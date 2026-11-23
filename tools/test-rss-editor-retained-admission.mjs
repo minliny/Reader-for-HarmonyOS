@@ -11,7 +11,7 @@ const ts=createRequire(import.meta.url)(sdk+'/node_modules/typescript');
 const compile=(raw,name,deps)=>new Function(...Object.keys(deps),ts.transpileModule(
   raw.replace(/^import[\s\S]*?;\n/gm,'').replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^export /gm,''),
   {compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText+`;return ${name};`)(...Object.values(deps));
-const gatewayRaw=rssSource('features/rss/RssGateway.ts'),editorRaw=rssSource('features/rss/RssSubscriptionEditorOrchestrator.ets');
+const gatewayRaw=rssSource('features/rss/application/RssGateway.ts'),editorRaw=rssSource('features/rss/application/RssSubscriptionEditorOrchestrator.ets');
 const gatewayDeps={ReaderRuntimeOwner:RssRuntime,isReaderCoreTransactionPendingError};
 const Gateway=compile(gatewayRaw,'RssGateway',gatewayDeps);
 const editorDeps={RssGateway:Gateway,ReaderRuntimeOwner:RssRuntime,ReaderWriteEvidence:RssWriteEvidence,

@@ -6,24 +6,24 @@ const { readFileSync }=await import('node:fs');
 const { stripTypeScriptTypes }=await import('node:module');
 const { dirname, resolve }=await import('node:path');
 const { fileURLToPath }=await import('node:url');
-const { readBookSearchTiming }=await import('../entry/src/main/ets/features/common/BookSearchTiming.ts');
+const { readBookSearchTiming }=await import('../entry/src/main/ets/app/library/BookSearchTiming.ts');
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const gatewayPath = resolve(
   repo,
-  'entry/src/main/ets/features/search/SearchGateway.ts',
+  'entry/src/main/ets/features/search/application/SearchGateway.ts',
 );
 const gatewaySource = readFileSync(gatewayPath, 'utf8');
-const authorMetadataModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/common/BookAuthorMetadata.ts'), 'utf8');
-const identityModule = readFileSync(resolve(repo, 'entry/src/main/ets/features/common/CachedBookIdentity.ts'), 'utf8').replace(/^import type .*;$/m, '');
+const authorMetadataModule = readFileSync(resolve(repo, 'entry/src/main/ets/app/library/BookAuthorMetadata.ts'), 'utf8');
+const identityModule = readFileSync(resolve(repo, 'entry/src/main/ets/app/library/CachedBookIdentity.ts'), 'utf8').replace(/^import type .*;$/m, '');
 const sourceCategoryModule = stripTypeScriptTypes(
-  readFileSync(resolve(repo, 'entry/src/main/ets/features/source/ReaderSourceCategory.ts'), 'utf8'),
+  readFileSync(resolve(repo, 'entry/src/main/ets/features/source/application/ReaderSourceCategory.ts'), 'utf8'),
 ).replace(/^export /gm, '');
 const timingModule = stripTypeScriptTypes(readFileSync(resolve(repo,
-  'entry/src/main/ets/features/common/BookSearchTiming.ts'), 'utf8')).replace(/^export /gm, '');
+  'entry/src/main/ets/app/library/BookSearchTiming.ts'), 'utf8')).replace(/^export /gm, '');
 
 // The helper module is inlined because data-URL loads cannot resolve
-// relative specifiers like '../../app/ErrorMessage'.
+// relative specifiers like '../../../app/ErrorMessage'.
 const errorMessageModule = stripTypeScriptTypes(
   readFileSync(resolve(repo, 'entry/src/main/ets/app/ErrorMessage.ts'), 'utf8'),
 ).replace('export function errorMessageOf', 'function errorMessageOf');
@@ -32,16 +32,17 @@ const errorMessageModule = stripTypeScriptTypes(
 // import so this contract test can exercise the real decoder and gateway with
 // an injected owner without replacing application code.
 const nodeSource = stripTypeScriptTypes(
-  (authorMetadataModule + '\n' + gatewaySource
+  (authorMetadataModule + '\n' + readFileSync(resolve(repo,'entry/src/main/ets/app/library/BookSearchPageProgress.ts'),'utf8') + '\n' + gatewaySource
+    .replace(/^import .*BookSearchPageProgress['"];\n/m, '')
     .replace(/^import \{ readBookSearchTiming \} from .*;$/m, () => timingModule)
     .replace(/^import \{ SearchBookProjection, type SearchBookPatch \} from .*;$/m, () =>
-      readFileSync(resolve(repo, 'entry/src/main/ets/features/search/SearchBookProjection.ts'), 'utf8'))
-    .replace(/^import \{\n(?:  [^\n]+\n)+\} from ['"]\.\.\/source\/ReaderSourceCategory['"];$/m,
+      readFileSync(resolve(repo, 'entry/src/main/ets/features/search/application/SearchBookProjection.ts'), 'utf8'))
+    .replace(/^import \{\n(?:  [^\n]+\n)+\} from ['"]\.\.\/\.\.\/source\/application\/ReaderSourceCategory['"];$/m,
       () => sourceCategoryModule)
     .replace(/^import \{[^\n]*errorMessageOf[^\n]*\} from ['"][^'"]*ErrorMessage(\.ts)?['"];$/m,
       () => errorMessageModule)
     .replace(
-      /^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m,
+      /^import \{ ReaderRuntimeOwner \} from ['"]\.\.\/\.\.\/\.\.\/app\/ReaderRuntimeOwner['"];$/m,
       '',
     )).replace(/^import \{[^\n]+\} from ['"][^'"]*BookAuthorMetadata(?:\.ts)?['"];?\n/gm, ''),
 );
@@ -158,6 +159,7 @@ const validOutcome = await gatewayReturning({
 
 assert.deepEqual(validOutcome, {
   ok: true,
+  pageReceipt: undefined,
   results: [{
     sourceId: 'source-a',
     sourceName: '甲书源',

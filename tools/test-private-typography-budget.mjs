@@ -33,7 +33,7 @@ assert.equal(countPrivateTypographyCalls("// Text('comment').fontSize(13);\n@Com
 const fake = "@Component struct Probe { private spec() { return { fontSizeFp: 99 }; } build() { Text('bad').fontSize(this.spec().fontSizeFp); } }";
 assert.equal(isSharedTypographyExpression('this.spec().fontSizeFp'),false,'a helper name alone carries no shared proof');
 assert.equal(countPrivateTypographyCalls(fake,file),1,'synthetic private spec 99 remains debt');
-assert.equal(countPrivateTypographyCalls(fake,'entry/src/main/ets/features/common/ReaderDialogSurface.ets'),1,'producer filename cannot admit another owner');
+assert.equal(countPrivateTypographyCalls(fake,'entry/src/main/ets/ui/surfaces/ReaderDialogSurface.ets'),1,'producer filename cannot admit another owner');
 const producerContract=JSON.parse(readFileSync(new URL('./fixtures/architecture-shared-producers.json',import.meta.url),'utf8'));
 // The genuine Choice Modifier is governed by the same exact producer contract
 // used by the full gate, not by helper-name or raw call-count exceptions.
@@ -46,37 +46,42 @@ function currentPrivateCount(source,file){
 }
 function rejectsPrivate(source,file){try{return currentPrivateCount(source,file)>0;}catch(error){assert.match(error.message,/finite shared physical inputs\/role bindings changed/);return true;}}
 const common='entry/src/main/ets/features/common/';
-for(const name of ['ReaderActionMenuSurface','ReaderChoiceRow','ReaderDialogSurface','ReaderSearchField']){
-  const actualFile=common+name+'.ets',source=readFileSync(new URL('../'+actualFile,import.meta.url),'utf8');
+const surfaces='entry/src/main/ets/ui/surfaces/';
+const choiceFile='entry/src/main/ets/ui/controls/ReaderChoiceRow.ets';
+for(const [name,actualFile] of [
+  ['ReaderActionMenuSurface',surfaces+'ReaderActionMenuSurface.ets'],
+  ['ReaderChoiceRow',choiceFile],
+  ['ReaderDialogSurface',surfaces+'ReaderDialogSurface.ets'],
+  ['ReaderSearchField','entry/src/main/ets/ui/controls/ReaderSearchField.ets'],
+]){
+  const source=readFileSync(new URL('../'+actualFile,import.meta.url),'utf8');
   assert.equal(currentPrivateCount(source,actualFile),0,name+': current genuine finite getter remains admitted');
   const getter=name==='ReaderSearchField'?'textStyle':'spec';
-  const expression=name==='ReaderSearchField'?'this.textStyle().fontSizeFp':name==='ReaderChoiceRow'?'this.textStyle().fontSizeFp':name==='ReaderDialogSurface'?'this.spec().headerFontSize':name==='ReaderActionSheetContent'?'this.spec().labelFontSize':'this.spec().actionFontSize';
+  const expression=name==='ReaderSearchField'?'this.textStyle().fontSizeFp':name==='ReaderChoiceRow'?'this.textStyle().fontSizeFp':name==='ReaderDialogSurface'?'this.spec().headerFontSize':'this.spec().actionFontSize';
   const context=typographyExpressionContext(source,actualFile);
-  assert.equal(isSharedTypographyExpression(expression,context,name),true,name+': genuine imported producer binding');
+  assert.equal(isSharedTypographyExpression(expression,context,name),true,name+': genuine finite producer binding');
   const tree=ts.createSourceFile(actualFile,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
   const method=tree.statements.find(n=>ts.isStructDeclaration(n)&&n.name.text===name).members.find(n=>ts.isMethodDeclaration(n)&&n.name.text===getter);
   const changed=source.slice(0,method.body.getStart(tree))+"{ return { fontSizeFp: 99 }; }"+source.slice(method.body.end);
   assert.notEqual(changed,source,name+': producer getter mutation actually applied');
   assert.ok(rejectsPrivate(changed,actualFile),name+': same owner/helper returning private99 rejected');
-  const wrongImport=source.replace("'./ReaderSurfaceSpecs'","'./PrivateSurfaceSpecs'").replace("'./ReaderChoiceSpecs'","'./PrivateChoiceSpecs'").replace("'./ReaderTypography'","'./PrivateTypography'");
-  assert.ok(rejectsPrivate(wrongImport,actualFile),name+': imported name from private module is not shared');
+  const wrongBinding=name==='ReaderChoiceRow'?source.replace('return CHOICES[id];','return PRIVATE_CHOICES[id];'):
+    source.replace("'./ReaderSurfaceSpecs'","'./PrivateSurfaceSpecs'").replace("'../foundation/ReaderTypography'","'./PrivateTypography'");
+  assert.notEqual(wrongBinding,source);
+  assert.ok(rejectsPrivate(wrongBinding,actualFile),name+': unregistered recipe source is rejected');
 }
-const compatibilityFile=common+'ReaderActionSheetContent.ets',compatibilitySource=readFileSync(new URL('../'+compatibilityFile,import.meta.url),'utf8');
-assert.equal(auditTypographyConsumers(compatibilitySource,compatibilityFile).length,0,'compatibility action-sheet facade owns zero text tuples');
-const privateFacade=compatibilitySource.replace('build() {',"build() { Text('private').fontSize(this.spec().labelFontSize);");
-assert.notEqual(privateFacade,compatibilitySource);assert.ok(rejectsPrivate(privateFacade,compatibilityFile),'retired content getter cannot regain admission through the facade');
-const menuFile=common+'ReaderActionMenuSurface.ets',menuSource=readFileSync(new URL('../'+menuFile,import.meta.url),'utf8');
+const menuFile=surfaces+'ReaderActionMenuSurface.ets',menuSource=readFileSync(new URL('../'+menuFile,import.meta.url),'utf8');
 assert.equal(isSharedTypographyExpression('this.actionSheetSpec().labelFontSize',typographyExpressionContext(menuSource,menuFile),'ReaderActionMenuSurface'),true,'existing menu family binds its second finite sheet resolver');
 const privateSheetGetter=menuSource.replace("resolveActionSheetSpec(this.variant === 'bookshelf' ? 'bookshelf' : this.variant === 'quick' ? 'quick' : 'grouped')",'{ labelFontSize: 99 }');
 assert.notEqual(privateSheetGetter,menuSource,'private sheet getter negative control reaches the actual finite selector');
 assert.ok(rejectsPrivate(privateSheetGetter,menuFile),'same secondary getter cannot return a private typography bag');
-const actionOwnerFile=common+'ReaderSheetActionList.ets',actionOwnerSource=readFileSync(new URL('../'+actionOwnerFile,import.meta.url),'utf8');
+const actionOwnerFile='entry/src/main/ets/features/bookshelf/ui/ReaderSheetActionList.ets',actionOwnerSource=readFileSync(new URL('../'+actionOwnerFile,import.meta.url),'utf8');
 assert.equal(auditTypographyConsumers(actionOwnerSource,actionOwnerFile).length,0,'bookshelf presentation owner delegates all text to the shared content producer');
 const retiredOwnerText=actionOwnerSource.replace('    Column() {',"    Column() { Text('private').fontSize(this.surfaceSpec().actionLabelFontSize);");
 assert.notEqual(retiredOwnerText,actionOwnerSource);
 assert.ok(rejectsPrivate(retiredOwnerText,actionOwnerFile),'retired bookshelf typography getter cannot regain admission after delegation');
 // Direct modifier injection must be rejected even though the struct's old getter is untouched.
-const choiceFile=common+'ReaderChoiceRow.ets',choiceSource=readFileSync(new URL('../'+choiceFile,import.meta.url),'utf8');
+const choiceSource=readFileSync(new URL('../'+choiceFile,import.meta.url),'utf8');
 assert.ok(rejectsPrivate(choiceSource.replace('instance.fontSize(text.fontSizeFp);','instance.fontSize(99);'),choiceFile),'same call count cannot hide a private Modifier literal');
 const privateAlias=choiceSource.replace('const text = this.selected ? spec.selectedText : spec.text;', 'const text = { fontSizeFp: 99 };');
 assert.notEqual(privateAlias,choiceSource);assert.ok(rejectsPrivate(privateAlias,choiceFile),'a modifier-local alias cannot manufacture a private font bag');

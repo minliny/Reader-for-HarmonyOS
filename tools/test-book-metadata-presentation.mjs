@@ -5,13 +5,13 @@ import { stripTypeScriptTypes } from 'node:module';
 const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
 const executable = async source => import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(source)).toString('base64')}`);
 const withoutImports = source => source.replace(/^import[\s\S]*?;\n/gm, '');
-const dependencies = `${read('features/common/BookAuthorMetadata.ts')}\n${withoutImports(read('features/common/BookSearchTiming.ts'))}\n${read('app/ErrorMessage.ts')}\n${read('features/source/ReaderSourceCategory.ts')}\n${withoutImports(read('features/source/SourceSwitchProviderFamily.ts'))}\n${withoutImports(read('features/common/CachedBookIdentity.ts'))}\n${withoutImports(read('features/common/BookAcquisitionPresentation.ts'))}`;
-const { SearchGateway } = await executable(dependencies + withoutImports(read('features/search/SearchBookProjection.ts')) + withoutImports(read('features/search/SearchGateway.ts')));
-const switchSource = read('features/source/SourceSwitchGateway.ts');
+const dependencies = `${read('app/library/BookAuthorMetadata.ts')}\n${withoutImports(read('app/library/BookSearchTiming.ts'))}\n${read('app/ErrorMessage.ts')}\n${read('features/source/application/ReaderSourceCategory.ts')}\n${withoutImports(read('features/source/application/SourceSwitchProviderFamily.ts'))}\n${withoutImports(read('app/library/CachedBookIdentity.ts'))}\n${withoutImports(read('app/library/BookAcquisitionPresentation.ts'))}`;
+const { SearchGateway } = await executable(dependencies + withoutImports(read('features/search/application/SearchBookProjection.ts')) + withoutImports(read('features/search/application/SearchGateway.ts')));
+const switchSource = read('features/source/application/SourceSwitchGateway.ts');
 const { SourceSwitchGateway, sourceSwitchCandidateKey, sourceSwitchSourceCount } = await executable(dependencies + withoutImports(read('app/BookRequestScheduler.ts')) + withoutImports(switchSource));
-const page = read('features/search/SearchPage.ets');
+const page = read('features/search/ui/SearchPage.ets');
 const groupSource = page.slice(page.indexOf('class SearchBookGroup'), page.indexOf('class SearchResultDataSource'));
-const window = read('features/source/SourceSwitchWindow.ets');
+const window = read('features/source/ui/SourceSwitchWindow.ets');
 const footer = window.slice(window.indexOf('  private statusText()'), window.indexOf('  private safeTop()'));
 const { SearchBookGroup, FooterProbe } = await executable(`${groupSource}
   ${switchSource.slice(switchSource.indexOf('export function sourceSwitchSourceCount'), switchSource.indexOf('function deduplicateSourceSwitchCandidates'))}
@@ -230,11 +230,11 @@ assert.ok(calls.every(method => ['source.list', 'search-book.batch.get', 'search
   }
 }
 
-const detail = read('features/bookshelf/LocalBookDetail.ets');
+const detail = read('features/reading/ui/LocalBookDetail.ets');
 const detailIntro = detail.slice(detail.indexOf('  private displayIntro()'), detail.indexOf('  private chapterEmptyMessage()'));
 const cardStart = page.indexOf('struct SearchResultCard');
 const cardIntro = page.slice(page.indexOf('  private displayIntro()', cardStart), page.indexOf('  private coverWidth()', cardStart));
-const { bookIntroText, DetailIntro, SearchIntro } = await executable(`${read('features/common/BookIntroText.ts')}
+const { bookIntroText, DetailIntro, SearchIntro } = await executable(`${read('app/library/BookIntroText.ts')}
   class DetailIntro { ${detailIntro} } class SearchIntro { ${cardIntro} } export { DetailIntro, SearchIntro };`);
 const detailProbe = new DetailIntro();
 const cardProbe = new SearchIntro();

@@ -1,0 +1,2429 @@
+{
+  "schemaVersion": 1,
+  "registrationCoverage": {
+    "registration-coverage:source-management/invariants.E2": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-e2-registration.test.mjs",
+          "name": "Source E2 registration binds all inventory targets, gestures and repeated case windows to native replay"
+        },
+        {
+          "path": "tools/ui-contract/test/source-e2-registration.test.mjs",
+          "name": "Source E2 registration refuses lost inventory, center, overlay, disabled and gesture scope"
+        },
+        {
+          "path": "tools/ui-contract/test/source-e2-registration.test.mjs",
+          "name": "Source E2 registration rejects static bounds, masked edges, wrong gesture roots and candidate drift"
+        },
+        {
+          "path": "tools/ui-contract/test/source-e2-registration.test.mjs",
+          "name": "Source E2 lookup keeps missing touches visible and resolves only released native actions"
+        },
+        {
+          "path": "tools/ui-contract/test/source-e2-registration.test.mjs",
+          "name": "Source E2 registration accepts painted edges only when the actual query paint pays the response area"
+        },
+        {
+          "path": "tools/ui-contract/test/source-e2-registration.test.mjs",
+          "name": "Source E2 registration requires separate SDK provenance and keeps the ordinary group scopes distinct"
+        },
+        {
+          "path": "tools/ui-contract/test/source-e3-registration.test.mjs",
+          "name": "Source E2 registration rejects a legacy normal-page claim even while lookup references exist"
+        },
+        {
+          "path": "tools/ui-contract/test/acceptance-impact.test.mjs",
+          "name": "registration coverage indexes exact scoped receipts without granting whole-rule admission"
+        },
+        {
+          "path": "tools/ui-contract/test/acceptance-impact.test.mjs",
+          "name": "registration coverage indexes a Source target only with its actual conditional obligation"
+        },
+        {
+          "path": "tools/ui-contract/test/acceptance-impact.test.mjs",
+          "name": "registration coverage requires each Source gesture to reference its bound native swipe"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control cases keep one exact center or top dispatch and never synthesize a post-click sample"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control owner admission binds the exact native point, branch, control, owner and generation"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control evidence rejects static, stale, foreign and duplicated probes without rewriting the condition"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control conditions distinguish unknown, inapplicable and applicable-but-undispatched states"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Actual Source owner emits one read-only admission on each normal recovery and Login path"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source Login accepts stable aliases across legal native id and geometry changes but rejects a visible IME"
+        }
+      ]
+    },
+    "registration-coverage:source-management/invariants.E3": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-e3-registration.test.mjs",
+          "name": "Source E3 registration first enrollment still pins new owners and inherited causal conditions"
+        },
+        {
+          "path": "tools/ui-contract/test/source-e3-registration.test.mjs",
+          "name": "Source E3 registration enrolls initially unmapped capture without overriding an existing frozen claim"
+        },
+        {
+          "path": "tools/ui-contract/test/source-e3-registration.test.mjs",
+          "name": "Source E3 registration pins each deployment when one signed candidate spans separately collected windows"
+        },
+        {
+          "path": "tools/ui-contract/test/source-e3-registration.test.mjs",
+          "name": "Source E3 registration admits exactly the listed alternatives for a role in its own measured cell"
+        },
+        {
+          "path": "tools/ui-contract/test/source-e3-registration.test.mjs",
+          "name": "Source E3 registration admits a complete replayed matrix and retains S5 same-window checks"
+        },
+        {
+          "path": "tools/ui-contract/test/source-e3-registration.test.mjs",
+          "name": "Source E3 registration rejects missing, duplicate or incomplete model window cells"
+        },
+        {
+          "path": "tools/ui-contract/test/source-e3-registration.test.mjs",
+          "name": "Source E3 registration rejects wrong candidate, missing receipt and wrong measured configurations"
+        },
+        {
+          "path": "tools/ui-contract/test/source-e3-registration.test.mjs",
+          "name": "Source E3 registration rejects geometry-only, foreign-role, stale font and absent recovery proof"
+        },
+        {
+          "path": "tools/ui-contract/test/source-e3-registration.test.mjs",
+          "name": "Source E3 registration requires the current applicable conditional sample before treating an optional assertion as required"
+        },
+        {
+          "path": "tools/ui-contract/test/source-e3-registration.test.mjs",
+          "name": "Source E3 registration model schema accepts complete Source E3 only and rejects a matrix on another claim"
+        },
+        {
+          "path": "tools/ui-contract/test/source-e3-registration.test.mjs",
+          "name": "Source E3 registration rejects legacy claim declarations without reading the report"
+        },
+        {
+          "path": "tools/ui-contract/test/source-e3-registration.test.mjs",
+          "name": "Source E3 registration rejects local single or same-window receipt mappings"
+        },
+        {
+          "path": "tools/ui-contract/test/acceptance-impact.test.mjs",
+          "name": "registration coverage indexes exact scoped receipts without granting whole-rule admission"
+        }
+      ]
+    }
+  },
+  "cases": {
+    "source-management.original-recovery-body": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery body proves the ordinary original and unknown notice, fitted or really expanded"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery body distinguishes fitted and folded conditions and retains clipping failures"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery body rejects unverified expand, changed owner and stale glyph data"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery body producer retires the rich Text controller when the generation or expansion changes"
+        }
+      ]
+    },
+    "source-management.original-recovery-body-fits": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery body proves the ordinary original and unknown notice, fitted or really expanded"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery body distinguishes fitted and folded conditions and retains clipping failures"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery body rejects unverified expand, changed owner and stale glyph data"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery body producer retires the rich Text controller when the generation or expansion changes"
+        }
+      ]
+    },
+    "source-management.unknown-recovery-body": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery body proves the ordinary original and unknown notice, fitted or really expanded"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery body distinguishes fitted and folded conditions and retains clipping failures"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery body rejects unverified expand, changed owner and stale glyph data"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery body producer retires the rich Text controller when the generation or expansion changes"
+        }
+      ]
+    },
+    "source-management.unknown-recovery-body-fits": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery body proves the ordinary original and unknown notice, fitted or really expanded"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery body distinguishes fitted and folded conditions and retains clipping failures"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery body rejects unverified expand, changed owner and stale glyph data"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery body producer retires the rich Text controller when the generation or expansion changes"
+        }
+      ]
+    },
+    "source-management.read-failure": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-surface-text.test.mjs",
+          "name": "source surface text preserves read failure applicability when the actual glyph sample is missed"
+        },
+        {
+          "path": "tools/ui-contract/test/source-retained-read.test.mjs",
+          "name": "source read surface glyphs keep a real cold read failure required when text is missing"
+        },
+        {
+          "path": "tools/ui-contract/test/source-native-text-sampler.test.mjs",
+          "name": "source read surface sampler binds the scheduled glyphs to the current read generation and branch"
+        }
+      ]
+    },
+    "source-management.empty-library": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-surface-text.test.mjs",
+          "name": "source surface text measures exact empty-state glyphs and separates clipping from stale evidence"
+        },
+        {
+          "path": "tools/ui-contract/test/source-retained-read.test.mjs",
+          "name": "source read surface glyphs bind empty library and footer ranges to one current native window"
+        },
+        {
+          "path": "tools/ui-contract/test/source-native-text-sampler.test.mjs",
+          "name": "source read surface sampler binds the scheduled glyphs to the current read generation and branch"
+        }
+      ]
+    },
+    "bookshelf.search-empty-bookshelf-entry": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/structure.test.mjs",
+          "name": "Empty bookshelf Search requires the real empty content and the shared input overlay"
+        },
+        {
+          "path": "tools/ui-contract/test/search-empty-bookshelf-entry.test.mjs",
+          "name": "empty bookshelf Search dispatch accepts only the scoped empty native Scroll and its actual Search Button"
+        },
+        {
+          "path": "tools/ui-contract/test/search-empty-bookshelf-entry.test.mjs",
+          "name": "empty bookshelf Search requires exactly one action-bound empty-origin acceptance and same-query projection"
+        },
+        {
+          "path": "tools/ui-contract/test/search-empty-bookshelf-entry.test.mjs",
+          "name": "empty bookshelf Search Back preserves the native editor then releases the existing owner on the empty shelf"
+        }
+      ]
+    },
+    "bookshelf.search-ime-back": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search separates native IME Back from a premature search route exit"
+        }
+      ]
+    },
+    "bookshelf.search-entry-initial": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search separates native IME Back from a premature search route exit"
+        }
+      ]
+    },
+    "bookshelf.search-entry-history-loading": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search-entry-history-loading.test.mjs",
+          "name": "search entry history loading accepts the same interactive editor and native pending feedback"
+        },
+        {
+          "path": "tools/ui-contract/test/search-entry-history-loading.test.mjs",
+          "name": "search entry history loading detects absent, misplaced or IME-covered feedback"
+        },
+        {
+          "path": "tools/ui-contract/test/search-entry-history-loading.test.mjs",
+          "name": "search entry history loading keeps a missed eligible interval required"
+        },
+        {
+          "path": "tools/ui-contract/test/search-entry-history-loading.test.mjs",
+          "name": "search entry history loading excludes only a positively completed initial read before the open viewport"
+        },
+        {
+          "path": "tools/ui-contract/test/search-entry-history-loading.test.mjs",
+          "name": "search entry history loading rejects stale owners and incomplete native intervals"
+        }
+      ]
+    },
+    "bookshelf.search-filter-empty-reset": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 1 公共长目录.txt"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search-filter-empty-reset.test.mjs",
+          "name": "Phase 1 search filter empty and reset preserve the same public result and query work"
+        }
+      ],
+      "contractCases": [
+        {
+          "path": "tools/test-search-view-state.mjs",
+          "name": "content-filter"
+        }
+      ]
+    },
+    "bookshelf.search-all-disabled": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search separates native IME Back from a premature search route exit"
+        }
+      ]
+    },
+    "bookshelf.search-submit-crop-reopen": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search separates native IME Back from a premature search route exit"
+        }
+      ]
+    },
+    "reading.control-directory-editor-release-back": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-effects.test.mjs",
+          "name": "Directory IME hide restores an enabled native chapter row in the retained list"
+        }
+      ]
+    },
+    "reading.control-directory-chapter-select": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 1 公共长目录.txt"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-directory-selection.test.mjs",
+          "name": "Directory chapter selection binds a native row, its committed chapter and the normal dismissal"
+        },
+        {
+          "path": "tools/ui-contract/test/control-directory-selection.test.mjs",
+          "name": "Directory chapter selection rejects stale, wrong or incomplete selection evidence"
+        },
+        {
+          "path": "tools/ui-contract/test/control-effects.test.mjs",
+          "name": "Directory IME hide restores an enabled native chapter row in the retained list"
+        }
+      ],
+      "contractCases": [
+        {
+          "path": "tools/test-reader-control-selection-transaction.mjs",
+          "name": "commit-boundary"
+        },
+        {
+          "path": "tools/test-reader-control-selection-transaction.mjs",
+          "name": "quick-search-selection-observation"
+        }
+      ]
+    },
+    "reading.control-directory-soft-ime-hide": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-effects.test.mjs",
+          "name": "Directory IME hide restores an enabled native chapter row in the retained list"
+        }
+      ]
+    },
+    "bookshelf.search-ime-submit": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search credits only a uniquely accepted Stop for the right query retaining its public row"
+        }
+      ]
+    },
+    "bookshelf.search-history-submit": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search credits only a uniquely accepted Stop for the right query retaining its public row"
+        }
+      ]
+    },
+    "bookshelf.search-stop-retain": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search credits only a uniquely accepted Stop for the right query retaining its public row"
+        }
+      ]
+    },
+    "bookshelf.search-filter-back": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search credits only a uniquely accepted Stop for the right query retaining its public row"
+        },
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search temporary panel Back binds the actual sheet and both current result endpoints"
+        }
+      ]
+    },
+    "bookshelf.search-task-back": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search credits only a uniquely accepted Stop for the right query retaining its public row"
+        },
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search temporary panel Back binds the actual sheet and both current result endpoints"
+        }
+      ]
+    },
+    "bookshelf.search-all-failed": {
+      "fixtures": ["tools/ui-contract/fixtures/Reader Phase 1 public HTTP failure source.json"],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search terminal 503 fixtures require the exact failure count and no skipped or unknown sources"
+        }
+      ]
+    },
+    "bookshelf.search-partial": {
+      "fixtures": ["tools/ui-contract/fixtures/Reader Phase 1 public HTTP failure source.json"],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search terminal 503 fixtures require the exact failure count and no skipped or unknown sources"
+        }
+      ]
+    },
+    "bookshelf.search-retry": {
+      "fixtures": ["tools/ui-contract/fixtures/Reader Phase 1 public HTTP failure source.json"],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search Task retry keeps the same native public book across fixed 503"
+        },
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search temporary panel Back binds the actual sheet and both current result endpoints"
+        },
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search Task retry requires one new work generation, the same query, and retained local result"
+        }
+      ]
+    },
+    "bookshelf.search-confirmed-empty": {
+      "fixtures": ["tools/ui-contract/fixtures/Reader Phase 1 公共长目录.txt"],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search confirmed empty rejects retained native rows and preserves heading evidence"
+        },
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search confirmed empty rerun needs the actual button and a fresh work generation in the same results owner"
+        },
+        {
+          "path": "tools/ui-contract/test/structure.test.mjs",
+          "name": "V5 structure requires the confirmed-empty heading inside the actual result list"
+        }
+      ],
+      "contractCases": [
+        {
+          "path": "tools/test-book-search-pages.mjs",
+          "name": "confirmed-empty-rerun"
+        }
+      ]
+    },
+    "bookshelf.search-retry-success": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/search-retry-recovery/source.json",
+        "tools/ui-contract/fixtures/search-retry-recovery/fixture-plan.json",
+        "tools/ui-contract/fixtures/search-retry-recovery/responses/initial-page-1.json",
+        "tools/ui-contract/fixtures/search-retry-recovery/responses/recovered-page-1.json",
+        "tools/ui-contract/fixtures/search-retry-recovery/responses/recovered-page-2.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search Task retry proves recovery of the same failed source and new online result"
+        },
+        {
+          "path": "tools/ui-contract/test/search-retry-recovery-fixture.test.mjs",
+          "name": "Phase 1 retry recovery fixture serves its pinned responses only on the current run routes"
+        },
+        {
+          "path": "tools/ui-contract/test/layout.test.mjs",
+          "name": "Phase 1 search Task retry accepts only the unique enabled button inside the named native sheet"
+        }
+      ],
+      "contractCases": [
+        {
+          "path": "tools/test-book-search-pages.mjs",
+          "name": "retry-recovery"
+        }
+      ]
+    },
+    "bookshelf.search-running-initial": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 1 public delayed source.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search loading needs both the matched running lease and the native pending viewport"
+        },
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search initial loading requires a live first online worker across the native sample"
+        }
+      ]
+    },
+    "bookshelf.search-unconfirmed-empty": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/search-unconfirmed-empty/public-unconfirmed-empty-source.json",
+        "tools/ui-contract/fixtures/search-unconfirmed-empty/public/search/unconfirmed-1.json"
+      ],
+      "contractCases": [
+        {
+          "path": "tools/test-book-search-pages.mjs",
+          "name": "unconfirmed-empty"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search unconfirmed empty requires the current negotiated receipt and the native status"
+        },
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search unconfirmed empty requires the pending viewport and exactly one unconfirmed source"
+        },
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search confirmed empty rejects retained native rows and preserves heading evidence"
+        }
+      ]
+    },
+    "bookshelf.search-append": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 0 公共测试书.txt"
+      ],
+      "contractCases": [
+        {
+          "path": "tools/test-book-search-pages.mjs",
+          "name": "orchestrator"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search append requires adjacent admitted Core pages, their merged rows and the current native viewport"
+        },
+        {
+          "path": "tools/ui-contract/test/evidence.test.mjs",
+          "name": "Phase 1 append replay preserves only a verified read-only tail after submit"
+        },
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search append advances the public three-page sequence through ordinary viewport demand"
+        },
+        {
+          "path": "tools/ui-contract/test/layout.test.mjs",
+          "name": "Phase 1 search append maps only the two public titles on true online rows of their native list"
+        }
+      ]
+    },
+    "reading.control-tts-capsule-handoff": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "TTS Quick handoff requires the painted Quick owner and an operable returned transport"
+        },
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "a TTS capsule handoff requires the real system pause and restores its original Quick controls"
+        },
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "a TTS capsule handoff excludes only a verified unavailable built-in engine on that launch"
+        },
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "a TTS capsule handoff publishes pause proof only after current Core and Host acknowledgement"
+        }
+      ]
+    },
+    "reading.control-tts-capsule-handoff-full": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "a TTS Full capsule handoff verifies the same paused speech and Full playback actor throughout the exit"
+        },
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "a TTS Full capsule handoff samples its exact native playback receiver on the production observation path"
+        },
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "a TTS capsule handoff publishes pause proof only after current Core and Host acknowledgement"
+        },
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "a TTS capsule handoff excludes only a verified unavailable built-in engine on that launch"
+        }
+      ]
+    },
+    "source-management.row-toggle-touch-edge": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 1 public row toggle source.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-toggle-edge.test.mjs",
+          "name": "source row toggle keeps a measured bad envelope as FAIL before dispatch"
+        },
+        {
+          "path": "tools/ui-contract/test/source-toggle-edge.test.mjs",
+          "name": "source row toggle emits the exact outer coordinates only for a visible matched row"
+        },
+        {
+          "path": "tools/ui-contract/test/source-toggle-edge.test.mjs",
+          "name": "source row toggle requires a uniquely admitted write and fresh readback to enable and restore"
+        },
+        {
+          "path": "tools/ui-contract/test/source-toggle-edge.test.mjs",
+          "name": "source row toggle canonical touches use proven top, bottom and center commands and restore disabled after each pair"
+        },
+        {
+          "path": "tools/ui-contract/test/source-toggle-edge.test.mjs",
+          "name": "source row toggle center cannot follow an ambiguous or replayed mutation or reach any nonpublic fixture"
+        },
+        {
+          "path": "tools/ui-contract/test/source.test.mjs",
+          "name": "source toggle owner binds only the public fixture intent to its fresh confirmed readback"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-edge.test.mjs",
+          "name": "source filter edge uses opposite ends of the real native Button and rechecks the click journal"
+        }
+      ]
+    },
+    "source-management.filter-touch-edges": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-filter-edge.test.mjs",
+          "name": "source status v3 binds three independently accepted native upper edges before and after the lane swipe"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-edge.test.mjs",
+          "name": "source filter edge requires the whole native Button inside its viewport and window"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-edge.test.mjs",
+          "name": "source filter edge uses opposite ends of the real native Button and rechecks the click journal"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-edge.test.mjs",
+          "name": "source filter edge rejects clipped, ambiguous, disabled and foreign lane targets before dispatch"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-edge.test.mjs",
+          "name": "source filter edge requires the exact owner dispatch and retains a proved unaccepted click"
+        }
+      ]
+    },
+    "reading.control-autopage-capsule-handoff": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "an AutoPage Quick capsule handoff requires the actual timer to remain manually paused"
+        },
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "a capsule handoff requires the paused launch, actual center tap and restored native Quick controls"
+        },
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "a capsule handoff rejects measured fade reversal, remount and restored Quick disappearance"
+        },
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "a capsule handoff leaves stale, cancelled, unmeasured and unbounded fade evidence incomplete"
+        },
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "a capsule handoff preserves wrong generation, order or pose and keeps a missing endpoint incomplete"
+        }
+      ]
+    },
+    "reading.control-tts-launch-interrupted": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "a Quick TTS launch interruption binds the same active system speech through the native return"
+        },
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "a Quick TTS launch interruption rejects changed audio, stale visuals and unproven overlap"
+        }
+      ]
+    },
+    "reading.control-tts-launch-quick": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "the TTS flight and pause are both required after current system playback starts"
+        }
+      ]
+    },
+    "source-management.layout-font-intermediate": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 1 public row toggle source.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation aligns the authored footer carrier on the physical pixel grid"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text rejects an older sweep after a same-read projection update"
+        },
+        {
+          "path": "tools/ui-contract/test/source-native-text-sampler.test.mjs",
+          "name": "source text sampler retires a queued sweep when the same opening publishes newer labels"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text requires effective readback at 366vp for the intermediate and maximum system settings"
+        }
+      ]
+    },
+    "source-management.layout-font-maximum": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 1 public row toggle source.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation aligns the authored footer carrier on the physical pixel grid"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text rejects an older sweep after a same-read projection update"
+        },
+        {
+          "path": "tools/ui-contract/test/source-native-text-sampler.test.mjs",
+          "name": "source text sampler retires a queued sweep when the same opening publishes newer labels"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text requires effective readback at 366vp for the intermediate and maximum system settings"
+        }
+      ]
+    },
+    "source-management.layout-font-160": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 1 public row toggle source.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation aligns the authored footer carrier on the physical pixel grid"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text rejects an older sweep after a same-read projection update"
+        },
+        {
+          "path": "tools/ui-contract/test/source-native-text-sampler.test.mjs",
+          "name": "source text sampler retires a queued sweep when the same opening publishes newer labels"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text requires effective system font readback in declared cases"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation surface keeps measured growth and legal compact/expanded flow with a clipped scroll tail"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation surface rejects missing, clipped, or overlapping controls and stale statistics scaling"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation surface applies only to a full capture of the current selected width and font"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text binds all fixed labels at exact large scales and leaves row text unclaimed"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text rejects observed truncation and clipping while keeping geometry independently usable"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text keeps missing, duplicate and stale native measurements unverified"
+        },
+        {
+          "path": "tools/ui-contract/test/source-native-text-sampler.test.mjs",
+          "name": "source native text sampler retains complete UTF-16 ranges and distinguishes unavailable reads"
+        }
+      ]
+    },
+    "source-management.layout-font-200": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 1 public row toggle source.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation aligns the authored footer carrier on the physical pixel grid"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text rejects an older sweep after a same-read projection update"
+        },
+        {
+          "path": "tools/ui-contract/test/source-native-text-sampler.test.mjs",
+          "name": "source text sampler retires a queued sweep when the same opening publishes newer labels"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text requires effective system font readback in declared cases"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation surface keeps measured growth and legal compact/expanded flow with a clipped scroll tail"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation surface rejects missing, clipped, or overlapping controls and stale statistics scaling"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation surface applies only to a full capture of the current selected width and font"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text binds all fixed labels at exact large scales and leaves row text unclaimed"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text rejects observed truncation and clipping while keeping geometry independently usable"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text keeps missing, duplicate and stale native measurements unverified"
+        },
+        {
+          "path": "tools/ui-contract/test/source-native-text-sampler.test.mjs",
+          "name": "source native text sampler retains complete UTF-16 ranges and distinguishes unavailable reads"
+        }
+      ]
+    },
+    "bookshelf.search-no-sources-management-return": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source.test.mjs",
+          "name": "source route from the no-source Search button returns only to its captured Search opening"
+        }
+      ]
+    },
+    "source-management.temporary-back-return": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source.test.mjs",
+          "name": "source temporary Back path exits only the opening whose IME and group Back were observed"
+        },
+        {
+          "path": "tools/ui-contract/test/source.test.mjs",
+          "name": "source register admits S4 only with entry and same-opening IME, group and settings return proofs"
+        }
+      ]
+    },
+    "reading.control-autopage-capsule-handoff-full": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "an AutoPage Full capsule handoff requires the manual press, real release and one stable Full playback actor"
+        }
+      ]
+    },
+    "source-management.scroll-return": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source.test.mjs",
+          "name": "source fixed inset and reset use native displacement with a negative raw scroll offset"
+        },
+        {
+          "path": "tools/ui-contract/test/source.test.mjs",
+          "name": "source register admits S3 only with the declared avoidance and paired native scroll proof"
+        },
+        {
+          "path": "tools/ui-contract/test/source.test.mjs",
+          "name": "S5 last row requires a fresh native List end and the row in that List"
+        },
+        {
+          "path": "tools/ui-contract/test/structure.test.mjs",
+          "name": "Source structure requires fixed carriers in front of the scrolled list"
+        },
+        {
+          "path": "tools/ui-contract/test/source-s5-registration.test.mjs",
+          "name": "S5 registration binds a complete distinct pair to one candidate and measured claim window"
+        },
+        {
+          "path": "tools/ui-contract/test/source-s5-registration.test.mjs",
+          "name": "S5 registration admits exact single-sample layout evidence with no synthetic sample ID"
+        },
+        {
+          "path": "tools/ui-contract/test/source-s5-registration.test.mjs",
+          "name": "S5 registration impact includes both members in the existing rule closure"
+        }
+      ]
+    },
+    "source-management.filter-selections": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-filter-edge.test.mjs",
+          "name": "source filter normal center requires the accepted current radio and the actual native carrier center"
+        },
+        {
+          "path": "tools/ui-contract/test/source-group-option-edge.test.mjs",
+          "name": "source group option center requires its scoped native command and releases the exact live panel"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-scroll.test.mjs",
+          "name": "source filter horizontal swipe moves native chips within the same lane"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-scroll.test.mjs",
+          "name": "source filter horizontal swipe rejects visible tails without corresponding native translation"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-scroll.test.mjs",
+          "name": "source filter horizontal swipe requires the bound native action and current Source owner"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-edge.test.mjs",
+          "name": "source filter selection binds native carriers for current radios, the disabled placeholder and the group trigger"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation aligns the authored footer carrier on the physical pixel grid"
+        },
+        {
+          "path": "tools/ui-contract/test/source.test.mjs",
+          "name": "source filter selection requires the expected native radio selection"
+        },
+        {
+          "path": "tools/ui-contract/test/source.test.mjs",
+          "name": "source combined filter retains the other active filters and cannot widen the same catalog"
+        }
+      ]
+    },
+    "source-management.chrome-touch-targets": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-native-control.test.mjs",
+          "name": "Source native control evidence binds real chrome and distinguishes an unmeasured response extension"
+        }
+      ]
+    },
+    "source-management.chrome-touch-delivery": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-chrome-dispatch.test.mjs",
+          "name": "source chrome top contacts use each current Button and normal endpoint after reopening Settings"
+        },
+        {
+          "path": "tools/ui-contract/test/source-chrome-dispatch.test.mjs",
+          "name": "source chrome top contacts reject a clipped edge, center reuse, and the wrong reopened owner"
+        },
+        {
+          "path": "tools/ui-contract/test/source-chrome-dispatch.test.mjs",
+          "name": "source chrome each native carrier reaches its own ordinary safe endpoint"
+        },
+        {
+          "path": "tools/ui-contract/test/source-chrome-dispatch.test.mjs",
+          "name": "source chrome 44vp, clipping and enabled state remain independent of exact dispatch"
+        },
+        {
+          "path": "tools/ui-contract/test/source-chrome-dispatch.test.mjs",
+          "name": "source chrome preserves credible wrong openings even when safe Back cannot run"
+        },
+        {
+          "path": "tools/ui-contract/test/source-chrome-dispatch.test.mjs",
+          "name": "source chrome binds the exact owner, projection and command; missing evidence stays open"
+        }
+      ]
+    },
+    "source-management.category-touch-edges": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-filter-edge.test.mjs",
+          "name": "source category v2 measures four distinct native centers and the All and External edges"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-edge.test.mjs",
+          "name": "source category tail and head bind four real upper edge taps and their selected owner"
+        }
+      ]
+    },
+    "source-management.group-outside-dismiss": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-group-outside-dismiss.test.mjs",
+          "name": "source group outside click uses the painted panel and exact raw command"
+        },
+        {
+          "path": "tools/ui-contract/test/source-group-outside-dismiss.test.mjs",
+          "name": "source group outside click rejects clipped, ambiguous and stale carriers before dispatch"
+        },
+        {
+          "path": "tools/ui-contract/test/source-group-outside-dismiss.test.mjs",
+          "name": "source group outside dismissal requires one accepted same-opening close and the unchanged endpoint"
+        }
+      ]
+    },
+    "source-management.original-reconcile-target": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-recovery-control.test.mjs",
+          "name": "Source recovery glyphs retain ineligible openings and reject stale owner, missing and clipped evidence"
+        },
+        {
+          "path": "tools/ui-contract/test/source-status-action.test.mjs",
+          "name": "Source operation glyph producer retires status, original and unknown generation callbacks"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-control.test.mjs",
+          "name": "Source recovery controls bind the current exact notice and native Button"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-control.test.mjs",
+          "name": "Source recovery controls distinguish owner ineligibility from unavailable observations"
+        }
+      ]
+    },
+    "source-management.original-continue-target": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-recovery-control.test.mjs",
+          "name": "Source recovery glyphs retain ineligible openings and reject stale owner, missing and clipped evidence"
+        },
+        {
+          "path": "tools/ui-contract/test/source-status-action.test.mjs",
+          "name": "Source operation glyph producer retires status, original and unknown generation callbacks"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-control.test.mjs",
+          "name": "Source recovery controls bind the current exact notice and native Button"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-control.test.mjs",
+          "name": "Source recovery controls distinguish owner ineligibility from unavailable observations"
+        }
+      ]
+    },
+    "source-management.original-expand-target": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-recovery-control.test.mjs",
+          "name": "Source recovery glyphs retain ineligible openings and reject stale owner, missing and clipped evidence"
+        },
+        {
+          "path": "tools/ui-contract/test/source-status-action.test.mjs",
+          "name": "Source operation glyph producer retires status, original and unknown generation callbacks"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-control.test.mjs",
+          "name": "Source recovery controls bind the current exact notice and native Button"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-control.test.mjs",
+          "name": "Source recovery controls distinguish owner ineligibility from unavailable observations"
+        }
+      ]
+    },
+    "source-management.unknown-reconcile-target": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-recovery-control.test.mjs",
+          "name": "Source recovery glyphs retain ineligible openings and reject stale owner, missing and clipped evidence"
+        },
+        {
+          "path": "tools/ui-contract/test/source-status-action.test.mjs",
+          "name": "Source operation glyph producer retires status, original and unknown generation callbacks"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-control.test.mjs",
+          "name": "Source recovery controls bind the current exact notice and native Button"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-control.test.mjs",
+          "name": "Source recovery controls distinguish owner ineligibility from unavailable observations"
+        }
+      ]
+    },
+    "source-management.unknown-expand-target": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-recovery-control.test.mjs",
+          "name": "Source recovery glyphs retain ineligible openings and reject stale owner, missing and clipped evidence"
+        },
+        {
+          "path": "tools/ui-contract/test/source-status-action.test.mjs",
+          "name": "Source operation glyph producer retires status, original and unknown generation callbacks"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-control.test.mjs",
+          "name": "Source recovery controls bind the current exact notice and native Button"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-control.test.mjs",
+          "name": "Source recovery controls distinguish owner ineligibility from unavailable observations"
+        }
+      ]
+    },
+    "source-management.import-research-status-action": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/source-status-action/reader-phase1-status-research-source.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-transient-text.test.mjs",
+          "name": "Source transient glyphs bind the actual active import message and leave the normal dismissal time"
+        },
+        {
+          "path": "tools/ui-contract/test/source-transient-text.test.mjs",
+          "name": "Source transient glyphs retire queued reads on changed owner facts and active host handoff"
+        },
+        {
+          "path": "tools/ui-contract/test/source-transient-status-text.test.mjs",
+          "name": "source transient status binds actual visible glyphs to current import and retained failure"
+        },
+        {
+          "path": "tools/ui-contract/test/source-transient-status-text.test.mjs",
+          "name": "source transient status preserves persistent glyphs when Toast is expired, absent, or borrowed"
+        },
+        {
+          "path": "tools/ui-contract/test/source-transient-status-text.test.mjs",
+          "name": "source transient status preserves proved glyph clipping and refuses a synthetic lifetime"
+        },
+        {
+          "path": "tools/ui-contract/test/source-transient-status-text.test.mjs",
+          "name": "source transient capture permits only its measured lifecycle through capture and persistent research"
+        },
+        {
+          "path": "tools/ui-contract/test/source-status-action.test.mjs",
+          "name": "Source import Re-search glyph requires current ready receipt and uncut native Text"
+        },
+        {
+          "path": "tools/ui-contract/test/source-status-action.test.mjs",
+          "name": "Source operation glyph producer retires status, original and unknown generation callbacks"
+        },
+        {
+          "path": "tools/ui-contract/test/source-document-picker.test.mjs",
+          "name": "status import requires the pinned document attestation for the exact target"
+        },
+        {
+          "path": "tools/ui-contract/test/source-status-action.test.mjs",
+          "name": "source status action binds real picker dispatch, confirmed readback, native geometry and exactly one retained-query search"
+        }
+      ],
+      "contractCases": [
+        {
+          "path": "tools/test-source-index-presentation-consumers.mjs",
+          "name": "inline-import-return"
+        }
+      ]
+    },
+    "source-management.inline-import-touch-edges": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-inline-import-edge.test.mjs",
+          "name": "Source inline import measures four outside-paint points inside the native centered response"
+        },
+        {
+          "path": "tools/ui-contract/test/source-inline-import-edge.test.mjs",
+          "name": "Source inline import dialog binds the exact title and local control in the same native scope"
+        },
+        {
+          "path": "tools/ui-contract/test/source-inline-import-edge.test.mjs",
+          "name": "Source inline import stores only a scoped raw title match for native dialog recognition"
+        },
+        {
+          "path": "tools/ui-contract/test/source-inline-import-edge.test.mjs",
+          "name": "Source inline import needs one real modal and first Back within the unchanged Source opening"
+        },
+        {
+          "path": "tools/ui-contract/test/source-inline-import-edge.test.mjs",
+          "name": "Source inline import center uses the actual current button and exact journal within the strict integer lane"
+        },
+        {
+          "path": "tools/ui-contract/test/source-inline-import-edge.test.mjs",
+          "name": "Source inline import exposes admission bounds and accepted center and edges only with complete real endpoints"
+        }
+      ]
+    },
+    "source-management.query-editor-touch-edges": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-query-edge.test.mjs",
+          "name": "Source query edges dispatch the real upper and lower outside-paint pixels"
+        },
+        {
+          "path": "tools/ui-contract/test/source-query-edge.test.mjs",
+          "name": "Source query edges reject clipped, ambiguous, focused and uncalibrated baselines"
+        },
+        {
+          "path": "tools/ui-contract/test/source-query-edge.test.mjs",
+          "name": "Source query outside taps require native focus and first Back keeps their opening"
+        },
+        {
+          "path": "tools/ui-contract/test/source-query-edge.test.mjs",
+          "name": "Source query center and enlarged-font edges use the actual painted response and real IME"
+        }
+      ]
+    },
+    "source-management.row-detect-offline": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/source-row-detect/public-source.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-offline-detect.test.mjs",
+          "name": "Offline Source Detect verifies the current raw definition, unique dispatch and same-row Core result"
+        },
+        {
+          "path": "tools/ui-contract/test/source-offline-detect.test.mjs",
+          "name": "Offline Source Detect production owner observes one admitted check and validates the Core report"
+        }
+      ]
+    },
+    "source-management.row-detect-offline-edge": {
+      "fixtures": ["tools/ui-contract/fixtures/source-row-detect/public-source.json"],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-offline-detect.test.mjs",
+          "name": "Offline Source Detect upper edge admits only the exact provider-free click and accepted same-row terminal"
+        }
+      ]
+    },
+    "source-management.row-action-targets": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/source-row-actions/public-source.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-row-action-targets.test.mjs",
+          "name": "source row actions bind native Login, Detect and category text to the exact unchecked public row"
+        },
+        {
+          "path": "tools/ui-contract/test/source-row-action-targets.test.mjs",
+          "name": "source row actions measure the actual bounded status vector and keep accessibility readback distinct"
+        },
+        {
+          "path": "tools/ui-contract/test/source-row-action-targets.test.mjs",
+          "name": "source row actions admit only the exact disabled public production row"
+        },
+        {
+          "path": "tools/ui-contract/test/source-row-action-targets.test.mjs",
+          "name": "source row actions alias only real buttons from the current public fixture row"
+        }
+      ]
+    },
+    "source-management.original-reconcile-touch-center": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control cases keep one exact center or top dispatch and never synthesize a post-click sample"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control owner admission binds the exact native point, branch, control, owner and generation"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control evidence rejects static, stale, foreign and duplicated probes without rewriting the condition"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control conditions distinguish unknown, inapplicable and applicable-but-undispatched states"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Actual Source owner emits one read-only admission on each normal recovery and Login path"
+        }
+      ]
+    },
+    "source-management.original-reconcile-touch-edge": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control cases keep one exact center or top dispatch and never synthesize a post-click sample"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control owner admission binds the exact native point, branch, control, owner and generation"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control evidence rejects static, stale, foreign and duplicated probes without rewriting the condition"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control conditions distinguish unknown, inapplicable and applicable-but-undispatched states"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Actual Source owner emits one read-only admission on each normal recovery and Login path"
+        }
+      ]
+    },
+    "source-management.original-continue-touch-center": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control cases keep one exact center or top dispatch and never synthesize a post-click sample"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control owner admission binds the exact native point, branch, control, owner and generation"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control evidence rejects static, stale, foreign and duplicated probes without rewriting the condition"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control conditions distinguish unknown, inapplicable and applicable-but-undispatched states"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Actual Source owner emits one read-only admission on each normal recovery and Login path"
+        }
+      ]
+    },
+    "source-management.original-continue-touch-edge": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control cases keep one exact center or top dispatch and never synthesize a post-click sample"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control owner admission binds the exact native point, branch, control, owner and generation"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control evidence rejects static, stale, foreign and duplicated probes without rewriting the condition"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control conditions distinguish unknown, inapplicable and applicable-but-undispatched states"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Actual Source owner emits one read-only admission on each normal recovery and Login path"
+        }
+      ]
+    },
+    "source-management.unknown-reconcile-touch-center": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control cases keep one exact center or top dispatch and never synthesize a post-click sample"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control owner admission binds the exact native point, branch, control, owner and generation"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control evidence rejects static, stale, foreign and duplicated probes without rewriting the condition"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control conditions distinguish unknown, inapplicable and applicable-but-undispatched states"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Actual Source owner emits one read-only admission on each normal recovery and Login path"
+        }
+      ]
+    },
+    "source-management.unknown-reconcile-touch-edge": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control cases keep one exact center or top dispatch and never synthesize a post-click sample"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control owner admission binds the exact native point, branch, control, owner and generation"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control evidence rejects static, stale, foreign and duplicated probes without rewriting the condition"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control conditions distinguish unknown, inapplicable and applicable-but-undispatched states"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Actual Source owner emits one read-only admission on each normal recovery and Login path"
+        }
+      ]
+    },
+    "source-management.row-login-touch-center": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/source-row-actions/public-source.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control cases keep one exact center or top dispatch and never synthesize a post-click sample"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control owner admission binds the exact native point, branch, control, owner and generation"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control evidence rejects static, stale, foreign and duplicated probes without rewriting the condition"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control conditions distinguish unknown, inapplicable and applicable-but-undispatched states"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Actual Source owner emits one read-only admission on each normal recovery and Login path"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source Login accepts stable aliases across legal native id and geometry changes but rejects a visible IME"
+        }
+      ]
+    },
+    "source-management.row-login-touch-edge": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/source-row-actions/public-source.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control cases keep one exact center or top dispatch and never synthesize a post-click sample"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control owner admission binds the exact native point, branch, control, owner and generation"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control evidence rejects static, stale, foreign and duplicated probes without rewriting the condition"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source control conditions distinguish unknown, inapplicable and applicable-but-undispatched states"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Actual Source owner emits one read-only admission on each normal recovery and Login path"
+        },
+        {
+          "path": "tools/ui-contract/test/source-control-touch.test.mjs",
+          "name": "Source Login accepts stable aliases across legal native id and geometry changes but rejects a visible IME"
+        }
+      ]
+    },
+    "source-management.filter-empty-clear-edge": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 1 public sources.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-filter-clear-edge.test.mjs",
+          "name": "source clear upper edge uses only the full scoped native Button and actual command"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-clear-edge.test.mjs",
+          "name": "source clear upper edge proves one accepted reset and the original public first row"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-clear-edge.test.mjs",
+          "name": "source clear upper edge withholds proof for stale dispatch or prior owner and fails a credible unchanged empty view"
+        }
+      ]
+    },
+    "source-management.import-research-status-action-edge": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/source-status-action/reader-phase1-status-research-source.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-status-action.test.mjs",
+          "name": "source Re-search upper edge preserves the confirmed import and exactly one retained-query return"
+        }
+      ]
+    },
+    "source-management.read-retry-edge": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source.test.mjs",
+          "name": "source read retry requires a causal native click, a new read and its matching terminal surface"
+        }
+      ]
+    },
+    "source-management.retained-read-retry-center": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-retained-read.test.mjs",
+          "name": "source retained refresh positions require an independent reopened failure and exact new retry generation"
+        }
+      ]
+    },
+    "source-management.retained-read-retry-edge": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-retained-read.test.mjs",
+          "name": "source retained refresh positions require an independent reopened failure and exact new retry generation"
+        }
+      ]
+    },
+    "source-management.original-recovery-expand-touch-edge": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery Expand edge proves the original and unknown native touches and their current local expansion"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery Expand edge keeps the folded condition pending when the observed endpoint is missing"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery Expand edge rejects stale notices, wrong commands and a reply without native body expansion"
+        }
+      ]
+    },
+    "source-management.unknown-recovery-expand-touch-edge": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery Expand edge proves the original and unknown native touches and their current local expansion"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery Expand edge keeps the folded condition pending when the observed endpoint is missing"
+        },
+        {
+          "path": "tools/ui-contract/test/source-recovery-body.test.mjs",
+          "name": "Source recovery Expand edge rejects stale notices, wrong commands and a reply without native body expansion"
+        }
+      ]
+    },
+    "source-management.read-retry": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source.test.mjs",
+          "name": "source read retry requires a causal native click, a new read and its matching terminal surface"
+        }
+      ]
+    },
+    "source-management.retained-read-failure": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-transient-status-text.test.mjs",
+          "name": "source transient status binds actual visible glyphs to current import and retained failure"
+        },
+        {
+          "path": "tools/ui-contract/test/source-transient-status-text.test.mjs",
+          "name": "source transient status preserves persistent glyphs when Toast is expired, absent, or borrowed"
+        },
+        {
+          "path": "tools/ui-contract/test/source-transient-status-text.test.mjs",
+          "name": "source transient status preserves proved glyph clipping and refuses a synthetic lifetime"
+        },
+        {
+          "path": "tools/ui-contract/test/source-transient-status-text.test.mjs",
+          "name": "source transient capture permits only its measured lifecycle through capture and persistent research"
+        },
+        {
+          "path": "tools/ui-contract/test/source-retained-read.test.mjs",
+          "name": "source read surface glyphs measure retained refresh on its original verified failed opening"
+        },
+        {
+          "path": "tools/ui-contract/test/source-retained-read.test.mjs",
+          "name": "source retained read failure measures the refresh control only on the eligible retained opening"
+        }
+      ]
+    },
+    "source-management.combined-filter-reset": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 1 public tools return sources.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source.test.mjs",
+          "name": "source combined filter reset requires all four active filters before native clear"
+        },
+        {
+          "path": "tools/ui-contract/test/source.test.mjs",
+          "name": "source combined filter reset adds native dimensions alongside exact owner acceptance"
+        },
+        {
+          "path": "tools/ui-contract/test/source.test.mjs",
+          "name": "source register admits current B3 only after the four-way reset with its causal native samples"
+        }
+      ]
+    },
+    "source-management.layout-status-glyph-tail-320-font-200": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-filter-tail-text.test.mjs",
+          "name": "source status tail text proves each fully visible label through real drag witnesses at both measured boundaries"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-tail-text.test.mjs",
+          "name": "source status tail text preserves glyph failures and keeps unobserved middle roles incomplete"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-tail-text.test.mjs",
+          "name": "source status tail text requires the current projection, true system font and exact original drag"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-tail-text.test.mjs",
+          "name": "source status tail text producer scopes post-layout reads to the current opening and latest settle"
+        }
+      ]
+    },
+    "source-management.layout-status-glyph-tail-366-font-200": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-filter-tail-text.test.mjs",
+          "name": "source status tail text proves each fully visible label through real drag witnesses at both measured boundaries"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-tail-text.test.mjs",
+          "name": "source status tail text preserves glyph failures and keeps unobserved middle roles incomplete"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-tail-text.test.mjs",
+          "name": "source status tail text requires the current projection, true system font and exact original drag"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-tail-text.test.mjs",
+          "name": "source status tail text producer scopes post-layout reads to the current opening and latest settle"
+        }
+      ]
+    },
+    "source-management.layout-category-glyph-tail-320-font-200": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-filter-tail-text.test.mjs",
+          "name": "source category tail text proves all seven labels in the measured lane and terminal matrix sample"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-tail-text.test.mjs",
+          "name": "source category tail text distinguishes a too-wide glyph range from an unobserved role"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-tail-text.test.mjs",
+          "name": "source status tail text producer scopes post-layout reads to the current opening and latest settle"
+        }
+      ]
+    },
+    "source-management.layout-category-glyph-tail-366-font-200": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-filter-tail-text.test.mjs",
+          "name": "source category tail text proves all seven labels in the measured lane and terminal matrix sample"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-tail-text.test.mjs",
+          "name": "source category tail text distinguishes a too-wide glyph range from an unobserved role"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-tail-text.test.mjs",
+          "name": "source status tail text producer scopes post-layout reads to the current opening and latest settle"
+        }
+      ]
+    },
+    "source-management.layout-expanded": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 1 public row toggle source.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation expanded proves row and fixed glyphs at its measured native sample"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation aligns the authored footer carrier on the physical pixel grid"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation expanded needs the actual native width at the production boundary"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation surface applies only to a full capture of the current selected width and font"
+        }
+      ]
+    },
+    "source-management.footer-tools-return": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 1 public sources.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-tools-return.test.mjs",
+          "name": "source Tools return admits restored footer focus only on the dispatched native footer entry"
+        }
+      ]
+    },
+    "source-management.tool-return-filters": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 1 public tools return sources.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-tools-return.test.mjs",
+          "name": "source Tools return binds both route generations, the filtered baseline and actual row offset"
+        },
+        {
+          "path": "tools/ui-contract/test/source-tools-return.test.mjs",
+          "name": "source Tools return rejects resetting any active filter and same-length query substitutions"
+        },
+        {
+          "path": "tools/ui-contract/test/source-tools-return.test.mjs",
+          "name": "source Tools return distinguishes trusted anchor loss from missing causal observations"
+        },
+        {
+          "path": "tools/ui-contract/test/source-tools-return.test.mjs",
+          "name": "source Tools return admits focus only on the live native button in the original entry"
+        },
+        {
+          "path": "tools/ui-contract/test/source.test.mjs",
+          "name": "source register admits S8 only with the full Tools round trip and current native return proofs"
+        }
+      ]
+    },
+    "bookshelf.search-source-load-error": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "search source load error v2 requires a terminal projection from the uniquely opened owner"
+        }
+      ]
+    },
+    "bookshelf.search-edit-resubmit-back": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search credits only a uniquely accepted Stop for the right query retaining its public row"
+        },
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search only credits a late A response after an audited discard within query B"
+        },
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search late A condition starts at B acceptance and detects an earlier stale publication"
+        },
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search late A result evidence distinguishes received books from an ordinary worker end"
+        },
+        {
+          "path": "tools/ui-contract/test/evidence.test.mjs",
+          "name": "Phase 1 mixed coverage cannot use an inapplicable run to replace an applied functional check"
+        },
+        {
+          "path": "tools/ui-contract/test/evidence.test.mjs",
+          "name": "Phase 1 candidate coverage combines only compatible complete scenarios across exact layout groups"
+        }
+      ]
+    },
+    "bookshelf.search-detail-return": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search.test.mjs",
+          "name": "Phase 1 search credits only a uniquely accepted Stop for the right query retaining its public row"
+        },
+        {
+          "path": "tools/ui-contract/test/search-detail-return.test.mjs",
+          "name": "search detail return requires the actually visible book and title"
+        },
+        {
+          "path": "tools/ui-contract/test/search-detail-return.test.mjs",
+          "name": "search detail return binds the stopped query to a new native viewport and retains its public row privately"
+        },
+        {
+          "path": "tools/ui-contract/test/search-detail-return.test.mjs",
+          "name": "search detail return rejects same-title replacement, wrong mounted list, wrong row mount and native displacement"
+        },
+        {
+          "path": "tools/ui-contract/test/search-detail-return.test.mjs",
+          "name": "search detail return separates route and result-owner contradictions from missing evidence"
+        },
+        {
+          "path": "tools/ui-contract/test/search-detail-return.test.mjs",
+          "name": "search detail return preserves the scope of the original v2 anchor verdict"
+        }
+      ]
+    },
+    "bookshelf.search-detail-scrolled-return": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/search-detail-scroll/移窗样本 01.txt",
+        "tools/ui-contract/fixtures/search-detail-scroll/移窗样本 02.txt",
+        "tools/ui-contract/fixtures/search-detail-scroll/移窗样本 03.txt",
+        "tools/ui-contract/fixtures/search-detail-scroll/移窗样本 04.txt",
+        "tools/ui-contract/fixtures/search-detail-scroll/移窗样本 05.txt",
+        "tools/ui-contract/fixtures/search-detail-scroll/移窗样本 06.txt",
+        "tools/ui-contract/fixtures/search-detail-scroll/移窗样本 07.txt",
+        "tools/ui-contract/fixtures/search-detail-scroll/终点移窗样本.txt",
+        "entry/src/main/resources/rawfile/reader-public-fixture-scroll-book-01-v1.txt",
+        "entry/src/main/resources/rawfile/reader-public-fixture-scroll-book-02-v1.txt",
+        "entry/src/main/resources/rawfile/reader-public-fixture-scroll-book-03-v1.txt",
+        "entry/src/main/resources/rawfile/reader-public-fixture-scroll-book-04-v1.txt",
+        "entry/src/main/resources/rawfile/reader-public-fixture-scroll-book-05-v1.txt",
+        "entry/src/main/resources/rawfile/reader-public-fixture-scroll-book-06-v1.txt",
+        "entry/src/main/resources/rawfile/reader-public-fixture-scroll-book-07-v1.txt",
+        "entry/src/main/resources/rawfile/reader-public-fixture-scroll-book-08-v1.txt"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search-detail-return.test.mjs",
+          "name": "search detail return requires the actually visible book and title"
+        },
+        {
+          "path": "tools/ui-contract/test/search-detail-return.test.mjs",
+          "name": "search scrolled detail joins the real swipe to the non-first-screen anchor and rejects top-only evidence"
+        },
+        {
+          "path": "tools/ui-contract/test/search-detail-return.test.mjs",
+          "name": "search scrolled detail action requires an actual off-start row on the current native viewport"
+        },
+        {
+          "path": "tools/ui-contract/test/search-detail-return.test.mjs",
+          "name": "search scrolled detail observes only the actual user scroll stop owned by the visible list"
+        },
+        {
+          "path": "tools/ui-contract/test/search-detail-return.test.mjs",
+          "name": "search scrolled detail public corpus goes through the real local query and relevance owner with a deterministic tail"
+        },
+        {
+          "path": "tools/ui-contract/test/search-detail-return.test.mjs",
+          "name": "search scrolled detail binds hidden recovery before explicit native editor tap"
+        },
+        {
+          "path": "tools/ui-contract/test/search-detail-return.test.mjs",
+          "name": "search scrolled detail seed imports only its exact ordered public corpus and resumes a bounded prefix"
+        }
+      ]
+    },
+    "source-management.layout-width-320": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation aligns the authored footer carrier on the physical pixel grid"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text rejects an older sweep after a same-read projection update"
+        },
+        {
+          "path": "tools/ui-contract/test/source-native-text-sampler.test.mjs",
+          "name": "source text sampler retires a queued sweep when the same opening publishes newer labels"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text requires effective default system font and fixed labels at 320vp"
+        }
+      ]
+    },
+    "source-management.layout-font-default": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 1 public row toggle source.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation aligns the authored footer carrier on the physical pixel grid"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text rejects an older sweep after a same-read projection update"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text binds the four remaining normal window matrix cells"
+        },
+        {
+          "path": "tools/ui-contract/test/source-native-text-sampler.test.mjs",
+          "name": "source text sampler retires a queued sweep when the same opening publishes newer labels"
+        }
+      ]
+    },
+    "source-management.layout-width-320-font-intermediate": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 1 public row toggle source.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation aligns the authored footer carrier on the physical pixel grid"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text rejects an older sweep after a same-read projection update"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text binds the four remaining normal window matrix cells"
+        },
+        {
+          "path": "tools/ui-contract/test/source-native-text-sampler.test.mjs",
+          "name": "source text sampler retires a queued sweep when the same opening publishes newer labels"
+        }
+      ]
+    },
+    "source-management.layout-width-320-font-160": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 1 public row toggle source.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation aligns the authored footer carrier on the physical pixel grid"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text rejects an older sweep after a same-read projection update"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text binds the four remaining normal window matrix cells"
+        },
+        {
+          "path": "tools/ui-contract/test/source-native-text-sampler.test.mjs",
+          "name": "source text sampler retires a queued sweep when the same opening publishes newer labels"
+        }
+      ]
+    },
+    "source-management.layout-width-320-font-200": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/Reader Phase 1 public row toggle source.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation aligns the authored footer carrier on the physical pixel grid"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text rejects an older sweep after a same-read projection update"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text binds the four remaining normal window matrix cells"
+        },
+        {
+          "path": "tools/ui-contract/test/source-native-text-sampler.test.mjs",
+          "name": "source text sampler retires a queued sweep when the same opening publishes newer labels"
+        }
+      ]
+    },
+    "source-management.layout-width-320-font-maximum": {
+      "fixtures": ["tools/ui-contract/fixtures/Reader Phase 1 public row toggle source.json"],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation aligns the authored footer carrier on the physical pixel grid"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text rejects an older sweep after a same-read projection update"
+        },
+        {
+          "path": "tools/ui-contract/test/source-native-text-sampler.test.mjs",
+          "name": "source text sampler retires a queued sweep when the same opening publishes newer labels"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text requires effective system font readback in declared cases"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text rejects observed truncation and clipping while keeping geometry independently usable"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text binds both fixed first-row labels at the actual 320vp and 1.45 branch"
+        },
+        {
+          "path": "tools/ui-contract/test/source-adaptation.test.mjs",
+          "name": "source adaptation text rejects clipped row labels and target reuse under a different row"
+        }
+      ]
+    },
+    "reading.control-more-popup": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-effects.test.mjs",
+          "name": "Popup requires a native stable projection across its owner path and Back"
+        }
+      ]
+    },
+    "reading.control-font-reorder": {
+      "contractCases": [
+        {
+          "path": "tools/test-reader-control-measurement-lifecycle.mjs",
+          "name": "font-reorder-delayed-prepared-display"
+        },
+        {
+          "path": "tools/test-reader-control-measurement-lifecycle.mjs",
+          "name": "captured-interaction"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-effects.test.mjs",
+          "name": "font release starts one settle toward the requested order while Host admission is pending"
+        },
+        {
+          "path": "tools/ui-contract/test/control-effects.test.mjs",
+          "name": "font reorder requires independent native slot exchange and restoration"
+        },
+        {
+          "path": "tools/ui-contract/test/control-effects.test.mjs",
+          "name": "font reorder landed drag stays inside the adjacent real slot and leaves measurable release motion"
+        }
+      ]
+    },
+    "reading.control-directory-scroll": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-effects.test.mjs",
+          "name": "directory case requires an ordered swipe trace and movement in the same native List"
+        },
+        {
+          "path": "tools/ui-contract/test/control-effects.test.mjs",
+          "name": "directory scroll binds the owner offset to independently moved native chapter rows"
+        }
+      ]
+    },
+    "source-management.group-options-scroll": {
+      "fixtures": [
+        "tools/ui-contract/fixtures/source-group-options-scroll/public-sources.json"
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-group-options-scroll.test.mjs",
+          "name": "source group option glyphs bind native public head and tail to retained menu and system font"
+        },
+        {
+          "path": "tools/ui-contract/test/source-group-options-scroll.test.mjs",
+          "name": "source group option glyph producer retires detached and superseded frames"
+        },
+        {
+          "path": "tools/ui-contract/test/source-group-options-scroll.test.mjs",
+          "name": "source group options scroll proves real movement and selects the same opening’s public tail"
+        }
+      ]
+    },
+    "source-management.native-focus-and-semantics": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-native-focus.test.mjs",
+          "name": "Source native editor and group focus prove actual native endpoints and preserve label and utterance gaps"
+        },
+        {
+          "path": "tools/ui-contract/test/source-native-focus.test.mjs",
+          "name": "Source native keyboard dispatch protects the current focus and rejects stale or missing group outcomes"
+        },
+        {
+          "path": "tools/ui-contract/test/source-native-focus.test.mjs",
+          "name": "Source native semantic states distinguish explicit mismatch, absent field, and unrelated cases"
+        }
+      ]
+    },
+    "source-management.group-option-touch-edges": {
+      "fixtures": ["tools/ui-contract/fixtures/Reader Phase 1 public sources.json"],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-group-option-edge.test.mjs",
+          "name": "source group trigger edge opens exactly one anchored native panel in the unchanged Source projection"
+        },
+        {
+          "path": "tools/ui-contract/test/source-group-option-edge.test.mjs",
+          "name": "source group option current center closes the exact live panel once while preserving scope and list"
+        },
+        {
+          "path": "tools/ui-contract/test/source-group-option-edge.test.mjs",
+          "name": "source group option edge resolves the real Scroll and rechecks both native commands"
+        },
+        {
+          "path": "tools/ui-contract/test/source-group-option-edge.test.mjs",
+          "name": "source group option edge rejects a 42vp inner Button, a clipped row and ambiguous ancestry"
+        },
+        {
+          "path": "tools/ui-contract/test/source-group-option-edge.test.mjs",
+          "name": "source group option edge distinguishes selecting the current row from changing group"
+        },
+        {
+          "path": "tools/ui-contract/test/source-group-option-edge.test.mjs",
+          "name": "source group option edge records ignored and stuck actions but rejects fabricated clicks"
+        },
+        {
+          "path": "tools/ui-contract/test/source-filter-edge.test.mjs",
+          "name": "source filter edge uses opposite ends of the real native Button and rechecks the click journal"
+        }
+      ]
+    },
+    "bookshelf.search-source-load-retry": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/search-source-load-retry.test.mjs",
+          "name": "search source list retry publishes one fresh read on the same opening and preserves history"
+        },
+        {
+          "path": "tools/ui-contract/test/search-source-load-retry.test.mjs",
+          "name": "search source list retry publishes known empty and disabled separately from a repeated failure"
+        },
+        {
+          "path": "tools/ui-contract/test/search-source-load-retry.test.mjs",
+          "name": "search source list retry rejects closed and query-superseded completions"
+        },
+        {
+          "path": "tools/ui-contract/test/search-source-load-retry.test.mjs",
+          "name": "search source list retry forces source.list beyond the cache and prevents a late older read from republishing it"
+        },
+        {
+          "path": "tools/ui-contract/test/search-source-load-retry.test.mjs",
+          "name": "search source list retry uses the actual page action without opening acquisition or accepting retired controls"
+        },
+        {
+          "path": "tools/ui-contract/test/search-source-load-retry.test.mjs",
+          "name": "search source list retry qualifies the actual diagnostic owner only for the current input publication"
+        },
+        {
+          "path": "tools/ui-contract/test/search-source-load-retry.test.mjs",
+          "name": "search source list retry evaluates all four owner-backed native endpoints and preserves measured keyboard state"
+        },
+        {
+          "path": "tools/ui-contract/test/search-source-load-retry.test.mjs",
+          "name": "search source list retry refuses stale transactions, an unrelated query and incomplete recovery evidence"
+        },
+        {
+          "path": "tools/ui-contract/test/search-source-load-retry.test.mjs",
+          "name": "search source list retry rejects extra reads and unusable recovery after the native tap"
+        },
+        {
+          "path": "tools/ui-contract/test/search-source-load-retry.test.mjs",
+          "name": "search source list retry will not dispatch on native occlusion or the other recovery branch"
+        }
+      ]
+    },
+    "source-management.captured-parent-roundtrip": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source-parent-roundtrip.test.mjs",
+          "name": "source captured parent follows the production Navigation owner through both Tools visits"
+        },
+        {
+          "path": "tools/ui-contract/test/source-parent-roundtrip.test.mjs",
+          "name": "source captured parent admits both native routes in one session with separate owners"
+        },
+        {
+          "path": "tools/ui-contract/test/source-parent-roundtrip.test.mjs",
+          "name": "source captured parent rejects wrong route, stale owner and duplicate accepted Back"
+        },
+        {
+          "path": "tools/ui-contract/test/source-parent-roundtrip.test.mjs",
+          "name": "source captured parent separates missing proof from trusted Source staying after Back"
+        },
+        {
+          "path": "tools/ui-contract/test/source.test.mjs",
+          "name": "source register admits S6 only when both captured parents have current full evidence"
+        }
+      ]
+    },
+    "reading.control-search-editor-back": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-effects.test.mjs",
+          "name": "Search IME Back preserves the same Full inline editor and its owner"
+        }
+      ]
+    },
+    "reading.control-search-result-ime-back": {
+      "fixtures": ["tools/ui-contract/fixtures/Reader Phase 0 公共测试书.txt"],
+      "contractCases": [
+        {
+          "path": "tools/test-reader-content-search-native-list.mjs",
+          "name": "quick-search-observation"
+        },
+        {
+          "path": "tools/test-reader-control-selection-transaction.mjs",
+          "name": "quick-search-selection-observation"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/layout.test.mjs",
+          "name": "reading Search aliases only the public fixture editor and first native result"
+        },
+        {
+          "path": "tools/ui-contract/test/control-effects.test.mjs",
+          "name": "Quick Search result effect keeps the current usable row through system Back and commits its real click"
+        },
+        {
+          "path": "tools/ui-contract/test/control-effects.test.mjs",
+          "name": "Quick Search result effect rejects known violations and preserves missing evidence"
+        }
+      ]
+    },
+    "reading.control-search-morph-back": {
+      "contractCases": [
+        {
+          "path": "tools/test-reader-content-search-native-list.mjs",
+          "name": "row-admission"
+        },
+        {
+          "path": "tools/test-reader-control-search-settings-content.mjs",
+          "name": "search-sdk"
+        }
+      ],
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "a Phase 1 rebase detects a coherently forged predecessor position and successor curve"
+        },
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "a Phase 1 rebase distinguishes native geometry, a rejected anchor and missing clock evidence"
+        },
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "a Phase 1 rebase admits the actual runtime projection from previously published ticks"
+        }
+      ]
+    },
+    "reading.control-autopage-launch-interrupted": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-input.test.mjs",
+          "name": "the bounded AutoPage initiation input measures the prior reader host and verifies both normal clicks"
+        },
+        {
+          "path": "tools/ui-contract/test/control-capsule.test.mjs",
+          "name": "an AutoPage initiation interruption proves the in-flight cut and an independently running playback owner"
+        }
+      ]
+    },
+    "reading.control-grabber-reversal": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-input.test.mjs",
+          "name": "reversal collection keeps Runner readbacks and dispatch adjacent and verifies dry isolation"
+        },
+        {
+          "path": "tools/ui-contract/test/grabber-reversal-runner.test.mjs",
+          "name": "independent Runner install preserves data and binds a fresh exact readback"
+        },
+        {
+          "path": "tools/ui-contract/test/runner-installed-metadata.test.mjs",
+          "name": "runner BMS projection proves the scoped feature and redacts private identities"
+        },
+        {
+          "path": "tools/ui-contract/test/runner-installed-metadata.test.mjs",
+          "name": "runner BMS projection proves only specific absence"
+        },
+        {
+          "path": "tools/ui-contract/test/evidence.test.mjs",
+          "name": "sealed grabber reversal replay reconstructs the current dispatch and rejects borrowed Runner evidence"
+        },
+        {
+          "path": "tools/ui-contract/test/grabber-reversal-runner.test.mjs",
+          "name": "independent Runner packaging checks its exact module and bundle-scoped Profile identity"
+        },
+        {
+          "path": "tools/ui-contract/test/control-input.test.mjs",
+          "name": "grabber reversal dispatch binds immutable native baselines and the one current Runner receipt"
+        },
+        {
+          "path": "tools/ui-contract/test/grabber-reversal-runner.test.mjs",
+          "name": "one frozen Reader run plans one bounded up-then-down interior path"
+        },
+        {
+          "path": "tools/ui-contract/test/grabber-reversal-runner.test.mjs",
+          "name": "the TestKit Runner rejects Reader as the test command bundle before dispatch"
+        },
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "grabber reversal receipt proves a single pointer and native retreat before UP"
+        },
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "grabber reversal receipt keeps unwitnessed input and missing observations unverified"
+        },
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "grabber reversal receipt preserves proved native and terminal violations"
+        }
+      ]
+    },
+    "reading.control-grabber-crossover": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-input.test.mjs",
+          "name": "grabber crossover dispatch binds complete same-window Quick and Full geometry to one normal drag"
+        },
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "grabber crossover receipt proves both held segments and a unique native Hidden commit"
+        },
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "grabber crossover receipt distinguishes incomplete input from definite crossover deviations"
+        }
+      ],
+      "contractCases": [
+        {
+          "path": "tools/test-reader-control-runtime.mjs",
+          "name": "panel-crossover"
+        }
+      ]
+    },
+    "reading.control-grabber-dismiss": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "grabber release runtime captures final UP without changing its motion"
+        },
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "grabber dismiss receipt proves held Quick visibility and one continuous native release to Hidden"
+        },
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "grabber dismiss receipt separates definite wrong paths and missing native observations"
+        }
+      ]
+    },
+    "reading.control-grabber-cancel": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "grabber Cancel receipt binds the held pointer, native motion and prior goal"
+        },
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "grabber Cancel receipt separates a proved UP from an unobserved cancellation"
+        },
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "grabber Cancel receipt retains proved deviations when observations are incomplete"
+        }
+      ]
+    },
+    "reading.control-grabber-drag": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "grabber release runtime captures final UP without changing its motion"
+        },
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "grabber release receipt proves UP continuity and strictly sampled native motion"
+        },
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "grabber release receipt refuses missing observations and uniformly slow frames"
+        },
+        {
+          "path": "tools/ui-contract/test/control-transition.test.mjs",
+          "name": "grabber release receipt preserves native and owner deviations alongside cadence gaps"
+        }
+      ]
+    },
+    "source-management.layout-filter": {
+      "checks": [
+        {
+          "path": "tools/ui-contract/test/source.test.mjs",
+          "name": "source register follows each causal action and sample to the original fixture"
+        },
+        {
+          "path": "tools/ui-contract/test/source-s5-registration.test.mjs",
+          "name": "S5 registration binds a complete distinct pair to one candidate and measured claim window"
+        },
+        {
+          "path": "tools/ui-contract/test/source-s5-registration.test.mjs",
+          "name": "S5 registration admits exact single-sample layout evidence with no synthetic sample ID"
+        },
+        {
+          "path": "tools/ui-contract/test/source-s5-registration.test.mjs",
+          "name": "S5 registration impact includes both members in the existing rule closure"
+        }
+      ]
+    }
+  }
+}

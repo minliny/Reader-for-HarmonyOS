@@ -4,9 +4,9 @@ import { readFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { boundedMembers } from './bounded-surface-sdk-probe.mjs';
 import { foundationControls, readerFoundationTokens } from './reader-foundation-control-probe.mjs';
-import { readerAppColor } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { readerAppColor } from '../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 
-const read=name=>readFileSync(new URL('../../entry/src/main/ets/features/common/'+name+'.ets',import.meta.url),'utf8');
+const read=(name,directory='ui/surfaces')=>readFileSync(new URL('../../entry/src/main/ets/'+directory+'/'+name+'.ets',import.meta.url),'utf8');
 const { root: sdk, require } = installedEtsCompiler();
 export function compileCardSpecs(source=read('ReaderCardSpecs')) {
  return pureModuleProbe(source,'ReaderCardSpecs.ets',readerFoundationTokens,['resolveReaderCardSpec']).resolveReaderCardSpec;
@@ -22,7 +22,10 @@ export function cardSdk({source=read('ReaderCard'),specSource=read('ReaderCardSp
  class StorageLinkedSimple extends ActualSimple {constructor(value,owner,name){super(name==='appThemeScheme'?scheme:value,owner,name);}}
  const deps={...foundation.dependencies,...readerFoundationTokens,readerAppColor,resolveReaderCardSpec,ObservedPropertySimplePU:StorageLinkedSimple};
  require(sdk+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('ReaderCard',new Set(['content']));
- const childSources={...foundation.hooks.childSources,ReaderCard:source,ReaderSectionHeading:read('ReaderSectionHeading'),ReaderRecoveryAction:read('ReaderRecoveryAction'),ReaderRecoveryNotice:read('ReaderRecoveryNotice')};
+ const childSources={...foundation.hooks.childSources,ReaderCard:source,
+  ReaderSectionHeading:read('ReaderSectionHeading','ui/controls'),
+  ReaderRecoveryAction:read('ReaderRecoveryAction','ui/feedback'),
+  ReaderRecoveryNotice:read('ReaderRecoveryNotice','ui/feedback')};
  const hooks={...foundation.hooks,childSources,mountChildren:true,lifecycleChildren:true,
   onChildUpdated(){properties.flush();}};
  const card=createReaderBuilderProbe(source,boundedMembers(source),deps,hooks);

@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import {
   ReaderDirectoryNavigationGateway, readerDirectoryScopeKey, decodeReaderDirectoryOpen, decodeReaderDirectoryPage,
   decodeReaderDirectoryTarget,
-  readerDirectoryAdmitRevision, readerDirectoryCollapsedIds, readerDirectoryToggleCollapsed,
-  readerDirectoryClearSessionState, openReaderDirectoryNavigation,
   backfillRetainedReaderDirectoryNavigation, readerDirectoryNoteMissingNavigation,
   readerDirectoryObserveMissingNavigation, readerDirectoryTakeMissingNavigation,
-} from '../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts';
+} from '../entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation.ts';
+import {
+  readerDirectoryAdmitRevision, readerDirectoryCollapsedIds, readerDirectoryToggleCollapsed,
+  readerDirectoryClearSessionState, openReaderDirectoryNavigation,
+} from './lib/reader-directory-navigation-session-probe.mjs';
 
 const group = { nodeId: 'g:1', depth: 1, title: '上卷', kind: 'group', hasChildren: true, expanded: true };
 const linked = { nodeId: 't:1', parentId: 'g:1', depth: 2, title: '卷首', kind: 'target',
@@ -79,9 +81,9 @@ assert.equal(calls.at(-1).params.limit, 256, 'page requests stay bounded');
 assert.deepEqual(await gateway.resolveTarget('book', 'view-a', 't:1', () => true),
   { chapterIndex: 3, chapterOffsetScalar: 7, positionScope: scope });
 assert.equal(calls.at(-1).params.nodeId, 't:1');
-assert.equal(await backfillRetainedReaderDirectoryNavigation(runtime, 'book', () => true), 'ready');
+assert.equal((await backfillRetainedReaderDirectoryNavigation(runtime, 'book', () => true)).status, 'ready');
 assert.equal(calls.at(-1).params.filePath, '/retained/book.source');
-assert.equal(await backfillRetainedReaderDirectoryNavigation(runtime, 'book', () => false), 'unavailable');
+assert.equal((await backfillRetainedReaderDirectoryNavigation(runtime, 'book', () => false)).status, 'unavailable');
 assert.equal(calls.filter(call => call.method === 'local_book.navigation.backfill.v1').length, 1,
   'cancelled book never starts a repair');
 let unavailableReason = '';
@@ -127,8 +129,16 @@ v2Reply = { ...identityV2, viewId:'v2-view', kind:'chapterStart', chapterIndex:3
 const startV2 = await v2Gateway.resolveTarget('book','v2-view','t:1');
 assert.equal(startV2.positionScope, undefined, 'uncached online chapter start does not invent body proof');
 assert.deepEqual(startV2.directoryTargetProof, proofV2);
-v2Reply = { ...v2Reply, directoryTargetProof:{...proofV2, chapterIndex:4} };
-await assert.rejects(() => v2Gateway.resolveTarget('book','v2-view','t:1'), /proof chapter changed/);
+assert.notEqual(startV2.directoryTargetProof, proofV2, 'decoded authority does not alias the Core response');
+for (const [changed, rejection] of [
+  [{sourceId:'source:b'}, /identity changed/], [{bookId:'other-book'}, /identity changed/],
+  [{catalogRevision:'stale'}, /identity changed/], [{structureRevision:'stale'}, /identity changed/],
+  [{nodeId:'t:other'}, /node changed/], [{chapterIndex:4}, /proof chapter changed/],
+  [{url:''}, /proof URL/], [{unrecognized:true}, /unexpected fields/],
+]) {
+  v2Reply = { ...v2Reply, directoryTargetProof:{...proofV2, ...changed} };
+  await assert.rejects(() => v2Gateway.resolveTarget('book','v2-view','t:1'), rejection);
+}
 v2Reply = { ...v2Reply, directoryTargetProof:proofV2 };
 v2Reply = { ...v2Reply, kind:'exact', chapterOffsetScalar:0, positionScope:{...scope, sourceId:'source:a'} };
 assert.equal((await v2Gateway.resolveTarget('book','v2-view','t:1')).positionScope.bodyVersion, 'body-v1',
@@ -139,7 +149,7 @@ assert.deepEqual(await new ReaderDirectoryNavigationGateway(runtime).open({sourc
  {status:'unavailable',reason:'unsupported'}, 'old Core online books stay flat without a v1 local call');
 console.log('reader directory v2 scope and target contracts passed');
 const { appendReadingSelectionContext, captureRemotePositionContext, decodeRemotePositionMigration } =
-  await import('../entry/src/main/ets/features/reading/RemoteReadingPositionMigration.ts');
+  await import('../entry/src/main/ets/features/reading/application/RemoteReadingPositionMigration.ts');
 const selection = captureRemotePositionContext({ anchors: [], directoryTargetProof: proofV2 });
 const selectionParams = {};
 appendReadingSelectionContext(selectionParams, selection);
@@ -155,11 +165,11 @@ assert.equal(exactParams.positionContext.anchors[0].offset, 0);
 assert.equal(exactParams.directoryTargetProof.nodeId, 't:1');
 console.log('directory selection uses independent immutable authority through deferred context');
 const txtCalls = [];
-assert.equal(await backfillRetainedReaderDirectoryNavigation({
+assert.equal((await backfillRetainedReaderDirectoryNavigation({
   supportsCoreCapability: () => true,
   retainedLocalBookSourcePath: () => assert.fail('TXT uses stored TOC and bodies, never reparses archive'),
   request: async (method, params) => { txtCalls.push({method, params}); return {data:{status:'ready'}}; },
-}, 'local:txt-sha', () => true, 'txt'), 'ready');
+}, 'local:txt-sha', () => true, 'txt')).status, 'ready');
 assert.deepEqual(txtCalls, [{method:'reading.directory.rules.prepare.v2', params:{sourceId:'local',bookId:'local:txt-sha'}}]);
 const scopedA = readerDirectoryScopeKey('source:a', 'same:book');
 const scopedB = readerDirectoryScopeKey('source', 'a:same:book');
@@ -168,7 +178,7 @@ readerDirectoryToggleCollapsed(scopedA, 'r', 'group');
 assert.deepEqual(readerDirectoryCollapsedIds(scopedB), [], 'another source never inherits folded node IDs');
 for (let index=0;index<9;index++) readerDirectoryAdmitRevision(readerDirectoryScopeKey('s', `book:${index}`),'r');
 assert.deepEqual(readerDirectoryCollapsedIds(scopedA), [], 'fold history is bounded to eight scoped books');
-const { readerDirectorySaveViewportAnchor, readerDirectoryViewportAnchor } = await import('../entry/src/main/ets/features/reading/ReaderDirectoryViewport.ts');
+const { readerDirectorySaveViewportAnchor, readerDirectoryViewportAnchor } = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryViewport.ts');
 readerDirectoryClearSessionState();
 readerDirectoryToggleCollapsed('fold-owner','r','group');
 for(let i=0;i<8;i++) readerDirectorySaveViewportAnchor({bookId:`viewport-${i}`,navigationRevision:'r',viewId:'v',nodeId:'n',visibleIndex:0,rowFraction:0});
@@ -185,27 +195,34 @@ for (const format of ['local', ' LOCAL ', ' TxT ']) {
     retainedLocalBookSourcePath: async () => { throw new Error('TXT must not read retained archive'); },
     request: async (method, params, options) => { requests.push({method,params,options}); return {data:{status:'ready'}}; },
   };
-  assert.equal(await backfillRetainedReaderDirectoryNavigation(txtRuntime,'production-txt',()=>current,format),'ready');
+  assert.equal((await backfillRetainedReaderDirectoryNavigation(txtRuntime,'production-txt',()=>current,format)).status, 'ready');
   assert.equal(requests[0].method,'reading.directory.rules.prepare.v2');
   assert.deepEqual(requests[0].params,{sourceId:'local',bookId:'production-txt'});
   current=false;
   assert.equal(requests[0].options.shouldCancel(),true);
-  assert.equal(await backfillRetainedReaderDirectoryNavigation(txtRuntime,'production-txt',()=>current,format),'unavailable');
+  assert.equal((await backfillRetainedReaderDirectoryNavigation(txtRuntime,'production-txt',()=>current,format)).status, 'unavailable');
   assert.equal(requests.length,1,'stale ownership does not dispatch');
   current=true;
   txtRuntime.request=async()=>{current=false;return {data:{status:'ready'}};};
-  assert.equal(await backfillRetainedReaderDirectoryNavigation(txtRuntime,'production-txt',()=>current,format),'unavailable',
+  assert.equal((await backfillRetainedReaderDirectoryNavigation(txtRuntime,'production-txt',()=>current,format)).status, 'unavailable',
     'late prepare success cannot escape its owner');
   current=true;
   txtRuntime.supportsCoreCapability=()=>false;
-  assert.equal(await backfillRetainedReaderDirectoryNavigation(txtRuntime,'production-txt',()=>current,format),'unavailable');
+  assert.equal((await backfillRetainedReaderDirectoryNavigation(txtRuntime,'production-txt',()=>current,format)).status, 'unavailable');
+}
+for (const reason of ['NoStructure', 'bodyMissingOrBudget']) {
+  const result = await backfillRetainedReaderDirectoryNavigation({
+    supportsCoreCapability: () => true,
+    request: async () => ({ data: { status: 'unavailable', reason } }),
+  }, 'production-txt', () => true, 'txt');
+  assert.deepEqual(result, { status: 'unavailable', reason }, 'TXT preserves the exact Core outcome');
 }
 for (const format of ['EPUB',' mobi ',' AZW3 ', 'kf8']) {
   const methods=[];
-  assert.equal(await backfillRetainedReaderDirectoryNavigation({
+  assert.equal((await backfillRetainedReaderDirectoryNavigation({
     retainedLocalBookSourcePath:async()=>'/retained/self-authored-book',
     request:async method=>{methods.push(method);return {data:{status:'ready',navigationRevision:'revision'}};},
-  },'archive',()=>true,format),'ready');
+  },'archive',()=>true,format)).status, 'ready');
   assert.deepEqual(methods,['local_book.navigation.backfill.v1'],'archive formats never route to TXT rules');
 }
 console.log('PASS local/TXT alias dispatch and cancellation preserve TXT body/rules path; EPUB/MOBI-family retain archive path');

@@ -11,9 +11,9 @@ return;
 const {readFileSync}=await import('node:fs');
 const {readerTypographyRoles}=await import('./lib/reader-typography-probe.mjs');
 const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');
-const failureSource=readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),'utf8');
+const failureSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),'utf8');
 function checkFailureCarrier(source){
- const actors=auditTypographyConsumers(source,'entry/src/main/ets/features/reading/LocalReadingExperience.ets').filter(n=>n.method==='readingFailureContent'&&n.kind==='Text');
+ const actors=auditTypographyConsumers(source,'entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets').filter(n=>n.method==='readingFailureContent'&&n.kind==='Text');
  const title=actors.filter(n=>n.text==="this.sourceSwitchFailureMessage.length > 0 ? '换源未完成' : '正文暂时无法显示'");
  const body=actors.filter(n=>n.text==='this.sourceSwitchFailureMessage.length > 0 ? this.sourceSwitchFailureMessage : this.failureHint');
  assert.equal(title.length,1,'one actual failure title');assert.equal(body.length,1,'one public failure hint; never diagnostic code');
@@ -30,7 +30,7 @@ const failureNative=(switchFailure,roles={})=>{
   Object.assign(owner,{appThemeScheme:'day',sourceId:'local',sourceSwitchFailureMessage:switchFailure?'换源请求失败':'',failureHint:'请重新载入正文',failureCode:'PRIVATE_DIAGNOSTIC_919',
     appearanceSnapshot:{activeTheme:'paper'},readerRecoveryView:{visible:false,canRetry:false},sourceSwitchScopeId:9,
     readingLayout:()=>({bodyWidth:()=>350,bodyHeight:()=>600,contentLeft:0,contentTop:0}),
-    retryReading(){},openReaderControl(){},onRetryFailedSourceSwitch(){},onDismissSourceSwitchFailure(){}});
+    readerInputIsCurrent:()=>true,retryReading(){},openReaderControl(){},onRetryFailedSourceSwitch(){},onDismissSourceSwitchFailure(){}});
   owner.readingFailureContent();
   const nodes=sdk.nodes(owner),title=nodes.find(n=>n.type==='Text'&&n.create===(switchFailure?'换源未完成':'正文暂时无法显示')),
     body=nodes.find(n=>n.type==='Text'&&n.create===(switchFailure?'换源请求失败':'请重新载入正文'));

@@ -20,7 +20,7 @@ let cleanupDurableFixtures;
 try {
 if(selectedCase==='preview-request'){
  const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');const {readFileSync}=await import('node:fs');
- const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderReplaceQuickGateway.ts',import.meta.url),'utf8');const {ts}=installedEtsCompiler();
+ const source=readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReaderReplaceQuickGateway.ts',import.meta.url),'utf8');const {ts}=installedEtsCompiler();
  const emitted=ts.transpileModule(source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});assert.deepEqual(emitted.diagnostics,[]);
  const exports={};new Function('exports','errorMessageOf',emitted.outputText)(exports,error=>error.message);
  const calls=[],runtime={request:async(method,params)=>{calls.push({method,params});return{data:{...params,chapterTitle:'chapter',before:'old',after:'new',changed:true,truncated:false,storedRuleCount:3,enabledRuleCount:3}};}};
@@ -33,7 +33,7 @@ console.log(JSON.stringify({kind:'reader-existing-tool-evidence',...durable.dura
 const { readerReplaceSdkFixture, readerControlReplaceDraftParams } = await import('./lib/reader-replace-legacy-sdk-probe.mjs');
 const actualSdk = await readerReplaceSdkFixture();
 const ReaderControlReplaceGateway = actualSdk.Full, ReaderControlReplaceGatewayError = actualSdk.FullError;
-const { createReaderControlReplaceDraft } = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
+const { createReaderControlReplaceDraft } = await import('../entry/src/main/ets/features/reading/presentation/ReaderControlReplaceState.ts');
 const { BookRequestNotDispatchedError } = await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
 const rule = (id) => ({ id, order: id, name: `规则${id}`, pattern: 'old', replacement: 'new', group: 'g',
   scope: 'book', excludeScope: 'skip', scopeTitle: true, scopeSource: true, scopeContent: true,
@@ -87,9 +87,8 @@ runtime.request = async (method, params = {}, options = {}) => {
 };
 let gateway = new ReaderControlReplaceGateway(runtime);
 const all = await gateway.loadRules(() => current);
-if(selectedCase==='crud')assert.deepEqual(all.map(r => r.id), [1,2,3,4,5]);
+if(selectedCase==='crud')assert.deepEqual(all.map(r => r.id), [1,2,3,4,5], 'Quick and Full load the same canonical rows');
 assert.equal(all[0].scopeSource, true);
-if(selectedCase==='crud')assert.deepEqual((await gateway.load()).rules.map(r=>r.id),[1,2,3],'legacy Quick facade stays bounded');
 const original = all[0];
 let draft = createReaderControlReplaceDraft(original);
 let count=calls.length;

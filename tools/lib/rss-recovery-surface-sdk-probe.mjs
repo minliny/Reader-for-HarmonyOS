@@ -14,7 +14,7 @@ export function rssRecoverySurfaceSdk(options={}) {
   Object.assign(sdk.childSources,controls.hooks.childSources);sdk.hooks.lifecycleChildren=true;
   const flush=sdk.properties.flush;sdk.properties.flush=()=>{flush();controls.properties.flush();};
  }
- const source=readFileSync(new URL('../../entry/src/main/ets/features/rss/RssOriginalRecoverySurface.ets',import.meta.url),'utf8');
+ const source=readFileSync(new URL('../../entry/src/main/ets/features/rss/ui/RssOriginalRecoverySurface.ets',import.meta.url),'utf8');
  sdk.childSources.RssOriginalRecoverySurface=source;
  sdk.deps.RssOriginalRecoverySurface=createReaderBuilderProbe(source,boundedMembers(source),sdk.deps,sdk.hooks).Component;
  return sdk;

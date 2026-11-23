@@ -1,26 +1,21 @@
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions = {"index-admission": {"description": "实际Index readable admission/membership stale拒绝", "resources": []}, "stage-recovery": {"description": "真实Host abandoned stages/hash完整性假文件端口", "resources": []}, "import-finalize": {"description": "实际parse/persist/add lostACK与确定拒绝资产归属", "resources": []}};
+const definitions = {"index-admission": {"description": "实际Entry/Detail owner admission/membership stale拒绝", "resources": []}, "stage-recovery": {"description": "真实Host abandoned stages/hash完整性假文件端口", "resources": []}, "import-finalize": {"description": "实际parse/persist/add lostACK与确定拒绝资产归属", "resources": []}};
 for (const id of selectContractCases(definitions)) {
   await runSelectedCase(id);
   recordContractCasePass(id);
 }
 async function runSelectedCase(selectedCase) {
 const { compileHost, setRuntime } = await import('./lib/reading-entry-owner-probe.mjs');
-const {readableAdmissionFixture} = await import('./lib/bookshelf-readable-admission-probe.mjs');
+const {readingEntryActionFixture,detailAdmissionFixture} = await import('./lib/reading-entry-action-fixture.mjs');
 const {ReaderStartupContentOwner} = await import('../entry/src/main/ets/app/ReaderStartupContentOwner.ts');
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { registerHooks, stripTypeScriptTypes } = await import('node:module');
 const { createHash } = await import('node:crypto');
-const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const { ReaderStartupTrace } = await import('../entry/src/main/ets/app/ReaderStartupTrace.ts');
 
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
 const {ReaderCoreRequestError}=await import('../entry/vendor/core-harmony/sdk/reader_core.ts');
-const readingEvidence=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
-const readingAdmission=await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
-const readingContract=await import('../entry/src/main/ets/features/reading/RemoteReadingContract.ts');
-const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
 const read=p=>readFileSync(new URL('../'+p,import.meta.url),'utf8');
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};};
 const tick=()=>new Promise(resolve=>setTimeout(resolve,0));
@@ -32,44 +27,44 @@ function method(source,name){
 const index=read('entry/src/main/ets/pages/Index.ets');
 if(selectedCase==='index-admission') {
 for(const fails of [false,true]){
- const pending=deferred();const f=readableAdmissionFixture({add:()=>pending.promise});
- f.page.addDetailBook();assert.equal(f.page.shelfOperation.removalKey,'','pending add cannot block reading a different book');
- assert.equal(f.snapshot().adding,true);f.page.detailBook=undefined;
+ const pending=deferred();const f=detailAdmissionFixture({add:()=>pending.promise});
+ f.detail.request(f.detail.identity());assert.equal(f.mutations.snapshot.removalKey,'','pending add cannot block reading a different book');
+ assert.equal(f.snapshot().adding,true);f.state.book=undefined;
  if(fails)pending.reject(Error('synthetic'));else pending.resolve({data:{sourceId:'s',bookId:'b',created:true,addedAt:1}});
- await tick();const snapshot=f.page.bookshelfHost.readable(f.runtime).find('s','b');
- assert.equal(f.page.shelfOperation.removalKey,'');assert.equal(snapshot.adding,fails,'unknown admission stays cancellable without blind replay');
- assert.equal(f.page.refreshes,0,'a stale add never refreshes a different page');assert.equal(f.notices.length,0);
+ await tick();const snapshot=f.host.readable(f.runtime).find('s','b');
+ assert.equal(f.mutations.snapshot.removalKey,'');assert.equal(snapshot.adding,fails,'unknown admission stays cancellable without blind replay');
+ assert.equal(f.state.refreshes,0,'a stale add never refreshes a different page');assert.equal(f.notices.length,0);
  assert.equal(snapshot.message.includes('synthetic'),fails);
 }
 for(const outcome of ['cancelled','already-saved','failure','other-book']){
  const addition=deferred(),cancellation=deferred(),lookup=deferred();
- const f=readableAdmissionFixture({add:()=>addition.promise,cancel:()=>cancellation.promise,lookup:()=>lookup.promise});
- f.page.addDetailBook();f.page.cancelDetailBookAddition();f.page.cancelDetailBookAddition();
+ const f=detailAdmissionFixture({add:()=>addition.promise,cancel:()=>cancellation.promise,lookup:()=>lookup.promise});
+ f.detail.request(f.detail.identity());f.detail.cancel(f.detail.identity());f.detail.cancel(f.detail.identity());
  assert.equal(f.calls.filter(c=>c[0]==='cancel').length,1);
- if(outcome==='other-book'){f.page.detailBook={sourceId:'s',bookId:'next'};f.page.navigationGeneration++;}
+ if(outcome==='other-book'){f.state.book={sourceId:'s',bookId:'next'};f.state.generation++;}
  if(outcome==='failure')cancellation.reject(Error('uncertain'));else cancellation.resolve();
  lookup.resolve(outcome==='already-saved'?{sourceId:'s',bookId:'b',title:'书',author:'作者',addedAt:1,sortIndex:0}:null);
  await tick();addition.reject(Error('cancelled admission'));await tick();
- const snapshot=f.page.bookshelfHost.readable(f.runtime).find('s','b');
- if(outcome==='other-book'){assert.equal(f.page.detailInBookshelf,false);assert.equal(f.page.refreshes,0);}
+ const snapshot=f.host.readable(f.runtime).find('s','b');
+ if(outcome==='other-book'){assert.equal(f.state.inBookshelf,false);assert.equal(f.state.refreshes,0);}
  else if(outcome==='failure'){assert.equal(snapshot.adding,true);assert.equal(snapshot.cancelling,false);assert.match(snapshot.message,/取消状态未确认/);}
- else{assert.equal(snapshot.adding,false);assert.equal(f.page.detailInBookshelf,outcome==='already-saved');assert.equal(f.page.refreshes,outcome==='already-saved'?1:0);assert.equal(snapshot.message,outcome==='already-saved'?'':'已取消加入书架');}
+ else{assert.equal(snapshot.adding,false);assert.equal(f.state.inBookshelf,outcome==='already-saved');assert.equal(f.state.refreshes,outcome==='already-saved'?1:0);assert.equal(snapshot.message,outcome==='already-saved'?'':'已取消加入书架');}
  assert.equal(snapshot.receipt,undefined,'readback is membership, never this add ACK');
 }
 const entry=stripTypeScriptTypes(read('entry/src/main/ets/entryability/EntryAbility.ets').replace(/^import[\s\S]*?;\n/gm,''));
 let setups=[];const coordinator={install:()=>{const p=deferred();setups.push(p);return p.promise;},detach(){}};
 const Entry=new Function('UIAbility','ReaderWindowCoordinator','ReaderStartupTrace','hilog','ReaderStartupContentOwner',entry.replace('export default class','return class'))(class{},coordinator,ReaderStartupTrace,{error(){}},ReaderStartupContentOwner);
-const stage=()=>({loads:0,getMainWindowSync:()=>({}),loadContent(){this.loads++;}});
+const stage=()=>({loads:0,getMainWindowSync:()=>({}),loadContent(_page,done){this.loads++;done({code:0});}});
 {
  const e=new Entry(),old=stage(),fresh=stage();e.onWindowStageCreate(old);e.onWindowStageDestroy();e.onWindowStageCreate(fresh);
- setups[0].reject(Error('old setup failed'));setups[1].resolve(true);await tick();assert.equal(old.loads,0);assert.equal(fresh.loads,1);
+ setups[0].reject(Error('old setup failed'));setups[1].resolve(true);await tick();assert.equal(old.loads,0);assert.equal(fresh.loads,1);e.onWindowStageDestroy();
 }
 {
  const e=new Entry(),s=stage();e.onWindowStageCreate(s);setups[2].resolve(false);await tick();assert.equal(s.loads,1,'failed geometry setup uses the existing zero-inset recovery instead of stranding startup');e.onWindowStageDestroy();
 }
 console.log('PASS: detail mutation settles after exit; stale window completion cannot load content');
 // Cache freshness/request joining live in the coordinator. Exercise the active
-// Index admission call and its generation guards, not the removed wrapper.
+// entry-owner admission call and its generation guards, not a removed Index wrapper.
 for(const stale of [false,true]) for(const fails of [false,true]) {
  const shared=deferred(),background=deferred(),calls=[],failures=[],refreshes=[];
  const coordinator={readingProjectionRevision:()=>0,setPreparationVisible(value){assert.equal(value,false);},
@@ -83,28 +78,20 @@ for(const stale of [false,true]) for(const fails of [false,true]) {
  const owner={bookAcquisitions:()=>coordinator,request:async(method)=>{if(method==='bookmark.list')return {data:{bookmarks:[]}};if(method==='chapter.content')return {data:{sourceId:'s',bookId:'b',chapterTitle:'第一章',via:'rule',content:'完整的故事正文。'.repeat(20),bodyVersion:'body',processingVersion:'processing'}};throw Error('optional IO unavailable: '+method);}}; setRuntime(owner);
  const EntryHost=compileHost(undefined,{ReaderCoreGateway:class{async loadShelfBook(){return undefined;}}});
  const backgroundMethod=EntryHost.prototype.refreshInBackground; EntryHost.prototype.refreshInBackground=function(...args){refreshes.push(args);return backgroundMethod.apply(this,args);};
- const CacheClass=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-   ['openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','installRemoteReadingSession'],{
-     ...readingEvidence,RemoteChapterCacheRefreshError,...readingAdmission,...readingContract,
-     ReaderRuntimeOwner:{current:()=>owner},ReadingEntryHost:EntryHost,EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0},LOCAL_SOURCE_ID:'local',
-     DOMAIN:0,hilog:{info(){},warn(){},error(){}},
-   });
  const seed={sourceId:'s',bookId:'b',title:'预览',author:'作者'};
  const session={identity:{sourceId:'s',bookId:'b'},book:{title:'已准入',author:'作者'},entries:[{index:0,title:'第一章',url:'/1'}],acquisitionMode:'cache'};
- const h=Object.assign(new CacheClass(),{searchHost:{visibilityChanged(){},close(){},resume(){}},mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,searchDetailCandidates:[],shelfBooks:[],
-   remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{generation:0,removalKey:'',busy:false,batchRemovalBusy:false},
-   showReadingFailure:(...args)=>failures.push(args)});
- h.openRemoteBookDetail(seed,'书源名称');assert.equal(h.route,'detail');await tick();assert.equal(calls.length,1);assert.equal(calls[0].seed,seed);
- assert.equal(calls[0].options.isCurrent(),true);assert.equal(h.detailReturnRoute,'search');
- if(stale){h.nextNavigationGeneration();h.route='bookshelf';assert.equal(calls[0].options.isCurrent(),false);}
+ const h=readingEntryActionFixture({runtime:owner,Host:EntryHost,route:'search',failure:(...args)=>failures.push(args)});
+ h.actions.openRemoteDetail({seed,sourceName:'书源名称'});assert.equal(h.navigation.snapshot().route,'detail');await tick();assert.equal(calls.length,1);assert.deepEqual(calls[0].seed,{...seed,contentKind:undefined},'current Host captures the complete typed seed DTO');assert.notEqual(calls[0].seed,seed,'the Host owns a defensive DTO copy');assert.equal(Object.hasOwn(seed,'contentKind'),false,'admission never mutates the caller seed');
+ assert.equal(calls[0].options.isCurrent(),true);assert.equal(h.navigation.returns.snapshot().detailParent,'search');
+ if(stale){h.advance();h.navigation.show('bookshelf');assert.equal(calls[0].options.isCurrent(),false);}
  if(fails)shared.reject(Error('synthetic admission failure'));else shared.resolve({session,backgroundRefresh:background.promise});
  await tick();
- assert.equal(h.route,stale?'bookshelf':'detail');
+ assert.equal(h.navigation.snapshot().route,stale?'bookshelf':'detail');
  assert.equal(failures.length,0,'detail failure stays in the page, with no modal blocking reading');
- if(!stale&&fails)assert.equal(h.detailLoadingMessage,'synthetic admission failure');
+ if(!stale&&fails)assert.equal(h.entry.loadingMessage,'synthetic admission failure');
  assert.equal(refreshes.length,!stale&&!fails?1:0,'only the current admission hands off the existing background promise');
- if(!stale&&!fails){assert.deepEqual(h.remoteReadingSession,session);assert.equal(refreshes[0][5],background.promise);}
- else assert.equal(h.remoteReadingSession,undefined,'failure/late admission cannot mount a session');
+ if(!stale&&!fails){assert.deepEqual(h.entry.session,session);assert.equal(refreshes[0][5],background.promise);}
+ else assert.equal(h.entry.session,undefined,'failure/late admission cannot mount a session');
  background.resolve(session);
 }
 for (const scenario of ['offscreen-existing','not-on-shelf','stale-lookup']) {
@@ -114,20 +101,13 @@ for (const scenario of ['offscreen-existing','not-on-shelf','stale-lookup']) {
   acquireCandidateGroup(){calls.push('group');return new Promise(()=>{});}};
  const owner={bookAcquisitions:()=>coordinator,request:async(method)=>{if(method==='bookmark.list')return {data:{bookmarks:[]}};if(method==='chapter.content')return {data:{sourceId:'s',bookId:'b',chapterTitle:'第一章',via:'rule',content:'完整的故事正文。'.repeat(20),bodyVersion:'body',processingVersion:'processing'}};throw Error('optional IO unavailable: '+method);}}; setRuntime(owner);
  const EntryHost=compileHost(undefined,{ReaderCoreGateway:class{loadShelfBook(){return lookup.promise;}}});
- const Host=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-  ['openRemoteBookDetail','nextNavigationGeneration','readingDetailForRemoteSeed','installRemoteReadingSession'],{
-   ...readingEvidence,RemoteChapterCacheRefreshError,...readingAdmission,...readingContract,
-   ReaderRuntimeOwner:{current:()=>owner},ReadingEntryHost:EntryHost,EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0},LOCAL_SOURCE_ID:'local',
-   DOMAIN:0,hilog:{info(){},warn(){},error(){}}});
- const h=Object.assign(new Host(),{searchHost:{visibilityChanged(){},close(){},resume(){}},mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),remoteSessionGeneration:0,remoteContentProbeGeneration:0,route:'search',navigationGeneration:0,
-  searchDetailCandidates:[],shelfBooks:[],remoteCatalogRefreshAt:new Map(),offlineMutationGeneration:0,shelfOperation:{generation:0,removalKey:'',busy:false,batchRemovalBusy:false},
-  });
+ const h=readingEntryActionFixture({runtime:owner,Host:EntryHost,route:'search'});
  const selected={sourceId:'s',bookId:'offscreen',title:'书',author:'作者'};
- h.openRemoteBookDetail(selected,'书源');assert.equal(h.route,'detail');assert.deepEqual(calls,[]);
- if(scenario==='stale-lookup'){h.nextNavigationGeneration();h.route='bookshelf';}
+ h.actions.openRemoteDetail({seed:selected,sourceName:'书源'});assert.equal(h.navigation.snapshot().route,'detail');assert.deepEqual(calls,[]);
+ if(scenario==='stale-lookup'){h.advance();h.navigation.show('bookshelf');}
  lookup.resolve(scenario==='not-on-shelf'?undefined:selected);await tick();
  assert.deepEqual(calls,scenario==='stale-lookup'?[]:[scenario==='offscreen-existing'?'fixed':'group']);
- if(scenario==='offscreen-existing')assert.equal(h.detailInBookshelf,true);
+ if(scenario==='offscreen-existing')assert.equal(h.entry.inBookshelf,true);
 }
 console.log('PASS search preview uses exact Core membership before source fallback; partial shelf and stale membership lookup cannot substitute a saved source');
 
@@ -176,7 +156,7 @@ console.log('PASS: active detail admission retains one shared refresh with succe
 }
 if(selectedCase==='import-finalize') {
 // An import.persist reply lost after Core commits must not destroy lazy EPUB resources.
-const importSource=read('entry/src/main/ets/features/bookshelf/LocalBookImportGateway.ts');
+const importSource=read('entry/src/main/ets/features/bookshelf/application/LocalBookImportGateway.ts');
 const importMethods=[
  method(importSource,'async importPreparedSelection('),
  method(importSource,'async finalizeCommittedImport('),

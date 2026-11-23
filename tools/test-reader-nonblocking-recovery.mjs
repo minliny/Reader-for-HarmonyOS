@@ -19,7 +19,7 @@ async function case_render_recovery() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const path = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const path = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 const Reader = productionMotionMethods(path, ['showReaderRecovery', 'reconcileReaderRecovery',
   'admitPageTurnPersistenceOutcome', 'releasePageTurnRecoveryInput', 'requestBookTurn2DFallback']);
 const events = [];
@@ -55,7 +55,7 @@ async function case_continuous_progress_retry() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const path = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const path = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 const Continuous = productionMotionMethods(path, ['onContinuousScrollStopped']);
 let attempts = 0, notifications = 0, completed = 0;
 const continuous = Object.assign(new Continuous(), { mounted: true, exitRequested: false,
@@ -79,7 +79,7 @@ async function case_exit_during_persistence() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const path = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const path = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 const Exit = productionMotionMethods(path, ['beginExit'], { cancelReaderRapidPageTurn: state => state });
 const exitEvents = [];
 const exitOwner = Object.assign(new Exit(), { lifecycleToken: 1, mounted: true, exitRequested: false,

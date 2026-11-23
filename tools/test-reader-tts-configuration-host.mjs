@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { ReaderHttpTtsGateway } from '../entry/src/main/ets/features/reading/ReaderHttpTtsGateway.ts';
-import { ReaderTtsGateway } from '../entry/src/main/ets/features/reading/ReaderTtsGateway.ts';
-import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts';
+import { ReaderHttpTtsGateway } from '../entry/src/main/ets/features/reading/application/ReaderHttpTtsGateway.ts';
+import { ReaderTtsGateway } from '../entry/src/main/ets/features/reading/application/ReaderTtsGateway.ts';
+import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/application/ReaderTtsSessionCoordinator.ts';
 import { FakeGateway, FakeHost } from './lib/reader-tts-fixtures.mjs';
 import { ReaderTtsConfigurationHost, configurationSource, loadConfigurationHost } from './lib/reader-tts-configuration-fixture.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
@@ -195,10 +195,10 @@ for(const mode of ['error','unavailable','retired']) {
 // Actual SDK-parsed LRE methods prove real delegation and lifecycle/book/
 // coordinator admission. No rendering geometry or native timing is simulated.
 {
-  const lre=new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url);
+  const lre=new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url);
   const f=fixture();let owner;const notices=[];
   const Owner=productionMotionMethods(lre,['requireTtsConfigurationHost','changeTtsEngine','saveHttpTtsEngine',
-    'deleteHttpTtsEngine','persistTtsConfig','onControlTemporaryLayerChange'],
+    'deleteHttpTtsEngine','persistTtsConfig','retryTtsConfigurationMetadataOnOpen'],
     {ReaderTtsConfigurationHost,ReaderTtsCredentialStore:{instance:f.credentials},hilog:{error(){}}});
   owner=new Owner();Object.assign(owner,{lifecycleToken:1,sourceId:'source',bookId:'book',ttsEngine:'system',
     ttsState:{rate:1,status:'stopped',errorMessage:'existing speech error'},ttsConfig:{...baseConfig},ttsConfigMutationGeneration:0,
@@ -212,7 +212,7 @@ for(const mode of ['error','unavailable','retired']) {
   assert.equal(JSON.stringify(owner.ttsState),playback,'production callback never writes a configuration error into playback');
   assert.ok(notices.some(v=>/已保存/.test(v)));
   const writes=f.methods().filter(v=>v==='http-tts.put').length;
-  delete f.hooks['http-tts.list'];owner.onControlTemporaryLayerChange(true);await drain();
+  delete f.hooks['http-tts.list'];owner.retryTtsConfigurationMetadataOnOpen();await drain();
   assert.equal(owner.ttsConfigurationHost.snapshot().metadata.fact,'current');
   assert.equal(f.methods().filter(v=>v==='http-tts.put').length,writes,'reopening recovery retries only the metadata read');
   const gate=deferred();f.hooks['http-tts.put']=async params=>{await gate.promise;return {data:{tts:params}};};
@@ -223,6 +223,6 @@ for(const mode of ['error','unavailable','retired']) {
 const Mutant=await loadConfigurationHost(configurationSource.replace(
   'return !this.retired && generation === this.generation && this.deps.isCurrent();','return true;'));
 await assert.rejects(retiredDurableSave(Mutant),/retired owner cannot publish|retired owner cannot activate/);
-assert.match(readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),'utf8'),
+assert.match(readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),'utf8'),
   /this\.ttsConfigurationHost\?\.retire\(\)/,'unmount retires the real Host');
 console.log('TTS configuration Host PASS: real gateways; durable/metadata/activation facts; lost replies; secret safety; serialized generations; retired writes; SDK LRE wiring; coordinator playback isolation; omission negative control');

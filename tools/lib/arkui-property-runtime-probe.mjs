@@ -25,8 +25,17 @@ export function createArkUIPropertyRuntimeProbe() {
   const trackedStart = source.indexOf('class TrackedObject {');
   const trackedEnd = source.indexOf('TrackedObject.___TRACKED_PREFIX_LEN = TrackedObject.___TRACKED_PREFIX.length;', trackedStart);
   assert.ok(proxyStart > 0 && proxyEnd > proxyStart && trackedEnd > trackedStart);
-  const classes = source.slice(trackedStart, source.indexOf('\n', trackedEnd)) + '\n' +
+  // API 26 proxy handlers share the Symbol initialized before their classes.
+  // Execute that installed-SDK initializer too, in a per-probe global seam:
+  // omitting it turns a metadata write into an ordinary observed mutation.
+  const observedNameInitializer = source.match(/^globalThis\.__OBSERVED_OBJECT_NAME = Symbol\([^\r\n]+\);$/m)?.[0] ?? '';
+  const propertyClasses = source.slice(trackedStart, source.indexOf('\n', trackedEnd)) + '\n' +
     source.slice(proxyStart, source.indexOf('\n', proxyEnd)) + '\n' + names.map(classSource).join('\n');
+  if (propertyClasses.includes('globalThis.__OBSERVED_OBJECT_NAME')) {
+    assert.ok(observedNameInitializer, 'installed SDK observed-object metadata initializer');
+  }
+  const classes = observedNameInitializer + '\n' + propertyClasses;
+  const runtimeGlobal = Object.create(globalThis);
   let active;
   const dependencies = new WeakMap(), dirty = new Map(), reads = [], updates = [], copies = [];
   const subscribers = new Map(); let propertyId = 0;
@@ -51,8 +60,9 @@ export function createArkUIPropertyRuntimeProbe() {
     getPropSourceObservedPropertyFakeName() { return `${this.info_}:source`; }
     debugInfo() { return this.info_; }
     recordPropertyDependentUpdate() {
-      reads.push({ owner: this.owner, name: this.info_, id: active?.owner === this.owner ? active.id : -1 });
-      if (active?.owner !== this.owner) return;
+      const tracking = active !== undefined && active.owner === this.owner;
+      reads.push({ owner: this.owner, name: this.info_, id: tracking ? active.id : -1 });
+      if (!tracking) return;
       let byName = dependencies.get(this.owner);
       if (!byName) dependencies.set(this.owner, byName = new Map());
       let ids = byName.get(this.info_);
@@ -73,6 +83,7 @@ export function createArkUIPropertyRuntimeProbe() {
     aboutToBeDeleted() {}
   }
   const nativeBoundary = {
+    globalThis: runtimeGlobal,
     ObservedPropertyAbstractPU, SubscribableAbstract: class {},
     InteropConfigureStateMgmt: { needsInterop: () => false },
     SubscriberManager: { Find: id => subscribers.get(id) },
@@ -94,7 +105,7 @@ export function createArkUIPropertyRuntimeProbe() {
     onChildUpdate(child, params) { updates.push({ child, params }); },
   };
   return {
-    sdk, hooks, reads, updates, copies, dependencies,
+    sdk, hooks, reads, updates, copies, dependencies, runtimeGlobal,
     source: { path, classesSha256: createHash('sha256').update(classes).digest('hex'),
       layer: 'actual SDK property/proxy classes and compiler output; subscriber/dependency delivery instrumented; no renderer/layout/pixels' },
     flush(acceptOwner = () => true) {

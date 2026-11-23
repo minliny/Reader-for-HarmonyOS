@@ -2,11 +2,11 @@ import { localFilePath, resolveEtsLoaderRoot } from './lib/tool-environment.mjs'
 import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
-import {ReadingSurfaceLayoutMap} from '../entry/src/main/ets/features/reading/ReadingSurfaceLayoutMap.ts';
-import {readerSelectedOriginalText} from '../entry/src/main/ets/features/reading/ReaderTextSelectionProjection.ts';
+import {ReadingSurfaceLayoutMap} from '../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts';
+import {readerSelectedOriginalText} from '../entry/src/main/ets/features/reading/ui/ReaderTextSelectionProjection.ts';
 const sdk=resolveEtsLoaderRoot();
 const ts=createRequire(import.meta.url)(`${sdk}/node_modules/typescript`);
-const path=localFilePath(new URL('../entry/src/main/ets/features/reading/ReaderNativeParagraphView.ets',import.meta.url));
+const path=localFilePath(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeParagraphView.ets',import.meta.url));
 const source=readFileSync(path,'utf8');
 const classSource=source.slice(0,source.indexOf('  build() {')).replace('@Component\nexport struct ReaderNativeParagraphView {',
  'class View { getUIContext(): UIContext { return this.context; } context: UIContext;')
@@ -21,7 +21,7 @@ host.getSourceFile=(p,...args)=>p===virtual?ts.createSourceFile(p,typed,ts.Scrip
 const program=ts.createProgram([virtual,...readdirSync(`${sdk}/declarations`).filter(n=>n.endsWith('.d.ts')).map(n=>`${sdk}/declarations/${n}`)],options,host);
 assert.deepEqual(ts.getPreEmitDiagnostics(program).filter(d=>d.category===ts.DiagnosticCategory.Error)
  .map(d=>ts.flattenDiagnosticMessageText(d.messageText,'\n')),[]);
-const measurementSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderNativeTextMeasurement.ets',import.meta.url),'utf8');
+const measurementSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextMeasurement.ets',import.meta.url),'utf8');
 const geometryJs=ts.transpileModule(measurementSource.replace(/^import.*$/gm,'').replace(/^export /gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
 const geometryKey=new Function(geometryJs+';return readerNativeTextGeometryKey;')();
 const style={widthVp:300,fontFamily:'f',fontSize:20,fontWeight:400,lineHeight:30,letterSpacing:0,color:'#111',alignment:0,breakAll:false};

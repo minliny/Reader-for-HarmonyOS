@@ -11,7 +11,7 @@ const { foundationControls } = await import('./lib/reader-foundation-control-pro
 const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } = await import('./lib/reader-floating-bar-metrics-probe.mjs');
-const { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp, readerInteractiveSafeLeft, readerInteractiveSafeRight } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp, readerInteractiveSafeLeft, readerInteractiveSafeRight } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 
 
 const require = createRequire(import.meta.url);
@@ -29,8 +29,13 @@ const cases = [
   ['rss/RssEntryDetailPage.ets', 62],
 ];
 const chosenFiles={bookshelf:'bookshelf/BookshelfManagementPage.ets',source:'source/SourceToolsPage.ets',rules:'settings/RulesManagementPage.ets',sync:'sync/SyncPage.ets',rssFeed:'rss/RssSourceFeedPage.ets',rssManagement:'rss/RssSubscriptionManagementPage.ets',rssEditor:'rss/RssSubscriptionEditorPage.ets',rssDetail:'rss/RssEntryDetailPage.ets'};
+const liveSourcePaths = new Map([
+  ['bookshelf/BookshelfManagementPage.ets', 'bookshelf/ui/BookshelfManagementPage.ets'],
+  ['source/SourceToolsPage.ets', 'source/ui/SourceToolsPage.ets'],
+  ['settings/RulesManagementPage.ets', 'settings/ui/RulesManagementPage.ets'],
+]);
 for (const [file, bottom] of cases.filter(row=>row[0]===chosenFiles[selectedCase])) {
-  const source = readFileSync(new URL(`../entry/src/main/ets/features/${file}`, import.meta.url), 'utf8');
+  const source = readFileSync(new URL(`../entry/src/main/ets/features/${liveSourcePaths.get(file) ?? file}`, import.meta.url), 'utf8');
   const builders = [...source.matchAll(/@Builder\s+private (\w+)\(/g)].map(match => match[1]);
   for (const name of builders) require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD.add(name);
   const isDetail = file === 'rss/RssEntryDetailPage.ets';
@@ -40,8 +45,8 @@ for (const [file, bottom] of cases.filter(row=>row[0]===chosenFiles[selectedCase
   if (builders.includes('backBar')) methods.push('backBar');
   if (file.endsWith('RssSubscriptionEditorPage.ets')) methods.push('saveAction');
   if (isDetail) methods.push('bottomActions');
-  const controls=foundationControls(),headerSource=readFileSync(new URL('../entry/src/main/ets/features/common/PageBackBar.ets',import.meta.url),'utf8'),toggleSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderToggle.ets',import.meta.url),'utf8');
-  const recoverySources=Object.fromEntries(['ReaderRecoveryAction','ReaderRecoveryNotice'].map(name=>[name,readFileSync(new URL(`../entry/src/main/ets/features/common/${name}.ets`,import.meta.url),'utf8')]));
+  const controls=foundationControls(),headerSource=readFileSync(new URL('../entry/src/main/ets/ui/chrome/PageBackBar.ets',import.meta.url),'utf8'),toggleSource=readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderToggle.ets',import.meta.url),'utf8');
+  const recoverySources=Object.fromEntries(['ReaderRecoveryAction','ReaderRecoveryNotice'].map(name=>[name,readFileSync(new URL(`../entry/src/main/ets/ui/feedback/${name}.ets`,import.meta.url),'utf8')]));
   const hooks={...controls.hooks,childSources:{...controls.hooks.childSources,PageBackBar:headerSource,ReaderToggle:toggleSource,...recoverySources}},platform={...controls.dependencies,...switchSpecs(),AccessibilityRoleType:{SWITCH:'AccessibilityRoleType.SWITCH',BUTTON:'AccessibilityRoleType.BUTTON'},readerInteractiveSafeLeft,readerInteractiveSafeRight,ReaderWindowCoordinator:{metrics:()=>metrics}};
   const ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
   const headerTree=ts.createSourceFile('PageBackBar.ets',headerSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options),headerDecl=headerTree.statements.find(n=>ts.isStructDeclaration(n));

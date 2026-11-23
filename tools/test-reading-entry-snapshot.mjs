@@ -5,8 +5,8 @@ async function run(id){
 const { registerHooks, stripTypeScriptTypes }=await import('node:module');
 const { readFileSync }=await import('node:fs');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const {readReadingEntrySnapshot,readPreparedReadingEntrySnapshot}=await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
+const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
+const {readReadingEntrySnapshot,readPreparedReadingEntrySnapshot}=await import('../entry/src/main/ets/features/reading/application/ReadingEntrySnapshot.ts');
 function fixture(){
  const calls=[];let current=true,contentCurrent=true,answer;
  const body={kind:'ready',sourceId:'s',bookId:'b',chapterIndex:40,chapterTitle:'第四章',content:'正文甲乙丙',blocks:[{kind:'text',startScalar:0,endScalar:5,text:'正文甲乙丙'}],
@@ -68,7 +68,7 @@ if(id==='resume-chapter'){
   'explicit chapter selection keeps prior durable progress as a separate observation');
  const preparedSelected=readPreparedReadingEntrySnapshot(f.runtime,'s','b',3,()=>true,'lineSeparated');
  assert.equal(preparedSelected.chapter.chapterIndex,3);assert.equal(preparedSelected.progress.progress.chapterIndex,325);
- const path=new URL('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts',import.meta.url);
+ const path=new URL('../entry/src/main/ets/features/reading/application/ReadingEntrySnapshot.ts',import.meta.url);
  const guarded=readFileSync(path,'utf8');
  const guard="    if (chapterIndex === undefined && progressIndex !== index) throw new Error('reading entry resume chapter mismatch');";
  assert.equal(guarded.split(guard).length,2,'negative control removes only the actual resume guard');
@@ -146,7 +146,7 @@ if(id==='image-identity'){
 }
 if(id==='catalog-paging'){
 {
- const {readReadingCatalog}=await import('../entry/src/main/ets/features/reading/ReadingEntrySnapshot.ts');
+ const {readReadingCatalog}=await import('../entry/src/main/ets/features/reading/application/ReadingEntrySnapshot.ts');
  const calls=[];let changed=false,cancel=false;
  const runtime={supportsCoreCapability:()=>true,request:async(method,p)=>{
    assert.equal(method,'reading.catalog.page');calls.push(p);

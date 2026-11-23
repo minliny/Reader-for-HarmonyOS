@@ -2,7 +2,7 @@ import {createHash} from 'node:crypto';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
-const code=stripTypeScriptTypes(readFileSync(new URL('../entry/src/main/ets/app/ReadingBodyImageHost.ts',import.meta.url),'utf8').replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,''));
+const code=stripTypeScriptTypes(readFileSync(new URL('../entry/src/main/ets/platform/reading-resources/ReadingBodyImageHost.ts',import.meta.url),'utf8').replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,''));
 let mimeType='image/png',frames=1,orientation=1,metadataError=false,pixelDecodes=0,inspections=0,nativeDecodeError=false;
 let pixelFormat=3,rowPadding=0,postRotatePadding=0,pixelBytesExtra=0,allocationClass='scanline',omitProfile=false;
 const profile=()=>({format:mimeType.slice(6),encodedWidth:width,encodedHeight:height,allocationClass:mimeType==='image/webp'?'fullFrame':allocationClass});

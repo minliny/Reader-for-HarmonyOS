@@ -11,7 +11,7 @@ const { readFileSync } = await import('node:fs');
 const {
   isCookieVisibleToScript,
   isExactCookieDomainScope,
-} = await import('../entry/src/main/ets/app/CookieSecurityPolicy.ts');
+} = await import('../entry/src/main/ets/platform/network/CookieSecurityPolicy.ts');
 assert.equal(isExactCookieDomainScope('login.example.com', 'login.example.com'), true);
 for (const scope of ['example.com', 'com', 'co.uk', 'other.example']) {
   assert.equal(isExactCookieDomainScope('login.example.com', scope), false,
@@ -22,7 +22,7 @@ assert.equal(isCookieVisibleToScript(true), false);
 
 
 const {selectedProductionMethods,selectedProductionValues}=await import('./lib/selected-production-methods.mjs');
-const file=new URL('../entry/src/main/ets/app/CookieSessionStore.ts',import.meta.url),constants=selectedProductionValues(file,['LOG_DOMAIN','LOG_TAG','ASSET_ALIAS','ASSET_PENDING_ALIAS','ASSET_CHUNK_ALIAS_PREFIX','ASSET_SECRET_CHUNK_BYTES','MAX_PERSISTED_BYTES','MAX_PERSISTED_CHUNKS']);
+const file=new URL('../entry/src/main/ets/platform/network/CookieSessionStore.ts',import.meta.url),constants=selectedProductionValues(file,['LOG_DOMAIN','LOG_TAG','ASSET_ALIAS','ASSET_PENDING_ALIAS','ASSET_CHUNK_ALIAS_PREFIX','ASSET_SECRET_CHUNK_BYTES','MAX_PERSISTED_BYTES','MAX_PERSISTED_CHUNKS']);
 const util={TextDecoder:{create:(_encoding,options)=>({decodeToString:bytes=>new TextDecoder('utf-8',options).decode(bytes)})},TextEncoder:class{encode(value){return new TextEncoder().encode(value);}}};
 const Host=selectedProductionMethods(file,'CookieSessionStore',['recoverPendingWrite','parseChunkHeader','chunkAlias','utf8','readChunkedPayload'],{...constants,util,hilog:{warn(){}}});
 const encode=value=>new TextEncoder().encode(typeof value==='string'?value:JSON.stringify(value));

@@ -1,7 +1,7 @@
 import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import assert from 'node:assert/strict';
 import {createHash} from 'node:crypto';
-import {createDefaultReaderWindowMetrics,readerVisualSafeTop,readerContentSafeTop} from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {createDefaultReaderWindowMetrics,readerVisualSafeTop,readerContentSafeTop} from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 
 export const fullDirectoryLayoutSuccessorPath='tools/fixtures/reader-full-directory-page-layout-successor-20261014.json';
 export const fullDirectoryMessageOverlaySuccessorPath='tools/fixtures/reader-full-directory-message-overlay-successor-20261019.json';
@@ -16,7 +16,7 @@ export function verifyFullDirectoryLayoutSuccession(baseline,readSource,shape,pa
  const witness=JSON.parse(readSource(fullDirectoryLayoutSuccessorPath));
  const overlayWitness=JSON.parse(readSource(fullDirectoryMessageOverlaySuccessorPath));
  assert.deepEqual([overlayWitness.schema,overlayWitness.authority,overlayWitness.previousLayoutWitness,overlayWitness.page,overlayWitness.scope],
-  [1,'docs/message-ui/approved-scope-20261019.json',fullDirectoryLayoutSuccessorPath,'entry/src/main/ets/features/reading/ReaderFullDirectory.ets','A13 pending-operation'],
+  [1,'docs/message-ui/approved-scope-20261019.json',fullDirectoryLayoutSuccessorPath,'entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets','A13 pending-operation'],
   'only the approved A13 overlay supersedes the immutable directory layout witness');
  assert.deepEqual(overlayWitness.slots,{header:'topBar',content:'directoryContent',overlayContent:'directoryOverlay'});
  assert.equal(overlayWitness.visibility,'this.directoryRecovery.bookmarks.visible || this.directoryRecovery.offline.visible');
@@ -28,7 +28,7 @@ export function verifyFullDirectoryLayoutSuccession(baseline,readSource,shape,pa
  assert.equal(witness.previousSourceHead,'838078322bb267c95e11757ccce8a242678be44a');
  assert.equal(witness.previousSourceSha256,'a8c8d44475062ff8ffbf334604aaca6656912f53d20ff9d19fbd0b792c404adc');
  assert.deepEqual([witness.page,witness.previousBodyMethod,witness.currentBodyMethod,witness.host],
-  ['entry/src/main/ets/features/reading/ReaderFullDirectory.ets','build','directoryContent','ReaderPageScaffold']);
+  ['entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets','build','directoryContent','ReaderPageScaffold']);
  assert.equal(witness.variantExpression,"this.catalogContext === 'detail' ? 'directory' : 'readerDirectory'");
  assert.deepEqual(witness.slots,{header:'topBar',content:'directoryContent',overlayContent:'offlineBookMenu'});
  assert.deepEqual(witness.safeTopOwnership,{method:'topBarTop',detail:{owner:'Index parent',ownGap:18},reader:{owner:'ReaderFullDirectory window',minimumTop:18}});

@@ -6,9 +6,14 @@ import type { CommitConfirmationKind } from './ReaderOperationFacts';
 export class ReaderWriteEvidence {
   dispatchedCount: number = 0;
   confirmedCount: number = 0;
+  private dispatchObserved: boolean = false;
 
-  dispatched(): void { this.dispatchedCount += 1; }
+  dispatched(): void { this.dispatchObserved = true; this.dispatchedCount += 1; }
   confirmed(): void { this.confirmedCount += 1; }
+
+  /** A rejected ACK can remove an unexecuted command from confirmation counts,
+   * but cannot undo the first dispatch of an already fixed operation plan. */
+  hasDispatched(): boolean { return this.dispatchObserved; }
 
   /** Only a gateway's typed Core admission response may call this. */
   rejectedBeforeExecution(): void {

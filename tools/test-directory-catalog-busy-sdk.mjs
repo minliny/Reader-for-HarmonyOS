@@ -3,32 +3,48 @@ import {fixture,book,deferred,until,seed,session} from './lib/reading-entry-inde
 import {makeIndex} from './lib/reading-entry-sdk-consumer.mjs';
 import {read} from './lib/reading-entry-owner-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
+import {bookshelfOperationClass} from './lib/bookshelf-operation-owner-probe.mjs';
 import {boundedSurfaceSdk} from './lib/bounded-surface-sdk-probe.mjs';
 
-const panelSource=read('features/reading/FullDirectoryPanel.ets');
-const directorySource=read('features/bookshelf/BookDirectoryPage.ets');
+const panelSource=read('features/reading/ui/FullDirectoryPanel.ets');
+const directorySource=read('features/reading/ui/BookDirectoryPage.ets');
 const checks=[];
-function wireState(index){
- const sdk=boundedSurfaceSdk();
+function wireState(x){
+ const index=x.idx,entry=x.entry,sdk=boundedSurfaceSdk();
  class Captured{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
- const fullSource=read('features/reading/ReaderFullDirectory.ets'),shellSource=read('features/shell/ReaderShell.ets');
- Object.assign(sdk.hooks.childSources,{BookDirectoryPage:directorySource,ReaderFullDirectory:fullSource,FullDirectoryPanel:panelSource});
- const deps={...sdk.deps,BookDirectoryPage:Captured,ReaderFullDirectory:Captured,FullDirectoryPanel:Captured};
+ const fullSource=read('features/reading/ui/ReaderFullDirectory.ets'),shellSource=read('features/reading/ui/ReaderShell.ets');
+ const detailSource=read('features/reading/ui/DetailDirectoryScene.ets'),destinationSource=read('features/reading/ui/ReaderDirectoryDestination.ets');
+ const EMPTY_READING_DIRECTORY_RECOVERY=bookshelfOperationClass('features/reading/presentation/ReadingDirectoryRecovery.ts','EMPTY_READING_DIRECTORY_RECOVERY');
+ const readerDirectoryActions=bookshelfOperationClass('features/reading/presentation/ReaderDirectoryActions.ets','readerDirectoryActions');
+ const isReaderLocalTxtFormat=bookshelfOperationClass('features/reading/application/ReaderDirectoryNavigation.ts','isReaderLocalTxtFormat');
+ Object.assign(sdk.hooks.childSources,{DetailDirectoryScene:detailSource,ReaderDirectoryDestination:destinationSource,BookDirectoryPage:directorySource,ReaderFullDirectory:fullSource,FullDirectoryPanel:panelSource});
+ const deps={...sdk.deps,DetailDirectoryScene:Captured,ReaderDirectoryDestination:Captured,BookDirectoryPage:Captured,ReaderFullDirectory:Captured,FullDirectoryPanel:Captured,
+  SynchedPropertyNesedObjectPU:sdk.properties.sdk.SynchedPropertyNestedObjectPU,EMPTY_READING_DIRECTORY_RECOVERY,readerDirectoryActions,isReaderLocalTxtFormat};
  const direct=createReaderBuilderProbe(read('pages/Index.ets'),['externalDirectory'],deps,sdk.hooks).owner;
- Object.assign(direct,{detailBook:index.detailBook,detailToc:index.detailToc,detailLoadingMessage:index.detailLoadingMessage,detailCatalogBusy:index.detailCatalogBusy,
-  directoryRecovery:()=>({}),settingsSnapshot:{reduceMotion:false}});direct.externalDirectory();
- const fullProps=[...direct.children.values()].find(c=>c instanceof Captured).params;
- assert.equal(fullProps.catalogBusy,index.detailCatalogBusy,'actual Index external directory forwards activity');
+ Object.assign(direct,{readingEntry:entry,directoryJourney:{operations:undefined},directoryNavigationPorts:()=>undefined,
+  settingsPresentation:{snapshot:{reduceMotion:false}},isDirectoryOpeningCurrent:()=>true});direct.externalDirectory();
+ const detailProps=[...direct.children.values()].find(c=>c instanceof Captured).params;
+ assert.equal(x.p.properties.sdk.ObservedObject.GetRawObject(sdk.properties.sdk.ObservedObject.GetRawObject(detailProps.reading)),
+  x.p.properties.sdk.ObservedObject.GetRawObject(entry),'actual Index hands the current reading projection to its detail directory scene');
+ const detail=createReaderBuilderProbe(detailSource,['build','directoryActions'],deps,sdk.hooks).owner;
+ Object.assign(detail,detailProps);detail.initialRender();
+ const destinationProps=[...detail.children.values()].find(c=>c instanceof Captured).params;
+ assert.equal(destinationProps.catalogBusy,entry.catalogBusy,'actual detail scene forwards explicit activity');
+ const destination=createReaderBuilderProbe(destinationSource,['catalog','canHandle','bookmarkSelection'],deps,sdk.hooks).owner;
+ Object.assign(destination,destinationProps,{mounted:true});destination.catalog(destinationProps.opening);
+ const fullProps=[...destination.children.values()].find(c=>c instanceof Captured).params;
+ assert.equal(fullProps.catalogBusy,entry.catalogBusy,'actual destination forwards activity to the full directory');
  const full=createReaderBuilderProbe(fullSource,['directoryContent'],deps,sdk.hooks).owner;
- Object.assign(full,fullProps,{usesExpandedLayout:()=>false,panelWidth:()=>300,fullPanelHeight:()=>400,panelViewportHeight:()=>400,panelLeft:()=>0,panelTop:()=>0,shouldAnimatePanel:()=>false});
+ Object.assign(full,fullProps,{usesExpandedLayout:()=>false,panelWidth:()=>300,fullPanelHeight:()=>400,panelViewportHeight:()=>400,panelLeft:()=>0,panelTop:()=>0,
+  shouldAnimatePanel:()=>false,headerLayoutReady:()=>true,directoryRulesOpened:false});
  full.directoryContent();const panelProps=[...full.children.values()].find(c=>c instanceof Captured).params;
- assert.equal(panelProps.catalogBusy,index.detailCatalogBusy,'actual full directory forwards activity into its panel');
+ assert.equal(panelProps.catalogBusy,entry.catalogBusy,'actual full directory forwards activity into its panel');
  for(const contentKind of ['text','manga']){
   const shell=createReaderBuilderProbe(shellSource,['readingOverlay'],deps,sdk.hooks).owner;
-  Object.assign(shell,{route:'directory',contentKind,catalogMessage:index.detailLoadingMessage,catalogBusy:index.detailCatalogBusy,sourceSwitchVisible:false,
-   sourceId:index.detailBook.sourceId,bookId:index.detailBook.bookId,tocEntries:index.detailToc,overlayStatusBarUnderlay(){}});
+  Object.assign(shell,{route:'directory',contentKind,catalogMessage:entry.loadingMessage,catalogBusy:entry.catalogBusy,sourceSwitchVisible:false,
+   sourceId:entry.book.sourceId,bookId:entry.book.bookId,tocEntries:entry.toc,overlayStatusBarUnderlay(){}});
   shell.readingOverlay();const props=[...shell.children.values()].find(c=>c instanceof Captured).params;
-  assert.equal(props.catalogBusy,index.detailCatalogBusy,'actual reader shell forwards activity to '+contentKind+' control directory');
+  assert.equal(props.catalogBusy,entry.catalogBusy,'actual reader shell forwards activity to '+contentKind+' control directory');
  }
 }
 
@@ -36,9 +52,11 @@ function wireState(index){
 // tabs, and data-list rendering are ports; neither activity nor retry is stubbed.
 function directoryState(message,busy){
  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
- const directory=sdk.consumer(directorySource,['mangaEmptyState','catalogMessage','catalogBusy','catalogLoading','catalogRetryVisible'],{},
-  {catalogMessage:message,catalogBusy:busy});
- let retries=0;Object.assign(directory,{mounted:true,searchQuery:'',navigationActive:false,emptyMessage:()=>message,onRetryCatalog:()=>retries++});
+ const directory=sdk.consumer(directorySource,['mangaEmptyState','catalogMessage','catalogBusy','catalogLoading','catalogRetryVisible',
+  'sourceId','bookId','interactive','isOpeningCurrent','admittedIdentity','identity','directoryInputIsCurrent'],{},
+  {catalogMessage:message,catalogBusy:busy,sourceId:'source',bookId:'book',interactive:true});
+ let retries=0;Object.assign(directory,{admittedIdentity:'source\0book',
+  searchQuery:'',navigationActive:false,emptyMessage:()=>message,onRetryCatalog:()=>retries++,mounted:true});
  directory.mangaEmptyState();
  const panel=sdk.consumer(panelSource,['directoryBody','catalogMessage','catalogBusy','catalogRetryVisible','catalogEmptyMessage'],{},
   {catalogMessage:message,catalogBusy:busy});
@@ -60,25 +78,25 @@ function directoryState(message,busy){
 for(const message of ['读取失败：本地目录暂不可用','加载失败：目录内容暂不可用']){
  const f=fixture(),x=makeIndex(f),request=f.runtime.request;
  f.runtime.request=async(method,...args)=>{if(method==='local_book.toc')throw Error(message);return request(method,...args);};
- x.idx.openLocalBookDetail(book('failed','local'));
- assert.equal(x.idx.detailCatalogBusy,true,'real Host begin publishes explicit acquisition activity');
- await until(()=>x.idx.detailLoadingMessage===message);assert.equal(x.idx.detailCatalogBusy,false);
+ x.entryActions.openLocalDetail(book('failed','local'));
+ assert.equal(x.entry.catalogBusy,true,'real Host begin publishes explicit acquisition activity');
+ await until(()=>x.entry.loadingMessage===message);assert.equal(x.entry.catalogBusy,false);
  assert.equal(x.owner().snapshot().catalogLoading,false);
  const leaf=x.render();assert.equal(leaf.catalogBusy,false);assert.equal(leaf.loadingMessage,message);
  leaf.catalog();const state=x.p.walk(leaf).filter(c=>c.title===message).at(-1);assert.ok(state,'real Host→Index→decorated detail carries the error text');
  assert.equal(state.loading,false);assert.equal(x.p.nodes(state).some(n=>n.type==='LoadingProgress'),false);
- wireState(x.idx);directoryState(x.idx.detailLoadingMessage,x.idx.detailCatalogBusy);
+ wireState(x);directoryState(x.entry.loadingMessage,x.entry.catalogBusy);
  f.close();checks.push(message);
 }
 {
  const f=fixture(),x=makeIndex(f),gate=deferred(),request=f.runtime.request;
  f.runtime.request=async(method,...args)=>{if(method==='local_book.toc')await gate.promise;return request(method,...args);};
- x.idx.openLocalBookDetail(book('waiting','local'));
- assert.equal(x.idx.detailCatalogBusy,true);const leaf=x.render();assert.equal(leaf.catalogBusy,true);
+ x.entryActions.openLocalDetail(book('waiting','local'));
+ assert.equal(x.entry.catalogBusy,true);const leaf=x.render();assert.equal(leaf.catalogBusy,true);
  leaf.catalog();const state=x.p.walk(leaf).find(c=>c.title==='正在读取本地目录…');assert.ok(state);assert.equal(state.loading,true);
  assert.ok(x.p.nodes(state).some(n=>n.type==='LoadingProgress'&&n.width===32&&n.height===32));
- wireState(x.idx);directoryState('正在读取本地目录…',true);
- gate.resolve();await until(()=>!x.idx.detailCatalogBusy);assert.ok(x.idx.detailToc.length>0);f.close();checks.push('actual loading and successful settle');
+ wireState(x);directoryState('正在读取本地目录…',true);
+ gate.resolve();await until(()=>!x.entry.catalogBusy);assert.ok(x.entry.toc.length>0);f.close();checks.push('actual loading and successful settle');
 }
 {
  const f=fixture();const request=f.runtime.request;

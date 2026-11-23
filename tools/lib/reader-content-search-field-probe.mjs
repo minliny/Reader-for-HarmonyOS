@@ -1,10 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { foundationControls } from './reader-foundation-control-probe.mjs';
-import * as geometry from '../../entry/src/main/ets/features/reading/ReaderControlSearchGeometry.ts';
-import * as motion from '../../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
+import * as geometry from '../../entry/src/main/ets/features/reading/ui/ReaderControlSearchGeometry.ts';
+import * as motion from '../../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts';
 
-const actualSource = readFileSync(new URL('../../entry/src/main/ets/features/reading/ReaderControlSearchContent.ets', import.meta.url), 'utf8');
+const actualSource = readFileSync(new URL('../../entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets', import.meta.url), 'utf8');
 
 // Compile the shipping parent and shipping field/modifier. Only native
 // focus/controller APIs remain platform seams; this does not implement focus,

@@ -148,7 +148,7 @@
       }
     },
     {
-      "file": "entry/src/main/ets/features/common/ReaderSegmentedControl.ets",
+      "file": "entry/src/main/ets/ui/controls/ReaderSegmentedControl.ets",
       "counts": {
         "fontSize": 1,
         "backgroundColor": 2
@@ -176,7 +176,7 @@
       }
     },
     {
-      "file": "entry/src/main/ets/features/common/ReaderToggle.ets",
+      "file": "entry/src/main/ets/ui/controls/ReaderToggle.ets",
       "counts": {
         "backgroundColor": 1
       }
@@ -217,13 +217,6 @@
       }
     },
     {
-      "file": "entry/src/main/ets/features/reading/ReaderAppearanceModulePanel.ets",
-      "counts": {
-        "fontSize": 4,
-        "backgroundColor": 5
-      }
-    },
-    {
       "file": "entry/src/main/ets/features/reading/ReaderAppearanceMotionStage.ets",
       "counts": {
         "backgroundColor": 2
@@ -241,13 +234,6 @@
       "counts": {
         "fontSize": 21,
         "backgroundColor": 12
-      }
-    },
-    {
-      "file": "entry/src/main/ets/features/reading/ReaderAutoPagePanel.ets",
-      "counts": {
-        "fontSize": 7,
-        "backgroundColor": 7
       }
     },
     {
@@ -373,13 +359,6 @@
       }
     },
     {
-      "file": "entry/src/main/ets/features/reading/ReaderDirectoryModulePanel.ets",
-      "counts": {
-        "fontSize": 3,
-        "backgroundColor": 8
-      }
-    },
-    {
       "file": "entry/src/main/ets/features/reading/ReaderDirectoryRules.ets",
       "counts": {
         "fontSize": 7,
@@ -431,20 +410,6 @@
       }
     },
     {
-      "file": "entry/src/main/ets/features/reading/ReaderReplaceQuickPanel.ets",
-      "counts": {
-        "fontSize": 4,
-        "backgroundColor": 4
-      }
-    },
-    {
-      "file": "entry/src/main/ets/features/reading/ReaderSearchFullPanel.ets",
-      "counts": {
-        "fontSize": 5,
-        "backgroundColor": 4
-      }
-    },
-    {
       "file": "entry/src/main/ets/features/reading/ReaderSessionCapsule.ets",
       "counts": {
         "fontSize": 2,
@@ -465,13 +430,6 @@
       }
     },
     {
-      "file": "entry/src/main/ets/features/reading/ReaderSettingsModulePanel.ets",
-      "counts": {
-        "fontSize": 2,
-        "backgroundColor": 3
-      }
-    },
-    {
       "file": "entry/src/main/ets/features/reading/ReaderStatusBarPaper.ets",
       "counts": {
         "backgroundColor": 1
@@ -489,13 +447,6 @@
       "counts": {
         "fontSize": 28,
         "backgroundColor": 17
-      }
-    },
-    {
-      "file": "entry/src/main/ets/features/reading/ReaderTtsModulePanel.ets",
-      "counts": {
-        "fontSize": 5,
-        "backgroundColor": 8
       }
     },
     {
@@ -653,7 +604,7 @@
       "reason": "The existing action family owns exactly menu/grouped/quick variants. Original two popup spec IDs and anchored geometry remain finite. Content actions and callbacks plus measured viewport inputs are accepted; no caller typography, appearance or row-layout override. One renderer owns all action admission and native text."
     },
     {
-      "file": "entry/src/main/ets/features/common/ReaderChoiceRow.ets",
+      "file": "entry/src/main/ets/ui/controls/ReaderChoiceRow.ets",
       "counts": {
         "fontSize": 2,
         "backgroundColor": 3
@@ -732,7 +683,7 @@
       }
     },
     {
-      "file": "entry/src/main/ets/features/common/ReaderButton.ets",
+      "file": "entry/src/main/ets/ui/controls/ReaderButton.ets",
       "counts": {
         "fontSize": 1
       },
@@ -740,7 +691,7 @@
       "reason": "Finite current-UI control owns actual role/geometry/press or controlled draft; no caller style overrides; full original owner SDK and AUTO proof."
     },
     {
-      "file": "entry/src/main/ets/features/common/ReaderFormField.ets",
+      "file": "entry/src/main/ets/ui/controls/ReaderFormField.ets",
       "counts": {
         "fontSize": 1,
         "backgroundColor": 1
@@ -749,7 +700,7 @@
       "reason": "Finite current-UI control owns actual role/geometry/press or controlled draft; no caller style overrides; full original owner SDK and AUTO proof."
     },
     {
-      "file": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+      "file": "entry/src/main/ets/ui/controls/ReaderLabeledIconAction.ets",
       "counts": {
         "fontSize": 1
       },
@@ -768,7 +719,7 @@
       "contractId": "shared-RssOriginalRecoverySurface"
     },
     {
-      "file": "entry/src/main/ets/features/common/ReaderIconButton.ets",
+      "file": "entry/src/main/ets/ui/controls/ReaderIconButton.ets",
       "kind": "finite-spec-actual-shared-producer",
       "owner": "ReaderIconButton",
       "reason": "Six finite current-UI icon geometry variants consumed by five actual navigation/tool/manga callers. The four original tuples plus approved floating-more and manga-reader-action retain shared accessible-name eligibility, press feedback and original callback ownership. Actual SDK composition separately verifies real manga return/more and shelf More actions; native focus/layout remains a target evidence tier.",
@@ -778,7 +729,7 @@
       "proof": "tools/test-icon-button-finite-specs.mjs"
     },
     {
-      "file": "entry/src/main/ets/features/common/ReaderMangaDownloadPopup.ets",
+      "file": "entry/src/main/ets/features/manga/ReaderMangaDownloadPopup.ets",
       "kind": "finite-spec-actual-shared-producer",
       "owner": "ReaderMangaDownloadPopup",
       "reason": "Approved existing manga download native popup thin shared adapter; fixed recipe and exact actual content delegate, unchanged parent identity/generation admission. No private business overlay budget increase.",
@@ -833,24 +784,24 @@
       "proof": "tools/test-shared-download-ui-sdk.mjs"
     },
     {
-      "file": "entry/src/main/ets/features/common/ReaderPageShell.ts",
+      "file": "entry/src/main/ets/ui/layout/ReaderPageShell.ts",
       "contractId": "shared-ReaderPageShellPolicy",
       "counts": {
         "backgroundColor": 7
       }
     },
     {
-      "file": "entry/src/main/ets/features/common/ReaderPageScaffold.ets",
+      "file": "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets",
       "contractId": "shared-ReaderPageScaffold",
       "counts": {}
     },
     {
-      "file": "entry/src/main/ets/features/common/ReaderFixedHeaderHost.ets",
+      "file": "entry/src/main/ets/ui/layout/ReaderFixedHeaderHost.ets",
       "contractId": "shared-ReaderFixedHeaderHost",
       "counts": {}
     },
     {
-      "file": "entry/src/main/ets/features/common/ReaderStandardPage.ets",
+      "file": "entry/src/main/ets/ui/layout/ReaderStandardPage.ets",
       "contractId": "shared-ReaderStandardPage",
       "counts": {}
     },
@@ -867,6 +818,27 @@
         "sourceHead": "651f413c",
         "status": "CODE_AND_SDK_FACTS_NATIVE_AND_USER_ACCEPTANCE_OPEN"
       }
+    },
+    {
+      "file": "entry/src/main/ets/ui/controls/ReaderFormRow.ets",
+      "kind": "finite-spec-actual-shared-producer",
+      "owner": "ReaderFormRow",
+      "reason": "Finite standard, compact and danger forms. The native action or label action delegates exactly one current intent; content remains a separately owned slot.",
+      "contractId": "shared-ReaderFormRow",
+      "counts": {
+        "fontSize": 2,
+        "backgroundColor": 2
+      },
+      "proof": "tools/test-switch-enum-shared-contract.mjs"
+    },
+    {
+      "file": "entry/src/main/ets/ui/layout/ReaderPageScrollHost.ets",
+      "kind": "finite-spec-actual-shared-producer",
+      "owner": "ReaderPageScrollHost",
+      "reason": "Native scroll owner and geometry from the shared page shell. One render path with explicit viewport and safe content budget.",
+      "contractId": "shared-ReaderPageScrollHost",
+      "counts": {},
+      "proof": "tools/test-reader-page-header-contract.mjs"
     }
   ],
   "uiPolicies": [

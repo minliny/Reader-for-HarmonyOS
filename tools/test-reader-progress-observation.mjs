@@ -1,7 +1,7 @@
 import { withReaderProgressProducerFixture } from './lib/reader-progress-producer-fixture.mjs';
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { observeReaderProgressOperation, reconcileReaderControlSelectionProgress } from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
+import { observeReaderProgressOperation, reconcileReaderControlSelectionProgress } from '../entry/src/main/ets/features/reading/application/ReaderControlSelectionTransaction.ts';
 import { readerPageRecoveryDependencies, readerPageRecoveryPorts } from './lib/reader-page-recovery-fixture.mjs';
 const observe = operation => observeReaderProgressOperation(operation, 5);
 let release;
@@ -14,7 +14,7 @@ assert.equal(unavailable.errorCode, 'READING_PROGRESS_RECONCILIATION_UNKNOWN');
 release(); await new Promise(r => setImmediate(r));
 assert.equal(reads, 0, 'an expired queued query is inert without releasing or overtaking the actual write');
 
-const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 class Anchor { constructor(chapterIndex, chapterOffset, chapterProgress) { Object.assign(this, { chapterIndex, chapterOffset, chapterProgress }); } }
 const Page = productionMotionMethods(file, ['beginPreparedPageTurnPersistence', 'admitPageTurnPersistenceOutcome',
   'canPresentOrdinaryPage', 'persistPreparedPageTurn', 'isPreparedPageTurnCommitCurrent', 'invalidatePageTurnRuntime'],

@@ -180,7 +180,7 @@ export class ReaderMangaPlatformDiagnostic {
         const count = await fs.read(file.fd, bytes, { length });
         if (!Number.isSafeInteger(count) || count <= 0 || count > length) break;
         position += count; this.readBytes += count;
-        const text = pending + decoder.decodeWithStream(new Uint8Array(bytes, 0, count), { stream: true });
+        const text = pending + decoder.decodeToString(new Uint8Array(bytes, 0, count), { stream: true });
         const lines = text.split('\n'); pending = lines.pop() ?? '';
         for (const line of lines) this.exportStackLine(line, event);
         if (pending.length > 4096) pending = '';

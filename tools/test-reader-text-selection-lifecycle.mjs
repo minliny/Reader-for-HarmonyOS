@@ -5,7 +5,7 @@ import {selectContractCases,recordContractCasePass} from './lib/contract-case-se
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 const stable={configured:true,mounted:true,exitRequested:false,pageReady:true,controlVisible:false,controlObscured:false,interactionBlocked:false,pageTurnActive:false,autoPageActive:false,ttsActive:false};
 async function policy() {
- const {readerTextSelectionEnabled}=await import('../entry/src/main/ets/features/reading/ReaderTextSelectionPolicy.ts');
+ const {readerTextSelectionEnabled}=await import('../entry/src/main/ets/features/reading/ui/ReaderTextSelectionPolicy.ts');
  assert.equal(readerTextSelectionEnabled(stable),true);
  for(const key of ['exitRequested','controlVisible','controlObscured','interactionBlocked','pageTurnActive','autoPageActive','ttsActive'])assert.equal(readerTextSelectionEnabled({...stable,[key]:true}),false,key);
  for(const key of ['configured','mounted','pageReady'])assert.equal(readerTextSelectionEnabled({...stable,[key]:false}),false,key);
@@ -16,9 +16,9 @@ function actualMethod(source,name,dependencies={}) {
  return new Function(...Object.keys(dependencies),stripTypeScriptTypes('class Actual {\n'+source.slice(start,end+4).replace('  private ','  ')+'\n}')+';return Actual;')(...Object.values(dependencies));
 }
 async function ownerAndDismissal() {
- const {readerTextSelectionEnabled}=await import('../entry/src/main/ets/features/reading/ReaderTextSelectionPolicy.ts');
- const {createReaderRapidPageTurnState,readerRapidPageTurnHasWork}=await import('../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts');
- const {readerTtsSessionBlocksAutoPageStart}=await import('../entry/src/main/ets/features/reading/ReaderSessionCapsuleModel.ts');
+ const {readerTextSelectionEnabled}=await import('../entry/src/main/ets/features/reading/ui/ReaderTextSelectionPolicy.ts');
+ const {createReaderRapidPageTurnState,readerRapidPageTurnHasWork}=await import('../entry/src/main/ets/features/reading/ui/ReaderRapidPageTurnState.ts');
+ const {readerTtsSessionBlocksAutoPageStart}=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionCapsuleModel.ts');
  const Owner=actualMethod(read('LocalReadingExperience.ets'),'readerTextSelectionEnabled',{readerTextSelectionEnabled,readerRapidPageTurnHasWork,readerTtsSessionBlocksAutoPageStart});
  const make=()=>Object.assign(new Owner(),{readerSettingsSnapshot:{longPressSelectText:true},mounted:true,exitRequested:false,phase:'ready',controlVisible:()=>false,controlObscured:false,interactionBlocked:false,pageTurnOwnsReaderInput:()=>false,rapidPageTurnState:createReaderRapidPageTurnState(),automaticReadingState:()=>({status:'stopped'}),ttsState:{status:'stopped'}});
  assert.equal(make().readerTextSelectionEnabled(),true);

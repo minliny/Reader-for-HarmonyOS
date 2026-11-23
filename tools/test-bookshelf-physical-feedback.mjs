@@ -7,7 +7,7 @@ for (const id of selectContractCases(definitions)) {
 async function runSelectedCase(selectedCase) {
 
 const {default:assert}=await import('node:assert/strict');
-const {ShelfBookPresentation:Projection}=await import('../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts');
+const {ShelfBookPresentation:Projection}=await import('../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts');
 for(const kind of ['local','txt','TXT']) {const book=Object.freeze({sourceId:'local',kind});assert.equal(Projection.source(book),'本地 TXT');assert.equal(book.kind,kind);}
 assert.equal(Projection.source({sourceId:'local',kind:'EPUB'}),'本地 EPUB');assert.equal(Projection.source({sourceId:'local'}),'本地书');
 const rows=[undefined,'','默认','历史分组'].map((group,i)=>Object.freeze({sourceId:'local',bookId:`b${i}`,group}));

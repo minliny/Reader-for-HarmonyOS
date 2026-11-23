@@ -1,0 +1,233 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "reader.contracts/navigation-registry.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "revision",
+    "routes"
+  ],
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "revision": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "routes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "routeId",
+          "route",
+          "owner",
+          "sources",
+          "parentRoutes",
+          "entrySources",
+          "backPolicy",
+          "retention",
+          "systemBackOwner",
+          "restorePolicy",
+          "platformHostRefs",
+          "visibility",
+          "status",
+          "unresolvedRefs",
+          "evidenceBoundary"
+        ],
+        "properties": {
+          "owner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "path"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "symbol": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          },
+          "routeId": {
+            "type": "string",
+            "pattern": "^nav\\.[A-Za-z][A-Za-z0-9]*$"
+          },
+          "route": {
+            "type": "string",
+            "minLength": 1
+          },
+          "parentRoutes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "entrySources": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "backPolicy": {
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "platform",
+                "captured-parent",
+                "overlay-first",
+                "blocked-when-busy",
+                "platform-host"
+              ]
+            }
+          },
+          "retention": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "view",
+              "query",
+              "scroll",
+              "selection",
+              "draft",
+              "basis"
+            ],
+            "properties": {
+              "view": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "query": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "scroll": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "selection": {
+                "type": [
+                  "boolean",
+                  "null"
+                ]
+              },
+              "draft": {
+                "enum": [
+                  "keep",
+                  "discard",
+                  "ask",
+                  "unknown"
+                ]
+              },
+              "basis": {
+                "enum": [
+                  "observed",
+                  "target",
+                  "mixed"
+                ]
+              }
+            }
+          },
+          "systemBackOwner": {
+            "type": "string",
+            "minLength": 1
+          },
+          "restorePolicy": {
+            "enum": [
+              "fresh",
+              "resume",
+              "reload",
+              "reconcile"
+            ]
+          },
+          "platformHostRefs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "visibility": {
+            "enum": [
+              "visible",
+              "retained"
+            ]
+          },
+          "status": {
+            "enum": [
+              "resolved",
+              "unresolved"
+            ]
+          },
+          "unresolvedRefs": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          },
+          "evidenceBoundary": {
+            "type": "string",
+            "minLength": 1
+          },
+          "knownGap": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "status": {
+                  "const": "unresolved"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "knownGap"
+              ],
+              "properties": {
+                "knownGap": { "type": "string", "minLength": 1 },
+                "unresolvedRefs": {
+                  "type": "array",
+                  "minItems": 1
+                }
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

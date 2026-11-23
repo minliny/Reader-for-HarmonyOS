@@ -23,10 +23,14 @@ for(const name of ['', 'txt','book','https://server/book','book.zip'])assert.equ
 
 }
 if(selectedCase==='picker-binding') {
+ const {ReaderDocumentPickerActivity}=await import('../entry/src/main/ets/platform/ReaderDocumentPickerActivity.ts');
+ const pickerAdmission={current:true,foreground:true};
+ const canOpenPicker=()=>pickerAdmission.current&&pickerAdmission.foreground;
+ ReaderDocumentPickerActivity.bind(9201);ReaderDocumentPickerActivity.setForeground(pickerAdmission.foreground);
  const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');const {localImportFailure}=await import('../entry/src/main/ets/app/LocalImportFailure.ts');let received;const staged=[];
  const picker={DocumentSelectOptions:class{},DocumentViewPicker:class{async select(options){received=options;return['file:///valid.TXT','file:///rejected.zip'];}}};
- const Host=selectedProductionMethods(new URL('../entry/src/main/ets/app/ReaderHostRegistry.ts',import.meta.url),'ReaderHostRegistry',['LocalBookSelectionLimit','LocalBookStagingConcurrency','selectLocalBookInputs'],{picker,READER_LOCAL_BOOK_PICKER_FILTER:filter,isReaderLocalBookFileName,errorMessageOf:error=>error.message,localImportFailure,LOG_DOMAIN:0,hilog:{error(){},warn(){}}});
- const host=Object.assign(new Host(),{context:{},ensureStageRecovery:async()=>{},requireSelectedFileName:uri=>uri.split('/').at(-1),stageLocalBook:async(uri,fileName)=>{staged.push(uri);return{uri,fileName};}});const result=await host.selectLocalBookInputs();
+ const Host=selectedProductionMethods(new URL('../entry/src/main/ets/app/ReaderHostRegistry.ts',import.meta.url),'ReaderHostRegistry',['LocalBookSelectionLimit','LocalBookStagingConcurrency','selectLocalBookInputs'],{ReaderDocumentPickerActivity,picker,READER_LOCAL_BOOK_PICKER_FILTER:filter,isReaderLocalBookFileName,errorMessageOf:error=>error.message,localImportFailure,LOG_DOMAIN:0,hilog:{error(){},warn(){}}});
+ const host=Object.assign(new Host(),{context:{},ensureStageRecovery:async()=>{},requireSelectedFileName:uri=>uri.split('/').at(-1),stageLocalBook:async(uri,fileName)=>{staged.push(uri);return{uri,fileName};}});const result=await host.selectLocalBookInputs(canOpenPicker);
  assert.deepEqual(received.fileSuffixFilters,[filter],'actual picker receives current shared admission filter');assert.ok(Number.isSafeInteger(received.maxSelectNumber)&&received.maxSelectNumber>0);assert.deepEqual(staged,['file:///valid.TXT'],'provider ignored suffix filter cannot send unsupported data to staging');assert.deepEqual(result.map(x=>x.state),['ready','failed']);
 }
 

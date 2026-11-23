@@ -5,9 +5,9 @@ import { createRequire } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { mangaSurfaceSdkDependencies, mangaSurfaceBoundedControls } from './lib/manga-surface-sdk-probe.mjs';
 import { mangaDirectoryAdaptiveFields, mangaDirectoryAdaptiveMembers, mangaDirectoryAdaptiveDependencies } from './lib/manga-directory-adaptive-probe.mjs';
-import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryQuickMinimumListHeight } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
+import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryQuickMinimumListHeight } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url), 'utf8');
 // The real frontend registers all declared Builder names before lowering a
 // selected branch. Inactive mode/settings/more remain outside this scope.
 const require = createRequire(import.meta.url);
@@ -15,7 +15,9 @@ const sdkRoot = resolveEtsLoaderRoot();
 const componentMap = require(`${sdkRoot}/lib/component_map.js`);
 for (const match of source.matchAll(/@Builder\s+private (\w+)\(/g)) componentMap.CUSTOM_BUILDER_METHOD.add(match[1]);
 const members = [...mangaDirectoryAdaptiveFields, ...mangaDirectoryAdaptiveMembers,
-  'panelOverlay', 'isActionPanel', 'actionPanelInsets', 'actionPanelSurface', 'actionPanelHeader', 'actionPanelBody',
+  'panelOverlay', 'panelInputCurrent', 'actionPanelPresentationGeneration',
+  'isActionPanel', 'actionPanelInsets', 'actionPanelSurface', 'actionPanelHeader', 'actionPanelBody',
+  'directorySheet', 'directoryBottomHeader', 'directorySideHeader', 'measureDirectorySheetHeader', 'chromeScheme',
   'directoryPanel', 'directoryTools', 'directoryBody', 'directoryFallback',
   'directoryCurrentFooter', 'directoryCurrentTitle', 'directoryCurrentIndex', 'directoryCurrentPagePosition',
   'directoryFontScale', 'directoryToolHeight', 'directoryHeaderChrome', 'directoryInitialWidth', 'directoryQuickHeight',
@@ -39,8 +41,10 @@ function fixture({ candidate = source, width = 320, height = 480, scale = 3.2 } 
       statusBarRect: { top: 0, height: 0 } }) },
   }, shared.hooks);
   const entries = Array.from({ length: 681 }, (_, index) => ({ index: index * 2 + 1, title: 'Chapter ' + (index + 1), navigable: true }));
-  Object.assign(owner, { mounted: true, sourceId: 'source', bookId: 'book', directoryOpenRevision: 3,
-    panel: 'directory', panelPhase: 'open', panelGeneration: 1, panelOffset: 0, panelScrimOpacity: 1, backgroundPreference: 'paper',
+  Object.assign(owner, { mounted: true, appForeground: true, windowChromeActive: true,
+    sourceId: 'source', bookId: 'book', directoryOpenRevision: 3,
+    panel: 'directory', panelPhase: 'open', panelGeneration: 1, actionPanelPresentationGeneration: 1,
+    panelOffset: 0, panelScrimOpacity: 1, backgroundPreference: 'paper',
     viewportWidth: width, viewportHeight: height, stageWidth: width, stageHeight: height,
     windowMetricsRevision: 0, quickHeaderMeasured: 0, quickToolsMeasured: 0, quickFooterMeasured: 0,
     directoryQuery: '', directoryAscending: true, directoryRevision: 0, publishedManifestVersion: 'manifest',

@@ -19,7 +19,7 @@ async function case_manga_preferences() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
-const { createDefaultReaderSettingsSnapshot, normalizeReaderSettingsSnapshot, copyReaderSettingsSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
+const { createDefaultReaderSettingsSnapshot, normalizeReaderSettingsSnapshot, copyReaderSettingsSnapshot } = await import('../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts');
 const { runtimeOwnerIdentityProbe } = await import('./lib/reader-runtime-admission-probe.mjs');
 const initial = createDefaultReaderSettingsSnapshot();
 const normalized = normalizeReaderSettingsSnapshot({ ...initial, mangaBackground: 'ink', mangaPageNumbers: false });
@@ -47,7 +47,7 @@ const store = {
   },
 };
 const runtimeOwner = { getUIAbilityContext: () => ({}) };
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderSettingsGateway.ts', import.meta.url), 'utf8')
+const source = readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReaderSettingsGateway.ts', import.meta.url), 'utf8')
   .replace(/^import[\s\S]*?;\s*\n/gm, '').replace(/^export /gm, '');
 const Gateway = new Function('preferences', 'ReaderRuntimeOwner', 'ReaderThemeHost', 'copyReaderSettingsSnapshot',
   'createDefaultReaderSettingsSnapshot', 'normalizeReaderSettingsSnapshot',
@@ -102,10 +102,11 @@ assert.equal(gateway.current().screenTimeout, 'alwaysOn', 'manga writes preserve
 async function case_chapter_action_admission() {
 const { default: assert } = await import('node:assert/strict');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const Surface = productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets', import.meta.url),
+const Surface = productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url),
   ['adjacentChapter','pageOrdinal','openChapterEnd','seekPage','nativeImageFailures','nativeFailureKey','wholeImageUnavailable','unavailableMarkerTile']);
 const chapter = { chapterIndex: 8, manifest: { chapter: { sourceId: 's', bookId: 'b', chapterId: '/8' } } };
 const owner = Object.assign(new Surface(), { sourceId: 's', bookId: 'b', mounted: true, opened: true,
+  appForeground: true, windowChromeActive: true, interactionBlocked: false, pageTurnInputRevision: 0,
   horizontal: false, displayedPage: 3, horizontalPageCount: 4,
   confirmedPosition: { anchor: { ordinal: 3 } },
   controller: { chapter, totalPages: 4, tile: () => undefined, visiblePages: () => [], setVisible: async () => {} },
@@ -147,7 +148,7 @@ console.log('PASS production manga preference migration, stale novel form preser
 
 async function case_layout_policy() {
 const { default: assert } = await import('node:assert/strict');
-const { mangaUsesPersistentDirectory, mangaDirectoryColumnWidth } = await import('../entry/src/main/ets/features/manga/MangaLayoutPolicy.ts');
+const { mangaUsesPersistentDirectory, mangaDirectoryColumnWidth } = await import('../entry/src/main/ets/features/manga/ui/MangaLayoutPolicy.ts');
 assert.equal(mangaUsesPersistentDirectory(393,852,false),false);
 assert.equal(mangaUsesPersistentDirectory(820,420,false),false,'phone landscape keeps a floating directory');
 assert.equal(mangaUsesPersistentDirectory(1180,820,true),true);

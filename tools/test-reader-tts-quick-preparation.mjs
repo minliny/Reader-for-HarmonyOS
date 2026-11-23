@@ -5,14 +5,19 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts';
-import * as state from '../entry/src/main/ets/features/reading/ReaderTtsState.ts';
-import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts';
-import * as actors from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
+import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/application/ReaderTtsSessionCoordinator.ts';
+import * as state from '../entry/src/main/ets/features/reading/application/ReaderTtsState.ts';
+import * as preferencesState from '../entry/src/main/ets/features/reading/application/ReaderTtsPreferencesState.ts';
+import * as geometry from '../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts';
+import * as actors from '../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts';
 import { ReaderTtsConfigurationHost } from './lib/reader-tts-configuration-fixture.mjs';
 import { FakeGateway, FakeHost, chapter, canonicalRemoteContent } from './lib/reader-tts-fixtures.mjs';
 
-const root = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
+const args = process.argv.slice(2);
+assert.ok(args.length === 0 || (args.length === 1 && args[0] === '--preparation-only'), 'Use no arguments or --preparation-only');
+const preparationOnly = args[0] === '--preparation-only';
+
+const root = new URL('../entry/src/main/ets/features/reading/ui/', import.meta.url);
 const lre = localFilePath(new URL('LocalReadingExperience.ets', root));
 const source = readFileSync(lre, 'utf8');
 const defaults = { version: 1, language: 'zh-CN', person: 0, pauseOnInterruption: true,
@@ -22,7 +27,7 @@ function deferred() { let resolve, reject; const promise = new Promise((a, b) =>
 async function drain() { for (let i = 0; i < 30; i++) await Promise.resolve(); }
 let runtime;
 class Frame { constructor(fn) { this.fn = fn; } onFrame() { this.fn(); } }
-const dependencies = { ...state, ReaderTtsSessionCoordinator, ReaderTtsConfigurationHost,
+const dependencies = { ...state, ...preferencesState, ReaderTtsSessionCoordinator, ReaderTtsConfigurationHost,
   ReaderTtsCredentialStore: { instance: { create: async () => {}, remove: async () => {} } }, ReaderUIFrameCallback: Frame,
   ReaderRuntimeOwner: { current: () => runtime },
   ReaderTtsGateway: class { constructor(owner) { return owner.gateway; } },
@@ -31,7 +36,9 @@ const dependencies = { ...state, ReaderTtsSessionCoordinator, ReaderTtsConfigura
 const methods = ['notifyReadingPresentationReady', 'notifyControlSelectionReadingReady', 'scheduleTtsPresentationWarmup', 'initializeTtsSession',
   'isStableVisiblePageOwner', 'isSelectionCurrent', 'loadTtsPresentationMetadata', 'retryPendingTtsPreferences', 'admitTtsPreferences', 'ttsPreferencesSnapshot', 'multiplierForTtsConfig',
   'multiplierForCoreRate', 'prepareControlPage', 'changeTtsRate', 'requireTtsConfigurationHost',
-  'persistTtsConfig', 'coreRateForMultiplier', 'ratePercentForMultiplier'];
+  'persistTtsConfig', 'coreRateForMultiplier', 'ratePercentForMultiplier', 'captureTtsPreferenceOwner', 'captureTtsPreferenceAdmission',
+  'copyTtsPreferencesSnapshot', 'nextTtsPreferenceMutationGeneration', 'acceptTtsPreferencesPatch','persistTtsPreferences','persistTtsPreferencesPatch',
+  'setReaderPreferenceNotice','settleReaderPreferenceNotice','notifyTtsPreferencePending','ttsWindowAwakeRequested','reconcileTtsWindowAwake','changeTtsVoice'];
 function fixture(file = lre) {
   const Owner = productionMotionMethods(file, methods, dependencies);
   const frames = [], events = [], http = deferred(), prefs = deferred(), voice = deferred();
@@ -46,6 +53,9 @@ function fixture(file = lre) {
     chapterSelectionToken: 1, visiblePageSelectionToken: 1,
     ttsWarmupScheduled: false, ttsInitialization: undefined, ttsPresentationMetadata: undefined, ttsAvailabilityResolved: false,
     ttsPreferenceMutationGeneration: 0, ttsConfigMutationGeneration: 0,
+    ttsPreferenceSavedGeneration: 0, ttsPreferenceOverrides: {}, ttsPreferenceBase: undefined,
+    ttsVoicePreferenceGeneration: 0, ttsMixingPreferenceGeneration: 0,
+    ttsVoicePreferencePending: false, ttsMixingPreferencePending: false, appForeground: true,
     ttsState: state.createReaderTtsState(), ttsEngine: 'system', ttsHttpEngines: [], ttsVoiceOptions: [],
     ttsLanguage: 'zh-CN', ttsPerson: 0, ttsPauseOnInterruption: true, ttsAllowMixing: false,
     ttsFailurePolicy: 'stop', ttsFollowHighlight: true, ttsBackgroundPlayback: true, ttsKeepScreenOn: false,
@@ -54,8 +64,10 @@ function fixture(file = lre) {
     getUIContext: () => ({ postFrameCallback: f => frames.push(f) }),
     onChapterCommitted: () => events.push('committed'), onReadingReady: () => events.push('ready'),
     onSessionLaunchTtsState: s => events.push(`state:${s.status}`),
-    ttsPreferencesGateway: { load: () => { events.push('prefs'); return prefs.promise; }, writeFacts: () => ({ pendingReconciliation: false }) },
-    persistTtsPreferences: () => events.push('repairVoice'),
+    projectTtsConfigurationRecovery: snapshot => events.push(`configuration:${snapshot.metadata.fact}`),
+    ttsPreferencesGateway: { load: () => { events.push('prefs'); return prefs.promise; },
+      patch: async () => { events.push('preferencePatch'); }, writeFacts: () => ({ pendingReconciliation: false }) },
+    applyReaderWindowPolicy: async () => { events.push('windowPolicy'); }, controlsPresentedForWindow: () => false,
     logTtsFailure: (op, error) => events.push(`error:${op}:${error.message}`), errorMessage: e => e.message,
   });
   const resolveMetadata = () => { http.resolve([]); prefs.resolve(defaults); voice.resolve(voices); };
@@ -127,12 +139,14 @@ for (const invalidate of [o => { o.exitRequested = true; }, o => { o.lifecycleTo
   const f = readySchedulesAfterObservers(), config = deferred(); f.gateway.getConfig = () => config.promise;
   f.frames.shift().onFrame(); await drain();
   f.owner.changeTtsRate(1.5); await drain();
-  f.owner.ttsPreferenceMutationGeneration++; f.owner.ttsLanguage = 'fr-FR';
+  f.owner.ttsVoiceOptions = voices;
+  f.owner.changeTtsVoice('en-US', 2); await drain();
   f.owner.ttsHttpEngines = [{ id: 9, name: 'Just saved' }];
   config.resolve({ engine: 'system', rate: 4, ratePercent: 75 }); f.resolveMetadata(); await drain();
   assert.equal(f.owner.ttsState.rate, 1.5, 'late initial rate cannot overwrite real user rate method');
   assert.equal(f.owner.ttsConfig.ratePercent, 150);
-  assert.equal(f.owner.ttsLanguage, 'fr-FR', 'late preferences cannot overwrite a newer user intent');
+  assert.equal(f.owner.ttsLanguage, 'en-US', 'late preferences preserve the actually accepted installed voice field');
+  assert.equal(f.owner.ttsPerson, 2);
   assert.equal(f.owner.ttsHttpEngines[0].id, 9, 'late list cannot erase an acknowledged service update');
 }
 {
@@ -164,9 +178,10 @@ for (const invalidate of [o => { o.exitRequested = true; }, o => { o.lifecycleTo
 
 // Actual SDK-generated Builder observers: the first Quick render has its
 // label/play glyph/control; probing and ACK are state updates, never a new tree.
+if (!preparationOnly) {
 const content = readFileSync(new URL('ReaderControlTtsContent.ets', root), 'utf8');
 const members = ['quickLabel', 'quickLabelActor', 'playbackLabel', 'roundControl', 'controlText', 'isActivelySpeaking',
-  'hasActiveQueue', 'sharedInput', 'transport', 'p', 'frame', 'effectiveRate', 'onlineServicePage', 'isHttpEngineSelected'];
+  'hasActiveQueue', 'sharedInput', 'transport', 'transportPaint', 'transportGlyphSize', 'p', 'frame', 'effectiveRate', 'onlineServicePage', 'isHttpEngineSelected'];
 const { owner: ui } = createReaderBuilderProbe(content, members, { ...geometry, ...actors, ...state,
   readerTtsPlayGradientStart: () => '#2F6373' });
 let toggles = 0;
@@ -184,4 +199,7 @@ for (const status of ['probing', 'idle', 'unavailable']) {
 }
 assert.equal(control.accessibilityText, '重试朗读'); assert.equal(control.enabled, true);
 control.onClick(); assert.equal(toggles, 1, 'failed warmup remains explicitly retryable');
-console.log('PH44 TTS Quick preparation PASS: deferred ready/single-flight/zero audio+queue/independent metadata/obsolete+newer intent guards/active session/SDK first frame/retry; omission negative control rejected');
+}
+console.log(preparationOnly ?
+  'PH44 TTS preparation lifecycle PASS: deferred ready/single-flight/zero audio+queue/independent metadata/obsolete owner/accepted installed voice-field/active session/retry; actual omission negative rejected. SDK first-frame branch NOT_RUN.' :
+  'PH44 TTS Quick preparation PASS: deferred ready/single-flight/zero audio+queue/independent metadata/obsolete+newer intent guards/active session/SDK first frame/retry; omission negative control rejected');

@@ -32,6 +32,7 @@ await new Promise(resolve=>setImmediate(resolve));assert.deepEqual(requests,['ma
 assert.equal(page.owner.state.canRetry,false,'retry admission closes while the original main load is pending');
 retry.onClick();assert.equal(requests.length,3,'retained old callback cannot duplicate the pending main load');
 mainDone(17);recoveryDone(0);properties.flush();
-const exit=nodes().find(node=>node.accessibilityText==='退出应用');exit.onClick();await new Promise(resolve=>setImmediate(resolve));assert.equal(exits,1);
+retry.onClick();assert.equal(requests.length,4,'old retry stays retired after a new recovery receipt');
+const exit=nodes().findLast(node=>node.accessibilityText==='退出应用');exit.onClick();await new Promise(resolve=>setImmediate(resolve));assert.equal(exits,1);
 page.owner.aboutToDisappear();owner.close();retry.onClick();assert.equal(requests.length,4,'retired recovery control cannot restart a WindowStage');
 console.log('PASS independent startup recovery surface: actual SDK page and shared actions, native32 wait/no actions and native-receipt recovery actions, one retry and retired callback; native branch removal remains outside CPU proof');

@@ -4,9 +4,10 @@ for(const id of selectContractCases(definitions)){await runSelectedCase(id);reco
 async function runSelectedCase(selectedCase){
 const {default: assert} = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
+const {rssOriginalMatchesScope} = await import('../entry/src/main/ets/features/rss/application/RssMutationRecoveryContract.ts');
 const {boundedSurfaceSdk,boundedMembers} = await import('./lib/bounded-surface-sdk-probe.mjs');
 
-const source=readFileSync(new URL('../entry/src/main/ets/features/rss/RssOriginalRecoverySurface.ets',import.meta.url),'utf8');
+const source=readFileSync(new URL('../entry/src/main/ets/features/rss/ui/RssOriginalRecoverySurface.ets',import.meta.url),'utf8');
 async function pending(kind='management'){
  if(selectedCase==='surface-admission')return {projection:{generation:7,operationId:'fixture-operation-7',sequence:7,method:kind==='entry'?'rss.favorite.put':kind==='editor'?'rss-source.put':'rss.subscription.setEnabled',scope:kind,subscriptionId:'s',guid:kind==='entry'?'g':'',confirmation:'unknown',writeStage:'core',busy:false,blocked:true,canRetryOriginal:true,message:'原操作未确认'}};
  const {fixture,seedEntry,draft}=await import('./lib/rss-management-durable-probe.mjs');
@@ -15,10 +16,10 @@ async function pending(kind='management'){
 }
 function surface(projection,handlers={},scope='management'){
  const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
- const owner=sdk.consumer(source,boundedMembers(source),{}, {original:projection,presentationIdentity:'page-a',subscriptionId:projection.subscriptionId,guid:projection.guid,scope,...handlers});owner.aboutToAppear();owner.initialRender();
+ const owner=sdk.consumer(source,boundedMembers(source),{rssOriginalMatchesScope}, {original:projection,presentationIdentity:'page-a',subscriptionId:projection.subscriptionId,guid:projection.guid,scope,...handlers});owner.aboutToAppear();owner.initialRender();
  const actions=()=>sdk.walk(owner).filter(c=>c instanceof sdk.deps.ReaderRecoveryAction);
  const action=label=>{const actor=actions().filter(c=>c.label===label).at(-1);assert.ok(actor,label);return{actor,click:sdk.nodes(actor).find(n=>n.onClick).onClick};};
- return{sdk,owner,actions,action,update(params){owner.updateStateVars({original:owner.original,presentationIdentity:owner.presentationIdentity,scope:owner.scope,subscriptionId:owner.subscriptionId,guid:owner.guid,...params});sdk.properties.flush();owner.replay();sdk.properties.flush();}};
+ return{sdk,owner,actions,action,update(params){if(selectedCase==='surface-admission'){Object.assign(owner,params);return;}owner.updateStateVars({original:owner.original,presentationIdentity:owner.presentationIdentity,scope:owner.scope,subscriptionId:owner.subscriptionId,guid:owner.guid,...params});sdk.properties.flush();owner.replay();sdk.properties.flush();}};
 }
 let cases=0;
 if(selectedCase==='cold-integration') {
@@ -48,17 +49,17 @@ for(const state of ['busy','foreign','feed','unqualified','disappeared']){
 }
 {
  const {projection}=await pending();let attempts=0;const mutated=source.replace('if (this.canContinue(identity)) this.onContinueOriginal(this.expected(identity));','this.onContinueOriginal(this.expected(identity));');
- const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});const owner=sdk.consumer(mutated,boundedMembers(mutated),{}, {original:projection,presentationIdentity:'page-a',scope:'management',onContinueOriginal:()=>attempts++});owner.aboutToAppear();owner.initialRender();
+ const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});const owner=sdk.consumer(mutated,boundedMembers(mutated),{rssOriginalMatchesScope}, {original:projection,presentationIdentity:'page-a',scope:'management',onContinueOriginal:()=>attempts++});owner.aboutToAppear();owner.initialRender();
  const actor=sdk.walk(owner).filter(a=>a instanceof sdk.deps.ReaderRecoveryAction&&a.label==='继续原操作').at(-1),click=sdk.nodes(actor).find(n=>n.onClick).onClick;
  owner.aboutToDisappear();click();assert.equal(attempts,1,'negative control: removing the physical guard reproduces the retired write attempt');cases++;
 }
 for(const kind of ['entry','editor']){
- const {projection}=await pending(kind);const v=surface(projection,{},kind);assert.ok(v.action('继续原操作'));
- v.update({subscriptionId:'other'});assert.equal(v.actions().filter(a=>a.label==='继续原操作'&&a.actionEnabled).length,0,'other entity cannot borrow this original');
- const wrong=surface(projection,{},kind);wrong.update({guid:kind==='entry'?'other':'',subscriptionId:kind==='editor'?'other':projection.subscriptionId});
- assert.equal(wrong.actions().filter(a=>a.label==='继续原操作'&&a.actionEnabled).length,0);cases++;
+ const {projection}=await pending(kind);let attempts=0;const v=surface(projection,{onContinueOriginal:()=>attempts++},kind);const originalClick=v.action('继续原操作').click;
+ v.update({subscriptionId:'other'});originalClick();assert.equal(attempts,0,'other entity cannot borrow this original');
+ const wrong=surface(projection,{onContinueOriginal:()=>attempts++},kind);const wrongClick=wrong.action('继续原操作').click;wrong.update({guid:kind==='entry'?'other':'',subscriptionId:kind==='editor'?'other':projection.subscriptionId});
+ wrongClick();assert.equal(attempts,0);cases++;
 }
 }
-console.log(`PASS selected RSS actual Core/Atomic original→decorated shared recovery→native physical event: ${cases} groups`);
+console.log(`PASS selected RSS ${selectedCase==='surface-admission'?'fixed typed projection, initial SDK Notice actions and current host input-guard mutations; native removal/busy paint OPEN':'actual Core/Atomic original→decorated shared recovery→event'}: ${cases} groups`);
 
 }

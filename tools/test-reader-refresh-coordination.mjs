@@ -6,11 +6,11 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 registerHooks({ resolve(s, c, n) { try { return n(s, c); } catch (e) {
   if (s.startsWith('.') && !s.endsWith('.ts')) return n(`${s}.ts`, c); throw e;
 } } });
-const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/app/BookAcquisitionCoordinator.ts');
-const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const { RemoteReadingFlowGateway, RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-const evidence = await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
-const admission = await import('../entry/src/main/ets/features/reading/RemoteContentAdmission.ts');
+const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts');
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
+const { RemoteReadingFlowGateway, RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+const evidence = await import('../entry/src/main/ets/features/reading/application/RemoteReadingEvidence.ts');
+const admission = await import('../entry/src/main/ets/features/reading/application/RemoteContentAdmission.ts');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
 const session = { identity: { sourceId: 's', bookId: 'b' }, sourceVersion: 'v1', acquisitionMode: 'online',

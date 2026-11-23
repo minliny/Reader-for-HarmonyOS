@@ -12,20 +12,20 @@ const facts=await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
 const projection=await import('../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts');
 const recovery=await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
 const source=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
-const indexSource=source('pages/Index.ets'),pageSource=source('features/settings/RulesManagementPage.ets');
+const indexSource=source('pages/Index.ets'),pageSource=source('features/settings/ui/RulesManagementPage.ets');
 const require=createRequire(import.meta.url),syntax=require((resolveEtsLoaderRoot())+'/lib/validate_ui_syntax.js');
-for(const [name,path]of[['RulesManagementPage','features/settings/RulesManagementPage.ets'],['JsonImportDialog','features/common/JsonImportDialog.ets'],['ReaderToggle','features/common/ReaderToggle.ets'],['PageBackBar','features/common/PageBackBar.ets']]){
+for(const [name,path]of[['RulesManagementPage','features/settings/ui/RulesManagementPage.ets'],['JsonImportDialog','app/composition/JsonImportDialog.ets'],['ReaderToggle','ui/controls/ReaderToggle.ets'],['PageBackBar','ui/chrome/PageBackBar.ets']]){
  syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source(path).matchAll(/@Prop(?:\s+@Watch\([^)]*\))?\s+(\w+)\s*:/g)].map(m=>m[1])));
 }
 
 class Child{constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
 const names=['rulesManagementContent','rulesManagementSurface','isCurrentRuntime','isCurrentRulesPresentation','getRulesManagementOrchestrator',
- 'jsonImportContent','jsonImportSurface','isCurrentJsonImportPresentation','openJsonImport','dismissJsonImport','executeJsonImport','jsonImportTitle','jsonImportDescription'];
+ 'jsonImportContent','dismissJsonImport'];
 let instances=0,cases=0;
 const draft={name:'dict',urlRule:'https://dict.invalid/{{key}}',showRule:'$.definition',enabled:true,sortNumber:0};
 function host(f){
- const Source=compile('features/source/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner:f.Runtime},true);
- return compile('features/settings/RulesManagementOrchestrator.ets','RulesManagementOrchestrator',
+ const Source=compile('features/source/application/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner:f.Runtime},true);
+ return compile('features/settings/application/RulesManagementOrchestrator.ets','RulesManagementOrchestrator',
   {ReaderRuntimeOwner:f.Runtime,ReaderWriteEvidence,RulesManagementGateway:f.Gateway,SourceGateway:Source,
    RssGateway:class{observeWrites(){}},...facts,...projection,hilog:{error(){}}},true);
 }
@@ -117,15 +117,29 @@ passed=true;}finally{const cleanup=await cleanupDurableFixtures({retain:!passed}
 }
 async function lightModal(mode){
  const {readFileSync}=await import('node:fs');const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
- const source=readFileSync(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),'utf8');
+ const source=path=>readFileSync(new URL('../entry/src/main/ets/'+path,import.meta.url),'utf8');
  class Child{constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
- const runtime={},calls=[],host={owns:value=>value===runtime,isPresentationCurrent:id=>id==='live',importBundle:(url,id)=>calls.push([url,id])};
- const {owner}=createReaderBuilderProbe(source,['jsonImportContent','jsonImportSurface','isCurrentJsonImportPresentation','openJsonImport','dismissJsonImport','executeJsonImport','jsonImportTitle','jsonImportDescription','isCurrentRulesPresentation','isCurrentRuntime'],{JsonImportDialog:Child,deviceInfo:{deviceType:'phone'},ReaderRuntimeOwner:{isCurrent:value=>value===runtime}},{childSources:{JsonImportDialog:readFileSync(new URL('../entry/src/main/ets/features/common/JsonImportDialog.ets',import.meta.url),'utf8')}});
- Object.assign(owner,{route:'rulesManagement',navigationGeneration:1,detailShelfAdmissionMount:1,mountedRuntimeOwner:runtime,shelfReceiptRetired:false,jsonImportGeneration:0,jsonImportVisible:false,rulesManagementOrchestrator:host,rulesPresentationIdentity:'live'});
- owner.openJsonImport('ruleBundle');owner.jsonImportContent();const old=[...owner.children.values()].at(-1).params;
- if(mode==='modal-generation'){owner.dismissJsonImport();owner.openJsonImport('ruleBundle');owner.jsonImportContent();}else{owner.rulesManagementOrchestrator={...host};owner.rulesPresentationIdentity='successor';}
- old.onDismiss();old.onImportOnline('https://old.invalid');old.onSelectLocal();assert.equal(owner.jsonImportVisible,true);assert.deepEqual(calls,[]);
- if(mode==='modal-generation'){const live=[...owner.children.values()].at(-1).params;live.onImportOnline('https://chosen.invalid');assert.equal(owner.jsonImportVisible,false);assert.deepEqual(calls,[['https://chosen.invalid','live']]);}
+ const calls=[],host={importBundle:(url,id)=>calls.push([url,id])};
+ const rulesPresentation={identity:'live',operations:id=>id===rulesPresentation.identity?host:undefined};
+ const {owner}=createReaderBuilderProbe(source('pages/Index.ets'),['jsonImportContent','dismissJsonImport','rulesManagementSurface'],
+  {JsonImportDialog:Child,RulesManagementSurface:Child},{childSources:{JsonImportDialog:source('app/composition/JsonImportDialog.ets'),
+    RulesManagementSurface:source('features/settings/ui/RulesManagementSurface.ets')}});
+ Object.assign(owner,{rulesPresentation,expandedLayout:()=>false});
+ function open() {
+  owner.rulesManagementSurface(rulesPresentation.identity);
+  [...owner.children.values()].findLast(child=>child.params?.onImport).params.onImport();
+  owner.jsonImportContent();
+  return [...owner.children.values()].findLast(child=>child.params?.onImportOnline).params;
+ }
+ const old=open();
+ if(mode==='modal-generation') owner.dismissJsonImport();
+ else rulesPresentation.identity='successor';
+ const live=open();
+ old.onDismiss();old.onImportOnline('https://old.invalid');old.onSelectLocal();
+ assert.equal(owner.jsonImportVisible,true);assert.deepEqual(calls,[]);
+ live.onImportOnline('https://chosen.invalid');
+ assert.equal(owner.jsonImportVisible,false);
+ assert.deepEqual(calls,[['https://chosen.invalid',rulesPresentation.identity]]);
 }
 const definitions={"physical-admission": {"description": "physical-admission actual production owner/SDK scope", "resources": []}, "attachment": {"description": "attachment actual production owner/SDK scope", "resources": []}, "accepted-tail": {"description": "accepted-tail actual production owner/SDK scope", "resources": []}, "readback": {"description": "readback actual production owner/SDK scope", "resources": []}, "modal-generation": {"description": "modal-generation actual production owner/SDK scope", "resources": []}, "modal-replacement": {"description": "modal-replacement actual production owner/SDK scope", "resources": []}, "attach-negative": {"description": "attach-negative actual production owner/SDK scope", "resources": []}, "presentation-negative": {"description": "presentation-negative actual production owner/SDK scope", "resources": []}};
 for(const id of selectContractCases(definitions)){if(id==='modal-generation'||id==='modal-replacement')await lightModal(id);else await run(id);recordContractCasePass(id);}

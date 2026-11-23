@@ -9,8 +9,8 @@ async function runSelectedCase(selectedCase) {
 const {default:assert}=await import('node:assert/strict');
 const {readFileSync}=await import('node:fs');
 const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
-const {ShelfBookPresentation}=await import('../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts');
-const list=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ShelfBookListDetails.ets',import.meta.url),'utf8');
+const {ShelfBookPresentation}=await import('../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts');
+const list=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/ShelfBookListDetails.ets',import.meta.url),'utf8');
 // Inspect the real SDK-emitted details: two metadata tags, independent manga
 // position, compact same-colour facts and the thin whole-book progress track.
 const probeSource=list.replace('  build() {', '  build() { Column() {} }\n  @Builder\n  shelfDetails() {');

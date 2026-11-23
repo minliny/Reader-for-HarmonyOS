@@ -1,4 +1,5 @@
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+import { mangaSourceUrl } from './lib/manga-source-paths.mjs';
 
 export const CONTRACT_CASES = {
   "controller-cas-lifecycle": {
@@ -37,10 +38,9 @@ const { MangaRetainedTileCache } = await import('./lib/manga-retained-tile-cache
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
-const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
-const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts');
 function load(name, dependencies = {}) {
-  const source = readFileSync(new URL(`${name}.ts`, root), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
+  const source = readFileSync(mangaSourceUrl(`${name}.ts`), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
   return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
 }
 const MangaSessionGateway = load('MangaSessionGateway');
@@ -227,10 +227,9 @@ const { MangaRetainedTileCache } = await import('./lib/manga-retained-tile-cache
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
-const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
-const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts');
 function load(name, dependencies = {}) {
-  const source = readFileSync(new URL(`${name}.ts`, root), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
+  const source = readFileSync(mangaSourceUrl(`${name}.ts`), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
   return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
 }
 const MangaSessionGateway = load('MangaSessionGateway');
@@ -320,10 +319,9 @@ const { MangaRetainedTileCache } = await import('./lib/manga-retained-tile-cache
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
-const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
-const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts');
 function load(name, dependencies = {}) {
-  const source = readFileSync(new URL(`${name}.ts`, root), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
+  const source = readFileSync(mangaSourceUrl(`${name}.ts`), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
   return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
 }
 const MangaSessionGateway = load('MangaSessionGateway');
@@ -354,7 +352,7 @@ const runtime={ supportsCoreCapability:()=>true,
  const rt={supportsCoreCapability:()=>true,request:async(method)=>{assert.equal(method,'manga.entry.get');phases.push('entry');return {data:{entry:prepared}};},
   loadReadingImage:async()=>{phases.push('pixels');return {fileUri:'file://entry',width:600,height:800,revision:'r'};},releaseReadingImage:()=>{},
   bookAcquisitions:()=>({acquireBook:()=>{phases.push('catalog-start');return catalog;}})};
- const ControllerSurface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway, MangaBookPresentation, AppStorage:{setOrCreate(){}}});
+ const ControllerSurface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway, MangaBookPresentation, AppStorage:{setOrCreate(){}}});
  const controller=new Controller(rt);
  const surface=Object.assign(new ControllerSurface(),{mounted:true,controller,runtime:rt,sourceId:'s',bookId:'b',offline:false,
   remoteBookSeed:{},opened:false,acquirePreparedCatalog:()=>{phases.push('catalog-start');return catalog;},publish:()=>phases.push('published'),restore:()=>phases.push('restored'),onRemoteSessionReady:()=>phases.push('catalog-ready')});
@@ -376,7 +374,7 @@ console.log('PASS actual surface first admits narrow pixels, then starts catalog
   assert.equal(method,'reading.progress.update');assert.equal(params.expectedRevision,persisted.progressRevision);
   writes++;persisted=structuredClone(params.location);return {data:{token:{epoch:12,revision:persisted.progressRevision},location:structuredClone(persisted)}};
  },loadReadingImage:async()=>({fileUri:'file://resume',width:600,height:800,revision:'r'}),releaseReadingImage:()=>{}};
- const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway, MangaBookPresentation, AppStorage:{setOrCreate(){}}});
+ const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway, MangaBookPresentation, AppStorage:{setOrCreate(){}}});
  const c=new Controller(rt);
  const surface=Object.assign(new Surface(),{mounted:true,controller:c,runtime:rt,sourceId:'s',bookId:'b',offline:false,
   remoteSession:{identity:{sourceId:'s',bookId:'b'},contentKind:'manga',entries:[{index:0,url:'/c'}]},
@@ -415,7 +413,7 @@ for (const mappingStatus of ['exact','unresolved']) {
  else await assert.rejects(c.savePosition(target,0,0),/POSITION_NOT_VISIBLE/,'the retained failed old page cannot save guessed replacement progress');
  // Execute the actual ArkUI publication method after the internal recovery.
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
- const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['publish','requestedLast','displayChapterTitle']);
+ const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),['publish','requestedLast','displayChapterTitle']);
  const Projection=load('MangaStripProjection');const projection=new Projection();
  projection.publish(old.manifest,()=>({width:600,height:800,tileHeight:800}),5);
  const restored=[];const surface=Object.assign(new Surface(),{controller:c,mounted:true,opened:true,horizontal:true,horizontalPage:5,publishedManifestVersion:'v',layoutGeneration:0,viewportGeneration:0,first:0,last:0,
@@ -455,10 +453,9 @@ const { MangaRetainedTileCache } = await import('./lib/manga-retained-tile-cache
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
-const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
-const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts');
 function load(name, dependencies = {}) {
-  const source = readFileSync(new URL(`${name}.ts`, root), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
+  const source = readFileSync(mangaSourceUrl(`${name}.ts`), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
   return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
 }
 const MangaSessionGateway = load('MangaSessionGateway');
@@ -495,7 +492,7 @@ const runtime={ supportsCoreCapability:()=>true,
  async prefetchReadingImage(identity,current,version,allowNetwork){assert.equal(version,'r');assert.equal(allowNetwork,true);assert.equal(current(),true);assert.equal(identity.chapterIndex,42);assert.equal(identity.resourceRef,next.manifest.pages[0].resourceRef);events.push('prefetch-first');cache.add(identity.resourceRef);}};
  const c=new Controller(rt);await c.open('s','b',0);await new Promise(r=>setImmediate(r));
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
- const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['configureAdjacentChapter']);
+ const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),['configureAdjacentChapter']);
  const surface=Object.assign(new Surface(),{runtime:rt,offline:false});
  surface.configureAdjacentChapter({contentKind:'manga',sourceVersion:'r',acquisitionMode:'online',identity:{sourceId:'s',bookId:'b'},entries:[{index:0,url:'/c'},{index:20,url:'/group',navigable:false},{index:42,url:'/next'}]},c);
  await new Promise(r=>setImmediate(r));assert.equal(nextHttp,1);assert.equal(cache.size,0,'opening a chapter must not download the next first image');
@@ -547,13 +544,13 @@ const { MangaRetainedTileCache } = await import('./lib/manga-retained-tile-cache
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
-const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
-const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts');
 function load(name, dependencies = {}) {
-  const source = readFileSync(new URL(`${name}.ts`, root), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
+  const source = readFileSync(mangaSourceUrl(`${name}.ts`), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
   return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
 }
-const MangaSessionGateway = load('MangaSessionGateway');
+const { encodeReaderDirectoryTargetProof } = await import('../entry/src/main/ets/features/reading/application/ReaderDirectoryTargetProof.ts');
+const MangaSessionGateway = load('MangaSessionGateway', { encodeReaderDirectoryTargetProof });
 const MangaResourceGateway = load('MangaResourceGateway');
 const Controller = load('MangaSessionController', { MangaRetainedTileCache, MangaSessionGateway, MangaResourceGateway });
 const chapter = { manifest: { chapter: {sourceId:'s', bookId:'b', chapterId:'/c'}, sourceRuleVersion:'r', manifestVersion:'v', decodeRevision:'identity-v1',
@@ -574,8 +571,8 @@ const runtime={ supportsCoreCapability:()=>true,
 // both cached and network entry paths. Core refusal cannot admit image pixels.
 {
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
- const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway, MangaBookPresentation, AppStorage:{setOrCreate(){}}});
- const proof={sourceId:'s',bookId:'b',chapterIndex:0,url:'/c',nodeId:'node-0',catalogRevision:'catalog',structureRevision:'tree',rulesVersion:'rules'};
+ const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],{MangaSessionGateway, MangaBookPresentation, AppStorage:{setOrCreate(){}}});
+ const proof={sourceId:'s',bookId:'b',chapterIndex:0,url:'/c',nodeId:'node-0',catalogRevision:'catalog',structureRevision:'tree'};
  for(const mode of ['cached','network','stale-proof']) {
   const requests=[];let pixels=0;
   const rt={supportsCoreCapability:()=>true,async request(method,params){requests.push([method,params]);
@@ -611,6 +608,51 @@ const runtime={ supportsCoreCapability:()=>true,
 }
 console.log('PASS real manga surface/gateway/controller carries exact directory proof on cached and live paths, rejection admits no pixels/writes, implicit resume retains historical image xy/CAS');
 
+{
+ const Switch = load('MangaSourceSwitchGateway', { MangaSessionGateway, MangaResourceGateway });
+ const originChapter = {sourceId:'old',bookId:'original',chapterId:'/old'};
+ const saved = {kind:'manga',chapter:originChapter,manifestVersion:'old-manifest',
+  pageId:chapter.manifest.pages[0].pageId,pageOrdinalFallback:0,x:0,y:0,progressRevision:9};
+ const target = {contentKind:'manga',sourceVersion:'r',identity:{sourceId:'s',bookId:'b'},
+  entries:[{index:0,title:'Selected chapter',url:'/c'}]};
+ const proof = {sourceId:'s',bookId:'b',catalogRevision:'catalog',structureRevision:'tree',nodeId:'selected',chapterIndex:0,url:'/c'};
+ const expectedFrom = {epoch:92,revision:9};
+ for (const stale of [false,true]) {
+  const calls = [], released = [];
+  let imageLoads = 0;
+  const gateway = new Switch({
+   supportsCoreCapability:()=>true,
+   async request(method,params) {
+    calls.push(method);
+    if (method==='manga.chapter.get') {
+     assert.deepEqual(params.directoryTargetProof,proof);
+     assert.notEqual(params.directoryTargetProof,proof,'serialize into an independent Core command object');
+     if (stale) throw Error('directory target proof changed');
+     return {data:structuredClone(chapter)};
+    }
+    assert.equal(method,'reading.progress.get');
+    return {data:params.sourceId==='old'?{token:expectedFrom,location:saved}:{token:{epoch:92,revision:0},location:null}};
+   },
+   async loadReadingImage() { imageLoads++; return {fileUri:'file://switch-proof',width:600,height:800,revision:'pixels'}; },
+   releaseReadingImage(uri) { released.push(uri); },
+  });
+  const selection = gateway.prepareSelected('old','original',target,0,()=>true,expectedFrom,proof);
+  if (stale) {
+   await assert.rejects(selection,/directory target proof changed/);
+   assert.deepEqual(calls,['reading.progress.get','manga.chapter.get']);
+   assert.equal(imageLoads,0,'rejected directory authority cannot load a target image');
+  } else {
+   const proposal = await selection;
+   assert.deepEqual(proposal.expectedFrom,expectedFrom);
+   assert.equal(proposal.targetPageOrdinal,0);
+   assert.deepEqual(calls,['reading.progress.get','manga.chapter.get','reading.progress.get']);
+   assert.equal(imageLoads,1);
+   assert.deepEqual(released,['file://switch-proof']);
+  }
+ }
+}
+console.log('PASS explicit manga switch consumes the same Core directory proof and fences first-image preparation on refusal');
+
 }
 
 async function case_source_cache_renew() {
@@ -619,10 +661,9 @@ const { MangaRetainedTileCache } = await import('./lib/manga-retained-tile-cache
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
-const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
-const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts');
 function load(name, dependencies = {}) {
-  const source = readFileSync(new URL(`${name}.ts`, root), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
+  const source = readFileSync(mangaSourceUrl(`${name}.ts`), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
   return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
 }
 const MangaSessionGateway = load('MangaSessionGateway');
@@ -682,7 +723,7 @@ for (const mode of ['missing', 'reprocess', 'same-exact', 'same-unresolved', 'sa
    if(options.forceRefresh && mode==='exit')await new Promise(resolve=>finishCatalog=resolve);
    return catalog;
  }})};
- const Surface=productionMotionMethods(new URL('MangaReadingSurface.ets',root),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],
+ const Surface=productionMotionMethods(mangaSourceUrl('MangaReadingSurface.ets'),['open','acquireCatalog','effectiveFit','configureAdjacentChapter'],
    {MangaSessionGateway,MangaBookPresentation,AppStorage:{setOrCreate(){}}});
  const c=new Controller(rt),offlineMode=mode.startsWith('offline');
  const surface=Object.assign(new Surface(),{mounted:true,controller:c,runtime:rt,sourceId:'s',bookId:'b',offline:offlineMode,
@@ -754,7 +795,7 @@ console.log('PASS actual Surface/Gateway/Controller cached entry renewal: change
  const rt={supportsCoreCapability:()=>true,captureReadingContentValidity:()=>{const revision=contentRevision;return ()=>revision===contentRevision;},
   async request(method){if(method==='manga.entry.get'){if(failNextEntry){failNextEntry=false;throw Error('entry unavailable');}return {data:{entry:structuredClone(entry)}};}writes++;throw Error('reopen must not write progress or refetch the canonical cached chapter');},
   async loadReadingImage(){return {fileUri:`file://reopen-${++images}`,width:600,height:800,revision:'r'};},releaseReadingImage(){}};
- const Surface=productionMotionMethods(new URL('MangaReadingSurface.ets',root),['open','reopenChangedChapter','retryOpen','effectiveFit','configureAdjacentChapter'],
+ const Surface=productionMotionMethods(mangaSourceUrl('MangaReadingSurface.ets'),['open','reopenChangedChapter','retryOpen','effectiveFit','configureAdjacentChapter'],
   {MangaSessionGateway,MangaBookPresentation,AppStorage:{setOrCreate(){}}});
  const c=new Controller(rt);
  const catalog={contentKind:'manga',sourceVersion:'r',identity:{sourceId:'s',bookId:'b'},entries:[{index:0,url:'/c',title:'chapter'}]};
@@ -791,10 +832,9 @@ const { MangaRetainedTileCache } = await import('./lib/manga-retained-tile-cache
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
-const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
-const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
+const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts');
 function load(name, dependencies = {}) {
-  const source = readFileSync(new URL(`${name}.ts`, root), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
+  const source = readFileSync(mangaSourceUrl(`${name}.ts`), 'utf8').replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
   return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
 }
 const MangaSessionGateway = load('MangaSessionGateway');
@@ -823,30 +863,32 @@ const runtime={ supportsCoreCapability:()=>true,
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
  const {createRequire}=await import('node:module');
  const {ReadingEntryPreparation}=await import('./lib/reading-entry-owner-probe.mjs');
- const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
- const surfaceSource=readFileSync(new URL('MangaReadingSurface.ets',root),'utf8');
- const shellSource=readFileSync(new URL('../entry/src/main/ets/features/shell/ReaderShell.ets',import.meta.url),'utf8');
+ const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+ const surfaceSource=readFileSync(mangaSourceUrl('MangaReadingSurface.ets'),'utf8');
+ const shellSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderShell.ets',import.meta.url),'utf8');
  const sdk=resolveEtsLoaderRoot();
  const syntax=createRequire(import.meta.url)(`${sdk}/lib/validate_ui_syntax.js`);
  syntax.componentCollection.customComponents.add('MangaReadingSurface');
  syntax.propCollection.set('MangaReadingSurface',new Set([...surfaceSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(match=>match[1])));
  const properties=createArkUIPropertyRuntimeProbe();
  const childSdk=createReaderBuilderProbe(surfaceSource,
-   ['remoteSession','onSelectDirectoryTarget','open','acquireCatalog','acquirePreparedCatalog','effectiveFit','configureAdjacentChapter','adjacentChapter','directoryEntries','selectDirectoryTarget',
+   ['remoteSession','isReaderIdentityCurrent','onSelectDirectoryTarget','open','acquireCatalog','acquirePreparedCatalog','effectiveFit','configureAdjacentChapter','adjacentChapter','directoryEntries','selectDirectoryTarget',
     'performPanelAction','closePanel','dismissPanelKeyboard','panelTravel','panelWidth','panelHeight','widePanel',
     'panel','panelPhase','panelGeneration','panelActionGeneration','panelCloseTask','panelCloseResolve','panelOffset','panelScrimOpacity','reduceMotion',
-    'onWindowChromeChanged'],
+    'onWindowChromeChanged','readerPanelForeground','requestPanelFocus','panelReturnFocusTarget','panelFocusGeneration'],
    {...properties.sdk,MangaSessionGateway,MangaBookPresentation,RemoteReadingFlowGateway,AppStorage:{setOrCreate(){}},
     inputMethod:{getController:()=>({hideTextInput:async()=>{}})},
     uiContext:{getFocusController:()=>({clearFocus(){}})}},properties.hooks);
- const parentSdk=createReaderBuilderProbe(shellSource,['remoteSession','mangaSurface','mangaIdentityKey'],
+ const parentSdk=createReaderBuilderProbe(shellSource,['remoteSession','mangaSurface','mangaIdentityKey','isMangaSurfaceCurrent','readingContentIsForeground','acceptsMangaInput'],
    {...properties.sdk,MangaReadingSurface:childSdk.Component,ReaderRuntimeOwner:{current:()=>({})}},properties.hooks);
  const parent=parentSdk.owner;
- Object.assign(parent,{sourceId:'s',bookId:'b',readingReadyGeneration:1,mangaChapterRequestGeneration:0});
+ Object.assign(parent,{sourceId:'s',bookId:'b',contentKind:'manga',route:'reading',visible:true,inputAllowed:true,sourceSwitchPresented:false,sourceSwitchCovered:false,readingReadyGeneration:1,mangaChapterRequestGeneration:0});
  parent.mangaSurface();
  assert.equal(parent.children.size,1);
  const surface=[...parent.children.values()][0];
- surface.isReaderIdentityCurrent=()=>false; // Cold-catalog fixture has no system-window owner.
+ // The actual Shell identity guard remains active. Native chrome side effects
+ // are explicit ports; this leaf proves catalog/selection, not system bars.
+ Object.assign(surface,{refreshLoginRequiredForControls(){},applyWindowChrome(){},applyWindowPolicyForChromeOwner(){}});
  const next=structuredClone(chapter);next.chapterIndex=1;next.manifest.chapter.chapterId='/next';next.manifest.manifestVersion='next';
  const catalog={contentKind:'manga',sourceVersion:'r',identity:{sourceId:'s',bookId:'b'},book:{title:'cold manga'},
    entries:[{index:0,url:'/c',title:'chapter'},{index:1,url:'/next',title:'next chapter'}]};
@@ -859,11 +901,12 @@ const runtime={ supportsCoreCapability:()=>true,
    if(method==='manga.chapter.get'){assert.equal(params.chapterIndex,1,'only optional canonical next-chapter preparation may follow cached entry');return {data:structuredClone(next)}};
    writes++;throw Error('cold catalog publication cannot write user data');
  },async loadReadingImage(){return {fileUri:'file://cold-entry',width:600,height:800,revision:'pixels'}},releaseReadingImage(){},
-   bookAcquisitions:()=>({acquireBook:()=>assert.fail('cached reader bootstrap cannot mutate its catalog')})};
+   bookAcquisitions:()=>({setPreparationVisible(){},readingProjectionRevision:()=>0,acquireBook:()=>assert.fail('cached reader bootstrap cannot mutate its catalog')})};
  const controller=new Controller(rt);
  parent.onRemoteSessionReady=session=>{parent.updateStateVars({remoteSession:session});properties.flush();};
  Object.assign(surface,{mounted:true,controller,runtime:rt,sourceId:'s',bookId:'b',offline:false,
    remoteBookSeed:{sourceId:'s',bookId:'b',contentKind:'manga',title:'cold manga',author:'Writer',detailUrl:'/b'},fitPreference:'width',horizontal:false,
+   appForeground:true,windowChromeActive:true,windowChromeOverlayActive:false,interactionBlocked:false,panelReturnFocusTarget:'',widePanel:()=>false,
    publish(){},restore(){},updateViewport(){},onRemoteSessionReady:session=>parent.onRemoteSessionReady(session)});
  await surface.open(controller);
  assert.equal(surface.opened,true);assert.equal(surface.remoteSession,undefined);
@@ -877,36 +920,37 @@ const runtime={ supportsCoreCapability:()=>true,
  assert.deepEqual(surface.directoryEntries().map(entry=>entry.index),[0,1]);
  assert.ok(properties.updates.some(update=>update.child===surface&&update.params.remoteSession?.identity.bookId==='b'),
    'actual SDK Shell emits the later session in its retained-child update payload');
- // The emitted Shell adapter forwards flat fallback picks through Index's
- // existing canonical chapter path, while proof-backed v2 targets keep their
- // stricter identity path. No flat row can invent a v2 proof.
- const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-   ['onDirectoryChapterSelected','onDirectoryNavigationTargetSelected','isKnownDetailChapter'],{LOCAL_SOURCE_ID:'local'});
- const indexOwner=Object.assign(new Index(),{detailBook:{sourceId:'s',bookId:'b'},readingContentKind:'manga',
-   readingSessionActive:true,remoteReadingSession:{...catalog,entries:[...catalog.entries,{index:9,url:'/group',navigable:false}]},
-   mangaChapterRequestGeneration:0,directoryCurrentChapterIndex:0,mangaCommittedRequestGeneration:0,route:'reading',
-   nextNavigationGeneration(){},onReaderBookmarkSelected(){throw Error('manga must not enter text bookmark navigation')}});
- parent.onSelectChapter=index=>indexOwner.onDirectoryChapterSelected(index);
- parent.onSelectNavigationTarget=(...args)=>indexOwner.onDirectoryNavigationTargetSelected(...args);
+ // The emitted Shell adapter forwards both intents through the shipping
+ // directory adapter, Entry projection and DirectoryJourney navigation ports.
+ // Flat rows cannot manufacture a proof; the admitted reader owns requests.
+ const {mangaPositionOwnerFixture}=await import('./lib/manga-position-current-owner-probe.mjs');
+ const current=mangaPositionOwnerFixture({runtime:rt});
+ const entry=current.entry;
+ Object.assign(entry,{book:{sourceId:'s',bookId:'b',title:'cold manga',author:'',contentKind:'manga'},contentKind:'manga',
+   sessionActive:true,session:{...catalog,entries:[...catalog.entries,{index:9,url:'/group',navigable:false}]},
+   mangaChapterRequestGeneration:0,directoryCurrentChapterIndex:0,mangaCommittedRequestGeneration:0});
+ current.show('reading');
+ parent.onSelectChapter=current.directoryActions.selectChapter;
+ parent.onSelectNavigationTarget=current.directoryActions.selectTarget;
  let saves=0;surface.saveVisible=async()=>{saves++;};surface.panel='directory';surface.panelPhase='open';surface.reduceMotion=true;surface.persistentDirectory=()=>false;
  await surface.selectDirectoryTarget(1);
- assert.equal(indexOwner.requestedChapterIndex,1,'proof-less fallback reaches the existing canonical chapter pick');
- assert.equal(indexOwner.requestedMangaDirectoryTargetProof,undefined);
- assert.equal(indexOwner.mangaChapterRequestGeneration,1);assert.equal(surface.panel,'');
+ assert.equal(entry.requestedChapterIndex,1,'proof-less fallback reaches the existing canonical chapter pick');
+ assert.equal(entry.requestedMangaDirectoryTargetProof,undefined);
+ assert.equal(entry.mangaChapterRequestGeneration,1);assert.equal(surface.panel,'');
  const proof={sourceId:'s',bookId:'b',chapterIndex:0,url:'/c',nodeId:'node0',catalogRevision:'catalog'};
  surface.panel='directory';surface.panelPhase='open'; // A second user pick starts in a newly opened directory.
  await surface.selectDirectoryTarget(0,proof);
- assert.equal(indexOwner.requestedChapterIndex,0);assert.equal(indexOwner.requestedMangaDirectoryTargetProof,proof,
-   'proof-backed v2 selection still reaches the exact Index path with the original proof');
- assert.equal(indexOwner.mangaChapterRequestGeneration,2);
+ assert.equal(entry.requestedChapterIndex,0);assert.equal(entry.requestedMangaDirectoryTargetProof,proof,
+   'proof-backed v2 selection reaches the current owner with the original proof');
+ assert.equal(entry.mangaChapterRequestGeneration,2);
  surface.panel='directory';surface.panelPhase='open';
  await surface.selectDirectoryTarget(9);
- assert.equal(indexOwner.requestedChapterIndex,0);assert.equal(indexOwner.mangaChapterRequestGeneration,2,
-   'Index canonical/navigable checks still reject a non-readable group on the fallback path');
+ assert.equal(entry.requestedChapterIndex,0);assert.equal(entry.mangaChapterRequestGeneration,2,
+   'current Entry canonical/navigable checks reject a non-readable group on the fallback path');
  assert.equal(saves,3,'both directory adapters retain Surface save-before-navigation');
- assert.equal(writes,0);assert.equal(controller.sessionContentCurrent(),true);controller.close();preparation.close();
+ assert.equal(writes,0);assert.equal(controller.sessionContentCurrent(),true);current.close();controller.close();preparation.close();
 }
-console.log('PASS actual SDK Shell/retained Surface/property runtime plus cold Controller entry: later catalog updates directory and next chapter; flat/proof-backed picks reach existing Index guards, preserve proof and save ordering; no remount or user-data writes');
+console.log('PASS actual SDK Shell/retained Surface/property runtime plus cold Controller entry: later catalog updates directory and next chapter; flat/proof-backed picks reach current Entry/DirectoryJourney guards, preserve proof and save ordering; no remount or user-data writes');
 
 }
 

@@ -3,16 +3,18 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 
 async function fullProjectionCase() {
   const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
-  const { projectReaderDirectoryEntries } = await import('../entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts');
-  const { projectReaderBookmarkRows, readerBookmarkLoadState } = await import('../entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts');
-  const Full = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/FullDirectoryPanel.ets', import.meta.url),
-    'FullDirectoryPanel', ['switchTab', 'rebuildProjection', 'applySearch', 'handleControl', 'selectBookmark'],
+  const { projectReaderDirectoryEntries } = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryProjection.ts');
+  const { projectReaderBookmarkRows, readerBookmarkLoadState, readerBookmarkEmptyCopy } = await import('../entry/src/main/ets/features/reading/presentation/ReaderBookmarkProjection.ts');
+  const Full = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets', import.meta.url),
+    'FullDirectoryPanel', ['panelInputCurrent', 'switchTab', 'rebuildProjection', 'applySearch', 'handleControl', 'selectBookmark',
+      'bookmarkEmptyAction', 'shortBookmarkStateActionKey', 'shortBookmarkStateAction'],
     { projectReaderDirectoryEntries, projectReaderBookmarkRows, readerBookmarkLoadState });
   const entries = [
     { index: 1, title: 'first', bookmarks: [{ time: 1, chapterIndex: 1, chapterOffset: 23, chapterTitle: 'first', content: 'needle' }] },
     { index: 7, title: 'last', bookmarks: [{ time: 2, chapterIndex: 7, chapterOffset: 89, chapterTitle: 'last', content: 'other' }] },
   ];
   const owner = Object.assign(new Full(), { admittedEntries: entries, mangaSearch: false, ascending: true,
+    positioningMounted: true, chapterActionsEnabled: true, motionActive: false,
     searchQuery: 'needle', beginListPositioning() {}, onTabChange() {}, scheduleProjectionTopScroll() {}, navigationActive: true });
   let writtenTab;
   Object.defineProperty(owner, 'activeTab', { configurable: true, get: () => 'directory', set: value => { writtenTab = value; } });
@@ -41,14 +43,36 @@ async function fullProjectionCase() {
   assert.deepEqual(selected, [['bookmark-7', 7, 89, scope]]); assert.deepEqual(fallback, []);
   owner.onSelectBookmark = undefined; owner.selectBookmark('bookmark-7', 7, 89, scope);
   assert.deepEqual(fallback, [7], 'only an unwired legacy owner uses chapter fallback');
+
+  Object.defineProperty(owner, 'activeTab', { configurable: true, value: 'bookmarks', writable: true });
+  Object.defineProperty(owner, 'searchQuery', { configurable: true, value: '', writable: true });
+  owner.listPositioning = { listOpenRevision: 8 };
+  owner.searchDraft = 'no match'; owner.applySearch();
+  assert.deepEqual(owner.projectedBookmarks, []);
+  assert.equal(readerBookmarkEmptyCopy(true).title, '没有匹配的书签');
+  assert.equal(readerBookmarkEmptyCopy(false).action, '返回目录');
+  owner.bookmarkEmptyAction(7, true);
+  assert.equal(owner.searchQuery, 'no match');
+  owner.bookmarkEmptyAction(8, true);
+  assert.deepEqual([owner.activeTab, owner.searchDraft, owner.searchQuery], ['bookmarks', '', '']);
+  assert.deepEqual(owner.projectedBookmarks.map(row => row.chapterOffset), [23, 89]);
+  owner.searchDraft = 'no match'; owner.applySearch();
+  const oldClear = owner.shortBookmarkStateActionKey();
+  owner.shortBookmarkStateAction(oldClear);
+  owner.admittedEntries = [{index: 1, title: 'first', bookmarks: []}];
+  owner.rebuildProjection('bookmarks', true, '');
+  owner.shortBookmarkStateAction(oldClear);
+  assert.equal(owner.activeTab, 'bookmarks', 'old clear must not become the genuine-empty return action');
+  owner.shortBookmarkStateAction(owner.shortBookmarkStateActionKey());
+  assert.equal(owner.activeTab, 'directory');
 }
 
 async function bookmarkRowCase() {
   const { readFileSync } = await import('node:fs');
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
   const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
-  const { sampleReaderControlBookmark } = await import('../entry/src/main/ets/features/reading/ReaderControlBookmarkGeometry.ts');
-  const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderBookmarkRow.ets', import.meta.url), 'utf8');
+  const { sampleReaderControlBookmark } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts');
+  const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderBookmarkRow.ets', import.meta.url), 'utf8');
   const { ts, options } = installedEtsCompiler();
   const tree = ts.createSourceFile('ReaderBookmarkRow.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   const constants = ['BOOKMARK_ROW_HEIGHT', 'BOOKMARK_PENDING_LABEL'];

@@ -5,9 +5,9 @@ async function run(id){
 const {ProductionHost,compileHost,read,setRuntime,readingEvidence,content,BookAcquisitionCoordinator}=await import('./lib/reading-entry-owner-probe.mjs');
 const {fixture:productionFixture,deferred,seed,book,session}=await import('./lib/reading-entry-index-fixture.mjs');
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
-const {MangaBookPresentation}=await import('../entry/src/main/ets/features/manga/MangaBookPresentation.ts');
+const {MangaBookPresentation}=await import('../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts');
 const owned=[];const fixture=(...a)=>{const f=productionFixture(...a);owned.push(f);return f;};const tick=()=>new Promise(setImmediate);async function until(p){for(let t=0;t<1500;t++){if(p())return;await tick();}assert.fail('controlled Host boundary not reached');}
-const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 const checkpoints=[];
 function mangaFixture(){
  const f=fixture(),sourceId='s1',bookId='book',chapterId='https://source/book/0',pageId='mp1:'+'1'.repeat(64);
@@ -33,6 +33,93 @@ function controlledTimers(){const savedSet=globalThis.setTimeout,savedClear=glob
 const clock=id==='retired-preparation'?controlledTimers():undefined;
 
 try{
+if(id==='late-download-display'){
+ async function verify(Host=ProductionHost){
+  for(const ending of ['current','offline-generation','scope']){
+   const f=fixture(Host),gate=deferred(),retained={...session(),contentKind:'manga',requiresContextRefresh:false};
+   retained.entries=retained.entries.map(entry=>({...entry,displayTitle:'旧显示',isVip:false,isPay:false,contextTitle:'旧卷',level:1,navigable:true}));
+   const status=entries=>({sourceId:'s1',bookId:'book',tocAvailable:true,sourceVersion:'v1',catalogVersion:'c1',contextVersion:'x1',continuationVariables:{},
+    chapters:entries.map(entry=>({chapterIndex:entry.index,title:entry.title,url:entry.url,variables:{},proofState:'verified',level:entry.level,
+     navigable:true,displayTitle:entry.displayTitle,isVip:entry.isVip,isPay:entry.isPay,contextTitle:entry.contextTitle,state:'completed',cachedBytes:10}))});
+   let reads=0;
+   f.runtime.request=async(method)=>{
+    if(method==='bookmark.list')return{data:{bookmarks:[]}};
+    if(method==='manga.retention.list')return{data:{retentions:[]}};
+    assert.equal(method,'cache.book.status');reads++;
+    if(reads===1){await gate.promise;return{data:status(retained.entries)};}
+    return{data:status(retained.entries.map(entry=>({...entry,displayTitle:'当前显示',isVip:true,isPay:true,contextTitle:'当前卷',level:3})))};
+   };
+   f.host.bindReader({...book(),contentKind:'manga'},retained,retained.entries.map(entry=>({...entry,downloadState:'missing',bookmarks:[]})),true,f.lease);
+   const scope=f.host.snapshot().scopeId,generation=f.host.snapshot().sessionGeneration;
+   const work=f.host.projectDirectory(scope);await until(()=>reads===1);
+   await f.host.refreshMangaDirectoryDisplay(true,false);
+   assert.equal(f.host.snapshot().sessionGeneration,generation,'same-proof false-to-false display refresh keeps current session generation');
+   assert.equal(readingEvidence.sameRemoteSessionEvidence(f.host.snapshot().session,retained),true);
+   const current=f.host.snapshot().toc.map(entry=>({...entry,bookmarks:[{time:42}]}));
+   f.host.replaceDirectory(scope,current);
+   if(ending==='offline-generation')f.control.offline++;
+   if(ending==='scope')f.host.bindReader(book('other'),session('other'),[],false,f.lease);
+   const before=f.host.snapshot();gate.resolve();await work;
+   if(ending==='current'){
+    const delivered=f.changes.filter(value=>value.scopeId===scope&&value.toc[0]?.downloadState==='cached');
+    assert.ok(delivered.length>0,'offline facts were published');
+    const value=delivered[0].toc[0];
+    for(const key of ['title','displayTitle','isVip','isPay','contextTitle','level','navigable','bookmarks'])
+     assert.deepEqual(value[key],current[0][key],'download completion preserves latest '+key);
+    assert.equal(f.host.snapshot().toc[0].displayTitle,'当前显示');
+   }else assert.deepEqual(f.host.snapshot(),before,'retired offline completion cannot publish');
+   f.close();
+  }
+ }
+ async function verifyCollection(Host=ProductionHost){
+  const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts');
+  for(const shape of ['cold-empty-growth','growth','removal','replacement-empty','remote-bootstrap']){
+   const f=fixture(Host),gate=deferred(),remote=shape==='remote-bootstrap'||shape==='replacement-empty';
+   const initialSession=remote?session():undefined;
+   const selectedBook=remote?book():book('local-book','local');
+   const request=f.runtime.request;
+   f.runtime.request=async(method,...args)=>{
+    if(method==='cache.book.status'){f.calls.push({method,p:args[0]});await gate.promise;
+     return{data:{sourceId:remote?'s1':'local',bookId:selectedBook.bookId,tocAvailable:true,
+      sourceVersion:'v1',catalogVersion:'c1',contextVersion:'x1',chapters:[0,1,2].map(chapterIndex=>({chapterIndex,state:'failed',cachedBytes:0}))}};}
+    return request(method,...args);
+   };
+   if(remote)f.host.bindReader(selectedBook,initialSession,[],false,f.lease);
+   else await f.host.openLocal(selectedBook,f.lease,true);
+   const toc=remote?[]:(await new LocalReadingFlowGateway(f.runtime).loadToc(selectedBook.bookId)).entries;
+   const scope=f.host.snapshot().scopeId;
+   if(shape==='growth')f.host.replaceDirectory(scope,toc.slice(0,1));
+   if(shape==='removal')f.host.replaceDirectory(scope,toc);
+   const work=f.host.projectDirectory(scope);await until(()=>f.calls.some(call=>call.method==='cache.book.status'));
+   if(shape==='replacement-empty')f.host.replaceDirectory(scope,[]);
+   else if(!remote)f.host.replaceDirectory(scope,shape==='removal'?toc.slice(1):toc);
+   const current=f.host.snapshot().toc,before=f.changes.length;gate.resolve();await work;
+   const committed=f.changes.slice(before).find(snapshot=>snapshot.scopeId===scope);
+   assert.ok(committed,'current download completion publishes');
+   if(shape==='remote-bootstrap'){assert.deepEqual(committed.toc.map(entry=>entry.index),[0,1,2],'unchanged empty remote opening retains initial full projection');}
+   else{
+    assert.deepEqual(committed.toc.map(entry=>entry.index),current.map(entry=>entry.index),'late download completion preserves latest catalog collection');
+    for(const entry of committed.toc){
+     const matched=shape==='growth'?entry.index===0:shape==='removal';
+     assert.equal(entry.downloadState,matched?'failed':current.find(prior=>prior.index===entry.index).downloadState,'only returned matching download facts change');
+    }
+   }
+   f.close();
+  }
+ }
+ await verify();await verifyCollection();
+ const original=read('features/reading/application/ReadingEntryHost.ts');
+ const old=original.replace('const downloads = new Map(entries.map(entry => [entry.index, entry.downloadState]));',
+  'const projected = new Map(entries.map(entry => [entry.index, entry])); const downloads = new Map(entries.map(entry => [entry.index, entry.downloadState]));')
+  .replace('return downloadState === undefined ? entry : { ...entry, downloadState };',
+  'return { ...(projected.get(entry.index) ?? entry), bookmarks: entry.bookmarks };');assert.notEqual(old,original);
+ await assert.rejects(()=>verify(compileHost(old)),/download completion preserves latest/);
+ const oldCollection=original.replace('const directory = initiallyEmpty && latest === initialDirectory && latest.length === 0 ? entries : latest;','const directory = entries;');
+ assert.notEqual(oldCollection,original);await assert.rejects(()=>verifyCollection(compileHost(oldCollection)),/late download completion preserves latest catalog collection/);
+ const missingPublicationFence=original.replace('initiallyEmpty && latest === initialDirectory && latest.length === 0','initiallyEmpty && latest.length === 0');
+ assert.notEqual(missingPublicationFence,original);await assert.rejects(()=>verifyCollection(compileHost(missingPublicationFence)),/late download completion preserves latest catalog collection/);
+ checkpoints.push('actual-full-EntryHost-same-proof-manga-display-refresh-during-offline-read-and-original-retirement-fences');
+}
 if(id==='cold-bookmarks'){
 {
  const f=fixture(),entries=[{index:0,title:'Persisted chapter',downloadState:'unknown'}];
@@ -293,7 +380,7 @@ if(id==='same-book-generation'){
 }
 if(id==='negative-probe-generation'){
 {
- const source=read('features/reading/ReadingEntryHost.ts');
+ const source=read('features/reading/application/ReadingEntryHost.ts');
  const unsafe=source.replace('generation === this.probeGeneration &&','true &&').replace('scope === this.state.scopeId &&','true &&');
  assert.notEqual(source,unsafe);const f=fixture(compileHost(unsafe)),gate=deferred();f.gates.set('chapter.content:'+f.key('s1','book'),gate);
  f.control.bodyIgnoreCancellation=true;f.host.bindReader(book(),session(),[],false,f.lease);const work=f.host.probe(f.host.snapshot().scopeId);
@@ -303,7 +390,7 @@ if(id==='negative-probe-generation'){
 }
 if(id==='negative-projection-identity'){
 {
- const source=read('features/reading/ReadingEntryHost.ts');
+ const source=read('features/reading/application/ReadingEntryHost.ts');
  const unsafe=source.replace('projection?.origin === session.identity.sourceId && projection.bookUrl === session.identity.bookId &&','true &&');
  assert.notEqual(source,unsafe);const f=fixture(compileHost(unsafe));f.host.bindReader(book(),session(),[],false,f.lease);
  f.host.acceptSession(session(),f.coordinator.readingProjectionRevision(),{origin:'foreign',bookUrl:'foreign',acquisition:{schemaVersion:2,
@@ -411,7 +498,7 @@ if(id==='visible-text-only'){
 }
 if(id==='negative-audio-guard'){
 {
- const source=read('features/reading/ReadingEntryHost.ts');
+ const source=read('features/reading/application/ReadingEntryHost.ts');
  const unsafe=source.replace("if (seed.contentKind === 'audio') {",'if (false) {');
  assert.notEqual(source,unsafe);const f=fixture(compileHost(unsafe));
  await f.host.openRemote({seed:{...seed(),contentKind:'audio'},sourceName:'Source',shelfSnapshot:book(),resumeImmediately:true},f.lease);
@@ -487,7 +574,7 @@ if(id==='manga-prepared-display'){
  f.chapter.chapterIndex=0;f.chapter.chapterTitle=retained.entries[0].title;f.chapter.manifest.chapter.chapterId=retained.entries[0].url;
  const saved={kind:'manga',chapter:f.chapter.manifest.chapter,manifestVersion:'manifest',pageId,pageOrdinalFallback:0,x:.27,y:.61,progressRevision:2};
  const prepared={chapter:f.chapter,targetOrdinal:0,recoveryRequired:false,progress:{token:{epoch:2,revision:2},location:saved}};
- const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),
+ const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),
   ['open','acquireCatalog','openDirectory'],{MangaSessionGateway:class{async entry(){return prepared;}},MangaBookPresentation,AppStorage:{setOrCreate(){}}});
  const pixels=[],restored=[],controller={chapter:f.chapter,savedLocation:saved,displayedOrdinal:0,recoveryRequired:false,
   async awaitPendingProgress(){},async setPreviewMode(){},async openPrepared(value){assert.equal(value,prepared);pixels.push('open');},pageAt:()=>({pageId})};
@@ -627,5 +714,5 @@ const f=fixture(),gate=deferred();f.gates.set('chapter.content:'+f.key('s1','boo
 }
 }finally{for(const f of owned)f.close();setRuntime(undefined);clock?.restore();}
 }
-const definitions={"cold-bookmarks": "cold-bookmarks actual production scoped behavior, controlled IO; no native device claim", "late-bookmarks": "late-bookmarks actual production scoped behavior, controlled IO; no native device claim", "local-entry": "local-entry actual production scoped behavior, controlled IO; no native device claim", "shelf-resume": "shelf-resume actual production scoped behavior, controlled IO; no native device claim", "cold-resume": "cold-resume actual production scoped behavior, controlled IO; no native device claim", "author-proof": "author-proof actual production scoped behavior, controlled IO; no native device claim", "review-admission": "review-admission actual production scoped behavior, controlled IO; no native device claim", "probe-readable": "probe-readable actual production scoped behavior, controlled IO; no native device claim", "candidate-fallback": "candidate-fallback actual production scoped behavior, controlled IO; no native device claim", "probe-exact-chapter": "probe-exact-chapter actual production scoped behavior, controlled IO; no native device claim", "leading-empty": "leading-empty actual production scoped behavior, controlled IO; no native device claim", "cache-decline": "cache-decline actual production scoped behavior, controlled IO; no native device claim", "cache-refresh": "cache-refresh actual production scoped behavior, controlled IO; no native device claim", "late-cache-choice": "late-cache-choice actual production scoped behavior, controlled IO; no native device claim", "probe-late-scope": "probe-late-scope actual production scoped behavior, controlled IO; no native device claim", "session-proof": "session-proof actual production scoped behavior, controlled IO; no native device claim", "background-error": "background-error actual production scoped behavior, controlled IO; no native device claim", "membership-read": "membership-read actual production scoped behavior, controlled IO; no native device claim", "projection-metadata": "projection-metadata actual production scoped behavior, controlled IO; no native device claim", "terminal-candidate": "terminal-candidate actual production scoped behavior, controlled IO; no native device claim", "shared-preparation": "shared-preparation actual production scoped behavior, controlled IO; no native device claim", "preparation-visibility": "preparation-visibility actual production scoped behavior, controlled IO; no native device claim", "runtime-owner": "runtime-owner actual production scoped behavior, controlled IO; no native device claim", "same-book-generation": "same-book-generation actual production scoped behavior, controlled IO; no native device claim", "negative-probe-generation": "negative-probe-generation actual production scoped behavior, controlled IO; no native device claim", "negative-projection-identity": "negative-projection-identity actual production scoped behavior, controlled IO; no native device claim", "session-ready-directory": "session-ready-directory actual production scoped behavior, controlled IO; no native device claim", "probe-membership": "probe-membership actual production scoped behavior, controlled IO; no native device claim", "fallback-membership": "fallback-membership actual production scoped behavior, controlled IO; no native device claim", "stale-readmission": "stale-readmission actual production scoped behavior, controlled IO; no native device claim", "projection-queue": "projection-queue actual production scoped behavior, controlled IO; no native device claim", "late-background": "late-background actual production scoped behavior, controlled IO; no native device claim", "cache-revision": "cache-revision actual production scoped behavior, controlled IO; no native device claim", "retired-preparation": "retired-preparation actual production scoped behavior, controlled IO; no native device claim", "audio-admission": "audio-admission actual production scoped behavior, controlled IO; no native device claim", "visible-text-only": "visible-text-only actual production scoped behavior, controlled IO; no native device claim", "negative-audio-guard": "negative-audio-guard actual production scoped behavior, controlled IO; no native device claim", "manga-first-image": "manga-first-image actual production scoped behavior, controlled IO; no native device claim", "manga-late-image": "manga-late-image actual production scoped behavior, controlled IO; no native device claim", "manga-image-failure": "manga-image-failure actual production scoped behavior, controlled IO; no native device claim", "typed-preparation": "typed-preparation actual production scoped behavior, controlled IO; no native device claim", "manga-prepared-display": "manga-prepared-display actual production scoped behavior, controlled IO; no native device claim", "manga-display-proofs": "manga-display-proofs actual production scoped behavior, controlled IO; no native device claim", "manga-source-recovery": "manga-source-recovery actual production scoped behavior, controlled IO; no native device claim", "manga-late-display": "manga-late-display actual production scoped behavior, controlled IO; no native device claim", "display-cover": "display-cover actual production scoped behavior, controlled IO; no native device claim", "probe-position-context": "probe-position-context actual production scoped behavior, controlled IO; no native device claim"};
+const definitions={"late-download-display":"Actual same-proof display refresh during download await preserves all current metadata and bookmark facts; old merge negative","cold-bookmarks": "cold-bookmarks actual production scoped behavior, controlled IO; no native device claim", "late-bookmarks": "late-bookmarks actual production scoped behavior, controlled IO; no native device claim", "local-entry": "local-entry actual production scoped behavior, controlled IO; no native device claim", "shelf-resume": "shelf-resume actual production scoped behavior, controlled IO; no native device claim", "cold-resume": "cold-resume actual production scoped behavior, controlled IO; no native device claim", "author-proof": "author-proof actual production scoped behavior, controlled IO; no native device claim", "review-admission": "review-admission actual production scoped behavior, controlled IO; no native device claim", "probe-readable": "probe-readable actual production scoped behavior, controlled IO; no native device claim", "candidate-fallback": "candidate-fallback actual production scoped behavior, controlled IO; no native device claim", "probe-exact-chapter": "probe-exact-chapter actual production scoped behavior, controlled IO; no native device claim", "leading-empty": "leading-empty actual production scoped behavior, controlled IO; no native device claim", "cache-decline": "cache-decline actual production scoped behavior, controlled IO; no native device claim", "cache-refresh": "cache-refresh actual production scoped behavior, controlled IO; no native device claim", "late-cache-choice": "late-cache-choice actual production scoped behavior, controlled IO; no native device claim", "probe-late-scope": "probe-late-scope actual production scoped behavior, controlled IO; no native device claim", "session-proof": "session-proof actual production scoped behavior, controlled IO; no native device claim", "background-error": "background-error actual production scoped behavior, controlled IO; no native device claim", "membership-read": "membership-read actual production scoped behavior, controlled IO; no native device claim", "projection-metadata": "projection-metadata actual production scoped behavior, controlled IO; no native device claim", "terminal-candidate": "terminal-candidate actual production scoped behavior, controlled IO; no native device claim", "shared-preparation": "shared-preparation actual production scoped behavior, controlled IO; no native device claim", "preparation-visibility": "preparation-visibility actual production scoped behavior, controlled IO; no native device claim", "runtime-owner": "runtime-owner actual production scoped behavior, controlled IO; no native device claim", "same-book-generation": "same-book-generation actual production scoped behavior, controlled IO; no native device claim", "negative-probe-generation": "negative-probe-generation actual production scoped behavior, controlled IO; no native device claim", "negative-projection-identity": "negative-projection-identity actual production scoped behavior, controlled IO; no native device claim", "session-ready-directory": "session-ready-directory actual production scoped behavior, controlled IO; no native device claim", "probe-membership": "probe-membership actual production scoped behavior, controlled IO; no native device claim", "fallback-membership": "fallback-membership actual production scoped behavior, controlled IO; no native device claim", "stale-readmission": "stale-readmission actual production scoped behavior, controlled IO; no native device claim", "projection-queue": "projection-queue actual production scoped behavior, controlled IO; no native device claim", "late-background": "late-background actual production scoped behavior, controlled IO; no native device claim", "cache-revision": "cache-revision actual production scoped behavior, controlled IO; no native device claim", "retired-preparation": "retired-preparation actual production scoped behavior, controlled IO; no native device claim", "audio-admission": "audio-admission actual production scoped behavior, controlled IO; no native device claim", "visible-text-only": "visible-text-only actual production scoped behavior, controlled IO; no native device claim", "negative-audio-guard": "negative-audio-guard actual production scoped behavior, controlled IO; no native device claim", "manga-first-image": "manga-first-image actual production scoped behavior, controlled IO; no native device claim", "manga-late-image": "manga-late-image actual production scoped behavior, controlled IO; no native device claim", "manga-image-failure": "manga-image-failure actual production scoped behavior, controlled IO; no native device claim", "typed-preparation": "typed-preparation actual production scoped behavior, controlled IO; no native device claim", "manga-prepared-display": "manga-prepared-display actual production scoped behavior, controlled IO; no native device claim", "manga-display-proofs": "manga-display-proofs actual production scoped behavior, controlled IO; no native device claim", "manga-source-recovery": "manga-source-recovery actual production scoped behavior, controlled IO; no native device claim", "manga-late-display": "manga-late-display actual production scoped behavior, controlled IO; no native device claim", "display-cover": "display-cover actual production scoped behavior, controlled IO; no native device claim", "probe-position-context": "probe-position-context actual production scoped behavior, controlled IO; no native device claim"};
 for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

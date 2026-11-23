@@ -7,8 +7,8 @@ async function load(name, extra='') {
   const source=readFileSync(new URL(name,app),'utf8').replace(/^import[\s\S]*?;\n/gm,'');
   return import('data:text/javascript;base64,'+Buffer.from(common+extra+stripTypeScriptTypes(source)).toString('base64'));
 }
-const cookiePolicy=stripTypeScriptTypes(readFileSync(new URL('CookieSecurityPolicy.ts',app),'utf8')).replace(/^export /gm,'');
-const { CookieSessionStore }=await load('CookieSessionStore.ts',cookiePolicy);
+const cookiePolicy=stripTypeScriptTypes(readFileSync(new URL('../platform/network/CookieSecurityPolicy.ts',app),'utf8')).replace(/^export /gm,'');
+const { CookieSessionStore }=await load('../platform/network/CookieSessionStore.ts',cookiePolicy);
 function attach(map, fault={}) {
   const jar=new CookieSessionStore(); let writes=0;
   jar.readRecordSecret=async key=>map.get(key)??null;
@@ -99,9 +99,9 @@ for(const after of [false,true]) for(let at=1;at<=9;at++) {
 }
 globalThis.auditCookieStore=CookieSessionStore;
 let endDns;globalThis.auditDns={getDefaultHttpProxy:async()=>({host:'',port:0,exclusionList:[]}),getPacUrl:()=>'',getPacFileUrl:()=>'',getAppNet:async()=>null,getDefaultNet:async()=>({netId:1}),getAddressesByName:()=>new Promise((_,reject)=>{endDns=reject;})};
-const policy=stripTypeScriptTypes(readFileSync(new URL('HttpTransportPolicy.ts',app),'utf8')).replace(/^export /gm,'');
-const routePolicy=stripTypeScriptTypes(readFileSync(new URL('NetworkRoutePolicy.ts',app),'utf8').replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
-const {HttpExecuteHost}=await load('HttpExecuteHost.ts',`const http={InterceptorType:{REDIRECTION:1},RequestMethod:{GET:'GET',POST:'POST',HEAD:'HEAD',PUT:'PUT',DELETE:'DELETE',PATCH:'PATCH',OPTIONS:'OPTIONS',TRACE:'TRACE',CONNECT:'CONNECT'}};const connection=globalThis.auditDns;const CookieSessionStore=globalThis.auditCookieStore;${policy}${routePolicy}`);
+const policy=stripTypeScriptTypes(readFileSync(new URL('../platform/network/HttpTransportPolicy.ts',app),'utf8')).replace(/^export /gm,'');
+const routePolicy=stripTypeScriptTypes(readFileSync(new URL('../platform/network/NetworkRoutePolicy.ts',app),'utf8').replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
+const {HttpExecuteHost}=await load('../platform/network/HttpExecuteHost.ts',`const http={InterceptorType:{REDIRECTION:1},RequestMethod:{GET:'GET',POST:'POST',HEAD:'HEAD',PUT:'PUT',DELETE:'DELETE',PATCH:'PATCH',OPTIONS:'OPTIONS',TRACE:'TRACE',CONNECT:'CONNECT'}};const connection=globalThis.auditDns;const CookieSessionStore=globalThis.auditCookieStore;${policy}${routePolicy}`);
 {
   const host=new HttpExecuteHost();let probes=0;
   await assert.rejects(host.execute({url:'https://example.test',method:'GET'},42,()=>{probes++;return true;}));

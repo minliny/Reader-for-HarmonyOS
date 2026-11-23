@@ -1,0 +1,17 @@
+[
+  {
+    "bookSourceName": "Reader Phase 1 公共未确认空结果夹具",
+    "bookSourceUrl": "https://reader-phase1-unconfirmed-empty.test/",
+    "bookSourceGroup": "Reader Phase 1 Fixture",
+    "bookSourceType": 0,
+    "enabled": true,
+    "enabledExplore": false,
+    "enabledCookieJar": false,
+    "searchUrl": "search/unconfirmed-{{page}}.json",
+    "ruleSearch": {
+      "bookList": "$.books[*]",
+      "name": "$.title",
+      "bookUrl": "$.url"
+    }
+  }
+]

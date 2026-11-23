@@ -3,7 +3,7 @@ import {selectContractCases,recordContractCasePass} from './lib/contract-case-se
 async function run(id){
 const { resolveEtsLoaderRoot }=await import("./lib/tool-environment.mjs");
 const {boundedSurfaceSdk,boundedMembers}=await import("./lib/bounded-surface-sdk-probe.mjs");
-const { RssPresentationProjection }=await import("../entry/src/main/ets/features/rss/RssPresentationProjection.ts");
+const { RssPresentationProjection }=await import("../entry/src/main/ets/features/rss/presentation/RssPresentationProjection.ts");
 const {createRequire}=await import("node:module");
 const {productionMotionMethods}=await import("./lib/reader-motion-method-probe.mjs");
 const {createReaderBuilderProbe}=await import("./lib/reader-control-builder-probe.mjs");
@@ -19,8 +19,8 @@ const deps={RssPresentationProjection,ReaderRuntimeOwner:RssRuntime,RssOrchestra
 const Index=productionMotionMethods(file('pages/Index.ets'),methods,deps);
 const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const syntax=require(sdk+'/lib/validate_ui_syntax.js');
-for(const [name,path]of[['RssSubscriptionManagementPage','rss'],['RssPage','rss'],['RssSourceFeedPage','rss'],['RssEntryDetailPage','rss'],['RssSubscriptionEditorPage','rss'],['ReaderRecoveryNotice','common'],['ReaderRecoveryAction','common']]){
- syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source('features/'+path+'/'+name+'.ets').matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
+for(const [name,path]of[['RssSubscriptionManagementPage','features/rss'],['RssPage','features/rss'],['RssSourceFeedPage','features/rss'],['RssEntryDetailPage','features/rss'],['RssSubscriptionEditorPage','features/rss'],['ReaderRecoveryNotice','ui/feedback'],['ReaderRecoveryAction','ui/feedback']]){
+ syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source(path+'/'+name+'.ets').matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
 }
 class Child{constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
 let physicalIndexIdentity=0;
@@ -37,7 +37,7 @@ function fixture(route='rssSourceFeed',runtime=rssRpc()){
   Object.assign(b,p);for(const name of methods)b[name]=p[name].bind(p);b[builder]();lastBuilder=b;return [...b.children.values()].at(-1).params;
  };
  const shared=(params)=>{
-  const p=boundedSurfaceSdk(),n=p.consumer(source('features/common/ReaderRecoveryNotice.ets'));
+  const p=boundedSurfaceSdk(),n=p.consumer(source('ui/feedback/ReaderRecoveryNotice.ets'));
   Object.assign(n,{appThemeScheme:'day'},params);n.initialRender();
   const a=p.walk(n).find(c=>c instanceof p.deps.ReaderRecoveryAction);
   return{notice:n,action:a&&p.nodes(a).find(x=>x.type==='Stack'&&x.onClick)};
@@ -46,13 +46,13 @@ function fixture(route='rssSourceFeed',runtime=rssRpc()){
   const names={main:['rssPageContent','RssPage','readFeedback'],source:['rssSourceFeedContent','RssSourceFeedPage','operationFeedback','retryFeedback'],
    entry:['rssEntryDetailContent','RssEntryDetailPage','operationFeedback','retryFeedback'],editor:['rssEditorContent','RssSubscriptionEditorPage','operationRecovery','recoveryActionIdentities','recoveryGeneration','dispatchRecovery']};
   const [builder,child,...members]=names[kind],props=renderProps(builder,child);
-  const originalSdk=boundedSurfaceSdk(),originalSource=source('features/rss/RssOriginalRecoverySurface.ets');originalSdk.childSources.RssOriginalRecoverySurface=originalSource;
+  const originalSdk=boundedSurfaceSdk(),originalSource=source('features/rss/ui/RssOriginalRecoverySurface.ets');originalSdk.childSources.RssOriginalRecoverySurface=originalSource;
   const Original=createReaderBuilderProbe(originalSource,boundedMembers(originalSource),originalSdk.deps,originalSdk.hooks).Component;
   const b=createReaderBuilderProbe(source('features/rss/'+child+'.ets'),members,{readerRecoveryView:rssRecoveryView,ReaderRecoveryNotice:Child,ReaderRecoveryAction:Child,RssOriginalRecoverySurface:Original},{...originalSdk.hooks,mountChildren:true}).owner;
   Object.assign(b,{appThemeScheme:'day'},clone(Object.fromEntries(Object.entries(props).filter(([,v])=>typeof v!=='function'))),Object.fromEntries(Object.entries(props).filter(([,v])=>typeof v==='function')));
   b[members[0]]();
   const actual=[...b.children.values()].find(x=>x.params?.view?.visible);
-  if(kind==='editor'){const c=[...b.children.values()].filter(c=>c instanceof Child).at(-1);if(c){const p=boundedSurfaceSdk(),a=p.consumer(source('features/common/ReaderRecoveryAction.ets'));Object.assign(a,{appThemeScheme:'day'},c.params);a.initialRender();return{props,page:b,action:p.nodes(a).find(x=>x.type==='Stack'&&x.onClick)};}}
+  if(kind==='editor'){const c=[...b.children.values()].filter(c=>c instanceof Child).at(-1);if(c){const p=boundedSurfaceSdk(),a=p.consumer(source('ui/feedback/ReaderRecoveryAction.ets'));Object.assign(a,{appThemeScheme:'day'},c.params);a.initialRender();return{props,page:b,action:p.nodes(a).find(x=>x.type==='Stack'&&x.onClick)};}}
   return{props,page:b,...(actual?shared(actual.params):{})};
  };
  const settle=()=>settleRss(p.getRssOrchestrator());

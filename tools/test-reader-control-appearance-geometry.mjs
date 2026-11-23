@@ -6,11 +6,11 @@ import {
   readerControlAppearanceFontDropIndex,
   readerControlAppearanceFontInput,
   sampleReaderControlAppearance,
-} from '../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceGeometry.ts';
 import {
   moveReaderAppearanceFontSlot,
   normalizeReaderAppearanceFontOrder,
-} from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
+} from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
 
 const near = (actual, expected, message) => assert.ok(Math.abs(actual - expected) < 1e-8,
   `${message}: ${actual} != ${expected}`);
@@ -231,7 +231,7 @@ for (const p of [0, 0.001, 0.5, 0.999, 1]) {
 
 // Supplemental source-tree guard only: this does not claim ArkUI/runtime or
 // visual acceptance. Production sampler behavior above is the primary test.
-const tree = await readFile(new URL('../entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets', import.meta.url), 'utf8');
+const tree = await readFile(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets', import.meta.url), 'utf8');
 assert.doesNotMatch(tree, /ReaderAppearanceFullPanel\(|ReaderAppearanceSharedActors\(|animateTo\(|setTimeout\(/);
 assert.match(tree, /private scheduleFontFrame/,'font sorting has a separate cancellable feedback clock, not a panel morph clock');
 assert.match(tree, /control-appearance-theme-\$\{theme\}/);

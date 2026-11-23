@@ -5,7 +5,7 @@ import {
   ReadingPaginationPrefix,
   createReadingPaginationLayoutSignature,
   deriveReadingContentVersion,
-} from '../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
+} from '../entry/src/main/ets/features/reading/application/ReadingPaginationIndex.ts';
 
 const layoutFacts = {
   deviceForm: 'phone',

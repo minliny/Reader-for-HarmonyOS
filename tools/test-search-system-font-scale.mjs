@@ -11,12 +11,12 @@ const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
 const { tailControls, compileTailConsumer } = await import('./lib/foundation-tail-consumer-probe.mjs');
 const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
-const { bookIntroText } = await import('../entry/src/main/ets/features/common/BookIntroText.ts');
-const { bookAuthorLabel } = await import('../entry/src/main/ets/features/common/BookAuthorMetadata.ts');
-const { SearchViewState } = await import('../entry/src/main/ets/features/search/SearchViewState.ts');
+const { bookIntroText } = await import('../entry/src/main/ets/app/library/BookIntroText.ts');
+const { bookAuthorLabel } = await import('../entry/src/main/ets/app/library/BookAuthorMetadata.ts');
+const { SearchViewState } = await import('../entry/src/main/ets/features/search/presentation/SearchViewState.ts');
 
 const read=path=>readFileSync(new URL('../entry/src/main/ets/features/'+path,import.meta.url),'utf8');
-const pageSource=read('search/SearchPage.ets'), fieldSource=read('common/ReaderSearchField.ets'),buttonSource=read('common/ReaderButton.ets');
+const pageSource=read('search/ui/SearchPage.ets'), fieldSource=read('../ui/controls/ReaderSearchField.ets'),buttonSource=read('../ui/controls/ReaderButton.ets');
 let scale=1;
 const windowMetrics=()=>({systemFontScale:scale});
 const shared=foundationControls({windowMetrics,buttonSource});
@@ -43,17 +43,53 @@ for(const tablet of [false,true])for(const fontScale of [2,1,1.3,1.75,3.2]){
 }
 assert.equal(count,10,'IME submit survives each scale/device change');for(const invalid of [NaN,Infinity,0,-1]){scale=invalid;assert.equal(field.bookFontScale(),1);}
 }
-// The finite search Button family shares the existing native action and
-// half-leading alignment. Other common Button variants retain their tuples.
-if(selectedCase==='action')for(const tablet of [false,true])for(const fontScale of [1,1.3,1.75,2,3.2])for(const busy of [false,true]){
- scale=fontScale;const component=shared.button.Component;
- const button=new component(undefined,{scheme:'day',specId:tablet?'search-field-wide':'search-field-phone',label:busy?'停止':'搜索',
-  actionEnabled:true,isBusy:busy,leading(){},onAction:()=>count++},undefined,100+count);
- button.aboutToAppear();button.initialRender();
- const native=shared.nodes(button).find(n=>n.onClick),label=shared.nodes(button).find(n=>n.type==='Text');
- const measured=native.height;assert.ok(Number.isFinite(measured)&&measured>0);if(fontScale>1){scale=1;button.replay();const base=shared.nodes(button).find(n=>n.onClick).height;scale=fontScale;button.replay();assert.ok(measured>base,'large font action frame grows');}
- assert.ok(label.lineHeight>0);assert.equal(label.maxFontScale,fontScale);assert.equal(label.halfLeading,true);
- assert.equal(native.enabled,true);native.onClick();assert.ok(count>0);button.aboutToDisappear();const before=count;native.onClick();assert.equal(count,before);
+// Phone search/stop now belongs to the retained Library bar. Exercise that
+// actual native actor and Model instead of preserving its retired spec ID.
+if(selectedCase==='action'){
+ const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
+ const metrics=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+ const headerMetrics=await import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts');
+ const controlGeometry=await import('../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts');
+ const fonts=await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+ const {foundationSpecs}=await import('./lib/reader-foundation-control-probe.mjs');
+ const source=read('search/ui/ReaderLibrarySearchSurface.ets');
+ const headers=pureModuleProbe(read('../ui/foundation/ReaderHeaderSpecs.ets'),'ReaderHeaderSpecs.ets',
+  {...dependencies,...headerMetrics},['bookshelfHeaderSpec','searchHeaderSpec']);
+ const {ReaderLibrarySearchModel,READER_LIBRARY_SEARCH_BACK_FOCUS_ID}=pureModuleProbe(
+  read('search/presentation/ReaderLibrarySearchModel.ets'),'ReaderLibrarySearchModel.ets',
+  {Observed:value=>value},['ReaderLibrarySearchModel','READER_LIBRARY_SEARCH_BACK_FOCUS_ID']);
+ const currentWindow=()=>{const value=metrics.createDefaultReaderWindowMetrics();value.windowRect.width=390;
+  value.windowRect.height=844;value.systemFontScale=scale;return value;};
+ const currentDependencies={...dependencies,...headers,...metrics,...controlGeometry,...fonts,READER_LIBRARY_SEARCH_BACK_FOCUS_ID,
+  ReaderWindowCoordinator:{metrics:currentWindow}};
+ const methods=['bar','headerActionFrame','headerActionGlyph','cardContentWidth','horizontalInset','fontScale','controlHeight',
+  'barHeight','actionWidth','searchLaneLeft','searchLaneWidth','fieldWidth','laneTop','titleOpacity','surfaceValue',
+  'headerActionTop','moreInteractive','presentedSearch','inputInteractive','actionInteractive','fieldIdentity','acceptsField',
+  'searchAction','leadingAction','moreAction','textAction','submitAction','focusAction'];
+ const specs=foundationSpecs();
+ assert.equal(specs.resolveReaderButtonSpec('search-field-phone'),undefined,'retired phone ID is not an executable public recipe');
+ assert.equal(specs.resolveReaderButtonSpec('search-scope'),undefined,'retired scope ID is not an executable public recipe');
+ for(const fontScale of [1,1.3,1.75,2,3.2])for(const busy of [false,true]){
+  scale=fontScale;const model=new ReaderLibrarySearchModel();model.claim(11);model.activate(11);
+  Object.assign(model,{keyword:'大明望族',sweeping:busy,canSubmit:true,fieldSubmitEnabled:true,onAction:()=>count++});
+  const {owner}=compileTailConsumer(source,methods,currentDependencies,controls.hooks);
+  Object.assign(owner,{scheme:'day',model,mounted:true,mode:'input',transitionKind:'none',identity:1,navigationGeneration:2,mounting:3,
+   metricsRevision:0,expandedLayout:false,searchMounted:true,spec:headers.searchHeaderSpec(),
+   surfaceProgress:()=>1,historyProgress:()=>1,resultsProgress:()=>1,onMore(){},onOpen(){},onBack(){}});
+  owner.bar();
+  const action=()=>controls.nodes(owner).find(node=>node.type==='Button'&&node.accessibilityText===(busy?'停止搜索':'搜索'));
+  const native=action(),label=controls.nodes(owner).find(node=>node.type==='Text'&&node.create===(busy?'停止':'搜索'));
+  assert.ok(native,'the actual phone Library bar owns the native search/stop action');
+  assert.equal(label.fontSize,13);assert.equal(label.fontWeight,'FontWeight.Bold');
+  const measured=native.height;assert.ok(Number.isFinite(measured)&&measured>0);
+  if(fontScale>1){scale=1;owner.replay();const base=action().height;scale=fontScale;owner.replay();
+   assert.ok(measured>base,'actual phone search action frame grows with system font facts');}
+  assert.equal(native.enabled,true);const before=count;native.onClick();assert.equal(count,before+1);
+  model.panelOwnsInput=true;native.onClick();assert.equal(count,before+1,'covered input cannot dispatch a retained native click');
+  model.panelOwnsInput=false;model.suspend();native.onClick();assert.equal(count,before+1,'background model cannot dispatch');
+  model.activate(11);owner.identity++;native.onClick();assert.equal(count,before+1,'old field identity cannot dispatch');
+  owner.mounted=false;native.onClick();assert.equal(count,before+1,'retired native actor cannot dispatch');
+ }
 }
 // Actual production page methods + Builders are extracted, rather than a
 // reconstructed layout formula. Public PageScaffold owns header measurement.

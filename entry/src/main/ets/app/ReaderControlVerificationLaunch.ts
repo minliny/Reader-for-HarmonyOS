@@ -4,7 +4,7 @@ import type { MangaOfflineProbeScope, MangaProbeSelectionMode } from './MangaOff
  * Production EntryAbility has one default cold-start page. Diagnostic pages
  * are admitted only for an exact debug cold start used by the local VM probe.
  */
-export type ReaderColdStartPage = 'pages/Index' | 'pages/ReaderControlMotionVerification' | 'pages/ReaderRendererPilot' | 'pages/__ReaderStartupMainLoadFailure';
+export type ReaderColdStartPage = 'pages/Index' | 'pages/__ReaderStartupMainLoadFailure';
 
 /**
  * Cold-start-only allowlist. Only primitive boolean true is accepted, and
@@ -23,8 +23,8 @@ export function readerControlVerificationColdStartPage(debug: boolean,
   // Deliberately not registered as a page. Failure comes from the actual
   // platform dispatch/callback; EntryAbility consumes this destination once.
   if (mainLoadFailure) return 'pages/__ReaderStartupMainLoadFailure';
-  if (renderer) return 'pages/ReaderRendererPilot';
-  if (motion) return 'pages/ReaderControlMotionVerification';
+  // Old renderer and motion Wants still participate in conflict detection.
+  // Both return to the normal application and cannot mount an isolated host.
   return 'pages/Index';
 }
 

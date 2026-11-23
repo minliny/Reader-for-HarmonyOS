@@ -2,17 +2,17 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { stripTypeScriptTypes } from 'node:module';
-import { readerDirectoryScopeKey } from '../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts';
+import { readerDirectoryScopeKey } from '../entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation.ts';
 import { mangaGridProbeDependencies, mangaRowBuilderMembers, emptyMangaGridState } from './lib/manga-directory-grid-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import * as fontFamilies from '../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import * as fontFamilies from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { readerDirectoryClearViewportAnchors, readerDirectorySaveViewportAnchor,
   readerDirectoryViewportAnchor, readerDirectoryObserveScrollIntent,
   readerDirectorySignalScrollIntent, readerDirectoryObserveScrollCommand,
-  readerDirectorySignalScrollCommand } from '../entry/src/main/ets/features/reading/ReaderDirectoryViewport.ts';
+  readerDirectorySignalScrollCommand } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryViewport.ts';
 
-const path = fileURLToPath(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryNavigationList.ets', import.meta.url));
+const path = fileURLToPath(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets', import.meta.url));
 const source = readFileSync(path, 'utf8');
 const timers = [];
 const ScrollAlign = { START: 'start', CENTER: 'center' };

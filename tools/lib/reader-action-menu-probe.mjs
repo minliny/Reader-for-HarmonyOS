@@ -1,10 +1,11 @@
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
+import { pureModuleProbe } from './ets-pure-module-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
-import { SOURCE_SWITCH_VISUAL } from '../../entry/src/main/ets/features/source/SourceSwitchVisual.ts';
+import { SOURCE_CHROME_VISUAL as SOURCE_SWITCH_VISUAL } from '../../entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts';
 
-const file=name=>new URL(`../../entry/src/main/ets/features/common/${name}.ets`,import.meta.url);
+const file=name=>new URL(`../../entry/src/main/ets/ui/surfaces/${name}.ets`,import.meta.url);
 export const menuSource=readFileSync(file('ReaderActionMenuSurface'),'utf8');
 const specSource=readFileSync(file('ReaderSurfaceSpecs'),'utf8');
 export const {resolvePopupSpec,resolveActionSheetSpec}=new Function('TextAlign','SOURCE_SWITCH_VISUAL',stripTypeScriptTypes(specSource)
@@ -14,10 +15,11 @@ export const ReaderMenuActionView=new Function(stripTypeScriptTypes(menuSource.s
   .replace('export class','class')+';return ReaderMenuActionView;')();
 
 export function actionMenuProbe(resolve=resolvePopupSpec) {
+  const scale = pureModuleProbe(readFileSync(new URL('../../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts', import.meta.url), 'utf8'), 'ReaderSurfaceResolvers.ts', {}, ['readerReadableFontScale', 'readerScaledControlHeight']);
   const properties=createArkUIPropertyRuntimeProbe();
   const probe=createReaderBuilderProbe(menuSource,
-    ['appThemeScheme','variant','specId','scheme','actions','availableWidth','viewportHeight','onAction','mounted','aboutToAppear','aboutToDisappear','build','menuActions','actionRow','actionRows','row','actionSheetSpec','spec','action','dividerWidth','effectiveScheme','color','accessibilityLabel','commitAction'],
-    {...properties.sdk,ReaderMenuActionView,resolvePopupSpec:resolve,resolveActionSheetSpec},properties.hooks);
+    ['appThemeScheme','readerWindowMetricsRevision','fontScale','menuActionHeight','hasFollowingAction','variant','specId','scheme','actions','availableWidth','viewportHeight','onAction','mounted','aboutToAppear','aboutToDisappear','build','menuActions','actionRow','actionRows','row','actionSheetSpec','spec','action','dividerWidth','effectiveScheme','color','accessibilityLabel','commitAction'],
+    {...properties.sdk,...scale,ReaderMenuActionView,resolvePopupSpec:resolve,resolveActionSheetSpec},properties.hooks);
   return {...probe,properties,dependencies:{ReaderActionMenuSurface:probe.Component,ReaderMenuActionView,resolvePopupSpec:resolve,resolveActionSheetSpec},
     hooks:{childSources:{ReaderActionMenuSurface:menuSource},mountChildren:true,lifecycleChildren:true},
     nodes(owner) {

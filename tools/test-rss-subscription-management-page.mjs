@@ -8,14 +8,14 @@ const { readFileSync } = await import('node:fs');
 const { dirname, resolve } = await import('node:path');
 const { fileURLToPath } = await import('node:url');
 const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
-const { createDefaultReaderWindowMetrics } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const { createDefaultReaderWindowMetrics } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const { createRequire } = await import('node:module');
 
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const page = readFileSync(resolve(
   repo,
-  'entry/src/main/ets/features/rss/RssSubscriptionManagementPage.ets',
+  'entry/src/main/ets/features/rss/ui/RssSubscriptionManagementPage.ets',
 ), 'utf8');
 
 // Actual page -> standard body slot -> native Scroll retains the original
@@ -25,7 +25,7 @@ const page = readFileSync(resolve(
  const sdk=boundedSurfaceSdk(),scrolls=[],bodies=[],queue=[];
  class Scroller{scrollTo(value){scrolls.push(value);}}
  class Header{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
- sdk.childSources.PageBackBar=readFileSync(resolve(repo,'entry/src/main/ets/features/common/PageBackBar.ets'),'utf8');
+ sdk.childSources.PageBackBar=readFileSync(resolve(repo,'entry/src/main/ets/ui/chrome/PageBackBar.ets'),'utf8');
  const loader=resolveEtsLoaderRoot();
  createRequire(import.meta.url)(loader+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));
  const metrics=createDefaultReaderWindowMetrics();metrics.windowRect.width=393;metrics.systemInsets.left=24;metrics.cutoutInsets.right=30;

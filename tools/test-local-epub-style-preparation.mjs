@@ -7,7 +7,7 @@ registerHooks({ resolve(specifier, context, next) {
     throw error;
   }
 } });
-const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/ReadingEntryPreparation.ts');
+const { ReadingEntryPreparation } = await import('../entry/src/main/ets/features/reading/application/ReadingEntryPreparation.ts');
 const hash = 'a'.repeat(64), bookId = `local:${hash}`;
 const root = '/private/app/files/reader-import/books';
 let existing = new Set(), accesses = [], afterAccess;

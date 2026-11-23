@@ -11,6 +11,7 @@ import { fileURLToPath } from 'node:url';
 
 import {
   deploymentRoute,
+  deploymentSigningRoute,
   parseBundleMetadata,
   profileIdentity,
   sourceSnapshot,
@@ -131,7 +132,7 @@ const installedDebugNone = {
   appIdSha256: 'same-app',
 };
 assert.deepEqual(
-  deploymentRoute({ targetKind: 'vm', installed: installedDebugNone, artifact: signedDebug }),
+  deploymentSigningRoute({ targetKind: 'vm', installed: installedDebugNone, artifact: signedDebug }),
   { allowed: true, reason: 'matching-identity-signed-update-candidate', preservesData: true },
   'appSignType=none must not override an independently established application identity',
 );
@@ -139,7 +140,7 @@ for (const appIdSha256 of ['', 'different-app']) {
   assert.equal(deploymentRoute({ targetKind: 'vm', installed: { ...installedDebugNone, appIdSha256 },
     artifact: signedDebug }).allowed, false, 'debug Profile type alone cannot establish update identity');
 }
-assert.equal(deploymentRoute({ targetKind: 'vm',
+assert.equal(deploymentSigningRoute({ targetKind: 'vm',
   installed: { ...installedDebugNone, appIdSha256: 'old-key', appIdentifierSha256: 'stable-app' },
   artifact: { signature: { ...signedDebug.signature, appIdentifierSha256: 'stable-app' } } }).allowed, true,
   'a matching nonempty appIdentifier supports legitimate signing key renewal');

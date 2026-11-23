@@ -3,10 +3,10 @@ import { readerMangaOfflineProbeScope, readerMangaReadingProbeScope, readerManga
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createMangaAtomicPayloadInstallerFixture } from './lib/manga-atomic-payload-probe.mjs';
 import { errorMessageOf, localReadFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
-import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/ReaderAppearanceStore.ts';
+import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceStore.ts';
 import { createDefaultReaderAppearanceSnapshot, setReaderAppearanceFont, setReaderAppearanceCustomFont,
-  ReaderCustomFontDescriptor } from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
-import { readerAppearanceSnapshotFontFamily } from '../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts';
+  ReaderCustomFontDescriptor } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
+import { readerAppearanceSnapshotFontFamily } from '../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts';
 
 const path = new URL('../entry/src/main/ets/entryability/EntryAbility.ets', import.meta.url);
 const installMangaAtomicPayloadReader = createMangaAtomicPayloadInstallerFixture({});

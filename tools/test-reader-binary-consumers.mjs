@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
-import { ReaderTtsAudioSessionLease } from '../entry/src/main/ets/app/ReaderTtsAudioSessionLease.ts';
+import { ReaderTtsAudioSessionLease } from '../entry/src/main/ets/platform/tts/ReaderTtsAudioSessionLease.ts';
 const source=name=>stripTypeScriptTypes(readFileSync(new URL(`../entry/src/main/ets/app/${name}.ts`,import.meta.url),'utf8')
   .replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
 const deferred=()=>{let resolve;const promise=new Promise(yes=>resolve=yes);return{promise,resolve};};

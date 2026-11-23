@@ -7,16 +7,16 @@ const definitions={
 const selected=selectContractCases(definitions);
 async function runCase(selectedCase){
  const {default:assert}=await import('node:assert/strict');const {readFileSync}=await import('node:fs');
- const {sampleReaderControlBookmark}=await import('../entry/src/main/ets/features/reading/ReaderControlBookmarkGeometry.ts');
+ const {sampleReaderControlBookmark}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts');
  const {selectedProductionMethods,selectedProductionValues}=await import('./lib/selected-production-methods.mjs');
  const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
  const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
- const row=read('entry/src/main/ets/features/reading/ReaderBookmarkRow.ets');
- const constants=selectedProductionValues(new URL('../entry/src/main/ets/features/reading/ReaderBookmarkRow.ets',import.meta.url),['BOOKMARK_ROW_HEIGHT','BOOKMARK_PENDING_LABEL']);
+ const row=read('entry/src/main/ets/features/reading/ui/ReaderBookmarkRow.ets');
+ const constants=selectedProductionValues(new URL('../entry/src/main/ets/features/reading/ui/ReaderBookmarkRow.ets',import.meta.url),['BOOKMARK_ROW_HEIGHT','BOOKMARK_PENDING_LABEL']);
  const near=(a,b,why='')=>assert.ok(Math.abs(a-b)<1e-8,`${why}: ${a} != ${b}`);
  if(selectedCase==='list-extent'){
   const pending=[];
-  const List=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ReaderBookmarkList.ets',import.meta.url),'ReaderBookmarkList',
+  const List=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderBookmarkList.ets',import.meta.url),'ReaderBookmarkList',
    ['rowHeight','stableLayoutEnabled','layoutRowHeightValue','layoutPaddingXValue','onRowGeometryChanged','scheduleRowGeometryFlush','aboutToAppear','aboutToDisappear'],
    {...constants,sampleReaderControlBookmark,setTimeout:callback=>pending.push(callback)});
   const owner=Object.assign(new List(),{embeddedInControl:false,motionProgress:0,rowWidth:254,layoutRowHeight:0,listPaddingX:10,layoutPaddingX:-1,
@@ -95,7 +95,7 @@ return;
 // The production row consumes the independent position label and keeps the
 // saved quote/callback proof through scope-only updates of a retained card.
 {
- const {projectReaderBookmarkRows}=await import('../entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts');
+ const {projectReaderBookmarkRows}=await import('../entry/src/main/ets/features/reading/presentation/ReaderBookmarkProjection.ts');
  const identity={libraryBookId:'lib',sourceId:'remote',bookId:'b',bookName:'书',bookAuthor:'作者'};
  const mark={time:92,chapterIndex:0,chapterOffset:12,chapterTitle:'章节',content:'备注',bookText:'刷新前保留的原文'};
  const entries=[{index:0,title:'章节',bookmarks:[mark]}];

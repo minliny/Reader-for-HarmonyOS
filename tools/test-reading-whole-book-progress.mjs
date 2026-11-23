@@ -6,7 +6,7 @@ import {
   validateContentMetricsAgainstToc,
   wholeBookAnchorForPercent,
   wholeBookProgressPercent,
-} from '../entry/src/main/ets/features/reading/LocalReadingWholeBookProgress.ts';
+} from '../entry/src/main/ets/features/reading/application/LocalReadingWholeBookProgress.ts';
 
 const metrics = {
   bookId: 'book-1',
@@ -55,11 +55,11 @@ assert.equal(wholeBookAnchorForPercent({ bookId: 'empty', totalScalarLength: 0, 
   undefined);
 
 const experienceSource = readFileSync(
-  new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   'utf8',
 );
 const gatewaySource = readFileSync(
-  new URL('../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts', import.meta.url),
+  new URL('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts', import.meta.url),
   'utf8',
 );
 
@@ -78,7 +78,7 @@ assert.match(experienceSource, /Remote sessions[\s\S]*must not download the whol
 // Exercise the actual metric admission path. A global text search for "for"
 // accidentally classified the new forceRefresh argument as bulk chapter I/O.
 const MetricOwner = productionMotionMethods(
-  new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['loadContentMetricsIfNeeded'], { validateContentMetricsAgainstToc });
 for (const exact of [false, true]) {
   let metricReads = 0, bodyReads = 0;
@@ -106,7 +106,7 @@ console.log('reading whole-book processed-scalar progress: PASS');
 
 // The production owner's index has bounded storage and never scans chapters
 // again while the admitted metrics snapshot is unchanged.
-const { LocalReadingContentMetricIndex } = await import('../entry/src/main/ets/features/reading/LocalReadingWholeBookProgress.ts');
+const { LocalReadingContentMetricIndex } = await import('../entry/src/main/ets/features/reading/application/LocalReadingWholeBookProgress.ts');
 let chapterReads = 0;
 const largeMetrics = { bookId: 'indexed', totalScalarLength: 100000, chapters: Array.from({ length: 10000 }, (_, i) => ({
   get chapterIndex() { chapterReads++; return i; }, scalarLength: 10, cumulativeStart: i * 10, cumulativeEnd: i * 10 + 10,

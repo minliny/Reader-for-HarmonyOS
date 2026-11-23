@@ -1,15 +1,20 @@
 import { supplyBundledSources } from './IncrementalBundledSourceSupply';
-import { BookAcquisitionCoordinator } from './BookAcquisitionCoordinator';
+import { BookAcquisitionCoordinator } from '../features/reading/application/BookAcquisitionCoordinator';
 import { readerRuleMutationEffects } from './ReaderRuleMutationEffects';
+import { buildReaderPublicFixtureDirectory, readerHostCacheDirectory, readerHostFilesDirectory,
+  type ReaderPublicFixtureScope } from './diagnostics/ReaderPublicFixtureScope';
+import { readerPublicSearchHttpFixtureMode } from './diagnostics/ReaderPublicSearchHttpFixture';
 import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError, type BookRequestOptions } from './BookRequestScheduler';
 export { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from './BookRequestScheduler';
 import common from '@ohos.app.ability.common';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import {
   createReaderCoreRuntimeAsync,
+  probeReaderCoreStorageAsync,
   type JsonObject,
   type ReaderCoreResultEvent,
   type ReaderCoreRuntime,
+  type ReaderCoreStorageProbe,
   type RequestOptions,
 } from '@reader/core-harmony';
 import {
@@ -21,24 +26,24 @@ import {
   ReaderHostRegistry,
 } from './ReaderHostRegistry';
 import { errorMessageOf, httpResponseFailureSummary, coreAdmissionFailureSummary } from './ErrorMessage';
-import { HarmonySystemTtsHost } from './HarmonySystemTtsHost';
-import { HarmonyHttpTtsHost } from './HarmonyHttpTtsHost';
-import { HarmonyTtsHostRouter } from './HarmonyTtsHostRouter';
-import { HarmonyTtsMediaSession } from './HarmonyTtsMediaSession';
-import { HarmonyTtsBackgroundSession } from './HarmonyTtsBackgroundSession';
-import { LocalEpubResourceHost } from './LocalEpubResourceHost';
-import { ReadingBodyImageHost, type ReadingBodyImagePayload, type MangaImageMetadataProof } from './ReadingBodyImageHost';
-import { MangaImageDecodeHost } from './MangaImageDecodeHost';
-import { MangaImageMetadataHost } from './MangaImageMetadataHost';
+import { HarmonySystemTtsHost } from '../platform/tts/HarmonySystemTtsHost';
+import { HarmonyHttpTtsHost } from '../platform/tts/HarmonyHttpTtsHost';
+import { HarmonyTtsHostRouter } from '../platform/tts/HarmonyTtsHostRouter';
+import { HarmonyTtsMediaSession } from '../platform/tts/HarmonyTtsMediaSession';
+import { HarmonyTtsBackgroundSession } from '../platform/tts/HarmonyTtsBackgroundSession';
+import { LocalEpubResourceHost } from '../platform/reading-resources/LocalEpubResourceHost';
+import { ReadingBodyImageHost, type ReadingBodyImagePayload, type MangaImageMetadataProof } from '../platform/reading-resources/ReadingBodyImageHost';
+import { MangaImageDecodeHost } from '../platform/reading-resources/MangaImageDecodeHost';
+import { MangaImageMetadataHost } from '../platform/reading-resources/MangaImageMetadataHost';
 import {
   ReadingImageDiskCache,
   type ReadingImageCacheIdentity,
   type ReadingImageChapterIdentity,
-} from './ReadingImageDiskCache';
+} from '../platform/reading-resources/ReadingImageDiskCache';
 import { canonicalReadingImageBaseUrl } from '../common/ReadingImageIdentity';
-import { ArkWebExecutor } from './ArkWebExecutor';
+import { ArkWebExecutor } from '../platform/network/ArkWebExecutor';
 import { sourceLoginPageUrl } from './SourceLoginPageProjection';
-import type { SourceHttpDiagnosticRecord } from './HttpExecuteHost';
+import type { SourceHttpDiagnosticRecord } from '../platform/network/HttpExecuteHost';
 import {
   BundledSourceLedger,
   canonicalRulePayloadJson,
@@ -49,25 +54,26 @@ import {
   sha256Hex,
 } from './BundledBookSourceSupply';
 import { image } from '@kit.ImageKit';
-import { ReaderAppearanceStore } from '../features/reading/ReaderAppearanceStore';
+import { ReaderAppearanceStore } from '../features/reading/application/ReaderAppearanceStore';
 import { ReaderAppearancePreferences } from './ReaderAppearancePreferences';
-import { ReadingEntryPreparation } from '../features/reading/ReadingEntryPreparation';
-import { releaseReadingEntryMemory } from '../features/reading/ReadingEntryHandoff';
+import { ReadingEntryPreparation } from '../features/reading/application/ReadingEntryPreparation';
+import { releaseReadingEntryMemory } from '../features/reading/application/ReadingEntryHandoff';
 import { ReaderPreparationNetworkHost } from './ReaderPreparationNetworkHost';
 import { ReaderStartupTrace } from './ReaderStartupTrace';
 import { MangaOfflineNetworkProbe, type MangaOfflineProbeScope, type MangaProbeSelectionMode } from './MangaOfflineNetworkProbe';
-import { MangaChapterPreparationCoordinator } from '../features/manga/MangaChapterPreparationCoordinator';
-import type { MangaStorageChapter, MangaStorageGrant } from './ReadingImageDiskCache';
-import type { MangaDisplaySessionScope } from '../features/reading/ReadingGatewayRuntime';
-import { SharedDownloadCoordinator } from '../features/downloads/SharedDownloadCoordinator';
+import { MangaChapterPreparationCoordinator } from '../features/manga/application/MangaChapterPreparationCoordinator';
+import type { MangaStorageChapter, MangaStorageGrant } from '../platform/reading-resources/ReadingImageDiskCache';
+import type { MangaDisplaySessionScope } from '../features/reading/application/ReadingGatewayRuntime';
+import { SharedDownloadCoordinator } from '../features/downloads/application/SharedDownloadCoordinator';
 import type { ReaderWriteEvidence } from './ReaderWriteEvidence';
-import { SharedDownloadStorageGateway, type SettingsTextCleanupJournal, type SharedDownloadCleanupResult } from '../features/downloads/SharedDownloadStorageGateway';
-import type { ReadingTextStorageChapter } from './ReadingImageDiskCache';
-import type { DownloadStorageSummary } from '../features/downloads/SharedDownloadProjection';
-import { ReadingRecordGateway } from '../features/reading/ReadingRecordGateway';
-import { ReadingProgressJournal } from '../features/reading/ReadingProgressJournal';
-import { ReadingProgressIntentFile } from '../features/reading/ReadingProgressIntentFile';
-import { recoverReadingProgress } from '../features/reading/ReadingSessionFlowGateway';
+import { SharedDownloadStorageGateway, type SettingsTextCleanupJournal, type SharedDownloadCleanupResult,
+  type SharedDownloadStoragePolicyResult } from '../features/downloads/application/SharedDownloadStorageGateway';
+import type { ReadingTextStorageChapter } from '../platform/reading-resources/ReadingImageDiskCache';
+import type { DownloadStorageSummary } from '../features/downloads/presentation/SharedDownloadProjection';
+import { ReadingRecordGateway } from '../features/reading/application/ReadingRecordGateway';
+import { ReadingProgressJournal } from '../features/reading/application/ReadingProgressJournal';
+import { ReadingProgressIntentFile } from '../features/reading/application/ReadingProgressIntentFile';
+import { recoverReadingProgress } from '../features/reading/application/ReadingSessionFlowGateway';
 
 type RuntimeState = 'new' | 'starting' | 'ready' | 'closing' | 'closed';
 
@@ -90,7 +96,7 @@ const PENDING_LOCAL_IMPORT_FINALIZE_TIMEOUT_MS = 5000;
 const LOG_DOMAIN = 0x5244;
 const BUNDLED_BOOK_SOURCE_COLLECTION_RAW_FILE = 'reader-tested-book-source-collection.json';
 // BEGIN bundled-source-integrity (managed by tools/refresh-source-supply-manifest.mjs)
-const BUNDLED_RAW_FILE_SHA256 = 'b2abb67815534e9d58efebba27025fc6be4336cbbc8dfb485904e8bb76c73f18';
+const BUNDLED_RAW_FILE_SHA256 = '405661f1a7308c95e922eddea876ec10888563fde36d7e814064f585bb2142b9';
 // END bundled-source-integrity
 
 type CoreBuildIdentity = {
@@ -101,7 +107,36 @@ type CoreBuildIdentity = {
   cargoLockSha256: string;
   protocolSha256: string;
   rustProfile: string;
+  storageCompatibility?: CoreStorageCompatibility;
+  sqliteUserVersion?: number;
 };
+
+type CoreStorageCompatibility = {
+  sqliteMaxUserVersion: number;
+  sqliteStorageSourceSha256: string;
+};
+
+/** Legacy recovery facts that older Core builds could return in core.info. */
+type LegacyCoreStorageCapabilities = {
+  logicalExport: boolean;
+  logicalRestore: boolean;
+  legacyHostImport: boolean;
+  physicalBackup: boolean;
+  physicalRestore: boolean;
+  webdavConfigRestore: boolean;
+  activeLibrarySync: false;
+  logicalExportRequiresDataPreflight: true;
+  logicalRestoreRequiresCompleteCoverage: boolean;
+  resourceEvidenceOnly: true;
+  externalFilesIncluded: false;
+};
+
+type LegacyCoreStorageFormat = {
+  format: 'legacy' | 'library47';
+  portableSnapshotSupported: boolean;
+  capabilities?: LegacyCoreStorageCapabilities;
+};
+export type ReaderLegacySnapshotRecovery = 'none' | 'unsupportedStorageFormat' | 'storageCapabilityUnavailable' | 'automaticImportDeferred';
 
 type BundledSourceInstallSummary = {
   collectionRecords: number;
@@ -129,6 +164,8 @@ export class ReaderRuntimeOwner {
   private mangaReadingProbeImageScope: MangaOfflineProbeScope | undefined;
   private mangaReadingProbeForeignImages: number = 0;
   private runtime: ReaderCoreRuntime | undefined = undefined;
+  private searchPageEvidenceCount: number = 0;
+  private switchPageEvidenceCount: number = 0;
   private appearanceStore: ReaderAppearanceStore | undefined = undefined;
   private startup: Promise<void> | undefined = undefined;
   /** Serializes background storage flushes with teardown. */
@@ -152,6 +189,7 @@ export class ReaderRuntimeOwner {
   private state: RuntimeState = 'new';
   private reservationQuarantineDiagnosticLogged: boolean = false;
   private coreCapabilities: Set<string> = new Set<string>();
+  private legacySnapshotRecovery: ReaderLegacySnapshotRecovery = 'none';
   private downloadCoordinator: SharedDownloadCoordinator | undefined;
   private downloadStorageGateway: SharedDownloadStorageGateway | undefined;
   private downloadReadingProtection: { sourceId: string; bookId: string; chapterIndex?: number; } | undefined;
@@ -167,7 +205,8 @@ export class ReaderRuntimeOwner {
 
   getReadingProgressJournal(): ReadingProgressJournal {
     if (this.readingProgressJournal === undefined) this.readingProgressJournal = new ReadingProgressJournal(
-      new ReadingProgressIntentFile(this.getUIAbilityContext().filesDir, (): boolean => ReaderRuntimeOwner.isCurrent(this)));
+      new ReadingProgressIntentFile(readerHostFilesDirectory(this.getUIAbilityContext().filesDir),
+        (): boolean => ReaderRuntimeOwner.isCurrent(this)));
     return this.readingProgressJournal;
   }
 
@@ -183,6 +222,9 @@ export class ReaderRuntimeOwner {
   }
 
   supportsCoreCapability(capability: string): boolean { return this.coreCapabilities.has(capability); }
+
+  /** Deferred migration is not a failed current SQLite store or a completed import. */
+  legacySnapshotMigrationRecovery(): ReaderLegacySnapshotRecovery { return this.legacySnapshotRecovery; }
   private bookCoordinator: BookAcquisitionCoordinator | undefined = undefined;
   private entryPreparations: ReadingEntryPreparation | undefined = undefined;
   private preparationNetwork: ReaderPreparationNetworkHost | undefined;
@@ -196,12 +238,16 @@ export class ReaderRuntimeOwner {
   private readonly predecessorClose: Promise<void>;
   /** Fixed at process-owner construction; never a persisted user setting. */
   private readonly optionalEntryMemoryEnabled: boolean;
+  private readonly publicFixture: ReaderPublicFixtureScope | undefined;
+  private publicSearchHttpReady: boolean = false;
 
   private constructor(context: common.UIAbilityContext, predecessorClose: Promise<void> = Promise.resolve(),
     disableOptionalEntryMemory: boolean = false, mangaOfflineScope?: MangaOfflineProbeScope,
-    mangaReadingScope?: MangaOfflineProbeScope, mangaSelectionMode?: MangaProbeSelectionMode) {
+    mangaReadingScope?: MangaOfflineProbeScope, mangaSelectionMode?: MangaProbeSelectionMode,
+    publicFixture?: ReaderPublicFixtureScope) {
     this.predecessorClose = predecessorClose;
     this.optionalEntryMemoryEnabled = !disableOptionalEntryMemory;
+    this.publicFixture = publicFixture;
     let probe: MangaOfflineNetworkProbe | undefined = undefined;
     const conflictingScope = mangaOfflineScope !== undefined && mangaReadingScope !== undefined;
     const conflictingSelection = mangaSelectionMode !== undefined && (mangaOfflineScope !== undefined || mangaReadingScope !== undefined);
@@ -219,7 +265,8 @@ export class ReaderRuntimeOwner {
       }
     }
     this.mangaOfflineProbe = probe;
-    this.host = new ReaderHostRegistry(context, this.mangaOfflineProbe);
+    this.host = new ReaderHostRegistry(context, this.mangaOfflineProbe, publicFixture,
+      (): boolean => publicFixture !== undefined && this.publicSearchHttpReady && this.isCurrentPublicFixture(publicFixture));
     this.ttsHost = new HarmonyTtsHostRouter(
       new HarmonySystemTtsHost(),
       new HarmonyHttpTtsHost(this),
@@ -229,7 +276,7 @@ export class ReaderRuntimeOwner {
     );
     this.localEpubResourceHost = new LocalEpubResourceHost(context);
     this.readingImageDiskCache = new ReadingImageDiskCache(context);
-    ReadingBodyImageHost.setDisplayCacheDir(context.cacheDir);
+    ReadingBodyImageHost.setDisplayCacheDir(readerHostCacheDirectory(context.cacheDir));
     this.bindMangaStorage();
     if (this.mangaOfflineProbe?.mode === 'reading') this.bindMangaReadingProbe();
   }
@@ -275,9 +322,10 @@ export class ReaderRuntimeOwner {
             inUse: data['inUse'] as boolean, lastReadAt: lastReadAt as number | null };
         });
       },
-      candidates: async (reason, scope) => {
-        const data = (await this.request('manga.cache.evict', { nowSeconds: Math.floor(Date.now() / 1000),
-          ttlSeconds: reason === 'expiry' ? 7 * 24 * 60 * 60 : 0 })).data;
+      candidates: async (reason, scope, expiry) => {
+        if (reason === 'expiry' && expiry === undefined) throw new Error('MANGA_CACHE_EXPIRY_POLICY_REQUIRED');
+        const data = (await this.request('manga.cache.evict', { nowSeconds: expiry?.nowSeconds ?? Math.floor(Date.now() / 1000),
+          ttlSeconds: reason === 'expiry' ? expiry!.ttlSeconds : 0 })).data;
         return (data['candidates'] as JsonObject[]).map(value => {
           const chapter = value['chapter'] as JsonObject;
           return { sourceId: chapter['sourceId'] as string, bookId: chapter['bookId'] as string,
@@ -292,7 +340,7 @@ export class ReaderRuntimeOwner {
       pending: async () => ((await this.request('manga.cache.eviction.pending')).data['grants'] as JsonObject[]).map(projectGrant),
     });
     const body = ReadingBodyImageHost.instance;
-    body.configureMangaDisplayCache(this.host.getContext().filesDir);
+    body.configureMangaDisplayCache(readerHostFilesDirectory(this.host.getContext().filesDir));
     this.readingImageDiskCache.setMangaExternalStorage({
       inventory: () => body.mangaDisplayInventory(),
       remove: (grant, files) => body.removeMangaDisplay(grant, files),
@@ -304,11 +352,12 @@ export class ReaderRuntimeOwner {
 
   static install(context: common.UIAbilityContext, disableOptionalEntryMemory: boolean = false,
     mangaOfflineScope?: MangaOfflineProbeScope, mangaReadingScope?: MangaOfflineProbeScope,
-    mangaSelectionMode?: MangaProbeSelectionMode): ReaderRuntimeOwner {
+    mangaSelectionMode?: MangaProbeSelectionMode, publicFixture?: ReaderPublicFixtureScope): ReaderRuntimeOwner {
     const current = ReaderRuntimeOwner.instance;
     if (current === undefined || current.state === 'closing' || current.state === 'closed') {
       const predecessorClose = current?.closeTask ?? Promise.resolve();
-      ReaderRuntimeOwner.instance = new ReaderRuntimeOwner(context, predecessorClose, disableOptionalEntryMemory, mangaOfflineScope, mangaReadingScope, mangaSelectionMode);
+      ReaderRuntimeOwner.instance = new ReaderRuntimeOwner(context, predecessorClose, disableOptionalEntryMemory,
+        mangaOfflineScope, mangaReadingScope, mangaSelectionMode, publicFixture);
       if (disableOptionalEntryMemory) ReaderRuntimeOwner.instance.releaseOptionalReadingEntryMemory();
     } else current.mangaOfflineProbe?.release('ability-reinstalled');
     ReaderRuntimeOwner.instance.abilityLeases += 1;
@@ -319,6 +368,18 @@ export class ReaderRuntimeOwner {
    * that require an installed owner still use the throwing current() getter. */
   static isCurrent(owner: ReaderRuntimeOwner): boolean {
     return ReaderRuntimeOwner.instance === owner;
+  }
+
+  isCurrentPublicFixture(fixture: ReaderPublicFixtureScope): boolean {
+    return this.state === 'ready' && ReaderRuntimeOwner.isCurrent(this) && this.publicFixture === fixture;
+  }
+
+  /** Admission follows successful verification of both packaged fixture inputs. */
+  confirmPublicSearchHttpFixture(fixture: ReaderPublicFixtureScope): void {
+    if (!this.isCurrentPublicFixture(fixture) || readerPublicSearchHttpFixtureMode(fixture.id) === undefined) {
+      throw new Error('PUBLIC_SEARCH_HTTP_FIXTURE_NOT_CURRENT');
+    }
+    this.publicSearchHttpReady = true;
   }
 
   selectMangaOfflineProbe(sourceId: string, bookId: string, manga: boolean): void {
@@ -521,6 +582,28 @@ export class ReaderRuntimeOwner {
     return { retainedChapters, protectedChapters };
   }
 
+  /** Bounded operational facts only. Never accepts source/query/body values
+   * or owns pagination; consumers publish after their normal receipt checks. */
+  observeSourceSearchPage(route: 'search' | 'switch', requestedPage: number,
+    decodedCount: number, matchedCount: number): void {
+    if (this.state !== 'ready' || (route !== 'search' && route !== 'switch') ||
+      !Number.isSafeInteger(requestedPage) || requestedPage < 2 || requestedPage > 0xffffffff ||
+      !Number.isSafeInteger(decodedCount) || decodedCount < 1 || decodedCount > 65536 ||
+      !Number.isSafeInteger(matchedCount) || matchedCount < 1 || matchedCount > decodedCount) return;
+    if (route === 'search') {
+      if (this.searchPageEvidenceCount >= 8) return;
+      this.searchPageEvidenceCount += 1;
+    } else {
+      if (this.switchPageEvidenceCount >= 8) return;
+      this.switchPageEvidenceCount += 1;
+    }
+    try {
+      hilog.info(LOG_DOMAIN, 'ReaderSourcePageEvidence',
+        'route=%{public}s requestedPage=%{public}d decoded=%{public}d matched=%{public}d',
+        route, requestedPage, decodedCount, matchedCount);
+    } catch (_) { /* A diagnostic failure cannot change a business receipt. */ }
+  }
+
   async request(method: string, params: JsonObject = {}, options: BookRequestOptions = {}): Promise<ReaderCoreResultEvent> {
     if (this.state === 'closing' && this.runtime !== undefined &&
       (method === 'manga.cache.materialization.abort' || method === 'manga.session.release')) return this.runtime.request(method, params, options);
@@ -610,7 +693,7 @@ export class ReaderRuntimeOwner {
     return this.getDownloadStorageGateway().readSettingsTextCleanup();
   }
 
-  async configureDownloadStorage(limitMb: number, cleanupAfterDays: number): Promise<{ maintenanceMessage?: string; }> {
+  async configureDownloadStorage(limitMb: number, cleanupAfterDays: number): Promise<SharedDownloadStoragePolicyResult> {
     if (this.state !== 'ready') throw new Error('READER_RUNTIME_NOT_READY');
     return this.getDownloadStorageGateway().configurePolicy({ capacityBytes: limitMb * 1024 * 1024, expiryDays: cleanupAfterDays });
   }
@@ -862,11 +945,12 @@ export class ReaderRuntimeOwner {
   }
 
   /** Open a user-operated source login/challenge page on the shared Host jar. */
-  async openSourceLogin(sourceId: string, loginUrl: string, sourceName: string): Promise<void> {
+  async openSourceLogin(sourceId: string, loginUrl: string, sourceName: string, isCurrent?: () => boolean): Promise<void> {
     await ArkWebExecutor.instance.openInteractive(
       sourceLoginPageUrl(sourceId, loginUrl),
       sourceId,
       `${sourceName} · 登录 / 验证`,
+      isCurrent,
     );
   }
 
@@ -1416,11 +1500,11 @@ export class ReaderRuntimeOwner {
     return this.ttsHost;
   }
 
-  async selectLocalBookInputs(): Promise<LocalBookPreparation[]> {
+  async selectLocalBookInputs(canOpenPicker: () => boolean): Promise<LocalBookPreparation[]> {
     if (this.state === 'closing' || this.state === 'closed') {
       throw new Error('Reader Host is no longer available after teardown');
     }
-    return this.host.selectLocalBookInputs();
+    return this.host.selectLocalBookInputs(canOpenPicker);
   }
 
   async prepareSystemLocalBookInput(uri: string): Promise<LocalBookPreparation> {
@@ -1636,6 +1720,29 @@ export class ReaderRuntimeOwner {
     await this.startRuntime();
   }
 
+  private async requireStorageProbeIdentity(probe: ReaderCoreStorageProbe, current: () => boolean): Promise<void> {
+    const raw = await this.host.readBundledRawFileText('reader-core-storage-identity.v1.json');
+    if (!current() || raw.length > 4096) throw new Error('STORAGE_BOOTSTRAP_IDENTITY_RETIRED');
+    const value: unknown = JSON.parse(raw);
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new Error('STORAGE_BOOTSTRAP_IDENTITY_MISMATCH');
+    }
+    const expected = value as JsonObject;
+    if (Object.keys(expected).length !== 5 || expected['format'] !== 'reader.storage-bootstrap-identity' ||
+      expected['version'] !== 1 || !this.isLowerHex(expected['buildId'], 64, 64) ||
+      !this.isLowerHex(expected['contractSha256'], 64, 64) ||
+      !this.isLowerHex(expected['coreInputFingerprint'], 64, 64) ||
+      expected['buildId'] !== probe.buildIdentity['buildId'] || expected['contractSha256'] !== probe.contractSha256 ||
+      expected['coreInputFingerprint'] !== probe.coreInputFingerprint) {
+      throw new Error('STORAGE_BOOTSTRAP_IDENTITY_MISMATCH');
+    }
+    if (!current()) throw new Error('STORAGE_BOOTSTRAP_IDENTITY_RETIRED');
+    const receipt = JSON.stringify({ schemaVersion: 1, buildId: expected['buildId'], contractSha256: expected['contractSha256'],
+      coreInputFingerprint: expected['coreInputFingerprint'], matched: true });
+    hilog.info(LOG_DOMAIN, 'Reader', 'Storage bootstrap identity: %{public}s', receipt);
+    ReaderStartupTrace.current()?.mark('startup.storage-identity', 'matched');
+  }
+
   private async startRuntime(): Promise<void> {
     // Host file-existence checks are independent of native database open and
     // capability negotiation. Start them together, but consume the result
@@ -1646,10 +1753,25 @@ export class ReaderRuntimeOwner {
     // retaining its original rejection for the admission barrier below.
     void legacyMigration.catch((): void => {});
     let runtime: ReaderCoreRuntime;
+    let admittedBuild: CoreBuildIdentity;
+    const isCurrent = (): boolean => this.state === 'starting' && ReaderRuntimeOwner.isCurrent(this);
     try {
-      runtime = await ReaderStartupTrace.measure('startup.native-open', (): Promise<ReaderCoreRuntime> => createReaderCoreRuntimeAsync({
-        dataDirectory: `${this.host.getContext().filesDir}/reader-core`,
-      }, (): boolean => this.state === 'starting'));
+      const filesDir = this.host.getContext().filesDir;
+      const dataDirectory = this.publicFixture === undefined ? `${filesDir}/reader-core` :
+        buildReaderPublicFixtureDirectory(filesDir, this.publicFixture.id);
+      if (dataDirectory === undefined) throw new Error('PUBLIC_FIXTURE_STORAGE_NOT_ISOLATED');
+      const storageProbe = await ReaderStartupTrace.measure('startup.storage-admission',
+        (): Promise<ReaderCoreStorageProbe> => probeReaderCoreStorageAsync(dataDirectory, isCurrent));
+      if (!isCurrent()) throw new Error('Reader Core startup cancelled after storage admission');
+      admittedBuild = this.requireCoreBuildIdentity(storageProbe.buildIdentity);
+      await this.requireStorageProbeIdentity(storageProbe, isCurrent);
+      const startupConfig: JsonObject = { dataDirectory: dataDirectory };
+      // Core owns the explicit migration plan and revalidates it on open.
+      if (storageProbe.observation.requiresMigration && storageProbe.observation.explicitMigration !== null) {
+        startupConfig['storageMigration'] = storageProbe.observation.explicitMigration;
+      }
+      runtime = await ReaderStartupTrace.measure('startup.native-open',
+        (): Promise<ReaderCoreRuntime> => createReaderCoreRuntimeAsync(startupConfig, isCurrent));
     } catch (error) {
       if (this.state === 'starting') this.state = 'new';
       throw error;
@@ -1693,16 +1815,36 @@ export class ReaderRuntimeOwner {
         }
       }
       const buildIdentity = this.requireCoreBuildIdentity(coreInfo.data['buildIdentity']);
+      if (buildIdentity.buildId !== admittedBuild.buildId) {
+        throw new Error('Reader Core build changed after storage admission');
+      }
+      const storageFormat = this.requireCoreStorageFormat(coreInfo.data['storageFormat']);
+      const sqliteUserVersion = coreInfo.data['sqliteUserVersion'];
+      if (typeof sqliteUserVersion === 'number' && Number.isSafeInteger(sqliteUserVersion) &&
+        sqliteUserVersion > 0 && sqliteUserVersion <= 0x7fffffff) {
+        buildIdentity.sqliteUserVersion = sqliteUserVersion;
+      }
       if (this.supportsCoreCapability('host.http.timeout.v1')) {
         hostCapabilities['extensions'] = ['http.execute.timeoutMs.v1'];
         await runtime.request('runtime.setHostCapabilities', hostCapabilities, { timeoutMs: 5000 });
       }
       hilog.info(LOG_DOMAIN, 'Reader', 'Core build identity: %{public}s', JSON.stringify(buildIdentity));
+      this.legacySnapshotRecovery = 'none';
       if (startupReads[1]) {
-        await ReaderStartupTrace.measure('startup.legacy-restore', (): Promise<ReaderCoreResultEvent> =>
-          runtime.request('runtime.storage.restore', {}, { timeoutMs: 30000 }));
-        await ReaderStartupTrace.measure('startup.legacy-marker-write', (): Promise<void> =>
-          this.host.markLegacySnapshotMigrated());
+        // Portable export/restore support is not permission to replay this old
+        // Host file into a current Library47 store. Keep its original data and
+        // migration marker intact; any explicit import remains Core-owned.
+        const operation = storageFormat?.capabilities;
+        if (operation === undefined || storageFormat?.format !== 'legacy' || !operation.legacyHostImport) {
+          this.legacySnapshotRecovery = operation === undefined ? 'storageCapabilityUnavailable' :
+            storageFormat?.format === 'library47' ? 'automaticImportDeferred' : 'unsupportedStorageFormat';
+          hilog.warn(LOG_DOMAIN, 'Reader', 'Legacy snapshot migration deferred: %{public}s', this.legacySnapshotRecovery);
+        } else {
+          await ReaderStartupTrace.measure('startup.legacy-restore', (): Promise<ReaderCoreResultEvent> =>
+            runtime.request('runtime.storage.restore', {}, { timeoutMs: 30000 }));
+          await ReaderStartupTrace.measure('startup.legacy-marker-write', (): Promise<void> =>
+            this.host.markLegacySnapshotMigrated());
+        }
       }
       // A source switch is not admitted to the restored route until its first
       // canonical target progress atomically finalizes the Core transaction.
@@ -1714,7 +1856,7 @@ export class ReaderRuntimeOwner {
       hilog.info(LOG_DOMAIN, 'Reader', 'Core source-switch startup recovery count: %{public}d', recoveredCount);
       // `close()` may have begun while Host capability setup/restore awaited.
       // Never publish a ready runtime after teardown has claimed this owner.
-      if (this.state !== 'starting') {
+      if (!isCurrent()) {
         throw new Error('Reader Core runtime was closed during startup');
       }
       this.runtime = runtime;
@@ -1733,6 +1875,7 @@ export class ReaderRuntimeOwner {
       this.scheduleImportFinalizeCleanup(runtime);
       // A 1,951-record collection must not hold the first frame or turn a
       // single malformed/dead source into an application startup failure.
+      if (this.publicFixture !== undefined && this.publicFixture.id !== 'empty-shelf') return;
       this.sourceSupplyTask = this.installBundledBookSourceCollection(runtime)
         .then((summary: BundledSourceInstallSummary): void => {
           hilog.info(LOG_DOMAIN, 'Reader',
@@ -2155,7 +2298,7 @@ export class ReaderRuntimeOwner {
       typeof identity['rustProfile'] !== 'string' || identity['rustProfile'].trim().length === 0) {
       throw new Error('core.info returned an invalid buildIdentity');
     }
-    return {
+    const result: CoreBuildIdentity = {
       schemaVersion: 1,
       buildId: identity['buildId'],
       gitCommit: gitCommit,
@@ -2164,6 +2307,65 @@ export class ReaderRuntimeOwner {
       protocolSha256: identity['protocolSha256'],
       rustProfile: identity['rustProfile'],
     };
+    const storage = identity['storageCompatibility'];
+    if (storage !== undefined) {
+      if (typeof storage !== 'object' || storage === null) {
+        throw new Error('core.info returned invalid storage compatibility');
+      }
+      const fields = storage as Record<string, unknown>;
+      const version = fields['sqliteMaxUserVersion'];
+      const source = fields['sqliteStorageSourceSha256'];
+      if (typeof version !== 'number' || !Number.isSafeInteger(version) || version <= 0 || version > 0x7fffffff ||
+        !this.isLowerHex(source, 64, 64)) {
+        throw new Error('core.info returned invalid storage compatibility');
+      }
+      result.storageCompatibility = { sqliteMaxUserVersion: version, sqliteStorageSourceSha256: source };
+    }
+    return result;
+  }
+
+  private requireCoreStorageFormat(value: unknown): LegacyCoreStorageFormat | undefined {
+    if (value === undefined) return undefined;
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new Error('core.info returned invalid storage format capability');
+    }
+    const fields = value as Record<string, unknown>;
+    const format = fields['format'];
+    const portable = fields['portableSnapshotSupported'];
+    if ((format !== 'legacy' && format !== 'library47') || typeof portable !== 'boolean' ||
+      Object.keys(fields).some((key: string): boolean => !['format', 'portableSnapshotSupported', 'capabilities'].includes(key))) {
+      throw new Error('core.info returned invalid storage format capability');
+    }
+    if (fields['capabilities'] === undefined) return { format, portableSnapshotSupported: portable };
+    const capabilities = this.requireCoreStorageCapabilities(fields['capabilities']);
+    if (portable !== (capabilities.logicalExport && capabilities.logicalRestore && capabilities.legacyHostImport) ||
+      (format === 'library47' && !capabilities.logicalRestoreRequiresCompleteCoverage) ||
+      (format !== 'library47' && (capabilities.physicalBackup || capabilities.physicalRestore))) {
+      throw new Error('core.info returned invalid storage format capability');
+    }
+    return { format, portableSnapshotSupported: portable, capabilities };
+  }
+
+  private requireCoreStorageCapabilities(value: unknown): LegacyCoreStorageCapabilities {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new Error('core.info returned invalid storage format capability');
+    }
+    const fields = value as Record<string, unknown>;
+    const keys: string[] = ['logicalExport', 'logicalRestore', 'legacyHostImport', 'physicalBackup', 'physicalRestore',
+      'webdavConfigRestore', 'activeLibrarySync', 'logicalExportRequiresDataPreflight',
+      'logicalRestoreRequiresCompleteCoverage', 'resourceEvidenceOnly', 'externalFilesIncluded'];
+    if (Object.keys(fields).length !== keys.length || keys.some((key: string): boolean => typeof fields[key] !== 'boolean') ||
+      fields['activeLibrarySync'] !== false || fields['logicalExportRequiresDataPreflight'] !== true ||
+      fields['resourceEvidenceOnly'] !== true ||
+      fields['externalFilesIncluded'] !== false) {
+      throw new Error('core.info returned invalid storage format capability');
+    }
+    return { logicalExport: fields['logicalExport'] as boolean, logicalRestore: fields['logicalRestore'] as boolean,
+      legacyHostImport: fields['legacyHostImport'] as boolean, physicalBackup: fields['physicalBackup'] as boolean,
+      physicalRestore: fields['physicalRestore'] as boolean, webdavConfigRestore: fields['webdavConfigRestore'] as boolean,
+      activeLibrarySync: false, logicalExportRequiresDataPreflight: true,
+      logicalRestoreRequiresCompleteCoverage: fields['logicalRestoreRequiresCompleteCoverage'] as boolean,
+      resourceEvidenceOnly: true, externalFilesIncluded: false };
   }
 
   private requireSourceSwitchRecoveryCount(value: unknown): number {

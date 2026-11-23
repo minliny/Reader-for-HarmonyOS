@@ -5,25 +5,25 @@ const { resolveEtsLoaderRoot }=await import('./lib/tool-environment.mjs');
 const {default:assert}=await import('node:assert/strict');
 const { readFileSync }=await import('node:fs');
 const { createRequire }=await import('node:module');
-const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
+const { productionMotionMethods }=await import('./lib/reader-p1-motion-method-probe.mjs');
 const { createReaderBuilderProbe }=await import('./lib/reader-control-builder-probe.mjs');
-const state=await import('../entry/src/main/ets/features/reading/ReaderAppearanceState.ts');
-const style=await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
-const { READER_THEME_DEFINITIONS }=await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const { readerControlHostVisible }=await import('../entry/src/main/ets/features/reading/ReaderControlHostSession.ts');
-const { createReaderControlSessionState }=await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const { readerWidthClass, resolveReaderReadingLayout }=await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
-const { ReaderWindowMetricsSnapshot, ReaderRectVp }=await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const state=await import('../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts');
+const style=await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
+const { READER_THEME_DEFINITIONS }=await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { readerControlHostVisible }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
+const { createReaderControlSessionState }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const { readerWidthClass, resolveReaderReadingLayout }=await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
+const { ReaderWindowMetricsSnapshot, ReaderRectVp }=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 
 const require = createRequire(import.meta.url);
 const ts = require(((resolveEtsLoaderRoot()) + '/node_modules/typescript'));
 const syntax = require(((resolveEtsLoaderRoot()) + '/lib/validate_ui_syntax.js'));
-const statusPaperSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderStatusBarPaper.ets', import.meta.url), 'utf8');
+const statusPaperSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderStatusBarPaper.ets', import.meta.url), 'utf8');
 syntax.componentCollection.customComponents.add('ReaderStatusBarPaper');
 syntax.propCollection.set('ReaderStatusBarPaper', new Set([...statusPaperSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m => m[1])));
 class StatusPaper { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 const sourcePath=relative=>new URL(`../entry/src/main/ets/${relative}`,import.meta.url);
-const lre = sourcePath('features/reading/LocalReadingExperience.ets');
+const lre = sourcePath('features/reading/ui/LocalReadingExperience.ets');
 const results = [];
 async function check(name, run) {
   const group=name.startsWith('PH108: real SDK')||name.startsWith('PH108: shell')?'status-band':name.startsWith('PH108: every')?'theme-texture':name.startsWith('PH104:')?'launch-work':name.startsWith('PH107:')?'volume-policy':name.startsWith('PH106:')?'font-import':'download-feedback';
@@ -104,7 +104,7 @@ await check('PH108: every theme-only change invalidates page textures without re
 });
 
 await check('PH108: shell repaints the reader band above directory and source-switch overlays', () => {
-  const source = readFileSync(sourcePath('features/shell/ReaderShell.ets'), 'utf8');
+  const source = readFileSync(sourcePath('features/reading/ui/ReaderShell.ets'), 'utf8');
   for (const theme of READER_THEME_DEFINITIONS) for (const route of ['directory', 'reading']) {
     const { owner } = createReaderBuilderProbe(source, ['overlayStatusBarUnderlay', 'chromeMetrics'], {
       ReaderStatusBarPaper: StatusPaper, readerWidthClass,
@@ -191,12 +191,14 @@ await check('PH106: import stays an action; a separate selected custom font surv
 });
 
 await check('PH106: actual font Host registers persisted sandbox font through file URI', async () => {
+  const { ReaderDocumentPickerActivity } = await import('../entry/src/main/ets/platform/ReaderDocumentPickerActivity.ts');
   const src = readFileSync(sourcePath('app/ReaderCustomFontHost.ts'), 'utf8');
   const output = ts.transpileModule(src, { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS } }).outputText;
   const module = { exports: {} };
   let registered;
-  const deps = { '@ohos.file.fs': { default: { access: async () => true } }, '../features/reading/ReaderAppearanceState': state,
-    './ReaderFontLoadHost': {loadReaderFontChecked: async (familyName, familySrc) => { registered = {familyName, familySrc}; }} };
+  const deps = { '@ohos.file.fs': { default: { access: async () => true } }, '../features/reading/application/ReaderAppearanceState': state,
+    '../platform/ReaderDocumentPickerActivity': { ReaderDocumentPickerActivity },
+    '../ui/platform/ReaderFontLoadHost': {loadReaderFontChecked: async (familyName, familySrc) => { registered = {familyName, familySrc}; }} };
   new Function('require', 'module', 'exports', output)(id => deps[id] ?? {}, module, module.exports);
   const host = new module.exports.ReaderCustomFontHost({ filesDir: '/files' });
   const descriptor = new state.ReaderCustomFontDescriptor('字体', 'ReaderCustom_aaaaaaaaaaaaaaaa',

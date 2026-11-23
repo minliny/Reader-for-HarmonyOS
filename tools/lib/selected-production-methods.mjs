@@ -1,6 +1,32 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
+import { readerWindowEnvironmentForProbe } from './reader-window-environment-probe.mjs';
+
+// Select the unchanged callback expression at one normal component assembly.
+// Native event delivery still requires the separate SDK/component probes.
+export function selectedProductionComponentCallback(file, component, property, owner, bindings = {}) {
+  const { ts, options } = installedEtsCompiler();
+  const source = readFileSync(file, 'utf8');
+  const tree = ts.createSourceFile(String(file), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+  assert.deepEqual(tree.parseDiagnostics, [], 'production assembly parses');
+  const expressions = [];
+  const visit = node => {
+    if (ts.isCallExpression(node) && node.expression.getText(tree) === component) {
+      const value = node.arguments[0]?.properties?.find(item => item.name?.getText(tree) === property);
+      if (value) expressions.push(value.initializer.getText(tree));
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(tree);
+  assert.equal(expressions.length, 1, 'one actual component callback');
+  const emitted = ts.transpileModule(`const action = ${expressions[0]};`, {
+    compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS },
+    reportDiagnostics: true,
+  });
+  assert.deepEqual(emitted.diagnostics, [], 'production callback emits');
+  return new Function(...Object.keys(bindings), emitted.outputText + '\nreturn action;').call(owner, ...Object.values(bindings));
+}
 
 // Ordinary method adapter only. It copies AST-selected production declarations,
 // never a hand-maintained implementation. Callers supply platform I/O explicitly.
@@ -24,8 +50,16 @@ export function selectedProductionMethods(file, className, names, dependencies =
     reportDiagnostics: true, fileName: 'SelectedProductionMethods.ts',
   });
   assert.deepEqual(result.diagnostics, [], 'selected unchanged production declarations emit');
+  const bindings = { ...dependencies };
+  if (members.some(member => /\breaderWindowMetrics\s*\(/.test(member)) && bindings.readerWindowMetrics === undefined &&
+    typeof dependencies.ReaderWindowCoordinator?.metrics === 'function') {
+    // Keep the fixture's explicitly supplied platform source, crossing the
+    // actual new read port rather than restoring a UI -> app import.
+    bindings.readerWindowMetrics = readerWindowEnvironmentForProbe(
+      () => dependencies.ReaderWindowCoordinator.metrics()).readerWindowMetrics;
+  }
   const exports = {};
-  new Function('exports', ...Object.keys(dependencies), result.outputText)(exports, ...Object.values(dependencies));
+  new Function('exports', ...Object.keys(bindings), result.outputText)(exports, ...Object.values(bindings));
   return exports[className];
 }
 

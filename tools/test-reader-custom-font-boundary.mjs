@@ -1,156 +1,135 @@
-import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
-import * as appearance from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
-import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/ReaderAppearanceStore.ts';
-
-const require = createRequire(import.meta.url);
-const sdk = resolveEtsLoaderRoot();
-const ts = require(`${sdk}/node_modules/typescript`);
-const source = readFileSync(new URL('../entry/src/main/ets/app/ReaderCustomFontHost.ts', import.meta.url), 'utf8');
-const compiled = ts.transpileModule(source, {
-  compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS },
-}).outputText;
-
-const provider = 'file://provider/test.ttf';
-const fontBytes = Uint8Array.from([0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2, 3, 4, 5, 6, 7, 8, 9]);
-const fingerprint = createHash('sha256').update(fontBytes).digest('hex');
-const finalPath = `/files/reader-fonts/${fingerprint}.ttf`;
-const files = new Map([[provider, fontBytes]]);
-const directories = new Set();
-const opened = new Map();
-let nextFd = 1;
-let providerStatSize;
-let failNativeLoad = false;
-let openedCount = 0;
-let retiredCount = 0;
-
-const fileIo = {
-  OpenMode: { READ_ONLY: 1, CREATE: 2, READ_WRITE: 4, TRUNC: 8 },
-  async stat(path) {
-    if (!files.has(path)) throw Error(`missing ${path}`);
-    return { size: path === provider && providerStatSize !== undefined ? providerStatSize : files.get(path).length };
-  },
-  async access(path) { return files.has(path) || directories.has(path); },
-  async mkdir(path) { directories.add(path); },
-  async open(path, mode) {
-    openedCount++;
-    if (mode !== 1) files.set(path, new Uint8Array());
-    if (!files.has(path)) throw Error(`missing ${path}`);
-    const fd = nextFd++;
-    opened.set(fd, { path, offset: 0 });
-    return { fd };
-  },
-  async read(fd, buffer) {
-    const file = opened.get(fd);
-    const data = files.get(file.path);
-    const length = Math.min(buffer.byteLength, data.length - file.offset);
-    new Uint8Array(buffer).set(data.subarray(file.offset, file.offset + length));
-    file.offset += length;
-    return length;
-  },
-  async write(fd, buffer) {
-    const file = opened.get(fd);
-    const old = files.get(file.path);
-    const bytes = new Uint8Array(buffer);
-    const next = new Uint8Array(Math.max(old.length, file.offset + bytes.length));
-    next.set(old); next.set(bytes, file.offset);
-    files.set(file.path, next);
-    file.offset += bytes.length;
-    return bytes.length;
-  },
-  async close(file) { opened.delete(typeof file === 'number' ? file : file.fd); },
-  async fsync() {},
-  async rename(from, to) { files.set(to, files.get(from)); files.delete(from); },
-  async unlink(path) { files.delete(path); retiredCount++; },
+import { installedEtsCompiler } from './lib/ets-compiler-runtime.mjs';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+import * as appearance from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
+import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceStore.ts';
+import { ReaderDocumentPickerActivity } from '../entry/src/main/ets/platform/ReaderDocumentPickerActivity.ts';
+const definitions = {
+  'font-boundary': { description: 'Full Host bounded import, cleanup, live retirement guard; actual Gateway/Store durable replacement', resources: [] },
+  'font-handoff': { description: 'Full Host/Gateway/Store/FontLoadHost: pending A/B/A, actual async file port, checked receipt, cold registration', resources: [] },
 };
-const deps = {
-  './ReaderFontLoadHost': { loadReaderFontChecked: async () => {
-    if (failNativeLoad) throw Error('native font rejected');
-  } },
-  '@ohos.file.fs': { default: fileIo },
-  '@ohos.file.picker': { default: {
-    DocumentSelectOptions: class {},
-    DocumentViewPicker: class { async select() { return [provider]; } },
-  } },
-  '@ohos.file.fileuri': { default: { FileUri: class { constructor(uri) { this.name = uri.split('/').at(-1); } } } },
-  '@ohos.security.cryptoFramework': { default: { createMd: () => {
-    const hash = createHash('sha256');
-    return { async update(input) { hash.update(input.data); }, async digest() { return { data: hash.digest() }; } };
-  } } },
-  '../features/reading/ReaderAppearanceState': appearance,
-};
-const module = { exports: {} };
-new Function('require', 'module', 'exports', compiled)(id => deps[id] ?? {}, module, module.exports);
-const host = new module.exports.ReaderCustomFontHost({ filesDir: '/files' });
+const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
+const drain = async () => { for (let i = 0; i < 120; i++) await Promise.resolve(); };
+async function until(predicate, label) { for (let i = 0; i < 300; i++) { if (predicate()) return; await Promise.resolve(); } assert.fail(label); }
+function load(path, deps) {
+  const { ts } = installedEtsCompiler();
+  const source = readFileSync(new URL('../entry/src/main/ets/' + path, import.meta.url), 'utf8');
+  const emitted = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS }, reportDiagnostics: true });
+  assert.deepEqual(emitted.diagnostics, []);
+  const module = { exports: {} };
+  new Function('require', 'module', 'exports', emitted.outputText)(id => { assert.ok(Object.hasOwn(deps, id), `explicit dependency ${id}`); return deps[id]; }, module, module.exports);
+  return module.exports;
+}
+function fixture(cached = false) {
+  ReaderDocumentPickerActivity.bind(9203); ReaderDocumentPickerActivity.setForeground(true);
+  const provider = 'file://provider/test.ttf', bytes = Uint8Array.from([0, 1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 2, 3, 4, 5, 6, 7, 8, 9]);
+  const files = new Map([[provider, bytes]]), directories = new Set(), opened = new Map();
+  const state = { statSize: undefined, failLoad: false, openedCount: 0, unlinkGate: undefined, accessGate: undefined, nativeLoads: 0, themeGate: undefined };
+  let fd = 0;
+  const io = {
+    OpenMode: { READ_ONLY: 1, CREATE: 2, READ_WRITE: 4, TRUNC: 8 },
+    async stat(path) { assert.ok(files.has(path), 'stat existing'); return { size: path === provider && state.statSize !== undefined ? state.statSize : files.get(path).length }; },
+    async access(path) { if (state.accessGate?.path === path) { const gate = state.accessGate; state.accessGate = undefined; gate.wasEntered = true; gate.entered.resolve(); await gate.release.promise; } return files.has(path) || directories.has(path); },
+    async mkdir(path) { directories.add(path); },
+    async open(path, mode) { state.openedCount++; if (mode !== 1) files.set(path, new Uint8Array()); assert.ok(files.has(path)); const id = ++fd; opened.set(id, { path, offset: 0 }); return { fd: id }; },
+    async read(id, buffer) { const f = opened.get(id), data = files.get(f.path), count = Math.min(buffer.byteLength, data.length - f.offset); new Uint8Array(buffer).set(data.subarray(f.offset, f.offset + count)); f.offset += count; return count; },
+    async write(id, buffer) { const f = opened.get(id), old = files.get(f.path), bytes = new Uint8Array(buffer), next = new Uint8Array(Math.max(old.length, f.offset + bytes.length)); next.set(old); next.set(bytes, f.offset); files.set(f.path, next); f.offset += bytes.length; return bytes.length; },
+    async close(file) { opened.delete(typeof file === 'number' ? file : file.fd); }, async fsync() {},
+    async rename(from, to) { assert.ok(files.has(from)); files.set(to, files.get(from)); files.delete(from); },
+    async unlink(path) { if (state.unlinkGate?.path === path) { const gate = state.unlinkGate; state.unlinkGate = undefined; gate.wasEntered = true; gate.entered.resolve(); await gate.release.promise; } files.delete(path); },
+  };
+  const native = async () => { state.nativeLoads++; if (state.failLoad) throw Error('native font rejected'); };
+  const fontLoad = cached ? load('ui/platform/ReaderFontLoadHost.ts', { '@ohos.graphics.text': { default: { FontCollection: { getGlobalInstance: () => ({ loadFontWithCheck: native }) } } } }) : { loadReaderFontChecked: native };
+  const { ReaderCustomFontHost: Host } = load('app/ReaderCustomFontHost.ts', {
+    '../platform/ReaderDocumentPickerActivity': { ReaderDocumentPickerActivity }, '../ui/platform/ReaderFontLoadHost': fontLoad,
+    '@ohos.file.fs': { default: io }, '@ohos.file.picker': { default: { DocumentSelectOptions: class {}, DocumentViewPicker: class { async select() { return [provider]; } } } },
+    '@ohos.file.fileuri': { default: { FileUri: class { constructor(uri) { this.name = uri.split('/').at(-1); } } } },
+    '@ohos.security.cryptoFramework': { default: { createMd: () => { const hash = createHash('sha256'); return { async update(input) { hash.update(input.data); }, async digest() { return { data: hash.digest() }; } }; } } },
+    '../features/reading/application/ReaderAppearanceState': appearance,
+  });
+  let currentOwner;
+  const { ReaderAppearanceGateway: Gateway } = load('features/reading/application/ReaderAppearanceGateway.ts', {
+    '../../../app/ReaderCustomFontHost': { ReaderCustomFontHost: Host },
+    '../../../app/ReaderRuntimeOwner': { ReaderRuntimeOwner: { isCurrent: owner => owner === currentOwner } },
+    '../../../app/ReaderThemeHost': { ReaderThemeHost: { prepareUserChange: async () => { if(state.themeGate){const gate=state.themeGate;state.themeGate=undefined;gate.wasEntered = true; gate.entered.resolve();await gate.release.promise;} } } },
+    './ReaderAppearanceState': appearance, '@kit.PerformanceAnalysisKit': { hilog: { warn() {} } },
+  });
+  const host = new Host({ filesDir: '/files' });
+  const fontPath = data => `/files/reader-fonts/${createHash('sha256').update(data).digest('hex')}.ttf`;
+  function gateway(store) { if (!currentOwner) currentOwner = { getAppearanceStore: () => store, getUIAbilityContext: () => ({ filesDir: '/files' }) }; return new Gateway(currentOwner); }
+  return { host, Host, Gateway, files, directories, bytes, provider, state, fontPath, gateway, retireOwner: () => { currentOwner = undefined; } };
+}
+async function boundary() {
+  const f = fixture(), path = f.fontPath(f.bytes);
+  f.state.statSize = 33 * 1024 * 1024;
+  await assert.rejects(f.host.selectAndRegister(undefined), /between 12 bytes and 32 MiB/);
+  assert.equal(f.state.openedCount, 0); assert.equal(f.directories.size, 0);
+  f.state.statSize = f.bytes.length - 1;
+  await assert.rejects(f.host.selectAndRegister(undefined), /changed or exceeded its import limit/);
+  assert.equal([...f.files.keys()].filter(p => p.startsWith('/files/')).length, 0);
+  f.state.statSize = undefined; f.state.failLoad = true;
+  await assert.rejects(f.host.selectAndRegister(undefined), /native font rejected/); assert.equal(f.files.has(path), false);
+  f.state.failLoad = false; const a = await f.host.selectAndRegister(undefined);
+  f.state.failLoad = true; await assert.rejects(f.host.selectAndRegister(undefined), /native font rejected/);
+  assert.equal(f.files.has(path), true, 'failed native reimport preserves preexisting file');
+  await f.host.retireUnusedFont(a, () => false); assert.equal(f.files.has(path), true);
+  let unused = true; const gate = { path, entered: deferred(), release: deferred() }; f.state.accessGate = gate;
+  const retiring = f.host.retireUnusedFont(a, () => unused); await until(() => gate.wasEntered, 'file gate entered'); unused = false; gate.release.resolve(); await retiring;
+  assert.equal(f.files.has(path), true, 'guard rechecked after async access');
+  const save = deferred(); let persisted = appearance.setReaderAppearanceCustomFont(appearance.createDefaultReaderAppearanceSnapshot(), a);
+  const store = new ReaderAppearanceStore({ load: async () => persisted, save: async value => { await save.promise; persisted = value; } });
+  await store.load(); const gateway = f.gateway(store);
+  const commit = await gateway.update(value => ({ ...value, customFont: undefined }));
+  await drain(); assert.equal(f.files.has(path), true, 'replacement must be durable before retirement');
+  save.resolve(); await commit.saved; await drain(); assert.equal(f.files.has(path), false); assert.equal(persisted.customFont, undefined);
+}
+async function handoff() {
+  // Both not-yet-submitted and already-submitted unlink: final import decision
+  // shares the actual static Host lane across gateway instances.
+  for (const phase of ['access', 'unlink']) {
+    const f = fixture(true); const a = await f.host.selectAndRegister(undefined), path = a.filePath;
+    let persisted = appearance.setReaderAppearanceCustomFont(appearance.createDefaultReaderAppearanceSnapshot(), a);
+    const save = deferred(); let writes = 0;
+    const store = new ReaderAppearanceStore({ load: async () => persisted, save: async value => { if (++writes === 1) await save.promise; persisted = value; } });
+    await store.load(); const gateway = f.gateway(store);
+    const bBytes = f.bytes.slice(); bBytes[19]++; f.files.set(f.provider, bBytes);
+    const b = await gateway.importCustomFont(undefined); await until(() => writes === 1, 'B write entered');
+    assert.equal(persisted.customFont.filePath, path); assert.equal(f.files.has(path), true);
+    // A cancelled reimport while B is accepted but not durable cannot delete durable A.
+    f.files.set(f.provider, f.bytes); const rejected = await gateway.importCustomFont(undefined, () => false);
+    assert.equal(rejected, undefined); assert.equal(f.files.has(path), true);
+    const gate = { path, entered: deferred(), release: deferred() };
+    f.state[phase === 'access' ? 'accessGate' : 'unlinkGate'] = gate;
+    save.resolve(); await b.saved; await until(() => gate.wasEntered, 'file gate entered');
+    const secondGateway = f.gateway(store);
+    const importingA = secondGateway.importCustomFont(undefined); let admitted = false; importingA.then(() => { admitted = true; });
+    await drain(); assert.equal(admitted, false, 'A finalization waits for old cleanup lane');
+    gate.release.resolve(); const committedA = await importingA; await committedA.saved; await drain();
+    assert.equal(store.current().customFont.filePath, path); assert.equal(persisted.customFont.filePath, path);
+    assert.equal(f.files.has(path), true, 'recreated A survives old cleanup');
+    assert.equal(f.state.nativeLoads, 2, 'actual FontLoadHost reuses A checked receipt, not file existence');
+    const cold = new ReaderAppearanceStore({ load: async () => persisted, save: async () => {} });
+    const coldSnapshot = await cold.load(); assert.equal(await new f.Host({ filesDir: '/files' }).registerPersisted(undefined, coldSnapshot.customFont), true);
+    f.retireOwner(); const retired = await gateway.update(value => ({ ...value, customFont: undefined }));
+    await retired.saved; await drain(); assert.equal(f.files.has(path), true, 'retired Runtime cannot clean current files');
+  }
+  {
+    const f=fixture(true),a=await f.host.selectAndRegister(undefined),path=a.filePath;
+    let persisted=appearance.setReaderAppearanceCustomFont(appearance.createDefaultReaderAppearanceSnapshot(),a),writes=0;
+    const save=deferred(),store=new ReaderAppearanceStore({load:async()=>persisted,save:async value=>{if(++writes===1)await save.promise;persisted=value;}});
+    await store.load();const gateway=f.gateway(store),second=f.gateway(store);
+    const bytes=f.bytes.slice();bytes[19]++;f.files.set(f.provider,bytes);
+    const b=await gateway.importCustomFont(undefined);await until(()=>writes===1,'B save entered');
+    f.files.set(f.provider,f.bytes);
+    const gate={entered:deferred(),release:deferred()};f.state.themeGate=gate;
+    const importingA=second.importCustomFont(undefined);await until(()=>gate.wasEntered,'A admission gate entered');
+    save.resolve();await b.saved;await drain();
+    assert.equal(f.files.has(path),true,'file lane includes waiting appearance admission, so old cleanup cannot delete A');
+    gate.release.resolve();const commit=await importingA;await commit.saved;await drain();
+    assert.equal(f.files.has(path),true);assert.equal(persisted.customFont.filePath,path);
+  }
 
-providerStatSize = 33 * 1024 * 1024;
-await assert.rejects(host.selectAndRegister(undefined), /between 12 bytes and 32 MiB/);
-assert.equal(openedCount, 0, 'oversized provider is rejected before any private copy');
-assert.equal(directories.size, 0, 'oversized provider does not create private font storage');
-
-providerStatSize = fontBytes.length - 1;
-await assert.rejects(host.selectAndRegister(undefined), /changed or exceeded its import limit/);
-assert.equal([...files.keys()].filter(path => path.startsWith('/files/')).length, 0,
-  'a provider that grows after stat leaves no staged file');
-
-providerStatSize = undefined;
-failNativeLoad = true;
-await assert.rejects(host.selectAndRegister(undefined), /native font rejected/);
-assert.equal(files.has(finalPath), false, 'failed native load removes only the newly imported hash');
-
-failNativeLoad = false;
-const descriptor = await host.selectAndRegister(undefined);
-assert.equal(descriptor.filePath, finalPath);
-assert.equal(files.has(finalPath), true);
-
-failNativeLoad = true;
-await assert.rejects(host.selectAndRegister(undefined), /native font rejected/);
-assert.equal(files.has(finalPath), true, 'failed reimport preserves a pre-existing active hash');
-
-await host.retireUnusedFont(descriptor, descriptor);
-assert.equal(files.has(finalPath), true, 'active persisted font cannot be retired');
-await host.retireUnusedFont(descriptor, undefined);
-assert.equal(files.has(finalPath), false, 'a replaced, owned font can be removed after durable admission');
-assert.ok(retiredCount >= 3);
-
-const gatewaySource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderAppearanceGateway.ts', import.meta.url), 'utf8');
-const gatewayCompiled = ts.transpileModule(gatewaySource, {
-  compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS },
-}).outputText;
-let releaseSave;
-const oldFont = new appearance.ReaderCustomFontDescriptor('旧字体', `ReaderCustom_${fingerprint.slice(0, 16)}`,
-  finalPath, fingerprint);
-const replacementHash = 'b'.repeat(64);
-const replacement = new appearance.ReaderCustomFontDescriptor('新字体', `ReaderCustom_${replacementHash.slice(0, 16)}`,
-  `/files/reader-fonts/${replacementHash}.ttf`, replacementHash);
-const initial = appearance.setReaderAppearanceCustomFont(appearance.createDefaultReaderAppearanceSnapshot(), oldFont);
-const store = new ReaderAppearanceStore({
-  async load() { return initial; },
-  async save() { await new Promise(resolve => { releaseSave = resolve; }); },
-});
-await store.load();
-const retirements = [];
-const gatewayDeps = {
-  '../../app/ReaderCustomFontHost': { ReaderCustomFontHost: class {
-    async retireUnusedFont(old, active) { retirements.push({ old, active }); }
-  } },
-  '@kit.PerformanceAnalysisKit': { hilog: { warn() {} } },
-};
-const gatewayModule = { exports: {} };
-new Function('require', 'module', 'exports', gatewayCompiled)(id => gatewayDeps[id] ?? {},
-  gatewayModule, gatewayModule.exports);
-const gateway = new gatewayModule.exports.ReaderAppearanceGateway({
-  getAppearanceStore: () => store, getUIAbilityContext: () => ({}),
-});
-const commit = await gateway.update(current => ({ ...current, customFont: replacement }));
-assert.equal(retirements.length, 0, 'old font is retained while new preference write is pending');
-while (releaseSave === undefined) await new Promise(resolve => setImmediate(resolve));
-releaseSave();
-await commit.saved;
-await new Promise(resolve => setImmediate(resolve));
-assert.deepEqual(retirements.map(value => [value.old.filePath, value.active.filePath]),
-  [[oldFont.filePath, replacement.filePath]], 'only the durably retired descriptor is handed to cleanup');
-console.log('custom font boundary: pre-copy and changing-provider limits, failed-load cleanup, active-font preservation PASS');
+}
+for (const id of selectContractCases(definitions)) { let timer; try { await Promise.race([(id === 'font-boundary' ? boundary() : handoff()), new Promise((_, reject) => {timer=setTimeout(()=>reject(Error('font case deadline')),5000);})]); recordContractCasePass(id); } finally {clearTimeout(timer);} }

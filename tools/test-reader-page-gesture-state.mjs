@@ -22,7 +22,7 @@ import {
   startReaderPagePan,
   updateReaderPagePan,
   updateReaderPagePanInPlace,
-} from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
+} from '../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts';
 
 assert.equal(READER_PAGE_GESTURE_TOUCH_SLOP, 8);
 assert.equal(READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP, 16);

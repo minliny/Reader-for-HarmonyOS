@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function run(id){
 const { resolveEtsLoaderRoot }=await import("./lib/tool-environment.mjs");
-const { RssPresentationProjection }=await import("../entry/src/main/ets/features/rss/RssPresentationProjection.ts");
+const { RssPresentationProjection }=await import("../entry/src/main/ets/features/rss/presentation/RssPresentationProjection.ts");
 const {runtimeOwnerIdentityProbe}=await import("./lib/reader-runtime-admission-probe.mjs");
 const { readFileSync }=await import("node:fs");
 const { createRequire, stripTypeScriptTypes }=await import("node:module");
@@ -17,16 +17,16 @@ const facts = new Function(ordinary(source('app/ReaderOperationFacts.ts')) + ';r
 const projectPersistedReceipt = new Function(...Object.keys(facts), ordinary(source('app/ReaderPersistedReceiptProjection.ts')) + ';return projectPersistedReceipt;')(...Object.values(facts));
 let currentOwner;
 const ReaderRuntimeOwner = runtimeOwnerIdentityProbe(()=>currentOwner);
-const RssGateway = new Function('ReaderRuntimeOwner','isReaderCoreTransactionPendingError', ordinary(source('features/rss/RssGateway.ts')) + ';return RssGateway;')(ReaderRuntimeOwner,isReaderCoreTransactionPendingError);
+const RssGateway = new Function('ReaderRuntimeOwner','isReaderCoreTransactionPendingError', ordinary(source('features/rss/application/RssGateway.ts')) + ';return RssGateway;')(ReaderRuntimeOwner,isReaderCoreTransactionPendingError);
 const RssOrchestrator = new Function('RssGateway','ReaderRuntimeOwner','ReaderWriteEvidence','RssRouteOperationHost','hilog','isReaderCoreTransactionPendingError','projectPersistedReceipt','projectOperationFacts',
-  ordinary(source('features/rss/RssOrchestrator.ets')) + ';return RssOrchestrator;')(RssGateway,ReaderRuntimeOwner,ReaderWriteEvidence,RssRouteOperationHost,{warn(){},error(){}},isReaderCoreTransactionPendingError,projectPersistedReceipt,facts.projectOperationFacts);
+  ordinary(source('features/rss/application/RssOrchestrator.ets')) + ';return RssOrchestrator;')(RssGateway,ReaderRuntimeOwner,ReaderWriteEvidence,RssRouteOperationHost,{warn(){},error(){}},isReaderCoreTransactionPendingError,projectPersistedReceipt,facts.projectOperationFacts);
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
-const pageSource = source('features/rss/RssSubscriptionManagementPage.ets');
+const pageSource = source('features/rss/ui/RssSubscriptionManagementPage.ets');
 syntax.componentCollection.customComponents.add('RssSubscriptionManagementPage');
 syntax.propCollection.set('RssSubscriptionManagementPage', new Set([...pageSource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
-const recoverySource = source('features/common/ReaderRecoveryAction.ets');
+const recoverySource = source('ui/feedback/ReaderRecoveryAction.ets');
 syntax.componentCollection.customComponents.add('ReaderRecoveryAction');
 syntax.propCollection.set('ReaderRecoveryAction', new Set([...recoverySource.matchAll(/@Prop\s+(\w+)\s*:/g)].map(m=>m[1])));
 class ManagementChild {
@@ -74,7 +74,7 @@ function fixture(runtime=rpc()){
   Object.assign(index,{mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,rssInstanceIdentity:++physicalIndexIdentity,rssPresentationIdentity:'',route:'rssSubscriptionManagement',navigationGeneration:1,shelfReceiptRetired:false,rssPresentation:{kind:'feed',subscriptions:[],recentUnread:[]},rssManagementRead:facts.projectOperationFacts({phase:'idle'}),rssManagementFocusSubscriptionId:''});
   const orchestrator=index.getRssOrchestrator();index.rssSubscriptionManagementContent();const child=[...index.children.values()][0];
   const refresh=()=>{index.replay();return child.params;};
-  const surfaceSdk=boundedSurfaceSdk();const originalSurfaceSource=source('features/rss/RssOriginalRecoverySurface.ets');surfaceSdk.childSources.RssOriginalRecoverySurface=originalSurfaceSource;
+  const surfaceSdk=boundedSurfaceSdk();const originalSurfaceSource=source('features/rss/ui/RssOriginalRecoverySurface.ets');surfaceSdk.childSources.RssOriginalRecoverySurface=originalSurfaceSource;
   const OriginalSurface=createReaderBuilderProbe(originalSurfaceSource,boundedMembers(originalSurfaceSource),surfaceSdk.deps,surfaceSdk.hooks).Component;
   const page=()=>{
     const {owner}=createReaderBuilderProbe(pageSource,['operationFeedback','hasOperationFeedback','feedbackMessage','canRetryFeedback','retryFeedback'],{ReaderRecoveryAction:ManagementChild,RssOriginalRecoverySurface:OriginalSurface},{...surfaceSdk.hooks,mountChildren:true});
@@ -348,7 +348,7 @@ if(key==='throwing-admission'){
 if(key==='throwing-diagnostics'){
 {
   const ThrowingDiagnosticOwner = new Function('RssGateway','ReaderRuntimeOwner','ReaderWriteEvidence','RssRouteOperationHost','hilog','isReaderCoreTransactionPendingError','projectPersistedReceipt','projectOperationFacts',
-    ordinary(source('features/rss/RssOrchestrator.ets')) + ';return RssOrchestrator;')(RssGateway,ReaderRuntimeOwner,ReaderWriteEvidence,RssRouteOperationHost,
+    ordinary(source('features/rss/application/RssOrchestrator.ets')) + ';return RssOrchestrator;')(RssGateway,ReaderRuntimeOwner,ReaderWriteEvidence,RssRouteOperationHost,
       {warn(){throw Error('logger unavailable');},error(){throw Error('logger unavailable');}},isReaderCoreTransactionPendingError,projectPersistedReceipt,facts.projectOperationFacts);
   const runtime=rpc();currentOwner=runtime;
   const owner=new ThrowingDiagnosticOwner(()=>{throw Error('native delivery retired');},()=>true,runtime,

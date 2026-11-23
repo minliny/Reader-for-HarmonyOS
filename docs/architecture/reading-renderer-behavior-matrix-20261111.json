@@ -1,0 +1,1990 @@
+{
+  "schema": "reader.framework-closure.p0-reading-behavior-matrix.v1",
+  "createdAt": "2026-11-11T01:18:18.241880+00:00",
+  "status": "READ_ONLY_SOURCE_AUDIT_COMPLETE_BEHAVIOR_EXECUTION_NOT_RUN",
+  "sourceIdentity": {
+    "repository": "/home/administrator/Reader/Reader-for-HarmonyOS",
+    "head": "14444eac0feb182d38f16ef8ffb40c43cb749434",
+    "selectedPrimaryPathsGitStatus": "CLEAN_TRACKED_PATHS_AT_AUDIT; does not claim full workspace clean",
+    "currentCandidateReference": "0.2.0.DEV.a4438c05bb65; no build/install performed here",
+    "inputs": [
+      {
+        "role": "LRE",
+        "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+        "sha256": "b36ec9247f694e279b348757a4b58057a452fb9b4be59589c525ca85141d11d5",
+        "bytes": 785947
+      },
+      {
+        "role": "Panel",
+        "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+        "sha256": "36f254d5d715937bcf8d9c4c94a772ea0adb986574f37cf9bf10da14b8cc2bf1",
+        "bytes": 144560
+      },
+      {
+        "role": "Stage",
+        "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlMotionStage.ets",
+        "sha256": "956b2f5c23b39eb3c68086d1093ef9c8c5a3c0e65d5ee309f48984d7c52c03b7",
+        "bytes": 41672
+      },
+      {
+        "role": "Runtime",
+        "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+        "sha256": "2d9d1d89117f81845f49412b90a69d8b770a1d8a77dd2379af84d3a80541fcf3",
+        "bytes": 9861
+      },
+      {
+        "role": "HostSession",
+        "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+        "sha256": "d221d82db6a5fb0e6c44d37e44e99874fb698be514772ed0d7ccaacc705a3bc6",
+        "bytes": 5388
+      },
+      {
+        "role": "Session",
+        "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
+        "sha256": "d0d1c28f5a2b2a05065ff7e6f8de93a871a1deeff41d917900ad4bb131d8bb44",
+        "bytes": 27274
+      },
+      {
+        "role": "Driver",
+        "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts",
+        "sha256": "1352127222d3b21306a2b6833faa80ddf8590833a892f10d01f8d6ce07f64960",
+        "bytes": 16578
+      },
+      {
+        "role": "Rebase",
+        "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlLayoutRebase.ts",
+        "sha256": "70d42dd991d0bf9c44520fcff80801f50483ae8e7c115bf650c646f29b35af6e",
+        "bytes": 8991
+      },
+      {
+        "role": "Policy",
+        "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts",
+        "sha256": "c87e2f7959cc8179de0dcbe1f86e94e5e290c7120464ce0864f26abf19bad42a",
+        "bytes": 4033
+      },
+      {
+        "role": "Keyboard",
+        "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/ui/foundation/ReaderKeyboardBack.ts",
+        "sha256": "97261fe067596492263a6919029935347a74473528d810e6150083ca3099bc21",
+        "bytes": 1454
+      },
+      {
+        "role": "VerificationPage",
+        "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/ReaderControlMotionVerification.ets",
+        "sha256": "f6d385fc8310a8dddc995464b75b93b601351dce01378fa30dfbab16df9f3421",
+        "bytes": 13564
+      }
+    ]
+  },
+  "authorizationAndBoundary": {
+    "requested": "P0阅读行为矩阵只读审计；仅写此JSON",
+    "writes": [
+      "/home/administrator/Reader/.local/framework-closure-20261111/p0-behavior-matrix.json"
+    ],
+    "productionFilesModified": false,
+    "priorEvidenceModified": false,
+    "deviceOperations": 0,
+    "testsBuildsGatesExecuted": 0,
+    "originalUserPayloadRead": false,
+    "scope": "现行文字阅读LocalReadingExperience/ReaderControlPanel/ReaderControlRuntime与验证用ReaderControlMotionStage的生产替换风险；不宣称漫画路径或宽屏rail准入。",
+    "futureExecution": "可选入口只是目录审计，不安排或授权测试/设备。以后选择任何检查前仍需逐项记录入口、嵌套调用、范围、风险、必要依据；不自动跑父文件/兄弟case/全量。",
+    "deviceScope": "先前受控设备取证已结束，本矩阵不恢复其授权或增加设备次数。"
+  },
+  "method": {
+    "source": "只读有限生产源码及当前本地索引，源路径/行号见每行；记录关键输入hash。",
+    "evidenceGrades": {
+      "SOURCE_REVIEWED": "可由当前源码读出，非行为执行PASS",
+      "CATALOG_QUALIFIED": "目录已审可选入口，非本次定义指纹核验或执行PASS",
+      "EXISTING_STATIC_PIXELS": "仅已有两张日间/current-font静态画面边界",
+      "NOT_RUN": "本轮未执行；不得标成通过"
+    },
+    "exactCaseCaveat": "有#case的入口才列为exact；原已审whole-file候选单列，绝不伪造#case或悄悄改跑整文件。已退休/diagnostic-only项不列作生产行为必需证据。",
+    "catalogCaveat": "部分catalog productionBinding含历史行号；当前owner定位以本JSON源引用为准。这里只提供候选的作用与限制，未重审所有fixture/隐式依赖，也未重新钉指纹。"
+  },
+  "productionMotionOwner": {
+    "observed": "LocalReadingExperience -> ReaderControlPanel -> ReaderControlRuntime；Panel管理本地visual @State/VSync与全部actor，LRE持稀疏semanticSession及业务/平台owner。",
+    "stageObservedConsumer": "ReaderControlMotionVerification.ets；未找到实际阅读路由使用ReaderControlMotionStage。",
+    "source": [
+      {
+        "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+        "line": 2233,
+        "detail": "actual production Panel consumer"
+      },
+      {
+        "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+        "line": 589,
+        "detail": "Runtime construction/start"
+      },
+      {
+        "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+        "line": 26,
+        "detail": "production control clock contract"
+      },
+      {
+        "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlMotionStage.ets",
+        "line": 42,
+        "detail": "representative integration/verification staging comment"
+      },
+      {
+        "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/pages/ReaderControlMotionVerification.ets",
+        "line": 231,
+        "detail": "only actual Stage builder consumer"
+      }
+    ],
+    "notAnAutomaticDefect": "Stage未接生产是当前边界，不单凭参考组件存在将原UI框架交付判未完成；下面缺口是替换前提，不冒充当前生产回归。"
+  },
+  "rows": [
+    {
+      "id": "P0-01",
+      "behavior": "控制栏打开、关闭与隐藏节点保留",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "semantic": "LocalReadingExperience.controlSession + ReaderControlHostSession",
+        "visual": "ReaderControlPanel -> ReaderControlRuntime",
+        "business": "阅读会话与持久化继续由LRE/gateway持有"
+      },
+      "productionFacts": [
+        {
+          "fact": "打开需当前宿主及正文输入可用且无翻页owner；预留目录数据后发一次open命令。关闭从当前visual sample dismiss，收起UI不代表停止阅读/TTS或取消未决操作。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 11058,
+              "detail": "openReaderControl / hideControl"
+            }
+          ]
+        },
+        {
+          "fact": "Panel首次打开后保留actor树；Runtime只把稳定端点交回语义session，所有actor来自同一runtime更新。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 640,
+              "detail": "acceptRuntime"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 1149,
+              "detail": "commitVisualSession"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "支持稀疏semanticSession、独立VSync采样与onSessionCommit；隐藏时保留dock/content节点，dismiss隐藏端点延后一帧发布。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "生产Panel已使用独立Runtime而非Stage；替换不能同时保留两个visual clock或在LRE镜像每帧状态。",
+          "Stage自有隐藏端点延后一帧发布与生产Runtime的端点发布时机不同，不能宣称严格时序等价。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-control-runtime#runtime-protocol",
+        "H-reader-control-runtime#panel-projection"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [
+        "H-reader-control-host-session",
+        "H-reader-control-session-state"
+      ],
+      "existingEvidence": [
+        "controlled-pixels-20261110/verification.json: text.entries=1、两张日间静态图；本次仅引用既有记录，不重复取证。"
+      ],
+      "notProven": [
+        "本轮未执行开关/连续重开方法回放。",
+        "既有两帧只证明日间正文及打开后静态画面，不证明关闭过渡、合成末帧或无闪烁。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-02",
+      "behavior": "首页、七个二级模块及快捷/完整形态",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "semantic": "ReaderControlSessionState.location(level/module/directoryTab/form)；HostSession仅兼容page投影",
+        "visual": "Panel.contentLocation保留当前可见actor身份",
+        "business": "prepareControlPage按模块访问边界加载业务事实"
+      },
+      "productionFacts": [
+        {
+          "fact": "setControlPage从latestControlVisualSession派生；HostSession映射七模块，Replace无Full兼容page名但真实form仍由session保存。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 9604,
+              "detail": "setControlPage / prepareControlPage"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+              "line": 66,
+              "detail": "setReaderControlHostPage"
+            }
+          ]
+        },
+        {
+          "fact": "隐藏帧继续使用lastVisibleContentLocation，不向List/Input灌入默认新模块。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 1160,
+              "detail": "rememberVisibleContentLocation / contentLocation"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "共享Session/Geometry可采样Quick/Full；提供module/header/navigation Builder槽及lastVisibleContentModule。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "槽位只承载UI，不提供生产七模块装配、访问revision、业务加载/退休或完整location身份。",
+          "Stage仅记最后module字符串，不能直接替代Panel保留level/tab/form的完整内容身份。",
+          "内容安装尺寸为fullHeight-70，缺少生产实测minimum/contentBudget及模块profile合同。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-control-runtime#panel-projection",
+        "H-reader-control-search-settings-content#search-sdk",
+        "H-reader-control-search-settings-content#settings-sdk"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [
+        "H-reader-control-host-session",
+        "H-reader-control-header-content"
+      ],
+      "existingEvidence": [],
+      "notProven": [
+        "七模块Quick/Full的真实List/Input连续性与原生滚动位置尚无本轮证据。",
+        "SDK/method case不等于全部真实路由或所有模块像素通过。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-03",
+      "behavior": "展开、收回与中途命令接管",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "semantic": "Panel.applySemanticSession；HostSession Back/page映射",
+        "visual": "Runtime.command/timedCommand + MotionPolicy",
+        "business": "不改变模块业务owner"
+      },
+      "productionFacts": [
+        {
+          "fact": "收起按钮从当下visualSession retarget，禁止临时层期间动作；无障碍toggle同一Runtime语义入口。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 1194,
+              "detail": "collapseControl"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 1009,
+              "detail": "accessibleControlActions"
+            }
+          ]
+        },
+        {
+          "fact": "生产Runtime启用coordinatedMotion，对新命令限定当前MotionPolicy时长；重复Host echo不倒带。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 631,
+              "detail": "runtimeConfig coordinatedMotion:true"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+              "line": 75,
+              "detail": "command"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts",
+              "line": 30,
+              "detail": "readerControlMotionCommandTiming"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "共享toggle/Session及语义Watch去重；提供fullHeader槽让外层实现显式收起。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "Stage没有使用ReaderControlRuntime/MotionPolicy；gestureConfig未传coordinatedMotion，不能继承生产expand/collapse/restore协调时长。",
+          "验证页固定1150/420/360只是验证页输入，不能作为当前生产时长或用户批准的替代依据。",
+          "fullHeader由调用方提供，Stage并未实现生产收起按钮及完整输入门槛。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-control-integration-events#command-takeover",
+        "H-reader-control-runtime#runtime-protocol"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [
+        "H-reader-control-input-routing",
+        "H-reader-control-motion-policy"
+      ],
+      "existingEvidence": [],
+      "notProven": [
+        "中途Back、点击收起、重复命令的真实事件与像素等价未证明。",
+        "相关whole-file检查有已审定作用，但没有发布同名#case，不能捏造精确case。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-04",
+      "behavior": "把手拖动、重抓、多指、CANCEL与时间戳",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "semantic": "Session/GestureDriver",
+        "visual": "Panel.handleControlTouch -> Runtime.down/move/up/cancel",
+        "platform": "ReaderPageInputClock修正真实事件时钟"
+      },
+      "productionFacts": [
+        {
+          "fact": "新Down需要当前minimum准入且无临时层；原owner仍可接Move/Up/Cancel。真实时间戳经ReaderPageInputClock归一，重置时清速度。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 950,
+              "detail": "handleControlTouch"
+            }
+          ]
+        },
+        {
+          "fact": "Runtime失效ticket覆盖命令/输入/生命周期；释放续程由真实速度及MotionPolicy曲线驱动。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+              "line": 119,
+              "detail": "frame"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+              "line": 155,
+              "detail": "accept continuationSlope"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "直接调用同一GestureDriver，按pointer/epoch处理重抓、多指、最终UP位移和Cancel。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "Stage.eventTime直接timestamp/Date.now，缺少生产ReaderPageInputClock重置/缺失时间戳与速度修正。",
+          "Stage不用Runtime的continuationSlope/协调时长，手势释放轨迹不能推断等价。",
+          "Stage只有72x28把手，无生产额外全宽grab-cap；触区属于保留合同，不能无依据缩减。",
+          "Stage触摸Down未检查temporaryLayerActive。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-control-runtime#panel-terminal",
+        "H-reader-control-runtime#runtime-protocol",
+        "H-reader-control-integration-events#mixed-path",
+        "H-reader-control-integration-events#command-takeover"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [
+        "H-reader-control-gesture-driver",
+        "H-reader-control-gesture-continuation"
+      ],
+      "existingEvidence": [],
+      "notProven": [
+        "真实ArkUI触摸投递、recognizer、多指和跟手帧率均未在本轮执行。",
+        "纯Driver/Runtime结果不证明Stage原生触摸层等价。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-05",
+      "behavior": "正文翻页、书签手势、文字选择与控制栏互斥",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "semantic": "LRE.pageTurnInputPhase/ReaderPageGestureState",
+        "visual": "ReaderPageTurnStage/BookTurnSession/continuous stage；不归控制Stage",
+        "business": "progress/selection/bookmark原owner"
+      },
+      "productionFacts": [
+        {
+          "fact": "正文与控制栏输入互斥；翻页tracking/dragging/settling期间不能直接打开控制栏；布局和退出等待或回滚当前未提交翻页。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 10977,
+              "detail": "isReaderPageInteractionEnabled / pageTurnInputPhase / pageTurnOwnsReaderInput"
+            }
+          ]
+        },
+        {
+          "fact": "文字选择只在稳定正文为唯一owner且TTS/auto-page不占用时有效。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 11041,
+              "detail": "readerTextSelectionEnabled"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "可接收外层合成后的inputEnabled，控制Stage本身不处理正文手势。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "必须继续由LRE决定正文与控制互斥；不能用Stage.visibility/一个tap回调替代翻页事务及持久化边界。",
+          "P0不要求把正文翻页、书签写入或文字选择迁入控制Stage。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-control-host-input#portable-protocol",
+        "H-reader-control-host-input#sdk-members"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [
+        "H-reader-page-gesture-state",
+        "H-reader-page-input-runtime"
+      ],
+      "existingEvidence": [],
+      "notProven": [
+        "本轮没有翻页、书签手势、原生文字选择或持久化行为执行。",
+        "旧UNKNOWN意图不得借手势验收或新Stage接线隐式重放。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-06",
+      "behavior": "背景点按关闭与透明圆角排除",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "semantic": "LRE.onControlBackdropTouch + BackdropTouch reducer",
+        "visual": "Panel实测dock/topbar矩形，native drawing.Path圆角判断"
+      },
+      "productionFacts": [
+        {
+          "fact": "仅同pointer背景DOWN到短UP可关闭；用visualSession held/closeRevision和inputRevision作废旧回调，并排除实测dock/topbar。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 11239,
+              "detail": "native圆角contains"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 11255,
+              "detail": "onControlBackdropTouch"
+            }
+          ]
+        },
+        {
+          "fact": "Panel用同一frame派发排除区域，未测量或obscured时不宣称ready。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 1176,
+              "detail": "reportBackdropRegions"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "提供onDockGeometryChange/onTopBarGeometryChange；验证页有自己的backdropTouch。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "Stage不拥有生产背景关闭reducer、Host inputRevision和native圆角路径。",
+          "接入时应复用现有Host回调；验证页背景逻辑不是生产已接线证明。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-control-host-input#portable-protocol"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [
+        "H-reader-control-backdrop-touch"
+      ],
+      "existingEvidence": [],
+      "notProven": [
+        "真实圆角透明区和穿透命中未执行；静态rect/SDK属性不能证明native hit-test。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-07",
+      "behavior": "临时菜单、选择器、编辑器及弹层",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "semantic": "临时子组件与Panel generation/dismiss/retire revision；LRE控制Back顺序",
+        "visual": "原生popup及各模块已认可临时宿主",
+        "business": "临时UI关闭不取消、确认或重试原业务"
+      },
+      "productionFacts": [
+        {
+          "fact": "Panel保存source/book/opening/module/tab临时scope，允许已接纳编辑器跨自身measurement reflow，但新模块/新opening失效；临时层拦截新把手Down/收起/亮度/导航。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 929,
+              "detail": "onTemporaryLayerActivityChanged"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 1115,
+              "detail": "contentInputEnabled / hasCurrentTemporaryInput"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 1322,
+              "detail": "header/brightness/navigation gates"
+            }
+          ]
+        },
+        {
+          "fact": "More菜单按generation防旧回调；Back先发临时层dismiss revision，完整关闭另发retire revision。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 1440,
+              "detail": "setMoreMenuVisible / performMoreAction"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 6958,
+              "detail": "requestExit"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 11178,
+              "detail": "dismissControlTemporaryLayers"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "有temporaryLayerActive输入，仅无障碍toggle直接使用它。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "Stage的touch Down、header/module/brightness/navigation enabled条件未覆盖temporaryLayerActive；不能仅靠这个Prop宣称模态隔离。",
+          "Stage没有生产temporary scope、dismiss/retire revision，也没有obscured/launchRecovering业务边界；这些必须保留在Panel/Host并传完整输入策略。",
+          "不能简单禁用整棵内容树：生产需保留当前已准入native编辑器通过自身reflow的交互。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-more-popup#panel-actions",
+        "H-reader-more-popup#adaptive-lifecycle",
+        "H-reader-session-launch-recovery#more-menu"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [],
+      "existingEvidence": [],
+      "notProven": [
+        "各模块所有选择器/编辑器与输入层的综合优先级尚无统一精确method-level case。",
+        "native popup销毁/动画dismiss/再打开旧回调未做本轮设备验证。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-08",
+      "behavior": "IME、搜索焦点与键盘引起的布局",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "semantic": "LRE.requestExit + ReaderKeyboardBack",
+        "platform": "ReaderWindowCoordinator TYPE_KEYBOARD insets；公开inputMethod.hideTextInput",
+        "visual": "controlLayout/minimum + Panel retained Search内容"
+      },
+      "productionFacts": [
+        {
+          "fact": "Back首先只消费真实可见键盘；关闭只在可见insets时请求hide。失败仅记录，不拥有业务/导航锁。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 6958,
+              "detail": "requestExit"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 11145,
+              "detail": "controlKeyboardHost"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/ui/foundation/ReaderKeyboardBack.ts",
+              "line": 23,
+              "detail": "keyboardVisible / consumeReaderControlKeyboardBack"
+            }
+          ]
+        },
+        {
+          "fact": "窗口metrics revision重测control minimum；Panel保留原生Input，current temporary scope可跨自身重测。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 4757,
+              "detail": "onWindowMetricsRevisionChanged"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 8020,
+              "detail": "controlLayout"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 1135,
+              "detail": "hasCurrentTemporaryInput"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "轴/viewport变化可rebase，module Builder可承载已有Input。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "Stage没有IME可见性/Back消费/焦点ID和生产minimum scope合同，只能保留外层原owner。",
+          "Stage所有transition期间禁用module内容；生产contentInputEnabled允许open阶段交互并支持current temporary editor，语义不等价。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-control-search-settings-content#search-sdk",
+        "H-reader-control-search-scroll#rebase"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [
+        "H-reader-control-host-keyboard",
+        "H-reader-content-search-focus"
+      ],
+      "existingEvidence": [],
+      "notProven": [
+        "没有覆盖完整requestExit +实际IME hide失败/更新insets/再次Back的已执行本轮证据。",
+        "当前静态读图未打开键盘；不能记IME通过。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-09",
+      "behavior": "朗读TTS开始、暂停、停止与胶囊交接",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "business": "LRE.toggleTts + ReaderTtsSessionCoordinator / TTS配置与音频Host",
+        "visual": "ReaderSessionLaunchController/ReaderSessionLaunchStage + Panel source-only actors",
+        "semantic": "generation/lifecycle/selection/source/book play intent"
+      },
+      "productionFacts": [
+        {
+          "fact": "TTS选择作废待启动auto-page，异步availability/start必须满足原play intent；native playing/paused ACK只更新业务事实，不重播动效。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 8755,
+              "detail": "toggleTts"
+            }
+          ]
+        },
+        {
+          "fact": "生产Panel接launch ownership/recovering/source minimum/ready generation；business与visual handoff分开，普通控制输入在launch持有时禁用。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 2233,
+              "detail": "ReaderControlPanel initializer"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 921,
+              "detail": "onRuntimeEnabledChanged"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 1033,
+              "detail": "onLaunchSourceVisible / confirmLaunchSourceReady"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "普通module slot可画TTS；Stage只持控制Session，不持音频业务。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "Stage无四入口source measurement、launchStageOpacity、handoffPending、source-ready generation或播放胶囊的交接端口。",
+          "这些端口不应迁成Stage业务状态，但若以Stage替换Panel动效层必须保留完整接线，且不能抢先结束业务/取消已发请求。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-control-playback-host-intents#business-intent",
+        "H-reader-control-playback-host-intents#visual-owner-seam",
+        "H-reader-session-launch-recovery#recovery-handoff",
+        "H-reader-tts-session-coordinator#interruption-stop"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [
+        "H-reader-session-launch",
+        "H-reader-tts-exit-progress"
+      ],
+      "existingEvidence": [],
+      "notProven": [
+        "本轮未执行TTS音频、原生media、胶囊动画或跨章进度。",
+        "所列exact case依赖受控边界，不代表真实音频与合成。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-10",
+      "behavior": "自动翻页与TTS互斥、定时器和继续阅读",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "business": "LRE.toggleAutoPage + ReaderAutoPageCoordinator",
+        "visual": "SessionLaunchController/Capsule，控制Panel仅展示状态"
+      },
+      "productionFacts": [
+        {
+          "fact": "auto-page启动会作废旧TTS play intent；活动TTS先等待stop barrier，过期generation不启动；resume关闭控制但不重置会话时限。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 9339,
+              "detail": "toggleAutoPage / startAutoPageSession"
+            }
+          ]
+        },
+        {
+          "fact": "普通关闭UI不清TTS/auto-page/选择owner；背景/obscured由原LRE协调暂停。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 11227,
+              "detail": "onControlSessionChanged close edge"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 9450,
+              "detail": "onAppForegroundChanged"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 9512,
+              "detail": "onControlObscuredChanged"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "可承载autoPage slot及普通控制可见性。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "Stage不持auto-page定时器/stop barrier/胶囊交接，必须继续委托现有业务owner。",
+          "不能用动画完成或隐藏端点作为start/stop成功回执。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-auto-page-coordinator#clock-commit",
+        "H-reader-control-playback-host-intents#business-intent"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [],
+      "existingEvidence": [],
+      "notProven": [
+        "真实翻页渲染模式、计时器native调度及前后台恢复未在本轮执行。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-11",
+      "behavior": "换源入口、本地禁用与换源完成显示",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "business": "Index/source-switch transaction + reading gateway；LRE completion guards",
+        "visual": "Panel topBar action、既有SourceSwitchProgress/reveal宿主"
+      },
+      "productionFacts": [
+        {
+          "fact": "本地书换源原生Button禁用且回调再判local；在线触发保留focusId，LRE先hideControl再交给onSwitchSource。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 2012,
+              "detail": "topBarActions"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 2352,
+              "detail": "onSourceSwitch callback"
+            }
+          ]
+        },
+        {
+          "fact": "完成显示需current source/book/lifecycle/selection/generation、当前canonical正文和实际page revision；源码未将page callback当Core ACK或physical display fence。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 2954,
+              "detail": "sourceSwitchCanonicalPageCurrent"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 2971,
+              "detail": "onSourceSwitchPagePresented / sourceSwitchCompletionCurrent"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "topBar Builder槽可以原样保留业务action。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "Stage自身不验证本地准入或完成事实；必须保留原顶栏回调、原禁用/触区及source focus identity。",
+          "Stage不能因可见度/动画端点触发业务确认或“换源成功”。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-source-failure-p0#source-switch-route"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [
+        "H-source-switch-reader-ack"
+      ],
+      "existingEvidence": [
+        "controlled-pixels-20261110/verification.json：当前a443日间本地换源Button enabled=false、clickable=false；视觉未见重影。"
+      ],
+      "notProven": [
+        "现有静态图只覆盖本地禁用弱色单层与按钮不可点，不证明在线换源、回退、焦点恢复或完成动画。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-12",
+      "behavior": "目录/书签tab、章节选择、提交后关闭",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "semantic": "Session directoryTab，不增加虚假Back层级",
+        "business": "LRE.selectControlChapter/selectBookmarkAnchor/ReaderControlSelectionTransaction；Index/ReaderDirectoryHost持书签事实",
+        "visual": "ReaderControlDirectoryContent保留List和toolbar"
+      },
+      "productionFacts": [
+        {
+          "fact": "进入目录才按opening/generation/current scope加载bookmark；旧load/选择不能污染新书或新opening。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 9612,
+              "detail": "prepareControlPage / loadControlBookmarks"
+            }
+          ]
+        },
+        {
+          "fact": "离散章节选择与连续scrub走原selection事务；持久化及visible receipt决定是否关闭，不因点击就清空选择或假定写入成功。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 11912,
+              "detail": "selectControlChapter / stepControlChapter / seekControlProgress"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 1723,
+              "detail": "setReaderControlDirectoryTab"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "共享Session支持directoryTab；module slot可保留现有目录内容。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "Stage只保module字符串，不拥有生产List positioning、selection receipt、bookmark identities和tab内容连续性。",
+          "目录load会进入现有原意图reconcile链，不能把换Stage后的“开目录一次”描述为只读；本审计未执行该链。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-control-internal-selection#user-selection",
+        "H-reader-control-selection-transaction#commit-boundary",
+        "H-reader-control-directory-content#current-toolbar",
+        "H-reader-directory-host#node-protocol"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [],
+      "existingEvidence": [],
+      "notProven": [
+        "假RPC Node protocol不覆盖真实durable journal；SDK toolbar不覆盖native List滚动与完整目录返回。",
+        "原UNKNOWN业务是否确认没有本轮证据，也不得从静态图/hash推导。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-13",
+      "behavior": "系统Back、顶栏返回箭头与正常退出",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "navigation": "LRE.requestExit/beginExit；HostSession Back hierarchy；外层onExit拿回route",
+        "business": "原gateway序列化进度/朗读进度和reading record，不归motion owner"
+      },
+      "productionFacts": [
+        {
+          "fact": "系统Back顺序为可见IME -> 临时层dismiss -> 控制层级 -> beginExit；顶栏箭头直接beginExit，不能改成与system Back相同。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 6958,
+              "detail": "requestExit"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 2348,
+              "detail": "onExitReading callback"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 1992,
+              "detail": "topBarBack"
+            }
+          ]
+        },
+        {
+          "fact": "beginExit先取消未提交page pan或等待settlement；已发Core progress交回原owner，不用动画关闭冒充持久化完成。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 6980,
+              "detail": "beginExit"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+              "line": 91,
+              "detail": "backReaderControlHostSession"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "Stage提供onDismiss和visual/session callback；共享Session可被外层Back命令接管。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "Stage不实现系统Back层级/IME/临时层/进度等待；不能把onDismiss直接接路由退出。",
+          "Stage与Runtime端点时序不同，隐形held帧仍需保持输入所有权，不能v=0就放行正文。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-control-integration-events#command-takeover",
+        "H-reader-control-runtime#runtime-protocol",
+        "H-reader-control-selection-transaction#commit-boundary"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [
+        "H-reader-control-host-session",
+        "H-reader-control-session-state",
+        "H-reader-tts-exit-progress"
+      ],
+      "existingEvidence": [],
+      "notProven": [
+        "本轮未执行完整IME/临时层/Full->Quick->Home->hidden->书架Back链或持久化故障退出。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-14",
+      "behavior": "减少动态效果：初始值与运行中开启",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "setting": "外层实时reduceMotion Prop；偏好值由原settings owner",
+        "visual": "Panel.runtimeConfig/onLayoutChanged；LRE退休page-turn/source reveal/session launch"
+      },
+      "productionFacts": [
+        {
+          "fact": "Panel reduceMotion有Watch onLayoutChanged；runtime.configure在settleDuration=0且无held pointer时立即推进当前transition并清补偿。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 397,
+              "detail": "reduceMotion Watch"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 692,
+              "detail": "onLayoutChanged"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+              "line": 87,
+              "detail": "configure"
+            }
+          ]
+        },
+        {
+          "fact": "LRE热切换清source reveal并退休翻页；已发Core write保留原owner等待receipt，不因reduce motion撤销或假定成功。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 10746,
+              "detail": "onSessionLaunchReduceMotionChanged / retirePageTurnForReduceMotion"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "调用方可传0时长的初始语义命令和settle参数。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "Stage没有reduceMotion Prop，时长Props也无Watch；改settleDuration不会自动退休已存duration的运行中transition。",
+          "不能仅把验证页初始时长换成0就声称支持生产热切换；应复用Runtime.configure或显式同等退休合同。",
+          "held pointer与已发持久化操作必须按各自原owner保留，不能统一清空状态。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-control-runtime#runtime-protocol"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [
+        "H-reader-reduce-motion-retirement",
+        "H-reader-session-launch",
+        "H-reader-control-motion-policy"
+      ],
+      "existingEvidence": [],
+      "notProven": [
+        "H-reader-control-p0#shell-motion-owners是可选AST接线检查，不是method-level热切换行为证据。",
+        "本轮未执行系统设置事件交付、native动画停止或屏幕无闪烁。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-15",
+      "behavior": "旋转、窗口resize与IME轴变化",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "metrics": "ReaderWindowCoordinator；LRE viewport/revision/minimum身份",
+        "visual": "Panel Runtime.configure -> LayoutRebase；正文重分页仍归LRE"
+      },
+      "productionFacts": [
+        {
+          "fact": "metrics变化重测minimum；正文活动翻页先回滚或等待后再reflow；controlLayout以book/lifecycle/opening/visit/width/height/metrics校验测量。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 4757,
+              "detail": "window metrics / reflowAfterWindowGeometryChange"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 8020,
+              "detail": "controlLayout / controlMinimumIdentity"
+            }
+          ]
+        },
+        {
+          "fact": "Panel layout Watch与Area更新统一Runtime轴，不另开动效时钟。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 692,
+              "detail": "onLayoutChanged"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+              "line": 87,
+              "detail": "configure"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "watch width/height/viewport/dock轴输入，admitLayout校验finite并调用共享rebase；width-only/unchanged不重启时钟。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "Stage可证明的只是控制轴适配源码，缺生产minimum/contentBudget与TTS launch profile admission；不得让旧测量回填新窗口。",
+          "正文分页/当前anchor、恢复消息安全区、IME预算和retained临时editor仍需上层现owner；不能迁入Stage。",
+          "这项审计不开放产品已排除的宽屏rail/平板准入。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-control-motion-geometry#spatial",
+        "H-reader-control-internal-selection#internal-reflow"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [
+        "H-reader-control-layout-rebase",
+        "H-reader-control-host-keyboard"
+      ],
+      "existingEvidence": [],
+      "notProven": [
+        "真实旋转事件、持指中旋转、键盘resize与正文anchor保持未在本轮执行。",
+        "纯rebase方法并不证明系统窗口通知顺序或native帧连续。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-16",
+      "behavior": "前后台、遮挡和保留阅读页",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "lifecycle": "LRE.appForeground/windowChromeActive/controlObscured/current reader identity",
+        "visual": "Panel.onRuntimeEnabledChanged -> Runtime.setEnabled",
+        "business": "TTS后台准入与auto-page暂停由原owner"
+      },
+      "productionFacts": [
+        {
+          "fact": "输入需mounted/foreground/windowChromeActive且无exit/interactionBlocked/obscured；Panel暂停clock并取消held pointer。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+              "line": 26,
+              "detail": "readerControlHostInputEnabled"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 921,
+              "detail": "onRuntimeEnabledChanged"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+              "line": 61,
+              "detail": "setEnabled"
+            }
+          ]
+        },
+        {
+          "fact": "后台取消待启动与临时试听、处理胶囊/书签回滚及记录；TTS按后台能力判断暂停，回前台继续原owner。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 9450,
+              "detail": "onAppForegroundChanged"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 11163,
+              "detail": "onControlInputBoundaryChanged"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "inputEnabled Watch可使旧callback失效、重置frame时间基线并取消pointer，恢复不计后台墙钟。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "Stage只有通用inputEnabled，实际foregound/obscured/launchRecovering组合必须由生产owner提供。",
+          "Stage禁止输入不等于业务停止；不能自动停TTS或清待确认事务。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-control-runtime#runtime-protocol",
+        "H-reader-tts-session-coordinator#interruption-stop",
+        "H-reader-system-event-host#screen-off"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [],
+      "existingEvidence": [],
+      "notProven": [
+        "真实系统前后台、锁屏、窗口遮挡交付与音频继续策略未在本轮执行。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-17",
+      "behavior": "组件卸载、重挂载与迟到回调",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "lifecycle": "LRE lifecycleToken + Panel runtimeLifecycle + Runtime ticket；各业务generation",
+        "platform": "原system-event/window/brightness/image/audio资源owner"
+      },
+      "productionFacts": [
+        {
+          "fact": "Panel卸载停止Runtime、使帧ticket/lifecycle失效、释放测量提供者、临时层和背景区域；promise回调先判mount/lifecycle。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 613,
+              "detail": "aboutToDisappear"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 675,
+              "detail": "scheduleRuntimeFrame"
+            }
+          ]
+        },
+        {
+          "fact": "LRE卸载退休翻页/来源completion/选择/搜索/自动翻页、系统事件和图片资源，dispose TTS；正常退出串行提交，不在unmount另起fire-and-forget进度写入。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 1988,
+              "detail": "aboutToDisappear"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+              "line": 59,
+              "detail": "stop"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "Stage mounted/lifecycleRevision围栏覆盖touch/layout/frame，清pending hidden endpoint；重挂载比较last semantic避免旧visual复位。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "Stage卸载仅撤销本地视觉/geometry回调，不能替代Panel的minimum/brightness/temporary或LRE的业务资源退休。",
+          "Stage诊断lifecycle case在目录中是DIAGNOSTIC_ONLY，不能拿来当生产销毁行为已通过。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-control-runtime#runtime-protocol",
+        "H-reader-tts-session-coordinator#replacement",
+        "H-reader-more-popup#adaptive-lifecycle"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [],
+      "existingEvidence": [],
+      "notProven": [
+        "没有本轮真实ArkUI aboutToDisappear/重挂载/queued input投递证据。",
+        "组件卸载审计不授权卸载应用、清数据或重启VM。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-18",
+      "behavior": "亮度拖动/取消与进度scrub",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "input": "Panel preview/drag scope与progress input guard",
+        "business": "LRE selection transaction；ReaderWindowCoordinator brightness writer"
+      },
+      "productionFacts": [
+        {
+          "fact": "临时层、失活或minimum未准入时取消亮度输入；只取消未发送sample，已发native调用先settle，ACK按原generation更新。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+              "line": 2386,
+              "detail": "brightness drag / cancel"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 11743,
+              "detail": "setReaderBrightness / cancelReaderBrightness"
+            }
+          ]
+        },
+        {
+          "fact": "进度scrub与离散章节选择分开，连续scrub不应因一次value回调而自动关闭控制或重复commit。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 11960,
+              "detail": "seekControlProgress"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "brightness Builder槽只提供画面和通用enabled；无preview/write owner。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "需要保留实际writer/ACK/cancel和progress input identity；不能把视觉轨道value写成持久化事实。",
+          "Stage现brightness enabled没有temporaryLayerActive门槛，与生产Panel不同。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-brightness-writer#writer-ordering",
+        "H-reader-control-internal-selection#user-selection"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [
+        "H-reader-brightness-cancel-ui"
+      ],
+      "existingEvidence": [],
+      "notProven": [
+        "真实屏幕亮度写入、丢帧和进度连续拖动本轮未执行。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "P0-19",
+      "behavior": "阅读设置开关、即时外观与持久值",
+      "auditStatus": "SOURCE_REVIEWED_NO_BEHAVIOR_EXECUTION",
+      "productionOwner": {
+        "business": "LRE/ReaderSettingsGateway/AppearanceStore及原写入确认owner",
+        "visual": "ReaderControlSettingsContent/AppearanceContent，Panel只装配回调"
+      },
+      "productionFacts": [
+        {
+          "fact": "模块切换只准备当前设置快照/转换模式，控件通过原回调写入，动效pose不生成第二份配置事实。",
+          "source": [
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 9612,
+              "detail": "prepareControlPage"
+            },
+            {
+              "path": "/home/administrator/Reader/Reader-for-HarmonyOS/entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+              "line": 2326,
+              "detail": "ReaderControlPanel settingsSnapshot / appearanceSnapshot props"
+            }
+          ]
+        }
+      ],
+      "stage": {
+        "supportedBySource": [
+          "module slot可以容纳现有Settings/Appearance组件。"
+        ],
+        "replacementGapsOrCallerObligations": [
+          "Stage本身不持设置偏好，也不应新增通用设置state；保留capability、pending/failed写入、当前book/visit身份和旧回调失效条件。",
+          "临时设置选择器仍受P0-07约束，不能因普通transition而杀掉已接纳原生editor。"
+        ],
+        "parityStatus": "NOT_ESTABLISHED"
+      },
+      "optionalExactCaseIds": [
+        "H-reader-control-search-settings-content#settings-sdk",
+        "H-reader-control-option-update#modifier-budget"
+      ],
+      "supportingQualifiedWholeFileIdsWithoutExactCase": [],
+      "existingEvidence": [],
+      "notProven": [
+        "本轮未执行设置写回、失败恢复、即时外观/布局变化或历史偏好兼容验收。"
+      ],
+      "executionThisAudit": "NOT_RUN"
+    }
+  ],
+  "decisionConditions": {
+    "recommendedNow": "保留Panel -> ReaderControlRuntime作为生产动效owner；Stage维持明确验证用途，直到存在具体、获准的生产抽取收益和逐行语义等价方案。",
+    "singleOwnerInvariant": "LRE只有一份语义控制会话；每个已挂载生产控制实例只有一份visual clock/gesture pointer/ticket；不让Panel Runtime与Stage自有advance同时驱动同一actor。",
+    "ifStageAdoptionIsChosen": [
+      "优先把Stage改成现有ReaderControlRuntime的窄ArkUI adapter，复用其命令/时间戳/速度续程/配置/生命周期能力；不保留第二套完整clock、gesture adapter与状态推进。",
+      "业务与平台所有权继续在LRE、gateway、SessionLaunchController、原目录/选择/设置/亮度/TTS owner；Stage只接视觉/输入策略与测量端口，不发持久化或业务成功回执。",
+      "先补齐P0-03/04/07/08/09/14/15/17列出的具体差异：协调时长、ReaderPageInputClock、抓取触区、临时scope、open期交互、IME优先、胶囊handoff、reduce-motion热切换、minimum identity和退休边界。不得为接入缩短触区或改已批准几何/时长。",
+      "现有List/Scroll/TextInput/重复行实体身份应保持；不要在每帧父树重建业务数据、测量提供者或完整目录数组。",
+      "先按真正受影响的owner选择最小exact method/SDK case，补明确缺口的有限反例；目录可选不意味着必须执行全部矩阵，且不能增加默认构建/CI门禁。",
+      "只有代码/方法层仍不能回答的具体native事件或合成问题，另定最小设备问题与授权；旧两张静态图及验证Stage画面不能替代生产路径事件/帧证据。",
+      "生产切换完成后同一能力只留一个owner实现；若Stage不能完整承接而仍需大面积分叉，保留现有Runtime并提取共用窄adapter，不以“两套长期维护”作为完成。"
+    ],
+    "retainProductionOwnerWhen": [
+      "主要收益只来自组件名统一，尚无实际消费者复用或重建成本问题。",
+      "任何P0差异仍未能给出原owner保留方式，或需要修改业务事务/旧偏好才能使视觉组件接入。",
+      "同一actor仍会被两个clock驱动，或必须用验证页输入替代真实业务/平台事实。"
+    ],
+    "decisionStatus": "SOURCE_BASED_RECOMMENDATION_NOT_A_PRODUCTION_CHANGE_OR_ACCEPTANCE"
+  },
+  "optionalExactCaseCatalog": [
+    {
+      "id": "H-reader-auto-page-coordinator#clock-commit",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-auto-page-coordinator.mjs",
+      "case": "clock-commit",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-auto-page-coordinator#clock-commit --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-auto-page-coordinator.mjs --case clock-commit",
+      "protectedBehavior": "Production coordinator deadlines, pause/retry and commit barrier using controlled clock",
+      "mechanism": "Production coordinator deadlines, pause/retry and commit barrier using controlled clock; owner implementation record: [\"Replaced five identical animation-mode-labelled executions with one coordinator outcome/commit protocol execution; no mode was passed into production.\", \"No arguments/--list now returns NOT_RUN through shared selectContractCases; only the named lazy case executes and emits a receipt.\"]",
+      "limitations": "Real coordinator with in-memory host clock and queue; no five-renderer or native-animation coverage claim.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-brightness-writer#writer-ordering",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-brightness-writer.mjs",
+      "case": "writer-ordering",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-brightness-writer#writer-ordering --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-brightness-writer.mjs --case writer-ordering",
+      "protectedBehavior": "Production brightness writer with explicitly released lookup/native acknowledgements",
+      "mechanism": "Production brightness writer with explicitly released lookup/native acknowledgements; owner implementation record: [\"Replaced real 16/24ms sleeps with explicitly released Window lookup promises; assert newer MOVE does not restart lookup and a write occurs before subsequent input ends.\", \"Replaced zero-ms sleeps with microtask boundaries; kept native acknowledgement gates.\", \"Lazy writer-ordering case and no implicit execution.\"]",
+      "limitations": "Real production writer; timing claim is ordering/progress under controlled lookup/ACK, not wall-clock frame timing.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-directory-content#current-toolbar",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-directory-content.mjs",
+      "case": "current-toolbar",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-directory-content#current-toolbar --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-directory-content.mjs --case current-toolbar",
+      "protectedBehavior": "Current control-only directory SDK authored Toolbar parent/child coordinates, inherited alpha and callbacks",
+      "mechanism": "Current control-only directory SDK authored Toolbar parent/child coordinates, inherited alpha and callbacks; owner implementation record: [\"Confirmed current ReaderControlPanel uses control-only ReaderControlDirectoryContent; old FullDirectory embedded body is separate explicit legacy diagnostic.\", \"Current Toolbar actual SDK nested Stack/Row records verify local+parent coordinates, inherited alpha and callback arguments.\", \"Removed legacy FullDirectory regex from current release selection.\"]",
+      "limitations": "Finite authored SDK tree parentage; no native layout or hits. Parent directory-shared-content owns mount wiring and is not imported here.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-host-input#portable-protocol",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-host-input.mjs",
+      "case": "portable-protocol",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-host-input#portable-protocol --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-host-input.mjs --case portable-protocol",
+      "protectedBehavior": "Actual ordinary Host input/backdrop methods and queued preparation priority",
+      "mechanism": "Actual ordinary Host input/backdrop methods and queued preparation priority; owner implementation record: [\"Portable ordinary-method protocol and SDK member transform are separate required selections.\", \"Selected SDK absence fails; removed mixed PASS/SKIPPED and duplicated consumer regex.\", \"Actual ETS dialect options used for member transform; legacy getter negative still reproduces missing gate.\"]",
+      "limitations": "Actual methods and SDK member transform only; no device hit testing or visual evidence.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-host-input#sdk-members",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-host-input.mjs",
+      "case": "sdk-members",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-host-input#sdk-members --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-host-input.mjs --case sdk-members",
+      "protectedBehavior": "Required SDK V1 transform and dropped-getter negative reproduction",
+      "mechanism": "Required SDK V1 transform and dropped-getter negative reproduction; owner implementation record: [\"Portable ordinary-method protocol and SDK member transform are separate required selections.\", \"Selected SDK absence fails; removed mixed PASS/SKIPPED and duplicated consumer regex.\", \"Actual ETS dialect options used for member transform; legacy getter negative still reproduces missing gate.\"]",
+      "limitations": "Actual methods and SDK member transform only; no device hit testing or visual evidence.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-integration-events#command-takeover",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-integration-events.mjs",
+      "case": "command-takeover",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-integration-events#command-takeover --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-integration-events.mjs --case command-takeover",
+      "protectedBehavior": "Pure modules: newer explicit dismiss/Back defeats old CANCEL",
+      "mechanism": "Pure modules: newer explicit dismiss/Back defeats old CANCEL; owner implementation record: [\"Retained complex mixed restoration/regrab and explicit takeover as two pure-module cases.\", \"Removed symmetric/stable simple CANCEL examples duplicated by driver/continuation suites; no imported tests.\"]",
+      "limitations": "Pure state/driver integration, not Host/native events.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-integration-events#mixed-path",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-integration-events.mjs",
+      "case": "mixed-path",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-integration-events#mixed-path --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-integration-events.mjs --case mixed-path",
+      "protectedBehavior": "Pure modules: interrupted goal, mixed visibility/morph regrab and exact residue reversal",
+      "mechanism": "Pure modules: interrupted goal, mixed visibility/morph regrab and exact residue reversal; owner implementation record: [\"Retained complex mixed restoration/regrab and explicit takeover as two pure-module cases.\", \"Removed symmetric/stable simple CANCEL examples duplicated by driver/continuation suites; no imported tests.\"]",
+      "limitations": "Pure state/driver integration, not Host/native events.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-internal-selection#internal-reflow",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-internal-selection.mjs",
+      "case": "internal-reflow",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-internal-selection#internal-reflow --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-internal-selection.mjs --case internal-reflow",
+      "protectedBehavior": "Automatic TTS/reflow internal -1 owner, delayed commit and two negative mutations",
+      "mechanism": "Automatic TTS/reflow internal -1 owner, delayed commit and two negative mutations; owner implementation record: [\"Internal TTS/reflow and user discrete/scrub selection run separately.\", \"Removed unused native alert SDK import/constructor; explicit empty alert-retire seam preserves selected method calls.\", \"Replaced retry source regex with actual recovery closure invocation asserting all original args, scrub no-close and successor-book rejection.\"]",
+      "limitations": "Actual unchanged Host methods/type stripping and pure production owners; no native dialog behavior claim.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-internal-selection#user-selection",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-internal-selection.mjs",
+      "case": "user-selection",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-internal-selection#user-selection --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-internal-selection.mjs --case user-selection",
+      "protectedBehavior": "Discrete pick versus continuous scrub, stale commit/reopen and exact recovery callback owner",
+      "mechanism": "Discrete pick versus continuous scrub, stale commit/reopen and exact recovery callback owner; owner implementation record: [\"Internal TTS/reflow and user discrete/scrub selection run separately.\", \"Removed unused native alert SDK import/constructor; explicit empty alert-retire seam preserves selected method calls.\", \"Replaced retry source regex with actual recovery closure invocation asserting all original args, scrub no-close and successor-book rejection.\"]",
+      "limitations": "Actual unchanged Host methods/type stripping and pure production owners; no native dialog behavior claim.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-motion-geometry#spatial",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-motion-geometry.mjs",
+      "case": "spatial",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-motion-geometry#spatial --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-motion-geometry.mjs --case spatial",
+      "protectedBehavior": "Pure geometry/composition/axis and zero live budget invariants",
+      "mechanism": "Pure geometry/composition/axis and zero live budget invariants; owner implementation record: [\"Archived MR1 capture is explicit historical case, absent capture fails only that selected diagnostic.\", \"Current spatial/composition/axis/zero-budget and complete frame cache are independent cases; no optional SKIP in current pass.\"]",
+      "limitations": "Pure authored geometry and cache; historical capture NOT_RUN and not release prerequisite.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-option-update#modifier-budget",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-option-update.mjs",
+      "case": "modifier-budget",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-option-update#modifier-budget --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-option-update.mjs --case modifier-budget",
+      "protectedBehavior": "Pinned Apache-2.0 upstream modifier correctness and native setter call budget",
+      "mechanism": "Pinned Apache-2.0 upstream modifier correctness and native setter call budget; owner implementation record: [\"Emits exact upstream Git blob/SHA/ref/license and explicit installed SDK relationship.\", \"Replaced less-than-half legacy comparison/reduction percentage with five-changing-setters ×13 nodes ×120 poses maximum 7800 native calls.\", \"Retained each property correctness, same-pose zero calls and current callback.\"]",
+      "limitations": "Pinned OpenHarmony 5.0 fixture is distinct from installed API23/runtime; no timing or VM performance claim.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-playback-host-intents#business-intent",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-playback-host-intents.mjs",
+      "case": "business-intent",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-playback-host-intents#business-intent --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-playback-host-intents.mjs --case business-intent",
+      "protectedBehavior": "Immediate launch, availability/pause/stop barriers and obsolete business admission",
+      "mechanism": "Immediate launch, availability/pause/stop barriers and obsolete business admission; owner implementation record: [\"Separated immediate business intent/stop barrier from actual Host visual-owner integration.\", \"Removed dense design-clock sampling duplicated by session-launch; retained first frame, .5 Host clock mapping, hidden receipt and hold/ownership handoff.\"]",
+      "limitations": "Controller Host seam only; detailed design timing and native animation separately owned, not automatically imported.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-playback-host-intents#visual-owner-seam",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-playback-host-intents.mjs",
+      "case": "visual-owner-seam",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-playback-host-intents#visual-owner-seam --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-playback-host-intents.mjs --case visual-owner-seam",
+      "protectedBehavior": "Actual Host first frame/.5 clock/hold integration; detailed design clock owned by session-launch",
+      "mechanism": "Actual Host first frame/.5 clock/hold integration; detailed design clock owned by session-launch; owner implementation record: [\"Separated immediate business intent/stop barrier from actual Host visual-owner integration.\", \"Removed dense design-clock sampling duplicated by session-launch; retained first frame, .5 Host clock mapping, hidden receipt and hold/ownership handoff.\"]",
+      "limitations": "Controller Host seam only; detailed design timing and native animation separately owned, not automatically imported.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-runtime#panel-projection",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-runtime.mjs",
+      "case": "panel-projection",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-runtime#panel-projection --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-runtime.mjs --case panel-projection",
+      "protectedBehavior": "Actual Panel scalar projection and retained route identity",
+      "mechanism": "Actual Panel scalar projection and retained route identity; owner implementation record: [\"Split pure Runtime protocol, actual Panel terminal adapter and scalar projection.\", \"Former broad integration regex only explicit source-boundary diagnostic, excluded from behavioral release; no automatic run.\", \"Panel selected ordinary SDK methods now use explicit dependencies instead of broad motion helper.\"]",
+      "limitations": "Real Runtime and selected actual Panel methods; no native event delivery/visual claim.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-runtime#panel-terminal",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-runtime.mjs",
+      "case": "panel-terminal",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-runtime#panel-terminal --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-runtime.mjs --case panel-terminal",
+      "protectedBehavior": "Actual Panel reset/missing timestamp terminal admission",
+      "mechanism": "Actual Panel reset/missing timestamp terminal admission; owner implementation record: [\"Split pure Runtime protocol, actual Panel terminal adapter and scalar projection.\", \"Former broad integration regex only explicit source-boundary diagnostic, excluded from behavioral release; no automatic run.\", \"Panel selected ordinary SDK methods now use explicit dependencies instead of broad motion helper.\"]",
+      "limitations": "Real Runtime and selected actual Panel methods; no native event delivery/visual claim.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-runtime#runtime-protocol",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-runtime.mjs",
+      "case": "runtime-protocol",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-runtime#runtime-protocol --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-runtime.mjs --case runtime-protocol",
+      "protectedBehavior": "Production Runtime ticket/regrab/endpoint/background lifecycle",
+      "mechanism": "Production Runtime ticket/regrab/endpoint/background lifecycle; owner implementation record: [\"Split pure Runtime protocol, actual Panel terminal adapter and scalar projection.\", \"Former broad integration regex only explicit source-boundary diagnostic, excluded from behavioral release; no automatic run.\", \"Panel selected ordinary SDK methods now use explicit dependencies instead of broad motion helper.\"]",
+      "limitations": "Real Runtime and selected actual Panel methods; no native event delivery/visual claim.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-search-scroll#rebase",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-search-scroll.mjs",
+      "case": "rebase",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-search-scroll#rebase --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-search-scroll.mjs --case rebase",
+      "protectedBehavior": "Current async normalization receipts, clamped range continuation and invalid input",
+      "mechanism": "Current async normalization receipts, clamped range continuation and invalid input; owner implementation record: [\"Confirmed current ReaderControlSearchContent imports and invokes this production policy.\", \"Separated semantic projection, async rebase/clamp and content origin/padding; native List adapter remains separate.\", \"Source mutation guards are explicit diagnostic only, not normal product scope.\"]",
+      "limitations": "Pure production policy with independent semantic shapes; no native range/paint oracle.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-search-settings-content#search-sdk",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-search-settings-content.mjs",
+      "case": "search-sdk",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-search-settings-content#search-sdk --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-search-settings-content.mjs --case search-sdk",
+      "protectedBehavior": "Current Search methods and actual SDK retained native input/results plus stale-value/inset negatives",
+      "mechanism": "Current Search methods and actual SDK retained native input/results plus stale-value/inset negatives; owner implementation record: [\"Search and Settings current SDK/method paths independent from archived fixture geometry.\", \"Current raw production ETS read without theme text rewriting; actual Settings const arrays AST-selected.\", \"Removed broad duplicate List/scroll/no-clock/source locks; actual input/result/option/cache and two negatives retained.\"]",
+      "limitations": "Actual retained SDK input/results/setting Props and callbacks; native layout/visual acceptance separate. Archived geometry requires independent current design-version qualification.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-search-settings-content#settings-sdk",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-search-settings-content.mjs",
+      "case": "settings-sdk",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-search-settings-content#settings-sdk --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-search-settings-content.mjs --case settings-sdk",
+      "protectedBehavior": "Current Settings dispatch plus actual SDK retained capability/snapshot/pose/cache and click",
+      "mechanism": "Current Settings dispatch plus actual SDK retained capability/snapshot/pose/cache and click; owner implementation record: [\"Search and Settings current SDK/method paths independent from archived fixture geometry.\", \"Current raw production ETS read without theme text rewriting; actual Settings const arrays AST-selected.\", \"Removed broad duplicate List/scroll/no-clock/source locks; actual input/result/option/cache and two negatives retained.\"]",
+      "limitations": "Actual retained SDK input/results/setting Props and callbacks; native layout/visual acceptance separate. Archived geometry requires independent current design-version qualification.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-control-selection-transaction#commit-boundary",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-selection-transaction.mjs",
+      "case": "commit-boundary",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-control-selection-transaction#commit-boundary --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-control-selection-transaction.mjs --case commit-boundary",
+      "protectedBehavior": "Actual Host commit method with stale and mismatching stored/visible receipts",
+      "mechanism": "Actual Host commit method with stale and mismatching stored/visible receipts; owner implementation record: [\"Pure ownership policy, inline feedback owner and actual Host commit boundary independent.\", \"Removed broad select/recovery/storage substring checks.\", \"Commit boundary passes real stored/visible receipt objects, rejects stale selection token and mismatching page/UI owner; actual callback settles ticket only current invocation.\"]",
+      "limitations": "Commit test protects actual receipt consumer; not actual durable storage write. Feedback classification seam explicit; not error classifier coverage.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-directory-host#node-protocol",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-directory-host.mjs",
+      "case": "node-protocol",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-directory-host#node-protocol --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-directory-host.mjs --case node-protocol",
+      "protectedBehavior": "Direct production Node owner with fake RPC/projection; no journal supplied",
+      "mechanism": "Direct production Node owner with fake RPC/projection; no journal supplied; owner implementation record: [\"Select Node and SDK protocol explicitly; remove environment-controlled implicit alternate execution.\", \"Scope resolver registration to selected case with finally deregistration; retain ACK/unknown/partial/readback/retirement boundaries.\"]",
+      "limitations": "Fake RPC protocol with actual production Host class; no Core durable journal or native execution.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-more-popup#adaptive-lifecycle",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-more-popup.mjs",
+      "case": "adaptive-lifecycle",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-more-popup#adaptive-lifecycle --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-more-popup.mjs --case adaptive-lifecycle",
+      "protectedBehavior": "Actual popup width/window adaptation and input lifecycle",
+      "mechanism": "Actual popup width/window adaptation and input lifecycle; owner implementation record: [\"Use actual production resolvePopupSpec; remove hand-maintained surface copy.\", \"Select finite endpoints, SDK action admission/callbacks and adaptive lifecycle separately; withdraw whole-source shape guards.\"]",
+      "limitations": "Actual production spec and SDK attributes/callbacks; no native placement pixels.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-more-popup#panel-actions",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-more-popup.mjs",
+      "case": "panel-actions",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-more-popup#panel-actions --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-more-popup.mjs --case panel-actions",
+      "protectedBehavior": "Actual SDK native popup action admission, callbacks and width cache",
+      "mechanism": "Actual SDK native popup action admission, callbacks and width cache; owner implementation record: [\"Use actual production resolvePopupSpec; remove hand-maintained surface copy.\", \"Select finite endpoints, SDK action admission/callbacks and adaptive lifecycle separately; withdraw whole-source shape guards.\"]",
+      "limitations": "Actual production spec and SDK attributes/callbacks; no native placement pixels.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-session-launch-recovery#more-menu",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-session-launch-recovery.mjs",
+      "case": "more-menu",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-session-launch-recovery#more-menu --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-session-launch-recovery.mjs --case more-menu",
+      "protectedBehavior": "Actual More menu refresh readiness and one-dispatch ownership",
+      "mechanism": "Actual More menu refresh readiness and one-dispatch ownership; owner implementation record: [\"拆恢复交接、More菜单和播放主题图标三个入口；复用当前helper而非import整文件，保当前generation/不可交互负路径。\", \"三入口通过purehelper复用，非import整测试；保currentgeneration/源不可交互。\"]",
+      "limitations": "Only selected actual production methods/SDK/declared native test with controlled boundary ports. Does not prove product-wide behavior, native pixels, physical interaction or user acceptance.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-session-launch-recovery#recovery-handoff",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-session-launch-recovery.mjs",
+      "case": "recovery-handoff",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-session-launch-recovery#recovery-handoff --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-session-launch-recovery.mjs --case recovery-handoff",
+      "protectedBehavior": "Actual frame and source-ready generation, clock during recovery and cancel handoff; fake runtime ports",
+      "mechanism": "Actual frame and source-ready generation, clock during recovery and cancel handoff; fake runtime ports; owner implementation record: [\"拆恢复交接、More菜单和播放主题图标三个入口；复用当前helper而非import整文件，保当前generation/不可交互负路径。\", \"三入口通过purehelper复用，非import整测试；保currentgeneration/源不可交互。\"]",
+      "limitations": "Only selected actual production methods/SDK/declared native test with controlled boundary ports. Does not prove product-wide behavior, native pixels, physical interaction or user acceptance.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-source-failure-p0#source-switch-route",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-source-failure-p0.mjs",
+      "case": "source-switch-route",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-source-failure-p0#source-switch-route --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-source-failure-p0.mjs --case source-switch-route",
+      "protectedBehavior": "Actual Index source switch chooses mounted-reader owner or explicit detail fallback",
+      "mechanism": "Actual Index source switch chooses mounted-reader owner or explicit detail fallback; owner implementation record: [\"保留定位材料；按晚到identity、保留mount、三action调用、probe请求chapter/context拆实际方法/SDK负路径，移除依赖注释和大跨度regex。\", \"lateidentity、保mount、三action、probe章节位置四入口，用实际方法/SDK。\"]",
+      "limitations": "Only selected actual production methods/SDK/declared native test with controlled boundary ports. Does not prove product-wide behavior, native pixels, physical interaction or user acceptance.",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-system-event-host#screen-off",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-system-event-host.mjs",
+      "case": "screen-off",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-system-event-host#screen-off --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-system-event-host.mjs --case screen-off",
+      "protectedBehavior": "Actual Host latest subscriber, retirement and retry",
+      "mechanism": "Actual Host latest subscriber, retirement and retry; owner implementation record: \"全source regex替为完整生产Host类strip执行+受控Kit端口。\"",
+      "limitations": "实际Kit与native事件由端口控制；LRE consumer接线不再由本项声称覆盖。",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-tts-session-coordinator#interruption-stop",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-tts-session-coordinator.mjs",
+      "case": "interruption-stop",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-tts-session-coordinator#interruption-stop --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-tts-session-coordinator.mjs --case interruption-stop",
+      "protectedBehavior": "interruption-stop actual coordinator with controlled boundaries; no regex gate",
+      "mechanism": "interruption-stop actual coordinator with controlled boundaries; no regex gate; owner implementation record: \"14责任case；删除source字形/watchdog/listener假证明，改实际probe entered gates；owned coordinator finallydispose。\"",
+      "limitations": "watchdog/listener由state-machine精确case保护，不嵌套；Core队列/音频仍受控。",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    },
+    {
+      "id": "H-reader-tts-session-coordinator#replacement",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-tts-session-coordinator.mjs",
+      "case": "replacement",
+      "selectionEntry": "node tools/gate-index.mjs --id H-reader-tts-session-coordinator#replacement --run --change <本次具体必要依据>",
+      "directEntry": "node tools/test-reader-tts-session-coordinator.mjs --case replacement",
+      "protectedBehavior": "replacement actual coordinator with controlled boundaries; no regex gate",
+      "mechanism": "replacement actual coordinator with controlled boundaries; no regex gate; owner implementation record: \"14责任case；删除source字形/watchdog/listener假证明，改实际probe entered gates；owned coordinator finallydispose。\"",
+      "limitations": "watchdog/listener由state-machine精确case保护，不嵌套；Core队列/音频仍受控。",
+      "declaredResources": [],
+      "executionThisAudit": "NOT_RUN",
+      "definitionFingerprintVerifiedThisAudit": false
+    }
+  ],
+  "qualifiedWholeFileCandidatesWithoutExactCase": [
+    {
+      "id": "H-reader-brightness-cancel-ui",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-brightness-cancel-ui.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "取消亮度拖动等待同writer已发请求结算后才清preview；旧ACK不得覆盖新automatic意图。",
+      "limitations": "Writer是假，不证明串行队列实现；UI通过字段而非真实Slider显示验证。",
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "H-reader-content-search-focus",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-content-search-focus.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "搜索整个字段可请求自身唯一input ID焦点；失活/移除/失败不能偷IME或修改query/提交。",
+      "limitations": "fakeFocusController不显示键盘；按节点高度不证native文字排版/触摸区域；共享helper编译需SDK。",
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "H-reader-control-backdrop-touch",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-backdrop-touch.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "只有背景DOWN到同指短UP才能关闭，Dock/TopBar起点、拖离又返回、多指、旧close/reopen和invalid geometry不误关；透明圆角由native判断。",
+      "limitations": "人工rect和clock；未接Host/真实touch dispatcher；500ms/8vp为该配置契约非设备体验证据。",
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "H-reader-control-gesture-continuation",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-gesture-continuation.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "越过18vp隐藏路径的finger残量需先耗尽再恢复，不瞬跳；速度只影响续程时间，取消恢复原目标；亚像素折返不产生虚假blocked残量。",
+      "limitations": "轴/时间人工，density只参数换算；无真实pan recognizer/frame/pixels。",
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "H-reader-control-gesture-driver",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-gesture-driver.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "Quick慢上拖也展开、Full下拖直接隐藏；最近方向决定endpoint而速度仅改时间，Home不展开；重抓/多指/Back/CANCEL旧epoch不误写。",
+      "limitations": "不验证ArkUI触摸投递、native recognizer、可见把手坐标；固定axis/clock。",
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "H-reader-control-header-content",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-header-content.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "七module/目录tabheader正确标题/字体/位置，Quick-Full反向保留同节点，非法输入帧保持finite。",
+      "limitations": "Figma历史fixture未经本次外部复核；contentLocation fake不验证真实路由；无native字体测量。",
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "H-reader-control-host-keyboard",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-host-keyboard.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "Back只在可见IME先隐藏，隐藏失败不锁返回；键盘inset改变控制面板预算且不重分页/重置持指与query，关闭后Quick回窗口底部。",
+      "limitations": "metrics为人工Snapshot，IME hide只promise；66 indexOf若未找到边界可能不充分，但72close有校验；无native键盘/视觉证据。",
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "H-reader-control-host-session",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-host-session.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "业务page名与统一session层级映射，Back逐层/关闭提交一次；持指完全隐藏仍逻辑可见不提前放行；旧page回调不重开。",
+      "limitations": "Host wiring regex可死码满足；所有timing为参数推进，无真实watch/renderer。",
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "H-reader-control-input-routing",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-input-routing.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "Header父节点必须让collapse叶按钮被命中，七module收回Quick只一次语义命令且保模块；disabled/held禁交互。",
+      "limitations": "节点hitTest属性非native hit-test执行；probe把实际Header段包装新Builder，不编整页；固定320为测试契约。",
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "H-reader-control-layout-rebase",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-layout-rebase.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "窗口resize时保持手指下handle屏幕anchor、目标/epoch/close/pointer不变；只续剩时间，越界用补偿不误commit，invalid轴原子拒绝。",
+      "limitations": "人工axis非真实窗口通知；纯状态advance不执行UI/帧调度；参数数值不能替代新设计决议。",
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "H-reader-control-motion-policy",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-motion-policy.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "协调时长320/260/200/220映射，Host echo不倒带；拖动线性/释放无跳、hold续原时间、regrab废旧clock；续程曲线单调有端点斜率。",
+      "limitations": "人工frame推进和linear easing注入；千点不是形式证明；不构成设备timing/跟手验收。",
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "H-reader-control-session-state",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-control-session-state.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "控制层级Back逐级返回，bookmark不是额外层；dismiss冻结composition，held隐藏端点不算已关闭，旧epoch不能写当前state。",
+      "limitations": "状态key精确列表约束可阻挡合理新增字段，新增字段应复核其归属；无native。",
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "H-reader-page-gesture-state",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-page-gesture-state.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "稀疏触摸和UP末次位移仍只触发一次正确翻页/书签；方向锁定后回撤不变成点击。",
+      "limitations": "阈值设计调整需同步明确新语义；无平台事件派发与触感验收。",
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "H-reader-page-input-runtime",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-page-input-runtime.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "真实事件流不吞系统边缘、不把竖拉书签变翻页；settlement重抓保持可见位置、几何变更撤销当前指针。",
+      "limitations": "私有方法文本截取需维护；回调/原生时间戳由fixture控制；不证明设备事件序列。",
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "H-reader-reduce-motion-retirement",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-reduce-motion-retirement.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "中途开启减少动态效果时，未提交翻页回退，已提交Core/Native工作由现owner继续，fallback只接当前ArkUI帧。",
+      "limitations": "不证明系统设置事件交付、Native renderer停止时刻或画面无闪烁。",
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "H-reader-session-launch",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-session-launch.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "四入口原设计时钟的48actor数值轨道、固定右缘、clip、Reduce Motion；实际Controller的ACK、generation、资源接管/释放和取消。",
+      "limitations": "CSS百分比round成毫秒；expected easing共享生产bezier函数，不能独立发现bezier算法错；footer PH10部分期望引用实际proxy位置；scale1不证明生产.5/真实帧率。",
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "H-reader-tts-exit-progress",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-reader-tts-exit-progress.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "退出时只移交已完成音频位置且不等待挂起stop，手动换章后旧TTS进度不得覆盖，handoff不能伪造durable ACK。",
+      "limitations": "stop挂起用never Promise，需runner外层timeout；native durability未模拟，进度fixture默认支持CAS不能证明旧Core兼容。",
+      "executionThisAudit": "NOT_RUN"
+    },
+    {
+      "id": "H-source-switch-reader-ack",
+      "qualificationInCurrentCatalog": "QUALIFIED",
+      "file": "/home/administrator/Reader/Reader-for-HarmonyOS/tools/test-source-switch-reader-ack.mjs",
+      "selectorKind": "QUALIFIED_WHOLE_FILE_NO_PUBLISHED_EXACT_CASE",
+      "exactCase": null,
+      "protectedBehavior": "finalized标记必须来自原ACK而非活Prop，旧ACK不能清successor，普通/local进度不能重复宣告换源完成；失败页动作需捕获原scope。",
+      "limitations": "Core仅fakeupdate noCAS/SQLite；failurePageaction只证明传id，拒旧由上游owner另测；未native调度。",
+      "executionThisAudit": "NOT_RUN"
+    }
+  ],
+  "knownNonBehavioralSelections": [
+    {
+      "id": "H-reader-control-stage-lifecycle#diagnostic-frames / #diagnostic-touch / #diagnostic-trace",
+      "status": "DIAGNOSTIC_ONLY",
+      "boundary": "验证Stage本地诊断不证明生产Panel/业务路径通过，不计P0生产验收。"
+    },
+    {
+      "id": "H-reader-control-p0#shell-motion-owners",
+      "status": "QUALIFIED_AST_ONLY",
+      "boundary": "可证明实时reduceMotion接线，不能替代热切换方法与native退休行为。"
+    },
+    {
+      "id": "H-reader-control-runtime#source-boundary",
+      "status": "DIAGNOSTIC_ONLY",
+      "boundary": "历史结构诊断不是行为case。"
+    }
+  ],
+  "conclusion": {
+    "sourceAudit": "完成19行只读盘点；当前生产owner明确，Stage接入等价未建立。",
+    "behaviorTests": "NOT_RUN",
+    "nativeDynamicBehavior": "NOT_RUN",
+    "userAcceptance": "NOT_RUN",
+    "existingPixelLimit": "仅当前a443日间/current-font正文+打开后控件静态两帧；标题在505px分配区仍省略，换源单层弱色且disabled，未见可辨认正文透影。不得推导夜间/其他字号/动画/IME/矩阵全部通过。",
+    "nextAction": "由root据owner选择决定是否产生单独实施任务；此文件不自动安排测试或设备。"
+  }
+}

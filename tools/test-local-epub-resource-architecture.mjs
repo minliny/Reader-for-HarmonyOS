@@ -8,7 +8,7 @@ async function runSelectedCase(selectedCase) {
 const {default: assert} = await import('node:assert/strict');
 const {selectedProductionMethods,selectedProductionValues} = await import('./lib/selected-production-methods.mjs');
 
-const file=new URL('../entry/src/main/ets/app/LocalEpubResourceHost.ts',import.meta.url);
+const file=new URL('../entry/src/main/ets/platform/reading-resources/LocalEpubResourceHost.ts',import.meta.url);
 const values=selectedProductionValues(file,['LOCAL_EPUB_SCHEME','LOCAL_MOBI_SCHEME','MAX_READING_IMAGE_BYTES','MAX_LOCAL_IMAGE_BOOK_ID_BASE64_CHARS','MAX_LOCAL_IMAGE_PATH_BASE64_CHARS','MAX_LOCAL_IMAGE_LOCATOR_CHARS']);
 const decoder={create:(_encoding,options)=>({decodeToString:bytes=>new TextDecoder('utf-8',options).decode(bytes)})};
 const util={TextDecoder:decoder,Type:{BASIC_URL_SAFE:'url'},Base64Helper:class{decodeSync(value){return new Uint8Array(Buffer.from(value,'base64url'));}}};

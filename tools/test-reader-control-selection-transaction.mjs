@@ -7,7 +7,7 @@ const {
   readerControlSelectionMayClose,
   readerControlSelectionMayRecover,
   readerControlSelectionOwnsReading,
-}=await import('../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts');
+}=await import('../entry/src/main/ets/features/reading/application/ReaderControlSelectionTransaction.ts');
 
 const ticket = {
   sourceId: 'local', bookId: 'book-A', lifecycleToken: 4, selectionToken: 20,
@@ -72,7 +72,7 @@ assert.deepEqual({ ticket, owner, committed }, snapshot,
 if(selectedCase==='feedback-owner'){
 const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
 const productionMotionMethods=(file,names,deps)=>selectedProductionMethods(file,'ReadingExperience',[...names,'readerRecoveryOwnerKey'],{...deps,readingFailureHint:()=> 'fixture-classified failure',remoteReadingFailureKindOf:()=> 'UNKNOWN'});
-const FeedbackHost = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+const FeedbackHost = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['showControlSelectionFailure', 'showReaderRecovery'], { readerControlSelectionOwnsReading, hilog: { error() {} } });
 for (const changed of [{}, {bookId:'book-B'}, {sourceId:'remote'}, {lifecycleToken:5},
   {selectionToken:21}, {mounted:false}, {exitRequested:true}]) {
@@ -106,7 +106,7 @@ console.log('reader control selection transaction: production ownership/commit p
 }
 if(selectedCase==='commit-boundary'){
  const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
- const Commit=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),'ReadingExperience',
+ const Commit=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),'ReadingExperience',
   ['completeControlSelectionAfterCommit'],{readerControlSelectionMayClose});
  for(const changed of [{},{storedChapterOffset:0},{visibleSelectionToken:19},{controlOpenRevision:7},{closeOnCommit:false}]){
   let closes=0;const currentOwner={...owner,...('controlOpenRevision' in changed?{controlOpenRevision:changed.controlOpenRevision}:{})};

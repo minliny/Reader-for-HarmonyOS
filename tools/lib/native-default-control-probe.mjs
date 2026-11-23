@@ -24,7 +24,7 @@ export function nativeDefaultRecoveryBranchContract(previous) {
   const { count: _observedActorCount, ...historical } = previous;
   assert.equal(digest(JSON.stringify(historical)), recoverySuccessor.previousRowSha256, 'exact original native retry row');
   assert.deepEqual([recoverySuccessor.id, recoverySuccessor.file, recoverySuccessor.method, recoverySuccessor.sdkProof],
-    ['NATIVE-DEFAULT-05', 'features/reading/LocalReadingExperience.ets', 'readingFailureContent', 'tools/test-native-default-control-contracts.mjs']);
+    ['NATIVE-DEFAULT-05', 'features/reading/ui/LocalReadingExperience.ets', 'readingFailureContent', 'tools/test-native-default-control-contracts.mjs']);
   assert.equal(recoverySuccessor.exclusiveGuard, previous.branchInstances[0].guard);
   assert.equal(recoverySuccessor.branchInstances.length, previous.branchInstances.length, 'no added native actor');
   const inlineGuard = 'this.readerRecoveryView.visible && this.readerRecoveryView.canRetry';

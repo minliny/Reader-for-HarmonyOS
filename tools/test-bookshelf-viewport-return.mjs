@@ -19,21 +19,21 @@ const [
 ]=await Promise.all([
  import('./lib/reader-control-builder-probe.mjs'),
  import('./lib/bounded-surface-sdk-probe.mjs'),
- import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts'),
+ import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts'),
  import('./lib/reader-floating-bar-metrics-probe.mjs'),
  import('./lib/reader-motion-method-probe.mjs'),
  import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts'),
- import('../entry/src/main/ets/features/bookshelf/BookshelfViewState.ts'),
- import('../entry/src/main/ets/features/common/ReaderHeaderMetrics.ts'),
+ import('../entry/src/main/ets/features/bookshelf/presentation/BookshelfViewState.ts'),
+ import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts'),
  import('./lib/ets-pure-module-probe.mjs'),
  import('./lib/reader-foundation-control-probe.mjs'),
 ]);
-const source=new URL('../entry/src/main/ets/features/bookshelf/BookshelfPage.ets',import.meta.url);
-const common=name=>readFileSync(new URL(`../entry/src/main/ets/features/common/${name}`,import.meta.url),'utf8');
-const headerSpecs=pureModuleProbe(common('ReaderHeaderSpecs.ets'),'ViewportReturnHeaderSpecs.ets',
+const source=new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets',import.meta.url);
+const headerSpecSource=readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderHeaderSpecs.ets',import.meta.url),'utf8');
+const headerSpecs=pureModuleProbe(headerSpecSource,'ViewportReturnHeaderSpecs.ets',
  {...headerMetrics,TOK_BORDER_W:readerFoundationTokens.TOK_BORDER_W},['bookshelfHeaderSpec']);
 class Frame { constructor(callback){this.callback=callback;} }
-const Page=productionMotionMethods(source,['shelfHeaderItems','saveShelfViewport','restoreShelfViewport','publishVisibleReadingBooks','aboutToDisappear','aboutToAppear','viewModeRecovery','publishHeaderScrolled','onScrollToTopRequested'],{
+const Page=productionMotionMethods(source,['shelfHeaderItems','saveShelfViewport','restoreShelfViewport','publishVisibleReadingBooks','aboutToDisappear','aboutToAppear','viewModeRecovery','publishHeaderScrolled','onScrollToTopRequested','takeDetailReturnFocus','cancelBookActionFocus','bookActionFocusRevision','restoreDetailReturnFocus'],{
  ...headerSpecs,readerRecoveryView, BookshelfMotionFrameCallback:Frame, ScrollAlign:{START:'start'}, Edge:{Top:'top'}, registerReaderShelfFonts(){}
 });
 const state=new BookshelfViewState(); const frames=[]; const calls=[]; const prepared=[];const materials=[];
@@ -114,15 +114,21 @@ for (const saved of [0, -30, -66]) {
 const text=readFileSync(source,'utf8');assert.match(text,/List\(\{ space: TOK_SPACE_CONTROL_INLINE, scroller: this\.shelfScroller \}\)/);
 assert.match(text,/maintainVisibleContentPosition\(true\)/);assert.match(text,/onAppear\(\(\): void => this\.restoreShelfViewport\(\)\)/);
 const index=readFileSync(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),'utf8');
-assert.match(index,/private readonly bookshelfViewState: BookshelfViewState = new BookshelfViewState/);
-assert.match(index,/BookshelfPage\(\{[\s\S]*?noticeTopInset: this\.shelfPendingNoticeHeight > 0 \? this\.shelfPendingNoticeHeight \+ 8 : 0,[\s\S]*?headerBottom: this\.shelfHeaderHeight,[\s\S]*?navigationGeneration: this\.navigationGeneration,\s*viewState: this\.bookshelfViewState/);
-assert.match(index,/this\.bookshelfViewState\.anchorKey = ''; this\.bookshelfViewState\.anchorOffset = 0;\s*this\.bookshelfViewState\.anchorCaptured = false/,
+const readPresentation=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/presentation/BookshelfReadPresentation.ets',import.meta.url),'utf8');
+const shelfScene=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfScene.ets',import.meta.url),'utf8');
+assert.match(readPresentation,/readonly viewState: BookshelfViewState = new BookshelfViewState/);
+assert.match(index,/BookshelfScene\(\{\s*read: this\.shelfRead,/);
+assert.match(shelfScene,/BookshelfPage\(\{[\s\S]*?noticeTopInset: this\.read\.noticeTopInset\(\),\s*headerBottom: this\.read\.headerBottom,[\s\S]*?navigationGeneration: this\.navigation,\s*viewState: this\.read\.viewState/);
+assert.match(readPresentation,/this\.viewState\.anchorKey = '';\s*this\.viewState\.anchorOffset = 0;\s*this\.viewState\.anchorCaptured = false/,
  'a changed shelf filter revokes the captured viewport rather than restoring numeric zero as a saved scroll');
-assert.match(index,/private pendingShelfReadbackKey: string = ''/,
+const detail=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/presentation/BookshelfDetailPresentation.ets',import.meta.url),'utf8');
+assert.match(detail,/private pendingReadbackKey: string = ''/,
   'detail shelf admission retains a confirmed identity until the bookshelf route readback');
-assert.match(index,/this\.getUIContext\(\)\.postFrameCallback\(new ReaderNavigationBackfillFrame/,
+assert.match(index,/this\.navigateTo\('bookshelf'\);\s*this\.refreshBookshelf\(\);[\s\S]*?this\.detailShelf\.readbackOnBookshelf\(\);/);
+assert.match(index,/postFrame: \(action: \(\) => void\): void => this\.getUIContext\(\)\.postFrameCallback\(new ReaderNavigationBackfillFrame\(action\)\)/);
+assert.match(detail,/readbackOnBookshelf\(\): void \{[\s\S]*?this\.scope\.postFrame\(\(\): void => \{/,
   'bookshelf return schedules a fresh read after the route binding is mounted');
-assert.match(index,/this\.invalidateBookshelfProjection\(\);\s*this\.refreshBookshelf\(\);\s*this\.pendingShelfReadbackKey = ''/,
+assert.match(detail,/this\.scope\.invalidateProjection\(\);\s*this\.scope\.refreshBookshelf\(\);\s*this\.pendingReadbackKey = ''/,
   'the post-frame shelf readback invalidates the stale detail projection before clearing the pending identity');
 console.log('PASS bookshelf route return: complete native samples, captured zero, new-state top, signed/identity anchors, late callback isolation');
 }

@@ -15,7 +15,7 @@ async function case_runtime_projection() {
 const { default: fs } = await import('node:fs');
 const { default: assert } = await import('node:assert/strict');
 const { stripTypeScriptTypes } = await import('node:module');
-const source = fs.readFileSync('entry/src/main/ets/features/reading/ReaderRenderStageSpec.ts', 'utf8');
+const source = fs.readFileSync('entry/src/main/ets/features/reading/ui/ReaderRenderStageSpec.ts', 'utf8');
 const moduleSource = stripTypeScriptTypes(source, { mode: 'strip' });
 const url = `data:text/javascript;base64,${Buffer.from(moduleSource).toString('base64')}`;
 const mod = await import(url);
@@ -37,8 +37,8 @@ assert.deepEqual(mod.readerBookTurnRuntimeSpec('continuous', 'simulation', false
 async function case_host_projection_binding() {
 const { default: assert } = await import('node:assert/strict');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { readerBookTurnRuntimeSpec } = await import('../entry/src/main/ets/features/reading/ReaderRenderStageSpec.ts');
-const Host = productionMotionMethods('entry/src/main/ets/features/reading/LocalReadingExperience.ets', ['usesBookTurnSimulation','shouldMountBookTurnSurface'], {readerBookTurnRuntimeSpec});
+const { readerBookTurnRuntimeSpec } = await import('../entry/src/main/ets/features/reading/ui/ReaderRenderStageSpec.ts');
+const Host = productionMotionMethods('entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', ['usesBookTurnSimulation','shouldMountBookTurnSurface'], {readerBookTurnRuntimeSpec});
 for(const mode of ['paged','continuous']) for(const transition of ['simulation','slide']) for(const reduced of [false,true]) for(const failed of [false,true]) {
  const owner = new Host();Object.assign(owner,{readerSettingsSnapshot:{navigationMode:mode,pageTransition:transition},reduceMotion:reduced,bookTurnRuntimeFailed:failed});
  const expected=readerBookTurnRuntimeSpec(mode,transition,reduced,failed);

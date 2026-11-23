@@ -2,14 +2,14 @@ import { readFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './arkui-property-runtime-probe.mjs';
 import { boundedMembers } from './bounded-surface-sdk-probe.mjs';
-import * as visual from '../../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
-import * as layout from '../../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
-import * as presentation from '../../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
-import { mangaDirectoryDisplay } from '../../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
-import * as directoryState from '../../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
-import * as fonts from '../../entry/src/main/ets/features/common/ReaderFontFamilies.ts';
+import * as visual from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
+import * as layout from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryLayout.ts';
+import * as presentation from '../../entry/src/main/ets/features/manga/presentation/MangaDirectoryPresentation.ts';
+import { mangaDirectoryDisplay } from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryDisplay.ts';
+import * as directoryState from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryState.ts';
+import * as fonts from '../../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 
-export const mangaDirectoryEntryRowSource = readFileSync(new URL('../../entry/src/main/ets/features/manga/MangaDirectoryEntryRow.ets', import.meta.url), 'utf8');
+export const mangaDirectoryEntryRowSource = readFileSync(new URL('../../entry/src/main/ets/features/manga/ui/MangaDirectoryEntryRow.ets', import.meta.url), 'utf8');
 
 /** Actual SDK-emitted shared row and V1 Prop runtime. Parents continue to
  * execute their production callbacks; no row geometry or identity is copied. */

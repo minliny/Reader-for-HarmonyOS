@@ -4,9 +4,9 @@ import { readFileSync } from 'node:fs';
 import { boundedSurfaceSdk, boundedMembers } from './bounded-surface-sdk-probe.mjs';
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
 import { typographyProperties, typographyRoleImports } from './reader-typography-consumer-audit.mjs';
-import * as horizontal from '../../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
-import * as metricsApi from '../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import { localImportResultLayout } from '../../entry/src/main/ets/features/bookshelf/LocalImportLayout.ts';
+import * as horizontal from '../../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts';
+import * as metricsApi from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import { localImportResultLayout } from '../../entry/src/main/ets/features/bookshelf/ui/LocalImportLayout.ts';
 
 const metrics = metricsApi.createDefaultReaderWindowMetrics();
 metrics.windowRect = new metricsApi.ReaderRectVp(0, 0, 390, 844);
@@ -16,10 +16,10 @@ registerHooks({ resolve(specifier, context, next) { try { return next(specifier,
   if ((specifier.startsWith('./') || specifier.startsWith('../')) && !specifier.endsWith('.ts')) return next(specifier + '.ts', context);
   throw error;
 } } });
-const replaceState = await import('../../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
-const replaceGeometry = await import('../../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
-const replaceMorph = await import('../../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts');
-const replacePresentation = await import('../../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
+const replaceState = await import('../../entry/src/main/ets/features/reading/presentation/ReaderControlReplaceState.ts');
+const replaceGeometry = await import('../../entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts');
+const replaceMorph = await import('../../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts');
+const replacePresentation = await import('../../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts');
 /** The projected expressions below are returned only after executing the
  * actual original owner -> mounted shared SDK child -> native Text and proving
  * its exact tuple, omitted AUTO attributes and active public-role propagation.
@@ -30,7 +30,6 @@ export function boundedTypographyCarrier(entry, file, expected, pageSource, targ
   if (cached.has(key)) return cached.get(key);
   function native(branch, options = {}) {
     const p = boundedSurfaceSdk({ [entry.component]: source, ...options });
-    p.hooks.childSources.CandidateRow = readFileSync(new URL('../../entry/src/main/ets/features/source/CandidateRow.ets', import.meta.url), 'utf8');
     const owner = p.consumer(pageSource, boundedMembers(pageSource), {
       ...horizontal, ...metricsApi, ...replaceState, ...replaceGeometry, ...replaceMorph, ...replacePresentation, localImportResultLayout,
       ReaderWindowCoordinator: { metrics: () => metrics }, registerReaderFonts() {},

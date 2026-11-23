@@ -1,0 +1,427 @@
+{
+  "schemaVersion": "1.0",
+  "revision": 3,
+  "contracts": [
+    {
+      "contractId": "product",
+      "plane": "P0",
+      "owner": "ReaderProductScope",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/app/ReaderProductScope.ts"
+        },
+        {
+          "path": "docs/ui-design/cross-platform-reference/PAGES_AND_STATES.md"
+        }
+      ],
+      "machineSource": null,
+      "status": "manual",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "route visibility",
+      "evidenceBoundary": "Source/document reference only; manual review cannot become automatic behavior PASS."
+    },
+    {
+      "contractId": "route",
+      "plane": "P1",
+      "owner": "ReaderNavigation + journey presentation owners",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/app/navigation/ReaderNavigation.ts"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/presentation/SourceJourneyPresentation.ets"
+        }
+      ],
+      "machineSource": "tools/contracts/navigation-registry.json",
+      "status": "partial",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "routeContractRef",
+      "evidenceBoundary": "Source/document reference only; manual review cannot become automatic behavior PASS."
+    },
+    {
+      "contractId": "startup",
+      "plane": "P1",
+      "owner": "ReaderStartupRecovery",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/pages/ReaderStartupRecovery.ets"
+        },
+        {
+          "path": "entry/src/main/ets/app/composition/system-open/ReaderSystemFileOpenHost.ts"
+        }
+      ],
+      "machineSource": null,
+      "status": "manual",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "layers.route / layers.states",
+      "evidenceBoundary": "Source/document reference only; manual review cannot become automatic behavior PASS."
+    },
+    {
+      "contractId": "page-frame",
+      "plane": "P2",
+      "owner": "ReaderPageScaffold",
+      "sources": [
+        {
+          "path": "docs/architecture/ui-page-framework-20261014.md"
+        },
+        {
+          "path": "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets"
+        },
+        {
+          "path": "entry/src/main/ets/ui/layout/ReaderPageShell.ts"
+        }
+      ],
+      "machineSource": null,
+      "status": "manual",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "layers.scaffold",
+      "evidenceBoundary": "Source/document reference only; manual review cannot become automatic behavior PASS."
+    },
+    {
+      "contractId": "geometry",
+      "plane": "P2",
+      "owner": "ReaderPageGeometry",
+      "sources": [
+        {
+          "path": "docs/architecture/ui-parameter-contract-20261025.md"
+        },
+        {
+          "path": "entry/src/main/ets/ui/layout/ReaderPageGeometry.ts"
+        },
+        {
+          "path": "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets"
+        }
+      ],
+      "machineSource": null,
+      "status": "manual",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "layers.scroll / layers.measurement",
+      "evidenceBoundary": "Source/document reference only; manual review cannot become automatic behavior PASS."
+    },
+    {
+      "contractId": "surface",
+      "plane": "P2",
+      "owner": "ReaderSurfaceSpecs",
+      "sources": [
+        {
+          "path": "docs/architecture/ui-surface-role-contract-20261028.md"
+        },
+        {
+          "path": "entry/src/main/ets/ui/surfaces/ReaderSurfaceSpecs.ets"
+        }
+      ],
+      "machineSource": null,
+      "status": "manual",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "layers.overlay / layers.visual",
+      "evidenceBoundary": "Source/document reference only; manual review cannot become automatic behavior PASS."
+    },
+    {
+      "contractId": "expression",
+      "plane": "P3",
+      "owner": "ReaderTypography",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderTypography.ets"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/MotionSpec.ets"
+        }
+      ],
+      "machineSource": null,
+      "status": "manual",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "layers.visual / layers.interaction",
+      "evidenceBoundary": "Source/document reference only; manual review cannot become automatic behavior PASS."
+    },
+    {
+      "contractId": "control",
+      "plane": "P3",
+      "owner": "ReaderControlSpecs",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderControlSpecs.ets"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderButton.ets"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderToggle.ets"
+        }
+      ],
+      "machineSource": "tools/contracts/control-registry.json",
+      "status": "partial",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "controlRefs",
+      "evidenceBoundary": "Source/document reference only; manual review cannot become automatic behavior PASS."
+    },
+    {
+      "contractId": "message",
+      "plane": "P3",
+      "owner": "ReaderTransientFeedback",
+      "sources": [
+        {
+          "path": "docs/message-ui/FRAMEWORK.md"
+        },
+        {
+          "path": "tools/message-entrypoints.json"
+        }
+      ],
+      "machineSource": "tools/message-entrypoints.json",
+      "status": "mature",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "messageSurfaces.entryId",
+      "evidenceBoundary": "Machine inventory resolves IDs; runtime behavior is not implied."
+    },
+    {
+      "contractId": "operation",
+      "plane": "P4",
+      "owner": "ReaderOperationFacts",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/app/ReaderOperationFacts.ts"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/application/SourceOrchestrator.ets"
+        },
+        {
+          "path": "entry/src/main/ets/features/settings/application/RulesMutationOwner.ts"
+        }
+      ],
+      "machineSource": null,
+      "status": "manual",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "operationRefs.factSource",
+      "evidenceBoundary": "Source/document reference only; manual review cannot become automatic behavior PASS."
+    },
+    {
+      "contractId": "persistence",
+      "plane": "P4",
+      "owner": "ReaderRuntimeOwner",
+      "sources": [
+        {
+          "path": "docs/architecture/reader-residual-repair-implementation-20261111.md"
+        },
+        {
+          "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts"
+        }
+      ],
+      "machineSource": null,
+      "status": "manual",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "layers.dataLifecycle",
+      "evidenceBoundary": "Source/document reference only; manual review cannot become automatic behavior PASS."
+    },
+    {
+      "contractId": "platform",
+      "plane": "P4",
+      "owner": "ArkWebExecutor",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/platform/network/ArkWebExecutor.ts"
+        },
+        {
+          "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts"
+        }
+      ],
+      "machineSource": "tools/contracts/platform-host-registry.json",
+      "status": "partial",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "platformHosts.hostRef",
+      "evidenceBoundary": "Source/document reference only; manual review cannot become automatic behavior PASS."
+    },
+    {
+      "contractId": "adaptation",
+      "plane": "P5",
+      "owner": "ReaderPageGeometry",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/ui/layout/ReaderPageGeometry.ts"
+        },
+        {
+          "path": "entry/src/main/ets/ui/layout/ReaderLayoutCapability.ts"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts"
+        }
+      ],
+      "machineSource": null,
+      "status": "manual",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "layers.adaptation",
+      "evidenceBoundary": "Source/document reference only; manual review cannot become automatic behavior PASS."
+    },
+    {
+      "contractId": "a11y",
+      "plane": "P5",
+      "owner": "RPSCM",
+      "sources": [
+        {
+          "path": "docs/architecture/PAGE_STRUCTURE_CONTRACT.md"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderButton.ets"
+        },
+        {
+          "path": "entry/src/main/ets/ui/controls/ReaderToggle.ets"
+        }
+      ],
+      "machineSource": null,
+      "status": "manual",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "a11y.ruleRefs",
+      "evidenceBoundary": "Source/document reference only; manual review cannot become automatic behavior PASS."
+    },
+    {
+      "contractId": "release",
+      "plane": "P6",
+      "owner": "workspace-governance",
+      "sources": [
+        {
+          "path": "../AGENTS.md"
+        },
+        {
+          "path": "config/app-release-ledger.json"
+        },
+        {
+          "path": "AppScope/app.json5"
+        }
+      ],
+      "machineSource": null,
+      "status": "manual",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "independent; no page result",
+      "evidenceBoundary": "Source/document reference only; manual review cannot become automatic behavior PASS."
+    },
+    {
+      "contractId": "gate",
+      "plane": "P6",
+      "owner": "workspace-governance",
+      "sources": [
+        {
+          "path": "../GATE_INDEX.md"
+        }
+      ],
+      "machineSource": null,
+      "status": "manual",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "explicit selected checks",
+      "evidenceBoundary": "Source/document reference only; manual review cannot become automatic behavior PASS."
+    },
+    {
+      "contractId": "observability",
+      "plane": "P6",
+      "owner": "unassigned",
+      "sources": [],
+      "machineSource": null,
+      "status": "missing",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "upstream only; not consumed",
+      "evidenceBoundary": "No formal owning source; not a consumer requirement in this iteration."
+    },
+    {
+      "contractId": "i18n",
+      "plane": "P6",
+      "owner": "unassigned",
+      "sources": [],
+      "machineSource": null,
+      "status": "missing",
+      "consumedBy": [
+        "source-management",
+        "directory",
+        "downloads",
+        "source-tools"
+      ],
+      "referenceRule": "upstream only; not consumed",
+      "evidenceBoundary": "No formal owning source; not a consumer requirement in this iteration."
+    }
+  ]
+}

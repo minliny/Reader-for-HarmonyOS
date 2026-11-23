@@ -76,7 +76,7 @@ for(const build of [{debug:false},{buildMode:'release'}]){const f=fixture(build)
 // cannot change normal ownership, and a stale detach never removes a successor.
 for(const file of ['ReadingBodyImageHost.ts','MangaImageGraphicsHost.ts']){
  for(const [DEBUG,BUILD_MODE_NAME,allowed] of [[true,'debug',true],[false,'debug',false],[true,'release',false]]){
-  const Host=productionMotionMethods(new URL('ets/app/'+file,root),['attachDiagnosticObserver','observeDiagnostic'],{});const host=new Host();assert.throws(()=>host.attachDiagnosticObserver(()=>{}),/UNAVAILABLE/);
+  const Host=productionMotionMethods(new URL('ets/platform/reading-resources/'+file,root),['attachDiagnosticObserver','observeDiagnostic'],{});const host=new Host();assert.throws(()=>host.attachDiagnosticObserver(()=>{}),/UNAVAILABLE/);
   if(!allowed){assert.throws(()=>host.attachDiagnosticObserver(()=>{},DEBUG,BUILD_MODE_NAME),/UNAVAILABLE/);continue;}
   const detach=host.attachDiagnosticObserver(()=>{throw Error('observer cannot break decoding')},DEBUG,BUILD_MODE_NAME);assert.doesNotThrow(()=>host.observeDiagnostic({event:'open'}));
   assert.throws(()=>host.attachDiagnosticObserver(()=>{},DEBUG,BUILD_MODE_NAME),/UNAVAILABLE/);detach();let seen=0;const detach2=host.attachDiagnosticObserver(()=>seen++,DEBUG,BUILD_MODE_NAME);detach();host.observeDiagnostic({event:'open'});assert.equal(seen,1);detach2();
@@ -92,7 +92,7 @@ console.log('PASS fixed SHA/golden assets, actual runner negative pixel/preencod
 for(const cancel of [false,true]){
  let current=true,size={width:3,height:2};const events=[];
  const image={CropAndScaleStrategy:{CROP_FIRST:2},PixelMapFormat:{RGBA_8888:3},DecodingDynamicRange:{SDR:1},createImageSource(){return {async getImageInfo(){return {size:{width:3,height:2},mimeType:'image/png'}},async createPixelMap(options){assert.deepEqual(options.desiredRegion,{x:0,y:0,size:{width:3,height:2}});assert.deepEqual(options.desiredSize,options.desiredRegion.size);assert.equal(options.cropAndScaleStrategy,2);return {async getImageInfo(){return {size,pixelFormat:3}},getBytesNumberPerRow(){return size.width*4},getPixelBytesNumber(){return size.width*size.height*4},async rotate(){size={width:2,height:3}},async release(){}}},async release(){}}}};
- const Host=productionMotionMethods(new URL('ets/app/ReadingBodyImageHost.ts',root),['withDecodedPixelMap','assertMangaPixelBudget','assertCurrent','attachDiagnosticObserver','observeDiagnostic'],{image,DEBUG:true,BUILD_MODE_NAME:'debug',MAX_READING_IMAGE_DIMENSION:4096,MAX_READING_IMAGE_PIXELS:4194304,MAX_MANGA_DECODE_WORKING_BYTES:4194304,MAX_MANGA_OUTPUT_BYTES:4194304});
+ const Host=productionMotionMethods(new URL('ets/platform/reading-resources/ReadingBodyImageHost.ts',root),['withDecodedPixelMap','assertMangaPixelBudget','assertCurrent','attachDiagnosticObserver','observeDiagnostic'],{image,DEBUG:true,BUILD_MODE_NAME:'debug',MAX_READING_IMAGE_DIMENSION:4096,MAX_READING_IMAGE_PIXELS:4194304,MAX_MANGA_DECODE_WORKING_BYTES:4194304,MAX_MANGA_OUTPUT_BYTES:4194304});
  const owner=new Host();owner.assertMangaImageMetadata=async()=>({orientation:6,decodeProfile:{format:'png',encodedWidth:3,encodedHeight:2,allocationClass:'scanline'}});owner.boundedDecodeSize=(width,height)=>({width,height});
  const detach=owner.attachDiagnosticObserver(event=>{events.push(event);if(cancel&&event.event==='open'&&event.resource==='pixel')current=false;},true,'debug');
  const task=owner.withDecodedPixelMap(new Uint8Array([1,2,3]),()=>current,async(_map,w,h)=>[w,h],0,'digest');
@@ -101,14 +101,14 @@ for(const cancel of [false,true]){
  assert.equal(events.filter(e=>e.event==='region').length,1);detach();
 }
 {
- const {validateMangaGraphicsPlan,validateMangaGraphicsDimensions}=await import('../entry/src/main/ets/app/MangaImageGraphicsPlan.ts');
+ const {validateMangaGraphicsPlan,validateMangaGraphicsDimensions}=await import('../entry/src/main/ets/platform/reading-resources/MangaImageGraphicsPlan.ts');
  const actual=read('graphics-input.png'),expected=read('graphics-expected-bgra.bin');
  const original=readFileSync(new URL('fixtures/manga-graphics/input-bgra.bin',import.meta.url));
  const plan=JSON.parse(Buffer.from(read('graphics-plan.json')).toString());
  for(const cancel of [false,true]){
   let current=true;const events=[];const info={mimeType:'image/png',size:{width:8,height:103},pixelFormat:3};
   const image={PixelMapFormat:{RGBA_8888:3,BGRA_8888:4,RGB_565:2},DecodingDynamicRange:{SDR:1},createImageSource(){return {async getImageInfo(){return info},async getFrameCount(){return 1},async createPixelMap(){return {async getImageInfo(){return info},getBytesNumberPerRow(){return info.size.width*4},getPixelBytesNumber(){return info.size.width*info.size.height*4},async readPixels(area){for(let y=0;y<area.region.size.height;y++)new Uint8Array(area.pixels).set(original.subarray((area.region.y+y)*32,(area.region.y+y+1)*32),area.offset+y*area.stride)},async release(){}}},async release(){}}},async createPixelMap(){return {async getImageInfo(){return {size:info.size,pixelFormat:2}},getBytesNumberPerRow(){return info.size.width*2},getPixelBytesNumber(){return info.size.width*info.size.height*2},async release(){}}},createImagePacker(){return {async packing(){return new Uint8Array([1,2,3]).buffer},async release(){}}}};
-  const Host=productionMotionMethods(new URL('ets/app/MangaImageGraphicsHost.ts',root),['attachDiagnosticObserver','observeDiagnostic','transform','performTransform','current','encoded','workingSet','dimensions','diagnosticPending'],{image,DEBUG:true,BUILD_MODE_NAME:'debug',MAX_BYTES:16777216,MAX_GRAPHICS_WORKING_BYTES:33554432,validateMangaGraphicsPlan,validateMangaGraphicsDimensions});
+  const Host=productionMotionMethods(new URL('ets/platform/reading-resources/MangaImageGraphicsHost.ts',root),['attachDiagnosticObserver','observeDiagnostic','transform','performTransform','current','encoded','workingSet','dimensions','diagnosticPending'],{image,DEBUG:true,BUILD_MODE_NAME:'debug',MAX_BYTES:16777216,MAX_GRAPHICS_WORKING_BYTES:33554432,validateMangaGraphicsPlan,validateMangaGraphicsDimensions});
   const owner=new Host();owner.pending=0;owner.tail=Promise.resolve();let pixels;
   const detach=owner.attachDiagnosticObserver(event=>{events.push(event);if(event.event==='pre-encode')pixels=event.pixels.slice();if(cancel&&event.resource==='pixel'&&event.event==='open')current=false;},true,'debug');
   const task=owner.transform(actual,plan,()=>current);if(cancel)await assert.rejects(task,/CANCELLED/);else{await task;assert.deepEqual(pixels,expected);}
@@ -118,5 +118,5 @@ for(const cancel of [false,true]){
 }
 console.log('PASS actual production regional decode and strip transform observation: exact independent pre-encode pixels, cancellation after native allocation, balanced release, unchanged queue settlement.');
 
-for(const file of ['ReadingBodyImageHost.ts','MangaImageGraphicsHost.ts','MangaPlatformProbeRunner.ts'])assert.doesNotMatch(readFileSync(new URL('ets/app/'+file,root),'utf8'),/import .*BuildProfile/,'TS must not import generated ETS');
+for(const file of ['platform/reading-resources/ReadingBodyImageHost.ts','platform/reading-resources/MangaImageGraphicsHost.ts','app/MangaPlatformProbeRunner.ts'])assert.doesNotMatch(readFileSync(new URL('ets/'+file,root),'utf8'),/import .*BuildProfile/,'TS must not import generated ETS');
 assert.match(page,/this.present\(frame\), DEBUG, BUILD_MODE_NAME/);

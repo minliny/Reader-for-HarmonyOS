@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { READER_TTS_WAVEFORM_HEIGHTS, ReaderTtsWaveformMotion, ReaderTtsWaveformClock } from '../entry/src/main/ets/features/reading/ReaderTtsWaveformModel.ts';
-import { readerAppearanceCubicBezierProgress as bezier } from '../entry/src/main/ets/features/reading/ReaderAppearanceMotionGeometry.ts';
+import { READER_TTS_WAVEFORM_HEIGHTS, ReaderTtsWaveformMotion, ReaderTtsWaveformClock } from '../entry/src/main/ets/features/reading/ui/ReaderTtsWaveformModel.ts';
+import { readerProbeCubicBezierProgress as bezier } from './lib/reader-motion-curve-fixture.mjs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 const ease = p => bezier(p, .25, .1, .25, 1), easeInOut = p => bezier(p, .42, 0, .58, 1);
 const curves = { ease, easeInOut };
@@ -53,7 +53,7 @@ clock.update(b, false, false); now = 1100; scheduled.shift()(); assert.equal(sch
 clock.update(b, true, true); assert.equal(scheduled.length, 0, 'reduce motion stops the repeating clock');
 clock.unsubscribe(b);
 let subscribed = 0, unsubscribed = 0;
-const View = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderTtsWaveform.ets', import.meta.url),
+const View = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderTtsWaveform.ets', import.meta.url),
   ['onPlaybackChanged'], { WAVEFORM_CLOCK: { unsubscribe() { unsubscribed++; }, subscribe() { subscribed++; } } });
 const view = Object.assign(new View(), { mounted: true, active: true, frozen: true, subscription: -1 });
 view.onPlaybackChanged(); assert.equal(subscribed, 0, 'frozen source view never starts a competing clock');
@@ -70,8 +70,8 @@ const hiddenId = hiddenClock.subscribe(true, false, () => {}, f => hiddenFrames.
 assert.equal(hiddenFrames.length, 1);
 hiddenClock.unsubscribe(hiddenId); hiddenNow = 100; hiddenFrames.shift()();
 assert.equal(hiddenFrames.length, 0, 'last hidden subscriber leaves no continuing postFrame chain');
-const panel = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets', import.meta.url), 'utf8');
-const content = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlTtsContent.ets', import.meta.url), 'utf8');
+const panel = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url), 'utf8');
+const content = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets', import.meta.url), 'utf8');
 assert.match(panel, /this\.launchWaveformSample = readerTtsWaveformSnapshot\(\)/);
 assert.match(panel, /frozenWaveformSample: this\.launchWaveformSample/);
 assert.match(content, /frozen: this\.sourceOnly !== 'none', frozenSample: this\.frozenWaveformSample/);

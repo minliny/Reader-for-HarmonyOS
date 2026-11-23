@@ -1,5 +1,7 @@
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 export const CONTRACT_CASES = {
+  "runtime-retirement-reserve": { "description": "Actual Runtime lifecycle/requests, public image paths, Body/Retention and Disk; native decoding/open and request scheduler finite ports", "resources": [] },
+  "configured-expiry-policy": { "description": "Actual Runtime binding and Disk saved TTL with real temp files, finite Core policy port", "resources": [] },
   "identity": {
     "description": "Actual ReadingImageDiskCache identity: real private files/inodes, fake Core policy; no native build/device",
     "resources": []
@@ -126,7 +128,7 @@ const { createMangaAtomicPayloadReaderFixture } = await import('./lib/manga-atom
 // Full production methods, real temporary files. The sparse quota fixtures
 // report their real stat.size without allocating gigabytes of test payload.
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const source = readFileSync(join(repo, 'entry/src/main/ets/app/ReadingImageDiskCache.ts'), 'utf8');
+const source = readFileSync(join(repo, 'entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts'), 'utf8');
 const executable = stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
 const handles = new Map();
 let rejectUnlink = () => false;
@@ -194,6 +196,140 @@ function derivedStorage(cache,files,events=[],beforeRemove=async()=>{}) {
 }
 
 const cases={
+'runtime-retirement-reserve':async()=>{
+  const {installedEtsCompiler}=await import('./lib/ets-compiler-runtime.mjs');const{ts}=installedEtsCompiler();
+  const load=(name,deps)=>{const text=readFileSync(join(repo,'entry/src/main/ets/platform/reading-resources/'+name+'.ts'),'utf8').replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,'');return new Function(...Object.keys(deps),stripTypeScriptTypes(text)+';return '+name)(...Object.values(deps));};
+  let accessGate;
+  const bodyIo={...io,access:async path=>{if(accessGate&&/\/manga-display-[0-9a-f]+\.json$/.test(path)){const gate=accessGate;accessGate=undefined;gate.enter();await gate.held;}return io.access(path);}};
+  const Retention=load('MangaDisplayRetention',{fs:bodyIo,util,readMangaAtomicPayload});
+  const Body=load('ReadingBodyImageHost',{fs:bodyIo,util,cryptoFramework:crypto,MangaDisplayRetention:Retention});
+  const body=Body.instance;
+  // Native decode and display-file creation form an explicit finite seam.
+  // Actual Body load/lease handling and Retention lookup/store stay active;
+  // this case does not execute materializeDisplayFile or native image APIs.
+  body.decodeBytes=async function(payload,current,position,preview,displayKey){assert.equal(current(),true);const path=this.mangaDisplayDir+'/reading-body-manga-'+displayKey+'-8x8.png';await fs.mkdir(this.mangaDisplayDir,{recursive:true});await fs.writeFile(path,payload);this.displayFileReferences.set(path,1);return{fileUri:'file://'+path,width:8,height:8,intrinsicWidth:8,intrinsicHeight:8,revision:'native-decoder-port'};};
+  const ownerSource=readFileSync(join(repo,'entry/src/main/ets/app/ReaderRuntimeOwner.ts'),'utf8');
+  const tree=ts.createSourceFile('ReaderRuntimeOwner.ts',ownerSource,ts.ScriptTarget.Latest,true);
+  assert.deepEqual(tree.parseDiagnostics,[]);
+  const declaration=tree.statements.find(n=>n.name?.text==='ReaderRuntimeOwner');
+  const names=new Set(['install','current','isCurrent','waitForPredecessorClose','start','startAfterPredecessor','release','close','closeDownloadsAndRuntime','closeRuntime',
+    'bindMangaStorage','request','requestDirect','bookAcquisitions','captureMangaImageContentValidity','loadReadingImage','loadReadingImageOwned',
+    'prefetchReadingImage','prefetchReadingImageOwned','runMangaImageWork','drainMangaImageWork','readingImageCacheIdentity','mangaStorageChapter','assertReadingImageCurrent','admitReadingImage']);
+  for(const name of names)assert.ok(declaration.members.some(n=>n.name?.getText(tree)===name),name);
+  const members=declaration.members.filter(n=>ts.isPropertyDeclaration(n)||ts.isConstructorDeclaration(n)||names.has(n.name?.getText(tree))).map(n=>n.getText(tree)).join('\n');
+  const events=[];
+  class Host{constructor(context){this.context=context;}getContext(){return this.context;}async close(){}setResponseAssetBridge(){}}
+  class Disk extends Cache{constructor(context){super(context,{getFreeBytes:async()=>8*1024**3});}}
+  // Request scheduling is an explicit finite forwarding port. Crucially it
+  // reaches unchanged requestDirect -> start -> predecessor wait, not an
+  // immediately answered authority or fake public start.
+  class Coordinator{constructor(execute){this.execute=execute;}request(...args){return this.execute(...args);}close(){}}
+  const deps={ReaderHostRegistry:Host,HarmonyTtsHostRouter:Host,HarmonySystemTtsHost:Host,HarmonyHttpTtsHost:Host,HarmonyTtsMediaSession:Host,HarmonyTtsBackgroundSession:Host,LocalEpubResourceHost:Host,
+    ReadingImageDiskCache:Disk,ReadingBodyImageHost:Body,BookAcquisitionCoordinator:Coordinator,
+    MangaChapterPreparationCoordinator:{forRuntime:()=>({close:async()=>{}})},ReaderStartupTrace:{current:()=>undefined},
+    LOG_DOMAIN:0,DEFAULT_CORE_REQUEST_TIMEOUT_MS:30000,hilog:{info(){},warn(){},error(){}},errorMessageOf:String,
+    canonicalReadingImageBaseUrl:value=>value,readerRuleMutationEffects:method=>({method}),coreAdmissionFailureSummary:()=>undefined,httpResponseFailureSummary:()=>undefined};
+  const Runtime=new Function(...Object.keys(deps),stripTypeScriptTypes('class ReaderRuntimeOwner{'+members+'}')+';return ReaderRuntimeOwner;')(...Object.values(deps));
+  Runtime.prototype.readingEntryPreparations=()=>({beginRequest:()=>false,captureMangaImageContentValidity:()=>()=>true});
+  // Controlled native open is below the actual public start/predecessor
+  // barrier. The original deadlock occurs before this seam can be admitted.
+  Runtime.prototype.startRuntime=async function(){events.push('native-open:'+this.host.context.id);this.state='ready';const id=this.host.context.id;this.runtime={request:async(method,params)=>{events.push(id+':'+method);if(method==='manga.cache.classify')return{data:{status:'cache',inUse:false,lastReadAt:null}};if(method==='manga.cache.classifyBatch')return{data:{results:params.versions.map(()=>({status:'cache',inUse:false,lastReadAt:null}))}};if(method==='manga.cache.eviction.pending')return{data:{grants:[]}};if(method==='manga.cache.evict')return{data:{candidates:[]}};if(method==='runtime.storage.flush')return{data:{}};throw Error('unexpected native command '+method);},close(){events.push('native-close:'+id);}};};
+  for(const mode of ['foreground','prefetch']){
+    const dir=join(root,'runtime-retire-'+mode);await fs.mkdir(dir);await fs.mkdir(join(dir,'cache'));
+    const context=id=>({id,filesDir:dir,cacheDir:join(dir,'cache')});
+    const old=Runtime.install(context('old-'+mode));await old.start();
+    const c=chapter('runtime-'+mode),i=image(c);await old.readingImageDiskCache.storeResource(i,bytes);await old.readingImageDiskCache.markChapterComplete(c,[i]);
+    let enter,release;const entered=new Promise(r=>{enter=r;}),held=new Promise(r=>{release=r;});accessGate={enter,held};
+    const loading=mode==='foreground'?old.loadReadingImage(c.sourceId,c.bookId,c.chapterIndex,c.contentVersion,i.imageUrl,c.chapterId,false,undefined,i.resourceRef,0,undefined,false,'identity-v1'):
+      old.prefetchReadingImage({...i,baseUrl:c.chapterId},undefined,undefined,false);
+    const rejected=assert.rejects(loading,/CANCELLED|cancelled|teardown/);
+    await deadline(entered);
+    const closing=old.release(),next=Runtime.install(context('next-'+mode));let started=false;
+    const starting=next.start().then(()=>{started=true;});await new Promise(r=>setImmediate(r));assert.equal(started,false);
+    const successorReserve=[];const reserve=next.readingImageDiskCache.reserveExternalWrite.bind(next.readingImageDiskCache);
+    next.readingImageDiskCache.reserveExternalWrite=(...args)=>{successorReserve.push(args);return reserve(...args);};
+    release();await deadline(Promise.all([rejected,closing,starting]));
+    assert.equal(successorReserve.length,0,'old miss cannot reserve through successor authority');
+    assert.ok(events.indexOf('native-close:old-'+mode)<events.indexOf('native-open:next-'+mode));
+    assert.equal(old.mangaImagePending,0);assert.equal(old.readingImageDiskCache.mangaReservedBytes,0);assert.equal(old.readingImageDiskCache.mangaBusy.size,0);
+    const loaded=await deadline(next.loadReadingImage(c.sourceId,c.bookId,c.chapterIndex,c.contentVersion,i.imageUrl,c.chapterId,false,undefined,i.resourceRef,0,undefined,false,'identity-v1'));
+    assert.equal(await exists(loaded.fileUri.slice(7)),true);assert.ok(successorReserve.length>0);body.release(loaded.fileUri);
+    await next.release();assert.equal(next.readingImageDiskCache.mangaReservedBytes,0);assert.equal(body.displayFileReferences.size,0);
+    old.readingImageDiskCache.close();next.readingImageDiskCache.close();
+  }
+  pass('actual Runtime predecessor/start/close and public foreground/prefetch miss reject old work before successor reserve; new owner decodes with zero remaining leases');
+},
+
+'configured-expiry-policy':async()=>{
+  const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+  const Runtime=selectedProductionMethods(join(repo,'entry/src/main/ets/app/ReaderRuntimeOwner.ts'),'ReaderRuntimeOwner',['bindMangaStorage'],{
+    ReadingBodyImageHost:{instance:{configureMangaDisplayCache(){},mangaDisplayInventory:async()=>[],setMangaDisplayReserve(){}}},
+  });
+  async function bound(name) {
+    const f=await fixture(name),facts=new Map(),calls=[],grants=new Map();let serial=0;
+    let beforeCandidates=async()=>{};
+    const fact=c=>facts.get(key(c))??{status:'cache',inUse:false,lastReadAt:null};
+    const wire=c=>({chapter:{sourceId:c.sourceId,bookId:c.bookId,chapterId:c.chapterId},manifestVersion:c.contentVersion});
+    const from=p=>({...p.chapter,contentVersion:p.manifestVersion});
+    const eligible=(c,p)=>{const x=fact(c);return x.status==='cache'&&!x.inUse&&(x.lastReadAt===null||x.lastReadAt<p.nowSeconds-p.ttlSeconds);};
+    const runtime=new Runtime();Object.assign(runtime,{readingImageDiskCache:f.cache,host:{getContext:()=>({filesDir:f.dir})},
+      async request(method,p={}) { calls.push({method,p:structuredClone(p)});
+        if(method==='manga.cache.classify')return{data:fact(from(p))};
+        if(method==='manga.cache.classifyBatch')return{data:{results:p.versions.map(v=>fact(from(v)))}};
+        if(method==='manga.cache.evict'){await beforeCandidates(p);return{data:{candidates:[...f.a.chapters.values()].filter(c=>eligible(c,p)).map(wire)}};}
+        if(method==='manga.cache.eviction.pending')return{data:{grants:[...grants.values()]}};
+        if(method==='manga.cache.eviction.claim'){const c=from(p);if(!eligible(c,p))return{data:{grant:null}};const grant={...wire(c),token:'ttl-'+ ++serial};grants.set(grant.token,grant);return{data:{grant}};}
+        if(method==='manga.cache.eviction.complete'){if(p.removed){const grant=grants.get(p.token);facts.set(key(from(grant)),{status:'missing',inUse:false,lastReadAt:null});grants.delete(p.token);}return{data:{}};}
+        assert.fail('unexpected Core port '+method);
+      }});runtime.bindMangaStorage();
+    return{...f,facts,calls,setCandidates:fn=>{beforeCandidates=fn;}};
+  }
+  for(const days of [14,30,3,undefined]){
+    const f=await bound('saved-ttl-'+days),c=chapter('ttl-'+days),i=await seed(f.cache,f.a,c);
+    const age=days===3?4:8,now=Math.floor(Date.now()/1000);
+    f.facts.set(key(c),{status:'cache',inUse:false,lastReadAt:now-age*86400});
+    if(days!==undefined){const policy=await f.cache.readPolicy();await f.cache.configurePolicy({...policy,expiryDays:days});}
+    await deadline(f.cache.maintainMangaStorage('expiry'));
+    const expected=days??7,enumerations=f.calls.filter(v=>v.method==='manga.cache.evict');
+    assert.equal(enumerations.length,1);assert.equal(enumerations[0].p.ttlSeconds,expected*86400);
+    const claims=f.calls.filter(v=>v.method==='manga.cache.eviction.claim');
+    assert.equal(await exists(await f.cache.resourcePath(i)),expected>age);
+    assert.equal(claims.length,expected>age?0:1);
+    for(const claim of claims){assert.equal(claim.p.ttlSeconds,enumerations[0].p.ttlSeconds);assert.equal(claim.p.nowSeconds,enumerations[0].p.nowSeconds);}
+    const cold=new Cache({filesDir:f.dir},{getFreeBytes:async()=>8*1024**3});
+    assert.equal((await cold.readPolicy()).expiryDays,expected,'saved TTL survives fresh Disk owner');
+    cold.close();f.cache.close();
+  }
+  {
+    const f=await bound('ttl-policy-scope-handoff'),a=chapter('a','one'),b=chapter('b','two'),live=chapter('live'),download=chapter('download');
+    const resources=[];
+    for(const c of [a,b,live,download]){resources.push(await seed(f.cache,f.a,c));f.facts.set(key(c),{status:c===download?'download':'cache',inUse:c===live,lastReadAt:Math.floor(Date.now()/1000)-6*86400});}
+    await f.cache.configurePolicy({...await f.cache.readPolicy(),expiryDays:30});
+    let enter,release;const entered=new Promise(r=>{enter=r;}),held=new Promise(r=>{release=r;});let once=true;
+    f.setCandidates(async()=>{if(once){once=false;enter();await held;}});
+    const old=f.cache.maintainMangaStorage('expiry',{sourceId:a.sourceId,bookId:a.bookId});await deadline(entered);
+    await f.cache.configurePolicy({...await f.cache.readPolicy(),expiryDays:3});
+    const global=f.cache.maintainMangaStorage('expiry');release();await deadline(Promise.all([old,global]));
+    const scans=f.calls.filter(v=>v.method==='manga.cache.evict');assert.deepEqual(scans.map(v=>v.p.ttlSeconds),[30*86400,3*86400,3*86400], 'old scoped caller retries current TTL; a scoped retry does not satisfy waiting global cleanup');
+    assert.equal(await exists(await f.cache.resourcePath(resources[0])),false);assert.equal(await exists(await f.cache.resourcePath(resources[1])),false);
+    assert.equal(await exists(await f.cache.resourcePath(resources[2])),true);assert.equal(await exists(await f.cache.resourcePath(resources[3])),true);
+    assert.equal(f.calls.filter(v=>v.method==='manga.cache.eviction.claim').length,2);
+    f.cache.close();
+  }
+  {
+    const f=await bound('ttl-reject-old-short-policy'),c=chapter('old-7-new-14'),i=await seed(f.cache,f.a,c);
+    f.facts.set(key(c),{status:'cache',inUse:false,lastReadAt:Math.floor(Date.now()/1000)-8*86400});
+    let enter,release;const entered=new Promise(r=>{enter=r;}),held=new Promise(r=>{release=r;});let once=true;
+    f.setCandidates(async()=>{if(once){once=false;enter();await held;}});
+    const old=f.cache.maintainMangaStorage('expiry');await deadline(entered);
+    await f.cache.configurePolicy({...await f.cache.readPolicy(),expiryDays:14});release();await deadline(old);
+    assert.deepEqual(f.calls.filter(v=>v.method==='manga.cache.evict').map(v=>v.p.ttlSeconds),[7*86400,14*86400]);
+    assert.equal(f.calls.some(v=>v.method==='manga.cache.eviction.claim'),false,'unclaimed old shorter TTL cannot delete newly retained original');
+    assert.equal(await exists(await f.cache.resourcePath(i)),true);f.cache.close();
+  }
+  pass('saved/default TTL reaches actual Runtime candidates and claims, cold policy and changed-policy scoped/global coalescing, in-use/download protection');
+},
+
 'identity':async()=>{
   {
     const {dir,a,cache}=await fixture('identity');const c=chapter('A');const i=await seed(cache,a,c);

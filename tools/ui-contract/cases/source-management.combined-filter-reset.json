@@ -1,0 +1,511 @@
+{
+  "id": "source-management.combined-filter-reset",
+  "version": 3,
+  "phase": 1,
+  "pageId": "source-management",
+  "fixture": {
+    "id": "public-source-combined-filter-reset-v3",
+    "description": "Use the existing attested public populated Source catalogue without changing its contents. Capture the default catalogue and native first row. Select Unchecked, Novel, and the first non-default group in that opening, then use the fixed public no-match query. One native Clear restores the original collection, first row and all four defaults.",
+    "publicSources": true,
+    "inputs": {
+      "zero-match": "Phase1NoMatch98417"
+    }
+  },
+  "steps": [
+    {
+      "id": "bookshelf",
+      "kind": "locate",
+      "anchors": [
+        "reader-main-tab-settings",
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false
+    },
+    {
+      "id": "open-settings",
+      "kind": "action",
+      "op": "click",
+      "from": "bookshelf",
+      "target": "reader-main-tab-settings"
+    },
+    {
+      "id": "settings",
+      "kind": "locate",
+      "anchors": [
+        "reader-settings-source-management"
+      ],
+      "keyboard": false,
+      "afterAction": "open-settings"
+    },
+    {
+      "id": "open-sources",
+      "kind": "action",
+      "op": "click",
+      "from": "settings",
+      "target": "reader-settings-source-management",
+      "waitFor": [
+        {
+          "kind": "source.route",
+          "fields": {
+            "payload.action": "open",
+            "payload.from": "settings",
+            "payload.to": "source"
+          }
+        }
+      ]
+    },
+    {
+      "id": "source-ready",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-footer",
+        "reader-source-list",
+        "reader-source-content",
+        "reader-source-search",
+        "reader-source-editor",
+        "reader-source-stats",
+        "reader-source-category-filter",
+        "reader-source-status-filter",
+        "reader-source-group-filter",
+        "reader-source-filter-block"
+      ],
+      "keyboard": false,
+      "afterAction": "open-sources",
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "fields": {
+            "payload.state": "rows",
+            "payload.readFact": "current",
+            "payload.status": "all",
+            "payload.category": "all",
+            "payload.groupIndex": 0,
+            "payload.allGroups": true,
+            "payload.queryLength": 0
+          },
+          "channel": "business",
+          "match": "latest"
+        }
+      ],
+      "quietMs": 500
+    },
+    {
+      "kind": "action",
+      "id": "select-unchecked",
+      "op": "click",
+      "from": "source-ready",
+      "target": "reader-source-status-unchecked",
+      "gesture": true,
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "fields": {
+            "payload.trigger": "status",
+            "payload.status": "unchecked"
+          },
+          "channel": "business"
+        }
+      ]
+    },
+    {
+      "kind": "locate",
+      "id": "unchecked",
+      "afterAction": "select-unchecked",
+      "anchors": [
+        "source-category-novel"
+      ],
+      "keyboard": false,
+      "quietMs": 250
+    },
+    {
+      "kind": "action",
+      "id": "select-novel",
+      "op": "click",
+      "from": "unchecked",
+      "target": "source-category-novel",
+      "gesture": true,
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "fields": {
+            "payload.trigger": "category",
+            "payload.category": "novel",
+            "payload.status": "unchecked"
+          },
+          "channel": "business"
+        }
+      ]
+    },
+    {
+      "kind": "locate",
+      "id": "novel",
+      "afterAction": "select-novel",
+      "anchors": [
+        "reader-source-group-trigger"
+      ],
+      "keyboard": false,
+      "quietMs": 250
+    },
+    {
+      "kind": "action",
+      "id": "open-group",
+      "op": "click",
+      "from": "novel",
+      "target": "reader-source-group-trigger",
+      "gesture": true,
+      "waitFor": [
+        {
+          "kind": "source.overlay",
+          "fields": {
+            "payload.phase": "open",
+            "payload.overlay": "group"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "sample",
+      "id": "group-open",
+      "afterAction": "open-group",
+      "anchors": [
+        "reader-source-group-panel",
+        "reader-source-group-selected",
+        "reader-source-group-option-1"
+      ],
+      "keyboard": false,
+      "quietMs": 500
+    },
+    {
+      "kind": "action",
+      "id": "select-group",
+      "op": "click",
+      "from": "group-open",
+      "target": {
+        "id": "reader-source-group-option-1",
+        "ancestors": [
+          "reader-source-group-panel"
+        ]
+      },
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "fields": {
+            "payload.trigger": "group",
+            "payload.groupIndex": 1,
+            "payload.allGroups": false
+          },
+          "channel": "business"
+        },
+        {
+          "kind": "source.overlay",
+          "fields": {
+            "payload.phase": "dismiss",
+            "payload.overlay": "group"
+          }
+        }
+      ]
+    },
+    {
+      "kind": "sample",
+      "id": "combined-active",
+      "afterAction": "select-group",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-footer",
+        "reader-source-list",
+        "reader-source-content",
+        "reader-source-editor",
+        "reader-source-filter-block",
+        "reader-source-status-filter",
+        "reader-source-category-filter",
+        "reader-source-group-trigger",
+        "reader-source-group-filter"
+      ],
+      "keyboard": false,
+      "quietMs": 500
+    },
+    {
+      "id": "focus-editor",
+      "kind": "action",
+      "op": "click",
+      "from": "combined-active",
+      "target": "reader-source-editor",
+      "gesture": true
+    },
+    {
+      "id": "source-ime",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-editor",
+        "reader-source-search"
+      ],
+      "keyboard": true,
+      "focus": "reader-source-editor",
+      "afterAction": "focus-editor",
+      "quietMs": 500
+    },
+    {
+      "id": "edit-zero-match",
+      "kind": "action",
+      "op": "inputText",
+      "from": "source-ime",
+      "target": "reader-source-editor",
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "fields": {
+            "payload.trigger": "edit",
+            "payload.queryLength": 18
+          },
+          "channel": "business"
+        }
+      ],
+      "inputRole": "zero-match"
+    },
+    {
+      "id": "filtered-ime",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-editor",
+        "reader-source-search"
+      ],
+      "keyboard": true,
+      "focus": "reader-source-editor",
+      "afterAction": "edit-zero-match",
+      "quietMs": 500
+    },
+    {
+      "id": "ime-back",
+      "kind": "action",
+      "op": "keyEvent",
+      "from": "filtered-ime",
+      "key": "Back"
+    },
+    {
+      "id": "zero-match",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-filtered-empty",
+        "reader-source-clear-filters",
+        "reader-source-footer",
+        "reader-source-editor"
+      ],
+      "keyboard": false,
+      "afterAction": "ime-back",
+      "quietMs": 500
+    },
+    {
+      "id": "clear-filters",
+      "kind": "action",
+      "op": "click",
+      "from": "zero-match",
+      "target": {
+        "id": "reader-source-clear-filters",
+        "ancestors": [
+          "reader-source-filtered-empty"
+        ]
+      },
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "channel": "business",
+          "fields": {
+            "payload.trigger": "clear"
+          }
+        }
+      ]
+    },
+    {
+      "id": "cleared",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-search",
+        "reader-source-editor",
+        "reader-source-list"
+      ],
+      "keyboard": false,
+      "afterAction": "clear-filters",
+      "quietMs": 500
+    }
+  ],
+  "ownerSources": [
+    "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+    "entry/src/main/ets/app/composition/ReaderSourceJourney.ets",
+    "entry/src/main/ets/features/source/ui/SourceManagementVerification.ts",
+    "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets",
+    "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
+    "entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts",
+    "entry/src/main/ets/features/source/presentation/SourceManagementScrollState.ts",
+    "entry/src/main/ets/features/source/presentation/SourceJourneyPresentation.ets",
+    "entry/src/main/ets/features/source/application/SourceOrchestrator.ets",
+    "entry/src/main/ets/features/source/application/SourceHost.ets",
+    "entry/src/main/ets/features/source/application/SourceGateway.ts",
+    "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
+    "entry/src/main/ets/ui/patterns/ReaderBottomTabBar.ets",
+    "entry/src/main/ets/ui/foundation/ReaderTokens.ets",
+    "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+    "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/ui/controls/ReaderFormRow.ets",
+    "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+    "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
+    "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets",
+    "entry/src/main/ets/ui/layout/ReaderPageGeometry.ts",
+    "entry/src/main/ets/ui/layout/ReaderScrollLayout.ts",
+    "entry/src/main/ets/ui/feedback/ReaderPageState.ets",
+    "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+    "entry/src/main/ets/ui/controls/ReaderSelect.ets",
+    "entry/src/main/ets/ui/chrome/PageBackBar.ets"
+  ],
+  "assertions": [
+    {
+      "id": "source.route.entry",
+      "evaluator": "source",
+      "kind": "route",
+      "expected": {
+        "action": "open",
+        "from": "settings",
+        "to": "source",
+        "anchor": "reader-source-back"
+      },
+      "source": "entry/src/main/ets/app/composition/ReaderSourceJourney.ets#ReaderSourceJourney",
+      "required": true,
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "sample": "source-ready",
+      "action": "open-sources"
+    },
+    {
+      "id": "source.filter.group",
+      "evaluator": "source",
+      "kind": "filter-selection",
+      "required": true,
+      "expected": {
+        "trigger": "group",
+        "field": "groupIndex",
+        "value": 1
+      },
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#commitGroupSelection",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "select-group",
+      "baseline": "group-open",
+      "sample": "combined-active"
+    },
+    {
+      "id": "source.filteredEmpty",
+      "evaluator": "source",
+      "kind": "filtered-empty",
+      "expected": {
+        "state": "filteredEmpty",
+        "countPositive": true,
+        "projected": 0
+      },
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#hasFilteredEmpty",
+      "required": true,
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "edit-zero-match",
+      "baseline": "source-ready",
+      "sample": "zero-match",
+      "editSample": "filtered-ime"
+    },
+    {
+      "id": "source.e2.clear-filter-target",
+      "evaluator": "source",
+      "kind": "native-control-target",
+      "expected": {
+        "target": "reader-source-clear-filters"
+      },
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#sourceList",
+      "required": true,
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "sample": "zero-match",
+      "action": "open-sources"
+    },
+    {
+      "id": "source.clearFilters.combined",
+      "evaluator": "source",
+      "kind": "combined-filter-reset",
+      "expected": {
+        "status": "unchecked",
+        "category": "novel",
+        "groupIndex": 1,
+        "queryLength": 18,
+        "capturedCatalogue": true
+      },
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#clearFilters",
+      "required": true,
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "clear-filters",
+      "baseline": "zero-match",
+      "sample": "cleared",
+      "entrySample": "source-ready",
+      "filteredSample": "combined-active"
+    },
+    {
+      "id": "source.layout.footer-empty-state",
+      "evaluator": "layout",
+      "kind": "nonOverlap",
+      "expected": {
+        "maxOverlapAreaVp2": 0
+      },
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#pageFooter",
+      "required": true,
+      "sources": [
+        "native-tree",
+        "window-metrics"
+      ],
+      "sample": "zero-match",
+      "a": "reader-source-filtered-empty",
+      "b": "reader-source-footer"
+    },
+    {
+      "id": "source.layout.footer-reset-action",
+      "evaluator": "layout",
+      "kind": "visibleFraction",
+      "expected": {
+        "minFraction": 1
+      },
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#clearFilters",
+      "required": true,
+      "sources": [
+        "native-tree",
+        "window-metrics"
+      ],
+      "sample": "zero-match",
+      "a": "reader-source-clear-filters",
+      "basis": "rectangular"
+    }
+  ],
+  "structure": {
+    "source-ready": "source-ready",
+    "group-open": "group-open",
+    "combined-active": "combined-active",
+    "source-ime": "source-ime",
+    "filtered-ime": "filtered-ime",
+    "zero-match": "zero-match",
+    "cleared": "cleared"
+  }
+}

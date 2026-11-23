@@ -11,12 +11,12 @@ const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-envir
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { createRequire, stripTypeScriptTypes } = await import('node:module');
-const { SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
+const { SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts');
 const {runtimeOwnerIdentityProbe} = await import('./lib/reader-runtime-admission-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const { resolveHorizontalFrame, SurfaceWidthSpec } = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
+const { resolveHorizontalFrame, SurfaceWidthSpec } = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
 const { readerInteractiveSafeLeft, readerInteractiveSafeRight, ReaderWindowMetricsSnapshot,
-  ReaderRectVp, ReaderInsetsVp } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+  ReaderRectVp, ReaderInsetsVp } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 
 
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
@@ -25,8 +25,7 @@ const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const surfaceSource = readFileSync(file('features/common/ReaderDialogSurface.ets'), 'utf8');
-const indexSource = readFileSync(file('pages/Index.ets'), 'utf8');
+const surfaceSource = readFileSync(file('ui/surfaces/ReaderDialogSurface.ets'), 'utf8');
 const surfaceTree = ts.createSourceFile(virtualFilePath('BookRemovalSurfaceProbe.ets'), surfaceSource,
   ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 assert.equal(surfaceTree.parseDiagnostics.length, 0, 'production dialog surface parses');
@@ -34,7 +33,7 @@ const actionModel = surfaceTree.statements.find(node => node.name?.text === 'Dia
 assert.ok(actionModel, 'production action model is present');
 const DialogActionView = new Function(stripTypeScriptTypes(actionModel.getText(surfaceTree))
   .replace(/^export /, '') + '; return DialogActionView;')();
-const specSource = readFileSync(file('features/common/ReaderSurfaceSpecs.ets'), 'utf8');
+const specSource = readFileSync(file('ui/surfaces/ReaderSurfaceSpecs.ets'), 'utf8');
 const { resolveDialogSpec } = new Function('TextAlign', 'SOURCE_SWITCH_VISUAL', stripTypeScriptTypes(specSource)
   .replace(/^import[^;]+;\s*/gm, '').replace(/^export /gm, '') + '; return { resolveDialogSpec };')({ Start: 'TextAlign.Start', Center: 'TextAlign.Center' }, SOURCE_SWITCH_VISUAL);
 // Mirror the SDK frontend's production child/decorator collection before the
@@ -46,75 +45,201 @@ syntax.builderParamObjectCollection.set('ReaderDialogSurface', new Set(
   [...surfaceSource.matchAll(/@BuilderParam\s+(\w+)\s*:/g)].map(match => match[1])));
 syntax.componentCollection.customComponents.add('BookRemovalDialog');
 syntax.componentCollection.customDialogs.add('BookRemovalDialog');syntax.propCollection.set('BookRemovalDialog',new Set(['message']));
-const actualRuntime={};const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>actualRuntime);let activeEvents;
-class NativeController { constructor(options){this.options=options;}open(){activeEvents.push('open');}close(){activeEvents.push('close');} }
-const hostMethods=[
-  'openBookRemovalDialog', 'dismissBookRemovalDialog', 'confirmBookRemovalDialog',
-  'requestRemoveDetailBook', 'requestRemoveShelfBook', 'requestRemoveShelfBooks',
-  'hasUnknownShelfWrite', 'canRemoveDetailBook', 'canRemoveShelfBook', 'isSameDetailBook', 'shelfBookKey', 'onBackPress',
-];
-hostMethods.push('isCurrentRuntime','isCurrentBookRemoval','bookRemovalDialogContent');
-const Host=createReaderBuilderProbe(indexSource,hostMethods,{LOCAL_SOURCE_ID:'local',ReaderRuntimeOwner,
- CustomDialogController:NativeController,BookRemovalDialog:class{},DialogAlignment:{Center:'center'}}).Component;
-
-const local = { sourceId: 'local', bookId: 'a', title: '本地书' };
-const online = { sourceId: 'source', bookId: 'b', title: '在线书' };
-function fixture(route, book = local) {
-  const events = [];activeEvents=events;
-  const host = Object.assign(new Host(), { route, detailBook: book, detailInBookshelf: true, shelfBooks: [local, online],
-    bookshelfSelectionBooks: [local, online], bookshelfSelectionReady: true,
-    bookshelfBatchRemovalBusy: false, shelfOperation: {removalKey:'',busy:false,batchRemovalBusy:false}, offlineMutationActiveKey: '',
-    readingSessionActive: false, sourceSwitchVisible: false, pendingSourceSwitch: undefined,
-    navigationGeneration: 1, bookRemovalPresentation:0,detailShelfAdmissionMount:1,mountedRuntimeOwner:actualRuntime,shelfReceiptRetired:false,bookRemovalDialogOpen: false,
-    bookRemovalDialogController: { open() { events.push('open'); }, close() { events.push('close'); } },
-    removeDetailBook(target) { events.push(['detail', target]); },
-    removeShelfBook(target) { events.push(['shelf', target]); },
-    removeShelfBooks(targets) { events.push(['batch', targets]); },
-  });
-  return { host, events };
-}
-{
- const {host,events}=fixture('detail',local);host.detailInBookshelf=false;host.requestRemoveDetailBook();
- assert.deepEqual(events,[],'removed local metadata cannot dispatch another delete or open a dead confirmation');
-}
-for (const origin of ['detail', 'bookshelf', 'bookshelfMultiSelect']) {
-  const request = h => origin === 'detail' ? h.requestRemoveDetailBook() :
-    origin === 'bookshelf' ? h.requestRemoveShelfBook(local) : h.requestRemoveShelfBooks([h.shelfBookKey(local)]);
-  for (const exit of ['cancel', 'back', 'confirm', 'stale', 'busy']) {
-    const { host: h, events } = fixture(origin);
-    request(h); request(h);
-    assert.deepEqual(events, ['open'], 'repeated requests must preserve one confirmation');
-    if (exit === 'cancel') h.dismissBookRemovalDialog();
-    else if (exit === 'back') assert.equal(h.onBackPress(), true);
-    else {
-      if (exit === 'stale') h.navigationGeneration++;
-      if (exit === 'busy') { h.shelfOperation={...h.shelfOperation,removalKey:'busy',busy:true,batchRemovalBusy:true}; }
-      h.confirmBookRemovalDialog();
-    }
-    h.confirmBookRemovalDialog();
-    assert.equal(h.bookRemovalDialogOpen, false);
-    assert.equal(h.bookRemovalConfirmAction, undefined, 'intent is released on every exit');
-    assert.equal(events.filter(Array.isArray).length, exit === 'confirm' ? 1 : 0,
-      `${origin}/${exit}: only one admitted confirmation may dispatch a mutation`);
-    if (exit === 'confirm') assert.deepEqual(events[2][1], origin === 'bookshelfMultiSelect' ? [local] : local);
-    assert.equal(events.filter(e => e === 'close').length, 1);
+if (selectedCase === 'confirmation-admission') {
+  const { selectedProductionClasses, selectedProductionMethods, selectedProductionValues } = await import('./lib/selected-production-methods.mjs');
+  const { BookRemovalDialogPresentation } = await import('../entry/src/main/ets/features/bookshelf/presentation/BookRemovalDialogPresentation.ts');
+  const { ReaderNavigation } = await import('../entry/src/main/ets/app/navigation/ReaderNavigation.ts');
+  const mutationFile = file('features/bookshelf/presentation/BookshelfMutationPresentation.ets');
+  const { EMPTY_SELECTION } = selectedProductionValues(mutationFile, ['EMPTY_SELECTION']);
+  const { BookshelfMutationPresentation } = selectedProductionClasses(mutationFile, ['BookshelfMutationPresentation'],
+    { EMPTY_SELECTION, EMPTY_BOOKSHELF_OPERATION_SNAPSHOT: { busy: false, removalKey: '' } });
+  const { BookshelfDetailPresentation } = selectedProductionClasses(
+    file('features/bookshelf/presentation/BookshelfDetailPresentation.ets'), ['BookshelfDetailPresentation']);
+  const { BookshelfProjectionOwner } = selectedProductionClasses(
+    file('features/bookshelf/application/BookshelfProjectionOwner.ts'), ['BookshelfProjectionOwner']);
+  const runtime = {}, ReaderRuntimeOwner = runtimeOwnerIdentityProbe(() => runtime);
+  const local = { sourceId: 'local', bookId: 'a', title: '本地书', addedAt: 1 };
+  const online = { sourceId: 'source', bookId: 'b', title: '在线书', addedAt: 2 };
+  const localKey = 'local\0a';
+  const tick = () => new Promise(resolve => setImmediate(resolve));
+  let nativeEvents, nativeController;
+  class NativeController {
+    constructor(options) { this.options = options; nativeController = this; }
+    open() { nativeEvents.push('open'); this.options.builder(); }
+    close() { nativeEvents.push('close'); }
+    cancelNatively() { nativeEvents.push('close'); this.options.cancel(); }
   }
-}
-for (const book of [local, online]) if(selectedCase==='confirmation-admission') {
-{
-  const { host: h } = fixture('detail', book); h.requestRemoveDetailBook();
-  assert.ok(h.bookRemovalMessage.includes(book.title));
-  assert.match(h.bookRemovalMessage, book === local ? /解析内容、阅读进度和离线任务将一并删除/ : /阅读进度和已缓存正文不会删除/);
-}
-{
-  const { host: h, events } = fixture('detail'); h.requestRemoveDetailBook(); h.detailBook = online;
-  h.confirmBookRemovalDialog(); assert.deepEqual(events, ['open', 'close'], 'changed detail identity is never removed');
-}
-{
-  const { host: h, events } = fixture('bookshelf'); h.requestRemoveShelfBook(local); h.shelfBooks = [online];
-  h.confirmBookRemovalDialog(); assert.deepEqual(events, ['open', 'close'], 'missing shelf identity is never removed');
-}
+  class DialogChild {
+    constructor(owner, params, _storage, id) { Object.assign(this, {owner, params, id}); }
+  }
+  const nativeHostSource = readFileSync(file('features/bookshelf/ui/BookRemovalDialogHost.ets'), 'utf8');
+  const nativeHostMembers = ['aboutToAppear', 'aboutToDisappear', 'createDialog', 'dialogContent'];
+  const NativeHost = createReaderBuilderProbe(nativeHostSource, nativeHostMembers, {
+    BookRemovalDialog: DialogChild, CustomDialogController: NativeController, DialogAlignment: { Center: 'center' },
+  }, { childSources: { BookRemovalDialog: readFileSync(file('features/bookshelf/ui/BookRemovalDialog.ets'), 'utf8') } }).Component;
+  const hostMethods = ['openBookRemovalDialog', 'onBackPress', 'isCurrentRuntime'];
+  const Host = selectedProductionMethods(file('pages/Index.ets'), 'Index', hostMethods, {
+    ReaderRuntimeOwner, hilog: { warn() {} }, DOMAIN: 0, errorMessageOf: error => error.message,
+  });
 
+  function fixture(route, book = local, paged = true) {
+    const events = [], feedback = [], messages = [];
+    nativeEvents = events;
+    const model = { books: [local, online], revision: 'r1', pending: undefined, failed: false };
+    const state = () => ({ books: model.books, total: model.books.length,
+      projectionRevision: paged ? model.revision : undefined });
+    const projection = new BookshelfProjectionOwner(runtime, () => true, () => ({
+      loadAll: async () => state(),
+      loadPage: async () => {
+        if (model.pending !== undefined) await model.pending;
+        if (model.failed) throw Error('shelf temporarily unavailable');
+        return state();
+      },
+    }), async () => []);
+    const binding = { identity: 'selection', current: () => true, emit() {} };
+    projection.attach(binding);
+    const host = Object.assign(new Host(), {
+      route, readingSessionActive: false, shelfRead: { snapshot: { books: [local, online] } },
+      mangaSourceSwitch: { selectionVisible: false }, navigationGeneration: 1, bookRemovalConfirmation: new BookRemovalDialogPresentation(),
+      detailShelfAdmissionMount: 1, mountedRuntimeOwner: runtime, shelfReceiptRetired: false,
+      navigationOwner: new ReaderNavigation(), jsonImportPresentation: {},
+      sourceSwitchPresentation: { visible: false }, shelfGroupPresentation: { back: () => false },
+    });
+    host.navigationOwner.show(route);
+    const nativeHost = new NativeHost(undefined, {});
+    nativeHost.presentation = host.bookRemovalConfirmation;
+    nativeHost.aboutToAppear();
+    const confirmCurrent = () => [...nativeHost.children.values()].findLast(child => child instanceof DialogChild).params.onConfirm();
+    const confirm = (message, action) => { messages.push(message); host.openBookRemovalDialog(message, action); };
+    const operation = {
+      current: () => ({ generation: 1 }),
+      remove(targets, batch, _filter, current) {
+        assert.equal(current(), true);
+        events.push([batch ? 'batch' : route, targets]);
+        return Promise.resolve(undefined);
+      },
+    };
+    host.shelfMutations = new BookshelfMutationPresentation({
+      host: () => ({ operations: () => operation }), owner: () => host.mountedRuntimeOwner,
+      isCurrentOwner: owner => owner === runtime, retired: () => host.shelfReceiptRetired, route: () => host.route,
+      generation: () => host.navigationGeneration, mounting: () => host.detailShelfAdmissionMount,
+      filter: () => ({ readingState: 'all', sourceKind: 'all' }), feedback: message => feedback.push(message),
+      readSelection: () => projection.selection(binding),
+      selectionMatches: (selection, current) => projection.selectionMatches(selection, binding, current),
+      shelfProjection: () => ({ generation: 1, revision: model.revision, books: host.shelfRead.snapshot.books,
+        value: { shelf: state() }, filter: { readingState: 'all', sourceKind: 'all' } }),
+      readingActive: () => false, refreshShelf() {},
+      confirmRemoval: confirm, leaveSelection: () => events.push('leave'), finishSelection: () => events.push('finish'),
+    });
+    const detail = new BookshelfDetailPresentation({
+      owner: () => host.mountedRuntimeOwner, isCurrentOwner: owner => owner === runtime, retired: () => false,
+      route: () => host.route, generation: () => host.navigationGeneration, mounting: () => host.detailShelfAdmissionMount,
+      book: () => model.detailBook, inBookshelf: () => model.inBookshelf, blocked: () => false,
+      mutations: () => host.shelfMutations, confirm,
+    });
+    model.detailBook = book;
+    model.inBookshelf = true;
+    return { host, model, detail, events, feedback, messages, confirmCurrent };
+  }
+
+  for (const route of ['detail', 'bookshelf', 'bookshelfMultiSelect']) {
+    for (const exit of ['cancel', 'back', 'confirm', 'stale', 'busy']) {
+      const f = fixture(route), h = f.host, selection = h.shelfMutations;
+      if (route === 'bookshelfMultiSelect') { selection.openSelection(local, [local, online]); await tick(); }
+      const request = () => {
+        if (route === 'detail') f.detail.request(f.detail.identity());
+        else if (route === 'bookshelf') selection.requestSingleRemoval(local);
+        else selection.requestSelectionRemoval(selection.selection.identity, [localKey]);
+      };
+      request(); request();
+      assert.deepEqual(f.events, ['open'], 'repeated requests preserve one confirmation');
+      if (exit === 'cancel') nativeController.cancelNatively();
+      else if (exit === 'back') assert.equal(h.onBackPress(), true);
+      else {
+        if (exit === 'stale') h.navigationGeneration++;
+        if (exit === 'busy') selection.snapshot = { ...selection.snapshot, busy: true };
+        f.confirmCurrent();
+      }
+      f.confirmCurrent();
+      await tick();
+      assert.equal(h.bookRemovalConfirmation.isOpen(), false);
+      assert.deepEqual(f.events, exit === 'confirm' ?
+        ['open', 'close', [route === 'bookshelfMultiSelect' ? 'batch' : route, [{ sourceId: 'local', bookId: 'a' }]]] :
+        ['open', 'close'], `${route}/${exit}`);
+    }
+  }
+
+  for (const book of [local, online]) {
+    const f = fixture('detail', book);
+    f.detail.request(f.detail.identity());
+    assert.ok(f.messages[0].includes(book.title));
+    assert.match(f.messages[0], book === local ? /解析内容、阅读进度和离线任务将一并删除/ : /阅读进度和已缓存正文不会删除/);
+    f.model.detailBook = book === local ? online : local;
+    f.confirmCurrent();
+    assert.deepEqual(f.events, ['open', 'close'], 'changed detail identity is never removed');
+  }
+  {
+    const f = fixture('detail');
+    f.model.inBookshelf = false;
+    f.detail.request(f.detail.identity());
+    assert.deepEqual(f.events, [], 'removed local metadata cannot reopen confirmation');
+  }
+  {
+    const f = fixture('bookshelf');
+    f.host.shelfMutations.requestSingleRemoval(local);
+    f.host.shelfRead.snapshot.books = [online];
+    f.confirmCurrent();
+    assert.deepEqual(f.events, ['open', 'close'], 'missing shelf identity is never removed');
+  }
+
+  for (const paged of [true, false]) {
+    const f = fixture('bookshelfMultiSelect', local, paged), selection = f.host.shelfMutations;
+    selection.openSelection(local, [local, online]);
+    await tick();
+    const oldIdentity = selection.selection.identity;
+    assert.equal(selection.selection.initialKey, localKey);
+    selection.requestSelectionRemoval(oldIdentity, [localKey, 'unknown']);
+    assert.deepEqual(f.events, [], 'partial obsolete targets never open a destructive confirmation');
+    selection.requestSelectionRemoval(oldIdentity, [localKey]);
+    f.model.revision = 'r2';
+    f.model.books = [{ ...local, addedAt: 3 }, online];
+    f.confirmCurrent();
+    await tick();
+    assert.deepEqual(f.events, ['open', 'close'], 'changed selection version never dispatches removeBatch');
+    assert.deepEqual(f.feedback, ['书架已变化，请重新选择']);
+    assert.notEqual(selection.selection.identity, oldIdentity);
+    assert.equal(selection.selection.initialKey, '');
+    assert.equal(selection.selection.ready, true);
+    selection.requestSelectionRemoval(oldIdentity, [localKey]);
+    assert.deepEqual(f.events, ['open', 'close'], 'old page callbacks cannot borrow refreshed identity');
+    selection.requestSelectionRemoval(selection.selection.identity, [localKey]);
+    f.confirmCurrent();
+    await tick();
+    assert.deepEqual(f.events.at(-1), ['batch', [{ sourceId: 'local', bookId: 'a' }]]);
+  }
+  {
+    const f = fixture('bookshelfMultiSelect'), selection = f.host.shelfMutations;
+    selection.openSelection(local, [local, online]);
+    await tick();
+    selection.requestSelectionRemoval(selection.selection.identity, [localKey]);
+    f.model.failed = true;
+    f.confirmCurrent();
+    await tick();
+    assert.deepEqual(f.events, ['open', 'close']);
+    assert.deepEqual(f.feedback, ['暂时无法核对书架，请重试']);
+    assert.equal(selection.selectionVerifying, false);
+    let resume;
+    f.model.failed = false;
+    f.model.pending = new Promise(resolve => { resume = resolve; });
+    selection.requestSelectionRemoval(selection.selection.identity, [localKey]);
+    f.confirmCurrent();
+    assert.equal(selection.selectionVerifying, true);
+    selection.retireSelection();
+    f.host.navigationGeneration++;
+    resume();
+    await tick();
+    assert.deepEqual(f.events, ['open', 'close', 'open', 'close'], 'late recheck cannot dispatch into a newer route');
+  }
 }
 if(selectedCase==='dialog-message') {
 let metrics = new ReaderWindowMetricsSnapshot();
@@ -130,7 +255,7 @@ class SurfaceChild {
     params.body();
   }
 }
-const dialogSource = readFileSync(file('features/bookshelf/BookRemovalDialog.ets'), 'utf8');
+const dialogSource = readFileSync(file('features/bookshelf/ui/BookRemovalDialog.ets'), 'utf8');
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
@@ -173,6 +298,9 @@ assert.equal(cancel + confirm, 2, 'unrouted action ids never reach the callbacks
 
 }
 if(selectedCase==='removal-actions') {
+const resolverSource = readFileSync(file('ui/foundation/ReaderSurfaceResolvers.ts'), 'utf8');
+const { readerReadableFontScale, readerScaledControlHeight } = new Function(stripTypeScriptTypes(resolverSource)
+  .replace(/^import[^;]+;\s*/gm, '').replace(/^export /gm, '') + '; return { readerReadableFontScale, readerScaledControlHeight };')();
 let metrics=new ReaderWindowMetricsSnapshot();
 // Surface probe: the shared component owns spec geometry, the standard header,
 // the data-driven actions row and press feedback for the book-removal spec.
@@ -181,11 +309,12 @@ metrics.windowRect = new ReaderRectVp(0, 0, 390, 844);
 const { owner: surface } = createReaderBuilderProbe(surfaceSource,
   ['body', 'defaultBody', 'build', 'header', 'actionsRow', 'actionCell', 'spec', 'resolvedFrame',
     'frameWidth', 'framePadding', 'actionLabelColor', 'actionSurfaceRole', 'actionModifier',
-    'actionTouchRegion', 'bodyActionsInnerMargin'], {
+    'actionTouchRegion', 'bodyActionsInnerMargin', 'actionHeight', 'fontScale'], {
   ReaderWindowCoordinator: { metrics: () => metrics }, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   resolveHorizontalFrame, SurfaceWidthSpec, SurfaceHorizontalFrame: class {
     constructor(left, right, width) { Object.assign(this, { left, right, width }); }
-  }, resolveDialogSpec, ButtonType: { Normal: 'Normal' },
+  }, resolveDialogSpec, readerReadableFontScale, readerScaledControlHeight,
+  MESSAGE_ACTION: { lineHeightFp: 20 }, ButtonType: { Normal: 'Normal' },
 });
 const actions = [
   { id: 'cancel', label: '取消', tone: 'default', enabled: true, defaultFocus: true },

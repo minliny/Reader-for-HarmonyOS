@@ -8,12 +8,12 @@ import {compile} from './lib/rules-mutation-durable-probe.mjs';
 // Read-only resource probe. Stored source inputs are exact audited production
 // snapshots; platform IO/protocol observations are controlled adapters. This
 // does not execute Core mutations or establish HarmonyOS device budgets.
-const policy=await import('../entry/src/main/ets/app/HttpTransportPolicy.ts');
-const category=await import('../entry/src/main/ets/features/source/ReaderSourceCategory.ts');
+const policy=await import('../entry/src/main/ets/platform/network/HttpTransportPolicy.ts');
+const category=await import('../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
 const errors=await import('../entry/src/main/ets/app/ErrorMessage.ts');
 const scheduler=await import('../entry/src/main/ets/app/BookRequestScheduler.ts');
 const {ReaderWriteEvidence}=await import('../entry/src/main/ets/app/ReaderWriteEvidence.ts');
-const methods=compile('features/settings/RulesMutationContract.ts','RULES_MUTATION_METHODS',{},true);
+const methods=compile('features/settings/application/RulesMutationContract.ts','RULES_MUTATION_METHODS',{},true);
 const basePath=process.env.READER_SUBSCRIPTION_BASE_STORE_SOURCE??new URL('./evidence/p9-subscription-capacity/base-store.txt',import.meta.url);
 const baseSource=readFileSync(basePath,'utf8');
 const shaPath=process.env.READER_SUBSCRIPTION_STORE_SOURCE??new URL('./evidence/p9-subscription-bounded-capacity/store-candidate.txt',import.meta.url);
@@ -56,16 +56,16 @@ function build(storeSource,disk={raw:''},stats=newStats()){
   digest:async()=>({data:new Uint8Array(h.digest())})};}};
  const sha256Hex=compile('app/BundledBookSourceSupply.ts','sha256Hex',{cryptoFramework,util:{TextEncoder:class{encodeInto(text){return new TextEncoder().encode(text);}}}},true);
  const atomic=compile('app/ReaderAtomicSnapshotFile.ts','replaceReaderAtomicSnapshot',{fileIo},true);
- const Store=compile('features/settings/RulesMutationIntentStore.ts','RulesMutationIntentStore',{ReaderRuntimeOwner:Runtime,fileIo,util:{generateRandomUUID:()=>uuid(++uuids)},replaceReaderAtomicSnapshot:atomic,RULES_MUTATION_METHODS:methods,sha256Hex},true,storeSource);
- const types=compile('features/settings/RulesMutationOwner.ts','*',{...scheduler,ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,RULES_MUTATION_METHODS:methods,RulesMutationIntentStore:Store},true,ownerSource),Owner=types.RulesMutationOwner;
+ const Store=compile('features/settings/application/RulesMutationIntentStore.ts','RulesMutationIntentStore',{ReaderRuntimeOwner:Runtime,fileIo,util:{generateRandomUUID:()=>uuid(++uuids)},replaceReaderAtomicSnapshot:atomic,RULES_MUTATION_METHODS:methods,sha256Hex},true,storeSource);
+ const types=compile('features/settings/application/RulesMutationOwner.ts','*',{...scheduler,ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,RULES_MUTATION_METHODS:methods,RulesMutationIntentStore:Store},true,ownerSource),Owner=types.RulesMutationOwner;
  runtime={closed:false,getUIAbilityContext:()=>({filesDir:'/controlled-capacity'}),supportsCoreCapability:()=>true,
   async request(method,params={},options={}){stats.rpcCalls++;if(options.canDispatch?.()===false)throw new scheduler.BookRequestNotDispatchedError('capacity last admission rejected');options.onDispatch?.();
    if(method==='rules.mutation.query')return {data:{head:head??null,receipt:latest!==undefined&&latest.binding.operationId===params.operationId?latest:null}};
    if(method==='source.import'){stats.rpcWrites++;return {data:ackData(method,params)};}
    assert.equal(method,'rules.mutation.apply');assert.equal(options.shouldCancel,undefined);const expected=disk.first?.subscription.steps[stats.rpcWrites];if(expected!==undefined)assert.deepEqual(params.mutation,{method:expected.method,params:expected.params},'every physical RPC preserves original accepted step DTO');stats.rpcWrites++;
    latest=receipt(params.operationId,params.sequence,params.mutation);head=latest.binding;return {data:latest};}};
- const Gateway=compile('features/settings/RulesManagementGateway.ts','RulesManagementGateway',{ReaderRuntimeOwner:Runtime,RulesMutationOwner:Owner},true);
- const Source=compile('features/source/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner:Runtime,...policy,...category,...errors},true);
+ const Gateway=compile('features/settings/application/RulesManagementGateway.ts','RulesManagementGateway',{ReaderRuntimeOwner:Runtime,RulesMutationOwner:Owner},true);
+ const Source=compile('features/source/application/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner:Runtime,...policy,...category,...errors},true);
  return{stats,disk,Store,Owner,runtime,source:new Source(runtime),gateway:new Gateway(runtime),owner:Owner.forRuntime(runtime),sha256Hex,head:value=>{head=value;latest=undefined;}};
 }
 function originalPlan(f,n){const sources=Array.from({length:n},(_,i)=>sourceData(i));const document=JSON.stringify(sources),plan=f.source.prepareSubscriptionDocument(document);
@@ -131,7 +131,7 @@ async function integrity(){const seed=build(shaSource),{plan}=originalPlan(seed,
  writeFileSync(resolve(out,'INTEGRITY.json'),JSON.stringify(results,null,2)+'\n');console.log(JSON.stringify({integrity:results}));return results;
 }
 const loader=resolveEtsLoaderRoot();
-const dependencyHashes=Object.fromEntries(['app/ReaderAtomicSnapshotFile.ts','app/BundledBookSourceSupply.ts','features/settings/RulesManagementGateway.ts','features/settings/RulesMutationContract.ts','features/source/SourceGateway.ts'].map(p=>[p,digest(readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8'))]));
+const dependencyHashes=Object.fromEntries(['app/ReaderAtomicSnapshotFile.ts','app/BundledBookSourceSupply.ts','features/settings/application/RulesManagementGateway.ts','features/settings/application/RulesMutationContract.ts','features/source/application/SourceGateway.ts'].map(p=>[p,digest(readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8'))]));
 const manifest={hostDependencyBase:'3df16be152bcb7701a08670a218cb90b964d6cca',candidateCommit:process.env.READER_SUBSCRIPTION_CANDIDATE_COMMIT??null,storeSource:String(shaPath),storeSha256:digest(shaSource),ownerSource:String(ownerPath),ownerSha256:digest(ownerSource),dependencyHashes,environment:{node:process.version,platform:process.platform,arch:process.arch,loader,sdkTypeScriptVersion:createRequire(import.meta.url)(loader+'/node_modules/typescript').version},boundaries:['Full production methods compiled with installed SDK; controlled memory file and official crypto API seams','50/500/5000 complete Host protocol chains use typed observations, zero Core database writes','Host probe CPU/RSS are not HarmonyOS target/device budgets or Atomic crash durability']};
 writeFileSync(resolve(out,'INPUTS.json'),JSON.stringify(manifest,null,2)+'\n');
 const rows=[];for(const n of [50,500,5000])rows.push(await full(n));

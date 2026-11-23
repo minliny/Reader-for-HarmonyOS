@@ -17,7 +17,7 @@ const { localImportFailure } = await import('../entry/src/main/ets/app/LocalImpo
 const read = (relative) => readFileSync(new URL(`../${relative}`, import.meta.url), 'utf8');
 const host = read('entry/src/main/ets/app/ReaderHostRegistry.ts');
 const owner = read('entry/src/main/ets/app/ReaderRuntimeOwner.ts');
-const gateway = read('entry/src/main/ets/features/bookshelf/LocalBookImportGateway.ts');
+const gateway = read('entry/src/main/ets/features/bookshelf/application/LocalBookImportGateway.ts');
 
 // Execute the real gateway method with a deterministic failing Core request.
 // It must retry exactly three times, enqueue the same opaque token, and never
@@ -142,8 +142,9 @@ const ImportGateway = new Function('ReaderCoreGateway','ReaderRuntimeOwner', 'hi
   ReaderCoreGateway, {}, { warn() {}, error() {} }, error => error.message, localImportFailure);
 const importBook = { bookId: 'same-bytes', title: '新书名', author: '新作者',
   coverUrl: 'cover', intro: '简介', kind: 'txt', lastChapter: '第二章' };
-for (const scenario of ['normal', 'committed', 'sourceId', 'bookId', 'title', 'author', 'coverUrl', 'intro', 'kind', 'lastChapter']) {
+for (const scenario of ['normal', 'cleanupPending', 'committed', 'sourceId', 'bookId', 'title', 'author', 'coverUrl', 'intro', 'kind', 'lastChapter']) {
   const calls = [];
+  const acknowledged = scenario === 'normal' || scenario === 'cleanupPending';
   const owner = {
     async request(name, params) {
       calls.push(name);
@@ -154,7 +155,7 @@ for (const scenario of ['normal', 'committed', 'sourceId', 'bookId', 'title', 'a
         persisted: { kind: 'localBook', data: { book: importBook } } } };
       if (name === 'bookshelf.add') {
         assert.deepEqual(params, { sourceId: 'local', ...importBook });
-        if (scenario === 'normal') return { data: { sourceId:'local',bookId:importBook.bookId,created: false,addedAt:1 } };
+        if (acknowledged) return { data: { sourceId:'local',bookId:importBook.bookId,created: false,addedAt:1 } };
         throw Error('lost add response');
       }
       if (name === 'bookshelf.get') {
@@ -162,18 +163,22 @@ for (const scenario of ['normal', 'committed', 'sourceId', 'bookId', 'title', 'a
         if (scenario !== 'committed') shelf[scenario] = 'previous value';
         return { data: { book: shelf } };
       }
-      if (name === 'import.finalize') return { data: {} };
+      if (name === 'import.finalize') return { data: { kind: 'localBook', data: { finalized: scenario === 'normal' } } };
       assert.fail(`ambiguous upsert must preserve Core journal: ${name}`);
     },
     async commitLocalBookInput() { calls.push('assets.commit'); return { created: false }; },
+    async enqueuePendingLocalImportFinalize(value) { assert.deepEqual(value, token); calls.push('journal.queue'); },
     async rollbackLocalBookAsset() { assert.fail('possible durable shelf reference must preserve assets'); },
   };
   const result = await new ImportGateway(owner).importPreparedSelections([
     { state: 'ready', input: { bookId: importBook.bookId, fileName: '新书名.txt', stagedPath: '/private/input' } },
   ]);
-  if (scenario === 'normal') {
+  if (acknowledged) {
     assert.equal(result.imported, 1); assert.equal(result.failed, 0);
-    assert.equal(calls.at(-1), 'import.finalize');
+    assert.equal(result.items[0].disposition, 'existing');
+    assert.equal(result.items[0].cleanupDeferred, scenario === 'cleanupPending' ? true : undefined);
+    assert.equal(calls.filter(name => name === 'import.finalize').length, scenario === 'cleanupPending' ? 3 : 1);
+    assert.equal(calls.at(-1), scenario === 'cleanupPending' ? 'journal.queue' : 'import.finalize');
     assert.equal(calls.filter(name => name === 'bookshelf.get').length, 0);
   } else {
     assert.equal(result.failed, 1); assert.equal(result.items[0].failure.code, 'recoveryPending');

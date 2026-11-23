@@ -1,3 +1,4 @@
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import { mangaSurfaceSdkDependencies, mountMangaViewportBuilder } from './lib/manga-surface-sdk-probe.mjs';
 import assert from 'node:assert/strict';
@@ -5,11 +6,11 @@ import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {createArkUIPropertyRuntimeProbe} from './lib/arkui-property-runtime-probe.mjs';
-import {createDefaultReaderWindowMetrics,readerInteractiveSafeInsets} from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import {createDefaultReaderWindowMetrics,readerInteractiveSafeInsets} from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 
 // The override permits an immutable old-source counterfactual without changing
 // the shared worktree. Normal check-local always reads the production Surface.
-const source=readFileSync(process.env.READER_MANGA_VIEWPORT_SOURCE??new URL('../entry/src/main/ets/features/manga/MangaReadingSurface.ets',import.meta.url),'utf8');
+const source=readFileSync(process.env.READER_MANGA_VIEWPORT_SOURCE??new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),'utf8');
 const require=createRequire(import.meta.url);
 const sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`);
@@ -17,12 +18,12 @@ const tree=ts.createSourceFile(virtualFilePath('MangaViewportRestoreProbe.ets'),
 assert.equal(tree.parseDiagnostics.length,0);
 const component=tree.statements.find(n=>n.name?.getText(tree)==='MangaReadingSurface');
 const names=component.members.map(n=>n.name?.getText(tree)).filter(Boolean);
-const projectionSource=readFileSync(new URL('../entry/src/main/ets/features/manga/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
+const projectionSource=readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
 const Projection=new Function(`${stripTypeScriptTypes(projectionSource)};return MangaStripProjection`)();
 const dataText=tree.statements.find(n=>n.name?.getText(tree)==='MangaStripDataSource').getText(tree);
 const DataSource=new Function('MangaStripProjection',`${stripTypeScriptTypes(dataText)};return MangaStripDataSource`)(Projection);
 const frameNode=tree.statements.find(n=>n.name?.getText(tree)==='MangaLayoutFrame');
-const frameDeps=frameNode?{MangaLayoutFrame:new Function('FrameCallback',`${stripTypeScriptTypes(frameNode.getText(tree))};return MangaLayoutFrame`)(class {})}:{};
+const frameDeps=frameNode?{MangaLayoutFrame:new Function('FrameCallback','ReaderPostLayoutFrame', `${stripTypeScriptTypes(frameNode.getText(tree))};return MangaLayoutFrame`)(class {}, actualReaderPostLayoutFrame())}:{};
 const boundary=new Proxy({}, {get:()=>()=>{}});
 const tick=()=>new Promise(resolve=>setImmediate(resolve));
 function fixture({tiles=12,height=750}={}) {
@@ -63,7 +64,7 @@ function fixture({tiles=12,height=750}={}) {
   owner.data.registerDataChangeListener({onDataReloaded:()=>notifications.push('reload'),onDataChange:i=>notifications.push(i)});
   return {owner,list,timers,frames,scrolls,queries,windows,notifications,
     readyRows(indices){for(const index of indices)tileFacts.set(index,{image:{fileUri:`file://viewport-${index}.png`,revision:'ready'}});},
-    runFrame(){assert.ok(frames.length,'restore must schedule a native-frame geometry reconciliation');const frame=frames.shift();frame.onFrame(0);frame.onIdle(2_000_000);}};
+    runFrame(){assert.ok(frames.length,'restore must schedule a native-frame geometry reconciliation');const frame=frames.shift();frame.onFrame(0);frame.onIdle(2_000_000); drainReaderPostLayoutFallbacks(frames);}};
 }
 
 // Same first index often has no new native callback; a callback during restore

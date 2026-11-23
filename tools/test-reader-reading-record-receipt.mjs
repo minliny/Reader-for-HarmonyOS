@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
-import { ReadingRecordIntent, ReadingRecordRecoveryError } from '../entry/src/main/ets/features/reading/ReaderReadingRecordState.ts';
+import { ReadingRecordIntent, ReadingRecordRecoveryError } from '../entry/src/main/ets/features/reading/application/ReaderReadingRecordState.ts';
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); } catch (error) {
   if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error;
 } } });
-const { ReaderReadingRecordHost } = await import('../entry/src/main/ets/features/reading/ReaderReadingRecordHost.ts');
+const { ReaderReadingRecordHost } = await import('../entry/src/main/ets/features/reading/application/ReaderReadingRecordHost.ts');
 
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 

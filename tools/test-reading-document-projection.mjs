@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {registerHooks} from 'node:module';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(s+'.ts',c);throw e;}}});
-const load=()=>import('../entry/src/main/ets/features/reading/ReadingDocumentProjection.ts');
+const load=()=>import('../entry/src/main/ets/features/reading/application/ReadingDocumentProjection.ts');
 async function blockContract(){const {materializeReadingDocument}=await load();
 const loads = [];
 const runtime = {

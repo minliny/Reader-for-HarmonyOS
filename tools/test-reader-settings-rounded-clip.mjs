@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { productionSettingsOptionModifier } from './lib/reader-control-option-modifier-probe.mjs';
-import * as geometry from '../entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts';
-import * as actors from '../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts';
-import * as paint from '../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts';
-import * as policy from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
-import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import * as geometry from '../entry/src/main/ets/features/reading/ui/ReaderControlSettingsGeometry.ts';
+import * as actors from '../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts';
+import * as paint from '../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts';
+import * as policy from '../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts';
+import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets', import.meta.url), 'utf8');
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/reader-control-search-settings-live-20260905.json', import.meta.url), 'utf8'));
 const design = fixture.sources.find(n => n.key === 'settingsDesign').result.content.map(n => n.text ?? '').join('\n');
 for (const id of ['1692:3687', '1692:3692', '1692:3699']) {

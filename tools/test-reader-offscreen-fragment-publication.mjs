@@ -45,7 +45,7 @@ function reactiveSurface(params, source = surfaceSource) {
   const runtime = createArkUIPropertyRuntimeProbe();
   const { owner } = createReaderBuilderProbe(source,
     ['chapterTitle', 'showChapterTitle', 'pageFragments', 'contentRevision', 'fragmentsProvider', 'build',
-      'renderFragments', 'contentInsets', 'usesHighlightCanvas', 'dynamicHighlightBlend', 'onHighlightContentChanged'], {
+      'renderFragments', 'currentFragment', 'contentInsets', 'usesHighlightCanvas', 'dynamicHighlightBlend', 'onHighlightContentChanged'], {
       ...runtime.sdk,
       ReaderPageChrome: Child, ReaderNativeParagraphView: Child, ReaderReadingTextFragment: Child, ReaderPaperBackground: Child,
       TYPE_READER_CHAPTER_TITLE: { fontFamily: 'ReaderNotoSansSC', fontWeight: 500, fontSizeFp: 24 },
@@ -109,7 +109,7 @@ async function captureSequence(pages, source = surfaceSource) {
     }
     update(input) { content.update(input); }
   }
-  const Capture = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  const Capture = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
     ['captureBookTurnTexture'], { ComponentContent, BookTurnTextureBuildInput,
       BookTurnTextureBuilder: () => {}, wrapBuilder: value => value, BOOK_TURN_TEXTURE_CURRENT: 0 });
   const capture = new Capture();

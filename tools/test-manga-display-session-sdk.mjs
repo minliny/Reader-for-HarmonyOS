@@ -16,9 +16,9 @@ function members(file, className, names) {
     assert.ok(member, `${className}.${name} is taken from production`);return member.getText(file);
   }).join('\n');
 }
-const runtime = tree('app/ReaderRuntimeOwner.ts'), body = tree('app/ReadingBodyImageHost.ts');
-const gatewayContract = tree('features/reading/ReadingGatewayRuntime.ts'), disk = tree('app/ReadingImageDiskCache.ts');
-const gateway = readFileSync(path('features/manga/MangaResourceGateway.ts'), 'utf8').replace(/^import[^;]+;\n/gm, '');
+const runtime = tree('app/ReaderRuntimeOwner.ts'), body = tree('platform/reading-resources/ReadingBodyImageHost.ts');
+const gatewayContract = tree('features/reading/application/ReadingGatewayRuntime.ts'), disk = tree('platform/reading-resources/ReadingImageDiskCache.ts');
+const gateway = readFileSync(path('features/manga/application/MangaResourceGateway.ts'), 'utf8').replace(/^import[^;]+;\n/gm, '');
 const runtimeInterface = gatewayContract.statements.find(node => node.name?.text === 'ReadingGatewayRuntime');
 const apiNames = ['loadReadingImage','prefetchReadingImage','releaseReadingImage','beginMangaDisplaySession','endMangaDisplaySession','tryAcquireMangaPreparedImage'];
 const source = `import image from '@ohos.multimedia.image';

@@ -14,12 +14,18 @@ const { iconButtonControls, iconButtonSource, iconButtonSpecSource } = await imp
 const { readerFoundationTokens, foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
 const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
-const readerFontFamilies = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const { createDefaultReaderWindowMetrics, readerInteractiveSafeLeft, readerInteractiveSafeRight } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
+const readerFontFamilies = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { createDefaultReaderWindowMetrics, readerInteractiveSafeLeft, readerInteractiveSafeRight } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 
 
-const read = file => readFileSync(file, 'utf8'), root = 'entry/src/main/ets/features/';
+const root = 'entry/src/main/ets/features/';
+const sourcePaths = new Map([
+  [root + 'bookshelf/BookshelfShell.ets', root + 'bookshelf/ui/BookshelfShell.ets'],
+  [root + 'search/SearchPage.ets', root + 'search/ui/SearchPage.ets'],
+  [root + 'source/SourceManagementPage.ets', root + 'source/ui/SourceManagementPage.ets'],
+]);
+const read = file => readFileSync(sourcePaths.get(file) ?? file, 'utf8');
 const before = read('tools/fixtures/icon-button-family/ReaderIconButton.before.ets');
 const golden = JSON.parse(read('tools/fixtures/icon-button-family/original-consumers.json'));
 const approved = JSON.parse(read('tools/fixtures/icon-button-family/approved-bookshelf-manga-20261005.json'));
@@ -50,14 +56,18 @@ function iconInputs(source) {
 }
 function verifyConsumer(source, file) {
   const { tree, inputs } = iconInputs(source);
-  assert.equal(inputs.length, expected[file].length, 'every actual declaration remains present');
+  const sourceManagement = file === 'source/SourceManagementPage.ets';
+  const variants = sourceManagement ? [...expected[file], 'form-primary-icon'] : expected[file];
+  const actionLabels = sourceManagement ? [...labels[file], '导入书源'] : labels[file];
+  assert.equal(inputs.length, variants.length, 'every actual declaration remains present');
   for (const [i, input] of inputs.entries()) {
     assert.ok(ts.isObjectLiteralExpression(input), 'actual icon props object');
-    assert.deepEqual(input.properties.map(p => p.name.getText(tree)).sort(),
-      (file.startsWith('discover/') ? ['accessibilityLabel', 'actionEnabled', 'icon', 'onTap', 'specId'] :
-        ['accessibilityLabel', 'icon', 'onTap', 'specId']), 'no free icon appearance input');
-    assert.equal(input.properties.find(p => p.name.getText(tree) === 'specId').initializer.text, expected[file][i], 'exact finite real consumer');
-    assert.equal(input.properties.find(p => p.name.getText(tree) === 'accessibilityLabel').initializer.text, labels[file][i]);
+    const props = ['accessibilityLabel', 'icon', 'onTap', 'specId'];
+    if (file.startsWith('discover/') || (sourceManagement && i === 1)) props.push('actionEnabled');
+    if (sourceManagement && i === 0) props.push('focusId');
+    assert.deepEqual(input.properties.map(p => p.name.getText(tree)).sort(), props.sort(), 'no free icon appearance input');
+    assert.equal(input.properties.find(p => p.name.getText(tree) === 'specId').initializer.text, variants[i], 'exact finite real consumer');
+    assert.equal(input.properties.find(p => p.name.getText(tree) === 'accessibilityLabel').initializer.text, actionLabels[i]);
     if (file.startsWith('discover/')) assert.equal(input.properties.find(p => p.name.getText(tree) === 'actionEnabled').initializer.getText(tree), '!this.presentation.loading', 'actual business busy source');
   }
 }
@@ -109,7 +119,7 @@ function parent(file, { legacy = false, scheme = 'day', specSource = iconButtonS
   Object.assign(p.dependencies, base.dependencies, readerFoundationTokens, readerTypographyRoles, readerFontFamilies,
     { ReaderIconButton: p.icon.Component, resolveReaderIconButtonSpec: p.resolveReaderIconButtonSpec, readerAppColor,
       ReaderWindowCoordinator: { metrics: () => metrics }, readerInteractiveSafeLeft, readerInteractiveSafeRight, bookshelfTemporaryGeneration: 0 });
-  const sources = { AppTopBar: read(root + 'common/AppTopBar.ets'), PageBackBar: read(root + 'common/PageBackBar.ets'), ReaderSearchField: read(root + 'common/ReaderSearchField.ets') };
+  const sources = { AppTopBar: read(root + '../ui/chrome/AppTopBar.ets'), PageBackBar: read(root + '../ui/chrome/PageBackBar.ets'), ReaderSearchField: read(root + '../ui/controls/ReaderSearchField.ets') };
   Object.assign(p.hooks.childSources, base.hooks.childSources, sources);
   for (const name of ['AppTopBar', 'PageBackBar']) syntax.builderParamObjectCollection.set(name, new Set(['trailing']));
   for (const [name, source] of Object.entries(sources)) p.dependencies[name] = p.consumer(source, boundedMembers(source)).constructor;
@@ -181,6 +191,6 @@ for (const file of Object.keys(expected)) {
     assert.equal(hit.width, actor.specId === 'toolbar-standard' ? 46 : current.p.resolveReaderIconButtonSpec(actor.specId).boxSize);
   }
 }
-console.log(`PASS F01 actual SDK: ${comparisons} original/current four-spec and four retained/approved-site day/night native comparisons; exact names/role/focus, real loading/retained eligibility, unnamed and guard-removal negatives, approved AppTopBar leading Search navigation fence, same-spec propagation/variant isolation, retained Props, original callbacks/old More identity, 12 literal99 consumer negatives and removed free inputs. ArkUI native scheduling/device remain separate.`);
+console.log(`PASS F01 actual SDK: ${comparisons} original/current four-spec and four retained/approved-site day/night native comparisons; exact names/role/focus, real loading/retained eligibility, unnamed and guard-removal negatives, approved AppTopBar leading Search navigation fence, same-spec propagation/variant isolation, retained Props, original callbacks/old More identity, 15 literal99 consumer negatives and removed free inputs. ArkUI native scheduling/device remain separate.`);
 
 }

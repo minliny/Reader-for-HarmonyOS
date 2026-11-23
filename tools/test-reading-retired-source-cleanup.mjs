@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if((s.startsWith('./')||s.startsWith('../'))&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {ReadingOfflineHost}=await import(process.env.READER_READING_OWNER_SDK === '1' ? './lib/reader-reading-owner-sdk-probe.mjs' : '../entry/src/main/ets/features/reading/ReadingOfflineHost.ts');
+const {ReadingOfflineHost}=await import(process.env.READER_READING_OWNER_SDK === '1' ? './lib/reader-reading-owner-sdk-probe.mjs' : '../entry/src/main/ets/features/reading/application/ReadingOfflineHost.ts');
 function fixture(){let current=true;const calls=[];const runtime={async request(method,params){calls.push({method,params});if(this.lost)throw Error('lost Core clear ACK');if(this.retireAfterACK)current=false;return {data:{scope:'book',cacheEntriesRemoved:1,chapterEntriesRemoved:1,queueEntriesRemoved:0,removedContentBytes:2}};},async clearOfflineBookImages(sourceId,bookId){calls.push({platform:[sourceId,bookId]});if(this.platformFailed)throw Error('image cleanup failed');}};const host=ReadingOfflineHost.forRuntime(runtime,()=>current);return{host,runtime,calls,retire:()=>current=false};}
 const identity={sourceId:'captured-old-source',bookId:'captured-old-book'};
 {const f=fixture();await f.host.cleanupRetiredSource(identity);assert.deepEqual(f.calls.map(x=>x.params??x.platform),[{scope:'book',sourceId:identity.sourceId,bookId:identity.bookId},[identity.sourceId,identity.bookId]]);assert.equal(f.host.snapshot().projection.receipt.confirmation,'confirmed');assert.equal(f.host.snapshot().materialization,'succeeded');}

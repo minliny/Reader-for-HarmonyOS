@@ -1,0 +1,171 @@
+{
+  "id": "bookshelf.search-no-sources",
+  "version": 3,
+  "phase": 1,
+  "pageId": "bookshelf",
+  "fixture": {
+    "id": "public-search-no-sources-v3",
+    "description": "Use the isolated 320 vp public VM after verified normal suppression of its bundled sources. No source remains. Observe the normal search entry with a focused editor and no visible IME, then press Back once to restore the bookshelf.",
+    "bookTitle": "Reader Phase 1 公共长目录",
+    "publicSources": true
+  },
+  "steps": [
+    {
+      "id": "before",
+      "kind": "sample",
+      "anchors": [
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false,
+      "book": true
+    },
+    {
+      "id": "open-search",
+      "kind": "action",
+      "op": "click",
+      "from": "before",
+      "target": "reader-bookshelf-search-entry",
+      "waitFor": [
+        {
+          "kind": "search-open-accepted"
+        }
+      ]
+    },
+    {
+      "id": "entry-projection",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-library-search-back",
+        "reader-bookshelf-search-field",
+        "reader-bookshelf-search-submit",
+        "reader-bookshelf-search-sourceRequired"
+      ],
+      "afterAction": "open-search",
+      "waitFor": [
+        {
+          "kind": "search-surface-settled",
+          "fields": {
+            "payload.mode": "input"
+          },
+          "match": "latest",
+          "channel": "business"
+        },
+        {
+          "kind": "search-page-projection",
+          "fields": {
+            "payload.projection": "sourceRequired",
+            "payload.sourceRequiredReason": "noSources",
+            "payload.searchActive": false
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ],
+      "keyboard": false,
+      "focus": "reader-book-search-input",
+      "quietMs": 125
+    },
+    {
+      "id": "back-to-shelf",
+      "kind": "action",
+      "op": "keyEvent",
+      "from": "entry-projection",
+      "waitFor": [
+        {
+          "kind": "search-back-consumed"
+        }
+      ],
+      "key": "Back"
+    },
+    {
+      "id": "bookshelf-again",
+      "kind": "sample",
+      "anchors": [
+        "reader-bookshelf-search-entry"
+      ],
+      "afterAction": "back-to-shelf",
+      "waitFor": [
+        {
+          "kind": "search-route-released",
+          "fields": {
+            "payload.route": "bookshelf"
+          }
+        }
+      ],
+      "keyboard": false,
+      "quietMs": 125,
+      "book": true
+    }
+  ],
+  "ownerSources": [
+    "entry/src/main/ets/app/composition/ReaderLibraryJourney.ets",
+    "entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchHistoryPanel.ets",
+    "entry/src/main/ets/features/search/ui/SearchPage.ets",
+    "entry/src/main/ets/features/search/presentation/LibrarySearchPresentation.ets",
+    "entry/src/main/ets/features/search/presentation/SearchPresentation.ts",
+    "entry/src/main/ets/features/search/presentation/SearchViewState.ts",
+    "entry/src/main/ets/features/search/application/SearchOrchestrator.ets",
+    "entry/src/main/ets/features/search/application/SearchHost.ets",
+    "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+    "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+    "entry/src/main/ets/pages/Index.ets",
+    "entry/src/main/ets/ui/foundation/ReaderKeyboardBack.ts",
+    "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchTaskPanel.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchFilterPanel.ets"
+  ],
+  "assertions": [
+    {
+      "id": "search.entry.no-sources",
+      "evaluator": "search",
+      "kind": "phase-projection",
+      "required": true,
+      "expected": {
+        "mode": "input",
+        "projections": [
+          "sourceRequired"
+        ],
+        "searchActive": false,
+        "node": "reader-bookshelf-search-sourceRequired",
+        "sourceRequiredReason": "noSources"
+      },
+      "source": "entry/src/main/ets/features/search/application/SearchOrchestrator.ets#entryPresentationForSources",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "open-search",
+      "sample": "entry-projection"
+    },
+    {
+      "id": "search.back.input",
+      "evaluator": "search",
+      "kind": "phase-back",
+      "required": true,
+      "expected": {
+        "consumer": "route",
+        "previousMode": "input",
+        "publicBook": true
+      },
+      "source": "entry/src/main/ets/app/composition/ReaderLibraryJourney.ets#returnToBookshelf",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "action": "back-to-shelf",
+      "baseline": "entry-projection",
+      "sample": "bookshelf-again"
+    }
+  ],
+  "structure": {
+    "before": "before",
+    "entry-projection": "entry-projection",
+    "bookshelf-again": "bookshelf-again"
+  }
+}

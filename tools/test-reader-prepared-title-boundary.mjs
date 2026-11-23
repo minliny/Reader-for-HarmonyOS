@@ -2,11 +2,11 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
-import {ReaderPageChromeSnapshot} from '../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts';
-const stage=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPageTurnStage.ets',import.meta.url),'utf8');
+import {ReaderPageChromeSnapshot} from '../entry/src/main/ets/features/reading/presentation/ReaderPageChromeModel.ts';
+const stage=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderPageTurnStage.ets',import.meta.url),'utf8');
 const classText=stage.slice(stage.indexOf('export class ReaderPageTurnRenderPage'),stage.indexOf('\nexport type ReaderPageTurnStageDirection'));
 const RenderPage=new Function('ReaderPageChromeSnapshot',stripTypeScriptTypes(classText).replace('export class','class')+';return ReaderPageTurnRenderPage;')(ReaderPageChromeSnapshot);
-const Owner=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),['preparedPageTurnRenderPage','isChapterFirstPageStart'],{ReaderPageTurnRenderPage:RenderPage});
+const Owner=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),['preparedPageTurnRenderPage','isChapterFirstPageStart'],{ReaderPageTurnRenderPage:RenderPage});
 for(const start of [0,600]) for(const direction of ['next','previous']) {
  const chapter={chapterTitle:'Next chapter',documentRange:{startScalar:start}};
  const ranges=[{startScalar:start}]; const fragments=[{text:'body',nativeTitle:{text:chapter.chapterTitle}}];

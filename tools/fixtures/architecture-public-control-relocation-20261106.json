@@ -1,0 +1,1950 @@
+{
+  "schema": 1,
+  "producers": [
+    {
+      "id": "shared-ReaderButton",
+      "from": "entry/src/main/ets/features/common/ReaderButton.ets",
+      "file": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+      "shapeSha256": "b9ce49552b76e3ccf14835c1bdf23c1925ddf6bc2f63d2430a78099dde5ffaa3",
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookshelfManagementPage.ets",
+          "method": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#groupRow",
+          "component": "ReaderButton",
+          "specId": "'shelf-row-edit'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfManagementPage.ets",
+          "method": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#assignmentBookRow",
+          "component": "ReaderButton",
+          "specId": "'shelf-row-select'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfManagementPage.ets",
+          "method": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#actionButton",
+          "component": "ReaderButton",
+          "specId": "'shelf-action'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "layout",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfManagementPage.ets",
+          "method": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#smallAction",
+          "component": "ReaderButton",
+          "specId": "'shelf-small'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/common/JsonImportDialog.ets",
+          "method": "features/common/JsonImportDialog.ets#JsonImportDialog#localButton",
+          "component": "ReaderButton",
+          "specId": "'form-action'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "layout",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/discover/DiscoverPage.ets",
+          "method": "features/discover/DiscoverPage.ets#DiscoverPage#categoryChips",
+          "component": "ReaderButton",
+          "specId": "'discover-category'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/discover/DiscoverPage.ets",
+          "method": "features/discover/DiscoverPage.ets#DiscoverPage#pageAction",
+          "component": "ReaderButton",
+          "specId": "'discover-page'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "actionEnabled",
+            "isBusy",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/rss/RssEntryDetailPage.ets",
+          "method": "features/rss/RssEntryDetailPage.ets#RssEntryDetailPage#sourceCard",
+          "component": "ReaderButton",
+          "specId": "'rss-source-link'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/rss/RssEntryDetailPage.ets",
+          "method": "features/rss/RssEntryDetailPage.ets#RssEntryDetailPage#bottomActions",
+          "component": "ReaderButton",
+          "specId": "'rss-detail-bottom'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "layout",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/rss/RssEntryDetailPage.ets",
+          "method": "features/rss/RssEntryDetailPage.ets#RssEntryDetailPage#bottomActions",
+          "component": "ReaderButton",
+          "specId": "'rss-detail-bottom'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "layout",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/rss/RssPage.ets",
+          "method": "features/rss/RssPage.ets#RssPage#statusTab",
+          "component": "ReaderButton",
+          "specId": "'rss-mode-tab'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/rss/RssPage.ets",
+          "method": "features/rss/RssPage.ets#RssPage#filterPill",
+          "component": "ReaderButton",
+          "specId": "'rss-filter'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/rss/RssPage.ets",
+          "method": "features/rss/RssPage.ets#RssPage#stateButtons",
+          "component": "ReaderButton",
+          "specId": "'rss-state'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/rss/RssPage.ets",
+          "method": "features/rss/RssPage.ets#RssPage#stateButtons",
+          "component": "ReaderButton",
+          "specId": "'rss-state'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionEditorPage.ets",
+          "method": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#saveAction",
+          "component": "ReaderButton",
+          "specId": "'form-busy-action'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "layout",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionManagementPage.ets",
+          "method": "features/rss/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage#sourceDocumentAction",
+          "component": "ReaderButton",
+          "specId": "'form-document-action'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "layout",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/search/ReaderSearchFilterPanel.ets",
+          "method": "features/search/ReaderSearchFilterPanel.ets#ReaderSearchFilterPanel#groupChip",
+          "component": "ReaderButton",
+          "specId": "'search-filter-option'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "actionAccessibilityLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/search/ReaderSearchFilterPanel.ets",
+          "method": "features/search/ReaderSearchFilterPanel.ets#ReaderSearchFilterPanel#typeChip",
+          "component": "ReaderButton",
+          "specId": "'search-filter-option'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "actionAccessibilityLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/search/ReaderSearchFilterPanel.ets",
+          "method": "features/search/ReaderSearchFilterPanel.ets#ReaderSearchFilterPanel#resetAction",
+          "component": "ReaderButton",
+          "specId": "'search-retry-progress'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/search/ReaderSearchHistoryPanel.ets",
+          "method": "features/search/ReaderSearchHistoryPanel.ets#ReaderSearchHistoryPanel#retryHistoryAction",
+          "component": "ReaderButton",
+          "specId": "'search-secondary'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/search/ReaderSearchHistoryPanel.ets",
+          "method": "features/search/ReaderSearchHistoryPanel.ets#ReaderSearchHistoryPanel#build",
+          "component": "ReaderButton",
+          "specId": "'search-history-keyword'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "layout",
+            "actionEnabled",
+            "actionAccessibilityLabel",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/search/ReaderSearchTaskPanel.ets",
+          "method": "features/search/ReaderSearchTaskPanel.ets#ReaderSearchTaskPanel#details",
+          "component": "ReaderButton",
+          "specId": "'search-retry-progress'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/search/SearchPage.ets",
+          "method": "features/search/SearchPage.ets#SearchPage#primaryPill",
+          "component": "ReaderButton",
+          "specId": "'search-primary'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/search/SearchPage.ets",
+          "method": "features/search/SearchPage.ets#SearchPage#secondaryPill",
+          "component": "ReaderButton",
+          "specId": "'search-secondary'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/search/SearchPage.ets",
+          "method": "features/search/SearchPage.ets#SearchPage#searchErrorActions",
+          "component": "ReaderButton",
+          "specId": "'search-error-retry'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/search/SearchPage.ets",
+          "method": "features/search/SearchPage.ets#SearchPage#searchErrorActions",
+          "component": "ReaderButton",
+          "specId": "'search-error-source'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/settings/ReaderMessagePreviewPage.ets",
+          "method": "features/settings/ReaderMessagePreviewPage.ets#ReaderMessagePreviewPage#content",
+          "component": "ReaderButton",
+          "specId": null,
+          "keys": [
+            "label",
+            "layout",
+            "scheme",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/settings/ReaderMessagePreviewPage.ets",
+          "method": "features/settings/ReaderMessagePreviewPage.ets#ReaderMessagePreviewPage#sampleButton",
+          "component": "ReaderButton",
+          "specId": null,
+          "keys": [
+            "label",
+            "scheme",
+            "layout",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/settings/ReaderMessagePreviewPage.ets",
+          "method": "features/settings/ReaderMessagePreviewPage.ets#ReaderMessagePreviewPage#previewOverlay",
+          "component": "ReaderButton",
+          "specId": null,
+          "keys": [
+            "label",
+            "scheme",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/settings/ReaderMessagePreviewPage.ets",
+          "method": "features/settings/ReaderMessagePreviewPage.ets#ReaderMessagePreviewPage#previewOverlay",
+          "component": "ReaderButton",
+          "specId": null,
+          "keys": [
+            "label",
+            "scheme",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/settings/RulesManagementPage.ets",
+          "method": "features/settings/RulesManagementPage.ets#RulesManagementPage#actionButton",
+          "component": "ReaderButton",
+          "specId": "'rules-action'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "layout",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/settings/RulesManagementPage.ets",
+          "method": "features/settings/RulesManagementPage.ets#RulesManagementPage#smallButton",
+          "component": "ReaderButton",
+          "specId": "'rules-compact'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/source/SourceManagementPage.ets",
+          "method": "features/source/SourceManagementPage.ets#SourceManagementPage#statusBanner",
+          "component": "ReaderButton",
+          "specId": "'source-management-retry'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/source/SourceManagementPage.ets",
+          "method": "features/source/SourceManagementPage.ets#SourceManagementPage#statusBanner",
+          "component": "ReaderButton",
+          "specId": "'source-management-retry'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/source/SourceManagementPage.ets",
+          "method": "features/source/SourceManagementPage.ets#SourceManagementPage#categoryFilter",
+          "component": "ReaderButton",
+          "specId": "'source-management-category'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/source/SourceManagementPage.ets",
+          "method": "features/source/SourceManagementPage.ets#SourceManagementPage#chip",
+          "component": "ReaderButton",
+          "specId": "width === 58 ? 'source-management-status-compact' : 'source-management-status-wide'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "actionEnabled",
+            "availableWidth",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/source/SourceManagementPage.ets",
+          "method": "features/source/SourceManagementPage.ets#SourceManagementPage#detectButton",
+          "component": "ReaderButton",
+          "specId": "'source-management-detect'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "isBusy",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/source/SourceManagementPage.ets",
+          "method": "features/source/SourceManagementPage.ets#SourceManagementPage#loginButton",
+          "component": "ReaderButton",
+          "specId": "'source-management-login'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/source/SourceManagementPage.ets",
+          "method": "features/source/SourceManagementPage.ets#SourceManagementPage#bottomActionBar",
+          "component": "ReaderButton",
+          "specId": "'source-management-manage'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "layout",
+            "focusId",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/source/SourceToolsPage.ets",
+          "method": "features/source/SourceToolsPage.ets#SourceToolsPage#smallButton",
+          "component": "ReaderButton",
+          "specId": "'source-compact'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/source/SourceToolsPage.ets",
+          "method": "features/source/SourceToolsPage.ets#SourceToolsPage#actionButton",
+          "component": "ReaderButton",
+          "specId": "'source-action'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "actionEnabled",
+            "layout",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/source/SourceToolsPage.ets",
+          "method": "features/source/SourceToolsPage.ets#SourceToolsPage#fullWidthActionButton",
+          "component": "ReaderButton",
+          "specId": "'source-action'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "actionEnabled",
+            "layout",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/sync/SyncPage.ets",
+          "method": "features/sync/SyncPage.ets#SyncPage#configActions",
+          "component": "ReaderButton",
+          "specId": "'sync-config-test'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "layout",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/sync/SyncPage.ets",
+          "method": "features/sync/SyncPage.ets#SyncPage#configActions",
+          "component": "ReaderButton",
+          "specId": "'sync-config-save'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "layout",
+            "actionEnabled",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/sync/SyncPage.ets",
+          "method": "features/sync/SyncPage.ets#SyncPage#manualActionButton",
+          "component": "ReaderButton",
+          "specId": "'sync-action'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "primary",
+            "actionEnabled",
+            "layout",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/sync/SyncPage.ets",
+          "method": "features/sync/SyncPage.ets#SyncPage#emptyState",
+          "component": "ReaderButton",
+          "specId": "'sync-empty-backup'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "layout",
+            "actionEnabled",
+            "onAction"
+          ]
+        }
+      ],
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/ui/controls/ReaderControlSpecs.ets",
+          "shapeSha256": "8c2185547088f46e6033e7cc03000acea599a9f1dd379d62993448649f25a2de"
+        }
+      ]
+    },
+    {
+      "id": "shared-ReaderChoiceRow",
+      "from": "entry/src/main/ets/features/common/ReaderChoiceRow.ets",
+      "file": "entry/src/main/ets/ui/controls/ReaderChoiceRow.ets",
+      "shapeSha256": "cb1e2f983d2fbc92c31eee1d647d082eedfc2df6ef7b145c9828d2d1df1670d2",
+      "consumers": [
+        {
+          "file": "features/common/ReaderSelectPanel.ets",
+          "method": "features/common/ReaderSelectPanel.ets#ReaderSelectPanel#appearanceLibraryOption",
+          "component": "ReaderChoiceRow",
+          "specId": "'appearance-library'",
+          "keys": [
+            "specId",
+            "label",
+            "selected",
+            "scheme",
+            "actionEnabled",
+            "wrapLabel",
+            "onHeightChange",
+            "onChoose"
+          ]
+        },
+        {
+          "file": "features/common/ReaderSelectPanel.ets",
+          "method": "features/common/ReaderSelectPanel.ets#ReaderSelectPanel#selectedRow",
+          "component": "ReaderChoiceRow",
+          "specId": "this.variant === 'appearanceCompact' ? 'appearance-compact-selected' :\n    (this.variant === 'sourceGroup' ? 'source-group-selected' : 'default-selected')",
+          "keys": [
+            "specId",
+            "label",
+            "selected",
+            "scheme",
+            "availableWidth",
+            "chevronAngle",
+            "actionEnabled",
+            "wrapLabel",
+            "onHeightChange",
+            "onChoose"
+          ]
+        },
+        {
+          "file": "features/common/ReaderSelectPanel.ets",
+          "method": "features/common/ReaderSelectPanel.ets#ReaderSelectPanel#optionRow",
+          "component": "ReaderChoiceRow",
+          "specId": "this.variant === 'sourceGroup' ? 'source-group-option' : 'default-option'",
+          "keys": [
+            "specId",
+            "label",
+            "scheme",
+            "actionEnabled",
+            "wrapLabel",
+            "onHeightChange",
+            "onChoose"
+          ]
+        },
+        {
+          "file": "features/settings/SettingsSelectOverlay.ets",
+          "method": "features/settings/SettingsSelectOverlay.ets#SettingsSelectOverlay#phoneOption",
+          "component": "ReaderChoiceRow",
+          "specId": "'settings-phone'",
+          "keys": [
+            "specId",
+            "label",
+            "selected",
+            "showDivider",
+            "scheme",
+            "onChoose"
+          ]
+        },
+        {
+          "file": "features/settings/SettingsSelectOverlay.ets",
+          "method": "features/settings/SettingsSelectOverlay.ets#SettingsSelectOverlay#tabletOption",
+          "component": "ReaderChoiceRow",
+          "specId": "'settings-tablet'",
+          "keys": [
+            "specId",
+            "label",
+            "selected",
+            "showDivider",
+            "scheme",
+            "onChoose"
+          ]
+        }
+      ],
+      "specSources": []
+    },
+    {
+      "id": "shared-ReaderFixedHeaderHost",
+      "from": "entry/src/main/ets/features/common/ReaderFixedHeaderHost.ets",
+      "file": "entry/src/main/ets/ui/layout/ReaderFixedHeaderHost.ets",
+      "shapeSha256": "3c1a3861750cd0d51e4c14df31f96349e035ccbcc9dd173549acc9bb34e793b8",
+      "consumers": [
+        {
+          "file": "features/search/ReaderLibrarySearchSurface.ets",
+          "method": "features/search/ReaderLibrarySearchSurface.ets#ReaderLibrarySearchSurface#build",
+          "component": "ReaderFixedHeaderHost",
+          "specId": null,
+          "keys": [
+            "style",
+            "measurementKey",
+            "content",
+            "onHeightChange"
+          ]
+        },
+        {
+          "file": "ui/layout/ReaderPageScaffold.ets",
+          "method": "ui/layout/ReaderPageScaffold.ets#ReaderPageScaffold#build",
+          "component": "ReaderFixedHeaderHost",
+          "specId": null,
+          "keys": [
+            "style",
+            "measurementKey",
+            "content",
+            "onHeightChange"
+          ]
+        }
+      ],
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/ui/layout/ReaderPageShell.ts",
+          "shapeSha256": "6a44965ed7be61582e4c18fc249446c9c6e505fa162c1227bef4689a77f74301"
+        }
+      ]
+    },
+    {
+      "id": "shared-ReaderFormField",
+      "from": "entry/src/main/ets/features/common/ReaderFormField.ets",
+      "file": "entry/src/main/ets/ui/controls/ReaderFormField.ets",
+      "shapeSha256": "5df93cf2f14534875649df9070bc198037fb2784fb7f01adde27aed7d871b868",
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookshelfManagementPage.ets",
+          "method": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#groupEditorCard",
+          "component": "ReaderFormField",
+          "specId": "'shelf-native'",
+          "keys": [
+            "scheme",
+            "specId",
+            "text",
+            "placeholder",
+            "onTextChange"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfManagementPage.ets",
+          "method": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#groupEditorCard",
+          "component": "ReaderFormField",
+          "specId": "'shelf-order'",
+          "keys": [
+            "scheme",
+            "specId",
+            "text",
+            "placeholder",
+            "onTextChange"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfManagementPage.ets",
+          "method": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#assignmentCard",
+          "component": "ReaderFormField",
+          "specId": "'shelf-native'",
+          "keys": [
+            "scheme",
+            "specId",
+            "text",
+            "placeholder",
+            "onTextChange"
+          ]
+        },
+        {
+          "file": "features/common/JsonImportDialog.ets",
+          "method": "features/common/JsonImportDialog.ets#JsonImportDialog#formBody",
+          "component": "ReaderFormField",
+          "specId": "'form-url'",
+          "keys": [
+            "scheme",
+            "specId",
+            "text",
+            "placeholder",
+            "onTextChange",
+            "onSubmit"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderControlReplaceContent.ets",
+          "method": "features/reading/ReaderControlReplaceContent.ets#ReaderControlReplaceContent#editorText",
+          "component": "ReaderFormField",
+          "specId": "'reader-replace-text'",
+          "keys": [
+            "specId",
+            "scheme",
+            "text",
+            "placeholder",
+            "isEditable",
+            "onTextChange"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderControlSearchContent.ets",
+          "method": "features/reading/ReaderControlSearchContent.ets#ReaderControlSearchContent#searchField",
+          "component": "ReaderFormField",
+          "specId": "'reader-content-search'",
+          "keys": [
+            "specId",
+            "scheme",
+            "text",
+            "placeholder",
+            "inputController",
+            "inputIdentity",
+            "fieldAccessibilityLabel",
+            "onTextChange",
+            "onEditingChange",
+            "onSubmit"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderDirectoryRules.ets",
+          "method": "features/reading/ReaderDirectoryRules.ets#ReaderDirectoryRules#build",
+          "component": "ReaderFormField",
+          "specId": "'directory-rule-pattern'",
+          "keys": [
+            "specId",
+            "scheme",
+            "text",
+            "isEditable",
+            "placeholder",
+            "onTextChange"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderDirectoryRules.ets",
+          "method": "features/reading/ReaderDirectoryRules.ets#ReaderDirectoryRules#build",
+          "component": "ReaderFormField",
+          "specId": "'directory-rule-level'",
+          "keys": [
+            "specId",
+            "scheme",
+            "text",
+            "isEditable",
+            "onTextChange"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderTtsConfigOverlay.ets",
+          "method": "features/reading/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay#managerForm",
+          "component": "ReaderFormField",
+          "specId": "'tts-manager-name'",
+          "keys": [
+            "specId",
+            "scheme",
+            "text",
+            "placeholder",
+            "isEditable",
+            "fieldAccessibilityLabel",
+            "onTextChange"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderTtsConfigOverlay.ets",
+          "method": "features/reading/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay#managerForm",
+          "component": "ReaderFormField",
+          "specId": "'tts-manager-value'",
+          "keys": [
+            "specId",
+            "scheme",
+            "text",
+            "placeholder",
+            "isEditable",
+            "fieldAccessibilityLabel",
+            "onTextChange"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderTtsConfigOverlay.ets",
+          "method": "features/reading/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay#managerForm",
+          "component": "ReaderFormField",
+          "specId": "'tts-manager-value'",
+          "keys": [
+            "specId",
+            "scheme",
+            "text",
+            "placeholder",
+            "isEditable",
+            "fieldAccessibilityLabel",
+            "password",
+            "onTextChange"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderTtsConfigOverlay.ets",
+          "method": "features/reading/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay#managerForm",
+          "component": "ReaderFormField",
+          "specId": "'tts-manager-value'",
+          "keys": [
+            "specId",
+            "scheme",
+            "text",
+            "placeholder",
+            "isEditable",
+            "fieldAccessibilityLabel",
+            "onTextChange"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionEditorPage.ets",
+          "method": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#editorField",
+          "component": "ReaderFormField",
+          "specId": "'form-body'",
+          "keys": [
+            "scheme",
+            "specId",
+            "text",
+            "placeholder",
+            "onTextChange"
+          ]
+        },
+        {
+          "file": "features/settings/RulesManagementPage.ets",
+          "method": "features/settings/RulesManagementPage.ets#RulesManagementPage#input",
+          "component": "ReaderFormField",
+          "specId": "'rules-input'",
+          "keys": [
+            "scheme",
+            "specId",
+            "text",
+            "placeholder",
+            "onTextChange"
+          ]
+        },
+        {
+          "file": "features/source/SourceToolsPage.ets",
+          "method": "features/source/SourceToolsPage.ets#SourceToolsPage#editorCard",
+          "component": "ReaderFormField",
+          "specId": "'source-code'",
+          "keys": [
+            "scheme",
+            "specId",
+            "text",
+            "placeholder",
+            "isEditable",
+            "onTextChange"
+          ]
+        },
+        {
+          "file": "features/source/SourceToolsPage.ets",
+          "method": "features/source/SourceToolsPage.ets#SourceToolsPage#debugCard",
+          "component": "ReaderFormField",
+          "specId": "'source-debug'",
+          "keys": [
+            "scheme",
+            "specId",
+            "text",
+            "placeholder",
+            "onTextChange"
+          ]
+        },
+        {
+          "file": "features/sync/SyncPage.ets",
+          "method": "features/sync/SyncPage.ets#SyncPage#webdavInputRow",
+          "component": "ReaderFormField",
+          "specId": "'sync-credential'",
+          "keys": [
+            "scheme",
+            "specId",
+            "text",
+            "placeholder",
+            "password",
+            "isEditable",
+            "onTextChange"
+          ]
+        }
+      ],
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/ui/controls/ReaderControlSpecs.ets",
+          "shapeSha256": "8c2185547088f46e6033e7cc03000acea599a9f1dd379d62993448649f25a2de"
+        }
+      ]
+    },
+    {
+      "id": "shared-ReaderFormRow",
+      "file": "entry/src/main/ets/ui/controls/ReaderFormRow.ets",
+      "shapeSha256": "2d24a88447e6bfa46c1bf1dfa234bbbb71dce526fee7feac804489a379897ba1",
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookshelfSettingsPage.ets",
+          "method": "features/bookshelf/BookshelfSettingsPage.ets#BookshelfSettingsPage#pageContent",
+          "component": "ReaderFormRow",
+          "specId": null,
+          "keys": [
+            "label",
+            "kind"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfSettingsPage.ets",
+          "method": "features/bookshelf/BookshelfSettingsPage.ets#BookshelfSettingsPage#pageContent",
+          "component": "ReaderFormRow",
+          "specId": null,
+          "keys": [
+            "label",
+            "kind"
+          ]
+        },
+        {
+          "file": "features/settings/SettingsPage.ets",
+          "method": "features/settings/SettingsPage.ets#SettingsPage#developerPageContent",
+          "component": "ReaderFormRow",
+          "specId": null,
+          "keys": [
+            "icon",
+            "label",
+            "actionEnabled",
+            "isBusy",
+            "onLabelAction"
+          ]
+        },
+        {
+          "file": "features/settings/SettingsPage.ets",
+          "method": "features/settings/SettingsPage.ets#SettingsPage#navRow",
+          "component": "ReaderFormRow",
+          "specId": null,
+          "keys": [
+            "icon",
+            "label",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/settings/SettingsPage.ets",
+          "method": "features/settings/SettingsPage.ets#SettingsPage#switchRow",
+          "component": "ReaderFormRow",
+          "specId": null,
+          "keys": [
+            "icon",
+            "label",
+            "actionEnabled",
+            "isBusy",
+            "onLabelAction"
+          ]
+        },
+        {
+          "file": "features/settings/SettingsPage.ets",
+          "method": "features/settings/SettingsPage.ets#SettingsPage#segmentRow",
+          "component": "ReaderFormRow",
+          "specId": null,
+          "keys": [
+            "icon",
+            "label"
+          ]
+        },
+        {
+          "file": "features/settings/SettingsPage.ets",
+          "method": "features/settings/SettingsPage.ets#SettingsPage#cacheActionRow",
+          "component": "ReaderFormRow",
+          "specId": null,
+          "keys": [
+            "icon",
+            "label",
+            "actionEnabled",
+            "isBusy",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/settings/SettingsPage.ets",
+          "method": "features/settings/SettingsPage.ets#SettingsPage#permissionRow",
+          "component": "ReaderFormRow",
+          "specId": null,
+          "keys": [
+            "icon",
+            "label"
+          ]
+        },
+        {
+          "file": "features/settings/SettingsPage.ets",
+          "method": "features/settings/SettingsPage.ets#SettingsPage#dangerRow",
+          "component": "ReaderFormRow",
+          "specId": null,
+          "keys": [
+            "kind",
+            "label",
+            "isBusy",
+            "icon",
+            "onAction"
+          ]
+        }
+      ],
+      "specSources": [],
+      "newProducer": {
+        "component": "ReaderFormRow",
+        "specPolicy": "Finite standard, compact and danger forms. The native action or label action delegates exactly one current intent; content remains a separately owned slot.",
+        "removalProofs": [
+          "docs/architecture/F04_SWITCH_ENUM_CONTRACT.md"
+        ],
+        "sdkProofs": [
+          "tools/test-switch-enum-shared-contract.mjs",
+          "tools/test-architecture-shared-producers.mjs"
+        ]
+      }
+    },
+    {
+      "id": "shared-ReaderIconButton",
+      "from": "entry/src/main/ets/features/common/ReaderIconButton.ets",
+      "file": "entry/src/main/ets/ui/controls/ReaderIconButton.ets",
+      "shapeSha256": "c738e99fe91ab7ed871b1bd9d7092b30751ca68d044c0fe24b24dadd9f684173",
+      "consumers": [
+        {
+          "file": "features/discover/DiscoverPage.ets",
+          "method": "features/discover/DiscoverPage.ets#DiscoverPage#homeTopBar",
+          "component": "ReaderIconButton",
+          "specId": "'toolbar-standard'",
+          "keys": [
+            "icon",
+            "specId",
+            "accessibilityLabel",
+            "actionEnabled",
+            "onTap"
+          ]
+        },
+        {
+          "file": "features/manga/MangaReadingSurface.ets",
+          "method": "features/manga/MangaReadingSurface.ets#MangaReadingSurface#iconAction",
+          "component": "ReaderIconButton",
+          "specId": "'manga-reader-action'",
+          "keys": [
+            "icon",
+            "specId",
+            "scheme",
+            "accessibilityLabel",
+            "onTap"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderChapterLoadingState.ets",
+          "method": "features/reading/ReaderChapterLoadingState.ets#ReaderChapterLoadingState#build",
+          "component": "ReaderIconButton",
+          "specId": "'navigation-back'",
+          "keys": [
+            "specId",
+            "scheme",
+            "icon",
+            "accessibilityLabel",
+            "onTap"
+          ]
+        },
+        {
+          "file": "features/source/SourceManagementPage.ets",
+          "method": "features/source/SourceManagementPage.ets#SourceManagementPage#backBar",
+          "component": "ReaderIconButton",
+          "specId": "'toolbar-compact'",
+          "keys": [
+            "icon",
+            "specId",
+            "accessibilityLabel",
+            "focusId",
+            "onTap"
+          ]
+        }
+      ],
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/ui/controls/ReaderControlSpecs.ets",
+          "shapeSha256": "8c2185547088f46e6033e7cc03000acea599a9f1dd379d62993448649f25a2de"
+        }
+      ]
+    },
+    {
+      "id": "shared-ReaderLabeledIconAction",
+      "from": "entry/src/main/ets/features/common/ReaderLabeledIconAction.ets",
+      "file": "entry/src/main/ets/ui/controls/ReaderLabeledIconAction.ets",
+      "shapeSha256": "d13c02b6a91cbe2b7a6f47dee97613b56eea9d54b9aad1aa53e8f77602c66323",
+      "consumers": [
+        {
+          "file": "features/discover/DiscoverPage.ets",
+          "method": "features/discover/DiscoverPage.ets#DiscoverPage#filterRow",
+          "component": "ReaderLabeledIconAction",
+          "specId": "'discover-apply'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "icon",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/rss/RssEntryDetailPage.ets",
+          "method": "features/rss/RssEntryDetailPage.ets#RssEntryDetailPage#actionTarget",
+          "component": "ReaderLabeledIconAction",
+          "specId": "'rss-entry'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "icon",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/rss/RssPage.ets",
+          "method": "features/rss/RssPage.ets#RssPage#managePill",
+          "component": "ReaderLabeledIconAction",
+          "specId": "'rss-manage'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "icon",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/rss/RssPage.ets",
+          "method": "features/rss/RssPage.ets#RssPage#recentUnreadHeader",
+          "component": "ReaderLabeledIconAction",
+          "specId": "'rss-view-all'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "icon",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/rss/RssSourceFeedPage.ets",
+          "method": "features/rss/RssSourceFeedPage.ets#RssSourceFeedPage#actionTarget",
+          "component": "ReaderLabeledIconAction",
+          "specId": "'rss-feed'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "icon",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/rss/RssSourceFeedPage.ets",
+          "method": "features/rss/RssSourceFeedPage.ets#RssSourceFeedPage#entrySectionHeader",
+          "component": "ReaderLabeledIconAction",
+          "specId": "'rss-source-operations'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "icon",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionManagementPage.ets",
+          "method": "features/rss/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage#actionTarget",
+          "component": "ReaderLabeledIconAction",
+          "specId": "'rss-management'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "icon",
+            "isDanger",
+            "showDivider",
+            "onAction"
+          ]
+        },
+        {
+          "file": "features/source/SourceManagementPage.ets",
+          "method": "features/source/SourceManagementPage.ets#SourceManagementPage#bottomActionBar",
+          "component": "ReaderLabeledIconAction",
+          "specId": "'source-management-add'",
+          "keys": [
+            "scheme",
+            "specId",
+            "label",
+            "icon",
+            "onAction"
+          ]
+        }
+      ],
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/ui/controls/ReaderLabeledIconActionSpecs.ets",
+          "shapeSha256": "95947cc67060430726194ac78f5f6760c842b119a02650f970b6b9726f5105ae"
+        }
+      ]
+    },
+    {
+      "id": "shared-ReaderMangaDownloadPopup",
+      "from": "entry/src/main/ets/features/common/ReaderMangaDownloadPopup.ets",
+      "file": "entry/src/main/ets/features/manga/ReaderMangaDownloadPopup.ets",
+      "shapeSha256": "67bcab6b3ded1efc0b78278690f4af7fa047dc6c177a1d860a7832a7518ea710",
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookDirectoryPage.ets",
+          "method": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#mangaDownloadMenuButton",
+          "component": "ReaderMangaDownloadPopup",
+          "specId": "'manga-download'",
+          "keys": [
+            "specId",
+            "visible",
+            "generation",
+            "availableWidth",
+            "actions",
+            "loading",
+            "failureMessage",
+            "onOpen",
+            "onClosed",
+            "onAction",
+            "onRetry"
+          ]
+        }
+      ],
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/features/manga/ReaderMangaDownloadPopupSpec.ts",
+          "shapeSha256": "cf55541285d0ede4b618a9a314ed801147272bd62309bdbf09f484db1f7bb60c"
+        }
+      ]
+    },
+    {
+      "id": "shared-ReaderPageScaffold",
+      "from": "entry/src/main/ets/features/common/ReaderPageScaffold.ets",
+      "file": "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets",
+      "shapeSha256": "dab3d62863412421362a1a9eb00d454052892796bf48e337a056385904f0e899",
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookDirectoryPage.ets",
+          "method": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "frameStyle",
+            "geometry",
+            "content"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookDirectoryPage.ets",
+          "method": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#standardPage",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "frameStyle",
+            "geometry",
+            "headerMeasurementKey",
+            "content",
+            "header",
+            "overlayContent",
+            "onHeaderHeightChange"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookDirectoryPage.ets",
+          "method": "features/bookshelf/BookDirectoryPage.ets#BookDirectoryPage#mangaPage",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "frameStyle",
+            "geometry",
+            "headerMeasurementKey",
+            "content",
+            "header",
+            "footer",
+            "overlayContent",
+            "onHeaderHeightChange"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfMultiSelectPage.ets",
+          "method": "features/bookshelf/BookshelfMultiSelectPage.ets#BookshelfMultiSelectPage#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "frameStyle",
+            "geometry",
+            "headerMeasurementKey",
+            "footerMeasurementKey",
+            "content",
+            "header",
+            "onHeaderHeightChange",
+            "onFooterHeightChange",
+            "footer"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalBookDetail.ets",
+          "method": "features/bookshelf/LocalBookDetail.ets#LocalBookDetail#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "frameStyle",
+            "geometry",
+            "content"
+          ]
+        },
+        {
+          "file": "features/bookshelf/LocalBookDetail.ets",
+          "method": "features/bookshelf/LocalBookDetail.ets#LocalBookDetail#detailPage",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "frameStyle",
+            "geometry",
+            "headerMeasurementKey",
+            "footerMeasurementKey",
+            "content",
+            "header",
+            "onHeaderHeightChange",
+            "onFooterHeightChange",
+            "footer"
+          ]
+        },
+        {
+          "file": "features/downloads/SharedDownloadPage.ets",
+          "method": "features/downloads/SharedDownloadPage.ets#SharedDownloadPage#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "frameStyle",
+            "geometry",
+            "content",
+            "header",
+            "footer",
+            "overlayContent"
+          ]
+        },
+        {
+          "file": "features/reading/ReaderFullDirectory.ets",
+          "method": "features/reading/ReaderFullDirectory.ets#ReaderFullDirectory#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "frameStyle",
+            "geometry",
+            "headerMeasurementKey",
+            "header",
+            "content",
+            "overlayContent",
+            "onHeaderHeightChange"
+          ]
+        },
+        {
+          "file": "features/search/SearchPage.ets",
+          "method": "features/search/SearchPage.ets#SearchPage#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "frameStyle",
+            "headerVisible",
+            "transparentContent",
+            "geometry",
+            "content"
+          ]
+        },
+        {
+          "file": "features/shell/MainTabShell.ets",
+          "method": "features/shell/MainTabShell.ets#MainTabShell#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "frameStyle",
+            "headerVisible",
+            "geometry",
+            "headerMeasurementKey",
+            "content",
+            "header",
+            "footer",
+            "overlayContent",
+            "onHeaderHeightChange"
+          ]
+        },
+        {
+          "file": "features/shell/ReaderShell.ets",
+          "method": "features/shell/ReaderShell.ets#ReaderShell#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "frameStyle",
+            "pageVisible",
+            "geometry",
+            "content",
+            "overlayContent"
+          ]
+        },
+        {
+          "file": "features/source/SourceManagementPage.ets",
+          "method": "features/source/SourceManagementPage.ets#SourceManagementPage#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "frameStyle",
+            "geometry",
+            "headerMeasurementKey",
+            "footerMeasurementKey",
+            "content",
+            "header",
+            "footer",
+            "overlayContent",
+            "onHeaderHeightChange",
+            "onFooterHeightChange"
+          ]
+        },
+        {
+          "file": "features/sync/ui/SyncSurface.ets",
+          "method": "features/sync/ui/SyncSurface.ets#SyncSurface#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "frameStyle",
+            "geometry",
+            "content"
+          ]
+        },
+        {
+          "file": "ui/layout/ReaderStandardPage.ets",
+          "method": "ui/layout/ReaderStandardPage.ets#ReaderStandardPage#build",
+          "component": "ReaderPageScaffold",
+          "specId": null,
+          "keys": [
+            "frameStyle",
+            "geometry",
+            "headerMeasurementKey",
+            "footerMeasurementKey",
+            "content",
+            "header",
+            "footer",
+            "overlayContent",
+            "onHeaderHeightChange",
+            "onFooterHeightChange"
+          ]
+        }
+      ],
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/ui/layout/ReaderPageShell.ts",
+          "shapeSha256": "6a44965ed7be61582e4c18fc249446c9c6e505fa162c1227bef4689a77f74301"
+        }
+      ]
+    },
+    {
+      "id": "shared-ReaderPageScrollHost",
+      "file": "entry/src/main/ets/ui/layout/ReaderPageScrollHost.ets",
+      "shapeSha256": "3bda189203a6c1f483a33a08fac48a50bd4e7aabfc0fb2fb23e24b18d25b5013",
+      "consumers": [
+        {
+          "file": "ui/layout/ReaderStandardPage.ets",
+          "method": "ui/layout/ReaderStandardPage.ets#ReaderStandardPage#scrollContent",
+          "component": "ReaderPageScrollHost",
+          "specId": null,
+          "keys": [
+            "scroller",
+            "layout",
+            "content"
+          ]
+        }
+      ],
+      "specSources": [],
+      "newProducer": {
+        "component": "ReaderPageScrollHost",
+        "specPolicy": "Native scroll owner and geometry from the shared page shell. One render path with explicit viewport and safe content budget.",
+        "removalProofs": [
+          "docs/architecture/ui-target-architecture-20261105.md"
+        ],
+        "sdkProofs": [
+          "tools/test-reader-page-header-contract.mjs"
+        ]
+      }
+    },
+    {
+      "id": "shared-ReaderSegmentedControl",
+      "from": "entry/src/main/ets/features/common/ReaderSegmentedControl.ets",
+      "file": "entry/src/main/ets/ui/controls/ReaderSegmentedControl.ets",
+      "shapeSha256": "eba3967cf675c934f88111a011ab497af101eace46c95b73980d7f412d632200",
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookshelfSettingsPage.ets",
+          "method": "features/bookshelf/BookshelfSettingsPage.ets#BookshelfSettingsPage#pageContent",
+          "component": "ReaderSegmentedControl",
+          "specId": "'pill-choice'",
+          "keys": [
+            "specId",
+            "options",
+            "optionIds",
+            "inputIdentity",
+            "accessibilityLabel",
+            "selectedIndex",
+            "actionEnabled",
+            "onSelect"
+          ]
+        },
+        {
+          "file": "features/settings/SettingsPage.ets",
+          "method": "features/settings/SettingsPage.ets#SettingsPage#appThemeControl",
+          "component": "ReaderSegmentedControl",
+          "specId": "'app-theme-segment'",
+          "keys": [
+            "specId",
+            "options",
+            "optionIds",
+            "inputIdentity",
+            "accessibilityLabel",
+            "actionEnabled",
+            "selectedIndex",
+            "onSelect"
+          ]
+        }
+      ],
+      "specSources": []
+    },
+    {
+      "id": "shared-ReaderStandardPage",
+      "from": "entry/src/main/ets/features/common/ReaderStandardPage.ets",
+      "file": "entry/src/main/ets/ui/layout/ReaderStandardPage.ets",
+      "shapeSha256": "780080e28134274417f8e25c02ad26a913083ee095620c1b648273a577b161b1",
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookshelfManagementPage.ets",
+          "method": "features/bookshelf/BookshelfManagementPage.ets#BookshelfManagementPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content",
+            "overlayContent"
+          ]
+        },
+        {
+          "file": "features/bookshelf/BookshelfSettingsPage.ets",
+          "method": "features/bookshelf/BookshelfSettingsPage.ets#BookshelfSettingsPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content",
+            "overlayContent"
+          ]
+        },
+        {
+          "file": "features/rss/RssEntryDetailPage.ets",
+          "method": "features/rss/RssEntryDetailPage.ets#RssEntryDetailPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content",
+            "footer"
+          ]
+        },
+        {
+          "file": "features/rss/RssSourceFeedPage.ets",
+          "method": "features/rss/RssSourceFeedPage.ets#RssSourceFeedPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionEditorPage.ets",
+          "method": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionManagementPage.ets",
+          "method": "features/rss/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content",
+            "scroller"
+          ]
+        },
+        {
+          "file": "features/settings/ReaderMessagePreviewPage.ets",
+          "method": "features/settings/ReaderMessagePreviewPage.ets#ReaderMessagePreviewPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "scroller",
+            "header",
+            "content",
+            "overlayContent"
+          ]
+        },
+        {
+          "file": "features/settings/RulesManagementPage.ets",
+          "method": "features/settings/RulesManagementPage.ets#RulesManagementPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        },
+        {
+          "file": "features/settings/SettingsPage.ets",
+          "method": "features/settings/SettingsPage.ets#SettingsPage#developerPage",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content",
+            "overlayContent"
+          ]
+        },
+        {
+          "file": "features/shell/MainTabShell.ets",
+          "method": "features/shell/MainTabShell.ets#MainTabShell#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "scroller",
+            "onViewportChange",
+            "contentLeadingRail",
+            "contentEndInset",
+            "content",
+            "header",
+            "footer",
+            "overlayContent"
+          ]
+        },
+        {
+          "file": "features/shell/SettingsShell.ets",
+          "method": "features/shell/SettingsShell.ets#SettingsShell#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "scroller",
+            "content",
+            "header",
+            "overlayContent"
+          ]
+        },
+        {
+          "file": "features/source/SourceToolsPage.ets",
+          "method": "features/source/SourceToolsPage.ets#SourceToolsPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content",
+            "overlayContent"
+          ]
+        },
+        {
+          "file": "features/sync/SyncPage.ets",
+          "method": "features/sync/SyncPage.ets#SyncPage#build",
+          "component": "ReaderStandardPage",
+          "specId": null,
+          "keys": [
+            "variant",
+            "header",
+            "content"
+          ]
+        }
+      ],
+      "specSources": [
+        {
+          "file": "entry/src/main/ets/ui/layout/ReaderPageShell.ts",
+          "shapeSha256": "6a44965ed7be61582e4c18fc249446c9c6e505fa162c1227bef4689a77f74301"
+        }
+      ]
+    },
+    {
+      "id": "shared-ReaderToggle",
+      "from": "entry/src/main/ets/features/common/ReaderToggle.ets",
+      "file": "entry/src/main/ets/ui/controls/ReaderToggle.ets",
+      "shapeSha256": "92619052a08be77eda1a69371c06dfc349ed6ba1bdbbf0fe9f2010e0ff84e7c3",
+      "consumers": [
+        {
+          "file": "features/bookshelf/BookshelfSettingsPage.ets",
+          "method": "features/bookshelf/BookshelfSettingsPage.ets#BookshelfSettingsPage#pageContent",
+          "component": "ReaderToggle",
+          "specId": "'bookshelf-update-toggle'",
+          "keys": [
+            "specId",
+            "value",
+            "inputIdentity",
+            "accessibilityLabel",
+            "actionEnabled",
+            "isBusy",
+            "onToggle"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionEditorPage.ets",
+          "method": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#pageContent",
+          "component": "ReaderToggle",
+          "specId": "'standard-toggle'",
+          "keys": [
+            "value",
+            "specId",
+            "accessibilityLabel",
+            "inputIdentity",
+            "actionEnabled",
+            "onToggle"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionEditorPage.ets",
+          "method": "features/rss/RssSubscriptionEditorPage.ets#RssSubscriptionEditorPage#pageContent",
+          "component": "ReaderToggle",
+          "specId": "'standard-toggle'",
+          "keys": [
+            "value",
+            "specId",
+            "accessibilityLabel",
+            "inputIdentity",
+            "actionEnabled",
+            "onToggle"
+          ]
+        },
+        {
+          "file": "features/rss/RssSubscriptionManagementPage.ets",
+          "method": "features/rss/RssSubscriptionManagementPage.ets#RssSubscriptionManagementPage#subscriptionItem",
+          "component": "ReaderToggle",
+          "specId": "'standard-toggle'",
+          "keys": [
+            "value",
+            "specId",
+            "accessibilityLabel",
+            "inputIdentity",
+            "actionEnabled",
+            "isBusy",
+            "onToggle"
+          ]
+        },
+        {
+          "file": "features/settings/RulesManagementPage.ets",
+          "method": "features/settings/RulesManagementPage.ets#RulesManagementPage#booleanField",
+          "component": "ReaderToggle",
+          "specId": "'standard-toggle'",
+          "keys": [
+            "value",
+            "specId",
+            "accessibilityLabel",
+            "inputIdentity",
+            "actionEnabled",
+            "onToggle"
+          ]
+        },
+        {
+          "file": "features/settings/SettingsPage.ets",
+          "method": "features/settings/SettingsPage.ets#SettingsPage#developerPageContent",
+          "component": "ReaderToggle",
+          "specId": "'standard-toggle'",
+          "keys": [
+            "value",
+            "specId",
+            "inputIdentity",
+            "accessibilityLabel",
+            "actionEnabled",
+            "isBusy",
+            "onToggle"
+          ]
+        },
+        {
+          "file": "features/settings/SettingsPage.ets",
+          "method": "features/settings/SettingsPage.ets#SettingsPage#switchRow",
+          "component": "ReaderToggle",
+          "specId": "'standard-toggle'",
+          "keys": [
+            "value",
+            "specId",
+            "inputIdentity",
+            "accessibilityLabel",
+            "actionEnabled",
+            "isBusy",
+            "onToggle"
+          ]
+        },
+        {
+          "file": "features/source/SourceManagementPage.ets",
+          "method": "features/source/SourceManagementPage.ets#SourceManagementPage#sourceSwitch",
+          "component": "ReaderToggle",
+          "specId": "'standard-toggle'",
+          "keys": [
+            "value",
+            "specId",
+            "inputIdentity",
+            "accessibilityLabel",
+            "actionEnabled",
+            "isBusy",
+            "onToggle"
+          ]
+        }
+      ],
+      "specSources": []
+    }
+  ],
+  "boundedSpecs": [
+    {
+      "id": "shared-ReaderPageShellPolicy",
+      "from": "entry/src/main/ets/features/common/ReaderPageShell.ts",
+      "file": "entry/src/main/ets/ui/layout/ReaderPageShell.ts",
+      "shapeSha256": "6a44965ed7be61582e4c18fc249446c9c6e505fa162c1227bef4689a77f74301"
+    }
+  ]
+}

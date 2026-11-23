@@ -1,19 +1,20 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, registerHooks, stripTypeScriptTypes } from 'node:module';
 import { ReadingEntryHandoff, registerReadingEntryMemoryRelease, releaseReadingEntryMemory,
-  estimateRetainedRemoteSessionBytes } from '../entry/src/main/ets/features/reading/ReadingEntryHandoff.ts';
+  estimateRetainedRemoteSessionBytes } from '../entry/src/main/ets/features/reading/application/ReadingEntryHandoff.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { ReadingPaginationPrefix } from '../entry/src/main/ets/features/reading/ReadingPaginationIndex.ts';
+import { ReadingPaginationPrefix } from '../entry/src/main/ets/features/reading/application/ReadingPaginationIndex.ts';
 registerHooks({ resolve(specifier, context, next) {
   try { return next(specifier, context); } catch (error) {
     if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context);
     throw error;
   }
 } });
-const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
+const file = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 const handoff = new ReadingEntryHandoff();
 let current = true;
 assert.equal(handoff.publish('local', 'a', { marker: 1 }, 40, () => current), true);
@@ -173,7 +174,7 @@ for (const callback of ['admitCommittedProgress', 'onDirectoryProjectionChanged'
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`), options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const tree = ts.createSourceFile(virtualFilePath('ReaderEntryRetain.ets'), readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const tree = ts.createSourceFile(virtualFilePath('ReaderEntryRetain.ets'), readReaderExperienceFixture(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
 const classes = Object.fromEntries(['ReaderRetainedPresentation', 'ReaderMaterializedChapterContext'].map(name => {
   const node = tree.statements.find(node => ts.isClassDeclaration(node) && node.name?.getText(tree) === name);
   assert.ok(node, name);

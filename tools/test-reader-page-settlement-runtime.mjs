@@ -1,10 +1,10 @@
 import assert from 'node:assert/strict';
-import { ReaderPageSettlementTimeline } from '../entry/src/main/ets/features/reading/ReaderPageSettlementTimeline.ts';
-import { resumeReaderPagePan, updateReaderPagePanInPlace, finishReaderPagePan } from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
+import { ReaderPageSettlementTimeline } from '../entry/src/main/ets/features/reading/ui/ReaderPageSettlementTimeline.ts';
+import { resumeReaderPagePan, updateReaderPagePanInPlace, finishReaderPagePan } from '../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { createReaderRapidPageTurnState, enqueueReaderRapidPageTurn, beginReaderRapidPageTurn, completeReaderRapidPageTurn } from '../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts';
-import { readerBookTurnRuntimeSpec } from '../entry/src/main/ets/features/reading/ReaderRenderStageSpec.ts';
-const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+import { createReaderRapidPageTurnState, enqueueReaderRapidPageTurn, beginReaderRapidPageTurn, completeReaderRapidPageTurn } from '../entry/src/main/ets/features/reading/ui/ReaderRapidPageTurnState.ts';
+import { readerBookTurnRuntimeSpec } from '../entry/src/main/ets/features/reading/ui/ReaderRenderStageSpec.ts';
+const file = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 const Host = productionMotionMethods(file, ['regrabPageTurn', 'completeRapidPageTurnTransaction'], { resumeReaderPagePan, completeReaderRapidPageTurn });
 for (const direction of ['next', 'previous']) {
   const sign = direction === 'next' ? -1 : 1;

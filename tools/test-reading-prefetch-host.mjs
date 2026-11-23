@@ -5,12 +5,12 @@ async function run(id){
 const {registerHooks,stripTypeScriptTypes}=await import('node:module');
 const {readFileSync}=await import('node:fs');
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
-const {ReadingOfflineGateway}=await import('../entry/src/main/ets/features/reading/ReadingOfflineGateway.ts');
-const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
-const evidence=await import('../entry/src/main/ets/features/reading/RemoteReadingEvidence.ts');
+const {ReadingOfflineGateway}=await import('../entry/src/main/ets/features/reading/application/ReadingOfflineGateway.ts');
+const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+const evidence=await import('../entry/src/main/ets/features/reading/application/RemoteReadingEvidence.ts');
 const {errorMessageOf}=await import('../entry/src/main/ets/app/ErrorMessage.ts');
 let currentOwner;const ownedHosts=[];
-const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ReadingPrefetchHost.ts',import.meta.url),'utf8');
+const source=readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingPrefetchHost.ts',import.meta.url),'utf8');
 const compile=source=>new Function('ReaderRuntimeOwner','ReadingOfflineGateway','RemoteReadingFlowGateway','sameRemoteSessionEvidence','canAppendRemoteReadingCatalog','errorMessageOf',
  stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm,'')).replace(/\bexport /g,'')+';return ReadingPrefetchHost;')(
  {current:()=>currentOwner,isCurrent:owner=>currentOwner===owner},ReadingOfflineGateway,RemoteReadingFlowGateway,evidence.sameRemoteSessionEvidence,evidence.canAppendRemoteReadingCatalog,errorMessageOf);

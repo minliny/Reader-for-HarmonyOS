@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { actualProjectionTypes, actualProjectionIndex } from './lib/bookshelf-projection-owner-probe.mjs';
-const file = new URL('../entry/src/main/ets/features/bookshelf/BookshelfFlowGateway.ts', import.meta.url);
+const file = new URL('../entry/src/main/ets/features/bookshelf/application/BookshelfFlowGateway.ts', import.meta.url);
 const Flow=productionMotionMethods(file,['load','loadPage','loadAll','loadAnchor','extendPage','classify'],{BOOKSHELF_PAGE_SIZE:48});
 const book=i=>({sourceId:'s',bookId:String(i),title:String(i),author:'a'});
 const page=(offset,total=100,revision='r')=>({books:Array.from({length:Math.min(48,total-offset)},(_,i)=>book(i+offset)),total,unfilteredTotal:total,projectionRevision:revision,changed:false});
@@ -61,26 +61,26 @@ function windowFixture(total=100){let installed,resolvePage,defer=false,mode='ap
  return{...actual,requests,mode:m=>mode=m,changeOwner:o=>installed=o,pause(){defer=true;},release(){resolvePage();}};
 }
 for(const outcome of ['append','stale-generation','changed','duplicate','owner']){
- const f=windowFixture(),host=f.idx;let refreshes=0;
+ const f=windowFixture(),host=f.index;let refreshes=0;
  const refresh=f.owner.refresh.bind(f.owner);f.owner.refresh=(...args)=>{refreshes++;return refresh(...args);};
- f.idx.bookshelfProjectionBinding.failed=e=>f.faults.push(e.message);
- f.pause();f.mode(outcome);host.loadNextShelfPage();host.loadNextShelfPage();assert.equal(f.requests.length,1);
+ f.read.binding.failed=e=>f.faults.push(e.message);
+ f.pause();f.mode(outcome);f.read.page(false);f.read.page(false);assert.equal(f.requests.length,1);
  if(outcome==='stale-generation')host.invalidateBookshelfProjection();
  if(outcome==='owner')f.changeOwner({});
  f.release();await until(()=>!f.owner.snapshot().pageLoading);await pause();
- assert.equal(host.shelfBooks.length,outcome==='append'?96:48,outcome+' '+JSON.stringify(f.faults));
+ assert.equal(f.read.snapshot.books.length,outcome==='append'?96:48,outcome+' '+JSON.stringify(f.faults));
  assert.equal(refreshes,outcome==='changed'?1:0,outcome);
 }
 console.log('PASS actual Flow→ProjectionOwner→Index paging: single request, append, stale generation/runtime rejection, changed revision refresh and duplicate-page rejection');
 // Exercise more than twenty native list windows, including an incomplete tail.
 {
- const total=1001,f=windowFixture(total),host=f.idx;
- const check=()=>{assert.ok(host.shelfBooks.length<=144);assert.equal(host.shelfWindowOffset%48,0);
- assert.deepEqual(host.shelfBooks.map(b=>Number(b.bookId)),Array.from({length:host.shelfBooks.length},(_,i)=>host.shelfWindowOffset+i));};
- while(host.shelfWindowOffset+host.shelfBooks.length<total){host.loadNextShelfPage();await until(()=>!f.owner.snapshot().pageLoading);check();}
- assert.equal(host.shelfBooks.at(-1).bookId,'1000');
- while(host.shelfWindowOffset>0){host.loadPreviousShelfPage();await until(()=>!f.owner.snapshot().pageLoading);check();}
- assert.equal(host.shelfBooks[0].bookId,'0');assert.ok(f.requests.length>35);
+ const total=1001,f=windowFixture(total),host=f.index;
+ const check=()=>{assert.ok(f.read.snapshot.books.length<=144);assert.equal(f.read.snapshot.offset%48,0);
+ assert.deepEqual(f.read.snapshot.books.map(b=>Number(b.bookId)),Array.from({length:f.read.snapshot.books.length},(_,i)=>f.read.snapshot.offset+i));};
+ while(f.read.snapshot.offset+f.read.snapshot.books.length<total){f.read.page(false);await until(()=>!f.owner.snapshot().pageLoading);check();}
+ assert.equal(f.read.snapshot.books.at(-1).bookId,'1000');
+ while(f.read.snapshot.offset>0){f.read.page(true);await until(()=>!f.owner.snapshot().pageLoading);check();}
+ assert.equal(f.read.snapshot.books[0].bookId,'0');assert.ok(f.requests.length>35);
 }
 
 {
@@ -96,7 +96,7 @@ console.log('PASS actual Flow→ProjectionOwner→Index paging: single request, 
 console.log('PASS 1001-book forward/backward bounded windows, partial-tail alignment and one-query deep anchor');
 
 {
- const Page=productionMotionMethods(new URL('../entry/src/main/ets/features/bookshelf/BookshelfPage.ets',import.meta.url),['rebuildShelfProjection']);
+ const Page=productionMotionMethods(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets',import.meta.url),['rebuildShelfProjection']);
  const state={anchorKey:JSON.stringify(['s','70']),anchorItemY:-7};let restored=false;
  const owner=Object.assign(new Page(),{books:page(48,1001).books,serverFiltered:true,unfilteredOnlineBooks:true,
   mounted:true,viewportRestored:true,viewState:state,

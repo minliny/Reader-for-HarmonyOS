@@ -8,6 +8,7 @@ const {readFileSync}=await import('node:fs');
 const {stripTypeScriptTypes,createRequire}=await import('node:module');
 const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
 const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');
+const {sourceManagementRecoveryProbe,sourceRecoveryNativeAction}=await import('./lib/source-management-recovery-probe.mjs');
 const source=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
 const ordinary=s=>stripTypeScriptTypes(s.replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''));
 const load=(p,n,deps={})=>new Function(...Object.keys(deps),ordinary(source(p))+`;return ${n};`)(...Object.values(deps));
@@ -15,22 +16,22 @@ const facts=load('app/ReaderOperationFacts.ts','{projectOperationFacts,projectCo
 const projectPersistedReceipt=load('app/ReaderPersistedReceiptProjection.ts','projectPersistedReceipt',facts);
 const ReaderWriteEvidence=load('app/ReaderWriteEvidence.ts','ReaderWriteEvidence'),readerRecoveryView=load('app/ReaderRecoveryProjection.ts','readerRecoveryView');
 let currentOwner;const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
-const helpers={...load('app/ErrorMessage.ts','{errorMessageOf}'),...load('app/HttpTransportPolicy.ts','{httpUrlHostname,isPrivateNetworkTarget}'),...load('features/source/ReaderSourceCategory.ts','{classifyReaderSource}')};
+const helpers={...load('app/ErrorMessage.ts','{errorMessageOf}'),...load('platform/network/HttpTransportPolicy.ts','{httpUrlHostname,isPrivateNetworkTarget}'),...load('features/source/application/ReaderSourceCategory.ts','{classifyReaderSource}')};
 const {ReaderCoreRequestError,isReaderCoreTransactionPendingError:typed}=await import('../entry/vendor/core-harmony/sdk/reader_core.ts');
-const SourceGateway=load('features/source/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner,isReaderCoreTransactionPendingError:typed,...helpers});
-const SourceOrchestrator=load('features/source/SourceOrchestrator.ets','SourceOrchestrator',{SourceGateway,ReaderRuntimeOwner,ReaderWriteEvidence,isReaderCoreTransactionPendingError:typed,hilog:{error(){},warn(){},info(){}},projectPersistedReceipt,...facts,...helpers});
-const SourceHost=load('features/source/SourceHost.ets','SourceHost',{ReaderRuntimeOwner,SourceOrchestrator,SourceGateway});
+const SourceGateway=load('features/source/application/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner,isReaderCoreTransactionPendingError:typed,...helpers});
+const SourceOrchestrator=load('features/source/application/SourceOrchestrator.ets','SourceOrchestrator',{SourceGateway,ReaderRuntimeOwner,ReaderWriteEvidence,isReaderCoreTransactionPendingError:typed,hilog:{error(){},warn(){},info(){}},projectPersistedReceipt,...facts,...helpers});
+const SourceHost=load('features/source/application/SourceHost.ets','SourceHost',{ReaderRuntimeOwner,SourceOrchestrator,SourceGateway});
 const prefs=new WeakMap();const preferences={getPreferences:async ctx=>prefs.get(ctx)};
 function freshSettingsHost(){
-const {SettingsGateway,createDefaultSettingsSnapshot}=load('features/settings/SettingsGateway.ts','{SettingsGateway,createDefaultSettingsSnapshot}',{preferences,ReaderThemeHost:{async prepareUserChange(){}}});
-const SettingsOrchestrator=load('features/settings/SettingsOrchestrator.ets','SettingsOrchestrator',{SettingsGateway,createDefaultSettingsSnapshot,ReaderRuntimeOwner,ReaderWriteEvidence,LocalConfigurationReset:{request(){throw Error('reset tested by full durable reset suite');}},hilog:{error(){}},projectPersistedReceipt,...facts});
-const SettingsHost=load('features/settings/SettingsHost.ets','SettingsHost',{SettingsOrchestrator,ReaderRuntimeOwner});
+const {SettingsGateway,createDefaultSettingsSnapshot}=load('features/settings/application/SettingsGateway.ts','{SettingsGateway,createDefaultSettingsSnapshot}',{preferences,ReaderThemeHost:{async prepareUserChange(){}}});
+const SettingsOrchestrator=load('features/settings/application/SettingsOrchestrator.ets','SettingsOrchestrator',{SettingsGateway,createDefaultSettingsSnapshot,ReaderRuntimeOwner,ReaderWriteEvidence,LocalConfigurationReset:{request(){throw Error('reset tested by full durable reset suite');}},hilog:{error(){}},projectPersistedReceipt,...facts});
+const SettingsHost=load('features/settings/application/SettingsHost.ets','SettingsHost',{SettingsOrchestrator,ReaderRuntimeOwner});
 return SettingsHost;
 }
 const SettingsHost=freshSettingsHost();
 const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot(),syntax=require(sdk+'/lib/validate_ui_syntax.js');
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
-for(const [name,path] of [['SourceManagementPage','features/source/SourceManagementPage.ets'],['SettingsPage','features/settings/SettingsPage.ets'],['ReaderRecoveryAction','features/common/ReaderRecoveryAction.ets']]){syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source(path).matchAll(/@Prop\s+(?:@Watch\([^\n]+?\)\s+)?(\w+)\s*:/g)].map(m=>m[1])));}
+for(const [name,path] of [['SourceManagementPage','features/source/ui/SourceManagementPage.ets'],['SettingsPage','features/settings/ui/SettingsPage.ets'],['ReaderRecoveryAction','ui/feedback/ReaderRecoveryAction.ets']]){syntax.componentCollection.customComponents.add(name);syntax.propCollection.set(name,new Set([...source(path).matchAll(/@Prop\s+(?:@Watch\([^\n]+?\)\s+)?(\w+)\s*:/g)].map(m=>m[1])));}
 const clone=v=>v===undefined?undefined:structuredClone(v),tick=()=>new Promise(r=>setImmediate(r));
 const defer=()=>{let resolve;const promise=new Promise(r=>resolve=r);return{resolve,promise};};
 const row=()=>({sourceId:'a',name:'A',baseUrl:'https://a.test',enabled:true,enabledExplore:false,bookSource:{bookSourceType:0}});
@@ -49,10 +50,10 @@ function fixture(kind){const SettingsHost=freshSettingsHost();const r=rpc();curr
  Object.assign(index,{route:sourceDomain?'source':'settings',sourceSources:[],sourceStatusKind:'idle',sourceStatusMessage:'',sourceOperation:{action:'load',sourceId:''},settingsOperation:{action:'load'},settingsSnapshot:{autoCheckUpdate:true,tapBottomScrollTop:true,reduceMotion:false,crashLog:true,developerMode:false},settingsSection:'general',mountedRuntimeOwner:r,detailShelfAdmissionMount:1,navigationGeneration:1,shelfReceiptRetired:false,sourcePresentationIdentity:'',settingsPresentationIdentity:'',rssInstanceIdentity:1});
  const host=field(index,sourceDomain?'sourceHost':'settingsHost',{SourceHost,SettingsHost});index[sourceDomain?'sourceHost':'settingsHost']=host;if(sourceDomain)assert.equal(index.bindSourceManagement(),true);else assert.equal(index.bindSettingsPresentation(),true);
  let rendered=false;const refresh=()=>{if(!rendered){index[method]();rendered=true;}else index.replay();return [...index.children.values()].at(-1).params;};
- function page(){const params=refresh(),path=sourceDomain?'features/source/SourceManagementPage.ets':'features/settings/SettingsPage.ets';
-  if(sourceDomain){const sdk=boundedSurfaceSdk();const page=sdk.consumer(source(path),['operation','statusKind','statusMessage','onReconcile','onRetryLoad','statusBanner','recovery'],{readerRecoveryView},params);Object.assign(page,{appThemeScheme:'day',resetMessage:'',contentFrame:()=>({width:350})});page.statusBanner();page.actualSdk=sdk;return page;}
+ function page(){const params=refresh(),path=sourceDomain?'features/source/ui/SourceManagementPage.ets':'features/settings/ui/SettingsPage.ets';
+  if(sourceDomain){const projection=sourceManagementRecoveryProbe(source(path),params);const page=projection.owner;page.actualSdk=projection.sdk;page.actualRecoveryProjection=projection;return page;}
   const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
-  const page=sdk.consumer(source(path),['operation','cacheCleanup','onCacheCleanupChanged','applyCacheCleanup','temporaryBackIdentity','operationFeedback','pendingFeedback','recovery','feedbackMessage','recoveryActionIdentities','recoveryActionKind','recoveryActionGeneration',
+  const page=sdk.consumer(source(path),['operation','cacheCleanup','onCacheCleanupChanged','temporaryBackIdentity','operationFeedback','pendingFeedback','recovery','feedbackMessage','recoveryActionIdentities','recoveryActionKind','recoveryActionGeneration',
    'recoveryActionLabel','recoveryActionCurrent','dispatchRecoveryAction'],{readerRecoveryView,ReaderRuntimeOwner});
   Object.assign(page,params,{appThemeScheme:'day',resetMessage:'',mounted:true,themeOwner:r,temporaryBackIdentity:'settings-real:1'});page.operationFeedback();page.pendingFeedback();
   page.actualSdk=sdk;return page;
@@ -61,7 +62,7 @@ function fixture(kind){const SettingsHost=freshSettingsHost();const r=rpc();curr
   const actor=page.actualSdk.walk(page).find(c=>c.label===currentLabel&&c instanceof page.actualSdk.deps.ReaderRecoveryAction);assert.ok(actor,label+' actual native action');
   return [...actor.nodes.values()].find(n=>n.onClick).onClick;};
 
- return{r,index,host,refresh,page,open:()=>host.open(sourceDomain?index.sourcePresentationIdentity:index.settingsPresentationIdentity),write:()=>sourceDomain?host.toggleSource('a',false,index.sourcePresentationIdentity):host.toggle('reduceMotion',true,index.settingsPresentationIdentity),settle:async()=>{await tick();if(sourceDomain)await host.orchestrator.operationChain;else for(let i=0;i<5;i++)await tick();},receipt:()=>index[sourceDomain?'sourceOperation':'settingsOperation'],read:()=>index[sourceDomain?'sourceOperation':'settingsOperation'].readFacts,native,retry:page=>{if(sourceDomain){const actor=page.actualSdk.walk(page).find(c=>c.specId==='source-management-retry'&&c.label==='重试');assert.ok(actor,'actual shared Source retry component');const hit=page.actualSdk.nodes(actor).find(n=>typeof n.onClick==='function');assert.ok(hit,'actual shared Source retry native action');hit.onClick();}else native(page,page.hasPendingSettings()?'核对':'刷新设置')();}};}
+ return{r,index,host,refresh,page,open:()=>host.open(sourceDomain?index.sourcePresentationIdentity:index.settingsPresentationIdentity),write:()=>sourceDomain?host.toggleSource('a',false,index.sourcePresentationIdentity):host.toggle('reduceMotion',true,index.settingsPresentationIdentity),settle:async()=>{await tick();if(sourceDomain)await host.orchestrator.operationChain;else for(let i=0;i<5;i++)await tick();},receipt:()=>index[sourceDomain?'sourceOperation':'settingsOperation'],read:()=>index[sourceDomain?'sourceOperation':'settingsOperation'].readFacts,native,retry:page=>{if(sourceDomain){sourceRecoveryNativeAction(page.actualRecoveryProjection).onClick();}else native(page,page.hasPendingSettings()?'核对':'刷新设置')();}};}
 
 try{
 if(id==='source-readback'){

@@ -59,8 +59,8 @@ export const startProgrammatic: (componentId: string, generation: number, direct
  *  reveal request. Accepted duplicates do not restart the clock. */
 export const startAutomaticTimeline: (componentId: string, generation: number, surfaceToken: number) => boolean;
 export const commitSlots: (componentId: string, generation: number, direction: number) => boolean;
-/** ArkUI presentation barrier: hold the committed terminal frame until the
- *  promoted content is confirmed composited (releaseTerminalFrame). */
+/** Hold the committed terminal frame until releaseTerminalFrame is processed for
+ * this generation. This logical hold does not confirm physical presentation. */
 export const retainTerminalFrame: (componentId: string, generation: number) => boolean;
 export const releaseTerminalFrame: (componentId: string, generation: number) => boolean;
 /** Clear the EGL surface after ArkUI has hidden the XComponent for this

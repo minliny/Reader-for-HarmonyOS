@@ -2,16 +2,18 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { JsonImportPresentation } from './lib/json-import-presentation-probe.mjs';
 
 const read = (path) => fs.readFileSync(path, 'utf8');
 const host = read('entry/src/main/ets/app/ReaderHostRegistry.ts');
-const httpHost = read('entry/src/main/ets/app/HttpExecuteHost.ts');
+const httpHost = read('entry/src/main/ets/platform/network/HttpExecuteHost.ts');
 const owner = read('entry/src/main/ets/app/ReaderRuntimeOwner.ts');
-const dialog = read('entry/src/main/ets/features/common/JsonImportDialog.ets');
-const source = read('entry/src/main/ets/features/source/SourceOrchestrator.ets');
-const rules = read('entry/src/main/ets/features/settings/RulesManagementOrchestrator.ets');
-const rssGateway = read('entry/src/main/ets/features/rss/RssGateway.ts');
-const rssOrchestrator = read('entry/src/main/ets/features/rss/RssOrchestrator.ets');
+const dialog = read('entry/src/main/ets/app/composition/JsonImportDialog.ets');
+const source = read('entry/src/main/ets/features/source/application/SourceOrchestrator.ets');
+const rules = read('entry/src/main/ets/features/settings/application/RulesManagementOrchestrator.ets');
+const rssGateway = read('entry/src/main/ets/features/rss/application/RssGateway.ts');
+const rssOrchestrator = read('entry/src/main/ets/features/rss/application/RssOrchestrator.ets');
+const rssJourney = read('entry/src/main/ets/features/rss/presentation/RssJourneyPresentation.ets');
 const index = read('entry/src/main/ets/pages/Index.ets');
 
 // One Host transport for every portable JSON feature; no feature-local HTTP stack.
@@ -52,12 +54,23 @@ assert.match(dialog, /ReaderFormField\(\{[\s\S]*?specId: 'form-url'[\s\S]*?onSub
 assert.match(dialog, /GitHub 仓库文件请使用 Raw 链接/);
 assert.match(dialog, /请输入在线 JSON 的 HTTP\/HTTPS 地址/);
 assert.match(dialog, /validationMessage/);
-assert.match(index, /openJsonImport\('bookSource'\)/);
-assert.match(index, /openJsonImport\('ruleBundle'\)/);
-assert.match(index, /openJsonImport\('rssMerge'\)/);
-assert.match(index, /openJsonImport\('rssReplace'\)/);
-assert.match(index, /private executeJsonImport\(context: JsonImportContext, onlineUrl\?: string,\s*rules: RulesManagementOrchestrator \| undefined = this\.rulesManagementOrchestrator, identity: string = this\.rulesPresentationIdentity,\s*source: SourceHost = this\.sourceHost, sourceIdentity: string = this\.sourcePresentationIdentity,\s*rss: RssOrchestrator \| undefined = this\.rssOrchestrator, rssIdentity: string = this\.rssPresentationIdentity\)/);
-assert.match(index, /rules\.isPresentationCurrent\(identity\)\)\s*rules\.importBundle\(onlineUrl, identity\)/,
-  'portable rules import retains its captured original presentation at actual owner admission');
+assert.match(index, /openBookSource\(this\.sourceJourney, identity,/);
+assert.match(index, /openRuleBundle\(this\.rulesPresentation, identity\)/);
+assert.match(index, /openRss\(this\.rssJourney, context, this\.rssJourney\.rssPresentationIdentity\)/);
+assert.match(rssJourney, /openImport\('rssMerge'\)/);
+assert.match(rssJourney, /openImport\('rssReplace'\)/);
+{
+ const modal = new JsonImportPresentation(), calls = [];
+ let identity = 'rules:original';
+ const ruleOwner = { importBundle: (url, target) => calls.push([url, target]) };
+ const rules = { operations: target => target === identity ? ruleOwner : undefined };
+ modal.openRuleBundle(rules, identity);
+ identity = 'rules:successor';
+ modal.submit(modal.opening.id, 'https://old.invalid');
+ assert.deepEqual(calls, [], 'the original opening cannot dispatch to a successor Rules owner');
+ modal.openRuleBundle(rules, identity);
+ modal.submit(modal.opening.id, 'https://chosen.invalid');
+ assert.deepEqual(calls, [['https://chosen.invalid', identity]]);
+}
 
 console.log('portable JSON local/online import boundary: PASS');

@@ -2,8 +2,8 @@ import { localFilePath } from './lib/tool-environment.mjs';
 import { withReaderProgressProducerFixture } from './lib/reader-progress-producer-fixture.mjs';
 import assert from 'node:assert/strict';
 
-import { ReaderTtsGateway } from '../entry/src/main/ets/features/reading/ReaderTtsGateway.ts';
-import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/ReaderTtsSessionCoordinator.ts';
+import { ReaderTtsGateway } from '../entry/src/main/ets/features/reading/application/ReaderTtsGateway.ts';
+import { ReaderTtsSessionCoordinator } from '../entry/src/main/ets/features/reading/application/ReaderTtsSessionCoordinator.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { FakeGateway, FakeHost, chapter as fixtureChapter, canonicalRemoteContent } from './lib/reader-tts-fixtures.mjs';
 import { readFileSync } from 'node:fs';
@@ -117,7 +117,7 @@ console.log('reader TTS precise rate round trip: PASS');
 const wireChapterKeys = Object.keys(JSON.parse(readFileSync(new URL(
   '../../Reader-Core/protocol/reader-command.schema.json', import.meta.url), 'utf8')).$defs.TtsChapterRef.properties);
 const Page = withReaderProgressProducerFixture(productionMotionMethods(localFilePath(new URL(
-  '../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url)),
+  '../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url)),
 ['ttsChapterRef', 'commitTtsProgress'], {
   CoreReadingAnchor: class { constructor(chapterIndex, chapterOffset, chapterProgress, bodyVersion, processingVersion) {
     Object.assign(this, { chapterIndex, chapterOffset, chapterProgress, bodyVersion, processingVersion });

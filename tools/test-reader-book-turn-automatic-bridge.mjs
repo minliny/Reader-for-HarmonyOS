@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 const read = (name) => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
 const source = read('entry/src/main/cpp/bookturn/bookturn_napi.cpp');
 const motion = read('entry/src/main/cpp/bookturn/bookturn_motion.h');
-const session = read('entry/src/main/ets/features/reading/BookTurnPresentationSession.ets');
+const session = read('entry/src/main/ets/features/reading/ui/BookTurnPresentationSession.ets');
 const declarations = read('entry/src/main/cpp/types/libreader_bookturn_napi/Index.d.ts');
 function block(text, signature) {
   const start = text.indexOf(signature);

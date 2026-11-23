@@ -1,0 +1,120 @@
+// Historical 641be0ab production functions, evaluated only with finite fake ports.
+// Negative fixture: never imported or dispatched as a controller.
+function readInstalledSqliteVersion({ bundleName, uid, querySandbox }) {
+  if (!/^[A-Za-z][A-Za-z0-9_.]+$/.test(bundleName) || !Number.isSafeInteger(uid) || uid <= 0) return null;
+  const cwd = /^\/mnt\/debug\/(0|[1-9]\d*)\/debug_hap\/([A-Za-z][A-Za-z0-9_.]+)$/.exec(querySandbox('pwd').trim());
+  if (!cwd || cwd[2] !== bundleName) return null;
+  const directory = `/data/app/el2/${cwd[1]}/base/${bundleName}/haps/entry/files/reader-core`;
+  const db = `${directory}/reader-core.sqlite3`;
+  // A shell-owned read-only SQLite connection can still create WAL/SHM files
+  // beside an app's DB. Read only the header and reject an active WAL or journal.
+  const noJournal = `test ! -s ${db}-wal && test ! -s ${db}-journal`;
+  const stat = `stat -c '%u:%i:%s:%Y' ${db}`;
+  const output = querySandbox(`test -r ${directory} && test -x ${directory} && ${noJournal} && ${stat} && ` +
+    `od -An -v -N 100 -t u1 ${db} && ${noJournal} && ${stat}`);
+  const lines = output.trim().split(/\r?\n/);
+  const metadata = /^(\d+):\d+:([1-9]\d*):\d+$/.exec(lines[0]);
+  if (!metadata || Number(metadata[1]) !== uid || Number(metadata[2]) < 100 || lines[0] !== lines.at(-1)) return null;
+  const fields = lines.slice(1, -1).join(' ').trim().split(/\s+/);
+  if (fields.length !== 100 || fields.some(field => !/^\d{1,3}$/.test(field) || Number(field) > 255)) return null;
+  const header = Buffer.from(fields.map(Number));
+  if (header.subarray(0, 16).toString('latin1') !== 'SQLite format 3\0') return null;
+  const version = header.readUInt32BE(60);
+  return Number.isSafeInteger(version) && version > 0 && version <= 0x7fffffff ? version : null;
+}
+
+function installDeployment(options) {
+  const target = requiredOption(options, '--target');
+  const targetKind = requiredOption(options, '--target-kind');
+  const targetRef = targetReference(target);
+  const lockDir = join(LOCK_ROOT, `reader-harmony-target-${targetRef}.lock`);
+  acquireLock(lockDir, {
+    pid: process.pid,
+    targetKind,
+    targetRef,
+    startedAt: new Date().toISOString(),
+  }, false);
+  try {
+    const resolved = resolveDeployment(options);
+    if (!resolved.route.allowed) fail(`deployment stopped: ${resolved.route.reason}`, 3);
+    // A successful install followed by a failed launch must still protect the
+    // package. Keep this marker across errors/crashes until a full receipt exists.
+    const installProtection = resolve(resolved.verified.directory,
+      `retention-install-${resolved.targetKind}-${resolved.targetRef}.json`);
+    writeJson(installProtection, { name: 'reader-hap-install-protection',
+      runId: resolved.verified.manifest.runId, startedAt: new Date().toISOString() });
+    const storageTransition = resolved.storageEvidence?.transition ?
+      archiveStorageTransition(resolved.verified, resolved.storageEvidence.transition) : null;
+    // This runs while the same immutable run and target locks are held, after
+    // archiving exact consumed proof bytes and immediately before replacement.
+    resolved.revalidateStorageTransition?.();
+    const install = runTargetHdc(resolved.hdc, resolved.target, [
+      '-t', resolved.target, 'install', '-r', resolved.artifactPath,
+    ], { allowFailure: true });
+    const installOutput = `${install.stdout ?? ''}\n${install.stderr ?? ''}`;
+    if (install.status !== 0 || !installOutput.includes('install bundle successfully')) {
+      if (installOutput.includes('9568332')) fail('9568332 install sign info inconsistent; data was preserved', 3);
+      if (installOutput.includes('9568320')) fail('9568320 no signature file; data was preserved', 3);
+      fail(`HAP install failed while preserving data: ${installOutput.trim()}`, 3);
+    }
+    const postInstall = installedMetadata(resolved.hdc, resolved.target);
+    const installedRoute = deploymentSigningRoute({ targetKind: resolved.targetKind,
+      installed: postInstall, artifact: resolved.artifact });
+    if (!postInstall.bundlePresent || !installedRoute.allowed) {
+      fail('HAP was installed but its reported signing identity does not match; stopped before launch without uninstalling', 3);
+    }
+    if (resolved.verified.manifest.expectedVersion) {
+      assertInstalledAppVersion(resolved.verified.manifest.expectedVersion, postInstall);
+    }
+    let launch = 'NOT_RUN';
+    if (options.get('--no-launch') !== true) {
+      const start = runTargetHdc(resolved.hdc, resolved.target, [
+        '-t', resolved.target, 'shell',
+        `aa start -a EntryAbility -b ${BUNDLE_NAME} -m entry`,
+      ], { allowFailure: true });
+      const startOutput = `${start.stdout ?? ''}\n${start.stderr ?? ''}`;
+      if (start.status !== 0 || !/start ability successfully/i.test(startOutput)) {
+        fail(`HAP installed but launch failed: ${startOutput.trim()}`, 3);
+      }
+      launch = 'PASS';
+    }
+    const receipt = {
+      schemaVersion: 1,
+      name: 'reader-harmonyos-deployment-receipt',
+      runId: resolved.verified.manifest.runId,
+      ...(resolved.verified.manifest.expectedVersion ? { expectedVersion: resolved.verified.manifest.expectedVersion, appVersionCheck: 'PASS' } : { appVersionCheck: 'LEGACY_NOT_PRESENT' }),
+      targetKind: resolved.targetKind,
+      targetRef: resolved.targetRef,
+      artifact: {
+        kind: resolved.artifact.kind,
+        sha256: resolved.artifact.sha256,
+        signature: resolved.artifact.signature,
+      },
+      dataPolicy: 'preserve',
+      readiness: resolved.readiness,
+      storageEvidence: resolved.storageEvidence,
+      ...(storageTransition ? { storageTransition } : {}),
+      install: 'PASS',
+      launch,
+      preInstall: resolved.installed,
+      postInstall,
+      completedAt: new Date().toISOString(),
+      evidenceBoundary: {
+        installAndLaunch: launch === 'PASS' ? 'PASS' : 'OPEN',
+        featureInteraction: 'OPEN',
+        userAcceptance: 'OPEN',
+      },
+    };
+    const receiptPath = resolve(
+      resolved.verified.directory,
+      `deploy-${resolved.targetKind}-${resolved.targetRef}-${timestampId()}.json`,
+    );
+    writeJson(receiptPath, receipt);
+    rmSync(installProtection);
+    console.log(JSON.stringify({ status: 'PASS', receipt: receiptPath, dataPreserved: true }));
+  } finally {
+    rmSync(lockDir, { recursive: true, force: true });
+  }
+}
+
+function usage() {}

@@ -1,0 +1,5703 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "properties": {
+    "schemaVersion": {
+      "const": "1.0"
+    },
+    "modelVersion": {
+      "const": "0.2"
+    },
+    "pages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/page"
+      },
+      "minItems": 1,
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "schemaVersion",
+    "modelVersion",
+    "pages"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "followUp": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "reviewTrigger": {
+          "type": "string",
+          "minLength": 1
+        },
+        "exitCriteria": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "owner",
+        "reviewTrigger",
+        "exitCriteria"
+      ],
+      "additionalProperties": false
+    },
+    "action": {
+      "type": "object",
+      "properties": {
+        "actionId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "placement": {
+          "type": "string",
+          "enum": [
+            "header",
+            "query",
+            "footer",
+            "row"
+          ]
+        },
+        "priority": {
+          "type": "string",
+          "enum": [
+            "primary",
+            "secondary",
+            "contextual",
+            "unresolved"
+          ]
+        }
+      },
+      "required": [
+        "actionId",
+        "owner",
+        "placement",
+        "priority"
+      ],
+      "additionalProperties": false
+    },
+    "evidence": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "source",
+            "test",
+            "demo",
+            "device",
+            "user"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "symbol": {
+          "type": "string",
+          "minLength": 1
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXCEPTION",
+            "NOT_RUN"
+          ]
+        },
+        "rootSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "toolSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "toolPath": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "appBuildId",
+            "hapSha256",
+            "sourceFingerprint",
+            "targetRef"
+          ],
+          "properties": {
+            "appBuildId": {
+              "type": "string",
+              "minLength": 1
+            },
+            "hapSha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "sourceFingerprint": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "targetRef": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{12}$"
+            }
+          }
+        }
+      },
+      "required": [
+        "kind",
+        "path",
+        "result"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "symbol"
+            ],
+            "properties": {
+              "symbol": {
+                "enum": ["ui-contract-receipt", "ui-contract-receipt-group"]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "rootSha256",
+              "toolSha256",
+              "toolPath",
+              "candidate"
+            ],
+            "properties": {
+              "kind": {
+                "const": "device"
+              },
+              "rootSha256": {},
+              "toolSha256": {},
+              "toolPath": {},
+              "candidate": {}
+            }
+          },
+          "else": {
+            "properties": {
+              "rootSha256": false,
+              "toolSha256": false,
+              "toolPath": false,
+              "candidate": false
+            }
+          }
+        }
+      ]
+    },
+    "brief": {
+      "type": "object",
+      "properties": {
+        "pageId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "type": "string",
+          "enum": [
+            "root",
+            "secondary",
+            "detail",
+            "modal",
+            "reader"
+          ]
+        },
+        "purpose": {
+          "type": "string",
+          "enum": [
+            "browse",
+            "search",
+            "select",
+            "read",
+            "inspect",
+            "form"
+          ]
+        },
+        "content": {
+          "type": "string",
+          "enum": [
+            "collection",
+            "document",
+            "form",
+            "canvas"
+          ]
+        },
+        "queryPriority": {
+          "type": "string",
+          "enum": [
+            "none",
+            "secondary",
+            "primary",
+            "complex"
+          ]
+        },
+        "queryComplexity": {
+          "type": "string",
+          "enum": [
+            "simple",
+            "complex"
+          ]
+        },
+        "queryFrequency": {
+          "type": "string",
+          "enum": [
+            "frequent",
+            "rare"
+          ]
+        },
+        "collectionLength": {
+          "type": "string",
+          "enum": [
+            "short",
+            "long"
+          ]
+        },
+        "navigationPersistence": {
+          "type": "string",
+          "enum": [
+            "required",
+            "optional",
+            "none"
+          ]
+        },
+        "alternateNavigation": {
+          "type": "boolean"
+        },
+        "contentImmersive": {
+          "type": "boolean"
+        },
+        "titleCanExit": {
+          "type": "boolean"
+        },
+        "primaryActionScope": {
+          "type": "string",
+          "enum": [
+            "none",
+            "global",
+            "perItem",
+            "navigation"
+          ]
+        },
+        "selectionMode": {
+          "type": "string",
+          "enum": [
+            "none",
+            "single",
+            "multi"
+          ]
+        },
+        "stateSet": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "messageSet": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "transient",
+              "recovery",
+              "pageState",
+              "confirm",
+              "task"
+            ]
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "platformSet": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "filePicker",
+              "loginWeb",
+              "nativeAlert",
+              "share",
+              "mediaSession",
+              "externalOpen",
+              "permission",
+              "backgroundTask"
+            ]
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "widthClass": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "regular",
+            "expanded"
+          ]
+        },
+        "fontScale": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 3.2
+        },
+        "queryViewport": {
+          "$ref": "#/definitions/queryViewport"
+        }
+      },
+      "required": [
+        "pageId",
+        "role",
+        "purpose",
+        "content",
+        "queryPriority",
+        "queryComplexity",
+        "queryFrequency",
+        "collectionLength",
+        "navigationPersistence",
+        "alternateNavigation",
+        "contentImmersive",
+        "titleCanExit",
+        "primaryActionScope",
+        "selectionMode",
+        "stateSet",
+        "messageSet",
+        "platformSet",
+        "widthClass",
+        "fontScale"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "type": "object",
+            "properties": {
+              "queryViewport": {}
+            },
+            "required": [
+              "queryViewport"
+            ]
+          },
+          "then": {
+            "properties": {
+              "queryPriority": {
+                "const": "primary"
+              }
+            },
+            "type": "object"
+          }
+        }
+      ]
+    },
+    "source": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "additionalProperties": false
+    },
+    "routeFacts": {
+      "type": "object",
+      "properties": {
+        "parentRoutes": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "parentCaptured": {
+          "type": "boolean"
+        },
+        "entrySources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "backPolicy": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "retention": {
+          "type": "object",
+          "properties": {
+            "view": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "query": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "scroll": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "selection": {
+              "type": [
+                "boolean",
+                "null"
+              ]
+            },
+            "draft": {
+              "type": "string",
+              "enum": [
+                "keep",
+                "discard",
+                "ask",
+                "unknown"
+              ]
+            },
+            "basis": {
+              "enum": [
+                "observed",
+                "target",
+                "mixed"
+              ]
+            }
+          },
+          "required": [
+            "view",
+            "query",
+            "scroll",
+            "selection",
+            "draft",
+            "basis"
+          ],
+          "additionalProperties": false
+        },
+        "restorePolicy": {
+          "type": "string",
+          "enum": [
+            "fresh",
+            "resume",
+            "reload",
+            "reconcile"
+          ]
+        },
+        "systemBackOwner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "platformHostRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "resolved",
+            "unresolved"
+          ]
+        },
+        "unresolvedRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "parentRoutes",
+        "parentCaptured",
+        "entrySources",
+        "backPolicy",
+        "retention",
+        "restorePolicy",
+        "systemBackOwner",
+        "platformHostRefs",
+        "status",
+        "unresolvedRefs"
+      ],
+      "additionalProperties": false
+    },
+    "routeLayer": {
+      "type": "object",
+      "properties": {
+        "applicability": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "not_applicable"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facts": {
+          "type": "object"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXCEPTION",
+            "NOT_RUN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/evidence"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "knownGap": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "applicability",
+        "owner",
+        "facts",
+        "result",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "applicable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "facts": {
+                "$ref": "#/definitions/routeFacts"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "not_applicable"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "facts": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "scaffoldFacts": {
+      "type": "object",
+      "properties": {
+        "prototype": {
+          "type": "string",
+          "minLength": 1
+        },
+        "regions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "prototype",
+        "regions"
+      ],
+      "additionalProperties": false
+    },
+    "scaffoldLayer": {
+      "type": "object",
+      "properties": {
+        "applicability": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "not_applicable"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facts": {
+          "type": "object"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXCEPTION",
+            "NOT_RUN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/evidence"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "knownGap": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "applicability",
+        "owner",
+        "facts",
+        "result",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "applicable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "facts": {
+                "$ref": "#/definitions/scaffoldFacts"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "not_applicable"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "facts": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "informationArchitectureFacts": {
+      "type": "object",
+      "properties": {
+        "blockOrder": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "firstScreenBudget": {
+          "type": "object",
+          "properties": {
+            "viewportHeight": {
+              "type": "number",
+              "minimum": 0
+            },
+            "filterStackHeight": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "firstRowTop": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "unit": {
+              "const": "vp"
+            }
+          },
+          "required": [
+            "viewportHeight",
+            "filterStackHeight",
+            "firstRowTop",
+            "unit"
+          ],
+          "additionalProperties": false
+        },
+        "budgetStatus": {
+          "type": "string",
+          "enum": [
+            "declared",
+            "unverified",
+            "missing"
+          ]
+        }
+      },
+      "required": [
+        "blockOrder",
+        "firstScreenBudget",
+        "budgetStatus"
+      ],
+      "additionalProperties": false
+    },
+    "informationArchitectureLayer": {
+      "type": "object",
+      "properties": {
+        "applicability": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "not_applicable"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facts": {
+          "type": "object"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXCEPTION",
+            "NOT_RUN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/evidence"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "knownGap": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "applicability",
+        "owner",
+        "facts",
+        "result",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "applicable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "facts": {
+                "$ref": "#/definitions/informationArchitectureFacts"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "not_applicable"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "facts": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "headerFacts": {
+      "type": "object",
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": [
+            "Back",
+            "Home",
+            "Contextual",
+            "None"
+          ]
+        },
+        "presentation": {
+          "type": "string",
+          "enum": [
+            "Fixed",
+            "Floating",
+            "ScrollAway",
+            "None"
+          ]
+        },
+        "composition": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "surface": {
+          "type": "string",
+          "minLength": 1
+        },
+        "height": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "safeAreaOwner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/action"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "role",
+        "presentation",
+        "composition",
+        "surface",
+        "height",
+        "safeAreaOwner",
+        "actions"
+      ],
+      "additionalProperties": false
+    },
+    "headerLayer": {
+      "type": "object",
+      "properties": {
+        "applicability": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "not_applicable"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facts": {
+          "type": "object"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXCEPTION",
+            "NOT_RUN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/evidence"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "knownGap": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "applicability",
+        "owner",
+        "facts",
+        "result",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "applicable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "facts": {
+                "$ref": "#/definitions/headerFacts"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "not_applicable"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "facts": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "scrollFacts": {
+      "type": "object",
+      "properties": {
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "primaryCount": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "headerInset": {
+          "type": "string",
+          "minLength": 1
+        },
+        "footerInset": {
+          "type": "string",
+          "minLength": 1
+        },
+        "underlap": {
+          "type": "boolean"
+        },
+        "obscurationCompensation": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "obscurationCompensationSource": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "symbol": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "path",
+            "symbol"
+          ],
+          "additionalProperties": false
+        },
+        "restore": {
+          "type": "string",
+          "minLength": 1
+        },
+        "refresh": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "owner",
+        "primaryCount",
+        "headerInset",
+        "footerInset",
+        "underlap",
+        "obscurationCompensation",
+        "restore",
+        "refresh"
+      ],
+      "additionalProperties": false
+    },
+    "scrollLayer": {
+      "type": "object",
+      "properties": {
+        "applicability": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "not_applicable"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facts": {
+          "type": "object"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXCEPTION",
+            "NOT_RUN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/evidence"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "knownGap": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "applicability",
+        "owner",
+        "facts",
+        "result",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "applicable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "facts": {
+                "$ref": "#/definitions/scrollFacts"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "not_applicable"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "facts": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "contentFacts": {
+      "type": "object",
+      "properties": {
+        "unit": {
+          "type": "string",
+          "enum": [
+            "Row",
+            "Card",
+            "Grid",
+            "Canvas",
+            "Document",
+            "Form"
+          ]
+        },
+        "rowForm": {
+          "type": "string",
+          "enum": [
+            "single-line",
+            "two-line",
+            "overflow-menu",
+            "detail-entry",
+            "adaptive",
+            "none"
+          ]
+        },
+        "slots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "density": {
+          "type": "string",
+          "minLength": 1
+        },
+        "truncation": {
+          "type": "string",
+          "minLength": 1
+        },
+        "rowHeight": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "availableWidth": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "textMinWidth": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "trailingMaxWidth": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "budgetDeclared": {
+          "type": "boolean"
+        },
+        "controlRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "unit",
+        "rowForm",
+        "slots",
+        "density",
+        "truncation",
+        "rowHeight",
+        "availableWidth",
+        "textMinWidth",
+        "trailingMaxWidth",
+        "budgetDeclared",
+        "controlRefs"
+      ],
+      "additionalProperties": false
+    },
+    "contentLayer": {
+      "type": "object",
+      "properties": {
+        "applicability": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "not_applicable"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facts": {
+          "type": "object"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXCEPTION",
+            "NOT_RUN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/evidence"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "knownGap": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "applicability",
+        "owner",
+        "facts",
+        "result",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "applicable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "facts": {
+                "$ref": "#/definitions/contentFacts"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "not_applicable"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "facts": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "queryFacts": {
+      "type": "object",
+      "properties": {
+        "placement": {
+          "type": "string",
+          "enum": [
+            "Inline",
+            "HeaderSlot",
+            "Overlay",
+            "None"
+          ]
+        },
+        "inlineComposition": {
+          "type": "string",
+          "enum": [
+            "boundedEditor"
+          ]
+        },
+        "entryPlacements": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "inline",
+              "headerSlot",
+              "overlay",
+              "none"
+            ]
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "applyTiming": {
+          "type": "string",
+          "enum": [
+            "live",
+            "submit",
+            "explicit",
+            "none"
+          ]
+        },
+        "filteredEmpty": {
+          "type": "boolean"
+        },
+        "reset": {
+          "type": "boolean"
+        },
+        "normalization": {
+          "type": "string",
+          "minLength": 1
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/action"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "filterSemantics": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "filterId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "definition": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "filterId",
+              "definition"
+            ],
+            "additionalProperties": false
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "placement",
+        "entryPlacements",
+        "applyTiming",
+        "filteredEmpty",
+        "reset",
+        "normalization",
+        "actions",
+        "filterSemantics"
+      ],
+      "additionalProperties": false
+    },
+    "queryLayer": {
+      "type": "object",
+      "properties": {
+        "applicability": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "not_applicable"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facts": {
+          "type": "object"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXCEPTION",
+            "NOT_RUN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/evidence"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "knownGap": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "applicability",
+        "owner",
+        "facts",
+        "result",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "applicable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "facts": {
+                "$ref": "#/definitions/queryFacts"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "not_applicable"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "facts": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "footerFacts": {
+      "type": "object",
+      "properties": {
+        "presence": {
+          "type": "boolean"
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/action"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "safeAreaOwner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contentEndInset": {
+          "type": "string",
+          "minLength": 1
+        },
+        "controlRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "placement": {
+          "enum": [
+            "fixed",
+            "inline",
+            "none"
+          ]
+        },
+        "placementCondition": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "presence",
+        "actions",
+        "safeAreaOwner",
+        "contentEndInset",
+        "controlRefs"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "required": [
+              "placement"
+            ],
+            "properties": {
+              "placement": {
+                "const": "none"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "presence": {
+                "const": false
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "required": [
+              "placement"
+            ],
+            "properties": {
+              "placement": {
+                "enum": [
+                  "fixed",
+                  "inline"
+                ]
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "presence": {
+                "const": true
+              }
+            }
+          }
+        }
+      ]
+    },
+    "footerLayer": {
+      "type": "object",
+      "properties": {
+        "applicability": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "not_applicable"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facts": {
+          "type": "object"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXCEPTION",
+            "NOT_RUN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/evidence"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "knownGap": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "applicability",
+        "owner",
+        "facts",
+        "result",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "applicable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "facts": {
+                "$ref": "#/definitions/footerFacts"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "not_applicable"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "facts": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "overlayFacts": {
+      "type": "object",
+      "properties": {
+        "types": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "zOrder": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "backConsumption": {
+          "type": "string",
+          "enum": [
+            "before-route",
+            "after-route",
+            "unknown"
+          ]
+        },
+        "focusRestore": {
+          "type": "string",
+          "enum": [
+            "verified",
+            "unverified",
+            "missing"
+          ]
+        }
+      },
+      "required": [
+        "types",
+        "hosts",
+        "zOrder",
+        "backConsumption",
+        "focusRestore"
+      ],
+      "additionalProperties": false
+    },
+    "overlayLayer": {
+      "type": "object",
+      "properties": {
+        "applicability": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "not_applicable"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facts": {
+          "type": "object"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXCEPTION",
+            "NOT_RUN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/evidence"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "knownGap": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "applicability",
+        "owner",
+        "facts",
+        "result",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "applicable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "facts": {
+                "$ref": "#/definitions/overlayFacts"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "not_applicable"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "facts": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "statesFacts": {
+      "type": "object",
+      "properties": {
+        "required": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "implemented": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "transitions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "required",
+        "implemented",
+        "transitions"
+      ],
+      "additionalProperties": false
+    },
+    "statesLayer": {
+      "type": "object",
+      "properties": {
+        "applicability": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "not_applicable"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facts": {
+          "type": "object"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXCEPTION",
+            "NOT_RUN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/evidence"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "knownGap": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "applicability",
+        "owner",
+        "facts",
+        "result",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "applicable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "facts": {
+                "$ref": "#/definitions/statesFacts"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "not_applicable"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "facts": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "visualFacts": {
+      "type": "object",
+      "properties": {
+        "typographyRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "colorRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "surfaceRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "contrastRatio": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "contrastEvidence": {
+          "type": "string",
+          "minLength": 1
+        },
+        "designContractRef": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "typographyRefs",
+        "colorRefs",
+        "surfaceRefs",
+        "contrastRatio",
+        "contrastEvidence"
+      ],
+      "additionalProperties": false
+    },
+    "visualLayer": {
+      "type": "object",
+      "properties": {
+        "applicability": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "not_applicable"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facts": {
+          "type": "object"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXCEPTION",
+            "NOT_RUN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/evidence"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "knownGap": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "applicability",
+        "owner",
+        "facts",
+        "result",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "applicable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "facts": {
+                "$ref": "#/definitions/visualFacts"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "not_applicable"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "facts": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "interactionFacts": {
+      "type": "object",
+      "properties": {
+        "controlRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "statusNonColor": {
+          "type": "boolean"
+        },
+        "targets": {
+          "type": "object",
+          "properties": {
+            "minWidth": {
+              "type": "number",
+              "minimum": 0
+            },
+            "minHeight": {
+              "type": "number",
+              "minimum": 0
+            },
+            "equivalentResponseRegion": {
+              "type": "boolean"
+            },
+            "controlRefs": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            }
+          },
+          "required": [
+            "minWidth",
+            "minHeight",
+            "equivalentResponseRegion"
+          ],
+          "additionalProperties": false
+        },
+        "focusStatus": {
+          "type": "string",
+          "enum": [
+            "verified",
+            "unverified",
+            "missing"
+          ]
+        },
+        "actionStates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "controlRef": {
+                "type": "string",
+                "minLength": 1
+              },
+              "busyBound": {
+                "type": "boolean"
+              },
+              "disabledBound": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "controlRef",
+              "busyBound",
+              "disabledBound"
+            ],
+            "additionalProperties": false
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "controlRefs",
+        "statusNonColor",
+        "targets",
+        "focusStatus",
+        "actionStates"
+      ],
+      "additionalProperties": false
+    },
+    "interactionLayer": {
+      "type": "object",
+      "properties": {
+        "applicability": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "not_applicable"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facts": {
+          "type": "object"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXCEPTION",
+            "NOT_RUN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/evidence"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "knownGap": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "applicability",
+        "owner",
+        "facts",
+        "result",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "applicable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "facts": {
+                "$ref": "#/definitions/interactionFacts"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "not_applicable"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "facts": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "adaptationFacts": {
+      "type": "object",
+      "properties": {
+        "widthClass": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "regular",
+            "expanded"
+          ]
+        },
+        "fontScales": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "verifiedFontScales": {
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "orientation": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "portrait",
+              "landscape"
+            ]
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "theme": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "reduceMotion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "budgetStatus": {
+          "type": "string",
+          "enum": [
+            "declared",
+            "unverified",
+            "missing"
+          ]
+        }
+      },
+      "required": [
+        "widthClass",
+        "fontScales",
+        "verifiedFontScales",
+        "orientation",
+        "theme",
+        "reduceMotion",
+        "budgetStatus"
+      ],
+      "additionalProperties": false
+    },
+    "adaptationLayer": {
+      "type": "object",
+      "properties": {
+        "applicability": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "not_applicable"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facts": {
+          "type": "object"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXCEPTION",
+            "NOT_RUN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/evidence"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "knownGap": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "applicability",
+        "owner",
+        "facts",
+        "result",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "applicable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "facts": {
+                "$ref": "#/definitions/adaptationFacts"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "not_applicable"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "facts": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "accessibilityFacts": {
+      "type": "object",
+      "properties": {
+        "ruleRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "semantics": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "focusOrder": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "touchTargets": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "contrast": {
+          "type": "string",
+          "minLength": 1
+        },
+        "fontScaleMax": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "reduceMotion": {
+          "type": "string",
+          "minLength": 1
+        },
+        "screenReaderLabels": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "ruleRefs",
+        "semantics",
+        "focusOrder",
+        "touchTargets",
+        "contrast",
+        "fontScaleMax",
+        "reduceMotion",
+        "screenReaderLabels"
+      ],
+      "additionalProperties": false
+    },
+    "accessibilityLayer": {
+      "type": "object",
+      "properties": {
+        "applicability": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "not_applicable"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facts": {
+          "type": "object"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXCEPTION",
+            "NOT_RUN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/evidence"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "knownGap": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "applicability",
+        "owner",
+        "facts",
+        "result",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "applicable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "facts": {
+                "$ref": "#/definitions/accessibilityFacts"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "not_applicable"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "facts": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "measurementFacts": {
+      "type": "object",
+      "properties": {
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "revisionSource": {
+          "type": "string",
+          "minLength": 1
+        },
+        "cacheOwner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "geometryInputs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "boundaries": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "keys",
+        "revisionSource",
+        "cacheOwner",
+        "geometryInputs",
+        "boundaries"
+      ],
+      "additionalProperties": false
+    },
+    "measurementLayer": {
+      "type": "object",
+      "properties": {
+        "applicability": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "not_applicable"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facts": {
+          "type": "object"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXCEPTION",
+            "NOT_RUN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/evidence"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "knownGap": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "applicability",
+        "owner",
+        "facts",
+        "result",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "applicable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "facts": {
+                "$ref": "#/definitions/measurementFacts"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "not_applicable"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "facts": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "dataLifecycleFacts": {
+      "type": "object",
+      "properties": {
+        "identity": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "generation": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "serialization": {
+          "type": "string",
+          "minLength": 1
+        },
+        "stalePolicy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "projectionConsistency": {
+          "type": "string",
+          "enum": [
+            "bound",
+            "partial",
+            "unbound"
+          ]
+        },
+        "confirmedRefreshPolicy": {
+          "type": "string",
+          "enum": [
+            "read-only",
+            "replay-write"
+          ]
+        },
+        "operationIds": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "identity",
+        "generation",
+        "serialization",
+        "stalePolicy",
+        "projectionConsistency",
+        "confirmedRefreshPolicy",
+        "operationIds"
+      ],
+      "additionalProperties": false
+    },
+    "dataLifecycleLayer": {
+      "type": "object",
+      "properties": {
+        "applicability": {
+          "type": "string",
+          "enum": [
+            "applicable",
+            "not_applicable"
+          ]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1
+        },
+        "owner": {
+          "type": "string",
+          "minLength": 1
+        },
+        "facts": {
+          "type": "object"
+        },
+        "result": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "EXCEPTION",
+            "NOT_RUN"
+          ]
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/evidence"
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "knownGap": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "applicability",
+        "owner",
+        "facts",
+        "result",
+        "evidence"
+      ],
+      "additionalProperties": false,
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "applicable"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "facts": {
+                "$ref": "#/definitions/dataLifecycleFacts"
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "applicability": {
+                "const": "not_applicable"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "reason"
+            ],
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1
+              },
+              "facts": {
+                "type": "object",
+                "maxProperties": 0
+              }
+            }
+          }
+        }
+      ]
+    },
+    "page": {
+      "type": "object",
+      "properties": {
+        "pageId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "routeContractRef": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prototype": {
+          "type": "string",
+          "enum": [
+            "ReaderPage",
+            "RootTabPage",
+            "SelectionPage",
+            "CompoundSearchPage",
+            "SecondaryDetailPage",
+            "SecondaryCollectionPage"
+          ]
+        },
+        "brief": {
+          "$ref": "#/definitions/brief"
+        },
+        "layoutEvidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "source": {
+          "$ref": "#/definitions/source"
+        },
+        "layers": {
+          "type": "object",
+          "properties": {
+            "route": {
+              "$ref": "#/definitions/routeLayer"
+            },
+            "scaffold": {
+              "$ref": "#/definitions/scaffoldLayer"
+            },
+            "informationArchitecture": {
+              "$ref": "#/definitions/informationArchitectureLayer"
+            },
+            "header": {
+              "$ref": "#/definitions/headerLayer"
+            },
+            "scroll": {
+              "$ref": "#/definitions/scrollLayer"
+            },
+            "content": {
+              "$ref": "#/definitions/contentLayer"
+            },
+            "query": {
+              "$ref": "#/definitions/queryLayer"
+            },
+            "footer": {
+              "$ref": "#/definitions/footerLayer"
+            },
+            "overlay": {
+              "$ref": "#/definitions/overlayLayer"
+            },
+            "states": {
+              "$ref": "#/definitions/statesLayer"
+            },
+            "visual": {
+              "$ref": "#/definitions/visualLayer"
+            },
+            "interaction": {
+              "$ref": "#/definitions/interactionLayer"
+            },
+            "adaptation": {
+              "$ref": "#/definitions/adaptationLayer"
+            },
+            "accessibility": {
+              "$ref": "#/definitions/accessibilityLayer"
+            },
+            "measurement": {
+              "$ref": "#/definitions/measurementLayer"
+            },
+            "dataLifecycle": {
+              "$ref": "#/definitions/dataLifecycleLayer"
+            }
+          },
+          "required": [
+            "route",
+            "scaffold",
+            "informationArchitecture",
+            "header",
+            "scroll",
+            "content",
+            "query",
+            "footer",
+            "overlay",
+            "states",
+            "visual",
+            "interaction",
+            "adaptation",
+            "accessibility",
+            "measurement",
+            "dataLifecycle"
+          ],
+          "additionalProperties": false
+        },
+        "controlRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "operationRefs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "operationId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "owner": {
+                "type": "string",
+                "minLength": 1
+              },
+              "factSource": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "symbol": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "path",
+                  "symbol"
+                ],
+                "additionalProperties": false
+              },
+              "identity": {
+                "type": "string",
+                "minLength": 1
+              },
+              "busyProjection": {
+                "type": "string",
+                "minLength": 1
+              },
+              "disabledProjection": {
+                "type": "string",
+                "minLength": 1
+              },
+              "bindingStatus": {
+                "type": "string",
+                "enum": [
+                  "bound",
+                  "partial",
+                  "unbound"
+                ]
+              },
+              "knownGap": {
+                "type": "string",
+                "minLength": 1
+              },
+              "unknownPolicy": {
+                "enum": [
+                  "recovery",
+                  "reconcile",
+                  "block",
+                  "not-exposed"
+                ]
+              },
+              "refreshPolicy": {
+                "enum": [
+                  "none",
+                  "read-only",
+                  "reload"
+                ]
+              }
+            },
+            "required": [
+              "operationId",
+              "owner",
+              "factSource",
+              "identity",
+              "busyProjection",
+              "disabledProjection",
+              "bindingStatus",
+              "unknownPolicy",
+              "refreshPolicy"
+            ],
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "bindingStatus": {
+                      "const": "partial"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "knownGap": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "knownGap"
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "unknownPolicy": {
+                      "const": "not-exposed"
+                    }
+                  },
+                  "required": [
+                    "unknownPolicy"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "bindingStatus": {
+                      "const": "partial"
+                    },
+                    "knownGap": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "bindingStatus",
+                    "knownGap"
+                  ]
+                }
+              }
+            ]
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "platformHosts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "hostRef": {
+                "type": "string",
+                "minLength": 1
+              },
+              "hostId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "businessOwner": {
+                "type": "string",
+                "minLength": 1
+              },
+              "intent": {
+                "type": "string",
+                "minLength": 1
+              },
+              "identity": {
+                "type": "string",
+                "minLength": 1
+              },
+              "returnContext": {
+                "type": "string",
+                "minLength": 1
+              },
+              "backPolicy": {
+                "type": "string",
+                "enum": [
+                  "unknown",
+                  "platform-first",
+                  "application-first"
+                ]
+              },
+              "resultPolicy": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "completed",
+                    "cancelled",
+                    "error"
+                  ]
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "stalePolicy": {
+                "type": "string",
+                "minLength": 1
+              },
+              "registeredAsRoute": {
+                "type": "boolean"
+              },
+              "extraFrame": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "hostRef",
+              "hostId",
+              "businessOwner",
+              "intent",
+              "identity",
+              "returnContext",
+              "backPolicy",
+              "resultPolicy",
+              "stalePolicy",
+              "registeredAsRoute",
+              "extraFrame"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "retainedScopeRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "messageSurfaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "entryId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "layer": {
+                "type": "integer",
+                "enum": [
+                  9,
+                  10
+                ]
+              },
+              "check": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "entryId",
+              "layer",
+              "check"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "invariants": {
+          "type": "object",
+          "properties": {
+            "S1": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "S2": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "S3": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "S4": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "S5": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "S6": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "S7": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "S8": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "B1": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "B2": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "B3": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "B4": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "B5": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "B6": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "B7": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "B8": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "E1": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "E2": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "E3": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "E4": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "E5": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "E6": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "S6",
+            "S7",
+            "S8",
+            "B1",
+            "B2",
+            "B3",
+            "B4",
+            "B5",
+            "B6",
+            "B7",
+            "B8",
+            "E1",
+            "E2",
+            "E3",
+            "E4",
+            "E5",
+            "E6"
+          ],
+          "additionalProperties": false
+        },
+        "exceptions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "registryRevisions": {
+          "type": "object",
+          "properties": {
+            "contractMap": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "navigation": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "control": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "platform": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "contractMap",
+            "navigation",
+            "control",
+            "platform"
+          ],
+          "additionalProperties": false
+        },
+        "sourceInputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/sourceInput"
+          },
+          "uniqueItems": true
+        },
+        "variants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/variant"
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "pageId",
+        "routeContractRef",
+        "prototype",
+        "brief",
+        "source",
+        "layers",
+        "controlRefs",
+        "operationRefs",
+        "platformHosts",
+        "retainedScopeRefs",
+        "messageSurfaces",
+        "invariants",
+        "exceptions",
+        "revision",
+        "registryRevisions"
+      ],
+      "additionalProperties": false
+    },
+    "sourceInput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "symbol": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "registration": {
+      "type": "object",
+      "properties": {
+        "pageId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "routeContractRef": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prototype": {
+          "type": "string",
+          "enum": [
+            "ReaderPage",
+            "RootTabPage",
+            "SelectionPage",
+            "CompoundSearchPage",
+            "SecondaryDetailPage",
+            "SecondaryCollectionPage"
+          ]
+        },
+        "brief": {
+          "$ref": "#/definitions/brief"
+        },
+        "layoutEvidence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "path",
+            "sha256"
+          ],
+          "properties": {
+            "path": {
+              "type": "string",
+              "minLength": 1
+            },
+            "sha256": {
+              "type": "string",
+              "pattern": "^[a-f0-9]{64}$"
+            }
+          }
+        },
+        "source": {
+          "$ref": "#/definitions/source"
+        },
+        "layers": {
+          "type": "object",
+          "properties": {
+            "route": {
+              "$ref": "#/definitions/routeLayer"
+            },
+            "scaffold": {
+              "$ref": "#/definitions/scaffoldLayer"
+            },
+            "informationArchitecture": {
+              "$ref": "#/definitions/informationArchitectureLayer"
+            },
+            "header": {
+              "$ref": "#/definitions/headerLayer"
+            },
+            "scroll": {
+              "$ref": "#/definitions/scrollLayer"
+            },
+            "content": {
+              "$ref": "#/definitions/contentLayer"
+            },
+            "query": {
+              "$ref": "#/definitions/queryLayer"
+            },
+            "footer": {
+              "$ref": "#/definitions/footerLayer"
+            },
+            "overlay": {
+              "$ref": "#/definitions/overlayLayer"
+            },
+            "states": {
+              "$ref": "#/definitions/statesLayer"
+            },
+            "visual": {
+              "$ref": "#/definitions/visualLayer"
+            },
+            "interaction": {
+              "$ref": "#/definitions/interactionLayer"
+            },
+            "adaptation": {
+              "$ref": "#/definitions/adaptationLayer"
+            },
+            "accessibility": {
+              "$ref": "#/definitions/accessibilityLayer"
+            },
+            "measurement": {
+              "$ref": "#/definitions/measurementLayer"
+            },
+            "dataLifecycle": {
+              "$ref": "#/definitions/dataLifecycleLayer"
+            }
+          },
+          "required": [
+            "route",
+            "scaffold",
+            "informationArchitecture",
+            "header",
+            "scroll",
+            "content",
+            "query",
+            "footer",
+            "overlay",
+            "states",
+            "visual",
+            "interaction",
+            "adaptation",
+            "accessibility",
+            "measurement",
+            "dataLifecycle"
+          ],
+          "additionalProperties": false
+        },
+        "controlRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "operationRefs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "operationId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "owner": {
+                "type": "string",
+                "minLength": 1
+              },
+              "factSource": {
+                "type": "object",
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "symbol": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "path",
+                  "symbol"
+                ],
+                "additionalProperties": false
+              },
+              "identity": {
+                "type": "string",
+                "minLength": 1
+              },
+              "busyProjection": {
+                "type": "string",
+                "minLength": 1
+              },
+              "disabledProjection": {
+                "type": "string",
+                "minLength": 1
+              },
+              "bindingStatus": {
+                "type": "string",
+                "enum": [
+                  "bound",
+                  "partial",
+                  "unbound"
+                ]
+              },
+              "knownGap": {
+                "type": "string",
+                "minLength": 1
+              },
+              "unknownPolicy": {
+                "enum": [
+                  "recovery",
+                  "reconcile",
+                  "block",
+                  "not-exposed"
+                ]
+              },
+              "refreshPolicy": {
+                "enum": [
+                  "none",
+                  "read-only",
+                  "reload"
+                ]
+              }
+            },
+            "required": [
+              "operationId",
+              "owner",
+              "factSource",
+              "identity",
+              "busyProjection",
+              "disabledProjection",
+              "bindingStatus",
+              "unknownPolicy",
+              "refreshPolicy"
+            ],
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "bindingStatus": {
+                      "const": "partial"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "knownGap": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "knownGap"
+                  ]
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "unknownPolicy": {
+                      "const": "not-exposed"
+                    }
+                  },
+                  "required": [
+                    "unknownPolicy"
+                  ]
+                },
+                "then": {
+                  "properties": {
+                    "bindingStatus": {
+                      "const": "partial"
+                    },
+                    "knownGap": {
+                      "type": "string",
+                      "minLength": 1
+                    }
+                  },
+                  "required": [
+                    "bindingStatus",
+                    "knownGap"
+                  ]
+                }
+              }
+            ]
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "platformHosts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "hostRef": {
+                "type": "string",
+                "minLength": 1
+              },
+              "hostId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "businessOwner": {
+                "type": "string",
+                "minLength": 1
+              },
+              "intent": {
+                "type": "string",
+                "minLength": 1
+              },
+              "identity": {
+                "type": "string",
+                "minLength": 1
+              },
+              "returnContext": {
+                "type": "string",
+                "minLength": 1
+              },
+              "backPolicy": {
+                "type": "string",
+                "enum": [
+                  "unknown",
+                  "platform-first",
+                  "application-first"
+                ]
+              },
+              "resultPolicy": {
+                "type": "array",
+                "items": {
+                  "enum": [
+                    "completed",
+                    "cancelled",
+                    "error"
+                  ]
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "stalePolicy": {
+                "type": "string",
+                "minLength": 1
+              },
+              "registeredAsRoute": {
+                "type": "boolean"
+              },
+              "extraFrame": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "hostRef",
+              "hostId",
+              "businessOwner",
+              "intent",
+              "identity",
+              "returnContext",
+              "backPolicy",
+              "resultPolicy",
+              "stalePolicy",
+              "registeredAsRoute",
+              "extraFrame"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "retainedScopeRefs": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "messageSurfaces": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "entryId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "layer": {
+                "type": "integer",
+                "enum": [
+                  9,
+                  10
+                ]
+              },
+              "check": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "entryId",
+              "layer",
+              "check"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "invariants": {
+          "type": "object",
+          "properties": {
+            "S1": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "S2": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "S3": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "S4": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "S5": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "S6": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "S7": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "S8": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "B1": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "B2": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "B3": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "B4": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "B5": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "B6": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "B7": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "B8": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "E1": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "E2": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "E3": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "E4": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "E5": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            },
+            "E6": {
+              "type": "object",
+              "properties": {
+                "followUp": {
+                  "$ref": "#/definitions/followUp"
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "PASS",
+                    "FAIL",
+                    "EXCEPTION",
+                    "NOT_RUN"
+                  ]
+                },
+                "reason": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "evidence": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/evidence"
+                  },
+                  "minItems": 0,
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "result",
+                "reason",
+                "evidence"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "required": [
+            "S1",
+            "S2",
+            "S3",
+            "S4",
+            "S5",
+            "S6",
+            "S7",
+            "S8",
+            "B1",
+            "B2",
+            "B3",
+            "B4",
+            "B5",
+            "B6",
+            "B7",
+            "B8",
+            "E1",
+            "E2",
+            "E3",
+            "E4",
+            "E5",
+            "E6"
+          ],
+          "additionalProperties": false
+        },
+        "exceptions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "revision": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "registryRevisions": {
+          "type": "object",
+          "properties": {
+            "contractMap": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "navigation": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "control": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "platform": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "required": [
+            "contractMap",
+            "navigation",
+            "control",
+            "platform"
+          ],
+          "additionalProperties": false
+        },
+        "sourceInputs": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/sourceInput"
+          },
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "pageId",
+        "routeContractRef",
+        "prototype",
+        "brief",
+        "source",
+        "layers",
+        "controlRefs",
+        "operationRefs",
+        "platformHosts",
+        "retainedScopeRefs",
+        "messageSurfaces",
+        "invariants",
+        "exceptions",
+        "revision",
+        "registryRevisions"
+      ],
+      "additionalProperties": false
+    },
+    "variant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "variantId",
+        "condition",
+        "host",
+        "registration"
+      ],
+      "properties": {
+        "variantId": {
+          "type": "string",
+          "minLength": 1
+        },
+        "condition": {
+          "type": "string",
+          "minLength": 1
+        },
+        "host": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "kind",
+            "owner",
+            "routeContractRef",
+            "contextKinds",
+            "factSource"
+          ],
+          "properties": {
+            "kind": {
+              "enum": [
+                "route",
+                "embedded",
+                "selection"
+              ]
+            },
+            "owner": {
+              "type": "string",
+              "minLength": 1
+            },
+            "routeContractRef": {
+              "type": "string",
+              "minLength": 1
+            },
+            "contextKinds": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "minItems": 1,
+              "uniqueItems": true
+            },
+            "factSource": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "path",
+                "symbol"
+              ],
+              "properties": {
+                "path": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "symbol": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          }
+        },
+        "registration": {
+          "$ref": "#/definitions/registration"
+        }
+      }
+    },
+    "queryViewport": {
+      "type": "object",
+      "properties": {
+        "availableHeight": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "fixedChromeHeight": {
+          "type": "number",
+          "minimum": 0
+        },
+        "minimumContentHeight": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      },
+      "required": [
+        "availableHeight",
+        "fixedChromeHeight",
+        "minimumContentHeight"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

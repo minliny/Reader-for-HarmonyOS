@@ -3,20 +3,30 @@ import {systemFileIndexFixture,systemFileTick as tick,systemReaderExitSdk,system
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 {
  const f=systemFileIndexFixture();await f.enqueue();f.page.searchAppForeground=false;f.mount();assert.equal(f.events.length,0);
- f.page.searchAppForeground=true;f.page.consumeSystemFileOpen();assert.deepEqual(f.events.map(e=>e[0]),['close-import','shelf','open','ack']);
+ f.page.searchAppForeground=true;f.page.consumeSystemFileOpen();assert.deepEqual(f.events.map(e=>e[0]),['shelf','open','ack']);
  assert.deepEqual(f.events.find(e=>e[0]==='open')[1].readingPosition,f.book.readingPosition);assert.equal(f.queue.peek(),undefined);f.dispose();
 }
+{
+ const f=systemFileIndexFixture();f.page.route='bookshelf';
+ f.page.shelfMutations.snapshot.importPresentation={state:'fileSelection'};
+ f.mount();await f.enqueue();const waiting=f.queue.peek();
+ assert.ok(waiting);assert.deepEqual(f.events,[],'a visible import retains the exact system file result');
+ f.page.shelfMutations.snapshot.importPresentation=undefined;
+ f.page.readingExitActions.navigationSettled();await tick();
+ assert.deepEqual(f.events,[['open',f.book],['ack',waiting.id]]);f.dispose();
+}
 for(const terminal of ['exit','cancel']){
- const f=systemFileIndexFixture();f.page.readingSessionActive=true;f.mount();const sdk=systemReaderExitSdk(f.page);await f.enqueue();
+ const f=systemFileIndexFixture();f.admitBook(f.page,f.book);f.mount();const sdk=systemReaderExitSdk(f.page);await f.enqueue();
  assert.equal(f.events.length,0,'queued local file waits for original reader exit registration');
- sdk.onExitRequestHandler(reason=>{assert.equal(reason,'navigation');f.events.push(['exit-request']);});
- f.page.consumeSystemFileOpen();assert.deepEqual(f.events.map(e=>e[0]),['exit-request']);
- if(terminal==='exit'){sdk.onExit(f.page.currentReaderPresentationIdentity());assert.deepEqual(f.events.map(e=>e[0]),['exit-request','shelf','close-import','shelf','open','ack']);}
+ sdk.onExitRequestHandler(reason=>{assert.equal(reason,'navigation');f.events.push(['exit-request']);},f.page.currentReaderPresentationIdentity(),()=>true);
+ assert.deepEqual(f.events,[],'the reader can finish initialization after registering its exit callback');
+ await tick();assert.deepEqual(f.events.map(e=>e[0]),['exit-request']);
+ if(terminal==='exit'){sdk.onExit(f.page.currentReaderPresentationIdentity());await tick();assert.deepEqual(f.events.map(e=>e[0]),['exit-request','shelf','open','ack']);}
  else{sdk.onExitCancelled(f.page.currentReaderPresentationIdentity());assert.deepEqual(f.events.map(e=>e[0]),['exit-request','ack']);assert.equal(f.page.readingSessionActive,true);}
  assert.equal(f.queue.peek(),undefined);assert.equal(f.page.systemFileOpenNavigation.hasPendingExit(),false);f.dispose();
 }
 for(const terminal of ['exit','cancel']){
- const f=systemFileIndexFixture();f.page.readingSessionActive=true;f.mount();
+ const f=systemFileIndexFixture();f.admitBook(f.page,f.book);f.mount();
  const sdk=systemReaderShellExitSdk(f.page),old=sdk.render();
  old.onExitRequestHandler(()=>f.events.push(['old-exit-request']));await f.enqueue();
  const original=f.page.currentReaderPresentationIdentity();f.page.readingReadyGeneration++;
@@ -28,10 +38,11 @@ for(const terminal of ['exit','cancel']){
  // Even direct old Index payload delivery cannot bypass its immutable tuple.
  f.page.onReaderExited(original);f.page.cancelReaderExitDestination(original);assert.equal(f.events.length,before);
  if(terminal==='exit')next.onExit();else next.onExitCancelled();
+ await tick();
  assert.equal(f.queue.peek(),undefined);assert.equal(f.events.filter(e=>e[0]==='ack').length,1);f.dispose();
 }
 for(const retired of ['unset','runtime','unmount']){
- const f=systemFileIndexFixture();f.page.readingSessionActive=true;f.mount();const actor=systemReaderShellExitSdk(f.page).render();
+ const f=systemFileIndexFixture();f.admitBook(f.page,f.book);f.mount();const actor=systemReaderShellExitSdk(f.page).render();
  actor.onExitRequestHandler(()=>f.events.push(['exit-request']));await f.enqueue();const before=f.events.length;
  if(retired==='unset')f.setRuntime(undefined);
  if(retired==='runtime')f.setRuntime({});
@@ -40,7 +51,7 @@ for(const retired of ['unset','runtime','unmount']){
  assert.ok(f.queue.peek());f.dispose();
 }
 for(const stale of ['nav','book','mutated-book','runtime','unset','unmount','reappear']){
- const f=systemFileIndexFixture(),query=deferred();f.page.readingSessionActive=true;f.page.detailBook={sourceId:'remote',bookId:'old'};
+ const f=systemFileIndexFixture(),query=deferred();f.admitBook(f.page,{sourceId:'remote',bookId:'old'});
  let reads=0;f.page.resolveReaderSourceSwitchTransaction=async()=>{reads++;await query.promise;};f.page.readingExitRequest=()=>f.events.push(['exit']);f.mount();await f.enqueue();
  assert.equal(reads,1);const host=f.page.systemFileOpenNavigation;
  if(stale==='nav')f.page.navigationGeneration++;
@@ -56,7 +67,7 @@ for(const stale of ['nav','book','mutated-book','runtime','unset','unmount','rea
  assert.ok(f.queue.peek());f.dispose();
 }
 {
- const f=systemFileIndexFixture();f.page.readingSessionActive=true;f.page.detailBook={sourceId:'remote',bookId:'remote-book'};
+ const f=systemFileIndexFixture();f.admitBook(f.page,{sourceId:'remote',bookId:'remote-book'});
  f.page.pendingSourceSwitch={transactionId:'actual-pending-fixture',targetSourceId:'remote',targetBookId:'remote-book'};f.mount();await f.enqueue();f.page.consumeSystemFileOpen();
  assert.equal(f.events.filter(e=>e[0]==='toast').length,1);assert.ok(f.queue.peek());
  f.page.pendingSourceSwitch=undefined;f.page.readingExitRequest=()=>f.events.push(['exit']);f.page.consumeSystemFileOpen();await tick();assert.equal(f.events.at(-1)[0],'exit');f.dispose();
@@ -69,8 +80,27 @@ for(const stale of ['nav','book','mutated-book','runtime','unset','unmount','rea
  const f=systemFileIndexFixture();f.page.getUIContext=()=>{throw Error('toast unavailable');};f.mount();await f.enqueue({failure:{code:'readFailed',message:'读取失败'}});assert.equal(f.queue.peek(),undefined);assert.equal(f.events.filter(e=>e[0]==='ack').length,1);f.dispose();
 }
 {
- const f=systemFileIndexFixture();f.page.openShelfBook=()=>{throw Error('route failed after import');};f.mount();await f.enqueue();assert.ok(f.queue.peek());assert.equal(f.events.filter(e=>e[0]==='ack').length,0);
- f.page.openShelfBook=()=>f.events.push(['open']);f.page.consumeSystemFileOpen();assert.equal(f.queue.peek(),undefined);assert.equal(f.events.filter(e=>e[0]==='ack').length,1);f.dispose();
+ const f=systemFileIndexFixture(),open=f.page.openShelfBook;
+ f.page.openShelfBook=()=>{throw Error('route failed after import');};f.mount();await f.enqueue();assert.ok(f.queue.peek());assert.equal(f.events.filter(e=>e[0]==='ack').length,0);
+ f.page.openShelfBook=open;f.page.consumeSystemFileOpen();assert.equal(f.queue.peek(),undefined);assert.equal(f.events.filter(e=>e[0]==='ack').length,1);f.dispose();
+}
+{
+ const f=systemFileIndexFixture(),open=f.page.openShelfBook;
+ f.page.openShelfBook=()=>{};f.mount();await f.enqueue();
+ assert.equal(f.page.route,'bookshelf');
+ assert.ok(f.queue.peek(),'a silent route refusal retains the same imported file');
+ assert.equal(f.events.filter(e=>e[0]==='ack').length,0);
+ f.page.openShelfBook=open;f.page.consumeSystemFileOpen();
+ assert.equal(f.page.route,'reading');assert.equal(f.queue.peek(),undefined);
+ assert.equal(f.events.filter(e=>e[0]==='ack').length,1);f.dispose();
+}
+{
+ const f=systemFileIndexFixture();
+ f.page.openShelfBook=selected=>f.admitBook(f.page,{...selected,bookId:'different-book'});
+ f.mount();await f.enqueue();
+ assert.equal(f.page.route,'reading');assert.equal(f.page.readingSessionActive,true);
+ assert.ok(f.queue.peek(),'another active book cannot acknowledge this imported file');
+ assert.equal(f.events.filter(e=>e[0]==='ack').length,0);f.dispose();
 }
 assert.doesNotMatch(systemFileSource('pages/Index.ets'),/private systemFileOpen(?:Checking|Checked|Applying|NoticeId|ExitId|Unsubscribe|Mounted)/,'old independent navigation owner is removed');
 console.log('PASS actual bounded queue→NavigationHost→Index adapter→SDK-emitted original exit registration/cancel/exit callbacks, captured Runtime/mount/nav/book/queue, preserved progress and failed notice/route settlement. Native reader scheduling remains separate.');

@@ -1,0 +1,275 @@
+{
+  "id": "source-management.layout-status-glyph-tail-320-font-200",
+  "version": 1,
+  "phase": 1,
+  "pageId": "source-management",
+  "fixture": {
+    "id": "public-source-catalog-v1",
+    "description": "Use the normal populated public Source catalogue in compact portrait at nominal 320vp and independently verified effective system font 2.0×. Observe all five status Text roles while dragging the real overflowing status lane. Keep the original filter projection.",
+    "publicSources": true
+  },
+  "steps": [
+    {
+      "id": "bookshelf",
+      "kind": "locate",
+      "anchors": [
+        "reader-main-tab-settings",
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false
+    },
+    {
+      "id": "open-settings",
+      "kind": "action",
+      "op": "click",
+      "from": "bookshelf",
+      "target": "reader-main-tab-settings"
+    },
+    {
+      "id": "settings",
+      "kind": "locate",
+      "anchors": [
+        "reader-settings-source-management"
+      ],
+      "keyboard": false,
+      "afterAction": "open-settings"
+    },
+    {
+      "id": "open-sources",
+      "kind": "action",
+      "op": "click",
+      "from": "settings",
+      "target": "reader-settings-source-management",
+      "waitFor": [
+        {
+          "kind": "source.route",
+          "fields": {
+            "payload.action": "open",
+            "payload.from": "settings",
+            "payload.to": "source"
+          }
+        }
+      ]
+    },
+    {
+      "id": "source-ready",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-list",
+        "reader-source-filter-block",
+        "reader-source-status-filter",
+        "reader-source-category-filter"
+      ],
+      "keyboard": false,
+      "afterAction": "open-sources",
+      "waitFor": [
+        {
+          "kind": "source.projection",
+          "fields": {
+            "payload.state": "rows",
+            "payload.readFact": "current"
+          }
+        },
+        {
+          "kind": "source.text-layout",
+          "channel": "business"
+        },
+        {
+          "kind": "source.filter-text-layout",
+          "channel": "business",
+          "fields": {
+            "payload.lane": "status",
+            "payload.phase": "initial"
+          }
+        }
+      ],
+      "quietMs": 500
+    },
+    {
+      "id": "scroll-status-first",
+      "kind": "action",
+      "op": "drag",
+      "from": "source-ready",
+      "target": "reader-source-status-filter",
+      "path": {
+        "from": [
+          0.85,
+          0.5
+        ],
+        "to": [
+          0.35,
+          0.5
+        ],
+        "speed": 300
+      }
+    },
+    {
+      "id": "status-middle-first",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-list",
+        "reader-source-filter-block",
+        "reader-source-status-filter",
+        "reader-source-category-filter"
+      ],
+      "keyboard": false,
+      "afterAction": "scroll-status-first",
+      "waitFor": [
+        {
+          "kind": "source.filter-text-layout",
+          "channel": "business",
+          "fields": {
+            "payload.lane": "status",
+            "payload.phase": "settled"
+          }
+        }
+      ],
+      "quietMs": 500
+    },
+    {
+      "id": "scroll-status-second",
+      "kind": "action",
+      "op": "drag",
+      "from": "status-middle-first",
+      "target": "reader-source-status-filter",
+      "path": {
+        "from": [
+          0.85,
+          0.5
+        ],
+        "to": [
+          0.35,
+          0.5
+        ],
+        "speed": 300
+      }
+    },
+    {
+      "id": "status-middle-last",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-list",
+        "reader-source-filter-block",
+        "reader-source-status-filter",
+        "reader-source-category-filter"
+      ],
+      "keyboard": false,
+      "afterAction": "scroll-status-second",
+      "waitFor": [
+        {
+          "kind": "source.filter-text-layout",
+          "channel": "business",
+          "fields": {
+            "payload.lane": "status",
+            "payload.phase": "settled"
+          }
+        }
+      ],
+      "quietMs": 500
+    },
+    {
+      "id": "scroll-status-third",
+      "kind": "action",
+      "op": "drag",
+      "from": "status-middle-last",
+      "target": "reader-source-status-filter",
+      "path": {
+        "from": [
+          0.85,
+          0.5
+        ],
+        "to": [
+          0.35,
+          0.5
+        ],
+        "speed": 300
+      }
+    },
+    {
+      "id": "status-tail",
+      "kind": "sample",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-list",
+        "reader-source-filter-block",
+        "reader-source-status-filter",
+        "reader-source-category-filter"
+      ],
+      "keyboard": false,
+      "afterAction": "scroll-status-third",
+      "waitFor": [
+        {
+          "kind": "source.filter-text-layout",
+          "channel": "business",
+          "fields": {
+            "payload.lane": "status",
+            "payload.phase": "settled"
+          }
+        }
+      ],
+      "quietMs": 500
+    }
+  ],
+  "assertions": [
+    {
+      "id": "source.layout.status-glyph-tail",
+      "evaluator": "source",
+      "kind": "filter-tail-text",
+      "required": true,
+      "source": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets#scheduleVerificationFilterText",
+      "expected": {
+        "lane": "status",
+        "widthVp": 320
+      },
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner"
+      ],
+      "baseline": "source-ready",
+      "sample": "status-tail",
+      "action": "scroll-status-third"
+    }
+  ],
+  "ownerSources": [
+    "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+    "entry/src/main/ets/app/composition/ReaderSourceJourney.ets",
+    "entry/src/main/ets/features/source/ui/SourceManagementVerification.ts",
+    "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets",
+    "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
+    "entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts",
+    "entry/src/main/ets/features/source/presentation/SourceManagementScrollState.ts",
+    "entry/src/main/ets/features/source/presentation/SourceJourneyPresentation.ets",
+    "entry/src/main/ets/features/source/application/SourceOrchestrator.ets",
+    "entry/src/main/ets/features/source/application/SourceHost.ets",
+    "entry/src/main/ets/features/source/application/SourceGateway.ts",
+    "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
+    "entry/src/main/ets/ui/patterns/ReaderBottomTabBar.ets",
+    "entry/src/main/ets/ui/foundation/ReaderTokens.ets",
+    "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+    "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/ui/controls/ReaderFormRow.ets",
+    "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+    "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
+    "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets",
+    "entry/src/main/ets/ui/layout/ReaderPageGeometry.ts",
+    "entry/src/main/ets/ui/layout/ReaderScrollLayout.ts",
+    "entry/src/main/ets/ui/feedback/ReaderPageState.ets",
+    "entry/src/main/ets/ui/foundation/ReaderTypography.ets",
+    "entry/src/main/ets/ui/controls/ReaderButton.ets",
+    "entry/src/main/ets/ui/controls/ReaderControlSpecs.ets",
+    "entry/src/main/ets/ui/controls/ReaderSelect.ets",
+    "entry/src/main/ets/pages/ReaderSourceTextMetrics.ets",
+    "entry/src/main/ets/ui/controls/ReaderLabeledIconAction.ets"
+  ],
+  "structure": {
+    "source-ready": "source-ready",
+    "status-middle-first": "status-middle-first",
+    "status-middle-last": "status-middle-last",
+    "status-tail": "status-tail"
+  }
+}

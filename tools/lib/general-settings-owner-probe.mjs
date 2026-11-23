@@ -17,13 +17,13 @@ export function actualGeneralSettingsTypes(deps={}) {
   util:deps.settingsUtil??deps.util??{generateRandomUUID:unsupported},
   hilog:deps.hilog??{error(){}}};
  all.replaceReaderAtomicSnapshot=deps.replaceReaderAtomicSnapshot??bookshelfOperationClass('app/ReaderAtomicSnapshotFile.ts','replaceReaderAtomicSnapshot',all);
- const readingIntents=bookshelfOperationClass('features/reading/ReadingOperationIntents.ts','({CacheClearOperationIntentStore,ReadingOperationPendingError})',all);
- const gateway=bookshelfOperationClass('features/settings/SettingsGateway.ts','({SettingsGateway,createDefaultSettingsSnapshot})',all);
- const reset=deps.LocalConfigurationReset??bookshelfOperationClass('features/settings/LocalConfigurationReset.ts','LocalConfigurationReset',{...all,...gateway});
- const SettingsOrchestrator=bookshelfOperationClass('features/settings/SettingsOrchestrator.ets','SettingsOrchestrator',{...all,...gateway,LocalConfigurationReset:reset});
- const SettingsCacheGateway=bookshelfOperationClass('features/settings/SettingsCacheGateway.ts','SettingsCacheGateway',{...all,...readingIntents});
- const SettingsCacheCleanupOwner=bookshelfOperationClass('features/settings/SettingsCacheCleanupOwner.ts','SettingsCacheCleanupOwner',{...all,...readingIntents,SettingsCacheGateway});
- const SettingsHost=bookshelfOperationClass('features/settings/SettingsHost.ets','SettingsHost',{...all,SettingsOrchestrator,SettingsCacheCleanupOwner});
+ const readingIntents=bookshelfOperationClass('features/reading/application/ReadingOperationIntents.ts','({CacheClearOperationIntentStore,ReadingOperationPendingError})',all);
+ const gateway=bookshelfOperationClass('features/settings/application/SettingsGateway.ts','({SettingsGateway,createDefaultSettingsSnapshot})',all);
+ const reset=deps.LocalConfigurationReset??bookshelfOperationClass('features/settings/application/LocalConfigurationReset.ts','LocalConfigurationReset',{...all,...gateway});
+ const SettingsOrchestrator=bookshelfOperationClass('features/settings/application/SettingsOrchestrator.ets','SettingsOrchestrator',{...all,...gateway,LocalConfigurationReset:reset});
+ const SettingsCacheGateway=bookshelfOperationClass('features/settings/application/SettingsCacheGateway.ts','SettingsCacheGateway',{...all,...readingIntents});
+ const SettingsCacheCleanupOwner=bookshelfOperationClass('features/settings/application/SettingsCacheCleanupOwner.ts','SettingsCacheCleanupOwner',{...all,...readingIntents,SettingsCacheGateway});
+ const SettingsHost=bookshelfOperationClass('features/settings/application/SettingsHost.ets','SettingsHost',{...all,SettingsOrchestrator,SettingsCacheCleanupOwner});
  return {...gateway,SettingsOrchestrator,SettingsCacheGateway,SettingsCacheCleanupOwner,SettingsHost};
 }
 export function actualGeneralSettingsHostField(index,SettingsHost) {

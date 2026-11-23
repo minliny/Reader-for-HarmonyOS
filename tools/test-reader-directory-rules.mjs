@@ -12,7 +12,7 @@ const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.m
 const {boundedSurfaceSdk,boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');
 const {foundationControls}=await import('./lib/reader-foundation-control-probe.mjs');
 
-const sourceUrl=new URL('../entry/src/main/ets/features/reading/ReaderDirectoryRules.ets',import.meta.url);
+const sourceUrl=new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryRules.ets',import.meta.url);
 const source=readFileSync(sourceUrl,'utf8'),require=createRequire(import.meta.url);
 const loader=resolveEtsLoaderRoot();
 const ts=require(loader+'/node_modules/typescript'),tree=ts.createSourceFile('ReaderDirectoryRules.ets',source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(loader+'/lib/ets_checker.js').compilerOptions);
@@ -30,7 +30,7 @@ async function setup(prior) {
  else assert.ok(caps.includes('rules.mutation.directory-rules.v1'),'select current paired Core CLI; legacy cannot acknowledge directory applies');
  f.id='local:'+createHash('sha256').update(body).digest('hex');
  if(!prior){const file=resolve(f.root,'source.txt');writeFileSync(file,body);await f.command('local_book.import',{bookId:f.id,filePath:file,format:'txt'});}
- f.DirectoryGateway=compile('features/reading/ReaderDirectoryRulesGateway.ts','ReaderDirectoryRulesGateway',{ReaderRuntimeOwner:f.Runtime,RulesMutationOwner:f.Owner},true);
+ f.DirectoryGateway=compile('features/reading/application/ReaderDirectoryRulesGateway.ts','ReaderDirectoryRulesGateway',{ReaderRuntimeOwner:f.Runtime,RulesMutationOwner:f.Owner},true);
  f.directoryGateway=new f.DirectoryGateway(f.runtime);
  return f;
 }

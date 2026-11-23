@@ -9,7 +9,7 @@ import { compile, fixture, until } from './rules-mutation-durable-probe.mjs';
 // and BundledSourceLedger into Node's unsupported strip-only dependency graph.
 export const readerReplaceSdkFixture = existing => fixture(true, existing);
 export const untilReaderReplaceSdk = until;
-const path = 'features/reading/ReaderControlReplaceGateway.ts';
+const path = 'features/reading/application/ReaderControlReplaceGateway.ts';
 const source = readFileSync(new URL('../../entry/src/main/ets/' + path, import.meta.url), 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
@@ -29,8 +29,8 @@ export { compile as compileReaderReplaceSdkMethods };
  * changes, rather than assuming the platform has already disposed them. */
 export async function mountReaderReplaceRecoveryActor(values, sourceOverride) {
   const { createReaderBuilderProbe } = await import('./reader-control-builder-probe.mjs');
-  const { readerControlReplaceEndpoint } = await import('../../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
-  const source = sourceOverride ?? readFileSync(new URL('../../entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets', import.meta.url), 'utf8');
+  const { readerControlReplaceEndpoint } = await import('../../entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts');
+  const source = sourceOverride ?? readFileSync(new URL('../../entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets', import.meta.url), 'utf8');
   const { owner } = createReaderBuilderProbe(source,
     ['originalRecoveryAction', 'textAction', 'reload', 'perform', 'fullInput', 'quickInput'],
     { errorMessageOf: error => error.message, readerControlReplaceEndpoint });
@@ -41,7 +41,7 @@ export async function mountReaderReplaceRecoveryActor(values, sourceOverride) {
 }
 export async function checkReaderReplaceRecoveryActor(sourceOverride) {
   const { createReaderControlReplaceState, createReaderControlReplaceDraft } =
-    await import('../../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
+    await import('../../entry/src/main/ets/features/reading/presentation/ReaderControlReplaceState.ts');
   const draft = createReaderControlReplaceDraft(); draft.name = 'original retained draft';
   const calls = [];
   const owner = await mountReaderReplaceRecoveryActor({ state: { ...createReaderControlReplaceState('book:1'), status: 'ready',

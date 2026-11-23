@@ -4,15 +4,15 @@ const selected=selectContractCases(definitions);
 async function runCase(selectedCase){
 const {default:assert}=await import('node:assert/strict');
 const { readFileSync }=await import('node:fs');
-const paint=await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
-const scroll=await import('../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts');
-const appearance=await import('../entry/src/main/ets/features/reading/ReaderControlAppearanceGeometry.ts');
-const { READER_CONTROL_APPEARANCE_THEMES }=await import('../entry/src/main/ets/features/reading/ReaderControlAppearanceStyle.ts');
-const appearanceState=await import('../entry/src/main/ets/features/reading/ReaderAppearanceState.ts');
-const render=await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
-const playback=await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
-const settings=await import('../entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts');
-const actors=await import('../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts');
+const paint=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts');
+const scroll=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts');
+const appearance=await import('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceGeometry.ts');
+const { READER_CONTROL_APPEARANCE_THEMES }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceStyle.ts');
+const appearanceState=await import('../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts');
+const render=await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
+const playback=await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
+const settings=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSettingsGeometry.ts');
+const actors=await import('../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts');
 const { createReaderBuilderProbe }=await import('./lib/reader-control-builder-probe.mjs');
 
 const source = name => readFileSync(new URL(`../entry/src/main/ets/features/reading/ReaderControl${name}Content.ets`, import.meta.url), 'utf8');
@@ -137,7 +137,7 @@ if(selectedCase==='appearance-cache'){
 // within the live width/height, including reversal and font-order updates.
 const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
 let endpointSamples=0;
-const EndpointOwner=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderControlAppearanceContent.ets', import.meta.url),
+const EndpointOwner=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets', import.meta.url),
   ['endpointFrame','themeIds','fontIds','presentation'], {...appearanceState,...paint,READER_CONTROL_APPEARANCE_THEMES,
     sampleReaderControlAppearance: (...args) => { endpointSamples++; return appearance.sampleReaderControlAppearance(...args); }});
 const cache = Object.assign(new EndpointOwner(), {availableWidth:286,fullContentHeight:666,motionProgress:0,

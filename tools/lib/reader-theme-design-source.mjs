@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { readerAppColor } from '../../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { readerAppColor } from '../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 
 /** Existing Figma geometry contracts name the original design tokens. Resolve
  * only the new app-palette call sites back to those names for these static

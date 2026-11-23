@@ -1,0 +1,17 @@
+[
+  {
+    "bookSourceName": "Reader Phase 1 公共延迟夹具",
+    "bookSourceUrl": "https://httpbingo.org/delay/5",
+    "bookSourceGroup": "Reader Phase 1 Fixture",
+    "bookSourceType": 0,
+    "enabled": true,
+    "enabledExplore": false,
+    "enabledCookieJar": false,
+    "searchUrl": "https://httpbingo.org/delay/5",
+    "ruleSearch": {
+      "bookList": "$.books[*]",
+      "name": "$.title",
+      "bookUrl": "$.url"
+    }
+  }
+]

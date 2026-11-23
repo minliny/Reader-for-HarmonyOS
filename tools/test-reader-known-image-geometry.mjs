@@ -1,13 +1,13 @@
 import{selectContractCases,recordContractCasePass}from'./lib/contract-case-selection.mjs';
 const selected=selectContractCases({'dto-decode':{description:'Actual prepared image geometry/decoded intrinsic handoff and mismatch lease rejection',resources:[]},'pixel-ownership':{description:'Actual LRE pixel lease, frozen-page publication and reverse/continuous geometry invariants',resources:[]},'continuous-observer':{description:'Actual notifying continuous rows, coalesced pixel revisions and bounded lookup',resources:[]}});
 async function run(id){
-const { ReaderReadingImageResources, sameReaderReadingImageResource }=await import('../entry/src/main/ets/features/reading/ReaderReadingImageResources.ts');
+const { ReaderReadingImageResources, sameReaderReadingImageResource }=await import('../entry/src/main/ets/features/reading/application/ReaderReadingImageResources.ts');
 const {default:assert}=await import('node:assert/strict');
 const { readFileSync }=await import('node:fs');
 const { registerHooks, stripTypeScriptTypes }=await import('node:module');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
-const { ReadingChapterWindow, hasKnownReadingImageGeometry }=await import('../entry/src/main/ets/features/reading/ReadingChapterWindow.ts');
-const style=await import('../entry/src/main/ets/features/reading/ReaderAppearanceRenderStyle.ts');
+const { ReadingChapterWindow, hasKnownReadingImageGeometry }=await import('../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts');
+const style=await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
 
 const hooks=registerHooks({ resolve(specifier, context, next) {
   try { return next(specifier, context); } catch (error) {
@@ -17,7 +17,7 @@ const hooks=registerHooks({ resolve(specifier, context, next) {
   }
 } });
 try{
-const { materializePreparedReadingDocument } = await import('../entry/src/main/ets/features/reading/ReadingDocumentProjection.ts');
+const { materializePreparedReadingDocument } = await import('../entry/src/main/ets/features/reading/application/ReadingDocumentProjection.ts');
 const dir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const file = new URL('LocalReadingExperience.ets', dir);
 const surface = readFileSync(new URL('ReadingSurface.ets', dir), 'utf8');
@@ -67,7 +67,7 @@ assert.equal(releases.length, 1, 'rejected pixels release their lease');
 
 const nativeOriginal = { width: 8191, height: 4093 };
 let decoded, decodedReleased = 0, sourceReleased = 0;
-const NativePayload = productionMotionMethods(new URL('../entry/src/main/ets/app/ReadingBodyImageHost.ts', import.meta.url),
+const NativePayload = productionMotionMethods(new URL('../entry/src/main/ets/platform/reading-resources/ReadingBodyImageHost.ts', import.meta.url),
   ['decodeBytes','withDecodedPixelMap','boundedDecodeSize','assertCurrent'], {
     MAX_READING_IMAGE_BYTES: 16 * 1024 * 1024, MAX_READING_IMAGE_DIMENSION: 4096, MAX_READING_IMAGE_PIXELS: 4 * 1024 * 1024,
     image: { createImageSource: () => ({ getImageInfo: async () => ({ size: nativeOriginal }),

@@ -1,0 +1,479 @@
+{
+  "id": "bookshelf.search-filter-empty-reset",
+  "version": 1,
+  "phase": 1,
+  "pageId": "bookshelf",
+  "fixture": {
+    "id": "public-search-filter-empty-reset-v1",
+    "description": "Use an isolated public Reader bookshelf with only the public long-directory book and an authoritatively empty source catalog. Submit Reader through the normal Search editor. In the terminal local results select Online, close the normal filter sheet, inspect the filter-empty view, reopen the filter and use Reset. Inspect the original local book in the same unchanged query after closing the sheet.",
+    "bookTitle": "Reader Phase 1 公共长目录",
+    "publicSources": true,
+    "inputs": {
+      "a": "Reader"
+    }
+  },
+  "steps": [
+    {
+      "id": "before",
+      "kind": "sample",
+      "anchors": [
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false,
+      "book": true
+    },
+    {
+      "id": "open-search",
+      "kind": "action",
+      "op": "click",
+      "from": "before",
+      "target": "reader-bookshelf-search-entry",
+      "waitFor": [
+        {
+          "kind": "search-open-accepted"
+        }
+      ]
+    },
+    {
+      "id": "search-entry",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-bookshelf-search-bar",
+        "reader-bookshelf-search-submit",
+        "reader-bookshelf-search-sourceRequired"
+      ],
+      "afterAction": "open-search",
+      "quietMs": 125,
+      "waitFor": [
+        {
+          "kind": "search-surface-settled",
+          "fields": {
+            "payload.mode": "input"
+          },
+          "match": "latest",
+          "channel": "business"
+        },
+        {
+          "kind": "search-page-projection",
+          "fields": {
+            "payload.projection": "sourceRequired",
+            "payload.sourceRequiredReason": "noSources"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ]
+    },
+    {
+      "id": "focus-editor",
+      "kind": "action",
+      "op": "click",
+      "from": "search-entry",
+      "target": "reader-book-search-input"
+    },
+    {
+      "id": "ime-ready",
+      "kind": "locate",
+      "anchors": [
+        "reader-book-search-input"
+      ],
+      "keyboard": true,
+      "focus": "reader-book-search-input",
+      "afterAction": "focus-editor",
+      "quietMs": 125
+    },
+    {
+      "id": "type-a",
+      "kind": "action",
+      "op": "inputText",
+      "from": "ime-ready",
+      "target": "reader-book-search-input",
+      "inputRole": "a",
+      "waitFor": [
+        {
+          "kind": "search-editor-edit",
+          "fields": {
+            "payload.length": 6
+          },
+          "match": "latest",
+          "channel": "input"
+        },
+        {
+          "kind": "search-editor-selection",
+          "fields": {
+            "payload.start": 6,
+            "payload.end": 6
+          },
+          "match": "latest",
+          "channel": "input"
+        },
+        {
+          "kind": "search-draft-accepted",
+          "fields": {
+            "payload.length": 6
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ]
+    },
+    {
+      "id": "submit-ready",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-bookshelf-search-bar",
+        "reader-bookshelf-search-submit"
+      ],
+      "keyboard": true,
+      "focus": "reader-book-search-input",
+      "afterAction": "type-a",
+      "quietMs": 125
+    },
+    {
+      "id": "submit-a",
+      "kind": "action",
+      "op": "click",
+      "from": "submit-ready",
+      "target": "reader-bookshelf-search-submit",
+      "buttonSemantic": "search",
+      "waitFor": [
+        {
+          "kind": "search-button-intent"
+        },
+        {
+          "kind": "search-submit-accepted"
+        }
+      ]
+    },
+    {
+      "id": "unfiltered-results",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-search-result-viewport",
+        "reader-search-public-local-result",
+        "reader-search-filter-trigger"
+      ],
+      "keyboard": false,
+      "afterAction": "submit-a",
+      "quietMs": 500,
+      "waitFor": [
+        {
+          "kind": "search-surface-settled",
+          "fields": {
+            "payload.mode": "results"
+          },
+          "match": "latest",
+          "channel": "business"
+        },
+        {
+          "kind": "search-page-projection",
+          "fields": {
+            "payload.projection": "results",
+            "payload.operation": "current",
+            "payload.searchActive": false,
+            "payload.resultCount": 1,
+            "payload.visibleCount": 1
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ]
+    },
+    {
+      "id": "open-filter",
+      "kind": "action",
+      "op": "click",
+      "from": "unfiltered-results",
+      "target": "reader-search-filter-trigger",
+      "waitFor": [
+        {
+          "kind": "search-page-action",
+          "fields": {
+            "payload.action": "panel-open",
+            "payload.panel": "filter"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ]
+    },
+    {
+      "id": "filter-open",
+      "kind": "sample",
+      "anchors": [
+        "reader-search-filter-online",
+        "reader-search-filter-reset"
+      ],
+      "keyboard": false,
+      "afterAction": "open-filter",
+      "quietMs": 125,
+      "waitFor": [
+        {
+          "kind": "search-page-action",
+          "fields": {
+            "payload.action": "panel-open",
+            "payload.panel": "filter"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ]
+    },
+    {
+      "id": "select-online",
+      "kind": "action",
+      "op": "click",
+      "from": "filter-open",
+      "target": "reader-search-filter-online",
+      "waitFor": [
+        {
+          "kind": "search-filter-applied",
+          "fields": {
+            "payload.action": "scope"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ]
+    },
+    {
+      "id": "selected-online",
+      "kind": "locate",
+      "anchors": [
+        "reader-search-filter-online",
+        "reader-search-filter-reset"
+      ],
+      "keyboard": false,
+      "afterAction": "select-online",
+      "waitFor": [
+        {
+          "kind": "search-filter-applied",
+          "fields": {
+            "payload.action": "scope"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ]
+    },
+    {
+      "id": "hide-filter",
+      "kind": "action",
+      "op": "keyEvent",
+      "key": "Back",
+      "from": "selected-online",
+      "waitFor": [
+        {
+          "kind": "search-page-action",
+          "fields": {
+            "payload.action": "panel-dismiss",
+            "payload.panel": "filter"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ]
+    },
+    {
+      "id": "filtered-empty",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-search-result-viewport",
+        "reader-search-filtered-empty",
+        "reader-search-filter-trigger"
+      ],
+      "keyboard": false,
+      "afterAction": "hide-filter",
+      "quietMs": 500,
+      "waitFor": [
+        {
+          "kind": "search-page-action",
+          "fields": {
+            "payload.action": "panel-dismiss",
+            "payload.panel": "filter"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ]
+    },
+    {
+      "id": "reopen-filter",
+      "kind": "action",
+      "op": "click",
+      "from": "filtered-empty",
+      "target": "reader-search-filter-trigger",
+      "waitFor": [
+        {
+          "kind": "search-page-action",
+          "fields": {
+            "payload.action": "panel-open",
+            "payload.panel": "filter"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ]
+    },
+    {
+      "id": "reset-open",
+      "kind": "sample",
+      "anchors": [
+        "reader-search-filter-online",
+        "reader-search-filter-reset"
+      ],
+      "keyboard": false,
+      "afterAction": "reopen-filter",
+      "quietMs": 125,
+      "waitFor": [
+        {
+          "kind": "search-page-action",
+          "fields": {
+            "payload.action": "panel-open",
+            "payload.panel": "filter"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ]
+    },
+    {
+      "id": "reset-filter",
+      "kind": "action",
+      "op": "click",
+      "from": "reset-open",
+      "target": "reader-search-filter-reset",
+      "waitFor": [
+        {
+          "kind": "search-filter-applied",
+          "fields": {
+            "payload.action": "reset"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ]
+    },
+    {
+      "id": "reset-applied",
+      "kind": "locate",
+      "anchors": [
+        "reader-search-filter-online",
+        "reader-search-filter-reset"
+      ],
+      "keyboard": false,
+      "afterAction": "reset-filter",
+      "waitFor": [
+        {
+          "kind": "search-filter-applied",
+          "fields": {
+            "payload.action": "reset"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ]
+    },
+    {
+      "id": "close-reset",
+      "kind": "action",
+      "op": "keyEvent",
+      "key": "Back",
+      "from": "reset-applied",
+      "waitFor": [
+        {
+          "kind": "search-page-action",
+          "fields": {
+            "payload.action": "panel-dismiss",
+            "payload.panel": "filter"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ]
+    },
+    {
+      "id": "restored-results",
+      "kind": "sample",
+      "anchors": [
+        "reader-book-search-input",
+        "reader-search-result-viewport",
+        "reader-search-public-local-result",
+        "reader-search-filter-trigger"
+      ],
+      "keyboard": false,
+      "afterAction": "close-reset",
+      "quietMs": 500,
+      "waitFor": [
+        {
+          "kind": "search-page-action",
+          "fields": {
+            "payload.action": "panel-dismiss",
+            "payload.panel": "filter"
+          },
+          "match": "latest",
+          "channel": "business"
+        }
+      ]
+    }
+  ],
+  "ownerSources": [
+    "entry/src/main/ets/app/composition/ReaderLibraryJourney.ets",
+    "entry/src/main/ets/app/composition/ReaderLibraryAcquisitionBinding.ts",
+    "entry/src/main/ets/app/ReaderWindowCoordinator.ts",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
+    "entry/src/main/ets/pages/Index.ets",
+    "entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchFilterPanel.ets",
+    "entry/src/main/ets/features/search/ui/SearchPage.ets",
+    "entry/src/main/ets/features/search/ui/SearchFilterGeometry.ts",
+    "entry/src/main/ets/features/search/ui/SearchResultSheetBinding.ets",
+    "entry/src/main/ets/features/search/ui/LibrarySearchResults.ets",
+    "entry/src/main/ets/features/search/presentation/LibrarySearchPresentation.ets",
+    "entry/src/main/ets/features/search/presentation/SearchViewState.ts",
+    "entry/src/main/ets/features/search/presentation/SearchResultProjection.ts",
+    "entry/src/main/ets/features/search/application/SearchOrchestrator.ets",
+    "entry/src/main/ets/features/search/application/SearchHost.ets",
+    "entry/src/main/ets/ui/controls/ReaderButton.ets",
+    "entry/src/main/ets/ui/feedback/ReaderPageState.ets",
+    "entry/src/main/ets/ui/surfaces/ReaderBoundedSurface.ets",
+    "entry/src/main/ets/ui/surfaces/ReaderBoundedSurfaceHeader.ets"
+  ],
+  "assertions": [
+    {
+      "id": "search.filter-empty-reset",
+      "evaluator": "search",
+      "kind": "phase-filter-empty-reset",
+      "required": true,
+      "source": "entry/src/main/ets/features/search/ui/SearchPage.ets#resetSearchFilters",
+      "sources": [
+        "native-tree",
+        "window-metrics",
+        "app-owner",
+        "app-input"
+      ],
+      "baseline": "unfiltered-results",
+      "sample": "restored-results",
+      "action": "select-online",
+      "priorAction": "submit-a",
+      "expected": {
+        "resultCount": 1
+      }
+    }
+  ],
+  "structure": {
+    "before": "before",
+    "search-entry": "search-entry",
+    "submit-ready": "submit-ready",
+    "unfiltered-results": "unfiltered-results",
+    "filter-open": "filter-open",
+    "filtered-empty": "filtered-empty",
+    "reset-open": "reset-open",
+    "restored-results": "restored-results"
+  }
+}

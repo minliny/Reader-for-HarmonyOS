@@ -1,16 +1,16 @@
-import * as directoryState from '../entry/src/main/ets/features/manga/MangaDirectoryState.ts';
-import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/MangaDirectoryDisplay.ts';
-import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
+import * as directoryState from '../entry/src/main/ets/features/manga/ui/MangaDirectoryState.ts';
+import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryDisplay.ts';
+import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts';
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { compileHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
-import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup } from '../entry/src/main/ets/features/manga/MangaDirectoryPresentation.ts';
-import { projectReaderDirectoryEntries } from '../entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts';
-import { snapshotReaderDirectoryData, sameReaderDirectoryData } from '../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts';
-import { mangaDirectoryEntryRows, mangaDirectoryNearbyEntries } from '../entry/src/main/ets/features/manga/MangaDirectoryLayout.ts';
-import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryScale, mangaDirectoryHeaderHeight, mangaDirectoryContentTop } from '../entry/src/main/ets/features/manga/MangaDirectoryVisual.ts';
-import * as geometry from '../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts';
-import * as metrics from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup } from '../entry/src/main/ets/features/manga/presentation/MangaDirectoryPresentation.ts';
+import { projectReaderDirectoryEntries } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryProjection.ts';
+import { snapshotReaderDirectoryData, sameReaderDirectoryData } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts';
+import { mangaDirectoryEntryRows, mangaDirectoryNearbyEntries } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryLayout.ts';
+import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryScale, mangaDirectoryHeaderHeight, mangaDirectoryContentTop } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
+import * as geometry from '../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts';
+import * as metrics from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 
 const windowPorts = { ...geometry, ...metrics, visual, mangaDirectoryScale, mangaDirectoryHeaderHeight, mangaDirectoryContentTop,
   ReaderWindowCoordinator: { metrics: () => ({ ...metrics.createDefaultReaderWindowMetrics(),
@@ -32,29 +32,31 @@ assert.equal(model.get(41).group, false);
 assert.deepEqual(mangaDirectoryVisibleEntries(entries, model, [7]).map(row => row.index), [7, 29, 41, 53]);
 assert.deepEqual(mangaDirectoryVisibleEntries(entries, model, [17]).map(row => row.index), [7, 17, 29, 41, 53]);
 
-const Detail = productionMotionMethods(new URL('features/bookshelf/LocalBookDetail.ets', base),
-  ['visibleToc', 'chapterIsGroup', 'chapterIndent', 'onBookChanged', 'measureIntro', 'onTocChanged', 'prepareMangaPreview',
+const Detail = productionMotionMethods(new URL('features/reading/ui/LocalBookDetail.ets', base),
+  ['chapterIsGroup', 'onBookChanged', 'measureIntro', 'onTocChanged', 'prepareMangaPreview',
     'contentFrame', 'safeLeft', 'safeRight'], {
     ...windowPorts, ...directoryState, mangaDirectoryDisplay,
     mangaDirectoryPresentation, mangaDirectoryVisibleEntries, mangaDirectoryIsGroup, mangaDirectoryEntryRows,
-    mangaDirectoryNearbyEntries, CHAPTER_PREVIEW_LIMIT: 8, TEXT_CHAPTER_PREVIEW_LIMIT: 20,
+    mangaDirectoryNearbyEntries, CHAPTER_PREVIEW_LIMIT: 8,
   });
 const detail = Object.assign(new Detail(), { toc: entries, book: { sourceId: 's', bookId: 'b', contentKind: 'manga' },
   collapsedGroups: [7, 17], collapseIdentity: 's\0b', mangaPresentation: new Map(), mangaPreviewRows: [], liveWidth: () => 400 });
 detail.prepareMangaPreview();
-assert.deepEqual(detail.visibleToc().map(row => row.index), [23, 29, 53], 'detail preview contains actual nearby targets, with explicit context carried separately');
+const detailPreviewTargets = () => detail.mangaPreviewRows.flatMap(row => row.entries.map(entry => entry.index));
+assert.deepEqual(detailPreviewTargets(), [23, 29, 53], 'detail preview contains actual nearby targets, with explicit context carried separately');
 assert.equal(detail.mangaPresentation.get(23).contextTitle, '外卷 / 内卷');
 detail.collapsedGroups = [17];
-assert.deepEqual(detail.visibleToc().map(row => row.index), [23, 29, 53], 'a full-directory folding preference cannot hide the detail preview target');
+detail.prepareMangaPreview();
+assert.deepEqual(detailPreviewTargets(), [23, 29, 53], 'a full-directory folding preference cannot hide the detail preview target');
 assert.equal(detail.chapterIsGroup(entries[4]), false, 'disabled row does not fold later independent chapters');
-assert.equal(detail.chapterIndent(entries[3]), 10, 'a root target is not indented under a prior volume');
+assert.deepEqual(detail.mangaPresentation.get(29).ancestorGroupIndexes, [], 'the preview root target is independent of the prior volume');
 detail.book = { ...detail.book, bookId: 'other' }; detail.onBookChanged();
 assert.deepEqual(detail.collapsedGroups, [], 'equal indexes in another book do not inherit old folds');
 detail.collapsedGroups = [7]; detail.toc = entries.map(row => row.index === 7 ? { ...row, title: '新外卷' } : row);
 detail.onTocChanged(); assert.deepEqual(detail.collapsedGroups, [], 'renamed/reused group facts discard detail collapse');
 
 const timers = [], scrolls = [];
-const Page = productionMotionMethods(new URL('features/bookshelf/BookDirectoryPage.ets', base),
+const Page = productionMotionMethods(new URL('features/reading/ui/BookDirectoryPage.ets', base),
   ['identity', 'admitEntries', 'mangaIsGroup', 'mangaVisibleEntries', 'locateCurrent', 'selectMangaEntry', 'rowIsCurrent',
     'toggleMangaBranch', 'prepareMangaLayout', 'publishProjection', 'onListUserScroll', 'mangaEntryIsDisplayed',
     'contentFrame', 'mangaNarrow', 'mangaFontScale', 'scrollMangaCurrent', 'mangaContentTopInset', 'mangaVisibleTopInset', 'topInset'], {

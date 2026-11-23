@@ -15,7 +15,7 @@ async function case_slot_placement_admission() {
 const { default: assert } = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
-const file=new URL('../entry/src/main/ets/features/reading/ReaderPageTurnStage.ets',import.meta.url);
+const file=new URL('../entry/src/main/ets/features/reading/ui/ReaderPageTurnStage.ets',import.meta.url);
 const names=["slotPage", "refreshRenderPages", "currentRenderPage", "adjacentRenderPage", "slotIdentity", "slotSnapshotId", "slotPresented", "hasActiveTurn", "slotVisible", "slotX", "slotLayer", "slotShadow", "hasLiveTurnWidth", "previousPageX", "nextPageX", "turnProgress", "coverOcclusionStrength"];
 const dependencies={READER_PAGE_TURN_SLOT_A:'reader-page-slot-a',READER_PAGE_TURN_SLOT_B:'reader-page-slot-b'};
 const Subject=productionMotionMethods(file,names,dependencies);
@@ -112,7 +112,7 @@ async function case_sdk_build_slot_binding() {
 const { default: assert } = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
-const file=new URL('../entry/src/main/ets/features/reading/ReaderPageTurnStage.ets',import.meta.url);
+const file=new URL('../entry/src/main/ets/features/reading/ui/ReaderPageTurnStage.ets',import.meta.url);
 const names=["slotPage", "refreshRenderPages", "currentRenderPage", "adjacentRenderPage", "slotIdentity", "slotSnapshotId", "slotPresented", "hasActiveTurn", "slotVisible", "slotX", "slotLayer", "slotShadow", "hasLiveTurnWidth", "previousPageX", "nextPageX", "turnProgress", "coverOcclusionStrength"];
 const dependencies={READER_PAGE_TURN_SLOT_A:'reader-page-slot-a',READER_PAGE_TURN_SLOT_B:'reader-page-slot-b'};
 const Subject=productionMotionMethods(file,names,dependencies);

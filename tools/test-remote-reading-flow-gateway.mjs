@@ -13,7 +13,7 @@ const {
   RemoteReadingGatewayError,
   remoteReadingHostCapabilitySnapshot,
   isRemoteReadingCacheFallbackEligible,
-}=await import('../entry/src/main/ets/features/reading/RemoteReadingContract.ts');
+}=await import('../entry/src/main/ets/features/reading/application/RemoteReadingContract.ts');
 
 assert.deepEqual(createRemoteReadingIdentity('source-a', '/book/42'), {
   sourceId: 'source-a',
@@ -96,7 +96,7 @@ for (const code of ['invalidInput', 'invalidResponse', 'identityMismatch', 'miss
 
 }
 async function rpcContract(){
- const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+ const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
  const seed={sourceId:'s',bookId:'b',detailUrl:'https://remote.test/b',title:'书',author:'作者',searchVariables:[{name:'token',value:'search'},{name:'search',value:'kept'}]};
  function fixture(fault){const calls=[];return{calls,gateway:new RemoteReadingFlowGateway({async request(method,p){calls.push({method,p});
   if(method==='book.detail')return {data:{sourceId:fault==='detail-source'?'other':'s',sourceVersion:'v1',book:{bookId:fault==='detail-book'?'other':'b',title:'书',author:'作者'},tocUrl:'https://remote.test/toc',variables:{token:'detail'}}};

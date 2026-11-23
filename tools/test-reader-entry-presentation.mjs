@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import * as settings from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
-import { copyReaderAppearanceSnapshot, createDefaultReaderAppearanceSnapshot } from '../entry/src/main/ets/features/reading/ReaderAppearanceState.ts';
-import { READER_THEME_DEFINITIONS } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import * as settings from '../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts';
+import { copyReaderAppearanceSnapshot, createDefaultReaderAppearanceSnapshot } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
+import { READER_THEME_DEFINITIONS } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 
 const reading = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
 const gatewayText = readFileSync(new URL('ReaderSettingsGateway.ts', reading), 'utf8');

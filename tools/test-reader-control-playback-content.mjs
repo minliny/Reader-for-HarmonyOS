@@ -11,16 +11,16 @@ const descriptions={
 const selected=selectContractCases(Object.fromEntries(Object.entries(descriptions).map(([id,description])=>[id,{description,resources:[]}])));
 async function runCase(selectedCase){
 const { resolveEtsLoaderRoot }=await import('./lib/tool-environment.mjs');
-const ttsConfig=await import('../entry/src/main/ets/features/reading/ReaderTtsConfigOptions.ts');
-const morphScroll=await import('../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts');
-const presentation=await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
+const ttsConfig=await import('../entry/src/main/ets/features/reading/presentation/ReaderTtsConfigOptions.ts');
+const morphScroll=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts');
+const presentation=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts');
 const {default:assert}=await import('node:assert/strict');
 const { existsSync, readFileSync }=await import('node:fs');
 const { createRequire, stripTypeScriptTypes }=await import('node:module');
-const geometry=await import('../entry/src/main/ets/features/reading/ReaderControlPlaybackGeometry.ts');
-const actors=await import('../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts');
-const ttsState=await import('../entry/src/main/ets/features/reading/ReaderTtsState.ts');
-const sourceIdentity=await import('../entry/src/main/ets/features/reading/ReaderSessionMorphState.ts');
+const geometry=await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
+const actors=await import('../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts');
+const ttsState=await import('../entry/src/main/ets/features/reading/application/ReaderTtsState.ts');
+const sourceIdentity=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
 
 const root=new URL('../entry/src/main/ets/features/reading/',import.meta.url);
 const near=(a,b,label)=>assert.ok(Math.abs(a-b)<0.0011,`${label}: ${a} != ${b}`);

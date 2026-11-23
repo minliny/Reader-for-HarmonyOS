@@ -4,8 +4,9 @@ import {stripTypeScriptTypes} from 'node:module';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {actualSourceManagementTypes} from './lib/source-management-owner-probe.mjs';
 import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
+import {bookshelfOperationClass} from './lib/bookshelf-operation-owner-probe.mjs';
 
-const source = readFileSync(new URL('../entry/src/main/ets/app/ReadingImageHttpError.ts',import.meta.url),'utf8')
+const source = readFileSync(new URL('../entry/src/main/ets/platform/reading-resources/ReadingImageHttpError.ts',import.meta.url),'utf8')
   .replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
 let xmlFields = [], parseCalls = 0, failXml = false;
 const xml = {XmlPullParser: class {
@@ -34,7 +35,7 @@ assert.equal(parseCalls,before,'large errors and HTML must not be parsed as trus
 assert.equal(classify(429,{},body,signed).message,'READING_IMAGE_RATE_LIMITED');
 const failure=classify(503,{},body,signed);assert.equal(failure.status,503);
 assert.equal(failure.message,'READING_IMAGE_HTTP_FAILED');assert.ok(!JSON.stringify(failure).includes('secret'));
-const Body=productionMotionMethods(new URL('../entry/src/main/ets/app/ReadingBodyImageHost.ts',import.meta.url),['fetchRequestBytes'],{
+const Body=productionMotionMethods(new URL('../entry/src/main/ets/platform/reading-resources/ReadingBodyImageHost.ts',import.meta.url),['fetchRequestBytes'],{
   MAX_READING_IMAGE_BYTES:16777216, readingImageHttpError:classify,
   HttpExecuteHost:{instance:{async executeBytes(){return {status:401,headers:{},bytes:body};}}}
 });
@@ -42,23 +43,36 @@ const host=new Body();host.assertCurrent=()=>{};
 await assert.rejects(host.fetchRequestBytes({url:signed}),error=>error.message==='READING_IMAGE_AUTH_REQUIRED'&&error.status===401);
 
 let sources=[{sourceId:'s',name:'Source',enabled:true,loginUrl:'https://source.example.test/login'}];
-let opened=0, releaseLogin;const owner={async openSourceLogin(){opened++;await new Promise(r=>releaseLogin=r);},
+let opened=0, releaseLogin, hostCurrent;
+const owner={async openSourceLogin(sourceId,url,name,current){
+  assert.deepEqual([sourceId,url,name],['s','https://source.example.test/login','Source']);
+  assert.equal(current(),true);hostCurrent=current;opened++;await new Promise(r=>releaseLogin=r);
+},
   async request(method,params,options){assert.equal(method,'source.list');assert.deepEqual(params,{sourceId:'s'});
     assert.equal(options.canDispatch(),true);return {data:{sources:sources.map(row=>({...row,bookSource:{loginUrl:row.loginUrl}}))}};}};
 let currentOwner=owner;
 const Runtime=runtimeOwnerIdentityProbe(()=>currentOwner);
-const {SourceHost}=actualSourceManagementTypes({ReaderRuntimeOwner:Runtime});
-const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),['loginMangaSource'],{
+const {SourceGateway}=actualSourceManagementTypes({ReaderRuntimeOwner:Runtime});
+const MangaSourceLogin=bookshelfOperationClass('features/manga/presentation/MangaSourceLogin.ts','MangaSourceLogin',{SourceGateway});
+const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
+  ['loginMangaSource','currentReadingRuntime','currentReaderPresentationIdentity','isCurrentRuntime'],{
   ReaderRuntimeOwner:Runtime
 });
-const index=new Index();Object.assign(index,{detailBook:{sourceId:'s',bookId:'b'},mountedRuntimeOwner:owner,shelfReceiptRetired:false,
-  sourceHost:new SourceHost(()=>{},()=>true,undefined,()=>owner),readingContentKind:'manga',readingSessionActive:true,navigationGeneration:1});
+const index=new Index();Object.assign(index,{mountedRuntimeOwner:owner,shelfReceiptRetired:false,route:'reading',
+  searchAppForeground:true,navigationGeneration:1,detailShelfAdmissionMount:1,mangaSourceLogin:new MangaSourceLogin(),
+  sourceSwitchPresentation:{visible:false},mangaSourceSwitch:{selectionVisible:false},
+  readingEntry:{book:{sourceId:'s',bookId:'b'},contentKind:'manga',sessionActive:true,mangaChapterRequestGeneration:1,
+    readerPresentationIdentity:()=> 'reader-s-b'}});
 const task=index.loginMangaSource();await new Promise(r=>setImmediate(r));assert.equal(opened,1);
-await assert.rejects(index.loginMangaSource(),/IN_PROGRESS/);releaseLogin();await task;assert.equal(index.mangaLoginTask,undefined);
-const stale=index.loginMangaSource();await new Promise(r=>setImmediate(r));index.navigationGeneration++;releaseLogin();await assert.rejects(stale,/CANCELLED/);
-sources=[];await assert.rejects(index.loginMangaSource(),/LOGIN_UNAVAILABLE/);assert.equal(opened,2);
-currentOwner=undefined;await assert.rejects(index.loginMangaSource(),/CANCELLED/);assert.equal(opened,2);
-currentOwner={};await assert.rejects(index.loginMangaSource(),/CANCELLED/);assert.equal(opened,2);
+await assert.rejects(index.loginMangaSource(),/IN_PROGRESS/);releaseLogin();await task;
+for (const retire of [()=>index.navigationGeneration++,()=>index.readingEntry.mangaChapterRequestGeneration++]) {
+  const stale=index.loginMangaSource();await new Promise(r=>setImmediate(r));retire();
+  assert.equal(hostCurrent(),false,'queued native surface loses admission when its reader or chapter retires');
+  releaseLogin();await assert.rejects(stale,/CANCELLED/);
+}
+sources=[];await assert.rejects(index.loginMangaSource(),/LOGIN_UNAVAILABLE/);assert.equal(opened,3);
+currentOwner=undefined;await assert.rejects(index.loginMangaSource(),/CANCELLED/);assert.equal(opened,3);
+currentOwner={};await assert.rejects(index.loginMangaSource(),/CANCELLED/);assert.equal(opened,3);
 currentOwner=owner;
-index.readingContentKind='text';await assert.rejects(index.loginMangaSource(),/CANCELLED/);
+index.readingEntry.contentKind='text';await assert.rejects(index.loginMangaSource(),/CANCELLED/);
 console.log('PASS production image HTTP classification and explicit reader login: bounded platform parser boundary, no guessed 403 refresh, single owner, absent login, stale navigation and no text route');

@@ -5,28 +5,28 @@ import { createRequire, registerHooks } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
-import * as positioning from '../entry/src/main/ets/features/reading/ReaderControlListPositioning.ts';
-import * as bookmarkProjection from '../entry/src/main/ets/features/reading/ReaderBookmarkProjection.ts';
-import * as snapshots from '../entry/src/main/ets/features/reading/ReaderDirectoryDataSnapshot.ts';
-import * as hierarchy from '../entry/src/main/ets/features/reading/ReaderDirectoryHierarchy.ts';
-import * as markers from '../entry/src/main/ets/features/reading/ReaderDirectoryMarkerState.ts';
-import * as viewport from '../entry/src/main/ets/features/reading/ReaderDirectoryViewport.ts';
-import * as metricsApi from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import { projectReaderDirectoryEntries } from '../entry/src/main/ets/features/reading/ReaderDirectoryProjection.ts';
-import { sampleReaderControlBookmark } from '../entry/src/main/ets/features/reading/ReaderControlBookmarkGeometry.ts';
-import { readerDirectoryScopeKey } from '../entry/src/main/ets/features/reading/ReaderDirectoryNavigation.ts';
-import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import * as positioning from '../entry/src/main/ets/features/reading/ui/ReaderControlListPositioning.ts';
+import * as bookmarkProjection from '../entry/src/main/ets/features/reading/presentation/ReaderBookmarkProjection.ts';
+import * as snapshots from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts';
+import * as hierarchy from '../entry/src/main/ets/features/reading/ui/ReaderDirectoryHierarchy.ts';
+import * as markers from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryMarkerState.ts';
+import * as viewport from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryViewport.ts';
+import * as metricsApi from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import { projectReaderDirectoryEntries } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryProjection.ts';
+import { sampleReaderControlBookmark } from '../entry/src/main/ets/features/reading/ui/ReaderControlBookmarkGeometry.ts';
+import { readerDirectoryScopeKey } from '../entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation.ts';
+import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 
 registerHooks({ resolve(specifier, context, next) {
   try { return next(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(specifier + '.ts', context); throw error; }
 } });
-const recovery = await import('../entry/src/main/ets/features/reading/ReadingDirectoryRecovery.ts');
-const { readerWidthClass } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const recovery = await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
+const { readerWidthClass } = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const read = file => readFileSync(new URL('../entry/src/main/ets/' + file, import.meta.url), 'utf8');
-const indexSource = read('pages/Index.ets'), fullSource = read('features/reading/ReaderFullDirectory.ets');
-const panelSource = read('features/reading/FullDirectoryPanel.ets'), listSource = read('features/reading/ReaderDirectoryList.ets');
-const surfaceSource = read('features/reading/ReaderDirectoryNavigationSurface.ets');
+const indexSource = read('pages/Index.ets'), fullSource = read('features/reading/ui/ReaderFullDirectory.ets');
+const panelSource = read('features/reading/ui/FullDirectoryPanel.ets'), listSource = read('features/reading/ui/ReaderDirectoryList.ets');
+const surfaceSource = read('features/reading/ui/ReaderDirectoryNavigationSurface.ets');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(sdk + '/node_modules/typescript'), options = require(sdk + '/lib/ets_checker.js').compilerOptions;
@@ -52,7 +52,7 @@ function fixture({ index = indexSource, full = fullSource, panel = panelSource, 
   class Port { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
   const dependencies = { ...properties.sdk, ...positioning, ...bookmarkProjection, ...snapshots, ...hierarchy, ...markers, ...viewport, ...metricsApi, ...recovery,
     projectReaderDirectoryEntries, sampleReaderControlBookmark, DirectoryListDataSource,
-    BOOKMARK_ROW_HEIGHT: Number(read('features/reading/ReaderBookmarkRow.ets').match(/export const BOOKMARK_ROW_HEIGHT = (\d+)/)[1]),
+    BOOKMARK_ROW_HEIGHT: Number(read('features/reading/ui/ReaderBookmarkRow.ets').match(/export const BOOKMARK_ROW_HEIGHT = (\d+)/)[1]),
     ChildrenMainSize: class { constructor(height) { this.childDefaultSize = height; } },
     Scroller: NativeScroller, ReaderWindowCoordinator: { metrics: () => metrics }, registerReaderFonts() {},
     setTimeout(action) { const timer = { action, cancelled: false }; timers.push(timer); return timer; }, clearTimeout(timer) { if (timer) timer.cancelled = true; },
@@ -61,18 +61,19 @@ function fixture({ index = indexSource, full = fullSource, panel = panelSource, 
     uiContext: { getFont: () => ({}), animateTo(options, action) { action(); options.onFinish?.(); } },
     Curve: { Linear: 'Curve.Linear' }, Edge: { Top: 'Edge.Top' }, ScrollSource: { DRAG: 'drag' },
     ReaderSearchField: Port, ReaderBookmarkList: Port, ReaderBookmarkEmptyState: Port, ReaderBookmarkLoadingState: Port, ReaderBookmarkErrorState: Port, ReaderDirectoryNavigationList: Port,
+    ReaderDirectoryChapterRow: Port,
     ReaderDirectoryRecoverySurface: Port, ReaderRuntimeOwner: { current: () => ({ supportsCoreCapability: () => false }) },
     readerDirectoryScopeKey, readerWidthClass, deviceInfo: { deviceType: 'phone' }, ReadingExperience: Port, ReaderStatusBarPaper: Port,
   };
   const hooks = { ...properties.hooks, mountChildren: true, lifecycleChildren: true, childSources: {
     ReaderFullDirectory: full, FullDirectoryPanel: panel, ReaderDirectoryList: listSource, ReaderDirectoryNavigationSurface: surfaceSource,
-    BookDirectoryPage: read('features/bookshelf/BookDirectoryPage.ets'),
-    LocalBookDetail: read('features/bookshelf/LocalBookDetail.ets'), BookshelfMultiSelectPage: read('features/bookshelf/BookshelfMultiSelectPage.ets'),
-    ReadingExperience: read('features/reading/LocalReadingExperience.ets'), ReaderStatusBarPaper: read('features/reading/ReaderStatusBarPaper.ets'),
-    ReaderShell: read('features/shell/ReaderShell.ets'), ReaderLayoutDebugOverlay: read('features/common/ReaderLayoutDebugOverlay.ets'), ArkWebExecutionHost: read('app/ArkWebExecutionHost.ets'),
+    BookDirectoryPage: read('features/reading/ui/BookDirectoryPage.ets'),
+    LocalBookDetail: read('features/reading/ui/LocalBookDetail.ets'), BookshelfMultiSelectPage: read('features/bookshelf/ui/BookshelfMultiSelectPage.ets'),
+    ReadingExperience: read('features/reading/ui/LocalReadingExperience.ets'), ReaderStatusBarPaper: read('features/reading/ui/ReaderStatusBarPaper.ets'),
+    ReaderShell: read('features/reading/ui/ReaderShell.ets'), ReaderLayoutDebugOverlay: read('app/composition/ReaderLayoutDebugOverlay.ets'), ArkWebExecutionHost: read('ui/platform/ArkWebExecutionHost.ets'),
   } };
-  for (const name of ['ReaderSearchField', 'ReaderBookmarkList', 'ReaderBookmarkEmptyState', 'ReaderBookmarkLoadingState', 'ReaderBookmarkErrorState', 'ReaderDirectoryNavigationList', 'ReaderDirectoryRecoverySurface'])
-    hooks.childSources[name] = read(`features/${name === 'ReaderSearchField' ? 'common' : 'reading'}/${name}.ets`);
+  for (const name of ['ReaderSearchField', 'ReaderBookmarkList', 'ReaderBookmarkEmptyState', 'ReaderBookmarkLoadingState', 'ReaderBookmarkErrorState', 'ReaderDirectoryNavigationList', 'ReaderDirectoryRecoverySurface', 'ReaderDirectoryChapterRow'])
+    hooks.childSources[name] = read(`${name === 'ReaderSearchField' ? 'ui/controls' : 'features/reading'}/${name}.ets`);
   for (const [name, source] of Object.entries(hooks.childSources)) {
     syntax.componentCollection.customComponents.add(name);
     syntax.builderParamObjectCollection.set(name, new Set([...source.matchAll(/@BuilderParam\s+(\w+)/g)].map(match => match[1])));
@@ -90,8 +91,7 @@ function fixture({ index = indexSource, full = fullSource, panel = panelSource, 
   const Shell = createReaderBuilderProbe(shellSource, [...shellFacts, 'build', 'readingContent', 'readingOverlay', 'readingIdentityKey', 'overlayStatusBarUnderlay', 'chromeMetrics'],
     { ...dependencies, ReaderFullDirectory: Full, BookDirectoryPage: Port }, hooks).Component;
   const owner = createReaderBuilderProbe(index, ['readerWindowMetricsRevision', 'build', 'detailContent', 'detailSurface', 'externalDirectory', 'detailBookKey', 'isCurrentRuntime', 'hasUnknownShelfWrite', 'detailReadableAdmission',
-      'detailShelfMessage', 'detailShelfAdmissionIdentity', 'isCurrentDetailShelfAdmission', 'isCurrentDetailPresentation', 'directoryRecovery', 'directoryOperationPresentationId', 'directoryOperationBindingId',
-      'readerOwnsWindowEdges', 'mangaOwnsWindowEdges', 'appContentTopInset', 'currentSourceSwitchTransactionId', 'controlBookmarkProjectionMessage', 'canCancelMangaSourcePreparation'], {
+      'detailShelfMessage', 'detailShelfAdmissionIdentity', 'isCurrentDetailShelfAdmission', 'isCurrentDetailPresentation', 'directoryRecovery', 'readerOwnsWindowEdges', 'mangaOwnsWindowEdges', 'appContentTopInset', 'currentSourceSwitchTransactionId', 'controlBookmarkProjectionMessage', 'canCancelMangaSourcePreparation'], {
       ...dependencies, ReaderFullDirectory: Full, BookDirectoryPage: Port, LocalBookDetail: Port, BookshelfMultiSelectPage: Port, ReaderShell: Shell, ReaderLayoutDebugOverlay: Port, ArkWebExecutionHost: Port,
       LOCAL_SOURCE_ID: 'local', EMPTY_READABLE_ADMISSION: { adding: false, cancelling: false, message: '' }, isReaderProductSurfaceEnabled: () => true,
     }, hooks).owner;

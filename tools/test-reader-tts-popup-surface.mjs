@@ -5,9 +5,9 @@ import {selectContractCases,recordContractCasePass} from './lib/contract-case-se
 async function frameMapping() {
  const {boundedSurfaceSdk,boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');
  const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
- const {readerAppColor}=await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+ const {readerAppColor}=await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
  const read=name=>readFileSync(new URL('../entry/src/main/ets/'+name,import.meta.url),'utf8');
- const overlay=read('features/reading/ReaderTtsConfigOverlay.ets'),frame=read('features/common/ReaderBoundedSurface.ets');
+ const overlay=read('features/reading/ui/ReaderTtsConfigOverlay.ets'),frame=read('ui/surfaces/ReaderBoundedSurface.ets');
  for(const mutated of [false,true]) {
   const sdk=boundedSurfaceSdk(),canonical=sdk.deps.resolvePopupSpec('tts-config-manager');
   const spec=mutated?{...canonical,width:canonical.width+9,borderWidth:canonical.borderWidth+.25,borderRadius:canonical.borderRadius+3,shadowRadius:canonical.shadowRadius+5,shadowOffsetY:canonical.shadowOffsetY+2}:canonical;

@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync as writeNativeFileSync, readFileSync, rmSync, existsSync, copyFileSync, symlinkSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
-import { tmpdir } from 'node:os';
+import { tmpdir, availableParallelism } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { performance } from 'node:perf_hooks';
-import { runContracts, runContractsBounded, contractTests, MAX_CONTRACT_TIMEOUT_MS, MAX_CONTRACT_KILL_GRACE_MS } from './run-contract-tests.mjs';
+import { runContracts, runContractsBounded, contractCaseSelection, contractTests, resourceLimit, MAX_CONTRACT_TIMEOUT_MS, MAX_CONTRACT_KILL_GRACE_MS } from './run-contract-tests.mjs';
 
 // Every owned synthetic child below is plain Node. Give these fixture roots
 // an explicit resource declaration; production missing metadata still fails.
@@ -20,7 +20,24 @@ function writeFileSync(path, bytes, ...options) {
 
 
 export async function runContractTierFixtures() {
+const GiB = 1024 ** 3;
+const resourceSample = { cpu: 32, free: 12 * GiB, total: 16 * GiB, active: 4, jobBytes: GiB };
+assert.equal(resourceLimit(resourceSample), 14);
+assert.equal(resourceLimit({ ...resourceSample, cpu: 4 }), 4);
+assert.equal(resourceLimit({ ...resourceSample, jobCpu: 3 }), 10);
+assert.equal(resourceLimit({ ...resourceSample, jobCpu: 3, load: 30 }), 4);
+assert.equal(resourceLimit({ ...resourceSample, free: GiB }), 3);
+assert.equal(resourceLimit({ ...resourceSample, free: 0 }), 2);
+assert.equal(resourceLimit({ ...resourceSample, load: 34 }), 2);
+assert.equal(resourceLimit({ ...resourceSample, jobBytes: 2 * GiB }), 9);
+assert.equal(resourceLimit({ ...resourceSample, cpu: 1, free: 0, active: 0 }), 1);
+
 contractTests(fileURLToPath(new URL('..', import.meta.url)), 'full');
+const focusedRoot = fileURLToPath(new URL('..', import.meta.url));
+const focusedLayout = 'test-reader-layout-architecture.mjs';
+assert.throws(() => contractCaseSelection(focusedRoot, [focusedLayout]), /focused case selection required/);
+assert.deepEqual(contractCaseSelection(focusedRoot, [focusedLayout], { [focusedLayout]: ['geometry'] }).selections,
+  { [focusedLayout]: ['geometry'] });
 
 const workspace = mkdtempSync(join(tmpdir(), 'reader-contract-gate-'));
 const root = join(workspace, 'Reader-for-HarmonyOS');
@@ -38,7 +55,7 @@ try {
   await assert.rejects(runContractsBounded(root, 'full', 2), /test-fail.mjs failed \(7\)/,
     'bounded full gate must retain the actual failure exit');
   await assert.rejects(runContractsBounded(root, 'full', 0), /workers/);
-  await assert.rejects(runContractsBounded(root, 'full', 5), /workers/);
+  await assert.rejects(runContractsBounded(root, 'full', availableParallelism() + 1), /workers/);
   assert.equal(MAX_CONTRACT_TIMEOUT_MS, 110_000, 'formal per-test deadline stays at 110 seconds');
   assert.equal(MAX_CONTRACT_KILL_GRACE_MS, 1_000, 'formal termination grace stays at one second');
   await assert.rejects(runContractsBounded(root, 'full', 1, { timeoutMs: 110_001 }), /invalid test deadline/,
@@ -57,6 +74,13 @@ try {
   const completed = await runContractsBounded(root, 'full', 2);
   assert.deepEqual(completed.results.map(row => row.name).sort(), ['test-fail.mjs', 'test-pass.mjs']);
   assert.ok(completed.results.every(row => row.status === 0 && row.timedOut === false && row.termination.length === 0));
+
+  const adaptive = await runContractsBounded(root, 'full', 'auto');
+  assert.equal(adaptive.execution.mode, 'adaptive');
+  assert.equal(adaptive.execution.capacity, availableParallelism());
+  assert.equal(adaptive.results.length, completed.results.length);
+  assert.ok(adaptive.results.every(row => row.status === 0 && !row.timedOut));
+  assert.ok(adaptive.execution.peakConcurrency >= 1);
 
   // Scope is an explicit subset of the same complete, classified inventory.
   // Execute the real CLI against a fixture whose omitted child would fail.

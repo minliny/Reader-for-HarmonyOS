@@ -2,7 +2,8 @@
 
 当前事实来自同一次构建的机器证据，本文件不保存历史成功哈希。
 
-- `scripts/build-harmony-napi.sh` 执行真实桌面 NAPI、OHOS 编译和 Bun SDK 门禁。
+- `scripts/build-harmony-napi.sh` 默认只执行 OHOS 编译与产物身份绑定；真实桌面 NAPI 和 Bun SDK
+  测试默认 `NOT_RUN`，分别使用 `--host-probe` / `--sdk-smoke` 显式选择。
 - `target/harmony-napi/arm64-v8a/core-input-snapshot.json` 由
   `scripts/build-input-snapshot.mjs` 绑定实际 Core 输入，并拒绝未绑定的符号链接。
 - `harmony-napi-build-evidence.txt` 将源码快照、build identity、Native 与 package manifest 绑定。

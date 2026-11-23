@@ -2,12 +2,12 @@ import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { readingParagraphBoundaryMode } from '../entry/src/main/ets/features/reading/ReadingParagraphProjection.ts';
-import { ReadingChapterWindow } from '../entry/src/main/ets/features/reading/ReadingChapterWindow.ts';
-const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts');
-const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/features/reading/RemoteReadingFlowGateway.ts');
+import { readingParagraphBoundaryMode } from '../entry/src/main/ets/features/reading/application/ReadingParagraphProjection.ts';
+import { ReadingChapterWindow } from '../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts';
+const {ReadingSessionFlowGateway}=await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
+const {RemoteChapterCacheRefreshError}=await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 let runtime;
-const Owner=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),
+const Owner=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),
  ['tryInitialEntrySnapshot','openChapter','loadSessionChapter','configureRestoredAnchor','lastVisibleScalar',
   'readingTocEntries','isKnownControlChapter','requireKnownChapter','adjacentChapterIndex','hydrateEntryCatalog',
   'loadNextTtsChapter','ttsChapterRef'],{

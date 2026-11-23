@@ -1,6 +1,17 @@
 export type LocalImportFailureCode = 'positionMigration' | 'incomplete' | 'tooLarge' | 'noSpace' | 'invalidBook' | 'readFailed' | 'recoveryPending' | 'unknown';
 export interface LocalImportFailure { code: LocalImportFailureCode; message: string; }
 
+/** Host selection rejection, before staging or import dispatch. This typed
+ * boundary must never be inferred from an arbitrary import exception. */
+export class LocalBookSelectionFailure extends Error {
+  readonly reason: 'selectionLimit' | 'invalidSelection';
+  constructor(reason: 'selectionLimit' | 'invalidSelection') {
+    super(reason === 'selectionLimit' ? '本次最多选择50个文件，尚未导入，请重新选择' : '文件选择无效，尚未导入，请重新选择');
+    this.name = 'LocalBookSelectionFailure';
+    this.reason = reason;
+  }
+}
+
 export function localImportFailure(reason: string, recoveryPending: boolean = false): LocalImportFailure {
   if (recoveryPending) { return { code: 'recoveryPending', message: '结果未确认，请重启后检查书架' }; }
   const value = reason.toLowerCase();

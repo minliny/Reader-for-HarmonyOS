@@ -35,7 +35,7 @@ function directoryConsumer(source,shared){
  // The rendering test controls the platform Runtime reference and owner facts,
  // while the complete shipping Gateway provides ownsRuntime/snapshot methods.
  const ts=sdkRequire(sdk+'/node_modules/typescript'),options=sdkRequire(sdk+'/lib/ets_checker.js').compilerOptions;
- const gatewaySource=readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderDirectoryRulesGateway.ts',import.meta.url),'utf8');
+ const gatewaySource=readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReaderDirectoryRulesGateway.ts',import.meta.url),'utf8');
  const tree=ts.createSourceFile('ReaderDirectoryRulesGateway.ts',gatewaySource,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,options);
  const declaration=tree.statements.find(n=>ts.isClassDeclaration(n)&&n.name.text==='ReaderDirectoryRulesGateway');assert.ok(declaration);
  const runtime={supportsCoreCapability:()=>false,request:async()=>({data:{status:'ready',rules:[{pattern:'^卷',level:2,boundary:'title'}]}})},authority={snapshot:()=>owner.operation,recoverOriginal:async()=>owner.operation};let currentRuntime=runtime;
@@ -48,8 +48,10 @@ function setup(tail,scheme,busy){
  const f=baseline.files.find(f=>f.path.endsWith(tail)),shared=foundationControls(),oldShared=foundationControls();
  const deps={...readerFoundationTokens,DirectoryRuleDraft,readerControlReplaceEndpoint};
  const old=compile('@Component struct OriginalReadingFields {\n'+f.methods.join('\n')+(f.names.includes('build')?'':'\nbuild(){Column(){}}')+'\n}',f.names,{...oldShared.dependencies,...deps},oldShared.hooks).owner;
- const source=readFileSync(new URL('../'+f.path,import.meta.url),'utf8'),directory=tail==='ReaderDirectoryRules.ets'?directoryConsumer(source,shared):undefined;
- const current=directory?.owner??compile(source,f.names,{...shared.dependencies,...deps},shared.hooks).owner;
+ const currentPath=f.path.replace('features/reading/','features/reading/ui/');
+ const source=readFileSync(new URL('../'+currentPath,import.meta.url),'utf8'),directory=tail==='ReaderDirectoryRules.ets'?directoryConsumer(source,shared):undefined;
+ const currentNames=tail==='ReaderControlReplaceContent.ets'?[...f.names,'editorTextEnabled','temporaryInputCurrent']:f.names;
+ const current=directory?.owner??compile(source,currentNames,{...shared.dependencies,...deps},shared.hooks).owner;
  const states={appThemeScheme:scheme,scheme,busy,localPending:busy,interactionEnabled:true,motionProgress:1,state:{kind:'ready',mutationPending:busy,writeBlocked:false,writeUncertain:false},query:'原正文关键词',queryInputId:'persistent-reading-input',draftName:'原服务',draftUrl:'https://original.invalid/tts',draftApiKey:'private-fixture-only',draftVoice:'原音色',draftFormat:'mp3',draftClearApiKey:true,errorText:'',rules:[new DirectoryRuleDraft(7,'^卷','2','title')],loaded:true,previewReady:false,preview:[],message:'原提示',generation:3,mounted:true,presentationGeneration:1,bookId:'current-book',directoryRefreshFailed:false,operation:{generation:0,busy:false,confirmation:'undispatched',label:'',method:'',message:'',blocked:false,canRetryOriginal:false,writeStage:'intent'}};
  const calls={old:[],current:[]},controller={stopEditing(){}};
  for(const[side,owner]of[['old',old],['current',current]]){
@@ -57,13 +59,17 @@ function setup(tail,scheme,busy){
   owner.frame=()=>({field:{width:260,height:32,x:18,y:10}});owner.presentation=()=>({contentOpacity:.82,contentBlur:0});owner.focusQueryField=()=>calls[side].push(['focus']);
   owner.onQueryChange=value=>calls[side].push(['query',value]);owner.onTemporaryLayerChange=value=>calls[side].push(['edit',value]);owner.onSearch=()=>calls[side].push(['submit']);
  }
+ if(tail==='ReaderControlReplaceContent.ets'){
+  current.state.sessionKey='reader:replace:opening';
+  Object.assign(current,{layer:'editor',presentationRevision:1,lastSessionKey:current.state.sessionKey});
+ }
  return{f,shared,oldShared,old,current,calls,controller,directory};
 }
 let cases=0;
 for(const tail of[{replace:'ReaderControlReplaceContent.ets',search:'ReaderControlSearchContent.ets',directory:'ReaderDirectoryRules.ets',tts:'ReaderTtsConfigOverlay.ets'}[selectedCase]])for(const scheme of['day','night'])for(const busy of[false,true]){
  const p=setup(tail,scheme,busy),method=p.f.names[0];
  for(const[side,owner]of[['old',p.old],['current',p.current]]){
-  const args=method==='editorText'?['替换内容',()=> '原草稿',value=>p.calls[side].push(['draft',value])]:[];(method==='build'?owner.initialRender.bind(owner):owner[method].bind(owner))(...args);
+  const args=method==='editorText'?['替换内容',()=> '原草稿',value=>p.calls[side].push(['draft',value]),1]:[];(method==='build'?owner.initialRender.bind(owner):owner[method].bind(owner))(...args);
  }
  const old=p.oldShared.orderedNodes(p.old).filter(n=>n.type==='TextInput'),current=p.shared.orderedNodes(p.current).filter(n=>n.type==='TextInput');assert.equal(current.length,old.length,tail+': no input removed/added');
  for(let i=0;i<old.length;i++){
@@ -76,7 +82,15 @@ for(const tail of[{replace:'ReaderControlReplaceContent.ets',search:'ReaderContr
   if(old[i].onSubmit){old[i].onSubmit('EnterKeyType.Search');current[i].onSubmit('EnterKeyType.Search');}
  }
  assert.deepEqual(p.calls.current,p.calls.old,tail+': actual callback semantics retained');
- if(method==='managerForm')for(const key of['draftName','draftUrl','draftApiKey','draftVoice','draftClearApiKey'])assert.equal(p.current[key],p.old[key],key+': original draft/clear-secret transition');
+ if(method==='managerForm'){
+  for(const key of['draftName','draftUrl','draftApiKey','draftVoice','draftClearApiKey'])assert.equal(p.current[key],p.old[key],key+': original draft/clear-secret transition');
+  const nodes=p.shared.orderedNodes(p.current),clear=nodes.find(n=>n.type==='Button'&&n.accessibilityText==='已选择清除已保存密钥');
+  assert.ok(clear,'clear-key is an independent native action, not an input wrapper');
+  assert.equal(clear.padding,0);assert.equal(clear.enabled,!busy);
+  const formats=nodes.filter(n=>n.type==='Button'&&/^(MP3|WAV|PCM)/.test(n.accessibilityText??''));
+  assert.ok(formats.length>0);assert.ok(formats.every(n=>n.height===34&&n.padding===0&&n.enabled===!busy));
+  if(!busy){const before=p.current.draftClearApiKey;clear.onClick();assert.equal(p.current.draftClearApiKey,!before);clear.onClick();assert.equal(p.current.draftClearApiKey,before);assert.equal(p.current.draftApiKey,'');}
+ }
  if(method==='build')assert.deepEqual(JSON.parse(JSON.stringify(p.current.rules)),JSON.parse(JSON.stringify(p.old.rules)),'actual edit method preserves every rule ID/field; current SDK reactive array is not the legacy plain array');
  const child=[...p.current.children.values()].find(c=>c instanceof p.shared.field.Component);assert.ok(child);
  const originalActor=p.shared.nodes(child).find(n=>n.type==='TextInput'),id=originalActor.id;

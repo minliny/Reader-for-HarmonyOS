@@ -64,7 +64,9 @@ const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'C
         return { data: { complete: true, books, missing } };
       }
       assert.equal(method, 'book.search');assert.equal(params.page, 1);
-      const id = params.sourceId; started.push(id); now += 100;
+      const id = params.sourceId;
+      if(!gates.has(id))return{data:{sourceId:id,sourceVersion:'v1',contentKind:'text',books:[]}};
+      started.push(id); now += 100;
       await gates.get(id).promise;
       rows.push({ origin: id, bookUrl: '/book', name: 'Current Book', author: 'Writer', time: now,
         acquisition: { sourceVersion: 'v1' } });
@@ -74,7 +76,7 @@ const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'C
   };
   const gateway = new SourceSwitchGateway(runtime);
   try {
-    const run = gateway.refreshCandidates(progressiveQuery, () => true, ['original', 'legacy'],
+    const run = gateway.refreshCandidates(progressiveQuery, () => true,
       candidates => publications.push(structuredClone(candidates))).then(result => { finished = true; return result; });
     await untilProgress(() => started.length === 3);
     assert.deepEqual(publications[0], [], 'initial 0 means an active discovery, not a fabricated failure');
@@ -160,15 +162,17 @@ const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'C
       if (method === 'search-book.batch.get') {
         return { data: { complete: true, books: [], missing: params.identities } };
       }
-      assert.equal(method, 'book.search');assert.equal(params.page, 1);started++;
-      const id = params.sourceId; await (id === 'a' ? a.promise : b.promise);
+      assert.equal(method, 'book.search');assert.equal(params.page, 1);
+      const id = params.sourceId;
+      if(id==='original')return{data:{sourceId:id,sourceVersion:'v1',contentKind:'text',books:[]}};
+      started++; await (id === 'a' ? a.promise : b.promise);
       if (id === 'a') rows.push({ origin: id, bookUrl: '/book', name: 'Current Book', author: 'Writer', time: Date.now() });
       else bReturned = true;
       const book = { bookId: '/book', title: 'Current Book', author: 'Writer', variables: {} };
       return { data: { sourceId: id, sourceVersion: 'v1', contentKind: 'text', books: [book, book] } };
     },
   });
-  const run = gateway.refreshCandidates(progressiveQuery, () => true, ['original'],
+  const run = gateway.refreshCandidates(progressiveQuery, () => true,
     candidates => publications.push(structuredClone(candidates)));
   await untilProgress(() => started === 2);
   a.resolve(); await untilProgress(() => publications.at(-1)?.some(item => item.sourceId === 'a'));
@@ -226,10 +230,10 @@ const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'C
   } };
   const gateway = new SourceSwitchGateway(runtime);
   try {
-    const oldRun = gateway.refreshCandidates(progressiveQuery, undefined, [], rows => oldPublications.push(rows));
+    const oldRun = gateway.refreshCandidates(progressiveQuery, undefined, rows => oldPublications.push(rows));
     await untilProgress(() => requests === 1);
     now = 20200;
-    const newRun = gateway.refreshCandidates(progressiveQuery, undefined, [], rows => newPublications.push(rows));
+    const newRun = gateway.refreshCandidates(progressiveQuery, undefined, rows => newPublications.push(rows));
     await untilProgress(() => requests === 2);
     now = 20250; gates[1].resolve();
     assert.equal((await newRun).candidates[0].latencyMs, 50);
@@ -250,7 +254,7 @@ const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'C
     started = true; await gate.promise;
     throw new Error('cancelled transport');
   } });
-  const run = gateway.refreshCandidates(progressiveQuery, () => active, [], rows => publications.push(rows));
+  const run = gateway.refreshCandidates(progressiveQuery, () => active, rows => publications.push(rows));
   await untilProgress(() => started); active = false; gate.resolve();
   assert.deepEqual(await run, { kind: 'noSources' });
   assert.deepEqual(publications, [[]], 'cancellation emits neither an empty completion nor a false source failure');
@@ -294,12 +298,12 @@ const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'C
  const gateway=new SourceSwitchGateway(owner);
  const query={contentKind:'manga',sourceId:'comic-a',bookId:'/same-name',bookName:'Book',author:'Writer',currentChapterIndex:0,currentChapterTitle:''};
  assert.deepEqual((await gateway.loadCachedCandidates(query)).map(row=>row.sourceId),['comic-a','comic-b']);
- const manga=await gateway.discoverCandidates('comic-a','/same-name','Book',()=>true,[],'manga');
+ const manga=await gateway.discoverCandidates('comic-a','/same-name','Book',()=>true,'manga');
  assert.deepEqual(searched,['comic-a','comic-b']);assert.equal(manga.candidates.length,2);
  assert.ok(manga.candidates.every(row=>row.category==='comic'&&row.latencyKind==='search'));
- searched.length=0;await gateway.discoverCandidates('novel','/same-name','Book',()=>true,[],'text');
+ searched.length=0;await gateway.discoverCandidates('novel','/same-name','Book',()=>true,'text');
  assert.deepEqual(searched,['novel']);
- searched.length=0;const result=await gateway.refreshCandidates(query,()=>true,[],()=>{});
+ searched.length=0;const result=await gateway.refreshCandidates(query,()=>true,()=>{});
  assert.deepEqual(searched,['comic-a','comic-b']);assert.ok(result.candidates.every(row=>row.category==='comic'));
  const next=await gateway.loadCachedCandidates(query);
  assert.deepEqual(next.map(row=>row.latencyMs),result.candidates.map(row=>row.latencyMs),

@@ -4,7 +4,7 @@ import {readFileSync, mkdtempSync, writeFileSync, rmSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
-import * as state from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
+import * as state from '../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 
 const require=createRequire(import.meta.url),ts=require((resolveEtsLoaderRoot())+'/node_modules/typescript');

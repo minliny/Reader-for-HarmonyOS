@@ -1,8 +1,8 @@
-import { createReaderPageGestureState } from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
+import { createReaderPageGestureState } from '../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts';
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { readerRapidPageTurnHasWork, createReaderRapidPageTurnState } from '../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts';
-const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+import { readerRapidPageTurnHasWork, createReaderRapidPageTurnState } from '../entry/src/main/ets/features/reading/ui/ReaderRapidPageTurnState.ts';
+const file = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 const events={BOOK_TURN_EVENT_SURFACE_READY:1,BOOK_TURN_EVENT_TEXTURE_READY:2,BOOK_TURN_EVENT_VISUAL_COMMIT_ENDPOINT:3,
   BOOK_TURN_EVENT_ROLLBACK_COMPLETE:4,BOOK_TURN_EVENT_SURFACE_LOST:5,BOOK_TURN_EVENT_RENDER_FAILURE:6,
   BOOK_TURN_EVENT_SLOTS_COMMITTED:7,BOOK_TURN_EVENT_TERMINAL_RELEASED:8,BOOK_TURN_EVENT_FRAME_PRESENTED:9};

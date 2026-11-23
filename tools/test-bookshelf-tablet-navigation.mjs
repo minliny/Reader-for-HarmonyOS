@@ -12,13 +12,13 @@ const { createRequire, stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { boundedMembers, boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { admitBookshelfSdkCarrier } = await import('./lib/bookshelf-projection-owner-probe.mjs');
-const metricsApi = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const geometryApi = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
+const metricsApi = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const geometryApi = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
 const { readerFloatingTabBottomInset } = await import('./lib/reader-floating-bar-metrics-probe.mjs');
 
 
 const read = file => readFileSync(new URL('../entry/src/main/ets/' + file, import.meta.url), 'utf8');
-const bookshelf = read('features/bookshelf/BookshelfPage.ets'), shellText = read('features/bookshelf/BookshelfShell.ets');
+const bookshelf = read('features/bookshelf/ui/BookshelfPage.ets'), shellText = read('features/bookshelf/ui/BookshelfShell.ets');
 const mainText = read('features/shell/MainTabShell.ets'), barText = read('features/shell/MainTabBar.ets');
 const expectedItems = [
   ['bookshelf_library', '书架', 'bookshelf', true],
@@ -34,7 +34,7 @@ function runNavigation(mainSource=mainText) {
 const sdkRoot=resolveEtsLoaderRoot();
 createRequire(import.meta.url)(sdkRoot+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('BookshelfShell',new Set(['content']));
 const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
-Object.assign(sdk.childSources, { MainTabShell: mainSource, MainTabBar: barText, BookshelfShell: shellText, BookshelfMoreMenu: read('features/bookshelf/BookshelfMoreMenu.ets') });
+Object.assign(sdk.childSources, { MainTabShell: mainSource, MainTabBar: barText, BookshelfShell: shellText, BookshelfMoreActionSheet: read('features/bookshelf/ui/BookshelfMoreActionSheet.ets') });
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 const metrics = () => new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0, 0, 1280, 800));
 // The existing extended-admission seam exercises all four configured routes.
@@ -49,7 +49,7 @@ const Main = createReaderBuilderProbe(mainSource, boundedMembers(mainSource), { 
 const shellNames = ['build', 'shellHeader', 'shellOverlay', 'content', 'headerHeight', 'onHeaderHeightChange', 'showBottomNav', 'numericAreaLength',
   'recovery', 'onRecoveryChanged', 'onReadRecoveryChanged', 'onNoticeHeightChange', 'noticeHeight', 'lastReadFeedback', 'readRecovery', 'populated', 'reduceMotion', 'onMainTab', 'mounted', 'navigationGeneration', 'onNavigationGenerationChanged', 'registerTemporaryBackGeneration', 'onTemporaryBackBridge',
   'temporaryBackGeneration', 'temporaryBackIdentity', 'moreMenuVisible', 'moreSelectionId', 'dismissMoreMenu', 'requestMainTab'];
-const Shell = createReaderBuilderProbe(shellText, shellNames, { ...platform, MainTabShell: Main, BookshelfMoreMenu: Child }, sdk.hooks).Component;
+const Shell = createReaderBuilderProbe(shellText, shellNames, { ...platform, MainTabShell: Main, BookshelfMoreActionSheet: Child }, sdk.hooks).Component;
 const Parent = createReaderBuilderProbe(read('pages/Index.ets'), ['bookshelfShellContent'], { BookshelfShell: Child },
   { childSources: { BookshelfShell: shellText } }).Component;
 const parent = new Parent(), firstRuntime = {}; let installedRuntime = firstRuntime;

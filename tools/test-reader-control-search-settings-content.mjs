@@ -6,22 +6,22 @@ const definitions={
 };
 const selected=selectContractCases(definitions);
 async function runCase(selectedCase){
-const morphScroll=await import('../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts');
-const presentation=await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
+const morphScroll=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts');
+const presentation=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts');
 const motionDeps = { ...presentation, RectShape: class { width(value) { this.widthValue = value; return this; } height(value) { this.heightValue = value; return this; } }, PathShape: class { commands(path) { this.path = path; return this; } } };
 const motionProps = { fullContentHeight: 666, quickContentHeight: 190, fullViewportHeight: 666,
   scrollMotion: morphScroll.createReaderControlMorphScroll(), getUIContext: () => ({ vp2px: n => n * 3 }) };
 const {default:assert}=await import('node:assert/strict');
 const { readFileSync }=await import('node:fs');
 const { stripTypeScriptTypes }=await import('node:module');
-const { readerControlSearchSourceField, readerControlSearchSourceResult, sampleReaderControlSearch }=await import('../entry/src/main/ets/features/reading/ReaderControlSearchGeometry.ts');
+const { readerControlSearchSourceField, readerControlSearchSourceResult, sampleReaderControlSearch }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSearchGeometry.ts');
 const { readerControlSettingsLabel, readerControlSettingsBar, readerControlSettingsChoice,
   readerControlSettingsScreenTitle, readerControlSettingsAddedGroup, readerControlSettingsAddedChild,
-  sampleReaderControlSettings }=await import('../entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts');
-const settingsPolicy=await import('../entry/src/main/ets/features/reading/ReaderSettingsState.ts');
-const { readerControlLerp, readerControlUnit }=await import('../entry/src/main/ets/features/reading/ReaderControlActorGeometry.ts');
-const { splitReaderSearchSnippet }=await import('../entry/src/main/ets/features/reading/ReaderSearchHighlight.ts');
-const searchScroll=await import('../entry/src/main/ets/features/reading/ReaderControlSearchScroll.ts');
+  sampleReaderControlSettings }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSettingsGeometry.ts');
+const settingsPolicy=await import('../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts');
+const { readerControlLerp, readerControlUnit }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts');
+const { splitReaderSearchSnippet }=await import('../entry/src/main/ets/features/reading/presentation/ReaderSearchHighlight.ts');
+const searchScroll=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSearchScroll.ts');
 
 const read=path=>readFileSync(new URL('../'+path,import.meta.url),'utf8');
 if(selectedCase==='historical-geometry'){
@@ -202,8 +202,8 @@ for (const p of points) {
 
 return;
 }
-const searchUI=read('entry/src/main/ets/features/reading/ReaderControlSearchContent.ets');
-const settingsUI=read('entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets');
+const searchUI=read('entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets');
+const settingsUI=read('entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets');
 const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
 function method(src, name) {
   const start = src.indexOf('  private ' + name + '(');
@@ -242,7 +242,7 @@ assert.equal(search.query, ' 雨夜 ');
 assert.equal(search.state, resultState, 'morph input protection does not replace query/results');
 assert.equal(search.resultScroller, scroller, 'keyboard dismissal never recreates/reset the result Scroller');
 assert.deepEqual(scroller, { x: 0, y: 108 });
-  const fieldSpecSource = read('entry/src/main/ets/features/common/ReaderControlSpecs.ets');
+  const fieldSpecSource = read('entry/src/main/ets/ui/controls/ReaderControlSpecs.ets');
   function checkMountedInputInsets(source, specsSource = fieldSpecSource) {
     const shared = foundationControls({ specs: foundationSpecs(undefined, specsSource) });
     const { owner } = createReaderBuilderProbe(source, ['frame', 'searchField', 'presentation'], { ...shared.dependencies, sampleReaderControlSearch, ...motionDeps }, shared.hooks);
@@ -312,7 +312,7 @@ const settingsMethods = ['groupOptions', 'groupLabel', 'optionLabel', 'isSegment
   'isSegmentAvailable', 'segmentAccessibilityText', 'handleSegment', 'toggleValue', 'toggleAccessibilityText',
   'handleToggle', 'handleJustify'];
 const {selectedProductionValues}=await import('./lib/selected-production-methods.mjs');
-const settingsConstants=selectedProductionValues(new URL('../entry/src/main/ets/features/reading/ReaderControlSettingsContent.ets',import.meta.url),['SETTINGS_DIRECTION_OPTIONS','SETTINGS_PAGE_OPTIONS','SETTINGS_TIMEOUT_OPTIONS']);
+const settingsConstants=selectedProductionValues(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets',import.meta.url),['SETTINGS_DIRECTION_OPTIONS','SETTINGS_PAGE_OPTIONS','SETTINGS_TIMEOUT_OPTIONS']);
 const Settings = new Function(...Object.keys(settingsPolicy),
   ...Object.keys(settingsConstants),
   stripTypeScriptTypes('class Probe { ' + settingsMethods.map(n => method(settingsUI, n)).join('\n') + ' }') +

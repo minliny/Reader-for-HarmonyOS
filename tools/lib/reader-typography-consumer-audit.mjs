@@ -2,19 +2,30 @@ import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { sourceAnalysisCache } from './source-analysis-cache.mjs';
 const require = createRequire(import.meta.url);
 const sdkRoot = resolveEtsLoaderRoot();
 const ts = require(`${sdkRoot}/node_modules/typescript`);
 const options = require(`${sdkRoot}/lib/ets_checker.js`).compilerOptions;
+const typographyAnalysis = sourceAnalysisCache(options);
+const nativeAnalysis = sourceAnalysisCache(options);
 export const typographyProperties = ['fontFamily', 'fontWeight', 'fontSize', 'lineHeight', 'letterSpacing'];
 
 /** Parse actual ETS modifier chains, including Marquee/native-input carriers.
  * A Text inside a string/comment is never counted as a production consumer. */
 export function auditTypographyConsumers(source, file = virtualFilePath('TypographyConsumer.ets'), sourceTree) {
+  const analyze = () => {
   const parsed = sourceTree ?? ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.equal(parsed.fileName, file, 'shared typography AST path matches current source');
   assert.equal(parsed.text, source, 'shared typography AST bytes match current source');
   assert.equal(parsed.parseDiagnostics.length, 0, `${file}: real ETS parsing`);
+  return collectTypographyConsumers(parsed);
+  };
+  // Shared AST callers must validate their current tree even after a cache hit.
+  return sourceTree == null ? typographyAnalysis(source, file, analyze) : analyze();
+}
+
+function collectTypographyConsumers(parsed) {
   const groups = new Map();
   const rootOf = node => {
     while (node && ts.isCallExpression(node) && node.expression?.expression) node = node.expression.expression;
@@ -62,7 +73,7 @@ const getterPolicies = {
     'sideTitleFontFamily', 'sideTitleFontWeight', 'sideTitleFontSize', 'sideTitleLineHeight',
     'titleMinFontScale', 'titleMaxFontScale',
   ] },
-  'ReaderChoiceRow.ets': { owner: 'ReaderChoiceRow', getter: 'spec', resolver: 'resolveReaderChoiceSpec', module: 'ReaderChoiceSpecs', argument: 'this.specId', fields: ['selectedWeight','text','selectedText'], textGetter: 'textStyle' },
+  'ReaderChoiceRow.ets': { owner: 'ReaderChoiceRow', getter: 'spec', resolver: 'resolveReaderChoiceSpec', localTable: 'CHOICES', argument: 'this.specId', fields: ['selectedWeight','text','selectedText'], textGetter: 'textStyle' },
   'ReaderSearchField.ets': { owner: 'ReaderSearchField', getter: 'textStyle', roles: ['TYPE_SEARCH_SOURCE_INPUT','TYPE_SEARCH_DIRECTORY_INPUT','TYPE_SEARCH_MANGA_DIRECTORY_INPUT','TYPE_SEARCH_READER_QUICK_INPUT'], fields: ['fontFamily','fontWeight','fontSizeFp','lineHeightFp','letterSpacingFp'] },
 };
 const roleFields = ['fontFamily','fontWeight','fontSizeFp','lineHeightFp','letterSpacingFp'];
@@ -72,7 +83,10 @@ export function typographyExpressionContext(source, file) {
   const normalized=file.replaceAll('\\','/');
   // Full / relative production paths are accepted; basename-only test fixtures
   // cannot impersonate a producer from an unrelated folder.
-  const policy = /(?:^|\/)common\//.test(normalized) ? getterPolicies[path.basename(normalized)] : undefined;
+  const movedSurface = /(?:^|\/)ui\/surfaces\/(?:ReaderActionMenuSurface|ReaderDialogSurface|ReaderBoundedSurfaceHeader)\.ets$/.test(normalized);
+  const movedControl = /(?:^|\/)ui\/controls\/(?:ReaderChoiceRow|ReaderSearchField)\.ets$/.test(normalized);
+  const policy = /(?:^|\/)common\//.test(normalized) || movedControl || movedSurface ?
+    getterPolicies[path.basename(normalized)] : undefined;
   const bindings = new Map();
   if (!policy) return { bindings };
   const owner=tree.statements.find(n=>ts.isStructDeclaration(n)&&n.name.text===policy.owner);
@@ -93,10 +107,18 @@ export function typographyExpressionContext(source, file) {
     const imported=imports.get(policy.resolver),getter=methods.get(policy.getter);
     const statements=getter?.body?.statements;
     const returned=statements?.length===1&&ts.isReturnStatement(statements[0])?statements[0].expression:undefined;
+    const local=policy.localTable&&tree.statements.find(node=>ts.isFunctionDeclaration(node)&&node.name?.text===policy.resolver);
+    const localStatements=local?.body?.statements;
+    const localReturn=localStatements?.length===1&&ts.isReturnStatement(localStatements[0])?localStatements[0].expression:undefined;
+    const localTable=policy.localTable&&tree.statements.filter(ts.isVariableStatement)
+      .flatMap(node=>[...node.declarationList.declarations]).find(node=>node.name.getText(tree)===policy.localTable);
+    const validLocal=!imported&&local?.parameters.length===1&&localReturn!==undefined&&ts.isElementAccessExpression(localReturn)&&
+      localReturn.expression.getText(tree)===policy.localTable&&localReturn.argumentExpression.getText(tree)===local.parameters[0].name.getText(tree)&&
+      localTable?.initializer!==undefined&&ts.isObjectLiteralExpression(localTable.initializer);
     const validImport=imported?.exported===policy.resolver&&imported.module==='./'+policy.module;
     const validReturn=ts.isCallExpression(returned)&&ts.isIdentifier(returned.expression)&&returned.expression.text===policy.resolver&&
       returned.arguments.length===1&&returned.arguments[0].getText(tree)===policy.argument;
-    if(validImport&&validReturn)bind(policy.getter,policy.fields);
+    if((validImport||validLocal)&&validReturn)bind(policy.getter,policy.fields);
     if(policy.textGetter&&bindings.has(policy.owner+'#'+policy.getter)){
       const returned=methods.get(policy.textGetter)?.body?.statements;
       const expression=returned?.length===1&&ts.isReturnStatement(returned[0])?returned[0].expression:undefined;
@@ -106,15 +128,21 @@ export function typographyExpressionContext(source, file) {
     }
   }else{
     const getter=methods.get(policy.getter),seen=[];
+    const publicRole=(expression,role)=>ts.isIdentifier(expression)&&expression.text===role&&
+      imports.get(role)?.exported===role&&imports.get(role)?.module==='../../ui/foundation/ReaderTypography';
     const validStatement=n=>{
-      if(ts.isReturnStatement(n)&&ts.isIdentifier(n.expression)){seen.push(n.expression.text);return policy.roles.includes(n.expression.text)&&
-        imports.get(n.expression.text)?.exported===n.expression.text&&imports.get(n.expression.text)?.module==='./ReaderTypography';}
+      if(ts.isReturnStatement(n)&&ts.isIdentifier(n.expression)){seen.push(n.expression.text);return policy.roles.includes(n.expression.text)&&publicRole(n.expression,n.expression.text);}
       if(ts.isBlock(n))return n.statements.length===1&&validStatement(n.statements[0]);
       if(ts.isIfStatement(n))return !n.elseStatement&&/^(?:this\.variant === '(?:sourceManagement|readerDirectory|mangaDirectory)')$/.test(n.expression.getText(tree))&&validStatement(n.thenStatement);
       return false;
     };
     if(getter?.body?.statements.length===4&&getter.body.statements.every(validStatement)&&
       new Set(seen).size===policy.roles.length)bind(policy.getter,policy.fields);
+    const bookStatements=methods.get('bookTextStyle')?.body?.statements;
+    const bookReturn=bookStatements?.length===1&&ts.isReturnStatement(bookStatements[0])?bookStatements[0].expression:undefined;
+    if(bookReturn!==undefined&&ts.isConditionalExpression(bookReturn)&&bookReturn.condition.getText(tree)==="this.variant === 'bookPanel'"&&
+      publicRole(bookReturn.whenTrue,'TYPE_SEARCH_BOOK_PANEL_INPUT')&&publicRole(bookReturn.whenFalse,'TYPE_SEARCH_BOOK_INPUT'))
+      bind('bookTextStyle',roleFields);
   }
   return { bindings };
 }
@@ -190,6 +218,7 @@ export function typographyRoleImports(source, file = virtualFilePath('Typography
  * An omitted font tuple means the framework owns rendering; it is not a fake
  * public role and cannot be discovered by a modifier-count-only gate. */
 export function auditNativeTextElements(source, file = virtualFilePath('NativeTypography.ets'), sourceTree) {
+  const analyze = () => {
   const parsed = sourceTree ?? ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.equal(parsed.fileName, file, 'shared native AST path matches current source');
   assert.equal(parsed.text, source, 'shared native AST bytes match current source');
@@ -213,4 +242,6 @@ export function auditNativeTextElements(source, file = virtualFilePath('NativeTy
       line:parsed.getLineAndCharacterOfPosition(node.getStart(parsed)).line+1,hasChildContent:!!node.body,
       modifiers:fonts.get(node.getStart(parsed))??{},attributes:attributes.get(node.pos)??{}});
   }ts.forEachChild(node,walk); };walk(parsed);return result;
+  };
+  return sourceTree == null ? nativeAnalysis(source, file, analyze) : analyze();
 }

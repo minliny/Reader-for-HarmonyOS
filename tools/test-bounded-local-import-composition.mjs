@@ -1,5 +1,5 @@
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions = {"picker-admission": {"description": "真实文件选择busy/current/关闭", "resources": []}, "result-receipts": {"description": "真实result DTO/Watch和late animation归属", "resources": []}};
+const definitions = {"importing-growth": {"description": "真实进行文档自然增长、1x/2x短窗单Scroll、测量代次和持久shell", "resources": []}, "picker-admission": {"description": "真实文件选择busy/current/关闭", "resources": []}, "result-receipts": {"description": "真实result DTO/Watch和late animation归属", "resources": []}, "scroll-origin": {"description": "完整SDK导入固定文档Scroll首区顶对齐，保留自然测量结果列表与居中进度", "resources": []}};
 for (const id of selectContractCases(definitions)) {
   await runSelectedCase(id);
   recordContractCasePass(id);
@@ -10,21 +10,107 @@ async function runSelectedCase(selectedCase) {
 const {default: assert} = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {boundedSurfaceSdk,boundedMembers} = await import('./lib/bounded-surface-sdk-probe.mjs');
-const horizontal = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
-const metricsApi = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const {localImportResultLayout} = await import('../entry/src/main/ets/features/bookshelf/LocalImportLayout.ts');
+const {pureModuleProbe} = await import('./lib/ets-pure-module-probe.mjs');
+const {selectedProductionValues} = await import('./lib/selected-production-methods.mjs');
+const horizontal = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
+const metricsApi = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const {localImportResultLayout} = await import('../entry/src/main/ets/features/bookshelf/ui/LocalImportLayout.ts');
 
-const source=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/LocalImportDialog.ets',import.meta.url),'utf8');
-const frameSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderBoundedSurface.ets',import.meta.url),'utf8');
+const source=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/LocalImportDialog.ets',import.meta.url),'utf8');
+const {LOCAL_IMPORT_FILE_FOCUS_ID}=selectedProductionValues(new URL('../entry/src/main/ets/features/bookshelf/ui/LocalImportDialog.ets',import.meta.url),['LOCAL_IMPORT_FILE_FOCUS_ID']);
+const frameSource=readFileSync(new URL('../entry/src/main/ets/ui/surfaces/ReaderBoundedSurface.ets',import.meta.url),'utf8');
+const resolverSource=readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts',import.meta.url),'utf8');
+const {readerSurfaceMaxHeight}=pureModuleProbe(resolverSource,'ReaderSurfaceResolvers.ts',{},['readerSurfaceMaxHeight']);
+const productTiming = await import('../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts');
+const { SOURCE_CHROME_VISUAL: SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts');
+const { DIRECTORY_CHROME_VISUAL: MANGA_DIRECTORY_VISUAL } = await import('../entry/src/main/ets/ui/foundation/ReaderDirectoryChromeVisual.ts');
+const { READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS } = await import('../entry/src/main/ets/features/bookshelf/ui/LocalImportMotion.ts');
+const nativeCurves = { cubicBezierCurve: (...values) => ({ nativeCurveArguments: values }) };
+const nativeCurve = Object.fromEntries(['Linear', 'Ease', 'EaseIn', 'EaseInOut', 'EaseOut'].map(name => [name, `Curve.${name}`]));
+const motion = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/foundation/MotionSpec.ets', import.meta.url), 'utf8'),
+  'MotionSpec.ets', { ...productTiming, SOURCE_SWITCH_VISUAL, MANGA_DIRECTORY_VISUAL, curves: nativeCurves, Curve: nativeCurve },
+  ['motionAnimateParam', 'motionAnimateParamDelayed', 'motionSpecGet']);
+const policy = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderMotionPolicy.ets', import.meta.url), 'utf8'),
+  'ReaderMotionPolicy.ets', { ...motion }, ['readerMotionCurve', 'readerMotionDurationMs']);
+const feedbackSource=readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts',import.meta.url),'utf8');
 const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
 const props=o=>({state:o.state,batch:o.batch,reduceMotion:o.reduceMotion,failureMessage:o.failureMessage,originalPending:o.originalPending,recovery:o.recovery,selectionEnabled:o.selectionEnabled,selectionBlockedMessage:o.selectionBlockedMessage});
 function mount(params={},options={},input=source,viewportHeight=0){
   const p=boundedSurfaceSdk(options),animations=[],feedback=[];let now=0;
-  const o=p.consumer(input,boundedMembers(input),{...horizontal,...metricsApi,localImportResultLayout,
+  const storage=new Map();
+  const AppStorage={get:key=>storage.get(key),setOrCreate:(key,value)=>{
+    storage.set(key,value);
+    if(key==='readerTransientToast'&&value.visible)feedback.push(value.message);
+  }};
+  const feedbackDeps=pureModuleProbe(feedbackSource,'ReaderTransientFeedback.ts',{AppStorage},['ReaderTransientFeedback','READER_FEEDBACK_BRIEF_MS']);
+  const o=p.consumer(input,boundedMembers(input),{...horizontal,...metricsApi,...feedbackDeps,...motion,...policy,READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS,localImportResultLayout,readerSurfaceMaxHeight,LOCAL_IMPORT_FILE_FOCUS_ID,
     ReaderWindowCoordinator:{metrics:()=>metrics},registerReaderFonts(){},readerMotionNowMs:()=>now,
     BorderStyle:{Dashed:'BorderStyle.Dashed'},Curve:{Linear:'Curve.Linear'},curves:{cubicBezierCurve:(...values)=>values},
-    uiContext:{animateTo:(options,work)=>{animations.push(options);work();},getPromptAction:()=>({showToast:({message})=>feedback.push(message)})}}, {state:'fileSelection',reduceMotion:true,...params});
+    uiContext:{animateTo:(options,work)=>{animations.push(options);work();}}}, {state:'fileSelection',reduceMotion:true,...params});
   o.viewportHeight=viewportHeight;o.aboutToAppear();o.initialRender();return{p,o,animations,feedback,clock:n=>now=n};
+}
+if (selectedCase === 'importing-growth') {
+  for (const scale of [1, 2]) for (const viewport of [160, 400]) {
+    metrics.systemFontScale = scale;
+    const { p, o } = mount({ state: 'importing' }, {}, source, viewport);
+    const scroll = p.nodes(o).find(node => node.type === 'Scroll');
+    const document = p.nodes(o).find(node => node.type === 'Column' && node.onAreaChange);
+    const frame = p.walk(o).find(actor => actor instanceof p.deps.ReaderBoundedSurface);
+    const shell = [...frame.nodes.values()].find(node => node.type === 'Stack');
+    assert.ok(scroll && document && shell);
+    assert.equal(document.height, undefined, 'importing document retains natural native height');
+    assert.equal(document.constraintSize.minHeight, 228, 'approved regular minimum');
+    assert.equal(scroll.align, 'Alignment.Top');
+    assert.equal(scroll.hitTestBehavior, 'HitTestMode.Default', 'overflow document can actually scroll');
+    const naturalHeight = scale === 1 ? 228 : 250;
+    document.onAreaChange({}, { height: `${naturalHeight}vp` }); p.properties.flush();
+    assert.equal(o.measuredImportingHeight, naturalHeight);
+    assert.equal(scroll.height, Math.min(naturalHeight, o.availableHeight()));
+    assert.equal(shell.height, scroll.height, 'inner viewport and persistent shell share one cap');
+    assert.ok(scroll.height <= o.availableHeight());
+    document.onAreaChange({}, { height: NaN });
+    assert.equal(o.measuredImportingHeight, naturalHeight);
+    const beforeBackground = document.onAreaChange;
+    o.foreground = false; p.properties.flush();
+    const backgroundMeasure = document.onAreaChange;
+    assert.notEqual(backgroundMeasure, beforeBackground, 'current importing actor rebinds its measured receipt after a motion identity change');
+    beforeBackground({}, { height: 999 });
+    assert.equal(o.measuredImportingHeight, naturalHeight);
+    backgroundMeasure({}, { height: naturalHeight + 12 }); p.properties.flush();
+    assert.equal(o.measuredImportingHeight, naturalHeight + 12);
+    o.foreground = true; p.properties.flush();
+    document.onAreaChange({}, { height: naturalHeight }); p.properties.flush();
+    assert.equal(o.measuredImportingHeight, naturalHeight, 'foreground successor keeps a live natural-height receipt');
+    const old = document.onAreaChange;
+    o.updateStateVars({ ...props(o), state: 'result', batch: { items: [], imported: 0 } }); p.properties.flush();
+    const finalHeight = o.shellHeight;
+    old({}, { height: 999 });
+    assert.equal(o.shellHeight, finalHeight, 'late importing measurement cannot resize result');
+    o.aboutToDisappear(); o.updateStateVars({ ...props(o), state: 'importing' }); o.aboutToAppear();
+    old({}, { height: 777 });
+    assert.equal(o.measuredImportingHeight, naturalHeight, 'old opening cannot resize successor');
+  }
+  console.log('PASS actual SDK importing natural height / bounded single Scroll at 1x/2x and short windows; glyph wrapping/native touch remain OPEN');
+  return;
+}
+if(selectedCase==='scroll-origin') {
+ for(const scale of [1,2]){
+  metrics.systemFontScale=scale;
+  const selection=mount({state:'fileSelection'});
+  const selectionScroll=selection.p.nodes(selection.o).find(node=>node.type==='Scroll');
+  assert.equal(selectionScroll.align,'Alignment.Top');
+  assert.equal(selectionScroll.height,selection.o.selectionPanelHeight());
+  for(const count of [0,1,12]){
+   const items=Array.from({length:count},(_,index)=>({fileName:`book-${index}.txt`,state:'success',disposition:'created'}));
+   const result=mount({state:'result',batch:{items,imported:count}}, {},source,200);
+   assert.equal(result.o.resultLayout().compact,true);
+   const resultScroll=result.p.nodes(result.o).find(node=>node.type==='Scroll'&&node.scrollBar==='BarState.Off');
+   assert.equal(resultScroll.align,'Alignment.Top');
+   assert.equal(resultScroll.height,Math.max(0,result.o.resultPanelHeight()-result.o.measuredFooterHeight));
+  }
+ }
+ console.log('PASS actual SDK import document origins at 1x/2x and 0/1/12 result items; no Native geometry claim');
+ return;
 }
 if(selectedCase==='picker-admission') {
 {
@@ -41,10 +127,18 @@ if(selectedCase==='picker-admission') {
   o.updateStateVars({...props(o),state:'fileSelection',selectionEnabled:false,selectionBlockedMessage:'上次导入仍在处理中'});p.properties.flush();
   assert.equal(chooseAction.enabled,false);assert.equal(label.create,'选择文件');assert.equal(message.create,'上次导入仍在处理中');
   chooseAction.onClick();assert.equal(choose,1);cancelAction.onClick();assert.equal(close,2,'closing the surface remains available');
-  const drop=p.nodes(o).find(n=>n.onClick&&n.border?.style==='BorderStyle.Dashed');assert.ok(drop);assert.equal(drop.enabled,false);drop.onClick();assert.equal(choose,1);
+  const drop=p.nodes(o).find(n=>n.onClick&&n.border?.style==='BorderStyle.Dashed');assert.ok(drop);
+  assert.equal(drop.type,'Button');assert.equal(drop.id,'reader-local-import-file-selection');
+  assert.equal(drop.width,'100%');assert.equal(drop.padding,0);assert.equal(drop.border.width,2);assert.equal(drop.borderRadius,14);
+  assert.equal(drop.enabled,false);drop.onClick();assert.equal(choose,1);
+  const fileLabel=p.nodes(o).find(n=>n.type==='Text'&&n.create==='从系统文件中选择');assert.ok(fileLabel);assert.equal(fileLabel.onClick,undefined);
   o.updateStateVars({...props(o),selectionEnabled:true,selectionBlockedMessage:''});p.properties.flush();chooseAction.onClick();assert.equal(choose,2);
+  let admitted;o.onSelectFiles=current=>{choose++;admitted=current;};drop.onClick();assert.equal(choose,3);assert.equal(admitted(),true);
+  o.foreground=false;o.onForegroundChanged();drop.onClick();assert.equal(choose,3);assert.equal(admitted(),false,'queued picker lease retires on background');
+  o.foreground=true;o.onForegroundChanged();drop.onClick();assert.equal(choose,4);assert.equal(admitted(),true);
   o.viewportWidth=320;p.properties.flush();assert.equal(native.width,o.panelFrame().width);
-  o.aboutToDisappear();const reopened=mount();assert.equal(reopened.o.state,'fileSelection');assert.equal(reopened.o.mounted,true);
+  o.aboutToDisappear();drop.onClick();assert.equal(choose,4);assert.equal(admitted(),false,'unmount retires file selection lease');
+  const reopened=mount();assert.equal(reopened.o.state,'fileSelection');assert.equal(reopened.o.mounted,true);
 }
 
 }
@@ -70,20 +164,33 @@ if(selectedCase==='result-receipts') {
   oldHit.onClick();assert.deepEqual(reconcile,[7],'old physical callback cannot borrow the new generation');
   const currentHit=[...recoveryAction.nodes.values()].filter(n=>n.onClick).at(-1);
   assert.notEqual(currentHit,oldHit,'the new generation has its own real SDK native action');
+  o.foreground=false;currentHit.onClick();assert.deepEqual(reconcile,[7],'a hidden import notice cannot start readback');
+  o.foreground=true;
   currentHit.onClick();assert.deepEqual(reconcile,[7,8]);
   const complete=[...footer.nodes.values()].find(n=>n.onClick);complete.onClick();assert.equal(close,1);
   const oldGeneration=o.motionGeneration;o.aboutToDisappear();assert.ok(o.motionGeneration>oldGeneration);const currentHeight=o.shellHeight;measure.onAreaChange({}, {height:90});assert.equal(o.shellHeight,currentHeight,'late measurement cannot restart a retired transition');
+  currentHit.onClick();assert.deepEqual(reconcile,[7,8],'a retired notice cannot start another readback');
 }
 {
   const {p,o}=mount({state:'result',batch:{items:[],imported:0}}, {},source,160);
   assert.equal(o.resultLayout().compact,true);
-  const scroll=p.nodes(o).find(n=>n.type==='Scroll');assert.equal(scroll.height,Math.max(0,o.resultPanelHeight()-o.measuredFooterHeight));
+  const scroll=p.nodes(o).find(n=>n.type==='Scroll'&&n.scrollBar==='BarState.Off');assert.equal(scroll.height,Math.max(0,o.resultPanelHeight()-o.measuredFooterHeight));
   const done=p.nodes(o).find(n=>n.onClick&&n.constraintSize?.minHeight===44);assert.ok(done);
 }
 {
   const {p,o,animations}=mount({state:'importing',reduceMotion:false,batch:{items:[],imported:0}});
   assert.ok(p.nodes(o).some(n=>n.type==='LoadingProgress'&&n.width===32));o.updateStateVars({...props(o),state:'result',batch:{items:[],imported:0}});p.properties.flush();
-  const finish=animations.find(options=>options.onFinish)?.onFinish;assert.equal(typeof finish,'function');
+  const reveals=()=>animations.filter(options=>typeof options.onFinish==='function');
+  const finish=reveals()[0]?.onFinish;assert.equal(typeof finish,'function');
+  o.updateStateVars({...props(o),batch:{items:[],imported:0}});p.properties.flush();
+  assert.equal(reveals().length,1,'a newer receipt does not restart the same result reveal');
+  assert.equal(o.resultInputReady,false);
+  o.foreground=false;o.onForegroundChanged();p.properties.flush();
+  assert.equal(o.resultInputReady,true,'backgrounding settles the interrupted reveal');
+  assert.equal(o.resultAcceptsInput(),false);
+  o.foreground=true;o.onForegroundChanged();p.properties.flush();
+  assert.equal(reveals().length,1,'foregrounding the settled result does not replay the reveal');
+  assert.equal(o.resultAcceptsInput(),true);
   o.aboutToDisappear();o.updateStateVars({...props(o),state:'importing'});o.aboutToAppear();
   assert.equal(o.wasImporting,true);finish();assert.equal(o.wasImporting,true,'old animation completion cannot settle a reopened import owner');
   o.updateStateVars({...props(o),reduceMotion:true});p.properties.flush();
@@ -98,6 +205,10 @@ if(selectedCase==='result-receipts') {
   assert.equal(message.create,'current failure detail','same ForEach key must read latest failure DTO');assert.equal(badge.create,'失败','nested badge must use current primitive projection');assert.equal(message.id,messageId);assert.equal(badge.id,badgeId);
   const success=mount({state:'result',batch:{items:[{fileName:'same.txt',state:'success',disposition:'created'}],imported:1}}),successBadge=success.p.nodes(success.o).find(n=>n.create==='新增成功');
   success.o.updateStateVars({...props(success.o),batch:{items:[{fileName:'same.txt',state:'success',disposition:'existing'}],imported:1}});success.p.properties.flush();assert.equal(successBadge.create,'已在书架');
+  const deferredCleanup=mount({state:'result',batch:{items:[{fileName:'same.txt',state:'success',disposition:'created',cleanupDeferred:true}],imported:1}});
+  assert.ok(deferredCleanup.p.nodes(deferredCleanup.o).some(node=>node.create==='书籍已保存，导入清理尚未完成'));
+  assert.equal(deferredCleanup.o.summaryTitle(),'导入完成');
+  assert.equal(deferredCleanup.o.pendingImport(),false,'deferred cleanup never becomes an unconfirmed import');
   assert.throws(()=>{const bad=mount({state:'result',batch:{items:[first],imported:0}}, {},source.replace('this.currentResultItem(item, index)','item'));const text=bad.p.nodes(bad.o).find(n=>n.create==='first ACK unknown');bad.o.updateStateVars({...props(bad.o),batch:{items:[{...first,failure:{code:'validation',message:'new failure'}}],imported:0}});bad.p.properties.flush();assert.equal(text.create,'new failure','current same-key DTO');},/current same-key DTO/);
 }
 {

@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from '../../lib/reader-control-builder-probe.mjs';
-import { createDefaultReaderWindowMetrics } from '../../../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import { createDefaultReaderWindowMetrics } from '../../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 export function createSyncOwnerFixture({sharedAsset}={}) {
 const require=createRequire(import.meta.url);
 // Thin Node adaptation of the actual platform AtomicFile API. Production
@@ -25,8 +25,18 @@ const fileIo={OpenMode:{READ_WRITE:1,READ_ONLY:0},
 const cryptoFramework={createMd(){const hash=require('node:crypto').createHash('sha256');return{async update({data}){hash.update(data);},async digest(){return {data:new Uint8Array(hash.digest())};}};}};
 
 const syntax=require((resolveEtsLoaderRoot())+'/lib/validate_ui_syntax.js');
-const source = p => readFileSync(new URL(`../../../entry/src/main/ets/${p}`,import.meta.url),'utf8');
-syntax.builderParamObjectCollection.set('ReaderCard',new Set([...source('features/common/ReaderCard.ets').matchAll(/@BuilderParam\s+(\w+):/g)].map(m=>m[1])));
+const relocatedSyncSources=Object.freeze({
+  'features/sync/SyncOperationProjection.ts':'features/sync/application/SyncOperationProjection.ts',
+  'features/sync/WebDavCredentialStore.ts':'features/sync/application/WebDavCredentialStore.ts',
+  'features/sync/SyncGateway.ts':'features/sync/application/SyncGateway.ts',
+  'features/sync/SyncOrchestrator.ets':'features/sync/application/SyncOrchestrator.ets',
+  'features/sync/SyncPage.ets':'features/sync/ui/SyncPage.ets',
+});
+const source = p => {
+  const file=Object.hasOwn(relocatedSyncSources,p)?relocatedSyncSources[p]:p;
+  return readFileSync(new URL(`../../../entry/src/main/ets/${file}`,import.meta.url),'utf8');
+};
+syntax.builderParamObjectCollection.set('ReaderCard',new Set([...source('ui/surfaces/ReaderCard.ets').matchAll(/@BuilderParam\s+(\w+):/g)].map(m=>m[1])));
 const ordinary = text => stripTypeScriptTypes(text.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''));
 const execute = (p,n,deps={})=>new Function(...Object.keys(deps),ordinary(source(p))+`;return ${n};`)(...Object.values(deps));
 const facts=execute('app/ReaderOperationFacts.ts','({projectOperationFacts,projectCommitReadback})');
@@ -99,12 +109,12 @@ function fixture({empty=false,preserveAsset=false,createOwner}={}){
   transport=async()=>({status:201,body:''});
   const owner=createOwner?createOwner():new Orchestrator(v=>{snapshot=clone(v);emitted.push(clone(v));},()=>snapshot,currentOwner,()=>route);
   const settle=async()=>{await owner.operationChain;};
-  const noticeSource=source('features/common/ReaderRecoveryNotice.ets');const actionSource=source('features/common/ReaderRecoveryAction.ets');
+  const noticeSource=source('ui/feedback/ReaderRecoveryNotice.ets');const actionSource=source('ui/feedback/ReaderRecoveryAction.ets');
   class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
   class Card extends Child { initialRender(){this.params.content?.();} }
   const page=()=>{
     const shared=foundationControls();
-    const p=createReaderBuilderProbe(source('features/sync/SyncPage.ets'),['manualActionsSection','configSaveContinuationIdentities','canContinueConfigSave','configSaveGeneration','effectiveWebdavUrl','effectiveWebdavUser','effectiveWebdavPath','sectionHeadingMuted','restoreConflictCard','feedbackView','recoveryLabel','canSkipBackupRetention','backupGeneration','backupRetentionActionIdentities','canMutate','manualActionButton'],{...shared.dependencies,readerRecoveryView,ReaderRecoveryNotice:Child,ReaderRecoveryAction:Child,ReaderCard:Card},{...shared.hooks,mountChildren:true,childSources:{...shared.hooks.childSources,ReaderCard:source('features/common/ReaderCard.ets')}});
+    const p=createReaderBuilderProbe(source('features/sync/SyncPage.ets'),['manualActionsSection','configSaveContinuationIdentities','canContinueConfigSave','configSaveGeneration','effectiveWebdavUrl','effectiveWebdavUser','effectiveWebdavPath','sectionHeadingMuted','restoreConflictCard','feedbackView','recoveryLabel','canSkipBackupRetention','backupGeneration','backupRetentionActionIdentities','canMutate','manualActionButton'],{...shared.dependencies,readerRecoveryView,ReaderRecoveryNotice:Child,ReaderRecoveryAction:Child,ReaderCard:Card},{...shared.hooks,mountChildren:true,childSources:{...shared.hooks.childSources,ReaderCard:source('ui/surfaces/ReaderCard.ets')}});
     Object.assign(p.owner,{snapshot:clone(snapshot),contentFrame:()=>({width:390}),appThemeScheme:'day',onReconcile:g=>owner.reconcile(g),onSkipBackupRetention:g=>owner.skipBackupRetention(g),onContinueConfigSave:(...args)=>owner.continueConfigSave(...args),onTriggerBackup:()=>owner.triggerBackup(),onRestoreLatest:()=>owner.restoreLatest(),restoreConflictCard:()=>{}});
     p.owner.manualActionsSection();
     const child=[...p.owner.children.values()].find(c=>c.params?.view);

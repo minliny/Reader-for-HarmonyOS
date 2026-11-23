@@ -67,13 +67,14 @@ async function cardCase(selectedCase) {
   const { cardSdk } = await import('./lib/reader-card-probe.mjs');
   const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
   const { syncIndexFixture } = await import('./lib/sync-index-real-fixture.mjs');
-  const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+  const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
   const { readerFoundationTokens } = await import('./lib/reader-foundation-control-probe.mjs');
   const { createReaderBuilderProbe, readerBuilderChildPropertyCacheStats } = await import('./lib/reader-control-builder-probe.mjs');
-  const metricsApi = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-  const fontFamilies = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
+  const metricsApi = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+  const fontFamilies = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
   const read = file => readFileSync(file, 'utf8');
-  const common='entry/src/main/ets/features/common/',category='entry/src/main/ets/features/settings/CategorySection.ets',sync='entry/src/main/ets/features/sync/SyncPage.ets';
+  const common='entry/src/main/ets/features/common/',category='entry/src/main/ets/features/settings/ui/CategorySection.ets',sync='entry/src/main/ets/features/sync/ui/SyncPage.ets';
+  const surfaces='entry/src/main/ets/ui/surfaces/';
   const historical = selectedCase === 'historical-migration';
   let golden, before;
   if (historical) {
@@ -140,16 +141,16 @@ assert.throws(()=>compareBodies(sync,read(sync).replace("return this.snapshot.fa
 
 
   }
-const originalSpec=read(common+'ReaderCardSpecs.ets');
+const originalSpec=read(surfaces+'ReaderCardSpecs.ets');
 const methods=['webdavSection','manualActionsSection','autoBackupSection','emptyState','historyRow'];
 const entry={destination:'WebDAV',timestamp:'2026-10-04 08:00',summary:'原始备份结果',status:'success',detail:'保持原始信息',bookCount:2,sourceCount:3};
-const geometry=syncIndexFixture.execute('features/common/SurfaceHorizontalGeometry.ts','({SurfaceWidthSpec,SurfaceHorizontalFrame,resolveHorizontalFrame})');
+const geometry=syncIndexFixture.execute('ui/layout/SurfaceHorizontalGeometry.ts','({SurfaceWidthSpec,SurfaceHorizontalFrame,resolveHorizontalFrame})');
 // Compile equal production inputs once inside this test. Every comparison still
 // constructs fresh owners, native actors, observed properties and callbacks;
 // neither a rendered fixture nor an assertion result is cached.
 const parentKernels=new Map(),consumerMembers=new Map();let parentInstances=0;
 function parent({legacy=false,method='build',scheme='day',width=352,specSource=originalSpec}={}){
- const cardSource=legacy?before:read(common+'ReaderCard.ets');
+ const cardSource=legacy?before:read(surfaces+'ReaderCard.ets');
  const kernelKey=JSON.stringify([cardSource,specSource,scheme]);
  let kernel=parentKernels.get(kernelKey);
  if(!kernel){kernel={shared:cardSdk({source:cardSource,specSource,scheme}),consumers:new Map()};parentKernels.set(kernelKey,kernel);}
@@ -270,7 +271,7 @@ for(const[scheme,windowWidth,hostWidth,left,right,bottom]of[
  const shared=cardSdk({scheme}),metrics=new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,windowWidth,900),
   undefined,new metricsApi.ReaderInsetsVp(left,47,right,bottom));
  const frameDeps={...metricsApi,...fontFamilies,ReaderWindowCoordinator:{metrics:()=>metrics}};
- const backSource=read(common+'PageBackBar.ets');shared.hooks.childSources.PageBackBar=backSource;
+ const backSource=read('entry/src/main/ets/ui/chrome/PageBackBar.ets');shared.hooks.childSources.PageBackBar=backSource;
  shared.deps.PageBackBar=createReaderBuilderProbe(backSource,boundedMembers(backSource),{...shared.deps,...frameDeps},shared.hooks).Component;
  const owner=shared.consumer(read(sync),boundedMembers(read(sync)),{...frameDeps,DEFAULT_SYNC_SNAPSHOT:syncIndexFixture.DEFAULT_SYNC_SNAPSHOT,
   readerRecoveryView:syncIndexFixture.readerRecoveryView,registerReaderFonts(){}});

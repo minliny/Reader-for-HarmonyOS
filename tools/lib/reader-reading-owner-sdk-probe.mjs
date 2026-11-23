@@ -4,10 +4,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { ReaderWriteEvidence } from '../../entry/src/main/ets/app/ReaderWriteEvidence.ts';
 import { projectPersistedReceipt } from '../../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts';
-import { LocalReadingFlowGateway, LOCAL_SOURCE_ID } from '../../entry/src/main/ets/features/reading/LocalReadingFlowGateway.ts';
-import { ReadingOfflineGateway } from '../../entry/src/main/ets/features/reading/ReadingOfflineGateway.ts';
-import { MangaDownloadActionsGateway } from '../../entry/src/main/ets/features/manga/MangaDownloadActionsGateway.ts';
-import { loadReaderControlBookmarkProjection } from '../../entry/src/main/ets/features/reading/ReaderControlBookmarkLoad.ts';
+import { LocalReadingFlowGateway, LOCAL_SOURCE_ID } from '../../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts';
+import { ReadingOfflineGateway } from '../../entry/src/main/ets/features/reading/application/ReadingOfflineGateway.ts';
+import { MangaDownloadActionsGateway } from '../../entry/src/main/ets/features/manga/application/MangaDownloadActionsGateway.ts';
+import { loadReaderControlBookmarkProjection } from '../../entry/src/main/ets/features/reading/presentation/ReaderControlBookmarkLoad.ts';
 const { ts } = installedEtsCompiler();
 function emit(name,dependencies){
  const path=new URL(`../../entry/src/main/ets/features/reading/${name}.ts`,import.meta.url);

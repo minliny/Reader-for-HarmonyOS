@@ -4,22 +4,22 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { readerFloatingTabContentInset } from './lib/reader-floating-bar-metrics-probe.mjs';
-import { createDefaultReaderWindowMetrics } from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
-import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/ShelfBookPresentation.ts';
-import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/MangaBookPresentation.ts';
+import { createDefaultReaderWindowMetrics } from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts';
+import { MangaBookPresentation } from '../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 
 const read = path => readFileSync(new URL(`../entry/src/main/ets/${path}`, import.meta.url), 'utf8');
 const indexSource = read('pages/Index.ets');
-const pageSource = read('features/bookshelf/BookshelfPage.ets');
+const pageSource = read('features/bookshelf/ui/BookshelfPage.ets');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
 const builders = require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
 for (const name of ['sectionAction', 'filterRow', 'projectionRow']) builders.add(name);
-for (const [name, source] of [['BookshelfPage', pageSource], ['BookshelfEmptyPage', read('features/bookshelf/BookshelfEmptyPage.ets')],
-  ['BookshelfStatusContent', read('features/bookshelf/BookshelfStatusContent.ets')], ['NoCoverCover', read('features/bookshelf/NoCoverCover.ets')]]) {
+for (const [name, source] of [['BookshelfPage', pageSource], ['BookshelfEmptyPage', read('features/bookshelf/ui/BookshelfEmptyPage.ets')],
+  ['BookshelfStatusContent', read('features/bookshelf/ui/BookshelfStatusContent.ets')], ['NoCoverCover', read('ui/patterns/NoCoverCover.ets')]]) {
   syntax.componentCollection.customComponents.add(name);
   syntax.propCollection.set(name, new Set([...source.matchAll(/@Prop(?:\s+@\w+(?:\([^)]*\))?)*\s+(\w+)\s*:/g)].map(match => match[1])));
 }

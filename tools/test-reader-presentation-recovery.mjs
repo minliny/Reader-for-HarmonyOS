@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { readerPageRecoveryDependencies, readerPageRecoveryPorts } from './lib/reader-page-recovery-fixture.mjs';
-const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
 class Frame { constructor(callback) { this.callback = callback; } }
 const Host = productionMotionMethods(file,
   ['scheduleBookTurnSurfaceRelease', 'confirmBookTurnPresented'], { ReaderUIFrameCallback: Frame });

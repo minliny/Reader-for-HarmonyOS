@@ -1,4 +1,4 @@
-import { readerAppColor } from '../entry/src/main/ets/features/common/ReaderThemeRegistry.ts';
+import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
@@ -56,11 +56,11 @@ function renderIcon(recipe, source) {
   }
   if (recipe.fillInterior) {
     assert.ok(!/<path[^>]*\bfill=/.test(result), `${recipe.sourceFile}: paths already carry a fill attribute`);
-    result = result.replaceAll('<path d=', `<path fill="${recipe.color}" d=`);
+    result = result.replace(/<path\b/g, `<path fill="${recipe.color}"`);
   }
   if (recipe.fillNone) {
     assert.ok(!/<path[^>]*\bfill=/.test(result), `${recipe.sourceFile}: paths already carry a fill attribute`);
-    result = result.replaceAll('<path d=', '<path fill="none" d=');
+    result = result.replace(/<path\b/g, '<path fill="none"');
   }
   return `${result.trim()}\n`;
 }
@@ -220,7 +220,7 @@ export async function renderRecipe(recipe) {
       assert.equal((content.match(/stroke-width="2"/g) ?? []).length, 1, 'Lucide trash has one root stroke-width attribute');
       content = content.replace('stroke-width="2"', `stroke-width="${recipe.strokeWidth}"`);
     }
-    const themeSource = await readFile(path.join(ROOT, 'entry/src/main/ets/features/common/ReaderThemeRegistry.ts'), 'utf8');
+    const themeSource = await readFile(path.join(ROOT, 'entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts'), 'utf8');
     return { content, manifest: { ...original.manifest, file: `${recipe.file}.svg`, semanticRole: recipe.semanticRole,
       originType: recipe.originType, baseAsset: `${recipe.baseFile}.svg`, baseSha256: sha256(original.content),
       themeRegistrySha256: sha256(themeSource), transform: { pathMutation: 'none', palette: scheme,

@@ -1,64 +1,36 @@
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions = {"bounded-menu-frame": {"description": "实际菜单frame约束与native vp/string测量", "resources": []}};
+const definitions = {"bounded-menu-frame": {"description": "书架更多原生面板的实际手机窗口边界", "resources": []}};
 for (const id of selectContractCases(definitions)) {
-  await runSelectedCase(id);
+  await runSelectedCase();
   recordContractCasePass(id);
 }
-async function runSelectedCase(selectedCase) {
-const { actionMenuProbe, ReaderMenuActionView } = await import('./lib/reader-action-menu-probe.mjs');
-const {default: assert} = await import('node:assert/strict');
-const { readFileSync } = await import('node:fs');
-const { stripTypeScriptTypes } = await import('node:module');
-const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
-const { SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
 
-const file=new URL('../entry/src/main/ets/features/bookshelf/BookshelfMoreMenu.ets',import.meta.url);
-const source=readFileSync(file,'utf8');
-const specSource=readFileSync(new URL('../entry/src/main/ets/features/common/ReaderSurfaceSpecs.ets',import.meta.url),'utf8');
-const { resolvePopupSpec } = new Function('TextAlign', 'SOURCE_SWITCH_VISUAL', stripTypeScriptTypes(specSource)
-  .replace(/^import[^;]+;\s*/gm,'').replace(/^export /gm,'') + '; return { resolvePopupSpec };')({ Start: 'TextAlign.Start', Center: 'TextAlign.Center' }, SOURCE_SWITCH_VISUAL);
-const popupSpec=resolvePopupSpec('bookshelf-more-menu');
-const names=['surfaceSpec','actionEnabled','actionLabel','actionIcon','menuWidth','menuX','menuTop','visiblePanelHeight','pointerX','commitAction','collapseMenu','finishCollapse'];
-const Methods=productionMotionMethods(file,names,{resolvePopupSpec});
-const menu=Object.assign(new Methods(),{overlayWidth:393,overlayHeight:650,anchorRight:373,anchorBottom:60,panelHeight:212});
-
-for(const [width,height,right,bottom] of [[320,190,312,60],[393,140,393,60],[800,300,798,80],[170,200,170,70]]) {
- Object.assign(menu,{overlayWidth:width,overlayHeight:height,anchorRight:right,anchorBottom:bottom});
- assert.ok(menu.menuX()>=0);assert.ok(menu.menuX()+menu.menuWidth()<=width);
- assert.ok(menu.menuTop()+menu.visiblePanelHeight()<=height-8);
- assert.ok(menu.visiblePanelHeight()>=popupSpec.collapsedHeight,'a compact viewport retains one full scrollable row');
- assert.ok(menu.pointerX()>=0 && menu.pointerX()+popupSpec.pointerWidth<=menu.menuWidth());
-}
-function measuredMenu(definition=source) {
- const surface=actionMenuProbe();
- const {owner:actual}=createReaderBuilderProbe(definition,boundedMembers(definition),
-  {...surface.properties.sdk,...surface.dependencies,LineJoinStyle:{Round:'LineJoinStyle.Round'},
-   registerReaderFonts(){},uiContext:{animateTo:(_params,callback)=>callback()}},
-  {...surface.properties.hooks,...surface.hooks});
- Object.assign(actual,{anchorRight:355,anchorBottom:52,reduceMotion:true,mounted:true});actual.initialRender();
- const area=[...actual.nodes.values()].find(node=>node.type==='Stack'&&node.onAreaChange);
- assert.ok(area,'actual More overlay root owns native viewport measurement');
- return {actual,area,surface};
-}
-{
- const {actual,area,surface}=measuredMenu(),actor=[...actual.children.values()][0];
- for(const viewport of [{width:365,height:650},{width:'365vp',height:'650vp'}]) {
-  area.onAreaChange({},viewport);actual.replay();surface.properties.flush();
-  assert.deepEqual([actual.overlayWidth,actual.overlayHeight],[365,650]);
-  assert.ok(actual.menuX()>=0&&actual.menuX()+actual.menuWidth()<=365);
-  assert.equal([...actual.children.values()][0],actor,'unit measurement retains the actual shared menu actor');
- }
-}
-{
- const broken=source.replaceAll('readerPageAreaLength(area.','Number(area.');assert.notEqual(broken,source);
- const {actual,area}=measuredMenu(broken);area.onAreaChange({}, {width:'365vp',height:'650vp'});
- assert.ok(Number.isNaN(actual.overlayWidth)&&Number.isNaN(actual.overlayHeight),
-  'Number mutation reproduces invalid vp viewport in the actual native callback');
-}
-// Actual Index readiness -> shared menu admission is exercised by the SDK shell-state test.
-// Shell readiness is covered by the separately selected shell-state case; no imported test entry.
-console.log('PASS PH60 More: four rows, bounded scrolling geometry, anchored pointer, live progress/theme, empty/background guards and once-only update');
-
+async function runSelectedCase() {
+  const {default: assert} = await import('node:assert/strict');
+  const {createTemporaryBackLeafFixtures} = await import('./lib/temporary-back-leaf-fixture.mjs');
+  const {ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp} =
+    await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+  const {readerAppColor} = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+  const {shelfFixture} = await createTemporaryBackLeafFixtures();
+  let width = 393, left = 0, right = 0;
+  const metrics = () => new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, width, 844), undefined,
+    new ReaderInsetsVp(left, 0, right, 0));
+  const f = shelfFixture(undefined, metrics);
+  const opening = f.sheet().sheet;
+  for (const viewport of [[393, 0, 0], [365, 10, 9], [320, 0, 0]]) {
+    [width, left, right] = viewport;
+    const {options, sheet} = f.sheet();
+    assert.equal(options.width, Math.min(390, width - left - right));
+    assert.equal(options.height, 'fit-content');
+    assert.equal(options.preferType, 'bottom');
+    assert.equal(options.enableOutsideInteractive, false);
+    assert.equal(sheet, opening, 'window changes keep the current native sheet content');
+  }
+  f.o.appThemeScheme = 'night';
+  const {options} = f.sheet();
+  assert.equal(options.backgroundColor, readerAppColor('TOK_SS_WINDOW_BG', 'night'));
+  assert.equal(options.maskColor, readerAppColor('TOK_SS_DRAWER_SCRIM', 'night'));
+  // The retired custom popover's triangle, global anchor conversion and
+  // invalid-vp mutation have no corresponding path in the native Sheet.
+  console.log('PASS actual bookshelf More native Sheet width, bounded content, retained identity and theme options');
 }

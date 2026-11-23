@@ -8,24 +8,26 @@ async function runSelectedCase(selectedCase) {
 const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
-const { createRequire, stripTypeScriptTypes } = await import('node:module');
+const { createRequire } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { SurfaceWidthSpec, resolveHorizontalFrame } = await import('../entry/src/main/ets/features/common/SurfaceHorizontalGeometry.ts');
+const { SurfaceWidthSpec, resolveHorizontalFrame } = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
 const { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeBottom,
-  readerVisualSafeTop } = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const { readerAppColor } = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const families = await import('../entry/src/main/ets/features/common/ReaderFontFamilies.ts');
+  readerVisualSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const families = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
 const { loadReaderTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
 const { isReaderMainTabEnabled } = await import('../entry/src/main/ets/app/ReaderProductScope.ts');
 const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { actualReaderMainTabs, actualReaderPhoneNavigationGeometry } = await import('./lib/reader-phone-navigation-source.mjs');
+const { actualReaderFloatingBarMetrics } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { readerFoundationTokens } = await import('./lib/reader-tokens-probe.mjs');
 
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
 const read = name => readFileSync(file(name),'utf8');
-const roleSource=read('features/common/ReaderTypography.ets');
-const floatingSource=read('features/common/ReaderFloatingBarMetrics.ts').replace(/^import\s*[\s\S]*?;\s*/gm,'').replace(/\bexport /g,'');
-const {readerFloatingTabBottomInset,readerFloatingTabContentInset}=new Function('readerInteractiveSafeBottom',`${stripTypeScriptTypes(floatingSource)};return {readerFloatingTabBottomInset,readerFloatingTabContentInset};`)(readerInteractiveSafeBottom);
+const roleSource=read('ui/foundation/ReaderTypography.ets');
+const {readerFloatingTabBottomInset,readerFloatingTabContentInset}=await import('./lib/reader-floating-bar-metrics-probe.mjs');
 const { TYPE_MAIN_TAB_LABEL, TYPE_PAGE_TITLE, TYPE_APP_HOME_TITLE } = loadReaderTypographyRoles(roleSource);
 const roles = { TYPE_MAIN_TAB_LABEL, TYPE_PAGE_TITLE, TYPE_APP_HOME_TITLE };
 let metrics={windowRect:{width:390,height:844},systemInsets:{left:0,right:0,top:48,bottom:34},cutoutInsets:{},gestureInsets:{},navigationInsets:{}};
@@ -38,6 +40,48 @@ if(selectedCase==='phone-nav') {
 for(const count of [2,3,4]) for(const width of [320,390,800]) for(const scheme of ['day','night']) {
   const tabs=[{key:'bookshelf',label:'书架'},...(count>=3?[{key:'rss',label:'RSS'}]:[]),...(count===4?[{key:'discover',label:'发现'}]:[]),{key:'settings',label:'设置'}];
   metrics={...metrics,windowRect:{...metrics.windowRect,width},cutoutInsets:width===800?{left:50,right:0}:{}};
+  if(width<800){
+    const runtime=createArkUIPropertyRuntimeProbe();
+    const navigationSource=read('app/navigation/ReaderBottomNavigation.ets');
+    const rendererSource=read('ui/patterns/ReaderBottomTabBar.ets');
+    class RaisedSurfaceInputs {
+      constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}
+      updateStateVars(params){Object.assign(this.params,params);}
+    }
+    const hooks={...runtime.hooks,mountChildren:true,lifecycleChildren:true,childSources:{
+      ReaderBottomTabBar:rendererSource,ReaderRaisedSurface:read('ui/surfaces/ReaderRaisedSurface.ets'),
+    }};
+    const dependencies={...common,...runtime.sdk,...actualReaderMainTabs(),...actualReaderFloatingBarMetrics(),
+      ...readerFoundationTokens,MAIN_TABS:tabs,ReaderRaisedSurface:RaisedSurfaceInputs,registerReaderShelfFonts(){}};
+    const geometry=actualReaderPhoneNavigationGeometry({...dependencies,AppStorage:{get:()=>undefined}});
+    const Renderer=createReaderBuilderProbe(rendererSource,boundedMembers(rendererSource),dependencies,hooks).Component;
+    const {owner}=createReaderBuilderProbe(navigationSource,boundedMembers(navigationSource),
+      {...dependencies,...geometry,ReaderBottomTabBar:Renderer},hooks);
+    const selected=[],currentTaps=[];
+    Object.assign(owner,{appThemeScheme:scheme,readerWindowMetricsRevision:1,mainViewportRevision:0,current:'bookshelf',
+      onSelect:key=>selected.push(key),onCurrentTap:key=>currentTaps.push(key)});
+    owner.aboutToAppear();owner.initialRender();
+    const walk=parent=>[parent,...[...parent.children.values()].flatMap(child=>child.nodes?walk(child):[])];
+    const nodes=walk(owner).flatMap(child=>[...child.nodes.values()]);
+    const bar=nodes.find(node=>node.type==='Row');
+    const wrapper=nodes.find(node=>node.type==='Stack'&&node.margin?.bottom!==undefined);
+    assert.ok(wrapper,'the actual phone wrapper owns inset and translation');
+    const frame=owner.bottomBarFrame();
+    assert.equal(bar.width,Math.min(360,98*count,width-Math.max(32,readerInteractiveSafeLeft(metrics))-Math.max(32,readerInteractiveSafeRight(metrics))));
+    assert.equal(bar.clip,true);assert.equal(bar.hitTestBehavior,'HitTestMode.Transparent','empty painted bounds pass through while real buttons own clicks');
+    const actualLeft=(width-bar.width)/2+wrapper.translate.x;
+    assert.equal(actualLeft,frame.left);assert.ok(actualLeft>=readerInteractiveSafeLeft(metrics));
+    assert.ok(actualLeft+bar.width<=width-readerInteractiveSafeRight(metrics));
+    const items=nodes.filter(node=>node.type==='Button'&&node.onClick);
+    assert.equal(items.length,count);
+    assert.equal(items[0].backgroundColor,readerAppColor('TOK_PRIMARY_DARK',scheme));
+    assert.ok(items[0].accessibilityText.includes('已选中'));
+    assert.equal(nodes.find(node=>node.type==='Image').create,'app.media.bookshelf_library_active','existing white outline resource remains the selected icon');
+    items[0].onClick();assert.deepEqual(selected,[],'selected tab does not navigate again');assert.deepEqual(currentTaps,['bookshelf'],'current tab delegates to the existing current-tab action');
+    items.at(-1).onClick();assert.deepEqual(selected,['settings']);
+    assert.ok(readerFloatingTabContentInset(metrics)>=bar.constraintSize.minHeight+wrapper.margin.bottom+16,'scroll-end clearance includes the actual bar plus margin');
+    continue;
+  }
   const dep={...common,MAIN_TABS:tabs};
   const {owner}=createReaderBuilderProbe(tabsSource,['bottomBar','bottomTabItem','tabIcon','tabIconResource','bottomBarFrame','bottomBarTranslateX','bottomInset','liveWindowWidth'],dep);
   const selected=[],currentTaps=[];
@@ -66,7 +110,7 @@ console.log('PASS actual main tab SDK Builder: 2/3/4 items, narrow/equal slots, 
 
 }
 if(selectedCase==='centered-header') {
-const backFile=file('features/common/PageBackBar.ets'),backSource=readFileSync(backFile,'utf8');
+const backFile=file('ui/chrome/PageBackBar.ets'),backSource=readFileSync(backFile,'utf8');
 for(const trailing of [false,true]) for(const scheme of ['day','night']) {
   metrics={...metrics,windowRect:{width:820,height:420},cutoutInsets:{left:60,right:0}};
   const {owner}=createReaderBuilderProbe(backSource,['trailing','build','leftInset','rightInset'],common);

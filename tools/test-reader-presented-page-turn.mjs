@@ -1,23 +1,28 @@
+import { readReaderExperienceFixture } from './lib/reader-experience-fixture-source.mjs';
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { completeReaderPageGestureSettlement, createReaderPageGestureState } from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
-import { observeReaderProgressOperation, reconcileReaderControlSelectionProgress } from '../entry/src/main/ets/features/reading/ReaderControlSelectionTransaction.ts';
+import { completeReaderPageGestureSettlement, createReaderPageGestureState } from '../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts';
+import { observeReaderProgressOperation, reconcileReaderControlSelectionProgress } from '../entry/src/main/ets/features/reading/application/ReaderControlSelectionTransaction.ts';
 
-const file = new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url);
-const gatewayFile = new URL('../entry/src/main/ets/features/reading/ReadingSessionFlowGateway.ts', import.meta.url);
+const file = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
+const gatewayFile = new URL('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts', import.meta.url);
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
 const ts = require(`${sdk}/node_modules/typescript`);
 const options = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
-const source = readFileSync(file, 'utf8');
+const source = readReaderExperienceFixture(file, 'utf8');
 const tree = ts.createSourceFile(virtualFilePath('ReaderPresentedTurnClasses.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const commitTree = ts.createSourceFile(virtualFilePath('ReadingCommit.ts'),
+  readReaderExperienceFixture(new URL('../entry/src/main/ets/features/reading/application/ReadingCommit.ts', import.meta.url), 'utf8'),
+  ts.ScriptTarget.Latest, true, ts.ScriptKind.TS, options);
 const classes = Object.fromEntries(['CoreReadingAnchor', 'PreparedReaderPageTurn', 'ReadingCommit', 'ReaderUIFrameCallback'].map(name => {
-  const node = tree.statements.find(node => ts.isClassDeclaration(node) && node.name?.getText(tree) === name);
+  const classTree = name === 'ReadingCommit' ? commitTree : tree;
+  const node = classTree.statements.find(node => ts.isClassDeclaration(node) && node.name?.getText(classTree) === name);
   assert.ok(node, name);
-  return [name, new Function('FrameCallback', `${stripTypeScriptTypes(node.getText(tree)).replace(/^export /, '')}; return ${name};`)(class {})];
+  return [name, new Function('FrameCallback', `${stripTypeScriptTypes(node.getText(classTree)).replace(/^export /, '')}; return ${name};`)(class {})];
 }));
 const events = Object.fromEntries(['SURFACE_READY', 'TEXTURE_READY', 'VISUAL_COMMIT_ENDPOINT', 'ROLLBACK_COMPLETE',
   'SURFACE_LOST', 'RENDER_FAILURE', 'SLOTS_COMMITTED', 'TERMINAL_RELEASED', 'FRAME_PRESENTED']

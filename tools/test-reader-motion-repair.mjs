@@ -23,10 +23,10 @@ async function case_runtime_panel_clock() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const S = await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const { ReaderControlRuntime } = await import('../entry/src/main/ets/features/reading/ReaderControlRuntime.ts');
-const { ReversibleMotionTimeline, motionSegment } = await import('../entry/src/main/ets/features/common/MotionTimeline.ts');
-const { MotionPointTrack } = await import('../entry/src/main/ets/features/common/MotionPointTrack.ts');
+const S = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const { ReaderControlRuntime } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts');
+const { ReversibleMotionTimeline, motionSegment } = await import('../entry/src/main/ets/ui/foundation/MotionTimeline.ts');
+const { MotionPointTrack } = await import('../entry/src/main/ets/ui/foundation/MotionPointTrack.ts');
 const feature = name => new URL(`../entry/src/main/ets/features/${name}`, import.meta.url);
 const linear = p => p;
 const curve = { interpolate: linear };
@@ -85,10 +85,6 @@ async function case_select_appearance_owner() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const S = await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const { ReaderControlRuntime } = await import('../entry/src/main/ets/features/reading/ReaderControlRuntime.ts');
-const { ReversibleMotionTimeline, motionSegment } = await import('../entry/src/main/ets/features/common/MotionTimeline.ts');
-const { MotionPointTrack } = await import('../entry/src/main/ets/features/common/MotionPointTrack.ts');
 const feature = name => new URL(`../entry/src/main/ets/features/${name}`, import.meta.url);
 const linear = p => p;
 const curve = { interpolate: linear };
@@ -100,8 +96,18 @@ let animations=[], frames=[];
 const UI={animateTo:(p,change)=>{animations.push(p);change();},postFrameCallback:f=>frames.push(f.fn)};
 const motionAnimateParam=(id,onFinish)=>({id,onFinish});
 class Callback {constructor(fn){this.fn=fn;}}
-const Select=productionMotionMethods(feature('common/ReaderSelectPanel.ets'),
+const Select=productionMotionMethods(feature('../ui/controls/ReaderSelectPanel.ets'),
   ['selectAndCollapse','collapsePanel','finishCollapse','onClosingChanged','aboutToDisappear'],{motionAnimateParam,OPTION_H:36});
+const selectSource=readFileSync(feature('../ui/controls/ReaderSelectPanel.ets'),'utf8');
+assert.ok(!/\bonSelect\s*:/.test(selectSource),'the unused legacy callback is no longer a public entry');
+assert.ok(!/export interface SelectAnchor\b/.test(selectSource),'the unused host anchor type is not re-exported by the menu');
+const missingEvents=[],missingAnimations=[];
+const missing=Object.assign(new Select(),{mounted:true,generation:1,selectionId:'missing-commit',closeInFlight:false,
+  value:'无',options:['无','单字'],reduceMotion:false,onCommit:undefined,onDismiss:()=>missingEvents.push('dismiss'),
+  getUIContext:()=>({animateTo:(params,apply)=>{missingAnimations.push(params);apply();}})});
+missing.selectAndCollapse('单字');
+assert.equal(missing.closeInFlight,false,'missing explicit commit cannot report an accepted selection');
+assert.deepEqual(missingEvents,[]);assert.deepEqual(missingAnimations,[],'missing commit cannot close as success');
 for(const reduced of [false,true]) {
   const events=[];
   const menu=Object.assign(new Select(),{mounted:true,generation:1,selectionId:'indent:1',closeInFlight:false,value:'无',options:['无','单字','双字'],
@@ -118,7 +124,7 @@ const menu=Object.assign(new Select(),{mounted:true,generation:1,selectionId:'ol
   reduceMotion:false,getUIContext:()=>UI,onCommit:()=>events.push('commit'),onDismiss:()=>events.push('dismiss')});
 menu.selectAndCollapse('value'); const late=animations.at(-1).onFinish;
 menu.aboutToDisappear(); late(); assert.deepEqual(events,['commit'],'late finish cannot operate after unmount');
-const Appearance=productionMotionMethods(feature('reading/ReaderControlAppearanceContent.ets'),['commitSelect','selectionActorIdentity']);
+const Appearance=productionMotionMethods(feature('reading/ui/ReaderControlAppearanceContent.ets'),['commitSelect','selectionActorIdentity']);
 const selected=[];
 const appearance=Object.assign(new Appearance(),{selectIdentity:'language:2',chineseConversionIdentity:'reader:motion',openSelect:'language',fullInput:()=>true,
   selectOptions:()=>['原文','繁转简','简转繁'],applySelect:(...args)=>selected.push(args)});
@@ -132,10 +138,10 @@ async function case_continuous_bookmark_owner() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const S = await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const { ReaderControlRuntime } = await import('../entry/src/main/ets/features/reading/ReaderControlRuntime.ts');
-const { ReversibleMotionTimeline, motionSegment } = await import('../entry/src/main/ets/features/common/MotionTimeline.ts');
-const { MotionPointTrack } = await import('../entry/src/main/ets/features/common/MotionPointTrack.ts');
+const S = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const { ReaderControlRuntime } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts');
+const { ReversibleMotionTimeline, motionSegment } = await import('../entry/src/main/ets/ui/foundation/MotionTimeline.ts');
+const { MotionPointTrack } = await import('../entry/src/main/ets/ui/foundation/MotionPointTrack.ts');
 const feature = name => new URL(`../entry/src/main/ets/features/${name}`, import.meta.url);
 const linear = p => p;
 const curve = { interpolate: linear };
@@ -175,10 +181,10 @@ async function case_shelf_reversal_fixture() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const S = await import('../entry/src/main/ets/features/reading/ReaderControlSessionState.ts');
-const { ReaderControlRuntime } = await import('../entry/src/main/ets/features/reading/ReaderControlRuntime.ts');
-const { ReversibleMotionTimeline, motionSegment } = await import('../entry/src/main/ets/features/common/MotionTimeline.ts');
-const { MotionPointTrack } = await import('../entry/src/main/ets/features/common/MotionPointTrack.ts');
+const S = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const { ReaderControlRuntime } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts');
+const { ReversibleMotionTimeline, motionSegment } = await import('../entry/src/main/ets/ui/foundation/MotionTimeline.ts');
+const { MotionPointTrack } = await import('../entry/src/main/ets/ui/foundation/MotionPointTrack.ts');
 const feature = name => new URL(`../entry/src/main/ets/features/${name}`, import.meta.url);
 const linear = p => p;
 const curve = { interpolate: linear };

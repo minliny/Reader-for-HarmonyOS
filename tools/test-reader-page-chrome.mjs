@@ -31,19 +31,19 @@ async function case_footer_geometry() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
-const windowMetrics = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const readingGeometry = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const windowMetrics = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const readingGeometry = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const {
   ReaderPageChromeMeasurements,
   READER_PAGE_CHROME_BOOKMARK_SIZE,
   resolveReaderPageChromeLayout,
-} = await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+} = await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const {
   ReaderPageOrdinal,
   formatReaderPageOrdinal,
   formatReaderPageProgress,
-} = await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
-const { ReaderReadingLayoutSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+} = await import('../entry/src/main/ets/features/reading/presentation/ReaderPageChromeModel.ts');
+const { ReaderReadingLayoutSnapshot } = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 function layout(width, height, widthClass = 'compact', safeRight = 0, safeBottom = 0, safeTop = 0) {
   return new ReaderReadingLayoutSnapshot(
     widthClass,
@@ -82,22 +82,22 @@ const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const windowMetrics = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const readingGeometry = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const windowMetrics = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const readingGeometry = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const {
   ReaderPageChromeMeasurements,
   READER_PAGE_CHROME_BOOKMARK_SIZE,
   resolveReaderPageChromeLayout,
-} = await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+} = await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
 const {
   ReaderPageOrdinal,
   formatReaderPageOrdinal,
   formatReaderPageProgress,
-} = await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
-const { ReaderReadingLayoutSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
-const chromeSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPageChrome.ets', import.meta.url), 'utf8');
-const experienceSource = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url), 'utf8');
+} = await import('../entry/src/main/ets/features/reading/presentation/ReaderPageChromeModel.ts');
+const { ReaderReadingLayoutSnapshot } = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
+const chromeSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderPageChrome.ets', import.meta.url), 'utf8');
+const experienceSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url), 'utf8');
 // Exercise the actual SDK-emitted Text position attributes, rather than only
 // the layout helper. The visible and hidden avoid-area samples retain the
 // same real status rectangle; neither cutout setting may introduce a new lane.
@@ -152,7 +152,7 @@ for (const [width, height] of [[390, 844], [844, 390], [760, 960], [960, 760]]) 
 }
 // The top information row owns the measured status-bar origin. A visible
 // SYSTEM inset must not become a second vertical offset for the row.
-const geometrySource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts', import.meta.url), 'utf8');
+const geometrySource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts', import.meta.url), 'utf8');
 const regressionMetrics = new windowMetrics.ReaderWindowMetricsSnapshot();
 Object.assign(regressionMetrics, { ready: true, revision: 999,
   statusBarHeight: 48, statusBarRect: new windowMetrics.ReaderRectVp(0, 3, 390, 48) });
@@ -184,24 +184,24 @@ const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const windowMetrics = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const readingGeometry = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const windowMetrics = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const readingGeometry = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const {
   ReaderPageChromeMeasurements,
   READER_PAGE_CHROME_BOOKMARK_SIZE,
   resolveReaderPageChromeLayout,
-} = await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+} = await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
 const {
   ReaderPageOrdinal,
   formatReaderPageOrdinal,
   formatReaderPageProgress,
-} = await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
-const { ReaderReadingLayoutSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
-const chromeSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderPageChrome.ets', import.meta.url), 'utf8');
-const experienceSource = readFileSync(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url), 'utf8');
+} = await import('../entry/src/main/ets/features/reading/presentation/ReaderPageChromeModel.ts');
+const { ReaderReadingLayoutSnapshot } = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
+const chromeSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderPageChrome.ets', import.meta.url), 'utf8');
+const experienceSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url), 'utf8');
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
-const ChromeMeasure=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderPageChrome.ets',import.meta.url),['textMeasure'],{measureReaderPageChromeText,readerPageChromeTopTextStyle});
+const ChromeMeasure=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderPageChrome.ets',import.meta.url),['textMeasure'],{measureReaderPageChromeText,readerPageChromeTopTextStyle});
 let measurements = 0;
 let density = 3;
 let fontScale = 1;
@@ -259,23 +259,23 @@ const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const windowMetrics = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const readingGeometry = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const windowMetrics = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const readingGeometry = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const {
   ReaderPageChromeMeasurements,
   READER_PAGE_CHROME_BOOKMARK_SIZE,
   resolveReaderPageChromeLayout,
-} = await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+} = await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
 const {
   ReaderPageOrdinal,
   formatReaderPageOrdinal,
   formatReaderPageProgress,
-} = await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
-const { ReaderReadingLayoutSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+} = await import('../entry/src/main/ets/features/reading/presentation/ReaderPageChromeModel.ts');
+const { ReaderReadingLayoutSnapshot } = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
 const ChromeOwner = productionMotionMethods(
-  new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['bookTurnTextureIdentity', 'admitPageChromeClock']);
 const clockOwner = Object.assign(new ChromeOwner(), {
   sourceId: 'local', bookId: 'test', appearanceSnapshot: { activeTheme: 'paper' },
@@ -307,20 +307,20 @@ const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const windowMetrics = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const readingGeometry = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const windowMetrics = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const readingGeometry = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const {
   ReaderPageChromeMeasurements,
   READER_PAGE_CHROME_BOOKMARK_SIZE,
   resolveReaderPageChromeLayout,
-} = await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+} = await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
 const {
   ReaderPageOrdinal,
   formatReaderPageOrdinal,
   formatReaderPageProgress,
-} = await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
-const { ReaderReadingLayoutSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+} = await import('../entry/src/main/ets/features/reading/presentation/ReaderPageChromeModel.ts');
+const { ReaderReadingLayoutSnapshot } = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 function layout(width, height, widthClass = 'compact', safeRight = 0, safeBottom = 0, safeTop = 0) {
   return new ReaderReadingLayoutSnapshot(
     widthClass,
@@ -342,7 +342,7 @@ function layout(width, height, widthClass = 'compact', safeRight = 0, safeBottom
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
 const style={fontFamily:'Test',fontWeight:400,fontSizeFp:12,lineHeightFp:14.4};
 const LayoutChrome = productionMotionMethods(
-  new URL('../entry/src/main/ets/features/reading/ReaderPageChrome.ets', import.meta.url), ['chromeLayout', 'topTextStyle'],
+  new URL('../entry/src/main/ets/features/reading/ui/ReaderPageChrome.ets', import.meta.url), ['chromeLayout', 'topTextStyle'],
   { TYPE_READER_IMMERSIVE_TIME: style, TYPE_READER_IMMERSIVE_PROGRESS: style,
     TYPE_READER_IMMERSIVE_PAGE_ORDINAL: style, ReaderPageChromeMeasurements, resolveReaderPageChromeLayout,
     READER_PAGE_CHROME_BOOKMARK_SIZE, readerPageChromeTopTextStyle });
@@ -369,23 +369,23 @@ const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const windowMetrics = await import('../entry/src/main/ets/features/common/ReaderWindowMetrics.ts');
-const readingGeometry = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+const windowMetrics = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const readingGeometry = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const {
   ReaderPageChromeMeasurements,
   READER_PAGE_CHROME_BOOKMARK_SIZE,
   resolveReaderPageChromeLayout,
-} = await import('../entry/src/main/ets/features/reading/ReaderPageChromeLayout.ts');
+} = await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const { measureReaderPageChromeText, readerPageChromeTextMeasurements, readerPageChromeTopTextStyle } = await import('./lib/reader-page-chrome-measurement-probe.mjs');
 const {
   ReaderPageOrdinal,
   formatReaderPageOrdinal,
   formatReaderPageProgress,
-} = await import('../entry/src/main/ets/features/reading/ReaderPageChromeModel.ts');
-const { ReaderReadingLayoutSnapshot } = await import('../entry/src/main/ets/features/reading/ReaderLayoutGeometry.ts');
+} = await import('../entry/src/main/ets/features/reading/presentation/ReaderPageChromeModel.ts');
+const { ReaderReadingLayoutSnapshot } = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
 const CaptureOwner = productionMotionMethods(
-  new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets', import.meta.url),
+  new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['sessionLaunchRenderWorkBlocked', 'performBookTurnTextureRefresh', 'onBookTurnArkUIFramePresented'],
   { BOOK_TURN_TEXTURE_CURRENT: 1, BOOK_TURN_TEXTURE_PREVIOUS: 0, BOOK_TURN_TEXTURE_NEXT: 2 });
 const snapshots = [], captures = Object.assign(new CaptureOwner(), {

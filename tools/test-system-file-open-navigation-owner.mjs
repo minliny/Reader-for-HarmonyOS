@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
-import { ReaderSystemFileOpenQueue } from '../entry/src/main/ets/app/ReaderSystemFileOpenQueue.ts';
+import { ReaderSystemFileOpenQueue } from '../entry/src/main/ets/app/composition/system-open/ReaderSystemFileOpenQueue.ts';
 
-const source = readFileSync(new URL('../entry/src/main/ets/app/ReaderSystemFileOpenNavigationHost.ts', import.meta.url), 'utf8');
+const source = readFileSync(new URL('../entry/src/main/ets/app/navigation/ReaderSystemFileOpenNavigationHost.ts', import.meta.url), 'utf8');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
 const book = { sourceId: 'local', bookId: 'local:fixture', title: '本地书', currentChapterIndex: 4,
@@ -20,7 +20,7 @@ function fixture(text = source) {
   const adapter = { isCurrent: () => true, view: () => view,
     resolveReaderTransaction: async () => { events.push(['query']); },
     notice: message => { events.push(['notice', message]); },
-    open: value => { assert.deepEqual(value.readingPosition, book.readingPosition); events.push(['open', value.bookId]); } };
+    open: value => { assert.deepEqual(value.readingPosition, book.readingPosition); events.push(['open', value.bookId]); return true; } };
   const host = new Owner(owner, adapter);
   const enqueue = async (outcome, uri = 'file://provider/local.txt') => {
     if (outcome !== undefined) { queue.dispose(); queue = new ReaderSystemFileOpenQueue(async () => outcome); }
@@ -76,7 +76,10 @@ for (const cancel of [false, true]) {
 {
   const f = fixture(); f.view.switchBlocked = true; await f.enqueue(); f.host.mount(); f.host.consume();
   assert.deepEqual(f.events.map(e => e[0]), ['notice']); assert.ok(f.peek());
-  f.view.switchBlocked = false; f.host.consume(); assert.deepEqual(f.events.map(e => e[0]), ['notice', 'open', 'ack']); f.dispose();
+  f.view.switchBlocked = false; f.view.openBlocked = true; f.host.consume();
+  assert.deepEqual(f.events.map(e => e[0]), ['notice']); assert.ok(f.peek());
+  f.view.openBlocked = false; f.host.navigationSettled(); await tick();
+  assert.deepEqual(f.events.map(e => e[0]), ['notice', 'open', 'ack']); f.dispose();
 }
 // Query the existing journal before a cold remote reader can exit. A discovered
 // pending transaction defers the external navigation without dropping its book.
@@ -88,12 +91,13 @@ for (const cancel of [false, true]) {
   f.view.switchBlocked = false; f.view.requestExit = () => f.events.push(['exit']); f.host.consume();
   assert.equal(f.events.at(-1)[0], 'exit'); f.dispose();
 }
-for (const retirement of ['runtime', 'navigation', 'book', 'dispose', 'result']) {
+for (const retirement of ['runtime', 'navigation', 'reader', 'book', 'dispose', 'result']) {
   const f = fixture(), gate = deferred(); f.view.reading = true; f.view.book = { sourceId: 'remote', bookId: 'old' };
   f.adapter.resolveReaderTransaction = async () => { f.events.push(['query']); await gate.promise; };
   f.view.requestExit = () => f.events.push(['exit']); await f.enqueue(); f.host.mount(); await tick();
   if (retirement === 'runtime') f.runtime.current = {};
   if (retirement === 'navigation') f.view.navigationGeneration++;
+  if (retirement === 'reader') f.view.readerIdentity = 'replacement-reader';
   if (retirement === 'book') f.view.book = { sourceId: 'remote', bookId: 'new' };
   if (retirement === 'dispose') f.host.dispose();
   if (retirement === 'result') await f.enqueue({ book }, 'file://provider/new.txt');
@@ -101,8 +105,32 @@ for (const retirement of ['runtime', 'navigation', 'book', 'dispose', 'result'])
   assert.equal(f.events.length, before, retirement + ': old failure cannot notify/ack/open/exit in a successor');
   assert.ok(f.peek()); f.dispose();
 }
+{
+  const f = fixture(), journal = deferred();
+  f.view.reading = true; f.view.book = { sourceId: 'remote', bookId: 'old' };
+  f.adapter.resolveReaderTransaction = () => journal.promise;
+  await f.enqueue(); f.host.mount(); await tick();
+  f.view.reading = false;
+  f.host.navigationSettled(); await tick();
+  assert.deepEqual(f.events.map(e => e[0]), ['open', 'ack'], 'ordinary reader exit wakes a file while the old query is still pending');
+  journal.reject(new Error('late old reader query')); await tick();
+  assert.deepEqual(f.events.map(e => e[0]), ['open', 'ack']); f.dispose();
+}
 // Background transition cannot strand the same checking tuple. A successful
 // read may settle while hidden; actual exit waits for foreground publication.
+for (const blocker of ['switchBlocked', 'openBlocked']) {
+  const f = fixture(), gate = deferred();
+  f.view.reading = true; f.view.book = { sourceId: 'remote', bookId: 'same' };
+  let queries = 0;
+  f.adapter.resolveReaderTransaction = async () => { if (++queries === 1) await gate.promise; };
+  f.view.requestExit = () => f.events.push(['exit']);
+  await f.enqueue(); f.host.mount(); await tick();
+  f.view[blocker] = true;
+  gate.reject(new Error('journal read failed while blocked')); await tick();
+  assert.deepEqual(f.events, []); assert.ok(f.peek());
+  f.view[blocker] = false; f.host.navigationSettled(); await tick();
+  assert.deepEqual(f.events, [['exit']]); assert.equal(queries, 2); f.dispose();
+}
 for (const failed of [false, true]) {
   const f = fixture(), gate = deferred(); f.view.reading = true; f.view.book = { sourceId: 'remote', bookId: 'same' };
   let queries = 0; f.adapter.resolveReaderTransaction = async () => { queries++; if (queries === 1) await gate.promise; };
@@ -121,7 +149,9 @@ for (const failed of [false, true]) {
 {
   const f = fixture(); await f.enqueue(); f.adapter.open = () => { throw Error('route adapter unavailable'); }; f.host.mount();
   assert.deepEqual(f.events.map(e => e[0]), ['notice']); assert.ok(f.peek());
-  f.adapter.open = () => { f.events.push(['open']); f.host.consume(); }; f.host.consume();
+  f.adapter.open = () => false; f.host.consume();
+  assert.deepEqual(f.events.map(e => e[0]), ['notice']); assert.ok(f.peek(), 'refused admission retains the exact queue head');
+  f.adapter.open = () => { f.events.push(['open']); f.host.consume(); return true; }; f.host.consume();
   assert.deepEqual(f.events.map(e => e[0]), ['notice', 'open', 'ack']); f.dispose();
 }
 {

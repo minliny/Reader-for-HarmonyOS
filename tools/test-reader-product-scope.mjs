@@ -6,7 +6,7 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
-import * as metrics from '../entry/src/main/ets/features/common/ReaderWindowMetrics.ts';
+import * as metrics from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import { readerFloatingTabBottomInset } from './lib/reader-floating-bar-metrics-probe.mjs';
 
 import {
@@ -29,12 +29,13 @@ for (const surface of ['discover', 'rss', 'sync', 'unimplementedSettings']) {
 
 const root = new URL('../entry/src/main/ets/', import.meta.url);
 const mainTabs = await readFile(new URL('features/shell/MainTabBar.ets', root), 'utf8');
-const bookshelf = await readFile(new URL('features/bookshelf/BookshelfPage.ets', root), 'utf8');
-const bookshelfShell = await readFile(new URL('features/bookshelf/BookshelfShell.ets', root), 'utf8');
-const settings = await readFile(new URL('features/settings/SettingsPage.ets', root), 'utf8');
+const mainTabDefinitions = await readFile(new URL('app/navigation/ReaderMainTabs.ts', root), 'utf8');
+const bookshelf = await readFile(new URL('features/bookshelf/ui/BookshelfPage.ets', root), 'utf8');
+const bookshelfShell = await readFile(new URL('features/bookshelf/ui/BookshelfShell.ets', root), 'utf8');
+const settings = await readFile(new URL('features/settings/ui/SettingsPage.ets', root), 'utf8');
 const index = await readFile(new URL('pages/Index.ets', root), 'utf8');
 
-assert.match(mainTabs, /ALL_MAIN_TABS\.filter\([\s\S]*isReaderMainTabEnabled\(tab\.key\)/,
+assert.match(mainTabDefinitions, /ALL_MAIN_TABS\.filter\([\s\S]*isReaderMainTabEnabled\(tab\.key\)/,
   'shared Phone/Tablet navigation must derive from the admitted product scope');
 assert.doesNotMatch(bookshelf, /private tabletNavigation(?:Item)?\(/,
   'bookshelf content delegates navigation to the actual public owner');
@@ -43,7 +44,7 @@ assert.match(bookshelfShell, /MainTabShell\(\{[\s\S]*railVariant: 'bookshelf'/,
 const loader=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(loader+'/node_modules/typescript');
 const compilerOptions=require(loader+'/lib/ets_checker.js').compilerOptions;
-const tabAst=ts.createSourceFile('MainTabBar.ets',mainTabs,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,compilerOptions);
+const tabAst=ts.createSourceFile('ReaderMainTabs.ts',mainTabDefinitions,ts.ScriptTarget.Latest,true,ts.ScriptKind.TS,compilerOptions);
 assert.deepEqual(tabAst.parseDiagnostics,[]);
 const configuration=tabAst.statements.filter(statement=>ts.isVariableStatement(statement)&&
   statement.declarationList.declarations.some(node=>['ALL_MAIN_TABS','MAIN_TABS'].includes(node.name.getText(tabAst))));

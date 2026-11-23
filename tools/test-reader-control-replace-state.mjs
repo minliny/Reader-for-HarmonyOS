@@ -7,8 +7,8 @@ registerHooks({ resolve(specifier, context, nextResolve) {
     throw error;
   }
 } });
-const s = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
-const { createReaderReplaceQuickState } = await import('../entry/src/main/ets/features/reading/ReaderReplaceQuickState.ts');
+const s = await import('../entry/src/main/ets/features/reading/presentation/ReaderControlReplaceState.ts');
+const { orderedReaderControlReplaceRules } = await import('../entry/src/main/ets/features/reading/application/ReaderReplaceQuickState.ts');
 const rule = (id, order = id) => ({ id, order, name: `规则${id}`, pattern: 'old', replacement: 'new',
   group: 'g', scope: 'book', excludeScope: 'excluded', scopeTitle: true, scopeSource: true,
   scopeContent: true, isEnabled: true, isRegex: false, timeoutMillisecond: 9000 });
@@ -16,15 +16,13 @@ const source = Array.from({ length: 50 }, (_, i) => rule(50 - i));
 let state = s.beginReaderControlReplaceLoad(s.createReaderControlReplaceState('A:open1'));
 const oldRead = s.readerControlReplaceTicket(state);
 state = s.admitReaderControlReplaceLoad(state, oldRead, source);
-assert.equal(state.rules.length, 50, 'Full canonical state must never receive a three-row DTO');
+assert.equal(state.rules.length, 50, 'Quick and Full share the complete canonical state');
 assert.deepEqual(state.rules.map(r => r.id), Array.from({ length: 50 }, (_, i) => i + 1));
 assert.equal(source[0].id, 50);
 assert.notEqual(state.rules[0], source[49]);
 assert.equal(state.rules[0].scopeSource, true);
-assert.deepEqual(createReaderReplaceQuickState(state.rules).rules.map(r => r.id), [1, 2, 3]);
-assert.equal(state.rules.length, 50);
-assert.throws(() => s.orderedReaderControlReplaceRules([rule(1), rule(1)]), /duplicate/);
-assert.deepEqual(s.orderedReaderControlReplaceRules([rule(2, 0), rule(1, 0)]).map(r => r.id), [1, 2]);
+assert.throws(() => orderedReaderControlReplaceRules([rule(1), rule(1)]), /duplicate/);
+assert.deepEqual(orderedReaderControlReplaceRules([rule(2, 0), rule(1, 0)]).map(r => r.id), [1, 2]);
 
 const previous = state;
 state = s.beginReaderControlReplaceMutation(state);

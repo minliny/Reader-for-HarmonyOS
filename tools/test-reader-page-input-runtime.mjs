@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
-import * as gesture from '../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
-import { ReaderPageInputClock } from '../entry/src/main/ets/features/reading/ReaderPageInputClock.ts';
-import { createDefaultReaderSettingsSnapshot, setReaderPageTurnStyle } from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
+import * as gesture from '../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts';
+import { ReaderPageInputClock } from '../entry/src/main/ets/features/reading/ui/ReaderPageInputClock.ts';
+import { createDefaultReaderSettingsSnapshot, setReaderPageTurnStyle } from '../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts';
 
 // Execute production decisions; only ArkUI coordinates, timers and external
 // callbacks are supplied by this harness. No copied implementation assertions.
@@ -21,7 +21,7 @@ function production(file, names, bindings = {}) {
 let now = 1000;
 let timers = [];
 const Pointer = production('ReaderPageInteractionLayer.ets', [
-  'startRawPointer', 'updateRawPointer', 'finishRawPointer', 'updateVelocity', 'eventTimeMs',
+  'acceptCurrentInput', 'startRawPointer', 'updateRawPointer', 'finishRawPointer', 'updateVelocity', 'eventTimeMs',
   'resetRawPointer', 'reportManualInteraction', 'isPageOwner', 'resolveDeferredSegment',
   'onReadinessChanged', 'armPointerWatchdog', 'schedulePointerWatchdog', 'clearPointerWatchdog', 'cancelPan', 'handleRawTap',
   'onInteractionModeChanged', 'tapOnlyNow',

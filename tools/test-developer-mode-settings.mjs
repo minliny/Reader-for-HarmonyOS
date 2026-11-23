@@ -21,8 +21,9 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const clearedTimers = [];
 let timerCount = 0;
 const Owner = selectedProductionMethods(path.join(root,
-  'entry/src/main/ets/features/common/ReaderLayoutDebugOverlay.ets'), 'ReaderLayoutDebugOverlay',
-['scanFrameTree', 'collectFrameBounds', 'paintFrameBounds', 'onDeveloperModeChanged', 'aboutToDisappear'], {
+  'entry/src/main/ets/app/composition/ReaderLayoutDebugOverlay.ets'), 'ReaderLayoutDebugOverlay',
+['scanFrameTree', 'collectFrameBounds', 'intersectBounds', 'paintOutline', 'paintFrameBounds',
+  'onDeveloperModeChanged', 'aboutToDisappear'], {
   FRAME_NODE_SCAN_LIMIT: 10000,
   ExpandMode: { NOT_EXPAND: 0 },
   setInterval: () => ++timerCount,
@@ -30,16 +31,24 @@ const Owner = selectedProductionMethods(path.join(root,
 });
 const owner = new Owner();
 const rectangles = [];
+const opacities = [];
 const labels = [];
+const strokeClips = [];
+const savedClips = [];
+let activeClips = [];
+let currentPath = [];
 let childQueries = 0;
 function node(id, type, x, y, width, height, children = [], geometryMissing = false) {
   return {
-    parent: null, id, x, y, children, visible: true,
+    parent: null, id, x, y, children, visible: true, opacity: 1, clipped: false, properties: {},
     getId: () => id,
     getNodeType: () => type,
     getUniqueId: () => id.length,
     getParent() { return this.parent; },
     isVisible() { return this.visible; },
+    getOpacity() { return this.opacity; },
+    getCustomProperty(key) { return this.properties[key]; },
+    isClipToFrame() { return this.clipped; },
     getPositionToWindow() { return { x: this.x, y: this.y }; },
     getMeasuredSize() {
       if (geometryMissing) throw new Error('virtual node has no rectangle');
@@ -60,9 +69,12 @@ const virtual = node('', '__Common__', 0, 0, 0, 0, [textNode, divider], true);
 const hidden = node('hidden', 'Column', 0, 0, 100, 100,
   [node('hidden-title', 'Text', 0, 0, 10, 10)]);
 hidden.visible = false;
+const transparent = node('retained-navigation', 'Stack', 45, 480, 88, 96,
+  [node('retained-button', 'Button', 45, 490, 45, 44)]);
+transparent.opacity = 0;
 const overlayNode = node('reader-layout-debug-overlay', 'Stack', 5, 40, 390, 700,
   [node('overlay-canvas', 'Canvas', 0, 0, 390, 700)]);
-const rootNode = node('root', 'Stack', 0, 0, 390, 844, [virtual, hidden, overlayNode]);
+const rootNode = node('root', 'Stack', 0, 0, 390, 844, [virtual, hidden, transparent, overlayNode]);
 overlayNode.parent = rootNode;
 const context = {
   getAttachedFrameNodeById: id => {
@@ -74,11 +86,23 @@ const context = {
 };
 Object.assign(owner, {
   developerModeEnabled: true, canvasReady: true, frameScanHandle: -1,
+  appForeground: true,
+  opaqueHeaders: new Map(),
   getUIContext: () => context,
+  reportWindowSample() {},
   drawingContext: {
     width: 390, height: 700,
-    clearRect: () => { rectangles.length = 0; labels.length = 0; },
-    strokeRect: (...values) => rectangles.push(values),
+    clearRect: () => {
+      rectangles.length = 0; opacities.length = 0; labels.length = 0; strokeClips.length = 0;
+    },
+    save() { savedClips.push(activeClips); activeClips = [...activeClips]; },
+    restore() { activeClips = savedClips.pop(); },
+    beginPath() { currentPath = []; },
+    rect(...bounds) { currentPath.push(bounds); },
+    clip(rule) { activeClips.push({ rule, path: currentPath }); },
+    strokeRect(...values) {
+      rectangles.push(values); opacities.push(this.globalAlpha); strokeClips.push(activeClips);
+    },
     fillText: (...values) => labels.push(values),
   },
 });
@@ -89,7 +113,26 @@ assert.deepEqual(rectangles.find(rect => rect[2] === 30), [18, 40, 30, 15],
 assert.ok(rectangles.some(rect => rect[3] === 1), 'one-vp Divider gets a complete boundary');
 assert.equal(labels.some(label => /overlay|hidden/.test(label[0])), false,
   'hidden children and the diagnostic subtree never enter the border set');
-assert.equal(childQueries, 5, 'hidden and diagnostic children are not traversed');
+assert.equal(childQueries, 6, 'hidden, transparent and diagnostic children are not traversed');
+assert.equal(owner.excludedTransparentBranches, 1);
+assert.equal(owner.frameScanTruncated, false);
+assert.ok(!rectangles.some(rect => rect[2] === 88 || rect[2] === 45), 'a mounted transparent branch contributes no pixels');
+transparent.opacity = 0.2;
+transparent.children[0].opacity = 0.5;
+owner.scanFrameTree();
+assert.ok(rectangles.some(rect => rect[2] === 88) && rectangles.some(rect => rect[2] === 45),
+  'a visible actor and its descendants return as it fades in');
+assert.equal(opacities[rectangles.findIndex(rect => rect[2] === 88)], 0.32 * 0.2);
+assert.equal(opacities[rectangles.findIndex(rect => rect[2] === 45)], 0.32 * 0.2 * 0.5,
+  'a retained child inherits both parent and own opacity');
+transparent.opacity = 0.000011;
+owner.scanFrameTree();
+assert.ok(opacities[rectangles.findIndex(rect => rect[2] === 45)] < 0.00001,
+  'a nearly transparent retained branch cannot draw a full-strength border');
+transparent.opacity = NaN;
+owner.scanFrameTree();
+assert.equal(owner.frameScanTruncated, true, 'unreadable native visibility marks the sample incomplete');
+transparent.opacity = 0;
 textNode.x = 33;
 owner.scanFrameTree();
 assert.deepEqual(rectangles.find(rect => rect[2] === 30), [28, 40, 30, 15],
@@ -100,6 +143,48 @@ virtual.children.splice(0, virtual.children.length,
 owner.scanFrameTree();
 assert.equal(owner.frameCount, 1602, 'ordinary pages are not silently limited to the old 1500 drawn nodes');
 assert.equal(owner.frameScanTruncated, false);
+
+const fullyCovered = node('covered-row', 'Text', 24, 59, 24, 10);
+const partlyCovered = node('crossing-row', 'Text', 17, 60, 33, 32);
+const belowHeader = node('other-row', 'Text', 17, 110, 35, 20);
+const outsideList = node('off-list', 'Text', 17, 160, 36, 20);
+const clipAtListEnd = node('last-row', 'Text', 17, 131, 34, 20);
+const list = node('list', 'List', 14, 42, 95, 100,
+  [fullyCovered, partlyCovered, belowHeader, outsideList, clipAtListEnd]);
+list.clipped = true;
+const body = node('body', 'Stack', 5, 40, 390, 700, [list]);
+body.properties.readerLayoutDebugContentUnderHeader = 'one-scaffold';
+const headerLabel = node('foreground-title', 'Text', 30, 58, 31, 12);
+const header = node('solid-header', 'Column', 20, 45, 88, 35, [headerLabel]);
+header.properties.readerLayoutDebugOpaqueHeader = 'one-scaffold';
+const otherPage = node('independent-dialog', 'Text', 24, 59, 38, 10);
+rootNode.children.splice(0, rootNode.children.length, body, header, otherPage, overlayNode);
+owner.scanFrameTree();
+assert.equal(owner.opaqueHeaders.size, 1);
+assert.ok(!rectangles.some(rect => rect[2] === 24 || rect[2] === 36),
+  'fully occluded and clipped rows do not draw');
+assert.deepEqual(rectangles.find(rect => rect[2] === 33), [12, 20, 33, 32],
+  'a partially covered row keeps its measured rectangle');
+assert.deepEqual(strokeClips[rectangles.findIndex(rect => rect[2] === 33)], [
+  { rule: 'evenodd', path: [[0, 0, 390, 700], [15, 5, 88, 35]] },
+], 'the foreground header masks only its actual measured pixels');
+assert.deepEqual(strokeClips[rectangles.findIndex(rect => rect[2] === 34)], [
+  { rule: undefined, path: [[9, 2, 95, 100]] },
+], 'the row at the end inherits the actual native clip');
+for (const width of [31, 35, 38]) {
+  const index = rectangles.findIndex(rect => rect[2] === width);
+  assert.ok(index >= 0);
+  assert.equal(strokeClips[index].length, 0, 'foreground labels, visible rows and another layer stay intact');
+}
+header.y = 85;
+owner.scanFrameTree();
+assert.ok(rectangles.some(rect => rect[2] === 24), 'the next scan uses the moved header geometry');
+header.y = 45;
+header.opacity = 0.8;
+owner.scanFrameTree();
+assert.ok(rectangles.some(rect => rect[2] === 24), 'a faded header cannot mask the still-visible content');
+assert.equal(owner.opaqueHeaders.size, 0);
+assert.equal(savedClips.length, 0, 'scoped canvas changes cannot leak into later outlines');
 owner.onDeveloperModeChanged();
 assert.equal(timerCount, 1);
 owner.developerModeEnabled = false;

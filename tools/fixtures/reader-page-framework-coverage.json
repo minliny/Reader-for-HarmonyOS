@@ -71,11 +71,11 @@
           "entryPath": [
             {
               "from": "pages/Index.ets#Index#build",
-              "condition": "this.readingSessionActive && this.detailBook !== undefined",
+              "condition": "this.readingEntry.sessionActive && this.readingEntry.book !== undefined",
               "branch": "then",
               "component": "ReaderShell",
               "inputFacts": {
-                "contentKind": "this.readingContentKind"
+                "contentKind": "this.readingEntry.contentKind"
               }
             }
           ]
@@ -97,12 +97,26 @@
             },
             {
               "from": "pages/Index.ets#Index#externalDirectory",
-              "condition": "this.detailBook.contentKind === 'manga'",
+              "condition": "this.readingEntry.book !== undefined",
+              "branch": "then",
+              "component": "ReaderDirectoryDestination",
+              "inputFacts": {
+                "catalogContext": "'detail'"
+              }
+            },
+            {
+              "from": "features/reading/ui/ReaderDirectoryDestination.ets#ReaderDirectoryDestination#build",
+              "guards": [],
+              "method": "catalog"
+            },
+            {
+              "from": "features/reading/ui/ReaderDirectoryDestination.ets#ReaderDirectoryDestination#catalog",
+              "condition": "this.contentKind === 'manga'",
               "branch": "else",
               "component": "ReaderFullDirectory",
               "inputFacts": {
-                "catalogContext": "'detail'",
-                "currentChapterIndex": "this.directoryCurrentChapterIndex"
+                "catalogContext": "this.catalogContext",
+                "currentChapterIndex": "this.currentChapterIndex"
               }
             }
           ],
@@ -124,11 +138,25 @@
             },
             {
               "from": "pages/Index.ets#Index#externalDirectory",
-              "condition": "this.detailBook.contentKind === 'manga'",
+              "condition": "this.readingEntry.book !== undefined",
+              "branch": "then",
+              "component": "ReaderDirectoryDestination",
+              "inputFacts": {
+                "catalogContext": "'detail'"
+              }
+            },
+            {
+              "from": "features/reading/ui/ReaderDirectoryDestination.ets#ReaderDirectoryDestination#build",
+              "guards": [],
+              "method": "catalog"
+            },
+            {
+              "from": "features/reading/ui/ReaderDirectoryDestination.ets#ReaderDirectoryDestination#catalog",
+              "condition": "this.contentKind === 'manga'",
               "branch": "then",
               "component": "BookDirectoryPage",
               "inputFacts": {
-                "contentKind": "this.detailBook.contentKind === 'manga' ? 'manga' : 'text'"
+                "contentKind": "'manga'"
               }
             }
           ],
@@ -374,14 +402,14 @@
   ],
   "sideSurfaces": [
     {
-      "condition": "this.readingSessionActive && this.detailBook !== undefined",
+      "condition": "this.readingEntry.sessionActive && this.readingEntry.book !== undefined",
       "kind": "page",
       "actor": {
         "component": "ReaderShell"
       }
     },
     {
-      "condition": "(this.route === 'detail' || this.route === 'bookshelf') && !this.readingSessionActive && this.sourceSwitchVisible && !this.mangaSourceSwitchSelectionVisible && this.detailBook !== undefined",
+      "condition": "(this.route === 'detail' || this.route === 'bookshelf') && !this.readingEntry.sessionActive && this.sourceSwitchPresentation.visible && !this.mangaSourceSwitch.selectionVisible && this.readingEntry.book !== undefined",
       "kind": "businessWindow",
       "actor": {
         "method": "sourceSwitchOverlayContent"
@@ -412,7 +440,7 @@
       "contract": "tools/test-bounded-local-import-composition.mjs"
     },
     {
-      "condition": "this.jsonImportVisible",
+      "condition": "this.jsonImportPresentation.opening !== undefined",
       "kind": "businessWindow",
       "actor": {
         "method": "jsonImportContent"
@@ -422,8 +450,7 @@
   ],
   "nonPageActors": [
     {
-      "method": "indexRecoveryNoticeContent",
-      "component": "ReaderRecoveryNotice",
+      "component": "ReaderJourneyRecoveryNotices",
       "kind": "nonmodalFeedback",
       "contract": "tools/test-index-native-alert-consumers.mjs",
       "boundary": "One intrinsic-height shared recovery notice, guarded by current route/runtime and visible state; generation-keyed actions preserve source/session identity. No full-screen native page, modal, scrim, or pointer mask."

@@ -1,5 +1,5 @@
-import { cancelReaderRapidPageTurn, createReaderRapidPageTurnState } from '../../entry/src/main/ets/features/reading/ReaderRapidPageTurnState.ts';
-import { createReaderPageGestureState } from '../../entry/src/main/ets/features/reading/ReaderPageGestureState.ts';
+import { cancelReaderRapidPageTurn, createReaderRapidPageTurnState } from '../../entry/src/main/ets/features/reading/ui/ReaderRapidPageTurnState.ts';
+import { createReaderPageGestureState } from '../../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts';
 
 export const readerPageRecoveryDependencies = { cancelReaderRapidPageTurn, createReaderPageGestureState };
 

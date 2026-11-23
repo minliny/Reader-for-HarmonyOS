@@ -18,6 +18,7 @@ const definitions = {
   java: { env: ['JAVA'], commands: ['java'], studio: ['jbr/Contents/Home/bin/java', 'jbr/bin/java'] },
   openssl: { env: ['OPENSSL'], commands: ['openssl'] },
   unzip: { env: ['UNZIP'], commands: ['unzip'] },
+  python: { env: ['READER_PYTHON', 'PYTHON'], commands: ['python3', 'python'] },
 };
 
 function present(path, directory = false) {

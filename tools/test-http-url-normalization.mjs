@@ -21,9 +21,9 @@ const cookieStore={instance:{sessionGeneration:()=>1,
  async storeResponseCookies(_session,value){cookieWrites.push(value);return [];}}};
 const nativeUtil={TextDecoder:{create:(charset,options)=>({decodeToString:bytes=>new TextDecoder(charset,options).decode(bytes)})}};
 const connection={async addCustomDnsRule(host,addresses){pins.push({host,addresses});},async removeCustomDnsRule(){}};
-const policy=source('HttpTransportPolicy.ts');
+const policy=source('../platform/network/HttpTransportPolicy.ts');
 const Host=new Function('http','url','util','connection','prepareNetworkTarget','NetworkEnvironmentError','CookieSessionStore','errorMessageOf','hilog','encodeSharedText',
- policy+source('HttpExecuteHost.ts')+';return HttpExecuteHost;')(
+ policy+source('../platform/network/HttpExecuteHost.ts')+';return HttpExecuteHost;')(
  http,{URL:{parseURL:(value,base)=>new URL(value,base)}},nativeUtil,connection,
  async value=>{admitted.push(value);return{host:new URL(value).hostname,route:'direct',addresses:['93.184.216.34']};},
  class extends Error{},cookieStore,error=>error instanceof Error?error.message:String(error),{error(){},warn(){}},

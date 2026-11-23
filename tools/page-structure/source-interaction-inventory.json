@@ -1,0 +1,709 @@
+{
+  "schemaVersion": "1.0",
+  "pageId": "source-management",
+  "status": "CODE_INVENTORY_COMPLETE_NATIVE_OPEN",
+  "scope": "Current SourceManagementPage reachable page/overlay condition states; template coverage is not device coverage.",
+  "frameworkBindings": "Not a replacement for control-register; current page E2 remains FAIL.",
+  "targets": [
+    {
+      "id": "header-back",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "backBar",
+        "component": "PageBackBar"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/chrome/PageBackBar.ets",
+        "symbol": "panel"
+      },
+      "eventOwner": "SourceJourneySurface.managementPage → ReaderNavigation.closeSourceManagement",
+      "condition": "always",
+      "admission": "PageBackBar direct onBack; overlay-first is parent temporary-back policy",
+      "sdkGroup": "header-back",
+      "nativeEvidence": "OPEN",
+      "controlRef": "page-back"
+    },
+    {
+      "id": "header-tools",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "backBar",
+        "component": "ReaderIconButton"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderIconButton.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceJourneySurface.managementPage → SourceJourneyPresentation.retainManagementViewForTools → ReaderNavigation.openSourceTools",
+      "condition": "always",
+      "admission": "mounted + actionEnabled + readable label",
+      "sdkGroup": "header-tools",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-tools"
+    },
+    {
+      "id": "query-input",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "searchField",
+        "component": "ReaderSearchField"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+        "symbol": "autoLineHeightField"
+      },
+      "eventOwner": "SourceManagementPage.searchQuery",
+      "condition": "always",
+      "admission": "mounted + mode live",
+      "sdkGroup": "query-input",
+      "nativeEvidence": "OPEN",
+      "inputKind": "native TextInput; IME submit shares input target, not a separate touch button",
+      "controlRef": "source-search"
+    },
+    {
+      "id": "search-import",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "importAction",
+        "component": "ReaderIconButton"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderIconButton.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceJourneySurface.managementPage → SourceJourneySurface.onImport",
+      "condition": "always",
+      "admission": "page callback; D1 retains duplicate entry",
+      "sdkGroup": "search-import",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-add-inline"
+    },
+    {
+      "id": "status-all",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "chip",
+        "component": "ReaderButton"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceManagementPage.statusValue",
+      "condition": "全部",
+      "admission": "ReaderButton mounted + actionEnabled + not busy",
+      "sdkGroup": "status-chip",
+      "nativeEvidence": "OPEN",
+      "label": "全部",
+      "controlRef": "source-filter-chip"
+    },
+    {
+      "id": "status-enabled",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "chip",
+        "component": "ReaderButton"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceManagementPage.statusValue",
+      "condition": "启用",
+      "admission": "ReaderButton mounted + actionEnabled + not busy",
+      "sdkGroup": "status-chip",
+      "nativeEvidence": "OPEN",
+      "label": "启用",
+      "controlRef": "source-filter-chip"
+    },
+    {
+      "id": "status-error",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "chip",
+        "component": "ReaderButton"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceManagementPage.statusValue",
+      "condition": "异常",
+      "admission": "ReaderButton mounted + actionEnabled + not busy",
+      "sdkGroup": "status-chip",
+      "nativeEvidence": "OPEN",
+      "label": "异常",
+      "controlRef": "source-filter-chip"
+    },
+    {
+      "id": "status-unchecked",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "chip",
+        "component": "ReaderButton"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceManagementPage.statusValue",
+      "condition": "未检测",
+      "admission": "ReaderButton mounted + actionEnabled + not busy",
+      "sdkGroup": "status-chip",
+      "nativeEvidence": "OPEN",
+      "label": "未检测",
+      "controlRef": "source-filter-chip"
+    },
+    {
+      "id": "status-custom",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "chip",
+        "component": "ReaderButton"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceManagementPage.statusValue",
+      "condition": "自定义",
+      "admission": "actionEnabled false; retained visual placeholder",
+      "sdkGroup": "status-chip",
+      "nativeEvidence": "OPEN",
+      "label": "自定义",
+      "controlRef": "source-filter-chip"
+    },
+    {
+      "id": "category-all",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "categoryFilter",
+        "component": "ReaderButton"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceManagementPage.categoryValue",
+      "condition": "all",
+      "admission": "ReaderButton mounted + actionEnabled + not busy",
+      "sdkGroup": "category-chip",
+      "nativeEvidence": "OPEN",
+      "category": "all",
+      "label": "全部类型",
+      "controlRef": "source-category-chip"
+    },
+    {
+      "id": "category-novel",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "categoryFilter",
+        "component": "ReaderButton"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceManagementPage.categoryValue",
+      "condition": "novel",
+      "admission": "ReaderButton mounted + actionEnabled + not busy",
+      "sdkGroup": "category-chip",
+      "nativeEvidence": "OPEN",
+      "category": "novel",
+      "label": "小说",
+      "controlRef": "source-category-chip"
+    },
+    {
+      "id": "category-comic",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "categoryFilter",
+        "component": "ReaderButton"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceManagementPage.categoryValue",
+      "condition": "comic",
+      "admission": "ReaderButton mounted + actionEnabled + not busy",
+      "sdkGroup": "category-chip",
+      "nativeEvidence": "OPEN",
+      "category": "comic",
+      "label": "漫画",
+      "controlRef": "source-category-chip"
+    },
+    {
+      "id": "category-music",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "categoryFilter",
+        "component": "ReaderButton"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceManagementPage.categoryValue",
+      "condition": "music",
+      "admission": "ReaderButton mounted + actionEnabled + not busy",
+      "sdkGroup": "category-chip",
+      "nativeEvidence": "OPEN",
+      "category": "music",
+      "label": "音乐/有声",
+      "controlRef": "source-category-chip"
+    },
+    {
+      "id": "category-download",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "categoryFilter",
+        "component": "ReaderButton"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceManagementPage.categoryValue",
+      "condition": "download",
+      "admission": "ReaderButton mounted + actionEnabled + not busy",
+      "sdkGroup": "category-chip",
+      "nativeEvidence": "OPEN",
+      "category": "download",
+      "label": "下载/文件",
+      "controlRef": "source-category-chip"
+    },
+    {
+      "id": "category-external",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "categoryFilter",
+        "component": "ReaderButton"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceManagementPage.categoryValue",
+      "condition": "external",
+      "admission": "ReaderButton mounted + actionEnabled + not busy",
+      "sdkGroup": "category-chip",
+      "nativeEvidence": "OPEN",
+      "category": "external",
+      "label": "视频/外部媒体",
+      "controlRef": "source-category-chip"
+    },
+    {
+      "id": "category-other",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "categoryFilter",
+        "component": "ReaderButton"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceManagementPage.categoryValue",
+      "condition": "other",
+      "admission": "ReaderButton mounted + actionEnabled + not busy",
+      "sdkGroup": "category-chip",
+      "nativeEvidence": "OPEN",
+      "category": "other",
+      "label": "其他/混合",
+      "controlRef": "source-category-chip"
+    },
+    {
+      "id": "group-trigger",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "groupFilter",
+        "component": "ReaderSelect"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
+        "symbol": "sourceGroupTrigger"
+      },
+      "eventOwner": "SourceManagementPage.group selection",
+      "condition": "always",
+      "admission": "toggle ignores unmounted / options <=1; closes existing opening",
+      "sdkGroup": "group-trigger",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-group-select"
+    },
+    {
+      "id": "group-selected-option",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "groupOverlay",
+        "component": "ReaderSelectPanel"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderChoiceRow.ets",
+        "symbol": "flowRow"
+      },
+      "eventOwner": "SourceManagementPage.group selection",
+      "condition": "groupOpen; selected/current or each other option",
+      "admission": "ReaderSelectPanel closeInFlight + selectionId/generation and parent ownsGroupSelection",
+      "sdkGroup": "group-option",
+      "nativeEvidence": "OPEN",
+      "panelBinding": {
+        "path": "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
+        "symbol": "selectedRow"
+      },
+      "cardinality": "dynamic group options; each option uses this template",
+      "controlRef": "source-group-option"
+    },
+    {
+      "id": "group-other-option",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "groupOverlay",
+        "component": "ReaderSelectPanel"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderChoiceRow.ets",
+        "symbol": "flowRow"
+      },
+      "eventOwner": "SourceManagementPage.group selection",
+      "condition": "groupOpen; selected/current or each other option",
+      "admission": "ReaderSelectPanel closeInFlight + selectionId/generation and parent ownsGroupSelection",
+      "sdkGroup": "group-option",
+      "nativeEvidence": "OPEN",
+      "panelBinding": {
+        "path": "entry/src/main/ets/ui/controls/ReaderSelectPanel.ets",
+        "symbol": "optionRow"
+      },
+      "cardinality": "dynamic group options; each option uses this template",
+      "controlRef": "source-group-option"
+    },
+    {
+      "id": "group-outside-dismiss",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "groupOverlay",
+        "component": "native:onClick"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "groupOverlay"
+      },
+      "eventOwner": "SourceManagementPage.group selection",
+      "condition": "groupOpen",
+      "admission": "captured selection identity; closes existing opening",
+      "sdkGroup": "outside-dismiss",
+      "nativeEvidence": "OPEN",
+      "geometryKind": "viewport outside-dismiss region; 44 minimum does not apply as a separate small button",
+      "controlRef": "source-group-dismiss"
+    },
+    {
+      "id": "row-login",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "loginButton",
+        "component": "ReaderButton"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceHost.loginSource",
+      "condition": "nonempty trimmed loginUrl",
+      "admission": "sourceActionEnabled and not checkState checking",
+      "sdkGroup": "row-login",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-login"
+    },
+    {
+      "id": "row-detect",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "detectButton",
+        "component": "ReaderButton"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceHost.checkSource",
+      "condition": "each source",
+      "admission": "sourceDetectEnabled: mounted + current sourceId exists + not checking; captured presentation must match. Original source-write blocked/unknown allowed by independent diagnostic policy; Core transaction/cache persistence gates remain authoritative.",
+      "sdkGroup": "row-detect",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-detect"
+    },
+    {
+      "id": "row-toggle",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "sourceSwitch",
+        "component": "ReaderToggle"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderToggle.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceHost.toggleSource",
+      "condition": "each source",
+      "admission": "current source/opening identity + sourceActionEnabled + not busy",
+      "sdkGroup": "row-toggle",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-toggle"
+    },
+    {
+      "id": "footer-manage",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "bottomActionBar",
+        "component": "ReaderButton"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceJourneySurface.managementPage → SourceJourneyPresentation.retainManagementViewForTools → ReaderNavigation.openSourceTools",
+      "condition": "always",
+      "admission": "ReaderButton mounted + actionEnabled; D1 retains duplicate entry",
+      "sdkGroup": "footer-manage",
+      "nativeEvidence": "OPEN",
+      "controlRef": "footer-batch"
+    },
+    {
+      "id": "footer-add",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "bottomActionBar",
+        "component": "ReaderLabeledIconAction"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderLabeledIconAction.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceJourneySurface.managementPage → SourceJourneySurface.onImport",
+      "condition": "always",
+      "admission": "mounted action; D1 retains duplicate entry",
+      "sdkGroup": "footer-add",
+      "nativeEvidence": "OPEN",
+      "controlRef": "footer-add"
+    },
+    {
+      "id": "status-action",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "statusAction",
+        "component": "ReaderRecoveryAction"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceJourneySurface.managementPage → SourceJourneyPresentation.runSearchAction",
+      "condition": "statusActionLabel nonempty and original not blocked",
+      "admission": "captured statusActionGeneration",
+      "sdkGroup": "recovery-compact",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-status-action"
+    },
+    {
+      "id": "read-refresh",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "sourceList",
+        "component": "ReaderRecoveryAction"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceHost.reconcile",
+      "condition": "sources nonempty; recovery canRetry; not original blocked/unknown",
+      "admission": "captured recovery generation",
+      "sdkGroup": "recovery-compact",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-read-refresh"
+    },
+    {
+      "id": "empty-read-retry",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "sourceList",
+        "component": "ReaderPageState"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceHost.reconcile or retryLoad",
+      "condition": "sources empty + readFacts failed + not original blocked",
+      "admission": "ReaderPageState not loading and actionLabel nonempty",
+      "sdkGroup": "page-state",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-read-retry"
+    },
+    {
+      "id": "filter-empty-clear",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "sourceList",
+        "component": "ReaderPageState"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceManagementPage.clearFilters",
+      "condition": "sources exist; projected empty; not loading/blocked/unknown",
+      "admission": "ReaderPageState not loading and actionLabel nonempty",
+      "sdkGroup": "page-state",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-filter-clear"
+    },
+    {
+      "id": "original-reconcile",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "originalRecovery",
+        "component": "ReaderRecoveryNotice"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceHost.reconcile",
+      "condition": "operation.original.blocked; view.canRetry or busy",
+      "admission": "captured generation; original additionally captured opening/operation/writeStage; busy blocks",
+      "sdkGroup": "recovery-notice",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-original-reconcile"
+    },
+    {
+      "id": "original-continue",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "originalRecovery",
+        "component": "ReaderRecoveryNotice"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceHost.continueOriginal",
+      "condition": "operation.original.blocked; canRetryOriginal",
+      "admission": "same original identity and !original.busy; notice busy blocks",
+      "sdkGroup": "recovery-notice",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-original-continue"
+    },
+    {
+      "id": "original-expand-collapse",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "originalRecovery",
+        "component": "ReaderRecoveryNotice"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "ReaderRecoveryNotice.expanded",
+      "condition": "operation.original.blocked; clipped",
+      "admission": "local presentation toggle; does not cancel/replay original",
+      "sdkGroup": "recovery-notice",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-original-expand"
+    },
+    {
+      "id": "unknown-reconcile",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "pendingRecovery",
+        "component": "ReaderRecoveryNotice"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "SourceHost.reconcile",
+      "condition": "not original blocked and receipt.confirmation unknown; view.canRetry or busy",
+      "admission": "captured generation; original additionally captured opening/operation/writeStage; busy blocks",
+      "sdkGroup": "recovery-notice",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-unknown-reconcile"
+    },
+    {
+      "id": "unknown-expand-collapse",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "pendingRecovery",
+        "component": "ReaderRecoveryNotice"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
+        "symbol": "build"
+      },
+      "eventOwner": "ReaderRecoveryNotice.expanded",
+      "condition": "not original blocked and receipt.confirmation unknown; clipped",
+      "admission": "local presentation toggle; does not cancel/replay original",
+      "sdkGroup": "recovery-notice",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-unknown-expand"
+    }
+  ],
+  "excluded": [
+    {
+      "id": "statusBanner",
+      "reason": "retained unmounted builder; no reachable call from build; retry/statusAction inside it are not current UI"
+    },
+    {
+      "id": "statusBadge",
+      "reason": "readable noninteractive status; no onClick/gesture"
+    },
+    {
+      "id": "sourceRow",
+      "reason": "row/info/icon have no row click; only child actions are targets"
+    },
+    {
+      "id": "query-clear",
+      "reason": "ReaderSearchField sourceManagement uses autoLineHeightField; current branch has no clear button (clearable default false), query can be erased via native TextInput"
+    },
+    {
+      "id": "system-ime",
+      "reason": "platform keyboard submit belongs native input; keyboard keys are outside application 44vp target audit"
+    }
+  ],
+  "gestures": [
+    {
+      "id": "main-list",
+      "owner": "SourceManagementPage.sourceList",
+      "kind": "vertical Scroll/List",
+      "nativeEvidence": "OPEN"
+    },
+    {
+      "id": "status-scroll",
+      "owner": "SourceManagementPage.statusFilter",
+      "kind": "horizontal Scroll",
+      "nativeEvidence": "OPEN"
+    },
+    {
+      "id": "category-scroll",
+      "owner": "SourceManagementPage.categoryFilter",
+      "kind": "horizontal Scroll",
+      "nativeEvidence": "OPEN"
+    },
+    {
+      "id": "group-options-scroll",
+      "owner": "ReaderSelectPanel.build",
+      "kind": "vertical Scroll when panel content exceeds bounded height",
+      "nativeEvidence": "OPEN"
+    }
+  ],
+  "nativeQuestions": [
+    "All current enabled small targets: actual composition clipping/overlap and center/edge dispatch at 320/366 and scales 1/1.3/1.6/2",
+    "Search input response region42→44: native focus/keyboard at edge; actual production glyph at2x remains E3OPEN",
+    "Recovery notice multi-action Flex intrinsic widths, wrapping and reserved text space: native actual area must match action lane without overlap",
+    "Select overlay outside dismiss and rows: global coordinates, clipping, closing-animation admission and platform Back priority"
+  ],
+  "nativeResult": "NOT_RUN",
+  "pageE2": "FAIL",
+  "pageE3": "FAIL"
+}

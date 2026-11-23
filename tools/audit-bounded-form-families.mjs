@@ -7,7 +7,7 @@ import { createHash } from 'node:crypto';
 const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`),options=require(`${sdk}/lib/ets_checker.js`).compilerOptions;
 const baseline='d6adb8833d530e19141dc3ff506dc055dc8feec7';
-const paths=['features/bookshelf/LocalImportDialog.ets','features/source/SourceSwitchWindow.ets','features/reading/SourceSwitchPanel.ets','features/reading/ReaderControlReplaceContent.ets','features/reading/ReaderTtsConfigOverlay.ets'];
+const paths=['features/bookshelf/ui/LocalImportDialog.ets','features/source/ui/SourceSwitchWindow.ets','features/source/ui/SourceSwitchPanel.ets','features/reading/ui/ReaderControlReplaceContent.ets','features/reading/ui/ReaderTtsConfigOverlay.ets'];
 const native=new Set(['Stack','Row','Column','Scroll','Text','Image','Blank','TextInput','TextArea','Button']);
 const facts=paths.map(relative=>{
   const path=`entry/src/main/ets/${relative}`,source=execFileSync('git',['show',`${baseline}:${path}`],{encoding:'utf8'});

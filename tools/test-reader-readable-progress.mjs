@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {readerControlDirectorySnapshot as project} from '../entry/src/main/ets/features/reading/ReaderControlDirectoryModel.ts';
+import {readerControlDirectorySnapshot as project} from '../entry/src/main/ets/features/reading/ui/ReaderControlDirectoryModel.ts';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 const entries=[{index:0,title:'卷',navigable:false},{index:7,title:'甲',navigable:true},{index:8,title:'禁用',navigable:false},{index:42,title:'乙',navigable:true}];
 for(const ascending of [true,false]) for(const query of ['', '甲']) {
@@ -10,15 +10,15 @@ for(const ascending of [true,false]) for(const query of ['', '甲']) {
 assert.equal(project(entries,'directory','',true,0).currentPosition,'','historical group has no invented readable ordinal');
 assert.equal(project(entries.slice(1,2),'directory','',true,7,undefined,{complete:false,chapterCount:54,currentPosition:1,readableChapterCount:53,readablePosition:0}).currentPosition,'1 / 53');
 assert.equal(project(entries.slice(0,1),'directory','',true,0,undefined,{complete:false,chapterCount:54,currentPosition:0,readableChapterCount:53}).currentPosition,'');
-const Full=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/FullDirectoryPanel.ets',import.meta.url),['currentPosition']);
+const Full=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets',import.meta.url),['currentPosition']);
 const full=Object.assign(new Full(),{admittedEntries:entries,currentEntry:()=>entries[1]});assert.equal(full.currentPosition(),'1 / 2');
 full.currentEntry=()=>entries[0];assert.equal(full.currentPosition(),'');
-const Panel=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ReaderControlPanel.ets',import.meta.url),['canStepChapter']);
+const Panel=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets',import.meta.url),['canStepChapter']);
 const panel=Object.assign(new Panel(),{tocEntries:entries,currentChapterIndex:7,readableChapterPosition:0,totalChapters:2});
 assert.equal(panel.canStepChapter(-1),false);assert.equal(panel.canStepChapter(1),true);
 panel.currentChapterIndex=42;panel.readableChapterPosition=1;assert.equal(panel.canStepChapter(1),false);assert.equal(panel.canStepChapter(-1),true);
 panel.readableChapterPosition=-1;assert.equal(panel.canStepChapter(1),false,'disabled/group tail cannot enable next');
-const Reader=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/LocalReadingExperience.ets',import.meta.url),['readingTocEntries','readableChapterPosition','entryChapterPosition','controlProgress','pageChromeProgress','seekControlProgress'],{READER_CONTROL_PROGRESS_MIN:0,READER_CONTROL_PROGRESS_MAX:100});
+const Reader=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),['readingTocEntries','readableChapterPosition','entryChapterPosition','controlProgress','pageChromeProgress','seekControlProgress'],{READER_CONTROL_PROGRESS_MIN:0,READER_CONTROL_PROGRESS_MAX:100});
 const selected=[];const reader=Object.assign(new Reader(),{tocEntries:entries,mounted:true,entryCatalogPending:false,desiredChapterProgress:.5,desiredChapterOffset:5,currentChapterIndex:()=>7,normalizedProgress:x=>x,clearTtsChapterEndTimer(){},selectChapterAnchor:(...args)=>selected.push(args),chapterWindow:{position(){throw Error('resumeOnly order must not define readable percentage');}}});
 assert.equal(reader.controlProgress(),25);assert.equal(reader.pageChromeProgress(42,5,10),75);assert.equal(reader.readableChapterPosition(0),-1);
 const ranks=reader.readingTocRanks;reader.controlProgress();assert.equal(reader.readingTocRanks,ranks,'reuse rank map while catalog identity unchanged');

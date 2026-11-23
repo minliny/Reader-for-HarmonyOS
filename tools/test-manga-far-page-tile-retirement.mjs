@@ -2,10 +2,10 @@ import { MangaRetainedTileCache } from './lib/manga-retained-tile-cache-probe.mj
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
+import { mangaSourceUrl } from './lib/manga-source-paths.mjs';
 
-const root = new URL('../entry/src/main/ets/features/manga/', import.meta.url);
 function load(name, dependencies = {}) {
-  const source = readFileSync(new URL(`${name}.ts`, root), 'utf8')
+  const source = readFileSync(mangaSourceUrl(`${name}.ts`), 'utf8')
     .replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
   return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
 }

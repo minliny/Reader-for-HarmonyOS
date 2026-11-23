@@ -108,3 +108,10 @@ Compare future upstream releases with these concrete defects. If upstream
 supports short content, fixed viewport presentation, raw-distance thresholds and
 cancel/lifetime gates completely, update the pin and remove the corresponding
 Reader patch. Do not retain two production pull engines.
+
+## API 23 animation context adaptation
+
+The reset uses the mounted component UIContext.animateTo instead of the deprecated
+global animateTo. Duration, reset callback, resistance and chapter admission stay
+unchanged. The complete reader.patch and vendored hashes were updated together;
+the upstream commit, original-file hashes and Apache-2.0 license remain fixed.

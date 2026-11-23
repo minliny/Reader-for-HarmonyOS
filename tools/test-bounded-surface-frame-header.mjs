@@ -11,11 +11,11 @@ const { readFileSync } = await import('node:fs');
 const { createRequire } = await import('node:module');
 const { resolve } = await import('node:path');
 const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
-const {SOURCE_SWITCH_VISUAL} = await import('../entry/src/main/ets/features/source/SourceSwitchVisual.ts');
-const {readerAppColor} = await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
+const {SOURCE_SWITCH_VISUAL} = await import('../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts');
+const {readerAppColor} = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 
 const read=path=>readFileSync(new URL(`../entry/src/main/ets/${path}`,import.meta.url),'utf8');
-const source=read('features/source/SourceSwitchWindow.ets'),tts=read('features/reading/ReaderTtsConfigOverlay.ets');
+const source=read('features/source/ui/SourceSwitchWindow.ets'),tts=read('features/reading/ui/ReaderTtsConfigOverlay.ets');
 // SDK lowering alone does not diagnose incompatible inherited properties.
 // Compare real business callbacks with the installed CustomComponent API.
 const sdk=resolveEtsLoaderRoot();
@@ -29,7 +29,7 @@ function collectInherited(name){
   for(const clause of declaration.heritageClauses??[])if(clause.token===ts.SyntaxKind.ExtendsKeyword)for(const base of clause.types)collectInherited(base.expression.getText(api));
 }
 collectInherited('CustomComponent');assert.ok(inherited.has('onDragStart')&&inherited.has('onDragEnd'),'installed SDK reserves both native drag APIs');
-const headerSource=read('features/common/ReaderBoundedSurfaceHeader.ets');
+const headerSource=read('ui/surfaces/ReaderBoundedSurfaceHeader.ets');
 function verifyBusinessCallbacks(candidate){
   const parsed=ts.createSourceFile(virtualFilePath('ReaderBoundedSurfaceHeader.ets'),candidate,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
   const header=parsed.statements.find(node=>node.name?.text==='ReaderBoundedSurfaceHeader');assert.ok(header);

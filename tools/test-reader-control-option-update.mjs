@@ -8,8 +8,8 @@ const { gunzipSync }=await import('node:zlib');
 const { createHash }=await import('node:crypto');
 const { runInNewContext }=await import('node:vm');
 const { productionSettingsOptionModifier }=await import('./lib/reader-control-option-modifier-probe.mjs');
-const { sampleReaderControlSettings }=await import('../entry/src/main/ets/features/reading/ReaderControlSettingsGeometry.ts');
-const { sampleReaderControlMotionPresentation }=await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
+const { sampleReaderControlSettings }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSettingsGeometry.ts');
+const { sampleReaderControlMotionPresentation }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts');
 
 const upstreamEvidence=[];
 const fixture = name => {

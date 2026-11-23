@@ -7,9 +7,9 @@ const definitions={
 const selected=selectContractCases(definitions);
 async function runCase(selectedCase){
 const { readerTypographyRoles }=await import('./lib/reader-typography-probe.mjs');
-const { readerAppColor }=await import('../entry/src/main/ets/features/common/ReaderThemeRegistry.ts');
-const morphScroll=await import('../entry/src/main/ets/features/reading/ReaderControlMorphScroll.ts');
-const presentation=await import('../entry/src/main/ets/features/reading/ReaderControlMotionPresentation.ts');
+const { readerAppColor }=await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const morphScroll=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts');
+const presentation=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts');
 const motionDeps = { ...presentation, PathShape: class { commands(path) { this.path = path; return this; } } };
 const motionProps = { fullContentHeight: 666, quickContentHeight: 190, getUIContext: () => ({ vp2px: n => n * 3 }) };
 const {default:assert}=await import('node:assert/strict');
@@ -24,23 +24,26 @@ const resolution=registerHooks({ resolve(specifier, context, nextResolve) {
   }
 } });
 try {
-const stateModule = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceState.ts');
-const geometry = await import('../entry/src/main/ets/features/reading/ReaderControlReplaceGeometry.ts');
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderControlReplaceContent.ets', import.meta.url), 'utf8');
+const stateModule = await import('../entry/src/main/ets/features/reading/presentation/ReaderControlReplaceState.ts');
+const geometry = await import('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts');
+const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets', import.meta.url), 'utf8');
 // Execute the actual ordinary production methods. Only ArkUI rendering and
 // lifecycle services are omitted; async callbacks stay explicitly controllable.
-const methods = source.slice(source.indexOf('  private onSourceChanged()'), source.indexOf('  build()'));
+const methods = source.slice(source.indexOf('  private currentInputEnabled()'), source.indexOf('  private statusText()')) +
+  source.slice(source.indexOf('  private onMinimumContentChanged()'), source.indexOf('  aboutToAppear()')) +
+  source.slice(source.indexOf('  private onSourceChanged()'), source.indexOf('  build()'));
 assert.ok(methods.includes('private async perform('));
-const Probe = new Function(...Object.keys(morphScroll), 'sampleReaderControlReplace', 'readerControlReplaceEndpoint',
+const Probe = new Function('readerControlUnit', ...Object.keys(morphScroll), 'sampleReaderControlReplace', 'readerControlReplaceEndpoint',
   'createReaderControlReplaceDraft', 'errorMessageOf',
   `${stripTypeScriptTypes(`class Probe { ${methods} }`)}\nreturn Probe;`)(
-    ...Object.values(morphScroll), geometry.sampleReaderControlReplace, geometry.readerControlReplaceEndpoint,
+    value => Math.max(0, Math.min(1, value)), ...Object.values(morphScroll), geometry.sampleReaderControlReplace, geometry.readerControlReplaceEndpoint,
     stateModule.createReaderControlReplaceDraft, error => error.message);
 const owner = new Probe();
 const events = [];
 Object.assign(owner, { state: { ...stateModule.createReaderControlReplaceState('A:open1'), status: 'ready' },
   motionProgress: 1, interactionEnabled: true, availableWidth: 338, availableHeight: 666,
   layer: '', localError: '', localPending: false, presentationRevision: 0, lastSessionKey: 'A:open1',
+  quickScrollMotion: morphScroll.createReaderControlMorphScroll(), quickScroller: { scrollTo() {}, currentOffset: () => ({ yOffset: 0 }) },
   scrollMotion: morphScroll.createReaderControlMorphScroll(), scroller: { scrollTo() {}, currentOffset: () => ({ yOffset: 0 }) }, onTemporaryLayerChange: active => events.push(active),
 });
 const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; });
@@ -106,6 +109,8 @@ assert.equal(owner.readyInput(), false, 'a completed query callback alone cannot
 assert.equal(reloadedId, 'original-rule-operation');
 assert.equal(reloads, 1);
 owner.state.writeUncertain = false;
+owner.cancelTemporaryLayer();
+assert.equal(owner.layer, '', 'leave the retained editor explicitly before opening the independent import confirmation');
 owner.openImport();
 assert.equal(owner.layer, 'import-confirm');
 let imports = 0;
@@ -170,8 +175,13 @@ owner.state.mutationPending = false;
 owner.state.writeUncertain = false;
 owner.state.canonicalReloadRequired = false;
 owner.localPending = false;
+const opening = owner.presentationRevision;
+const previousLayer = owner.layer;
+owner.mounted = true;
+owner.layer = 'editor';
 for (const call of actionCalls(source)) {
-  new Function('operationId', stripTypeScriptTypes(`${call};`)).call(owner, owner.state.writeOperationId || '');
+  new Function('operationId', 'opening', 'revision', stripTypeScriptTypes(`${call};`))
+    .call(owner, owner.state.writeOperationId || '', opening, opening);
 }
 assert.equal(predicates.size, 8, 'both former reload actions now consume one keyed original-operation Builder; save belongs to the fixed SDK-tested editor footer');
 
@@ -239,19 +249,19 @@ owner.editorFlag = (label, value, change) => {
   assert.equal(typeof value, 'function', `${label} is a live draft getter`);
   flags.set(label, { value, change });
 };
-for (const call of actionCalls(source, 'editorFlag')) new Function(stripTypeScriptTypes(`${call};`)).call(owner);
+for (const call of actionCalls(source, 'editorFlag')) new Function('opening', stripTypeScriptTypes(`${call};`)).call(owner, opening);
 assert.equal(flags.size, 5);
 for (const [label, flag] of flags) {
   const initial = flag.value();
-  owner.changeEditorFlag(flag.value, flag.change);
+  owner.changeEditorFlag(flag.value, flag.change, opening);
   assert.equal(flag.value(), !initial, `${label}: first click`);
-  owner.changeEditorFlag(flag.value, flag.change);
+  owner.changeEditorFlag(flag.value, flag.change, opening);
   assert.equal(flag.value(), initial, `${label}: second click restores the first value`);
   owner.localPending = true;
-  owner.changeEditorFlag(flag.value, flag.change);
+  owner.changeEditorFlag(flag.value, flag.change, opening);
   assert.equal(flag.value(), initial, `${label}: pending blocks mutation`);
   owner.localPending = false;
-  owner.changeEditorFlag(flag.value, flag.change);
+  owner.changeEditorFlag(flag.value, flag.change, opening);
   assert.equal(flag.value(), !initial, `${label}: after pending the next click remains live`);
 }
 const fields = new Map();
@@ -259,7 +269,7 @@ owner.editorText = (label, value, change) => {
   assert.equal(typeof value, 'function', `${label} is a live text getter`);
   fields.set(label, { value, change });
 };
-for (const call of actionCalls(source, 'editorText')) new Function(stripTypeScriptTypes(`${call};`)).call(owner);
+for (const call of actionCalls(source, 'editorText')) new Function('opening', stripTypeScriptTypes(`${call};`)).call(owner, opening);
 assert.equal(fields.size, 8);
 for (const [label, field] of fields) {
   field.change('41');
@@ -267,6 +277,8 @@ for (const [label, field] of fields) {
   field.change('42');
   assert.equal(field.value(), '42', `${label}: second edit remains live`);
 }
+owner.layer = previousLayer;
+owner.mounted = false;
 // A stable ForEach key must not freeze the first Core DTO or its initial index.
 const initialRule = { id: 10, name: 'before', isEnabled: true };
 owner.state.rules = [initialRule, { id: 20, name: 'other' }];
@@ -305,7 +317,7 @@ if(selectedCase==='sdk-rule-geometry'){
 // string. User M-02 overrides the recovered text scale, not row geometry.
 function checkMountedRuleTypography(componentSource = source) {
   const { owner: rowOwner } = createReaderBuilderProbe(componentSource,
-    ['ruleRow', 'ruleIcon', 'scopeSummary', 'frame', 'fullInput', 'quickInput', 'readyInput', 'presentation', 'rowClip'],
+    ['ruleRow', 'ruleIcon', 'scopeSummary', 'quickFlowExtra', 'quickFlowContentHeight', 'frame', 'fullInput', 'quickInput', 'readyInput', 'presentation', 'rowClip'],
     { ...geometry, ...morphScroll, ...motionDeps, FlexAlign: { Center: 'FlexAlign.Center' } });
   let rule = { id: 12, name: '规则名称', pattern: '原文', replacement: '替换', scope: '本书',
     scopeTitle: true, scopeContent: true, scopeSource: false, isRegex: false, isEnabled: true };
@@ -362,7 +374,7 @@ function checkMountedRuleListClip(componentSource = source) {
   const { owner: listOwner } = createReaderBuilderProbe(probeSource,
     ['ruleListClipProbe', 'ruleRow', 'ruleIcon', 'scopeSummary', 'frame', 'fullInput', 'quickInput', 'readyInput',
       'textAction', 'statusContent', 'originalRecoveryAction', 'emptyStateMessage', 'listContentMinHeight', 'onFullDidScroll', 'nativeScrollDelta', 'sharedScrollTranslation', 'fullOnlyScrollTranslation',
-      'currentRule', 'currentRuleIndex', 'refreshRuleLookup', 'presentation', 'rowClip'],
+      'currentRule', 'currentRuleIndex', 'refreshRuleLookup', 'quickFlowExtra', 'quickFlowContentHeight', 'presentation', 'rowClip'],
     { ...geometry, ...morphScroll, ...motionDeps, FlexAlign: { Center: 'FlexAlign.Center' } });
   const rule = { id: 12, name: '规则名称', pattern: '原文', replacement: '替换', scope: '本书',
     scopeTitle: true, scopeContent: true, scopeSource: false, isRegex: false, isEnabled: true };

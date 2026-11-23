@@ -2,14 +2,14 @@ import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import * as state from '../entry/src/main/ets/features/reading/ReaderSettingsState.ts';
+import * as state from '../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts';
 
 // Same actual Preferences get/put/flush seam as test-reader-settings-write-facts.
 // Each fixture emits the full production Gateway class, with independent static
 // state for cold processes; cache reads never manufacture a durable flush ACK.
 const require = createRequire(import.meta.url);
 const ts = require((resolveEtsLoaderRoot()) + '/node_modules/typescript');
-const gatewayUrl = new URL('../entry/src/main/ets/features/reading/ReaderSettingsGateway.ts', import.meta.url);
+const gatewayUrl = new URL('../entry/src/main/ets/features/reading/application/ReaderSettingsGateway.ts', import.meta.url);
 const source = readFileSync(gatewayUrl, 'utf8');
 const mangaKeys = ['mangaDirection', 'mangaFit', 'mangaBackground', 'mangaPageNumbers'];
 const defaults = state.createDefaultReaderSettingsSnapshot();
@@ -180,7 +180,7 @@ for (const failure of ['put', 'before', 'after']) {
     'real production branch removal reproduces four-field erasure');
 }
 {
-  const modelSource = readFileSync(new URL('../entry/src/main/ets/features/reading/ReaderSettingsState.ts', import.meta.url), 'utf8');
+  const modelSource = readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts', import.meta.url), 'utf8');
   for (const key of mangaKeys) {
     const mutant = modelSource.split('\n').filter(line => !line.includes(`normalized.${key} =`)).join('\n');
     assert.notEqual(mutant, modelSource, `remove ${key} from the actual production normalizer`);
