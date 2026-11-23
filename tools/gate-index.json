@@ -156949,7 +156949,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ReaderTypography.ets",
-          "sha256": "9884dee996f1b02dbde84b56e8fa095f2c9cb30f5dadb2287073c3661f68da10"
+          "sha256": "c81e13b4be2f9f65003758376fcfad7f730b63dc7518a22c44b73e32c9abd057"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ReaderWindowEnvironment.ts",
