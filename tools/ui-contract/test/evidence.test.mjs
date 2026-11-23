@@ -11,7 +11,7 @@ import { checkpoint, installedCommand, logCommand, normalizeSample, probeEventsI
 import { prepareReversalDispatch, reversalCommandArgs } from '../collectors/harmonyos/reversal-dispatch.mjs';
 import { assertRunnerQualification, runnerCollectionMode, sealRunnerQualification } from '../collectors/harmonyos/runner-collection-admission.mjs';
 import { READER_SIGNER } from '../collectors/harmonyos/pointer-matrix-runner/entry/src/ohosTest/ets/testrunner/ReversalPlan.ts';
-import { loadCandidate, readLivePriorEvents } from '../collectors/harmonyos/run.mjs';
+import { loadCandidate, readLivePriorEvents, writeGuestSchedulingEvidence } from '../collectors/harmonyos/run.mjs';
 import { candidateCoverage, groupExecution, scenarioCoverage } from '../coverage.mjs';
 import { loadCase, toolIdentity } from '../lib/cases.mjs';
 import { evidenceStore, jsonBytes, jsonDigest, sealChain, sha256, validate, verifyChain } from '../lib/evidence.mjs';
@@ -112,6 +112,27 @@ function fixture(t, id = searchId, mutate) {
 function replay(path, rootSha256, contract) {
   return replayReceipt({ receiptPath: path, expectedRoot: rootSha256, contract });
 }
+
+test('Missing or unarmed Guest scheduling still seals the incomplete official receipt', t => {
+  for (const [expected, rawObservation] of [
+    ['NOT_RUN', undefined], ['NOT_ARMED', {status:'NOT_ARMED', cleanup:'NOT_RUN'}], ['UNBOUND', {}],
+  ]) {
+    const run = fixture(t, 'reading.control-tts-capsule-handoff-full');
+    const candidate = loadCandidate(run.store, run.refs, run.contract);
+    const observation = rawObservation ? run.store.writeJson('raw/guest-scheduling.json', rawObservation) : null;
+    const guestSchedulingTrace = writeGuestSchedulingEvidence({...run, candidate, records:[]});
+    const summary = run.store.json(guestSchedulingTrace.evidence);
+    assert.equal(summary.status, expected);
+    assert.equal(summary.cleanup, 'NOT_RUN');
+    assert.deepEqual(summary.observation, observation);
+    assert.deepEqual(summary.session, run.sessionRef);
+    for (const key of ['trace','coverage','playbackCommandSeq','dispatchLogFloorSeq']) assert.equal(summary[key], null);
+
+    const sealed = sealReceipt({...run, candidate, guestSchedulingTrace}, run.contract);
+    assert.equal(sealed.receipt.execution, 'INCOMPLETE');
+    assert.equal(replay(join(run.bundle, 'receipt.json'), sealed.rootSha256, run.contract).receipt.execution, 'INCOMPLETE');
+  }
+});
 
 test('readiness preserves supported procfs denial and rejects other nonzero or interrupted queries', () => {
   const path = '/proc/sys/kernel/random/boot_id';

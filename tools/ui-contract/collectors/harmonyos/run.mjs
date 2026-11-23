@@ -701,45 +701,49 @@ export async function collectHarmony(options, contract) {
   const session = validate('session', {runId, platform:'harmonyos', instanceId, result, reason,
     commands:observed, fixture, chain:sealChain(entries),...(runnerEvidence ? {runner:runnerEvidence} : {})});
   const sessionRef = store.writeJson('session/session.json', session);
-  let guestSchedulingTrace;
-  if (options.guestSchedulingTrace) {
-    const path = 'raw/' + guestSchedulingReceipt;
-    const action = entries.find(entry => entry.kind === 'action' && entry.id === 'playback-launch');
-    let status = 'NOT_RUN';
-    let observation;
-    let trace;
-    let coverage;
-    let cleanup = 'NOT_RUN';
-    if (existsSync(join(store.root, path))) {
-      try {
-        observation = store.reference(path);
-        const data = store.json(observation);
-        status = data.status;
-        cleanup = data.cleanup;
-        if (status === 'TRACE_BYTES_SAVED') {
-          const artifact = store.reference('raw/' + guestSchedulingTraceFile);
-          if (data.targetRef === candidate.targetRef && action &&
-            data.dispatch?.commandSeq === action.command && artifact.bytes === data.trace?.bytes &&
-            artifact.sha256 === data.trace?.sha256) {
-            trace = artifact;
-            const events = probeEventsInRange(probe.records.slice(action.floorLog - 1, action.afterLog),
-              instanceId, action.beforeSeq, action.afterSeq);
-            const {startTimeMs, frames} = guestSchedulingActionWindow(events);
-            coverage = guestSchedulingCoverage(store.bytes(trace).toString('utf8'), data.readerPid, startTimeMs, frames);
-            status = coverage.status === 'COVERED' ? 'COVERED' : 'TRACE_BYTES_ONLY';
-          } else status = 'UNBOUND';
-        }
-      } catch (_) {
-        status = 'UNBOUND';
-      }
-    }
-    const evidence = store.writeJson('session/guest-scheduling.json', {
-      status, observation, trace, coverage, cleanup, session:sessionRef, runId, instanceId, caseId:contract.id,
-      appBuildId:candidate.appBuildId, buildRunId:candidate.buildRunId, targetRef:candidate.targetRef,
-      playbackCommandSeq:action?.command, dispatchLogFloorSeq:action?.floorLog,
-    });
-    guestSchedulingTrace = { status, cleanup, evidence };
-  }
+  const guestSchedulingTrace = options.guestSchedulingTrace ? writeGuestSchedulingEvidence({
+    store, candidate, contract, session, sessionRef, records:probe.records,
+  }) : undefined;
   if (toolError) throw toolError;
   return {store, refs, candidate, session, sessionRef, guestSchedulingTrace};
+}
+
+export function writeGuestSchedulingEvidence({ store, candidate, contract, session, sessionRef, records }) {
+  const {runId, instanceId} = session;
+  const path = 'raw/' + guestSchedulingReceipt;
+  const action = session.chain.find(({entry}) => entry.kind === 'action' && entry.id === 'playback-launch')?.entry;
+  let status = 'NOT_RUN';
+  let observation = null;
+  let trace = null;
+  let coverage = null;
+  let cleanup = 'NOT_RUN';
+  if (existsSync(join(store.root, path))) {
+    try {
+      observation = store.reference(path);
+      const data = store.json(observation);
+      status = data.status ?? 'UNBOUND';
+      cleanup = data.cleanup ?? 'NOT_RUN';
+      if (status === 'TRACE_BYTES_SAVED') {
+        const artifact = store.reference('raw/' + guestSchedulingTraceFile);
+        if (data.targetRef === candidate.targetRef && action &&
+          data.dispatch?.commandSeq === action.command && artifact.bytes === data.trace?.bytes &&
+          artifact.sha256 === data.trace?.sha256) {
+          trace = artifact;
+          const events = probeEventsInRange(records.slice(action.floorLog - 1, action.afterLog),
+            instanceId, action.beforeSeq, action.afterSeq);
+          const {startTimeMs, frames} = guestSchedulingActionWindow(events);
+          coverage = guestSchedulingCoverage(store.bytes(trace).toString('utf8'), data.readerPid, startTimeMs, frames);
+          status = coverage.status === 'COVERED' ? 'COVERED' : 'TRACE_BYTES_ONLY';
+        } else status = 'UNBOUND';
+      }
+    } catch (_) {
+      status = 'UNBOUND';
+    }
+  }
+  const evidence = store.writeJson('session/guest-scheduling.json', {
+    status, observation, trace, coverage, cleanup, session:sessionRef, runId, instanceId, caseId:contract.id,
+    appBuildId:candidate.appBuildId, buildRunId:candidate.buildRunId, targetRef:candidate.targetRef,
+    playbackCommandSeq:action?.command ?? null, dispatchLogFloorSeq:action?.floorLog ?? null,
+  });
+  return { status, cleanup, evidence };
 }
