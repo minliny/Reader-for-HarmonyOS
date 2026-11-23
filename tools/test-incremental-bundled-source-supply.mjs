@@ -10,12 +10,14 @@ let source=readFileSync(new URL('../entry/src/main/ets/app/IncrementalBundledSou
  .replace(/^import .*;\n/gm,'').replace(/export /g,'');
 const supply=new Function('sha256Hex','BUNDLED_SOURCE_INDEX_SHA256','BUNDLED_SOURCE_BUNDLE_ID',
  stripTypeScriptTypes(source)+';return supplyBundledSources;')(sha256Hex,await sha256Hex(indexText),index.bundleId);
-function fixture({complete=false,dirty=[],fail=false,stop=false,legacy=[],removed=[]}={}){
+function fixture({complete=false,dirty=[],fail=false,stop=false,legacy=[],removed=[],previous=[],unregistered=[]}={}){
  const reads=[],calls=[];let current=true;
- const receipts=[...index.items.map(i=>({...i,dirty:dirty.includes(i.sourceId)})),...removed];
+ const receipts=[...index.items.filter(i=>!unregistered.includes(i.sourceId))
+   .map(i=>({...i,dirty:dirty.includes(i.sourceId)})),...removed];
  return {reads,calls,resources:{digest:index.digest,current:()=>current,
   legacyIds:async()=>legacy,read:async file=>{reads.push(file);if(stop&&file!=='bundled-sources/index.json')current=false;return readFileSync(new URL(file,base),'utf8');},
-  request:async p=>{calls.push(p);if(p.operation==='status')return{data:{complete,items:receipts}};
+  request:async p=>{calls.push(p);if(p.operation==='status')return{data:p.bundleId===index.bundleId
+   ? {complete,items:receipts}:{complete:false,items:previous}};
    if(p.operation==='apply'&&fail)throw Error('item failed');
    return{data:{accepted:true,changed:true,complete:true}};
   }}};
@@ -50,11 +52,24 @@ function fixture({complete=false,dirty=[],fail=false,stop=false,legacy=[],remove
   removed:[{sourceId:removedCurrent,itemDigest:'a'.repeat(64),dirty:true}]});
  const result=await supply(f.resources);
  assert.equal(index.bundleId,'reader-tested-book-sources-v2');
- assert.ok(f.calls.every(call=>call.bundleId===index.bundleId));
+ assert.ok(f.calls.filter(call=>call.operation!=='status').every(call=>call.bundleId===index.bundleId));
  assert.deepEqual(f.calls.filter(call=>call.operation==='withdraw').map(call=>call.sourceId),[removedCurrent]);
  assert.equal(f.calls.find(call=>call.operation==='apply').legacyManaged,true);
  assert.ok(f.calls.at(-1).expected.some(item=>item.sourceId===removedCurrent&&item.itemDigest==='withdrawn'));
  assert.ok(!f.calls.at(-1).expected.some(item=>item.sourceId===otherLegacy));
  assert.equal(result.failed,0);
 }
-console.log('incremental source supply: no-resource unchanged path, selective reads, failure/no seal, cancellation, index integrity, scoped withdrawals PASS');
+{
+ const [withdrawn, absent] = index.items;
+ const f=fixture({unregistered:[withdrawn.sourceId,absent.sourceId],previous:[
+  {sourceId:withdrawn.sourceId,itemDigest:'withdrawn',dirty:false},
+  {sourceId:absent.sourceId,itemDigest:absent.itemDigest,dirty:false},
+ ]});
+ const result=await supply(f.resources);
+ assert.deepEqual(f.reads,['bundled-sources/index.json',absent.file]);
+ assert.ok(!f.calls.some(call=>call.sourceId===withdrawn.sourceId));
+ assert.equal(f.calls.find(call=>call.operation==='apply').legacyManaged,true);
+ assert.ok(!f.calls.at(-1).expected.some(item=>item.sourceId===withdrawn.sourceId));
+ assert.equal(result.failed,0);
+}
+console.log('incremental source supply: no-resource unchanged path, selective reads, failure/no seal, cancellation, index integrity, scoped withdrawals, predecessor decisions PASS');

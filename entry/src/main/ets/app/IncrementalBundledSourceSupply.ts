@@ -5,6 +5,7 @@ import { sha256Hex } from './BundledBookSourceSupply';
 type IndexItem = { sourceId: string; itemDigest: string; file: string };
 type SupplyIndex = { schemaVersion: number; bundleId: string; digest: string; collectionRecords: number; items: IndexItem[] };
 type Receipt = { sourceId: string; itemDigest: string; dirty: boolean };
+const LEGACY_BUNDLE_ID = 'reader-tested-book-sources';
 export type IncrementalSupplySummary = {
   collectionRecords: number; uniqueSourceIds: number; processed: number;
   installedOrUpgraded: number; failed: number; interrupted: boolean;
@@ -17,6 +18,20 @@ export type SupplyResources = {
   current: () => boolean;
   failure?: (sourceId: string, error: Error) => void;
 };
+
+function sourceReceipts(status: ReaderCoreResultEvent): Map<string, Receipt> {
+  const receipts = new Map<string, Receipt>();
+  const rawReceipts = status.data['items'];
+  if (!Array.isArray(rawReceipts)) throw new Error('Core bundled source status missing receipts');
+  for (const raw of rawReceipts) {
+    const receipt = raw as Receipt;
+    if (typeof receipt.sourceId !== 'string' || typeof receipt.itemDigest !== 'string' || typeof receipt.dirty !== 'boolean') {
+      throw new Error('Invalid Core supply receipt');
+    }
+    receipts.set(receipt.sourceId, receipt);
+  }
+  return receipts;
+}
 
 /** Host owns resource I/O only. Core owns rule edits, suppression and receipts. */
 export async function supplyBundledSources(resources: SupplyResources): Promise<IncrementalSupplySummary> {
@@ -41,26 +56,27 @@ export async function supplyBundledSources(resources: SupplyResources): Promise<
     seen.add(item.sourceId);
   }
   summary.collectionRecords = index.collectionRecords; summary.uniqueSourceIds = index.items.length;
-  const receipts = new Map<string, Receipt>();
-  const rawReceipts = status.data['items'];
-  if (!Array.isArray(rawReceipts)) throw new Error('Core bundled source status missing receipts');
-  for (const raw of rawReceipts) {
-    const receipt = raw as Receipt;
-    if (typeof receipt.sourceId !== 'string' || typeof receipt.itemDigest !== 'string' || typeof receipt.dirty !== 'boolean') throw new Error('Invalid Core supply receipt');
-    receipts.set(receipt.sourceId, receipt);
-  }
+  const receipts = sourceReceipts(status);
+  // The predecessor remains read-only. The status digest intentionally differs
+  // from published bundle digests so status supplies its individual receipts.
+  const predecessor = sourceReceipts(await resources.request({ operation: 'status', bundleId: LEGACY_BUNDLE_ID,
+    digest: `${supplyDigest}:predecessor-history` }));
   const legacy = new Set<string>(await resources.legacyIds());
   const expected: JsonObject[] = [];
   for (const item of index.items) {
     if (!resources.current()) { summary.interrupted = true; return summary; }
-    expected.push({ sourceId: item.sourceId, itemDigest: item.itemDigest });
     const receipt = receipts.get(item.sourceId);
+    if (receipt === undefined && predecessor.get(item.sourceId)?.itemDigest === 'withdrawn') {
+      summary.processed += 1;
+      continue;
+    }
+    expected.push({ sourceId: item.sourceId, itemDigest: item.itemDigest });
     if (receipt?.itemDigest === item.itemDigest && !receipt.dirty) { summary.processed += 1; continue; }
     try {
       const document = await resources.read(item.file);
       if (!resources.current()) { summary.interrupted = true; return summary; }
       const result = await resources.request({ operation: 'apply', bundleId, sourceId: item.sourceId,
-        itemDigest: item.itemDigest, document, legacyManaged: legacy.has(item.sourceId) });
+        itemDigest: item.itemDigest, document, legacyManaged: legacy.has(item.sourceId) || predecessor.has(item.sourceId) });
       if (result.data['accepted'] !== true) throw new Error('Core rejected bundled source');
       if (result.data['changed'] === true) summary.installedOrUpgraded += 1;
     } catch (error) { summary.failed += 1; resources.failure?.(item.sourceId, error as Error); }
@@ -83,7 +99,7 @@ export async function supplyBundledSources(resources: SupplyResources): Promise<
     } catch (error) { summary.failed += 1; resources.failure?.(sourceId, error as Error); }
   }
   if (!resources.current()) { summary.interrupted = true; return summary; }
-  if (summary.failed === 0) {
+  if (summary.failed === 0 && expected.length > 0) {
     const finished = await resources.request({ operation: 'finish', bundleId, digest: supplyDigest, expected });
     if (finished.data['complete'] !== true) summary.failed += 1;
   }

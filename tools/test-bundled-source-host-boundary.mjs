@@ -80,7 +80,7 @@ const summary = await supply({ digest: index.digest, current: () => true, legacy
     return { data: { accepted: true, changed: true, complete: true } };
   } });
 assert.deepEqual(supplyReads, ['bundled-sources/index.json', itemPath]);
-assert.deepEqual(calls.map(call => call.operation), ['status', 'apply', 'finish']);
+assert.deepEqual(calls.map(call => call.operation), ['status', 'status', 'apply', 'finish']);
 assert.equal(summary.failed, 0);
 assert.equal(summary.installedOrUpgraded, 1);
 console.log('Bundled source Host boundary: controlled paths, unchanged I/O guards, real supply-to-Host wiring PASS');
