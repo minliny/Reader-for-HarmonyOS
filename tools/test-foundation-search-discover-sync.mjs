@@ -55,7 +55,8 @@ function resultsHeaderProducer(source){
  return statsCall.expression.name.text;
 }
 function setup(file,method,{scheme='day',tablet=false,busy=false,selected=true,canRetry=true}={}){
- const old=tailControls(),current=tailControls(),source=readFileSync(new URL('../'+file.path,import.meta.url),'utf8');
+ const currentPath=file.path.includes('/sync/')?file.path.replace('/sync/SyncPage.ets','/sync/ui/SyncPage.ets'):file.path;
+ const old=tailControls(),current=tailControls(),source=readFileSync(new URL('../'+currentPath,import.meta.url),'utf8');
  const scope=file.path.includes('/search/')?searchScopeDependencies(source):{};
  const required=file.path.includes('/search/')?searchActionMethods:file.path.includes('/sync/')?['canMutate']:['currentFilterText','kindTitles'];
  const frozen='@Component struct OriginalActionFamily{\n'+file.methods.join('\n')+'\n'+members(source,required.filter(n=>!file.names.includes(n))).join('\n')+'\nbuild(){Column(){}}\n}';
@@ -122,7 +123,7 @@ for(const scheme of['day','night'])for(const fileKey of['search','discover','syn
    const card=[...p.owners.current.children.values()].find(c=>c.specId==='sync-status');assert.ok(card,'actual Sync consumer mounts the real finite Card');
    const outer=[...card.nodes.values()].find(n=>n.type==='Column'&&Object.hasOwn(n,'borderRadius')),spec=p.current.dependencies.resolveReaderCardSpec(card.specId);assert.ok(outer);
    assert.equal(outer.borderRadius,spec.radius);assert.deepEqual(outer.constraintSize,{maxWidth:spec.maxWidth});assert.deepEqual(outer.border,{width:spec.borderWidth,color:readerAppColor(spec.borderRole,card.appThemeScheme)});assert.equal(outer.backgroundColor,readerAppColor(spec.backgroundRole,card.appThemeScheme));
-   const old=p.old.orderedNodes(p.owners.old).find(n=>n.type==='Text'&&n.create==='立即备份'),actor=[...p.owners.current.children.values()].flatMap(c=>[c,...c.children.values()]).find(c=>c.specId==='sync-empty-backup');assert.ok(actor);const next=p.current.nodes(actor).find(n=>n.type==='Text');if(!variation.busy)old.onClick();next.onClick();assert.deepEqual(p.calls.current,p.calls.old,'actual empty backup callback and busy admission');
+   const old=p.old.orderedNodes(p.owners.old).find(n=>n.type==='Text'&&n.create==='立即备份'),actor=[...p.owners.current.children.values()].flatMap(c=>[c,...c.children.values()]).find(c=>c.specId==='sync-empty-backup');assert.ok(actor);const next=p.current.nodes(actor).find(n=>n.type==='Button'&&n.onClick);if(!variation.busy)old.onClick();next.onClick();assert.deepEqual(p.calls.current,p.calls.old,'actual empty backup callback and busy admission');
   }
   cases++;
  }

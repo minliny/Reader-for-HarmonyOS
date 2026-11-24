@@ -12,6 +12,7 @@ import {boundedMembers} from './bounded-surface-sdk-probe.mjs';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
 import {compileCardSpecs} from './reader-card-probe.mjs';
 import {compileIconButtonSpecs} from './reader-icon-button-probe.mjs';
+import {readerEditingSdk} from './reader-editing-sdk-probe.mjs';
 const req=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const map=req(sdk+'/lib/component_map.js');
 export function compileTailConsumer(source,names,deps,hooks){const saved=new Map(map.ID_ATTRS);map.ID_ATTRS.clear();try{return createReaderBuilderProbe(source,names,deps,hooks);}finally{map.ID_ATTRS.clear();for(const[k,v]of saved)map.ID_ATTRS.set(k,v);}}
@@ -29,7 +30,7 @@ export function tailControls(options={}){
  childSources.SearchResultCard=page.slice(page.lastIndexOf('@Component',page.indexOf('struct SearchResultCard')));
  const hooks={...shared.hooks,childSources:{...shared.hooks.childSources,...childSources}};
  const enumValues=name=>new Proxy({},{get:(_,key)=>`${name}.${String(key)}`});
- const dependencies={...shared.dependencies,...readerFoundationTokens,...roles,readerAppColor,SearchViewState,resolveReaderCardSpec:compileCardSpecs(),resolveReaderIconButtonSpec:compileIconButtonSpecs(),
+ const dependencies={...shared.dependencies,...readerEditingSdk(),...readerFoundationTokens,...roles,readerAppColor,SearchViewState,resolveReaderCardSpec:compileCardSpecs(),resolveReaderIconButtonSpec:compileIconButtonSpecs(),
   // This task/action fixture does not synthesize native caret facts. Retain
   // the real field's controller construction and record explicit native calls.
   TextInputController:class{stopEditing(){nativeInputCalls.push(['stopEditing']);}
