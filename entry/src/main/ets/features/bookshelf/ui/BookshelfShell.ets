@@ -60,6 +60,7 @@ export struct BookshelfShell {
   @State private footerMeasurementKey: number = 0;
   @State private measuredFooterHeight: number = 0;
   @State private recoveryViewportHeight: number = -1;
+  @State private paneWidth: number = 0;
   @State private recoveryOriginY: number = 0;
   /** Presented header bottom (top + measured height), owned by the route. */
   @Prop headerBottom: number = bookshelfHeaderSpec().frameHeight;
@@ -194,7 +195,8 @@ export struct BookshelfShell {
   private moreSheetWidth(): number {
     this.readerWindowMetricsRevision;
     const metrics = ReaderWindowCoordinator.metrics();
-    return resolveHorizontalFrame(metrics.windowRect.width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics),
+    return resolveHorizontalFrame(this.paneWidth > 0 ? this.paneWidth : metrics.windowRect.width,
+      readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics),
       new SurfaceWidthSpec(this.moreSheetSpec().maxWidth)).width;
   }
 
@@ -264,8 +266,10 @@ export struct BookshelfShell {
     }
     .width('100%').height('100%')
     .onAreaChange((_old: Area, area: Area): void => {
+      const width = this.numericAreaLength(area.width);
       const height = this.numericAreaLength(area.height);
       const originY = this.numericAreaLength(area.globalPosition?.y ?? 0);
+      if (Number.isFinite(width) && width > 0) this.paneWidth = width;
       if (Number.isFinite(height) && height >= 0) this.recoveryViewportHeight = height;
       if (Number.isFinite(originY)) this.recoveryOriginY = originY;
     })

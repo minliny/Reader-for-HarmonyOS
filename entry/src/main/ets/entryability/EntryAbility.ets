@@ -7,6 +7,7 @@ import { SyncGateway } from '../features/sync/application/SyncGateway';
 import { LocalConfigurationReset } from '../features/settings/application/LocalConfigurationReset';
 import { ReaderThemeHost } from '../app/ReaderThemeHost';
 import { ReaderNavigationAppearancePreferences } from '../app/ReaderNavigationAppearancePreferences';
+import { ReaderControlPlacementPreferences } from '../app/ReaderControlPlacementPreferences';
 import { AbilityConstant, ConfigurationConstant, type Configuration, UIAbility, Want } from '@kit.AbilityKit';
 import contextConstant from '@ohos.app.ability.contextConstant';
 import fileIo from '@ohos.file.fs';
@@ -164,6 +165,8 @@ export default class EntryAbility extends UIAbility {
       .catch((error: Error): void => {
         hilog.error(DOMAIN, 'Reader', 'Theme restoration failed: %{private}s', error.message);
       });
+    void ReaderControlPlacementPreferences.install(this.context,
+      (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner)).catch((): void => {});
     const sync = new SyncGateway(owner);
     ReaderThemeHost.setRecoveryBarrier(async (): Promise<void> => {
       await Promise.all([this.themeReady, this.bookshelfModeReady, owner.start()]);

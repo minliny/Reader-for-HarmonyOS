@@ -248,6 +248,7 @@ export class ReaderControlLayoutSnapshot {
   dockRightGap: number;
   dockWidth: number;
   fullPanelTop: number;
+  fullPanelLeftGap: number = 0;
   fullPanelRightGap: number;
   fullPanelWidth: number;
   fullPanelHeight: number;
@@ -644,6 +645,7 @@ export function resolveReaderControlLayout(
     selectedPanel?.quickHeight,
   );
   snapshot.topBarHeight = topBarHeight; snapshot.topBarVisible = topBarVisible; snapshot.minimumPanelTop = minimumPanelTop;
+  snapshot.fullPanelLeftGap = fullPanelLeftGap;
   const measured = selectedPanel?.measured;
   if (measured !== undefined && selectedPanel !== undefined) {
     snapshot.minimumKey = measured.key;

@@ -1457,6 +1457,17 @@
       "status": "registered-source-entry"
     },
     {
+      "id": "entry/src/main/ets/features/settings/ui/SettingsPage.ets#SettingsPage.controlPlacementRecovery::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
+      "owner": "SettingsPage",
+      "member": "controlPlacementRecovery",
+      "family": "shared.recovery-notice",
+      "category": "宽屏阅读控制栏位置保存待确认",
+      "effectiveHost": "通用设置有界恢复组；当前前景、页面打开身份、导航代次、原本机 Preferences 写入代次同时有效。",
+      "retireRule": "临时弹层、导航切换、页面退场或后继代次拒绝旧动作。原操作继续由 ReaderControlPlacementPreferences 持有；仅原值写入完成且 flush 确认才清除提示并发布有效值。",
+      "status": "registered-source-entry"
+    },
+    {
       "id": "entry/src/main/ets/features/settings/ui/SettingsPage.ets#SettingsPage.operationFeedback::shared.recovery-action",
       "file": "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
       "owner": "SettingsPage",
@@ -1553,7 +1564,7 @@
       "member": "showFeedbackToast",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
-      "effectiveHost": "当前已挂载设置页；主题使用原 themeOwner、temporaryBackIdentity，缓存与设置沿用原操作 generation/fact。",
+      "effectiveHost": "当前已挂载设置页；主题使用原 themeOwner、temporaryBackIdentity，缓存与设置沿用原操作 generation/fact。宽屏控制栏位置仅在当前通用设置打开身份和导航代次且保存未派发时沿用短反馈。",
       "retireRule": "设置页退场、临时弹层或 runtime/原操作身份变化拒绝旧按钮；原生确认 lease 退役，写入事实由 SettingsHost 持有。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
       "status": "registered-source-entry"
     },

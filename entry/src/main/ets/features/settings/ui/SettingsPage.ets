@@ -13,6 +13,9 @@ import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../../
 import { TYPE_APP_INHERITED_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_ACTION, TYPE_SETTINGS_CACHE_ACTION } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor, type ReaderAppThemeMode } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
+import { ReaderControlPlacementPreferences } from '../../../app/ReaderControlPlacementPreferences';
+import { readerControlAlignment } from '../../reading/ui/ReaderControlPlacement';
+import { readerWidthClassWithHint } from '../../../ui/foundation/ReaderWidthClass';
 import { ReaderAppearanceSaveUnconfirmedError, type ReaderAppearanceSaveState } from '../../reading/application/ReaderAppearanceStore';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { SettingsShell } from './SettingsShell';
@@ -83,6 +86,9 @@ export struct SettingsPage {
   onReconcileCache: (generation: number) => void = (_generation: number): void => {};
   onContinueCache: (generation: number) => void = (_generation: number): void => {};
   @StorageLink('readerAppThemeMode') private appThemeMode: string = 'system';
+  @StorageLink('readerControlAlignment') private controlAlignment: string = 'center';
+  @StorageLink('readerControlPlacementPendingGeneration') private controlPlacementPending: number = 0;
+  @State private controlPlacementSaving: boolean = false;
   @State private languageValue: string = '简体中文';
   @State private startupValue: string = '书架';
   @State private animationValue: string = '标准';
@@ -125,6 +131,7 @@ export struct SettingsPage {
   @State private anchorBottom: number = 0;
   @State private originX: number = 0;
   @State private originY: number = 0;
+  @State private paneWidth: number = 0;
   private selectAnchors: Record<string, SettingsSelectAnchor> = {};
   onBack: () => void = (): void => {};
   onOpenSourceManagement: () => void = (): void => {};
@@ -234,10 +241,7 @@ export struct SettingsPage {
       showOverlay: this.openSelect !== '',
       boundedOverlayVisible: this.pendingFeedbackVisible(),
       boundedOverlayContent: (): void => { this.pendingFeedback(); },
-      onOverlayOriginChange: (x: number, y: number): void => {
-        this.originX = x;
-        this.originY = y;
-      },
+      onOverlayOriginChange: (x: number, y: number, width?: number): void => this.recordShellArea(x, y, width),
       // ArkUI 限制: @Builder 方法引用作 @BuilderParam 时, 方法内部再建 @Builder
       // 闭包 (CategorySection content → this.navRow) 会丢 this 绑定, 运行时崩
       // "Cannot read property bind of undefined"。改内联闭包词法捕获 this (同
@@ -564,7 +568,7 @@ export struct SettingsPage {
 
   private pendingFeedbackVisible(): boolean {
     return this.settingsInputIsCurrent() && !this.resetInFlight && this.openSelect === '' &&
-      (this.hasPendingSettings() || this.hasPendingCleanup() || this.hasPendingAppearanceSave());
+      (this.hasPendingSettings() || this.hasPendingCleanup() || this.hasPendingAppearanceSave() || this.hasPendingControlPlacement());
   }
 
   @Builder
@@ -606,6 +610,7 @@ export struct SettingsPage {
             onSecondaryAction: (): void => this.dispatchRecoveryAction(this.capturedPendingAction(identity, 1)) });
         }, (key: string): string => key);
       }
+      this.controlPlacementRecovery();
   }
 
 
@@ -664,12 +669,86 @@ export struct SettingsPage {
       if (isReaderProductSurfaceEnabled('wideNavigationRail')) {
         this.switchRow('宽屏使用侧边导航', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_navigation_theme_night') : $r('app.media.settings_gen_navigation')), 'wideNavigationRail');
       }
+      this.controlPlacementRow();
       if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
         this.switchRow('点击当前底栏回顶部', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_tap_top_theme_night') : $r('app.media.settings_gen_tap_top')), 'tapBottomScrollTop');
         this.switchRow('崩溃日志', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_crash_theme_night') : $r('app.media.settings_gen_crash')), 'crashLog');
         this.selectRow('动画效果', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_animation_theme_night') : $r('app.media.settings_gen_animation')), 'animation', ['标准', '减弱', '关闭']);
       }
     }
+  }
+
+  @Builder
+  private controlPlacementRow() {
+    ReaderFormRow({ label: '宽屏控制栏默认位置', contentMinWidth: READER_APP_THEME_SEGMENT_WIDTH }) {
+      ForEach([this.controlPlacementHostIdentity()], (identity: string): void => {
+        ReaderSegmentedControl({
+          specId: 'app-theme-segment', options: ['左', '居中', '右'], optionIds: ['left', 'center', 'right'],
+          inputIdentity: identity, accessibilityLabel: '宽屏控制栏默认位置',
+          actionEnabled: this.controlPlacementCurrent(identity) && this.controlPlacementPending === 0 && !this.controlPlacementSaving,
+          selectedIndex: this.controlAlignment === 'left' ? 0 : this.controlAlignment === 'right' ? 2 : 1,
+          onSelect: (index: number): void => this.selectControlPlacement(index, identity),
+        });
+      }, (identity: string): string => identity);
+    }
+  }
+
+  private selectControlPlacement(index: number, identity: string): void {
+    const current = (): boolean => this.controlPlacementCurrent(identity);
+    if (!current() || this.controlPlacementSaving || this.controlPlacementPending !== 0 ||
+      !Number.isInteger(index) || index < 0 || index > 2) return;
+    this.controlPlacementSaving = true;
+    void ReaderControlPlacementPreferences.select(readerControlAlignment(['left', 'center', 'right'][index]), current)
+      .then((result): void => {
+        if (result === 'notDispatched' && current()) this.showFeedbackToast('控制栏位置未保存，请重试');
+      }).finally((): void => { this.controlPlacementSaving = false; });
+  }
+
+  @Builder
+  private controlPlacementRecovery() {
+    if (this.hasPendingControlPlacement()) {
+      ForEach([JSON.stringify([this.controlPlacementHostIdentity(), `${this.controlPlacementPending}`])], (ticket: string): void => {
+        ReaderRecoveryNotice({ grouped: true,
+          follows: this.hasPendingSettings() || this.hasPendingAppearanceSave() || this.hasPendingCleanup(),
+          view: { visible: true, message: '控制栏位置的保存结果待确认。', canRetry: true,
+            generation: Number(this.capturedPendingAction(ticket, 1)) },
+          tag: '控制栏位置', actionLabel: '重试保存', busy: this.controlPlacementSaving,
+          onReconcile: (generation: number): void => this.retryControlPlacement(ticket, generation),
+        });
+      }, (ticket: string): string => `control-placement:${ticket}`);
+    }
+  }
+
+  private hasPendingControlPlacement(): boolean {
+    return this.controlPlacementPending > 0 && this.controlPlacementCurrent(this.controlPlacementHostIdentity());
+  }
+
+  private retryControlPlacement(ticket: string, generation: number): void {
+    const identity = this.capturedPendingAction(ticket, 0);
+    const current = (): boolean => this.controlPlacementCurrent(identity) && this.controlPlacementPending === generation;
+    if (this.controlPlacementSaving || generation <= 0 || generation !== Number(this.capturedPendingAction(ticket, 1)) || !current()) return;
+    this.controlPlacementSaving = true;
+    void ReaderControlPlacementPreferences.retry(generation, current)
+      .finally((): void => { this.controlPlacementSaving = false; });
+  }
+
+  private controlPlacementHostIdentity(): string {
+    return JSON.stringify([this.temporaryBackIdentity, this.navigationGeneration]);
+  }
+
+  private controlPlacementCurrent(identity: string): boolean {
+    return identity === this.controlPlacementHostIdentity() && this.settingsInputIsCurrent() && this.settingsNavigationCurrent() &&
+      this.developerPageId === '' && this.openSelect === '';
+  }
+
+  private paneExpanded(): boolean {
+    return readerWidthClassWithHint(this.paneWidth, this.expandedLayout) === 'expanded';
+  }
+
+  private recordShellArea(x: number, y: number, width?: number): void {
+    this.originX = x;
+    this.originY = y;
+    if (width !== undefined && Number.isFinite(width) && width > 0) this.paneWidth = width;
   }
 
   @Builder
@@ -781,7 +860,7 @@ export struct SettingsPage {
         value: this.currentValue(key),
         options: options,
         isOpen: this.openSelect === key,
-        variant: this.expandedLayout ? 'settingsTablet' : 'settingsPhone',
+        variant: this.paneExpanded() ? 'settingsTablet' : 'settingsPhone',
         reduceMotion: this.reduceMotionValue,
         onToggle: (): void => {
           this.toggleSelection(key);
@@ -1034,7 +1113,7 @@ export struct SettingsPage {
   private buildOverlay() {
     if (this.openSelect !== '') {
       SettingsSelectOverlay({
-        expandedLayout: this.expandedLayout,
+        expandedLayout: this.paneExpanded(),
         field: this.openSelect,
         value: this.currentValue(this.openSelect),
         options: this.selectOptions(this.openSelect),

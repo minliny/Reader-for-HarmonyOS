@@ -26,7 +26,8 @@ export struct SettingsShell {
   onOpenSync: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
   onDiscoverRequested: () => void = (): void => {};
-  onOverlayOriginChange: (x: number, y: number) => void = (_x: number, _y: number): void => {};
+  onOverlayOriginChange: (x: number, y: number, width?: number) => void =
+    (_x: number, _y: number, _width?: number): void => {};
   @BuilderParam homeContent: () => void;
   @BuilderParam generalContent: () => void;
   @BuilderParam overlayContent: (contentStartInset: number) => void;
@@ -78,7 +79,8 @@ export struct SettingsShell {
 
   private reportOverlayOrigin(area: Area): void {
     // Area.globalPosition 已是 vp 单位，不能再 px2vp。
-    this.onOverlayOriginChange(readerPageAreaLength(area.globalPosition.x), readerPageAreaLength(area.globalPosition.y));
+    this.onOverlayOriginChange(readerPageAreaLength(area.globalPosition.x),
+      readerPageAreaLength(area.globalPosition.y), readerPageAreaLength(area.width));
   }
 
   private onMainTab(key: string): void {
