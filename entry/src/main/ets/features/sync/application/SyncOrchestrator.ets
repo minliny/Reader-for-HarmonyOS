@@ -370,7 +370,7 @@ export class SyncOrchestrator {
       observation.write.dispatchedCount > 0 ? 'unknown' : 'undispatched' : observation.write.confirmation();
     const partial = observation.coreApplied && !observation.completed
       ? 'Core 配置已应用，Host 恢复尚未完成；核对已有恢复，不重复覆盖' : undefined;
-    const remotePartial = observation.retentionSkipped ? '备份已保留，保留清理已由你结束；已发出的远端请求不会撤回' : !observation.completed && observation.uploadQualified ? '本次备份上传已核实，保留清理尚无完成回执；不自动重传或删除' :
+    const remotePartial = observation.retentionSkipped ? '备份已保留，保留清理已由你结束；已发出的远端请求不会撤回' : !observation.completed && observation.uploadQualified ? '本次备份上传已核实，保留清理尚无完成回执' + (errorOrStatus === undefined ? '' : '，' + errorOrStatus) :
       !observation.completed && observation.remoteConfirmedCount > 0 ? `已有 ${observation.remoteConfirmedCount} 个远端写入响应，备份完成回执待核对；不自动重传` : undefined;
     this.latestOperation = { action, writeGeneration: observation.writeGeneration, operationId: observation.operationId, coreApplied: observation.coreApplied, hostApplied: observation.hostApplied,
       completed: observation.completed, retentionSkipped: observation.retentionSkipped, remoteConfirmedCount: observation.remoteConfirmedCount, uploadQualified: observation.uploadQualified,

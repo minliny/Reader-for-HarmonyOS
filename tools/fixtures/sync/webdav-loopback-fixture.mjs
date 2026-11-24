@@ -193,6 +193,28 @@ export async function verifyWebdavLoopback(nativeCore) {
       fixture.expireAuthorization(true);
       await assert.rejects(() => gateway.reconcileBackupReceipt(), /WebDAV 认证失败或已过期/);
       assert.equal((await x.store.loadBackupJournal()).phase, 'mayDispatch');
+      fixture.expireAuthorization(false);
+      fixture.changeRead(body => body);
+      const recovered = await gateway.reconcileBackupReceipt();
+      assert.equal(recovered.uploadQualified, true);
+      assert.equal((await gateway.skipBackupRetention(recovered.operationId)).retentionSkipped, true);
+      // Fill the collection with Reader-shaped objects from another owner.
+      const unowned = [];
+      for (let index = 0; index < 4; index++) {
+        const name = `reader-storage-170000000000${index}-aabbccddeeff.reader-backup.json`;
+        const target = `${baseUrl}${fixture.directory}/${name}`;
+        const created = await transport({ ...command, url: target, method: 'PUT',
+          headers: { ...command.headers, 'If-None-Match': '*' }, body: 'foreign backup object' });
+        assert.equal(created.status, 201);
+        unowned.push(name);
+      }
+      const protectedBackup = await gateway.triggerBackup();
+      assert.equal(protectedBackup.error, '旧备份归属未核实，已保留远端历史');
+      const receipt = await gateway.reconcileBackupReceipt(false);
+      assert.equal(receipt.uploadQualified, true);
+      assert.equal((await gateway.skipBackupRetention(receipt.operationId)).retentionSkipped, true);
+      assert.equal(fixture.status().counters.delete, deletes);
+      assert.ok(unowned.every(name => fixture.status().fileNames.includes(name)));
     }
     assert.equal(fixture.status().uploadedBodyContainsPlaintextMarker, false);
     console.log(JSON.stringify({ transport: 'loopback HTTPS', core: nativeCore ? 'desktop-native' : 'controlled',

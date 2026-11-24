@@ -6,7 +6,7 @@ async function run(id){
   await verifyWebdavLoopback(id==='loopback-core');
   return;
  }
- if(['publication-readback','provider-switch','connection-retirement','stale-consent','readback-auth'].includes(id)){
+ if(['publication-readback','provider-switch','connection-retirement','stale-consent','readback-auth','unknown-retention'].includes(id)){
   const {createSyncOwnerFixture}=await import('./fixtures/sync/receipt-owner-fixture.mjs');
   const f=createSyncOwnerFixture();
   try {
@@ -103,6 +103,41 @@ async function run(id){
     assert.equal(x.runtime.count('sync.webdav.transaction.advance'),0);
     await assert.rejects(()=>gateway.reconcileBackupReceipt(),/WebDAV 认证失败或已过期/);
    }
+   if(id==='unknown-retention'){
+    const unowned='https://example.test/backup/reader-storage-1700000000000-aabbccddeeff.reader-backup.json';
+    let planned=false;
+    const request=x.runtime.request.bind(x.runtime);
+    x.runtime.request=async (method,params)=>{
+     if(method==='sync.webdav.backup.retention.skip'){
+      x.runtime.calls.push([method,params]);
+      return {data:{transactionId:params.transactionId,receiptState:'retentionSkipped',uploadQualified:true,
+        durable:true,retentionSkipped:true,retentionCompleted:false}};
+     }
+     const result=await request(method,params);
+     if(method==='sync.webdav.transaction.advance'&&!planned){
+      planned=true;
+      return {data:{transactionId:params.transactionId,status:'hostRequired',phase:'backupRetentionDelete',
+        requests:[{method:'DELETE',url:unowned}]}};
+     }
+     if(method==='sync.webdav.backup.receipt.query'&&planned){
+      result.data.uploadQualified=true;
+      result.data.receiptState='uploadAcknowledged';
+     }
+     return result;
+    };
+    f.setTransport(async value=>{
+     requests.push(value);
+     return {status:value.method==='GET'?200:201,finalUrl:value.url,body:'ciphertext'};
+    });
+    x.owner.open();await x.settle();x.owner.triggerBackup();await x.settle();
+    assert.deepEqual(requests.map(value=>value.method),['PUT','GET']);
+    assert.equal(x.snapshot().facts.operation.uploadQualified,true);
+    assert.equal(x.runtime.count('sync.webdav.backup.retention.skip'),0,'only explicit retention action settles');
+    x.page().skipAction.onClick();await x.settle();
+    assert.equal(x.runtime.count('sync.webdav.backup.retention.skip'),1);
+    assert.equal(x.snapshot().facts.operation.retentionSkipped,true);
+    assert.equal(x.snapshot().facts.canMutate,true);
+   }
   }finally{f.cleanup();}
  }
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
@@ -125,4 +160,4 @@ async function run(id){
   assert.equal(c.requireDirectory(' /backup '),'/backup');for(const value of ['/a/../b','/%2e%2e/x','/a\u0000b','x'.repeat(1025)])assert.throws(()=>c.requireDirectory(value));
  }
 }
-for(const id of selectContractCases({'closed-transaction':'Actual structured abort classifier','restore-order':'Actual stale conflict abort before new restore','transport-directory':'Actual HTTPS request options/transaction identity/directory rejection','publication-readback':'Conditional new object and exact readback before retention','provider-switch':'Saved provider change invalidates outstanding restore consent','connection-retirement':'Retired connection test issues no HTTP request','stale-consent':'Old physical action cannot approve a new same-route restore candidate','readback-auth':'Readback auth expiry retains original publication journal','loopback-transport':'Loopback TLS and product Host with controlled Core','loopback-core':'Loopback TLS, product Host, and local desktop Core NAPI'})){await run(id);recordContractCasePass(id);}
+for(const id of selectContractCases({'closed-transaction':'Actual structured abort classifier','restore-order':'Actual stale conflict abort before new restore','transport-directory':'Actual HTTPS request options/transaction identity/directory rejection','publication-readback':'Conditional new object and exact readback before retention','provider-switch':'Saved provider change invalidates outstanding restore consent','connection-retirement':'Retired connection test issues no HTTP request','stale-consent':'Old physical action cannot approve a new same-route restore candidate','readback-auth':'Readback auth expiry retains original publication journal','unknown-retention':'Never delete filename-matching unowned WebDAV backup objects','loopback-transport':'Loopback TLS and product Host with controlled Core','loopback-core':'Loopback TLS, product Host, and local desktop Core NAPI'})){await run(id);recordContractCasePass(id);}

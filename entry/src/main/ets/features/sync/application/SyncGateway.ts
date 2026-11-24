@@ -20,6 +20,7 @@ const MAX_TRANSACTION_REQUESTS = 100;
 const MAX_WEBDAV_DIRECTORY_LENGTH = 4096;
 const WEBDAV_AUTH_FAILED = 'WebDAV 认证失败或已过期，请更新账号与密码';
 const WEBDAV_READBACK_FAILED = '上传结果尚待核对，请核对本次备份';
+const WEBDAV_RETENTION_UNOWNED = '旧备份归属未核实，已保留远端历史';
 const WEBDAV_PROVIDER_CHANGED = 'WebDAV 配置已变化，请重新选择恢复备份';
 const WEBDAV_NOT_CONFIGURED = '请先安全保存 WebDAV 配置';
 const WEBDAV_EMPTY = '此 WebDAV 目录暂无 Reader 配置备份';
@@ -31,7 +32,7 @@ const WEBDAV_FAILURE = '操作未完成，请核对当前配置或已有恢复�
 /** Project only finite messages. Raw native and HTTP errors can contain secrets. */
 export function syncFailureMessage(error: unknown): string {
   if (error instanceof Error && [
-    WEBDAV_AUTH_FAILED, WEBDAV_READBACK_FAILED, WEBDAV_PROVIDER_CHANGED, WEBDAV_NOT_CONFIGURED,
+    WEBDAV_AUTH_FAILED, WEBDAV_READBACK_FAILED, WEBDAV_RETENTION_UNOWNED, WEBDAV_PROVIDER_CHANGED, WEBDAV_NOT_CONFIGURED,
     WEBDAV_EMPTY, WEBDAV_INVALID_BACKUP, WEBDAV_RESTORE_PENDING, WEBDAV_CANCELLED,
   ].includes(error.message)) return error.message;
   if (error === null || typeof error !== 'object') return WEBDAV_FAILURE;
@@ -647,6 +648,17 @@ export class SyncGateway {
           this.assertAdmission(admitted);
           const request = current.requests[index];
           const method = request['method'];
+          if (typeof method === 'string' && method.toUpperCase() === 'DELETE') {
+            // A matching filename does not establish ownership. Preserve the
+            // verified publication and let the user finish through retention.skip.
+            const receipt = await this.reconcileBackupReceipt(false);
+            this.assertAdmission(admitted);
+            if (receipt?.operationId === current.transactionId && receipt.uploadQualified && observation !== undefined) {
+              observation.uploadQualified = true;
+              if (observation.write.dispatchedCount > 0) observation.write.confirmed();
+            }
+            throw new Error(WEBDAV_RETENTION_UNOWNED);
+          }
           const mutable = typeof method === 'string' && !['GET', 'HEAD', 'OPTIONS', 'PROPFIND'].includes(method.toUpperCase());
           const uploads = current.phase === 'backupUpload' && method === 'PUT';
           let publication: WebDavBackupJournal | undefined;
