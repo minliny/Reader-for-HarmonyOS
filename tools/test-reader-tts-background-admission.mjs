@@ -21,7 +21,8 @@ function fixture(enabled = true) {
   const coordinator = { pauseForBackground: async () => { pauses++; } };
   const reader = Object.assign(new Reader(), {
     mounted: true, appForeground: false, ttsBackgroundPlayback: enabled, ttsCoordinator: coordinator,
-    bookmarkRollbackGeneration: 0, onControlInputBoundaryChanged() {}, cancelAutomaticPageStart() {},
+    bookmarkRollbackGeneration: 0, applyWindowPolicyForChromeOwner() {}, onControlInputBoundaryChanged() {},
+    cancelAutomaticPageStart() {},
     cancelSourceSwitchCompletion() {},
     stopReaderTtsAudition() {}, finishSessionCapsuleMorph() {}, finishBookmarkRollback() {},
     captureReadingRecordElapsed() {}, clearReadingRecordTimer() {}, flushReadingRecord: async () => {},
@@ -69,8 +70,11 @@ admission = deferred();
   const coordinator=new ReaderTtsSessionCoordinator(gateway,transport,async value=>commits.push(value));
   await coordinator.start({chapter,content:canonicalRemoteContent,contentVersion:1,scalarPosition:0,pauseOnInterruption:false});
   const requestId=transport.requests.at(-1).requestId;
+  transport.emit({type:'start',requestId});await coordinator.whenSettled();
+  assert.equal(transport.calls.filter(call=>call.startsWith('media:')).at(-1),'media:playing');
   transport.emit({type:'backgroundLeaseRevoked'});await coordinator.whenSettled();
   assert.equal(coordinator.getState().status,'interrupted');assert.equal(coordinator.getState().pauseReason,'routeBackground');
+  assert.equal(transport.calls.filter(call=>call.startsWith('media:')).at(-1),'media:paused','background revocation reflects the suspended speech on the system controller');
   assert.ok(transport.calls.includes('deactivate'),'mandatory background revoke releases audio despite optional pause preference');
   const cursor=gateway.cursor;transport.emit({type:'complete',requestId,completion:'audio'});await coordinator.whenSettled();
   assert.equal(gateway.cursor,cursor,'old speech callback cannot advance a revoked background queue');

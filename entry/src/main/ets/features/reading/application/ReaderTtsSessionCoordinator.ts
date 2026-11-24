@@ -303,7 +303,7 @@ export class ReaderTtsSessionCoordinator {
         const selected = await this.host.selectEngine(input.engine ?? session.restoreEngine);
         if (!current()) return;
         if (!selected) throw new Error('当前试听引擎不可用');
-        const probe = await this.host.probe();
+        const probe = await this.host.probe(input.language, input.person, true);
         if (!current()) return;
         if (!probe.available) throw new Error(probe.reason ?? '当前音色不可用');
         this.host.setBackgroundPlaybackEnabled?.(false);
@@ -1061,6 +1061,7 @@ export class ReaderTtsSessionCoordinator {
       audioSession: 'inactive',
       focus: 'none',
     };
+    this.host.publishPlaybackState('error');
     this.setState({
       ...this.state,
       status: 'error',
@@ -1117,6 +1118,7 @@ export class ReaderTtsSessionCoordinator {
       audioSession: 'inactive',
       focus: 'none',
     };
+    this.host.publishPlaybackState('error');
     this.setState({
       ...this.state,
       status,

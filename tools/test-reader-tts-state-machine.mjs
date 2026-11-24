@@ -195,18 +195,24 @@ if(id==='start-failures'){
     await coordinator.dispose();
   }
 
-  // Engine unavailable mid-start: capability gate, not error.
+  // An unavailable replacement must clear the previous playback projection.
   {
     const gateway = new FakeGateway();
     const host = new FakeHost();
-    host.probeResult = { available: false, reason: '系统不支持朗读：detail-2' };
     const coordinator = createCoordinator(gateway, host);
     await coordinator.start(startInput());
+    host.emit({ type: 'start', requestId: host.requests.at(-1).requestId });
+    await coordinator.whenSettled();
+    assert.equal(host.calls.filter(call => call.startsWith('media:')).at(-1), 'media:playing');
+    host.probeResult = { available: false, reason: '系统不支持朗读：detail-2' };
+    await coordinator.start(startInput({ contentVersion: 2 }));
     const state = coordinator.getState();
     assert.equal(state.status, 'unavailable');
     assert.equal(state.stopReason, 'engineUnavailable');
     assert.equal(state.errorMessage, '系统不支持朗读：detail-2');
     assert.equal(state.chapterKey, undefined, 'unavailable must not keep a phantom active session');
+    assert.equal(host.calls.filter(call => call.startsWith('media:')).at(-1), 'media:error');
+    assert.equal(host.requests.length, 1, 'the unavailable replacement never dispatches speech');
     await coordinator.dispose();
   }
 
@@ -235,6 +241,7 @@ if(id==='start-failures'){
     const state = coordinator.getState();
     assert.equal(state.status, 'error');
     assert.equal(state.errorMessage, 'synth failed');
+    assert.equal(host.calls.filter(call => call.startsWith('media:')).at(-1), 'media:error');
     await coordinator.dispose();
   }
 }

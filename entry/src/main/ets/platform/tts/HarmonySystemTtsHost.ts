@@ -118,19 +118,19 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
    * Capability + language + voice check. The reason text is preserved for the
    * coordinator so an unavailable engine never reports without a cause.
    */
-  async probe(language?: string, person?: number): Promise<ReaderTtsHostProbe> {
+  async probe(language?: string, person?: number, exactVoice?: boolean): Promise<ReaderTtsHostProbe> {
     if (this.closed) return { available: false, reason: '朗读服务已关闭' };
     try {
       await this.ensureEngine(language ?? this.engineRequestedLanguage ?? DEFAULT_LANGUAGE,
-        person ?? this.engineRequestedPerson ?? DEFAULT_PERSON);
+        person ?? this.engineRequestedPerson ?? DEFAULT_PERSON, undefined, exactVoice);
       return { available: true };
     } catch (error) {
       this.logError('system TTS engine probe failed', error);
       const detail = errorMessageOf(error);
       if (/not\s*support|unsupported|不支持/i.test(detail)) {
-        return { available: false, reason: `系统不支持朗读：${detail}` };
+        return { available: false, reason: '当前系统不支持此音色，可选择其他音色或配置在线 TTS。' };
       }
-      return { available: false, reason: `中文离线音色未安装或音色创建失败：${detail}` };
+      return { available: false, reason: '系统音色未安装或无法启动，请安装或启用语音服务，也可以配置在线 TTS。' };
     }
   }
 
@@ -200,9 +200,6 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
       const languageOrder = left.language.localeCompare(right.language);
       return languageOrder !== 0 ? languageOrder : left.person - right.person;
     });
-    if (options.length === 0) {
-      options.push({ language: DEFAULT_LANGUAGE, person: DEFAULT_PERSON, label: '系统默认' });
-    }
     return options;
   }
 
@@ -255,15 +252,15 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   }
 
   private async ensureEngine(language: string, person: number,
-    trace?: (point: ReaderTtsNativeSpeakPoint) => void): Promise<textToSpeech.TextToSpeechEngine> {
+    trace?: (point: ReaderTtsNativeSpeakPoint) => void, exactVoice: boolean = false): Promise<textToSpeech.TextToSpeechEngine> {
     this.assertOpen();
     if (this.engine !== undefined && this.engineRequestedLanguage === language) {
       const cached = this.engineRequestedPerson;
-      if (cached === person) {
+      if (cached === person && (!exactVoice || (this.engineLanguage === language && this.enginePerson === person))) {
         trace?.('engine-cache-hit');
         return this.engine;
       }
-      if (language === DEFAULT_LANGUAGE &&
+      if (!exactVoice && language === DEFAULT_LANGUAGE &&
         ((cached === DEFAULT_PERSON && person === LING_XIAOSHAN_PERSON) ||
           (cached === LING_XIAOSHAN_PERSON && person === DEFAULT_PERSON))) {
         trace?.('engine-cache-alias-hit');
@@ -300,7 +297,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
       if (this.closed || generation !== this.engineGeneration) {
         throw new Error('Reader system TTS engine initialization retired');
       }
-      if (language === DEFAULT_LANGUAGE && person === DEFAULT_PERSON) throw error;
+      if (exactVoice || (language === DEFAULT_LANGUAGE && person === DEFAULT_PERSON)) throw error;
       this.logError('requested system TTS voice failed; falling back to default', error);
       effectiveLanguage = DEFAULT_LANGUAGE;
       effectivePerson = DEFAULT_PERSON;

@@ -13,6 +13,7 @@ function fixture() {
     async activate() { calls.push(['activate']); },
     async deactivate() { calls.push(['deactivate']); },
     async destroy() { calls.push(['destroy']); if (failDestroy) throw Error('destroy failed'); },
+    async setAVMetadata(metadata) { calls.push(['metadata', metadata]); },
     async setAVPlaybackState(state) { calls.push(['publish', state.state]); },
   };
   const native = { async createAVSession() { calls.push(['create']); return session; }, PlaybackState: {
@@ -23,6 +24,37 @@ function fixture() {
     .replace(/^export /gm, '') + ';return HarmonyTtsMediaSession;')(native, { error() {} });
   return { Class, owner: new Class({}), native, session, calls, callbacks,
     set failDestroy(value) { failDestroy = value; }, set failOn(value) { failOn = value; } };
+}
+{
+  const f = fixture();
+  const events = [];
+  f.owner.setEventListener(event => events.push(event));
+  await f.owner.activate();
+  assert.deepEqual(f.calls[1], ['metadata', { assetId: 'reader-tts', title: 'Reader 朗读' }]);
+  assert.deepEqual(f.calls.at(-1), ['activate'], 'metadata and control registration precede activation');
+  for (const command of ['play', 'pause', 'stop', 'playNext', 'playPrevious']) f.callbacks.get(command)();
+  assert.deepEqual(events, ['play', 'pause', 'stop', 'next', 'previous'].map(action => ({ type: 'mediaControl', action })));
+  for (const state of ['preparing', 'playing', 'paused', 'stopped']) f.owner.publish(state);
+  await tick();
+  assert.deepEqual(f.calls.filter(call => call[0] === 'publish').map(call => call[1]), [1, 2, 3, 6]);
+  await f.owner.close();
+}
+{
+  const f = fixture();
+  for (const state of ['error', 'stopped', 'completed']) f.owner.publish(state);
+  await tick();
+  assert.deepEqual(f.calls, [], 'terminal state cannot acquire AVSession for a never-started player');
+  await f.owner.close();
+}
+{
+  const f = fixture(), wait = deferred();
+  f.session.setAVMetadata = () => { f.calls.push(['metadata']); return wait.promise; };
+  const start = f.owner.activate(); await tick();
+  assert.ok(f.calls.some(call => call[0] === 'metadata'));
+  const close = f.owner.close();
+  wait.resolve(); await assert.rejects(start, /closed during initialization/); await close;
+  assert.equal(f.calls.filter(call => call[0] === 'on' || call[0] === 'activate').length, 0);
+  assert.equal(f.calls.filter(call => call[0] === 'destroy').length, 1);
 }
 {
   const f = fixture(), wait = deferred(); f.native.createAVSession = () => { f.calls.push(['create']); return wait.promise; };
@@ -69,4 +101,4 @@ function fixture() {
   wait.resolve(f.session); await assert.rejects(first, /closed during initialization/); await retired; await second;
   assert.equal(creates, 2); await next.close();
 }
-console.log('PASS actual AVSession owner: deferred create/activate retirement, no late controls or publish admission, partial-init cleanup, exact failed-release retry and successor barrier');
+console.log('PASS actual AVSession owner: metadata and control setup before activation, command/state mapping, deferred create/metadata/activate retirement, exact failed-release retry and successor barrier');

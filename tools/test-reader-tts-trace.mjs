@@ -153,5 +153,6 @@ for (const enabled of [true, false]) {
   assert.equal(Isolated.currentTts(), undefined, 'warm caller cannot enable diagnostics');
 }
 const ability = readFileSync(new URL('../entry/src/main/ets/entryability/EntryAbility.ets', import.meta.url), 'utf8');
-assert.match(ability, /DEBUG === true && BUILD_MODE_NAME === 'debug', want\.parameters\?\.readerTtsTrace === true/);
+assert.match(ability, /const parameters = this\.publicFixture === undefined \? want\.parameters : undefined/);
+assert.match(ability, /DEBUG === true && BUILD_MODE_NAME === 'debug', parameters\?\.readerTtsTrace === true/);
 console.log('TTS trace PASS: real production adapter/callback seams, shared monotonic operation identity, stop/revoke/release, failure, old engine/owner/generation rejection, normal/release zero TTS sampling; DEVICE NOT RUN');

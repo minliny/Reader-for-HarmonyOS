@@ -39,7 +39,7 @@ export interface ReaderTtsHost {
   setEventListener(listener: ((event: ReaderTtsHostEvent) => void) | undefined, owner: string): void;
   clearEventListener(owner: string): void;
   selectEngine(engine?: string): Promise<boolean>;
-  probe(language?: string, person?: number): Promise<ReaderTtsHostProbe>;
+  probe(language?: string, person?: number, exactVoice?: boolean): Promise<ReaderTtsHostProbe>;
   isAvailable(): Promise<boolean>;
   activateAudioSession(allowMixing: boolean): Promise<void>;
   deactivateAudioSession(): Promise<void>;

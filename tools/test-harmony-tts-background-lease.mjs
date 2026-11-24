@@ -142,3 +142,25 @@ function fixture() {
   await router.close();assert.equal(f.listeners.size,0);
 }
 console.log('PASS native background owner: exact task identity, deferred Want/start retirement, revoke-before-ACK, release failure/retry, missing-ID readback, no broad cleanup, real router foreground/background gates');
+
+// Optional media failure must leave foreground speech admitted and recover on
+// the next foreground lease, without hammering the same failing lease per slice.
+{
+  let attempts = 0;
+  const speech = { setEventListener() {}, async activateAudioSession() {}, async deactivateAudioSession() {}, async close() {} };
+  const media = { setEventListener() {}, async activate() {
+    attempts++;
+    if (attempts === 1) throw Error('transient metadata setup failure');
+  }, async close() {} };
+  const router = new HarmonyTtsHostRouter(speech, speech, media);
+  await router.activateAudioSession(false);
+  await tick();
+  await router.activateAudioSession(false);
+  await tick();
+  assert.equal(attempts, 1, 'same audio lease does not retry for each slice');
+  await router.deactivateAudioSession();
+  await router.activateAudioSession(false);
+  await tick();
+  assert.equal(attempts, 2, 'a successor audio lease retries the optional media session');
+  await router.close();
+}
