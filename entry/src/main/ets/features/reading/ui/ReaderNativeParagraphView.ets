@@ -3,6 +3,7 @@ import { ReaderNativeParagraphController, ReaderNativeParagraphRecipe, ReaderNat
 import { ReaderDynamicHighlightRect, readerHighlightCanvasColor } from './ReaderDynamicHighlight';
 import { ReadingSurfaceLayoutMap } from '../application/ReadingSurfaceLayoutMap';
 import { readerSelectedOriginalText } from './ReaderTextSelectionProjection';
+import { readerSelectionShareAnchor, readerShareMessage, readerSystemShareActions } from './ReaderSharePresentation';
 import { copyReaderSelection } from '../../../platform/clipboard/ReaderClipboardHost';
 import { readerNativeTextGeometryKey } from './ReaderNativeTextMeasurement';
 
@@ -10,6 +11,7 @@ import { readerNativeTextGeometryKey } from './ReaderNativeTextMeasurement';
 @Component
 export struct ReaderNativeParagraphView {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
+  private readonly selectionShareAnchor: string = readerSelectionShareAnchor();
   @Prop @Watch('prepare') recipe: ReaderNativeParagraphRecipe;
   resourceProvider: (() => ReaderNativeParagraphResource | undefined) | undefined = undefined;
   @Prop @Watch('prepare') gapVp: number = 0;
@@ -37,6 +39,7 @@ export struct ReaderNativeParagraphView {
   private map: ReadingSurfaceLayoutMap | undefined;
   private mounted: boolean = false;
   private epoch: number = 0;
+  private selectionEpoch: number = 0;
   private preparedKey: string = '';
   private x: number = 0;
   private y: number = 0;
@@ -88,14 +91,29 @@ export struct ReaderNativeParagraphView {
   private updateSelection(): void {
     if (!this.mounted) return;
     const epoch = this.epoch;
+    const selectionEpoch = ++this.selectionEpoch;
+    const current = (): boolean => this.mounted && this.selectionEnabled && epoch === this.epoch &&
+      selectionEpoch === this.selectionEpoch &&
+      this.selectionInputCurrent?.() !== false;
+    const selected = (range: TextRange): string | undefined => current() ?
+      readerSelectedOriginalText(this.recipe.text, 0, range.start, range.end,
+        this.controller.visibleStartUtf16(), this.controller.visibleEndUtf16()) : undefined;
     this.controller.selection(this.selectionEnabled, this.selectionColor, (range: TextRange): void => {
-      if (!this.mounted || !this.selectionEnabled || this.selectionInputCurrent?.() === false || epoch !== this.epoch) return;
-      const original = readerSelectedOriginalText(this.recipe.text, 0, range.start, range.end,
-        this.controller.visibleStartUtf16(), this.controller.visibleEndUtf16());
+      const original = selected(range);
       if (original === undefined || original.length === 0) return;
       try { copyReaderSelection(original); }
-      catch (_) { this.transientFeedback.show(() => this.getUIContext(), { message: '复制失败，请重试' }, (): boolean => this.mounted && this.selectionEnabled && epoch === this.epoch); }
+      catch (_) { this.transientFeedback.show(() => this.getUIContext(), { message: '复制失败，请重试' }, current); }
+    }, (range: TextRange, copyRequested: boolean): void => {
+      const original = selected(range);
+      if (original !== undefined && original.length > 0) void this.shareSelection(original, current, copyRequested);
     });
+  }
+
+  private async shareSelection(text: string, current: () => boolean, copyRequested: boolean): Promise<void> {
+    const actions = readerSystemShareActions(() => this.getUIContext(), this.selectionShareAnchor);
+    const message = readerShareMessage(await actions.shareSelection(text, current, copyRequested),
+      copyRequested ? '已复制选文' : undefined);
+    if (message !== undefined) this.transientFeedback.show(() => this.getUIContext(), { message }, current);
   }
 
   private updateHighlight(): void {
@@ -164,6 +182,7 @@ export struct ReaderNativeParagraphView {
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
     NodeContainer(this.controller)
+      .id(this.selectionShareAnchor)
       .width('100%').height(this.heightVp)
       .onAreaChange((_old: Area, area: Area): void => {
         this.x = Number.parseFloat(`${area.globalPosition.x}`);

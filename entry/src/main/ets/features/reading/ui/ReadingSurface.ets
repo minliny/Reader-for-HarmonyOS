@@ -10,6 +10,7 @@ import { text as graphicsText } from '@kit.ArkGraphics2D';
 import type { image } from '@kit.ImageKit';
 import { copyReaderSelection } from '../../../platform/clipboard/ReaderClipboardHost';
 import { readerSelectedOriginalText } from './ReaderTextSelectionProjection';
+import { readerCopySelectionForShare, readerSelectionShareAnchor, readerShareMessage, readerShareSelectionMenu, readerSystemShareActions } from './ReaderSharePresentation';
 import { registerReaderFonts, readerRegisteredFontFamily } from '../../../ui/foundation/ReaderFonts';
 import { TYPE_READER_CHAPTER_TITLE } from '../../../ui/foundation/ReaderTypography';
 import {
@@ -105,6 +106,7 @@ export class ReadingSurfacePageFragment {
 @Component
 export struct ReaderReadingTextFragment {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
+  private readonly selectionShareAnchor: string = readerSelectionShareAnchor();
   @Prop @Watch('scheduleHighlightGeometry') text: string = '';
   @Prop isParagraphStart: boolean = false;
   @Prop @Watch('scheduleHighlightGeometry') startScalar: number = 0;
@@ -123,6 +125,7 @@ export struct ReaderReadingTextFragment {
   private highlightTextCache: ReaderHighlightTextCache = new ReaderHighlightTextCache();
   private highlightHadGeometry: boolean = false;
   private highlightLifecycle: number = 0;
+  private selectionEpoch: number = 0;
   private highlightMounted: boolean = false;
   private highlightQueued: boolean = false;
   private highlightGlobalX: number = 0;
@@ -161,6 +164,7 @@ export struct ReaderReadingTextFragment {
         Span(this.highlightSuffix());
       }
     }
+      .id(this.selectionShareAnchor)
       .width('100%')
       .fontFamily(readerRegisteredFontFamily(this.getUIContext().getFont(), readerAppearanceSnapshotFontFamily(this.appearance)))
       .fontWeight(FontWeight.Regular)
@@ -170,7 +174,7 @@ export struct ReaderReadingTextFragment {
       .fontColor(this.themeStyle().ink)
       .copyOption(this.longPressSelectText ? CopyOptions.InApp : CopyOptions.None)
       .editMenuOptions({
-        onCreateMenu: (items: Array<TextMenuItem>): Array<TextMenuItem> => items,
+        onCreateMenu: (items: Array<TextMenuItem>): Array<TextMenuItem> => readerShareSelectionMenu(items),
         onMenuItemClick: (item: TextMenuItem, range: TextRange): boolean => this.onTextMenuItemClick(item, range),
       })
       .selectedBackgroundColor(readerThemeDefinition(this.appearance.activeTheme).selection)
@@ -224,25 +228,45 @@ export struct ReaderReadingTextFragment {
   }
 
   private onTextSelectionEnabledChanged(): void {
+    this.selectionEpoch += 1;
     if (!this.longPressSelectText) {
       this.textController.closeSelectionMenu();
     }
   }
 
   private onTextMenuItemClick(item: TextMenuItem, range: TextRange): boolean {
-    if (!item.id.equals(TextMenuItemId.COPY)) return false;
-    // Consume stale copy actions too, so a dismissed selection cannot copy
-    // a newly rendered fragment or fall through to the synthetic display text.
-    if (!this.highlightMounted || !this.longPressSelectText || this.selectionInputCurrent?.() === false) return true;
+    const copyForShare = readerCopySelectionForShare(item.id);
+    const share = item.id.equals(TextMenuItemId.SHARE);
+    if (!share && !copyForShare && !item.id.equals(TextMenuItemId.COPY)) return false;
+    // A dismissed selection cannot act on a new fragment or the synthetic display text.
+    const lifecycle = this.highlightLifecycle;
+    const epoch = this.selectionEpoch;
+    const text = this.text;
+    const current = (): boolean => this.highlightMounted && this.highlightLifecycle === lifecycle && this.selectionEpoch === epoch &&
+      this.text === text &&
+      this.longPressSelectText && this.selectionInputCurrent?.() !== false;
+    if (!current()) return true;
     const selected = readerSelectedOriginalText(this.text, this.indentPrefix().length, range.start, range.end);
     if (selected === undefined || selected.length === 0) return true;
+    if (share || copyForShare) {
+      this.textController.closeSelectionMenu();
+      void this.shareSelection(selected, current, copyForShare);
+      return true;
+    }
     try {
       copyReaderSelection(selected);
       this.textController.closeSelectionMenu();
     } catch (_) {
-      this.transientFeedback.show(() => this.getUIContext(), { message: '复制失败，请重试' }, (): boolean => this.highlightMounted && this.longPressSelectText);
+      this.transientFeedback.show(() => this.getUIContext(), { message: '复制失败，请重试' }, current);
     }
     return true;
+  }
+
+  private async shareSelection(text: string, current: () => boolean, copyRequested: boolean): Promise<void> {
+    const actions = readerSystemShareActions(() => this.getUIContext(), this.selectionShareAnchor);
+    const message = readerShareMessage(await actions.shareSelection(text, current, copyRequested),
+      copyRequested ? '已复制选文' : undefined);
+    if (message !== undefined) this.transientFeedback.show(() => this.getUIContext(), { message }, current);
   }
 
   private indentPrefix(): string {

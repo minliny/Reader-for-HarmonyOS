@@ -70,6 +70,8 @@ API 23 可通过 `UIContext.getPromptAction()` 显示系统 Toast。`openToast` 
 
 受控清单为 `tools/message-entrypoints.json`：按文件、宿主、成员和类别登记，不以行号或历史总数锁死。新增或修改入口必须更新分类、准入、清理或明确例外。来源中已有公共组件不等于已完成视觉、交互或用户验收。
 
+小说详情和正文选文的分享或复制结果由当前宿主通过 `ReaderTransientFeedback` 发布。确认复制和明确失败按普通短反馈处理，系统分享面板关闭时保持中性。详情、段落或片段退役后的回执由原宿主的准入谓词拒绝。[分享反馈入口登记](../../tools/message-entrypoints.json)
+
 RSS、同步、发现、未开放设置及不可达旧模块保持关闭。它们的 Toast 同样经公共适配；未完成的历史 UI 分流必须列为 `retained-before-open`，开放前完成对应分类迁移，不能计入当前已整合覆盖率。正常任务内容、资源占位、阅读手势和 OS 媒体通道属于已登记专用类别，不是任意页面绕过公共消息框架的授权。
 
 `node tools/check-message-entrypoints.mjs --inventory` 只列当前入口；`--check` 才校验未登记入口与原生旁路。无参为 `NOT_RUN`，不自动接入构建、签名、CI或其他测试。该检查不把任意 Text 判断为消息，不证明业务可达性、原生层级、视觉或用户验收；新场景仍需依据本规范审查。

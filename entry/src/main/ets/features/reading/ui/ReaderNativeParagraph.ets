@@ -198,8 +198,9 @@ export class ReaderNativeParagraphController extends NodeController {
   heightVp(): number { return this.window?.clipHeightVp() ?? 0; }
   glyphRects(start: number, end: number): ReaderNativeGlyphRect[] { return this.window?.glyphRects(start, end) ?? []; }
 
-  selection(enabled: boolean, background: ResourceColor, onCopy: (range: TextRange) => void): void {
-    this.window?.selection(enabled, background, onCopy);
+  selection(enabled: boolean, background: ResourceColor, onCopy: (range: TextRange) => void,
+    onShare?: (range: TextRange, copyRequested: boolean) => void): void {
+    this.window?.selection(enabled, background, onCopy, onShare);
   }
   visibleStartUtf16(): number { return this.window?.visibleStartUtf16() ?? 0; }
   visibleEndUtf16(): number { return this.window?.visibleEndUtf16() ?? 0; }

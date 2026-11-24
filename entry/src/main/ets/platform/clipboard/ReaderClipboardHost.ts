@@ -11,6 +11,11 @@ export function copyReaderSelection(text: string): void {
 
 /** Build identification is user-requested, non-secret text intended for issue reports. */
 export function copyReaderBuildIdentity(text: string): void {
+  copyReaderShareText(text);
+}
+
+/** Explicit copy from the share action may be pasted into another app. */
+export function copyReaderShareText(text: string): void {
   const data = pasteboard.createData(pasteboard.MIMETYPE_TEXT_PLAIN, text);
   const property = data.getProperty();
   property.shareOption = pasteboard.ShareOption.LOCALDEVICE;

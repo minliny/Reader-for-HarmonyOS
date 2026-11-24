@@ -11,14 +11,19 @@ const component=source.slice(source.indexOf('@Component'),source.indexOf('  buil
  .replace('@Component\nexport struct ReaderTextNodeDiagnostic {','class Page { constructor(private context: UIContext) {}')
  .replaceAll('@State ','').replaceAll('this.getUIContext()','this.context')+'\n}';
 const virtual=sourcePath.replace('.ets','SdkProbe.ts');
+const windowPath=localFilePath(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextWindow.ets',import.meta.url));
 const options={noEmit:true,skipLibCheck:true,moduleResolution:ts.ModuleResolutionKind.NodeJs,
  target:ts.ScriptTarget.ESNext,module:ts.ModuleKind.ESNext,types:[],baseUrl:'/',paths:{
  '@ohos.*':[`${sdk}/../../api/@ohos.*.d.ts`],'@kit.*':[`${sdk}/../../kits/@kit.*.d.ts`]}};
 const host=ts.createCompilerHost(options),read=host.getSourceFile.bind(host);
 host.getSourceFile=(path,...args)=>path===virtual?ts.createSourceFile(path,prefix+component,ts.ScriptTarget.Latest,true):read(path,...args);
 const program=ts.createProgram([virtual,...readdirSync(`${sdk}/declarations`).filter(n=>n.endsWith('.d.ts')).map(n=>`${sdk}/declarations/${n}`)],options,host);
-assert.deepEqual(ts.getPreEmitDiagnostics(program).filter(d=>d.category===ts.DiagnosticCategory.Error)
- .map(d=>ts.flattenDiagnosticMessageText(d.messageText,'\n')),[],'real SDK API qualification');
+for (const path of [virtual, windowPath]) {
+ const checked = program.getSourceFile(path);
+ assert.ok(checked, `SDK probe loaded ${path}`);
+ assert.deepEqual(ts.getPreEmitDiagnostics(program,checked).filter(d=>d.category===ts.DiagnosticCategory.Error)
+  .map(d=>ts.flattenDiagnosticMessageText(d.messageText,'\n')),[],'real SDK API qualification');
+}
 const nodes=[],logs=[];let count=3;
 const metrics=[0,1,2].map(i=>({startIndex:i*4,endIndex:i*4+4,topHeight:i*31,height:31,width:100,baseline:i*31+25}));
 class Controller{rebuild(){this.rebuilds=(this.rebuilds??0)+1;}}
@@ -32,10 +37,10 @@ class Frame{
 const dependencies={FrameNode:Frame,NodeController:Controller,
  TextController:class{getLayoutManager(){return {getLineCount:()=>count,getLineMetrics:i=>metrics[i],getRectsForRange:()=>[]};}},
  typeNode:{createNode(){const n=new Frame();n.inputs=[];n.initialize=(...args)=>n.inputs.push(args);n.attribute={};
-  for(const key of ['lineSpacing','copyOption','editMenuOptions','fontWeight','width','fontFamily','fontSize','lineHeight','fontColor','letterSpacing','textIndent','textAlign','direction'])
+  for(const key of ['lineSpacing','copyOption','editMenuOptions','selectedBackgroundColor','fontWeight','width','fontFamily','fontSize','lineHeight','fontColor','letterSpacing','textIndent','textAlign','direction'])
    n.attribute[key]=v=>{n.props[key]=v;return n.attribute;};
   n.measure=v=>{n.constraint=v;};n.layout=v=>{n.position=v;};nodes.push(n);return n;}},
- FontWeight:{Regular:400},CopyOptions:{InApp:1},WordBreak:{BREAK_ALL:1},TextAlign:{JUSTIFY:'justify',Start:'start'},Direction:{Rtl:'rtl',Ltr:'ltr'},
+ FontWeight:{Regular:400},CopyOptions:{InApp:1,None:0},WordBreak:{BREAK_ALL:1},TextAlign:{JUSTIFY:'justify',Start:'start'},Direction:{Rtl:'rtl',Ltr:'ltr'},
  hilog:{info(_d,_t,_f,v){logs.push(JSON.parse(v));}}};
 const adapterSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextMeasurement.ets',import.meta.url),'utf8');
 const adapterJs=ts.transpileModule(adapterSource.replace(/^import.*$/gm,'').replace(/^export /gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
@@ -43,7 +48,19 @@ const nativeAdapter=new Function('typeNode','WordBreak','LengthMetrics',adapterJ
 dependencies.ReaderNativeTextMeasurement=nativeAdapter.ReaderNativeTextMeasurement;
 const windowSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextWindow.ets',import.meta.url),'utf8');
 const windowJs=ts.transpileModule(windowSource.replace(/^import.*$/gm,'').replace(/^export /gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
-dependencies.ReaderNativeTextWindow=new Function('FrameNode','LengthMetrics','graphicsText','readerNativeTextGeometryKey','readerNativeTextNodeGeometry','readerNativeTextNodeContent',windowJs+';return ReaderNativeTextWindow;')(Frame,{vp:v=>v},{RectWidthStyle:{TIGHT:0},RectHeightStyle:{TIGHT:0}},nativeAdapter.readerNativeTextGeometryKey,nativeAdapter.readerNativeTextNodeGeometry,nativeAdapter.readerNativeTextNodeContent);
+const menuId = () => ({equals(other) { return this === other; }});
+const copyForShareId = menuId();
+const menuIds = {COPY:menuId(), SHARE:menuId(), of:() => copyForShareId};
+const sharePresentation = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderSharePresentation.ets',import.meta.url),'utf8');
+const shareJs = ts.transpileModule(sharePresentation.replace(/^import.*$/gm,'').replace(/^export /gm,''),
+ {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+const { readerShareSelectionMenu, readerCopySelectionForShare } = new Function('TextMenuItemId',
+ shareJs+';return {readerShareSelectionMenu, readerCopySelectionForShare};')(menuIds);
+dependencies.ReaderNativeTextWindow=new Function('FrameNode','LengthMetrics','graphicsText','readerNativeTextGeometryKey',
+ 'readerNativeTextNodeGeometry','readerNativeTextNodeContent','CopyOptions','TextMenuItemId','readerShareSelectionMenu','readerCopySelectionForShare',
+ windowJs+';return ReaderNativeTextWindow;')(Frame,{vp:v=>v},{RectWidthStyle:{TIGHT:0},RectHeightStyle:{TIGHT:0}},
+ nativeAdapter.readerNativeTextGeometryKey,nativeAdapter.readerNativeTextNodeGeometry,nativeAdapter.readerNativeTextNodeContent,
+ dependencies.CopyOptions,menuIds,readerShareSelectionMenu,readerCopySelectionForShare);
 const js=ts.transpileModule(prefix.replace(/^import[\s\S]*?;$/gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
 const {Probe,samples}=new Function(...Object.keys(dependencies),js+';return {Probe:TextNodeDiagnosticController,samples:TEXT_NODE_SAMPLES};')(...Object.values(dependencies));
 const probe=new Probe(),context={vp2px:v=>v*3.5,px2vp:v=>v/3.5,fp2px:v=>v*3.5};
@@ -147,3 +164,27 @@ console.log('PASS native resource acquisition and configure have bounded visible
  measurement.clear();window.close();assert.equal(node.disposed,1);assert.equal(window.prepareWholeParagraph(),false);
 }
 console.log('PASS complete initial geometry identity, exact native-node reuse, zero-measure expansion and incompatible-layout rejection');
+
+{
+ const native = dependencies.typeNode.createNode();
+ const textController = new dependencies.TextController();
+ const observed = [];
+ textController.closeSelectionMenu = () => observed.push('close');
+ const window = new dependencies.ReaderNativeTextWindow(context,native,textController,100);
+ const copyItem = {id:menuIds.COPY,content:'复制'};
+ const range = {start:1,end:3};
+ window.selection(true,'#888',selection=>observed.push(['copy',selection]),(selection,copy)=>observed.push([copy?'copy-for-share':'share',selection]));
+ const menu = native.props.editMenuOptions;
+ const items = menu.onCreateMenu([copyItem]);
+ assert.deepEqual(items,[copyItem,{id:menuIds.SHARE,content:'分享'},{id:copyForShareId,content:'复制以分享'}]);
+ assert.deepEqual(menu.onCreateMenu(items),items,'the existing native and explicit actions are reused');
+ assert.equal(menu.onMenuItemClick(copyItem,range),true);
+ assert.equal(menu.onMenuItemClick(items[1],range),true);
+ assert.equal(menu.onMenuItemClick(items[2],range),true);
+ assert.deepEqual(observed,[['copy',range],'close',['share',range],'close',['copy-for-share',range]]);
+ window.selection(false,'#888',()=>assert.fail('disabled COPY'),()=>assert.fail('disabled Share'));
+ assert.equal(menu.onMenuItemClick(items[1],range),true,'a stale Share callback suppresses the system default');
+ assert.deepEqual(observed,[['copy',range],'close',['share',range],'close',['copy-for-share',range],'close']);
+ window.close();
+}
+console.log('PASS native Text selection preserves Copy and routes one current Share item');

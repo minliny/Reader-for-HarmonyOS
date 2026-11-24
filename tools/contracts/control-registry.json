@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 30,
+  "revision": 31,
   "controls": [
     {
       "controlId": "page-back",
@@ -3115,6 +3115,154 @@
       "accessibleNameSource": "One book Row with the existing book-title focus ID, full title/author/source/count and selection intent",
       "status": "partial",
       "knownGap": "Whole row owns ordinary open/management selection. Title/cover/metadata are information under this one intent. Native status/More/checkbox use default child-priority Tap recognition, with independent44 horizontal lanes. Exact SDK API/callback and24 density samples pass; Native arbitration, List Pan, focus and reader acceptance remain open."
+    },
+    {
+      "controlId": "detail-share-book",
+      "owner": "LocalBookDetail",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
+          "symbol": "shareActions"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
+          "symbol": "shareAction"
+        }
+      ],
+      "states": [
+        "ready",
+        "hidden",
+        "input-rejected"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "分享书籍信息",
+      "status": "partial",
+      "knownGap": "Available novel detail supplies the native button label and a 44vp minimum height. Native hit, wrapping, focus and spoken label remain unverified."
+    },
+    {
+      "controlId": "detail-copy-book",
+      "owner": "LocalBookDetail",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
+          "symbol": "shareActions"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
+          "symbol": "shareAction"
+        }
+      ],
+      "states": [
+        "ready",
+        "hidden",
+        "input-rejected"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "复制书籍信息",
+      "status": "partial",
+      "knownGap": "Available novel detail supplies the native button label and a 44vp minimum height. Native hit, wrapping, focus and spoken label remain unverified."
+    },
+    {
+      "controlId": "detail-share-original",
+      "owner": "LocalBookDetail",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
+          "symbol": "shareActions"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/application/ReaderShareActions.ts",
+          "symbol": "readerCanShareOriginal"
+        }
+      ],
+      "states": [
+        "ready",
+        "hidden",
+        "input-rejected"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "分享原文件",
+      "status": "partial",
+      "knownGap": "Novel detail with an admitted local identity, format and original lookup supplies the button. Native hit, focus, spoken label and actual receiver access remain unverified."
+    },
+    {
+      "controlId": "reader-selection-share",
+      "owner": "ReaderNativeTextWindow / ReaderReadingTextFragment",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderNativeTextWindow.ets",
+          "symbol": "selection"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReadingSurface.ets",
+          "symbol": "onTextMenuItemClick"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderSharePresentation.ets",
+          "symbol": "readerShareSelectionMenu"
+        }
+      ],
+      "states": [
+        "ready",
+        "hidden",
+        "input-rejected"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "ArkUI SHARE item label or the supplied 分享 label",
+      "status": "partial",
+      "knownGap": "The OS selection menu owns layout and hit targets. Native delivery, spoken label and focus return remain unverified."
+    },
+    {
+      "controlId": "reader-selection-copy-for-share",
+      "owner": "ReaderNativeTextWindow / ReaderReadingTextFragment",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderNativeTextWindow.ets",
+          "symbol": "selection"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReadingSurface.ets",
+          "symbol": "onTextMenuItemClick"
+        },
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderSharePresentation.ets",
+          "symbol": "readerShareSelectionMenu"
+        }
+      ],
+      "states": [
+        "ready",
+        "hidden",
+        "input-rejected"
+      ],
+      "hitTarget": {
+        "width": null,
+        "height": null,
+        "unit": "vp",
+        "status": "unverified"
+      },
+      "accessibleNameSource": "复制以分享",
+      "status": "partial",
+      "knownGap": "The OS selection menu owns layout and hit targets. Native delivery, spoken label and focus return remain unverified."
     }
   ]
 }

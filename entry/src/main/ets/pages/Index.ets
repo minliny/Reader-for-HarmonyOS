@@ -1067,6 +1067,10 @@ struct Index {
         const owner = this.mountedRuntimeOwner;
         return (): boolean => this.isCurrentDetailPresentation(identity, owner);
       },
+      retainedShareFile: async (bookId: string, current: () => boolean): Promise<string | undefined> => {
+        const owner = this.currentReadingRuntime();
+        return owner === undefined || !current() ? undefined : owner.retainedLocalBookSourcePath(bookId, current);
+      },
       openReading: (chapterIndex?: number): void => this.openReading(chapterIndex),
       openDirectory: (): void => this.openFullDirectory(),
       retryCatalog: (): void => {

@@ -1,3 +1,4 @@
+import { readerCopySelectionForShare, readerShareSelectionMenu } from './ReaderSharePresentation';
 import { FrameNode, LengthMetrics, typeNode } from '@ohos.arkui.node';
 import { UIContext } from '@ohos.arkui.UIContext';
 import { text as graphicsText } from '@kit.ArkGraphics2D';
@@ -200,16 +201,27 @@ export class ReaderNativeTextWindow {
     if (!this.closed) this.node.attribute.fontColor(value);
   }
 
-  selection(enabled: boolean, background: ResourceColor, onCopy: (range: TextRange) => void): void {
+  selection(enabled: boolean, background: ResourceColor, onCopy: (range: TextRange) => void,
+    onShare?: (range: TextRange, copyRequested: boolean) => void): void {
     if (this.closed) return;
     const epoch = ++this.selectionEpoch;
     if (!enabled) this.controller.closeSelectionMenu();
     this.node.attribute.copyOption(enabled ? CopyOptions.InApp : CopyOptions.None)
       .selectedBackgroundColor(background).editMenuOptions({
-        onCreateMenu: (items: Array<TextMenuItem>): Array<TextMenuItem> => items,
+        onCreateMenu: (items: Array<TextMenuItem>): Array<TextMenuItem> =>
+          onShare === undefined ? items : readerShareSelectionMenu(items),
         onMenuItemClick: (item: TextMenuItem, range: TextRange): boolean => {
-          if (!item.id.equals(TextMenuItemId.COPY)) return false;
-          if (!this.closed && enabled && epoch === this.selectionEpoch) onCopy(range);
+          const copyForShare = onShare !== undefined && readerCopySelectionForShare(item.id);
+          const share = onShare !== undefined && (copyForShare || item.id.equals(TextMenuItemId.SHARE));
+          if (!share && !item.id.equals(TextMenuItemId.COPY)) return false;
+          if (!this.closed && enabled && epoch === this.selectionEpoch) {
+            if (share) {
+              this.controller.closeSelectionMenu();
+              onShare?.(range, copyForShare);
+            } else {
+              onCopy(range);
+            }
+          }
           return true;
         },
       });

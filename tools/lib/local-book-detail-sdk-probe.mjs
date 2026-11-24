@@ -24,6 +24,7 @@ import {mangaDirectoryEntryRowSdk} from './manga-directory-entry-row-probe.mjs';
 import {pureModuleProbe} from './ets-pure-module-probe.mjs';
 import {actualReaderPostLayoutFrame} from './reader-post-layout-frame-probe.mjs';
 import {sourceSwitchTriggerFocusId} from '../../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts';
+import {readerCanShareOriginal} from '../../entry/src/main/ets/features/reading/application/ReaderShareActions.ts';
 import {resolveReaderRaisedShape} from '../../entry/src/main/ets/ui/layout/ReaderRaisedShape.ts';
 
 const read = path => readFileSync(new URL('../../entry/src/main/ets/' + path, import.meta.url), 'utf8');
@@ -50,7 +51,7 @@ export function localBookDetailSdk(dependencies = {}, hooks = {}, properties = c
     ...author, ...intro, ...mangaDirectory, ...mangaLayout, ...manga.deps, ...constants,
     ...layout,...actionTargets,...headers,...headerMetrics,...resolvers,...mangaVisual,visual:mangaVisual.MANGA_DIRECTORY_VISUAL,READER_FEEDBACK_BRIEF_MS,
     readerDirectoryAccessibilityText, readerDirectoryIndentVp, readerDirectoryBookmarkMarkerState, sourceSwitchTriggerFocusId,
-    resolveReaderRaisedShape,
+    readerCanShareOriginal, resolveReaderRaisedShape,
     ReaderWindowCoordinator: {metrics: metrics.createDefaultReaderWindowMetrics},
     ImageFit: {Cover: 'cover'}, NoCoverCover: Cover, registerReaderFonts() {},
     ReaderUIVerificationProbe: {enabled: () => false},

@@ -20,6 +20,8 @@ import { ReaderRaisedShape, resolveReaderRaisedShape } from '../../../ui/layout/
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconAction';
 import type { ReadingBookDetail } from '../presentation/ReadingBookDetail';
+import { readerCanShareOriginal, type ReaderShareResult, type RetainedShareFile } from '../application/ReaderShareActions';
+import { readerShareMessage, readerSystemShareActions } from './ReaderSharePresentation';
 import { bookIntroText } from '../../../app/library/BookIntroText';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { ReaderUIVerificationProbe } from '../../../app/diagnostics/ReaderUIVerificationProbe';
@@ -89,7 +91,7 @@ class DetailDirectoryFocusFrame extends FrameCallback {
 export struct LocalBookDetail {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerAppForeground') private appForeground: boolean = true;
+  @StorageLink('readerAppForeground') @Watch('onShareForegroundChanged') private appForeground: boolean = true;
   @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
   @StorageLink('readerWindowMetricsRevision') @Watch('onMangaGeometryChanged') readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onBookChanged') book: ReadingBookDetail;
@@ -108,6 +110,7 @@ export struct LocalBookDetail {
   @Prop loadingMessage: string = '';
   @Prop catalogBusy: boolean = false;
   isDetailActionCurrent: () => boolean = (): boolean => true;
+  retainedShareFile: RetainedShareFile | undefined = undefined;
   onContinue: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
   onOpenDirectory: () => void = (): void => {};
@@ -144,6 +147,8 @@ export struct LocalBookDetail {
   private layoutBookIdentity: string = '';
   private readonly headerSpec: DetailHeaderSpec = detailHeaderSpec();
   private mounted: boolean = false;
+  private shareGeneration: number = 0;
+  private shareBusy: boolean = false;
   private pendingDirectoryFocus: string = '';
   private directoryFocusGeneration: number = 0;
   private mangaFontGeneration: number = 0;
@@ -159,6 +164,7 @@ export struct LocalBookDetail {
   }
 
   aboutToDisappear(): void {
+    this.retireShareAction();
     this.transientFeedback.reset();
     this.mounted = false;
     this.cancelDirectoryFocusRestore();
@@ -264,6 +270,7 @@ export struct LocalBookDetail {
       Column({ space: this.book.contentKind === 'manga' ? 0 : 24 }) {
         this.hero();
         this.readingFacts();
+        if (this.book.contentKind !== 'manga' && this.detailBookAvailable()) this.shareActions();
         this.summary();
         this.catalog();
         if (!this.detailBookAvailable()) {
@@ -276,6 +283,66 @@ export struct LocalBookDetail {
       .scrollBarWidth(this.book.contentKind === 'manga' ? visual.scrollbarWidth : undefined)
       .scrollBarColor(this.book.contentKind === 'manga' ? mangaDirectoryColor('scrollbar', this.appThemeScheme) : undefined)
       .onDidScroll((): void => this.onDetailScroll(scrollIdentity));
+  }
+
+  @Builder
+  private shareActions() {
+    Flex({ wrap: FlexWrap.Wrap }) {
+      this.shareAction('分享书籍信息', 'book');
+      this.shareAction('复制书籍信息', 'copy');
+      if (this.retainedShareFile !== undefined && readerCanShareOriginal(this.book)) {
+        this.shareAction('分享原文件', 'file');
+      }
+    }.width('100%');
+  }
+
+  @Builder
+  private shareAction(label: string, action: 'book' | 'copy' | 'file') {
+    Button(label, { type: ButtonType.Normal })
+      .constraintSize({ minWidth: READER_ACTION_MIN_TARGET, minHeight: READER_ACTION_MIN_TARGET })
+      .padding({ left: 10, right: 10 })
+      .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
+      .fontSize(14)
+      .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
+      .backgroundColor(Color.Transparent)
+      .id(`reader-detail-share-${action}`)
+      .onClick((): void => { void this.runShareAction(action); });
+  }
+
+  private async runShareAction(action: 'book' | 'copy' | 'file'): Promise<void> {
+    if (this.shareBusy || !this.appForeground || !this.acceptsDetailInput() || !this.detailBookAvailable()) return;
+    const identity = this.detailScrollIdentity();
+    const generation = ++this.shareGeneration;
+    const current = (): boolean => generation === this.shareGeneration && this.appForeground &&
+      this.acceptsDetailInput() && this.detailBookAvailable() && this.detailScrollIdentity() === identity;
+    const actions = readerSystemShareActions(() => this.getUIContext(), `reader-detail-share-${action}`);
+    const book = this.book;
+    const retained = this.retainedShareFile;
+    this.shareBusy = true;
+    try {
+      let result: ReaderShareResult;
+      switch (action) {
+        case 'book': result = await actions.shareBook(book, current); break;
+        case 'copy': result = actions.copyBook(book, current); break;
+        case 'file':
+          if (retained === undefined) return;
+          result = await actions.shareFile(book, retained, current);
+          break;
+      }
+      const message = readerShareMessage(result, action === 'copy' ? '已复制书籍信息' : undefined);
+      if (message !== undefined) this.transientFeedback.show(() => this.getUIContext(), { message }, current);
+    } finally {
+      if (generation === this.shareGeneration) this.shareBusy = false;
+    }
+  }
+
+  private retireShareAction(): void {
+    this.shareGeneration += 1;
+    this.shareBusy = false;
+  }
+
+  private onShareForegroundChanged(): void {
+    if (!this.appForeground) this.retireShareAction();
   }
 
   private detailScrollIdentity(): string {
@@ -298,6 +365,7 @@ export struct LocalBookDetail {
     // An inactive interval cancels the frame, but preserves this directory's return target.
     if (this.directoryFocusContext === 'directory') this.pendingDirectoryFocus = this.directoryFocusKey();
     if (this.directoryFocusContext !== 'detail') {
+      this.retireShareAction();
       this.transientFeedback.reset();
       return;
     }
@@ -305,6 +373,7 @@ export struct LocalBookDetail {
   }
 
   private onDirectoryFocusIdentityChanged(): void {
+    this.retireShareAction();
     if (this.pendingDirectoryFocus.length > 0 && this.pendingDirectoryFocus !== this.directoryFocusKey()) {
       this.cancelDirectoryFocusRestore();
     }

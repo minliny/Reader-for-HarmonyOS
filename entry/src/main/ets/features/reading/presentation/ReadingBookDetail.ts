@@ -50,6 +50,8 @@ export type ReadingBookDetail = {
   sourceName: string;
   bookId: string;
   title: string;
+  /** Existing source page address, when available from the active entry. */
+  sourcePageUrl?: string;
   author: string;
   /** Exact source-version proof; presentation must not invent author aliases. */
   authorIdentity?: BookAuthorIdentityProof;

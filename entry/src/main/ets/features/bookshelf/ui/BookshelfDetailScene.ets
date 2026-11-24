@@ -1,3 +1,4 @@
+import type { RetainedShareFile } from '../../reading/application/ReaderShareActions';
 import type { ReadingBookDetail } from '../../reading/presentation/ReadingBookDetail';
 import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowGateway';
 import { ReadingEntryPresentation, remoteContentVerdictLabel } from '../../reading/presentation/ReadingEntryPresentation';
@@ -7,6 +8,7 @@ import { LocalBookDetail } from '../../reading/ui/LocalBookDetail';
 
 export interface BookshelfDetailScenePorts {
   captureAction: (identity: string) => (() => boolean);
+  retainedShareFile?: RetainedShareFile;
   openReading: (chapterIndex?: number) => void;
   openDirectory: () => void;
   retryCatalog: () => void;
@@ -76,6 +78,7 @@ export struct BookshelfDetailScene {
         cancellingAdd: this.detail.admission(this.bodyBook).cancelling,
         shelfMessage: this.detail.message(this.bodyBook),
         isDetailActionCurrent: (): boolean => current?.() === true,
+        retainedShareFile: this.ports?.retainedShareFile,
         onContinue: (): void => { if (current?.() === true) this.ports?.openReading(); },
         onSelectChapter: (chapterIndex: number): void => {
           if (current?.() === true) this.ports?.openReading(chapterIndex);

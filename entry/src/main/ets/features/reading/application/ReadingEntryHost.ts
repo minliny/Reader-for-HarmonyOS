@@ -796,7 +796,7 @@ export class ReadingEntryHost {
     });
   }
   private detail(seed: RemoteReadingBookSeed, name: string): ReadingBookDetail {
-    return { sourceId: seed.sourceId, sourceName: name.trim() || seed.sourceId, bookId: seed.bookId, title: seed.title,
+    return { sourceId: seed.sourceId, sourceName: name.trim() || seed.sourceId, bookId: seed.bookId, sourcePageUrl: seed.detailUrl, title: seed.title,
       author: seed.author, authorIdentity: seed.authorIdentity, sourceVersion: seed.sourceVersion,
       kind: seed.kind, coverUrl: seed.coverUrl, intro: seed.intro, lastChapter: seed.lastChapter,
       contentKind: seed.contentKind, mangaPosition: seed.contentKind === 'manga' ? MangaBookPresentation.get(seed.sourceId, seed.bookId) : undefined };
@@ -805,7 +805,7 @@ export class ReadingEntryHost {
     const previous = this.state.book;
     const retain = previous !== undefined && (previous.contentKind ?? 'text') === (session.contentKind ?? 'text') &&
       (this.sameBook(session, previous) || confirmedCandidate);
-    return this.displayDetail({ sourceId: session.identity.sourceId, sourceName: name, bookId: session.identity.bookId,
+    return this.displayDetail({ sourceId: session.identity.sourceId, sourceName: name, bookId: session.identity.bookId, sourcePageUrl: session.detailUrl,
       ...this.remoteDetail(session.book), contentKind: session.contentKind ?? 'text',
       authorIdentity: session.book.authorIdentity, sourceVersion: session.sourceVersion,
       mangaPosition: session.contentKind === 'manga' ? MangaBookPresentation.get(session.identity.sourceId, session.identity.bookId) : undefined }, retain);
