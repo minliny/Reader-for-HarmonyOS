@@ -76,10 +76,10 @@ for (const id of selectContractCases(cases)) {
 
 async function gripPort() {
   const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
-  const source = new URL('../entry/src/main/ets/platform/interaction/HarmonyReaderGrip.ts', import.meta.url);
+  const source = new URL('../entry/src/main/ets/platform/interaction/HarmonyReaderGrip.ets', import.meta.url);
   let enabled = false, rejected = true, callback, removed, attempts = 0;
   const received = [];
-  const { subscribeReaderHoldingHand } = pureModuleProbe(readFileSync(source, 'utf8'), 'HarmonyReaderGrip.ts', {
+  const { subscribeReaderHoldingHand } = pureModuleProbe(readFileSync(source, 'utf8'), 'HarmonyReaderGrip.ets', {
     readerHarmonyCapabilities: () => ({ grip: enabled }), readerHoldingHand,
     motion: {
       on: (type, listener) => {

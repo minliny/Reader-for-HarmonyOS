@@ -44,10 +44,10 @@ const CASES = {
     const { readFileSync } = await import('node:fs');
     const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
     const policy = await import('../entry/src/main/ets/app/HarmonyCapabilityPolicy.ts');
-    const source = readFileSync(new URL('../entry/src/main/ets/app/HarmonyCapabilityProbe.ts', import.meta.url), 'utf8');
+    const source = readFileSync(new URL('../entry/src/main/ets/app/HarmonyCapabilityProbe.ets', import.meta.url), 'utf8');
     for (const version of [60100, 60101, 260000]) {
       const calls = [];
-      const { readerHarmonyApi24, readerHarmonyCapabilities } = pureModuleProbe(source, 'HarmonyCapabilityProbe.ts', {
+      const { readerHarmonyApi24, readerHarmonyCapabilities } = pureModuleProbe(source, 'HarmonyCapabilityProbe.ets', {
         ...policy, deviceInfo: { distributionOSApiVersion: version, deviceType: 'phone',
           apiAvailable(api) { calls.push(api); return api === '26.0.0'; } },
         canIUse: capability => capability === 'SystemCapability.UIDesign.HDSComponent.Core',
