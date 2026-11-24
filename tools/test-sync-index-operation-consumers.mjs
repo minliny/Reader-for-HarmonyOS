@@ -2,19 +2,14 @@ import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function run(id){
 const { resolveEtsLoaderRoot }=await import("./lib/tool-environment.mjs");
-const {boundedSurfaceSdk}=await import("./lib/bounded-surface-sdk-probe.mjs");
-const {foundationControls}=await import("./lib/reader-foundation-control-probe.mjs");
-const {createRequire}=await import("node:module");
 const {mkdtempSync,readFileSync,writeFileSync,existsSync,rmSync}=await import("node:fs");
 const {tmpdir}=await import("node:os");
 const {join}=await import("node:path");
-const {syncIndexFixture: f,fullSyncIndexPage: sharedFullSyncIndexPage}=await import("./lib/sync-index-real-fixture.mjs");
+const {syncIndexFixture: f,fullSyncIndexPage,syncRecoveryAction}=await import("./lib/sync-index-real-fixture.mjs");
 const {productionMotionMethods}=await import("./lib/reader-motion-method-probe.mjs");
 const {createReaderBuilderProbe}=await import("./lib/reader-control-builder-probe.mjs");
 const {ReaderNativeAlertOwner}=await import("./lib/reader-native-alert-sdk-probe.mjs");
 const nodes=owner=>[...(owner.nodes?.values()??[]),...[...(owner.children?.values()??[])].flatMap(c=>nodes(c))];
-const {actualReaderPageLayout}=await import('./lib/reader-page-shell-runtime-probe.mjs');
-const fullSyncIndexPage=props=>sharedFullSyncIndexPage(props,actualReaderPageLayout());
 const clone=v=>structuredClone(v);
 const {currentSyncIndex,currentSyncPayload,currentSyncIdentity,currentSyncOperations,currentSyncPresentationSource,reopenCurrentSyncOpening,syncDirectoryFsyncFixturePort}=await import('./lib/sync-current-owner-consumer.mjs');
 let enabled=true,directorySyncReceipts=0;
@@ -33,22 +28,14 @@ function fixture({durable=false}={}){
   let parent;
   const props=()=>{const actual=payload(index);parent=actual.parent;return actual.props;};
   const page=()=>{
-    const shared=foundationControls();
-    const p=createReaderBuilderProbe(f.source('features/sync/ui/SyncPage.ets'),['manualActionsSection','canContinueConfigSave','configSaveContinuationIdentities','configSaveGeneration','effectiveWebdavUrl','effectiveWebdavUser','effectiveWebdavPath','sectionHeadingMuted','restoreConflictCard','feedbackView','recoveryLabel','canMutate','manualActionButton','canSkipBackupRetention','backupRetentionActionIdentities','backupGeneration'],
-      {...shared.dependencies,readerRecoveryView:f.readerRecoveryView,ReaderRecoveryNotice:Child,ReaderRecoveryAction:Child,ReaderCard:Card},{...shared.hooks,mountChildren:true,childSources:{...shared.hooks.childSources,ReaderCard:f.source('ui/surfaces/ReaderCard.ets')}}).owner;
-    Object.assign(p,props(),{contentFrame:()=>({width:390}),appThemeScheme:'day'});p.manualActionsSection();
-    const notice=[...p.children.values()].find(c=>c.params?.view);
-    const messages=boundedSurfaceSdk(),n=messages.consumer(f.source('ui/feedback/ReaderRecoveryNotice.ets'),undefined,{},notice.params);n.initialRender();
-    const actor=messages.walk(n).find(owner=>owner instanceof messages.deps.ReaderRecoveryAction&&owner.label===(notice.params.actionLabel??'刷新列表'));
-    const action=actor&&messages.nodes(actor).find(node=>node.type==='Button'&&node.onClick);
-    return{page:p,view:notice.params.view,action};
+    const page=fullSyncIndexPage(props());
+    const [action]=syncRecoveryAction(page,page.recoveryLabel());
+    return { page, view:page.feedbackView(), action:action?.node };
   };
   const open=async()=>{assert.equal(index.syncPresentation.ready,true,'current Presentation loading publishes an actual usable Page payload');await real.settle();};
   const retry=async()=>{const p=page();assert.ok(p.action);p.action.onClick();p.action.onClick();await real.settle();};
   return{...real,index,props,page,open,retry,parent:()=>parent};
 }
-class Child{constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
-class Card extends Child{initialRender(){this.params.content?.();}}
 
 try {
 restoreDirectorySync=syncDirectoryFsyncFixturePort(f.fileIo,async()=>{directorySyncReceipts++;return 'CONTROLLED_PLATFORM_DIRECTORY_SYNC_ACK';});
@@ -64,19 +51,19 @@ if(id==='save-readback'){
 if(id==='sdk-drafts'){
 {const x=fixture();await x.open();const actual=fullSyncIndexPage(x.props());actual.webdavUrl='https://draft.test';actual.webdavUrlEdited=true;actual.webdavPass='typed-secret';actual.backupPass='backup-secret';
   const save=nodes(actual).find(n=>n.type==='Button'&&n.accessibilityText==='保存配置');assert.ok(save.onClick,'actual complete SDK page save handler');const load=x.store.loadSerializedState.bind(x.store);let fail=true;x.store.loadSerializedState=async()=>{if(fail){fail=false;throw Error('actual post-save read failed');}return load();};save.onClick();await x.settle();
-  assert.equal(x.index.syncPresentation.snapshot.facts.operation.projection.receipt.fact,'confirmedRefreshFailed');actual.updateStateVars(x.props());actual.replay();assert.equal(actual.webdavPass,'','actual @Watch clears acknowledged password');assert.equal(actual.webdavUrl,'https://draft.test','edited draft is retained');
-  assert.equal([...actual.children.values()].find(c=>c.params?.view)?.params.view.canRetry,true,'real updated recovery child sees operation');await x.retry();assert.equal(f.asset.calls.filter(v=>v==='add').length,1);
+  assert.equal(x.index.syncPresentation.snapshot.facts.operation.projection.receipt.fact,'confirmedRefreshFailed');actual.updateStateVars(x.props());assert.equal(actual.webdavPass,'','actual @Watch clears acknowledged password');assert.equal(actual.webdavUrl,'https://draft.test','edited draft is retained');
+  assert.equal(syncRecoveryAction(fullSyncIndexPage(x.props()),'重新读取配置').at(-1)?.actor.actionEnabled,true,'real updated recovery child sees operation');await x.retry();assert.equal(f.asset.calls.filter(v=>v==='add').length,1);
   x.index.nextNavigationGeneration();x.index.navigateTo('settings');save.onClick();await x.settle();assert.equal(f.asset.calls.filter(v=>v==='add').length,1,'physical old SDK save handler cannot operate the new route');}
 }
 if(id==='backup-recovery'){
-{const x=fixture();await x.open();x.runtime.failBackupAdvance=true;x.props().onTriggerBackup();await x.settle();await x.retry();assert.equal(x.runtime.count('sync.webdav.transaction.start'),1);assert.equal(x.index.syncPresentation.snapshot.facts.operation.projection.receipt.confirmation,'unknown');}
+{const x=fixture();await x.open();x.runtime.failBackupAdvance=true;x.props().onTriggerBackup();await x.settle();await x.retry();assert.equal(x.runtime.count('sync.webdav.transaction.start'),1);assert.equal(x.index.syncPresentation.snapshot.facts.operation.projection.receipt.confirmation,'confirmed');}
 }
 if(id==='callbacks'){
 for(const retired of['route','generation','runtime-unset','hidden','unmounted']){
   const x=fixture();await x.open();const p=x.props(),before=f.asset.calls.length,native=x.runtime.calls.length;
   if(retired==='route')x.index.navigateTo('settings');if(retired==='generation')x.index.nextNavigationGeneration();if(retired==='runtime-unset'){f.setRuntimeOwner(undefined);assert.throws(()=>f.ReaderRuntimeOwner.current(),/installed by EntryAbility/);}
   if(retired==='hidden')enabled=false;if(retired==='unmounted')x.index.shelfReceiptRetired=true;
-  assert.doesNotThrow(()=>{p.onSaveConfig(f.config.url,f.config.user,'','',f.config.directory);p.onTestConnection(f.config.url,f.config.user,'',f.config.directory);p.onTriggerBackup();p.onRestoreLatest();p.onResolveRestore(true);p.onReconcile(0);p.onSkipBackupRetention(0);p.onContinueConfigSave(0,f.config.url,f.config.user,'','',f.config.directory);p.onBack();});
+  assert.doesNotThrow(()=>{p.onSaveConfig(f.config.url,f.config.user,'','',f.config.directory);p.onTestConnection(f.config.url,f.config.user,'',f.config.directory);p.onTriggerBackup();p.onRestoreLatest();p.onResolveRestore(true,p.snapshot.restoreConflict?.transactionId??"retired");p.onReconcile(0);p.onSkipBackupRetention(0);p.onContinueConfigSave(0,f.config.url,f.config.user,'','',f.config.directory);p.onBack();});
   await x.settle();assert.equal(f.asset.calls.length,before);assert.equal(x.runtime.calls.length,native);f.setRuntimeOwner(x.runtime);
 }
 }
@@ -84,7 +71,7 @@ if(id==='presentation-key'){
 {const x=fixture();await x.open();const old=x.props(),parent=x.parent(),child=[...parent.children.values()].at(-1);x.index.nextNavigationGeneration();x.index.openSync();const updated=payload(x.index,parent),next=updated.carrier;assert.notEqual(next.id,child.id);old.onTriggerBackup();await x.settle();assert.equal(x.runtime.count('sync.webdav.transaction.start'),0);updated.props.onTriggerBackup();await x.settle();assert.equal(x.runtime.count('sync.webdav.transaction.start'),1);}
 }
 if(id==='restore-retirement'){
-{const x=fixture();await x.open();const gate=f.pause();x.runtime.beforeApply=()=>gate.promise;x.props().onRestoreLatest();await x.settle();x.props().onResolveRestore(true);for(let n=0;x.runtime.count('runtime.storage.apply')===0&&n<2000;n++)await new Promise(setImmediate);assert.equal(x.runtime.count('runtime.storage.apply'),1);const atClose=clone(x.index.syncPresentation.snapshot);x.index.nextNavigationGeneration();x.index.navigateTo('settings');gate.resolve();await x.settle();assert.deepEqual(x.index.syncPresentation.snapshot,atClose,'late accepted write cannot publish into closed route');}
+{const x=fixture();await x.open();const gate=f.pause();x.runtime.beforeApply=()=>gate.promise;x.props().onRestoreLatest();await x.settle();x.props().onResolveRestore(true,x.index.syncPresentation.snapshot.restoreConflict.transactionId);for(let n=0;x.runtime.count('runtime.storage.apply')===0&&n<2000;n++)await new Promise(setImmediate);assert.equal(x.runtime.count('runtime.storage.apply'),1);const atClose=clone(x.index.syncPresentation.snapshot);x.index.nextNavigationGeneration();x.index.navigateTo('settings');gate.resolve();await x.settle();assert.deepEqual(x.index.syncPresentation.snapshot,atClose,'late accepted write cannot publish into closed route');}
 }
 if(id==='save-retirement'){
 {const x=fixture();await x.open();const gate=f.pause();f.asset.beforeAdd=()=>gate.promise;x.props().onSaveConfig(f.config.url,f.config.user,'','',f.config.directory);for(let n=0;!f.asset.calls.includes('add')&&n<2000;n++)await new Promise(setImmediate);assert.ok(f.asset.calls.includes('add'));const atRetirement=clone(x.index.syncPresentation.snapshot);f.setRuntimeOwner(undefined);gate.resolve();await assert.doesNotReject(x.settle());assert.deepEqual(x.index.syncPresentation.snapshot,atRetirement,'accepted durable save settles after actual Runtime unset without late Index publication');assert.equal(f.asset.calls.filter(v=>v==='add').length,1);f.setRuntimeOwner(x.runtime);}
@@ -97,17 +84,17 @@ for(const retired of ['live','route','generation','runtime-unset','hidden','unmo
   const x=fixture({durable:true});await x.open();x.runtime.failBackupAdvance=true;x.props().onTriggerBackup();await x.settle();
   const pending=x.index.syncPresentation.snapshot.facts.operation;x.qualifyRemote();x.props().onReconcile(pending.projection.facts.generation);await x.settle();
   assert.equal(x.index.syncPresentation.snapshot.facts.operation.uploadQualified,true);assert.equal(x.index.syncPresentation.snapshot.facts.operation.completed,false);
-  const props=x.props(),actual=fullSyncIndexPage(props),action=[...actual.children.values()].find(c=>c.params?.label==='保留备份，结束清理');
+  const props=x.props(),actual=fullSyncIndexPage(props),action=syncRecoveryAction(actual,'保留备份，结束清理')[0];
   assert.ok(action,'actual Index → complete decorated SDK Page mounts exact receipt consent action');
   const before=x.runtime.count('sync.webdav.backup.retention.skip');
   if(retired==='route')x.index.navigateTo('settings');if(retired==='generation')x.index.nextNavigationGeneration();
   if(retired==='runtime-unset')f.setRuntimeOwner(undefined);if(retired==='hidden')enabled=false;if(retired==='unmounted')x.index.shelfReceiptRetired=true;
-  assert.doesNotThrow(()=>action.params.onReconcile(action.params.generation));await x.settle();
+  assert.doesNotThrow(()=>action.node.onClick());await x.settle();
   assert.equal(x.runtime.count('sync.webdav.backup.retention.skip'),before+(retired==='live'?1:0));
   if(retired==='live') {
     assert.equal(x.index.syncPresentation.snapshot.facts.operation.retentionSkipped,true);assert.equal(x.index.syncPresentation.snapshot.facts.operation.completed,false);
     assert.equal(x.index.syncPresentation.snapshot.facts.canMutate,true);const count=x.runtime.calls.length;
-    action.params.onReconcile(action.params.generation);await x.settle();assert.equal(x.runtime.calls.length,count,'retired actual consent actor never replays terminal mutation');
+    action.node.onClick();await x.settle();assert.equal(x.runtime.calls.length,count,'retired actual consent actor never replays terminal mutation');
     assert.equal(x.requests.filter(r=>r.method==='PUT').length,1);assert.equal(x.requests.filter(r=>r.method==='DELETE').length,0);
   }
   f.setRuntimeOwner(x.runtime);
@@ -129,7 +116,7 @@ for (const retired of ['live', 'route', 'generation', 'runtime-unset', 'hidden',
   assert.equal(pending.projection.receipt.confirmation, 'unknown');
   assert.equal(pending.canContinueOriginal, true);
   const props = x.props(), actual = fullSyncIndexPage(props);
-  const original = [...actual.children.values()].find(child => child.params?.label === '继续原操作');
+  const original = syncRecoveryAction(actual,'继续原操作')[0];
   assert.ok(original, 'actual Index→decorated Page has original config continuation action');
   const identity = pending.operationId, adds = f.asset.calls.filter(v => v === 'add').length;
   if (retired === 'route') x.index.navigateTo('settings');
@@ -138,13 +125,13 @@ for (const retired of ['live', 'route', 'generation', 'runtime-unset', 'hidden',
   if (retired === 'hidden') enabled = false;
   if (retired === 'unmounted') x.index.shelfReceiptRetired = true;
   if (retired === 'replacement-host') x.index.syncPresentation.retire();
-  assert.doesNotThrow(() => original.params.onReconcile(original.params.generation)); await x.settle();
+  assert.doesNotThrow(() => original.node.onClick()); await x.settle();
   assert.equal(f.asset.calls.filter(v => v === 'add').length, adds, 'exact prepared original never writes a second immutable record');
   if (retired === 'live') {
     assert.equal(x.index.syncPresentation.snapshot.facts.operation.completed, true);
     assert.equal(x.index.syncPresentation.snapshot.facts.operation.operationId, identity, 'explicit continuation retains original operation identity');
     assert.equal(x.index.syncPresentation.snapshot.facts.canMutate, true);
-    original.params.onReconcile(original.params.generation); await x.settle();
+    original.node.onClick(); await x.settle();
     assert.equal(f.asset.calls.filter(v => v === 'add').length, adds, 'old physical config continuation cannot replay terminal save');
   } else assert.equal(x.index.syncPresentation.snapshot.facts.operation.completed, false, 'retired or replaced owner cannot settle via old physical actor');
   f.setRuntimeOwner(x.runtime);
@@ -170,7 +157,7 @@ if(id==='attachment'){
 if(id==='accepted-transfer'){
 {
  const x=fixture();await x.open();const gate=f.pause();x.runtime.beforeApply=()=>gate.promise;
- x.props().onRestoreLatest();await x.settle();x.props().onResolveRestore(true);
+ x.props().onRestoreLatest();await x.settle();x.props().onResolveRestore(true,x.index.syncPresentation.snapshot.restoreConflict.transactionId);
  for(let n=0;x.runtime.count('runtime.storage.apply')===0&&n<2000;n++)await new Promise(setImmediate);
  assert.equal(x.runtime.count('runtime.storage.apply'),1);const original=currentSyncOperations(x.index),tail=original.operationChain;
  const next=replacementIndex(x),atRetirement=clone(x.index.syncPresentation.snapshot);

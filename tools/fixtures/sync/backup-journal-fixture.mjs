@@ -18,7 +18,7 @@ function preferences(){let data=existsSync(disk)?JSON.parse(readFileSync(disk,'u
 };}
 function fixture({cold=false,createOwner}={}){
  if(!cold)rmSync(disk,{force:true});const x=f.fixture({preserveAsset:cold,createOwner});const prefs=preferences();f.setPreferences(prefs);
- const requests=[],original=x.runtime.request.bind(x.runtime);let state='prepared',uploaded=false,retention=false,remoteQualified=false,skipped=false,skipLostAck=false,skipGate;
+ const requests=[],original=x.runtime.request.bind(x.runtime);let state='prepared',uploaded=false,retention=false,remoteQualified=!cold,skipped=false,skipLostAck=false,skipGate;
  const exactId=()=>x.runtime.backupOperationId;
  // Typed Core result injection here is independent of the paired Rust tests,
  // which exercise actual durable Core/hash/SQLite methods. No hash algorithm

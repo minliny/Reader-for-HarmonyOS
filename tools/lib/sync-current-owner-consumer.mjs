@@ -6,6 +6,7 @@ import { selectedProductionMethods } from './selected-production-methods.mjs';
 import { pureModuleProbe } from './ets-pure-module-probe.mjs';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
 import { actualReadingEntryPresentation } from './reading-entry-presentation-probe.mjs';
+import { syncNativeSlotMeasurement } from './sync-index-real-fixture.mjs';
 import { ReaderNavigation } from '../../entry/src/main/ets/app/navigation/ReaderNavigation.ts';
 import { isReaderProductSurfaceEnabled } from '../../entry/src/main/ets/app/ReaderProductScope.ts';
 const root=new URL('../../entry/src/main/ets/',import.meta.url),read=path=>readFileSync(new URL(path,root),'utf8');
@@ -69,7 +70,8 @@ export function currentSyncPayload(index,{parent}={}){
  // is copied or aliased back onto retired Index fields.
  const syntax=createRequire(import.meta.url)(resolveEtsLoaderRoot()+'/lib/validate_ui_syntax.js');
  syntax.observedClassCollection.add('SyncPresentation');
- const surface=createReaderBuilderProbe(surfaceSource,['build','preparingFrame','preparingContent'],{SyncPage:Carrier},
+ const surface=createReaderBuilderProbe(surfaceSource,['build','preparingFrame','preparingContent'],
+  {SyncPage:Carrier,ReaderNativeSlotMeasurement:syncNativeSlotMeasurement(read)},
   {childSources:{SyncPage:pageSource}}).owner;
  Object.assign(surface,carrier.params);assert.equal(surface.presentation.ready,true,'actual binding is ready before a Page payload');surface.initialRender();
  const page=[...surface.children.values()].find(child=>child.params?.onSaveConfig);assert.ok(page,'actual Surface builds Page callbacks');

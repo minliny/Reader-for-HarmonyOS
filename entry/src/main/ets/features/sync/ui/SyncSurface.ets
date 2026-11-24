@@ -29,7 +29,8 @@ export struct SyncSurface {
           this.presentation.operations(this.identity)?.testConnection(url, user, pass, path),
         onTriggerBackup: (): void => this.presentation.operations(this.identity)?.triggerBackup(),
         onRestoreLatest: (): void => this.presentation.operations(this.identity)?.restoreLatest(),
-        onResolveRestore: (overwriteLocal: boolean): void => this.presentation.operations(this.identity)?.resolveRestore(overwriteLocal),
+        onResolveRestore: (overwriteLocal: boolean, transactionId: string): void =>
+          this.presentation.operations(this.identity)?.resolveRestore(overwriteLocal, transactionId),
       });
     } else {
       ReaderPageScaffold({ frameStyle: this.preparingFrame(), geometry: readerEmptyPageGeometry(),

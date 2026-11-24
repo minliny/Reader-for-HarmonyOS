@@ -2,13 +2,13 @@ import { SyncWriteObservation, type SyncPresentationFacts } from './SyncOperatio
 import { SyncHostConfigurationGateway } from './SyncHostConfiguration';
 import { ReaderThemeHost } from '../../../app/ReaderThemeHost';
 import type { JsonObject } from '@reader/core-harmony';
-import { errorMessageOf } from '../../../app/ErrorMessage';
 import util from '@ohos.util';
 import url from '@ohos.url';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { HttpExecuteHost } from '../../../platform/network/HttpExecuteHost';
 import {
   type StoredWebDavConfig,
+  type StoredWebDavState,
   type WebDavBackupJournal,
   type WebDavConfigIntent,
   WebDavCredentialStore,
@@ -18,6 +18,34 @@ const DEFAULT_WEBDAV_DIRECTORY = '/ReaderBackup/ReaderHarmony';
 const MAX_TRANSACTION_STEPS = 12;
 const MAX_TRANSACTION_REQUESTS = 100;
 const MAX_WEBDAV_DIRECTORY_LENGTH = 4096;
+const WEBDAV_AUTH_FAILED = 'WebDAV 认证失败或已过期，请更新账号与密码';
+const WEBDAV_READBACK_FAILED = '上传结果尚待核对，请核对本次备份';
+const WEBDAV_PROVIDER_CHANGED = 'WebDAV 配置已变化，请重新选择恢复备份';
+const WEBDAV_NOT_CONFIGURED = '请先安全保存 WebDAV 配置';
+const WEBDAV_EMPTY = '此 WebDAV 目录暂无 Reader 配置备份';
+const WEBDAV_INVALID_BACKUP = '此 WebDAV 配置备份损坏、超限或加密密码不正确';
+const WEBDAV_RESTORE_PENDING = '上一次恢复仍待核对，请完成已有恢复后再执行新操作';
+const WEBDAV_CANCELLED = '已取消 WebDAV 操作';
+const WEBDAV_FAILURE = '操作未完成，请核对当前配置或已有恢复记录';
+
+/** Project only finite messages. Raw native and HTTP errors can contain secrets. */
+export function syncFailureMessage(error: unknown): string {
+  if (error instanceof Error && [
+    WEBDAV_AUTH_FAILED, WEBDAV_READBACK_FAILED, WEBDAV_PROVIDER_CHANGED, WEBDAV_NOT_CONFIGURED,
+    WEBDAV_EMPTY, WEBDAV_INVALID_BACKUP, WEBDAV_RESTORE_PENDING, WEBDAV_CANCELLED,
+  ].includes(error.message)) return error.message;
+  if (error === null || typeof error !== 'object') return WEBDAV_FAILURE;
+  const event = (error as { event?: { error?: { code?: string; message?: string } } }).event;
+  const failure = event?.error;
+  if (failure?.code === 'CANCELLED') return WEBDAV_CANCELLED;
+  if (failure?.code === 'INVALID_PARAMS' &&
+    failure.message === 'WebDAV directory contains no Reader storage backup') return WEBDAV_EMPTY;
+  if (failure?.code === 'INVALID_PARAMS' && typeof failure.message === 'string' &&
+    /^(WebDAV (backup |authenticated config |decrypted |restore body |config payload )|invalid WebDAV backup)/.test(failure.message)) {
+    return WEBDAV_INVALID_BACKUP;
+  }
+  return WEBDAV_FAILURE;
+}
 
 export type SyncHistoryEntry = {
   timestamp: string;
@@ -45,6 +73,7 @@ export type SyncSnapshot = {
   canContinueConfigSave?: boolean;
   configSavePayloadAvailable?: boolean;
   backupReceipt?: SyncBackupReceipt;
+  restoreRecoveryOperationId?: string;
   webdavUrl: string;
   webdavUser: string;
   /** Persisted secrets are never emitted back into ArkUI state. */
@@ -81,6 +110,7 @@ export type SyncRestoreResult = {
   ok: boolean;
   applied?: boolean;
   cancelled?: boolean;
+  conflictInvalidated?: boolean;
   conflict?: SyncRestoreConflict;
   path?: string;
   error?: string;
@@ -126,6 +156,7 @@ export class SyncGateway {
   private readonly runtimeOwner: ReaderRuntimeOwner;
   private readonly credentials: WebDavCredentialStore;
   private pendingRestoreTransactionId: string = '';
+  private pendingRestoreConfig: StoredWebDavState | undefined = undefined;
   private static restoreRecoveries: Map<ReaderRuntimeOwner, Promise<boolean>> = new Map();
 
   constructor(
@@ -214,9 +245,11 @@ export class SyncGateway {
     const canContinueConfigSave = configSaveIntent !== undefined && !configSaveHeadMatchesOriginal;
     const config = state.config;
     const backupReceipt = await this.reconcileBackupReceipt(false);
+    const restoreRecoveryOperationId = (await this.credentials.loadRestoreJournal())?.operationId;
     this.assertOwner();
     if (config === null) {
-      return { ...this.copySnapshot(DEFAULT_SYNC_SNAPSHOT), backupReceipt, configSaveIntent, configSaveHeadMatchesOriginal, canContinueConfigSave, configSavePayloadAvailable };
+      return { ...this.copySnapshot(DEFAULT_SYNC_SNAPSHOT), statusMessage: WEBDAV_NOT_CONFIGURED,
+        backupReceipt, restoreRecoveryOperationId, configSaveIntent, configSaveHeadMatchesOriginal, canContinueConfigSave, configSavePayloadAvailable };
     }
     return {
       ...this.copySnapshot(DEFAULT_SYNC_SNAPSHOT),
@@ -228,7 +261,7 @@ export class SyncGateway {
       statusMessage: '已加载安全配置',
       configSaveOperationId: state.saveOperationId,
       configSaveIntent, configSaveHeadMatchesOriginal, canContinueConfigSave, configSavePayloadAvailable,
-      backupReceipt,
+      backupReceipt, restoreRecoveryOperationId,
     };
   }
 
@@ -321,7 +354,7 @@ export class SyncGateway {
       const config = await this.resolveConnectionConfig(urlValue, userValue, passValue, directoryValue);
       const started = await this.startTransaction('connectionTest', config, false, admitted);
       transactionId = started.transactionId;
-      const completed = await this.driveTransaction(started);
+      const completed = await this.driveTransaction(started, undefined, admitted);
       if (completed.status !== 'completed' || completed.phase !== 'connectionCompleted') {
         throw new Error('Core 未完成 WebDAV 连接事务');
       }
@@ -418,6 +451,7 @@ export class SyncGateway {
       const authorization = this.authorization(current.config); if (authorization !== undefined) headers['Authorization'] = authorization;
       const response = await HttpExecuteHost.instance.execute({ ...request, headers, httpsOnly: true, sameOriginRedirectsOnly: true });
       this.assertAdmission(admitted);
+      if (response['status'] === 401 || response['status'] === 403) throw new Error(WEBDAV_AUTH_FAILED);
       const checked = await this.runtimeOwner.request('sync.webdav.backup.receipt.query', { transactionId: journal.operationId, response });
       this.assertAdmission(admitted); receipt = this.decodeBackupReceipt(checked.data, journal);
       return { receipt, response };
@@ -461,18 +495,18 @@ export class SyncGateway {
     // dropping the local id would strand its credentials/candidate snapshot
     // until the Core TTL and eventually consume the active-transaction quota.
     const stalePendingTransactionId = this.pendingRestoreTransactionId;
-    this.pendingRestoreTransactionId = '';
     const staleAborted = await this.abortBestEffort(stalePendingTransactionId);
     if (stalePendingTransactionId.length > 0 && !staleAborted) {
       // Do not start a second restore while the old conflict transaction is
       // still potentially holding credentials and a candidate snapshot. The
       // user can retry once the transient abort/Host failure has cleared.
-      this.pendingRestoreTransactionId = stalePendingTransactionId;
       return { ok: false, error: '上一次恢复冲突仍在清理，请稍后重试' };
     }
+    this.clearPendingRestore();
     let transactionId = '';
     try {
-      const config = await this.requireStoredConfig();
+      const configState = await this.credentials.loadSerializedState();
+      const config = await this.requireStoredConfig(configState.config);
       this.assertAdmission(admitted);
       const started = await this.startTransaction('restore', config, true, admitted);
       transactionId = started.transactionId;
@@ -480,6 +514,7 @@ export class SyncGateway {
       if (outcome.status === 'conflict') {
         const conflict = this.decodeConflict(outcome);
         this.pendingRestoreTransactionId = outcome.transactionId;
+        this.pendingRestoreConfig = configState;
         return { ok: false, conflict, path: conflict.remotePath };
       }
       if (outcome.status !== 'completed' || outcome.phase !== 'restoreCompleted') {
@@ -492,14 +527,24 @@ export class SyncGateway {
     }
   }
 
-  async resolveRestore(overwriteLocal: boolean, observation?: SyncWriteObservation, admitted?: () => boolean): Promise<SyncRestoreResult> {
+  async resolveRestore(overwriteLocal: boolean, expectedTransactionId: string, observation?: SyncWriteObservation,
+    admitted?: () => boolean): Promise<SyncRestoreResult> {
     await this.credentials.requireConfigSettled();
     this.assertAdmission(admitted);
     const transactionId = this.pendingRestoreTransactionId;
-    if (transactionId.length === 0) {
+    if (transactionId.length === 0 || transactionId !== expectedTransactionId) {
       return { ok: false, error: '没有待处理的恢复冲突' };
     }
     try {
+      if (overwriteLocal) {
+        const current = await this.credentials.loadSerializedState();
+        this.assertAdmission(admitted);
+        if (!this.matchesPendingRestoreConfig(current)) {
+          this.pendingRestoreConfig = undefined;
+          if (await this.abortBestEffort(transactionId)) this.clearPendingRestore();
+          return { ok: false, conflictInvalidated: true, error: WEBDAV_PROVIDER_CHANGED };
+        }
+      }
       const event = await this.runtimeOwner.request('sync.webdav.transaction.resolve', {
         transactionId,
         choice: overwriteLocal ? 'overwriteLocal' : 'cancel',
@@ -511,7 +556,7 @@ export class SyncGateway {
       if (outcome.status !== 'completed') {
         throw new Error('Core 未关闭 WebDAV 恢复事务');
       }
-      this.pendingRestoreTransactionId = '';
+      this.clearPendingRestore();
       return {
         ok: true,
         applied: overwriteLocal,
@@ -521,13 +566,28 @@ export class SyncGateway {
     } catch (error) {
       // Keep the ID when abort itself failed: a transient resolve/Host error
       // must remain retryable instead of silently orphaning the Core row.
-      if ((observation === undefined || observation.write.dispatchedCount === 0) && await this.abortBestEffort(transactionId)) {
-        this.pendingRestoreTransactionId = '';
-      } else {
-        this.pendingRestoreTransactionId = transactionId;
+      const dispatched = (observation?.write.dispatchedCount ?? 0) > 0;
+      const aborted = !dispatched && await this.abortBestEffort(transactionId);
+      if (aborted) {
+        this.clearPendingRestore();
       }
-      return { ok: false, applied: observation?.coreApplied, error: this.errorMessage(error) };
+      return { ok: false, applied: observation?.coreApplied, conflictInvalidated: dispatched || aborted,
+        error: this.errorMessage(error) };
     }
+  }
+
+  private matchesPendingRestoreConfig(current: StoredWebDavState): boolean {
+    const original = this.pendingRestoreConfig;
+    const left = original?.config;
+    const right = current.config;
+    return original !== undefined && original.saveOperationId === current.saveOperationId && left != null && right !== null &&
+      left.url === right.url && left.directory === right.directory && left.user === right.user &&
+      left.password === right.password && left.backupPassword === right.backupPassword;
+  }
+
+  private clearPendingRestore(): void {
+    this.pendingRestoreTransactionId = '';
+    this.pendingRestoreConfig = undefined;
   }
 
   private async startTransaction(
@@ -571,7 +631,7 @@ export class SyncGateway {
   private async driveTransaction(initial: CoreWebDavTransaction, observation?: SyncWriteObservation, admitted?: () => boolean): Promise<CoreWebDavTransaction> {
     let current = initial;
     for (let step = 0; step < MAX_TRANSACTION_STEPS; step += 1) {
-      this.assertOwner();
+      this.assertAdmission(admitted);
       if (current.status === 'completed' || current.status === 'conflict') {
         return current;
       }
@@ -584,26 +644,37 @@ export class SyncGateway {
           // Core owns WebDAV verbs and payloads; Host pins every hop to the
           // configured HTTPS origin so backup bytes cannot follow a downgrade
           // or cross-origin redirect.
-          this.assertOwner();
+          this.assertAdmission(admitted);
           const request = current.requests[index];
           const method = request['method'];
           const mutable = typeof method === 'string' && !['GET', 'HEAD', 'OPTIONS', 'PROPFIND'].includes(method.toUpperCase());
-          if (mutable && observation !== undefined && observation.write.dispatchedCount === 0) {
+          const uploads = current.phase === 'backupUpload' && method === 'PUT';
+          let publication: WebDavBackupJournal | undefined;
+          if (uploads) {
+            const journal = await this.credentials.loadBackupJournal();
             this.assertAdmission(admitted);
-            if (current.phase === 'backupUpload') {
-              const journal = await this.credentials.loadBackupJournal();
-              this.assertAdmission(admitted);
-              if (journal === undefined || journal.operationId !== current.transactionId) throw new Error('备份发布记录已变化');
-              await this.credentials.saveBackupJournal({ ...journal, phase: 'mayDispatch' });
-              this.assertAdmission(admitted);
-            }
+            if (journal === undefined || journal.operationId !== current.transactionId) throw new Error('备份发布记录已变化');
+            publication = { ...journal, phase: 'mayDispatch' };
+            await this.credentials.saveBackupJournal(publication);
+            this.assertAdmission(admitted);
+          }
+          if (mutable && (current.phase !== 'backupUpload' || uploads) &&
+            observation !== undefined && observation.write.dispatchedCount === 0) {
             observation.write.dispatched();
           }
+          const headers = request['headers'] === undefined ? {} : this.requireObject(request['headers'], 'Core WebDAV 请求头');
+          if (uploads) headers['If-None-Match'] = '*';
           const response = await HttpExecuteHost.instance.execute({
-            ...current.requests[index],
+            ...request, headers,
             httpsOnly: true,
             sameOriginRedirectsOnly: true,
           });
+          this.assertAdmission(admitted);
+          if (response['status'] === 401 || response['status'] === 403) throw new Error(WEBDAV_AUTH_FAILED);
+          if (publication !== undefined) {
+            const checked = await this.queryBackupReceipt(publication, true, admitted);
+            if (!checked.receipt.uploadQualified || !checked.receipt.durable) throw new Error(WEBDAV_READBACK_FAILED);
+          }
           if (mutable && observation !== undefined && typeof response['status'] === 'number' &&
             (response['status'] as number) >= 200 && (response['status'] as number) < 300) observation.remoteConfirmedCount += 1;
           this.assertOwner();
@@ -688,7 +759,7 @@ export class SyncGateway {
   private async requireRestoreSettled(): Promise<void> {
     const journal = await this.credentials.loadRestoreJournal();
     this.assertOwner();
-    if (journal !== undefined) throw new Error('上一次恢复仍待核对，请完成已有恢复后再执行新操作');
+    if (journal !== undefined) throw new Error(WEBDAV_RESTORE_PENDING);
   }
 
   private assertTransactionIdentity(expected: string, actual: string, operation: string): void {
@@ -878,7 +949,7 @@ export class SyncGateway {
   private async requireStoredConfig(observed?: StoredWebDavConfig | null): Promise<StoredWebDavConfig> {
     const config = observed === undefined ? await this.credentials.loadSerialized() : observed;
     if (config === null) {
-      throw new Error('请先安全保存 WebDAV 配置');
+      throw new Error(WEBDAV_NOT_CONFIGURED);
     }
     this.requireBaseUrl(config.url);
     this.requireDirectory(config.directory);
@@ -966,6 +1037,6 @@ export class SyncGateway {
   }
 
   private errorMessage(error: unknown): string {
-    return errorMessageOf(error);
+    return syncFailureMessage(error);
   }
 }

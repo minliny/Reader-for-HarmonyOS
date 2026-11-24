@@ -64,7 +64,8 @@ export struct SyncPage {
   onSkipBackupRetention: (generation: number) => void = (_generation: number): void => {};
   onTriggerBackup: () => void = (): void => {};
   onRestoreLatest: () => void = (): void => {};
-  onResolveRestore: (overwriteLocal: boolean) => void = (_overwriteLocal: boolean): void => {};
+  onResolveRestore: (overwriteLocal: boolean, transactionId: string) => void =
+    (_overwriteLocal: boolean, _transactionId: string): void => {};
   @State webdavUrl: string = '';
   @State webdavUser: string = '';
   @State webdavPass: string = '';
@@ -182,8 +183,8 @@ export struct SyncPage {
             '与 WebDAV 登录密码分开保存', true, (value: string): void => {
               this.backupPass = value;
             });
-          this.webdavInputRow((): Resource => (this.appThemeScheme === 'night' ? $r('app.media.source_group_folder_theme_night') : $r('app.media.source_group_folder')), '同步目录', (): string => this.effectiveWebdavPath(),
-            '/ReaderBackup/ReaderAndroid', false, (value: string): void => {
+          this.webdavInputRow((): Resource => (this.appThemeScheme === 'night' ? $r('app.media.source_group_folder_theme_night') : $r('app.media.source_group_folder')), '备份目录', (): string => this.effectiveWebdavPath(),
+            '/ReaderBackup/ReaderHarmony', false, (value: string): void => {
               this.webdavPathEdited = true;
               this.webdavPath = value;
             });
@@ -244,7 +245,7 @@ export struct SyncPage {
   @Builder
   private manualActionsSection() {
     Column({ space: TOK_SPACE_XS }) {
-      this.sectionHeadingMuted('前台手动备份');
+      this.sectionHeadingMuted('手动配置备份与恢复');
       ReaderCard({ specId: 'sync-status',
         cardWidth: this.contentFrame().width }) {
         Column({ space: TOK_SPACE_SM }) {
@@ -272,7 +273,9 @@ export struct SyncPage {
           }
           .width('100%');
           if (this.snapshot.restoreConflict !== undefined) {
-            this.restoreConflictCard(this.snapshot.restoreConflict as SyncRestoreConflict);
+            ForEach([this.snapshot.restoreConflict as SyncRestoreConflict], (conflict: SyncRestoreConflict): void => {
+              this.restoreConflictCard(conflict);
+            }, (conflict: SyncRestoreConflict): string => conflict.transactionId);
           }
         }
         .width('100%')
@@ -283,7 +286,9 @@ export struct SyncPage {
   }
 
   private hasOriginalRecovery(): boolean {
-    return this.snapshot.facts?.operation !== undefined && !this.snapshot.facts.operation.completed;
+    const operation = this.snapshot.facts?.operation;
+    return operation !== undefined && !operation.completed && !operation.retentionSkipped &&
+      operation.projection.receipt.confirmation !== 'undispatched';
   }
 
   private recoveryIdentity(): string {
@@ -349,7 +354,7 @@ export struct SyncPage {
   @Builder
   private restoreConflictCard(conflict: SyncRestoreConflict) {
     Column({ space: TOK_SPACE_XS }) {
-      Text('检测到本机与远端完整备份不同')
+      Text('本机配置与远端备份不同')
         .width('100%')
         .fontFamily(TYPE_FORM_LABEL_ACTION.fontFamily)
         .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
@@ -362,8 +367,8 @@ export struct SyncPage {
         .lineHeight(TYPE_SYNC_CONFLICT_META.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       Row({ space: TOK_SPACE_XS }) {
-        this.manualActionButton('取消', false, (): void => this.onResolveRestore(false));
-        this.manualActionButton('覆盖本机', true, (): void => this.onResolveRestore(true));
+        this.manualActionButton('取消', false, (): void => this.onResolveRestore(false, conflict.transactionId));
+        this.manualActionButton('恢复本机配置', true, (): void => this.onResolveRestore(true, conflict.transactionId));
       }
       .width('100%');
     }
@@ -595,7 +600,8 @@ export struct SyncPage {
   private feedbackView(): ReaderRecoveryView {
     const facts = this.snapshot.facts;
     const read = facts?.read.fact === 'failed' || facts?.read.fact === 'refreshFailed' ? facts.read : facts?.request ?? facts?.read;
-    return readerRecoveryView(facts?.operation?.projection, read);
+    return readerRecoveryView(facts?.request !== undefined && !this.hasOriginalRecovery() ? undefined :
+      facts?.operation?.projection, read);
   }
 
   private canContinueConfigSave(): boolean {

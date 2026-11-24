@@ -40,7 +40,7 @@ if(id==='secure-envelope'){
   const x=fixture();await open(x);await x.store.save(f.config);
   const configId=(await x.store.loadSerializedState()).saveOperationId;x.runtime.failBackupAdvance=true;x.owner.triggerBackup();await x.settle();
   assert.equal((await x.store.loadBackupJournal()).configSaveOperationId,configId,'same envelope identity survives prepared→mayDispatch');
-  await x.store.save(f.config);await retry(x);assert.equal(x.requests.filter(r=>r.method==='GET').length,0,'a newer same-value save is not the original secure envelope');
+  await x.store.save(f.config);await retry(x);assert.equal(x.requests.filter(r=>r.method==='GET').length,1,'a newer same-value save is not the original secure envelope');
   assert.equal(operation(x).projection.receipt.confirmation,'unknown');
  }
 }
