@@ -179,7 +179,8 @@ export class SourceJourneyPresentation {
   requestDelete(identity: string, selected: SourceToolsSelection, show: (count: number,
     confirm: () => void, current: () => boolean) => void): void {
     const selection: SourceToolsSelection = { sourceIds: selected.sourceIds.slice(),
-      sourceListRevision: selected.sourceListRevision, selectionRevision: selected.selectionRevision };
+      sourceListRevision: selected.sourceListRevision, selectionRevision: selected.selectionRevision,
+      query: selected.query, isScopeCurrent: selected.isScopeCurrent };
     const host = this.toolsForSelection(identity, selection);
     if (host === undefined) return;
     const current = (): boolean => this.toolsForSelection(identity, selection) === host;

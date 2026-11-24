@@ -85,6 +85,7 @@ import { RssJourneyPresentation, type RssRoute } from '../features/rss/presentat
 import { RssJourneySurface } from '../features/rss/ui/RssJourneySurface';
 import { SettingsPresentation, type SettingsRoute } from '../features/settings/presentation/SettingsPresentation';
 import { SettingsScenes, type SettingsDestination } from '../app/composition/SettingsScenes';
+import { ReaderWideSettingsShell, type WideSettingsPane } from '../features/settings/ui/ReaderWideSettingsShell';
 import { ReaderLibraryAcquisitionBinding } from '../app/composition/ReaderLibraryAcquisitionBinding';
 import { ReaderLibraryJourney, type ReaderLibraryJourneyPorts, type ReaderLibraryScope,
   type ReaderLibraryHeaderActions } from '../app/composition/ReaderLibraryJourney';
@@ -234,6 +235,7 @@ struct Index {
   @State private navigationGeneration: number = this.navigationOwner.snapshot().generation;
   @State private directoryReturnTarget: DirectoryReturnTarget = this.navigationOwner.snapshot().directoryReturnTarget;
   @State private settingsSection: SettingsSection = this.navigationOwner.snapshot().settingsSection;
+  @State private wideSettingsCollapsed: boolean = false;
   @State private visibleRouteMotion: ReaderRouteMotionKind | 'none' = 'none';
   @State private sourceOpeningGeneration: number = 0;
   @State private sourceToolsOpeningGeneration: number = 0;
@@ -265,7 +267,9 @@ struct Index {
     }
     this.navigationGeneration = snapshot.generation;
     this.directoryReturnTarget = snapshot.directoryReturnTarget;
-    this.settingsSection = snapshot.settingsSection;
+    this.settingsSection = snapshot.route === 'settings' && snapshot.route !== this.route &&
+      snapshot.settingsSection === 'home' && this.expandedLayout() ?
+      this.navigationOwner.setSettingsSection('general').settingsSection : snapshot.settingsSection;
     this.route = snapshot.route;
     if (restoringDirectory) this.directoryJourney.refreshDetailPosition();
   }
@@ -991,17 +995,20 @@ struct Index {
           if (this.isDetailDirectoryRoute() || this.navigationOwner.retainsDetailDirectory()) this.externalDirectory();
         }.width('100%').height('100%').transition(this.routeTransition());
       } else if (this.route !== 'reading' && this.route !== 'directory') {
-        ReaderRouteStackSurface({
-          route: this.route,
-          routeMotion: this.visibleRouteMotion,
-          reduceMotion: this.appReduceMotion,
-          viewportWidth: ReaderWindowCoordinator.metrics().windowRect.width,
-          backGestureEnabled: this.journeyRecoveryInputAllowed(),
-          content: (route: ReaderRoute): void => { this.secondaryRouteSurface(route); },
-          onBack: (): boolean => this.onBackPress(),
-        }).width('100%').height('100%')
-          .backgroundColor(readerAppColor('app.window.background', this.appThemeScheme))
-          .transition(this.routeTransition());
+        if (this.wideSettingsPane() !== undefined) {
+          ReaderWideSettingsShell({
+            pane: this.wideSettingsPane() ?? 'general', collapsed: this.wideSettingsCollapsed,
+            interactive: this.wideSettingsInputAllowed(),
+            onToggle: (): void => {
+              if (this.wideSettingsInputAllowed()) this.wideSettingsCollapsed = !this.wideSettingsCollapsed;
+            },
+            onPane: (pane: WideSettingsPane): void => this.requestWideSettingsPane(pane),
+            onMainTab: (tab: string): void => this.requestWideSettingsMainTab(tab),
+            content: (width: number): void => { this.secondaryRouteStack(width, true); },
+          }).transition(this.routeTransition());
+        } else {
+          this.secondaryRouteStack(ReaderWindowCoordinator.metrics().windowRect.width);
+        }
       }
       if (this.route === 'bookshelf' || this.route === 'search' || this.shelfMotion.retainsOpeningBackground()) {
         this.librarySearchSurface(this.mountedRuntimeOwner, this.librarySearch.host);
@@ -1173,8 +1180,60 @@ struct Index {
     return this.route === 'directory' && this.directoryReturnTarget === 'detail';
   }
 
+  private wideSettingsPane(): WideSettingsPane | undefined {
+    return this.expandedLayout() ? this.navigationOwner.settingsPane() : undefined;
+  }
+
+  private wideSettingsInputAllowed(): boolean {
+    return this.wideSettingsPane() !== undefined && this.rulesManagementInputAllowed();
+  }
+
+  private requestWideSettingsPane(pane: WideSettingsPane): void {
+    if (!this.wideSettingsInputAllowed()) return;
+    if (this.route === 'sourceTools' && pane !== 'source') {
+      this.onBackPress();
+      if (this.navigationOwner.snapshot().route !== 'source') return;
+    }
+    if (this.route !== 'settings') {
+      if (pane === this.wideSettingsPane()) return;
+      this.onBackPress();
+      if (this.navigationOwner.snapshot().route !== 'settings') return;
+    } else if (this.navigationOwner.consumeTemporaryBack(
+      (owner: ReaderRuntimeOwner): boolean => owner === this.currentReadingRuntime(),
+      (_error: Error): void => {})) {
+      return;
+    }
+    if (pane === 'general') {
+      if (this.settingsSection !== 'general') this.setSettingsSection('general');
+      return;
+    }
+    this.openSettingsDestination(pane);
+    if (this.wideSettingsPane() === pane) this.visibleRouteMotion = 'tab';
+  }
+
+  private requestWideSettingsMainTab(tab: string): void {
+    if (!this.wideSettingsInputAllowed() || this.navigationOwner.consumeTemporaryBack(
+      (owner: ReaderRuntimeOwner): boolean => owner === this.currentReadingRuntime(),
+      (_error: Error): void => {})) return;
+    if (tab === 'bookshelf') this.libraryJourney.returnToBookshelf();
+    else if (tab === 'discover') this.openDiscover();
+    else if (tab === 'rss') this.rssJourney.openRss();
+  }
+
   @Builder
-  private secondaryRouteSurface(route: ReaderRoute) {
+  private secondaryRouteStack(width: number, embeddedWide: boolean = false) {
+    ReaderRouteStackSurface({
+      route: this.route, routeMotion: this.visibleRouteMotion, reduceMotion: this.appReduceMotion,
+      viewportWidth: width, backGestureEnabled: this.journeyRecoveryInputAllowed(),
+      content: (route: ReaderRoute): void => { this.secondaryRouteSurface(route, embeddedWide); },
+      onBack: (): boolean => this.onBackPress(),
+    }).width('100%').height('100%')
+      .backgroundColor(readerAppColor('app.window.background', this.appThemeScheme))
+      .transition(this.routeTransition());
+  }
+
+  @Builder
+  private secondaryRouteSurface(route: ReaderRoute, embeddedWide: boolean = false) {
     if (route === 'bookshelfSettings') {
       this.settingsContent('bookshelfSettings');
     } else if (route === 'bookshelfMultiSelect') {
@@ -1198,7 +1257,7 @@ struct Index {
     } else if (isReaderProductSurfaceEnabled('discover') && route === 'discover') {
       this.discoverPageContent();
     } else if (route === 'settings') {
-      this.settingsContent('settings');
+      this.settingsContent('settings', this.navigationGeneration, this.mountedRuntimeOwner, embeddedWide);
     } else if (route === 'downloads') {
       this.downloadsContent();
     } else if (route === 'rulesManagement') {
@@ -1294,10 +1353,10 @@ struct Index {
 
   @Builder
   private settingsContent(route: SettingsRoute, generation: number = this.navigationGeneration,
-    owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner) {
+    owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner, embeddedWide: boolean = false) {
     SettingsScenes({
       presentation: this.settingsPresentation, route, section: this.settingsSection,
-      expandedLayout: this.expandedLayout(), generation,
+      expandedLayout: this.expandedLayout(), embeddedWide, generation,
       isInputAllowed: (): boolean => this.searchAppForeground && !this.arkWebCapturesInput &&
         this.isCurrentRoute(generation, route) && owner === this.mountedRuntimeOwner && this.isCurrentRuntime(owner),
       onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void =>

@@ -7,11 +7,31 @@ async function sourceSelection() {
  let owner={};const runtime=owner,emitted=[];let pageCurrent=true;
  class SelectionGateway {originalMutationSnapshot(){return undefined;}}
  const body=source.replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,'');
- const Orchestrator=new Function('ReaderRuntimeOwner','SourceGateway',stripTypeScriptTypes(body)+';return SourceToolsOrchestrator;')({isCurrent:value=>value===owner,current:()=>owner},SelectionGateway);
- const host=new Orchestrator(value=>emitted.push(value),()=>pageCurrent,runtime);host.snapshot={...host.snapshot,sources:[{sourceId:'a'},{sourceId:'b'}]};
+ const {SourceToolsOrchestrator:Orchestrator,filterSourceTools}=new Function('ReaderRuntimeOwner','SourceGateway',
+   stripTypeScriptTypes(body)+';return {SourceToolsOrchestrator,filterSourceTools};')({isCurrent:value=>value===owner,current:()=>owner},SelectionGateway);
+ const sources=[{sourceId:'a',name:'共同 <img>',baseUrl:'https://a.test',group:'甲'},
+   {sourceId:'b',name:'共同',baseUrl:'https://b.test',group:'乙'}];
+ const host=new Orchestrator(value=>emitted.push(value),()=>pageCurrent,runtime);host.snapshot={...host.snapshot,sources};
  const oldSelection=host.snapshot.selectedSourceIds;host.toggleSelection('a');host.toggleSelection('a');assert.deepEqual(oldSelection,[]);assert.deepEqual(host.snapshot.selectedSourceIds,[]);
  host.toggleSelection('b');host.toggleSelection('a');assert.deepEqual(host.snapshot.selectedSourceIds,['b','a']);host.selectAll();assert.deepEqual(host.snapshot.selectedSourceIds,['a','b']);
  assert.deepEqual(host.consumeSelection(['b','missing','a','b']),['b','a']);assert.deepEqual(host.snapshot.selectedSourceIds,[]);
+ assert.deepEqual(filterSourceTools(sources,'  A.TEST '),[sources[0]]);
+ assert.deepEqual(filterSourceTools(sources,'<img>'),[sources[0]]);
+ assert.deepEqual(filterSourceTools(sources,'<script>'),[]);
+ host.setSelection(['b']);host.setVisibleSelection('甲',true);
+ assert.deepEqual(host.snapshot.selectedSourceIds,['b','a']);
+ let scopeCurrent=true;
+ const scoped={sourceIds:['a'],query:'甲',sourceListRevision:host.snapshot.sourceListRevision,
+   selectionRevision:host.snapshot.selectionRevision,isScopeCurrent:()=>scopeCurrent};
+ assert.equal(host.acceptsSelection(scoped),true);
+ assert.equal(host.acceptsSelection({...scoped,sourceIds:['b','a']}),false,'all batch consumers reject hidden source IDs');
+ scopeCurrent=false;assert.equal(host.acceptsSelection(scoped),false,'retired filters cannot confirm');
+ scopeCurrent=true;host.setVisibleSelection('甲',false);
+ assert.deepEqual(host.snapshot.selectedSourceIds,['b'],'deselect all clears only the filtered projection');
+ assert.equal(host.acceptsSelection(scoped),false,'old selection receipt cannot confirm after a change');
+ host.setVisibleSelection('甲',true);
+ assert.deepEqual(host.consumeSelection(['a']),['a']);
+ assert.deepEqual(host.snapshot.selectedSourceIds,['b'],'consumption keeps unseen selections');
  host.setSelection(['a']);host.snapshot.busy=true;host.toggleSelection('b');assert.deepEqual(host.consumeSelection(['a']),[]);assert.deepEqual(host.snapshot.selectedSourceIds,['a']);
  host.snapshot.busy=false;host.pendingOperations=1;host.selectAll();assert.deepEqual(host.snapshot.selectedSourceIds,['a']);host.pendingOperations=0;
  pageCurrent=false;assert.deepEqual(host.consumeSelection(['a']),[]);pageCurrent=true;owner={};assert.deepEqual(host.consumeSelection(['a']),[]);

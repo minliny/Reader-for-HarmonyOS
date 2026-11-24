@@ -1,12 +1,12 @@
 {
   "id": "reading.control-search-editor-back",
-  "version": 2,
+  "version": 3,
   "phase": 1,
   "pageId": "reading",
   "fixture": {
     "id": "public-local-reading-v1",
     "bookTitle": "Reader Phase 0 公共测试书",
-    "description": "Public local book. Focus the real Full Search editor, then use Back to hide the current IME and retain the same native input and Search panel."
+    "description": "Open Search directly and verify normal Back while its editor owns the IME."
   },
   "steps": [
     {
@@ -62,13 +62,6 @@
       "waitFor": [
         {
           "kind": "reading.control-transition-committed"
-        },
-        {
-          "kind": "reading.control-motion",
-          "fields": {
-            "payload.finalBlock": true,
-            "payload.endReason": "completed"
-          }
         }
       ],
       "gesture": true
@@ -85,13 +78,6 @@
       "waitFor": [
         {
           "kind": "reading.control-transition-committed"
-        },
-        {
-          "kind": "reading.control-motion",
-          "fields": {
-            "payload.finalBlock": true,
-            "payload.endReason": "completed"
-          }
         }
       ]
     },
@@ -123,52 +109,10 @@
       ]
     },
     {
-      "id": "expand",
-      "kind": "action",
-      "op": "click",
-      "from": "enter-search-state",
-      "target": "reader-control-motion-grabber",
-      "waitFor": [
-        {
-          "kind": "reading.control-transition-committed"
-        },
-        {
-          "kind": "reading.control-motion",
-          "fields": {
-            "payload.finalBlock": true,
-            "payload.endReason": "completed"
-          }
-        }
-      ],
-      "gesture": true
-    },
-    {
-      "id": "expand-state",
-      "kind": "sample",
-      "anchors": [
-        "reader-reading-stage"
-      ],
-      "keyboard": false,
-      "afterAction": "expand",
-      "quietMs": 500,
-      "waitFor": [
-        {
-          "kind": "reading.control-transition-committed"
-        },
-        {
-          "kind": "reading.control-motion",
-          "fields": {
-            "payload.finalBlock": true,
-            "payload.endReason": "completed"
-          }
-        }
-      ]
-    },
-    {
       "id": "focus-editor",
       "kind": "action",
       "op": "click",
-      "from": "expand-state",
+      "from": "enter-search-state",
       "target": "reader-control-search-field",
       "gesture": true
     },
@@ -268,30 +212,14 @@
           "entry/src/main/ets/features/reading/ui/ReaderControlLayoutRebase.ts",
           "entry/src/main/ets/features/reading/ui/ReaderControlSpatialPath.ts",
           "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts"
-        ],
-        "trajectory": {
-          "layoutToleranceVp": 1,
-          "opacityTolerance": 0.02,
-          "transformTolerance": 0.001,
-          "cadenceGapFactor": 3,
-          "dockTravelVp": 18,
-          "grabberWidthVp": 72,
-          "grabberHeightVp": 28,
-          "maxContentInsetVp": 13,
-          "quickContentTopVp": 29,
-          "quickContentReserveVp": 52,
-          "quickCornerVp": 8,
-          "cornerDeltaVp": 4,
-          "runtimeDurationMs": 220
-        }
+        ]
       },
       "required": true,
       "source": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#openReaderControl",
       "sources": [
         "app-owner",
         "native-tree",
-        "window-metrics",
-        "debug-frame"
+        "window-metrics"
       ]
     },
     {
@@ -303,7 +231,7 @@
       "sample": "enter-search-state",
       "expected": {
         "op": "click",
-        "direction": "navigate",
+        "direction": "morph",
         "origins": [
           "module-button"
         ],
@@ -316,10 +244,10 @@
         "target": {
           "level": "secondary",
           "module": "search",
-          "form": "quick",
+          "form": "full",
           "directoryTab": "directory"
         },
-        "commandDurationMs": 0,
+        "commandDurationMs": 260,
         "endpointOpacityTolerance": 0.02,
         "ownerSources": [
           "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
@@ -328,7 +256,8 @@
           "entry/src/main/ets/features/reading/ui/ReaderControlVerificationSession.ts",
           "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
           "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
-          "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets"
+          "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
+          "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts"
         ]
       },
       "required": true,
@@ -337,76 +266,6 @@
         "app-owner",
         "native-tree",
         "window-metrics"
-      ]
-    },
-    {
-      "id": "reading.control-search-editor-back.expand",
-      "evaluator": "motion",
-      "kind": "control-transition",
-      "action": "expand",
-      "baseline": "enter-search-state",
-      "sample": "expand-state",
-      "expected": {
-        "op": "click",
-        "direction": "morph",
-        "origins": [
-          "grabber-release"
-        ],
-        "source": {
-          "level": "secondary",
-          "module": "search",
-          "form": "quick",
-          "directoryTab": "directory"
-        },
-        "target": {
-          "level": "secondary",
-          "module": "search",
-          "form": "full",
-          "directoryTab": "directory"
-        },
-        "commandDurationMs": 320,
-        "endpointOpacityTolerance": 0.02,
-        "ownerSources": [
-          "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
-          "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-          "entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
-          "entry/src/main/ets/features/reading/ui/ReaderControlVerificationSession.ts",
-          "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
-          "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
-          "entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
-          "entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts",
-          "entry/src/main/ets/features/reading/ui/ReaderControlVerificationMotion.ets",
-          "entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts",
-          "entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts",
-          "entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts",
-          "entry/src/main/ets/features/reading/ui/ReaderControlLayoutRebase.ts",
-          "entry/src/main/ets/features/reading/ui/ReaderControlSpatialPath.ts",
-          "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
-          "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets"
-        ],
-        "trajectory": {
-          "layoutToleranceVp": 1,
-          "opacityTolerance": 0.02,
-          "transformTolerance": 0.001,
-          "cadenceGapFactor": 3,
-          "dockTravelVp": 18,
-          "grabberWidthVp": 72,
-          "grabberHeightVp": 28,
-          "maxContentInsetVp": 13,
-          "quickContentTopVp": 29,
-          "quickContentReserveVp": 52,
-          "quickCornerVp": 8,
-          "cornerDeltaVp": 4,
-          "runtimeDurationMs": 320
-        }
-      },
-      "required": true,
-      "source": "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets#acceptVerificationGesture",
-      "sources": [
-        "app-owner",
-        "native-tree",
-        "window-metrics",
-        "debug-frame"
       ]
     },
     {
@@ -449,7 +308,6 @@
     "reading-before": "reading-before",
     "open-state": "open-state",
     "enter-search-state": "enter-search-state",
-    "expand-state": "expand-state",
     "editor-ime": "editor-ime",
     "editor-ime-hidden": "editor-ime-hidden"
   }

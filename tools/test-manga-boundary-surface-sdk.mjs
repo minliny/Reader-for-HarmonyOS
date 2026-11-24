@@ -4,12 +4,16 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { createReaderBuilderProbe, productionReaderMotionSdk } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
 import { MangaStripProjection } from '../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts';
 import { PhotoViewScaleModel } from '../entry/src/main/ets/features/manga/vendor/photoview/PhotoViewScaleModel.ts';
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
+import { readerPaperPullOffset } from '../entry/src/main/ets/features/reading/presentation/ReaderPaperPullMotion.ts';
+import { readerIsExpandedWidth } from '../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts';
+import { readerMotionValueDurationMs } from '../entry/src/main/ets/ui/foundation/ReaderMotionDurationPolicy.ts';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 // Only Core/controller acquisition, timers, native frames/rectangles and haptics
 // are controlled ports. Chapter sequencing, retention, position admission,
@@ -38,7 +42,8 @@ const methods = ['readerPanelForeground','boundaryEnabled','onBoundaryActivity',
   'publish','rememberVisible','flushViewportObservation','onViewportScroll','queueViewportObservation','restore','finishLayout',
   'measureVisibleWindow','positionIdentity','saveVisible','effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop',
   'rowDisplayLeft','visibleX','displayChapterTitle','updateViewport','configureAdjacentChapter','adjacentChapter',
-  'resizeViewport','changeZoom','toggleDirection','onWindowChromeChanged','openPanel'];
+  'finalBoundaryConfirmed','releaseNextBoundary','clearPageSliderPreview',
+  'resizeViewport','changeZoom','toggleDirection','onWindowChromeChanged','openPanel','panelTriggerFocusId'];
 const Surface = productionMotionMethods(surfaceURL, methods, {
   MangaLayoutFrame, MangaSheetFrame, LengthMetrics: {vp:value=>({value,unit:0})},
   MangaBookPresentation: { revision: 0, admitConfirmedLocation(...args) { activePorts.admissions.push(args); } },
@@ -52,6 +57,8 @@ const Surface = productionMotionMethods(surfaceURL, methods, {
 });
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const outcomes=[];
+const directed=process.argv.length>2;
+const selected=directed?selectContractCases({'paper-ink':{description:'实际漫画章末手势、滑块页码、宽屏目录与主题接线',resources:[]}}):[];
 function controller(index, prefix, sameImages=false) {
   const manifest={chapter:{sourceId:'s',bookId:'b',chapterId:`chapter-${index}`},manifestVersion:`manifest-${index}`,
     sourceRuleVersion:'source-v1',pages:[{ordinal:0,pageId:sameImages?'shared-page':`page-${index}`,resourceRef:'r'}]};
@@ -99,7 +106,7 @@ function fixture({sameImages=false,prepareFailure=false,originIndex=0,targetInde
     nativeTransitionImages:new Set(),nativeTransitionTimer:-1,previousChapterPixels:[],chapterTransitions:transitions,
     rollbackChapterImages:new Set(),boundaryPaintGeneration:0,rollbackPainting:false,
     scroller,horizontalScroller:horizontal,scalePolicy:new PhotoViewScaleModel(),offline:false,
-    remoteSession:{sourceVersion:'source-v1',contentKind:'manga',identity:{sourceId:'s',bookId:'b'},entries},
+    remoteSession:{sourceVersion:'source-v1',acquisitionMode:'online',contentKind:'manga',identity:{sourceId:'s',bookId:'b'},entries},
     isReaderIdentityCurrent:()=>true,
     onAdjacentChapterCommitted:(...args)=>ports.commits.push(args),onChapterCommitted:(...args)=>ports.initialCommits=(ports.initialCommits??[]).concat([args]),
     onSaveFailure:message=>ports.saveFailure=message,
@@ -129,6 +136,7 @@ function imageBuilder(f,row,uri=f.owner.controller.tile(row.ordinal,row.tileInde
 async function completeVisible(f){activePorts=f.ports;f.flushTimers();f.flushFrames();await tick();
   for(let i=0;i<2;i++) imageBuilder(f,f.owner.data.getData(i)).onComplete({loadingStatus:1});
   f.flushFrames();await tick();}
+if(!directed){
 {
   let calls=0;
   const frame=new MangaLayoutFrame({postFrameCallback(){}},()=>calls++);
@@ -382,34 +390,54 @@ for (const offscreenRect of ['throw', 'zero']) {
     'native paint admission does not remove controller prefetch');
 }
 outcomes.push('cachedCount(0) offscreen native rectangles may throw or be zero: retention and paint use only measured visible tiles while controller prefetch stays intact');
+}
 
 // The official SDK emits the exact production PullToRefresh callback closures.
+function boundaryBuilder(properties) {
+  const motion=productionReaderMotionSdk();
+  return createReaderBuilderProbe(source,['boundaryViewport'],{...properties.sdk,...mangaSurfaceSdkDependencies,
+    readerPaperPullOffset,readerMotionStandardCurve:()=>motion.motionSpecGet('app.control.press').curve,
+    readerMotionDurationMs:(id,reduced)=>readerMotionValueDurationMs(motion.motionSpecGet(id).durationMs,reduced)},properties.hooks);
+}
+if(!directed||selected.includes('paper-ink')){
 {
   const f=fixture({originIndex:4,targetIndex:0});const properties=createArkUIPropertyRuntimeProbe();
-  const built=createReaderBuilderProbe(source,['boundaryViewport'],{...properties.sdk,...mangaSurfaceSdkDependencies},properties.hooks);
+  const built=boundaryBuilder(properties);
+  let openedEnd=0;
+  f.owner.openChapterEnd=async()=>{openedEnd++;};
   Object.assign(built.owner,{scroller:f.owner.scroller,boundaryReset:7,reduceMotion:true,
     boundaryEnabled:f.owner.boundaryEnabled.bind(f.owner),adjacentChapter:f.owner.adjacentChapter.bind(f.owner),
+    finalBoundaryConfirmed:f.owner.finalBoundaryConfirmed.bind(f.owner),releaseNextBoundary:f.owner.releaseNextBoundary.bind(f.owner),
     onBoundaryActivity:f.owner.onBoundaryActivity.bind(f.owner),onBoundaryPull:f.owner.onBoundaryPull.bind(f.owner),
-    turnBoundaryChapter:f.owner.turnBoundaryChapter.bind(f.owner),imageViewport(){},boundaryHint(){}});
+    imageViewport(){},boundaryHint(){}});
   built.owner.boundaryViewport();const params=[...built.owner.children.values()].at(-1).params;
-  assert.equal(params.pullEnabled,true);assert.equal(params.hasPrevious,false);assert.equal(params.hasNext,false);
+  assert.equal(params.pullEnabled,true);assert.equal(params.hasPrevious,false);assert.equal(params.hasNext,true);
   assert.equal(params.customRefresh,undefined,'the upward-only Surface has no previous-chapter pull UI');
-  assert.equal(params.animationDuration,0);assert.equal(params.resetToken,7);
+  assert.equal(params.animationDuration,0);assert.equal(params.reduceMotion,true);assert.equal(params.resetToken,7);
+  assert.equal(params.visualDamping,readerPaperPullOffset);
   params.onActivity(true);assert.equal(f.owner.boundaryDragging,true);
   params.onPull('next',30,false);assert.equal(f.owner.boundaryDistance,30);
+  await params.onLoadMore();assert.equal(openedEnd,0);
+  params.onPull('next',180,true);
+  await params.onLoadMore();assert.equal(openedEnd,1);assert.equal(f.ports.prepare,undefined);
+  f.owner.remoteSession={...f.owner.remoteSession,acquisitionMode:'offline'};
+  assert.equal(f.owner.finalBoundaryConfirmed(),false,'an unversioned offline catalog cannot certify a final chapter');
   params.onActivity(false);
   outcomes.push('SDK-generated PullToRefresh receives actual admission, lifecycle epoch, reduced-motion and anchor callbacks');
 }
 {
   const f=fixture();const properties=createArkUIPropertyRuntimeProbe();
-  const built=createReaderBuilderProbe(source,['boundaryViewport'],{...properties.sdk,...mangaSurfaceSdkDependencies},properties.hooks);
+  const built=boundaryBuilder(properties);
   Object.assign(built.owner,{scroller:f.owner.scroller,boundaryReset:0,reduceMotion:false,
     boundaryEnabled:f.owner.boundaryEnabled.bind(f.owner),adjacentChapter:f.owner.adjacentChapter.bind(f.owner),
+    finalBoundaryConfirmed:f.owner.finalBoundaryConfirmed.bind(f.owner),releaseNextBoundary:f.owner.releaseNextBoundary.bind(f.owner),
     onBoundaryActivity:f.owner.onBoundaryActivity.bind(f.owner),onBoundaryPull:f.owner.onBoundaryPull.bind(f.owner),
-    turnBoundaryChapter:f.owner.turnBoundaryChapter.bind(f.owner),imageViewport(){},boundaryHint(){}});
+    imageViewport(){},boundaryHint(){}});
   built.owner.boundaryViewport();const params=[...built.owner.children.values()].at(-1).params;
   assert.equal(params.hasNext,true);
   params.onActivity(true);params.onPull('next',180,true);
+  params.onPull('next',120,false);params.onPull('next',185,true);
+  assert.equal(f.ports.vibrations.length,1,'rearming within one drag cannot repeat haptics');
   const pending=params.onLoadMore();await tick();
   assert.equal(f.ports.prepare.landing,'first');assert.equal(f.ports.prepare.chapterIndex,4);
   assert.equal(f.owner.controller,f.target);assert.equal(f.candidate.targetOrdinal,0);
@@ -417,6 +445,87 @@ outcomes.push('cachedCount(0) offscreen native rectangles may throw or be zero: 
   assert.equal(f.ports.presentCount,1);assert.equal(f.ports.commits[0][0],4);
   outcomes.push('actual SDK onLoadMore closure prepares and presents exactly the next chapter first image');
 }
+{
+  const properties=createArkUIPropertyRuntimeProbe();
+  const mode={Begin:'begin',Moving:'moving',End:'end',Click:'click'};
+  const theme=[];
+  const methods=['bottomControls','pageBadge','chapterEndContent','chapterEndActionLabel','resumeFromChapterEnd',
+    'adjacentLabel','pageSliderPreview','pageSliderGeneration','pageSliderCommitted','presentedPage','clearPageSliderPreview',
+    'changePageSlider','chromeScheme','greenColor','backgroundPreference','appThemeScheme','synchronizePaper','setBackground',
+    'widePanel','panelWidth','panelHeight'];
+  const {owner}=createReaderBuilderProbe(source,methods,{...properties.sdk,...mangaSurfaceSdkDependencies,readerAppColor,readerIsExpandedWidth,
+    SliderChangeMode:mode,TouchType:{Cancel:'cancel'},
+    ReaderThemeHost:{async selectApp(scheme,admitted){theme.push([scheme,admitted]);}}},properties.hooks);
+  let ordinal=0, finish;
+  const seeks=[], turns=[];
+  Object.assign(owner,{opened:true,horizontalPageCount:8,controlsVisible:true,chapterEnd:false,panel:'',panelPhase:'closed',
+    viewportHeight:800,stageHeight:800,viewportWidth:599,stageWidth:599,windowMetricsRevision:1,
+    readerPanelForeground:()=>true,preferencePanelInputCurrent:opening=>opening===4,persistentDirectory:()=>false,
+    pageOrdinal:()=>ordinal,interactiveInsets:()=>({left:0,right:0,top:0,bottom:0}),
+    windowInteractiveInsets:()=>({top:0}),chapterEndLabel:()=> '第六话',mutedColor:()=> 'muted',lineColor:()=> 'line',
+    dockPageRowHeight:()=>65,dockActionHeight:()=>58,bottomControlViewportHeight:()=>130,controlFontScale:()=>1,
+    footerAction(){},isActionPanel:()=>false, adjacentChapter:()=>({title:'第七话',displayTitle:'第七话 · 帝都夜谈'}),
+    finalBoundaryConfirmed:()=>true,selectAdjacentChapter:direction=>turns.push(direction),
+    seekPage:next=>new Promise(resolve=>{seeks.push(next);finish=()=>{ordinal=next;resolve();};})});
+  owner.bottomControls();owner.pageBadge();owner.chapterEndContent();
+  const slider=[...owner.nodes.values()].find(node=>node.type==='Slider');
+  const page=[...owner.nodes.values()].find(node=>node.create==='1 / 8');
+  const badge=[...owner.nodes.values()].find(node=>node.create==='第六话 · 1 / 8');
+  const end=[...owner.nodes.values()].find(node=>node.type==='Button'&&node.accessibilityText?.startsWith('点击进入下一话'));
+  assert.equal(slider.height,44);assert.equal(slider.create.max,8);
+  slider.onChange(2,mode.Begin);slider.onChange(4,mode.Moving);properties.flush();
+  assert.equal(page.create,'4 / 8');assert.equal(badge.create,'第六话 · 4 / 8');assert.deepEqual(seeks,[]);
+  slider.onChange(4,mode.End);assert.deepEqual(seeks,[3]);finish();await tick();
+  slider.onChange(4,mode.End);assert.deepEqual(seeks,[3]);
+  slider.onChange(6,mode.Click);assert.deepEqual(seeks,[3,5]);finish();await tick();
+  slider.onChange(7,mode.Begin);slider.onChange(7,mode.Moving);
+  slider.onTouch({type:'cancel'});properties.flush();assert.equal(badge.create,'第六话 · 6 / 8');
+  assert.equal(end.accessibilityText,'点击进入下一话：第七话 · 帝都夜谈');end.onClick();assert.deepEqual(turns,[]);
+  owner.chapterEnd=true;end.onClick();assert.deepEqual(turns,[1]);
+  owner.adjacentChapter=()=>undefined;owner.replay();
+  assert.equal(end.accessibilityText,'已读至最新一话 · 返回继续');end.onClick();
+  assert.equal(owner.chapterEnd,false);assert.equal(owner.controlsVisible,true);
+  owner.panel='directory';assert.equal(owner.widePanel(),false);assert.equal(owner.panelHeight(),624);
+  owner.stageWidth=600;assert.equal(owner.widePanel(),true);assert.equal(owner.panelWidth(),336);assert.equal(owner.panelHeight(),800);
+  owner.setBackground('ink',3);owner.setBackground('ink',4);owner.setBackground('paper',4);
+  assert.deepEqual(theme.map(([scheme])=>scheme),['night','day']);assert.ok(theme.every(([,current])=>current()));
+  owner.appThemeScheme='night';properties.flush();assert.equal(owner.backgroundPreference,'ink');
+  owner.appThemeScheme='day';properties.flush();assert.equal(owner.backgroundPreference,'paper');
+  outcomes.push('real slider and pinned page badge share draft/commit state, Chapter End taps keep admission, 599/600 layout and bidirectional theme intents');
+}
+{
+  const properties=createArkUIPropertyRuntimeProbe();
+  const field=readFileSync(new URL('ui/controls/ReaderSearchField.ets',root),'utf8');
+  class SearchField { constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});} }
+  const names=['directoryUtility','directoryUtilityHeight','directorySortIcon','directoryOuterIdentity',
+    'directorySheetInputCurrent','directoryQuery','directoryAscending','directoryRevision','directoryUtilityMeasured','directoryOpenRevision'];
+  const {owner}=createReaderBuilderProbe(source,names,{...properties.sdk,ReaderSearchField:SearchField},
+    {...properties.hooks,childSources:{ReaderSearchField:field}});
+  Object.assign(owner,{sourceId:'s',bookId:'b',chapterEnd:false,panel:'directory',panelPhase:'open',
+    readerPanelForeground:()=>true,chromeScheme:()=> 'night',greenColor:()=> 'green',directoryCurrentIndex:()=>7,panelContentInset:()=>16});
+  const identity=owner.directoryOuterIdentity();
+  owner.directoryUtility(identity);
+  const [editor]=owner.children.values();
+  const byLabel=label=>[...owner.nodes.values()].find(node=>node.type==='Button'&&node.accessibilityText===label);
+  assert.equal(editor.params.placeholder,'搜索话名或序号…');
+  assert.equal(editor.params.editingCurrent(),true);
+  editor.params.onTextChange('远行');properties.flush();assert.equal(owner.directoryQuery,'远行');
+  assert.equal([...owner.children.values()][0],editor);
+  const sort=byLabel('正序，切换倒序');sort.onClick();properties.flush();
+  assert.equal(owner.directoryAscending,false);assert.equal(sort.accessibilityText,'倒序，切换正序');
+  assert.ok([...owner.nodes.values()].some(node=>node.create==='app.media.manga_directory_sort_descending_theme_night'));
+  const locate=byLabel('定位当前话');locate.onClick();properties.flush();
+  assert.equal(owner.directoryQuery,'');assert.equal(owner.directoryRevision,1);
+  const utility=[...owner.nodes.values()].find(node=>node.type==='Column'&&node.onAreaChange);
+  utility.onAreaChange({}, {height:108});assert.equal(owner.directoryUtilityHeight(),108);
+  owner.directoryOpenRevision++;
+  assert.equal(editor.params.editingCurrent(),false);
+  editor.params.onTextChange('过期');sort.onClick();locate.onClick();
+  assert.equal(owner.directoryQuery,'');assert.equal(owner.directoryAscending,false);assert.equal(owner.directoryRevision,1);
+  outcomes.push('wide and phone drawer tools publish query and order, locating clears filters, stale callbacks expire with drawer identity');
+}
+}
+if(!directed){
 {
   const f=fixture();const {pending}=await begin(f);
   for(let n=0;n<100;n++)f.owner.traceBoundary('paint-gate');
@@ -497,20 +606,22 @@ outcomes.push('actual Shell SDK closure updates Index after adjacent commit, ret
   assert.equal(index.mangaChapterRequestGeneration,generation);
   outcomes.push('SDK-emitted exact Index ReaderShell property/callback expressions publish adjacent progress without advancing the remount epoch');
 }
+}
 
 
 // The user-selected footer has no preparation/retry/cancel card. Its finite
 // actor layout/theme proof is in test-manga-boundary-feedback-sdk; this probes
 // the Surface's actual SDK child-property expressions for each pull phase.
-{
+if(!directed||selected.includes('paper-ink')){
   const properties=createArkUIPropertyRuntimeProbe();
-  const wrapper=createReaderBuilderProbe(source,['boundaryHint'],{...properties.sdk,...mangaSurfaceSdkDependencies},properties.hooks).owner;
-  Object.assign(wrapper,{boundaryBusy:false,boundaryArmed:false,
-    paperColor:()=> '#paper',inkColor:()=> '#ink',mutedColor:()=> '#muted'});
-  for(const [busy,armed,caption]of[[false,false,'继续上拉进入下一章节'],[false,true,'松手进入下一章节'],[true,true,'正在进入下一章节…']]){
-    wrapper.boundaryBusy=busy;wrapper.boundaryArmed=armed;wrapper.boundaryHint('next');
+  const wrapper=createReaderBuilderProbe(source,['boundaryHint','boundaryCaption','adjacentLabel'],
+    {...properties.sdk,...mangaSurfaceSdkDependencies},properties.hooks).owner;
+  Object.assign(wrapper,{boundaryBusy:false,boundaryArmed:false,boundaryDistance:48,reduceMotion:false,chromeScheme:()=> 'night',
+    adjacentChapter:()=>({title:'下一话标题'}),finalBoundaryConfirmed:()=>false});
+  for(const [busy,armed,caption]of[[false,false,'继续上拉进入下一话：下一话标题'],[false,true,'松手进入下一话：下一话标题'],[true,true,'正在进入：下一话标题']]){
+    wrapper.boundaryBusy=busy;wrapper.boundaryArmed=armed;wrapper.boundaryHint();
     const params=[...wrapper.children.values()].at(-1).params;
-    assert.equal(params.caption,caption);assert.equal(params.paperColor,'#paper');assert.equal(params.inkColor,'#ink');assert.equal(params.mutedColor,'#muted');
+    assert.equal(params.caption,caption);assert.equal(params.scheme,'night');assert.equal(params.distance,48);assert.equal(params.armed,armed);
     assert.equal(params.onRetry,undefined);assert.equal(params.onDismiss,undefined);assert.equal(params.kind,undefined);
   }
   const surface=tree.statements.find(node=>node.name?.getText(tree)==='MangaReadingSurface');
@@ -518,4 +629,5 @@ outcomes.push('actual Shell SDK closure updates Index after adjacent commit, ret
   outcomes.push('Surface SDK forwards only brief upward pull/release/busy footer copy; preparation/retry/cancel card is absent');
 }
 
-console.log(JSON.stringify({outcomes,boundary:'Actual Surface/Shell/Index methods and SDK Image/PullToRefresh closures; controlled Core/controller and native frame/rectangle ports. No HAP, VM pixels, native pointer arbitration or user acceptance claim.'},null,2));
+for(const id of selected) recordContractCasePass(id);
+if(!directed||selected.length)console.log(JSON.stringify({outcomes,boundary:'Actual Surface methods and SDK Image/PullToRefresh closures; controlled Core/controller and native frame/rectangle ports. No HAP, VM pixels, native pointer arbitration or user acceptance claim.'},null,2));

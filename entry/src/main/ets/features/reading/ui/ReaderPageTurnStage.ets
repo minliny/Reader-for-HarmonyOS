@@ -19,7 +19,7 @@ import {
   type ReaderDynamicHighlightRect,
 } from './ReadingSurface';
 import { ReaderPageChromeSnapshot } from '../presentation/ReaderPageChromeModel';
-import type { ReaderPageBookmarkMode, ReaderPageBookmarkSnapshot } from '../presentation/ReaderPageBookmarkModel';
+import type { ReaderBookmarkRibbonFrame, ReaderPageBookmarkMode, ReaderPageBookmarkSnapshot } from '../presentation/ReaderPageBookmarkModel';
 
 class ReaderPageTurnFrameCallback extends FrameCallback {
   private callback: () => void;
@@ -134,6 +134,7 @@ struct ReaderPageTurnSurface {
   @Prop bookmark: ReaderPageBookmarkSnapshot | undefined = undefined;
   @Prop bookmarkMode: ReaderPageBookmarkMode | undefined = undefined;
   @Prop bookmarkOpacity: number | undefined = undefined;
+  @Prop bookmarkRibbon: ReaderBookmarkRibbonFrame | undefined = undefined;
   @Prop translateX: number = 0;
   @Prop shadowStrength: number = 0;
   @Prop compositorIsolation: boolean = false;
@@ -206,6 +207,7 @@ struct ReaderPageTurnSurface {
           bookmark: this.bookmark,
           bookmarkMode: this.bookmarkMode,
           bookmarkOpacity: this.bookmarkOpacity,
+          bookmarkRibbon: this.bookmarkRibbon,
           ttsHighlightStart: this.ttsHighlightStart,
           ttsHighlightEnd: this.ttsHighlightEnd,
           autoPageHighlightStart: this.autoPageHighlightStart,
@@ -285,6 +287,7 @@ export struct ReaderPageTurnStage {
   @Prop topInfoMovesWithPage: boolean = false;
   @Prop bookmarkMode: ReaderPageBookmarkMode | undefined = undefined;
   @Prop bookmarkOpacity: number | undefined = undefined;
+  @Prop bookmarkRibbon: ReaderBookmarkRibbonFrame | undefined = undefined;
   @Prop layout: ReaderReadingLayoutSnapshot = createDefaultReaderReadingLayout();
   @Prop appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
   @Prop ttsHighlightStart: number | undefined = undefined;
@@ -337,6 +340,7 @@ export struct ReaderPageTurnStage {
         bookmark: this.slotPage('a').bookmark,
         bookmarkMode: this.currentPageSlot === 'a' && this.turnDirection === undefined ? this.bookmarkMode : undefined,
         bookmarkOpacity: this.currentPageSlot === 'a' && this.turnDirection === undefined ? this.bookmarkOpacity : undefined,
+        bookmarkRibbon: this.currentPageSlot === 'a' && this.turnDirection === undefined ? this.bookmarkRibbon : undefined,
         longPressSelectText: this.currentPageSlot === 'a' && this.longPressSelectText,
         selectionInputCurrent: (): boolean => this.currentPageSlot === 'a' && this.selectionInputCurrent?.() !== false,
         translateX: this.slotX('a'),
@@ -377,6 +381,7 @@ export struct ReaderPageTurnStage {
         bookmark: this.slotPage('b').bookmark,
         bookmarkMode: this.currentPageSlot === 'b' && this.turnDirection === undefined ? this.bookmarkMode : undefined,
         bookmarkOpacity: this.currentPageSlot === 'b' && this.turnDirection === undefined ? this.bookmarkOpacity : undefined,
+        bookmarkRibbon: this.currentPageSlot === 'b' && this.turnDirection === undefined ? this.bookmarkRibbon : undefined,
         longPressSelectText: this.currentPageSlot === 'b' && this.longPressSelectText,
         selectionInputCurrent: (): boolean => this.currentPageSlot === 'b' && this.selectionInputCurrent?.() !== false,
         translateX: this.slotX('b'),

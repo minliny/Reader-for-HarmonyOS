@@ -14,18 +14,26 @@ const { boundedMembers, boundedSurfaceSdk } = await import('./lib/bounded-surfac
 const { selectedProductionClasses } = await import('./lib/selected-production-methods.mjs');
 const { resolveSourceToolsRowLayout } = await import('../entry/src/main/ets/features/source/presentation/SourceToolsLayout.ts');
 const { bookshelfOperationClass } = await import('./lib/bookshelf-operation-owner-probe.mjs');
-const sourceEditorReadbackPending = bookshelfOperationClass('features/source/application/SourceToolsOrchestrator.ets', 'sourceEditorReadbackPending');
+const { sourceEditorReadbackPending, filterSourceTools } = bookshelfOperationClass(
+  'features/source/application/SourceToolsOrchestrator.ets', '({sourceEditorReadbackPending,filterSourceTools})');
 
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/source/ui/SourceToolsPage.ets', import.meta.url), 'utf8');
 const { SourceToolListRow } = selectedProductionClasses(new URL('../entry/src/main/ets/features/source/ui/SourceToolsPage.ets', import.meta.url), ['SourceToolListRow']);
 const headerSource = readFileSync(new URL('../entry/src/main/ets/ui/chrome/PageBackBar.ets', import.meta.url), 'utf8');
+const fieldSource = readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderSearchField.ets', import.meta.url), 'utf8');
+class ReaderSearchField {
+  constructor(owner, params, _storage, id) {
+    Object.assign(this, params, {owner, id, children: new Map(), nodes: new Map()});
+  }
+}
 const methods = [...source.matchAll(/@Builder\s+private\s+(\w+)\s*\(/g)].map(match => match[1]);
 methods.push('recovery', 'batchCheckPercent', 'batchCheckPhaseLabel', 'batchResultLabel', 'confirmExportThen', 'canWriteSources',
   'editorDraftIsEditable', 'debugOptionsCurrent', 'batchControlsRenderKey', 'batchSelectionAction', 'toolsOpeningIsCurrent',
   'sourceRowAction', 'batchButtonLabel', 'batchButtonEnabled', 'batchButtonAction', 'currentSourceForRow',
   'currentSourceToolRow', 'sourceRowKey', 'sourceRowButtonLabel', 'sourceRowButtonEnabled', 'currentSourceRowAction',
-  'toolsFontScale', 'sourceRowLayout', 'actionMinimumWidth', 'toolsInputIsCurrent', 'editorAction', 'editorDraftChange', 'editorButtonLabel', 'editorButtonEnabled');
+  'toolsFontScale', 'sourceRowLayout', 'actionMinimumWidth', 'toolsInputIsCurrent', 'editorAction', 'editorDraftChange', 'editorButtonLabel', 'editorButtonEnabled',
+  'visibleSources', 'visibleSelectedIds', 'allVisibleSelected', 'changeSourceQuery');
 if(selectedCase==='inline-native-admission')methods.push('debugKeyChange');
 const bookSource={name:'测试书源',sourceId:'https://source.example',baseUrl:'https://source.example',lastCheckSummary:'上次检测已完成'};
 const owners=owner=>[owner,...[...owner.children.values()].flatMap(owners)];
@@ -38,7 +46,7 @@ const make = (overrides = {}) => {
   const messages=selectedCase==='inline-native-admission'?{deps:{},childSources:{}}:
     boundedSurfaceSdk({properties:controls.properties,allowEmptyBranchAdmission:true});
   controls.hooks.childSources={...messages.childSources,...controls.hooks.childSources};
-  controls.hooks.childSources = {...controls.hooks.childSources, PageBackBar: headerSource};
+  controls.hooks.childSources = {...controls.hooks.childSources, PageBackBar: headerSource, ReaderSearchField: fieldSource};
   const PageBackBar = selectedCase==='inline-native-admission'?undefined:
     createReaderBuilderProbe(headerSource, boundedMembers(headerSource), controls.dependencies, controls.hooks).Component;
   const {inlineSelectSdk}=awaitInline;
@@ -51,12 +59,13 @@ const make = (overrides = {}) => {
     // Builders run separately below, with their real SDK observer closures.
     LazyForEach: { create() {}, pop() {} }, readerRecoveryView, sourceEditorReadbackPending, SourceToolListRow, resolveSourceToolsRowLayout,
     uiContext: { px2vp: x => x, getMeasureUtils: () => ({ measureText: input => input.textContent.length * 12 }) },
-    ...messages.deps,...controls.dependencies, PageBackBar, ...inline.dependencies, AppStorage: {get: () => true}, ...overrides,
+    ...messages.deps,...controls.dependencies, PageBackBar, ReaderSearchField, filterSourceTools, ...inline.dependencies, AppStorage: {get: () => true}, ...overrides,
   },controls.hooks);
   const replay=owner.replay.bind(owner);owner.replay=()=>{replay();controls.properties.flush();};
   const calls = [];
   Object.assign(owner, {
     appThemeScheme: 'day', mounted: true, temporaryBackIdentity: 'tools:1', debugInputRevision: 0,
+    sourceQuery: '', sourceQueryRevision: 0, syncListDataSources() {},
     snapshot: {
       busy: false, sources: [bookSource], selectedSourceIds: [bookSource.sourceId], selectedSourceCount: 1,
       sourceListRevision: 1, selectionRevision: 1,
@@ -153,15 +162,22 @@ if(selectedCase==='guard-admission'){
  const {owner,calls}=make();
  owner.onSetSelectedEnabled=(selection,enabled)=>calls.push({selection,enabled});
  owner.batchCard();
+ const [search]=owners(owner).filter(actor=>actor instanceof ReaderSearchField);
+ assert.ok(search,'the current tools card mounts the shared search field');
  const oldProof=owner.batchSelectionAction(owner.batchControlsRenderKey(),selection=>calls.push({selection,enabled:true}));
  const oldEnable=nodes(owner).find(node=>node.type==='Button'&&node.accessibilityText==='启用').onClick;
  oldEnable();
- assert.deepEqual(calls,[{selection:{sourceIds:[bookSource.sourceId],sourceListRevision:1,selectionRevision:1},enabled:true}]);
- owner.snapshot={...owner.snapshot,selectedSourceIds:['https://next.test'],selectionRevision:2};
+ assert.deepEqual(calls[0].selection.sourceIds,[bookSource.sourceId]);
+ assert.equal(calls[0].selection.isScopeCurrent(),true);
+ search.onTextChange('next');
+ const next={...bookSource,name:'next',sourceId:'https://next.test'};
+ owner.snapshot={...owner.snapshot,sources:[bookSource,next],selectedSourceIds:[bookSource.sourceId,next.sourceId],selectionRevision:2};
  oldProof();
+ assert.equal(calls[0].selection.isScopeCurrent(),false,'a new query retires the original confirmation');
  assert.equal(calls.length,1,'an old exact selection proof rejects a replacement selection');
  oldEnable();
- assert.deepEqual(calls.at(-1),{selection:{sourceIds:['https://next.test'],sourceListRevision:1,selectionRevision:2},enabled:true},'retained native action dispatches the current selection');
+ assert.deepEqual(calls.at(-1).selection.sourceIds,[next.sourceId],'retained native action targets the current visible selection');
+ assert.equal(calls.at(-1).selection.query,'next');
 }
 if(selectedCase==='raw-debug'){
  const {owner,cardType}=make(),message='目录读取失败。\n请求：https://example.test/very/long/source-and-chapter-identifier\n原始错误信息';owner.debugLogRow({state:-1,message},123);const actual=nodes(owner),body=actual.find(n=>n.create===message),ordinal=actual.find(n=>n.create==='124');assert.ok(body&&ordinal);assert.equal(body.fontSize,readerTypographyRoles.MESSAGE_BODY.fontSizeFp);assert.equal(body.lineHeight,readerTypographyRoles.MESSAGE_BODY.lineHeightFp);assert.equal(body.maxLines,undefined);assert.equal(body.textOverflow,undefined);assert.equal(body.fontColor,readerAppColor('TOK_MESSAGE_INK','day'));assert.equal(actual.find(n=>n.create==='检测失败').fontColor,readerAppColor('TOK_MESSAGE_DANGER','day'));owner.debugCard();const target=nodes(owner).find(n=>n.create===bookSource.sourceId);assert.equal(target.maxLines,undefined);assert.equal(target.textOverflow,undefined);

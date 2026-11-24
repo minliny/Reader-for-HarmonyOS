@@ -29,6 +29,10 @@ import { ReaderSegmentedControl, READER_APP_THEME_SEGMENT_WIDTH } from '../../..
 import { StatusBadge } from '../../../ui/controls/StatusBadge';
 import { CategorySection } from './CategorySection';
 import { ReaderCard } from '../../../ui/surfaces/ReaderCard';
+import { DialogActionView, ReaderDialogSurface } from '../../../ui/surfaces/ReaderDialogSurface';
+import { readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
+import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
+import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { ReaderFormRow } from '../../../ui/controls/ReaderFormRow';
 import { SettingsSelectOverlay, type SettingsSelectField } from './SettingsSelectOverlay';
 import { NavigationAppearanceSettings } from './NavigationAppearanceSettings';
@@ -65,6 +69,7 @@ let settingsSelectionGeneration: number = 0;
 
 @Component
 export struct SettingsPage {
+  @Prop embeddedWide: boolean = false;
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerAppForeground') private appForeground: boolean = true;
@@ -100,6 +105,12 @@ export struct SettingsPage {
   @State private wideNavigationRailValue: boolean = false;
   @State private resetInFlight: boolean = false;
   @State private resetMessage: string = '';
+  @State private resetDialogTicket: number = 0;
+  @State private resetCoverVisible: boolean = false;
+  @State private resetFrameVisible: boolean = false;
+  private resetDialogSerial: number = 0;
+  private resetDialogWanted: boolean = false;
+  private resetFrameAttached: boolean = false;
   private readonly nativeAlertOwner: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
   private mounted: boolean = false;
   private themeOwner: ReaderRuntimeOwner | undefined = undefined;
@@ -178,6 +189,7 @@ export struct SettingsPage {
     this.themeOwner = undefined;
     this.temporaryBackIdentity = '';
     this.nativeAlertOwner.retire();
+    this.retireResetDialog();
     this.resetRevision += 1;
     this.retireSelection();
     this.onTemporaryBackBridge(undefined, identity);
@@ -185,6 +197,10 @@ export struct SettingsPage {
 
   private consumeTemporaryBack(identity: string): boolean {
     if (!this.mounted || identity !== this.temporaryBackIdentity) return false;
+    if (this.resetDialogTicket > 0) {
+      this.closeResetDialog(this.resetDialogTicket);
+      return true;
+    }
     if (this.aboutPageCurrent(this.aboutPageId)) { this.closeAboutPage(this.aboutPageId); return true; }
     if (this.messagePreviewCurrent(this.messagePreviewId)) {
       if (this.messagePreviewBackHandler?.() !== true) this.closeMessagePreview(this.messagePreviewId);
@@ -200,8 +216,14 @@ export struct SettingsPage {
   }
 
   build() {
-    Stack({ alignContent: Alignment.TopStart }) { this.pageSurface(); }
-      .width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent);
+    Stack({ alignContent: Alignment.TopStart }) {
+      Stack({ alignContent: Alignment.TopStart }) { this.pageSurface(); }
+        .width('100%').height('100%').enabled(this.resetDialogTicket === 0)
+        .accessibilityLevel(this.resetDialogTicket === 0 ? 'auto' : 'no-hide-descendants');
+      Column().width(0).height(0).hitTestBehavior(HitTestMode.None).accessibilityLevel('no')
+        .bindContentCover(this.resetCoverVisible, this.resetDialogCover,
+          this.resetCoverOptions(this.resetDialogTicket, this.temporaryBackIdentity));
+    }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent);
   }
 
   @Builder
@@ -225,6 +247,7 @@ export struct SettingsPage {
     } else {
     SettingsShell({
       activeSection: this.activeSection,
+      embeddedWide: this.embeddedWide,
       navigationGeneration: this.navigationGeneration,
       tapBottomScrollTop: this.tapBottomScrollTopValue,
       reduceMotion: this.appReduceMotion,
@@ -379,6 +402,7 @@ export struct SettingsPage {
     this.aboutPageId = '';
     if (this.activeSection === 'general') return;
     this.nativeAlertOwner.retire();
+    this.retireResetDialog();
     this.retireSelection();
     this.retireDeveloperPages();
   }
@@ -1143,17 +1167,118 @@ export struct SettingsPage {
 
   private requestRestoreDefaults(): void {
     const identity = this.temporaryBackIdentity;
-    const revision = this.resetRevision;
-    const current = (): boolean => this.settingsInputIsCurrent(identity) && this.generalConfirmationCurrent(identity) &&
-      this.isOpeningCurrent() && revision === this.resetRevision;
-    if (!current()) return;
-    this.nativeAlertOwner.present((native: ReaderNativeAlertOptions): void => this.getUIContext().showAlertDialog(native), 'confirmation', {
-      title: '恢复界面与阅读设置',
-      message: '恢复通用偏好、书架封面模式、默认日夜阅读主题、跟随系统、阅读排版与朗读偏好。保留书籍、书源、进度、书签、导入字体文件及同步和朗读服务凭据。',
-      primaryButton: { value: '取消', action: (): void => {} },
-      secondaryButton: { value: '恢复默认', fontColor: readerAppColor('TOK_DANGER', this.appThemeScheme),
-        action: (): void => { void this.performRestoreDefaults(identity); } },
-    }, current);
+    if (!this.settingsInputIsCurrent(identity) || !this.generalConfirmationCurrent(identity) ||
+      this.resetDialogTicket > 0 || this.openSelect.length > 0) return;
+    this.resetDialogTicket = ++this.resetDialogSerial;
+    this.resetDialogWanted = true;
+    this.resetCoverVisible = true;
+  }
+
+  private resetCoverOptions(ticket: number, identity: string): ContentCoverOptions {
+    return {
+      modalTransition: ModalTransition.NONE, backgroundColor: Color.Transparent,
+      onAppear: (): void => {
+        if (!this.mounted || identity !== this.temporaryBackIdentity || ticket !== this.resetDialogTicket) return;
+        if (this.resetDialogWanted) this.resetFrameVisible = true;
+        else this.resetCoverVisible = false;
+      },
+      onWillDismiss: (_action: DismissContentCoverAction): void => this.closeResetDialog(ticket),
+      onDisappear: (): void => {
+        if (ticket <= 0 || ticket !== this.resetDialogTicket) return;
+        this.retireResetDialog();
+        this.restoreResetFocus(identity);
+      },
+    };
+  }
+
+  private resetTriggerId(identity: string): string { return `${identity}:restore-defaults`; }
+
+  private restoreResetFocus(identity: string): void {
+    try {
+      const context = this.getUIContext();
+      context.postFrameCallback(new ReaderPostLayoutFrame(context, (): void => {
+        if (!this.settingsInputIsCurrent(identity) || this.activeSection !== 'general' ||
+          this.resetDialogTicket > 0 || this.resetInFlight) return;
+        try { context.getFocusController().requestFocus(this.resetTriggerId(identity)); } catch (_) {}
+      }));
+    } catch (_) {}
+  }
+
+  private closeResetDialog(ticket: number): void {
+    if (ticket <= 0 || ticket !== this.resetDialogTicket || !this.resetDialogWanted) return;
+    this.resetDialogWanted = false;
+    this.resetFrameVisible = false;
+    if (!this.resetFrameAttached) this.resetCoverVisible = false;
+  }
+
+  private retireResetDialog(): void {
+    this.resetDialogTicket = 0;
+    this.resetDialogWanted = false;
+    this.resetFrameAttached = false;
+    this.resetFrameVisible = false;
+    this.resetCoverVisible = false;
+  }
+
+  @Builder
+  private resetDialogCover() {
+    Stack({ alignContent: Alignment.Center }) {
+      if (this.resetFrameVisible) {
+        ForEach([this.resetDialogTicket], (ticket: number): void => { this.resetDialog(ticket, this.temporaryBackIdentity); },
+          (ticket: number): string => ticket.toString());
+      }
+    }.width('100%').height('100%').hitTestBehavior(HitTestMode.Default);
+  }
+
+  @Builder
+  private resetDialog(ticket: number, identity: string) {
+    Stack({ alignContent: Alignment.Center }) {
+      Rect().width('100%').height('100%').fill(readerAppColor('app.scrim.warmModal', this.appThemeScheme))
+        .accessibilityLevel('no').onClick((): void => this.closeResetDialog(ticket));
+      Column() {
+        ReaderDialogSurface({ specId: 'book-removal', title: '恢复界面与阅读设置',
+          actions: [new DialogActionView('cancel', '取消', 'default', true, true),
+            new DialogActionView('confirm', '恢复默认', 'danger')],
+          onAction: (action: string): void => this.chooseResetDialog(ticket, identity, action),
+          body: (): void => { this.resetDialogMessage(); },
+        });
+      }.width('100%').padding({ left: 20, right: 20 }).hitTestBehavior(HitTestMode.Transparent)
+        .transition(this.resetDialogMotion());
+    }.width('100%').height('100%')
+      .onAppear((): void => { if (ticket === this.resetDialogTicket) this.resetFrameAttached = true; })
+      .transition(this.appReduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) :
+        TransitionEffect.asymmetric(
+          TransitionEffect.OPACITY.animation({ duration: 220, curve: readerMotionStandardCurve() }),
+          TransitionEffect.OPACITY.animation({ duration: 180, curve: readerMotionStandardCurve() })),
+        (entering: boolean): void => {
+          if (!entering && ticket === this.resetDialogTicket && !this.resetDialogWanted) this.resetCoverVisible = false;
+        });
+  }
+
+  private resetDialogMotion(): TransitionEffect {
+    if (this.appReduceMotion) return TransitionEffect.IDENTITY;
+    const effect = TransitionEffect.scale({ x: 0.95, y: 0.95 }).combine(TransitionEffect.translate({ y: 8 }));
+    return TransitionEffect.asymmetric(
+      effect.animation({ duration: 220, curve: readerMotionStandardCurve() }),
+      TransitionEffect.scale({ x: 0.95, y: 0.95 }).animation({ duration: 180, curve: readerMotionStandardCurve() }));
+  }
+
+  @Builder
+  private resetDialogMessage() {
+    Scroll() {
+      Text('将重置通用偏好、书架视图与阅读设置。书籍、书源、阅读进度、书签、导入字体文件及服务凭据会完整保留。')
+        .width('100%').textAlign(TextAlign.Center)
+        .fontFamily(MESSAGE_BODY.fontFamily).fontSize(MESSAGE_BODY.fontSizeFp)
+        .lineHeight(MESSAGE_BODY.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+    }.width('100%').constraintSize({ maxHeight: '45%' }).scrollBar(BarState.Auto);
+  }
+
+  private chooseResetDialog(ticket: number, identity: string, action: string): void {
+    if (!this.resetDialogWanted || ticket !== this.resetDialogTicket ||
+      !this.settingsInputIsCurrent(identity) || !this.generalConfirmationCurrent(identity)) return;
+    if (action !== 'cancel' && action !== 'confirm') return;
+    this.closeResetDialog(ticket);
+    if (action === 'confirm') void this.performRestoreDefaults(identity);
   }
 
   private async performRestoreDefaults(identity: string): Promise<void> {
@@ -1173,12 +1298,14 @@ export struct SettingsPage {
     else if (result === undefined || result.fact === 'notDispatched') this.resetMessage = '恢复未完成，请重试';
     // Pending writes and failed readback already use the owner's recovery projection.
     this.showFeedbackToast(this.resetMessage);
+    if (this.resetDialogTicket === 0) this.restoreResetFocus(identity);
   }
 
   @Builder
   private dangerRow() {
     ReaderCard({ specId: 'danger-action' }) {
-      ReaderFormRow({ kind: 'danger', label: '恢复默认', isBusy: this.resetInFlight, disclosure: true,
+      ReaderFormRow({ kind: 'danger', label: '恢复默认设置', isBusy: this.resetInFlight, disclosure: true,
+        actionId: this.resetTriggerId(this.temporaryBackIdentity),
         icon: this.appThemeScheme === 'night' ? $r('app.media.settings_reset_defaults_theme_night') : $r('app.media.settings_reset_defaults'),
         onAction: (): void => this.requestRestoreDefaults() });
     }

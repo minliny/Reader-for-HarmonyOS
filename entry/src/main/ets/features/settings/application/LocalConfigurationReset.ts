@@ -13,6 +13,7 @@ import { WebDavCredentialStore } from '../../sync/application/WebDavCredentialSt
 const RESET_PREFERENCES = 'reader_configuration_reset_v1';
 const RESET_INTENT_KEY = 'pending';
 const RESET_INTENT = 'interface-and-reading-settings-v1';
+const DEFAULT_BOOKSHELF_VIEW = 'list';
 
 /** User-approved, non-destructive configuration reset. The durable intent is
  * recorded before touching any setting, and removed only after all writes
@@ -99,11 +100,11 @@ export class LocalConfigurationReset {
     LocalConfigurationReset.assertOwner(owner);
     await new ReaderTtsPreferencesGateway(owner).update(createDefaultReaderTtsPreferencesSnapshot(), true);
     LocalConfigurationReset.assertOwner(owner);
-    await WebDavCredentialStore.instance.saveBookshelfViewMode('cover');
+    await WebDavCredentialStore.instance.saveBookshelfViewMode(DEFAULT_BOOKSHELF_VIEW);
     LocalConfigurationReset.assertOwner(owner);
     await ReaderThemeHost.resetAppearanceDefaults();
     LocalConfigurationReset.assertOwner(owner);
-    AppStorage.setOrCreate('readerBookshelfViewMode', 'cover');
+    AppStorage.setOrCreate('readerBookshelfViewMode', DEFAULT_BOOKSHELF_VIEW);
     AppStorage.setOrCreate('readerBookshelfSelectedGroup', '');
     AppStorage.setOrCreate('readerBookshelfReadingFilter', 'all');
     AppStorage.setOrCreate('readerBookshelfSourceFilter', 'all');

@@ -31,7 +31,9 @@ import {
   createDefaultReaderReadingLayout,
 } from './ReaderLayoutGeometry';
 import { ReaderPageChrome } from './ReaderPageChrome';
-import type { ReaderPageBookmarkMode, ReaderPageBookmarkSnapshot } from '../presentation/ReaderPageBookmarkModel';
+import { ReaderBookmarkRibbonFrame, readerBookmarkRibbonRest, type ReaderPageBookmarkMode,
+  type ReaderPageBookmarkSnapshot } from '../presentation/ReaderPageBookmarkModel';
+import { ReaderPageBookmarkRibbon } from './ReaderPageBookmarkRibbon';
 import { ReaderPaperBackground } from './ReaderPaperBackground';
 
 export type { ReaderDynamicHighlightRect } from './ReaderDynamicHighlight';
@@ -363,6 +365,7 @@ export struct ReadingSurface {
   @Prop bookmark: ReaderPageBookmarkSnapshot | undefined = undefined;
   @Prop bookmarkMode: ReaderPageBookmarkMode | undefined = undefined;
   @Prop bookmarkOpacity: number | undefined = undefined;
+  @Prop bookmarkRibbon: ReaderBookmarkRibbonFrame | undefined = undefined;
 
   aboutToAppear(): void {
     this.highlightMounted = true; this.highlightLifecycle += 1;
@@ -527,16 +530,15 @@ export struct ReadingSurface {
         appearance: this.appearance,
       });
       if (this.bookmark !== undefined) {
-        Image(this.pageBookmarkResource())
-          .syncLoad(true)
-          .width(this.bookmark.topAccessoryWidth)
-          .height(this.bookmark.topAccessoryHeight)
-          .position({ x: this.bookmark.topAccessoryX, y: this.bookmark.topAccessoryY })
-          .visibility(this.pageBookmarkMode() === 'hidden' ? Visibility.Hidden : Visibility.Visible)
-          .opacity(this.bookmarkOpacity ?? this.bookmark.opacity)
-          .accessibilityText('本页已添加书签')
-          .accessibilityLevel(this.pageBookmarkMode() === 'filled' ? 'auto' : 'no')
-          .hitTestBehavior(HitTestMode.None);
+        ReaderPageBookmarkRibbon({
+          x: this.bookmark.topAccessoryX,
+          paperTop: this.bookmark.topAccessoryY,
+          offsetY: this.pageBookmarkRibbonFrame().y,
+          fillHeight: this.pageBookmarkRibbonFrame().fillHeight,
+          alpha: this.pageBookmarkRibbonFrame().opacity,
+          bookmarked: this.pageBookmarkMode() === 'filled' && this.bookmarkRibbon === undefined,
+          night: readerAppearanceChromeTone(this.appearance.activeTheme) === 'light',
+        });
       }
       }
       .width('100%').height('100%')
@@ -572,13 +574,10 @@ export struct ReadingSurface {
     return this.bookmarkMode ?? this.bookmark?.mode ?? 'hidden';
   }
 
-  private pageBookmarkResource(): Resource {
-    const light = readerAppearanceChromeTone(this.appearance.activeTheme) === 'light';
-    if (this.pageBookmarkMode() === 'filled') {
-      return light ? $r('app.media.reader_page_bookmark_filled_theme_night') : $r('app.media.reader_page_bookmark_filled');
-    }
-    return light ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') :
-      $r('app.media.reader_directory_marker_bookmark_active');
+  private pageBookmarkRibbonFrame(): ReaderBookmarkRibbonFrame {
+    if (this.bookmarkRibbon !== undefined) return this.bookmarkRibbon;
+    const rest = readerBookmarkRibbonRest(this.pageBookmarkMode() === 'filled');
+    return new ReaderBookmarkRibbonFrame(rest.y, rest.fillHeight, this.bookmarkOpacity ?? this.bookmark?.opacity ?? rest.opacity);
   }
 
   private usesHighlightCanvas(): boolean {

@@ -30,6 +30,7 @@ export const READER_TITLE_TO_BODY_SPACE_VP = 18;
 
 export const READER_FULL_PANEL_MAX_WIDTH_PHONE = 364;
 export const READER_FULL_PANEL_MAX_WIDTH_TABLET = 720;
+const READER_DIRECT_PANEL_MAX_WIDTH_TABLET = 348;
 export const READER_FULL_PANEL_HEIGHT_PHONE = 736;
 export const READER_FULL_PANEL_HEIGHT_TABLET = 852;
 export const READER_FULL_PANEL_TOP = 88;
@@ -454,15 +455,18 @@ export function readerControlExtentFits(required: number, capacity: number): boo
 /** Only candidate widths are measured. A selected width never borrows the
  * minimum of a neighbouring width: wrapping belongs to that exact candidate. */
 export function readerControlCandidateWidths(viewportWidth: number, viewportHeight: number,
-  expandedHint: boolean, metrics: ReaderWindowMetricsSnapshot): ReaderControlCandidateWidths[] {
+  expandedHint: boolean, metrics: ReaderWindowMetricsSnapshot, directSheet: boolean = false): ReaderControlCandidateWidths[] {
   if (viewportWidth <= 0 || viewportHeight <= 0) return [];
-  const profile = new ReaderDesignProfile(readerWidthClass(viewportWidth, expandedHint) === 'expanded');
+  const widthClass = readerWidthClass(viewportWidth, expandedHint);
+  const profile = new ReaderDesignProfile(widthClass === 'expanded');
   const density = Number.isFinite(metrics.densityPixels) && metrics.densityPixels > 0 ? metrics.densityPixels : 1;
   const available = Math.max(0, viewportWidth - readerContentSafeHorizontal(metrics) * 2);
   const lo = Math.ceil(viewportWidth * 0.91 * density - 1e-8);
   const hi = Math.floor(Math.min(viewportWidth * 0.96, available) * density + 1e-8);
   const widths: number[] = [];
-  if (readerWidthClass(viewportWidth, expandedHint) === 'compact' && viewportWidth < viewportHeight) {
+  if (directSheet) {
+    widths.push(readerDirectPanelWidth(widthClass, available));
+  } else if (widthClass === 'compact' && viewportWidth < viewportHeight) {
     for (let pixel = lo; pixel <= hi; pixel++) widths.push(pixel / density);
   } else {
     widths.push(Math.min(profile.fullPanelMaxWidth, Math.max(0, viewportWidth -
@@ -478,6 +482,10 @@ export function readerControlCandidateWidths(viewportWidth: number, viewportHeig
     return { panelWidthVp: width, fullContentWidthVp: fullWidth,
       quickContentWidthVp: Math.max(0, fullWidth - READER_CONTROL_MOTION_QUICK_CONTENT_HORIZONTAL_RESERVE) };
   });
+}
+
+function readerDirectPanelWidth(widthClass: ReaderWidthClass, available: number): number {
+  return widthClass === 'expanded' ? Math.min(READER_DIRECT_PANEL_MAX_WIDTH_TABLET, available) : available;
 }
 
 function validControlMinimum(value: ReaderControlSharedShellMinimum): boolean {
@@ -563,6 +571,7 @@ export function resolveReaderControlLayout(
   metrics: ReaderWindowMetricsSnapshot,
   measuredPersistentBottomVp: number = 0,
   candidates?: ReaderControlCandidateMinimum[],
+  directSheet: boolean = false,
 ): ReaderControlLayoutSnapshot {
   const widthClass = readerWidthClass(viewportWidth, expandedHint);
   const profile = new ReaderDesignProfile(widthClass === 'expanded');
@@ -602,19 +611,20 @@ export function resolveReaderControlLayout(
     topBarVisible ? topBarTop + topBarHeight + 8 : topBarTop, minimumPanelTop);
   const fullPanelBottom = Math.max(READER_FULL_PANEL_BOTTOM_GAP, dockBottomGap);
   const availablePanelHeight = Math.max(0, height - fullPanelTop - fullPanelBottom);
-  const defaultPanelWidth = Math.min(profile.fullPanelMaxWidth,
+  const availablePanelWidth = Math.max(0, width - safeHorizontal * 2);
+  const defaultPanelWidth = directSheet ? readerDirectPanelWidth(widthClass, availablePanelWidth) : Math.min(profile.fullPanelMaxWidth,
     Math.max(0, width - fullPanelLeftGap - fullPanelRightGap));
   const density = Number.isFinite(metrics.densityPixels) && metrics.densityPixels > 0 ? metrics.densityPixels : 1;
-  const portraitPanel = widthClass === 'compact' && width < height ?
+  const portraitPanel = !directSheet && widthClass === 'compact' && width < height ?
     (candidates !== undefined && candidates.length > 0 ?
-      resolveMeasuredPortraitControlPanelSize(width, height, Math.max(0, width - safeHorizontal * 2),
+      resolveMeasuredPortraitControlPanelSize(width, height, availablePanelWidth,
         availablePanelHeight, density, candidates) : undefined) ??
-      resolvePortraitControlPanelSize(width, height, Math.max(0, width - safeHorizontal * 2), availablePanelHeight, density) :
+      resolvePortraitControlPanelSize(width, height, availablePanelWidth, availablePanelHeight, density) :
     undefined;
   // Wide and landscape windows use their exact dock width. Their measured
   // natural extent is allowed to scroll inside the physical viewport.
   const otherCandidate = candidates?.find((value: ReaderControlCandidateMinimum): boolean =>
-    validControlCandidate(value, Math.max(0, width - safeHorizontal * 2)) &&
+    validControlCandidate(value, availablePanelWidth) &&
     Math.abs(value.widths.panelWidthVp - defaultPanelWidth) < 0.01);
   const otherShell = otherCandidate === undefined ? undefined : controlShellMinimum(otherCandidate);
   const otherHeight = controlHeightWithin(availablePanelHeight, 0, availablePanelHeight, density);

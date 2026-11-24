@@ -15,6 +15,7 @@ export struct SettingsScenes {
   @Prop route: SettingsRoute = 'settings';
   @Prop section: SettingsSection = 'home';
   @Prop expandedLayout: boolean = false;
+  @Prop embeddedWide: boolean = false;
   @Prop generation: number = 0;
   isInputAllowed: (() => boolean) | undefined = undefined;
   onBack: () => void = (): void => {};
@@ -60,7 +61,7 @@ export struct SettingsScenes {
     SettingsPage({
       navigationGeneration: this.generation,
       activeSection: this.section, snapshot: this.presentation.snapshot, operation: this.presentation.operation,
-      cacheCleanup: this.presentation.cacheCleanup, expandedLayout: this.expandedLayout,
+      cacheCleanup: this.presentation.cacheCleanup, expandedLayout: this.expandedLayout, embeddedWide: this.embeddedWide,
       isOpeningCurrent: (): boolean => this.route === 'settings' && this.presentation.isCurrent(identity),
       isInputAllowed: (): boolean => this.route === 'settings' && this.inputIsCurrent(identity),
       onSelectAppTheme: (mode: ReaderAppThemeMode): Promise<void> =>

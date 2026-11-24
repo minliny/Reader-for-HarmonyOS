@@ -4,7 +4,6 @@ import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { AppTopBar } from '../../../ui/chrome/AppTopBar';
 
-
 // SettingsShell —— Settings 页面骨架 (FIGMA_NATIVE_UI_ARCHITECTURE_PLAN §七/§十)。
 // 负责 Settings Home TopBar + BackTopBar + Scroll Content + BottomNav + 子页返回结构 +
 // 响应式页面边距。Settings 分 Home 与 General 两态(不互替): Home 显示设置菜单 + 底部栏,
@@ -15,6 +14,7 @@ import { AppTopBar } from '../../../ui/chrome/AppTopBar';
 @Component
 export struct SettingsShell {
   @Prop activeSection: 'home' | 'general' = 'home';
+  @Prop embeddedWide: boolean = false;
   @Prop navigationGeneration: number = 0;
   @Prop tapBottomScrollTop: boolean = true;
   @Prop reduceMotion: boolean = false;
@@ -37,7 +37,20 @@ export struct SettingsShell {
   private readonly generalScroller: Scroller = new Scroller();
 
   build() {
-    if (this.activeSection === 'home') {
+    if (this.embeddedWide) {
+      ReaderStandardPage({
+        variant: this.activeSection === 'home' ? 'settingsHome' : 'settingsGeneral',
+        scroller: this.generalScroller,
+        content: (): void => {
+          if (this.activeSection === 'home') this.homeContent();
+          else this.generalContent();
+        },
+        header: (): void => { this.embeddedTopBar(); },
+        overlayContent: (contentStartInset: number): void => { this.pageOverlay(contentStartInset); },
+        boundedOverlayVisible: this.boundedOverlayVisible,
+        boundedOverlayContent: (): void => { this.boundedOverlayContent(); },
+      }).onAreaChange((_old: Area, next: Area): void => this.reportOverlayOrigin(next));
+    } else if (this.activeSection === 'home') {
       MainTabShell({
         activeTab: 'settings', standardScroll: true, standardPageVariant: 'settingsHome', scroller: this.homeScroller,
         navigationGeneration: this.navigationGeneration,
@@ -60,6 +73,15 @@ export struct SettingsShell {
         boundedOverlayContent: (): void => { this.boundedOverlayContent(); },
       }).onAreaChange((_old: Area, next: Area): void => this.reportOverlayOrigin(next));
     }
+  }
+
+  @Builder
+  private embeddedTopBar() {
+    PageBackBar({ title: this.activeSection === 'home' ? '设置' : '通用设置',
+      onBack: (): void => {
+        if (this.activeSection === 'general') this.onSectionChange('home');
+        else this.onBack();
+      } });
   }
 
   @Builder

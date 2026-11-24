@@ -40,7 +40,8 @@ import { TYPE_DOWNLOAD_BODY, TYPE_SELECT_DEFAULT_VALUE } from '../../../ui/found
 import { ReaderWindowCoordinator, ReaderWindowChromeStyle } from '../../../app/ReaderWindowCoordinator';
 import { ReaderInsetsVp, ReaderWindowMetricsSnapshot, readerVisualSafeLeft, readerVisualSafeRight, readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import type { DownloadBookView, DownloadChapterView, SharedDownloadFilters, DownloadReadingTarget, DownloadStorageSummary, DownloadStoragePolicyView } from '../presentation/SharedDownloadProjection';
-import { filterDownloadBooks, describeDownloadReadingTarget, downloadChapterDetailLabel, formatDownloadStorageBytes, canCleanDownloadStorage, currentDownloadReadingChapterIndex } from '../presentation/SharedDownloadProjection';
+import { filterDownloadBooks, describeDownloadReadingTarget, downloadChapterDetailLabel, downloadChapterBookTitle,
+  downloadsProvenEmpty, formatDownloadStorageBytes, canCleanDownloadStorage, currentDownloadReadingChapterIndex } from '../presentation/SharedDownloadProjection';
 import { FrameCallback, TextModifier, SymbolGlyphModifier } from '@kit.ArkUI';
 import { readerScrimmedOpaqueColor } from '../../../ui/surfaces/ReaderScrimColor';
 import { ReaderInlineSelect } from '../../../ui/controls/ReaderInlineSelect';
@@ -106,7 +107,7 @@ export struct SharedDownloadPage {
   @Prop storagePolicy: DownloadStoragePolicyView | undefined = undefined;
   @Prop storagePolicyBusy: boolean = false;
   @Prop storageCleanupBusy: boolean = false;
-  @Prop @Watch('restoreChapterOffset') loading: boolean = false;
+  @Prop @Watch('onLoadingChanged') loading: boolean = false;
   @Prop reduceMotion: boolean = false;
   @Prop @Watch('onInputEligibilityChanged') covered: boolean = false;
   @Prop @Watch('onErrorChanged') error: string = '';
@@ -140,6 +141,7 @@ export struct SharedDownloadPage {
   @State private managing: boolean = false;
   @State private managementGeneration: number = 0;
   @State private selectedBookKeys: string[] = [];
+  private closeSelectionAfterRemoval: boolean = false;
   @State private selectedChapters: Map<number, string> = new Map<number, string>();
   @State @Watch('onSheetChanged') private sheet: string = '';
   @State private filterSourceOptions: DownloadChoice[] = [];
@@ -229,6 +231,7 @@ export struct SharedDownloadPage {
     this.chapterLayoutReady = false;
     this.chapterScrollRestorePending = this.detailKey.length > 0;
     this.chapterScrollRestoreScheduled = false;
+    this.closeSelectionAfterRemoval = false;
     this.mounted = true;
     this.onSheetChanged();
     this.readingReturnFocus = this.takeReadingFocus();
@@ -346,14 +349,26 @@ export struct SharedDownloadPage {
 
   private lastErrorFeedback: string = '';
   private lastChapterFeedback: string = '';
+  private onLoadingChanged(): void {
+    this.restoreChapterOffset();
+    this.retireEmptyBookSelection();
+  }
   private onErrorChanged(): void {
-    if (!this.error) { this.lastErrorFeedback = ''; return; }
+    if (!this.error) {
+      this.lastErrorFeedback = '';
+      this.retireEmptyBookSelection();
+      return;
+    }
     if (!this.mounted || !this.presentationIsCurrent() || this.books.length === 0 || !this.error || this.error === this.lastErrorFeedback) return;
     this.lastErrorFeedback = this.error;
     try { this.transientFeedback.show(() => this.getUIContext(), { message: this.error, duration: READER_FEEDBACK_BRIEF_MS }, (): boolean => this.mounted && this.presentationIsCurrent()); } catch (_) {}
   }
   private onBooksChanged(): void {
     this.onErrorChanged();
+    const keys = new Set<string>(this.books.map((book: DownloadBookView): string => book.key));
+    const retainedBookKeys = this.selectedBookKeys.filter((key: string): boolean => keys.has(key));
+    if (retainedBookKeys.length !== this.selectedBookKeys.length) this.selectedBookKeys = retainedBookKeys;
+    this.retireEmptyBookSelection();
     this.syncRangeCatalog();
     this.restoreChapterOffset();
     const book = this.detail();
@@ -430,6 +445,13 @@ export struct SharedDownloadPage {
               message: this.books.length === 0 ? '加入书架后，可在这里管理下载' : '调整搜索关键词或筛选条件',
               actionLabel: this.books.length === 0 ? '' : '清除筛选',
               onAction: (): void => this.clearFilters(ownerGeneration) });
+          }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() });
+        }
+      }
+      if (!this.managing && this.visibleBooks().length > 0 && this.downloadTasksEmpty()) {
+        ListItem() {
+          Column() {
+            ReaderPageState({ title: '暂无下载任务', message: '打开书籍，选择要下载的章节。' });
           }.width('100%').padding({ left: this.contentLeftInset(), right: this.contentRightInset() });
         }
       }
@@ -621,12 +643,12 @@ export struct SharedDownloadPage {
       return;
     }
     this.cancelManagingScroll();
-    this.query = value; this.selectedBookKeys = []; this.listScroller.scrollTo({ xOffset: 0, yOffset: 0 });
+    this.query = value; this.listScroller.scrollTo({ xOffset: 0, yOffset: 0 });
   }
 
   private clearSearchInput(identity: string): void {
     if (!this.searchInputIsCurrent(identity) || this.query.length === 0) return;
-    this.query = ''; this.selectedBookKeys = [];
+    this.query = '';
   }
 
   @Builder
@@ -643,7 +665,7 @@ export struct SharedDownloadPage {
       .accessibilityText(`${label}${this.bookType === id ? '，已选择' : ''}`)
       .onClick((): void => {
         if (!this.searchInputIsCurrent(identity)) return;
-        this.bookType = id; this.selectedBookKeys = [];
+        this.bookType = id;
       });
   }
 
@@ -668,7 +690,7 @@ export struct SharedDownloadPage {
         Column({ space: 0 }) {
         Row({ space: DOWNLOAD_VISUAL.bookTopGap }) {
           Flex({ direction: FlexDirection.Row, justifyContent: FlexAlign.Start, alignItems: ItemAlign.Center }) {
-            Text(book().title).fontFamily(TYPE_DOWNLOAD_BOOK_TITLE.fontFamily).fontWeight(TYPE_DOWNLOAD_BOOK_TITLE.fontWeight)
+            Text(secondary ? downloadChapterBookTitle(book()) : book().title).fontFamily(TYPE_DOWNLOAD_BOOK_TITLE.fontFamily).fontWeight(TYPE_DOWNLOAD_BOOK_TITLE.fontWeight)
               .fontSize(TYPE_DOWNLOAD_BOOK_TITLE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_BOOK_TITLE.lineHeightFp as number).halfLeading(true)
               .fontColor(downloadVisualColor('ink', this.appThemeScheme)).flexShrink(1).textAlign(TextAlign.Start).wordBreak(WordBreak.BREAK_WORD);
             if (!secondary) {
@@ -676,7 +698,7 @@ export struct SharedDownloadPage {
                 .flexShrink(0).margin({ left: DOWNLOAD_VISUAL.statusGap });
             }
           }.layoutWeight(1).constraintSize({ minHeight: DOWNLOAD_VISUAL.bookTopHeight });
-          if (book().contentKind !== undefined) {
+          if (!secondary && book().contentKind !== undefined) {
             Text(book().contentKind === 'manga' ? '漫画' : '小说')
               .fontFamily(TYPE_DOWNLOAD_TAG.fontFamily).fontWeight(TYPE_DOWNLOAD_TAG.fontWeight)
               .fontSize(TYPE_DOWNLOAD_TAG.fontSizeFp).lineHeight(TYPE_DOWNLOAD_TAG.lineHeightFp as number).halfLeading(true)
@@ -1106,12 +1128,11 @@ export struct SharedDownloadPage {
             if (this.captureSelection(true)) this.openSheet('chapter-actions', 'selection-more');
           }, 'selection-more');
         } else {
-          this.actionButton((): string => '下载所选书籍', true, (): boolean => this.selectedBookKeys.length > 0, (): void => {
-            if (!this.captureSelection()) return;
-            this.prepareRange(this.actionBookKeys[0] ?? '');
-            this.openSheet('range', 'selection-download');
-          }, 'selection-download');
-          this.actionButton((): string => '更多书籍操作', false, (): boolean => this.selectedBookKeys.length > 0, (): void => {
+          this.actionButton((): string => '暂停所选', false, (): boolean => this.selectedQueueTargets(false).length > 0,
+            (): void => this.sendSelectedQueueAction(false));
+          this.actionButton((): string => '继续所选', true, (): boolean => this.selectedQueueTargets(true).length > 0,
+            (): void => this.sendSelectedQueueAction(true));
+          this.actionButton((): string => '移除', false, (): boolean => this.selectedBooksCanBeRemoved(), (): void => {
             if (this.captureSelection()) this.openSheet('book-actions', 'selection-more');
           }, 'selection-more');
         }
@@ -1388,7 +1409,7 @@ export struct SharedDownloadPage {
           if (!this.sheetOpeningIsCurrent(opening) || this.sheet !== 'filter') return;
           const choice = this.stateChoices().find((option: DownloadChoice): boolean => option.label === value);
           if (choice === undefined) return;
-          this.stateFilter = choice.id; this.selectedBookKeys = [];
+          this.stateFilter = choice.id;
         },
       });
     }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.settingsHeight })
@@ -1409,7 +1430,7 @@ export struct SharedDownloadPage {
           const choice = this.filterSourceOptions.find((option: DownloadChoice): boolean => option.label === value);
           if (choice === undefined || (choice.id !== 'all' &&
             !this.books.some((book: DownloadBookView): boolean => book.sourceId === choice.id))) return;
-          this.sourceFilter = choice.id; this.selectedBookKeys = [];
+          this.sourceFilter = choice.id;
         },
       });
     }.width('100%').constraintSize({ minHeight: DOWNLOAD_VISUAL.settingsHeight })
@@ -1443,6 +1464,13 @@ export struct SharedDownloadPage {
 
   private operationsActions(): ReaderMenuActionView[] {
     if (this.sheet === 'book-actions') {
+      if (this.managing && this.detailKey.length === 0) {
+        return [
+          new ReaderMenuActionView('cancel', '取消下载任务', this.actionAvailable('cancel'), readerActionIcon('close', this.appThemeScheme)),
+          new ReaderMenuActionView('deleteLocal', '删除本地内容', this.actionAvailable('deleteLocal'),
+            readerActionIcon('trash', this.appThemeScheme), '删除本地内容', '', '', '', 'danger'),
+        ];
+      }
       const books = this.actionBooks();
       const complete = books.length > 0 && books.every((book: DownloadBookView): boolean => book.projectionStatus === 'ready' &&
         book.totalChapters !== undefined && book.totalChapters > 0 && book.downloadedChapters === book.totalChapters &&
@@ -1765,8 +1793,8 @@ export struct SharedDownloadPage {
   }
 
   private confirmationTitle(): string {
-    if (this.confirmation === 'cleanup') return '清理自动保存？';
-    const books = this.actionBooks();
+    if (this.confirmation === 'cleanup') return '清理临时缓存？';
+    const books = this.removalActionBooks(this.confirmation === 'cancel' ? 'cancel' : 'deleteLocal');
     const label = this.confirmation === 'cancel' ? '取消任务' : '删除内容';
     if (this.actionChapters.length > 0)
       return `确认${label} · ${this.actionChapters.length}${this.unit(books[0])}？`;
@@ -1775,7 +1803,7 @@ export struct SharedDownloadPage {
   }
   private confirmationCopy(): string {
     if (this.confirmation === 'cleanup')
-      return `将清理 ${formatDownloadStorageBytes(this.storageSummary.cleanableBytes)} 自动保存的内容。保留下载、正在阅读和下载的内容不受影响，书架与阅读记录保留。`;
+      return `将清理 ${formatDownloadStorageBytes(this.storageSummary.cleanableBytes)} 的临时缓存。保留下载、正在阅读和下载的内容不受影响，书架与阅读记录保留。`;
     if (this.actionChapters.length > 0)
       return this.confirmation === 'cancel' ? '仅取消所选章节的剩余下载，已下载内容保留。' :
         '仅删除所选章节的本地内容，并取消这些章节的剩余下载。书架和阅读记录保留。';
@@ -1788,10 +1816,10 @@ export struct SharedDownloadPage {
     return !this.storageCleanupBusy && canCleanDownloadStorage(this.storageSummary);
   }
   private storageCleanLabel(): string {
-    if (this.storageCleanupBusy) return '正在清理自动保存…';
-    if (formatDownloadStorageBytes(this.storageSummary.cleanableBytes).length === 0) return '清理自动保存';
+    if (this.storageCleanupBusy) return '正在清理临时缓存…';
+    if (formatDownloadStorageBytes(this.storageSummary.cleanableBytes).length === 0) return '清理临时缓存';
     return canCleanDownloadStorage(this.storageSummary) ?
-      `清理自动保存 · ${formatDownloadStorageBytes(this.storageSummary.cleanableBytes)}` : '暂无可清理的自动保存';
+      `清理临时缓存 · ${formatDownloadStorageBytes(this.storageSummary.cleanableBytes)}` : '暂无可清理的临时缓存';
   }
   private openStorageCleanup(generation: number = this.presentationGeneration, opening: number = this.sheetOpeningGeneration): void {
     if (!this.presentationIsCurrent(generation) || !this.sheetOpeningIsCurrent(opening) ||
@@ -1919,6 +1947,7 @@ export struct SharedDownloadPage {
       }
     }
     this.syncOverlayChrome();
+    this.retireEmptyBookSelection();
     this.syncOverlayFocus();
   }
 
@@ -1960,6 +1989,7 @@ export struct SharedDownloadPage {
     this.retireSheetActors();
     this.sheetExitPending = false;
     this.syncOverlayChrome();
+    this.retireEmptyBookSelection();
     this.syncOverlayFocus();
   }
 
@@ -2033,6 +2063,7 @@ export struct SharedDownloadPage {
     this.readingReturnFocus = undefined;
     this.sheetMaskReady = false;
     this.sheetExitPending = false;
+    this.closeSelectionAfterRemoval = false;
     this.chapterLayoutReady = false;
     this.chapterScrollRestorePending = false;
     this.chapterScrollRestoreScheduled = false;
@@ -2077,7 +2108,6 @@ export struct SharedDownloadPage {
     this.cancelChapterScrollRestore();
     this.cancelManagingScroll();
     this.query = ''; this.bookType = 'all'; this.stateFilter = 'all'; this.sourceFilter = 'all';
-    this.selectedBookKeys = [];
     this.listScroller.scrollTo({ xOffset: 0, yOffset: 0 });
     this.publishViewState();
   }
@@ -2089,7 +2119,28 @@ export struct SharedDownloadPage {
   }
   private visibleBooks(): DownloadBookView[] { return filterDownloadBooks(this.books, this.filters()); }
   private detail(): DownloadBookView | undefined { return this.books.find((book: DownloadBookView): boolean => book.key === this.detailKey); }
-  private actionBooks(): DownloadBookView[] { return this.books.filter((book: DownloadBookView): boolean => this.actionBookKeys.includes(book.key)); }
+  private actionBooks(): DownloadBookView[] {
+    if (!this.managing || this.detailKey.length > 0)
+      return this.books.filter((book: DownloadBookView): boolean => this.actionBookKeys.includes(book.key));
+    const books = this.visibleSelectedBooks().filter((book: DownloadBookView): boolean => this.actionBookKeys.includes(book.key));
+    return books.length === this.actionBookKeys.length ? books : [];
+  }
+
+  private visibleSelectedBooks(): DownloadBookView[] {
+    const selected = new Set<string>(this.selectedBookKeys);
+    return this.visibleBooks().filter((book: DownloadBookView): boolean => selected.has(book.key));
+  }
+
+  private downloadTasksEmpty(): boolean {
+    return !this.loading && this.error.length === 0 && downloadsProvenEmpty(this.books);
+  }
+
+  private retireEmptyBookSelection(): void {
+    if (!this.closeSelectionAfterRemoval || !this.managing || this.detailKey.length > 0 ||
+      !this.downloadTasksEmpty() || this.modalBlocking()) return;
+    this.setManaging(false);
+    if (!this.managing) this.closeSelectionAfterRemoval = false;
+  }
   private unit(book: DownloadBookView | undefined): string {
     return book?.contentKind === 'novel' ? '章' : book?.contentKind === 'manga' ? '个条目' : '';
   }
@@ -2230,6 +2281,7 @@ export struct SharedDownloadPage {
     return false;
   }
   private toggleBook(key: string, selected: boolean): void {
+    if (!this.visibleBooks().some((book: DownloadBookView): boolean => book.key === key)) return;
     this.selectedBookKeys = selected ? this.selectedBookKeys.concat([key]).filter((value: string, index: number, all: string[]): boolean => all.indexOf(value) === index)
       : this.selectedBookKeys.filter((value: string): boolean => value !== key);
   }
@@ -2252,6 +2304,7 @@ export struct SharedDownloadPage {
     this.invalidateReadingHandoff();
     this.managementGeneration += 1;
     this.managing = managing;
+    this.closeSelectionAfterRemoval = false;
     if (managing) {
       this.managingTriggerKey = triggerKey;
       if (triggerKey === 'manage') this.focusGeneration += 1;
@@ -2395,7 +2448,10 @@ export struct SharedDownloadPage {
   }
   private allSelected(): boolean {
     const book = this.detail();
-    if (book === undefined) return this.selectedBookKeys.length > 0 && this.selectedBookKeys.length === this.visibleBooks().length;
+    if (book === undefined) {
+      const visible = this.visibleBooks().length;
+      return visible > 0 && this.visibleSelectedBooks().length === visible;
+    }
     const chapters = book.chapters.filter((chapter: DownloadChapterView): boolean => chapter.navigable && chapter.chapterId.length > 0);
     return chapters.length > 0 && chapters.every((chapter: DownloadChapterView): boolean => this.chapterSelected(chapter));
   }
@@ -2412,20 +2468,57 @@ export struct SharedDownloadPage {
   private toggleAll(): void {
     const book = this.detail();
     if (book !== undefined) this.selectChapters(this.allSelected() ? [] : book.chapters);
-    else this.selectedBookKeys = this.allSelected() ? [] : this.visibleBooks().map((item: DownloadBookView): string => item.key);
+    else {
+      const visible = this.visibleBooks().map((item: DownloadBookView): string => item.key);
+      const matching = new Set<string>(visible);
+      const hidden = this.selectedBookKeys.filter((key: string): boolean => !matching.has(key));
+      this.selectedBookKeys = this.allSelected() ? hidden : hidden.concat(visible);
+    }
   }
   private selectionLabel(): string {
     const book = this.detail();
     if (book !== undefined) return this.managing ? `已选 ${this.selectedChapters.size}${this.unit(book)}` : this.downloadCount(book, false);
-    return `已选 ${this.selectedBookKeys.length} 本书`;
+    return `已选 ${this.visibleSelectedBooks().length} / ${this.visibleBooks().length} 本书`;
   }
   private captureSelection(chapters: boolean = false): boolean {
     const book = this.detail();
-    if (chapters ? book === undefined || this.selectedChapters.size === 0 :
-      this.detailKey.length > 0 || this.selectedBookKeys.length === 0) return false;
-    this.actionBookKeys = book === undefined ? this.selectedBookKeys.slice() : [book.key];
+    const visible = chapters ? [] : this.visibleSelectedBooks().map((entry: DownloadBookView): string => entry.key);
+    if (chapters ? book === undefined || this.selectedChapters.size === 0 : this.detailKey.length > 0 || visible.length === 0) return false;
+    this.actionBookKeys = book === undefined ? visible : [book.key];
     this.actionChapters = chapters ? this.selectedChapterProofs() : [];
     return true;
+  }
+
+  private selectedQueueTargets(resume: boolean): SharedDownloadUiBookTarget[] {
+    const targets: SharedDownloadUiBookTarget[] = [];
+    for (const book of this.visibleSelectedBooks()) {
+      if (book.projectionStatus !== 'ready') continue;
+      const chapters = book.chapters.filter((chapter: DownloadChapterView): boolean =>
+        chapter.navigable && chapter.chapterId.length > 0 && !chapter.localComplete &&
+        (resume ? chapter.queueState === 'paused' || chapter.queueState === 'failed' : this.chapterIsRunning(chapter)));
+      if (chapters.length === 0) continue;
+      targets.push({ sourceId: book.sourceId, bookId: book.bookId,
+        chapterIndices: chapters.map((chapter: DownloadChapterView): number => chapter.index),
+        expectedChapters: chapters.map((chapter: DownloadChapterView): SharedDownloadExpectedChapter => this.chapterProof(chapter)) });
+    }
+    return targets;
+  }
+
+  private selectedBooksCanBeRemoved(): boolean {
+    const books = this.visibleSelectedBooks();
+    return this.actionAvailable('cancel', books, []) || this.actionAvailable('deleteLocal', books, []);
+  }
+
+  private removalActionBooks(action: 'cancel' | 'deleteLocal'): DownloadBookView[] {
+    const books = this.actionBooks();
+    if (!this.managing || this.detailKey.length > 0) return books;
+    return books.filter((book: DownloadBookView): boolean => this.actionAvailable(action, [book], []));
+  }
+
+  private sendSelectedQueueAction(resume: boolean): void {
+    if (!this.uiInputIsCurrent() || !this.managing || this.detailKey.length > 0 || this.modalBlocking()) return;
+    const books = this.selectedQueueTargets(resume);
+    if (books.length > 0) this.onIntent({ action: resume ? 'download' : 'pause', scope: 'books', books });
   }
   private selectedChapterProofs(): SharedDownloadExpectedChapter[] {
     const proofs: SharedDownloadExpectedChapter[] = [];
@@ -2617,12 +2710,16 @@ export struct SharedDownloadPage {
     const storage = action === 'cleanup';
     const scoped = !storage && this.actionChapters.length > 0;
     if (scoped && !this.actionAvailable(action)) return;
-    const targets = storage ? [] : this.actionBooks().map((book: DownloadBookView): SharedDownloadUiBookTarget => ({
+    const books = storage ? [] : (action === 'cancel' || action === 'deleteLocal') ?
+      this.removalActionBooks(action) : this.actionBooks();
+    const targets = books.map((book: DownloadBookView): SharedDownloadUiBookTarget => ({
       sourceId: book.sourceId, bookId: book.bookId,
       chapterIndices: scoped ? this.actionChapters.map((chapter: SharedDownloadExpectedChapter): number => chapter.chapterIndex) : undefined,
       expectedChapters: scoped ? this.actionChapters.slice() : undefined,
     }));
     if (!storage && targets.length === 0) return;
+    if (this.managing && this.detailKey.length === 0 && (action === 'cancel' || action === 'deleteLocal'))
+      this.closeSelectionAfterRemoval = true;
     this.sheet = '';
     this.onIntent({ action, scope: storage ? 'storage' : scoped ? 'chapters' : 'books', books: targets });
   }

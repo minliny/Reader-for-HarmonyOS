@@ -116,3 +116,11 @@ property watcher requests a reset, the generation-checked notification is deferr
 until after the parent update. Coalesced watchers retain the active parent state
 until the current reset delivers one release. The complete patch and source lock
 record these changes on the pinned upstream and Apache-2.0 license.
+
+## Reader Paper & Ink presentation
+
+The Reader passes its paper-pull damping function for visual displacement.
+Edge recognition, raw thresholds, release revalidation, and upstream directional
+resistance continue to own admission. The horizontal edge is unchanged. Reduced
+motion leaves the page fixed and exposes a stationary feedback band whose
+consumer owns the fade. The chapter transaction remains with the reading owner.

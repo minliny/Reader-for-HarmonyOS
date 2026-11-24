@@ -1,0 +1,627 @@
+{
+  "id": "reading.control-direct-sheet-navigation",
+  "version": 1,
+  "phase": 1,
+  "pageId": "reading",
+  "fixture": {
+    "id": "public-local-reading-v1",
+    "bookTitle": "Reader Phase 0 公共测试书",
+    "description": "Public local book with standard motion. Open Directory, Search and Replace from their home shortcuts, then return to the same reader controls with normal Back."
+  },
+  "steps": [
+    {
+      "id": "reading-book-entry",
+      "kind": "locate",
+      "anchors": [
+        "reader-bookshelf-search-entry"
+      ],
+      "keyboard": false,
+      "book": true
+    },
+    {
+      "id": "enter-reading",
+      "kind": "action",
+      "op": "click",
+      "from": "reading-book-entry",
+      "target": {
+        "publicBookTitle": "Reader Phase 0 公共测试书"
+      },
+      "waitFor": [
+        {
+          "kind": "reading.ready",
+          "fields": {
+            "payload.localBook": true,
+            "payload.reduceMotion": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "reading-before",
+      "kind": "sample",
+      "anchors": [
+        "reader-reading-stage"
+      ],
+      "keyboard": false,
+      "afterAction": "enter-reading",
+      "quietMs": 500,
+      "anyAnchor": [
+        "reader-reading-interaction-host-continuous",
+        "reader-reading-interaction-host-paged"
+      ]
+    },
+    {
+      "id": "open",
+      "kind": "action",
+      "op": "click",
+      "from": "reading-before",
+      "target": [
+        "reader-reading-interaction-host-continuous",
+        "reader-reading-interaction-host-paged"
+      ],
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        },
+        {
+          "kind": "reading.control-motion",
+          "fields": {
+            "payload.finalBlock": true,
+            "payload.endReason": "completed"
+          }
+        }
+      ],
+      "gesture": true
+    },
+    {
+      "id": "open-state",
+      "kind": "sample",
+      "anchors": [
+        "reader-reading-stage"
+      ],
+      "keyboard": false,
+      "afterAction": "open",
+      "quietMs": 500,
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        },
+        {
+          "kind": "reading.control-motion",
+          "fields": {
+            "payload.finalBlock": true,
+            "payload.endReason": "completed"
+          }
+        }
+      ]
+    },
+    {
+      "id": "open-directory",
+      "kind": "action",
+      "op": "click",
+      "from": "open-state",
+      "target": "reader-control-entry-directory",
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        }
+      ]
+    },
+    {
+      "id": "directory-open",
+      "kind": "sample",
+      "anchors": [
+        "reader-reading-stage"
+      ],
+      "keyboard": false,
+      "afterAction": "open-directory",
+      "quietMs": 240,
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        }
+      ]
+    },
+    {
+      "id": "close-directory",
+      "kind": "action",
+      "op": "keyEvent",
+      "from": "directory-open",
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        }
+      ]
+    },
+    {
+      "id": "directory-closed",
+      "kind": "sample",
+      "anchors": [
+        "reader-reading-stage"
+      ],
+      "keyboard": false,
+      "afterAction": "close-directory",
+      "quietMs": 240,
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        }
+      ]
+    },
+    {
+      "id": "open-search",
+      "kind": "action",
+      "op": "click",
+      "from": "directory-closed",
+      "target": "reader-control-entry-search",
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        }
+      ]
+    },
+    {
+      "id": "search-open",
+      "kind": "sample",
+      "anchors": [
+        "reader-reading-stage"
+      ],
+      "keyboard": false,
+      "afterAction": "open-search",
+      "quietMs": 240,
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        }
+      ]
+    },
+    {
+      "id": "close-search",
+      "kind": "action",
+      "op": "keyEvent",
+      "from": "search-open",
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        }
+      ]
+    },
+    {
+      "id": "search-closed",
+      "kind": "sample",
+      "anchors": [
+        "reader-reading-stage"
+      ],
+      "keyboard": false,
+      "afterAction": "close-search",
+      "quietMs": 240,
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        }
+      ]
+    },
+    {
+      "id": "open-replace",
+      "kind": "action",
+      "op": "click",
+      "from": "search-closed",
+      "target": "reader-control-entry-replace",
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        }
+      ]
+    },
+    {
+      "id": "replace-open",
+      "kind": "sample",
+      "anchors": [
+        "reader-reading-stage"
+      ],
+      "keyboard": false,
+      "afterAction": "open-replace",
+      "quietMs": 240,
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        }
+      ]
+    },
+    {
+      "id": "close-replace",
+      "kind": "action",
+      "op": "keyEvent",
+      "from": "replace-open",
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        }
+      ]
+    },
+    {
+      "id": "replace-closed",
+      "kind": "sample",
+      "anchors": [
+        "reader-reading-stage"
+      ],
+      "keyboard": false,
+      "afterAction": "close-replace",
+      "quietMs": 240,
+      "waitFor": [
+        {
+          "kind": "reading.control-transition-committed"
+        }
+      ]
+    }
+  ],
+  "ownerSources": [
+    "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+    "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+    "entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlVerificationSession.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+    "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlVerificationMotion.ets",
+    "entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlLayoutRebase.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlSpatialPath.ts",
+    "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
+    "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
+    "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
+    "entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets"
+  ],
+  "assertions": [
+    {
+      "id": "reading.control-direct-sheet-navigation.open",
+      "evaluator": "motion",
+      "kind": "control-transition",
+      "action": "open",
+      "baseline": "reading-before",
+      "sample": "open-state",
+      "expected": {
+        "op": "click",
+        "direction": "open",
+        "origins": [
+          "continuous-tap",
+          "paged-tap"
+        ],
+        "source": {
+          "level": "hidden",
+          "module": "directory",
+          "form": "quick",
+          "directoryTab": "directory"
+        },
+        "target": {
+          "level": "home",
+          "module": "directory",
+          "form": "quick",
+          "directoryTab": "directory"
+        },
+        "commandDurationMs": 220,
+        "endpointOpacityTolerance": 0.02,
+        "ownerSources": [
+          "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+          "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlVerificationSession.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+          "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlVerificationMotion.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlGestureDriver.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlLayoutRebase.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSpatialPath.ts",
+          "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts"
+        ]
+      },
+      "required": true,
+      "source": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#openReaderControl",
+      "sources": [
+        "app-owner",
+        "native-tree",
+        "window-metrics"
+      ]
+    },
+    {
+      "id": "reading.control-direct-sheet-navigation.open-directory",
+      "evaluator": "motion",
+      "kind": "control-transition",
+      "action": "open-directory",
+      "baseline": "open-state",
+      "sample": "directory-open",
+      "expected": {
+        "op": "click",
+        "direction": "morph",
+        "origins": [
+          "module-button"
+        ],
+        "source": {
+          "level": "home",
+          "module": "directory",
+          "form": "quick",
+          "directoryTab": "directory"
+        },
+        "target": {
+          "level": "secondary",
+          "module": "directory",
+          "form": "full",
+          "directoryTab": "directory"
+        },
+        "commandDurationMs": 260,
+        "endpointOpacityTolerance": 0.02,
+        "ownerSources": [
+          "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+          "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlVerificationSession.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+          "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
+          "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts"
+        ]
+      },
+      "required": true,
+      "source": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#requestControlSession",
+      "sources": [
+        "app-owner",
+        "native-tree",
+        "window-metrics"
+      ]
+    },
+    {
+      "id": "reading.control-direct-sheet-navigation.close-directory",
+      "evaluator": "motion",
+      "kind": "control-transition",
+      "action": "close-directory",
+      "baseline": "directory-open",
+      "sample": "directory-closed",
+      "expected": {
+        "op": "keyEvent",
+        "direction": "navigate",
+        "origins": [
+          "system-back"
+        ],
+        "source": {
+          "level": "secondary",
+          "module": "directory",
+          "form": "full",
+          "directoryTab": "directory"
+        },
+        "target": {
+          "level": "home",
+          "module": "directory",
+          "form": "quick",
+          "directoryTab": "directory"
+        },
+        "commandDurationMs": 210,
+        "endpointOpacityTolerance": 0.02,
+        "ownerSources": [
+          "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+          "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlVerificationSession.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+          "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
+          "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts"
+        ],
+        "requirePanelBack": true
+      },
+      "required": true,
+      "source": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#requestControlSession",
+      "sources": [
+        "app-owner",
+        "native-tree",
+        "window-metrics"
+      ]
+    },
+    {
+      "id": "reading.control-direct-sheet-navigation.open-search",
+      "evaluator": "motion",
+      "kind": "control-transition",
+      "action": "open-search",
+      "baseline": "directory-closed",
+      "sample": "search-open",
+      "expected": {
+        "op": "click",
+        "direction": "morph",
+        "origins": [
+          "module-button"
+        ],
+        "source": {
+          "level": "home",
+          "module": "directory",
+          "form": "quick",
+          "directoryTab": "directory"
+        },
+        "target": {
+          "level": "secondary",
+          "module": "search",
+          "form": "full",
+          "directoryTab": "directory"
+        },
+        "commandDurationMs": 260,
+        "endpointOpacityTolerance": 0.02,
+        "ownerSources": [
+          "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+          "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlVerificationSession.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+          "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
+          "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts"
+        ]
+      },
+      "required": true,
+      "source": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#requestControlSession",
+      "sources": [
+        "app-owner",
+        "native-tree",
+        "window-metrics"
+      ]
+    },
+    {
+      "id": "reading.control-direct-sheet-navigation.close-search",
+      "evaluator": "motion",
+      "kind": "control-transition",
+      "action": "close-search",
+      "baseline": "search-open",
+      "sample": "search-closed",
+      "expected": {
+        "op": "keyEvent",
+        "direction": "navigate",
+        "origins": [
+          "system-back"
+        ],
+        "source": {
+          "level": "secondary",
+          "module": "search",
+          "form": "full",
+          "directoryTab": "directory"
+        },
+        "target": {
+          "level": "home",
+          "module": "directory",
+          "form": "quick",
+          "directoryTab": "directory"
+        },
+        "commandDurationMs": 210,
+        "endpointOpacityTolerance": 0.02,
+        "ownerSources": [
+          "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+          "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlVerificationSession.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+          "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSearchContent.ets",
+          "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts"
+        ],
+        "requirePanelBack": true
+      },
+      "required": true,
+      "source": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#requestControlSession",
+      "sources": [
+        "app-owner",
+        "native-tree",
+        "window-metrics"
+      ]
+    },
+    {
+      "id": "reading.control-direct-sheet-navigation.open-replace",
+      "evaluator": "motion",
+      "kind": "control-transition",
+      "action": "open-replace",
+      "baseline": "search-closed",
+      "sample": "replace-open",
+      "expected": {
+        "op": "click",
+        "direction": "morph",
+        "origins": [
+          "module-button"
+        ],
+        "source": {
+          "level": "home",
+          "module": "directory",
+          "form": "quick",
+          "directoryTab": "directory"
+        },
+        "target": {
+          "level": "secondary",
+          "module": "replace",
+          "form": "full",
+          "directoryTab": "directory"
+        },
+        "commandDurationMs": 260,
+        "endpointOpacityTolerance": 0.02,
+        "ownerSources": [
+          "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+          "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlVerificationSession.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+          "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets",
+          "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts"
+        ]
+      },
+      "required": true,
+      "source": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#requestControlSession",
+      "sources": [
+        "app-owner",
+        "native-tree",
+        "window-metrics"
+      ]
+    },
+    {
+      "id": "reading.control-direct-sheet-navigation.close-replace",
+      "evaluator": "motion",
+      "kind": "control-transition",
+      "action": "close-replace",
+      "baseline": "replace-open",
+      "sample": "replace-closed",
+      "expected": {
+        "op": "keyEvent",
+        "direction": "navigate",
+        "origins": [
+          "system-back"
+        ],
+        "source": {
+          "level": "secondary",
+          "module": "replace",
+          "form": "full",
+          "directoryTab": "directory"
+        },
+        "target": {
+          "level": "home",
+          "module": "directory",
+          "form": "quick",
+          "directoryTab": "directory"
+        },
+        "commandDurationMs": 210,
+        "endpointOpacityTolerance": 0.02,
+        "ownerSources": [
+          "entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets",
+          "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlVerificationSession.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts",
+          "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
+          "entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent.ets",
+          "entry/src/main/ets/features/reading/ui/ReaderControlReplaceContent.ets",
+          "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts"
+        ],
+        "requirePanelBack": true
+      },
+      "required": true,
+      "source": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#requestControlSession",
+      "sources": [
+        "app-owner",
+        "native-tree",
+        "window-metrics"
+      ]
+    }
+  ],
+  "structure": {
+    "reading-before": "reading-before",
+    "open-state": "open-state",
+    "directory-open": "directory-open",
+    "directory-closed": "directory-closed",
+    "search-open": "search-open",
+    "search-closed": "search-closed",
+    "replace-open": "replace-open",
+    "replace-closed": "replace-closed"
+  }
+}

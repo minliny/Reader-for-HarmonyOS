@@ -70,6 +70,14 @@ const emptyCatalog = await new SharedDownloadGateway({ request: async () => ({ d
 assert.equal(emptyCatalog.projectionStatus, 'ready');
 assert.deepEqual(emptyCatalog.chapters, []);
 assert.equal(emptyCatalog.totalChapters, 0, 'a canonical empty TOC carries a proven zero');
+assert.equal(projection.downloadsProvenEmpty([emptyCatalog]), true);
+assert.equal(projection.downloadsProvenEmpty([emptyCatalog, unknown]), false, 'unknown TOC cannot prove no downloads');
+assert.equal(projection.downloadsProvenEmpty([emptyCatalog, view]), false);
+for (const title of ['同名（漫画）', '同名(漫画)', '同名（ 漫画 ）'])
+  assert.equal(projection.downloadChapterBookTitle({ title, contentKind: 'manga' }), title);
+assert.equal(projection.downloadChapterBookTitle({ title: '同名 ', contentKind: 'manga' }), '同名（漫画）');
+assert.equal(projection.downloadChapterBookTitle({ title: '同名', contentKind: 'novel' }), '同名（小说）');
+assert.equal(projection.downloadChapterBookTitle({ title: '同名' }), '同名');
 const zeroBody = await new SharedDownloadGateway({ request: async () => ({ data: status(novel, [row(0, 'cached', 0)]) }) }).load(novel, () => true);
 assert.equal(zeroBody.downloadedChapters, 0, 'metadata alone cannot prove a saved body');
 const other = { ...createDownloadBookView(shelf('s2', 'same', 'manga')), recentRead: 2 };
@@ -260,6 +268,44 @@ owner.detailKey = '';
 assert.equal(owner.consumeBack(), false);
 assert.equal(saved.at(-1).listScroll, 87, 'save latest offset before the root retires identity');
 
+owner.managing = true;
+owner.books = [view, mixed];
+owner.selectedBookKeys = [view.key];
+owner.query = ''; owner.sourceFilter = mixed.sourceId; owner.sheet = '';
+owner.toggleAll();
+assert.equal(owner.allSelected(), true);
+assert.deepEqual(owner.selectedBookKeys, [view.key, mixed.key], 'select all retains hidden book identities');
+assert.match(owner.selectionLabel(), /1 \/ 1/);
+owner.sendSelectedQueueAction(false);
+owner.sendSelectedQueueAction(true);
+for (const [entry, action, index] of [[events.at(-2), 'pause', 1], [events.at(-1), 'download', 2]]) {
+  assert.equal(entry.action, action);
+  assert.equal(entry.scope, 'books');
+  assert.equal(entry.books.length, 1);
+  assert.equal(entry.books[0].sourceId, mixed.sourceId);
+  assert.equal(entry.books[0].bookId, mixed.bookId);
+  assert.deepEqual(entry.books[0].expectedChapters, [{ chapterIndex: index, chapterId: 'chapter:1' }]);
+}
+owner.toggleAll();
+assert.deepEqual(owner.selectedBookKeys, [view.key], 'deselect all clears only currently matching books');
+assert.equal(owner.captureSelection(), false, 'a hidden-only selection cannot open an action');
+owner.toggleAll();
+assert.equal(owner.captureSelection(), true);
+assert.deepEqual(owner.actionBookKeys, [mixed.key]);
+owner.sendAction('cancel');
+assert.deepEqual(events.at(-1).books.map(book => book.sourceId), [mixed.sourceId]);
+owner.setManaging = managing => { owner.managing = managing; };
+owner.loading = false; owner.error = '';
+owner.retireEmptyBookSelection();
+assert.equal(owner.managing, true, 'dispatch must await the actual empty projection');
+owner.books = [projectDownloadBookAvailability(createDownloadBookView(novel), [], 0)];
+owner.sheetExitPending = true;
+owner.retireEmptyBookSelection();
+assert.equal(owner.managing, true, 'removal sheet finishes before exit');
+owner.sheetExitPending = false;
+owner.retireEmptyBookSelection();
+assert.equal(owner.managing, false, 'known final task removal exits multi-select');
+
 }
 // Read the committed device-sized policy, including a non-preset and fractional
 // MiB value; opening the settings sheet must not select a fabricated preset.
@@ -324,7 +370,7 @@ function storageOwner(summary = { ...storageFixture }) {
 }
 const cleanup = storageOwner(), cleanupDataBefore = structuredClone(cleanup.result.storageSummary);
 
-assert.equal(cleanup.button.accessibilityText, '清理自动保存 · 512 MB');
+assert.equal(cleanup.button.accessibilityText, '清理临时缓存 · 512 MB');
 
 
 cleanup.button.onClick();
@@ -362,7 +408,7 @@ const busyCleanup = storageOwner(); busyCleanup.button.onClick(); busyCleanup.re
 const busyConfirm = [...busyCleanup.result.nodes.values()].filter(node => node.type === 'Button').at(-1);
 busyCleanup.result.storageCleanupBusy = true; storageProperties.flush();
 assert.equal(busyCleanup.button.enabled, false);
-assert.equal(busyCleanup.button.accessibilityText, '正在清理自动保存…');
+assert.equal(busyCleanup.button.accessibilityText, '正在清理临时缓存…');
 assert.equal(busyConfirm.enabled, false); busyConfirm.onClick();
 assert.deepEqual(busyCleanup.intents, [], 'an open confirmation cannot duplicate a pending Runtime cleanup');
 const retiredCleanup = storageOwner(); retiredCleanup.button.onClick(); retiredCleanup.result.confirmationOverlay();

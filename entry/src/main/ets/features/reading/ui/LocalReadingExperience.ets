@@ -22,7 +22,8 @@ import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from 
 import { ReaderDirectoryRecoverySurface } from './ReaderDirectoryRecoverySurface';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
-import { MESSAGE_META, MESSAGE_GESTURE_ICON } from '../../../ui/foundation/ReaderMessageStyle';
+import { MESSAGE_META } from '../../../ui/foundation/ReaderMessageStyle';
+import vibrator from '@ohos.vibrator';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { BookRequestNotDispatchedError as ReaderCoreNotDispatchedError } from '../../../app/BookRequestScheduler';
 import { ReaderReadingImageResources, sameReaderReadingImageResource } from '../application/ReaderReadingImageResources';
@@ -69,7 +70,9 @@ import { errorMessageOf } from '../../../app/ErrorMessage';
 import curves from '@ohos.curves';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
 import { ReaderControlVerificationSession, type ReaderControlVerificationOrigin } from './ReaderControlVerificationSession';
-import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_DISMISS_MS } from '../../../ui/foundation/ProductMotionTiming';
+import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_DISMISS_MS,
+  READER_CONTROL_LAYER_SWITCH_MS, READER_CONTROL_MODULE_SWITCH_MS, READER_SHEET_OPEN_MS,
+  READER_SHEET_CLOSE_MS, READER_REDUCED_FADE_MS } from '../../../ui/foundation/ProductMotionTiming';
 import { readerControlMotionMs } from './ReaderControlMotionPolicy';
 import {
   type LocalReadingAnchor,
@@ -113,7 +116,6 @@ import {
   cancelReaderPagePan,
   completeReaderPageGestureSettlement,
   createReaderPageGestureState,
-  READER_PAGE_GESTURE_BOOKMARK_SLOP,
   type ReaderPageGestureDecision,
   type ReaderPageGestureState,
   type ReaderPageTapIntent,
@@ -139,7 +141,10 @@ import {
   ReaderPageTurnStage,
   type ReaderPageTurnSlot,
 } from './ReaderPageTurnStage';
-import { ReaderPageBookmarkSnapshot, type ReaderPageBookmarkMode } from '../presentation/ReaderPageBookmarkModel';
+import { READER_BOOKMARK_RIBBON_HEIGHT, READER_BOOKMARK_RIBBON_WIDTH,
+  ReaderBookmarkRibbonFrame, ReaderPageBookmarkSnapshot, readerBookmarkHintAlpha, readerBookmarkRibbonPull,
+  readerBookmarkRibbonRest, type ReaderPageBookmarkMode } from '../presentation/ReaderPageBookmarkModel';
+import { ReaderPageBookmarkRibbon } from './ReaderPageBookmarkRibbon';
 import {
   BookTurnTextureBuildInput,
   BookTurnTextureBuilder,
@@ -191,7 +196,7 @@ import {
 } from './ReaderControlSessionState';
 import {
   backReaderControlHostSession, readerControlHostCloseCommitted, readerControlHostClosing,
-  readerControlHostInputEnabled, readerControlHostPage, readerControlHostVisible,
+  readerControlHostInputEnabled, readerControlHostPage, readerControlHostVisible, readerControlIsDirectSheet,
   setReaderControlHostPage, type ReaderControlHostTiming,
 } from './ReaderControlHostSession';
 import {
@@ -768,6 +773,8 @@ export struct ReadingExperience {
   private pageTurnReconciliationPending: boolean = false;
   @State private pageTurnSettlementActive: boolean = false;
   @State private bookmarkPageOffsetY: number = 0;
+  @State private bookmarkRibbonFrame: ReaderBookmarkRibbonFrame | undefined = undefined;
+  @State private bookmarkPullHintOpacity: number = 0;
   private bookmarkRollbackGeneration: number = 0;
   @State private bookmarkPendingTarget: string = '';
   private bookmarkPendingAnchor: string = '';
@@ -776,7 +783,6 @@ export struct ReadingExperience {
   private bookmarkMutationConfirmed: boolean = false;
   /** Shared gesture preview directly paints the right-corner feedback. */
   @State private bookmarkPreviewChanged: boolean = false;
-  @State private bookmarkPreviewCancelled: boolean = false;
   // The raw arena releases its pointer before delivering the terminal
   // bookmark callback. Keep the admitted page/segment identity, not a live
   // pointer-id requirement, until that callback consumes it exactly once.
@@ -798,7 +804,6 @@ export struct ReadingExperience {
   private bookmarkHintWidth: number = 0;
   private bookmarkHintHeight: number = 0;
   private bookmarkHintBodyTop: number = 0;
-  private bookmarkHintTopInfoTop: number = 0;
   private bookmarkStatusEntries: LocalReadingTocEntry[] | undefined = undefined;
   private bookmarkStatusAnchor: string = '';
   private bookmarkStatusValue: 'unknown' | 'empty' | 'bookmarked' = 'unknown';
@@ -1999,6 +2004,7 @@ export struct ReadingExperience {
           topInfoMovesWithPage: true,
           bookmarkMode: this.pageBookmarkFeedbackMode(this.pageTurnRenderRevision),
           bookmarkOpacity: this.pageBookmarkFeedbackOpacity(),
+          bookmarkRibbon: this.currentBookmarkRibbonFrame(this.pageTurnRenderRevision),
           ttsHighlightStart: this.ttsFollowHighlight ? this.ttsState.charStart : undefined,
           ttsHighlightEnd: this.ttsFollowHighlight ? this.ttsState.charEnd : undefined,
           autoPageHighlightStart: this.autoPageHighlightStart(),
@@ -2028,6 +2034,7 @@ export struct ReadingExperience {
       // The Panel stays mounted, but only this Host's linked session owns
       // routes, held input, the transition and committed close revision.
       ReaderControlPanel({
+        directSheetRedesign: true,
         bodySelectionPossible: this.readerTextSelectionEnabled(),
         sessionFontScale: this.readingLayout().systemFontScale,
         controlThemeStyle: readerControlThemeStyle(this.readerAppScheme),
@@ -2059,6 +2066,14 @@ export struct ReadingExperience {
         progressPercent: this.controlProgress(),
         totalChapters: this.entryCatalogNavigation?.readableChapterCount ?? this.readingTocEntries().length,
         readableChapterPosition: this.readableChapterPosition(this.currentChapterIndex()),
+        pageBookmarkStatus: this.controlPageBookmarkStatus(this.bookmarkPresentationRevision + this.pageTurnRenderRevision),
+        pageBookmarkEnabled: this.controlPageBookmarkEnabled(this.bookmarkPresentationRevision + this.pageTurnRenderRevision),
+        onTogglePageBookmark: (): void => {
+          if (this.isControlInputEnabled() && this.controlMotionPage() === 'home' &&
+            this.controlPageBookmarkEnabled(this.bookmarkPresentationRevision + this.pageTurnRenderRevision)) {
+            this.toggleCurrentPageBookmark();
+          }
+        },
         layout: this.controlLayout(this.readerWindowMetricsRevision),
         presentationReceipt: this.controlPresentationReceipt,
         preparedMinimumRequired: true,
@@ -2130,7 +2145,7 @@ export struct ReadingExperience {
         searchPublication: this.quickSearchPublication,
         searchRevision: this.quickSearchRevision,
         brightnessPercent: this.brightnessPercent,
-        brightnessAutomatic: this.brightnessAutomatic,
+        brightnessAutomatic: this.brightnessAutomaticIntent ?? this.brightnessAutomatic,
         brightnessRevision: this.brightnessRevision,
         autoPageStatus: this.automaticReadingState().status,
         autoPageSpeedSeconds: this.automaticReadingState().speedSeconds,
@@ -7923,6 +7938,9 @@ export struct ReadingExperience {
           undefined, informationHeight, 0, this.sessionCapsuleMetrics().targetHeight);
       }
     }
+    // Reserve the full opening below the system status crop. Pagination and
+    // every retained page share this settings-sensitive layout snapshot.
+    layout.contentTop = Math.max(layout.contentTop, this.bookmarkRibbonPaperTop(layout) + READER_BOOKMARK_RIBBON_HEIGHT);
     this.readingLayoutCache = layout;
     this.readingLayoutCacheWidth = width; this.readingLayoutCacheHeight = height;
     this.readingLayoutCacheRevision = metrics.revision; this.readingLayoutCacheTablet = this.expandedLayout;
@@ -8106,12 +8124,14 @@ export struct ReadingExperience {
         this.adoptControlDisplayFacts(facts);
         return;
       }
+      const location = profileReader === undefined ? undefined : this.controlMinimumRequestLocation();
+      const directSheet = location?.level === 'secondary' && location.form === 'full' && readerControlIsDirectSheet(location.module);
       const widths = readerControlCandidateWidths(this.effectiveViewportWidth(), this.effectiveViewportHeight(),
-        this.expandedLayout, ReaderWindowCoordinator.metrics());
+        this.expandedLayout, ReaderWindowCoordinator.metrics(), directSheet);
       const measured = measureReaderControlMinimumCandidates(widths, identity, generation, measure,
         (candidate: ReaderControlCandidateMinimum): boolean =>
           resolveReaderControlLayout(this.effectiveViewportWidth(), this.effectiveViewportHeight(),
-            this.expandedLayout, ReaderWindowCoordinator.metrics(), 0, [candidate]).minimumStatus === 'preferred');
+            this.expandedLayout, ReaderWindowCoordinator.metrics(), 0, [candidate], directSheet).minimumStatus === 'preferred');
       if (generation !== this.controlMinimumGeneration || measure !== this.controlMinimumProvider ||
         navigationGeneration !== this.activeControlNavigationIntent()?.generation ||
         profileReader !== this.controlMinimumProfileReader || environment !== this.controlMinimumEnvironmentKey() ||
@@ -8153,12 +8173,13 @@ export struct ReadingExperience {
       this.pendingControlMinimumIdentity = identity;
       return;
     }
-    const layout = resolveReaderControlLayout(this.effectiveViewportWidth(), this.effectiveViewportHeight(),
-      this.expandedLayout, ReaderWindowCoordinator.metrics(), 0, candidates);
     const readProfile = this.controlMinimumProfileReader;
-    if (readProfile !== undefined) {
+    const location = readProfile === undefined ? undefined : this.controlMinimumRequestLocation();
+    const directSheet = location?.level === 'secondary' && location.form === 'full' && readerControlIsDirectSheet(location.module);
+    const layout = resolveReaderControlLayout(this.effectiveViewportWidth(), this.effectiveViewportHeight(),
+      this.expandedLayout, ReaderWindowCoordinator.metrics(), 0, candidates, directSheet);
+    if (readProfile !== undefined && location !== undefined) {
       const profile = readProfile(layout.minimumKey);
-      const location = this.controlMinimumRequestLocation();
       const module = location.level === 'secondary' ? location.module : 'home';
       if (layout.minimumStatus === 'legacy' || profile === undefined || profile.identity !== identity ||
         profile.module !== module || profile.widths.panelWidthVp !== layout.fullPanelWidth ||
@@ -11594,8 +11615,10 @@ export struct ReadingExperience {
       showDurationMs: readerControlMotionMs(READER_CONTROL_OPEN_MS, this.reduceMotion),
       dismissDurationMs: readerControlMotionMs(READER_CONTROL_DISMISS_MS, this.reduceMotion),
       morphDurationMs: readerControlMotionMs(READER_CONTROL_EXPAND_MS, this.reduceMotion),
-      // Module navigation has no admitted new visual choreography here.
-      navigateDurationMs: 0,
+      layerDurationMs: readerControlMotionMs(READER_CONTROL_LAYER_SWITCH_MS, this.reduceMotion),
+      navigateDurationMs: readerControlMotionMs(READER_CONTROL_MODULE_SWITCH_MS, this.reduceMotion),
+      directSheetDurationMs: this.reduceMotion ? READER_REDUCED_FADE_MS : READER_SHEET_OPEN_MS,
+      directSheetCloseDurationMs: this.reduceMotion ? READER_REDUCED_FADE_MS : READER_SHEET_CLOSE_MS,
     };
   }
 
@@ -13098,7 +13121,6 @@ export struct ReadingExperience {
     this.finishPageTurnPerf('invalidated');
     this.bookmarkRollbackGeneration += 1;
     this.bookmarkGestureAnchor = '';
-    this.bookmarkPreviewCancelled = false;
     this.bookmarkUnavailableMessage = '';
     this.bookmarkUnavailableGeneration += 1;
     const preparation = this.pageTurnPreparation;
@@ -13144,6 +13166,8 @@ export struct ReadingExperience {
     this.bookTurnMotion = undefined;
     this.bookTurnAwaitingSlotCommit = false;
     this.bookmarkPageOffsetY = 0;
+    this.bookmarkRibbonFrame = undefined;
+    this.bookmarkPullHintOpacity = 0;
     this.bookmarkPreviewChanged = false;
     if (this.bookmarkMutationConfirmed) this.reconcilePageBookmarkFeedback();
     this.bookTurnTextureCaptureGeneration += 1;
@@ -13552,7 +13576,6 @@ export struct ReadingExperience {
     this.bookmarkGestureInputRevision = this.pageTurnInputRevision;
     this.bookmarkPreviewStatus = status;
     this.bookmarkPreviewOwner = this.bookmarkFeedbackOwnerKey();
-    this.bookmarkPreviewCancelled = false;
     this.bookmarkUnavailableMessage = '';
     this.bookmarkUnavailableGeneration += 1;
     return true;
@@ -13798,10 +13821,16 @@ export struct ReadingExperience {
     if (state.owner !== 'bookmark') return;
     if (!this.isReaderBookmarkGestureCurrent()) return;
     if (state.phase !== 'settling') this.bookmarkRollbackGeneration += 1;
-    this.bookmarkPageOffsetY = state.bookmarkOffsetY;
+    const justArmed = state.bookmarkPreviewChanged && !this.bookmarkPreviewChanged;
+    this.bookmarkPageOffsetY = this.reduceMotion ? 0 : state.bookmarkOffsetY;
+    this.bookmarkRibbonFrame = readerBookmarkRibbonPull(state.bookmarkOffsetY,
+      this.bookmarkPreviewStatus === 'bookmarked', this.reduceMotion);
+    this.bookmarkPullHintOpacity = readerBookmarkHintAlpha(state.bookmarkOffsetY);
     this.bookmarkPreviewChanged = state.bookmarkPreviewChanged;
-    this.bookmarkPreviewCancelled = state.bookmarkPeakDistance >= READER_PAGE_GESTURE_BOOKMARK_SLOP &&
-      !state.bookmarkPreviewChanged;
+    if (justArmed && !this.reduceMotion) {
+      try { void vibrator.startVibration({ type: 'time', duration: 10 }, { usage: 'touch' }).catch((): void => {}); }
+      catch (_) {}
+    }
   }
 
   private isReaderBookmarkGestureCurrent(): boolean {
@@ -13828,8 +13857,9 @@ export struct ReadingExperience {
       if (!ownsPointerEpoch) return;
       this.bookmarkRollbackGeneration += 1;
       this.bookmarkPageOffsetY = 0;
+      this.bookmarkRibbonFrame = undefined;
+      this.bookmarkPullHintOpacity = 0;
       this.bookmarkPreviewChanged = false;
-      this.bookmarkPreviewCancelled = false;
       if (this.mounted && this.pageTurnGestureState.owner === 'bookmark') {
         this.pageTurnGestureState = createReaderPageGestureState();
         this.pageTurnInputOwned = false;
@@ -13840,21 +13870,26 @@ export struct ReadingExperience {
       return;
     }
     if (changed) this.toggleCurrentPageBookmark();
-    else {
-      // System CANCEL can retain a threshold-crossed gesture snapshot.
-      // Restore the admitted state before the page begins its rebound.
-      this.bookmarkPreviewChanged = false;
-      this.bookmarkPreviewCancelled = false;
-    }
+    else this.bookmarkPreviewChanged = false;
     const generation = ++this.bookmarkRollbackGeneration;
     const owner = this.bookmarkFeedbackOwnerKey();
-    if (this.reduceMotion) { this.finishBookmarkRollback(generation); return; }
+    const target = readerBookmarkRibbonRest(this.pageBookmarkFeedbackFilled(), this.reduceMotion);
+    if (this.reduceMotion && changed) {
+      // A reduced transition changes only alpha. Keep the filled ribbon's
+      // silhouette static during both insertion and removal.
+      this.bookmarkRibbonFrame = new ReaderBookmarkRibbonFrame(target.y, READER_BOOKMARK_RIBBON_HEIGHT,
+        this.bookmarkPreviewStatus === 'bookmarked' ? this.bookmarkRibbonFrame?.opacity ?? 1 : 0);
+      target.fillHeight = READER_BOOKMARK_RIBBON_HEIGHT;
+    }
+    const finish = (): void => {
+      if (owner === this.bookmarkFeedbackOwnerKey()) this.finishBookmarkRollback(generation);
+    };
     this.getUIContext().animateTo(
-      motionAnimateParam('reader.bookmark.rollback', (): void => {
-        if (owner === this.bookmarkFeedbackOwnerKey()) this.finishBookmarkRollback(generation);
-      }),
+      this.reduceMotion ? readerMotionReducedFadeParam(finish) : motionAnimateParam('reader.bookmark.rollback', finish),
       (): void => {
         this.bookmarkPageOffsetY = 0;
+        this.bookmarkRibbonFrame = target;
+        this.bookmarkPullHintOpacity = 0;
       },
     );
   }
@@ -13863,8 +13898,9 @@ export struct ReadingExperience {
     if (generation !== this.bookmarkRollbackGeneration || !this.mounted) return;
     this.bookmarkGestureAnchor = '';
     this.bookmarkPageOffsetY = 0;
+    this.bookmarkRibbonFrame = undefined;
+    this.bookmarkPullHintOpacity = 0;
     this.bookmarkPreviewChanged = false;
-    this.bookmarkPreviewCancelled = false;
     this.reconcilePageBookmarkFeedback();
     if (this.usesBookTurnSimulation() && this.pageTurnInputPhase() === 'idle') {
       this.bookTurnTextureCaptureGeneration += 1;
@@ -13904,6 +13940,16 @@ export struct ReadingExperience {
     return this.bookmarkStatusValue;
   }
 
+  private controlPageBookmarkStatus(_revision: number): 'unknown' | 'empty' | 'bookmarked' {
+    return this.currentPageBookmarkStatus();
+  }
+
+  private controlPageBookmarkEnabled(revision: number): boolean {
+    const anchor = this.pageBookmarkFeedbackAnchor();
+    return anchor.length > 0 && this.bookmarkWriteEnabled() && this.controlPageBookmarkStatus(revision) !== 'unknown' &&
+      !(this.bookmarkPendingTarget.length > 0 && this.bookmarkPendingAnchor === anchor);
+  }
+
   private pageBookmarkFeedbackAnchor(): string {
     const page = this.visiblePage;
     return page === undefined ? '' : `${this.sourceId}:${this.bookId}:${this.currentChapterIndex()}:${this.chapter?.contentVersion}:${this.chapter?.bodyVersion}:${this.chapter?.processingVersion}:${page.startScalar}:${page.endScalar}`;
@@ -13914,27 +13960,26 @@ export struct ReadingExperience {
       this.bookmarkPendingOwner === this.bookmarkFeedbackOwnerKey()) {
       return this.bookmarkPendingTarget === 'bookmarked';
     }
-    // Admission resolves the canonical status once. MOVE only paints that
-    // snapshot and never scans the chapter/bookmark projection again.
-    const bookmarked = ((this.bookmarkPageOffsetY > 0 || this.bookmarkPreviewChanged) &&
-      this.bookmarkPreviewOwner === this.bookmarkFeedbackOwnerKey() ?
-      this.bookmarkPreviewStatus : this.currentPageBookmarkStatus()) === 'bookmarked';
-    return this.bookmarkPreviewChanged && this.bookmarkPreviewOwner === this.bookmarkFeedbackOwnerKey() ?
-      !bookmarked : bookmarked;
+    if (this.bookmarkGestureAnchor.length > 0 && this.bookmarkPreviewOwner === this.bookmarkFeedbackOwnerKey()) {
+      const bookmarked = this.bookmarkPreviewStatus === 'bookmarked';
+      return this.bookmarkPreviewChanged ? !bookmarked : bookmarked;
+    }
+    return this.currentPageBookmarkStatus() === 'bookmarked';
   }
 
   private pageBookmarkFeedbackMode(_renderRevision: number): 'hidden' | 'filled' | 'outline' {
-    // visiblePage is an atomically published, non-reactive projection. Each
-    // If/Image observer must consume its revision before resolving this mode.
+    // visiblePage is atomically published; render callers consume its revision.
     if (this.pageBookmarkFeedbackFilled()) return 'filled';
-    return this.bookmarkPageOffsetY > 0 && this.bookmarkPreviewOwner === this.bookmarkFeedbackOwnerKey() ?
-      'outline' : 'hidden';
+    return 'hidden';
   }
 
   private pageBookmarkFeedbackOpacity(): number {
-    const mode = this.pageBookmarkFeedbackMode(this.pageTurnRenderRevision);
-    if (mode === 'hidden') return 0;
-    return this.bookmarkPageOffsetY > 0 && !this.bookmarkPreviewChanged ? 0.35 : 1;
+    return this.pageBookmarkFeedbackFilled() ? 1 : 0;
+  }
+
+  private currentBookmarkRibbonFrame(_renderRevision: number): ReaderBookmarkRibbonFrame | undefined {
+    const frame = this.bookmarkRibbonFrame;
+    return frame !== undefined && this.bookmarkPreviewOwner === this.bookmarkFeedbackOwnerKey() ? frame : undefined;
   }
 
   private pageBookmarkStatusFor(
@@ -13965,8 +14010,8 @@ export struct ReadingExperience {
   private bookmarkSnapshotForCurrentPage(): ReaderPageBookmarkSnapshot {
     const layout = this.bookmarkCornerLayout();
     return new ReaderPageBookmarkSnapshot(this.pageBookmarkFeedbackMode(this.pageTurnRenderRevision),
-      this.pageBookmarkFeedbackOpacity(), layout.topAccessoryX, layout.topAccessoryY,
-      layout.topAccessoryWidth, layout.topAccessoryHeight);
+      this.pageBookmarkFeedbackOpacity(), this.bookmarkRibbonX(layout), this.bookmarkRibbonPaperTop(this.readingLayout()),
+      READER_BOOKMARK_RIBBON_WIDTH, READER_BOOKMARK_RIBBON_HEIGHT);
   }
 
   private bookmarkSnapshotForPreparedPage(
@@ -13982,7 +14027,8 @@ export struct ReadingExperience {
     const status = this.pageBookmarkStatusFor(chapterIndex, sourceId, bookId, bodyVersion, processingVersion,
       startScalar, endScalar);
     return new ReaderPageBookmarkSnapshot(status === 'bookmarked' ? 'filled' : 'hidden', status === 'bookmarked' ? 1 : 0,
-      layout.topAccessoryX, layout.topAccessoryY, layout.topAccessoryWidth, layout.topAccessoryHeight);
+      this.bookmarkRibbonX(layout), this.bookmarkRibbonPaperTop(this.readingLayout()),
+      READER_BOOKMARK_RIBBON_WIDTH, READER_BOOKMARK_RIBBON_HEIGHT);
   }
 
   private reconcilePageBookmarkFeedback(): void {
@@ -14003,6 +14049,10 @@ export struct ReadingExperience {
     }
   }
 
+  private bookmarkRibbonX(layout: ReaderPageChromeLayoutSnapshot): number {
+    return layout.topAccessoryX + Math.max(0, (layout.topAccessoryWidth - READER_BOOKMARK_RIBBON_WIDTH) / 2);
+  }
+
   private bookmarkFeedbackTopBoundary(layout: ReaderReadingLayoutSnapshot): number {
     const metrics = layout.pageChromeStatusMetrics;
     const status = metrics?.statusBarRect;
@@ -14010,6 +14060,11 @@ export struct ReadingExperience {
     return Math.max(0, layout.pageChromeVisualSafeTop + layout.pageChromeTopRegionHeight,
       metrics?.ready === true && status !== undefined && status.height > 0 ? status.top + status.height : 0,
       metrics?.ready === true && cutout !== undefined && cutout.height > 0 ? cutout.top + cutout.height : 0);
+  }
+
+  private bookmarkRibbonPaperTop(layout: ReaderReadingLayoutSnapshot): number {
+    return this.readerSettingsSnapshot.hideStatusBar === true ? layout.pageChromeVisualSafeTop :
+      this.bookmarkFeedbackTopBoundary(layout);
   }
 
   private bookmarkCornerLayout(): ReaderPageChromeLayoutSnapshot {
@@ -14034,14 +14089,12 @@ export struct ReadingExperience {
       title.width, title.height, clock.width, clock.height, 0, 0, 0, 0, false, 0, 0,
       READER_PAGE_CHROME_BOOKMARK_SIZE, READER_PAGE_CHROME_BOOKMARK_SIZE));
     const hint = measureReaderPageChromeText('松手移除本页书签', MESSAGE_META, layout, context);
-    const hintHeight = Math.max(hint.height, MESSAGE_GESTURE_ICON.lineHeightFp as number);
+    const hintHeight = hint.height;
     this.bookmarkHintX = Math.max(layout.contentLeft, layout.pageChromeVisualSafeLeft);
     this.bookmarkHintWidth = Math.max(0, layout.viewportWidth - this.bookmarkHintX -
       Math.max(layout.contentRight, layout.pageChromeVisualSafeRight));
     this.bookmarkHintHeight = hintHeight;
     this.bookmarkHintBodyTop = layout.contentTop;
-    this.bookmarkHintTopInfoTop = Math.min(result.topStartY, result.topEndY,
-      result.topAccessoryHeight > 0 ? result.topAccessoryY : layout.contentTop);
     this.bookmarkHintY = Math.max(layout.pageChromeVisualSafeTop + layout.pageChromeTopRegionHeight,
       result.topStartY + title.height, result.topEndY + clock.height,
       result.topAccessoryY + result.topAccessoryHeight, layout.contentTop - hintHeight);
@@ -14050,25 +14103,14 @@ export struct ReadingExperience {
     return result;
   }
 
-  private bookmarkFeedbackHintFits(): boolean {
+  private bookmarkUnavailableHintFits(): boolean {
     this.bookmarkCornerLayout();
-    // In immersion the entire top row travels with the page. Reveal a fixed
-    // hint only after that row has cleared it, never on top of title/clock.
-    const movingTop = this.readerSettingsSnapshot.navigationMode === 'paged' ?
-      Math.min(this.bookmarkHintBodyTop, this.bookmarkHintTopInfoTop) : this.bookmarkHintBodyTop;
     return this.bookmarkHintWidth > 0 && this.bookmarkHintHeight > 0 &&
-      this.bookmarkHintY + this.bookmarkHintHeight <= movingTop + this.bookmarkPageOffsetY;
+      this.bookmarkHintY + this.bookmarkHintHeight <= this.bookmarkHintBodyTop;
   }
 
   private bookmarkFeedbackOwnerKey(): string {
     return JSON.stringify([this.lifecycleToken, this.chapterSelectionToken, this.pageBookmarkFeedbackAnchor()]);
-  }
-
-  private bookmarkFeedbackHintLabel(_renderRevision?: number): string {
-    if (this.bookmarkUnavailableMessage.length > 0 &&
-      this.bookmarkUnavailableOwner === this.bookmarkFeedbackOwnerKey()) return this.bookmarkUnavailableMessage;
-    return this.bookmarkPageOffsetY > 0 && this.bookmarkPreviewOwner === this.bookmarkFeedbackOwnerKey() ?
-      this.bookmarkFeedbackLabel() : '';
   }
 
   private onReaderBookmarkGestureUnavailable(reason: 'busy' | 'unavailable'): void {
@@ -14087,7 +14129,7 @@ export struct ReadingExperience {
     // A rejected gesture does not translate the page. Use the same quiet
     // whitespace slot when it fits; otherwise retain the existing platform
     // short feedback. The arena invokes this only once per physical segment.
-    if (!this.bookmarkFeedbackHintFits()) {
+    if (!this.bookmarkUnavailableHintFits()) {
       this.bookmarkUnavailableMessage = '';
       try { this.transientFeedback.show(() => this.getUIContext(), { message }, (): boolean => this.isSessionActive(this.lifecycleToken) && this.appForeground && this.windowChromeActive && generation === this.bookmarkUnavailableGeneration && owner === this.bookmarkFeedbackOwnerKey()); } catch (_) {}
       return;
@@ -14103,57 +14145,59 @@ export struct ReadingExperience {
   }
 
   private bookmarkFeedbackLabel(): string {
-    if (this.bookmarkPageOffsetY <= 0) return '本页已添加书签';
     return this.bookmarkPreviewChanged ? (this.bookmarkPreviewStatus === 'bookmarked' ?
-      '松手移除本页书签' : '松手添加书签') : this.bookmarkPreviewCancelled ? '松手取消' :
+      '松手移除本页书签' : '松手添加书签') :
         this.bookmarkPreviewStatus === 'bookmarked' ? '下拉移除本页书签' : '下拉添加书签';
+  }
+
+  private bookmarkUnavailableHintCurrent(_renderRevision: number): boolean {
+    return this.bookmarkUnavailableMessage.length > 0 && this.bookmarkUnavailableOwner === this.bookmarkFeedbackOwnerKey();
+  }
+
+  private continuousBookmarkRibbonFrame(_renderRevision: number): ReaderBookmarkRibbonFrame {
+    return this.currentBookmarkRibbonFrame(_renderRevision) ?? readerBookmarkRibbonRest(this.pageBookmarkFeedbackFilled());
+  }
+
+  private bookmarkHintVisibleAlpha(_renderRevision: number): number {
+    const alpha = this.bookmarkPullHintOpacity;
+    if (this.bookmarkUnavailableHintCurrent(_renderRevision)) return 1;
+    return this.bookmarkPreviewOwner === this.bookmarkFeedbackOwnerKey() ? alpha : 0;
+  }
+
+  private bookmarkHintVisibleHeight(_renderRevision: number): number {
+    if (this.reduceMotion || this.bookmarkUnavailableHintCurrent(_renderRevision)) return this.bookmarkHintHeight;
+    return Math.max(0, Math.min(this.bookmarkHintHeight, this.bookmarkHintBodyTop + this.bookmarkPageOffsetY - this.bookmarkHintY));
   }
 
   @Builder
   private bookmarkCornerFeedback() {
-    // Paged reading paints the marker inside each physical page slot. Keep the
-    // stationary Host actor only for continuous reading, whose List has no
-    // physical page slot to inherit the marker transform.
-    if (this.readerSettingsSnapshot.navigationMode === 'continuous') {
-    // A dedicated top-info slot shares the page chrome's measured clock,
-    // safe/cutout geometry. Never overlay a hint on the title or the clock.
-    // Keep one native image actor. Its source, visibility and opacity update
-    // together; a page change must not depend on a separate If removing the
-    // old image after its resource observer has already painted an outline.
-    Image(this.pageBookmarkFeedbackMode(this.pageTurnRenderRevision) === 'filled' ? (readerAppearanceChromeTone(this.visibleReadingAppearance().activeTheme) === 'light' ?
-      $r('app.media.reader_page_bookmark_filled_theme_night') : $r('app.media.reader_page_bookmark_filled')) :
-      (readerAppearanceChromeTone(this.visibleReadingAppearance().activeTheme) === 'light' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') :
-        $r('app.media.reader_directory_marker_bookmark_active')))
-      .width(this.bookmarkCornerLayout().topAccessoryWidth)
-      .height(this.bookmarkCornerLayout().topAccessoryHeight)
-      .position({ x: this.bookmarkCornerLayout().topAccessoryX, y: this.bookmarkCornerLayout().topAccessoryY })
-      .visibility(this.controlVisible() || this.controlObscured ||
-        this.pageBookmarkFeedbackMode(this.pageTurnRenderRevision) === 'hidden' ? Visibility.Hidden : Visibility.Visible)
-      .opacity(this.controlVisible() || this.controlObscured ||
-        this.pageBookmarkFeedbackMode(this.pageTurnRenderRevision) === 'hidden' ? 0 :
-          this.bookmarkPageOffsetY > 0 && !this.bookmarkPreviewChanged ? 0.35 : 1)
-      .accessibilityText(this.bookmarkFeedbackLabel())
-      .zIndex(9).hitTestBehavior(HitTestMode.None);
-    }
-    // Gesture instructions use viewport coordinates; only the permanent page
-    // marker belongs to the moving sheet. Share this fixed hint across modes.
     if (!this.controlVisible() && !this.controlObscured &&
-      this.bookmarkFeedbackHintLabel(this.pageTurnRenderRevision).length > 0 && this.bookmarkFeedbackHintFits()) {
-      Row({ space: 8 }) {
-        if (this.bookmarkPageOffsetY > 0 && this.bookmarkUnavailableMessage.length === 0) {
-          Text('↓').fontFamily(MESSAGE_GESTURE_ICON.fontFamily).fontSize(MESSAGE_GESTURE_ICON.fontSizeFp)
-            .lineHeight(MESSAGE_GESTURE_ICON.lineHeightFp as number)
-            .minFontScale(1).maxFontScale(1).accessibilityLevel('no')
-            .fontColor(readerThemeDefinition(this.visibleReadingAppearance().activeTheme).chromeMeta)
-            .rotate({ angle: this.bookmarkPreviewChanged ? 180 : 0 });
-        }
-        Text(this.bookmarkFeedbackHintLabel(this.pageTurnRenderRevision))
+      readerRenderStageKind(this.readerSettingsSnapshot.navigationMode, this.hasContinuousRenderContent()) === 'continuous') {
+      // The paged actor belongs to its physical slot. Only the List needs a host marker.
+      ReaderPageBookmarkRibbon({
+        x: this.bookmarkRibbonX(this.bookmarkCornerLayout()),
+        paperTop: this.bookmarkRibbonPaperTop(this.readingLayout()),
+        offsetY: this.continuousBookmarkRibbonFrame(this.pageTurnRenderRevision).y,
+        fillHeight: this.continuousBookmarkRibbonFrame(this.pageTurnRenderRevision).fillHeight,
+        alpha: this.continuousBookmarkRibbonFrame(this.pageTurnRenderRevision).opacity,
+        bookmarked: this.pageBookmarkFeedbackFilled(),
+        night: readerAppearanceChromeTone(this.visibleReadingAppearance().activeTheme) === 'light',
+      });
+    }
+    // Retain the same hint node through drag and rebound so Alpha can interpolate.
+    if (!this.controlVisible() && !this.controlObscured) {
+      Row() {
+        Text(this.bookmarkUnavailableHintCurrent(this.pageTurnRenderRevision) ? this.bookmarkUnavailableMessage :
+          this.bookmarkFeedbackLabel())
           .fontFamily(MESSAGE_META.fontFamily).fontWeight(MESSAGE_META.fontWeight)
           .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
           .fontColor(readerThemeDefinition(this.visibleReadingAppearance().activeTheme).chromeMeta)
           .textAlign(TextAlign.Center).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-      }.width(this.bookmarkHintWidth).height(this.bookmarkHintHeight).justifyContent(FlexAlign.Center)
+      }
+        .width(this.bookmarkHintWidth).height(this.bookmarkHintVisibleHeight(this.pageTurnRenderRevision)).justifyContent(FlexAlign.Center)
         .position({ x: this.bookmarkHintX, y: this.bookmarkHintY })
+        .opacity(this.bookmarkHintVisibleAlpha(this.pageTurnRenderRevision))
+        .accessibilityLevel(this.bookmarkHintVisibleAlpha(this.pageTurnRenderRevision) > 0 ? 'auto' : 'no-hide-descendants')
         .clip(true).zIndex(9).hitTestBehavior(HitTestMode.None);
     }
   }
@@ -14336,6 +14380,8 @@ export struct ReadingExperience {
     this.bookTurnMotion = undefined;
     this.bookTurnAwaitingSlotCommit = false;
     this.bookmarkPageOffsetY = 0;
+    this.bookmarkRibbonFrame = undefined;
+    this.bookmarkPullHintOpacity = 0;
     this.bookmarkPreviewChanged = false;
     if (this.bookmarkMutationConfirmed) this.reconcilePageBookmarkFeedback();
     this.recoverBookTurnSurfaceIfIdle();

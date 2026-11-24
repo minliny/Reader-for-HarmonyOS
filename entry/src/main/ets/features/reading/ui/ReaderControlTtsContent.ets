@@ -1090,9 +1090,9 @@ export struct ReaderControlTtsContent {
 
   @Builder
   private waveform() {
-    ReaderTtsWaveform({ playing: this.isActivelySpeaking(), appThemeScheme: this.appScheme,
+    ReaderTtsWaveform({ playing: this.state.status === 'playing', appThemeScheme: this.appScheme,
       frozen: this.sourceOnly !== 'none', frozenSample: this.frozenWaveformSample, reduceMotion: this.reduceMotion,
-      active: this.waveformActive })
+      active: this.waveformActive && this.currentInputEnabled() && !this.sourceDetached })
       .width(this.frame().waveform.width).height(this.frame().waveform.height)
       .position({ x: this.frame().waveform.x, y: this.frame().waveform.y })
       .opacity(this.frame().waveform.opacity).hitTestBehavior(HitTestMode.None).accessibilityLevel('no');

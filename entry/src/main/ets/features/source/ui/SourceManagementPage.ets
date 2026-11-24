@@ -28,7 +28,7 @@ import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { ReaderRecoveryNotice, type ReaderRecoveryBodyPresentation, type ReaderRecoveryTextAction } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
-import { TYPE_FORM_COMPACT_ACTION, TYPE_FORM_HINT, TYPE_FORM_LABEL_ACTION, TYPE_SEARCH_RESULT_INTRO, TYPE_SOURCE_MANAGEMENT_COUNT, TYPE_SOURCE_MANAGEMENT_STATUS, TYPE_SOURCE_MANAGEMENT_ROW_TITLE, TYPE_SOURCE_STATE_TITLE } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_FORM_COMPACT_ACTION, TYPE_FORM_HINT, TYPE_SELECT_SOURCE_GROUP_VALUE, TYPE_SEARCH_RESULT_INTRO, TYPE_SOURCE_MANAGEMENT_COUNT, TYPE_SOURCE_MANAGEMENT_STATUS, TYPE_SOURCE_MANAGEMENT_ROW_TITLE, TYPE_SOURCE_STATE_TITLE } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
@@ -78,10 +78,7 @@ import {
   TOK_SURFACE_SOLID,
 } from '../../../ui/foundation/ReaderTokens';
 
-const GROUP_ICON_WIDTH = 15;
-const GROUP_LABEL_GAP = 12;
-const GROUP_TRIGGER_GAP = 22;
-const SOURCE_TEXT_ROLES = ['stats', 'status/all', 'category/all', 'group/label', 'row/title',
+const SOURCE_TEXT_ROLES = ['stats', 'status/all', 'category/all', 'row/title',
   'row/domain', 'row/detect', 'footer/manage', 'footer/add'];
 const SOURCE_RESERVED_TEXT_ROLES = ['row/domain', 'row/detect'];
 let sourceTemporaryGeneration: number = 0;
@@ -671,7 +668,7 @@ export struct SourceManagementPage {
         value: this.groupValue,
         options: this.visibleGroupOptions(),
         variant: 'sourceGroup',
-        controlWidth: this.groupClosingAnchor?.width ?? this.groupTriggerWidth,
+        controlWidth: Math.max(148, this.groupClosingAnchor?.width ?? this.groupTriggerWidth),
         menuHeaderHeight: this.groupClosingAnchor?.height ?? this.groupTriggerHeight,
         emptyOptionsText: '没有匹配的分组',
         menuHeader: (): void => { this.groupSearchField(this.groupSelectionId); },
@@ -747,12 +744,11 @@ export struct SourceManagementPage {
       .layoutWeight(1)
       .height(this.layoutBudget().filterHeight);
 
-      ForEach([this.temporaryBackIdentity], (identity: string): void => { this.importAction(identity); },
-        (identity: string): string => identity);
+      this.groupFilter();
     }
     .id('reader-source-search')
     .width(this.contentFrame().width)
-    .height(this.layoutBudget().filterHeight)
+    .constraintSize({ minHeight: this.layoutBudget().filterHeight })
     .alignItems(VerticalAlign.Center)
     .margin({ top: TOK_SPACE_XS });
   }
@@ -1395,23 +1391,15 @@ export struct SourceManagementPage {
 
   @Builder
   private filterArea() {
-    if (this.expandedLayout) {
-      Row({ space: 20 }) {
-        this.statusFilter();
-        this.groupFilter();
-      }
-      .width(this.contentFrame().width)
-      .constraintSize({ minHeight: 36 })
-      .alignItems(VerticalAlign.Top)
-      .margin({ top: TOK_SPACE_XS });
-    } else {
-      Column({ space: TOK_SPACE_XS }) {
-        this.statusFilter();
-        this.groupFilter();
-      }
-      .width(this.contentFrame().width)
-      .margin({ top: TOK_SPACE_XS });
+    Row({ space: TOK_SPACE_XS }) {
+      this.statusFilter();
+      ForEach([this.temporaryBackIdentity], (identity: string): void => { this.importAction(identity); },
+        (identity: string): string => identity);
     }
+    .width(this.contentFrame().width)
+    .constraintSize({ minHeight: this.layoutBudget().filterHeight })
+    .alignItems(VerticalAlign.Center)
+    .margin({ top: TOK_SPACE_XS });
   }
 
   @Builder
@@ -1451,9 +1439,9 @@ export struct SourceManagementPage {
     Scroll() {
     Row({ space: TOK_SPACE_XS }) {
       this.chip('全部', 'all', 58, true);
-      this.chip('启用', 'enabled', 58, true);
+      this.chip('启用', 'enabled', 72, true, '已启用');
       this.chip('异常', 'error', 58, true);
-      this.chip('未检测', 'unchecked', 72, true);
+      this.chip('未检测', 'unchecked', 72, true, '未测速');
       // 原稿保留该视觉位，但没有稳定业务定义；禁用比伪造筛选语义更诚实。
       this.chip('自定义', 'custom', 72, false);
     }
@@ -1470,13 +1458,13 @@ export struct SourceManagementPage {
   }
 
   @Builder
-  private chip(label: string, verificationId: string, width: number, enabled: boolean) {
+  private chip(label: string, verificationId: string, width: number, enabled: boolean, title: string = label) {
     ReaderButton({ scheme: this.appThemeScheme, specId: width === 58 ? 'source-management-status-compact' : 'source-management-status-wide',
       onFocused: (): void => this.cancelToolsReturnFocus('other-focus'),
-      label, primary: enabled && this.statusValue === label, actionEnabled: enabled, availableWidth: this.filterControlWidth(),
+      label: title, primary: enabled && this.statusValue === label, actionEnabled: enabled, availableWidth: this.filterControlWidth(),
       textLayoutOptions: verificationId !== 'all' && this.verificationFilterTextMetrics?.has('status') ?
-        this.filterTextLayoutOptions('status', verificationId, label) : this.textLayoutOptions?.(`chip/${label}`, undefined, label),
-      selectionSemantic: true, actionAccessibilityLabel: `书源状态，${label}${enabled ? '' : '，暂不可用'}`,
+        this.filterTextLayoutOptions('status', verificationId, title) : this.textLayoutOptions?.(`chip/${label}`, undefined, title),
+      selectionSemantic: true, actionAccessibilityLabel: `书源状态，${title}${enabled ? '' : '，暂不可用'}`,
       onAction: (): void => {
         if (!enabled || !this.managementInputIsCurrent() || this.groupOpen) return;
         this.cancelToolsReturnFocus('selection');
@@ -1493,16 +1481,6 @@ export struct SourceManagementPage {
   @Builder
   private groupFilter() {
     Row() {
-      Image((this.appThemeScheme === 'night' ? $r('app.media.source_group_folder_theme_night') : $r('app.media.source_group_folder'))).width(GROUP_ICON_WIDTH).height(15);
-      Text('分组', this.verificationTextOptions?.('group/label', undefined, '分组'))
-        .id(this.verificationTextOptions === undefined ? '' : 'reader-source-text-group-label')
-        .margin({ left: GROUP_LABEL_GAP })
-        .width(this.groupLabelWidth())
-        .fontFamily(TYPE_FORM_LABEL_ACTION.fontFamily)
-        .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
-        .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .maxLines(1);
       ReaderSelect({
         value: this.groupValue,
         options: this.groupOptions(),
@@ -1515,12 +1493,11 @@ export struct SourceManagementPage {
       })
       .id('reader-source-group-trigger')
       .visibility(this.groupOpen ? Visibility.Hidden : Visibility.Visible)
-      .margin({ left: GROUP_TRIGGER_GAP })
       .onAreaChange((_oldValue: Area, newValue: Area): void => this.recordGroupTrigger(newValue));
     }
     .id('reader-source-group-filter')
-    .width(this.filterControlWidth())
-    .constraintSize({ minHeight: 36 })
+    .width(this.groupSelectWidth())
+    .constraintSize({ minHeight: 44 })
     .alignItems(VerticalAlign.Center);
   }
 
@@ -2657,25 +2634,19 @@ export struct SourceManagementPage {
   }
 
   private filterControlWidth(): number {
-    if (!this.expandedLayout) {
-      return this.contentFrame().width;
-    }
-    return Math.max(0, (this.contentFrame().width - 20) / 2);
+    return Math.max(0, this.contentFrame().width - 44 - TOK_SPACE_XS);
   }
-
-
 
   private groupSelectWidth(): number {
-    return Math.max(0, this.filterControlWidth() - GROUP_ICON_WIDTH - GROUP_LABEL_GAP - this.groupLabelWidth() - GROUP_TRIGGER_GAP);
-  }
-
-  private groupLabelWidth(): number {
-    const style = TYPE_FORM_LABEL_ACTION;
-    const fallback = Math.ceil(style.fontSizeFp * 2 * this.fontScale());
+    const available = this.contentFrame().width;
+    const text = this.groupValue.length > 4 ? this.groupValue : '全部分组';
+    const style = TYPE_SELECT_SOURCE_GROUP_VALUE;
+    const fallback = Math.ceil(style.fontSizeFp * text.length * this.fontScale());
     const context = this.getUIContext();
-    const width = context.px2vp(context.getMeasureUtils().measureText({ textContent: '分组',
+    const measured = context.px2vp(context.getMeasureUtils().measureText({ textContent: text,
       fontSize: style.fontSizeFp, fontFamily: style.fontFamily, fontWeight: style.fontWeight }));
-    return Number.isFinite(width) && width > 0 ? Math.ceil(width) : fallback;
+    const label = Number.isFinite(measured) && measured > 0 ? Math.ceil(measured) : fallback;
+    return Math.min(Math.max(96, label + 42), Math.max(0, available * 0.55));
   }
 
   private numericAreaLength(value: Length | undefined): number {

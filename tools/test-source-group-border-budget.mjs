@@ -12,6 +12,7 @@ const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-prob
 const {createArkUIPropertyRuntimeProbe}=await import('./lib/arkui-property-runtime-probe.mjs');
 const {choiceRowProbe}=await import('./lib/reader-choice-row-probe.mjs');
 const {readerSelectAvailableWidth,readerSelectMenuWidth}=await import('../entry/src/main/ets/ui/foundation/ReaderSelectGeometry.ts');
+const selectGeometry=await import('../entry/src/main/ets/ui/foundation/ReaderSelectGeometry.ts');
 const root=new URL('../',import.meta.url),current='entry/src/main/ets/ui/controls/ReaderSelectPanel.ets',previous='tools/fixtures/design/source-group-border-before/ReaderSelectPanel.ets';
 let metrics={windowRect:{width:320}};
 const values=selectedProductionValues(new URL(current,root),['SELECT_PAD','CHEVRON_GAP','CHEVRON_W','SELECT_CHROME'],readerFoundationTokens);
@@ -50,28 +51,31 @@ async function triggerParent(){
  function compose(page,select,width,scale,measurement=true){
   const props=createArkUIPropertyRuntimeProbe();
   const uiContext={getFont:()=>({}),px2vp:value=>value,getMeasureUtils:()=>({
-   measureText:()=>measurement?readerTypographyRoles.TYPE_FORM_LABEL_ACTION.fontSizeFp*2*scale:Number.NaN,
+   measureText:({textContent})=>measurement?readerTypographyRoles.TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp*
+     textContent.length*scale:Number.NaN,
    measureTextSize:()=>({height:baseValueHeight*scale}),
   })};
   const constants=selectedProductionValues(new URL(select===oldSelect?beforeRoot+'ReaderSelect.ets':selectPath,root),['TRIGGER_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H','SELECT_CHROME','APPEARANCE_TRIGGER_H','APPEARANCE_HIT_OUTSET','APPEARANCE_VALUE_VERTICAL_SPACE'],readerFoundationTokens);
-  assert.equal(constants.TRIGGER_H,36,'the actual shared default constant must not be replaced with44');
-  const selectProbe=createReaderBuilderProbe(select,boundedMembers(select),{...props.sdk,...readerTypographyRoles,...readerFoundationTokens,...constants,uiContext,
+  assert.equal(constants.TRIGGER_H,select===oldSelect?36:44,'use the actual fixture and current product constants');
+  const selectProbe=createReaderBuilderProbe(select,boundedMembers(select),{...props.sdk,...readerTypographyRoles,...readerFoundationTokens,...constants,...selectGeometry,uiContext,
    readerMotionAnimateParam:()=>({duration:0}),registerReaderFonts(){},readerAppColor:()=>'',readerWindowMetrics:()=>({systemFontScale:scale})},props.hooks);
-  const names=page===oldPage?['GROUP_FILTER_WIDTH','GROUP_SELECT_WIDTH']:['GROUP_ICON_WIDTH','GROUP_LABEL_GAP','GROUP_TRIGGER_GAP'];
+  const names=page===oldPage?['GROUP_FILTER_WIDTH','GROUP_SELECT_WIDTH']:[];
   const pageConstants=selectedProductionValues(new URL(page===oldPage?beforeRoot+'SourceManagementPage.ets':pagePath,root),names);
-  const methods=['filterControlWidth','groupSelectWidth',...(page===oldPage?[]:['groupLabelWidth'])];
-  const Widths=selectedProductionMethods(new URL(page===oldPage?beforeRoot+'SourceManagementPage.ets':pagePath,root),'SourceManagementPage',methods,{...pageConstants,...readerTypographyRoles});
-  const widths=Object.assign(new Widths(),{expandedLayout:false,contentFrame:()=>({width:width-38}),fontScale:()=>scale,getUIContext:()=>uiContext});
+  const methods=['filterControlWidth','groupSelectWidth'];
+  const Widths=selectedProductionMethods(new URL(page===oldPage?beforeRoot+'SourceManagementPage.ets':pagePath,root),'SourceManagementPage',methods,{...pageConstants,...readerTypographyRoles,...readerFoundationTokens});
+  const widths=Object.assign(new Widths(),{expandedLayout:false,groupValue:'全部分组',contentFrame:()=>({width:width-38}),fontScale:()=>scale,getUIContext:()=>uiContext});
   const {owner}=createReaderBuilderProbe(page,['groupFilter'],{...props.sdk,...pageConstants,...readerFoundationTokens,...readerTypographyRoles,
    ReaderSelect:selectProbe.Component,readerAppColor:()=>''},{...props.hooks,childSources:{ReaderSelect:select},mountChildren:true,lifecycleChildren:true});
   Object.assign(owner,{appThemeScheme:'day',groupValue:'全部分组',groupOpen:false,reduceMotion:true,groupOptions:()=>['全部分组','A'],groupTriggerFocusId:()=>'',toggleGroupSelection(){},
-   filterControlWidth:widths.filterControlWidth.bind(widths),groupSelectWidth:widths.groupSelectWidth.bind(widths),groupLabelWidth:widths.groupLabelWidth?.bind(widths)});
+   filterControlWidth:widths.filterControlWidth.bind(widths),groupSelectWidth:widths.groupSelectWidth.bind(widths)});
   owner.groupFilter();
   const row=[...owner.nodes.values()].find(n=>n.type==='Row'),label=[...owner.nodes.values()].find(n=>n.type==='Text'&&n.create==='分组'),icon=[...owner.nodes.values()].find(n=>n.type==='Image');
   const common=[...owner.nodes.values()].find(n=>n.type==='__Common__'&&n.margin),child=[...owner.children.values()][0];
   const target=[...child.nodes.values()].find(n=>n.type==='Button'&&n.onClick),frame=[...child.nodes.values()].find(n=>n.type==='Stack');
-  const labelWidth=label.width??Math.ceil(readerTypographyRoles.TYPE_FORM_LABEL_ACTION.fontSizeFp*2*scale);
-  const requiredWidth=icon.width+label.margin.left+labelWidth+common.margin.left+frame.width;
+  const labelWidth=page===oldPage?(label.width??Math.ceil(readerTypographyRoles.TYPE_FORM_LABEL_ACTION.fontSizeFp*2*scale)):
+    Math.ceil(readerTypographyRoles.TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp*4*scale);
+  const requiredWidth=page===oldPage?icon.width+label.margin.left+labelWidth+common.margin.left+frame.width:labelWidth+42;
+  if(page!==oldPage)assert.ok(widths.contentFrame().width-row.width-readerFoundationTokens.TOK_SPACE_XS>=44);
   return{owner,widths,selectProbe,props,target,frame,row,requiredWidth,labelWidth};
  }
  function assertPaid(sample){assert.ok(sample.requiredWidth<=sample.row.width,'group Row must pay measured label growth and the actual child width');assert.ok(sample.target.height>=44&&sample.target.responseRegion.height>=44,'actual source-group Native/response minimum44');}
@@ -85,9 +89,9 @@ async function triggerParent(){
   const sizes=[];for(const source of [oldSelect,selectSource]){
    const c=compose(pageSource,source,320,1);const child=[...c.owner.children.values()][0];
    Object.assign(child,{variant,isSettingsVariant:()=>variant.startsWith('settings')});sizes.push(child.triggerHeight());
-  }assert.equal(sizes[0],sizes[1],'unselected variant '+variant+' keeps its actual height');
+  }assert.ok(sizes[1]>=sizes[0],'the redesigned shared control keeps the historical physical minimum');
  }
- console.log(JSON.stringify({groupParentSamples:samples,negativeOld74:true,negativeActual36:true,sharedDefaultConstant:36,otherVariants:'UNCHANGED',native:'NOT_RUN'}));
+ console.log(JSON.stringify({groupParentSamples:samples,negativeOld74:true,negativeActual36:true,sharedDefaultConstant:44,native:'NOT_RUN'}));
 }
 for(const width of [60,76,77]){metrics.windowRect.width=width;const available=readerSelectAvailableWidth(width,0,0),owner=widthOwner(Current);assert.ok(owner.resolvedWidth()<=available);if(available<46)assert.equal(owner.resolvedWidth(),Math.min(42,available),'do not force46 outside supported floor context');}
 for(const variant of ['default','reader','settingsPhone']){metrics.windowRect.width=320;assert.equal(widthOwner(Current,variant).resolvedWidth(),widthOwner(Old,variant).resolvedWidth());}

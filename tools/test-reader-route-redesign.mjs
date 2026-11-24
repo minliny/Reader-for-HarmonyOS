@@ -86,9 +86,12 @@ function settingsToolsReturn() {
   const navigation = new ReaderNavigation();
   const advance = () => navigation.advance();
   assert.equal(navigation.openSettingsHome().route, 'settings');
+  assert.equal(navigation.settingsPane(), 'general');
   assert.equal(navigation.routeMotion(), 'tab');
   assert.equal(navigation.openSourceManagement('settings', '', advance)?.route, 'source');
+  assert.equal(navigation.settingsPane(), 'source');
   assert.equal(navigation.openSourceTools(advance)?.route, 'sourceTools');
+  assert.equal(navigation.settingsPane(), 'source');
   assert.equal(navigation.routeMotion(), 'push');
   let dismissed = 0;
   const covered = navigation.snapshot();
@@ -107,8 +110,25 @@ function settingsToolsReturn() {
     assert.equal(navigation.closeSourceManagement(false, advance)?.snapshot.route, 'settings');
   }), true);
   assert.equal(navigation.routeMotion(), 'pop');
+  assert.equal(navigation.settingsPane(), 'general');
+  assert.equal(navigation.openBookshelfSettings(advance)?.route, 'bookshelfSettings');
+  assert.equal(navigation.settingsPane(), 'bookshelfSettings');
+  navigation.backFromBookshelfSettings(() => navigation.show('settings'), assert.fail);
+  const intent = { kind: 'fresh', detailKey: '' };
+  assert.equal(navigation.openDownloads(intent, () => undefined, advance)?.route, 'downloads');
+  assert.equal(navigation.settingsPane(), 'downloads');
+  navigation.show('settings');
   navigation.returnToBookshelf(undefined, advance);
   assert.equal(navigation.routeMotion(), 'tab');
+  assert.equal(navigation.openBookshelfSettings(advance)?.route, 'bookshelfSettings');
+  assert.equal(navigation.settingsPane(), undefined);
+  navigation.backFromBookshelfSettings(assert.fail, () => navigation.show('bookshelf'));
+  assert.equal(navigation.openDownloads(intent, () => undefined, advance)?.route, 'downloads');
+  assert.equal(navigation.settingsPane(), undefined);
+  navigation.show('bookshelf');
+  navigation.openLibrarySearch(advance, () => true);
+  navigation.openSourceManagement('search', 'fixture', advance);
+  assert.equal(navigation.settingsPane(), undefined, 'the search-owned source journey stays standalone');
 }
 
 function routeTransitionEffects() {

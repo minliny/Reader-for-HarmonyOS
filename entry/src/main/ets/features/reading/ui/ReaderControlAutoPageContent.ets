@@ -4,6 +4,7 @@ import { readerControlModuleProfileMatches, readerControlModuleFactsMatch, type 
 import { TYPE_READER_AUTO_SPEED_LABEL_FULL, TYPE_READER_AUTO_SPEED_LABEL_QUICK, TYPE_READER_AUTO_SPEED_VALUE_FULL, TYPE_READER_AUTO_SPEED_VALUE_QUICK, TYPE_READER_AUTO_PAGE_RETAINED_CHAPTER_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_FOLLOW_HIGHLIGHT_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_STOP_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_SECONDARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_TERTIARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_META } from '../../../ui/foundation/ReaderTypography';
 
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderControlQuickBack } from './ReaderControlQuickBack';
@@ -52,6 +53,8 @@ class ReaderAutoPageProfileFrame extends FrameCallback {
 export struct ReaderControlAutoPageContent {
   @StorageLink('readerAppScheme') @Watch('reportMorphActor') private appScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppForeground') @Watch('syncRunningPulse') private foreground: boolean = true;
+  @StorageProp('readerReduceMotion') @Watch('syncRunningPulse') private reducedMotion: boolean = false;
 
   // Pure retained source projections have no Scroll, IDs, callbacks or modal hosts.
   @Prop sourceOnly: 'none' | 'quick' | 'full' = 'none';
@@ -113,6 +116,7 @@ export struct ReaderControlAutoPageContent {
   }
 
   private onSourceDetachedChanged(): void {
+    this.syncRunningPulse();
     if (this.sourceOnly !== 'none' || this.sourceDetached) return;
     const measured = this.form === 'full' ? this.fullMeasurement : this.quickMeasurement;
     if (measured === undefined || measured.width <= 0 || measured.height <= 0) return;
@@ -133,7 +137,7 @@ export struct ReaderControlAutoPageContent {
   @Prop @Watch('onMotionChanged') interactionEnabled: boolean = true;
   inputCurrent?: () => boolean;
   @Prop @Watch('reportMorphActor') form: ReaderControlForm = 'quick';
-  @Prop @Watch('publishMinimumMeasurer') status: ReaderAutoPageStatus = 'stopped';
+  @Prop @Watch('onStatusChanged') status: ReaderAutoPageStatus = 'stopped';
   @Prop @Watch('publishMinimumMeasurer') timerSummaryText: string = '15:00';
   @Prop timerMinutes: number = 15;
   @Prop timerSeconds: number = 0;
@@ -169,6 +173,8 @@ export struct ReaderControlAutoPageContent {
   private cachedWidth: number = -1;
   private cachedMinimumKey: string = '';
   private cachedFrame: ReaderControlAutoPageFrame = sampleReaderControlAutoPage(0, 286);
+  @State private runningPulseHigh: boolean = false;
+  private runningPulseVisible: boolean = false;
 
   private p(): number { return readerControlUnit(this.motionProgress); }
   private frame(): ReaderControlAutoPageFrame {
@@ -203,10 +209,25 @@ export struct ReaderControlAutoPageContent {
     this.adoptedPreparedKey = '';
 
     this.minimumMounted = false;
+    this.syncRunningPulse();
     this.minimumMeasurer = undefined;
     this.minimumOpening += 1;
     if (this.publishedMinimumIdentity.length > 0) this.onMinimumMeasurerReady(this.publishedMinimumIdentity, undefined);
     this.minimumProfiles.clear();
+  }
+
+  private onStatusChanged(): void {
+    this.publishMinimumMeasurer();
+    this.syncRunningPulse();
+  }
+
+  private syncRunningPulse(): void {
+    const running = this.minimumMounted && this.runningPulseVisible && this.foreground && !this.reducedMotion &&
+      this.sourceOnly === 'none' && !this.sourceDetached && this.status === 'running' && this.currentInputEnabled();
+    if (running === this.runningPulseHigh) return;
+    const timing = motionAnimateParam('reader.autoPage.pulse.half');
+    this.getUIContext().animateTo(running ? { duration: timing.duration, curve: timing.curve, iterations: -1,
+      playMode: PlayMode.Alternate } : { duration: 0 }, (): void => { this.runningPulseHigh = running; });
   }
 
   private publishMinimumMeasurer(): void {
@@ -328,6 +349,7 @@ export struct ReaderControlAutoPageContent {
     return profile.controlContentHeight;
   }
   private onMotionChanged(): void {
+    this.syncRunningPulse();
     if (this.sourceOnly !== 'none') return;
     const p = this.p();
     if (this.minimumLastProgress === 0 && p > 0 && this.minimumQuickScrollOffset > 0)
@@ -595,6 +617,17 @@ export struct ReaderControlAutoPageContent {
     Row() {
       Text(kind === 'control' ? '自动翻页控制' : '详细配置').layoutWeight(1).fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE.fontFamily).fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE.fontWeight)
         .fontSize(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1);
+      if (kind === 'control') {
+        Circle().width(6).height(6).margin({ right: 5 })
+          .fill(readerAppColor(this.status === 'running' ? 'TOK_READ_PRIMARY' : 'TOK_READ_MUTED', this.appScheme))
+          .scale({ x: this.runningPulseHigh ? 1.05 : .9, y: this.runningPulseHigh ? 1.05 : .9 })
+          .opacity(this.status === 'stopped' ? 0 : this.runningPulseHigh || this.reducedMotion ? 1 : .6)
+          .accessibilityLevel('no').hitTestBehavior(HitTestMode.None)
+          .onVisibleAreaChange([0, .01, 1], (visible: boolean, ratio: number): void => {
+            this.runningPulseVisible = visible && ratio > 0;
+            this.syncRunningPulse();
+          });
+      }
       Text(this.headerMeta(kind)).fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META.fontFamily as string).fontSize(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme));
     }.width(this.headerActor(kind).width).height(this.headerActor(kind).height).alignItems(VerticalAlign.Center)
       .position({ x: this.headerActor(kind).x, y: this.headerActor(kind).y })

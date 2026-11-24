@@ -5343,6 +5343,29 @@
       }
     },
     {
+      "caseId": "reading.control-direct-sheet-navigation",
+      "states": {
+        "reading-before": "reading.controls-hidden",
+        "open-state": "reading.controls-home",
+        "directory-open": "reading.directory-full-directory-list",
+        "directory-closed": "reading.controls-home",
+        "search-open": "reading.search-full",
+        "search-closed": "reading.controls-home",
+        "replace-open": "reading.replace-full",
+        "replace-closed": "reading.controls-home"
+      },
+      "actions": {
+        "reading-before": "enter-reading",
+        "open-state": "open",
+        "directory-open": "open-directory",
+        "directory-closed": "close-directory",
+        "search-open": "open-search",
+        "search-closed": "close-search",
+        "replace-open": "open-replace",
+        "replace-closed": "close-replace"
+      }
+    },
+    {
       "caseId": "reading.control-search-morph-back",
       "states": {
         "reading-before": "reading.controls-hidden",
@@ -6488,8 +6511,7 @@
       "states": {
         "reading-before": "reading.controls-hidden",
         "open-state": "reading.controls-home",
-        "enter-directory-state": "reading.directory-quick-directory-list",
-        "expand-state": "reading.directory-full-directory-list",
+        "enter-directory-state": "reading.directory-full-directory-list",
         "directory-editor-ime": "reading.directory-ime",
         "directory-editor-ime-hidden": "reading.directory-full-directory-list"
       },
@@ -6497,7 +6519,6 @@
         "reading-before": "enter-reading",
         "open-state": "open",
         "enter-directory-state": "enter-directory",
-        "expand-state": "expand",
         "directory-editor-ime": "focus-directory-editor",
         "directory-editor-ime-hidden": "directory-editor-back"
       }
@@ -6507,20 +6528,18 @@
       "states": {
         "reading-before": "reading.controls-hidden",
         "open-state": "reading.controls-home",
-        "enter-directory-state": "reading.directory-quick-directory-list",
-        "expand-state": "reading.directory-full-directory-list",
+        "enter-directory-state": "reading.directory-full-directory-list",
         "directory-editor-ime": "reading.directory-ime",
         "directory-editor-ime-hidden": "reading.directory-full-directory-list",
-        "directory-quick-state": "reading.directory-quick-directory-list"
+        "return-home-state": "reading.controls-home"
       },
       "actions": {
         "reading-before": "enter-reading",
         "open-state": "open",
         "enter-directory-state": "enter-directory",
-        "expand-state": "expand",
         "directory-editor-ime": "focus-directory-editor",
         "directory-editor-ime-hidden": "directory-editor-back",
-        "directory-quick-state": "directory-panel-back"
+        "return-home-state": "directory-panel-back"
       }
     },
     {
@@ -6566,8 +6585,7 @@
       "states": {
         "reading-before": "reading.controls-hidden",
         "open-state": "reading.controls-home",
-        "enter-directory-state": "reading.directory-quick-directory-list",
-        "expand-state": "reading.directory-full-directory-list",
+        "enter-directory-state": "reading.directory-full-directory-list",
         "directory-editor-ime": "reading.directory-ime",
         "directory-editor-ime-hidden": "reading.directory-full-directory-list",
         "selected-reading": "reading.controls-hidden"
@@ -6576,7 +6594,6 @@
         "reading-before": "enter-reading",
         "open-state": "open",
         "enter-directory-state": "enter-directory",
-        "expand-state": "expand",
         "directory-editor-ime": "focus-directory-editor",
         "directory-editor-ime-hidden": "directory-soft-ime-hide",
         "selected-reading": "select-directory-chapter"
@@ -6587,8 +6604,7 @@
       "states": {
         "reading-before": "reading.controls-hidden",
         "open-state": "reading.controls-home",
-        "enter-directory-state": "reading.directory-quick-directory-list",
-        "expand-state": "reading.directory-full-directory-list",
+        "enter-directory-state": "reading.directory-full-directory-list",
         "directory-editor-ime": "reading.directory-ime",
         "directory-editor-ime-hidden": "reading.directory-full-directory-list"
       },
@@ -6596,7 +6612,6 @@
         "reading-before": "enter-reading",
         "open-state": "open",
         "enter-directory-state": "enter-directory",
-        "expand-state": "expand",
         "directory-editor-ime": "focus-directory-editor",
         "directory-editor-ime-hidden": "directory-soft-ime-hide"
       }
@@ -6754,8 +6769,7 @@
       "states": {
         "reading-before": "reading.controls-hidden",
         "open-state": "reading.controls-home",
-        "enter-replace-state": "reading.replace-quick",
-        "expand-state": "reading.replace-full",
+        "enter-replace-state": "reading.replace-full",
         "open-layer-state": "reading.replace-overlay-open",
         "replace-editor-ime": "reading.replace-overlay-open",
         "replace-editor-ime-hidden": "reading.replace-overlay-open",
@@ -6765,7 +6779,6 @@
         "reading-before": "enter-reading",
         "open-state": "open",
         "enter-replace-state": "enter-replace",
-        "expand-state": "expand",
         "open-layer-state": "open-layer",
         "replace-editor-ime": "focus-replace-name",
         "replace-editor-ime-hidden": "replace-editor-ime-back",
@@ -6811,8 +6824,7 @@
       "states": {
         "reading-before": "reading.controls-hidden",
         "open-state": "reading.controls-home",
-        "enter-replace-state": "reading.replace-quick",
-        "expand-state": "reading.replace-full",
+        "enter-replace-state": "reading.replace-full",
         "open-layer-state": "reading.replace-overlay-open",
         "close-layer-state": "reading.replace-overlay-closed"
       },
@@ -6820,7 +6832,6 @@
         "reading-before": "enter-reading",
         "open-state": "open",
         "enter-replace-state": "enter-replace",
-        "expand-state": "expand",
         "open-layer-state": "open-layer",
         "close-layer-state": "close-layer"
       }
@@ -6830,8 +6841,7 @@
       "states": {
         "reading-before": "reading.controls-hidden",
         "open-state": "reading.controls-home",
-        "enter-search-state": "reading.search-quick",
-        "expand-state": "reading.search-full",
+        "enter-search-state": "reading.search-full",
         "editor-ime": "reading.search-ime",
         "editor-ime-hidden": "reading.search-full"
       },
@@ -6839,7 +6849,6 @@
         "reading-before": "enter-reading",
         "open-state": "open",
         "enter-search-state": "enter-search",
-        "expand-state": "expand",
         "editor-ime": "focus-editor",
         "editor-ime-hidden": "keyboard-back"
       }

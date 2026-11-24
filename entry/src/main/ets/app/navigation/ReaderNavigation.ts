@@ -225,6 +225,8 @@ export class ReaderReturnNavigation {
       detailReaderReturn: this.detailReturnRoute === 'reader' ? this.detailReaderReturn : undefined };
   }
 
+  downloadsFromSettings(): boolean { return this.download?.target === 'settings'; }
+
   requestDownloadsAfterExit(book: ShelfBook, context: ReaderReturnContext | undefined, lease: ReaderExitLease, detailKey: string): void {
     const pending = this.downloadsAfterReaderExit;
     if (pending?.readerIdentity === lease.readerIdentity && pending.detailKey === detailKey) return;
@@ -586,6 +588,15 @@ export class ReaderNavigation {
   }
 
   routeMotion(): ReaderRouteMotionKind { return this.lastRouteMotion; }
+
+  settingsPane(): 'general' | 'source' | 'bookshelfSettings' | 'downloads' | undefined {
+    const route = this.current.route;
+    if (route === 'settings') return 'general';
+    if ((route === 'source' || route === 'sourceTools') && this.returns.sourceOrigin().target === 'settings') return 'source';
+    if (route === 'bookshelfSettings' && this.bookshelfSettingsReturn === 'settings') return route;
+    if (route === 'downloads' && this.returns.downloadsFromSettings()) return route;
+    return undefined;
+  }
 
   retainsDetailDirectory(): boolean {
     const retained = this.returns.snapshot();

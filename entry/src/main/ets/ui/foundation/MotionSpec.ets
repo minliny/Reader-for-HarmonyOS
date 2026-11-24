@@ -5,7 +5,7 @@ import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_COLLAP
   READER_NAVIGATION_PILL_MS, READER_SHELF_REFLOW_MS, READER_SHELF_STAGGER_MS, READER_SHELF_STAGGER_CAP_MS,
   READER_SHELF_FILTER_OPEN_MS, READER_SHELF_FILTER_CLOSE_MS,
   READER_SEARCH_OPEN_MS, READER_SEARCH_SUBMIT_MS, READER_SEARCH_BACK_MS, READER_SHEET_OPEN_MS,
-  READER_SHEET_CLOSE_MS, READER_SHEET_SCRIM_MS } from './ProductMotionTiming';
+  READER_SHEET_CLOSE_MS, READER_SHEET_SCRIM_MS, READER_BOOKMARK_RIBBON_RETURN_MS } from './ProductMotionTiming';
 import { DIRECTORY_CHROME_VISUAL as MANGA_DIRECTORY_VISUAL } from './ReaderDirectoryChromeVisual';
 // ----------------------------------------------------------------------------
 // MotionSpec — 动效注册表
@@ -94,6 +94,7 @@ const ENTRIES: MotionSpecEntry[] = [
   { id: 'reader.quick.promote', durationMs: 320, curve: Curve.EaseOut },
   { id: 'reader.module.switch', durationMs: READER_CONTROL_MODULE_SWITCH_MS, curve: STANDARD_CURVE },
   { id: 'reader.module.layer', durationMs: READER_CONTROL_LAYER_SWITCH_MS, curve: STANDARD_CURVE },
+  { id: 'reader.autoPage.pulse.half', durationMs: 650, curve: Curve.EaseInOut },
   // Product interaction supplement: the Figma font library defines a static
   // reorderable grid but has no authored keyframes. Keep the finger direct;
   // only neighbouring slots and the final settle use implicit animation.
@@ -123,9 +124,10 @@ const ENTRIES: MotionSpecEntry[] = [
   { id: 'reader.session.capsule.exit', durationMs: 200, curve: Curve.EaseOut },
   // Page turns use ReaderPageSettlementTimeline / Native motion directly.
   // Their distance/velocity clock must not acquire an implicit second animation.
-  // Frozen simulated-page contract: a released bookmark pull returns the
-  // translated page to its origin in one 160 ms compositor animation.
-  { id: 'reader.bookmark.rollback', durationMs: 160, curve: Curve.EaseOut },
+  // The paper, ribbon and hint return in the same transaction.
+  { id: 'reader.bookmark.rollback', durationMs: READER_BOOKMARK_RIBBON_RETURN_MS, curve: STANDARD_CURVE },
+  { id: 'reader.bookmark.pill.add', durationMs: 240, curve: STANDARD_CURVE },
+  { id: 'reader.bookmark.pill.remove', durationMs: 160, curve: STANDARD_CURVE },
   // Figma: Review · J1 `1506:8807`, production dropdown expansion.
   // Same panel grows 36→full height with a fixed top anchor; no fade/translate.
   { id: 'dropdown.menu.expand', durationMs: 160, curve: curves.cubicBezierCurve(0.16, 1, 0.3, 1) },
@@ -154,6 +156,7 @@ const ENTRIES: MotionSpecEntry[] = [
   { id: 'manga.directory.fold', durationMs: MANGA_DIRECTORY_VISUAL.foldDuration, curve: Curve.Ease },
   // Vendor pull-to-refresh reset settle.
   { id: 'manga.pullRefresh.reset', durationMs: 180, curve: Curve.EaseOut },
+  { id: 'manga.boundary.arrow', durationMs: 160, curve: STANDARD_CURVE },
   // Local import sheet handoff: spinner fade, shell resize, result reveal.
   { id: 'bookshelf.import.handoff.fade', durationMs: 120, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
   { id: 'bookshelf.import.handoff.resize', durationMs: 220, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },

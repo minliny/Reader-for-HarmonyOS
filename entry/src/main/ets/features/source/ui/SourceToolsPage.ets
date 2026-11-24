@@ -6,6 +6,7 @@ import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFee
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
+import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
 import { resolveReaderButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
 import { readerPageAreaLength, readerStandardPageSpec } from '../../../ui/layout/ReaderPageShell';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
@@ -37,7 +38,6 @@ import {
   TYPE_SOURCE_TOOLS_DESCRIPTION,
   TYPE_SOURCE_TOOLS_HINT,
   TYPE_SOURCE_TOOLS_INHERITED_META,
-  TYPE_SOURCE_TOOLS_NOTE,
   TYPE_SOURCE_TOOLS_STATUS,
   TYPE_SOURCE_TOOLS_URL,
 } from '../../../ui/foundation/ReaderTypography';
@@ -58,11 +58,12 @@ import {
   type SourceToolsSelection,
   type SourceToolsSnapshot,
   EMPTY_SOURCE_TOOLS_SNAPSHOT,
+  filterSourceTools,
   sourceEditorReadbackPending,
 } from '../application/SourceToolsOrchestrator';
 
 let nextSourceToolsBackIdentity: number = 0;
-type SourceToolsBatchAction = 'selectAll' | 'clear' | 'exportSelected' | 'check' | 'stop' | 'enable' | 'disable' | 'delete';
+type SourceToolsBatchAction = 'selectAll' | 'exportSelected' | 'check' | 'stop' | 'enable' | 'disable' | 'delete';
 type SourceToolsRowAction = 'select' | 'edit' | 'debug';
 type SourceToolsEditorAction = 'cancel' | 'save' | 'reconcile';
 
@@ -201,6 +202,9 @@ export struct SourceToolsPage {
   @State private batchFirstResultKey: string = '';
   @State private overlayHostWidth: number = 0;
   @State private recoveryLeadingReserve: number = 0;
+  @State private sourceQuery: string = '';
+  private sourceQueryRevision: number = 0;
+  private projectedSourceQuery: string = '';
 
   @Prop @Watch('onSnapshotChanged') snapshot: SourceToolsSnapshot = EMPTY_SOURCE_TOOLS_SNAPSHOT;
   isOpeningCurrent: (() => boolean) | undefined = undefined;
@@ -224,8 +228,7 @@ export struct SourceToolsPage {
   onCancelEditor: (revision: number) => void = (_revision: number): void => {};
   onDebugKeyChanged: (value: string) => void = (_value: string): void => {};
   onDebugSource: (sourceId: string) => void = (_sourceId: string): void => {};
-  onSelectAll: () => void = (): void => {};
-  onClearSelection: () => void = (): void => {};
+  onSetVisibleSelection: (query: string, selected: boolean) => void = (_query: string, _selected: boolean): void => {};
   onToggleSelection: (sourceId: string) => void = (_sourceId: string): void => {};
   private readonly sourceDataSource: SourceToolListDataSource = new SourceToolListDataSource();
   private readonly batchResultDataSource: SourceCheckResultDataSource = new SourceCheckResultDataSource();
@@ -389,10 +392,12 @@ export struct SourceToolsPage {
   @Builder
   private batchCard() {
     ReaderCard({ specId: 'editor-section' }) {
-      ReaderSectionHeading({ variant: 'tool-card', title: `批量管理（已选 ${this.snapshot.selectedSourceCount}/${this.snapshot.sources.length}）` });
+      ReaderSectionHeading({ variant: 'tool-card', title: `批量管理（已选 ${this.visibleSelectedIds().length}/${this.visibleSources().length}）` });
+      ForEach([this.temporaryBackIdentity], (opening: string): void => {
+        this.sourceSearch(opening);
+      }, (opening: string): string => opening);
       Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
         this.batchButton('selectAll');
-        this.batchButton('clear');
         this.batchButton('exportSelected');
       }
       .width('100%');
@@ -407,13 +412,34 @@ export struct SourceToolsPage {
         this.batchButton('delete');
       }
       .width('100%');
-      Text('批量操作复用 source.export / source.check.run / source.update / source.delete；删除由系统确认框二次确认。')
-        .width('100%')
-        .fontFamily(TYPE_SOURCE_TOOLS_NOTE.fontFamily as string)
-        .fontSize(TYPE_SOURCE_TOOLS_NOTE.fontSizeFp)
-        .lineHeight(TYPE_SOURCE_TOOLS_NOTE.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
+  }
+
+  @Builder
+  private sourceSearch(opening: string) {
+    ReaderSearchField({ editingHost: this.editingHost, variant: 'sourceManagement', mode: 'live', text: this.sourceQuery,
+      editingCurrent: (): boolean => this.toolsInputIsCurrent(opening),
+      placeholder: '搜索书源名称、域名或分组', accessibilityLabel: '筛选书源工具列表',
+      onTextChange: (query: string): void => this.changeSourceQuery(opening, query) });
+  }
+
+  private visibleSources(): BookSource[] { return filterSourceTools(this.snapshot.sources, this.sourceQuery); }
+
+  private visibleSelectedIds(): string[] {
+    const visible = new Set<string>(this.visibleSources().map((source: BookSource): string => source.sourceId));
+    return this.snapshot.selectedSourceIds.filter((sourceId: string): boolean => visible.has(sourceId));
+  }
+
+  private allVisibleSelected(): boolean {
+    const count = this.visibleSources().length;
+    return count > 0 && this.visibleSelectedIds().length === count;
+  }
+
+  private changeSourceQuery(opening: string, query: string): void {
+    if (!this.toolsInputIsCurrent(opening) || query === this.sourceQuery) return;
+    this.sourceQuery = query;
+    this.sourceQueryRevision += 1;
+    this.syncListDataSources();
   }
 
   @Builder
@@ -426,8 +452,7 @@ export struct SourceToolsPage {
 
   private batchButtonLabel(action: SourceToolsBatchAction): string {
     switch (action) {
-      case 'selectAll': return '全选';
-      case 'clear': return '清空';
+      case 'selectAll': return this.allVisibleSelected() ? '取消全选' : '全选';
       case 'exportSelected': return '导出所选';
       case 'check': return '检测所选';
       case 'stop': return this.snapshot.batchCheck.phase === 'stopping' ? '停止中…' : '停止检测';
@@ -441,8 +466,8 @@ export struct SourceToolsPage {
     const phase = this.snapshot.batchCheck.phase;
     if (action === 'stop') return phase === 'running';
     if (this.snapshot.busy) return false;
-    if (action === 'selectAll') return true;
-    if (this.snapshot.selectedSourceCount === 0) return false;
+    if (action === 'selectAll') return this.visibleSources().length > 0;
+    if (this.visibleSelectedIds().length === 0) return false;
     if (action === 'enable' || action === 'disable' || action === 'delete') return this.canWriteSources();
     return action !== 'check' || (phase !== 'running' && phase !== 'stopping');
   }
@@ -452,8 +477,7 @@ export struct SourceToolsPage {
     return (): void => {
       if (!this.toolsInputIsCurrent(opening) || !this.batchButtonEnabled(action)) return;
       switch (action) {
-        case 'selectAll': this.onSelectAll(); break;
-        case 'clear': this.onClearSelection(); break;
+        case 'selectAll': this.onSetVisibleSelection(this.sourceQuery, !this.allVisibleSelected()); break;
         case 'stop': this.onStopCheck(); break;
         case 'exportSelected':
           this.batchSelectionAction(this.batchControlsRenderKey(), (selection: SourceToolsSelection): void =>
@@ -475,8 +499,10 @@ export struct SourceToolsPage {
 
   private batchSelectionAction(key: string, action: (selection: SourceToolsSelection) => void): () => void {
     const opening = this.temporaryBackIdentity;
-    const selection: SourceToolsSelection = { sourceIds: this.snapshot.selectedSourceIds.slice(),
-      sourceListRevision: this.snapshot.sourceListRevision, selectionRevision: this.snapshot.selectionRevision };
+    const revision = this.sourceQueryRevision;
+    const selection: SourceToolsSelection = { sourceIds: this.visibleSelectedIds(), query: this.sourceQuery,
+      sourceListRevision: this.snapshot.sourceListRevision, selectionRevision: this.snapshot.selectionRevision,
+      isScopeCurrent: (): boolean => this.toolsInputIsCurrent(opening) && revision === this.sourceQueryRevision };
     return (): void => {
       if (selection.sourceIds.length === 0 || !this.toolsInputIsCurrent(opening) || key !== this.batchControlsRenderKey()) return;
       action(selection);
@@ -749,13 +775,13 @@ export struct SourceToolsPage {
   private exportCard() {
     ReaderCard({ specId: 'editor-section' }) {
       ReaderSectionHeading({ variant: 'tool-card', title: '书源导出' });
-      Text('Core 生成 Legado 兼容 JSON；Host 只通过系统文件选择器写入。')
+      Text('将书源备份为 Legado 兼容的 JSON 文件。')
         .width('100%')
         .fontFamily(TYPE_SOURCE_TOOLS_DESCRIPTION.fontFamily as string)
         .fontSize(TYPE_SOURCE_TOOLS_DESCRIPTION.fontSizeFp)
         .lineHeight(TYPE_SOURCE_TOOLS_DESCRIPTION.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-      this.fullWidthActionButton('导出全部书源', true,
+      this.fullWidthActionButton(`导出全部书源（${this.snapshot.sources.length}）`, true,
         (): void => this.confirmExportThen((): void => this.onExportAll()));
     }
   }
@@ -763,7 +789,13 @@ export struct SourceToolsPage {
   @Builder
   private sourceCard() {
     ReaderCard({ specId: 'bordered-list-section' }) {
-      ReaderSectionHeading({ variant: 'tool-card', title: `书源编辑（${this.snapshot.sources.length}）` });
+      ReaderSectionHeading({ variant: 'tool-card', title: `书源编辑（${this.visibleSources().length}）` });
+      if (this.snapshot.sources.length > 0 && this.visibleSources().length === 0) {
+        ForEach([this.temporaryBackIdentity], (opening: string): void => {
+          ReaderPageState({ title: '没有匹配的书源', message: '更换关键词或清除筛选后重试。',
+            actionLabel: '清除筛选', onAction: (): void => this.changeSourceQuery(opening, '') });
+        }, (opening: string): string => opening);
+      }
       List() {
         LazyForEach(this.sourceDataSource, (row: SourceToolListRow) => {
           ListItem() { this.sourceRow(row); }
@@ -851,7 +883,7 @@ export struct SourceToolsPage {
   }
 
   private currentSourceToolRow(row: SourceToolListRow): SourceToolListRow | undefined {
-    const source = this.snapshot.sources.find((value: BookSource): boolean => value.sourceId === row.source.sourceId);
+    const source = this.visibleSources().find((value: BookSource): boolean => value.sourceId === row.source.sourceId);
     return source === undefined ? undefined : new SourceToolListRow(source, this.snapshot.sourceListRevision,
       this.snapshot.selectedSourceIds.includes(source.sourceId), !this.snapshot.busy);
   }
@@ -902,7 +934,7 @@ export struct SourceToolsPage {
   }
 
   private sourceListHeight(): number {
-    const height = this.snapshot.sources.reduce((total: number, source: BookSource): number =>
+    const height = this.visibleSources().reduce((total: number, source: BookSource): number =>
       total + this.sourceRowLayout(source).rowMinHeight, 0);
     return Math.min(420, Math.max(58, height));
   }
@@ -1120,7 +1152,8 @@ export struct SourceToolsPage {
 
   @Builder
   private fullWidthActionButton(label: string, primary: boolean, action: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-action', label, primary, actionEnabled: !this.snapshot.busy, layout: 'full', onAction: action });
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-action', label, primary,
+      actionEnabled: !this.snapshot.busy && this.snapshot.sources.length > 0, layout: 'full', onAction: action });
   }
 
   /**
@@ -1182,15 +1215,17 @@ export struct SourceToolsPage {
 
   private syncListDataSources(): void {
     if (this.projectedSourceListRevision !== this.snapshot.sourceListRevision ||
+      this.projectedSourceQuery !== this.sourceQuery ||
       this.projectedSelectionRevision !== this.snapshot.selectionRevision ||
       this.projectedBusy !== this.snapshot.busy || this.projectedCanWrite !== this.canWriteSources()) {
       this.sourceDataSource.replace(
-        this.snapshot.sources,
+        this.visibleSources(),
         this.snapshot.sourceListRevision,
         this.snapshot.selectedSourceIds,
         !this.snapshot.busy,
       );
       this.projectedSourceListRevision = this.snapshot.sourceListRevision;
+      this.projectedSourceQuery = this.sourceQuery;
       this.projectedSelectionRevision = this.snapshot.selectionRevision;
       this.projectedBusy = this.snapshot.busy;
       this.projectedCanWrite = this.canWriteSources();
@@ -1219,7 +1254,7 @@ export struct SourceToolsPage {
   }
 
   private batchControlsRenderKey(): string {
-    return `${this.snapshot.sourceListRevision}:${this.snapshot.selectionRevision}:${this.snapshot.selectedSourceCount}:` +
+    return `${this.snapshot.sourceListRevision}:${this.snapshot.selectionRevision}:${this.sourceQueryRevision}:` +
       `${this.snapshot.busy ? 1 : 0}:${this.snapshot.batchCheck.phase}:${this.canWriteSources() ? 1 : 0}`;
   }
 

@@ -121,8 +121,9 @@ export struct SourceJourneySurface {
       onContinueOriginal: (expected: number): void => {
         if (this.toolsInputIsCurrent()) this.presentation.tools(this.identity)?.continueOriginal(expected);
       },
-      onSelectAll: (): void => { if (this.toolsInputIsCurrent()) this.presentation.tools(this.identity)?.selectAll(); },
-      onClearSelection: (): void => { if (this.toolsInputIsCurrent()) this.presentation.tools(this.identity)?.setSelection([]); },
+      onSetVisibleSelection: (query: string, selected: boolean): void => {
+        if (this.toolsInputIsCurrent()) this.presentation.tools(this.identity)?.setVisibleSelection(query, selected);
+      },
       onToggleSelection: (sourceId: string): void => {
         if (this.toolsInputIsCurrent()) this.presentation.tools(this.identity)?.toggleSelection(sourceId);
       },

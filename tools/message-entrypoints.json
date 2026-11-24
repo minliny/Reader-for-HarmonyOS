@@ -1513,26 +1513,14 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/settings/ui/SettingsPage.ets#SettingsPage.requestRestoreDefaults::native.alert",
+      "id": "entry/src/main/ets/features/settings/ui/SettingsPage.ets#SettingsPage.resetDialog::shared.dialog-surface",
       "file": "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
       "owner": "SettingsPage",
-      "member": "requestRestoreDefaults",
-      "family": "native.alert",
-      "category": "经 ReaderNativeAlertOwner 的原生确认/选择桥",
-      "effectiveHost": "当前已挂载设置页；主题使用原 themeOwner、temporaryBackIdentity，缓存与设置沿用原操作 generation/fact。",
-      "retireRule": "设置页退场、临时弹层或 runtime/原操作身份变化拒绝旧按钮；原生确认 lease 退役，写入事实由 SettingsHost 持有。 必须位于本方法 ReaderNativeAlertOwner.present 的第一个 native 回调内；owner 退役使旧按钮不再分派业务。",
-      "status": "registered-source-entry",
-      "bridge": "owned-alert-native-callback"
-    },
-    {
-      "id": "entry/src/main/ets/features/settings/ui/SettingsPage.ets#SettingsPage.requestRestoreDefaults::shared.alert-owner",
-      "file": "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
-      "owner": "SettingsPage",
-      "member": "requestRestoreDefaults",
-      "family": "shared.alert-owner",
-      "category": "原生确认/选择的原宿主 owner 入口",
-      "effectiveHost": "当前已挂载设置页；主题使用原 themeOwner、temporaryBackIdentity，缓存与设置沿用原操作 generation/fact。",
-      "retireRule": "设置页退场、临时弹层或 runtime/原操作身份变化拒绝旧按钮；原生确认 lease 退役，写入事实由 SettingsHost 持有。 原生 lease 在决定/取消/退役时结束；原生 UI 关闭仍遵循原系统/调用者规则，不作为业务 ACK。",
+      "member": "resetDialog",
+      "family": "shared.dialog-surface",
+      "category": "恢复设置前的确认",
+      "effectiveHost": "当前通用设置页以独立确认代次和当前页面身份持有确认。",
+      "retireRule": "取消、Back、退场以及旧确认代次均不派发恢复。确认仅触发一次原 SettingsHost 重置；弹层关闭和转场不确认写入。",
       "status": "registered-source-entry"
     },
     {
@@ -1732,6 +1720,17 @@
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前 mounted 的书源工具页；snapshot 原操作 generation/identity 与 exportRevision/nativeAlertOwner 决定准入。",
       "retireRule": "退场递增 exportRevision 并 retire 原生确认；批量检查、检测日志与原写入各自保持原 session/operation 所有权。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets#SourceToolsPage.sourceCard::shared.page-state",
+      "file": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
+      "owner": "SourceToolsPage",
+      "member": "sourceCard",
+      "family": "shared.page-state",
+      "category": "筛选后的书源列表空态",
+      "effectiveHost": "当前书源工具页已读入书源但没有匹配当前查询的条目。",
+      "retireRule": "清除筛选仅接纳当前可交互的工具页 opening，回到已有列表。查询和空态只展示已读书源数据。",
       "status": "registered-source-entry"
     },
     {

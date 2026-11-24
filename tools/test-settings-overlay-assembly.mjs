@@ -7,6 +7,8 @@ const selected = selectContractCases({
   'settings-frame': { description: 'Actual SettingsPage to both shells to StandardPage retains a live bounded recovery frame and ordinary page geometry.', resources: [] },
   'settings-compatibility': { description: 'SettingsShell legacy overlay API forwards nonzero inset values for Home and General while retaining its visibility guard.', resources: [] },
   'settings-actions': { description: 'The original settings and cleanup recovery callbacks retain current identities and immediately yield to active selection or retirement.', resources: [] },
+  'reset-confirmation': { description: 'Actual settings cover tickets fence Back, stale actions and one write, then reset persists and publishes list layout.', resources: [] },
+  'wide-shell': { description: 'Actual tablet Settings shell preserves one rail, measured panel and bottom tab for four current routes and collapse.', resources: [] },
   'preview-layers': { description: 'Runtime message preview notices use the bounded slot, while popup scenes preserve sample content and scroll and modal geometry stays locally live.', resources: [] },
 });
 
@@ -231,6 +233,99 @@ if (selected.length > 0) {
         samples++;
       }
     }
+    if (id === 'reset-confirmation') {
+      const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+      const Owner = selectedProductionMethods(new URL('../entry/src/main/ets/' + paths.page, import.meta.url),
+        'SettingsPage', ['requestRestoreDefaults', 'resetCoverOptions', 'closeResetDialog', 'retireResetDialog',
+          'chooseResetDialog', 'consumeTemporaryBack'], { ModalTransition: { NONE: 'none' }, Color: { Transparent: 'clear' } });
+      const writes = [], focus = [];
+      const owner = Object.assign(new Owner(), { mounted: true, temporaryBackIdentity: 'settings:one',
+        resetDialogTicket: 0, resetDialogSerial: 0, resetDialogWanted: false, resetFrameAttached: false,
+        resetFrameVisible: false, resetCoverVisible: false, openSelect: '', activeSection: 'general',
+        settingsInputIsCurrent: identity => identity === owner.temporaryBackIdentity,
+        generalConfirmationCurrent: identity => identity === owner.temporaryBackIdentity && owner.activeSection === 'general',
+        performRestoreDefaults: async identity => writes.push(identity),
+        restoreResetFocus: identity => focus.push(identity) });
+      owner.requestRestoreDefaults();
+      const first = owner.resetDialogTicket, firstCover = owner.resetCoverOptions(first, 'settings:one');
+      owner.requestRestoreDefaults(); assert.equal(owner.resetDialogTicket, first);
+      firstCover.onAppear(); assert.equal(owner.resetFrameVisible, true);
+      owner.resetFrameAttached = true;
+      assert.equal(owner.consumeTemporaryBack('settings:one'), true);
+      assert.equal(owner.resetCoverVisible, true, 'Back keeps modal isolation through exit');
+      owner.chooseResetDialog(first, 'settings:one', 'confirm');
+      assert.deepEqual(writes, []);
+      firstCover.onDisappear();
+      assert.equal(owner.resetDialogTicket, 0);
+      assert.deepEqual(focus, ['settings:one']);
+      owner.requestRestoreDefaults();
+      const second = owner.resetDialogTicket, secondCover = owner.resetCoverOptions(second, 'settings:one');
+      secondCover.onAppear(); firstCover.onWillDismiss({}); firstCover.onDisappear();
+      owner.chooseResetDialog(first, 'settings:one', 'confirm');
+      assert.equal(owner.resetFrameVisible, true);
+      owner.chooseResetDialog(second, 'settings:one', 'confirm');
+      owner.chooseResetDialog(second, 'settings:one', 'confirm');
+      assert.deepEqual(writes, ['settings:one'], 'current confirmation is consumed before its one mutation');
+      secondCover.onDisappear();
+
+      const { bookshelfOperationClass } = await import('./lib/bookshelf-operation-owner-probe.mjs');
+      const storage = new Map(), persisted = [], mutations = [];
+      const runtime = { getUIAbilityContext: () => ({ filesDir: '/fixture' }) };
+      class WriteEvidence { dispatchedCount = 0; dispatched() { this.dispatchedCount++; } confirmed() {} }
+      const gateway = name => class { async update() { mutations.push(name); } };
+      const reset = bookshelfOperationClass('features/settings/application/LocalConfigurationReset.ts', 'LocalConfigurationReset', {
+        ReaderRuntimeOwner: { isCurrent: owner => owner === runtime }, ReaderWriteEvidence: WriteEvidence,
+        readerHostPreferencesName: (_directory, name) => name,
+        preferences: { getPreferences: async () => ({ get: async () => '', put: async () => {}, delete: async () => {}, flush: async () => {} }) },
+        ReaderThemeHost: { prepareUserChange: async () => {}, resetAppearanceDefaults: async () => mutations.push('appearance') },
+        SettingsGateway: gateway('app'), ReaderSettingsGateway: gateway('reader'), ReaderTtsPreferencesGateway: gateway('tts'),
+        createDefaultSettingsSnapshot: () => ({}), createDefaultReaderSettingsSnapshot: () => ({}),
+        createDefaultReaderTtsPreferencesSnapshot: () => ({}),
+        WebDavCredentialStore: { instance: { async saveBookshelfViewMode(value) { persisted.push(value); } } },
+        AppStorage: { setOrCreate: (key, value) => storage.set(key, value) },
+      });
+      assert.equal(await reset.request(runtime), true);
+      assert.deepEqual(mutations, ['app', 'reader', 'tts', 'appearance']);
+      assert.deepEqual(persisted, ['list']);
+      assert.equal(storage.get('readerBookshelfViewMode'), 'list');
+      samples += 2;
+    }
+    if (id === 'wide-shell') {
+      const source = read('features/settings/ui/ReaderWideSettingsShell.ets');
+      const bottom = read('app/navigation/ReaderBottomNavigation.ets');
+      const sdk = boundedSurfaceSdk();
+      const viewport = [], selections = [], main = [], widths = [];
+      let toggles = 0;
+      registerShape('ReaderBottomNavigation', bottom);
+      const { Component } = createReaderBuilderProbe(source, boundedMembers(source), {
+        ...sdk.deps, ReaderBottomNavigation: ChromePort, publishReaderMainViewport: (...size) => viewport.push(size),
+        readerPageAreaLength: Number, readerSurfaceElevation: () => ({}),
+      }, { ...sdk.hooks, childSources: { ...sdk.hooks.childSources, ReaderBottomNavigation: bottom } });
+      const shell = new Component(undefined, { pane: 'general', interactive: true,
+        onPane: pane => selections.push(pane), onToggle: () => toggles++,
+        onMainTab: tab => main.push(tab), content: width => widths.push(width) });
+      shell.initialRender(); sdk.properties.flush();
+      const native = [...shell.nodes.values()];
+      const child = [...shell.children.values()].find(entry => entry instanceof ChromePort);
+      assert.ok(child); assert.equal(child.current, 'settings');
+      child.onSelect('bookshelf'); assert.deepEqual(main, ['bookshelf']);
+      const buttons = native.filter(node => node.type === 'Button' && node.onClick);
+      assert.deepEqual(buttons.map(node => node.accessibilityText),
+        ['收起设置栏', '通用设置', '书源管理', '书架设置', '下载管理']);
+      buttons[0].onClick(); assert.equal(toggles, 1);
+      buttons[2].onClick(); assert.deepEqual(selections, ['source']);
+      const panel = native.find(node => node.type === 'Stack' && node.borderRadius === 20);
+      assert.ok(panel); panel.onAreaChange({}, { width: 430 }); sdk.properties.flush();
+      assert.equal(shell.paneWidth, 430);
+      const rail = native.find(node => node.type === 'Column' && node.borderRadius === 16);
+      assert.equal(rail.width, 164);
+      shell.updateStateVars({ pane: 'downloads', collapsed: true, interactive: true });
+      sdk.properties.flush();
+      assert.equal(rail.width, 56); assert.equal(buttons[4].accessibilitySelected, true);
+      assert.ok([...shell.children.values()].includes(child), 'rail selection preserves the same main tab actor');
+      assert.equal(buttons[0].accessibilityText, '展开设置栏');
+      samples++;
+    }
     if (id === 'preview-layers') {
       for (const scene of ['none', 'toast', 'notice', 'notice-long', 'dialog-normal', 'task-running']) {
         const model = preview(); model.page.scene = scene; model.page.content();
@@ -270,8 +365,11 @@ if (selected.length > 0) {
       }
       samples++;
     }
-    console.log(JSON.stringify({ kind: 'settings-overlay-assembly', case: id, samples,
-      boundary: 'Actual SDK property/Builder and complete current shell/StandardPage geometry chain. Header/nav/business bodies and preview timers are explicit finite ports. Native layout, modal focus, physical touch and pixels are not executed.' }));
+    const boundary = id === 'reset-confirmation' ?
+      'Actual selected SettingsPage methods and reset coordinator with controlled owner, preferences and theme ports. No native modal, pixels or persistence.' :
+      id === 'wide-shell' ? 'Actual SDK-lowered rail and panel with controlled bottom-navigation and Area ports. No native layout, input or pixels.' :
+        'Actual SDK property/Builder and complete current shell/StandardPage geometry chain. Header/nav/business bodies and preview timers are explicit finite ports. Native layout, modal focus, physical touch and pixels are not executed.';
+    console.log(JSON.stringify({ kind: 'settings-overlay-assembly', case: id, samples, boundary }));
     recordContractCasePass(id);
   }
 }

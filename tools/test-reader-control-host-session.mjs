@@ -94,6 +94,33 @@ assert.deepEqual(sampleReaderControlSession(state), midFrame,
   'second Back changes content level without snapping the unfinished shape to Quick');
 assert.equal(state.transition.durationMs, 1150);
 
+const redesigned = { ...timing, layerDurationMs: 220, navigateDurationMs: 240,
+  directSheetDurationMs: 260, directSheetCloseDurationMs: 210 };
+for (const [page, module] of [['moduleDirectory', 'directory'], ['fullSearch', 'search'], ['quickReplace', 'replace']]) {
+  const opening = setReaderControlHostPage(home(), page, redesigned);
+  assert.equal(opening.transition.fromLocation.level, 'home');
+  assert.equal(opening.transition.toLocation.form, 'full');
+  assert.equal(opening.transition.toLocation.module, module);
+  assert.equal(opening.transition.durationMs, 260);
+  const partial = advanceReaderControlSession(opening, 90, opening.epoch);
+  const earlyBack = backReaderControlHostSession(partial, redesigned);
+  assert.deepEqual(sampleReaderControlSession(earlyBack.state), sampleReaderControlSession(partial));
+  assert.equal(earlyBack.state.transition.toLocation.level, 'home');
+  const open = finish(opening);
+  assert.equal(open.location.form, 'full');
+  assert.equal(setReaderControlHostPage(open, page, redesigned), open, 'repeat entry keeps the current module');
+  const closing = backReaderControlHostSession(open, redesigned).state;
+  assert.equal(closing.transition.toLocation.level, 'home');
+  assert.equal(closing.transition.durationMs, 210);
+  assert.equal(backReaderControlHostSession(closing, redesigned).state, closing, 'Back during exit cannot dismiss the home island');
+  assert.equal(finish(closing).location.level, 'home');
+}
+const autoOpening = setReaderControlHostPage(home(), 'quickAutoPage', redesigned);
+assert.equal(autoOpening.transition.durationMs, 220);
+const ttsOpening = setReaderControlHostPage(finish(autoOpening), 'moduleTts', redesigned);
+assert.equal(ttsOpening.transition.durationMs, 240);
+assert.equal(setReaderControlHostPage(finish(ttsOpening), 'home', redesigned).transition.durationMs, 220);
+
 // Wiring checks are structural only; they do not execute ArkUI or prove pixels.
 const host = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url), 'utf8');
 assert.match(host, /@State @Watch\('onControlSessionChanged'\) private controlSession:/);
@@ -104,6 +131,8 @@ assert.match(host, /controlOpenRevision: this\.controlOpenRevision/);
 assert.match(host, /readerControlHostCloseCommitted\(this\.controlSession, this\.observedControlCloseRevision\)/);
 assert.doesNotMatch(host, /this\.(?:controlVisible|controlPage|controlShellExitArmed)\s*=(?!=)/);
 assert.doesNotMatch(host, /scheduleControlRouteReset|controlRouteResetTimer|controlShellExitGeneration/);
-assert.match(host, /onExpandDirectory: \(\): void => this\.expandControlDirectory\(\)/);
+assert.match(host, /directSheetRedesign: true/);
+assert.match(host, /directSheetDurationMs: this\.reduceMotion \? READER_REDUCED_FADE_MS : READER_SHEET_OPEN_MS/);
+assert.match(host, /directSheetCloseDurationMs: this\.reduceMotion \? READER_REDUCED_FADE_MS : READER_SHEET_CLOSE_MS/);
 console.log('Reader control Host session: production projection, command, close-commit and lifecycle cases PASS');
 console.log('Reader control Host wiring: structural checks PASS (not ArkUI execution or visual acceptance)');
