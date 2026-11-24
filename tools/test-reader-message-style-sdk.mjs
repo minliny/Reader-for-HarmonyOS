@@ -71,7 +71,7 @@ const retainedAction = actions()[0];
 const retainedGesture = [...retainedAction.nodes.values()].find(node => node.onClick).onClick;
 retainedAction.generation = 8;retainedGesture();assert.equal(first, 1, 'old physical action cannot borrow successor generation');
 retainedAction.generation = 7;
-assert.ok(sdk.nodes(notice).some(node => node.backgroundColor === readerAppColor('TOK_MESSAGE_NOTICE', 'day')));
+assert.ok(sdk.nodes(notice).some(node => node.backgroundColor === readerAppColor('TOK_SURFACE_ELEVATED', 'day')));
 const busy = sdk.consumer(read('ReaderRecoveryAction'));
 Object.assign(busy, { label: '核对', variant: 'notice', isBusy: true, onReconcile: () => first++ });
 busy.initialRender();
@@ -118,8 +118,9 @@ for (const specId of ['book-removal', 'json-import', 'shelf-group', 'local-impor
   Object.assign(dialog, { specId, title: '确认操作', showCloseButton: false,
     actions: [{ id: 'cancel', label: '取消', tone: 'default', enabled: true, defaultFocus: false }] });
   dialog.initialRender();
-  assert.equal(sdk.nodes(dialog).find(node => node.create === '确认操作').fontFamily, 'ReaderMangaSans600',
-    `${specId}: actual shared header selects static 600`);
+  const heading = sdk.nodes(dialog).find(node => node.create === '确认操作');
+  assert.equal(heading.fontFamily, 'ReaderNotoSerifSCBold', `${specId}: the frozen dialog heading uses the checked Serif face`);
+  assert.equal(heading.fontSize, 18, `${specId}: the complete prompt remains an 18fp dialog heading`);
   assert.equal(sdk.nodes(dialog).find(node => node.create === '取消').fontFamily, 'ReaderNotoSansSCUIMedium',
     `${specId}: actual shared action selects static 500`);
 }
@@ -127,7 +128,7 @@ for (const specId of ['book-removal', 'json-import', 'shelf-group', 'local-impor
 const night = sdk.consumer(read('ReaderRecoveryNotice'));
 Object.assign(night, { appThemeScheme: 'night', tag: '设置', actionLabel: '',
   view: { message: '保存未确认，当前设置保留', visible: true, canRetry: false, generation: 8 } });night.initialRender();
-assert.ok(sdk.nodes(night).some(node => node.backgroundColor === readerAppColor('TOK_MESSAGE_NOTICE', 'night')));
+assert.ok(sdk.nodes(night).some(node => node.backgroundColor === readerAppColor('TOK_SURFACE_ELEVATED', 'night')));
 console.log('PASS actual SDK message family: same-card independent actions, original generation, busy admission and stable label, native18/32 loaders, day/night scoped notice palette');
 
 

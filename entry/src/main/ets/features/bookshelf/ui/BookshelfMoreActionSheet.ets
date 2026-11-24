@@ -4,9 +4,7 @@ import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfa
 import { SheetSurfaceSpec, resolveSheetSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
 
-/** Bottom-sheet content for the bookshelf top-bar More action.
- * The native host owns the sheet frame, mask and lifecycle; this component
- * only owns the five existing bookshelf actions and their presentation token. */
+/** Content and presentation token for the five bookshelf More actions. */
 @Component
 export struct BookshelfMoreActionSheet {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';

@@ -13,10 +13,12 @@ const { readFileSync, writeFileSync } = await import('node:fs');
 const { createRequire, stripTypeScriptTypes } = await import('node:module');
 const { SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts');
 const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
-const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const { readerEditingSdk } = await import('./lib/reader-editing-sdk-probe.mjs');
+const { boundedMembers, readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { productionReaderPressFeedback } = await import('./lib/reader-press-feedback-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+const { readerTypographyRoles, readerMessageStyles } = await import('./lib/reader-typography-probe.mjs');
 const { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp,
   readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const { resolveHorizontalFrame, SurfaceWidthSpec } = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
@@ -71,9 +73,9 @@ class LiveSurfaceChild {
   }
 }
 const foundation=foundationControls();
-const jsonMembers = ['build', 'formBody', 'localButton', 'submitOnlineImport', 'focusScopeKey', 'localFocusKey',
+const jsonMembers = ['editingHost', 'editingScroll', 'editingScroller', 'build', 'formBody', 'localButton', 'submitOnlineImport', 'focusScopeKey', 'localFocusKey',
   'safeTop', 'availableHeight', 'inputIsCurrent', 'restoreFocusAction', 'updateUrlDraft'];
-const jsonDependencies = { readerWindowMetrics: () => metrics, readerInteractiveSafeTop, readerInteractiveSafeBottom, readerPageAreaLength: value => Number.parseFloat(value) };
+const jsonDependencies = { ...readerEditingSdk(), ...readerMessageStyles, readerWindowMetrics: () => metrics, readerInteractiveSafeTop, readerInteractiveSafeBottom, readerPageAreaLength: value => Number.parseFloat(value) };
 const { owner: dialog } = createReaderBuilderProbe(jsonSource,
   jsonMembers, {
   ...foundation.dependencies, ...jsonDependencies, ReaderDialogSurface: LiveSurfaceChild, DialogActionView,
@@ -109,13 +111,18 @@ assert.ok(dialogNodes.indexOf(localLabel) < dialogNodes.indexOf(urlLabel) && dia
 assert.equal(typeof localButton.onClick, 'function');
 const rawLinkNote = dialogNodes.find(n => n.type === 'Text' && n.create === 'GitHub 仓库文件请使用 Raw 链接；普通 blob 页面不是 JSON。');
 assert.ok(rawLinkNote,'actual Raw-link note remains body content');
-for (const [node, role] of [[urlLabel, 'TYPE_FORM_ACTION'], [urlInput, 'TYPE_FORM_URL_INPUT'],
-  [localLabel, 'TYPE_FORM_LABEL_ACTION']]) {
+for (const [node, role] of [[urlLabel, 'TYPE_FORM_ACTION'], [urlInput, 'TYPE_FORM_URL_INPUT']]) {
   const tuple = readerTypographyRoles[role];
   assert.deepEqual([node.fontFamily, node.fontSize, node.fontWeight, node.lineHeight],
     [tuple.fontFamily, tuple.fontSizeFp, tuple.fontWeight, tuple.lineHeightFp],
     `${role}: the normal URL/local-file control retains its original tuple and AUTO omissions`);
 }
+
+const localPaint = dialogNodes.find(node => node.type === 'Row' && node.borderRadius === 999 && node.scale !== undefined);
+assert.equal(localPaint.constraintSize.minHeight, 44, 'frozen JSON local action has its own 44vp dialog paint');
+assert.equal(localLabel.fontSize, 13);
+assert.equal(localLabel.fontFamily, readerTypographyRoles.TYPE_FORM_LABEL_ACTION.fontFamily);
+assert.equal(localButton.constraintSize.minHeight, 44);
 
 // Draft update clears validation; submit routes the trimmed URL; the empty
 // draft surfaces the admission message instead of dispatching.
@@ -153,11 +160,14 @@ assert.equal(selected, 1, 'unrouted action ids never reach callbacks');
 // The actual dialog, header and action Native Buttons share one bounded
 // document. This geometry layer uses the current host and IME snapshot.
 const realControls = foundationControls({ windowMetrics: () => metrics });
-const surfaceDeps = { ...realControls.dependencies, ...readerTypographyRoles,
-  resolveDialogSpec, readerWindowMetrics: () => metrics, readerInteractiveSafeLeft, readerInteractiveSafeRight,
+const { readerActionIcon } = pureModuleProbe(readFileSync(file('ui/foundation/ReaderActionIconResources.ets'), 'utf8'),
+  'ReaderActionIconResources.ets', { $r: value => value }, ['readerActionIcon']);
+const surfaceDeps = { ...realControls.dependencies, ...readerTypographyRoles, ...readerMessageStyles, readerActionIcon,
+  resolveDialogSpec, readerSurfaceElevation: readerSurfaceSpecsForProbe().readerSurfaceElevation,
+  readerWindowMetrics: () => metrics, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   SurfaceWidthSpec, resolveHorizontalFrame, ReaderPressFeedback: productionReaderPressFeedback(),
   readerAppColor: (await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts')).readerAppColor,
-  MESSAGE_ACTION: readerTypographyRoles.MESSAGE_ACTION };
+};
 const surfaceHooks = { ...realControls.hooks, childSources: { ...realControls.hooks.childSources,
   ReaderDialogSurface: surfaceSource }, allowEmptyBranchAdmission: true };
 const Surface = createReaderBuilderProbe(surfaceSource, boundedMembers(surfaceSource), surfaceDeps, surfaceHooks).Component;
@@ -179,7 +189,12 @@ for (const scale of [1, 1.45, 2, 3]) for (const ime of [0, 180]) {
   for (const label of ['关闭', '选择本地 JSON 文件', '从在线链接导入'])
     assert.ok(all.some(node => node.type === 'Button' && (node.accessibilityText === label ||
       realControls.nodes(live).some(text => text.type === 'Text' && text.create === label))), `${label} exists inside current document`);
-  assert.ok(all.find(node => node.type === 'Button' && node.accessibilityText === '关闭').height >= 44, 'actual shared header Native close pays44vp minimum');
+  const close = all.find(node => node.type === 'Button' && node.accessibilityText === '关闭');
+  assert.ok(close.height >= 44 && close.constraintSize.minWidth >= 44, 'shared close button pays both native hit dimensions');
+  assert.ok(all.some(node => node.type === 'Stack' && node.width === 32 && node.height === 32 &&
+    node.borderRadius === 16 && node.hitTestBehavior === 'HitTestMode.None'), 'close paint is a passive 32vp capsule');
+  assert.ok(all.some(node => node.type === 'Image' && node.create === readerActionIcon('close', 'day') &&
+    node.width === 15 && node.height === 15), 'close uses the generated vector at its frozen size');
   assert.ok(all.some(node => node.type === 'Text' && node.create === live.validationMessage), 'full long validation remains scrollable');
   const root = all.find(node => node.type === 'Stack' && typeof node.onAreaChange === 'function');
   root.onAreaChange({}, { width: 320, height: 150, globalPosition: { x: 0, y: 0 } });
@@ -193,7 +208,7 @@ for (const scale of [1, 1.45, 2, 3]) for (const ime of [0, 180]) {
     oldClose.initialRender();
     assert.throws(() => assert.ok(realControls.nodes(oldClose).find(node => node.type === 'Button' && node.accessibilityText === '关闭').height >= 44), /AssertionError/, 'old Native close36 rejected');
   }
-  const old = jsonSource.replace('Scroll() {', 'Column() {');
+  const old = jsonSource.replace('Scroll(this.editingScroller) {', 'Column() {');
   assert.notEqual(old, jsonSource);
   const before = createReaderBuilderProbe(old, geometryMembers,
     { ...realControls.dependencies, ...jsonDependencies, ReaderDialogSurface: Surface, DialogActionView }, surfaceHooks).owner;
@@ -203,10 +218,11 @@ for (const scale of [1, 1.45, 2, 3]) for (const ime of [0, 180]) {
   before.initialRender();
   assert.throws(() => assert.ok(realControls.nodes(before).some(node => node.type === 'Scroll')), /AssertionError/, 'historical unbounded Column rejected');
 }
-writeFileSync(new URL('../.reader-artifacts/framework-confluence-20261112/code-side-audit/repair-secondary-post-json-import.json', import.meta.url), JSON.stringify({
+const receiptPath = process.env.READER_JSON_DIALOG_RECEIPT_PATH;
+if (receiptPath) writeFileSync(receiptPath, JSON.stringify({
   command: { entry: 'tools/test-json-import-dialog-real.mjs', cases: ['json-url-form-admission'] }, result: 'PASS',
   contexts: { width: 320, height: 360, fontScales: [1, 1.45, 2, 3], keyboardInsets: [0, 180], sameOpeningResizedHeight: 150 },
-  checked: ['actual body/header/actions Native SDK assembly', 'controlled URL admission and local/close dispatch', 'long validation whole-document Scroll', 'same opening resize preserves URL', 'old unbounded Column mutation rejected'],
+  checked: ['actual body/header/actions Native SDK assembly and 32vp close vector in independent hit region', 'controlled URL admission and local/close dispatch', 'long validation whole-document Scroll', 'same opening resize preserves URL', 'old unbounded Column mutation rejected'],
   completeInputManifest: process.env.READER_LAYOUT_TRACE_OUTPUT ?? 'NOT_RECORDED',
   boundary: 'Actual installed ETS observers and Native node modifiers. Platform IME scheduling, pixels, pointer, focus and user acceptance NOT_RUN.',
 }, null, 2) + '\n');

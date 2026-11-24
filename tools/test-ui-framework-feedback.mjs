@@ -379,11 +379,14 @@ async function transientAnnouncement() {
   const adapter = pureModuleProbe(readFileSync(new URL('ReaderTransientAnnouncement.ets', base), 'utf8'), 'ReaderTransientAnnouncement.ets',
     { ...feedback, accessibility: { sendAccessibilityEvent(event) { events.push(event); return reject ? Promise.reject(Error('platform rejected')) : Promise.resolve(); } },
       hilog: { warn: (...args) => warnings.push(args) } }, ['announceReaderTransientToast']);
+  const motion = [];
   const context = { getHostContext: () => ({ applicationInfo: { name: 'io.reader.minliny' } }),
-    animateTo: (_params, action) => action(), getFocusController: () => { throw Error('announcement must preserve focus'); } };
+    animateTo: (params, action) => { motion.push([params.duration, root.toastOffsetY]); action(); },
+    getFocusController: () => { throw Error('announcement must preserve focus'); } };
   const Host = selectedProductionMethods(new URL('ReaderTransientToast.ets', base), 'ReaderTransientToast',
     ['aboutToAppear', 'aboutToDisappear', 'toastChanged', 'foregroundChanged', 'syncToast', 'dismiss', 'clearDismissTimer'],
-    { ...feedback, ...adapter, AppStorage, readerReduceMotionFromStorage: () => true, readerMotionAnimateParam: () => ({ duration: 0 }),
+    { ...feedback, ...adapter, AppStorage, readerReduceMotionFromStorage: () => true, readerMotionAnimateParam: () => ({ duration: 220 }),
+      readerMotionReducedFadeParam: () => ({ duration: 120 }),
       setTimeout: action => { const id = ++nextTimer; timers.set(id, action); return id; }, clearTimeout: id => timers.delete(id) });
   const host = priority => Object.assign(new Host(), { priority, hostId: -1, activeHost: 0, foreground: true, displayed: false,
     handledGeneration: -1, dismissTimer: -1, getUIContext: () => context, toast: feedback.createReaderTransientToastState() });
@@ -399,6 +402,7 @@ async function transientAnnouncement() {
   };
   const root = host(0); root.aboutToAppear();
   publish('已保存', '分组'); synchronize(root); synchronize(root);
+  assert.deepEqual(motion,[ [120, 0] ],'reduced entry uses the shared fade and starts without displacement');
   assert.equal(events.length, 1); assert.equal(events[0].textAnnouncedForAccessibility, '分组。已保存');
   assert.equal(events[0].type, 'announceForAccessibilityNotInterrupt'); assert.equal(events[0].triggerAction, 'common');
   assert.equal(events[0].bundleName, 'io.reader.minliny');

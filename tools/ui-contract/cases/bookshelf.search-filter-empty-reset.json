@@ -1,6 +1,6 @@
 {
   "id": "bookshelf.search-filter-empty-reset",
-  "version": 1,
+  "version": 2,
   "phase": 1,
   "pageId": "bookshelf",
   "fixture": {
@@ -209,7 +209,7 @@
       ],
       "keyboard": false,
       "afterAction": "open-filter",
-      "quietMs": 125,
+      "quietMs": 500,
       "waitFor": [
         {
           "kind": "search-page-action",
@@ -328,7 +328,7 @@
       ],
       "keyboard": false,
       "afterAction": "reopen-filter",
-      "quietMs": 125,
+      "quietMs": 500,
       "waitFor": [
         {
           "kind": "search-page-action",
@@ -430,9 +430,10 @@
     "entry/src/main/ets/pages/Index.ets",
     "entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets",
     "entry/src/main/ets/features/search/ui/ReaderSearchFilterPanel.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchFilterTrigger.ets",
     "entry/src/main/ets/features/search/ui/SearchPage.ets",
     "entry/src/main/ets/features/search/ui/SearchFilterGeometry.ts",
-    "entry/src/main/ets/features/search/ui/SearchResultSheetBinding.ets",
+    "entry/src/main/ets/ui/surfaces/ReaderBottomSheet.ets",
     "entry/src/main/ets/features/search/ui/LibrarySearchResults.ets",
     "entry/src/main/ets/features/search/presentation/LibrarySearchPresentation.ets",
     "entry/src/main/ets/features/search/presentation/SearchViewState.ts",
@@ -462,7 +463,8 @@
       "action": "select-online",
       "priorAction": "submit-a",
       "expected": {
-        "resultCount": 1
+        "resultCount": 1,
+        "sheetHost": "reader-bottom-sheet"
       }
     }
   ],

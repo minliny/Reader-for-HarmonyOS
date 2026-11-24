@@ -2,8 +2,7 @@ import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface'
 import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSurfaceHeader';
 import { ReaderSheetActionList } from './ReaderSheetActionList';
 
-/** Business callbacks only. The native host retains presentation ownership;
- * the common frame/header/actions own the existing physical surface. */
+/** Header and actions for the owner-bound book presentation. */
 @Component
 export struct BookshelfBookActionSheet {
   @Prop presentationId: string = '';

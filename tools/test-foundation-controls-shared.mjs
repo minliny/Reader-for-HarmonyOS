@@ -42,7 +42,6 @@ const nativeAction=nodes=>{
  assert.equal(actions.length,1,'one actual native actor owns the physical action');
  const action=actions[0];assert.equal(action.type,'Button');
  assert.deepEqual(action.createWithChild,{type:'ButtonType.Normal',stateEffect:false});
- assert.equal(action.onTouch,undefined,'no parallel touch business dispatcher');
  assert.equal(action.onKeyEvent,undefined,'native Button owns keyboard activation');
  return action;
 };
@@ -95,7 +94,8 @@ if(selectedCase==='native-modifier') {
  active.applyNormalAttribute(native);const normal=attrs.backgroundColor;
  active.applyPressedAttribute(native);assert.equal(attrs.backgroundColor,'platform-pressed');
  active.applyNormalAttribute(native);assert.equal(attrs.backgroundColor,normal,'release/pointer-cancel normal endpoint');
- assert.ok(platformCalls.some(c=>c[0]==='rgba'&&c[4]===.12));
+ assert.ok(platformCalls.some(c=>c[0]==='resource'&&c[1]===readerAppColor('app.interaction.press','day')),
+  'native composition resolves the current neutral registry overlay');
  const disabled=new modifiers.ReaderButtonTextModifier('rules-action',false,false,'equal','day');
  const before=platformCalls.length;disabled.applyPressedAttribute(native);assert.equal(platformCalls.length,before);assert.equal(attrs.backgroundColor,normal);assert.equal(attrs.opacity,.62);
  // The retained combined modifier above still serves compact capsules. The
@@ -117,7 +117,7 @@ if(selectedCase==='native-modifier') {
  assert.equal(platformCalls.length,frameBefore);assert.equal(frameAttrs.backgroundColor,normal);assert.equal(frameAttrs.opacity,.62);
  const p=parent('rules',{ColorMetrics}),calls=[];p.owner.actionButton('执行',false,()=>calls.push('action'));
  const button=nativeAction(p.nodes()),label=p.nodes().find(node=>node.type==='Text'&&node.create==='执行');
- assert.equal(button.height,frameAttrs.height);assert.equal(button.backgroundColor,normal);assert.equal(button.padding,0);
+ assert.equal(button.height,frameAttrs.height);assert.equal(button.backgroundColor,normal);assert.deepEqual(button.padding,frameAttrs.padding);
  assert.equal(button.accessibilityText,'执行');assert.equal(button.accessibilityRole,'AccessibilityRoleType.BUTTON');
  checkFont(label,readerTypographyRoles.TYPE_RULES_MANAGEMENT_ACTION);
  assert.equal(label.onClick,undefined);assert.equal(label.accessibilityLevel,'no');assert.equal(label.hitTestBehavior,'HitTestMode.None');
@@ -164,7 +164,13 @@ if(selectedCase==='json') {
  owner.formBody();const input=shared.nodes(owner).find(n=>n.type==='TextInput'),button=shared.nodes(owner).find(n=>n.type==='Button'&&n.accessibilityText==='选择本地 JSON 文件');
  checkFont(input,readerTypographyRoles.TYPE_FORM_URL_INPUT);
  assert.equal(input.placeholderColor,readerAppColor('TOK_MUTED','day'));assert.equal(input.backgroundColor,readerAppColor('TOK_SURFACE_FIELD','day'));
- assert.equal(Object.hasOwn(button,'border'),false);assert.equal(button.opacity,1,'current shared native Button paints enabled opacity');
+ assert.equal(Object.hasOwn(button,'border'),false);
+ const paint=shared.nodes(owner).find(n=>n.type==='Row'&&n.borderRadius===999&&n.scale!==undefined);
+ assert.equal(paint.opacity,1,'enabled paint lives on an independent child');
+ assert.equal(button.opacity,undefined);
+ button.onTouch({type:'down',changedTouches:[{id:1}]});
+ button.onTouch({type:'up',changedTouches:[{id:1}]});
+ assert.deepEqual(calls,[],'pointer feedback cannot dispatch the business action');
  owner.validationMessage='旧错误';input.onChange('  https://example.test/b.json  ');assert.equal(owner.validationMessage,'');input.onSubmit('Enter');assert.deepEqual(calls,['https://example.test/b.json']);
  button.onClick();assert.deepEqual(calls,['https://example.test/b.json','local']);shared.properties.flush();
  const field=[...owner.children.values()].find(c=>c instanceof shared.field.Component);

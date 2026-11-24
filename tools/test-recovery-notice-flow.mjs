@@ -223,8 +223,7 @@ async function approvedComposition() {
   const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
   const source = readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets', import.meta.url), 'utf8');
   const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
-  assert.equal(readerAppColor('TOK_MESSAGE_NOTICE_DIVIDER', 'day'), '#3BFFFDF6');
-  assert.equal(readerAppColor('TOK_MESSAGE_NOTICE_DIVIDER', 'night'), '#3B263321');
+  assert.notEqual(readerAppColor('TOK_LINE', 'day'), readerAppColor('TOK_LINE', 'night'));
   let samples = 0;
   for (const width of [216, 288, 342, 540]) {
     for (const scale of [1, 1.3, 1.6, 2]) {
@@ -252,6 +251,8 @@ async function approvedComposition() {
         else assert.ok((notice.reservedSpace.length - 1) * 3.15 * scale >= expected + 8,
           'reservation pays complete action carriers, coarse gap18 and text gap8');
         const paintedTitle = sdk.nodes(notice).find(node => node.type === 'Text' && node.onAreaChange);
+        assert.equal(paintedTitle.fontColor, readerAppColor('TOK_INK', 'day'));
+        assert.ok(sdk.nodes(notice).some(node => node.border?.color === readerAppColor('TOK_PRIMARY_BORDER', 'day')));
         if (notice.reservedSpace.length > 0) assert.ok(paintedTitle.maxLines > 3,
           'a fitting three-line business title retains the additional line reserved for its actions');
         assert.ok(measured.filter(value => value.constraintWidth).every(value => !value.textContent.includes('\u00a0')));

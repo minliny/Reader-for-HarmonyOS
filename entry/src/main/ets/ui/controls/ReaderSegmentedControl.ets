@@ -32,11 +32,10 @@ interface ReaderSegmentSpec {
 }
 export const READER_APP_THEME_SEGMENT_WIDTH = 168;
 const APP_THEME_SEGMENT: ReaderSegmentSpec = {
-  width: READER_APP_THEME_SEGMENT_WIDTH, padding: 2, radius: 8, itemRadius: 6, borderWidth: 1,
+  width: READER_APP_THEME_SEGMENT_WIDTH, padding: 4, radius: 12, itemRadius: 9, borderWidth: 1,
   activeText: 'app.segment.activeText',
-  inactiveText: 'app.segment.inactiveText',
-  selectedSurface: 'app.segment.selected',
-  selectedBorder: 'TOK_GREEN',
+  inactiveText: 'TOK_MUTED',
+  selectedSurface: 'TOK_SURFACE_ELEVATED',
   surface: 'app.segment.surface', border: 'app.segment.border',
 };
 const PILL_CHOICE: ReaderSegmentSpec = {
@@ -93,7 +92,7 @@ export struct ReaderSegmentedControl {
         ForEach(this.optionIds, (optionId: string): void => {
           Button({ type: ButtonType.Normal }) {
             Text(this.optionLabel(optionId)).fontSize(TYPE_APP_INHERITED_OPTION.fontSizeFp)
-              .fontColor(this.choiceColor(optionId)).textAlign(TextAlign.Center);
+              .fontColor(this.choiceColor(optionId)).fontFeature('"tnum" 1').textAlign(TextAlign.Center);
           }
           .layoutWeight(undefined)
           .constraintSize({ minWidth: 44, minHeight: 44 })
@@ -192,7 +191,7 @@ export struct ReaderSegmentedControl {
   private themeTextModifier(id: string): TextModifier {
     return new TextModifier().fontFamily(TYPE_APP_SEGMENT_LABEL.fontFamily)
         .fontSize(TYPE_APP_SEGMENT_LABEL.fontSizeFp).fontWeight(TYPE_APP_SEGMENT_LABEL.fontWeight)
-        .minFontScale(0).maxFontScale(this.themeMaxFontScale)
+        .minFontScale(0).maxFontScale(this.themeMaxFontScale).fontFeature('"tnum" 1')
         .maxLines(Math.max(1, this.optionLabel(id).length)).textOverflow({ overflow: TextOverflow.Clip })
         .width('100%').constraintSize({ minHeight: 44 }).padding(0).textAlign(TextAlign.Center)
         .border({ width: this.isSelected(id) && this.spec().selectedBorder !== undefined ? this.spec().borderWidth : 0,
@@ -217,8 +216,8 @@ export struct ReaderSegmentedControl {
         itemSelectedFontColor: ColorMetrics.resourceColor(readerAppColor(this.spec().activeText, this.appThemeScheme)),
         buttonPadding: LengthMetrics.vp(0), buttonMinHeight: LengthMetrics.vp(44),
         itemSelectedBackgroundColor: ColorMetrics.resourceColor(readerAppColor(this.spec().selectedSurface, this.appThemeScheme)),
-        itemShadow: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
-        buttonBackgroundColor: ColorMetrics.resourceColor('#00000000'), buttonBorderRadius: LengthMetrics.vp(this.spec().radius),
+        itemShadow: { radius: 3, color: readerAppColor('app.chrome.raisedShadowNear', this.appThemeScheme), offsetX: 0, offsetY: 1 },
+        buttonBackgroundColor: ColorMetrics.resourceColor(readerAppColor('app.surface.transparent', this.appThemeScheme)), buttonBorderRadius: LengthMetrics.vp(this.spec().radius),
       }).width('100%');
     }, (opening: ReaderSegmentOpening): string => opening.identity + JSON.stringify(opening.ids));
   }

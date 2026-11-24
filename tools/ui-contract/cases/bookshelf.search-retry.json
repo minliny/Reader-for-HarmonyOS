@@ -1,6 +1,6 @@
 {
   "id": "bookshelf.search-retry",
-  "version": 6,
+  "version": 7,
   "phase": 1,
   "pageId": "bookshelf",
   "fixture": {
@@ -333,9 +333,11 @@
     "entry/src/main/ets/app/diagnostics/ReaderUIVerificationProbe.ts",
     "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
     "entry/src/main/ets/features/search/ui/ReaderSearchTaskPanel.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchTaskTrigger.ets",
     "entry/src/main/ets/features/search/ui/ReaderSearchFilterPanel.ets",
+    "entry/src/main/ets/features/search/ui/ReaderSearchFilterTrigger.ets",
     "entry/src/main/ets/features/search/application/SearchGateway.ts",
-    "entry/src/main/ets/features/search/ui/SearchResultSheetBinding.ets",
+    "entry/src/main/ets/ui/surfaces/ReaderBottomSheet.ets",
     "entry/src/main/ets/ui/surfaces/ReaderBoundedSurface.ets",
     "entry/src/main/ets/ui/surfaces/ReaderBoundedSurfaceHeader.ets"
   ],
@@ -445,7 +447,8 @@
       "required": true,
       "expected": {
         "panel": "task",
-        "nativeReturn": true
+        "nativeReturn": true,
+        "sheetHost": "reader-bottom-sheet"
       },
       "source": "entry/src/main/ets/features/search/ui/SearchPage.ets#finishNativePanel",
       "sources": [

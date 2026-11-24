@@ -38,6 +38,7 @@ export struct ReaderBottomTabBar {
   @State private raisedShape: ReaderRaisedShape | undefined = undefined;
   private mounted: boolean = false;
   private appearanceEpoch: number = 0;
+  private readonly itemGap: number = 6;
 
   aboutToAppear(): void {
     this.appearanceEpoch += 1;
@@ -54,7 +55,7 @@ export struct ReaderBottomTabBar {
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       if (this.hasPaintGeometry()) {
-        Row({ space: TOK_SPACE_XS }) {
+        Row({ space: this.itemGap }) {
           this.activePill();
           ForEach(this.items, (tab: ReaderBottomTabItem): void => {
             this.tabItem(tab);
@@ -84,7 +85,7 @@ export struct ReaderBottomTabBar {
       Row()
         .width(this.pillWidth()).height(readerMainTabItemHeight(this.fontScale, false))
         .position({ x: TOK_SPACE_XS + TOK_BORDER_W, y: this.pillTop() })
-        .translate({ x: this.paintedTab * (this.pillWidth() + TOK_SPACE_XS) })
+        .translate({ x: this.paintedTab * (this.pillWidth() + this.itemGap) })
         .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.scheme))
         .borderRadius(readerMainTabItemHeight(this.fontScale, false) / 2)
         .opacity(this.pillOpacity)
@@ -97,7 +98,7 @@ export struct ReaderBottomTabBar {
     const count = this.items.length;
     const inset = TOK_SPACE_XS + TOK_BORDER_W;
     const width = this.currentRaisedShape()?.width ?? this.surfaceWidth;
-    return count > 0 ? Math.max(0, (width - 2 * inset - (count - 1) * TOK_SPACE_XS) / count) : 0;
+    return count > 0 ? Math.max(0, (width - 2 * inset - (count - 1) * this.itemGap) / count) : 0;
   }
 
   private pillTop(): number {
@@ -152,7 +153,7 @@ export struct ReaderBottomTabBar {
     Button({ type: ButtonType.Capsule, stateEffect: false }) {
       Column({ space: 2 }) {
         Stack({ alignContent: Alignment.Center }) {
-          Image(this.currentTab(tab).icon).width(24).height(24).accessibilityLevel('no');
+          Image(this.currentTab(tab).icon).width(21).height(21).accessibilityLevel('no');
         }.width(30).height(30);
         Text(this.currentTab(tab).label)
           .width('100%')
@@ -213,7 +214,7 @@ export struct ReaderBottomTabBar {
     const count = this.items.length;
     const itemHeight = readerMainTabItemHeight(this.fontScale, false);
     const inset = TOK_SPACE_XS + TOK_BORDER_W;
-    const minimumWidth = count * Math.max(44, itemHeight) + Math.max(0, count - 1) * TOK_SPACE_XS +
+    const minimumWidth = count * Math.max(44, itemHeight) + Math.max(0, count - 1) * this.itemGap +
       2 * inset;
     const minimumHeight = itemHeight + 2 * inset;
     const precision = Number.EPSILON * Math.max(1, width, height, minimumWidth, minimumHeight) * 4;

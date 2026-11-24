@@ -2,15 +2,19 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
+import { switchControls } from './lib/reader-switch-control-probe.mjs';
 import { iconButtonControls } from './lib/reader-icon-button-probe.mjs';
 import { labeledIconControls } from './lib/reader-labeled-icon-action-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
+import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import { selectedProductionValues } from './lib/selected-production-methods.mjs';
 
 const cases = {
   controls: { description: 'Actual shared native shape/finite paint modifiers, retained spec updates, geometry callbacks and existing action targets.', resources: [] },
+  matrix: { description: 'Production button matrix, independent native hit dimensions, themed paint, keyboard focus, disabled admission and large-text geometry.', resources: [] },
+  families: { description: 'Actual shared book search paint/input separation, native Toggle and SegmentV2 geometry, and noninteractive tabular status badge paint.', resources: [] },
 };
 
 const nodes = (owner, kind) => [...owner.nodes.values()].filter(node => node.type === kind);
@@ -53,8 +57,11 @@ function testControls() {
     icon.aboutToAppear(); icon.initialRender();
     const hit = nodes(icon, 'Button')[0];
     const spec = icons.resolveReaderIconButtonSpec(specId);
-    assert.equal(hit.borderRadius, Math.min(spec.radius, spec.boxSize / 2));
-    const nativeId = icon.attributeCalls.find(call => call.property === 'createWithChild').id;
+    assert.equal(hit.backgroundColor, 'Color.Transparent', 'native target carries focus without a duplicate material');
+    assert.equal(hit.borderRadius, Math.min(spec.radius, spec.boxSize / 2), 'native focus keeps its original shape');
+    const paint = nodes(icon, 'Stack').find(node => node.scale !== undefined);
+    assert.equal(paint.borderRadius, Math.min(spec.radius, spec.boxSize / 2));
+    const nativeId = paint.id;
     const paintCalls = icon.attributeCalls.filter(call => call.id === nativeId);
     assert.ok(paintCalls.findIndex(call => call.property === 'border') <
       paintCalls.findIndex(call => call.property === 'attributeModifier'),
@@ -64,7 +71,7 @@ function testControls() {
     const values = {};
     const attrs = new Proxy({}, { get: (_target, key) => value => { values[key] = value; return attrs; } });
     modifier.applyPressedAttribute(attrs);
-    assert.equal(values.borderRadius, Math.min(spec.pressedRadius, spec.boxSize / 2));
+    assert.equal(values.borderRadius, Math.min(spec.pressFeedback === false ? spec.radius : spec.pressedRadius, spec.boxSize / 2));
   }
 
   const labeled = labeledIconControls();
@@ -139,12 +146,14 @@ function testPressMotion() {
   const foundation = foundationControls({ ColorMetrics: {
     resourceColor: color => ({ color, blendColor: overlay => ({ color: `blend:${color}:${overlay.color}` }) }),
   } });
-  const icons = iconButtonControls();
+  const icons = iconButtonControls({ ColorMetrics: {
+    resourceColor: color => ({ color, blendColor: overlay => ({ color: `blend:${color}:${overlay.color}` }) }),
+  } });
   const fixture = [
     [foundation.button.Component, foundation.properties,
       { specId: 'search-filter-option', label: '全部', primary: true, selectionSemantic: true }, 'Text'],
     [icons.icon.Component, icons.properties,
-      { specId: 'toolbar-standard', icon: 'back', accessibilityLabel: '返回', selectionState: 'selected' }, 'Image'],
+      { specId: 'toolbar-standard', icon: 'back', accessibilityLabel: '返回', selectionState: 'selected' }, 'Stack'],
   ];
   for (const [Component, properties, props, visualType] of fixture) {
     const owner = new Component(undefined, props);
@@ -168,7 +177,7 @@ function testPressMotion() {
     assert.deepEqual(target.responseRegion ?? target.constraintSize, hitGeometry);
     assert.deepEqual(visual.scale, { x: 0.978, y: 0.978 });
     assert.equal(visual.opacity, 1);
-    if (visualType === 'Text') assert.equal(visual.backgroundColor, `blend:${restingSurface}:#141D1B18`);
+    assert.equal(visual.backgroundColor, `blend:${restingSurface}:#141D1B18`);
     assert.deepEqual(visual.animation, { duration: 140, curve: [0.2, 0, 0, 1] });
     touch('down', 7);
     touch('up', 7);
@@ -195,15 +204,145 @@ function testPressMotion() {
     owner.updateStateVars({ ...snapshot, actionEnabled: false });
     properties.flush();
     assert.equal(owner.pressPointer, -1);
-    assert.equal(visual.opacity, visualType === 'Image' ? 0.45 : 1);
+    assert.equal(visual.opacity, 1);
+    if (visualType === 'Stack') assert.equal(nodes.find(node => node.type === 'Image').opacity, 0.45);
     touch('down');
     assert.equal(owner.pressPointer, -1);
     assert.equal(target.enabled, false);
   }
 }
 
+function testButtonMatrix() {
+  let scale = 1;
+  const shared = foundationControls({ windowMetrics: () => ({ systemFontScale: scale }) });
+  const sizes = [['large', 46, 24, 15], ['medium', 38, 16, 13], ['small', 30, 12, 12]];
+  const variants = [
+    ['primary', 'TOK_PRIMARY_DARK', 'TOK_ON_PRIMARY'],
+    ['tonal', 'TOK_PRIMARY_SOFT', 'TOK_PRIMARY_DARK'],
+    ['subtle', 'TOK_SURFACE_FIELD', 'TOK_INK'],
+    ['danger', 'app.action.destructiveSoft', 'app.action.destructive'],
+  ];
+  for (const scheme of ['day', 'night']) for (const [variant, surface, ink] of variants) for (const [size, height, inset, textSize] of sizes) {
+    let clicks = 0, focus = 0;
+    const owner = new shared.button.Component(undefined, { variant, size, scheme, label: '确认 12',
+      focusId: 'reader-matrix-action', onAction: () => clicks++, onFocused: () => focus++ });
+    owner.aboutToAppear(); owner.initialRender();
+    const [target] = nodes(owner, 'Button');
+    const [paint] = nodes(owner, 'Row');
+    const [label] = nodes(owner, 'Text');
+    assert.deepEqual(target.constraintSize, { minWidth: 44, minHeight: 44 });
+    assert.equal(target.scale, undefined);
+    assert.equal(target.id, 'reader-matrix-action');
+    assert.equal(paint.constraintSize.minHeight, height);
+    assert.deepEqual(paint.padding, { left: inset, right: inset });
+    assert.equal(paint.borderRadius, 999);
+    assert.equal(paint.backgroundColor, readerAppColor(surface, scheme));
+    assert.equal(label.fontSize, textSize);
+    assert.equal(label.fontFeature, '"tnum" 1');
+    assert.equal(label.fontColor, readerAppColor(ink, scheme));
+    target.onFocus(); target.onClick(); assert.deepEqual([focus, clicks], [1, 1]);
+    owner.updateStateVars({ ...currentProps(owner), actionEnabled: false });
+    shared.properties.flush(); target.onClick();
+    assert.equal(clicks, 1);
+    assert.equal(target.enabled, false);
+    assert.equal(paint.opacity, 0.45);
+    assert.equal(paint.backgroundColor, readerAppColor('TOK_SURFACE_FIELD', scheme));
+    assert.equal(label.fontColor, readerAppColor('TOK_MUTED', scheme));
+    scale = 2; owner.readerWindowMetricsRevision += 1; shared.properties.flush();
+    assert.ok(paint.constraintSize.minHeight > height, 'large text grows paint independently of the hit minimum');
+    scale = 1;
+    owner.aboutToDisappear();
+  }
+}
+
+function testControlFamilies() {
+  const shared = foundationControls();
+  const source = name => readFileSync(new URL(`../entry/src/main/ets/ui/controls/${name}.ets`, import.meta.url), 'utf8');
+  const search = source('ReaderSearchField');
+  const field = createReaderBuilderProbe(search,
+    ['fixedLineHeightField', 'bookEditorLane', 'nativeFieldBackground', 'nativeInputBackground',
+      'fieldHeight', 'inputHeight', 'horizontalPadding', 'isBookField', 'fieldBackgroundColor', 'fieldBorderWidth', 'fieldBorderColor'],
+    shared.dependencies, shared.hooks).owner;
+  Object.assign(field, {
+    variant: 'bookPanel', appThemeScheme: 'day', placeholder: '搜索书名', text: '第12章',
+    bookFontScale: () => 1, bookTextStyle: () => readerTypographyRoles.TYPE_SEARCH_BOOK_PANEL_INPUT,
+    resolvedAccessibilityLabel: () => '搜索书名', bookPanelFrameId: 'book-search',
+    clearable: true, bookPanelClearId: 'book-search-clear',
+  });
+  field.fixedLineHeightField();
+  const frame = nodes(field, 'Stack').find(node => node.id === 'book-search');
+  const paint = nodes(field, 'Row').find(node => node.height === 40);
+  const input = nodes(field, 'TextInput')[0];
+  const clear = nodes(field, 'Button').find(node => node.id === 'book-search-clear');
+  assert.equal(frame.height, 44);
+  assert.equal(paint.height, 40);
+  assert.equal(paint.borderRadius, 20);
+  assert.equal(paint.backgroundColor, readerAppColor('TOK_SURFACE_FIELD', 'day'));
+  assert.equal(paint.border.width, 1);
+  assert.equal(input.height, 44);
+  assert.equal(input.borderRadius, 0);
+  assert.equal(input.fontFeature, '"tnum" 1');
+  assert.deepEqual([clear.width, clear.height], [44, 44]);
+
+  const switches = switchControls();
+  for (const specId of ['standard-toggle', 'bookshelf-update-toggle']) {
+    const intents = [];
+    const owner = new switches.toggle.Component(undefined, { specId, inputIdentity: specId, onToggle: next => intents.push(next) });
+    owner.aboutToAppear(); owner.initialRender();
+    const target = nodes(owner, 'Toggle')[0];
+    assert.deepEqual([target.width, target.height, target.switchStyle.pointRadius, target.switchStyle.trackBorderRadius],
+      [44, 26, 10, 13]);
+    assert.deepEqual(target.responseRegion, { x: 0, y: -9, width: 44, height: 44 });
+    assert.equal(target.selectedColor, readerAppColor('TOK_PRIMARY_DARK', 'day'));
+    target.onChange(true); assert.deepEqual(intents, [true]);
+    assert.equal(owner.value, false, 'business owner still accepts the native proposal');
+  }
+  const choices = [];
+  const segmented = switches.mount(switches.segment, {
+    inputIdentity: 'theme', options: ['跟随系统', '浅色宣纸', '夜间松墨'], optionIds: ['system', 'day', 'night'],
+    selectedIndex: 0, onSelect: index => choices.push(index),
+  });
+  const capsule = switches.capsules(segmented)[0].params;
+  assert.equal(nodes(segmented, 'Row')[0].borderRadius, 12);
+  assert.equal(capsule.itemBorderRadius.value, 9);
+  assert.equal(capsule.itemMinHeight.value, 44);
+  assert.equal(capsule.items[0].textModifier.attributes.fontFeature, '"tnum" 1');
+  capsule.onItemClicked(1); assert.deepEqual(choices, [1]);
+  assert.equal(segmented.selectedIndex, 0, 'native item presses remain proposals');
+
+  const badgeSource = source('StatusBadge');
+  const Badge = createReaderBuilderProbe(badgeSource, boundedMembers(badgeSource), {
+    ...shared.dependencies, LineJoinStyle: { Round: 'LineJoinStyle.Round' },
+    uiContext: { vp2px: value => value },
+  }, shared.hooks).Component;
+  for (const [status, role] of [['success', 'app.status.goodSoft'], ['error', 'app.status.checkErrorSoft']]) {
+    const badge = new Badge(undefined, { status, label: '书源测速 128 毫秒', text: '128ms' });
+    badge.initialRender();
+    const frame = nodes(badge, 'Stack').find(node => node.accessibilityGroup);
+    const value = nodes(badge, 'Text')[0];
+    assert.equal(frame.borderRadius, 999);
+    assert.equal(frame.backgroundColor, readerAppColor(role, 'day'));
+    assert.equal(frame.accessibilityText, '书源测速 128 毫秒');
+    assert.equal(frame.onClick, undefined);
+    assert.equal(value.fontFeature, '"tnum" 1');
+    assert.equal(value.fontSize, 11);
+  }
+  const symbol = new Badge(undefined, { status: 'pending', label: '搜索中', text: '128ms', symbolOnly: true });
+  symbol.initialRender();
+  const markCarrier = nodes(symbol, 'Stack').find(node => node.accessibilityGroup);
+  assert.deepEqual([markCarrier.width, markCarrier.height, markCarrier.accessibilityLevel], [14, 18, 'no']);
+  assert.equal(nodes(symbol, 'Text').length, 0, 'existing symbol-only facts stay in their compact graphic slot');
+
+}
+
 for (const id of selectContractCases(cases)) {
-  testControls();
-  testPressMotion();
+  if (id === 'controls') {
+    testControls();
+    testPressMotion();
+  } else if (id === 'matrix') {
+    testButtonMatrix();
+  } else {
+    testControlFamilies();
+  }
   recordContractCasePass(id);
 }

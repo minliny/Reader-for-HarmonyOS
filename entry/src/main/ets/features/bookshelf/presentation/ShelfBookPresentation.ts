@@ -50,7 +50,8 @@ export class ShelfBookPresentation {
     return book.currentChapterTitle?.trim() || '尚未阅读';
   }
 
-  static contentLabel(book: ShelfBook): string {
+  static contentLabel(book: ShelfBook | undefined): string {
+    if (book === undefined) return '';
     return book.contentKind === 'manga' ? '漫画' : book.contentKind === 'audio' ? '有声' : '小说';
   }
 

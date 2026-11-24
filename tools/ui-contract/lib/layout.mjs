@@ -35,6 +35,11 @@ const bottom = rect => rect.top + rect.height;
 const area = rect => rect.width * rect.height;
 const searchLabels = new Map([['搜索', 'search'], ['停止搜索', 'stop'], ['停止', 'stop']]);
 const searchSheetTitles = ['筛选', '搜索进度'];
+export const readerSearchBottomSheetHost = 'reader-bottom-sheet';
+export function isReaderSearchBottomSheet(node, kind) {
+  const match = /^reader-search-sheet:(filter|task)$/u.exec(node.id ?? '');
+  return node.type === 'Column' && match !== null && (kind === undefined || match[1] === kind);
+}
 export const searchConfirmedEmptyHeading = 'reader-search-confirmed-empty-heading';
 export const searchUnconfirmedEmptyHeading = 'reader-search-unconfirmed-empty-heading';
 export const searchMismatchedEmptyHeading = 'reader-search-mismatched-empty-heading';
@@ -368,7 +373,7 @@ export function normalizeHarmonyLayout({
         if (labels.length === 1) sourceActionRow.buttons.push({index:nodes.length,alias:labels[0][1]});
       }
     }
-    if (a.type === 'SheetPage' && parentType === 'SheetWrapper' &&
+    if (((a.type === 'SheetPage' && parentType === 'SheetWrapper') || isReaderSearchBottomSheet(a)) &&
         boolean(a.visible) === true && positive(finiteNumber(a.opacity))) {
       sheet = { index:nodes.length, titles:new Map(), buttons:[] };
       taskSheets.push(sheet);

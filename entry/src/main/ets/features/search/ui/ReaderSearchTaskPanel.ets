@@ -3,26 +3,20 @@ import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSurfaceHeader';
 import { MESSAGE_META } from '../../../ui/foundation/ReaderMessageStyle';
-import { READER_ACTION_MIN_TARGET, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
+import { READER_ACTION_MIN_TARGET } from '../../../ui/controls/ReaderActionAccessibility';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { resolveSheetSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { SurfaceWidthSpec, resolveHorizontalFrame } from '../../../ui/layout/SurfaceHorizontalGeometry';
-import { readerVisualSafeLeft, readerVisualSafeRight, readerVisualSafeTop, readerVisualSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerVisualSafeTop, readerVisualSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
-import { SearchResultSheetBinding } from './SearchResultSheetBinding';
 
-/** Registered search-task content. SearchPage owns facts, retry rights and
- * the native panel lease; this component reports its Sheet events. */
+/** Bounded search task content. SearchPage owns the current presentation and input. */
 @Component
 export struct ReaderSearchTaskPanel {
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') @Watch('metricsChanged') private metricsRevision: number = 0;
   @Prop expanded: boolean = false;
   @Prop presentationIdentity: string = '';
-  @Prop triggerFocusId: string = '';
-  @Prop triggerWidth: number = 240;
   @Prop progressText: string = '';
-  @Prop statusLabel: string = '';
   @Prop searching: boolean = false;
   @Prop partialText: string = '';
   @Prop failed: number = 0;
@@ -31,41 +25,20 @@ export struct ReaderSearchTaskPanel {
   @Prop skipped: number = 0;
   @Prop canRetry: boolean = false;
   @Prop retryIdentity: string = '';
-  onToggle: (identity: string, expanded: boolean) => void = (_identity: string, _expanded: boolean): void => {};
-  onNativeOpening: (identity: string) => void = (_identity: string): void => {};
-  onNativeClosing: (identity: string) => void = (_identity: string): void => {};
-  onClosed: (identity: string) => void = (_identity: string): void => {};
   onDismiss: (identity: string) => void = (_identity: string): void => {};
   onRetry: (identity: string, retryIdentity: string) => void = (_identity: string, _retryIdentity: string): void => {};
   private mounted: boolean = false;
-  private readonly nativeSheet: SearchResultSheetBinding = new SearchResultSheetBinding();
   @State private measuredHeaderHeight: number = 0;
 
   aboutToAppear(): void { this.mounted = true; }
-  aboutToDisappear(): void { this.mounted = false; this.nativeSheet.retire(this.onNativeClosing); }
+  aboutToDisappear(): void { this.mounted = false; }
   private metricsChanged(): void { this.measuredHeaderHeight = 0; }
   private accepts(identity: string): boolean {
     return this.mounted && this.expanded && identity === this.presentationIdentity;
   }
-  private toggleAction(identity: string, expanded: boolean): () => void {
-    return (): void => { if (this.mounted) this.onToggle(identity, expanded); };
-  }
   private fontScale(): number {
     const value = this.metricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
     return Number.isFinite(value) && value > 0 ? Math.max(1, value) : 1;
-  }
-  private summaryLabel(): string {
-    const parts: string[] = [this.progressText];
-    if (this.partialText.length > 0) parts.push('部分未完成');
-    if (this.failed > 0) parts.push(`${this.failed} 失败`);
-    if (this.skipped > 0) parts.push(`${this.skipped} 跳过`);
-    return parts.filter((value: string): boolean => value.length > 0).join(' · ');
-  }
-  private triggerHeight(): number { return (MESSAGE_META.lineHeightFp ?? 18) * this.fontScale() + 8; }
-  private sheetWidth(): number {
-    const metrics = ReaderWindowCoordinator.metrics();
-    return resolveHorizontalFrame(metrics.windowRect.width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(resolveSheetSpec('search-task-status').maxWidth)).width;
   }
   private bodyLimit(): number {
     const metrics = ReaderWindowCoordinator.metrics();
@@ -74,14 +47,6 @@ export struct ReaderSearchTaskPanel {
       spec.handleBottom + Math.max(spec.titleHeight, spec.titleLineHeight * this.fontScale()) + spec.titleBottom;
     return Math.max(0, metrics.windowRect.height - readerVisualSafeTop(metrics) - readerVisualSafeBottom(metrics) -
       header - spec.contentBottom);
-  }
-  private sheetOptions(identity: string): SheetOptions {
-    return this.nativeSheet.options(resolveSheetSpec('search-task-status'), this.sheetWidth(), this.scheme, identity, {
-      isMountedOpening: (): boolean => this.mounted && identity === this.presentationIdentity,
-      isExpandedOpening: (): boolean => this.accepts(identity),
-      onOpening: this.onNativeOpening, onClosing: this.onNativeClosing,
-      onDismiss: this.onDismiss, onClosed: this.onClosed,
-    });
   }
   private retryAction(identity: string, retryIdentity: string): () => void {
     return (): void => {
@@ -134,32 +99,10 @@ export struct ReaderSearchTaskPanel {
     Scroll() { this.details(identity); }.width('100%').constraintSize({ maxHeight: this.bodyLimit() })
       .scrollBar(BarState.Auto);
   }
-  @Builder private sheetContent() {
+  build() {
     ForEach([this.presentationIdentity], (identity: string): void => {
       ReaderBoundedSurface({ specId: 'search-task-status', header: (): void => { this.sheetHeader(identity); },
         body: (): void => { this.sheetBody(identity); } });
     }, (identity: string): string => identity);
-  }
-  build() {
-    Row({ space: 8 }) {
-      Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Row({ space: 4 }) {
-        Text(this.summaryLabel()).layoutWeight(1).fontFamily(MESSAGE_META.fontFamily).fontWeight(MESSAGE_META.fontWeight)
-          .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_MUTED', this.scheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-        Image(this.scheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'))
-          .width(10).height(10).objectFit(ImageFit.Contain);
-        }.width(this.triggerWidth).height(this.triggerHeight());
-      }.width(this.triggerWidth).height(this.triggerHeight()).id(this.triggerFocusId)
-        .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
-        // Expanded response stays left of the filter's reserved right lane.
-        .responseRegion(readerActionTouchRegion(this.triggerWidth, this.triggerHeight()))
-        .accessibilityRole(AccessibilityRoleType.BUTTON)
-        .accessibilityText(`查看搜索进度，${this.summaryLabel()}`)
-        .onClick(this.toggleAction(this.presentationIdentity, this.expanded))
-        .bindSheet(this.expanded, this.sheetContent, this.sheetOptions(this.presentationIdentity));
-      Text(this.statusLabel).width(READER_ACTION_MIN_TARGET).fontFamily(MESSAGE_META.fontFamily).fontSize(10).lineHeight(15)
-        .fontColor(readerAppColor('TOK_MUTED', this.scheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-    }.width('100%').alignItems(VerticalAlign.Center);
   }
 }

@@ -101,8 +101,8 @@ export struct ReaderSelect {
     .height(this.triggerHeight())
     .padding(0)
     .backgroundColor(Color.Transparent)
-    .borderRadius(this.variant === 'appearanceLibrary' ? Math.min(this.resolvedWidth(), this.triggerHeight()) / 2 :
-      this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_RADIUS : this.variant === 'settingsPhone' ? 7 : 6)
+    .borderRadius(this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_RADIUS :
+      Math.min(this.resolvedWidth(), this.triggerHeight()) / 2)
     .responseRegion({ x: 0, y: this.variant === 'appearanceLibrary' ? -APPEARANCE_HIT_OUTSET : 0,
       width: '100%', height: this.variant === 'appearanceLibrary' ?
         this.triggerHeight() + APPEARANCE_HIT_OUTSET * 2 : this.triggerHeight() })
@@ -190,7 +190,7 @@ export struct ReaderSelect {
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('app.selection.subtle', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_GREEN', this.appThemeScheme) })
-    .borderRadius(7);
+    .borderRadius(Math.min(this.resolvedWidth(), this.triggerHeight()) / 2);
   }
 
   @Builder
@@ -221,7 +221,7 @@ export struct ReaderSelect {
     .alignItems(VerticalAlign.Center)
     .backgroundColor(readerAppColor('app.selection.subtle', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_GREEN', this.appThemeScheme) })
-    .borderRadius(7);
+    .borderRadius(Math.min(this.resolvedWidth(), this.triggerHeight()) / 2);
   }
 
   @Builder
@@ -270,6 +270,7 @@ export struct ReaderSelect {
         .fontSize(TYPE_SELECT_DEFAULT_VALUE.fontSizeFp)
         .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
         .textAlign(TextAlign.Start)
+        .fontFeature('"tnum" 1')
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
       Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down'))).width(CHEVRON_W).height(CHEVRON_H)
@@ -279,9 +280,9 @@ export struct ReaderSelect {
     .width('100%')
     .height(this.triggerHeight())
     .padding({ left: SELECT_PAD, right: SELECT_PAD })
-    .backgroundColor(readerAppColor('app.select.triggerSurface', this.appThemeScheme))
+    .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-    .borderRadius(6)
+    .borderRadius(Math.min(this.resolvedWidth(), this.triggerHeight()) / 2)
     .alignItems(VerticalAlign.Center);
   }
 

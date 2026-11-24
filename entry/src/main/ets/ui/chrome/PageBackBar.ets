@@ -1,4 +1,4 @@
-import { DIRECTORY_CHROME_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryHeaderHeight } from '../foundation/ReaderDirectoryChromeVisual';
+import { DIRECTORY_CHROME_VISUAL as visual, mangaDirectoryScale, mangaDirectoryHeaderHeight } from '../foundation/ReaderDirectoryChromeVisual';
 import { MangaDirectoryPressFeedback } from '../foundation/MangaDirectoryPressFeedback';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerSurfaceElevation, readerHeaderVeilMaterial, readerHeaderVeilBorder } from '../surfaces/ReaderSurfaceSpecs';
@@ -12,7 +12,7 @@ import {
   readerInteractiveSafeRight,
 } from '../foundation/ReaderWindowMetrics';
 import { TYPE_DOWNLOAD_HEADER_TITLE, TYPE_PAGE_TITLE } from '../foundation/ReaderTypography';
-import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_650 } from '../foundation/ReaderFontFamilies.ts';
+import { READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC_UI_650 } from '../foundation/ReaderFontFamilies.ts';
 import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_HEADER_BAR_HEIGHT, DOWNLOAD_HEADER_HEIGHT,
   DOWNLOAD_HEADER_ACTION_WIDTH, DOWNLOAD_HEADER_ACTION_HEIGHT } from '../foundation/ReaderHeaderMetrics';
 import { readerScaledBarHeight } from '../foundation/ReaderSurfaceResolvers';
@@ -87,7 +87,7 @@ export struct PageBackBar {
         .padding(0).backgroundColor(Color.Transparent)
         .borderRadius(this.variant === 'mangaDirectory' ? visual.headerButtonRadius : 22)
         .attributeModifier(new MangaDirectoryPressFeedback(true, this.variant === 'mangaDirectory', this.appThemeScheme, 'nativeButton'))
-        .accessibilityText('返回').accessibilityRole(AccessibilityRoleType.BUTTON)
+        .accessibilityText(this.backLabel).accessibilityRole(AccessibilityRoleType.BUTTON)
         .id(this.backFocusId)
         .onClick((): void => this.onBack());
       }
@@ -95,14 +95,16 @@ export struct PageBackBar {
       if (this.variant === 'download') {
         Text(this.title).fontFamily(TYPE_DOWNLOAD_HEADER_TITLE.fontFamily).fontWeight(TYPE_DOWNLOAD_HEADER_TITLE.fontWeight)
           .fontSize(TYPE_DOWNLOAD_HEADER_TITLE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_HEADER_TITLE.lineHeightFp as number)
-          .halfLeading(true).fontColor(readerAppColor('TOK_DOWNLOAD_INK', this.appThemeScheme))
+          .halfLeading(true).fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .textAlign(TextAlign.Center).layoutWeight(1);
       } else {
         Text(this.title)
-          .fontFamily(this.variant === 'mangaDirectory' ? READER_FONT_NOTO_SANS_SC_UI_650 : this.floating ? READER_FONT_NOTO_SANS_SC_UI_BOLD : TYPE_PAGE_TITLE.fontFamily)
+          .fontFamily(this.variant === 'mangaDirectory' ? READER_FONT_NOTO_SANS_SC_UI_650 :
+            this.floating ? READER_FONT_NOTO_SERIF_SC_BOLD : TYPE_PAGE_TITLE.fontFamily)
           .fontWeight(this.variant === 'mangaDirectory' ? visual.headerFontWeight : this.floating ? FontWeight.Bold : TYPE_PAGE_TITLE.fontWeight,
             { enableVariableFontWeight: this.variant === 'mangaDirectory' })
-          .fontSize(this.variant === 'mangaDirectory' ? visual.headerFontSize : this.floating ? 19 : TYPE_PAGE_TITLE.fontSizeFp)
+          .fontSize(this.variant === 'mangaDirectory' ? visual.headerFontSize : this.floating ? 16 : TYPE_PAGE_TITLE.fontSizeFp)
           .lineHeight(this.adaptsTitleSize() ? undefined :
             this.variant === 'mangaDirectory' ? visual.headerLineHeight : this.floating ? 28 : TYPE_PAGE_TITLE.lineHeightFp as number)
           .minFontSize(this.adaptsTitleSize() ? Math.round(TYPE_PAGE_TITLE.fontSizeFp * 0.75) : undefined)
@@ -112,7 +114,7 @@ export struct PageBackBar {
           .halfLeading(this.variant === 'mangaDirectory')
           .minFontScale(this.variant === 'mangaDirectory' ? Math.min(1, this.mangaFontScale()) : 0)
           .maxFontScale(this.variant === 'mangaDirectory' ? Math.max(1, this.mangaFontScale()) : Math.max(1, this.fontScale()))
-          .fontColor(this.titleColor.length > 0 ? this.titleColor : this.variant === 'mangaDirectory' ? mangaDirectoryColor('ink', this.appThemeScheme) : readerAppColor('TOK_INK', this.appThemeScheme))
+          .fontColor(this.titleColor.length > 0 ? this.titleColor : readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(this.multilineTitle() ? 2 : 1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .accessibilityText(this.title)
@@ -138,13 +140,15 @@ export struct PageBackBar {
     .padding({ left: this.leftInset(), right: this.rightInset(), top: this.verticalInset(), bottom: this.verticalInset() })
     .alignItems(VerticalAlign.Center)
     .backgroundEffect(this.veil() ? readerHeaderVeilMaterial(this.scrolled, this.appThemeScheme) : undefined)
-    .backgroundColor(this.variant === 'mangaDirectory' ? mangaDirectoryColor('surface', this.appThemeScheme) : this.veil() ? Color.Transparent : this.framed() || this.surface === 'solid' ? readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme) : Color.Transparent)
+    .backgroundColor(this.veil() || this.surface === 'transparent' ? Color.Transparent :
+      readerAppColor('TOK_PAPER', this.appThemeScheme))
     .border({ width: this.framed() ? this.variant === 'mangaDirectory' ? visual.borderWidth : 1 : 0,
-      color: this.variant === 'mangaDirectory' ? mangaDirectoryColor('line', this.appThemeScheme) : this.veil() ? readerHeaderVeilBorder(this.appThemeScheme) : readerAppColor('app.border.control', this.appThemeScheme) })
+      color: this.veil() ? readerHeaderVeilBorder(this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
     .borderRadius(this.panelRadius())
     .clip(this.framed() || this.raised())
     .shadow(readerSurfaceElevation(this.raised() ? 'raised' : this.elevation === 'floating' ? 'floating' : 'fixed', this.appThemeScheme))
-    .hitTestBehavior(this.variant === 'download' || this.raised() || this.veil() ? HitTestMode.Default : HitTestMode.Transparent)
+    .hitTestBehavior(this.variant === 'download' || this.raised() ||
+      (this.variant === 'standard' && this.material === 'veil') ? HitTestMode.Default : HitTestMode.Transparent)
     .onAreaChange(this.panelAreaChangeHandler());
   }
 
@@ -167,7 +171,7 @@ export struct PageBackBar {
   private standardTitleHeightLimit(): number { return APP_HEADER_BAR_HEIGHT * 2; }
   private verticalInset(): number { return this.variant === 'download' ? DOWNLOAD_HEADER_PADDING_Y : 0; }
   private raised(): boolean { return this.variant === 'standard' && this.elevation === 'raised'; }
-  private veil(): boolean { return this.variant === 'standard' && this.material === 'veil'; }
+  private veil(): boolean { return this.floating || (this.variant === 'standard' && this.material === 'veil'); }
 
   private backIconResource(): Resource {
     if (this.variant === 'mangaDirectory') {
@@ -179,8 +183,7 @@ export struct PageBackBar {
   }
 
   private requestedRadius(): number {
-    return this.variant === 'download' ? DOWNLOAD_HEADER_RADIUS : this.floating ?
-      this.variant === 'mangaDirectory' ? visual.headerRadius : 18 : 0;
+    return this.variant === 'download' ? DOWNLOAD_HEADER_RADIUS : this.floating ? this.barHeight() / 2 : 0;
   }
 
   private raisedShapeIdentity(): string {

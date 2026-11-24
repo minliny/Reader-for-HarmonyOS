@@ -13,6 +13,9 @@ const { readFileSync } = await import('node:fs');
 const { createRequire, stripTypeScriptTypes } = await import('node:module');
 const { SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts');
 const {runtimeOwnerIdentityProbe} = await import('./lib/reader-runtime-admission-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { resolveHorizontalFrame, SurfaceWidthSpec } = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
 const { readerInteractiveSafeLeft, readerInteractiveSafeRight, ReaderWindowMetricsSnapshot,
@@ -306,29 +309,36 @@ let metrics=new ReaderWindowMetricsSnapshot();
 // the data-driven actions row and press feedback for the book-removal spec.
 metrics = new ReaderWindowMetricsSnapshot();
 metrics.windowRect = new ReaderRectVp(0, 0, 390, 844);
+const properties = createArkUIPropertyRuntimeProbe();
 const { owner: surface } = createReaderBuilderProbe(surfaceSource,
-  ['body', 'defaultBody', 'build', 'header', 'actionsRow', 'actionCell', 'spec', 'resolvedFrame',
+  ['body', 'defaultBody', 'build', 'header', 'actions', 'actionsRow', 'actionCell', 'action', 'spec', 'resolvedFrame',
     'frameWidth', 'framePadding', 'actionLabelColor', 'actionSurfaceRole', 'actionModifier',
-    'actionTouchRegion', 'bodyActionsInnerMargin', 'actionHeight', 'fontScale'], {
-  ReaderWindowCoordinator: { metrics: () => metrics }, readerInteractiveSafeLeft, readerInteractiveSafeRight,
+    'actionTouchRegion', 'bodyActionsInnerMargin', 'actionHeight', 'fontScale', 'mounted', 'aboutToAppear', 'aboutToDisappear'], {
+  ...properties.sdk, ReaderWindowCoordinator: { metrics: () => metrics }, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   resolveHorizontalFrame, SurfaceWidthSpec, SurfaceHorizontalFrame: class {
     constructor(left, right, width) { Object.assign(this, { left, right, width }); }
-  }, resolveDialogSpec, readerReadableFontScale, readerScaledControlHeight,
+  }, DialogActionView, resolveDialogSpec, readerSurfaceElevation: readerSurfaceSpecsForProbe().readerSurfaceElevation, readerReadableFontScale, readerScaledControlHeight,
   MESSAGE_ACTION: { lineHeightFp: 20 }, ButtonType: { Normal: 'Normal' },
-});
+}, properties.hooks);
 const actions = [
   { id: 'cancel', label: '取消', tone: 'default', enabled: true, defaultFocus: true },
   { id: 'confirm', label: '移除', tone: 'danger', enabled: true, defaultFocus: false },
 ];
 Object.assign(surface, { appThemeScheme: 'day', readerWindowMetricsRevision: 0,
   specId: 'book-removal', title: '移出书架', showCloseButton: false, actions });
-surface.initialRender();
+surface.aboutToAppear(); surface.initialRender();
 const surfaceNodes = [...surface.nodes.values()];
 const buttons = surfaceNodes.filter(n => n.type === 'Button');
-void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-assert.equal(buttons.length,actions.length);
-void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
+const frame = surfaceNodes.find(node => node.type === 'Column' && node.borderRadius === 22);
+assert.equal(frame.width, 318);
+assert.equal(frame.padding, 19, 'the 1vp border completes the 20vp edge inset');
+assert.equal(frame.border.color, readerAppColor('TOK_LINE', 'day'));
+assert.equal(frame.backgroundColor, readerAppColor('TOK_SURFACE_ELEVATED', 'day'));
+assert.equal(frame.shadow.radius, 30);
+assert.equal(buttons.length, actions.length);
+assert.ok(buttons.every(button => button.borderRadius === 999 && button.constraintSize.minHeight >= 44));
+assert.equal(buttons[0].backgroundColor, readerAppColor('TOK_SURFACE_FIELD', 'day'));
+assert.equal(buttons[1].backgroundColor, readerAppColor('app.action.destructive', 'day'));
 assert.deepEqual(buttons.map(b => b.defaultFocus), [true, false], 'keyboard focus defaults to cancel');
 assert.ok(buttons.every(b=>b.responseRegion?.width==='100%'),'each action owns its full horizontal response region');
 metrics.windowRect = new ReaderRectVp(0, 0, 280, 300);

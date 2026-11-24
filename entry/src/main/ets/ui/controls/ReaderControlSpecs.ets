@@ -52,6 +52,48 @@ export function resolveReaderIconButtonSpec(id: ReaderIconButtonSpecId): ReaderI
 
 export type ReaderButtonSpecId = 'source-tools-action' | 'source-tools-compact' | 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action' | 'form-action' | 'form-busy-action' | 'form-document-action' | 'search-primary' | 'search-secondary' | 'discover-page' | 'rss-mode-tab' | 'rss-state' | 'rss-source-link' | 'shelf-action' | 'shelf-small' | 'shelf-row-edit' | 'shelf-row-select' | 'rss-detail-bottom' | 'rss-filter' | 'sync-config-test' | 'sync-config-save' | 'source-management-retry' | 'source-management-category' | 'source-management-status-compact' | 'source-management-status-wide' | 'source-management-detect' | 'source-management-login' | 'source-management-manage' | 'search-field-wide' | 'search-history-keyword' | 'search-filter-option' | 'search-retry-progress' | 'search-error-retry' | 'search-error-source' | 'discover-category' | 'sync-empty-backup';
 export type ReaderButtonLayout = 'intrinsic' | 'equal' | 'full';
+export type ReaderButtonVariant = 'primary' | 'tonal' | 'subtle' | 'danger';
+export type ReaderButtonSize = 'large' | 'medium' | 'small';
+
+export interface ReaderButtonMatrixSize {
+  height: number;
+  horizontalPadding: number;
+  fontSize: number;
+  lineHeight: number;
+}
+
+export const READER_DIALOG_FORM_ACTION_SIZE: ReaderButtonMatrixSize = {
+  height: 44, horizontalPadding: 16, fontSize: 13, lineHeight: 20,
+};
+
+const BUTTON_MATRIX_SIZES: Record<ReaderButtonSize, ReaderButtonMatrixSize> = {
+  'large': { height: 46, horizontalPadding: 24, fontSize: 15, lineHeight: 22 },
+  'medium': { height: 38, horizontalPadding: 16, fontSize: 13, lineHeight: 20 },
+  'small': { height: 30, horizontalPadding: 12, fontSize: 12, lineHeight: 18 },
+};
+
+export interface ReaderButtonMatrixPaint {
+  surface: ReaderAppColorRole;
+  ink: ReaderAppColorRole;
+}
+
+const BUTTON_MATRIX_PAINT: Record<ReaderButtonVariant, ReaderButtonMatrixPaint> = {
+  'primary': { surface: 'TOK_PRIMARY_DARK', ink: 'TOK_ON_PRIMARY' },
+  'tonal': { surface: 'TOK_PRIMARY_SOFT', ink: 'TOK_PRIMARY_DARK' },
+  'subtle': { surface: 'TOK_SURFACE_FIELD', ink: 'TOK_INK' },
+  'danger': { surface: 'app.action.destructiveSoft', ink: 'app.action.destructive' },
+};
+
+const DISABLED_BUTTON_PAINT: ReaderButtonMatrixPaint = { surface: 'TOK_SURFACE_FIELD', ink: 'TOK_MUTED' };
+
+export function resolveReaderButtonMatrixSize(size: ReaderButtonSize): ReaderButtonMatrixSize {
+  return BUTTON_MATRIX_SIZES[size];
+}
+
+export function resolveReaderButtonMatrixPaint(variant: ReaderButtonVariant, enabled: boolean): ReaderButtonMatrixPaint {
+  return enabled ? BUTTON_MATRIX_PAINT[variant] : DISABLED_BUTTON_PAINT;
+}
+
 export interface ReaderButtonMargin { top?: number; right?: number; bottom?: number; left?: number; }
 export interface ReaderButtonSpec {
   text: ReaderTextStyle | ReaderInheritedTextStyle;

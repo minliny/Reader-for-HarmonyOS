@@ -23,15 +23,10 @@ const STANDARD_TOGGLE: ReaderToggleSpec = {
   thumbColor: 'app.toggle.thumb',
   checkedColor: 'TOK_PRIMARY_DARK', uncheckedColor: 'app.toggle.offTrack',
 };
-// Preserves the bookshelf settings page's pre-migration green track while
-// adopting the one shared switch geometry and interaction contract.
-const BOOKSHELF_UPDATE_TOGGLE: ReaderToggleSpec = {
-  thumbColor: 'app.toggle.thumb',
-  checkedColor: 'TOK_GREEN', uncheckedColor: 'app.toggle.offTrack',
-};
 function resolveReaderToggleSpec(id: ReaderToggleSpecId): ReaderToggleSpec {
-  if (id === 'bookshelf-update-toggle') return BOOKSHELF_UPDATE_TOGGLE;
-  if (id !== 'standard-toggle') throw new Error('Unknown ReaderToggle specification');
+  if (id !== 'standard-toggle' && id !== 'bookshelf-update-toggle') {
+    throw new Error('Unknown ReaderToggle specification');
+  }
   return STANDARD_TOGGLE;
 }
 
@@ -91,12 +86,12 @@ export struct ReaderToggle {
       Stack({ alignContent: Alignment.Center }) {
         ForEach([this.nativeRevision], (revision: number): void => {
           Toggle({ type: ToggleType.Switch, isOn: this.value })
-            .width(44).height(24)
+            .width(44).height(26)
             .selectedColor(readerAppColor(resolveReaderToggleSpec(this.specId).checkedColor, this.appThemeScheme))
-            .switchStyle({ pointRadius: 10, trackBorderRadius: 12,
+            .switchStyle({ pointRadius: 10, trackBorderRadius: 13,
               pointColor: readerAppColor(resolveReaderToggleSpec(this.specId).thumbColor, this.appThemeScheme),
               unselectedColor: readerAppColor(resolveReaderToggleSpec(this.specId).uncheckedColor, this.appThemeScheme) })
-            .responseRegion({ x: 0, y: -10, width: 44, height: 44 })
+            .responseRegion({ x: 0, y: -9, width: 44, height: 44 })
             .enabled(this.canAct(identity)).focusable(this.canAct(identity))
             .accessibilityText(this.accessibilityLabel)
             .id(this.nativeFocusId(identity, revision))

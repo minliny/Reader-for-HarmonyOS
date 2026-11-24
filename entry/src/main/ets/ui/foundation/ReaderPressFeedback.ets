@@ -10,17 +10,24 @@ export class ReaderPressFeedback implements AttributeModifier<CommonAttribute> {
   private readonly radius: number;
   private readonly pressedRadius: number;
   private readonly enabled: boolean;
+  private readonly paintPressed: boolean;
 
   constructor(surface: ResourceColor = Color.Transparent, scheme: string = 'day',
-    radius: number = 0, pressedRadius: number = radius, enabled: boolean = true) {
+    radius: number = 0, pressedRadius: number = radius, enabled: boolean = true, paintPressed: boolean = false) {
     this.surface = surface;
     this.scheme = scheme;
     this.radius = radius;
     this.pressedRadius = pressedRadius;
     this.enabled = enabled;
+    this.paintPressed = paintPressed;
   }
 
   applyNormalAttribute(instance: CommonAttribute): void {
+    if (this.paintPressed) this.applyPressedAttribute(instance);
+    else this.applyResting(instance);
+  }
+
+  private applyResting(instance: CommonAttribute): void {
     instance.backgroundColor(this.surface).borderRadius(this.radius);
   }
 
@@ -40,7 +47,7 @@ export class ReaderPressFeedback implements AttributeModifier<CommonAttribute> {
 
   applyPressedAttribute(instance: CommonAttribute): void {
     if (!this.enabled) {
-      this.applyNormalAttribute(instance);
+      this.applyResting(instance);
       return;
     }
     try {
@@ -48,11 +55,11 @@ export class ReaderPressFeedback implements AttributeModifier<CommonAttribute> {
     } catch (_) {
       // Keep the original complete fallback, including geometry, when the
       // platform cannot produce the pressed surface.
-      this.applyNormalAttribute(instance);
+      this.applyResting(instance);
     }
   }
 
   applyDisabledAttribute(instance: CommonAttribute): void {
-    this.applyNormalAttribute(instance);
+    this.applyResting(instance);
   }
 }

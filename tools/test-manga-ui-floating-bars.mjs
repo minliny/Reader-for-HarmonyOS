@@ -111,22 +111,36 @@ console.log('PASS actual main tab SDK Builder: 2/3/4 items, narrow/equal slots, 
 }
 if(selectedCase==='centered-header') {
 const backFile=file('ui/chrome/PageBackBar.ets'),backSource=readFileSync(backFile,'utf8');
+const { resolveReaderRaisedShape } = await import('../entry/src/main/ets/ui/layout/ReaderRaisedShape.ts');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const { readerScaledBarHeight } = pureModuleProbe(read('ui/foundation/ReaderSurfaceResolvers.ts'),
+  'ReaderSurfaceResolvers.ts', {}, ['readerScaledBarHeight']);
 for(const trailing of [false,true]) for(const scheme of ['day','night']) {
-  metrics={...metrics,windowRect:{width:820,height:420},cutoutInsets:{left:60,right:0}};
-  const {owner}=createReaderBuilderProbe(backSource,['trailing','build','leftInset','rightInset'],common);
+  metrics={...metrics,windowRect:{width:820,height:420},cutoutInsets:{left:60,right:0},systemFontScale:1};
+  const runtime=createArkUIPropertyRuntimeProbe();
+  const {owner}=createReaderBuilderProbe(backSource,boundedMembers(backSource),
+    {...common,...runtime.sdk,readerScaledBarHeight,resolveReaderRaisedShape},runtime.hooks);
   let back=0,more=0;
   Object.assign(owner,{appThemeScheme:scheme,readerWindowMetricsRevision:1,title:'书籍详情',centered:true,floating:true,
-    titleColor:'',onBack:()=>back++,trailing:trailing?()=>more++:undefined});
+    titleColor:'',backLabel:'回到书架',backFocusId:'detail-return',
+    onBack:()=>back++,trailing:trailing?()=>more++:undefined});
+  owner.aboutToAppear();
   owner.initialRender();
   const nodes=[...owner.nodes.values()],bar=nodes.find(n=>n.type==='Row'),title=nodes.find(n=>n.type==='Text');
-  void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */assert.equal(bar.clip,true);
+  assert.equal(bar.clip,true);
+  assert.deepEqual(bar.backgroundEffect,{radius:10,color:readerAppColor('app.header.veilSurface',scheme)});
+  assert.equal(bar.border.color,readerAppColor('app.header.veilBorder',scheme));
+  assert.equal(bar.borderRadius,bar.constraintSize.minHeight/2);
   assert.equal(bar.hitTestBehavior,'HitTestMode.Transparent');assert.equal(bar.padding.left,bar.padding.right,'bar-owned padding preserves title centre after parent safe-frame placement');
-  assert.equal(title.textAlign,'TextAlign.Center');void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-  const left=nodes.find(n=>n.type==='Stack'&&n.onClick),right=nodes.find(n=>n.type===(trailing?'Stack':'Blank')&&n.id!==left.id);
-  void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
+  assert.equal(title.textAlign,'TextAlign.Center');
+  assert.equal(title.fontFamily,families.READER_FONT_NOTO_SERIF_SC_BOLD);
+  assert.equal(title.fontSize,16);assert.equal(title.maxLines,1);
+  const left=nodes.find(n=>n.type==='Button'&&n.onClick),right=nodes.find(n=>n.type===(trailing?'Stack':'Blank'));
+  assert.equal(left.accessibilityText,'回到书架');assert.equal(left.id,'detail-return');
+  assert.equal(left.width,44);assert.equal(left.height,44);assert.equal(right.width,44);
   left.onClick();assert.equal(back,1);assert.equal(more,trailing?1:0);
 }
-console.log('PASS actual centered header SDK Builder: symmetric 44vp slots, 19/28 title, 52/R18 float, asymmetric parent safe frame and one back dispatch');
+console.log('PASS actual centered header SDK Builder: symmetric 44vp slots, 16vp serif title, 10vp day/night veil, asymmetric parent safe frame and one back dispatch');
 
 }
 if(selectedCase==='retained-nav') {

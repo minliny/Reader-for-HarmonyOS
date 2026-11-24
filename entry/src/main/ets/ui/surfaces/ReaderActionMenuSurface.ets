@@ -2,6 +2,7 @@ import { PopupSurfaceSpec, resolvePopupSpec, ActionSheetSurfaceSpec, resolveActi
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
+import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 
 export type ReaderActionMenuVariant = 'menu' | ActionSheetSpecId;
 export type ReaderActionTone = 'default' | 'danger';
@@ -112,7 +113,7 @@ export struct ReaderActionMenuSurface {
     }.width('100%').height(this.menuActionHeight());
     }.width('100%').height(this.menuActionHeight()).padding(0).borderRadius(0)
       .id(this.nativeId.length > 0 ? this.nativeId + '-item-' + id : '')
-      .backgroundColor(Color.Transparent)
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.effectiveScheme(), 0, 0, this.action(id).enabled))
       .opacity(this.action(id).enabled || this.action(id).busy ? 1 : 0.45)
       .enabled(this.action(id).enabled)
       .accessibilityText(this.action(id).accessibilityLabel)
@@ -169,12 +170,13 @@ export struct ReaderActionMenuSurface {
         this.actionSheetSpec().labelLineHeight, this.fontScale()) })
         .padding({ left: this.actionSheetSpec().rowInsetLeft, right: this.actionSheetSpec().rowInsetRight,
           top: this.actionSheetSpec().rowPaddingY, bottom: this.actionSheetSpec().rowPaddingY });
-      }.width('100%').padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-        .opacity(this.action(id).enabled ? 1 : 0.48).enabled(this.action(id).enabled)
+      }.width('100%').padding(0)
+        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.effectiveScheme(), 0, 0, this.action(id).enabled))
+        .opacity(this.action(id).enabled ? 1 : 0.45).enabled(this.action(id).enabled)
         .accessibilityGroup(true).accessibilityText(this.accessibilityLabel(this.action(id))).onClick((): void => this.commitAction(id));
       if (this.hasFollowingAction(id)) {
         Row().width(`calc(100% - ${this.actionSheetSpec().dividerInset}vp)`).height(this.actionSheetSpec().dividerHeight)
-          .backgroundColor(readerAppColor('TOK_ROW_DIVIDER', this.effectiveScheme()))
+          .backgroundColor(readerAppColor(this.actionSheetSpec().lineRole, this.effectiveScheme()))
           .margin({ left: this.actionSheetSpec().dividerInset });
       }
     }.width('100%');

@@ -29,7 +29,7 @@ export function inlineSelectSdk({properties=createArkUIPropertyRuntimeProbe(),ui
  assert.ok(uiContext,'explicit native measurement/animation/font context required');
  const enums=name=>new Proxy({},{get:(_,key)=>name+'.'+String(key)}),curves=new Proxy({},{get:(_,name)=>(...args)=>({nativeCurve:String(name),args})});
  const motion=pureModuleProbe(read('MotionSpec','foundation'),'MotionSpec.ets',{...timing,curves,Curve:enums('Curve'),SOURCE_SWITCH_VISUAL,MANGA_DIRECTORY_VISUAL},['motionAnimateParam','motionSpecGet']);
- const policy=pureModuleProbe(read('ReaderMotionPolicy','foundation'),'ReaderMotionPolicy.ets',{...motion,collapseMotionDurationMs},['readerMotionAnimateParam']);
+ const policy=pureModuleProbe(read('ReaderMotionPolicy','foundation'),'ReaderMotionPolicy.ets',{...motion,collapseMotionDurationMs},['readerMotionAnimateParam','readerMotionReducedFadeParam']);
  const choice=choiceRowProbe(resolveReaderChoiceSpec,choiceSource,properties,dependencies.readerWindowMetrics);
  const hooks={...properties.hooks,mountChildren:true,lifecycleChildren:true,allowEmptyBranchAdmission:true,childSources:{...choice.hooks.childSources}};
  const deps={...properties.sdk,...readerFoundationTokens,...readerTypographyRoles,...appearance,...geometry,readerInteractiveSafeLeft,readerInteractiveSafeRight,readerInteractiveSafeTop,readerInteractiveSafeBottom,readerKeyboardHostBottom,...motion,...policy,...choice.dependencies,readerAppColor,registerReaderFonts(){},uiContext,Placement:enums('Placement'),Curve:enums('Curve'),...dependencies};

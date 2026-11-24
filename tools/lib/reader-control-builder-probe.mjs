@@ -644,9 +644,14 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       if (!this.keys.has(key)) {
         this.keys.set(key, id); const before = this.observers.length; generator();
         this.keys.set(`${key}-empty`, before === this.observers.length);
-      } else if (hooks.allowEmptyBranchAdmission && this.keys.get(key) !== id) {
-        assert.equal(this.keys.get(`${key}-empty`), true, 'probe only admits previously empty branches; it does not model removal');
+      } else if ((hooks.allowEmptyBranchAdmission || hooks.allowEmptyBranchRemoval) && this.keys.get(key) !== id) {
+        const wasEmpty = this.keys.get(`${key}-empty`);
+        if (wasEmpty && !hooks.allowEmptyBranchAdmission) return;
+        if (!wasEmpty) assert.ok(hooks.allowEmptyBranchRemoval, 'probe only admits previously empty branches; it does not model removal');
         this.keys.set(key, id); const before = this.observers.length; generator();
+        // A close can deliver the SDK-emitted empty branch. Keep the recorded
+        // actors to exercise late callbacks; native unmount is outside this recorder.
+        if (!wasEmpty) assert.equal(this.observers.length, before, 'closing branch emits no replacement actors');
         this.keys.set(`${key}-empty`, before === this.observers.length);
       }
     }
@@ -677,11 +682,11 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     ...Object.fromEntries(recoveryChildren.map(name => [name, Child])), $r: value => value,
     ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Grid', 'GridItem', 'LazyForEach', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Rect', 'Shape', 'Path', 'Polygon', 'Polyline', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'Slider', 'Toggle', 'Checkbox', 'Radio', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
-    ...Object.fromEntries(['TextDecorationType', 'BorderStyle', 'FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'LayoutPolicy', 'AccessibilityRoleType',
+    ...Object.fromEntries(['TextDecorationType', 'TextHeightAdaptivePolicy', 'BorderStyle', 'FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'LayoutPolicy', 'AccessibilityRoleType',
       'LineCapStyle', 'ImageFit', 'TextAlign', 'TextOverflow', 'WordBreak', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign', 'ToggleType', 'ButtonType',
       'SafeAreaType','SafeAreaEdge','LayoutSafeAreaType','LayoutSafeAreaEdge'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
-    ...readerTypographyRoles, ...directoryVisual, ...directoryGeometry, visual: directoryVisual.MANGA_DIRECTORY_VISUAL,
+    ...readerTypographyRoles, READER_FONT_NOTO_SERIF_SC_BOLD, ...directoryVisual, ...directoryGeometry, visual: directoryVisual.MANGA_DIRECTORY_VISUAL,
     // Actual production surface/inset policy, including all finite variants.
     ...actualReaderPageShell(),
     ...headerMetrics,
@@ -700,6 +705,14 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   // owner-shaped I/O port. The UI consumes the real readonly adapter instead.
   globals.readerWindowMetrics ??= readerWindowEnvironmentForProbe(
     () => globals.ReaderWindowCoordinator.metrics()).readerWindowMetrics;
+  if (members.some(member => member.includes('readerHeaderVeilMaterial('))) {
+    const surface = readerSurfaceSpecsForProbe(new Proxy({}, {
+      get: (_target, key) => globals.readerWindowMetrics()[key],
+    }));
+    globals.readerHeaderVeilMaterial ??= surface.readerHeaderVeilMaterial;
+    globals.readerHeaderVeilBorder ??= surface.readerHeaderVeilBorder;
+    globals.readerSurfaceElevation ??= surface.readerSurfaceElevation;
+  }
   if ((struct.name.getText(original) === 'FullDirectoryPanel' && names.includes('panelHeader')) ||
     (['FullDirectoryPanel', 'ReaderDirectoryToolbar', 'ReaderControlDirectoryContent'].includes(struct.name.getText(original)) &&
       /reader(?:ReadableFontScale|ScaledControlHeight)/.test(members.join('\n')))) {

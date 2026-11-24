@@ -28,7 +28,7 @@ export struct ReaderIconButton {
   private mounted: boolean = false;
 
   aboutToAppear(): void { this.mounted = true; }
-  aboutToDisappear(): void { this.mounted = false; }
+  aboutToDisappear(): void { this.mounted = false; this.resetPress(); }
 
   build() {
     if (this.specId === 'form-primary-icon') {
@@ -40,17 +40,10 @@ export struct ReaderIconButton {
 
   @Builder
   private formPrimaryButton() {
-    Button({ type: ButtonType.Normal }) {
-      Image(this.icon).scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
-        .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion))
-        .animation(readerPressAnimation(this.reduceMotion))
-        .width(resolveReaderIconButtonSpec(this.specId).iconSize)
-        .height(resolveReaderIconButtonSpec(this.specId).iconSize).accessibilityLevel('no')
-        .hitTestBehavior(HitTestMode.None);
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
+      this.iconPaint();
     }.width(this.formPrimaryBoxSize()).height(this.formPrimaryBoxSize()).padding(0)
-      .attributeModifier(new ReaderPressFeedback(this.frameSurface(), this.effectiveScheme(),
-        Math.min(resolveReaderIconButtonSpec(this.specId).radius, resolveReaderIconButtonSpec(this.specId).boxSize / 2),
-        Math.min(resolveReaderIconButtonSpec(this.specId).pressedRadius, resolveReaderIconButtonSpec(this.specId).boxSize / 2)))
+      .backgroundColor(Color.Transparent).borderRadius(this.restingRadius())
       .accessibilityRole(AccessibilityRoleType.BUTTON)
       .accessibilityText(this.accessibilityLabel).accessibilitySelected(false)
       .enabled(this.canAct())
@@ -64,25 +57,12 @@ export struct ReaderIconButton {
   @Builder
   private iconStack() {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Image(this.icon)
-        .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
-        .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion,
-          this.specId === 'reader-chapter-step' || this.actionEnabled ? 1 : 0.45))
-        .animation(readerPressAnimation(this.reduceMotion))
-        .width(resolveReaderIconButtonSpec(this.specId).iconSize)
-        .height(resolveReaderIconButtonSpec(this.specId).iconSize)
-        .objectFit(ImageFit.Contain)
-        .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
+      this.iconPaint();
     }
     .padding(0)
     .width(resolveReaderIconButtonSpec(this.specId).boxSize)
     .height(resolveReaderIconButtonSpec(this.specId).boxSize)
-    .border(this.activeBorder())
-    .attributeModifier(new ReaderPressFeedback(this.frameSurface(), this.effectiveScheme(),
-      Math.min(resolveReaderIconButtonSpec(this.specId).radius, resolveReaderIconButtonSpec(this.specId).boxSize / 2),
-      Math.min(resolveReaderIconButtonSpec(this.specId).pressedRadius, resolveReaderIconButtonSpec(this.specId).boxSize / 2),
-      this.canAct() && resolveReaderIconButtonSpec(this.specId).pressFeedback !== false))
-    .opacity(this.specId === 'reader-chapter-step' && !this.actionEnabled ? 0.4 : 1)
+    .backgroundColor(Color.Transparent).borderRadius(this.restingRadius())
     .enabled(this.canAct())
     .id(this.focusId)
     .onFocus((): void => { if (this.mounted) this.onFocused(); })
@@ -97,6 +77,27 @@ export struct ReaderIconButton {
     .onClick(this.actionHandler());
   }
 
+  @Builder
+  private iconPaint() {
+    Stack({ alignContent: Alignment.Center }) {
+      Image(this.icon)
+        .width(resolveReaderIconButtonSpec(this.specId).iconSize)
+        .height(resolveReaderIconButtonSpec(this.specId).iconSize)
+        .objectFit(ImageFit.Contain)
+        .opacity(this.specId === 'reader-chapter-step' || this.actionEnabled ? 1 : 0.45)
+        .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
+    }.width(this.paintBoxSize()).height(this.paintBoxSize()).border(this.activeBorder())
+      .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
+      .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion,
+        this.specId === 'reader-chapter-step' && !this.actionEnabled ? 0.4 : 1))
+      .animation(readerPressAnimation(this.reduceMotion))
+      .attributeModifier(new ReaderPressFeedback(this.frameSurface(), this.effectiveScheme(),
+        this.restingRadius(),
+        Math.min(resolveReaderIconButtonSpec(this.specId).pressedRadius, resolveReaderIconButtonSpec(this.specId).boxSize / 2),
+        this.canAct() && resolveReaderIconButtonSpec(this.specId).pressFeedback !== false, this.pressPointer >= 0))
+      .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+  }
+
   private observePress(event: TouchEvent): void {
     this.pressPointer = readerPressPointer(event, this.pressPointer,
       this.canAct() && resolveReaderIconButtonSpec(this.specId).pressFeedback !== false);
@@ -105,6 +106,14 @@ export struct ReaderIconButton {
   private resetPress(): void { this.pressPointer = -1; }
 
   private canAct(): boolean { return this.mounted && this.actionEnabled && this.accessibilityLabel.trim().length > 0; }
+  private restingRadius(): number {
+    const spec = resolveReaderIconButtonSpec(this.specId);
+    return Math.min(spec.radius, spec.boxSize / 2);
+  }
+
+  private paintBoxSize(): number {
+    return this.specId === 'form-primary-icon' ? this.formPrimaryBoxSize() : resolveReaderIconButtonSpec(this.specId).boxSize;
+  }
   private formPrimaryBoxSize(): number {
     return Math.max(resolveReaderIconButtonSpec(this.specId).boxSize, this.minimumTargetSize);
   }

@@ -1,5 +1,5 @@
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
-import { PopupSurfaceSpec, READER_GLASS_BLUR_VP, READER_HEAVY_GLASS_BLUR_VP,
+import { PopupSurfaceSpec, READER_GLASS_BLUR_VP, READER_HEAVY_GLASS_BLUR_VP, readerSurfaceElevation,
   resolvePopupSpec, resolveSheetSpec, resolveDialogSpec, resolveDrawerSpec,
   type SheetSpecId } from './ReaderSurfaceSpecs';
 import { ReaderInsetsVp } from '../foundation/ReaderWindowMetrics';
@@ -10,8 +10,7 @@ export type ReaderBoundedSurfaceId = 'source-switch-window' | 'source-switch-dra
  * owner's measured viewport geometry; visual choices are finite spec IDs.
  * The native/content-cover host, tasks and lifecycle stay with the caller. */
 /** Finite spec adapter shared by both column and fixed-position stack
- * roots. Geometry inputs belong to bounded modal owners; the native book
- * Sheet paints its one frame and measures its normal-flow content. */
+ * roots. Geometry inputs belong to bounded modal owners. */
 export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttribute> {
   private readonly id: ReaderBoundedSurfaceId;
   private readonly width: number | string;
@@ -53,8 +52,8 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
       const spec = resolveDialogSpec('local-import');
       instance.width(this.width).height(this.height);
       if (this.id !== 'local-import-result-content') instance.backgroundColor(readerAppColor(spec.backgroundRole, this.scheme))
-        .borderRadius(spec.borderRadius).shadow({ radius: 50,
-          color: readerAppColor(this.id === 'local-import-selection' ? 'app.shadow.dialog' : 'app.shadow.dialog', this.scheme), offsetX: 0, offsetY: 25 });
+        .border({ width: 1, color: readerAppColor('TOK_LINE', this.scheme) })
+        .borderRadius(spec.borderRadius).shadow(readerSurfaceElevation('dialog', this.scheme));
       return;
     }
     if (this.id === 'reader-replace-editor') {
@@ -64,8 +63,7 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
     }
     if (this.id === 'bookshelf-book-action' || this.id === 'search-result-filter' || this.id === 'search-task-status') {
       const spec = resolveSheetSpec(this.id);
-      // Native bindSheet owns the opaque paper, radius, clipping and safe
-      // bottom. A second fixed box would distort FIT_CONTENT and crop rows.
+      // ReaderBottomSheet owns the one frame and safe bottom.
       instance.width('100%').padding({ bottom: spec.contentBottom });
       return;
     }

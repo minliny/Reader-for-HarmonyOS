@@ -224,9 +224,9 @@ async function inlinePopupLayout() {
     const metrics = createDefaultReaderWindowMetrics();
     metrics.ready = true; metrics.windowRect.width = 366; metrics.windowRect.height = height;
     metrics.systemFontScale = scale; metrics.systemInsets.top = 24; metrics.systemInsets.bottom = 16;
-    const animations = [];
+    const animations = [], frames = [];
     const uiContext = { px2vp: value => value, getFont: () => ({}), getMeasureUtils: () => ({ measureText: () => 26 * scale, measureTextSize: () => ({ width: 26 * scale, height: 24 * scale }) }),
-      animateTo(params, action) { animations.push(params); action(); }, postFrameCallback() {} };
+      animateTo(params, action) { animations.push(params); action(); }, postFrameCallback(frame) { frames.push(frame); } };
     const sdk = inlineSelectSdk({ uiContext, dependencies: { readerWindowMetrics: () => metrics } });
     const actor = new sdk.dependencies.ReaderInlineSelect(undefined,
       { value: '搜索', options: ['搜索', '发现'], reduceMotion: reduced });
@@ -244,8 +244,14 @@ async function inlinePopupLayout() {
     assert.ok(body.width > 0);
     if (height === 0) assert.equal(body.height, 0, 'zero window capacity preserves a zero menu viewport');
     else assert.ok(body.height >= 44 + 2, 'current popup pays a bordered choice row');
-    if (reduced) assert.equal(animations.length, 0, 'reduced-motion panel uses its immediate branch');
-    else assert.equal(animations.at(-1).duration, 160);
+    if (reduced) {
+      const before = body.height;
+      assert.equal(body.opacity, 0);
+      frames.splice(0).forEach(frame => frame.onFrame()); sdk.properties.flush();
+      assert.deepEqual(animations.map(animation => animation.duration), [120]);
+      assert.equal(body.opacity, 1);
+      assert.equal(body.height, before, 'reduced opening only changes paint opacity');
+    } else assert.equal(animations.at(-1).duration, 160);
     const retainedIdentity = actor.selectionId;
     actor.toggle(); actor.dismiss(retainedIdentity); sdk.properties.flush();
     actor.aboutToDisappear();

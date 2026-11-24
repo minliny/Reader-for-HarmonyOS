@@ -442,7 +442,7 @@ export struct LocalBookDetail {
           .objectFit(ImageFit.Cover).borderRadius(visual.heroRadius)
           .border({ width: visual.borderWidth, color: mangaDirectoryColor('frame', this.appThemeScheme) });
       } else {
-        this.mangaCoverPlaceholder();
+        NoCoverCover({ coverWidth: visual.heroWidth, coverHeight: visual.heroHeight, glyph: this.book.title, kindLabel: '漫画' });
       }
       Column({ space: 0 }) {
         Row({ space: visual.heroTagGap }) {
@@ -494,30 +494,6 @@ export struct LocalBookDetail {
   }
 
   @Builder
-  private mangaCoverPlaceholder() {
-    Stack({ alignContent: Alignment.Center }) {
-      Column({ space: visual.coverGap }) {
-        Text('MANGA / READER').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(visual.bodyFontWeight)
-          .fontSize(visual.coverTinySize).lineHeight(visual.coverTinyLine).letterSpacing(visual.coverTinyTracking)
-          .minFontScale(1).maxFontScale(1).halfLeading(true).fontColor(mangaDirectoryColor('muted', this.appThemeScheme)).opacity(.6);
-        Text(this.book.title).width('100%').fontFamily(READER_FONT_NOTO_SERIF_SC_BOLD).fontWeight(visual.summaryFontWeight)
-          .fontSize(visual.coverTitleFontSize).lineHeight(visual.coverTitleLineHeight)
-          .minFontScale(1).maxFontScale(1).halfLeading(true).fontColor(mangaDirectoryColor('muted', this.appThemeScheme)).textAlign(TextAlign.Center);
-        Text('漫画').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(visual.bodyFontWeight)
-          .fontSize(visual.coverMediumSize).lineHeight(visual.coverMediumLine).letterSpacing(visual.coverMediumTracking)
-          .minFontScale(1).maxFontScale(1).halfLeading(true).fontColor(mangaDirectoryColor('muted', this.appThemeScheme)).opacity(.7);
-      }.width('100%').alignItems(HorizontalAlign.Center);
-      Text('封面占位').width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(visual.bodyFontWeight)
-        .fontSize(visual.coverFooterSize).lineHeight(visual.coverFooterLineHeight).halfLeading(true).fontColor(mangaDirectoryColor('muted', this.appThemeScheme))
-        .minFontScale(1).maxFontScale(1).textAlign(TextAlign.Center).opacity(.7)
-        .align(Alignment.Bottom).margin({ bottom: visual.coverFooterBottom });
-    }.width(visual.heroWidth).height(visual.heroHeight).clip(true).borderRadius(visual.heroRadius)
-      .border({ width: visual.borderWidth, color: mangaDirectoryColor('frame', this.appThemeScheme) })
-      .backgroundColor(mangaDirectoryColor('soft', this.appThemeScheme))
-      .foregroundColor(mangaDirectoryColor('muted', this.appThemeScheme)).accessibilityText('封面占位');
-  }
-
-  @Builder
   private mangaMetadataTag(label: () => string, primary: boolean) {
     Text(label()).width(Math.max(visual.heroTagWidth, visual.heroTagFontSize * label().length * this.mangaFontScale() +
         visual.heroTagWidth - visual.heroTagFontSize * 2))
@@ -535,7 +511,8 @@ export struct LocalBookDetail {
       if (this.hasCover()) {
         Image(this.displayCoverUrl() as string).width(84).height(122).objectFit(ImageFit.Cover).borderRadius(8);
       } else {
-        NoCoverCover({ coverWidth: 84, coverHeight: 122 });
+        NoCoverCover({ coverWidth: 84, coverHeight: 122, glyph: this.book.title,
+          kindLabel: this.book.contentKind === 'audio' ? '有声' : '小说' });
       }
       Column({ space: 8 }) {
         Text(this.book.title).width('100%').fontFamily('ReaderNotoSerifSCBold')

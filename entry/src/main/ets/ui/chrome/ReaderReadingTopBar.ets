@@ -3,11 +3,10 @@ import type { UIContext } from '@ohos.arkui.UIContext';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerReadableFontScale } from '../foundation/ReaderSurfaceResolvers';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
-import { mangaDirectoryColor } from '../foundation/ReaderDirectoryChromeVisual';
 import { READER_FONT_NOTO_SERIF_SC_BOLD } from '../foundation/ReaderFontFamilies';
 import { TYPE_READER_CONTROL_BOOK_TITLE, TYPE_READER_CONTROL_CHAPTER_SOURCE,
   TYPE_READER_DIRECTORY_BOOK_TITLE, TYPE_READER_DIRECTORY_CHAPTER } from '../foundation/ReaderTypography';
-import { ReaderPanelFrame } from '../surfaces/ReaderPanelFrame';
+import { readerHeaderVeilBorder, readerHeaderVeilMaterial, readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
 
 export type ReaderReadingTopBarVariant = 'reading' | 'directory' | 'manga';
 
@@ -57,7 +56,7 @@ export class ReaderReadingTopBarTitle implements AttributeModifier<TextAttribute
     instance.maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
     if (this.variant === 'manga') {
       if (this.primary) instance.fontFamily(READER_FONT_NOTO_SERIF_SC_BOLD).fontWeight(FontWeight.Bold);
-      instance.fontSize(this.primary ? 17 : 11).fontColor(mangaDirectoryColor(this.primary ? 'ink' : 'muted', this.scheme));
+      instance.fontSize(this.primary ? 17 : 11).fontColor(readerAppColor(this.primary ? 'TOK_INK' : 'TOK_MUTED', this.scheme));
       return;
     }
     const reading = this.variant === 'reading';
@@ -68,7 +67,7 @@ export class ReaderReadingTopBarTitle implements AttributeModifier<TextAttribute
     else instance.width('100%').height(Math.ceil((this.primary ? 22 : 17) * this.fontScale))
       .minFontScale(1).maxFontScale(this.fontScale);
     instance.fontFamily(style.fontFamily).fontWeight(style.fontWeight).fontSize(style.fontSizeFp)
-      .fontColor(readerAppColor(this.primary ? 'TOK_READ_INK' : 'TOK_READ_MUTED', this.scheme));
+      .fontColor(readerAppColor(this.primary ? 'TOK_INK' : 'TOK_MUTED', this.scheme));
   }
 }
 
@@ -119,6 +118,11 @@ export struct ReaderReadingTopBar {
     }.width(this.barWidth).height(this.resolvedHeight())
       .padding(this.variant === 'reading' ? { left: 13, right: 13 } : 0)
       .alignItems(VerticalAlign.Center).enabled(this.inputEnabled)
-      .attributeModifier(new ReaderPanelFrame(this.variant === 'manga' ? 'manga-toolbar' : 'reader', this.scheme));
+      .backgroundColor(Color.Transparent)
+      .backgroundEffect(readerHeaderVeilMaterial(true, this.scheme))
+      .border({ width: 1, color: readerHeaderVeilBorder(this.scheme) })
+      .borderRadius(this.resolvedHeight() / 2)
+      .clip(this.variant === 'manga')
+      .shadow(readerSurfaceElevation('raised', this.scheme));
   }
 }

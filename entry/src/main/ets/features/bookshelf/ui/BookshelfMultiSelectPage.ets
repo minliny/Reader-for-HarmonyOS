@@ -251,7 +251,7 @@ export struct BookshelfMultiSelectPage {
             .shadow({ radius: 26, color: readerAppColor('app.shadow.cover', this.appThemeScheme), offsetX: 0, offsetY: 8 });
         } else {
           NoCoverCover({ coverWidth: this.cardWidth(), coverHeight: this.coverHeight(),
-            glyph: noCoverGlyph(this.currentBook(book).title) });
+            glyph: noCoverGlyph(this.currentBook(book).title), kindLabel: ShelfBookPresentation.contentLabel(this.currentBook(book)) });
         }
 
         this.selectionBadge(book, 4);
@@ -488,7 +488,8 @@ export struct BookshelfMultiSelectPage {
             .objectFit(ImageFit.Cover)
             .borderRadius(6);
         } else {
-          NoCoverCover({ coverWidth: 48, coverHeight: 80, glyph: noCoverGlyph(this.currentBook(book).title) });
+          NoCoverCover({ coverWidth: 48, coverHeight: 80, glyph: noCoverGlyph(this.currentBook(book).title),
+            kindLabel: ShelfBookPresentation.contentLabel(this.currentBook(book)) });
         }
         this.selectionBadge(book, 2);
       }

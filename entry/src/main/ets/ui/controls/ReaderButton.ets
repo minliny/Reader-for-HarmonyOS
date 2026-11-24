@@ -1,10 +1,12 @@
-import { ReaderButtonLayout, ReaderButtonSpecId, resolveReaderButtonSpec } from './ReaderControlSpecs';
+import { ReaderButtonLayout, ReaderButtonMatrixPaint, ReaderButtonMatrixSize, ReaderButtonSize, ReaderButtonSpecId, ReaderButtonVariant,
+  READER_DIALOG_FORM_ACTION_SIZE, resolveReaderButtonMatrixPaint, resolveReaderButtonMatrixSize, resolveReaderButtonSpec } from './ReaderControlSpecs';
 import { readerSearchActionWidth, readerSearchControlHeight, readerSearchHistoryControlHeight } from '../foundation/ReaderSearchControlGeometry';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerPressAnimation, readerPressOpacity, readerPressPointer, readerPressScale } from '../foundation/ReaderPressMotion';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { TOK_BORDER_W, TOK_SPACE_XS } from '../foundation/ReaderTokens';
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
+import { TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_FORM_LABEL_ACTION } from '../foundation/ReaderTypography';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 
 /** Shared action presentation. Admission and business work stay at the owner;
@@ -164,6 +166,8 @@ export struct ReaderButton {
   @Prop scheme: string = 'day';
   @Prop specId: ReaderButtonSpecId = 'source-action';
   @Prop label: string = '';
+  @Prop variant: ReaderButtonVariant | undefined = undefined;
+  @Prop size: ReaderButtonSize = 'medium';
   @Prop primary: boolean = false;
   @Prop @Watch('resetPress') actionEnabled: boolean = true;
   @Prop layout: ReaderButtonLayout = 'intrinsic';
@@ -181,11 +185,13 @@ export struct ReaderButton {
   onFocused: () => void = (): void => {};
   private mounted: boolean = false;
   aboutToAppear(): void { this.mounted = true; }
-  aboutToDisappear(): void { this.mounted = false; }
+  aboutToDisappear(): void { this.mounted = false; this.resetPress(); }
   @Builder
   private emptyLeading() {}
   build() {
-    if (this.specId === 'search-filter-option' || this.specId === 'source-management-category' ||
+    if (this.variant !== undefined || this.specId === 'form-action') {
+      this.matrixButton();
+    } else if (this.specId === 'search-filter-option' || this.specId === 'source-management-category' ||
       this.specId === 'source-management-login') {
       // The capsule keeps its compact visual size inside a separate native
       // target. Its 44vp slot belongs to layout instead of an outer response
@@ -251,6 +257,52 @@ export struct ReaderButton {
         .accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label).onClick((): void => this.commit());
     }
   }
+  @Builder
+  private matrixButton() {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
+      Row({ space: 5 }) {
+        this.leading();
+        Text(this.label, this.textLayoutOptions)
+          .fontFamily(this.variant === undefined ? TYPE_FORM_LABEL_ACTION.fontFamily : TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily)
+          .fontSize(this.matrixSize().fontSize)
+          .lineHeight(`${this.matrixSize().lineHeight}fp`)
+          .fontWeight(this.matrixVariant() === 'subtle' || !this.actionEnabled ? 500 : 600)
+          .fontColor(readerAppColor(this.matrixPaint().ink, this.scheme))
+          .fontFeature('"tnum" 1')
+          .textAlign(TextAlign.Center);
+      }.width(this.layout === 'intrinsic' ? undefined : '100%')
+        .constraintSize({ minHeight: readerScaledControlHeight(this.matrixSize().height,
+          this.matrixSize().lineHeight, this.fontScale()) })
+        .padding({ left: this.matrixSize().horizontalPadding,
+          right: this.matrixSize().horizontalPadding })
+        .alignItems(VerticalAlign.Center).justifyContent(FlexAlign.Center)
+        .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
+        .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion, this.actionEnabled ? 1 : 0.45))
+        .animation(readerPressAnimation(this.reduceMotion))
+        .attributeModifier(new ReaderPressFeedback(
+          readerAppColor(this.matrixPaint().surface, this.scheme),
+          this.scheme, 999, 999, this.actionEnabled, this.pressPointer >= 0))
+        .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+    }.padding(0).backgroundColor(Color.Transparent).borderRadius(0)
+      .layoutWeight(this.layout === 'equal' ? 1 : undefined)
+      .width(this.layout === 'full' ? '100%' : undefined)
+      .constraintSize({ minWidth: 44, minHeight: 44 })
+      .enabled(this.actionEnabled)
+      .id(this.focusId)
+      .onFocus((): void => { if (this.mounted) this.onFocused(); })
+      .accessibilityRole(AccessibilityRoleType.BUTTON)
+      .attributeModifier(new ReaderButtonSelectionModifier(this.selectionSemantic, this.primary))
+      .accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label)
+      .onTouch((event: TouchEvent): void => this.observePress(event))
+      .onClick((): void => this.commit());
+  }
+
+  private matrixVariant(): ReaderButtonVariant { return this.variant ?? (this.primary ? 'primary' : 'subtle'); }
+  private matrixSize(): ReaderButtonMatrixSize {
+    return this.variant === undefined ? READER_DIALOG_FORM_ACTION_SIZE : resolveReaderButtonMatrixSize(this.size);
+  }
+  private matrixPaint(): ReaderButtonMatrixPaint { return resolveReaderButtonMatrixPaint(this.matrixVariant(), this.actionEnabled); }
+
   private fontScale(): number {
     if (this.readerWindowMetricsRevision < 0) return 1;
     return readerReadableFontScale(readerWindowMetrics().systemFontScale);

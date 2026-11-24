@@ -14,6 +14,7 @@ import { sourceOfflineDetectButton } from './source-offline-detect.mjs';
 import { sourceRecoveryControl } from './source-recovery-control.mjs';
 import { sourceToggleEdgeTarget } from './source-toggle-edge.mjs';
 import { sourceControlTouchPolicy } from './source-control-touch.mjs';
+import { readerSearchBottomSheetHost } from './layout.mjs';
 
 // The shape of a check's definition belongs to its evaluator, not the
 // evidence it happens to receive. Trajectory details remain evaluator-owned.
@@ -57,8 +58,8 @@ const shapes = {
     'phase-clear': {beforeLength:'number',afterLength:'number'},
     'phase-obsolete': {discarded:'boolean',requireResultBatch:'boolean'},
     'phase-relative': {dx:'number',dy:'number'},
-    'phase-panel': {panel:'string',nativeReturn:'boolean?'},
-    'phase-filter-empty-reset': {resultCount:'number'},
+    'phase-panel': {panel:'string',nativeReturn:'boolean?',sheetHost:'string?'},
+    'phase-filter-empty-reset': {resultCount:'number',sheetHost:'string?'},
     'phase-task-retry': {operation:'string',resultCount:'number',failedCount:'number',
       requireRetainedWhileRefreshing:'boolean?',requireSamePublicBook:'boolean?',httpResponseStatus:'number?',recoveredResult:'string?'},
   },
@@ -425,7 +426,8 @@ export function publicAssertionDefinition(assertion) {
   if (evaluator === 'search' && kind === 'phase-filter-empty-reset' &&
       (assertion.required !== true || assertion.baseline !== 'unfiltered-results' ||
        assertion.sample !== 'restored-results' || assertion.action !== 'select-online' ||
-       assertion.priorAction !== 'submit-a' || expected.resultCount !== 1)) {
+       assertion.priorAction !== 'submit-a' || expected.resultCount !== 1 ||
+       (expected.sheetHost !== undefined && expected.sheetHost !== readerSearchBottomSheetHost))) {
     throw new Error(`Assertion ${id}: filtered empty and reset require one originally visible local result in the same query`);
   }
   if (evaluator === 'search' && kind === 'phase-projection' && expected.nativeConfirmedEmpty !== undefined &&
@@ -469,7 +471,9 @@ export function publicAssertionDefinition(assertion) {
       ((expected.nativeReturn !== undefined && (expected.nativeReturn !== true ||
         !['filter','task'].includes(expected.panel) || !assertion.action || !assertion.returnAction ||
         !assertion.baseline || !assertion.sample)) ||
-       (assertion.retryAction !== undefined && (expected.nativeReturn !== true || expected.panel !== 'task')))) {
+       (assertion.retryAction !== undefined && (expected.nativeReturn !== true || expected.panel !== 'task')) ||
+       (expected.sheetHost !== undefined &&
+         (expected.sheetHost !== readerSearchBottomSheetHost || expected.nativeReturn !== true)))) {
     throw new Error(`Assertion ${id}: native sheet return needs both actions, current result endpoints and a known Search sheet`);
   }
   if (evaluator === 'search' && kind === 'phase-operation' && expected.requireSamePublicBook === true &&

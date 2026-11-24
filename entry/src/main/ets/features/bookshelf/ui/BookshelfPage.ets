@@ -65,7 +65,8 @@ import {
 import { NoCoverCover, noCoverGlyph } from '../../../ui/patterns/NoCoverCover';
 import { registerReaderShelfFonts } from '../../../ui/foundation/ReaderFonts';
 import { BookshelfBookActionSheet } from './BookshelfBookActionSheet';
-import { SheetSurfaceSpec, resolveSheetSpec, readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { ReaderBottomSheet } from '../../../ui/surfaces/ReaderBottomSheet';
+import { SheetSurfaceSpec, resolveSheetSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { ReaderWindowChromeStyle, ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import {
   readerFloatingBarBottomInset,
@@ -282,7 +283,6 @@ export struct BookshelfPage {
   private actionSheetRevision: number = 0;
   private actionSheetNavigation: number = 0;
   private actionSheetFocusTarget: string | undefined = undefined;
-  private actionSheetAppearedId: string = '';
   private actionSheetChromeId: string = '';
   private pendingBookAction: (() => void) | undefined = undefined;
   @State private visibleBookCount: number = 0;
@@ -410,7 +410,6 @@ export struct BookshelfPage {
     this.modeReconcileBusy = false;
     this.bookActionSheetVisible = false;
     this.pendingBookAction = undefined;
-    this.actionSheetAppearedId = '';
     if (this.actionSheetChromeId.length > 0 && this.isCurrentChromeHost(this.navigationGeneration)) ReaderWindowCoordinator.requestAppChrome();
     this.actionSheetChromeId = '';
     this.actionBook = undefined;
@@ -439,11 +438,15 @@ export struct BookshelfPage {
         }.width('100%').padding({ left: 17, right: 17, top: this.shelfHeaderClearance() + this.noticeTopInset })
           .hitTestBehavior(HitTestMode.Transparent);
       }
+      if (this.actionSheetId.length > 0) {
+        ForEach([this.actionSheetId], (id: string): void => {
+          this.bookActionSheetHost(id, this.actionBook);
+        }, (id: string): string => id);
+      }
     }
     .width('100%')
     .height('100%')
-    .onAreaChange((_old: Area, area: Area): void => this.recordShelfPane(area))
-    .bindSheet(this.bookActionSheetVisible, this.bookActionSheetContent, this.bookActionSheetOptions());
+    .onAreaChange((_old: Area, area: Area): void => this.recordShelfPane(area));
   }
 
   private recordShelfPane(area: Area): void {
@@ -468,41 +471,6 @@ export struct BookshelfPage {
       readerKeyboardHostBottom(metrics, this.recoveryOriginY, height)), this.shelfHeaderClearance() + this.noticeTopInset + 8);
   }
 
-  private bookActionSheetOptions(presentationId: string = this.actionSheetId,
-    book: ShelfBook | undefined = this.actionBook): SheetOptions {
-    return {
-      height: SheetSize.FIT_CONTENT,
-      width: this.bookActionWidth(),
-      preferType: SheetType.BOTTOM,
-      dragBar: false,
-      showClose: false,
-      backgroundColor: readerAppColor(this.bookActionSheetSpec().hostBackgroundRole, this.appThemeScheme),
-      radius: { topLeft: this.bookActionSheetSpec().borderRadius, topRight: this.bookActionSheetSpec().borderRadius, bottomLeft: 0, bottomRight: 0 },
-      maskColor: readerAppColor(this.bookActionSheetSpec().hostMaskRole, this.appThemeScheme),
-      shadow: readerSurfaceElevation(this.bookActionSheetSpec().hostElevation, this.appThemeScheme),
-      borderWidth: { top: this.bookActionSheetSpec().hostBorderWidth },
-      borderColor: readerAppColor(this.bookActionSheetSpec().hostBorderRole, this.appThemeScheme),
-      enableOutsideInteractive: false,
-      onWillAppear: (): void => this.claimBookActionChrome(presentationId, book),
-      onAppear: (): void => {
-        if (this.isCurrentBookActionSheet(presentationId, book)) this.actionSheetAppearedId = presentationId;
-      },
-      onWillDismiss: (dismissal: DismissSheetAction): void => {
-        if (!this.isCurrentBookActionSheet(presentationId, book)) return;
-        // Ignore the opening gesture's release/outside hit until the native
-        // sheet has finished entering. Back remains an explicit dismissal.
-        if (dismissal.reason !== DismissReason.PRESS_BACK && this.actionSheetAppearedId !== presentationId) return;
-        // Native sheet mask and system-bar chrome are separate render paths.
-        // Release the latter at the same dismissal boundary; onDisappear keeps
-        // the cleanup idempotent for interrupted/native teardown paths.
-        this.releaseBookActionChrome(presentationId);
-        this.dismissBookActionSheet(presentationId, book);
-        dismissal.dismiss();
-      },
-      onDisappear: (): void => this.finishBookActionSheet(presentationId, book),
-    };
-  }
-
   private claimBookActionChrome(presentationId: string, book: ShelfBook | undefined): void {
     if (!this.isCurrentChromeHost(this.actionSheetNavigation)) return;
     if (!this.isCurrentBookActionSheet(presentationId, book)) return;
@@ -516,24 +484,19 @@ export struct BookshelfPage {
     ReaderWindowCoordinator.requestOverlayChrome(style);
   }
 
-  private releaseBookActionChrome(presentationId: string): void {
-    if (!this.mounted || presentationId.length === 0 || presentationId !== this.actionSheetChromeId ||
-      !this.isCurrentChromeHost(this.actionSheetNavigation)) return;
-    this.actionSheetChromeId = '';
-    ReaderWindowCoordinator.requestAppChrome();
-  }
-
   private bookActionSheetSpec(): SheetSurfaceSpec {
     return resolveSheetSpec('bookshelf-book-action');
   }
 
   @Builder
-  private bookActionSheetContent() {
-    // V1 ordinary callbacks are constructor inputs. Only this small temporary
-    // Sheet child remounts on a new presentation; the bookshelf stays mounted.
-    ForEach([this.actionSheetId], (presentationId: string) => {
-      this.bookActionSheetPresentation(presentationId, this.actionBook);
-    }, (presentationId: string): string => presentationId);
+  private bookActionSheetHost(id: string, book: ShelfBook | undefined) {
+    ReaderBottomSheet({ visible: this.bookActionSheetVisible, specId: 'bookshelf-book-action', surfaceWidth: this.bookActionWidth(),
+      scheme: this.appThemeScheme, reduceMotion: this.reduceMotion, nativeId: 'reader-bookshelf-book-action-sheet', drainPendingClose: true,
+      content: (): void => { this.bookActionSheetPresentation(id, book); },
+      onRequestClose: (): void => this.dismissBookActionSheet(id, book),
+      onOpening: (): void => this.claimBookActionChrome(id, book),
+      onClosed: (): void => this.finishBookActionSheet(id, book),
+    });
   }
 
   @Builder
@@ -592,6 +555,7 @@ export struct BookshelfPage {
           coverWidth: this.continueCardFrame(expandedLayout).coverWidth,
           coverHeight: this.continueCardFrame(expandedLayout).coverHeight,
           glyph: noCoverGlyph(bookProvider()?.title),
+          kindLabel: ShelfBookPresentation.contentLabel(bookProvider()),
         });
       }
     }.width(this.continueCardFrame(expandedLayout).coverWidth)
@@ -1147,6 +1111,7 @@ export struct BookshelfPage {
           coverWidth: this.shelfBookCardWidth(expandedLayout),
           coverHeight: this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout),
           glyph: noCoverGlyph(book.title),
+          kindLabel: ShelfBookPresentation.contentLabel(book),
         });
       }
       if ((book.unreadCount ?? 0) > 0) {
@@ -1266,7 +1231,6 @@ export struct BookshelfPage {
     this.actionSheetId = `bookshelf-action:${++this.actionSheetRevision}`;
     this.actionSheetNavigation = this.navigationGeneration;
     this.actionSheetFocusTarget = focusTarget;
-    this.actionSheetAppearedId = '';
     this.pendingBookAction = undefined;
     this.actionBook = book;
     this.bookActionSheetVisible = true;
@@ -1299,7 +1263,6 @@ export struct BookshelfPage {
     this.actionBook = undefined;
     this.actionSheetId = '';
     this.actionSheetFocusTarget = undefined;
-    this.actionSheetAppearedId = '';
     if (this.actionSheetChromeId === presentationId) {
       this.actionSheetChromeId = '';
       if (this.isCurrentChromeHost(this.navigationGeneration)) ReaderWindowCoordinator.requestAppChrome();
@@ -1355,8 +1318,7 @@ export struct BookshelfPage {
     const navigation = this.actionSheetNavigation;
     const focusTarget = this.actionSheetFocusTarget;
     this.pendingBookAction = (): void => action(book, navigation, focusTarget);
-    // Keep the keyed content until native onDisappear; otherwise FIT_CONTENT
-    // and route navigation can destroy the outgoing sheet before its motion.
+    // The keyed presentation and selected book remain owned until the exit.
     this.bookActionSheetVisible = false;
   }
 

@@ -10,6 +10,7 @@ import {
   readerVisualSafeRight,
   readerVisualSafeTop,
 } from '../../../ui/foundation/ReaderWindowMetrics.ts';
+import { readerWidthClassWithHint, type ReaderWidthClass } from '../../../ui/foundation/ReaderWidthClass.ts';
 import { READER_CONTROL_TOP_BAR_HEIGHT } from './ReaderControlGeometry.ts';
 import {
   READER_CONTROL_MOTION_QUICK_CONTENT_VERTICAL_RESERVE,
@@ -17,13 +18,12 @@ import {
   READER_CONTROL_MOTION_QUICK_CONTENT_HORIZONTAL_RESERVE,
 } from './ReaderControlMotionGeometry.ts';
 
-export type ReaderWidthClass = 'compact' | 'expanded';
+export { READER_EXPANDED_MIN_WIDTH, type ReaderWidthClass } from '../../../ui/foundation/ReaderWidthClass.ts';
 
 export const READER_PHONE_REFERENCE_WIDTH = 390;
 export const READER_PHONE_REFERENCE_HEIGHT = 844;
 export const READER_TABLET_REFERENCE_WIDTH = 760;
 export const READER_TABLET_REFERENCE_HEIGHT = 960;
-export const READER_EXPANDED_MIN_WIDTH = 600;
 
 export const READER_TITLE_LINE_HEIGHT_FP = 28.75;
 export const READER_TITLE_TO_BODY_SPACE_VP = 18;
@@ -309,10 +309,7 @@ export function readerWidthClass(
   viewportWidth: number,
   expandedHint: boolean,
 ): ReaderWidthClass {
-  if (viewportWidth > 0) {
-    return viewportWidth >= READER_EXPANDED_MIN_WIDTH ? 'expanded' : 'compact';
-  }
-  return expandedHint ? 'expanded' : 'compact';
+  return readerWidthClassWithHint(viewportWidth, expandedHint);
 }
 
 export function resolveReaderReadingLayout(

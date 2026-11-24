@@ -2,18 +2,23 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
+import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { readerMessageStyles } from './lib/reader-typography-probe.mjs';
+import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import * as feedback from '../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts';
-import { createDefaultReaderWindowMetrics, readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import * as windowMetrics from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 const selected = selectContractCases({
   'mark-role': { description: 'Actual Toast native status-glyph and paint budget, 1x/2x unit resolution, with ordinary title/body retaining fp and legacy14fp negative', resources: [] },
 });
 const source = readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderTransientToast.ets', import.meta.url), 'utf8');
+const { readerKeyboardHostBottom } = pureModuleProbe(
+  readFileSync(new URL('../entry/src/main/ets/ui/layout/ReaderKeyboardGeometry.ts', import.meta.url), 'utf8'),
+  'ReaderKeyboardGeometry.ts', windowMetrics, ['readerKeyboardHostBottom']);
 for (const id of selected) {
   const sdk = boundedSurfaceSdk();
-  const metrics = createDefaultReaderWindowMetrics();
+  const metrics = windowMetrics.createDefaultReaderWindowMetrics();
   const owner = sdk.consumer(source, undefined, {
-    ...feedback, ...readerMessageStyles, readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight,
+    ...feedback, ...readerMessageStyles, ...windowMetrics, readerKeyboardHostBottom,
     readerWindowMetrics: () => metrics,
     readerMotionAnimateParam: () => ({ duration: 0 }), readerReduceMotionFromStorage: () => true,
   });
@@ -30,7 +35,17 @@ for (const id of selected) {
   assert.equal(mark.fontSize, '14vp');
   assert.deepEqual([mark.width, mark.height], [22, 22]);
   assert.equal(body.fontSize, readerMessageStyles.MESSAGE_BODY.fontSizeFp);
-  assert.equal(title.fontSize, readerMessageStyles.MESSAGE_TITLE.fontSizeFp);
+  assert.equal(title.fontSize, readerMessageStyles.MESSAGE_ACTION.fontSizeFp);
+  assert.equal(title.fontWeight, readerMessageStyles.MESSAGE_ACTION.fontWeight);
+  const capsule = nodes.find(node => node.type === 'Row' && node.shadow);
+  assert.equal(capsule.borderRadius, 999);
+  assert.equal(capsule.backgroundColor, readerAppColor('TOK_PRIMARY_DARK', 'day'));
+  assert.equal(title.fontColor, readerAppColor('TOK_ON_PRIMARY', 'day'));
+  assert.equal(body.fontColor, readerAppColor('TOK_ON_PRIMARY', 'day'));
+  owner.appThemeScheme = 'night';
+  owner.replay(); sdk.properties.flush();
+  assert.equal(capsule.backgroundColor, readerAppColor('TOK_PRIMARY_DARK', 'night'));
+  assert.equal(body.fontColor, readerAppColor('TOK_ON_PRIMARY', 'night'));
   const nativeSize = (value, scale) => typeof value === 'number' ? value * scale : value.endsWith('vp') ? Number.parseFloat(value) : NaN;
   for (const scale of [1, 2]) {
     assert.ok(nativeSize(mark.fontSize, scale) <= mark.height, 'fixed status glyph fits its22vp icon budget');

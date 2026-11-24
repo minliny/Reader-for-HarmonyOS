@@ -792,9 +792,9 @@ function pageBackBarTitleWrap() {
     const text = nodes.find(node => node.type === 'Text' && node.create === '书源管理');
     const row = nodes.find(node => node.type === 'Row');
     assert.ok(text && row);
-    assert.equal(text.maxLines, floating ? 1 : undefined, 'header title follows fixed or floating layout policy');
-    assert.equal(text.textOverflow.overflow, floating ? nativeEnums.TextOverflow.Ellipsis : nativeEnums.TextOverflow.Clip);
-    assert.equal(text.fontSize, floating ? 19 : readerTypographyRoles.TYPE_PAGE_TITLE.fontSizeFp);
+    assert.equal(text.maxLines, floating ? 1 : 2, 'header title follows fixed or floating layout policy');
+    assert.equal(text.textOverflow.overflow, nativeEnums.TextOverflow.Ellipsis);
+    assert.equal(text.fontSize, floating ? 16 : readerTypographyRoles.TYPE_PAGE_TITLE.fontSizeFp);
     assert.equal(text.maxFontScale, 2);
     assert.equal(text.layoutWeight, 1);
     assert.equal(row.height, undefined, 'row height follows native single or multiline text');
@@ -802,7 +802,7 @@ function pageBackBarTitleWrap() {
   }
   expect(source, false);
   expect(source, true);
-  const before = source.replace('.maxLines(this.multilineTitle() ? undefined : 1)', '.maxLines(1)');
+  const before = source.replace('.maxLines(this.multilineTitle() ? 2 : 1)', '.maxLines(1)');
   assert.notEqual(before, source);
   assert.throws(() => expect(before, false), /header title follows fixed or floating layout policy/);
   results.push({ case: 'page-back-bar-title-wrap', fixedHeaderGrowth: true, floatingSingleLine: true });
@@ -1095,9 +1095,10 @@ function downloadAccessibility() {
   const coverSource = read('features/downloads/ui/SharedDownloadBookCover.ets');
   const placeholderSource = read('ui/patterns/NoCoverCover.ets');
   deps.NoCoverCover = createReaderBuilderProbe(placeholderSource,
-    ['appThemeScheme', 'coverWidth', 'coverHeight', 'build', 'ruleWidth', 'labelWidth'], deps, c.hooks).Component;
+    ['appThemeScheme', 'coverWidth', 'coverHeight', 'glyph', 'kindLabel', 'build', 'x', 'y', 'scale'], deps, c.hooks).Component;
   deps.SharedDownloadBookCover = createReaderBuilderProbe(coverSource,
-    ['bookKey', 'coverUrl', 'presentationGeneration', 'coverWidth', 'coverHeight', 'imageFailed', 'requestGeneration', 'mounted',
+    ['bookKey', 'coverUrl', 'presentationGeneration', 'coverWidth', 'coverHeight', 'bookTitle', 'kindLabel',
+      'imageFailed', 'requestGeneration', 'mounted',
       'build', 'requestIdentity', 'rejectImage', 'resetImage'], deps,
     { ...c.hooks, childSources: { ...c.hooks.childSources, NoCoverCover: placeholderSource } }).Component;
   const methods = ['bookRow', 'chapterRow', 'eventBook', 'eventChapter', 'chapterButtonLabel', 'chapterIsRunning',

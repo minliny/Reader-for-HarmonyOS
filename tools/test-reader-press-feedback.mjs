@@ -72,6 +72,9 @@ function failedCompositionFallback(source=actualSource) {
     const modifier=new Modifier('current-surface','day',17,12);
     modifier.applyPressedAttribute(attributes);
     assert.deepEqual([attributes.fill,attributes.radius],['current-surface',17],stage+': complete normal fallback');
+    requests=0;
+    new Modifier('current-surface','day',17,12,true,true).applyNormalAttribute(attributes);
+    assert.deepEqual([attributes.fill,attributes.radius],['current-surface',17],stage+': paint-child fallback');
     requests=0;assert.equal(modifier.pressedSurface(),'current-surface',stage+': finite gradient helper retains its fallback');
     requests=0;new Modifier('disabled-surface','day',17,12,false).applyPressedAttribute(attributes);
     assert.equal(requests,0,'disabled actor never requests a platform press color');
@@ -79,7 +82,7 @@ function failedCompositionFallback(source=actualSource) {
   }
 }
 failedCompositionFallback();
-const correctFallback='this.applyNormalAttribute(instance);\n    }\n  }\n\n  applyDisabledAttribute';
+const correctFallback='this.applyResting(instance);\n    }\n  }\n\n  applyDisabledAttribute';
 assert.ok(actualSource.includes(correctFallback));
 assert.throws(()=>failedCompositionFallback(actualSource.replace(correctFallback,
   'instance.backgroundColor(this.surface).borderRadius(this.pressedRadius);\n    }\n  }\n\n  applyDisabledAttribute')),

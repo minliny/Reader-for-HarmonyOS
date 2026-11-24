@@ -24,11 +24,9 @@ const node = (type,id,rect,props={},children=[]) => {
 const localRow = identity => node('Button',`reader-search-result:${JSON.stringify([9,4,identity])}`,[20,110,400,240],{},[
   node('Text','',[35,125,360,168],{text:publicTitle}),
 ]);
-const sheet = (controlId, attrs={}) => node('SheetWrapper','',[0,380,420,800],{},[
-  node('SheetPage','',[0,390,420,800],{},[
+const sheet = (controlId, attrs={}, id='reader-search-sheet:filter') => node('Column',id,[0,390,420,800],{},[
     node('Text','',[20,413,130,457],{text:'筛选'}),
     node('Button',controlId,[24,495,157,539],attrs),
-  ]),
 ]);
 const normalSample = (beforeSeq,children) => {
   const root = node('root','',frame,{bundleName:'io.reader.minliny',abilityName:'EntryAbility',pagePath:'pages/Index'},children);
@@ -114,6 +112,10 @@ test('Phase 1 search filter empty and reset preserve the same public result and 
   const badResetControl = scenario();
   badResetControl.samples['reset-open'] = normalSample(26,[sheet(resetId,{enabled:'false'})]);
   assert.equal(evaluate(badResetControl).verdict,'FAIL');
+
+  const wrongFrame = scenario();
+  wrongFrame.samples['filter-open'] = normalSample(11,[sheet(onlineId,{},'reader-search-sheet:task')]);
+  assert.equal(evaluate(wrongFrame).verdict,'FAIL','a matching label in the wrong native frame cannot admit a control');
 
   const missingNative = scenario();
   delete missingNative.samples['restored-results'];

@@ -19,7 +19,7 @@ import {
   TOK_SURFACE_PANEL_SOFT,
 } from '../foundation/ReaderTokens';
 import { motionAnimateParam, motionSpecGet } from '../foundation/MotionSpec';
-import { readerMotionAnimateParam } from '../foundation/ReaderMotionPolicy';
+import { readerMotionReducedFadeParam } from '../foundation/ReaderMotionPolicy';
 import {
   APPEARANCE_SELECT_OPTION_HEIGHT, appearanceSelectMenuHeight,
 } from './ReaderSelectAppearanceStyle';
@@ -90,6 +90,7 @@ export struct ReaderSelectPanel {
   onOptionsScrollStop: ((identity: string) => void) | undefined = undefined;
   onDismiss: (identity: string) => void = (_identity: string): void => {};
   @State private expandedHeight: number = OPTION_H;
+  @State private panelOpacity: number = 1;
   @State private chevronAngle: number = 0;
   @State private closeInFlight: boolean = false;
   @State private measuredHeightRevision: number = 0;
@@ -99,6 +100,7 @@ export struct ReaderSelectPanel {
   private optionHeightsLayoutIdentity: string = '';
   private mounted: boolean = false;
   private generation: number = 0;
+  private reducedEnterGeneration: number = -1;
   private closingValue: string = '';
   private closingOptions: string[] = [];
   private closeFinish: (() => void) | undefined = undefined;
@@ -117,6 +119,7 @@ export struct ReaderSelectPanel {
     this.mounted = true;
     this.generation += 1;
     this.closeFinish = undefined;
+    this.panelOpacity = this.reduceMotion ? 0 : 1;
     registerReaderFonts(this.getUIContext().getFont());
   }
 
@@ -132,19 +135,42 @@ export struct ReaderSelectPanel {
     if (this.appearanceHeightAnimator !== undefined) this.cancelAppearanceHeightAnimation();
     this.closeInFlight = false;
     this.closeFinish = undefined;
+    this.panelOpacity = this.reduceMotion ? 0 : 1;
     if (this.mounted) this.expandPanel();
   }
 
   private onReduceMotionChanged(): void {
-    if (!this.mounted || !this.reduceMotion) return;
+    if (!this.mounted) return;
+    if (!this.reduceMotion) {
+      if (!this.closeInFlight) this.panelOpacity = 1;
+      return;
+    }
     const generation = ++this.generation;
     if (this.appearanceHeightAnimator !== undefined) this.cancelAppearanceHeightAnimation();
-    this.getUIContext().animateTo(readerMotionAnimateParam(
-      this.closeInFlight ? 'dropdown.menu.collapse' : 'dropdown.menu.expand', true), (): void => {
-      this.expandedHeight = this.closeInFlight ? this.collapsedHeight() : this.fullPanelHeight();
-      this.chevronAngle = this.closeInFlight ? 0 : -180;
-    });
-    if (this.closeInFlight) this.finishCollapse(generation, true);
+    if (this.closeInFlight) this.fadePanelOut(generation, true);
+    else this.expandPanel();
+  }
+
+  private fadePanelIn(): void {
+    const generation = this.generation;
+    if (this.panelOpacity === 1 || this.reducedEnterGeneration === generation) return;
+    this.reducedEnterGeneration = generation;
+    try {
+      const context = this.getUIContext();
+      context.postFrameCallback(new ReaderSelectParentFrame((): void => {
+        if (!this.mounted || this.closeInFlight || !this.reduceMotion || generation !== this.generation) return;
+        try {
+          context.animateTo(readerMotionReducedFadeParam(), (): void => { this.panelOpacity = 1; });
+        } catch (_) { this.panelOpacity = 1; }
+      }));
+    } catch (_) { this.panelOpacity = 1; }
+  }
+
+  private fadePanelOut(generation: number, deferParent: boolean): void {
+    const finish = (): void => this.finishCollapse(generation, deferParent);
+    try {
+      this.getUIContext().animateTo(readerMotionReducedFadeParam(finish), (): void => { this.panelOpacity = 0; });
+    } catch (_) { void Promise.resolve().then(finish); }
   }
 
   private finishCollapse(generation: number, deferParent: boolean = false): void {
@@ -265,7 +291,8 @@ export struct ReaderSelectPanel {
     .zIndex(10)
     .backgroundColor(this.menuHeaderHeight > 0 ? Color.Transparent : this.panelBackgroundColor())
     .border({ width: this.menuHeaderHeight > 0 ? 0 : TOK_BORDER_W, color: this.panelBorderColor() })
-    .borderRadius(this.variant === 'appearanceLibrary' ? 9 : (this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_RADIUS : 6))
+    .borderRadius(this.variant === 'appearanceLibrary' ? 9 : (this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_RADIUS : 14))
+    .opacity(this.panelOpacity)
     .shadow({ radius: this.variant === 'appearanceLibrary' ? 20 : 0,
       color: this.variant === 'appearanceLibrary' ? readerAppColor('app.shadow.select', this.appThemeScheme) : Color.Transparent, offsetY: 8 })
     .clip(true).onAppear((): void => this.expandPanel());
@@ -486,15 +513,16 @@ export struct ReaderSelectPanel {
     if (!this.mounted || this.closeInFlight) return;
     if (this.closing) { this.onClosingChanged(); return; }
     const targetHeight = this.fullPanelHeight();
+    if (this.reduceMotion) {
+      this.expandedHeight = targetHeight;
+      this.chevronAngle = -180;
+      this.fadePanelIn();
+      return;
+    }
     if (this.expandedHeight === targetHeight && this.chevronAngle === -180) {
       if (this.appearanceHeightAnimator !== undefined && this.appearanceHeightTarget !== targetHeight) {
         this.cancelAppearanceHeightAnimation();
       }
-      return;
-    }
-    if (this.reduceMotion) {
-      this.expandedHeight = targetHeight;
-      this.chevronAngle = -180;
       return;
     }
     if (this.variant === 'appearanceLibrary' && this.animateAppearanceHeight(targetHeight, -180)) return;
@@ -535,9 +563,7 @@ export struct ReaderSelectPanel {
     if (onCommit !== undefined) onCommit();
     if (!this.mounted || generation !== this.generation) return;
     if (this.reduceMotion) {
-      this.expandedHeight = this.collapsedHeight();
-      this.chevronAngle = 0;
-      this.finishCollapse(generation, deferParent);
+      this.fadePanelOut(generation, deferParent);
       return;
     }
     if (this.variant === 'appearanceLibrary' &&

@@ -724,7 +724,8 @@ export struct SourceSwitchWindow {
           .objectFit(ImageFit.Cover).borderRadius(SOURCE_SWITCH_VISUAL.coverRadius).onError(this.coverFailureHandler());
       } else {
         NoCoverCover({ coverWidth: this.compactWindow() ? SOURCE_SWITCH_VISUAL.compactCoverWidth : SOURCE_SWITCH_VISUAL.coverWidth,
-          coverHeight: this.compactWindow() ? SOURCE_SWITCH_VISUAL.compactCoverHeight : SOURCE_SWITCH_VISUAL.coverHeight });
+          coverHeight: this.compactWindow() ? SOURCE_SWITCH_VISUAL.compactCoverHeight : SOURCE_SWITCH_VISUAL.coverHeight,
+          glyph: this.bookTitle, kindLabel: '小说' });
       }
       Column() {
         Text(this.bookTitle || '当前书籍').fontFamily(TYPE_SOURCE_SWITCH_NOVEL_BOOK_TITLE.fontFamily).fontWeight(TYPE_SOURCE_SWITCH_NOVEL_BOOK_TITLE.fontWeight)

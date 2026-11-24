@@ -156,7 +156,7 @@ function validateScopedCase(contract, samples, actions) {
     'Each additional public result requires a distinct title and a registered input role');
   }
   const append = contract.id === 'bookshelf.search-append' && [3,4,5].includes(contract.version);
-  const recovery = contract.id === 'bookshelf.search-retry-success' && contract.version === 1;
+  const recovery = contract.id === 'bookshelf.search-retry-success' && [1, 2].includes(contract.version);
   const onlineRoles = append ? ['cedar','maple'] : recovery ? ['recovery'] : [];
   requireEvidence(equalJson(Object.keys(fixture.onlineResultTitles ?? {}).sort(),onlineRoles) &&
     Object.values(fixture.onlineResultTitles ?? {}).every(title => title !== fixture.bookTitle),

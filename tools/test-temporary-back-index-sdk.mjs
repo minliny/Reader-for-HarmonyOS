@@ -8,12 +8,14 @@ const {default: assert} = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {createRequire,stripTypeScriptTypes} = await import('node:module');
 const {ReaderNativeAlertOwner} = await import('./lib/reader-native-alert-sdk-probe.mjs');
-const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
-const {createBookshelfReadProjectionProbe,createLibraryShelfChromeProbe,mountBookshelfSceneProbe} = await import('./lib/bookshelf-projection-owner-probe.mjs');
+const {createReaderBuilderProbe,productionReaderMotionSdk} = await import('./lib/reader-control-builder-probe.mjs');
+const {admitBookshelfSdkCarrier,createBookshelfReadProjectionProbe,createLibraryShelfChromeProbe,mountBookshelfSceneProbe} = await import('./lib/bookshelf-projection-owner-probe.mjs');
 const {boundedSurfaceSdk,boundedMembers} = await import('./lib/bounded-surface-sdk-probe.mjs');
 const {choiceSource,resolveReaderChoiceSpec,compileReaderChoiceLabelModifier} = await import('./lib/reader-choice-row-probe.mjs');
 const {menuSource,ReaderMenuActionView} = await import('./lib/reader-action-menu-probe.mjs');
 const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
+const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
+const {actualReaderPageLayout} = await import('./lib/reader-page-shell-runtime-probe.mjs');
 const {runtimeOwnerIdentityProbe} = await import('./lib/reader-runtime-admission-probe.mjs');
 const {actualSourceJourneyTypes,actualSourceManagementGeometry} = await import('./lib/source-management-owner-probe.mjs');
 const {fixture: generalSettingsFixture} = await import('./lib/general-settings-persistence-probe.mjs');
@@ -29,9 +31,13 @@ const syntax=createRequire(import.meta.url)((resolveEtsLoaderRoot())+'/lib/valid
 const indexPath=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),indexSource=readFileSync(indexPath,'utf8');
 let installed;const Runtime=runtimeOwnerIdentityProbe(()=>installed);
 const methods=['registerTemporaryBackBridge','currentReadingRuntime','isCurrentRuntime','isCurrentBookshelfPresentation',
-  'isInteractiveBookshelfPresentation',...(selectedCase==='bookshelf'?['bookshelfScenePorts']:[]),'nextNavigationGeneration','onBackPress',
-  'openSourcePresentation','sourceJourneyIdentity','isCurrentRoute','publishNavigation','setSettingsSection'];
-const Index=productionMotionMethods(indexPath,methods,{ReaderRuntimeOwner:Runtime,hilog:{error(){}},DOMAIN:0});
+  'isInteractiveBookshelfPresentation',...(selectedCase==='bookshelf'?
+    ['bookshelfScenePorts','bookshelfModalVisible','dispatchBackDestination']:['openSourcePresentation','sourceJourneyIdentity']),
+  'nextNavigationGeneration','onBackPress','isCurrentRoute','publishNavigation','setSettingsSection'];
+const indexDependencies={ReaderRuntimeOwner:Runtime,hilog:{error(){}},DOMAIN:0};
+const Index=selectedCase==='bookshelf'?
+  selectedProductionMethods(indexPath,'Index',methods,indexDependencies):
+  productionMotionMethods(indexPath,methods,indexDependencies);
 class Child{constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
 function sourceLeaf(params){
   const p=boundedSurfaceSdk(),source=leaf.sourceSource;
@@ -79,18 +85,38 @@ if(sourceTypes){
   const h=scope==='source'?undefined:leaf.harness(),source=scope==='settings'?leaf.settingsSource:scope==='source'?leaf.sourceSource:leaf.shelfSource;
   if(scope==='bookshelf'){
     const recovery=index.shelfRecovery;
+    const retire=()=>{};
     Object.assign(index,{
       libraryAcquisition:{currentOwner:()=>installed},
       shelfRead:createBookshelfReadProjectionProbe(),librarySearch:createLibraryShelfChromeProbe(),
-      settingsPresentation:{snapshot:{reduceMotion:false}},searchAppForeground:true,mangaSourceSwitch:{selectionVisible:false},
+      settingsPresentation:{snapshot:{reduceMotion:false},retire},searchAppForeground:true,mangaSourceSwitch:{selectionVisible:false},
       shelfCatalog:{snapshot:{},retire(){}},
       shelfGroupPresentation:{identity:'',back:()=>false,retire(){}},
+      bookRemovalConfirmation:{isOpen:()=>false,dismiss(){}},jsonImportPresentation:{opening:undefined,dismiss(){}},
+      sourceSwitchPresentation:{isSurfacePresented:()=>false},retireSourceSwitchPresentation:retire,
+      readingEntry:{sessionActive:false,retire},readingEntryActions:{shelfPreparing:false,retirePreparation:retire},
+      shelfMotion:{clear(){}},transientFeedback:{reset(){}},downloadPresentation:{retire},readingCommits:{retire},
+      sourceJourney:{retire},rssJourney:{retire},shelfManagement:{retire},discoverPresentation:{retire},
+      rulesPresentation:{retire},syncPresentation:{retire},nativeAlertOwner:{retire},
       shelfMutations:{snapshot:{importPresentation:undefined},recovery,canContinueRemoval:()=>false,retireSelection(){},
+        hasUnknownWrite:()=>false,
         openImport(){calls.push('import-open');this.snapshot.importPresentation={state:'fileSelection'};},
         closeImport(){calls.push('import-close');this.snapshot.importPresentation=undefined;}},
     });
+    admitBookshelfSdkCarrier(index,runtime,()=>installed);
+    const coverSource=leaf.read('ui/surfaces/ReaderBottomSheet');
+    h.p.hooks.childSources.ReaderBottomSheet=coverSource;
     h.p.hooks.childSources.BookshelfMoreActionSheet=leaf.read('features/bookshelf/ui/BookshelfMoreActionSheet');
-    Object.assign(h.p.deps,horizontalGeometry,{BookshelfMoreActionSheet:Child,bookshelfHeaderSpec:()=>({frameHeight:58}),
+    h.p.hooks.allowEmptyBranchAdmission=true;
+    h.p.hooks.allowEmptyBranchRemoval=true;
+    syntax.builderParamObjectCollection.set('ReaderBottomSheet',new Set(['content']));
+    const transition=kind=>({animation:options=>({kind,...options})});
+    h.p.deps.ReaderBottomSheet=createReaderBuilderProbe(coverSource,boundedMembers(coverSource),
+      {...h.p.deps,...productionReaderMotionSdk(),readerWindowMetrics:()=>h.p.deps.ReaderWindowCoordinator.metrics(),
+        ModalTransition:{NONE:'none'},TransitionEdge:{BOTTOM:'bottom'},
+        TransitionEffect:{OPACITY:transition('opacity'),move:transition,asymmetric:(enter,exit)=>({enter,exit})},
+      },h.p.hooks).Component;
+    Object.assign(h.p.deps,horizontalGeometry,actualReaderPageLayout(),{BookshelfMoreActionSheet:Child,bookshelfHeaderSpec:()=>({frameHeight:58}),
       SheetType:{BOTTOM:'bottom'},SheetSize:{FIT_CONTENT:'fit-content'}});
     Object.assign(h.p.deps.ReaderWindowCoordinator,{requestAppChrome(){},requestOverlayChrome(){}});
   }
@@ -127,11 +153,41 @@ if(sourceTypes){
   }
   const params={...props(),sources:[],groups:['A','B']};
   const f=scope==='source'?sourceLeaf(params):h.owner(source,params);
-  const open=()=>{if(scope==='settings')f.o.toggleSelection('language');else if(scope==='source')f.o.toggleGroupSelection();
-    else index.librarySearch.openShelfMore(f.o.temporaryBackIdentity,index.navigationGeneration,index.detailShelfAdmissionMount);};
+  let openedCover;
+  const open=()=>{
+    if(scope==='settings')f.o.toggleSelection('language');
+    else if(scope==='source')f.o.toggleGroupSelection();
+    else {
+      index.librarySearch.openShelfMore(f.o.temporaryBackIdentity,index.navigationGeneration,index.detailShelfAdmissionMount);
+      f.o.content=()=>{};
+      if(f.o.nodes.size===0) f.o.initialRender();
+      else f.o.replay();
+      h.p.properties.flush();
+      const cover=[...f.o.children.values()].findLast(child=>child instanceof h.p.deps.ReaderBottomSheet && child.visible);
+      const anchor=[...cover.nodes.values()].find(node=>node.bindContentCover);
+      const [visible,body,options]=anchor.bindContentCover;
+      assert.equal(visible,true,'the current Bookshelf More presentation opens one native content cover');
+      body.builder();
+      options.onAppear();
+      h.p.properties.flush();
+      const frame=[...cover.nodes.values()].find(node=>node.id==='reader-bookshelf-more-sheet');
+      frame.onAppear();
+      openedCover={cover,anchor,frame,options};
+      return openedCover;
+    }
+  };
   const finish=()=>{
     if(scope==='source')f.o.dismissGroupSelection(f.o.groupSelectionId);
-    if(scope==='bookshelf')f.o.moreSheetOptions().onDisappear();
+    if(scope==='bookshelf'){
+      h.p.properties.flush();
+      const {cover,anchor,frame,options}=openedCover;
+      assert.equal(cover.frameVisible,false,'the current frame has started closing');
+      assert.equal(cover.coverVisible,true,'the cover still owns Back while its frame exits');
+      frame.transition[1](false);
+      h.p.properties.flush();
+      assert.equal(anchor.bindContentCover[0],false);
+      options.onDisappear();
+    }
   };
   return{index,runtime,calls,h,f,open,finish,props};
 }
@@ -167,7 +223,7 @@ if(selectedCase==='bookshelf'){
   const oldAction=o.moreOpenAction(firstId);
   assert.equal(chrome.shelfMoreIdentity(first.generation,mounting),firstId);
   o.content=()=>{};o.initialRender();const children=[...o.children.values()];
-  x.open();const disappeared=o.moreSheetOptions().onDisappear;
+  const disappeared=x.open().options.onDisappear;
   x.index.nextNavigationGeneration();assert.equal(x.index.navigationOwner.temporaryBackLease,undefined);
   const p=x.props();o.updateStateVars(p);x.h.p.properties.flush();
   const second=x.index.navigationOwner.temporaryBackLease;assert.equal(second.generation,2);assert.notEqual(second.identity,firstId);assert.equal(o.moreMenuVisible,false,'actual @Prop/@Watch retires old opening');assert.equal(first.handler(),false);
@@ -181,9 +237,7 @@ if(selectedCase==='bookshelf'){
 }
 if(selectedCase==='bookshelf')for(const retired of ['current','navigation','route','unmounted']){
   const x=fixture('bookshelf'),o=x.f.o;
-  o.content=()=>{};o.initialRender();x.open();o.replay();
-  const host=[...o.nodes.values()].find(node=>node.bindSheet),[visible,body,options]=host.bindSheet;
-  assert.equal(visible,true);body.builder();
+  const {options}=x.open();
   const action=[...o.children.values()].find(child=>child.params?.onLocalImport).params.onLocalImport;
   action();action();
   assert.equal(o.moreMenuVisible,false);assert.deepEqual(x.calls,[],'import waits for the native sheet to disappear');
@@ -194,7 +248,9 @@ if(selectedCase==='bookshelf')for(const retired of ['current','navigation','rout
   }
   if(retired==='route')x.index.publishNavigation(x.index.navigationOwner.show('search'));
   if(retired==='unmounted')o.aboutToDisappear();
-  options.onDisappear();options.onDisappear();action();
+  if(retired==='current')x.finish();
+  else options.onDisappear();
+  options.onDisappear();action();
   assert.deepEqual(x.calls,retired==='current'?['import-open']:[],`only the exact current onDisappear can deliver import once (${retired})`);
   if(retired==='current'){
     assert.equal(x.index.onBackPress(),true);assert.deepEqual(x.calls,['import-open','import-close']);

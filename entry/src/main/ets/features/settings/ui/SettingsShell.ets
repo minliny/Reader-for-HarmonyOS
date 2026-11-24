@@ -64,7 +64,9 @@ export struct SettingsShell {
 
   @Builder
   private homeTopBar() {
-    AppTopBar({ title: '设置' });
+    Stack({ alignContent: Alignment.Center }) {
+      AppTopBar({ title: '设置', floating: true, centered: true });
+    }.width('100%').padding({ left: 14, right: 14, top: 8, bottom: 6 });
   }
 
   @Builder

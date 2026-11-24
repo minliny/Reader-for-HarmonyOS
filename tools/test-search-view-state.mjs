@@ -521,6 +521,7 @@ const filtered = Object.assign(new Page(), {
   pageMounted: true, pageEpoch: filterState.pageRevision, queryAtMount: filterState.revision,
   isPresentationCurrent: () => true,
   visibleStart: 0, visibleEnd: 5, warmupGroups: [], resultDataSource: new SearchResultDataSource(),
+  scheduleMoreResults() {},
   resultScroller: { scrollTo() { scrollResets++; }, scrollEdge() { scrollResets++; } },
   onVisibleGroups() { warmups++; }, onSearch(keyword) { searches.push(keyword); }, onRetry() { retries++; },
 });
@@ -544,39 +545,26 @@ Object.assign(chips, { mounted: true, expanded: true, presentationIdentity: shee
     filtered.selectContentType(label);
     this.selectedType = filtered.selectedContentType;
   } });
-// Exercise the current trigger actors as well as the existing real chip path.
-// Native sheet lifecycle remains the production binding, not reconstructed callbacks.
-const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
-const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
-const sheetSurfaces = boundedSurfaceSdk();
-const surfaceGeometry = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
-const windowMetrics = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+// The result List trigger is stable while SearchPage owns the modal cover.
+const filterTriggerSource = read('entry/src/main/ets/features/search/ui/ReaderSearchFilterTrigger.ets');
 const resultGeometry = await import('../entry/src/main/ets/features/search/ui/SearchResultGeometry.ts');
-const sheetDeps = { ...sheetSurfaces.deps, ...surfaceGeometry, ...windowMetrics, ...resultGeometry,
-  SheetSize: { FIT_CONTENT: 'fit' }, SheetType: { BOTTOM: 'bottom' }, DismissReason: { PRESS_BACK: 'back' } };
-const { SearchResultSheetBinding } = pureModuleProbe(read('entry/src/main/ets/features/search/ui/SearchResultSheetBinding.ets'),
-  'SearchResultSheetBinding.ets', sheetDeps, ['SearchResultSheetBinding']);
-const { owner: filterTrigger } = createReaderBuilderProbe(filterPanel,
-  ['build', 'active', 'toggleAction', 'sheetContent', 'sheetOptions', 'sheetSpec', 'sheetWidth', 'accepts', 'nativeSheet'],
-  { ...sheetDeps, SearchResultSheetBinding }, sheetSurfaces.hooks);
+const { owner: filterTrigger } = createReaderBuilderProbe(filterTriggerSource,
+  ['build', 'active', 'toggleAction'], { ...controls.dependencies, ...resultGeometry }, controls.hooks);
 const triggerEvents = [];
 Object.assign(filterTrigger, { mounted: true, expanded: false, scheme: 'day', selectedType: '漫画', selectedGroup: '全部',
   presentationIdentity: 'filter-trigger', triggerFocusId: 'filter-return',
-  onToggle: (identity, expanded) => triggerEvents.push(['toggle', identity, expanded]),
-  onNativeOpening: identity => triggerEvents.push(['opening', identity]),
-  onNativeClosing() {}, onDismiss() {}, onClosed() {} });
+  onToggle: (identity, expanded) => triggerEvents.push(['toggle', identity, expanded]) });
 filterTrigger.initialRender();
 const physicalFilter = [...filterTrigger.nodes.values()].find(node => node.type === 'Button' && node.onClick);
 assert.ok(physicalFilter, 'actual filter trigger is a native Button');
 assert.equal(physicalFilter.id, 'filter-return');
 assert.equal(physicalFilter.width, resultGeometry.SEARCH_RESULT_GEOMETRY.filterActionSize);
-assert.ok(Array.isArray(physicalFilter.bindSheet), 'native sheet stays attached to the same filter actor');
+assert.equal(physicalFilter.bindSheet, undefined, 'the retained trigger does not create a second native sheet');
 physicalFilter.onClick();
-physicalFilter.bindSheet[2].onWillAppear();
-assert.deepEqual(triggerEvents, [['toggle', 'filter-trigger', false], ['opening', 'filter-trigger']]);
+assert.deepEqual(triggerEvents, [['toggle', 'filter-trigger', false]]);
 filterTrigger.mounted = false;
-physicalFilter.onClick(); physicalFilter.bindSheet[2].onWillAppear();
-assert.equal(triggerEvents.length, 2, 'retired trigger and native opening cannot dispatch');
+physicalFilter.onClick();
+assert.equal(triggerEvents.length, 1, 'a retired trigger cannot dispatch');
 assert.ok(![...filterTrigger.nodes.values()].some(node => node.type === 'Stack' && node.onClick),
   'filter visual Stack has no duplicate toggle');
 
@@ -600,7 +588,8 @@ assert.ok(![...history.nodes.values()].some(node => node.type === 'Row' && node.
   'history visual Row cannot clear twice');
 const typeLabels = ['全部类型', '小说', '漫画'];
 const geometry = { choiceWidths: [64, 64, 64], choiceHeight: 44 };
-typeLabels.forEach((label, index) => chips.typeChip(label, index, sheetIdentity, geometry));
+chips.sheetGeometry = () => geometry;
+typeLabels.forEach((label, index) => chips.typeChip(label, index, sheetIdentity));
 const chip = label => controls.nodes(chips).find(node => node.onClick &&
   [`当前内容:${label}`, `筛选内容:${label}`].includes(node.accessibilityText));
 assert.deepEqual(typeLabels.map(label => Boolean(chip(label))), [true, true, true]);

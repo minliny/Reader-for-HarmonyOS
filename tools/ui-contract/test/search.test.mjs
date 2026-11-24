@@ -1204,14 +1204,20 @@ test('Phase 1 search temporary panel Back binds the actual sheet and both curren
       visible:'true',opacity:'1',enabled:'true',clickable:'true',...extra},children};
   }
   function nativeSample(state,first,last,showSheet,{panel = 'filter',row = 'fixture',wrongSheet = false,
-    listId = viewport, keyboard = false} = {}) {
+    sheetHost, wrongRoot = false, listId = viewport, keyboard = false} = {}) {
     const trigger = leaf('Button', `reader-search-${panel}:7:7`);
     const result = leaf('Button', `reader-search-result:[7,7,"local:${row}"]`,
       [leaf('Text','',[],{text:title})]);
     const content = [leaf('List',listId,[trigger,result])];
-    if (showSheet) content.push(leaf('SheetWrapper','',[leaf('SheetPage','',[
-      leaf('Text','',[],{text:(panel === 'task') !== wrongSheet ? '搜索进度' : '筛选'}),
-    ])]));
+    if (showSheet) {
+      const titleNode = leaf('Text','',[],{text:(panel === 'task') !== wrongSheet ? '搜索进度' : '筛选'});
+      if (sheetHost) {
+        const frame = wrongRoot ? (panel === 'task' ? 'filter' : 'task') : panel;
+        content.push(leaf('Stack','',[leaf('Column',`reader-search-sheet:${frame}`,[titleNode])]));
+      } else {
+        content.push(leaf('SheetWrapper','',[leaf('SheetPage','',[titleNode])]));
+      }
+    }
     const tree = {attributes:{bounds:'[0,0][100,200]'},children:[
       leaf('root','',content,{bundleName:'io.reader.minliny',abilityName:'EntryAbility',pagePath:'pages/Index'}),
     ]};
@@ -1222,10 +1228,10 @@ test('Phase 1 search temporary panel Back binds the actual sheet and both curren
     }},sampleId:state,state,instanceId:INSTANCE,publicBookTitle:title,evidenceRefs:[state]}),
       beforeSeq:first,afterSeq:last,hostBeginMs:first,hostEndMs:last,captureComplete:true};
   }
-  function fixture(panel = 'filter', retry = false) {
+  function fixture(panel = 'filter', retry = false, sheetHost) {
     const returnGeneration = retry ? 2 : 1;
     const before = nativeSample('results-a',4,5,false,{panel});
-    const opened = nativeSample('panel-open',20,21,true,{panel});
+    const opened = nativeSample('panel-open',20,21,true,{panel,sheetHost});
     const backSource = retry ? 'task-retry-settled' : 'panel-open';
     return {actions:{
       'open-panel':{...action('click',`reader-search-${panel}-trigger`,6,13,6,13),from:'results-a'},
@@ -1234,7 +1240,7 @@ test('Phase 1 search temporary panel Back binds the actual sheet and both curren
     },samples:{
       'results-a':before,'panel-open':opened,
       'panel-closed':nativeSample('panel-closed',31,34,false,{panel}),
-      ...(retry ? {'task-retry-settled':nativeSample('task-retry-settled',23,23,true,{panel})} : {}),
+      ...(retry ? {'task-retry-settled':nativeSample('task-retry-settled',23,23,true,{panel,sheetHost})} : {}),
     },events:[
       event(3,'business','search-page-projection',projection),
       event(11,'business','search-page-action',{...scope,action:'panel-open',panel}),
@@ -1246,8 +1252,9 @@ test('Phase 1 search temporary panel Back binds the actual sheet and both curren
       event(27,'business','search-page-action',{...scope,operationGeneration:returnGeneration,action:'panel-dismiss',panel}),
     ]};
   }
-  function run(context, panel = 'filter', retry = false) {
-    return evaluateSearch({kind:'phase-panel',expected:{panel,nativeReturn:true},...(retry ? {retryAction:'retry'} : {}),
+  function run(context, panel = 'filter', retry = false, sheetHost) {
+    return evaluateSearch({kind:'phase-panel',expected:{panel,nativeReturn:true,...(sheetHost ? {sheetHost} : {})},
+      ...(retry ? {retryAction:'retry'} : {}),
       baseline:'results-a',action:'open-panel',returnAction:'panel-back',sample:'panel-closed',
       acceptedSources:CASE_SOURCES},context);
   }
@@ -1261,6 +1268,15 @@ test('Phase 1 search temporary panel Back binds the actual sheet and both curren
   assert.equal(normal.verdict,'PASS', normal.reason ?? 'the native sheet may consume Back without an app Back event');
   assert.equal(run(fixture('task',true),'task',true).verdict,'PASS','one Task retry may advance work while the panel stays open');
   assert.equal(run(fixture('task',true),'task').verdict,'FAIL','an unadmitted work transition is not the ordinary panel return');
+  const host = 'reader-bottom-sheet';
+  assert.equal(run(fixture('task',true,host),'task',true,host).verdict,'PASS');
+  assert.equal(run(fixture(),'filter',false,host).verdict,'FAIL','a historical SheetPage cannot satisfy the new host contract');
+  const wrongRoot = fixture('filter',false,host);
+  wrongRoot.samples['panel-open'] = nativeSample('panel-open',20,21,true,{sheetHost:host,wrongRoot:true});
+  assert.equal(run(wrongRoot,'filter',false,host).verdict,'FAIL','the expected title must be inside the expected frame ID');
+  const stillCovered = fixture('filter',false,host);
+  stillCovered.samples['panel-closed'] = nativeSample('panel-closed',31,34,true,{sheetHost:host});
+  assert.equal(run(stillCovered,'filter',false,host).verdict,'FAIL','a lingering frame cannot satisfy the restored endpoint');
   const duplicate = fixture();
   duplicate.events.splice(2,0,event(12,'business','search-page-action',{...scope,action:'panel-open',panel:'filter'}));
   assert.equal(run(duplicate).verdict,'FAIL');

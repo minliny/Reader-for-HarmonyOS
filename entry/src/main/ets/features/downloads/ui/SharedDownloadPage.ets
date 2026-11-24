@@ -659,7 +659,8 @@ export struct SharedDownloadPage {
       Stack() {
         SharedDownloadBookCover({ bookKey: book().key, coverUrl: book().coverUrl ?? '',
           presentationGeneration: ownerGeneration, coverWidth: DOWNLOAD_VISUAL.coverWidth,
-          coverHeight: this.bookHeight(book().key) });
+          coverHeight: this.bookHeight(book().key), bookTitle: book().title,
+          kindLabel: book().contentKind === undefined ? '' : book().contentKind === 'manga' ? '漫画' : '小说' });
       }.width(DOWNLOAD_VISUAL.coverWidth).height(this.bookHeight(book().key)).borderRadius(DOWNLOAD_VISUAL.coverRadius).clip(true)
         .border({ width: DOWNLOAD_VISUAL.borderWidth, color: downloadVisualColor('line', this.appThemeScheme) })
         .backgroundColor(downloadVisualColor(book().contentKind === 'manga' ? 'softGreen' : 'soft', this.appThemeScheme));

@@ -150,18 +150,6 @@ export interface MangaDirectoryVisual {
   introBottom: number;
   introBodyTop: number;
   catalogTop: number;
-  coverGap: number;
-  coverTitleFontSize: number;
-  coverTitleLineHeight: number;
-  coverTinySize: number;
-  coverTinyLine: number;
-  coverTinyTracking: number;
-  coverMediumSize: number;
-  coverMediumLine: number;
-  coverMediumTracking: number;
-  coverFooterSize: number;
-  coverFooterBottom: number;
-  coverFooterLineHeight: number;
   sectionFontSize: number;
   sectionLineHeight: number;
   sectionFontWeight: number;
@@ -376,18 +364,6 @@ export const MANGA_DIRECTORY_VISUAL: MangaDirectoryVisual = {
   introBottom: 18,
   introBodyTop: 11,
   catalogTop: 25,
-  coverGap: 7,
-  coverTitleFontSize: 19,
-  coverTitleLineHeight: 27,
-  coverTinySize: 6,
-  coverTinyLine: 9,
-  coverTinyTracking: 2,
-  coverMediumSize: 8,
-  coverMediumLine: 12,
-  coverMediumTracking: 3,
-  coverFooterSize: 7,
-  coverFooterBottom: 5,
-  coverFooterLineHeight: 10,
   sectionFontSize: 17,
   sectionLineHeight: 25,
   sectionFontWeight: 650,

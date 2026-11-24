@@ -9,7 +9,9 @@ import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { SearchResultProjection } from '../presentation/SearchResultProjection';
 import { SEARCH_RESULT_GEOMETRY } from './SearchResultGeometry';
 import { ReaderSearchFilterPanel } from './ReaderSearchFilterPanel';
+import { ReaderSearchFilterTrigger } from './ReaderSearchFilterTrigger';
 import { ReaderSearchTaskPanel } from './ReaderSearchTaskPanel';
+import { ReaderSearchTaskTrigger } from './ReaderSearchTaskTrigger';
 import { searchBookSnapshot } from '../presentation/SearchBookSnapshot';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
@@ -23,7 +25,8 @@ import type { SearchBook } from '../application/SearchGateway';
 import type { ShelfBook } from '../../../app/ReaderCoreGateway';
 import { readerSourceCategoryIsText, readerMediaIdentity } from '../../source/application/ReaderSourceCategory';
 import { ReaderWindowChromeStyle, ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
-import { resolveSheetSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { ReaderBottomSheet } from '../../../ui/surfaces/ReaderBottomSheet';
+import { resolveSheetSpec, type SheetSpecId } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { readerScrimmedOpaqueColor } from '../../../ui/surfaces/ReaderScrimColor';
 import { readerFloatingBarBottomInset } from '../../../ui/layout/ReaderFloatingBarMetrics';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
@@ -412,8 +415,10 @@ export struct SearchPage {
   @State private measurementRevision: number = 0;
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   @State private filtersExpanded: boolean = false;
+  @State private filterSheetIdentity: string = '';
   private filterGeneration: number = 0;
   @State private taskStatusExpanded: boolean = false;
+  @State private taskSheetIdentity: string = '';
   private taskStatusGeneration: number = 0;
   private lastOpenedPanel: SearchPanelKind | undefined = undefined;
   private nativePanel: SearchNativePanel | undefined = undefined;
@@ -662,9 +667,8 @@ export struct SearchPage {
         this.dismissSearchFilters(this.filterPresentationIdentity());
         return true;
       }
-      // The native sheet can still own the foreground after its binding
-      // becomes false. Only its disappearance releases the next Back.
-      return this.nativePanel !== undefined;
+      // Keep Back in the modal scope until the closing cover disappears.
+      return this.searchPanelOwnsInput();
     };
     model.onFieldFocused = (): void => { if (this.surfaceInputCurrent()) this.cancelSearchFocusRestore(); };
     model.onText = (value: string): void => {
@@ -746,15 +750,73 @@ export struct SearchPage {
   }
 
   build() {
-    ReaderPageScaffold({
-      // Only the rounded card paints the header. A solid search host also
-      // paints its side/bottom gutters beyond that card's visible border.
-      frameStyle: this.frameStyle(),
-      headerVisible: false,
-      transparentContent: true,
-      geometry: this.pageGeometry(),
-      content: (): void => { this.stateContent(); },
-    });
+    Stack({ alignContent: Alignment.TopStart }) {
+      ReaderPageScaffold({
+        // Only the rounded card paints the header. A solid search host also
+        // paints its side/bottom gutters beyond that card's visible border.
+        frameStyle: this.frameStyle(),
+        headerVisible: false,
+        transparentContent: true,
+        geometry: this.pageGeometry(),
+        content: (): void => { this.stateContent(); },
+      });
+      this.resultSheets();
+    }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  private resultSheetWidth(id: SheetSpecId): number {
+    this.readerWindowMetricsRevision;
+    const metrics = ReaderWindowCoordinator.metrics();
+    return resolveHorizontalFrame(metrics.windowRect.width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics),
+      new SurfaceWidthSpec(resolveSheetSpec(id).maxWidth)).width;
+  }
+
+  private openPanelAction(kind: SearchPanelKind, identity: string): () => void {
+    return (): void => this.acceptNativePanel(kind, identity);
+  }
+
+  private dismissPanelAction(kind: SearchPanelKind, identity: string): () => void {
+    return (): void => {
+      if (kind === 'filter') this.dismissSearchFilters(identity);
+      else this.dismissTaskStatus(identity);
+    };
+  }
+
+  private closePanelAction(kind: SearchPanelKind, identity: string): () => void {
+    const dismiss = this.dismissPanelAction(kind, identity);
+    return (): void => {
+      if (identity !== (kind === 'filter' ? this.filterSheetIdentity : this.taskSheetIdentity)) return;
+      dismiss();
+      if (kind === 'filter') this.filterSheetIdentity = '';
+      else this.taskSheetIdentity = '';
+      this.finishNativePanel(kind, identity);
+    };
+  }
+
+  @Builder
+  private resultSheets() {
+    if (this.filterSheetIdentity.length > 0) {
+      ForEach([this.filterSheetIdentity], (identity: string): void => {
+        ReaderBottomSheet({ visible: this.filtersExpanded, specId: 'search-result-filter',
+          surfaceWidth: this.resultSheetWidth('search-result-filter'), scheme: this.appThemeScheme,
+          reduceMotion: this.reduceMotion, nativeId: 'reader-search-sheet:filter', drainPendingClose: true,
+          onOpening: this.openPanelAction('filter', identity),
+          onRequestClose: this.dismissPanelAction('filter', identity),
+          onClosed: this.closePanelAction('filter', identity),
+          content: (): void => { this.filterSheetContent(); } });
+      }, (identity: string): string => identity);
+    }
+    if (this.taskSheetIdentity.length > 0) {
+      ForEach([this.taskSheetIdentity], (identity: string): void => {
+        ReaderBottomSheet({ visible: this.taskStatusExpanded, specId: 'search-task-status',
+          surfaceWidth: this.resultSheetWidth('search-task-status'), scheme: this.appThemeScheme,
+          reduceMotion: this.reduceMotion, nativeId: 'reader-search-sheet:task', drainPendingClose: true,
+          onOpening: this.openPanelAction('task', identity),
+          onRequestClose: this.dismissPanelAction('task', identity),
+          onClosed: this.closePanelAction('task', identity),
+          content: (): void => { this.taskSheetContent(); } });
+      }, (identity: string): string => identity);
+    }
   }
 
   private filterPresentationIdentity(): string {
@@ -778,10 +840,11 @@ export struct SearchPage {
       this.dismissSearchFilters(identity);
       return;
     }
-    if (this.taskStatusExpanded || this.nativePanel !== undefined) return;
+    if (this.searchPanelOwnsInput()) return;
     this.cancelSearchFocusRestore();
     this.filterGeneration += 1;
     this.lastOpenedPanel = 'filter';
+    this.filterSheetIdentity = this.filterPresentationIdentity();
     this.filtersExpanded = true;
     this.publishSurfacePanelInput();
   }
@@ -832,10 +895,11 @@ export struct SearchPage {
       this.dismissTaskStatus(identity);
       return;
     }
-    if (this.filtersExpanded || this.nativePanel !== undefined) return;
+    if (this.searchPanelOwnsInput()) return;
     this.cancelSearchFocusRestore();
     this.taskStatusGeneration += 1;
     this.lastOpenedPanel = 'task';
+    this.taskSheetIdentity = this.taskStatusIdentity();
     this.taskStatusExpanded = true;
     this.publishSurfacePanelInput();
   }
@@ -848,11 +912,14 @@ export struct SearchPage {
     this.lastOpenedPanel = undefined;
     this.filtersExpanded = false;
     this.taskStatusExpanded = false;
+    this.filterSheetIdentity = '';
+    this.taskSheetIdentity = '';
     this.publishSurfacePanelInput();
   }
 
   private searchPanelOwnsInput(): boolean {
-    return this.filtersExpanded || this.taskStatusExpanded || this.nativePanel !== undefined;
+    return this.filtersExpanded || this.taskStatusExpanded || this.nativePanel !== undefined ||
+      this.filterSheetIdentity.length > 0 || this.taskSheetIdentity.length > 0;
   }
 
   private publishSurfacePanelInput(): void {
@@ -1290,32 +1357,29 @@ export struct SearchPage {
           .minFontScale(Math.min(1, this.searchFontScale())).maxFontScale(Math.max(1, this.searchFontScale()))
           .layoutWeight(this.searchSummaryStacked() ? 0 : 1);
       }.layoutWeight(1);
-      ReaderSearchFilterPanel({ expanded: this.filtersExpanded,
+      ReaderSearchFilterTrigger({ expanded: this.filtersExpanded,
         presentationIdentity: this.filterPresentationIdentity(),
         triggerFocusId: this.panelTriggerFocusId('filter'),
         selectedGroup: this.selectedGroupName, selectedType: this.selectedContentType,
-        onToggle: (identity: string, expanded: boolean): void => this.toggleSearchFilters(identity, expanded),
-        onNativeOpening: (identity: string): void => this.acceptNativePanel('filter', identity),
-        onNativeClosing: (identity: string): void => this.releaseNativePanelChrome('filter', identity),
-        onReset: (identity: string): void => this.resetSearchFilters(identity),
-        onDismiss: (identity: string): void => this.dismissSearchFilters(identity),
-        onClosed: (identity: string): void => this.finishNativePanel('filter', identity),
-        onGroup: (value: string, identity: string): void => {
-          if (!this.acceptsFilter(identity) || this.selectedGroupName === value) return;
-          this.selectGroup(value);
-          if (this.surfaceModel?.verification?.enabled() === true) this.observeFilterApplied('scope',identity);
-        },
-        onType: (value: SearchContentType, identity: string): void => {
-          if (!this.acceptsFilter(identity)) return;
-          this.selectContentType(value);
-        } });
+        onToggle: (identity: string, expanded: boolean): void => this.toggleSearchFilters(identity, expanded) });
     }.width('100%').constraintSize({ minHeight: this.searchSummaryHeight() });
   }
 
-  private searchProgressFraction(): number {
-    if (this.presentation.kind !== 'results') return this.isSweeping() ? 0 : 1;
-    const total = this.presentation.totalSourceCount;
-    return total > 0 ? Math.min(1, Math.max(0, this.presentation.completedSourceCount / total)) : 0;
+  @Builder
+  private filterSheetContent() {
+    ReaderSearchFilterPanel({ expanded: this.filtersExpanded, presentationIdentity: this.filterPresentationIdentity(),
+      surfaceWidth: this.resultSheetWidth('search-result-filter'),
+      selectedGroup: this.selectedGroupName, selectedType: this.selectedContentType,
+      onReset: (identity: string): void => this.resetSearchFilters(identity),
+      onDismiss: (identity: string): void => this.dismissSearchFilters(identity),
+      onGroup: (value: string, identity: string): void => {
+        if (!this.acceptsFilter(identity) || this.selectedGroupName === value) return;
+        this.selectGroup(value);
+        if (this.surfaceModel?.verification?.enabled() === true) this.observeFilterApplied('scope', identity);
+      },
+      onType: (value: SearchContentType, identity: string): void => {
+        if (this.acceptsFilter(identity)) this.selectContentType(value);
+      } });
   }
 
   @Builder
@@ -1475,20 +1539,24 @@ export struct SearchPage {
 
   @Builder
   private searchProgressDetails() {
-    ReaderSearchTaskPanel({ expanded: this.taskStatusExpanded, presentationIdentity: this.taskStatusIdentity(),
+    ReaderSearchTaskTrigger({ expanded: this.taskStatusExpanded, presentationIdentity: this.taskStatusIdentity(),
       triggerFocusId: this.panelTriggerFocusId('task'),
       triggerWidth: Math.max(0, this.searchResultWidth() - SEARCH_RESULT_GEOMETRY.filterActionSize - 8),
       progressText: this.displayedSearchNoticeFacts().progressText, statusLabel: this.searchStatusLabel(),
-      searching: this.displayedSearchNoticeFacts().searching,
+      partialText: this.displayedSearchNoticeFacts().partialText,
+      failed: this.displayedSearchNoticeFacts().failed, skipped: this.displayedSearchNoticeFacts().skipped,
+      onToggle: (identity: string, expanded: boolean): void => this.toggleTaskStatus(identity, expanded) });
+  }
+
+  @Builder
+  private taskSheetContent() {
+    ReaderSearchTaskPanel({ expanded: this.taskStatusExpanded, presentationIdentity: this.taskStatusIdentity(),
+      progressText: this.displayedSearchNoticeFacts().progressText, searching: this.displayedSearchNoticeFacts().searching,
       partialText: this.displayedSearchNoticeFacts().partialText,
       failed: this.displayedSearchNoticeFacts().failed, skipped: this.displayedSearchNoticeFacts().skipped,
       failedText: this.searchNoticeText('failed'), skippedText: this.searchNoticeText('skipped'),
       canRetry: this.hasSearchNoticeRetry(), retryIdentity: this.searchNoticeActionKey(this.searchNoticeRetryKind()),
-      onToggle: (identity: string, expanded: boolean): void => this.toggleTaskStatus(identity, expanded),
-      onNativeOpening: (identity: string): void => this.acceptNativePanel('task', identity),
-      onNativeClosing: (identity: string): void => this.releaseNativePanelChrome('task', identity),
       onDismiss: (identity: string): void => this.dismissTaskStatus(identity),
-      onClosed: (identity: string): void => this.finishNativePanel('task', identity),
       onRetry: (identity: string, retryIdentity: string): void => this.retryTaskStatus(identity, retryIdentity) });
   }
 

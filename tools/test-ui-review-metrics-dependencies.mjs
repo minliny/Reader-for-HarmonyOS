@@ -7,6 +7,7 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 const selected = selectContractCases({
   'rss-header-width': 'Actual retained RSS PageBackBar parameter observer updates measured width for metrics and UI configuration delivery; original42 metrics cases are separate.',
   'retained-native-consumers': 'Exact installed-SDK native observer closures consume current metrics on the same retained node. Includes removed-dependency controls for the R19 family.',
+  'search-sheet-metrics': 'Retained Search sheet width and shared frame shadow follow live window metrics.',
 });
 if (selected.length === 0) process.exit(0);
 
@@ -80,6 +81,8 @@ function nativeWitness(spec, source, metrics) {
     visual: directoryVisual.MANGA_DIRECTORY_VISUAL, SOURCE_SWITCH_VISUAL, SEARCH_RESULT_GEOMETRY,
     TRIGGER_H: 44, APPEARANCE_HIT_OUTSET: 6,
     readerAppColor: role => role,
+    readerMotionAnimateParam: () => ({}), readerMotionReducedFadeParam: () => ({}),
+    TransitionEffect: { OPACITY: { animation: () => ({}) } },
     uiContext: { px2vp: value => value / metrics.densityPixels, vp2px: value => value * metrics.densityPixels,
       getMeasureUtils: () => ({
         measureTextSize: () => ({ width: 60 * metrics.systemFontScale * metrics.densityPixels,
@@ -98,10 +101,6 @@ function nativeWitness(spec, source, metrics) {
     Object.assign(dependencies, pureModuleProbe(source.slice(0, source.indexOf('@Component')),
       'ReaderSelectConstants.ets', readerFoundationTokens, ['TRIGGER_H', 'APPEARANCE_TRIGGER_H',
         'APPEARANCE_VALUE_VERTICAL_SPACE', 'APPEARANCE_HIT_OUTSET', 'CHEVRON_GAP', 'CHEVRON_W', 'CHEVRON_H', 'SELECT_PAD']));
-  }
-  if (spec.path.endsWith('ReaderSearchFilterPanel.ets')) {
-    Object.assign(dependencies, pureModuleProbe(read('features/search/ui/SearchResultSheetBinding.ets'),
-      'SearchResultSheetBinding.ets', dependencies, ['SearchResultSheetBinding']));
   }
   class ChildPort {
     constructor(parent, params, _storage, id) { Object.assign(this, { parent, params, id, lastDelivery: snapshot(params), updated: 0 }); }
@@ -146,7 +145,6 @@ function nativeWitness(spec, source, metrics) {
     ...(spec.path.endsWith('ReaderLibrarySearchSurface.ets') && builders[0].name.getText(tree) === 'build' ? ['results', 'emptySlot'] : [])])];
   const { owner, output } = createReaderBuilderProbe(source, names, dependencies, hooks);
   Object.assign(owner, spec.params ?? {});
-  if (spec.path.endsWith('ReaderSearchFilterPanel.ets')) owner.nativeSheet = new dependencies.SearchResultSheetBinding();
   const revision = spec.actualStorage ? owner[`__${spec.revision}`] :
     new properties.sdk.ObservedPropertySimplePU(0, owner, spec.revision);
   assert.ok(revision, 'actual SDK local revision property');
@@ -234,10 +232,18 @@ const consumers = [
     methods: ['selectionPanelHeight', 'availableHeight'], revision: 'readerWindowMetricsRevision',
     params: { viewportHeight: 852 }, native: 'Scroll', change: m => { m.systemFontScale = 2; },
     value: (_owner, n) => n.height },
-  { path: 'features/search/ui/ReaderSearchFilterPanel.ets', marker: 'this.sheetOptions(this.presentationIdentity)',
-    methods: ['sheetOptions', 'sheetSpec', 'sheetWidth', 'active', 'toggleAction'], revision: 'metricsRevision',
-    params: { scheme: 'day', presentationIdentity: 'filter', expanded: true, selectedType: '全部类型', selectedGroup: '全部', sheetContent() {} },
-    native: 'Button', change: m => { m.densityPixels = 2; }, value: (_owner, n) => n.bindSheet[2].shadow },
+  { path: 'ui/surfaces/ReaderBottomSheet.ets', builder: 'frame', marker: '.shadow(this.frameShadow())',
+    methods: ['spec', 'frameMaxHeight', 'safeBottom', 'safeCenterOffset', 'frameShadow', 'content', 'emptyContent'], revision: 'metricsRevision',
+    params: { scheme: 'day', specId: 'search-result-filter', surfaceWidth: 350, reduceMotion: true, content() {} },
+    native: 'Column', change: m => { m.densityPixels = 2; }, value: (_owner, n) => n.shadow },
+  { path: 'features/search/ui/SearchPage.ets', builder: 'resultSheets',
+    marker: "surfaceWidth: this.resultSheetWidth('search-result-filter')", observerName: 'ReaderBottomSheet',
+    methods: ['resultSheetWidth'], revision: 'readerWindowMetricsRevision',
+    lexical: { identity: 'filter' },
+    params: { appThemeScheme: 'day', filtersExpanded: true, openPanelAction() {},
+      dismissPanelAction() {}, closePanelAction() {}, filterSheetContent() {} },
+    change: m => { m.windowRect.width = 320; }, value: owner => owner.children.get(0).lastDelivery.surfaceWidth,
+    expected: () => 320 },
   { path: 'features/search/ui/ReaderLibrarySearchSurface.ets', marker: 'this.headerStackShadow()',
     methods: ['headerStackShadow'], revision: 'metricsRevision',
     params: { scheme: 'day', headerVeil: () => false, historyProgress: () => 1 }, native: 'Stack',
@@ -394,9 +400,6 @@ consumers.push(
   { ...debugBase, marker: 'y: this.statusTop() + this.statusHeight()', change: m => { m.statusBarHeight = 48; },
     expected: () => 48 },
 );
-const filterBase = consumers.find(spec => spec.path.endsWith('ReaderSearchFilterPanel.ets'));
-consumers.push({ ...filterBase, change: m => { m.windowRect.width = 320; },
-  value: (_owner, n) => n.bindSheet[2].width, expected: () => 320 });
 const controlBase = consumers.find(spec => spec.path.endsWith('ReaderDirectoryStructureFixture.ets'));
 consumers.push({ ...controlBase, marker: 'availableWidth: this.controlFrame().content.width',
   params: { ...controlBase.params, openingIdentity: () => 'same', identity: () => ({ sourceId: 'source', bookId: 'book' }),
@@ -448,7 +451,7 @@ const expectedByPath = {
   'features/bookshelf/ui/BookshelfShell.ets': m => Math.min(390, m.windowRect.width),
   'features/bookshelf/ui/BookshelfMultiSelectPage.ets': m => Math.max(12, metricsPolicy.readerInteractiveSafeBottom(m)),
   'features/bookshelf/ui/LocalImportDialog.ets': m => Math.min(852 - 40, 399.75 * m.systemFontScale),
-  'features/search/ui/ReaderSearchFilterPanel.ets': m => readerSurfaceSpecsForProbe(m).readerSurfaceElevation('sheet', 'day'),
+  'ui/surfaces/ReaderBottomSheet.ets': m => readerSurfaceSpecsForProbe(m).readerSurfaceElevation('sheet', 'day'),
   [libraryPath]: m => readerSurfaceSpecsForProbe(m).readerSurfaceElevation('popover', 'day'),
   'features/source/ui/SourceSwitchWindow.ets': m => novel.sourceSwitchNovelHeadingHeight(m.systemFontScale),
   'pages/ReaderStartupRecovery.ets': m => m.windowRect.height - m.systemInsets.top - m.systemInsets.bottom,
@@ -529,7 +532,9 @@ async function run(spec, source) {
 
 for (const id of selected) {
   const results = [], failures = [];
-  const currentConsumers = id === 'rss-header-width' ? rssHeaderConsumers : consumers;
+  const currentConsumers = id === 'rss-header-width' ? rssHeaderConsumers : id === 'search-sheet-metrics' ?
+    consumers.filter(spec => ['ui/surfaces/ReaderBottomSheet.ets', 'features/search/ui/SearchPage.ets'].includes(spec.path)) :
+    consumers;
   for (const spec of currentConsumers) {
     const source = read(spec.path);
     try {

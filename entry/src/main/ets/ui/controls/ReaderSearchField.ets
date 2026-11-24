@@ -529,6 +529,19 @@ export struct ReaderSearchField {
 
   @Builder
   private fixedLineHeightField() {
+    Stack({ alignContent: Alignment.Center }) {
+      Row().width('100%').height(this.fieldHeight() - 4)
+        .nativeFieldBackground()
+        .border({ width: this.fieldBorderWidth(), color: this.fieldBorderColor() })
+        .borderRadius((this.fieldHeight() - 4) / 2)
+        .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
+      this.bookEditorLane();
+    }.id(this.bookPanelFrameId).width('100%').height(this.fieldHeight())
+      .onClick((): void => { if (!this.bookInputFocused) this.focusBookInput(); });
+  }
+
+  @Builder
+  private bookEditorLane() {
     // The shared library bar already owns the leading search/back action.
     // Its bookPanel input starts at the field inset, without an icon slot.
     Row({ space: 0 }) {
@@ -552,6 +565,7 @@ export struct ReaderSearchField {
         .fontFamily(this.bookTextStyle().fontFamily)
         .fontWeight(this.bookTextStyle().fontWeight)
         .fontSize(this.bookTextStyle().fontSizeFp)
+        .fontFeature('"tnum" 1')
         .lineHeight(this.bookTextStyle().lineHeightFp as number)
         .halfLeading(true)
         .minFontScale(Math.min(1, this.bookFontScale()))
@@ -583,23 +597,22 @@ export struct ReaderSearchField {
         .onSubmit((_enterKey: EnterKeyType): void => this.submit());
       if (this.clearable && this.text.length > 0) {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
-          Image(this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear'))
-            .width(14).height(14).accessibilityLevel('no');
+          Stack({ alignContent: Alignment.Center }) {
+            Image(this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear'))
+              .width(11).height(11).accessibilityLevel('no');
+          }.width(20).height(20).borderRadius(10)
+            .backgroundColor(readerAppColor('TOK_LINE_STRONG', this.appThemeScheme))
+            .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
         }.width(SEARCH_CONTROL_MIN_TARGET).height(this.fieldHeight()).padding(0).backgroundColor(Color.Transparent)
           .id(this.bookPanelClearId)
           .accessibilityRole(AccessibilityRoleType.BUTTON).accessibilityText('清空搜索内容')
           .onClick((): void => this.clearBookInput());
       }
     }
-    .id(this.bookPanelFrameId)
     .width('100%')
     .height(this.fieldHeight())
     .padding({ left: this.horizontalPadding(), right: this.horizontalPadding() })
-    .nativeFieldBackground()
-    .border({ width: this.fieldBorderWidth(), color: this.fieldBorderColor() })
-    .borderRadius(this.cornerRadius())
-    .alignItems(VerticalAlign.Center)
-    .onClick((): void => { if (!this.bookInputFocused) this.focusBookInput(); });
+    .alignItems(VerticalAlign.Center);
   }
 
   @Builder
@@ -640,6 +653,7 @@ export struct ReaderSearchField {
           .fontFamily(this.textStyle().fontFamily)
           .fontWeight(this.textStyle().fontWeight)
           .fontSize(this.textStyle().fontSizeFp)
+          .fontFeature('"tnum" 1')
           .maxLines(1)
           .fontColor(this.inputColor())
           .nativeInputBackground()
@@ -738,7 +752,7 @@ export struct ReaderSearchField {
 
   private inputHeight(): number {
     if (this.isBookField()) {
-      return this.fieldHeight() - this.fieldBorderWidth() * 2;
+      return this.fieldHeight();
     }
     if (this.variant === 'sourceManagement') {
       return Math.max(44, this.fieldHeight() - this.fieldBorderWidth() * 2);
@@ -775,7 +789,7 @@ export struct ReaderSearchField {
 
   private horizontalPadding(): number {
     if (this.variant === 'sourceGroup') return SOURCE_GROUP_SELECT_TEXT_INSET;
-    if (this.variant === 'bookPanel') return 9;
+    if (this.variant === 'bookPanel') return 14;
     if (this.variant === 'readerDirectory') {
       return 9;
     }
@@ -797,7 +811,7 @@ export struct ReaderSearchField {
   }
 
   private fieldBorderWidth(): number {
-    return this.variant === 'sourceManagement' || this.variant === 'rssPassive' ? TOK_BORDER_W : 0;
+    return this.variant === 'sourceManagement' || this.variant === 'rssPassive' || this.isBookField() ? TOK_BORDER_W : 0;
   }
 
   private fieldBorderColor(): string {
@@ -806,9 +820,8 @@ export struct ReaderSearchField {
 
   private cornerRadius(): number {
     if (this.variant === 'sourceGroup') return SOURCE_GROUP_SELECT_RADIUS;
-    if (this.variant === 'bookPanel') return 18;
-    return this.variant === 'rssPassive' ? Math.min(Math.max(0, this.fieldWidthVp), this.fieldHeight()) / 2 :
-      this.variant === 'sourceManagement' ? 12 : 8;
+    if (this.variant === 'rssPassive') return Math.min(Math.max(0, this.fieldWidthVp), this.fieldHeight()) / 2;
+    return this.fieldHeight() / 2;
   }
 
   private inputColor(): string {

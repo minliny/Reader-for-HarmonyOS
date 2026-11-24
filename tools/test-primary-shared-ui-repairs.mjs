@@ -7,6 +7,7 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 import { createReaderBuilderProbe, productionReaderMotionSdk } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { selectedProductionValues } from './lib/selected-production-methods.mjs';
+import { productionReaderPressFeedback } from './lib/reader-press-feedback-probe.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { foundationControls, foundationSpecs, surfaceFontResolvers } from './lib/reader-foundation-control-probe.mjs';
@@ -39,7 +40,7 @@ const definitions = {
   'detail-directory-action': 'Actual text/manga detail directory actors enter the detail-directory journey without dispatching reading; a late prepared-page delivery is rejected after the detail session has ended.',
   'bookshelf-action-lanes': 'The shelf section pays the full icon hit lane while the group selector preserves compact paint inside a native44vp carrier.',
   'labeled-action-paint': 'Finite labeled actions retain their authored compact paint heights and distinct glyphs with an independent44vp native carrier and natural text growth.',
-  'select-watch-parent-delivery': 'A closing/reduce-motion PropWatch fences immediately but delivers the actual select dismiss callback after the parent render and rejects a replaced identity.',
+  'select-watch-parent-delivery': 'A closing/reduce-motion PropWatch fences input immediately, fades only the shared select paint for 120ms and rejects dismissal from a retired identity.',
   'directory-watch-parent-delivery': 'Directory focus revocation fences the native input immediately and delivers the parent callback on the next frame only while its current identity still owns it.',
   'dialog-action-budget': 'Real bundled font advances at actual dialog safe widths expose wrapping and natural native action growth beyond the old single-line cap.',
   'menu-divider-current': 'Stable-key menu actors recompute their divider from current action order after an appended action.',
@@ -547,12 +548,17 @@ for (const id of selectContractCases(definitions)) {
     }
   }
   if (id === 'select-watch-parent-delivery') {
-    const frames = [];
-    const uiContext = { getFont: () => ({}), postFrameCallback: frame => frames.push(frame), animateTo: (_param, action) => action(),
+    const frames = [], animations = [];
+    let owner;
+    const uiContext = { getFont: () => ({}), postFrameCallback: frame => frames.push(frame), animateTo(params, action) {
+        const before = owner.expandedHeight;
+        action();
+        animations.push({ params, before, after: owner.expandedHeight });
+      },
       getMeasureUtils: () => ({ measureText: () => 36, measureTextSize: () => ({ width: 36, height: 18 }) }), px2vp: n => n };
     const metrics = windowFacts.createDefaultReaderWindowMetrics(); metrics.windowRect.width = 366;
     const sdk = inlineSelectSdk({ uiContext, dependencies: { readerWindowMetrics: () => metrics } });
-    const owner = new sdk.dependencies.ReaderSelectPanel(undefined, { selectionId: 'one', reduceMotion: true, value: '自动', options: ['自动', '手动'] });
+    owner = new sdk.dependencies.ReaderSelectPanel(undefined, { selectionId: 'one', reduceMotion: true, value: '自动', options: ['自动', '手动'] });
     const propNames = [...read('ui/controls/ReaderSelectPanel.ets').matchAll(/^\s*@Prop[^\n]*?\s(\w+):/gm)].map(match => match[1]);
     const deliver = patch => owner.updateStateVars({ ...Object.fromEntries(propNames.map(name => [name, owner[name]])), ...patch });
     let renderingParent = false;
@@ -564,19 +570,30 @@ for (const id of selectContractCases(definitions)) {
     assert.equal(owner.closeInFlight, true, 'watch closes input synchronously');
     assert.deepEqual(dismissed, []);
     renderingParent = false;
+    const finishFade = () => {
+      const fade = animations.filter(animation => animation.params.onFinish !== undefined).at(-1);
+      assert.equal(fade.params.duration, 120);
+      assert.equal(fade.before, fade.after, 'reduced dismissal does not animate panel geometry');
+      assert.equal(owner.panelOpacity, 0);
+      fade.params.onFinish();
+    };
+    finishFade();
     frames.splice(0).forEach(frame => frame.onFrame());
     assert.deepEqual(dismissed, ['one']);
     deliver({ selectionId: 'two', closing: false });
     renderingParent = true;
     deliver({ closing: true });
     renderingParent = false;
+    const retiredFade = animations.filter(animation => animation.params.onFinish !== undefined).at(-1);
     deliver({ selectionId: 'three', closing: false });
+    retiredFade.params.onFinish();
     frames.splice(0).forEach(frame => frame.onFrame());
     assert.deepEqual(dismissed, ['one'], 'a later presentation invalidates the queued close completion');
     deliver({ reduceMotion: false });
     owner.closeInFlight = true; owner.closeFinish = () => owner.onDismiss(owner.selectionId);
     renderingParent = true; deliver({ reduceMotion: true }); renderingParent = false;
     assert.deepEqual(dismissed, ['one']);
+    finishFade();
     frames.splice(0).forEach(frame => frame.onFrame());
     assert.deepEqual(dismissed, ['one', 'three']);
   }
@@ -647,16 +664,37 @@ for (const id of selectContractCases(definitions)) {
     const { ReaderMenuActionView } = pureModuleProbe(source.slice(0, source.indexOf('@Component')), 'ReaderMenuActionView.ets', {}, ['ReaderMenuActionView']);
     const properties = createArkUIPropertyRuntimeProbe();
     const available = boundedMembers(source);
-    const members = ['actions', 'menuActions', 'actionRow', 'action', 'spec', 'fontScale', 'effectiveScheme', 'menuActionHeight', 'dividerWidth', 'hasFollowingAction'].filter(name => available.includes(name));
+    const members = ['actions', 'menuActions', 'actionRow', 'action', 'spec', 'fontScale', 'effectiveScheme', 'menuActionHeight', 'dividerWidth', 'hasFollowingAction', 'nativeId', 'commitAction', 'mounted'].filter(name => available.includes(name));
+    const requests = [];
+    const ReaderPressFeedback = productionReaderPressFeedback({ ColorMetrics: {
+      resourceColor: color => { requests.push(color); return { blendColor: () => ({ color: 'pressed-ink' }) }; },
+    } });
     const owner = createReaderBuilderProbe(source, members,
-      { ReaderMenuActionView, ...properties.sdk, ...readerSurfaceSpecsForProbe(), ...surfaceFontResolvers(), readerAppColor, readerWindowMetrics: () => ({ systemFontScale: 1 }) },
+      { ReaderMenuActionView, ReaderPressFeedback, ...properties.sdk, ...readerSurfaceSpecsForProbe(), ...surfaceFontResolvers(), readerAppColor, readerWindowMetrics: () => ({ systemFontScale: 1 }) },
       { ...properties.hooks, allowEmptyBranchAdmission: true }).owner;
-    Object.assign(owner, { specId: 'reader-more-menu', scheme: 'day', appThemeScheme: 'day', availableWidth: 240, viewportHeight: 300,
+    Object.assign(owner, { specId: 'reader-more-menu', scheme: 'day', appThemeScheme: 'day', availableWidth: 240, viewportHeight: 300, nativeId: 'menu', mounted: true,
       actions: [new ReaderMenuActionView('one', '第一个动作')] });
     owner.menuActions();
+    const target = nodes(owner).find(node => node.id === 'menu-item-one');
+    const fired = [];
+    owner.onAction = action => fired.push(action);
+    target.onClick(); assert.deepEqual(fired, ['one']);
+    const currentModifier = () => owner.attributeCalls.filter(call => call.property === 'attributeModifier' &&
+      call.id === [...owner.nodes].find(([, node]) => node === target)[0]).at(-1).args[0];
+    const paint = {};
+    const port = new Proxy({}, { get: (_object, key) => value => { paint[key] = value; return port; } });
+    currentModifier().applyPressedAttribute(port);
+    assert.equal(paint.backgroundColor, 'pressed-ink');
+    assert.deepEqual(requests, [readerAppColor('app.interaction.press', 'day'), 'Color.Transparent']);
     owner.actions = [new ReaderMenuActionView('one', '第一个动作'), new ReaderMenuActionView('two', '第二个动作')]; owner.replay();
     assert.equal(nodes(owner).filter(node => node.type === 'Row' && node.position !== undefined).length, 1,
       'a retained former last action acquires its current divider');
+    owner.actions = [new ReaderMenuActionView('one', '第一个动作', false), new ReaderMenuActionView('two', '第二个动作')];
+    owner.replay(); target.onClick();
+    assert.deepEqual(fired, ['one']);
+    currentModifier().applyPressedAttribute(port);
+    assert.equal(paint.backgroundColor, 'Color.Transparent');
+    assert.equal(requests.length, 2, 'disabled menu actions skip neutral ink composition');
   }
   if (id === 'main-rail-current') {
     const product = pureModuleProbe(read('app/ReaderProductScope.ts'), 'ReaderProductScope.ts', {}, ['isReaderMainTabEnabled']);
@@ -691,16 +729,37 @@ for (const id of selectContractCases(definitions)) {
   }
   if (id === 'no-cover-graphic') {
     const source = read('ui/patterns/NoCoverCover.ets');
-    for (const width of [60, 84, 96.96, 128]) {
-      const owner = createReaderBuilderProbe(source, ['build', 'ruleWidth', 'labelWidth'], { readerAppColor }).owner;
-      Object.assign(owner, { coverWidth: width, coverHeight: width * 1.5, appThemeScheme: 'day' }); owner.initialRender();
-      const label = nodes(owner).find(node => node.type === 'Text' && node.create === '暂无封面');
-      assert.equal(typeof label.fontSize, 'string'); assert.ok(label.fontSize.endsWith('vp'));
-      assert.equal(typeof label.lineHeight, 'string'); assert.ok(label.lineHeight.endsWith('vp'));
-      for (const fontScale of [1, 2]) {
-        const painted = Number.parseFloat(label.fontSize) * (label.fontSize.endsWith('fp') ? fontScale : 1);
-        assert.equal(painted / width, readerTypographyRoles.TYPE_SHELF_COVER_PLACEHOLDER.fontSizeFp / 96.96);
-        assert.ok(painted * 4 <= label.width, 'cover artwork label fits its authored72-unit lane');
+    const glyph = '海边旧书店的漫长假期';
+    for (const [width, height] of [[48, 80], [60, 160], [84, 122], [90, 124], [128, 168]]) {
+      for (const scheme of ['day', 'night']) {
+        const owner = createReaderBuilderProbe(source, ['build', 'x', 'y', 'scale'], { readerAppColor }).owner;
+        Object.assign(owner, { coverWidth: width, coverHeight: height, appThemeScheme: scheme, glyph, kindLabel: '小说' });
+        owner.initialRender();
+        const emitted = nodes(owner);
+        const frame = emitted.find(node => node.width === width && node.height === height);
+        assert.equal(frame.backgroundColor, readerAppColor('TOK_FIELD_SURFACE', scheme));
+        assert.equal(frame.hitTestBehavior, 'HitTestMode.None');
+        assert.equal(frame.accessibilityLevel, 'no-hide-descendants');
+        const rules = emitted.filter(node => node.type === 'Row');
+        assert.deepEqual(rules.map(rule => rule.width), [2 * width / 90, 68 * width / 90, 61 * width / 90,
+          10 * Math.min(width / 90, height / 124)]);
+        assert.equal(rules[0].height, height);
+        assert.equal(rules[0].backgroundColor, readerAppColor('TOK_LINE_STRONG', scheme));
+        assert.equal(rules[1].border.color, readerAppColor('TOK_LINE_STRONG', scheme));
+        assert.equal(rules[2].border.color, readerAppColor('TOK_LINE', scheme));
+        assert.equal(rules[3].border.color, readerAppColor('TOK_GREEN', scheme));
+        assert.equal(rules[3].backgroundColor, readerAppColor('TOK_PRIMARY_SOFT', scheme));
+        const title = emitted.find(node => node.type === 'Text' && node.create === glyph);
+        assert.equal(title.fontFamily, readerTypographyRoles.TYPE_SHELF_COVER_PLACEHOLDER.fontFamily);
+        assert.equal(title.fontSize, `${12.5 * Math.min(width / 90, height / 124)}vp`);
+        assert.equal(title.lineHeight, `${16 * Math.min(width / 90, height / 124)}vp`);
+        assert.equal(title.textAlign, 'TextAlign.Center');
+        assert.equal(title.maxLines, 2);
+        assert.deepEqual(title.textOverflow, { overflow: 'TextOverflow.Ellipsis' });
+        const label = emitted.find(node => node.type === 'Text' && node.create === '无封面 · 小说');
+        assert.equal(label.width, 58 * width / 90);
+        assert.equal(label.position.y, 89 * height / 124);
+        assert.equal(label.maxLines, 1);
       }
     }
   }
