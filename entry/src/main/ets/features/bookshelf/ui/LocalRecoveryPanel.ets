@@ -93,7 +93,7 @@ export struct LocalRecoveryPanel {
     try {
       const alert = this.alert.present((native: ReaderNativeAlertOptions): void => this.getUIContext().showAlertDialog(native),
         'confirmation-cancelable', {
-          title: '恢复本地阅读库', message: '确认后，恢复包中的备份将替换当前阅读库。',
+          title: '恢复本地阅读库', message: '恢复包将替换当前阅读库。导入的联网书源和自动更新需重新启用。',
           primaryButton: { value: '取消', action: (): void => {} },
           secondaryButton: { value: '恢复', fontColor: readerAppColor('TOK_MESSAGE_DANGER', this.scheme),
             action: (): void => { void this.perform('apply', revision); } },

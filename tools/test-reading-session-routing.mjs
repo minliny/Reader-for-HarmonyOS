@@ -48,7 +48,7 @@ async function routingFixture(initialRoute) {
     return navigation.advance().generation;
   };
   const actions = new EntryActions(navigation, new ReaderEntryStartupTrace(() => {}), {
-    runtime, entry: () => entry, search: () => search, sourceSwitch: () => source,
+    runtime, mounting: () => 1, entry: () => entry, search: () => search, sourceSwitch: () => source,
     shelfBooks: () => [...f.shelves.values()], removalPending: () => false, readerExitPending: () => false,
     advance, show: next => navigation.show(next), bindReader, restoreReaderReturn: restoreReturn,
     entryPorts, sourceName: (_id, name) => name ?? 'Named Source', failure: f.lease.notice,
@@ -173,7 +173,8 @@ async function missingLocalOriginal() {
     const child = await detailChild(x);
     assert.equal(child.loadingMessage, '待取得原书');
     assert.equal(child.readingEnabled, false);
-    assert.deepEqual(child.toc, []);
+    assert.equal(child.toc.length, 0);
+    assert.equal(x.f.calls.some(call => call.method === 'local_book.toc'), false);
     child.onContinue();
     assert.equal(x.route(), 'detail');
     assert.equal(x.entry.sessionActive, false);
