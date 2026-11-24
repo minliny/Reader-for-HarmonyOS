@@ -28,6 +28,7 @@ import { CategorySection } from './CategorySection';
 import { ReaderCard } from '../../../ui/surfaces/ReaderCard';
 import { ReaderFormRow } from '../../../ui/controls/ReaderFormRow';
 import { SettingsSelectOverlay, type SettingsSelectField } from './SettingsSelectOverlay';
+import { NavigationAppearanceSettings } from './NavigationAppearanceSettings';
 import {
   TOK_BORDER_W,
   TOK_DANGER,
@@ -644,6 +645,8 @@ export struct SettingsPage {
   private preferenceCard() {
     CategorySection({ title: '基础偏好' }) {
       this.segmentRow('App主题', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_theme_theme_night') : $r('app.media.settings_gen_theme')));
+      NavigationAppearanceSettings({ generation: this.navigationGeneration,
+        inputCurrent: (): boolean => this.activeSection === 'general' && this.settingsInputIsCurrent() });
       if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
       this.selectRow('语言', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.settings_gen_language_theme_night') : $r('app.media.settings_gen_language')), 'language',
         ['简体中文', '繁體中文', 'English', '日本語', '한국어']);

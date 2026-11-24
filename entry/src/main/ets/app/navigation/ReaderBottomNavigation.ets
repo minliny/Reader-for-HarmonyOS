@@ -5,8 +5,11 @@ import { mainTabBottomWidth, readerMainViewport } from '../../features/shell/Mai
 import { ReaderBottomTabBar, type ReaderBottomTabItem } from '../../ui/patterns/ReaderBottomTabBar';
 import { registerReaderShelfFonts } from '../../ui/foundation/ReaderFonts';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../ui/foundation/ReaderWindowMetrics';
-import { readerFloatingTabBottomInset } from '../../ui/layout/ReaderFloatingBarMetrics';
+import { readerFloatingTabBarHeight, readerFloatingTabBottomInset } from '../../ui/layout/ReaderFloatingBarMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../../ui/layout/SurfaceHorizontalGeometry';
+import type { ReaderNavigationAppearance } from '../HarmonyCapabilityPolicy';
+import { ReaderNavigationAppearanceHost } from './ReaderNavigationAppearanceHost';
+import { ReaderSystemNavigationBar } from './ReaderSystemNavigationBar';
 
 /** Admits product tabs and supplies the existing phone navigation geometry. */
 @Component
@@ -29,6 +32,15 @@ export struct ReaderBottomNavigation {
   aboutToDisappear(): void { this.mounted = false; }
 
   build() {
+    ReaderNavigationAppearanceHost({
+      inputEnabled: this.inputIsEnabled(),
+      unifiedContent: (): void => { this.unifiedTabBar(); },
+      nativeContent: (appearance: ReaderNavigationAppearance): void => { this.nativeTabBar(appearance); },
+    });
+  }
+
+  @Builder
+  private unifiedTabBar() {
     ReaderBottomTabBar({
       items: this.items(), current: this.current, scheme: this.appThemeScheme,
       surfaceWidth: this.bottomBarFrame().width, translateX: this.bottomBarTranslateX(),
@@ -37,6 +49,20 @@ export struct ReaderBottomNavigation {
       onCurrentTap: (key: string): void => { if (this.acceptsInput(key)) this.onCurrentTap(key); },
       onGeometryTrace: (width: number, paintReady: boolean): void => this.recordTabGeometry(width, paintReady),
     });
+  }
+
+  @Builder
+  private nativeTabBar(appearance: ReaderNavigationAppearance) {
+    ReaderSystemNavigationBar({
+      current: this.current, appearance,
+      surfaceWidth: this.bottomBarFrame().width,
+      surfaceHeight: readerFloatingTabBarHeight(this.navigationFontScale()),
+      inputEnabled: this.inputIsEnabled(),
+      onSelect: (key: string): void => { if (this.acceptsInput(key)) this.onSelect(key); },
+      onCurrentTap: (key: string): void => { if (this.acceptsInput(key)) this.onCurrentTap(key); },
+    })
+      .margin({ bottom: this.bottomInset() })
+      .translate({ x: this.bottomBarTranslateX() });
   }
 
   private items(): ReaderBottomTabItem[] {

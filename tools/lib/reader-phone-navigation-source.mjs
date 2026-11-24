@@ -15,11 +15,13 @@ export function actualReaderMainTabs() {
     return { MAIN_TABS, readerMainTabIconResource };`)(isReaderMainTabEnabled);
 }
 
-// The existing viewport receipt and width policy remain in MainNavigationSpec.
-// Only the two phone inputs are exposed here; window/storage I/O stays explicit.
+// The existing viewport receipt and navigation geometry remain in MainNavigationSpec.
+// Window, text scale and storage inputs stay explicit.
 export function actualReaderPhoneNavigationGeometry({ ReaderWindowCoordinator, AppStorage, readerVisualSafeTop,
+  readerInteractiveSafeBottom, readerMainTabItemHeight,
   MAIN_TABS = actualReaderMainTabs().MAIN_TABS }) {
   return new Function('ReaderWindowCoordinator', 'AppStorage', 'readerVisualSafeTop', 'MAIN_TABS',
-    `${executable('features/shell/MainNavigationSpec.ts')}; return { mainTabBottomWidth, readerMainViewport };`)(
-    ReaderWindowCoordinator, AppStorage, readerVisualSafeTop, MAIN_TABS);
+    'readerInteractiveSafeBottom', 'readerMainTabItemHeight',
+    `${executable('features/shell/MainNavigationSpec.ts')}; return { mainTabBottomWidth, readerMainViewport, readerMainRailTop };`)(
+    ReaderWindowCoordinator, AppStorage, readerVisualSafeTop, MAIN_TABS, readerInteractiveSafeBottom, readerMainTabItemHeight);
 }

@@ -1446,6 +1446,17 @@
       "status": "retained-before-open"
     },
     {
+      "id": "entry/src/main/ets/features/settings/ui/NavigationAppearanceSettings.ets#NavigationAppearanceSettings.saveRecovery::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/settings/ui/NavigationAppearanceSettings.ets",
+      "owner": "NavigationAppearanceSettings",
+      "member": "saveRecovery",
+      "family": "shared.recovery-notice",
+      "category": "本机导航外观保存待确认",
+      "effectiveHost": "通用设置当前导航代次；只重试本机外观 owner 持有的原写入意图。",
+      "retireRule": "退场停止反馈和输入，原意图保留到本机写入确认或 Ability 退役。",
+      "status": "registered-source-entry"
+    },
+    {
       "id": "entry/src/main/ets/features/settings/ui/SettingsPage.ets#SettingsPage.operationFeedback::shared.recovery-action",
       "file": "entry/src/main/ets/features/settings/ui/SettingsPage.ets",
       "owner": "SettingsPage",
