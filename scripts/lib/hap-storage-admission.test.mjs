@@ -3,8 +3,13 @@ import test from 'node:test';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { deploymentRoute, assertInstalledDeploymentIdentity } from '../hap-pipeline.mjs';
+import { deploymentRoute, deploymentSigningRoute, assertInstalledDeploymentIdentity, hdcRouteEvidence,
+  resolveHdcServer } from '../hap-pipeline.mjs';
 import { embeddedStorageCompatibility, readInstalledSqliteVersion, readInstalledStorageLineage, storageUpdateRoute, validateStorageTransitionProof, bindStorageTransitionTarget, storageTransitionResources, readStoppedStorageTransitionState, STORAGE_TRANSITION_CONTRACT, STORAGE_TRANSITION_CASES, LIBRARY47_OBJECT_SET_SHA256 } from './hap-storage-admission.mjs';
+import { collectStorageAdmission, installedStorageIdentity, releaseStorageAdmission, revalidateStorageAdmission,
+  storageAdmissionAllowed } from './storage-deployment-admission.mjs';
+import { collectStorageDeviceEvidence } from './storage-device-evidence.mjs';
+import { readinessQueryOutput } from './hap-delivery-evidence.mjs';
 
 const bundleName = 'io.reader.minliny';
 const uid = 20020064;
@@ -257,90 +262,187 @@ const requiredOption = (options, key) => { assert.ok(options.has(key)); return o
 const fail = message => { throw new Error(message); };
 
 test('actual deployment resolution never reads live headers or logs and revalidates the bound source', () => {
-  const f = transitionFixture();
-  const artifact = { kind: 'signed', sha256: f.expected.hapSha256, path: 'signed.hap',
-    embeddedCoreNapi: { sha256: f.expected.nativeSha256, storageCompatibility: f.expected.storageCompatibility },
+  const contractBytes = readFileSync(new URL('../../../Reader-Core/storage/storage-contract.v1.json', import.meta.url));
+  const candidateSha256 = '1'.repeat(64), nativeSha256 = '2'.repeat(64);
+  const artifact = { kind: 'signed', sha256: candidateSha256, path: 'signed.hap',
+    embeddedCoreNapi: { sha256: nativeSha256 },
+    storageCapability: { hapSha256: candidateSha256, nativeSha256, coreBuildId: '3'.repeat(64),
+      coreInputFingerprint: '4'.repeat(64), contract: JSON.parse(contractBytes),
+      contractSha256: createHash('sha256').update(contractBytes).digest('hex') },
     signature: { status: 'signed', verified: true, profileType: 'debug', appIdSha256: hash } };
-  let installed = { bundlePresent: true, uid, cpuAbi: 'x86_64', updateTime: f.observed.updateTime,
+  let installed = { bundlePresent: true, uid, cpuAbi: 'x86_64', updateTime: 1794210000000,
     appProvisionType: 'debug', appIdSha256: hash };
-  let observed = structuredClone(f.observed), snapshots = 0, metadataReads = 0, transportQueries = 0, manifestAbi = 'x86_64';
+  const target = 'synthetic-target', serverKey = '192.168.1.10:8710';
+  const readiness = { status: 'PASS', bootIdSha256: '1'.repeat(64) };
+  const layout = { schemaVersion: 47, layoutId: 'reader-sqlite-47-remote', schemaCookie: 452,
+    schemaFingerprint: '78ec3da13ad542c869b6825e4c008ddffe8310edf0fc268ceb80f0e42203d28b',
+    dataFormatGeneration: 1, directoryPolicyId: 'reader-directory-visible-content-v2', syncEpochOwner: 'none' };
+  let databaseSha256 = 'd'.repeat(64);
+  let collections = 0, rechecks = 0, releases = 0, metadataReads = 0, transportQueries = 0, manifestAbi = 'x86_64';
   const options = new Map([['--manifest', '/synthetic/manifest.json'], ['--artifact', 'signed'],
-    ['--target', 'synthetic-target'], ['--target-kind', 'vm']]);
+    ['--target', target], ['--target-kind', 'vm'], ['--vm-location', 'remote']]);
+  const collect = context => {
+    collections++;
+    assert.equal(context.target, target);
+    assert.equal(context.serverKey, serverKey);
+    assert.equal(context.candidate, artifact.storageCapability);
+    const binding = { target, serverKey, bootIdSha256: readiness.bootIdSha256, bundleName,
+      installedIdentitySha256: installedStorageIdentity(context.installed) };
+    const facts = () => ({ binding, barrier: { kind: 'stopped-application-uid-and-frozen-files',
+      held: context.mode === 'install', tokenSha256: hash },
+      snapshot: { databaseSha256, walSha256: 'e'.repeat(64),
+        manifestSha256: '8'.repeat(64), backupReceiptSha256: '9'.repeat(64) },
+      layout, requiresMigration: false, explicitMigration: null });
+    return { facts: facts(), revalidate: () => {
+      rechecks++;
+      assert.deepEqual(context.observeReadiness(), readiness);
+      return { ...facts(), binding: { ...binding, installedIdentitySha256: installedStorageIdentity(context.observeInstalled()) } };
+    }, release: () => { releases++; } };
+  };
   const ports = { requiredOption, fail, verifyManifest: () => ({ artifacts: [artifact], directory: '/synthetic',
-    manifest: { abi: manifestAbi } }), resolve, hdcBinary: () => '/synthetic/hdc', assertTargetConnected: () => {},
-    capture: () => { transportQueries++; throw new Error('no header, log, or live data query may be dispatched'); },
-    HDC_LEASE_SCRIPT: '/synthetic/lease', HDC_SERVER: 'synthetic-server', BUNDLE_NAME: bundleName,
-    targetReadiness: () => ({ status: 'PASS' }), option: (o, key) => o.get(key),
+    manifest: { abi: manifestAbi } }), resolve, hdcBinary: () => '/synthetic/hdc',
+    assertTargetConnected: (hdc, actualTarget, actualServer) => {
+      assert.deepEqual([hdc, actualTarget, actualServer], ['/synthetic/hdc', target, serverKey]);
+    },
+    runTargetHdc: () => { transportQueries++; throw new Error('no direct header or log queries'); },
+    BUNDLE_NAME: bundleName, process: { env: {} },
+    resolveHdcServer, targetReadiness: () => readiness, readinessQueryOutput, option: (o, key) => o.get(key),
     installedMetadata: () => { metadataReads++; return structuredClone(installed); },
-    deploymentSigningRoute: () => ({ allowed: true }), deploymentRoute,
-    targetReference: () => f.observed.targetRef, storageTransitionCandidate: () => f.expected,
-    loadStorageTransitionProof: () => f.validate(), bindStorageTransitionTarget,
-    readStoppedStorageTransitionState: () => { snapshots++; return structuredClone(observed); } };
+    deploymentSigningRoute, installedStorageIdentity, storageAdmissionAllowed, collectStorageDeviceEvidence,
+    targetReference: () => '0123456789ab',
+    collectStorageAdmission: (context, collector) => {
+      assert.equal(collector, collectStorageDeviceEvidence);
+      return collectStorageAdmission(context, collect);
+    } };
   const resolveActual = productionFunction(pipelineSource, 'resolveDeployment', 'inspectDeployment', ports);
-  assert.equal(resolveActual(options).route.reason, 'verified-storage-transition-required');
-  assert.equal(snapshots, 0);
-  assert.equal(metadataReads, 1);
-  assert.equal(transportQueries, 0);
+  const inspected = resolveActual(options);
+  assert.equal(inspected.route.allowed, true, inspected.route.reason);
+  assert.equal(inspected.storageAdmission.status, 'OBSERVED');
+  assert.throws(() => revalidateStorageAdmission(inspected.storageAdmission), /untrusted/);
+  releaseStorageAdmission(inspected.storageAdmission);
+
   options.set('--storage-transition', '/synthetic/proof.json');
-  const admitted = resolveActual(options);
-  assert.equal(admitted.route.reason, 'verified-directed-storage-transition');
-  assert.equal(snapshots, 2); // initial capture and initial complete revalidation
-  assert.equal(transportQueries, 0);
-  admitted.revalidateDeployment();
-  assert.equal(snapshots, 3);
-  observed.snapshot[0].sha256 = '9'.repeat(64);
-  assert.throws(admitted.revalidateDeployment, /current target\/snapshot/);
-  observed = structuredClone(f.observed);
-  installed = { ...installed, uid: uid + 1 };
-  assert.throws(admitted.revalidateDeployment, /identity changed/);
-  assert.equal(transportQueries, 0); // Catch-and-empty cannot hide a dispatched read.
+  assert.throws(() => resolveActual(options, 'install'), /requires live storage admission/);
+  assert.equal(collections, 1);
+  assert.equal(metadataReads, 1);
   options.delete('--storage-transition');
-  installed = { bundlePresent: false };
+
+  const admitted = resolveActual(options, 'install');
+  assert.equal(admitted.route.allowed, true);
+  assert.equal(admitted.storageAdmission.status, 'READY');
+  assert.deepEqual(admitted.storageAdmission.storageLayout, layout);
+  assert.equal(revalidateStorageAdmission(admitted.storageAdmission).status, 'PASS');
+  releaseStorageAdmission(admitted.storageAdmission);
+
+  const changedFiles = resolveActual(options, 'install').storageAdmission;
+  databaseSha256 = '9'.repeat(64);
+  assert.throws(() => revalidateStorageAdmission(changedFiles), /storage facts changed/);
+  releaseStorageAdmission(changedFiles);
+
+  const changedIdentity = resolveActual(options, 'install').storageAdmission;
+  installed = { ...installed, uid: uid + 1 };
+  assert.throws(() => revalidateStorageAdmission(changedIdentity), /installed identity changed/);
+  releaseStorageAdmission(changedIdentity);
+  assert.equal(rechecks, 3);
+  assert.equal(releases, 4);
+
   manifestAbi = undefined;
-  assert.equal(resolveActual(options).candidateAbi, 'arm64-v8a');
-  assert.equal(transportQueries, 0); // Legacy fresh install stays in its frozen ABI contract.
+  const legacyAbi = resolveActual(options, 'install');
+  assert.equal(legacyAbi.candidateAbi, 'arm64-v8a');
+  assert.equal(legacyAbi.route.reason, 'installed-abi-or-uid-does-not-match-candidate');
+  assert.equal(collections, 4);
+  assert.equal(transportQueries, 0);
 });
 
 test('actual install checks UID before start and rejects the old missing-UID-fence implementation', () => {
-  function invoke(source, changedUid, noLaunch = false, staleBeforeReplacement = false) {
+  function invoke(source, { changedUid = false, noLaunch = false, staleBeforeReplacement = false } = {}) {
     const calls = [], before = { bundlePresent: true, uid, cpuAbi: 'x86_64' };
-    const artifact = { signature: { status: 'signed', verified: true, profileType: 'debug', appIdSha256: hash } };
+    const target = 'synthetic-target', serverKey = '192.168.1.10:8710';
+    const artifact = { kind: 'signed', sha256: '1'.repeat(64), bytes: 50,
+      signature: { status: 'signed', verified: true, profileType: 'debug', appIdSha256: hash } };
+    const storageAdmission = Object.freeze({ status: 'READY', candidateSha256: artifact.sha256 });
+    const dataRecheck = { status: 'PASS', candidateSha256: artifact.sha256 };
+    const storageCandidateBinding = { status: 'CANDIDATE_BOUND', actualNativeIdentity: 'OPEN' };
     const options = new Map([['--target', 'synthetic-target'], ['--target-kind', 'vm']]);
     if (noLaunch) options.set('--no-launch', true);
     const revalidate = () => { calls.push('revalidate'); if (staleBeforeReplacement) throw new Error('stale source'); };
     const resolved = { route: { allowed: true }, artifact, installed: before, targetKind: 'vm', targetRef: 'fake',
-      artifactPath: '/synthetic/signed.hap', candidateAbi: 'x86_64', hdc: '/synthetic/hdc', target: 'synthetic-target',
-      storageEvidence: null, readiness: { status: 'PASS' },
+      artifactPath: '/synthetic/signed.hap', candidateAbi: 'x86_64', hdc: '/synthetic/hdc', target,
+      hdcRoute: { serverKey, vmLocation: 'remote' }, storageAdmission, readiness: { status: 'PASS' },
       verified: { directory: '/synthetic', manifest: { abi: 'x86_64', runId: 'synthetic' } },
-      revalidateDeployment: revalidate, revalidateStorageTransition: revalidate };
+      revalidateStorageTransition: revalidate };
+    let receipt;
     const ports = { requiredOption, fail, targetReference: () => 'fake', LOCK_ROOT: '/synthetic', join, resolve,
-      acquireLock: () => calls.push('lock'), resolveDeployment: () => resolved,
-      writeJson: () => calls.push('write-receipt'), archiveStorageTransition: () => {},
-      runTargetHdc: (_hdc, _target, argv) => { calls.push(argv.includes('install') ? 'install' : 'start');
-        return { status: 0, stdout: argv.includes('install') ? 'install bundle successfully' : 'start ability successfully' }; },
+      acquireLock: () => calls.push('lock'), resolveDeployment: (_options, mode) => {
+        if (source === pipelineSource) assert.equal(mode, 'install');
+        return resolved;
+      },
+      writeJson: (_path, value) => {
+        if (value.name === 'reader-harmonyos-deployment-receipt') {
+          calls.push('write-receipt');
+          receipt = value;
+        }
+      },
+      fileRecord: path => {
+        assert.equal(path, resolved.artifactPath);
+        return { sha256: artifact.sha256, bytes: artifact.bytes };
+      },
+      revalidateStorageAdmission: session => {
+        assert.equal(session, storageAdmission);
+        revalidate();
+        return dataRecheck;
+      },
+      recordInstalledStorageCandidate: (session, installed) => {
+        assert.equal(session, storageAdmission);
+        assert.equal(installed.uid, uid);
+        calls.push('bind');
+        return storageCandidateBinding;
+      },
+      releaseStorageAdmission: session => {
+        assert.equal(session, storageAdmission);
+        calls.push('release');
+      },
+      hdcRouteEvidence,
+      runTargetHdc: (hdc, actualTarget, serverOrArgs, currentArgs) => {
+        assert.deepEqual([hdc, actualTarget], [resolved.hdc, target]);
+        const argv = Array.isArray(serverOrArgs) ? serverOrArgs : currentArgs;
+        if (source === pipelineSource) assert.equal(serverOrArgs, serverKey);
+        if (argv[2] === 'install') {
+          assert.deepEqual(argv, ['-t', target, 'install', '-r', resolved.artifactPath]);
+          calls.push('install');
+          return { status: 0, stdout: 'install bundle successfully' };
+        }
+        assert.deepEqual(argv, ['-t', target, 'shell', `aa start -a EntryAbility -b ${bundleName} -m entry`]);
+        calls.push('start');
+        return { status: 0, stdout: 'start ability successfully' };
+      },
       installedMetadata: () => ({ ...before, uid: changedUid ? uid + 1 : uid, appProvisionType: 'debug', appIdSha256: hash }),
-      deploymentSigningRoute: () => ({ allowed: true }), assertInstalledAppVersion: () => {}, assertInstalledDeploymentIdentity,
+      deploymentSigningRoute, assertInstalledDeploymentIdentity,
       BUNDLE_NAME: bundleName, timestampId: () => 'synthetic', rmSync: () => calls.push('cleanup'),
       console: { log: () => {} } };
     const install = productionFunction(source, 'installDeployment', 'usage', ports);
     let error;
     try { install(options); } catch (caught) { error = caught; }
-    return { calls, error };
+    return { calls, error, receipt, storageAdmission, dataRecheck, storageCandidateBinding };
   }
-  const changed = invoke(pipelineSource, true);
+  const changed = invoke(pipelineSource, { changedUid: true });
   assert.match(changed.error?.message ?? '', /UID/);
-  assert.ok(changed.calls.includes('install'));
-  assert.ok(!changed.calls.includes('start'));
-  const legacy = invoke(legacyPipelineSource, true);
+  assert.deepEqual(changed.calls, ['lock', 'revalidate', 'install', 'release', 'cleanup']);
+  const legacy = invoke(legacyPipelineSource, { changedUid: true });
   assert.equal(legacy.error, undefined);
   assert.ok(legacy.calls.includes('start')); // actual prior source fails the safety assertion
-  const ok = invoke(pipelineSource, false);
+  const ok = invoke(pipelineSource);
   assert.equal(ok.error, undefined);
-  assert.ok(ok.calls.indexOf('revalidate') < ok.calls.indexOf('install'));
-  assert.ok(ok.calls.indexOf('install') < ok.calls.indexOf('start'));
-  assert.ok(!invoke(pipelineSource, false, true).calls.includes('start'));
-  const stale = invoke(pipelineSource, false, false, true);
+  assert.deepEqual(ok.calls, ['lock', 'revalidate', 'install', 'bind', 'start', 'write-receipt', 'cleanup', 'release', 'cleanup']);
+  assert.equal(ok.receipt.storageAdmission, ok.storageAdmission);
+  assert.equal(ok.receipt.dataRecheck, ok.dataRecheck);
+  assert.equal(ok.receipt.storageCandidateBinding, ok.storageCandidateBinding);
+  const noLaunch = invoke(pipelineSource, { noLaunch: true });
+  assert.equal(noLaunch.error, undefined);
+  assert.equal(noLaunch.receipt.launch, 'NOT_RUN');
+  assert.ok(!noLaunch.calls.includes('start'));
+  const stale = invoke(pipelineSource, { staleBeforeReplacement: true });
   assert.match(stale.error?.message ?? '', /stale source/);
-  assert.ok(!stale.calls.includes('install'));
+  assert.deepEqual(stale.calls, ['lock', 'revalidate', 'release', 'cleanup']);
 });
 
