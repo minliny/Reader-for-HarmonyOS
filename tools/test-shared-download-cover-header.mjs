@@ -25,7 +25,7 @@ async function run(id) {
     function fixture(coverSource = source, params = {}) {
       const properties = createArkUIPropertyRuntimeProbe();
       const placeholderClass = createReaderBuilderProbe(placeholder,
-        ['appThemeScheme', 'coverWidth', 'coverHeight', 'glyph', 'kindLabel', 'build', 'x', 'y', 'scale'],
+        ['appThemeScheme', 'coverWidth', 'coverHeight', 'glyph', 'kindLabel', 'build', 'x', 'y', 'scaleCoverUnit'],
         properties.sdk, properties.hooks).Component;
       const probe = createReaderBuilderProbe(coverSource, members,
         { ...properties.sdk, NoCoverCover: placeholderClass }, { ...properties.hooks,

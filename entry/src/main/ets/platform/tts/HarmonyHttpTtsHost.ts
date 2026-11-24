@@ -208,7 +208,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
     this.cancelActiveRequest('Reader HttpTTS audio request stopped');
     this.currentRequestId = undefined;
     this.startReported = false;
-    await this.releasePlayer();
+    await this.releasePlayer(true);
   }
 
   /** At most one next sentence is retained (bounded by the normal 16 MiB
@@ -266,8 +266,9 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
     }
   }
 
-  private async releasePlayer(): Promise<void> {
+  private async releasePlayer(reportStopFailure: boolean = false): Promise<void> {
     const player = this.player;
+    const generation = this.speakGeneration;
     this.player = undefined;
     // Detach this owner's reference before awaiting native release. A later
     // utterance may install a new buffer while the old player is stopping.
@@ -276,6 +277,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
       this.audioBytes = undefined;
       return;
     }
+    let stopFailed = false;
     try {
       if (player.state === 'playing' || player.state === 'paused' || player.state === 'prepared' ||
         player.state === 'completed') {
@@ -283,11 +285,16 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
       }
     } catch (_) {
       // Release remains mandatory even when the state changed concurrently.
+      stopFailed = true;
     }
     try {
       await player.release();
     } catch (error) {
       this.logError('HttpTTS AVPlayer release failed', error);
+      if (reportStopFailure && stopFailed) {
+        if (this.player === undefined && this.speakGeneration === generation) this.player = player;
+        throw new Error('Reader HTTP TTS transport did not stop');
+      }
     }
   }
 

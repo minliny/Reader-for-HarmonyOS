@@ -1470,7 +1470,7 @@ export struct MangaReadingSurface {
     if (!this.readerPanelForeground() || !this.boundaryDragging || !this.boundaryArmed ||
       this.boundaryInputRevision !== this.pageTurnInputRevision) return '';
     if (this.adjacentChapter(1) !== undefined) return this.turnBoundaryChapter(1);
-    if (this.finalBoundaryConfirmed()) await this.openChapterEnd();
+    await this.openChapterEnd(true);
     return '';
   }
   private resumeFromChapterEnd(): void {
@@ -1478,10 +1478,22 @@ export struct MangaReadingSurface {
     this.chapterEnd = false;
     this.controlsVisible = true;
   }
-  private async openChapterEnd(): Promise<void> {
-    if (!this.opened || !this.readerPanelForeground() || this.pageOrdinal() + 1 !== this.horizontalPageCount ||
-      this.confirmedPosition?.anchor.ordinal !== this.pageOrdinal()) return;
-    await this.performPanelAction((): void => { this.chapterEnd = true; });
+  private async openChapterEnd(fromVerticalBoundary: boolean = false): Promise<void> {
+    const inputRevision = this.pageTurnInputRevision;
+    const canOpen = (): boolean => {
+      const ordinal = this.pageOrdinal();
+      const confirmed = this.confirmedPosition;
+      if (!this.opened || !this.readerPanelForeground() || inputRevision !== this.pageTurnInputRevision ||
+        confirmed === undefined || confirmed.anchor.ordinal !== ordinal) return false;
+      if (!fromVerticalBoundary) return ordinal + 1 === this.horizontalPageCount;
+      if (this.horizontal || confirmed.controller !== this.controller ||
+        confirmed.manifest !== this.controller?.chapter?.manifest || confirmed.identity !== this.positionIdentity(ordinal) ||
+        !this.finalBoundaryConfirmed()) return false;
+      // Native bottom clamping can leave an earlier short page at the top.
+      try { return this.scroller.isAtEnd(); } catch (_error) { return false; }
+    };
+    if (!canOpen()) return;
+    await this.performPanelAction((): void => { if (canOpen()) this.chapterEnd = true; });
   }
   private async selectAdjacentChapter(direction: number, fromDirectory: boolean = false): Promise<void> {
     if (this.adjacentChapter(direction) === undefined) return;

@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { createReaderBuilderProbe, productionReaderMotionSdk } from './lib/reader-control-builder-probe.mjs';
 import { compileTailConsumer } from './lib/foundation-tail-consumer-probe.mjs';
 import { productionMangaDirectoryPressFeedback } from './lib/manga-directory-press-feedback-probe.mjs';
 import { downloadChapterDetailLabel } from '../entry/src/main/ets/features/downloads/presentation/SharedDownloadProjection.ts';
@@ -1013,21 +1013,38 @@ async function selectReduceMotion() {
 }
 
 function bookshelfGroupRecoveryCapacity() {
+  const { readerMotionReducedFadeParam } = productionReaderMotionSdk();
+  const compiler = installedEtsCompiler();
+  compiler.require(compiler.root + '/lib/validate_ui_syntax.js')
+    .observedClassCollection.add('BookshelfGroupPresentation');
+  const { readerKeyboardHostBottom } = pureModuleProbe(read('ui/layout/ReaderKeyboardGeometry.ts'),
+    'ReaderKeyboardGeometry.ts', safe, ['readerKeyboardHostBottom']);
   for (const scale of [1, 1.3, 1.6, 2]) for (const height of [360, 180, 0]) {
     const value = metrics(320, height, scale), c = context(value), calls = [];
     const rel = 'features/bookshelf/ui/BookshelfGroupDialog.ets';
     const dialogSource = read('ui/surfaces/ReaderDialogSurface.ets');
     const horizontal = pureModuleProbe(read('ui/layout/SurfaceHorizontalGeometry.ts'), 'SurfaceHorizontalGeometry.ts', {},
       ['SurfaceHorizontalFrame', 'SurfaceWidthSpec', 'resolveHorizontalFrame']);
-    Object.assign(c.deps, horizontal, readerSurfaceSpecsForProbe(value));
+    Object.assign(c.deps, horizontal, readerSurfaceSpecsForProbe(value), {
+      readerKeyboardHostBottom,
+      SynchedPropertyNesedObjectPU: c.foundation.properties.sdk.SynchedPropertyNestedObjectPU,
+    });
+    c.deps.TransitionEffect = { IDENTITY: {}, OPACITY: { animation: params => params } };
+    c.deps.readerMotionReducedFadeParam = readerMotionReducedFadeParam;
     c.hooks.childSources.ReaderDialogSurface = dialogSource;
     c.deps.ReaderDialogSurface = createReaderBuilderProbe(dialogSource, boundedMembers(dialogSource), c.deps, c.hooks).Component;
-    const owner = c.actor(rel, ['build', 'surface', 'recovery', 'recoveryInsetTop', 'recoveryAvailableHeight', 'groupInputIsCurrent',
-      'focusScopeKey', 'selectorFocusKey', 'viewportHeight', 'originY', 'metricsRevision'], { foreground: true, metricsRevision: 1, viewportHeight: height, originY: 0, recoveryTop: 70,
+    const groupSource = read(rel);
+    const presentation = c.foundation.properties.sdk.ObservedObject.createNew({
+      book: {}, identity: 'group:1', snapshot: { busy: false, receipt: { facts: { generation: 7 } } },
+      recovery: generation => ({ visible: true, message: '分组操作仍待核对。'.repeat(1000), generation, canRetry: true }),
+      canContinue: () => true, reconcile: (...args) => calls.push(args),
+    }, undefined);
+    const { owner } = createReaderBuilderProbe(groupSource, boundedMembers(groupSource).filter(name => name !== 'selector'),
+      c.deps, { ...c.hooks, initialParams: { presentation } });
+    Object.assign(owner, { foreground: true, appReduceMotion: true,
+      metricsRevision: 1, viewportHeight: height, originY: 0, recoveryTop: 70,
       selector() {}, restoreFocusAction: () => () => {}, requestFocusAfterFrame() {},
-      presentation: { book: {}, identity: 'group:1', snapshot: { busy: false, receipt: { facts: { generation: 7 } } },
-        recovery: generation => ({ visible: true, message: '分组操作仍待核对。'.repeat(1000), generation, canRetry: true }), canContinue: () => true,
-        reconcile: (...args) => calls.push(args) } });
+    });
     owner.initialRender(); c.foundation.properties.flush();
     const notice = [...owner.children.values()].find(child => child instanceof c.deps.ReaderRecoveryNotice);
     assert.ok(notice, 'normal group build/surface/recovery mounts the shared Notice');
@@ -1095,7 +1112,7 @@ function downloadAccessibility() {
   const coverSource = read('features/downloads/ui/SharedDownloadBookCover.ets');
   const placeholderSource = read('ui/patterns/NoCoverCover.ets');
   deps.NoCoverCover = createReaderBuilderProbe(placeholderSource,
-    ['appThemeScheme', 'coverWidth', 'coverHeight', 'glyph', 'kindLabel', 'build', 'x', 'y', 'scale'], deps, c.hooks).Component;
+    ['appThemeScheme', 'coverWidth', 'coverHeight', 'glyph', 'kindLabel', 'build', 'x', 'y', 'scaleCoverUnit'], deps, c.hooks).Component;
   deps.SharedDownloadBookCover = createReaderBuilderProbe(coverSource,
     ['bookKey', 'coverUrl', 'presentationGeneration', 'coverWidth', 'coverHeight', 'bookTitle', 'kindLabel',
       'imageFailed', 'requestGeneration', 'mounted',

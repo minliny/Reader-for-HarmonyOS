@@ -110,6 +110,7 @@ import {
   wholeBookProgressPercent,
 } from '../application/LocalReadingWholeBookProgress';
 import { ReadingSurfacePageFragment } from './ReadingSurface';
+import { ReaderFacingChapter, ReaderFacingChapterColumn } from './ReaderFacingChapter';
 import { ReaderPageInteractionLayer } from './ReaderPageInteractionLayer';
 import { readerBookTurnRuntimeSpec, readerRenderStageKind } from './ReaderRenderStageSpec';
 import {
@@ -407,11 +408,13 @@ import {
   setReaderScreenDirection,
   setReaderScreenTimeout,
   setReaderSettingsToggle,
+  setReaderWidePageLayout,
   type ReaderPageTurnStyle,
   type ReaderScreenDirection,
   type ReaderScreenTimeout,
   type ReaderSettingsSnapshot,
   type ReaderSettingsToggleKey,
+  type ReaderWidePageLayout,
 } from '../application/ReaderSettingsState';
 export { ReaderRetainedPresentation } from '../presentation/ReaderPagePresentationModels';
 export { readerEntryPresentation } from '../presentation/ReaderRetainedPresentationHost';
@@ -1984,6 +1987,11 @@ export struct ReadingExperience {
             this.continuousScroller = scroller;
           },
         });
+        ReaderFacingChapterColumn({
+          chapter: this.currentFacingChapter(this.pageTurnRenderRevision),
+          layout: this.readingLayout(),
+          appearance: this.visibleReadingAppearance(),
+        });
         this.continuousPageChromeContent();
       } else {
         ReaderPageTurnStage({
@@ -2160,6 +2168,7 @@ export struct ReadingExperience {
         appearanceSnapshot: this.appearanceSnapshot,
         chineseConversionMode: this.chineseConversionMode,
         settingsSnapshot: this.readerSettingsSnapshot,
+        widePageLayout: this.readerSettingsSnapshot.widePageLayout ?? 'spread',
         pageTurnSimulationAvailable: !this.bookTurnRuntimeFailed,
         ttsState: this.ttsState,
         ttsTimerMode: this.ttsTimerMode,
@@ -2257,6 +2266,7 @@ export struct ReadingExperience {
           this.dispatchChineseConversionAction(mode, identity),
         onSettingsToggleChange: (key: ReaderSettingsToggleKey, value: boolean): void =>
           this.changeReaderSetting(key, value),
+        onWidePageLayoutChange: (value: ReaderWidePageLayout): void => this.changeWidePageLayout(value),
         onScreenDirectionChange: (direction: ReaderScreenDirection): void =>
           this.changeReaderScreenDirection(direction),
         onScreenTimeoutChange: (timeout: ReaderScreenTimeout): void =>
@@ -3884,6 +3894,7 @@ export struct ReadingExperience {
     const chrome = this.pageChromeSnapshot(chapterIndex, pageStart, scalarCount, key, paginationDraft);
     const bottomJustifyGap = this.visiblePage === undefined ? 0 : this.pageBottomJustifyGap(this.visiblePage);
     const bookmark = this.bookmarkSnapshotForCurrentPage();
+    const facingChapter = this.facingChapter(chapterIndex);
     const textureIdentity = this.bookTurnTextureIdentity(
         chapterIndex,
         pageStart,
@@ -3892,6 +3903,7 @@ export struct ReadingExperience {
         bottomJustifyGap,
         chrome,
         bookmark.mode,
+        facingChapter?.identity,
       );
     return new ReaderPageTurnRenderPage(
       this.bookTurnSurfaceIdentity('current', chapterIndex, pageStart, contentVersion,
@@ -3905,6 +3917,7 @@ export struct ReadingExperience {
       chrome,
       this.visibleReadingAppearance(),
       bookmark,
+      facingChapter,
     );
   }
 
@@ -3933,6 +3946,7 @@ export struct ReadingExperience {
     const bookmark = this.bookmarkSnapshotForPreparedPage(prepared.key.chapterIndex, prepared.context.chapter.sourceId,
       prepared.context.chapter.bookId, prepared.context.chapter.bodyVersion, prepared.context.chapter.processingVersion,
       prepared.page.startScalar, prepared.page.endScalar);
+    const facingChapter = this.facingChapter(prepared.key.chapterIndex);
     const textureIdentity = this.bookTurnTextureIdentity(
         prepared.key.chapterIndex,
         prepared.page.startScalar,
@@ -3941,6 +3955,7 @@ export struct ReadingExperience {
         bottomJustifyGap,
         chrome,
         bookmark.mode,
+        facingChapter?.identity,
       );
     return new ReaderPageTurnRenderPage(
       this.bookTurnSurfaceIdentity(direction, prepared.key.chapterIndex, prepared.page.startScalar,
@@ -3954,6 +3969,7 @@ export struct ReadingExperience {
       chrome,
       this.pageReadingAppearance(prepared.page),
       bookmark,
+      facingChapter,
     );
   }
 
@@ -3988,8 +4004,9 @@ export struct ReadingExperience {
     bottomJustifyGap: number,
     chrome: ReaderPageChromeSnapshot,
     bookmarkMode: ReaderPageBookmarkMode = 'hidden',
+    facingChapterIdentity: string = '',
   ): string {
-    return [
+    const identity = [
       'reader-bookturn-texture-v2',
       this.sourceId,
       this.bookId,
@@ -4010,6 +4027,38 @@ export struct ReadingExperience {
       bookmarkMode,
       this.sessionLaunch !== undefined ? 'session-overlay' : 'page-chrome',
     ].join('|');
+    return facingChapterIdentity.length > 0 ? `${identity}|${facingChapterIdentity}` : identity;
+  }
+
+  private facingChapters: Map<number, ReaderFacingChapter> = new Map<number, ReaderFacingChapter>();
+
+  private currentFacingChapter(_renderRevision: number): ReaderFacingChapter | undefined {
+    return this.facingChapter(this.chapter?.chapterIndex ?? -1);
+  }
+
+  private facingChapter(chapterIndex: number): ReaderFacingChapter | undefined {
+    if (this.readingLayout().facingChapterWidth <= 0 || chapterIndex < 0) return undefined;
+    const nextIndex = this.adjacentChapterIndex(chapterIndex, 1);
+    if (nextIndex === undefined) return undefined;
+    const candidate = this.chapterWindow.get(nextIndex);
+    const chapter = candidate?.sourceId === this.sourceId && candidate.bookId === this.bookId &&
+      candidate.chapterIndex === nextIndex && candidate.sourceCorrectionRequired !== true &&
+      (candidate.documentRange?.startScalar ?? 0) === 0 ? candidate : undefined;
+    const entry = this.readingTocEntries()[this.readingTocRanks.get(nextIndex) ?? -1];
+    const title = chapter?.chapterTitle ?? entry?.displayTitle ?? entry?.title ?? '';
+    if (title.length === 0 && chapter === undefined) return undefined;
+    const identity = JSON.stringify([this.sourceId, this.bookId, nextIndex, chapter?.contentVersion, title]);
+    const cached = this.facingChapters.get(nextIndex);
+    if (cached?.identity === identity) return cached;
+    // Paint only a bounded head of the exact admitted next chapter. The
+    // right leaf never owns pagination, selection, TTS or progress.
+    const text = chapter?.content.slice(0, 4096) ?? '';
+    const paragraphs = text.split(/\r\n|\r|\n/).map((value: string): string => value.trim())
+      .filter((value: string): boolean => value.length > 0).slice(0, 64);
+    const preview = new ReaderFacingChapter(title, paragraphs, identity);
+    if (this.facingChapters.size >= 3) this.facingChapters.clear();
+    this.facingChapters.set(nextIndex, preview);
+    return preview;
   }
 
   private pageBottomJustifyGap(page: PhysicalReadingPage): number {
@@ -5031,14 +5080,16 @@ export struct ReadingExperience {
     selectionToken: number,
   ): void {
     const page = this.visiblePage;
-    if (current.documentRange !== undefined || page === undefined || !this.isStableVisiblePageOwner(page, current, selectionToken, lifecycleToken)) return;
+    const facing = this.readingLayout().facingChapterWidth > 0;
+    if ((!facing && current.documentRange !== undefined) || page === undefined ||
+      !this.isStableVisiblePageOwner(page, current, selectionToken, lifecycleToken)) return;
     const key = `${lifecycleToken}:${selectionToken}:${current.chapterIndex}:${page.startScalar}`;
     if (this.neighbourPreparationKey === key) return;
     this.neighbourPreparationKey = key;
     const isCurrent = (): boolean => this.neighbourPreparationKey === key &&
       this.isStableVisiblePageOwner(page, current, selectionToken, lifecycleToken);
     const run = async (): Promise<void> => {
-      for (const delta of [1, -1, 2, -2, 3, -3]) {
+      for (const delta of current.documentRange !== undefined ? [1] : [1, -1, 2, -2, 3, -3]) {
         // Yield between chapters; optional work must not form a long UI task.
         await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
         if (!isCurrent()) return;
@@ -5054,6 +5105,9 @@ export struct ReadingExperience {
           this.retainCurrentChapterWindow();
           if (!admitted) continue;
           this.admitChapterContentVersion(chapter.chapterIndex, chapter.contentVersion);
+          if (facing && (delta === 1 || delta === 2) && this.pageTurnInputPhase() === 'idle') {
+            this.pageTurnRenderRevision += 1;
+          }
           if (Math.abs(delta) === 1) {
             this.queuePageTurnPreparation(delta > 0 ? 'next' : 'previous');
             this.drainPageTurnPreparationQueue();
@@ -7903,6 +7957,7 @@ export struct ReadingExperience {
   private readingLayoutCacheCutout: boolean = false;
   private readingLayoutCacheHideStatusBar: boolean = false;
   private readingLayoutCachePaged: boolean = false;
+  private readingLayoutCacheWide: ReaderWidePageLayout | undefined = undefined;
 
   private readingLayout(): ReaderReadingLayoutSnapshot {
     this.readerWindowMetricsRevision;
@@ -7918,14 +7973,16 @@ export struct ReadingExperience {
     const cutout = this.readerSettingsSnapshot.extendIntoCutout;
     const hideStatusBar = this.readerSettingsSnapshot.hideStatusBar === true;
     const paged = this.readerSettingsSnapshot.navigationMode === 'paged';
+    const wide = this.readerSettingsSnapshot.widePageLayout ?? 'spread';
     if (this.readingLayoutCache !== undefined && this.readingLayoutCacheWidth === width &&
       this.readingLayoutCacheHeight === height && this.readingLayoutCacheRevision === metrics.revision &&
       this.readingLayoutCacheTablet === this.expandedLayout && this.readingLayoutCacheCutout === cutout &&
-      this.readingLayoutCacheHideStatusBar === hideStatusBar && this.readingLayoutCachePaged === paged) {
+      this.readingLayoutCacheHideStatusBar === hideStatusBar && this.readingLayoutCachePaged === paged &&
+      this.readingLayoutCacheWide === wide) {
       return this.readingLayoutCache;
     }
     let layout = resolveReaderReadingLayout(width, height, this.expandedLayout, metrics, cutout,
-      undefined, 0, 0, this.sessionCapsuleMetrics().targetHeight);
+      undefined, 0, 0, this.sessionCapsuleMetrics().targetHeight, wide);
     if (metrics.ready && layout.pageChromeTopRegionHeight > 0) {
       const context = this.getUIContext();
       const topStyle = readerPageChromeTopTextStyle(layout, context);
@@ -7935,7 +7992,7 @@ export struct ReadingExperience {
       const measuredInformationLane = informationHeight + READER_PAGE_CHROME_TOP_ROW_PADDING_VP * 2;
       if (measuredInformationLane > layout.pageChromeTopRegionHeight) {
         layout = resolveReaderReadingLayout(width, height, this.expandedLayout, metrics, cutout,
-          undefined, informationHeight, 0, this.sessionCapsuleMetrics().targetHeight);
+          undefined, informationHeight, 0, this.sessionCapsuleMetrics().targetHeight, wide);
       }
     }
     // Reserve the full opening below the system status crop. Pagination and
@@ -7947,6 +8004,7 @@ export struct ReadingExperience {
     this.readingLayoutCacheCutout = cutout;
     this.readingLayoutCacheHideStatusBar = hideStatusBar;
     this.readingLayoutCachePaged = paged;
+    this.readingLayoutCacheWide = wide;
     return layout;
   }
 
@@ -8251,6 +8309,7 @@ export struct ReadingExperience {
       layout.contentRight,
       layout.contentBottom,
       layout.contentLeft,
+      layout.facingChapterWidth,
       layout.titleTrackHeightVp,
       layout.systemFontScale,
       this.readerSettingsSnapshot.extendIntoCutout,
@@ -8592,6 +8651,15 @@ export struct ReadingExperience {
       },
       async (chapter: ReaderTtsChapterRef): Promise<ReaderTtsChapterAdvanceInput | undefined> =>
         this.loadNextTtsChapter(chapter, lifecycleToken),
+      {
+        admitHostResume: (origin: 'mediaPlay' | 'interruptionResume'): boolean => {
+          if (!isOwnerCurrent() || this.ttsCoordinator !== coordinator) return false;
+          const autoPageActive = this.automaticReadingState().status !== 'stopped';
+          if (origin === 'interruptionResume') return !autoPageActive && this.ttsState.pauseReason !== 'user';
+          if (autoPageActive) this.stopAutoPage();
+          return true;
+        },
+      },
     );
     this.ttsGateway = gateway;
     this.ttsHttpGateway = httpGateway;
@@ -8912,9 +8980,8 @@ export struct ReadingExperience {
     }
     const intent = pendingIntent ?? this.createTtsPlayIntent();
     if (!this.isTtsPlayIntentCurrent(intent)) return;
-    // A user choosing TTS cancels any auto-page start that is waiting for the
-    // preceding TTS stop barrier. Its continuation may still resolve, but its
-    // generation can no longer start a second runtime.
+    // An explicit speech intent retires error callbacks from the previous
+    // auto-page takeover, even if the speech pause receipt has not settled.
     this.cancelPendingAutoPageStart();
     const startingNew = this.ttsState.status !== 'playing' && this.ttsState.status !== 'preparing' &&
       this.ttsState.status !== 'paused' && this.ttsState.status !== 'interrupted' && this.ttsState.status !== 'stopping';
@@ -9498,55 +9565,51 @@ export struct ReadingExperience {
       this.retirePendingPlaybackStarts(); return;
     }
     this.cancelPendingTtsPlay();
-    const presentation = this.captureControlPlaybackPresentation();
-    if (this.automaticReadingState().status === 'running') {
+    const status = this.automaticReadingState().status;
+    if (status === 'running') {
       this.pauseAutoPage('manual');
       return;
     }
-    if (this.automaticReadingState().status === 'paused') {
+    if (this.phase !== 'ready' || this.autoPageCoordinator.pendingStart()) return;
+
+    const coordinator = this.ttsCoordinator;
+    const generation = this.autoPageCoordinator.beginStart();
+    const lifecycleToken = this.lifecycleToken;
+    const sourceId = this.sourceId;
+    const bookId = this.bookId;
+    const speechGeneration = this.ttsState.sessionGeneration;
+    const pauseIsCurrent = (): boolean => this.isSessionActive(lifecycleToken) &&
+      this.sourceId === sourceId && this.bookId === bookId && this.ttsCoordinator === coordinator &&
+      this.ttsState.sessionGeneration === speechGeneration &&
+      this.autoPageCoordinator.isStartCurrent(generation) && this.automaticReadingState().status !== 'stopped';
+    if (coordinator !== undefined && readerTtsSessionBlocksAutoPageStart(this.ttsState.status)) {
+      // Pause retires the speech request and dispatches the platform stop in
+      // this turn. Its queue and platform acknowledgements settle separately.
+      void coordinator.pause().catch((error: Error): void => {
+        if (!pauseIsCurrent()) return;
+        this.pauseAutoPage('manual');
+        this.logTtsFailure('pause for auto-page', error);
+        this.transientFeedback.show(() => this.getUIContext(), { message: '朗读暂停失败，自动翻页已暂停，请重试' },
+          (): boolean => pauseIsCurrent() && this.appForeground && this.windowChromeActive);
+      });
+    }
+    if (!this.autoPageCoordinator.admitStart(generation)) return;
+    if (status === 'paused') {
       this.autoPageCoordinator.resume();
       this.hideControl();
       this.armAutoPageTimer(true);
       this.armAutoPageSessionTimer(false);
       return;
     }
-    if (this.autoPageCoordinator.pendingStart()) return;
-    this.beginSessionCapsuleMorph('autoPage');
-    const coordinator = this.ttsCoordinator;
-    if (readerTtsSessionBlocksAutoPageStart(this.ttsState.status)) {
-      if (coordinator === undefined) return;
-      const generation = this.autoPageCoordinator.beginStart();
-      const lifecycleToken = this.lifecycleToken;
-      void coordinator.stop('user')
-        .then((): void => {
-          if (!this.isSessionActive(lifecycleToken) || !this.autoPageCoordinator.pendingStart() ||
-            !this.autoPageCoordinator.isStartCurrent(generation) || this.ttsCoordinator !== coordinator ||
-            this.automaticReadingState().status !== 'stopped') {
-            return;
-          }
-          // Keep the pending token until the last first-start admission check.
-          // A rejected start must still be able to retire its preparing proxy.
-          if (!this.readerInputIsCurrent() || this.windowChromeOverlayActive || this.phase !== 'ready') {
-            this.retirePendingPlaybackStarts(); return;
-          }
-          if (this.autoPageCoordinator.admitStart(generation)) this.startAutoPageSession(presentation);
-        })
-        .catch((error: Error): void => {
-          if (!this.autoPageCoordinator.admitStart(generation)) return;
-          this.logTtsFailure('stop before auto-page', error);
-          this.cancelSessionLaunch('stopBarrierFailure');
-          this.transientFeedback.show(() => this.getUIContext(), { message: '朗读未能停止，自动翻页尚未启动，请重试' }, (): boolean => this.isSessionActive(lifecycleToken) && this.ttsCoordinator === coordinator && this.appForeground && this.windowChromeActive);
-        });
-      return;
-    }
-    this.startAutoPageSession(presentation);
+    this.startAutoPageSession();
   }
 
-  private startAutoPageSession(presentation: ReaderControlPlaybackPresentation): void {
+  private startAutoPageSession(): void {
     if (!this.readerInputIsCurrent() || this.windowChromeOverlayActive || this.phase !== 'ready' ||
       this.automaticReadingState().status !== 'stopped') {
       return;
     }
+    this.beginSessionCapsuleMorph('autoPage');
     this.autoPageCoordinator.start();
     const launch = this.sessionLaunch;
     if (launch !== undefined && launch.geometry.type === 'autoPage' && launch.ownership === 'stage') {
@@ -10185,6 +10248,17 @@ export struct ReadingExperience {
     this.commitReaderWindowSettings(setReaderScreenDirection(this.readerSettingsSnapshot, direction));
   }
 
+  private changeWidePageLayout(value: ReaderWidePageLayout): void {
+    if (this.readingLayout().widthClass !== 'expanded' || !this.readerInputIsCurrent() ||
+      this.pageTurnInputPhase() !== 'idle' || value === (this.readerSettingsSnapshot.widePageLayout ?? 'spread')) return;
+    if (this.readerSettingsSnapshot.navigationMode === 'continuous' && this.continuousVisibleScalar >= 0) {
+      // Reflow keeps the current chapter/scalar from the existing List owner.
+      this.desiredChapterOffset = this.continuousVisibleScalar;
+    }
+    this.commitReaderSessionSettings(setReaderWidePageLayout(this.readerSettingsSnapshot, value));
+    this.reflowAfterWindowGeometryChange();
+  }
+
   private changeReaderScreenTimeout(timeout: ReaderScreenTimeout): void {
     this.commitReaderWindowSettings(setReaderScreenTimeout(this.readerSettingsSnapshot, timeout));
   }
@@ -10417,6 +10491,7 @@ export struct ReadingExperience {
       volumeKeysTurnPage: snapshot.volumeKeysTurnPage,
       stopTtsOnScreenOff: snapshot.stopTtsOnScreenOff,
       longPressSelectText: snapshot.longPressSelectText,
+      widePageLayout: snapshot.widePageLayout,
     });
   }
 

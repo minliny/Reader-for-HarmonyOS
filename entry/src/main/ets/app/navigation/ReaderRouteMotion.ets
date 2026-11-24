@@ -13,7 +13,10 @@ export function readerRouteTransition(kind: ReaderRouteMotionKind | 'none', widt
   reduced: boolean): TransitionEffect {
   if (kind === 'none') return TransitionEffect.IDENTITY;
   if (reduced) return TransitionEffect.opacity(0).animation(readerMotionReducedFadeParam());
-  if (kind === 'tab') return TransitionEffect.opacity(0).animation(readerMotionAnimateParam('app.navigation.tab', false));
+  if (kind === 'tab') {
+    return TransitionEffect.opacity(0.72).combine(TransitionEffect.scale({ x: 0.992, y: 0.992 }))
+      .animation(readerMotionAnimateParam('app.navigation.tab', false));
+  }
 
   const fullWidth = Number.isFinite(width) && width > 0 ? width : 0;
   const foreground = fullWidth > 0 ? TransitionEffect.translate({ x: fullWidth, y: 0 }) :

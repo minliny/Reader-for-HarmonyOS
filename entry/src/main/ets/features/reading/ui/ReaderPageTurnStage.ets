@@ -20,6 +20,7 @@ import {
 } from './ReadingSurface';
 import { ReaderPageChromeSnapshot } from '../presentation/ReaderPageChromeModel';
 import type { ReaderBookmarkRibbonFrame, ReaderPageBookmarkMode, ReaderPageBookmarkSnapshot } from '../presentation/ReaderPageBookmarkModel';
+import type { ReaderFacingChapter } from './ReaderFacingChapter';
 
 class ReaderPageTurnFrameCallback extends FrameCallback {
   private callback: () => void;
@@ -54,6 +55,7 @@ export class ReaderPageTurnRenderPage {
   fragments: ReadingSurfacePageFragment[];
   appearance: ReaderAppearanceSnapshot | undefined;
   bookmark: ReaderPageBookmarkSnapshot | undefined;
+  facingChapter: ReaderFacingChapter | undefined;
   bottomJustifyGap: number;
   chromeTopStartText: string;
   chromeTopEndText: string;
@@ -74,6 +76,7 @@ export class ReaderPageTurnRenderPage {
     chrome: ReaderPageChromeSnapshot = new ReaderPageChromeSnapshot(),
     appearance?: ReaderAppearanceSnapshot,
     bookmark?: ReaderPageBookmarkSnapshot,
+    facingChapter?: ReaderFacingChapter,
   ) {
     this.identity = identity;
     this.textureIdentity = textureIdentity;
@@ -83,6 +86,7 @@ export class ReaderPageTurnRenderPage {
     this.fragments = fragments;
     this.appearance = appearance;
     this.bookmark = bookmark;
+    this.facingChapter = facingChapter;
     this.bottomJustifyGap = bottomJustifyGap;
     this.chromeTopStartText = chrome.topStartText;
     this.chromeTopEndText = chrome.topEndText;
@@ -105,7 +109,7 @@ export const READER_PAGE_TURN_SLOT_A = 'reader-page-slot-a';
 export const READER_PAGE_TURN_SLOT_B = 'reader-page-slot-b';
 
 /**
- * One stage slot with only primitive/array inputs.
+ * One stage slot with individually reactive inputs.
  *
  * ArkUI V1 parameterized @Builder functions copy complex objects by value;
  * forwarding ReaderPageTurnRenderPage through that path and then mounting a
@@ -131,6 +135,7 @@ struct ReaderPageTurnSurface {
   pageFragmentsProvider: () => ReadingSurfacePageFragment[] = (): ReadingSurfacePageFragment[] => this.pageFragments;
   @Prop layout: ReaderReadingLayoutSnapshot = createDefaultReaderReadingLayout();
   @Prop appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+  @Prop facingChapter: ReaderFacingChapter | undefined = undefined;
   @Prop bookmark: ReaderPageBookmarkSnapshot | undefined = undefined;
   @Prop bookmarkMode: ReaderPageBookmarkMode | undefined = undefined;
   @Prop bookmarkOpacity: number | undefined = undefined;
@@ -204,6 +209,7 @@ struct ReaderPageTurnSurface {
           onDynamicHighlights: this.onDynamicHighlights,
           layout: this.layout,
           appearance: this.appearance,
+          facingChapter: this.facingChapter,
           bookmark: this.bookmark,
           bookmarkMode: this.bookmarkMode,
           bookmarkOpacity: this.bookmarkOpacity,
@@ -337,6 +343,7 @@ export struct ReaderPageTurnStage {
         pageFragmentsProvider: (): ReadingSurfacePageFragment[] => this.slotPage('a').fragments,
         layout: this.layout,
         appearance: this.slotPage('a').appearance ?? this.appearance,
+        facingChapter: this.slotPage('a').facingChapter,
         bookmark: this.slotPage('a').bookmark,
         bookmarkMode: this.currentPageSlot === 'a' && this.turnDirection === undefined ? this.bookmarkMode : undefined,
         bookmarkOpacity: this.currentPageSlot === 'a' && this.turnDirection === undefined ? this.bookmarkOpacity : undefined,
@@ -378,6 +385,7 @@ export struct ReaderPageTurnStage {
         pageFragmentsProvider: (): ReadingSurfacePageFragment[] => this.slotPage('b').fragments,
         layout: this.layout,
         appearance: this.slotPage('b').appearance ?? this.appearance,
+        facingChapter: this.slotPage('b').facingChapter,
         bookmark: this.slotPage('b').bookmark,
         bookmarkMode: this.currentPageSlot === 'b' && this.turnDirection === undefined ? this.bookmarkMode : undefined,
         bookmarkOpacity: this.currentPageSlot === 'b' && this.turnDirection === undefined ? this.bookmarkOpacity : undefined,

@@ -140,6 +140,7 @@ function routeTransitionEffects() {
   const TransitionEffect = {
     IDENTITY: effect('identity'),
     opacity: value => effect('opacity', value),
+    scale: value => effect('scale', value),
     translate: value => effect('translate', value),
     move: value => effect('move', value),
     asymmetric: (enter, exit) => ({ enter, exit }),
@@ -163,7 +164,13 @@ function routeTransitionEffects() {
   assert.deepEqual(pop.exit.value, { value: { x: 400, y: 0 }, timing: { duration: 240 } });
   assert.deepEqual(push.exit.value.value.map(node => node.value), [{ x: -64, y: 0 }, 0.96]);
   assert.deepEqual(pop.enter.value.value.map(node => node.value), [{ x: -64, y: 0 }, 0.96]);
-  assert.equal(readerRouteTransition('tab', 400, false).value.timing.duration, 180);
+  const tab = readerRouteTransition('tab', 400, false);
+  assert.equal(tab.value.timing.duration, 180);
+  assert.deepEqual(tab.value.value.map(node => [node.kind, node.value]), [
+    ['opacity', 0.72], ['scale', { x: 0.992, y: 0.992 }],
+  ]);
+  const surface = readFileSync(new URL('../entry/src/main/ets/app/navigation/ReaderRouteStackSurface.ets', import.meta.url), 'utf8');
+  assert.match(surface, /readerRouteTransition\('tab', 0, this\.reduceMotion\), TransitionEffect\.IDENTITY/);
   for (const kind of ['push', 'pop', 'tab']) {
     const reduced = readerRouteTransition(kind, 400, true);
     assert.equal(reduced.kind, 'opacity');

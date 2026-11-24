@@ -8,12 +8,16 @@ import { readerTtsSessionBlocksAutoPageStart } from '../entry/src/main/ets/featu
 import { FakeGateway, FakeHost, chapter, canonicalRemoteContent } from './lib/reader-tts-fixtures.mjs';
 
 const definitions = {
-  'auto-start': { description: 'Actual LRE first AutoPage start across real successful TTS stop, input retirement and valid morph', resources: [] },
+  'auto-start': { description: 'Actual Host starts AutoPage before either TTS pause acknowledgment, preserves resumable speech and fences stale pause results', resources: [] },
   'tts-start': { description: 'Actual LRE availability/document continuation and real TTS first dispatch, accepted ACK and desired-paused boundaries', resources: [] },
   'retirement': { description: 'Actual input/manual/content retirement distinguishes pending start from accepted playback and matching presentation', resources: [] },
 };
 const source = new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url);
-const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
+const deferred = () => {
+  let resolve, reject;
+  const promise = new Promise((done, fail) => { resolve = done; reject = fail; });
+  return { promise, resolve, reject };
+};
 const drain = async () => { for (let index = 0; index < 100; index++) await Promise.resolve(); };
 const members = ['toggleAutoPage', 'startAutoPageSession', 'cancelPendingAutoPageStart', 'stopAutoPage',
   'toggleTts', 'createTtsPlayIntent', 'isTtsPlayIntentCurrent', 'cancelPendingTtsPlay', 'retirePendingPlaybackStarts',
@@ -23,8 +27,8 @@ const members = ['toggleAutoPage', 'startAutoPageSession', 'cancelPendingAutoPag
 
 function fixture() {
   const gateway = new FakeGateway(), host = new FakeHost(), timers = new Map();
-  const presentationEvents = [], errors = [];
-  let sequence = 0, page;
+  const presentationEvents = [], errors = [], notices = [];
+  let sequence = 0, clock = 10000, page;
   host.isBackgroundPlaybackActive = () => true;
   const Reader = selectedProductionMethods(source, 'ReadingExperience', members, {
     readerControlHostInputEnabled, readerTtsSessionBlocksAutoPageStart,
@@ -47,6 +51,7 @@ function fixture() {
       // Finite presentation port: own control hiding leaves the real input predicate current.
       this.controlsHidden = true;
       this.sessionLaunch = { geometry: { type }, ownership: 'stage', businessStatus: 'preparing', desiredPlaying: true, generation: 1 };
+      return true;
     },
     cancelSessionLaunch(reason) {
       presentationEvents.push(reason);
@@ -62,19 +67,24 @@ function fixture() {
     stopReaderTtsAudition() {}, finishBookmarkRollback() {}, captureReadingRecordElapsed() {},
     clearReadingRecordTimer() {}, flushReadingRecord: async () => {}, admitRetainedReadingRecency() {},
     beginReadingRecordClock() {}, scheduleControlMinimum() {}, retirePagePointer() {},
+    refreshAppearanceSaveRecovery() {}, publishControlVerificationReady() {},
     invalidateControlBackdrop() {}, syncVolumeKeyPolicy() {}, retireReaderRecovery() {},
     hideControl() {}, logTtsFailure: (operation, error) => errors.push([operation, error]),
+    controlVerification: { observing: () => false },
+    capsuleVerification: { ttsTiming: () => undefined, ownerState() {} },
     onSessionLaunchTtsState: state => presentationEvents.push(['start-completed', state.status]),
-    transientFeedback: { show() { assert.fail('normal successful stop must not publish a failure notice'); } },
+    transientFeedback: { show(_context, options, isCurrent) { if (isCurrent()) notices.push(options.message); } },
   });
-  const auto = new ReaderAutoPageCoordinator({ now: () => 10000, active: () => page.readerInputIsCurrent(),
-    ready: () => page.phase === 'ready', canResumeTurn: () => true, turn: () => ({ kind: 'busy' }), changed() {},
+  const auto = new ReaderAutoPageCoordinator({ now: () => clock, active: () => page.readerInputIsCurrent(),
+    ready: () => page.phase === 'ready', canResumeTurn: () => true,
+    turn: () => page.autoPageTurn?.() ?? { kind: 'busy' }, changed() {},
     schedule(fn, ms) { const id = ++sequence; timers.set(id, { fn, ms }); return id; }, cancel: id => timers.delete(id) });
   const tts = new ReaderTtsSessionCoordinator(gateway, host, undefined, state => { page.ttsState = state; });
   Object.assign(page, { autoPageCoordinator: auto, ttsCoordinator: tts, ttsState: tts.getState(),
     automaticReadingState: () => auto.snapshot(), armAutoPageTimer: reset => auto.armPageTimer(reset),
     armAutoPageSessionTimer: reset => auto.armSessionTimer(reset) });
-  return { page, gateway, host, auto, tts, timers, presentationEvents, errors,
+  return { page, gateway, host, auto, tts, timers, presentationEvents, errors, notices,
+    advanceClock(ms) { clock += ms; },
     async close() { auto.dispose(); await tts.dispose(); assert.deepEqual(errors, []); } };
 }
 
@@ -92,33 +102,137 @@ function retire(f, edge) {
   }
 }
 
+async function playingTts(f) {
+  await f.tts.start({ chapter, content: canonicalRemoteContent, contentVersion: 'original', scalarPosition: 0 });
+  const request = f.host.requests[0];
+  f.host.emit({ type: 'start', requestId: request.requestId });
+  await f.tts.whenSettled();
+  const state = f.tts.getState();
+  assert.equal(state.status, 'playing');
+  return { state, request };
+}
+
 async function autoStart() {
-  for (const edge of ['normal', 'desired-paused', 'background', 'background-return', 'live-only', 'obscured', 'window', 'blocked', 'overlay']) {
-    const f = fixture(), entered = deferred(), gate = deferred();
-    const originalStop = f.gateway.stop.bind(f.gateway);
+  for (const reverseWhilePaused of [false, true]) {
+    const f = fixture(), transport = deferred(), corePause = deferred(), enteredCorePause = deferred();
     try {
-      await f.tts.start({ chapter, content: canonicalRemoteContent, contentVersion: 'original', scalarPosition: 0 });
-      f.host.emit({ type: 'start', requestId: f.host.requests[0].requestId }); await f.tts.whenSettled();
-      let first = true;
-      f.gateway.stop = async (...args) => { if (first) { first = false; entered.resolve(); await gate.promise; } return originalStop(...args); };
-      f.page.toggleAutoPage(); await entered.promise;
-      assert.equal(f.auto.pendingStart(), true);
-      if (edge === 'desired-paused') f.page.sessionLaunch.desiredPlaying = false;
-      else if (edge !== 'normal') retire(f, edge);
-      gate.resolve(); await f.tts.whenSettled(); await drain();
-      assert.ok(f.gateway.calls.includes('stop'), 'original successful stop ACK still settles');
-      assert.ok(f.host.calls.includes('deactivate'), 'original transport cleanup still settles');
-      assert.equal(f.auto.pendingStart(), false, edge);
-      if (edge === 'normal') {
-        assert.equal(f.page.controlsHidden, true); assert.equal(f.auto.snapshot().status, 'running');
-        assert.equal(f.timers.size, 2, 'both real automatic deadlines are armed');
-      } else if (edge === 'desired-paused') {
-        assert.equal(f.auto.snapshot().status, 'paused'); assert.equal(f.timers.size, 0);
-      } else {
-        assert.equal(f.auto.snapshot().status, 'stopped', edge + ': no phantom running session');
-        assert.equal(f.timers.size, 0); assert.equal(f.page.sessionLaunch, undefined, 'retired first-start proxy released');
+      const { state, request } = await playingTts(f);
+      const stop = f.host.stop.bind(f.host);
+      const pause = f.gateway.pause.bind(f.gateway);
+      let stopDispatched = false;
+      f.host.stop = async () => { stopDispatched = true; await transport.promise; return stop(); };
+      f.gateway.pause = async (...args) => { enteredCorePause.resolve(); await corePause.promise; return pause(...args); };
+
+      f.page.toggleAutoPage();
+      assert.equal(stopDispatched, true, 'native transport pause dispatches on the initiating stack');
+      assert.equal(f.tts.getState().status, 'paused');
+      assert.equal(f.tts.getState().sessionGeneration, state.sessionGeneration);
+      assert.equal(f.tts.getState().sliceIndex, state.sliceIndex);
+      assert.equal(f.tts.getState().requestId, undefined);
+      assert.equal(f.auto.pendingStart(), false);
+      assert.equal(f.auto.snapshot().status, 'running');
+      assert.equal(f.page.controlsHidden, true);
+      assert.equal(f.page.sessionLaunch.businessStatus, 'playing');
+      assert.equal(f.timers.size, 2, 'both automatic deadlines are armed before either pause ACK');
+      assert.equal(f.gateway.calls.includes('pause'), false);
+
+      f.host.emit({ type: 'start', requestId: request.requestId });
+      transport.resolve(); await enteredCorePause.promise;
+      assert.equal(f.auto.snapshot().status, 'running', 'a pending Core pause cannot hold or re-arm AutoPage');
+      assert.equal(f.timers.size, 2);
+      if (reverseWhilePaused) {
+        f.page.toggleTts();
+        assert.equal(f.auto.snapshot().status, 'stopped', 'explicit resume retires automatic reading immediately');
+        assert.equal(f.timers.size, 0);
+        assert.equal(f.host.requests.length, 1, 'resume still respects the existing serialized audio owner');
       }
-    } finally { gate.resolve(); await f.close(); }
+      corePause.resolve(); await f.tts.whenSettled(); await drain();
+      assert.ok(f.gateway.calls.includes('pause'));
+      assert.ok(f.host.calls.includes('deactivate'));
+      assert.equal(f.gateway.calls.includes('stop'), false, 'takeover preserves the queue instead of tearing it down');
+      if (!reverseWhilePaused) {
+        assert.equal(f.tts.getState().status, 'paused');
+        assert.equal(f.host.requests.length, 1, 'the retired speech callback cannot launch a second utterance');
+        assert.equal(f.auto.snapshot().status, 'running');
+        retire(f, 'overlay');
+        assert.equal(f.auto.snapshot().status, 'running', 'overlay cannot retire accepted automatic reading');
+        f.page.windowChromeOverlayActive = false;
+        retire(f, 'background');
+        assert.equal(f.auto.snapshot().status, 'paused', 'existing background policy pauses the accepted run');
+        assert.equal(f.timers.size, 0);
+      } else {
+        assert.equal(f.host.requests.length, 2);
+        const resumed = f.host.requests[1];
+        assert.notEqual(resumed.requestId, request.requestId);
+        f.host.emit({ type: 'start', requestId: resumed.requestId });
+        await f.tts.whenSettled();
+        assert.equal(f.tts.getState().status, 'playing');
+        assert.equal(f.tts.getState().sessionGeneration, state.sessionGeneration);
+        assert.equal(f.tts.getState().sliceIndex, state.sliceIndex);
+        assert.equal(f.auto.snapshot().status, 'stopped');
+        assert.equal(f.timers.size, 0);
+      }
+      assert.deepEqual(f.notices, []);
+    } finally { transport.resolve(); corePause.resolve(); await f.close(); }
+  }
+
+  for (const edge of ['live-only', 'obscured', 'window', 'blocked', 'overlay', 'page-not-ready']) {
+    const f = fixture();
+    try {
+      await playingTts(f);
+      const stopsBefore = f.host.calls.filter(call => call === 'stop').length;
+      if (edge === 'page-not-ready') f.page.phase = 'loading';
+      else retire(f, edge);
+      f.page.toggleAutoPage();
+      assert.equal(f.auto.snapshot().status, 'stopped', edge);
+      assert.equal(f.tts.getState().status, 'playing', edge);
+      assert.equal(f.host.calls.filter(call => call === 'stop').length, stopsBefore, edge);
+      assert.equal(f.page.sessionLaunch, undefined, edge);
+      assert.equal(f.timers.size, 0, edge);
+    } finally { await f.close(); }
+  }
+
+  for (const edge of ['current', 'after-page-commit', 'same-pause-successor', 'retired-speech', 'retired-owner']) {
+    const f = fixture(), transport = deferred();
+    try {
+      await playingTts(f);
+      const stop = f.host.stop.bind(f.host);
+      let blocked = true;
+      f.host.stop = () => { if (!blocked) return stop(); blocked = false; return transport.promise; };
+      f.page.toggleAutoPage();
+      assert.equal(f.auto.snapshot().status, 'running');
+      if (edge === 'after-page-commit') {
+        const generation = f.auto.snapshot().generation;
+        const [id, pageTimer] = f.timers.entries().next().value;
+        f.page.autoPageTurn = () => ({ kind: 'started' });
+        f.advanceClock(f.auto.snapshot().remainingSeconds * 1000);
+        f.timers.delete(id); pageTimer.fn();
+        assert.equal(f.auto.snapshot().awaitingPageCommit, true);
+        f.auto.pageCommitted();
+        assert.notEqual(f.auto.snapshot().generation, generation, 'the page epoch is distinct from the AutoPage run');
+      }
+      if (edge === 'same-pause-successor') {
+        f.page.stopAutoPage();
+        f.page.toggleAutoPage();
+      }
+      const retiredSpeech = edge === 'retired-speech' ? f.tts.stop() : undefined;
+      if (edge === 'retired-owner') f.page.lifecycleToken += 1;
+      const error = Error('audio pause transport rejected');
+      transport.reject(error); await f.tts.whenSettled(); await drain();
+      await retiredSpeech;
+      if (edge === 'current' || edge === 'after-page-commit' || edge === 'same-pause-successor') {
+        assert.equal(f.auto.snapshot().status, 'paused');
+        assert.equal(f.timers.size, 0);
+        assert.equal(f.errors.length, 1);
+        assert.equal(f.errors.pop()[1], error);
+        assert.equal(f.notices.length, 1);
+      } else {
+        assert.equal(f.auto.snapshot().status, 'running', edge + ': stale rejection cannot pause the live run');
+        assert.equal(f.timers.size, 2);
+        assert.deepEqual(f.errors, []);
+        assert.deepEqual(f.notices, []);
+      }
+    } finally { transport.resolve(); await f.close(); }
   }
 }
 

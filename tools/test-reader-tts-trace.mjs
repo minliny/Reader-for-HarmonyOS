@@ -79,6 +79,18 @@ engines.at(-1).listener.onStart('replacement', {});
 assert.deepEqual(delivered, [{ type: 'start', requestId: 'replacement' }]);
 await replaced.close();
 
+const stopping = new SystemHost();
+await stopping.speak(request);
+const stoppingEngine = engines.at(-1);
+const stop = stoppingEngine.stop;
+try {
+  stoppingEngine.stop = () => { throw Error('native stop rejected'); };
+  await assert.rejects(stopping.stop(), /system TTS transport did not stop/);
+} finally {
+  stoppingEngine.stop = stop;
+  await stopping.close();
+}
+
 // Stop during asynchronous engine initialization must prevent the later speak.
 let releaseEngine;
 createGate = new Promise(resolve => { releaseEngine = resolve; });

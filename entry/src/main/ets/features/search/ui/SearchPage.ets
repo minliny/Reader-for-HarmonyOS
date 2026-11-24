@@ -1393,6 +1393,12 @@ export struct SearchPage {
       } });
   }
 
+  private searchProgressFraction(): number {
+    if (this.presentation.kind !== 'results') return this.isSweeping() ? 0 : 1;
+    const total = this.presentation.totalSourceCount;
+    return total > 0 ? Math.min(1, Math.max(0, this.presentation.completedSourceCount / total)) : 0;
+  }
+
   @Builder
   private resultProgress() {
     Row() {

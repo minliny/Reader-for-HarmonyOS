@@ -903,7 +903,7 @@ export struct FullDirectoryPanel {
   private catalogFooter() {
     Column() {
       ReaderDirectoryQuickActions({
-        title: this.currentTitle(), position: this.currentPosition() === '—' ? '' : this.currentPosition(),
+        title: this.currentTitle(), positionLabel: this.currentPosition() === '—' ? '' : this.currentPosition(),
         scheme: this.appThemeScheme, fontScale: this.fontScale(),
         locateEnabled: this.panelInputCurrent() && this.currentEntry() !== undefined,
         edgeEnabled: this.panelInputCurrent() && (this.projectedEntries.length > 0 || this.navigationActive),

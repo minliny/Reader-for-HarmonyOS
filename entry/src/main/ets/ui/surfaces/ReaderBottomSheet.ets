@@ -80,11 +80,11 @@ export struct ReaderBottomSheet {
       .onAppear((): void => {
         if (this.mounted && this.drainPendingClose && !this.visible && !this.coverVisible) this.onClosed();
       })
-      .bindContentCover(this.coverVisible, this.overlay, this.coverOptions());
+      .bindContentCover(this.coverVisible, this.sheetCoverContent, this.coverOptions());
   }
 
   @Builder
-  private overlay() {
+  private sheetCoverContent() {
     Stack({ alignContent: Alignment.Bottom }) {
       if (this.frameVisible) {
         Rect().width('100%').height('100%')

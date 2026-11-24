@@ -167,7 +167,7 @@ export struct ReaderButton {
   @Prop specId: ReaderButtonSpecId = 'source-action';
   @Prop label: string = '';
   @Prop variant: ReaderButtonVariant | undefined = undefined;
-  @Prop size: ReaderButtonSize = 'medium';
+  @Prop visualSize: ReaderButtonSize = 'medium';
   @Prop primary: boolean = false;
   @Prop @Watch('resetPress') actionEnabled: boolean = true;
   @Prop layout: ReaderButtonLayout = 'intrinsic';
@@ -299,7 +299,7 @@ export struct ReaderButton {
 
   private matrixVariant(): ReaderButtonVariant { return this.variant ?? (this.primary ? 'primary' : 'subtle'); }
   private matrixSize(): ReaderButtonMatrixSize {
-    return this.variant === undefined ? READER_DIALOG_FORM_ACTION_SIZE : resolveReaderButtonMatrixSize(this.size);
+    return this.variant === undefined ? READER_DIALOG_FORM_ACTION_SIZE : resolveReaderButtonMatrixSize(this.visualSize);
   }
   private matrixPaint(): ReaderButtonMatrixPaint { return resolveReaderButtonMatrixPaint(this.matrixVariant(), this.actionEnabled); }
 

@@ -1032,7 +1032,7 @@ struct Index {
         reduceMotion: this.appReduceMotion, consumeTopInset: this.readerOwnsWindowEdges(),
         actions: this.sourceSwitchActions,
       });
-      if (this.route === 'bookshelf' || (this.route === 'detail' && this.shelfGroupPresentation.identity.length > 0)) {
+      if (this.route === 'bookshelf' || this.route === 'detail') {
         BookshelfGroupDialog({ presentation: this.shelfGroupPresentation, recoveryTop: this.messageSafeTop(),
           isInputAllowed: (): boolean => this.searchAppForeground && !this.arkWebCapturesInput &&
             (this.route === 'bookshelf' || this.route === 'detail'),

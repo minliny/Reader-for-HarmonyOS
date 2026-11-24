@@ -11,7 +11,7 @@ export function readerDirectoryQuickActionsHeight(fontScale: number, showPositio
 @Component
 export struct ReaderDirectoryQuickActions {
   @Prop title: string = '';
-  @Prop position: string = '';
+  @Prop positionLabel: string = '';
   @Prop scheme: string = 'day';
   @Prop fontScale: number = 1;
   @Prop locateEnabled: boolean = false;
@@ -21,7 +21,7 @@ export struct ReaderDirectoryQuickActions {
   onBottom: () => void = (): void => {};
 
   private actionHeight(): number {
-    return readerDirectoryQuickActionsHeight(this.fontScale, this.position.length > 0) - 12;
+    return readerDirectoryQuickActionsHeight(this.fontScale, this.positionLabel.length > 0) - 12;
   }
 
   @Builder
@@ -34,8 +34,8 @@ export struct ReaderDirectoryQuickActions {
           Text(`在读：${this.title}`).width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
             .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(12).fontWeight(FontWeight.Medium).lineHeight(16)
             .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.scheme));
-          if (this.position.length > 0) {
-            Text(this.position).width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+          if (this.positionLabel.length > 0) {
+            Text(this.positionLabel).width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
               .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(10).lineHeight(12).fontFeature('"tnum" 1')
               .fontColor(readerAppColor('TOK_MUTED', this.scheme));
           }
@@ -45,7 +45,7 @@ export struct ReaderDirectoryQuickActions {
         .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
     }.layoutWeight(1).constraintSize({ minWidth: 44 }).height(this.actionHeight()).padding(0)
       .backgroundColor(Color.Transparent).opacity(this.locateEnabled ? 1 : .55)
-      .attributeModifier(new ReaderActionAccessibility(`在读：${this.title}${this.position.length > 0 ? `，${this.position}` : ''}`,
+      .attributeModifier(new ReaderActionAccessibility(`在读：${this.title}${this.positionLabel.length > 0 ? `，${this.positionLabel}` : ''}`,
         this.locateEnabled, false, true, undefined, 'nativeButton'))
       .onClick((): void => { if (this.locateEnabled) this.onLocateCurrent(); });
   }

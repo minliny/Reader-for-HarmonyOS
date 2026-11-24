@@ -44,7 +44,7 @@ for (const id of selected) {
 
     const dock = sdk.consumer(source('ReaderDirectoryQuickActions'), undefined,
       { ReaderActionAccessibility, readerDirectoryQuickActionsHeight });
-    Object.assign(dock, { title: '第三百一十章', position: '2 / 10 页', edgeEnabled: true, locateEnabled: true,
+    Object.assign(dock, { title: '第三百一十章', positionLabel: '2 / 10 页', edgeEnabled: true, locateEnabled: true,
       onLocateCurrent: () => calls.push('current'), onTop: () => calls.push('top'), onBottom: () => calls.push('bottom') });
     dock.initialRender();
     const dockButtons = sdk.nodes(dock).filter(node => node.type === 'Button');

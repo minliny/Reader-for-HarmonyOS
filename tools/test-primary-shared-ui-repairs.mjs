@@ -732,7 +732,7 @@ for (const id of selectContractCases(definitions)) {
     const glyph = '海边旧书店的漫长假期';
     for (const [width, height] of [[48, 80], [60, 160], [84, 122], [90, 124], [128, 168]]) {
       for (const scheme of ['day', 'night']) {
-        const owner = createReaderBuilderProbe(source, ['build', 'x', 'y', 'scale'], { readerAppColor }).owner;
+        const owner = createReaderBuilderProbe(source, ['build', 'x', 'y', 'scaleCoverUnit'], { readerAppColor }).owner;
         Object.assign(owner, { coverWidth: width, coverHeight: height, appThemeScheme: scheme, glyph, kindLabel: '小说' });
         owner.initialRender();
         const emitted = nodes(owner);

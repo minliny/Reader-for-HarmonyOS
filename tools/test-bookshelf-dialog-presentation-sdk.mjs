@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {bookshelfDialogPresentationFixture as fixture,indexSource,groupPresentationSource,removalHostSource,defer} from './lib/bookshelf-dialog-presentation-sdk.mjs';
+import {readerAppColor} from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 let cases=0;
 const groupOnly=process.argv.includes('--group-only');
 function ignoreRemovalAdmission(source) {
@@ -29,15 +30,36 @@ if(!groupOnly)for(const retire of['nav','mount','runtime','unmounted']){
 {
  const f=fixture(),a={sourceId:'s',bookId:'a',group:'old'},b={sourceId:'s',bookId:'b',group:'old'};
  f.i.openShelfGroup(a);const old=f.group();assert.ok(old.select&&old.mask);
+ const {enter,exit}=old.surface.transition;
+ assert.deepEqual([enter.kind,enter.params.duration,exit.kind,exit.params.duration],['opacity',220,'opacity',180]);
+ assert.deepEqual(enter.params.curve,[0.2,0,0,1]);
+ assert.deepEqual(old.card.transition.enter.value,{x:0.95,y:0.95});
+ assert.deepEqual(old.card.transition.enter.combined.value,{y:8});
+ assert.equal(old.card.transition.exit.params.duration,180);
+ assert.equal(old.mask.backdropBlur,6);
+ assert.equal(old.mask.backgroundColor,readerAppColor('app.scrim.modal','day'));
  assert.equal(old.select.type,'Button','actual default choice is a native Button');
- assert.deepEqual(old.select.padding,{left:12,right:12,top:5,bottom:5});
- assert.deepEqual(old.select.constraintSize,{minWidth:0,minHeight:0},'choice keeps its natural authored size');
- assert.equal(old.select.borderRadius,999);assert.equal(old.select.id,old.child.focusId);
+ assert.equal(old.select.padding,0);
+ assert.deepEqual(old.select.constraintSize,{minWidth:44,minHeight:44},'choice keeps the admitted touch target');
+ assert.equal(old.select.id,old.child.focusId);
  const label=[...old.child.nodes.values()].find(n=>n.type==='Text'&&n.create==='默认');
  assert.ok(label);assert.equal(label.onClick,undefined,'label only paints the choice');
- old.mask.onClick();assert.equal(f.presentation.book,undefined);f.i.openShelfGroup(b);const live=f.group();
+ assert.deepEqual(label.padding,{left:12,right:12,top:5,bottom:5});
+ old.mask.onClick();assert.equal(f.presentation.book,undefined);
+ old.dialog.replay();
+ assert.equal(old.surface.hitTestBehavior,'HitTestMode.None');
+ assert.equal(old.surface.accessibilityLevel,'no-hide-descendants');
+ f.i.openShelfGroup(b);const live=f.group(old.dialog,true);
+ assert.notEqual(live.surface.focusScopeId[0],old.surface.focusScopeId[0]);
+ assert.equal(live.surface.hitTestBehavior,'HitTestMode.Default');
+ assert.equal(live.surface.accessibilityLevel,'auto');
+ assert.equal(live.surface.transition.kind,'opacity');
+ assert.equal(live.surface.transition.params.duration,120);
+ assert.equal(live.card.transition.kind,'identity');
  old.mask.onClick();old.select.onClick();await Promise.resolve();assert.equal(f.raw(f.presentation.book),b);assert.equal(f.writes.length,0);
- live.select.onClick();await Promise.resolve();await Promise.resolve();assert.deepEqual(f.writes,[b]);assert.equal(f.presentation.book,undefined);assert.equal(f.refresh(),1);cases++;
+ live.select.onClick();
+ assert.deepEqual(f.writes,[b],'the current native action reaches the business owner in the same turn');
+ await Promise.resolve();await Promise.resolve();assert.equal(f.presentation.book,undefined);assert.equal(f.refresh(),1);cases++;
 }
 for(const fail of[false,true]){
  const f=fixture(),a={sourceId:'s',bookId:'a'},b={sourceId:'s',bookId:'b'},gate=defer();f.i.openShelfGroup(a);const old=f.group();f.setTask(gate);

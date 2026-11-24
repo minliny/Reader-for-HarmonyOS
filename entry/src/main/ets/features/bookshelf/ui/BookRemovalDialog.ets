@@ -1,7 +1,9 @@
 import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
+import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { ReaderDialogSurface, DialogActionView } from '../../../ui/surfaces/ReaderDialogSurface';
 
 /** Figma Library/BookDetail/DeleteDialog 2269:46. The caller owns removal
@@ -14,12 +16,31 @@ export struct BookRemovalDialog {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @Prop message: string = '';
+  @Prop reducedMotion: boolean = false;
   @State private measuredMessageHeight: number = 50;
+  @State private contentOpacity: number = 1;
+  private motionGeneration: number = 0;
   onCancel: () => void = (): void => {};
   onConfirm: () => void = (): void => {};
 
   aboutToAppear(): void {
-    registerReaderFonts(this.getUIContext().getFont());
+    const context = this.getUIContext();
+    registerReaderFonts(context.getFont());
+    this.contentOpacity = this.reducedMotion ? 0 : 1;
+    const generation = ++this.motionGeneration;
+    if (!this.reducedMotion) return;
+    try {
+      context.postFrameCallback(new ReaderPostLayoutFrame(context, (): void => {
+        if (generation !== this.motionGeneration) return;
+        try {
+          context.animateTo(readerMotionReducedFadeParam(), (): void => { this.contentOpacity = 1; });
+        } catch (_) { this.contentOpacity = 1; }
+      }));
+    } catch (_) { this.contentOpacity = 1; }
+  }
+
+  aboutToDisappear(): void {
+    this.motionGeneration += 1;
   }
 
   build() {
@@ -40,7 +61,7 @@ export struct BookRemovalDialog {
       body: (): void => {
         this.messageBody();
       },
-    })
+    }).opacity(this.contentOpacity);
   }
 
   @Builder

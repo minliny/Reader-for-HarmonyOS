@@ -74,6 +74,7 @@ import {
   type ReaderScreenTimeout,
   type ReaderSettingsSnapshot,
   type ReaderSettingsToggleKey,
+  type ReaderWidePageLayout,
 } from '../application/ReaderSettingsState';
 import type { ReaderHttpTtsConfig } from '../application/ReaderHttpTtsGateway';
 import type { ReaderTtsConfigurationDraft } from '../application/ReaderTtsConfigurationHost';
@@ -529,6 +530,7 @@ export struct ReaderControlPanel {
   @Prop chineseConversionIdentity: string = '';
   @Prop @Watch('onMinimumFactsPropsChanged') chineseConversionMode: ReaderChineseConversionMode = 'none';
   @Prop @Watch('onMinimumFactsPropsChanged') settingsSnapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
+  @Prop widePageLayout: ReaderWidePageLayout = 'spread';
   /** Native simulation capability for this mounted reading session. */
   @Prop pageTurnSimulationAvailable: boolean = true;
   @Prop @Watch('onMinimumFactsPropsChanged') ttsState: ReaderTtsState = createReaderTtsState(false);
@@ -643,6 +645,7 @@ export struct ReaderControlPanel {
     (_mode: ReaderChineseConversionMode): void => {};
   onSettingsToggleChange: (key: ReaderSettingsToggleKey, value: boolean) => void =
     (_key: ReaderSettingsToggleKey, _value: boolean): void => {};
+  onWidePageLayoutChange: (value: ReaderWidePageLayout) => void = (_value: ReaderWidePageLayout): void => {};
   onScreenDirectionChange: (direction: ReaderScreenDirection) => void =
     (_direction: ReaderScreenDirection): void => {};
   onScreenTimeoutChange: (timeout: ReaderScreenTimeout) => void =
@@ -1575,7 +1578,16 @@ export struct ReaderControlPanel {
     if (this.directBudgetSource !== source || this.directBudgetAvailable !== contentHeight) {
       this.directBudgetSource = source;
       this.directBudgetAvailable = contentHeight;
-      this.directBudget = { ...source, fullContentHeightVp: contentHeight };
+      this.directBudget = {
+        key: source.key,
+        quickContentHeightVp: source.quickContentHeightVp,
+        fullContentHeightVp: contentHeight,
+        brightnessContentHeightVp: source.brightnessContentHeightVp,
+        navigationHeightVp: source.navigationHeightVp,
+        headerHeightVp: source.headerHeightVp,
+        brightnessAutoHeightVp: source.brightnessAutoHeightVp,
+        brightnessAutoWidthVp: source.brightnessAutoWidthVp,
+      };
     }
     return this.directBudget;
   }
@@ -2767,6 +2779,10 @@ export struct ReaderControlPanel {
       interactionEnabled: this.secondaryModuleInputEnabled('settings'),
       inputCurrent: (): boolean => this.secondaryModuleInputEnabled('settings'),
       snapshot: this.settingsSnapshot,
+      widePageLayoutAvailable: this.isExpanded(), widePageLayout: this.widePageLayout,
+      onWidePageLayoutChange: (value: ReaderWidePageLayout): void => {
+        if (this.isExpanded() && this.secondaryModuleInputEnabled('settings')) this.onWidePageLayoutChange(value);
+      },
       pageTurnSimulationAvailable: this.pageTurnSimulationAvailable,
       justifyText: this.appearanceSnapshot.alignment === 'justify',
       onJustifyTextChange: (_value: boolean): void =>
@@ -3230,10 +3246,12 @@ export struct ReaderControlPanel {
               .opacity(this.reduceMotion ? this.pageBookmarkFill : 1).scale({ x: 1, y: this.pageBookmarkTuck, centerY: 0 });
           }.width(12).height(12).accessibilityLevel('no');
           Text(this.pageBookmarkStatus === 'bookmarked' ? '已加书签' : '加书签').fontSize(11).maxLines(1)
-            .fontColor(readerAppColor(this.pageBookmarkStatus === 'bookmarked' ? 'TOK_ACCENT' : 'TOK_READ_INK', this.appScheme));
+            .fontColor(readerAppColor(this.pageBookmarkStatus === 'bookmarked' ? 'TOK_READ_PRIMARY' : 'TOK_READ_INK', this.appScheme));
         }.width(86).height(22).justifyContent(FlexAlign.Center).borderRadius(11)
-          .backgroundColor(readerAppColor('TOK_READ_ELEVATED', this.appScheme))
-          .border({ width: 1, color: readerAppColor('TOK_LINE', this.appScheme) });
+          .backgroundColor(readerAppColor(this.pageBookmarkStatus === 'bookmarked' ? 'TOK_READ_ACTIVE_SOFT' :
+            'TOK_SURFACE_PANEL_SOFT', this.appScheme))
+          .border({ width: 1, color: readerAppColor(this.pageBookmarkStatus === 'bookmarked' ? 'TOK_READ_PRIMARY' :
+            'app.border.readerConfig', this.appScheme) });
       }.id('novel-bookmark-pill').width(86).height(44).padding(0).backgroundColor(Color.Transparent)
         .accessibilityText(this.pageBookmarkStatus === 'bookmarked' ? '已加书签，点击移除' : '加书签')
         .enabled(this.pageBookmarkEnabled && this.progressInputEnabled(true))

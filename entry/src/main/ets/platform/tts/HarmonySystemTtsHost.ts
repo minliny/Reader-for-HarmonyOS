@@ -213,6 +213,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
       engine.stop();
     } catch (error) {
       this.logError('system TTS stop failed', error);
+      throw new Error('Reader system TTS transport did not stop');
     }
   }
 

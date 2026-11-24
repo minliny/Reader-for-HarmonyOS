@@ -1,5 +1,5 @@
 import type { ReaderRoute, ReaderRouteMotionKind } from './ReaderNavigation';
-import { READER_ROUTE_PARENT_DIM, READER_ROUTE_PARENT_PARALLAX } from './ReaderRouteMotion';
+import { READER_ROUTE_PARENT_DIM, READER_ROUTE_PARENT_PARALLAX, readerRouteTransition } from './ReaderRouteMotion';
 import { ReaderPostLayoutFrame } from '../../ui/layout/ReaderPostLayoutFrame';
 import { motionAnimateParam, motionSpecGet } from '../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../ui/foundation/ReaderMotionPolicy';
@@ -45,7 +45,7 @@ export struct ReaderRouteStackSurface {
   @State private progress: number = 1;
   private mounted: boolean = false;
   private routeUpdate: number = 0;
-  private animation: number = 0;
+  private animationGeneration: number = 0;
   private animationProxy: NavigationTransitionProxy | undefined = undefined;
   private preview: ReaderRouteBackPreview | undefined = undefined;
 
@@ -109,7 +109,7 @@ export struct ReaderRouteStackSurface {
   }
 
   private finishRouteAnimation(): void {
-    this.animation += 1;
+    this.animationGeneration += 1;
     const proxy = this.animationProxy;
     this.animationProxy = undefined;
     this.paint = undefined;
@@ -117,7 +117,7 @@ export struct ReaderRouteStackSurface {
   }
 
   private nativeTransition(from: NavContentInfo, to: NavContentInfo, operation: NavigationOperation): NavigationAnimatedTransition {
-    const ticket = ++this.animation;
+    const ticket = ++this.animationGeneration;
     const preview = operation === NavigationOperation.POP && from.name === this.preview?.from ? this.preview : undefined;
     const motion: ReaderRouteSurfaceMotion = operation === NavigationOperation.POP || this.routeMotion === 'pop' ?
       'pop' : this.routeMotion === 'tab' ? 'tab' : 'push';
@@ -128,7 +128,7 @@ export struct ReaderRouteStackSurface {
       isInteractive: preview !== undefined,
       timeout: preview === undefined && duration !== undefined ? duration + 300 : undefined,
       transition: (proxy: NavigationTransitionProxy): void => {
-        if (!this.mounted || ticket !== this.animation) {
+        if (!this.mounted || ticket !== this.animationGeneration) {
           if (preview !== undefined && proxy.cancelTransition !== undefined) proxy.cancelTransition();
           else proxy.finishTransition();
           return;
@@ -150,7 +150,7 @@ export struct ReaderRouteStackSurface {
         }
       },
       onTransitionEnd: (_success: boolean): void => {
-        if (!this.mounted || ticket !== this.animation) return;
+        if (!this.mounted || ticket !== this.animationGeneration) return;
         this.animationProxy = undefined;
         this.paint = undefined;
         if (preview !== undefined && this.preview === preview) {
@@ -267,7 +267,7 @@ export struct ReaderRouteStackSurface {
   }
 
   @Builder
-  private destination(name: string, _param: unknown) {
+  private destination(name: string) {
     NavDestination() {
       this.lane(name as ReaderRoute, name);
     }
@@ -284,8 +284,7 @@ export struct ReaderRouteStackSurface {
           }
           .width('100%').height('100%')
           .transition(TransitionEffect.asymmetric(
-            TransitionEffect.OPACITY.animation(this.reduceMotion ? readerMotionReducedFadeParam() :
-              motionAnimateParam('app.navigation.tab')), TransitionEffect.IDENTITY));
+            readerRouteTransition('tab', 0, this.reduceMotion), TransitionEffect.IDENTITY));
         }, (route: ReaderRoute): string => route);
       }
       .mode(NavigationMode.Stack)

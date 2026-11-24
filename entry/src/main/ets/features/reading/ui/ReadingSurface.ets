@@ -35,6 +35,7 @@ import { ReaderBookmarkRibbonFrame, readerBookmarkRibbonRest, type ReaderPageBoo
   type ReaderPageBookmarkSnapshot } from '../presentation/ReaderPageBookmarkModel';
 import { ReaderPageBookmarkRibbon } from './ReaderPageBookmarkRibbon';
 import { ReaderPaperBackground } from './ReaderPaperBackground';
+import { ReaderFacingChapterColumn, type ReaderFacingChapter } from './ReaderFacingChapter';
 
 export type { ReaderDynamicHighlightRect } from './ReaderDynamicHighlight';
 
@@ -346,6 +347,7 @@ export struct ReadingSurface {
   @Prop @Watch('onHighlightContentChanged') layout: ReaderReadingLayoutSnapshot = createDefaultReaderReadingLayout();
   /** UI-owned persisted appearance snapshot; no business/content state lives here. */
   @Prop appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+  @Prop facingChapter: ReaderFacingChapter | undefined = undefined;
   @Prop ttsHighlightStart: number | undefined = undefined;
   @Prop ttsHighlightEnd: number | undefined = undefined;
   @Prop autoPageHighlightStart: number | undefined = undefined;
@@ -512,6 +514,9 @@ export struct ReadingSurface {
       .height('100%')
       .padding(this.contentInsets())
       .clip(true);
+      if (this.layout.facingChapterWidth > 0) {
+        ReaderFacingChapterColumn({ chapter: this.facingChapter, layout: this.layout, appearance: this.appearance });
+      }
       }
       .width('100%')
       .height('100%')

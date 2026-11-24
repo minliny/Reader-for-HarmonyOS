@@ -163,8 +163,10 @@ export struct ReaderTransientToast {
   }
 
   private toastMessageTextOptions(): TextOptions | undefined {
-    try { return this.activeTextObserver(this.toast.generation)?.textOptions(this.toast.message); }
-    catch (_) { return undefined; }
+    try {
+      const options = this.activeTextObserver(this.toast.generation)?.textOptions(this.toast.message);
+      return options === undefined ? undefined : options as TextOptions;
+    } catch (_) { return undefined; }
   }
 
   private toastTextLayout(generation: number): (_old: Area, next: Area) => void {

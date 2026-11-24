@@ -12,13 +12,16 @@ import { createReaderControlMorphScroll, advanceReaderControlMorphScroll, observ
   readerControlMorphScrollPath, sampleReaderControlMorphScrollPath,
   type ReaderControlMorphScrollPath, type ReaderControlMorphScrollState } from './ReaderControlMorphScroll';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
+import { ReaderSegmentedControl } from '../../../ui/controls/ReaderSegmentedControl';
+import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { ReaderControlSwitchTrack } from './ReaderControlSwitchTrack';
 import { ReaderControlSettingsOptionModifier } from './ReaderControlSettingsOptionModifier';
 import { createDefaultReaderSettingsSnapshot, isReaderPageTurnStyleAvailable,
   isReaderScreenDirectionAvailable, isReaderScreenTimeoutAvailable, isReaderSettingsToggleAvailable,
   readerPageTurnStyle, type ReaderPageTurnStyle, type ReaderScreenDirection,
-  type ReaderScreenTimeout, type ReaderSettingsSnapshot, type ReaderSettingsToggleKey } from '../application/ReaderSettingsState';
+  type ReaderScreenTimeout, type ReaderSettingsSnapshot, type ReaderSettingsToggleKey,
+  type ReaderWidePageLayout } from '../application/ReaderSettingsState';
 
 import { readerControlSettingsLabel, readerControlSettingsBar, readerControlSettingsChoice, readerControlSettingsScreenTitle, readerControlSettingsAddedGroup, readerControlSettingsAddedChild, sampleReaderControlSettings, type ReaderControlSettingsFrame, type ReaderControlSettingsGroup, type ReaderControlSettingsAddedGroup, type ReaderControlSettingsMinimumProfile } from './ReaderControlSettingsGeometry';
 
@@ -49,6 +52,8 @@ export struct ReaderControlSettingsContent {
   @Prop @Watch('onMotionChanged') interactionEnabled: boolean = true;
   inputCurrent?: () => boolean;
   @Prop snapshot: ReaderSettingsSnapshot = createDefaultReaderSettingsSnapshot();
+  @Prop widePageLayoutAvailable: boolean = false;
+  @Prop widePageLayout: ReaderWidePageLayout = 'spread';
   @Prop pageTurnSimulationAvailable: boolean = true;
   @Prop justifyText: boolean = true;
   onScreenDirectionChange: (direction: ReaderScreenDirection) => void =
@@ -59,8 +64,10 @@ export struct ReaderControlSettingsContent {
     (_timeout: ReaderScreenTimeout): void => {};
   onToggleChange: (key: ReaderSettingsToggleKey, value: boolean) => void =
     (_key: ReaderSettingsToggleKey, _value: boolean): void => {};
+  onWidePageLayoutChange: (value: ReaderWidePageLayout) => void = (_value: ReaderWidePageLayout): void => {};
   onJustifyTextChange: (value: boolean) => void = (_value: boolean): void => {};
   @State private scrollMotion: ReaderControlMorphScrollState = createReaderControlMorphScroll();
+  @State private widePageLayoutHeight: number = 0;
   @Prop fullViewportHeight: number = 666;
   private adoptedPrepared: ReaderControlPreparedModuleProfile | undefined = undefined;
   private presentationPrepared(): ReaderControlPreparedModuleProfile | undefined {
@@ -177,7 +184,8 @@ export struct ReaderControlSettingsContent {
   private p(): number { return readerControlUnit(this.motionProgress); }
   private fullInput(): boolean { return this.currentInputEnabled() && this.p() === 1; }
   private scrollContentHeight(): number {
-    return Math.max(this.geometry().contentHeight, this.availableHeight + readerControlMorphScrollExtent(this.scrollMotion));
+    const wideHeight = this.widePageLayoutAvailable ? this.widePageLayoutHeight : 0;
+    return Math.max(this.geometry().contentHeight, this.availableHeight + readerControlMorphScrollExtent(this.scrollMotion) - wideHeight);
   }
   private onMotionChanged(): void {
     const p = this.p();
@@ -237,7 +245,8 @@ export struct ReaderControlSettingsContent {
   }
 
   private quickMinimumScrollPresentation(): boolean {
-    return this.p() === 0 && !readerControlExtentFits(this.geometry().contentHeight, this.availableHeight);
+    const wideHeight = this.widePageLayoutAvailable ? this.widePageLayoutHeight : 0;
+    return this.p() === 0 && !readerControlExtentFits(this.geometry().contentHeight + wideHeight, this.availableHeight);
   }
 
   private fullOnlyScrollTranslation(): number {
@@ -328,14 +337,14 @@ export struct ReaderControlSettingsContent {
   build() {
     if (!this.preparedMinimumRequired || this.presentationPrepared() !== undefined) {
     Scroll(this.scroller) {
-      Stack({ alignContent: Alignment.TopStart }) {
-        this.screenGroup();
-        this.addedGroup('status', '导航状态栏');
-        this.addedGroup('typography', '排版');
-        this.addedGroup('control', '控制');
+      if (this.widePageLayoutAvailable) {
+        Column() {
+          this.widePageLayoutRow();
+          this.settingsGroups();
+        }.width(this.availableWidth);
+      } else {
+        this.settingsGroups();
       }
-      .width(this.availableWidth)
-      .height(this.scrollContentHeight());
     }
     .id('reader-control-module-settings')
     .width(this.availableWidth).height(this.availableHeight)
@@ -349,6 +358,48 @@ export struct ReaderControlSettingsContent {
     .clip(true);
 
     }
+  }
+
+  @Builder
+  private settingsGroups() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      this.screenGroup();
+      this.addedGroup('status', '导航状态栏');
+      this.addedGroup('typography', '排版');
+      this.addedGroup('control', '控制');
+    }.width(this.availableWidth).height(this.scrollContentHeight());
+  }
+
+  @Builder
+  private widePageLayoutRow() {
+    Row({ space: 12 }) {
+      Text('宽屏正文布局').layoutWeight(1)
+        .fontFamily(TYPE_READER_SETTINGS_RETAINED_SCREEN_GROUP_LABEL.fontFamily)
+        .fontWeight(TYPE_READER_SETTINGS_RETAINED_SCREEN_GROUP_LABEL.fontWeight)
+        .fontSize(TYPE_READER_SETTINGS_RETAINED_SCREEN_GROUP_LABEL.fontSizeFp)
+        .lineHeight(TYPE_READER_SETTINGS_RETAINED_SCREEN_GROUP_LABEL.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
+      ForEach([this.minimumIdentity], (identity: string): void => {
+        ReaderSegmentedControl({ specId: 'app-theme-segment', options: ['双栏对开', '单栏居中'],
+          optionIds: ['spread', 'single'], selectedIndex: this.widePageLayout === 'spread' ? 0 : 1,
+          inputIdentity: `${identity}|wide-page-layout`, actionEnabled: this.currentInputEnabled(),
+          accessibilityLabel: '宽屏正文布局', onSelect: (index: number): void => this.selectWidePageLayout(identity, index),
+        });
+      }, (identity: string): string => identity);
+    }.width(this.availableWidth).padding({ left: 15, right: 15, top: 4, bottom: 4 })
+      .onAreaChange((_previous: Area, next: Area): void => {
+        const height = readerPageAreaLength(next.height);
+        if (Number.isFinite(height) && height >= 0 && Math.abs(height - this.widePageLayoutHeight) > .1) {
+          this.widePageLayoutHeight = height;
+        }
+      });
+  }
+
+  private selectWidePageLayout(identity: string, index: number): void {
+    if (!this.minimumMounted || !this.widePageLayoutAvailable || identity !== this.minimumIdentity || !this.currentInputEnabled() ||
+      (index !== 0 && index !== 1)) return;
+    const value: ReaderWidePageLayout = index === 0 ? 'spread' : 'single';
+    if (value !== this.widePageLayout) this.onWidePageLayoutChange(value);
   }
 
   @Builder

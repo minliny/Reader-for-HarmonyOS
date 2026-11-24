@@ -11,6 +11,7 @@ import {
   readerVisualSafeTop,
 } from '../../../ui/foundation/ReaderWindowMetrics.ts';
 import { readerWidthClassWithHint, type ReaderWidthClass } from '../../../ui/foundation/ReaderWidthClass.ts';
+import type { ReaderWidePageLayout } from '../application/ReaderSettingsState.ts';
 import { READER_CONTROL_TOP_BAR_HEIGHT } from './ReaderControlGeometry.ts';
 import {
   READER_CONTROL_MOTION_QUICK_CONTENT_VERTICAL_RESERVE,
@@ -24,12 +25,16 @@ export const READER_PHONE_REFERENCE_WIDTH = 390;
 export const READER_PHONE_REFERENCE_HEIGHT = 844;
 export const READER_TABLET_REFERENCE_WIDTH = 760;
 export const READER_TABLET_REFERENCE_HEIGHT = 960;
+export const READER_FACING_CHAPTER_GAP_VP = 32;
+const READER_SPREAD_MAX_WIDTH = 680;
+const READER_SINGLE_FOCUS_MAX_WIDTH = 520;
+const READER_FACING_CHAPTER_MIN_WIDTH = 200;
 
 export const READER_TITLE_LINE_HEIGHT_FP = 28.75;
 export const READER_TITLE_TO_BODY_SPACE_VP = 18;
 
 export const READER_FULL_PANEL_MAX_WIDTH_PHONE = 364;
-export const READER_FULL_PANEL_MAX_WIDTH_TABLET = 720;
+export const READER_FULL_PANEL_MAX_WIDTH_TABLET = 356;
 const READER_DIRECT_PANEL_MAX_WIDTH_TABLET = 348;
 export const READER_FULL_PANEL_HEIGHT_PHONE = 736;
 export const READER_FULL_PANEL_HEIGHT_TABLET = 852;
@@ -81,7 +86,7 @@ class ReaderDesignProfile {
       this.dockBottomGap = 33;
       this.dockLeftGap = 0;
       this.dockRightGap = 25;
-      this.dockMaxWidth = 340;
+      this.dockMaxWidth = READER_FULL_PANEL_MAX_WIDTH_TABLET;
       this.fullPanelLeftGap = 26;
       this.fullPanelRightGap = 14;
       this.fullPanelMaxWidth = READER_FULL_PANEL_MAX_WIDTH_TABLET;
@@ -125,6 +130,7 @@ export class ReaderReadingLayoutSnapshot {
   pageChromeInteractiveSafeRight: number;
   pageChromeInteractiveSafeBottom: number;
   pageChromeStatusMetrics: ReaderWindowMetricsSnapshot | undefined;
+  readonly facingChapterWidth: number;
 
   constructor(
     widthClass: ReaderWidthClass,
@@ -143,6 +149,7 @@ export class ReaderReadingLayoutSnapshot {
     pageChromeInteractiveSafeBottom: number = 0,
     pageChromeTopRegionHeight: number = 0,
     pageChromeStatusMetrics?: ReaderWindowMetricsSnapshot,
+    facingChapterWidth: number = 0,
   ) {
     this.widthClass = widthClass;
     this.viewportWidth = viewportWidth;
@@ -163,6 +170,7 @@ export class ReaderReadingLayoutSnapshot {
     this.pageChromeInteractiveSafeRight = pageChromeInteractiveSafeRight;
     this.pageChromeInteractiveSafeBottom = pageChromeInteractiveSafeBottom;
     this.pageChromeStatusMetrics = pageChromeStatusMetrics;
+    this.facingChapterWidth = facingChapterWidth;
   }
 
   bodyWidth(): number {
@@ -323,6 +331,7 @@ export function resolveReaderReadingLayout(
   measuredTopInfoHeightVp: number = 0,
   measuredPersistentBottomVp: number = 0,
   measuredSessionTargetHeightVp: number = 0,
+  widePageLayout?: ReaderWidePageLayout,
 ): ReaderReadingLayoutSnapshot {
   const widthClass = readerWidthClass(viewportWidth, expandedHint);
   const profile = new ReaderDesignProfile(widthClass === 'expanded');
@@ -348,6 +357,14 @@ export function resolveReaderReadingLayout(
   const configuredHorizontal = Number.isFinite(requestedHorizontal) ? Math.max(0, requestedHorizontal) : autoHorizontal;
   const contentHorizontal = Math.max(configuredHorizontal, safeHorizontal,
     widthClass === 'expanded' && insetProfile === undefined ? Math.max(0, (width - 720) / 2) : 0);
+  const spreadInset = Math.max(contentHorizontal, (width - READER_SPREAD_MAX_WIDTH) / 2);
+  const columnWidth = (width - spreadInset * 2 - READER_FACING_CHAPTER_GAP_VP) / 2;
+  const wide = widthClass === 'expanded' && widePageLayout !== undefined;
+  const facingChapterWidth = wide && widePageLayout === 'spread' && columnWidth >= READER_FACING_CHAPTER_MIN_WIDTH ?
+    columnWidth : 0;
+  const bodyLeft = !wide ? contentHorizontal : facingChapterWidth > 0 ? spreadInset :
+    Math.max(contentHorizontal, (width - READER_SINGLE_FOCUS_MAX_WIDTH) / 2);
+  const bodyRight = facingChapterWidth > 0 ? width - bodyLeft - facingChapterWidth : bodyLeft;
   // The immersive metadata uses the real status-bar origin and a lane that is
   // at least as high as the measured status region.  Its own text line also
   // gets measured breathing room, so a small status bar cannot make the
@@ -397,9 +414,9 @@ export function resolveReaderReadingLayout(
     width,
     height,
     Math.max(resolvedContentTop, persistentBottom > 0 ? persistentBottom + 8 : 0),
-    contentHorizontal,
+    bodyRight,
     Math.max(profile.contentBottom, contentBottom, sessionBottomBudget),
-    contentHorizontal,
+    bodyLeft,
     systemFontScale,
     informationTop,
     readerVisualSafeRight(metrics),
@@ -409,6 +426,7 @@ export function resolveReaderReadingLayout(
     readerInteractiveSafeBottom(metrics, true),
     informationLaneHeight,
     metrics,
+    facingChapterWidth,
   );
 }
 

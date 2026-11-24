@@ -108888,56 +108888,70 @@
       }
     },
     {
-      "file": "tools/test-manga-boundary-feedback-sdk.mjs",
+      "file": "tools/test-manga-boundary-caption-sdk.mjs",
       "needs": [
-        "边界提示文案",
-        "retained paint",
-        "clip",
-        "手势穿透",
-        "footer主题"
+        "manga boundary vector",
+        "live boundary caption",
+        "reduced motion"
       ],
-      "productionBinding": "MangaBoundaryTurnFeedback.ets SDK全members；MangaReadingSurface.ets retainedChapterPixels；reader-page-shell-runtime-probe执行真实ReaderPageShell策略。",
-      "overlap": "chapter-transition保事务和旧资源，本项paint属性补充；两Text字体/48/18与typography约束重复，须与boundary行为拆分，不能凭同源角色fixture认定所有视觉tuple有效。",
-      "minimumTrigger": "改retained paint或boundary caption/theme actor时，先拆除未证实几何快照后按需选。; exact case: boundary-caption",
-      "necessityReason": "opaque/clip/pass-through具清晰像素泄漏风险且有负控；入口混入footer旧几何/字体布局约束，未见当期确认来源，整体不能作为合格发行集合。",
-      "limitations": "Actual selected scope only; no device/product-wide acceptance.",
+      "productionBinding": "MangaBoundaryTurnFeedback actual SDK Builder and V1 properties; production MotionSpec, motion preference and theme registry.",
+      "overlap": "Adjacent cases keep their published definitions and protected behavior.",
+      "minimumTrigger": "Changes to the exact production admission, semantics or presentation listed for this case.",
+      "necessityReason": "Day/night vector choice, current caption, reveal opacity, 160ms rotation, 120ms reduced fade and actor retention.",
+      "limitations": "Recorded SDK lowering and attributes. Native rendering, touch and device acceptance remain NOT_RUN.",
       "id": "H-manga-boundary-feedback-sdk#boundary-caption",
       "parentId": "H-manga-boundary-feedback-sdk",
       "caseId": "boundary-caption",
-      "qualification": "REVIEW_NEEDED",
+      "qualification": "QUALIFIED",
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
       "tests": [
-        "test-manga-boundary-feedback-sdk.mjs"
+        "test-manga-boundary-caption-sdk.mjs"
       ],
       "caseSelection": {
-        "test-manga-boundary-feedback-sdk.mjs": [
+        "test-manga-boundary-caption-sdk.mjs": [
           "boundary-caption"
         ]
       },
       "resourceNeeds": [],
-      "protectedBehavior": "真实footer文本Props与非交互",
+      "protectedBehavior": "Day/night vector choice, current caption, reveal opacity, 160ms rotation, 120ms reduced fade and actor retention.",
       "prerequisites": [
-        "Node.js with built-in TypeScript/stripTypeScriptTypes/registerHooks support",
-        "Installed Harmony ETS SDK selected by tools/lib/tool-environment.mjs; local production/fixture inputs named in this case",
-        "Only explicit local fake native/IO/owner/measurement ports used by the selected branch; no implicit Core/network/device"
+        "Node with TypeScript strip support",
+        "Installed HarmonyOS ETS SDK",
+        "Reviewed local fixture closure"
       ],
-      "mechanism": "真实footer文本Props与非交互; owner implementation record: [\"footer与旧章遮蔽paint分case；移除未确认48高度/18padding tuple；保当前消息roles/native属性、live文案/色彩、旧图像稳定actor和遮蔽负例。\"]",
-      "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
-      "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "a3b98f32c431da645e8722f254b227a7629184437377c3a360c7036a8ca8914c",
+      "mechanism": "Lowers the actor with installed SDK, then delivers live armed, caption, distance and reduced-motion updates in both schemes.",
+      "failureExample": "Static counterexamples include stale caption, incorrect scheme/vector, animated reduced rotation or remounted actor.",
+      "estimatedCostType": "sdk-transpile",
+      "reviewedSourceSha256": "412c07e786b5051ca93520b2fabdcebfb64c592bf7b91efc5e5b4dc6f3984949",
       "definitionInputs": [
+        {
+          "path": "entry/vendor/core-harmony/sdk/reader_core.ts",
+          "sha256": "5eb7cc236a7f2c523901204b972361cf0173a27b3117519382a9fc58a0954b5f"
+        },
+        {
+          "path": "scripts/lib/development-environment.mjs",
+          "sha256": "34c4eb7537bb8f833e642be3073ecc42858d7addfd46047c6de746faa23ba407"
+        },
+        {
+          "path": "scripts/lib/harmony-toolchain.mjs",
+          "sha256": "da8b553bb30c3a12c9179ea70815541b6890b3d26da3feab4124411d01942fc7"
+        },
         {
           "path": "tools/gate-index.mjs",
           "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
         },
         {
           "path": "tools/lib/arkui-property-runtime-probe.mjs",
-          "sha256": "5c7e7b6a84659f5a9c4d2ca3a8dbb1a6b3a4d1ffa1cfe696348f5247f7da28d5"
+          "sha256": "de3dbc381e5eb787b79719b088f91b898c5bf59dee793217016a0fae2756d34a"
+        },
+        {
+          "path": "tools/lib/bookshelf-operation-owner-probe.mjs",
+          "sha256": "afb664199b380d9247101acbc689451243af87df61e65cb7d9a8d8da68a8fee6"
         },
         {
           "path": "tools/lib/bounded-surface-sdk-probe.mjs",
-          "sha256": "884393abc0949a976b2a3fdad4ffbcc8809b1474a12ce2ee0d2036d6a71370dd"
+          "sha256": "a9f9f7a5e3b278b4058047310d5232f5f7127d085d464417bffba5950e99fda2"
         },
         {
           "path": "tools/lib/contract-case-selection.mjs",
@@ -108952,28 +108966,40 @@
           "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
         },
         {
+          "path": "tools/lib/json-import-presentation-probe.mjs",
+          "sha256": "56dab2a57f8eb7d46fafb696ddf711e93e3333bc6511f403e443f6f2185f08ad"
+        },
+        {
           "path": "tools/lib/manga-directory-entry-row-probe.mjs",
-          "sha256": "a4e009c38ee22510adef51891d60fc72fb016e0cbc2dd3698e0c3d621e4a1486"
+          "sha256": "928c32cc164f6e5103811876b7d984720f9655d7a9049189180343e7ff21370f"
         },
         {
           "path": "tools/lib/manga-directory-press-feedback-probe.mjs",
-          "sha256": "33ff4fe1e9c10286c35decbf815d59ee230b06f34f9803260efb0b436f59ac7e"
+          "sha256": "2e37ea0c75a8b5e3ebb373a9f6822c329c8cc2a7131ac86ea7341f3c5e88c116"
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "1680a9de636d283707d86c7934e6941825feddb249364892f334056428187b4b"
+          "sha256": "a243d7f107e6ccf1ddb4d98de97ea55fc5aa4a2684bbca7a7a80ed03137712cd"
+        },
+        {
+          "path": "tools/lib/reader-directory-operations-probe.mjs",
+          "sha256": "2b918d9b10ad441f6fb6c1efc512a030b7be9336028dd8f4ef9b1361ab1ae236"
+        },
+        {
+          "path": "tools/lib/reader-editing-sdk-probe.mjs",
+          "sha256": "56b83d626463aae3063904461ba63d1d9b262bc25f24434f94defd8284f7e45b"
         },
         {
           "path": "tools/lib/reader-foundation-control-probe.mjs",
-          "sha256": "8702b6abae3c5eef679cf8f69aa7dec9daa04e48d3f4d33192b2825d30f8ef24"
+          "sha256": "4471db01fff7b9ad4d6a6f100ede9257224303eb02526347d7854f56a4abef6d"
         },
         {
           "path": "tools/lib/reader-icon-button-probe.mjs",
-          "sha256": "cadb27017d1c10eb2efdc4784f22577b398c1057d2ef139fd038c8c96bbc804a"
+          "sha256": "0889e7b8077fc5682039c41af5c6562f99ee7297f52ca0edc436d064da8fe611"
         },
         {
           "path": "tools/lib/reader-labeled-icon-action-probe.mjs",
-          "sha256": "d9080c7da0e5fb690841c6980817571cf7d473c37739c58944f2c5cf84797332"
+          "sha256": "9fe39afcf36450870215be306e71b95f64c354bc6c1d9b2892687290227a5b43"
         },
         {
           "path": "tools/lib/reader-page-builder-slots.mjs",
@@ -108981,19 +109007,43 @@
         },
         {
           "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
-          "sha256": "6d6fdd2414f6668d91a6ddcd45c34e6c1e34403e6b6f5e863b8c0bd53ee68f15"
+          "sha256": "81492f44e86c714de33bd59062b533ae4b484e0e7eb68d1792d5d98bb5d1539f"
+        },
+        {
+          "path": "tools/lib/reader-post-layout-frame-probe.mjs",
+          "sha256": "71df317460573bc02b549fe42d297053af2dfe5a457d8536216fd95de2fd04ce"
         },
         {
           "path": "tools/lib/reader-press-feedback-probe.mjs",
-          "sha256": "d6fbad7e2399e61b5c4f3cfb3941b39e847b7b881255fb5a83025905c9a20de8"
+          "sha256": "1c3feccbed74c10ce7e04579cfa22f0fab0b98b4cbb87fa472bc7f19c49e3c2a"
         },
         {
           "path": "tools/lib/reader-switch-control-probe.mjs",
-          "sha256": "231838712f75d3980051a1d513e64ffd3af2f083f51cf632cebcecbc29e195f9"
+          "sha256": "c4e9b74924dcdb1ba5b5284c6c581b9ccfaba54493ab60b59996e1f4fededb36"
+        },
+        {
+          "path": "tools/lib/reader-tokens-probe.mjs",
+          "sha256": "b7794b410df5defebae65e1aaa81c1426cf7d6e1a6ec59dbf2c58cbb9bc7d195"
         },
         {
           "path": "tools/lib/reader-typography-probe.mjs",
-          "sha256": "bdd276f790f1cef6683f027084c347ff4534f8e50827c6bd77f48ecde9fb82e8"
+          "sha256": "86c596ca6e5125348c1c7e1c0f44584ef1346b8bfd628c451add6099a7e08a70"
+        },
+        {
+          "path": "tools/lib/reader-window-environment-probe.mjs",
+          "sha256": "3fa537ff34133195d4929418a7a4c25eeaad385bf2f7a4a30cdd3fd2adc47cd4"
+        },
+        {
+          "path": "tools/lib/reading-entry-presentation-probe.mjs",
+          "sha256": "68148fe92754e8bd674d542296b09bf2f958b7f0c9d21e012b585be0dd33e2ec"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "f3c48ccfc1a33cbcf688ab9ef994869a8f41542135672ed3419a0351f8e87bbd"
+        },
+        {
+          "path": "tools/lib/source-switch-presentation-probe.mjs",
+          "sha256": "d96f6025c9435faa824b795404b8c8fe10fb03eb04cb71e69d7ca48eb03d2050"
         },
         {
           "path": "tools/lib/tool-environment.mjs",
@@ -109005,11 +109055,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
-          "path": "tools/test-manga-boundary-feedback-sdk.mjs",
-          "sha256": "a3b98f32c431da645e8722f254b227a7629184437377c3a360c7036a8ca8914c"
+          "path": "tools/test-manga-boundary-caption-sdk.mjs",
+          "sha256": "412c07e786b5051ca93520b2fabdcebfb64c592bf7b91efc5e5b4dc6f3984949"
         }
       ],
       "definitionInputProblems": [],
@@ -109017,21 +109067,18 @@
       "repairAction": null,
       "repair": null,
       "implementation": "IMPLEMENTED",
-      "validationEvidence": {
-        "syntax": "PASS",
-        "case": "NOT_RUN",
-        "selectedExecutedCases": []
-      },
-      "evidenceBoundary": null,
+      "validationEvidence": "NOT_RUN",
+      "evidenceBoundary": "Wave F exact-method/SDK fixture review. Production and SDK identities are recorded in the execution trace.",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "0a29415c455b78a8cdc7f853b8222abaf02676de7b4ac8fa3ea587f574d0cee1",
-      "overlayAssemblyMethodReview": {
+      "resourceDefinitionSha256": "6b857089e6076c918c31ba70e12220f09ebfc6f67cd44f608794c50841c77864",
+      "priorOverlayAssemblyMethodReview": {
         "path": ".reader-artifacts/vm-ui-feedback-20261113/app-overlay-audit/metadata/method-review.json",
         "decision": "REVIEW_NEEDED",
         "currentPublicationExecution": "NOT_RUN",
         "sha256": "739f6b28a421faa981f9812d9576cebba3675856dcd324a75486e33a3a4de22b"
-      }
+      },
+      "reviewNote": "2026-11-24 Wave F isolated exact-leaf review. Historical parent and sibling definitions are retained."
     },
     {
       "file": "tools/test-manga-boundary-feedback-sdk.mjs",
@@ -123606,19 +123653,17 @@
       "resourceDefinitionSha256": "0c949d3aea4cf192cbde7133420dcc89a8a67dffe47970ee4380e54038c83143"
     },
     {
-      "file": "tools/test-manga-ui-state.mjs",
+      "file": "tools/test-manga-chapter-action-admission.mjs",
       "needs": [
-        "漫画偏好",
-        "旧小说表单",
-        "未知flush",
-        "邻章准入",
-        "分栏断点"
+        "manga chapter-end admission",
+        "native list end",
+        "stale seek"
       ],
-      "productionBinding": "features/reading/ReaderSettingsGateway.ts:90 update、122 updateMangaPreferences、139 retryAccepted；ReaderSettingsState.ts normalize；features/manga/MangaReadingSurface.ets:1293 adjacentChapter、1307 openChapterEnd；MangaLayoutPolicy.ts。",
-      "overlap": "viewport-restore-sdk测恢复帧不测章节目录准入；系统偏好/Settings测试已有通用队列，本项独有旧小说表单保留漫画可选字段。LayoutPolicy三点与偏好耐久无共同触发。",
-      "minimumTrigger": "按需验证漫画偏好兼容/未知flush或章节导航准入、布局断点修改；应分别选择拆出的入口。; exact case: chapter-action-admission",
-      "necessityReason": "缓存值与耐久值分别建模能保护不确定写结果的诚实反馈，不能因fixture而否定；但设置、章节、布局三域聚合使当前入口不适合作最小触发。",
-      "limitations": "Only selected actual production methods/SDK/declared native test with controlled boundary ports. Does not prove product-wide behavior, native pixels, physical interaction or user acceptance.",
+      "productionBinding": "MangaReadingSurface production chapter neighbors, boundary release, end-panel admission and seek methods. Native list, controller and persistence calls are fixture ports.",
+      "overlap": "Adjacent cases keep their published definitions and protected behavior.",
+      "minimumTrigger": "Changes to the exact production admission, semantics or presentation listed for this case.",
+      "necessityReason": "Confirmed horizontal last ordinal, current vertical native end, readable neighbors and stale position/input fencing.",
+      "limitations": "Local SDK-selected production methods with controlled ports. Native layout, live content fetch and device acceptance remain NOT_RUN.",
       "id": "H-manga-ui-state#chapter-action-admission",
       "parentId": "H-manga-ui-state",
       "caseId": "chapter-action-admission",
@@ -123626,30 +123671,48 @@
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
       "tests": [
-        "test-manga-ui-state.mjs"
+        "test-manga-chapter-action-admission.mjs"
       ],
       "caseSelection": {
-        "test-manga-ui-state.mjs": [
+        "test-manga-chapter-action-admission.mjs": [
           "chapter-action-admission"
         ]
       },
       "resourceNeeds": [],
-      "protectedBehavior": "Actual Surface chapter and late seek admission with fake controller",
+      "protectedBehavior": "Confirmed horizontal last ordinal, current vertical native end, readable neighbors and stale position/input fencing.",
       "prerequisites": [
-        "Node.js; installed ETS compiler only for actual ETS/SDK probes; native-build only on declared native case"
+        "Node with TypeScript strip support",
+        "Installed HarmonyOS ETS SDK",
+        "Reviewed local fixture closure"
       ],
-      "mechanism": "Actual Surface chapter and late seek admission with fake controller; owner implementation record: [\"拆出manga-preferences、chapter-action-admission、layout-policy三个纯fixture入口；偏好保留真实SettingsGateway共享队列与cache/durable分离，不以设备缺席关闭局部价值。\", \"偏好/章节/布局三入口，偏好继续真Gateway与cache/durable分离。\"]",
-      "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
-      "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "6d9aacec08f926d82e1db7dcce9cd81a3b446158ac9dec248f8cc516e0701776",
+      "mechanism": "Executes actual selected methods against false, active and unknown list end, stale confirmed positions, dirty catalogs, retired input and disposed asynchronous seek.",
+      "failureExample": "Static counterexamples include false end certification, relying on the last vertical visible ordinal and allowing a retired seek to move the viewport.",
+      "estimatedCostType": "sdk-transpile",
+      "reviewedSourceSha256": "973bc4cea72b09448e9d4a9873fdc3c06eed0e27217dfea6b1608c3713aa3d3a",
       "definitionInputs": [
+        {
+          "path": "../Reader-Core/bindings/harmony/sdk/reader_core.ts",
+          "sha256": "5eb7cc236a7f2c523901204b972361cf0173a27b3117519382a9fc58a0954b5f"
+        },
+        {
+          "path": "entry/vendor/core-harmony/sdk/reader_core.ts",
+          "sha256": "5eb7cc236a7f2c523901204b972361cf0173a27b3117519382a9fc58a0954b5f"
+        },
+        {
+          "path": "scripts/lib/development-environment.mjs",
+          "sha256": "34c4eb7537bb8f833e642be3073ecc42858d7addfd46047c6de746faa23ba407"
+        },
+        {
+          "path": "scripts/lib/harmony-toolchain.mjs",
+          "sha256": "da8b553bb30c3a12c9179ea70815541b6890b3d26da3feab4124411d01942fc7"
+        },
         {
           "path": "tools/gate-index.mjs",
           "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
         },
         {
           "path": "tools/lib/bookshelf-operation-owner-probe.mjs",
-          "sha256": "ef878bc4e24f9d538d42a600e3d00f396b650439a687d7495589a75f1c73bfa4"
+          "sha256": "afb664199b380d9247101acbc689451243af87df61e65cb7d9a8d8da68a8fee6"
         },
         {
           "path": "tools/lib/contract-case-selection.mjs",
@@ -123660,24 +123723,36 @@
           "sha256": "3d3be1c159621d2aac47bb74c973c47dd53ad829d86a91ac4d9bf080bf343762"
         },
         {
+          "path": "tools/lib/ets-pure-module-probe.mjs",
+          "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
+        },
+        {
           "path": "tools/lib/general-settings-owner-probe.mjs",
-          "sha256": "e1b90ddab97fde5d089f9b3449441956ff8410ca039628f8b2feb0884bad7e3f"
+          "sha256": "f3b41d3708e916e3b40a80c4be095036ecae8dcd2c0af04f36a7de188f599af6"
+        },
+        {
+          "path": "tools/lib/json-import-presentation-probe.mjs",
+          "sha256": "56dab2a57f8eb7d46fafb696ddf711e93e3333bc6511f403e443f6f2185f08ad"
         },
         {
           "path": "tools/lib/manga-directory-adaptive-probe.mjs",
-          "sha256": "95504763f3a125cba29cded74e2e31f61144e6cfe4a030a544256b142af7ad59"
+          "sha256": "96e54e9a72ca0e996298dc5736bd2c1ab75377e0e50e1cb9f972a82b41f4d926"
+        },
+        {
+          "path": "tools/lib/reader-directory-operations-probe.mjs",
+          "sha256": "2b918d9b10ad441f6fb6c1efc512a030b7be9336028dd8f4ef9b1361ab1ae236"
         },
         {
           "path": "tools/lib/reader-motion-method-probe.mjs",
-          "sha256": "707b1a2d8f1d7418dc06adf25919d5ab7d3cf8276583a44299b6f645c1fb3f61"
+          "sha256": "3ed24e5f90ec6b4d374ba7f7b95f00a2f6f3a97471c01ec39e83694b3cdc2fc9"
         },
         {
           "path": "tools/lib/reader-native-alert-sdk-probe.mjs",
-          "sha256": "bd38f863deb8934d048e1914a6fff1f298924eb22127e3c64a8704c25742c8c4"
+          "sha256": "680fa1869ba71f890cfbd70281d6ae60778ae345455cfdd2ed3f10d5e88d3f5f"
         },
         {
           "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
-          "sha256": "6d6fdd2414f6668d91a6ddcd45c34e6c1e34403e6b6f5e863b8c0bd53ee68f15"
+          "sha256": "81492f44e86c714de33bd59062b533ae4b484e0e7eb68d1792d5d98bb5d1539f"
         },
         {
           "path": "tools/lib/reader-runtime-admission-probe.mjs",
@@ -123685,11 +123760,31 @@
         },
         {
           "path": "tools/lib/reader-typography-probe.mjs",
-          "sha256": "bdd276f790f1cef6683f027084c347ff4534f8e50827c6bd77f48ecde9fb82e8"
+          "sha256": "86c596ca6e5125348c1c7e1c0f44584ef1346b8bfd628c451add6099a7e08a70"
+        },
+        {
+          "path": "tools/lib/reader-window-environment-probe.mjs",
+          "sha256": "3fa537ff34133195d4929418a7a4c25eeaad385bf2f7a4a30cdd3fd2adc47cd4"
+        },
+        {
+          "path": "tools/lib/reading-entry-owner-probe.mjs",
+          "sha256": "46d33895960335c8203063d345dec6395ab40bc1d619b6a8f4f0225027e38f2a"
+        },
+        {
+          "path": "tools/lib/reading-entry-presentation-probe.mjs",
+          "sha256": "68148fe92754e8bd674d542296b09bf2f958b7f0c9d21e012b585be0dd33e2ec"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "f3c48ccfc1a33cbcf688ab9ef994869a8f41542135672ed3419a0351f8e87bbd"
         },
         {
           "path": "tools/lib/source-management-owner-probe.mjs",
-          "sha256": "14a7ab796a524336df4b00e1c9e88c6d2c6b0781454852eeaec7d86bdcf679b3"
+          "sha256": "2e20da8c56aab2941f25872ac068e199a7036a31627ee7a8d83cecd53022e7f6"
+        },
+        {
+          "path": "tools/lib/source-switch-presentation-probe.mjs",
+          "sha256": "d96f6025c9435faa824b795404b8c8fe10fb03eb04cb71e69d7ca48eb03d2050"
         },
         {
           "path": "tools/lib/tool-environment.mjs",
@@ -123701,11 +123796,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
-          "path": "tools/test-manga-ui-state.mjs",
-          "sha256": "6d9aacec08f926d82e1db7dcce9cd81a3b446158ac9dec248f8cc516e0701776"
+          "path": "tools/test-manga-chapter-action-admission.mjs",
+          "sha256": "973bc4cea72b09448e9d4a9873fdc3c06eed0e27217dfea6b1608c3713aa3d3a"
         }
       ],
       "definitionInputProblems": [],
@@ -123713,17 +123808,15 @@
       "repairAction": null,
       "repair": null,
       "implementation": "IMPLEMENTED",
-      "validationEvidence": {
-        "file": "tools/test-manga-ui-state.mjs",
-        "case": "chapter-action-admission",
-        "exitCode": 0,
-        "elapsed": 0.58,
-        "status": "PASS"
-      },
-      "evidenceBoundary": "Only selected actual production methods/SDK/declared native test with controlled boundary ports. Does not prove product-wide behavior, native pixels, physical interaction or user acceptance.",
+      "validationEvidence": "NOT_RUN",
+      "evidenceBoundary": "Wave F exact-method/SDK fixture review. Production and SDK identities are recorded in the execution trace.",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "0c949d3aea4cf192cbde7133420dcc89a8a67dffe47970ee4380e54038c83143"
+      "resourceDefinitionSha256": "612f8eb7565429bf7a69b1ac2ecf37e75af94ce5a14f31d8acc52eff45f70f81",
+      "executionEnvRoots": {
+        "READER_CORE_ROOT": "../Reader-Core"
+      },
+      "reviewNote": "2026-11-24 Wave F isolated exact-leaf review. Historical parent and sibling definitions are retained."
     },
     {
       "file": "tools/test-manga-ui-state.mjs",
@@ -128041,58 +128134,74 @@
       }
     },
     {
-      "file": "tools/test-reader-bookmark-top-info.mjs",
+      "file": "tools/test-reader-bookmark-transaction.mjs",
       "needs": [
-        "书签下拉",
-        "顶部图标",
-        "回弹输入",
-        "ACK投影乱序",
-        "cutout状态纸"
+        "bookmark pointer admission",
+        "bookmark write ACK",
+        "rebound lifecycle"
       ],
-      "productionBinding": "LocalReadingExperience.ets:12534 canStartReaderBookmarkGesture、13045 bookmarkCornerFeedback等；ReaderPageInteractionLayer、ReaderPageChrome与ReaderPageTurnStage实际方法/Builder。",
-      "overlap": "bookmark-projection是数据纯函数，本项实际消费/输入；page-chrome与physical-window-bookmark-refresh也覆盖顶部布局，需按其方法/状态对照后缩减几何重复，不能把本项735行当单一风险。",
-      "minimumTrigger": "需验证书签拉动、marker响应依赖、ACK/回弹顺序、status paper/cutout布局或Stage counter-translation的相关变更。; exact case: transaction",
-      "necessityReason": "同页保存状态在六完成顺序和撤权场景均保持目标，实际SDK observer与父子primitive Prop链防止只有方法绿而图标不更新；本层真实风险充分，但范围大应按需拆分以精确选用。",
-      "limitations": "SDK node/observer and production method semantics only; no native pixels or real-time gesture acceptance.",
+      "productionBinding": "LocalReadingExperience and ReaderPageInteractionLayer actual methods, bookmark gesture/projection helpers and shared motion. Core receipt, window and vibration ports are controlled.",
+      "overlap": "Adjacent cases keep their published definitions and protected behavior.",
+      "minimumTrigger": "Changes to the exact production admission, semantics or presentation listed for this case.",
+      "necessityReason": "Legal UP/CANCEL, rebound, seventeen invalidations and six completion orders over twelve lifecycles.",
+      "limitations": "Local method/projection evidence. Native touch/drawing, persistent Core transaction and device acceptance remain NOT_RUN.",
       "id": "H-reader-bookmark-top-info#transaction",
       "parentId": "H-reader-bookmark-top-info",
       "caseId": "transaction",
-      "qualification": "REVIEW_NEEDED",
+      "qualification": "QUALIFIED",
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
       "tests": [
-        "test-reader-bookmark-top-info.mjs"
+        "test-reader-bookmark-transaction.mjs"
       ],
       "caseSelection": {
-        "test-reader-bookmark-top-info.mjs": [
+        "test-reader-bookmark-transaction.mjs": [
           "transaction"
         ]
       },
       "resourceNeeds": [],
-      "protectedBehavior": "Production bookmark gesture, pointer/rebound and ACK/projection completion orders",
+      "protectedBehavior": "Legal UP/CANCEL, rebound, seventeen invalidations and six completion orders over twelve lifecycles.",
       "prerequisites": [
-        "production Host method probe; controlled callback queues; no Core CLI"
+        "Node with TypeScript strip support",
+        "Installed HarmonyOS ETS SDK",
+        "Reviewed local fixture closure"
       ],
-      "mechanism": "Production bookmark gesture, pointer/rebound and ACK/projection completion orders; owner implementation record: [\"Separated actual geometry/status-paper/Prop-chain, retained marker subscription, and gesture/ACK transaction groups.\", \"Only geometry constructs chrome/bookmark/status-paper component kernels; transaction uses one representative layout rather than running the geometry matrix.\", \"Removed duplicate cross-book visual assertion from transaction; marker group owns visual delivery. Resolver hook is scoped with finally cleanup.\", \"Added actual current readerAppearanceChromeTone and explicit appearance input to marker fixture seam.\"]",
-      "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
-      "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "8777487a07fda352f1d1f3a73d88154b9e5ac6345751fac5bd1ddcd749109927",
+      "mechanism": "Exercises real selected methods, six ACK/read/settle orders, duplicate releases, cancellation, stale and failed deliveries and reduced-motion recovery.",
+      "failureExample": "Static counterexamples include duplicate writes, stale ACK replacing the next page and cancellation leaving preview paint.",
+      "estimatedCostType": "sdk-transpile",
+      "reviewedSourceSha256": "6299a70653165b58f062772bb38bfe5e48fbb77221f737aac02359f9f7571683",
       "definitionInputs": [
+        {
+          "path": "../Reader-Core/bindings/harmony/sdk/reader_core.ts",
+          "sha256": "5eb7cc236a7f2c523901204b972361cf0173a27b3117519382a9fc58a0954b5f"
+        },
+        {
+          "path": "entry/vendor/core-harmony/sdk/reader_core.ts",
+          "sha256": "5eb7cc236a7f2c523901204b972361cf0173a27b3117519382a9fc58a0954b5f"
+        },
+        {
+          "path": "scripts/lib/development-environment.mjs",
+          "sha256": "34c4eb7537bb8f833e642be3073ecc42858d7addfd46047c6de746faa23ba407"
+        },
+        {
+          "path": "scripts/lib/harmony-toolchain.mjs",
+          "sha256": "da8b553bb30c3a12c9179ea70815541b6890b3d26da3feab4124411d01942fc7"
+        },
         {
           "path": "tools/gate-index.mjs",
           "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
         },
         {
           "path": "tools/lib/arkui-property-runtime-probe.mjs",
-          "sha256": "5c7e7b6a84659f5a9c4d2ca3a8dbb1a6b3a4d1ffa1cfe696348f5247f7da28d5"
+          "sha256": "de3dbc381e5eb787b79719b088f91b898c5bf59dee793217016a0fae2756d34a"
         },
         {
           "path": "tools/lib/bookshelf-operation-owner-probe.mjs",
-          "sha256": "ef878bc4e24f9d538d42a600e3d00f396b650439a687d7495589a75f1c73bfa4"
+          "sha256": "afb664199b380d9247101acbc689451243af87df61e65cb7d9a8d8da68a8fee6"
         },
         {
           "path": "tools/lib/bounded-surface-sdk-probe.mjs",
-          "sha256": "884393abc0949a976b2a3fdad4ffbcc8809b1474a12ce2ee0d2036d6a71370dd"
+          "sha256": "a9f9f7a5e3b278b4058047310d5232f5f7127d085d464417bffba5950e99fda2"
         },
         {
           "path": "tools/lib/contract-case-selection.mjs",
@@ -128108,43 +128217,55 @@
         },
         {
           "path": "tools/lib/general-settings-owner-probe.mjs",
-          "sha256": "e1b90ddab97fde5d089f9b3449441956ff8410ca039628f8b2feb0884bad7e3f"
+          "sha256": "f3b41d3708e916e3b40a80c4be095036ecae8dcd2c0af04f36a7de188f599af6"
+        },
+        {
+          "path": "tools/lib/json-import-presentation-probe.mjs",
+          "sha256": "56dab2a57f8eb7d46fafb696ddf711e93e3333bc6511f403e443f6f2185f08ad"
         },
         {
           "path": "tools/lib/manga-directory-adaptive-probe.mjs",
-          "sha256": "95504763f3a125cba29cded74e2e31f61144e6cfe4a030a544256b142af7ad59"
+          "sha256": "96e54e9a72ca0e996298dc5736bd2c1ab75377e0e50e1cb9f972a82b41f4d926"
         },
         {
           "path": "tools/lib/manga-directory-entry-row-probe.mjs",
-          "sha256": "a4e009c38ee22510adef51891d60fc72fb016e0cbc2dd3698e0c3d621e4a1486"
+          "sha256": "928c32cc164f6e5103811876b7d984720f9655d7a9049189180343e7ff21370f"
         },
         {
           "path": "tools/lib/manga-directory-press-feedback-probe.mjs",
-          "sha256": "33ff4fe1e9c10286c35decbf815d59ee230b06f34f9803260efb0b436f59ac7e"
+          "sha256": "2e37ea0c75a8b5e3ebb373a9f6822c329c8cc2a7131ac86ea7341f3c5e88c116"
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "1680a9de636d283707d86c7934e6941825feddb249364892f334056428187b4b"
+          "sha256": "a243d7f107e6ccf1ddb4d98de97ea55fc5aa4a2684bbca7a7a80ed03137712cd"
+        },
+        {
+          "path": "tools/lib/reader-directory-operations-probe.mjs",
+          "sha256": "2b918d9b10ad441f6fb6c1efc512a030b7be9336028dd8f4ef9b1361ab1ae236"
+        },
+        {
+          "path": "tools/lib/reader-editing-sdk-probe.mjs",
+          "sha256": "56b83d626463aae3063904461ba63d1d9b262bc25f24434f94defd8284f7e45b"
         },
         {
           "path": "tools/lib/reader-foundation-control-probe.mjs",
-          "sha256": "8702b6abae3c5eef679cf8f69aa7dec9daa04e48d3f4d33192b2825d30f8ef24"
+          "sha256": "4471db01fff7b9ad4d6a6f100ede9257224303eb02526347d7854f56a4abef6d"
         },
         {
           "path": "tools/lib/reader-icon-button-probe.mjs",
-          "sha256": "cadb27017d1c10eb2efdc4784f22577b398c1057d2ef139fd038c8c96bbc804a"
+          "sha256": "0889e7b8077fc5682039c41af5c6562f99ee7297f52ca0edc436d064da8fe611"
         },
         {
           "path": "tools/lib/reader-labeled-icon-action-probe.mjs",
-          "sha256": "d9080c7da0e5fb690841c6980817571cf7d473c37739c58944f2c5cf84797332"
+          "sha256": "9fe39afcf36450870215be306e71b95f64c354bc6c1d9b2892687290227a5b43"
         },
         {
           "path": "tools/lib/reader-motion-method-probe.mjs",
-          "sha256": "707b1a2d8f1d7418dc06adf25919d5ab7d3cf8276583a44299b6f645c1fb3f61"
+          "sha256": "3ed24e5f90ec6b4d374ba7f7b95f00a2f6f3a97471c01ec39e83694b3cdc2fc9"
         },
         {
           "path": "tools/lib/reader-native-alert-sdk-probe.mjs",
-          "sha256": "bd38f863deb8934d048e1914a6fff1f298924eb22127e3c64a8704c25742c8c4"
+          "sha256": "680fa1869ba71f890cfbd70281d6ae60778ae345455cfdd2ed3f10d5e88d3f5f"
         },
         {
           "path": "tools/lib/reader-page-builder-slots.mjs",
@@ -128152,15 +128273,19 @@
         },
         {
           "path": "tools/lib/reader-page-chrome-measurement-probe.mjs",
-          "sha256": "5d335e4f5cbf0d3d3960963feb278c511da8f6e3d9abec67e5073889ddb894b6"
+          "sha256": "969cf33431d64b39f2bd40a24a3c194834c3839547612333289440528f79d482"
         },
         {
           "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
-          "sha256": "6d6fdd2414f6668d91a6ddcd45c34e6c1e34403e6b6f5e863b8c0bd53ee68f15"
+          "sha256": "81492f44e86c714de33bd59062b533ae4b484e0e7eb68d1792d5d98bb5d1539f"
+        },
+        {
+          "path": "tools/lib/reader-post-layout-frame-probe.mjs",
+          "sha256": "71df317460573bc02b549fe42d297053af2dfe5a457d8536216fd95de2fd04ce"
         },
         {
           "path": "tools/lib/reader-press-feedback-probe.mjs",
-          "sha256": "d6fbad7e2399e61b5c4f3cfb3941b39e847b7b881255fb5a83025905c9a20de8"
+          "sha256": "1c3feccbed74c10ce7e04579cfa22f0fab0b98b4cbb87fa472bc7f19c49e3c2a"
         },
         {
           "path": "tools/lib/reader-runtime-admission-probe.mjs",
@@ -128168,15 +128293,39 @@
         },
         {
           "path": "tools/lib/reader-switch-control-probe.mjs",
-          "sha256": "231838712f75d3980051a1d513e64ffd3af2f083f51cf632cebcecbc29e195f9"
+          "sha256": "c4e9b74924dcdb1ba5b5284c6c581b9ccfaba54493ab60b59996e1f4fededb36"
+        },
+        {
+          "path": "tools/lib/reader-tokens-probe.mjs",
+          "sha256": "b7794b410df5defebae65e1aaa81c1426cf7d6e1a6ec59dbf2c58cbb9bc7d195"
         },
         {
           "path": "tools/lib/reader-typography-probe.mjs",
-          "sha256": "bdd276f790f1cef6683f027084c347ff4534f8e50827c6bd77f48ecde9fb82e8"
+          "sha256": "86c596ca6e5125348c1c7e1c0f44584ef1346b8bfd628c451add6099a7e08a70"
+        },
+        {
+          "path": "tools/lib/reader-window-environment-probe.mjs",
+          "sha256": "3fa537ff34133195d4929418a7a4c25eeaad385bf2f7a4a30cdd3fd2adc47cd4"
+        },
+        {
+          "path": "tools/lib/reading-entry-owner-probe.mjs",
+          "sha256": "46d33895960335c8203063d345dec6395ab40bc1d619b6a8f4f0225027e38f2a"
+        },
+        {
+          "path": "tools/lib/reading-entry-presentation-probe.mjs",
+          "sha256": "68148fe92754e8bd674d542296b09bf2f958b7f0c9d21e012b585be0dd33e2ec"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "f3c48ccfc1a33cbcf688ab9ef994869a8f41542135672ed3419a0351f8e87bbd"
         },
         {
           "path": "tools/lib/source-management-owner-probe.mjs",
-          "sha256": "14a7ab796a524336df4b00e1c9e88c6d2c6b0781454852eeaec7d86bdcf679b3"
+          "sha256": "2e20da8c56aab2941f25872ac068e199a7036a31627ee7a8d83cecd53022e7f6"
+        },
+        {
+          "path": "tools/lib/source-switch-presentation-probe.mjs",
+          "sha256": "d96f6025c9435faa824b795404b8c8fe10fb03eb04cb71e69d7ca48eb03d2050"
         },
         {
           "path": "tools/lib/tool-environment.mjs",
@@ -128188,41 +128337,33 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
-          "path": "tools/test-reader-bookmark-top-info.mjs",
-          "sha256": "8777487a07fda352f1d1f3a73d88154b9e5ac6345751fac5bd1ddcd749109927"
+          "path": "tools/test-reader-bookmark-transaction.mjs",
+          "sha256": "6299a70653165b58f062772bb38bfe5e48fbb77221f737aac02359f9f7571683"
         }
       ],
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
       "repair": null,
-      "implementation": "COMPLETE",
-      "validationEvidence": {
-        "plan": [
-          "READING-010",
-          "READING-011"
-        ],
-        "status": "PASS",
-        "passedCases": [
-          "subscription",
-          "transaction",
-          "geometry"
-        ],
-        "priorFixtureFailure": "Current marker theme dependency absent; real production function supplied before exact retry."
-      },
-      "evidenceBoundary": "SDK node/observer and production method semantics only; no native pixels or real-time gesture acceptance.",
+      "implementation": "IMPLEMENTED",
+      "validationEvidence": "NOT_RUN",
+      "evidenceBoundary": "Wave F exact-method/SDK fixture review. Production and SDK identities are recorded in the execution trace.",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "4c6f15544d642a5d1d8b3fa42ff16586cf75fb616492949eafd1f5d54857be8c",
-      "overlayAssemblyMethodReview": {
+      "resourceDefinitionSha256": "211c995493e5db9a93ec2133e976203dca3788bc7cc75ac216afe7198cc813d5",
+      "executionEnvRoots": {
+        "READER_CORE_ROOT": "../Reader-Core"
+      },
+      "priorOverlayAssemblyMethodReview": {
         "path": ".reader-artifacts/vm-ui-feedback-20261113/app-overlay-audit/metadata/method-review.json",
         "decision": "REVIEW_NEEDED",
         "currentPublicationExecution": "NOT_RUN",
         "sha256": "739f6b28a421faa981f9812d9576cebba3675856dcd324a75486e33a3a4de22b"
-      }
+      },
+      "reviewNote": "2026-11-24 Wave F isolated exact-leaf review. Historical parent and sibling definitions are retained."
     },
     {
       "file": "tools/test-reader-brightness-writer.mjs",
@@ -142223,7 +142364,7 @@
       }
     },
     {
-      "file": "tools/test-reader-control-playback-host-intents.mjs",
+      "file": "tools/test-reader-playback-takeover-business-intent.mjs",
       "needs": [
         "TTS准备暂停",
         "播放意图失效",
@@ -142243,31 +142384,27 @@
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
       "tests": [
-        "test-reader-control-playback-host-intents.mjs"
+        "test-reader-playback-takeover-business-intent.mjs"
       ],
       "caseSelection": {
-        "test-reader-control-playback-host-intents.mjs": [
+        "test-reader-playback-takeover-business-intent.mjs": [
           "business-intent"
         ]
       },
       "resourceNeeds": [],
-      "protectedBehavior": "Immediate launch, availability/pause/stop barriers and obsolete business admission",
+      "protectedBehavior": "Admitted AutoPage immediately requests TTS pause and starts its countdown. Explicit TTS resume retires AutoPage, and obsolete or failed launches cannot continue as active.",
       "prerequisites": [
         "Node",
         "installed ETS SDK"
       ],
-      "mechanism": "Immediate launch, availability/pause/stop barriers and obsolete business admission; owner implementation record: [\"Separated immediate business intent/stop barrier from actual Host visual-owner integration.\", \"Removed dense design-clock sampling duplicated by session-launch; retained first frame, .5 Host clock mapping, hidden receipt and hold/ownership handoff.\"]",
-      "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
+      "mechanism": "Execute actual reading Host methods and AutoPage coordinator with deferred TTS availability and pause replies. Assert launch and timer order before releasing those replies, and exercise current-owner and obsolete-owner branches.",
+      "failureExample": "Awaiting pause before starting the countdown leaves the timer absent while the controlled pause reply is blocked. Stale input must dispatch neither pause nor timer.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "b5498a8fb55b0b3873747725bfa2646ad7b4d8e4862d10a117747f4be0c1a74e",
+      "reviewedSourceSha256": "7d977e9b19ae94e018bf0c6106ef32687452984351f5c3eb17c0d79b6b12c9c3",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
           "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
-        },
-        {
-          "path": "tools/lib/bookshelf-operation-owner-probe.mjs",
-          "sha256": "ef878bc4e24f9d538d42a600e3d00f396b650439a687d7495589a75f1c73bfa4"
         },
         {
           "path": "tools/lib/contract-case-selection.mjs",
@@ -142278,36 +142415,12 @@
           "sha256": "3d3be1c159621d2aac47bb74c973c47dd53ad829d86a91ac4d9bf080bf343762"
         },
         {
-          "path": "tools/lib/general-settings-owner-probe.mjs",
-          "sha256": "e1b90ddab97fde5d089f9b3449441956ff8410ca039628f8b2feb0884bad7e3f"
+          "path": "tools/lib/reader-window-environment-probe.mjs",
+          "sha256": "3fa537ff34133195d4929418a7a4c25eeaad385bf2f7a4a30cdd3fd2adc47cd4"
         },
         {
-          "path": "tools/lib/manga-directory-adaptive-probe.mjs",
-          "sha256": "95504763f3a125cba29cded74e2e31f61144e6cfe4a030a544256b142af7ad59"
-        },
-        {
-          "path": "tools/lib/reader-motion-method-probe.mjs",
-          "sha256": "707b1a2d8f1d7418dc06adf25919d5ab7d3cf8276583a44299b6f645c1fb3f61"
-        },
-        {
-          "path": "tools/lib/reader-native-alert-sdk-probe.mjs",
-          "sha256": "bd38f863deb8934d048e1914a6fff1f298924eb22127e3c64a8704c25742c8c4"
-        },
-        {
-          "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
-          "sha256": "6d6fdd2414f6668d91a6ddcd45c34e6c1e34403e6b6f5e863b8c0bd53ee68f15"
-        },
-        {
-          "path": "tools/lib/reader-runtime-admission-probe.mjs",
-          "sha256": "de107cea53ea796de87c3e926b8a024b13ecaf29b42751afb3e5cf6eae75ead8"
-        },
-        {
-          "path": "tools/lib/reader-typography-probe.mjs",
-          "sha256": "bdd276f790f1cef6683f027084c347ff4534f8e50827c6bd77f48ecde9fb82e8"
-        },
-        {
-          "path": "tools/lib/source-management-owner-probe.mjs",
-          "sha256": "14a7ab796a524336df4b00e1c9e88c6d2c6b0781454852eeaec7d86bdcf679b3"
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "f3c48ccfc1a33cbcf688ab9ef994869a8f41542135672ed3419a0351f8e87bbd"
         },
         {
           "path": "tools/lib/tool-environment.mjs",
@@ -142319,33 +142432,27 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
-          "path": "tools/test-reader-control-playback-host-intents.mjs",
-          "sha256": "b5498a8fb55b0b3873747725bfa2646ad7b4d8e4862d10a117747f4be0c1a74e"
+          "path": "tools/test-reader-playback-takeover-business-intent.mjs",
+          "sha256": "7d977e9b19ae94e018bf0c6106ef32687452984351f5c3eb17c0d79b6b12c9c3"
         }
       ],
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
       "repair": null,
-      "implementation": "COMPLETE",
-      "validationEvidence": {
-        "plan": "READING-027",
-        "status": "PASS",
-        "passedCases": [
-          "business-intent",
-          "visual-owner-seam"
-        ]
-      },
-      "evidenceBoundary": "Controller Host seam only; detailed design timing and native animation separately owned, not automatically imported.",
+      "implementation": "IMPLEMENTED",
+      "validationEvidence": "NOT_RUN",
+      "evidenceBoundary": "Production Host methods run with controlled transport and clocks. Native sound cessation and frame rendering are outside this case.",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "d7d7181338a2e741cd61229caa8d6b9a8645bd193aaa29db31220a98ad64d123"
+      "resourceDefinitionSha256": "dc3676166f7e2543499c8c0de89e070dd088d8a2ca9f94da4b75dbedda2732b2",
+      "reviewNote": "2026-11-24 Wave F exact-leaf source review. Historical multi-case declarations and unrelated definition hashes remain frozen."
     },
     {
-      "file": "tools/test-reader-control-playback-host-intents.mjs",
+      "file": "tools/test-reader-playback-takeover-visual-seam.mjs",
       "needs": [
         "TTS准备暂停",
         "播放意图失效",
@@ -142365,31 +142472,27 @@
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
       "tests": [
-        "test-reader-control-playback-host-intents.mjs"
+        "test-reader-playback-takeover-visual-seam.mjs"
       ],
       "caseSelection": {
-        "test-reader-control-playback-host-intents.mjs": [
+        "test-reader-playback-takeover-visual-seam.mjs": [
           "visual-owner-seam"
         ]
       },
       "resourceNeeds": [],
-      "protectedBehavior": "Actual Host first frame/.5 clock/hold integration; detailed design clock owned by session-launch",
+      "protectedBehavior": "The Host owns the immediate capsule launch, consumes its control-hidden receipt at 160ms and settles its visual clock at 380ms.",
       "prerequisites": [
         "Node",
         "installed ETS SDK"
       ],
-      "mechanism": "Actual Host first frame/.5 clock/hold integration; detailed design clock owned by session-launch; owner implementation record: [\"Separated immediate business intent/stop barrier from actual Host visual-owner integration.\", \"Removed dense design-clock sampling duplicated by session-launch; retained first frame, .5 Host clock mapping, hidden receipt and hold/ownership handoff.\"]",
-      "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
+      "mechanism": "Execute production Host methods and the capsule controller with one controlled clock and queued frame callbacks at 0, 160, 220 and 380ms.",
+      "failureExample": "A late control-hidden receipt or a surviving flight source after 220ms fails the respective frame assertions. A hold after settlement leaves a frame queued.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "b5498a8fb55b0b3873747725bfa2646ad7b4d8e4862d10a117747f4be0c1a74e",
+      "reviewedSourceSha256": "a249f48cf46b9b534c85569775177f51786875fc755694932ca77570c5d2e0bc",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
           "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
-        },
-        {
-          "path": "tools/lib/bookshelf-operation-owner-probe.mjs",
-          "sha256": "ef878bc4e24f9d538d42a600e3d00f396b650439a687d7495589a75f1c73bfa4"
         },
         {
           "path": "tools/lib/contract-case-selection.mjs",
@@ -142400,36 +142503,12 @@
           "sha256": "3d3be1c159621d2aac47bb74c973c47dd53ad829d86a91ac4d9bf080bf343762"
         },
         {
-          "path": "tools/lib/general-settings-owner-probe.mjs",
-          "sha256": "e1b90ddab97fde5d089f9b3449441956ff8410ca039628f8b2feb0884bad7e3f"
+          "path": "tools/lib/reader-window-environment-probe.mjs",
+          "sha256": "3fa537ff34133195d4929418a7a4c25eeaad385bf2f7a4a30cdd3fd2adc47cd4"
         },
         {
-          "path": "tools/lib/manga-directory-adaptive-probe.mjs",
-          "sha256": "95504763f3a125cba29cded74e2e31f61144e6cfe4a030a544256b142af7ad59"
-        },
-        {
-          "path": "tools/lib/reader-motion-method-probe.mjs",
-          "sha256": "707b1a2d8f1d7418dc06adf25919d5ab7d3cf8276583a44299b6f645c1fb3f61"
-        },
-        {
-          "path": "tools/lib/reader-native-alert-sdk-probe.mjs",
-          "sha256": "bd38f863deb8934d048e1914a6fff1f298924eb22127e3c64a8704c25742c8c4"
-        },
-        {
-          "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
-          "sha256": "6d6fdd2414f6668d91a6ddcd45c34e6c1e34403e6b6f5e863b8c0bd53ee68f15"
-        },
-        {
-          "path": "tools/lib/reader-runtime-admission-probe.mjs",
-          "sha256": "de107cea53ea796de87c3e926b8a024b13ecaf29b42751afb3e5cf6eae75ead8"
-        },
-        {
-          "path": "tools/lib/reader-typography-probe.mjs",
-          "sha256": "bdd276f790f1cef6683f027084c347ff4534f8e50827c6bd77f48ecde9fb82e8"
-        },
-        {
-          "path": "tools/lib/source-management-owner-probe.mjs",
-          "sha256": "14a7ab796a524336df4b00e1c9e88c6d2c6b0781454852eeaec7d86bdcf679b3"
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "f3c48ccfc1a33cbcf688ab9ef994869a8f41542135672ed3419a0351f8e87bbd"
         },
         {
           "path": "tools/lib/tool-environment.mjs",
@@ -142441,30 +142520,24 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
-          "path": "tools/test-reader-control-playback-host-intents.mjs",
-          "sha256": "b5498a8fb55b0b3873747725bfa2646ad7b4d8e4862d10a117747f4be0c1a74e"
+          "path": "tools/test-reader-playback-takeover-visual-seam.mjs",
+          "sha256": "a249f48cf46b9b534c85569775177f51786875fc755694932ca77570c5d2e0bc"
         }
       ],
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
       "repair": null,
-      "implementation": "COMPLETE",
-      "validationEvidence": {
-        "plan": "READING-027",
-        "status": "PASS",
-        "passedCases": [
-          "business-intent",
-          "visual-owner-seam"
-        ]
-      },
-      "evidenceBoundary": "Controller Host seam only; detailed design timing and native animation separately owned, not automatically imported.",
+      "implementation": "IMPLEMENTED",
+      "validationEvidence": "NOT_RUN",
+      "evidenceBoundary": "Host and controller ownership on a controlled frame clock. Native compositor timing is outside this case.",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "d7d7181338a2e741cd61229caa8d6b9a8645bd193aaa29db31220a98ad64d123"
+      "resourceDefinitionSha256": "0f097cdaa956eb650f95d0f40edf13382a4828c97757af7469bb76e66f8075cc",
+      "reviewNote": "2026-11-24 Wave F exact-leaf source review. Historical multi-case declarations and unrelated definition hashes remain frozen."
     },
     {
       "file": "tools/test-reader-control-replace-content.mjs",
@@ -176274,7 +176347,7 @@
       "resourceDefinitionSha256": "2409a69e54d651be9484d8d9f786d5b31264474bb297e6da2b88bf04f72473a4"
     },
     {
-      "file": "tools/test-reader-tts-session-coordinator.mjs",
+      "file": "tools/test-reader-tts-coordinator-host-events.mjs",
       "needs": [
         "TTS协调器",
         "立即stop",
@@ -176293,22 +176366,22 @@
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
       "tests": [
-        "test-reader-tts-session-coordinator.mjs"
+        "test-reader-tts-coordinator-host-events.mjs"
       ],
       "caseSelection": {
-        "test-reader-tts-session-coordinator.mjs": [
+        "test-reader-tts-coordinator-host-events.mjs": [
           "host-events"
         ]
       },
       "resourceNeeds": [],
-      "protectedBehavior": "host-events actual coordinator with controlled boundaries; no regex gate",
+      "protectedBehavior": "Cancelling media, interruption and device events stop TTS transport before the in-flight speak settles.",
       "prerequisites": [
         "Node"
       ],
-      "mechanism": "host-events actual coordinator with controlled boundaries; no regex gate; owner implementation record: \"14责任case；删除source字形/watchdog/listener假证明，改实际probe entered gates；owned coordinator finallydispose。\"",
-      "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
+      "mechanism": "Run the production coordinator with a controlled speak promise and assert immediate stop across seven cancelling Host events.",
+      "failureExample": "Allowing the blocked speak to serialize cancellation fails the synchronous stop assertion. A matching synthesis-only callback must leave transport active.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205",
+      "reviewedSourceSha256": "95d319112baf2dc60e733d9dc511400b0832f6e0686820507e5f68177e5dc3a4",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -176331,8 +176404,8 @@
           "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
-          "path": "tools/test-reader-tts-session-coordinator.mjs",
-          "sha256": "37b4365fd7b79071463aa3cc9eb34de9ae4dff386cfc8a79f1eb39f099bb8205"
+          "path": "tools/test-reader-tts-coordinator-host-events.mjs",
+          "sha256": "95d319112baf2dc60e733d9dc511400b0832f6e0686820507e5f68177e5dc3a4"
         }
       ],
       "definitionInputProblems": [],
@@ -176341,10 +176414,11 @@
       "repair": null,
       "implementation": "IMPLEMENTED",
       "validationEvidence": "NOT_RUN",
-      "evidenceBoundary": "watchdog/listener由state-machine精确case保护，不嵌套；Core队列/音频仍受控。",
+      "evidenceBoundary": "Production coordinator dispatch under controlled Core and Host transport boundaries. Native audio is outside this case.",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "2409a69e54d651be9484d8d9f786d5b31264474bb297e6da2b88bf04f72473a4"
+      "resourceDefinitionSha256": "fe6f61e308319ccb7383a2a67e99bdcf96aa8d9d82bc448cfe8d2870c9f1d99d",
+      "reviewNote": "2026-11-24 Wave F exact-leaf source review. Historical multi-case declarations and unrelated definition hashes remain frozen."
     },
     {
       "file": "tools/test-reader-tts-session-coordinator.mjs",
@@ -310010,19 +310084,17 @@
       "resourceDefinitionSha256": "13996024d93f72dfc3bf48bf336453074460439cf94560ecd6061c16de6b1a8f"
     },
     {
-      "file": "tools/test-source-switch-gateway.mjs",
+      "file": "tools/test-source-switch-discovery-concurrency.mjs",
       "needs": [
         "source discovery",
-        "DNS classification",
-        "author proof",
-        "relation pagination",
-        "refresh teardown"
+        "per-source concurrency",
+        "source sweep progress"
       ],
-      "productionBinding": "真实SourceSwitchGateway全module+SearchGateway decode/BookRequestScheduler；部分Host来自source-switch-owner-probe；CandidateRow selectCandidate真实SDK方法。",
-      "overlap": "host测试业务intent生命周期；本文混入PH70Host entry/delta与host有重叠；reader catalog seam更窄，不可为一处DTO改动强制整1142行。",
-      "minimumTrigger": "按需选择discovery errors/authorqualification/cached relation/refresh teardown/session handoff相关子集；无自动全换源。; exact case: discovery-concurrency",
-      "necessityReason": "覆盖实际方法且多负输入有证据，但超宽入口、旧正则和150ms实timer使最小调用不成立，需拆。",
-      "limitations": "actualGateway/decoder/workers全生产，RPC受控；source owner Graph只在Hostcase；用户数据/真实网络/设备不在本条；当前产品source分类不等站点可读。",
+      "productionBinding": "SourceSwitchGateway.discoverCandidates, runBookSourceWorkers, SearchGateway.decodeBookSearchResult and current vendored Core SDK. A controlled request port drives the production method.",
+      "overlap": "Neighboring exact cases cover DNS, network environment and late publication separately.",
+      "minimumTrigger": "Changes to the source candidate worker bound, per-source failure/isolation or eligible sweep count.",
+      "necessityReason": "The production Gateway publishes one initial receipt and one terminal receipt per eligible source across concurrent controlled RPCs. A fixture timeout exercises skipped candidates without halting other workers.",
+      "limitations": "Local Node method and controlled RPC evidence. Host presentation, elapsed latency, real network, native display and device acceptance remain NOT_RUN.",
       "id": "H-source-switch-gateway#discovery-concurrency",
       "parentId": "H-source-switch-gateway",
       "caseId": "discovery-concurrency",
@@ -310030,78 +310102,35 @@
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
       "tests": [
-        "test-source-switch-gateway.mjs"
+        "test-source-switch-discovery-concurrency.mjs"
       ],
       "caseSelection": {
-        "test-source-switch-gateway.mjs": [
+        "test-source-switch-discovery-concurrency.mjs": [
           "discovery-concurrency"
         ]
       },
       "resourceNeeds": [],
-      "protectedBehavior": "discovery-concurrency actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases",
+      "protectedBehavior": "Eight concurrent workers search ten eligible text sources once each; one failed source is counted but omitted from stable ordered results.",
       "prerequisites": [
-        "Node"
+        "Node with registerHooks and TypeScript strip support",
+        "Checked-in HarmonyOS Core SDK fixture"
       ],
-      "mechanism": "discovery-concurrency actual Gateway/decoder/scheduler scope; Host/SDK only in explicitly named cases; owner implementation record: \"现版1142行28case，关闭fetch/order/worker/queue源码regex；保新DNS/HTTP/author/version资格；Host/SDK仅选中case懒载；progressive/cancellation受控clock替150/500/20ms。\"",
-      "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
-      "estimatedCostType": "selected-sdk-or-method",
-      "reviewedSourceSha256": "2ce92c84d0e2f43f2598234d63f18a39a66dc4008401c332700df03ef0e5ec2c",
+      "mechanism": "The selector loads only the current Gateway and its finite production import set, injects a controlled source.list/book.search port, and asserts dispatch identity, peak concurrency, failure isolation, publication order and every initial/terminal sweep receipt.",
+      "failureExample": "Static negative controls: serial or unbounded dispatch violates peak eight; disabled or comic admission violates exact source IDs; an omitted failure receipt breaks checked=0…10; shuffled results violate registry order.",
+      "estimatedCostType": "local-method",
+      "reviewedSourceSha256": "adf35619a67b4ab1889bb20f950dd9dc3c4c89199fe7e3f0eeea869c10ed34c9",
       "definitionInputs": [
+        {
+          "path": "entry/vendor/core-harmony/sdk/reader_core.ts",
+          "sha256": "5eb7cc236a7f2c523901204b972361cf0173a27b3117519382a9fc58a0954b5f"
+        },
         {
           "path": "tools/gate-index.mjs",
           "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
         },
         {
-          "path": "tools/lib/bookshelf-operation-owner-probe.mjs",
-          "sha256": "ef878bc4e24f9d538d42a600e3d00f396b650439a687d7495589a75f1c73bfa4"
-        },
-        {
           "path": "tools/lib/contract-case-selection.mjs",
           "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
-        },
-        {
-          "path": "tools/lib/ets-compiler-runtime.mjs",
-          "sha256": "3d3be1c159621d2aac47bb74c973c47dd53ad829d86a91ac4d9bf080bf343762"
-        },
-        {
-          "path": "tools/lib/general-settings-owner-probe.mjs",
-          "sha256": "e1b90ddab97fde5d089f9b3449441956ff8410ca039628f8b2feb0884bad7e3f"
-        },
-        {
-          "path": "tools/lib/manga-directory-adaptive-probe.mjs",
-          "sha256": "95504763f3a125cba29cded74e2e31f61144e6cfe4a030a544256b142af7ad59"
-        },
-        {
-          "path": "tools/lib/reader-motion-method-probe.mjs",
-          "sha256": "707b1a2d8f1d7418dc06adf25919d5ab7d3cf8276583a44299b6f645c1fb3f61"
-        },
-        {
-          "path": "tools/lib/reader-native-alert-sdk-probe.mjs",
-          "sha256": "bd38f863deb8934d048e1914a6fff1f298924eb22127e3c64a8704c25742c8c4"
-        },
-        {
-          "path": "tools/lib/reader-page-shell-runtime-probe.mjs",
-          "sha256": "6d6fdd2414f6668d91a6ddcd45c34e6c1e34403e6b6f5e863b8c0bd53ee68f15"
-        },
-        {
-          "path": "tools/lib/reader-runtime-admission-probe.mjs",
-          "sha256": "de107cea53ea796de87c3e926b8a024b13ecaf29b42751afb3e5cf6eae75ead8"
-        },
-        {
-          "path": "tools/lib/reader-typography-probe.mjs",
-          "sha256": "bdd276f790f1cef6683f027084c347ff4534f8e50827c6bd77f48ecde9fb82e8"
-        },
-        {
-          "path": "tools/lib/source-management-owner-probe.mjs",
-          "sha256": "14a7ab796a524336df4b00e1c9e88c6d2c6b0781454852eeaec7d86bdcf679b3"
-        },
-        {
-          "path": "tools/lib/source-switch-owner-probe.mjs",
-          "sha256": "4d9bbbb3abff5d66005b91f9d3524323c6ee9290dd32b61b8faa6fb42aff52ac"
-        },
-        {
-          "path": "tools/lib/tool-environment.mjs",
-          "sha256": "0d1db4155dd5dd02753f61fbeb0b5aff5656c1b4248c31cc784547363c181f69"
         },
         {
           "path": "tools/retired-contract-tests.json",
@@ -310109,11 +310138,11 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "9d78b230ef216e11da9c64cce869fe41cadd279a67cb9b1c1a97c0b985e96179"
         },
         {
-          "path": "tools/test-source-switch-gateway.mjs",
-          "sha256": "2ce92c84d0e2f43f2598234d63f18a39a66dc4008401c332700df03ef0e5ec2c"
+          "path": "tools/test-source-switch-discovery-concurrency.mjs",
+          "sha256": "adf35619a67b4ab1889bb20f950dd9dc3c4c89199fe7e3f0eeea869c10ed34c9"
         }
       ],
       "definitionInputProblems": [],
@@ -310122,10 +310151,11 @@
       "repair": null,
       "implementation": "IMPLEMENTED",
       "validationEvidence": "NOT_RUN",
-      "evidenceBoundary": "actualGateway/decoder/workers全生产，RPC受控；source owner Graph只在Hostcase；用户数据/真实网络/设备不在本条；当前产品source分类不等站点可读。",
+      "evidenceBoundary": "Wave F independent source review adopts this one production-method case. Resource manifest and integration inventory declare one selector; default execution stays OFF.",
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "13996024d93f72dfc3bf48bf336453074460439cf94560ecd6061c16de6b1a8f"
+      "resourceDefinitionSha256": "e62caf639b1de03f6d5df43dcd02fea06e2b6b79aaa203fd494aded4c8ba8482",
+      "reviewNote": "2026-11-24 Wave F exact-leaf source review. The historical multi-case declarations and all sibling definition hashes retain their published values."
     },
     {
       "file": "tools/test-source-switch-gateway.mjs",

@@ -54,6 +54,7 @@ export function BookTurnTextureBuilder(input: BookTurnTextureBuildInput) {
       fragmentsProvider: input.fragmentsProvider,
       layout: input.layout,
       appearance: input.appearance,
+      facingChapter: input.page.facingChapter,
       bookmark: input.page.bookmark,
       bottomJustifyGap: input.page.bottomJustifyGap,
       chromeTopStartText: input.page.chromeTopStartText,

@@ -352,7 +352,7 @@ export struct BookDirectoryPage {
 
   @Builder
   private mangaCurrentFooter(measurement: ReaderNativeSlotMeasurement = this.footerMeasurement) {
-    ReaderDirectoryQuickActions({ title: this.mangaCurrentTitle(), position: this.mangaCurrentPosition() === '—' ? '' : this.mangaCurrentPosition(),
+    ReaderDirectoryQuickActions({ title: this.mangaCurrentTitle(), positionLabel: this.mangaCurrentPosition() === '—' ? '' : this.mangaCurrentPosition(),
       scheme: this.appThemeScheme, fontScale: this.mangaFontScale(),
       locateEnabled: this.interactive && !this.selectionBusy && this.currentChapterIndex >= 0,
       edgeEnabled: this.interactive && !this.selectionBusy && (this.mangaLayoutRows.length > 0 || this.navigationActive),

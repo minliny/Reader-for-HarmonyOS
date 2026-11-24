@@ -20,16 +20,16 @@ export struct NoCoverCover {
         .backgroundColor(readerAppColor('TOK_LINE_STRONG', this.appThemeScheme))
         .position({ x: this.x(6), y: 0 });
 
-      Row().width(this.x(68)).height(this.y(104)).borderRadius(this.scale(2.5))
-        .border({ width: this.scale(1), color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
+      Row().width(this.x(68)).height(this.y(104)).borderRadius(this.scaleCoverUnit(2.5))
+        .border({ width: this.scaleCoverUnit(1), color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
         .position({ x: this.x(11), y: this.y(10) });
-      Row().width(this.x(61)).height(this.y(97)).borderRadius(this.scale(1.5))
-        .border({ width: this.scale(0.7), color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+      Row().width(this.x(61)).height(this.y(97)).borderRadius(this.scaleCoverUnit(1.5))
+        .border({ width: this.scaleCoverUnit(0.7), color: readerAppColor('TOK_LINE', this.appThemeScheme) })
         .position({ x: this.x(14.5), y: this.y(13.5) });
 
-      Row().width(this.scale(10)).height(this.scale(10)).borderRadius(this.scale(2))
+      Row().width(this.scaleCoverUnit(10)).height(this.scaleCoverUnit(10)).borderRadius(this.scaleCoverUnit(2))
         .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-        .border({ width: this.scale(0.7), color: readerAppColor('TOK_GREEN', this.appThemeScheme) })
+        .border({ width: this.scaleCoverUnit(0.7), color: readerAppColor('TOK_GREEN', this.appThemeScheme) })
         .position({ x: this.x(61), y: this.y(18) });
 
       Stack({ alignContent: Alignment.Center }) {
@@ -37,8 +37,8 @@ export struct NoCoverCover {
           .width('100%')
           .fontFamily(TYPE_SHELF_COVER_PLACEHOLDER.fontFamily)
           .fontWeight(TYPE_SHELF_COVER_PLACEHOLDER.fontWeight)
-          .fontSize(`${this.scale(12.5)}vp`)
-          .lineHeight(`${this.scale(16)}vp`)
+          .fontSize(`${this.scaleCoverUnit(12.5)}vp`)
+          .lineHeight(`${this.scaleCoverUnit(16)}vp`)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .textAlign(TextAlign.Center)
           .maxLines(2)
@@ -48,8 +48,8 @@ export struct NoCoverCover {
 
       Text(this.kindLabel.trim().length > 0 ? `无封面 · ${this.kindLabel}` : '无封面')
         .width(this.x(58)).textAlign(TextAlign.Center)
-        .fontSize(`${this.scale(7)}vp`)
-        .lineHeight(`${this.scale(10)}vp`)
+        .fontSize(`${this.scaleCoverUnit(7)}vp`)
+        .lineHeight(`${this.scaleCoverUnit(10)}vp`)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .position({ x: this.x(16), y: this.y(89) });
@@ -65,5 +65,5 @@ export struct NoCoverCover {
 
   private x(units: number): number { return units * this.coverWidth / 90; }
   private y(units: number): number { return units * this.coverHeight / 124; }
-  private scale(units: number): number { return units * Math.min(this.coverWidth / 90, this.coverHeight / 124); }
+  private scaleCoverUnit(units: number): number { return units * Math.min(this.coverWidth / 90, this.coverHeight / 124); }
 }

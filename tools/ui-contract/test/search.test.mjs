@@ -1061,7 +1061,7 @@ function taskRetryNativeRows(context, contract, sampleId, book, {page=3,query=8,
 test('Phase 1 search Task retry keeps the same native public book across fixed 503', () => {
   const contract = loadCase('bookshelf.search-retry');
   const spec = contract.assertions.find(check => check.kind === 'phase-task-retry');
-  assert.equal(contract.version,6);
+  assert.equal(contract.version,7);
   assert.equal(spec.expected.requireSamePublicBook,true);
   const strict = {...spec,acceptedSources:spec.sources};
   const {requireSamePublicBook,...previousExpected} = spec.expected;
@@ -1108,7 +1108,7 @@ test('Phase 1 search Task retry keeps the same native public book across fixed 5
 test('Phase 1 search Task retry proves recovery of the same failed source and new online result', () => {
   const contract = loadCase('bookshelf.search-retry-success');
   const spec = contract.assertions.find(check => check.kind === 'phase-task-retry');
-  assert.equal(contract.version,1);
+  assert.equal(contract.version,2);
   assert.equal(spec.expected.recoveredResult,'recovery');
   assert.equal(spec.expected.httpResponseStatus,503);
   const strict = {...spec,acceptedSources:spec.sources};

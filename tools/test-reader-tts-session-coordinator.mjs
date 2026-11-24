@@ -115,6 +115,59 @@ assert.equal(coordinator.getState().status, 'idle');
 assert.ok(host.calls.includes('media:stopped'), 'ordinary stop must publish AVSession stopped');
 await coordinator.dispose();
 
+{
+  const gateway = new FakeGateway();
+  const host = new FakeHost();
+  const requests = [];
+  let allowed;
+  const coordinator = createCoordinator(gateway, host, undefined, undefined, undefined, {
+    admitHostResume: origin => { requests.push(origin); return origin === allowed; },
+  });
+  const mediaPlay = { type: 'mediaControl', action: 'play' };
+  const interruptionResume = { type: 'interruption', action: 'resume' };
+  host.emit(mediaPlay);
+  host.emit(interruptionResume);
+  assert.deepEqual(requests, [], 'stale native events do not reach the shared channel while TTS is idle');
+  await coordinator.start({ chapter, content: canonicalRemoteContent, contentVersion: 3, scalarPosition: 0 });
+  host.emit(mediaPlay);
+  assert.deepEqual(requests, [], 'a redundant Play during preparation cannot relinquish AutoPage');
+
+  await coordinator.pause();
+  host.emit(mediaPlay);
+  host.emit(interruptionResume);
+  await coordinator.whenSettled();
+  assert.deepEqual(requests, ['mediaPlay', 'interruptionResume']);
+  assert.equal(coordinator.getState().status, 'paused');
+  assert.equal(host.requests.length, 1, 'a denied host resume cannot dispatch another utterance');
+  assert.ok(!gateway.calls.includes('resume'), 'a denied host resume cannot mutate the Core queue');
+
+  allowed = 'mediaPlay';
+  host.emit(mediaPlay);
+  await coordinator.whenSettled();
+  assert.equal(coordinator.getState().status, 'preparing');
+  assert.equal(host.requests.length, 2);
+  host.emit({ type: 'start', requestId: host.requests.at(-1).requestId });
+  await coordinator.whenSettled();
+  host.emit({ type: 'interruption', action: 'pause' });
+  await coordinator.whenSettled();
+  assert.equal(coordinator.getState().status, 'interrupted');
+
+  host.emit(interruptionResume);
+  await coordinator.whenSettled();
+  assert.equal(host.requests.length, 2);
+  assert.equal(coordinator.getState().status, 'interrupted');
+  allowed = 'interruptionResume';
+  host.emit(interruptionResume);
+  await coordinator.whenSettled();
+  assert.equal(host.requests.length, 3, 'the current admitted interruption resumes the same TTS owner');
+  assert.equal(gateway.calls.filter(call => call === 'resume').length, 2);
+
+  const retiredListener = host.listener;
+  await coordinator.dispose();
+  retiredListener(mediaPlay);
+  retiredListener(interruptionResume);
+  assert.deepEqual(requests, ['mediaPlay', 'interruptionResume', 'mediaPlay', 'interruptionResume', 'interruptionResume']);
+}
 
 }
 if(id==='immediate-stop'){
@@ -133,6 +186,44 @@ await slowStopTask;
 assert.equal(slowStop.coordinator.getState().status, 'idle');
 await slowStop.coordinator.dispose();
 
+for (const fails of [false, true]) {
+  const gateway = new FakeGateway();
+  const host = new FakeHost();
+  const coordinator = createCoordinator(gateway, host);
+  await coordinator.start({ chapter, content: canonicalRemoteContent, contentVersion: 74, scalarPosition: 0 });
+  let settleNative;
+  let rejectNative;
+  const native = new Promise((resolve, reject) => { settleNative = resolve; rejectNative = reject; });
+  host.stop = () => { host.calls.push('stop'); return native; };
+  let enterCore;
+  let releaseCore;
+  const coreEntered = new Promise(resolve => { enterCore = resolve; });
+  const corePending = new Promise(resolve => { releaseCore = resolve; });
+  gateway.stop = async () => { enterCore(); await corePending; return gateway.snapshot('stopped'); };
+
+  const cause = new Error('native stop failed');
+  const stop = coordinator.stop('user');
+  const stopOutcome = fails ? assert.rejects(stop, error => error === cause) : stop;
+  const pause = coordinator.pause();
+  assert.equal(host.calls.filter(call => call === 'stop').length, 1, 'pause joins the already-dispatched native stop');
+  if (fails) {
+    const paused = assert.rejects(pause, error => error === cause);
+    rejectNative(cause);
+    await paused;
+  } else {
+    settleNative();
+    await pause;
+  }
+  await coreEntered;
+  assert.equal(coordinator.getState().status, 'stopping', 'joined native receipt settles independently of Core teardown');
+  if (fails) await assert.rejects(coordinator.pause(), error => error === cause);
+  else await coordinator.pause();
+  assert.equal(host.calls.filter(call => call === 'stop').length, 1);
+  releaseCore();
+  await stopOutcome;
+  host.stop = FakeHost.prototype.stop;
+  await coordinator.dispose();
+}
 
 }
 if(id==='transport-intents'){
@@ -177,6 +268,38 @@ for (const failure of ['hostStop', 'corePause']) {
   assert.ok(host.calls.includes('media:error'), 'native media controls must stop advertising playing on pause failure');
   assert.equal(coordinator.getTransportState().audioSession, 'inactive');
   host.stop = FakeHost.prototype.stop;
+  await coordinator.dispose();
+}
+
+for (const failure of ['hostStop', 'corePause', 'release']) {
+  const gateway = new FakeGateway();
+  const host = new FakeHost();
+  const coordinator = createCoordinator(gateway, host);
+  await coordinator.start({ chapter, content: canonicalRemoteContent, contentVersion: 73, scalarPosition: 6 });
+  host.emit({ type: 'start', requestId: host.requests.at(-1).requestId });
+  await coordinator.whenSettled();
+  const state = coordinator.getState();
+  const cause = new Error(failure);
+  const target = failure === 'corePause' ? gateway : host;
+  const method = failure === 'corePause' ? 'pause' : failure === 'release' ? 'deactivateAudioSession' : 'stop';
+  const original = target[method];
+  target[method] = async () => { throw cause; };
+  const failed = coordinator.pause();
+  assert.equal(coordinator.pause(), failed, 'duplicate user pause shares the in-flight receipt');
+  await assert.rejects(failed, error => error === cause);
+  assert.equal(coordinator.getState().status, 'paused');
+  assert.equal(coordinator.hasConfirmedUserPause(state.sessionGeneration), false);
+
+  target[method] = original;
+  await coordinator.pause();
+  assert.equal(coordinator.getState().sessionGeneration, state.sessionGeneration);
+  assert.equal(coordinator.getState().sliceIndex, state.sliceIndex);
+  assert.equal(coordinator.hasConfirmedUserPause(state.sessionGeneration), true, `${failure} can be retried on the same owner`);
+  assert.ok(!gateway.calls.includes('stop'));
+  assert.equal(host.requests.length, 1);
+  const pausedCalls = [host.calls.length, gateway.calls.length];
+  await coordinator.pause();
+  assert.deepEqual([host.calls.length, gateway.calls.length], pausedCalls, 'a confirmed sticky pause stays idempotent');
   await coordinator.dispose();
 }
 

@@ -293,6 +293,26 @@ const hostModule = await import(`data:text/javascript;base64,${Buffer.from(
   hostPrelude + stripTypeScriptTypes(executableHost) + '\nexport {HarmonyHttpTtsHost};',
 ).toString('base64')}`);
 if(selectedCase==='http-owner') {
+for (const releaseFails of [false, true]) {
+  const host = Object.create(hostModule.HarmonyHttpTtsHost.prototype);
+  const calls = [];
+  const player = { state: 'playing', async stop() { calls.push('stop'); throw Error('stop failed'); },
+    async release() { calls.push('release'); if (releaseFails) throw Error('release failed'); } };
+  Object.assign(host, { player, speakGeneration: 0, networkGeneration: 0 });
+  const stopped = host.stop();
+  assert.deepEqual(calls, ['stop'], 'native stop dispatches before awaiting anything');
+  if (releaseFails) {
+    await assert.rejects(stopped, /HTTP TTS transport did not stop/);
+    assert.equal(host.player, player, 'the current failed owner can retry disposal');
+    player.stop = async () => { calls.push('stop-retry'); };
+    await host.stop();
+    assert.deepEqual(calls, ['stop', 'release', 'stop-retry', 'release']);
+  } else {
+    await stopped;
+    assert.deepEqual(calls, ['stop', 'release'], 'successful release provides the stop fallback');
+  }
+  assert.equal(host.player, undefined);
+}
 const hostProbe = Object.create(hostModule.HarmonyHttpTtsHost.prototype);
 const resolved = await hostProbe.resolveRequest({
   url: 'https://tts.example.test/audio?token={{apiKey}}',

@@ -4,7 +4,6 @@ import { registerHooks } from 'node:module';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
 import { readerFoundationTokens } from './lib/reader-tokens-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 
@@ -127,14 +126,17 @@ for (const id of selectContractCases(definitions)) {
   const read = name => readFileSync(new URL(root + name, import.meta.url), 'utf8');
   const geometrySource = read('ReaderLayoutGeometry.ts');
   const panelSource = read('ReaderControlPanel.ets');
-  const deps = { ...metricsApi, ...control, ...motion };
   if (id === 'home-composition') {
     homeComposition(panelSource, geometry, control);
     recordContractCasePass(id);
     continue;
   }
-  const height = pureModuleProbe(geometrySource, 'ReaderLayoutGeometry.ts', deps,
-    ['controlHeightWithin', 'pixelWithin']);
+  // The height functions need neither the layout module's imports nor its public re-exports.
+  const heightStart = geometrySource.indexOf('function pixelWithin(');
+  const heightEnd = geometrySource.indexOf('/** Only arithmetic precision', heightStart);
+  assert.ok(heightStart >= 0 && heightEnd > heightStart, 'production height helpers are present');
+  const height = pureModuleProbe(geometrySource.slice(heightStart, heightEnd), 'ReaderLayoutGeometry.ts', {},
+    ['controlHeightWithin']);
   const near = (actual, expected, text) => assert.ok(Math.abs(actual - expected) < 1e-9, `${text}: ${actual}/${expected}`);
   const density = 3.5;
 
@@ -163,12 +165,10 @@ for (const id of selectContractCases(definitions)) {
     ${homeMinimumMethod}
     build() { ${statement} }
   }`;
-  const sdk = boundedSurfaceSdk();
   function nativeScroll(capacity, required, statement = scrollStatement) {
-    const source = scaffold(statement);
-    const owner = sdk.consumer(source, ['build', 'homeContent', 'homeContentMinimumHeight'], {
+    const owner = createReaderBuilderProbe(scaffold(statement), ['build', 'homeContent', 'homeContentMinimumHeight'], {
       ...control, readerControlExtentFits: geometry.readerControlExtentFits,
-    });
+    }).owner;
     Object.assign(owner, { frame: () => ({ content: { width: 264, height: capacity } }),
       homeChapterCardHeight: () => required - 82, homeMetric: () => 76, currentLayout: () => ({ topBarVisible: true }) });
     owner.initialRender();

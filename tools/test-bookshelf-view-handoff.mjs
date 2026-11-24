@@ -290,7 +290,7 @@ for (const mode of ['cover', 'list']) {
 
 // Render the real default-cover text body, not a test replica of its labels.
 const defaultBuilderSource = noCoverSource.replace('  build() {', '  build() { Column() {} }\n  @Builder\n  coverContent() {');
-const { owner: defaultCover } = createReaderBuilderProbe(defaultBuilderSource, ['coverContent', 'x', 'y', 'scale'],
+const { owner: defaultCover } = createReaderBuilderProbe(defaultBuilderSource, ['coverContent', 'x', 'y', 'scaleCoverUnit'],
   { ...readerTypographyRoles, ...readerFoundationTokens });
 const defaultFrame = grid.bookshelfGridFrame(326, false);
 Object.assign(defaultCover, { coverWidth: defaultFrame.cardWidth,

@@ -801,14 +801,14 @@ export struct BookshelfPage {
   private filteredEmptyActions(navigation: number) {
     Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Center,
       space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
-      ReaderButton({ specId: 'shelf-action', scheme: this.appThemeScheme, label: '重置筛选', variant: 'tonal', size: 'medium',
+      ReaderButton({ specId: 'shelf-action', scheme: this.appThemeScheme, label: '重置筛选', variant: 'tonal', visualSize: 'medium',
         onAction: (): void => {
           this.clearFilters(navigation);
           this.setFilterExpanded(false, navigation);
         } });
-      ReaderButton({ specId: 'search-primary', scheme: this.appThemeScheme, label: '搜索书籍', variant: 'primary', size: 'medium',
+      ReaderButton({ specId: 'search-primary', scheme: this.appThemeScheme, label: '搜索书籍', variant: 'primary', visualSize: 'medium',
         onAction: (): void => { if (this.isShelfPresentationCurrent(navigation)) this.onEmptySearch(navigation); } });
-      ReaderButton({ specId: 'shelf-action', scheme: this.appThemeScheme, label: '本地导入', variant: 'subtle', size: 'medium',
+      ReaderButton({ specId: 'shelf-action', scheme: this.appThemeScheme, label: '本地导入', variant: 'subtle', visualSize: 'medium',
         focusId: 'reader-bookshelf-filtered-import',
         onAction: (): void => {
           if (this.isShelfPresentationCurrent(navigation)) this.onEmptyImport(navigation, 'reader-bookshelf-filtered-import');

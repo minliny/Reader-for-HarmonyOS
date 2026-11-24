@@ -99,7 +99,11 @@ assert.ok(initialStart >= 0 && initialEnd > initialStart);
 assert.doesNotMatch(experienceSource.slice(initialStart, initialEnd), /loadContentMetrics/,
   'exact whole-book metrics must be removed from first-page admission');
 assert.match(experienceSource, /private async loadContentMetricsIfNeeded\(/);
-assert.match(experienceSource, /this\.controlSession = openReaderControlSession[\s\S]*?void this\.loadContentMetricsIfNeeded/,
+const controlsOpenStart = experienceSource.indexOf('private openReaderControl(');
+const controlsOpenEnd = experienceSource.indexOf('private hideControl(', controlsOpenStart);
+assert.ok(controlsOpenStart >= 0 && controlsOpenEnd > controlsOpenStart);
+assert.match(experienceSource.slice(controlsOpenStart, controlsOpenEnd),
+  /const nextControl = openReaderControlSession[\s\S]*?this\.controlSession = nextControl;\s*void this\.loadContentMetricsIfNeeded/,
   'exact metrics may load on demand when the user opens whole-book controls');
 
 console.log('reading whole-book processed-scalar progress: PASS');

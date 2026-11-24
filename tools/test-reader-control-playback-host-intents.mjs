@@ -1,6 +1,6 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={
- 'business-intent':{description:'Immediate launch, availability/pause/stop barriers and obsolete business admission',resources:[]},
+ 'business-intent':{description:'Immediate launch, non-blocking AutoPage takeover, paused TTS resume and obsolete business admission',resources:[]},
  'visual-owner-seam':{description:'Actual Host synchronous first frame, 380ms settlement, and stale frame ownership',resources:[]}
 };
 const selected=selectContractCases(definitions);
@@ -21,7 +21,7 @@ const { productionMotionMethods }=await import('./lib/reader-motion-method-probe
 const file=localFilePath(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url));
 if(selectedCase==='business-intent'){
 const names=['toggleTts','stopTts','toggleAutoPage','startAutoPageSession','stopAutoPage','cancelPendingAutoPageStart',
-  'cancelPendingTtsPlay','createTtsPlayIntent','isTtsPlayIntentCurrent',
+  'cancelPendingTtsPlay','createTtsPlayIntent','isTtsPlayIntentCurrent','retirePendingPlaybackStarts',
   'captureControlPlaybackPresentation','isControlPlaybackPresentationCurrent','toggleSessionCapsule'];
 const Host=productionMotionMethods(file,names,{...autoPolicy,readerTtsSessionBlocksAutoPageStart,
   readerControlContentLocation:s=>s.location});
@@ -33,7 +33,7 @@ function owner(){
   chapterSelectionToken:1,phase:'ready',chapter:{content:'正文',chapterIndex:4},visiblePage:{startScalar:20},materializedContentVersion:'v1',
   ttsAvailabilityResolved:true,ttsPlayIntentGeneration:0,ttsState:{status:'idle',rate:1},ttsLanguage:'zh-CN',ttsPerson:0,
   ttsPauseOnInterruption:true,ttsAllowMixing:false,ttsFailurePolicy:'stop',autoPageState:autoPolicy.createReaderAutoPageState(8),
-  autoPageStartGeneration:0,autoPageStartPending:false,controlOpenRevision:1,controlModuleVisitRevision:1,
+  controlOpenRevision:1,controlModuleVisitRevision:1,
   controlSession:{location:{level:'secondary',module:'tts',form:'quick'}},visible:true,sessionLaunch:undefined,
   isSessionActive(t){return this.mounted&&!this.exitRequested&&this.lifecycleToken===t;},
   controlVisible(){return this.visible;},controlShellExitArmed:()=>false,
@@ -97,16 +97,31 @@ for(const availabilityDelay of [false,true]){
  assert.equal(host.autoPageState.status,'running');
 }
 {
- const {host,calls}=owner(),stop=deferred();host.ttsState.status='playing';host.controlSession.location.module='autoPage';
- host.ttsCoordinator.stop=()=>{calls.push('stop');return stop.promise;};host.toggleAutoPage();
- assert.deepEqual(calls.slice(0,2),['visual:autoPage','stop']);assert.equal(host.autoPageState.status,'stopped');
- host.toggleSessionCapsule();stop.resolve();await drain();assert.equal(host.autoPageState.status,'paused');
- assert.equal(calls.includes('autoTimer'),false,'preparing pause cannot arm the first automatic turn');
+ const {host,calls}=owner(),pause=deferred();host.ttsState.status='playing';host.controlSession.location.module='autoPage';
+ host.ttsCoordinator.pause=()=>{calls.push('pause');host.ttsState.status='paused';return pause.promise;};
+ host.ttsCoordinator.resume=async()=>{assert.equal(host.autoPageState.status,'stopped');calls.push('resume');};
+ host.toggleAutoPage();
+ assert.deepEqual(calls.slice(0,3),['pause','visual:autoPage','autoTimer']);
+ assert.equal(host.autoPageState.status,'running');assert.equal(host.autoPageCoordinator.pendingStart(),false);
+ assert.equal(host.ttsState.status,'paused');assert.equal(calls.includes('stop'),false);
+ host.toggleTts();
+ assert.equal(host.autoPageState.status,'stopped');assert.equal(calls.filter(call=>call==='resume').length,1);
+ pause.resolve();await drain();assert.equal(host.autoPageState.status,'stopped','late pause completion does not re-arm AutoPage');
 }
 {
- const {host,calls}=owner(),stop=deferred();host.ttsState.status='playing';host.controlSession.location.module='autoPage';
- host.ttsCoordinator.stop=()=>stop.promise;host.toggleAutoPage();stop.reject(Error('transport stop failed'));await drain();
- assert.equal(host.autoPageState.status,'stopped');assert.equal(host.ttsState.status,'playing');assert.ok(calls.includes('cancel:stopBarrierFailure'));
+ const {host,calls}=owner(),pause=deferred();host.ttsState.status='playing';host.controlSession.location.module='autoPage';
+ host.ttsCoordinator.pause=()=>{host.ttsState.status='paused';return pause.promise;};
+ host.toggleAutoPage();assert.equal(host.autoPageState.status,'running');
+ pause.reject(Error('transport pause failed'));await drain();
+ assert.equal(host.autoPageState.status,'paused');
+ assert.equal(calls.filter(call=>call.startsWith('feedback:')).length,1);
+ assert.equal(calls.includes('cancel:stopBarrierFailure'),false);
+}
+{
+ const {host,calls}=owner();host.ttsState.status='playing';host.controlSession.location.module='autoPage';
+ host.readerInputIsCurrent=()=>false;
+ host.toggleAutoPage();assert.equal(host.autoPageState.status,'stopped');
+ assert.ok(calls.every(call=>call!=='pause'&&call!=='visual:autoPage'&&call!=='autoTimer'));
 }
 for(const invalidate of [h=>h.stopTts(),h=>{h.mounted=false;},h=>{h.lifecycleToken++;},h=>{h.bookId='new';},h=>{h.chapterSelectionToken++;}]){
  const {host,calls,availability}=owner();host.ttsAvailabilityResolved=false;host.toggleTts();invalidate(host);
