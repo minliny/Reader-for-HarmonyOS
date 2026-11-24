@@ -1,6 +1,6 @@
 --- a/library/src/main/ets/components/PullToRefresh/PullToRefresh.ets
 +++ b/library/src/main/ets/components/PullToRefresh/PullToRefresh.ets
-@@ -12,457 +12,253 @@
+@@ -12,457 +12,264 @@
   * See the License for the specific language governing permissions and
   * limitations under the License.
   */
@@ -102,7 +102,6 @@
 -        this.refreshPoint2x = this.refreshRingOx + this.refreshRingRadius * Math.cos(Math.PI * -30 / 180);
 -        this.refreshPoint2y = this.refreshRingOy + this.refreshRingRadius * Math.sin(Math.PI * -30 / 180);
 -      }
--    }
 +  @BuilderParam customList: () => void;
 +  @BuilderParam customRefresh?: () => void;
 +  @BuilderParam customLoad?: () => void;
@@ -142,22 +141,23 @@
 +
 +  aboutToDisappear(): void {
 +    this.alive = false;
++    this.active = false;
 +    this.requestGeneration++;
 +    this.requestPending = false;
 +    this.gestureCancelled = true;
-+    this.resetPull(false);
++    this.resetPull(false, true);
 +  }
 +
 +  private handleEnabledChange(): void {
-+    if (!this.pullEnabled) this.cancelPull();
++    if (!this.pullEnabled) this.cancelPull(true);
 +  }
 +
 +  private handleAdmissionChange(): void {
 +    if ((this.pullDirection() === 'previous' && !this.hasPrevious) ||
-+      (this.pullDirection() === 'next' && !this.hasNext)) this.cancelPull();
++      (this.pullDirection() === 'next' && !this.hasNext)) this.cancelPull(true);
 +  }
 +
-+  private handleResetToken(): void { this.cancelPull(); }
++  private handleResetToken(): void { this.cancelPull(true); }
 +
 +  private triggerDistance(): number {
 +    return Math.max(120, Math.min(180, this.mHeightNumber * 0.2));
@@ -274,21 +274,31 @@
 +    }
 +  }
 +
-+  private cancelPull(): void {
++  private cancelPull(deferParent: boolean = false): void {
 +    this.gestureCancelled = true;
 +    this.requestGeneration++;
 +    this.requestPending = false;
-+    this.resetPull(this.alive);
++    this.resetPull(this.alive, deferParent);
 +  }
 +
-+  private resetPull(animated: boolean): void {
++  private resetPull(animated: boolean, deferParent: boolean = false): void {
 +    const reset = (): void => { this.trYTop = 0; this.trYBottom = 0; };
 +    if (animated) this.getUIContext().animateTo({ duration: Math.max(0, this.animationDuration) }, reset);
 +    else reset();
 +    this.state = IS_FREE;
 +    this.rawDistance = 0;
-+    this.onPull('', 0, false);
-+    this.setActive(false);
++    if (deferParent) {
++      const generation = this.requestGeneration;
++      // Keep the last parent activity until the current reset can deliver it.
++      void Promise.resolve().then((): void => {
++        if (!this.alive || generation !== this.requestGeneration || this.state !== IS_FREE || this.rawDistance !== 0) return;
++        this.onPull('', 0, false);
++        this.setActive(false);
++      });
++    } else {
++      this.onPull('', 0, false);
++      this.setActive(false);
+     }
    }
  
    build() {
@@ -679,7 +689,7 @@
    private getTranslateYOfRefresh(newTranslateY: number): number {
      if (this.refreshConfigurator !== undefined) {
        let maxTranslateY = this.refreshConfigurator.getMaxTranslate();
-@@ -523,90 +319,4 @@
+@@ -523,90 +330,4 @@
      return 0;
    }
  

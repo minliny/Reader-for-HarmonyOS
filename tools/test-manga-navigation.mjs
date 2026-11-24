@@ -8,6 +8,7 @@ import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {PhotoViewScaleModel} from '../entry/src/main/ets/features/manga/vendor/photoview/PhotoViewScaleModel.ts';
+import {sourceSwitchTriggerFocusId} from '../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts';
 import {createDefaultReaderSettingsSnapshot,normalizeReaderSettingsSnapshot,setReaderPageTurnStyle} from '../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts';
 const source=readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts',import.meta.url),'utf8').replace(/^import[^;]+;\n/gm,'').replace(/^export /gm,'');
 const Projection=new Function(`${stripTypeScriptTypes(source)};return MangaStripProjection`)();
@@ -48,9 +49,11 @@ function flushLayout(width,height) {
 }
 let xOffset=250;let clipped=100;let nativeWidth=1000;let nativeHeight=1000;
 const Surface=productionMotionMethods(surfaceURL,
- ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','changeFit','loginRequired','loginAndRetry','imageError','refreshImages','publish','requestedLast','measureVisibleWindow','openDirectory','openSourceSwitch','handleBack','positionIdentity','rememberVisible','restore','finishLayout','onViewportScroll','resizeViewport','changeZoom','toggleDirection','turnPage','saveVisible'],
+ ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','changeFit','loginRequired','loginAndRetry','imageError','publish','requestedLast','measureVisibleWindow','openDirectory','openSourceSwitch','handleBack','positionIdentity','rememberVisible','restore','finishLayout','onViewportScroll','resizeViewport','changeZoom','toggleDirection','turnPage','saveVisible',
+  'readerPanelForeground','openPanel','panelTriggerFocusId','invalidatePanelMotion','panelOpeningCurrent','cancelPanelOpening',
+  'dismissPanelKeyboard','preparePanelFonts','loadPanelFonts','panelCloseFocusId','closePanel','performPanelAction'],
  {setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'},LengthMetrics:{vp:value=>({value,unit:'vp'})},MangaLayoutFrame,
-  inputMethod:{getController:()=>({hideTextInput:async()=>{}})}, READER_FONT_NOTO_SERIF_SC_BOLD,
+  inputMethod:{getController:()=>({hideTextInput:async()=>{}})}, READER_FONT_NOTO_SERIF_SC_BOLD, sourceSwitchTriggerFocusId,
   prepareReaderFontFamily:async family=>{assert.equal(family,READER_FONT_NOTO_SERIF_SC_BOLD);},
   prepareMangaSheetFonts:async()=>true});
 const saved=[];const settings=[];
@@ -118,6 +121,9 @@ assert.doesNotMatch(JSON.stringify(diagnostics),/UNEXPECTED_DIAGNOSTIC|private\/
 console.log('PASS manga error hints and finite public diagnostics');
 
 let finishSave;const actions=[];
+Object.assign(owner, {sourceId:'s',bookId:'b',panelFocusGeneration:0,directoryOpenRevision:0,exiting:false,
+  isReaderIdentityCurrent:()=>true,panelTravel:()=>300,resetDirectoryOuterLayout(){},
+  directoryOuterIdentity:()=> 'current-directory',scheduleDirectoryOuterPosition(){},requestPanelFocus(){}});
 owner.saveVisible=()=>new Promise(resolve=>{finishSave=resolve;});
 owner.onDirectory=()=>actions.push('directory');owner.onSwitchSource=()=>actions.push('source');
 const directory=owner.openDirectory();assert.deepEqual(actions,[]);await directory;assert.equal(owner.panel,'directory');assert.deepEqual(actions,[]);

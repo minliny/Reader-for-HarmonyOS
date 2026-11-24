@@ -9,6 +9,8 @@ import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-pr
 import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
 import { MangaStripProjection } from '../entry/src/main/ets/features/manga/ui/MangaStripProjection.ts';
 import { PhotoViewScaleModel } from '../entry/src/main/ets/features/manga/vendor/photoview/PhotoViewScaleModel.ts';
+import { findReaderTheme } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
+import { readerIsExpandedWidth } from '../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts';
 
 // Model-only sizes reproduce the recorded proportions, not guest intrinsic
 // metadata or compositor pixels. Actual SDK Surface methods and List closures
@@ -38,6 +40,12 @@ const dataText = tree.statements.find(node => node.name?.getText(tree) === 'Mang
 const DataSource = new Function('MangaStripProjection', `${stripTypeScriptTypes(dataText)}; return MangaStripDataSource;`)(MangaStripProjection);
 const frames = Object.fromEntries(['MangaLayoutFrame', 'MangaSheetFrame'].map(name => [name,
   new Function('FrameCallback', 'ReaderPostLayoutFrame', `${stripTypeScriptTypes(tree.statements.find(node => node.name?.getText(tree) === name).getText(tree))}; return ${name};`)(class {}, actualReaderPostLayoutFrame())]));
+const windowSource = readFileSync(new URL('../entry/src/main/ets/app/ReaderWindowCoordinator.ts', import.meta.url), 'utf8');
+const windowTree = ts.createSourceFile('ReaderWindowCoordinator.ts', windowSource, ts.ScriptTarget.Latest, true);
+const windowValues = Object.fromEntries(['ReaderWindowChromeStyle', 'ReaderWindowPolicy'].map(name => {
+  const text = windowTree.statements.find(node => node.name?.getText(windowTree) === name).getText(windowTree);
+  return [name, new Function('findReaderTheme', `${stripTypeScriptTypes(text.replace(/^export /, ''))}; return ${name};`)(findReaderTheme)];
+}));
 let oldSource = source;
 for (const name of ['restore', 'publish', 'onViewportScroll']) {
   const member = declaration.members.find(node => node.name?.getText(tree) === name);
@@ -73,10 +81,13 @@ class ListScroller {
   }
   isAtEnd() { return this.ports.offset >= this.maximum(); }
 }
-function compiled(text) {
+function compiled(text, layoutFrame = frames.MangaLayoutFrame) {
   const properties = createArkUIPropertyRuntimeProbe();
   return createReaderBuilderProbe(text, members, {
-    ...properties.sdk, ...mangaSurfaceSdkDependencies, ...frames,
+    ...properties.sdk, ...mangaSurfaceSdkDependencies, ...frames, ...windowValues, MangaLayoutFrame: layoutFrame,
+    readerIsExpandedWidth,
+    ReaderWindowCoordinator: { ...mangaSurfaceSdkDependencies.ReaderWindowCoordinator, isTabletDevice: () => false,
+      requestReaderChrome() {}, async requestReaderWindowPolicy() {}, requestAppChrome() {}, async requestAppWindowPolicy() {} },
     MangaStripDataSource: DataSource, PhotoViewScaleModel, Scroller, ListScroller,
     ScrollAlign: { START: 0 }, LengthMetrics: { vp: value => ({ value, unit: 0 }) },
     ImageFit: { Fill: 0 }, ScrollDirection: { Horizontal: 0 }, TouchType: { Down: 0 },
@@ -89,13 +100,21 @@ function compiled(text) {
   }, properties.hooks).Component;
 }
 activePorts = {};
-const Current = compiled(source), Previous = compiled(oldSource);
+class HistoricalLayoutFrame extends frames.MangaLayoutFrame {
+  constructor(contextOrAction, actionOrStarted, started) {
+    if (typeof contextOrAction === 'function') {
+      const context = activePorts.owner.getUIContext();
+      super(context, contextOrAction, actionOrStarted);
+    } else super(contextOrAction, actionOrStarted, started);
+  }
+}
+const Current = compiled(source), Previous = compiled(oldSource, HistoricalLayoutFrame);
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const outcomes = [];
 function fixture(Component = Current, { tailKnown = false, prefixKnown = true, targetKnown = true } = {}) {
   const ports = { frames: [], jumps: [], saves: [], headers: [], leases: [], offset: 0, layoutReady: true, pendingOffset: undefined, closed: [] };
   activePorts = ports;
-  const owner = new Component(undefined, {}); ports.owner = owner;
+  const owner = new Component(undefined, { windowChromeActive: true }); ports.owner = owner;
   const geometry = new Map();
   const dimensions = { width: MODEL.width, height: MODEL.height, tileHeight: MODEL.tileHeight };
   if (prefixKnown) geometry.set(21, dimensions);

@@ -68,6 +68,7 @@ export struct PullToRefresh {
 
   aboutToDisappear(): void {
     this.alive = false;
+    this.active = false;
     this.requestGeneration++;
     this.requestPending = false;
     this.gestureCancelled = true;
@@ -215,12 +216,11 @@ export struct PullToRefresh {
     this.rawDistance = 0;
     if (deferParent) {
       const generation = this.requestGeneration;
-      const wasActive = this.active;
-      this.active = false;
+      // Keep the last parent activity until the current reset can deliver it.
       void Promise.resolve().then((): void => {
-        if (!this.alive || generation !== this.requestGeneration || this.active || this.rawDistance !== 0) return;
+        if (!this.alive || generation !== this.requestGeneration || this.state !== IS_FREE || this.rawDistance !== 0) return;
         this.onPull('', 0, false);
-        if (wasActive) this.onActivity(false);
+        this.setActive(false);
       });
     } else {
       this.onPull('', 0, false);

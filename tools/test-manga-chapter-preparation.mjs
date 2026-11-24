@@ -223,6 +223,31 @@ function completed(f, ch, intent = 'cache') {
 console.log('PASS actual Controller + Coordinator: protected first screen, 75-page complete receipt, departed preparation, A→B→A zero extra network/process, background no TTL/queue mutation and final CAS release');
 
 {
+  const active = chapter(8, 90);
+  let releasePrefetch, stillCurrent;
+  const held = new Promise(resolve => { releasePrefetch = resolve; });
+  const f = fixture([active], { optional: false, beforePrefetch: async (_ch, ordinal, current) => {
+    if (ordinal !== 4) return;
+    stillCurrent = current;
+    await held;
+  } });
+  const reader = new Controller(f.rt);
+  const unattached = new Controller(f.rt);
+  await reader.openPrepared(entry(active));
+  await until(() => stillCurrent !== undefined, 'the reader already owns active preparation');
+  try {
+    await unattached.close('chapter');
+    assert.ok(stillCurrent(), 'closing an unattached view must not cancel another reader’s current chapter');
+  } finally {
+    releasePrefetch();
+  }
+  await until(() => completed(f, active), 'current chapter completes with optional work disabled');
+  assert.equal(f.prefetches.at(-1).priority, 'chapter');
+  await reader.close();
+}
+console.log('PASS closing an unattached controller preserves the active chapter preparation and its priority');
+
+{
   const full = chapter(8, 2);
   let fail = true;
   const f = fixture([full], { beforePrefetch: async (_ch, ordinal) => {
@@ -535,12 +560,15 @@ console.log('PASS cancelled different/same-version refresh restores the still-vi
  assert.equal(c.visiblePages().find(page=>page.ordinal===0)?.status,'ready');assert.equal(c.chapter.manifest.manifestVersion,a.manifest.manifestVersion);
  assert.deepEqual(f.prefetches.filter(item=>item.chapterId==='/c84').map(item=>item.ordinal),[0,1,2],'real capacity failure stops fill immediately and preserves acquired pages');
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
- const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),['publish','displayChapterTitle','displayError']);
- const messages=[];
+ const {ReaderTransientFeedback,READER_FEEDBACK_BRIEF_MS,READER_TRANSIENT_TOAST_STORAGE_KEY}=await import('../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts');
+ const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),
+  ['publish','displayChapterTitle','displayError','notifyPreparationFailure','readerPanelForeground'],{READER_FEEDBACK_BRIEF_MS});
+ const messages=[],storage=new Map();
+ globalThis.AppStorage={get:key=>storage.get(key),setOrCreate(key,value){storage.set(key,value);if(key===READER_TRANSIENT_TOAST_STORAGE_KEY&&value.visible)messages.push(value.message);}};
  const surface=Object.assign(new Surface(),{controller:c,mounted:true,opened:true,error:'',publishedManifestVersion:a.manifest.manifestVersion,layoutGeneration:0,viewportGeneration:0,
   mountedTurnRowKey:'',horizontal:false,rememberVisible(){},notifyPublishedRows(){},
-  getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>messages.push(message)})}),
-  data:{projection:{publish:()=>false},totalCount:()=>0}});
+  appForeground:true,windowChromeActive:true,isReaderIdentityCurrent:()=>true,transientFeedback:new ReaderTransientFeedback(),
+  getUIContext:()=>({}),data:{projection:{publish:()=>false},totalCount:()=>0}});
  surface.publish();assert.equal(surface.error,'','background preparation does not become a global image error');
  assert.equal(c.preparationError,'MANGA_CHAPTER_CACHE_CAPACITY','the actual failure remains owned by preparation');
  assert.deepEqual(messages,['整章加载已暂停，缓存空间不足，可清理缓存或下载保留。']);
@@ -548,9 +576,10 @@ console.log('PASS cancelled different/same-version refresh restores the still-vi
  assert.equal(surface.opened,true);assert.equal(c.visiblePages()[0].status,'ready','feedback does not replace the readable body');
  const first=events.filter(error=>error==='MANGA_CHAPTER_CACHE_CAPACITY').length;
  const owner=Coordinator.forRuntime(f.rt);owner.startCurrent(a);await tick();assert.equal(events.filter(error=>error==='MANGA_CHAPTER_CACHE_CAPACITY').length,first,'same failure does not repeatedly notify');
- await c.openPrepared(entry(b));await until(()=>completed(f,b),'new chapter completes');surface.publish();assert.equal(surface.error,'','old chapter capacity feedback does not follow the new view');
+ await c.openPrepared(entry(b));await until(()=>completed(f,b),'new chapter completes');surface.publishedManifestVersion=c.chapter.manifest.manifestVersion;surface.publish();assert.equal(surface.error,'','old chapter capacity feedback does not follow the new view');
  await c.openPrepared(entry(a));fail=false;await c.refreshChapter(0);await until(()=>owner.states.get(chapterKey(a)).complete,'explicit retry after space recovery completes');
- assert.equal(c.preparationError,undefined);surface.publish();assert.equal(surface.error,'','complete retry clears only its preparation feedback');
+ assert.equal(c.preparationError,undefined);surface.publishedManifestVersion=c.chapter.manifest.manifestVersion;surface.publish();assert.equal(surface.error,'','complete retry clears only its preparation feedback');
+ surface.transientFeedback.reset();delete globalThis.AppStorage;
  await c.close();
 }
 console.log('PASS actual current-only capacity feedback retains readable pixels, stops filling, deduplicates failure, fences chapter changes and clears on complete retry');

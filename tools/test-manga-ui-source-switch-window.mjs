@@ -35,9 +35,9 @@ const dataEnd=source.indexOf('\n@Component',dataStart);
 const SourceSwitchCandidateDataSource=new Function('sourceSwitchCandidateKey',
   `${stripTypeScriptTypes(source.slice(dataStart,dataEnd).replace('@Observed\n',''))};return SourceSwitchCandidateDataSource;`)(sourceSwitchCandidateKey);
 const timers = new Map(); let nextTimer = 0;
-class LayoutFrame { constructor(action) { this.action = action; } }
+class LayoutFrame { constructor(_context, action) { this.action = action; } }
 const Controller = productionMotionMethods(page,
-  ['candidateKey', 'presentationCandidates', 'publishCandidates', 'acceptState', 'cancelPresentation', 'queueReorder', 'publishOrder', 'restoreAnchor',
+  ['candidateKey', 'presentationCandidates', 'publishCandidates', 'acceptState', 'notifyOrdinaryFailure', 'hasPendingRecovery', 'messageActionCurrent', 'cancelPresentation', 'queueReorder', 'publishOrder', 'restoreAnchor',
     'listTouch', 'selectCandidate', 'busy', 'isSweeping', 'requiresReconciliation', 'rollbackRequired', 'requestRefresh', 'statusText', 'errorText', 'listHeaderCount', 'listHeaderHeight', 'rowHeight', 'compactWindow',
     'frameHeight', 'frameWidth', 'drawerWidth', 'novelSafeLeft', 'novelSafeRight', 'narrowWindow', 'sideInset', 'novelFontScale', 'flowChrome', 'scrollBook',
     'headingHeight', 'discoveryHeight', 'columnsHeight', 'footerHeight', 'bookHeight', 'timingWidth', 'drawerHeight', 'safeTop', 'safeBottom', 'safeLeft', 'safeRight'],
@@ -45,7 +45,8 @@ const Controller = productionMotionMethods(page,
     ...novelPresentation, SOURCE_SWITCH_VISUAL, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1, windowRect:{width:390,height:844} }) },
     Curve: { EaseInOut: 'curve' }, ScrollAlign: { START: 'start' }, TouchType: { Down: 'down', Up: 'up', Cancel: 'cancel' },
     setTimeout: callback => { const id = ++nextTimer; timers.set(id, callback); return id; },
-    clearTimeout: id => timers.delete(id) });
+    clearTimeout: id => timers.delete(id),
+    readerMotionAnimateParam: id => { assert.equal(id, 'source.switch.list.update'); return {}; } });
 const key = candidate => sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl);
 const item = (id, latencyMs = 300, bookUrl = `${id}-book`) => ({ sourceId: id, bookUrl, bookName: '书', category: 'novel',
   sourceName: id, latencyMs, latencyKind: 'search', acquisitionState: 'discovered' });
@@ -54,9 +55,11 @@ function owner(initial = [], contentKind = 'manga') {
   let offset = 0;
   Object.assign(page, { contentKind, state: { kind: 'candidates', candidates: initial }, displayedCandidates: [], latestCandidates: [],
     candidateDataSource: new SourceSwitchCandidateDataSource(),
+    messageGeneration: 0, lastFeedbackIdentity: '',
+    transientFeedback: { show: (_context, _view, current) => current(), reset() {} },
     retestingKeys: [], pendingSearchKeys: new Set(), wasRefreshing: false, mounted: true, foreground: true,
     touching: false, scrolling: false, heldKey: '', selectedKey: '', selectionPending: false, listMounted: true,
-    firstVisibleIndex: 0, firstVisibleListIndex: 0, contextHeight: 0, statusHeight: 0, containerHeight:0, containerWidth:0, readerWindowMetricsRevision:-1, listStartInset: () => 0, reorderTimer: -1, presentationEpoch: 0, anchorEpoch: 0, restoringAnchor: false, reduceMotion: false,
+    firstVisibleIndex: 0, firstVisibleListIndex: 0, contextHeight: 0, statusHeight: 0, containerHeight:844, containerWidth:390, readerWindowMetricsRevision:-1, listStartInset: () => 0, reorderTimer: -1, presentationEpoch: 0, anchorEpoch: 0, restoringAnchor: false, reduceMotion: false,
     onSelectCandidate: candidate => selected.push(candidate), onStop: () => actions.push('stop'),
     onRetry: () => actions.push('retry'), onRefresh: () => actions.push('refresh'), onRollback: () => actions.push('rollback'),
     getUIContext: () => ({ animateTo: (_options, apply) => apply(), postFrameCallback: frame => frames.push(frame.action) }),
@@ -128,9 +131,9 @@ const dataEnd=source.indexOf('\n@Component',dataStart);
 const SourceSwitchCandidateDataSource=new Function('sourceSwitchCandidateKey',
   `${stripTypeScriptTypes(source.slice(dataStart,dataEnd).replace('@Observed\n',''))};return SourceSwitchCandidateDataSource;`)(sourceSwitchCandidateKey);
 const timers = new Map(); let nextTimer = 0;
-class LayoutFrame { constructor(action) { this.action = action; } }
+class LayoutFrame { constructor(_context, action) { this.action = action; } }
 const Controller = productionMotionMethods(page,
-  ['candidateKey', 'presentationCandidates', 'publishCandidates', 'acceptState', 'cancelPresentation', 'queueReorder', 'publishOrder', 'restoreAnchor',
+  ['candidateKey', 'presentationCandidates', 'publishCandidates', 'acceptState', 'notifyOrdinaryFailure', 'hasPendingRecovery', 'messageActionCurrent', 'cancelPresentation', 'queueReorder', 'publishOrder', 'restoreAnchor',
     'listTouch', 'selectCandidate', 'busy', 'isSweeping', 'requiresReconciliation', 'rollbackRequired', 'requestRefresh', 'statusText', 'errorText', 'listHeaderCount', 'listHeaderHeight', 'rowHeight', 'compactWindow',
     'frameHeight', 'frameWidth', 'drawerWidth', 'novelSafeLeft', 'novelSafeRight', 'narrowWindow', 'sideInset', 'novelFontScale', 'flowChrome', 'scrollBook',
     'headingHeight', 'discoveryHeight', 'columnsHeight', 'footerHeight', 'bookHeight', 'timingWidth', 'drawerHeight', 'safeTop', 'safeBottom', 'safeLeft', 'safeRight'],
@@ -138,7 +141,8 @@ const Controller = productionMotionMethods(page,
     ...novelPresentation, SOURCE_SWITCH_VISUAL, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1, windowRect:{width:390,height:844} }) },
     Curve: { EaseInOut: 'curve' }, ScrollAlign: { START: 'start' }, TouchType: { Down: 'down', Up: 'up', Cancel: 'cancel' },
     setTimeout: callback => { const id = ++nextTimer; timers.set(id, callback); return id; },
-    clearTimeout: id => timers.delete(id) });
+    clearTimeout: id => timers.delete(id),
+    readerMotionAnimateParam: id => { assert.equal(id, 'source.switch.list.update'); return {}; } });
 const key = candidate => sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl);
 const item = (id, latencyMs = 300, bookUrl = `${id}-book`) => ({ sourceId: id, bookUrl, bookName: '书', category: 'novel',
   sourceName: id, latencyMs, latencyKind: 'search', acquisitionState: 'discovered' });
@@ -147,9 +151,11 @@ function owner(initial = [], contentKind = 'manga') {
   let offset = 0;
   Object.assign(page, { contentKind, state: { kind: 'candidates', candidates: initial }, displayedCandidates: [], latestCandidates: [],
     candidateDataSource: new SourceSwitchCandidateDataSource(),
+    messageGeneration: 0, lastFeedbackIdentity: '',
+    transientFeedback: { show: (_context, _view, current) => current(), reset() {} },
     retestingKeys: [], pendingSearchKeys: new Set(), wasRefreshing: false, mounted: true, foreground: true,
     touching: false, scrolling: false, heldKey: '', selectedKey: '', selectionPending: false, listMounted: true,
-    firstVisibleIndex: 0, firstVisibleListIndex: 0, contextHeight: 0, statusHeight: 0, containerHeight:0, containerWidth:0, readerWindowMetricsRevision:-1, listStartInset: () => 0, reorderTimer: -1, presentationEpoch: 0, anchorEpoch: 0, restoringAnchor: false, reduceMotion: false,
+    firstVisibleIndex: 0, firstVisibleListIndex: 0, contextHeight: 0, statusHeight: 0, containerHeight:844, containerWidth:390, readerWindowMetricsRevision:-1, listStartInset: () => 0, reorderTimer: -1, presentationEpoch: 0, anchorEpoch: 0, restoringAnchor: false, reduceMotion: false,
     onSelectCandidate: candidate => selected.push(candidate), onStop: () => actions.push('stop'),
     onRetry: () => actions.push('retry'), onRefresh: () => actions.push('refresh'), onRollback: () => actions.push('rollback'),
     getUIContext: () => ({ animateTo: (_options, apply) => apply(), postFrameCallback: frame => frames.push(frame.action) }),
@@ -196,9 +202,9 @@ const dataEnd=source.indexOf('\n@Component',dataStart);
 const SourceSwitchCandidateDataSource=new Function('sourceSwitchCandidateKey',
   `${stripTypeScriptTypes(source.slice(dataStart,dataEnd).replace('@Observed\n',''))};return SourceSwitchCandidateDataSource;`)(sourceSwitchCandidateKey);
 const timers = new Map(); let nextTimer = 0;
-class LayoutFrame { constructor(action) { this.action = action; } }
+class LayoutFrame { constructor(_context, action) { this.action = action; } }
 const Controller = productionMotionMethods(page,
-  ['candidateKey', 'presentationCandidates', 'publishCandidates', 'acceptState', 'cancelPresentation', 'queueReorder', 'publishOrder', 'restoreAnchor',
+  ['candidateKey', 'presentationCandidates', 'publishCandidates', 'acceptState', 'notifyOrdinaryFailure', 'hasPendingRecovery', 'messageActionCurrent', 'cancelPresentation', 'queueReorder', 'publishOrder', 'restoreAnchor',
     'listTouch', 'selectCandidate', 'busy', 'isSweeping', 'requiresReconciliation', 'rollbackRequired', 'requestRefresh', 'statusText', 'errorText', 'listHeaderCount', 'listHeaderHeight', 'rowHeight', 'compactWindow',
     'frameHeight', 'frameWidth', 'drawerWidth', 'novelSafeLeft', 'novelSafeRight', 'narrowWindow', 'sideInset', 'novelFontScale', 'flowChrome', 'scrollBook',
     'headingHeight', 'discoveryHeight', 'columnsHeight', 'footerHeight', 'bookHeight', 'timingWidth', 'drawerHeight', 'safeTop', 'safeBottom', 'safeLeft', 'safeRight'],
@@ -206,7 +212,8 @@ const Controller = productionMotionMethods(page,
     ...novelPresentation, SOURCE_SWITCH_VISUAL, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1, windowRect:{width:390,height:844} }) },
     Curve: { EaseInOut: 'curve' }, ScrollAlign: { START: 'start' }, TouchType: { Down: 'down', Up: 'up', Cancel: 'cancel' },
     setTimeout: callback => { const id = ++nextTimer; timers.set(id, callback); return id; },
-    clearTimeout: id => timers.delete(id) });
+    clearTimeout: id => timers.delete(id),
+    readerMotionAnimateParam: id => { assert.equal(id, 'source.switch.list.update'); return {}; } });
 const key = candidate => sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl);
 const item = (id, latencyMs = 300, bookUrl = `${id}-book`) => ({ sourceId: id, bookUrl, bookName: '书', category: 'novel',
   sourceName: id, latencyMs, latencyKind: 'search', acquisitionState: 'discovered' });
@@ -215,9 +222,11 @@ function owner(initial = [], contentKind = 'manga') {
   let offset = 0;
   Object.assign(page, { contentKind, state: { kind: 'candidates', candidates: initial }, displayedCandidates: [], latestCandidates: [],
     candidateDataSource: new SourceSwitchCandidateDataSource(),
+    messageGeneration: 0, lastFeedbackIdentity: '',
+    transientFeedback: { show: (_context, _view, current) => current(), reset() {} },
     retestingKeys: [], pendingSearchKeys: new Set(), wasRefreshing: false, mounted: true, foreground: true,
     touching: false, scrolling: false, heldKey: '', selectedKey: '', selectionPending: false, listMounted: true,
-    firstVisibleIndex: 0, firstVisibleListIndex: 0, contextHeight: 0, statusHeight: 0, containerHeight:0, containerWidth:0, readerWindowMetricsRevision:-1, listStartInset: () => 0, reorderTimer: -1, presentationEpoch: 0, anchorEpoch: 0, restoringAnchor: false, reduceMotion: false,
+    firstVisibleIndex: 0, firstVisibleListIndex: 0, contextHeight: 0, statusHeight: 0, containerHeight:844, containerWidth:390, readerWindowMetricsRevision:-1, listStartInset: () => 0, reorderTimer: -1, presentationEpoch: 0, anchorEpoch: 0, restoringAnchor: false, reduceMotion: false,
     onSelectCandidate: candidate => selected.push(candidate), onStop: () => actions.push('stop'),
     onRetry: () => actions.push('retry'), onRefresh: () => actions.push('refresh'), onRollback: () => actions.push('rollback'),
     getUIContext: () => ({ animateTo: (_options, apply) => apply(), postFrameCallback: frame => frames.push(frame.action) }),

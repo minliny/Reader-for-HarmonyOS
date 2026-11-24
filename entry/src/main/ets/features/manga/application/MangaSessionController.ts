@@ -804,7 +804,7 @@ export class MangaSessionController {
 
   close(intent: 'exit' | 'chapter' | 'candidate' = 'exit'): Promise<void> {
     const closing = intent === 'exit' ? this.preparation?.close() : undefined;
-    if (intent === 'chapter') this.preparation?.leaveCurrent(this.chapterData);
+    if (intent === 'chapter' && this.chapterData !== undefined) this.preparation?.leaveCurrent(this.chapterData);
     this.releaseView();
     return closing ?? Promise.resolve();
   }

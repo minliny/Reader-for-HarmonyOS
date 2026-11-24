@@ -1,4 +1,5 @@
 import { resolveEtsLoaderRoot } from './tool-environment.mjs';
+import { readerHostFilesDirectory } from '../../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -112,7 +113,7 @@ export function fixture(options={},productionSource=hostSource) {
   const compileHost=()=>{
     const mangaReplace=compile(read('app/ReaderAtomicSnapshotFile.ts'),'replaceReaderAtomicSnapshot',{fileIo:mangaFileIo});
     const mangaIntentModule=compile(read('features/manga/application/MangaSourceSwitchIntents.ts'),'{MangaSourceSwitchIntents,MangaSwitchRecoveryError}',
-      {...common,...mangaSwitch,fileIo:mangaFileIo,replaceReaderAtomicSnapshot:mangaReplace,
+      {...common,...mangaSwitch,fileIo:mangaFileIo,replaceReaderAtomicSnapshot:mangaReplace,readerHostFilesDirectory,
         util:{generateRandomUUID:()=>`00000000-0000-4000-8000-${String(++uuid).padStart(12,'0')}`}});
     MangaSwitchRecoveryError=mangaIntentModule.MangaSwitchRecoveryError;
     const {MangaSourceSwitchIntents}=mangaIntentModule;

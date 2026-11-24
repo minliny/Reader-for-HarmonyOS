@@ -111,7 +111,8 @@ Reader patch. Do not retain two production pull engines.
 
 ## API 23 animation context adaptation
 
-The reset uses the mounted component UIContext.animateTo instead of the deprecated
-global animateTo. Duration, reset callback, resistance and chapter admission stay
-unchanged. The complete reader.patch and vendored hashes were updated together;
-the upstream commit, original-file hashes and Apache-2.0 license remain fixed.
+The reset uses the mounted component's `UIContext.animateTo`. When an ArkUI
+property watcher requests a reset, the generation-checked notification is deferred
+until after the parent update. Coalesced watchers retain the active parent state
+until the current reset delivers one release. The complete patch and source lock
+record these changes on the pinned upstream and Apache-2.0 license.

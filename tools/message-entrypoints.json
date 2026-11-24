@@ -532,14 +532,14 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.performMoreAction::shared.transient",
+      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.refreshImages::shared.transient",
       "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
       "owner": "MangaReadingSurface",
-      "member": "performMoreAction",
+      "member": "refreshImages",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
-      "effectiveHost": "当前漫画 reader 的 mounted、sourceId/bookId、presentationGeneration、isReaderIdentityCurrent 与 windowChromeActive；章边界还保留 boundaryGeneration。",
-      "retireRule": "退出/身份变化、章边界代次退役后拒绝旧展示；原图像与章节控制器保留自己的取消、回退和资源释放。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
+      "effectiveHost": "当前前景漫画 reader、章节控制器与刷新结果对应的章节。",
+      "retireRule": "退出、书籍或章节 owner 退役时拒绝旧展示；只有成功投影新版本才提示已更新，取消和待确认恢复由原章节 owner 保留。",
       "status": "registered-source-entry"
     },
     {
@@ -1998,6 +1998,17 @@
       "effectiveHost": "当前 SourceTools snapshot 的原 debug session 和 debugLogs 逐项事实。",
       "retireRule": "原 debug session/投影变化更新日志；退场取消原订阅/分派，不把日志显示当作任务完成。",
       "reason": "调试日志是任务输出，不作为每行 Toast 或待处理通知。",
+      "status": "dedicated-existing-surface"
+    },
+    {
+      "id": "DEDICATED-MANGA-CHAPTER-REFRESH",
+      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
+      "owner": "MangaReadingSurface",
+      "member": "refreshProgress",
+      "category": "漫画本章刷新进度",
+      "effectiveHost": "当前前景漫画 reader 的已打开章节与原刷新操作，面板和章末打开时暂退。",
+      "retireRule": "原刷新返回或当前 reader 退场时结束进度展示；图像和位置继续由章节控制器管理。",
+      "reason": "原章节视口上方复用消息文字样式与原生 LoadingProgress，保留图像和底页输入。",
       "status": "dedicated-existing-surface"
     },
     {

@@ -189,6 +189,8 @@ for (const id of selected) {
 
 async function shortFallbackInsets() {
   const { boundedSurfaceSdk, boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const { readerEditingSdk } = await import('./lib/reader-editing-sdk-probe.mjs');
+  const { ReaderEditingScrollBinding } = readerEditingSdk();
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
   const { selectedProductionClasses } = await import('./lib/selected-production-methods.mjs');
   const snapshot = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts');
@@ -208,10 +210,10 @@ async function shortFallbackInsets() {
   function check(candidate = pageSource, listCandidate = listSource) {
     for (const flowing of [true, false]) {
       const sdk = boundedSurfaceSdk();
-      const start = flowing ? 360 : 280, end = 18, moves = [], offsets = [];
+      const start = flowing ? 360 : 280, end = 18, moves = [], offsets = [], footers = [];
       const page = createReaderBuilderProbe(candidate,
-        ['mangaContent', 'mangaFlatList', 'mangaFlatPrefix', 'mangaToolbar', 'scrollMangaCurrent', 'mangaHeightHandler'], {
-          ...sdk.deps, ...fonts, visual, ReaderDirectoryList: Captured,
+        ['mangaContent', 'mangaFlatList', 'mangaFlatPrefix', 'mangaToolbar', 'mangaSummary', 'scrollMangaCurrent', 'mangaHeightHandler'], {
+          ...sdk.deps, ...fonts, visual, ReaderDirectoryList: Captured, EdgeEffect: { Spring: 'spring' },
           ReaderDirectoryToolbar: Captured, MangaDirectoryCurrentFooter: Captured, ReaderDirectoryNavigationSurface: Captured,
           ScrollAlign: { START: 'start' }, LengthMetrics: { vp: value => value },
         }, { ...sdk.hooks, childSources: {
@@ -222,11 +224,12 @@ async function shortFallbackInsets() {
       Object.assign(page, {
         geometry: { content: { frame: { left: 18, right: 18, width: 330 }, startInset: start, endInset: end } },
         listScroller: { scrollToIndex: (...args) => moves.push(args) },
+        editingScroll: new ReaderEditingScrollBinding(), directoryPublication: new snapshot.ReaderDirectoryDataPublication(),
         mangaFlowFooter: () => flowing, mangaContentTopInset: () => start, mangaVisibleTopInset: () => 80,
         mangaLayoutEntries: () => [], directoryListIsCurrent: () => true, mangaScrollOffset: 0,
         onMangaScrollOffset: value => offsets.push(value), appThemeScheme: 'day', bookTitle: '长标题',
         mangaToolsHeight: 250, toolsMeasurement: { id: 'toolbar', mount() {}, unmount() {} },
-        flowToolsMeasurement: { id: 'flow-toolbar', mount() {}, unmount() {} },
+        flowFooterMeasurement: { id: 'fallback-footer' }, mangaFlowSummary: measurement => footers.push(measurement),
         admittedIdentity: 'current', admittedEntries: [], interactive: true, viewportWidth: 366, navigationActive: false,
         mangaNarrow: () => true, directoryScrollLayout: () => new scrollLayout.ReaderScrollLayout(start, end, 'contentOffset'),
         mangaFontScale: () => 1, mangaSummaryLabel: () => '60 个条目', searchDraft: '', ascending: true,
@@ -245,15 +248,18 @@ async function shortFallbackInsets() {
       const viewport = [...list.nodes.values()].find(node => node.type === 'List');
       assert.equal(viewport.contentStartOffset, flowing ? 0 : start);
       assert.equal(viewport.contentEndOffset, flowing ? 0 : end);
-      const spacers = [...list.nodes.values()].filter(node => node.type === 'ListItem' && typeof node.height === 'number');
-      assert.deepEqual(spacers.map(node => node.height), flowing ? [start, end] : []);
+      const prefix = [...list.nodes.values()].filter(node => node.type === 'ListItem' && typeof node.height === 'number');
+      const tail = [...list.nodes.values()].filter(node => node.type === 'ListItem' && node.padding?.bottom === end);
+      assert.deepEqual(prefix.map(node => node.height), flowing ? [start] : []);
+      assert.equal(tail.length, flowing ? 1 : 0);
       if (flowing) {
-        spacers[0].create[0](spacers[0].id, true);
-        const inline = [...page.nodes.values()].find(node => node.id === 'flow-toolbar');
-        assert.ok(inline, 'actual native prefix callback mounts the original toolbar in scroll content');
-        assert.equal(inline.position, undefined);
-        assert.equal(inline.hitTestBehavior, 'HitTestMode.Default');
-        assert.ok([...page.nodes.values()].some(node => node.type === 'Blank' && node.height === start - 250));
+        prefix[0].create[0](prefix[0].id, true);
+        tail[0].create[0](tail[0].id, true);
+        assert.ok(footers.length > 0 && footers.every(owner => owner === page.flowFooterMeasurement));
+        assert.ok([...page.nodes.values()].some(node => node.type === 'Blank' && node.height === start),
+          'actual native prefix reserves the complete editor space');
+        assert.equal([...page.children.values()].filter(node => node.params.variant === 'manga-catalog').length, 1,
+          'materializing the prefix does not mount a second editor');
       }
       child.params.onScrollOffset(flowing ? 0 : -start);
       child.params.onScrollOffset(flowing ? 93 : -start + 93);
@@ -262,13 +268,12 @@ async function shortFallbackInsets() {
       page.scrollMangaCurrent(4, 12);
       assert.deepEqual(moves, [[flowing ? 5 : 4, false, 'start', { extraOffset: (flowing ? 0 : start) - 92 }]],
         'canonical chapter index and painted header clearance reach the current native List');
-      const overlay = [...page.nodes.values()].find(node => node.id === 'toolbar');
-      if (flowing) assert.equal(overlay, undefined, 'short flat prefix has one actual toolbar producer');
-      else assert.equal(overlay.hitTestBehavior, 'HitTestMode.Transparent');
-      const toolbar = [...page.nodes.values()].find(node => node.type === '__Common__' &&
-        node.hitTestBehavior === 'HitTestMode.BLOCK_HIERARCHY');
-      assert.equal(toolbar !== undefined, !flowing,
-        'overlay actions stop lower siblings, inline actions keep their native List ancestor');
+      assert.equal([...page.nodes.values()].filter(node => node.id === 'toolbar').length, 1,
+        'both height layouts use the same overlay editor contract');
+      const overlay = [...page.nodes.values()].find(node => node.position?.x === 18);
+      assert.equal(overlay.hitTestBehavior, 'HitTestMode.Transparent', 'editor wrapper leaves the list scrollable');
+      assert.ok([...page.nodes.values()].some(node => node.type === '__Common__' &&
+        node.hitTestBehavior === 'HitTestMode.Default'), 'editor retains its own input boundary');
     }
   }
   check();
@@ -276,20 +281,23 @@ async function shortFallbackInsets() {
     ['native short offsets', pageSource.replace('materializedInsets: this.mangaFlowFooter(),', ''), listSource],
     ['chapter prefix index', pageSource.replace('index + (flowing ? 1 : 0)', 'index'), listSource],
     ['short content origin', pageSource.replace('offset + (this.mangaFlowFooter() ? 0 : this.mangaContentTopInset())', 'offset + this.mangaContentTopInset()'), listSource],
-    ['summary hit boundary', pageSource.replace('inline ? HitTestMode.Default : HitTestMode.Transparent', 'HitTestMode.Default'), listSource],
-    ['toolbar action boundary', pageSource.replace('inline ? HitTestMode.Default : HitTestMode.BLOCK_HIERARCHY', 'HitTestMode.Default'), listSource],
-    ['duplicate overlay', pageSource.replace('if (!this.mangaFlowFooter()) { this.mangaToolbar(identity); }', 'this.mangaToolbar(identity);'), listSource],
+    ['editor wrapper hit boundary', pageSource.replace('inline ? HitTestMode.Default : HitTestMode.Transparent', 'HitTestMode.Default'), listSource],
+    ['toolbar action boundary', pageSource.replace('}).hitTestBehavior(HitTestMode.Default);', '}).hitTestBehavior(HitTestMode.None);'), listSource],
+    ['duplicate editor', pageSource.replace('this.mangaToolbar(identity);', 'this.mangaToolbar(identity); this.mangaToolbar(identity);'), listSource],
     ['missing inline producer', pageSource, listSource.replace('ListItem() { this.prefixBuilder(); }.width', 'ListItem() {}.width')],
     ['missing scroll spacers', pageSource, listSource.replaceAll('if (this.materializedInsets) {', 'if (false) {')],
   ]) {
     assert.ok(page !== pageSource || list !== listSource, label);
     assert.throws(() => check(page, list), assert.AssertionError, label);
   }
-  console.log('PASS actual short/full SDK List content, canonical index, signed offsets and one inline/overlay toolbar producer with eight rejected regressions.');
+  console.log('PASS actual short/full SDK List content, canonical index, signed offsets and a single persistent overlay editor with eight rejected regressions.');
 }
 
 async function shortGridPrefix() {
   const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const { readerEditingSdk } = await import('./lib/reader-editing-sdk-probe.mjs');
+  const { ReaderEditingScrollBinding } = readerEditingSdk();
+  const { ReaderDirectoryDataPublication } = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts');
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
   const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
   const { ReaderScrollLayout } = await import('../entry/src/main/ets/ui/layout/ReaderScrollLayout.ts');
@@ -305,25 +313,28 @@ async function shortGridPrefix() {
   for (const flowing of [true, false]) {
     const sdk = boundedSurfaceSdk(), overlays = [], prefixes = [];
     const page = createReaderBuilderProbe(pageSource, ['mangaContent'], {
-      ...sdk.deps, visual, ReaderDirectoryNavigationSurface: Captured,
+      ...sdk.deps, visual, ReaderDirectoryNavigationSurface: Captured, EdgeEffect: { Spring: 'spring' },
     }, { ...sdk.hooks, childSources: { ReaderDirectoryNavigationSurface: surfaceSource } }).owner;
     Object.assign(page, { admittedIdentity: 'current', admittedEntries: [], viewportWidth: 366,
       geometry: { content: { frame: { left: 18, right: 18, width: 330 }, startInset: 360 } },
       mangaFlowFooter: () => flowing, navigationActive: true, interactive: true,
       mangaVisibleTopInset: () => 98, mangaNarrow: () => true, directoryScrollLayout: () => new ReaderScrollLayout(360, 18, 'contentOffset'),
+      editingScroll: new ReaderEditingScrollBinding(), directoryPublication: new ReaderDirectoryDataPublication(),
       mangaToolbar: () => overlays.push('overlay'),
-      treeToolsMeasurement: { id: 'semantic-tools' }, treeFooterMeasurement: { id: 'semantic-footer' },
-      mangaFlatPrefix: (identity, tools, footer) => prefixes.push({ identity, tools, footer }),
+      treeFooterMeasurement: { id: 'semantic-footer' },
+      mangaFlatPrefix: () => prefixes.push('reserved editor space'),
+      mangaFlowSummary: footer => prefixes.push(footer),
     });
     page.mangaContent();
     const navigation = [...page.children.values()].find(child => child instanceof Captured);
     assert.equal(navigation.params.headerCount, flowing ? 1 : 0, 'current short semantic Grid receives the native prefix contract');
     assert.equal(navigation.params.prefixHeight, flowing ? 360 : 0);
     assert.equal(navigation.params.prefixIdentity, 'current');
-    assert.equal(overlays.length, flowing ? 0 : 1);
+    assert.equal(overlays.length, 1);
     navigation.params.prefixBuilder();
-    assert.deepEqual(prefixes, [{ identity: 'current', tools: page.treeToolsMeasurement, footer: page.treeFooterMeasurement }],
-      'semantic and fallback native producers have independent measurement owners');
+    navigation.params.mangaTailBuilder();
+    assert.deepEqual(prefixes, ['reserved editor space', page.treeFooterMeasurement],
+      'the semantic Grid reserves editor space and measures its own footer');
   }
   let anchor;
   const Policy = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderDirectoryNavigationList.ets', import.meta.url),
@@ -372,15 +383,16 @@ async function shortGridPrefix() {
 
   const nativeIndexPolicy = Object.assign(new Policy(), policy, { headerCount: 1 });
   function checkGrid(candidate = listSource) {
-    const sdk = boundedSurfaceSdk(), prefixCalls = [], firstLayouts = [];
-    const grid = createReaderBuilderProbe(candidate, ['build', 'prefixBuilder', 'emptyBuilder', 'emptyPrefix'], { ...sdk.deps,
+    const sdk = boundedSurfaceSdk(), prefixCalls = [], tailCalls = [], firstLayouts = [];
+    const grid = createReaderBuilderProbe(candidate, ['build', 'prefixBuilder', 'mangaTailBuilder', 'emptyBuilder', 'emptyPrefix'], { ...sdk.deps,
+      MANGA_DIRECTORY_VISUAL: visual,
       LazyForEach: new Proxy({}, { get: () => () => {} }),
       ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
     }, sdk.hooks).owner;
     Object.assign(grid, { mangaDisplay: true, view: { ...view }, scroller: {}, dataSource: { coreIndex: index => index },
       nativeHeaderCount: () => 1, mangaGridLayoutOptions: () => options, prefixHeight: 360,
       prefixBuilder: () => prefixCalls.push('current'), mangaContentStartOffset: () => 360,
-      mangaContentEndOffset: () => 18, listPaddingX: 18, listPaddingRight: 18,
+      mangaContentEndOffset: () => 18, mangaTailBuilder: () => tailCalls.push('current'), listPaddingX: 18, listPaddingRight: 18,
       mangaColor: () => '#000000', interactionEnabled: true, initialPositionPending: true, mangaViewportWidth: 330,
       dataIndex: index => nativeIndexPolicy.dataIndex(index),
       onFirstLayout: () => firstLayouts.push(grid.mangaViewportHeight),
@@ -389,9 +401,11 @@ async function shortGridPrefix() {
     grid.initialRender();
     const viewport = [...grid.nodes.values()].find(node => node.type === 'Grid');
     assert.equal(viewport.contentStartOffset, 0); assert.equal(viewport.contentEndOffset, 0);
-    const spacers = [...grid.nodes.values()].filter(node => node.type === 'GridItem');
-    assert.deepEqual(spacers.map(node => node.height), [360, 18]);
-    spacers[0].create[0](spacers[0].id, true); assert.deepEqual(prefixCalls, ['current']);
+    const items = [...grid.nodes.values()].filter(node => node.type === 'GridItem');
+    assert.deepEqual(items.map(node => node.height), [360, undefined]);
+    assert.equal(items[1].padding.bottom, 18);
+    items[0].create[0](items[0].id, true); assert.deepEqual(prefixCalls, ['current']);
+    items[1].create[0](items[1].id, true); assert.deepEqual(tailCalls, ['current']);
     viewport.onScrollIndex(0, 1); assert.equal(grid.firstVisibleIndex, -1);
     viewport.onScrollIndex(2, 3); assert.equal(grid.firstVisibleIndex, 1);
     viewport.onAreaChange({}, { width: 330, height: 168 }); assert.deepEqual(firstLayouts, [168]);

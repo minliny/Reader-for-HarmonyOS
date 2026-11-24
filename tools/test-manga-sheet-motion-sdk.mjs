@@ -58,7 +58,7 @@ const methods = [...mangaDirectoryAdaptiveMembers, 'openPanel', 'closePanel', 'i
   'directoryTools', 'directoryCurrentFooter', 'directoryCurrentTitle', 'directoryCurrentIndex', 'directoryCurrentPagePosition', 'pageOrdinal', 'adjacentChapter', 'selectAdjacentChapter', 'directoryBody', 'panelContentInset', 'directoryFallback', 'modePanel', 'settingsPanel', 'morePanel', 'moreActions', 'performMoreAction', 'performMorePanelAction', 'sectionTitle', 'sheetChoice', 'fitLine', 'choiceIcon',
   'isActionPanel', 'actionPanelInsets', 'actionPanelSurface', 'actionPanelHeader', 'actionPanelBody', 'actionHeaderHeight',
   'directorySheet', 'directoryBottomHeader', 'directorySideHeader', 'measureDirectorySheetHeader', 'chromeScheme',
-  'panelInputCurrent', 'preferencePanelInputCurrent', 'requestPanelFocus', 'panelCloseFocusId', 'panelTriggerFocusId',
+  'panelInputCurrent', 'downloadPanelInputCurrent', 'ownsDownloadActions', 'preferencePanelInputCurrent', 'requestPanelFocus', 'panelCloseFocusId', 'panelTriggerFocusId',
   'isSheetChoiceSelected', 'paperColor', 'surfaceColor', 'inkColor', 'mutedColor', 'faintColor', 'lineColor',
   'softSurfaceColor', 'greenColor', 'accentColor', 'aboutToDisappear', 'handleBack', 'openDirectory',
   'showDetail', 'openSourceSwitch', 'selectDirectoryTarget', 'displayedBrightnessPercent', 'resetMangaPreferences',

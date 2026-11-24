@@ -31,7 +31,8 @@ const Controller = productionMotionMethods(files.controller, ['close']);
   controller.releaseView=()=>events.push('pixels.released');
   const Surface=productionMotionMethods(files.surface,['handleBack','performPanelAction']);
   const surface=Object.assign(new Surface(),{mounted:true,controller,panel:'',panelPhase:'closed',panelGeneration:0,panelActionGeneration:0,
-    exiting:false,saveVisible:async()=>events.push('progress.saved'),closePanel:async()=>true,
+    exiting:false,saveVisible:async()=>events.push('progress.saved'),closePanel:async()=>true,requestPanelFocus() {},
+    onExitCancelled:()=>assert.fail('successful navigation must not be cancelled'),
     onBack:()=>{events.push('exit.callback');assert.ok(events.includes('session.released'));assert.ok(events.includes('pixels.released'));}});
   const exiting=surface.handleBack('navigation');await tick();
   assert.equal(events.includes('exit.callback'),false,'the route/delete callback must wait for final session cleanup');
@@ -52,13 +53,14 @@ const Controller = productionMotionMethods(files.controller, ['close']);
 function surfaceFixture(shell, previousIdentity) {
   const events = [], intent = [], counts = { close: 0, leave: 0, releaseView: 0 };
   let surface, retentionChecks = 0;
-  const Surface = productionMotionMethods(files.surface, ['rollbackChapterImages', 'aboutToDisappear'], {
+  const Surface = productionMotionMethods(files.surface, ['rollbackChapterImages', 'aboutToDisappear', 'invalidatePanelMotion'], {
     ReaderWindowCoordinator: { brightness: () => ({ release: async token => {
       assert.equal(token, 41); assert.equal(surface.mounted, false); events.push('brightness.release');
     } }) },
   });
   surface = new Surface();
   const controller = new Controller();
+  controller.chapterData = { manifest: { chapter: { sourceId: 'source', bookId: 'manga', chapterId: '/old' }, manifestVersion: 'old' } };
   controller.preparation = {
     close: async () => { counts.close++; events.push('preparation.close'); },
     leaveCurrent: () => { counts.leave++; events.push('preparation.leaveCurrent'); },
@@ -75,6 +77,8 @@ function surfaceFixture(shell, previousIdentity) {
     layoutGeneration: 2, viewportGeneration: 3, loginGeneration: 4, presentationGeneration: 5,
     brightnessOwner: 41, brightnessGeneration: 6,
     confirmedPosition: { old: true }, pendingTurnOrdinal: 3, mountedTurnRowKey: 'old-row',
+    transientFeedback:{reset(){}},rollbackChapterImages:new Map(),withdrawExitRequest:()=>events.push('exit.withdraw'),
+    panelGeneration: 0, panelActionGeneration: 0, panelFocusGeneration: 0,
     panel: 'directory', panelPhase: 'open', panelOffset: 60, panelScrimOpacity: 0.4,
     panelFontsReady: true, panelFontGeneration: 7,
     panelCloseTask: Promise.resolve(), panelCloseResolve: settled => { assert.equal(settled, false); events.push('panel.cancelled'); },
