@@ -4016,7 +4016,7 @@ export struct ReadingExperience {
       lineHeight: readerAppearanceLineHeight(this.appearanceSnapshot), letterSpacing: this.appearanceSnapshot.letterSpacing,
       color: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink,
       alignment: readerAppearanceUsesJustify(this.appearanceSnapshot.alignment) ? TextAlign.JUSTIFY : TextAlign.Start,
-      breakAll: false,
+      breakAll: false, bookBody: true,
     };
     if (!this.unicodeProbeVerified) this.nativeTextMeasurement.measure(this.getUIContext(), UNICODE_PROBE, this.unicodeProbeController, style);
     this.measureNativeChapterTitle();
@@ -4051,7 +4051,7 @@ export struct ReadingExperience {
         letterSpacing: this.appearanceSnapshot.letterSpacing,
         color: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink,
         alignment: readerAppearanceUsesJustify(this.appearanceSnapshot.alignment) ? TextAlign.JUSTIFY : TextAlign.Start,
-        breakAll: false,
+        breakAll: false, bookBody: true,
         indentVp: paragraph.isParagraphStart ?
           this.getUIContext().px2vp(this.getUIContext().fp2px(
             readerAppearanceParagraphIndent(this.appearanceSnapshot.fontSize, this.appearanceSnapshot.indent))) : 0,
@@ -5519,7 +5519,7 @@ export struct ReadingExperience {
                 lineHeight: readerAppearanceLineHeight(this.appearanceSnapshot), letterSpacing: this.appearanceSnapshot.letterSpacing,
                 color: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink,
                 alignment: readerAppearanceUsesJustify(this.appearanceSnapshot.alignment) ? TextAlign.JUSTIFY : TextAlign.Start,
-                breakAll: false, indentVp: paragraph.isParagraphStart ?
+                breakAll: false, bookBody: true, indentVp: paragraph.isParagraphStart ?
                   this.getUIContext().px2vp(this.getUIContext().fp2px(
             readerAppearanceParagraphIndent(this.appearanceSnapshot.fontSize, this.appearanceSnapshot.indent))) : 0 } };
             if (!transferred) {
@@ -5862,7 +5862,7 @@ export struct ReadingExperience {
               lineHeight: readerAppearanceLineHeight(this.appearanceSnapshot), letterSpacing: this.appearanceSnapshot.letterSpacing,
               color: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink,
               alignment: readerAppearanceUsesJustify(this.appearanceSnapshot.alignment) ? TextAlign.JUSTIFY : TextAlign.Start,
-              breakAll: false, indentVp: this.getUIContext().px2vp(this.getUIContext().fp2px(
+              breakAll: false, bookBody: true, indentVp: this.getUIContext().px2vp(this.getUIContext().fp2px(
                 readerAppearanceParagraphIndent(this.appearanceSnapshot.fontSize, this.appearanceSnapshot.indent))) },
           };
           const fragments: ReadingSurfacePageFragment[] = [];
@@ -7177,7 +7177,7 @@ export struct ReadingExperience {
 
   private paginationLayoutSignature(): string {
     const layout = this.readingLayout();
-    return 'native-paragraph-v2|' + createReadingPaginationLayoutSignature({
+    return 'native-paragraph-v3|' + createReadingPaginationLayoutSignature({
       deviceForm: layout.widthClass === 'expanded' ? 'tablet' : 'phone',
       viewportWidth: layout.viewportWidth,
       viewportHeight: layout.viewportHeight,
@@ -7430,7 +7430,7 @@ export struct ReadingExperience {
           lineHeight: readerAppearanceLineHeight(renderedAppearance), letterSpacing: renderedAppearance.letterSpacing,
           color: readerAppearanceThemeStyle(renderedAppearance.activeTheme).ink,
           alignment: readerAppearanceUsesJustify(renderedAppearance.alignment) ? TextAlign.JUSTIFY : TextAlign.Start,
-          breakAll: false, indentVp: this.getUIContext().px2vp(this.getUIContext().fp2px(
+          breakAll: false, bookBody: true, indentVp: this.getUIContext().px2vp(this.getUIContext().fp2px(
             readerAppearanceParagraphIndent(renderedAppearance.fontSize, renderedAppearance.indent))) } };
       fragment.nativeParagraphFirst = true;
       fragments.push(fragment);

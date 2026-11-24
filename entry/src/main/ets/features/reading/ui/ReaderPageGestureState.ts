@@ -200,13 +200,18 @@ export function updateReaderPagePanInPlace(
   );
 }
 
+export function readerPageTapSegmentWidth(viewportWidth: number): number {
+  return Number.isFinite(viewportWidth) && viewportWidth > 0 ? viewportWidth / 3 : 0;
+}
+
 export function readerPageTapIntent(localX: number, viewportWidth: number): ReaderPageTapIntent | undefined {
-  if (!Number.isFinite(localX) || !Number.isFinite(viewportWidth) || viewportWidth <= 0 ||
+  const segmentWidth = readerPageTapSegmentWidth(viewportWidth);
+  if (!Number.isFinite(localX) || segmentWidth <= 0 ||
     localX < 0 || localX > viewportWidth) {
     return undefined;
   }
-  if (localX < viewportWidth / 3) return 'previous';
-  if (localX > viewportWidth * 2 / 3) return 'next';
+  if (localX < segmentWidth) return 'previous';
+  if (localX > segmentWidth * 2) return 'next';
   return 'control';
 }
 

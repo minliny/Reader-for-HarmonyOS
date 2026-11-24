@@ -4,7 +4,7 @@ import { copyReaderControlSessionState, sampleReaderControlSession,
 
 import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_COLLAPSE_MS,
   READER_CONTROL_DISMISS_MS, READER_CONTROL_RESTORE_MS } from '../../../ui/foundation/ProductMotionTiming.ts';
-import { readerMotionValueDurationMs } from '../../../ui/foundation/ReaderMotionDurationPolicy';
+import { readerMotionValueDurationMs } from '../../../ui/foundation/ReaderMotionDurationPolicy.ts';
 export { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_COLLAPSE_MS,
   READER_CONTROL_DISMISS_MS, READER_CONTROL_RESTORE_MS } from '../../../ui/foundation/ProductMotionTiming.ts';
 

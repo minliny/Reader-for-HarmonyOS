@@ -144,6 +144,7 @@ let rssIndexInstance: number = 0;
 struct Index {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
 
   @StorageLink('readerWindowMetricsRevision') @Watch('onShelfMotionWindowChanged') readerWindowMetricsRevision: number = 0;
   @State private shelfMotion: BookshelfNavigationPresentation = new BookshelfNavigationPresentation({
@@ -795,7 +796,7 @@ struct Index {
       coordinator: this.libraryAcquisition.coordinator(),
       isCurrent: (): boolean => this.isCurrentSearchPresentation(generation, owner, mounting, host),
       isVisible: (): boolean => this.route === 'search' && this.searchAppForeground && !this.arkWebCapturesInput,
-      reduceMotion: this.settingsPresentation.snapshot.reduceMotion,
+      reduceMotion: this.appReduceMotion,
       expandedLayout: this.expandedLayout(),
       onBack: (): void => { this.onBackPress(); },
       onQuery: (keyword: string, scopeSourceIds?: string[]): void => this.libraryJourney.search(keyword, scopeSourceIds),
@@ -829,7 +830,7 @@ struct Index {
         this.shelfRead.snapshot.visualAdmitted && this.shelfRead.headerScrolled,
       moreIdentity: this.librarySearch.shelfMoreIdentity(this.navigationGeneration, this.detailShelfAdmissionMount),
       animateOnAppear: this.librarySearch.animateOnAppear, expandedLayout: this.expandedLayout(),
-      reduceMotion: this.settingsPresentation.snapshot.reduceMotion,
+      reduceMotion: this.appReduceMotion,
       continueCardRect: this.librarySearch.continueCardRect(this.navigationGeneration, this.detailShelfAdmissionMount,
         this.shelfRead.snapshot.continueReading),
       onHistoryCoverageChanged: actions.onHistoryCoverageChanged,
@@ -866,7 +867,7 @@ struct Index {
       this.indexContent();
       BookshelfNavigationTransition({
         request: this.shelfMotion.request,
-        reduceMotion: this.settingsPresentation.snapshot.reduceMotion || !this.searchAppForeground,
+        reduceMotion: this.appReduceMotion || !this.searchAppForeground,
         onCovered: (id: number): void => this.shelfMotion.coverClosed(id),
         onReaderOpacity: (id: number, opacity: number): void => this.shelfMotion.publishReaderOpacity(id, opacity),
         onFinished: (id: number): void => this.shelfMotion.finish(id),
@@ -914,7 +915,7 @@ struct Index {
             navigation: this.navigationGeneration, feedbackEnabled: !this.readingEntry.sessionActive && !this.readingEntryActions.shelfPreparing,
             continueCardSuppressed: this.route === 'search' &&
               this.librarySearch.continueCardSuppressed(this.navigationGeneration, this.detailShelfAdmissionMount),
-            reduceMotion: this.settingsPresentation.snapshot.reduceMotion,
+            reduceMotion: this.appReduceMotion,
             tapBottomScrollTop: this.settingsPresentation.snapshot.tapBottomScrollTop,
             ports: this.bookshelfScenePorts(this.mountedRuntimeOwner, this.detailShelfAdmissionMount),
           });
@@ -978,7 +979,7 @@ struct Index {
           reading: this.readingEntry, commits: this.readingCommits,
           source: this.sourceSwitchPresentation, manga: this.mangaSourceSwitch,
           visibleRoute: retainedReaderRoute(this.route, this.directoryReturnTarget),
-          expandedLayout: this.expandedLayout(), reduceMotion: this.settingsPresentation.snapshot?.reduceMotion ?? false,
+          expandedLayout: this.expandedLayout(), reduceMotion: this.appReduceMotion,
           transitionOpacity: this.shelfMotion.readerOpacity,
           inputAllowed: this.searchAppForeground && !this.arkWebCapturesInput &&
             this.shelfMotion.pendingExitId < 0 && this.shelfMotion.request?.direction !== 'open',
@@ -989,7 +990,7 @@ struct Index {
         reading: this.readingEntry, source: this.sourceSwitchPresentation, manga: this.mangaSourceSwitch,
         entryPickerAllowed: this.route === 'detail' || this.route === 'bookshelf' || this.isDetailDirectoryRoute(),
         interactive: this.searchAppForeground && !this.arkWebCapturesInput,
-        reduceMotion: this.settingsPresentation.snapshot.reduceMotion, consumeTopInset: this.readerOwnsWindowEdges(),
+        reduceMotion: this.appReduceMotion, consumeTopInset: this.readerOwnsWindowEdges(),
         actions: this.sourceSwitchActions,
       });
       if (this.route === 'bookshelf') {
@@ -999,7 +1000,7 @@ struct Index {
       }
       if (this.route === 'bookshelf') {
         BookshelfImportScene({ presentation: this.shelfMutations, navigation: this.navigationGeneration,
-          reduceMotion: this.settingsPresentation.snapshot.reduceMotion,
+          reduceMotion: this.appReduceMotion,
           canRestoreFocus: (): boolean => this.isInteractiveBookshelfPresentation(
             this.navigationGeneration, this.mountedRuntimeOwner, this.detailShelfAdmissionMount) &&
             !this.bookRemovalConfirmation.isOpen() && this.jsonImportPresentation.opening === undefined &&
@@ -1103,7 +1104,7 @@ struct Index {
   @Builder
   private externalDirectory() {
     if (this.readingEntry.book !== undefined) {
-      DetailDirectoryScene({ reduceMotion: this.settingsPresentation.snapshot.reduceMotion,
+      DetailDirectoryScene({ reduceMotion: this.appReduceMotion,
         reading: this.readingEntry,
         operations: this.directoryJourney.operations,
         navigation: this.directoryNavigationPorts(),
@@ -1164,7 +1165,7 @@ struct Index {
   @Builder
   private downloadsContent(generation: number = this.navigationGeneration, owner: ReaderRuntimeOwner | undefined = this.mountedRuntimeOwner) {
     SharedDownloadScene({
-      presentation: this.downloadPresentation, reduceMotion: this.settingsPresentation.snapshot.reduceMotion,
+      presentation: this.downloadPresentation, reduceMotion: this.appReduceMotion,
       covered: this.arkWebCapturesInput,
       onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string): void =>
         this.registerTemporaryBackBridge('downloads', generation, owner, handler, identity),
@@ -1269,7 +1270,7 @@ struct Index {
     showingTools: boolean, identity: string) {
     SourceJourneySurface({
       presentation: this.sourceJourney, identity, showingTools, expandedLayout: this.expandedLayout(),
-      reduceMotion: this.settingsPresentation.snapshot.reduceMotion,
+      reduceMotion: this.appReduceMotion,
       inputEnabled: this.searchAppForeground && !this.arkWebCapturesInput &&
         this.jsonImportPresentation.opening === undefined,
       isInputAllowed: (): boolean => this.searchAppForeground && !this.arkWebCapturesInput &&

@@ -1,4 +1,5 @@
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerHarmonyApi24 } from '../../../app/HarmonyCapabilityProbe';
 import {
   TYPE_SHELF_LIST_AUTHOR,
   TYPE_SHELF_LIST_CHAPTER,
@@ -12,6 +13,7 @@ import { ShelfBookPresentation } from '../presentation/ShelfBookPresentation';
 /** Shared shelf facts. Only content type and origin occupy metadata tags. */
 @Component
 export struct ShelfBookListDetails {
+  private readonly metadataEllipsisMode: EllipsisMode = readerHarmonyApi24() ? EllipsisMode.CENTER : EllipsisMode.END;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerMangaPresentationRevision') private mangaRevision: number = 0;
   @Prop book: ShelfBook;
@@ -27,7 +29,7 @@ export struct ShelfBookListDetails {
           .fontFamily(TYPE_SHELF_LIST_TITLE.fontFamily).fontWeight(TYPE_SHELF_LIST_TITLE.fontWeight)
           .fontSize(TYPE_SHELF_LIST_TITLE.fontSizeFp).lineHeight(TYPE_SHELF_LIST_TITLE.lineHeightFp as number).letterSpacing(TYPE_SHELF_LIST_TITLE.letterSpacingFp as number)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).ellipsisMode(this.metadataEllipsisMode);
         Flex({ direction: this.textFrame.metadataColumns === 2 ? FlexDirection.Row : FlexDirection.Column }) {
           this.metadataTag((): string => ShelfBookPresentation.contentLabel(this.book), false);
           this.metadataTag((): string => ShelfBookPresentation.originLabel(this.book), true);

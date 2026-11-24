@@ -294,6 +294,7 @@ test('the SDK-emitted detail buttons invoke their own actions and retire with th
   const { Component } = localBookDetailSdk({
     readerSystemShareActions: () => actions,
     readerShareMessage: result => ['fileCopied', 'copied'].includes(result) ? result : undefined,
+    AccessibilityRoleType: { BUTTON: 'button' },
   });
   const owner = new Component(undefined, {});
   const feedback = [];
@@ -304,6 +305,12 @@ test('the SDK-emitted detail buttons invoke their own actions and retire with th
     transientFeedback: { reset() {}, show(_context, options, admitted) { if (admitted()) feedback.push(options.message); } },
   });
   owner.shareActions();
+  for (const [id, label] of [['book', '分享书籍信息'], ['copy', '复制书籍信息'], ['file', '分享原文件']]) {
+    const button = [...owner.nodes.values()].find(node => node.id === `reader-detail-share-${id}`);
+    assert.equal(button.accessibilityText, label);
+    assert.equal(button.accessibilityRole, 'button');
+    assert.equal(button.enabled, true, 'a current action is reachable by keyboard and screen reader');
+  }
   const click = id => {
     const button = [...owner.nodes.values()].find(node => node.id === `reader-detail-share-${id}`);
     assert.ok(button?.onClick, `real detail ${id} Button`);

@@ -11,6 +11,7 @@ export interface ReaderNativeTextStyle {
   color: ResourceColor;
   alignment: TextAlign;
   breakAll: boolean;
+  bookBody?: boolean;
   indentVp?: number;
   direction?: Direction;
   extraLineSpacingVp?: number;
@@ -23,7 +24,7 @@ const nativeTextContent: WeakMap<typeNode.Text, string> = new WeakMap();
 export function readerNativeTextGeometryKey(style: ReaderNativeTextStyle): string {
   return JSON.stringify([style.widthVp, style.fontFamily, style.fontSize, style.fontWeight,
     style.lineHeight, style.letterSpacing, style.alignment, style.breakAll,
-    style.indentVp ?? 0, style.direction ?? null, style.extraLineSpacingVp ?? 0]);
+    style.bookBody === true, style.indentVp ?? 0, style.direction ?? null, style.extraLineSpacingVp ?? 0]);
 }
 export function readerNativeTextNodeGeometry(node: typeNode.Text): string | undefined {
   return nativeTextGeometry.get(node);
@@ -49,6 +50,11 @@ export class ReaderNativeTextMeasurement {
       node.attribute.width(style.widthVp).fontFamily(style.fontFamily)
         .fontWeight(style.fontWeight).fontSize(style.fontSize).lineHeight(style.lineHeight)
         .letterSpacing(style.letterSpacing).fontColor(style.color).textAlign(style.alignment);
+      if (style.bookBody === true) {
+        // ArkUI shapes the original text in place. Auto-spacing never inserts
+        // characters into the scalar/UTF-16 coordinates used by progress.
+        node.attribute.enableAutoSpacing(true).fallbackLineSpacing(true).compressLeadingPunctuation(true);
+      }
       if (style.breakAll) node.attribute.wordBreak(WordBreak.BREAK_ALL);
       if (style.indentVp !== undefined) node.attribute.textIndent(style.indentVp);
       if (style.direction !== undefined) node.attribute.direction(style.direction);

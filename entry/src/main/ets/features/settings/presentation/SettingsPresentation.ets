@@ -2,6 +2,7 @@ import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { effectiveReaderWideNavigationRail, isReaderProductSurfaceEnabled } from '../../../app/ReaderProductScope';
 import type { CommitReadbackSummary } from '../../../app/ReaderOperationFacts';
 import { READER_REDUCE_MOTION_STORAGE_KEY } from '../../../ui/foundation/ReaderMotionPolicy';
+import { watchReaderSystemReduceMotion } from '../../../platform/accessibility/ReaderSystemReduceMotion';
 import { createDefaultSettingsSnapshot, SettingsGateway, type GeneralSettingsKey, type SettingsSnapshot } from '../application/SettingsGateway';
 import { SettingsHost } from '../application/SettingsHost';
 import type { SettingsCacheCleanupSnapshot } from '../application/SettingsCacheCleanupOwner';
@@ -26,6 +27,8 @@ export class SettingsPresentation {
   identity: string = '';
   private applicationSnapshot: SettingsSnapshot | undefined;
   private unsubscribe: (() => void) | undefined;
+  private stopSystemMotion: (() => void) | undefined;
+  private systemReduceMotion: boolean = false;
   private opening: SettingsOpening | undefined;
   private host: SettingsHost | undefined;
 
@@ -54,18 +57,30 @@ export class SettingsPresentation {
 
   mount(owner: ReaderRuntimeOwner, changed: () => void): void {
     this.unsubscribe?.();
+    this.stopSystemMotion?.();
+    this.systemReduceMotion = false;
+    this.publishReduceMotion();
+    this.stopSystemMotion = watchReaderSystemReduceMotion((enabled: boolean): void => {
+      this.systemReduceMotion = enabled;
+      this.publishReduceMotion();
+    });
     AppStorage.setOrCreate<boolean>('readerWideNavigationRail', effectiveReaderWideNavigationRail(this.snapshot.wideNavigationRail === true));
     this.cacheCleanup = this.settingsHost().cacheCleanupSnapshot(owner);
     const gateway = new SettingsGateway(owner.getUIAbilityContext());
     this.unsubscribe = gateway.subscribe((snapshot: SettingsSnapshot): void => {
       this.applicationSnapshot = snapshot;
-      AppStorage.setOrCreate<boolean>(READER_REDUCE_MOTION_STORAGE_KEY, snapshot.reduceMotion === true);
+      this.publishReduceMotion();
       AppStorage.setOrCreate<boolean>('readerWideNavigationRail', effectiveReaderWideNavigationRail(snapshot.wideNavigationRail === true));
       AppStorage.setOrCreate<boolean>('readerDeveloperMode', snapshot.developerMode === true);
       if (this.opening?.isRouteCurrent() !== true) this.snapshot = snapshot;
       changed();
     });
     void gateway.load().catch((): void => {});
+  }
+
+  private publishReduceMotion(): void {
+    AppStorage.setOrCreate<boolean>(READER_REDUCE_MOTION_STORAGE_KEY,
+      this.systemReduceMotion || this.applicationSnapshot?.reduceMotion === true);
   }
 
   ready(): boolean { return this.applicationSnapshot !== undefined; }
@@ -111,6 +126,8 @@ export class SettingsPresentation {
     this.retire();
     this.unsubscribe?.();
     this.unsubscribe = undefined;
+    this.stopSystemMotion?.();
+    this.stopSystemMotion = undefined;
     this.applicationSnapshot = undefined;
   }
 

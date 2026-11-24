@@ -1,5 +1,6 @@
 import { FrameCallback } from '@kit.ArkUI';
 import { LengthMetrics } from '@ohos.arkui.node';
+import { READER_ACTION_MIN_TARGET } from '../../../ui/controls/ReaderActionAccessibility';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
 import { ReaderPageInputClock } from './ReaderPageInputClock';
 import { READER_PAGE_GESTURE_LONG_PRESS_MS } from './ReaderPageGestureState';
@@ -337,10 +338,48 @@ export struct ReaderContinuousReadingStage {
           }),
       );
       }, (mountIdentity: string): string => mountIdentity);
+      this.accessibleOpenControlCarrier();
     }
     .width('100%')
     .height('100%')
     .clip(true);
+  }
+
+  @Builder
+  private accessibleOpenControlCarrier() {
+    // A sibling keeps the List and its paragraphs in the native accessibility tree.
+    Row().width(READER_ACTION_MIN_TARGET).height(READER_ACTION_MIN_TARGET)
+      .position({ x: this.accessibleControlOffset(this.layout.viewportWidth),
+        y: this.accessibleControlOffset(this.layout.viewportHeight) })
+      .hitTestBehavior(HitTestMode.None)
+      .accessibilityLevel('no')
+      .accessibilityVirtualNode(this.accessibleOpenControl);
+  }
+
+  @Builder
+  private accessibleOpenControl() {
+    Text('打开阅读控制栏').id('reader-continuous-action-control')
+      .width(READER_ACTION_MIN_TARGET).height(READER_ACTION_MIN_TARGET)
+      .accessibilityText('打开阅读控制栏')
+      .accessibilityRole(AccessibilityRoleType.BUTTON)
+      .accessibilityLevel(this.accessibleControlAvailable() ? 'yes' : 'no')
+      .enabled(this.accessibleControlAvailable())
+      .onClick((): void => this.activateControlFromAccessibility());
+  }
+
+  private accessibleControlOffset(viewportExtent: number): number {
+    return Number.isFinite(viewportExtent) ? Math.max(0, (viewportExtent - READER_ACTION_MIN_TARGET) / 2) : 0;
+  }
+
+  private accessibleControlAvailable(): boolean {
+    return this.interactionEnabled &&
+      Number.isFinite(this.layout.viewportWidth) && this.layout.viewportWidth >= READER_ACTION_MIN_TARGET &&
+      Number.isFinite(this.layout.viewportHeight) && this.layout.viewportHeight >= READER_ACTION_MIN_TARGET;
+  }
+
+  private activateControlFromAccessibility(): void {
+    if (!this.mounted || this.touchActive || !this.accessibleControlAvailable() || !this.acceptCurrentInput()) return;
+    this.onOpenControl();
   }
 
   private fragmentRenderKey(fragment: ReadingSurfacePageFragment): string {

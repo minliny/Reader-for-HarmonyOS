@@ -1,6 +1,6 @@
 {
   "schemaVersion": "1.0",
-  "revision": 31,
+  "revision": 32,
   "controls": [
     {
       "controlId": "page-back",
@@ -3263,6 +3263,101 @@
       "accessibleNameSource": "复制以分享",
       "status": "partial",
       "knownGap": "The OS selection menu owns layout and hit targets. Native delivery, spoken label and focus return remain unverified."
+    },
+    {
+      "controlId": "reader-paged-action-previous",
+      "owner": "ReaderPageInteractionLayer",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderPageInteractionLayer.ets",
+          "symbol": "accessiblePageAction"
+        }
+      ],
+      "states": [
+        "ready",
+        "disabled",
+        "hidden"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "上一页",
+      "status": "partial",
+      "knownGap": "Virtual screen-reader target. Its 44vp baseline is bounded by the measured viewport and its page thirds. Native focus and activation remain unverified."
+    },
+    {
+      "controlId": "reader-paged-action-control",
+      "owner": "ReaderPageInteractionLayer",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderPageInteractionLayer.ets",
+          "symbol": "accessiblePageAction"
+        }
+      ],
+      "states": [
+        "ready",
+        "disabled",
+        "hidden"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "打开阅读控制栏",
+      "status": "partial",
+      "knownGap": "Virtual screen-reader target. Its 44vp baseline is bounded by the measured viewport and its page thirds. Native focus and activation remain unverified."
+    },
+    {
+      "controlId": "reader-paged-action-next",
+      "owner": "ReaderPageInteractionLayer",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderPageInteractionLayer.ets",
+          "symbol": "accessiblePageAction"
+        }
+      ],
+      "states": [
+        "ready",
+        "disabled",
+        "hidden"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "下一页",
+      "status": "partial",
+      "knownGap": "Virtual screen-reader target. Its 44vp baseline is bounded by the measured viewport and its page thirds. Native focus and activation remain unverified."
+    },
+    {
+      "controlId": "reader-continuous-action-control",
+      "owner": "ReaderContinuousReadingStage",
+      "sources": [
+        {
+          "path": "entry/src/main/ets/features/reading/ui/ReaderContinuousReadingStage.ets",
+          "symbol": "accessibleOpenControl"
+        }
+      ],
+      "states": [
+        "ready",
+        "hidden"
+      ],
+      "hitTarget": {
+        "width": 44,
+        "height": 44,
+        "unit": "vp",
+        "status": "spec"
+      },
+      "accessibleNameSource": "打开阅读控制栏",
+      "status": "partial",
+      "knownGap": "Virtual screen-reader target with its own carrier next to the content List. Native focus and activation remain unverified."
     }
   ]
 }

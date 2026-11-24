@@ -1,4 +1,5 @@
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
+import { readerHarmonyApi24 } from '../../../app/HarmonyCapabilityProbe';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
@@ -164,6 +165,7 @@ class SourceListDataSource implements IDataSource {
 
 @Component
 export struct SourceManagementPage {
+  private readonly metadataEllipsisMode: EllipsisMode = readerHarmonyApi24() ? EllipsisMode.CENTER : EllipsisMode.END;
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding('reader-source-list');
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
@@ -1813,7 +1815,8 @@ export struct SourceManagementPage {
         .lineHeight(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis });
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .ellipsisMode(this.metadataEllipsisMode);
       Text(this.sourceDomain(source), this.textLayoutOptions?.('row/domain', source.sourceId, this.sourceDomain(source)))
         .id(this.verificationRowTextId(source.sourceId, 'reader-source-text-row-domain'))
         .width('100%')
@@ -1825,7 +1828,8 @@ export struct SourceManagementPage {
         .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
         .wordBreak(WordBreak.BREAK_ALL)
         .maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis });
+        .textOverflow({ overflow: TextOverflow.Ellipsis })
+        .ellipsisMode(this.metadataEllipsisMode);
     }
     .layoutWeight(this.layoutBudget(source).rowForm === 'stacked-leading' ? 0 : 1)
     .width(this.layoutBudget(source).rowForm === 'stacked-leading' ? '100%' : undefined)

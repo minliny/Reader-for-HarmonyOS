@@ -8,6 +8,7 @@ import {
   readerPageGestureCanTap,
   readerPagePointerCoordinate,
   readerPageTapIntent,
+  readerPageTapSegmentWidth,
   startReaderPagePan,
   updateReaderPagePanInPlace,
   type ReaderPageGestureState,
@@ -16,6 +17,7 @@ import {
   type ReaderPageTurnDirection,
   type ReaderPageTurnOutcome,
 } from './ReaderPageGestureState';
+import { READER_ACTION_MIN_TARGET } from '../../../ui/controls/ReaderActionAccessibility';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
 import { ReaderPageInputClock } from './ReaderPageInputClock';
 
@@ -134,9 +136,57 @@ export struct ReaderPageInteractionLayer {
       .backgroundColor('#00000000')
       .hitTestBehavior(this.interactionEnabled ?
         (this.allowTextSelection ? HitTestMode.Transparent : HitTestMode.Block) : HitTestMode.None)
-      .accessibilityText('阅读翻页区域')
-      .accessibilityTextHint('左侧上一页，中间打开阅读控制，右侧下一页')
+      .accessibilityLevel('no')
+      .accessibilityVirtualNode(this.accessiblePageActions)
       .onTouch((event: TouchEvent): void => this.handleTouch(event));
+  }
+
+  @Builder
+  private accessiblePageActions() {
+    Row() {
+      this.accessiblePageAction('上一页', 'previous');
+      this.accessiblePageAction('打开阅读控制栏', 'control');
+      this.accessiblePageAction('下一页', 'next');
+    }.direction(Direction.Ltr).width(readerPageTapSegmentWidth(this.viewportWidth) * 3)
+      .height(this.accessibleActionHeight()).position({ x: 0, y: this.accessibleActionTop() });
+  }
+
+  @Builder
+  private accessiblePageAction(label: string, intent: ReaderPageTapIntent) {
+    Text(label).id(`reader-paged-action-${intent}`)
+      .width(readerPageTapSegmentWidth(this.viewportWidth)).height(this.accessibleActionHeight())
+      .accessibilityText(label)
+      .accessibilityRole(AccessibilityRoleType.BUTTON)
+      .accessibilityLevel(this.accessibleActionsAvailable() ? 'yes' : 'no')
+      .enabled(this.accessibleActionsAvailable() && !this.tapOnly)
+      .onClick((): void => this.activatePageFromAccessibility(intent));
+  }
+
+  private accessibleActionHeight(): number {
+    return Number.isFinite(this.viewportHeight) && this.viewportHeight > 0 ?
+      Math.min(READER_ACTION_MIN_TARGET, this.viewportHeight) : 0;
+  }
+
+  private accessibleActionTop(): number {
+    const height = this.accessibleActionHeight();
+    // Leave the rest of the page available for text exploration.
+    return height > 0 ? (this.viewportHeight - height) / 2 : 0;
+  }
+
+  private accessibleActionsAvailable(): boolean {
+    return this.interactionEnabled && readerPageTapSegmentWidth(this.viewportWidth) > 0 &&
+      this.accessibleActionHeight() > 0;
+  }
+
+  private activatePageFromAccessibility(intent: ReaderPageTapIntent): void {
+    if (!this.accessibleActionsAvailable() || this.activePointerId >= 0 || this.tapOnlyNow() ||
+      this.gestureState.phase !== 'idle' || !this.acceptCurrentInput()) return;
+    if (intent === 'control') {
+      this.onOpenControl();
+      return;
+    }
+    this.onManualInteraction();
+    this.onTurn(intent);
   }
 
   private acceptCurrentInput(): boolean {
