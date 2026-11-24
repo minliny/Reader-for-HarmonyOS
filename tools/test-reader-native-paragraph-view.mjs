@@ -3,7 +3,9 @@ import assert from 'node:assert/strict';
 import {readFileSync,readdirSync} from 'node:fs';
 import {createRequire} from 'node:module';
 import {ReadingSurfaceLayoutMap} from '../entry/src/main/ets/features/reading/application/ReadingSurfaceLayoutMap.ts';
+import {ReaderShareActions} from '../entry/src/main/ets/features/reading/application/ReaderShareActions.ts';
 import {readerSelectedOriginalText} from '../entry/src/main/ets/features/reading/ui/ReaderTextSelectionProjection.ts';
+import {ReaderTransientFeedback, READER_TRANSIENT_TOAST_STORAGE_KEY} from '../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts';
 const sdk=resolveEtsLoaderRoot();
 const ts=createRequire(import.meta.url)(`${sdk}/node_modules/typescript`);
 const path=localFilePath(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeParagraphView.ets',import.meta.url));
@@ -19,28 +21,51 @@ const options={noEmit:true,skipLibCheck:true,lib:['lib.es2022.d.ts'],moduleResol
 const host=ts.createCompilerHost(options),read=host.getSourceFile.bind(host);
 host.getSourceFile=(p,...args)=>p===virtual?ts.createSourceFile(p,typed,ts.ScriptTarget.Latest,true):read(p,...args);
 const program=ts.createProgram([virtual,...readdirSync(`${sdk}/declarations`).filter(n=>n.endsWith('.d.ts')).map(n=>`${sdk}/declarations/${n}`)],options,host);
-assert.deepEqual(ts.getPreEmitDiagnostics(program).filter(d=>d.category===ts.DiagnosticCategory.Error)
+assert.deepEqual(ts.getPreEmitDiagnostics(program,program.getSourceFile(virtual)).filter(d=>d.category===ts.DiagnosticCategory.Error)
  .map(d=>ts.flattenDiagnosticMessageText(d.messageText,'\n')),[]);
 const measurementSource=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderNativeTextMeasurement.ets',import.meta.url),'utf8');
 const geometryJs=ts.transpileModule(measurementSource.replace(/^import.*$/gm,'').replace(/^export /gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
 const geometryKey=new Function(geometryJs+';return readerNativeTextGeometryKey;')();
 const style={widthVp:300,fontFamily:'f',fontSize:20,fontWeight:400,lineHeight:30,letterSpacing:0,color:'#111',alignment:0,breakAll:false};
-const controllers=[],copied=[];
+const controllers=[],copied=[],shared=[],fallbackCopies=[];
+const appStorage = new Map();
+globalThis.AppStorage = { get: key => appStorage.get(key), setOrCreate: (key, value) => appStorage.set(key, value) };
+const presentationPath = new URL('../entry/src/main/ets/features/reading/ui/ReaderSharePresentation.ets', import.meta.url);
+const presentationSource = readFileSync(presentationPath,'utf8').replace(/^import.*$/gm,'').replace(/^export /gm,'');
+const presentationJs = ts.transpileModule(presentationSource,{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
+const readerShareMessage = new Function(presentationJs+';return readerShareMessage;')();
+let completeShare = () => Promise.resolve('unavailable');
+const shareActions = new ReaderShareActions({
+ publicLink: () => undefined,
+ show: async record => { shared.push(record); return completeShare(); },
+}, text => fallbackCopies.push(text));
 class Controller {
  constructor(){controllers.push(this);}prepare(_context,recipe){this.recipe=recipe;this.prepares=(this.prepares??0)+1;}
  color(value){this.ink=value;}
- heightVp(){return 30;}close(){this.closed=true;}selection(enabled,_background,callback){this.enabled=enabled;this.copy=callback;}
+ heightVp(){return 30;}close(){this.closed=true;}
+ selection(enabled,_background,onCopy,onShare){this.enabled=enabled;this.copy=onCopy;this.share=onShare;}
  visibleStartUtf16(){return 1;}visibleEndUtf16(){return 4;}
  glyphRects(start,end){this.range=[start,end];return [{left:2,right:8,top:4,bottom:12}];}
 }
 const js=ts.transpileModule(classSource.replace(/^import.*$/gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
 const View=new Function('ReaderNativeParagraphController','ReadingSurfaceLayoutMap','readerSelectedOriginalText','copyReaderSelection',
- 'readerNativeParagraphResource','readerNativeTextGeometryKey',js+';return View;')(Controller,ReadingSurfaceLayoutMap,readerSelectedOriginalText,t=>copied.push(t),()=>undefined,geometryKey);
+ 'readerNativeParagraphResource','readerNativeTextGeometryKey','ReaderTransientFeedback','readerShareMessage','readerSelectionShareAnchor',
+ 'readerSystemShareActions',js+';return View;')(Controller,ReadingSurfaceLayoutMap,readerSelectedOriginalText,
+ t=>copied.push(t),()=>undefined,geometryKey,ReaderTransientFeedback,readerShareMessage,()=>'reader-selection-share-test',()=>shareActions);
 const view=new View(),pending=[],paint=[];
 view.context={px2vp:v=>v/2,vp2px:v=>v*2,fp2px:v=>v*2};view.recipe={key:'a',text:'A😀BC',startScalar:100,firstLine:0,lastLine:0,style};
 view.queueHighlightMeasurement=fn=>pending.push(fn);view.onHighlightGeometry=r=>paint.push(r);
 view.selectionEnabled=true;view.highlightStart=101;view.highlightEnd=103;view.underline=true;
 view.aboutToAppear();const native=controllers[0];native.copy({start:0,end:5});assert.deepEqual(copied,['😀B']);
+native.share({start:0,end:5});
+await new Promise(resolve=>setImmediate(resolve));
+assert.deepEqual(shared,[{kind:'text',text:'😀B'}]);
+assert.deepEqual(fallbackCopies,['😀B']);
+assert.equal(appStorage.get(READER_TRANSIENT_TOAST_STORAGE_KEY).message,'系统分享不可用，已复制内容');
+view.selectionInputCurrent=()=>false;
+native.share({start:0,end:5});
+assert.equal(shared.length,1,'a covered paragraph cannot dispatch a captured Share callback');
+view.selectionInputCurrent=()=>true;
 view.prepare();assert.equal(native.prepares,1,'unchanged reactive delivery cannot reshape or dismiss selection');
 view.inkColor='#eeeeee';view.updateInk();assert.equal(native.ink,'#eeeeee');assert.equal(native.prepares,1,'theme changes update ink without reshaping');
 assert.equal(view.heightVp,30);pending.shift()();assert.deepEqual(native.range,[1,4]);
@@ -55,9 +80,16 @@ view.updateHighlight();view.prepare();
 for (const action of pending.splice(0)) action();
 assert.deepEqual(paint.at(-1),[{left:1,right:4,top:4.5,bottom:6,color:'#222222',multiply:false}],
   'a stale queued measurement cannot suppress the post-reflow measurement');
-view.updateHighlight();const oldCopy=native.copy;view.aboutToDisappear();pending.shift()();oldCopy({start:0,end:5});
+let releaseShare;
+completeShare=()=>new Promise(resolve=>{releaseShare=resolve;});
+native.share({start:0,end:5});
+view.updateHighlight();const oldCopy=native.copy,oldShare=native.share;
+view.aboutToDisappear();pending.shift()();oldCopy({start:0,end:5});oldShare({start:0,end:5});
+releaseShare('unavailable');await new Promise(resolve=>setImmediate(resolve));
+assert.equal(shared.length,2,'retired callbacks cannot start a new share');
+assert.deepEqual(fallbackCopies,['😀B'],'late platform failure cannot copy after the paragraph retires');
+assert.equal(appStorage.get(READER_TRANSIENT_TOAST_STORAGE_KEY).visible,false);
 assert.equal(copied.length,1);assert.deepEqual(paint.at(-1),[]);assert.equal(native.closed,true);
-console.log('PASS native paragraph view SDK, original visible selection, absolute scalar highlight and unmount rejection');
 
 {
  const shared = new ReadingSurfaceLayoutMap('A😀BC');
@@ -74,5 +106,8 @@ console.log('PASS native paragraph view SDK, original visible selection, absolut
  changed.aboutToAppear();const c=controllers.at(-1);assert.equal(c.prepares,1);
  changed.recipe={...changed.recipe,style:{...style,color:'#eee'}};changed.prepare();assert.equal(c.prepares,1);
  changed.recipe={...changed.recipe,style:{...style,fontSize:21}};changed.prepare();assert.equal(c.prepares,2,'same recipe key cannot suppress changed geometry');
- changed.context={vp2px:v=>v,fp2px:v=>v*1.5};changed.prepare();assert.equal(c.prepares,3,'font scale is part of measured identity');changed.aboutToDisappear();
+ changed.recipe={...changed.recipe,style:{...changed.recipe.style,letterSpacing:2}};
+ changed.prepare();assert.equal(c.prepares,3,'changing letter spacing reshapes a retained recipe');
+ changed.context={vp2px:v=>v,fp2px:v=>v*1.5};changed.prepare();assert.equal(c.prepares,4,'font scale is part of measured identity');changed.aboutToDisappear();
 }
+console.log('PASS native paragraph view SDK, visible original-text copy and share, scalar highlight reflow, retired selection and late share rejection');

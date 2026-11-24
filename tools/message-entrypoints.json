@@ -664,6 +664,17 @@
       "status": "registered-source-entry"
     },
     {
+      "id": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets#LocalBookDetail.runShareAction::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
+      "owner": "LocalBookDetail",
+      "member": "runShareAction",
+      "family": "shared.transient",
+      "category": "分享降级与指令明确失败短反馈",
+      "effectiveHost": "当前前景书籍详情，绑定本次详情标识及书籍身份。",
+      "retireRule": "书籍详情退役或切换后拒绝旧回执。仅展示明确复制和失败事实，取消不发消息。",
+      "status": "registered-source-entry"
+    },
+    {
       "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.changeChineseConversionMode::shared.transient",
       "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
       "owner": "ReadingExperience",
@@ -1082,6 +1093,17 @@
       "status": "registered-source-entry"
     },
     {
+      "id": "entry/src/main/ets/features/reading/ui/ReaderNativeParagraphView.ets#ReaderNativeParagraphView.shareSelection::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderNativeParagraphView.ets",
+      "owner": "ReaderNativeParagraphView",
+      "member": "shareSelection",
+      "family": "shared.transient",
+      "category": "分享降级与指令明确失败短反馈",
+      "effectiveHost": "当前原生段落和原选区，绑定布局 epoch、前景输入准入及选区原文。",
+      "retireRule": "段落重排或退场后抛弃旧回执；清理沿既有段落反馈退役。",
+      "status": "registered-source-entry"
+    },
+    {
       "id": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets#ReaderTtsConfigOverlay.build::shared.recovery-notice",
       "file": "entry/src/main/ets/features/reading/ui/ReaderTtsConfigOverlay.ets",
       "owner": "ReaderTtsConfigOverlay",
@@ -1101,6 +1123,17 @@
       "category": "普通完成/失败短反馈",
       "effectiveHost": "当前 highlightMounted 且 longPressSelectText 的显示片段；复制使用原文本选区投影。",
       "retireRule": "片段退场后拒绝新复制短反馈并清空去重，原选择菜单仍由原 TextController 关闭。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/reading/ui/ReadingSurface.ets#ReaderReadingTextFragment.shareSelection::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/ReadingSurface.ets",
+      "owner": "ReaderReadingTextFragment",
+      "member": "shareSelection",
+      "family": "shared.transient",
+      "category": "分享降级与指令明确失败短反馈",
+      "effectiveHost": "当前已挂载正文片段，绑定片段生命周期、源文本和选区输入准入。",
+      "retireRule": "失去选区输入或片段退场后拒收旧回执，沿现有反馈退役。",
       "status": "registered-source-entry"
     },
     {

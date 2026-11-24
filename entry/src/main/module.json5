@@ -26,6 +26,7 @@
       }
     ],
     "pages": "$profile:main_pages",
+    "shareFiles": "$profile:reader_share_files",
     "abilities": [
       {
         "name": "EntryAbility",

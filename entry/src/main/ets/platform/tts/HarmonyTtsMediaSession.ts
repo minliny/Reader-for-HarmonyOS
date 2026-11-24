@@ -42,6 +42,7 @@ export class HarmonyTtsMediaSession implements ReaderTtsMediaSessionBridge {
     if (this.closed) throw new Error('Reader TTS AVSession is closed');
     const task = this.operationTail.then(async (): Promise<void> => {
       if (this.closed) throw new Error('Reader TTS AVSession admission retired');
+      if (this.active) return;
       const session = await this.ensureSession();
       if (this.closed) throw new Error('Reader TTS AVSession admission retired');
       await session.activate();
@@ -57,6 +58,8 @@ export class HarmonyTtsMediaSession implements ReaderTtsMediaSessionBridge {
     if (this.closed) return;
     const task = this.operationTail.then(async (): Promise<void> => {
       if (this.closed) return;
+      // Terminal state is sent only to an existing, fully initialized session.
+      if (!this.initialized && (state === 'stopped' || state === 'completed' || state === 'error')) return;
       const session = await this.ensureSession();
       if (this.closed) return;
       await session.setAVPlaybackState({ state: this.toAvState(state) });
@@ -94,11 +97,15 @@ export class HarmonyTtsMediaSession implements ReaderTtsMediaSessionBridge {
     this.session = session;
     if (this.closed) throw new Error('Reader TTS AVSession closed during initialization');
     try {
-      session.on('play', (): void => this.emit('play'));
-      session.on('pause', (): void => this.emit('pause'));
-      session.on('stop', (): void => this.emit('stop'));
-      session.on('playNext', (): void => this.emit('next'));
-      session.on('playPrevious', (): void => this.emit('previous'));
+      // AVSession requires metadata for both the lock screen and headset commands.
+      // Use a stable Reader asset without exposing the current book on the lock screen.
+      await session.setAVMetadata({ assetId: 'reader-tts', title: 'Reader 朗读' });
+      if (this.closed) throw new Error('Reader TTS AVSession closed during initialization');
+      session.on('play', (): void => this.emit(session, 'play'));
+      session.on('pause', (): void => this.emit(session, 'pause'));
+      session.on('stop', (): void => this.emit(session, 'stop'));
+      session.on('playNext', (): void => this.emit(session, 'next'));
+      session.on('playPrevious', (): void => this.emit(session, 'previous'));
       this.initialized = true;
       return session;
     } catch (error) {
@@ -129,8 +136,8 @@ export class HarmonyTtsMediaSession implements ReaderTtsMediaSessionBridge {
     return task;
   }
 
-  private emit(action: 'play' | 'pause' | 'stop' | 'next' | 'previous'): void {
-    if (!this.closed) this.listener?.({ type: 'mediaControl', action });
+  private emit(session: avSession.AVSession, action: 'play' | 'pause' | 'stop' | 'next' | 'previous'): void {
+    if (this.isActive() && this.session === session) this.listener?.({ type: 'mediaControl', action });
   }
 
   private toAvState(state: ReaderTtsPublishedPlaybackState): avSession.PlaybackState {

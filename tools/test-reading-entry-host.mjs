@@ -690,13 +690,15 @@ if(id==='manga-late-display'){
 }
 if(id==='display-cover'){
 {
- const f=fixture(), canonical={...seed(),coverUrl:''};
+ const f=fixture(), canonical={...seed(),coverUrl:'',detailUrl:'https://source.example/books/entry'};
  await f.host.openRemote({seed:canonical,sourceName:'Source',displayCoverUrl:' https://cover.invalid/search.png ',resumeImmediately:true},f.lease);
  assert.equal(f.host.snapshot().book.displayCoverUrl,'https://cover.invalid/search.png');
+ assert.equal(f.host.snapshot().book.sourcePageUrl,canonical.detailUrl,'current link comes from the entry source page');
  assert.equal(f.host.snapshot().book.coverUrl,'');assert.equal(f.host.snapshot().seed.coverUrl,'');
- const admitted={...session(),book:{...session().book,coverUrl:''}};
+ const admitted={...session(),detailUrl:'https://source.example/books/canonical',book:{...session().book,coverUrl:''}};
  assert.equal(f.host.readerSessionReady(admitted),true);
  assert.equal(f.host.snapshot().book.displayCoverUrl,'https://cover.invalid/search.png');
+ assert.equal(f.host.snapshot().book.sourcePageUrl,admitted.detailUrl,'confirmed session updates the detail source link');
  assert.equal(admitted.book.coverUrl,'','display fallback cannot become persisted source metadata');
  await f.host.openRemote({seed:{...canonical,bookId:'different'},sourceName:'Source',resumeImmediately:true},f.lease);
  assert.equal(f.host.snapshot().book.displayCoverUrl,undefined,'a different identity cannot inherit the prior visible cover');

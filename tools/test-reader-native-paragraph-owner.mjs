@@ -13,7 +13,7 @@ const options={noEmit:true,skipLibCheck:true,moduleResolution:ts.ModuleResolutio
 const host=ts.createCompilerHost(options),read=host.getSourceFile.bind(host);
 host.getSourceFile=(p,...args)=>p===virtual?ts.createSourceFile(p,source,ts.ScriptTarget.Latest,true):read(p,...args);
 const program=ts.createProgram([virtual,...readdirSync(`${sdk}/declarations`).filter(n=>n.endsWith('.d.ts')).map(n=>`${sdk}/declarations/${n}`)],options,host);
-assert.deepEqual(ts.getPreEmitDiagnostics(program).filter(d=>d.category===ts.DiagnosticCategory.Error)
+assert.deepEqual(ts.getPreEmitDiagnostics(program,program.getSourceFile(virtual)).filter(d=>d.category===ts.DiagnosticCategory.Error)
  .map(d=>ts.flattenDiagnosticMessageText(d.messageText,'\n')),[]);
 let measured=0,cleared=0,failed=false;const windows=[];
 class Window{constructor(...args){this.args=args;this.closes=0;windows.push(this);} matchesGeometry(){return this.geometryMatches!==false;} prepareWholeParagraph(){this.expands=(this.expands??0)+1;if(this.expansionBlocked)return false;this.whole=true;return true;} lineTopForUtf16(v){return v*7;} lineStartForY(v){return Math.floor(v/7);} coversWholeParagraph(){return this.whole===true;}lineCount(){return 37;}selection(){} configure(...args){this.range=args;if(failed)throw Error('bad geometry');} close(){this.closes++;}frame(){return this;}clipHeightVp(){return 31;}glyphRects(){return [];}}

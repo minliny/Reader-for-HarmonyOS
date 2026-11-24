@@ -18,7 +18,11 @@ await coordinator.whenSettled();assert.equal(coordinator.getState().status,'paus
 host.emit({type:'complete',requestId:request.requestId,completion:'audio'});await audition;
 assert.equal(host.calls.at(-1),'engine:system');assert.deepEqual(progress,[]);assert.equal(gateway.cursor,beforeCursor);
 // A second audition retires the first request; late completion cannot stop the new one.
+const probeVoice = host.probe.bind(host);
+let probedVoice;
+host.probe = (...voice) => { probedVoice = voice; return probeVoice(); };
 const first=coordinator.auditionVoice({language:'zh-CN',person:0});await coordinator.whenSettled();const firstId=host.requests.at(-1).requestId;
+assert.deepEqual(probedVoice, ['zh-CN', 0, true], 'audition probes the selected system voice exactly');
 const second=coordinator.auditionVoice({language:'en-US',person:2});await coordinator.whenSettled();await first;
 const secondId=host.requests.at(-1).requestId;assert.notEqual(firstId,secondId);
 const stops=host.calls.filter(x=>x==='stop').length;

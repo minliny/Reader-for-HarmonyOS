@@ -111,8 +111,10 @@ export function systemReaderShellExitSdk(page){
  const wrapper='@Component struct ReaderFileOwnerProbe { @Builder readingOwner() { '+raw.slice(start,end)+' } build(){Column(){}} }';
  class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(){}}
  const probe=createReaderBuilderProbe(wrapper,['readingOwner'],{ReadingExperience:Child},{childSources:{ReadingExperience:systemFileSource('features/reading/ui/LocalReadingExperience.ets')}}).owner;
- const Shell=productionMotionMethods(new URL('../../entry/src/main/ets/features/reading/ui/ReaderShell.ets',import.meta.url),['readingIdentityKey']);
- Object.assign(probe,systemReaderExitSdk(page),{route:'reading',visible:true,readingIdentityKey:Shell.prototype.readingIdentityKey});
+ const Shell=productionMotionMethods(new URL('../../entry/src/main/ets/features/reading/ui/ReaderShell.ets',import.meta.url),
+  ['readingIdentityKey','readingContentIsForeground']);
+ Object.assign(probe,systemReaderExitSdk(page),{route:'reading',visible:true,inputAllowed:true,
+  readingIdentityKey:Shell.prototype.readingIdentityKey,readingContentIsForeground:Shell.prototype.readingContentIsForeground});
  for(const name of ['sourceId','bookId','readingReadyGeneration'])Object.defineProperty(probe,name,{get:()=>name==='readingReadyGeneration'?page[name]:page.detailBook?.[name]});
  const render=()=>{probe.readingOwner();return [...probe.children.values()].at(-1).params;};
  return {probe,render};

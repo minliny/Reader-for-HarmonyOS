@@ -716,6 +716,7 @@ node tools/check-overlay-assembly.mjs --check --inventory-file tools/page-struct
 - 平台宿主结果必须核对发起时的 identity；旧 session、旧页面、旧世代的回调丢弃。
 - 宿主 Back 顺序默认 `unknown`；没有平台证据时不能写“平台一定先”或“应用一定先”。
 - 源页当前只登记 `loginWeb`；JSON 导入不进入平台宿主表。
+- 小说详情的书籍信息、原文件和正文选文使用 Share Kit 系统面板。详情按当次书籍和输入准入捕获回程，选文按当前 ReaderShell 正文、段落或片段代次捕获原文。对应 `platform.detailShare` 和 `platform.readingSelectionShare` 登记了真实入口及平台结果。系统 Back、焦点恢复、面板几何与接收端读文件仍待原生证据。[平台宿主登记](../../tools/contracts/platform-host-registry.json) · [分享与复制控件登记](../../tools/contracts/control-registry.json)
 
 ### 6.9 控件状态
 
@@ -1005,7 +1006,7 @@ embedded豁免限于`regions: ["content"]`、没有独立页头与固定页脚�
 | 层 | Owner | 允许变体 | 当前缺口 |
 |---|---|---|---|
 | 路由 | Index / 导航契约 | root / secondary / reader / captured-parent | 可见/保留路由已登记；NAV-07/08 与平台返回行为仍未冻结/未验 |
-| 平台宿主 | 平台适配 owner | filePicker / loginWeb / nativeAlert / share / mediaSession | 书源 `loginWeb` 最小集已登记；Back 与真实平台行为未验 |
+| 平台宿主 | 平台适配 owner | filePicker / loginWeb / nativeAlert / share / mediaSession | 已登记书源登录、书源工具的系统确认和文件保存、小说详情和选文分享。平台行为的证据范围见各宿主登记。 |
 | 页头 | PageBackBar / AppTopBar | standard / floating / home | 书架/搜索私有头重复；AppTopBar 有未使用模式 |
 | 滚动 | ReaderPageScaffold | fixed / floating / scrollAway | 无跨页 inset 断言 |
 | 查询 | ReaderSearchField / ReaderSelectPanel | inline / header / overlay | 决策表已落地；跨页登记与首屏预算待扩展 |

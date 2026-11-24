@@ -123,6 +123,11 @@ if (selectedCase === 'ui-boundary') {
   const consumer = 'ui/layout/ReaderStandardPage.ets';
   const feature = 'features/settings/ui/SettingsPage.ets';
   assert.ok(files.has(feature));
+  const generatedProfile = '../../../../../build/default/generated/profile/default/BuildProfile';
+  assertSharedUiFeatureImports(sharedUiFeatureImports(ts, options, consumer,
+    `import { DEBUG } from '${generatedProfile}';`, files, readSource));
+  assert.throws(() => sharedUiFeatureImports(ts, options, consumer,
+    `import { DEBUG } from '${generatedProfile}Other';`, files, readSource), /unresolved local module/);
   for (const source of [
     "import { SettingsPage as Other } from '../../features/settings/ui/SettingsPage';",
     "export { SettingsPage } from '@bundle:io.reader.minliny/entry/ets/features/settings/ui/SettingsPage';",

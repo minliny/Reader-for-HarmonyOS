@@ -57,7 +57,6 @@ type ArkWebJob = {
   cancelled: boolean;
   networkDenied?: boolean;
   pinnedHost?: string;
-  dnsPinned?: boolean;
   route?: NetworkTarget;
   proxyLease?: ArkWebProxyLease;
   nativeFailure?: ArkWebHostFailure | NetworkEnvironmentError;
@@ -134,6 +133,7 @@ export class ArkWebExecutor {
   private surfaceLease: ArkWebSurfaceLease | undefined = undefined;
   private nextSurfaceId: number = 1;
   private proxyLease: ArkWebProxyLease | undefined = undefined;
+  private ownedDnsPin: string | undefined = undefined;
   private surfaceListener: ((surface: ArkWebSurface | undefined) => void) | undefined = undefined;
   private jobs: Map<number, ArkWebJob> = new Map<number, ArkWebJob>();
   private active: ArkWebJob | undefined = undefined;
@@ -253,8 +253,20 @@ export class ArkWebExecutor {
     if (target.route !== 'systemProxy' && !host.includes(':') && !/^[0-9.]+$/.test(host)) {
       webview.WebviewController.setHostIP(host, target.addresses[0],
         Math.max(1, Math.ceil((job.deadlineAt - Date.now()) / 1000)));
-      job.dnsPinned = true;
+      this.ownedDnsPin = host;
     }
+  }
+
+  private clearOwnedDnsPin(): void {
+    const host = this.ownedDnsPin;
+    if (host === undefined) return;
+    try {
+      webview.WebviewController.clearHostIP(host);
+    } catch (error) {
+      throw NetworkEnvironmentError.fromPlatform('dns', '当前网络地址尚未恢复，请稍后重试',
+        'dns.clearHostIP', error);
+    }
+    this.ownedDnsPin = undefined;
   }
 
   /** Native errors carry their originating immutable surface, just like
@@ -577,10 +589,13 @@ export class ArkWebExecutor {
       if (this.proxyLease.phase === 'failed') this.releaseProxyLease(this.proxyLease);
       await this.waitForProxyLease(job, this.proxyLease, true);
     }
+    this.assertCurrent(job);
+    // ArkWeb's pin is process-wide. Recover a failed clear before resolving
+    // the next document, including when the system route now uses a proxy.
+    this.clearOwnedDnsPin();
     let seeds: ArkWebCookieSeed[] = [];
     let controller: webview.WebviewController | undefined;
     try {
-      this.assertCurrent(job);
       this.active = job;
       const id = this.nextSurfaceId++;
       const surface: ArkWebSurface = {
@@ -695,10 +710,10 @@ export class ArkWebExecutor {
       try {
         webview.WebCookieManager.clearAllCookiesSync(true);
       } finally {
-        if (job.dnsPinned && job.pinnedHost !== undefined) {
-          try { webview.WebviewController.clearHostIP(job.pinnedHost); } catch (_) {}
+        if (this.active === job) {
+          try { this.clearOwnedDnsPin(); } catch (_) { /* Retry before a later page. */ }
+          this.active = undefined;
         }
-        if (this.active === job) this.active = undefined;
         const lease = this.surfaceLease;
         if (lease !== undefined && job.surface !== undefined && lease.surface === job.surface) {
           // Revoke callbacks before requesting removal. Only the owning native

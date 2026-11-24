@@ -34,7 +34,7 @@ function wireState(x){
  Object.assign(destination,destinationProps,{mounted:true});destination.catalog(destinationProps.opening);
  const fullProps=[...destination.children.values()].find(c=>c instanceof Captured).params;
  assert.equal(fullProps.catalogBusy,entry.catalogBusy,'actual destination forwards activity to the full directory');
- const full=createReaderBuilderProbe(fullSource,['directoryContent'],deps,sdk.hooks).owner;
+ const full=createReaderBuilderProbe(fullSource,['directoryContent','bookmarkWriteEnabled'],deps,sdk.hooks).owner;
  Object.assign(full,fullProps,{usesExpandedLayout:()=>false,panelWidth:()=>300,fullPanelHeight:()=>400,panelViewportHeight:()=>400,panelLeft:()=>0,panelTop:()=>0,
   shouldAnimatePanel:()=>false,headerLayoutReady:()=>true,directoryRulesOpened:false});
  full.directoryContent();const panelProps=[...full.children.values()].find(c=>c instanceof Captured).params;
@@ -58,11 +58,11 @@ function directoryState(message,busy){
  let retries=0;Object.assign(directory,{admittedIdentity:'source\0book',
   searchQuery:'',navigationActive:false,emptyMessage:()=>message,onRetryCatalog:()=>retries++,mounted:true});
  directory.mangaEmptyState();
- const panel=sdk.consumer(panelSource,['directoryBody','catalogMessage','catalogBusy','catalogRetryVisible','catalogEmptyMessage'],{},
+ const panel=sdk.consumer(panelSource,['standaloneCatalogState','catalogMessage','catalogBusy','catalogRetryVisible','catalogEmptyMessage','panelInputCurrent'],{},
   {catalogMessage:message,catalogBusy:busy});
- Object.assign(panel,{activeTab:'chapters',entries:[],projectedEntries:[],navigationActive:false,
-  tabs(){},searchControls(){},chapterList(){},statusFooter(){},chapterListHeight:()=>240,innerWidth:()=>300,bodyContentHeight:()=>300,onRetryCatalog:()=>retries++});
- panel.directoryBody();
+ Object.assign(panel,{entries:[],navigationActive:false,allowUnanchoredBrowse:true,positioningMounted:true,
+  chapterActionsEnabled:true,motionActive:false,onRetryCatalog:()=>retries++});
+ panel.standaloneCatalogState();
  const action=owner=>sdk.walk(owner).find(c=>c instanceof sdk.deps.ReaderRecoveryAction);
  const click=owner=>{const actor=action(owner);assert.ok(actor);sdk.nodes(actor).find(n=>n.onClick).onClick();};
  if(busy){

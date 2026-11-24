@@ -37,9 +37,8 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
   private backgroundPlaybackEnabled: boolean = true;
   private foregroundSessionActive: boolean = false;
   private foregroundActivation: Promise<void> | undefined = undefined;
-  private mediaActivationAttempted: boolean = false;
+  private mediaActivationGeneration: number = -1;
   private backgroundActivationAttempted: boolean = false;
-  private mediaActivation: Promise<void> | undefined = undefined;
   private backgroundActivation: Promise<void> | undefined = undefined;
   private listener: ((event: ReaderTtsHostEvent) => void) | undefined = undefined;
   private listenerOwner: string | undefined = undefined;
@@ -120,9 +119,9 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     return this.active.isAvailable();
   }
 
-  probe(language?: string, person?: number): Promise<ReaderTtsHostProbe> {
+  probe(language?: string, person?: number, exactVoice?: boolean): Promise<ReaderTtsHostProbe> {
     if (this.closed) return Promise.resolve({ available: false, reason: '朗读服务已关闭' });
-    return this.active === this.system ? this.system.probe(language, person) : this.http.probe();
+    return this.active === this.system ? this.system.probe(language, person, exactVoice) : this.http.probe();
   }
 
   async activateAudioSession(allowMixing: boolean): Promise<void> {
@@ -305,9 +304,9 @@ export class HarmonyTtsHostRouter implements ReaderTtsHost {
     // Neither optional platform bridge belongs on the per-slice speech path.
     // A single attempt per foreground lease also avoids repeated native calls
     // when the coordinator asks to keep the same audio focus for each slice.
-    if (!this.mediaActivationAttempted) {
-      this.mediaActivationAttempted = true;
-      this.mediaActivation = this.mediaSession.activate().catch((): void => {});
+    if (this.mediaActivationGeneration !== this.audioGeneration) {
+      this.mediaActivationGeneration = this.audioGeneration;
+      void this.mediaSession.activate().catch((): void => {});
     }
     if (this.backgroundPlaybackEnabled && this.backgroundSession !== undefined &&
       !this.backgroundActivationAttempted) {

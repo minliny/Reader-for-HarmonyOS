@@ -1,0 +1,10 @@
+{
+  "share_files": {
+    "scopes": [
+      {
+        "path": "/el2/base/cache/reader-share",
+        "permission": "r"
+      }
+    ]
+  }
+}
