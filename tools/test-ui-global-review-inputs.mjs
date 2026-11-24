@@ -3,17 +3,18 @@ import { readFileSync } from 'node:fs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 import { iconButtonControls } from './lib/reader-icon-button-probe.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { createReaderBuilderProbe, productionReaderMotionSdk } from './lib/reader-control-builder-probe.mjs';
 import { actualReaderFloatingBarMetrics, actualReaderPageShell } from './lib/reader-page-shell-runtime-probe.mjs';
 import { actualReaderMainTabs } from './lib/reader-phone-navigation-source.mjs';
 import { selectedProductionMethods, selectedProductionValues } from './lib/selected-production-methods.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { resolveReaderRaisedShape } from '../entry/src/main/ets/ui/layout/ReaderRaisedShape.ts';
 
 const cases = selectContractCases({
-  'tab-current-items': 'Actual native tab actors consume current same-key icons and labels after route/theme projections. Frozen icon capture is rejected. No native layout.',
+  'tab-current-items': 'Actual native tab actors consume current same-key icons and labels after route/theme projections. The retained pill moves in 220ms or fades at its destination in 120ms. Frozen icon capture is rejected. No native layout.',
   'rule-current-drafts': 'Actual stable-id directory rule fields and Select props follow production draft edits. Original callback identity and field actors remain stable.',
   'shelf-mode-admission': 'Actual shelf section native callback reaches production mode admission, rejecting background/old navigation inputs and retaining pre-dispatch qualification.',
 });
@@ -32,21 +33,38 @@ function checkTabItems(source) {
     navigation.appThemeScheme = scheme;
     return navigation.items();
   };
-  const owner = createReaderBuilderProbe(source, boundedMembers(source), {
+  const frames = [], animations = [];
+  let owner;
+  const uiContext = {
+    postFrameCallback: frame => frames.push(frame),
+    animateTo(params, paint) {
+      const before = [owner.paintedTab, owner.pillOpacity];
+      paint();
+      animations.push({ params, before, after: [owner.paintedTab, owner.pillOpacity] });
+    },
+  };
+  owner = createReaderBuilderProbe(source, boundedMembers(source), {
     ...controls.dependencies, ...actualReaderFloatingBarMetrics(), resolveReaderRaisedShape,
     readerPageAreaLength, readerSurfaceElevation: () => ({ radius: 0 }),
+    ...productionReaderMotionSdk(), ReaderPostLayoutFrame: actualReaderPostLayoutFrame(), uiContext,
   }, controls.hooks).owner;
   Object.assign(owner, {
     mounted: true, appearanceEpoch: 1, current: 'bookshelf', scheme: 'day',
     items: items('bookshelf', 'day'), surfaceWidth: 196, fontScale: 1,
     inputEnabled: true, bottomInset: 15, translateX: 0, metricsRevision: 1,
   });
+  owner.aboutToAppear();
   owner.initialRender();
   const images = controls.nodes(owner).filter(node => node.type === 'Image');
   const labels = controls.nodes(owner).filter(node => node.type === 'Text');
+  const deliver = patch => owner.updateStateVars({
+    current: owner.current, items: owner.items, scheme: owner.scheme, surfaceWidth: owner.surfaceWidth,
+    fontScale: owner.fontScale, inputEnabled: owner.inputEnabled, bottomInset: owner.bottomInset,
+    translateX: owner.translateX, ...patch,
+  });
   for (const [current, scheme] of [['bookshelf', 'night'], ['settings', 'night'], ['settings', 'day']]) {
     const projection = items(current, scheme);
-    owner.updateStateVars({ current, scheme, items: projection });
+    deliver({ current, scheme, items: projection });
     controls.properties.flush();
     assert.deepEqual(images.map(node => node.create), projection.map(tab => tab.icon),
       'retained tab images consume current item icons');
@@ -54,10 +72,29 @@ function checkTabItems(source) {
       'projection changes preserve the native icon actors');
   }
   const renamed = items('settings', 'day').map(tab => ({ ...tab, label: `${tab.label}已更新` }));
-  owner.updateStateVars({ items: renamed });
+  deliver({ items: renamed });
   controls.properties.flush();
   assert.deepEqual(labels.map(node => node.create), renamed.map(tab => tab.label));
-  return { images: images.length, projections: 4 };
+  const buttons = controls.nodes(owner).filter(node => node.type === 'Button');
+  const pills = () => controls.nodes(owner).filter(node => node.type === 'Row' && node.accessibilityLevel === 'no' && node.translate);
+  assert.equal(pills().length, 1, 'one paint-only pill spans tab changes');
+  const pill = pills()[0];
+  assert.deepEqual(animations, [{ params: { duration: 220, curve: [0.22, 1.05, 0.36, 1] }, before: [0, 1], after: [1, 1] }]);
+  owner.reduceMotion = true;
+  deliver({ current: 'bookshelf', items: items('bookshelf', 'day') });
+  controls.properties.flush();
+  assert.equal(owner.paintedTab, 0);
+  assert.equal(owner.pillOpacity, 0);
+  owner.replay();
+  assert.equal(pill.opacity, 0);
+  const frame = frames.shift(); frame.onFrame(16); frame.onIdle(0); drainReaderPostLayoutFallbacks(frames);
+  controls.properties.flush();
+  assert.deepEqual(animations[1], { params: { duration: 120, curve: 'Curve.EaseOut' }, before: [0, 0], after: [0, 1] });
+  assert.equal(pills()[0], pill);
+  owner.replay();
+  assert.equal(pill.opacity, 1);
+  assert.deepEqual(controls.nodes(owner).filter(node => node.type === 'Button'), buttons);
+  return { images: images.length, projections: 5, pillMotion: [220, 120] };
 }
 
 function checkRuleDrafts(source) {

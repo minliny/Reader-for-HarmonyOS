@@ -39,6 +39,49 @@ export function bookshelfMotionRectAt(request: BookshelfMotionRequest, progress:
     height: source.height + (target.height - source.height) * p };
 }
 
+export interface BookshelfMotionPaint {
+  rect: BookshelfMotionRect;
+  radius: number;
+  angle: number;
+  coverOpacity: number;
+  readerOpacity: number;
+  shelfOpacity: number;
+  shelfScale: number;
+  shelfBrightness: number;
+}
+
+function bookshelfMotionTrack(progress: number, from: number, to: number, start: number, end: number,
+  curve: (fraction: number) => number): number {
+  const t = Math.max(0, Math.min(1, (progress - start) / (end - start)));
+  return from + (to - from) * curve(t);
+}
+
+/** All tracks sample one direction-independent authored phase. */
+export function bookshelfMotionPaint(request: BookshelfMotionRequest, phase: number,
+  carryCurve: (fraction: number) => number, spineCurve: (fraction: number) => number): BookshelfMotionPaint {
+  const p = Math.max(0, Math.min(1, phase));
+  const carry = carryCurve(p);
+  let angle: number;
+  if (p < 0.12) angle = bookshelfMotionTrack(p, 0, -10, 0, 0.12, spineCurve);
+  else if (p < 0.56) angle = bookshelfMotionTrack(p, -10, -82, 0.12, 0.56, spineCurve);
+  else if (p < 0.88) angle = bookshelfMotionTrack(p, -82, -116, 0.56, 0.88, spineCurve);
+  else angle = bookshelfMotionTrack(p, -116, -122, 0.88, 1, spineCurve);
+  return {
+    rect: bookshelfMotionRectAt(request, carry),
+    radius: request.origin.radius * (1 - carry),
+    angle,
+    coverOpacity: p < 0.56 ? bookshelfMotionTrack(p, 1, 0.95, 0.12, 0.56, spineCurve) :
+      bookshelfMotionTrack(p, 0.95, 0, 0.56, 0.88, spineCurve),
+    readerOpacity: carry,
+    shelfOpacity: p < 0.75 ? bookshelfMotionTrack(p, 1, 0.9, 0, 0.75, carryCurve) :
+      bookshelfMotionTrack(p, 0.9, 0, 0.75, 1, carryCurve),
+    shelfScale: p < 0.75 ? bookshelfMotionTrack(p, 1, 0.978, 0, 0.75, carryCurve) :
+      bookshelfMotionTrack(p, 0.978, 0.97, 0.75, 1, carryCurve),
+    shelfBrightness: p < 0.75 ? bookshelfMotionTrack(p, 1, 0.68, 0, 0.75, carryCurve) :
+      bookshelfMotionTrack(p, 0.68, 0.6, 0.75, 1, carryCurve),
+  };
+}
+
 export function bookshelfMotionBookKey(sourceId: string, bookId: string): string {
   return JSON.stringify([sourceId, bookId]);
 }

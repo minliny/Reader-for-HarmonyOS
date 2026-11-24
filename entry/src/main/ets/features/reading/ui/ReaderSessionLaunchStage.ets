@@ -7,8 +7,7 @@ import type { ReaderSessionCapsuleState } from './ReaderSessionCapsuleModel';
 import type { ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
 
 /**
- * Persistent C/D/E/F actors. Parent owns viewport positioning, lifecycle and
- * one clock. Keep this stage mounted through the 2300–3500 hold and afterwards.
+ * Persistent launch and playback actors. Parent owns positioning, lifecycle and clock.
  * Builders contain visual source CONTENT only: no source surface, interaction,
  * onAppear work, measurements, Core reads or capture requests. They can render
  * a ready, revision-validated PixelMap; they must never wait for one to exist.
@@ -39,7 +38,6 @@ export struct ReaderSessionLaunchStage {
   @Prop themeScheme: string = 'day';
   @Prop shadowColor: string = '#12463423';
   @BuilderParam sourceSharpContent: () => void;
-  @BuilderParam sourceBlurContent: () => void;
   onToggle: () => void = (): void => {};
 
   private sourceClipCache: ReaderControlMotionPathCache<PathShape> = new ReaderControlMotionPathCache<PathShape>(
@@ -66,7 +64,7 @@ export struct ReaderSessionLaunchStage {
         .attributeModifier(new ReaderSessionCapsuleFrame(this.themeScheme, this.surfaceColor, this.surfaceBorderColor, this.shadowColor))
         .opacity(this.sample.canonicalSurfaceOpacity).hitTestBehavior(HitTestMode.None);
 
-      // SourceRegion owns its surface; both content copies retain uniform scale.
+      // SourceRegion owns its surface; the single content actor retains uniform scale.
       Stack({ alignContent: Alignment.TopStart }) {
         Row().width('100%').height(Math.max(0, this.sample.proxyHeight - this.sourceSurfaceTopInset * (1 - this.sample.flight)))
           .position({ x: 0, y: this.sourceSurfaceTopInset * (1 - this.sample.flight) })
@@ -77,20 +75,15 @@ export struct ReaderSessionLaunchStage {
           .hitTestBehavior(HitTestMode.None);
         Row().width('100%').height(1).backgroundColor(this.sourceHighlightColor)
           .position({ x: 0, y: this.sourceSurfaceTopInset * (1 - this.sample.flight) }).hitTestBehavior(HitTestMode.None);
-        Stack({ alignContent: Alignment.TopStart }) { this.sourceSharpContent(); }
-          .id('reader-session-launch-sharp')
-          .width(this.sample.sourceWidth).height(this.sample.sourceHeight)
-          .position({ x: this.sample.sourceContentBaseOffset, y: this.sample.sourceContentBaseOffset })
-          .scale({ x: this.sample.sourceContentScale, y: this.sample.sourceContentScale, centerX: '50%', centerY: '50%' })
-          .translate({ x: this.sample.sourceContentTranslateX, y: this.sample.sourceContentTranslateY })
-          .opacity(this.sample.sharpOpacity).hitTestBehavior(HitTestMode.None);
-        Stack({ alignContent: Alignment.TopStart }) { this.sourceBlurContent(); }
-          .id('reader-session-launch-blur')
-          .width(this.sample.sourceWidth).height(this.sample.sourceHeight)
-          .position({ x: this.sample.sourceContentBaseOffset, y: this.sample.sourceContentBaseOffset })
-          .scale({ x: this.sample.sourceContentScale, y: this.sample.sourceContentScale, centerX: '50%', centerY: '50%' })
-          .translate({ x: this.sample.sourceContentTranslateX, y: this.sample.sourceContentTranslateY })
-          .blur(this.sample.blurRadius).opacity(this.sample.blurOpacity).hitTestBehavior(HitTestMode.None);
+        if (this.sample.sourceNeeded) {
+          Stack({ alignContent: Alignment.TopStart }) { this.sourceSharpContent(); }
+            .id('reader-session-launch-sharp')
+            .width(this.sample.sourceWidth).height(this.sample.sourceHeight)
+            .position({ x: this.sample.sourceContentBaseOffset, y: this.sample.sourceContentBaseOffset })
+            .scale({ x: this.sample.sourceContentScale, y: this.sample.sourceContentScale, centerX: '50%', centerY: '50%' })
+            .translate({ x: this.sample.sourceContentTranslateX, y: this.sample.sourceContentTranslateY })
+            .opacity(this.sample.sharpOpacity).hitTestBehavior(HitTestMode.None);
+        }
       }
       .id('reader-session-launch-source')
       .width('100%').height('100%')
@@ -106,7 +99,7 @@ export struct ReaderSessionLaunchStage {
           .translate({ x: this.sample.leadingOffsetX }).opacity(this.sample.leadingOpacity);
       }.id('reader-session-launch-leading').width('100%').height('100%').borderRadius(READER_SESSION_CAPSULE_RADIUS).clip(true).hitTestBehavior(HitTestMode.None);
 
-      // CircleState is NOT a descendant of the reveal row: already visible at dot.
+      // The pause control keeps its own position throughout the reveal.
       ReaderSessionCapsulePause({ sessionState: this.sessionState, themeScheme: this.themeScheme, desiredPlaying: this.desiredPlaying,
         primaryColor: this.effectivePrimaryColor(), onPrimaryColor: this.effectiveOnPrimaryColor() })
         .position({ x: this.sample.pauseX, y: (this.sample.proxyHeight - 16) / 2 }).opacity(this.sample.pauseOpacity);

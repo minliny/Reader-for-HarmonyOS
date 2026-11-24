@@ -108,7 +108,7 @@ export class ReaderSettingsJourney {
       this.returnToSettings();
       return;
     }
-    this.ports.publish(this.navigation.show(this.navigation.returns.snapshot().readingOrigin));
+    this.ports.publish(this.navigation.showReadingOrigin());
     this.ports.readingActions().openReading(undefined);
   }
 }

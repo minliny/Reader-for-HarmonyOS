@@ -8,8 +8,9 @@ import type { ReaderSessionLaunchGeometry } from './ReaderSessionLaunchPresentat
 import type { ReaderControlLocation } from './ReaderControlSessionState';
 
 const ACTOR_IDS: string[] = ['reader-session-launch-proxy', 'reader-session-launch-source',
-  'reader-session-launch-sharp', 'reader-session-launch-blur', 'reader-session-launch-surface',
-  'reader-session-launch-leading', 'reader-control-motion-dock', 'reader-control-motion-topbar'];
+  'reader-session-launch-sharp', 'reader-session-launch-surface',
+  'reader-session-launch-leading', 'reader-control-motion-dock', 'reader-control-motion-topbar',
+  'reader-session-launch-blur']; // Negative observation for the retired blur actor.
 const MAX_FRAMES: number = 192;
 const BLOCK_FRAMES: number = 2;
 const BLOCK_INTERVAL_MS: number = 75;

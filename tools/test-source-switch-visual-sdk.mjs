@@ -204,8 +204,27 @@ for(const width of [390,720])for(const scheme of ['day','night']){
  const content=x.nodes.filter(node=>node.type==='Column'&&node.layoutWeight===1&&node.padding?.bottom===32);
  assert.equal(content.length,1,'only the drawer content owns the safe-area padding');
  assert.deepEqual(content[0].padding,{left:left+side,right:right+side,bottom:32});
- assert.equal([...x.o.nodes.values()].find(node=>node.type==='__Common__'&&node.transition!==undefined).transition.kind,'identity','owner preserves reduced-motion policy around the shared frame');
+ const transition = [...x.o.nodes.values()].find(node => node.type === '__Common__' && node.transition !== undefined).transition[0];
+ assert.equal(transition.kind, 'opacity', 'reduced sheet movement is an opacity dissolve');
+ assert.equal(transition.options.duration, 120);
  x.o.aboutToDisappear();
+}
+if (selectedCase === 'rows-safe-area') {
+ const { o, rows } = scene(390,844,1);
+ const carrier = [...o.nodes.values()].find(node => node.type === '__Common__' && node.transition !== undefined);
+ const [normal] = carrier.transition;
+ assert.equal(normal.kind, 'asymmetric');
+ for (const [phase, duration] of [['appear', 260], ['disappear', 210]]) {
+  const effect = normal.parameters[phase];
+  assert.equal(effect.kind, 'move');
+  assert.equal(effect.parameters, 'bottom');
+  assert.equal(effect.options.duration, duration);
+  assert.deepEqual(effect.options.curve.values, [0.2, 0, 0, 1]);
+ }
+ assert.ok(rows.length > 0);
+ assert.ok(rows.every(row => p.nodes(row).every(node => node.transition === undefined)),
+  'candidate insertion has no per-row entrance actor or delay');
+ o.aboutToDisappear();
 }
 // The same native track remains reserved before remeasurement supplies a
 // latency. Only content is inset; the row's border and hit extent stay full width.

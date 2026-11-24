@@ -1,5 +1,6 @@
 import type { SourceSwitchPresentation } from '../presentation/SourceSwitchPresentation';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
+import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { resolveDrawerSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import type { SourceSwitchCandidate } from '../application/SourceSwitchGateway';
@@ -35,7 +36,7 @@ export struct SourceSwitchPanel {
   @Prop latestChapterTitle: string = '';
   @Prop currentChapterTitle: string = '';
   @Prop contentKind: string = 'text';
-  @Prop @Watch('surfaceChanged') reduceMotion: boolean = false;
+  @Prop reduceMotion: boolean = false;
   @Prop consumeTopInset: boolean = true;
   @Prop allowCancelWhileSwitching: boolean = false;
   @Prop interactive: boolean = true;
@@ -81,7 +82,7 @@ export struct SourceSwitchPanel {
         this.attachedSurface = surface;
         this.attachment = surface.attachSurface(this.scopeId);
       }
-    } else this.attachedSurface?.hideSurface(this.attachment, this.attachedScope, this.reduceMotion);
+    } else this.attachedSurface?.hideSurface(this.attachment, this.attachedScope);
   }
 
   private acceptsInput(): boolean {
@@ -107,9 +108,8 @@ export struct SourceSwitchPanel {
         .width('100%')
         .height('100%')
         .backgroundColor(readerAppColor(resolveDrawerSpec('source-switch-drawer').scrimRole, this.appThemeScheme))
-        .transition(this.reduceMotion ? TransitionEffect.IDENTITY : TransitionEffect.asymmetric(
-          TransitionEffect.OPACITY.animation(motionAnimateParam('source.switch.open')),
-          TransitionEffect.OPACITY.animation(motionAnimateParam('source.switch.close'))),
+        .transition(TransitionEffect.OPACITY.animation(this.reduceMotion ?
+          readerMotionReducedFadeParam() : motionAnimateParam('app.sheet.scrim')),
           (transitionIn: boolean): void => this.surface?.surfaceTransitionFinished(attachment, scopeId, 'scrim', transitionIn))
         .onAppear((): void => this.surface?.surfacePartAppeared(attachment, scopeId, 'scrim'))
         .onClick((): void => { if (this.isCurrent(scopeId)) this.onClose(scopeId); });

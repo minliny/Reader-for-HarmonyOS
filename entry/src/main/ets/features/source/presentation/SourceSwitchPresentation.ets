@@ -130,8 +130,8 @@ export class SourceSwitchPresentation {
   surfacePartAppeared(attachment: number, scope: number, part: string): void {
     this.surfaceLifecycle.appeared(attachment, scope, part);
   }
-  hideSurface(attachment: number, scope: number, reduceMotion: boolean): void {
-    if (this.surfaceLifecycle.hide(attachment, scope, reduceMotion)) this.restoreSurfaceFocus(scope);
+  hideSurface(attachment: number, scope: number): void {
+    if (this.surfaceLifecycle.hide(attachment, scope)) this.restoreSurfaceFocus(scope);
   }
   surfaceTransitionFinished(attachment: number, scope: number, part: string, transitionIn: boolean): void {
     if (this.surfaceLifecycle.transitionFinished(attachment, scope, part, transitionIn)) this.restoreSurfaceFocus(scope);

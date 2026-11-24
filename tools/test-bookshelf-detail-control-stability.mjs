@@ -57,7 +57,6 @@ const { createRequire, stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const { motionSegment } = await import('../entry/src/main/ets/ui/foundation/MotionTimeline.ts');
-const { readerInteractiveSafeBottom } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const { localBookDetailSdk, localBookDetailSource } = await import('./lib/local-book-detail-sdk-probe.mjs');
 const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
@@ -74,61 +73,53 @@ for (const name of ['continueReadingCard', 'filterRow', 'projectionRow']) builde
 const specSource = readFileSync(file('ui/foundation/MotionSpec.ets'), 'utf8');
 const declaration = specSource.slice(specSource.indexOf('const BOOKSHELF_VIEW_MOTION:'), specSource.indexOf('\nconst ENTRIES:'));
 const curve = { interpolate: value => value };
-const viewMotion = new Function('curves', 'Curve',
-  `${stripTypeScriptTypes(declaration)}; return BOOKSHELF_VIEW_MOTION;`)(
-  { cubicBezierCurve: () => curve }, { Linear: 'linear', EaseOut: 'easeOut' });
+const { READER_SHELF_REFLOW_MS, READER_SHELF_STAGGER_MS, READER_SHELF_STAGGER_CAP_MS } =
+  await import('../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts');
+const viewMotion = new Function('STANDARD_CURVE', 'READER_SHELF_REFLOW_MS', 'READER_SHELF_STAGGER_MS',
+  'READER_SHELF_STAGGER_CAP_MS', `${stripTypeScriptTypes(declaration)}; return BOOKSHELF_VIEW_MOTION;`)(
+  curve, READER_SHELF_REFLOW_MS, READER_SHELF_STAGGER_MS, READER_SHELF_STAGGER_CAP_MS);
 const Motion = productionMotionMethods(shelfFile, ['sampleViewSwitch'], { motionSegment });
-const readerMetrics = { windowRect: { width: 390, height: 844 }, systemInsets: { top: 48, bottom: 34, left: 0, right: 0 }, cutoutInsets: {}, gestureInsets: {}, navigationInsets: {}, keyboardInsets: {} };
-const readerFloatingTabContentInset = metrics => 68 + Math.max(15, readerInteractiveSafeBottom(metrics)) + 16;
 const sampler = Object.assign(new Motion(), { viewMotion, viewFadeCurve: curve,
   viewContentCurve: curve, viewSwitchSourceMode: 'cover', viewSwitchDestinationMode: 'list' });
 let shelfSamples = 0;
 if(selectedCase==='toolbar-retained') {
+const headerSource = readFileSync(file('features/bookshelf/ui/BookshelfSectionHeader.ets'), 'utf8');
+const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+const { readerFoundationTokens } = await import('./lib/reader-tokens-probe.mjs');
+const { readerScaledControlHeight } = await import('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts');
+const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
+syntax.componentCollection.customComponents.add('ReaderIconButton');
+syntax.propCollection.set('ReaderIconButton', new Set(['specId', 'icon', 'accessibilityLabel', 'actionEnabled', 'scheme', 'selectionState']));
+const ReaderIconButton = class { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } };
+assert.match(shelfSource, /BookshelfSectionHeader\(\{[\s\S]*?titleOpacity: this\.viewSwitchHeaderOpacity,[\s\S]*?viewMode: this\.viewMode,/);
 for (const theme of ['day', 'night']) {
-  const mountedItems = new Set();
-  const { owner } = createReaderBuilderProbe(shelfSource, ['bookshelfList','shelfPageHandler','shelfScrollHandler','isShelfPresentationCurrent', 'sectionAction',
-    'sectionActionAsset', 'canonicalFilterActiveAsset', 'isSectionActionActive', 'sectionActionLabel'], {
-    READER_FLOATING_TOP_BAR_HEIGHT: 58,
-    LazyForEach: { create() {}, pop() {} },
-    ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
-    readerFloatingTabContentInset, ReaderWindowCoordinator: { metrics: () => readerMetrics },
-  }, {
-    onObserverExit(owner, id) {
-      const node = owner.nodes.get(id);
-      if (node.type === 'ListItem' && Array.isArray(node.create) &&
-        typeof node.create[0] === 'function' && !mountedItems.has(id)) {
-        mountedItems.add(id); node.create[0]();
-      }
-    },
-  });
-  Object.assign(owner, { appThemeScheme: theme, viewMode: 'cover', viewSwitchHeaderOpacity: 1,
-    continueReading: undefined, filterRowVisible: false,
-    viewModeError: '', visibleBookCount: 0, rowDataSource: {},
-    shelfContentWidth: () => 352, readerFloatingTabContentInset, ReaderWindowCoordinator: { metrics: () => readerMetrics }, hasActiveFilters: () => false, isWideViewport: () => false });
-  owner.bookshelfList(false);
-  const icons = [...owner.nodes.values()].filter(node => node.type === 'Image');
-  assert.equal(icons.length, 3);
-  const ids = icons.map(node => node.id);
-  const header = [...owner.nodes.values()].find(node => node.type === 'Row' && node.height === 38);
+  const { owner } = createReaderBuilderProbe(headerSource,
+    ['build', 'sectionAction', 'sectionActionAsset', 'actionLabel', 'isActive', 'activate'], {
+      ...readerTypographyRoles, ...readerFoundationTokens, readerAppColor, readerScaledControlHeight,
+      SHELF_SECTION_ACTION_SIZE: 34, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) }, ReaderIconButton,
+    });
+  Object.assign(owner, { appThemeScheme: theme, viewMode: 'cover', titleOpacity: 1, actionsOpacity: 1,
+    contentWidth: 352, windowRevision: 0, actionsEnabled: true, filterExpanded: false, hasActiveFilters: false });
+  owner.initialRender();
+  const actionIds = [...owner.children.keys()];
+  assert.equal(actionIds.length, 3);
+  const header = [...owner.nodes.values()].find(node => node.type === 'Row' && node.width === 352);
   const title = [...owner.nodes.values()].find(node => node.type === 'Text' && node.create === '我的书架');
   assert.equal(title.layoutWeight,1,'title expansion keeps the three surviving tools right-aligned');
   assert.equal([...owner.nodes.values()].find(node=>node.type==='Row'&&node.height===34).width,undefined,
     'toolbar width follows its three actions without retaining an empty gear slot');
   for (const [source, target] of [['cover', 'list'], ['list', 'cover']]) {
     Object.assign(sampler, { viewSwitchSourceMode: source, viewSwitchDestinationMode: target });
-    for (const time of [0, 150, 210, 270, 350, 499, 500, 600, 700, 1000, 350, 150, 0]) {
+    for (const time of [0, 24, 60, 96, 120, 180, 240, 260, 300, viewMotion.totalMs, 180, 60, 0]) {
       sampler.viewSwitchTimeMs = time; sampler.sampleViewSwitch();
       owner.viewMode = sampler.viewMode;
-      owner.viewSwitchHeaderOpacity = sampler.viewSwitchHeaderOpacity;
+      owner.titleOpacity = sampler.viewSwitchHeaderOpacity;
       owner.replay();
       assert.equal(header.opacity ?? 1, 1, `toolbar ancestor hidden at ${time} ms`);
       assert.equal(title.opacity ?? 1, sampler.viewSwitchHeaderOpacity, 'title keeps its existing motion track');
-      assert.deepEqual([...owner.nodes.values()].filter(node => node.type === 'Image').map(node => node.id), ids);
-      for (const icon of icons) {
-        assert.equal(icon.opacity ?? 1, 1);
-        void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */ void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-        assert.equal(typeof icon.create, 'string');
-      }
+      assert.deepEqual([...owner.children.keys()], actionIds);
+      assert.equal([...owner.nodes.values()].find(node => node.type === 'Row' && node.height === 34).opacity, 1);
+      for (const action of owner.children.values()) assert.equal(typeof action.params.icon, 'string');
       shelfSamples += 1;
     }
   }

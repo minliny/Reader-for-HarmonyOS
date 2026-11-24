@@ -28,7 +28,7 @@ function check(source) {
   const Entry = selectedProductionMethods(file('features/reading/presentation/ReadingEntryPresentation.ets'),
     'ReadingEntryPresentation', ['readerPresentationIdentity']);
   const Motion = selectedProductionMethods(file('features/bookshelf/ui/BookshelfNavigationPresentation.ets'),
-    'BookshelfNavigationPresentation', ['finish', 'coverClosed']);
+    'BookshelfNavigationPresentation', ['finish', 'coverClosed', 'resetShelfPaint']);
   const scenarios = [];
   for (const boundary of ['opening', 'hidden', 'directory', 'source', 'manga']) {
     const runtime = {};

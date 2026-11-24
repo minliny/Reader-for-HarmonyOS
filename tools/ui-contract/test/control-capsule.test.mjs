@@ -24,8 +24,8 @@ function fixture() {
   const proxy = { id:'reader-session-launch-proxy', mounted:true, uniqueId:1,
     windowOriginVp:{x:40,y:500}, layoutRectVp:{x:40,y:500,width:286,height:196},
     matrix:[...matrix], rotation:{angle:0}, zIndex:0, inspectorSource:'FrameNode.getInspectorInfo' };
-  const frame = { index:0, frameTimeNs:1e6, publishedTickMs:100, timeMs:0, phase:'initial',
-    controlsPresented:true, sourceNeeded:true, actors:[proxy] };
+  const frame = { index:0, frameTimeNs:1e6, publishedTickMs:100, timeMs:0, phase:'flight',
+    controlsPresented:true, sourceNeeded:true, actors:[proxy, {id:'reader-session-launch-blur',mounted:false}] };
   const admission = { generation:3, type:'autoPage', kind:'quickAutoPage', source:{level:'secondary',module:'autoPage',form:'quick'},
     sourceActorId:sourceId, startTimeMs:100, reducedMotion:false, geometry:{ kind:'quickAutoPage',type:'autoPage',
       sourceLeft:40, sourceTop:500, sourceWidth:286, sourceHeight:196, dotLeft:280, targetLeft:210, targetTop:760,
@@ -74,18 +74,19 @@ test('the Full capsule flight compares captured ArkUI geometry without changing 
     ...baseline.nodes[1], id:sourceActorId, rectPx:{left:geometry.sourceLeft,top:geometry.sourceTop,
       width:geometry.sourceWidth,height:geometry.sourceHeight},
   }]};
-  const dock = {...proxy, id:'reader-control-motion-dock', uniqueId:2, translateVp:{x:0,y:668.28125,z:0}};
-  // 39470868b037 Full AutoPage raw frames 17, 18, and 20, respectively.
+  const dock = {...proxy, id:'reader-control-motion-dock', uniqueId:2, translateVp:{x:0,y:694.36,z:0}};
+  // Independently calculated 0, 80 and 140ms points for the final cubic over the measured source.
   const points = [
-    [574,149.14285278320312,407.4285583496094,184.196044921875,72.15611049107143],
-    [608,170.2857208251953,450.28570556640625,163.98008510044642,66.07904924665179],
-    [684,211.14285278320312,532.5714111328125,125.103271484375,54.39239065987723],
+    [0,37.143,179.857,291.429,104.391],
+    [80,251.398,614.608,86.479,42.782],
+    [140,300.841,714.933,39.184,28.564],
   ];
   const block = context.events[2].payload.facts;
   const initial = block.frames[0];
   block.frames = points.map(([timeMs,x,y,width,height], index) => ({
-    ...initial, index, timeMs, phase:'flight', frameTimeNs:(index + 1) * 15e6, publishedTickMs:100 + timeMs / 2,
-    actors:[{...proxy, windowOriginVp:{x,y}, layoutRectVp:{x,y,width,height}}, ...(index === 2 ? [dock] : [])],
+    ...initial, index, timeMs, phase:'flight', frameTimeNs:(index + 1) * 15e6, publishedTickMs:100 + timeMs,
+    actors:[{...proxy, windowOriginVp:{x,y}, layoutRectVp:{x,y,width,height}},
+      initial.actors[1], ...(index === 2 ? [dock] : [])],
   }));
   const compare = () => evaluateMotion(fullLaunch, context).actual.findings.filter(item =>
     item.field === 'proxy-window-geometry' || item.field === 'dock-translation');
@@ -93,6 +94,14 @@ test('the Full capsule flight compares captured ArkUI geometry without changing 
   block.frames[0].actors[0].windowOriginVp.y += 1.25;
   dock.translateVp.y += 1.25;
   assert.deepEqual(compare().map(item => item.field), ['proxy-window-geometry','dock-translation']);
+});
+
+test('a mounted obsolete blur actor violates the new capsule flight', () => {
+  const { context } = fixture();
+  context.events[2].payload.facts.frames[0].actors[1].mounted = true;
+  const result = evaluateMotion(launch, context);
+  assert.equal(result.verdict, 'FAIL');
+  assert.ok(result.actual.findings.some(item => item.field === 'no-obsolete-blur-actor' && !item.missing));
 });
 
 test('a capsule transform violation is retained despite later missing blocks', () => {
@@ -263,7 +272,7 @@ function handoffFixture() {
     payload:{readingId,kind:'capsule-launch',phase,facts:{type:'autoPage',kind:'quickAutoPage',generation:3,...facts}},
   });
   const returned = (eventSeq, phase, ownership) =>
-    event(eventSeq,phase,{ownership,status:'playing',desiredPlaying:false,cancelReason:'openControl',timeMs:3500});
+    event(eventSeq,phase,{ownership,status:'playing',desiredPlaying:false,cancelReason:'openControl',timeMs:380});
   const fadeFrame = (elapsed, opacity) => ({observedMs:4000 + elapsed,stageId:42,quickId:57,opacity,quickVisible:true});
   const fade = event(54,'handoff-fade',{
     source:'FrameNode.getOpacity',frameLimitReached:false,start:fadeFrame(0,1),endpoint:fadeFrame(200,0),
@@ -275,7 +284,7 @@ function handoffFixture() {
   fade.channel = 'motion';
   context.events.push(
     event(21,'business-ack',{status:'playing'}),
-    event(30,'timeline-finished',{timeMs:3500}),
+    event(30,'timeline-finished',{timeMs:380}),
     event(40,'business-paused',{status:'paused'}),
     returned(50,'cancel-request','handoffPending'),
     returned(53,'handoff-ready','exitPending'),
@@ -301,21 +310,21 @@ function interruptedLaunchFixture() {
   final.nodes.push(node(sourceId,'0/1','0'),node('reader-control-collapse','0/2','0',{enabled:false}));
   context.actions[interruptedLaunch.action] = {instanceId,op:'clickThenReaderCenter',
     targetId:'reader-control-autopage-transport-toggle',beforeSeq:14,afterSeq:56,
-    dispatch:{dispatchGapMs:650,probeSeq:71}};
+    dispatch:{dispatchGapMs:240,probeSeq:71}};
   context.events = context.events.filter(event => !['business-paused','timeline-finished'].includes(event.payload.phase));
   const admission = phase('admitted');
   const play = phase('business-ack');
   const hidden = {...play,eventSeq:30,payload:{...play.payload,phase:'panel-hidden',
-    facts:{...play.payload.facts,timeMs:700,controlsPresented:false}}};
+    facts:{...play.payload.facts,timeMs:162,controlsPresented:false}}};
   context.events.push(hidden);
   for (const name of ['cancel-request','handoff-ready','retired']) {
-    Object.assign(phase(name).payload.facts,{timeMs:1160,autoPageStatus:'running',desiredPlaying:true});
+    Object.assign(phase(name).payload.facts,{timeMs:255,autoPageStatus:'running',desiredPlaying:true});
   }
   const block = phase('frame-block');
   block.channel = 'motion';
   block.eventSeq = 56;
   Object.assign(block.payload.facts,{blockCount:1,finalBlock:true,endReason:'openControl',
-    frames:[1000,1032,1064,1096].map((timeMs,index) => ({index,timeMs,frameTimeNs:(index+1)*16e6,actors:[{
+    frames:[192,208,224,240].map((timeMs,index) => ({index,timeMs,frameTimeNs:(index+1)*16e6,actors:[{
       id:'reader-session-launch-proxy',mounted:true,uniqueId:50,
       windowOriginVp:{x:175 + index,y:400 + index},layoutRectVp:{width:60 - index,height:30 - index},
     }]})),
@@ -343,7 +352,7 @@ test('an AutoPage initiation interruption proves the in-flight cut and an indepe
     [({context,hidden}) => {context.events = context.events.filter(event => event !== hidden);},
       'NOT_RUN','launch-interruption-in-flight-cut lacks comparable evidence'],
     [({phase}) => {
-      for (const name of ['cancel-request','handoff-ready','retired']) phase(name).payload.facts.timeMs = 2310;
+      for (const name of ['cancel-request','handoff-ready','retired']) phase(name).payload.facts.timeMs = 380;
     },'NOT_RUN','launch-interruption-in-flight-cut lacks comparable evidence'],
     [({block}) => { block.payload.facts.endReason = 'visual-settled'; },
       'NOT_RUN','launch-interruption-native-flight lacks comparable evidence'],
@@ -780,7 +789,7 @@ test('a TTS capsule handoff requires the real system pause and restores its orig
 });
 
 test('TTS Quick handoff requires the painted Quick owner and an operable returned transport', () => {
-  assert.equal(ttsHandoffCase.version,2);
+  assert.equal(ttsHandoffCase.version,3);
   assert.equal(ttsQuickV2Handoff.expected.requireQuickTtsNativeTransport,true);
   const {context,returned,evaluate:legacy} = ttsHandoffFixture();
   const [stage,module,button] = returned.nodes;

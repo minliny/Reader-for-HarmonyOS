@@ -1,6 +1,6 @@
 {
   "id": "reading.control-autopage-launch-quick",
-  "version": 3,
+  "version": 4,
   "phase": 1,
   "pageId": "reading",
   "fixture": {

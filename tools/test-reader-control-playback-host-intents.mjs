@@ -1,7 +1,7 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={
  'business-intent':{description:'Immediate launch, availability/pause/stop barriers and obsolete business admission',resources:[]},
- 'visual-owner-seam':{description:'Actual Host first frame/.5 clock/hold integration; detailed design clock owned by session-launch',resources:[]}
+ 'visual-owner-seam':{description:'Actual Host synchronous first frame, 380ms settlement, and stale frame ownership',resources:[]}
 };
 const selected=selectContractCases(definitions);
 async function runCase(selectedCase){
@@ -14,7 +14,8 @@ const { buildReaderSessionLaunchGeometry }=await import('../entry/src/main/ets/f
 const { ReaderSessionLaunchController }=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchController.ts');
 const { ReaderSessionMorphSourceMeasurement, readerSessionMorphSourceKindForPage }=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
 const { ReaderPageChromeSnapshot }=await import('../entry/src/main/ets/features/reading/presentation/ReaderPageChromeModel.ts');
-const { copyReaderControlSessionState, createReaderControlSessionState }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+const { copyReaderControlSessionState, createReaderControlSessionState,
+ readerControlContentLocation }=await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
 const { ReaderPageChromeMeasurements }=await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
 const file=localFilePath(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url));
@@ -41,15 +42,17 @@ function owner(){
   beginSessionCapsuleMorph(type){calls.push(`visual:${type}`);this.sessionLaunch={generation:1,geometry:{type},ownership:'stage',businessStatus:'preparing',desiredPlaying:true};return true;},
   cancelSessionLaunch(reason){calls.push(`cancel:${reason}`);this.sessionLaunch=undefined;},
   hideControl:()=>calls.push('hide'),onSessionLaunchTtsState:()=>calls.push('ack'),
-  armAutoPageTimer:()=>calls.push('autoTimer'),armAutoPageSessionTimer:()=>{},clearAutoPageTimer:()=>{},clearAutoPageSessionTimer:()=>{},resetAutoPageSessionDuration:()=>{},
+  armAutoPageTimer(resetDeadline){calls.push('autoTimer');this.autoPageCoordinator.armPageTimer(resetDeadline);},
+  armAutoPageSessionTimer:()=>{},clearAutoPageTimer:()=>{},clearAutoPageSessionTimer:()=>{},resetAutoPageSessionDuration:()=>{},
   pauseAutoPage(reason){this.autoPageCoordinator.pause(reason);},
   pageTurnInputPhase:()=> 'idle',sessionCapsuleSnapshot:()=>undefined,
   readerInputIsCurrent:()=>true,
   transientFeedback:{show:(_context,options)=>calls.push(`feedback:${options.message}`)},
   getUIContext:()=>({getPromptAction:()=>({showToast:()=>{}})}),
+  controlVerification:{observing:()=>false},capsuleVerification:{ttsTiming:()=>undefined,ownerState:()=>{}},
  });
  host.autoPageCoordinator = new ReaderAutoPageCoordinator({ now:()=>10000,
-  schedule:()=>1,cancel:()=>{},active:()=>host.mounted&&!host.exitRequested,ready:()=>true,
+  schedule:(_callback, delay)=>{calls.push(`schedule:${delay}`);return 1;},cancel:()=>{},active:()=>host.mounted&&!host.exitRequested,ready:()=>true,
   canResumeTurn:()=>true,turn:()=>({kind:'started'}),changed:()=>{} });
  Object.defineProperty(host,'autoPageState',{get:()=>host.autoPageCoordinator.snapshot()});
  host.automaticReadingState = () => host.autoPageCoordinator.snapshot();
@@ -67,6 +70,7 @@ for(const availabilityDelay of [false,true]){
  const {host,calls,availability}=owner();host.ttsAvailabilityResolved=!availabilityDelay;
  host.toggleTts();assert.equal(calls[0],'visual:tts','launch occurs synchronously before service preparation');
  if(availabilityDelay){assert.equal(calls.some(c=>c.startsWith('start:')),false);host.ttsAvailabilityResolved=true;availability.resolve(true);}
+ else assert.ok(calls.includes('start:true'),'admitted TTS dispatches before a visual frame or async ACK');
  await drain();assert.equal(calls.filter(c=>c.startsWith('visual:')).length,1);assert.equal(calls.filter(c=>c.startsWith('start:')).length,1);
  assert.equal(calls.includes('hide'),false,'business ACK cannot start an independent control hide clock');
 }
@@ -83,6 +87,14 @@ for(const availabilityDelay of [false,true]){
  host.toggleSessionCapsule();assert.equal(host.sessionLaunch.desiredPlaying,false);assert.equal(host.sessionLaunch.businessStatus,'preparing');
  host.ttsAvailabilityResolved=true;availability.resolve(true);await drain();
  assert.ok(calls.includes('start:false'),'pause during availability is carried into start, never overwritten');
+}
+{
+ const {host,calls}=owner();host.controlSession.location.module='autoPage';
+ host.toggleAutoPage();
+ assert.equal(calls[0],'visual:autoPage');
+ assert.ok(calls.includes('autoTimer'));
+ assert.ok(calls.some(call=>call.startsWith('schedule:')),'admitted countdown is armed on the play call');
+ assert.equal(host.autoPageState.status,'running');
 }
 {
  const {host,calls}=owner(),stop=deferred();host.ttsState.status='playing';host.controlSession.location.module='autoPage';
@@ -109,16 +121,14 @@ for(const invalidate of [h=>h.stopTts(),h=>{h.mounted=false;},h=>{h.lifecycleTok
 
 }
 if(selectedCase==='visual-owner-seam'){
-// Run the actual Host visual methods with the real ownership controller. This
-// verifies first-frame publication / 350ms close / 1750ms persistence (PH09).
-let now=10000;const storage=new Map();const frames=[],holdTimers=[];
+// Drive the real Host and controller from one source clock.
+let now=10000;const storage=new Map();const frames=[];
 class Callback{constructor(callback){this.onFrame=callback;}}
 const Visual=productionMotionMethods(file,['beginSessionCapsuleMorph','scheduleSessionLaunchFrame'],{
  readerSessionMorphSourceKindForPage,buildReaderSessionLaunchGeometry,ReaderPageChromeMeasurements,ReaderPageChromeSnapshot,
- copyReaderControlSessionState,readerSessionCapsuleMinimumWidth:type=>type==='tts'?94:96,
+ copyReaderControlSessionState,readerControlContentLocation,readerSessionCapsuleMinimumWidth:type=>type==='tts'?94:96,
  readerMotionNowMs:()=>now,ReaderUIFrameCallback:Callback,resolveReaderPageChromeLayout:()=>({sessionX:250,sessionY:760}),
  AppStorage:{setOrCreate:(k,v)=>storage.set(k,v)},hilog:{warn:()=>{}},
- setTimeout:(fn,ms)=>{holdTimers.push({fn,ms});return holdTimers.length;},
 });
 const c=p=>p,controller=new ReaderSessionLaunchController({flight:c,expand:c,easeIn:c,easeOut:c,easeInOut:c});
 const source=new ReaderSessionMorphSourceMeasurement('quickAutoPage','source',25,524,286,196,1);
@@ -126,8 +136,11 @@ const visual=Object.assign(new Visual(),{mounted:true,appForeground:true,exitReq
  lifecycleToken:1,sourceId:'src',bookId:'book',controlOpenRevision:1,controlModuleVisitRevision:1,readerWindowMetricsRevision:1,
  sharedAppearanceRevision:1,appearanceMutationGeneration:1,measurementEpoch:1,reduceMotion:false,
  sessionLaunchController:controller,sessionLaunchSourceContexts:new Map([['quickAutoPage','measured']]),
- sessionLaunchTopExit:73,sessionLaunchDockExit:349,sessionLaunchExitGeneration:0,pageTurnRenderRevision:0,sessionLaunchHoldTimer:-1,
- controlVisible:()=>true,controlPage:()=> 'quickAutoPage',sessionMorphSourceMeasurement:()=>source,
+ sessionLaunchTopExit:73,sessionLaunchDockExit:349,sessionLaunchExitGeneration:0,pageTurnRenderRevision:0,
+ controlVisible:()=>true,cancelControlNavigationIntent:()=>{},effectiveViewportWidth:()=>0,effectiveViewportHeight:()=>0,
+ sessionCapsuleMetrics:()=>({width:96,paintHeight:24,targetHeight:44}),
+ controlVerification:{observing:()=>false},capsuleVerification:{begin:()=>{},queuedFrameTime:()=>undefined,update:()=>{},ownerState:()=>{}},
+ controlPage:()=> 'quickAutoPage',sessionMorphSourceMeasurement:()=>source,
  sessionLaunchMeasurementKey:()=> 'measured',sessionLaunchLayoutKey:()=> 'layout',readingLayout:()=>({}),
  currentChapterIndex:()=>4,visiblePage:{startScalar:20},pageChromeClockText:'10:00',
  latestControlVisualSession:createReaderControlSessionState(),currentPageTurnRenderPage:()=>({chromeTopStartText:'book',chromeTopEndText:'10:00',chromeBottomStartText:'1%',chromeBottomEndText:'1/50'}),
@@ -140,15 +153,18 @@ const visual=Object.assign(new Visual(),{mounted:true,appForeground:true,exitReq
 });
 assert.equal(visual.beginSessionCapsuleMorph('autoPage'),true);assert.equal(visual.sessionLaunch.sample.timeMs,0);
 assert.equal(visual.sessionLaunch.sample.sharpOpacity,1);assert.equal(visual.hiddenCalls,0);assert.equal(frames.length,1);
-now=11150;frames.shift().onFrame(now*1e6);
-assert.equal(visual.sessionLaunch.sample.timeMs,2300,'Host wall clock uses approved .5 playback');
+now=10160;frames.shift().onFrame(now*1e6);
+assert.equal(visual.sessionLaunch.sample.timeMs,160);
 assert.equal(visual.hiddenCalls,1,'Host consumes current control-hidden receipt');
-assert.equal(frames.length,0);assert.equal(holdTimers.length,1);assert.equal(holdTimers[0].ms,600);
-now=11750;holdTimers[0].fn();
+assert.equal(frames.length,1);
+now=10220;frames.shift().onFrame(now*1e6);
+assert.equal(visual.sessionLaunch.sample.sourceNeeded,false);
+assert.equal(frames.length,1);
+now=10380;frames.shift().onFrame(now*1e6);
 assert.equal(visual.sessionLaunch.sample.finished,true);assert.equal(visual.sessionLaunch.ownership,'stage');
 assert.equal(frames.length,0);assert.equal(storage.get('readerSessionChromeOverlayActive'),true);
 assert.equal(visual.pageTurnRenderRevision,1,'the stable stage does not hand the footer back to old page textures');
-console.log('Reader playback Host intents: PASS (production methods; immediate visual, delayed ACK, pause intent, barriers, 350/1750 ownership)');
+console.log('Reader playback Host intents: PASS (production methods; immediate visual, 380ms settlement and stable ownership)');
 
 }
 

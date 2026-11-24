@@ -38,9 +38,9 @@ import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import type { ShelfBook } from '../../../app/ReaderCoreGateway';
 import { FrameCallback } from '@kit.ArkUI';
 import { readerScrimmedOpaqueColor } from '../../../ui/surfaces/ReaderScrimColor';
-import curves from '@ohos.curves';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
 import { motionSegment, ReversibleMotionTimeline } from '../../../ui/foundation/MotionTimeline';
+import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import {
   TOK_BORDER,
   TOK_BORDER_W,
@@ -103,19 +103,6 @@ const TABLET_LIST_COVER_WIDTH = 64;
 const TABLET_LIST_COVER_HEIGHT = 104;
 
 type BookshelfViewMode = 'cover' | 'list';
-
-interface BookshelfFilterFrame {
-  generation: number;
-  startedAt: number;
-  fromHeight: number;
-  toHeight: number;
-  fromOpacity: number;
-  toOpacity: number;
-  heightDuration: number;
-  contentDuration: number;
-  heightCurve: curves.ICurve;
-  contentCurve: curves.ICurve;
-}
 
 class BookshelfMotionFrameCallback extends FrameCallback {
   private readonly callback: () => void;
@@ -201,6 +188,7 @@ export struct BookshelfPage {
   private detailReturnFocus: BookshelfDetailReturnFocus | undefined;
   private bookActionFocusRevision: number = 0;
   private firstVisibleItem: number = 0;
+  private lastVisibleItem: number = -1;
   private headerScrollFrameQueued: string = '';
   private headerScrollPublishedNavigation: number = -1;
   private headerScrolled: boolean = false;
@@ -304,6 +292,7 @@ export struct BookshelfPage {
   @State private viewSwitchTimeMs: number = 0;
   private viewSwitchSourceMode: BookshelfViewMode = 'cover';
   private viewSwitchDestinationMode: BookshelfViewMode = 'list';
+  private viewSwitchRanks: Map<number, number> = new Map<number, number>();
   private viewTimeline: ReversibleMotionTimeline = new ReversibleMotionTimeline(this.viewMotion.totalMs);
   private readonly rowDataSource: BookshelfRowDataSource = new BookshelfRowDataSource((row: ShelfBook[]): string => this.bookRowRenderKey(row, 0));
   private readonly webDavCredentials: WebDavCredentialStore = WebDavCredentialStore.instance;
@@ -928,39 +917,24 @@ export struct BookshelfPage {
     const generation = ++this.filterMotionGeneration;
     const expanded = this.filterRowVisible;
     this.filterMotionRunning = true;
-    const height = motionAnimateParam(expanded ? 'bookshelf.filter.expand' : 'bookshelf.filter.collapse');
-    const content = motionAnimateParam(expanded ? 'bookshelf.filter.content.in' : 'bookshelf.filter.content.out');
-    // Reuse the page's frame clock and shared segment sampler. State holds
-    // the displayed values, so a reversal starts there and reduced motion can
-    // stop immediately without reassigning an implicit animation's old target.
-    this.scheduleFilterFrame({ generation, startedAt: readerMotionNowMs(),
-      fromHeight: this.filterPanelHeight, toHeight: expanded ? this.filterNaturalHeight : 0,
-      fromOpacity: this.filterContentOpacity, toOpacity: expanded ? 1 : 0,
-      heightDuration: height.duration ?? 0, contentDuration: content.duration ?? 0,
-      // These registered filter tracks use native cubicBezierCurve objects.
-      heightCurve: height.curve as curves.ICurve, contentCurve: content.curve as curves.ICurve });
-  }
-
-  private scheduleFilterFrame(frame: BookshelfFilterFrame): void {
-    this.getUIContext().postFrameCallback(new BookshelfMotionFrameCallback((): void => {
-      if (!this.mounted || frame.generation !== this.filterMotionGeneration || !this.filterMotionRunning) return;
-      const elapsed = Math.max(0, readerMotionNowMs() - frame.startedAt);
-      const heightProgress = motionSegment(elapsed, 0, frame.heightDuration,
-        (fraction: number): number => frame.heightCurve.interpolate(fraction));
-      const contentProgress = motionSegment(elapsed, 0, frame.contentDuration,
-        (fraction: number): number => frame.contentCurve.interpolate(fraction));
-      this.filterPanelHeight = frame.fromHeight + (frame.toHeight - frame.fromHeight) * heightProgress;
-      this.filterContentOpacity = frame.fromOpacity + (frame.toOpacity - frame.fromOpacity) * contentProgress;
-      if (elapsed >= Math.max(frame.heightDuration, frame.contentDuration)) this.filterMotionRunning = false;
-      else this.scheduleFilterFrame(frame);
-    }));
+    const context = this.getUIContext();
+    context.animateTo(motionAnimateParam(expanded ? 'bookshelf.filter.expand' : 'bookshelf.filter.collapse', (): void => {
+      if (this.mounted && generation === this.filterMotionGeneration) this.filterMotionRunning = false;
+    }), (): void => { this.filterPanelHeight = expanded ? this.filterNaturalHeight : 0; });
+    context.animateTo(motionAnimateParam(expanded ? 'bookshelf.filter.content.in' : 'bookshelf.filter.content.out'),
+      (): void => { this.filterContentOpacity = expanded ? 1 : 0; });
   }
 
   private settleFilterPanel(): void {
-    this.filterMotionGeneration += 1;
-    this.filterMotionRunning = false;
-    this.filterPanelHeight = this.filterRowVisible ? this.filterNaturalHeight : 0;
-    this.filterContentOpacity = this.filterRowVisible ? 1 : 0;
+    const generation = ++this.filterMotionGeneration;
+    const expanded = this.filterRowVisible;
+    this.filterMotionRunning = true;
+    if (expanded) this.filterPanelHeight = this.filterNaturalHeight;
+    this.getUIContext().animateTo(readerMotionReducedFadeParam((): void => {
+      if (!this.mounted || generation !== this.filterMotionGeneration) return;
+      if (!expanded) this.filterPanelHeight = 0;
+      this.filterMotionRunning = false;
+    }), (): void => { this.filterContentOpacity = expanded ? 1 : 0; });
   }
 
   /** PH60: view-only state/type conditions; grouping and updates have separate owners. */
@@ -1105,8 +1079,8 @@ export struct BookshelfPage {
   ) {
     Stack({ alignContent: Alignment.TopStart }) {
       this.projectionBookCover(book, expandedLayout, index);
-      this.projectionGridDetails(book, expandedLayout);
-      this.projectionListDetails(book, expandedLayout);
+      this.projectionGridDetails(book, expandedLayout, index);
+      this.projectionListDetails(book, expandedLayout, index);
     }
     .width(this.projectionBookWidth(expandedLayout, index()))
     .height(this.projectionBookHeight(book, expandedLayout, index()))
@@ -1218,7 +1192,7 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private projectionGridDetails(book: ShelfBook, expandedLayout: boolean) {
+  private projectionGridDetails(book: ShelfBook, expandedLayout: boolean, index?: () => number) {
     Column({ space: BOOKSHELF_GRID_TEXT_GAP }) {
       Text(book.title)
         .width(this.shelfBookCardWidth(expandedLayout))
@@ -1255,14 +1229,14 @@ export struct BookshelfPage {
     .width(this.shelfBookCardWidth(expandedLayout))
     .alignItems(HorizontalAlign.Start)
     .translate({ y: this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout) + BOOKSHELF_GRID_TEXT_GAP })
-    .opacity(this.viewSwitchGridContentOpacity)
+    .opacity(this.projectionDetailsOpacity('cover', index?.()))
     .accessibilityLevel(this.viewMode === 'cover' ? 'auto' : 'no-hide-descendants')
     .enabled(this.viewMode === 'cover')
     .hitTestBehavior(this.viewMode === 'cover' ? HitTestMode.Default : HitTestMode.None);
   }
 
   @Builder
-  private projectionListDetails(book: ShelfBook, expandedLayout: boolean) {
+  private projectionListDetails(book: ShelfBook, expandedLayout: boolean, index?: () => number) {
     Row({ space: TOK_SPACE_CONTROL_INLINE }) {
       ShelfBookListDetails({ book, textFrame: this.listTextFrame(expandedLayout) })
         .layoutWeight(1).constraintSize({ minWidth: 0 });
@@ -1276,7 +1250,7 @@ export struct BookshelfPage {
     .height(this.listRowHeight(expandedLayout))
     .alignItems(VerticalAlign.Center)
     .translate({ x: this.listCoverWidth(expandedLayout) + TOK_SPACE_CONTROL_INLINE })
-    .opacity(this.viewSwitchListContentOpacity)
+    .opacity(this.projectionDetailsOpacity('list', index?.()))
     // None skips only this Row. Disable its retained More button whenever the
     // list projection is hidden so it cannot intercept a neighboring cover.
     .accessibilityLevel(this.viewMode === 'list' ? 'auto' : 'no-hide-descendants')
@@ -1755,10 +1729,12 @@ export struct BookshelfPage {
     };
   }
 
-  private shelfScrollHandler(): (start: number) => void {
+  private shelfScrollHandler(): (start: number, end: number) => void {
     const navigation = this.navigationGeneration;
-    return (start: number): void => {
-      if (!this.isShelfPresentationCurrent(navigation) || !this.viewportRestored) return;
+    return (start: number, end: number): void => {
+      if (!this.isShelfPresentationCurrent(navigation)) return;
+      if (Number.isFinite(end)) this.lastVisibleItem = end;
+      if (!this.viewportRestored) return;
       this.firstVisibleItem = start;
       this.saveShelfViewport(); this.publishVisibleReadingBooks();
       if (start <= this.shelfHeaderItems() + 4) this.onPreviousPageRequested(navigation);
@@ -1923,9 +1899,7 @@ export struct BookshelfPage {
         '请先在同步设置中重试未完成的恢复' : '显示方式保存失败，点击重试';
     });
     if (this.reduceMotion) {
-      this.resetViewSwitchMotion();
-      this.viewMode = mode;
-      this.setRestingProjectionOpacity(mode);
+      this.fadeViewSwitch(mode);
       return;
     }
     if (this.viewSwitchRunning) {
@@ -1939,12 +1913,21 @@ export struct BookshelfPage {
 
   private onReduceMotionChanged(): void {
     if (!this.mounted || !this.reduceMotion) return;
-    this.settleFilterPanel();
+    if (this.filterMotionRunning) this.settleFilterPanel();
     if (!this.viewSwitchRunning) return;
-    const target = this.pendingViewMode;
+    this.fadeViewSwitch(this.pendingViewMode);
+  }
+
+  private fadeViewSwitch(mode: BookshelfViewMode): void {
     this.resetViewSwitchMotion();
-    this.viewMode = target;
-    this.setRestingProjectionOpacity(target);
+    this.viewMode = mode;
+    this.viewSwitchHeaderOpacity = 0.65;
+    this.viewSwitchGridContentOpacity = mode === 'cover' ? 0.65 : 0;
+    this.viewSwitchListContentOpacity = mode === 'list' ? 0.65 : 0;
+    this.getUIContext().animateTo(readerMotionReducedFadeParam(), (): void => {
+      this.viewSwitchHeaderOpacity = 1;
+      this.setRestingProjectionOpacity(mode);
+    });
   }
 
   private startViewSwitch(mode: BookshelfViewMode): void {
@@ -1952,12 +1935,27 @@ export struct BookshelfPage {
     this.pendingViewMode = mode;
     this.viewSwitchSourceMode = this.viewMode;
     this.viewSwitchDestinationMode = mode;
+    this.captureViewSwitchRanks();
     this.viewSwitchTimeMs = 0;
     this.viewTimeline = new ReversibleMotionTimeline(this.viewMotion.totalMs);
     this.viewTimeline.retarget(true, readerMotionNowMs());
     this.viewSwitchRunning = true;
     this.sampleViewSwitch();
     this.scheduleViewSwitchFrame(token);
+  }
+
+  private captureViewSwitchRanks(): void {
+    this.viewSwitchRanks.clear();
+    const leadingItems = this.shelfHeaderItems();
+    const firstRow = Math.max(0, this.firstVisibleItem - leadingItems);
+    const lastRow = Math.min(this.rowDataSource.totalCount() - 1, this.lastVisibleItem - leadingItems);
+    for (let row = firstRow; row <= lastRow && this.viewSwitchRanks.size < 9; row += 1) {
+      const books = this.rowDataSource.getData(row);
+      for (let column = 0; column < books.length && this.viewSwitchRanks.size < 9; column += 1) {
+        if (this.measureBookOrigin(books[column], false) === undefined) continue;
+        this.viewSwitchRanks.set(row * 3 + column, this.viewSwitchRanks.size);
+      }
+    }
   }
 
   private scheduleViewSwitchFrame(token: number): void {
@@ -1984,11 +1982,8 @@ export struct BookshelfPage {
       motionSegment(t, m.headerIncomingStartMs, m.headerIncomingDurationMs, content);
     this.viewSwitchGridContentOpacity = this.viewSwitchSourceMode === 'cover' ? outgoing : incoming;
     this.viewSwitchListContentOpacity = this.viewSwitchSourceMode === 'list' ? outgoing : incoming;
-    // Cover continuity is independent of the text reveal. In G, the upper
-    // cover fades at 690–720ms but text is not opaque until 820ms. In H, the
-    // upper cover fades in at 150–180ms. A second partial alpha beneath either
-    // handoff dims the same book before it brightens again (most visible on
-    // NoCoverCover's text/rules). The lower actor must remain opaque.
+    // The stable lower cover stays opaque while the upper cover hands off.
+    // Text reveal and whole-cover paint are independent.
     this.viewSwitchDestinationCoverOpacity = 1;
     if (this.viewSwitchDestinationMode === 'list') {
       this.viewSwitchMorphCoverOpacity = 1 - motionSegment(t,
@@ -2014,10 +2009,20 @@ export struct BookshelfPage {
     this.viewSwitchMorphCoverOpacity = 0;
   }
 
-  private projectionListProgress(index: number, scale: boolean = false): number {
+  private projectionDetailsOpacity(mode: BookshelfViewMode, index?: number): number {
+    if (this.viewSwitchRunning && index !== undefined && !this.viewSwitchRanks.has(index)) {
+      return this.pendingViewMode === mode ? 1 : 0;
+    }
+    return mode === 'cover' ? this.viewSwitchGridContentOpacity : this.viewSwitchListContentOpacity;
+  }
+
+  private projectionListProgress(index: number, scale: boolean = false, row: boolean = false): number {
     if (!this.viewSwitchRunning || this.reduceMotion) return this.viewMode === 'list' ? 1 : 0;
+    const visibleIndex = this.viewSwitchRanks.get(index) ??
+      (row ? this.viewSwitchRanks.get(index + 1) ?? this.viewSwitchRanks.get(index + 2) : undefined);
+    if (visibleIndex === undefined) return this.pendingViewMode === 'list' ? 1 : 0;
     const progress = motionSegment(this.viewSwitchTimeMs,
-      this.viewMotion.layoutCommitMs + bookshelfViewCoverDelayMs(index),
+      this.viewMotion.layoutCommitMs + bookshelfViewCoverDelayMs(visibleIndex),
       scale ? this.viewMotion.coverScaleDurationMs : this.viewMotion.coverMoveDurationMs,
       (p: number): number => scale ? this.viewMotion.coverScaleCurve.interpolate(p) :
         this.viewMotion.coverMoveCurve.interpolate(p));
@@ -2029,7 +2034,7 @@ export struct BookshelfPage {
     for (const book of row) grid = Math.max(grid, this.gridBookCardHeight(book, expandedLayout));
     const list = row.length * this.listRowHeight(expandedLayout) +
       Math.max(0, row.length - 1) * TOK_SPACE_CONTROL_INLINE;
-    return grid + (list - grid) * this.projectionListProgress(index);
+    return grid + (list - grid) * this.projectionListProgress(index, false, true);
   }
 
   private projectionBookWidth(expandedLayout: boolean, index: number): number {

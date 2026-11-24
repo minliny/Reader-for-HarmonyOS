@@ -6,7 +6,7 @@ import { SOURCE_SWITCH_VISUAL } from './SourceSwitchVisual';
 import { SourceSwitchSpinner } from './SourceSwitchSpinner';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
-import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
+import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
@@ -113,7 +113,6 @@ struct SourceSwitchNovelRow {
   @State private pressed: boolean = false;
   @Prop rowHeight: number = SOURCE_SWITCH_VISUAL.rowHeight;
   @Prop timingColumnWidth: number = SOURCE_SWITCH_VISUAL.timingColumnWidth;
-  @Prop reduceMotion: boolean = false;
   onSelect: () => void = (): void => {};
   onPress: () => void = (): void => {};
 
@@ -164,8 +163,6 @@ struct SourceSwitchNovelRow {
       right: SOURCE_SWITCH_VISUAL.scrollbarWidth + 5 })
       .backgroundColor(this.selected || this.pressed ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : Color.Transparent)
       .border({ width: { bottom: SOURCE_SWITCH_VISUAL.rowDividerWidth }, color: this.dividerColor() })
-      .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
-        TransitionEffect.OPACITY.animation(motionAnimateParam('source.switch.row.enter')))
       .enabled(this.rowEnabled && this.candidate.isCurrent !== true).accessibilityGroup(true)
       .accessibilityText(`${this.candidate.sourceName || this.candidate.sourceId}，${sourceSwitchNovelChapter(this.candidate)}，搜索用时 ${sourceSwitchNovelLatency(this.candidate)}`)
       .onTouch((event: TouchEvent): void => this.rowTouch(event))
@@ -567,7 +564,7 @@ export struct SourceSwitchWindow {
         }
         LazyForEach(this.candidateDataSource, (row: SourceSwitchCandidateRow) => {
           ListItem() {
-            SourceSwitchNovelRow({ row: row, rowHeight: this.rowHeight(), timingColumnWidth: this.timingWidth(), reduceMotion: this.reduceMotion,
+            SourceSwitchNovelRow({ row: row, rowHeight: this.rowHeight(), timingColumnWidth: this.timingWidth(),
               rowEnabled: this.state.kind === 'candidates' && !this.busy(),
               selected: this.selectedKey === row.key,
               onPress: (): void => { this.heldKey = row.key; },
@@ -864,9 +861,9 @@ export struct SourceSwitchWindow {
   private novelDrawer(part: string, attachment: number, scope: number) {
     ReaderBoundedSurface({ specId: 'source-switch-drawer', surfaceWidth: '100%', surfaceHeight: this.drawerHeight(),
       body: (): void => this.novelDrawerBody() })
-      .transition(this.reduceMotion ? TransitionEffect.IDENTITY : TransitionEffect.asymmetric(
-        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('source.switch.open')),
-        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('source.switch.close'))),
+      .transition(this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) : TransitionEffect.asymmetric(
+        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('app.sheet.open')),
+        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('app.sheet.close'))),
         (transitionIn: boolean): void => this.surface?.surfaceTransitionFinished(attachment, scope, part, transitionIn))
       .onAppear((): void => this.surface?.surfacePartAppeared(attachment, scope, part));
   }
@@ -878,8 +875,7 @@ export struct SourceSwitchWindow {
       onFocusReady: (): void => this.focusCurrentActor(attachment, scope, variant, `reader-source-progress:${scope}:${attachment}:${part}`),
       allowCancel: this.allowCancelWhileSwitching && this.canClose(),
       onCancel: (): void => { if (this.state.kind === 'switching') this.requestClose(); } })
-      .transition(this.reduceMotion ? TransitionEffect.IDENTITY :
-        TransitionEffect.OPACITY.animation(motionAnimateParam('source.switch.close')),
+      .transition(TransitionEffect.OPACITY.animation(this.reduceMotion ? readerMotionReducedFadeParam() : motionAnimateParam('app.sheet.close')),
         (transitionIn: boolean): void => this.surface?.surfaceTransitionFinished(attachment, scope, part, transitionIn))
       .onAppear((): void => this.surface?.surfacePartAppeared(attachment, scope, part));
   }

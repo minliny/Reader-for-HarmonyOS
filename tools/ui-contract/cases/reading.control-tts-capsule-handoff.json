@@ -1,6 +1,6 @@
 {
   "id": "reading.control-tts-capsule-handoff",
-  "version": 2,
+  "version": 3,
   "phase": 1,
   "pageId": "reading",
   "fixture": {

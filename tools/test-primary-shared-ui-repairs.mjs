@@ -4,10 +4,11 @@ import * as windowFacts from '../entry/src/main/ets/ui/foundation/ReaderWindowMe
 import * as horizontalFrame from '../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts';
 import { readFileSync } from 'node:fs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { createReaderBuilderProbe, productionReaderMotionSdk } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { selectedProductionValues } from './lib/selected-production-methods.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { foundationControls, foundationSpecs, surfaceFontResolvers } from './lib/reader-foundation-control-probe.mjs';
 import { inlineSelectSdk } from './lib/reader-inline-select-sdk-probe.mjs';
 import { labeledIconControls, labeledIconSpecs } from './lib/reader-labeled-icon-action-probe.mjs';
@@ -33,7 +34,7 @@ const definitions = {
   'prepared-media-qualification': 'Actual coordinator cache and in-flight joins qualify current media, preserve existing consumers and never retain an explicit media-mismatched result for the next retry.',
   'detail-kind-confirmation': 'Actual current source registry gives the initial media hint while cold detail failure/retry publishes its confirmed session type through the shipping Entry/Host chain.',
   'detail-type-state': 'Unknown remote type renders the existing page-state host with current retry, keeps Back available and excludes a misleading hero/footer; local/text/manga/audio are distinguished.',
-  'library-watch-parent-delivery': 'Library search PropWatch completes its local visual state immediately while settled navigation and continue-card coverage notify the parent after render with current scope fencing.',
+  'library-watch-parent-delivery': 'Library search PropWatch fences input before its 120ms paint-only fade; settled navigation and coverage notify the current parent after render.',
   'detail-entry-dto-geometry': 'Actual search matched-shelf selection and shelf info entry project canonical kind/cover facts through the shipping Host mapper before comparing their real detail geometry.',
   'detail-directory-action': 'Actual text/manga detail directory actors enter the detail-directory journey without dispatching reading; a late prepared-page delivery is rejected after the detail session has ended.',
   'bookshelf-action-lanes': 'The shelf section pays the full icon hit lane while the group selector preserves compact paint inside a native44vp carrier.',
@@ -294,46 +295,72 @@ for (const id of selectContractCases(definitions)) {
   if (id === 'library-watch-parent-delivery') {
     const source = read('features/search/ui/ReaderLibrarySearchSurface.ets');
     const locals = pureModuleProbe(source.slice(0, source.indexOf('@Component')), 'LibrarySearchFrames.ets',
-      { FrameCallback: class {} }, ['SurfaceValueTrack', 'LibrarySearchFrame', 'LibrarySearchFocusFrame']);
+      { FrameCallback: class {} }, ['LibrarySearchFrame', 'LibrarySearchFocusFrame']);
     const headerMetrics = await import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts');
     const headers = pureModuleProbe(read('ui/foundation/ReaderHeaderSpecs.ets'), 'ReaderHeaderSpecs.ets',
       { ...headerMetrics, ...inlineSelectSdk({ uiContext: {} }).dependencies }, ['searchHeaderSpec', 'bookshelfHeaderSpec']);
-    const frames = [], calls = [];
-    let renderingParent = false;
-    const uiContext = { postFrameCallback: frame => frames.push(frame), getFocusController: () => ({ clearFocus() {} }) };
+    const frames = [], calls = [], animations = [];
+    let renderingParent = false, owner;
+    const uiContext = {
+      postFrameCallback: frame => frames.push(frame),
+      getFocusController: () => ({ clearFocus() {} }),
+      animateTo(params, paint) {
+        const before = [owner.displayedSurfaceProgress, owner.reducedSearchOpacity];
+        paint();
+        animations.push({ params, before, after: [owner.displayedSurfaceProgress, owner.reducedSearchOpacity] });
+      },
+    };
     const properties = createArkUIPropertyRuntimeProbe();
     const members = ['mode', 'reduceMotion', 'identity', 'navigationGeneration', 'mounting', 'currentMode', 'mounted', 'generation',
       'activeIdentity', 'activeNavigation', 'activeMounting', 'fromSurface', 'fromHistory', 'fromResults', 'fromScrim',
       'toSurface', 'toHistory', 'toResults', 'toScrim', 'measurementKey', 'automaticInputFocusAllowed', 'fieldFocused',
       'transitionKind', 'transitionDurationMs', 'transitionStartedMs', 'elapsed', 'searchMounted', 'historyHeight',
-      'displayedHistoryViewport', 'historyTrack', 'historyResizeSpec', 'lastCardSuppressed', 'lastCardCoverageScope',
+      'displayedHistoryViewport', 'displayedHistoryLimit', 'displayedSurfaceProgress', 'reducedTransition', 'reducedSearchOpacity',
+      'lastCardSuppressed', 'lastCardCoverageScope',
       'openSpec', 'submitSpec', 'backSpec', 'applyTargets', 'transitionFor', 'durationFor', 'modeChanged',
-      'retargetHistoryViewport', 'publishContinueCardCoverage', 'completeTransition'];
-    const owner = createReaderBuilderProbe(source, members, { ...properties.sdk, ...locals, ...headers, uiContext,
-      motionSpecGet: () => ({ durationMs: 100, curve: { interpolate: value => value } }), readerMotionNowMs: () => 0 }, properties.hooks).owner;
+      'retargetHistoryViewport', 'publishContinueCardCoverage', 'completeTransition', 'beginReducedTransition'];
+    owner = createReaderBuilderProbe(source, members, { ...properties.sdk, ...locals, ...headers, uiContext,
+      ...productionReaderMotionSdk(), ReaderPostLayoutFrame: actualReaderPostLayoutFrame(), readerMotionNowMs: () => 0 }, properties.hooks).owner;
     Object.assign(owner, { mounted: false, mode: 'input', currentMode: 'input', reduceMotion: true, identity: 1, navigationGeneration: 2, mounting: 3,
       activeIdentity: 1, activeNavigation: 2, activeMounting: 3, searchMounted: true,
-      resolvedHistoryViewport: () => ({ height: 80, suppressContinueCard: true }),
-      scheduleInputFocus: () => {},
-      surfaceProgress: () => 1, historyProgress: () => 1, resultsProgress: () => 0, scrimProgress: () => 1,
+      resolvedHistoryViewport: () => ({ height: 80, suppressContinueCard: true }), historyLimit: () => 100,
+      model: {},
+      scheduleInputFocus: () => {}, observeEntryHistory: () => {},
+      displayedSurfaceProgress: 1, sampleSurfaceProgress() { return this.fromSurface; },
+      historyProgress: () => 1, resultsProgress: () => 0, scrimProgress: () => 1,
       onHistoryCoverageChanged: (...values) => { assert.equal(renderingParent, false); calls.push(['coverage', ...values]); },
       onSettled: (...values) => { assert.equal(renderingParent, false); calls.push(['settled', ...values]); } });
     owner.mounted = true;
     const props = ['mode', 'reduceMotion', 'identity', 'navigationGeneration', 'mounting'];
     const deliver = patch => owner.updateStateVars({ ...Object.fromEntries(props.map(name => [name, owner[name]])), ...patch });
+    assert.deepEqual(['open', 'submit', 'back', 'edit'].map(kind => owner.durationFor(kind)), [260, 240, 200, 200]);
+    const frame = () => {
+      for (const callback of frames.splice(0)) { callback.onFrame(16); callback.onIdle(0); }
+      drainReaderPostLayoutFallbacks(frames);
+    };
     renderingParent = true; deliver({ mode: 'idle' }); renderingParent = false;
-    assert.equal(owner.searchMounted, false, 'local input/visual retirement completes immediately');
+    assert.equal(owner.searchMounted, true, 'existing visual actors survive through fade-out');
     assert.deepEqual(calls, []);
-    frames.splice(0).forEach(frame => frame.onFrame());
+    frame();
+    assert.equal(animations[0].params.duration, 120);
+    assert.deepEqual(animations[0].before, [1, 1]);
+    assert.deepEqual(animations[0].after, [1, 0]);
+    assert.deepEqual(calls, []);
+    animations[0].params.onFinish();
+    assert.equal(owner.searchMounted, false);
     assert.deepEqual(calls, [['settled', 'idle', 1, 2, 3]]);
     renderingParent = true; deliver({ mode: 'input' }); renderingParent = false;
     assert.equal(calls.length, 1);
-    frames.splice(0).forEach(frame => frame.onFrame());
+    frame();
+    assert.equal(animations[1].params.duration, 120);
+    assert.deepEqual(animations[1].before, [1, 0]);
+    assert.deepEqual(animations[1].after, [1, 1]);
     assert.ok(calls.some(values => values[0] === 'coverage' && values[1] === true));
     const count = calls.length;
     renderingParent = true; deliver({ mode: 'idle' }); renderingParent = false;
     owner.mounted = false; owner.generation++;
-    frames.splice(0).forEach(frame => frame.onFrame());
+    animations[1].params.onFinish();
+    frame();
     assert.equal(calls.length, count, 'retired search cannot navigate or update its successor coverage');
   }
   if (id === 'detail-entry-dto-geometry') {

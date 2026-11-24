@@ -287,6 +287,7 @@ import {
 import { registerReaderFonts, readerRegisteredFontFamily, prepareReaderFontFamily, readerFontFamilyReady } from '../../../ui/foundation/ReaderFonts';
 import { TYPE_READER_CHAPTER_TITLE } from '../../../ui/foundation/ReaderTypography';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
+import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { ComponentContent, FrameCallback, window } from '@kit.ArkUI';
 import { image } from '@kit.ImageKit';
 import {
@@ -988,7 +989,6 @@ export struct ReadingExperience {
   private sessionLaunchTopExit: number = 0;
   private sessionLaunchDockExit: number = 0;
   private sessionLaunchFramePending: boolean = false;
-  private sessionLaunchHoldTimer: number = -1;
   @State private sessionControlClosing: boolean = false;
   @State private windowControlsPresented: boolean = false;
   private pendingSessionLaunchGeneration: number = 0;
@@ -2367,7 +2367,10 @@ export struct ReadingExperience {
           footerOpacity: this.sessionLaunchFooterExiting ? this.sessionLaunchFooterOpacity : this.sessionLaunch.sample.footerOpacity,
           footerTranslateX: this.sessionLaunchFooterExiting ? this.sessionLaunchFooterOffset : this.sessionLaunch.sample.footerTranslateX,
           sessionExitProgress: this.sessionLaunchFooterExitProgress,
-        }).opacity(this.sessionLaunchFooterExiting ? 1 : this.sessionLaunchStageOpacity).zIndex(8).hitTestBehavior(HitTestMode.None);
+        }).opacity(this.sessionLaunchFooterExiting ? 1 : this.sessionLaunchStageOpacity).zIndex(8).hitTestBehavior(HitTestMode.None)
+          .transition(this.reduceMotion ? TransitionEffect.asymmetric(
+            TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()), TransitionEffect.IDENTITY) :
+            TransitionEffect.IDENTITY);
       }
       this.sourceSwitchPreparationContent();
       this.readerRecoveryContent();
@@ -11038,23 +11041,6 @@ export struct ReadingExperience {
   private scheduleSessionLaunchFrame(generation: number): void {
     if ((this.sessionLaunchFramePending && this.pendingSessionLaunchGeneration === generation) ||
       !this.sessionLaunchController.isCurrent(generation) || this.sessionLaunch?.sample.finished) return;
-    const held = this.sessionLaunch;
-    if (held !== undefined && held.sample.settled) {
-      // Figma's 2300..3500 tail is a hold, not 1200ms of new visual state.
-      // Keep actors and input alive; publish the terminal semantic sample once.
-      if (this.sessionLaunchHoldTimer >= 0) return;
-      this.sessionLaunchHoldTimer = setTimeout((): void => {
-        this.sessionLaunchHoldTimer = -1;
-        if (!this.mounted || !this.appForeground || this.exitRequested ||
-          !this.sessionLaunchController.isCurrent(generation)) return;
-        const previous = this.sessionLaunch;
-        const tick = readerMotionNowMs();
-        this.sessionLaunch = this.sessionLaunchController.advance(generation, tick);
-        if (this.sessionLaunch !== undefined) this.capsuleVerification.update(this.sessionLaunch, tick, previous);
-        if (!this.sessionLaunch?.sample.finished) this.scheduleSessionLaunchFrame(generation);
-      }, Math.max(1, Math.ceil(this.sessionLaunchController.remainingHoldMs())));
-      return;
-    }
     this.sessionLaunchFramePending = true;
     this.pendingSessionLaunchGeneration = generation;
     const queuedMs = this.capsuleVerification.queuedFrameTime(generation);
@@ -11104,7 +11090,7 @@ export struct ReadingExperience {
     const anchor = `${this.currentChapterIndex()}|${this.visiblePage?.startScalar}|${this.pageChromeClockText}|${this.pageTurnRenderRevision}`;
     if (anchor !== this.sessionLaunchChromeAnchor && !this.pageChromeStateFrozen()) {
       this.sessionLaunchChromeAnchor = anchor;
-      // Do not read a frozen page/texture snapshot at the stage-to-hold boundary.
+      // After settlement, follow the live footer and page revisions.
       const chapter = this.chapter;
       const key = this.pageChromePaginationKey(chapter?.chapterIndex ?? -1, this.materializedContentVersion);
       this.sessionLaunchChrome = this.pageChromeSnapshot(chapter?.chapterIndex ?? -1,
@@ -11114,7 +11100,7 @@ export struct ReadingExperience {
   }
 
   private commitSessionLaunchControlHidden(): void {
-    // No ordinary 320ms dismiss clock: this is only the semantic 700ms endpoint.
+    // The launch sampler already moves the controls offscreen on its own clock.
     this.controlSession = dismissReaderControlSession(this.controlSession, 0);
     this.latestControlVisualSession = copyReaderControlSessionState(this.controlSession);
   }
@@ -11123,6 +11109,7 @@ export struct ReadingExperience {
     if (this.reduceMotion) this.finishSourceSwitchReveal();
     if (this.reduceMotion) this.retirePageTurnForReduceMotion();
     if (!this.reduceMotion || this.sessionLaunch === undefined) return;
+    if (!this.sessionLaunch.sample.finished) this.capsuleVerification.finish(this.sessionLaunch.generation, 'reduce-motion');
     this.sessionLaunch = this.sessionLaunchController.setReduceMotion(true);
     this.commitSessionLaunchControlHidden();
     AppStorage.setOrCreate<boolean>('readerSessionChromeOverlayActive', true);
@@ -11201,8 +11188,6 @@ export struct ReadingExperience {
 
   private cancelSessionLaunch(reason: ReaderSessionLaunchCancelReason): void {
     if (this.sessionLaunch === undefined || this.sessionLaunch.ownership !== 'stage') return;
-    if (this.sessionLaunchHoldTimer >= 0) clearTimeout(this.sessionLaunchHoldTimer);
-    this.sessionLaunchHoldTimer = -1;
     const launch = this.sessionLaunchController.cancel(reason);
     if (launch === undefined) return;
     this.sessionLaunch = launch;
@@ -11262,8 +11247,9 @@ export struct ReadingExperience {
     const canObserveFade = (): boolean => this.mounted && this.appForeground && !this.exitRequested &&
       this.readerWindowMetricsRevision === viewportRevision && ownsExit() &&
       this.sessionLaunch?.ownership === 'exitPending';
-    const ui = this.reduceMotion ? undefined : this.getUIContext();
-    const observingFade = ui !== undefined && launch?.generation === generation && canObserveFade() &&
+    const reducedMotion = this.reduceMotion;
+    const ui = this.mounted && this.appForeground && !this.exitRequested ? this.getUIContext() : undefined;
+    const observingFade = !reducedMotion && ui !== undefined && launch?.generation === generation && canObserveFade() &&
       this.capsuleVerification.beginHandoffFade(ui, launch);
     const finish = (): void => {
       if (!ownsExit()) return;
@@ -11274,15 +11260,20 @@ export struct ReadingExperience {
       this.finishSessionCapsuleMorph(released ? this.sessionLaunchController.snapshot() : undefined);
     };
     if (ui === undefined) { finish(); return; }
-    const parameters = motionAnimateParam('reader.session.capsule.exit', finish);
+    const parameters = reducedMotion ? readerMotionReducedFadeParam(finish) :
+      motionAnimateParam('reader.session.capsule.exit', finish);
+    const finalizeFooter = (): void => {
+      if (!this.sessionLaunchFooterExiting) return;
+      this.sessionLaunchFooterOffset = 0;
+      this.sessionLaunchFooterExitProgress = 1;
+      this.sessionLaunchFooterOpacity = 1;
+    };
+    if (reducedMotion) finalizeFooter();
     const applyExit = (): void => {
       this.sessionLaunchStageOpacity = 0;
-      if (this.sessionLaunchFooterExiting) {
-        this.sessionLaunchFooterOffset = 0; this.sessionLaunchFooterExitProgress = 1;
-        this.sessionLaunchFooterOpacity = 1;
-      }
+      if (!reducedMotion) finalizeFooter();
     };
-    if (launch?.cancelReason === 'openControl' && parameters.duration !== undefined) {
+    if (!reducedMotion && launch?.cancelReason === 'openControl' && parameters.duration !== undefined) {
       // Render the exit curve on the still-mounted capsule while the restored
       // controls own input. Each opacity is written to the actual stage.
       try {
@@ -11324,8 +11315,6 @@ export struct ReadingExperience {
     const exitAnimator = this.sessionLaunchExitAnimator;
     this.sessionLaunchExitAnimator = undefined;
     exitAnimator?.cancel();
-    if (this.sessionLaunchHoldTimer >= 0) clearTimeout(this.sessionLaunchHoldTimer);
-    this.sessionLaunchHoldTimer = -1;
     const launch = releasedLaunch ?? this.sessionLaunch;
     const hadLaunch = launch !== undefined;
     if (launch !== undefined) {

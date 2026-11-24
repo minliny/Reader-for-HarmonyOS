@@ -87,9 +87,11 @@ export function sourceSwitchLiveSdk(p,extra={},sources={}) {
  const curves={cubicBezierCurve(...values){return{kind:'cubic-bezier',values};}};
  const Curve={EaseIn:'ease-in',EaseInOut:'ease-in-out',EaseOut:'ease-out',Linear:'linear'};
  const motion=sourceSwitchMotionSdk(curves,Curve);
+ const { readerKeyboardHostBottom } = pureModuleProbe(read('ui/layout/ReaderKeyboardGeometry.ts'),
+  'ReaderKeyboardGeometry.ts', metricsApi, ['readerKeyboardHostBottom']);
  const motionPolicy=pureModuleProbe(read('ui/foundation/ReaderMotionPolicy.ets'),'ReaderMotionPolicy.ets',
-  {...motion,collapseMotionDurationMs},['readerMotionAnimateParam']);
- const deps={...p.deps,SynchedPropertyNesedObjectPU:p.properties.sdk.SynchedPropertyNestedObjectPU,...horizontal,...metricsApi,...scrollLayout,...novelPresentation,...sourceVisual,...appearanceRender,...sourceNames,...providerFamily,...gatewayExports,...motion,...motionPolicy,SourceSwitchCompletionPresentation,sourceSwitchSourceCount,SourceSwitchLayoutFrame,SourceSwitchCandidateRow,SourceSwitchCandidateDataSource,LazyForEach,ColorMetrics:sourceSwitchColorMetricsSdk(),
+  {...motion,collapseMotionDurationMs},['readerMotionAnimateParam','readerMotionReducedFadeParam']);
+ const deps={...p.deps,SynchedPropertyNesedObjectPU:p.properties.sdk.SynchedPropertyNestedObjectPU,...horizontal,...metricsApi,readerKeyboardHostBottom,...scrollLayout,...novelPresentation,...sourceVisual,...appearanceRender,...sourceNames,...providerFamily,...gatewayExports,...motion,...motionPolicy,SourceSwitchCompletionPresentation,sourceSwitchSourceCount,SourceSwitchLayoutFrame,SourceSwitchCandidateRow,SourceSwitchCandidateDataSource,LazyForEach,ColorMetrics:sourceSwitchColorMetricsSdk(),
    curves,
    ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}},
    Scroller:class Scroller{},ScrollAlign:{START:'start'},TouchType:{Down:'down',Move:'move',Up:'up',Cancel:'cancel'},

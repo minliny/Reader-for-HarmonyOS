@@ -16,7 +16,6 @@ import { MangaDirectoryCurrentFooter } from './MangaDirectoryCurrentFooter';
 import { MangaDirectoryPressFeedback } from '../../../ui/foundation/MangaDirectoryPressFeedback';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryLineBox, mangaDirectoryFooterHeight, mangaDirectoryQuickFlowGaps, mangaDirectoryQuickMinimumListHeight } from './MangaDirectoryVisual';
 import hilog from '@ohos.hilog';
-import curves from '@ohos.curves';
 import inputMethod from '@ohos.inputMethod';
 import vibrator from '@ohos.vibrator';
 import { FrameCallback } from '@kit.ArkUI';
@@ -54,7 +53,7 @@ import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface'
 import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSurfaceHeader';
 import { resolveDrawerSpec, type ActionSheetSpecId } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
-import { readerMotionDurationMs } from '../../../ui/foundation/ReaderMotionPolicy';
+import { readerMotionDurationMs, readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 
 interface MangaViewportAnchor { ordinal: number; y: number; x?: number; }
@@ -215,6 +214,7 @@ export struct MangaReadingSurface {
   @State @Watch('onWindowChromeChanged') private panel: string = '';
   @State private panelOffset: number = 0;
   @State private panelScrimOpacity: number = 0;
+  @State private panelOpacity: number = 1;
   @State private panelPhase: string = 'closed';
   private panelGeneration: number = 0;
   private panelFocusGeneration: number = 0;
@@ -1787,20 +1787,17 @@ export struct MangaReadingSurface {
     this.actionPanelPresentationGeneration = generation;
     this.panel = panel;
     this.panelPhase = 'opening';
-    this.panelOffset = this.panelTravel(); this.panelScrimOpacity = 0;
-    if (this.reduceMotion) {
-      this.panelOffset = 0; this.panelScrimOpacity = 1; this.panelPhase = 'open';
-      this.scheduleDirectoryOuterPosition(this.directoryOuterIdentity());
-      this.requestPanelFocus(this.panelCloseFocusId(this.actionPanelPresentationGeneration), generation, true);
-      return;
-    }
+    this.panelOffset = this.reduceMotion ? 0 : this.panelTravel();
+    this.panelOpacity = this.reduceMotion ? 0 : 1;
+    this.panelScrimOpacity = 0;
     // The native surface must finish its first layout at the offscreen
     // endpoint before either animation changes the observed values.
     this.getUIContext().postFrameCallback(new MangaSheetFrame(this.getUIContext(), (): void => {
       if (this.panelPhase !== 'opening' || !this.panelOpeningCurrent(generation)) return;
-      if (this.reduceMotion) this.panelScrimOpacity = 1;
-      else this.getUIContext().animateTo(motionAnimateParam('manga.panel.scrim'),
+      if (!this.reduceMotion) {
+        this.getUIContext().animateTo(motionAnimateParam('app.sheet.scrim'),
           (): void => { this.panelScrimOpacity = 1; });
+      }
       this.settlePanel(generation, true);
     }));
   }
@@ -1901,9 +1898,18 @@ export struct MangaReadingSurface {
         if (focusOnOpen) this.requestPanelFocus(this.panelCloseFocusId(this.actionPanelPresentationGeneration), generation, true);
       }
     };
-    if (this.reduceMotion) { this.panelOffset = 0; finish(); return; }
-    this.getUIContext().animateTo({ curve: curves.interpolatingSpring(0, 0.9, 500, 43), onFinish: finish },
-      (): void => { this.panelOffset = 0; });
+    if (this.reduceMotion) {
+      this.panelOffset = 0;
+      if (!focusOnOpen) { finish(); return; }
+      this.panelOpacity = 0;
+      this.getUIContext().animateTo(readerMotionReducedFadeParam(finish), (): void => {
+        this.panelOpacity = 1;
+        this.panelScrimOpacity = 1;
+      });
+    } else {
+      this.getUIContext().animateTo(motionAnimateParam('app.sheet.open', finish),
+        (): void => { this.panelOffset = 0; this.panelOpacity = 1; });
+    }
   }
   private closePanel(restoreFocus: boolean = true): Promise<boolean> {
     if (!this.mounted) return Promise.resolve(false);
@@ -1914,19 +1920,10 @@ export struct MangaReadingSurface {
     if (this.panel.length === 0) { this.panelPhase = 'closed'; return Promise.resolve(true); }
     this.panelPhase = 'closing';
     void this.dismissPanelKeyboard();
-    if (this.reduceMotion) {
-      this.panel = ''; this.panelOffset = 0; this.panelScrimOpacity = 0; this.panelPhase = 'closed';
-      if (restoreFocus) {
-        this.panelReturnFocusTarget = '';
-        this.requestPanelFocus(focusTarget, generation, false);
-      }
-      return Promise.resolve(true);
-    }
+    const reduced = this.reduceMotion;
     this.panelCloseTask = new Promise<boolean>((resolve): void => {
       this.panelCloseResolve = resolve;
-      this.getUIContext().animateTo(motionAnimateParam('manga.panel.scrim'),
-        (): void => { this.panelScrimOpacity = 0; });
-      this.getUIContext().animateTo({ curve: curves.interpolatingSpring(0, 1.05, 250, 30), onFinish: (): void => {
+      const finish = (): void => {
         if (!this.mounted || generation !== this.panelGeneration) { resolve(false); return; }
         this.panel = ''; this.panelOffset = 0; this.panelPhase = 'closed';
         this.panelCloseResolve = undefined; this.panelCloseTask = undefined;
@@ -1935,7 +1932,18 @@ export struct MangaReadingSurface {
           this.requestPanelFocus(focusTarget, generation, false);
         }
         resolve(true);
-      } }, (): void => { this.panelOffset = this.panelTravel(); });
+      };
+      if (reduced) {
+        this.getUIContext().animateTo(readerMotionReducedFadeParam(finish), (): void => {
+          this.panelOpacity = 0;
+          this.panelScrimOpacity = 0;
+        });
+      } else {
+        this.getUIContext().animateTo(motionAnimateParam('app.sheet.scrim'),
+          (): void => { this.panelScrimOpacity = 0; });
+        this.getUIContext().animateTo(motionAnimateParam('app.sheet.close', finish),
+          (): void => { this.panelOffset = this.panelTravel(); });
+      }
     });
     return this.panelCloseTask;
   }
@@ -1965,9 +1973,7 @@ export struct MangaReadingSurface {
   private updatePanelDrag(offset: number): void {
     if (this.panelPhase !== 'dragging' || !Number.isFinite(offset)) return;
     const target = Math.max(0, offset);
-    if (this.reduceMotion || target === this.panelOffset) { this.panelOffset = target; return; }
-    this.getUIContext().animateTo({ curve: curves.interpolatingSpring(0, 0.9, 500, 43) },
-      (): void => { this.panelOffset = target; });
+    this.panelOffset = target;
   }
   private finishPanelDrag(offset: number, velocity: number): void {
     if (this.panelPhase !== 'dragging') return;
@@ -2694,6 +2700,7 @@ export struct MangaReadingSurface {
         .enabled(this.panelPhase === 'open' || this.panelPhase === 'dragging');
     }.width(this.panelWidth())
       .translate({ x: this.widePanel() ? this.panelOffset : 0, y: this.widePanel() ? 0 : this.panelOffset })
+      .opacity(this.panelOpacity)
       // The sheet must admit its chapter rows while masking the scrim below.
       .hitTestBehavior(this.widePanel() ? HitTestMode.Block : HitTestMode.Default);
   }
@@ -2772,6 +2779,7 @@ export struct MangaReadingSurface {
       }).enabled(this.panelPhase === 'open' || this.panelPhase === 'dragging');
     }.width(this.panelWidth())
       .translate({ x: this.widePanel() ? this.panelOffset : 0, y: this.widePanel() ? 0 : this.panelOffset })
+      .opacity(this.panelOpacity)
       .hitTestBehavior(this.widePanel() ? HitTestMode.Block : HitTestMode.Default);
   }
   @Builder

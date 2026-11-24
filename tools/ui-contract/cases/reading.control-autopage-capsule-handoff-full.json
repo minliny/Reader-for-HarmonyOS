@@ -1,6 +1,6 @@
 {
   "id": "reading.control-autopage-capsule-handoff-full",
-  "version": 2,
+  "version": 3,
   "phase": 1,
   "pageId": "reading",
   "fixture": {

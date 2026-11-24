@@ -52,6 +52,7 @@ import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSu
 import { resolveDrawerSpec, resolveActionSheetSpec, readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { readerAvailableWindowHeight, readerDynamicSurfaceWidth, readerSurfaceMaxHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
+import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import type { SharedDownloadReadingControl, SharedDownloadReadingFocus, SharedDownloadUiAction,
   SharedDownloadUiBookTarget, SharedDownloadUiIntent, SharedDownloadViewState } from '../presentation/SharedDownloadUiContract';
 import type { SharedDownloadExpectedChapter } from '../application/SharedDownloadCoordinator';
@@ -106,7 +107,7 @@ export struct SharedDownloadPage {
   @Prop storagePolicyBusy: boolean = false;
   @Prop storageCleanupBusy: boolean = false;
   @Prop @Watch('restoreChapterOffset') loading: boolean = false;
-  @Prop @Watch('onMotionPreferenceChanged') reduceMotion: boolean = false;
+  @Prop reduceMotion: boolean = false;
   @Prop @Watch('onInputEligibilityChanged') covered: boolean = false;
   @Prop @Watch('onErrorChanged') error: string = '';
   @Prop batchRecovery: ReaderRecoveryView = { message: '', visible: false, canRetry: false, generation: 0 };
@@ -1202,9 +1203,8 @@ export struct SharedDownloadPage {
               this.sheet = '';
           })
           .onAppear((): void => this.onSheetActorAppeared(attachment, ownerGeneration, 'scrim'))
-          .transition(this.reduceMotion ? TransitionEffect.IDENTITY : TransitionEffect.asymmetric(
-            TransitionEffect.OPACITY.animation(motionAnimateParam('source.switch.open')),
-            TransitionEffect.OPACITY.animation(motionAnimateParam('source.switch.close'))),
+          .transition(TransitionEffect.OPACITY.animation(this.reduceMotion ?
+            readerMotionReducedFadeParam() : motionAnimateParam('app.sheet.scrim')),
             (transitionIn: boolean): void => this.onSheetActorTransitionFinished(attachment, ownerGeneration, 'scrim', transitionIn));
         ForEach([this.sheetOpeningGeneration], (opening: number): void => {
           if (this.isOperationsSheet()) this.operationsSurface(opening, attachment, ownerGeneration);
@@ -1225,9 +1225,9 @@ export struct SharedDownloadPage {
       .shadow(readerSurfaceElevation('sheet', this.appThemeScheme))
       .hitTestBehavior(HitTestMode.Default)
       .onAppear((): void => this.onSheetActorAppeared(attachment, ownerGeneration, 'sheet:' + opening, opening))
-      .transition(this.reduceMotion ? TransitionEffect.IDENTITY : TransitionEffect.asymmetric(
-        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('source.switch.open')),
-        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('source.switch.close'))),
+      .transition(this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) : TransitionEffect.asymmetric(
+        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('app.sheet.open')),
+        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('app.sheet.close'))),
         (transitionIn: boolean): void => this.onSheetActorTransitionFinished(attachment, ownerGeneration, 'sheet:' + opening, transitionIn));
   }
 
@@ -1255,9 +1255,9 @@ export struct SharedDownloadPage {
     }.width('100%')
       .padding({ left: readerVisualSafeLeft(this.currentMetrics()), right: readerVisualSafeRight(this.currentMetrics()) })
       .onAppear((): void => this.onSheetActorAppeared(attachment, ownerGeneration, 'operations:' + opening, opening))
-      .transition(this.reduceMotion ? TransitionEffect.IDENTITY : TransitionEffect.asymmetric(
-        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('source.switch.open')),
-        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('source.switch.close'))),
+      .transition(this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) : TransitionEffect.asymmetric(
+        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('app.sheet.open')),
+        TransitionEffect.move(TransitionEdge.BOTTOM).animation(motionAnimateParam('app.sheet.close'))),
         (transitionIn: boolean): void => this.onSheetActorTransitionFinished(attachment, ownerGeneration, 'operations:' + opening, transitionIn));
   }
 
@@ -1906,14 +1906,14 @@ export struct SharedDownloadPage {
     const visible = this.sheet.length > 0;
     if (visible !== this.sheetWasVisible) {
       this.sheetWasVisible = visible;
-      this.sheetMaskReady = visible && this.reduceMotion;
+      this.sheetMaskReady = false;
       if (visible) {
         this.sheetActorAttachment = ++this.sheetActorGeneration;
         this.sheetActorOwner = this.presentationGeneration;
         this.sheetActors = [];
         this.sheetExitPending = false;
       } else {
-        this.sheetExitPending = !this.reduceMotion && this.sheetActors.length > 0;
+        this.sheetExitPending = this.sheetActors.length > 0;
         if (!this.sheetExitPending) this.retireSheetActors();
       }
     }
@@ -1967,18 +1967,6 @@ export struct SharedDownloadPage {
     this.sheetActorAttachment = 0;
     this.sheetActorOwner = -1;
     this.sheetActors = [];
-  }
-
-  private onMotionPreferenceChanged(): void {
-    if (!this.reduceMotion) return;
-    this.sheetMaskReady = this.sheet.length > 0;
-    if (this.sheetExitPending) {
-      this.sheetActors = [];
-      this.onSheetExitFinished(this.sheetActorAttachment, this.sheetActorOwner);
-      return;
-    }
-    this.syncOverlayChrome();
-    this.syncOverlayFocus();
   }
 
   private syncOverlayChrome(): void {

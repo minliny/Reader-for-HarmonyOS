@@ -1,4 +1,7 @@
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { motionAnimateParam } from '../foundation/MotionSpec';
+import { readerMotionReducedFadeParam } from '../foundation/ReaderMotionPolicy';
+import { ReaderPostLayoutFrame } from '../layout/ReaderPostLayoutFrame';
 import { TOK_BORDER_W, TOK_RADIUS_PILL, TOK_SPACE_XS } from '../foundation/ReaderTokens';
 import { TYPE_MAIN_TAB_LABEL } from '../foundation/ReaderTypography';
 import { readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
@@ -16,7 +19,7 @@ export interface ReaderBottomTabItem {
 @Component
 export struct ReaderBottomTabBar {
   @Prop items: ReaderBottomTabItem[] = [];
-  @Prop current: string = '';
+  @Prop @Watch('moveActivePill') current: string = '';
   @Prop scheme: string = 'day';
   @Prop @Watch('traceGeometry') surfaceWidth: number = 0;
   @Prop translateX: number = 0;
@@ -28,6 +31,10 @@ export struct ReaderBottomTabBar {
   onGeometryTrace: (width: number, paintReady: boolean) => void =
     (_width: number, _paintReady: boolean): void => {};
   @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerReduceMotion') @Watch('motionPreferenceChanged') private reduceMotion: boolean = false;
+  @State private paintedTab: number = -1;
+  @State private pillOpacity: number = 1;
+  private pillGeneration: number = 0;
   @State private raisedShape: ReaderRaisedShape | undefined = undefined;
   private mounted: boolean = false;
   private appearanceEpoch: number = 0;
@@ -36,14 +43,19 @@ export struct ReaderBottomTabBar {
     this.appearanceEpoch += 1;
     this.raisedShape = undefined;
     this.mounted = true;
+    this.syncActivePill();
     this.traceGeometry();
   }
-  aboutToDisappear(): void { this.mounted = false; }
+  aboutToDisappear(): void {
+    this.mounted = false;
+    this.pillGeneration += 1;
+  }
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       if (this.hasPaintGeometry()) {
         Row({ space: TOK_SPACE_XS }) {
+          this.activePill();
           ForEach(this.items, (tab: ReaderBottomTabItem): void => {
             this.tabItem(tab);
           }, (tab: ReaderBottomTabItem): string => `main-tab-${tab.key}`);
@@ -64,6 +76,75 @@ export struct ReaderBottomTabBar {
       .hitTestBehavior(HitTestMode.Transparent)
       .margin({ bottom: this.bottomInset })
       .translate({ x: this.translateX });
+  }
+
+  @Builder
+  private activePill() {
+    if (this.paintedTab >= 0) {
+      Row()
+        .width(this.pillWidth()).height(readerMainTabItemHeight(this.fontScale, false))
+        .position({ x: TOK_SPACE_XS + TOK_BORDER_W, y: this.pillTop() })
+        .translate({ x: this.paintedTab * (this.pillWidth() + TOK_SPACE_XS) })
+        .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.scheme))
+        .borderRadius(readerMainTabItemHeight(this.fontScale, false) / 2)
+        .opacity(this.pillOpacity)
+        .hitTestBehavior(HitTestMode.None)
+        .accessibilityLevel('no');
+    }
+  }
+
+  private pillWidth(): number {
+    const count = this.items.length;
+    const inset = TOK_SPACE_XS + TOK_BORDER_W;
+    const width = this.currentRaisedShape()?.width ?? this.surfaceWidth;
+    return count > 0 ? Math.max(0, (width - 2 * inset - (count - 1) * TOK_SPACE_XS) / count) : 0;
+  }
+
+  private pillTop(): number {
+    const height = this.currentRaisedShape()?.height ?? readerFloatingTabBarHeight(this.fontScale);
+    return Math.max(0, (height - readerMainTabItemHeight(this.fontScale, false)) / 2);
+  }
+
+  private activeTabIndex(): number {
+    return this.items.findIndex((tab: ReaderBottomTabItem): boolean => tab.key === this.current);
+  }
+
+  private syncActivePill(): void {
+    this.pillGeneration += 1;
+    this.paintedTab = this.activeTabIndex();
+    this.pillOpacity = 1;
+  }
+
+  private motionPreferenceChanged(): void {
+    if (this.mounted) this.syncActivePill();
+  }
+
+  private moveActivePill(): void {
+    if (!this.mounted) return;
+    const index = this.activeTabIndex();
+    if (index === this.paintedTab) return;
+    if (!this.hasPaintGeometry() || index < 0 || this.paintedTab < 0) {
+      this.syncActivePill();
+      return;
+    }
+    const context = this.getUIContext();
+    if (!this.reduceMotion) {
+      try {
+        context.animateTo(motionAnimateParam('app.navigation.pill'), (): void => { this.paintedTab = index; });
+      } catch (_) { this.syncActivePill(); }
+      return;
+    }
+    const generation = ++this.pillGeneration;
+    this.pillOpacity = 0;
+    this.paintedTab = index;
+    try {
+      context.postFrameCallback(new ReaderPostLayoutFrame(context, (): void => {
+        if (!this.mounted || generation !== this.pillGeneration) return;
+        try {
+          context.animateTo(readerMotionReducedFadeParam(), (): void => { this.pillOpacity = 1; });
+        } catch (_) { this.pillOpacity = 1; }
+      }));
+    } catch (_) { this.pillOpacity = 1; }
   }
 
   @Builder
@@ -89,7 +170,7 @@ export struct ReaderBottomTabBar {
     .layoutWeight(1)
     .constraintSize({ minHeight: readerMainTabItemHeight(this.fontScale, false) })
     .padding(0)
-    .backgroundColor(this.current === tab.key ? readerAppColor('TOK_PRIMARY_DARK', this.scheme) : Color.Transparent)
+    .backgroundColor(Color.Transparent)
     .enabled(this.inputEnabled)
     .accessibilityText(`${this.currentTab(tab).label}${this.current === tab.key ? '，已选中' : ''}`)
     .id(`reader-main-tab-${tab.key}`)

@@ -114,7 +114,10 @@ import { JsonImportPresentation, type JsonImportOpening } from '../app/compositi
 import { isReaderProductSurfaceEnabled } from '../app/ReaderProductScope';
 import { ReaderNavigation, retainedReaderRoute, type DetailReturnRoute, type DirectoryReturnTarget,
   type ReaderNavigationSnapshot, type ReaderReturnContext, type ReaderRoute, type SettingsSection,
-  type ReaderBackTarget, type TemporaryBackScope } from '../app/navigation/ReaderNavigation';
+  type ReaderBackTarget, type ReaderRouteMotionKind, type TemporaryBackScope } from '../app/navigation/ReaderNavigation';
+import { readerRouteTransition, readerRouteUnderlayAnimation,
+  READER_ROUTE_PARENT_DIM, READER_ROUTE_PARENT_PARALLAX } from '../app/navigation/ReaderRouteMotion';
+import { ReaderRouteStackSurface } from '../app/navigation/ReaderRouteStackSurface';
 import { ReaderLayoutDebugOverlay } from '../app/composition/ReaderLayoutDebugOverlay';
 
 const DOMAIN = 0x5244;
@@ -229,7 +232,12 @@ struct Index {
   @State private navigationGeneration: number = this.navigationOwner.snapshot().generation;
   @State private directoryReturnTarget: DirectoryReturnTarget = this.navigationOwner.snapshot().directoryReturnTarget;
   @State private settingsSection: SettingsSection = this.navigationOwner.snapshot().settingsSection;
+  @State private visibleRouteMotion: ReaderRouteMotionKind | 'none' = 'none';
+  @State private sourceOpeningGeneration: number = 0;
+  @State private sourceToolsOpeningGeneration: number = 0;
   private publishNavigation(snapshot: ReaderNavigationSnapshot): void {
+    const restoringDirectory = this.route === 'reading' && snapshot.route === 'directory' &&
+      snapshot.directoryReturnTarget === 'detail';
     if (snapshot.generation !== this.navigationGeneration || snapshot.route !== this.route) {
       this.bookRemovalConfirmation.dismiss();
       this.jsonImportPresentation.dismiss();
@@ -238,16 +246,38 @@ struct Index {
       if (this.shelfMutations.snapshot.importPresentation !== undefined) this.shelfMutations.closeImport();
       if (this.shelfGroupPresentation.identity.length > 0) this.shelfGroupPresentation.retire();
     }
+    if (snapshot.route !== this.route) {
+      const from = this.route, to = snapshot.route;
+      if (to === 'source') this.sourceOpeningGeneration = snapshot.generation;
+      else if (to === 'sourceTools') this.sourceToolsOpeningGeneration = snapshot.generation;
+      const shelfSearch = (from === 'bookshelf' && to === 'search') || (from === 'search' && to === 'bookshelf');
+      const shelfReading = (from === 'bookshelf' && to === 'reading') || (from === 'reading' && to === 'bookshelf');
+      const retainedReader = (from === 'reading' && to === 'directory' && snapshot.directoryReturnTarget === 'readerControl') ||
+        (from === 'directory' && to === 'reading' && this.directoryReturnTarget === 'readerControl');
+      this.visibleRouteMotion = shelfSearch || shelfReading || retainedReader ? 'none' : this.navigationOwner.routeMotion();
+    }
     this.navigationGeneration = snapshot.generation;
     this.directoryReturnTarget = snapshot.directoryReturnTarget;
     this.settingsSection = snapshot.settingsSection;
     this.route = snapshot.route;
+    if (restoringDirectory) this.directoryJourney.refreshDetailPosition();
   }
   private setSettingsSection(section: SettingsSection): void {
     this.publishNavigation(this.navigationOwner.setSettingsSection(section));
   }
   private navigateTo(route: ReaderRoute): void {
     this.publishNavigation(this.navigationOwner.show(route));
+  }
+  private routeTransition(): TransitionEffect {
+    return readerRouteTransition(this.searchAppForeground ? this.visibleRouteMotion : 'none',
+      ReaderWindowCoordinator.metrics().windowRect.width, this.appReduceMotion);
+  }
+  private routeUnderlayOffset(covered: boolean): number {
+    return covered && !this.appReduceMotion ? -ReaderWindowCoordinator.metrics().windowRect.width *
+      READER_ROUTE_PARENT_PARALLAX : 0;
+  }
+  private routeUnderlayBrightness(covered: boolean): number {
+    return covered && !this.appReduceMotion ? 1 - READER_ROUTE_PARENT_DIM : 1;
   }
   @StorageLink('readerAppForeground') @Watch('onSearchVisibilityChanged') private searchAppForeground: boolean = true;
   @State private jsonImportPresentation: JsonImportPresentation = new JsonImportPresentation();
@@ -870,6 +900,8 @@ struct Index {
         reduceMotion: this.appReduceMotion || !this.searchAppForeground,
         onCovered: (id: number): void => this.shelfMotion.coverClosed(id),
         onReaderOpacity: (id: number, opacity: number): void => this.shelfMotion.publishReaderOpacity(id, opacity),
+        onShelfPaint: (id: number, opacity: number, scale: number, brightness: number): void =>
+          this.shelfMotion.publishShelfPaint(id, opacity, scale, brightness),
         onFinished: (id: number): void => this.shelfMotion.finish(id),
       });
     }
@@ -923,53 +955,45 @@ struct Index {
         .width('100%')
         .height('100%')
         .padding({ top: this.shelfMotion.retainsOpeningBackground() ? this.appContentTopInset() : 0 })
+        .opacity(this.shelfMotion.shelfOpacity)
+        .scale({ x: this.shelfMotion.shelfScale, y: this.shelfMotion.shelfScale })
+        .brightness(this.shelfMotion.shelfBrightness)
         .enabled(this.bookshelfContentAcceptsInput())
         .hitTestBehavior(this.bookshelfContentAcceptsInput() ? HitTestMode.Default : HitTestMode.None)
         .accessibilityLevel(this.bookshelfContentAcceptsInput() ? 'auto' : 'no-hide-descendants')
+        .transition(this.routeTransition())
         .customProperty('readerLayoutDebugExcluded', this.route !== 'bookshelf');
-      } else if (this.route === 'bookshelfSettings') {
-        this.settingsContent('bookshelfSettings');
-      } else if (this.route === 'bookshelfMultiSelect') {
-        ForEach([this.shelfMutations.selection.identity], (identity: number): void => {
-          BookshelfMultiSelectPage({
-            books: this.shelfMutations.selection.books,
-            ready: this.shelfMutations.selection.ready,
-            initialSelectedKey: this.shelfMutations.selection.initialKey,
-            busy: this.shelfMutations.snapshot.batchRemovalBusy || this.shelfMutations.selectionVerifying,
-            isInputAllowed: (): boolean => this.searchAppForeground && !this.arkWebCapturesInput &&
-              this.route === 'bookshelfMultiSelect' && identity === this.shelfMutations.selection.identity,
-            onCancel: (): void => { if (identity === this.shelfMutations.selection.identity) this.libraryJourney.returnToBookshelf(); },
-            onRemoveSelected: (keys: string[]): void => this.shelfMutations.requestSelectionRemoval(identity, keys),
-          });
-        }, (identity: number): string => identity.toString());
-      } else if (this.route === 'bookshelfManagement') {
-        BookshelfManagementSurface({ presentation: this.shelfManagement, onBack: (): void => this.libraryJourney.returnToBookshelf() });
-      } else if (isReaderProductSurfaceEnabled('rss') && (this.route === 'rss' || this.route === 'rssSubscriptionManagement' ||
-        this.route === 'rssSubscriptionEditor' || this.route === 'rssSourceFeed' || this.route === 'rssEntryDetail')) {
-        this.rssContent(this.route);
-      } else if (isReaderProductSurfaceEnabled('discover') && this.route === 'discover') {
-        this.discoverPageContent();
-      } else if (this.route === 'settings') {
-        this.settingsContent('settings');
-      } else if (this.route === 'downloads') {
-        this.downloadsContent();
-      } else if (this.route === 'rulesManagement') {
-        this.rulesManagementContent();
-      } else if (this.route === 'source' || this.route === 'sourceTools') {
-        this.sourceJourneyContent();
-      } else if (isReaderProductSurfaceEnabled('sync') && this.route === 'sync') {
-        this.syncContent();
       } else if (this.readingEntry.book !== undefined && (this.route === 'detail' ||
         (this.route === 'directory' && this.directoryReturnTarget === 'detail') ||
+        this.navigationOwner.retainsDetailDirectory() ||
         (!this.readingEntry.sessionActive && (this.route === 'reading' || this.route === 'directory')))) {
-        BookshelfDetailScene({
-          entry: this.readingEntry, detail: this.detailShelf, mutations: this.shelfMutations,
-          identity: this.detailShelf.identity(), foreground: this.detailContentIsForeground(),
-          directoryRetained: this.isDetailDirectoryRoute(),
-          mutationEnabled: this.detailShelf.mutationEnabled(this.readingEntry.book),
-          ports: this.detailScenePorts(),
-        });
-        if (this.isDetailDirectoryRoute()) this.externalDirectory();
+        Stack({ alignContent: Alignment.TopStart }) {
+          Stack({ alignContent: Alignment.TopStart }) {
+            BookshelfDetailScene({
+              entry: this.readingEntry, detail: this.detailShelf, mutations: this.shelfMutations,
+              identity: this.detailShelf.identity(), foreground: this.detailContentIsForeground(),
+              directoryRetained: this.isDetailDirectoryRoute() || this.navigationOwner.retainsDetailDirectory(),
+              mutationEnabled: this.detailShelf.mutationEnabled(this.readingEntry.book),
+              ports: this.detailScenePorts(),
+            });
+          }.width('100%').height('100%')
+            .translate({ x: this.routeUnderlayOffset(this.isDetailDirectoryRoute()) })
+            .brightness(this.routeUnderlayBrightness(this.isDetailDirectoryRoute()))
+            .animation(readerRouteUnderlayAnimation(this.visibleRouteMotion, this.appReduceMotion));
+          if (this.isDetailDirectoryRoute() || this.navigationOwner.retainsDetailDirectory()) this.externalDirectory();
+        }.width('100%').height('100%').transition(this.routeTransition());
+      } else if (this.route !== 'reading' && this.route !== 'directory') {
+        ReaderRouteStackSurface({
+          route: this.route,
+          routeMotion: this.visibleRouteMotion,
+          reduceMotion: this.appReduceMotion,
+          viewportWidth: ReaderWindowCoordinator.metrics().windowRect.width,
+          backGestureEnabled: this.journeyRecoveryInputAllowed(),
+          content: (route: ReaderRoute): void => { this.secondaryRouteSurface(route); },
+          onBack: (): boolean => this.onBackPress(),
+        }).width('100%').height('100%')
+          .backgroundColor(readerAppColor('app.window.background', this.appThemeScheme))
+          .transition(this.routeTransition());
       }
       if (this.route === 'bookshelf' || this.route === 'search' || this.shelfMotion.retainsOpeningBackground()) {
         this.librarySearchSurface(this.mountedRuntimeOwner, this.librarySearch.host);
@@ -984,7 +1008,7 @@ struct Index {
           inputAllowed: this.searchAppForeground && !this.arkWebCapturesInput &&
             this.shelfMotion.pendingExitId < 0 && this.shelfMotion.request?.direction !== 'open',
           ports: this.retainedReaderPorts(),
-        });
+        }).transition(this.routeTransition());
       }
       ReaderSourceSwitchSurfaces({
         reading: this.readingEntry, source: this.sourceSwitchPresentation, manga: this.mangaSourceSwitch,
@@ -1102,13 +1126,50 @@ struct Index {
   }
 
   @Builder
+  private secondaryRouteSurface(route: ReaderRoute) {
+    if (route === 'bookshelfSettings') {
+      this.settingsContent('bookshelfSettings');
+    } else if (route === 'bookshelfMultiSelect') {
+      ForEach([this.shelfMutations.selection.identity], (identity: number): void => {
+        BookshelfMultiSelectPage({
+          books: this.shelfMutations.selection.books,
+          ready: this.shelfMutations.selection.ready,
+          initialSelectedKey: this.shelfMutations.selection.initialKey,
+          busy: this.shelfMutations.snapshot.batchRemovalBusy || this.shelfMutations.selectionVerifying,
+          isInputAllowed: (): boolean => this.searchAppForeground && !this.arkWebCapturesInput &&
+            this.route === 'bookshelfMultiSelect' && identity === this.shelfMutations.selection.identity,
+          onCancel: (): void => { if (identity === this.shelfMutations.selection.identity) this.libraryJourney.returnToBookshelf(); },
+          onRemoveSelected: (keys: string[]): void => this.shelfMutations.requestSelectionRemoval(identity, keys),
+        });
+      }, (identity: number): string => identity.toString());
+    } else if (route === 'bookshelfManagement') {
+      BookshelfManagementSurface({ presentation: this.shelfManagement, onBack: (): void => this.libraryJourney.returnToBookshelf() });
+    } else if (isReaderProductSurfaceEnabled('rss') && (route === 'rss' || route === 'rssSubscriptionManagement' ||
+      route === 'rssSubscriptionEditor' || route === 'rssSourceFeed' || route === 'rssEntryDetail')) {
+      this.rssContent(route);
+    } else if (isReaderProductSurfaceEnabled('discover') && route === 'discover') {
+      this.discoverPageContent();
+    } else if (route === 'settings') {
+      this.settingsContent('settings');
+    } else if (route === 'downloads') {
+      this.downloadsContent();
+    } else if (route === 'rulesManagement') {
+      this.rulesManagementContent();
+    } else if (route === 'source' || route === 'sourceTools') {
+      this.sourceJourneyContent(route === 'sourceTools');
+    } else if (isReaderProductSurfaceEnabled('sync') && route === 'sync') {
+      this.syncContent();
+    }
+  }
+
+  @Builder
   private externalDirectory() {
     if (this.readingEntry.book !== undefined) {
       DetailDirectoryScene({ reduceMotion: this.appReduceMotion,
         reading: this.readingEntry,
         operations: this.directoryJourney.operations,
         navigation: this.directoryNavigationPorts(),
-        interactive: this.isDirectoryOpeningCurrent(this.readingEntry.directoryPresentationGeneration, 'detail'),
+        interactive: this.isDirectoryOpeningCurrent(this.readingEntry.detailDirectoryPresentationGeneration, 'detail'),
         mangaDownloadEnabled: this.readingEntry.book.contentKind === 'manga' &&
           this.mountedRuntimeOwner?.supportsCoreCapability('manga.offline.v1') === true,
         isOpeningCurrent: (opening: number): boolean => this.isDirectoryOpeningCurrent(opening, 'detail'),
@@ -1117,7 +1178,15 @@ struct Index {
         onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string, opening: number): void =>
           this.registerDirectoryBackBridge('detail', opening, handler, identity),
         onBack: (): void => this.closeDirectory(),
-      }).width('100%').height('100%');
+      }).width('100%').height('100%')
+        .translate({ x: this.routeUnderlayOffset(!this.isDetailDirectoryRoute()) })
+        .brightness(this.routeUnderlayBrightness(!this.isDetailDirectoryRoute()))
+        .animation(readerRouteUnderlayAnimation(this.visibleRouteMotion, this.appReduceMotion))
+        .visibility(this.route === 'detail' ? Visibility.Hidden : Visibility.Visible)
+        .enabled(this.isDetailDirectoryRoute())
+        .hitTestBehavior(this.isDetailDirectoryRoute() ? HitTestMode.Default : HitTestMode.None)
+        .accessibilityLevel(this.isDetailDirectoryRoute() ? 'auto' : 'no-hide-descendants')
+        .transition(this.routeTransition());
     }
   }
 
@@ -1255,14 +1324,15 @@ struct Index {
   }
 
   @Builder
-  private sourceJourneyContent() {
-    // Both routes share the outer If branch. Capture the current opening in
-    // this keyed subtree instead of retaining the first @Builder boolean.
-    ForEach([this.sourceNavigation.identity(this.navigationGeneration, this.detailShelfAdmissionMount,
-      this.route === 'sourceTools' ? 'sourceTools' : 'source')], (identity: string): void => {
-      this.sourceJourneySurface(this.navigationGeneration, this.mountedRuntimeOwner,
-        this.route === 'sourceTools', identity);
-    }, (identity: string): string => identity);
+  private sourceJourneyContent(showingTools: boolean) {
+    // Advancing the navigation generation retires business actions before the
+    // route changes. Preserve the covered lane's viewport until a real return.
+    ForEach([showingTools ? this.sourceToolsOpeningGeneration : this.sourceOpeningGeneration],
+      (generation: number): void => {
+        this.sourceJourneySurface(generation, this.mountedRuntimeOwner, showingTools,
+          this.sourceNavigation.identity(generation, this.detailShelfAdmissionMount, showingTools ? 'sourceTools' : 'source'));
+      }, (generation: number): string =>
+        this.sourceNavigation.identity(generation, this.detailShelfAdmissionMount, showingTools ? 'sourceTools' : 'source'));
   }
 
   @Builder

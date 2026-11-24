@@ -7,8 +7,9 @@ async function routingFixture(initialRoute) {
   const { actualReadingEntryPresentation } = await import('./lib/reading-entry-presentation-probe.mjs');
   const { ReaderEntryStartupTrace } = await import('../entry/src/main/ets/app/ReaderStartupTrace.ts');
   const { ReaderNavigation } = await import('../entry/src/main/ets/app/navigation/ReaderNavigation.ts');
+  const entryDto = await import('../entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts');
   const EntryActions = bookshelfOperationClass('app/composition/ReaderReadingEntryActions.ets',
-    'ReaderReadingEntryActions', { Observed: value => value });
+    'ReaderReadingEntryActions', { Observed: value => value, ...entryDto });
   const SourceJourney = bookshelfOperationClass('app/composition/ReaderSourceSwitchJourney.ets', 'ReaderSourceSwitchJourney');
 
   const f = fixture();
@@ -126,7 +127,8 @@ async function preview() {
     assert.equal(child.readingEnabled, true);
     assert.equal(child.book.sourceName, 'Named Source');
     assert.equal(child.toc.length, 3);
-    assert.equal(x.f.calls.filter(call => call.method === 'bookmark.list').length, 1);
+    assert.equal(x.f.calls.filter(call => call.method === 'bookmark.list').length, 0,
+      'Detail preview leaves bookmark loading to the directory opening');
     assert.equal(x.f.calls.some(call => /bookshelf\.(?:upsert|add|remove)/.test(call.method)), false);
     const before = x.f.calls.length;
     child.onContinue();

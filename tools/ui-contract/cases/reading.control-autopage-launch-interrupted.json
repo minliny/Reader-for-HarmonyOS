@@ -1,6 +1,6 @@
 {
   "id": "reading.control-autopage-launch-interrupted",
-  "version": 1,
+  "version": 2,
   "phase": 1,
   "pageId": "reading",
   "fixture": {

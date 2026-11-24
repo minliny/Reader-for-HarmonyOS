@@ -28,7 +28,9 @@ const {createRequire} = await import('node:module');
 const require=createRequire(import.meta.url);
 const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
-const {ReaderControlMotionFrameCache} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+const {ReaderControlMotionFrameCache, readerControlMotionBounds} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
+const {readerControlMotionMs, READER_CONTROL_OPEN_MS} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts');
+const {READER_REDUCED_FADE_MS} = await import('../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts');
 const {ReaderSessionMorphSourceMeasurement} = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
 const {buildReaderSessionLaunchGeometry,sampleReaderSessionLaunch} = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
 const {readerControlPlaybackSourceKind} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
@@ -37,11 +39,13 @@ const {createReaderControlMorphScroll,readerControlMorphScrollTranslation} = awa
 const file=name=>new URL(`../entry/src/main/ets/features/reading/ui/${name}`,import.meta.url);
 const curves={flight:p=>p,expand:p=>p,easeIn:p=>p,easeOut:p=>p,easeInOut:p=>p};
 const g=buildReaderSessionLaunchGeometry({source:new ReaderSessionMorphSourceMeasurement('quickTts','tts',30,510,286,190,1),targetLeft:260,targetTop:790,topBarExitDistance:90,dockExitDistance:330});
-const P=productionMotionMethods(file('ReaderControlPanel.ets'),['frame','controlPanelHeight','onLaunchSourceVisible','confirmLaunchSourceReady','setMoreMenuVisible','dismissMoreMenu','performMoreAction','onRuntimeEnabledChanged']);
-for(const time of [0,100,450,1100,1700,2200]){
+const P=productionMotionMethods(file('ReaderControlPanel.ets'),['frame','currentLayout','controlPanelHeight',
+  'onLaunchSourceVisible','confirmLaunchSourceReady','launchSourceCurrent','onRuntimeEnabledChanged'], {readerControlMotionBounds});
+for(const time of [0,100,160,190,220,379,380]){
  const sample=sampleReaderSessionLaunch(time,g,curves),events=[];
  const p=Object.assign(new P(),{launchSample:sample,launchOwnsControls:false,launchRecovering:true,launchGeneration:7,
  launchSourceKind:'quickTts',launchSourceVisibleGeneration:0,launchSourceReadyGeneration:0,launchMotionProgress:0,
+ runtimeMounted:true,capturedLaunchGeneration:7,capturedLaunchSourceKind:'quickTts',minimumIdentity:'',
  layout:{fullPanelWidth:364,fullPanelHeight:736,dockBottomGap:20},isExpanded:()=>false,controlQuickHeight:()=>330,
  launchFrameCache:new ReaderControlMotionFrameCache(),onLaunchSourceReady:n=>events.push(n)});
  for(const v of [0,.25,.75,1]){
@@ -58,23 +62,50 @@ for(const time of [0,100,450,1100,1700,2200]){
 // clock must run; conflating those gates would deadlock the source handoff.
 {
  const enabled=[],p=Object.assign(new P(),{inputEnabled:false,launchRecovering:true,controlObscured:false,
- runtime:{setEnabled:v=>{enabled.push(v);return {};}},acceptRuntime:()=>{}});
+ runtime:{setEnabled:v=>{enabled.push(v);return {};}},acceptRuntime:()=>{},
+ syncProgressInput:()=>{},placementPointers:new Set(),refreshDockPlacement:()=>{}});
  p.onRuntimeEnabledChanged();assert.equal(enabled.at(-1),true);
  p.controlObscured=true;p.onRuntimeEnabledChanged();assert.equal(enabled.at(-1),false);
  p.controlObscured=false;p.launchRecovering=false;p.onRuntimeEnabledChanged();assert.equal(enabled.at(-1),false);
 }
 {
- const H=productionMotionMethods(file('LocalReadingExperience.ets'),['cancelSessionLaunch'],{...sessionPolicy,READER_CONTROL_OPEN_MS:220});
+ const H=productionMotionMethods(file('LocalReadingExperience.ets'),['cancelSessionLaunch'],
+   {...sessionPolicy,READER_CONTROL_OPEN_MS,readerControlMotionMs});
  const source=sessionPolicy.expandReaderControlSession(sessionPolicy.enterReaderControlModule(
    sessionPolicy.openReaderControlSession(sessionPolicy.createReaderControlSessionState(),0),'tts',0),0);
  const current={ownership:'stage',geometry:{type:'tts'}};
- const next={...current,ownership:'handoffPending',sample:sampleReaderSessionLaunch(900,g,curves)};
+ const next={...current,ownership:'handoffPending',sample:sampleReaderSessionLaunch(190,g,curves)};
  const h=Object.assign(new H(),{sessionLaunch:current,sessionLaunchSourceControl:source,reduceMotion:false,
-   sessionLaunchController:{cancel:()=>next},applyWindowPolicyForChromeOwner:()=>{}});
+   sessionLaunchController:{cancel:()=>next},applyWindowPolicyForChromeOwner:()=>{},
+   capsuleVerification:{ownerState:()=>{},finish:()=>{}},sessionLaunchSpeechFacts:()=>undefined});
  h.cancelSessionLaunch('openControl');
  assert.equal(h.controlSession.transition.kind,'open');assert.equal(h.controlSession.transition.durationMs,220);
  assert.equal(sessionPolicy.readerControlContentLocation(h.controlSession).module,'tts');
  assert.equal(sessionPolicy.readerControlTargetLocation(h.controlSession).form,'full');
+}
+{
+ const H = productionMotionMethods(file('LocalReadingExperience.ets'), ['fadeSessionLaunchExit'], {
+   readerMotionReducedFadeParam: onFinish => ({duration:READER_REDUCED_FADE_MS,onFinish}),
+ });
+ let finish;
+ const states = [];
+ const launch = {generation:7,ownership:'exitPending',cancelReason:'openControl'};
+ const h = Object.assign(new H(), {mounted:true,appForeground:true,exitRequested:false,reduceMotion:true,
+   sessionLaunch:launch,sessionLaunchExitGeneration:0,readerWindowMetricsRevision:1,
+   sessionLaunchStageOpacity:1,sessionLaunchFooterExiting:true,sessionLaunchFooterOffset:5,
+   sessionLaunchController:{finishExit:g=>g === launch.generation,snapshot:()=>launch},
+   finishSessionCapsuleMorph:value=>states.push(value),
+   getUIContext:()=>({animateTo:({duration,onFinish},update)=>{
+     assert.equal(duration,120);
+     assert.equal(h.sessionLaunchFooterOffset,0,'footer is stationary during the reduced fade');
+     update();finish=onFinish;
+   }}),
+ });
+ h.fadeSessionLaunchExit(7);
+ assert.equal(h.sessionLaunchStageOpacity,0);
+ assert.deepEqual(states,[]);
+ finish();
+ assert.deepEqual(states,[launch]);
 }
 
 }

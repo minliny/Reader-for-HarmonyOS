@@ -23,6 +23,7 @@ import type { RemoteReadingPositionScope } from '../application/RemoteReadingPos
 import { readerTtsWaveformSnapshot } from './ReaderTtsWaveform';
 import type { ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
 import { ReaderSessionLaunchStage } from './ReaderSessionLaunchStage';
+import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import type { ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
 import type { ReaderSessionCapsuleState } from './ReaderSessionCapsuleModel';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -1955,9 +1956,11 @@ export struct ReaderControlPanel {
           onPrimaryColor: readerAppColor('app.sessionCapsule.onPrimary', this.appScheme),
           themeScheme: this.appScheme,
           sourceSharpContent: (): void => { this.launchSourceContent(); },
-          sourceBlurContent: (): void => { this.launchSourceContent(); },
           onToggle: (): void => this.onLaunchToggle(),
-        }).id('reader-session-launch-fade-owner').opacity(this.launchStageOpacity).zIndex(9);
+        }).id('reader-session-launch-fade-owner').opacity(this.launchStageOpacity).zIndex(9)
+          .transition(this.reduceMotion ? TransitionEffect.asymmetric(
+            TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()), TransitionEffect.IDENTITY) :
+            TransitionEffect.IDENTITY);
       }
       }
     }

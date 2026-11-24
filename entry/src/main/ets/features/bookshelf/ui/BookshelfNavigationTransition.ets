@@ -1,25 +1,21 @@
 import { FrameCallback } from '@kit.ArkUI';
 import curves from '@ohos.curves';
-import { MotionSpecEntry, motionSpecGet } from '../../../ui/foundation/MotionSpec';
+import { readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
 import { motionSegment, ReversibleMotionTimeline } from '../../../ui/foundation/MotionTimeline';
+import { READER_BOOK_CLOSE_MS, READER_BOOK_OPEN_MS, READER_REDUCED_FADE_MS } from '../../../ui/foundation/ProductMotionTiming';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { TYPE_SHELF_CONTINUE_TITLE } from '../../../ui/foundation/ReaderTypography';
-import { bookshelfMotionRectAt, BookshelfMotionRequest } from '../presentation/BookshelfNavigationMotion';
+import { bookshelfMotionPaint, BookshelfMotionRequest } from '../presentation/BookshelfNavigationMotion';
 import { BOOKSHELF_COVER_SHADOW_RADIUS, BOOKSHELF_COVER_SHADOW_OFFSET_Y } from './BookshelfCoverVisual';
 
-function navigationMotion(id: string): MotionSpecEntry {
-  const entry = motionSpecGet(id);
-  if (entry === undefined) throw new Error(`Missing bookshelf motion: ${id}`);
-  return entry;
-}
-const CARRY = navigationMotion('bookshelf.open.carry');
-const TURN = navigationMotion('bookshelf.open.turn');
-const HANDOFF = navigationMotion('bookshelf.open.handoff');
-const FADE = navigationMotion('bookshelf.open.fade');
-const TURN_START = CARRY.durationMs;
-const HANDOFF_START = TURN_START + TURN.durationMs;
-const TOTAL = HANDOFF_START + HANDOFF.durationMs;
+const CARRY = readerMotionStandardCurve();
+const SPINE = curves.cubicBezierCurve(0.22, 0.88, 0.26, 1);
+const FADE = curves.cubicBezierCurve(0, 0, 0.58, 1);
+const COVER_PERSPECTIVE_VP = 1400;
+// Change the route while the paper plane covers the reader. The live shelf
+// can measure the landing while the remaining close clock is still running.
+const CLOSE_HANDOFF_FRACTION = 0.28;
 
 class BookshelfNavigationFrameCallback extends FrameCallback {
   private readonly callback: () => void;
@@ -38,6 +34,8 @@ export struct BookshelfNavigationTransition {
   // The reader remains at its natural layout and scale; its visibility is a
   // track on this actor's clock, guarded by the caller's request identity.
   onReaderOpacity: (id: number, opacity: number) => void = (_id: number, _opacity: number): void => {};
+  onShelfPaint: (id: number, opacity: number, scale: number, brightness: number) => void =
+    (_id: number, _opacity: number, _scale: number, _brightness: number): void => {};
   onFinished: (id: number) => void = (_id: number): void => {};
 
   @State private visible: boolean = false;
@@ -51,6 +49,11 @@ export struct BookshelfNavigationTransition {
   @State private actorY: number = 0;
   @State private actorRadius: number = 0;
   @State private actorOpacity: number = 1;
+  @State private curtainOpacity: number = 0;
+  @State private curtainWidth: number = 0;
+  @State private curtainHeight: number = 0;
+  @State private curtainX: number = 0;
+  @State private curtainY: number = 0;
   @State private coverAngle: number = 0;
   @State private fadeSurface: boolean = false;
 
@@ -58,13 +61,15 @@ export struct BookshelfNavigationTransition {
   private generation: number = 0;
   private activeId: number = -1;
   private activeRequest: BookshelfMotionRequest | undefined = undefined;
-  private timeline: ReversibleMotionTimeline = new ReversibleMotionTimeline(TOTAL);
+  private duration: number = READER_BOOK_OPEN_MS;
+  private timeline: ReversibleMotionTimeline = new ReversibleMotionTimeline(READER_BOOK_OPEN_MS);
   private running: boolean = false;
   private covered: boolean = false;
   private waiting: boolean = false;
   private fading: boolean = false;
   private readerProgress: number = 0;
   private fadeStartProgress: number = 0;
+  private sampledPhase: number = 0;
 
   aboutToAppear(): void { this.mounted = true; this.onRequestChanged(); }
   aboutToDisappear(): void { this.mounted = false; this.clearActor(); }
@@ -93,69 +98,76 @@ export struct BookshelfNavigationTransition {
       }
       return;
     }
+    const now = readerMotionNowMs();
+    const preceding = this.activeRequest;
+    const reverse = this.running && !this.fading && preceding !== undefined && preceding.direction !== next.direction &&
+      preceding.origin.sourceId === next.origin.sourceId && preceding.origin.bookId === next.origin.bookId;
+    const reversedPosition = reverse ? next.direction === 'open' ? this.sampledPhase : 1 - this.sampledPhase : 0;
     this.clearActor();
     this.activeId = next.id;
     this.activeRequest = next;
     this.covered = false;
-    this.renderedId = next.id;
+    if (!reverse) this.renderedId = next.id;
     this.coverUrl = next.origin.coverUrl;
     this.title = next.origin.title;
-    this.coverFailed = false;
+    if (!reverse) this.coverFailed = false;
     this.readerProgress = 0;
     this.fadeStartProgress = 0;
+    this.curtainOpacity = 0;
     this.running = true;
     this.visible = true;
     this.fading = this.reduceMotion || next.fadeOnly === true;
     this.fadeSurface = this.fading;
-    const now = readerMotionNowMs();
-    if (this.fading) {
-      this.timeline = new ReversibleMotionTimeline(FADE.durationMs);
-      this.timeline.retarget(true, now);
-      this.sampleFade(0);
-    } else {
-      this.timeline = new ReversibleMotionTimeline(TOTAL);
-      this.timeline.seek(next.direction === 'close' ? TOTAL : 0, now);
-      this.timeline.retarget(next.direction === 'open', now);
-      this.sampleActor(next.direction === 'close' ? TOTAL : 0);
-    }
+    this.duration = this.fading ? READER_REDUCED_FADE_MS :
+      next.direction === 'open' ? READER_BOOK_OPEN_MS : READER_BOOK_CLOSE_MS;
+    this.timeline = new ReversibleMotionTimeline(this.duration);
+    const position = this.fading ? 0 : reversedPosition * this.duration;
+    this.timeline.seek(position, now);
+    this.timeline.retarget(true, now);
+    this.sample(position);
     this.scheduleFrame(this.generation);
   }
 
-  private sampleFade(time: number): void {
-    const request = this.activeRequest;
-    if (request === undefined) return;
-    const p = motionSegment(time, 0, FADE.durationMs, (x: number): number =>
-      (FADE.curve as curves.ICurve).interpolate(x));
-    const target = request.target;
-    this.actorX = target.x; this.actorY = target.y;
-    this.actorWidth = target.width; this.actorHeight = target.height;
-    this.actorRadius = 0; this.coverAngle = 0;
-    const openProgress = this.fadeStartProgress + (1 - this.fadeStartProgress) * p;
-    this.actorOpacity = request.direction === 'open' ? 1 - openProgress : this.covered ? 1 - p : p;
-    if (request.direction === 'open') {
-      this.readerProgress = openProgress;
-      this.onReaderOpacity(request.id, openProgress);
-    }
+  private closeHandoffTime(): number {
+    return this.duration * (this.fading ? 0.5 : CLOSE_HANDOFF_FRACTION);
   }
 
-  private sampleActor(time: number): void {
+  private sampleCurtain(request: BookshelfMotionRequest, time: number): void {
+    const handoff = this.closeHandoffTime();
+    const easeOut = (value: number): number => FADE.interpolate(value);
+    const ramp = motionSegment(time, 0, handoff, easeOut);
+    this.curtainOpacity = !this.covered ? ramp :
+      1 - motionSegment(time, handoff, this.duration - handoff, easeOut);
+    this.curtainX = request.target.x; this.curtainY = request.target.y;
+    this.curtainWidth = request.target.width; this.curtainHeight = request.target.height;
+  }
+
+  private sample(time: number): void {
     const request = this.activeRequest;
     if (request === undefined) return;
-    const carry = motionSegment(time, 0, CARRY.durationMs, (x: number): number =>
-      (CARRY.curve as curves.ICurve).interpolate(x));
-    const turn = motionSegment(time, TURN_START, TURN.durationMs, (x: number): number =>
-      (TURN.curve as curves.ICurve).interpolate(x));
-    const handoff = motionSegment(time, HANDOFF_START, HANDOFF.durationMs, (x: number): number =>
-      (HANDOFF.curve as curves.ICurve).interpolate(x));
-    const rect = bookshelfMotionRectAt(request, carry);
-    this.actorX = rect.x; this.actorY = rect.y;
-    this.actorWidth = rect.width; this.actorHeight = rect.height;
-    this.actorRadius = request.origin.radius * (1 - carry);
-    this.coverAngle = -78 * turn - 18 * handoff;
-    this.actorOpacity = 1 - handoff;
+    if (request.direction === 'close') this.sampleCurtain(request, time);
+    if (this.fadeSurface) {
+      this.actorOpacity = 0;
+      if (request.direction === 'open') {
+        const p = motionSegment(time, 0, this.duration, (value: number): number => FADE.interpolate(value));
+        this.readerProgress = this.fadeStartProgress + (1 - this.fadeStartProgress) * p;
+        this.onReaderOpacity(request.id, this.readerProgress);
+        this.onShelfPaint(request.id, 1, 1, 1);
+      }
+      return;
+    }
+    this.sampledPhase = request.direction === 'open' ? time / this.duration : 1 - time / this.duration;
+    const paint = bookshelfMotionPaint(request, this.sampledPhase,
+      (value: number): number => CARRY.interpolate(value), (value: number): number => SPINE.interpolate(value));
+    this.actorX = paint.rect.x; this.actorY = paint.rect.y;
+    this.actorWidth = paint.rect.width; this.actorHeight = paint.rect.height;
+    this.actorRadius = paint.radius;
+    this.coverAngle = paint.angle;
+    this.actorOpacity = paint.coverOpacity;
     if (request.direction === 'open') {
-      this.readerProgress = carry;
-      this.onReaderOpacity(request.id, carry);
+      this.readerProgress = paint.readerOpacity;
+      this.onReaderOpacity(request.id, paint.readerOpacity);
+      this.onShelfPaint(request.id, paint.shelfOpacity, paint.shelfScale, paint.shelfBrightness);
     }
   }
 
@@ -166,32 +178,14 @@ export struct BookshelfNavigationTransition {
       const time = this.timeline.sample(now);
       const request = this.activeRequest;
       if (request === undefined) return;
-      if (this.fading) {
-        this.sampleFade(time);
-        if (!this.timeline.running(now)) {
-          if (request.direction === 'close' && !this.covered) {
-            this.covered = true;
-            this.waiting = true;
-            this.onCovered(request.id);
-            if (this.current(token) && this.waiting && !this.activeRequest?.awaitingTarget) this.resumeReturn();
-            return;
-          }
-          this.complete(token);
-        } else this.scheduleFrame(token);
-        return;
-      }
-      // Closing must cover the reader before its route can be changed. Hold
-      // precisely at the carry boundary until the new shelf rect is resolved.
-      if (request.direction === 'close' && !this.covered && time <= TURN_START) {
-        this.timeline.seek(TURN_START, now);
-        this.sampleActor(TURN_START);
+      this.sample(time);
+      if (request.direction === 'close' && !this.covered && time >= this.closeHandoffTime()) {
         this.covered = true;
         this.waiting = true;
         this.onCovered(request.id);
         if (this.current(token) && this.waiting && !this.activeRequest?.awaitingTarget) this.resumeReturn();
         return;
       }
-      this.sampleActor(time);
       if (this.timeline.running(now)) this.scheduleFrame(token); else this.complete(token);
     }));
   }
@@ -200,17 +194,11 @@ export struct BookshelfNavigationTransition {
     const request = this.activeRequest;
     if (request === undefined || !this.running || !this.waiting) return;
     this.waiting = false;
+    this.fadeSurface = this.fading || request.fadeOnly === true;
     const now = readerMotionNowMs();
-    if (this.fading || request.fadeOnly || this.reduceMotion) {
-      this.fading = true; this.fadeSurface = true;
-      this.timeline = new ReversibleMotionTimeline(FADE.durationMs);
-      this.timeline.retarget(true, now);
-      this.sampleFade(0);
-    } else {
-      this.timeline.retarget(false, now);
-      this.sampleActor(TURN_START);
-    }
-    this.scheduleFrame(this.generation);
+    const token = this.generation;
+    this.sample(this.timeline.sample(now));
+    if (this.timeline.running(now)) this.scheduleFrame(token); else this.complete(token);
   }
 
   private complete(token: number): void {
@@ -229,19 +217,28 @@ export struct BookshelfNavigationTransition {
     // A close that has already handed off must keep its opaque cover until
     // the destination is resolved, even when the accessibility setting flips.
     if (this.covered && this.waiting) {
-      this.actorOpacity = 1;
+      this.actorOpacity = 0;
+      this.curtainOpacity = 1;
+      this.duration = READER_REDUCED_FADE_MS;
+      this.timeline = new ReversibleMotionTimeline(this.duration);
+      const now = readerMotionNowMs();
+      this.timeline.seek(this.closeHandoffTime(), now);
+      this.timeline.retarget(true, now);
       return;
     }
     this.waiting = false;
-    this.timeline = new ReversibleMotionTimeline(FADE.durationMs);
+    this.duration = READER_REDUCED_FADE_MS;
+    this.timeline = new ReversibleMotionTimeline(this.duration);
     this.fadeStartProgress = request.direction === 'open' ? this.readerProgress : 0;
-    this.timeline.retarget(true, readerMotionNowMs());
-    this.sampleFade(0);
+    const now = readerMotionNowMs();
+    if (this.covered) this.timeline.seek(this.closeHandoffTime(), now);
+    this.timeline.retarget(true, now);
+    this.sample(this.timeline.sample(now));
     this.scheduleFrame(this.generation);
   }
 
   private onCoverError(id: number): void {
-    if (this.mounted && this.running && id === this.activeId) this.coverFailed = true;
+    if (this.mounted && this.running && id === this.renderedId) this.coverFailed = true;
   }
 
   @Builder
@@ -261,6 +258,11 @@ export struct BookshelfNavigationTransition {
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       if (this.visible) {
+        if (this.curtainOpacity > 0) {
+          Blank().width(this.curtainWidth).height(this.curtainHeight)
+            .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
+            .translate({ x: this.curtainX, y: this.curtainY }).opacity(this.curtainOpacity);
+        }
         ForEach([this.renderedId], (id: number): void => {
           Stack({ alignContent: Alignment.Center }) {
             // The neutral paper is the inner face after the cover crosses the
@@ -273,8 +275,9 @@ export struct BookshelfNavigationTransition {
           .shadow({ radius: !this.fadeSurface && this.coverUrl.length > 0 && !this.coverFailed ?
             BOOKSHELF_COVER_SHADOW_RADIUS : 0, color: readerAppColor('app.shadow.cover', this.appThemeScheme),
             offsetX: 0, offsetY: BOOKSHELF_COVER_SHADOW_OFFSET_Y })
-          .rotate({ x: 0, y: 1, z: 0, angle: this.coverAngle, centerX: 0, centerY: '50%' })
-          .translate({ x: this.actorX, y: this.actorY }).opacity(this.actorOpacity);
+          .rotate({ x: 0, y: 1, z: 0, angle: this.coverAngle, centerX: 0, centerY: '50%',
+            perspective: -this.getUIContext().vp2px(COVER_PERSPECTIVE_VP) })
+          .translate({ x: this.actorX, y: this.actorY }).opacity(this.fadeSurface ? 0 : this.actorOpacity);
         }, (id: number): string => id.toString());
       }
     }

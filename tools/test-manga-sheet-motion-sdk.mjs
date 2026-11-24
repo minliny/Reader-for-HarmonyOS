@@ -1,6 +1,6 @@
 import { drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"deferred-reduced":{"description":"Actual queued opening reads latest motion policy; no new scrim/spring clocks, focus and generation retained","resources":[]},"lifecycle": {"description": "实际two-frame enter/retained exit/current generation/cancel-reopen", "resources": []}, "font-admission": {"description": "实际panel字体拒绝短反馈、persistent局部状态与live重试、并发合并及迟到拒绝", "resources": []}, "directory-selection": {"description": "实际tablet right panel/left catalog canonical proof与close-save归属", "resources": []}, "download-navigation": {"description": "实际book/chapter0标题与download manager portal一次导航", "resources": []}, "preferences-reset": {"description": "实际reset保现背景/手动brightness/持久偏好回调", "resources": []}, "drag-reduced": {"description": "实际反向drag clamp/超额drag退出/reduce无帧与cancel token", "resources": []}};
+const definitions={"deferred-reduced":{"description":"Actual queued opening reads latest motion policy; one 120ms opacity-only compositor animation, focus and generation retained","resources":[]},"lifecycle": {"description": "实际two-frame enter/retained exit/current generation/cancel-reopen", "resources": []}, "font-admission": {"description": "实际panel字体拒绝短反馈、persistent局部状态与live重试、并发合并及迟到拒绝", "resources": []}, "directory-selection": {"description": "实际tablet right panel/left catalog canonical proof与close-save归属", "resources": []}, "download-navigation": {"description": "实际book/chapter0标题与download manager portal一次导航", "resources": []}, "preferences-reset": {"description": "实际reset保现背景/手动brightness/持久偏好回调", "resources": []}, "drag-reduced": {"description": "实际反向drag clamp/超额drag退出/reduce透明度淡出与cancel token", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
@@ -36,15 +36,21 @@ try {
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url), 'utf8');
 const footerSource = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaDirectoryCurrentFooter.ets', import.meta.url), 'utf8');
-const { motionAnimateParam } = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/foundation/MotionSpec.ets', import.meta.url), 'utf8'),
+const motion = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/foundation/MotionSpec.ets', import.meta.url), 'utf8'),
   'MotionSpec.ets', { ...timing, SOURCE_SWITCH_VISUAL: SOURCE_CHROME_VISUAL,
     MANGA_DIRECTORY_VISUAL: mangaSurfaceSdkDependencies.MANGA_DIRECTORY_VISUAL,
     Curve: new Proxy({}, { get: (_target, key) => `Curve.${String(key)}` }),
-    curves: new Proxy({}, { get: (_target, key) => (...args) => ({ nativeCurve: String(key), args }) }) }, ['motionAnimateParam']);
+    curves: new Proxy({}, { get: (_target, key) => (...args) => ({ nativeCurve: String(key), args }) }) }, ['motionAnimateParam', 'motionSpecGet']);
+const { motionAnimateParam } = motion;
+const { readerMotionValueDurationMs: collapseMotionDurationMs } = await import(
+  '../entry/src/main/ets/ui/foundation/ReaderMotionDurationPolicy.ts');
+const { readerMotionReducedFadeParam } = pureModuleProbe(
+  readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderMotionPolicy.ets', import.meta.url), 'utf8'),
+  'ReaderMotionPolicy.ets', { ...motion, collapseMotionDurationMs }, ['readerMotionReducedFadeParam']);
 const { readerActionIcon } = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderActionIconResources.ets', import.meta.url), 'utf8'),
   'ReaderActionIconResources.ets', { $r: value => value }, ['readerActionIcon']);
 const subsetTitles = new Set(['章节目录', '阅读方式', '漫画阅读设置', '更多', '本书下载', '本话下载']);
-const fields = [...mangaDirectoryAdaptiveFields, 'mounted', 'panel', 'panelOffset', 'panelScrimOpacity', 'panelPhase', 'panelGeneration',
+const fields = [...mangaDirectoryAdaptiveFields, 'mounted', 'panel', 'panelOffset', 'panelScrimOpacity', 'panelOpacity', 'panelPhase', 'panelGeneration',
   'panelActionGeneration', 'actionPanelPresentationGeneration', 'panelCloseTask', 'panelCloseResolve', 'reduceMotion', 'directoryQuery',
   'directoryRevision', 'directoryOpenRevision', 'chapterEnd', 'controlsVisible', 'backgroundPreference',
   'panelFontsReady', 'panelFontsLoading', 'panelFontsFailed', 'panelFontTask', 'panelFontTaskIdentity', 'panelFontGeneration', 'refreshing', 'moreMenuVariant', 'brightnessOwner', 'exiting', 'zoom', 'directoryAscending', 'brightnessPercent', 'showPageNumbers', 'fitPreference', 'horizontal',
@@ -84,18 +90,17 @@ function fixture(text = source, options = {}) {
     getFocusController: () => ({ clearFocus: () => events.push('clear-focus'), requestFocus: target => events.push(['focus', target]) }),
     postFrameCallback: frame => frames.push(frame),
     animateTo(params, apply) {
-      const before = [owner.panelOffset, owner.panelScrimOpacity];
-      apply(); animations.push({ params, before, after: [owner.panelOffset, owner.panelScrimOpacity] });
+      const before = [owner.panelOffset, owner.panelScrimOpacity, owner.panelOpacity];
+      apply(); animations.push({ params, before, after: [owner.panelOffset, owner.panelScrimOpacity, owner.panelOpacity] });
     },
   };
   const dependencies = {
     ...mangaDirectoryAdaptiveDependencies, ...properties.sdk, ...mangaSurfaceSdkDependencies, ...shared.deps, ...fonts, uiContext,
-    readerIsExpandedWidth, motionAnimateParam, readerActionIcon, READER_FEEDBACK_BRIEF_MS,
+    readerIsExpandedWidth, motionAnimateParam, readerMotionReducedFadeParam, readerActionIcon, READER_FEEDBACK_BRIEF_MS,
     inputMethod: { getController: () => ({ hideTextInput: () => { events.push('hide-input'); return options.keyboard ?? Promise.resolve(); } }) },
     prepareMangaSheetFonts: () => { events.push(['prepare-font', 'required-static-receipts']); return options.fontLoad?.() ?? options.font ?? Promise.resolve(true); },
     prepareReaderFontFamily: family => { events.push(['prepare-serif', family]); return options.serifLoad?.(family) ?? options.serif ?? Promise.resolve(); },
     Curve: { EaseInOut: 'easeInOut' },
-    curves: { interpolatingSpring: (...args) => ({ kind: 'native-interpolatingSpring', args }) },
     hilog: { warn: (...args) => events.push(['keyboard-warning', ...args]) },
     ReaderWindowCoordinator: { isTabletDevice: () => false, brightness: () => ({ release: async () => {} }), metrics: () => ({systemFontScale:1,systemInsets:{left:0,top:0,right:0,bottom:0},cutoutInsets:{left:0,top:0,right:0,bottom:0},gestureInsets:{left:0,top:0,right:0,bottom:0},navigationInsets:{left:0,top:0,right:0,bottom:0},statusBarRect:{top:0,height:0}}) },
   };
@@ -163,6 +168,8 @@ function assertOpening(f, panel) {
   }
   f.enterFrames();
   assert.equal(f.animations.length, 2);
+  assert.deepEqual(f.animations.map(animation => animation.params.duration), [160, 260]);
+  assert.deepEqual(f.animations[1].params.curve.args, [0.2, 0, 0, 1]);
   assert.equal(typeof f.animations[1].params.onFinish, 'function', 'the native movement completion owns phase publication');
   assert.equal(f.owner.panelPhase, 'opening', 'target mutation is not treated as animation completion');
   f.finish(1); assert.equal(f.owner.panelPhase, 'open');
@@ -178,6 +185,8 @@ async function verifyMotion(text = source) {
     const closing = f.owner.closePanel();
     assert.equal(f.owner.closePanel(), closing, 'repeated dismiss shares one completion');
     assert.equal(f.animations.length, 4);
+    assert.deepEqual(f.animations.slice(2).map(animation => animation.params.duration), [160, 210]);
+    assert.deepEqual(f.animations[3].params.curve.args, [0.2, 0, 0, 1]);
 
     assert.equal(f.owner.panel, panel, 'same content is retained while leaving');
     await f.owner.selectDirectoryTarget(99); assert.ok(!f.events.some(event => Array.isArray(event) && event[0] === 'target'), 'late directory selection cannot navigate during exit');
@@ -227,9 +236,13 @@ async function verifyDeferredReduced(text = source) {
   const f=fixture(text);await f.owner.openPanel('settings');
   assert.equal(f.owner.panelPhase,'opening');assert.equal(f.animations.length,0);
   f.owner.reduceMotion=true;f.enterFrames();
-  assert.equal(f.animations.length,0,'queued reduced opening creates no native animation');
-  assert.equal(f.owner.panelOffset,0);assert.equal(f.owner.panelScrimOpacity,1);
-  assert.equal(f.owner.panelPhase,'open');
+  assert.equal(f.animations.length, 1, 'queued reduced opening creates one fade');
+  assert.equal(f.animations[0].params.duration, 120);
+  assert.deepEqual(f.animations[0].before, [0, 0, 0], 'fade begins in terminal geometry');
+  assert.deepEqual(f.animations[0].after, [0, 1, 1], 'only opacity changes');
+  assert.equal(f.owner.panelPhase, 'opening');
+  f.finish(0);
+  assert.equal(f.owner.panelPhase, 'open');
   for(const frame of f.frames.splice(0)){frame.onFrame(16);frame.onIdle(0);drainReaderPostLayoutFallbacks(f.frames);}
   assert.ok(f.events.some(event=>Array.isArray(event)&&event[0]==='focus'),'same opening retains focus scheduling');
   const stale=fixture(text);await stale.owner.openPanel('settings');
@@ -246,7 +259,7 @@ if(selectedCase==='drag-reduced') {
   const f = fixture(); f.owner.reduceMotion = true; f.owner.isReaderIdentityCurrent = () => true;
   Object.assign(f.owner, { appForeground: true, windowChromeActive: true,
     refreshLoginRequiredForControls() {}, applyWindowChrome() {}, applyWindowPolicyForChromeOwner() {} });
-  await f.owner.openPanel('more'); const token = f.owner.actionPanelPresentationGeneration;
+  await f.owner.openPanel('more'); f.enterFrames(); f.finish(0); const token = f.owner.actionPanelPresentationGeneration;
   f.owner.panelOverlay();
   assert.equal(f.pans.length, 1, 'the composed shared header registers exactly one native handle recognizer');
   const pan = f.pans[0];
@@ -255,6 +268,7 @@ if(selectedCase==='drag-reduced') {
   assert.equal(f.owner.panelPhase, 'open');
   assert.notEqual(f.owner.panelGeneration, token, 'a cancelled drag advances only the motion fence');
   f.owner.performMoreAction('source', token);
+  f.finish(f.animations.length - 1);
   await new Promise(resolve => setImmediate(resolve));
   assert.equal(f.events.filter(event => event === 'source').length, 1, 'the retained More opening still accepts actions after a cancelled drag');
   await f.owner.openPanel('more'); f.owner.performMoreAction('source', token);
@@ -569,11 +583,20 @@ if(selectedCase==='directory-selection') await verifyReachableWideDirectory();
 
 if(selectedCase==='drag-reduced') {
  const drag=fixture();await drag.owner.openPanel('mode');drag.enterFrames();drag.finish(1);drag.owner.beginPanelDrag();drag.owner.updatePanelDrag(-20);assert.equal(drag.owner.panelOffset,0);const distance=drag.owner.panelTravel()*2;drag.owner.updatePanelDrag(distance);drag.owner.finishPanelDrag(distance,0);assert.equal(drag.owner.panelPhase,'closing');drag.finish(drag.animations.length-1);
- const reduced=fixture();reduced.owner.reduceMotion=true;await reduced.owner.openPanel('settings');assert.equal(reduced.owner.panelPhase,'open');assert.equal(reduced.owner.panelOffset,0);assert.equal(reduced.owner.panelScrimOpacity,1);await reduced.owner.closePanel();assert.equal(reduced.owner.panel,'');assert.equal(reduced.animations.length,0);
- // Reduced motion still schedules owned focus; these are not motion clocks.
- for(const frame of reduced.frames.splice(0)){frame.onFrame(16);frame.onIdle(0);drainReaderPostLayoutFallbacks(reduced.frames);}
- assert.equal(reduced.frames.length,0);assert.equal(reduced.animations.length,0);
- assert.equal(reduced.events.filter(event=>Array.isArray(event)&&event[0]==='focus').length,1,'only current close focus survives generation replacement');
+ const reduced = fixture();
+ reduced.owner.reduceMotion = true;
+ await reduced.owner.openPanel('settings'); reduced.enterFrames(); reduced.finish(0);
+ assert.equal(reduced.owner.panelPhase, 'open');
+ const closed = reduced.owner.closePanel();
+ assert.equal(reduced.owner.panelPhase, 'closing');
+ assert.deepEqual(reduced.animations.map(animation => animation.params.duration), [120, 120]);
+ assert.deepEqual(reduced.animations[1].before, [0, 1, 1]);
+ assert.deepEqual(reduced.animations[1].after, [0, 0, 0]);
+ reduced.finish(1);
+ assert.equal(await closed, true);
+ assert.equal(reduced.owner.panel, '');
+ assert.equal(reduced.frames.length, 0);
+ assert.equal(reduced.events.filter(event => Array.isArray(event) && event[0] === 'focus').length, 2);
 }
 // Narrow production-method regressions must fail the same lifecycle behavior;
 // neither the expected result nor the native I/O boundary is rewritten.
@@ -587,10 +610,10 @@ function mutate(name, transform) {
   const before = member.getText(tree), after = transform(before); assert.notEqual(before, after);
   return source.slice(0, member.getStart(tree)) + after + source.slice(member.end);
 }
-if(selectedCase==='deferred-reduced') await assert.rejects(()=>verifyDeferredReduced(mutate('openPanel',text=>
-  text.replace('if (this.reduceMotion) this.panelScrimOpacity = 1;','if (false) this.panelScrimOpacity = 1;'))),/queued reduced opening creates no native animation/);
-if(selectedCase==='deferred-reduced') await assert.rejects(()=>verifyDeferredReduced(mutate('settlePanel',text=>
-  text.replace('if (this.reduceMotion) { this.panelOffset = 0; finish(); return; }',''))),/queued reduced opening creates no native animation|settle entry independently checks/);
+if (selectedCase === 'deferred-reduced') await assert.rejects(() => verifyDeferredReduced(mutate('openPanel', text =>
+  text.replace('if (!this.reduceMotion)', 'if (true)'))), /queued reduced opening creates one fade/);
+if (selectedCase === 'deferred-reduced') await assert.rejects(() => verifyDeferredReduced(mutate('settlePanel', text =>
+  text.replace('this.panelOffset = 0;', 'this.panelOffset = this.panelTravel();'))), /fade begins in terminal geometry/);
 if(selectedCase==='lifecycle') await assert.rejects(() => verifyMotion(mutate('closePanel', text =>
   text.replace("this.panelPhase = 'closing';", "this.panelPhase = 'closing'; this.panel = '';"))), /same content is retained/);
 if(selectedCase==='lifecycle') await assert.rejects(() => verifyRaces(mutate('closePanel', text =>

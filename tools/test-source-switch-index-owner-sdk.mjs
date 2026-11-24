@@ -482,7 +482,7 @@ if(id==='reader-completion'){
 }
 if(id==='metadata-hosts'){
 {
- const {numbers,colors}=await visualContract();
+ const {colors}=await visualContract();
  class ChildPort {
   constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}
   updateStateVars(params){Object.assign(this.params,params);}
@@ -491,7 +491,13 @@ if(id==='metadata-hosts'){
  const windowSource=read('features/source/ui/SourceSwitchWindow.ets'),indexSource=read('pages/Index.ets');
  const surfacesSource=read('app/composition/ReaderSourceSwitchSurfaces.ets');
  const directorySource=read('features/reading/ui/BookDirectoryPage.ets');
- const p=boundedSurfaceSdk(),deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metricsApi.createDefaultReaderWindowMetrics()}});
+ const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+ const frames=[];
+ const deps=sourceSwitchLiveSdk(p,{
+  ReaderWindowCoordinator:{metrics:()=>metricsApi.createDefaultReaderWindowMetrics()},
+  SourceSwitchSurfaceFrame: class { constructor(action) { this.onFrame = action; } },
+  uiContext: { postFrameCallback: frame => frames.push(frame) },
+ });
  const factories=new Map(),actors=[];
  const capture=(source,names,childName,childSource,fields)=>{
   const key=JSON.stringify([source,names,childName,childSource]);
@@ -511,7 +517,7 @@ if(id==='metadata-hosts'){
  };
  const book={sourceId:'old',bookId:'book',title:'书名',author:'作者',sourceName:'当前书源',coverUrl:'cover',lastChapter:'最新章节 第 120 章'};
  const state={kind:'candidates',candidates:[]};
- const expectedCurve={kind:'cubic-bezier',values:[numbers.easingX1,numbers.easingY1,numbers.easingX2,numbers.easingY2]};
+ const expectedCurve={kind:'cubic-bezier',values:[0.2,0,0,1]};
  const assertScrim=(probe,contentKind,scheme,reduceMotion)=>{
   const nodes=probe.p.nodes(probe.o).filter(n=>n.type==='Stack'&&typeof n.onClick==='function');
   assert.equal(nodes.length,1,'the real overlay has one dismissing scrim');
@@ -519,22 +525,15 @@ if(id==='metadata-hosts'){
   const c=colors[scheme],hex=n=>Math.round(n).toString(16).padStart(2,'0').toUpperCase();const expectedColor='#'+[c.a*255,c.r,c.g,c.b].map(hex).join('');
   assert.equal(scrim.backgroundColor,expectedColor,'detail and retained reader use the same selected scrim palette for both formats');
   assert.equal(scrim.width,'100%');assert.equal(scrim.height,'100%');
-  if(reduceMotion){
-   assert.equal(scrim.transition.kind,'identity','reduced motion preserves a static scrim for both formats');
-  }else{
-   assert.equal(scrim.transition.kind,'asymmetric');
-   for(const [phase,duration] of [['appear',numbers.openDurationMs],['disappear',numbers.closeDurationMs]]){
-    const effect=scrim.transition.parameters[phase];
-    assert.equal(effect.kind,'opacity');
-    assert.equal(effect.options.duration,duration,'the scrim uses the selected drawer transition duration');
-    assert.deepEqual(effect.options.curve,expectedCurve,'both hosts use the selected shared cubic curve');
-   }
-  }
+  const [transition] = scrim.transition;
+  assert.equal(transition.kind, 'opacity');
+  assert.equal(transition.options.duration, reduceMotion ? 120 : 160);
+  assert.deepEqual(transition.options.curve, reduceMotion ? 'ease-out' : expectedCurve);
  };
  for(const contentKind of ['text','manga'])for(const scheme of ['day','night'])for(const reduceMotion of [false,true]){
   const i=capture(surfacesSource,['build'],'SourceSwitchPanel',panelSource,{
    reading:{book:{...book,contentKind},directoryChapterTitle:'正在阅读 第 20 章',sessionActive:false},
-   source:{visible:true,scopeId:7,state,host:()=>undefined},
+   source:{visible:true,scopeId:7,state,host:()=>undefined,isSurfacePresented:()=>true},
    manga:{selectionVisible:false,canCancelPreparation:()=>false},
    entryPickerAllowed:true,consumeTopInset:false,reduceMotion,interactive:true,
    actions:{stop(){},close(){},retry(){},refresh(){},select(){},rollback(){}},
@@ -546,6 +545,7 @@ if(id==='metadata-hosts'){
    contentKind,bookTitle:book.title,bookAuthor:book.author,bookCoverUrl:book.coverUrl,sourceName:book.sourceName,
    sourceId:book.sourceId,latestChapterTitle:book.lastChapter,directoryChapterTitle:'正在阅读 第 20 章',
    sourceSwitchScopeId:7,sourceSwitchState:state,appThemeScheme:scheme,reduceMotion,visible:true,inputAllowed:true,sourceSwitchCovered:false,
+   sourceSwitchVisible:true,
   });
   s.o.sourceSwitchOverlayContent();assert.equal(s.child().params.latestChapterTitle,book.lastChapter);
   assert.equal(i.child().params.reduceMotion,reduceMotion);assert.equal(s.child().params.reduceMotion,reduceMotion);
@@ -553,7 +553,13 @@ if(id==='metadata-hosts'){
    const closes=[];
    const panel=capture(panelSource,boundedMembers(panelSource),'SourceSwitchWindow',windowSource,
     {...host.child().params,appThemeScheme:scheme,appForeground:true,onClose:scope=>closes.push(scope)});
+   panel.o.surface = {
+    surfaceIsCurrent: (attachment, scope) => attachment === 1 && scope === 7,
+    attachSurface: () => 1,
+    detachSurface: () => {},
+   };
    panel.o.aboutToAppear();
+   frames.splice(0).forEach(frame => frame.onFrame());
    panel.o.initialRender();
    assert.ok(panel.p.nodes(panel.o).some(n=>n.type==='Stack'&&n.create?.alignContent==='Alignment.Bottom'));
    assertScrim(panel,contentKind,scheme,reduceMotion);
@@ -571,7 +577,7 @@ if(id==='metadata-hosts'){
  const effects=[];
  const targetCatalog=capture(surfacesSource,['build'],'BookDirectoryPage',directorySource,{
   reading:{book,sessionActive:true},source:{visible:true,scopeId:7,state},entryPickerAllowed:true,
-  manga:{selectionVisible:true,selection,
+  manga:{selectionVisible:true,selection,directorySelectionBusy:()=>false,
    directoryOpening:current=>()=>current===selection,
    directorySelection:current=>index=>effects.push(['chapter',current,index]),
    directoryTemporaryBack:current=>(_handler,identity)=>effects.push(['bridge',current,identity]),

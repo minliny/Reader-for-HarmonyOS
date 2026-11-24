@@ -401,6 +401,8 @@ const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs'
 const bounded = boundedSurfaceSdk({ properties });
 const metricsApi = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const frames = [], timers = [], focus = [], intents = [];
+const { productionReaderMotionSdk } = await import('./lib/reader-control-builder-probe.mjs');
+const motion = productionReaderMotionSdk();
 const IdleFrame = actualReaderPostLayoutFrame();
 const { owner } = createReaderBuilderProbe(source, [...new Set([...helpers, 'sheet', 'confirmation', 'reduceMotion',
   'sheetExitPending', 'sheetOpeningGeneration', 'confirmationGeneration', 'previousConfirmation', 'sheetTriggerKey', 'focusGeneration', 'managementGeneration',
@@ -409,7 +411,7 @@ const { owner } = createReaderBuilderProbe(source, [...new Set([...helpers, 'she
   ...pageMembers.filter(member => ['sheetActorGeneration', 'sheetActorAttachment', 'sheetActorOwner', 'sheetActors', 'sheetSurface'].includes(member.name?.getText(pageTree))).map(member => member.name.getText(pageTree))])], {
   ...bounded.deps, ...properties.sdk, ...metricsApi, ...projection, ...visual, ...backDependencies, SharedDownloadIdleFrame: IdleFrame,
   ButtonType: { Normal: 'normal' }, HitTestMode: { None: 'none', Default: 'default' },
-  motionAnimateParam: () => ({ duration: 15 }), setTimeout: action => { timers.push(action); },
+  ...motion, setTimeout: action => { timers.push(action); },
   readerSurfaceElevation: () => ({}),
   TransitionEffect: { IDENTITY: { kind: 'identity' }, OPACITY: { animation: params => ({ kind: 'opacity', params }) },
     move: edge => ({ animation: params => ({ kind: 'move', edge, params }) }),
@@ -447,6 +449,12 @@ const finish = (actor, transitionIn = false) => {
 };
 owner.openSheet('settings', 'storage'); idle();
 const mountedActors = mountSheet();
+const [scrimEffect] = mountedActors.scrim.transition;
+const [sheetEffect] = mountedActors.panel.transition;
+assert.deepEqual(scrimEffect, { kind: 'opacity', params: { duration: 160, curve: [0.2, 0, 0, 1] } });
+for (const [effect, duration] of [[sheetEffect.enter, 260], [sheetEffect.exit, 210]]) {
+  assert.deepEqual(effect, { kind: 'move', edge: 'bottom', params: { duration, curve: [0.2, 0, 0, 1] } });
+}
 assert.equal(focus.at(-1), focusName('sheet'));
 owner.pageContent();
 const background = [...owner.nodes.values()].find(node => node.type === 'Stack' && node.enabled === false);
@@ -540,11 +548,18 @@ assert.equal(owner.sheetExitPending, true, 'an old operations receipt cannot sta
 finish(replacementSurface.panel, true); assert.equal(owner.sheetExitPending, true);
 finish(replacementSurface.panel); idle(); assert.equal(owner.sheetExitPending, false);
 
-// Reduced-motion closure retires a real opening immediately. Its remaining
-// physical callbacks must not release a later operations opening.
-owner.openSheet('sort', 'sort'); const oldActors = mountSheet();
+// Reduced motion retains the same attachment through its opacity dissolve.
+owner.reduceMotion = true; owner.openSheet('sort', 'sort'); const oldActors = mountSheet();
 const oldAttachment = owner.sheetActorAttachment;
-owner.reduceMotion = true; assert.equal(owner.consumeBack(), true); idle();
+for (const actor of [oldActors.scrim, oldActors.panel]) {
+  assert.equal(actor.transition[0].kind, 'opacity');
+  assert.equal(actor.transition[0].params.duration, 120);
+}
+assert.equal(owner.consumeBack(), true); idle();
+assert.equal(owner.sheetExitPending, true);
+owner.openSheet('book-actions', 'book-menu:' + mixed.key);
+assert.equal(owner.sheet, '', 'an exiting reduced carrier still blocks new modal input');
+finish(oldActors.scrim); finish(oldActors.panel); idle();
 assert.equal(owner.sheetExitPending, false);
 owner.reduceMotion = false; owner.openSheet('book-actions', 'book-menu:' + mixed.key);
 const nextActors = mountSheet(); assert.notEqual(owner.sheetActorAttachment, oldAttachment);
@@ -554,12 +569,12 @@ finish(nextActors.panel, true); assert.equal(owner.sheetExitPending, true);
 finish(nextActors.panel); assert.equal(owner.sheetExitPending, true, 'operations completion still waits for its actual scrim');
 finish(nextActors.scrim); idle(); assert.equal(owner.sheetExitPending, false);
 
-// Changing motion policy during an actual exit is the explicit immediate
-// path, while an ordinary mounted exit has no timeout/disappearance shortcut.
+// An already mounted transition keeps its exit receipt when policy changes.
 owner.openSheet('sort', 'sort'); const motionActors = mountSheet();
 assert.equal(owner.consumeBack(), true); assert.equal(owner.sheetExitPending, true);
 assert.ok([motionActors.scrim, motionActors.panel].every(actor => actor.onDisappear === undefined));
-owner.reduceMotion = true; idle(); assert.equal(owner.sheetExitPending, false);
+owner.reduceMotion = true; idle(); assert.equal(owner.sheetExitPending, true);
+finish(motionActors.scrim); finish(motionActors.panel); idle(); assert.equal(owner.sheetExitPending, false);
 
 // Retiring a physical owner invalidates all its callbacks before a successor
 // presentation on the same receiver can acquire new Native actor tickets.

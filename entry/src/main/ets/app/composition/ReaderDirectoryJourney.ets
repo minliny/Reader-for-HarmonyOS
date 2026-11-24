@@ -80,7 +80,8 @@ export class ReaderDirectoryJourney {
     const scope = this.ports.scope(), route = this.navigation.snapshot();
     return this.ports.entry().directoryScene({ owner: scope.owner, route: route.route,
       retired: scope.retired, mount: scope.mount, navigation: route.generation,
-      foreground: scope.foreground && !scope.covered });
+      foreground: scope.foreground && !scope.covered,
+      detailDirectory: route.route === 'directory' && route.directoryReturnTarget === 'detail' });
   }
 
   navigationPorts(): ReadingDirectoryNavigationPorts {
@@ -107,12 +108,18 @@ export class ReaderDirectoryJourney {
     if (next === undefined) return;
     this.ports.publish(next);
     this.operations.loadDirectory();
-    if (target !== 'detail') return;
+    if (target === 'detail') this.refreshDetailPosition();
+  }
+
+  refreshDetailPosition(): void {
+    const entry = this.ports.entry();
     const bound = this.ports.scope();
+    const opening = this.navigation.snapshot();
+    if (opening.route !== 'directory' || opening.directoryReturnTarget !== 'detail') return;
     const current = (): boolean => {
       const scope = this.ports.scope(), route = this.navigation.snapshot();
       return scope.owner === bound.owner && this.ports.ownsRuntime(bound.owner) && !scope.retired && scope.mount === bound.mount &&
-        route.generation === next.generation && route.route === 'directory' && route.directoryReturnTarget === 'detail';
+        route.generation === opening.generation && route.route === 'directory' && route.directoryReturnTarget === 'detail';
     };
     entry.projectDetailDirectoryPosition(bound.owner, this.ports.shelfBooks(), current);
   }
@@ -136,13 +143,14 @@ export class ReaderDirectoryJourney {
 
   retryDetailCatalog(): void {
     const owner = this.ports.runtime(), entry = this.ports.entry();
-    if (owner !== undefined && this.isOpeningCurrent(entry.directoryPresentationGeneration, 'detail')) entry.retryDirectoryCatalog(owner);
+    if (owner !== undefined && this.isOpeningCurrent(entry.detailDirectoryPresentationGeneration, 'detail')) entry.retryDirectoryCatalog(owner);
   }
 
   private matchesOpening(opening: number, target: DirectoryReturnTarget): boolean {
     const route = this.navigation.snapshot();
-    return route.route === 'directory' && route.directoryReturnTarget === target &&
-      this.ports.entry().directoryPresentationGeneration === opening;
+    const entry = this.ports.entry();
+    const activeOpening = target === 'detail' ? entry.detailDirectoryPresentationGeneration : entry.directoryPresentationGeneration;
+    return route.route === 'directory' && route.directoryReturnTarget === target && activeOpening === opening;
   }
 }
 

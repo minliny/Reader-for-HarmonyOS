@@ -32,6 +32,9 @@ class BookshelfNavigationFrame extends FrameCallback {
 export class BookshelfNavigationPresentation {
   request: BookshelfMotionRequest | undefined = undefined;
   readerOpacity: number = 1;
+  shelfOpacity: number = 1;
+  shelfScale: number = 1;
+  shelfBrightness: number = 1;
   returnBookKey: string = '';
   private shelfMotionSequence: number = 0;
   private shelfMotionOrigin: BookshelfBookOrigin | undefined = undefined;
@@ -51,6 +54,7 @@ export class BookshelfNavigationPresentation {
     this.shelfMotionSequence += 1;
     this.request = undefined;
     this.readerOpacity = 1;
+    this.resetShelfPaint();
     this.returnBookKey = '';
     this.shelfMotionReturnNavigation = -1;
     if (forgetOrigin) {
@@ -66,6 +70,7 @@ export class BookshelfNavigationPresentation {
     if (this.pendingExitId === id) this.coverClosed(id);
     this.request = undefined;
     this.readerOpacity = 1;
+    this.resetShelfPaint();
     this.returnBookKey = '';
     const project = this.deferredShelfMotionProjection;
     this.deferredShelfMotionProjection = undefined;
@@ -82,6 +87,20 @@ export class BookshelfNavigationPresentation {
       !this.scope.readingActive() || this.scope.route() !== 'reading' || !Number.isFinite(opacity)) return;
     const next = Math.max(0, Math.min(1, opacity));
     if (Math.abs(next - this.readerOpacity) > 0.0001) this.readerOpacity = next;
+  }
+
+  publishShelfPaint(id: number, opacity: number, scale: number, brightness: number): void {
+    if (this.request?.id !== id || !this.retainsOpeningBackground() ||
+      ![opacity, scale, brightness].every((value: number): boolean => Number.isFinite(value))) return;
+    this.shelfOpacity = Math.max(0, Math.min(1, opacity));
+    this.shelfScale = Math.max(0.97, Math.min(1, scale));
+    this.shelfBrightness = Math.max(0.6, Math.min(1, brightness));
+  }
+
+  private resetShelfPaint(): void {
+    this.shelfOpacity = 1;
+    this.shelfScale = 1;
+    this.shelfBrightness = 1;
   }
 
   coverClosed(id: number): void {
@@ -138,7 +157,7 @@ export class BookshelfNavigationPresentation {
   }
 
   private measureShelfMotionPage(id: number, identity: ReaderSurfaceRectIdentity): BookshelfMotionRect | undefined {
-    return readerMeasureSurfaceRect(this.scope.context(), 'reader-bookshelf-page-slot',
+    return readerMeasureSurfaceRect(this.scope.context(), 'reader-reading-stage',
       'reader-bookshelf-motion-host', identity, (): ReaderSurfaceRectIdentity => this.shelfMotionPageIdentity(id));
   }
 
