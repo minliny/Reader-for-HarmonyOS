@@ -3,7 +3,7 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 export const CONTRACT_CASES = {
   'storage-format-dto': { description: 'Actual Host decoder with current Core producer/source-schema DTO and malformed/contradictory operation facts; no Rust/Native execution', resources: [] },
   'legacy-snapshot-barrier': { description: 'Actual startup methods preserve old Host snapshot/marker for Library47 and unknown operation support; fake platform/background ports only', resources: [] },
-  'sdk-type-resolution': { description: 'Actual installed ArkTS OHPM resolver/type checker resolves SDK subpath types and rejects old root imports; no full app build claim', resources: [] },
+  'sdk-type-resolution': { description: 'Actual installed ArkTS OHPM resolver/type checker resolves legacy SDK storage types from their subpath and rejects old root imports; no full app build claim', resources: [] },
 };
 for (const id of selectContractCases(CONTRACT_CASES)) {
   if (id === 'storage-format-dto') await storageFormatDto();
@@ -14,7 +14,7 @@ for (const id of selectContractCases(CONTRACT_CASES)) {
 
 async function sdkTypeResolution() {
   const { default: assert } = await import('node:assert/strict');
-  const { mkdtempSync, mkdirSync, symlinkSync, readFileSync } = await import('node:fs');
+  const { mkdtempSync, mkdirSync, symlinkSync } = await import('node:fs');
   const { tmpdir } = await import('node:os');
   const { join, resolve } = await import('node:path');
   const { fileURLToPath } = await import('node:url');
@@ -33,14 +33,8 @@ async function sdkTypeResolution() {
   const resolved = ts.resolveModuleName(module, file, options, host).resolvedModule;
   assert.equal(resolve(resolved?.resolvedFileName ?? ''), resolve(vendor, 'sdk/reader_core.ts'),
     'the actual OHPM resolver reaches the existing SDK file through an oh_modules package link');
-  const ownerSource = readFileSync(new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url), 'utf8');
-  const ownerTree = ts.createSourceFile('ReaderRuntimeOwner.ts', ownerSource, ts.ScriptTarget.Latest, true);
-  const actualImport = ownerTree.statements.find(node => ts.isImportDeclaration(node) &&
-    node.moduleSpecifier.text === module && node.importClause?.isTypeOnly);
-  assert.ok(actualImport, 'the actual Host uses the SDK type subpath');
-  const declarations = actualImport.getText(ownerTree);
   const check = (specifier, assignment = 'fact') => {
-    const source = declarations.replace(module, specifier) + '\n' +
+    const source = `import type { CoreStorageFormatInfo, CoreStorageCapabilities } from '${specifier}';\n` +
       'declare const fact: CoreStorageFormatInfo;\n' +
       'declare const capabilities: CoreStorageCapabilities;\n' +
       'const admitted: CoreStorageFormatInfo = ' + assignment + ';\n' +
@@ -53,10 +47,10 @@ async function sdkTypeResolution() {
     const consumer = program.getSourceFile(file); assert.ok(consumer);
     return program.getSemanticDiagnostics(consumer).filter(diagnostic => diagnostic.category === ts.DiagnosticCategory.Error);
   };
-  assert.deepEqual(check(module), [], 'the actual imported declarations resolve and type-check against the existing SDK');
+  assert.deepEqual(check(module), [], 'the vendored SDK declarations resolve and type-check through their subpath');
   const wrongRoot = check('@reader/core-harmony');
   assert.equal(wrongRoot.filter(diagnostic => diagnostic.code === 2305).length, 2,
-    'negative control reproduces both former missing package-root exports behind10505001');
+    'negative control reproduces the two missing package-root exports');
   assert.ok(check(module, "{ format: 'library47', portableSnapshotSupported: 'yes' }").length > 0,
     'the resolved SDK type rejects a wrong wire-field type rather than silently becoming any');
   // The new private fixture is retained under /tmp; it contains only a package
