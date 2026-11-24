@@ -20,18 +20,20 @@ const base=new URL('../entry/src/main/ets/features/',import.meta.url),read=name=
 function checkMangaNamedRowTargets(source) {
  const accessibility=pureModuleProbe(read('../ui/controls/ReaderActionAccessibility.ets'),'ReaderActionAccessibility.ets',
   {AccessibilityRoleType:{BUTTON:'button'}},['readerActionTouchRegion','ReaderActionAccessibility']);
- const {motionAnimateParam}=pureModuleProbe(read('../ui/foundation/MotionSpec.ets'),'MotionSpec.ets',{
+ const motion=pureModuleProbe(read('../ui/foundation/MotionSpec.ets'),'MotionSpec.ets',{
   ...motionTiming,SOURCE_SWITCH_VISUAL:SOURCE_CHROME_VISUAL,MANGA_DIRECTORY_VISUAL:DIRECTORY_CHROME_VISUAL,
   Curve:new Proxy({},{get:(_target,key)=>`Curve.${String(key)}`}),
   curves:new Proxy({},{get:(_target,key)=>(...args)=>({nativeCurve:String(key),args})}),
- },['motionAnimateParam']);
+ },['motionAnimateParam','motionSpecGet']);
+ const {readerMotionAnimateParam}=pureModuleProbe(read('../ui/foundation/ReaderMotionPolicy.ets'),
+  'ReaderMotionPolicy.ets',motion,['readerMotionAnimateParam']);
  const samples=[];
  for(const scale of [1,1.3,1.45,2]) {
   for(const kind of ['target','group','disabled']) {
    const node={nodeId:`named-${kind}`,kind,title:'山海间的长标题与 English sample 23',depth:2,
     chapterIndex:kind==='target'?22:undefined,hasChildren:kind==='group',expanded:true};
    const view={viewId:'named-response'},events=[];
-   const dependencies={...mangaGridProbeDependencies,...fontFamilies,...accessibility,motionAnimateParam,globalThis,
+   const dependencies={...mangaGridProbeDependencies,...fontFamilies,...accessibility,readerMotionAnimateParam,globalThis,
     readerWindowMetrics:()=>({systemFontScale:scale})};
    const {owner}=createReaderBuilderProbe(source,[...mangaRowBuilderMembers,'emptyBuilder','emptyPrefix'],dependencies);
    Object.assign(owner,{view,mangaScheme:'day',appThemeScheme:'day',mangaSearchActive:false,
@@ -89,7 +91,7 @@ for(const id of cases){
   if(scale===1)assert.equal(height,form==='controlQuick'?32:40,'original Quick32/Full40 parent allocation');
   const row={nodeId:'chapter17',kind,title:'第17章 native carrier',depth:0,level:1,chapterIndex:kind==='target'?16:undefined,hasChildren:kind==='group'||accessories,expanded:false};
   const item={key:'chapter17',index:16,node:row},events=[];
-  const owner=createReaderBuilderProbe(candidate,['row','isCurrentNode','displayLevel','currentPaintNode','textRowAccessibility','positionRowHeight','bookmarkActionEnabled','directoryInputCurrent'],deps,sdk.hooks).owner;
+  const owner=createReaderBuilderProbe(candidate,['row','isCurrentNode','displayLevel','currentPaintNode','textRowAccessibility','verificationChapterSelectionId','positionRowHeight','bookmarkActionEnabled','directoryInputCurrent'],deps,sdk.hooks).owner;
   Object.assign(owner,{mounted:true,view:{currentVisibleIndex:current?16:undefined,currentAncestorNodeId:current?row.nodeId:undefined},rowPresentationRevision:0,dataSource:{loadedNode:()=>current?row:undefined,currentView:()=>owner.view,loadedItemById:()=>({node:row})},
    rowHeight:height,appThemeScheme:'day',interactionEnabled:true,chapterDownloadEnabled:accessories,chapterDownloadActionsEnabled:false,
    chapterByIndex:new Map(accessories?[[16,{index:16,navigable:true,downloadState:'idle',bookmarks:[]}]]:[]),
@@ -111,10 +113,10 @@ for(const id of cases){
   samples.push({scale,form,kind,current,accessories,parentHeight:height,carrierHeight:title.height,responseHeight:title.responseRegion.height,complete44:height>=44,conflict:height<44?'host':'none',adjacentOverlap:0});
  }
  for(const scale of[1,1.3,1.45,2])for(const form of['standalone','controlQuick','controlFull'])for(const [kind,current,accessories]of[['target',false,false],['target',true,true],['group',false,false],['disabled',false,false]])render(source,scale,kind,current,accessories,form);
- const withoutCarrier=source.replace("Text(item.node.title)\n          .height(this.rowHeight)","Text(item.node.title)");
+ const withoutCarrier=source.replace(".id(this.verificationChapterSelectionId(item))\n          .height(this.rowHeight)",".id(this.verificationChapterSelectionId(item))");
  assert.notEqual(withoutCarrier,source,'negative removes exactly the production chapter carrier');
  assert.throws(()=>render(withoutCarrier,1,'target',false,false),/chapter Text must own the full parent carrier/,'natural-height Text fails even when a response rectangle is declared');
- const inflated=source.replace("Text(item.node.title)\n          .height(this.rowHeight)","Text(item.node.title)\n          .height(Math.max(44, this.rowHeight))");
+ const inflated=source.replace(".id(this.verificationChapterSelectionId(item))\n          .height(this.rowHeight)",".id(this.verificationChapterSelectionId(item))\n          .height(Math.max(44, this.rowHeight))");
  assert.notEqual(inflated,source);
  assert.throws(()=>render(inflated,1,'target',true,false,'controlQuick'),/chapter Text must own the full parent carrier/,'uniform44 cannot exceed the actual32 parent lane');
  console.log(JSON.stringify({kind:'directory-text-row-target-evidence',proof:'SDK declared carrier/response/parent extents; actual Native hit and glyph remain separate',samples}));

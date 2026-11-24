@@ -22,6 +22,8 @@ function targetFile(file, specifier, files) {
   let base;
   if (specifier.startsWith('.')) {
     base = path.normalize(path.join(path.dirname(file), specifier));
+    // Hvigor generates this module under entry/build, outside the Reader source tree.
+    if (base === '../../../build/default/generated/profile/default/BuildProfile') return undefined;
   } else if (specifier.startsWith(bundleSource)) {
     base = path.normalize(specifier.slice(bundleSource.length));
   } else if (specifier.startsWith('entry/src/main/ets/')) {

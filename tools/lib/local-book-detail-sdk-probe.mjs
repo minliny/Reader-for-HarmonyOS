@@ -21,6 +21,10 @@ import * as mangaLayout from '../../entry/src/main/ets/features/manga/ui/MangaDi
 import {readerDirectoryAccessibilityText,readerDirectoryIndentVp} from '../../entry/src/main/ets/features/reading/ui/ReaderDirectoryHierarchy.ts';
 import {readerDirectoryBookmarkMarkerState} from '../../entry/src/main/ets/features/reading/presentation/ReaderDirectoryMarkerState.ts';
 import {mangaDirectoryEntryRowSdk} from './manga-directory-entry-row-probe.mjs';
+import {pureModuleProbe} from './ets-pure-module-probe.mjs';
+import {actualReaderPostLayoutFrame} from './reader-post-layout-frame-probe.mjs';
+import {sourceSwitchTriggerFocusId} from '../../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts';
+import {resolveReaderRaisedShape} from '../../entry/src/main/ets/ui/layout/ReaderRaisedShape.ts';
 
 const read = path => readFileSync(new URL('../../entry/src/main/ets/' + path, import.meta.url), 'utf8');
 export const localBookDetailSource = read('features/reading/ui/LocalBookDetail.ets');
@@ -45,10 +49,16 @@ export function localBookDetailSdk(dependencies = {}, hooks = {}, properties = c
   const deps = {bookCoverDisplayUrl,...properties.sdk, ...readerFoundationTokens, ...geometry, ...metrics, ...fonts,
     ...author, ...intro, ...mangaDirectory, ...mangaLayout, ...manga.deps, ...constants,
     ...layout,...actionTargets,...headers,...headerMetrics,...resolvers,...mangaVisual,visual:mangaVisual.MANGA_DIRECTORY_VISUAL,READER_FEEDBACK_BRIEF_MS,
-    readerDirectoryAccessibilityText, readerDirectoryIndentVp, readerDirectoryBookmarkMarkerState,
+    readerDirectoryAccessibilityText, readerDirectoryIndentVp, readerDirectoryBookmarkMarkerState, sourceSwitchTriggerFocusId,
+    resolveReaderRaisedShape,
     ReaderWindowCoordinator: {metrics: metrics.createDefaultReaderWindowMetrics},
     ImageFit: {Cover: 'cover'}, NoCoverCover: Cover, registerReaderFonts() {},
+    ReaderUIVerificationProbe: {enabled: () => false},
+    TextHeightAdaptivePolicy: {LAYOUT_CONSTRAINT_FIRST: 'layout-constraint-first'},
     prepareReaderFontFamily: async () => {}, prepareMangaSheetFonts: async () => true, ...dependencies};
+  deps.ReaderNativeSlotMeasurement ??= pureModuleProbe(read('ui/layout/ReaderNativeSlotMeasurement.ets'),
+    'ReaderNativeSlotMeasurement.ets', {ReaderPostLayoutFrame: actualReaderPostLayoutFrame(),
+      readerMeasureSurfaceRect: () => undefined}, ['ReaderNativeSlotMeasurement']).ReaderNativeSlotMeasurement;
   const carrier = {...properties.hooks, ...hooks, childSources: {...manga.hooks.childSources, ...hooks.childSources,
     PageBackBar: headerSource, NoCoverCover: coverSource, ReaderDirectoryChapterRow: directoryRowSource, ReaderRaisedSurface:raisedSource}, mountChildren: true};
   // Shadow rasterization is a native visual port. Keep the actual child Prop

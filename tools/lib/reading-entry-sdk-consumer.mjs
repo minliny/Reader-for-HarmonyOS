@@ -76,7 +76,8 @@ export function makeIndex(f, { route = 'search', mount = 1, indexSource = read('
   const navigation = new ReaderNavigation();
   navigation.show(route);
   const entry = observe(new Entry());
-  const source = { visible: false, pending: undefined, failureMessage: '', host: () => undefined };
+  const source = { visible: false, pending: undefined, failureMessage: '', host: () => undefined,
+    isSurfacePresented() { return this.visible; } };
   const emptyPresentation = { retire() {} };
   Object.assign(idx, {
     navigationOwner: navigation, mountedRuntimeOwner: f.runtime, rssInstanceIdentity: 1,
@@ -126,7 +127,8 @@ export function makeIndex(f, { route = 'search', mount = 1, indexSource = read('
   metrics.windowRect = new metricsApi.ReaderRectVp(0, 0, 390, 844);
   const resolvers = bookshelfOperationClass('ui/foundation/ReaderSurfaceResolvers.ts', '({readerScaledBarHeight,readerScaledControlHeight,readerReadableFontScale})', metricsApi);
   const headers = bookshelfOperationClass('ui/foundation/ReaderHeaderSpecs.ets', '({DetailHeaderSpec,detailHeaderSpec})', { ...p.deps, ...headerMetrics });
-  const leafDeps = { ...p.deps, ...headerMetrics, ...resolvers, ...headers, ...actualReaderPageLayout(), ...geometry, ...metricsApi, ReaderWindowCoordinator: { metrics: () => metrics }, BookDirectoryPage: class {} };
+  const leafDeps = { ...p.deps, ...headerMetrics, ...resolvers, ...headers, ...actualReaderPageLayout(), ...geometry, ...metricsApi,
+    readerWindowMetrics: () => metrics, ReaderWindowCoordinator: { metrics: () => metrics }, BookDirectoryPage: class {} };
   // Shadow painting is not entry behavior. Register the exact shipping child
   // properties; its native Canvas/layout/raster output remains an explicit port.
   class ShadowCanvasPort { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } initialRender() {} updateStateVars(next) { Object.assign(this.params, next); } }

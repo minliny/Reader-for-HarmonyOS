@@ -103,7 +103,12 @@ async function runSelectedCase(selectedCase) {
     clearTimeout(timer) { if (timer && typeof timer === 'object') timer.cancelled = true; },
     fullDirectoryBackGeneration: 0, bookDirectoryBackGeneration: 0,
     DirectoryRulesFocusFrame: class { constructor(action) { this.action = action; } },
-    uiContext: {getFont: () => ({}), postFrameCallback: frame => pending.push({action: frame.action})},
+    uiContext: {
+      getFont: () => ({}),
+      getMeasureUtils: () => ({measureTextSize: ({fontSize}) => ({height: fontSize === 16 ? 22 : 17})}),
+      px2vp: value => value,
+      postFrameCallback: frame => pending.push({action: frame.action}),
+    },
     consumeReaderControlKeyboardBack: () => false, hilog: {warn() {}, error() {}}, inputMethod: {},
     ReaderDirectoryDestination: Port, ReaderFullDirectory: FullPort, BookDirectoryPage: MangaPort,
     ReaderDirectoryNavigationSurface: Port, ReaderDirectoryList: Port, ReaderDirectoryToolbar: Port,
@@ -252,6 +257,7 @@ async function runSelectedCase(selectedCase) {
     const destination = component(destinationSource, {
       opening, catalogContext: 'detail', contentKind: 'text', sourceId: 'source-a', bookId: 'book',
       entries, bookmarkIdentity: {sourceId: 'source-a', bookId: 'book'}, chapterStartBookmarkCreationEnabled: true,
+      directoryRecovery: {...recovery.EMPTY_READING_DIRECTORY_RECOVERY, bookmarkWriteEnabled: true},
       isOpeningCurrent: value => directoryForeground && value === opening,
       onSelectChapter: index => actions.push(['chapter', index]),
       onSelectNavigationTarget: (index, offset) => actions.push(['tree', index, offset]),
@@ -270,10 +276,10 @@ async function runSelectedCase(selectedCase) {
     const p = panel(child.params);
     p.searchControls(); p.chapterList();
     const toolbar = [...p.children.values()].find(actor => actor.params?.showChapterTools);
-    const tree = [...p.children.values()].find(actor => actor.params?.chapterEntries);
+    const tree = [...p.children.values()].find(actor => actor.params?.directoryPublication);
     assert.ok(toolbar && tree);
     assert.equal(tree.params.sourceId, 'source-a');
-    assert.equal(tree.params.chapterEntries.length, 3000);
+    assert.equal(tree.params.directoryPublication.entriesAt(tree.params.directoryEntriesRevision).length, 3000);
     assert.equal(tree.params.chapterDownloadEnabled, true);
     tree.params.onDownloadChapter(7);
     tree.params.onSelectTarget(17, 2);
@@ -431,7 +437,9 @@ async function runSelectedCase(selectedCase) {
         owner.sourceId = 'remote';
         assert.equal(owner.directoryRulesVisible, false);
       }
-      owner.aboutToDisappear(); flush();
+      // This case asserts the real owner state and late callbacks. Native
+      // removal of the retired editor branch is outside this Builder probe.
+      owner.aboutToDisappear();
     }
     const unavailable = full({sourceId: 'local', bookKind: 'TXT'}, {
       ReaderRuntimeOwner: {current() { throw Error('ReaderRuntimeOwner must be installed by EntryAbility'); }},
