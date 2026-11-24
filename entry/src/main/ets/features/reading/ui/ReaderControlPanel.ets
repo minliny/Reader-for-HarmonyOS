@@ -155,6 +155,9 @@ import {
   type ReaderControlModuleMinimum, type ReaderControlModuleMeasurer,
   type ReaderControlContentMeasurer, type ReaderControlContentModule,
 } from './ReaderLayoutGeometry';
+import { ReaderControlPlacement, readerControlAlignment, readerControlDockLeft,
+  type ReaderControlAlignment, type ReaderHoldingHand } from './ReaderControlPlacement';
+import { subscribeReaderHoldingHand } from '../../../platform/interaction/HarmonyReaderGrip';
 import { TYPE_READER_CONTROL_CHAPTER_TITLE, TYPE_READER_CONTROL_SOURCE_ACTION } from '../../../ui/foundation/ReaderTypography';
 
 import curves from '@ohos.curves';
@@ -216,6 +219,18 @@ class ReaderControlHeaderLineHeight implements AttributeModifier<TextAttribute> 
 
 @Component
 export struct ReaderControlPanel {
+  @StorageLink('readerControlAlignment') @Watch('refreshDockPlacement')
+  private manualControlAlignment: string = 'center';
+  @StorageLink('readerAppForeground') @Watch('refreshDockPlacement')
+  private gripForeground: boolean = true;
+  @Prop @Watch('refreshDockPlacement') bodySelectionPossible: boolean = false;
+  @State private dockAlignment: ReaderControlAlignment = 'center';
+  private readonly placement: ReaderControlPlacement = new ReaderControlPlacement();
+  private readonly placementPointers: Set<number> = new Set();
+  private gripRequested: boolean = false;
+  private holdingHand: ReaderHoldingHand = undefined;
+  private unbindHoldingHand: (() => void) | undefined = undefined;
+  private placementTimer: number = -1;
   @StorageLink('readerWindowMetricsRevision') @Watch('onEditingWindowChanged') private editingMetricsRevision: number = 0;
   @State @Watch('onEditingOffsetChanged') private editingOffsetY: number = 0;
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
@@ -300,6 +315,7 @@ export struct ReaderControlPanel {
   private launchFrameCache: ReaderControlMotionFrameCache = new ReaderControlMotionFrameCache();
 
   private onLaunchSampleChanged(): void {
+    this.refreshDockPlacement();
     if (this.launchSample === undefined) {
       this.launchNaturalMinimum = undefined;
       this.launchMotionBounds = undefined;
@@ -751,6 +767,7 @@ export struct ReaderControlPanel {
     this.editingHost.unmount();
     this.dismissMoreMenu();
     this.runtimeMounted = false;
+    this.retireDockPlacement();
     this.runtimeLifecycle += 1;
     this.onMinimumMeasurerReady(this.minimumIdentity, undefined);
     this.minimumFontsReady = false;
@@ -799,6 +816,8 @@ export struct ReaderControlPanel {
       this.visualSession = update.session;
     }
     const visual = sampleReaderControlSession(update.session);
+    const placementInputChanged = this.visualHeldPointerId !== update.session.heldPointerId ||
+      this.visualTransitionKind !== (update.session.transition?.kind ?? '');
     // Keep only the lightweight command owner on reading entry. Once opened,
     // retain the actor tree through every close to preserve compositor/input
     // continuity. The first open command itself admits the tree at progress 0.
@@ -811,6 +830,7 @@ export struct ReaderControlPanel {
     this.visualTransitionKind = update.session.transition?.kind ?? '';
     this.motionOffsetY = update.offsetY;
     this.syncProgressInput();
+    if (placementInputChanged) this.refreshDockPlacement();
     if (sessionChanged) this.onVisualSessionChange(update.session);
     if (update.endpoint !== undefined) this.commitVisualSession(update.endpoint);
     const f = this.frame();
@@ -919,6 +939,7 @@ export struct ReaderControlPanel {
   }
 
   private onLayoutChanged(): void {
+    this.refreshDockPlacement();
     this.geo = new ReaderControlGeometry(this.isExpanded());
     this.configureRuntime();
     if (this.previousTopBarVisibility !== this.currentLayout().topBarVisible && this.moreMenuVisible) this.setMoreMenuVisible(false);
@@ -1304,6 +1325,8 @@ export struct ReaderControlPanel {
       this.acceptRuntime(this.runtime.setEnabled((this.inputEnabled || this.launchRecovering) && !this.controlObscured));
     }
     this.syncProgressInput();
+    if (!this.inputEnabled || this.controlObscured) this.placementPointers.clear();
+    this.refreshDockPlacement();
   }
 
   private onTemporaryLayerActivityChanged(): void {
@@ -1318,6 +1341,7 @@ export struct ReaderControlPanel {
     }
     if ((this.temporaryLayerKind !== '')) this.cancelBrightnessDrag();
     this.syncProgressInput();
+    this.refreshDockPlacement();
   }
 
   private onControlSessionChanged(): void {
@@ -1679,11 +1703,76 @@ export struct ReaderControlPanel {
     return `${this.sourceId}:${this.bookTitle}:${this.controlOpenRevision}`;
   }
 
-  /** Full-screen Stage placement; dock geometry remains in its local axis. */
+  private refreshDockPlacement(): void {
+    if (!this.runtimeMounted) return;
+    this.syncGripSubscription();
+    if (this.placementTimer >= 0) clearTimeout(this.placementTimer);
+    this.placementTimer = -1;
+    const locked = this.visualHeldPointerId >= 0 || this.visualTransitionKind.length > 0 ||
+      this.placementPointers.size > 0 || this.progressPreviewPercent >= 0 || this.brightnessDragging ||
+      this.moreMenuVisible || this.temporaryLayerKind !== '' || this.bodySelectionPossible || this.controlObscured ||
+      this.launchSample !== undefined || !this.inputEnabled || !this.gripForeground;
+    const result = this.placement.update(readerControlAlignment(this.manualControlAlignment),
+      this.holdingHand, locked, readerMotionNowMs());
+    if (result.alignment !== this.dockAlignment) {
+      this.dockAlignment = result.alignment;
+      this.dockRect.x = this.rootScreenX + this.dockLeft();
+      this.reportBackdropRegions();
+      this.editingHost.refresh();
+    }
+    if (result.settleInMs > 0) {
+      this.placementTimer = setTimeout((): void => this.refreshDockPlacement(), Math.ceil(result.settleInMs));
+    }
+  }
+
+  private syncGripSubscription(): void {
+    const layout = this.currentLayout();
+    const requested = this.gripForeground && this.inputEnabled && !this.controlObscured && this.isExpanded() &&
+      layout.viewportWidth - layout.fullPanelWidth > layout.fullPanelLeftGap + layout.fullPanelRightGap;
+    if (requested === this.gripRequested) return;
+    this.gripRequested = requested;
+    if (requested) {
+      this.unbindHoldingHand = subscribeReaderHoldingHand((hand: ReaderHoldingHand): void => {
+        this.holdingHand = hand;
+        this.refreshDockPlacement();
+      });
+    } else {
+      this.unbindHoldingHand?.();
+      this.unbindHoldingHand = undefined;
+      this.holdingHand = undefined;
+      this.placement.retireGrip();
+    }
+  }
+
+  private retireDockPlacement(): void {
+    this.unbindHoldingHand?.();
+    this.unbindHoldingHand = undefined;
+    this.gripRequested = false;
+    this.holdingHand = undefined;
+    this.placement.retireGrip();
+    this.placementPointers.clear();
+    if (this.placementTimer >= 0) clearTimeout(this.placementTimer);
+    this.placementTimer = -1;
+  }
+
+  private onDockPlacementTouch(event: TouchEvent): void {
+    if (event.type === TouchType.Move) return;
+    if (event.type === TouchType.Cancel) {
+      this.placementPointers.clear();
+    } else {
+      for (const touch of event.changedTouches) {
+        if (event.type === TouchType.Down) this.placementPointers.add(touch.id);
+        else if (event.type === TouchType.Up) this.placementPointers.delete(touch.id);
+      }
+    }
+    this.refreshDockPlacement();
+  }
+
+  /** The dock's visual and input geometry share this pane-local origin. */
   private dockLeft(): number {
-    return this.isExpanded() ?
-      this.currentLayout().viewportWidth - this.currentLayout().fullPanelRightGap - this.currentLayout().fullPanelWidth :
-      (this.currentLayout().viewportWidth - this.currentLayout().fullPanelWidth) / 2;
+    const layout = this.currentLayout();
+    return readerControlDockLeft(layout.viewportWidth, layout.fullPanelWidth, layout.fullPanelLeftGap,
+      layout.fullPanelRightGap, this.dockAlignment);
   }
 
   private dockTop(): number {
@@ -1837,6 +1926,7 @@ export struct ReaderControlPanel {
         .translate({ y: this.frame().dock.translateY })
         .opacity(this.frame().dock.opacity)
         .position({ x: this.dockLeft(), y: this.presentedDockTop() })
+        .onTouch((event: TouchEvent): void => this.onDockPlacementTouch(event))
         // A held pointer may reach the hidden endpoint before UP. Retiring
         // its ancestor here loses UP/CANCEL and leaves the runtime held.
         .enabled(this.inputEnabled && (this.frame().visibility > 0 || this.visualHeldPointerId >= 0))
@@ -1904,6 +1994,7 @@ export struct ReaderControlPanel {
     this.observeMoreMenuFrames(visible, this.moreMenuGeneration);
     this.syncProgressInput();
     this.onTemporaryLayerChange(visible, 'moreMenu');
+    this.refreshDockPlacement();
   }
 
   private observeMoreMenuFrames(visible: boolean, generation: number): void {
@@ -3015,7 +3106,10 @@ export struct ReaderControlPanel {
 
   private invalidateProgressInput(): void {
     this.progressInputRevision += 1;
-    if (this.progressPreviewPercent >= 0) this.progressPreviewPercent = -1;
+    if (this.progressPreviewPercent >= 0) {
+      this.progressPreviewPercent = -1;
+      this.refreshDockPlacement();
+    }
   }
 
   private syncProgressInput(): void {
@@ -3035,6 +3129,7 @@ export struct ReaderControlPanel {
         this.progressPreviewPercent = -1;
         this.onProgressChange(committed);
       }
+      this.refreshDockPlacement();
     };
   }
 
@@ -3216,6 +3311,7 @@ export struct ReaderControlPanel {
     this.brightnessPreviewPercent = this.brightnessDragStartPercent;
     this.brightnessDragging = true;
     this.brightnessLastEmittedPercent = this.brightnessDragStartPercent;
+    this.refreshDockPlacement();
   }
 
   private updateBrightnessDrag(offsetY: number): void {
@@ -3254,6 +3350,7 @@ export struct ReaderControlPanel {
     // Keep the optimistic rail until the latest native write is acknowledged.
     this.onBrightnessChange(this.effectiveBrightnessPercent());
     this.brightnessLastEmittedPercent = -1;
+    this.refreshDockPlacement();
   }
 
   private onBrightnessConfirmed(): void {
@@ -3270,6 +3367,7 @@ export struct ReaderControlPanel {
     // Keep the current preview until the writer settles any already-issued
     // native call. onBrightnessConfirmed then projects that successful ACK.
     this.brightnessLastEmittedPercent = -1;
+    this.refreshDockPlacement();
   }
 
   private commitBrightnessTap(event: GestureEvent): void {

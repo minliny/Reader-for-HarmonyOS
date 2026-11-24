@@ -15,15 +15,20 @@ assert.deepEqual(ts.getPreEmitDiagnostics(program).filter(d=>d.category===ts.Dia
 const nodes=[],events=[];let lines=2;
 const typeNode={createNode(_context,type){assert.equal(type,'Text');const node={disposed:0,props:{},initialize(content,options){events.push('initialize');this.content=content;this.controller=options.controller;},
  measure(constraint){events.push('measure');this.constraint=constraint;},layout(position){events.push('layout');this.position=position;},dispose(){this.disposed++;}};
- node.attribute={};for(const key of ['width','fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','textAlign','wordBreak','textIndent','direction'])node.attribute[key]=v=>{node.props[key]=v;return node.attribute;};nodes.push(node);return node;}};
+ node.attribute={};for(const key of ['width','fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','textAlign','wordBreak','textIndent','direction','enableAutoSpacing','fallbackLineSpacing','compressLeadingPunctuation'])node.attribute[key]=v=>{node.props[key]=v;return node.attribute;};nodes.push(node);return node;}};
 const js=ts.transpileModule(source.replace(/^import.*$/gm,'').replace(/^export /gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
-const Owner=new Function('typeNode','WordBreak',js+';return ReaderNativeTextMeasurement;')(typeNode,{BREAK_ALL:'all'});
+const {Owner, geometryKey}=new Function('typeNode','WordBreak',js+';return {Owner:ReaderNativeTextMeasurement,geometryKey:readerNativeTextGeometryKey};')(typeNode,{BREAK_ALL:'all'});
 const owner=new Owner(),controller={getLayoutManager:()=>({getLineCount:()=>{events.push('read');return lines;}})};
 const style={widthVp:300,fontFamily:'selected',fontSize:20,fontWeight:400,lineHeight:30,letterSpacing:1,color:'#000',alignment:'justify',breakAll:false};
-owner.measure({vp2px:v=>v*3},'甲😀乙',controller,style);
-assert.deepEqual(events,['initialize','measure','layout','read']);assert.equal(nodes[0].content,'甲😀乙');assert.equal(nodes[0].controller,controller);
+const body={...style,bookBody:true};
+const mixed='「甲ABC😀e\u0301乙」';
+owner.measure({vp2px:v=>v*3},mixed,controller,body);
+assert.deepEqual(events,['initialize','measure','layout','read']);assert.equal(nodes[0].content,mixed);assert.equal(nodes[0].controller,controller);
 assert.equal(nodes[0].constraint.maxSize.width,900);assert.equal(nodes[0].props.fontSize,20);assert.equal(nodes[0].props.lineHeight,30);
+for(const property of ['enableAutoSpacing','fallbackLineSpacing','compressLeadingPunctuation'])assert.equal(nodes[0].props[property],true,property);
+assert.notEqual(geometryKey(body),geometryKey(style),'an old native window cannot be retained for differently shaped prose');
 owner.measure({vp2px:v=>v*3},'title',controller,{...style,breakAll:true});assert.equal(nodes[1].props.wordBreak,'all');
+assert.equal(nodes[1].props.enableAutoSpacing,undefined,'chapter titles keep their existing native measurement recipe');
 owner.clear();owner.clear();assert.ok(nodes.every(n=>n.disposed===1));
 const transferredController={getLayoutManager:()=>({getLineCount:()=>2})};
 owner.measure({vp2px:v=>v},'whole paragraph',transferredController,{...style,indentVp:12,direction:'rtl'});

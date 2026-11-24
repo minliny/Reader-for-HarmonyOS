@@ -148,7 +148,7 @@ export struct LocalBookDetail {
   private readonly headerSpec: DetailHeaderSpec = detailHeaderSpec();
   private mounted: boolean = false;
   private shareGeneration: number = 0;
-  private shareBusy: boolean = false;
+  @State private shareBusy: boolean = false;
   private pendingDirectoryFocus: string = '';
   private directoryFocusGeneration: number = 0;
   private mangaFontGeneration: number = 0;
@@ -306,6 +306,9 @@ export struct LocalBookDetail {
       .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
       .backgroundColor(Color.Transparent)
       .id(`reader-detail-share-${action}`)
+      .accessibilityRole(AccessibilityRoleType.BUTTON)
+      .accessibilityText(label)
+      .enabled(this.appForeground && !this.shareBusy && this.acceptsDetailInput() && this.detailBookAvailable())
       .onClick((): void => { void this.runShareAction(action); });
   }
 
@@ -450,7 +453,7 @@ export struct LocalBookDetail {
           .fontWeight(visual.summaryFontWeight).fontSize(visual.summaryFontSize).lineHeight(visual.summaryLineHeight)
           .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true)
           .fontColor(mangaDirectoryColor('ink', this.appThemeScheme)).margin({ top: visual.heroTitleMargin, bottom: visual.heroTitleMargin })
-          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
+          .wordBreak(WordBreak.BREAK_ALL);
         Text(bookAuthorLabel(this.book.author)).width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
           .fontWeight(visual.bodyFontWeight).fontSize(visual.heroAuthorFontSize).lineHeight(visual.heroAuthorLineHeight)
           .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true)
@@ -460,7 +463,7 @@ export struct LocalBookDetail {
             .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(visual.bodyFontWeight)
             .fontSize(visual.heroSourceFontSize).lineHeight(visual.heroSourceLineHeight)
             .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true)
-            .fontColor(mangaDirectoryColor('muted', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+            .fontColor(mangaDirectoryColor('muted', this.appThemeScheme)).wordBreak(WordBreak.BREAK_ALL);
           if (this.book.sourceId !== 'local') {
             Button({ type: ButtonType.Normal, stateEffect: false }) {
               Text('换源').constraintSize({ minHeight: READER_ACTION_MIN_TARGET }).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
@@ -538,7 +541,7 @@ export struct LocalBookDetail {
         Text(this.book.title).width('100%').fontFamily('ReaderNotoSerifSCBold')
           .fontWeight(FontWeight.Bold).fontSize(24).lineHeight(34)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-          .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
+          .wordBreak(WordBreak.BREAK_ALL);
         Text(bookAuthorLabel(this.book.author)).width('100%').fontFamily('ReaderNotoSansSC')
           .fontSize(13).lineHeight(20).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -590,7 +593,7 @@ export struct LocalBookDetail {
         Row({ space: 12 }) {
           Text(`当前来源：${this.book.sourceName}`).layoutWeight(1).constraintSize({ minWidth: 0 })
             .fontSize(13).lineHeight(20).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+            .wordBreak(WordBreak.BREAK_ALL);
           if (this.book.sourceId !== 'local') {
             Button({ type: ButtonType.Normal, stateEffect: false }) {
               Text('换源').padding({ left: 12, right: 12, top: 5, bottom: 5 }).fontSize(12).lineHeight(18)

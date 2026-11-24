@@ -16,7 +16,7 @@ const selected = selectContractCases({
   'import-summary': 'Actual import result header consumes changing accepted and recovery-pending batch facts.',
   'search-source-reason': 'Actual Search source-required state updates title/action and dispatch after source availability changes.',
   'group-row-values': 'Actual retained group row and assignment picker consume current same-ID group facts and names.',
-  'shelf-metadata': 'Actual shelf-list and text/manga detail metadata tags consume current book Props.',
+  'shelf-metadata': 'Actual shelf-list and text/manga detail metadata consume current book Props, with bounded list and complete detail titles.',
   'manga-dock-icons': 'Actual manga dock delivers current theme resources to its three retained footer images.',
   'replace-recovery-label': 'Actual same-operation replacement recovery action updates its retained caption and keeps operation identity.',
   'sync-summary-values': 'Actual retained Sync summary rows consume current loaded configuration facts.',
@@ -257,12 +257,16 @@ if (selected.length) {
     const controls = foundationControls();
     const path = 'entry/src/main/ets/features/bookshelf/ui/ShelfBookListDetails.ets';
     const fragment = read(path).replace('  build() {', '  build() { Column() {} }\n  @Builder\n  details() {');
-    const book = { sourceId: 'local', bookId: 'a', contentKind: 'text', title: '书名', author: '作者', readProgress: 0 };
-    const owner = createReaderBuilderProbe(fragment, ['book', 'details', 'metadataTag', 'positionLabel'],
-      { ...controls.dependencies, ShelfBookPresentation }, controls.hooks).owner;
+    const book = { sourceId: 'local', bookId: 'a', contentKind: 'text', title: '长书名Reader'.repeat(14), author: '作者', readProgress: 0 };
+    const owner = createReaderBuilderProbe(fragment, ['book', 'details', 'metadataTag', 'positionLabel', 'metadataEllipsisMode'],
+      { ...controls.dependencies, ShelfBookPresentation, readerHarmonyApi24: () => true,
+        EllipsisMode: { CENTER: 'center', END: 'end' } }, controls.hooks).owner;
     Object.assign(owner, { mangaRevision: 0, textFrame: { width: 300, height: 134, titleGroupHeight: 28,
       readingGroupHeight: 20, metadataColumns: 2, metadataWidth: 90, metadataHeight: 20, tagHeight: 18, scale: 1 } });
     owner.book = book; owner.details();
+    const listTitle = controls.nodes(owner).find(node => node.type === 'Text' && node.create === book.title);
+    assert.equal(listTitle?.maxLines, 1, 'bounded shelf title receives the entire title');
+    assert.equal(listTitle?.ellipsisMode, 'center');
     owner.updateStateVars({ book: { ...book, contentKind: 'audio', sourceId: 'remote' } }); controls.properties.flush();
     const labels = controls.nodes(owner).filter(node => node.type === 'Text').map(node => node.create);
     assert.ok(labels.includes('有声') && labels.includes('在线'), 'retained shelf metadata consumes current book facts');
@@ -271,13 +275,22 @@ if (selected.length) {
     for (const kind of ['text', 'manga']) {
       const actual = localBookDetailSdk({ ReaderNativeSlotMeasurement, sourceSwitchTriggerFocusId }, { source: read(detailPath) });
       const detail = actual.owner;
-      detail.book = { ...book, contentKind: kind, coverUrl: 'https://example.test/cover', sourceName: '本地' };
+      const sourceName = '长书源Source'.repeat(14);
+      detail.book = { ...book, contentKind: kind, coverUrl: 'https://example.test/cover', sourceName };
       detail.hasCover = () => true;
       detail.displayCoverUrl = () => 'https://example.test/cover';
       detail.mangaFontScale = () => 1;
       detail.mangaSummaryLabel = () => '两章';
       detail.onBookChanged = () => {};
       detail[kind === 'text' ? 'standardHero' : 'mangaHero']();
+      const title = [...detail.nodes.values()].find(node => node.type === 'Text' && node.create === book.title);
+      assert.ok(title, `complete ${kind} detail title`);
+      assert.equal(title.maxLines, undefined);
+      if (kind === 'manga') {
+        const source = [...detail.nodes.values()].find(node => node.type === 'Text' && String(node.create).includes(sourceName));
+        assert.ok(source, 'manga detail receives the complete source display name');
+        assert.equal(source.maxLines, undefined);
+      }
       detail.updateStateVars({ book: { ...detail.book, sourceId: 'remote', contentKind: kind === 'text' ? 'audio' : 'manga' } });
       actual.properties.flush();
       const text = [...detail.nodes.values()].filter(node => node.type === 'Text').map(node => node.create);

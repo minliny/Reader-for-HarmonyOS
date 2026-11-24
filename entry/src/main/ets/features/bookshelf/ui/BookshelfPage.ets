@@ -195,6 +195,7 @@ export struct BookshelfPage {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   viewState: BookshelfViewState = new BookshelfViewState();
   private readonly shelfScroller: Scroller = new Scroller();
+  @State private paneWidth: number = 0;
   private viewportRestored: boolean = false;
   private viewportRestoreGeneration: number = 0;
   private detailReturnFocus: BookshelfDetailReturnFocus | undefined;
@@ -438,11 +439,7 @@ export struct BookshelfPage {
   @Builder
   private bookshelfTabContent() {
     Stack({ alignContent: Alignment.TopStart }) {
-      if (this.isWideViewport()) {
-        this.tabletContent();
-      } else {
-        this.phoneContent();
-      }
+      this.shelfPane();
       if (this.viewModePending()) {
         Column() {
           ForEach([this.navigationGeneration], (navigation: number): void => {
@@ -456,13 +453,20 @@ export struct BookshelfPage {
     }
     .width('100%')
     .height('100%')
-    .onAreaChange((_old: Area, area: Area): void => {
-      const height = readerPageAreaLength(area.height);
-      const originY = readerPageAreaLength(area.globalPosition?.y ?? 0);
-      if (Number.isFinite(height) && height >= 0) this.recoveryViewportHeight = height;
-      if (Number.isFinite(originY)) this.recoveryOriginY = originY;
-    })
+    .onAreaChange((_old: Area, area: Area): void => this.recordShelfPane(area))
     .bindSheet(this.bookActionSheetVisible, this.bookActionSheetContent, this.bookActionSheetOptions());
+  }
+
+  private recordShelfPane(area: Area): void {
+    const width = readerPageAreaLength(area.width);
+    const height = readerPageAreaLength(area.height);
+    const originY = readerPageAreaLength(area.globalPosition?.y ?? 0);
+    if (Number.isFinite(width) && width > 0 && Math.abs(width - this.paneWidth) >= 0.01) {
+      this.paneWidth = width;
+      this.scheduleContinueCardMeasurement();
+    }
+    if (Number.isFinite(height) && height >= 0) this.recoveryViewportHeight = height;
+    if (Number.isFinite(originY)) this.recoveryOriginY = originY;
   }
 
   private viewModeRecoveryMaxHeight(): number {
@@ -563,23 +567,17 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private phoneContent() {
+  private shelfPane() {
     Column() {
-      this.bookshelfList(false);
+      this.bookshelfList();
     }
     .width('100%')
     .height('100%')
-    .padding({ left: this.phoneContentFrame().left, right: this.phoneContentFrame().right });
+    .padding({ left: this.shelfPaneFrame().left, right: this.shelfPaneFrame().right });
   }
 
-  @Builder
-  private tabletContent() {
-    Column() {
-      this.bookshelfList(true);
-    }
-    .width('100%')
-    .height('100%')
-    .padding({ left: this.tabletContentFrame().left, right: this.tabletContentFrame().right });
+  private shelfPaneFrame(): SurfaceHorizontalFrame {
+    return this.isWideViewport() ? this.tabletContentFrame() : this.phoneContentFrame();
   }
 
   private continueCardFrame(expandedLayout: boolean): BookshelfContinueCardFrame {
@@ -715,20 +713,24 @@ export struct BookshelfPage {
   }
 
   @Builder
-  private bookshelfList(expandedLayout: boolean) {
+  private bookshelfList() {
     List({ space: TOK_SPACE_CONTROL_INLINE, scroller: this.shelfScroller }) {
       if (this.continueReading !== undefined) {
         ListItem() {
           // Retained Builder observers must read the live Prop instead of
           // capturing the book that happened to be current when mounted.
-          this.continueReadingCard((): ShelfBook | undefined => this.continueReading, expandedLayout);
+          if (this.isWideViewport()) {
+            this.continueReadingCard((): ShelfBook | undefined => this.continueReading, true);
+          } else {
+            this.continueReadingCard((): ShelfBook | undefined => this.continueReading, false);
+          }
         }.padding({ top: this.shelfFirstItemPadding() });
       }
       ListItem() {
         Column() {
           ForEach([this.navigationGeneration], (navigation: number): void => {
             BookshelfSectionHeader({
-              contentWidth: this.shelfContentWidth(expandedLayout),
+              contentWidth: this.shelfContentWidth(this.isWideViewport()),
               titleOpacity: this.viewSwitchHeaderOpacity,
               viewMode: this.viewMode,
               filterExpanded: this.filterRowVisible,
@@ -743,7 +745,7 @@ export struct BookshelfPage {
             this.filterPanel(navigation);
           }, (navigation: number): string => `shelf-filters:${navigation}`);
         }
-        .width(this.shelfContentWidth(expandedLayout))
+        .width(this.shelfContentWidth(this.isWideViewport()))
         .padding({ top: this.continueReading === undefined ? this.shelfFirstItemPadding() : 0 });
       }
 
@@ -763,12 +765,18 @@ export struct BookshelfPage {
       // Figma shared-cover motion had no persistent actor to interpolate.
       LazyForEach(this.rowDataSource, (row: ShelfBook[], rowIndex: number) => {
         ListItem() {
-          this.projectionRow(row, expandedLayout,
-            this.rowDataSource.positionForKey(this.bookRowRenderKey(row, rowIndex), rowIndex));
+          // Keep the ListItem and its stable key when its layout form changes.
+          if (this.isWideViewport()) {
+            this.projectionRow(row, true,
+              this.rowDataSource.positionForKey(this.bookRowRenderKey(row, rowIndex), rowIndex));
+          } else {
+            this.projectionRow(row, false,
+              this.rowDataSource.positionForKey(this.bookRowRenderKey(row, rowIndex), rowIndex));
+          }
         }
       }, (row: ShelfBook[], rowIndex: number): string => this.bookRowRenderKey(row, rowIndex));
     }
-    .width(this.shelfContentWidth(expandedLayout))
+    .width(this.shelfContentWidth(this.isWideViewport()))
     .height('100%')
     .id(this.shelfViewportMotionId())
     .contentStartOffset(readerScrollStartOffset(this.scrollLayout()))
@@ -1475,6 +1483,7 @@ export struct BookshelfPage {
   }
 
   private effectiveViewportWidth(): number {
+    if (this.paneWidth > 0) return this.paneWidth;
     if (this.readerWindowMetricsRevision < 0) {
       return 0;
     }

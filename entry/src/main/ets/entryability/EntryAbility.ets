@@ -6,6 +6,8 @@ import { ReaderSettingsGateway } from '../features/reading/application/ReaderSet
 import { SyncGateway } from '../features/sync/application/SyncGateway';
 import { LocalConfigurationReset } from '../features/settings/application/LocalConfigurationReset';
 import { ReaderThemeHost } from '../app/ReaderThemeHost';
+import { ReaderNavigationAppearancePreferences } from '../app/ReaderNavigationAppearancePreferences';
+import { ReaderControlPlacementPreferences } from '../app/ReaderControlPlacementPreferences';
 import { AbilityConstant, ConfigurationConstant, type Configuration, UIAbility, Want } from '@kit.AbilityKit';
 import contextConstant from '@ohos.app.ability.contextConstant';
 import fileIo from '@ohos.file.fs';
@@ -152,6 +154,7 @@ export default class EntryAbility extends UIAbility {
         parameters?.readerMangaOfflineBookId, mangaSelectFlag ? true : parameters?.readerMangaOfflineProbe) : undefined,
       mangaSelectionMode, this.publicFixture);
     this.runtimeOwner = owner;
+    ReaderNavigationAppearancePreferences.attach(this.context);
     if (DEBUG === true && BUILD_MODE_NAME === 'debug' && parameters?.readerCapacityTrace === true) {
       this.capacityProbe = ReaderCapacityProbe.create(DEBUG, BUILD_MODE_NAME, parameters?.readerCapacityTrace,
         async (method: string, params: JsonObject, options: ReaderCapacityQueryOptions): Promise<JsonObject> => (await owner.request(method, params, options)).data,
@@ -162,6 +165,8 @@ export default class EntryAbility extends UIAbility {
       .catch((error: Error): void => {
         hilog.error(DOMAIN, 'Reader', 'Theme restoration failed: %{private}s', error.message);
       });
+    void ReaderControlPlacementPreferences.install(this.context,
+      (): boolean => this.runtimeOwner === owner && ReaderRuntimeOwner.isCurrent(owner)).catch((): void => {});
     const sync = new SyncGateway(owner);
     ReaderThemeHost.setRecoveryBarrier(async (): Promise<void> => {
       await Promise.all([this.themeReady, this.bookshelfModeReady, owner.start()]);
@@ -507,6 +512,7 @@ export default class EntryAbility extends UIAbility {
     this.startupContent?.close();
     this.startupContent = undefined;
     ReaderThemeHost.detach();
+    ReaderNavigationAppearancePreferences.detach();
     this.windowStageGeneration += 1;
     this.activeWindowStage = undefined;
     ReaderWindowCoordinator.destroyWindow();

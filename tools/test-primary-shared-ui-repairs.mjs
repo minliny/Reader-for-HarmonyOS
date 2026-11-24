@@ -740,20 +740,25 @@ for (const id of selectContractCases(definitions)) {
     owner.actions = []; button.onClick(); assert.deepEqual(calls, ['apply'], 'removed current action cannot dispatch');
   }
   if (id === 'detail-hero-source') {
-    const source = read('features/reading/ui/LocalBookDetail.ets');
-    const owner = localBookDetailSdk({ sourceSwitchTriggerFocusId }).owner;
-    Object.assign(owner, { book: { sourceId: 'remote', bookId: 'book', contentKind: 'text', title: '书名', author: '作者', sourceName: '来源', lastChapter: '' },
+    const sourceName = '长书源Source'.repeat(14);
+    const owner = localBookDetailSdk({ sourceSwitchTriggerFocusId, WordBreak: { BREAK_ALL: 'break-all' } }).owner;
+    Object.assign(owner, { book: { sourceId: 'remote', bookId: 'book', contentKind: 'text', title: '书名', author: '作者', sourceName, lastChapter: '' },
       hasCover: () => true, displayCoverUrl: () => 'cover', headerSpec: { contentGap: 16, contentUnderlap: 8 }, appThemeScheme: 'day',
       sourceSwitchEnabled: true, READER_ACTION_MIN_TARGET: 44, onSwitchSource: () => {} });
     owner.standardHero(); owner.readingFacts();
     const titleColumn = nodes(owner).find(node => node.type === 'Column' && node.layoutWeight === 1);
     assert.equal(titleColumn.padding, undefined, 'hero title and cover share the same parent start');
+    const sourceLabel = nodes(owner).find(node => node.type === 'Text' && node.create === `当前来源：${sourceName}`);
+    assert.ok(sourceLabel, 'the complete source label reaches the native Text');
+    assert.equal(sourceLabel.maxLines, undefined, 'novel detail displays the complete source name');
+    assert.equal(sourceLabel.wordBreak, 'break-all', 'unbroken source names wrap in the available column');
     const sourcePaint = nodes(owner).find(node => node.type === 'Text' && node.create === '换源');
     assert.equal(sourcePaint.constraintSize?.minHeight, undefined, '44vp target does not become the filled source paint');
     assert.deepEqual(sourcePaint.padding, { left: 12, right: 12, top: 5, bottom: 5 });
     assert.equal(sourcePaint.fontSize, 12); assert.equal(sourcePaint.lineHeight, 18);
     const sourceButton = nodes(owner).find(node => node.type === 'Button');
     assert.equal(sourceButton.constraintSize.minWidth, 44); assert.equal(sourceButton.constraintSize.minHeight, 44);
+    assert.equal(sourceButton.flexShrink, 0, 'wrapping does not shrink the adjacent switch action');
     for (const top of [0, 24]) {
       const metrics = windowFacts.createDefaultReaderWindowMetrics();
       metrics.windowRect.width = 366; metrics.windowRect.height = 844; metrics.systemInsets.top = top;

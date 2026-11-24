@@ -4,6 +4,7 @@ import type { ReaderExitRequest } from '../presentation/ReadingEntryPresentation
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { readerEmptyPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
+import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import type { SourceSwitchCompletionPresentation } from '../../source/presentation/SourceSwitchCompletionPresentation';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../presentation/ReadingDirectoryRecovery';
 import { ReaderSettingsGateway } from '../application/ReaderSettingsGateway';
@@ -47,6 +48,8 @@ export struct ReaderShell {
     readerAppColor('app.window.background', 'day');
   @StorageLink('readerWindowChromeThemeId') private chromePaperThemeId: string = '';
   @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
+  @State private paneWidth: number = 0;
+  @State private paneHeight: number = 0;
 
   // 阅读内容。
   @Prop bookId: string = '';
@@ -184,6 +187,11 @@ export struct ReaderShell {
       geometry: readerEmptyPageGeometry(),
       content: (): void => { this.readingContent(); },
       overlayContent: (): void => { this.readingOverlay(); },
+    }).onAreaChange((_old: Area, area: Area): void => {
+      const width = readerPageAreaLength(area.width);
+      const height = readerPageAreaLength(area.height);
+      if (Number.isFinite(width) && width > 0) this.paneWidth = width;
+      if (Number.isFinite(height) && height > 0) this.paneHeight = height;
     });
   }
 
@@ -246,6 +254,8 @@ export struct ReaderShell {
           requestedBookmarkAnchor: this.requestedBookmarkAnchor,
           bookmarkIdentity: this.bookmarkIdentity,
           expandedLayout: this.expandedLayout,
+          paneWidthHint: this.paneWidth,
+          paneHeightHint: this.paneHeight,
           windowChromeActive: this.visible,
           windowChromeOverlayActive: this.visible &&
             (this.route === 'directory' || this.sourceSwitchPresented),
@@ -533,10 +543,10 @@ export struct ReaderShell {
       ReaderStatusBarPaper({
         theme: this.chromePaperThemeId,
         fallbackColor: this.chromeUnderlayColor,
-        viewportWidth: this.chromeMetrics(this.windowMetricsRevision).windowRect.width,
-        viewportHeight: this.chromeMetrics(this.windowMetricsRevision).windowRect.height,
+        viewportWidth: this.paneWidth > 0 ? this.paneWidth : this.chromeMetrics(this.windowMetricsRevision).windowRect.width,
+        viewportHeight: this.paneHeight > 0 ? this.paneHeight : this.chromeMetrics(this.windowMetricsRevision).windowRect.height,
         statusRect: this.chromeMetrics(this.windowMetricsRevision).statusBarRect,
-        expanded: readerWidthClassWithHint(this.chromeMetrics(this.windowMetricsRevision).windowRect.width,
+        expanded: readerWidthClassWithHint(this.paneWidth > 0 ? this.paneWidth : this.chromeMetrics(this.windowMetricsRevision).windowRect.width,
           this.expandedLayout) === 'expanded',
       }).zIndex(10).hitTestBehavior(HitTestMode.None)
         .id('reader-overlay-status-bar-underlay');

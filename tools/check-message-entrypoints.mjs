@@ -44,7 +44,14 @@ export function inventoryMessageEntrypoints({ files } = {}) {
   for (const file of selected) if (!file.startsWith(`${sourceRoot}/`) || file.includes('..') || !['.ets', '.ts'].includes(extname(file)) || !existsSync(resolve(root,file))) throw new Error(`Invalid selected message file: ${file}`);
   const require = createRequire(import.meta.url), sdk = resolveEtsLoaderRoot();
   const ts = require(`${sdk}/node_modules/typescript`);
-  const compilerOptions = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
+  const baseOptions = require(`${sdk}/lib/ets_checker.js`).compilerOptions;
+  const extensionPath = resolve(sdk, '../../../../hms/ets/build-tools/ets-loader/components/externalconfig.json');
+  const extensions = existsSync(extensionPath) ? JSON.parse(readFileSync(extensionPath, 'utf8')).compilerOptions.ets : undefined;
+  // Hvigor supplies these SDK extensions for production. Preserve the same
+  // component grammar for the read-only message inventory.
+  const compilerOptions = extensions === undefined ? baseOptions : {
+    ...baseOptions, ets: { ...baseOptions.ets, components: [...new Set([...baseOptions.ets.components, ...extensions.components])] },
+  };
   const entries = new Map(), declarations = [], parseErrors = [];
   for (const file of selected) {
     const text = readFileSync(resolve(root, file), 'utf8');

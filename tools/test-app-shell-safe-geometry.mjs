@@ -11,6 +11,8 @@ const {default: assert} = await import('node:assert/strict');
 const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
 const {actualReaderPhoneNavigationGeometry} = await import('./lib/reader-phone-navigation-source.mjs');
 const {resolveHorizontalFrame,SurfaceWidthSpec} = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
+const {actualReaderFloatingBarMetrics} = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const {readerMainTabItemHeight} = actualReaderFloatingBarMetrics();
 const base=new URL('../entry/src/main/ets/',import.meta.url);
 let metrics={windowRect:{width:410,height:800},left:51,right:7,top:30,bottom:20};
 const dependencies={ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeLeft:m=>m.left,
@@ -25,7 +27,8 @@ for(const [file,name] of [['ui/chrome/AppTopBar.ets','AppTopBar'],['ui/chrome/Pa
  assert.equal(owner.leftInset(),right);assert.equal(owner.rightInset(),left,'asymmetric edges mirror independently');
  metrics={...metrics,left:51,right:7};
 }
-const phoneGeometry=actualReaderPhoneNavigationGeometry({...dependencies,AppStorage:{get:()=>undefined}});
+const phoneGeometry=actualReaderPhoneNavigationGeometry({...dependencies,readerMainTabItemHeight,
+ AppStorage:{get:()=>undefined}});
 const Bar=selectedProductionMethods(new URL('app/navigation/ReaderBottomNavigation.ets',base),'ReaderBottomNavigation',['bottomBarFrame','liveWindowWidth'],{...dependencies,...phoneGeometry});
 const bar=Object.assign(new Bar(),{readerWindowMetricsRevision:0,mainViewportRevision:0});
 for(const [width,left,right] of [[410,51,7],[250,3,49],[0,10,20],[NaN,10,20],[90,120,6]]) {
@@ -35,9 +38,12 @@ for(const [width,left,right] of [[410,51,7],[250,3,49],[0,10,20],[NaN,10,20],[90
  assert.ok(frame.left+frame.width<=w && frame.right+frame.width<=w,'actual nav frame remains inside live width');
  if(w>=left+right) {assert.ok(frame.left>=left);assert.ok(frame.right>=right);}
 }
-const Shell=selectedProductionMethods(new URL('features/shell/MainTabShell.ets',base),'MainTabShell',['railTop'],dependencies),shell=new Shell();
-metrics={...metrics,windowRect:{width:410,height:800},top:30,bottom:20};const original=shell.railTop();
-metrics={...metrics,windowRect:{width:410,height:780},top:10};assert.equal(shell.railTop(),original,'same available host span cannot apply safeTop twice');
-metrics={...metrics,windowRect:{width:410,height:0}};assert.equal(shell.railTop(),0);
+metrics={...metrics,windowRect:{width:410,height:800},top:30,bottom:20};
+const original=phoneGeometry.readerMainRailTop();
+assert.ok(original > 0, 'rail is centered in a valid host span');
+metrics={...metrics,windowRect:{width:410,height:780},top:10};
+assert.equal(phoneGeometry.readerMainRailTop(),original,'same available host span cannot apply safeTop twice');
+metrics={...metrics,windowRect:{width:410,height:0}};
+assert.equal(phoneGeometry.readerMainRailTop(),0);
 
 }

@@ -731,6 +731,7 @@ node tools/check-overlay-assembly.mjs --check --inventory-file tools/page-struct
 | 选择/chip | default / pressed / selected / disabled | 选中态有文字/图标，不只靠颜色 | 用填色变化冒充状态 |
 | 行级动作 | default / pressed / busy / disabled | 不与整行点击冲突 | 行点击和动作点击同一语义 |
 | 标签页 | default / selected / pressed / disabled | 有 role/state；焦点顺序稳定 | 选中态只靠颜色 |
+| 正文无障碍动作 | ready / disabled / hidden | 分页的上一页、打开阅读控制栏、下一页依次对应正文的左、中、右三等分；连续阅读提供中心控制栏入口；稳定 ID 在[控件登记](../../tools/contracts/control-registry.json) | 额外接管物理触摸或在被覆盖时派发动作 |
 
 规则：
 
@@ -778,6 +779,8 @@ node tools/check-overlay-assembly.mjs --check --inventory-file tools/page-struct
 规则：
 
 - 每个可交互控件必须有可访问名称、角色和当前状态；状态变化必须可播报。
+- 分页正文的三个虚拟按钮使用实际正文视口，仅占中部 44vp 高的带区。视口宽至少 132vp 且高至少 44vp 时，每个按钮的语义区域均达到 44vp；更小视口内约束在原三等分和可用高度内，未测量或被覆盖时退出遍历。SDK 探针验证边界、标识及原有动作准入，读屏走焦与触发仍需原生核验。
+- 连续阅读使用独立的 44vp 中心虚拟按钮打开控制栏。它沿用当前阅读输入准入和打开命令，正文列表继续持有滚动、触摸和段落语义。
 - 浮层打开时焦点进入浮层；关闭后回到触发源；不得把焦点留在已卸载节点。
 - 字体放大到 2.0× 时，关键操作、状态和关闭入口仍可达；不能靠裁切或覆盖通过。
 - `fontScaleMax` 写已验证上限，不写设计目标；没有相关证据时填 `null`，未验证 2.0× 时不能填 2.0。

@@ -661,6 +661,8 @@ export struct ReadingExperience {
   // Static per-session book identity for stable bookmark ids.
   @Prop bookmarkIdentity: ReaderBookIdentity | undefined = undefined;
   @Prop @Watch('onExpandedLayoutChanged') expandedLayout: boolean;
+  @Prop paneWidthHint: number = 0;
+  @Prop paneHeightHint: number = 0;
   @Prop @Watch('onWindowChromeActiveChanged') windowChromeActive: boolean = false;
   @Prop @Watch('onWindowChromeActiveChanged') windowChromeOverlayActive: boolean = false;
   @Prop @Watch('onSessionLaunchReduceMotionChanged') reduceMotion: boolean = false;
@@ -1448,11 +1450,11 @@ export struct ReadingExperience {
 
   private admitInitialWindowGeometry(): void {
     const metrics = ReaderWindowCoordinator.metrics();
-    // ReaderShell and Index both own the complete edge-to-edge window. These
-    // are observed platform facts, never Phone/Tablet fallback dimensions.
+    // Use the containing pane when it has already measured. The child Area
+    // callback remains authoritative for all later reflow.
     if (!metrics.ready || metrics.windowRect.width <= 0 || metrics.windowRect.height <= 0) return;
-    this.viewportWidth = metrics.windowRect.width;
-    this.viewportHeight = metrics.windowRect.height;
+    this.viewportWidth = this.paneWidthHint > 0 ? this.paneWidthHint : metrics.windowRect.width;
+    this.viewportHeight = this.paneHeightHint > 0 ? this.paneHeightHint : metrics.windowRect.height;
   }
 
   /** Cold persisted entry is an initial-build input, not a post-mount task.
@@ -2026,6 +2028,7 @@ export struct ReadingExperience {
       // The Panel stays mounted, but only this Host's linked session owns
       // routes, held input, the transition and committed close revision.
       ReaderControlPanel({
+        bodySelectionPossible: this.readerTextSelectionEnabled(),
         sessionFontScale: this.readingLayout().systemFontScale,
         controlThemeStyle: readerControlThemeStyle(this.readerAppScheme),
         launchSample: this.sessionLaunch?.sample,
@@ -4013,7 +4016,7 @@ export struct ReadingExperience {
       lineHeight: readerAppearanceLineHeight(this.appearanceSnapshot), letterSpacing: this.appearanceSnapshot.letterSpacing,
       color: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink,
       alignment: readerAppearanceUsesJustify(this.appearanceSnapshot.alignment) ? TextAlign.JUSTIFY : TextAlign.Start,
-      breakAll: false,
+      breakAll: false, bookBody: true,
     };
     if (!this.unicodeProbeVerified) this.nativeTextMeasurement.measure(this.getUIContext(), UNICODE_PROBE, this.unicodeProbeController, style);
     this.measureNativeChapterTitle();
@@ -4048,7 +4051,7 @@ export struct ReadingExperience {
         letterSpacing: this.appearanceSnapshot.letterSpacing,
         color: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink,
         alignment: readerAppearanceUsesJustify(this.appearanceSnapshot.alignment) ? TextAlign.JUSTIFY : TextAlign.Start,
-        breakAll: false,
+        breakAll: false, bookBody: true,
         indentVp: paragraph.isParagraphStart ?
           this.getUIContext().px2vp(this.getUIContext().fp2px(
             readerAppearanceParagraphIndent(this.appearanceSnapshot.fontSize, this.appearanceSnapshot.indent))) : 0,
@@ -5516,7 +5519,7 @@ export struct ReadingExperience {
                 lineHeight: readerAppearanceLineHeight(this.appearanceSnapshot), letterSpacing: this.appearanceSnapshot.letterSpacing,
                 color: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink,
                 alignment: readerAppearanceUsesJustify(this.appearanceSnapshot.alignment) ? TextAlign.JUSTIFY : TextAlign.Start,
-                breakAll: false, indentVp: paragraph.isParagraphStart ?
+                breakAll: false, bookBody: true, indentVp: paragraph.isParagraphStart ?
                   this.getUIContext().px2vp(this.getUIContext().fp2px(
             readerAppearanceParagraphIndent(this.appearanceSnapshot.fontSize, this.appearanceSnapshot.indent))) : 0 } };
             if (!transferred) {
@@ -5859,7 +5862,7 @@ export struct ReadingExperience {
               lineHeight: readerAppearanceLineHeight(this.appearanceSnapshot), letterSpacing: this.appearanceSnapshot.letterSpacing,
               color: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink,
               alignment: readerAppearanceUsesJustify(this.appearanceSnapshot.alignment) ? TextAlign.JUSTIFY : TextAlign.Start,
-              breakAll: false, indentVp: this.getUIContext().px2vp(this.getUIContext().fp2px(
+              breakAll: false, bookBody: true, indentVp: this.getUIContext().px2vp(this.getUIContext().fp2px(
                 readerAppearanceParagraphIndent(this.appearanceSnapshot.fontSize, this.appearanceSnapshot.indent))) },
           };
           const fragments: ReadingSurfacePageFragment[] = [];
@@ -7174,7 +7177,7 @@ export struct ReadingExperience {
 
   private paginationLayoutSignature(): string {
     const layout = this.readingLayout();
-    return 'native-paragraph-v2|' + createReadingPaginationLayoutSignature({
+    return 'native-paragraph-v3|' + createReadingPaginationLayoutSignature({
       deviceForm: layout.widthClass === 'expanded' ? 'tablet' : 'phone',
       viewportWidth: layout.viewportWidth,
       viewportHeight: layout.viewportHeight,
@@ -7427,7 +7430,7 @@ export struct ReadingExperience {
           lineHeight: readerAppearanceLineHeight(renderedAppearance), letterSpacing: renderedAppearance.letterSpacing,
           color: readerAppearanceThemeStyle(renderedAppearance.activeTheme).ink,
           alignment: readerAppearanceUsesJustify(renderedAppearance.alignment) ? TextAlign.JUSTIFY : TextAlign.Start,
-          breakAll: false, indentVp: this.getUIContext().px2vp(this.getUIContext().fp2px(
+          breakAll: false, bookBody: true, indentVp: this.getUIContext().px2vp(this.getUIContext().fp2px(
             readerAppearanceParagraphIndent(renderedAppearance.fontSize, renderedAppearance.indent))) } };
       fragment.nativeParagraphFirst = true;
       fragments.push(fragment);
@@ -8008,7 +8011,8 @@ export struct ReadingExperience {
     const budget = layout.contentBudget;
     return JSON.stringify([layout.widthClass, layout.viewportWidth, layout.viewportHeight,
       layout.topBarTop, layout.topBarHeight, layout.topBarVisible, layout.minimumPanelTop, layout.topBarWidth,
-      layout.dockBottomGap, layout.dockRightGap, layout.dockWidth, layout.fullPanelTop, layout.fullPanelRightGap,
+      layout.dockBottomGap, layout.dockRightGap, layout.dockWidth, layout.fullPanelTop,
+      layout.fullPanelLeftGap, layout.fullPanelRightGap,
       layout.fullPanelWidth, layout.fullPanelHeight, layout.quickPanelHeight, layout.minimumStatus,
       layout.quickMinimumFits, layout.fullMinimumFits,
       budget === undefined ? undefined : [budget.quickContentHeightVp, budget.fullContentHeightVp,

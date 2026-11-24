@@ -7,20 +7,36 @@ async function metadata() {
  const {readerFoundationTokens}=await import('./lib/reader-foundation-control-probe.mjs');
  const {readerAppColor}=await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
  const {readerSourceCategoryLabel}=await import('../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
+ const {httpUrlHostname}=await import('../entry/src/main/ets/platform/network/HttpTransportPolicy.ts');
  const read=name=>readFileSync(new URL('../entry/src/main/ets/'+name,import.meta.url),'utf8');
  const roles=loadReaderTypographyRoles(read('ui/foundation/ReaderTypography.ets')),source=read('features/source/ui/SourceManagementPage.ets');
  const original=roles.TYPE_SOURCE_MANAGEMENT_META;
- for(const scheme of ['day','night'])for(const role of [original,{...original,fontFamily:'ReaderTestRole',fontWeight:500,fontSizeFp:original.fontSizeFp+2,lineHeightFp:original.lineHeightFp+3}]) {
-  const {owner}=createReaderBuilderProbe(source,['sourceInfo'],{...readerFoundationTokens,...roles,TYPE_SOURCE_MANAGEMENT_META:role,readerAppColor,readerSourceCategoryLabel,Alignment:{Center:'center'},VerticalAlign:{Center:'center'},HorizontalAlign:{Start:'start'},TextOverflow:{Ellipsis:'ellipsis'}});
+ for(const scheme of ['day','night'])for(const role of [original,{...original,fontFamily:'ReaderTestRole',fontWeight:500,fontSizeFp:original.fontSizeFp+2,lineHeightFp:original.lineHeightFp+3}])for(const api24 of [false,true]) {
+  const {owner}=createReaderBuilderProbe(source,['sourceInfo','sourceDomain'],{...readerFoundationTokens,...roles,
+   TYPE_SOURCE_MANAGEMENT_META:role,readerAppColor,readerSourceCategoryLabel,httpUrlHostname,
+   Alignment:{Center:'center'},VerticalAlign:{Center:'center'},HorizontalAlign:{Start:'start'},
+   TextOverflow:{Ellipsis:'ellipsis'},EllipsisMode:{CENTER:'center',END:'end'},WordBreak:{BREAK_ALL:'break-all'}});
   Object.assign(owner,{appThemeScheme:scheme,fontScale:()=>2,layoutBudget:()=>({rowForm:'inline'})});
-  const bookSource={sourceId:'s',name:'书源',category:'novel',baseUrl:'https://metadata.test',enabled:true,checkMessage:'检测摘要',checkState:'passed'};owner.sourceInfo(bookSource);
-  for(const text of [readerSourceCategoryLabel('novel'),bookSource.baseUrl,bookSource.checkMessage]) {
-   const node=[...owner.nodes.values()].find(n=>n.type==='Text'&&n.create===text);assert.ok(node,text);
-   assert.deepEqual([node.fontFamily,node.fontWeight,node.fontSize,node.lineHeight],[role.fontFamily,role.fontWeight,role.fontSizeFp,role.lineHeightFp]);assert.equal(node.fontColor,readerAppColor('TOK_CONTROL_INK',scheme));assert.equal(node.maxFontScale,2);
+  owner.metadataEllipsisMode=api24?'center':'end';
+  owner.verificationRowTextId=()=>undefined;
+  const bookSource={sourceId:'s',name:'中英文超长书源 Copyright Free Books 长尾',category:'novel',
+    baseUrl:'https://very-long-books.metadata.test/nested/edition.json',enabled:true};
+  owner.sourceInfo(bookSource);
+  const title=[...owner.nodes.values()].find(n=>n.type==='Text'&&n.create===bookSource.name);
+  const domain=[...owner.nodes.values()].find(n=>n.type==='Text'&&n.create==='very-long-books.metadata.test');
+  assert.ok(title&&domain,'the real source row retains the entire title and domain strings for measurement');
+  assert.deepEqual([domain.fontFamily,domain.fontWeight,domain.fontSize,domain.lineHeight],
+    [role.fontFamily,role.fontWeight,role.fontSizeFp,role.lineHeightFp]);
+  assert.equal(domain.fontColor,readerAppColor('TOK_CONTROL_INK',scheme));
+  assert.equal(domain.wordBreak,'break-all');
+  for (const node of [title,domain]) {
+   assert.equal(node.maxFontScale,2);
    assert.equal(node.maxLines,1);
    assert.equal(node.textOverflow.overflow,'ellipsis');
-   assert.equal(node.wordBreak,text===bookSource.baseUrl?'WordBreak.BREAK_ALL':undefined);
+   assert.equal(node.ellipsisMode,api24?'center':'end');
   }
+  assert.ok([...owner.nodes.values()].some(n=>n.accessibilityText?.includes(bookSource.baseUrl)),
+   'accessibility keeps the full source name and configured URL');
  }
 }
 for(const id of selectContractCases({'metadata-carriers':'Actual category/URL/check-summary SDK Text with role mutation and live day/night'})){await metadata();recordContractCasePass(id);}
