@@ -11,6 +11,7 @@ import {ReaderNavigation} from '../entry/src/main/ets/app/navigation/ReaderNavig
 import {readerAppColor} from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import * as metricsApi from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import * as geometryApi from '../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts';
+import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts';
 import {READER_REDUCED_FADE_MS, READER_SHEET_OPEN_MS, READER_SHEET_CLOSE_MS,
   READER_SHEET_SCRIM_MS} from '../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts';
 const source=p=>readFileSync(new URL('../entry/src/main/ets/'+p,import.meta.url),'utf8');
@@ -21,7 +22,8 @@ const pageSource=source('features/bookshelf/ui/BookshelfPage.ets');
 const {readerActionIcon}=pureModuleProbe(source('ui/foundation/ReaderActionIconResources.ets'),
   'ReaderActionIconResources.ets',{$r:value=>value},['readerActionIcon']);
 const names=['presentBookActionSheet','isCurrentBookActionSheet','dismissBookActionSheet','performBookAction','finishBookActionSheet',
-  'claimBookActionChrome','bookActionSheetSpec','onBooksChanged','aboutToDisappear','cancelBookActionFocus','bookActionFocusRevision','bookActionFocusKey'];
+  'claimBookActionChrome','bookActionSheetSpec','onBooksChanged','aboutToDisappear','cancelBookActionFocus','bookActionFocusRevision','bookActionFocusKey',
+  'currentVisibleBook','projectedBooks','isShelfPresentationCurrent'];
 const book=(sourceId,bookId)=>({sourceId,bookId,title:bookId,author:'author',kind:'novel',currentChapterTitle:'chapter'});
 const A=book('a','same'),B=book('b','same');
 function fixture(definition=pageSource,{width=390,left=0,right=0,reduceMotion=false}={}){
@@ -49,7 +51,7 @@ function fixture(definition=pageSource,{width=390,left=0,right=0,reduceMotion=fa
     'actionSheetChromeId','bookActionSheetVisible','actionSheetFocusTarget','pendingBookAction','mounted','appThemeScheme',...names,
     'readerWindowMetricsRevision','paneWidth','mainViewportRevision','bookActionWidth','resolveContentFrame','effectiveViewportWidth',
     'onShelfPresentationChanged','bookshelfTabContent','bookActionSheetHost','bookActionSheetPresentation'],
-    {...p.deps,...metricsApi,...geometryApi,readerAppColor,readerMainViewport:()=>({width}),
+    {...p.deps,...metricsApi,...geometryApi,readerAppColor,ShelfBookPresentation,readerMainViewport:()=>({width}),
       ReaderWindowCoordinator:{metrics:()=>metrics,requestAppChrome() {}}},
     {...p.hooks,initialParams:{books:[A,B],navigationGeneration:7,reduceMotion}});
   const {owner}=probe;
@@ -225,8 +227,8 @@ for(const retirement of ['current','runtime','route','mount'])for(const actionIn
 // Restore only the original guards inside an isolated SDK compilation. The
 // genuine State/Prop runtime and native registered Builder remain unchanged.
 const originalGuard=pageSource
-  .replace('book !== undefined && this.actionBook !== undefined && this.actionBook.sourceId === book.sourceId && this.actionBook.bookId === book.bookId && this.books.some(',
-    'book !== undefined && this.actionBook === book && this.books.some(')
+  .replace(/book !== undefined && this\.actionBook !== undefined && this\.actionBook\.sourceId === book\.sourceId &&\s*this\.actionBook\.bookId === book\.bookId && this\.currentVisibleBook\(book\) !== undefined;/,
+    'book !== undefined && this.actionBook === book && this.currentVisibleBook(book) !== undefined;')
   .replace('book === undefined || this.actionBook === undefined || this.actionBook.sourceId !== book.sourceId || this.actionBook.bookId !== book.bookId) return;',
     'book === undefined || this.actionBook !== book) return;');
 assert.notEqual(originalGuard,pageSource);

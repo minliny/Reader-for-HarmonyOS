@@ -47,6 +47,7 @@ export interface ReaderDirectoryNavigationReady {
   /** Manga presentation only; other directory owners retain their alignment. */
   currentDisplayInset?: number;
   currentDisplaySmooth?: boolean;
+  currentDisplayCentered?: boolean;
   /** A newly admitted filter result returns the fixed full manga catalog to its start. */
   startAtCatalogTop?: boolean;
 }

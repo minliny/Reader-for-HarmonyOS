@@ -577,7 +577,7 @@ export struct ReaderDirectoryNavigationList {
     }
     if (this.view.locateCurrent && this.view.currentVisibleIndex !== undefined)
       return { viewId: this.view.viewId, index: this.view.currentVisibleIndex,
-        rowFraction: 0, align: this.mangaDisplay ? ScrollAlign.START : ScrollAlign.CENTER,
+        rowFraction: 0, align: this.mangaDisplay && this.view.currentDisplayCentered !== true ? ScrollAlign.START : ScrollAlign.CENTER,
         currentInset: this.mangaDisplay ? (this.view.currentDisplayInset ?? 12) : undefined,
         smooth: this.mangaDisplay && this.view.currentDisplaySmooth === true };
     const anchor = readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, this.bookId));

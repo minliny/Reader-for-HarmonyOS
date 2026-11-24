@@ -27,10 +27,12 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
   applyNormalAttribute(instance: CommonAttribute): void {
     if (this.id === 'source-switch-drawer') {
       const spec = resolveDrawerSpec(this.id);
-      instance.width(this.width).height(this.height).constraintSize({ maxWidth: spec.maxWidth })
+      instance.width(this.width).height(this.height)
         .backgroundEffect({ radius: READER_HEAVY_GLASS_BLUR_VP,
           color: readerAppColor(spec.surfaceRole, this.scheme) })
-        .borderRadius({ topLeft: spec.cornerRadius, topRight: spec.cornerRadius }).clip(true);
+        .border({ width: { top: 1 }, color: readerAppColor(spec.lineRole, this.scheme) })
+        .borderRadius(this.placement === 'side' ? 22 : { topLeft: spec.cornerRadius, topRight: spec.cornerRadius })
+        .shadow(readerSurfaceElevation('sheet', this.scheme)).clip(true);
       return;
     }
     if (this.id === 'reader-action-sheet') {

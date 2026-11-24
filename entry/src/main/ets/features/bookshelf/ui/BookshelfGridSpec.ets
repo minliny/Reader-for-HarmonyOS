@@ -8,13 +8,14 @@ import type { UIContext } from '@ohos.arkui.UIContext';
 import { prepareReaderFontFamily, readerFontFamilyReady } from '../../../ui/foundation/ReaderFonts';
 import { TOK_SPACE_XS } from '../../../ui/foundation/ReaderTokens';
 
-const GRID_COLUMNS = 3;
 const MAX_COLUMN_GAP = 30;
 const MIN_COLUMN_GAP = TOK_SPACE_XS;
 const PHONE_CARD_MAX_WIDTH = 96.656;
-const PHONE_COVER_RATIO = 145.443 / PHONE_CARD_MAX_WIDTH;
 const TABLET_CARD_MAX_WIDTH = 186.672;
-const TABLET_COVER_RATIO = 280 / TABLET_CARD_MAX_WIDTH;
+const COVER_RATIO = 4.1 / 3;
+export const BOOKSHELF_LIST_COLUMN_GAP = 10;
+export const BOOKSHELF_LIST_COVER_WIDTH = 54;
+export const BOOKSHELF_LIST_COVER_HEIGHT = 76;
 export const BOOKSHELF_GRID_TEXT_GAP = 6;
 /** Runtime title line count. Figma `Library/BookCard` `493:196` exposes
  * TitleLines=1/2; product decision 2026-11-20 enables the two-line variant
@@ -51,20 +52,28 @@ export interface BookshelfGridFrame {
   columnGap: number;
 }
 
-/** One geometry owner for the shelf grid and multi-select grid. Both pages
- *  keep three columns; card width is capped by width class and the column gap
- *  absorbs the remaining content width. */
+export function bookshelfColumnCount(expanded: boolean, list: boolean = false): number {
+  return list ? (expanded ? 2 : 1) : (expanded ? 4 : 3);
+}
+
+export function bookshelfListCardWidth(contentWidth: number, expanded: boolean): number {
+  const columns = bookshelfColumnCount(expanded, true);
+  return Math.max(0, (contentWidth - BOOKSHELF_LIST_COLUMN_GAP * (columns - 1)) / columns);
+}
+
+/** The shelf and multi-select share the width class and the cover grid. */
 export function bookshelfGridFrame(contentWidth: number, expanded: boolean, fontScale: number = 1,
   hasProgress: boolean = false, titleLines: number = 1): BookshelfGridFrame {
   const usable = Math.max(0, contentWidth);
+  const columns = bookshelfColumnCount(expanded);
   const cardMaxWidth = expanded ? TABLET_CARD_MAX_WIDTH : PHONE_CARD_MAX_WIDTH;
   const cardWidth = Math.min(cardMaxWidth,
-    Math.max(0, (usable - MIN_COLUMN_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS));
+    Math.max(0, (usable - MIN_COLUMN_GAP * (columns - 1)) / columns));
   const columnGap = Math.min(MAX_COLUMN_GAP,
-    Math.max(MIN_COLUMN_GAP, (usable - cardWidth * GRID_COLUMNS) / (GRID_COLUMNS - 1)));
-  const coverHeight = cardWidth * (expanded ? TABLET_COVER_RATIO : PHONE_COVER_RATIO);
+    Math.max(MIN_COLUMN_GAP, (usable - cardWidth * columns) / (columns - 1)));
+  const coverHeight = bookshelfCoverHeight(cardWidth, expanded);
   return {
-    rowWidth: cardWidth * GRID_COLUMNS + columnGap * (GRID_COLUMNS - 1),
+    rowWidth: cardWidth * columns + columnGap * (columns - 1),
     cardWidth,
     coverHeight,
     cardHeight: coverHeight + bookshelfGridTextFrame(fontScale, hasProgress, titleLines).height,
@@ -72,8 +81,8 @@ export function bookshelfGridFrame(contentWidth: number, expanded: boolean, font
   };
 }
 
-export function bookshelfCoverHeight(cardWidth: number, expanded: boolean): number {
-  return cardWidth * (expanded ? TABLET_COVER_RATIO : PHONE_COVER_RATIO);
+export function bookshelfCoverHeight(cardWidth: number, _expanded: boolean): number {
+  return cardWidth * COVER_RATIO;
 }
 
 export interface BookshelfListTextFrame {

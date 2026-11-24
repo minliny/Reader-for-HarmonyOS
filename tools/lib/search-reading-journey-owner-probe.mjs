@@ -78,7 +78,7 @@ export function searchReadingJourneyFixture({ runtime, ReadingHost, route = 'sea
     shelfReceiptRetired: { get: () => controls.retired } });
   const library = indexLibrary(receiver);
   const searchHost = library.host;
-  searchHost.orchestrator = { visibilityChanged: () => onEvent('search.visibility'),
+  searchHost.orchestrator = { visibilityChanged: () => onEvent('search.visibility'), observeEntrySourceRead: () => undefined,
     resume: () => onEvent('search.resume'), close: () => onEvent('search.close'),
     open: () => onEvent('UNEXPECTED.search.open'), search: () => onEvent('UNEXPECTED.search.search'),
     ...onSearch };

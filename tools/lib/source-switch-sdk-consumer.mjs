@@ -4,6 +4,8 @@ import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {resolveEtsLoaderRoot,virtualFilePath} from './tool-environment.mjs';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
+import {compileTailConsumer} from './foundation-tail-consumer-probe.mjs';
+import {readerEditingSdk} from './reader-editing-sdk-probe.mjs';
 import {searchListLazyRequests} from './reader-content-search-list-probe.mjs';
 import {sourceSwitchRowSdk} from './source-switch-row-sdk-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './bounded-surface-sdk-probe.mjs';
@@ -25,6 +27,8 @@ import {SourceSwitchCompletionPresentation} from '../../entry/src/main/ets/featu
 import * as appearanceRender from '../../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts';
 import * as sourceNames from '../../entry/src/main/ets/features/bookshelf/application/BookshelfSourceNameProjection.ts';
 import * as providerFamily from '../../entry/src/main/ets/features/source/application/SourceSwitchProviderFamily.ts';
+import * as searchGeometry from '../../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts';
+import {readerIsExpandedWidth} from '../../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts';
 export {novelPresentation};
 export function sourceSwitchRecoveryAction(p, owner, label) {
  const notice = p.walk(owner).find(child => child instanceof p.deps.ReaderRecoveryNotice && child.actionLabel === label);
@@ -91,19 +95,27 @@ export function sourceSwitchLiveSdk(p,extra={},sources={}) {
   'ReaderKeyboardGeometry.ts', metricsApi, ['readerKeyboardHostBottom']);
  const motionPolicy=pureModuleProbe(read('ui/foundation/ReaderMotionPolicy.ets'),'ReaderMotionPolicy.ets',
   {...motion,collapseMotionDurationMs},['readerMotionAnimateParam','readerMotionReducedFadeParam']);
+ const {readerActionIcon}=pureModuleProbe(read('ui/foundation/ReaderActionIconResources.ets'),
+   'ReaderActionIconResources.ets',{$r:name=>name},['readerActionIcon']);
  const deps={...p.deps,SynchedPropertyNesedObjectPU:p.properties.sdk.SynchedPropertyNestedObjectPU,...horizontal,...metricsApi,readerKeyboardHostBottom,...scrollLayout,...novelPresentation,...sourceVisual,...appearanceRender,...sourceNames,...providerFamily,...gatewayExports,...motion,...motionPolicy,SourceSwitchCompletionPresentation,sourceSwitchSourceCount,SourceSwitchLayoutFrame,SourceSwitchCandidateRow,SourceSwitchCandidateDataSource,LazyForEach,ColorMetrics:sourceSwitchColorMetricsSdk(),
-   curves,
+   curves,readerIsExpandedWidth,readerActionIcon,
    ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}},
    Scroller:class Scroller{},ScrollAlign:{START:'start'},TouchType:{Down:'down',Move:'move',Up:'up',Cancel:'cancel'},
    Curve,ImageFit:{Cover:'cover',Fill:'fill'},ButtonType:{Normal:'normal'},
    GradientDirection:{Bottom:'GradientDirection.Bottom'},ImageInterpolation:{High:'ImageInterpolation.High'},ImageRepeat:{XY:'ImageRepeat.XY'},
-   TransitionEdge:{BOTTOM:'bottom'},TransitionEffect:{IDENTITY:effect('identity'),OPACITY:effect('opacity'),
+   TransitionEdge:{BOTTOM:'bottom',END:'end'},TransitionEffect:{IDENTITY:effect('identity'),OPACITY:effect('opacity'),
     move:edge=>effect('move',edge),asymmetric:(appear,disappear)=>effect('asymmetric',{appear,disappear})},
    ...sourceSwitchFontSdk(),uiContext:{getFont:()=>({}),animateTo(_options,action){action();},postFrameCallback(){},
     createAnimator(_options){return{onFrame(){},play(){},cancel(){}};}},...extra};
  p.hooks.lifecycleChildren=true;
  p.hooks.childSources.SourceSwitchPanel=windowSource;
  p.hooks.childSources.SourceSwitchNovelRow=windowSource;
+ const fieldSource=read('ui/controls/ReaderSearchField.ets');
+ p.hooks.childSources.ReaderSearchField=fieldSource;
+ const fieldAdapters=pureModuleProbe(fieldSource.slice(0,fieldSource.indexOf('@Component')),
+   'ReaderSearchFieldAdapters.ets',{FrameCallback:class {}},['ReaderSearchInputTarget','ReaderSearchFocusFrame']);
+ deps.ReaderSearchField=compileTailConsumer(fieldSource,boundedMembers(fieldSource),
+   {...deps,...readerEditingSdk(),...searchGeometry,...fieldAdapters,DEBUG:false,TextInputController:class {}},p.hooks).Component;
  for(const [name,path] of [['NoCoverCover','ui/patterns/NoCoverCover.ets'],['SearchSpinner','features/search/ui/SearchSpinner.ets'],['SourceSwitchSpinner','features/source/ui/SourceSwitchSpinner.ets'],['SourceSwitchProgress','features/source/ui/SourceSwitchProgress.ets'],['ReaderPaperBackground','features/reading/ui/ReaderPaperBackground.ets'],['SourceSwitchCompletionOverlay','features/source/ui/SourceSwitchCompletionOverlay.ets']]){
    p.hooks.childSources[name]=sources[name]??read(path);deps[name]=createReaderBuilderProbe(p.hooks.childSources[name],boundedMembers(p.hooks.childSources[name]),deps,p.hooks).Component;
  }

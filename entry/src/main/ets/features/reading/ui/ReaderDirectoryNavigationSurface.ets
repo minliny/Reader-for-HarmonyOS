@@ -401,8 +401,8 @@ export struct ReaderDirectoryNavigationSurface {
     const trace = pendingTrace ?? new ReaderDirectoryTrace(reason);
     this.openingGeneration = generation;
     this.loadPending = true;
-    const query = this.query, descending = !this.ascending;
     const explicitLocateCurrent = this.locateCurrentPending;
+    const query = explicitLocateCurrent ? '' : this.query, descending = !this.ascending;
     const catalogFilter = this.mangaFullCatalog ? JSON.stringify([query.trim(), descending]) : undefined;
     // Full opens with the actual search rail and the first chapter. A Quick
     // viewport anchor describes a different list and must not hide this rail.
@@ -510,6 +510,7 @@ export struct ReaderDirectoryNavigationSurface {
         if (this.mangaDisplay) {
           ready.currentDisplayInset = explicitLocateCurrent ? 12 : this.mangaCurrentOpenInset;
           ready.currentDisplaySmooth = explicitLocateCurrent;
+          ready.currentDisplayCentered = explicitLocateCurrent && this.mangaFullCatalog;
         }
         this.acceptedCatalogFilter = catalogFilter;
         this.view = ready;

@@ -612,6 +612,16 @@ export struct ReaderLibrarySearchSurface {
       if (this.acceptsField(owner, field)) this.model.dispatchText(owner, value);
     };
   }
+  private clearAction(owner: number, field: string): () => void {
+    const identity = this.identity;
+    const generation = this.navigationGeneration;
+    const mounting = this.mounting;
+    return (): void => {
+      if (this.acceptsField(owner, field) && !this.model.panelOwnsInput && this.mode === 'results') {
+        this.onInputRequested(identity, generation, mounting);
+      }
+    };
+  }
   private submitAction(owner: number, field: string): () => void {
     return (): void => {
       if (!this.acceptsField(owner, field) || this.model.panelOwnsInput) return;
@@ -835,7 +845,8 @@ export struct ReaderLibrarySearchSurface {
             ForEach([this.fieldIdentity()], (key: string) => {
               // The closing track keeps the field mounted after search mode ends.
               ReaderSearchField({ editingHost: this.editingHost,
-                editingCurrent: (): boolean => this.acceptsField(this.model.currentOwner(), key), variant: 'bookPanel', mode: 'submit', focusOnAppear: false,
+                editingCurrent: (): boolean => this.acceptsField(this.model.currentOwner(), key) && !this.model.panelOwnsInput,
+                variant: 'bookPanel', mode: 'submit', focusOnAppear: false,
                 bookKeyboardOnFocus: this.model.fieldKeyboardOnFocus === true,
                 bookPanelFrameId: 'reader-bookshelf-search-field',
                 observeBookEditor: this.model.verification === undefined ? undefined :
@@ -844,6 +855,7 @@ export struct ReaderLibrarySearchSurface {
                 expandedLayout: this.expandedLayout, clearable: true, submitEnabled: this.model.fieldSubmitEnabled,
                 bookPanelClearId: this.model.verification?.enabled() === true ? 'reader-book-search-clear' : '',
                 onTextChange: this.textAction(this.model.currentOwner(), key),
+                onBookClear: this.clearAction(this.model.currentOwner(), key),
                 onSubmit: this.submitAction(this.model.currentOwner(), key),
                 onFocusChanged: this.focusAction(this.model.currentOwner(), key) })
                 .width(this.fieldWidth())

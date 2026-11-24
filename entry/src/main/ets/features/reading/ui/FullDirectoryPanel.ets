@@ -30,6 +30,7 @@ import {
 import { registerReaderFonts, readerFontFamilyReady } from '../../../ui/foundation/ReaderFonts';
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
 import { ReaderDirectoryToolbar } from './ReaderDirectoryToolbar';
+import { ReaderDirectoryQuickActions, readerDirectoryQuickActionsHeight } from './ReaderDirectoryQuickActions';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
@@ -138,6 +139,7 @@ export struct FullDirectoryPanel {
   // The reading control owns the outer sheet, handle and Full header. This
   // mode only renders one persistent directory/bookmark content instance.
   @Prop embeddedInControl: boolean = false;
+  @Prop standaloneCatalog: boolean = false;
   @Prop @Watch('onMotionProgressChanged') motionProgress: number = 1;
   @Prop initialTab: string = 'directory';
   // The control keeps this panel mounted across quick/full transitions. A
@@ -159,6 +161,7 @@ export struct FullDirectoryPanel {
   @State private projectedEntries: LocalReadingTocEntry[] = [];
   @State private navigationInteracted: boolean = false;
   @State private navigationActive: boolean = false;
+  @State private locateCurrentRevision: number = 0;
   @State private projectedBookmarks: ReaderBookmarkRowModel[] = [];
   @State private bookmarkTabLoading: boolean = false;
   // Optional stable book identity supplied by the owner. Undefined keeps the
@@ -234,6 +237,7 @@ export struct FullDirectoryPanel {
   onSelectNavigationTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof) => void =
     (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: ReaderDirectoryTargetProof): void => {};
   onDownloadChapter: (index: number) => void = (_index: number): void => {};
+  onOpenCacheManagement: () => void = (): void => {};
   // The marker is chapter-level while Core identities are bookmark-level.
   // Forward every existing identity represented by the marker so the owner
   // can perform explicit deletes and reload the projection without guessing.
@@ -328,7 +332,10 @@ export struct FullDirectoryPanel {
             this.chapterList();
             if (this.projectedEntries.length === 0 && !this.navigationActive) this.standaloneCatalogState();
           }.width(this.innerWidth()).height(this.chapterListHeight());
-          if (!this.standaloneShort()) this.statusFooter();
+          if (!this.standaloneShort()) {
+            if (this.standaloneCatalog) this.catalogFooter();
+            else this.statusFooter();
+          }
         }
       }.width(this.innerWidth()).height(this.standaloneAvailableHeight()).margin({ left: 13, top: 6 });
     }.width(this.panelWidth()).height(this.panelHeight())
@@ -347,6 +354,7 @@ export struct FullDirectoryPanel {
   }
 
   private standaloneFooterHeight(): number {
+    if (this.standaloneCatalog) return readerDirectoryQuickActionsHeight(this.fontScale(), this.currentPosition() !== '—');
     return readerScaledControlHeight(48, 16, this.fontScale());
   }
 
@@ -660,15 +668,21 @@ export struct FullDirectoryPanel {
     Column({ space: 0 }) {
       ReaderDirectoryToolbar({ editingHost: this.editingHost,
         editingCurrent: (): boolean => this.panelInputCurrent(),
-        variant: 'full-directory', text: this.searchDraft, placeholder: this.searchPlaceholder(),
+        variant: this.catalogToolbar() ? 'standalone-catalog' : 'full-directory',
+        text: this.searchDraft, placeholder: this.searchPlaceholder(),
         ascending: this.ascending, showChapterTools: this.activeTab === 'directory',
         availableWidthVp: this.innerWidth(), inputMinimumWidthVp: this.toolbarInputMinimumWidth(),
         naturalFieldHeightVp: this.queryHeight(), naturalToolbarHeightVp: this.searchControlsHeight() - (this.embeddedInControl ? 0 : 1),
-        onTextChange: (value: string): void => { if (this.panelInputCurrent()) this.searchDraft = value; },
+        onTextChange: (value: string): void => {
+          if (!this.panelInputCurrent()) return;
+          this.searchDraft = value;
+          if (this.catalogToolbar()) this.applySearch(value);
+        },
         onSearch: (): void => this.handleControl('search'),
         onTop: (): void => this.handleControl('top'),
         onBottom: (): void => this.handleControl('bottom'),
         onToggleSort: (): void => this.handleControl('sort'),
+        onOpenCacheManagement: (): void => { if (this.panelInputCurrent()) this.onOpenCacheManagement(); },
       });
       if (!this.embeddedInControl) {
         Text('')
@@ -692,6 +706,7 @@ export struct FullDirectoryPanel {
             inputCurrent: (): boolean => this.panelInputCurrent(),
             sourceId: this.bookmarkIdentity.sourceId, bookId: this.bookmarkIdentity.bookId, query: this.searchQuery, ascending: this.ascending,
             currentChapterIndex: this.currentChapterIndex, openRevision: this.listSessionKey, prepareLocalTxt: this.prepareLocalTxt,
+            locateCurrentRevision: this.standaloneCatalog ? this.locateCurrentRevision : 0,
             refreshRevision: this.directoryRulesRevision,
             showLoadStatus: this.projectedEntries.length > 0 || this.navigationActive,
             interacted: this.navigationInteracted, rowHeight: this.directoryListRowHeight(),
@@ -715,6 +730,7 @@ export struct FullDirectoryPanel {
             onTreeStateChange: (active: boolean): void => {
               this.navigationActive = active;
               if (active) this.initialListPositionReady = true;
+              else if (this.standaloneCatalog) this.scheduleOpenPositioning();
             },
             onDeleteBookmarks: (times: number[]): void => { if (this.bookmarkActionsEnabled) this.onDeleteBookmarks(times); },
             onDownloadChapter: (chapterIndex: number): void => this.onDownloadChapter(chapterIndex),
@@ -884,6 +900,30 @@ export struct FullDirectoryPanel {
   }
 
   @Builder
+  private catalogFooter() {
+    Column() {
+      ReaderDirectoryQuickActions({
+        title: this.currentTitle(), position: this.currentPosition() === '—' ? '' : this.currentPosition(),
+        scheme: this.appThemeScheme, fontScale: this.fontScale(),
+        locateEnabled: this.panelInputCurrent() && this.currentEntry() !== undefined,
+        edgeEnabled: this.panelInputCurrent() && (this.projectedEntries.length > 0 || this.navigationActive),
+        onLocateCurrent: (): void => this.locateCurrent(),
+        onTop: (): void => this.handleControl('top'),
+        onBottom: (): void => this.handleControl('bottom'),
+      }).width(Math.min(540, this.innerWidth()));
+    }.width('100%').height(this.standaloneFooterHeight()).alignItems(HorizontalAlign.Center);
+  }
+
+  private locateCurrent(): void {
+    if (!this.panelInputCurrent() || this.activeTab !== 'directory' || this.currentEntry() === undefined) return;
+    this.searchDraft = '';
+    this.searchQuery = '';
+    this.rebuildProjection('directory', this.ascending, '');
+    this.locateCurrentRevision += 1;
+    this.beginListPositioning('directory', false);
+  }
+
+  @Builder
   private statusFooter() {
     Column({ space: 0 }) {
       Text('')
@@ -927,8 +967,9 @@ export struct FullDirectoryPanel {
     .height(this.standaloneFooterHeight());
   }
 
-  private applySearch(): void {
-    const nextQuery = this.searchDraft.trim();
+  private applySearch(value: string = this.searchDraft): void {
+    const nextQuery = value.trim();
+    if (this.catalogToolbar() && nextQuery === this.searchQuery) return;
     this.searchQuery = nextQuery;
     this.rebuildProjection(this.activeTab, this.ascending, nextQuery);
     this.scheduleProjectionTopScroll();
@@ -1462,7 +1503,8 @@ export struct FullDirectoryPanel {
     return readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
   private panelHeaderHeight(): number { return readerScaledControlHeight(30, 20, this.fontScale()); }
-  private queryHeight(): number { return readerScaledControlHeight(32, 24, this.fontScale()); }
+  private catalogToolbar(): boolean { return this.standaloneCatalog && !this.embeddedInControl && this.activeTab === 'directory'; }
+  private queryHeight(): number { return readerScaledControlHeight(this.catalogToolbar() ? 36 : 32, 24, this.fontScale()); }
   private tabStripHeight(): number { return this.tabHeight() + 6; }
   private toolbarInputMinimumWidth(): number {
     const scale = this.fontScale();
@@ -1481,8 +1523,9 @@ export struct FullDirectoryPanel {
     return width;
   }
   private searchControlsHeight(): number {
+    const catalog = this.catalogToolbar();
     return readerDirectoryToolbarBudget(this.innerWidth(), this.activeTab === 'directory',
-      this.queryHeight(), this.toolbarInputMinimumWidth()).height + (this.embeddedInControl ? 0 : 1);
+      this.queryHeight(), this.toolbarInputMinimumWidth() + (catalog ? 44 : 0), 0, catalog).height + (this.embeddedInControl ? 0 : 1);
   }
   private embeddedToolbarGrowth(): number {
     return Math.max(0, this.searchControlsHeight() - 52) * this.controlProgress();

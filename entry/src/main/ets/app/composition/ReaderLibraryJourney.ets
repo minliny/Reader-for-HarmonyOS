@@ -179,10 +179,10 @@ export class ReaderLibraryJourney {
   openShelfGroup(book: ShelfBook, focusTarget?: string): void {
     const scope = this.ports.scope(), owner = scope.owner, mounting = scope.mounting;
     const generation = this.navigation.snapshot().generation;
-    if (owner === undefined) return;
+    if (owner === undefined || !this.ports.read().containsVisibleBook(book)) return;
     const identity = JSON.stringify([scope.instance, mounting, generation, 'bookshelfManagement', 'page']);
     this.ports.group().open(owner, book, identity,
-      (): boolean => this.isCurrentBookshelf(generation, owner, mounting),
+      (): boolean => this.isCurrentBookshelf(generation, owner, mounting) && this.ports.read().containsVisibleBook(book),
       (): void => { this.ports.read().invalidate(); this.ports.refreshShelf(); },
       this.ports.feedback, focusTarget, this.ports.bookshelfInputAllowed);
   }

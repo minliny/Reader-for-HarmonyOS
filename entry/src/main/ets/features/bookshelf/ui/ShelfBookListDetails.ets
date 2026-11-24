@@ -39,25 +39,31 @@ export struct ShelfBookListDetails {
           .fontSize(TYPE_SHELF_LIST_AUTHOR.fontSizeFp).lineHeight(TYPE_SHELF_LIST_AUTHOR.lineHeightFp as number).letterSpacing(TYPE_SHELF_LIST_AUTHOR.letterSpacingFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
         .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-      Text(this.positionLabel()).width('100%').fontFamily(TYPE_SHELF_LIST_CHAPTER.fontFamily).fontWeight(TYPE_SHELF_LIST_CHAPTER.fontWeight)
-          .fontSize(TYPE_SHELF_LIST_CHAPTER.fontSizeFp).lineHeight(TYPE_SHELF_LIST_CHAPTER.lineHeightFp as number).letterSpacing(TYPE_SHELF_LIST_CHAPTER.letterSpacingFp as number)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       Flex({ direction: this.textFrame.stackStatus ? FlexDirection.Column : FlexDirection.Row }) {
-        Text(`最新：${ShelfBookPresentation.latestChapter(this.book)}`).layoutWeight(this.textFrame.stackStatus ? 0 : 1)
+        Text(`读至：${this.positionLabel()}`).layoutWeight(this.textFrame.stackStatus ? 0 : 1)
           .width(this.textFrame.stackStatus ? '100%' : undefined)
           .margin({ right: this.textFrame.stackStatus ? 0 : 8, bottom: this.textFrame.stackStatus ? 2 : 0 })
           .constraintSize({ minWidth: 0 }).fontFamily(TYPE_SHELF_LIST_CHAPTER.fontFamily).fontWeight(TYPE_SHELF_LIST_CHAPTER.fontWeight)
           .fontSize(TYPE_SHELF_LIST_CHAPTER.fontSizeFp).lineHeight(TYPE_SHELF_LIST_CHAPTER.lineHeightFp as number).letterSpacing(TYPE_SHELF_LIST_CHAPTER.letterSpacingFp as number)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         Text(ShelfBookPresentation.progress(this.book)).width(this.textFrame.stackStatus ? '100%' : undefined)
           .fontFamily(TYPE_SHELF_LIST_STATUS.fontFamily).fontWeight(TYPE_SHELF_LIST_STATUS.fontWeight)
-          .fontSize(TYPE_SHELF_LIST_STATUS.fontSizeFp).lineHeight(TYPE_SHELF_LIST_STATUS.lineHeightFp as number).letterSpacing(TYPE_SHELF_LIST_STATUS.letterSpacingFp as number).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(this.textFrame.stackStatus ? undefined : 1).wordBreak(WordBreak.BREAK_WORD).flexShrink(0);
+          .fontSize(TYPE_SHELF_LIST_STATUS.fontSizeFp).lineHeight(TYPE_SHELF_LIST_STATUS.lineHeightFp as number)
+          .letterSpacing(TYPE_SHELF_LIST_STATUS.letterSpacingFp as number)
+          .fontColor(readerAppColor('TOK_ACCENT', this.appThemeScheme))
+          .maxLines(this.textFrame.stackStatus ? undefined : 1).textOverflow({ overflow: TextOverflow.Ellipsis })
+          .wordBreak(WordBreak.BREAK_WORD).flexShrink(0);
       }.width('100%').height(this.textFrame.readingGroupHeight);
+      Text(`最新：${ShelfBookPresentation.latestChapter(this.book)}`).width('100%')
+        .fontFamily(TYPE_SHELF_LIST_CHAPTER.fontFamily).fontWeight(TYPE_SHELF_LIST_CHAPTER.fontWeight)
+        .fontSize(TYPE_SHELF_LIST_CHAPTER.fontSizeFp).lineHeight(TYPE_SHELF_LIST_CHAPTER.lineHeightFp as number)
+        .letterSpacing(TYPE_SHELF_LIST_CHAPTER.letterSpacingFp as number)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       Progress({ value: ShelfBookPresentation.progressPercent(this.book), total: 100, type: ProgressType.Linear })
-        .width('100%').height(3).color(readerAppColor('TOK_GREEN', this.appThemeScheme))
-        .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
+        .width('100%').height(3).color(readerAppColor('TOK_ACCENT', this.appThemeScheme))
+        .backgroundColor(readerAppColor('TOK_FIELD_SURFACE', this.appThemeScheme))
         .style({ strokeWidth: 3, strokeRadius: 2, enableSmoothEffect: false })
         .hitTestBehavior(HitTestMode.None);
     }.width('100%').height(this.textFrame.height).alignItems(HorizontalAlign.Start);
@@ -71,9 +77,9 @@ export struct ShelfBookListDetails {
         top: trailing && this.textFrame.metadataColumns === 1 ? 2 : 0 }).padding({ left: 4, right: 4 })
       .fontFamily(TYPE_SHELF_METADATA_TAG.fontFamily).fontWeight(TYPE_SHELF_METADATA_TAG.fontWeight)
           .fontSize(TYPE_SHELF_METADATA_TAG.fontSizeFp).lineHeight(TYPE_SHELF_METADATA_TAG.lineHeightFp as number).letterSpacing(TYPE_SHELF_METADATA_TAG.letterSpacingFp as number).textAlign(TextAlign.Center)
-      .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: 0.5, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(4);
+      .fontColor(readerAppColor(trailing ? 'TOK_GREEN' : 'TOK_MUTED', this.appThemeScheme))
+      .backgroundColor(readerAppColor(trailing ? 'TOK_PRIMARY_SOFT' : 'TOK_FIELD_SURFACE', this.appThemeScheme))
+      .borderRadius(5);
   }
 
   private positionLabel(): string {

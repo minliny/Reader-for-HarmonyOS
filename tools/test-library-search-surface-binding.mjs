@@ -1,6 +1,7 @@
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const selected = selectContractCases({
+  'clear-results-input': 'The shared editor clears the original draft, retires results, and refocuses the same input only while its owner lives.',
   'native-targets': { description: 'Current bookPanel/bar/history native44 targets, paid Common/lane/heading/projection and SearchPage query/header ownership. Old36/32/30 recipes rejected.', resources: [] },
   'measured-shadow': {
     description: 'Actual SDK header owns one rounded Native material/shadow and measured fractional-density radius; stale or missing bindings and a second phone painter are rejected',
@@ -31,7 +32,53 @@ for (const id of selected) {
   const componentMap = require(`${root}/lib/component_map.js`);
   const parse = source => ts.createSourceFile(virtualFilePath('SearchSurfaceBindingProbe.ets'), source,
     ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
-  if (id === 'native-targets') {
+  if (id === 'clear-results-input') {
+    const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+    const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+    const base = new URL('../entry/src/main/ets/', import.meta.url);
+    const file = relative => new URL(relative, base);
+    const frames = [], receipts = [];
+    const modelFile = file('features/search/presentation/ReaderLibrarySearchModel.ets');
+    const { ReaderLibrarySearchModel } = pureModuleProbe(readFileSync(modelFile,'utf8'),
+      'ReaderLibrarySearchModel.ets', { Observed: type => type }, ['ReaderLibrarySearchModel']);
+    const model = new ReaderLibrarySearchModel();
+    model.claim(4); model.activate(4);
+    model.onText = text => receipts.push(['draft',text]);
+    const Presentation = selectedProductionMethods(file('features/search/presentation/LibrarySearchPresentation.ets'),
+      'LibrarySearchPresentation', ['edit']);
+    const presentation = Object.assign(new Presentation(), { mode:'results',
+      host:{ stop:()=>receipts.push(['stop']), refreshHistory:()=>receipts.push(['history']) } });
+    const Surface = selectedProductionMethods(file('features/search/ui/ReaderLibrarySearchSurface.ets'),
+      'ReaderLibrarySearchSurface', ['acceptsField','clearAction','textAction']);
+    const surface = Object.assign(new Surface(), { model, mounted:true, identity:1, navigationGeneration:2, mounting:3,
+      fieldIdentity:()=> 'one-editor', onInputRequested:(identity,generation,mounting)=>{
+        assert.deepEqual([identity,generation,mounting],[1,2,3]);
+        presentation.edit();
+      } });
+    Object.defineProperty(surface,'mode',{get:()=>presentation.mode});
+    const Field = selectedProductionMethods(file('ui/controls/ReaderSearchField.ets'), 'ReaderSearchField',
+      ['clearBookInput','changeText','focusBookInput'],
+      { ReaderSearchFocusFrame: class { constructor(action) { this.action = action; } } });
+    const field = Object.assign(new Field(), { mounted:true, focusGeneration:1, mode:'submit',
+      isBookField:()=>true, bookEditorObservationCurrent:()=>true, observedBookLength:4,
+      editingCurrent:()=>surface.acceptsField(4,'one-editor') && !model.panelOwnsInput,
+      onTextChange:surface.textAction(4,'one-editor'), onBookClear:surface.clearAction(4,'one-editor'),
+      observeBookEditor:(event,facts)=>receipts.push([event,facts.beforeLength]),
+      revealBookInputCaret() {}, getUIContext:()=>({postFrameCallback:frame=>frames.push(frame),
+        getFocusController:()=>({requestFocus:target=>receipts.push(['focus',target])})}) });
+    field.clearBookInput();
+    assert.equal(presentation.mode,'input','result clear returns to input before a focus callback');
+    frames.shift().action();
+    assert.deepEqual(receipts,[['clear',4],['draft',''],['stop'],['history'],['focus','reader-book-search-input']]);
+    model.panelOwnsInput = true;
+    field.clearBookInput();
+    assert.equal(receipts.length,5,'an overlay prevents retained clear from acting');
+    model.panelOwnsInput = false;
+    field.clearBookInput();
+    model.release(4);
+    frames.shift().action();
+    assert.deepEqual(receipts.slice(5),[['clear',0],['draft','']],'input clear keeps history and stale focus is retired');
+  } else if (id === 'native-targets') {
     const { writeFileSync } = await import('node:fs');
     const { createHash } = await import('node:crypto');
     const { execFileSync } = await import('node:child_process');
@@ -99,7 +146,7 @@ for (const id of selected) {
       page.bindSurface();
       const names = ['header', 'bar', 'controlHeight', 'fontScale', 'barHeight', 'actionWidth', 'searchLaneLeft', 'searchLaneWidth', 'fieldWidth', 'laneTop', 'stackedSearch', 'searchLaneHeight', 'cardContentWidth', 'horizontalInset',
         'fieldIdentity', 'presentedSearch', 'surfaceValue', 'actionInteractive', 'inputInteractive', 'headerActionGlyph', 'headerActionFrame', 'headerActionTop', 'moreInteractive', 'leadingAction', 'moreAction', 'textAction',
-        'submitAction', 'focusAction', 'searchAction', 'acceptsField', 'historyInteractive', 'historyAction', 'clearHistoryAction', 'retryHistoryAction', 'historyGeometry', 'historyFeedbackKey',
+        'submitAction', 'focusAction', 'searchAction', 'clearAction', 'acceptsField', 'historyInteractive', 'historyAction', 'clearHistoryAction', 'retryHistoryAction', 'historyGeometry', 'historyFeedbackKey',
         'historyViewportHeight', 'historyLimit', 'resolvedHistoryViewport', 'surfaceHeight', 'availableBottom', 'historyDividerColor', 'consumeInputBack',
         'captureHeader', 'metricsChanged', 'retargetHistoryViewport'];
       const surface = compileTailConsumer(surfaceSource, names, { ...shared, ReaderSearchField: SearchField, ReaderSearchHistoryPanel: History,

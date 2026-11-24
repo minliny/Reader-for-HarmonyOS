@@ -69,6 +69,11 @@ export struct BookshelfScene {
         viewState: this.read.viewState,
         books: this.read.snapshot.books,
         serverFiltered: this.read.snapshot.revision.length > 0,
+        projectedSourceFilter: this.read.snapshot.filter.sourceKind,
+        projectedContentFilter: this.read.snapshot.filter.contentKind ?? 'all',
+        projectedBookCount: this.read.snapshot.facts?.fact === 'refreshing' ||
+          this.read.snapshot.facts?.fact === 'refreshFailed' || this.read.snapshot.facts?.fact === 'partial' ?
+          -1 : this.read.snapshot.matchedTotal,
         onNextPageRequested: (presentedNavigation?: number): void => {
           if (this.isCurrent(presentedNavigation ?? navigation)) this.read.page(false);
         },
@@ -77,6 +82,10 @@ export struct BookshelfScene {
         },
         onFilterRequested: (_readingState: string, _sourceKind: string, _contentKind?: string, presentedNavigation?: number): void => {
           if (this.isCurrent(presentedNavigation ?? navigation)) this.read.refreshForFilter();
+        },
+        onEmptySearch: (presentedNavigation: number): void => this.open('search', presentedNavigation),
+        onEmptyImport: (presentedNavigation: number, focusTarget: string): void => {
+          if (this.isInteractive(presentedNavigation)) this.mutations.openImport(focusTarget);
         },
         continueReading: this.read.snapshot.continueReading,
         continueCardSuppressed: this.continueCardSuppressed,

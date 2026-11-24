@@ -75,7 +75,7 @@ export async function createSearchResultContinuityProbe({ source = readSearchRes
     ...runtime.sdk, SynchedPropertyNesedObjectPU: runtime.sdk.SynchedPropertyNestedObjectPU,
     SearchViewState, SearchLayoutFrame, searchBookSnapshot, SEARCH_RESULT_GEOMETRY, bookIntroText, bookAuthorLabel, TouchType, SourceType,
     uiContext: { postFrameCallback: frame => pendingFrames.push(frame) },
-  }, { ...runtime.hooks, allowEmptyBranchAdmission: true });
+  }, { ...runtime.hooks, allowEmptyBranchAdmission: true, allowEmptyBranchRemoval: true });
   const publishProps = () => owner.updateStateVars({ group: observed, queryRevision: viewState.revision, cardWidth: 350 });
   publishProps();
   owner.viewState = viewState;

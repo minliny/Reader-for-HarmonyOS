@@ -297,13 +297,13 @@ function detailActions(candidate = localBookDetailSource) {
                 const button = buttons.find(node => node.accessibilityText === label);
                 assert.ok(button, label);
                 assert.ok(button.constraintSize?.minHeight >= 44, `${kind} ${label} native target minimum44`);
-                if (kind === 'text' && label === '完整目录') {
+                if (label === '完整目录') {
                     const directoryActor = recursiveActors(owner).find(actor => actor.specId === 'detail-directory');
                     assert.ok(directoryActor, 'actual shared directory action');
                     const nativeDirectory = recursiveNodes(directoryActor).filter(node => node.type === 'Row' && node.constraintSize?.minHeight === 30);
                     assert.ok(nativeDirectory.length > 0 && nativeDirectory.every(node => node.height === undefined),
                         'authored thirty-vp content row grows naturally within its paid44 native action');
-                    assert.equal(button.width, undefined, 'novel directory native width follows its unbounded content');
+                    assert.equal(button.width, undefined, 'directory native width follows its icon, label and padding');
                 }
                 else
                     assert.ok(button.constraintSize?.minWidth >= 44, `${kind} ${label} native width minimum44`);

@@ -16,13 +16,15 @@ export interface ReaderDirectoryToolbarBudget {
 /** The field pays for its icon/insets as well as useful editable text.
  * The authored32vp tools keep their five-vp gaps. Touch payment is independent. */
 export function readerDirectoryToolbarBudget(width: number, chapterTools: boolean,
-  fieldHeight: number, editableMinimum: number, naturalHeight: number = 0): ReaderDirectoryToolbarBudget {
+  fieldHeight: number, editableMinimum: number, naturalHeight: number = 0,
+  catalog: boolean = false): ReaderDirectoryToolbarBudget {
   const field = Math.max(32, Number.isFinite(fieldHeight) ? fieldHeight : 32);
   const text = Math.max(44, Number.isFinite(editableMinimum) ? editableMinimum : 60);
   const fieldMinimumWidth = 39 + text;
-  const actionsWidth = chapterTools ? 143 : 32;
-  const stacked = Number.isFinite(width) && width > 0 && width - 20 - 5 - actionsWidth < fieldMinimumWidth;
-  const row = field + 18;
+  const actionsWidth = catalog ? 96 : chapterTools ? 143 : 32;
+  const gutter = catalog ? 8 : 25;
+  const stacked = Number.isFinite(width) && width > 0 && width - gutter - actionsWidth < fieldMinimumWidth;
+  const row = catalog ? Math.max(44, field) : field + 18;
   return { stacked, height: Math.max(Number.isFinite(naturalHeight) ? naturalHeight : 0,
     stacked ? row * 2 + 8 : row), fieldMinimumWidth, actionsWidth };
 }

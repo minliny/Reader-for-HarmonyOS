@@ -16,10 +16,40 @@ export function sourceSwitchNovelScale(fontScale: number): number {
 export function sourceSwitchNovelCompact(height: number): boolean {
   return Number.isFinite(height) && height > 0 && height < visual.shortHeightThreshold;
 }
-export function sourceSwitchNovelDrawerHeight(height: number, safeTop: number): number {
+export function sourceSwitchNovelDrawerHeight(height: number, safeTop: number, side: boolean = false): number {
   const available = Number.isFinite(height) ? Math.max(0, height) : 0;
   const top = Number.isFinite(safeTop) ? Math.max(0, safeTop) : 0;
-  return Math.max(0, available - Math.max(top, sourceSwitchNovelCompact(available) ? 0 : visual.drawerTopReserve));
+  return side ? available : Math.max(0, Math.min(available - top, available * .82));
+}
+
+export function sourceSwitchCandidateMatches(candidate: SourceSwitchCandidate, query: string): boolean {
+  const needle = query.trim().toLowerCase();
+  return needle.length === 0 || (candidate.sourceName || candidate.sourceId).toLowerCase().includes(needle) ||
+    (candidate.latestChapterTitle ?? '').toLowerCase().includes(needle);
+}
+
+/** Recognize a chapter number only when it is marked as a chapter. A date or
+ * bare number inside prose does not give the candidate a fabricated rank. */
+export function sourceSwitchChapterOrdinal(title: string): number {
+  const match = /(?:第\s*)?([0-9]+|[零〇一二两兩三四五六七八九十百千万萬]+)\s*[章话話回节節]/u.exec(title.normalize('NFKC'));
+  if (match === null) return 0;
+  const numeric = Number(match[1]);
+  if (/^[0-9]+$/.test(match[1])) return Number.isSafeInteger(numeric) ? numeric : 0;
+  const chinese = match[1].replace(/[〇]/g, '零').replace(/[两兩]/g, '二').replace(/萬/g, '万');
+  let total = 0, section = 0, pending = 0;
+  for (const symbol of chinese) {
+    const digit = '零一二三四五六七八九'.indexOf(symbol);
+    if (digit >= 0) pending = pending * 10 + digit;
+    else if (symbol === '万') { total += (section + pending || 1) * 10000; section = 0; pending = 0; }
+    else { section += (pending || 1) * (symbol === '千' ? 1000 : symbol === '百' ? 100 : 10); pending = 0; }
+  }
+  return Number.isSafeInteger(total + section + pending) ? total + section + pending : 0;
+}
+
+export function sourceSwitchOrderByChapter(candidates: SourceSwitchCandidate[]): SourceSwitchCandidate[] {
+  return candidates.map((candidate: SourceSwitchCandidate) => ({ candidate,
+    ordinal: sourceSwitchChapterOrdinal(candidate.latestChapterTitle ?? '') }))
+    .sort((left, right) => right.ordinal - left.ordinal).map(item => item.candidate);
 }
 export function sourceSwitchNovelRowHeight(fontScale: number): number {
   return visual.rowHeight * sourceSwitchNovelScale(fontScale);

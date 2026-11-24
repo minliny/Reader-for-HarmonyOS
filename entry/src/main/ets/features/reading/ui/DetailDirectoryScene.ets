@@ -52,6 +52,7 @@ export struct DetailDirectoryScene {
         bookmarkIdentity: this.reading.bookmarkIdentity(),
         onDownloadChapter: this.directoryActions.downloadChapter,
         onDownloadBook: this.directoryActions.downloadBook,
+        onOpenCacheManagement: this.directoryActions.openCacheManagement,
         onClearBookOffline: this.directoryActions.clearBookOffline,
         onDeleteBookmarks: this.directoryActions.deleteBookmarks,
         chapterStartBookmarkCreationEnabled: true,

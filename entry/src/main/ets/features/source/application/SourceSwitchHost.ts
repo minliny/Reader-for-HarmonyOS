@@ -15,7 +15,7 @@ import type { RemoteReadingIdentity } from '../../reading/application/RemoteRead
 import type { BookAcquisitionChange } from '../../reading/application/BookAcquisitionCoordinator';
 import type { SourceSwitchPanelState } from '../presentation/SourceSwitchPresentationState';
 import { buildSourceSwitchCommitParams, sourceSwitchCandidateKey, sourceSwitchIsAlternative, SourceSwitchGateway,
-  type PendingSourceSwitch, type SourceSwitchCandidate, type SourceSwitchCommitOutcome,
+  type PendingSourceSwitch, type SourceSwitchCandidate, type SourceSwitchCommitOutcome, type SourceSwitchSweepProgress,
   type SourceSwitchProbeQuery, type SourceSwitchDiscoveryOutcome } from './SourceSwitchGateway';
 import type { SourceSwitchTransactionProjection } from './SourceSwitchGateway';
 import { SourceSwitchIntentStore, SourceSwitchIntentRecoveryError, type SourceSwitchIntent } from './SourceSwitchIntentStore';
@@ -667,8 +667,12 @@ export class SourceSwitchHost {
       reset = false; dirty.clear();
       void this.gateway.loadCachedCandidates(context.query, current, knownCandidates(), batch).then((candidates): void => {
         if (!current()) return;
-        if (candidates.length > 0) this.snapshot = { ...this.snapshot, state: { kind: 'candidates', candidates,
-          refreshing: this.snapshot.state.kind === 'candidates' && this.snapshot.state.refreshing === true } };
+        if (candidates.length > 0) {
+          const state = this.snapshot.state;
+          const refreshing = state.kind === 'discovering' || state.kind === 'candidates' && state.refreshing === true;
+          this.snapshot = { ...this.snapshot, state: { kind: 'candidates', candidates, refreshing,
+            sweep: state.kind === 'discovering' || state.kind === 'candidates' ? state.sweep : undefined } };
+        }
         else if (this.snapshot.state.kind !== 'candidates' || this.snapshot.state.refreshing !== true) {
           this.snapshot = { ...this.snapshot, state: { kind: 'empty' } };
         }
@@ -680,9 +684,10 @@ export class SourceSwitchHost {
       }).finally((): void => { projecting = false; if (again) refreshProjection({ reset: false, identities: [] }); });
     };
     this.unsubscribe = this.runtime.bookAcquisitions().subscribe(refreshProjection);
-    const publishProgress = (candidates: SourceSwitchCandidate[]): void => {
-      if (!current() || candidates.length === 0) return;
-      this.snapshot = { ...this.snapshot, state: { kind: 'candidates', candidates, refreshing: true } };
+    const publishProgress = (candidates: SourceSwitchCandidate[], sweep?: SourceSwitchSweepProgress): void => {
+      if (!current() || (candidates.length === 0 && sweep === undefined)) return;
+      this.snapshot = { ...this.snapshot, state: candidates.length > 0 ?
+        { kind: 'candidates', candidates, refreshing: true, sweep } : { kind: 'discovering', sweep } };
       this.publish();
     };
     try {
@@ -708,7 +713,7 @@ export class SourceSwitchHost {
       const outcome: SourceSwitchDiscoveryOutcome = cached.some(sourceSwitchIsAlternative) ?
         { kind: 'sources' as const, candidates: cached } :
         await this.gateway.refreshCandidates(context.query, current,
-          publishProgress, force ? previous : (cached.length > 0 ? cached : initialKnown));
+          publishProgress, force ? previous : (cached.length > 0 ? cached : initialKnown), force);
       if (!current()) return;
       this.snapshot = { ...this.snapshot, state: outcome.kind === 'noSources' || outcome.candidates.length === 0
         ? (outcome.incompleteSourceCount ? { kind: 'discoveryError', message: '部分书源未能确认后续结果，请重试或调整书源。' } : { kind: 'empty' }) :

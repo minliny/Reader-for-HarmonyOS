@@ -2,6 +2,8 @@ import { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryD
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import type { ReaderDirectoryNavigationPortFactory } from '../application/ReaderDirectoryNavigation';
+import { readerDirectoryScopeKey } from '../application/ReaderDirectoryNavigation';
+import { readerDirectorySignalScrollCommand, readerDirectorySignalScrollIntent } from '../presentation/ReaderDirectoryViewport';
 import hilog from '@ohos.hilog';
 import { DEBUG } from '../../../../../../build/default/generated/profile/default/BuildProfile';
 import inputMethod from '@ohos.inputMethod';
@@ -9,11 +11,10 @@ import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryT
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { mangaDirectoryDisplay } from '../../manga/ui/MangaDirectoryDisplay';
 import { mangaDirectoryContextEntries, mangaDirectoryDownloadStatusWidth } from '../../manga/ui/MangaDirectoryState';
-import { LengthMetrics } from '@kit.ArkUI';
-import { MangaDirectoryCurrentFooter } from '../../manga/ui/MangaDirectoryCurrentFooter';
-import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryFooterHeight, mangaDirectoryHeaderHeight, mangaDirectoryFullFlowFooter } from '../../manga/ui/MangaDirectoryVisual';
+import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryHeaderHeight, mangaDirectoryFullFlowFooter } from '../../manga/ui/MangaDirectoryVisual';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../presentation/ReadingDirectoryRecovery';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { registerReaderFonts, prepareMangaSheetFonts, prepareReaderFontFamily } from '../../../ui/foundation/ReaderFonts';
@@ -25,6 +26,8 @@ import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGatewa
 import { snapshotReaderDirectoryData, sameReaderDirectoryData } from '../presentation/ReaderDirectoryDataSnapshot';
 import { projectReaderDirectoryEntries } from '../presentation/ReaderDirectoryProjection';
 import { ReaderDirectoryToolbar } from './ReaderDirectoryToolbar';
+import { ReaderDirectoryQuickActions, readerDirectoryQuickActionsHeight } from './ReaderDirectoryQuickActions';
+import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { ReaderDirectoryList } from './ReaderDirectoryList';
 import { ReaderDirectoryNavigationSurface } from './ReaderDirectoryNavigationSurface';
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
@@ -79,6 +82,7 @@ export struct BookDirectoryPage {
   @Prop @Watch('prepareMangaLayout') mangaDownloadEnabled: boolean = false;
   onLoadDownloadActions: (chapterIndex?: number) => Promise<MangaDownloadAction[]> = async (): Promise<MangaDownloadAction[]> => [];
   onDownloadAction: (action: MangaDownloadActionId, chapterIndex?: number) => Promise<void> = async (): Promise<void> => {};
+  onOpenCacheManagement: () => void = (): void => {};
   @State private downloadMenuVisible: boolean = false;
   @State private downloadActions: MangaDownloadAction[] = [];
   @State private downloadActionsLoading: boolean = false;
@@ -113,7 +117,6 @@ export struct BookDirectoryPage {
   private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();
   @State private mangaToolsHeight: number = 175;
   @State private mangaFooterMeasured: number = 0;
-  @State private mangaScrollOffset: number = 0;
   @State @Watch('invalidateFrame') private mangaFontsReady: boolean = false;
   @State private mangaFontsFailed: boolean = false;
   private mangaFontGeneration: number = 0;
@@ -130,6 +133,7 @@ export struct BookDirectoryPage {
   private scrollGeneration: number = 0;
   private listReady: boolean = false;
   private pendingScrollEdge: Edge | undefined = undefined;
+  private pendingLocateChapter: number = -1;
   private readonly listScroller: Scroller = new Scroller();
 
   aboutToAppear(): void {
@@ -162,6 +166,7 @@ export struct BookDirectoryPage {
     this.admittedIdentity = '';
     this.listReady = false;
     this.pendingScrollEdge = undefined;
+    this.pendingLocateChapter = -1;
   }
 
   build() {
@@ -209,8 +214,8 @@ export struct BookDirectoryPage {
 
   @Builder
   private mangaContent() {
-    // The summary/tools track the directory scroll offset inside the body;
-    // the fixed header and current-chapter dock are owned by the scaffold.
+    // The list reserves the measured catalog rail while its content scrolls
+    // under the fixed header, query tools and current-chapter dock.
     Stack({ alignContent: Alignment.Top }) {
       ForEach([this.admittedIdentity], (identity: string) => {
         ReaderDirectoryNavigationSurface({ navigationPortFactory: this.navigationPortFactory,
@@ -252,11 +257,8 @@ export struct BookDirectoryPage {
           onUserScrollIntent: (): void => {
             if (this.navigationActive && this.directoryInputIsCurrent(identity)) this.onListUserScroll();
           },
-          onScrollOffset: (offset: number): void => {
-            if (this.directoryListIsCurrent(identity, true)) this.onMangaScrollOffset(offset);
-          },
           onClearSearch: (): void => {
-            if (this.navigationActive && this.directoryInputIsCurrent(identity)) { this.searchDraft = ''; this.applySearch(); }
+            if (this.navigationActive && this.directoryInputIsCurrent(identity)) { this.searchDraft = ''; this.applySearch(''); }
           },
           onTreeStateChange: (active: boolean): void => {
             if (!this.mounted || identity !== this.admittedIdentity || identity !== this.identity() ||
@@ -300,14 +302,18 @@ export struct BookDirectoryPage {
         if (!this.mangaFlowFooter()) { this.mangaSummary(); }
         ReaderDirectoryToolbar({ editingHost: this.editingHost,
           editingCurrent: (): boolean => this.directoryInputIsCurrent(identity) && !this.selectionBusy,
-          variant: 'manga-catalog', text: this.searchDraft, placeholder: '搜索章名或序号',
-          ascending: this.ascending, mangaFontScale: this.mangaFontScale(), locateEnabled: this.currentChapterIndex >= 0,
+          variant: 'standalone-catalog', text: this.searchDraft, placeholder: '搜索章名或序号',
+          availableWidthVp: this.geometry.content.frame.width,
+          actionEnabled: this.interactive && !this.selectionBusy,
+          ascending: this.ascending, mangaFontScale: this.mangaFontScale(),
           onTextChange: (value: string): void => {
-            if (this.directoryInputIsCurrent(identity)) { this.searchDraft = value; this.applySearch(); }
+            if (this.directoryInputIsCurrent(identity)) { this.searchDraft = value; this.applySearch(value); }
           },
           onSearch: (): void => { if (this.directoryInputIsCurrent(identity)) this.applySearch(); },
           onToggleSort: (): void => { if (this.directoryInputIsCurrent(identity)) this.toggleSort(); },
-          onLocateCurrent: (): void => { if (this.directoryInputIsCurrent(identity)) this.locateCurrent(); },
+          onOpenCacheManagement: (): void => {
+            if (this.directoryInputIsCurrent(identity) && !this.selectionBusy) this.onOpenCacheManagement();
+          },
         }).hitTestBehavior(HitTestMode.Default);
       }.width('100%').alignItems(HorizontalAlign.Start)
         .id(measurement.id)
@@ -316,9 +322,10 @@ export struct BookDirectoryPage {
         .onDisAppear((): void => measurement.unmount())
         .onAreaChange(this.mangaHeightHandler('tools', this.mangaMeasurementKey));
     }.width(this.geometry.content.frame.width).alignItems(HorizontalAlign.Start)
+      .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
       .hitTestBehavior(inline ? HitTestMode.Default : HitTestMode.Transparent)
       .position(inline ? undefined : { x: this.geometry.content.frame.left,
-        y: this.geometry.content.startInset - this.mangaToolsHeight - this.mangaScrollOffset });
+        y: this.geometry.content.startInset - this.mangaToolsHeight });
   }
 
   @Builder
@@ -345,8 +352,13 @@ export struct BookDirectoryPage {
 
   @Builder
   private mangaCurrentFooter(measurement: ReaderNativeSlotMeasurement = this.footerMeasurement) {
-    MangaDirectoryCurrentFooter({ title: this.mangaCurrentTitle(), pagePosition: this.mangaCurrentPosition(), scheme: this.appThemeScheme,
-      availableWidth: this.mangaFooterFrame(this.geometry.content.frame).width,
+    ReaderDirectoryQuickActions({ title: this.mangaCurrentTitle(), position: this.mangaCurrentPosition() === '—' ? '' : this.mangaCurrentPosition(),
+      scheme: this.appThemeScheme, fontScale: this.mangaFontScale(),
+      locateEnabled: this.interactive && !this.selectionBusy && this.currentChapterIndex >= 0,
+      edgeEnabled: this.interactive && !this.selectionBusy && (this.mangaLayoutRows.length > 0 || this.navigationActive),
+      onLocateCurrent: (): void => this.locateCurrent(),
+      onTop: (): void => this.jumpToEdge(Edge.Top),
+      onBottom: (): void => this.jumpToEdge(Edge.Bottom),
     }).width(this.mangaFooterFrame(this.geometry.content.frame).width)
       .id(measurement.id)
       .onAppear((): void => measurement.mount(this.getUIContext(), this.mangaMeasurementKey,
@@ -382,26 +394,15 @@ export struct BookDirectoryPage {
     return mangaDirectoryFullFlowFooter(height, this.mangaFontScale(), this.topInset(), this.mangaBottomInset(), this.mangaFooterHeight());
   }
 
-  private scrollMangaCurrent(index: number, currentInset: number = 12): void {
-    const flowing = this.mangaFlowFooter();
-    this.listScroller.scrollToIndex(index + (flowing ? 1 : 0), false, ScrollAlign.START, { extraOffset: LengthMetrics.vp(
-      (flowing ? 0 : this.mangaContentTopInset()) - this.mangaVisibleTopInset() - currentInset) });
-  }
-
-  private mangaContentTopInset(): number {
-    return this.geometry.content.startInset;
-  }
-
-  private onMangaScrollOffset(offset: number): void {
-    if (Number.isFinite(offset) && Math.abs(offset - this.mangaScrollOffset) > .1) this.mangaScrollOffset = offset;
-  }
-
   private mangaFontScale(): number {
     const revision = this.readerWindowMetricsRevision;
     return mangaDirectoryScale(revision < 0 ? 1 : readerWindowMetrics().systemFontScale);
   }
 
-  private mangaFooterHeight(): number { return this.mangaFooterMeasured > 0 ? this.mangaFooterMeasured : mangaDirectoryFooterHeight(this.mangaFontScale(), this.mangaFooterFrame().width, this.mangaCurrentPosition()); }
+  private mangaFooterHeight(): number {
+    return this.mangaFooterMeasured > 0 ? this.mangaFooterMeasured :
+      readerDirectoryQuickActionsHeight(this.mangaFontScale(), this.mangaCurrentPosition() !== '—');
+  }
   private mangaBottomInset(): number { return Math.max(0, readerInteractiveSafeBottom(readerWindowMetrics())); }
   /** The footer follows the safe area closely; the released 4vp is usable list space. */
   private mangaFooterBottomOffset(): number { return Math.max(0, visual.footerBottom - 4); }
@@ -414,7 +415,7 @@ export struct BookDirectoryPage {
 
   private mangaFooterFrame(frame: SurfaceHorizontalFrame = this.contentFrame()): SurfaceHorizontalFrame {
     // The approved catalog uses 18vp content and a 30vp light dock.
-    const inset = Math.min(visual.detailDockInset - 18, frame.width / 2);
+    const inset = Math.max(Math.min(visual.detailDockInset - 18, frame.width / 2), (frame.width - 540) / 2);
     return new SurfaceHorizontalFrame(frame.left + inset, frame.right + inset, Math.max(0, frame.width - inset * 2));
   }
 
@@ -489,10 +490,6 @@ export struct BookDirectoryPage {
       onFirstLayout: (): void => {
         if (this.directoryListIsCurrent(identity, false)) this.onListFirstLayout(identity);
       },
-      onScrollOffset: (offset: number): void => {
-        if (this.directoryListIsCurrent(identity, false))
-          this.onMangaScrollOffset(offset + (this.mangaFlowFooter() ? 0 : this.mangaContentTopInset()));
-      },
       onUserScrollIntent: (): void => {
         if (!this.navigationActive && this.directoryInputIsCurrent(identity)) this.onListUserScroll();
       },
@@ -561,12 +558,13 @@ export struct BookDirectoryPage {
     this.prepareMangaLayout();
   }
 
-  private prepareMangaLayout(): void {
-    this.mangaLayoutRows = mangaDirectoryEntryRows(this.mangaVisibleEntries(), this.mangaPresentation,
+  private prepareMangaLayout(entries: LocalReadingTocEntry[] = this.projectedEntries, query: string = this.searchQuery,
+    collapsed: number[] = this.mangaCollapsedGroups): void {
+    this.mangaLayoutRows = mangaDirectoryEntryRows(this.mangaVisibleEntries(entries, query, collapsed), this.mangaPresentation,
       this.mangaNarrow(), this.mangaFontScale(), this.contentFrame().width, (entry: LocalReadingTocEntry): number => {
         const glyph = this.mangaDownloadEnabled && entry.navigable !== false && entry.downloadState !== 'unknown';
         return (glyph ? visual.downloadGridWidth : 0) + mangaDirectoryDownloadStatusWidth(entry.downloadState, glyph, this.mangaFontScale());
-      }, this.searchQuery);
+      }, query);
   }
 
   private mangaLayoutEntries(): LocalReadingTocEntry[] {
@@ -703,10 +701,11 @@ export struct BookDirectoryPage {
     return `${this.currentPageOrdinal + 1} / ${this.currentPageTotal} 页`;
   }
 
-  private mangaVisibleEntries(): LocalReadingTocEntry[] {
+  private mangaVisibleEntries(entries: LocalReadingTocEntry[] = this.projectedEntries, query: string = this.searchQuery,
+    collapsed: number[] = this.mangaCollapsedGroups): LocalReadingTocEntry[] {
     // Search reveals matches and their original volume path even when folded.
-    if (this.searchQuery.length > 0) return this.projectedEntries;
-    return mangaDirectoryVisibleEntries(this.projectedEntries, this.mangaPresentation, this.mangaCollapsedGroups);
+    if (query.length > 0) return entries;
+    return mangaDirectoryVisibleEntries(entries, this.mangaPresentation, collapsed);
   }
 
   private topInset(): number {
@@ -715,22 +714,23 @@ export struct BookDirectoryPage {
   }
 
   private locateCurrent(): void {
-    if (this.currentChapterIndex < 0) return;
+    if (!this.directoryInputIsCurrent() || this.selectionBusy || this.currentChapterIndex < 0) return;
     this.searchDraft = '';
     this.searchQuery = '';
     const currentEntry = this.admittedEntries.find((entry: LocalReadingTocEntry): boolean => entry.index === this.currentChapterIndex);
     const ancestors = currentEntry === undefined ? [] : this.mangaPresentation.get(currentEntry.index)?.ancestorGroupIndexes ?? [];
-    this.mangaCollapsedGroups = this.mangaCollapsedGroups.filter((index: number): boolean => !ancestors.includes(index));
+    const collapsed = this.mangaCollapsedGroups.filter((index: number): boolean => !ancestors.includes(index));
+    this.mangaCollapsedGroups = collapsed;
     this.publishProjection(projectReaderDirectoryEntries(mangaDirectoryContextEntries(this.admittedEntries, this.mangaPresentation),
-      '', this.ascending, true));
+      '', this.ascending, true), '', collapsed);
+    this.pendingScrollEdge = undefined;
+    this.pendingLocateChapter = this.currentChapterIndex;
     this.locateCurrentRevision += 1;
     const generation = ++this.scrollGeneration;
-    setTimeout((): void => {
-      if (!this.mounted || generation !== this.scrollGeneration || this.navigationActive) return;
-      const index = this.mangaLayoutRows.findIndex((row: MangaDirectoryLayoutRow): boolean =>
-        row.entries.some((entry: LocalReadingTocEntry): boolean => entry.index === this.currentChapterIndex));
-      if (index >= 0 && this.listReady) this.scrollMangaCurrent(index);
-    }, 0);
+    const context = this.getUIContext();
+    context.postFrameCallback(new ReaderPostLayoutFrame(context, (): void => {
+      if (generation === this.scrollGeneration && this.directoryInputIsCurrent()) this.flushPendingScroll();
+    }));
   }
 
   private identity(): string { return `${this.sourceId}\u0000${this.bookId}`; }
@@ -757,6 +757,7 @@ export struct BookDirectoryPage {
     this.retireDownloadMenu();
     this.mangaCollapsedGroups = [];
     this.locateCurrentRevision = 0;
+    this.pendingLocateChapter = -1;
     // The identity comparison blocks old-row callbacks immediately; publish
     // the next keyed List and projection together after reconciliation.
     this.onEntriesChanged();
@@ -799,11 +800,11 @@ export struct BookDirectoryPage {
     }
   }
 
-  private applySearch(): void {
-    const nextQuery = this.searchDraft.trim();
+  private applySearch(value: string = this.searchDraft): void {
+    const nextQuery = value.trim();
     this.searchQuery = nextQuery;
     this.publishProjection(projectReaderDirectoryEntries(mangaDirectoryContextEntries(this.admittedEntries, this.mangaPresentation),
-      nextQuery, this.ascending, true));
+      nextQuery, this.ascending, true), nextQuery);
     if (this.mangaFlowFooter()) this.onListUserScroll();
     else if (!this.navigationActive) this.scheduleTopScroll();
   }
@@ -818,17 +819,19 @@ export struct BookDirectoryPage {
 
   private scheduleTopScroll(): void {
     const generation = ++this.scrollGeneration;
+    this.pendingLocateChapter = -1;
     this.pendingScrollEdge = Edge.Top;
     setTimeout((): void => {
       if (generation === this.scrollGeneration) this.flushPendingScroll();
     }, 0);
   }
 
-  private publishProjection(entries: LocalReadingTocEntry[]): void {
+  private publishProjection(entries: LocalReadingTocEntry[], query: string = this.searchQuery,
+    collapsed: number[] = this.mangaCollapsedGroups): void {
     // The List remains mounted beneath the empty-state text. Empty and
     // nonempty updates may coalesce; neither invalidates its native readiness.
     this.projectedEntries = entries;
-    this.prepareMangaLayout();
+    this.prepareMangaLayout(entries, query, collapsed);
   }
 
   private onListFirstLayout(identity: string): void {
@@ -840,10 +843,21 @@ export struct BookDirectoryPage {
   private onListUserScroll(): void {
     this.scrollGeneration += 1;
     this.pendingScrollEdge = undefined;
+    this.pendingLocateChapter = -1;
     this.navigationInteracted = true;
   }
 
   private flushPendingScroll(): void {
+    if (!this.mounted || !this.listReady) return;
+    const locate = this.pendingLocateChapter;
+    if (locate >= 0) {
+      this.pendingLocateChapter = -1;
+      if (this.navigationActive) return;
+      const index = this.mangaLayoutRows.findIndex((row: MangaDirectoryLayoutRow): boolean =>
+        row.entries.some((entry: LocalReadingTocEntry): boolean => entry.index === locate));
+      if (index >= 0) this.listScroller.scrollToIndex(index + (this.mangaFlowFooter() ? 1 : 0), false, ScrollAlign.CENTER);
+      return;
+    }
     const edge = this.pendingScrollEdge;
     if (!this.mounted || !this.listReady ||
       (this.projectedEntries.length === 0 && !this.navigationActive) || edge === undefined) return;
@@ -856,6 +870,15 @@ export struct BookDirectoryPage {
       // The short-host variant materializes its spacer as the first item.
       this.listScroller.scrollEdge(edge);
     }
+    if (this.navigationActive) readerDirectorySignalScrollCommand(readerDirectoryScopeKey(this.sourceId, this.bookId));
+  }
+
+  private jumpToEdge(edge: Edge): void {
+    if (!this.directoryInputIsCurrent() || this.selectionBusy) return;
+    readerDirectorySignalScrollIntent(readerDirectoryScopeKey(this.sourceId, this.bookId));
+    this.onListUserScroll();
+    this.pendingScrollEdge = edge;
+    this.flushPendingScroll();
   }
 
   private emptyMessage(): string {
@@ -928,7 +951,7 @@ export struct BookDirectoryPage {
   }
 
   private mangaFrameStyle(): ReaderFrameStyle {
-    const pageBackground = mangaDirectoryColor('paper', this.appThemeScheme);
+    const pageBackground = readerAppColor('TOK_PAPER', this.appThemeScheme);
     return readerFrameStyle({ backgroundColor: pageBackground, alignment: 'top',
       headerBackground: pageBackground, headerTransparent: true, footerBackground: pageBackground });
   }

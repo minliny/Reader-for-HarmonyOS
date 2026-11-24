@@ -8,6 +8,7 @@ import type { BookshelfDataState, BookshelfFilter, BookshelfRemovalTarget,
   BookshelfRemoveBatchOutcome, BookshelfRemoveOutcome } from '../application/BookshelfFlowGateway';
 import { EMPTY_BOOKSHELF_OPERATION_SNAPSHOT, type BookshelfOperationSnapshot } from '../application/BookshelfOperationOwner';
 import { LOCAL_IMPORT_PRESENTATION_KEY } from './LocalImportPresentationOwner';
+import { ShelfBookPresentation } from './ShelfBookPresentation';
 
 export interface BookshelfMutationScope {
   host: () => BookshelfHost;
@@ -48,6 +49,7 @@ interface BookshelfSelectionSnapshot {
 interface BookshelfSelectionOpening {
   readonly identity: number;
   readonly current: () => boolean;
+  readonly filter: BookshelfFilter;
   source?: BookshelfState;
 }
 
@@ -154,15 +156,15 @@ export class BookshelfMutationPresentation {
     const current = (): boolean => this.selectionOpening?.identity === identity && !this.scope.retired() &&
       this.scope.route() === 'bookshelfMultiSelect' && this.scope.generation() === navigation &&
       this.scope.mounting() === mounting && this.scope.owner() === owner && this.scope.isCurrentOwner(owner);
-    const opening: BookshelfSelectionOpening = { identity, current };
+    const opening: BookshelfSelectionOpening = { identity, current, filter: this.scope.filter() };
     this.selectionOpening = opening;
     this.selectionVerifying = false;
     const initialKey = initialBook === undefined ? '' : this.selectionBookKey(initialBook);
-    this.selection = { identity, books: fallback, initialKey, ready: false };
+    this.selection = { identity, books: this.visibleSelection(fallback, opening.filter), initialKey, ready: false };
     void this.scope.readSelection().then((source: BookshelfState | undefined): void => {
       if (!current() || source === undefined) return;
       opening.source = source;
-      this.selection = { identity, books: source.books, initialKey, ready: true };
+      this.selection = { identity, books: this.visibleSelection(source.books, opening.filter), initialKey, ready: true };
     }).catch((_error: Error): void => {
       if (!current()) return;
       this.scope.feedback('书架读取失败，请重试', current);
@@ -244,7 +246,8 @@ export class BookshelfMutationPresentation {
     if (opening === undefined || opening.identity !== identity || source === undefined ||
       !this.canRemoveSelection(opening) || keys.length === 0) return;
     const selectedKeys = new Set<string>(keys);
-    const targets = source.books.filter((book: ShelfBook): boolean => selectedKeys.has(this.selectionBookKey(book)))
+    const targets = this.visibleSelection(source.books, opening.filter)
+      .filter((book: ShelfBook): boolean => selectedKeys.has(this.selectionBookKey(book)))
       .map((book: ShelfBook): BookshelfRemovalTarget => ({ sourceId: book.sourceId, bookId: book.bookId }));
     if (targets.length !== keys.length) return;
     this.scope.confirmRemoval(`确定将已选择的 ${targets.length} 本书移出书架吗？本地原始文件不受影响。`,
@@ -258,7 +261,7 @@ export class BookshelfMutationPresentation {
     this.selectionVerifying = true;
     let matches: boolean | undefined;
     try {
-      matches = await this.scope.selectionMatches(source, opening.current);
+      matches = await this.scope.selectionMatches(source, (): boolean => opening.current() && this.selectionFilterCurrent(opening), opening.filter);
     } catch (_) {
       if (opening.current()) this.scope.feedback('暂时无法核对书架，请重试', opening.current);
       return;
@@ -280,7 +283,17 @@ export class BookshelfMutationPresentation {
 
   private canRemoveSelection(opening: BookshelfSelectionOpening): boolean {
     return opening.current() && !this.selectionVerifying && !this.snapshot.busy &&
-      !this.snapshot.reconcileBusy && !this.hasUnknownWrite();
+      !this.snapshot.reconcileBusy && !this.hasUnknownWrite() && this.selectionFilterCurrent(opening);
+  }
+
+  private selectionFilterCurrent(opening: BookshelfSelectionOpening): boolean {
+    const active = this.scope.filter();
+    return active.readingState === opening.filter.readingState && active.sourceKind === opening.filter.sourceKind &&
+      (active.contentKind ?? 'all') === (opening.filter.contentKind ?? 'all');
+  }
+
+  private visibleSelection(books: ShelfBook[], filter: BookshelfFilter): ShelfBook[] {
+    return ShelfBookPresentation.visible(books, '', filter.readingState, filter.sourceKind, filter.contentKind);
   }
 
   private selectionBookKey(book: ShelfBook): string { return `${book.sourceId}\u0000${book.bookId}`; }

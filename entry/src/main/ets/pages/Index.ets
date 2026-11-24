@@ -227,6 +227,8 @@ struct Index {
   @State private shelfManagement: BookshelfManagementPresentation = new BookshelfManagementPresentation();
   private readonly navigationOwner: ReaderNavigation = new ReaderNavigation();
   private arkWebBack: (() => boolean) | undefined = undefined;
+  private detailMoreBack: (() => boolean) | undefined = undefined;
+  private detailMoreBackIdentity: string = '';
   @State private arkWebCapturesInput: boolean = false;
   @State @Watch('onSearchVisibilityChanged') private route: ReaderRoute = this.navigationOwner.snapshot().route;
   @State private navigationGeneration: number = this.navigationOwner.snapshot().generation;
@@ -245,6 +247,11 @@ struct Index {
     if (this.route === 'bookshelf' && snapshot.route !== 'bookshelf' && this.bookshelfModalVisible()) {
       if (this.shelfMutations.snapshot.importPresentation !== undefined) this.shelfMutations.closeImport();
       if (this.shelfGroupPresentation.identity.length > 0) this.shelfGroupPresentation.retire();
+    }
+    if (this.route === 'detail' && snapshot.route !== 'detail') {
+      this.shelfGroupPresentation.retire();
+      this.detailMoreBack = undefined;
+      this.detailMoreBackIdentity = '';
     }
     if (snapshot.route !== this.route) {
       const from = this.route, to = snapshot.route;
@@ -708,7 +715,8 @@ struct Index {
   onBackPress(): boolean {
     if (this.currentReadingRuntime() === undefined) return false;
     return this.navigationOwner.dispatchBack({
-      nativeSurface: this.arkWebBack,
+      nativeSurface: (): boolean => this.arkWebBack?.() === true ||
+        (this.route === 'detail' && (this.shelfGroupPresentation.back() || this.detailMoreBack?.() === true)),
       mangaSelection: this.mangaSourceSwitch.selectionVisible ? (): void => this.mangaSourceSwitch.backFromSelection() : undefined,
       bookRemoval: this.bookRemovalConfirmation.isOpen() ? (): void => { this.bookRemovalConfirmation.dismiss(); } : undefined,
       jsonImport: this.jsonImportPresentation.opening !== undefined ? (): void => this.dismissJsonImport() : undefined,
@@ -1017,9 +1025,10 @@ struct Index {
         reduceMotion: this.appReduceMotion, consumeTopInset: this.readerOwnsWindowEdges(),
         actions: this.sourceSwitchActions,
       });
-      if (this.route === 'bookshelf') {
+      if (this.route === 'bookshelf' || (this.route === 'detail' && this.shelfGroupPresentation.identity.length > 0)) {
         BookshelfGroupDialog({ presentation: this.shelfGroupPresentation, recoveryTop: this.messageSafeTop(),
-          isInputAllowed: (): boolean => this.searchAppForeground && !this.arkWebCapturesInput && this.route === 'bookshelf',
+          isInputAllowed: (): boolean => this.searchAppForeground && !this.arkWebCapturesInput &&
+            (this.route === 'bookshelf' || this.route === 'detail'),
         });
       }
       if (this.route === 'bookshelf') {
@@ -1103,12 +1112,51 @@ struct Index {
         if (owner !== undefined) this.readingEntry.retryDirectoryCatalog(owner);
       },
       openSourceSwitch: (focusId?: string): void => this.openDetailSourceSwitch(focusId),
+      openDownloads: (): void => this.downloadNavigation.open(),
+      openGroup: (identity: string, focusId?: string): void => { void this.openCurrentDetailGroup(identity, focusId); },
+      projectCurrentChapter: (identity: string): void => {
+        const owner = this.mountedRuntimeOwner;
+        const current = (): boolean => this.isCurrentDetailPresentation(identity, owner);
+        if (current()) this.readingEntry.projectDetailDirectoryPosition(owner, this.shelfRead.snapshot.books, current);
+      },
+      registerMoreBack: (handler: (() => boolean) | undefined, identity: string): void => {
+        if (handler === undefined && this.detailMoreBackIdentity !== identity) return;
+        this.detailMoreBackIdentity = handler === undefined ? '' : identity;
+        this.detailMoreBack = handler;
+      },
       back: (): void => { this.onBackPress(); },
     };
   }
 
+  private async openCurrentDetailGroup(identity: string, focusId?: string): Promise<void> {
+    const owner = this.mountedRuntimeOwner;
+    const book = this.readingEntry.book;
+    if (owner === undefined || book === undefined || !this.readingEntry.inBookshelf ||
+      !this.isCurrentDetailPresentation(identity, owner)) return;
+    const mounting = this.detailShelfAdmissionMount, navigation = this.navigationGeneration;
+    const current = (): boolean => this.route === 'detail' && this.mountedRuntimeOwner === owner &&
+      this.isCurrentRuntime(owner) && this.detailShelfAdmissionMount === mounting && this.navigationGeneration === navigation &&
+      this.detailShelf.isCurrent(identity) && this.readingEntry.inBookshelf &&
+      this.readingEntry.book?.sourceId === book.sourceId && this.readingEntry.book?.bookId === book.bookId;
+    try {
+      const shelfBook = await this.bookshelfHost.loadShelfBook(book.sourceId, book.bookId);
+      if (!current() || !this.detailContentIsForeground() || shelfBook === undefined ||
+        shelfBook.sourceId !== book.sourceId || shelfBook.bookId !== book.bookId) return;
+      this.shelfGroupPresentation.open(owner, shelfBook, identity, current, (): void => {
+        this.shelfRead.invalidate();
+        this.refreshBookshelf();
+      }, (message: string, admitted: () => boolean): void => {
+        this.transientFeedback.show(() => this.getUIContext(), { message, duration: READER_FEEDBACK_EXTENDED_MS },
+          (): boolean => this.searchAppForeground && current() && admitted());
+      }, focusId, (): boolean => this.detailContentIsForeground() && current());
+    } catch (error) {
+      if (current()) hilog.warn(DOMAIN, 'Reader', 'Detail shelf group lookup: %{private}s', errorMessageOf(error));
+    }
+  }
+
   private detailContentIsForeground(): boolean {
     return this.searchAppForeground !== false && !this.arkWebCapturesInput && this.route === 'detail' &&
+      this.shelfGroupPresentation.identity.length === 0 &&
       !this.sourceSwitchPresentation.isSurfacePresented() && !this.mangaSourceSwitch.selectionVisible;
   }
 

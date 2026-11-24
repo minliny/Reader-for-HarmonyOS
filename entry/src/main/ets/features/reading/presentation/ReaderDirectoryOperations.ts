@@ -61,6 +61,12 @@ export class ReaderDirectoryOperations {
 
   downloadBook(): void { void this.submitDownload(); }
 
+  openCacheManagement(): void {
+    const { owner, book, directoryVisible, retired, foreground } = this.ports.scene();
+    if (owner !== undefined && book !== undefined && directoryVisible && !retired && foreground &&
+      this.ports.ownsRuntime(owner)) this.ports.openDownloadProgress('');
+  }
+
   private async submitDownload(chapterIndex?: number): Promise<void> {
     const scene = this.ports.scene();
     const { owner, session } = scene;

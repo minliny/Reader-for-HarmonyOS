@@ -1,6 +1,6 @@
 import { readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
-import { TYPE_APP_SECTION_LABEL } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_APP_SECTION_LABEL, TYPE_SHELF_LIST_STATUS } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { TOK_SPACE_XS } from '../../../ui/foundation/ReaderTokens';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
@@ -21,20 +21,27 @@ export struct BookshelfSectionHeader {
   @Prop viewMode: 'cover' | 'list' = 'cover';
   @Prop filterExpanded: boolean = false;
   @Prop hasActiveFilters: boolean = false;
+  @Prop bookCount: number = -1;
   onCover: () => void = (): void => {};
   onList: () => void = (): void => {};
   onFilter: () => void = (): void => {};
 
   build() {
     Row() {
-      Text('我的书架')
-        .layoutWeight(1)
-        .fontFamily(TYPE_APP_SECTION_LABEL.fontFamily)
-        .fontWeight(TYPE_APP_SECTION_LABEL.fontWeight)
-        .fontSize(TYPE_APP_SECTION_LABEL.fontSizeFp)
-        .lineHeight(`${TYPE_APP_SECTION_LABEL.lineHeightFp}fp`)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .opacity(this.titleOpacity);
+      Row({ space: 6 }) {
+        Text('我的书架')
+          .fontFamily(TYPE_APP_SECTION_LABEL.fontFamily)
+          .fontWeight(TYPE_APP_SECTION_LABEL.fontWeight)
+          .fontSize(TYPE_APP_SECTION_LABEL.fontSizeFp)
+          .lineHeight(`${TYPE_APP_SECTION_LABEL.lineHeightFp}fp`)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).flexShrink(1);
+        if (this.bookCount >= 0) {
+          Text(`${this.bookCount} 本`).fontFamily(TYPE_SHELF_LIST_STATUS.fontFamily)
+            .fontSize(TYPE_SHELF_LIST_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+        }
+      }.layoutWeight(1).constraintSize({ minWidth: 0 }).opacity(this.titleOpacity);
 
       if (this.actionsEnabled) {
       Row({ space: TOK_SPACE_XS }) {

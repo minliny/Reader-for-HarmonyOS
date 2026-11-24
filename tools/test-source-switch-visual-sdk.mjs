@@ -1,5 +1,6 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={"definition": {"description": "所选第三抽屉/2026-10-07 light-toolbar定义→generated spec身份，浏览器/设备接受仍OPEN", "resources": []}, "layout-text": {"description": "所选text当前drawer布局矩阵与native属性/最新复合identity回调", "resources": []}, "layout-manga": {"description": "所选manga当前drawer布局矩阵与native属性/最新复合identity回调", "resources": []}, "rows-safe-area": {"description": "provider规则不合并，shared frame residual safe inset单一owner与未测latency占位", "resources": []}, "row-action-interaction": {"description": "真实SDK row/查找action pressed、cancel/state/retire与当前可选行", "resources": []}, "adaptive-empty": {"description": "实测container宽优先与极短/大字体空状态可达", "resources": []}, "cancel-admission": {"description": "实际progress allowCancel与pending/rollback窗口close准入", "resources": []}, "anchor-controller": {"description": "实际未绑定List currentOffset/rect回落与有界frame恢复", "resources": []}, "native-spinner": {"description": "当前实际native LoadingProgress active/foreground/reduceMotion/mount与guard负例", "resources": []}, "completion-surfaces": {"description": "实际换源纸张过渡委托、尺寸、透明度与主题传播", "resources": []}, "font-load": {"description": "实际checked字体四face ready/reject/retired才准入两格式文字", "resources": []}, "wiring-negatives": {"description": "实际生产halfLeading/rowheight/heading/theme接线负例", "resources": []}, "refresh-error": {"description": "刷新失败保留缓存候选/空诊断不造失败", "resources": []}};
+definitions['redesigned-picker']={description:'新换源抽屉 599/600 分界与动效，实际输入节点跨批次保留、筛选、排序和定位',resources:[]};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const {default: assert} = await import('node:assert/strict');
@@ -20,6 +21,102 @@ const design=JSON.parse(designBytes),v=design.numbers;
 if(selectedCase==='definition'){assert.equal(SOURCE_SWITCH_VISUAL_SHA256,createHash('sha256').update(designBytes).digest('hex'));assert.deepEqual(SOURCE_SWITCH_VISUAL,{...v,...design.strings});assert.equal(design.provenance.browserVisualAcceptance,'OPEN');assert.equal(design.provenance.nativeVisualAcceptance,'OPEN');return;}
 const tick=async()=>{await new Promise(setImmediate);};
 const candidate=(id,url='/book')=>({sourceId:id,bookUrl:url,sourceName:'书源 '+id,bookName:'书名',category:'novel',latestChapterTitle:'最新章节 '+id,latencyKind:'search',latencyMs:38,acquisitionState:'discovered'});
+if(selectedCase==='redesigned-picker'){
+ const frames=[], timers=new Map(), jumps=[], commands=[];
+ let timerId=0;
+ const state=(candidates,refreshing=false,checked=0)=>({kind:'candidates',candidates,refreshing,sweep:{checked,total:5}});
+ const make=(sourceId,sourceName,latestChapterTitle,latencyMs)=>({...candidate(sourceId),sourceName,latestChapterTitle,latencyMs});
+ const a=make('a','Alpha 源','第 9 章 序',10), b=make('b','Beta 源','第一百二十三章 远行',30);
+ const c=make('c','Gamma 源','第 ３１ 章 山路',20), d=make('d','Delta 源','第 1000 章 重逢',50);
+ const current={...make('current','原书源','第 10 章',1),isCurrent:true};
+ const order=owner=>owner.displayedCandidates.map(row=>row.sourceId);
+ for(const width of [599,600]){
+  const window=new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,width,800));
+  const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+  p.hooks.allowEmptyBranchRemoval=true;
+  const deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>window},readerWindowMetrics:()=>window,
+   uiContext:{getFont:()=>({}),animateTo(_spec,admit){admit();},postFrameCallback(frame){frames.push(frame);}},
+   Scroller:class{currentOffset(){return{yOffset:0};}scrollToIndex(...args){jumps.push(args);}},
+   setTimeout(action){timers.set(++timerId,action);return timerId;},clearTimeout(id){timers.delete(id);}});
+  const flush=()=>{for(const [id, action] of timers){timers.delete(id);action();}p.properties.flush();};
+  const owner=new deps.SourceSwitchPanel(undefined,{state:state([current,a,b],true,1),contentKind:width===599?'text':'manga',
+   currentSourceId:'current',currentSourceName:'原书源',currentChapterTitle:'第 10 章',latestChapterTitle:'第 20 章',
+   bookTitle:'同一本书',coverUrl:'retained-cover',surfaceScope:3,surfaceAttachment:5,
+   onSelectCandidate:row=>commands.push(row.sourceId),onRefresh:()=>commands.push('refresh'),onStop:()=>commands.push('stop')});
+  owner.aboutToAppear();owner.initialRender();flush();
+  const nodes=()=>p.nodes(owner);
+  const target=(label, actor=owner)=>p.nodes(actor).find(node=>node.type==='Button'&&node.accessibilityText===label);
+  const input=(actor=owner)=>p.nodes(actor).filter(node=>node.type==='TextInput');
+  const transition=(actor=owner)=>{
+   const value=p.nodes(actor).find(node=>node.type==='__Common__'&&node.transition)?.transition;
+   return Array.isArray(value)?value[0]:value;
+  };
+  const frame=p.walk(owner).find(child=>child instanceof p.deps.ReaderBoundedSurface);
+  assert.equal(frame.placement,width===599?'bottom':'side');
+  assert.equal(frame.surfaceWidth,width===599?599:376);
+  assert.equal(frame.surfaceHeight,width===599?656:800);
+  assert.equal(transition().parameters.appear.parameters,width===599?'bottom':'end');
+  assert.equal(transition().parameters.disappear.parameters,width===599?'bottom':'end');
+  assert.equal(transition().parameters.appear.options.duration,260);
+  assert.equal(transition().parameters.disappear.options.duration,210);
+  assert.deepEqual(transition().parameters.appear.options.curve.values,[.2,0,0,1]);
+  const reduced=new deps.SourceSwitchPanel(undefined,{state:state([a]),reduceMotion:true,coverUrl:'retained-cover',
+   onRefresh:()=>commands.push('refresh')});
+  reduced.aboutToAppear();reduced.initialRender();
+  assert.equal(transition(reduced).kind,'opacity');
+  assert.equal(transition(reduced).options.duration,120);
+  target('重新查找书源',reduced).onClick();assert.equal(commands.at(-1),'refresh');
+  reduced.aboutToDisappear();
+
+  const [editor]=input();assert.equal(input().length,1);
+  assert.equal(editor.id,'reader-source-filter:3:5');
+  const [field]=p.walk(owner).filter(child=>child instanceof deps.ReaderSearchField);
+  const candidateCount=count=>nodes().some(node=>node.type==='Text'&&node.create===`已发现 ${count} 个候选书源`);
+  const nativeController=editor.create.controller;
+  const retained=()=>{
+   assert.equal(input().length,1);assert.equal(input()[0],editor);
+   assert.equal(input()[0].create.controller,nativeController);
+   assert.equal(p.walk(owner).find(child=>child instanceof deps.ReaderSearchField),field);
+  };
+  const headers=nodes().filter(node=>node.type==='ListItem').slice(0,owner.listHeaderCount());
+  for(const item of headers)item.create[0](item.id,true);
+  assert.ok(nodes().some(node=>node.type==='Text'&&node.create==='当前 · 原书源'));
+  const list=nodes().find(node=>node.type==='List');list.onAppear();
+  assert.deepEqual(order(owner),['a','b']);
+  assert.ok(candidateCount(2));
+  const oldA=p.walk(owner).find(child=>child instanceof deps.SourceSwitchNovelRow&&child.row.candidate.sourceId==='a');
+  const oldRow=[...oldA.nodes.values()].find(node=>node.type==='Row'&&node.onClick);
+  owner.state=state([a,b],true,2);flush();retained();
+  const sweepProgress=()=>nodes().filter(node=>node.type==='Progress').map(node=>node.create);
+  assert.ok(sweepProgress().some(progress=>progress.value===2&&progress.total===5),JSON.stringify(sweepProgress()));
+  editor.onChange('山路');flush();retained();assert.equal(editor.create.text,'山路');
+  assert.deepEqual(order(owner),[]);assert.ok(candidateCount(0));oldRow.onClick();assert.equal(commands.at(-1),'refresh');
+  owner.state=state([a,c,b],true,3);flush();retained();assert.equal(editor.create.text,'山路');
+  assert.deepEqual(order(owner),['c']);
+  assert.ok(candidateCount(1));
+  assert.ok(nodes().some(node=>node.type==='Progress'&&node.create.value===3));
+  target('清空书源筛选').onClick();flush();retained();assert.equal(editor.create.text,'');
+  assert.deepEqual(order(owner),['a','c','b']);
+  target('延迟优先').onClick();flush();retained();assert.deepEqual(order(owner),['b','c','a']);
+  owner.state=state([a,c,b,d],true,4);flush();retained();assert.deepEqual(order(owner),['d','b','c','a']);
+  target('停止查找书源').onClick();assert.equal(commands.at(-1),'stop');
+  editor.onChange(' ALPHA ');flush();assert.deepEqual(order(owner),['a']);
+  target('定位当前').onClick();flush();retained();assert.equal(editor.create.text,'');
+  const locateFrame=frames.at(-1);
+  locateFrame.onFrame(0);locateFrame.onIdle(0);
+  assert.deepEqual(jumps.at(-1),[owner.listHeaderCount()-1,false,'start']);
+  assert.equal(nodes().filter(node=>node.type==='ListItem'&&node.transition).length,0,'no row entrance transition');
+  oldRow.onClick();assert.equal(commands.at(-1),'a');
+  owner.state=state([a,c,b,d],true,4);flush();
+  owner.aboutToDisappear();
+  const retiredCount=commands.length;
+  oldRow.onClick();
+  editor.onChange('Beta');
+  assert.equal(commands.length,retiredCount);
+  assert.equal(owner.filterText,'');
+ }
+ return;
+}
 if(selectedCase==='native-spinner'){
  const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs'),{boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');const source=readFileSync(new URL('../entry/src/main/ets/features/source/ui/SourceSwitchSpinner.ets',import.meta.url),'utf8');
  function check(definition,negative=false){const r=boundedSurfaceSdk(),C=createReaderBuilderProbe(definition,boundedMembers(definition),{...r.deps,readerAppColor},r.hooks).Component,o=new C(undefined,{active:true,diameter:27});o.aboutToAppear();o.initialRender();const node=r.nodes(o).find(n=>n.type==='LoadingProgress');assert.ok(node,'current native spinner');assert.equal(node.width,27);assert.equal(node.height,27);assert.equal(node.enableLoading,true);for(const field of ['foreground','active']){o[field]=false;r.properties.flush();assert.equal(node.enableLoading,false);o[field]=true;r.properties.flush();}o.reduceMotion=true;r.properties.flush();assert.equal(node.enableLoading,false);o.reduceMotion=false;r.properties.flush();o.aboutToDisappear();r.properties.flush();assert.equal(node.enableLoading,false);}

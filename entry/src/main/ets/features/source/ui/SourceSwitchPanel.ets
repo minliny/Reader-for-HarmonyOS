@@ -108,6 +108,7 @@ export struct SourceSwitchPanel {
         .width('100%')
         .height('100%')
         .backgroundColor(readerAppColor(resolveDrawerSpec('source-switch-drawer').scrimRole, this.appThemeScheme))
+        .backdropBlur(6)
         .transition(TransitionEffect.OPACITY.animation(this.reduceMotion ?
           readerMotionReducedFadeParam() : motionAnimateParam('app.sheet.scrim')),
           (transitionIn: boolean): void => this.surface?.surfaceTransitionFinished(attachment, scopeId, 'scrim', transitionIn))

@@ -125,6 +125,7 @@ export struct ReaderSearchField {
   @Prop accessibilityLabel: string = '';
   @Prop expandedLayout: boolean = false;
   @Prop clearable: boolean = false;
+  @Prop catalogChrome: boolean = false;
   @Prop bookPanelClearId: string = '';
   @Prop bookKeyboardOnFocus: boolean = true;
   @Prop submitEnabled: boolean = true;
@@ -158,6 +159,7 @@ export struct ReaderSearchField {
   private readonly editingTarget: ReaderEditableTarget = new ReaderEditableTarget();
   editingHost: ReaderEditingVisibility | undefined = undefined;
   editingCurrent: (() => boolean) | undefined = undefined;
+  onBookClear: (() => void) | undefined = undefined;
   bookPanelFrameId: string = '';
   observeBookEditor: ((event: ReaderSearchEditorEvent, facts: ReaderSearchEditorObservation) => void) | undefined;
   private observedBookLength: number = -1;
@@ -483,12 +485,13 @@ export struct ReaderSearchField {
   }
 
   private clearBookInput(): void {
-    if (!this.mounted) return;
+    if (!this.mounted || this.editingCurrent?.() === false) return;
     if (this.bookEditorObservationCurrent()) {
       this.observeBookEditor?.('clear', { focused: this.bookInputFocused, length: 0, beforeLength: this.observedBookLength });
       this.observedBookLength = 0;
     }
     this.changeText('');
+    this.onBookClear?.();
     this.focusBookInput();
     this.revealBookInputCaret();
   }
@@ -501,7 +504,7 @@ export struct ReaderSearchField {
     if (!this.mounted || !this.isBookField() || this.mode === 'passive') return;
     const generation = this.focusGeneration;
     this.getUIContext().postFrameCallback(new ReaderSearchFocusFrame((): void => {
-      if (this.mounted && generation === this.focusGeneration) {
+      if (this.mounted && generation === this.focusGeneration && this.editingCurrent?.() !== false) {
         this.getUIContext().getFocusController().requestFocus('reader-book-search-input');
       }
     }));
@@ -667,12 +670,22 @@ export struct ReaderSearchField {
           .onChange((value: string): void => this.changeText(value))
           .enterKeyType(EnterKeyType.Search)
           .onSubmit((_enterKey: EnterKeyType): void => this.submit());
+        if (this.variant === 'readerDirectory' && this.catalogChrome && this.text.length > 0) {
+          Button({ type: ButtonType.Normal, stateEffect: false }) {
+            Image(this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear'))
+              .width(11).height(11).accessibilityLevel('no');
+          }.width(44).height(44).padding(0).backgroundColor(Color.Transparent)
+            .accessibilityRole(AccessibilityRoleType.BUTTON).accessibilityText('清空章节搜索')
+            .onClick((): void => {
+              if (this.editingCurrent?.() !== false) this.changeText('');
+            });
+        }
       }
       .width('100%')
       .height(this.variant === 'readerDirectory' ? Math.max(44, this.fieldHeight()) : this.fieldHeight())
       .padding({ left: this.horizontalPadding(), right: this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_ARROW_TARGET : this.horizontalPadding() })
       .backgroundColor(this.variant === 'readerDirectory' || this.variant === 'sourceGroup' ? Color.Transparent : this.fieldBackgroundColor())
-      .border({ width: this.fieldBorderWidth(), color: this.fieldBorderColor() })
+      .border({ width: this.catalogChrome ? 0 : this.fieldBorderWidth(), color: this.fieldBorderColor() })
       .borderRadius(this.cornerRadius())
       .alignItems(VerticalAlign.Center);
     }.width('100%').height(this.variant === 'readerDirectory' ? Math.max(44, this.fieldHeight()) : this.fieldHeight());
@@ -800,7 +813,7 @@ export struct ReaderSearchField {
   }
 
   private fieldBackgroundColor(): string {
-    if (this.variant === 'bookPanel') return readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme);
+    if (this.variant === 'bookPanel' || this.catalogChrome) return readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme);
     if (this.variant === 'sourceManagement') {
       return readerAppColor('app.search.fieldSolid', this.appThemeScheme);
     }
@@ -811,10 +824,12 @@ export struct ReaderSearchField {
   }
 
   private fieldBorderWidth(): number {
+    if (this.catalogChrome) return 1;
     return this.variant === 'sourceManagement' || this.variant === 'rssPassive' || this.isBookField() ? TOK_BORDER_W : 0;
   }
 
   private fieldBorderColor(): string {
+    if (this.catalogChrome) return readerAppColor('TOK_LINE', this.appThemeScheme);
     return this.variant === 'sourceManagement' ? readerAppColor('app.border.searchField', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme);
   }
 

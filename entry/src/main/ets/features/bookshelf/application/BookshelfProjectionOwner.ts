@@ -172,12 +172,13 @@ export class BookshelfProjectionOwner {
       if (current() && shelf !== undefined) this.deliver(binding, (): void => binding.membership(shelf.books));
     } catch (error) { if (current()) this.diagnose(binding, error as Error); }
   }
-  async selection(binding: BookshelfProjectionBinding): Promise<BookshelfState | undefined> {
+  async selection(binding: BookshelfProjectionBinding,
+    filter: BookshelfFilter = { readingState: 'all', sourceKind: 'all' }): Promise<BookshelfState | undefined> {
     const generation = this.value.generation;
     const current = (): boolean => generation === this.value.generation && this.current(binding);
     if (!current()) return undefined;
     try {
-      const shelf = await this.gateway({ readingState: 'all', sourceKind: 'all' }).loadAll(current);
+      const shelf = await this.gateway(filter).loadAll(current);
       return current() ? shelf : undefined;
     } catch (error) { if (current()) throw error; return undefined; }
   }

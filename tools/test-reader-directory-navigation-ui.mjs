@@ -196,7 +196,7 @@ let timerId = 0;
 let visibleAnchorNodeId, prepareMissing, prepareStandalone;
 
 const SurfaceProbe = productionMotionMethods(surfacePath,
-  ['openTree', 'onViewInputsChanged', 'onInteractionChanged', 'scheduleQueryOpen', 'cancelQueryTimer',
+  ['openTree', 'onLocateCurrent', 'onViewInputsChanged', 'onInteractionChanged', 'scheduleQueryOpen', 'cancelQueryTimer',
     'onTreeUserScrollIntent', 'onProgrammaticScrollIntent', 'onTreeScrollSettled', 'prepareVisiblePages',
     'retryOpen', 'onIdentityChanged', 'notifyReadFailure', 'currentReadInputKey', 'currentInputOwnerKey',
     'prepareMangaFonts', 'currentDirectoryEntries', 'openingInputCurrent', 'recoveryInputCurrent'], {
@@ -274,7 +274,15 @@ if (selectedCase === 'catalog-filter-admission') {
     pending[start + 2].resolve(readyCatalog('short-sorted'));
     await flushSurface();
     assert.equal(surface.view.viewId, 'short-sorted');
-    assert.equal(surface.view.startAtCatalogTop, undefined);
+    assert.notEqual(surface.view.startAtCatalogTop, true);
+    surface.query = 'stale-filter';
+    surface.onLocateCurrent();
+    await flushSurface();
+    assert.equal(pending[start + 3].query.query, '', 'explicit locate cannot submit the just-cleared filter');
+    assert.equal(pending[start + 3].query.locateCurrent, true);
+    pending[start + 3].resolve({ ...readyCatalog('locating'), locateCurrent: true });
+    await flushSurface();
+    assert.equal(surface.view.currentDisplayCentered, true, 'the explicit full-catalog target uses centered host alignment');
     visibleAnchorNodeId = undefined;
 }
 if (selectedCase === 'surface-admission') {

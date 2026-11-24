@@ -13,6 +13,10 @@ export interface BookshelfDetailScenePorts {
   openDirectory: () => void;
   retryCatalog: () => void;
   openSourceSwitch: (focusId?: string) => void;
+  projectCurrentChapter?: (identity: string) => void;
+  openDownloads?: () => void;
+  openGroup?: (identity: string, focusId?: string) => void;
+  registerMoreBack?: (handler: (() => boolean) | undefined, identity: string) => void;
   back: () => void;
 }
 
@@ -40,8 +44,16 @@ export struct BookshelfDetailScene {
   private onEntryChanged(): void {
     const book = this.entry.book, toc = this.entry.toc;
     if (book !== this.sourceBook) {
+      const previous = this.sourceBook;
       this.sourceBook = book;
       this.bodyBook = book;
+      if (book !== undefined && (previous?.sourceId !== book.sourceId || previous?.bookId !== book.bookId)) {
+        const identity = this.identity;
+        void Promise.resolve().then((): void => {
+          if (identity === this.identity && this.sourceBook?.sourceId === book.sourceId &&
+            this.sourceBook?.bookId === book.bookId) this.ports?.projectCurrentChapter?.(identity);
+        });
+      }
     }
     if (toc !== this.sourceToc) {
       this.sourceToc = toc;
@@ -66,6 +78,10 @@ export struct BookshelfDetailScene {
         book: this.bodyBook,
         directoryFocusContext: this.foreground ? 'detail' : this.directoryRetained ? 'directory' : 'inactive',
         toc: this.bodyToc,
+        currentChapterIndex: this.bodyBook.contentKind === 'manga' ?
+          this.bodyBook.mangaPosition?.chapterIndex ?? -1 : this.entry.directoryCurrentChapterIndex,
+        groupEnabled: this.entry.inBookshelf && this.ports?.openGroup !== undefined,
+        downloadsEnabled: this.ports?.openDownloads !== undefined,
         sourceSwitchEnabled: this.detail.sourceSwitchEnabled(this.bodyBook),
         readingEnabled: this.entry.verdict === 'readable',
         readingBlockedReason: remoteContentVerdictLabel(this.entry.verdict),
@@ -85,6 +101,11 @@ export struct BookshelfDetailScene {
         },
         onOpenDirectory: (): void => { if (current?.() === true) this.ports?.openDirectory(); },
         onRetryCatalog: (): void => { if (current?.() === true) this.ports?.retryCatalog(); },
+        onOpenDownloads: (): void => { if (current?.() === true) this.ports?.openDownloads?.(); },
+        onOpenGroup: (focusId: string): void => { if (current?.() === true) this.ports?.openGroup?.(identity, focusId); },
+        onMoreBack: (handler: (() => boolean) | undefined, lease: string): void => {
+          if (handler === undefined || current?.() === true) this.ports?.registerMoreBack?.(handler, lease);
+        },
         onSwitchSource: (focusId?: string): void => { if (current?.() === true) this.ports?.openSourceSwitch(focusId); },
         admissionIdentity: identity,
         onRemove: (requestedIdentity?: string): void => {

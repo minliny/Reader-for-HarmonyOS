@@ -26,7 +26,7 @@ export struct ReaderDirectoryToolbar {
   @Prop ascending: boolean = true;
   @Prop showChapterTools: boolean = true;
   @Prop actionEnabled: boolean = true;
-  @Prop variant: 'standard' | 'full-directory' | 'manga-catalog' = 'standard';
+  @Prop variant: 'standard' | 'full-directory' | 'manga-catalog' | 'standalone-catalog' = 'standard';
   @Prop mangaFontScale: number = 1;
   @Prop locateEnabled: boolean = false;
   @Prop availableWidthVp: number = 0;
@@ -49,6 +49,7 @@ export struct ReaderDirectoryToolbar {
   onBottom: () => void = (): void => {};
   onToggleSort: () => void = (): void => {};
   onLocateCurrent: () => void = (): void => {};
+  onOpenCacheManagement: () => void = (): void => {};
 
   private directoryMounted: boolean = false;
   aboutToAppear(): void { this.directoryMounted = true; }
@@ -60,7 +61,8 @@ export struct ReaderDirectoryToolbar {
   private iconSize(): number { return this.variant === 'standard' ? 24 : 16; }
   private controlFieldHeight(): number {
     const scale = this.readerWindowMetricsRevision < 0 ? 1 : readerReadableFontScale(readerWindowMetrics().systemFontScale);
-    return Math.max(readerScaledControlHeight(this.variant === 'full-directory' ? 32 : 44, 24, scale),
+    const minimum = this.variant === 'full-directory' ? 32 : this.variant === 'standalone-catalog' ? 36 : 44;
+    return Math.max(readerScaledControlHeight(minimum, 24, scale),
       Number.isFinite(this.naturalFieldHeightVp) ? this.naturalFieldHeightVp : 0);
   }
   private controlToolbarHeight(): number {
@@ -145,9 +147,15 @@ export struct ReaderDirectoryToolbar {
 
   private toolbarBudget(): ReaderDirectoryToolbarBudget {
     const scale = this.readerWindowMetricsRevision < 0 ? 1 : readerReadableFontScale(readerWindowMetrics().systemFontScale);
+    const catalog = this.variant === 'standalone-catalog';
     return readerDirectoryToolbarBudget(this.availableWidthVp, this.showChapterTools, this.controlFieldHeight(),
-      this.inputMinimumWidthVp > 0 ? this.inputMinimumWidthVp : 60 * scale,
-      Math.max(READER_DIRECTORY_TOOLBAR_HEIGHT, this.naturalToolbarHeightVp));
+      (this.inputMinimumWidthVp > 0 ? this.inputMinimumWidthVp : 60 * scale) + (catalog ? 44 : 0),
+      Math.max(catalog ? 44 : READER_DIRECTORY_TOOLBAR_HEIGHT, this.naturalToolbarHeightVp), catalog);
+  }
+
+  private queryLaneHeight(): number {
+    if (this.variant === 'standalone-catalog') return Math.max(44, this.controlFieldHeight());
+    return this.queryStacked() ? this.controlFieldHeight() + 18 : Math.max(44, this.controlFieldHeight());
   }
 
   @Builder
@@ -155,9 +163,12 @@ export struct ReaderDirectoryToolbar {
       Row() {
         ReaderSearchField({ editingHost: this.editingHost,
           editingCurrent: (): boolean => this.currentDirectoryInput(inputFocusId) && this.actionEnabled && (this.editingCurrent?.() ?? true),
-          variant: 'readerDirectory', mode: this.variant === 'manga-catalog' ? 'live' : 'submit', text: this.text,
-          naturalFieldHeightVp: this.variant === 'manga-catalog' ? this.controlFieldHeight() : this.naturalFieldHeightVp,
-          naturalInputHeightVp: this.variant === 'manga-catalog' ? this.controlFieldHeight() : this.naturalInputHeightVp,
+          variant: 'readerDirectory', mode: this.variant === 'manga-catalog' || this.variant === 'standalone-catalog' ? 'live' : 'submit', text: this.text,
+          catalogChrome: this.variant === 'standalone-catalog',
+          naturalFieldHeightVp: this.variant === 'manga-catalog' || this.variant === 'standalone-catalog' ?
+            this.controlFieldHeight() : this.naturalFieldHeightVp,
+          naturalInputHeightVp: this.variant === 'standalone-catalog' ? this.queryLaneHeight() :
+            this.variant === 'manga-catalog' ? this.controlFieldHeight() : this.naturalInputHeightVp,
           placeholder: this.placeholder, accessibilityLabel: this.placeholder,
           clearable: this.variant === 'manga-catalog',
           directoryFocusId: inputFocusId, directoryFocusAllowed: this.directoryFocusAllowed,
@@ -180,13 +191,41 @@ export struct ReaderDirectoryToolbar {
       }.flexGrow(this.queryStacked() ? 0 : 1).flexShrink(this.queryStacked() ? 0 : 1)
         .flexBasis(this.queryStacked() ? 'auto' : 0).width(this.queryStacked() ? '100%' : undefined)
         .constraintSize({ minWidth: 0 })
-        .height(this.queryStacked() ? this.controlFieldHeight() + 18 : Math.max(44, this.controlFieldHeight()))
-        .padding(this.queryStacked() ? { top: 3, bottom: 3 } : 0).alignItems(VerticalAlign.Center);
+        .height(this.queryLaneHeight())
+        .padding(this.queryStacked() && this.variant !== 'standalone-catalog' ? { top: 3, bottom: 3 } : 0).alignItems(VerticalAlign.Center);
+  }
+
+  @Builder
+  private catalogTool(sort: boolean, inputFocusId: string) {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
+      Stack({ alignContent: Alignment.Center }) {
+        Image(sort ? this.mangaSortIcon() : this.appThemeScheme === 'night' ?
+          $r('app.media.reader_action_download_theme_night') : $r('app.media.reader_action_download'))
+          .width(16).height(16).objectFit(ImageFit.Contain);
+      }.width(36).height(36).borderRadius(18)
+        .backgroundColor(readerAppColor(sort && !this.ascending ? 'TOK_PRIMARY_SOFT' : 'TOK_SURFACE', this.appThemeScheme))
+        .border({ width: 1, color: readerAppColor(sort && !this.ascending ? 'TOK_PRIMARY_BORDER' : 'TOK_LINE', this.appThemeScheme) })
+        .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+    }.width(44).height(44).padding(0).backgroundColor(Color.Transparent)
+      .attributeModifier(new ReaderActionAccessibility(sort ?
+        (this.ascending ? '按章节倒序排列' : '按章节正序排列') : '缓存管理', this.actionEnabled, false, true,
+        new MangaDirectoryPressFeedback(this.actionEnabled, false, this.appThemeScheme, 'nativeButton'), 'nativeButton'))
+      .onClick((): void => {
+        if (!this.actionEnabled || !this.currentDirectoryInput(inputFocusId)) return;
+        if (sort) this.onToggleSort();
+        else this.onOpenCacheManagement();
+      });
   }
 
   @Builder
   private queryTools(inputFocusId: string) {
-      if (this.variant === 'manga-catalog') {
+      if (this.variant === 'standalone-catalog') {
+        Row({ space: 8 }) {
+          this.catalogTool(false, inputFocusId);
+          this.catalogTool(true, inputFocusId);
+        }.width(this.queryStacked() ? '100%' : undefined).height(this.queryLaneHeight())
+          .justifyContent(FlexAlign.End).flexShrink(0);
+      } else if (this.variant === 'manga-catalog') {
         this.tool('sort', (): void => { if (this.currentDirectoryInput(inputFocusId)) this.onToggleSort(); });
       } else {
         Row({ space: this.variant === 'full-directory' ? 5 : 0 }) {
@@ -209,11 +248,12 @@ export struct ReaderDirectoryToolbar {
     // One parent chain for the native field, including width/stacked changes.
     Flex({ direction: this.queryStacked() ? FlexDirection.Column : FlexDirection.Row,
       wrap: FlexWrap.NoWrap, alignItems: ItemAlign.Center, justifyContent: FlexAlign.End,
-      space: { main: LengthMetrics.vp(this.queryStacked() ? 8 : this.variant === 'standard' ? 8 : 5) } }) {
+      space: { main: LengthMetrics.vp(this.queryStacked() || this.variant === 'standard' ||
+        this.variant === 'standalone-catalog' ? 8 : 5) } }) {
       this.queryField(inputFocusId);
       this.queryTools(inputFocusId);
     }.width('100%').height(this.controlToolbarHeight())
-      .padding(this.variant === 'manga-catalog' ? { left: 0, right: 0 } :
+      .padding(this.variant === 'manga-catalog' || this.variant === 'standalone-catalog' ? { left: 0, right: 0 } :
         { left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE,
           top: this.queryStacked() ? 0 : 3, bottom: this.queryStacked() ? 0 : 3 });
   }

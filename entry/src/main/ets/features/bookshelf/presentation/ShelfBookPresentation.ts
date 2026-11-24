@@ -66,7 +66,7 @@ export class ShelfBookPresentation {
   }
 
   static visible(books: ShelfBook[], selectedGroup: string,
-    readingState: string = 'all', sourceKind: string = 'all'): ShelfBook[] {
+    readingState: string = 'all', sourceKind: string = 'all', contentKind: string = 'all'): ShelfBook[] {
     return books.filter((book: ShelfBook): boolean => {
       const group = book.group?.trim() ?? '';
       const inGroup = selectedGroup === '' || (selectedGroup === '默认' ? group === '' || group === '默认' : group === selectedGroup);
@@ -79,7 +79,9 @@ export class ShelfBookPresentation {
         readingState === 'finished' ? progress === 100 : true;
       const inKind = sourceKind === 'local' ? book.sourceId === 'local' :
         sourceKind === 'online' ? book.sourceId !== 'local' : true;
-      return inGroup && inState && inKind;
+      const inContent = contentKind === 'manga' ? book.contentKind === 'manga' :
+        contentKind === 'text' ? book.contentKind !== 'manga' : true;
+      return inGroup && inState && inKind && inContent;
     });
   }
 }

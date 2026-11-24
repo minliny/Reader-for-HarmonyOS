@@ -53,6 +53,52 @@ export class SearchResultProjection {
     this.books.delete(key); this.facts.delete(key);
   }
 
+  private updateShelfIndex(shelf: ShelfBook[]): Set<string> {
+    const affected = new Set<string>();
+    if (this.shelfInput === shelf) return affected;
+    const identities = new Set<string>(); const titles = new Set<string>();
+    for (const book of shelf) {
+      identities.add(`${book.sourceId}\u0000${book.bookId}`);
+      const workKey = bookshelfWorkKey(book.title, book.author);
+      if (book.sourceId !== 'local' && workKey !== undefined) titles.add(readerMediaIdentity(book.contentKind === 'manga', workKey));
+    }
+    const identityChanges = new Set<string>(); const titleChanges = new Set<string>();
+    for (const key of identities) if (!this.shelfIdentities.has(key)) identityChanges.add(key);
+    for (const key of this.shelfIdentities) if (!identities.has(key)) identityChanges.add(key);
+    for (const key of titles) if (!this.shelfTitles.has(key)) titleChanges.add(key);
+    for (const key of this.shelfTitles) if (!titles.has(key)) titleChanges.add(key);
+    for (const key of identityChanges) { const fact = this.facts.get(key); if (fact !== undefined) affected.add(fact.groupKey); }
+    for (const title of titleChanges) for (const key of this.byTitle.get(title) ?? []) {
+      const fact = this.facts.get(key); if (fact !== undefined) affected.add(fact.groupKey);
+    }
+    this.shelfIdentities = identities; this.shelfTitles = titles; this.shelfInput = shelf;
+    return affected;
+  }
+
+  private isInBookshelf(book: SearchBook, titleKey: string): boolean {
+    return this.shelfIdentities.has(this.identity(book)) ||
+      (book.sourceId !== 'local' && this.shelfTitles.has(titleKey));
+  }
+
+  /** An authoritative membership update can reach retained rows while the
+   * caller defers result layout and candidate enrichment during scrolling. */
+  updateRetainedMembership(shelf: ShelfBook[]): Map<string, boolean> {
+    const changed = new Map<string, boolean>();
+    for (const key of this.updateShelfIndex(shelf)) {
+      const row = this.rows.get(key);
+      if (row === undefined) continue;
+      const inBookshelf = row.variants.some((variant: SearchBook): boolean => {
+        const fact = this.facts.get(this.identity(variant));
+        return fact !== undefined && this.isInBookshelf(variant, fact.titleKey);
+      });
+      if (row.inBookshelf !== inBookshelf) {
+        row.inBookshelf = inBookshelf;
+        changed.set(key, inBookshelf);
+      }
+    }
+    return changed;
+  }
+
   update(results: SearchBook[], shelf: ShelfBook[], keyword: string, navigation: SearchViewState,
     delta?: SearchResultDelta, allowReorder: boolean = false): SearchProjectionUpdate {
     const affected = new Set<string>();
@@ -115,24 +161,7 @@ export class SearchResultProjection {
       this.input = results; this.keyword = keyword; this.revision = delta?.revision ?? -1;
       this.queryRevision = navigation.revision;
     }
-    if (this.shelfInput !== shelf || reset) {
-      const identities = new Set<string>(); const titles = new Set<string>();
-      for (const book of shelf) {
-        identities.add(`${book.sourceId}\u0000${book.bookId}`);
-        const workKey = bookshelfWorkKey(book.title, book.author);
-        if (book.sourceId !== 'local' && workKey !== undefined) titles.add(readerMediaIdentity(book.contentKind === 'manga', workKey));
-      }
-      const identityChanges = new Set<string>(); const titleChanges = new Set<string>();
-      for (const key of identities) if (!this.shelfIdentities.has(key)) identityChanges.add(key);
-      for (const key of this.shelfIdentities) if (!identities.has(key)) identityChanges.add(key);
-      for (const key of titles) if (!this.shelfTitles.has(key)) titleChanges.add(key);
-      for (const key of this.shelfTitles) if (!titles.has(key)) titleChanges.add(key);
-      for (const key of identityChanges) { const fact = this.facts.get(key); if (fact !== undefined) affected.add(fact.groupKey); }
-      for (const title of titleChanges) for (const key of this.byTitle.get(title) ?? []) {
-        const fact = this.facts.get(key); if (fact !== undefined) affected.add(fact.groupKey);
-      }
-      this.shelfIdentities = identities; this.shelfTitles = titles; this.shelfInput = shelf;
-    }
+    for (const key of this.updateShelfIndex(shelf)) affected.add(key);
     let membershipChanged = reset;
     const changedKeys = new Set<string>();
     for (const key of affected) {
@@ -154,8 +183,7 @@ export class SearchResultProjection {
       for (const variant of variants) {
         const identity = this.identity(variant); const fact = this.facts.get(identity) as SearchProjectionFact;
         sourceIds.add(variant.sourceId);
-        inBookshelf = inBookshelf || this.shelfIdentities.has(identity) ||
-          (variant.sourceId !== 'local' && this.shelfTitles.has(fact.titleKey));
+        inBookshelf = inBookshelf || this.isInBookshelf(variant, fact.titleKey);
         if ((usableVariants.length === 0 || searchCandidateRank(variant) < 3) &&
           (fact.score < score || (fact.score === score && searchCandidateRank(variant) < searchCandidateRank(book)))) {
           book = variant; score = fact.score;

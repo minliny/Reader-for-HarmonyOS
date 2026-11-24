@@ -8,6 +8,7 @@ import {actualReadingEntryPresentation} from './reading-entry-presentation-probe
 import {readerRecoveryView} from '../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import {errorMessageOf,localReadFailureSummary} from '../../entry/src/main/ets/app/ErrorMessage.ts';
 import {BookshelfViewState} from '../../entry/src/main/ets/features/bookshelf/presentation/BookshelfViewState.ts';
+import {ShelfBookPresentation} from '../../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts';
 import * as names from '../../entry/src/main/ets/features/bookshelf/application/BookshelfSourceNameProjection.ts';
 import * as headerMetrics from '../../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts';
 import {readerFoundationTokens} from './reader-tokens-probe.mjs';
@@ -42,7 +43,7 @@ const {BookshelfCatalogPresentation}=emit('features/bookshelf/presentation/Books
 const {EMPTY_BOOKSHELF_OPERATION_SNAPSHOT}=emit('features/bookshelf/application/BookshelfOperationOwner.ts',['EMPTY_BOOKSHELF_OPERATION_SNAPSHOT']);
 const {LOCAL_IMPORT_PRESENTATION_KEY}=emit('features/bookshelf/presentation/LocalImportPresentationOwner.ts',['LOCAL_IMPORT_PRESENTATION_KEY']);
 const {BookshelfMutationPresentation}=emit('features/bookshelf/presentation/BookshelfMutationPresentation.ets',['BookshelfMutationPresentation'],
- {EMPTY_BOOKSHELF_OPERATION_SNAPSHOT,LOCAL_IMPORT_PRESENTATION_KEY,readerRecoveryView});
+ {EMPTY_BOOKSHELF_OPERATION_SNAPSHOT,LOCAL_IMPORT_PRESENTATION_KEY,readerRecoveryView,ShelfBookPresentation});
 const {BookshelfNavigationPresentation}=emit('features/bookshelf/ui/BookshelfNavigationPresentation.ets',['BookshelfNavigationPresentation'],
  {FrameCallback:class {}});
 const Reading=actualReadingEntryPresentation();
@@ -65,7 +66,7 @@ function indexField(field,receiver,deps){
 }
 function currentReadTypes(storage){
  return emit('features/bookshelf/presentation/BookshelfReadPresentation.ets',
- ['BookshelfReadPresentation'],{BookshelfViewState,readerRecoveryView,readerPageInitialHeaderHeight,...names,
+ ['BookshelfReadPresentation'],{BookshelfViewState,ShelfBookPresentation,readerRecoveryView,readerPageInitialHeaderHeight,...names,
   errorMessageOf,localReadFailureSummary,AppStorage:storage,hilog:{warn(){},error(){}}});
 }
 export function currentReadPresentation(ports={},storage={get:()=>undefined}){

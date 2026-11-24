@@ -56,6 +56,7 @@ export struct ReaderDirectoryDestination {
     positionScope?: RemoteReadingPositionScope) => void) | undefined = undefined;
   onDownloadChapter: (chapterIndex: number) => void = (): void => {};
   onDownloadBook: () => void = (): void => {};
+  onOpenCacheManagement: () => void = (): void => {};
   onClearBookOffline: () => void = (): void => {};
   onDeleteBookmarks: (times: number[]) => void = (): void => {};
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void = (): void => {};
@@ -150,6 +151,7 @@ export struct ReaderDirectoryDestination {
           this.loadDownloadActions(opening, chapterIndex),
         onDownloadAction: (action: MangaDownloadActionId, chapterIndex?: number): Promise<void> =>
           this.canHandle(opening) ? this.onDownloadAction(action, chapterIndex) : Promise.resolve(),
+        onOpenCacheManagement: (): void => { if (this.canHandle(opening)) this.onOpenCacheManagement(); },
         onSelectChapter: (chapterIndex: number): void => {
           if (this.canHandle(opening)) this.onSelectChapter(chapterIndex);
         },
@@ -198,6 +200,7 @@ export struct ReaderDirectoryDestination {
           if (this.canHandle(opening)) this.onDownloadChapter(chapterIndex);
         },
         onDownloadBook: (): void => { if (this.canHandle(opening)) this.onDownloadBook(); },
+        onOpenCacheManagement: (): void => { if (this.canHandle(opening)) this.onOpenCacheManagement(); },
         onClearBookOffline: (): void => { if (this.canHandle(opening)) this.onClearBookOffline(); },
         onDeleteBookmarks: (times: number[]): void => { if (this.canHandle(opening)) this.onDeleteBookmarks(times); },
         chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,

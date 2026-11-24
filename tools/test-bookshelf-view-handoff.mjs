@@ -41,11 +41,11 @@ const { BOOKSHELF_VIEW_MOTION: motion } = constants(motionSource, ['BOOKSHELF_VI
   { STANDARD_CURVE: curves.cubicBezierCurve(0.2, 0, 0, 1),
     READER_SHELF_REFLOW_MS, READER_SHELF_STAGGER_MS, READER_SHELF_STAGGER_CAP_MS });
 const tokens = constants(tokensSource, ['TOK_SPACE_XS', 'TOK_SPACE_CONTROL_INLINE']);
-const geometry = constants(source, ['PHONE_LIST_COVER_WIDTH', 'PHONE_LIST_COVER_HEIGHT', 'TABLET_LIST_COVER_WIDTH', 'TABLET_LIST_COVER_HEIGHT']);
 const grid = pureModuleProbe(read('features/bookshelf/ui/BookshelfGridSpec.ets'), 'BookshelfGridSpec.ets',
   { ...readerTypographyRoles, ...readerFoundationTokens, readerFontFamilyReady: () => false },
   ['bookshelfGridFrame', 'bookshelfCoverHeight', 'bookshelfListTextHeight', 'BookshelfListTextBudget',
-    'BOOKSHELF_GRID_TEXT_GAP', 'BOOKSHELF_GRID_TITLE_LINES']);
+    'BOOKSHELF_GRID_TEXT_GAP', 'BOOKSHELF_GRID_TITLE_LINES', 'BOOKSHELF_LIST_COLUMN_GAP',
+    'BOOKSHELF_LIST_COVER_WIDTH', 'BOOKSHELF_LIST_COVER_HEIGHT', 'bookshelfColumnCount', 'bookshelfListCardWidth']);
 const noCover = parse(noCoverSource);
 const noCoverGlyphSource = noCover.statements.find(statement => ts.isFunctionDeclaration(statement) &&
   statement.name?.text === 'noCoverGlyph').getText(noCover);
@@ -70,14 +70,16 @@ const methods = ['sampleViewSwitch', 'resetViewSwitchMotion', 'setRestingProject
   'captureViewSwitchRanks', 'projectionDetailsOpacity', 'projectionListProgress', 'projectionRowHeight',
   'projectionBookWidth', 'projectionBookHeight',
   'projectionBookTranslateX', 'projectionBookTranslateY', 'projectionCoverScale', 'projectionCoverRadius',
+  'projectionCoverScaleY',
   'projectionCoverCompensationX', 'projectionCoverCompensationY', 'projectionListDetailsWidth',
   'projectionCoverLayerOpacity', 'gridBookCardHeight', 'gridProgressLabel', 'listCoverWidth', 'listCoverHeight', 'listRowHeight', 'listTextFrame', 'listTextBudget', 'listTextFontRevision',
   'shelfBookCardWidth', 'bookCardWidth', 'bookCardHeight', 'bookRowSpace', 'hasCover',
   'projectionBookCover', 'projectionBookCoverLayer', 'projectionGridDetails', 'projectionListDetails',
-  'bookActionFocusKey', 'bookActionPresentationHandler', 'isShelfPresentationCurrent', 'bookCoverMotionId'];
+  'bookActionFocusKey', 'bookActionPresentationHandler', 'isShelfPresentationCurrent', 'bookCoverMotionId',
+  'measureBookOrigin', 'shelfViewportMotionId'];
 function fixture(text = source) {
   const properties = createArkUIPropertyRuntimeProbe();
-  const { owner } = createReaderBuilderProbe(text, methods, { ...properties.sdk, ...readerFoundationTokens, ...tokens, ...geometry, ...grid, ...coverVisual,
+  const { owner } = createReaderBuilderProbe(text, methods, { ...properties.sdk, ...readerFoundationTokens, ...tokens, ...grid, ...coverVisual,
     ReaderWindowCoordinator: { metrics: () => metrics }, resolveReaderIconButtonSpec: compileIconButtonSpecs(),
     motionSegment, bookshelfViewCoverDelayMs, noCoverGlyph, NoCoverCover: Child, ShelfBookListDetails: Child, ReaderIconButton: Child, ShelfBookPresentation,
     ImageFit: { Cover: 'cover' } }, properties.hooks);
@@ -158,10 +160,13 @@ function near(actual, expected, message) {
 }
 const book = { sourceId: 'local', bookId: 'handoff', title: '封面交接', author: '作者', readProgress: 3245 };
 function frame(owner, tablet, index) {
-  return { rowHeight: owner.projectionRowHeight([book, book, book], tablet, index - index % 3),
+  const columns = grid.bookshelfColumnCount(tablet);
+  const column = index % columns;
+  return { rowHeight: owner.projectionRowHeight(Array(columns).fill(book), tablet, index - column),
     width: owner.projectionBookWidth(tablet, index), height: owner.projectionBookHeight(book, tablet, index),
-    x: owner.projectionBookTranslateX(index % 3, tablet, index), y: owner.projectionBookTranslateY(index % 3, tablet, index),
-    scale: owner.projectionCoverScale(tablet, index), radius: owner.projectionCoverRadius(tablet, index),
+    x: owner.projectionBookTranslateX(column, tablet, index), y: owner.projectionBookTranslateY(column, tablet, index),
+    scale: owner.projectionCoverScale(tablet, index), scaleY: owner.projectionCoverScaleY(tablet, index),
+    radius: owner.projectionCoverRadius(tablet, index),
     compensationX: owner.projectionCoverCompensationX(tablet, index), compensationY: owner.projectionCoverCompensationY(tablet, index),
     detailsWidth: owner.projectionListDetailsWidth(tablet), coverOpacity: coverOpacity(owner),
     headerOpacity: owner.viewSwitchHeaderOpacity, gridOpacity: owner.viewSwitchGridContentOpacity,
@@ -177,7 +182,7 @@ for (const [from, to] of [['cover', 'list'], ['list', 'cover']]) {
         actual.resetViewSwitchMotion();
         const after = frame(actual, tablet, index);
         assert.deepEqual(Object.keys(after), Object.keys(before), 'reset retains every frame field');
-        for (const name of ['rowHeight', 'width', 'height', 'x', 'y', 'scale', 'radius', 'compensationX', 'compensationY', 'detailsWidth']) {
+        for (const name of ['rowHeight', 'width', 'height', 'x', 'y', 'scale', 'scaleY', 'radius', 'compensationX', 'compensationY', 'detailsWidth']) {
           near(after[name], before[name], `${from}->${to} reset retains final ${name}`);
         }
         for (const name of ['coverOpacity', 'headerOpacity', 'gridOpacity', 'listOpacity']) {
@@ -187,13 +192,39 @@ for (const [from, to] of [['cover', 'list'], ['list', 'cover']]) {
           const minimumHeight = grid.bookshelfListTextHeight(scale);
           assert.ok(Number.isFinite(before.height) && Number.isFinite(minimumHeight) && before.height >= minimumHeight - 1e-9,
             'final list card reserves the shared four-line font budget');
-          near(before.rowHeight, before.height * 3 + tokens.TOK_SPACE_CONTROL_INLINE * 2, 'final projection row pays every list card and gap');
-          near(before.y, (index % 3) * (before.height + tokens.TOK_SPACE_CONTROL_INLINE), 'final projection offset pays the list stride');
+          const coverColumns = grid.bookshelfColumnCount(tablet);
+          const listColumns = grid.bookshelfColumnCount(tablet, true);
+          const rows = coverColumns / listColumns;
+          near(before.rowHeight, before.height * rows + tokens.TOK_SPACE_CONTROL_INLINE * (rows - 1), 'final projection row pays every list card and gap');
+          near(before.y, Math.floor((index % coverColumns) / listColumns) * (before.height + tokens.TOK_SPACE_CONTROL_INLINE),
+            'final projection offset pays the list stride');
+          near(before.x, ((index % coverColumns) % listColumns) * (before.width + grid.BOOKSHELF_LIST_COLUMN_GAP),
+            'final projection offset pays the list column');
+        } else {
+          assert.equal(grid.bookshelfColumnCount(tablet), tablet ? 4 : 3);
         }
       }
     }
   }
 }
+
+const measured = fixture();
+let width = 54, height = 76, viewportWidth = 326;
+const currentId = measured.bookCoverMotionId(book,false), viewportId = measured.shelfViewportMotionId();
+const node = (x,y) => ({getPositionToWindowWithTransform:()=>({x,y})});
+Object.assign(measured,{viewMode:'list',viewSwitchRunning:false,isWideViewport:()=>false,
+  continueCardFrame:()=>({coverWidth:56,coverHeight:78}),shelfHeaderClearance:()=>52,shelfContentEndInset:()=>68,
+  getUIContext:()=>({getFrameNodeById:id=>id===currentId?node(20,70):id===viewportId?node(0,0):null,
+    getComponentUtils:()=>({getRectangleById:id=>id===currentId?{size:{width,height},scale:{x:1,y:1}}:
+      {size:{width:viewportWidth,height:700}}}),px2vp:value=>value})});
+assert.equal(measured.measureBookOrigin(book,false).radius,6);
+assert.equal(measured.measureBookOrigin({...book,sourceId:'different'},false),undefined,'same bookId in another source has no origin');
+measured.viewMode='cover';
+assert.equal(measured.measureBookOrigin(book,false),undefined,'the old list dimensions cannot fly in the cover projection');
+width=grid.bookshelfGridFrame(viewportWidth,false).cardWidth;height=grid.bookshelfCoverHeight(width,false);
+assert.equal(measured.measureBookOrigin(book,false).radius,8);
+viewportWidth=650;
+assert.equal(measured.measureBookOrigin(book,false),undefined,'a sample from the retired viewport shape cannot fly');
 
 // Mount production cover/list builders once, then replay the real observer
 // closures. Retain both default-cover children or both native Image nodes

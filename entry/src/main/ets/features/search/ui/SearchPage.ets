@@ -230,6 +230,11 @@ class SearchResultDataSource implements IDataSource {
   totalCount(): number { return this.items.length; }
   getData(index: number): SearchBookGroup { return this.items[index]; }
 
+  updateShelfMembership(key: string, inBookshelf: boolean): void {
+    const index = this.positions.get(key);
+    if (index !== undefined) this.items[index].inBookshelf = inBookshelf;
+  }
+
   registerDataChangeListener(listener: DataChangeListener): void {
     if (this.listeners.indexOf(listener) < 0) this.listeners.push(listener);
   }
@@ -1244,6 +1249,12 @@ export struct SearchPage {
     // Keep only the latest immutable publication while a finger or an inertial
     // scroll owns the list. Projection's missed-delta path reconstructs it.
     if (this.presentation.kind === 'results' && (this.userInteracting || this.userScrolling)) {
+      const membership = this.resultProjection?.updateRetainedMembership(this.shelfBooks);
+      membership?.forEach((inBookshelf: boolean, key: string): void => {
+        const group = this.projectedGroups.get(key);
+        if (group !== undefined) group.inBookshelf = inBookshelf;
+        this.resultDataSource.updateShelfMembership(key, inBookshelf);
+      });
       this.resultsDeferred = true;
       return;
     }
@@ -2161,7 +2172,6 @@ interface SearchResultDisplayFacts {
   queryRevision: number;
   book: SearchBook;
   sourceCount: number;
-  inBookshelf: boolean;
 }
 
 /** A stable lazy row observes enrichment without remounting the whole result. */
@@ -2211,7 +2221,7 @@ struct SearchResultCard {
 
   private captureDisplayFacts(): SearchResultDisplayFacts {
     return { queryRevision: this.queryRevision, book: searchBookSnapshot(this.group.book),
-      sourceCount: this.group.sourceCount, inBookshelf: this.group.inBookshelf };
+      sourceCount: this.group.sourceCount };
   }
 
   private acceptDisplayFacts(): void {
@@ -2230,8 +2240,7 @@ struct SearchResultCard {
     // while a gesture owns the list. A new query replaces its old display.
     if (!changedQuery && (this.displayVisible || !this.canRefreshDisplay())) return;
     if (!changedQuery && this.displayedBookInput === this.group.book &&
-      this.displayedFacts?.sourceCount === this.group.sourceCount &&
-      this.displayedFacts?.inBookshelf === this.group.inBookshelf) return;
+      this.displayedFacts?.sourceCount === this.group.sourceCount) return;
     const next = this.captureDisplayFacts();
     // The owner captures the old geometry before this text can be relaid out.
     // Query changes already have their own navigation reset/restore owner.
@@ -2242,7 +2251,7 @@ struct SearchResultCard {
 
   private displayBook(): SearchBook { return this.displayedFacts?.book ?? this.group.book; }
   private displaySourceCount(): number { return this.group.sourceCount; }
-  private displayInBookshelf(): boolean { return this.displayedFacts?.inBookshelf ?? this.group.inBookshelf; }
+  private displayInBookshelf(): boolean { return this.group.inBookshelf; }
 
   private displayVisibilityHandler(): (visible: boolean, ratio: number) => void {
     const epoch = this.visibilityEpoch;
@@ -2451,9 +2460,12 @@ struct SearchResultCard {
               .constraintSize({ maxWidth: '100%' }).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
           }
           if (this.displayInBookshelf()) {
-            Text('已在书架').fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
+            Text('已在书架').fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontWeight(FontWeight.Medium)
+              .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
               .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
-              .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).maxLines(1)
+              .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)).maxLines(1)
+              .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
+              .borderRadius(6).padding({ left: 8, right: 8, top: 2, bottom: 2 })
               .textOverflow({ overflow: TextOverflow.Ellipsis });
           }
         }.width('100%').margin({ top: SEARCH_RESULT_GEOMETRY.footerGap });

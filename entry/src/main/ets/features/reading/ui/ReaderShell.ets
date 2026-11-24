@@ -373,6 +373,7 @@ export struct ReaderShell {
           onSelectChapter: this.onSelectChapter, onSelectNavigationTarget: this.onSelectNavigationTarget,
           onSelectBookmark: this.onSelectBookmark, bookmarkIdentity: this.bookmarkIdentity,
           onDownloadChapter: this.onDownloadChapter, onDownloadBook: this.onDownloadBook, onClearBookOffline: this.onClearBookOffline,
+          onOpenCacheManagement: this.onOpenDownloads,
           onDeleteBookmarks: this.onDeleteBookmarks, chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           onCreateChapterStartBookmark: this.onCreateChapterStartBookmark,
           onSwitchSource: this.onSwitchSource, onBack: this.onCloseDirectory, onTemporaryBackBridge: this.onDirectoryBackBridge,

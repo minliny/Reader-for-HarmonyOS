@@ -106,6 +106,7 @@ if(id==='discovery-concurrency'){
 let activeDiscoveries = 0;
 let maxActiveDiscoveries = 0;
 const discoveryCalls = [];
+const sweepReceipts = [];
 const discoveryRuntime = {
   async request(method, params) {
     if (method === 'source.list') {
@@ -117,6 +118,7 @@ const discoveryRuntime = {
             enabled: true,
           })),
           { sourceId: 'disabled-source', enabled: false },
+          { sourceId: 'comic-source', enabled: true, bookSource: { bookSourceType: 2 } },
         ],
       } };
     }
@@ -145,10 +147,13 @@ const discoveryRuntime = {
 };
 const discoveryGateway = new SourceSwitchGateway(discoveryRuntime);
 const discovered = await discoveryGateway.discoverCandidates(
-  'current-source', 'current-book', 'Current Book', () => true,
+  'current-source', 'current-book', 'Current Book', () => true, 'text', undefined, undefined,
+  sweep => sweepReceipts.push(sweep),
 );
 assert.equal(discovered.kind, 'sources');
 assert.equal(discoveryCalls.length, 10);
+assert.deepEqual(sweepReceipts, Array.from({ length: 11 }, (_, checked) => ({ checked, total: 10 })),
+  'only eligible sources count and every terminal source, including a failure, advances the sweep once');
 assert.equal(maxActiveDiscoveries, 8,
   'discovery must be bounded and concurrent instead of one 30s serial batch');
 assert.deepEqual(
@@ -301,7 +306,7 @@ for (const late of ['success', 'failure']) {
   let current = true, release, started;
   const gate = new Promise(resolve => { release = resolve; });
   const dispatch = new Promise(resolve => { started = resolve; });
-  const published = [], requests = [];
+  const published = [], sweeps = [], requests = [];
   const owner = { request: async (method, params, options) => {
     requests.push(method);
     if (method === 'source.list') return { data: { sources: [{ sourceId: 's', name: 'S', enabled: true, sourceVersion: 'v1' }] } };
@@ -311,9 +316,12 @@ for (const late of ['success', 'failure']) {
     return searchResult(params.sourceId, [{ bookId: '/book', title: '大明望族', author: '府天' }]);
   } };
   const run = new SourceSwitchGateway(owner).discoverCandidates('original', '/book', '大明望族', () => current, 'text',
-    async rows => { published.push(rows); });
-  await dispatch; current = false; release();
+    async rows => { published.push(rows); }, undefined, sweep => sweeps.push(sweep));
+  await dispatch;
+  assert.deepEqual(sweeps, [{ checked: 0, total: 1 }], 'the admitted sweep publishes a denominator before completion');
+  current = false; release();
   assert.deepEqual(await run, { kind: 'noSources' });
+  assert.deepEqual(sweeps, [{ checked: 0, total: 1 }], `late ${late} cannot advance an obsolete sweep`);
   assert.deepEqual(published, []); assert.equal(requests.includes('search-book.put'), false);
 }
 }
@@ -661,6 +669,7 @@ if(id==='progressive'){
   const fast = new Promise(resolve => { releaseFast = resolve; });
   const slow = new Promise(resolve => { releaseSlow = resolve; });
   const original = f.runtime.request.bind(f.runtime);
+  f.runtime.supportsCoreCapability = capability => capability === 'book.search.page-receipt.v1';
   f.runtime.request = async (method, params, options) => {
     requests.push({ method, params });
     if (method === 'source.list') return { data: { sources:
@@ -680,17 +689,17 @@ if(id==='progressive'){
     if (method === 'book.search') {
       const sourceId = params.sourceId;
       if (sourceId === 'new' || sourceId === 'broken') throw Error('source search failed');
-      if (sourceId === 'old' || sourceId === 'empty') return searchResult(sourceId, []);
+      if (sourceId === 'old' || sourceId === 'empty') return terminalSearchPage(params, []);
       await (sourceId === 'fast' ? fast : slow);
       const row = rawSourceRow(sourceId, `${sourceId}-book`);
-      rows.push(row);
-      return searchResult(sourceId, [{ bookId: row.bookUrl, title: row.name, author: row.author }]);
+      if (!rows.some(item => item.origin === sourceId && item.bookUrl === row.bookUrl)) rows.push(row);
+      return terminalSearchPage(params, [{ bookId: row.bookUrl, title: row.name, author: row.author }]);
     }
     return original(method, params, options);
   };
   const waitUntil = async predicate => {
     for (let turn = 0; turn < 100 && !predicate(); turn++) await new Promise(setImmediate);
-    assert.equal(predicate(), true, 'the actual refresh must publish the expected state');
+    assert.equal(predicate(), true, `the actual refresh must publish the expected state: ${JSON.stringify(f.host.current().state)}`);
   };
   assert.equal(f.host.open(f.context, f.lease), true);
   await waitUntil(() => f.host.current().state.kind === 'candidates' &&
@@ -699,6 +708,7 @@ if(id==='progressive'){
   assert.equal(f.host.current().state.candidates[0].latencyMs, undefined,
     'a cached successful result does not need a new search timing to enter the list');
   const refreshStart = requests.length;
+  const refreshPublicationStart = f.changes.length;
   f.host.refresh(f.host.current().scopeId);
   await waitUntil(() => requests.filter(row => row.method === 'book.search').length === 6);
   assert.equal(f.host.current().state.refreshing, true);
@@ -723,15 +733,40 @@ if(id==='progressive'){
   assert.equal(requests.filter(row => row.method === 'book.search').length, 6,
     'one explicit refresh dispatches each enabled source once');
   const refreshMethods = requests.slice(refreshStart).map(row => row.method);
+  const sweeps = f.changes.slice(refreshPublicationStart).flatMap(change => change.state.sweep ? [change.state.sweep] : []);
+  assert.ok(sweeps.length > 0, 'the actual host publishes the sweep with its intermediate candidate states');
+  assert.deepEqual([...new Set(sweeps.map(sweep => sweep.checked))], [0, 1, 2, 3, 4, 5, 6]);
+  assert.ok(sweeps.every((sweep, index) => sweep.total === 6 && (index === 0 || sweep.checked >= sweeps[index - 1].checked)),
+    'host projection retains a constant denominator and nondecreasing checks while candidates arrive');
   assert.equal(refreshMethods.filter(method => method === 'search-book.related').length, 2,
     'refresh performs one initial and one final complete relation verification');
   assert.equal(refreshMethods.filter(method => method === 'search-book.batch.get').length, 1,
     'source completions share one debounced batch identity projection');
+
+  const restartRequestStart = requests.length;
+  const restartPublicationStart = f.changes.length;
+  f.host.refresh(f.host.current().scopeId);
+  await clock.advance(150);
+  await waitUntil(() => f.host.current().state.kind === 'candidates' && f.host.current().state.refreshing === false);
+  const restarted = requests.slice(restartRequestStart).filter(row => row.method === 'book.search');
+  assert.deepEqual(restarted.map(row => row.params.sourceId).sort(), ['broken', 'empty', 'fast', 'new', 'old', 'slow'],
+    'explicit recheck reopens all enabled sources, including previously satisfied ones');
+  assert.ok(restarted.every(row => row.params.page === 1), 'an explicit recheck starts each source at its first page');
+  const restartedSweeps = f.changes.slice(restartPublicationStart).flatMap(change => change.state.sweep ? [change.state.sweep] : []);
+  assert.deepEqual(restartedSweeps[0], { checked: 0, total: 6 });
+  assert.deepEqual(restartedSweeps.at(-1), { checked: 6, total: 6 });
   f.host.retire();
 
   function rawSourceRow(sourceId, bookUrl) {
     return { origin: sourceId, bookUrl, name: 'Book', author: 'Writer', time: Date.now(),
       relationKey: 'same-book', relationRevision: '1', sourceVersion: 'v1' };
+  }
+  function terminalSearchPage(params, books) {
+    assert.equal(params.pageReceipt, true);
+    return { data: { sourceId: params.sourceId, sourceVersion: 'v1', contentKind: 'text', books, pageReceipt: {
+      sourceId: params.sourceId, sourceVersion: 'v1', query: params.keyword, requestedPage: params.page, state: 'end',
+      requestFingerprint: 'a'.repeat(64), responseFingerprint: 'b'.repeat(64), candidateFingerprint: 'c'.repeat(64),
+    } } };
   }
 }
 }

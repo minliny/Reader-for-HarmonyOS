@@ -124,6 +124,7 @@ export struct ReaderFullDirectory {
   bookmarkIdentity: ReaderBookIdentity | undefined = undefined;
   onDownloadChapter: (index: number) => void = (_index: number): void => {};
   onDownloadBook: () => void = (): void => {};
+  onOpenCacheManagement: () => void = (): void => {};
   onClearBookOffline: () => void = (): void => {};
   // The owning reading session performs the Core mutation and refreshes the
   // projected TOC. This overlay only forwards exact existing bookmark ids.
@@ -232,6 +233,7 @@ export struct ReaderFullDirectory {
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.BottomStart }) {
         FullDirectoryPanel({ navigationPortFactory: this.navigationPortFactory,
+          standaloneCatalog: true,
           inputCurrent: (): boolean => this.directoryInputCurrent(identity, bookId) && !this.directoryRulesVisible,
           entries: this.entries,
           catalogMessage: this.catalogMessage,
@@ -259,6 +261,9 @@ export struct ReaderFullDirectory {
           onSelectBookmark: this.onSelectBookmark,
           bookmarkIdentity: this.bookmarkIdentity,
           onDownloadChapter: (index: number): void => { if (this.directoryRecovery.offlineBlocked !== true) this.onDownloadChapter(index); },
+          onOpenCacheManagement: (): void => {
+            if (this.directoryInputCurrent(identity, bookId) && !this.directoryRulesVisible) this.onOpenCacheManagement();
+          },
           onDeleteBookmarks: (bookmarkTimes: number[]): void => { if (this.bookmarkWriteEnabled()) this.onDeleteBookmarks(bookmarkTimes); },
           bookmarkActionsEnabled: this.bookmarkWriteEnabled(),
           chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,

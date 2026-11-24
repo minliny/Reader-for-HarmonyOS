@@ -9,8 +9,12 @@ const cases = {
 
 for (const id of selectContractCases(cases)) {
   const { default: assert } = await import('node:assert/strict');
-  const { createSearchResultContinuityProbe, readSearchResultContinuitySource, searchContinuityBook: book } =
+  const { createSearchResultContinuityProbe, readSearchResultContinuitySource, searchResultContinuitySourceUrl,
+    searchContinuityBook: book } =
     await import('./lib/search-result-continuity-probe.mjs');
+  const { SearchResultProjection } = await import('../entry/src/main/ets/features/search/presentation/SearchResultProjection.ts');
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const Page = selectedProductionMethods(searchResultContinuitySourceUrl, 'SearchPage', ['refreshVisibleResults']);
   const source = readSearchResultContinuitySource();
   const a = book('a', '来源甲简介'), b = book('b', '来源乙简介');
   const textExists = (fixture, value) => [...fixture.owner.nodes.values()].some(node => node.type === 'Text' && node.create === value);
@@ -53,8 +57,33 @@ for (const id of selectContractCases(cases)) {
     // Visible text and a physical press belong to their presented snapshots.
     fixture.owner.displayVisibilityHandler()(true, 1);
     const displayed = fixture.owner.displayBook();
+    const projection = new SearchResultProjection();
+    const shelf = [{ ...a, contentKind: 'text', addedAt: 1 }];
+    projection.update([a, b], shelf, '查找', fixture.viewState);
+    const projected = fixture.makeGroup([a, b], true);
+    const page = Object.assign(new Page(), { ownsPageQuery: () => true,
+      viewState: fixture.viewState, viewStateRevision: fixture.viewState.revision, presentation: { kind: 'results' },
+      userScrolling: true, resultProjection: projection, projectedGroups: new Map([[fixture.rowKey, projected]]),
+      resultDataSource: fixture.data, shelfBooks: [] });
+    const branches = new Map(fixture.owner.keys);
     fixture.owner.onCardTouch(fixture.TouchType.Down);
     const pressed = fixture.owner.pressedSelection;
+    page.refreshVisibleResults();
+    fixture.runtime.flush();
+    assert.equal(page.resultsDeferred, true);
+    assert.equal(projected.inBookshelf, false);
+    assert.equal(fixture.owner.displayInBookshelf(), false, 'authoritative removal crosses a visible row while held');
+    assert.ok([...fixture.owner.keys].some(([key, empty]) => key.endsWith('-empty') && empty && branches.get(key) === false),
+      'the SDK chooses an empty branch for the removed badge');
+    assert.equal(fixture.owner.displayBook(), displayed);
+    assert.equal(fixture.owner.pressedSelection, pressed, 'membership never replaces the touch selection');
+    page.shelfBooks = shelf;
+    page.refreshVisibleResults();
+    fixture.runtime.flush();
+    assert.equal(projected.inBookshelf, true);
+    assert.equal(fixture.owner.displayInBookshelf(), true);
+    assert.ok(textExists(fixture, '已在书架'));
+    sameRow(fixture);
     fixture.owner.onCardTouch(fixture.TouchType.Up);
     assert.equal(fixture.owner.pressedSelection, pressed, 'Up preserves the press until Click is dispatched');
     update(fixture, [{ ...a, intro: '可见期间富化' }, b, book('c', '第三来源')]);
