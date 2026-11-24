@@ -76,9 +76,24 @@ if(id==='uri-admission'){
     const result=await host.prepareSystemLocalBookInput('file://provider/%E4%B8%AD%E6%96%87.'+suffix.toUpperCase());
     assert.equal(result.state,'ready'); assert.ok(result.input.fileName.startsWith('中文'));
   }
-  for (const uri of ['https://x/book.txt','/raw/book.txt','file://p/book.pdf','file://p/book.umd','file://p/book.zip','file://p/book.txt\n','file://p/'+ 'a'.repeat(8192)+'.txt']) {
-    assert.equal((await host.prepareSystemLocalBookInput(uri)).state,'failed');
+  for (const uri of ['https://x/book.txt','/raw/book.txt','file://p/book.txt\n','file://p/'+ 'a'.repeat(8192)+'.txt']) {
+    assert.equal((await host.prepareSystemLocalBookInput(uri)).failure.code, 'readFailed');
   }
+  for (const format of ['pdf', 'umd', 'zip']) {
+    const result = await host.prepareSystemLocalBookInput('file://p/book.' + format);
+    assert.deepEqual(result, { state: 'failed', fileName: 'book.' + format,
+      failure: { code: 'unsupportedFormat', message: '暂不支持此文件格式，请选择其他电子书文件' } });
+  }
+  class ForbiddenCore { constructor() { assert.fail('an unsupported file cannot reach Core'); } }
+  class ForbiddenImport { constructor() { assert.fail('an unsupported file cannot reach import'); } }
+  const SystemOpen = hostType(ForbiddenCore, ForbiddenImport);
+  const ready = deferred();
+  SystemOpen.install(host, ready.promise);
+  SystemOpen.receive({ action: 'ohos.want.action.viewData', uri: 'file://p/book.pdf' });
+  await until(() => SystemOpen.peek());
+  assert.equal(SystemOpen.peek().failure.code, 'unsupportedFormat');
+  assert.equal(SystemOpen.peek().book, undefined);
+  SystemOpen.detach(host);
   assert.equal(stages.length,6,'unsupported files never enter staging');
   host.stageLocalBook=async()=>{throw Error('open URI permission denied');};
   assert.equal((await host.prepareSystemLocalBookInput('file://provider/book.epub')).failure.code,'readFailed');
@@ -147,10 +162,12 @@ if(id==='index-navigation'){
   Object.assign(index,{getUIContext:()=>({getPromptAction:()=>({showToast:()=>actions.push('toast')})}),
     returnToBookshelf(){actions.push('shelf');this.readingEntry.endReading();this.route='bookshelf';this.navigationGeneration++;},
     openShelfBook(selected){assert.equal(selected,book);actions.push('open');f.admitBook(this,selected);},
-    closeImportDialog(){actions.push('close-import');}});f.mount();
+    dismissJsonImport(){actions.push('dismiss-json-import');}});f.mount();
   index.consumeSystemFileOpen(); assert.deepEqual(actions,[],'wait for mounted reader exit callback');
   index.readingExitRequest=()=>actions.push('exit'); index.consumeSystemFileOpen(); index.consumeSystemFileOpen();
-  assert.deepEqual(actions,['exit']); index.onReaderExited(index.currentReaderPresentationIdentity()); assert.deepEqual(actions,['exit','shelf','close-import','open','ack']);
+  assert.deepEqual(actions,['exit']); index.onReaderExited(index.currentReaderPresentationIdentity());
+  await until(() => actions.includes('ack'));
+  assert.deepEqual(actions,['exit','shelf','dismiss-json-import','open','ack']);
   index.readingEntry.endReading();index.route='detail';
   result={id:2,book}; index.sourceSwitchVisible=true;index.sourceSwitchState={kind:'switching'};actions.length=0;
   index.consumeSystemFileOpen();index.consumeSystemFileOpen();assert.deepEqual(actions,['toast']);assert.ok(result);

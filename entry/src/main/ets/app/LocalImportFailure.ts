@@ -1,4 +1,5 @@
-export type LocalImportFailureCode = 'positionMigration' | 'incomplete' | 'tooLarge' | 'noSpace' | 'invalidBook' | 'readFailed' | 'recoveryPending' | 'unknown';
+export type LocalImportFailureCode = 'positionMigration' | 'incomplete' | 'tooLarge' | 'noSpace' |
+  'invalidBook' | 'unsupportedFormat' | 'readFailed' | 'recoveryPending' | 'unknown';
 export interface LocalImportFailure { code: LocalImportFailureCode; message: string; }
 
 /** Host selection rejection, before staging or import dispatch. This typed

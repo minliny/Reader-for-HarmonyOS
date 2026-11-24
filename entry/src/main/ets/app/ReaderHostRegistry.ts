@@ -366,7 +366,10 @@ export class ReaderHostRegistry {
         throw new Error('Selected document URI is invalid');
       }
       fileName = this.requireSelectedFileName(uri);
-      if (!isReaderLocalBookFileName(fileName)) throw new Error('Unsupported local book format');
+      if (!isReaderLocalBookFileName(fileName)) {
+        return { state: 'failed', fileName,
+          failure: { code: 'unsupportedFormat', message: '暂不支持此文件格式，请选择其他电子书文件' } };
+      }
       await this.ensureStageRecovery();
       return { state: 'ready', input: await this.stageLocalBook(uri, fileName) };
     } catch (error) {
