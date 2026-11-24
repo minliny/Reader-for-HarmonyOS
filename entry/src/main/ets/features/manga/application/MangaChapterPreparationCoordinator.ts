@@ -90,8 +90,8 @@ export class MangaChapterPreparationCoordinator {
 
   /** A retired view can finish after its successor was admitted. It owns only
    * its own chapter, never the successor's shared preparation clock. */
-  leaveCurrent(chapter?: MangaChapterResult): void {
-    if (chapter === undefined || this.currentKey === this.key(chapter)) this.currentKey = undefined;
+  leaveCurrent(chapter: MangaChapterResult): void {
+    if (this.currentKey === this.key(chapter)) this.currentKey = undefined;
   }
 
   /** Admission before native paint may be rolled back. Keep the exact prior

@@ -830,7 +830,7 @@ export class ReaderRuntimeOwner {
         throw new ReaderCoreNotDispatchedError('Reader Core request was not dispatched');
       }
       options.onDispatch?.();
-      if (method === 'runtime.storage.apply' || method === 'runtime.storage.restore') {
+      if (preparationEffect === 'runtime.storage.apply' || preparationEffect === 'runtime.storage.restore') {
         // Content validity was invalidated before startup/request admission.
         // Finish the old display and eviction owners before Core replaces
         // their tokens, then reconcile Host's pending physical removals.

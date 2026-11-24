@@ -212,6 +212,7 @@ export class ReaderReadingEntryActions {
     const owner = this.ports.runtime();
     const entry = this.ports.entry();
     if (owner === undefined || entry.book === undefined ||
+      (entry.book.sourceId === 'local' && entry.verdict !== 'readable') ||
       (chapterIndex !== undefined && !entry.isKnownChapter(chapterIndex)) || this.ports.removalPending()) return;
     this.startReading(owner, chapterIndex, proof);
   }

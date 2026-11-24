@@ -37,7 +37,7 @@ if(id==='config'){
 if(id==='backup'){
 {
   const f=fixture();await open(f);f.runtime.failBackupAdvance=true;f.owner.triggerBackup();await f.settle();const op=f.snapshot().facts.operation;assert.equal(op.projection.receipt.confirmation,'unknown');assert.equal(op.remoteConfirmedCount,1);assert.equal(f.snapshot().history.length,0);
-  f.page().action.onClick();await f.settle();assert.equal(f.runtime.count('sync.webdav.transaction.start'),1);assert.equal(f.snapshot().facts.operation.projection.receipt.confirmation,'unknown');
+  f.page().action.onClick();await f.settle();assert.equal(f.runtime.count('sync.webdav.transaction.start'),1);assert.equal(f.snapshot().facts.operation.projection.receipt.confirmation,'confirmed');
 }
 {
   const f=fixture();await open(f);f.owner.triggerBackup();f.owner.triggerBackup();await f.settle();assert.equal(f.runtime.count('sync.webdav.transaction.start'),1);assert.equal(f.snapshot().facts.operation.completed,true);assert.equal(f.snapshot().history.length,1);
@@ -45,21 +45,29 @@ if(id==='backup'){
 }
 if(id==='restore'){
 {
-  const f=fixture();await open(f);f.owner.restoreLatest();await f.settle();f.owner.resolveRestore(false);await f.settle();assert.equal(f.runtime.count('runtime.storage.apply'),0);assert.equal(f.snapshot().restoreConflict,undefined);assert.equal(f.snapshot().statusMessage,'已取消恢复');assert.equal(f.snapshot().facts.operation,undefined,'explicit cancellation never fabricates a committed write');
+  const f=fixture();await f.store.saveRestoreJournal({version:1,operationId:'restore',checksum:'a'.repeat(64)});
+  await open(f);assert.match(f.page().view.message,/配置恢复已中断/);
+  assert.equal(f.runtime.count('runtime.storage.apply'),0);
+  f.page().action.onClick();await f.settle();
+  assert.equal(f.runtime.count('runtime.storage.apply'),0,'cold recovery only queries the original operation');
+  assert.equal(f.runtime.count('sync.webdav.transaction.commit'),1);assert.equal(f.journal(),undefined);
+}
+{
+  const f=fixture();await open(f);f.owner.restoreLatest();await f.settle();f.owner.resolveRestore(false,f.snapshot().restoreConflict.transactionId);await f.settle();assert.equal(f.runtime.count('runtime.storage.apply'),0);assert.equal(f.snapshot().restoreConflict,undefined);assert.equal(f.snapshot().statusMessage,'已取消恢复');assert.equal(f.snapshot().facts.operation,undefined,'explicit cancellation never fabricates a committed write');
 }
 for(const fail of ['none','applyAck','commitAck','host']){
   const f=fixture();await open(f);f.owner.restoreLatest();await f.settle();assert.equal(f.snapshot().restoreConflict.transactionId,'restore');assert.equal(f.runtime.count('runtime.storage.apply'),0);
   if(fail==='applyAck')f.runtime.failApplyAck=true;if(fail==='commitAck')f.runtime.failCommit=1;if(fail==='host')scope.controls.hostFailures=1;
-  f.owner.resolveRestore(true);await f.settle();assert.equal(f.runtime.count('runtime.storage.apply'),1);assert.equal(f.snapshot().facts.operation.projection.receipt.fact,'confirmedCurrent');assert.equal(f.snapshot().facts.operation.coreApplied,true);assert.equal(f.journal(),undefined);
+  f.owner.resolveRestore(true,f.snapshot().restoreConflict.transactionId);await f.settle();assert.equal(f.runtime.count('runtime.storage.apply'),1);assert.equal(f.snapshot().facts.operation.projection.receipt.fact,'confirmedCurrent');assert.equal(f.snapshot().facts.operation.coreApplied,true);assert.equal(f.journal(),undefined);
 }
 {
-  const f=fixture();await open(f);f.owner.restoreLatest();await f.settle();scope.controls.hostFailures=2;f.owner.resolveRestore(true);await f.settle();
+  const f=fixture();await open(f);f.owner.restoreLatest();await f.settle();scope.controls.hostFailures=2;f.owner.resolveRestore(true,f.snapshot().restoreConflict.transactionId);await f.settle();
   const op=f.snapshot().facts.operation;assert.equal(op.coreApplied,true);assert.equal(op.hostApplied,false);assert.equal(op.completed,false);assert.equal(op.projection.receipt.confirmation,'confirmed');assert.ok(f.journal());assert.match(f.page().view.message,/Core 配置已应用/);
   f.owner.triggerBackup();await f.settle();assert.equal(f.runtime.count('sync.webdav.transaction.start'),1);
   const p=f.page();assert.equal(p.notice.actionLabel,'核对已有恢复');p.action.onClick();p.action.onClick();await f.settle();assert.equal(f.runtime.count('runtime.storage.apply'),1,'partial recovery never reapplies Core descriptor');assert.equal(f.snapshot().facts.operation.completed,true);assert.equal(f.journal(),undefined);
 }
 {
-  const f=fixture();await open(f);f.owner.restoreLatest();await f.settle();f.runtime.failApplyAck=true;f.runtime.failQuery=true;f.owner.resolveRestore(true);await f.settle();assert.equal(f.snapshot().facts.operation.projection.receipt.confirmation,'unknown');assert.ok(f.journal());
+  const f=fixture();await open(f);f.owner.restoreLatest();await f.settle();f.runtime.failApplyAck=true;f.runtime.failQuery=true;f.owner.resolveRestore(true,f.snapshot().restoreConflict.transactionId);await f.settle();assert.equal(f.snapshot().facts.operation.projection.receipt.confirmation,'unknown');assert.ok(f.journal());
   f.page().action.onClick();await f.settle();assert.equal(f.runtime.count('runtime.storage.apply'),1);assert.equal(f.snapshot().facts.operation.projection.receipt.confirmation,'confirmed');assert.equal(f.journal(),undefined);
 }
 }
@@ -72,7 +80,7 @@ if(id==='lifecycle'){
   const f=fixture();await open(f);const gate=pause();Store.writeTail=gate.promise;f.owner.saveConfig(config.url,config.user,'','',config.directory);await new Promise(r=>setImmediate(r));f.close();gate.resolve();await f.settle();assert.equal(asset.calls.filter(c=>c==='add').length,0,'queued intent checks route after prepare/read');
 }
 {
-  const f=fixture();await open(f);f.owner.restoreLatest();await f.settle();const p=pause();f.runtime.beforeApply=()=>p.promise;f.owner.resolveRestore(true);await until(()=>f.runtime.calls.some(c=>c[0]==='runtime.storage.apply'));const count=f.emitted.length;scope.setRuntimeOwner(runtime());p.resolve();await f.settle();assert.equal(scope.controls.hostApplications,0,'retired runtime never applies Host configuration');assert.equal(f.emitted.length,count);assert.ok(f.journal(),'new startup can resolve already-applied Core receipt');f.owner.triggerBackup();await f.settle();assert.equal(f.runtime.count('sync.webdav.transaction.start'),1);
+  const f=fixture();await open(f);f.owner.restoreLatest();await f.settle();const p=pause();f.runtime.beforeApply=()=>p.promise;f.owner.resolveRestore(true,f.snapshot().restoreConflict.transactionId);await until(()=>f.runtime.calls.some(c=>c[0]==='runtime.storage.apply'));const count=f.emitted.length;scope.setRuntimeOwner(runtime());p.resolve();await f.settle();assert.equal(scope.controls.hostApplications,0,'retired runtime never applies Host configuration');assert.equal(f.emitted.length,count);assert.ok(f.journal(),'new startup can resolve already-applied Core receipt');f.owner.triggerBackup();await f.settle();assert.equal(f.runtime.count('sync.webdav.transaction.start'),1);
 }
 {
   const f=fixture();await open(f);f.owner.testConnection(config.url,config.user,'',config.directory);await f.settle();assert.equal(f.snapshot().facts.request.fact,'current');assert.equal(asset.calls.filter(c=>c==='add').length,0);assert.equal(f.snapshot().facts.operation,undefined,'read-only connection test does not fabricate write receipt');
@@ -90,7 +98,7 @@ for(const unknown of [false,true]){
 }finally{scope.cleanup();}
 }
 async function sdkDrafts(){
- const {syncIndexFixture:f,fullSyncIndexPage}=await import('./lib/sync-index-real-fixture.mjs');const {config,DEFAULT_SYNC_SNAPSHOT,projectPersistedReceipt,facts}=f;const clone=value=>JSON.parse(JSON.stringify(value));const nodes=owner=>[...(owner.nodes?.values()??[]),...[...(owner.children?.values()??[])].flatMap(nodes)];
+ const {syncIndexFixture:f,fullSyncIndexPage,syncRecoveryAction}=await import('./lib/sync-index-real-fixture.mjs');const {config,DEFAULT_SYNC_SNAPSHOT,projectPersistedReceipt,facts}=f;const clone=value=>JSON.parse(JSON.stringify(value));const nodes=owner=>[...(owner.nodes?.values()??[]),...[...(owner.children?.values()??[])].flatMap(nodes)];
  const full=fullSyncIndexPage({snapshot:{...clone(DEFAULT_SYNC_SNAPSHOT),webdavUrl:config.url,webdavUser:config.user,webdavPath:config.directory,facts:{read:facts.projectOperationFacts({phase:'succeeded',value:true}),busy:false,canMutate:true}},isTablet:false});try{
 assert.equal(full.webdavUrl,config.url);
   const inputs=nodes(full).filter(n=>n.create&&typeof n.create==='object'&&'placeholder' in n.create);assert.equal(inputs.length,5);assert.equal(inputs.filter(n=>n.enabled).length,5);assert.equal(inputs.filter(n=>n.type==='TextInput').length,5);assert.equal(inputs.filter(n=>n.nativeInputType==='InputType.Password').length,2);
@@ -98,7 +106,7 @@ assert.equal(full.webdavUrl,config.url);
   const operation={action:'saveConfig',writeGeneration:1,coreApplied:false,hostApplied:false,completed:true,remoteConfirmedCount:0,projection:projectPersistedReceipt({confirmation:'confirmed',readback:'failed',generation:900,canRetry:true})};
   full.updateStateVars({snapshot:{...clone(full.snapshot),webdavUrl:'https://new.test',facts:{...full.snapshot.facts,operation,busy:false,canMutate:true}}});
   assert.equal(full.webdavUrl,'https://draft.test','ACK/readback keeps edited non-secret draft');assert.equal(full.webdavPass,'','actual @Watch clears acknowledged password draft');assert.equal(full.backupPass,'');
-  const recovery=[...full.children.values()].find(c=>c.params?.view);full.replay();assert.equal(recovery.params.view.canRetry,true,'mounted shared child receives live snapshot receipt');
+  full.replay();assert.equal(syncRecoveryAction(full,'重新读取配置').at(-1)?.actor.actionEnabled,true,'mounted shared child receives live snapshot receipt');
   full.webdavPass='later-draft';full.backupPass='later-backup';
   full.updateStateVars({snapshot:{...clone(full.snapshot),facts:{...full.snapshot.facts,operation:{...operation,projection:projectPersistedReceipt({confirmation:'confirmed',readback:'succeeded',generation:901})}}}});
   assert.equal(full.webdavPass,'later-draft','read-only recovery never re-clears a later secret draft');assert.equal(full.backupPass,'later-backup');

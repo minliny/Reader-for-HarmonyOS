@@ -80,7 +80,7 @@ if(id==='restore-transfer'){
   x.owner.open(); await x.settle();
   x.owner.restoreLatest(); await x.settle();
   const gate = f.pause(); x.runtime.beforeApply = () => gate.promise;
-  x.owner.resolveRestore(true);
+  x.owner.resolveRestore(true,a.snapshot.restoreConflict.transactionId);
   await until(() => x.runtime.count('runtime.storage.apply') === 1);
   a.current = false; x.owner.detachPresentation('restore-a');
   const before = a.emitted.length, b = x.attach('restore-b');

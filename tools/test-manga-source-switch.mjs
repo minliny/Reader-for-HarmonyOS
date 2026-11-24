@@ -379,7 +379,7 @@ console.log('PASS actual current owners manual first-image/CAS failures preserve
  }
  assert.equal(s.manga.mangaSourceSwitchFailureMessage(Error('网络请求失败')),'网络请求失败');
  const source=readFileSync(new URL('../entry/src/main/ets/app/composition/RetainedReaderScene.ets',import.meta.url),'utf8');
- assert.match(source,/sourceSwitchVisible: this\.source\.visible, sourceSwitchCovered: this\.manga\.selectionVisible/,'the admitted reader stays interaction-blocked beneath the full-screen target directory');
+ assert.match(source,/sourceSwitchVisible: this\.source\.visible,[\s\S]*?sourceSwitchCovered: this\.manga\.selectionVisible/,'the admitted reader stays interaction-blocked beneath the full-screen target directory');
  assert.doesNotMatch(source,/sourceSwitchVisible: this\.source\.visible && !this\.manga\.selectionVisible/);
 }
 console.log('PASS internal switch errors use product messages while the original reader remains blocked beneath the target directory');

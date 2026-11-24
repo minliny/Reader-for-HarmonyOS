@@ -855,10 +855,10 @@ export struct LocalBookDetail {
         }.layoutWeight(1)
           .constraintSize({ minHeight: this.book.contentKind === 'manga' ? visual.detailActionMinHeight : 48 })
           .padding(0).backgroundColor(Color.Transparent).borderRadius(this.book.contentKind === 'manga' ? visual.detailActionRadius : 16)
-          .opacity(this.removing || !this.detailBookAvailable() ? (this.book.contentKind === 'manga' ? visual.disabledOpacity : 0.5) : 1)
-          .attributeModifier(new ReaderActionAccessibility(this.readingActionLabel(), !this.removing && this.detailBookAvailable(), false, true,
-            new MangaDirectoryPressFeedback(!this.removing && this.detailBookAvailable(), this.book.contentKind === 'manga', this.appThemeScheme, 'nativeButton'), 'nativeButton'))
-          .onClick((): void => { if (!this.removing && this.detailBookAvailable()) this.onContinue(); });
+          .opacity(this.readingActionAvailable() ? 1 : this.book.contentKind === 'manga' ? visual.disabledOpacity : 0.5)
+          .attributeModifier(new ReaderActionAccessibility(this.readingActionLabel(), this.readingActionAvailable(), false, true,
+            new MangaDirectoryPressFeedback(this.readingActionAvailable(), this.book.contentKind === 'manga', this.appThemeScheme, 'nativeButton'), 'nativeButton'))
+          .onClick((): void => { if (this.readingActionAvailable()) this.onContinue(); });
         ForEach([this.admissionIdentity], (identity: string) => {
         Stack({ alignContent: Alignment.Center }) {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
@@ -1203,6 +1203,9 @@ export struct LocalBookDetail {
     if (!this.detailBookAvailable()) return '请重新导入';
     if (this.book.contentKind === 'manga') return this.book.mangaPosition === undefined ? '开始阅读' : '继续阅读';
     return this.inBookshelf ? '继续阅读' : '开始阅读';
+  }
+  private readingActionAvailable(): boolean {
+    return !this.removing && this.detailBookAvailable() && (this.book.sourceId !== 'local' || this.readingEnabled);
   }
   private shelfActionLabel(): string {
     if (this.cancellingAdd) return '取消加入';

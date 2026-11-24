@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
 import {normalizeReaderSettingsSnapshot,createDefaultReaderSettingsSnapshot} from '../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts';
 const Surface=productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),
- ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','changeFit','resizeViewport','loginRequired','loginAndRetry','imageError','refreshImages']);
+ ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','changeFit','resizeViewport','loginRequired','loginAndRetry','imageError','refreshImages','readerPanelForeground']);
 const row={ordinal:8,tileIndex:1,known:true,width:1000,height:1000,sourceHeight:4000,sourceY:1000};
 const restored=[],settings=[],retries=[];let fail='READING_IMAGE_AUTH_REQUIRED';
 const chapter={manifest:{manifestVersion:1,displayHints:{fit:'contain'}}};
@@ -10,7 +10,8 @@ const owner=Object.assign(new Surface(),{viewportWidth:500,viewportHeight:800,zo
  controller:{setPreviewMode:async()=>{},chapter,displayedOrdinal:8,savedLocation:{pageOrdinalFallback:8,x:0.1,y:0.6},recoveryRequired:false,
   tile:()=>({error:fail}),visiblePages:()=>[],retryTile:async(...args)=>retries.push(args),refreshChapter:async()=>{}},
  saveVisible:async()=>{},rememberVisible:()=>{},visibleAnchor:{ordinal:8,x:0.25,y:0.55},restore:(...args)=>restored.push(args),settingsGateway:{updateMangaFit:async fit=>settings.push(fit)},
- data:{totalCount:()=>10,getData:()=>row},first:1,last:1,opened:true,mounted:true,presentationGeneration:0,layoutGeneration:0,error:'',loggingIn:false,loginGeneration:0,updateViewport:async()=>{},publish:()=>{}});
+ data:{totalCount:()=>10,getData:()=>row},first:1,last:1,opened:true,mounted:true,appForeground:true,windowChromeActive:true,
+ isReaderIdentityCurrent:()=>true,presentationGeneration:0,layoutGeneration:0,error:'',loggingIn:false,loginGeneration:0,updateViewport:async()=>{},publish:()=>{}});
 assert.equal(owner.rowDisplayWidth(row),200,'SINGLE contain must fit the whole logical image, not each crop');
 assert.equal(owner.rowDisplayLeft(row),150);assert.equal(owner.visibleX(row),0);
 await owner.changeFit();assert.equal(owner.fitPreference,'width');assert.equal(owner.rowDisplayWidth(row),500);assert.deepEqual(restored.at(-1),[8,0.55,0.25]);

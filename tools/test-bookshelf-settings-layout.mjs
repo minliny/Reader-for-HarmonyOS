@@ -14,19 +14,25 @@ const { readFileSync } = await import('node:fs');
 const { createRequire } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { boundedSurfaceSdk, readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { projectOperationFacts } = await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
 const { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
 const { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp, readerVisualSafeLeft, readerVisualSafeRight,
   readerInteractiveSafeLeft, readerInteractiveSafeRight } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const { READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset } = await import('./lib/reader-floating-bar-metrics-probe.mjs');
+const { actualReaderPageLayout } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { readerEditingSdk } = await import('./lib/reader-editing-sdk-probe.mjs');
+const { syncNativeSlotMeasurement } = await import('./lib/sync-index-real-fixture.mjs');
 const { loadReaderTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
 
 const typographySource = readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderTypography.ets', import.meta.url), 'utf8');
 const { TYPE_PAGE_TITLE } = loadReaderTypographyRoles(typographySource);
 const file = new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfSettingsPage.ets', import.meta.url);
 const source = readFileSync(file, 'utf8');
+const panelSource=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets', import.meta.url),'utf8');
+class LocalRecoveryPanel { constructor(owner,params,_storage,id) { Object.assign(this,{owner,params,id}); } }
+const panelDeps={LocalRecoveryPanel};
 const headerSource = readFileSync(new URL('../entry/src/main/ets/ui/chrome/PageBackBar.ets', import.meta.url), 'utf8');
 const require = createRequire(import.meta.url);
 const sdk = resolveEtsLoaderRoot();
@@ -38,16 +44,20 @@ syntax.propCollection.set('PageBackBar', new Set(['titleColor']));
 class Header { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 let metrics = new ReaderWindowMetricsSnapshot();
 class Notice {constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}}
-const deps = { readerRecoveryView,ReaderRecoveryNotice:Notice, PageBackBar: Header,
+const deps = { ...actualReaderPageLayout(),...readerEditingSdk(),...panelDeps,ReaderNativeSlotMeasurement:syncNativeSlotMeasurement(),
+  readerWindowMetrics:()=>metrics,readerRecoveryView,ReaderRecoveryNotice:Notice, PageBackBar: Header,
   ReaderWindowCoordinator: { metrics: () => metrics }, SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame,
   readerVisualSafeLeft, readerVisualSafeRight, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   TOK_CONTENT_MAX_W_TABLET: 720, TOK_SCREEN_INSET: 19, TOK_SPACE_XS: 8, TOK_SPACE_MD: 16,
   READER_FLOATING_TOP_BAR_HEIGHT, readerFloatingBarBottomInset, TYPE_PAGE_TITLE };
-const methods = ['settingsPending','modePending','pendingOverlay','retrySettingsAccepted','viewModeRecovery','build','settingsRecovery','settingsRecoveryIdentity','settingsRecoveryCurrent','retrySettingsRecovery','preferenceControlIdentity','pageContent','pageHeader'];
+const methods = ['settingsPending','modePending','pendingRecovery','pendingRecoveryItems','retrySettingsAccepted','viewModeRecovery','build','settingsRecovery','settingsRecoveryIdentity','settingsRecoveryCurrent','retrySettingsRecovery','userInputIsCurrent','preferenceControlIdentity','pageContent','pageHeader'];
 if (source.includes('private contentFrame(')) methods.push('contentFrame');
-const { Component } = createReaderBuilderProbe(source, methods, deps);
-const { Component: HeaderComponent } = createReaderBuilderProbe(headerSource, ['trailing', 'build', 'leftInset', 'rightInset'], deps);
 if(selectedCase==='settings-render') {
+const messages=boundedSurfaceSdk();
+const { Component } = createReaderBuilderProbe(source, methods, {...messages.deps,...deps},
+  {...messages.hooks,childSources:{...messages.childSources,LocalRecoveryPanel:panelSource,PageBackBar:headerSource}});
+const { localBookDetailSdk } = await import('./lib/local-book-detail-sdk-probe.mjs');
+const HeaderComponent=localBookDetailSdk({readerWindowMetrics:()=>metrics,...readerSurfaceSpecsForProbe(metrics)}).Header;
 for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [390, 844, 32, 24, 24], [1280, 800, 48, 32, 48]]) {
   metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, width, height), undefined,
     new ReaderInsetsVp(0, 48, 0, safeBottom), new ReaderInsetsVp(left, 0, right, 0));
@@ -64,7 +74,7 @@ for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [39
   Object.assign(header, headers[0].params, { appThemeScheme: 'day', readerWindowMetricsRevision: 1, titleColor: '' });
   header.initialRender();
   const headerNodes = [...header.nodes.values()];
-  const hit = headerNodes.find(node => node.type === 'Stack');
+  const hit = headerNodes.find(node => node.type === 'Button' && node.onClick);
   void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */ hit.onClick(); assert.equal(backs, 1);
   const title = headerNodes.find(node => node.type === 'Text');
   assert.deepEqual([title.fontFamily, title.fontSize, title.lineHeight],
@@ -82,8 +92,10 @@ for (const [width, height, left, right, safeBottom] of [[365, 320, 0, 0, 0], [39
   assert.ok(scroll); assert.equal(scroll.layoutWeight, undefined); assert.equal(scroll.align, 'Alignment.TopStart');
   assert.equal(scroll.height, '100%', 'the viewport extends behind the floating header even in short windows');
   const frame = resolveHorizontalFrame(width, left, right, new SurfaceWidthSpec(720, 19, 19));
-  const content=nodes.find(node=>node.type==='Column' && Number.isFinite(node.padding?.top) && Number.isFinite(node.padding?.bottom));
-  assert.ok(content); assert.equal(content.padding.left,frame.left); assert.equal(content.padding.right,frame.right); assert.ok(content.padding.bottom>=safeBottom);
+  const content=nodes.find(node=>node.type==='Column' && Number.isFinite(node.padding?.left) && Number.isFinite(node.padding?.right));
+  assert.ok(content); assert.equal(content.padding.left,frame.left); assert.equal(content.padding.right,frame.right);
+  const clearance=nodes.find(node=>node.type==='Column' && Number.isFinite(node.padding?.top) && Number.isFinite(node.padding?.bottom));
+  assert.ok(clearance);assert.ok(clearance.padding.bottom>=safeBottom);
   const toggle = nodes.find(node => node.type === 'Toggle');
   toggle.onChange(false); assert.deepEqual(updates, [false]);
   toggle.onChange(false); assert.deepEqual(updates, [false], 'old native switch callback is retired');
@@ -104,7 +116,7 @@ const retryOwner = new Component(undefined, {});
 const retries=[];
 Object.assign(retryOwner,{appThemeScheme:'day',mode:'cover',operation:{action:'load'},viewModeSnapshot:{canonical:'cover',receipt:{receipt:{confirmation:'unknown',readback:'idle'},facts:{fact:'pendingReconciliation',generation:9,canRetry:true,blocked:false}}},error:'pending',autoCheckUpdate:true,readerWindowMetricsRevision:1,
  viewModeRecovery:()=>({visible:true,message:'pending',canRetry:true,generation:9}),retryMode:g=>retries.push(g)});
-retryOwner.initialRender();
+retryOwner.pendingRecoveryItems();
 const recovery=[...retryOwner.children.values()].find(c=>c instanceof Notice&&c.params.view?.visible);
 recovery.params.onReconcile(9);assert.deepEqual(retries,[9],'visible recovery retains operation identity and reads only');
 
@@ -114,11 +126,12 @@ if(selectedCase==='read-state') {
 // facts, never from whether a recovery happens to be admitted.
 function readStatePage(definition=source) {
   const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+  sdk.childSources.LocalRecoveryPanel=panelSource;
   const Model=sdk.consumer(definition,['operation','viewModeSnapshot','modeLoadBusy','modeReconcileBusy',
-    'settingsPending','modePending','viewModeRecovery','pageContent','preferenceControlIdentity'],{readerRecoveryView}).constructor;
+    'settingsPending','modePending','viewModeRecovery','pageContent','preferenceControlIdentity','userInputIsCurrent'],{readerRecoveryView,...panelDeps}).constructor;
   return (facts,extra={})=>{
     const owner=new Model(undefined,{}),reads=[];
-    Object.assign(owner,{appThemeScheme:'day',operation:{action:'load',readFacts:facts},viewModeSnapshot:{canonical:undefined,readFacts:facts},
+    Object.assign(owner,{mounted:true,appThemeScheme:'day',operation:{action:'load',readFacts:facts},viewModeSnapshot:{canonical:undefined,readFacts:facts},
       modeLoadBusy:false,modeReconcileBusy:false,onReconcile:(...args)=>reads.push(args),navigationGeneration:4,...extra});
     owner.pageContent();
     const states=sdk.walk(owner).filter(child=>child instanceof sdk.deps.ReaderPageState);
@@ -138,7 +151,7 @@ for(const [phase,blockedReason,titleEnding] of [
     assert.equal(state.loading,false,`${facts.fact} is quiet even without retry admission`);
     assert.equal(x.sdk.nodes(state).some(node=>node.type==='LoadingProgress'),false);
     assert.ok(state.title.endsWith(titleEnding));assert.equal(state.message,facts.message);
-    assert.equal(x.sdk.nodes(state).some(node=>node.type==='Stack'&&node.onClick),false);
+    assert.equal(x.sdk.nodes(state).some(node=>node.type==='Button'&&node.onClick),false);
   }
   readStateCases++;
 }
@@ -153,8 +166,8 @@ for(const phase of ['loading','refreshing']){
 {
   const x=statePage(projectOperationFacts({phase:'failed',canRetry:true,generation:29,message:'读取失败，保留原失败事实'}));
   for(const state of x.states){assert.equal(state.loading,false);assert.equal(state.actionLabel,'重试');
-    assert.ok(x.sdk.nodes(state).some(node=>node.type==='Stack'&&node.onClick));}
-  x.sdk.nodes(x.states[0]).find(node=>node.type==='Stack'&&node.onClick).onClick();assert.deepEqual(x.reads,[[29,4]]);
+    assert.ok(x.sdk.nodes(state).some(node=>node.type==='Button'&&node.onClick));}
+  x.sdk.nodes(x.states[0]).find(node=>node.type==='Button'&&node.onClick).onClick();assert.deepEqual(x.reads,[[29,4]]);
   readStateCases++;
 }
 {
@@ -166,12 +179,13 @@ for(const phase of ['loading','refreshing']){
 // loadMode Promise is therefore the only legitimate local loading fact.
 {
   const sdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+  sdk.childSources.LocalRecoveryPanel=panelSource;
   const actual=actualModeHost({loadBookshelfViewMode:()=>new Promise(resolve=>{finishLoad=resolve;})});
   let finishLoad;
   const page=sdk.consumer(source,['operation','viewModeSnapshot','modeLoadBusy','modeReconcileBusy','mounted','revision','mode',
-    'settingsPending','modePending','viewModeRecovery','pageContent','preferenceControlIdentity','loadMode','applyModeSnapshot','modeFeedback','aboutToDisappear'],{readerRecoveryView});
+    'settingsPending','modePending','viewModeRecovery','pageContent','preferenceControlIdentity','userInputIsCurrent','loadMode','applyModeSnapshot','modeFeedback','aboutToDisappear'],{readerRecoveryView,...panelDeps});
   Object.assign(page,{mounted:true,revision:0,presentationRevision:0,appThemeScheme:'day',operation:{action:'load',readFacts:projectOperationFacts({phase:'idle'})},viewModeHost:actual,
-    viewModeSnapshot:{canonical:undefined},lastModeFeedback:'',getUIContext:()=>({getPromptAction:()=>({showToast(){}})})});
+    viewModeSnapshot:{canonical:undefined},lastModeFeedback:'',transientFeedback:{reset(){}},getUIContext:()=>({getPromptAction:()=>({showToast(){}})})});
   page.loadMode();assert.equal(page.modeLoadBusy,true);assert.equal(actual.current().readFacts,undefined);
   page.pageContent();const state=sdk.walk(page).find(child=>child instanceof sdk.deps.ReaderPageState&&child.title==='正在读取显示方式…');
   assert.equal(state.title,'正在读取显示方式…');assert.equal(state.loading,true);
@@ -206,7 +220,7 @@ const Model = productionMotionMethods(file, ['aboutToAppear', 'aboutToDisappear'
   WebDavCredentialStore: { instance: { currentBookshelfViewMode:()=>persistedMode, loadBookshelfViewMode: () => load(), saveBookshelfViewMode: mode => save(mode) } },
 });
 const mount = () => { const owner = Object.assign(new Model(), { mode: 'cover', revision: 0, presentationRevision:0,navigationGeneration:7,isInputAllowed:()=>true, operation:{action:'load'}, lastSettingsFeedback:'', lastModeFeedback:'', error: '',
-  getUIContext: () => ({ getFont: () => ({}) }),viewModeHost:actualModeHost({currentBookshelfViewMode:()=>persistedMode,loadBookshelfViewMode:()=>load(),saveBookshelfViewMode:mode=>save(mode)},()=>prepare()),viewModeSnapshot:{canonical:undefined} }); owner.aboutToAppear(); return owner; };
+  getUIContext: () => ({ getFont: () => ({}) }),viewModeHost:actualModeHost({currentBookshelfViewMode:()=>persistedMode,loadBookshelfViewMode:()=>load(),saveBookshelfViewMode:mode=>save(mode)},()=>prepare()),viewModeSnapshot:{canonical:undefined},transientFeedback:{reset(){}} }); owner.aboutToAppear(); return owner; };
 const settle = () => new Promise(resolve => setImmediate(resolve));
 let owner = mount(); owner.selectMode('list'); assert.equal(owner.mode, 'list'); await settle();
 assert.deepEqual(saved, ['list']); assert.equal(owner.confirmed, 'list'); assert.equal(fontRegistrations, 1);
@@ -215,7 +229,7 @@ assert.equal(owner.mode, 'list', 'failed optimistic change rolls back to the con
 assert.equal(owner.viewModeSnapshot.receipt.receipt.confirmation,'unknown');assert.match(owner.error,/等待核对/); assert.equal(owner.requestedMode, 'cover');
 load = async () => 'list'; owner=mount();owner.selectMode('cover'); await settle(); assert.equal(owner.mode, 'list');
 prepare = async () => { throw new Error('BOOKSHELF_RESTORE_PENDING'); }; owner=mount();owner.selectMode('cover'); await settle();
-assert.equal(owner.error, '请先在同步设置中重试未完成的恢复'); assert.equal(owner.mode, 'list');
+assert.equal(owner.error, '请先继续未完成的恢复'); assert.equal(owner.mode, 'list');
 let release; prepare = () => new Promise(resolve => { release = resolve; }); saved = [];
 save = async mode => { saved.push(mode); }; owner = mount(); owner.selectMode('list');
 await settle();owner.aboutToDisappear(); release(); await settle(); assert.deepEqual(saved, []); assert.equal(owner.error, '');

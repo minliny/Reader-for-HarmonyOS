@@ -8,6 +8,7 @@ export interface ReaderRuleMutationEffectRequest { method: string; params: JsonO
  * Malformed or future envelopes cannot borrow another command's effects. */
 export function readerRuleMutationEffects(method: string, params: JsonObject): ReaderRuleMutationEffectRequest {
   if (method === 'manga.sourceSwitch.commit.v2') return { method: 'manga.sourceSwitch.commit', params };
+  if (method === 'library.package.restore.apply') return { method: 'runtime.storage.apply', params };
   if (method !== 'rules.mutation.apply' && method !== 'bookshelf.management.mutation.apply') return { method, params };
   const mutation = params['mutation'];
   if (typeof params['operationId'] !== 'string' || (params['operationId'] as string).trim().length === 0 ||

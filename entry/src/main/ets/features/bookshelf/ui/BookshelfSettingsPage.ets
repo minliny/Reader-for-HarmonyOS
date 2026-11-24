@@ -16,6 +16,7 @@ import { ReaderFormRow } from '../../../ui/controls/ReaderFormRow';
 import { ReaderSegmentedControl } from '../../../ui/controls/ReaderSegmentedControl';
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
 import { WebDavCredentialStore } from '../../sync/application/WebDavCredentialStore';
+import { LocalRecoveryPanel } from './LocalRecoveryPanel';
 
 /** Persistent bookshelf preferences, shared by More and the settings route. */
 @Component
@@ -213,12 +214,14 @@ export struct BookshelfSettingsPage {
       }
 
     }
+    LocalRecoveryPanel({ navigationGeneration: this.navigationGeneration,
+      isInputAllowed: (): boolean => this.userInputIsCurrent() });
   }
 
   private viewModeRecovery(): ReaderRecoveryView {
     const view = readerRecoveryView(this.viewModeSnapshot.receipt, this.viewModeSnapshot.readFacts);
     if (this.viewModeSnapshot.receipt?.facts.blockedReason === 'BOOKSHELF_RESTORE_PENDING') {
-      return { message: '请先在同步设置中重试未完成的恢复', visible: true, canRetry: false, generation: view.generation };
+      return { message: '请先继续未完成的恢复', visible: true, canRetry: false, generation: view.generation };
     }
     return view;
   }
@@ -277,7 +280,7 @@ export struct BookshelfSettingsPage {
       if (!this.mounted || revision !== this.revision) return;
       this.mode = this.confirmed;
       this.error = error.message === 'BOOKSHELF_RESTORE_PENDING' ?
-        '请先在同步设置中重试未完成的恢复' : '显示方式保存失败，点击重试';
+        '请先继续未完成的恢复' : '显示方式保存失败，点击重试';
     });
   }
 }

@@ -2,42 +2,13 @@
 
 import crypto from 'node:crypto';
 import http from 'node:http';
+import https from 'node:https';
+import { pathToFileURL } from 'node:url';
 
-const host = '0.0.0.0';
-const port = Number.parseInt(process.env.READER_WEBDAV_FIXTURE_PORT ?? '18085', 10);
-const user = process.env.READER_WEBDAV_FIXTURE_USER ?? 'reader';
-const password = process.env.READER_WEBDAV_FIXTURE_PASSWORD ?? 'm5-pass';
 const basePath = '/dav/m5';
 const directory = '/ReaderBackup/ReaderHarmony';
 const routedDirectory = `${basePath}${directory}`;
-const expectedAuthorization = `Basic ${Buffer.from(`${user}:${password}`, 'utf8').toString('base64')}`;
 const maxBodyBytes = 70 * 1024 * 1024;
-
-const files = new Map();
-for (let index = 0; index < 5; index += 1) {
-  const timestamp = `${1700000000000 + index}`;
-  const checksum = `${index + 1}`.repeat(12);
-  files.set(
-    `${directory}/reader-storage-${timestamp}-${checksum}.reader-backup.json`,
-    Buffer.from('{"seed":true}', 'utf8'),
-  );
-}
-
-const counters = {
-  requests: 0,
-  authenticatedRequests: 0,
-  unauthorizedRequests: 0,
-  propfind: 0,
-  mkcol: 0,
-  put: 0,
-  get: 0,
-  delete: 0,
-  notFound: 0,
-};
-let uploadedBodySha256 = '';
-let uploadedBytes = 0;
-let uploadedBodyContainsPlaintextMarker = false;
-
 function safeEqual(left, right) {
   const a = Buffer.from(left, 'utf8');
   const b = Buffer.from(right, 'utf8');
@@ -68,7 +39,7 @@ function xmlEscape(value) {
     .replaceAll("'", '&apos;');
 }
 
-function multistatusBody() {
+function multistatusBody(files) {
   const resources = [
     `<d:response><d:href>${xmlEscape(`${routedDirectory}/`)}</d:href>` +
       '<d:propstat><d:prop><d:resourcetype><d:collection/></d:resourcetype></d:prop>' +
@@ -78,6 +49,7 @@ function multistatusBody() {
     resources.push(
       `<d:response><d:href>${xmlEscape(`${basePath}${path}`)}</d:href>` +
         `<d:propstat><d:prop><d:getcontentlength>${body.length}</d:getcontentlength>` +
+        `<d:getetag>${xmlEscape(etag(body))}</d:getetag>` +
         '</d:prop><d:status>HTTP/1.1 200 OK</d:status></d:propstat></d:response>',
     );
   }
@@ -101,107 +73,170 @@ async function readBody(request) {
   return Buffer.concat(chunks);
 }
 
-function sanitizedStatus() {
-  return {
-    fixture: 'reader-webdav-product-v1',
-    basePath,
-    directory,
-    counters: { ...counters },
-    fileCount: files.size,
-    fileNames: [...files.keys()].map((path) => path.split('/').at(-1)).sort(),
-    uploadedBytes,
-    uploadedBodySha256,
-    uploadedBodyContainsPlaintextMarker,
-  };
+function etag(body) {
+  return body === undefined ? undefined : `"${crypto.createHash('sha256').update(body).digest('hex')}"`;
 }
 
-const server = http.createServer(async (request, response) => {
-  counters.requests += 1;
-  const parsed = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
-  if (request.method === 'GET' && parsed.pathname === '/status') {
-    sendJson(response, 200, sanitizedStatus());
-    return;
+export async function startWebdavProductTestServer({ host = '127.0.0.1', port = 0, user = 'reader',
+  password = 'm5-pass', seedCount = 5, tls } = {}) {
+  const expectedAuthorization = `Basic ${Buffer.from(`${user}:${password}`, 'utf8').toString('base64')}`;
+
+  const files = new Map();
+  for (let index = 0; index < seedCount; index += 1) {
+    const timestamp = `${1700000000000 + index}`;
+    const checksum = `${index + 1}`.repeat(12);
+    files.set(
+      `${directory}/reader-storage-${timestamp}-${checksum}.reader-backup.json`,
+      Buffer.from('{"seed":true}', 'utf8'),
+    );
   }
 
-  const authorization = request.headers.authorization ?? '';
-  if (!safeEqual(authorization, expectedAuthorization)) {
-    counters.unauthorizedRequests += 1;
-    sendEmpty(response, 401, { 'www-authenticate': 'Basic realm="Reader M5 fixture"' });
-    return;
-  }
-  counters.authenticatedRequests += 1;
+  const counters = {
+    requests: 0,
+    authenticatedRequests: 0,
+    unauthorizedRequests: 0,
+    propfind: 0,
+    mkcol: 0,
+    put: 0,
+    get: 0,
+    delete: 0,
+    notFound: 0,
+  };
+  let uploadedBodySha256 = '';
+  let uploadedBytes = 0;
+  let uploadedBodyContainsPlaintextMarker = false;
+  const requests = [];
+  let expired = false;
+  let transformRead = body => body;
 
-  if (!parsed.pathname.startsWith(routedDirectory)) {
-    counters.notFound += 1;
-    sendEmpty(response, 404);
-    return;
+  function sanitizedStatus() {
+    return {
+      fixture: 'reader-webdav-product-v1',
+      basePath,
+      directory,
+      counters: { ...counters },
+      fileCount: files.size,
+      fileNames: [...files.keys()].map((path) => path.split('/').at(-1)).sort(),
+      uploadedBytes,
+      uploadedBodySha256,
+      uploadedBodyContainsPlaintextMarker,
+    };
   }
-  const relativePath = parsed.pathname.slice(basePath.length).replace(/\/+$/, '');
 
-  if (request.method === 'MKCOL' && relativePath === directory) {
-    counters.mkcol += 1;
-    sendEmpty(response, 405);
-    return;
-  }
-  if (request.method === 'PROPFIND' && relativePath === directory) {
-    counters.propfind += 1;
-    const body = multistatusBody();
-    response.writeHead(207, {
-      'content-type': 'application/xml; charset=utf-8',
-      'content-length': body.length,
-      connection: 'close',
-    });
-    response.end(body);
-    return;
-  }
-  if (request.method === 'PUT' && relativePath.endsWith('.reader-backup.json')) {
-    counters.put += 1;
-    try {
-      const body = await readBody(request);
-      files.set(relativePath, body);
-      uploadedBytes = body.length;
-      uploadedBodySha256 = crypto.createHash('sha256').update(body).digest('hex');
-      uploadedBodyContainsPlaintextMarker = body.includes('M5_VM_PLAINTEXT_SOURCE_MARKER');
-      sendEmpty(response, 201);
-    } catch (error) {
-      sendEmpty(response, error instanceof Error && error.message === 'BODY_TOO_LARGE' ? 413 : 400);
+  const handler = async (request, response) => {
+    counters.requests += 1;
+    const parsed = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
+    if (request.method === 'GET' && parsed.pathname === '/status') {
+      sendJson(response, 200, sanitizedStatus());
+      return;
     }
-    return;
-  }
-  if (request.method === 'GET' && relativePath.endsWith('.reader-backup.json')) {
-    counters.get += 1;
-    const body = files.get(relativePath);
-    if (body === undefined) {
+
+    const authorization = request.headers.authorization ?? '';
+    if (expired || !safeEqual(authorization, expectedAuthorization)) {
+      counters.unauthorizedRequests += 1;
+      sendEmpty(response, 401, { 'www-authenticate': 'Basic realm="Reader M5 fixture"' });
+      return;
+    }
+    counters.authenticatedRequests += 1;
+
+    if (!parsed.pathname.startsWith(routedDirectory)) {
       counters.notFound += 1;
       sendEmpty(response, 404);
       return;
     }
-    response.writeHead(200, {
-      'content-type': 'application/json',
-      'content-length': body.length,
-      connection: 'close',
-    });
-    response.end(body);
-    return;
-  }
-  if (request.method === 'DELETE' && relativePath.endsWith('.reader-backup.json')) {
-    counters.delete += 1;
-    const deleted = files.delete(relativePath);
-    sendEmpty(response, deleted ? 204 : 404);
-    return;
-  }
+    const relativePath = parsed.pathname.slice(basePath.length).replace(/\/+$/, '');
+    requests.push({ method: request.method, path: relativePath, condition: request.headers['if-none-match'] });
 
-  counters.notFound += 1;
-  sendEmpty(response, 404);
-});
+    if (request.method === 'MKCOL' && relativePath === directory) {
+      counters.mkcol += 1;
+      sendEmpty(response, 405);
+      return;
+    }
+    if (request.method === 'PROPFIND' && relativePath === directory) {
+      counters.propfind += 1;
+      const body = multistatusBody(files);
+      response.writeHead(207, {
+        'content-type': 'application/xml; charset=utf-8',
+        'content-length': body.length,
+        connection: 'close',
+      });
+      response.end(body);
+      return;
+    }
+    if (request.method === 'PUT' && relativePath.endsWith('.reader-backup.json')) {
+      counters.put += 1;
+      try {
+        const body = await readBody(request);
+        if (request.headers['if-none-match'] === '*' && files.has(relativePath)) {
+          sendEmpty(response, 412);
+          return;
+        }
+        if (request.headers['if-match'] !== undefined && request.headers['if-match'] !== etag(files.get(relativePath))) {
+          sendEmpty(response, 412);
+          return;
+        }
+        files.set(relativePath, body);
+        uploadedBytes = body.length;
+        uploadedBodySha256 = crypto.createHash('sha256').update(body).digest('hex');
+        uploadedBodyContainsPlaintextMarker = body.includes('M5_VM_PLAINTEXT_SOURCE_MARKER');
+        sendEmpty(response, 201, { etag: etag(body) });
+      } catch (error) {
+        sendEmpty(response, error instanceof Error && error.message === 'BODY_TOO_LARGE' ? 413 : 400);
+      }
+      return;
+    }
+    if (request.method === 'GET' && relativePath.endsWith('.reader-backup.json')) {
+      counters.get += 1;
+      const original = files.get(relativePath);
+      const body = original === undefined ? undefined : transformRead(original);
+      if (body === undefined) {
+        counters.notFound += 1;
+        sendEmpty(response, 404);
+        return;
+      }
+      response.writeHead(200, {
+        'content-type': 'application/json',
+        etag: etag(body),
+        'content-length': body.length,
+        connection: 'close',
+      });
+      response.end(body);
+      return;
+    }
+    if (request.method === 'DELETE' && relativePath.endsWith('.reader-backup.json')) {
+      counters.delete += 1;
+      const deleted = files.delete(relativePath);
+      sendEmpty(response, deleted ? 204 : 404);
+      return;
+    }
 
-server.listen(port, host, () => {
-  process.stdout.write(`${JSON.stringify({ ready: true, port, basePath, directory })}\n`);
-});
+    counters.notFound += 1;
+    sendEmpty(response, 404);
+  };
 
-function close() {
-  server.close(() => process.exit(0));
+  const server = tls === undefined ? http.createServer(handler) : https.createServer(tls, handler);
+  await new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(port, host, resolve);
+  });
+  return {
+    port: server.address().port, basePath, directory, requests,
+    status: sanitizedStatus,
+    expireAuthorization(value) { expired = value; },
+    changeRead(transform) { transformRead = transform; },
+    close: () => new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve())),
+  };
 }
 
-process.on('SIGINT', close);
-process.on('SIGTERM', close);
+if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  const fixture = await startWebdavProductTestServer({
+    host: process.env.READER_WEBDAV_FIXTURE_HOST ?? '0.0.0.0',
+    port: Number.parseInt(process.env.READER_WEBDAV_FIXTURE_PORT ?? '18085', 10),
+    user: process.env.READER_WEBDAV_FIXTURE_USER ?? 'reader',
+    password: process.env.READER_WEBDAV_FIXTURE_PASSWORD ?? 'm5-pass',
+  });
+  const ready = { ready: true, port: fixture.port, basePath, directory };
+  process.stdout.write(`${JSON.stringify(ready)}\n`);
+  process.on('SIGINT', () => fixture.close());
+  process.on('SIGTERM', () => fixture.close());
+}

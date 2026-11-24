@@ -6,6 +6,7 @@ import type { ReaderDirectoryTargetProof } from '../../reading/application/Reade
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { ReaderReadingTopBar, readerReadingTopBarHeight, readerReadingTopBarFontsReady } from '../../../ui/chrome/ReaderReadingTopBar';
 import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/feedback/ReaderTransientFeedback';
+import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
 import { LengthMetrics } from '@kit.ArkUI';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
@@ -984,39 +985,58 @@ export struct MangaReadingSurface {
     finally { if (this.mounted && generation === this.loginGeneration) this.loggingIn = false; }
   }
   private async refreshImages(): Promise<void> {
-    this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
     const controller = this.controller;
-    if (controller === undefined) return;
+    const chapter = controller?.chapter;
+    if (controller === undefined || chapter === undefined || this.refreshing || !this.readerPanelForeground()) return;
+    this.refreshing = true;
+    this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
     const generation = ++this.presentationGeneration;
-    const chapter = controller.chapter;
+    const current = (): boolean => this.mounted && !this.exiting && this.controller === controller && this.isReaderIdentityCurrent();
+    const feedbackCurrent = (): boolean => current() && this.opened && this.readerPanelForeground();
     const preserveNewerPosition = (): boolean => {
       const manifest = controller.chapter?.manifest;
-      return generation !== this.presentationGeneration && manifest !== undefined && chapter !== undefined &&
+      return generation !== this.presentationGeneration && manifest !== undefined &&
         manifest.manifestVersion === chapter.manifest.manifestVersion &&
         manifest.chapter.sourceId === chapter.manifest.chapter.sourceId &&
         manifest.chapter.bookId === chapter.manifest.chapter.bookId &&
         manifest.chapter.chapterId === chapter.manifest.chapter.chapterId;
     };
-    await this.saveVisible();
-    if (!this.mounted || this.controller !== controller || controller.chapter !== chapter || generation !== this.presentationGeneration) return;
-    await controller.refreshChapter();
-    if (!this.mounted || this.controller !== controller) return;
-    if (controller.replacementRecoveryRequired) {
-      // The old chapter remains displayed until the existing recovery action
-      // explicitly selects the complete new chapter. Keep its pixels/anchor.
-      this.error = ''; this.recovering = true;
-      return;
+    try {
+      await this.saveVisible();
+      if (!current() || controller.chapter !== chapter || generation !== this.presentationGeneration) return;
+      await controller.refreshChapter();
+      if (!current()) return;
+      if (controller.replacementRecoveryRequired) {
+        // The old chapter remains displayed until the existing recovery action
+        // explicitly selects the complete new chapter. Keep its pixels/anchor.
+        this.error = ''; this.recovering = true;
+        return;
+      }
+      if (preserveNewerPosition()) return;
+      await controller.setPreviewMode(this.effectiveFit() === 'contain', controller.displayedOrdinal);
+      if (!current() || preserveNewerPosition()) return;
+      this.error = ''; this.recovering = controller.recoveryRequired;
+      const saved = !this.recovering ? controller.savedLocation : null;
+      const ordinal = controller.displayedOrdinal;
+      this.horizontalPage = ordinal;
+      this.visibleAnchor = undefined;
+      this.publish();
+      this.restore(ordinal, saved?.y ?? 0, saved?.x ?? 0);
+      const installed = controller.chapter;
+      if (installed !== undefined && installed.manifest.manifestVersion !== chapter.manifest.manifestVersion &&
+        !this.recovering && this.error.length === 0) {
+        this.transientFeedback.show(() => this.getUIContext(), { message: '本章已更新' },
+          (): boolean => feedbackCurrent() && controller.chapter === installed);
+      }
+    } catch (error) {
+      if (!current() || (error instanceof Error && error.message === 'MANGA_SESSION_CANCELLED')) return;
+      const displayed = controller.chapter;
+      const message = displayed === chapter ? '刷新未完成，已保留当前内容。' : '刷新显示未完成，请重试。';
+      this.transientFeedback.show(() => this.getUIContext(), { message },
+        (): boolean => feedbackCurrent() && controller.chapter === displayed);
+    } finally {
+      if (this.mounted && this.controller === controller) this.refreshing = false;
     }
-    if (preserveNewerPosition()) return;
-    await controller.setPreviewMode(this.effectiveFit() === 'contain', controller.displayedOrdinal);
-    if (!this.mounted || this.controller !== controller || preserveNewerPosition()) return;
-    this.error = ''; this.recovering = controller.recoveryRequired;
-    const saved = !this.recovering ? controller.savedLocation : null;
-    const ordinal = controller.displayedOrdinal;
-    this.horizontalPage = ordinal;
-    this.visibleAnchor = undefined;
-    this.publish();
-    this.restore(ordinal, saved?.y ?? 0, saved?.x ?? 0);
   }
   private displayError(code: string): string {
     if (code === 'MANGA_CHAPTER_CACHE_CAPACITY') return '整章加载已暂停，缓存空间不足，可清理缓存或下载保留。';
@@ -2240,6 +2260,7 @@ export struct MangaReadingSurface {
               }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent)
                 .padding(this.interactiveInsets(this.windowMetricsRevision));
             }
+            this.refreshProgress();
             this.recoveryOverlay();
           }.width('100%').height('100%')
             .enabled(this.phonePanelBackgroundEnabled())
@@ -2450,6 +2471,25 @@ export struct MangaReadingSurface {
 
   private recoveryOverlayIdentity(): string {
     return JSON.stringify([this.sourceId, this.bookId, this.presentationGeneration]);
+  }
+
+  @Builder
+  private refreshProgress() {
+    if (this.refreshing && this.opened && this.readerPanelForeground() && this.panel.length === 0 &&
+      this.panelPhase === 'closed' && !this.chapterEnd && !this.boundaryBusy) {
+      Stack({ alignContent: Alignment.Bottom }) {
+        Row({ space: 8 }) {
+          LoadingProgress().width(16).height(16).color(readerAppColor('TOK_MESSAGE_INK', this.chromeScheme()))
+            .enableLoading(!this.reduceMotion).accessibilityLevel('no');
+          Text('正在更新本章').fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
+            .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp)
+            .fontColor(readerAppColor('TOK_MESSAGE_INK', this.chromeScheme()));
+        }.padding({ left: 12, right: 12, top: 6, bottom: 6 })
+          .margin({ bottom: this.controlsPresentedForWindow() ? this.bottomControlViewportHeight() + 10 : 12 })
+          .backgroundColor(readerAppColor('TOK_MESSAGE_SURFACE', this.chromeScheme())).borderRadius(12);
+      }.width('100%').height('100%').padding(this.interactiveInsets(this.windowMetricsRevision))
+        .hitTestBehavior(HitTestMode.None);
+    }
   }
 
   private recoveryOverlayCurrent(identity: string): boolean {
@@ -3190,7 +3230,7 @@ export struct MangaReadingSurface {
 
   private moreActions(): ReaderMenuActionView[] {
     const refreshLabel = this.title.includes('卷') ? '重新打开本卷' : '重新打开本话';
-    const refreshSecondary = this.refreshing ? '正在重新加载…' : !this.opened ? '章节尚未打开' : this.offline ? '离线时不可用' : '';
+    const refreshSecondary = this.refreshing ? '正在更新本章' : !this.opened ? '章节尚未打开' : this.offline ? '离线时不可用' : '';
     const scheme = this.backgroundPreference === 'ink' ? 'night' : 'day';
     const actions: ReaderMenuActionView[] = [
       new ReaderMenuActionView('source', '更换书源', true, readerActionIcon('source', scheme), '更换书源',
@@ -3225,17 +3265,7 @@ export struct MangaReadingSurface {
     if (action === undefined || !action.enabled) return;
     if (id === 'source') { void this.performMorePanelAction(generation, (): void => this.onSwitchSource(this.panelTriggerFocusId('more'))); return; }
     if (id === 'refresh') {
-      if (this.refreshing) return;
-      this.refreshing = true;
-      void this.performMorePanelAction(generation, (): Promise<void> => this.refreshImages())
-        .catch((error: Error): void => {
-          if (!this.mounted) return;
-          if (this.opened) {
-            try { this.transientFeedback.show(() => this.getUIContext(), { message: '刷新未完成，已保留当前内容。' },
-              (): boolean => this.readerPanelForeground() && this.opened); } catch (_) {}
-          } else this.error = error.message;
-        })
-        .finally((): void => { if (this.mounted) this.refreshing = false; });
+      void this.performMorePanelAction(generation, (): Promise<void> => this.refreshImages());
       return;
     }
     if (id === 'detail') { void this.performMorePanelAction(generation, (): void => this.onDetail()); return; }

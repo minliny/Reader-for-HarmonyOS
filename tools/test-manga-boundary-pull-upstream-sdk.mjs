@@ -154,6 +154,17 @@ check('disabled, removed neighbour and resetToken stop a pull', () => {
   }
 });
 {
+  const f = fixture(); startAtEnd(f); pull(f, 160);
+  const before = f.pulls.length;
+  f.owner.pullEnabled = false; f.owner.handleEnabledChange();
+  f.owner.handleResetToken();
+  assert.deepEqual(f.activity, [true], 'prop watchers defer notifications beyond the parent update');
+  await tick();
+  assert.deepEqual(f.pulls.slice(before), [['', 0, false]], 'coalesced watchers publish one reset');
+  assert.deepEqual(f.activity, [true, false], 'the newest watcher still clears the parent drag state');
+  outcomes.push('coalesced prop resets release the active parent drag exactly once');
+}
+{
   const f = fixture(); let settle;
   f.owner.onLoadMore = () => new Promise(resolve => { settle = resolve; });
   startAtEnd(f); pull(f, 160); f.owner.onActionEnd(); f.owner.aboutToDisappear();

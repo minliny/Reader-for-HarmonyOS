@@ -1,13 +1,10 @@
 import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function run(id){
-const { resolveEtsLoaderRoot, virtualFilePath }=await import("./lib/tool-environment.mjs");
 const {readFileSync,existsSync}=await import("node:fs");
 const {randomUUID}=await import("node:crypto");
 const {configIntentFixture}=await import("./lib/sync-config-intent-fixture.mjs");
-const {fullSyncIndexPage}=await import("./lib/sync-index-real-fixture.mjs");
-const {createRequire}=await import("node:module");
-const {createReaderBuilderProbe}=await import("./lib/reader-control-builder-probe.mjs");
+const {fullSyncIndexPage,syncRecoveryAction,updateSyncRecoveryAction}=await import("./lib/sync-index-real-fixture.mjs");
 const fixtures=[];
 const fresh=previous=>{const f=configIntentFixture(previous);fixtures.push(f);return f;};
 const open=async x=>{x.owner.open();await x.settle();};
@@ -124,21 +121,25 @@ for(const corrupt of ['head','immutable']) {
 if(id==='retained-actor'){
 {
   const f=fresh(),x=f.fixture();await open(x);f.asset.failAdd=true;await save(f,x);const calls=[];
-  const sdk=resolveEtsLoaderRoot();
-  const require=createRequire(import.meta.url),ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
-  const text=f.source('ui/feedback/ReaderRecoveryAction.ets'),tree=ts.createSourceFile(virtualFilePath('ReaderRecoveryAction.ets'),text,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
-  const names=tree.statements.find(n=>n.members&&n.name?.text==='ReaderRecoveryAction').members.map(n=>n.name?.getText(tree)).filter(Boolean);
-  const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');const actionSdk=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
-  class ActualAction{
-   constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});this.actor=actionSdk.consumer(text,names,{},params);this.actor.initialRender();}
-   updateStateVars(params){Object.assign(this.params,params);this.actor.updateStateVars(params);this.actor.replay();}
-  }
-  const page=fullSyncIndexPage({snapshot:x.snapshot(),isTablet:false,onContinueConfigSave:(...args)=>{calls.push(args);x.owner.continueConfigSave(...args);}}, {ReaderRecoveryAction:ActualAction},{allowEmptyBranchAdmission:true});
-  const first=[...page.children.values()].find(c=>c.params?.label==='继续原操作');assert.ok(first);const physical=child=>[...child.actor.nodes.values()].find(v=>v.type==='Stack'&&v.constraintSize?.minHeight===44&&v.onClick).onClick;
-  const oldClick=physical(first),oldGeneration=first.actor.generation,observers=page.observers.length;
-  first.updateStateVars({...first.params,actionEnabled:false,onReconcile:()=>{throw Error('ordinary callback must not refresh');}});oldClick();await x.settle();assert.equal(calls.length,0,'actual busy Prop suppresses physical action');first.updateStateVars({...first.params,actionEnabled:true});await reconcile(x);assert.notEqual(operation(x).projection.facts.generation,oldGeneration);page.webdavUrl='https://draft-retained.test';page.webdavUrlEdited=true;
-  page.updateStateVars({snapshot:x.snapshot()});page.replay();assert.equal(page.observers.length,observers+1,'only one keyed continuation actor enters, Page is retained');oldClick();await x.settle();assert.equal(metadata(f).operationId,operation(x).operationId);assert.equal(operation(x).completed,false,'stale physical original action rejects changed generation');
-  const current=[...page.children.values()].filter(c=>c.params?.label==='继续原操作').find(c=>c.params.generation===operation(x).projection.facts.generation);assert.ok(current,'fresh keyed actor owns new generation');assert.equal(first.actor.generation,oldGeneration,'retained V1 old actor does not borrow successor generation');physical(current)();await x.settle();assert.equal(operation(x).completed,true);assert.equal(page.webdavUrl,'https://draft-retained.test');assert.equal(calls.length,2);assert.equal(calls[0][0],oldGeneration);checks++;
+  const label='继续原操作';
+  const page=fullSyncIndexPage({snapshot:x.snapshot(),onContinueConfigSave:(...args)=>{calls.push(args);x.owner.continueConfigSave(...args);}});
+  const [first]=syncRecoveryAction(page,label);assert.ok(first);
+  const oldClick=first.node.onClick,oldGeneration=first.actor.generation;
+  updateSyncRecoveryAction(first.actor,{actionEnabled:false,onReconcile:()=>{throw Error('ordinary callback must not refresh');}});
+  oldClick();await x.settle();assert.equal(calls.length,0,'actual busy Prop suppresses physical action');
+  updateSyncRecoveryAction(first.actor,{actionEnabled:true});
+  await reconcile(x);assert.notEqual(operation(x).projection.facts.generation,oldGeneration);
+  page.webdavUrl='https://draft-retained.test';page.webdavUrlEdited=true;
+  page.updateStateVars({snapshot:x.snapshot()});page.replay();
+  oldClick();await x.settle();assert.equal(metadata(f).operationId,operation(x).operationId);
+  assert.equal(operation(x).completed,false,'old callback may arrive but cannot dispatch a stale mutation');
+  const current=syncRecoveryAction(page,label).findLast(item=>item.actor.generation===operation(x).projection.facts.generation);
+  assert.ok(current,'fresh native action owns new generation');assert.notEqual(current.node.onClick,oldClick);
+  assert.equal(page.webdavUrl,'https://draft-retained.test');
+  // The SDK probe retains retired slot actors, so use a fresh measured shell for the current click.
+  const active=fullSyncIndexPage({snapshot:x.snapshot(),onContinueConfigSave:(...args)=>{calls.push(args);x.owner.continueConfigSave(...args);}});
+  const [activeAction]=syncRecoveryAction(active,label);activeAction.node.onClick();await x.settle();
+  assert.equal(operation(x).completed,true);assert.deepEqual(calls.map(call=>call[0]),[activeAction.actor.generation]);checks++;
  }
 }
 }finally{for(const f of fixtures)f.cleanup();}

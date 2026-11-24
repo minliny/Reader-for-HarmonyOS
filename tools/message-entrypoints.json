@@ -301,6 +301,73 @@
       "status": "registered-source-entry"
     },
     {
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.processing::shared.page-state",
+      "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
+      "owner": "LocalRecoveryPanel",
+      "member": "processing",
+      "family": "shared.page-state",
+      "category": "本地恢复包操作状态",
+      "effectiveHost": "当前书架设置中的恢复包面板。展示核对、导出、隔离校验或恢复状态。",
+      "retireRule": "操作返回或面板代次退役即清除当前呈现，持久恢复由原 gateway 持有。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.requestRestore::native.alert",
+      "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
+      "owner": "LocalRecoveryPanel",
+      "member": "requestRestore",
+      "family": "native.alert",
+      "category": "经 ReaderNativeAlertOwner 发起恢复确认",
+      "effectiveHost": "当前书架设置，隔离校验完成且预览、口令和动作仍属于当前代次。",
+      "retireRule": "原生回调由确认 lease 封装，退役拒绝旧按钮，恢复结果仍由 gateway 持有。",
+      "status": "registered-source-entry",
+      "bridge": "owned-alert-native-callback"
+    },
+    {
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.requestRestore::shared.alert-owner",
+      "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
+      "owner": "LocalRecoveryPanel",
+      "member": "requestRestore",
+      "family": "shared.alert-owner",
+      "category": "本地恢复的明确确认",
+      "effectiveHost": "当前书架设置与已校验预览。",
+      "retireRule": "确认、取消或打开代次退役时结束 lease。确认动作提交恢复，完成状态由原业务回执确认。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.resumeControl::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
+      "owner": "LocalRecoveryPanel",
+      "member": "resumeControl",
+      "family": "shared.recovery-notice",
+      "category": "本地恢复中断后的继续入口",
+      "effectiveHost": "当前书架设置中的恢复包面板，恢复 journal 确认有待续操作。",
+      "retireRule": "继续动作核对当前打开代次并交给 gateway。退场只撤销本次交互与口令，原恢复状态可再次读取。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.showOutcome::shared.transient",
+      "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
+      "owner": "LocalRecoveryPanel",
+      "member": "showOutcome",
+      "family": "shared.transient",
+      "category": "本地导出、恢复、取消与明确失败的短反馈",
+      "effectiveHost": "当前前景书架设置中的恢复包面板，绑定打开代次和当前动作。",
+      "retireRule": "打开代次退役及新动作重置当前发布。中断恢复由独立待续通知承载。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.statusReadFailed::shared.page-state",
+      "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
+      "owner": "LocalRecoveryPanel",
+      "member": "statusReadFailed",
+      "family": "shared.page-state",
+      "category": "恢复 journal 状态无法读取",
+      "effectiveHost": "当前书架设置中的恢复包面板。",
+      "retireRule": "重新读取成功或面板代次退役时清除，重试仅核对原恢复状态。",
+      "status": "registered-source-entry"
+    },
+    {
       "id": "entry/src/main/ets/features/bookshelf/ui/BookshelfShell.ets#BookshelfShell.onReadRecoveryChanged::shared.transient",
       "file": "entry/src/main/ets/features/bookshelf/ui/BookshelfShell.ets",
       "owner": "BookshelfShell",
@@ -532,14 +599,14 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.performMoreAction::shared.transient",
+      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.refreshImages::shared.transient",
       "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
       "owner": "MangaReadingSurface",
-      "member": "performMoreAction",
+      "member": "refreshImages",
       "family": "shared.transient",
       "category": "普通完成/失败短反馈",
-      "effectiveHost": "当前漫画 reader 的 mounted、sourceId/bookId、presentationGeneration、isReaderIdentityCurrent 与 windowChromeActive；章边界还保留 boundaryGeneration。",
-      "retireRule": "退出/身份变化、章边界代次退役后拒绝旧展示；原图像与章节控制器保留自己的取消、回退和资源释放。 适配器退役时只清理自身消息代次，呈现到期及失败均不影响原业务事实。",
+      "effectiveHost": "当前前景漫画 reader、章节控制器与刷新结果对应的章节。",
+      "retireRule": "退出、书籍或章节 owner 退役时拒绝旧展示；只有成功投影新版本才提示已更新，取消和待确认恢复由原章节 owner 保留。",
       "status": "registered-source-entry"
     },
     {
@@ -1998,6 +2065,17 @@
       "effectiveHost": "当前 SourceTools snapshot 的原 debug session 和 debugLogs 逐项事实。",
       "retireRule": "原 debug session/投影变化更新日志；退场取消原订阅/分派，不把日志显示当作任务完成。",
       "reason": "调试日志是任务输出，不作为每行 Toast 或待处理通知。",
+      "status": "dedicated-existing-surface"
+    },
+    {
+      "id": "DEDICATED-MANGA-CHAPTER-REFRESH",
+      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
+      "owner": "MangaReadingSurface",
+      "member": "refreshProgress",
+      "category": "漫画本章刷新进度",
+      "effectiveHost": "当前前景漫画 reader 的已打开章节与原刷新操作，面板和章末打开时暂退。",
+      "retireRule": "原刷新返回或当前 reader 退场时结束进度展示；图像和位置继续由章节控制器管理。",
+      "reason": "原章节视口上方复用消息文字样式与原生 LoadingProgress，保留图像和底页输入。",
       "status": "dedicated-existing-surface"
     },
     {

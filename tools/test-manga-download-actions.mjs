@@ -1,5 +1,5 @@
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions = {"gateway-task": {"description": "实际gateway queue/inventory/retention先后与wire拒绝", "resources": []}, "current-submit": {"description": "当前Index提交exact admitted session和late receipt拒绝", "resources": []}, "legacy-intent-drain": {"description": "仅兼容旧Host intent pause/resume/cancel/drain", "resources": []}};
+const definitions = {"gateway-task": {"description": "实际gateway queue/inventory/retention先后与wire拒绝", "resources": []}, "current-submit": {"description": "实际目录操作提交原会话并拒绝过期回执", "resources": []}, "legacy-intent-drain": {"description": "仅兼容旧Host intent pause/resume/cancel/drain", "resources": []}};
 for (const id of selectContractCases(definitions)) {
   await runSelectedCase(id);
   recordContractCasePass(id);
@@ -172,37 +172,52 @@ console.log('PASS malformed queue receipts, foreign inventories, absent full-boo
 
 }
 if(selectedCase==='current-submit') {
-// Current Index buttons submit the exact admitted session to the shared
+// Current directory buttons submit the exact admitted session to the shared
 // durable coordinator. I/O receipts are the seam; production admission and
 // navigation execute unchanged, including stale/unknown/no-chapter guards.
+const { actualReaderDirectoryOperations } = await import('./lib/reader-directory-operations-probe.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const actionsSource = new URL('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ets', import.meta.url);
+const { readerDirectoryActions } = pureModuleProbe(readFileSync(actionsSource, 'utf8'), 'ReaderDirectoryActions.ets', {}, ['readerDirectoryActions']);
+const Operations = actualReaderDirectoryOperations();
+function directoryFixture() {
+ const f=fixture(), feedback=[], opened=[];
+ const admitted={...session,entries:f.rows.map(row=>({ index:row.chapterIndex, url:row.url, navigable:row.navigable }))};
+ const scene={owner:f.runtime,book:{...admitted.identity,contentKind:'manga'},session:admitted,
+  mount:1,navigation:1,presentation:1,sessionGeneration:1,retired:false,directoryVisible:true,
+  acceptsProjection:true,foreground:true,reading:false,offlineBusy:false};
+ const operations=new Operations({scene:()=>({...scene}),ownsRuntime:owner=>owner===f.runtime,
+  feedback:message=>feedback.push(message),openDownloadProgress:key=>opened.push(key),
+  diagnostic:(_kind,error)=>assert.fail(`unexpected directory download error: ${error.message}`)});
+ const actions=readerDirectoryActions(()=>undefined,()=>undefined,()=>operations);
+ return {...f,admitted,scene,actions,feedback,opened};
+}
 {
- const f=indexFixture(),submitted=[],opened=[];
+ const f=directoryFixture(),submitted=[];
  f.runtime.getDownloadCoordinator=()=>({submit:async(...args)=>{submitted.push(args);return{accepted:true,key:'shared-job',alreadyRunning:false};}});
- f.owner.requestReaderDownloads=key=>opened.push(key);
- f.owner.downloadDirectoryChapter(3);await tick();
- assert.deepEqual(submitted,[[f.admitted,[3]]]);assert.deepEqual(opened,[]);
+ f.actions.downloadChapter(3);await tick();
+ assert.deepEqual(submitted,[[f.admitted,[3]]]);assert.strictEqual(submitted[0][0],f.admitted);assert.deepEqual(f.opened,[]);
  assert.ok(f.feedback.includes('已加入下载，可在下载管理查看进度'));
- f.owner.downloadDirectoryChapter(2);await tick();assert.equal(submitted.length,1,'unknown/non-admitted volume index cannot submit a shared download');
- f.owner.downloadDirectoryBook();await tick();assert.deepEqual(submitted[1],[f.admitted,undefined]);assert.deepEqual(opened,['shared-job']);
+ f.actions.downloadChapter(2);f.actions.downloadChapter(99);await tick();
+ assert.equal(submitted.length,1,'unknown and non-navigable chapters cannot submit a shared download');
+ await f.actions.performMangaAction('downloadBook');await tick();
+ assert.deepEqual(submitted[1],[f.admitted,undefined]);assert.deepEqual(f.opened,['shared-job']);
 }
-for(const invalidation of ['navigation','session','retired']){
- const f=indexFixture(),receipt=deferred(),opened=[];
- f.runtime.getDownloadCoordinator=()=>({submit:()=>receipt.promise});f.owner.requestReaderDownloads=key=>opened.push(key);
- f.owner.downloadDirectoryBook();await tick();
- if(invalidation==='navigation')f.owner.navigationGeneration++;
- if(invalidation==='session')f.owner.remoteReadingSession={...f.admitted};
- if(invalidation==='retired')f.owner.shelfReceiptRetired=true;
+for(const invalidate of [scene=>scene.navigation++,scene=>scene.mount++,scene=>scene.presentation++,
+ scene=>{scene.session={...scene.session};},scene=>{scene.retired=true;},scene=>{scene.foreground=false;}]){
+ const f=directoryFixture(),receipt=deferred();let submitted=false;
+ f.runtime.getDownloadCoordinator=()=>({submit:()=>{submitted=true;return receipt.promise;}});
+ f.actions.downloadBook();await tick();assert.equal(submitted,true);
+ invalidate(f.scene);
  receipt.resolve({accepted:true,key:'stale-job',alreadyRunning:false});await tick();
- assert.deepEqual(opened,[]);assert.deepEqual(f.feedback,[],'late shared receipt cannot navigate or toast against a newer reader');
+ assert.deepEqual(f.opened,[]);assert.deepEqual(f.feedback,[],'late shared receipt cannot navigate or toast against a newer reader');
 }
 {
- const f=indexFixture(),opened=[];
- f.runtime.getDownloadCoordinator=()=>({submit:async()=>({accepted:false,key:'unknown',alreadyRunning:false})});f.owner.requestReaderDownloads=key=>opened.push(key);
- f.owner.downloadDirectoryBook();await tick();assert.deepEqual(opened,[]);assert.ok(f.feedback.includes('下载请求尚未确认，请重试'));
+ const f=directoryFixture();
+ f.runtime.getDownloadCoordinator=()=>({submit:async()=>({accepted:false,key:'unknown',alreadyRunning:false})});
+ f.actions.downloadBook();await tick();assert.deepEqual(f.opened,[]);assert.ok(f.feedback.includes('下载请求尚未确认，请重试'));
 }
-console.log('PASS actual Index chapter/book submission through shared coordinator: exact admitted session/indexes, accepted receipt navigation and stale/unconfirmed guards');
-
-
+console.log('PASS actual ReaderDirectoryActions and ReaderDirectoryOperations: exact admitted chapter/book submission, accepted receipt navigation and stale/unconfirmed guards');
 }
 if(selectedCase==='legacy-intent-drain') {
 {

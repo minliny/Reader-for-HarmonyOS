@@ -10,15 +10,18 @@ if (selectedCase === 'detail-action-semantics') {
   const {default: assert} = await import('node:assert/strict');
   const {readFileSync} = await import('node:fs');
   const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
+  const {resolveReaderRaisedShape} = await import('../entry/src/main/ets/ui/layout/ReaderRaisedShape.ts');
   const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/LocalBookDetail.ets', import.meta.url), 'utf8');
   const DETAIL_DOCK_HEIGHT = Number(source.match(/const DETAIL_DOCK_HEIGHT = (\d+);/)[1]);
-  const {owner} = createReaderBuilderProbe(source, ['actionSurface', 'readingActionLabel', 'shelfActionLabel', 'detailBookAvailable', 'detailColor', 'mangaFontScale'], { DETAIL_DOCK_HEIGHT });
+  const {owner} = createReaderBuilderProbe(source, ['actionSurface', 'readingActionLabel', 'readingActionAvailable', 'shelfActionLabel',
+    'detailBookAvailable', 'detailColor', 'mangaFontScale', 'dockNativeShape', 'dockShapeIdentity', 'dockRequestedRadius',
+    'currentDockShape', 'dockAreaChangeHandler'], { DETAIL_DOCK_HEIGHT, resolveReaderRaisedShape });
   const intents = [];
-  Object.assign(owner, {appThemeScheme: 'day', book: {sourceId:'remote',contentKind:'text'},
+  Object.assign(owner, {appThemeScheme: 'day', book: {sourceId:'remote',contentKind:'text'}, liveWidth: () => 390,
     admissionIdentity:'detail-lease', inBookshelf:false, removalEnabled:true, removing:false, adding:false, cancellingAdd:false,
     onContinue:()=>intents.push('continue'),onRemove:id=>intents.push(id),onCancelAdd:id=>intents.push(`cancel:${id}`)});
   owner.actionSurface();
-  const dock = [...owner.nodes.values()].find(node => node.type === 'Stack' && node.height === DETAIL_DOCK_HEIGHT);
+  const dock = [...owner.nodes.values()].find(node => node.type === 'Stack' && node.constraintSize?.minHeight === DETAIL_DOCK_HEIGHT);
   assert.equal(dock.borderRadius, 24);
   assert.equal(dock.width, '100%', 'scaffold owns the horizontal dock frame');
   const control = label => [...owner.nodes.values()].find(node => node.accessibilityText === label);
@@ -26,12 +29,21 @@ if (selectedCase === 'detail-action-semantics') {
     const action = control(label);
     assert.equal(action?.type,'Button','the actual detail command is carried by a native Button');
     assert.equal(action?.accessibilityRole,'AccessibilityRoleType.BUTTON');
-    assert.equal(action.focusable,true);assert.equal(action.height,48);action.onClick();
+    assert.equal(action.enabled,true);
+    assert.equal(action.focusable,undefined,'the native Button retains focus ownership');
+    assert.equal(action.constraintSize?.minHeight,48);action.onClick();
   }
   owner.adding=true;owner.replay();control('取消加入').onClick();
   owner.cancellingAdd=true;owner.replay();
-  assert.equal(control('取消加入').focusable,false);assert.equal(control('取消加入').enabled,false);
+  assert.equal(control('取消加入').enabled,false);
   control('取消加入').onClick();
+  assert.deepEqual(intents,['continue','detail-lease','cancel:detail-lease']);
+  Object.assign(owner, {book: {sourceId:'local',contentKind:'text'}, inBookshelf:true, readingEnabled:false});
+  owner.replay();
+  const blocked = control('继续阅读');
+  assert.equal(blocked.enabled, false);
+  assert.equal(blocked.focusable, undefined, 'disabling the native Button preserves its focus semantics');
+  blocked.onClick();
   assert.deepEqual(intents,['continue','detail-lease','cancel:detail-lease']);
   assert.ok(![...owner.nodes.values()].some(node=>node.type==='Text'&&typeof node.onClick==='function'),
     'visual labels cannot dispatch a second detail action');
@@ -132,7 +144,7 @@ const actionAreaSource = detailSource.slice(detailSource.indexOf('private action
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
 const { owner: detail } = createReaderBuilderProbe(detailSource, ['actionArea',
-  'readingActionLabel', 'shelfActionLabel', 'detailBookAvailable', 'detailColor'], {
+  'readingActionLabel', 'readingActionAvailable', 'shelfActionLabel', 'detailBookAvailable', 'detailColor'], {
     GradientDirection: { Bottom: 'bottom' },
     READER_FONT_NOTO_SANS_SC_UI_BOLD: 'ReaderNotoSansSCUIBold',
   });

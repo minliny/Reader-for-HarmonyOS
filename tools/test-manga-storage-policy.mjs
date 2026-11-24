@@ -125,6 +125,7 @@ const { fileURLToPath } = await import('node:url');
 const { createHash } = await import('node:crypto');
 const { stripTypeScriptTypes } = await import('node:module');
 const { createMangaAtomicPayloadReaderFixture } = await import('./lib/manga-atomic-payload-probe.mjs');
+const { readerHostCacheDirectory, readerHostFilesDirectory } = await import('../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts');
 // Full production methods, real temporary files. The sparse quota fixtures
 // report their real stat.size without allocating gigabytes of test payload.
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -157,9 +158,9 @@ const util = {
 const crypto = {createMd:()=>{const h=createHash('sha256');return{update:async({data})=>{h.update(data);},digest:async()=>({data:h.digest()})};}};
 class MaterializationError extends Error {constructor(kind,message){super(message);this.kind=kind;this.code=kind;}}
 const readMangaAtomicPayload = createMangaAtomicPayloadReaderFixture(io);
-const Cache = new Function('fileIo','statfs','cryptoFramework','util','canonicalReadingImageBaseUrl','assertReadingOfflineWriteCapacity','ReadingOfflineMaterializationError','readMangaAtomicPayload', `${executable}\nreturn ReadingImageDiskCache;`)(
+const Cache = new Function('fileIo','statfs','cryptoFramework','util','canonicalReadingImageBaseUrl','assertReadingOfflineWriteCapacity','ReadingOfflineMaterializationError','readMangaAtomicPayload','readerHostFilesDirectory', `${executable}\nreturn ReadingImageDiskCache;`)(
   io,{getFreeSize:async()=>8*1024**3},crypto,util,b=>b?.trim().split('#')[0]||undefined,
-  (free,bytes,reserve)=>{if(free<bytes+reserve)throw new MaterializationError('storage_full','MANGA_CACHE_STORAGE_FULL');},MaterializationError,readMangaAtomicPayload,
+  (free,bytes,reserve)=>{if(free<bytes+reserve)throw new MaterializationError('storage_full','MANGA_CACHE_STORAGE_FULL');},MaterializationError,readMangaAtomicPayload,readerHostFilesDirectory,
 );
 const root = await fs.mkdtemp(join(tmpdir(),'reader-manga-storage-policy-'));
 const checks=[];const pass=name=>checks.push(name);
@@ -224,7 +225,7 @@ const cases={
   // reaches unchanged requestDirect -> start -> predecessor wait, not an
   // immediately answered authority or fake public start.
   class Coordinator{constructor(execute){this.execute=execute;}request(...args){return this.execute(...args);}close(){}}
-  const deps={ReaderHostRegistry:Host,HarmonyTtsHostRouter:Host,HarmonySystemTtsHost:Host,HarmonyHttpTtsHost:Host,HarmonyTtsMediaSession:Host,HarmonyTtsBackgroundSession:Host,LocalEpubResourceHost:Host,
+  const deps={readerHostCacheDirectory,readerHostFilesDirectory,ReaderHostRegistry:Host,HarmonyTtsHostRouter:Host,HarmonySystemTtsHost:Host,HarmonyHttpTtsHost:Host,HarmonyTtsMediaSession:Host,HarmonyTtsBackgroundSession:Host,LocalEpubResourceHost:Host,
     ReadingImageDiskCache:Disk,ReadingBodyImageHost:Body,BookAcquisitionCoordinator:Coordinator,
     MangaChapterPreparationCoordinator:{forRuntime:()=>({close:async()=>{}})},ReaderStartupTrace:{current:()=>undefined},
     LOG_DOMAIN:0,DEFAULT_CORE_REQUEST_TIMEOUT_MS:30000,hilog:{info(){},warn(){},error(){}},errorMessageOf:String,

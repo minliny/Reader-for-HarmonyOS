@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from '../../lib/reader-control-builder-probe.mjs';
 import { createDefaultReaderWindowMetrics } from '../../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
-export function createSyncOwnerFixture({sharedAsset}={}) {
+export function createSyncOwnerFixture({sharedAsset,captureHostConfiguration}={}) {
 const require=createRequire(import.meta.url);
 // Thin Node adaptation of the actual platform AtomicFile API. Production
 // snapshot/Store/owner methods remain unmodified and use real durable files.
@@ -49,7 +49,7 @@ const checksum='a'.repeat(64);
 const clone=v=>v===undefined?undefined:structuredClone(v);
 const pause=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {resolve,promise};};
 const until=async predicate=>{for(let i=0;i<2000;i++){if(predicate())return;await new Promise(setImmediate);}throw Error('actual IO boundary did not arrive');};
-const util={generateRandomUUID:()=>randomUUID(),TextEncoder:globalThis.TextEncoder,TextDecoder:{create:()=>({decodeToString:b=>new TextDecoder('utf8',{fatal:true}).decode(b)})},Base64Helper:class {encodeToStringSync(v){return Buffer.from(v).toString('base64');}}};
+const util={generateRandomUUID:()=>randomUUID(),TextEncoder:class {encodeInto(value){return new TextEncoder().encode(value);}},TextDecoder:{create:()=>({decodeToString:b=>new TextDecoder('utf8',{fatal:true}).decode(b)})},Base64Helper:class {encodeToStringSync(v){return Buffer.from(v).toString('base64');}}};
 const asset=sharedAsset ?? {Tag:{ALIAS:1,RETURN_TYPE:2,SECRET:3,ACCESSIBILITY:4,CONFLICT_RESOLUTION:5},ReturnType:{ALL:1},Accessibility:{DEVICE_POWERED_ON:1},ConflictResolution:{OVERWRITE:0,THROW_ERROR:1},ErrorCode:{NOT_FOUND:100,DUPLICATED:101},record:undefined,records:new Map(),calls:[],failAdd:false,failQuery:false,beforeAdd:undefined,
  async query(query){this.calls.push('query');if(this.failQuery){this.failQuery=false;throw Error('read unavailable');}const alias=new TextDecoder().decode(query.get(1));const raw=alias==='reader.webdav.config.v2'?this.record:this.records.get(alias);return raw?[new Map([[1,query.get(1)],[3,raw]])]:[];},
  async add(attributes){this.calls.push('add');if(this.beforeAdd)await this.beforeAdd();const alias=new TextDecoder().decode(attributes.get(1));const existing=alias==='reader.webdav.config.v2'?this.record:this.records.get(alias);if(existing&&attributes.get(5)===1)throw {code:this.ErrorCode.DUPLICATED};if(alias==='reader.webdav.config.v2')this.record=attributes.get(3);else this.records.set(alias,attributes.get(3));if(this.failAdd){this.failAdd=false;throw Error('lost Asset ACK');}},
@@ -58,14 +58,16 @@ const asset=sharedAsset ?? {Tag:{ALIAS:1,RETURN_TYPE:2,SECRET:3,ACCESSIBILITY:4,
 let preferenceValues=new Map();
 let nativePreferences={async get(key,fallback){return preferenceValues.has(key)?preferenceValues.get(key):fallback;},async has(key){return preferenceValues.has(key);},async put(key,value){preferenceValues.set(key,value);},async delete(key){preferenceValues.delete(key);},async flush(){}};
 const replaceReaderAtomicSnapshot=execute('app/ReaderAtomicSnapshotFile.ts','replaceReaderAtomicSnapshot',{fileIo});
-const Store=execute('features/sync/WebDavCredentialStore.ts','WebDavCredentialStore',{asset,util,fileIo,cryptoFramework,replaceReaderAtomicSnapshot,preferences:{getPreferences:async()=>nativePreferences},errorMessageOf:()=> 'platform failure'});
+const publicFixture=execute('app/diagnostics/ReaderPublicFixtureScope.ts','({readerHostFilesDirectory,readerHostPreferencesName,READER_PUBLIC_FIXTURE_IDS})');
+const Store=execute('features/sync/WebDavCredentialStore.ts','WebDavCredentialStore',{asset,util,fileIo,cryptoFramework,replaceReaderAtomicSnapshot,...publicFixture,preferences:{getPreferences:async()=>nativePreferences},errorMessageOf:()=> 'platform failure'});
 let currentOwner,credentialStore,hostFailures=0,hostApplications=0,transport,prepareCalls=0;
 const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
-class Host {async capture(){return {version:1,bookshelfViewMode:'cover',themeSelection:{}};}encode(v){return v;}decode(v){return v;}async apply(){hostApplications++;if(hostFailures>0){hostFailures--;throw Error('Host write unavailable');}}}
+class Host {async capture(){return captureHostConfiguration?.()??{version:1,bookshelfViewMode:'cover',themeSelection:{}};}encode(v){return v;}decode(v){return v;}async apply(){hostApplications++;if(hostFailures>0){hostFailures--;throw Error('Host write unavailable');}}}
 const ReaderThemeHost={prepareUserChange:async()=>{prepareCalls++;},observedSystemScheme:()=> 'day'};
 const Gateway=execute('features/sync/SyncGateway.ts','SyncGateway',{SyncWriteObservation,SyncHostConfigurationGateway:Host,ReaderRuntimeOwner,WebDavCredentialStore:{get instance(){return credentialStore;}},ReaderThemeHost,HttpExecuteHost:{instance:{execute:async request=>transport(request)}},util,url:{URL:{parseURL:v=>new URL(v)}},errorMessageOf:()=> 'platform failure',AppStorage:{setOrCreate(){}}});
 const DEFAULT_SYNC_SNAPSHOT=execute('features/sync/SyncGateway.ts','DEFAULT_SYNC_SNAPSHOT',{SyncHostConfigurationGateway:Host,ReaderRuntimeOwner,WebDavCredentialStore:{get instance(){return credentialStore;}},ReaderThemeHost,HttpExecuteHost:{},util,url:{},errorMessageOf:()=> '',AppStorage:{}});
-const Orchestrator=execute('features/sync/SyncOrchestrator.ets','SyncOrchestrator',{SyncGateway:Gateway,DEFAULT_SYNC_SNAPSHOT,SyncWriteObservation,ReaderRuntimeOwner,projectPersistedReceipt,...facts});
+const syncFailureMessage=execute('features/sync/SyncGateway.ts','syncFailureMessage',{SyncHostConfigurationGateway:Host,ReaderRuntimeOwner,WebDavCredentialStore:{},ReaderThemeHost,HttpExecuteHost:{},util,url:{},AppStorage:{}});
+const Orchestrator=execute('features/sync/SyncOrchestrator.ets','SyncOrchestrator',{SyncGateway:Gateway,DEFAULT_SYNC_SNAPSHOT,syncFailureMessage,SyncWriteObservation,ReaderRuntimeOwner,projectPersistedReceipt,...facts});
 function runtime(){return {
   calls:[],coreApplied:false,beforeApply:undefined,beforeResolve:undefined,failApplyAck:false,failBackupAdvance:false,failQuery:false,failCommit:0,
   async request(method,params){
@@ -79,7 +81,7 @@ function runtime(){return {
       if(this.failBackupAdvance){this.failBackupAdvance=false;throw Error('lost backup completion');}
       return {data:{transactionId:this.backupOperationId,status:'completed',phase:'backupCompleted',contentBytes:100,remotePath:'/backup/package'}};
     }
-    if(method==='sync.webdav.backup.receipt.query')return {data:{transactionId:params.transactionId,receiptState:'prepared',uploadQualified:false,retentionCompleted:false,durable:true,request:{method:'GET',url:'https://example.test/backup/package'}}};
+    if(method==='sync.webdav.backup.receipt.query')return {data:{transactionId:params.transactionId,receiptState:'prepared',uploadQualified:params.response!==undefined,retentionCompleted:false,durable:true,request:{method:'GET',url:'https://example.test/backup/package'}}};
     if(method==='sync.webdav.transaction.resolve'){
       if(this.beforeResolve)await this.beforeResolve();
       if(params.choice==='cancel')return {data:{transactionId:'restore',status:'completed',phase:'restoreCancelled'}};
@@ -109,25 +111,30 @@ function fixture({empty=false,preserveAsset=false,createOwner}={}){
   transport=async()=>({status:201,body:''});
   const owner=createOwner?createOwner():new Orchestrator(v=>{snapshot=clone(v);emitted.push(clone(v));},()=>snapshot,currentOwner,()=>route);
   const settle=async()=>{await owner.operationChain;};
-  const noticeSource=source('ui/feedback/ReaderRecoveryNotice.ets');const actionSource=source('ui/feedback/ReaderRecoveryAction.ets');
   class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
   class Card extends Child { initialRender(){this.params.content?.();} }
   const page=()=>{
     const shared=foundationControls();
-    const p=createReaderBuilderProbe(source('features/sync/SyncPage.ets'),['manualActionsSection','configSaveContinuationIdentities','canContinueConfigSave','configSaveGeneration','effectiveWebdavUrl','effectiveWebdavUser','effectiveWebdavPath','sectionHeadingMuted','restoreConflictCard','feedbackView','recoveryLabel','canSkipBackupRetention','backupGeneration','backupRetentionActionIdentities','canMutate','manualActionButton'],{...shared.dependencies,readerRecoveryView,ReaderRecoveryNotice:Child,ReaderRecoveryAction:Child,ReaderCard:Card},{...shared.hooks,mountChildren:true,childSources:{...shared.hooks.childSources,ReaderCard:source('ui/surfaces/ReaderCard.ets')}});
+    const messages=boundedSurfaceSdk();
+    const p=createReaderBuilderProbe(source('features/sync/SyncPage.ets'),[
+      'manualActionsSection','configSaveContinuationIdentities','canContinueConfigSave','configSaveGeneration',
+      'effectiveWebdavUrl','effectiveWebdavUser','effectiveWebdavPath','sectionHeadingMuted','restoreConflictCard',
+      'feedbackView','recoveryLabel','canSkipBackupRetention','backupGeneration','backupRetentionActionIdentities',
+      'canMutate','manualActionButton','hasOriginalRecovery','recoveryIdentity','recoveryCurrent','originalRecovery',
+      'originalRecoveryNotice','pendingRecovery',
+    ],{...shared.dependencies,...messages.deps,readerRecoveryView,ReaderCard:Card},{...shared.hooks,...messages.hooks,
+      childSources:{...shared.hooks.childSources,...messages.childSources,ReaderCard:source('ui/surfaces/ReaderCard.ets')}});
     Object.assign(p.owner,{snapshot:clone(snapshot),contentFrame:()=>({width:390}),appThemeScheme:'day',onReconcile:g=>owner.reconcile(g),onSkipBackupRetention:g=>owner.skipBackupRetention(g),onContinueConfigSave:(...args)=>owner.continueConfigSave(...args),onTriggerBackup:()=>owner.triggerBackup(),onRestoreLatest:()=>owner.restoreLatest(),restoreConflictCard:()=>{}});
     p.owner.manualActionsSection();
-    const child=[...p.owner.children.values()].find(c=>c.params?.view);
-    const messages=boundedSurfaceSdk();
-    const n={owner:messages.consumer(noticeSource,undefined,{},child.params)};n.owner.initialRender();
-    const retryActor=messages.walk(n.owner).find(actor=>actor instanceof messages.deps.ReaderRecoveryAction&&actor.label===(child.params.actionLabel??'刷新列表'));
-    const native=actor=>actor&&messages.nodes(actor).find(node=>node.type==='Stack'&&node.onClick);
-    const action=native(retryActor);
-    const continuationChild=[...p.owner.children.values()].find(c=>c.params?.label==='继续原操作');let continueAction;
-    if(continuationChild){const a=messages.consumer(actionSource,undefined,{},continuationChild.params);a.initialRender();continueAction=native(a);}
-    const skipChild=[...p.owner.children.values()].find(c=>c.params?.label==='保留备份，结束清理');let skipAction;
-    if(skipChild){const a=messages.consumer(actionSource,undefined,{},skipChild.params);a.initialRender();skipAction=native(a);}
-    return {page:p.owner,view:child.params.view,action,skipAction,continueAction,notice:n.owner};
+    if(p.owner.hasOriginalRecovery()&&snapshot.restoreConflict===undefined)p.owner.pendingRecovery();
+    const actors=messages.walk(p.owner);
+    const notice=actors.find(actor=>actor instanceof messages.deps.ReaderRecoveryNotice);
+    const actionFor=label=>{
+      const actor=actors.find(child=>child instanceof messages.deps.ReaderRecoveryAction&&child.label===label);
+      return actor&&messages.nodes(actor).find(node=>node.type==='Button'&&node.onClick);
+    };
+    return {page:p.owner,view:p.owner.feedbackView(),action:actionFor(p.owner.recoveryLabel()),
+      skipAction:actionFor('保留备份，结束清理'),continueAction:actionFor('继续原操作'),notice};
   };
   return {owner,store:credentialStore,runtime:runtimeOwner,settle,page,snapshot:()=>snapshot,emitted,close:()=>{route=false;},reopen:()=>{route=true;owner.open();},journal:()=>journal};
 }

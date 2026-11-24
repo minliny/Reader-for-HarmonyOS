@@ -1,0 +1,237 @@
+import { ReaderButton } from '../../../ui/controls/ReaderButton';
+import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
+import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
+import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
+import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
+import { MESSAGE_BODY, MESSAGE_TITLE } from '../../../ui/foundation/ReaderMessageStyle';
+import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../../ui/platform/ReaderNativeAlertOwner';
+import { ReaderCard } from '../../../ui/surfaces/ReaderCard';
+import { LocalRecoveryGateway, type LocalRecoveryOutcome } from '../application/LocalRecoveryGateway';
+
+type LocalRecoveryAction = 'export' | 'inspect' | 'apply' | 'resume';
+
+@Component
+export struct LocalRecoveryPanel {
+  @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @Prop @Watch('refreshOpening') navigationGeneration: number = 0;
+  isInputAllowed: () => boolean = (): boolean => true;
+  @State private passphrase: string = '';
+  @State private checking: boolean = true;
+  @State private statusUnavailable: boolean = false;
+  @State private pendingRestore: boolean = false;
+  @State private active: LocalRecoveryAction | undefined = undefined;
+  @State private preview: LocalRecoveryOutcome | undefined = undefined;
+  @State private revision: number = 0;
+  private mounted: boolean = false;
+  private confirmationOpen: boolean = false;
+  private readonly gateway: LocalRecoveryGateway = new LocalRecoveryGateway();
+  private readonly alert: ReaderNativeAlertOwner = new ReaderNativeAlertOwner();
+  private readonly feedback: ReaderTransientFeedback = new ReaderTransientFeedback();
+
+  aboutToAppear(): void { this.mounted = true; this.refreshOpening(); }
+
+  aboutToDisappear(): void {
+    this.mounted = false;
+    this.retireOpening();
+  }
+
+  private retireOpening(): void {
+    this.revision++;
+    this.confirmationOpen = false;
+    this.alert.retire();
+    this.feedback.reset();
+    this.gateway.clearPreview();
+    this.preview = undefined;
+    this.passphrase = '';
+    this.active = undefined;
+  }
+
+  private refreshOpening(): void {
+    if (!this.mounted) return;
+    this.retireOpening();
+    void this.readPending();
+  }
+
+  private current(revision: number, navigation: number): boolean {
+    return this.mounted && this.revision === revision && this.navigationGeneration === navigation;
+  }
+
+  private async readPending(): Promise<void> {
+    const revision = this.revision, navigation = this.navigationGeneration;
+    this.checking = true;
+    this.statusUnavailable = false;
+    try {
+      const pending = await this.gateway.pending();
+      if (this.current(revision, navigation)) this.pendingRestore = pending;
+    } catch (_) {
+      if (this.current(revision, navigation)) this.statusUnavailable = true;
+    } finally {
+      if (this.current(revision, navigation)) this.checking = false;
+    }
+  }
+
+  private canStart(revision: number): boolean {
+    return this.current(revision, this.navigationGeneration) && this.isInputAllowed() && !this.checking &&
+      !this.statusUnavailable && this.active === undefined && this.passphrase.length > 0;
+  }
+
+  private clearPreview(revision: number): void {
+    if (this.revision !== revision || !this.mounted || !this.isInputAllowed() || this.active !== undefined) return;
+    this.revision++;
+    this.alert.retire();
+    this.gateway.clearPreview();
+    this.preview = undefined;
+    this.passphrase = '';
+  }
+
+  private requestRestore(revision: number): void {
+    const navigation = this.navigationGeneration;
+    const current = (): boolean => this.current(revision, navigation) && this.canStart(revision) && this.preview !== undefined;
+    if (!current() || this.confirmationOpen) return;
+    this.confirmationOpen = true;
+    try {
+      const alert = this.alert.present((native: ReaderNativeAlertOptions): void => this.getUIContext().showAlertDialog(native),
+        'confirmation-cancelable', {
+          title: '恢复本地阅读库', message: '恢复包将替换当前阅读库。导入的联网书源和自动更新需重新启用。',
+          primaryButton: { value: '取消', action: (): void => {} },
+          secondaryButton: { value: '恢复', fontColor: readerAppColor('TOK_MESSAGE_DANGER', this.scheme),
+            action: (): void => { void this.perform('apply', revision); } },
+        }, current);
+      void alert.decision.then((decision): void => {
+        if (!this.current(revision, navigation)) return;
+        this.confirmationOpen = false;
+        if (decision === 'native-failure' && current()) this.showOutcome('apply', { state: 'failed' }, revision, navigation);
+      });
+    } catch (_) {
+      this.confirmationOpen = false;
+      if (current()) this.showOutcome('apply', { state: 'failed' }, revision, navigation);
+    }
+  }
+
+  private async perform(action: LocalRecoveryAction, expected: number): Promise<void> {
+    if (!this.canStart(expected) || (action === 'resume') !== this.pendingRestore ||
+      (action === 'apply') !== (this.preview !== undefined)) return;
+    const revision = ++this.revision, navigation = this.navigationGeneration;
+    const current = (): boolean => this.current(revision, navigation);
+    const passphrase = this.passphrase;
+    this.active = action;
+    this.confirmationOpen = false;
+    this.feedback.reset();
+    if (action !== 'inspect') this.passphrase = '';
+    let outcome: LocalRecoveryOutcome;
+    try {
+      if (action === 'export') outcome = await this.gateway.exportPackage(passphrase, current);
+      else if (action === 'inspect') outcome = await this.gateway.inspectPackage(passphrase, current);
+      else if (action === 'apply') outcome = await this.gateway.applyPackage(passphrase);
+      else outcome = await this.gateway.resumePackage(passphrase);
+    } catch (_) {
+      outcome = { state: 'failed' };
+    }
+    if (!current()) return;
+    this.active = undefined;
+    if (outcome.state === 'preview') {
+      this.preview = outcome;
+      return;
+    }
+    this.preview = undefined;
+    this.passphrase = '';
+    if (outcome.state === 'interrupted') this.pendingRestore = true;
+    else if (action === 'apply' || action === 'resume') await this.readPending();
+    if (current()) this.showOutcome(action, outcome, revision, navigation);
+  }
+
+  private originalCounts(outcome: LocalRecoveryOutcome): string {
+    if (outcome.included === undefined || outcome.missing === undefined) return '';
+    return `包含原书 ${outcome.included} 本，缺少原书 ${outcome.missing} 本。`;
+  }
+
+  private showOutcome(action: LocalRecoveryAction, outcome: LocalRecoveryOutcome, revision: number, navigation: number): void {
+    let message: string;
+    switch (outcome.state) {
+      case 'exported': message = `恢复包已导出。${this.originalCounts(outcome)}`; break;
+      case 'restored': message = `阅读库已恢复。${this.originalCounts(outcome)}`; break;
+      case 'cancelled': message = action === 'export' ? '已取消导出' : '已取消选择恢复包'; break;
+      case 'rejected': message = '恢复包未通过校验，请核对口令与文件完整性。'; break;
+      case 'tooLarge': message = action === 'export' ? '待备份内容超过恢复包大小限制。' : '恢复包超过可导入的大小限制。'; break;
+      case 'failed': message = action === 'export' ? '恢复包导出失败，请重试。' : '恢复操作未完成，请重试。'; break;
+      default: return;
+    }
+    this.feedback.show(() => this.getUIContext(), { message },
+      (): boolean => this.current(revision, navigation) && this.isInputAllowed());
+  }
+
+  @Builder
+  private passphraseField() {
+    ReaderFormField({ scheme: this.scheme, specId: 'sync-credential', text: this.passphrase, password: true,
+      placeholder: '恢复包口令', fieldAccessibilityLabel: '恢复包口令', isEditable: this.active === undefined,
+      onTextChange: (value: string): void => {
+        if (this.mounted && this.isInputAllowed() && this.active === undefined) this.passphrase = value;
+      } });
+  }
+
+  @Builder
+  private processing() {
+    ReaderPageState({ variant: 'inline', padded: false, loading: true,
+      title: this.checking ? '正在核对恢复状态…' : this.active === 'export' ? '正在导出恢复包…' :
+        this.active === 'inspect' ? '正在隔离校验恢复包…' : '正在恢复阅读库…' });
+  }
+
+  @Builder
+  private statusReadFailed() {
+    ReaderPageState({ variant: 'inline', padded: false, title: '恢复状态暂时无法读取',
+      actionLabel: '重试', actionGeneration: this.revision, onAction: (expected: number): void => {
+        if (this.mounted && this.isInputAllowed() && this.revision === expected && this.statusUnavailable && !this.checking)
+          void this.readPending();
+      } });
+  }
+
+  @Builder
+  private resumeControl() {
+    ReaderRecoveryNotice({ tag: '恢复中断', actionLabel: '继续恢复',
+      view: { visible: true, canRetry: true, generation: this.revision, message: '请输入原恢复包口令，继续未完成的恢复。' },
+      actionEnabled: this.passphrase.length > 0, onReconcile: (expected: number): void => { void this.perform('resume', expected); } });
+  }
+
+  @Builder
+  private actions(expected: number) {
+    if (this.preview !== undefined) {
+      Text('恢复包校验完成').fontSize(MESSAGE_TITLE.fontSizeFp).fontWeight(MESSAGE_TITLE.fontWeight)
+        .fontColor(readerAppColor('TOK_MESSAGE_INK', this.scheme)).width('100%');
+      if (this.originalCounts(this.preview).length > 0) {
+        Text(this.originalCounts(this.preview)).fontSize(MESSAGE_BODY.fontSizeFp)
+          .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.scheme)).width('100%');
+      }
+      Row({ space: 10 }) {
+        ReaderButton({ scheme: this.scheme, specId: 'form-action', label: '取消', layout: 'full',
+          onAction: (): void => this.clearPreview(expected) }).layoutWeight(1);
+        ReaderButton({ scheme: this.scheme, specId: 'form-action', label: '恢复…', primary: true, layout: 'full',
+          onAction: (): void => this.requestRestore(expected) }).layoutWeight(1);
+      }.width('100%');
+    } else {
+      this.passphraseField();
+      if (this.pendingRestore) this.resumeControl();
+      else {
+        Row({ space: 10 }) {
+          ReaderButton({ scheme: this.scheme, specId: 'form-action', label: '导出恢复包', layout: 'full',
+            actionEnabled: this.passphrase.length > 0, onAction: (): void => { void this.perform('export', expected); } }).layoutWeight(1);
+          ReaderButton({ scheme: this.scheme, specId: 'form-action', label: '导入恢复包', layout: 'full',
+            actionEnabled: this.passphrase.length > 0, onAction: (): void => { void this.perform('inspect', expected); } }).layoutWeight(1);
+        }.width('100%');
+      }
+    }
+  }
+
+  build() {
+    ReaderCard({ specId: 'preference-panel' }) {
+      Text('本地备份与恢复').fontSize(MESSAGE_TITLE.fontSizeFp).fontWeight(MESSAGE_TITLE.fontWeight)
+        .fontColor(readerAppColor('TOK_MESSAGE_INK', this.scheme)).width('100%');
+      if (this.checking || this.active !== undefined) this.processing();
+      else if (this.statusUnavailable) this.statusReadFailed();
+      else {
+        ForEach([this.revision], (expected: number): void => { this.actions(expected); },
+          (expected: number): string => expected.toString());
+      }
+    }
+  }
+}
