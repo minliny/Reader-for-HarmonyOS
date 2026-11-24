@@ -301,6 +301,73 @@
       "status": "registered-source-entry"
     },
     {
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.processing::shared.page-state",
+      "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
+      "owner": "LocalRecoveryPanel",
+      "member": "processing",
+      "family": "shared.page-state",
+      "category": "本地恢复包操作状态",
+      "effectiveHost": "当前书架设置中的恢复包面板。展示核对、导出、隔离校验或恢复状态。",
+      "retireRule": "操作返回或面板代次退役即清除当前呈现，持久恢复由原 gateway 持有。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.requestRestore::native.alert",
+      "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
+      "owner": "LocalRecoveryPanel",
+      "member": "requestRestore",
+      "family": "native.alert",
+      "category": "经 ReaderNativeAlertOwner 发起恢复确认",
+      "effectiveHost": "当前书架设置，隔离校验完成且预览、口令和动作仍属于当前代次。",
+      "retireRule": "原生回调由确认 lease 封装，退役拒绝旧按钮，恢复结果仍由 gateway 持有。",
+      "status": "registered-source-entry",
+      "bridge": "owned-alert-native-callback"
+    },
+    {
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.requestRestore::shared.alert-owner",
+      "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
+      "owner": "LocalRecoveryPanel",
+      "member": "requestRestore",
+      "family": "shared.alert-owner",
+      "category": "本地恢复的明确确认",
+      "effectiveHost": "当前书架设置与已校验预览。",
+      "retireRule": "确认、取消或打开代次退役时结束 lease。确认动作提交恢复，完成状态由原业务回执确认。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.resumeControl::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
+      "owner": "LocalRecoveryPanel",
+      "member": "resumeControl",
+      "family": "shared.recovery-notice",
+      "category": "本地恢复中断后的继续入口",
+      "effectiveHost": "当前书架设置中的恢复包面板，恢复 journal 确认有待续操作。",
+      "retireRule": "继续动作核对当前打开代次并交给 gateway。退场只撤销本次交互与口令，原恢复状态可再次读取。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.showOutcome::shared.transient",
+      "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
+      "owner": "LocalRecoveryPanel",
+      "member": "showOutcome",
+      "family": "shared.transient",
+      "category": "本地导出、恢复、取消与明确失败的短反馈",
+      "effectiveHost": "当前前景书架设置中的恢复包面板，绑定打开代次和当前动作。",
+      "retireRule": "打开代次退役及新动作重置当前发布。中断恢复由独立待续通知承载。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.statusReadFailed::shared.page-state",
+      "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
+      "owner": "LocalRecoveryPanel",
+      "member": "statusReadFailed",
+      "family": "shared.page-state",
+      "category": "恢复 journal 状态无法读取",
+      "effectiveHost": "当前书架设置中的恢复包面板。",
+      "retireRule": "重新读取成功或面板代次退役时清除，重试仅核对原恢复状态。",
+      "status": "registered-source-entry"
+    },
+    {
       "id": "entry/src/main/ets/features/bookshelf/ui/BookshelfShell.ets#BookshelfShell.onReadRecoveryChanged::shared.transient",
       "file": "entry/src/main/ets/features/bookshelf/ui/BookshelfShell.ets",
       "owner": "BookshelfShell",

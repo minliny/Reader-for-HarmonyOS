@@ -28,6 +28,8 @@ export type ShelfBook = {
   /** Whole-book progress in basis points, 0..10000. */
   readProgress?: number;
   readingPosition?: ShelfReadingPosition;
+  /** Exact local original is still expected by the current restored library. */
+  localOriginalMissing?: boolean;
 };
 
 export type ShelfReadingPosition = {
@@ -226,6 +228,19 @@ export class ReaderCoreGateway {
     const book = this.decodeShelfBook(rawBook);
     if (book.sourceId !== sourceId || book.bookId !== bookId) {
       throw new Error('bookshelf.get returned a mismatched composite key');
+    }
+    const expectation = result.data['originalExpectation'];
+    if (sourceId === 'local' && result.data['original'] == null && typeof expectation === 'object' &&
+      expectation !== null && !Array.isArray(expectation)) {
+      const facts = expectation as JsonObject;
+      const original = facts['original'];
+      if (facts['schemaVersion'] === 1 && typeof facts['basis'] === 'string' && facts['basis'].length > 0 &&
+        typeof original === 'object' && original !== null && !Array.isArray(original)) {
+        const identity = original as JsonObject;
+        if (identity['schemaVersion'] === 1 && identity['provenance'] === 'rawBytes' && identity['bookId'] === bookId) {
+          book.localOriginalMissing = true;
+        }
+      }
     }
     return book;
   }

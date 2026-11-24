@@ -9,7 +9,7 @@ async function routingFixture(initialRoute) {
   const { ReaderNavigation } = await import('../entry/src/main/ets/app/navigation/ReaderNavigation.ts');
   const EntryActions = bookshelfOperationClass('app/composition/ReaderReadingEntryActions.ets',
     'ReaderReadingEntryActions', { Observed: value => value });
-  const SourceJourney = bookshelfOperationClass('app/composition/ReaderSourceSwitchJourney.ts', 'ReaderSourceSwitchJourney');
+  const SourceJourney = bookshelfOperationClass('app/composition/ReaderSourceSwitchJourney.ets', 'ReaderSourceSwitchJourney');
 
   const f = fixture();
   const entry = new (actualReadingEntryPresentation({ ReadingEntryHost: f.host.constructor }))();
@@ -78,10 +78,11 @@ async function detailChild(fixture) {
     'remoteContentVerdictLabel', { Observed: value => value });
   // Record the actual SDK-emitted detail child's props at the native leaf boundary.
   class LocalBookDetail {
-    constructor(_owner, params) { this.params = params; }
+    constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
   }
   const properties = createArkUIPropertyRuntimeProbe();
-  const scene = createReaderBuilderProbe(read('features/bookshelf/ui/BookshelfDetailScene.ets'), ['build', 'detailSurface'],
+  const scene = createReaderBuilderProbe(read('features/bookshelf/ui/BookshelfDetailScene.ets'),
+    ['build', 'detailSurface', 'onEntryChanged', 'aboutToAppear', 'bodyBook', 'bodyToc', 'sourceBook', 'sourceToc'],
     { ...properties.sdk, LocalBookDetail, remoteContentVerdictLabel },
     { ...properties.hooks, childSources: { LocalBookDetail: read('features/reading/ui/LocalBookDetail.ets') } }).owner;
   const opening = fixture.navigation.snapshot();
@@ -95,6 +96,7 @@ async function detailChild(fixture) {
       openReading: chapterIndex => fixture.actions.openReading(chapterIndex),
     },
   });
+  scene.aboutToAppear();
   scene.initialRender();
   const child = [...scene.children.values()].find(candidate => candidate instanceof LocalBookDetail);
   assert.ok(child, 'the real detail scene admits a native detail child');
@@ -155,12 +157,36 @@ async function reopen(sourceId) {
   } finally { x.close(); }
 }
 
+async function missingLocalOriginal() {
+  const x = await routingFixture('bookshelf');
+  try {
+    const book = x.book('missing-original', 'local');
+    const request = x.f.runtime.request.bind(x.f.runtime);
+    x.f.runtime.request = async (method, params, options) => {
+      if (method !== 'bookshelf.get') return request(method, params, options);
+      assert.deepEqual(params, { sourceId: 'local', bookId: book.bookId });
+      return { data: { book, originalExpectation: { schemaVersion: 1, basis: 'current',
+        original: { schemaVersion: 1, provenance: 'rawBytes', bookId: book.bookId, sha256: 'a'.repeat(64) } } } };
+    };
+    x.actions.openLocalDetail(book);
+    await x.until(() => x.entry.catalogBusy === false);
+    const child = await detailChild(x);
+    assert.equal(child.loadingMessage, '待取得原书');
+    assert.equal(child.readingEnabled, false);
+    assert.deepEqual(child.toc, []);
+    child.onContinue();
+    assert.equal(x.route(), 'detail');
+    assert.equal(x.entry.sessionActive, false);
+  } finally { x.close(); }
+}
+
 const cases = {
   'resume-local': () => resume('local'),
   'resume-remote': () => resume('s1'),
   preview,
   'reopen-local': () => reopen('local'),
   'reopen-remote': () => reopen('s1'),
+  'missing-local-original': missingLocalOriginal,
 };
 for (const id of selectContractCases({
   'resume-local': 'Actual local shelf mount before IO',
@@ -168,6 +194,7 @@ for (const id of selectContractCases({
   preview: 'Actual remote preview without shelf mutation',
   'reopen-local': 'Actual committed local source re-admission',
   'reopen-remote': 'Actual committed remote source re-admission',
+  'missing-local-original': 'Actual local detail labels the exact Core original expectation and blocks continuation',
 })) {
   await cases[id]();
   recordContractCasePass(id);

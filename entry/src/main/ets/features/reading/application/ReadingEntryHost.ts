@@ -145,17 +145,28 @@ export class ReadingEntryHost {
     this.lastRemoteInput = undefined;
     const scope = this.begin(lease, { sourceId: selection.sourceId, sourceName: '本地书籍', bookId: selection.bookId,
       title: selection.title, author: selection.author, kind: selection.kind, coverUrl: selection.coverUrl,
-      intro: selection.intro, lastChapter: selection.lastChapter, contentKind: selection.contentKind }, true, '正在读取本地目录…');
+      intro: selection.intro, lastChapter: selection.lastChapter, contentKind: selection.contentKind }, true, '正在读取本地目录…',
+      undefined, undefined, [], undefined, !resumeImmediately);
     if (resumeImmediately) return;
     const current = this.current(scope, lease);
     try {
+      const shelf = await new ReaderCoreGateway(this.runtime).loadShelfBook(LOCAL_SOURCE_ID, selection.bookId, current)
+        .catch((): undefined => undefined);
+      if (!current()) return;
+      if (shelf?.localOriginalMissing === true) {
+        this.state = { ...this.state, loadingMessage: '待取得原书', catalogLoading: false, verdict: 'contentUnavailable' };
+        this.publish(scope, lease);
+        return;
+      }
       const toc = await new LocalReadingFlowGateway(this.runtime).loadToc(selection.bookId);
       if (!current()) return;
-      this.state = { ...this.state, toc: toc.entries, loadingMessage: '', catalogLoading: false }; this.publish(scope, lease);
+      this.state = { ...this.state, toc: toc.entries, loadingMessage: '', catalogLoading: false, verdict: 'readable' };
+      this.publish(scope, lease);
       await this.projectDirectory(scope);
     } catch (error) {
       if (!current()) return;
-      this.state = { ...this.state, toc: [], loadingMessage: errorMessageOf(error), catalogLoading: false }; this.publish(scope, lease);
+      this.state = { ...this.state, toc: [], loadingMessage: errorMessageOf(error), catalogLoading: false, verdict: 'contentUnavailable' };
+      this.publish(scope, lease);
       this.diagnostic(lease, 'local-detail', error);
     }
   }
@@ -640,7 +651,8 @@ export class ReadingEntryHost {
     this.membershipGeneration = lease.membership().generation;
     this.mangaDisplayRefreshTask = undefined; this.mangaDisplayRefreshSession = undefined; this.mangaDisplayRefreshedSession = undefined;
     this.state = { scopeId: scope, sessionGeneration: this.state.sessionGeneration, book: displayedBook, seed, toc, inBookshelf,
-      loadingMessage, catalogLoading, verdict: book.sourceId === LOCAL_SOURCE_ID ? 'readable' : 'verifying', candidateAdmissionActive: false, candidateAdmissionFailed: false };
+      loadingMessage, catalogLoading, verdict: book.sourceId === LOCAL_SOURCE_ID && !catalogLoading ? 'readable' : 'verifying',
+      candidateAdmissionActive: false, candidateAdmissionFailed: false };
     this.readableRevision = -1; this.install(session); this.runtime.bookAcquisitions().setPreparationVisible(false);
     this.publish(scope, lease); return scope;
   }
