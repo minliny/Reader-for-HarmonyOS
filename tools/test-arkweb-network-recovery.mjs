@@ -11,9 +11,12 @@ const policy = lower('../platform/network/HttpTransportPolicy.ts');
 const route = lower('../platform/network/NetworkRoutePolicy.ts');
 const source = lower('../platform/network/ArkWebExecutor.ts');
 const NetworkEnvironmentError = new Function(`${route}\nreturn NetworkEnvironmentError;`)();
+class HarmonyTextEncoder {
+  encodeInto(value) { return new TextEncoder().encode(value); }
+}
 const Store = new Function('url', 'util', 'hilog', 'errorMessageOf',
   `${lower('../platform/network/CookieSecurityPolicy.ts')}\n${lower('../platform/network/CookieSessionStore.ts')}\nreturn CookieSessionStore;`)(
-  { URL: { parseURL: (value, base) => new URL(value, base) } }, { TextEncoder }, { warn() {}, error() {} },
+  { URL: { parseURL: (value, base) => new URL(value, base) } }, { TextEncoder: HarmonyTextEncoder }, { warn() {}, error() {} },
   error => error instanceof Error ? error.message : String(error));
 const tick = () => new Promise(resolve => setTimeout(resolve, 0));
 const bounded = async (promise, label, millis = 250) => {
@@ -33,14 +36,21 @@ async function until(predicate, label) {
 }
 
 function fixture(realCookieStore = false) {
-  const state = { route: 'direct', bypassSystemProxy: true, removeFailures: 0,
+  const state = { route: 'direct', bypassSystemProxy: true, removeFailures: 0, unpinFailures: 0,
     scriptMode: 'normal', cookieMode: 'normal', events: [], loads: [], reconciled: [],
     generation: 0, seeds: [], holdRestoreAck: false, releaseRestore: undefined,
     releaseScript: undefined, releaseCookies: undefined };
   let executor;
   class Controller {
     static setHostIP(host, ip) { state.events.push({ kind: 'pin', host, ip }); }
-    static clearHostIP(host) { state.events.push({ kind: 'unpin', host }); }
+    static clearHostIP(host) {
+      const failed = state.unpinFailures > 0;
+      state.events.push({ kind: 'unpin', host, failed });
+      if (failed) {
+        state.unpinFailures--;
+        throw Object.assign(new Error('simulated native pin removal failure'), { code: 401 });
+      }
+    }
     stop() { state.events.push({ kind: 'stop' }); }
     loadUrl(url) {
       this.url = url;
@@ -94,8 +104,11 @@ function fixture(realCookieStore = false) {
     arkWebSeeds: async () => state.seeds,
     reconcileArkWebCookies: async (...args) => { state.reconciled.push(args); },
   } };
-  const target = async url => ({ host: new URL(url).hostname, addresses: ['93.184.216.34'],
-    route: state.route, bypassSystemProxy: state.bypassSystemProxy });
+  const target = async url => {
+    const host = new URL(url).hostname;
+    state.events.push({ kind: 'resolve', host });
+    return { host, addresses: ['93.184.216.34'], route: state.route, bypassSystemProxy: state.bypassSystemProxy };
+  };
   const Executor = new Function('webview', 'CookieSessionStore', 'prepareNetworkTarget', 'NetworkEnvironmentError',
     `${policy}\n${source}\nreturn ArkWebExecutor;`)(webview, cookies, target, NetworkEnvironmentError);
   executor = new Executor();
@@ -111,6 +124,24 @@ function fixture(realCookieStore = false) {
 }
 
 const cases = [
+  ['transient DNS pin removal failure recovers before resolving under the new route', async f => {
+    f.state.unpinFailures = 1;
+    await f.execute(1);
+    f.state.route = 'systemProxy'; f.state.bypassSystemProxy = false;
+    const start = f.state.events.length;
+    assert.equal((await f.execute(2)).value, 'ordinary result');
+    assert.deepEqual(f.state.events.slice(start)
+      .filter(e => ['unpin', 'resolve', 'pin', 'load'].includes(e.kind)).map(e => e.kind), ['unpin', 'resolve', 'load']);
+  }],
+  ['persistent DNS pin removal failure blocks a later page and remains retryable', async f => {
+    f.state.unpinFailures = Infinity;
+    await f.execute(1);
+    await assert.rejects(f.execute(2), error => error instanceof NetworkEnvironmentError && error.retryable &&
+      error.details.operation === 'dns.clearHostIP' && error.details.phase === 'dns');
+    assert.equal(f.state.loads.length, 1);
+    f.state.unpinFailures = 0;
+    assert.equal((await f.execute(3)).value, 'ordinary result');
+  }],
   ['transient proxy restoration failure recovers before next job loads', async f => {
     f.state.removeFailures = 1;
     assert.equal((await f.execute(1)).value, 'ordinary result');
