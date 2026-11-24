@@ -135,7 +135,75 @@ function testControls() {
   console.log('PASS actual shared pill modifiers, retained native type, finite measured paint, independent 44 targets');
 }
 
+function testPressMotion() {
+  const foundation = foundationControls({ ColorMetrics: {
+    resourceColor: color => ({ color, blendColor: overlay => ({ color: `blend:${color}:${overlay.color}` }) }),
+  } });
+  const icons = iconButtonControls();
+  const fixture = [
+    [foundation.button.Component, foundation.properties,
+      { specId: 'search-filter-option', label: '全部', primary: true, selectionSemantic: true }, 'Text'],
+    [icons.icon.Component, icons.properties,
+      { specId: 'toolbar-standard', icon: 'back', accessibilityLabel: '返回', selectionState: 'selected' }, 'Image'],
+  ];
+  for (const [Component, properties, props, visualType] of fixture) {
+    const owner = new Component(undefined, props);
+    owner.aboutToAppear();
+    owner.initialRender();
+    const nodes = [...owner.nodes.values()];
+    const target = nodes.find(node => node.type === 'Button');
+    const visual = nodes.find(node => node.type === visualType);
+    const hitGeometry = target.responseRegion ?? target.constraintSize;
+    const targetOpacity = target.opacity;
+    const restingSurface = visual.backgroundColor;
+    const selected = target.accessibilitySelected;
+    assert.ok((hitGeometry.width ?? hitGeometry.minWidth) >= 44);
+    assert.ok((hitGeometry.height ?? hitGeometry.minHeight) >= 44);
+    const touch = (type, id = 3) => {
+      target.onTouch({ type, changedTouches: [{ id }] });
+      properties.flush();
+    };
+    touch('down');
+    assert.equal(target.scale, undefined, 'native hit target is not the animated actor');
+    assert.deepEqual(target.responseRegion ?? target.constraintSize, hitGeometry);
+    assert.deepEqual(visual.scale, { x: 0.978, y: 0.978 });
+    assert.equal(visual.opacity, 1);
+    if (visualType === 'Text') assert.equal(visual.backgroundColor, `blend:${restingSurface}:#141D1B18`);
+    assert.deepEqual(visual.animation, { duration: 140, curve: [0.2, 0, 0, 1] });
+    touch('down', 7);
+    touch('up', 7);
+    assert.deepEqual(visual.scale, { x: 0.978, y: 0.978 }, 'secondary touch cannot release the active press');
+    touch('cancel');
+    assert.deepEqual(visual.scale, { x: 1, y: 1 });
+    owner.reduceMotion = true;
+    touch('down');
+    assert.deepEqual(visual.scale, { x: 1, y: 1 });
+    assert.equal(visual.opacity, 0.92);
+    assert.equal(target.opacity, targetOpacity);
+    assert.equal(target.accessibilitySelected, selected);
+    assert.deepEqual(visual.animation, { duration: 120, curve: 'Curve.EaseOut' });
+    touch('cancel');
+    assert.equal(visual.opacity, 1);
+    assert.equal(visual.backgroundColor, restingSurface, 'the original visual surface returns after cancellation');
+    touch('down');
+    touch('up');
+    assert.equal(owner.pressPointer, -1);
+    assert.equal(visual.opacity, 1);
+    touch('down');
+    const snapshot = Object.fromEntries(Object.keys(owner).filter(key => key.startsWith('__'))
+      .map(key => [key.slice(2), owner[key.slice(2)]]));
+    owner.updateStateVars({ ...snapshot, actionEnabled: false });
+    properties.flush();
+    assert.equal(owner.pressPointer, -1);
+    assert.equal(visual.opacity, visualType === 'Image' ? 0.45 : 1);
+    touch('down');
+    assert.equal(owner.pressPointer, -1);
+    assert.equal(target.enabled, false);
+  }
+}
+
 for (const id of selectContractCases(cases)) {
   testControls();
+  testPressMotion();
   recordContractCasePass(id);
 }

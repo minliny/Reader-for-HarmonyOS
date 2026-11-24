@@ -65,8 +65,8 @@ try {
     };
     return Array.from(sheet.cssRules).flatMap(rule => visit(rule));
   });
-  // The native opaque system band must match the browser's authored scrim.
-  // Chromium Canvas2D owns alpha compositing and rounding, not a second color engine.
+  // Retain the demo's authored palette and compositor output as provenance.
+  // Live system bands compose their active Reader theme surfaces in ArkUI.
   overlayColors = await page.evaluate(() => {
     const root = document.createElement('div'); root.id = 'shared-reader-download';
     const phone = document.createElement('div'); phone.className = 'phone';
@@ -360,6 +360,15 @@ const storageStructure = Object.fromEntries(['.summary-top','.total','.breakdown
   '.breakdown dd','.free-row','.settings-row','.settings-row select','.clean-button','.clean-button:disabled','.feedback']
   .map(selector => [selector,storageRules.find(rule=>rule.selector===selector && rule.media==='').declarations]));
 const colorNames = ['paper','surface','ink','muted','line','soft','green','greenInk','softGreen','danger','scrim','shadow'];
+const paletteRoles = Object.fromEntries(colorNames.map(name => [name,
+  'TOK_DOWNLOAD_' + name.replace(/[A-Z]/g,c=>'_' + c).toUpperCase()]));
+const paletteSource = 'Reader-UI/theme/registry.json';
+const registry = JSON.parse(readFileSync(resolve(root, '..', paletteSource), 'utf8'));
+for (const role of Object.values(paletteRoles)) {
+  if (!registry.appRoles[role]?.day || !registry.appRoles[role]?.night) {
+    throw Error('Missing canonical download palette role: ' + role);
+  }
+}
 const colorKeys = {greenInk:'green-ink',softGreen:'soft-green'};
 const palettes = {};
 for (const name of colorNames) {
@@ -374,12 +383,10 @@ for (const name of colorNames) {
     provenance:'user-approved shared download demo; SHA256 ' + sha + '; CSS --' + (colorKeys[name] || name) };
 }
 for (const [name, role] of [['overlayChrome','background'], ['overlayChromeInk','foreground']]) {
-  colorNames.push(name);
   palettes[name] = {day:overlayColors.day[role], night:overlayColors.night[role],
     provenance:'user-approved shared download demo; SHA256 ' + sha + '; Chromium Canvas2D --scrim over --' + (role === 'background' ? 'paper' : 'ink')};
 }
 for (const [name,role] of [['overlayChromeDouble','background'],['overlayChromeDoubleInk','foreground']]) {
-  colorNames.push(name);
   palettes[name] = {day:storageOverlayColors.day[role],night:storageOverlayColors.night[role],
     provenance:'user-approved storage management v2 demo; SHA256 ' + storageSha +
       '; Chromium Canvas2D .scrim and .dialog-layer over --' + (role==='background'?'paper':'ink')};
@@ -387,6 +394,7 @@ for (const [name,role] of [['overlayChromeDouble','background'],['overlayChromeD
 const output = resolve(root, 'entry/src/main/ets/features/downloads/ui/SharedDownloadVisualSpec.ts');
 let code = '// Generated from approved docs/ui-design/shared-download/demo.html by Chromium CSSOM.\n' +
   '// Storage v2 constraints come from approved storage-demo.html; each source SHA is independent.\n' +
+  '// Runtime colors come from Reader-UI/theme/registry.json.\n' +
   '// Do not edit values. This finite adapter is not a general HTML/CSS engine.\n' +
   'import { readerAppColor } from \'../../../ui/foundation/ReaderThemeRegistry.ts\';\n' +
   'export const SHARED_DOWNLOAD_DEMO_SHA256 = ' + JSON.stringify(sha) + ';\n' +
@@ -397,19 +405,8 @@ code += '}\nexport const DOWNLOAD_VISUAL = new SharedDownloadVisualSpec();\n' +
   'export type DownloadVisualColorRole = ' + colorNames.map(JSON.stringify).join(' | ') + ';\n' +
   'export function downloadVisualColor(role: DownloadVisualColorRole, scheme: string): string {\n';
 for (const name of colorNames) code += '  if (role === ' + JSON.stringify(name) + ') return readerAppColor(' +
-  JSON.stringify('TOK_DOWNLOAD_' + name.replace(/[A-Z]/g,c=>'_' + c).toUpperCase()) + ', scheme);\n';
+  JSON.stringify(paletteRoles[name]) + ', scheme);\n';
 code += '  return readerAppColor(\'TOK_DOWNLOAD_INK\', scheme);\n}\n' +
-  'export class SharedDownloadOverlayChromeSpec {\n' +
-  '  underlayColor: string; contentColor: string; navigationUnderlayColor: string; navigationContentColor: string; tone: \'light\' | \'dark\';\n' +
-  '  constructor(scheme: string, sheetVisible: boolean, layerCount: number = 1) {\n' +
-  '    this.underlayColor = downloadVisualColor(layerCount === 2 ? \'overlayChromeDouble\' : \'overlayChrome\', scheme);\n' +
-  '    this.contentColor = downloadVisualColor(layerCount === 2 ? \'overlayChromeDoubleInk\' : \'overlayChromeInk\', scheme);\n' +
-  '    this.navigationUnderlayColor = sheetVisible ? downloadVisualColor(\'surface\', scheme) : this.underlayColor;\n' +
-  '    this.navigationContentColor = sheetVisible ? downloadVisualColor(\'ink\', scheme) : this.contentColor;\n' +
-  '    this.tone = scheme === \'night\' ? \'light\' : \'dark\';\n' +
-  '  }\n}\n' +
-  'export function downloadOverlayChromeStyle(scheme: string, sheetVisible: boolean, layerCount: number = 1): SharedDownloadOverlayChromeSpec {\n' +
-  '  return new SharedDownloadOverlayChromeSpec(scheme, sheetVisible, layerCount);\n}\n' +
   'export class SharedDownloadInsets {\n  left: number; right: number;\n' +
   '  constructor(left: number, right: number) { this.left = left; this.right = right; }\n}\n' +
   'export function sharedDownloadContentInsets(safeLeft: number, safeRight: number): SharedDownloadInsets {\n' +
@@ -426,16 +423,13 @@ const manifestPath = resolve(root,'docs/ui-design/shared-download/visual-spec.js
 const manifest = { schemaVersion:1, source:'demo.html', sourceSha256:sha,
   storageSource:'storage-demo.html',storageSourceSha256:storageSha,storageProvenance,storageStructure,
   extractor:'Chromium CSSOM via existing Playwright', fields, provenance, palettes,
+  runtimePalette:{source:paletteSource, roles:paletteRoles},
   ruleBoundary:'Original authored CSS, including min/max and inherited line boxes; platform layout tree consumes named constraints.',
   nativeVisualVerification:'OPEN' };
-const registryPath = resolve(root,'../Reader-UI/theme/registry.json');
-const registry = JSON.parse(readFileSync(registryPath,'utf8'));
-for (const name of colorNames) registry.appRoles['TOK_DOWNLOAD_' + name.replace(/[A-Z]/g,c=>'_' + c).toUpperCase()] = palettes[name];
-const registryCode = JSON.stringify(registry,null,2) + '\n';
-const outputs = [[output,code],[manifestPath,JSON.stringify(manifest,null,2)+'\n'],[registryPath,registryCode]];
+const outputs = [[output,code],[manifestPath,JSON.stringify(manifest,null,2)+'\n']];
 for (const [path, content] of outputs) {
   if (process.argv.includes('--check')) {
     if (readFileSync(path,'utf8') !== content) throw Error('Download visual input stale: ' + path);
   } else writeFileSync(path,content);
 }
-console.log('Approved download visual definitions: ' + Object.keys(fields).length + ' CSS-derived fields and ' + colorNames.length + ' day/night roles; SHA256 ' + sha);
+console.log('Approved download visual definitions: ' + Object.keys(fields).length + ' CSS-derived fields and ' + colorNames.length + ' canonical theme roles; SHA256 ' + sha);

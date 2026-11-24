@@ -1,5 +1,8 @@
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions = {"header-callback-intrinsic-frame": {"description": "真实继承API碰撞/header gesture/Props/AUTO与sheet单exterior", "resources": []}};
+const definitions = {
+  "header-callback-intrinsic-frame": {"description": "真实继承API碰撞/header gesture/Props/AUTO与sheet单exterior", "resources": []},
+  "source-glass-material": {"description": "Source drawer and popup SDK material, both schemes and unchanged frame identity", "resources": []},
+};
 for (const id of selectContractCases(definitions)) {
   await runSelectedCase(id);
   recordContractCasePass(id);
@@ -15,6 +18,41 @@ const {SOURCE_SWITCH_VISUAL} = await import('../entry/src/main/ets/features/sour
 const {readerAppColor} = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 
 const read=path=>readFileSync(new URL(`../entry/src/main/ets/${path}`,import.meta.url),'utf8');
+function verifySourceGlassMaterial() {
+  for (const scheme of ['day','night']) {
+    const probe=boundedSurfaceSdk();
+    const drawer=new probe.deps.ReaderBoundedSurface(undefined,{
+      specId:'source-switch-drawer',surfaceWidth:'100%',surfaceHeight:699,scheme,
+    });
+    drawer.initialRender();
+    const shell=[...drawer.nodes.values()].find(node=>node.type==='Column');
+    const shellId=shell.id;
+    assert.equal(shell.width,'100%');
+    assert.equal(shell.height,699);
+    assert.deepEqual(shell.constraintSize,{maxWidth:SOURCE_SWITCH_VISUAL.drawerMaxWidth});
+    assert.deepEqual(shell.borderRadius,{
+      topLeft:SOURCE_SWITCH_VISUAL.drawerCornerRadius,topRight:SOURCE_SWITCH_VISUAL.drawerCornerRadius,
+    });
+    assert.deepEqual(shell.backgroundEffect,{radius:24,color:readerAppColor('app.surface.glassHeavy',scheme)});
+    assert.equal(shell.clip,true);
+    assert.equal(shell.padding,undefined);
+    assert.equal(shell.transition,undefined);
+    drawer.updateStateVars({specId:'source-switch-drawer',surfaceWidth:'100%',surfaceHeight:320,scheme});
+    probe.properties.flush();
+    assert.equal(shell.height,320);
+    assert.equal(shell.id,shellId,'measured drawer update retains the frame actor');
+    const popup=new probe.deps.ReaderBoundedSurface(undefined,{
+      specId:'source-switch-window',surfaceWidth:300,surfaceHeight:400,scheme,
+    });
+    popup.initialRender();
+    const popupShell=[...popup.nodes.values()].find(node=>node.type==='Column');
+    assert.deepEqual(popupShell.backgroundEffect,{radius:20,color:readerAppColor('app.surface.glass',scheme)});
+  }
+}
+if (selectedCase === 'source-glass-material') {
+  verifySourceGlassMaterial();
+  return;
+}
 const source=read('features/source/ui/SourceSwitchWindow.ets'),tts=read('features/reading/ui/ReaderTtsConfigOverlay.ets');
 // SDK lowering alone does not diagnose incompatible inherited properties.
 // Compare real business callbacks with the installed CustomComponent API.
@@ -54,18 +92,7 @@ for(const reserved of ['onDragStart','onDragEnd'])assert.throws(()=>verifyBusine
 // The live source drawer is a distinct registered frame. Its measured height
 // is supplied by the source owner; the retired popup above retains its own
 // legacy geometry and cannot substitute for this drawer.
-for(const scheme of ['day','night']){
-  const probe=boundedSurfaceSdk();
-  const f=new probe.deps.ReaderBoundedSurface(undefined,{specId:'source-switch-drawer',surfaceWidth:'100%',surfaceHeight:699,scheme});f.initialRender();
-  const shell=[...f.nodes.values()].find(n=>n.type==='Column'),id=shell.id;
-  assert.equal(shell.width,'100%');assert.equal(shell.height,699);
-  assert.deepEqual(shell.constraintSize,{maxWidth:SOURCE_SWITCH_VISUAL.drawerMaxWidth});
-  assert.deepEqual(shell.borderRadius,{topLeft:SOURCE_SWITCH_VISUAL.drawerCornerRadius,topRight:SOURCE_SWITCH_VISUAL.drawerCornerRadius});
-  assert.equal(shell.backgroundColor,readerAppColor('TOK_SS_WINDOW_BG',scheme));assert.equal(shell.clip,true);
-  assert.equal(shell.padding,undefined);assert.equal(shell.transition,undefined);
-  f.updateStateVars({specId:'source-switch-drawer',surfaceWidth:'100%',surfaceHeight:320,scheme});probe.properties.flush();
-  assert.equal(shell.height,320);assert.equal(shell.id,id,'actual measured drawer update retains its frame actor');
-}
+verifySourceGlassMaterial();
 for(const specId of ['source-switch-window','tts-config-manager','tts-config-picker']){
   const probe=boundedSurfaceSdk();let close=0;
   const h=new probe.deps.ReaderBoundedSurfaceHeader(undefined,{specId,title:'original',surfaceWidth:300,actionEnabled:true,onClose:()=>close++});h.initialRender();

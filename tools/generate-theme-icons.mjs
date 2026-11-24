@@ -1,50 +1,90 @@
-import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
-import { svgActionForegroundRecipes, svgControlForegroundRecipes } from './svg-provenance.config.mjs';
-const root=path.resolve(import.meta.dirname,'..');
-const registryPath=path.resolve(root,'../Reader-UI/theme/registry.json');
-const registryRaw=fs.readFileSync(registryPath,'utf8');
-const registry=JSON.parse(registryRaw);
-const registryBefore=JSON.stringify(registry);
-const media=path.join(root,'entry/src/main/resources/base/media');
-const map={ '2D4A3E':'D2BD96','1F3528':'D2BD96','2F6373':'D2BD96','1F1B17':'EADFCE','332C25':'EADFCE','756F69':'BAAD9C','3F372F':'EADFCE','5B5046':'BAAD9C','4D463F':'EADFCE','41484C':'EADFCE','857C70':'BAAD9C','F8F4EC':'24211E','E8E2D9':'51493F','C1C7CD':'5C6065','F0EBE1':'332D27','C4BDB0':'746B60','CCC5B8':'6B6258','D4CEC2':'5D554B','D8D1C4':'514A40','E0D9CC':'463E35','EAE4D8':'3E3730' };
-function rgba(hex){return {r:parseInt(hex.slice(0,2),16),g:parseInt(hex.slice(2,4),16),b:parseInt(hex.slice(4,6),16),a:1};}
-const names=new Set();
-const explicitThemeFamilies=new Set([...svgActionForegroundRecipes, ...svgControlForegroundRecipes]
- .map(recipe=>recipe.baseFile==='reader_control_replace_add'?recipe.baseFile:recipe.file.replace(/_theme_night$/,'')));
-const filesIndex=process.argv.indexOf('--files');
-const selectedFiles=filesIndex<0?undefined:process.argv[filesIndex+1]?.split(',').filter(Boolean);
-if(filesIndex>=0&&(!selectedFiles?.length||selectedFiles.some(name=>!/^[A-Za-z][A-Za-z0-9_]*$/.test(name)||name.endsWith('_theme_night'))))throw Error('THEME_ICON_FILES_INVALID');
+import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
+import { svgAssetRecipes } from './svg-provenance.config.mjs';
+import { renderSvgSource, svgThemeColorRole, syncThemeSvgAssets } from './sync-svg-assets.mjs';
+
+const root = path.resolve(import.meta.dirname, '..');
+const media = path.join(root, 'entry/src/main/resources/base/media');
+const manifestPath = path.join(root, 'tools/theme-svg-variants.json');
+const previousVariants = readFileSync(manifestPath, 'utf8');
+const registeredVariants = JSON.parse(previousVariants);
+const baseRecipes = new Map(svgAssetRecipes.map(recipe => [recipe.file, recipe]));
+const explicitFamilies = new Set(svgAssetRecipes
+  .filter(recipe => recipe.file.endsWith('_theme_night') &&
+    (recipe.originType !== 'theme-palette-derived' || recipe.paletteRole !== undefined))
+  .map(recipe => recipe.file.replace(/_theme_night$/, '')));
+for (const recipe of svgAssetRecipes) {
+  if (recipe.namedWhiteStroke) explicitFamilies.add(recipe.baseFile);
+}
+
+const filesIndex = process.argv.indexOf('--files');
+const selectedFiles = filesIndex < 0 ? undefined : process.argv[filesIndex + 1]?.split(',');
+if (filesIndex >= 0) {
+  assert.ok(selectedFiles?.length && new Set(selectedFiles).size === selectedFiles.length &&
+    selectedFiles.every(name => /^[A-Za-z][A-Za-z0-9_]*$/.test(name) && !name.endsWith('_theme_night')),
+  'THEME_ICON_FILES_INVALID');
+}
+const names = new Set();
+
 // Dynamic Reader helpers return complete bare asset names and add app.media at
-// the $r call. Admit only complete string literals backed by an existing SVG,
-// including those names; do not infer arbitrary runtime string construction.
-// test-theme-dynamic-icons enumerates every current computed $r consumer.
-function collect(dir){for(const ent of fs.readdirSync(dir,{withFileTypes:true})){const f=path.join(dir,ent.name);if(ent.isDirectory())collect(f);else if(f.endsWith('.ets'))for(const m of fs.readFileSync(f,'utf8').matchAll(/(['"])(?:app\.media\.)?([A-Za-z][A-Za-z0-9_]*)\1/g))if(!m[2].endsWith('_theme_night')&&!explicitThemeFamilies.has(m[2])&&fs.existsSync(path.join(media,m[2]+'.svg')))names.add(m[2]);}}
-if(selectedFiles){for(const name of selectedFiles){if(explicitThemeFamilies.has(name))throw Error('THEME_ICON_EXPLICIT_RECIPE_USE_SYNC_SVG_ASSETS '+name);if(!fs.existsSync(path.join(media,name+'.svg')))throw Error('THEME_ICON_SOURCE_MISSING '+name);names.add(name);}}
-else collect(path.join(root,'entry/src/main/ets'));
-// Read-only discovery receipt, also checked against the live dynamic Builders.
-if(process.argv.includes('--list')){console.log(JSON.stringify([...names].sort()));process.exit(0);}
-const manifest=selectedFiles?JSON.parse(fs.readFileSync(path.join(root,'tools/theme-svg-variants.json'),'utf8')).filter(name=>!names.has(name)):[];
-for(const name of names){const f=path.join(media,name+'.svg');if(!fs.existsSync(f))continue;const original=fs.readFileSync(f,'utf8');let changed=false;let paletteBound=false;
- const night=original.replace(/#[0-9a-f]{6}\b/gi,color=>{const rgb=color.slice(1).toUpperCase();const role='app.icon.'+(name==='reader_page_bookmark_filled'?'reader_directory_marker_bookmark_active':name)+'.'+rgb;let target=map[rgb]||rgb;
-  if(['FFFAF4','FFFCF8'].includes(rgb)&&name.startsWith('reader_'))target='1C1A18';
-  if(!registry.appRoles[role])registry.appRoles[role]={day:rgba(rgb),night:rgba(target),provenance:`Existing monochrome/state SVG ${name}; same path and alpha, §2 App role mapping`};
-  const sourceRole=registry.appRoles[role].sourceRole;
-  if(sourceRole){const source=registry.appRoles[sourceRole];if(!source)throw Error('THEME_ICON_PALETTE_ROLE_MISSING '+sourceRole);registry.appRoles[role].day={...source.day};registry.appRoles[role].night={...source.night};paletteBound=true;}
-  const c=registry.appRoles[role].night;const resolved='#'+[c.r,c.g,c.b].map(v=>v.toString(16).padStart(2,'0')).join('').toUpperCase();
-  if(resolved.toUpperCase()!==color.toUpperCase())changed=true;return resolved;
- });
- if(!changed&&!paletteBound)continue;
- const out=path.join(media,name+'_theme_night.svg');
- if(process.argv.includes('--check')){if(fs.readFileSync(out,'utf8')!==night)throw Error('THEME_ICON_STALE '+name);}else fs.writeFileSync(out,night);
- manifest.push(name);
+// the call site. Discovery also accepts literal names in pure resource owners.
+function collect(directory) {
+  for (const entry of readdirSync(directory, { withFileTypes: true })) {
+    const file = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      collect(file);
+    } else if (/\.(ets|ts)$/.test(entry.name) && entry.name !== 'ReaderThemeRegistry.ts') {
+      const source = readFileSync(file, 'utf8');
+      for (const match of source.matchAll(/(['"])(?:app\.media\.)?([A-Za-z][A-Za-z0-9_]*)\1/g)) {
+        const name = match[2];
+        if (!name.endsWith('_theme_night') && !explicitFamilies.has(name) &&
+          existsSync(path.join(media, name + '.svg'))) names.add(name);
+      }
+    }
+  }
 }
-if(!process.argv.includes('--check')){
- // Reusing an existing role must not rewrite the registry (or its bound hash).
- if(JSON.stringify(registry)!==registryBefore)fs.writeFileSync(registryPath,JSON.stringify(registry,null,2)+'\n');
- fs.writeFileSync(path.join(root,'tools/theme-svg-variants.json'),JSON.stringify(manifest.sort(),null,2)+'\n');
- fs.mkdirSync(path.resolve(root,'.reader-local/design'),{recursive:true});
- fs.writeFileSync(path.resolve(root,'.reader-local/design/theme-icon-bindings.json'),JSON.stringify(manifest.sort(),null,2)+'\n');
+
+if (selectedFiles) {
+  for (const name of selectedFiles) {
+    assert.ok(!explicitFamilies.has(name), `THEME_ICON_EXPLICIT_RECIPE_USE_SYNC_SVG_ASSETS ${name}`);
+    assert.ok(baseRecipes.has(name), `THEME_ICON_SOURCE_MISSING ${name}`);
+    names.add(name);
+  }
+} else {
+  collect(path.join(root, 'entry/src/main/ets'));
 }
-console.log('Theme SVG adapters:',selectedFiles?names.size:manifest.length,
- selectedFiles?'; selected source files only; existing manifest entries retained; geometry/path/opacity unchanged.':'; geometry/path/opacity unchanged.');
+if (process.argv.includes('--list')) {
+  console.log(JSON.stringify([...names].sort()));
+  process.exit(0);
+}
+
+// Keep the registered variants when only the day name is dynamically
+// discoverable or the consumer is currently disabled.
+if (!selectedFiles) for (const name of registeredVariants) names.add(name);
+const check = process.argv.includes('--check');
+const manifest = new Set(registeredVariants);
+const registrySource = readFileSync(path.join(root, '../Reader-UI/theme/registry.json'));
+const registryAdapter = readFileSync(path.join(root, 'entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts'), 'utf8');
+const registryHash = createHash('sha256').update(registrySource).digest('hex');
+assert.equal(registryAdapter.split('\n')[1], `// SHA256 ${registryHash}`,
+  'Run generate-theme-registry.mjs before generating SVGs from the updated theme');
+
+for (const name of [...names].sort()) {
+  const base = baseRecipes.get(name);
+  assert.ok(base, `THEME_ICON_SOURCE_MISSING ${name}`);
+  const source = await renderSvgSource(base);
+  const needsNight = manifest.has(name) || [...source.content.matchAll(/#[0-9a-f]{6}\b/gi)].some(([color]) => {
+    const role = svgThemeColorRole(name, color);
+    const night = readerAppColor(role, 'night');
+    return night !== undefined && night !== readerAppColor(role, 'day');
+  });
+  if (needsNight) manifest.add(name);
+}
+const result = await syncThemeSvgAssets({
+  check, files: selectedFiles, variants: [...manifest].sort(), previousVariants,
+});
+const variants = [...names].filter(name => manifest.has(name)).length;
+console.log(`Theme SVG adapters: ${variants} night variants; ${result.count} SVG provenance entries ${check ? 'verified' : 'synchronized'}.`);

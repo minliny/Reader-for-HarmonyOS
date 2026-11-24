@@ -70,6 +70,8 @@ const BOOKSHELF_VIEW_MOTION: BookshelfViewMotionContract = {
 };
 
 const ENTRIES: MotionSpecEntry[] = [
+  { id: 'app.control.press', durationMs: 140, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
+  { id: 'app.motion.reduced.fade', durationMs: 120, curve: Curve.EaseOut },
   // Figma: 25 · Motion Reference MR1 · reader.control.show (TopBar y-8→0, Dock y+18→0)
   { id: 'reader.control.show', durationMs: READER_CONTROL_OPEN_MS, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
   // Figma: 25 · Motion Reference MR1 · reader.control.hide (反向回到原位)

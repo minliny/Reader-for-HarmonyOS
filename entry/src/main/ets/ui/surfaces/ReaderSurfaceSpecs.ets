@@ -97,13 +97,16 @@ export function readerHeaderVeilBorder(scheme: string): string {
   return readerAppColor(HEADER_VEIL_SPEC.borderRole, scheme);
 }
 
+export const READER_GLASS_BLUR_VP = 20;
+export const READER_HEAVY_GLASS_BLUR_VP = 24;
+
 /** Actual drawer frames, including the selected source drawer. Owners supply
  * measured geometry and safe insets; the existing bounded surface paints it. */
 export type DrawerSpecId = 'reader-action-sheet' | 'source-switch-drawer';
 export class DrawerSurfaceSpec {
   readonly maxWidth: number = SOURCE_SWITCH_VISUAL.drawerMaxWidth;
   readonly cornerRadius: number = SOURCE_SWITCH_VISUAL.drawerCornerRadius;
-  readonly surfaceRole: ReaderAppColorRole = 'TOK_SS_WINDOW_BG';
+  readonly surfaceRole: ReaderAppColorRole = 'app.surface.glassHeavy';
   readonly lineRole: ReaderAppColorRole = 'app.border.menu';
   readonly edgeHighlightRole: ReaderAppColorRole = 'app.border.modalHighlight';
   readonly edgeWidth: number = 1;

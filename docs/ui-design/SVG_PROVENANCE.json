@@ -10,6 +10,7 @@
       "figma-node-adapted",
       "figma-css-primitive",
       "figma-node-platform-adapted",
+      "reader-theme-svg",
       "theme-palette-derived",
       "radix-component-derived",
       "lucide-component-derived",
@@ -45,7 +46,7 @@
       },
       "baseAsset": "book_detail_back.svg",
       "baseSha256": "1522ea73ddfe8a6fb66e9032021ebbdfa29f00572a6f3ca14b6b019f54a3afba",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "f237e69ae5dd2d97b4771042cc6a3c9b54adba6ed16cb4da76194a97263625cc"
     },
     {
@@ -89,9 +90,9 @@
         ]
       },
       "baseAsset": "book_detail_directory.svg",
-      "baseSha256": "3b09f1beff55699da076451ed8a7e641aa2c23c28930ba332ccc9275f4266412",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "bc21705247b03f5d85f0edab5389541814a96167ddd2332249b4c5d864142fd5"
+      "baseSha256": "c101c67d7cf18890e188803b598314cffb270a3a06adb4001c91c0a3bbf008d4",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "48349d8896c42dd75d9bf0b59c9f7ad49aa9a5816fc4efc93eef153a3b8b24a8"
     },
     {
       "file": "book_detail_directory.svg",
@@ -109,9 +110,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#1F3528",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.book_detail_directory.1F3528"
+        ]
       },
-      "sha256": "3b09f1beff55699da076451ed8a7e641aa2c23c28930ba332ccc9275f4266412"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "c101c67d7cf18890e188803b598314cffb270a3a06adb4001c91c0a3bbf008d4"
     },
     {
       "file": "bookshelf_compass_active.svg",
@@ -155,7 +161,7 @@
       },
       "baseAsset": "bookshelf_compass_outline.svg",
       "baseSha256": "9e59b9adf2a1872af3051d10af318ba3969bc987e8ab876cd7996e3b0f171a6f",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "cc7d7089a0de971c57f500472f955ebc3942efdac32125972f6ec610289bb295"
     },
     {
@@ -199,9 +205,9 @@
         ]
       },
       "baseAsset": "bookshelf_filter_active.svg",
-      "baseSha256": "282874c97032b2c4f844df29077945c179341974aba5c6454a3776d662ef8581",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "6b831c05080c29e35436ad58788bb0a1603276799ee4846ba2c2042fabb4950a"
+      "baseSha256": "da609a6c92bfe8e2efba8d5fc85de2bf64bcaee3cf0242ceee4182c730e7440e",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "7bdb045f3835da0f647a67735804e55472db15686c7df28e913295b82133e568"
     },
     {
       "file": "bookshelf_filter_active.svg",
@@ -219,9 +225,14 @@
       "transform": {
         "pathMutation": "fill-none-on-stroke-paths",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.bookshelf_filter_active.2D4A3E"
+        ]
       },
-      "sha256": "282874c97032b2c4f844df29077945c179341974aba5c6454a3776d662ef8581"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "da609a6c92bfe8e2efba8d5fc85de2bf64bcaee3cf0242ceee4182c730e7440e"
     },
     {
       "file": "bookshelf_filter_theme_night.svg",
@@ -245,7 +256,7 @@
       },
       "baseAsset": "bookshelf_filter.svg",
       "baseSha256": "7a6aa2f19feea44e685b21a209894622018e9e19045d75e9689af4d939315362",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "86de84c1ed9419f7cba294586b226cb9523965ed57ef236facd25cf01ae4a056"
     },
     {
@@ -290,7 +301,7 @@
       },
       "baseAsset": "bookshelf_grid_outline.svg",
       "baseSha256": "cacb654b88613941e104bf28758237b47e5c25f15aa8b84514998d5449441dcc",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "c934bc71357bc38ff3e581777c1374db678a75e8aacb630a241f3c14e6e172e3"
     },
     {
@@ -334,9 +345,9 @@
         ]
       },
       "baseAsset": "bookshelf_grid.svg",
-      "baseSha256": "610f694acb03c1fc7633aff02ef51351474d29d71f66fec46e98ffcbd25165c1",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "3aa71c92325492eaccec91bca1cae451012c8d174198d33a164591cb09120416"
+      "baseSha256": "1049017eaca99949a443085c3cb1a12450dc1672597ba7213df58de0745c370e",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "7969ad1061ef1a6f5e32ec06c6994676879880ddc3936e7d79a4546aca7f5ece"
     },
     {
       "file": "bookshelf_grid.svg",
@@ -354,9 +365,39 @@
       "transform": {
         "pathMutation": "fill-none-on-stroke-paths",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.bookshelf_grid.2D4A3E"
+        ]
       },
-      "sha256": "610f694acb03c1fc7633aff02ef51351474d29d71f66fec46e98ffcbd25165c1"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "1049017eaca99949a443085c3cb1a12450dc1672597ba7213df58de0745c370e"
+    },
+    {
+      "file": "bookshelf_library_active_theme_night.svg",
+      "semanticRole": "bookshelf_library_active night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:96",
+      "componentName": "Icon/Bookshelf",
+      "upstreamName": "Bookshelf",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Bookshelf.svg",
+      "sourceSha256": "9765a88fdb5eab6ee68a5728482e5a00b1058940dfbf6e10b4eff50f0c2792d9",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.bookshelf_library_active.FFFAF4"
+        ]
+      },
+      "baseAsset": "bookshelf_library_active.svg",
+      "baseSha256": "f0ade36db98e9ed032e5f8646f0af5a77a3015fe756c851cb0edc01813dfd80a",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "7e443a0253319fa9eb91f75da236a7779c7d010ee0d234f6e5b24cc387f751b4"
     },
     {
       "file": "bookshelf_library_active.svg",
@@ -374,9 +415,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#FFFAF4",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.bookshelf_library_active.FFFAF4"
+        ]
       },
-      "sha256": "01bf345c1850c480ae5adaf68c2880c734084025beb40572b291e0fe5262b631"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "f0ade36db98e9ed032e5f8646f0af5a77a3015fe756c851cb0edc01813dfd80a"
     },
     {
       "file": "bookshelf_library_outline_theme_night.svg",
@@ -399,9 +445,9 @@
         ]
       },
       "baseAsset": "bookshelf_library_outline.svg",
-      "baseSha256": "7b7208a08c5f77a474fac7f713e9db46401ae5a0da8071bc2eadf20dab1203cb",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "45c1c718ba03088fb184cdb83904d9333249cdaa4f5506b822e2a43d151a75fa"
+      "baseSha256": "7df3ff03622696fa9f068d5b72b01f6e9c9b3f3d82b0ad345e62f921b4e1f851",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "45a3ba0631502bf5fe1430b32f2c5052001401ff82b75d77a5668bee89a3671e"
     },
     {
       "file": "bookshelf_library_outline.svg",
@@ -419,9 +465,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#756F69",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.bookshelf_library_outline.756F69"
+        ]
       },
-      "sha256": "7b7208a08c5f77a474fac7f713e9db46401ae5a0da8071bc2eadf20dab1203cb"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "7df3ff03622696fa9f068d5b72b01f6e9c9b3f3d82b0ad345e62f921b4e1f851"
     },
     {
       "file": "bookshelf_list_active_theme_night.svg",
@@ -444,9 +495,9 @@
         ]
       },
       "baseAsset": "bookshelf_list_active.svg",
-      "baseSha256": "39ef610830c5ffe72f2682a40899841c4f0c7ff7ea7ddb4fd263bc97bec5b8ac",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "0892b2094fe1422d4c2576e506500e08efaad82227fa20512c1d59d142773a31"
+      "baseSha256": "52e5f9c031efeb76855b83d9ab3340682cd2b02c4772571e0322a7beafd4ac29",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "fa73e6228a8ce792dc75090dc0ad0574fdcad4f0108910fdb6bb2275165da7b8"
     },
     {
       "file": "bookshelf_list_active.svg",
@@ -464,9 +515,14 @@
       "transform": {
         "pathMutation": "fill-none-on-stroke-paths",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.bookshelf_list_active.2D4A3E"
+        ]
       },
-      "sha256": "39ef610830c5ffe72f2682a40899841c4f0c7ff7ea7ddb4fd263bc97bec5b8ac"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "52e5f9c031efeb76855b83d9ab3340682cd2b02c4772571e0322a7beafd4ac29"
     },
     {
       "file": "bookshelf_list_theme_night.svg",
@@ -490,7 +546,7 @@
       },
       "baseAsset": "bookshelf_list.svg",
       "baseSha256": "f02bf267147e6ccc706c8795e6384b43bbb47a24504c6d079cbe7c97df4b7658",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "7112fe50737ed972c4a4493f0200c4148264f623d8673901a8246113f22fca8c"
     },
     {
@@ -531,7 +587,7 @@
       },
       "baseAsset": "bookshelf_more_batch.svg",
       "baseSha256": "d977e06549acd85a7991764669674a20c8ed460703ca5abedf257f7a10fa3b2e",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "c9a62b60d238462e9062c9cec1958dbe3dad589a6e1326943b5285b3eab4818c"
     },
     {
@@ -570,7 +626,7 @@
       },
       "baseAsset": "bookshelf_more_download.svg",
       "baseSha256": "5bb5a10684e0431055a1d9e40cd0ef2179266c738e5e80ae93776e802b77dfd0",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "a81f7a7d10eb6057541cdba20ee57579bb06f51e59f40409234db499bcd74fe2"
     },
     {
@@ -611,7 +667,7 @@
       },
       "baseAsset": "bookshelf_more_import.svg",
       "baseSha256": "c268570c99df72ac82cd222fe94fd58322d8f4529db4a654fceb4093a69bd02f",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "f662db28c1995188b3a05c549130881f906385442912fc4a3bd63b53df1966ff"
     },
     {
@@ -646,7 +702,7 @@
       },
       "baseAsset": "bookshelf_more_settings.svg",
       "baseSha256": "28a64e0209009f9f83a3f6c454537afb97c8abce6561de5d6922ab1151162bfd",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "6aef20339f8654453d7a3556f50564bc35458d239617c56eb84ec04c7c05f588"
     },
     {
@@ -682,7 +738,7 @@
       },
       "baseAsset": "bookshelf_more.svg",
       "baseSha256": "579508df8257c11fe5d458753773f58a0237e39908eef767b8f396de237d6147",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "ecb1861bf700e66c2a0fb0e8d42ae4698b409db64ef1dd7850fbe4a4f9f12c36"
     },
     {
@@ -707,7 +763,7 @@
       },
       "baseAsset": "bookshelf_more_update.svg",
       "baseSha256": "54f29b2d36ac7dc4fb856d05fed78fb138933c03222df7b72c6c9bc581c6ab6d",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "a486b55a7cbe8e379fd3c6f515cfa3d365d9ce49e2532639c0af6c4b1a9b35e7"
     },
     {
@@ -806,7 +862,7 @@
       },
       "baseAsset": "bookshelf_rss_outline.svg",
       "baseSha256": "14e15a15fddff35f31985153812d74ab73b1c9a5901132756f9ff3b1c3bc23e2",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "5d63bb1ccefaa09f43394dd0368da69d0c13fd6ccaf17422775af4ed41166861"
     },
     {
@@ -851,7 +907,7 @@
       },
       "baseAsset": "bookshelf_search.svg",
       "baseSha256": "4f01cd169355eb9e5729efc05f0024671e1a9446e30f330fc9bd9dc6b5be7e72",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "a8b685bccb41bf32df39417fb43478d46ff87a006f975a91df7755d3271f3596"
     },
     {
@@ -875,6 +931,31 @@
       "sha256": "4f01cd169355eb9e5729efc05f0024671e1a9446e30f330fc9bd9dc6b5be7e72"
     },
     {
+      "file": "bookshelf_settings_active_theme_night.svg",
+      "semanticRole": "bookshelf_settings_active night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "271:472",
+      "componentName": "Icon/Settings",
+      "upstreamName": "Settings",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Settings.svg",
+      "sourceSha256": "991b85162a8e75bda30a062835181fe2c01ba5259744b3c97465796d5148fc90",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.bookshelf_settings_active.FFFAF4"
+        ]
+      },
+      "baseAsset": "bookshelf_settings_active.svg",
+      "baseSha256": "db86dc583e7b8b8c1b6d181d90c83b9a2f7f9ccb171996339ce56a39e90b0256",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "e980e29ba6daff4ad367df61bb8e660cf34ea0dcb3c4d60b5c367faab9944be8"
+    },
+    {
       "file": "bookshelf_settings_active.svg",
       "semanticRole": "bookshelf settings active navigation",
       "originType": "figma-component-derived",
@@ -890,9 +971,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#FFFAF4",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.bookshelf_settings_active.FFFAF4"
+        ]
       },
-      "sha256": "306497f835b92461bba6d4fdea759a79948241517095ed893dc0efffd721d559"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "db86dc583e7b8b8c1b6d181d90c83b9a2f7f9ccb171996339ce56a39e90b0256"
     },
     {
       "file": "bookshelf_settings_outline_theme_night.svg",
@@ -915,9 +1001,9 @@
         ]
       },
       "baseAsset": "bookshelf_settings_outline.svg",
-      "baseSha256": "d9e93c48b3e57ed16733197f3d50b311a720e53d864993730f557a91806abbd5",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "cefa679fcc508b43c7268c1d0aaa3fe07782f5e261d74903bff9020adb8c53d0"
+      "baseSha256": "b5c1b0eb25a790c55bdc844da2fff25f96482a5a4a181ae5e80b143c0efdc32d",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "5600b8aa6842221653da1477e0bcea589bfb7d70e2201dcd1a0e700ff16b0690"
     },
     {
       "file": "bookshelf_settings_outline.svg",
@@ -935,9 +1021,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#756F69",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.bookshelf_settings_outline.756F69"
+        ]
       },
-      "sha256": "d9e93c48b3e57ed16733197f3d50b311a720e53d864993730f557a91806abbd5"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "b5c1b0eb25a790c55bdc844da2fff25f96482a5a4a181ae5e80b143c0efdc32d"
     },
     {
       "file": "bookshelf_settings_theme_night.svg",
@@ -961,7 +1052,7 @@
       },
       "baseAsset": "bookshelf_settings.svg",
       "baseSha256": "27f938028ce41beac8a6ba5c2f87a3178efba2f6f36a96f44a08a079ef553b38",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "645e5234e6401e6940f57fead7f13403994705d1cf036f62d599643a1d31e846"
     },
     {
@@ -1026,7 +1117,7 @@
       },
       "baseAsset": "discover_filter_chevron.svg",
       "baseSha256": "5811f25cf017a1012511e49e21cbb947fc28680d39ec55d35a1e27e18a448684",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "bd5a350fb1b6f07b6a4550e36a0303901ee4743413dbe7560869fac79bee19e3"
     },
     {
@@ -1071,7 +1162,7 @@
       },
       "baseAsset": "discover_filter.svg",
       "baseSha256": "16afdc68f29688aa7adadf9dc02a2b6bf1b4addbe7fce9712a3aaff1a130034a",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "c7b95b51cc3ae18f5d7a32c3649fbb983dc3c4dd81f6ccf8cf2d4c2c3ae21e26"
     },
     {
@@ -1116,7 +1207,7 @@
       },
       "baseAsset": "discover_refresh.svg",
       "baseSha256": "95a0d6901bd018d614b05db3f43bbae303b8168481c388b49020e7674a5dfe11",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "32c4c0067be770fdcf134a4acf6397390c75263424efb6c68f2143592d6fbdff"
     },
     {
@@ -1161,7 +1252,7 @@
       },
       "baseAsset": "discover_source_chevron.svg",
       "baseSha256": "9d8fc0d92fa8d6b8c1f2da89227e1ef9bdec3bf0345bff5d97f22abf0e1b94aa",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "bd5a350fb1b6f07b6a4550e36a0303901ee4743413dbe7560869fac79bee19e3"
     },
     {
@@ -1206,7 +1297,7 @@
       },
       "baseAsset": "discover_source_stack.svg",
       "baseSha256": "7c1896acd1002494438690d4b2dda5d797860ad409bbff31a6fa29d558b8a94a",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "d08b9e6d3baf9b3fcde2065656c107665bb9180ccdd902a252e9d9463d0438c5"
     },
     {
@@ -1247,11 +1338,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#EAE7DE",
+        "recolor": "#ECE8E0",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "747e336b4557d8ca6b5537cdf5e3c0ce17206c9d042b36b4fc4589f32c594f9c"
+      "sha256": "3c061ad2f90c20d016ac16fdaed0410f3f017e9227c79552e3668e136e3b0747"
     },
     {
       "file": "download_visual_back.svg",
@@ -1271,11 +1362,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#1F1B17",
+        "recolor": "#1D1B18",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "f3f9197bf2208063bde243c76dd584adc38be99d99b563419f76a98cb800c682"
+      "sha256": "1c7c70abf0d1833d6e02465dc52eb33ed197b02b4830888774e6896fdc0bff81"
     },
     {
       "file": "download_visual_check_theme_night.svg",
@@ -1295,11 +1386,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#B9CEB1",
+        "recolor": "#7BB094",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "acf293486a6de148d5be7808aeec38935b94d8aa527c1231d370fbd9da9f1824"
+      "sha256": "c19fa5df032911f027c79585fd90a0ba3402f0fceaad74a48d1d3a5235e209ca"
     },
     {
       "file": "download_visual_check.svg",
@@ -1319,11 +1410,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#1F3528",
+        "recolor": "#1F3D31",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "cf02e2a7c10bf71d9c6ca18ae84b5efe1c624b814cfab543ecd31c8c75334e7f"
+      "sha256": "219c09f968389b6633ec622e8822be20263b3c63f4c27219502cf538f566a1a1"
     },
     {
       "file": "download_visual_chevron_theme_night.svg",
@@ -1343,11 +1434,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#ABA99F",
+        "recolor": "#A6A196",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "dae7f08649fe2e67f6ee8c3d78180a14d99cc984a2c7b19e6ba9835bfa5626f4"
+      "sha256": "9c96f3fa95cd585a39c299da6d80d6f6bb5acad828d2aa27b21cedae78c5f1cd"
     },
     {
       "file": "download_visual_chevron.svg",
@@ -1367,11 +1458,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#756F69",
+        "recolor": "#635D55",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "c31bd8704d1abf1531d94230923ea5cffcbacef4bf04a9d1ec2f13bd4f72b247"
+      "sha256": "bd6f2b8ec6de41b54fce413a3e1df5f5a7307514110d68c4c4d8bce5940c57aa"
     },
     {
       "file": "download_visual_close_theme_night.svg",
@@ -1391,11 +1482,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#EAE7DE",
+        "recolor": "#ECE8E0",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "c7208ce3b58c511d774e1577f104ce913a11f76bf764b8cdf40e115e3f402185"
+      "sha256": "b8ebee7a4603d8edee541a040645207e18c8f441a7a4195b731870e3e9ebfc19"
     },
     {
       "file": "download_visual_close.svg",
@@ -1415,11 +1506,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#1F1B17",
+        "recolor": "#1D1B18",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "a7cadaee9cfbcd6abb69a0800b94380dbbcbf4cb053170b7c4d2405edd2bc97f"
+      "sha256": "3d7c9cba42c330407673f81b97e7df604ef32046a03140503fc8428d1d0dbf14"
     },
     {
       "file": "download_visual_download_theme_night.svg",
@@ -1439,11 +1530,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#ABA99F",
+        "recolor": "#A6A196",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "947c7d899464413bdb08195754dc456145f5c798ffe2fbabef503480fe9939f7"
+      "sha256": "17c4d357950ed1666fa4e27deefb93a3a8eda746cc9f87f5bd79d2d408dd977e"
     },
     {
       "file": "download_visual_download.svg",
@@ -1463,11 +1554,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#756F69",
+        "recolor": "#635D55",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "0b41fb2fb5d63346fa2cfb6dff8c07686ff20cf1aeacab7dffba48a92599528a"
+      "sha256": "cc27bc4e347e6d06b8db7a8e3b763e0ccc9aa89991186d1abc7d06136edc20dd"
     },
     {
       "file": "download_visual_empty_theme_night.svg",
@@ -1487,11 +1578,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#ABA99F",
+        "recolor": "#A6A196",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "a162ec28119e5999681042592170623cea4acccc4b6207f750d9a3b6ec4c48d3"
+      "sha256": "b10b2617bdda6cb01f6e327fb709b5fc139454898ac3640724a21f607f1c23aa"
     },
     {
       "file": "download_visual_empty.svg",
@@ -1511,11 +1602,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#756F69",
+        "recolor": "#635D55",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "f4d968f9155a686ca1a62b4035e53e20d0488faddaaa2606c406e78baf2b4583"
+      "sha256": "720d6d348dd53f5b6a9685dd6975f343aa10fff2322f70c0a382555166292e16"
     },
     {
       "file": "download_visual_filter_theme_night.svg",
@@ -1535,11 +1626,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#EAE7DE",
+        "recolor": "#ECE8E0",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "e93aa0e1ff51b729207aa39706a83d97aaaaa68ad107d01ff72607e24f9fa90f"
+      "sha256": "55b265a988de769512f82646d846534edcb634bcab4fcbd438598d35aa0d0b94"
     },
     {
       "file": "download_visual_filter.svg",
@@ -1559,11 +1650,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#1F1B17",
+        "recolor": "#1D1B18",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "0fce293f97f49d044b11cd7b8ae3af6c15740d4b3b19902616b10f5153c196bd"
+      "sha256": "38c388807aa187d04d83898e4edf38cfda9c9ab5c787972763a002e204a76e4a"
     },
     {
       "file": "download_visual_more_theme_night.svg",
@@ -1583,11 +1674,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#EAE7DE",
+        "recolor": "#ECE8E0",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "78ce11ab72c691e444d01e15dec48c114a5d75a5d96d9b4bc9a6080589ded4dd"
+      "sha256": "f3a7ea33cf6053ea9b36a211de1557c483674182be36d3a67adc83b60d89f7a7"
     },
     {
       "file": "download_visual_more.svg",
@@ -1607,11 +1698,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#1F1B17",
+        "recolor": "#1D1B18",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "2d8be904e4385e7c3c688f8abefa992e0ac47a9a732ccee662604bcbffa82c49"
+      "sha256": "aebcba674074bd97e54791e2e37d3c9de19c85663417eaf0eb8b933fc76da62b"
     },
     {
       "file": "download_visual_pause_theme_night.svg",
@@ -1631,11 +1722,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#B9CEB1",
+        "recolor": "#7BB094",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "6f46bb6108cb22e98fb995fa53b41a445ebfa5115d36de23362d693bbb46fd9c"
+      "sha256": "bf90387b6ec8cc0253aad2bdead42cf4db74f697704ebfbb392188e0b43db648"
     },
     {
       "file": "download_visual_pause.svg",
@@ -1655,11 +1746,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#1F3528",
+        "recolor": "#1F3D31",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "f2da51458675db9df43071610a8196ef8e586a109c1f7aa6e9dd6fff4a0fc032"
+      "sha256": "6b3cbd5d2ede875aa3d799ded50bacf7ea666078c09b5d68c260cc25456f7b1b"
     },
     {
       "file": "download_visual_play_theme_night.svg",
@@ -1679,11 +1770,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#B9CEB1",
+        "recolor": "#7BB094",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "1b978989c6a8643e25205c2765f7e298bca5d5b406b46f7f05007445bcd266fb"
+      "sha256": "41ba8623b29da8573a64841c82363925a71202c7eb9f6b479da8529fdb76ce08"
     },
     {
       "file": "download_visual_play.svg",
@@ -1703,11 +1794,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#1F3528",
+        "recolor": "#1F3D31",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "af4b70f199a5519457ee1a847e5d53039bd521c8d5ecede4d0cb5129539dd440"
+      "sha256": "9c058e4b9327b0efb4486ca82976461b59ff5748c20da02236cb5c9d807f9e81"
     },
     {
       "file": "download_visual_retry_theme_night.svg",
@@ -1727,11 +1818,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#EFB4A8",
+        "recolor": "#E0645A",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "b8cdfa204f7b07c0afece5b87eb0c430dfe48f9e839e85bffebd17277a747fea"
+      "sha256": "ad582c5e423f66864ffd00bf7fa22e3159198d335a55a14de228bd9cdac0f885"
     },
     {
       "file": "download_visual_retry.svg",
@@ -1751,11 +1842,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#A53D32",
+        "recolor": "#B83B32",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "6bf1aee9078836161148a8fac5b4d2e1c9f87634d10240c0422a672d24d649a1"
+      "sha256": "8e7676573d3910ff234e64e61c7a478da2deef82ba1ca23fafa786babb55bf9b"
     },
     {
       "file": "download_visual_search_theme_night.svg",
@@ -1775,11 +1866,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#ABA99F",
+        "recolor": "#A6A196",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "3649cfdcb2a3603ddd9f7146d09a6f2ddcddfb95aed3c54118e6610f5c755a87"
+      "sha256": "65acede08fc2b5d5cbc515abe817eb7fd57a2621573050f8ee3b7bf11b5c90b9"
     },
     {
       "file": "download_visual_search.svg",
@@ -1799,11 +1890,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#756F69",
+        "recolor": "#635D55",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "2b727f0296c7c6dd96414a90a087751446a9d755f7d05bfd3e533c454a36bbb8"
+      "sha256": "e960597c19911028f1b79fe4aea8fd2752e981cb2c6e422bfd48c4c9a93c5462"
     },
     {
       "file": "download_visual_sort_asc_theme_night.svg",
@@ -1823,11 +1914,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#EAE7DE",
+        "recolor": "#ECE8E0",
         "rotationDegrees": 90,
         "flipY": false
       },
-      "sha256": "c520baee9c141d72cfc8a95381d9ed017f65000fe82243dd641510aa378578b4"
+      "sha256": "3cc50b5528b60b16f7da89e0df1a8263815c512ddf917a28962a6aa62e33f1e8"
     },
     {
       "file": "download_visual_sort_asc.svg",
@@ -1847,11 +1938,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#1F1B17",
+        "recolor": "#1D1B18",
         "rotationDegrees": 90,
         "flipY": false
       },
-      "sha256": "6b33dde0546b2335235fe84360ee4c4f5abd3717918bba551998f5a66bd535ee"
+      "sha256": "d55eeca0dfd963b77d9b1568a0dc4a62b26ae1fbeb6c1f6a4a4585de4ac05e32"
     },
     {
       "file": "download_visual_sort_desc_theme_night.svg",
@@ -1871,11 +1962,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#EAE7DE",
+        "recolor": "#ECE8E0",
         "rotationDegrees": 90,
         "flipY": true
       },
-      "sha256": "e7e5a68e9b5bfd75631bf8580f6dcffee21356a9ee9adadcc8ae791c798ea3b0"
+      "sha256": "3285af048e90a433dd62e1ba6c95daa6662ea88a3e582a9a9f8b1ebe7a2779aa"
     },
     {
       "file": "download_visual_sort_desc.svg",
@@ -1895,11 +1986,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#1F1B17",
+        "recolor": "#1D1B18",
         "rotationDegrees": 90,
         "flipY": true
       },
-      "sha256": "05dd76ebae3a3f22da46e912ac8b026f8a7d3248962f8b4f7f47eb3bbe8b2384"
+      "sha256": "417bda74c834ee3b039780d4043c0a7163666528cc2bd1c83519dbc5319890ef"
     },
     {
       "file": "download_visual_storage_theme_night.svg",
@@ -1919,11 +2010,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#EAE7DE",
+        "recolor": "#ECE8E0",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "66b72f710da7d586d730d61c6c0b59cb18ef075c9ca07c43d47749a23ae72f1b"
+      "sha256": "fc6b1784a2fcdab2c5185ed531a984dee95acdbf748b0d2e785d3aa090e33546"
     },
     {
       "file": "download_visual_storage.svg",
@@ -1943,11 +2034,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#1F1B17",
+        "recolor": "#1D1B18",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "cd1b460583a7a0060da90100d7038a63eff14632dcc30c3a8359aabb09d42c7a"
+      "sha256": "ab2b6917ceaeffbfaa4093302f69a4c0e408f7fcb157c7914ba8e77598273d6e"
     },
     {
       "file": "download_visual_trash_disabled_theme_night.svg",
@@ -1967,11 +2058,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#ABA99F",
+        "recolor": "#A6A196",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "f40cc2a4c120eca39da916da5bceef0df1a56c710bc41191b062be94ef01230a"
+      "sha256": "35eb70a234b57bacf75748ca9b6090cfed057442d1c9a477247d10c311df40f4"
     },
     {
       "file": "download_visual_trash_disabled.svg",
@@ -1991,11 +2082,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#756F69",
+        "recolor": "#635D55",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "6f80b1aa28cdc0c56355f5370a1ce585154e729474d679ca482728c9c941488d"
+      "sha256": "9b236c6012a5018db10e8877a5dd36a9a0963e972e1dd08fe8d362b64e41387b"
     },
     {
       "file": "download_visual_trash_theme_night.svg",
@@ -2015,11 +2106,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#1C1E1A",
+        "recolor": "#111B16",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "7f27cb18e8f6a87e3fbc2e9830af83771f442657df4598e6b9d2069deecb04f9"
+      "sha256": "4e2b2299ca8981bbce4963cb2a352be51935c26218f254846e18d898bb83f59b"
     },
     {
       "file": "download_visual_trash.svg",
@@ -2039,11 +2130,11 @@
       "transform": {
         "pathMutation": "none",
         "viewBox": "preserved",
-        "recolor": "#FFFCF8",
+        "recolor": "#FAF7F0",
         "rotationDegrees": 0,
         "flipY": false
       },
-      "sha256": "a2477545ce86da9481f900b577fd2f9f8cc0dc848387bb2fe99d7c7a42c0e924"
+      "sha256": "ac54e1c8ffbbff958eaa4c0de3fe91a2697b68ae8e8205af53a2cba9b4ee295a"
     },
     {
       "file": "import_cancel_theme_night.svg",
@@ -2063,7 +2154,7 @@
       },
       "baseAsset": "import_cancel.svg",
       "baseSha256": "e9f0fa1ae5412e4879bc9365dcd11dd62a84a1d600c4f188b3a1f1b3ed05b4f1",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "97020261d7611501c03791f271c25f4a7d7fbdb697808414a92c1ca0feafbef0"
     },
     {
@@ -2112,7 +2203,7 @@
       },
       "baseAsset": "import_doc.svg",
       "baseSha256": "e351c249dea65aebc346eb4138b9b7208800b70c8d5130bbd292d330a4edd16a",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "4313e6daf0398a222c20d965232e6d5ee7f73b79b1a4054896a6311d58e43872"
     },
     {
@@ -2161,7 +2252,7 @@
       },
       "baseAsset": "import_info.svg",
       "baseSha256": "6b92bea8325f585ac113eefc934c29fd27efe9680ed19deecb66d1efc1db8b11",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "ef8e8e6cb54b03e1f11e129c018ca0dfb8efd525c81fb1cf538b696e56a1ddf7"
     },
     {
@@ -2195,9 +2286,9 @@
         ]
       },
       "baseAsset": "import_select_system.svg",
-      "baseSha256": "28bb531728cc73a41c2243517a5b96350f3b3ec09256dfe4d1cf656a862ef98d",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "a122bad5354f834ce66d526a77ac94abf1d7f98dc0fb1c23eaeeed367938906c"
+      "baseSha256": "69c6fc0be01c073e326e4913272d7dcf7efeaf770f1447a7f7ee31143b337a01",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "7851cfe1bcc12cc3e1b9d386ecc695ae4ec9b792da6290a867958927a667b22d"
     },
     {
       "file": "import_select_system.svg",
@@ -2209,9 +2300,14 @@
       "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/import_select_system.svg",
       "sourceSha256": "28bb531728cc73a41c2243517a5b96350f3b3ec09256dfe4d1cf656a862ef98d",
       "transform": {
-        "pathMutation": "none"
+        "pathMutation": "none",
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.import_select_system.2D4A3E"
+        ]
       },
-      "sha256": "28bb531728cc73a41c2243517a5b96350f3b3ec09256dfe4d1cf656a862ef98d"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "69c6fc0be01c073e326e4913272d7dcf7efeaf770f1447a7f7ee31143b337a01"
     },
     {
       "file": "import_success_theme_night.svg",
@@ -2230,9 +2326,9 @@
         ]
       },
       "baseAsset": "import_success.svg",
-      "baseSha256": "954b63570c2f0caa76ae597813072b7c5e72d85494579d3e69e2dadc197052e0",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "0a43138ea328f8824eedc8730b5755596e288a8b8c7ffa89f4d3edd18a6f542b"
+      "baseSha256": "7c2d974713daf711982140d9252fd5f6fa68f08d5c84fd0e62bca34eba51be37",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "acff1b1bfac1994f66aeb7b08de41c1ed37833daa6568bf1d07292c38f29f440"
     },
     {
       "file": "import_success.svg",
@@ -2244,9 +2340,14 @@
       "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/import_success.svg",
       "sourceSha256": "954b63570c2f0caa76ae597813072b7c5e72d85494579d3e69e2dadc197052e0",
       "transform": {
-        "pathMutation": "none"
+        "pathMutation": "none",
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.import_success.2D4A3E"
+        ]
       },
-      "sha256": "954b63570c2f0caa76ae597813072b7c5e72d85494579d3e69e2dadc197052e0"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "7c2d974713daf711982140d9252fd5f6fa68f08d5c84fd0e62bca34eba51be37"
     },
     {
       "file": "import_summary.svg",
@@ -3180,8 +3281,8 @@
       },
       "baseAsset": "rc_autopage.svg",
       "baseSha256": "834c50b29798e1110d2ce210535b458ee4bd10707430561499f14de79e83bdc6",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "d024ef6a414d103b689e98503e59ac5e88877db9493e2e75b397ce3c00ec006b"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "54c755bdc542cba853118de7df09ddb18770e86b365ee09d1784d4d4ab01e981"
     },
     {
       "file": "rc_autopage.svg",
@@ -3225,7 +3326,7 @@
       },
       "baseAsset": "rc_chevron_left.svg",
       "baseSha256": "f96ff27ce760c035013a56d92dbd961f54682fc7078d2c0a379f283e4f506e80",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "2beb173c5a5ba8b04b248c7c00a10a8c62ebad8f70c1d71ceb000d18d8d12307"
     },
     {
@@ -3270,7 +3371,7 @@
       },
       "baseAsset": "rc_chevron_right.svg",
       "baseSha256": "1486523612711e092ce951ce6bf4a6b80e459337137b44964218f07cf125b17b",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "9a9f46c777d97ccea090a19dcc7b5c40fad7621a8330085a531e01f1cd54f104"
     },
     {
@@ -3315,7 +3416,7 @@
       },
       "baseAsset": "rc_dots.svg",
       "baseSha256": "406c682a44490397f6e6f48b93880cf932b6a6caf735a4449447475e7636555e",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "141a6d501b38df93d361ffbb2cf4abb1f3ce99df64e986fb60da90671348deb8"
     },
     {
@@ -3359,9 +3460,9 @@
         ]
       },
       "baseAsset": "rc_headphones.svg",
-      "baseSha256": "367d0df83b1d14950995ab6bf3b7bf2c4ef6a4c2a8f2dcb574bc317237cda8ef",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "61bffee804ff1413f29fbf8921df3b3296b67a4eacb13b4ce8aeabd63f24b922"
+      "baseSha256": "311ef668c5913a288d7c0e896955b3082d00c5b12da5d20b1ae942668af9e236",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "266fe1c68af6264aafe84d93e90e2d1a3a7cd2047105e178f7080b6bea010c72"
     },
     {
       "file": "rc_headphones.svg",
@@ -3379,9 +3480,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.rc_headphones.2F6373"
+        ]
       },
-      "sha256": "367d0df83b1d14950995ab6bf3b7bf2c4ef6a4c2a8f2dcb574bc317237cda8ef"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "311ef668c5913a288d7c0e896955b3082d00c5b12da5d20b1ae942668af9e236"
     },
     {
       "file": "rc_list_theme_night.svg",
@@ -3404,9 +3510,9 @@
         ]
       },
       "baseAsset": "rc_list.svg",
-      "baseSha256": "f27bb46d8852b782423d65e6d0071e130126bbb8003d0d072af69b98ce97e79a",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "9a3638e9a5438f73b76570c88100788c1e5f22265a3cc228f57870e10cf183be"
+      "baseSha256": "86715db060077e3f29e7b69a99cf8b0083301d44ad0fb165ea95b14110b9ed77",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "52e7b5047d4d9d4583a44ebde05e6a728583390d6ccf98c121337b4491f50119"
     },
     {
       "file": "rc_list.svg",
@@ -3424,9 +3530,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.rc_list.2F6373"
+        ]
       },
-      "sha256": "f27bb46d8852b782423d65e6d0071e130126bbb8003d0d072af69b98ce97e79a"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "86715db060077e3f29e7b69a99cf8b0083301d44ad0fb165ea95b14110b9ed77"
     },
     {
       "file": "rc_palette_theme_night.svg",
@@ -3449,9 +3560,9 @@
         ]
       },
       "baseAsset": "rc_palette.svg",
-      "baseSha256": "60ef2580e871c25a6374ac2c7e5c3d2ef35a85bcc5dba483f28a6c5bb50c2a15",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "b07f1f5347bed6ed00c05c8bbc52a933ceab9c83f228262d17ebcf2bfc55a8b1"
+      "baseSha256": "eeceda5d619eec41b3e0b83bc00559c61795d75b0a555557ce253aecf7432f66",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "db5a3e6542be7470a10b418881ea36d79cd2645243374aac88fb4bae5a8107e2"
     },
     {
       "file": "rc_palette.svg",
@@ -3469,9 +3580,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.rc_palette.2F6373"
+        ]
       },
-      "sha256": "60ef2580e871c25a6374ac2c7e5c3d2ef35a85bcc5dba483f28a6c5bb50c2a15"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "eeceda5d619eec41b3e0b83bc00559c61795d75b0a555557ce253aecf7432f66"
     },
     {
       "file": "rc_replace_theme_night.svg",
@@ -3495,8 +3611,8 @@
       },
       "baseAsset": "rc_replace.svg",
       "baseSha256": "0bda625e1933237ddd74325c14f89261bebdbb5f58c88b334a23644b4282f7f4",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "66fd10fbc4cf32d620c6c6cec4a01818d85ac219584b6f2d8ac30285fb2b7271"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "b56760c3e4e396103f380eb6d20b40b0c093b412efe521ecf103ca746372ef99"
     },
     {
       "file": "rc_replace.svg",
@@ -3540,8 +3656,8 @@
       },
       "baseAsset": "rc_search.svg",
       "baseSha256": "67273222c2560cc3259eaef1655153cd73078aa9b77b2525d1c47216fc9f687a",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "80afd24cef01ed8d4bd4e18c61346d84a8f05a22870d31104d822c07353293c5"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "31200d94d3980f0a08e406f42cf7d44942a6303b2463096bb0432c95ad523bb2"
     },
     {
       "file": "rc_search.svg",
@@ -3584,9 +3700,9 @@
         ]
       },
       "baseAsset": "rc_settings.svg",
-      "baseSha256": "ca8d6689bca074f735f6291dd64e97c0cc73d04326a9275d68dac3188e16e317",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "c617f909f1781d063d108396ef0486307411acfd745f8418c136b5f7b0da760f"
+      "baseSha256": "897a2b4d5b5050169e4f7166bba1cdf906b9ceca5f65ebc4903f0be0e473cfb2",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "60d542021b8a4d4f50bb8e7a1c5719c4dbb4f0a260621db639b9e2457090624b"
     },
     {
       "file": "rc_settings.svg",
@@ -3604,9 +3720,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.rc_settings.2F6373"
+        ]
       },
-      "sha256": "ca8d6689bca074f735f6291dd64e97c0cc73d04326a9275d68dac3188e16e317"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "897a2b4d5b5050169e4f7166bba1cdf906b9ceca5f65ebc4903f0be0e473cfb2"
     },
     {
       "file": "rc_sun_theme_night.svg",
@@ -3629,9 +3750,9 @@
         ]
       },
       "baseAsset": "rc_sun.svg",
-      "baseSha256": "d5b33dadda3748f9e47af26a3176c89ae96a3e2528359a2f201e96518fc99e82",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "620956b69899fea0392f9bab1162ef5e952496b745c97382231ad14e2c2d732d"
+      "baseSha256": "514219c3a89b76aff5ac1487776db71ce3595a4d209e60a5d7146d069479502d",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "e73d0c49685463c493d34c78a1282cb000f4085cd41588d5313601cb3f2d2d9c"
     },
     {
       "file": "rc_sun.svg",
@@ -3649,9 +3770,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.rc_sun.2F6373"
+        ]
       },
-      "sha256": "d5b33dadda3748f9e47af26a3176c89ae96a3e2528359a2f201e96518fc99e82"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "514219c3a89b76aff5ac1487776db71ce3595a4d209e60a5d7146d069479502d"
     },
     {
       "file": "rc_switch_horizontal_theme_night.svg",
@@ -3675,7 +3801,7 @@
       },
       "baseAsset": "rc_switch_horizontal.svg",
       "baseSha256": "32cfebe3d3e8cd7d6a1a1341923f6be8c2d848c43db66cbd405427636166b7c4",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "c8ab125e72a7f6da10e3d593f82f0e3cd0ada2095ee0596ce9cea49bdfcbb36d"
     },
     {
@@ -3716,8 +3842,8 @@
       },
       "baseAsset": "bookshelf_more_batch.svg",
       "baseSha256": "d977e06549acd85a7991764669674a20c8ed460703ca5abedf257f7a10fa3b2e",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "ae3d1f141e6df0f1a97783511bee21922014f4061bfe1218f9ddd0213f460bb0"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "a38f8f34e89f3d60f9ccfd87b7786536403a3eb59363525ca51d043af3cd684d"
     },
     {
       "file": "reader_action_check.svg",
@@ -3737,8 +3863,8 @@
       },
       "baseAsset": "bookshelf_more_batch.svg",
       "baseSha256": "d977e06549acd85a7991764669674a20c8ed460703ca5abedf257f7a10fa3b2e",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "620cfea4ef37712e38b96d1ee4d3188b36b09270358010c1d5e6a57cc260ca1e"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "291463cf9e3121776a32c7afb62cba4ce74e7c0d486681b8b3770dd7accb26dc"
     },
     {
       "file": "reader_action_close_theme_night.svg",
@@ -3763,9 +3889,9 @@
         ]
       },
       "baseAsset": "download_visual_close.svg",
-      "baseSha256": "a7cadaee9cfbcd6abb69a0800b94380dbbcbf4cb053170b7c4d2405edd2bc97f",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "df96e8cc493b392127e77c998d7ff584d5038f532b14247bea29aa4c16823e79"
+      "baseSha256": "3d7c9cba42c330407673f81b97e7df604ef32046a03140503fc8428d1d0dbf14",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "b3c995203e09a0e38cc4e68ffef3be45e5b7fb4d1dee9e9724198aad3eab1897"
     },
     {
       "file": "reader_action_close.svg",
@@ -3790,9 +3916,9 @@
         ]
       },
       "baseAsset": "download_visual_close.svg",
-      "baseSha256": "a7cadaee9cfbcd6abb69a0800b94380dbbcbf4cb053170b7c4d2405edd2bc97f",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "90cc36f159e9b6ab682f10ae162c694b93bb1548a38bbcf8746092dc029da664"
+      "baseSha256": "3d7c9cba42c330407673f81b97e7df604ef32046a03140503fc8428d1d0dbf14",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "7f6da9d8fefbb2d68d8d65de1b2c0bf16a357775cdb4d8b40e3ac6ae1406838d"
     },
     {
       "file": "reader_action_download_theme_night.svg",
@@ -3817,9 +3943,9 @@
         ]
       },
       "baseAsset": "download_visual_download.svg",
-      "baseSha256": "0b41fb2fb5d63346fa2cfb6dff8c07686ff20cf1aeacab7dffba48a92599528a",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "3b280abcec5c1ea0e73e24aa125cfda0374d5c9930facabfddb8e1ad5d2711c0"
+      "baseSha256": "cc27bc4e347e6d06b8db7a8e3b763e0ccc9aa89991186d1abc7d06136edc20dd",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "5d69798667082d46f3a54c0d4c4ca85e1c35d17243071df6491f77a430b50c62"
     },
     {
       "file": "reader_action_download.svg",
@@ -3844,9 +3970,9 @@
         ]
       },
       "baseAsset": "download_visual_download.svg",
-      "baseSha256": "0b41fb2fb5d63346fa2cfb6dff8c07686ff20cf1aeacab7dffba48a92599528a",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "d46ccb486719538530ffe8dc9b2d48dcd80252731a4c6fe36cdc2a3455322bc9"
+      "baseSha256": "cc27bc4e347e6d06b8db7a8e3b763e0ccc9aa89991186d1abc7d06136edc20dd",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "3354c8daa9d9401877699a7214619ac4a30c4e11de74476baad0fa1084067837"
     },
     {
       "file": "reader_action_folder_theme_night.svg",
@@ -3868,10 +3994,10 @@
           "TOK_DOWNLOAD_GREEN_INK"
         ]
       },
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "baseAsset": "source_group_folder.svg",
-      "baseSha256": "ba156576477e006ef6902089573e38bab5f2c6ded53bc40ca2e4ecb47173a2d0",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "6b16ca10aec43f338e74a44ed6a480157c6d8c666cede10f1b313122756a9529"
+      "baseSha256": "8938234867933bd4c4000efc6343a6a8380dedad828f4af5b9e9df21564242e2",
+      "sha256": "8644aa20f90dcb6ebd13514bbb1bdd14deedb09b9ec9e042aa3a26ff102d1d90"
     },
     {
       "file": "reader_action_folder.svg",
@@ -3893,10 +4019,10 @@
           "TOK_DOWNLOAD_GREEN_INK"
         ]
       },
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "baseAsset": "source_group_folder.svg",
-      "baseSha256": "ba156576477e006ef6902089573e38bab5f2c6ded53bc40ca2e4ecb47173a2d0",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "ec5db715da9a508350b522bd322fc91c7a47b04af48c4949226f6d879a509785"
+      "baseSha256": "8938234867933bd4c4000efc6343a6a8380dedad828f4af5b9e9df21564242e2",
+      "sha256": "05d91f4c3c53965c3d8afe1d8eb884d47a64073bf7b4575e6d33bf9fc87cd535"
     },
     {
       "file": "reader_action_import_theme_night.svg",
@@ -3916,8 +4042,8 @@
       },
       "baseAsset": "bookshelf_more_import.svg",
       "baseSha256": "c268570c99df72ac82cd222fe94fd58322d8f4529db4a654fceb4093a69bd02f",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "022edf58b91236930b60eb0981cb548a53cf7c8d10baacebe6a9f29ada810e86"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "16967f6c4bbccc2ce04629d8cd1321510a403a0479e0399b6aa71d5cb8595d6c"
     },
     {
       "file": "reader_action_import.svg",
@@ -3937,8 +4063,8 @@
       },
       "baseAsset": "bookshelf_more_import.svg",
       "baseSha256": "c268570c99df72ac82cd222fe94fd58322d8f4529db4a654fceb4093a69bd02f",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "283a4481a1cf4e31a84a071ab48c5d0458c6a79dd9ece61cebb042741791db68"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "eb457f4882a773c36b3a8edf6167274cdfc4853e9988a7d8919cfb976f8a2ea5"
     },
     {
       "file": "reader_action_info_theme_night.svg",
@@ -3960,10 +4086,10 @@
           "TOK_DOWNLOAD_GREEN_INK"
         ]
       },
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "baseAsset": "settings_row_about.svg",
-      "baseSha256": "9eb0b1b9161cc8ebac2b5f202c0334d382a2db0b121a90271c0e6339dd085651",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "3dd399260c98fb7db86fce7e42d698366bb2c85682568658774be4bb25bda3e4"
+      "baseSha256": "fb12d6796d0718961ddfd721b854da48ca924ce3a1029db7f97903a3219987ee",
+      "sha256": "e883e9aa4d8836a104db5e83cdbda6113eacb2a400208bf18baab7fa9ac93bdb"
     },
     {
       "file": "reader_action_info.svg",
@@ -3985,10 +4111,10 @@
           "TOK_DOWNLOAD_GREEN_INK"
         ]
       },
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "baseAsset": "settings_row_about.svg",
-      "baseSha256": "9eb0b1b9161cc8ebac2b5f202c0334d382a2db0b121a90271c0e6339dd085651",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "e6d6ede65faf265a255dff04d83fc451ae205c585410096541efa9ea6a20ebc8"
+      "baseSha256": "fb12d6796d0718961ddfd721b854da48ca924ce3a1029db7f97903a3219987ee",
+      "sha256": "5de7fcea5364ef4631b078e6b64df68cb4d5cac9636cd84f951237bcf6499c10"
     },
     {
       "file": "reader_action_more_theme_night.svg",
@@ -4013,9 +4139,9 @@
         ]
       },
       "baseAsset": "download_visual_more.svg",
-      "baseSha256": "2d8be904e4385e7c3c688f8abefa992e0ac47a9a732ccee662604bcbffa82c49",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "56008d0693760f7326645e686b2403ff78c1d94a2d2428a518112a3c51ac4d9f"
+      "baseSha256": "aebcba674074bd97e54791e2e37d3c9de19c85663417eaf0eb8b933fc76da62b",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "ec82b882e7e46460b7459c1d1a95060636b261c85b9f313d07ef3dee01e59412"
     },
     {
       "file": "reader_action_more.svg",
@@ -4040,9 +4166,9 @@
         ]
       },
       "baseAsset": "download_visual_more.svg",
-      "baseSha256": "2d8be904e4385e7c3c688f8abefa992e0ac47a9a732ccee662604bcbffa82c49",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "cc32ead2933ea01e58688a604323f470e775116df9cce024cf9f341f9ff38947"
+      "baseSha256": "aebcba674074bd97e54791e2e37d3c9de19c85663417eaf0eb8b933fc76da62b",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "69195010aba6809afd69cc34c47156bd5f1f90ee6ccab1a1521b6382beaf4979"
     },
     {
       "file": "reader_action_pause_theme_night.svg",
@@ -4067,9 +4193,9 @@
         ]
       },
       "baseAsset": "download_visual_pause.svg",
-      "baseSha256": "f2da51458675db9df43071610a8196ef8e586a109c1f7aa6e9dd6fff4a0fc032",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "c126b848c53efa411b89431f80bb230c669c5fa3764bee62c59456da370e4fee"
+      "baseSha256": "6b3cbd5d2ede875aa3d799ded50bacf7ea666078c09b5d68c260cc25456f7b1b",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "f85b67be0f3457fc868f00c8d4817039e338096293b1148da0d90aea4311801b"
     },
     {
       "file": "reader_action_pause.svg",
@@ -4094,9 +4220,9 @@
         ]
       },
       "baseAsset": "download_visual_pause.svg",
-      "baseSha256": "f2da51458675db9df43071610a8196ef8e586a109c1f7aa6e9dd6fff4a0fc032",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "cda421786837aae705d4ff3cfa6bfc8eaca217d770120f5e0eb10e259a376bea"
+      "baseSha256": "6b3cbd5d2ede875aa3d799ded50bacf7ea666078c09b5d68c260cc25456f7b1b",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "858ced8afe0f36f2b76edf995ac8f84edd7769c3863a1e233a0ca834b2df0cac"
     },
     {
       "file": "reader_action_play_theme_night.svg",
@@ -4121,9 +4247,9 @@
         ]
       },
       "baseAsset": "download_visual_play.svg",
-      "baseSha256": "af4b70f199a5519457ee1a847e5d53039bd521c8d5ecede4d0cb5129539dd440",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "3697b1535c79ccdd0c991368e22e7870dab215c6d45b3fe12a729b02fe33217b"
+      "baseSha256": "9c058e4b9327b0efb4486ca82976461b59ff5748c20da02236cb5c9d807f9e81",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "ebaa1f81b26aa94a3fcc26dbbba7b44cc54f18fb0ae2906aefe4c3b8f3255316"
     },
     {
       "file": "reader_action_play.svg",
@@ -4148,9 +4274,9 @@
         ]
       },
       "baseAsset": "download_visual_play.svg",
-      "baseSha256": "af4b70f199a5519457ee1a847e5d53039bd521c8d5ecede4d0cb5129539dd440",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "e4ad46e476bb39e98b1da10fc9006f2eb19fcbf914f03c0e7563752bac00d447"
+      "baseSha256": "9c058e4b9327b0efb4486ca82976461b59ff5748c20da02236cb5c9d807f9e81",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "973fb91d4419a90730af57b242c325334e7f541e8d1e94f3f6cd27450945a705"
     },
     {
       "file": "reader_action_refresh_theme_night.svg",
@@ -4175,9 +4301,9 @@
         ]
       },
       "baseAsset": "download_visual_retry.svg",
-      "baseSha256": "6bf1aee9078836161148a8fac5b4d2e1c9f87634d10240c0422a672d24d649a1",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "132416a8771748b52996598318e86804097244a68821e7dee5ec1db44f50ba74"
+      "baseSha256": "8e7676573d3910ff234e64e61c7a478da2deef82ba1ca23fafa786babb55bf9b",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "1f2bb8810f1a32d5fbcc73b88901ba0a8e4105da4c480525b92927076004f8b0"
     },
     {
       "file": "reader_action_refresh.svg",
@@ -4202,9 +4328,9 @@
         ]
       },
       "baseAsset": "download_visual_retry.svg",
-      "baseSha256": "6bf1aee9078836161148a8fac5b4d2e1c9f87634d10240c0422a672d24d649a1",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "fdca52074cab695a3c923aceecf1ed57b8f35f95674ba6f4eca1b2d34e2cd323"
+      "baseSha256": "8e7676573d3910ff234e64e61c7a478da2deef82ba1ca23fafa786babb55bf9b",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "5d3281a76ebc15263979c12ecb625af392a13c474c1c5744f3fbb549449b5977"
     },
     {
       "file": "reader_action_source_theme_night.svg",
@@ -4228,8 +4354,8 @@
       },
       "baseAsset": "reader_directory_switch.svg",
       "baseSha256": "439a6fb03cc445dab0e589bc75ba4a43718a04ca43a2abdde086003e060e7d12",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "3308f3894fa0ebe2cbba93a3b1d9498037828911a7433312febb3cc8d8d38a8c"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "193be1ae77af2575680dcc67fdeb4c2a405e99aa3209f7586be4e6bbc459225f"
     },
     {
       "file": "reader_action_source.svg",
@@ -4253,8 +4379,8 @@
       },
       "baseAsset": "reader_directory_switch.svg",
       "baseSha256": "439a6fb03cc445dab0e589bc75ba4a43718a04ca43a2abdde086003e060e7d12",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "c56a2485945e668e8f9197025cd47a4027eabaee772664cdae86429d1b305de9"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "d0800a9320279280589268a28efe22a07ae2ae5504e1445ff8a5280286f58217"
     },
     {
       "file": "reader_action_storage_theme_night.svg",
@@ -4279,9 +4405,9 @@
         ]
       },
       "baseAsset": "download_visual_storage.svg",
-      "baseSha256": "cd1b460583a7a0060da90100d7038a63eff14632dcc30c3a8359aabb09d42c7a",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "c5d008b9d331fd07221912e5faa6ac26a1ce2d879d064cfff0991904872ca6e6"
+      "baseSha256": "ab2b6917ceaeffbfaa4093302f69a4c0e408f7fcb157c7914ba8e77598273d6e",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "22c6ba921a147f97395c69441eb5c8307db824d34dd51edce7260df55b571eef"
     },
     {
       "file": "reader_action_storage.svg",
@@ -4306,9 +4432,9 @@
         ]
       },
       "baseAsset": "download_visual_storage.svg",
-      "baseSha256": "cd1b460583a7a0060da90100d7038a63eff14632dcc30c3a8359aabb09d42c7a",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "46f36a356db14a471675bc6fe758948b2a77e7e1fcc8c6be06ae7ab12a87139d"
+      "baseSha256": "ab2b6917ceaeffbfaa4093302f69a4c0e408f7fcb157c7914ba8e77598273d6e",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "a08ed9fecd61653066278e65111381ed7a9f8387c445ca52eed1b86b73e6f3c1"
     },
     {
       "file": "reader_action_trash_theme_night.svg",
@@ -4334,9 +4460,9 @@
         "strokeWidth": 1.75
       },
       "baseAsset": "download_visual_trash.svg",
-      "baseSha256": "a2477545ce86da9481f900b577fd2f9f8cc0dc848387bb2fe99d7c7a42c0e924",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "780a85aeb3507bb527401aaffc450cbcfdc0f8d50785e9d5095b1c5e474e0bf9"
+      "baseSha256": "ac54e1c8ffbbff958eaa4c0de3fe91a2697b68ae8e8205af53a2cba9b4ee295a",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "bcd1df5a7ae6664d4c7ea3320f0806c6169787c0e113cb369982f0a400f387df"
     },
     {
       "file": "reader_action_trash.svg",
@@ -4362,9 +4488,9 @@
         "strokeWidth": 1.75
       },
       "baseAsset": "download_visual_trash.svg",
-      "baseSha256": "a2477545ce86da9481f900b577fd2f9f8cc0dc848387bb2fe99d7c7a42c0e924",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "3532f651ecd870998b4e415f8a55e2319558054ff5c364ef4f9e10101240b84c"
+      "baseSha256": "ac54e1c8ffbbff958eaa4c0de3fe91a2697b68ae8e8205af53a2cba9b4ee295a",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "79fdd1137b181da30c5545dc1708ed289b29338c8587559dccd3283e6260fc33"
     },
     {
       "file": "reader_appearance_header_theme_night.svg",
@@ -4388,7 +4514,7 @@
       },
       "baseAsset": "reader_appearance_header.svg",
       "baseSha256": "920e1ee8bd3e2672107979ccfd199da7e604f598c49568ccb05d1089a5960f24",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "ee57559284f18b02ceb63e1bd9358b40f27709644c93c2e88be46f1edd3d349d"
     },
     {
@@ -4429,9 +4555,9 @@
         ]
       },
       "baseAsset": "reader_appearance_make_check.svg",
-      "baseSha256": "546411d66dbf6f1d40601ed6266e041442c318e6b7e44cc4f81284d760b0c993",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "17a083f7574dd2321768b9c7eeb345f7263b333b8ff69d9ee58819f135508beb"
+      "baseSha256": "75e04bff4454006e868521795f6ba341d31542afb98745ceb601647f9b673c6c",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "cd0778d9fa84d3ac60706b5ef4dada552045941f37e54d3c9e145a761f18afdb"
     },
     {
       "file": "reader_appearance_make_check.svg",
@@ -4444,9 +4570,14 @@
       "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_appearance_make_check.svg",
       "sourceSha256": "546411d66dbf6f1d40601ed6266e041442c318e6b7e44cc4f81284d760b0c993",
       "transform": {
-        "pathMutation": "none"
+        "pathMutation": "none",
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_appearance_make_check.2F6373"
+        ]
       },
-      "sha256": "546411d66dbf6f1d40601ed6266e041442c318e6b7e44cc4f81284d760b0c993"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "75e04bff4454006e868521795f6ba341d31542afb98745ceb601647f9b673c6c"
     },
     {
       "file": "reader_appearance_make_chevron_theme_night.svg",
@@ -4467,7 +4598,7 @@
       },
       "baseAsset": "reader_appearance_make_chevron.svg",
       "baseSha256": "a3573901b83d28c3d24bc5dc977b871af9a08f8f3a99e02a07bab4ed05039a17",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "6a7f6c0975410b2c6cf5a4e1d3cd34635bedc3375021519642e27069d44c19a0"
     },
     {
@@ -4506,9 +4637,9 @@
         ]
       },
       "baseAsset": "reader_appearance_nav_active.svg",
-      "baseSha256": "952ca94c9b3220fa24d7fdce134552b486153a494581a4f62918e16535ddd8cf",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "c65b674473af84ea8a077a238b9b23102c5130bb490e21a663cda82da2a80166"
+      "baseSha256": "8c3a66f7ec717bbd50878855d14e1dee25c3fb2a619be4447504dde57025b573",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "cef813e31c5f0d547fc2cbe042821b406502744c7c0f563bc514bad2414b1522"
     },
     {
       "file": "reader_appearance_nav_active.svg",
@@ -4526,9 +4657,14 @@
       "transform": {
         "pathMutation": "fill-none-on-stroke-paths",
         "recolor": "#FFFAF4",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_appearance_nav_active.FFFAF4"
+        ]
       },
-      "sha256": "952ca94c9b3220fa24d7fdce134552b486153a494581a4f62918e16535ddd8cf"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "8c3a66f7ec717bbd50878855d14e1dee25c3fb2a619be4447504dde57025b573"
     },
     {
       "file": "reader_auto_full_chevron_left_theme_night.svg",
@@ -4551,9 +4687,9 @@
         ]
       },
       "baseAsset": "reader_auto_full_chevron_left.svg",
-      "baseSha256": "d12ab61e6425ab88de180785967eb47a3b70572b535eec260e4c89b7c2ccfe89",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "a619046a9bbf30fe023fe1ec84235a4a8f58c0d06aef47dacf2cef9953670b85"
+      "baseSha256": "2824e851f4318defc401a654cb27c30fe506d242f3f71561f15c61e94ae56679",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "000b7c8f22aae703afc2463e85a5e94d5142829f01c7894c9a28654bd21b1e7a"
     },
     {
       "file": "reader_auto_full_chevron_left.svg",
@@ -4571,9 +4707,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_auto_full_chevron_left.2F6373"
+        ]
       },
-      "sha256": "d12ab61e6425ab88de180785967eb47a3b70572b535eec260e4c89b7c2ccfe89"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "2824e851f4318defc401a654cb27c30fe506d242f3f71561f15c61e94ae56679"
     },
     {
       "file": "reader_auto_full_chevron_right_theme_night.svg",
@@ -4596,9 +4737,9 @@
         ]
       },
       "baseAsset": "reader_auto_full_chevron_right.svg",
-      "baseSha256": "df5e60a86066f29ab4ce23fece883053a5e67ee29b46998cd7f4615cdb349eeb",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "8396104522acb6c67c7986255fd83f97561bc54d442b5b6495e56fc8712e41c4"
+      "baseSha256": "284b1d27a8ff1f975a43d0c26da9c6b3ac92f72cca48d3bffb867cf0eff12ce4",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "43e62b630c7d6e1f0aa9d6c0c328abb0edb038cf2d27bf4f4d67bf450e104ae6"
     },
     {
       "file": "reader_auto_full_chevron_right.svg",
@@ -4616,9 +4757,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_auto_full_chevron_right.2F6373"
+        ]
       },
-      "sha256": "df5e60a86066f29ab4ce23fece883053a5e67ee29b46998cd7f4615cdb349eeb"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "284b1d27a8ff1f975a43d0c26da9c6b3ac92f72cca48d3bffb867cf0eff12ce4"
     },
     {
       "file": "reader_auto_full_clock_theme_night.svg",
@@ -4642,7 +4788,7 @@
       },
       "baseAsset": "reader_auto_full_clock.svg",
       "baseSha256": "a72fd4bef969498320c75491607011060792a487da0585cf71851634f5a64d11",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "489fe6c4028f76f762c62814b1035f1a1341601e48dd8f7cdf4c939e5da8dbf6"
     },
     {
@@ -4686,9 +4832,9 @@
         ]
       },
       "baseAsset": "reader_auto_full_play.svg",
-      "baseSha256": "dbc179e44cd085d605eefa4fec273524a79c1b298828ba0d26670020a1f52d1f",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "c7aaffed76a5b07a4602f68990f08ee3acbd0fd804e566889be08a95a5a4af69"
+      "baseSha256": "b9b6e6d0a5dfd03fc33f272f5089806f1555f169bf077b23a2fc6110f92c132d",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "b7fdfb23ac087adf49ea6720bdba5a4625a4bf35822944f25fe6aa74905fc520"
     },
     {
       "file": "reader_auto_full_play.svg",
@@ -4706,9 +4852,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#FFFAF4",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_auto_full_play.FFFAF4"
+        ]
       },
-      "sha256": "dbc179e44cd085d605eefa4fec273524a79c1b298828ba0d26670020a1f52d1f"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "b9b6e6d0a5dfd03fc33f272f5089806f1555f169bf077b23a2fc6110f92c132d"
     },
     {
       "file": "reader_auto_full_stop_theme_night.svg",
@@ -4731,9 +4882,9 @@
         ]
       },
       "baseAsset": "reader_auto_full_stop.svg",
-      "baseSha256": "e4f34ac2ab6662e72aed962c19aaf0e7da59e6974578f8bcbdddec4bbfb23b6a",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "91280af9d5c5b2f90a838cfeef420b43cfa1c30238baadbd5749b511d5358e21"
+      "baseSha256": "155fd5fe67574c8fc73748fde673dcee0606783284744a3a9c26a59ad51c11b4",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "573f55c91687023501d6e1961f1509a065cd74a1c756ef379c8738c57b76f81f"
     },
     {
       "file": "reader_auto_full_stop.svg",
@@ -4751,9 +4902,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_auto_full_stop.2F6373"
+        ]
       },
-      "sha256": "e4f34ac2ab6662e72aed962c19aaf0e7da59e6974578f8bcbdddec4bbfb23b6a"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "155fd5fe67574c8fc73748fde673dcee0606783284744a3a9c26a59ad51c11b4"
     },
     {
       "file": "reader_auto_stop.svg",
@@ -4796,9 +4952,9 @@
         ]
       },
       "baseAsset": "reader_chevron_down_primary.svg",
-      "baseSha256": "0ca8ac80a299d9307d5c189f0fb23c25f6d0cbee9d7b0e53f157dc0c665ec823",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "795a9561a0679d1d93768e9c71fd75886088b53783bb3a22a01ff0b181cfd76b"
+      "baseSha256": "d622ba7b1ba8b33ec9fc85d4185e1608d3186f3eaf1ae53127ceeb0b1ee7bbb0",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "55236acc5e7b1a071527e28140c65f965ca7ad3b153274aef733b9a91015b618"
     },
     {
       "file": "reader_chevron_down_primary.svg",
@@ -4816,9 +4972,14 @@
       "transform": {
         "pathMutation": "fill-none-on-stroke-paths",
         "recolor": "#2F6373",
-        "rotationDegrees": 90
+        "rotationDegrees": 90,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_chevron_down_primary.2F6373"
+        ]
       },
-      "sha256": "0ca8ac80a299d9307d5c189f0fb23c25f6d0cbee9d7b0e53f157dc0c665ec823"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "d622ba7b1ba8b33ec9fc85d4185e1608d3186f3eaf1ae53127ceeb0b1ee7bbb0"
     },
     {
       "file": "reader_chevron_down_theme_night.svg",
@@ -4842,7 +5003,7 @@
       },
       "baseAsset": "reader_chevron_down.svg",
       "baseSha256": "64648167da5824e0e5ebf78e44e3861b68625e87cd52b82eaf4d9d56519a512d",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "447b31bfd4257aa696adfe70334ede321d4a332b477d9fbb27662e7e020dcc3f"
     },
     {
@@ -4887,7 +5048,7 @@
       },
       "baseAsset": "reader_chevron_right.svg",
       "baseSha256": "509312c3bd25d8a9fdd64c3c066a842df6eb2f4240a61cfb6547b080db50fbc3",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "2a4f1ade04e2c7feb193fa14287922a6773bac063fb925b7f057aeda9589c0f3"
     },
     {
@@ -4911,6 +5072,44 @@
       "sha256": "509312c3bd25d8a9fdd64c3c066a842df6eb2f4240a61cfb6547b080db50fbc3"
     },
     {
+      "file": "reader_control_header_chevron_theme_night.svg",
+      "semanticRole": "reader_control_header_chevron night app palette",
+      "originType": "theme-palette-derived",
+      "license": "Reader project design",
+      "sourceFile": "../Reader-UI/theme/icons/reader_control_header_chevron.svg",
+      "sourceSha256": "176f7ea3416d297cf7437ff30b40877e7dc54aeb0fe492153930cb29e2aa1caa",
+      "sourceCommit": "8cb0c447d7746aa29b2a9bc0271c4d2bec071340",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.reader_control_header_chevron.2F6373"
+        ]
+      },
+      "baseAsset": "reader_control_header_chevron.svg",
+      "baseSha256": "4d0cb25ce5b978dfb3c362eac210ab9a0eedd478141fa89db0058d15bc5b4c05",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "bc4c4c1944650d3f784fec1617dc71ef0b006580b73913658bf08a7bdacfda7e"
+    },
+    {
+      "file": "reader_control_header_chevron.svg",
+      "semanticRole": "reader control header disclosure",
+      "originType": "reader-theme-svg",
+      "license": "Reader project design",
+      "sourceFile": "../Reader-UI/theme/icons/reader_control_header_chevron.svg",
+      "sourceSha256": "176f7ea3416d297cf7437ff30b40877e7dc54aeb0fe492153930cb29e2aa1caa",
+      "sourceCommit": "8cb0c447d7746aa29b2a9bc0271c4d2bec071340",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_control_header_chevron.2F6373"
+        ]
+      },
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "4d0cb25ce5b978dfb3c362eac210ab9a0eedd478141fa89db0058d15bc5b4c05"
+    },
+    {
       "file": "reader_control_replace_add_theme_night.svg",
       "semanticRole": "reader replace add night foreground on the light primary control surface",
       "originType": "theme-palette-derived",
@@ -4923,13 +5122,13 @@
         "pathMutation": "none",
         "palette": "night",
         "colorRoles": [
-          "app.ReaderControlReplaceContent.toolbarButton.fontColor.FFFFFFFF"
+          "app.replace.onToolbarAction"
         ]
       },
       "baseAsset": "reader_control_replace_add.svg",
       "baseSha256": "e8bb4c21bb42d0099cdfa4d909e6da262d7216e5cc9b6034977494318b4f60ed",
-      "themeRegistrySha256": "6b8ac73d5e4ae2d1d6522b8bb4cbaf6d898c7637929b203573139358c0392ba4",
-      "sha256": "ae382b3d3e57caab21d93e01d907b9d2efc5da515e5cf6222eaf56064d1df24f"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "f7720b07b0d12c8f8eb16bf56cc3edfa8750f48d8a29d9fd8a004edc66169163"
     },
     {
       "file": "reader_control_replace_add.svg",
@@ -4962,9 +5161,9 @@
         ]
       },
       "baseAsset": "reader_control_replace_back.svg",
-      "baseSha256": "951ddb50b8f835eeefd1c1100811166b4010bbe2f5a5d7d4054697e6a5cc41c5",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "d7d9d3b8be0637b22cf55a2eb621a8dff9aff74eb2fb9d7a0ff5a393f42fbdcc"
+      "baseSha256": "10942286fc917487230e7bfbe9d1744e7ca0cd8241a48be9506976366b927247",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "df3df9c6b6de37948178cc137e70e30f00ce498415be8a9fd726cf51f463725f"
     },
     {
       "file": "reader_control_replace_back.svg",
@@ -4976,9 +5175,14 @@
       "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_control_replace_back.svg",
       "sourceSha256": "951ddb50b8f835eeefd1c1100811166b4010bbe2f5a5d7d4054697e6a5cc41c5",
       "transform": {
-        "pathMutation": "none"
+        "pathMutation": "none",
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_control_replace_back.2F6373"
+        ]
       },
-      "sha256": "951ddb50b8f835eeefd1c1100811166b4010bbe2f5a5d7d4054697e6a5cc41c5"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "10942286fc917487230e7bfbe9d1744e7ca0cd8241a48be9506976366b927247"
     },
     {
       "file": "reader_control_replace_delete_theme_night.svg",
@@ -4998,7 +5202,7 @@
       },
       "baseAsset": "reader_control_replace_delete.svg",
       "baseSha256": "b9ebce1a2d92f814cd27e27c89c002650f48ba89a5922676f3fdfb671ca94c68",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "4f84a363a9520c97104767d3042e96e1e753f4465eeffa5d2d7ca33f80f9a1ce"
     },
     {
@@ -5033,7 +5237,7 @@
       },
       "baseAsset": "reader_control_replace_edit.svg",
       "baseSha256": "6084d4fe541922b718cfca0cbe073397bb25dbd5f4ac8204677258798458fc11",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "ad06f775d02a0384d576d2f7af1310368512b37ff7382ee25b67b1beb7fffc5e"
     },
     {
@@ -5068,7 +5272,7 @@
       },
       "baseAsset": "reader_control_replace_export.svg",
       "baseSha256": "00815d9ded70806d2cb5c54a0d01e431211157f31fa5effc53452719dd80b1e8",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "c5866ab8fdfcba26dfbbbfae69a2037fe892a587ff5f75d129927ba39e828436"
     },
     {
@@ -5103,7 +5307,7 @@
       },
       "baseAsset": "reader_control_replace_header.svg",
       "baseSha256": "bbdbfe2f2a99d8cd84bf4392c790ba8f2383140921e406ca1ebf07a4da2c9ede",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "a617701613f60836d98f196ff1018c1d239589e49face53f28b33a1fbc32112b"
     },
     {
@@ -5138,7 +5342,7 @@
       },
       "baseAsset": "reader_control_replace_import.svg",
       "baseSha256": "1375f7314210afb837c691caf489244d5dba792e98a5719129cc3a4bb99cf6eb",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "ca853fc883c66723b180de82f4fbc4602096a00c1455a6d92c38e808c35abea2"
     },
     {
@@ -5170,10 +5374,10 @@
       "sourceSha256": "e816c4e68aa5d2c9971e32f1a8793395862659628da17b7b0f2abe17f150e246",
       "transform": {
         "pathMutation": "none",
-        "recolor": "#EFB4A8",
+        "recolor": "#E0645A",
         "rotationDegrees": 0
       },
-      "sha256": "f143397ade995e6e6b98fcf981e68efbaef24f9185c6df7533f0f264650a6a44"
+      "sha256": "e4281d9b9577cfef729da4392b8276d23256ea037e8f48930f6ff9f02d0949ec"
     },
     {
       "file": "reader_danger_trash.svg",
@@ -5190,10 +5394,10 @@
       "sourceSha256": "e816c4e68aa5d2c9971e32f1a8793395862659628da17b7b0f2abe17f150e246",
       "transform": {
         "pathMutation": "none",
-        "recolor": "#A53D32",
+        "recolor": "#B83B32",
         "rotationDegrees": 0
       },
-      "sha256": "034a6182513fd2a85900d517f6107e72c5da29ac0266bd0a56da4d8bc1d5510b"
+      "sha256": "fd519c363a307fe2aaa59da9cb1292b9feb917ab7ebf6dbbad034f5253cbe99b"
     },
     {
       "file": "reader_directory_back_theme_night.svg",
@@ -5217,7 +5421,7 @@
       },
       "baseAsset": "reader_directory_back.svg",
       "baseSha256": "08253f6ff4975aca842e7c89249a62517543ffee57ffe20c2dd9d5c2874739c0",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "f237e69ae5dd2d97b4771042cc6a3c9b54adba6ed16cb4da76194a97263625cc"
     },
     {
@@ -5261,9 +5465,9 @@
         ]
       },
       "baseAsset": "reader_directory_bottom.svg",
-      "baseSha256": "793fba6e5436a6e3ade739d3cc4abd1fe031cb3f80187ea2606e5895efc9223b",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "cc12eb129fd609f0e58a89a15bd751f17628b314c58b3b8ba4d9355644779fea"
+      "baseSha256": "b62c77ca0282a3c2d84664719f39107de036e8aaeaf880e24284a7c685f8c9c3",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "e228b8bd5cd07ee60b841234033a6ce798dd54975e6c83c3437b91d0ddf664f8"
     },
     {
       "file": "reader_directory_bottom.svg",
@@ -5281,9 +5485,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_directory_bottom.2F6373"
+        ]
       },
-      "sha256": "793fba6e5436a6e3ade739d3cc4abd1fe031cb3f80187ea2606e5895efc9223b"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "b62c77ca0282a3c2d84664719f39107de036e8aaeaf880e24284a7c685f8c9c3"
     },
     {
       "file": "reader_directory_directory_theme_night.svg",
@@ -5307,7 +5516,7 @@
       },
       "baseAsset": "reader_directory_directory.svg",
       "baseSha256": "74c8a8378ca5c3b3e80c66520c2f960af1ab019b54c86b7af57a4195cfbb7bc2",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "81528b0146f70e35d0e0b81fb1e02260bbebec748922b7e7ce74272dc1943044"
     },
     {
@@ -5352,7 +5561,7 @@
       },
       "baseAsset": "reader_directory_input_search.svg",
       "baseSha256": "4bbb855d54bd62298aed75ebc024be9355d7166f17855a09727ea6ecc9232ee4",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "1be8b983d432d310c6577f845c587b32b8d672744a209ab7e4699e96b94e790a"
     },
     {
@@ -5396,9 +5605,9 @@
         ]
       },
       "baseAsset": "reader_directory_list_active.svg",
-      "baseSha256": "57ba559c7ac65c77ac7d0428966138444e1c4161b75b1be4b8268e6bd35459e1",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "89e6f4427ac31de39bfe75297572cdbed017c9f3f27cb4d833e3464d1b5a495d"
+      "baseSha256": "4e0a1020d7b7ca1ec7389a80366b691b8acbea1a84455d135cb7e89123954bec",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "f5c23d1933cf3921b4ea3e19dc8220c205d474e06721b53a7ae0713ea57b506e"
     },
     {
       "file": "reader_directory_list_active.svg",
@@ -5416,9 +5625,14 @@
       "transform": {
         "pathMutation": "fill-none-on-stroke-paths",
         "recolor": "#FFFAF4",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_directory_list_active.FFFAF4"
+        ]
       },
-      "sha256": "57ba559c7ac65c77ac7d0428966138444e1c4161b75b1be4b8268e6bd35459e1"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "4e0a1020d7b7ca1ec7389a80366b691b8acbea1a84455d135cb7e89123954bec"
     },
     {
       "file": "reader_directory_marker_bookmark_active_theme_night.svg",
@@ -5441,9 +5655,9 @@
         ]
       },
       "baseAsset": "reader_directory_marker_bookmark_active.svg",
-      "baseSha256": "210e7600dc2c1c2d22114d475f9296acd8cc341b4f4ce2ffe2d393c19584d47c",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "b33f67f47fc405ae1d1597e8484ef56abbe461cdf496ddff80c78ba9ebf50993"
+      "baseSha256": "950a2bcd49e311003ae947d3de818ac826a317271442de90862af91b7ad8e8e6",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "a93a4281080e79fb1051c196e007f61c0d777280c256525177769996e5beb55b"
     },
     {
       "file": "reader_directory_marker_bookmark_active.svg",
@@ -5461,9 +5675,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_directory_marker_bookmark_active.2F6373"
+        ]
       },
-      "sha256": "210e7600dc2c1c2d22114d475f9296acd8cc341b4f4ce2ffe2d393c19584d47c"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "950a2bcd49e311003ae947d3de818ac826a317271442de90862af91b7ad8e8e6"
     },
     {
       "file": "reader_directory_marker_bookmark_theme_night.svg",
@@ -5487,8 +5706,8 @@
       },
       "baseAsset": "reader_directory_marker_bookmark.svg",
       "baseSha256": "3c0956f29ad63bd0cbaa52aa1d5dcaa7d9eb10adb0da85b0e01438828e9a8e60",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "afeeeaca4d3c9b5fd7ef77d59a48f927c84ba04193b820a729501e73b13c5f7e"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "144f3cafff52c9b339541bb1f361322d3c3798a8c201847d1b35ecf139c33c11"
     },
     {
       "file": "reader_directory_marker_bookmark.svg",
@@ -5531,9 +5750,9 @@
         ]
       },
       "baseAsset": "reader_directory_marker_check.svg",
-      "baseSha256": "c7237a3d8929b61317599125d315d33298726145d52fcf79d77c280d9354c195",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "682e5b9abf890ed4a3404e694e8b1d41018ecb7c64dc5ca464fcc86c7ba524ad"
+      "baseSha256": "678a2a35ce2e7871ec87e4e1da1ea5fa95388c2b47d1f28bd55bca7ddae01b61",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "93eade52a8699b03ec7f64f427ac8f91b5e3e345e92979c3f983d5c4a0068ce1"
     },
     {
       "file": "reader_directory_marker_check.svg",
@@ -5551,9 +5770,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_directory_marker_check.2F6373"
+        ]
       },
-      "sha256": "c7237a3d8929b61317599125d315d33298726145d52fcf79d77c280d9354c195"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "678a2a35ce2e7871ec87e4e1da1ea5fa95388c2b47d1f28bd55bca7ddae01b61"
     },
     {
       "file": "reader_directory_marker_download_theme_night.svg",
@@ -5577,8 +5801,8 @@
       },
       "baseAsset": "reader_directory_marker_download.svg",
       "baseSha256": "1a785a5242e34a3a986a9d5705ee3d2ab448385918595feddc17b8fb2775c319",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "73a039603e7b253b9adf3075d1ba1b0c3bd88f87c3e6b914dd1de1618481e530"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "90bbaa873bb7f6be4474f8e0e03dae588040781f9266169694e0b54efeadeba1"
     },
     {
       "file": "reader_directory_marker_download.svg",
@@ -5622,7 +5846,7 @@
       },
       "baseAsset": "reader_directory_more.svg",
       "baseSha256": "b0fcba50fa075c94e86b5ce63253865e8ad14890048e6e4f92fe08f206f8bc3f",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "141a6d501b38df93d361ffbb2cf4abb1f3ce99df64e986fb60da90671348deb8"
     },
     {
@@ -5666,9 +5890,9 @@
         ]
       },
       "baseAsset": "reader_directory_search.svg",
-      "baseSha256": "0172b160bb2bf1b3a3fc409b5934442bd3463030936c1517a29729454b76867c",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "a0dfc7a2467d967fb4fd0a9f1994d2fe76d1fcaec426fc22a67acdeb9296bc95"
+      "baseSha256": "1f350323cc281745e1a560b8706d405a77a993c5b5364e1eeeba6827d05b1f6a",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "1844ac20bd9e1d91ad8f021c7d5caf7df211efe753bd8e40db44839c900ba3f3"
     },
     {
       "file": "reader_directory_search.svg",
@@ -5686,9 +5910,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_directory_search.2F6373"
+        ]
       },
-      "sha256": "0172b160bb2bf1b3a3fc409b5934442bd3463030936c1517a29729454b76867c"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "1f350323cc281745e1a560b8706d405a77a993c5b5364e1eeeba6827d05b1f6a"
     },
     {
       "file": "reader_directory_sort_ascending_theme_night.svg",
@@ -5711,9 +5940,9 @@
         ]
       },
       "baseAsset": "reader_directory_sort_ascending.svg",
-      "baseSha256": "b31726a95ebe96ad31b27c620e893a53338e91058d5cceed6a6900b273701df6",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "e201adf484198c801836314d9833cce682b4501c08501bd47b9c1ffd9df4ec89"
+      "baseSha256": "6b4ac0303151aa0092906015792d3d54595189eda34dbb563aadf0f2192d5539",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "da140c13a923857125050886dd304533236830c25252e1579e7c4e2a0033cae2"
     },
     {
       "file": "reader_directory_sort_ascending.svg",
@@ -5731,9 +5960,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_directory_sort_ascending.2F6373"
+        ]
       },
-      "sha256": "b31726a95ebe96ad31b27c620e893a53338e91058d5cceed6a6900b273701df6"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "6b4ac0303151aa0092906015792d3d54595189eda34dbb563aadf0f2192d5539"
     },
     {
       "file": "reader_directory_sort_descending_theme_night.svg",
@@ -5756,9 +5990,9 @@
         ]
       },
       "baseAsset": "reader_directory_sort_descending.svg",
-      "baseSha256": "79408e4d1e3886596400e289ed0debcf989f6d4fa6850fe3762abd9937303f0c",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "a08173aa08a3bbf72af14a2934f1efda3413800ea11cf158fec29d4c430623a5"
+      "baseSha256": "f6cf144f3f9e03ac26d58470764bd128865b7f1a4054a409a248d634f56cba57",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "3bcacfe2480551674bfb4e4a36e065e0871e740b4a141923306b11fae6cec4b2"
     },
     {
       "file": "reader_directory_sort_descending.svg",
@@ -5776,9 +6010,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_directory_sort_descending.2F6373"
+        ]
       },
-      "sha256": "79408e4d1e3886596400e289ed0debcf989f6d4fa6850fe3762abd9937303f0c"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "f6cf144f3f9e03ac26d58470764bd128865b7f1a4054a409a248d634f56cba57"
     },
     {
       "file": "reader_directory_switch_theme_night.svg",
@@ -5802,7 +6041,7 @@
       },
       "baseAsset": "reader_directory_switch.svg",
       "baseSha256": "439a6fb03cc445dab0e589bc75ba4a43718a04ca43a2abdde086003e060e7d12",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "c8ab125e72a7f6da10e3d593f82f0e3cd0ada2095ee0596ce9cea49bdfcbb36d"
     },
     {
@@ -5846,9 +6085,9 @@
         ]
       },
       "baseAsset": "reader_directory_top.svg",
-      "baseSha256": "0cd06bab20d9a8460a854ad7118f03adc54d0dec7e65ade999ba466c93e9ff63",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "57f8bd4de690b42772ef81b69357bf3dd144057c8e2177f9859c384cdb48c0c1"
+      "baseSha256": "ab0389e2523fc21b6c793407592b91822367fd65da7b3c7baaf5117e46977b40",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "9ef9f687a1ab80524efbf30152ff1df29d7c52e76946ab169955e5f0e61479b9"
     },
     {
       "file": "reader_directory_top.svg",
@@ -5866,9 +6105,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_directory_top.2F6373"
+        ]
       },
-      "sha256": "0cd06bab20d9a8460a854ad7118f03adc54d0dec7e65ade999ba466c93e9ff63"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "ab0389e2523fc21b6c793407592b91822367fd65da7b3c7baaf5117e46977b40"
     },
     {
       "file": "reader_image_unavailable_theme_night.svg",
@@ -5931,13 +6175,13 @@
         "pathMutation": "none",
         "palette": "night",
         "colorRoles": [
-          "app.icon.reader_directory_marker_bookmark_active.2F6373"
+          "app.icon.reader_page_bookmark_filled.2F6373"
         ]
       },
       "baseAsset": "reader_page_bookmark_filled.svg",
-      "baseSha256": "018f1e70604c85ae94d568033cf7be0540631de6f80ec3fc296a1623231c4bc0",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "bef10db9c8cce6b8a99571014198a5b47f07d33f1a955ff628ead606e580b3da"
+      "baseSha256": "fc8b21b9d0a48456bd9190039b07611090a085b968c9eab4ff14159fef05620e",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "70b9269445ff2f53ff20fbbba37318fcf0bf173216449cca71fda6b5e0481cdd"
     },
     {
       "file": "reader_page_bookmark_filled.svg",
@@ -5955,9 +6199,14 @@
       "transform": {
         "pathMutation": "fill-interior-for-explicit-state",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_page_bookmark_filled.2F6373"
+        ]
       },
-      "sha256": "018f1e70604c85ae94d568033cf7be0540631de6f80ec3fc296a1623231c4bc0"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "fc8b21b9d0a48456bd9190039b07611090a085b968c9eab4ff14159fef05620e"
     },
     {
       "file": "reader_quick_back_theme_night.svg",
@@ -5980,9 +6229,9 @@
         ]
       },
       "baseAsset": "reader_quick_back.svg",
-      "baseSha256": "53843b3ab4984a780e4443891623c903815cd77f10ea7d04315fdd0fa260c048",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "485265ce239da17135cf296a7d27b1c91c99b04d03f0d5e2c56e79898ca4a6a9"
+      "baseSha256": "6788724c712ec32ed1d1c9d7beaca3bc40dbec8a7750ae7b6419093d001f178a",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "7146155f90fed482b26b71161e132f628f4aa407e89e8351d1b734e7acef45b9"
     },
     {
       "file": "reader_quick_back.svg",
@@ -6000,9 +6249,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_quick_back.2F6373"
+        ]
       },
-      "sha256": "53843b3ab4984a780e4443891623c903815cd77f10ea7d04315fdd0fa260c048"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "6788724c712ec32ed1d1c9d7beaca3bc40dbec8a7750ae7b6419093d001f178a"
     },
     {
       "file": "reader_replace_close_theme_night.svg",
@@ -6025,9 +6279,9 @@
         ]
       },
       "baseAsset": "reader_replace_close.svg",
-      "baseSha256": "b13d6095dc01e6bb432bf2a9edc3ffb3130687ead81494daba405c5bc1b69a2e",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "fda408b7c1ae674d7944d1e2bc499fc4b935ccd5e81a9b944ee8dec7af43f721"
+      "baseSha256": "bf7b2f3ed5210f80a6df742658e0f74771affff26920bad23799febcd703210b",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "f68ed2b09d6b791518000742708a38f431d1f91e7dbeaa5dc0db9837700e4f91"
     },
     {
       "file": "reader_replace_close.svg",
@@ -6045,9 +6299,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_replace_close.2F6373"
+        ]
       },
-      "sha256": "b13d6095dc01e6bb432bf2a9edc3ffb3130687ead81494daba405c5bc1b69a2e"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "bf7b2f3ed5210f80a6df742658e0f74771affff26920bad23799febcd703210b"
     },
     {
       "file": "reader_replace_manage_theme_night.svg",
@@ -6070,9 +6329,9 @@
         ]
       },
       "baseAsset": "reader_replace_manage.svg",
-      "baseSha256": "306497f835b92461bba6d4fdea759a79948241517095ed893dc0efffd721d559",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "61e4158f2ee214de2a11ec286c455c9c26054a75210063cf9101d4158dc477eb"
+      "baseSha256": "db86dc583e7b8b8c1b6d181d90c83b9a2f7f9ccb171996339ce56a39e90b0256",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "e980e29ba6daff4ad367df61bb8e660cf34ea0dcb3c4d60b5c367faab9944be8"
     },
     {
       "file": "reader_replace_manage.svg",
@@ -6090,9 +6349,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#FFFAF4",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_replace_manage.FFFAF4"
+        ]
       },
-      "sha256": "306497f835b92461bba6d4fdea759a79948241517095ed893dc0efffd721d559"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "db86dc583e7b8b8c1b6d181d90c83b9a2f7f9ccb171996339ce56a39e90b0256"
     },
     {
       "file": "reader_replace_preview_theme_night.svg",
@@ -6116,7 +6380,7 @@
       },
       "baseAsset": "reader_replace_preview.svg",
       "baseSha256": "dfe2541a911f781804d6378cbf4b4c1fb3cd273ea81b8a810d775f12f6aee796",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "8df0e126018ac8114d35130d8b594b3875d7a679c4c713ba185bd53bf00a1c67"
     },
     {
@@ -6157,7 +6421,7 @@
       },
       "baseAsset": "reader_session_pause.svg",
       "baseSha256": "ac720cd8930c97e9f91d0abb7d9dfaeffefeaf3681a502f1545564ad44d4629d",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "1ccd54db17f8ed3e3d4e4c192ffe0e4a0bdaaccad921712cf6e6b418166b82fc"
     },
     {
@@ -6192,7 +6456,7 @@
       },
       "baseAsset": "reader_session_play.svg",
       "baseSha256": "431d2f7922802990422cd66c5e332295d8969a2e995f3d2e7f8c13b0a0c6bd5c",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "370982742d7b3d21a2e968bf1263a24834cf9bb8b7e35449613a9100ca052f77"
     },
     {
@@ -6231,7 +6495,7 @@
       },
       "baseAsset": "reader_settings_header.svg",
       "baseSha256": "65f2b6da46e31a86afac6b84a8add6ff90acbf109d67399e17226b8b877e95cd",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "c879182f9f04802195f8bd846069453a26d64c1b736f8088ccc36c0678158196"
     },
     {
@@ -6275,9 +6539,9 @@
         ]
       },
       "baseAsset": "reader_settings_nav_active.svg",
-      "baseSha256": "a31830d0bb838556a007c0d6a54f7671f36c8de732a17d79c1d68a670bb1bd7d",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "32d52b79d8fc1958c8865da3d2f3fa5619e2b92b821fa1bcd0e83a6c95d9295a"
+      "baseSha256": "42b9a5fca808255095f68b75423b8da1aaa29de448ea5ffadb01c376ebf98227",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "70db3dde9132232ec933d56247ff516fe5cbbc7d781d6fbc6993ff8a0d3dd471"
     },
     {
       "file": "reader_settings_nav_active.svg",
@@ -6295,9 +6559,14 @@
       "transform": {
         "pathMutation": "fill-none-on-stroke-paths",
         "recolor": "#FFFAF4",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_settings_nav_active.FFFAF4"
+        ]
       },
-      "sha256": "a31830d0bb838556a007c0d6a54f7671f36c8de732a17d79c1d68a670bb1bd7d"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "42b9a5fca808255095f68b75423b8da1aaa29de448ea5ffadb01c376ebf98227"
     },
     {
       "file": "reader_tts_clock_theme_night.svg",
@@ -6320,9 +6589,9 @@
         ]
       },
       "baseAsset": "reader_tts_clock.svg",
-      "baseSha256": "f8d187fdb7dcfcdee21acc8ae3f219bfb713fa908ab8b869f6ffe13bdc490727",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "84ec1ff9ac67f0a031e5ea6488630c8fcdff451639ef3928b3ecc26df4f27e7e"
+      "baseSha256": "d423c9a8667d0ae31b03e6d74533e279e59e82b8eec9f6ea2f28cb4fab947793",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "6dd29c00e166141c080516b2b334402e914214a3419ffc62b5e90adce49f4706"
     },
     {
       "file": "reader_tts_clock.svg",
@@ -6340,9 +6609,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_tts_clock.2F6373"
+        ]
       },
-      "sha256": "f8d187fdb7dcfcdee21acc8ae3f219bfb713fa908ab8b869f6ffe13bdc490727"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "d423c9a8667d0ae31b03e6d74533e279e59e82b8eec9f6ea2f28cb4fab947793"
     },
     {
       "file": "reader_tts_configure_chevron_theme_night.svg",
@@ -6363,7 +6637,7 @@
       },
       "baseAsset": "reader_appearance_make_chevron.svg",
       "baseSha256": "a3573901b83d28c3d24bc5dc977b871af9a08f8f3a99e02a07bab4ed05039a17",
-      "themeRegistrySha256": "6b8ac73d5e4ae2d1d6522b8bb4cbaf6d898c7637929b203573139358c0392ba4",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "07afe7f2fccac884815ab254c6f50a3184564fd247209e82778be350e02c9e77"
     },
     {
@@ -6385,7 +6659,7 @@
       },
       "baseAsset": "reader_appearance_make_chevron.svg",
       "baseSha256": "a3573901b83d28c3d24bc5dc977b871af9a08f8f3a99e02a07bab4ed05039a17",
-      "themeRegistrySha256": "6b8ac73d5e4ae2d1d6522b8bb4cbaf6d898c7637929b203573139358c0392ba4",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "c959407cc64c90765632e466a3c88fe4062cfa3d35a5a9eebc4a80180807bf16"
     },
     {
@@ -6410,7 +6684,7 @@
       },
       "baseAsset": "reader_tts_header.svg",
       "baseSha256": "acffaa6383824652d309c5d01c1a24f593fc728ca635aabe0ffb306229e7e859",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "09cd270847753c1503b279f04b5506fe6e5c01022c945683bc6847d4f0794ecf"
     },
     {
@@ -6454,9 +6728,9 @@
         ]
       },
       "baseAsset": "reader_tts_headphones.svg",
-      "baseSha256": "19106eda2d7b4d15e2bac430c1d3352b1ee13dedcec4f47f2d82fe4387301adc",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "00a72d27ed7a5ff10ed7d4f112dc22fec29d34874abd013c1d232ae9b39ecf6d"
+      "baseSha256": "50b24531b8ca5d95c12d8479229d5da514619315ec53a4c9f40c1d7c5fad60c7",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "31c7b7505aaaaf5d28c6f5bb9678ef62d309c5381d23d97899da64dd7656921d"
     },
     {
       "file": "reader_tts_headphones.svg",
@@ -6474,9 +6748,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_tts_headphones.2F6373"
+        ]
       },
-      "sha256": "19106eda2d7b4d15e2bac430c1d3352b1ee13dedcec4f47f2d82fe4387301adc"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "50b24531b8ca5d95c12d8479229d5da514619315ec53a4c9f40c1d7c5fad60c7"
     },
     {
       "file": "reader_tts_make_close_theme_night.svg",
@@ -6497,7 +6776,7 @@
       },
       "baseAsset": "reader_tts_make_close.svg",
       "baseSha256": "78c28ebe741de77fb83ffa8d43b6543b074fb965989987c962e10d462d3b7eee",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "ac7036aa94714d82ae92cb01b11a919c0e589136ad886c9f5c57cee65f9c6f31"
     },
     {
@@ -6534,9 +6813,9 @@
         ]
       },
       "baseAsset": "reader_tts_make_engine_check.svg",
-      "baseSha256": "c031ef55f6ff71e71c60d2bfa370013e9070d23b8c6e8aea3d8ad64d2747176a",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "6b6a81e0c20463664d993449524382f621e9c0d521e1680e933f623265ddefb9"
+      "baseSha256": "c7e6c45db4e33252a327d843a7a0a0d75c913d80ec052a3b389cc372863ff961",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "abc9ef0896490da8856defe66b03b3c655f4ad9d05ec2c556d97033885b498c9"
     },
     {
       "file": "reader_tts_make_engine_check.svg",
@@ -6549,9 +6828,15 @@
       "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_engine_check.svg",
       "sourceSha256": "c031ef55f6ff71e71c60d2bfa370013e9070d23b8c6e8aea3d8ad64d2747176a",
       "transform": {
-        "pathMutation": "none"
+        "pathMutation": "none",
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_tts_make_engine_check.2F6373",
+          "app.icon.reader_tts_make_engine_check.FFFCF8"
+        ]
       },
-      "sha256": "c031ef55f6ff71e71c60d2bfa370013e9070d23b8c6e8aea3d8ad64d2747176a"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "c7e6c45db4e33252a327d843a7a0a0d75c913d80ec052a3b389cc372863ff961"
     },
     {
       "file": "reader_tts_make_minus_theme_night.svg",
@@ -6571,9 +6856,9 @@
         ]
       },
       "baseAsset": "reader_tts_make_minus.svg",
-      "baseSha256": "9a60acf2f1579b8f5b97e51800419df5567ce74d765a8df9cda787a9a83fd948",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "ce8969ba49f725439bdb1ac2e740259d74f0a6847a4ce992760b6e76df90c68e"
+      "baseSha256": "e90b829e5261ece83b45983a3e45665a9b2666269158cc70047ab90be106d851",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "f7deb2a22cd120a6bb496119b723b3913420c3f47ff6ae5ddf5bac023eb2c2b6"
     },
     {
       "file": "reader_tts_make_minus.svg",
@@ -6586,9 +6871,14 @@
       "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_minus.svg",
       "sourceSha256": "9a60acf2f1579b8f5b97e51800419df5567ce74d765a8df9cda787a9a83fd948",
       "transform": {
-        "pathMutation": "none"
+        "pathMutation": "none",
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_tts_make_minus.2F6373"
+        ]
       },
-      "sha256": "9a60acf2f1579b8f5b97e51800419df5567ce74d765a8df9cda787a9a83fd948"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "e90b829e5261ece83b45983a3e45665a9b2666269158cc70047ab90be106d851"
     },
     {
       "file": "reader_tts_make_next_quick_theme_night.svg",
@@ -6618,7 +6908,7 @@
       },
       "baseAsset": "reader_tts_make_next_quick.svg",
       "baseSha256": "1a9f1760c8ec971e953e22642bb53fcc661745205893007247bc4d28d71fd591",
-      "themeRegistrySha256": "b4f55317b332524c5feb8bf712be59af55d4e600ce499c39454996ed6bc79c46",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "c02bc675d75418b7b6d3d05078f0cfe6de3fc175d2a1e75a95b44147230460a2"
     },
     {
@@ -6678,7 +6968,7 @@
       },
       "baseAsset": "reader_tts_make_next.svg",
       "baseSha256": "25df7a76627a7752dc5fd878d62e1ad0ffaa680015b529070a9f67bba7df7923",
-      "themeRegistrySha256": "b4f55317b332524c5feb8bf712be59af55d4e600ce499c39454996ed6bc79c46",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "a0936b6f844a82e465ba8decfb81fe1f506f90cad703bc71c93ddd7605be05a0"
     },
     {
@@ -6728,9 +7018,9 @@
         ]
       },
       "baseAsset": "reader_tts_make_pause.svg",
-      "baseSha256": "5ad4482384d7c156f856808cf3cde3749030c7078e49bdeade504556573b5fee",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "fce7011495e9417a35b619809ece2b14f7c36aeef418d7937d4f0b9333c7263a"
+      "baseSha256": "25d9e956d331f762b3f2aa897468aad838d352489f05e3df6cdbb4ad5a3d5e89",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "77ff927909ceea48369f1bddb25cabf9e4e7f7e8b532bbd06b91b3ae5e0c9900"
     },
     {
       "file": "reader_tts_make_pause.svg",
@@ -6743,9 +7033,14 @@
       "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_pause.svg",
       "sourceSha256": "5ad4482384d7c156f856808cf3cde3749030c7078e49bdeade504556573b5fee",
       "transform": {
-        "pathMutation": "none"
+        "pathMutation": "none",
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_tts_make_pause.FFFAF4"
+        ]
       },
-      "sha256": "5ad4482384d7c156f856808cf3cde3749030c7078e49bdeade504556573b5fee"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "25d9e956d331f762b3f2aa897468aad838d352489f05e3df6cdbb4ad5a3d5e89"
     },
     {
       "file": "reader_tts_make_play_theme_night.svg",
@@ -6765,9 +7060,9 @@
         ]
       },
       "baseAsset": "reader_tts_make_play.svg",
-      "baseSha256": "a34497ce771ab82ed052d19f19efd0e3a2a7685e1653e831acd46f74e81b3442",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "7798527783d53c049759046799dcef95ee6e0693a8580389b6c024d74fd3bc1d"
+      "baseSha256": "af5013dda3daf088684b0c62080757ef9ce84ef0c7019ed37c8836f10f229727",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "f43ddfc3fc2e33a6b7533120fd990575bb397577850210afc0726b0c1005e38e"
     },
     {
       "file": "reader_tts_make_play.svg",
@@ -6780,9 +7075,14 @@
       "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_play.svg",
       "sourceSha256": "a34497ce771ab82ed052d19f19efd0e3a2a7685e1653e831acd46f74e81b3442",
       "transform": {
-        "pathMutation": "none"
+        "pathMutation": "none",
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_tts_make_play.FFFAF4"
+        ]
       },
-      "sha256": "a34497ce771ab82ed052d19f19efd0e3a2a7685e1653e831acd46f74e81b3442"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "af5013dda3daf088684b0c62080757ef9ce84ef0c7019ed37c8836f10f229727"
     },
     {
       "file": "reader_tts_make_plus_theme_night.svg",
@@ -6802,9 +7102,9 @@
         ]
       },
       "baseAsset": "reader_tts_make_plus.svg",
-      "baseSha256": "3e38b44b8cfdd6b5e94e486455d6460ae0bd6630e03222b4d50c23e8ca72ce6e",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "4b474a9eb65fcc0dabd20c0664630e88bf5da31ac64eecf0e0f6d9b7d72d70d2"
+      "baseSha256": "85f5fc6162e635785eb59be9c4cd013a9bcbffa5901dc3620303667662651cc2",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "ede2c069f4d5a6bc57c007af45796a58dbbe481af25b9363ea954bad8eac12b4"
     },
     {
       "file": "reader_tts_make_plus.svg",
@@ -6817,9 +7117,14 @@
       "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_plus.svg",
       "sourceSha256": "3e38b44b8cfdd6b5e94e486455d6460ae0bd6630e03222b4d50c23e8ca72ce6e",
       "transform": {
-        "pathMutation": "none"
+        "pathMutation": "none",
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_tts_make_plus.2F6373"
+        ]
       },
-      "sha256": "3e38b44b8cfdd6b5e94e486455d6460ae0bd6630e03222b4d50c23e8ca72ce6e"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "85f5fc6162e635785eb59be9c4cd013a9bcbffa5901dc3620303667662651cc2"
     },
     {
       "file": "reader_tts_make_previous_quick_theme_night.svg",
@@ -6849,7 +7154,7 @@
       },
       "baseAsset": "reader_tts_make_previous_quick.svg",
       "baseSha256": "24ff3a049c017d7e7dd44284bfe04cd1aa0bc763bd605dfd0787094e7e63c9be",
-      "themeRegistrySha256": "b4f55317b332524c5feb8bf712be59af55d4e600ce499c39454996ed6bc79c46",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "12f978cf666fbdaf89bbd67409d916d7e4d1cccd9a0d87406f841fc3b1572e6d"
     },
     {
@@ -6909,7 +7214,7 @@
       },
       "baseAsset": "reader_tts_make_previous.svg",
       "baseSha256": "3ce5b6cab307c278ba43383354c16b1b362573d8c23d871eb64283c28ae23700",
-      "themeRegistrySha256": "b4f55317b332524c5feb8bf712be59af55d4e600ce499c39454996ed6bc79c46",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "25090c43c535d67dbf79bd1bc7c7df2337eddddf41b85086425b9e38517c8931"
     },
     {
@@ -6959,9 +7264,9 @@
         ]
       },
       "baseAsset": "reader_tts_make_stop.svg",
-      "baseSha256": "62c94ccc798bd380600aa628656a7671f3ff88e1b80f3303a3e73128e858bbd7",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "088f932a54f6cf50d8e060d83201f7556e6d6059395eef03e11bafae6d01325d"
+      "baseSha256": "9315b79c1f712a12aa7fa1b48f4e34207d1293677acca33c5d4b5034394d2793",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "fda80b5226ef2369f51490cba73831370edb703972ba295b93cbda520d9d30d0"
     },
     {
       "file": "reader_tts_make_stop.svg",
@@ -6974,9 +7279,14 @@
       "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_make_stop.svg",
       "sourceSha256": "62c94ccc798bd380600aa628656a7671f3ff88e1b80f3303a3e73128e858bbd7",
       "transform": {
-        "pathMutation": "none"
+        "pathMutation": "none",
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_tts_make_stop.A8543A"
+        ]
       },
-      "sha256": "62c94ccc798bd380600aa628656a7671f3ff88e1b80f3303a3e73128e858bbd7"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "9315b79c1f712a12aa7fa1b48f4e34207d1293677acca33c5d4b5034394d2793"
     },
     {
       "file": "reader_tts_nav_active_theme_night.svg",
@@ -6999,9 +7309,9 @@
         ]
       },
       "baseAsset": "reader_tts_nav_active.svg",
-      "baseSha256": "51cc708b9ca5c242c875d882c91b1f37fe19eef0a251576a101c8c1da6c9314a",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "6bc002169ca34b8b78484cec3d423739960dffd545fac4c7f0064de1d7c54daf"
+      "baseSha256": "a8f75a2b5cc0743538b5024162a5cb7877e3f73e9c8dee8a8fd41a59056c2ff3",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "94782bdc530a6431f5e07cfce00fbdc2d44d6282bfae56ef6eabe45f9b0a2430"
     },
     {
       "file": "reader_tts_nav_active.svg",
@@ -7019,9 +7329,14 @@
       "transform": {
         "pathMutation": "fill-none-on-stroke-paths",
         "recolor": "#FFFAF4",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_tts_nav_active.FFFAF4"
+        ]
       },
-      "sha256": "51cc708b9ca5c242c875d882c91b1f37fe19eef0a251576a101c8c1da6c9314a"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "a8f75a2b5cc0743538b5024162a5cb7877e3f73e9c8dee8a8fd41a59056c2ff3"
     },
     {
       "file": "reader_tts_next_theme_night.svg",
@@ -7051,7 +7366,7 @@
       },
       "baseAsset": "reader_tts_next.svg",
       "baseSha256": "f1efe2122f52d0fc52a52e05488d20ff00f6f574c5c66c2084320cb858757040",
-      "themeRegistrySha256": "b4f55317b332524c5feb8bf712be59af55d4e600ce499c39454996ed6bc79c46",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "7ac1485c6a102e05dc5f5ec3a5d1754f6f067cfe3adb6faee85401f19ae98a46"
     },
     {
@@ -7101,7 +7416,7 @@
       },
       "baseAsset": "reader_tts_online_engine.svg",
       "baseSha256": "ad82520fc2d882921ceac5761c5f01eea90c2a389cc6c39d8e839a66629a9e89",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "e31c00ae7bfd492df95fa3c1637b016a5d614dd14435f89711f4065411b06419"
     },
     {
@@ -7146,7 +7461,7 @@
       },
       "baseAsset": "reader_tts_previous.svg",
       "baseSha256": "12c3b38fd52003c41838884de7c7b50014514367e6cb825d4d33c9d4b95edf48",
-      "themeRegistrySha256": "b4f55317b332524c5feb8bf712be59af55d4e600ce499c39454996ed6bc79c46",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "c0e877e4541bde6e62322aaeae0a610469db1d1ac1f75aa0883b2d42848b7f6b"
     },
     {
@@ -7199,9 +7514,9 @@
         ]
       },
       "baseAsset": "reader_tts_rate.svg",
-      "baseSha256": "830073a1828d06451edb899a80c3bb5fba716f77d06bbc4d51126b67415b7762",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "055eaed1edf970678a5d2ac3ecc23070b5c654feed845c8a66ada8a2901ac1e2"
+      "baseSha256": "0b46aace18f31072b00590703220ba733cfc12cc69a36a5ffd89996f30ae62c8",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "a9234a7af6ef6618148127b1f2b8b0c7d22ceda35aa7def1c2436d4935ac7fd6"
     },
     {
       "file": "reader_tts_rate.svg",
@@ -7219,9 +7534,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_tts_rate.2F6373"
+        ]
       },
-      "sha256": "830073a1828d06451edb899a80c3bb5fba716f77d06bbc4d51126b67415b7762"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "0b46aace18f31072b00590703220ba733cfc12cc69a36a5ffd89996f30ae62c8"
     },
     {
       "file": "reader_tts_speed_thumb_theme_night.svg",
@@ -7241,9 +7561,9 @@
         ]
       },
       "baseAsset": "reader_tts_speed_thumb.svg",
-      "baseSha256": "509543c7b5b5313732d9b77e82a5108b0a843dd342e7b56a7c641d42fc725d21",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "d4ff798008b22a096f3654e34d854116765e549e89cd4d6d86800e61a9ac122e"
+      "baseSha256": "ecc9cfcdffe0e974c3483e60f0481c16676634ba7634cadc867cf3aa4d00d5e9",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "f3f2127ab0226332b4356a8a1aa0c13fdc2c065509d772bc7339825ba4ccab6b"
     },
     {
       "file": "reader_tts_speed_thumb.svg",
@@ -7255,9 +7575,15 @@
       "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_speed_thumb.svg",
       "sourceSha256": "509543c7b5b5313732d9b77e82a5108b0a843dd342e7b56a7c641d42fc725d21",
       "transform": {
-        "pathMutation": "none"
+        "pathMutation": "none",
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_tts_speed_thumb.FFFAF4",
+          "app.icon.reader_tts_speed_thumb.2F6373"
+        ]
       },
-      "sha256": "509543c7b5b5313732d9b77e82a5108b0a843dd342e7b56a7c641d42fc725d21"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "ecc9cfcdffe0e974c3483e60f0481c16676634ba7634cadc867cf3aa4d00d5e9"
     },
     {
       "file": "reader_tts_stop_theme_night.svg",
@@ -7280,9 +7606,9 @@
         ]
       },
       "baseAsset": "reader_tts_stop.svg",
-      "baseSha256": "f6d89164aee10abc248d2bcb033a80e5c86dd7980990400f8bbb0c4b06600599",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "f26e79f0137940096317e02f0183fc8c202e303f7cef5d1700a396d3f7b7fbba"
+      "baseSha256": "52894ee8eadec55bd80eda6bfa5098ae7602405a4bf07cde9097a8eb652d4790",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "7ce3db287eadbaf55f7f5fffe7f218f5d1e43ddf53cdaf8500304ffd58c381a2"
     },
     {
       "file": "reader_tts_stop.svg",
@@ -7300,9 +7626,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#FFFAF4",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_tts_stop.FFFAF4"
+        ]
       },
-      "sha256": "f6d89164aee10abc248d2bcb033a80e5c86dd7980990400f8bbb0c4b06600599"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "52894ee8eadec55bd80eda6bfa5098ae7602405a4bf07cde9097a8eb652d4790"
     },
     {
       "file": "reader_tts_system_engine_theme_night.svg",
@@ -7321,9 +7652,9 @@
         ]
       },
       "baseAsset": "reader_tts_system_engine.svg",
-      "baseSha256": "884811ea9bce12a6e1accc3d1c8a12b0118d22f58eb99d19d2ba407716a4ceaf",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "57858a82888cd2c223cab1b80cec39a927873d921539426abc95845d8675879f"
+      "baseSha256": "3083c6aa54edcb3903817643d456d02e5a04384d0a857610c1387c8c0fa0e1eb",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "52f5f02129e385cac10d9a6e52dfb568c677a01bff25a2db8d5fe7ba83dd0763"
     },
     {
       "file": "reader_tts_system_engine.svg",
@@ -7335,9 +7666,14 @@
       "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/reader_tts_system_engine.svg",
       "sourceSha256": "884811ea9bce12a6e1accc3d1c8a12b0118d22f58eb99d19d2ba407716a4ceaf",
       "transform": {
-        "pathMutation": "none"
+        "pathMutation": "none",
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_tts_system_engine.1F3528"
+        ]
       },
-      "sha256": "884811ea9bce12a6e1accc3d1c8a12b0118d22f58eb99d19d2ba407716a4ceaf"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "3083c6aa54edcb3903817643d456d02e5a04384d0a857610c1387c8c0fa0e1eb"
     },
     {
       "file": "reader_tts_timer_cycle_theme_night.svg",
@@ -7360,9 +7696,9 @@
         ]
       },
       "baseAsset": "reader_tts_timer_cycle.svg",
-      "baseSha256": "c032e11a382daaa65f099343fca120294be48ae0d71d811b6f33af4c4ea1dc15",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "c0dd3a77a1712841cac4d81ae32ec1dafc4e636e284de60fbe40fd52e0fe73ac"
+      "baseSha256": "3cb3e8ca62f8ddfb9522d3541f82656e6165deedff692ac2acd9ad32cda70174",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "66a95487c68db30b784a70f4cef09100083ddc0e0c2c2963d19984b2247ed047"
     },
     {
       "file": "reader_tts_timer_cycle.svg",
@@ -7380,9 +7716,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2F6373",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.reader_tts_timer_cycle.2F6373"
+        ]
       },
-      "sha256": "c032e11a382daaa65f099343fca120294be48ae0d71d811b6f33af4c4ea1dc15"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "3cb3e8ca62f8ddfb9522d3541f82656e6165deedff692ac2acd9ad32cda70174"
     },
     {
       "file": "reading_paper_phone_highlight.svg",
@@ -7538,7 +7879,7 @@
       },
       "baseAsset": "rss_add.svg",
       "baseSha256": "415f4841db4e3c1265bd1b979598a27b256d2bc7c6dce15a79e22cebbd09d5b8",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "ace504c729dd57e5125eabc80d3e2539a69a18ef91aa78f46c7f18565ff514a4"
     },
     {
@@ -7583,7 +7924,7 @@
       },
       "baseAsset": "rss_bookmark_active.svg",
       "baseSha256": "ed23e3e0cbde51ce1ae87a3191d440bc36b9236b77ca3501ccceb1480d5138ec",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "aed994a7fb2d0df188cb7ba2f7224382a0d18be42ca157be76327218d5118d8d"
     },
     {
@@ -7628,7 +7969,7 @@
       },
       "baseAsset": "rss_bookmark.svg",
       "baseSha256": "e789c3c91c79dda52a164b77c03ce5b079913a10166a62191dd60eebcd18ef1b",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "bdeede317261fb55eebd45d304ce7cc106ac50f06198468facc852edcbd1496c"
     },
     {
@@ -7673,7 +8014,7 @@
       },
       "baseAsset": "rss_edit.svg",
       "baseSha256": "6f4c1951fffc601a1d23872cc6e114d19e36822e5f5bbc4b67a9fbacf2501209",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "ad89e7daa1be120f1b7bac8f71e45223fdc1830db8a3c24d2998b1559e2981d4"
     },
     {
@@ -7718,7 +8059,7 @@
       },
       "baseAsset": "rss_empty.svg",
       "baseSha256": "0fa09ac5b9ce8c01eb40a3a98a8a641ea45cdd4e063680a24e6d0fb975b41fb0",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "38ef30d4480abcc21f5bb3ff90294927bb5326c7e616aa2c809a2720c0a3b552"
     },
     {
@@ -7763,7 +8104,7 @@
       },
       "baseAsset": "rss_error.svg",
       "baseSha256": "6ea43740a591ed528b6ab52f6601c5e8714753a15607ad1cddb315074f419ea3",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "4521e15996bfe3a82efbc870ce48aed2237d74baa0f3117daa1a074971d4b894"
     },
     {
@@ -7808,7 +8149,7 @@
       },
       "baseAsset": "rss_external.svg",
       "baseSha256": "656ae890197d151ce4deeb400549575ab61f19370fdfe98b4d79b287684b9d44",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "be557259cbbe78a1f374aca4f979c62f91d7401104c7bbb3b23f60aed1c4ea46"
     },
     {
@@ -7853,7 +8194,7 @@
       },
       "baseAsset": "rss_filter_chevron.svg",
       "baseSha256": "b9ea148abf75f6102e0cbd14850cf81650faeadbd976cb16a2e6ac67e987e427",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "69fc72aacef4afb66df9a55a6c363c7cf36271c39128b8e67cebb16e90337a5c"
     },
     {
@@ -7898,7 +8239,7 @@
       },
       "baseAsset": "rss_filter.svg",
       "baseSha256": "942de71963532a397e1165ac66249850bb78a5a0d751febc24cf888b1bd18774",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "3e36f3b59848839eae9428d0e5d944e21d05855b7fff2d31f17864be3f4a374b"
     },
     {
@@ -7943,7 +8284,7 @@
       },
       "baseAsset": "rss_item_chevron.svg",
       "baseSha256": "7f9958ce24cc1fdb99cf34aa6cf553d4d85fd24837a68fda93a4de9afe8045e6",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "69fc72aacef4afb66df9a55a6c363c7cf36271c39128b8e67cebb16e90337a5c"
     },
     {
@@ -7988,7 +8329,7 @@
       },
       "baseAsset": "rss_link.svg",
       "baseSha256": "f3c91008c654f63f1ae3849e129fae08ca095e48f5eaceed4e2b43f9ac7cde65",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "4378c92eb7caf14f72021831e85396fab44cc6651a16d0335d88aa8d8dba1d90"
     },
     {
@@ -8053,7 +8394,7 @@
       },
       "baseAsset": "rss_manage_edit.svg",
       "baseSha256": "d876fd993ea766ade4d49a2fccf020ccdacf290d911ea2a12e42b5909012f24a",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "d632aaa7ce298eb2d4d18137dde10f90e89d535a8d361c172ecf2041b2481abf"
     },
     {
@@ -8098,7 +8439,7 @@
       },
       "baseAsset": "rss_manage.svg",
       "baseSha256": "d9e93c48b3e57ed16733197f3d50b311a720e53d864993730f557a91806abbd5",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "f326eaf270e34b87119b84a2a54eda0e4b7a5c3a51dfe2ad23d284c0950d5b3f"
     },
     {
@@ -8123,7 +8464,7 @@
       },
       "baseAsset": "rss_manage_view_all.svg",
       "baseSha256": "a753d00b34a76be019b73b18bbbb732296e5c02fc400cac1b579a84f574bd5b5",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "2faeee16c1a53c0b0fe5360c5d3494eb9d07592a9a78208e62f173305e9952bf"
     },
     {
@@ -8188,7 +8529,7 @@
       },
       "baseAsset": "rss_refresh.svg",
       "baseSha256": "a39034bb92503e4492ed0a03b4ba56bf9b7491cd536dd8aed866929b887da41a",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "c0dd3a77a1712841cac4d81ae32ec1dafc4e636e284de60fbe40fd52e0fe73ac"
     },
     {
@@ -8233,7 +8574,7 @@
       },
       "baseAsset": "rss_source.svg",
       "baseSha256": "b020b178b761dfef0904746883dd6957c835ecf3fad70045aae9d6ef9eb5b6b1",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "0644feaef11ea706e40a928417d7348ca9eb87798828305fded79ced609eabbc"
     },
     {
@@ -8278,7 +8619,7 @@
       },
       "baseAsset": "rss_view_all.svg",
       "baseSha256": "f548f08fd95293d64ae3bb2a6a874042b0a1abddc0e9899c9ca13be2ea41ba24",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "4dbafd10947ca7e4cffc342b2f65444be68104d4334221c6aa92f3557a73dbde"
     },
     {
@@ -8319,7 +8660,7 @@
       },
       "baseAsset": "search_clear.svg",
       "baseSha256": "6a820bee5e09524cd2cf26c60b06b7e46c8c931137aaeaeae36ce589600f724a",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "34f03f8e01ec1881c6fa428aed432a7b800951a347b7deafa2e57ffa2bcd85ff"
     },
     {
@@ -8361,7 +8702,7 @@
       },
       "baseAsset": "search_empty.svg",
       "baseSha256": "117834cd4fe8d874c4a205c39cbe2ae3397a08d4d99edf170f39e9b5750b7a08",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "71b36fd688b4765312cdbfc0f913187f4642a7cb8f2ae10387c82d2ce3a6cf54"
     },
     {
@@ -8398,7 +8739,7 @@
       },
       "baseAsset": "search_error.svg",
       "baseSha256": "a0ebc62a8abae7a8fe5a78f746936c42f1c7ab88ef93df97fc8a70d9f1ce78b9",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "f933b6beda670ae023232e5a0bb6f8a4c6834fd76213f299e07c94d29dc3b08e"
     },
     {
@@ -8437,7 +8778,7 @@
       },
       "baseAsset": "search_mag.svg",
       "baseSha256": "530b1f391b5251d3557eb59bd00a510b698259b1a7aab0ecda84ea1e69556c7c",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "1be8b983d432d310c6577f845c587b32b8d672744a209ab7e4699e96b94e790a"
     },
     {
@@ -8481,9 +8822,9 @@
         ]
       },
       "baseAsset": "settings_gen_animation.svg",
-      "baseSha256": "b33dc6997d3c55f17892602b50a909ccf0bcab0dc4ffa1e63ec3cbac8c40d938",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "055eaed1edf970678a5d2ac3ecc23070b5c654feed845c8a66ada8a2901ac1e2"
+      "baseSha256": "0b46aace18f31072b00590703220ba733cfc12cc69a36a5ffd89996f30ae62c8",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "a9234a7af6ef6618148127b1f2b8b0c7d22ceda35aa7def1c2436d4935ac7fd6"
     },
     {
       "file": "settings_gen_animation.svg",
@@ -8501,9 +8842,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_gen_animation.2D4A3E"
+        ]
       },
-      "sha256": "b33dc6997d3c55f17892602b50a909ccf0bcab0dc4ffa1e63ec3cbac8c40d938"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "0b46aace18f31072b00590703220ba733cfc12cc69a36a5ffd89996f30ae62c8"
     },
     {
       "file": "settings_gen_battery_theme_night.svg",
@@ -8526,9 +8872,9 @@
         ]
       },
       "baseAsset": "settings_gen_battery.svg",
-      "baseSha256": "28267e1ad2fa1e3b1e71efab92b2af74f3d3f262c586aa25aed45258b650295b",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "c0482af337f9e866cdf3f842e0006bc6965008086ac7d449862f1b991ce45af8"
+      "baseSha256": "56adcdea5f5adf99640c6f7a2b7887cd0e86373804dfa1fe3ffc89be1b6f5e7f",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "668876c2806a8ff50045810d9b37ce684a487531760c9bc7499c1d2185b82072"
     },
     {
       "file": "settings_gen_battery.svg",
@@ -8546,9 +8892,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_gen_battery.2D4A3E"
+        ]
       },
-      "sha256": "28267e1ad2fa1e3b1e71efab92b2af74f3d3f262c586aa25aed45258b650295b"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "56adcdea5f5adf99640c6f7a2b7887cd0e86373804dfa1fe3ffc89be1b6f5e7f"
     },
     {
       "file": "settings_gen_cache_theme_night.svg",
@@ -8571,9 +8922,9 @@
         ]
       },
       "baseAsset": "settings_gen_cache.svg",
-      "baseSha256": "7733f3319e3ee46c35db29c964ae42525434278b8e28f9328b8422bd041e01bc",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "71b5dbb2623f6e292e7abdba8cdacd5f82a6d7b014b6e6f68faaabb9dafd0792"
+      "baseSha256": "1cd9e87126b132290658515144fdccf6cf0d666b226b7847eb76b33b65f42e72",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "31380892fd37106bf88b67a725dac186cb1c19f091c03ce2cf42a6187c23c25e"
     },
     {
       "file": "settings_gen_cache.svg",
@@ -8591,9 +8942,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_gen_cache.2D4A3E"
+        ]
       },
-      "sha256": "7733f3319e3ee46c35db29c964ae42525434278b8e28f9328b8422bd041e01bc"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "1cd9e87126b132290658515144fdccf6cf0d666b226b7847eb76b33b65f42e72"
     },
     {
       "file": "settings_gen_crash_theme_night.svg",
@@ -8616,9 +8972,9 @@
         ]
       },
       "baseAsset": "settings_gen_crash.svg",
-      "baseSha256": "38b371f5bd2ee43a543ffa88f52a046f037e196a3c93632492a8c207cf033e9c",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "f4181972dbe531ec5e92846fb4244b120c58cbf59c4bf6b1934bb7a41925be65"
+      "baseSha256": "b9ef05ebee1c0b3db2efb6294e533345c5b11fade13eee89c19be939bbfc5602",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "6d649a2ae9667fea3ac0f19492451ac9a481c1b28a1006ada55ed1bb0a82b2d5"
     },
     {
       "file": "settings_gen_crash.svg",
@@ -8636,9 +8992,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_gen_crash.2D4A3E"
+        ]
       },
-      "sha256": "38b371f5bd2ee43a543ffa88f52a046f037e196a3c93632492a8c207cf033e9c"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "b9ef05ebee1c0b3db2efb6294e533345c5b11fade13eee89c19be939bbfc5602"
     },
     {
       "file": "settings_gen_file_theme_night.svg",
@@ -8661,9 +9022,9 @@
         ]
       },
       "baseAsset": "settings_gen_file.svg",
-      "baseSha256": "f57c7879a77c8dcf381fbb6e85788f7a4ef27ee618606c14d71b9455bb6d02a6",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "422c2b201b2c099481745320608b7ce700763b6605cf3f423f52dedf8a700c74"
+      "baseSha256": "216f3f38b8420348e2c39c6e7e9ddbed99aa870fd8be7757596e714272c41a72",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "3e6e80c765645f3b7d8e8866086cde9f935a7a1541e5e41f4f99b6ae7f56e05d"
     },
     {
       "file": "settings_gen_file.svg",
@@ -8681,9 +9042,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_gen_file.2D4A3E"
+        ]
       },
-      "sha256": "f57c7879a77c8dcf381fbb6e85788f7a4ef27ee618606c14d71b9455bb6d02a6"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "216f3f38b8420348e2c39c6e7e9ddbed99aa870fd8be7757596e714272c41a72"
     },
     {
       "file": "settings_gen_language_theme_night.svg",
@@ -8706,9 +9072,9 @@
         ]
       },
       "baseAsset": "settings_gen_language.svg",
-      "baseSha256": "e13a7cae55598ae803275ee31bc519e666b9716eb50d5ea0a10502969dcaa2a3",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "43c363f440c60df9baa8afc2a89a0a3a66036f60c31ab2a0001a5febc97cfc2e"
+      "baseSha256": "5409b2318627ac4779f10c9f16fa8cf4f56a6367b7a9a1282e1511b039445919",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "61cf661142de890f06f5916de1b38fc985403770db3137a2b5d0e8a0f036e69e"
     },
     {
       "file": "settings_gen_language.svg",
@@ -8726,9 +9092,52 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_gen_language.2D4A3E"
+        ]
       },
-      "sha256": "e13a7cae55598ae803275ee31bc519e666b9716eb50d5ea0a10502969dcaa2a3"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "5409b2318627ac4779f10c9f16fa8cf4f56a6367b7a9a1282e1511b039445919"
+    },
+    {
+      "file": "settings_gen_navigation_theme_night.svg",
+      "semanticRole": "settings_gen_navigation night app palette",
+      "originType": "theme-palette-derived",
+      "license": "Reader project design",
+      "sourceFile": "../Reader-UI/theme/icons/settings_gen_navigation.svg",
+      "sourceSha256": "ef696bb6844746dd733207c0e436be713ad1eda666681a137dc141ede0440f5d",
+      "sourceCommit": "fce869a10399fd6feec4c9a8178808f43d55e31d",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.settings_gen_navigation.2D4A3E"
+        ]
+      },
+      "baseAsset": "settings_gen_navigation.svg",
+      "baseSha256": "87df6933a97f857f923405ffa9e7730a4cb8ae3f10d08ad7cb05d9690683c04b",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "5b0a9542195c3b342a22dc9ae4ab1e4fbfad5aa6bd1bab49aa6abc736c89d057"
+    },
+    {
+      "file": "settings_gen_navigation.svg",
+      "semanticRole": "general settings navigation layout",
+      "originType": "reader-theme-svg",
+      "license": "Reader project design",
+      "sourceFile": "../Reader-UI/theme/icons/settings_gen_navigation.svg",
+      "sourceSha256": "ef696bb6844746dd733207c0e436be713ad1eda666681a137dc141ede0440f5d",
+      "sourceCommit": "fce869a10399fd6feec4c9a8178808f43d55e31d",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_gen_navigation.2D4A3E"
+        ]
+      },
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "87df6933a97f857f923405ffa9e7730a4cb8ae3f10d08ad7cb05d9690683c04b"
     },
     {
       "file": "settings_gen_notification_theme_night.svg",
@@ -8752,7 +9161,7 @@
       },
       "baseAsset": "settings_gen_notification.svg",
       "baseSha256": "05d944b56f5284037955b557dd8c3beb68c488f7a64bf16e3171e4551ceb8b6c",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "9639d9d5b374c1b2501312bcf661e5ab6842c5cdaf908a994e1d3f6c92c8f758"
     },
     {
@@ -8796,9 +9205,9 @@
         ]
       },
       "baseAsset": "settings_gen_refresh.svg",
-      "baseSha256": "01fb14b0643aef6c597fc3977d7f0b68640d86545afa56f4b7eee2a0469fa7b7",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "c0dd3a77a1712841cac4d81ae32ec1dafc4e636e284de60fbe40fd52e0fe73ac"
+      "baseSha256": "3cb3e8ca62f8ddfb9522d3541f82656e6165deedff692ac2acd9ad32cda70174",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "66a95487c68db30b784a70f4cef09100083ddc0e0c2c2963d19984b2247ed047"
     },
     {
       "file": "settings_gen_refresh.svg",
@@ -8816,9 +9225,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_gen_refresh.2D4A3E"
+        ]
       },
-      "sha256": "01fb14b0643aef6c597fc3977d7f0b68640d86545afa56f4b7eee2a0469fa7b7"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "3cb3e8ca62f8ddfb9522d3541f82656e6165deedff692ac2acd9ad32cda70174"
     },
     {
       "file": "settings_gen_startup_theme_night.svg",
@@ -8841,9 +9255,9 @@
         ]
       },
       "baseAsset": "settings_gen_startup.svg",
-      "baseSha256": "14e39e3aebfc79c664d7f0aac108129f3a418bd6575e70db46d4aebfc87fe344",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "c01716245461082ae73dfa6f531ea8b08378aa4691f30ac73cea2532cbe00ee9"
+      "baseSha256": "c5cfa0b994e6a3635525eb25f8a16e9d8d2beccea5b2a519129400369dba7293",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "6e13ef5e21af77e17a1c3025aac19cbd91b2d0272536bc17d7f4b401d18449d9"
     },
     {
       "file": "settings_gen_startup.svg",
@@ -8861,9 +9275,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_gen_startup.2D4A3E"
+        ]
       },
-      "sha256": "14e39e3aebfc79c664d7f0aac108129f3a418bd6575e70db46d4aebfc87fe344"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "c5cfa0b994e6a3635525eb25f8a16e9d8d2beccea5b2a519129400369dba7293"
     },
     {
       "file": "settings_gen_tap_top_theme_night.svg",
@@ -8886,9 +9305,9 @@
         ]
       },
       "baseAsset": "settings_gen_tap_top.svg",
-      "baseSha256": "721f0e94afc0b5b90807974f7f47337f37b079a8c52ffe03c59aa9a600416cce",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "57f8bd4de690b42772ef81b69357bf3dd144057c8e2177f9859c384cdb48c0c1"
+      "baseSha256": "ab0389e2523fc21b6c793407592b91822367fd65da7b3c7baaf5117e46977b40",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "9ef9f687a1ab80524efbf30152ff1df29d7c52e76946ab169955e5f0e61479b9"
     },
     {
       "file": "settings_gen_tap_top.svg",
@@ -8906,9 +9325,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_gen_tap_top.2D4A3E"
+        ]
       },
-      "sha256": "721f0e94afc0b5b90807974f7f47337f37b079a8c52ffe03c59aa9a600416cce"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "ab0389e2523fc21b6c793407592b91822367fd65da7b3c7baaf5117e46977b40"
     },
     {
       "file": "settings_gen_theme_theme_night.svg",
@@ -8931,9 +9355,9 @@
         ]
       },
       "baseAsset": "settings_gen_theme.svg",
-      "baseSha256": "a1cbd7810b96cd8fa02741b20df159dd014e71fd0a913169605fa7468a2564d9",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "5d74e9d94bd543845a73978365abaeba5867acec5ef64d0db4057be9fefdf511"
+      "baseSha256": "24d5a712381bc0a92e6f1f53e275484ca4c215abd3afad8574201e4fd91cf33f",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "5b2ca0f569e6a769aaf776ada2e489221ff1317038c079263dda45f65c249a6e"
     },
     {
       "file": "settings_gen_theme.svg",
@@ -8951,9 +9375,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_gen_theme.2D4A3E"
+        ]
       },
-      "sha256": "a1cbd7810b96cd8fa02741b20df159dd014e71fd0a913169605fa7468a2564d9"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "24d5a712381bc0a92e6f1f53e275484ca4c215abd3afad8574201e4fd91cf33f"
     },
     {
       "file": "settings_reset_defaults_theme_night.svg",
@@ -8976,9 +9405,9 @@
         ]
       },
       "baseAsset": "settings_reset_defaults.svg",
-      "baseSha256": "dc59eb57b7557d95636419e6108abe53b0b7c65bbf150c9fbbae0b75c5a90629",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "dc59eb57b7557d95636419e6108abe53b0b7c65bbf150c9fbbae0b75c5a90629"
+      "baseSha256": "af232dd34e87e03d6dad8c5e6ad800434355342d60ee01eaf1ed4535f97d8e5e",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "1645750457f4a427dd2dfe92705f2f39f1ffeca669fb6aab679cd75797688b98"
     },
     {
       "file": "settings_reset_defaults.svg",
@@ -8996,9 +9425,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#D62222",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_reset_defaults.D62222"
+        ]
       },
-      "sha256": "dc59eb57b7557d95636419e6108abe53b0b7c65bbf150c9fbbae0b75c5a90629"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "af232dd34e87e03d6dad8c5e6ad800434355342d60ee01eaf1ed4535f97d8e5e"
     },
     {
       "file": "settings_row_about_theme_night.svg",
@@ -9021,9 +9455,9 @@
         ]
       },
       "baseAsset": "settings_row_about.svg",
-      "baseSha256": "9eb0b1b9161cc8ebac2b5f202c0334d382a2db0b121a90271c0e6339dd085651",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "85277c715091e65dc04f7943f234502dfdeebb5b1769e2358593504f91142f97"
+      "baseSha256": "fb12d6796d0718961ddfd721b854da48ca924ce3a1029db7f97903a3219987ee",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "e3247b58dabd0766e3a4ad920dd3e8ae40e717b5de25ed24451409f690b05a03"
     },
     {
       "file": "settings_row_about.svg",
@@ -9041,9 +9475,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_row_about.2D4A3E"
+        ]
       },
-      "sha256": "9eb0b1b9161cc8ebac2b5f202c0334d382a2db0b121a90271c0e6339dd085651"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "fb12d6796d0718961ddfd721b854da48ca924ce3a1029db7f97903a3219987ee"
     },
     {
       "file": "settings_row_download_theme_night.svg",
@@ -9066,9 +9505,9 @@
         ]
       },
       "baseAsset": "settings_row_download.svg",
-      "baseSha256": "feaac076bcfbbaca88378ae9f904cdf0680084ce3667fecedcf5f88f7da8beaa",
-      "themeRegistrySha256": "ac84b3b172a3da22dc69b6e63f9b93559e5a31c9d8aefa075a9ca4759e04efc1",
-      "sha256": "929306ca2412371de0c875dde0fdc803c74763cb285a5ed6e8ef3d289c6d8d49"
+      "baseSha256": "d41b0bc46a0285ce9f90ca2e2afc3804152a39d3e00bd0dad3ab085d1634613a",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "0105105747539f20dc1bcdc4993b8cee46a21746383bae312c6b1f6e4205e92e"
     },
     {
       "file": "settings_row_download.svg",
@@ -9086,9 +9525,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_row_download.2D4A3E"
+        ]
       },
-      "sha256": "feaac076bcfbbaca88378ae9f904cdf0680084ce3667fecedcf5f88f7da8beaa"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "d41b0bc46a0285ce9f90ca2e2afc3804152a39d3e00bd0dad3ab085d1634613a"
     },
     {
       "file": "settings_row_general_theme_night.svg",
@@ -9111,9 +9555,9 @@
         ]
       },
       "baseAsset": "settings_row_general.svg",
-      "baseSha256": "8fafb40c3b3eab2e072531980a531db0b20d27c6203accd2487ccf0357207cfe",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "01598afdebd24d430534b36f4f4b0fcda1d2a94de05ee8a5a8f1b01583e10577"
+      "baseSha256": "f88f20e9ec705595d21e3120a47851a4ed3accd25069f1f1a1dff013be3b3ac7",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "c487431bf11c3b561c3f1b0d0fec2151bcaf4938fb9c94548e7c0c414f32abb1"
     },
     {
       "file": "settings_row_general.svg",
@@ -9131,9 +9575,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_row_general.2D4A3E"
+        ]
       },
-      "sha256": "8fafb40c3b3eab2e072531980a531db0b20d27c6203accd2487ccf0357207cfe"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "f88f20e9ec705595d21e3120a47851a4ed3accd25069f1f1a1dff013be3b3ac7"
     },
     {
       "file": "settings_row_shelf_search_theme_night.svg",
@@ -9156,9 +9605,9 @@
         ]
       },
       "baseAsset": "settings_row_shelf_search.svg",
-      "baseSha256": "88c8827257b5bc217cf531c0423039172a606c940c26a1d171b08da163fd33bb",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "a0dfc7a2467d967fb4fd0a9f1994d2fe76d1fcaec426fc22a67acdeb9296bc95"
+      "baseSha256": "1f350323cc281745e1a560b8706d405a77a993c5b5364e1eeeba6827d05b1f6a",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "1844ac20bd9e1d91ad8f021c7d5caf7df211efe753bd8e40db44839c900ba3f3"
     },
     {
       "file": "settings_row_shelf_search.svg",
@@ -9176,9 +9625,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_row_shelf_search.2D4A3E"
+        ]
       },
-      "sha256": "88c8827257b5bc217cf531c0423039172a606c940c26a1d171b08da163fd33bb"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "1f350323cc281745e1a560b8706d405a77a993c5b5364e1eeeba6827d05b1f6a"
     },
     {
       "file": "settings_row_source_theme_night.svg",
@@ -9201,9 +9655,9 @@
         ]
       },
       "baseAsset": "settings_row_source.svg",
-      "baseSha256": "bed7a3d29b0ab887ebc026d957598a873b0ed204dfe28669083e1f4d8d81bd7c",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "d4bfcf2feeec1ddbd3caa76f4cfc28354f8c8bbf0279b5d4643ea844c0b332b3"
+      "baseSha256": "35df896bfcf474862585fb2775be9cf078ce7237c0efe1b5b242172177dab52c",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "b925c82c0c2a2be9ef8320d91baaf4aad14d86e79f65e2fc7fe3c11b485adb3c"
     },
     {
       "file": "settings_row_source.svg",
@@ -9221,9 +9675,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_row_source.2D4A3E"
+        ]
       },
-      "sha256": "bed7a3d29b0ab887ebc026d957598a873b0ed204dfe28669083e1f4d8d81bd7c"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "35df896bfcf474862585fb2775be9cf078ce7237c0efe1b5b242172177dab52c"
     },
     {
       "file": "settings_row_sync_theme_night.svg",
@@ -9247,7 +9706,7 @@
       },
       "baseAsset": "settings_row_sync.svg",
       "baseSha256": "016180f544edbee38d6aa5fb599fd11aeab7906f5217f0b1b73feaacae7b8d57",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "a664594634806daa7d2e85b6eff022cfa33fc839b93d7105cd43c073f9d6bb69"
     },
     {
@@ -9291,9 +9750,9 @@
         ]
       },
       "baseAsset": "settings_select_check.svg",
-      "baseSha256": "352a94ca7eb70a63dcd1c0ca1f30491381e64b419824da75b9df118257dc8a68",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "682e5b9abf890ed4a3404e694e8b1d41018ecb7c64dc5ca464fcc86c7ba524ad"
+      "baseSha256": "678a2a35ce2e7871ec87e4e1da1ea5fa95388c2b47d1f28bd55bca7ddae01b61",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "93eade52a8699b03ec7f64f427ac8f91b5e3e345e92979c3f983d5c4a0068ce1"
     },
     {
       "file": "settings_select_check.svg",
@@ -9311,9 +9770,39 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.settings_select_check.2D4A3E"
+        ]
       },
-      "sha256": "352a94ca7eb70a63dcd1c0ca1f30491381e64b419824da75b9df118257dc8a68"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "678a2a35ce2e7871ec87e4e1da1ea5fa95388c2b47d1f28bd55bca7ddae01b61"
+    },
+    {
+      "file": "source_add_theme_night.svg",
+      "semanticRole": "source_add night app palette",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaPageNodeId": "259:4",
+      "figmaNodeId": "363:29",
+      "componentName": "Icon/Plus",
+      "upstreamName": "Plus",
+      "upstreamVersion": "3.44.0",
+      "license": "MIT",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-icons/Icon__Plus.svg",
+      "sourceSha256": "d5766ddd43be5f3ef8a5b765bab27f6d7cf01cb564df742470621e882699056f",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.icon.source_add.FFFAF4"
+        ]
+      },
+      "baseAsset": "source_add.svg",
+      "baseSha256": "748eec694e375918c07d3e8e2747e570fca5a44b758fa9ba9fc374930ecc653a",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "cdb90ae1e68787f61db14613b115bb77384d5966cf10612f76897c048cda97f3"
     },
     {
       "file": "source_add.svg",
@@ -9331,9 +9820,14 @@
       "transform": {
         "pathMutation": "none",
         "recolor": "#FFFAF4",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.source_add.FFFAF4"
+        ]
       },
-      "sha256": "86094e67c69d6e6a6a496f193ff8ce80d2efb2cb4252af187d6ec48f93a5e715"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "748eec694e375918c07d3e8e2747e570fca5a44b758fa9ba9fc374930ecc653a"
     },
     {
       "file": "source_group_chevron_theme_night.svg",
@@ -9357,7 +9851,7 @@
       },
       "baseAsset": "source_group_chevron.svg",
       "baseSha256": "ef753d021a7020877ff03827d7d2a33c75ada5e6295c2c067e203edad042b9b1",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "3b4a3ef25fcc98914870c9ad861a880433fe3cd3fe470de21a6998b4322eb8d3"
     },
     {
@@ -9401,9 +9895,9 @@
         ]
       },
       "baseAsset": "source_group_folder.svg",
-      "baseSha256": "ba156576477e006ef6902089573e38bab5f2c6ded53bc40ca2e4ecb47173a2d0",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
-      "sha256": "d3ce2d35413c17f5a601ff457d17b33b3f74aacedc8a011b45a12ad40a8214ad"
+      "baseSha256": "8938234867933bd4c4000efc6343a6a8380dedad828f4af5b9e9df21564242e2",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "96beedd9d613f828cbd8b08ac9ed5350224b633bb6c9d119e7fb5d2d87de01c6"
     },
     {
       "file": "source_group_folder.svg",
@@ -9421,9 +9915,14 @@
       "transform": {
         "pathMutation": "fill-none-on-stroke-paths",
         "recolor": "#2D4A3E",
-        "rotationDegrees": 0
+        "rotationDegrees": 0,
+        "palette": "day",
+        "colorRoles": [
+          "app.icon.source_group_folder.2D4A3E"
+        ]
       },
-      "sha256": "ba156576477e006ef6902089573e38bab5f2c6ded53bc40ca2e4ecb47173a2d0"
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
+      "sha256": "8938234867933bd4c4000efc6343a6a8380dedad828f4af5b9e9df21564242e2"
     },
     {
       "file": "source_switch_close_theme_night.svg",
@@ -9447,7 +9946,7 @@
       },
       "baseAsset": "source_switch_close.svg",
       "baseSha256": "2257fb57f6c058b9a19617e23d27c6e6e61a857912259ff1d045179a42e7f42f",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "e9ad0f5d9d4eeb4523744b5c20bcb3bf3f6cabe7fd543660c238f8e237457fcc"
     },
     {
@@ -9492,7 +9991,7 @@
       },
       "baseAsset": "sync_account.svg",
       "baseSha256": "9b21ea26b3f79f36cfeaef65e29c558c3860b8de2246bc4e0162420ac37242c8",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "32d42edf50f681acdde9bddbd911a12863ed922e42863e8f282b634a5e40f0fb"
     },
     {
@@ -9537,7 +10036,7 @@
       },
       "baseAsset": "sync_backup_password.svg",
       "baseSha256": "8eaae2c25320c2b2aaec2fcadf2269fe3e77f79b62349c62e300bf90b44e4f16",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "5ce014056e65fc0090a38ec9896168b3bd5975c9352b98ddadd5caff7030c044"
     },
     {
@@ -9582,7 +10081,7 @@
       },
       "baseAsset": "sync_password.svg",
       "baseSha256": "bdab92a0b1c3fde3ac297e0f58d313efca9b66716175c307818af8fbf9c02e89",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "928811b1328f84b50169be298032cc5e3eab0d816f7c6896b850d2b2e8892654"
     },
     {
@@ -9627,7 +10126,7 @@
       },
       "baseAsset": "sync_scope_chevron.svg",
       "baseSha256": "46a16f17abc7e0d6936c4f752875af79486f6d721c4784b36b10e50091deb724",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "34e6a85ae6c0863384c3031ca14d95126147f5d152ad6383495f1a54ef37299e"
     },
     {
@@ -9672,7 +10171,7 @@
       },
       "baseAsset": "sync_server.svg",
       "baseSha256": "149378aa5b8bd498f7db41cf06e772e8a5c43467a1e177f0859267b3cff381e3",
-      "themeRegistrySha256": "7bc79c1f78c0f1a34230fb0c955187abb7e4595cabdc590ec41cee1c8715c340",
+      "themeRegistrySha256": "14710a61c65abaaf0ac1b63017b65f631ed5a4a835b30f278527b96fd526cba0",
       "sha256": "902c30676a3920d6befeb5b7f1a4465aeb16e470ee2766d2b172b13ffaa27e05"
     },
     {

@@ -1,4 +1,5 @@
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
+import { readerPressAnimation, readerPressOpacity, readerPressPointer, readerPressScale } from '../foundation/ReaderPressMotion';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerActionTouchRegion } from './ReaderActionAccessibility';
 import { ReaderIconButtonSpecId, resolveReaderIconButtonSpec } from './ReaderControlSpecs';
@@ -11,15 +12,17 @@ type ReaderIconSelectionState = 'none' | 'active' | 'selected';
 @Component
 export struct ReaderIconButton {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
   @Prop icon: Resource;
   @Prop specId: ReaderIconButtonSpecId = 'toolbar-standard';
   @Prop accessibilityLabel: string = '';
   @Prop focusId: string = '';
   @Prop minimumTargetSize: number = 0;
-  @Prop actionEnabled: boolean = true;
-  @Prop actionScope: string = '';
+  @Prop @Watch('resetPress') actionEnabled: boolean = true;
+  @Prop @Watch('resetPress') actionScope: string = '';
   @Prop scheme: string = 'auto';
   @Prop selectionState: ReaderIconSelectionState = 'none';
+  @State private pressPointer: number = -1;
   onTap: () => void = (): void => {};
   onFocused: () => void = (): void => {};
   private mounted: boolean = false;
@@ -38,8 +41,12 @@ export struct ReaderIconButton {
   @Builder
   private formPrimaryButton() {
     Button({ type: ButtonType.Normal }) {
-      Image(this.icon).width(resolveReaderIconButtonSpec(this.specId).iconSize)
-        .height(resolveReaderIconButtonSpec(this.specId).iconSize).accessibilityLevel('no');
+      Image(this.icon).scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
+        .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion))
+        .animation(readerPressAnimation(this.reduceMotion))
+        .width(resolveReaderIconButtonSpec(this.specId).iconSize)
+        .height(resolveReaderIconButtonSpec(this.specId).iconSize).accessibilityLevel('no')
+        .hitTestBehavior(HitTestMode.None);
     }.width(this.formPrimaryBoxSize()).height(this.formPrimaryBoxSize()).padding(0)
       .attributeModifier(new ReaderPressFeedback(this.frameSurface(), this.effectiveScheme(),
         Math.min(resolveReaderIconButtonSpec(this.specId).radius, resolveReaderIconButtonSpec(this.specId).boxSize / 2),
@@ -50,6 +57,7 @@ export struct ReaderIconButton {
       .id(this.focusId)
       .onFocus((): void => { if (this.mounted) this.onFocused(); })
       .responseRegion(readerActionTouchRegion(this.formPrimaryBoxSize(), this.formPrimaryBoxSize()))
+      .onTouch((event: TouchEvent): void => this.observePress(event))
       .onClick(this.actionHandler());
   }
 
@@ -57,10 +65,14 @@ export struct ReaderIconButton {
   private iconStack() {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Image(this.icon)
+        .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
+        .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion,
+          this.specId === 'reader-chapter-step' || this.actionEnabled ? 1 : 0.45))
+        .animation(readerPressAnimation(this.reduceMotion))
         .width(resolveReaderIconButtonSpec(this.specId).iconSize)
         .height(resolveReaderIconButtonSpec(this.specId).iconSize)
-        .objectFit(ImageFit.Contain).opacity(this.specId === 'reader-chapter-step' || this.actionEnabled ? 1 : 0.45)
-        .accessibilityLevel('no');
+        .objectFit(ImageFit.Contain)
+        .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
     }
     .padding(0)
     .width(resolveReaderIconButtonSpec(this.specId).boxSize)
@@ -81,8 +93,16 @@ export struct ReaderIconButton {
       y: Math.min(0, (resolveReaderIconButtonSpec(this.specId).boxSize - 44) / 2),
       width: Math.max(44, resolveReaderIconButtonSpec(this.specId).boxSize),
       height: Math.max(44, resolveReaderIconButtonSpec(this.specId).boxSize) })
+    .onTouch((event: TouchEvent): void => this.observePress(event))
     .onClick(this.actionHandler());
   }
+
+  private observePress(event: TouchEvent): void {
+    this.pressPointer = readerPressPointer(event, this.pressPointer,
+      this.canAct() && resolveReaderIconButtonSpec(this.specId).pressFeedback !== false);
+  }
+
+  private resetPress(): void { this.pressPointer = -1; }
 
   private canAct(): boolean { return this.mounted && this.actionEnabled && this.accessibilityLabel.trim().length > 0; }
   private formPrimaryBoxSize(): number {

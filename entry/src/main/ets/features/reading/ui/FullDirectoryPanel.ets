@@ -616,7 +616,8 @@ export struct FullDirectoryPanel {
   private bookmarkTabContent() {
       Row({ space: 5 }) {
         if (this.activeTab === 'bookmarks') {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') : $r('app.media.reader_directory_marker_bookmark_active')))
+          Image(this.appThemeScheme === 'night' ? $r('app.media.reader_page_bookmark_filled_theme_night') :
+            $r('app.media.reader_page_bookmark_filled'))
             .width(15)
             .height(15);
         } else {

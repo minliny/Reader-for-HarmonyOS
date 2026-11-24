@@ -41,3 +41,8 @@ export function readerMotionAnimateParam(id: string, reduceMotion: boolean, onFi
   if (onFinish === undefined) return { duration: 0, curve };
   return { duration: 0, curve, onFinish };
 }
+
+/** A reduced-motion transition whose caller animates only opacity. */
+export function readerMotionReducedFadeParam(onFinish?: () => void): AnimateParam {
+  return motionAnimateParam('app.motion.reduced.fade', onFinish);
+}

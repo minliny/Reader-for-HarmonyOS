@@ -1,7 +1,5 @@
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-/** Figma Make DEu3TuYhaJPLMEdSxorhwE, version 17, 2026-09-11.
- * Scoped to the TTS content: shared shell/navigation and other modules keep
- * their own tokens. All alpha colors use ArkUI's #AARRGGBB order. */
+/** TTS palette compatibility exports. Rendering reads the active app scheme. */
 export const TOK_TTS_INK = readerAppColor('TOK_TTS_INK', 'day');
 export const TOK_TTS_MUTED = readerAppColor('TOK_TTS_MUTED', 'day');
 export const TOK_TTS_TEAL = readerAppColor('TOK_TTS_TEAL', 'day');
@@ -21,7 +19,7 @@ export const TOK_TTS_LINE = readerAppColor('TOK_TTS_LINE', 'day');
 export const TOK_TTS_FIELD = readerAppColor('TOK_TTS_FIELD', 'day');
 export const TOK_TTS_TRACK = readerAppColor('TOK_TTS_TRACK', 'day');
 
-/** Make uses #357487 in Quick and #2f6373 in Full; sample the same shared p. */
+/** Keep the Quick-to-Full highlight tied to the shared panel progress. */
 export function readerTtsPlayGradientStart(progress: number, appScheme: string = 'day'): string {
   const p = Math.max(0, Math.min(1, progress));
   const start = readerAppColor('TOK_TTS_PLAY_START', appScheme);

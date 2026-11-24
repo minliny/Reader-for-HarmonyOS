@@ -6,6 +6,7 @@ import {
   READER_FONT_NOTO_SANS_SC_UI_REGULAR,
   READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
   READER_FONT_NOTO_SANS_SC_UI_BOLD,
+  READER_FONT_NOTO_SANS_SC_UI_600,
   READER_FONT_NOTO_SERIF_SC_BOLD,
   READER_FONT_NOTO_SERIF_SC_REGULAR,
 } from './ReaderFontFamilies.ts';
@@ -89,14 +90,12 @@ export class ReaderInheritedTextStyle {
   }
 }
 
-// Global semantic roles. Values intentionally preserve the audited Figma node
-// geometry while callers stop owning the physical font tuple.
+// Shared application heading roles from the Paper & Pine typography scale.
 export const TYPE_APP_HOME_TITLE = new ReaderTextStyle(
-  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 29, 38, undefined, 'system', 'figmaNode');
+  READER_FONT_NOTO_SERIF_SC_BOLD, 600, 24, 32, undefined, 'system', 'appBaseline');
 export const TYPE_PAGE_TITLE = new ReaderTextStyle(
-  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 24, 33, undefined, 'system', 'figmaNode');
-export const TYPE_SECTION_HEADING = new ReaderTextStyle(
-  READER_FONT_INTER, 900, 13, 15.6, undefined, 'system', 'figmaNode');
+  READER_FONT_NOTO_SANS_SC_UI_600, 600, 17, 24, undefined, 'system', 'appBaseline');
+export const TYPE_SECTION_HEADING = TYPE_PAGE_TITLE;
 export const TYPE_MAIN_TAB_LABEL = new ReaderTextStyle(
   READER_FONT_NOTO_SANS_SC_UI_BOLD, 700, 11, MAIN_TAB_LABEL_LINE_HEIGHT, undefined, 'system', 'figmaNode');
 
@@ -405,7 +404,7 @@ export const TYPE_APP_BODY = new ReaderTextStyle(
 export const TYPE_APP_PRIMARY_ACTION = new ReaderTextStyle(
   READER_FONT_INTER, 800, 13, 13, undefined, 'system', 'appBaseline');
 export const TYPE_BOOK_DETAIL_TITLE = new ReaderTextStyle(
-  READER_FONT_NOTO_SERIF_SC_BOLD, 700, 22, 25.96, undefined, 'system', 'appBaseline');
+  READER_FONT_NOTO_SERIF_SC_BOLD, 600, 20, 28, undefined, 'system', 'appBaseline');
 export const TYPE_BOOK_DETAIL_AUTHOR = new ReaderTextStyle(
   READER_FONT_INTER, 400, 13, 17.55, undefined, 'system', 'appBaseline');
 export const TYPE_BOOK_DETAIL_META = new ReaderTextStyle(

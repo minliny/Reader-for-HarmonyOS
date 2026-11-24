@@ -629,6 +629,10 @@ export struct SourceManagementPage {
     });
   }
 
+  private sourceAddIcon(): Resource {
+    return this.appThemeScheme === 'night' ? $r('app.media.source_add_theme_night') : $r('app.media.source_add');
+  }
+
   @Builder
   private pageContent() {
     Column() { this.sourceList(); }
@@ -776,7 +780,7 @@ export struct SourceManagementPage {
   @Builder
   private importAction(identity: string) {
     Stack({ alignContent: Alignment.Center }) {
-      ReaderIconButton({ icon: $r('app.media.source_add'), specId: 'form-primary-icon', accessibilityLabel: '导入书源',
+      ReaderIconButton({ icon: this.sourceAddIcon(), specId: 'form-primary-icon', accessibilityLabel: '导入书源',
         minimumTargetSize: 44,
         focusId: this.importFocusId(identity, 'header'),
         onFocused: (): void => this.cancelToolsReturnFocus('other-focus'),
@@ -1995,7 +1999,7 @@ export struct SourceManagementPage {
         .onAreaChange((_old: Area, area: Area): void => this.onToolsEntryLayout(identity, 'footer', area));
       ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'source-management-add', label: '新增书源', fillWidth: true,
         textLayoutOptions: this.textLayoutOptions?.('footer/add', undefined, '新增书源'),
-        icon: $r('app.media.source_add'), focusId: this.importFocusId(identity, 'footer'),
+        icon: this.sourceAddIcon(), focusId: this.importFocusId(identity, 'footer'),
         onAction: (): void => {
           if (this.mounted && identity === this.temporaryBackIdentity)
             this.onAddSource(this.importFocusId(identity, 'footer'), this.toolsFocusId('header'));

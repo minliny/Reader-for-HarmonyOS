@@ -19,7 +19,7 @@ export const MAIN_TABS: MainTabDef[] = ALL_MAIN_TABS.filter(
 export function readerMainTabIconResource(key: string, active: boolean, scheme: string): string {
   const night = scheme === 'night';
   if (key === 'bookshelf') {
-    return active ? 'bookshelf_library_active' :
+    return active ? (night ? 'bookshelf_library_active_theme_night' : 'bookshelf_library_active') :
       (night ? 'bookshelf_library_outline_theme_night' : 'bookshelf_library_outline');
   }
   if (key === 'discover') {
@@ -30,6 +30,6 @@ export function readerMainTabIconResource(key: string, active: boolean, scheme: 
     return active ? 'bookshelf_rss_active' :
       (night ? 'bookshelf_rss_outline_theme_night' : 'bookshelf_rss_outline');
   }
-  return active ? 'bookshelf_settings_active' :
+  return active ? (night ? 'bookshelf_settings_active_theme_night' : 'bookshelf_settings_active') :
     (night ? 'bookshelf_settings_outline_theme_night' : 'bookshelf_settings_outline');
 }

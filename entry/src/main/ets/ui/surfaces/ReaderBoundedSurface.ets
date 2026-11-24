@@ -1,5 +1,6 @@
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
-import { PopupSurfaceSpec, resolvePopupSpec, resolveSheetSpec, resolveDialogSpec, resolveDrawerSpec,
+import { PopupSurfaceSpec, READER_GLASS_BLUR_VP, READER_HEAVY_GLASS_BLUR_VP,
+  resolvePopupSpec, resolveSheetSpec, resolveDialogSpec, resolveDrawerSpec,
   type SheetSpecId } from './ReaderSurfaceSpecs';
 import { ReaderInsetsVp } from '../foundation/ReaderWindowMetrics';
 
@@ -28,7 +29,8 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
     if (this.id === 'source-switch-drawer') {
       const spec = resolveDrawerSpec(this.id);
       instance.width(this.width).height(this.height).constraintSize({ maxWidth: spec.maxWidth })
-        .backgroundColor(readerAppColor(spec.surfaceRole, this.scheme))
+        .backgroundEffect({ radius: READER_HEAVY_GLASS_BLUR_VP,
+          color: readerAppColor(spec.surfaceRole, this.scheme) })
         .borderRadius({ topLeft: spec.cornerRadius, topRight: spec.cornerRadius }).clip(true);
       return;
     }
@@ -38,7 +40,8 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
       instance.width(this.width).height(side ? this.height : undefined)
         .constraintSize({ minHeight: side ? 0 : Math.min(spec.minimumContentHeight, contentMax) + this.insets.top + this.insets.bottom, maxHeight: this.maxHeight })
         .padding({ left: this.insets.left, right: this.insets.right, top: this.insets.top, bottom: this.insets.bottom })
-        .backgroundColor(readerAppColor(spec.surfaceRole, this.scheme))
+        .backgroundEffect({ radius: READER_HEAVY_GLASS_BLUR_VP,
+          color: readerAppColor(spec.surfaceRole, this.scheme) })
         .border(side ? { width: { left: 1 }, color: readerAppColor(spec.lineRole, this.scheme) } : undefined)
         .borderRadius({ topLeft: side ? 0 : spec.cornerRadius, topRight: side ? 0 : spec.cornerRadius, bottomLeft: 0, bottomRight: 0 })
         .hitTestBehavior(HitTestMode.Default)
@@ -67,12 +70,15 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
       return;
     }
     const spec = resolvePopupSpec(this.id === 'source-switch-window' ? 'source-switch-window' : 'tts-config-manager');
-    instance.width(this.width).height(this.height)
-
-      .backgroundColor(readerAppColor(spec.surfaceBackgroundRole, this.scheme))
-      .border({ width: spec.borderWidth, color: readerAppColor(spec.surfaceBorderRole, this.scheme) })
-      .borderRadius(this.id === 'tts-config-picker' ? 14 : spec.borderRadius)
-;
+    instance.width(this.width).height(this.height);
+    const popupSurface = readerAppColor(spec.surfaceBackgroundRole, this.scheme);
+    if (this.id === 'source-switch-window') {
+      instance.backgroundEffect({ radius: READER_GLASS_BLUR_VP, color: popupSurface });
+    } else {
+      instance.backgroundColor(popupSurface);
+    }
+    instance.border({ width: spec.borderWidth, color: readerAppColor(spec.surfaceBorderRole, this.scheme) })
+      .borderRadius(this.id === 'tts-config-picker' ? 14 : spec.borderRadius);
     if (this.id !== 'source-switch-window') instance.constraintSize({
       maxWidth: this.id === 'tts-config-manager' ? spec.width : this.width, maxHeight: '100%',
     }).shadow({

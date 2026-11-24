@@ -35,6 +35,25 @@ import { readerRecoveryView } from '../../entry/src/main/ets/app/ReaderRecoveryP
 import { ReaderTransientFeedback } from '../../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts';
 import { readerWindowEnvironmentForProbe } from './reader-window-environment-probe.mjs';
 import { readerFoundationTokens } from './reader-tokens-probe.mjs';
+import * as pressMotionTiming from '../../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts';
+import { readerMotionValueDurationMs as collapseMotionDurationMs } from '../../entry/src/main/ets/ui/foundation/ReaderMotionDurationPolicy.ts';
+import { SOURCE_CHROME_VISUAL } from '../../entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts';
+
+function productionReaderPressMotion() {
+  const load = (name, dependencies, names) => pureModuleProbe(readFileSync(
+    new URL(`../../entry/src/main/ets/ui/foundation/${name}.ets`, import.meta.url), 'utf8'),
+    `${name}.ets`, dependencies, names);
+  const curves = { cubicBezierCurve: (...points) => points };
+  const Curve = new Proxy({}, { get: (_target, name) => `Curve.${String(name)}` });
+  const motion = load('MotionSpec', { ...pressMotionTiming, curves, Curve,
+    SOURCE_SWITCH_VISUAL: SOURCE_CHROME_VISUAL, MANGA_DIRECTORY_VISUAL: directoryChrome.DIRECTORY_CHROME_VISUAL },
+  ['motionAnimateParam', 'motionSpecGet']);
+  const policy = load('ReaderMotionPolicy', { ...motion, collapseMotionDurationMs },
+    ['readerMotionAnimateParam', 'readerMotionReducedFadeParam']);
+  const TouchType = { Down: 'down', Move: 'move', Up: 'up', Cancel: 'cancel' };
+  return load('ReaderPressMotion', { ...policy, TouchType },
+    ['readerPressScale', 'readerPressOpacity', 'readerPressAnimation', 'readerPressPointer']);
+}
 
 const sdkRoot = resolveEtsLoaderRoot();
 const { readerSourceSwitchActions } = pureModuleProbe(readFileSync(new URL(
@@ -579,6 +598,9 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     createStorageLink(_key, value, name) {
       return new dependencies.ObservedPropertySimplePU(value, this, name);
     }
+    createStorageProp(_key, value, name) {
+      return new dependencies.SynchedPropertyOneWayPU(value, this, name);
+    }
     getUIContext() { return dependencies.uiContext?.getFont ? dependencies.uiContext : { ...dependencies.uiContext, getFont: () => ({}) }; }
     declareWatch(name, callback) { this.watches.set(name, callback); }
     observeComponentCreation2(callback, component) {
@@ -666,6 +688,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       return metrics;
     } },
     readerInteractiveSafeBottom: metrics => metrics.interactiveSafeInsets?.bottom ?? 0,
+    ...(source.includes('readerPressScale') ? productionReaderPressMotion() : {}),
     ...dependencies };
   // Existing fixtures supply an explicit fake metrics source under the old
   // owner-shaped I/O port. The UI consumes the real readonly adapter instead.

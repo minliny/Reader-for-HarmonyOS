@@ -24,7 +24,7 @@ import { readerPageAreaLength, readerPresentedHeaderBottom } from '../../../ui/l
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
 import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
 import { prepareSharedDownloadFonts } from '../../../ui/foundation/ReaderFonts';
-import { DOWNLOAD_VISUAL, downloadVisualColor, downloadOverlayChromeStyle, sharedDownloadSheetMaxHeight, sharedDownloadContentInsets } from './SharedDownloadVisualSpec';
+import { DOWNLOAD_VISUAL, downloadVisualColor, sharedDownloadSheetMaxHeight, sharedDownloadContentInsets } from './SharedDownloadVisualSpec';
 import { SharedDownloadBookCover } from './SharedDownloadBookCover';
 import {
   TYPE_DOWNLOAD_CONTROL, TYPE_DOWNLOAD_META, TYPE_DOWNLOAD_TAG,
@@ -1993,28 +1993,43 @@ export struct SharedDownloadPage {
         requestGeneration !== this.overlayChromeRequestGeneration) return;
       if (this.sheetExitPending && this.sheet.length === 0 && this.confirmation.length === 0) return;
       if (this.sheet.length > 0 || this.confirmation.length > 0) {
-        const visual = downloadOverlayChromeStyle(this.appThemeScheme,
-          this.sheet.length > 0 && this.confirmation.length === 0,
-          this.sheet === 'settings' && this.confirmation === 'cleanup' ? 2 : 1);
-        const actionSheet = this.isOperationsSheet() && this.confirmation.length === 0;
-        let style = new ReaderWindowChromeStyle(visual.underlayColor, visual.tone, visual.contentColor);
-        if (actionSheet) {
-          const scrim = readerAppColor(resolveDrawerSpec('reader-action-sheet').scrimRole, this.appThemeScheme);
-          style = new ReaderWindowChromeStyle(
-            readerScrimmedOpaqueColor(downloadVisualColor('paper', this.appThemeScheme), scrim),
-            visual.tone, readerScrimmedOpaqueColor(downloadVisualColor('ink', this.appThemeScheme), scrim));
-        }
-        style.navigationUnderlayColor = actionSheet ?
-          readerAppColor(resolveDrawerSpec('reader-action-sheet').surfaceRole, this.appThemeScheme) : visual.navigationUnderlayColor;
-        style.navigationContentColor = actionSheet ?
-          readerAppColor(resolveDrawerSpec('reader-action-sheet').inkRole, this.appThemeScheme) : visual.navigationContentColor;
-        ReaderWindowCoordinator.requestOverlayChrome(style);
+        ReaderWindowCoordinator.requestOverlayChrome(this.overlayWindowChrome());
         this.overlayChromeClaimed = true;
       } else if (this.overlayChromeClaimed) {
         ReaderWindowCoordinator.requestAppChrome();
         this.overlayChromeClaimed = false;
       }
     });
+  }
+
+  private overlayWindowChrome(): ReaderWindowChromeStyle {
+    const scheme = this.appThemeScheme;
+    const confirmationVisible = this.confirmation.length > 0;
+    const operationsSheet = this.isOperationsSheet();
+    const sheetVisible = this.sheet.length > 0 && (!operationsSheet || !confirmationVisible);
+    const confirmationScrim = downloadVisualColor('scrim', scheme);
+    const firstScrim = sheetVisible ? this.sheetScrimColor() : confirmationScrim;
+    const pageInk = downloadVisualColor('ink', scheme);
+    let statusPaper = readerScrimmedOpaqueColor(downloadVisualColor('paper', scheme), firstScrim);
+    let statusInk = readerScrimmedOpaqueColor(pageInk, firstScrim);
+    let navigationPaper = statusPaper;
+    let navigationInk = statusInk;
+    if (sheetVisible) {
+      const drawer = resolveDrawerSpec('reader-action-sheet');
+      navigationPaper = readerAppColor(operationsSheet ? drawer.surfaceRole : 'app.surface.menuSolid', scheme);
+      navigationInk = operationsSheet ? readerAppColor(drawer.inkRole, scheme) : pageInk;
+      if (confirmationVisible) {
+        // The confirmation covers the page-and-sheet stack at the top and the sheet at the bottom.
+        statusPaper = readerScrimmedOpaqueColor(statusPaper, confirmationScrim);
+        statusInk = readerScrimmedOpaqueColor(statusInk, confirmationScrim);
+        navigationPaper = readerScrimmedOpaqueColor(navigationPaper, confirmationScrim);
+        navigationInk = readerScrimmedOpaqueColor(navigationInk, confirmationScrim);
+      }
+    }
+    const style = new ReaderWindowChromeStyle(statusPaper, scheme === 'night' ? 'light' : 'dark', statusInk);
+    style.navigationUnderlayColor = navigationPaper;
+    style.navigationContentColor = navigationInk;
+    return style;
   }
 
   private onPresentationIdentityChanged(): void {

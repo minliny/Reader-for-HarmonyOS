@@ -2342,11 +2342,11 @@ export struct ReadingExperience {
       if (this.sessionLaunch === undefined && this.shouldShowSessionCapsule()) {
         ReaderSessionCapsule({
           type: this.sessionCapsuleType(), sessionState: this.sessionCapsuleState(), countdown: this.sessionCapsuleCountdown(),
-          surfaceColor: readerAppColor('TOK_READ_SURFACE', this.readerAppScheme),
-          surfaceBorderColor: readerAppColor('TOK_LINE', this.readerAppScheme),
-          textColor: readerAppColor('TOK_READ_INK', this.readerAppScheme),
+          surfaceColor: readerAppColor('app.sessionCapsule.surface', this.readerAppScheme),
+          surfaceBorderColor: readerAppColor('app.sessionCapsule.border', this.readerAppScheme),
+          textColor: readerAppColor('app.sessionCapsule.ink', this.readerAppScheme),
           primaryColor: readerAppColor('TOK_READ_PRIMARY', this.readerAppScheme),
-          onPrimaryColor: readerAppColor('app.control.onPrimary', this.readerAppScheme),
+          onPrimaryColor: readerAppColor('app.sessionCapsule.onPrimary', this.readerAppScheme),
           themeScheme: this.readerAppScheme,
           fontScale: this.readingLayout().systemFontScale,
           measurementIdentity: this.sessionCapsuleMeasurementIdentity(this.sessionCapsuleType()),

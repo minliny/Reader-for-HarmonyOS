@@ -1,6 +1,7 @@
 import { ReaderButtonLayout, ReaderButtonSpecId, resolveReaderButtonSpec } from './ReaderControlSpecs';
 import { readerSearchActionWidth, readerSearchControlHeight, readerSearchHistoryControlHeight } from '../foundation/ReaderSearchControlGeometry';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
+import { readerPressAnimation, readerPressOpacity, readerPressPointer, readerPressScale } from '../foundation/ReaderPressMotion';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { TOK_BORDER_W, TOK_SPACE_XS } from '../foundation/ReaderTokens';
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
@@ -118,7 +119,9 @@ class ReaderButtonTextModifier implements AttributeModifier<TextAttribute> {
   private fontScale: number;
   private busy: boolean;
   private availableWidth: number;
-  constructor(id: ReaderButtonSpecId, primary: boolean, enabled: boolean, layout: ReaderButtonLayout, scheme: string, busy: boolean = false, availableWidth: number = 0, fontScale: number = 1) {
+  private pressed: boolean;
+  constructor(id: ReaderButtonSpecId, primary: boolean, enabled: boolean, layout: ReaderButtonLayout, scheme: string,
+    busy: boolean = false, availableWidth: number = 0, fontScale: number = 1, pressed: boolean = false) {
     this.id = id;
     this.primary = primary;
     this.enabled = enabled;
@@ -127,10 +130,14 @@ class ReaderButtonTextModifier implements AttributeModifier<TextAttribute> {
     this.fontScale = fontScale;
     this.busy = busy;
     this.availableWidth = availableWidth;
+    this.pressed = pressed;
   }
   applyNormalAttribute(instance: TextAttribute): void {
     new ReaderButtonLabelModifier(this.id, this.primary, this.scheme, this.fontScale).applyNormalAttribute(instance);
-    new ReaderButtonFrameModifier(this.id, this.primary, this.enabled, this.layout, this.scheme, this.busy, this.availableWidth, this.fontScale).applyNormalAttribute(instance);
+    const frame = new ReaderButtonFrameModifier(this.id, this.primary, this.enabled, this.layout, this.scheme, this.busy,
+      this.availableWidth, this.fontScale);
+    if (this.enabled && this.pressed) frame.applyPressedAttribute(instance);
+    else frame.applyNormalAttribute(instance);
   }
   applyPressedAttribute(instance: TextAttribute): void {
     new ReaderButtonLabelModifier(this.id, this.primary, this.scheme, this.fontScale).applyNormalAttribute(instance);
@@ -153,11 +160,12 @@ class ReaderButtonSelectionModifier implements AttributeModifier<CommonAttribute
 @Component
 export struct ReaderButton {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
   @Prop scheme: string = 'day';
   @Prop specId: ReaderButtonSpecId = 'source-action';
   @Prop label: string = '';
   @Prop primary: boolean = false;
-  @Prop actionEnabled: boolean = true;
+  @Prop @Watch('resetPress') actionEnabled: boolean = true;
   @Prop layout: ReaderButtonLayout = 'intrinsic';
   @Prop isBusy: boolean = false;
   // Available width remains an input for the variants that author a width cap.
@@ -166,6 +174,7 @@ export struct ReaderButton {
   @Prop actionAccessibilityLabel: string = '';
   @Prop selectionSemantic: boolean = false;
   @Prop focusId: string = '';
+  @State private pressPointer: number = -1;
   textLayoutOptions: TextOptions | undefined = undefined;
   @BuilderParam leading: () => void = this.emptyLeading;
   onAction: () => void = (): void => {};
@@ -183,8 +192,11 @@ export struct ReaderButton {
       // region, so adjacent filter targets never overlap.
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Text(this.label, this.textLayoutOptions)
+          .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
+          .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion))
+          .animation(readerPressAnimation(this.reduceMotion))
           .attributeModifier(new ReaderButtonTextModifier(this.specId, this.primary, this.actionEnabled,
-            'intrinsic', this.scheme, this.isBusy, this.availableWidth, this.fontScale()))
+            'intrinsic', this.scheme, this.isBusy, this.availableWidth, this.fontScale(), this.pressPointer >= 0))
           .accessibilityLevel('no')
           .hitTestBehavior(HitTestMode.None);
       }.padding(0).backgroundColor(Color.Transparent).borderRadius(0).opacity(1)
@@ -195,6 +207,7 @@ export struct ReaderButton {
         .accessibilityRole(AccessibilityRoleType.BUTTON)
         .attributeModifier(new ReaderButtonSelectionModifier(this.selectionSemantic, this.primary))
         .accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label)
+        .onTouch((event: TouchEvent): void => this.observePress(event))
         .onClick((): void => this.commit());
     } else if (resolveReaderButtonSpec(this.specId).stacked) {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
@@ -206,7 +219,10 @@ export struct ReaderButton {
           } else {
             Text(this.label, this.textLayoutOptions).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale()));
           }
-        }.accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+        }.scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
+          .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion))
+          .animation(readerPressAnimation(this.reduceMotion))
+          .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
       }.padding(0).backgroundColor(Color.Transparent).borderRadius(0).opacity(1)
         .type(resolveReaderButtonSpec(this.specId).radius === 999 ? ButtonType.Capsule : ButtonType.Normal)
         .accessibilityRole(AccessibilityRoleType.BUTTON)
@@ -214,10 +230,15 @@ export struct ReaderButton {
         .enabled(this.actionEnabled)
         .id(this.focusId)
         .onFocus((): void => { if (this.mounted) this.onFocused(); })
+        .onTouch((event: TouchEvent): void => this.observePress(event))
         .accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label).onClick((): void => this.commit());
     } else {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Text(this.label, this.textLayoutOptions).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale()))
+        Text(this.label, this.textLayoutOptions)
+          .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
+          .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion))
+          .animation(readerPressAnimation(this.reduceMotion))
+          .attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale()))
           .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
       }.padding(0).backgroundColor(Color.Transparent).borderRadius(0).opacity(1)
         .type(resolveReaderButtonSpec(this.specId).radius === 999 ? ButtonType.Capsule : ButtonType.Normal)
@@ -226,6 +247,7 @@ export struct ReaderButton {
         .enabled(this.actionEnabled)
         .id(this.focusId)
         .onFocus((): void => { if (this.mounted) this.onFocused(); })
+        .onTouch((event: TouchEvent): void => this.observePress(event))
         .accessibilityText(this.actionAccessibilityLabel.length > 0 ? this.actionAccessibilityLabel : this.label).onClick((): void => this.commit());
     }
   }
@@ -233,5 +255,9 @@ export struct ReaderButton {
     if (this.readerWindowMetricsRevision < 0) return 1;
     return readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
+  private observePress(event: TouchEvent): void {
+    this.pressPointer = readerPressPointer(event, this.pressPointer, this.mounted && this.actionEnabled);
+  }
+  private resetPress(): void { this.pressPointer = -1; }
   private commit(): void { if (this.mounted && this.actionEnabled) this.onAction(); }
 }

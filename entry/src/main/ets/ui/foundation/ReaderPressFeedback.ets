@@ -1,7 +1,7 @@
 import { ColorMetrics } from '@kit.ArkUI';
 import { readerAppColor } from './ReaderThemeRegistry';
 
-/** Figma InteractionStateLayer: accent at 12%, above the current surface.
+/** The theme's neutral ink overlay is composited above the current surface.
  * ArkUI owns press/release/cancel state; ColorMetrics owns alpha composition.
  * Keep selected/disabled business state in the consuming component. */
 export class ReaderPressFeedback implements AttributeModifier<CommonAttribute> {
@@ -34,8 +34,7 @@ export class ReaderPressFeedback implements AttributeModifier<CommonAttribute> {
   }
 
   private composePressedSurface(): ResourceColor {
-    const accent = ColorMetrics.resourceColor(readerAppColor('TOK_ACCENT', this.scheme));
-    const overlay = ColorMetrics.rgba(accent.red, accent.green, accent.blue, 0.12);
+    const overlay = ColorMetrics.resourceColor(readerAppColor('app.interaction.press', this.scheme));
     return ColorMetrics.resourceColor(this.surface).blendColor(overlay).color;
   }
 

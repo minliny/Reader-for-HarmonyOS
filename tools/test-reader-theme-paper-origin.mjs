@@ -2,19 +2,31 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function mapping() {
+ const palette = {
+  day: ['FAF7F1', 'F7F3EA', '2B241D', '766C61'],
+  warm: ['F5E7CE', 'F2E8D3', '2C241D', '766C61'],
+  paper: ['EAE0CA', 'EDE2CB', '2B241D', '766C61'],
+  green: ['DCE7D6', 'E3EBDD', '263423', '63755F'],
+  night: ['201F1C', '21221F', 'E4DDD0', '9D968B'],
+  warmNight: ['2A231B', '31271D', 'E7D8C8', 'B3A18F'],
+  paperNight: ['22262E', '202630', 'E2DDD5', '9BA5B2'],
+  greenNight: ['1F2C22', '1D2D23', 'D8E2D2', '97AA9A'],
+ };
  const {readerThemeDefinition}=await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
  const {readerAppearanceThemeStyle,readerAppearanceChromeTone}=await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
  const {readerControlAppearanceThemeSwatch}=await import('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceStyle.ts');
  const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
- const source=name=>new URL(`../entry/src/main/ets/features/reading/${name}`,import.meta.url);
+ const source=name=>new URL(`../entry/src/main/ets/features/reading/ui/${name}`,import.meta.url);
  const Surface=productionMotionMethods(source('ReadingSurface.ets'),['themeStyle'],{readerAppearanceThemeStyle});
  const calls=[];class ChromeStyle {constructor(underlayColor,tone,contentColor){Object.assign(this,{underlayColor,tone,contentColor});}}
  const Experience=productionMotionMethods(source('LocalReadingExperience.ets'),['applyWindowChrome'],{readerAppearanceThemeStyle,readerAppearanceChromeTone,ReaderWindowChromeStyle:ChromeStyle,
   ReaderWindowCoordinator:{requestAppChrome:()=>calls.push('app'),requestReaderChrome:s=>calls.push(s),requestOverlayChrome:s=>calls.push(s)}});
- for(const id of ['day','warm','paper','green','night','warmNight','paperNight','greenNight']) {
-  const def=readerThemeDefinition(id),color=def.paperStart;
-  for(const role of ['paperEnd','statusBackground','paperBack','swatch'])assert.equal(def[role],color,id+' '+role);
-  assert.equal(readerControlAppearanceThemeSwatch(id),color);
+ for(const [id, [swatch, background, ink, meta]] of Object.entries(palette)) {
+  const def=readerThemeDefinition(id),color='#FF'+background;
+  for(const role of ['paperStart','paperEnd','statusBackground','paperBack'])assert.equal(def[role],color,id+' '+role);
+  assert.equal(def.ink, '#FF'+ink, id+' ink');
+  assert.equal(def.chromeMeta, '#FF'+meta, id+' meta');
+  assert.equal(readerControlAppearanceThemeSwatch(id),'#FF'+swatch);
   const surface=Object.assign(new Surface(),{appearance:{activeTheme:id}});assert.equal(surface.themeStyle().paperStart,color);assert.equal(surface.themeStyle().paperEnd,color);
   for(const overlay of [false,true]){const host=Object.assign(new Experience(),{windowChromeActive:true,windowChromeOverlayActive:overlay,appearanceSnapshot:{activeTheme:id}});host.applyWindowChrome();assert.deepEqual(calls.at(-1),new ChromeStyle(color,def.scheme==='night'?'light':'dark',def.ink));}
   assert.equal(def.paperTexture,id==='paper'||id==='paperNight');assert.equal(def.sourcePaperLighting,id==='paper');

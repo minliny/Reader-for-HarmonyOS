@@ -42,7 +42,7 @@ export function foundationControls({specs=foundationSpecs(),ColorMetrics,buttonS
  const deps={...properties.sdk,...readerFoundationTokens,...specs,...surfaceFontResolvers(),...modifiers,readerWindowMetrics:windowMetrics,ReaderWindowCoordinator:{metrics:windowMetrics},InputType:{Password:'InputType.Password',Number:'InputType.Number'}};
  require(sdk+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('ReaderButton',new Set(['leading']));
  require(sdk+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('ReaderCard',new Set(['content']));
- const button=createReaderBuilderProbe(buttonDefinition,['readerWindowMetricsRevision','scheme','specId','label','primary','actionEnabled','layout','isBusy','availableWidth','actionAccessibilityLabel','selectionSemantic','focusId','leading','emptyLeading','onAction','mounted','aboutToAppear','aboutToDisappear','build','commit','fontScale'],deps,properties.hooks);
+ const button=createReaderBuilderProbe(buttonDefinition,['readerWindowMetricsRevision','reduceMotion','scheme','specId','label','primary','actionEnabled','layout','isBusy','availableWidth','actionAccessibilityLabel','selectionSemantic','focusId','pressPointer','leading','emptyLeading','onAction','mounted','aboutToAppear','aboutToDisappear','build','observePress','resetPress','commit','fontScale'],deps,properties.hooks);
  const editing = readerEditingSdk();
  const field = createReaderBuilderProbe(fieldDefinition, [
    'readerWindowMetricsRevision', 'scheme', 'specId', 'text', 'placeholder', 'isEditable', 'password',

@@ -396,8 +396,21 @@ const paperPrimitives = [
     ]),
 ];
 
-const themeVariants = JSON.parse(readFileSync(new URL('./theme-svg-variants.json', import.meta.url), 'utf8')).map(baseFile => ({
-  file: `${baseFile}_theme_night`, baseFile, semanticRole: `${baseFile} night app palette`, originType: 'theme-palette-derived',
+export function svgThemeVariantRecipe(baseFile) {
+  return { file: `${baseFile}_theme_night`, baseFile, semanticRole: `${baseFile} night app palette`, originType: 'theme-palette-derived' };
+}
+
+const themeVariants = JSON.parse(readFileSync(new URL('./theme-svg-variants.json', import.meta.url), 'utf8'))
+  .map(svgThemeVariantRecipe);
+// Reader-authored geometry from the two Host main commits below. The theme
+// source replaces the original paint with currentColor and keeps the geometry.
+const readerThemeSources = [
+  ['reader_control_header_chevron', '2F6373', '8cb0c447d7746aa29b2a9bc0271c4d2bec071340',
+    '176f7ea3416d297cf7437ff30b40877e7dc54aeb0fe492153930cb29e2aa1caa', 'reader control header disclosure'],
+  ['settings_gen_navigation', '2D4A3E', 'fce869a10399fd6feec4c9a8178808f43d55e31d',
+    'ef696bb6844746dd733207c0e436be713ad1eda666681a137dc141ede0440f5d', 'general settings navigation layout'],
+].map(([file, authoredPaintId, sourceCommit, sourceSha256, semanticRole]) => ({
+  file, authoredPaintId, sourceCommit, sourceSha256, semanticRole, originType: 'reader-theme-svg',
 }));
 export const SVG_TTS_SELECTED_C = Object.freeze({
   selectionId: 'TTS-TRANSPORT-C',
@@ -436,7 +449,7 @@ export const svgActionForegroundRecipes = [
 })));
 export const svgControlForegroundRecipes = [
   { file: 'reader_control_replace_add_theme_night', baseFile: 'reader_control_replace_add', scheme: 'night',
-    paletteRole: 'app.ReaderControlReplaceContent.toolbarButton.fontColor.FFFFFFFF', namedWhiteStroke: true,
+    paletteRole: 'app.replace.onToolbarAction', namedWhiteStroke: true,
     semanticRole: 'reader replace add night foreground on the light primary control surface' },
   ...['day', 'night'].map(scheme => ({
     file: `reader_tts_configure_chevron${scheme === 'night' ? '_theme_night' : ''}`,
@@ -444,5 +457,5 @@ export const svgControlForegroundRecipes = [
     semanticRole: `reader TTS unconfigured service action chevron ${scheme} on primary control surface`,
   })),
 ].map(recipe => ({ ...recipe, originType: 'theme-palette-derived' }));
-export const svgAssetRecipes = [...icons, ...exactExports, ...makeExports, ...makeSourceExports, ...appearanceMakeExports, ...adaptedExports, ...paperPrimitives, ...themeVariants, ...svgRadixSheetRecipes, ...svgDownloadLucideRecipes, ...svgMessageLucideRecipes, ...svgActionForegroundRecipes, ...svgControlForegroundRecipes, ...svgTtsSelectedCRecipes]
+export const svgAssetRecipes = [...icons, ...exactExports, ...makeExports, ...makeSourceExports, ...appearanceMakeExports, ...adaptedExports, ...paperPrimitives, ...readerThemeSources, ...themeVariants, ...svgRadixSheetRecipes, ...svgDownloadLucideRecipes, ...svgMessageLucideRecipes, ...svgActionForegroundRecipes, ...svgControlForegroundRecipes, ...svgTtsSelectedCRecipes]
   .sort((left, right) => left.file.localeCompare(right.file));

@@ -2346,6 +2346,23 @@
       "provenance": "user-approved storage management v2 demo; SHA256 20ad0e4ffee223775c402850f6d3d3d2cca399a0ffbdb62ccad634c30e0fa8e4; Chromium Canvas2D .scrim and .dialog-layer over --ink"
     }
   },
+  "runtimePalette": {
+    "source": "Reader-UI/theme/registry.json",
+    "roles": {
+      "paper": "TOK_DOWNLOAD_PAPER",
+      "surface": "TOK_DOWNLOAD_SURFACE",
+      "ink": "TOK_DOWNLOAD_INK",
+      "muted": "TOK_DOWNLOAD_MUTED",
+      "line": "TOK_DOWNLOAD_LINE",
+      "soft": "TOK_DOWNLOAD_SOFT",
+      "green": "TOK_DOWNLOAD_GREEN",
+      "greenInk": "TOK_DOWNLOAD_GREEN_INK",
+      "softGreen": "TOK_DOWNLOAD_SOFT_GREEN",
+      "danger": "TOK_DOWNLOAD_DANGER",
+      "scrim": "TOK_DOWNLOAD_SCRIM",
+      "shadow": "TOK_DOWNLOAD_SHADOW"
+    }
+  },
   "ruleBoundary": "Original authored CSS, including min/max and inherited line boxes; platform layout tree consumes named constraints.",
   "nativeVisualVerification": "OPEN"
 }

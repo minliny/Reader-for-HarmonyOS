@@ -2,7 +2,7 @@ import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeR
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import {
@@ -15,6 +15,7 @@ import {
   SVG_RADIX_COMPONENT_SOURCES,
   svgRadixSheetRecipes,
   svgAssetRecipes,
+  svgThemeVariantRecipe,
   SVG_DOWNLOAD_LUCIDE_PACKAGE,
   SVG_DOWNLOAD_LUCIDE_SOURCES,
   svgDownloadLucideRecipes,
@@ -35,8 +36,10 @@ const DOWNLOAD_LUCIDE_SOURCE_DIR = path.join(ROOT, 'docs/ui-design/svg-provenanc
 const MESSAGE_LUCIDE_SOURCE_DIR = path.join(ROOT, 'docs/ui-design/svg-provenance/message-lucide');
 const TTS_SELECTED_C_SOURCE_DIR = path.join(ROOT, 'docs/ui-design/svg-provenance/tts-selected-c');
 const MANIFEST_PATH = path.join(ROOT, 'docs/ui-design/SVG_PROVENANCE.json');
+const THEME_VARIANTS_PATH = path.join(ROOT, 'tools/theme-svg-variants.json');
 const MAIN_SOURCE_DIR = path.join(ROOT, 'entry/src/main');
 const BANNED_PROVENANCE = /reference-only|readerseed|unknown|manual|approximation/i;
+const SVG_COLOR = /#[0-9a-f]{6}\b/gi;
 
 function sha256(content) {
   return createHash('sha256').update(content).digest('hex');
@@ -72,7 +75,52 @@ function renderPaperPrimitive(recipe) {
   return `<svg viewBox="0 0 ${recipe.width} ${recipe.height}" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none"><rect x="0" y="0" height="100%" width="100%" fill="url(#grad)" opacity="1"/><defs><radialGradient id="grad" gradientUnits="userSpaceOnUse" cx="0" cy="0" r="10" gradientTransform="${recipe.gradientTransform}">${stops}</radialGradient></defs></svg>\n`;
 }
 
+export function svgThemeColorRole(file, color) {
+  return `app.icon.${file}.${color.slice(1).toUpperCase()}`;
+}
+
+function themePaint(role, scheme) {
+  const target = readerAppColor(role, scheme);
+  if (target === undefined) return undefined;
+  assert.match(target, /^#FF[0-9A-F]{6}$/i, `${role}: SVG adapter preserves original opacity`);
+  return `#${target.slice(3)}`;
+}
+
+function paintThemeDay(file, source) {
+  const roles = new Set();
+  const content = source.replace(SVG_COLOR, color => {
+    const role = svgThemeColorRole(file, color);
+    const target = themePaint(role, 'day');
+    if (target === undefined || target.toUpperCase() === color.toUpperCase()) return color;
+    roles.add(role);
+    return target;
+  });
+  return { content, roles: [...roles] };
+}
+
 export async function renderRecipe(recipe) {
+  const result = await renderSvgSource(recipe);
+  if (recipe.originType === 'theme-palette-derived') return result;
+  const { content, roles } = paintThemeDay(recipe.file, result.content);
+  if (roles.length === 0) return result;
+  const themeSource = await readFile(path.join(ROOT, 'entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts'), 'utf8');
+  return { content, manifest: { ...result.manifest, themeRegistrySha256: sha256(themeSource),
+    transform: { ...result.manifest.transform, palette: 'day', colorRoles: roles } } };
+}
+
+export async function renderSvgSource(recipe) {
+  if (recipe.originType === 'reader-theme-svg') {
+    const sourcePath = path.join(ROOT, '../Reader-UI/theme/icons', recipe.file + '.svg');
+    const source = await readFile(sourcePath, 'utf8');
+    assert.equal(sha256(source), recipe.sourceSha256, `${recipe.file}: original Reader geometry changed`);
+    assert.ok(source.includes('currentColor') && !/#[0-9a-f]{6}\b/i.test(source), `${recipe.file}: theme geometry uses currentColor`);
+    const content = source.replaceAll('currentColor', '#' + recipe.authoredPaintId);
+    return { content, manifest: {
+      file: recipe.file + '.svg', semanticRole: recipe.semanticRole, originType: recipe.originType,
+      license: 'Reader project design', sourceFile: path.relative(ROOT, sourcePath),
+      sourceSha256: sha256(source), sourceCommit: recipe.sourceCommit, transform: { pathMutation: 'none' },
+    } };
+  }
   if (recipe.originType === 'user-selected-icon-adapted') {
     assert.deepEqual(recipe, svgTtsSelectedCRecipes.find(value => value.file === recipe.file),
       'only the six explicitly selected TTS C spacing adapters are admitted');
@@ -196,22 +244,23 @@ export async function renderRecipe(recipe) {
     assert.ok(base && base.originType !== 'theme-palette-derived', 'night variant requires an original trusted design asset');
     if (recipe.paletteRole) assert.deepEqual(recipe, [...svgActionForegroundRecipes, ...svgControlForegroundRecipes]
       .find(value => value.file === recipe.file), 'explicit foreground adapters must use a registered finite recipe');
-    const original = await renderRecipe(base);
+    const original = recipe.paletteRole ? await renderRecipe(base) : await renderSvgSource(base);
+    const daytime = recipe.paletteRole ? original.content : paintThemeDay(base.file, original.content).content;
     const roles = [];
     const scheme = recipe.scheme ?? 'night';
-    let content = original.content.replace(/#[0-9a-f]{6}\b/gi, color => {
-      const role = recipe.paletteRole ?? `app.icon.${recipe.baseFile === 'reader_page_bookmark_filled' ? 'reader_directory_marker_bookmark_active' : recipe.baseFile}.${color.slice(1).toUpperCase()}`;
-      const target = readerAppColor(role, scheme);
-      assert.match(target, /^#FF[0-9A-F]{6}$/i, `${role}: SVG adapter preserves original opacity`);
+    let content = original.content.replace(SVG_COLOR, color => {
+      const role = recipe.paletteRole ?? svgThemeColorRole(recipe.baseFile, color);
+      const target = themePaint(role, scheme);
+      assert.ok(target, `${role}: registry color missing`);
       roles.push(role);
-      return `#${target.slice(3)}`;
+      return target;
     });
     if (recipe.namedWhiteStroke) {
       assert.equal(recipe.file, 'reader_control_replace_add_theme_night', 'only the finite replace add foreground uses named white stroke');
       assert.equal((content.match(/stroke="white"/g) ?? []).length, 2, 'replace add contains the two original white strokes');
-      const target = readerAppColor(recipe.paletteRole, scheme);
-      assert.match(target, /^#FF[0-9A-F]{6}$/i, 'replace add preserves the original opaque stroke');
-      content = content.replaceAll('stroke="white"', `stroke="#${target.slice(3)}"`);
+      const target = themePaint(recipe.paletteRole, scheme);
+      assert.ok(target, `${recipe.paletteRole}: registry color missing`);
+      content = content.replaceAll('stroke="white"', `stroke="${target}"`);
       roles.push(recipe.paletteRole);
     }
     if (recipe.strokeWidth !== undefined) {
@@ -222,7 +271,7 @@ export async function renderRecipe(recipe) {
     }
     const themeSource = await readFile(path.join(ROOT, 'entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts'), 'utf8');
     return { content, manifest: { ...original.manifest, file: `${recipe.file}.svg`, semanticRole: recipe.semanticRole,
-      originType: recipe.originType, baseAsset: `${recipe.baseFile}.svg`, baseSha256: sha256(original.content),
+      originType: recipe.originType, baseAsset: `${recipe.baseFile}.svg`, baseSha256: sha256(daytime),
       themeRegistrySha256: sha256(themeSource), transform: { pathMutation: 'none', palette: scheme,
         colorRoles: [...new Set(roles)], ...(recipe.strokeWidth !== undefined ? { strokeWidth: recipe.strokeWidth } : {}) } } };
   }
@@ -434,21 +483,97 @@ export async function verifySvgCatalogue(){
  return{count:names.length};
 }
 
-export async function syncSvgAssets({ check = false, files } = {}) {
+async function readCurrentSvgOutput(destination) {
+  try {
+    return await readFile(destination, 'utf8');
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+    return null;
+  }
+}
+
+async function writeSvgOutputs(outputs) {
+  const changes = outputs.filter(output => output.previous !== output.content);
+  if (changes.length === 0) return;
+  const staging = path.join(ROOT, '.reader-svg-write.lock');
+  await mkdir(staging);
+  const installed = [];
+  let preserveStaging = false;
+  try {
+    for (const [index, output] of changes.entries()) {
+      if (await readCurrentSvgOutput(output.destination) !== output.previous) {
+        throw Error(`${output.destination}: changed during SVG generation; rerun with current inputs`);
+      }
+      output.next = path.join(staging, `next-${index}`);
+      await writeFile(output.next, output.content);
+      if (output.previous !== null) {
+        output.backup = path.join(staging, `previous-${index}`);
+        await writeFile(output.backup, output.previous);
+      }
+    }
+    for (const output of changes) {
+      await rename(output.next, output.destination);
+      installed.push(output);
+    }
+  } catch (error) {
+    const failures = [error];
+    for (const output of installed.reverse()) {
+      try {
+        if (output.backup) await rename(output.backup, output.destination);
+        else await rm(output.destination);
+      } catch (restoreError) {
+        failures.push(restoreError);
+      }
+    }
+    if (failures.length > 1) {
+      preserveStaging = true;
+      throw new AggregateError(failures, `SVG publication rollback needs recovery in ${staging}`);
+    }
+    throw error;
+  } finally {
+    if (!preserveStaging) await rm(staging, { recursive: true, force: true });
+  }
+}
+
+export function syncSvgAssets({ check = false, files } = {}) {
+  return materializeSvgAssets({ check, files, recipes: svgAssetRecipes });
+}
+
+export function syncThemeSvgAssets({ check, files, variants, previousVariants }) {
+  const recipes = new Map(svgAssetRecipes.map(recipe => [recipe.file, recipe]));
+  for (const base of variants) {
+    const recipe = svgThemeVariantRecipe(base);
+    const previous = recipes.get(recipe.file);
+    assert.ok(!previous || (previous.originType === 'theme-palette-derived' && !previous.paletteRole),
+      `${recipe.file}: theme generation cannot replace an explicit SVG recipe`);
+    recipes.set(recipe.file, recipe);
+  }
+  const selected = new Set(files ?? recipes.keys());
+  // A scoped palette refresh also updates any foreground variants that record
+  // the selected asset's day digest as their base.
+  for (const recipe of recipes.values()) {
+    if (recipe.baseFile && selected.has(recipe.baseFile)) selected.add(recipe.file);
+  }
+  return materializeSvgAssets({ check, files: [...selected], recipes: [...recipes.values()],
+    themeVariants: { previous: previousVariants, content: JSON.stringify(variants, null, 2) + '\n' } });
+}
+
+async function materializeSvgAssets({ check, files, recipes, themeVariants }) {
   const selected = files === undefined ? undefined : new Set(files);
   if (selected) assert.ok(selected.size > 0 && selected.size === files.length, 'selected SVG files must be nonempty and unique');
   if (!selected) {
     await assertSourceCatalogue();
     await assertRadixSourceCatalogue();
   }
-  const recipeNames = svgAssetRecipes.map((recipe) => recipe.file);
+  const recipeNames = recipes.map(recipe => recipe.file);
   assert.equal(new Set(recipeNames).size, recipeNames.length, 'SVG provenance recipes must be unique');
-  assert.doesNotMatch(JSON.stringify(svgAssetRecipes), BANNED_PROVENANCE,
+  assert.doesNotMatch(JSON.stringify(recipes), BANNED_PROVENANCE,
     'SVG provenance recipes may not contain untrusted origin categories');
   if (selected) for (const file of selected) assert.ok(recipeNames.includes(file), `${file}: selected SVG recipe does not exist`);
+  if (!themeVariants) await assertProductionReferences(files ?? recipeNames);
 
   const rendered = [];
-  for (const recipe of svgAssetRecipes) {
+  for (const recipe of recipes) {
     if (selected && !selected.has(recipe.file)) continue;
     const item = await renderRecipe(recipe);
     item.manifest.sha256 = sha256(item.content);
@@ -462,23 +587,26 @@ export async function syncSvgAssets({ check = false, files } = {}) {
       'production SVG set must exactly match the trusted provenance registry');
   }
 
+  const outputs = [];
   for (const { recipe, content } of rendered) {
     const destination = path.join(MEDIA_DIR, `${recipe.file}.svg`);
-    if (check) {
-      const actual = await readFile(destination, 'utf8');
-      assert.equal(actual, content, `${recipe.file}.svg: generated bytes or provenance hash drifted`);
-    } else {
-      await writeFile(destination, content);
-    }
+    outputs.push({ destination, content, previous: await readCurrentSvgOutput(destination) });
   }
 
-  const previousEntries = selected ? JSON.parse(await readFile(MANIFEST_PATH, 'utf8')).entries
-    .filter(entry => !selected.has(entry.file.replace(/\.svg$/, ''))) : [];
+  const previousManifest = await readCurrentSvgOutput(MANIFEST_PATH);
+  const previousEntries = [];
+  if (selected) {
+    const previousCatalogue = JSON.parse(previousManifest);
+    assert.equal(previousCatalogue.schemaVersion, SVG_PROVENANCE_SCHEMA_VERSION);
+    const registeredFiles = previousCatalogue.entries.map(entry => entry.file);
+    assert.equal(new Set(registeredFiles).size, registeredFiles.length, 'SVG provenance has duplicate entries');
+    previousEntries.push(...previousCatalogue.entries.filter(entry => !selected.has(entry.file.replace(/\.svg$/, ''))));
+  }
   const manifest = `${JSON.stringify({
     schemaVersion: SVG_PROVENANCE_SCHEMA_VERSION,
     generatedBy: 'tools/sync-svg-assets.mjs',
     policy: {
-      allowedOrigins: ['figma-component-derived', 'figma-node-export', 'figma-make-dom-export', 'figma-make-source-export', 'figma-node-adapted', 'figma-css-primitive', 'figma-node-platform-adapted', 'theme-palette-derived', 'radix-component-derived', 'lucide-component-derived', 'lucide-static-svg-derived', 'user-selected-icon-adapted'],
+      allowedOrigins: ['figma-component-derived', 'figma-node-export', 'figma-make-dom-export', 'figma-make-source-export', 'figma-node-adapted', 'figma-css-primitive', 'figma-node-platform-adapted', 'reader-theme-svg', 'theme-palette-derived', 'radix-component-derived', 'lucide-component-derived', 'lucide-static-svg-derived', 'user-selected-icon-adapted'],
       unknownAllowed: false,
       manualPathMutationAllowed: false,
       userApprovedPathAdaptations: [SVG_TTS_SELECTED_C.selectionId],
@@ -487,15 +615,21 @@ export async function syncSvgAssets({ check = false, files } = {}) {
       .sort((left, right) => left.file.localeCompare(right.file)),
   }, null, 2)}\n`;
 
+  if (themeVariants) {
+    assert.equal(await readCurrentSvgOutput(THEME_VARIANTS_PATH), themeVariants.previous,
+      'Theme SVG variants changed during generation; rerun with current inputs');
+    outputs.push({ destination: THEME_VARIANTS_PATH, ...themeVariants });
+  }
+  outputs.push({ destination: MANIFEST_PATH, content: manifest, previous: previousManifest });
+
   if (check) {
-    assert.equal(await readFile(MANIFEST_PATH, 'utf8'), manifest,
-      'SVG provenance manifest is stale; run node tools/sync-svg-assets.mjs');
+    for (const { destination, content, previous } of outputs) {
+      if (previous !== content) throw Error(`${path.relative(ROOT, destination)}: generated bytes or provenance drifted`);
+    }
   } else {
-    await mkdir(path.dirname(MANIFEST_PATH), { recursive: true });
-    await writeFile(MANIFEST_PATH, manifest);
+    await writeSvgOutputs(outputs);
   }
 
-  await assertProductionReferences(selected ? [...selected] : recipeNames);
   return { count: rendered.length, manifestPath: MANIFEST_PATH };
 }
 

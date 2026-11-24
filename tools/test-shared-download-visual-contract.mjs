@@ -75,7 +75,7 @@ methods.push('searchInputRevision','appForeground','covered','focusGeneration','
 // admission. Retain them rather than replacing them with fixture defaults.
 methods.push('measurements', 'measurementRevision', 'reduceMotion', 'sheetWasVisible',
   'sheetMaskReady', 'sheetExitPending',
-  ...(['native-bindings', 'row-geometry-receipts'].includes(selectedCase) ? ['sheetActorGeneration', 'sheetActorAttachment', 'sheetActorOwner', 'sheetActors'] : ['sheetAnimationGeneration']),
+  ...(['native-bindings', 'row-geometry-receipts', 'overlay-chrome'].includes(selectedCase) ? ['sheetActorGeneration', 'sheetActorAttachment', 'sheetActorOwner', 'sheetActors'] : ['sheetAnimationGeneration']),
   'transientFeedback', 'managementGeneration', 'takeReadingFocus',
   'storageDockShape', 'selectionDockShape');
 // This selected renderer leaf must construct the same initialized production
@@ -1732,10 +1732,19 @@ chrome.confirmation = ''; await microtasks();
 assert.equal(chromeRequests.at(-1).owner, 'overlay', 'cancel retains the same storage sheet with its single scrim');
 assert.equal(argb(chromeRequests.at(-1).style.underlayColor), currentChromePalette.day.paper);
 assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), argb(currentChromePalette.day.sheetPaper));
-const exitingGeneration = chrome.sheetAnimationGeneration, beforeExit = chromeRequests.length;
+const attachment = chrome.sheetActorAttachment, ownerGeneration = chrome.sheetActorOwner;
+const sheetActor = 'sheet:' + chrome.sheetOpeningGeneration;
+chrome.onSheetActorAppeared(attachment, ownerGeneration, 'scrim');
+chrome.onSheetActorAppeared(attachment, ownerGeneration, sheetActor, chrome.sheetOpeningGeneration);
+const beforeExit = chromeRequests.length;
 chrome.sheet = ''; await microtasks();
 assert.equal(chromeRequests.length, beforeExit, 'an animated sheet retains its band until the native exit receipt');
-chrome.onSheetExitFinished(exitingGeneration); await microtasks();
+chrome.onSheetActorTransitionFinished(attachment + 1, ownerGeneration, 'scrim', false);
+chrome.onSheetActorTransitionFinished(attachment, ownerGeneration, sheetActor, false);
+await microtasks();
+assert.equal(chromeRequests.length, beforeExit, 'a stale attachment cannot retire the current scrim');
+chrome.onSheetActorTransitionFinished(attachment, ownerGeneration, 'scrim', false);
+await microtasks();
 assert.equal(chromeRequests.at(-1).owner, 'app', 'closing the final overlay restores normal App chrome');
 chrome.sheet = 'filter'; await microtasks();
 const retiredChromeStart = chromeRequests.length;
