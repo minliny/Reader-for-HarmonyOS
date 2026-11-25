@@ -724,7 +724,17 @@
     "test-theme-primary-text.mjs",
     "test-typography-carrier-successors.mjs",
     "test-typography-role-imports.mjs",
-    "test-window-flicker-dedup.mjs"
+    "test-window-flicker-dedup.mjs",
+    "test-reader-window-chrome-failure.mjs",
+    "test-harmony-tts-native-setup-failure.mjs",
+    "test-arkts-napi-declarations.mjs",
+    "test-arkts-persistence-faults.mjs",
+    "test-arkts-resource-failure-ownership.mjs",
+    "test-local-configuration-reset-qualification.mjs",
+    "test-reading-record-device-identity.mjs",
+    "test-sync-local-preferences-recovery.mjs",
+    "test-harmony-navigation-appearance.mjs",
+    "test-reader-named-fixture-directory.mjs"
   ],
   "scopes": {
     "manga-image-cache": [
@@ -831,7 +841,6 @@
     "test-document-picker-system-file-handoff.mjs",
     "test-download-native-fixture.mjs",
     "test-framework-confluence-controls.mjs",
-    "test-harmony-navigation-appearance.mjs",
     "test-hdc-deployment-routing.mjs",
     "test-hdc-foreground-loopback.mjs",
     "test-index-alert-input-admission.mjs",

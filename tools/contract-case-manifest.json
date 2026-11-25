@@ -750,15 +750,18 @@
       "cases": {
         "speech-router": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "a4e03cbc0cc03e3e80541f8a0b92f91e9371e3670a101d08caf954840e4f34e2"
         },
         "http-owner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "a4e03cbc0cc03e3e80541f8a0b92f91e9371e3670a101d08caf954840e4f34e2"
         },
         "http-request-policy": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "a4e03cbc0cc03e3e80541f8a0b92f91e9371e3670a101d08caf954840e4f34e2"
         }
       }
     },
@@ -908,7 +911,8 @@
       "cases": {
         "local-resource-host": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "b7f4eb4410b4d26327b41f80f20cf7b29974dbebd2a313c863d1af20d1963f15"
         }
       }
     },
@@ -3980,11 +3984,18 @@
       "cases": {
         "volume": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3300d510d36525d9306d5b4b10bf8fed4c8528705f9d41bfa72a0d26b256d914"
         },
         "screen-off": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3300d510d36525d9306d5b4b10bf8fed4c8528705f9d41bfa72a0d26b256d914"
+        },
+        "screen-lock-fallback": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3300d510d36525d9306d5b4b10bf8fed4c8528705f9d41bfa72a0d26b256d914"
         }
       }
     },
@@ -11840,11 +11851,13 @@
         },
         "journal": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "99434fc5e0c8ea46c244d2449bad21c4cbdb85ce9574ff27b97ad8a4ababcb3d"
         },
         "restore-recovery": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "99434fc5e0c8ea46c244d2449bad21c4cbdb85ce9574ff27b97ad8a4ababcb3d"
         },
         "scheme-order": {
           "resources": [],
@@ -12348,12 +12361,17 @@
         "font-boundary": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "53ab759e19db589875b323e3ad5ebcc2c3c0a6f5971aa9dd2ee6b3e5302da63e"
+          "sourceSha256": "6581636a311fb79e23a26f039efa6861ca2e0a1fcc908d3df11d7aa7eb60f519"
         },
         "font-handoff": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "53ab759e19db589875b323e3ad5ebcc2c3c0a6f5971aa9dd2ee6b3e5302da63e"
+          "sourceSha256": "6581636a311fb79e23a26f039efa6861ca2e0a1fcc908d3df11d7aa7eb60f519"
+        },
+        "fault-lifecycle": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6581636a311fb79e23a26f039efa6861ca2e0a1fcc908d3df11d7aa7eb60f519"
         }
       }
     },
@@ -12375,11 +12393,13 @@
         },
         "grip-settle": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "a771cd56ddec0bfa76e37ef2bc1ded457b21cb6e0b65c76f6426ff32521775d3"
         },
         "grip-port": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "a771cd56ddec0bfa76e37ef2bc1ded457b21cb6e0b65c76f6426ff32521775d3"
         },
         "dock-owner": {
           "resources": [],
@@ -12391,7 +12411,8 @@
         },
         "placement-durability": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "a771cd56ddec0bfa76e37ef2bc1ded457b21cb6e0b65c76f6426ff32521775d3"
         }
       }
     },
@@ -12512,6 +12533,226 @@
           "resources": [],
           "qualification": "QUALIFIED",
           "sourceSha256": "18fa10dd4273a3b125772a9384da9e566462a9b299b885fb182b91c30de34e04"
+        }
+      }
+    },
+    "test-reader-window-chrome-failure.mjs": {
+      "sourceSha256": "914dc450ce97d5658ad56ba2ed8d0d7602ca591181de572a8fd1ae3c43814d43",
+      "cases": {
+        "unsupported-style": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "914dc450ce97d5658ad56ba2ed8d0d7602ca591181de572a8fd1ae3c43814d43"
+        },
+        "window-epoch": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "914dc450ce97d5658ad56ba2ed8d0d7602ca591181de572a8fd1ae3c43814d43"
+        },
+        "transient-retry": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "914dc450ce97d5658ad56ba2ed8d0d7602ca591181de572a8fd1ae3c43814d43"
+        },
+        "metrics-refresh": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "914dc450ce97d5658ad56ba2ed8d0d7602ca591181de572a8fd1ae3c43814d43"
+        }
+      }
+    },
+    "test-harmony-tts-native-setup-failure.mjs": {
+      "sourceSha256": "08a6506222be26bc28995e0cb276e4e268a61e9becb4168cb205dcfe9169d21b",
+      "cases": {
+        "http-player": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "08a6506222be26bc28995e0cb276e4e268a61e9becb4168cb205dcfe9169d21b"
+        },
+        "http-stale-player": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "08a6506222be26bc28995e0cb276e4e268a61e9becb4168cb205dcfe9169d21b"
+        },
+        "system-engine": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "08a6506222be26bc28995e0cb276e4e268a61e9becb4168cb205dcfe9169d21b"
+        },
+        "media-session": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "08a6506222be26bc28995e0cb276e4e268a61e9becb4168cb205dcfe9169d21b"
+        }
+      }
+    },
+    "test-arkts-napi-declarations.mjs": {
+      "sourceSha256": "9358f8987c76f07d158ae6325b3a16b54fea9e7ad1773639bbb90ce41b6a833c",
+      "cases": {
+        "core": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9358f8987c76f07d158ae6325b3a16b54fea9e7ad1773639bbb90ce41b6a833c"
+        },
+        "bookturn": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9358f8987c76f07d158ae6325b3a16b54fea9e7ad1773639bbb90ce41b6a833c"
+        }
+      }
+    },
+    "test-arkts-persistence-faults.mjs": {
+      "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2",
+      "cases": {
+        "archive-primary-error": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+        },
+        "archive-stale-work": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+        },
+        "local-book-stage-retry": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+        },
+        "text-clear-disappearance": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+        },
+        "storage-policy-read-retry": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+        },
+        "manga-grant-reconcile": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+        },
+        "cache-write-primary-error": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+        },
+        "manga-display-disappearance": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+        }
+      }
+    },
+    "test-arkts-resource-failure-ownership.mjs": {
+      "sourceSha256": "6fd697419ececeee3f055bb4f7fec0ad85d8618fd15eaa627b62f54088443311",
+      "cases": {
+        "manga-graphics": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6fd697419ececeee3f055bb4f7fec0ad85d8618fd15eaa627b62f54088443311"
+        },
+        "local-epub-access": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6fd697419ececeee3f055bb4f7fec0ad85d8618fd15eaa627b62f54088443311"
+        },
+        "share-cache": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6fd697419ececeee3f055bb4f7fec0ad85d8618fd15eaa627b62f54088443311"
+        },
+        "native-text-teardown": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6fd697419ececeee3f055bb4f7fec0ad85d8618fd15eaa627b62f54088443311"
+        },
+        "capture-listener-teardown": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6fd697419ececeee3f055bb4f7fec0ad85d8618fd15eaa627b62f54088443311"
+        },
+        "bundled-ledger-read": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6fd697419ececeee3f055bb4f7fec0ad85d8618fd15eaa627b62f54088443311"
+        },
+        "arkweb-cleanup-precedence": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6fd697419ececeee3f055bb4f7fec0ad85d8618fd15eaa627b62f54088443311"
+        },
+        "public-book-cleanup-precedence": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6fd697419ececeee3f055bb4f7fec0ad85d8618fd15eaa627b62f54088443311"
+        },
+        "manga-chapter-cancel": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6fd697419ececeee3f055bb4f7fec0ad85d8618fd15eaa627b62f54088443311"
+        },
+        "core-copy-optional-paths": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6fd697419ececeee3f055bb4f7fec0ad85d8618fd15eaa627b62f54088443311"
+        }
+      }
+    },
+    "test-local-configuration-reset-qualification.mjs": {
+      "sourceSha256": "07ab9e2411c187a770e84f0c23cb92ae08461b51e250bada198c7665a8acbaff",
+      "cases": {
+        "journal-qualification": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "07ab9e2411c187a770e84f0c23cb92ae08461b51e250bada198c7665a8acbaff"
+        }
+      }
+    },
+    "test-reading-record-device-identity.mjs": {
+      "sourceSha256": "b28c1bf0c4e2eb3507a49d80191f2ccf2da239586ab08b62ac64b503983742b2",
+      "cases": {
+        "flush-qualification": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "b28c1bf0c4e2eb3507a49d80191f2ccf2da239586ab08b62ac64b503983742b2"
+        }
+      }
+    },
+    "test-sync-local-preferences-recovery.mjs": {
+      "sourceSha256": "c9086514bca2283d07bab694f5cebd861171e4824d88df548ac7ca14cd2c51cf",
+      "cases": {
+        "unqualified-cache": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "c9086514bca2283d07bab694f5cebd861171e4824d88df548ac7ca14cd2c51cf"
+        },
+        "credential-digest": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "c9086514bca2283d07bab694f5cebd861171e4824d88df548ac7ca14cd2c51cf"
+        }
+      }
+    },
+    "test-harmony-navigation-appearance.mjs": {
+      "sourceSha256": "d6d1140c8e337b9615de3859763fd3e2310f51ffd951e7a77f4575d5f087467a",
+      "cases": {
+        "local-preference-receipt": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "d6d1140c8e337b9615de3859763fd3e2310f51ffd951e7a77f4575d5f087467a"
+        }
+      }
+    },
+    "test-reader-named-fixture-directory.mjs": {
+      "sourceSha256": "d5aaafcb2719504d922c070c5c6d3ce4431708ef1aec9b4623f6c5017f06bddb",
+      "cases": {
+        "fresh-and-concurrent": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "d5aaafcb2719504d922c070c5c6d3ce4431708ef1aec9b4623f6c5017f06bddb"
         }
       }
     }
