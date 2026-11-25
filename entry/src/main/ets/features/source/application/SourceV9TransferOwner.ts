@@ -34,6 +34,7 @@ export interface SourceV9TransferItemResult {
   index: number;
   name: string;
   outcome: string;
+  preflightReport?: SourceCheckOutcome;
 }
 export interface SourceV9ImportResult {
   addedCount: number;
@@ -60,6 +61,29 @@ export interface SourceV9SubscriptionReview {
   ruleBaseline?: SourceV9RuleRow[];
   rows: SourceV9Change[];
 }
+export interface SourceV9PartialApplyItem {
+  key: string;
+  name: string;
+  sourceId?: string;
+  confirmed: boolean;
+}
+export interface SourceV9PartialApplyDetail {
+  subscriptionId: number;
+  name: string;
+  confirmedCount: number;
+  items: SourceV9PartialApplyItem[];
+}
+export interface SourceV9PartialSubscriptionApply {
+  confirmedCount: number;
+  selectedCount: number;
+  message: string;
+  details: SourceV9PartialApplyDetail[];
+}
+interface SourceV9ReviewApplication {
+  review: SourceV9SubscriptionReview;
+  chosen: SourceV9Change[];
+  detail: SourceV9PartialApplyDetail;
+}
 export interface SourceV9TransferSnapshot {
   importStep: 1 | 2 | 3;
   fileName: string;
@@ -70,6 +94,7 @@ export interface SourceV9TransferSnapshot {
   knownSourceIds: string[];
   subscriptions: ManagedRuleSubscription[];
   reviews: SourceV9SubscriptionReview[];
+  partialSubscriptionApply?: SourceV9PartialSubscriptionApply;
   busy: boolean;
   runningCheck: boolean;
   completedChecks: number;
@@ -359,7 +384,7 @@ export class SourceV9TransferOwner {
       if (!row.selected) return { index: row.index, name, outcome: '未选中' };
       const outcome = receipt?.status === 'imported' ?
         (existing.has(receipt.sourceId) ? '更新' : '新增') : (failures.get(row.index) ?? receipt?.error ?? '导入失败');
-      return { index: row.index, name, outcome };
+      return { index: row.index, name, outcome, preflightReport: row.report };
     });
     const summary: SourceV9ImportResult = { addedCount: result.addedCount, updatedCount: result.updatedCount,
       failedCount: result.failedCount, unsupportedCount: rows.filter((row: SourceV9ImportRow): boolean => row.candidate?.supported === false).length,
@@ -423,12 +448,13 @@ export class SourceV9TransferOwner {
     const verified: SourceV9ImportedReport[] = [];
     for (const report of reports) {
       if (!current()) return verified;
-      if (report.report.sourceId !== report.sourceId) continue;
+      const digest = report.report.report?.ruleDigest;
+      if (report.report.sourceId !== report.sourceId || digest === undefined) continue;
       try {
         const stored = await this.gateway.readSourceDefinition(report.sourceId, current);
-        if (stored?.hasRawBookSource === true && stored.sourceVersion !== undefined &&
+        if (stored?.hasRawBookSource === true && stored.sourceVersion === digest &&
           sourceV9CanonicalDocument(JSON.parse(stored.text)) === sourceV9CanonicalDocument(report.candidate)) {
-          verified.push({ ...report, sourceVersion: stored.sourceVersion });
+          verified.push({ ...report, sourceVersion: digest });
         }
       } catch (_) { /* Matching the original rule digest still requires a current Core readback. */ }
     }
@@ -493,7 +519,8 @@ export class SourceV9TransferOwner {
           failures.push(subscription.name);
         }
       }
-      if (current()) this.patch({ reviews, status: reviews.length > 0 ? '' : '没有可展示的订阅差异',
+      if (current()) this.patch({ reviews, partialSubscriptionApply: undefined,
+        status: reviews.length > 0 ? '' : '没有可展示的订阅差异',
         error: failures.length > 0 ? `未能检查订阅 · ${failures.join('、')}` : '' });
     });
   }
@@ -537,8 +564,13 @@ export class SourceV9TransferOwner {
     const plan = await this.rules.previewSourceSubscription(subscription.id, remote, expected, current);
     const candidates = new Map(supported.map((item: SourceImportCandidate): [string, JsonObject] =>
       [item.sourceId, item.bookSource]));
+    const unsupportedIds = new Set(prepared.items.filter((item: SourceImportCandidate): boolean => !item.supported)
+      .map((item: SourceImportCandidate): string => item.sourceId));
     const versions = new Map(sourcesBefore.map((row: BookSource): [string, string | undefined] => [row.sourceId, row.sourceVersion]));
-    const rows = plan.changes.map((change): SourceV9Change => {
+    // Filtering an unsupported candidate can make an old Core baseline look like a remote removal.
+    const visibleChanges = plan.changes.filter((change: RuleSourceChange): boolean =>
+      change.kind !== 'removedRemote' || !unsupportedIds.has(change.sourceId));
+    const rows = visibleChanges.map((change: RuleSourceChange): SourceV9Change => {
       const candidate = candidates.get(change.sourceId);
       const expectedVersion = versions.get(change.sourceId);
       const normalApply = change.kind === 'added' || change.kind === 'update';
@@ -620,28 +652,42 @@ export class SourceV9TransferOwner {
   }
 
   applyReviews(): Promise<void> {
+    if (this.snapshot.reviews.length === 0) return Promise.resolve();
     return this.operation(async (current: () => boolean): Promise<void> => {
       let appliedCount = 0;
       const failures: string[] = [];
       const reports: SourceV9ImportedReport[] = [];
-      const reviews = this.snapshot.reviews;
-      if (reviews.some((review: SourceV9SubscriptionReview): boolean =>
-        review.sourcePlan !== undefined && review.sourcePlan.expiresAt <= Date.now() &&
-        sourceV9ChangesToApply(review.rows).length > 0)) {
+      const applications: SourceV9ReviewApplication[] = [];
+      for (const review of this.snapshot.reviews) {
+        const chosen = sourceV9ChangesToApply(review.rows);
+        if (chosen.length === 0) continue;
+        const detail: SourceV9PartialApplyDetail = { subscriptionId: review.subscription.id, name: review.subscription.name,
+          confirmedCount: 0, items: chosen.map((row: SourceV9Change): SourceV9PartialApplyItem =>
+            ({ key: row.key, name: row.name, sourceId: row.sourceId, confirmed: false })) };
+        applications.push({ review, chosen, detail });
+      }
+      if (applications.some((application: SourceV9ReviewApplication): boolean =>
+        application.review.sourcePlan !== undefined && application.review.sourcePlan.expiresAt <= Date.now())) {
         this.patch({ error: '订阅预览已过期，请保留当前明细并重新检查更新' });
         return;
       }
       // A settled or uncertain plan must be checked afresh before reapplying it.
       this.patch({ reviews: [] });
-      for (const review of reviews) {
+      for (const application of applications) {
+        const review = application.review;
+        const chosen = application.chosen;
+        const detail = application.detail;
         if (!current()) return;
-        const chosen = sourceV9ChangesToApply(review.rows);
-        if (chosen.length === 0) continue;
         try {
           if (review.sourcePlan === undefined) {
             const rules = chosen.map((row: SourceV9Change): JsonObject => row.rule as JsonObject);
             await this.rules.refreshSubscription(review.subscription, JSON.stringify(rules), undefined, current,
-              (count: number): void => { appliedCount += count; }, async (): Promise<void> => {
+              (count: number): void => {
+                appliedCount += count;
+                detail.confirmedCount = count;
+                // A count alone does not identify individual rows in a partial receipt.
+                if (count === chosen.length) for (const item of detail.items) item.confirmed = true;
+              }, async (): Promise<void> => {
                 const subscriptions = await this.rules.listRuleSubscriptions(current);
                 const latest = subscriptions.find((row: ManagedRuleSubscription): boolean => row.id === review.subscription.id);
                 const stored = await this.storedReplaceRules(current);
@@ -658,8 +704,11 @@ export class SourceV9TransferOwner {
           if (normal.length === 0) await this.readReviewSubscription(review.subscription, true, current);
           const applied = normal.length > 0 ? await this.rules.applySourceSubscription(review.sourcePlan, normal, current) : [];
           appliedCount += applied.length;
+          detail.confirmedCount += applied.length;
+          const appliedIds = new Set(applied);
+          for (const item of detail.items) item.confirmed = item.sourceId !== undefined && appliedIds.has(item.sourceId);
           for (const row of chosen) {
-            if (row.sourceId !== undefined && applied.includes(row.sourceId)) this.collectReviewReport(row, reports);
+            if (row.sourceId !== undefined && appliedIds.has(row.sourceId)) this.collectReviewReport(row, reports);
           }
           const overwritten: string[] = [];
           for (const row of conflicts) {
@@ -668,7 +717,10 @@ export class SourceV9TransferOwner {
             try {
               await this.gateway.overwriteSubscriptionSource(row.sourceId, row.candidate, row.expectedVersion, current);
               appliedCount++;
+              detail.confirmedCount++;
               overwritten.push(row.sourceId);
+              const item = detail.items.find((byKey: SourceV9PartialApplyItem): boolean => byKey.key === row.key);
+              if (item !== undefined) item.confirmed = true;
               this.collectReviewReport(row, reports);
             } catch (_) {
               failures.push(row.name);
@@ -690,8 +742,14 @@ export class SourceV9TransferOwner {
         }
       }
       if (!current()) return;
-      this.patch({ status: `已确认应用 ${appliedCount} 项`, writePending: this.rules.mutationSnapshot().blocked,
-        error: failures.length ? `未确认全部更新 · ${failures.join('、')}` : '' });
+      const writePending = this.rules.mutationSnapshot().blocked;
+      const error = failures.length > 0 ? `未确认全部更新 · ${failures.join('、')}` : '';
+      const details = applications.map(application => application.detail);
+      const selectedCount = details.reduce((sum: number, detail: SourceV9PartialApplyDetail): number => sum + detail.items.length, 0);
+      const partialSubscriptionApply: SourceV9PartialSubscriptionApply | undefined =
+        failures.length > 0 || writePending || appliedCount !== selectedCount ?
+          { confirmedCount: appliedCount, selectedCount, message: error, details } : undefined;
+      this.patch({ status: `已确认应用 ${appliedCount} 项`, writePending, error, partialSubscriptionApply });
       const transferred = await this.qualifyTransferredReports(reports, current);
       if (!current()) return;
       if (appliedCount > 0) this.readBack(transferred);

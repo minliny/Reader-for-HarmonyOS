@@ -291,18 +291,42 @@ if (selected.length) {
     const { SourceHost } = actualSourceManagementTypes({ ReaderRuntimeOwner: Runtime, hilog: { info() {}, warn() {}, error() {} } });
     const tick = () => new Promise(resolve => setImmediate(resolve));
     const deferred = () => { let resolve, reject; const promise = new Promise((yes, no) => { resolve = yes; reject = no; }); return { promise, resolve, reject }; };
-    const row = id => ({ ...base(id), loginUrl: `https://${id}.test/login`, enabledExplore: false,
+    const ruleDigest = 'b'.repeat(64);
+    const traceId = 'login-check';
+    const report = (denied, timeoutMs = 180000) => ({ version: 2, mode: 'search', traceId, ruleDigest,
+      inputDigest: 'a'.repeat(64), executionOptions: { timeoutMs }, executionOptionsDigest: 'c'.repeat(64),
+      steps: ['L1', 'L2', 'L3', 'L4', 'L5'].map((level, index) => ({
+        level, requested: index < 2, executed: index < 2, durationMs: 0,
+        status: index >= 2 ? 'not_requested' : index === 1 && denied ? 'fail' : 'pass',
+        ...(index === 1 && denied ? { reason: 'network' } : {}),
+      })) });
+    const row = id => ({ ...base(id), loginUrl: `https://${id}.test/login`, enabledExplore: false, sourceVersion: ruleDigest,
       bookSource: { bookSourceType: 0, loginUrl: `https://${id}.test/login` } });
-    function runtime(gate) {
-      return { rows: [row('a')], calls: [], logins: [],
-        supportsCoreCapability: capability => capability === 'source.check.mode.v1', takeSourceHttpDiagnostics: () => [],
+    function runtime(gate, completion) {
+      const denied = completion === 'current-denied';
+      const olderReport = report(true);
+      olderReport.steps[1].reason = '登录失效';
+      return { rows: [row('a')], calls: [], logins: [], reports: completion === 'current-clear' ?
+          [{ report: olderReport, stale: false, checkedAtMs: 1 }] : [],
+        supportsCoreCapability: capability => ['source.check.mode.v1', 'source.check.report.v2',
+          'source.check.report.clear.v1'].includes(capability),
+        takeSourceHttpDiagnostics: requestId => denied ? [{ sourceId: 'a', requestId, traceId,
+          stage: 'L2', method: 'GET', url: 'https://a.test/search', statusCode: 401, durationMs: 1, timestampMs: 1 }] : [],
         async openSourceLogin(...args) { this.logins.push(args); await gate.promise; },
         async request(method, params, options = {}) {
           assert.notEqual(options.canDispatch?.(), false); assert.notEqual(options.canContinue?.(), false);
           this.calls.push({ method, params: structuredClone(params) });
-          if (method === 'source.list') return { data: { sources: structuredClone(this.rows) } };
-          if (method === 'source.check.run') return { requestId: 71, data: { traceId: 'login-check', results: [{
-            sourceId: params.sourceIds[0], available: true, levelsPassed: ['L1', 'L2'], durationMs: 1,
+          if (method === 'source.list') return { data: { sources: structuredClone(this.rows.map(source => ({
+            ...source, checkReports: params.includeCheckReports ? this.reports : undefined,
+          }))) } };
+          if (method === 'source.check.report.clear') {
+            const clearedCount = this.reports.length;
+            this.reports = [];
+            return { data: { sourceIds: params.sourceIds, clearedCount } };
+          }
+          if (method === 'source.check.run') return { requestId: 71, data: { traceId, results: [{
+            sourceId: params.sourceIds[0], available: !denied, levelsPassed: denied ? ['L1'] : ['L1', 'L2'], durationMs: 1,
+            ...(denied ? { failureReason: 'L2: HTTP 401' } : {}), report: report(denied, params.timeoutMs),
             debugLogs: [{ state: 1, msg: 'fixture check completed', timestampMs: 1 }],
           }] } };
           assert.fail(`Unexpected runtime I/O ${method}`);
@@ -322,17 +346,32 @@ if (selected.length) {
         async open() { host.open(identity); await this.settle(); },
       };
     }
-    for (const completion of ['current-resolve', 'old-resolve', 'old-reject']) {
-      const gate = deferred(), owner = runtime(gate); installed = owner;
+    for (const completion of ['current-resolve', 'current-denied', 'current-clear', 'old-resolve', 'old-reject']) {
+      const gate = deferred(), owner = runtime(gate, completion); installed = owner;
       const a = presentation(owner, `A:${completion}`); await a.open();
       a.host.loginSource('a','https://a.test/login',a.identity);a.host.loginSource('a','https://a.test/login',a.identity);
       for (let i = 0; i < 100 && owner.logins.length === 0; i++) await tick();
       assert.equal(owner.logins.length,1);assert.deepEqual(owner.logins[0].slice(0,3),['a','https://a.test/login','a'],'one login captures the original source identity and intent');assert.equal(owner.logins[0][3](),true,'native login receives the current task identity guard');
-      if (completion === 'current-resolve') {
+      if (completion === 'current-resolve' || completion === 'current-denied') {
         gate.resolve(); await a.settle();
         assert.equal(owner.calls.filter(call => call.method === 'source.check.run').length, 1);
-        assert.deepEqual(owner.calls.find(call => call.method === 'source.check.run').params.sourceIds, ['a']);
-        assert.equal(a.values.at(-1).find(value => value.sourceId === 'a').checkState, 'passed', 'real gateway validation and owner projection complete for the current session');
+        const params = owner.calls.find(call => call.method === 'source.check.run').params;
+        assert.deepEqual([params.sourceIds, params.mode, params.levels], [['a'], 'search', ['L1', 'L2']]);
+        const value = a.values.at(-1).find(value => value.sourceId === 'a');
+        const denied = completion === 'current-denied';
+        assert.equal(value.checkState, denied ? 'failed' : 'passed');
+        assert.equal(value.checkReports[0].report.traceId, traceId);
+        assert.equal(value.loginState, denied ? 'expired' : 'unknown',
+          'the typed public-search pass proves source availability but does not confirm the account');
+      } else if (completion === 'current-clear') {
+        assert.equal(a.values.at(-1)[0].loginState, 'expired');
+        assert.equal(await owner.logins[0][4](), true, 'current clear delegates and validates Core report deletion');
+        assert.equal(owner.reports.length, 0);
+        assert.equal(a.values.at(-1)[0].loginState, 'unknown');
+        assert.deepEqual(a.values.at(-1)[0].checkReports, []);
+        gate.reject(Object.assign(new Error('cancelled'), { code: 'CANCELLED' }));
+        await a.settle();
+        assert.equal(owner.calls.filter(call => call.method === 'source.check.run').length, 0, 'clear followed by cancel does not trigger a new check');
       } else {
         a.retire(); owner.rows = [row('b')];
         const b = presentation(owner, `B:${completion}`);

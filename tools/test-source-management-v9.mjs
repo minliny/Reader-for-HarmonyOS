@@ -248,10 +248,10 @@ test('current HTTP authentication denial projects expired, with exact matched st
   assert.equal(sourceV9AuthenticationDenied({ ...fail, logs: [{ ...denial, step: 'L1' }] }), false);
   assert.equal(sourceV9AuthenticationDenied({ ...fail, logs: [{ ...denial, statusCode: 500 }] }), false);
   const currentHistory = [{ checkedAtMs: 10, stale: false, report }];
-  assert.equal(projectSourceV9Check(book, currentHistory, undefined, 0, 'verified', true).loginState, 'expired');
+  assert.equal(projectSourceV9Check(book, currentHistory, undefined, 0, true).loginState, 'expired');
   assert.equal(projectSourceV9Check({ ...book, enabled: false }, currentHistory, undefined, 0,
-    'verified', true).loginState, 'unknown');
-  assert.equal(projectSourceV9Check(book, [], undefined, 11, undefined, false).loginState, 'unknown');
+    true).loginState, 'unknown');
+  assert.equal(projectSourceV9Check(book, [], undefined, 11).loginState, 'unknown');
   assert.equal(sourceV9CheckStepText(report.steps[0], 'L2: HTTP status 403'), '失败 · HTTP status 403');
   assert.equal(sourceV9CheckStepText(report.steps[0], 'L4: HTTP status 403'), '失败 · network');
 });

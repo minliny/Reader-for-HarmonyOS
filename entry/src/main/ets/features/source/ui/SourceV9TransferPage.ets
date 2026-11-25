@@ -14,7 +14,8 @@ import { httpUrlHostname } from '../../../platform/network/HttpTransportPolicy';
 import type { ManagedRuleSubscription, RuleSubscriptionDraft, RuleSubscriptionType } from '../../settings/application/RulesManagementGateway';
 import type { SourceCheckOutcome, SourceCheckReportStep, SourceGroupRecord, SourceImportGroupTarget } from '../application/SourceGateway';
 import { EMPTY_SOURCE_V9_TRANSFER, SourceV9TransferOwner, type SourceV9CheckOptions, type SourceV9SubscriptionReview,
-  type SourceV9ConfirmedImport, type SourceV9TransferItemResult, type SourceV9TransferSnapshot } from '../application/SourceV9TransferOwner';
+  type SourceV9ConfirmedImport, type SourceV9PartialApplyDetail, type SourceV9PartialApplyItem,
+  type SourceV9PartialSubscriptionApply, type SourceV9TransferItemResult, type SourceV9TransferSnapshot } from '../application/SourceV9TransferOwner';
 import { sourceV9ChangesToApply, sourceV9SelectedImportRows, type SourceV9Change, type SourceV9ChangeKind,
   type SourceV9Depth, type SourceV9GroupStrategy, type SourceV9ImportedReport, type SourceV9ImportOrigin,
   type SourceV9ImportRow, type SourceV9Mode, type SourceV9TransferPane } from '../application/SourceV9TransferState';
@@ -657,8 +658,8 @@ export struct SourceV9TransferPage {
   }
 
   @Builder
-  private reportAction(name: string, report: SourceCheckOutcome) {
-    this.action(report.available ? '通过' : '未通过', report.available ? 'neutral' : 'danger',
+  private reportAction(name: string, report: SourceCheckOutcome, preflight: boolean = false) {
+    this.action((preflight ? '预检' : '') + (report.available ? '通过' : '未通过'), report.available ? 'neutral' : 'danger',
       this.inputCurrent(), (): void => this.showReport(name, report), 28);
   }
 
@@ -697,6 +698,7 @@ export struct SourceV9TransferPage {
             Text(detail.name).layoutWeight(1).fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
               .fontColor(this.color('TOK_INK')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
             this.label(detail.outcome, 11, detail.outcome === '新增' || detail.outcome === '更新' ? 'TOK_MUTED' : 'TOK_DANGER');
+            if (detail.preflightReport !== undefined) this.reportAction(detail.name, detail.preflightReport, true);
           }.width('100%').padding(10).border({ width: { top: 1 }, color: this.color('TOK_LINE') });
         }, (detail: SourceV9TransferItemResult): string => String(detail.index));
       }
@@ -742,6 +744,9 @@ export struct SourceV9TransferPage {
           this.action('全部检查更新', 'primary', this.editable() && this.activeSubscriptions().length > 0,
             (): void => this.checkSubscriptions(this.activeSubscriptions()), 36);
         }.width('100%');
+        if (this.state.partialSubscriptionApply !== undefined) {
+          this.partialSubscriptionApply(this.state.partialSubscriptionApply);
+        }
         if (this.state.subscriptions.length === 0 && !this.state.writePending && this.state.error.length > 0) {
           ReaderPageState({ variant: 'inline', padded: false, message: this.state.error, actionLabel: '重新读取订阅',
             actionEnabled: this.editable(),
@@ -763,6 +768,30 @@ export struct SourceV9TransferPage {
         }
       }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 14, right: 14, top: 12, bottom: 18 });
     }.width('100%').layoutWeight(1).align(Alignment.Top).scrollBar(BarState.Off);
+  }
+
+  @Builder
+  private partialSubscriptionApply(result: SourceV9PartialSubscriptionApply) {
+    Column({ space: 8 }) {
+      this.label('本次应用已确认 ' + result.confirmedCount + ' / ' + result.selectedCount + ' 项', 13, 'TOK_INK', true);
+      if (result.message.length > 0) this.label(result.message, 12, 'TOK_DANGER');
+      ForEach(result.details, (detail: SourceV9PartialApplyDetail): void => {
+        Column({ space: 5 }) {
+          this.label(detail.name + ' · 已确认 ' + detail.confirmedCount + ' / ' + detail.items.length, 12, 'TOK_INK', true);
+          ForEach(detail.items, (item: SourceV9PartialApplyItem): void => {
+            Row({ space: 8 }) {
+              Column({ space: 2 }) {
+                this.label(item.name, 12, 'TOK_INK');
+                if (item.sourceId !== undefined) this.label(item.sourceId, 10, 'TOK_MUTED');
+              }.layoutWeight(1).alignItems(HorizontalAlign.Start);
+              this.label(item.confirmed ? '已确认' : '待核对', 11, item.confirmed ? 'app.status.good' : 'TOK_MUTED');
+            }.width('100%');
+          }, (item: SourceV9PartialApplyItem): string => item.key);
+        }.width('100%').alignItems(HorizontalAlign.Start).padding(8).borderRadius(8)
+          .backgroundColor(this.color('app.sourceUi.field'));
+      }, (detail: SourceV9PartialApplyDetail): string => String(detail.subscriptionId));
+    }.width('100%').alignItems(HorizontalAlign.Start).padding(12).borderRadius(14)
+      .backgroundColor(this.color('app.sourceUi.surface'));
   }
 
   @Builder

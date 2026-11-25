@@ -46,6 +46,7 @@ function fixture(capabilities, handlers) {
       }),
     },
     classifyReaderSource, errorMessageOf, httpUrlHostname, isPrivateNetworkTarget,
+    url: { URL: { parseURL: value => new URL(value) } },
   });
   return { gateway: new source(runtime), commands, receipts };
 }
@@ -154,6 +155,14 @@ async function groupedImport() {
   ]));
   assert.equal(preview.filteredUnsupportedCount, 1);
   assert.equal(preview.items[1].supported, false);
+  const remark = 'https://public.test:8443/path#小说 备注';
+  const urls = f.gateway.prepareGroupedSourceDocument(JSON.stringify([
+    { bookSourceName: '无效端口', bookSourceUrl: 'https://public.test:65536/path' },
+    { bookSourceName: '非法空白', bookSourceUrl: 'https://public.test/p ath' },
+    { bookSourceName: '合法备注', bookSourceUrl: remark },
+  ]));
+  assert.deepEqual(urls.failures.map(item => item.index), [0, 1]);
+  assert.deepEqual(urls.items.map(item => [item.sourceId, item.bookSource.bookSourceUrl]), [[remark, remark]]);
   const outcome = await f.gateway.importGroupedSources(preview.items, 12, 'fill', { groupId: 'g' });
   assert.deepEqual([outcome.addedCount, outcome.updatedCount, outcome.failedCount], [1, 1, 1]);
   assert.deepEqual(outcome.failures, [{ index: 3, sourceId: rejected, message: 'Core 拒绝' }]);

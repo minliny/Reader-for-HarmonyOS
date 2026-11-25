@@ -3,11 +3,11 @@ import {
   type BookSource,
   type SourceCheckOutcome,
   type SourceCheckHistoryEntry,
-  type SourceCheckReportStep,
   type SourceGroupCatalogData,
   type SourceGroupMutateParams,
   type SourceDefinitionSnapshot,
 } from './SourceGateway';
+import { SourceInitialMembershipUnconfirmed } from './SourceInitialMembershipUnconfirmed';
 import type { SourceV9ImportedReport } from './SourceV9TransferState';
 import { projectSourceV9Check, retainSourceV9Check, sourceV9AuthenticationDenied, sourceV9Supports } from '../presentation/SourceManagementV9';
 import type { BookSourceJsonSelection } from '../../../app/ReaderHostRegistry';
@@ -156,7 +156,6 @@ export class SourceOrchestrator {
   /** Session-local source-check projections; Core remains authoritative. */
   private checkResults: Map<string, BookSource> = new Map<string, BookSource>();
   private importedReports = new Map<string, SourceV9ImportedReport>();
-  private readonly verifiedLoginSources: Map<string, string> = new Map<string, string>();
   private readonly deniedLoginReports: Map<string, string> = new Map<string, string>();
   private reportClearTimes = new Map<string, number>();
   private checkingSourceIds: Map<string, SourceCheckCapture> = new Map<string, SourceCheckCapture>();
@@ -415,8 +414,12 @@ export class SourceOrchestrator {
       try {
         const result = await this.gateway.mutateSourceGroup(input, current);
         if (params.action === 'create' && selected.length > 0) {
-          await this.gateway.mutateSourceGroup({ expectedRevision: result.revision, action: 'assign',
-            targetGroupId: result.groupId, sourceIds: selected }, current);
+          try {
+            await this.gateway.mutateSourceGroup({ expectedRevision: result.revision, action: 'assign',
+              targetGroupId: result.groupId, sourceIds: selected }, current);
+          } catch (_) {
+            throw new SourceInitialMembershipUnconfirmed(result.groupId);
+          }
         }
       } finally {
         if (current()) await this.loadList(session);
@@ -430,7 +433,8 @@ export class SourceOrchestrator {
   acceptTransferredReports(reports: SourceV9ImportedReport[], confirmedSourceIds: string[]): Promise<boolean> {
     const session = this.session;
     for (const item of reports) {
-      if (item.sourceVersion !== undefined && item.report.sourceId === item.sourceId && item.report.report !== undefined) {
+      if (item.sourceVersion !== undefined && item.report.sourceId === item.sourceId &&
+        item.report.report?.ruleDigest === item.sourceVersion) {
         this.importedReports.set(item.sourceId, item);
       }
     }
@@ -589,13 +593,9 @@ export class SourceOrchestrator {
           (): boolean => this.isCurrentSourceCheck(capture),
           undefined, 'search', ['L1', 'L2'],
         );
-        if (await this.validateSourceCheck(capture, definition) !== undefined &&
-          this.applySourceCheckOutcome(outcome, capture)) {
-          const passedLoginCheck = outcome.available && outcome.report?.steps.some(
-            (step: SourceCheckReportStep): boolean => step.level === 'L2' && step.status === 'pass') === true;
-          if (passedLoginCheck) this.verifiedLoginSources.set(source.sourceId, capture.signature);
-          else this.verifiedLoginSources.delete(source.sourceId);
-          this.presentSources(this.sources);
+        if (await this.validateSourceCheck(capture, definition) !== undefined) {
+          // This recheck reports source availability. L2 can pass for public search.
+          this.applySourceCheckOutcome(outcome, capture);
         }
       })
       .catch(async (error: Error): Promise<void> => {
@@ -625,7 +625,6 @@ export class SourceOrchestrator {
     } finally {
       if (current()) {
         this.reportClearTimes.set(capture.sourceId, clearedAt);
-        this.verifiedLoginSources.delete(capture.sourceId);
         this.deniedLoginReports.delete(capture.sourceId);
         this.importedReports.delete(capture.sourceId);
         this.checkResults.delete(capture.sourceId);
@@ -821,7 +820,6 @@ export class SourceOrchestrator {
     finally { this.gateway.observeWrites(undefined); }
     this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'reading');
     if (!enabled) {
-      this.verifiedLoginSources.delete(id);
       this.deniedLoginReports.delete(id);
     }
     if (!enabled && !this.gateway.handlesSourceCleanup()) {
@@ -1025,7 +1023,6 @@ export class SourceOrchestrator {
     this.deniedLoginReports.delete(capture.sourceId);
     const source = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === capture.sourceId);
     if (source?.loginUrl !== undefined && entry !== undefined && sourceV9AuthenticationDenied(outcome)) {
-      this.verifiedLoginSources.delete(capture.sourceId);
       this.deniedLoginReports.set(capture.sourceId, entry.report.traceId);
     }
     this.setCheckProjection(outcome.sourceId, outcome.available ? 'passed' : 'failed', outcome.levelsPassed,
@@ -1142,13 +1139,10 @@ export class SourceOrchestrator {
           observed <= (history[0]?.checkedAtMs ?? 0)) this.importedReports.delete(source.sourceId);
         else if (report !== undefined) history.unshift({ report, stale: false, checkedAtMs: observed });
       }
-      const login = this.verifiedLoginSources.get(source.sourceId);
-      const verified = login !== undefined && login === this.sourceCheckSignature(source) ? login : undefined;
-      if (login !== undefined && verified === undefined) this.verifiedLoginSources.delete(source.sourceId);
       const deniedTrace = this.deniedLoginReports.get(source.sourceId);
       const deniedCurrent = deniedTrace !== undefined && deniedTrace === history[0]?.report.traceId;
       if (deniedTrace !== undefined && !deniedCurrent) this.deniedLoginReports.delete(source.sourceId);
-      return projectSourceV9Check(source, history, previous, clearedAt, verified, deniedCurrent);
+      return projectSourceV9Check(source, history, previous, clearedAt, deniedCurrent);
     });
     if (this.isCurrentSession(this.session)) { try { this.emit(this.sources); } catch (_) {} }
   }

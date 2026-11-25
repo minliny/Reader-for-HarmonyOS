@@ -105,9 +105,9 @@ export function sourceV9GroupRows(sources: BookSource[], catalog: SourceGroupCat
 }
 
 export function projectSourceV9Check(source: BookSource, history: SourceCheckHistoryEntry[],
-  previous: BookSource | undefined, clearedAt: number, verifiedLogin: string | undefined, deniedCurrentReport: boolean = false): BookSource {
+  previous: BookSource | undefined, clearedAt: number, deniedCurrentReport: boolean = false): BookSource {
   const latest = history[0];
-  let loginState: 'unknown' | 'verified' | 'expired' = 'unknown';
+  let loginState: BookSource['loginState'] = 'unknown';
   if (source.enabled && source.loginUrl !== undefined && latest !== undefined && !latest.stale) {
     const denied = latest.report.steps.some((step: SourceCheckReportStep): boolean => {
       const reason = (step.reason ?? '').toLowerCase();
@@ -115,7 +115,6 @@ export function projectSourceV9Check(source: BookSource, history: SourceCheckHis
         (reason.includes('login') || reason.includes('登录') || reason.includes('401') || reason.includes('403'));
     });
     if (denied || deniedCurrentReport) loginState = 'expired';
-    else if (verifiedLogin !== undefined) loginState = 'verified';
   }
   return { ...source, checkReports: history, checkState: previous?.checkState ?? source.checkState ?? 'unchecked',
     checkLevels: previous?.checkLevels ?? source.checkLevels ?? [],

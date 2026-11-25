@@ -16,6 +16,7 @@ import { DialogActionView, ReaderDialogSurface } from '../../../ui/surfaces/Read
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { httpUrlHostname } from '../../../platform/network/HttpTransportPolicy';
 import type { BookSource, SourceGroupCatalogData, SourceGroupMutateParams, SourceGroupRecord } from '../application/SourceGateway';
+import { SourceInitialMembershipUnconfirmed } from '../application/SourceInitialMembershipUnconfirmed';
 import type { SourceManagementProjection, SourceManagementStatusKind } from '../application/SourceOrchestrator';
 import { sourceV9Primary, sourceV9ReportFill, sourceV9ReportTone, sourceV9Supports } from '../presentation/SourceManagementV9';
 
@@ -345,9 +346,9 @@ export struct SourceV9GroupsPage {
           { expectedRevision, action: 'assign', targetGroupId: groupId, sourceIds } : undefined;
       }
       case 'move': {
-        const sourceIds = this.selectedSources(this.movingIds);
-        if (sourceIds.length === 0) return undefined;
         const target = this.target;
+        const sourceIds = this.selectedSources(this.movingIds, target);
+        if (sourceIds.length === 0) return undefined;
         if (target === undefined) {
           return this.usableName() ? { expectedRevision, action: 'create', name, sourceIds } : undefined;
         }
@@ -380,9 +381,20 @@ export struct SourceV9GroupsPage {
         this.pending = false;
         this.onBack();
       }
-    } catch (_) {
-      if (this.mounted && dialog === this.dialog)
+    } catch (error) {
+      if (!this.mounted || dialog !== this.dialog) return;
+      if (error instanceof SourceInitialMembershipUnconfirmed) {
+        this.mutationProblem = error.message;
+        if (dialog === 'create') {
+          this.dialogGroupId = error.groupId;
+          this.dialog = 'add';
+          this.refreshCandidates();
+        } else if (dialog === 'move') {
+          this.target = error.groupId;
+        }
+      } else {
         this.mutationProblem = '未能确认分组操作，请核对当前分组。';
+      }
     } finally {
       if (this.mounted) this.pending = false;
     }

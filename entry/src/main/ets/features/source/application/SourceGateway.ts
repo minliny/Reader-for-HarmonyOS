@@ -1,3 +1,4 @@
+import url from '@ohos.url';
 import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 import type { JsonObject } from '@reader/core-harmony';
 import { errorMessageOf } from '../../../app/ErrorMessage';
@@ -607,6 +608,16 @@ export class SourceGateway {
   private prepareImportCandidate(value: unknown, index: number): SourceImportCandidate {
     const bookSource = this.requireBookSourceObject(value, index);
     const sourceId = this.requireBookSourceUrl(bookSource, index).trim();
+    // The Legado remark belongs to the published identity, not the network URL.
+    const networkUrl = sourceId.split('#')[0];
+    try {
+      if (/\s/.test(networkUrl)) throw new Error('invalid address');
+      const parsed = url.URL.parseURL(networkUrl);
+      if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') ||
+        isPrivateNetworkTarget(parsed.hostname)) throw new Error('invalid address');
+    } catch (_) {
+      throw new Error(`第 ${index + 1} 项的 bookSourceUrl 需要有效的公开 HTTP(S) 地址`);
+    }
     const name = this.optionalString(bookSource, 'bookSourceName')?.trim() ?? '';
     const category = classifyReaderSource({ bookSourceType: bookSource['bookSourceType'], name,
       group: this.optionalString(bookSource, 'bookSourceGroup'), sourceId, baseUrl: sourceId });

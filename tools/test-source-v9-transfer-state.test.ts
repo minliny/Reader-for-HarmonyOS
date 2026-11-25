@@ -19,6 +19,16 @@ const report = (available: boolean): SourceCheckOutcome => ({
   sourceId: novel.sourceId, traceId: 'real-fixture', available, levelsPassed: available ? ['L1', 'L2'] : ['L1'],
   durationMs: 30, logs: [], hostEvidenceCount: 1,
 });
+const retainedDigest = 'a'.repeat(64);
+const versionedReport = (available: boolean): SourceCheckOutcome => ({
+  ...report(available), report: {
+    version: 2, mode: 'search', traceId: 'real-fixture', ruleDigest: retainedDigest, inputDigest: 'b'.repeat(64),
+    steps: ['L1', 'L2', 'L3', 'L4', 'L5'].map((level, index) => ({
+      level, requested: index < 2, executed: index < 2, durationMs: 0,
+      status: index >= 2 ? 'not_requested' : index === 1 && !available ? 'fail' : 'pass',
+    })),
+  },
+});
 
 test('unsupported source remains locked and a reviewed failure can be reselected and retained', () => {
   let rows = buildV9ImportRows([novel, audio], []);
@@ -91,7 +101,8 @@ test('import passes only admitted selections through the versioned write and con
   let selected: SourceImportCandidate[] = [];
   let present: unknown;
   const admitted: string[] = [];
-  const failures = report(false);
+  const failures = versionedReport(false);
+  let installedVersion = retainedDigest;
   const runtime = {
     async loadOnlineJsonDocument(value: string) {
       admitted.push(value);
@@ -121,7 +132,7 @@ test('import passes only admitted selections through the versioned write and con
     }
     async readSourceDefinition(id: string) {
       expect(id).toBe(novel.sourceId);
-      return { hasRawBookSource: true, sourceVersion: 'retained', text: JSON.stringify(novel.bookSource) };
+      return { hasRawBookSource: true, sourceVersion: installedVersion, text: JSON.stringify(novel.bookSource) };
     }
   }
   class RuleGateway {
@@ -146,7 +157,17 @@ test('import passes only admitted selections through the versioned write and con
   expect(selected).toEqual([novel]);
   expect(state?.importStep).toBe(3);
   expect(state?.importResult).toMatchObject({ addedCount: 1, updatedCount: 0, failedCount: 0, unsupportedCount: 1 });
-  expect(present).toMatchObject([{ report: failures, sourceId: novel.sourceId, sourceVersion: 'retained' }]);
+  expect(present).toMatchObject([{ report: failures, sourceId: novel.sourceId, sourceVersion: retainedDigest }]);
+
+  installedVersion = 'c'.repeat(64);
+  flow.resetImport();
+  await flow.parseImport({ origin: 'paste', url: '', paste: 'pasted' });
+  await flow.checkImport({ mode: 'search', depth: 'L2', keyword: '我的' });
+  flow.chooseImportRow(novel.index, true);
+  await flow.importSelected({ strategy: 'all', target: { groupId: 'reading' } });
+  expect(state?.importResult?.addedCount).toBe(1);
+  expect(state?.importResult?.details[0].preflightReport).toEqual(failures);
+  expect(present).toEqual([]);
 });
 
 async function transferFixture(SourceGateway: object, RulesManagementGateway: object) {
@@ -287,6 +308,7 @@ test('subscription conflict overwrite reconciles the Core baseline from the orig
   expect(sourceWrites).toEqual([[novel.sourceId]]);
   expect(overwrites).toEqual([]);
   expect(state?.status).toBe('已确认应用 1 项');
+  expect(state?.partialSubscriptionApply).toBeUndefined();
   await flow.previewSubscriptions([11]);
   flow.selectReviewRow('11:' + novel.sourceId, false);
   flow.resolveReviewConflict('11:' + conflict.sourceId, true);
@@ -310,6 +332,8 @@ test('subscription conflict overwrite reconciles the Core baseline from the orig
   expect(fetches).toBe(3);
   expect(state?.status).toBe('已确认应用 1 项');
   expect(state?.error).toMatch(/订阅基线/);
+  expect(state?.partialSubscriptionApply).toMatchObject({ confirmedCount: 1, selectedCount: 1,
+    details: [{ confirmedCount: 1, items: [{ sourceId: conflict.sourceId, confirmed: true }] }] });
 
   supportsConditionalOverwrite = false;
   const priorReads = sourceReads;
@@ -346,7 +370,6 @@ test('an unconfirmed grouped import resumes the exact retained operation and com
     operationId?: string; original?: { method: string; params: object }; method?: string; message?: string } =
     { blocked: false, generation: 0, canRetryOriginal: false, confirmation: 'undispatched' };
   const recoveryCalls: boolean[] = [];
-  const prechecks = report(false);
   class ImportGateway {
     supportsEphemeralSourceCheck() { return true; }
     prepareGroupedSourceDocument() {
@@ -354,8 +377,8 @@ test('an unconfirmed grouped import resumes the exact retained operation and com
     }
     async loadSourceGroupCatalog() { return { groups: [], revision: 20, memberships: [{ sourceId: existing.sourceId }] }; }
     async checkEphemeralSources(sources: SourceImportCandidate['bookSource'][]) {
-      return sources.map(source => ({ ...prechecks, sourceId: source.bookSourceUrl,
-        available: source.bookSourceUrl !== novel.sourceId }));
+      return sources.map(source => ({ ...versionedReport(source.bookSourceUrl !== novel.sourceId),
+        sourceId: source.bookSourceUrl }));
     }
     async importGroupedSources(items: SourceImportCandidate[], revision: number, strategy: string, target: object,
       _current: () => boolean, keep: (plan: SourceGroupedImportPlan) => void) {
@@ -379,7 +402,7 @@ test('an unconfirmed grouped import resumes the exact retained operation and com
     }
     async readSourceDefinition(id: string) {
       const candidate = [novel, existing].find(row => row.sourceId === id);
-      return { hasRawBookSource: true, sourceVersion: 'retained', text: JSON.stringify(candidate?.bookSource) };
+      return { hasRawBookSource: true, sourceVersion: retainedDigest, text: JSON.stringify(candidate?.bookSource) };
     }
   }
   class RuleGateway {
@@ -469,6 +492,15 @@ test('checking all replacement-rule subscriptions applies disjoint selected IDs 
   expect(rules.get(23)).toEqual(unrelatedLocalEdit);
   expect(state?.status).toBe('已确认应用 2 项');
   expect(state?.error).toBe('未确认全部更新 · 净化 23');
+  expect(state?.partialSubscriptionApply?.details.map(detail => [detail.name, detail.confirmedCount, detail.items[0].confirmed]))
+    .toEqual([['净化 21', 1, true], ['净化 22', 1, true], ['净化 23', 0, false]]);
+  expect(state?.reviews).toEqual([]);
+  await flow.applyReviews();
+  expect(applied).toEqual([21, 22]);
+  expect(state?.partialSubscriptionApply?.confirmedCount).toBe(2);
+  await flow.previewSubscriptions([23]);
+  expect(state?.partialSubscriptionApply).toBeUndefined();
+  expect(state?.reviews[0].rows[0].kind).toBe('conflict');
 });
 
 test('subscription save uses normalized provider identity and only resets a changed provider timestamp', async () => {
@@ -550,6 +582,46 @@ test('a partial malformed subscription package cannot masquerade as a remote rem
   await flow.previewSubscriptions([sub.id]);
   expect(corePackages).toEqual([[novel.bookSource]]);
   expect(state?.checkIssue).toContain('已过滤 1 项');
+});
+
+test('a supported subscription package does not show its present unsupported source as removed', async () => {
+  const sub = { id: 1, url: 'https://pkg.example/book.json', name: '书源包', type: 0,
+    autoUpdate: true, customOrder: 0, update: 0 };
+  const remoteChanges = [
+    { sourceId: audio.sourceId, name: audio.name, kind: 'removedRemote' },
+    { sourceId: novel.sourceId, name: novel.name, kind: 'added' },
+    { sourceId: 'https://removed.example', name: '真正移除', kind: 'removedRemote' },
+  ];
+  let previewDocument = '';
+  class Source {
+    supportsEphemeralSourceCheck() { return false; }
+    prepareGroupedSourceDocument() {
+      return { items: [novel, audio], failures: [], filteredUnsupportedCount: 1 };
+    }
+    async loadSources() { return []; }
+  }
+  class Rules {
+    observeWrites() {}
+    mutationSnapshot() { return { blocked: false, generation: 0, canRetryOriginal: false }; }
+    async listRuleSubscriptions() { return [sub]; }
+    async captureSourceSubscription() { return { subscription: sub }; }
+    async previewSourceSubscription(_id: number, document: string) {
+      previewDocument = document;
+      return { subscriptionId: sub.id, planId: '1:preview', remoteDigest: 'a'.repeat(64),
+        expiresAt: Date.now() + 1000, changes: remoteChanges };
+    }
+  }
+  const flowClass = await transferFixture(Source, Rules);
+  let state: SourceV9TransferSnapshot | undefined;
+  const flow = new flowClass({ supportsCoreCapability: () => false,
+    async loadOnlineJsonDocument() { return { text: JSON.stringify([novel.bookSource, audio.bookSource]) }; } },
+    (next: SourceV9TransferSnapshot) => { state = next; }, () => true, () => {});
+  await flow.loadSubscriptions();
+  await flow.previewSubscriptions([sub.id]);
+  expect(JSON.parse(previewDocument)).toEqual([novel.bookSource]);
+  expect(state?.reviews[0].rows.map(row => row.sourceId)).toEqual([novel.sourceId, 'https://removed.example']);
+  expect(state?.reviews[0].rows[0].kind).toBe('added');
+  expect(state?.checkIssue).toBe('订阅文档已过滤 1 项不支持的书源');
 });
 
 test('switching off preflight restores static selection and all original details remain visible after import', async () => {

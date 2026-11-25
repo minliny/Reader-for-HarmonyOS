@@ -409665,7 +409665,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/presentation/SourceManagementV9.ts",
-          "sha256": "6755756dfa7021f00e0b1f4e84675894c411be9b6c295fd0489143364b52809e"
+          "sha256": "6b60f3a111e862ed9acb934ed7bd547c91e33569d4efa719c8aae81c286ddff1"
         },
         {
           "path": "entry/src/main/ets/features/source/presentation/SourceSwitchPresentation.ets",
@@ -410113,19 +410113,19 @@
       "validationEvidence": {
         "execution": "PASS",
         "currentPublicationExecution": "NOT_RUN",
-        "trace": ".reader-artifacts/source-v9-acceptance-followup/matrix-inputs.json",
-        "traceSha256": "1bae31fe714e1e0bc76ef173bd6849ba66fde4ac966cc19d2cd40a5078c9d166",
-        "sourceSetSha256": "616ea32cf472d13b23b58dc812c5f25750311728fcc1b3e4bfb384f1a3395661",
+        "trace": ".reader-artifacts/source-v9-receipt-integrity/matrix-inputs.json",
+        "traceSha256": "347c18ccaff23a431628d7166017798c8943888e8b7ac2c19ceeee47a3a27fea",
+        "sourceSetSha256": "c6a0010d37e36aa4a52945bb8e44cfd118860e3aec23cd08e53d425a66c80c9f",
         "traceIntegrity": "PASS",
         "testExitCode": 0,
-        "report": ".reader-artifacts/source-v9-acceptance-followup/matrix.json",
-        "reportSha256": "6b3828b61f2f62e1a7d7ffa52be1cdf19554c01ecfe62cf7f5fd4d718f34afbb",
+        "report": ".reader-artifacts/source-v9-receipt-integrity/matrix.json",
+        "reportSha256": "2590831f37b99c668e3b554ac648a3db377e3261dd133a9ca2935e24bea5f492",
         "actualCommand": [
           "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-source-management-layout.mjs",
           "--case",
           "matrix",
           "--write-evidence",
-          "--evidence-path=.reader-artifacts/source-v9-acceptance-followup/matrix.json"
+          "--evidence-path=.reader-artifacts/source-v9-receipt-integrity/matrix.json"
         ],
         "sdkMatrix": {
           "rowLayouts": 64,

@@ -2439,6 +2439,17 @@
       "retireRule": "原query/operation generation和task opening/retryIdentity相符且当前owner.canRetry、无在途请求时转交原onRetry；隐藏、退场、关闭或后继查询拒绝旧回调，重试只消费原run准确未完成来源页。",
       "reason": "持续搜索的专用任务表面，复用既有MESSAGE_META和ReaderButton；不拥有查询、页号、取消或写入事实。",
       "status": "dedicated-existing-surface"
+    },
+    {
+      "id": "DEDICATED-SOURCE-V9-PARTIAL-APPLY",
+      "file": "entry/src/main/ets/features/source/ui/SourceV9TransferPage.ets",
+      "owner": "SourceV9TransferPage",
+      "member": "partialSubscriptionApply",
+      "category": "订阅部分应用后的只读逐项回执",
+      "effectiveHost": "当前书源订阅页展示 SourceV9TransferOwner 按 Core 原回执确认的已应用与待核对条目，仅用于核对，不拥有重试或再次应用权限。",
+      "retireRule": "新的订阅预览或订阅页退场清理旧投影；未确认写入继续由 ReaderRecoveryNotice 承载。",
+      "reason": "部分应用可能跨多个 Core 步骤，需保留已确认和未确认条目的事实明细；不将只读明细当作可执行预览。",
+      "status": "dedicated-source-v9-surface"
     }
   ],
   "platformAdapters": [
