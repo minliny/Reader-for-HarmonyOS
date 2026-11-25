@@ -250,7 +250,7 @@ export class SharedDownloadStorageGateway {
           removedContentBytes, beforeTextFiles, pendingHostChapters: chapters,
           cleanupError: more || blocked ? 'TEXT_CACHE_CLEANUP_PARTIAL' : undefined };
         await this.saveSettingsTextCleanup(confirmed);
-        checkpoint = await this.completeSettingsTextHost(confirmed, false);
+        checkpoint = await this.completeSettingsTextHost(confirmed);
         if (!more || blocked || !admitted()) break;
         await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
       }
@@ -266,7 +266,7 @@ export class SharedDownloadStorageGateway {
       if (journal === undefined || !current()) return undefined;
       if (journal.phase === 'pending') throw new Error('TEXT_CACHE_CLEANUP_UNCONFIRMED');
       if (journal.phase === 'confirmed') return journal.result;
-      const completed = journal.phase === 'core_confirmed' ? await this.completeSettingsTextHost(journal, true) : journal;
+      const completed = journal.phase === 'core_confirmed' ? await this.completeSettingsTextHost(journal) : journal;
       return this.finishSettingsTextReceipt(completed);
     });
   }
@@ -276,36 +276,41 @@ export class SharedDownloadStorageGateway {
     return this.persistence.saveSettingsTextCleanup(journal);
   }
 
-  private async completeSettingsTextHost(journal: SettingsTextCleanupJournal, recovering: boolean): Promise<SettingsTextCleanupJournal> {
+  private async completeSettingsTextHost(journal: SettingsTextCleanupJournal): Promise<SettingsTextCleanupJournal> {
     const chapters = journal.pendingHostChapters;
     const files = journal.beforeTextFiles;
     if (chapters === undefined || files === undefined) throw new Error('TEXT_CACHE_CLEANUP_JOURNAL_INVALID');
+    const pendingKeys = new Set(chapters.map(chapter => this.key(chapter)));
+    const byChapter = new Map<string, ReadingImageCleanupFile[]>();
+    for (const file of files) if (file.textOwner !== undefined) {
+      const key = this.key(file.textOwner);
+      if (!pendingKeys.has(key)) continue;
+      const bucket = byChapter.get(key) ?? [];
+      bucket.push(file);
+      byChapter.set(key, bucket);
+    }
     const protectedKeys = new Set<string>();
     let current: (() => boolean) | undefined;
-    if (recovering) {
+    if (byChapter.size > 0) {
+      // Core can commit while a retained download or active reader changes.
+      // Both the first handoff and an interrupted handoff use fresh authority.
       await this.restoreLegacyProtection();
       current = this.runtime.captureDownloadStorageValidity?.();
       const bindings = await this.runtime.readDownloadStorageBindings();
       for (const chapter of [...bindings.retainedChapters, ...bindings.protectedChapters, ...this.legacyProtection ?? []])
         protectedKeys.add(this.key(chapter));
     }
-    const byChapter = new Map<string, ReadingImageCleanupFile[]>();
-    for (const file of files) if (file.textOwner !== undefined) {
-      const key = this.key(file.textOwner);
-      const bucket = byChapter.get(key) ?? [];
-      bucket.push(file);
-      byChapter.set(key, bucket);
-    }
     let cleanupError = journal.cleanupError;
     for (const chapter of chapters) {
-      if (current?.() === false) throw new Error('TEXT_CACHE_CLEANUP_PROTECTION_CHANGED');
       const key = this.key(chapter);
+      const exact = byChapter.get(key);
+      if (exact === undefined) continue;
+      if (current?.() === false) throw new Error('TEXT_CACHE_CLEANUP_PROTECTION_CHANGED');
       if (protectedKeys.has(key)) {
         cleanupError = 'TEXT_CACHE_CLEANUP_PARTIAL';
         continue;
       }
-      const exact = byChapter.get(key) ?? [];
-      if (exact.length > 0) await this.disk.clearChapter(chapter.sourceId, chapter.bookId, chapter.chapterIndex, exact, current);
+      await this.disk.clearChapter(chapter.sourceId, chapter.bookId, chapter.chapterIndex, exact, current);
     }
     const completed: SettingsTextCleanupJournal = { ...journal, phase: 'host_completed', pendingHostChapters: undefined, cleanupError };
     await this.saveSettingsTextCleanup(completed);

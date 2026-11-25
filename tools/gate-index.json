@@ -297950,7 +297950,7 @@
       "mechanism": "settings-partial-ack actual scoped owner/gateway/storage path; controlled Core/OS ports; owner implementation record: [\"13个inventory/files/settings journal/policy独立case；实际DiskCache+StorageGateway临时FS\", \"自写LRU移为已安装ISC lru-cache；file handle/hook/root finally清理\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd",
+      "reviewedSourceSha256": "1bd6f096bd4899ff9f638871455fac0e366ebd6e02925c85edae2b3526912426",
       "definitionInputs": [
         {
           "path": "entry/src/main/ets/app/ReaderRuntimeOwner.ts",
@@ -297966,7 +297966,7 @@
         },
         {
           "path": "entry/src/main/ets/features/downloads/application/SharedDownloadStorageGateway.ts",
-          "sha256": "422e9102cc4033517d498a373c5bcc4e9eaadd4dbaff1c90a43d09de4d9181b8"
+          "sha256": "280fe76d9f913af4387bd8d6c80192e672fd9e85879d9e0d0bb37127a4c525f3"
         },
         {
           "path": "entry/src/main/ets/features/settings/application/SettingsCacheGateway.ts",
@@ -298006,7 +298006,7 @@
         },
         {
           "path": "tools/test-shared-download-storage.mjs",
-          "sha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd"
+          "sha256": "1bd6f096bd4899ff9f638871455fac0e366ebd6e02925c85edae2b3526912426"
         }
       ],
       "definitionInputProblems": [],
@@ -298018,7 +298018,7 @@
       "evidenceBoundary": [],
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "f110fb2d498ea5f024c0815127373c5e42fbaf0e273bb510b862b0f28968d74f"
+      "resourceDefinitionSha256": "bfbd83d32412a955a65f21032aa105862bab6430cd26f0ea6b25851a71fd212b"
     },
     {
       "file": "tools/test-shared-download-storage.mjs",
@@ -460517,7 +460517,7 @@
       "nestedCalls": [],
       "estimatedCostType": "selected-method/fixture",
       "resourceNeeds": [],
-      "reviewedSourceSha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd",
+      "reviewedSourceSha256": "1bd6f096bd4899ff9f638871455fac0e366ebd6e02925c85edae2b3526912426",
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
@@ -460538,7 +460538,7 @@
         },
         {
           "path": "entry/src/main/ets/features/downloads/application/SharedDownloadStorageGateway.ts",
-          "sha256": "422e9102cc4033517d498a373c5bcc4e9eaadd4dbaff1c90a43d09de4d9181b8"
+          "sha256": "280fe76d9f913af4387bd8d6c80192e672fd9e85879d9e0d0bb37127a4c525f3"
         },
         {
           "path": "entry/src/main/ets/features/settings/application/SettingsCacheGateway.ts",
@@ -460570,10 +460570,10 @@
         },
         {
           "path": "tools/test-shared-download-storage.mjs",
-          "sha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd"
+          "sha256": "1bd6f096bd4899ff9f638871455fac0e366ebd6e02925c85edae2b3526912426"
         }
       ],
-      "resourceDefinitionSha256": "f110fb2d498ea5f024c0815127373c5e42fbaf0e273bb510b862b0f28968d74f"
+      "resourceDefinitionSha256": "bfbd83d32412a955a65f21032aa105862bab6430cd26f0ea6b25851a71fd212b"
     },
     {
       "id": "H-shared-download-storage#settings-recover-host",
@@ -460612,7 +460612,7 @@
       "nestedCalls": [],
       "estimatedCostType": "selected-method/fixture",
       "resourceNeeds": [],
-      "reviewedSourceSha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd",
+      "reviewedSourceSha256": "1bd6f096bd4899ff9f638871455fac0e366ebd6e02925c85edae2b3526912426",
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
@@ -460633,7 +460633,7 @@
         },
         {
           "path": "entry/src/main/ets/features/downloads/application/SharedDownloadStorageGateway.ts",
-          "sha256": "422e9102cc4033517d498a373c5bcc4e9eaadd4dbaff1c90a43d09de4d9181b8"
+          "sha256": "280fe76d9f913af4387bd8d6c80192e672fd9e85879d9e0d0bb37127a4c525f3"
         },
         {
           "path": "entry/src/main/ets/features/settings/application/SettingsCacheGateway.ts",
@@ -460665,10 +460665,10 @@
         },
         {
           "path": "tools/test-shared-download-storage.mjs",
-          "sha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd"
+          "sha256": "1bd6f096bd4899ff9f638871455fac0e366ebd6e02925c85edae2b3526912426"
         }
       ],
-      "resourceDefinitionSha256": "f110fb2d498ea5f024c0815127373c5e42fbaf0e273bb510b862b0f28968d74f"
+      "resourceDefinitionSha256": "bfbd83d32412a955a65f21032aa105862bab6430cd26f0ea6b25851a71fd212b"
     },
     {
       "id": "H-shared-download-storage#inventory-concurrent-enoent",
@@ -460707,7 +460707,7 @@
       "nestedCalls": [],
       "estimatedCostType": "selected-method/fixture",
       "resourceNeeds": [],
-      "reviewedSourceSha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd",
+      "reviewedSourceSha256": "1bd6f096bd4899ff9f638871455fac0e366ebd6e02925c85edae2b3526912426",
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
@@ -460728,7 +460728,7 @@
         },
         {
           "path": "entry/src/main/ets/features/downloads/application/SharedDownloadStorageGateway.ts",
-          "sha256": "422e9102cc4033517d498a373c5bcc4e9eaadd4dbaff1c90a43d09de4d9181b8"
+          "sha256": "280fe76d9f913af4387bd8d6c80192e672fd9e85879d9e0d0bb37127a4c525f3"
         },
         {
           "path": "entry/src/main/ets/features/settings/application/SettingsCacheGateway.ts",
@@ -460760,10 +460760,10 @@
         },
         {
           "path": "tools/test-shared-download-storage.mjs",
-          "sha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd"
+          "sha256": "1bd6f096bd4899ff9f638871455fac0e366ebd6e02925c85edae2b3526912426"
         }
       ],
-      "resourceDefinitionSha256": "f110fb2d498ea5f024c0815127373c5e42fbaf0e273bb510b862b0f28968d74f"
+      "resourceDefinitionSha256": "bfbd83d32412a955a65f21032aa105862bab6430cd26f0ea6b25851a71fd212b"
     },
     {
       "id": "H-shared-download-storage#policy-retry",
@@ -460802,7 +460802,7 @@
       "nestedCalls": [],
       "estimatedCostType": "selected-method/fixture",
       "resourceNeeds": [],
-      "reviewedSourceSha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd",
+      "reviewedSourceSha256": "1bd6f096bd4899ff9f638871455fac0e366ebd6e02925c85edae2b3526912426",
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
@@ -460823,7 +460823,7 @@
         },
         {
           "path": "entry/src/main/ets/features/downloads/application/SharedDownloadStorageGateway.ts",
-          "sha256": "422e9102cc4033517d498a373c5bcc4e9eaadd4dbaff1c90a43d09de4d9181b8"
+          "sha256": "280fe76d9f913af4387bd8d6c80192e672fd9e85879d9e0d0bb37127a4c525f3"
         },
         {
           "path": "entry/src/main/ets/features/settings/application/SettingsCacheGateway.ts",
@@ -460855,10 +460855,10 @@
         },
         {
           "path": "tools/test-shared-download-storage.mjs",
-          "sha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd"
+          "sha256": "1bd6f096bd4899ff9f638871455fac0e366ebd6e02925c85edae2b3526912426"
         }
       ],
-      "resourceDefinitionSha256": "f110fb2d498ea5f024c0815127373c5e42fbaf0e273bb510b862b0f28968d74f"
+      "resourceDefinitionSha256": "bfbd83d32412a955a65f21032aa105862bab6430cd26f0ea6b25851a71fd212b"
     },
     {
       "id": "H-settings-cache-owner-consumer#reconcile-staged-text",
@@ -460918,7 +460918,7 @@
         },
         {
           "path": "entry/src/main/ets/features/downloads/application/SharedDownloadStorageGateway.ts",
-          "sha256": "422e9102cc4033517d498a373c5bcc4e9eaadd4dbaff1c90a43d09de4d9181b8"
+          "sha256": "280fe76d9f913af4387bd8d6c80192e672fd9e85879d9e0d0bb37127a4c525f3"
         },
         {
           "path": "entry/src/main/ets/features/settings/application/SettingsCacheGateway.ts",

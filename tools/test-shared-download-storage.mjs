@@ -298,6 +298,32 @@ if(id==='settings-partial-ack'){
   }
 }
 if(id==='settings-recover-staged'){
+  {
+    const f = await fixture({ bodyCount: 1 }), r = resource(identity(0));
+    await f.disk.storeResource(r, Uint8Array.of(1, 2, 3, 4));
+    const path = await f.disk.resourcePath(r);
+    const save = f.persistence.saveSettingsTextCleanup;
+    let refused = false;
+    f.persistence.saveSettingsTextCleanup = async journal => {
+      if (journal?.phase === 'core_confirmed' && !refused) {
+        refused = true;
+        throw Error('Core receipt could not yet be saved');
+      }
+      await save(journal);
+    };
+    const evidence = new ReaderWriteEvidence();
+    await assert.rejects(f.gateway.cleanupSettingsText(evidence, () => true), /Core receipt could not yet be saved/);
+    assert.equal(evidence.confirmation(), 'confirmed');
+    assert.equal(await io.access(path), true, 'Host waits for the exact durable authorization');
+    assert.equal((await f.gateway.readSettingsTextCleanup()).phase, 'core_confirmed');
+    const cold = new Storage(f.runtime, f.disk, f.persistence);
+    await assert.rejects(cold.reconcileSettingsTextCleanup(() => true), /UNCONFIRMED/);
+    const result = await f.gateway.reconcileSettingsTextCleanup(() => true);
+    assert.ok(result.removedContentBytes > 0);
+    assert.equal(await io.access(path), false);
+    assert.equal(f.calls.filter(call => call.method === 'cache.storage.cleanup').length, 1);
+  }
+  {
     const f = await fixture({ bodyCount: 1 }), r = resource(identity(0));
     await f.disk.storeResource(r, new Uint8Array([1, 2, 3, 4]));
     const receipt = f.disk.readingStorageCleanupReceipt.bind(f.disk);
@@ -340,8 +366,78 @@ if(id==='settings-recover-staged'){
     assert.equal(await new Preferences({filesDir:f.dir}).loadSettingsTextCleanup(), undefined, 'an empty new journal shadows old Preferences');
     atomicFile = '';
     await assert.rejects(new Preferences({filesDir:f.dir}).loadSettingsTextCleanup(), /JOURNAL_INVALID/);
+  }
 }
 if(id==='settings-recover-host'){
+  {
+    const f = await fixture({ bodyCount: 129 });
+    const alreadyAcknowledged = identity(0), r = resource(alreadyAcknowledged);
+    await f.disk.storeResource(r, Uint8Array.of(1, 2, 3, 4));
+    const path = await f.disk.resourcePath(r);
+    omitMtime = candidate => candidate.startsWith(dirname(path) + '/');
+    try {
+      const result = await f.gateway.cleanupSettingsText(new ReaderWriteEvidence(), () => true);
+      const batches = f.calls.filter(call => call.method === 'cache.storage.cleanup');
+      assert.equal(batches.length, 2, 'a later distinct body batch still runs');
+      assert.ok(batches[0].params.hostImageChapters.some(chapter => chapterKey(chapter) === chapterKey(alreadyAcknowledged)));
+      assert.ok(batches[1].params.protectedChapters.some(chapter => chapterKey(chapter) === chapterKey(alreadyAcknowledged)),
+        'the first ACK prevents a second Core selection of the same unresolved Host chapter');
+      assert.equal(f.bodies.size, 0);
+      assert.equal(await io.access(path), true);
+      assert.equal(result.cleanupError, 'TEXT_CACHE_CLEANUP_PARTIAL');
+    } finally { omitMtime = () => false; }
+  }
+  {
+    const f = await fixture({ bodyCount: 3 });
+    const retained = resource(identity(0)), protectedNow = resource(identity(1)), clearable = resource(identity(2));
+    for (const r of [retained, protectedNow, clearable]) await f.disk.storeResource(r, Uint8Array.of(3, 4, 5, 6));
+    const retainedPath = await f.disk.resourcePath(retained), protectedPath = await f.disk.resourcePath(protectedNow);
+    const clearablePath = await f.disk.resourcePath(clearable);
+    const before = await io.stat(retainedPath);
+    const request = f.runtime.request;
+    f.runtime.request = async (method, params, options) => {
+      const response = await request(method, params, options);
+      if (method === 'cache.storage.cleanup') {
+        f.keep([identity(0)]);
+        f.protect([identity(1)]);
+      }
+      return response;
+    };
+    const evidence = new ReaderWriteEvidence();
+    const result = await f.gateway.cleanupSettingsText(evidence, () => true);
+    assert.equal(evidence.confirmation(), 'confirmed');
+    assert.equal((await io.stat(retainedPath)).ino, before.ino, 'newly retained same-inode content survives the warm Host handoff');
+    assert.equal(await io.access(protectedPath), true);
+    assert.equal(await io.access(clearablePath), false);
+    assert.equal(f.calls.filter(call => call.method === 'cache.storage.cleanup').length, 1);
+    assert.equal(typeof result.cleanupError, 'string');
+  }
+  {
+    const f = await fixture({ bodyCount: 1 }), r = resource(identity(0));
+    await f.disk.storeResource(r, Uint8Array.of(3, 4, 5, 6));
+    const path = await f.disk.resourcePath(r);
+    const originalInode = (await io.stat(path)).ino;
+    const request = f.runtime.request;
+    let committed = false;
+    f.runtime.request = async (method, params, options) => {
+      const response = await request(method, params, options);
+      if (method === 'cache.storage.cleanup') committed = true;
+      return response;
+    };
+    beforeStat = async candidate => {
+      if (!committed || candidate !== path) return;
+      beforeStat = async () => {};
+      f.protect([identity(0)]);
+    };
+    await assert.rejects(f.gateway.cleanupSettingsText(new ReaderWriteEvidence(), () => true), /PROTECTION_CHANGED/);
+    assert.equal((await f.gateway.readSettingsTextCleanup()).phase, 'core_confirmed');
+    const cold = new Storage(f.runtime, f.disk, f.persistence);
+    const recovered = await cold.reconcileSettingsTextCleanup(() => true);
+    assert.equal((await io.stat(path)).ino, originalInode, 'the captured inode can become protected inside the Host deletion lane');
+    assert.equal(recovered.cleanupError, 'TEXT_CACHE_CLEANUP_PARTIAL');
+    assert.equal(f.calls.filter(call => call.method === 'cache.storage.cleanup').length, 1);
+  }
+  {
     const f = await fixture({ bodyCount: 130 });
     const first = resource(identity(0)), second = resource(identity(1)), protectedLater = resource(identity(2));
     for (const r of [first, second, protectedLater]) await f.disk.storeResource(r, new Uint8Array([1, 2, 3, 4]));
@@ -382,6 +478,7 @@ if(id==='settings-recover-host'){
       assert.equal(noTimestamp.deletedFiles, 0);
       assert.deepEqual(new Uint8Array(await fs.readFile(unverifiedPath)), replacement);
     } finally { omitMtime = () => false; }
+  }
 }
 if(id==='inventory-concurrent-enoent'){
     const f = await fixture(), r = resource(identity(0));

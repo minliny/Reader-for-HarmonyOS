@@ -8569,7 +8569,7 @@
         "settings-partial-ack": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd"
+          "sourceSha256": "1bd6f096bd4899ff9f638871455fac0e366ebd6e02925c85edae2b3526912426"
         },
         "automatic-policy": {
           "resources": [],
@@ -8578,22 +8578,22 @@
         "settings-recover-staged": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd"
+          "sourceSha256": "1bd6f096bd4899ff9f638871455fac0e366ebd6e02925c85edae2b3526912426"
         },
         "settings-recover-host": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd"
+          "sourceSha256": "1bd6f096bd4899ff9f638871455fac0e366ebd6e02925c85edae2b3526912426"
         },
         "inventory-concurrent-enoent": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd"
+          "sourceSha256": "1bd6f096bd4899ff9f638871455fac0e366ebd6e02925c85edae2b3526912426"
         },
         "policy-retry": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd"
+          "sourceSha256": "1bd6f096bd4899ff9f638871455fac0e366ebd6e02925c85edae2b3526912426"
         }
       }
     },
