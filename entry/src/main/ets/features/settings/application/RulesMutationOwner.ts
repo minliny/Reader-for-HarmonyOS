@@ -133,7 +133,7 @@ export class RulesMutationOwner {
     qualify: (method: string, params: JsonObject, data: JsonObject) => void,
     observer?: ReaderWriteEvidence,
     rejected?: (step: RuleSubscriptionStep, data: JsonObject) => void,
-    identifyOriginal?: (operationId: string) => void): Promise<RulesMutationSnapshot> {
+    identifyOriginal?: (operationId: string) => void, prepare?: () => Promise<void>): Promise<RulesMutationSnapshot> {
     if (this.state.busy || this.state.blocked || this.state.confirmation === 'unknown') throw new RulesMutationError('先核对原规则/订阅操作', true);
     const current = (): boolean => this.current(currentAdmission);
     this.state = { generation: this.state.generation + 1, busy: true, confirmation: 'undispatched',
@@ -148,8 +148,13 @@ export class RulesMutationOwner {
       const journey: RuleSubscriptionJourney = { kind, steps, localFailures, cursor: 0, facts: [] };
       const first = steps[0];
       const intent = await this.intents.accept(kind===3 ? '书源文档导入' : '订阅更新', first.method, first.params,
-        async (): Promise<number> => { const q = await this.query(undefined,current); this.requireSubscriptionCapability(kind);
-          this.requireMethodCapability(first.method,first.params); return q.head?.sequence ?? 0; },current,journey);
+        async (): Promise<number> => {
+          const q = await this.query(undefined, current);
+          this.requireSubscriptionCapability(kind);
+          this.requireMethodCapability(first.method, first.params);
+          if (prepare !== undefined) await prepare();
+          return q.head?.sequence ?? 0;
+        }, current, journey);
       originalOperationId = intent.operationId;
       return await this.continueSubscription(intent,current,qualify,true,observer,true,rejected);
     } catch (error) {
@@ -241,7 +246,9 @@ export class RulesMutationOwner {
       const intent = await this.intents.load();
       if (intent === undefined) { this.state.blocked = false; return this.snapshot(); }
       this.admitPending(intent);
-      const sourceFamily = intent.subscription?.kind===3 || intent.mutation.method==='source.update' || intent.mutation.method==='source.delete';
+      const sourceFamily = intent.subscription?.kind===3 || intent.mutation.method==='source.update' ||
+        intent.mutation.method==='source.delete' || intent.mutation.method==='source.group.mutate' ||
+        intent.mutation.method==='source.import.grouped';
       const rssFamily = intent.subscription===undefined &&
         (intent.mutation.method.startsWith('rss.') || intent.mutation.method.startsWith('rss-source.'));
       const directoryFamily = intent.subscription===undefined && intent.mutation.method==='reading.directory.rules.apply.v2';
@@ -360,6 +367,12 @@ export class RulesMutationOwner {
       throw new Error('当前 Core 不支持本书目录规则原操作回执，已停止派发');
     if ((method==='source.update' || method==='source.delete') && this.runtime.supportsCoreCapability?.('rules.mutation.source-management.v1') !== true)
       throw new Error('当前 Core 不支持书源原管理回执，已停止派发');
+    if ((method==='source.group.mutate' || method==='source.import.grouped') &&
+      this.runtime.supportsCoreCapability?.('rules.mutation.source-groups.v1') !== true)
+      throw new Error('当前 Core 不支持书源分组原管理回执，已停止派发');
+    if (method==='rule-sub.update.apply.v1' &&
+      this.runtime.supportsCoreCapability?.('rules.mutation.subscription.v1') !== true)
+      throw new Error('当前 Core 不支持订阅更新原操作回执，已停止派发');
     if ((method.startsWith('rss.') || method==='rss-source.put') && this.runtime.supportsCoreCapability?.('rules.mutation.rss-management.v1') !== true)
       throw new Error('当前 Core 不支持 RSS 原管理回执，已停止派发');
   }

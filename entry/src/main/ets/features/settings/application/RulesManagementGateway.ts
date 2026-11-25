@@ -85,6 +85,20 @@ export interface RuleBundleExport {
   summary: string;
 }
 
+export type RuleSourceChangeKind = 'added' | 'update' | 'conflict' | 'removedRemote' | 'unchanged' | 'localOnly';
+export interface RuleSourceChange {
+  sourceId: string;
+  name: string;
+  kind: RuleSourceChangeKind;
+}
+export interface RuleSourceSubscriptionPreview {
+  subscriptionId: number;
+  planId: string;
+  remoteDigest: string;
+  expiresAt: number;
+  changes: RuleSourceChange[];
+}
+
 /** Typed boundary for the four Core-owned rule entity families. */
 export class RulesManagementGateway {
   private readonly owner: ReaderRuntimeOwner;
@@ -97,9 +111,11 @@ export class RulesManagementGateway {
 
   mutationSnapshot(): RulesMutationSnapshot { return RulesMutationOwner.forRuntime(this.owner).snapshot(); }
 
-  async recoverMutation(current: () => boolean, retryOriginal: boolean = false): Promise<RulesMutationSnapshot> {
+  async recoverMutation(current: () => boolean, retryOriginal: boolean = false,
+    expectedOperationId?: string): Promise<RulesMutationSnapshot> {
     return RulesMutationOwner.forRuntime(this.owner).recoverOriginal(current,
-      (method: string, params: JsonObject, data: JsonObject): void => this.qualifyMutation(method, params, data), retryOriginal);
+      (method: string, params: JsonObject, data: JsonObject): void => this.qualifyMutation(method, params, data),
+      retryOriginal, undefined, undefined, expectedOperationId);
   }
 
   constructor(owner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
@@ -193,8 +209,8 @@ export class RulesManagementGateway {
     await this.requestMutation('dict-rule.delete', { name });
   }
 
-  async listRuleSubscriptions(): Promise<ManagedRuleSubscription[]> {
-    const result = await this.owner.request('rule-sub.list', {});
+  async listRuleSubscriptions(current?: () => boolean): Promise<ManagedRuleSubscription[]> {
+    const result = await this.owner.request('rule-sub.list', {}, { canDispatch: current, canContinue: current });
     return this.requireArray(result.data['subs'], 'rule-sub.list')
       .map((value: unknown): ManagedRuleSubscription => this.decodeRuleSubscription(value));
   }
@@ -202,6 +218,88 @@ export class RulesManagementGateway {
   async saveRuleSubscription(draft: RuleSubscriptionDraft): Promise<void> {
     await this.requestMutation('rule-sub.put',this.ruleSubscriptionParams(draft));
   }
+
+  /** Capture the original provider and rule lineage before opening Host HTTP. */
+  async captureSourceSubscription(sub: ManagedRuleSubscription, current: () => boolean): Promise<JsonObject> {
+    if (sub.type !== 0 || this.owner.supportsCoreCapability('rules.mutation.subscription.v1') !== true) {
+      throw new Error('当前 Core 不支持书源订阅差异预览');
+    }
+    const result = await this.owner.request('rules.mutation.query', {}, { canDispatch: current, canContinue: current });
+    const head = result.data['head'];
+    if (head !== null) {
+      const headData = this.requireObject(head, '规则流水');
+      if (this.requireString(headData, 'operationId').length === 0 || this.requireCount(headData, 'sequence') === 0 ||
+        !/^[a-f0-9]{64}$/.test(this.requireString(headData, 'payloadFingerprint'))) {
+        throw new Error('规则流水不完整');
+      }
+    }
+    return { subscription: this.ruleSubscriptionParams(sub), rulesHead: head };
+  }
+
+  async previewSourceSubscription(id: number, document: string, expected: JsonObject,
+    current: () => boolean): Promise<RuleSourceSubscriptionPreview> {
+    this.assertSafeInteger(id, 'subscription id');
+    const response = await this.owner.request('rule-sub.update.preview.v1', { subscriptionId: id, remoteJson: document, expected },
+      { canDispatch: current, canContinue: current, shouldCancel: (): boolean => !current() });
+    const data = response.data;
+    const planId = this.requireString(data, 'planId');
+    const remoteDigest = this.requireString(data, 'remoteDigest');
+    const expiresAt = this.requireCount(data, 'expiresAt');
+    if (this.requireInteger(data, 'subscriptionId') !== id || !planId.startsWith(`${id}:`) ||
+      !/^[a-f0-9]{64}$/.test(remoteDigest) || expiresAt <= Date.now()) {
+      throw new Error('Core 返回的订阅预览身份无效');
+    }
+    const found = new Set<string>();
+    const changes = this.requireArray(data['changes'], '订阅差异').map((raw: unknown): RuleSourceChange => {
+      const item = this.requireObject(raw, '订阅差异项');
+      const sourceId = this.requireString(item, 'sourceId');
+      const kind = this.requireString(item, 'kind');
+      if (!sourceId.length || found.has(sourceId) ||
+        !['added', 'update', 'conflict', 'removedRemote', 'unchanged', 'localOnly'].includes(kind)) {
+        throw new Error('Core 返回的订阅差异不完整');
+      }
+      found.add(sourceId);
+      return { sourceId, name: this.requireString(item, 'name'), kind: kind as RuleSourceChangeKind };
+    });
+    return { subscriptionId: id, planId, remoteDigest, expiresAt, changes };
+  }
+
+  async applySourceSubscription(preview: RuleSourceSubscriptionPreview, sourceIds: string[],
+    current: () => boolean): Promise<string[]> {
+    const ids = new Set(sourceIds);
+    if (ids.size !== sourceIds.length || !sourceIds.every((id: string): boolean =>
+      preview.changes.some((change: RuleSourceChange): boolean => change.sourceId === id &&
+        (change.kind === 'added' || change.kind === 'update')))) {
+      throw new Error('订阅更新包含 Core 预览之外的候选项');
+    }
+    return RulesMutationOwner.forRuntime(this.owner).run('应用书源订阅差异', current, async (request, confirmed) => {
+      const params: JsonObject = { planId: preview.planId, sourceIds };
+      const data = (await request('rule-sub.update.apply.v1', params)).data;
+      const applied = this.readSourceSubscriptionApply(params, data);
+      if (data['subscriptionId'] !== preview.subscriptionId || data['remoteDigest'] !== preview.remoteDigest) {
+        throw new Error('Core 订阅应用回执与预览身份不一致');
+      }
+      confirmed();
+      return applied;
+    }, this.writeEvidence);
+  }
+
+  private readSourceSubscriptionApply(params: JsonObject, data: JsonObject): string[] {
+    const expected = this.requireArray(params['sourceIds'], '订阅应用请求');
+    const planId = this.requireString(params, 'planId');
+    const applied = this.requireArray(data['appliedSourceIds'], '订阅应用结果');
+    const skipped = this.requireArray(data['skippedSourceIds'], '订阅跳过结果');
+    if (!planId.startsWith(`${this.requireInteger(data, 'subscriptionId')}:`) ||
+      !/^[a-f0-9]{64}$/.test(this.requireString(data, 'remoteDigest')) || this.requireCount(data, 'updatedAt') === 0 ||
+      applied.length !== expected.length || new Set(applied).size !== applied.length ||
+      !applied.every((id: unknown): boolean => typeof id === 'string' && expected.includes(id)) ||
+      new Set(skipped).size !== skipped.length ||
+      !skipped.every((id: unknown): boolean => typeof id === 'string' && !applied.includes(id))) {
+      throw new Error('Core 返回的订阅应用回执不完整');
+    }
+    return applied as string[];
+  }
+
   private ruleSubscriptionParams(draft: RuleSubscriptionDraft): JsonObject {
     const name = draft.name.trim();
     const subscriptionUrl = draft.url.trim();
@@ -261,8 +359,8 @@ export class RulesManagementGateway {
     await this.requestMutation('rule-sub.delete', { id });
   }
 
-  async exportBundle(): Promise<RuleBundleExport> {
-    const result = await this.owner.request('rule-bundle.export', {});
+  async exportBundle(current?: () => boolean): Promise<RuleBundleExport> {
+    const result = await this.owner.request('rule-bundle.export', {}, { canDispatch: current, canContinue: current });
     const json = result.data['json'];
     const counts = this.requireObject(result.data['counts'], 'rule-bundle.export counts');
     if (typeof json !== 'string' || result.data['schemaVersion'] !== 1) {
@@ -291,7 +389,7 @@ export class RulesManagementGateway {
   async refreshSubscription(subscription: ManagedRuleSubscription, document: string,
     sourcePlan: { items: { index: number; sourceId: string; bookSource: JsonObject }[];
       failures: { index: number; message: string }[] } | undefined,
-    current: () => boolean): Promise<string> {
+    current: () => boolean, onReplaceCount?: (count: number) => void, prepare?: () => Promise<void>): Promise<string> {
     const steps: RuleSubscriptionStep[] = [];
     const localFailures: { index: number; message: string }[] = [];
     if (subscription.type === 0) {
@@ -305,7 +403,13 @@ export class RulesManagementGateway {
     else throw new Error('未登记的订阅类型');
     steps.push({ method:'rule-sub.put',params:this.ruleSubscriptionParams({...subscription,update:Date.now()}) });
     const state = await RulesMutationOwner.forRuntime(this.owner).runSubscription(subscription.type,steps,localFailures,current,
-      (method:string,params:JsonObject,data:JsonObject):void=>this.qualifyMutation(method,params,data),this.writeEvidence);
+      (method:string,params:JsonObject,data:JsonObject):void=>{
+        this.qualifyMutation(method,params,data);
+        if (method === 'rule-bundle.import') {
+          const counts = this.requireObject(data['counts'], '规则导入回执');
+          onReplaceCount?.(this.requireCount(counts, 'replaceRules'));
+        }
+      },this.writeEvidence,undefined,undefined,prepare);
     const journey = state.subscription;
     if (journey?.metadataConfirmed !== true) throw new Error(state.message || '导入已核定但订阅更新时间未保存');
     return `订阅更新已确认；${Math.max(0,journey.confirmedParts-1)} 个导入步骤已确认` +
@@ -325,6 +429,10 @@ export class RulesManagementGateway {
 
   /** Qualification is over this original returned ACK, never a later list. */
   private qualifyMutation(method: string, params: JsonObject, data: JsonObject): void {
+    if (method === 'rule-sub.update.apply.v1') {
+      this.readSourceSubscriptionApply(params, data);
+      return;
+    }
     if (method === 'source.import') {
       if (data['imported'] !== true || data['sourceId'] !== params['sourceId'] ||
         typeof data['name'] !== 'string' || (data['name'] as string).trim().length === 0) throw new Error('source.import 原回执无效');

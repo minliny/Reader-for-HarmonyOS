@@ -1,9 +1,11 @@
 import { SourceOrchestrator } from './SourceOrchestrator';
-import type { BookSource } from './SourceGateway';
+import type { BookSource, SourceCheckOutcome, SourceGroupCatalogData, SourceGroupMutateParams } from './SourceGateway';
+import type { SourceV9ImportedReport } from './SourceV9TransferState';
 import type {
   SourceImportCompletion,
   SourceManagementStatusKind,
   SourceManagementProjection,
+  SourceV9CheckOptions,
 } from './SourceOrchestrator';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 
@@ -71,6 +73,27 @@ export class SourceHost {
   importBookSources(onlineUrl: string | undefined,
     onComplete: (completion: SourceImportCompletion) => void, onFailure: (error: Error) => void, identity: string): void {
     this.admitted(identity)?.importBookSources(onlineUrl, onComplete, onFailure);
+  }
+
+  loadGroups(identity: string): Promise<SourceGroupCatalogData> {
+    const host = this.admitted(identity);
+    return host === undefined ? Promise.reject(new Error('书源页面已关闭')) : host.loadGroups();
+  }
+  mutateGroup(params: SourceGroupMutateParams, identity: string): Promise<SourceGroupCatalogData> {
+    const host = this.admitted(identity);
+    return host === undefined ? Promise.reject(new Error('书源页面已关闭')) : host.mutateGroup(params);
+  }
+  toggleSources(ids: string[], enabled: boolean, identity: string): void {
+    this.admitted(identity)?.toggleSources(ids, enabled);
+  }
+  deleteSources(ids: string[], identity: string): void { this.admitted(identity)?.deleteSources(ids); }
+  exportAll(identity: string): void { this.admitted(identity)?.exportAll(); }
+  acceptTransferredReports(reports: SourceV9ImportedReport[], identity: string): void {
+    this.admitted(identity)?.acceptTransferredReports(reports);
+  }
+  runSourceCheck(id: string, options: SourceV9CheckOptions, current: () => boolean,
+    onStage: (stage: string) => void, identity: string): Promise<SourceCheckOutcome | undefined> {
+    return this.admitted(identity)?.runSourceCheck(id, options, current, onStage) ?? Promise.resolve(undefined);
   }
 
   private admitted(identity: string): SourceOrchestrator | undefined {

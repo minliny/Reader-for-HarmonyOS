@@ -32,6 +32,7 @@ export struct PageBackBar {
   @Prop title: string = '';
   @Prop trailingWidthVp: number = 44;
   @Prop centered: boolean = false;
+  @Prop minimumBarHeightVp: number = 0;
   @Prop @Watch('onRaisedRecipeChanged') floating: boolean = false;
   /** Rounded fixed bars keep their geometry without inheriting lift. */
   @Prop elevation: 'fixed' | 'floating' | 'raised' = 'fixed';
@@ -247,7 +248,7 @@ export struct PageBackBar {
     if (this.variant === 'download') return DOWNLOAD_HEADER_HEIGHT;
     if (this.variant === 'mangaDirectory') return mangaDirectoryHeaderHeight(this.mangaFontScale());
     return this.floating
-      ? readerScaledBarHeight(APP_FLOATING_HEADER_BAR_HEIGHT, TYPE_PAGE_TITLE.lineHeightFp as number, this.fontScale(), 0)
+      ? readerScaledBarHeight(this.minimumBarHeightVp > 0 ? this.minimumBarHeightVp : APP_FLOATING_HEADER_BAR_HEIGHT, TYPE_PAGE_TITLE.lineHeightFp as number, this.fontScale(), 0)
       : Math.min(this.standardTitleHeightLimit(),
         readerScaledBarHeight(APP_HEADER_BAR_HEIGHT, TYPE_PAGE_TITLE.lineHeightFp as number, this.fontScale(), 0));
   }

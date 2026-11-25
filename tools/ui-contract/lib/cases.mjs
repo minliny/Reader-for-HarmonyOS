@@ -412,7 +412,17 @@ function validateScopedCase(contract, samples, actions) {
     const scopedClick = (contract.id === sourceOfflineDetectCase && check?.expected?.position === undefined &&
       tap?.id === 'detect-source') || (contract.id === sourceOfflineDetectEdgeCase &&
       check?.expected?.position === 'top' && tap?.id === 'detect-source-top');
-    requireEvidence(scopedClick && contract.pageId === 'source-management' && contract.version === 1 &&
+    const run = contract.steps.find(step=>step.id === check?.runAction);
+    const close = contract.steps.find(step=>step.id === check?.returnAction);
+    const dialog = contract.steps.find(step=>step.id === run?.from);
+    const complete = contract.steps.find(step=>step.id === close?.from);
+    const v9 = contract.version === 2 && run?.op === 'click' && run.target === 'reader-source-v9-check-run' &&
+      dialog?.afterAction === tap?.id && dialog.keyboard === false &&
+      complete?.afterAction === run.id && waitsFor(complete.waitFor,'settled') &&
+      close?.op === 'click' && close.target === 'reader-source-v9-check-close' && end?.afterAction === close.id;
+    const legacy = contract.version === 1 && end?.afterAction === tap?.id && waitsFor(end?.waitFor,'settled') &&
+      contract.steps.at(-2) === tap && contract.steps.at(-3) === start;
+    requireEvidence(scopedClick && contract.pageId === 'source-management' && (v9 || legacy) &&
       fixture.id === sourceOfflineDetectFixture && fixture.publicSources === true && detects.length === 1 && detectChecks.length === 1 &&
       check.evaluator === 'source' && check.action === tap.id &&
       entry?.op === 'click' && entry.target === 'reader-settings-source-management' &&
@@ -420,9 +430,8 @@ function validateScopedCase(contract, samples, actions) {
       start.anchors.includes(sourceOfflineDetectButton) && start.anchors.includes(sourceOfflineDetectReady) &&
       waitsFor(start.waitFor,'ready') && waitsFor(tap.beforeEvent,'ready') &&
       tap.op === 'click' && tap.from === start.id && !tap.gesture && !tap.tapEdge && !tap.wait && !tap.waitFor &&
-      end?.kind === 'sample' && end.afterAction === tap.id && end.keyboard === false &&
-      end.anchors.includes(sourceOfflineDetectFailed) && waitsFor(end.waitFor,'settled') &&
-      contract.steps.at(-1) === end && contract.steps.at(-2) === tap && contract.steps.at(-3) === start,
+      end?.kind === 'sample' && end.keyboard === false && end.anchors.includes(sourceOfflineDetectFailed) &&
+      contract.steps.at(-1) === end,
     'Offline Detect requires one scoped click after the exact provider-free native ready row and its real local outcome');
   }
   const pickerLocators = contract.steps.filter(step => step.captureGuard === sourcePickerGuard);

@@ -28,27 +28,36 @@ if (selected.length) {
   const { readerScrollLayout, readerScrollStartOffset, readerScrollEndOffset } = await import('../entry/src/main/ets/ui/layout/ReaderScrollLayout.ts');
   const base = id => ({ sourceId: id, name: id, baseUrl: `https://${id}.test`, enabled: true, category: 'novel', checkState: 'unchecked' });
   const { sourceManagementFilterKey } = await import('../entry/src/main/ets/features/source/presentation/SourceManagementScrollState.ts');
-  const methods = names => selectedProductionMethods(file, 'SourceManagementPage', names, { sourceManagementFilterKey });
+  const v9 = await import('../entry/src/main/ets/features/source/presentation/SourceManagementV9.ts');
+  const methods = names => selectedProductionMethods(file, 'SourceManagementPage', names, { sourceManagementFilterKey, ...v9 });
 
   async function projection() {
-    const Page = methods(['normalizedSourceGroup', 'groupOptions', 'filteredSources', 'matchesStatus', 'rebuildSourceProjection', 'clearFilters', 'managementInputIsCurrent', 'managementOpeningIsCurrent', 'filteredEnabledCount', 'statsText', 'currentFilterKey']);
+    const Page = methods(['normalizedSourceGroup', 'groupOptions', 'filterProjection', 'rebuildSourceProjection',
+      'clearFilters', 'managementInputIsCurrent', 'managementOpeningIsCurrent', 'currentFilterKey']);
     const page = new Page();
     let replaced;
-    Object.assign(page, { mounted: true, appForeground: true, groupOpen: false, isOpeningCurrent: () => true, sources: [{ ...base('a'), group: ' 玄幻 ' }, { ...base('b'), group: '玄幻', enabled: false, checkState: 'checking' }, { ...base('c'), group: '', checkState: 'passed' }],
-      lastProjectionFilterKey:'', scheduleSourceAnchorRestore(){}, searchQuery: '', statusValue: '全部', categoryValue: 'all', groupValue: '玄幻',
-      sourceDataSource: { replace: value => { replaced = value; } }, onRetryLoad() { assert.fail('local filters must not dispatch reads'); } });
-    assert.deepEqual(page.groupOptions(), ['全部分组', '玄幻']);
+    Object.assign(page, { mounted: true, appForeground: true, inputEnabled: true, groupOpen: false,
+      isOpeningCurrent: () => true, catalogGroupNames: [],
+      sources: [{ ...base('a'), group: ' 玄幻 ' },
+        { ...base('b'), group: '玄幻', enabled: false, checkState: 'checking' },
+        { ...base('c'), group: '' }, { ...base('d'), category: 'music', group: '玄幻' }],
+      lastProjectionFilterKey: '', scheduleSourceAnchorRestore(){}, cancelScrollRestore(){}, observeVerificationProjection(){},
+      searchQuery: '', statusValue: '全部', categoryValue: 'all', groupValue: '玄幻',
+      sourceDataSource: { replace: value => { replaced = value; } },
+      onRetryLoad() { assert.fail('local filters must not dispatch reads'); } });
+    assert.deepEqual(page.groupOptions(), ['全部分组', '未分组', '玄幻']);
     page.rebuildSourceProjection();
-    assert.deepEqual(replaced.map(s => s.sourceId), ['a', 'b'], 'option trim and comparison share the actual normalizer');
-    assert.match(page.statsText(), /显示 2\/3 个书源 · 1 个启用/);
-    page.statusValue = '未检测'; page.groupValue = '全部分组'; page.rebuildSourceProjection();
-    assert.deepEqual(replaced.map(s => s.sourceId), ['a', 'b'], 'checking stays in the not-yet-complete filter');
+    assert.deepEqual(replaced.map(source => source.sourceId), ['a', 'b']);
+    assert.deepEqual(page.statusCounts, { all:2, enabled:1, disabled:1, abnormal:0 });
+    page.statusValue = '已停用'; page.rebuildSourceProjection();
+    assert.deepEqual(replaced.map(source => source.sourceId), ['b']);
+    assert.deepEqual(page.statusCounts, { all:2, enabled:1, disabled:1, abnormal:0 });
     page.searchQuery = 'no-match'; page.rebuildSourceProjection();
-    assert.match(page.statsText(), /显示 0\/3 个书源 · 0 个启用/);
+    assert.deepEqual(page.statusCounts, { all:0, enabled:0, disabled:0, abnormal:0 });
     page.categoryValue = 'comic'; page.groupValue = 'missing'; page.clearFilters();
     assert.deepEqual([page.searchQuery, page.statusValue, page.categoryValue, page.groupValue], ['', '全部', 'all', '全部分组']);
-    assert.equal(replaced.length, 3); assert.match(page.statsText(), /3 个书源 · 2 个启用/);
-    page.sources = []; assert.deepEqual(page.groupOptions(), ['全部分组'], 'no hidden catalog prop remains');
+    assert.deepEqual(replaced.map(source => source.sourceId), ['a','b','c']);
+    page.sources = []; assert.deepEqual(page.groupOptions(), ['全部分组','未分组']);
   }
 
   async function listState() {
@@ -56,12 +65,13 @@ if (selected.length) {
     function render({ sources = [base('a')], statusKind = 'idle', operation = {} } = {}) {
       let clears = 0;
       const page = sdk.consumer(text, ['sourceList', 'hasPendingSourceRecovery', 'sourceListLoading',
-        'sourceAnchorReadPending', 'hasEmptyListReadFailure', 'retryEmptyListAction', 'retryRetainedListAction'],
+        'sourceAnchorReadPending', 'hasFilteredEmpty', 'hasEmptyListReadFailure', 'readPageStateTitle', 'readPageStateMessage', 'retryEmptyListAction', 'retryRetainedListAction'],
       { readerScrollStartOffset, readerScrollEndOffset,
         ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} } });
-      Object.assign(page, { sources, projectedSources: [], statusKind, statusMessage: '', operation,
+      Object.assign(page, { sources, hasReadableSources: sources.some(v9.sourceV9Supports),
+        projectedSources: [], projectedSourceCount: 0, statusKind, statusMessage: '', operation,
         editingScroll: { id: 'source-list-state-test' },
-        sourceDataSource: { totalCount: () => 0 }, sourceRow() {}, searchField() {}, statsRow() {}, statusAction() {}, filterArea() {}, categoryFilter() {},
+        sourceDataSource: { totalCount: () => 0 }, sourceRow() {}, verificationLoadingObserver() {}, readPageStateTextOptions() {}, searchField() {}, statusAction() {}, filterArea() {}, categoryFilter() {},
         contentFrame: () => ({ left: 19, right: 19, width: 328 }), scrollLayout: () => ({ startInset: 58, endInset: 91, mode: 'contentOffset' }),
         recovery: () => ({ canRetry: false }), clearFilters: () => { clears++; } });
       page.sourceList();
@@ -164,7 +174,8 @@ if (selected.length) {
     const feedback = new Feedback(), messages = [];
     Object.assign(feedback, { mounted: true, sources: [base('a')], projectedSources: [], statusKind: 'error', statusMessage: '刷新失败，保留旧书源',
       operation: { readFacts: { fact: 'failed', generation: 4 } }, lastFeedbackIdentity: '', lastToastMessage: '',
-      scheduleSourceAnchorRestore(){}, recovery: () => ({ visible: false, message: '' }), getUIContext: () => ({}),
+      scheduleSourceAnchorRestore(){}, observeVerificationProjection(){}, scheduleImportStatusReadyObservation(){},
+      recovery: () => ({ visible: false, message: '' }), getUIContext: () => ({}),
       transientFeedback: { show(_context, notice, current) { assert.equal(current(), true); messages.push(notice.message); } } });
     feedback.onMessageChanged(); feedback.onMessageChanged();
     assert.deepEqual(messages, ['刷新失败，保留旧书源'], 'available old content failure is one transient fact, independently of the local filtered-empty projection');
@@ -181,7 +192,7 @@ if (selected.length) {
     const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
     const switchControls = () => {
       const properties=createArkUIPropertyRuntimeProbe();
-      const dependencies={...properties.sdk,...switchSpecs(),readerAppColor,DEBUG:false,hilog:{info(){}}};
+      const dependencies={...properties.sdk,...switchSpecs(),readerAppColor,...v9,DEBUG:false,hilog:{info(){}}};
       const hooks={...properties.hooks,childSources:{ReaderToggle:toggleSource},mountChildren:true,lifecycleChildren:true};
       const toggle=createReaderBuilderProbe(toggleSource,boundedMembers(toggleSource),dependencies,hooks);
       dependencies.ReaderToggle=toggle.Component;
@@ -199,7 +210,7 @@ if (selected.length) {
     ]) {
       const controls = switchControls(), calls = [];
       const page = controls.consumer(text, ['operation', 'projectedSources', 'sourceSwitch', 'sourceSwitchValue', 'sourceSwitchName', 'sourceToggleBusy', 'sourceActionEnabled','managementBackIsCurrent','managementOpeningIsCurrent'], {}, { operation });
-      Object.assign(page, { mounted: true, appForeground:true, temporaryBackIdentity: 'action-admission', onToggleSource: (_id, next) => calls.push(next) });
+      Object.assign(page, { mounted: true, appForeground:true, inputEnabled:true, temporaryBackIdentity: 'action-admission', onToggleSource: (_id, next) => calls.push(next) });
       page.sourceSwitch(false, next => page.onToggleSource('a', next), 'a');
       const actor = [...page.children.values()].find(c => c instanceof controls.toggle.Component);
       assert.ok(actor); const change = controls.nodes(actor).find(n => n.type==='Toggle' && n.onChange)?.onChange; assert.ok(change);
@@ -208,68 +219,68 @@ if (selected.length) {
       assert.equal(calls.length, expected, 'actual shared toggle refuses busy/blocked/unknown/refreshing callbacks');
     }
     const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
-    for (const [checkState, blocked, unknown, expected] of [['unchecked', false, false, 1], ['checking', false, false, 0], ['unchecked', true, false, 1], ['unchecked', false, true, 1], ['unchecked', true, true, 1]]) {
-      const controls = foundationControls(), page = createReaderBuilderProbe(text, ['detectButton','sourceDetectEnabled','sourceActionLabel','sourceRowCommand','sourceRowIsCurrent','sourceRenderKey','managementBackIsCurrent','managementOpeningIsCurrent'], controls.dependencies, controls.hooks).owner;
+    const controls = foundationControls();
+    const detectMembers = ['detectButton','detectGlyph','sourceBadgeLabel','offlineDetectBadgeId',
+      'verificationRowTextId','sourceDetectEnabled','sourceActionLabel','sourceRowCommand','sourceRowIsCurrent',
+      'sourceRenderKey','managementBackIsCurrent','managementOpeningIsCurrent'];
+    const renderDetect = (source, operation) => {
       let calls = 0;
-      Object.assign(page, { mounted: true, appForeground:true, temporaryBackIdentity: 'detect-admission', sources: [{...base('a'),checkState}], appThemeScheme: 'day', operation: { original: { blocked }, receipt: { receipt: { confirmation: unknown ? 'unknown' : 'confirmed' } } }, onDetectSource: () => calls++ });
-      page.projectedSources=page.sources.slice();
-      page.detectButton({ ...base('a'), checkState });
-      const actor = [...page.children.values()].find(c => c instanceof controls.button.Component);
-      assert.ok(actor); assert.equal(actor.isBusy, checkState === 'checking');
-      const click = controls.nodes(actor).find(n => n.onClick)?.onClick; assert.ok(click); click();
-      if (checkState === 'checking') click();
-      assert.equal(actor.actionEnabled, checkState !== 'checking');
-      assert.equal(calls, expected, 'diagnostic admission intentionally ignores pending source-write blocked/unknown');
+      const page = createReaderBuilderProbe(text, detectMembers, {...controls.dependencies,...v9}, controls.hooks).owner;
+      Object.assign(page,{mounted:true,appForeground:true,inputEnabled:true,temporaryBackIdentity:'detect-admission',
+        sources:[source],projectedSources:[source],appThemeScheme:'day',operation,onDetectSource:()=>calls++});
+      page.detectButton(source);
+      const button = [...page.nodes.values()].find(node => node.type === 'Button' && node.onClick);
+      assert.ok(button);
+      return {page,button,calls:()=>calls};
+    };
+    for (const [checkState, blocked, unknown, expected] of [['unchecked', false, false, 1], ['checking', false, false, 0],
+      ['unchecked', true, false, 1], ['unchecked', false, true, 1], ['unchecked', true, true, 1]]) {
+      const {button,calls} = renderDetect({...base('a'),checkState},
+        {original:{blocked},receipt:{receipt:{confirmation:unknown?'unknown':'confirmed'}}});
+      button.onClick();
+      assert.equal(button.enabled,checkState !== 'checking');
+      assert.equal(calls(),expected,'the native v9 diagnostic stays independent of an unknown source write');
     }
-    for (const retire of ['checking', 'removed', 'unmounted', 'presentation']) {
-      const controls = foundationControls(), page = createReaderBuilderProbe(text, ['detectButton','sourceDetectEnabled','sourceActionLabel','sourceRowCommand','sourceRowIsCurrent','sourceRenderKey','managementBackIsCurrent','managementOpeningIsCurrent'], controls.dependencies, controls.hooks).owner;
-      let calls = 0;
-      Object.assign(page, { mounted: true, appForeground:true, temporaryBackIdentity: 'detect-old', sources: [base('a')], appThemeScheme: 'day', onDetectSource: () => calls++ });
-      page.projectedSources=page.sources.slice();
-      page.detectButton(base('a'));
-      const actor = [...page.children.values()].find(c => c instanceof controls.button.Component);
-      const click = controls.nodes(actor).find(n => n.onClick)?.onClick; assert.ok(click);
+    for (const retire of ['checking','removed','unmounted','presentation']) {
+      const {page,button,calls} = renderDetect(base('a'),{});
       if (retire === 'checking') page.sources = [{...base('a'),checkState:'checking'}];
       if (retire === 'removed') page.sources = [];
       if (retire === 'unmounted') page.mounted = false;
       if (retire === 'presentation') page.temporaryBackIdentity = 'detect-successor';
-      click();
-      assert.equal(calls, 0, `captured diagnostic callback refuses ${retire} even before a button rerender`);
+      button.onClick();
+      assert.equal(calls(),0,`retired v9 detection refuses ${retire}`);
     }
   }
 
   async function loginStatus() {
-    const sdk = boundedSurfaceSdk();
     const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
     const controls = foundationControls();
-    const BadgeSource = readFileSync(new URL('../entry/src/main/ets/ui/controls/StatusBadge.ets', import.meta.url), 'utf8');
-    const Badge = createReaderBuilderProbe(BadgeSource, boundedMembers(BadgeSource), {...sdk.deps,uiContext:{vp2px:value=>value},LineJoinStyle:{Round:'LineJoinStyle.Round'}}, sdk.hooks).Component;
-    const deps = { ...sdk.deps, ...controls.dependencies, StatusBadge: Badge };
-    const hooks = { ...sdk.hooks, ...controls.hooks, childSources: { ...sdk.hooks.childSources, ...controls.hooks.childSources, StatusBadge: BadgeSource } };
-    const rowMethods=['sourceRowCommand','sourceRowIsCurrent','sourceRenderKey','managementBackIsCurrent','managementOpeningIsCurrent'];
-    for (const [checkState, blocked, unknown, expected] of [['unchecked', false, false, 1], ['checking', false, false, 0], ['unchecked', true, false, 0], ['unchecked', false, true, 0]]) {
+    const rowMethods = ['loginButton','verificationRowActionsCurrent','sourceActionEnabled','sourceActionLabel',
+      'sourceRowCommand','sourceRowIsCurrent','sourceRenderKey','managementBackIsCurrent','managementOpeningIsCurrent'];
+    for (const [checkState, blocked, unknown, expected] of [
+      ['unchecked',false,false,1],['checking',false,false,0],['unchecked',true,false,0],['unchecked',false,true,0],
+    ]) {
       let calls = 0;
-      const page = createReaderBuilderProbe(text, ['loginButton', 'sourceActionEnabled', 'sourceActionLabel',...rowMethods], deps, hooks).owner;
-      const source={...base('a'),loginUrl:'https://a.test/login',checkState};
-      Object.assign(page, { mounted:true, appForeground:true, temporaryBackIdentity:'login-sdk',sources:[source],projectedSources:[source],appThemeScheme:'day',
-        operation:{original:{blocked},receipt:{receipt:{confirmation:unknown?'unknown':'confirmed'}}},onLoginSource:()=>calls++ });
+      const page = createReaderBuilderProbe(text,rowMethods,{...controls.dependencies,...v9},controls.hooks).owner;
+      const source = {...base('a'),loginUrl:'https://a.test/login',checkState};
+      Object.assign(page,{mounted:true,appForeground:true,inputEnabled:true,temporaryBackIdentity:'login-sdk',
+        sources:[source],projectedSources:[source],appThemeScheme:'day',
+        operation:{original:{blocked},receipt:{receipt:{confirmation:unknown?'unknown':'confirmed'}}},onLoginSource:()=>calls++});
       page.loginButton(source);
-      const button = [...page.children.values()].find(c => c instanceof controls.button.Component);
-      assert.ok(button); assert.equal(button.isBusy, checkState === 'checking');
-      const click = controls.nodes(button).find(n => n.onClick)?.onClick; assert.ok(click); click();
-      assert.equal(calls, expected, 'actual native ReaderButton commit obeys forwarded admission');
+      const button = [...page.nodes.values()].find(node=>node.type === 'Button' && node.onClick);
+      assert.ok(button);
+      assert.equal(button.enabled,expected === 1);
+      assert.match(button.accessibilityText,/登录，状态未知/);
+      button.onClick();
+      assert.equal(calls,expected);
     }
-    const Status = methods(['sourceBadgeLabel','sourceBadgeStatus']); const status = new Status();
-    for (const [checkState, expected] of [['checking','检查中'],['passed','检查通过'],['failed','检查失败'],['unchecked','未检查']]) {
-      const source={...base('a'),checkState};
-      assert.equal(status.sourceBadgeLabel(source),expected);
-      const page=createReaderBuilderProbe(text,['statusBadge','sourceBadgeLabel','sourceBadgeStatus'],deps,hooks).owner;
-      page.statusBadge(source);
-      const badge=[...page.children.values()].find(child=>child instanceof Badge);
-      assert.ok(badge);assert.equal(badge.label,expected);
-      const names=[...badge.nodes.values()].map(node=>node.accessibilityText).filter(Boolean);
-      assert.ok(names.includes(expected),'actual semantic badge exposes the state label');
-    }
+    const Status = methods(['sourceBadgeLabel']);
+    const status = new Status();
+    assert.equal(status.sourceBadgeLabel({...base('a'),checkState:'checking'}),'检测中');
+    assert.equal(status.sourceBadgeLabel({...base('a'),checkState:'failed'}),'尚无有效检测报告');
+    const report = status => [{stale:false,report:{steps:[{level:'L2',status,executed:true}]}}];
+    assert.equal(status.sourceBadgeLabel({...base('a'),checkReports:report('pass')}),'检测通过');
+    assert.equal(status.sourceBadgeLabel({...base('a'),checkReports:report('fail')}),'检测失败');
   }
 
   async function loginSession() {
@@ -340,11 +351,11 @@ if (selected.length) {
 
   async function footerGeometry() {
     const {actualSourceManagementGeometry}=await import('./lib/source-management-owner-probe.mjs');
-    const context=actualSourceManagementGeometry();
+    const context={...actualSourceManagementGeometry(),...v9};
     const Page=selectedProductionMethods(file,'SourceManagementPage',['refreshGeometry','scrollLayout'],context);
     const page=new Page(),reads=[];
-    Object.assign(page,{mounted:true,viewportWidth:366,viewportHeight:844,measurementKey:17,measurementRevision:7,
-      footerFallbackHeight:()=>48,measurements:{readForGeneration(key,generation){reads.push([key,generation]);return key==='source:header'?61:93;}}});
+    Object.assign(page,{mounted:true,viewportWidth:366,viewportHeight:844,measurementKey:17,footerMeasurementKey:17,measurementRevision:7,
+      footerFallbackHeight:()=>48,observeVerificationGeometry(){},measurements:{readForGeneration(key,generation){reads.push([key,generation]);return key==='source:header'?61:93;}}});
     page.refreshGeometry();
     assert.equal(page.geometry.footer.height,93);assert.equal(page.geometry.content.endInset,93);
     assert.equal(readerScrollEndOffset(page.scrollLayout()),93);

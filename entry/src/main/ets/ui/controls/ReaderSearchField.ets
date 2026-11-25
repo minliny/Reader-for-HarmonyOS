@@ -111,6 +111,7 @@ export struct ReaderSearchField {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') @Watch('editingGeometryChanged') private readerWindowMetricsRevision: number = 0;
 
+  @Prop sourceV9Chrome: boolean = false;
   @Prop variant: ReaderSearchFieldVariant = 'bookPanel';
   @Prop mode: ReaderSearchFieldMode = 'submit';
   @Prop @Watch('revealBookInputCaret') text: string = '';
@@ -759,7 +760,7 @@ export struct ReaderSearchField {
     }
     if (this.variant === 'sourceGroup') return Math.max(SEARCH_CONTROL_MIN_TARGET, this.naturalFieldHeightVp);
     if (this.variant === 'sourceManagement') {
-      return readerScaledControlHeight(44, TYPE_SEARCH_SOURCE_INPUT.lineHeightFp ??
+      return readerScaledControlHeight(this.sourceV9Chrome ? 40 : 44, TYPE_SEARCH_SOURCE_INPUT.lineHeightFp ??
         TYPE_SEARCH_SOURCE_INPUT.fontSizeFp * 1.5, this.directoryFontScale());
     }
     if (this.variant === 'readerDirectory') {
@@ -774,7 +775,7 @@ export struct ReaderSearchField {
       return this.fieldHeight();
     }
     if (this.variant === 'sourceManagement') {
-      return Math.max(44, this.fieldHeight() - this.fieldBorderWidth() * 2);
+      return Math.max(this.sourceV9Chrome ? 0 : 44, this.fieldHeight() - this.fieldBorderWidth() * 2);
     }
     if (this.variant === 'readerDirectory') {
       return Number.isFinite(this.naturalInputHeightVp) && this.naturalInputHeightVp > 0 ?
@@ -826,6 +827,7 @@ export struct ReaderSearchField {
   }
 
   private cornerRadius(): number {
+    if (this.sourceV9Chrome) return 10;
     if (this.variant === 'rssPassive') return Math.min(Math.max(0, this.fieldWidthVp), this.fieldHeight()) / 2;
     return this.fieldHeight() / 2;
   }

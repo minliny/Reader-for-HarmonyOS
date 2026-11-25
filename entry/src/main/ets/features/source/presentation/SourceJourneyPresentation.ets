@@ -96,6 +96,10 @@ export class SourceJourneyPresentation {
     return this.isManagementCurrent(identity) ? this.registry : undefined;
   }
 
+  runtime(identity: string): ReaderRuntimeOwner | undefined {
+    return this.isManagementCurrent(identity) ? this.managementOwner : undefined;
+  }
+
   initialManagementViewState(identity: string): SourceManagementViewState | undefined {
     return this.isManagementCurrent(identity) && this.managementViewState !== undefined ? this.copyManagementViewState(this.managementViewState) : undefined;
   }

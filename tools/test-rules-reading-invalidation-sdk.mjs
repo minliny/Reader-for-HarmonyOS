@@ -15,7 +15,9 @@ const direct=overrides=>productionMotionMethods(file,['requestDirect'],{DEFAULT_
  coreAdmissionFailureSummary:()=>undefined,httpResponseFailureSummary:()=>undefined,hilog:{warn(){}},...overrides});
 const payload=method=>({operationId:'00000000-0000-4000-8000-000000000001',sequence:1,
  mutation:{method,params:method==='replace.persist'?{operation:'update',params:{id:3,replacement:'after'}}:
- method==='source.update'?{sourceId:'s',enabled:false}:method==='source.delete'?{sourceIds:['s']}:{id:3}}});
+ method==='source.update'?{sourceId:'s',enabled:false}:method==='source.delete'?{sourceIds:['s']}:
+ method==='source.import.grouped'?{expectedRevision:1,strategy:'preserve',items:[{sourceId:'s',bookSource:{bookSourceUrl:'s'}}]}:
+ method==='rule-sub.update.apply.v1'?{planId:'plan',sourceIds:['s']}:{id:3}}});
 const tick=()=>new Promise(r=>setImmediate(r));
 function fixture(negative=false){
  const queue=[],calls=[];let complete=true;
@@ -33,7 +35,7 @@ function fixture(negative=false){
 const checks=[];
 for(const original of RULES_MUTATION_METHODS){
  const f=fixture(),tuple=payload(original);
- const changesBody=['replace.persist','dict-rule.put','dict-rule.delete','rule-bundle.import','reader.chinese-conversion.put','source.import','source.update','source.delete'].includes(original);
+ const changesBody=['replace.persist','dict-rule.put','dict-rule.delete','rule-bundle.import','reader.chinese-conversion.put','source.import','source.import.grouped','rule-sub.update.apply.v1','source.update','source.delete'].includes(original);
  const current=f.preparations.captureContentValidity('s','b');
  await f.acquisition.request('rules.mutation.apply',tuple);
  assert.equal(current(),!changesBody,original+' preserves original preparation semantics');
@@ -43,6 +45,17 @@ for(const original of RULES_MUTATION_METHODS){
   'classification never unwraps the dispatched typed receipt or changes full original DTO');f.close();
 }
 checks.push('all registered original rules keep preparation/acquisition/wake effects; subscription metadata never invalidates book content');
+{
+ const f=fixture(),tuple=payload('rule-sub.update.apply.v1');
+ tuple.mutation.params.sourceIds=[];
+ const current=f.preparations.captureContentValidity('s','b');
+ await f.acquisition.request('rules.mutation.apply',tuple);
+ assert.equal(current(),true);
+ assert.equal(f.acquisition.readingProjectionRevision(),0);
+ assert.deepEqual(f.calls[0].params,tuple);
+ f.close();
+ checks.push('timestamp-only subscription apply preserves prepared content and the original receipt envelope');
+}
 {
  const f=fixture();f.complete(false);const old=f.preparations.captureContentValidity('s','b');let dispatched=0;
  const request=f.acquisition.request('rules.mutation.apply',payload('replace.persist'),{onDispatch:()=>dispatched++});

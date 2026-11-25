@@ -231,7 +231,7 @@ const parameters = {
     'source-native-semantics':['entryAction'],
     'source-inline-import-edge':['entryAction','dialogSample','returnAction'],
     'source-inline-import-center':['entryAction','dialogSample','returnAction'],
-    'source-offline-detect':['entryAction'],
+    'source-offline-detect':['entryAction','runAction','returnAction'],
     'group-outside-dismiss':['openAction'],
     'tool-return':['departAction','toolsSample'],
     'tool-return-filters':['departAction','toolsSample','priorAction','filteredSample'],

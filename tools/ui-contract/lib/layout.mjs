@@ -367,10 +367,13 @@ export function normalizeHarmonyLayout({
       if (matchesNativeText(a,id,observeSourceOfflineDetect ? sourceOfflineDetectTitle : sourceRowActionTitle)) sourceActionRow.titles += 1;
       const locator = observeSourceOfflineDetect ? sourceOfflineDetectUrl : sourceRowActionUrl;
       const hostname = observeSourceOfflineDetect ? sourceOfflineDetectHost : sourceRowActionHost;
-      if (matchesNativeText(a,id,locator) || matchesNativeText(a,id,hostname)) sourceActionRow.locators += 1;
+      if (matchesNativeText(a,id,locator) || matchesNativeText(a,id,hostname) ||
+          matchesNativeText(a,id,'https://' + hostname)) sourceActionRow.locators += 1;
       if (a.type === 'Button') {
         const labels = sourceRowButtonLabels(node,id);
-        if (labels.length === 1) sourceActionRow.buttons.push({index:nodes.length,alias:labels[0][1]});
+        if (a.id === 'reader-source-v9-fixture-detect' || a.id === 'reader-source-text-row-detect') {
+          sourceActionRow.buttons.push({index:nodes.length,alias:'reader-source-row-detect-control'});
+        } else if (labels.length === 1) sourceActionRow.buttons.push({index:nodes.length,alias:labels[0][1]});
       }
     }
     if (((a.type === 'SheetPage' && parentType === 'SheetWrapper') || isReaderSearchBottomSheet(a)) &&

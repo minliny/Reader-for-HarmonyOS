@@ -20,11 +20,14 @@ async function metadata() {
   owner.metadataEllipsisMode=api24?'center':'end';
   owner.verificationRowTextId=()=>undefined;
   const bookSource={sourceId:'s',name:'中英文超长书源 Copyright Free Books 长尾',category:'novel',
-    baseUrl:'https://very-long-books.metadata.test/nested/edition.json',enabled:true};
+    baseUrl:'https://very-long-books.metadata.test/nested/edition.json',enabled:true,
+    checkMessage:'完整检测失败原因'};
   owner.sourceInfo(bookSource);
   const title=[...owner.nodes.values()].find(n=>n.type==='Text'&&n.create===bookSource.name);
-  const domain=[...owner.nodes.values()].find(n=>n.type==='Text'&&n.create==='very-long-books.metadata.test');
+  const domain=[...owner.nodes.values()].find(n=>n.type==='Text'&&n.create==='https://very-long-books.metadata.test');
   assert.ok(title&&domain,'the real source row retains the entire title and domain strings for measurement');
+  assert.deepEqual([...owner.nodes.values()].filter(n=>n.type==='Text').map(n=>n.create), [title.create,domain.create],
+   'the row exposes only title and host as visible text');
   assert.deepEqual([domain.fontFamily,domain.fontWeight,domain.fontSize,domain.lineHeight],
     [role.fontFamily,role.fontWeight,role.fontSizeFp,role.lineHeightFp]);
   assert.equal(domain.fontColor,readerAppColor('TOK_CONTROL_INK',scheme));
@@ -39,4 +42,4 @@ async function metadata() {
    'accessibility keeps the full source name and configured URL');
  }
 }
-for(const id of selectContractCases({'metadata-carriers':'Actual category/URL/check-summary SDK Text with role mutation and live day/night'})){await metadata();recordContractCasePass(id);}
+for(const id of selectContractCases({'metadata-carriers':'Actual v9 title and scheme/host SDK Text with role mutation, overflow mode and day/night'})){await metadata();recordContractCasePass(id);}

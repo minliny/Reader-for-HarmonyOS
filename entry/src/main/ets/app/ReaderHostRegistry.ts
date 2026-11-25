@@ -203,6 +203,24 @@ export class ReaderHostRegistry {
     await CookieSessionStore.instance.clearSession(sourceId);
   }
 
+  private readonly sourceCheckStages = new Map<number, (stage: string) => void>();
+
+  observeSourceCheckStages(requestId: number, observe: (stage: string) => void): () => void {
+    this.sourceCheckStages.set(requestId, observe);
+    return (): void => { this.sourceCheckStages.delete(requestId); };
+  }
+
+  private publishSourceCheckStage(event: ReaderCoreHostRequestEvent): void {
+    const observe = this.sourceCheckStages.get(event.requestId);
+    const raw = event.params['diagnostic'];
+    if (observe === undefined || raw === null || typeof raw !== 'object' || Array.isArray(raw)) return;
+    const diagnostic = raw as JsonObject;
+    const stage = diagnostic['stage'];
+    if (diagnostic['requestId'] !== event.requestId || typeof stage !== 'string' ||
+      !['L2', 'L3', 'L4', 'L5'].includes(stage)) return;
+    try { observe(stage); } catch (_) { /* Progress observers cannot affect Host transport. */ }
+  }
+
   /** Consume sanitized evidence captured during one original Core request. */
   takeSourceHttpDiagnostics(requestId: number): SourceHttpDiagnosticRecord[] {
     return HttpExecuteHost.instance.takeSourceDiagnostics(requestId);
@@ -241,6 +259,7 @@ export class ReaderHostRegistry {
       return this.writeSnapshot(event);
     });
     router.register('http.execute', (event: ReaderCoreHostRequestEvent): Promise<JsonObject> => {
+      this.publishSourceCheckStage(event);
       if (this.fixtureDirectory !== undefined) {
         const fixture = this.publicSearchHttpFixture;
         const current = this.publicSearchHttpIsCurrent;

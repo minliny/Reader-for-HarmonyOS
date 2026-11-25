@@ -67,6 +67,9 @@ type ArkWebJob = {
   finalUrl?: string;
   interactive: boolean;
   interactiveCurrent?: () => boolean;
+  clearInteractiveSession?: () => Promise<ArkWebLoginClearOutcome>;
+  clearRequested?: boolean;
+  clearOutcome?: ArkWebLoginClearOutcome;
   presentationTitle: string;
   userFinished: boolean;
   resourceUrlMatcherJavaScript?: string;
@@ -77,7 +80,22 @@ export type ArkWebPresentation = {
   surfaceId: number;
   visible: boolean;
   title: string;
+  currentUrl?: string;
+  canClear?: boolean;
+  clearOutcome?: ArkWebLoginClearOutcome;
 };
+
+export interface ArkWebLoginClearOutcome {
+  cookiesCleared: boolean;
+  report: 'cleared' | 'unsupported' | 'failed';
+}
+
+export type ArkWebInteractiveNavigation = 'back' | 'forward' | 'refresh';
+
+export interface ArkWebInteractiveHistory {
+  canGoBack: boolean;
+  canGoForward: boolean;
+}
 
 export type ArkWebSurface = {
   readonly id: number;
@@ -154,7 +172,20 @@ export class ArkWebExecutor {
   }
 
   observeDiagnosticPageBegin(url: string, surface: ArkWebSurface): void {
-    this.emitDiagnostic(this.isSurfaceCurrent(surface) ? 'pageBegin' : 'pageBeginDiscarded', surface, url);
+    const current = this.isSurfaceCurrent(surface);
+    this.emitDiagnostic(current ? 'pageBegin' : 'pageBeginDiscarded', surface, url);
+    const job = this.active;
+    if (current && job?.interactive === true && job.pinnedHost !== undefined && httpUrlHostname(url) === job.pinnedHost) {
+      job.pageReadyAt = 0;
+    }
+  }
+
+  onSameDocumentNavigation(url: string, surface: ArkWebSurface): void {
+    const job = this.active;
+    if (!this.isSurfaceCurrent(surface) || job?.interactive !== true ||
+      job.pinnedHost === undefined || httpUrlHostname(url) !== job.pinnedHost) return;
+    job.finalUrl = url;
+    if (job.pageReadyAt === 0) job.pageReadyAt = Date.now() + PAGE_SETTLE_MS + job.settleDelayMillis;
   }
 
   private emitDiagnostic(kind: string, job?: ArkWebJob | ArkWebSurface, url?: string): void {
@@ -531,37 +562,108 @@ export class ArkWebExecutor {
     });
   }
 
-  openInteractive(url: string, profileId: string, title: string, isCurrent?: () => boolean): Promise<JsonObject> {
+  openInteractive(url: string, profileId: string, title: string, isCurrent?: () => boolean,
+    clearSession?: () => Promise<ArkWebLoginClearOutcome>): Promise<JsonObject> {
     if (this.publicFixture) return Promise.reject(new Error('PUBLIC_FIXTURE_ARKWEB_DISABLED'));
     const requestId = this.nextInteractiveRequestId();
-    const job = this.parseJob({
+    const params: JsonObject = {
       document: { kind: 'url', url },
       javaScript: 'document.documentElement.outerHTML',
       timeoutMillis: MAX_TIMEOUT_MS,
       profileId,
-    }, requestId);
+    };
+    const job = this.parseJob(params, requestId);
     job.interactive = true;
     job.interactiveCurrent = isCurrent;
+    job.clearInteractiveSession = clearSession;
     job.presentationTitle = title.trim().length > 0 ? title : '书源登录 / 验证';
     this.jobs.set(requestId, job);
-    const scheduled = this.tail.then((): Promise<JsonObject> => this.run(job));
+    const scheduled = this.tail.then((): Promise<JsonObject> => this.runInteractive(job, params));
     this.tail = scheduled.then((): void => undefined, (): void => undefined);
     return scheduled.finally((): void => {
       this.jobs.delete(requestId);
     });
   }
 
-  finishInteractive(surface: ArkWebSurface): void {
-    if (this.isSurfaceCurrent(surface) && this.active?.interactive === true) {
-      this.active.userFinished = true;
+  private async runInteractive(initial: ArkWebJob, params: JsonObject): Promise<JsonObject> {
+    let job = initial;
+    while (true) {
+      const result = await this.run(job);
+      const clear = job.clearInteractiveSession;
+      if (job.clearRequested !== true || clear === undefined || job.profileId === undefined) return result;
+      // Wait for the original browser to detach before clearing the owner jar.
+      // No callback from that Web may recapture credentials or finish the replacement.
+      await this.waitForRetiredSurface(job);
+      this.assertCurrent(job);
+      const expectedGeneration = CookieSessionStore.instance.sessionGeneration(job.profileId) + 1;
+      const outcome = await clear();
+      if (!outcome.cookiesCleared) throw new Error('SOURCE_LOGIN_COOKIE_CLEAR_FAILED');
+      if (job.cancelled || CookieSessionStore.instance.sessionGeneration(job.profileId) !== expectedGeneration) {
+        throw new Error('SOURCE_LOGIN_SESSION_RETIRED');
+      }
+      const previous = job;
+      job = this.parseJob(params, previous.requestId);
+      job.deadlineAt = previous.deadlineAt;
+      job.interactive = true;
+      job.interactiveCurrent = previous.interactiveCurrent;
+      job.clearInteractiveSession = clear;
+      job.clearOutcome = outcome;
+      job.presentationTitle = previous.presentationTitle;
+      this.jobs.set(job.requestId, job);
     }
   }
 
-  cancelInteractive(surface: ArkWebSurface): void {
-    const job = this.active;
-    if (job?.interactive === true && !job.userFinished && this.isSurfaceCurrent(surface)) {
-      this.cancel(job.requestId);
+  interactiveHistory(surface: ArkWebSurface): ArkWebInteractiveHistory {
+    if (!this.interactiveActionJob(surface)) return { canGoBack: false, canGoForward: false };
+    try {
+      return { canGoBack: surface.controller.accessBackward(), canGoForward: surface.controller.accessForward() };
+    } catch (_) {
+      return { canGoBack: false, canGoForward: false };
     }
+  }
+
+  navigateInteractive(surface: ArkWebSurface, navigation: ArkWebInteractiveNavigation): boolean {
+    if (!this.interactiveActionJob(surface)) return false;
+    const controller = surface.controller;
+    try {
+      if (navigation === 'back') {
+        if (!controller.accessBackward()) return false;
+        controller.backward();
+      } else if (navigation === 'forward') {
+        if (!controller.accessForward()) return false;
+        controller.forward();
+      } else {
+        controller.refresh();
+      }
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  requestInteractiveSessionClear(surface: ArkWebSurface): boolean {
+    const job = this.interactiveActionJob(surface);
+    if (job === undefined || job.clearInteractiveSession === undefined) return false;
+    job.clearRequested = true;
+    return true;
+  }
+
+  private interactiveActionJob(surface: ArkWebSurface): ArkWebJob | undefined {
+    const job = this.active;
+    if (job?.interactive !== true || !this.isSurfaceCurrent(surface) || job.userFinished ||
+      job.clearRequested === true || !job.loadStarted) return undefined;
+    try { this.assertCurrent(job); } catch (_) { return undefined; }
+    return job;
+  }
+
+  finishInteractive(surface: ArkWebSurface): void {
+    const job = this.interactiveActionJob(surface);
+    if (job !== undefined) job.userFinished = true;
+  }
+
+  cancelInteractive(surface: ArkWebSurface): void {
+    const job = this.interactiveActionJob(surface);
+    if (job !== undefined) this.cancel(job.requestId);
   }
 
   cancel(requestId: number): void {
@@ -650,10 +752,17 @@ export class ArkWebExecutor {
         if (job.interactive) {
           this.assertCurrent(job);
           this.publishPresentation(job, true, job.presentationTitle);
-          while (!job.userFinished) {
+          while (!job.userFinished && job.clearRequested !== true) {
             this.assertCurrent(job);
             await delay(100);
           }
+          if (job.clearRequested === true) {
+            this.assertCurrent(job);
+            return {};
+          }
+          // Completion may race a history navigation or refresh. Collect
+          // cookies only once the visible page has finished settling.
+          await this.waitForStablePage(job);
         }
         value = await this.evaluateUntilReady(job, controller);
       }
@@ -1027,7 +1136,10 @@ export class ArkWebExecutor {
 
   private publishPresentation(job: ArkWebJob, visible: boolean, title: string): void {
     if (this.active !== job || job.surface === undefined) return;
-    this.presentationListener?.({ visible, title, surfaceId: job.surface.id });
+    const rawUrl = job.finalUrl ?? this.documentUrl(job.document);
+    this.presentationListener?.({ visible, title, surfaceId: job.surface.id,
+      currentUrl: rawUrl === undefined ? undefined : redactedHttpUrl(rawUrl),
+      canClear: job.clearInteractiveSession !== undefined, clearOutcome: job.clearOutcome });
   }
 
   private documentUrl(document: ArkWebDocument): string | undefined {

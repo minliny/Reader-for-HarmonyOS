@@ -41,7 +41,7 @@ import {
   type ReadingImageChapterIdentity,
 } from '../platform/reading-resources/ReadingImageDiskCache';
 import { canonicalReadingImageBaseUrl } from '../common/ReadingImageIdentity';
-import { ArkWebExecutor } from '../platform/network/ArkWebExecutor';
+import { ArkWebExecutor, type ArkWebLoginClearOutcome } from '../platform/network/ArkWebExecutor';
 import { sourceLoginPageUrl } from './SourceLoginPageProjection';
 import type { SourceHttpDiagnosticRecord } from '../platform/network/HttpExecuteHost';
 import {
@@ -876,7 +876,16 @@ export class ReaderRuntimeOwner {
       }
       const probe = this.mangaOfflineProbe;
       let result: ReaderCoreResultEvent;
-      if (probe?.ownsCommand(method, params) === true && probe.assertCapacity()) {
+      if (options.onSourceCheckStage !== undefined &&
+        (method === 'source.check.run' || method === 'source.check.ephemeral.run')) {
+        const requestId = runtime.send(method, params);
+        const release = this.host.observeSourceCheckStages(requestId, options.onSourceCheckStage);
+        try {
+          result = await runtime.waitForResult(requestId, {
+            ...options, timeoutMs: options.timeoutMs ?? DEFAULT_CORE_REQUEST_TIMEOUT_MS,
+          });
+        } finally { release(); }
+      } else if (probe?.ownsCommand(method, params) === true && probe.assertCapacity()) {
         // SDK request is send + waitForResult. Register before any Host dispatch;
         // the Registry uses this exact id, never a URL or source-only guess.
         const requestId = runtime.send(method, params);
@@ -979,12 +988,24 @@ export class ReaderRuntimeOwner {
   }
 
   /** Open a user-operated source login/challenge page on the shared Host jar. */
-  async openSourceLogin(sourceId: string, loginUrl: string, sourceName: string, isCurrent?: () => boolean): Promise<void> {
+  async openSourceLogin(sourceId: string, loginUrl: string, sourceName: string,
+    isCurrent?: () => boolean, clearReport?: () => Promise<boolean>): Promise<void> {
+    const clearSession = clearReport === undefined ? undefined : async (): Promise<ArkWebLoginClearOutcome> => {
+      let cookiesCleared = false;
+      try {
+        await this.clearSourceCookieSession(sourceId);
+        cookiesCleared = true;
+      } catch (_) { /* The outcome separates a failed credential write from the report write. */ }
+      let report: 'cleared' | 'unsupported' | 'failed' = 'failed';
+      try { report = await clearReport() ? 'cleared' : 'unsupported'; } catch (_) {}
+      return { cookiesCleared, report };
+    };
     await ArkWebExecutor.instance.openInteractive(
       sourceLoginPageUrl(sourceId, loginUrl),
       sourceId,
       `${sourceName} · 登录 / 验证`,
       isCurrent,
+      clearSession,
     );
   }
 

@@ -1269,7 +1269,7 @@
         },
         {
           "caseId": "source-management.row-detect-offline",
-          "scope": "由正常书源列表派发单条公开停用源的检测。验证 44vp 实际 Button 的中心点击、同开次 Core 的 L1 通过及 L2 发请求前失败，并观察同一原生行的失败状态。",
+          "scope": "从公开停用书源的 28vp 检测按钮中心打开报告，开始检测后验证 Core 的 L1 通过及 L2 在 HTTP 前失败，关闭报告后验证同一原生行回写。",
           "assertions": [
             {"id": "source.row.detect.offline-dispatch", "sampleId": "detect-settled"}
           ],
@@ -1283,7 +1283,7 @@
         },
         {
           "caseId": "source-management.row-detect-offline-edge",
-          "scope": "独立未检测的公开停用源，核同一实际 Button 上缘派发、L1 通过和无网络请求的 L2 失败。",
+          "scope": "从公开未检测书源的检测按钮上缘打开报告，开始检测后验证 L1 通过且 L2 在 HTTP 前失败，关闭后核对原行回写。",
           "assertions": [{"id":"source.row.detect.offline-top","sampleId":"detect-settled"}],
           "ownerSources": [
             "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
@@ -5802,7 +5802,7 @@
       },
       "actions": {
         "source-ready": "open-sources",
-        "detect-settled": "detect-source"
+        "detect-settled": "close-check"
       }
     },
     {
@@ -5813,7 +5813,7 @@
       },
       "actions": {
         "source-ready": "open-sources",
-        "detect-settled": "detect-source-top"
+        "detect-settled": "close-check"
       }
     },
     {

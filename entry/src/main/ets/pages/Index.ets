@@ -108,7 +108,8 @@ import { SyncPresentation } from '../features/sync/presentation/SyncPresentation
 import { SyncSurface } from '../features/sync/ui/SyncSurface';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { readerExpandedLayout } from '../ui/layout/ReaderLayoutCapability';
-import { ArkWebExecutionHost } from '../ui/platform/ArkWebExecutionHost';
+import { ArkWebExecutionHost, type ArkWebInteractiveBounds } from '../ui/platform/ArkWebExecutionHost';
+import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
 import { JsonImportDialog } from '../app/composition/JsonImportDialog';
 import { JsonImportPresentation, type JsonImportOpening } from '../app/composition/JsonImportPresentation';
 import { isReaderProductSurfaceEnabled } from '../app/ReaderProductScope';
@@ -222,6 +223,7 @@ struct Index {
   private arkWebBack: (() => boolean) | undefined = undefined;
   private detailMoreBack: (() => boolean) | undefined = undefined;
   private detailMoreBackIdentity: string = '';
+  @State private sourcePaneBounds: ArkWebInteractiveBounds | undefined = undefined;
   @State private arkWebCapturesInput: boolean = false;
   @State @Watch('onSearchVisibilityChanged') private route: ReaderRoute = this.navigationOwner.snapshot().route;
   @State private navigationGeneration: number = this.navigationOwner.snapshot().generation;
@@ -1030,6 +1032,7 @@ struct Index {
         .hitTestBehavior(HitTestMode.Transparent);
       Stack({ alignContent: Alignment.TopStart }) {
         ArkWebExecutionHost({
+          interactiveBounds: this.wideSettingsPane() === 'source' && this.route === 'source' ? this.sourcePaneBounds : undefined,
           onBackBridge: (handler: (() => boolean) | undefined): void => { this.arkWebBack = handler; },
           onInputCaptureChange: (captured: boolean): void => {
             if (this.shelfReceiptRetired || this.arkWebCapturesInput === captured) return;
@@ -1641,12 +1644,6 @@ struct Index {
         this.jsonImportPresentation.opening === undefined,
       onBack: (): void => { this.onBackPress(); },
       onOpenTools: (): void => this.sourceNavigation.openTools(),
-      onImport: (preferred?: string, fallback?: string): void => {
-        if (this.searchAppForeground && !this.arkWebCapturesInput && this.sourceJourney.isManagementCurrent(identity))
-          this.jsonImportPresentation.openBookSource(this.sourceJourney, identity,
-            (): (() => void) | undefined => this.sourceNavigation.importSearchAction(),
-            { preferred: preferred ?? '', fallback: fallback ?? '' });
-      },
       onTemporaryBackBridge: (handler: (() => boolean) | undefined, bridgeIdentity: string): void => {
         this.registerTemporaryBackBridge('source', generation, owner, handler, bridgeIdentity);
       },
@@ -1658,7 +1655,16 @@ struct Index {
       },
     })
       .enabled(this.jsonImportPresentation.opening === undefined)
-      .accessibilityLevel(this.jsonImportPresentation.opening === undefined ? 'auto' : 'no-hide-descendants');
+      .accessibilityLevel(this.jsonImportPresentation.opening === undefined ? 'auto' : 'no-hide-descendants')
+      .onAreaChange((_old: Area, area: Area): void => {
+        if (!showingTools && embeddedWide && this.sourceJourney.isManagementCurrent(identity)) {
+          const width = readerPageAreaLength(area.width);
+          const height = readerPageAreaLength(area.height);
+          if (width > 0 && height > 0) this.sourcePaneBounds = {
+            left: readerPageAreaLength(area.globalPosition.x), top: readerPageAreaLength(area.globalPosition.y), width, height,
+          };
+        }
+      });
   }
 
   @Builder

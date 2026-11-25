@@ -21,6 +21,7 @@ import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { selectedProductionMethods, selectedProductionValues } from './lib/selected-production-methods.mjs';
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
+import { httpUrlHostname, redactedHttpUrl } from '../entry/src/main/ets/platform/network/HttpTransportPolicy.ts';
 import * as safe from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import { SOURCE_GROUP_SELECT_RADIUS } from '../entry/src/main/ets/ui/foundation/ReaderSelectGeometry.ts';
 import { consumeReaderControlKeyboardBack } from '../entry/src/main/ets/ui/foundation/ReaderKeyboardBack.ts';
@@ -413,40 +414,87 @@ function recoveryOverlays() {
   results.push({ case: 'recovery-overlays', fullMessageActions: 3, zeroBudget: 'bounded', staleGeneration: 'rejected', oldGenerationArea: 'rejected', sameGenerationOldLayoutArea: 'rejected', oldMetricsArea: 'rejected', retiredMountArea: 'rejected', oldInlineAreaMutation: 'reproduced-and-rejected', coldTextThenActions: 'PASS-one-delivery-each', coldActionsThenText: 'PASS-one-delivery-each', resultKeyedMutation: 'rejected-both-orders' });
 }
 function arkwebHost() {
-  for (const scale of [1, 1.45, 2]) {
-    const value = metrics(320, 360, scale), c = context(value), calls = [], current = { id: 1, controller: {} };
-    const executor = { isSurfaceCurrent: surface => surface === current, cancelInteractive: surface => calls.push(['cancel', surface.id]), finishInteractive: surface => calls.push(['finish', surface.id]) };
-    const source = read('ui/platform/ArkWebExecutionHost.ets');
-    const members = ['build', 'surfacesForRender', 'safeLeft', 'safeTop', 'safeWidth', 'safeHeight', 'toolbarHeight', 'toolbarAreaHandler', 'fontScale', 'consumeBack'];
-    const owner = createReaderBuilderProbe(source, members, { ...c.deps, ArkWebExecutor: { instance: executor }, ReaderActionAccessibility: class { applyNormalAttribute() {} },
-      consumeReaderControlKeyboardBack, inputMethod: { getController: () => ({ hideTextInput: () => { calls.push(['keyboard']); return Promise.resolve(); } }) }, hilog: { warn() {} } }, c.hooks).owner;
-    Object.assign(owner, { appThemeScheme: 'day', readerWindowMetricsRevision: 1, mounted: true, currentSurface: current, interactiveBackSurface: current,
-      surfaceId: 1, interactive: true, title: '书源网页登录', currentUrl: 'https://example.test/login', hostWidth: 320, hostHeight: 360, hostX: 0, hostY: 0,
-      measuredToolbarHeight: 0 });
-    owner.initialRender(); const nodes = c.nodes(owner), web = nodes.find(n => n.type === 'Web'), toolbar = nodes.find(n => n.type === 'Scroll');
+  const source = read('ui/platform/ArkWebExecutionHost.ets');
+  const members = ['build', 'surfacesForRender', 'safeLeft', 'safeTop', 'safeWidth', 'safeHeight', 'toolbarHeight',
+    'toolbarAreaHandler', 'toolbarActionWidth', 'controlsHeight', 'controlsAreaHandler', 'fontScale', 'consumeBack',
+    'browserAction', 'navigate', 'updateHistory', 'updateAddress', 'clearSession'];
+  const keyboard = pureModuleProbe(read('ui/layout/ReaderKeyboardGeometry.ts'),
+    'ReaderKeyboardGeometry.ts', safe, ['readerKeyboardHostBottom']);
+  for (const scale of [1, 1.45, 2]) for (const wide of [false, true]) {
+    const value = metrics(wide ? 1024 : 320, wide ? 640 : 360, scale), c = context(value);
+    const calls = [], current = { id: 1, controller: {} };
+    const executor = {
+      isSurfaceCurrent: surface => surface === current,
+      interactiveHistory: () => ({ canGoBack: true, canGoForward: true }),
+      onSameDocumentNavigation: (_url, surface) => calls.push(['same-document', surface.id]),
+      navigateInteractive: (surface, command) => { calls.push([command, surface.id]); return true; },
+      requestInteractiveSessionClear: surface => { calls.push(['clear', surface.id]); return true; },
+      cancelInteractive: surface => calls.push(['cancel', surface.id]),
+      finishInteractive: surface => calls.push(['finish', surface.id]),
+    };
+    const dependencies = { ...c.deps, ...keyboard, httpUrlHostname, redactedHttpUrl, ArkWebExecutor: { instance: executor },
+      ReaderActionAccessibility: class { applyNormalAttribute() {} },
+      consumeReaderControlKeyboardBack, inputMethod: { getController: () => ({
+        hideTextInput: () => { calls.push(['keyboard']); return Promise.resolve(); },
+      }) }, hilog: { warn() {} }, $r: id => id };
+    const fields = { appThemeScheme: 'day', readerWindowMetricsRevision: 1, mounted: true, currentSurface: current,
+      interactiveBackSurface: current, surfaceId: 1, interactive: true, title: '书源网页登录',
+      currentUrl: 'https://example.test/login', currentHost: 'example.test',
+      canGoBack: true, canGoForward: true, canClear: true, pageLoading: false, pageProgress: 0, clearing: false,
+      hostWidth: value.windowRect.width, hostHeight: value.windowRect.height, hostX: 0, hostY: 0,
+      interactiveBounds: wide ? { left: 234, top: 48, width: 708, height: 544 } : undefined,
+      measuredToolbarHeight: 0, measuredControlsHeight: 0 };
+    const owner = createReaderBuilderProbe(source, members, dependencies, c.hooks).owner;
+    Object.assign(owner, fields);
+    owner.initialRender();
+    const nodes = c.nodes(owner), web = nodes.find(n => n.type === 'Web');
+    const [toolbar, controls] = nodes.filter(n => n.type === 'Scroll');
+    const bounds = fields.interactiveBounds ?? { left: 0, top: 24, width: 320, height: 320 };
+    for (const layer of [toolbar, web, controls]) {
+      assert.equal(layer.position.x, bounds.left, 'left follows the current pane');
+      assert.equal(layer.width, bounds.width, 'width follows the current pane');
+    }
+    assert.equal(toolbar.position.y, bounds.top);
     assert.equal(web.position.y, toolbar.position.y + toolbar.height, 'Web starts below the actual toolbar viewport');
-    assert.ok(web.position.y + web.height <= 344 && web.position.y >= 24); assert.ok(web.width <= 320);
-    const actions = nodes.filter(n => n.type === 'Button'); assert.equal(actions.length, 2);
+    assert.equal(controls.position.y, web.position.y + web.height, 'Web ends at the current browser controls');
+    assert.equal(controls.position.y + controls.height, bounds.top + bounds.height);
+    const actions = nodes.filter(n => n.type === 'Button');
+    assert.equal(actions.length, 6);
     assert.ok(actions.every(n => n.constraintSize.minWidth >= 44 && n.constraintSize.minHeight >= 44));
+    owner.pageLoading = true;
+    web.onNavigationEntryCommitted({ isMainFrame: false, isSameDocument: true, url: 'https://example.test/frame' });
+    assert.equal(owner.pageLoading, true, 'subframe navigation does not settle the browser');
+    web.onNavigationEntryCommitted({ isMainFrame: true, isSameDocument: true, url: 'https://example.test/token#state' });
+    assert.equal(owner.pageLoading, false, 'the browser controls stay available for same-document history');
+    assert.equal(owner.currentUrl, 'https://example.test/…', 'the address projection omits credentials and fragments');
+    assert.deepEqual(calls.at(-1), ['same-document', 1]);
+    for (const [action, command] of actions.map((action, index) => [action, ['cancel', 'finish', 'back', 'forward', 'refresh', 'clear'][index]])) {
+      action.onClick();
+      assert.deepEqual(calls.at(-1), [command, 1]);
+      owner.pageLoading = false;
+    }
+    assert.equal(owner.clearing, true);
+    owner.clearing = false;
     assert.equal(owner.consumeBack(), true); assert.deepEqual(calls.at(-1), ['cancel', 1]);
     value.keyboardInsets = new safe.ReaderInsetsVp(0, 0, 0, 180);
     assert.equal(owner.consumeBack(), true); assert.deepEqual(calls.at(-1), ['keyboard'], 'IME dismissal precedes cancellation');
-    const background = createReaderBuilderProbe(source, members, { ...c.deps, ArkWebExecutor: { instance: executor } }, c.hooks).owner;
-    Object.assign(background, { appThemeScheme: 'day', readerWindowMetricsRevision: 1, currentSurface: current, surfaceId: 1, interactive: false });
+    const background = createReaderBuilderProbe(source, members, dependencies, c.hooks).owner;
+    Object.assign(background, { ...fields, interactive: false });
     background.initialRender();
-    const hidden = c.nodes(background).find(n => n.type === 'Web'); assert.equal(hidden.width, '100%'); assert.equal(hidden.height, '100%'); assert.equal(hidden.focusable, false);
-    assert.ok(c.nodes(background).some(n => n.type === 'Stack' && n.width === 1 && n.height === 1), 'background Web keeps1px execution host');
-    if (scale === 1) {
+    const hidden = c.nodes(background).find(n => n.type === 'Web');
+    assert.equal(hidden.width, '100%'); assert.equal(hidden.height, '100%'); assert.equal(hidden.focusable, false);
+    assert.ok(c.nodes(background).some(n => n.type === 'Stack' && n.width === 1 && n.height === 1), 'background Web keeps the 1vp execution host');
+    if (scale === 1 && !wide) {
       const coveredSource = source.replace('y: this.interactive ? this.safeTop() + this.toolbarHeight() : 0', 'y: 0');
       assert.notEqual(coveredSource, source);
-      const covered = createReaderBuilderProbe(coveredSource, members, { ...c.deps, ArkWebExecutor: { instance: executor }, ReaderActionAccessibility: class { applyNormalAttribute() {} } }, c.hooks).owner;
-      Object.assign(covered, { appThemeScheme: 'day', readerWindowMetricsRevision: 1, mounted: true, currentSurface: current, surfaceId: 1,
-        interactive: true, title: '旧宿主', currentUrl: 'https://example.test/login', hostWidth: 320, hostHeight: 360, hostX: 0, hostY: 0, measuredToolbarHeight: 0 });
+      const covered = createReaderBuilderProbe(coveredSource, members, dependencies, c.hooks).owner;
+      Object.assign(covered, fields);
       covered.initialRender(); const before = c.nodes(covered);
       assert.throws(() => assert.equal(before.find(n => n.type === 'Web').position.y,
-        before.find(n => n.type === 'Scroll').position.y + before.find(n => n.type === 'Scroll').height), /AssertionError/, 'actual old full-Web-under-overlay top0 is rejected');
+        before.find(n => n.type === 'Scroll').position.y + before.find(n => n.type === 'Scroll').height), /AssertionError/, 'Web under the toolbar is rejected');
     }
-    results.push({ case: 'arkweb-host', scale, toolbarHeight: toolbar.height, webY: web.position.y, webHeight: web.height });
+    results.push({ case: 'arkweb-host', scale, wide, toolbarHeight: toolbar.height, webY: web.position.y,
+      webHeight: web.height, controlsHeight: controls.height });
   }
 }
 function retainedAndSettings() {

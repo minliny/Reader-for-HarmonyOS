@@ -8,6 +8,7 @@ import { actualSourceManagementGeometry } from './source-management-owner-probe.
 import { createDefaultReaderWindowMetrics } from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import * as windowFacts from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
+import * as v9 from '../../entry/src/main/ets/features/source/presentation/SourceManagementV9.ts';
 import * as sourceScroll from '../../entry/src/main/ets/features/source/presentation/SourceManagementScrollState.ts';
 import * as surfaceResolvers from '../../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts';
 import { resolveSourceManagementLayout } from '../../entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts';
@@ -99,7 +100,7 @@ export function sourceManagementRecoveryProbe(source, params = {}, options = {})
   const support = new Function('FrameCallback',
     'ReaderPostLayoutFrame', stripTypeScriptTypes(closure.support) + ';return {SourceListDataSource,SourceListLayoutFrame};')(FramePort, actualReaderPostLayoutFrame());
   const owner = sdk.consumer(source, closure.members, {
-    ...actualSourceManagementGeometry(metrics), ...windowFacts, ...readerTypographyRoles, ...sourceScroll, ...surfaceResolvers,
+    ...actualSourceManagementGeometry(metrics), ...windowFacts, ...readerTypographyRoles, ...sourceScroll, ...surfaceResolvers, ...v9,
     ...foundationSpecs(), ...labeledIconSpecs(), ...readerEditingSdk(), READER_FEEDBACK_EXTENDED_MS,
     resolveSourceManagementLayout, readerSourceCategoryLabel, readerRecoveryView, ...support,
     ReaderUIVerificationProbe: { enabled: () => false },

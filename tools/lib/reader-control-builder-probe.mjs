@@ -478,6 +478,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     // consumers do not need to know about this diagnostics-only child.
     ['ReaderLayoutDebugOverlay', '../../entry/src/main/ets/app/composition/ReaderLayoutDebugOverlay.ets'],
     ['ReaderInlineSelect', '../../entry/src/main/ets/ui/controls/ReaderInlineSelect.ets'],
+    ['ReaderTransientToast', '../../entry/src/main/ets/ui/feedback/ReaderTransientToast.ets'],
     ['ReaderFullDirectory', '../../entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets'],
     ['ReaderPageBookmarkGlyph', '../../entry/src/main/ets/features/reading/ui/ReaderPageBookmarkRibbon.ets'],
     ['BookDirectoryPage', '../../entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets'],
@@ -554,14 +555,24 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   if (lowered === undefined) {
     const diagnostics = [];
     let transformed;
-    const result = ts.transform(file, [context => node => {
-      require(`${sdkRoot}/lib/process_ui_syntax.js`).contextGlobal = context;
-      transformed = compiler.processComponentClass(node.statements[0], context, diagnostics, false);
-      const visit = child => ts.visitEachChild(child, visit, context);
-      transformed = ts.visitNode(transformed, visit);
-      return node;
-    }]);
-    result.dispose();
+    // Each probe compiles an isolated virtual module. The SDK retains literal
+    // native IDs across compilations in this process, even when the file is virtual.
+    const ids = require(`${sdkRoot}/lib/component_map.js`).ID_ATTRS;
+    const previousIds = new Map(ids);
+    ids.clear();
+    try {
+      const result = ts.transform(file, [context => node => {
+        require(`${sdkRoot}/lib/process_ui_syntax.js`).contextGlobal = context;
+        transformed = compiler.processComponentClass(node.statements[0], context, diagnostics, false);
+        const visit = child => ts.visitEachChild(child, visit, context);
+        transformed = ts.visitNode(transformed, visit);
+        return node;
+      }]);
+      result.dispose();
+    } finally {
+      ids.clear();
+      for (const [id, value] of previousIds) ids.set(id, value);
+    }
     assert.deepEqual(diagnostics, [], 'real SDK Builder/member transform has no diagnostics');
     output = ts.createPrinter().printNode(ts.EmitHint.Unspecified, transformed, file);
     sdkLoweringCompiles++;
@@ -687,7 +698,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     LengthMetrics: { vp: value => ({ value, unit: 'vp' }) }, ColorMetrics: { resourceColor: color => ({ color }) },
     readerAppColor, readerThemeDefinition, readerRecoveryView, ReaderTransientFeedback, EMPTY_READABLE_ADMISSION, readerContentSafeTop, ViewPU, ReaderControlSwitchTrack: Child,
     ...Object.fromEntries(recoveryChildren.map(name => [name, Child])), $r: value => value,
-    ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Grid', 'GridItem', 'LazyForEach', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Rect', 'Shape', 'Path', 'Polygon', 'Polyline', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'Slider', 'Toggle', 'Checkbox', 'Radio', 'ForEach', 'If', '__Common__']
+    ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Grid', 'GridItem', 'LazyForEach', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Rect', 'Shape', 'Path', 'Polygon', 'Polyline', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'SymbolGlyph', 'Slider', 'Toggle', 'Checkbox', 'Radio', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
     ...Object.fromEntries(['TextDecorationType', 'TextHeightAdaptivePolicy', 'BorderStyle', 'FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'LocalizedAlignment', 'LayoutPolicy', 'AccessibilityRoleType',
       'LineCapStyle', 'ImageFit', 'TextAlign', 'TextOverflow', 'WordBreak', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign', 'ToggleType', 'ButtonType',

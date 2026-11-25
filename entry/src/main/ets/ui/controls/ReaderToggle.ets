@@ -38,6 +38,7 @@ export struct ReaderToggle {
   @StorageLink('readerAppForeground') @Watch('onForegroundChanged') private appForeground: boolean = true;
   @Prop specId: ReaderToggleSpecId = 'standard-toggle';
   @Prop value: boolean = false;
+  @Prop checkedColor: string | undefined = undefined;
   @Prop @Watch('onAvailabilityChanged') actionEnabled: boolean = true;
   @Prop @Watch('onAvailabilityChanged') isBusy: boolean = false;
   @Prop @Watch('clearFocusContinuation') inputIdentity: string = '';
@@ -87,7 +88,7 @@ export struct ReaderToggle {
         ForEach([this.nativeRevision], (revision: number): void => {
           Toggle({ type: ToggleType.Switch, isOn: this.value })
             .width(44).height(26)
-            .selectedColor(readerAppColor(resolveReaderToggleSpec(this.specId).checkedColor, this.appThemeScheme))
+            .selectedColor(this.checkedColor ?? readerAppColor(resolveReaderToggleSpec(this.specId).checkedColor, this.appThemeScheme))
             .switchStyle({ pointRadius: 10, trackBorderRadius: 13,
               pointColor: readerAppColor(resolveReaderToggleSpec(this.specId).thumbColor, this.appThemeScheme),
               unselectedColor: readerAppColor(resolveReaderToggleSpec(this.specId).uncheckedColor, this.appThemeScheme) })

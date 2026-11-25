@@ -71,7 +71,7 @@ VIEW_ALL.outerHit = false; VIEW_ALL.responseOffset = -8;
 const SOURCE_ADD: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
 SOURCE_ADD.text = TYPE_FORM_LABEL_ACTION; SOURCE_ADD.textRole = 'TOK_ON_PRIMARY';
 SOURCE_ADD.surfaceRole = 'TOK_PRIMARY_DARK'; SOURCE_ADD.iconSize = 16; SOURCE_ADD.gap = 8;
-SOURCE_ADD.rowHeight = undefined; SOURCE_ADD.horizontalPadding = undefined; SOURCE_ADD.radius = 8;
+SOURCE_ADD.rowHeight = undefined; SOURCE_ADD.horizontalPadding = undefined; SOURCE_ADD.radius = 999;
 SOURCE_ADD.surfaceOnHit = true; SOURCE_ADD.equalLayout = true;
 const DISCOVER_APPLY: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
 DISCOVER_APPLY.text = TYPE_DISCOVER_FILTER_LABEL; DISCOVER_APPLY.textRole = 'TOK_ON_PRIMARY';

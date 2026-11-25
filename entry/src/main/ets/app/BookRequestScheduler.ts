@@ -12,6 +12,8 @@ export interface BookRequestOptions extends RequestOptions {
   canContinue?: () => boolean;
   /** Called at the executor boundary, including a join to an already started request. */
   onDispatch?: () => void;
+  /** Observes network stages explicitly identified by a Core diagnostic request. */
+  onSourceCheckStage?: (stage: string) => void;
 }
 
 type Consumer = { cancelled?: () => boolean; canContinue?: () => boolean;

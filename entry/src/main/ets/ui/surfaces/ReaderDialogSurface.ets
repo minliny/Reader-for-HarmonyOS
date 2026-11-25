@@ -18,6 +18,7 @@ export class DialogActionView {
   readonly tone: 'default' | 'primary' | 'danger';
   readonly enabled: boolean;
   readonly defaultFocus: boolean;
+  readonly nativeId: string;
 
   constructor(
     id: string,
@@ -25,12 +26,14 @@ export class DialogActionView {
     tone: 'default' | 'primary' | 'danger' = 'default',
     enabled: boolean = true,
     defaultFocus: boolean = false,
+    nativeId: string = '',
   ) {
     this.id = id;
     this.label = label;
     this.tone = tone;
     this.enabled = enabled;
     this.defaultFocus = defaultFocus;
+    this.nativeId = nativeId;
   }
 }
 
@@ -57,6 +60,7 @@ export struct ReaderDialogSurface {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop specId: DialogSpecId = 'book-removal';
   @Prop title: string = '';
+  @Prop primarySurfaceColor: string | undefined = undefined;
   @Prop showCloseButton: boolean = false;
   @Prop actions: DialogActionView[] = [];
   @BuilderParam body: () => void = this.defaultBody;
@@ -169,6 +173,7 @@ export struct ReaderDialogSurface {
     .opacity(this.action(id).enabled ? 1 : 0.45)
     .enabled(this.action(id).enabled)
     .attributeModifier(this.actionModifier(this.action(id)))
+    .id(this.action(id).nativeId)
     .defaultFocus(this.action(id).defaultFocus)
     .responseRegion(this.actionTouchRegion())
     .onClick((): void => {
@@ -280,7 +285,8 @@ export struct ReaderDialogSurface {
 
   private actionModifier(action: DialogActionView): AttributeModifier<CommonAttribute> {
     const spec = this.spec();
-    const surface = readerAppColor(this.actionSurfaceRole(action), this.appThemeScheme);
+    const surface = (action.tone === 'primary' ? this.primarySurfaceColor : undefined) ??
+      readerAppColor(this.actionSurfaceRole(action), this.appThemeScheme);
     return new ReaderPressFeedback(surface, this.appThemeScheme, spec.actionBorderRadius,
       spec.actionBorderRadius, spec.actionUsesPressFeedback && action.enabled);
   }

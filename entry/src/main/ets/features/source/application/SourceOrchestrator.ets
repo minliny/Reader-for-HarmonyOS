@@ -2,8 +2,14 @@ import {
   SourceGateway,
   type BookSource,
   type SourceCheckOutcome,
+  type SourceCheckHistoryEntry,
+  type SourceCheckReportStep,
+  type SourceGroupCatalogData,
+  type SourceGroupMutateParams,
   type SourceDefinitionSnapshot,
 } from './SourceGateway';
+import type { SourceV9ImportedReport } from './SourceV9TransferState';
+import { projectSourceV9Check, retainSourceV9Check, sourceV9Supports } from '../presentation/SourceManagementV9';
 import type { BookSourceJsonSelection } from '../../../app/ReaderHostRegistry';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
@@ -25,6 +31,12 @@ let sourceProjectionGeneration: number = 0;
 let offlineDetectVerificationSequence: number = 0;
 let sourceControlVerificationSequence: number = 0;
 
+export interface SourceV9CheckOptions {
+  mode: 'search' | 'explore';
+  levels: string[];
+  keyword: string;
+}
+
 interface SourceCheckCapture {
   sourceId: string;
   sourceVersion?: string;
@@ -33,6 +45,8 @@ interface SourceCheckCapture {
   definition?: SourceDefinitionSnapshot;
   offlineDetect?: SourceOfflineDetectAdmission;
 }
+
+interface SourceLoginError { code?: string }
 
 interface SourceReadRetryObservation {
   readonly phase: 'started' | 'settled';
@@ -140,6 +154,9 @@ export class SourceOrchestrator {
   private importActive: boolean = false;
   /** Session-local source-check projections; Core remains authoritative. */
   private checkResults: Map<string, BookSource> = new Map<string, BookSource>();
+  private importedReports = new Map<string, SourceV9ImportedReport>();
+  private readonly verifiedLoginSources: Map<string, string> = new Map<string, string>();
+  private reportClearTimes = new Map<string, number>();
   private checkingSourceIds: Map<string, SourceCheckCapture> = new Map<string, SourceCheckCapture>();
   private emitProjection: (projection: SourceManagementProjection) => void = (_projection: SourceManagementProjection): void => {};
   private latestProjection: SourceManagementProjection = { action: 'load', sourceId: '' };
@@ -337,6 +354,116 @@ export class SourceOrchestrator {
       });
   }
 
+  toggleSources(ids: string[], enabled: boolean): void {
+    for (const id of this.selectedSourceIds(ids)) this.toggleSource(id, enabled);
+  }
+
+  deleteSources(ids: string[]): void {
+    const selected = this.selectedSourceIds(ids);
+    if (selected.length === 0 || this.originalBlocked()) return;
+    const session = this.session;
+    this.operationChain = this.operationChain.then(async (): Promise<void> => {
+      if (!this.isCurrentSession(session) || this.originalBlocked()) return;
+      const result = await this.gateway.deleteSources(selected);
+      await this.loadList(session);
+      const message = `已删除 ${result.deletedCount} 个书源`;
+      this.publishStatus(result.cookieCleanupFailures === 0 ? 'success' : 'warning',
+        result.cookieCleanupFailures === 0 ? message : `${message}，${result.cookieCleanupFailures} 个登录会话清理失败`);
+    }).catch((error: Error): void => {
+      if (this.isCurrentSession(session)) this.publishStatus('error', `删除书源失败：${error.message}`);
+    });
+  }
+
+  exportAll(): void {
+    const session = this.session;
+    const current = (): boolean => this.isCurrentSession(session);
+    this.operationChain = this.operationChain.then(async (): Promise<void> => {
+      if (!current() || AppStorage.get<boolean>('readerAppForeground') === false) return;
+      const exported = await this.gateway.exportBookSources(undefined, current);
+      if (!current() || AppStorage.get<boolean>('readerAppForeground') === false) return;
+      const file = await this.owner.saveBookSourceJson(exported.data, `reader-book-sources-${Date.now()}.json`);
+      if (current() && file !== undefined) this.publishStatus('success', `已导出 ${exported.count} 个书源：${file}`);
+    }).catch((error: Error): void => {
+      if (current()) this.publishStatus('error', `书源导出失败：${error.message}`);
+    });
+  }
+
+  loadGroups(): Promise<SourceGroupCatalogData> {
+    const session = this.session;
+    return this.gateway.loadSourceGroupCatalog((): boolean => this.isCurrentSession(session));
+  }
+
+  mutateGroup(params: SourceGroupMutateParams): Promise<SourceGroupCatalogData> {
+    const session = this.session;
+    const current = (): boolean => this.isCurrentSession(session);
+    const selected = this.selectedSourceIds(params.sourceIds ?? []);
+    const run = this.operationChain.then(async (): Promise<SourceGroupCatalogData> => {
+      if (!current() || this.originalBlocked()) throw new Error('书源操作暂不可用');
+      const input: SourceGroupMutateParams = { action: params.action, expectedRevision: params.expectedRevision,
+        groupId: params.groupId, name: params.name, targetGroupId: params.targetGroupId };
+      if (selected.length !== (params.sourceIds?.length ?? 0)) {
+        throw new Error('所选书源已变化，请重新选择');
+      }
+      if (params.action === 'assign') {
+        if (selected.length === 0) {
+          throw new Error('所选书源已变化，请重新选择');
+        }
+        input.sourceIds = selected;
+      }
+      try {
+        const result = await this.gateway.mutateSourceGroup(input, current);
+        if (params.action === 'create' && selected.length > 0) {
+          await this.gateway.mutateSourceGroup({ expectedRevision: result.revision, action: 'assign',
+            targetGroupId: result.groupId, sourceIds: selected }, current);
+        }
+      } finally {
+        if (current()) await this.loadList(session);
+      }
+      return this.loadGroups();
+    });
+    this.operationChain = run.then((): void => {}, (): void => {});
+    return run;
+  }
+
+  acceptTransferredReports(reports: SourceV9ImportedReport[]): void {
+    const session = this.session;
+    for (const item of reports) {
+      if (item.sourceVersion !== undefined && item.report.sourceId === item.sourceId && item.report.report !== undefined) {
+        this.importedReports.set(item.sourceId, item);
+      }
+    }
+    this.operationChain = this.operationChain.then((): Promise<void> => this.loadList(session));
+  }
+
+  /** Uses the same exact-definition and Core receipt checks as a row diagnostic. */
+  runSourceCheck(id: string, options: SourceV9CheckOptions, active: () => boolean,
+    onStage: (stage: string) => void): Promise<SourceCheckOutcome | undefined> {
+    if (!active()) return Promise.resolve(undefined);
+    const capture = this.captureSourceCheck(id);
+    if (capture === undefined) return Promise.resolve(undefined);
+    this.observeOfflineDetectAdmission(capture);
+    const current = (): boolean => active() && this.isCurrentSourceCheck(capture);
+    const run = this.operationChain.then(async (): Promise<SourceCheckOutcome | undefined> => {
+      if (!current()) return undefined;
+      const definition = await this.validateSourceCheck(capture);
+      if (!current() || definition === undefined) return undefined;
+      const observedAt = Date.now();
+      const outcome = await this.gateway.checkSource(id, current, options.keyword, options.mode,
+        options.levels, 180000, (stage: string): void => { if (current()) onStage(stage); });
+      if (!current() || await this.validateSourceCheck(capture, definition) === undefined || !current()) return undefined;
+      return this.applySourceCheckOutcome(outcome, capture, observedAt) ? outcome : undefined;
+    }).finally((): void => {
+      if (this.checkingSourceIds.get(id) === capture) this.checkingSourceIds.delete(id);
+    });
+    this.operationChain = run.then((): void => {}, (): void => {});
+    return run;
+  }
+
+  private selectedSourceIds(ids: string[]): string[] {
+    const supported = new Set(this.sources.filter(sourceV9Supports).map((source: BookSource): string => source.sourceId));
+    return Array.from(new Set(ids)).filter((id: string): boolean => supported.has(id));
+  }
+
   private observeToggleAdmission(id: string, requestedEnabled: boolean, toggleSeq: number): SourceToggleObservationIdentity | undefined {
     try {
       if (!ReaderUIVerificationProbe.enabled()) return undefined;
@@ -437,25 +564,56 @@ export class SourceOrchestrator {
         if (definition === undefined) return;
         this.observeRowLoginControl(source, loginUrl);
         await this.owner.openSourceLogin(source.sourceId, loginUrl, source.name,
-          (): boolean => this.isCurrentSourceCheck(capture));
+          (): boolean => this.isCurrentSourceCheck(capture),
+          (): Promise<boolean> => this.clearLoginReport(capture));
         if (await this.validateSourceCheck(capture, definition) === undefined) return;
         const outcome = await this.gateway.checkSource(
           source.sourceId,
           (): boolean => this.isCurrentSourceCheck(capture),
+          undefined, 'search', ['L1', 'L2'],
         );
-        if (await this.validateSourceCheck(capture, definition) !== undefined) {
-          this.applySourceCheckOutcome(outcome, capture);
+        if (await this.validateSourceCheck(capture, definition) !== undefined &&
+          this.applySourceCheckOutcome(outcome, capture)) {
+          const passedLoginCheck = outcome.available && outcome.report?.steps.some(
+            (step: SourceCheckReportStep): boolean => step.level === 'L2' && step.status === 'pass') === true;
+          if (passedLoginCheck) this.verifiedLoginSources.set(source.sourceId, capture.signature);
+          else this.verifiedLoginSources.delete(source.sourceId);
+          this.presentSources(this.sources);
         }
       })
       .catch(async (error: Error): Promise<void> => {
-        await this.publishSourceCheckFailure(capture, 'unchecked', '登录 / 验证已取消');
+        const code = (error as SourceLoginError | undefined)?.code;
+        const detail = errorMessageOf(error);
+        const message = code === 'CANCELLED' || detail === 'SOURCE_LOGIN_SESSION_RETIRED' ? '登录 / 验证已取消' :
+          detail === 'SOURCE_LOGIN_COOKIE_CLEAR_FAILED' ? '未能清除登录态，请重新打开登录页后重试' : `登录 / 验证失败：${detail}`;
+        await this.publishSourceCheckFailure(capture, 'unchecked', message);
+        if (code !== 'CANCELLED' && detail !== 'SOURCE_LOGIN_SESSION_RETIRED' && this.isCurrentSourceCheck(capture)) {
+          this.publishStatus('warning', message);
+        }
         hilog.warn(DOMAIN, 'Reader',
-          'Source login/challenge ended without completion: sourceId=%{private}s err=%{private}s',
-          id, error.message);
+          'Source login/challenge ended without completion: sourceId=%{private}s err=%{private}s', id, detail);
       })
       .finally((): void => {
         if (this.checkingSourceIds.get(id) === capture) this.checkingSourceIds.delete(id);
       });
+  }
+
+  private async clearLoginReport(capture: SourceCheckCapture): Promise<boolean> {
+    const current = (): boolean => this.isCurrentSourceCheck(capture);
+    if (!current()) throw new Error('书源登录已结束');
+    const clearedAt = Date.now();
+    try {
+      const cleared = await this.gateway.clearSourceCheckReports([capture.sourceId], current);
+      return cleared.supported;
+    } finally {
+      if (current()) {
+        this.reportClearTimes.set(capture.sourceId, clearedAt);
+        this.verifiedLoginSources.delete(capture.sourceId);
+        this.importedReports.delete(capture.sourceId);
+        this.checkResults.delete(capture.sourceId);
+        this.presentSources(this.sources);
+      }
+    }
   }
 
   private observeRowLoginControl(source: BookSource, loginUrl: string): void {
@@ -577,7 +735,7 @@ export class SourceOrchestrator {
     if (!this.isCurrentSession(session)) return;
     let sources: BookSource[];
     try {
-      sources = await this.gateway.loadSources(undefined, false, (): boolean => this.isCurrentSession(session));
+      sources = await this.gateway.loadSources(undefined, true, (): boolean => this.isCurrentSession(session));
     } catch (error) {
       if (!this.isCurrentSession(session)) {
         return;
@@ -612,7 +770,7 @@ export class SourceOrchestrator {
       return;
     }
     try {
-      const sources = await this.gateway.loadSources(undefined, false, (): boolean => this.isCurrentSession(session));
+      const sources = await this.gateway.loadSources(undefined, true, (): boolean => this.isCurrentSession(session));
       if (this.isCurrentSession(session)) {
         this.presentSources(sources);
       }
@@ -644,6 +802,7 @@ export class SourceOrchestrator {
     }
     finally { this.gateway.observeWrites(undefined); }
     this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'reading');
+    if (!enabled) this.verifiedLoginSources.delete(id);
     if (!enabled && !this.gateway.handlesSourceCleanup()) {
       try {
         // Security policy: disabling a source removes both session and
@@ -687,7 +846,7 @@ export class SourceOrchestrator {
     }
     let sources: BookSource[];
     try {
-      sources = await this.gateway.loadSources(undefined, false, (): boolean => this.isCurrentSession(session));
+      sources = await this.gateway.loadSources(undefined, true, (): boolean => this.isCurrentSession(session));
     } catch (error) {
       this.publishToggleReceipt(session, id, evidence.confirmation(), 'failed', observation, (error as Error).message);
       hilog.warn(DOMAIN, 'Reader',
@@ -831,30 +990,22 @@ export class SourceOrchestrator {
       outcome.failureReason ?? '');
   }
 
-  private applySourceCheckOutcome(outcome: SourceCheckOutcome, capture: SourceCheckCapture): void {
-    if (!this.isCurrentSourceCheck(capture) || outcome.sourceId !== capture.sourceId) return;
+  private applySourceCheckOutcome(outcome: SourceCheckOutcome, capture: SourceCheckCapture,
+    checkedAtMs: number = Date.now()): boolean {
+    if (!this.isCurrentSourceCheck(capture) || outcome.sourceId !== capture.sourceId) return false;
     if (outcome.report?.ruleDigest !== undefined && capture.definition?.sourceVersion !== undefined &&
       outcome.report.ruleDigest !== capture.definition.sourceVersion) {
       this.setCheckProjection(capture.sourceId, 'unchecked', [], '检测结果与当前书源版本不一致');
-      return;
+      return false;
     }
-    if (outcome.available) {
-      this.setCheckProjection(
-        outcome.sourceId,
-        'passed',
-        outcome.levelsPassed,
-        `搜索检测通过 · ${outcome.durationMs}ms`,
-      );
-      this.observeOfflineDetectResult(capture, outcome);
-      return;
-    }
-    this.setCheckProjection(
-      outcome.sourceId,
-      'failed',
-      outcome.levelsPassed,
-      outcome.failureReason ?? '检测失败',
-    );
+    const entry: SourceCheckHistoryEntry | undefined = outcome.report === undefined ? undefined :
+      { checkedAtMs, stale: false, report: outcome.report };
+    this.importedReports.delete(capture.sourceId);
+    this.setCheckProjection(outcome.sourceId, outcome.available ? 'passed' : 'failed', outcome.levelsPassed,
+      outcome.available ? `${outcome.mode === 'explore' ? '发现' : '搜索'}检测通过 · ${outcome.durationMs}ms` :
+        outcome.failureReason ?? '检测失败', entry);
     this.observeOfflineDetectResult(capture, outcome);
+    return true;
   }
 
   private setCheckProjection(
@@ -862,25 +1013,14 @@ export class SourceOrchestrator {
     state: 'unchecked' | 'checking' | 'passed' | 'failed',
     levels: string[],
     message: string,
+    entry?: SourceCheckHistoryEntry,
   ): void {
     const source = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === id);
-    if (source === undefined) {
-      return;
-    }
-    this.checkResults.set(id, {
-      sourceId: source.sourceId,
-      name: source.name,
-      baseUrl: source.baseUrl,
-      enabled: source.enabled,
-      enabledExplore: source.enabledExplore,
-      group: source.group,
-      sourceVersion: source.sourceVersion,
-      category: source.category,
-      loginUrl: source.loginUrl,
-      checkState: state,
-      checkLevels: levels,
-      checkMessage: message,
-    });
+    if (source === undefined) return;
+    const history = entry === undefined ? source.checkReports :
+      [entry].concat((source.checkReports ?? []).filter((existing: SourceCheckHistoryEntry): boolean =>
+        existing.report.traceId !== entry.report.traceId));
+    this.checkResults.set(id, retainSourceV9Check(source, state, levels, message, history));
     this.presentSources(this.sources);
   }
 
@@ -904,7 +1044,7 @@ export class SourceOrchestrator {
 
   private async loadSourcesWithRetry(session: number): Promise<BookSource[]> {
     try {
-      return await this.gateway.loadSources(undefined, false, (): boolean => this.isCurrentSession(session));
+      return await this.gateway.loadSources(undefined, true, (): boolean => this.isCurrentSession(session));
     } catch (error) {
       const err = error as Error;
       if (!isPendingTransactionError(err)) {
@@ -915,7 +1055,7 @@ export class SourceOrchestrator {
       // instead of guessing a fixed backoff window.
       await this.waitForCoreIdle(5000);
       if (!this.isCurrentSession(session)) throw new Error('书源原页面已关闭');
-      return await this.gateway.loadSources(undefined, false, (): boolean => this.isCurrentSession(session));
+      return await this.gateway.loadSources(undefined, true, (): boolean => this.isCurrentSession(session));
     }
   }
 
@@ -961,24 +1101,24 @@ export class SourceOrchestrator {
     });
     this.sources = sources.map((source: BookSource): BookSource => {
       const previous = this.checkResults.get(source.sourceId);
-      const checked = previous !== undefined && this.sourceCheckSignature(previous) === this.sourceCheckSignature(source) ? previous : undefined;
-      return {
-        sourceId: source.sourceId,
-        name: source.name,
-        baseUrl: source.baseUrl,
-        enabled: source.enabled,
-        enabledExplore: source.enabledExplore,
-        group: source.group,
-        sourceVersion: source.sourceVersion,
-        category: source.category,
-        loginUrl: source.loginUrl,
-        checkState: checked?.checkState ?? source.checkState ?? 'unchecked',
-        checkLevels: checked?.checkLevels ?? source.checkLevels ?? [],
-        checkMessage: checked?.checkMessage ?? source.checkMessage,
-        checkReports: source.checkReports,
-        lastCheckSummary: source.lastCheckSummary,
-        offlineDetectReportVersion: source.offlineDetectReportVersion,
-      };
+      const clearedAt = this.reportClearTimes.get(source.sourceId) ?? 0;
+      const history = (source.checkReports ?? []).filter((entry: SourceCheckHistoryEntry): boolean =>
+        entry.checkedAtMs > clearedAt);
+      const local = previous?.checkReports?.[0];
+      if (local !== undefined && local.checkedAtMs > clearedAt && local.checkedAtMs > (history[0]?.checkedAtMs ?? 0) &&
+        local.report.traceId !== history[0]?.report.traceId) history.unshift(local);
+      const imported = this.importedReports.get(source.sourceId);
+      if (imported !== undefined) {
+        const observed = imported.observedAtMs ?? 0;
+        const report = imported.report.report;
+        if (source.sourceVersion !== imported.sourceVersion || observed <= clearedAt ||
+          observed <= (history[0]?.checkedAtMs ?? 0)) this.importedReports.delete(source.sourceId);
+        else if (report !== undefined) history.unshift({ report, stale: false, checkedAtMs: observed });
+      }
+      const login = this.verifiedLoginSources.get(source.sourceId);
+      const verified = login !== undefined && login === this.sourceCheckSignature(source) ? login : undefined;
+      if (login !== undefined && verified === undefined) this.verifiedLoginSources.delete(source.sourceId);
+      return projectSourceV9Check(source, history, previous, clearedAt, verified);
     });
     if (this.isCurrentSession(this.session)) { try { this.emit(this.sources); } catch (_) {} }
   }
