@@ -47,11 +47,11 @@ export class LocalEpubResourceHost {
   private async readResource(locator: LocalEpubResourceLocator, isCurrent: () => boolean): Promise<Uint8Array> {
     this.assertCurrent(isCurrent);
     let archivePath = `${readerHostFilesDirectory(this.context.filesDir)}/reader-import/books/${locator.hash}.source`;
-    if (!(await fileIo.access(archivePath))) {
+    if (!(await this.archiveExists(archivePath))) {
       archivePath = `${readerHostFilesDirectory(this.context.filesDir)}/reader-import/books/${locator.hash}.epub`;
-    }
-    if (!(await fileIo.access(archivePath))) {
-      throw new Error('local EPUB source asset is unavailable; re-import is required');
+      if (!(await this.archiveExists(archivePath))) {
+        throw new Error('local EPUB source asset is unavailable; re-import is required');
+      }
     }
     this.assertCurrent(isCurrent);
     const bytes = await readLocalEpubEntryAsync(
@@ -61,6 +61,16 @@ export class LocalEpubResourceHost {
     );
     this.assertCurrent(isCurrent);
     return bytes;
+  }
+
+  private async archiveExists(path: string): Promise<boolean> {
+    try {
+      return await fileIo.access(path);
+    } catch (error) {
+      const code = (error as { code?: number | string } | undefined)?.code;
+      if (code === 13900002 || code === 'ENOENT') return false;
+      throw error;
+    }
   }
 
   private assertCurrent(isCurrent?: () => boolean): void {

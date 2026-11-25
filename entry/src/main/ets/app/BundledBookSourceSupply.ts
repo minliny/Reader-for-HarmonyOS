@@ -214,11 +214,17 @@ export class BundledSourceLedger {
 
   static async load(context: common.UIAbilityContext): Promise<BundledSourceLedger> {
     const path = `${context.filesDir}/${LEDGER_FILE_NAME}`;
+    let text: string;
     try {
-      if (!await fileIo.access(path)) {
-        return BundledSourceLedger.seedV1();
-      }
-      const text = await this.readText(path);
+      text = await fileIo.readText(path);
+    } catch (error) {
+      const code = (error as { code?: number | string } | undefined)?.code;
+      if (code === 13900002 || code === 'ENOENT') return BundledSourceLedger.seedV1();
+      // A failed read cannot establish that a newer ownership ledger is
+      // absent. Leave it intact and retry supply from a fresh read.
+      throw error;
+    }
+    try {
       const parsed = JSON.parse(text) as Record<string, unknown>;
       const installed = parsed['installed'];
       if (parsed['schemaVersion'] !== LEDGER_SCHEMA_VERSION || !Array.isArray(installed)) {
@@ -246,18 +252,6 @@ export class BundledSourceLedger {
       hilog.error(LOG_DOMAIN, 'Reader',
         'Bundled source ledger unreadable, resetting to v1 seed: %{private}s', errorMessageOf(error));
       return BundledSourceLedger.seedV1();
-    }
-  }
-
-  private static async readText(path: string): Promise<string> {
-    const file = await fileIo.open(path, fileIo.OpenMode.READ_ONLY);
-    try {
-      const stat = await fileIo.stat(path);
-      const buffer = new ArrayBuffer(stat.size);
-      await fileIo.read(file.fd, buffer);
-      return util.TextDecoder.create('utf-8').decodeToString(new Uint8Array(buffer));
-    } finally {
-      await fileIo.close(file);
     }
   }
 

@@ -45,7 +45,7 @@ export async function probeReaderCoreCopy(debug: boolean, buildMode: string,
       ensureDirectory(`${scratch}/data`);
       ensureDirectory(`${scratch}/cache`);
       const markerPath = `${scratch}/marker.txt`;
-      if (fileIo.accessSync(markerPath)) {
+      if (probeFilePresent(markerPath)) {
         requireFile(markerPath);
         if (await fileIo.readText(markerPath) !== marker) throw new Error('COPY_MARKER_MISMATCH');
       } else {
@@ -63,7 +63,7 @@ export async function probeReaderCoreCopy(debug: boolean, buildMode: string,
     requireFile(`${scratch}/data/reader-core.sqlite3`);
     for (const suffix of ['-wal', '-shm', '-journal']) {
       const path = `${scratch}/data/reader-core.sqlite3${suffix}`;
-      if (fileIo.accessSync(path)) requireFile(path);
+      if (probeFilePresent(path)) requireFile(path);
     }
     const inputPath = `${scratch}/${mode === 'query' ? 'commands.ndjson' : 'manga-target.json'}`;
     requireFile(inputPath);
@@ -72,7 +72,7 @@ export async function probeReaderCoreCopy(debug: boolean, buildMode: string,
     // the driver additionally stages fresh ordinary files into a new UUID tree.
     requireDistinctStorage(filesDir, scratch, inputPath);
     // A unique ID keeps prior results intact; never silently rerun a query copy.
-    if (fileIo.accessSync(`${scratch}/query-results.json`) || fileIo.accessSync(`${scratch}/query-error.json`)) {
+    if (probeFilePresent(`${scratch}/query-results.json`) || probeFilePresent(`${scratch}/query-error.json`)) {
       throw new Error('COPY_RESULT_ALREADY_EXISTS');
     }
     const commands = mode === 'query' ? readCommands(await fileIo.readText(inputPath)) : [];
@@ -109,7 +109,7 @@ export async function probeReaderCoreCopy(debug: boolean, buildMode: string,
   } catch (error) {
     if (mode !== 'prepare' && safeScratch && current()) {
       try {
-        if (!fileIo.accessSync(`${scratch}/query-error.json`)) {
+        if (!probeFilePresent(`${scratch}/query-error.json`)) {
           await replaceReaderAtomicSnapshot(`${scratch}/query-error.json`, scratch, JSON.stringify(privateError(error)));
         }
       } catch (_) { /* Secondary private IO failure must not suppress PROBE_ERROR. */ }
@@ -195,12 +195,12 @@ function requireDistinctStorage(filesDir: string, scratch: string, inputPath: st
   const main: bigint[] = [];
   for (const suffix of ['', '-wal', '-shm', '-journal']) {
     const path = `${filesDir}/reader-core/reader-core.sqlite3${suffix}`;
-    if (fileIo.accessSync(path)) { requireFile(path); main.push(fileIo.lstatSync(path).ino); }
+    if (probeFilePresent(path)) { requireFile(path); main.push(fileIo.lstatSync(path).ino); }
   }
   const seen: bigint[] = [];
   for (const path of [`${scratch}/marker.txt`, inputPath, ...['', '-wal', '-shm', '-journal']
     .map(suffix => `${scratch}/data/reader-core.sqlite3${suffix}`)]) {
-    if (!fileIo.accessSync(path)) continue;
+    if (!probeFilePresent(path)) continue;
     requireFile(path);
     const ino = fileIo.lstatSync(path).ino;
     if (main.includes(ino) || seen.includes(ino)) throw new Error('COPY_STORAGE_ALIAS_REJECTED');
@@ -232,8 +232,17 @@ function requireDirectory(path: string): void {
 }
 
 function ensureDirectory(path: string): void {
-  if (!fileIo.accessSync(path)) fileIo.mkdirSync(path);
+  if (!probeFilePresent(path)) fileIo.mkdirSync(path);
   requireDirectory(path);
+}
+
+function probeFilePresent(path: string): boolean {
+  try { return fileIo.accessSync(path); }
+  catch (error) {
+    const code = (error as { code?: number | string } | undefined)?.code;
+    if (code === 13900002 || code === 'ENOENT') return false;
+    throw error;
+  }
 }
 
 function requireFile(path: string): void {

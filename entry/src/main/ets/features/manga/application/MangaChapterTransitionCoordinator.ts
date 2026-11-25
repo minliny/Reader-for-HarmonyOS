@@ -1,4 +1,5 @@
 import type { ReaderDirectoryTargetProof } from '../../reading/application/ReaderDirectoryTargetProof';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import type { ReadingGatewayRuntime } from '../../reading/application/ReadingGatewayRuntime';
 import type { MangaChapterResult, MangaLocation, MangaPreparedEntry } from './MangaContract';
 import { MangaSessionGateway } from './MangaSessionGateway';
@@ -100,7 +101,8 @@ export class MangaChapterTransitionCoordinator {
     attempt.preparation = task;
     try { return await task; }
     catch (error) {
-      await this.cancelAttempt(attempt, false);
+      try { await this.cancelAttempt(attempt, false); }
+      catch (_) { hilog.warn(0x5244, 'Reader', 'Manga chapter preparation cleanup failed'); }
       throw error;
     }
   }
@@ -139,7 +141,11 @@ export class MangaChapterTransitionCoordinator {
     })();
     attempt.activation = task;
     try { await task; }
-    catch (error) { await this.cancelAttempt(attempt, false); throw error; }
+    catch (error) {
+      try { await this.cancelAttempt(attempt, false); }
+      catch (_) { hilog.warn(0x5244, 'Reader', 'Manga chapter activation cleanup failed'); }
+      throw error;
+    }
   }
 
   private confirmPresented(attempt: MangaTransitionAttempt): void {
@@ -166,7 +172,15 @@ export class MangaChapterTransitionCoordinator {
     // Keep the lock until all Core admission/lease cleanup has drained. A new
     // gesture must not race a preceding protection restoration.
     const task = (async (): Promise<void> => {
-      await attempt.controller.close('candidate');
+      let cleanupFailed = false;
+      let firstFailure: unknown;
+      const recordFailure = (error: unknown): void => {
+        if (cleanupFailed) return;
+        firstFailure = error;
+        cleanupFailed = true;
+      };
+      try { await attempt.controller.close('candidate'); }
+      catch (error) { recordFailure(error); }
       if (waitForWork && attempt.preparation !== undefined) await attempt.preparation.catch((): void => {});
       if (waitForWork && attempt.activation !== undefined) await attempt.activation.catch((): void => {});
       try {
@@ -176,10 +190,14 @@ export class MangaChapterTransitionCoordinator {
           const restored = attempt.restoreProtection === undefined || await attempt.restoreProtection(restore);
           if (restored) await attempt.request.currentController.restoreChapterProtection(restore);
         }
+      } catch (error) {
+        recordFailure(error);
       } finally {
         try { await this.releaseReceipt(attempt); }
+        catch (error) { recordFailure(error); }
         finally { if (this.attempt === attempt) { this.attempt = undefined; this.revision++; } }
       }
+      if (cleanupFailed) throw firstFailure;
     })();
     attempt.cleanup = task;
     return task;

@@ -1681,8 +1681,12 @@ export struct MangaReadingSurface {
           this.publish(); this.restore(confirmed.anchor.ordinal, confirmed.anchor.y, confirmed.anchor.x ?? 0);
         }
         // A cancelled, late save/prepare must never cancel a newer intention.
-        if (candidate !== undefined) await candidate.cancel();
-        else if (generation === this.boundaryGeneration) await this.chapterTransitions?.cancel();
+        try {
+          if (candidate !== undefined) await candidate.cancel();
+          else if (generation === this.boundaryGeneration) await this.chapterTransitions?.cancel();
+        } catch (_) {
+          hilog.warn(0x5244, 'Reader', 'Manga chapter candidate cleanup failed');
+        }
       }
       if (this.mounted && generation === this.boundaryGeneration && message !== 'MANGA_SESSION_CANCELLED') {
         this.boundaryFailure = '章节暂时打不开，请稍后再试。';

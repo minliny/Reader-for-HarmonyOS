@@ -595,6 +595,7 @@ export class ArkWebExecutor {
     this.clearOwnedDnsPin();
     let seeds: ArkWebCookieSeed[] = [];
     let controller: webview.WebviewController | undefined;
+    let jobFailed = false;
     try {
       this.active = job;
       const id = this.nextSurfaceId++;
@@ -695,6 +696,9 @@ export class ArkWebExecutor {
         result['title'] = title;
       }
       return result;
+    } catch (error) {
+      jobFailed = true;
+      throw error;
     } finally {
       this.emitDiagnostic('end', job);
       this.rejectResourceCapture(job, this.hostFailure('CANCELLED', 'ArkWeb job ended', false, { phase: 'resource' }));
@@ -709,6 +713,10 @@ export class ArkWebExecutor {
       }
       try {
         webview.WebCookieManager.clearAllCookiesSync(true);
+      } catch (error) {
+        // Keep the owner error (including cancellation and page errors).
+        // The next job must still clear private cookies before loading.
+        if (!jobFailed) throw error;
       } finally {
         if (this.active === job) {
           try { this.clearOwnedDnsPin(); } catch (_) { /* Retry before a later page. */ }

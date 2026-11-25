@@ -2,6 +2,7 @@ import { readerCopySelectionForShare, readerShareSelectionMenu } from './ReaderS
 import { FrameNode, LengthMetrics, typeNode } from '@ohos.arkui.node';
 import { UIContext } from '@ohos.arkui.UIContext';
 import { text as graphicsText } from '@kit.ArkGraphics2D';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderNativeTextStyle, readerNativeTextGeometryKey, readerNativeTextNodeGeometry, readerNativeTextNodeContent } from './ReaderNativeTextMeasurement';
 
 export interface ReaderNativeGlyphRect { left: number; top: number; right: number; bottom: number; }
@@ -230,12 +231,18 @@ export class ReaderNativeTextWindow {
   close(): void {
     if (this.closed) return;
     this.closed = true;
-    try {
-      if (this.attached) this.root?.removeChild(this.node);
-    } finally {
-      this.attached = false;
-      try { this.node.dispose(); }
-      finally { this.root?.dispose(); this.root = undefined; }
-    }
+    const root = this.root;
+    const attached = this.attached;
+    this.root = undefined;
+    this.attached = false;
+    // The SDK can reject a node already retired by the native tree. Each
+    // actor still gets its own disposal attempt and the owner can drain the
+    // remaining paragraphs without masking a preceding shaping failure.
+    try { if (attached) root?.removeChild(this.node); }
+    catch (_) { hilog.warn(0x5244, 'Reader', 'Native text window detach failed'); }
+    try { this.node.dispose(); }
+    catch (_) { hilog.warn(0x5244, 'Reader', 'Native text window node disposal failed'); }
+    try { root?.dispose(); }
+    catch (_) { hilog.warn(0x5244, 'Reader', 'Native text window root disposal failed'); }
   }
 }
