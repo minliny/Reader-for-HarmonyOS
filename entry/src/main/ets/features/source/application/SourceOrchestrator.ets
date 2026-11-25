@@ -422,9 +422,9 @@ export class SourceOrchestrator {
           }
         }
       } finally {
-        if (current()) await this.loadList(session);
+        if (current()) await this.loadList(session, false);
       }
-      return this.loadGroups();
+      return this.gateway.loadSourceGroupCatalog(current);
     });
     this.operationChain = run.then((): void => {}, (): void => {});
     return run;

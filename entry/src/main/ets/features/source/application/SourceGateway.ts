@@ -494,13 +494,30 @@ export class SourceGateway {
     if (input.sourceIds !== undefined) params['sourceIds'] = input.sourceIds.slice();
     if (input.action === 'delete') params['targetGroupId'] = '';
     else if (input.targetGroupId !== undefined) params['targetGroupId'] = input.targetGroupId;
-    return RulesMutationOwner.forRuntime(this.runtimeOwner).run('书源分组',
-      current ?? ((): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner)),
-      async (request, confirmed): Promise<SourceGroupMutateData> => {
-        const result = this.readGroupMutation(params, (await request('source.group.mutate', params)).data);
+    const owner = RulesMutationOwner.forRuntime(this.runtimeOwner);
+    const admitted = current ?? ((): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner));
+    const method = 'source.group.mutate';
+    let dispatchedId: string | undefined;
+    try {
+      return await owner.run('书源分组', admitted, async (request, confirmed): Promise<SourceGroupMutateData> => {
+        const result = this.readGroupMutation(params, (await request(method, params)).data);
         confirmed();
         return result;
-      }, this.writeEvidence);
+      }, this.writeEvidence, undefined, (): void => { dispatchedId = owner.snapshot().operationId; });
+    } catch (error) {
+      if (dispatchedId === undefined || !admitted() || !owner.snapshot().blocked) throw error;
+      // Keep the exact input paired with the ID captured at SDK dispatch. A
+      // recovered create provides the real group ID and revision for assign.
+      const keys = Object.keys(params);
+      let recovered: SourceGroupMutateData | undefined;
+      await owner.recoverOriginal(admitted, (_method: string, _original: JsonObject, data: JsonObject): void => {
+        recovered = this.readGroupMutation(params, data);
+      }, false, 'source-management', undefined, dispatchedId, (originalMethod: string, original: JsonObject): boolean =>
+        originalMethod === method && Object.keys(original).length === keys.length &&
+        keys.every((key: string): boolean => JSON.stringify(original[key]) === JSON.stringify(params[key])));
+      if (recovered === undefined) throw error;
+      return recovered;
+    }
   }
 
   prepareGroupedSourceDocument(text: string): SourceGroupedImportPreview {
