@@ -866,7 +866,9 @@ export struct SourceV9TransferPage {
           Text(row.sourceId).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
             .fontSize(10).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontColor(this.color('TOK_MUTED'));
         }
-        if (row.kind === 'conflict') {
+        if (row.kind === 'conflict' && !row.selectable) {
+          this.label('当前 Core 无法按版本覆盖，保留本地', 11, 'TOK_MUTED');
+        } else if (row.kind === 'conflict') {
           Row({ space: 4 }) {
             this.action('覆盖', row.overwrite ? 'primary' : 'neutral', this.editable() && row.selectable,
               (): void => this.flow?.resolveReviewConflict(row.key, true), 24);

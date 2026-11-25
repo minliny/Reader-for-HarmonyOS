@@ -23,6 +23,7 @@ import { measureSourceQueryEdge, measureSourceQueryTouch } from './source-query-
 import { evaluateSourceImportResearchStatusAction } from './source-status-action.mjs';
 import { evaluateSourceInlineImportEdge } from './source-inline-import-edge.mjs';
 import { evaluateSourceChrome } from './source-chrome-dispatch.mjs';
+import { evaluateSourceV9Chrome, sourceV9ChromeDispatch, sourceV9ChromeGeometry } from './source-v9-chrome.mjs';
 import { evaluateSourceOfflineDetect } from './source-offline-detect.mjs';
 import { evaluateSourceNativeFocus } from './source-native-focus.mjs';
 import { sourceFilterClearKind, sourceFilterClearPoint, sourceFilterClearQuery, sourceFilterClearTarget } from './source-filter-clear-edge.mjs';
@@ -489,6 +490,52 @@ function retainedRowDelta(beforeNode, afterNode) {
   return Number.isFinite(before) && Number.isFinite(after) ? after - before : null;
 }
 
+function sourceV9ListHandoff(assertion, context, viewName) {
+  const { actions, samples } = context;
+  const groups = viewName === 'groups';
+  const target = groups ? sourceHeaderToolsButton : sourceFooterToolsButton;
+  const baseline = samples[assertion.baseline];
+  const sample = samples[assertion.sample];
+  const action = actions[assertion.action];
+  const view = samples[assertion.toolsSample];
+  const departure = actions[assertion.departAction];
+  const origin = groups ? samples[assertion.entrySample] : baseline;
+  const openMore = actions[assertion.openAction];
+  const paneId = groups ? 'reader-source-v9-groups' : 'reader-source-v9-batch-dock';
+  const departureTarget = groups ? 'reader-source-v9-open-groups' : target.id;
+  if (departure?.op !== 'click' || departure.targetId !== departureTarget || departure.outcomeSettled !== true ||
+      action?.outcomeSettled !== true || !pairedNativeEndpoint(departure,baseline,view,assertion.baseline) ||
+      !pairedNativeBack(action,view,sample,assertion.toolsSample) ||
+      ![origin,baseline,view,sample].every(point => point?.captureComplete === true &&
+        point.window?.keyboard?.visible === false && sameWindowLayout(point,sample))) return undefined;
+  if (groups && (openMore?.op !== 'click' || openMore.targetId !== target.id || openMore.outcomeSettled !== true ||
+      !pairedNativeEndpoint(openMore,origin,baseline,assertion.entrySample))) return undefined;
+  const enter = eventsAt(context,departure,view,'source.v9-list-transition');
+  const leave = eventsAt(context,action,sample,'source.v9-list-transition');
+  const routeChanges = eventsAt(context,groups ? openMore : departure,sample,'source.route');
+  if (!enter.length && !oneNode(view,paneId)) return undefined;
+  const previous = latestAt(context,origin,'source.projection');
+  const current = latestAt(context,sample,'source.projection',payload=>payload.trigger === 'v9-return');
+  const refs = [origin,baseline,view,sample,openMore,departure,action,previous,current,...enter,...leave,...routeChanges];
+  const called = oneNode(origin,target);
+  const returned = oneNode(sample,target);
+  const transition = enter[0]?.payload;
+  const terminal = leave[0]?.payload;
+  const routeBound = enter.length === 1 && leave.length === 1 && routeChanges.length === 0 &&
+    transition?.view === viewName && terminal?.view === viewName && transition.phase === 'enter' &&
+    terminal.phase === 'return' && positiveInt(transition.revision) && transition.revision === terminal.revision &&
+    sameOwner(transition.owner,terminal.owner);
+  const canDispatch = node=>node?.type === 'Button' && node.clickable === true && node.enabled === true && fullyVisible(node);
+  const nativeEntry = !groups || Boolean(oneNode(baseline,'reader-source-v9-more-menu') &&
+    canDispatch(oneNode(baseline,{id:departureTarget,ancestors:['reader-source-v9-more-menu']})));
+  const nativeId = groups ? /^source-back:[1-9]\d*:tools:header$/u : /^source-back:[1-9]\d*:tools:footer$/u;
+  const nativeBound = Boolean(nativeEntry && oneNode(view,paneId) && !oneNode(sample,paneId) &&
+    oneNode(sample,list) && canDispatch(called) && nativeId.test(called.id ?? '') && canDispatch(returned) &&
+    returned.id === called.id && (!groups || !oneNode(view,list)));
+  return {origin,view,departure,returned,transition,terminal,enter:enter[0],leave:leave[0],previous,current,
+    routeBound,nativeBound,refs};
+}
+
 function sourceFilterRadioSelection(sample,target) {
   const carrier = measureSourceFilterCarrier(sample,target);
   if (!carrier.actual) return carrier;
@@ -525,56 +572,20 @@ function sourceCheck(assertion, context) {
 
   switch (assertion.kind) {
     case 'v9-list-return': {
-      const groups = expected.view === 'groups';
-      const target = groups ? sourceHeaderToolsButton : sourceFooterToolsButton;
-      const view = samples[assertion.toolsSample];
-      const departure = actions[assertion.departAction];
-      const origin = groups ? samples[assertion.entrySample] : baseline;
-      const openMore = actions[assertion.openAction];
-      const paneId = groups ? 'reader-source-v9-groups' : 'reader-source-v9-batch-dock';
-      const departureTarget = groups ? 'reader-source-v9-open-groups' : target.id;
-      if (departure?.op !== 'click' || departure.targetId !== departureTarget || departure.outcomeSettled !== true ||
-          action?.outcomeSettled !== true || !pairedNativeEndpoint(departure,baseline,view,assertion.baseline) ||
-          !pairedNativeBack(action,view,sample,assertion.toolsSample) ||
-          ![origin,baseline,view,sample].every(point => point?.captureComplete === true &&
-            point.window?.keyboard?.visible === false && sameWindowLayout(point,sample)))
-        return incomplete('Missing a current native child opening, System Back or complete same-layout Source samples');
-      if (groups && (openMore?.op !== 'click' || openMore.targetId !== target.id || openMore.outcomeSettled !== true ||
-          !pairedNativeEndpoint(openMore,origin,baseline,assertion.entrySample)))
-        return incomplete('Missing the native More button dispatch before Group management');
-      const enter = eventsAt(context,departure,view,'source.v9-list-transition');
-      const leave = eventsAt(context,action,sample,'source.v9-list-transition');
-      const routeChanges = eventsAt(context,groups ? openMore : departure,sample,'source.route');
-      const previous = latestAt(context,origin,'source.projection');
-      const current = latestAt(context,sample,'source.projection',payload=>payload.trigger === 'v9-return');
-      const observations = [origin,openMore,view,departure,previous,current,...enter,...leave,...routeChanges];
-      const called = oneNode(origin,target);
-      const returned = oneNode(sample,target);
-      const transition = enter[0]?.payload;
-      const terminal = leave[0]?.payload;
-      const routeBound = enter.length === 1 && leave.length === 1 && routeChanges.length === 0 &&
-        transition?.view === expected.view && terminal?.view === expected.view && transition.phase === 'enter' &&
-        terminal.phase === 'return' && positiveInt(transition.revision) && transition.revision === terminal.revision &&
-        sameOwner(transition.owner,terminal.owner);
-      const nativeEntry = !groups || (oneNode(baseline,'reader-source-v9-more-menu') &&
-        oneNode(baseline,{id:departureTarget,ancestors:['reader-source-v9-more-menu']})?.type === 'Button');
-      const nativeBound = Boolean(nativeEntry && oneNode(view,paneId) && !oneNode(sample,paneId) &&
-        oneNode(sample,list) && called?.type === 'Button' && called.clickable === true && called.enabled === true &&
-        returned?.type === 'Button' && returned.id === called.id && returned.clickable === true &&
-        returned.enabled === true && fullyVisible(returned) && (!groups || !oneNode(view,list)));
-      if (!enter.length && !oneNode(view,paneId))
-        return incomplete('No current owner event or native child view proves the requested transition');
+      const handoff = sourceV9ListHandoff(assertion,context,expected.view);
+      if (!handoff) return incomplete('Missing a current native child opening, System Back or complete same-layout Source samples');
+      const {origin,view,departure,returned,transition,terminal,leave,previous,current,routeBound,nativeBound,refs:observations} = handoff;
       if (!routeBound || !nativeBound)
         return conclude(false,'The native child did not return to the same Source opening and original control',
           {view:expected.view,routeBound,nativeBound},observations);
       if (!settledFilterProjection(previous?.payload) || !settledFilterProjection(current?.payload) ||
-          current.eventSeq <= leave[0].eventSeq)
+          current.eventSeq <= leave.eventSeq)
         return incomplete('Missing the current retained catalogue projection');
       if (terminal.filterMatchesDeparture !== true || !sameOwner(transition.owner,previous.payload.owner) ||
           !sameFilterState(previous.payload,current.payload))
         return conclude(false,'The child round trip changed the Source opening or current filters',
           {before:previous.payload,after:current.payload},observations);
-      if (groups) {
+      if (expected.minimumProjected !== undefined) {
         const filters = sourceToolsFilterProgress(context,expected);
         if (filters.verdict !== 'PASS') return report(filters.verdict,filters.reason,{commits:filters.completed},filters.refs);
         if (!sameFilterState(filters.previous,previous.payload))
@@ -586,7 +597,13 @@ function sourceCheck(assertion, context) {
         return conclude(returned.focused,returned.focused ? '' : 'The original native button did not regain focus',
           {view:expected.view,focused:returned.focused},observations);
       }
-      const scrolled = latestAt(context,origin,'source.scroll',payload=>payload.trigger === 'settled');
+      const prior = actions[assertion.priorAction];
+      const filtered = samples[assertion.filteredSample];
+      if (assertion.priorAction && (prior?.op !== 'swipe' || prior.targetId !== list || prior.outcomeSettled !== true ||
+          !pairedNativeEndpoint(prior,filtered,origin,assertion.filteredSample) || !sameWindowLayout(filtered,origin)))
+        return incomplete('Missing the native catalogue swipe before Group management');
+      const scrolled = prior ? eventsAt(context,prior,origin,'source.scroll').findLast(event=>event.payload.trigger === 'settled') :
+        latestAt(context,origin,'source.scroll',payload=>payload.trigger === 'settled');
       const saved = eventsAt(context,departure,view,'source.scroll').findLast(event=>event.payload.trigger === 'v9-list-enter');
       const restored = eventsAt(context,action,sample,'source.scroll').findLast(event=>event.payload.trigger === 'v9-list-return');
       if (!scrolled || !saved || !restored) return incomplete('Missing retained native scroll measurements');
@@ -607,7 +624,46 @@ function sourceCheck(assertion, context) {
         value.filterRevision === previous.payload.filterRevision) && b.filterMatchesSaved === true &&
         positionMatches(scrolled.payload,a) && positionMatches(a,b) && delta !== null && Math.abs(delta) <= expected.tolerancePx;
       return conclude(valid,valid ? '' : 'The same-opening Source row anchor or offset changed on return',
-        {view:expected.view,saved:a,restored:b,nativeAnchorDeltaPx:delta},[...observations,scrolled,saved,restored]);
+        {view:expected.view,saved:a,restored:b,nativeAnchorDeltaPx:delta},[...observations,prior,filtered,scrolled,saved,restored]);
+    }
+    case 'route-parent-after-v9-groups': {
+      const controls = sourceParentControls[expected.parent];
+      const parent = samples[assertion.parentSample];
+      const initial = samples[assertion.entrySample];
+      const enter = actions[assertion.entryAction];
+      const handoff = sourceV9ListHandoff({...assertion, baseline:assertion.menuSample,
+        sample:assertion.baseline, action:assertion.returnAction},context,'groups');
+      if (!handoff || enter?.op !== 'click' || enter.targetId !== controls.entry || enter.outcomeSettled !== true ||
+          action?.outcomeSettled !== true || !pairedNativeEndpoint(enter,parent,initial,assertion.parentSample) ||
+          !pairedNativeBack(action,baseline,sample,assertion.baseline) ||
+          ![parent,sample].every(point=>point.captureComplete === true && point.window.keyboard?.visible === false))
+        return incomplete('Missing the native parent entry or final System Back from the returned v9 list');
+      const openings = eventsAt(context,enter,initial,'source.route');
+      const closings = eventsAt(context,action,sample,'source.route');
+      const open = openings[0]?.payload;
+      const close = closings[0]?.payload;
+      const {previous,current,transition,terminal,leave,routeBound,nativeBound,refs:handoffRefs} = handoff;
+      const observations = [parent,initial,enter,...openings,...closings,...handoffRefs];
+      const actual = {opened:open,groups:transition,restoredSource:terminal,closed:close};
+      if (!open || (!close && !oneNode(sample,back))) return incomplete('Missing the parent owner route before or after the v9 visit');
+      const routes = routeBound && openings.length === 1 && closings.length === 1 &&
+        open.action === 'open' && open.from === expected.parent && open.to === 'source' &&
+        count(open.previousGeneration) && open.previousGeneration < open.generation && sameOwner(open,transition.owner) &&
+        close.action === 'close' && close.from === 'source' && close.to === expected.parent &&
+        close.previousGeneration === open.generation && open.generation < close.generation &&
+        open.mounting === close.mounting;
+      const native = nativeBound && Boolean(oneNode(parent,controls.entry) && oneNode(initial,back) &&
+        oneNode(baseline,back) && oneNode(sample,controls.returned) && !oneNode(sample,list) &&
+        !oneNode(sample,back) && !oneNode(sample,'reader-source-v9-groups'));
+      if (!routes || !native) return conclude(false,'The group visit lost the original Source opening or its captured parent',actual,observations);
+      const emptyCatalogue = fact => fact?.state === 'empty' && fact.readFact === 'current' &&
+        positiveInt(fact.readGeneration) && fact.count === 0 && fact.projected === 0 && defaultSourceFilters(fact);
+      if (!previous || !current || previous.eventSeq <= openings[0].eventSeq || current.eventSeq <= leave.eventSeq)
+        return incomplete('Missing the initial or returned empty Source projection');
+      const bound = [previous,current].every(event=>emptyCatalogue(event.payload) && sameOwner(event.payload.owner,open)) &&
+        terminal.filterMatchesDeparture === true && previous.payload.readGeneration === current.payload.readGeneration &&
+        previous.payload.filterRevision === current.payload.filterRevision;
+      return conclude(bound,bound ? '' : 'The empty catalogue or same-opening projection changed during Group management',actual,observations);
     }
     case 'route-parent-after-tools': {
       const controls = sourceParentControls[expected.parent];
@@ -952,10 +1008,12 @@ function sourceCheck(assertion, context) {
       const startFrame = readSourceInsetsFrame(context,baseline);
       const movedFrame = readSourceInsetsFrame(context,moving);
       const tailFrame = readSourceInsetsFrame(context,sample);
+      const restored = expected.v9GroupRoundTrip === true ? samples[assertion.restoreSample] : undefined;
+      const restoredFrame = restored ? readSourceInsetsFrame(context,restored) : undefined;
       const checks = {};
       const extra = [];
       if (moving) extra.push({evidenceRefs:moving.evidenceRefs});
-      const state = [startFrame,movedFrame,tailFrame].filter(Boolean);
+      const state = [startFrame,movedFrame,restoredFrame,tailFrame].filter(Boolean);
       const near = (a,b) => Number.isFinite(a) && Number.isFinite(b) && Math.abs(a-b) <= expected.tolerancePx;
       for (const frame of state) {
         const {header,dock,viewport,geometry,density} = frame;
@@ -992,6 +1050,10 @@ function sourceCheck(assertion, context) {
       const sameViewport = (a,b) => a?.sample.instanceId === b?.sample.instanceId &&
         a?.sample.window.id === b?.sample.window.id && a?.density === b?.density &&
         rectFields.every(key => near(a?.viewport[key],b?.viewport[key]));
+      if (startFrame && restoredFrame && tailFrame) for (const frame of [restoredFrame,tailFrame]) {
+        if (!['header','dock'].every(key=>rectFields.every(field=>near(startFrame[key][field],frame[key][field]))))
+          checks[frame.sample.sampleId].problems.push('fixed-carriers-across-group-return');
+      }
       const motionEvent = eventsAt(context,action,moving,'source.scroll').findLast(event =>
         event.payload.trigger === 'settled' && sameOwner(event.payload.owner,movedFrame?.projection.payload.owner) &&
         event.payload.filterRevision === movedFrame.projection.payload.filterRevision);
@@ -1006,8 +1068,12 @@ function sourceCheck(assertion, context) {
           motion.problems.push('fixed-carriers-while-list-scrolls');
         }
       }
-      const end = latestAt(context,sample,'source.scroll',event =>
-        sameOwner(event.owner,tailFrame?.projection.payload.owner) && event.filterRevision === tailFrame.projection.payload.filterRevision);
+      const sameTail = event=>sameOwner(event.owner,tailFrame?.projection.payload.owner) &&
+        event.filterRevision === tailFrame.projection.payload.filterRevision;
+      const tailAction = actions[assertion.tailAction];
+      const end = expected.v9GroupRoundTrip === true ?
+        eventsAt(context,tailAction,sample,'source.scroll').findLast(event=>event.payload.trigger === 'settled' && sameTail(event.payload)) :
+        latestAt(context,sample,'source.scroll',sameTail);
       const lastItem = end?.payload.atEnd === true && positiveInt(end.payload.lastAnchor) ?
         oneNode(sample,'reader-source-row-' + end.payload.lastAnchor,true) : undefined;
       const tail = tailFrame && rectPresent(lastItem?.rectPx) ? checks[sample.sampleId] : undefined;
@@ -1022,7 +1088,32 @@ function sourceCheck(assertion, context) {
       const opening = startFrame?.projection.payload.owner;
       const tailOpening = tailFrame?.projection.payload.owner;
       let tailContinuity = sameOwner(opening,tailOpening);
-      if (opening && tailOpening && !tailContinuity) {
+      if (expected.v9GroupRoundTrip === true) {
+        const handoff = sourceV9ListHandoff({...assertion, baseline:assertion.menuSample,
+          sample:assertion.restoreSample,action:assertion.returnAction},context,'groups');
+        if (handoff) extra.push(...handoff.refs);
+        const tailOrigin = samples[tailAction?.from];
+        const rearm = actions['scroll-away-from-tail'];
+        const rearmOrigin = samples[rearm?.from];
+        const armed = eventsAt(context,rearm,tailOrigin,'source.scroll').findLast(event=>event.payload.trigger === 'settled');
+        // The final locator is deliberately tree-only. Its invoking action and
+        // fresh full tail capture are paired by the required footer-end check.
+        tailContinuity = Boolean(tailContinuity && handoff?.routeBound && handoff?.nativeBound &&
+          handoff.terminal.filterMatchesDeparture === true && sameOwner(opening,handoff.transition.owner) &&
+          motionEvent?.eventSeq < handoff.enter.eventSeq && restoredFrame && sameViewport(startFrame,restoredFrame) &&
+          handoff.current?.eventSeq > handoff.leave.eventSeq &&
+          sameFilterState(handoff.previous?.payload,handoff.current.payload) &&
+          sameFilterState(handoff.current.payload,tailFrame?.projection.payload) &&
+          tailAction?.op === 'swipe' && tailAction.targetId === list && tailAction.outcomeSettled === true &&
+          sameWindowLayout(tailOrigin,sample) && restored.afterSeq < tailAction.beforeSeq &&
+          rearm?.op === 'swipe' && rearm.targetId === list && rearm.outcomeSettled === true &&
+          sameWindowLayout(rearmOrigin,tailOrigin) && oneNode(rearmOrigin,list)?.type === 'List' &&
+          rearmOrigin.afterSeq <= rearm.beforeSeq && rearm.afterSeq <= tailOrigin.beforeSeq &&
+          armed?.payload.atEnd === false && sameTail(armed.payload) &&
+          handoff.leave.eventSeq < armed.eventSeq && armed.eventSeq < tailAction.beforeSeq &&
+          tailAction.beforeSeq < end?.eventSeq && eventsAt(context,actions[assertion.returnAction],sample,'source.route').length === 0);
+        if (tailContinuity) extra.push(rearmOrigin,rearm,armed,tailOrigin,tailAction);
+      } else if (opening && tailOpening && !tailContinuity) {
         const tools = samples[assertion.toolsSample];
         const restored = samples[assertion.restoreSample];
         const depart = eventsAt(context,actions[assertion.departAction],tools,'source.route').find(event =>
@@ -1204,6 +1295,9 @@ function sourceCheck(assertion, context) {
     case 'source-inline-import-center':
     case 'source-inline-import-area':
       return evaluateSourceInlineImportEdge(assertion,context);
+    case sourceV9ChromeGeometry:
+    case sourceV9ChromeDispatch:
+      return evaluateSourceV9Chrome(assertion,context);
     case 'source-chrome-geometry':
     case 'source-chrome-dispatch':
       return evaluateSourceChrome(assertion,context);

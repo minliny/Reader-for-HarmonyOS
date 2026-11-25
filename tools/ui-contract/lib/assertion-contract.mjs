@@ -9,6 +9,7 @@ import { isSourceNativeFocusAssertion } from './source-native-focus.mjs';
 import { sourceInlineImportAreaKind, sourceInlineImportButton, sourceInlineImportCenterAction, sourceInlineImportCenterKind,
   sourceInlineImportEdgeAllowed } from './source-inline-import-edge.mjs';
 import { sourceChromePolicy } from './source-chrome-dispatch.mjs';
+import { sourceV9ChromeAssertionPolicy, sourceV9ChromeDispatch, sourceV9ChromeGeometry } from './source-v9-chrome.mjs';
 import { sourceFilterClearAction, sourceFilterClearAssertion, sourceFilterClearKind, sourceFilterClearTarget } from './source-filter-clear-edge.mjs';
 import { sourceOfflineDetectButton } from './source-offline-detect.mjs';
 import { sourceRecoveryControl } from './source-recovery-control.mjs';
@@ -66,6 +67,7 @@ const shapes = {
   source: {
     route: {action:'string',from:'string',to:'string',anchor:'string'},
     'route-parent-after-tools': {parent:'string'},
+    'route-parent-after-v9-groups': {parent:'string'},
     'load-state': {state:'string',readFact:'string',anchor:'string'},
     'read-surface': {state:'string',nativeFrame:'string?'},
     'read-retry': {state:'string',requireNativeTouchTarget:'boolean?',position:'string?'},
@@ -101,6 +103,8 @@ const shapes = {
     'source-inline-import-area': {target:'string'},
     'source-chrome-geometry': {target:'string'},
     'source-chrome-dispatch': {target:'string',position:'string?'},
+    'v9-source-chrome-geometry': {target:'string'},
+    'v9-source-chrome-dispatch': {target:'string',position:'string'},
     'source-offline-detect': {target:'string',l1:'string',l2:'string',position:'string?'},
     'toggle-touch-target': {},
     'toggle-touch-edge': {tapEdge:'string',requestedEnabled:'boolean'},
@@ -146,7 +150,7 @@ const shapes = {
     'v9-list-return': {view:'string',proof:'string',tolerancePx:'number',
       status:'string?',category:'string?',groupIndex:'number?',queryLength:'number?',minimumProjected:'number?'},
     'footer-end': {maxOverlapAreaVp2:'number',minFraction:'number',requireFreshEnd:'boolean?'},
-    'fixed-insets': {tolerancePx:'number'},
+    'fixed-insets': {tolerancePx:'number',v9GroupRoundTrip:'boolean?'},
   },
   motion: {
     'control-open': {open:'boolean'},
@@ -216,6 +220,7 @@ const parameters = {
   source: {
     route:['entryAction'],
     'route-parent-after-tools':['entryAction','parentSample','entrySample','departAction','toolsSample','returnAction'],
+    'route-parent-after-v9-groups':['entryAction','parentSample','entrySample','openAction','menuSample','departAction','toolsSample','returnAction'],
     'read-retry':['entryAction'],
     'retained-read-failure':['entryAction','returnAction'],
     'recovery-body-text':['entryAction'],
@@ -238,8 +243,8 @@ const parameters = {
     'tool-return':['departAction','toolsSample'],
     'tool-return-filters':['departAction','toolsSample','priorAction','filteredSample'],
     'tools-return-focus':['departAction','toolsSample'],
-    'v9-list-return':['departAction','toolsSample','entrySample','openAction'],
-    'fixed-insets':['movingSample','toolsSample','restoreSample','departAction','returnAction'],
+    'v9-list-return':['departAction','toolsSample','entrySample','openAction','priorAction','filteredSample'],
+    'fixed-insets':['movingSample','toolsSample','restoreSample','departAction','returnAction','entrySample','openAction','menuSample','tailAction'],
   },
 };
 
@@ -404,10 +409,17 @@ export function publicAssertionDefinition(assertion) {
       (!assertion.baseline || !assertion.entryAction || expected.action !== 'close' || expected.from !== 'source')) {
     throw new Error(`Assertion ${id}: a direct source route Back requires the entry action and closing baseline`);
   }
-  if (evaluator === 'source' && kind === 'route-parent-after-tools' &&
+  if (evaluator === 'source' && ['route-parent-after-tools','route-parent-after-v9-groups'].includes(kind) &&
       (!['settings','search'].includes(expected.parent) || !assertion.action || !assertion.baseline || !assertion.sample ||
        fields.some(field => !assertion[field]))) {
     throw new Error(`Assertion ${id}: a captured source parent needs both native Back actions and the original entry`);
+  }
+  if (evaluator === 'source' && kind === 'fixed-insets' &&
+      ([assertion.tailAction,assertion.entrySample,assertion.openAction,assertion.menuSample].some(Boolean) || expected.v9GroupRoundTrip !== undefined) &&
+      (expected.v9GroupRoundTrip !== true || assertion.required !== true || assertion.condition ||
+        ![assertion.action,assertion.baseline,assertion.sample,...fields.map(field=>assertion[field])].every(Boolean) ||
+        expected.tolerancePx !== 1 || !['native-tree','window-metrics','app-owner'].every(source=>assertion.sources?.includes(source)))) {
+    throw new Error(`Assertion ${id}: v9 fixed insets need the actual More, Groups, return and fresh List tail actions`);
   }
   if (evaluator === 'source' && kind === 'group-options-scroll' &&
       (assertion.required !== true || assertion.baseline !== 'panel-before' || assertion.sample !== 'selected-tail' ||
@@ -736,6 +748,10 @@ export function publicAssertionDefinition(assertion) {
       throw new Error(`Assertion ${id}: inline import needs the exact native response area or center dialog round trip`);
     }
   }
+  if (evaluator === 'source' && [sourceV9ChromeGeometry,sourceV9ChromeDispatch].includes(kind) &&
+      !sourceV9ChromeAssertionPolicy(assertion)) {
+    throw new Error(`Assertion ${id}: v9 Source Chrome requires the exact native control and action`);
+  }
   if (evaluator === 'source' && ['source-chrome-geometry','source-chrome-dispatch'].includes(kind)) {
     const policy = sourceChromePolicy(expected.target,expected.position);
     const geometry = kind === 'source-chrome-geometry';
@@ -800,10 +816,13 @@ export function publicAssertionDefinition(assertion) {
        !['groups','batch'].includes(expected.view) || !['position','focus'].includes(expected.proof) ||
        expected.tolerancePx < 0 || expected.tolerancePx > 1 || assertion.required !== true || assertion.condition ||
        !['native-tree','window-metrics','app-owner'].every(source=>assertion.sources?.includes(source)) ||
-       (expected.view === 'groups' ? !assertion.entrySample || !assertion.openAction || expected.status !== 'disabled' ||
-         expected.category !== 'novel' || expected.groupIndex !== 2 || expected.queryLength !== 12 || expected.minimumProjected !== 15 :
+       (expected.view === 'groups' ? !assertion.entrySample || !assertion.openAction ||
+         (expected.minimumProjected === undefined ? expected.proof !== 'position' || !assertion.priorAction || !assertion.filteredSample ||
+           [expected.status,expected.category,expected.groupIndex,expected.queryLength].some(value=>value !== undefined) :
+           assertion.priorAction || assertion.filteredSample || expected.status !== 'disabled' || expected.category !== 'novel' ||
+           expected.groupIndex !== 2 || expected.queryLength !== 12 || expected.minimumProjected !== 15) :
          [assertion.entrySample,assertion.openAction,expected.status,expected.category,expected.groupIndex,expected.queryLength,
-           expected.minimumProjected].some(value=>value !== undefined)))) {
+           expected.minimumProjected,assertion.priorAction,assertion.filteredSample].some(value=>value !== undefined)))) {
     throw new Error(`Assertion ${id}: v9 uses an actual group or batch view and the same native Source opening`);
   }
   if (evaluator !== 'layout' && kind !== 'phase-relative') return;

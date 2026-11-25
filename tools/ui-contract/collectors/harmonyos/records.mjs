@@ -41,6 +41,8 @@ import { publicReservedSourceHost, sourceReservedTypographySample } from '../../
 import { readSourceInlineImportDialog, sourceInlineImportButton, sourceInlineImportCenterStep, sourceInlineImportDialog,
   sourceInlineImportEdgeAllowed, sourceInlineImportEdgeFixture, sourceInlineImportEdgeTap } from '../../lib/source-inline-import-edge.mjs';
 import { sourceChromeFixture, sourceChromeStep, sourceChromeTapPoint } from '../../lib/source-chrome-dispatch.mjs';
+import { sourceV9ChromeFixture, sourceV9ChromeStep, sourceV9ChromeTapPoint,
+  validSourceV9ChromeTap } from '../../lib/source-v9-chrome.mjs';
 import { sourceFilterClearAction, sourceFilterClearPoint, sourceFilterClearStep } from '../../lib/source-filter-clear-edge.mjs';
 import { requireSourceOfflineDetectState, sourceOfflineDetectButton, sourceOfflineDetectEdgePoint,
   sourceOfflineDetectFixture } from '../../lib/source-offline-detect.mjs';
@@ -625,9 +627,10 @@ export function normalizeSample({ store, records, entry, before, after, refs, ca
     observeSourceOfflineDetect: fixture?.id === sourceOfflineDetectFixture && step?.kind === 'sample',
     observeSourceInlineImportDialog: [sourceInlineImportEdgeFixture,sourceChromeFixture].includes(fixture?.id) && step?.kind === 'sample',
     observeSourceNativeFocus: fixture?.id === sourceNativeFocusFixture && step?.kind === 'sample',
-    publicSourceToolsQuery: ['public-source-tools-return-v2','public-source-v9-group-return-v1'].includes(fixture?.id) ?
+    publicSourceToolsQuery: ['public-source-tools-return-v2','public-source-v9-group-return-v1','public-source-v9-scroll-return-v1'].includes(fixture?.id) ?
       fixture.inputs?.['public-source-prefix'] : undefined,
     publicSourceToolsGroup: fixture?.id === 'public-source-v9-group-return-v1' ? 'Phase1 Return Group A' : undefined,
+    observeSourceV9More: fixture?.id === 'public-source-v9-captured-parent-v1' || fixture?.id === sourceV9ChromeFixture,
     observeSourceRead: step?.anchors.some(id => id === 'reader-source-loading-progress' ||
       id === 'reader-source-read-failure-title' || id === 'reader-source-recovery-message') ||
       step?.waitFor?.some(predicate => predicate.kind === 'source.read-retry'),
@@ -645,7 +648,8 @@ export function normalizeSample({ store, records, entry, before, after, refs, ca
       captureComplete:false,beforeSeq:before.eventSeq,afterSeq:after.eventSeq,semanticSeq:after.semanticSeq,
       hostBeginMs:entry.hostBeginMs,hostEndMs:entry.hostEndMs,pickerCheckpoint:after,sourcePicker};
   }
-  if (fixture?.id === sourcePickerFixture && step?.id === 'source-before-import') {
+  if (fixture?.id === sourcePickerFixture && step?.id === 'source-before-import' ||
+      fixture?.id === sourceV9ChromeFixture && step?.anchors.includes(sourceFooterAddButton)) {
     const buttons = content.nodes.filter(node => node.type === 'Button' &&
       /^source-back:[1-9]\d*:import:footer$/u.test(node.id ?? '') &&
       ancestorsOf(content,node).some(parent => parent.id === 'reader-source-footer'));
@@ -892,6 +896,11 @@ export function requestedOperation(step, samples, fixture) {
     requireEvidence(fixture?.id === searchEmptyBookshelfFixture && step.id === 'open-search' && step.op === 'click' && entry,
       'The Search action has no verified native button in the genuinely empty bookshelf');
     return {op:'click',...layoutTapPoint(entry)};
+  }
+  if (sourceV9ChromeStep(step)) {
+    const policy = validSourceV9ChromeTap(step,fixture);
+    requireEvidence(policy,'The v9 Chrome touch requires its exact native Button and public fixture');
+    return {op:'click',...sourceV9ChromeTapPoint(sample,policy)};
   }
   const chrome = sourceChromeStep(step);
   if (chrome) {
@@ -1334,6 +1343,7 @@ export function sessionContext({store, session, sessionRef, candidate, contract,
         const filterLaneSwipe = sourceFilterSwipeDispatch(step,operation,dispatch.seq);
         const filterTextDrag = sourceFilterTextDragDispatch(step,operation,dispatch.seq);
         const chrome = contract.fixture.id === sourceChromeFixture && sourceChromeStep(step);
+        const v9Chrome = validSourceV9ChromeTap(step,contract.fixture);
         const sourceControl = sourceControlTouchStep(step,contract.fixture);
         const filterTouch = sourceFilterNativeDispatch(contract,step,operation,dispatch.seq);
         const queryPosition = sourceQueryTouchPosition(step,contract.fixture);
@@ -1364,6 +1374,7 @@ export function sessionContext({store, session, sessionRef, candidate, contract,
               velocity:operation.velocity,probeSeq:dispatch.seq}} : {}),
           ...(chrome ?
             {chromeTap:{x:operation.x,y:operation.y,probeSeq:dispatch.seq}} : {}),
+          ...(v9Chrome ? {v9ChromeTap:{x:operation.x,y:operation.y,probeSeq:dispatch.seq}} : {}),
           ...(sourceInlineImportCenterStep(step,contract.fixture) ?
             {inlineImportTap:{x:operation.x,y:operation.y,probeSeq:dispatch.seq}} : {}),
           ...(['clickThenBack','clickThenReaderCenter','grabberReversal'].includes(operation.op) ? {dispatch} : {}),
@@ -1377,7 +1388,7 @@ export function sessionContext({store, session, sessionRef, candidate, contract,
             queryTouch:{position:queryPosition,x:operation.x,y:operation.y,probeSeq:dispatch.seq}
           }),
           ...(toggle ? {toggleTap:{position:toggle.position,x:operation.x,y:operation.y,probeSeq:dispatch.seq}} : {}),
-          ...(step.tapEdge === undefined || chrome || sourceControl ? {} :
+          ...(step.tapEdge === undefined || chrome || v9Chrome || sourceControl ? {} :
             {edgeTap:{edge:step.tapEdge,x:operation.x,y:operation.y,probeSeq:dispatch.seq,
               ...(step.requireFullContainment ? {requireFullContainment:true} : {})}}),
           hostBeginMs: entry.hostBeginMs, hostEndMs: entry.hostEndMs,

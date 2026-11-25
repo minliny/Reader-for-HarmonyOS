@@ -2810,6 +2810,8 @@
     "source.v9-more": {"ids":["reader-source-v9-more-menu"]},
     "source.v9-groups": {"ids":["reader-source-v9-groups"]},
     "source.v9-batch": {"ids":["reader-source-v9-batch-dock"]},
+    "source.v9-import": {"ids":["reader-source-v9-import"]},
+    "source.v9-import-file": {"ids":["reader-source-v9-import-file"]},
     "source.tools-back": {
       "ids": [
         "reader-source-tools-back"
@@ -4760,6 +4762,14 @@
         {"kind":"descendant","node":"source.v9-batch","ancestor":"source.footer"}]
     },
     {
+      "id": "source.v9-import-open",
+      "layer": "route",
+      "basis": "书源管理 v9 底栏导入进入三步导入首页",
+      "requires": [],
+      "checks": [{"kind":"present","node":"source.v9-import"},
+        {"kind":"descendant","node":"source.v9-import-file","ancestor":"source.v9-import"}]
+    },
+    {
       "id": "source.tools",
       "layer": "route",
       "basis": "Phase 1 详细方案 §3 书源工具往返",
@@ -6367,6 +6377,66 @@
       }
     },
     {
+      "caseId": "source-management.v9-captured-parent-roundtrip",
+      "states": {
+        "before": "bookshelf.public-book-ready",
+        "entry-projection": "search.no-source-recovery",
+        "search-source-ready": "source.empty-library",
+        "search-more-open": "source.v9-more-open",
+        "search-groups": "source.v9-groups-open",
+        "search-source-restored": "source.empty-library",
+        "search-returned": "search.no-source-recovery",
+        "bookshelf-again": "bookshelf.public-book-ready",
+        "settings": "settings.source-return",
+        "settings-source-ready": "source.empty-library",
+        "settings-more-open": "source.v9-more-open",
+        "settings-groups": "source.v9-groups-open",
+        "settings-source-restored": "source.empty-library",
+        "settings-returned": "settings.source-return"
+      },
+      "actions": {
+        "before": null,
+        "entry-projection": "open-search",
+        "search-source-ready": "manage-sources",
+        "search-more-open": "search-open-more",
+        "search-groups": "search-open-groups",
+        "search-source-restored": "search-groups-back",
+        "search-returned": "back-to-search",
+        "bookshelf-again": "back-to-shelf",
+        "settings": "open-settings",
+        "settings-source-ready": "open-sources",
+        "settings-more-open": "settings-open-more",
+        "settings-groups": "settings-open-groups",
+        "settings-source-restored": "settings-groups-back",
+        "settings-returned": "back-to-settings"
+      }
+    },
+    {
+      "caseId": "source-management.v9-scroll-return",
+      "states": {
+        "source-ready": "source.query",
+        "fixture-sources-ready": "source.query",
+        "shallow": "source.fixed-carriers-over-list",
+        "filter-reset": "source.catalog",
+        "scrolled": "source.catalog",
+        "more-open": "source.v9-more-open",
+        "groups": "source.v9-groups-open",
+        "restored": "source.fixed-carriers-over-list",
+        "list-tail": "source.catalog"
+      },
+      "actions": {
+        "source-ready": "open-sources",
+        "fixture-sources-ready": "leave-fixture-ime",
+        "shallow": "scroll-shallow",
+        "filter-reset": "select-novel",
+        "scrolled": "scroll-list",
+        "more-open": "open-more",
+        "groups": "open-groups",
+        "restored": "groups-back",
+        "list-tail": "scroll-tail-3"
+      }
+    },
+    {
       "caseId": "source-management.v9-group-return",
       "states": {
         "source-ready": "source.filter-lanes",
@@ -6385,6 +6455,47 @@
         "more-open": "open-more",
         "v9-child": "open-groups",
         "restored": "v9-back"
+      }
+    },
+    {
+      "caseId": "source-management.v9-chrome-touch-delivery",
+      "states": {
+        "settings": "settings.source-return",
+        "source-ready-center": "source.catalog",
+        "opened-header-more-center": "source.v9-more-open",
+        "returned-header-more-center": "source.catalog",
+        "opened-footer-batch-center": "source.v9-batch-open",
+        "returned-footer-batch-center": "source.catalog",
+        "opened-footer-import-center": "source.v9-import-open",
+        "returned-footer-import-center": "source.catalog",
+        "settings-returned-center": "settings.source-return",
+        "source-ready-top": "source.catalog",
+        "opened-header-more-top": "source.v9-more-open",
+        "returned-header-more-top": "source.catalog",
+        "opened-footer-batch-top": "source.v9-batch-open",
+        "returned-footer-batch-top": "source.catalog",
+        "opened-footer-import-top": "source.v9-import-open",
+        "returned-footer-import-top": "source.catalog",
+        "settings-returned-top": "settings.source-return"
+      },
+      "actions": {
+        "settings": "open-settings",
+        "source-ready-center": "open-v9-sources-center",
+        "opened-header-more-center": "tap-v9-header-more-center",
+        "returned-header-more-center": "back-v9-header-more-center",
+        "opened-footer-batch-center": "tap-v9-footer-batch-center",
+        "returned-footer-batch-center": "back-v9-footer-batch-center",
+        "opened-footer-import-center": "tap-v9-footer-import-center",
+        "returned-footer-import-center": "back-v9-footer-import-center",
+        "settings-returned-center": "tap-v9-header-back-center",
+        "source-ready-top": "open-v9-sources-top",
+        "opened-header-more-top": "tap-v9-header-more-top",
+        "returned-header-more-top": "back-v9-header-more-top",
+        "opened-footer-batch-top": "tap-v9-footer-batch-top",
+        "returned-footer-batch-top": "back-v9-footer-batch-top",
+        "opened-footer-import-top": "tap-v9-footer-import-top",
+        "returned-footer-import-top": "back-v9-footer-import-top",
+        "settings-returned-top": "tap-v9-header-back-top"
       }
     },
     {

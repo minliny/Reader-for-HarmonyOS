@@ -351,7 +351,7 @@ function v9Context(view) {
   restored.nodes = restored.nodes.filter(item=>item.alias !== sourceHeaderToolsButton.id).concat({...button,focused:true});
   if (!groups) for (const sample of [fixture.samples.scrolled,restored]) sample.nodes.push(node('reader-source-footer','0/4'));
   const popup = node('reader-source-v9-more-menu','0/5');
-  fixture.samples['more-open'] = capture('more-open',134,[popup,node('reader-source-v9-open-groups','0/5/0','Button')]);
+  fixture.samples['more-open'] = capture('more-open',134,[popup,{...node('reader-source-v9-open-groups','0/5/0','Button'),clickable:true}]);
   fixture.samples['v9-child'] = capture('v9-child',142,groups ? [node('reader-source-v9-groups','0/0')] :
     [node(sourceList,'0/1','List'),node('reader-source-v9-batch-dock','0/4')]);
   const settled = {outcomeSettled:true};

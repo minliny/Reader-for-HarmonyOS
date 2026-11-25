@@ -297,6 +297,7 @@ export function normalizeHarmonyLayout({
   observeSourceNativeFocus = false,
   publicSourceToolsQuery,
   publicSourceToolsGroup = '小说 书源',
+  observeSourceV9More = false,
 }) {
   const metrics = report?.metrics;
   const density = metrics?.densityPixels;
@@ -436,7 +437,7 @@ export function normalizeHarmonyLayout({
     const nativeTransientText = probeTransientText &&
       [a.originalText,a.text].find(value => typeof value === 'string' && value.length > 0);
     const footerToolsButton = a.type === 'Button' && /^source-back:[0-9]+:tools:footer$/u.test(a.id ?? '');
-    const headerToolsButton = publicSourceToolsQuery && a.type === 'Button' &&
+    const headerToolsButton = (publicSourceToolsQuery || observeSourceV9More) && a.type === 'Button' &&
       /^source-back:[1-9][0-9]*:tools:header$/u.test(a.id ?? '');
     let groupAlias;
     if (groupFocus?.[2] === 'selected') groupAlias = 'reader-source-group-selected';

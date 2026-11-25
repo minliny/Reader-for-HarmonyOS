@@ -46,6 +46,8 @@ import { sourceInlineImportAreaKind, sourceInlineImportButton, sourceInlineImpor
   sourceInlineImportEdges } from './source-inline-import-edge.mjs';
 import { sourceChromeActions, sourceChromeCase, sourceChromeDispatch, sourceChromeFixture,
   sourceChromeGeometry, sourceChromeStep, sourceChromeTopActions, sourceChromeTopEntry } from './source-chrome-dispatch.mjs';
+import { sourceV9ChromeCase, sourceV9ChromeDispatch, sourceV9ChromeFixture, sourceV9ChromeGeometry,
+  validateSourceV9ChromeCase, validSourceV9ChromeTap } from './source-v9-chrome.mjs';
 import { sourceFilterClearAction, sourceFilterClearCase, sourceFilterClearFixture, sourceFilterClearKind,
   sourceFilterClearQuery, sourceFilterClearStep } from './source-filter-clear-edge.mjs';
 import { sourceOfflineDetectButton, sourceOfflineDetectCase, sourceOfflineDetectEdgeCase, sourceOfflineDetectFailed, sourceOfflineDetectFixture,
@@ -73,6 +75,23 @@ export function searchSubmissionSource(action) {
   if (action?.op === 'click' && target === 'reader-search-history-public-item-0') return 'history';
   if (action?.op === 'click' && target === 'reader-bookshelf-search-submit') return 'button';
   return null;
+}
+
+const sourceSystemBack = (step, from) => step?.op === 'keyEvent' && step.key === 'Back' && step.from === from;
+
+function sourceV9GroupsSteps(steps, {entry,more,menu,depart,child,back,returned}) {
+  const opens = (step, from, id, parent) => step?.op === 'click' && step.gesture !== true && step.from === from &&
+    equalJson(step.target,{id,ancestors:[parent]});
+  const captures = (sample, after, anchor) => sample?.kind === 'sample' && sample.afterAction === after &&
+    sample.keyboard === false && sample.anchors.includes(anchor);
+  const transition = (step, phase) => step.waitFor?.some(wait => wait.kind === 'source.v9-list-transition' &&
+    wait.channel === 'business' && wait.fields?.['payload.view'] === 'groups' && wait.fields?.['payload.phase'] === phase);
+  return opens(steps[more],entry,'reader-source-header-tools-button','reader-source-header-tools') &&
+    captures(steps[menu],more,'reader-source-v9-more-menu') &&
+    opens(steps[depart],menu,'reader-source-v9-open-groups','reader-source-v9-more-menu') && transition(steps[depart],'enter') &&
+    captures(steps[child],depart,'reader-source-v9-groups') && steps[child].anchors.includes('reader-source-v9-group-back') &&
+    sourceSystemBack(steps[back],child) && transition(steps[back],'return') &&
+    captures(steps[returned],back,'reader-source-list') && steps[returned].anchors.includes('reader-source-header-tools-button');
 }
 
 function validateScopedCase(contract, samples, actions) {
@@ -137,26 +156,65 @@ function validateScopedCase(contract, samples, actions) {
   const v9ListReturn = contract.assertions.filter(item=>item.kind === 'v9-list-return');
   const v9Groups = contract.id === 'source-management.v9-group-return';
   const v9Batch = contract.id === 'source-management.v9-batch-return';
-  if (v9Groups || v9Batch || v9ListReturn.length) {
-    const view = v9Groups ? 'groups' : 'batch';
-    const depart = v9Groups ? 'open-groups' : 'open-batch';
+  const v9Scroll = contract.id === 'source-management.v9-scroll-return';
+  const v9Inset = contract.assertions.filter(item=>item.kind === 'fixed-insets' && item.expected?.v9GroupRoundTrip === true);
+  if (v9Groups || v9Batch || v9Scroll || v9ListReturn.length || v9Inset.length) {
     const steps = Object.fromEntries(contract.steps.map(step=>[step.id,step]));
-    const toBoundNative = (step, id, parent) => equalJson(step?.target,{id,ancestors:[parent]});
-    requireEvidence((v9Groups || v9Batch) && contract.version === 1 && contract.pageId === 'source-management' &&
-      fixture.id === `public-source-v9-${v9Groups ? 'group' : 'batch'}-return-v1` && fixture.publicSources === true &&
-      (v9Groups ? equalJson(fixture.inputs,{'public-source-prefix':'Phase1Return'}) : fixture.inputs === undefined) &&
-      v9ListReturn.length === 2 && new Set(v9ListReturn.map(assertion=>assertion.expected.proof)).size === 2 &&
-      v9ListReturn.every(assertion=>assertion.expected.view === view && assertion.action === 'v9-back' &&
-        assertion.sample === 'restored' && assertion.departAction === depart && assertion.toolsSample === 'v9-child' &&
-        assertion.baseline === (v9Groups ? 'more-open' : 'scrolled') &&
-        (!v9Groups || assertion.entrySample === 'scrolled' && assertion.openAction === 'open-more')) &&
-      steps['v9-back']?.op === 'keyEvent' && steps['v9-back'].key === 'Back' && steps['v9-back'].from === 'v9-child' &&
-      steps[depart]?.op === 'click' && steps['v9-child']?.afterAction === depart &&
-      (v9Groups ? steps['open-more']?.op === 'click' &&
-        toBoundNative(steps['open-more'],'reader-source-header-tools-button','reader-source-header-tools') &&
-        toBoundNative(steps[depart],'reader-source-v9-open-groups','reader-source-v9-more-menu') :
-        toBoundNative(steps[depart],'reader-source-footer-tools-button','reader-source-footer')),
+    const groups = v9Groups || v9Scroll;
+    const view = groups ? 'groups' : 'batch';
+    const depart = groups ? 'open-groups' : 'open-batch';
+    const child = v9Scroll ? 'groups' : 'v9-child';
+    const back = v9Scroll ? 'groups-back' : 'v9-back';
+    requireEvidence((v9Groups || v9Batch || v9Scroll) && contract.version === 1 && contract.pageId === 'source-management' &&
+      fixture.id === `public-source-v9-${v9Scroll ? 'scroll' : groups ? 'group' : 'batch'}-return-v1` && fixture.publicSources === true &&
+      (groups ? equalJson(fixture.inputs,{'public-source-prefix':'Phase1Return'}) : fixture.inputs === undefined) &&
+      (v9Scroll ? v9ListReturn.length === 1 && v9ListReturn[0].expected.proof === 'position' &&
+        v9ListReturn[0].priorAction === 'scroll-list' && v9ListReturn[0].filteredSample === 'filter-reset' :
+        v9ListReturn.length === 2 && new Set(v9ListReturn.map(assertion=>assertion.expected.proof)).size === 2) &&
+      v9ListReturn.every(assertion=>assertion.expected.view === view && assertion.action === back &&
+        assertion.sample === 'restored' && assertion.departAction === depart && assertion.toolsSample === child &&
+        assertion.baseline === (groups ? 'more-open' : 'scrolled') &&
+        (!groups || assertion.entrySample === 'scrolled' && assertion.openAction === 'open-more')) &&
+      (groups ? sourceV9GroupsSteps(steps,{entry:'scrolled',more:'open-more',menu:'more-open',depart,child,back,returned:'restored'}) :
+        steps[depart]?.op === 'click' && steps[depart].from === 'scrolled' &&
+        equalJson(steps[depart].target,{id:'reader-source-footer-tools-button',ancestors:['reader-source-footer']}) &&
+        steps[child]?.afterAction === depart && sourceSystemBack(steps[back],child)),
     'Source v9 return requires bounded native child entry, same-opening position and focus, and normal System Back');
+    const insetBindings = {action:'scroll-shallow',baseline:'fixture-sources-ready',movingSample:'shallow',sample:'list-tail',
+      entrySample:'scrolled',menuSample:'more-open',openAction:'open-more',departAction:'open-groups',toolsSample:'groups',
+      returnAction:'groups-back',restoreSample:'restored',tailAction:'scroll-tail-3'};
+    requireEvidence(!v9Scroll ? v9Inset.length === 0 : v9Inset.length === 1 &&
+      Object.entries(insetBindings).every(([field,value])=>v9Inset[0][field] === value) &&
+      contract.assertions.some(item=>item.kind === 'fixed-scroll' && item.required === true && item.expected.requireNativeSwipe === true) &&
+      contract.assertions.some(item=>item.kind === 'footer-end' && item.required === true && item.action === 'scroll-tail-3' &&
+        item.sample === 'list-tail' && item.expected.requireFreshEnd === true && item.expected.maxOverlapAreaVp2 === 0 && item.expected.minFraction === 1) &&
+      steps['scroll-away-from-tail']?.op === 'swipe' && steps['scroll-away-from-tail'].target === 'reader-source-list' &&
+      steps['scroll-away-from-tail'].from === 'tail-2' && steps['before-final-tail']?.afterAction === 'scroll-away-from-tail' &&
+      steps['scroll-tail-3']?.op === 'swipe' && steps['scroll-tail-3'].target === 'reader-source-list' && steps['scroll-tail-3'].from === 'before-final-tail' &&
+      steps['list-tail']?.afterAction === 'scroll-tail-3',
+    'Source v9 scroll requires static and moving insets, the same Groups return, and an independent fresh, unclipped tail');
+  }
+  const v9Parents = contract.assertions.filter(item=>item.kind === 'route-parent-after-v9-groups');
+  if (contract.id === 'source-management.v9-captured-parent-roundtrip' || v9Parents.length) {
+    const steps = Object.fromEntries(contract.steps.map(step=>[step.id,step]));
+    requireEvidence(contract.id === 'source-management.v9-captured-parent-roundtrip' && contract.version === 1 && contract.pageId === 'source-management' &&
+      fixture.id === 'public-source-v9-captured-parent-v1' && fixture.publicSources === true && fixture.bookTitle === 'Reader Phase 1 公共长目录' &&
+      v9Parents.length === 2 && new Set(v9Parents.map(item=>item.expected.parent)).size === 2 && v9Parents.every(item=>{
+        const {parent} = item.expected;
+        const parentSample = parent === 'search' ? 'entry-projection' : 'settings';
+        const entryAction = parent === 'search' ? 'manage-sources' : 'open-sources';
+        const parentTarget = parent === 'search' ? 'reader-search-source-recovery-primary' : 'reader-settings-source-management';
+        return item.required === true && item.parentSample === parentSample && item.entryAction === entryAction &&
+          steps[entryAction]?.op === 'click' && steps[entryAction].from === parentSample && steps[entryAction].target === parentTarget &&
+          item.entrySample === `${parent}-source-ready` && steps[item.entrySample]?.afterAction === entryAction &&
+          item.openAction === `${parent}-open-more` && item.menuSample === `${parent}-more-open` &&
+          item.departAction === `${parent}-open-groups` && item.toolsSample === `${parent}-groups` &&
+          item.returnAction === `${parent}-groups-back` && item.baseline === `${parent}-source-restored` &&
+          item.action === `back-to-${parent}` && item.sample === `${parent}-returned` &&
+          sourceV9GroupsSteps(steps,{entry:item.entrySample,more:item.openAction,menu:item.menuSample,
+            depart:item.departAction,child:item.toolsSample,back:item.returnAction,returned:item.baseline}) &&
+          sourceSystemBack(steps[item.action],item.baseline) && steps[item.sample]?.afterAction === item.action;
+      }), 'Source v9 must restore the separately captured native Search and Settings parents after real Group management');
   }
   if (contract.id === searchEmptyBookshelfCase || fixture.id === searchEmptyBookshelfFixture ||
       contract.steps.some(step=>step.target === emptyBookshelfEntry || step.target?.id === emptyBookshelfEntry) ||
@@ -626,7 +684,7 @@ function validateScopedCase(contract, samples, actions) {
     }
     if (typeof assertion.action === 'string') requireEvidence(actions.has(assertion.action),
       `Assertion ${assertion.id} refers to an unknown action`);
-    for (const field of ['priorAction','entryAction','returnAction','openAction','departAction','scrollAction']) {
+    for (const field of ['priorAction','entryAction','returnAction','openAction','departAction','scrollAction','tailAction']) {
       if (assertion[field] !== undefined && !actions.has(assertion[field])) {
         throw new Error(`Assertion ${assertion.id} refers to an unknown action in ${field}`);
       }
@@ -722,7 +780,7 @@ function validateScopedCase(contract, samples, actions) {
           wait.fields?.['payload.direction'] === 'dismiss' && wait.fields?.['payload.target.level'] === 'hidden'),
       `Assertion ${assertion.id} requires the public measured IME hide, native noncurrent chapter click and committed hidden endpoint`);
     }
-    for (const field of ['editSample','movingSample','toolsSample','restoreSample','filteredSample','parentSample','entrySample','dialogSample']) {
+    for (const field of ['editSample','movingSample','toolsSample','restoreSample','filteredSample','parentSample','entrySample','dialogSample','menuSample']) {
       if (assertion[field] !== undefined && (!samples.has(assertion[field]) || scoped.has(assertion[field]))) {
         throw new Error(`Assertion ${assertion.id} refers to an unknown or action-only sample in ${field}`);
       }
@@ -790,6 +848,10 @@ function validateScopedCase(contract, samples, actions) {
       prior = back;
       baseline = returned;
     }
+  }
+  if (contract.id === sourceV9ChromeCase || fixture.id === sourceV9ChromeFixture ||
+      contract.assertions.some(assertion=>[sourceV9ChromeGeometry,sourceV9ChromeDispatch].includes(assertion.kind))) {
+    requireEvidence(validateSourceV9ChromeCase(contract), 'V9 Source chrome requires all exact native tap and first Back pairs');
   }
   const chromeChecks = contract.assertions.filter(assertion => [sourceChromeGeometry,sourceChromeDispatch].includes(assertion.kind));
   if (contract.id === sourceChromeCase || fixture.id === sourceChromeFixture || chromeChecks.length) {
@@ -935,6 +997,7 @@ function validateScopedCase(contract, samples, actions) {
         (recoveryEdge || sharedUnknownExpand) && sourceRecoveryExpandEdgeStep(step) || readTouch && sourceReadRetryTouchStep(step,fixture) ||
         sourceControlTouchStep(step,fixture) ||
         contract.id === sourceChromeCase && sourceChromeStep(step) ||
+        contract.id === sourceV9ChromeCase && validSourceV9ChromeTap(step,fixture) ||
         contract.id === sourceFilterClearCase && sourceFilterClearStep(step,fixture)) continue;
     const baseline = contract.steps.find(item => item.id === step.from);
     const toggle = sourceToggleEdgeAllowed(step.target, step.tapEdge);

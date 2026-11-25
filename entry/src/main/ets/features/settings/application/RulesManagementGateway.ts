@@ -215,8 +215,9 @@ export class RulesManagementGateway {
       .map((value: unknown): ManagedRuleSubscription => this.decodeRuleSubscription(value));
   }
 
-  async saveRuleSubscription(draft: RuleSubscriptionDraft): Promise<void> {
-    await this.requestMutation('rule-sub.put',this.ruleSubscriptionParams(draft));
+  async saveRuleSubscription(draft: RuleSubscriptionDraft): Promise<ManagedRuleSubscription> {
+    const result = await this.requestMutation('rule-sub.put', this.ruleSubscriptionParams(draft));
+    return this.decodeRuleSubscription(result.data['sub']);
   }
 
   /** Capture the original provider and rule lineage before opening Host HTTP. */

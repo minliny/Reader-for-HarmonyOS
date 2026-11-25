@@ -751,6 +751,7 @@ test('source toggle owner binds only the public fixture intent to its fresh conf
   const {registerHooks} = await import('node:module');
   const {selectedProductionMethods} = await import('../../lib/selected-production-methods.mjs');
   const {ReaderWriteEvidence} = await import('../../../entry/src/main/ets/app/ReaderWriteEvidence.ts');
+  const {projectSourceV9Check} = await import('../../../entry/src/main/ets/features/source/presentation/SourceManagementV9.ts');
   const verification = await import('../../../entry/src/main/ets/features/source/ui/SourceManagementVerification.ts');
   const receiptModule = new URL('../../../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts',import.meta.url);
   const hook = registerHooks({resolve(specifier, context, next) {
@@ -766,7 +767,7 @@ test('source toggle owner binds only the public fixture intent to its fresh conf
   const production = new URL('../../../entry/src/main/ets/features/source/application/SourceOrchestrator.ets',import.meta.url);
   const entry = read('../fixtures/Reader Phase 1 public sources.json')[0];
   const publicSource = {sourceId:entry.bookSourceUrl,baseUrl:entry.bookSourceUrl,name:entry.bookSourceName,
-    group:entry.bookSourceGroup,enabled:entry.enabled,enabledExplore:entry.enabledExplore};
+    group:entry.bookSourceGroup,category:'novel',enabled:entry.enabled,enabledExplore:entry.enabledExplore};
   const anchor = verification.sourceVerificationToggleAnchor(publicSource);
   assert.ok(anchor > 0);
   function fixture({source = publicSource, write = 'confirmed', readback} = {}) {
@@ -776,7 +777,8 @@ test('source toggle owner binds only the public fixture intent to its fresh conf
     const Source = selectedProductionMethods(production,'SourceOrchestrator',
       ['toggleSource','observeToggleAdmission','applyToggle','publishToggleReceipt','publishReceipt','publishStatus',
         'isCurrentSession','originalBlocked','updateSourceWithRetry','presentSources','sourceCheckSignature'], {
-        ...verification, ReaderWriteEvidence, projectPersistedReceipt, ReaderRuntimeOwner:{isCurrent:() => true},
+        ...verification, ReaderWriteEvidence, projectPersistedReceipt, projectSourceV9Check,
+        ReaderRuntimeOwner:{isCurrent:() => true},
         sourceProjectionGeneration:10,isPendingTransactionError:() => false,DOMAIN:0,hilog:{error() {},warn() {}},
         ReaderUIVerificationProbe:{enabled:() => true,emit:(kind, channel, payload) => {
           assert.equal(kind,'source.toggle');
@@ -788,6 +790,7 @@ test('source toggle owner binds only the public fixture intent to its fresh conf
       session:7,presentationIdentity:JSON.stringify(['fixture-route',owner.mounting,owner.generation,'source']),
       isCurrent:() => true,toggleSeq:0,operationChain:Promise.resolve(),sources:[source],hasRead:true,
       latestProjection:{action:'load',sourceId:''},checkingSourceIds:new Map(),checkResults:new Map(),
+      reportClearTimes:new Map(),importedReports:new Map(),verifiedLoginSources:new Map(),deniedLoginReports:new Map(),
       emit() {},emitProjection() {},emitStatus() {},
       gateway:{
         observeWrites(next) { observedWrite = next; },
@@ -1089,6 +1092,110 @@ test('source fixed inset requires native carriers and the raw list end gap', () 
   const missing = scrollFixture();
   missing.samples.shallow.nodes = missing.samples.shallow.nodes.filter(node => node.id !== 'reader-native-slot:29');
   assert.equal(evaluateScroll(id,missing).verdict,'NOT_RUN');
+});
+
+const v9ScrollContract = read('../cases/source-management.v9-scroll-return.json');
+
+function v9ScrollFixture() {
+  const context = scrollFixture();
+  const catalogue = context.events.find(item=>item.payload.trigger === 'category').payload;
+  context.events = context.events.filter(item=>item.payload.atEnd !== true);
+  const node = (id,path,type = 'Column',fields = {})=>({ ...makeNode(id),path,type,
+    parentPath:path.slice(0,path.lastIndexOf('/')),enabled:true,clickable:type === 'Button',...fields });
+  const build = (id,seq,filterTop,lastRowBottom)=>{
+    const result = scrollSample(id,seq,filterTop,lastRowBottom);
+    Object.assign(result,{afterSeq:seq+1,hostBeginMs:seq,hostEndMs:seq+1,captureComplete:true});
+    const rect = {left:0,top:136,width:1280,height:2696};
+    Object.assign(result.window,{rectPx:rect,visibleRectPx:rect});
+    for (const item of result.nodes) Object.assign(item,{source:'native-tree',clip:false,
+      parentPath:item.path.slice(0,item.path.lastIndexOf('/'))});
+    return result;
+  };
+  const more = node('source-back:3:tools:header','0/1/1/0','Button',{alias:'reader-source-header-tools-button'});
+  const addHeader = sample=>{
+    sample.nodes.push(node('reader-source-header-tools','0/1/1'),{...more});
+    return sample;
+  };
+  context.samples['filter-reset'] = build('filter-reset',30,339);
+  context.samples.scrolled = addHeader(build('scrolled',39,undefined,1600));
+  context.samples['more-open'] = build('more-open',47);
+  context.samples['more-open'].nodes.push(node('reader-source-v9-more-menu','0/3'),node('reader-source-v9-open-groups','0/3/0','Button'));
+  context.samples.groups = build('groups',55);
+  context.samples.groups.nodes = [node('reader-source-v9-groups','0/0')];
+  context.samples.restored = addHeader(build('restored',65,undefined,1600));
+  context.samples['tail-2'] = build('tail-2',70);
+  context.samples['before-final-tail'] = build('before-final-tail',78);
+  context.samples['before-final-tail'].evidenceRefs = [ref('raw/before-final-tail.json')];
+  context.samples['before-final-tail'].captureComplete = false;
+  context.samples['list-tail'] = build('list-tail',87,undefined,2524);
+  const dispatched = (from,seq,op,payload)=>({...action(seq,op),from,op,outcomeSettled:true,
+    afterSeq:seq+3,hostBeginMs:seq,hostEndMs:seq+3,...payload});
+  Object.assign(context.actions,{
+    'scroll-list':dispatched('filter-reset',32,'swipe',{targetId:'reader-source-list'}),
+    'open-more':dispatched('scrolled',42,'click',{targetId:more.alias}),
+    'open-groups':dispatched('more-open',50,'click',{targetId:'reader-source-v9-open-groups'}),
+    'groups-back':dispatched('groups',58,'keyEvent',{key:'Back'}),
+    'scroll-away-from-tail':dispatched('tail-2',72,'swipe',{targetId:'reader-source-list'}),
+    'scroll-tail-3':dispatched('before-final-tail',81,'swipe',{targetId:'reader-source-list'}),
+  });
+  const position = {owner,filterRevision:2,anchor:14,itemIndex:9,itemYVp:224,offsetVp:440,lastAnchor:14,
+    viewportWidthVp:366,viewportHeightVp:770};
+  const group = {owner,view:'groups',revision:1};
+  context.events.push(event(34,'source.scroll',{...position,trigger:'settled'}),
+    event(51,'source.scroll',{...position,trigger:'v9-list-enter'}),
+    event(52,'source.v9-list-transition',{...group,phase:'enter'}),
+    event(59,'source.v9-list-transition',{...group,phase:'return',filterMatchesDeparture:true}),
+    event(60,'source.projection',{...catalogue,trigger:'v9-return'}),
+    event(61,'source.scroll',{...position,trigger:'v9-list-return',layoutMatchesSaved:true,filterMatchesSaved:true}),
+    event(73,'source.scroll',{...position,trigger:'settled',atEnd:false}),
+    event(85,'source.scroll',{...position,trigger:'settled',atEnd:true}));
+  return context;
+}
+
+const evaluateV9Scroll = (id, context) => {
+  const assertion = v9ScrollContract.assertions.find(item=>item.id === id);
+  return evaluateSource({...assertion,acceptedSources:assertion.sources},context);
+};
+
+test('v9 fixed inset scroll retains native movement, the real Groups visit and a fresh last row',()=>{
+  const context = v9ScrollFixture();
+  for (const id of ['source.layout.footer-fixed','source.scroll.filter-reset','source.v9.scroll.group-return',
+    'source.layout.fixed-insets','source.layout.footer-last-row']) {
+    const result = evaluateV9Scroll(id,context);
+    assert.equal(result.verdict,'PASS',`${id}: ${result.reason}`);
+  }
+  const result = evaluateV9Scroll('source.layout.fixed-insets',context);
+  assert.equal(result.actual['fixture-sources-ready'].nativeStartGapPx,203);
+  assert.equal(result.actual.shallow.filterDeltaPx,-199);
+  assert.equal(result.actual['list-tail'].nativeEndGapPx,308);
+  assert.ok(result.actual.restored);
+  assert.ok(result.evidenceRefs.some(item=>item.path === 'raw/groups.png'));
+});
+
+test('v9 fixed inset and tail reject shifted restored chrome, clipping, stale end, and fake Tools handoff',()=>{
+  const shifted = v9ScrollFixture();
+  const header = shifted.samples.restored.nodes.find(item=>item.id === 'reader-native-slot:29');
+  header.rectPx = {...header.rectPx,height:header.rectPx.height + 2};
+  assert.equal(evaluateV9Scroll('source.layout.fixed-insets',shifted).reason,'restored: fixed-header-envelope');
+  const {payload:geometry} = shifted.events.find(item=>item.kind === 'source.geometry');
+  shifted.events.splice(10,0,event(62,'source.geometry',{...geometry,headerHeightVp:205/3.5,listStartInsetVp:205/3.5}));
+  assert.equal(evaluateV9Scroll('source.layout.fixed-insets',shifted).reason,'restored: fixed-carriers-across-group-return');
+  const clipped = v9ScrollFixture();
+  const row = clipped.samples['list-tail'].nodes.find(item=>item.id === 'reader-source-row-14');
+  row.rectPx = row.visibleRectPx = {...row.rectPx,top:row.rectPx.top + 2};
+  assert.equal(evaluateV9Scroll('source.layout.fixed-insets',clipped).verdict,'FAIL');
+  assert.equal(evaluateV9Scroll('source.layout.footer-last-row',clipped).verdict,'FAIL');
+  const stale = v9ScrollFixture();
+  stale.events.at(-1).eventSeq = 80;
+  for (const id of ['source.layout.fixed-insets','source.layout.footer-last-row'])
+    assert.equal(evaluateV9Scroll(id,stale).verdict,'NOT_RUN');
+  const noRearm = v9ScrollFixture();
+  noRearm.events.find(item=>item.eventSeq === 73).payload.atEnd = true;
+  assert.equal(evaluateV9Scroll('source.layout.fixed-insets',noRearm).verdict,'NOT_RUN');
+  const fake = v9ScrollFixture();
+  fake.events.splice(7,0,event(53,'source.route',{...owner,action:'tools',from:'source',to:'sourceTools'}));
+  assert.equal(evaluateV9Scroll('source.v9.scroll.group-return',fake).verdict,'FAIL');
+  assert.equal(evaluateV9Scroll('source.layout.fixed-insets',fake).verdict,'NOT_RUN');
 });
 
 function replayedFixture({definition = contract, context = evaluationFixture(), claim = 'invariants.B3',

@@ -161,6 +161,46 @@ async function transferFixture(SourceGateway: object, RulesManagementGateway: ob
   });
 }
 
+test('online import with a subscription adopts only confirmed matching sources as its initial baseline', async () => {
+  const url = 'https://packages.example/source.json';
+  const second = { ...novel, index: 1, sourceId: 'https://other.example',
+    bookSource: { bookSourceUrl: 'https://other.example', bookSourceName: '另一书源' } };
+  const subscription = { id: 11, name: '书源订阅', url, type: 0, autoUpdate: true, customOrder: 0, update: 0 };
+  const runtime = { async loadOnlineJsonDocument() { return { text: 'downloaded package' }; } };
+  const applied: string[][] = [];
+  class ImportGateway {
+    supportsEphemeralSourceCheck() { return false; }
+    prepareGroupedSourceDocument() { return { items: [novel, second], failures: [], filteredUnsupportedCount: 0 }; }
+    async loadSourceGroupCatalog() { return { groups: [], memberships: [], revision: 9 }; }
+    async importGroupedSources() {
+      return { addedCount: 1, updatedCount: 0, failedCount: 1, sourceIds: [novel.sourceId],
+        results: [{ index: novel.index, status: 'imported' }, { index: second.index, status: 'failed' }], failures: [] };
+    }
+  }
+  class RuleGateway {
+    observeWrites() {}
+    mutationSnapshot() { return { blocked: false, generation: 0, canRetryOriginal: false }; }
+    async saveRuleSubscription() { return subscription; }
+    async captureSourceSubscription(row: object) { return { subscription: row }; }
+    async previewSourceSubscription(id: number, document: string, expected: object) {
+      expect([id, JSON.parse(document), expected]).toEqual([11, [novel.bookSource], { subscription }]);
+      return { changes: [{ sourceId: novel.sourceId, kind: 'unchanged' }] };
+    }
+    async applySourceSubscription(_plan: object, ids: string[]) {
+      applied.push(ids);
+      return ids;
+    }
+  }
+  const flowClass = await transferFixture(ImportGateway, RuleGateway);
+  let state: SourceV9TransferSnapshot | undefined;
+  const flow = new flowClass(runtime, (next: SourceV9TransferSnapshot) => { state = next; }, () => true, () => {});
+  await flow.parseImport({ origin: 'url', url, paste: '' });
+  await flow.importSelected({ strategy: 'preserve', subscriptionName: subscription.name, subscriptionUrl: url });
+  expect(applied).toEqual([[]]);
+  expect(state?.status).toBe('已保存为书源订阅');
+  expect(state?.importResult).toMatchObject({ addedCount: 1, failedCount: 1 });
+});
+
 test('subscription conflict overwrite reconciles the Core baseline from the original package and counts confirmed writes', async () => {
   const conflict = { ...novel, index: 1, sourceId: 'https://conflict.example', name: '本地已修改',
     bookSource: { bookSourceUrl: 'https://conflict.example', bookSourceName: '远端规则' } };
@@ -171,11 +211,14 @@ test('subscription conflict overwrite reconciles the Core baseline from the orig
   const actions: string[] = [];
   let matchingAfterWrite = false;
   let previewMatches = true;
+  let supportsConditionalOverwrite = true;
+  let sourceReads = 0;
   let fetches = 0;
   const digest = 'b'.repeat(64);
   const subscription = { id: 11, name: '书源订阅', type: 0, url: 'https://packages.example/source.json', autoUpdate: true, customOrder: 0, update: 0 };
   const runtime = {
-    supportsCoreCapability: (capability: string) => capability === 'source.import.conditional.v1',
+    supportsCoreCapability: (capability: string) =>
+      supportsConditionalOverwrite && capability === 'source.import.conditional.v1',
     async loadOnlineJsonDocument() {
       fetches++;
       return { text: JSON.stringify(remote) };
@@ -184,7 +227,10 @@ test('subscription conflict overwrite reconciles the Core baseline from the orig
   class ImportGateway {
     supportsEphemeralSourceCheck() { return false; }
     prepareGroupedSourceDocument() { return { items: [novel, conflict], failures: [], filteredUnsupportedCount: 0 }; }
-    async loadSources() { return [{ sourceId: conflict.sourceId, sourceVersion: capturedVersion }]; }
+    async loadSources() {
+      sourceReads++;
+      return [{ sourceId: conflict.sourceId, sourceVersion: capturedVersion }];
+    }
     async overwriteSubscriptionSource(id: string, raw: object, version: string) {
       expect(raw).toEqual(conflict.bookSource);
       actions.push('overwrite');
@@ -243,6 +289,18 @@ test('subscription conflict overwrite reconciles the Core baseline from the orig
   expect(fetches).toBe(3);
   expect(state?.status).toBe('已确认应用 1 项');
   expect(state?.error).toMatch(/订阅基线/);
+
+  supportsConditionalOverwrite = false;
+  const priorReads = sourceReads;
+  await flow.previewSubscriptions([11]);
+  expect(sourceReads).toBe(priorReads);
+  flow.resolveReviewConflict('11:' + conflict.sourceId, true);
+  expect(state?.reviews[0].rows.find(row => row.sourceId === conflict.sourceId))
+    .toMatchObject({ kind: 'conflict', selectable: false, selected: false, overwrite: false });
+  await flow.applyReviews();
+  expect(overwrites).toHaveLength(2);
+  expect(sourceWrites).toEqual([[novel.sourceId], [], [novel.sourceId]]);
+  expect(state?.status).toBe('已确认应用 1 项');
 });
 
 test('an unconfirmed grouped import resumes the exact retained operation and completes the original result', async () => {

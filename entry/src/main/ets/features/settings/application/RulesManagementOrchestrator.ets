@@ -201,7 +201,9 @@ export class RulesManagementOrchestrator {
 
   saveRuleSubscription(draft: RuleSubscriptionDraft, presentationIdentity?: string): void {
     if (!this.admitPresentation(presentationIdentity)) return;
-    this.mutate('保存规则订阅', async (): Promise<void> => this.gateway.saveRuleSubscription(draft));
+    this.mutate('保存规则订阅', async (): Promise<void> => {
+      await this.gateway.saveRuleSubscription(draft);
+    });
   }
 
   deleteRuleSubscription(id: number, presentationIdentity?: string): void {

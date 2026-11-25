@@ -355,13 +355,36 @@ export class SourceV9TransferOwner {
     this.readBack(reports, { sourceIds: result.sourceIds, result: summary });
     if (result.sourceIds.length > 0 && save.subscriptionUrl !== undefined &&
       save.subscriptionUrl === this.acceptedImportUrl && current()) {
+      let subscription: ManagedRuleSubscription;
       try {
-        await this.rules.saveRuleSubscription({ name: save.subscriptionName?.trim() || '在线书源订阅',
+        subscription = await this.rules.saveRuleSubscription({ name: save.subscriptionName?.trim() || '在线书源订阅',
           url: save.subscriptionUrl, type: 0, customOrder: 0, autoUpdate: true });
-        if (current()) this.patch({ status: '已保存为书源订阅' });
       } catch (_) {
         if (current()) this.publishOperationError('书源已导入，订阅保存未确认');
+        return;
       }
+      if (!current()) return;
+      this.patch({ status: '已保存为书源订阅' });
+      await this.captureImportedSubscriptionBaseline(subscription, selected, result.sourceIds, current);
+    }
+  }
+
+  private async captureImportedSubscriptionBaseline(subscription: ManagedRuleSubscription, selected: SourceImportCandidate[],
+    sourceIds: string[], current: () => boolean): Promise<void> {
+    try {
+      const imported = new Set(sourceIds);
+      const document = JSON.stringify(selected.filter((row: SourceImportCandidate): boolean => imported.has(row.sourceId))
+        .map((row: SourceImportCandidate): JsonObject => row.bookSource));
+      const expected = await this.rules.captureSourceSubscription(subscription, current);
+      const plan = await this.rules.previewSourceSubscription(subscription.id, document, expected, current);
+      if (!current()) return;
+      const matched = plan.changes.filter((change: RuleSourceChange): boolean =>
+        imported.has(change.sourceId) && change.kind === 'unchanged').length;
+      // Core only records unchanged fingerprints in an empty selection.
+      if (matched > 0) await this.rules.applySourceSubscription(plan, [], current);
+      if (current() && matched !== imported.size) this.publishOperationError('部分已导入书源的订阅基线未确认');
+    } catch (_) {
+      if (current()) this.publishOperationError('已导入书源的订阅基线未确认');
     }
   }
 
@@ -441,7 +464,8 @@ export class SourceV9TransferOwner {
     }
 
     const expected = await this.rules.captureSourceSubscription(subscription, current);
-    const sourcesBefore = await this.gateway.loadSources(undefined, false, current);
+    const conditionalOverwrite = this.runtime.supportsCoreCapability('source.import.conditional.v1');
+    const sourcesBefore = conditionalOverwrite ? await this.gateway.loadSources(undefined, false, current) : [];
     if (!current()) throw new Error('订阅检查已取消');
     const document = (await this.runtime.loadOnlineJsonDocument(provider)).text;
     if (!current()) throw new Error('订阅检查已取消');
@@ -463,7 +487,7 @@ export class SourceV9TransferOwner {
       const expectedVersion = versions.get(change.sourceId);
       const normalApply = change.kind === 'added' || change.kind === 'update';
       const overwriteSupported = change.kind === 'conflict' && expectedVersion !== undefined &&
-        this.runtime.supportsCoreCapability('source.import.conditional.v1');
+        /^[a-f0-9]{64}$/.test(expectedVersion);
       return { key: `${subscription.id}:${change.sourceId}`, name: change.name, kind: change.kind,
         candidate, sourceId: change.sourceId, expectedVersion, overwrite: false,
         selectable: candidate !== undefined && (normalApply || overwriteSupported),
