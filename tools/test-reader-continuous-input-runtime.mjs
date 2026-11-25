@@ -19,6 +19,23 @@ const Stage = productionMotionMethods(new URL('ui/ReaderContinuousReadingStage.e
   { TouchType, CONTINUOUS_TAP_SLOP: 12, ReaderPageInputClock: Clock, readerMotionNowMs: () => receivedMs, READER_PAGE_GESTURE_LONG_PRESS_MS: 500 });
 const touch=(type,id,x,y)=>({type,changedTouches:[{id,x,y}],touches:[{id,x,y}]});
 if(selectedCase==='input-progress'){
+const { ReaderPageInputClock } = await import('../entry/src/main/ets/features/reading/ui/ReaderPageInputClock.ts');
+{
+  const stalled = new ReaderPageInputClock();
+  const began = stalled.sample(2e9, 1000);
+  assert.equal(stalled.sample(2e9, 1008), began, 'duplicate samples within one frame retain native precision');
+  assert.equal(stalled.resetVelocity, false);
+  const resumed = stalled.sample(2e9, 1016);
+  assert.equal(resumed - began, 16, 'several short receives cannot keep native time stalled');
+  assert.equal(stalled.resetVelocity, true);
+  assert.equal(stalled.sample(2e9, 7000) - began, 6000, 'constant native timestamps preserve a long hold');
+  assert.equal(stalled.sample(2.008e9, 7008) - began, 6008, 'native recovery rebases without a backwards jump');
+  stalled.sample(2.016e9, 7016);
+  assert.equal(stalled.resetVelocity, false);
+  const zero = new ReaderPageInputClock();
+  assert.equal(zero.sample(0, 100), 0);
+  assert.equal(zero.sample(0, 101), 1, 'zero with an advancing receive clock is unusable');
+}
 let interaction = 0, boundary = 0, rectY = -20;
 const reports = [];
 const stage = Object.assign(new Stage(), {
