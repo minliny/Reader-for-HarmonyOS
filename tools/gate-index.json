@@ -93253,7 +93253,7 @@
         "明确选择本精确case并提供当前变更理由"
       ],
       "estimatedCostType": "source-AST/selected-case",
-      "reviewedSourceSha256": "c4d9e69275102d0e559b75282cfcc90a61759ff96dd1094556be32293e8341c1",
+      "reviewedSourceSha256": "759509e00954ae1f10f876bdb5e81b69d07b8f602c305500fbc403ec26befefb",
       "definitionInputs": [
         {
           "path": "docs/testing/ui-framework-contract-definition-review-20261108.md",
@@ -93301,7 +93301,7 @@
         },
         {
           "path": "tools/test-architecture-shared-producers.mjs",
-          "sha256": "c4d9e69275102d0e559b75282cfcc90a61759ff96dd1094556be32293e8341c1"
+          "sha256": "759509e00954ae1f10f876bdb5e81b69d07b8f602c305500fbc403ec26befefb"
         }
       ],
       "definitionInputProblems": [],
@@ -93311,7 +93311,7 @@
         "当前定义的局部SDK AST/方法结果独立记录；默认OFF，非产品/发布验收，不扩展为Native/HAP/设备结论。"
       ],
       "limitations": "静态显式转发检查不解释任意运行时函数体或推断返回，也不证明业务准入、Native、焦点、测量或视觉。",
-      "resourceDefinitionSha256": "3c6a12b6865e38e518e22ca9cbaba3d4716dae548a4b6be4012ed963ef0f4896",
+      "resourceDefinitionSha256": "00f6af761f42abd1d4255cc2b253dbd09d2c3ad1d7d7181894939a65606c911f",
       "definitionReview": "docs/testing/ui-framework-contract-definition-review-20261108.md"
     },
     {
@@ -93446,7 +93446,7 @@
         "直接case结果与后续经原gate分派结果分别保存；不证明Core、Native、保存ACK、IME、焦点、冷恢复或全产品验收。"
       ],
       "limitations": "受控ports不能证明输入法、原生窗口、真实阅读保存或全旅程返回行为。",
-      "resourceDefinitionSha256": "3c6a12b6865e38e518e22ca9cbaba3d4716dae548a4b6be4012ed963ef0f4896"
+      "resourceDefinitionSha256": "00f6af761f42abd1d4255cc2b253dbd09d2c3ad1d7d7181894939a65606c911f"
     },
     {
       "id": "H-architecture-shared-producers#settings-arguments",
