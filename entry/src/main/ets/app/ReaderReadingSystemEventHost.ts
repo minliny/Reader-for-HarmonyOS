@@ -70,15 +70,16 @@ export class ReaderReadingSystemEventHost {
   setScreenLockHandler(handler: (locked: boolean) => void): void {
     if (this.disposed) return;
     this.screenLockHandler = handler;
-    void this.ensureScreenOffSubscription().then((): void => this.readScreenLock());
+    void this.ensureScreenOffSubscription().then((): void => { void this.readScreenLock(); });
   }
 
-  private readScreenLock(): void {
+  private async readScreenLock(): Promise<void> {
     if (this.disposed || this.screenLockHandler === undefined) return;
     const revision = ++this.screenStateRevision;
-    void screenLock.isScreenLocked().then((locked: boolean): void => {
+    try {
+      const locked = await screenLock.isScreenLocked();
       if (!this.disposed && revision === this.screenStateRevision) this.screenLockHandler?.(locked);
-    }).catch((): void => {});
+    } catch (_) { /* Screen events continue to provide lock state if the query is unavailable. */ }
   }
 
   private handleScreenEvent(event: string): void {
@@ -90,7 +91,7 @@ export class ReaderReadingSystemEventHost {
     } else if (event === support.COMMON_EVENT_SCREEN_UNLOCKED) {
       this.screenLockHandler?.(false);
     } else if (event === support.COMMON_EVENT_SCREEN_ON) {
-      this.readScreenLock();
+      void this.readScreenLock();
     }
   }
 
@@ -106,13 +107,12 @@ export class ReaderReadingSystemEventHost {
     this.screenOffSubscriptionGeneration += 1;
     const subscriber = this.screenOffSubscriber;
     this.screenOffSubscriber = undefined;
-    if (subscriber !== undefined) {
-      try {
-        commonEventManager.unsubscribe(subscriber);
-      } catch (_error) {
-        // A destroyed Ability may have already released the subscriber.
-      }
-    }
+    if (subscriber !== undefined) this.releaseScreenSubscription(subscriber);
+  }
+
+  private releaseScreenSubscription(subscriber: commonEventManager.CommonEventSubscriber): void {
+    try { commonEventManager.unsubscribe(subscriber); }
+    catch (_) { /* An already-released subscriber has no remaining event owner. */ }
   }
 
   private unregisterVolumeKeys(): void {
@@ -136,27 +136,26 @@ export class ReaderReadingSystemEventHost {
     }
     const generation = this.screenOffSubscriptionGeneration + 1;
     this.screenOffSubscriptionGeneration = generation;
+    let subscriber: commonEventManager.CommonEventSubscriber | undefined = undefined;
     try {
-      const subscriber = await commonEventManager.createSubscriber({
+      subscriber = await commonEventManager.createSubscriber({
         events: [commonEventManager.Support.COMMON_EVENT_SCREEN_OFF, commonEventManager.Support.COMMON_EVENT_SCREEN_ON,
           commonEventManager.Support.COMMON_EVENT_SCREEN_LOCKED, commonEventManager.Support.COMMON_EVENT_SCREEN_UNLOCKED],
       });
-      if (this.disposed || generation !== this.screenOffSubscriptionGeneration) {
-        commonEventManager.unsubscribe(subscriber);
-        return;
-      }
+      if (this.disposed || generation !== this.screenOffSubscriptionGeneration) return;
       await commonEventManager.subscribeToEvent(
         subscriber,
-        (data: commonEventManager.CommonEventData): void => this.handleScreenEvent(data.event),
+        (data: commonEventManager.CommonEventData): void => {
+          if (!this.disposed && this.screenOffSubscriber === subscriber) this.handleScreenEvent(data.event);
+        },
       );
-      if (this.disposed || generation !== this.screenOffSubscriptionGeneration) {
-        commonEventManager.unsubscribe(subscriber);
-        return;
-      }
+      if (this.disposed || generation !== this.screenOffSubscriptionGeneration) return;
       this.screenOffSubscriber = subscriber;
     } catch (_error) {
       // Unsupported devices keep the ordinary system behavior. A later
       // mounted reader will attempt a fresh subscription.
+    } finally {
+      if (subscriber !== undefined && this.screenOffSubscriber !== subscriber) this.releaseScreenSubscription(subscriber);
     }
   }
 }

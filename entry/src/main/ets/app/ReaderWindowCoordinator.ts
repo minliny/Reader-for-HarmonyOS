@@ -164,6 +164,8 @@ export class ReaderWindowCoordinator {
     new ReaderWindowChromeRequest('app', APP_CHROME_STYLE);
   private static desiredChromeRevision: number = 0;
   private static appliedChromeRevision: number = -1;
+  private static limitedChromeRevision: number = -1;
+  private static chromeRequestedEpoch: number = -1;
   private static chromeFlushRunning: boolean = false;
   private static appOrientation: window.Orientation = window.Orientation.UNSPECIFIED;
   private static appKeepScreenOn: boolean = false;
@@ -200,11 +202,11 @@ export class ReaderWindowCoordinator {
     ReaderWindowCoordinator.detach();
     ReaderWindowCoordinator.installEpoch += 1;
     const epoch = ReaderWindowCoordinator.installEpoch;
+    const properties = win.getWindowProperties();
     ReaderWindowCoordinator.mainWindow = win;
     ReaderWindowCoordinator.configurationFontScale = ReaderWindowCoordinator.validConfigurationFontScale(configuration?.fontSizeScale);
     // Listener reinstall can reuse the same live window. Only the Ability's
     // actual destruction path retires its native dialog attachments.
-    const properties = win.getWindowProperties();
     ReaderNativeAlertWindow.bind(properties.id);
     ReaderDocumentPickerActivity.bind(properties.id);
     ReaderDocumentPickerActivity.setForeground(AppStorage.get<boolean>('readerAppForeground') !== false);
@@ -280,6 +282,7 @@ export class ReaderWindowCoordinator {
     ReaderWindowCoordinator.appliedPolicyRevision = -1;
     ReaderWindowCoordinator.limitedPolicyRevision = -1;
     ReaderWindowCoordinator.appliedChromeRevision = -1;
+    ReaderWindowCoordinator.limitedChromeRevision = -1;
     if (win !== undefined) ReaderWindowCoordinator.publishUiConfigurationRevision();
   }
 
@@ -334,7 +337,7 @@ export class ReaderWindowCoordinator {
     const sameOwner = ReaderWindowCoordinator.desiredReaderWindowOwner === owner;
     // Opening controls can leave both visibility and geometry unchanged.
     // Retry a pending theme write even when the window policy is deduplicated;
-    // a successfully applied style performs no native write here.
+    // applied and unsupported styles perform no native write here.
     if (!policy.hideStatusBar) void ReaderWindowCoordinator.flushChrome();
     if (sameOwner && ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader' &&
       ReaderWindowCoordinator.sameWindowPolicy(
@@ -431,7 +434,9 @@ export class ReaderWindowCoordinator {
   }
 
   static reapplyChrome(): void {
-    ReaderWindowCoordinator.desiredChromeRevision += 1;
+    if (ReaderWindowCoordinator.appliedChromeRevision === ReaderWindowCoordinator.desiredChromeRevision) {
+      ReaderWindowCoordinator.appliedChromeRevision = -1;
+    }
     void ReaderWindowCoordinator.flushChrome();
   }
 
@@ -443,8 +448,8 @@ export class ReaderWindowCoordinator {
       (configuration !== undefined && expectedWindow !== win)) return;
     const scale = ReaderWindowCoordinator.validConfigurationFontScale(configuration?.fontSizeScale);
     if (scale !== undefined) ReaderWindowCoordinator.configurationFontScale = scale;
-    try { ReaderWindowCoordinator.refreshMetrics(); }
-    finally { ReaderWindowCoordinator.publishUiConfigurationRevision(); }
+    ReaderWindowCoordinator.refreshPolicyMetrics();
+    ReaderWindowCoordinator.publishUiConfigurationRevision();
   }
 
   private static validConfigurationFontScale(value: number | undefined): number | undefined {
@@ -462,7 +467,7 @@ export class ReaderWindowCoordinator {
     const epoch = ReaderWindowCoordinator.installEpoch;
     const refreshCurrent = (): void => {
       if (ReaderWindowCoordinator.mainWindow === win && ReaderWindowCoordinator.installEpoch === epoch) {
-        ReaderWindowCoordinator.refreshMetrics();
+        ReaderWindowCoordinator.refreshPolicyMetrics();
       }
     };
     ReaderWindowCoordinator.windowSizeListener = (_size: window.Size): void => {
@@ -832,7 +837,7 @@ export class ReaderWindowCoordinator {
   }
 
   private static requestChrome(request: ReaderWindowChromeRequest): void {
-    if (ReaderWindowCoordinator.desiredChrome.owner === request.owner &&
+    const sameStyle = ReaderWindowCoordinator.desiredChrome.owner === request.owner &&
       ReaderWindowCoordinator.desiredChrome.style.underlayColor === request.style.underlayColor &&
       ReaderWindowCoordinator.desiredChrome.style.tone === request.style.tone &&
       ReaderWindowCoordinator.desiredChrome.style.contentColor === request.style.contentColor &&
@@ -841,17 +846,23 @@ export class ReaderWindowCoordinator {
       (ReaderWindowCoordinator.desiredChrome.style.navigationContentColor ?? ReaderWindowCoordinator.desiredChrome.style.contentColor) ===
         (request.style.navigationContentColor ?? request.style.contentColor) &&
       ReaderWindowCoordinator.desiredChrome.style.paperThemeId === request.style.paperThemeId &&
-      ReaderWindowCoordinator.desiredChrome.style.transparentSystemBars === request.style.transparentSystemBars &&
-      ReaderWindowCoordinator.appliedChromeRevision === ReaderWindowCoordinator.desiredChromeRevision) {
-      return;
+      ReaderWindowCoordinator.desiredChrome.style.transparentSystemBars === request.style.transparentSystemBars;
+    if (sameStyle && ReaderWindowCoordinator.currentChromeSettled()) return;
+    if (!sameStyle) {
+      ReaderWindowCoordinator.desiredChrome = request;
+      ReaderWindowCoordinator.desiredChromeRevision += 1;
     }
-    ReaderWindowCoordinator.desiredChrome = request;
-    ReaderWindowCoordinator.desiredChromeRevision += 1;
     AppStorage.setOrCreate<string>('readerWindowChromeOwner', request.owner);
     AppStorage.setOrCreate<string>('readerWindowChromeUnderlayColor', request.style.underlayColor);
     AppStorage.setOrCreate<string>('readerWindowChromeTone', request.style.tone);
     AppStorage.setOrCreate<string>('readerWindowChromeThemeId', request.owner === 'app' ? '' : request.style.paperThemeId);
     void ReaderWindowCoordinator.flushChrome();
+  }
+
+  private static currentChromeSettled(): boolean {
+    const revision = ReaderWindowCoordinator.desiredChromeRevision;
+    return ReaderWindowCoordinator.appliedChromeRevision === revision ||
+      ReaderWindowCoordinator.limitedChromeRevision === revision;
   }
 
   private static nativeStatusBarColor(request: ReaderWindowChromeRequest): string {
@@ -864,13 +875,15 @@ export class ReaderWindowCoordinator {
   }
 
   private static async flushChrome(): Promise<void> {
+    ReaderWindowCoordinator.chromeRequestedEpoch = ReaderWindowCoordinator.installEpoch;
     if (ReaderWindowCoordinator.chromeFlushRunning) {
       return;
     }
     ReaderWindowCoordinator.chromeFlushRunning = true;
     try {
       while (ReaderWindowCoordinator.mainWindow !== undefined &&
-        ReaderWindowCoordinator.appliedChromeRevision !== ReaderWindowCoordinator.desiredChromeRevision) {
+        ReaderWindowCoordinator.chromeRequestedEpoch === ReaderWindowCoordinator.installEpoch &&
+        !ReaderWindowCoordinator.currentChromeSettled()) {
         const win = ReaderWindowCoordinator.mainWindow;
         const epoch = ReaderWindowCoordinator.installEpoch;
         const revision = ReaderWindowCoordinator.desiredChromeRevision;
@@ -888,22 +901,17 @@ export class ReaderWindowCoordinator {
             navigationBarContentColor: request.style.navigationContentColor ?? contentColor,
           });
         } catch (error) {
-          ReaderWindowCoordinator.reportChromeWrite(win, epoch, revision, request, metricsAtRequest,
-            false, ReaderWindowCoordinator.chromeErrorCode(error as BusinessError));
-          // A failed old write must not swallow a newer queued theme. A
-          // failed latest intent remains pending for an explicit retry;
-          // never spin on a rejected native operation.
-          if (revision !== ReaderWindowCoordinator.desiredChromeRevision) continue;
+          const code = ReaderWindowCoordinator.chromeErrorCode(error as BusinessError);
+          ReaderWindowCoordinator.reportChromeWrite(win, epoch, revision, request, metricsAtRequest, false, code);
+          if (!ReaderWindowCoordinator.installStillCurrent(epoch, win) ||
+            revision !== ReaderWindowCoordinator.desiredChromeRevision) continue;
+          // Unsupported settles this style only for this window installation.
+          // Other failures remain pending for an explicit retry.
+          if (code === '801') ReaderWindowCoordinator.limitedChromeRevision = revision;
           return;
         }
         ReaderWindowCoordinator.reportChromeWrite(win, epoch, revision, request, metricsAtRequest, true);
-        if (win !== ReaderWindowCoordinator.mainWindow || epoch !== ReaderWindowCoordinator.installEpoch) {
-          // install() can enqueue its new window style while this old write
-          // still owns the drain. Release only if no newer intent arrived.
-          if (revision !== ReaderWindowCoordinator.desiredChromeRevision) continue;
-          return;
-        }
-        ReaderWindowCoordinator.appliedChromeRevision = revision;
+        if (ReaderWindowCoordinator.installStillCurrent(epoch, win)) ReaderWindowCoordinator.appliedChromeRevision = revision;
       }
     } finally {
       ReaderWindowCoordinator.chromeFlushRunning = false;

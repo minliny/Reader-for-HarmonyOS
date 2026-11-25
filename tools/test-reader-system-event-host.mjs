@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 const tick=async()=>{await Promise.resolve();await Promise.resolve();await Promise.resolve();};
-function fixture({failDown=false}={}) {
+function fixture({failDown=false, readScreenLock, subscribeFailure}={}) {
  const source=readFileSync(new URL('../entry/src/main/ets/app/ReaderReadingSystemEventHost.ts',import.meta.url),'utf8');
 
  const listeners=new Map(),on=[],off=[],creates=[],unsubscribed=[],callbacks=new Map();
@@ -13,11 +13,11 @@ function fixture({failDown=false}={}) {
  const commonEventManager={Support:{COMMON_EVENT_SCREEN_OFF:'SCREEN_OFF',COMMON_EVENT_SCREEN_ON:'SCREEN_ON',
    COMMON_EVENT_SCREEN_LOCKED:'SCREEN_LOCKED',COMMON_EVENT_SCREEN_UNLOCKED:'SCREEN_UNLOCKED'},
    createSubscriber(options){const gate=deferred();creates.push({options,gate});return gate.promise;},
-   async subscribeToEvent(subscriber,callback){callbacks.set(subscriber,callback);},
+   async subscribeToEvent(subscriber,callback){callbacks.set(subscriber,callback);if(subscribeFailure?.(subscriber))throw Error('subscribe rejected');},
    unsubscribe(subscriber){unsubscribed.push(subscriber);callbacks.delete(subscriber);}};
  const body=source.replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,'');
  const Host=new Function('inputConsumer','KeyCode','commonEventManager','screenLock',stripTypeScriptTypes(body)+';return ReaderReadingSystemEventHost;')(
-   inputConsumer,{KEYCODE_VOLUME_UP:'UP',KEYCODE_VOLUME_DOWN:'DOWN'},commonEventManager,{isScreenLocked:()=>screenState.promise});
+   inputConsumer,{KEYCODE_VOLUME_UP:'UP',KEYCODE_VOLUME_DOWN:'DOWN'},commonEventManager,{isScreenLocked:readScreenLock??(()=>screenState.promise)});
  return{host:new Host(),listeners,on,off,creates,unsubscribed,callbacks,screenState};
 }
 function volume() {
@@ -52,5 +52,28 @@ async function screenOff() {
  assert.deepEqual(states,[true,false,true,false]);
  lock.host.dispose();
 }
-const cases={volume,'screen-off':screenOff};
-for(const id of selectContractCases({volume:'Actual Host UP/DOWN, replacement, partial registration and disposal','screen-off':'Actual Host latest subscriber, retirement and retry'})){await cases[id]();recordContractCasePass(id);}
+async function screenLockFallback() {
+ const states=[], failed={}; let readCount=0;
+ const f=fixture({subscribeFailure: subscriber=>subscriber===failed,
+  readScreenLock:()=>{readCount++;throw Error('screen lock query unsupported');}});
+ f.host.setScreenOffHandler(()=>{});
+ f.creates[0].gate.resolve(failed);await tick();
+ assert.deepEqual(f.unsubscribed,[failed],'failed registration releases its exact native subscriber');
+ f.host.setScreenLockHandler(locked=>states.push(locked));
+ const active={};f.creates[1].gate.resolve(active);await tick();
+ const callback=f.callbacks.get(active);
+ assert.doesNotThrow(()=>callback({event:'SCREEN_ON'}));
+ callback({event:'SCREEN_LOCKED'});callback({event:'SCREEN_UNLOCKED'});
+ await tick();
+ assert.equal(readCount,2,'initial read and screen-on may both be rejected');
+ assert.deepEqual(states,[true,false],'events continue to provide lock state when reads fail');
+ f.host.dispose();callback({event:'SCREEN_ON'});
+ assert.equal(readCount,2,'a retired subscriber cannot invoke the platform query');
+}
+
+const cases={volume,'screen-off':screenOff,'screen-lock-fallback':screenLockFallback};
+for(const id of selectContractCases({volume:'Actual Host UP/DOWN, replacement, partial registration and disposal',
+ 'screen-off':'Actual Host latest subscriber, retirement and retry',
+ 'screen-lock-fallback':'Actual Host drops a failed subscriber and falls back to events on a synchronous or async screen-lock rejection'})){
+ await cases[id]();recordContractCasePass(id);
+}
