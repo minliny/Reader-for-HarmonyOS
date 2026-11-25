@@ -1850,7 +1850,7 @@ export struct ReaderControlTtsContent {
     const context = this.getUIContext();
     const measured = context.getMeasureUtils().measureTextSize({ textContent: this.fieldValue(kind) || '字',
       fontSize: style.fontSizeFp, fontFamily: style.fontFamily, fontWeight: style.fontWeight,
-      lineHeight: style.lineHeightFp });
+      lineHeight: style.lineHeightFp === undefined ? undefined : `${style.lineHeightFp}fp` });
     const height = context.px2vp(Number(measured.height));
     return Math.max(kind === 'voice' ? 30 : 48, Math.ceil(Number.isFinite(height) ? height : 12) + 8);
   }

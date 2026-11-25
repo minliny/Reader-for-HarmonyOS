@@ -100,5 +100,5 @@ async function lineHeightBudget() {
     getUIContext: () => port.context,
   });
   assert.equal(content.fieldHeight('voice'), 40);
-  assert.equal(port.requests.at(-1).lineHeight, 16);
+  assert.equal(port.requests.at(-1).lineHeight, '16fp');
 }

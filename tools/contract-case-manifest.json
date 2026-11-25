@@ -69,7 +69,7 @@
         "navigation-owner": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "c4d9e69275102d0e559b75282cfcc90a61759ff96dd1094556be32293e8341c1"
+          "sourceSha256": "759509e00954ae1f10f876bdb5e81b69d07b8f602c305500fbc403ec26befefb"
         },
         "settings-arguments": {
           "resources": [],
@@ -1479,7 +1479,7 @@
         "safe-area": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "9473692219bb3b59b44812f5334a80054fa1240bf8134884a01a4e35afc359df"
+          "sourceSha256": "cc0081d35250a697dac68390d817d7caa5938f58013ee83595e28a186283c484"
         },
         "save-and-frame": {
           "resources": [],
@@ -2234,7 +2234,7 @@
         "input-progress": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "d3f322f2a6d48b186740454a92217e3bea517211c1b43a0d437b182c0afe056d"
+          "sourceSha256": "570d958eec173e72cea076aa5fd5438942419609af5d5dc558d51a48c90c59fc"
         },
         "image-anchor": {
           "resources": [],
@@ -3527,7 +3527,7 @@
         "scaffold-slots": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "87448d89275b22f91ce436e580c0561afa379c730a451057774a2e1ba3ce881a"
+          "sourceSha256": "6e38b54f03cf123848684ee2ceee1765a1fc3187be305691bdae1bf2a6b45f38"
         },
         "footer-safe-lane": {
           "resources": [],
@@ -4311,7 +4311,7 @@
         "ReaderControlTtsContent": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "a33dda353a80f680450d7563daf97fc3b45051b0365643de61eb5d74c6fdb9bd"
+          "sourceSha256": "21f2a71f5779bec558804bd04cda76a398c30ffb34d9cdcb2abef815f0776159"
         },
         "ReaderDirectoryChapterRow": {
           "resources": [],
@@ -8297,6 +8297,11 @@
         "publisher-failure": {
           "resources": [],
           "qualification": "REVIEW_NEEDED"
+        },
+        "reconcile-staged-text": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e860b75d6333bf93a920d280b6d67e9b06a7b51848d26ad5806dbfe4a97f7508"
         }
       }
     },
@@ -8563,11 +8568,32 @@
         },
         "settings-partial-ack": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd"
         },
         "automatic-policy": {
           "resources": [],
           "qualification": "QUALIFIED"
+        },
+        "settings-recover-staged": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd"
+        },
+        "settings-recover-host": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd"
+        },
+        "inventory-concurrent-enoent": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd"
+        },
+        "policy-retry": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3a3650f330e512fff08dc3df9a814431261434ca98503b9176f042e487631dfd"
         }
       }
     },
@@ -12365,6 +12391,126 @@
         "placement-durability": {
           "resources": [],
           "qualification": "REVIEW_NEEDED"
+        }
+      }
+    },
+    "test-reader-route-redesign.mjs": {
+      "sourceSha256": "608c2c7cd209437515c94ae4107f671e219b9d4e1c5c7938dc4a85bbe73b2bc6",
+      "cases": {
+        "route-transition-effects": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+        },
+        "download-chapter-transition": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+        },
+        "detail-cover-back": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+        },
+        "detail-cover-background": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+        },
+        "directory-reading-return": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+        },
+        "settings-tools-return": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+        },
+        "settings-scroll-roundtrip": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+        },
+        "wide-settings-panes": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+        },
+        "retained-directory-back": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+        },
+        "retained-route-ports": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+        },
+        "download-directory-return": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+        },
+        "legacy-download-chapter-return": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+        }
+      }
+    },
+    "test-reader-native-input-recovery.mjs": {
+      "sourceSha256": "d976dd3bf422d37f8e146c50b4969f87f3dc823ef530f3af2df580f66fdd32d1",
+      "cases": {
+        "opening-recovery": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "d976dd3bf422d37f8e146c50b4969f87f3dc823ef530f3af2df580f66fdd32d1"
+        }
+      }
+    },
+    "test-reader-tts-line-height.mjs": {
+      "sourceSha256": "1a3bbd6e33fd6be7bfa1297d6bb0da83545d15ac63cbe3ec1af23e6043bfba41",
+      "cases": {
+        "narrow-large-text": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e31101e20ffed5bec3d6259c99d76a721f909458b7f2929e80a4cb7ad53d3c0f"
+        }
+      }
+    },
+    "test-harmony-tts-audio-listeners.mjs": {
+      "sourceSha256": "bacef773f0cff8a9cd244c6a2914d2bdbdd4990b3c14e93fb4085ef6c5abe3af",
+      "cases": {
+        "rollback": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bacef773f0cff8a9cd244c6a2914d2bdbdd4990b3c14e93fb4085ef6c5abe3af"
+        },
+        "retirement": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bacef773f0cff8a9cd244c6a2914d2bdbdd4990b3c14e93fb4085ef6c5abe3af"
+        }
+      }
+    },
+    "test-reader-window-policy-isolation.mjs": {
+      "sourceSha256": "c79d7e774a0472c226401e0fecafb948f1c86f70a23da19cf54ba37b9037d7e0",
+      "cases": {
+        "install": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "18fa10dd4273a3b125772a9384da9e566462a9b299b885fb182b91c30de34e04"
+        },
+        "policy": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "18fa10dd4273a3b125772a9384da9e566462a9b299b885fb182b91c30de34e04"
+        },
+        "superseded": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "18fa10dd4273a3b125772a9384da9e566462a9b299b885fb182b91c30de34e04"
         }
       }
     }
