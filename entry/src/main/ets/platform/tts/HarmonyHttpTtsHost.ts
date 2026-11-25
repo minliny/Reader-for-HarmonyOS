@@ -36,6 +36,9 @@ type PrefetchedTtsAudio = {
 
 /** Host-only network/audio transport for a Core-owned HttpTTS descriptor. */
 export class HarmonyHttpTtsHost implements ReaderTtsHost {
+  private static readonly retiringPlayers: Set<media.AVPlayer> = new Set<media.AVPlayer>();
+  private static readonly pendingPlayerReleases: Map<media.AVPlayer, Promise<boolean>> =
+    new Map<media.AVPlayer, Promise<boolean>>();
   private readonly gateway: ReaderHttpTtsGateway;
   private audioListeners: HarmonyTtsAudioListenerRegistry | undefined = undefined;
   private readonly audioSessionDeactivatedCallback: (event: audio.AudioSessionDeactivatedEvent) => void;
@@ -165,24 +168,27 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
     }
     if (this.closed || generation !== this.speakGeneration) return;
     await this.releasePlayer();
+    for (const retired of HarmonyHttpTtsHost.retiringPlayers) {
+      if (!await this.retirePlayer(retired)) throw new Error('Reader HTTP TTS could not release its previous player');
+    }
     if (this.closed || generation !== this.speakGeneration) return;
     const player = await media.createAVPlayer();
     if (this.closed || generation !== this.speakGeneration) {
-      await player.release();
+      await this.retirePlayer(player);
       return;
     }
     this.player = player;
     this.currentRequestId = request.requestId;
     this.startReported = false;
-    player.on('stateChange', (state: media.AVPlayerState): void => {
-      this.handlePlayerState(player, request.requestId, state);
-    });
-    player.on('error', (error: Error): void => {
-      if (this.closed || generation !== this.speakGeneration ||
-        this.player !== player || this.currentRequestId !== request.requestId) return;
-      this.emit({ type: 'error', requestId: request.requestId, message: error.message });
-    });
     try {
+      player.on('stateChange', (state: media.AVPlayerState): void => {
+        this.handlePlayerState(player, request.requestId, state);
+      });
+      player.on('error', (error: Error): void => {
+        if (this.closed || generation !== this.speakGeneration ||
+          this.player !== player || this.currentRequestId !== request.requestId) return;
+        this.emit({ type: 'error', requestId: request.requestId, message: error.message });
+      });
       this.audioBytes = bytes;
       player.dataSrc = this.createDataSource(bytes);
       if (this.player !== player || this.currentRequestId !== request.requestId ||
@@ -274,10 +280,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
     // Detach this owner's reference before awaiting native release. A later
     // utterance may install a new buffer while the old player is stopping.
     this.audioBytes = undefined;
-    if (player === undefined) {
-      this.audioBytes = undefined;
-      return;
-    }
+    if (player === undefined) return;
     let stopFailed = false;
     try {
       if (player.state === 'playing' || player.state === 'paused' || player.state === 'prepared' ||
@@ -288,15 +291,33 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
       // Release remains mandatory even when the state changed concurrently.
       stopFailed = true;
     }
-    try {
-      await player.release();
-    } catch (error) {
-      this.logError('HttpTTS AVPlayer release failed', error);
-      if (reportStopFailure && stopFailed) {
-        if (this.player === undefined && this.speakGeneration === generation) this.player = player;
-        throw new Error('Reader HTTP TTS transport did not stop');
+    if (!await this.retirePlayer(player) && reportStopFailure && stopFailed) {
+      if (this.player === undefined && this.speakGeneration === generation) {
+        HarmonyHttpTtsHost.retiringPlayers.delete(player);
+        this.player = player;
       }
+      throw new Error('Reader HTTP TTS transport did not stop');
     }
+  }
+
+  private retirePlayer(player: media.AVPlayer): Promise<boolean> {
+    const pending = HarmonyHttpTtsHost.pendingPlayerReleases.get(player);
+    if (pending !== undefined) return pending;
+    const release = Promise.resolve().then(async (): Promise<boolean> => {
+      try {
+        await player.release();
+        HarmonyHttpTtsHost.retiringPlayers.delete(player);
+        return true;
+      } catch (error) {
+        HarmonyHttpTtsHost.retiringPlayers.add(player);
+        this.logError('HttpTTS AVPlayer release failed', error);
+        return false;
+      } finally {
+        HarmonyHttpTtsHost.pendingPlayerReleases.delete(player);
+      }
+    });
+    HarmonyHttpTtsHost.pendingPlayerReleases.set(player, release);
+    return release;
   }
 
   private async fetchAudio(descriptor: ReaderHttpTtsRequestDescriptor, configId: number): Promise<Uint8Array> {
@@ -563,7 +584,7 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   }
 
   private logError(message: string, error: Object): void {
-    const detail = errorMessageOf(error);
-    hilog.error(LOG_DOMAIN, 'Reader', '%{private}s: %{private}s', message, detail);
+    try { hilog.error(LOG_DOMAIN, 'Reader', '%{private}s: %{private}s', message, errorMessageOf(error)); }
+    catch (_) { /* Diagnostics must not reject transport teardown. */ }
   }
 }

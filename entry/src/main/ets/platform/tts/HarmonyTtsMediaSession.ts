@@ -109,8 +109,13 @@ export class HarmonyTtsMediaSession implements ReaderTtsMediaSessionBridge {
       this.initialized = true;
       return session;
     } catch (error) {
-      await HarmonyTtsMediaSession.release(session);
-      if (this.session === session) this.session = undefined;
+      try {
+        await HarmonyTtsMediaSession.release(session);
+        if (this.session === session) this.session = undefined;
+      } catch (releaseError) {
+        // Keep the uninitialized session for a later release attempt.
+        this.logFailure('setup rollback', releaseError as Error);
+      }
       throw error;
     }
   }
@@ -124,13 +129,9 @@ export class HarmonyTtsMediaSession implements ReaderTtsMediaSessionBridge {
       try { session.off('playNext'); } catch (_) {}
       try { session.off('playPrevious'); } catch (_) {}
       try { await session.deactivate(); } catch (_) { /* Destroy supplies the authoritative receipt. */ }
-      try {
-        await session.destroy();
-        HarmonyTtsMediaSession.released.add(session);
-      } catch (error) {
-        // The retired owner retains this exact identity until destroy succeeds.
-        throw error;
-      }
+      // The retired owner retains this exact identity until destroy succeeds.
+      await session.destroy();
+      HarmonyTtsMediaSession.released.add(session);
     });
     HarmonyTtsMediaSession.releaseTail = task.catch((): void => {});
     return task;
@@ -150,8 +151,11 @@ export class HarmonyTtsMediaSession implements ReaderTtsMediaSessionBridge {
   }
 
   private observe(task: Promise<void>): void {
-    this.operationTail = task.catch((error: Error): void => {
-      hilog.error(LOG_DOMAIN, 'Reader', 'TTS AVSession operation failed: %{private}s', error.message);
-    });
+    this.operationTail = task.catch((error: Error): void => this.logFailure('operation', error));
+  }
+
+  private logFailure(step: string, error: Error): void {
+    try { hilog.error(LOG_DOMAIN, 'Reader', 'TTS AVSession %{public}s failed: %{private}s', step, error.message); }
+    catch (_) { /* Keep the operation queue usable when the log sink fails. */ }
   }
 }

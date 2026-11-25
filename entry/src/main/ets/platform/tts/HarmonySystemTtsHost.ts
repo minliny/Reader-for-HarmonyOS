@@ -63,6 +63,8 @@ class EngineSpeakListener implements textToSpeech.SpeakListener {
  * the slice/queue source of truth while this adapter only owns platform audio.
  */
 export class HarmonySystemTtsHost implements ReaderTtsHost {
+  private static readonly retiringEngines: Set<textToSpeech.TextToSpeechEngine> =
+    new Set<textToSpeech.TextToSpeechEngine>();
   private audioListeners: HarmonyTtsAudioListenerRegistry | undefined = undefined;
   private readonly audioSessionDeactivatedCallback: (event: audio.AudioSessionDeactivatedEvent) => void;
   private readonly audioSessionStateChangedCallback: (event: audio.AudioSessionStateChangedEvent) => void;
@@ -240,11 +242,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
       } catch (_) {
         // Best effort: shutdown below still releases the platform object.
       }
-      try {
-        engine.shutdown();
-      } catch (error) {
-        this.logError('system TTS shutdown failed', error);
-      }
+      this.retireEngine(engine);
     }
     try {
       await this.deactivateAudioSession();
@@ -256,6 +254,9 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   private async ensureEngine(language: string, person: number,
     trace?: (point: ReaderTtsNativeSpeakPoint) => void, exactVoice: boolean = false): Promise<textToSpeech.TextToSpeechEngine> {
     this.assertOpen();
+    for (const retired of HarmonySystemTtsHost.retiringEngines) {
+      if (!this.retireEngine(retired)) throw new Error('Reader system TTS could not release its previous engine');
+    }
     if (this.engine !== undefined && this.engineRequestedLanguage === language) {
       const cached = this.engineRequestedPerson;
       if (cached === person && (!exactVoice || (this.engineLanguage === language && this.enginePerson === person))) {
@@ -284,11 +285,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
       } catch (_) {
         // Replacing the engine is still safe when stop has already completed.
       }
-      try {
-        previous.shutdown();
-      } catch (error) {
-        this.logError('system TTS engine shutdown during replacement failed', error);
-      }
+      if (!this.retireEngine(previous)) throw new Error('Reader system TTS could not release its previous engine');
     }
     let effectiveLanguage = language;
     let effectivePerson = person;
@@ -308,20 +305,35 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
     // A stopped/retired creation must never replace or orphan a successor's
     // active platform object. Shut down only the object this creation owns.
     if (this.closed || generation !== this.engineGeneration) {
-      try { engine.shutdown(); } catch (error) {
-        this.logError('retired system TTS engine shutdown failed', error);
-      }
+      this.retireEngine(engine);
       throw new Error('Reader system TTS engine initialization retired');
     }
-    engine.setListener(new EngineSpeakListener((event: ReaderTtsHostEvent): void => {
-      if (this.engine === engine) this.emit(event);
-    }));
+    try {
+      engine.setListener(new EngineSpeakListener((event: ReaderTtsHostEvent): void => {
+        if (this.engine === engine) this.emit(event);
+      }));
+    } catch (error) {
+      this.retireEngine(engine);
+      throw error;
+    }
     this.engine = engine;
     this.engineRequestedLanguage = language;
     this.engineRequestedPerson = person;
     this.engineLanguage = effectiveLanguage;
     this.enginePerson = effectivePerson;
     return engine;
+  }
+
+  private retireEngine(engine: textToSpeech.TextToSpeechEngine): boolean {
+    try {
+      engine.shutdown();
+      HarmonySystemTtsHost.retiringEngines.delete(engine);
+      return true;
+    } catch (error) {
+      HarmonySystemTtsHost.retiringEngines.add(engine);
+      this.logError('system TTS engine shutdown failed', error);
+      return false;
+    }
   }
 
   private createEngine(language: string, person: number): Promise<textToSpeech.TextToSpeechEngine> {
@@ -387,7 +399,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   }
 
   private logError(message: string, error: Object): void {
-    const detail = errorMessageOf(error);
-    hilog.error(LOG_DOMAIN, 'Reader', '%{private}s: %{private}s', message, detail);
+    try { hilog.error(LOG_DOMAIN, 'Reader', '%{private}s: %{private}s', message, errorMessageOf(error)); }
+    catch (_) { /* Diagnostics must not reject transport teardown. */ }
   }
 }
