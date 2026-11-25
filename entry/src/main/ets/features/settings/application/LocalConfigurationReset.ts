@@ -24,6 +24,10 @@ export class LocalConfigurationReset {
   private static operations: Map<ReaderRuntimeOwner, Promise<boolean>> = new Map();
   private static requests: Map<ReaderRuntimeOwner, Promise<boolean>> = new Map();
   private static evidence: WeakMap<ReaderRuntimeOwner, ReaderWriteEvidence> = new WeakMap();
+  private static operationTail: Promise<void> = Promise.resolve();
+  // A failed flush may leave a changed cached marker. Requalify the exact
+  // accepted reset before replaying its idempotent writes in this process.
+  private static unconfirmedIntents: Set<string> = new Set();
 
   static writeEvidence(owner: ReaderRuntimeOwner): ReaderWriteEvidence | undefined {
     return LocalConfigurationReset.evidence.get(owner);
@@ -45,6 +49,7 @@ export class LocalConfigurationReset {
     // Enter before registering our own operation, otherwise the central
     // recovery callback would join this operation and await itself.
     await ReaderThemeHost.prepareUserChange();
+    if (LocalConfigurationReset.evidence.get(owner)?.confirmation() === 'confirmed') return true;
     return LocalConfigurationReset.runShared(owner, true);
   }
 
@@ -61,7 +66,9 @@ export class LocalConfigurationReset {
       return active.then((applied: boolean): boolean | Promise<boolean> =>
         applied ? true : LocalConfigurationReset.runShared(owner, true));
     }
-    const operation = LocalConfigurationReset.apply(owner, requested);
+    const operation = LocalConfigurationReset.operationTail.then((): Promise<boolean> =>
+      LocalConfigurationReset.apply(owner, requested));
+    LocalConfigurationReset.operationTail = operation.then((): void => {}, (): void => {});
     LocalConfigurationReset.operations.set(owner, operation);
     void operation.finally((): void => {
       if (LocalConfigurationReset.operations.get(owner) === operation) LocalConfigurationReset.operations.delete(owner);
@@ -76,20 +83,22 @@ export class LocalConfigurationReset {
   private static async apply(owner: ReaderRuntimeOwner, requested: boolean): Promise<boolean> {
     LocalConfigurationReset.assertOwner(owner);
     const context = owner.getUIAbilityContext();
-    const store = await preferences.getPreferences(context, readerHostPreferencesName(context.filesDir, RESET_PREFERENCES));
+    const filesDir = context.filesDir;
+    const store = await preferences.getPreferences(context, readerHostPreferencesName(filesDir, RESET_PREFERENCES));
     const pending = await store.get(RESET_INTENT_KEY, '');
     if (pending !== '' && pending !== RESET_INTENT) throw new Error('CONFIGURATION_RESET_INTENT_INVALID');
-    if (pending === '' && !requested) return false;
+    const unconfirmed = LocalConfigurationReset.unconfirmedIntents.has(filesDir);
+    if (pending === '' && !requested && !unconfirmed) return false;
     const evidence = LocalConfigurationReset.evidence.get(owner) ?? new ReaderWriteEvidence();
     LocalConfigurationReset.evidence.set(owner, evidence);
     LocalConfigurationReset.assertOwner(owner);
-    if (pending === '') {
-      evidence.dispatched();
-      await store.put(RESET_INTENT_KEY, RESET_INTENT);
-      try { await store.flush(); }
-      catch (error) { await store.delete(RESET_INTENT_KEY); throw error; }
-    }
     if (evidence.dispatchedCount === 0) evidence.dispatched();
+    if (pending === '' || unconfirmed) {
+      LocalConfigurationReset.unconfirmedIntents.add(filesDir);
+      await store.put(RESET_INTENT_KEY, RESET_INTENT);
+      await store.flush();
+      LocalConfigurationReset.unconfirmedIntents.delete(filesDir);
+    }
     // Each operation uses the existing owner/serialized platform adapter.
     // No WebDAV credential, Core preference, book/source/position, imported
     // font file, reading-device identity or engine secret is removed.
@@ -113,9 +122,10 @@ export class LocalConfigurationReset {
     AppStorage.setOrCreate('readerBookshelfReadingFilter', 'all');
     AppStorage.setOrCreate('readerBookshelfSourceFilter', 'all');
     AppStorage.setOrCreate('readerBookshelfContentFilter', 'all');
+    LocalConfigurationReset.unconfirmedIntents.add(filesDir);
     await store.delete(RESET_INTENT_KEY);
-    try { await store.flush(); }
-    catch (error) { await store.put(RESET_INTENT_KEY, RESET_INTENT); throw error; }
+    await store.flush();
+    LocalConfigurationReset.unconfirmedIntents.delete(filesDir);
     evidence.confirmed();
     return true;
   }

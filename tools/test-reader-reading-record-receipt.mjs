@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import { ReadingRecordIntent, ReadingRecordRecoveryError } from '../entry/src/main/ets/features/reading/application/ReaderReadingRecordState.ts';
+import { readerHostPreferencesName } from '../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts';
 registerHooks({ resolve(specifier, context, next) { try { return next(specifier, context); } catch (error) {
   if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error;
 } } });
@@ -10,14 +11,14 @@ const { ReaderReadingRecordHost } = await import('../entry/src/main/ets/features
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 
 const dir = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
-const gatewaySource = readFileSync(new URL('ReadingRecordGateway.ts', dir), 'utf8');
+const gatewaySource = readFileSync(new URL('application/ReadingRecordGateway.ts', dir), 'utf8');
 let activeRuntime, storeFactory, ids = 0;
 const diagnosticLogs=[];
-const loadGateway = source => new Function('preferences', 'util', 'hilog', 'ReaderRuntimeOwner', 'ReadingRecordIntent', 'ReadingRecordRecoveryError',
+const loadGateway = source => new Function('preferences', 'util', 'hilog', 'ReaderRuntimeOwner', 'ReadingRecordIntent', 'ReadingRecordRecoveryError', 'readerHostPreferencesName',
   `${stripTypeScriptTypes(source.replace(/^import[^\n]*\n/gm, '')).replace('export class ', 'class ')}; return ReadingRecordGateway;`)
   ({ getPreferences: () => storeFactory() }, { generateRandomUUID: () => `actual-intent-${++ids}`, TextEncoder: class { encodeInto(value){return new TextEncoder().encode(value);} } },
     {warn(...args){diagnosticLogs.push(args.at(-1));}},
-    { isCurrent: owner => owner === activeRuntime }, ReadingRecordIntent, ReadingRecordRecoveryError);
+    { isCurrent: owner => owner === activeRuntime }, ReadingRecordIntent, ReadingRecordRecoveryError, readerHostPreferencesName);
 const Gateway = loadGateway(gatewaySource);
 const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a; reject=b; }); return {promise,resolve,reject}; };
 const settle = async () => { for (let i=0;i<8;i++) await new Promise(done=>setImmediate(done)); };
@@ -77,6 +78,17 @@ function fixture(GatewayClass = Gateway) {
   assert.throws(()=>f.gateway.currentDeviceId(), ReadingRecordRecoveryError,
     'a retired record owner cannot lend its cached device identity to a new progress visit');
   assert.equal(await current.currentDeviceId(),'harmony-device','the current owner reuses the same persisted identity');
+  assert.equal(f.writes.length,0);
+}
+{
+  const f=fixture();
+  const key=gatewaySource.match(/^const READING_RECORD_JOURNAL_KEY = '([^']+)';$/m)?.[1];
+  assert.ok(key);
+  const invalid=new Uint8Array();
+  f.cache.set(key,invalid);
+  await assert.rejects(f.gateway.accumulate(f.gateway.createIntent('damaged-journal',100,10)),
+    error=>error.kind==='blocked','an empty binary value is damaged data, whereas only the empty string means no journal');
+  assert.equal(f.cache.get(key),invalid);
   assert.equal(f.writes.length,0);
 }
 {
@@ -264,7 +276,7 @@ for(const malformed of [false,'null','{"version":2,"tail":[{"acceptanceId":"x"}]
 {
   const f=fixture(),gate=deferred(),events=[],host=new ReaderReadingRecordHost(f.gateway,()=> 'exit-book',()=>{});
   host.pendingMillis=80;f.hangWrite(gate);
-  const Reader=productionMotionMethods(new URL('LocalReadingExperience.ets',dir),['finishExit'],
+  const Reader=productionMotionMethods(new URL('ui/LocalReadingExperience.ets',dir),['finishExit'],
     {hilog:{warn(){},error(){}}});
   const reader=Object.assign(new Reader(),{readingRecordHost:host,lifecycleToken:1,exitAttemptGeneration:1,exitDelivered:false,
     handoffExitProgress:()=>events.push('progress-handoff'),isMountedToken:token=>token===1,

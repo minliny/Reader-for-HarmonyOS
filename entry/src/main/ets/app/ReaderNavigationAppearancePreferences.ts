@@ -11,12 +11,18 @@ export const NAVIGATION_APPEARANCE_SAVE_PENDING_KEY = 'readerNavigationAppearanc
 const PREFERENCES_NAME = 'reader_navigation_appearance_v1';
 const SNAPSHOT_KEY = 'snapshot';
 
+interface ReaderNavigationPreferenceWrite {
+  change: ReaderNavigationPreferenceChange;
+  snapshot?: ReaderNavigationPreferences;
+}
+
 /** Local visual preferences have their own domain and are never part of the
  * reading-theme snapshot, Core state or portable Host configuration. */
 export class ReaderNavigationAppearancePreferences {
   private static context: common.UIAbilityContext | undefined;
   private static store: preferences.Preferences | undefined;
-  private static pendingChange: ReaderNavigationPreferenceChange | undefined;
+  private static pendingWrites: Map<string, ReaderNavigationPreferenceWrite> = new Map();
+  private static publishedDirectory: string | undefined;
   private static generation: number = 0;
   private static tail: Promise<void> = Promise.resolve();
 
@@ -24,9 +30,8 @@ export class ReaderNavigationAppearancePreferences {
     const generation = ++this.generation;
     this.context = context;
     this.store = undefined;
-    this.pendingChange = undefined;
-    AppStorage.setOrCreate<boolean>(NAVIGATION_APPEARANCE_SAVE_PENDING_KEY, false);
-    this.publish(normalizeReaderNavigationPreferences(undefined));
+    AppStorage.setOrCreate<boolean>(NAVIGATION_APPEARANCE_SAVE_PENDING_KEY, this.pendingWrites.has(context.filesDir));
+    if (this.publishedDirectory !== context.filesDir) this.publish(normalizeReaderNavigationPreferences(undefined));
     void this.reload(generation).catch((): void => {});
   }
 
@@ -34,15 +39,15 @@ export class ReaderNavigationAppearancePreferences {
     this.generation += 1;
     this.context = undefined;
     this.store = undefined;
-    this.pendingChange = undefined;
   }
 
   static async save(change: ReaderNavigationPreferenceChange): Promise<void> {
     const generation = this.generation;
     return this.serialized(async (): Promise<void> => {
       this.current(generation);
-      if (this.pendingChange !== undefined) return;
-      this.pendingChange = change;
+      const directory = this.context!.filesDir;
+      if (this.pendingWrites.has(directory)) return;
+      this.pendingWrites.set(directory, { change: { ...change } });
       await this.apply(generation);
     });
   }
@@ -51,38 +56,47 @@ export class ReaderNavigationAppearancePreferences {
     const generation = this.generation;
     return this.serialized(async (): Promise<void> => {
       this.current(generation);
-      if (this.pendingChange !== undefined) await this.apply(generation);
+      await this.apply(generation);
     });
   }
 
   static resetDefaults(ownerCurrent: () => boolean): Promise<void> {
     const generation = this.generation;
     return this.serialized(async (): Promise<void> => {
+      this.current(generation);
+      const directory = this.context!.filesDir;
       const store = await this.open(generation);
       if (!ownerCurrent()) throw new Error('NAVIGATION_PREFERENCES_RETIRED');
       const defaults = normalizeReaderNavigationPreferences(undefined);
       await store.put(SNAPSHOT_KEY, JSON.stringify(defaults));
       await store.flush();
+      this.pendingWrites.delete(directory);
       this.current(generation);
       if (!ownerCurrent()) throw new Error('NAVIGATION_PREFERENCES_RETIRED');
-      this.pendingChange = undefined;
       this.publish(defaults);
       AppStorage.setOrCreate<boolean>(NAVIGATION_APPEARANCE_SAVE_PENDING_KEY, false);
     });
   }
 
   private static async apply(generation: number): Promise<void> {
-    const change = this.pendingChange!;
+    const directory = this.context!.filesDir;
+    const pending = this.pendingWrites.get(directory);
+    if (pending === undefined) return;
     try {
       const store = await this.open(generation);
-      const current = await this.read(store);
+      let next = pending.snapshot;
+      if (next === undefined) {
+        const current = await this.read(store);
+        this.current(generation);
+        next = normalizeReaderNavigationPreferences({ override: pending.change.override ?? current.override,
+          reduceTransparency: pending.change.reduceTransparency ?? current.reduceTransparency });
+        pending.snapshot = next;
+      }
       this.current(generation);
-      const next = normalizeReaderNavigationPreferences({ override: change.override ?? current.override,
-        reduceTransparency: change.reduceTransparency ?? current.reduceTransparency });
       await store.put(SNAPSHOT_KEY, JSON.stringify(next));
       await store.flush();
+      this.pendingWrites.delete(directory);
       this.current(generation);
-      this.pendingChange = undefined;
       this.publish(next);
       AppStorage.setOrCreate<boolean>(NAVIGATION_APPEARANCE_SAVE_PENDING_KEY, false);
     } catch (error) {
@@ -93,6 +107,10 @@ export class ReaderNavigationAppearancePreferences {
 
   private static reload(generation: number): Promise<void> {
     return this.serialized(async (): Promise<void> => {
+      this.current(generation);
+      const pending = this.pendingWrites.has(this.context!.filesDir);
+      AppStorage.setOrCreate<boolean>(NAVIGATION_APPEARANCE_SAVE_PENDING_KEY, pending);
+      if (pending) return; // The SDK cache may contain the original, unconfirmed put.
       const store = await this.open(generation);
       const value = await this.read(store);
       this.current(generation);
@@ -124,6 +142,7 @@ export class ReaderNavigationAppearancePreferences {
   }
 
   private static publish(value: ReaderNavigationPreferences): void {
+    this.publishedDirectory = this.context?.filesDir;
     AppStorage.setOrCreate<ReaderNavigationPreferences>(NAVIGATION_APPEARANCE_STORAGE_KEY, value);
   }
 

@@ -299,6 +299,12 @@ const CASES = {
     await assert.rejects(preferences.save({ reduceTransparency: true }), /unconfirmed/);
     assert.deepEqual(storage.get(snapshotKey), { override: 'systemNative', reduceTransparency: false });
     assert.equal(storage.get(pendingKey), true);
+    preferences.detach();
+    preferences.attach({ filesDir: '/isolated' });
+    await new Promise(resolve => setImmediate(resolve));
+    assert.deepEqual(storage.get(snapshotKey), { override: 'systemNative', reduceTransparency: false },
+      'the successor must not present the dirty Preferences cache as a flushed choice');
+    assert.equal(storage.get(pendingKey), true, 'the successor exposes retry for the same original choice');
     await preferences.save({ override: 'unified' });
     assert.equal(writes.length, 2, 'pending receipt owns its exact accepted intent');
     rejectFlush = false;

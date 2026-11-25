@@ -77,7 +77,7 @@ for (const id of selectContractCases(cases)) {
 async function gripPort() {
   const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
   const source = new URL('../entry/src/main/ets/platform/interaction/HarmonyReaderGrip.ets', import.meta.url);
-  let enabled = false, rejected = true, callback, removed, attempts = 0;
+  let enabled = false, rejected = true, callback, removed, attempts = 0, offRejected = false;
   const received = [];
   const { subscribeReaderHoldingHand } = pureModuleProbe(readFileSync(source, 'utf8'), 'HarmonyReaderGrip.ets', {
     readerHarmonyCapabilities: () => ({ grip: enabled }),
@@ -89,7 +89,11 @@ async function gripPort() {
         if (rejected) throw new Error('unsupported hardware or denied permission');
         callback = listener;
       },
-      off: (type, listener) => { assert.equal(type, 'holdingHandChanged'); removed = listener; },
+      off: (type, listener) => {
+        assert.equal(type, 'holdingHandChanged');
+        if (offRejected) throw new Error('native release temporarily unavailable');
+        removed = listener;
+      },
     },
   }, ['subscribeReaderHoldingHand']);
   assert.equal(subscribeReaderHoldingHand(value => received.push(value)), undefined);
@@ -105,10 +109,23 @@ async function gripPort() {
   callback(0);
   callback(16);
   assert.deepEqual(received, ['left', 'right', undefined, undefined, undefined]);
+  offRejected = true;
+  const retired = callback;
   release();
-  assert.equal(removed, callback);
-  callback(2);
+  retired(2);
   assert.deepEqual(received, ['left', 'right', undefined, undefined, undefined]);
+  assert.equal(subscribeReaderHoldingHand(value => received.push(value)), undefined,
+    'failed release keeps manual placement available without accumulating native callbacks');
+  assert.equal(attempts, 2);
+  offRejected = false;
+  const next = subscribeReaderHoldingHand(value => received.push(value));
+  assert.equal(removed, retired, 'a later activation releases the exact retired callback before acquiring another');
+  assert.equal(attempts, 3);
+  retired(1);
+  callback(2);
+  assert.equal(received.at(-1), 'right');
+  assert.equal(received.length, 6);
+  next();
 }
 
 async function dockOwner() {
@@ -240,9 +257,9 @@ async function placementDurability() {
   const source = new URL('../entry/src/main/ets/app/ReaderControlPlacementPreferences.ts', import.meta.url);
   const storage = new Map();
   const writes = [];
-  let fault = 'open', persisted = 'center', staged = 'center', current = true;
+  let fault = 'open', persisted = 'center', staged = 'center', current = true, readStaged = false;
   const store = {
-    get: async () => persisted,
+    get: async () => readStaged ? staged : persisted,
     put: async (key, value) => {
       assert.equal(key, 'alignment');
       writes.push(value);
@@ -275,6 +292,13 @@ async function placementDurability() {
   const original = storage.get('readerControlPlacementPendingGeneration');
   assert.ok(original > 0);
   assert.equal(storage.get('readerControlAlignment'), 'center');
+  current = false;
+  readStaged = true;
+  const successor = () => true;
+  await owner.install({ ...context }, successor);
+  assert.equal(storage.get('readerControlAlignment'), 'center', 'new owner must not publish the unqualified cached alignment');
+  assert.equal(storage.get('readerControlPlacementPendingGeneration'), original);
+  current = true;
   assert.equal(await owner.select('right', active), 'ignored');
   assert.equal(await owner.retry(original + 1, active), 'ignored');
   assert.equal(await owner.retry(original, () => false), 'ignored');
@@ -290,7 +314,7 @@ async function placementDurability() {
   assert.equal(await owner.retry(original, active), 'ignored');
   assert.deepEqual(writes, ['left', 'left', 'left']);
   current = false;
-  assert.equal(await owner.select('right', active), 'ignored');
+  assert.equal(await owner.select('right', active), 'ignored', 'the rejected input stays retired');
 }
 
 async function placementRecoveryRoute() {

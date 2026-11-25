@@ -46,10 +46,15 @@ await host.apply(next);assert.equal(mode,'list');assert.equal(theme.appMode,'nig
 failTheme=true;await assert.rejects(host.apply(prior),/恢复失败/);assert.equal(mode,'list','theme flush failure compensates only acknowledged mode');assert.equal(theme.appMode,'night');
 }
 if(id==='journal'){
-const Store=productionMotionMethods(path('features/sync/application/WebDavCredentialStore.ts'),['loadRestoreJournal','saveRestoreJournal','clearRestoreJournal','validateRestoreJournal'],{LOCAL_RESTORE_JOURNAL_KEY:'journal'});
-const values=new Map();let failFlush=false;
-const prefs={get:async(k,d)=>values.get(k)??d,put:async(k,v)=>values.set(k,v),delete:async k=>values.delete(k),flush:async()=>{if(failFlush){failFlush=false;throw Error('flush');}}};
-const credentials=Object.assign(new Store(),{localModeWriteTail:Promise.resolve(),ensureLocalPreferences:async()=>prefs});
+let disk=new Map(),values=new Map(),failFlush=false;
+const prefs={get:async(k,d)=>values.get(k)??d,put:async(k,v)=>values.set(k,v),delete:async k=>values.delete(k),flush:async()=>{
+ if(failFlush){failFlush=false;throw Error('flush');}disk=new Map(values);
+}};
+const Store=productionMotionMethods(path('features/sync/application/WebDavCredentialStore.ts'),
+ ['loadRestoreJournal','saveRestoreJournal','clearRestoreJournal','validateRestoreJournal','ensureLocalPreferences'],
+ {LOCAL_RESTORE_JOURNAL_KEY:'journal',LOCAL_PREFERENCES_NAME:'sync-local',readerHostPreferencesName:(_directory,name)=>name,
+  preferences:{getPreferences:async()=>prefs,removePreferencesFromCache:async()=>{values=new Map(disk);}}});
+const credentials=Object.assign(new Store(),{localModeWriteTail:Promise.resolve(),contextGeneration:1,context:{filesDir:'/test'}});
 
 failFlush=true;await assert.rejects(credentials.saveRestoreJournal(journal),/flush/);assert.equal(await credentials.loadRestoreJournal(),undefined);
 await credentials.saveRestoreJournal(journal);assert.deepEqual(await credentials.loadRestoreJournal(),journal);

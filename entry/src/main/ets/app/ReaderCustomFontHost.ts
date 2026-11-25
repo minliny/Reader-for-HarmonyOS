@@ -7,6 +7,7 @@ import { ReaderDocumentPickerActivity } from '../platform/ReaderDocumentPickerAc
 import fileUri from '@ohos.file.fileuri';
 import cryptoFramework from '@ohos.security.cryptoFramework';
 import { Font } from '@ohos.arkui.UIContext';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import {
   ReaderCustomFontDescriptor,
   normalizeReaderCustomFontDescriptor,
@@ -59,7 +60,7 @@ export class ReaderCustomFontHost {
         let newlyCreated = false;
         let checked = false;
         try {
-          if (await fileIo.access(finalPath)) await this.unlinkIfPresent(temporaryPath);
+          if (await this.pathAccessible(finalPath)) await this.unlinkIfPresent(temporaryPath);
           else { await fileIo.rename(temporaryPath, finalPath); newlyCreated = true; }
           const descriptor = new ReaderCustomFontDescriptor(this.displayName(selectedName),
             `ReaderCustom_${fingerprint.substring(0, 16)}`, finalPath, fingerprint);
@@ -70,12 +71,12 @@ export class ReaderCustomFontHost {
         } catch (error) {
           // Admission can already have accepted a durable intent before a
           // later error. Only a failed native check owns removal here.
-          if (newlyCreated && !checked) await this.unlinkIfPresent(finalPath);
+          if (newlyCreated && !checked) await this.cleanupFailedImport(finalPath);
           throw error;
         }
       });
     } catch (error) {
-      await this.unlinkIfPresent(temporaryPath);
+      await this.cleanupFailedImport(temporaryPath);
       throw error;
     }
   }
@@ -89,7 +90,7 @@ export class ReaderCustomFontHost {
     if (old === undefined || !this.isOwnedFontPath(old.filePath)) return;
     await this.withFontFiles(async (): Promise<void> => {
       if (!isUnused()) return;
-      if (await fileIo.access(old.filePath) && isUnused()) await fileIo.unlink(old.filePath);
+      if (await this.pathAccessible(old.filePath) && isUnused()) await this.unlinkIfPresent(old.filePath);
     });
   }
 
@@ -105,7 +106,7 @@ export class ReaderCustomFontHost {
   async registerPersisted(_font: Font | undefined, descriptor: ReaderCustomFontDescriptor | undefined): Promise<boolean> {
     const admitted = normalizeReaderCustomFontDescriptor(descriptor);
     if (admitted === undefined || !this.isOwnedFontPath(admitted.filePath) ||
-      !(await fileIo.access(admitted.filePath))) {
+      !(await this.pathAccessible(admitted.filePath))) {
       return false;
     }
     const fileName = admitted.filePath.substring(admitted.filePath.lastIndexOf('/') + 1);
@@ -120,13 +121,8 @@ export class ReaderCustomFontHost {
     const stat = await fileIo.stat(path);
     this.requireFontSize(stat.size);
     const header = new ArrayBuffer(4);
-    const file = await fileIo.open(path, fileIo.OpenMode.READ_ONLY);
-    let bytesRead = 0;
-    try {
-      bytesRead = await fileIo.read(file.fd, header);
-    } finally {
-      await fileIo.close(file);
-    }
+    const bytesRead = await this.withFontFile(path, fileIo.OpenMode.READ_ONLY,
+      (file: fileIo.File): Promise<number> => fileIo.read(file.fd, header));
     if (bytesRead !== 4 || !this.isSupportedSfntHeader(new Uint8Array(header))) {
       throw new Error('Selected document is not a supported TTF/OTF font');
     }
@@ -140,11 +136,9 @@ export class ReaderCustomFontHost {
 
   private async stageBoundedFont(uri: string, path: string, expectedBytes: number): Promise<void> {
     const buffer = new ArrayBuffer(ReaderCustomFontHost.HashChunkBytes);
-    const source = await fileIo.open(uri, fileIo.OpenMode.READ_ONLY);
-    try {
-      const destination = await fileIo.open(path,
-        fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC);
-      try {
+    await this.withFontFile(uri, fileIo.OpenMode.READ_ONLY, async (source: fileIo.File): Promise<void> => {
+      await this.withFontFile(path, fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC,
+        async (destination: fileIo.File): Promise<void> => {
         let totalBytes = 0;
         while (true) {
           const bytesRead = await fileIo.read(source.fd, buffer);
@@ -166,12 +160,8 @@ export class ReaderCustomFontHost {
         }
         if (totalBytes !== expectedBytes) throw new Error('Selected font changed while being staged');
         await fileIo.fsync(destination.fd);
-      } finally {
-        await fileIo.close(destination);
-      }
-    } finally {
-      await fileIo.close(source);
-    }
+        });
+    });
   }
 
   private isSupportedSfntHeader(header: Uint8Array): boolean {
@@ -185,9 +175,8 @@ export class ReaderCustomFontHost {
     const stat = await fileIo.stat(path);
     const digest = cryptoFramework.createMd('SHA256');
     const buffer = new ArrayBuffer(ReaderCustomFontHost.HashChunkBytes);
-    const file = await fileIo.open(path, fileIo.OpenMode.READ_ONLY);
-    let totalBytes = 0;
-    try {
+    const totalBytes = await this.withFontFile(path, fileIo.OpenMode.READ_ONLY, async (file: fileIo.File): Promise<number> => {
+      let totalBytes = 0;
       while (true) {
         const bytesRead = await fileIo.read(file.fd, buffer);
         if (bytesRead === 0) {
@@ -196,9 +185,8 @@ export class ReaderCustomFontHost {
         totalBytes += bytesRead;
         await digest.update({ data: new Uint8Array(buffer, 0, bytesRead) });
       }
-    } finally {
-      await fileIo.close(file);
-    }
+      return totalBytes;
+    });
     if (totalBytes !== stat.size) {
       throw new Error('Selected font changed while being hashed');
     }
@@ -243,21 +231,60 @@ export class ReaderCustomFontHost {
   }
 
   private async ensureDirectory(path: string): Promise<void> {
-    if (await fileIo.access(path)) {
-      return;
-    }
+    if (await this.pathAccessible(path)) return;
     try {
       await fileIo.mkdir(path, true);
     } catch (error) {
-      if (!(await fileIo.access(path))) {
-        throw error;
+      try {
+        if (await this.pathAccessible(path)) return;
+      } catch (recheckError) {
+        this.reportCleanupFailure('directory recheck', recheckError);
       }
+      throw error;
+    }
+  }
+
+  private async withFontFile<T>(path: string, mode: number, operation: (file: fileIo.File) => Promise<T>): Promise<T> {
+    const file = await fileIo.open(path, mode);
+    let result: T;
+    try {
+      result = await operation(file);
+    } catch (error) {
+      try { await fileIo.close(file); }
+      catch (closeError) { this.reportCleanupFailure('close', closeError); }
+      throw error;
+    }
+    await fileIo.close(file);
+    return result;
+  }
+
+  private async pathAccessible(path: string): Promise<boolean> {
+    try { return await fileIo.access(path); }
+    catch (error) {
+      if (this.isMissingFile(error)) return false;
+      throw error;
     }
   }
 
   private async unlinkIfPresent(path: string): Promise<void> {
-    if (await fileIo.access(path)) {
-      await fileIo.unlink(path);
+    try { await fileIo.unlink(path); }
+    catch (error) {
+      if (!this.isMissingFile(error)) throw error;
     }
+  }
+
+  private async cleanupFailedImport(path: string): Promise<void> {
+    try { await this.unlinkIfPresent(path); }
+    catch (error) { this.reportCleanupFailure('unlink', error); }
+  }
+
+  private isMissingFile(error: unknown): boolean {
+    const code = (error as Record<string, unknown> | undefined)?.['code'];
+    return code === 13900002 || code === 'ENOENT';
+  }
+
+  private reportCleanupFailure(operation: string, error: unknown): void {
+    try { hilog.warn(0x5244, 'Reader', 'Custom font %{public}s failed: %{private}s', operation, `${error}`); }
+    catch (_) { /* Diagnostics cannot replace the original import error. */ }
   }
 }

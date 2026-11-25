@@ -108,7 +108,7 @@ async function fixture(){
  await new readingModule.ReaderSettingsGateway(owner).update({...settings.createDefaultReaderSettingsSnapshot(),pageTransition:'none'},true);
  await new ttsModule.ReaderTtsPreferencesGateway(owner).update({...tts.createDefaultReaderTtsPreferencesSnapshot(),keepScreenOn:true},true);trace.length=0;
  return{owner,context,trace,stores,app,ReaderThemeHost,appGateway,settingModule,readingModule,ttsModule,
- reset:()=>Reset.request(owner),recover:()=>Reset.recover(owner),raceProbe:()=>{const probe=Reset.runShared(owner,false);const request=Reset.runShared(owner,true);return Promise.all([probe,request]);},restart:()=>{Reset=compile('features/settings/application/LocalConfigurationReset.ts',modules).LocalConfigurationReset;},
+ reset:()=>Reset.request(owner),recover:()=>Reset.recover(owner),raceProbe:()=>{const probe=Reset.runShared(owner,false);const request=Reset.runShared(owner,true);return Promise.all([probe,request]);},restart:()=>{const journal=stores.get('reader_configuration_reset_v1');if(journal!==undefined)journal.memory=new Map(journal.disk);Reset=compile('features/settings/application/LocalConfigurationReset.ts',modules).LocalConfigurationReset;},
  fail:x=>{fail=x;},gate:name=>{const d=deferred();pendingGate={name,...d};return d;},ownerChanged:()=>{current={};},
  mode:()=>mode,appearance:()=>appearanceDisk,barriers:()=>barrierCalls,
  pending:()=>stores.get('reader_configuration_reset_v1')?.memory.get('pending')??'',
@@ -139,7 +139,8 @@ async function fixture(){
 for(const failure of ['reader_configuration_reset_v1','reader_settings_v1','reader_reading_settings_v1','reader_tts_preferences_v1','mode','appearance',
  'reader_navigation_appearance_v1','reader_control_placement_v1']){
  const f=await fixture();f.fail(failure);await assert.rejects(f.reset(),/flush|CONTROL_PLACEMENT_RESET_UNCONFIRMED/);
- if(failure==='reader_configuration_reset_v1'){assert.equal(f.mode(),'cover');assert.equal(f.appearance().fontSize,24);assert.equal(f.pending(),'');}
+ if(failure==='reader_configuration_reset_v1'){assert.equal(f.mode(),'cover');assert.equal(f.appearance().fontSize,24);assert.ok(f.pending());
+   assert.equal(f.stores.get('reader_configuration_reset_v1').disk.has('pending'),false);}
  else{assert.ok(f.pending());f.restart();assert.equal(await f.recover(),true);await f.assertDefaults();assert.equal(f.pending(),'');}
 }
 {
@@ -159,7 +160,7 @@ for(const failure of ['reader_configuration_reset_v1','reader_settings_v1','read
  const f=await fixture();assert.deepEqual(await f.raceProbe(),[false,true],'empty startup probe cannot swallow explicit reset');await f.assertDefaults();
 }
 {
- const f=await fixture();f.fail('reset-clear');await assert.rejects(f.reset(),/flush/);assert.ok(f.pending());
+ const f=await fixture();f.fail('reset-clear');await assert.rejects(f.reset(),/flush/);assert.ok(f.stores.get('reader_configuration_reset_v1').disk.has('pending'));
  f.restart();await f.recover();await f.assertDefaults();assert.equal(f.pending(),'');
 }
 {
