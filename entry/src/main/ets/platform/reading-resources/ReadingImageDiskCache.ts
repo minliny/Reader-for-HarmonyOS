@@ -1131,25 +1131,22 @@ export class ReadingImageDiskCache {
       nowSeconds: Math.floor(Date.now() / 1000),
       ttlSeconds: this.configuredCleanupTtlSeconds ?? MANGA_READ_TTL_SECONDS,
     } : undefined;
-    const current = (): boolean => !this.closed && epoch === this.mangaStorageEpoch &&
+    const current = (): boolean => !this.closed && this.mangaAuthority === authority && epoch === this.mangaStorageEpoch &&
       this.mangaRestoreRequests === 0 && !this.mangaRestoreBlocked &&
       (expiry === undefined || expiry.ttlSeconds === (this.configuredCleanupTtlSeconds ?? MANGA_READ_TTL_SECONDS));
-    const pending = await this.mangaPolicyStep(batched, async (): Promise<MangaStorageGrant[]> => {
-      if (!current() || this.mangaAuthority !== authority) return [];
-      const grants = await authority.pending();
-      if (!current() || this.mangaAuthority !== authority) return [];
-      // A successful Core completion may have lost its reply. Refresh the
-      // temporary local fences from the exact authoritative pending set in
-      // the same policy lane used by claim/completion.
-      const active = new Set<string>();
-      for (const grant of grants) {
-        const key = this.mangaChapterKey(grant);
-        active.add(key);
-        this.mangaEvicting.set(key, grant);
+    const localAtRead = new Map(this.mangaEvicting);
+    const pending = await authority.pending();
+    const active = new Set(pending.map(grant => this.mangaChapterKey(grant)));
+    await this.mangaPolicyStep(batched, async (): Promise<void> => {
+      if (!current()) return;
+      // Core may have completed a grant whose reply was lost. Retire only
+      // unchanged local fences after the authoritative read outside the
+      // foreground lane. A concurrent, newer grant keeps its own fence.
+      for (const [key, grant] of localAtRead) {
+        if (!active.has(key) && this.mangaEvicting.get(key) === grant) this.mangaEvicting.delete(key);
       }
-      for (const key of this.mangaEvicting.keys()) if (!active.has(key)) this.mangaEvicting.delete(key);
-      return grants;
     });
+    if (!current()) return;
     for (const grant of pending) {
       if (!current()) return;
       if (scope !== undefined && (grant.sourceId !== scope.sourceId || grant.bookId !== scope.bookId)) continue;
