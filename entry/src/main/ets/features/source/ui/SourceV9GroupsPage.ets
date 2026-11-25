@@ -565,11 +565,14 @@ export struct SourceV9GroupsPage {
         .textOverflow({ overflow: TextOverflow.Ellipsis }).fontSize(18).fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD)
         .fontColor(this.color('TOK_INK'));
       if (this.detailGroupId === undefined) {
-        this.action('＋ 新建', 'soft', this.pageEditable(), (): void => this.openDialog('create'), 36);
+        this.action('＋ 新建', 'soft', this.pageEditable(), (): void => this.openDialog('create'), 36, 12,
+          'reader-source-v9-group-create');
       } else if (this.detailGroupId === '') {
-        this.action('批量归组', 'soft', this.pageEditable() && this.detailCount > 0, (): void => this.batchUngrouped(), 36);
+        this.action('批量归组', 'soft', this.pageEditable() && this.detailCount > 0, (): void => this.batchUngrouped(), 36, 12,
+          'reader-source-v9-group-batch-ungrouped');
       } else {
-        this.action('＋ 添加', 'soft', this.pageEditable(), (): void => this.openDialog('add'), 36);
+        this.action('＋ 添加', 'soft', this.pageEditable(), (): void => this.openDialog('add'), 36, 12,
+          'reader-source-v9-group-add');
       }
     }.width('100%').height(GROUP_HEADER_HEIGHT).padding({ left: this.frameInset(true), right: this.frameInset(false) })
       .border({ width: { bottom: 1 }, color: this.color('TOK_LINE') });
@@ -577,8 +580,9 @@ export struct SourceV9GroupsPage {
 
   @Builder
   private action(label: string, tone: GroupActionTone, enabled: boolean, run: () => void,
-    height: number = 32, size: number = 12) {
+    height: number = 32, size: number = 12, controlId: string = '') {
     Button(label, { type: ButtonType.Capsule }).height(height).padding({ left: height < 30 ? 8 : 12, right: height < 30 ? 8 : 12 })
+      .id(controlId)
       .fontSize(size).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
       .fontColor(this.actionInk(tone)).backgroundColor(this.actionSurface(tone))
       .border({ width: tone === 'neutral' ? 1 : 0, color: this.color('TOK_LINE_STRONG') })
@@ -618,7 +622,8 @@ export struct SourceV9GroupsPage {
           Image(this.scheme === 'night' ? $r('app.media.source_group_chevron_theme_night') : $r('app.media.source_group_chevron'))
             .width(15).height(15).flexShrink(0);
         }.width('100%');
-      }.layoutWeight(1).constraintSize({ minHeight: 44 }).padding(0)
+      }.id(`reader-source-v9-group-row-${group.id === '' ? 'ungrouped' : group.id}`)
+        .layoutWeight(1).constraintSize({ minHeight: 44 }).padding(0)
         .backgroundColor(Color.Transparent).enabled(this.pageEditable())
         .accessibilityText(`${group.name}，共 ${group.members} 个，已启用 ${group.enabled} 个`)
         .onClick((): void => this.openGroup(group.id));
@@ -635,14 +640,17 @@ export struct SourceV9GroupsPage {
   @Builder
   private groupDetail() {
     Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
-      this.action('整组检测', 'primary', this.pageEditable() && this.detailCount > 0, (): void => this.checkGroup());
+      this.action('整组检测', 'primary', this.pageEditable() && this.detailCount > 0, (): void => this.checkGroup(), 32, 12,
+        'reader-source-v9-group-check');
       this.action('全部启用', 'neutral', this.pageEditable() && this.detailCount > 0,
-        (): void => this.toggleGroup(this.detailGroupId ?? '', true));
+        (): void => this.toggleGroup(this.detailGroupId ?? '', true), 32, 12, 'reader-source-v9-group-enable');
       this.action('全部停用', 'neutral', this.pageEditable() && this.detailCount > 0,
-        (): void => this.toggleGroup(this.detailGroupId ?? '', false));
+        (): void => this.toggleGroup(this.detailGroupId ?? '', false), 32, 12, 'reader-source-v9-group-disable');
       if (this.detailGroupId !== '') {
-        this.action('重命名', 'neutral', this.pageEditable(), (): void => this.openDialog('rename'));
-        this.action('删除分组', 'danger', this.pageEditable(), (): void => this.openDialog('delete'));
+        this.action('重命名', 'neutral', this.pageEditable(), (): void => this.openDialog('rename'), 32, 12,
+          'reader-source-v9-group-rename');
+        this.action('删除分组', 'danger', this.pageEditable(), (): void => this.openDialog('delete'), 32, 12,
+          'reader-source-v9-group-delete');
       }
     }.width('100%').padding({ left: Math.max(16, this.frameInset(true)),
       right: Math.max(16, this.frameInset(false)), top: 12, bottom: 8 });
@@ -684,20 +692,24 @@ export struct SourceV9GroupsPage {
               .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(11).fontColor(this.color('app.sourceUi.faint'));
           }.layoutWeight(1).alignItems(HorizontalAlign.Start);
         }.width('100%');
-      }.layoutWeight(1).constraintSize({ minHeight: 44 }).padding(0)
+      }.id(`reader-source-v9-group-source-row-${source.sourceId}`)
+        .layoutWeight(1).constraintSize({ minHeight: 44 }).padding(0)
         .backgroundColor(Color.Transparent).enabled(this.pageEditable()).accessibilityText(`${source.name}，检测详情`)
         .onClick((): void => this.checkMember(source.sourceId));
       Button({ type: ButtonType.Circle }) {
         Text(this.checkGlyph(source)).fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(14)
           .fontColor(this.color(sourceV9ReportTone(source) === 'unverified' ? 'app.sourceUi.muted' : 'app.sourceUi.onPrimary'));
-      }.width(28).height(28).padding(0).flexShrink(0).responseRegion({ y: -8, height: 44 })
+      }.id(`reader-source-v9-group-source-check-${source.sourceId}`)
+        .width(28).height(28).padding(0).flexShrink(0).responseRegion({ y: -8, height: 44 })
         .backgroundColor(sourceV9ReportFill(sourceV9ReportTone(source), this.scheme) ?? this.color('app.sourceUi.field'))
         .enabled(this.pageEditable()).accessibilityText(`${source.name}，检测`)
         .onClick((): void => this.checkMember(source.sourceId));
       this.action(this.detailGroupId === '' ? '归入分组' : '移动', 'neutral', this.pageEditable(),
-        (): void => { if (this.rowValid(source.sourceId)) this.openMove([source.sourceId], this.sourceGroup(source)); }, 26, 11);
+        (): void => { if (this.rowValid(source.sourceId)) this.openMove([source.sourceId], this.sourceGroup(source)); }, 26, 11,
+        `reader-source-v9-group-source-move-${source.sourceId}`);
       if (this.detailGroupId !== '') {
-        this.action('移出', 'danger', this.pageEditable(), (): void => this.removeMember(source.sourceId), 26, 11);
+        this.action('移出', 'danger', this.pageEditable(), (): void => this.removeMember(source.sourceId), 26, 11,
+          `reader-source-v9-group-source-remove-${source.sourceId}`);
       }
       ReaderToggle({ checkedColor: sourceV9Primary(this.scheme), value: source.enabled, inputIdentity: source.sourceId,
         actionEnabled: this.pageEditable(), accessibilityLabel: `启用${source.name}`,
