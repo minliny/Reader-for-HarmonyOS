@@ -104,7 +104,7 @@ const topDock=[...owner.nodes.values()].find(node=>node.type==='Column'&&typeof 
 const bottomDock=[...owner.nodes.values()].find(node=>node.type==='Scroll'&&typeof node.position?.bottom==='number');
 assert.ok(topDock,'the real SDK positions the top chrome column');
 assert.ok(bottomDock,'the real SDK positions the bounded bottom dock Scroll');
-assert.equal(topDock.touchable,false,'the top layout host leaves the viewport outside its chrome available to image gestures');
+assert.equal(topDock.hitTestBehavior,'HitTestMode.None','the top layout host leaves the viewport outside its chrome available to image gestures');
 assert.ok(bottomDock.height>0&&bottomDock.height<owner.viewportHeight,'the bottom dock reserves only its own bounds');
 const assertDocks=(left,top,right,bottom)=>{
   assert.equal(topDock.width,`calc(100% - ${left+right}vp)`);

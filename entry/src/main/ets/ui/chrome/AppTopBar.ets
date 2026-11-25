@@ -91,8 +91,7 @@ export struct AppTopBar {
     .borderRadius(this.floating ? this.barHeight() / 2 : 0)
     .clip(false)
     .shadow(readerSurfaceElevation(this.floating ? 'raised' : 'fixed', this.appThemeScheme))
-    .hitTestBehavior(HitTestMode.Default)
-    .touchable(this.floating || this.surface === 'solid')
+    .hitTestBehavior(this.floating || this.surface === 'solid' ? HitTestMode.Default : HitTestMode.None)
     .onTouch((): void => {});
   }
 

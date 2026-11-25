@@ -62,21 +62,21 @@ export struct ReaderPageScaffold {
             onHeightChange: (height: number, presentedKey: number): void => this.onHeaderHeightChange(height, presentedKey) });
         }.width('100%').padding({ left: this.geometry.header.insetLeft, right: this.geometry.header.insetRight })
           .margin({ top: this.geometry.header.top }).zIndex(10)
-          .hitTestBehavior(HitTestMode.Default).touchable(false);
+          .hitTestBehavior(HitTestMode.None);
       }
       // Keep sibling blocking on a child hit. A layout carrier's empty lane
       // has no hit region of its own, even when it spans the viewport width.
       Column() {
         Column() { this.footer(); }
           .width('100%').padding({ left: this.geometry.footer.insetLeft, right: this.geometry.footer.insetRight })
-          .hitTestBehavior(HitTestMode.Default).touchable(false)
+          .hitTestBehavior(HitTestMode.None)
           .id(this.footerMeasurement.id)
           .onAppear((): void => this.footerMeasurement.mount(this.getUIContext(), this.footerMeasurementKey,
             (height: number, key: number): void => this.onFooterHeightChange(height, key)))
           .onDisAppear((): void => this.footerMeasurement.unmount())
           .onAreaChange(this.footerAreaChangeHandler(this.footerMeasurementKey));
       }.width('100%').layoutGravity(LocalizedAlignment.BOTTOM).zIndex(20)
-        .hitTestBehavior(HitTestMode.Default).touchable(this.footerSurfaceValue() === 'solid')
+        .hitTestBehavior(this.footerSurfaceValue() === 'solid' ? HitTestMode.Default : HitTestMode.None)
         .padding({ bottom: this.footerSurfaceValue() === 'solid' ? this.geometry.footer.bottom : 0 })
         .margin({ bottom: this.footerSurfaceValue() === 'solid' ? 0 : this.geometry.footer.bottom })
         .attributeModifier(new ReaderFooterFrameModifier(this.frameStyle.footer));

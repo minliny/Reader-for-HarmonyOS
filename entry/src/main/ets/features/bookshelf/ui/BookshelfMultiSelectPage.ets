@@ -190,8 +190,7 @@ export struct BookshelfMultiSelectPage {
     .width('100%')
     .constraintSize({ minHeight: APP_HEADER_BAR_HEIGHT })
     .padding({ left: 20, right: 20, top: 7, bottom: 7 })
-    .hitTestBehavior(HitTestMode.Default)
-    .touchable(false);
+    .hitTestBehavior(HitTestMode.None);
   }
 
   @Builder

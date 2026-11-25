@@ -65,7 +65,7 @@ export struct PageBackBar {
     if (this.raised()) {
       Stack({ alignContent: Alignment.TopStart }) {
         this.panel();
-      }.width('100%').clip(false).hitTestBehavior(HitTestMode.Default).touchable(false);
+      }.width('100%').clip(false).hitTestBehavior(HitTestMode.None);
     } else {
       this.panel();
     }
@@ -150,8 +150,7 @@ export struct PageBackBar {
     .borderRadius(this.panelRadius())
     .clip(this.variant === 'download' && this.elevation === 'fixed' && !this.veil() && this.surface === 'solid')
     .shadow(readerSurfaceElevation(this.raised() ? 'raised' : this.elevation === 'floating' ? 'floating' : 'fixed', this.appThemeScheme))
-    .hitTestBehavior(HitTestMode.Default)
-    .touchable(this.veil() || this.surface === 'solid')
+    .hitTestBehavior(this.veil() || this.surface === 'solid' ? HitTestMode.Default : HitTestMode.None)
     .onTouch((): void => {})
     .onAreaChange(this.panelAreaChangeHandler());
   }

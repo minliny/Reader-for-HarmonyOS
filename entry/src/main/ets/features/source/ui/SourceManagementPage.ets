@@ -649,7 +649,7 @@ export struct SourceManagementPage {
       .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
       .enabled(!this.groupOpen)
       .accessibilityLevel(this.groupOpen ? 'no-hide-descendants' : 'auto')
-      .hitTestBehavior(this.groupOpen ? HitTestMode.None : HitTestMode.Default).touchable(false);
+      .hitTestBehavior(HitTestMode.None);
   }
 
   @Builder
@@ -1994,7 +1994,7 @@ export struct SourceManagementPage {
     .width(this.contentFrame().width)
     .constraintSize({ minHeight: this.layoutBudget().footerHeight })
     .margin({ top: TOK_SPACE_SM, bottom: this.actionBottomInset() })
-    .hitTestBehavior(HitTestMode.Default).touchable(false);
+    .hitTestBehavior(HitTestMode.None);
   }
 
   private actionBottomInset(actionHeight: number = this.footerActionHeight()): number {

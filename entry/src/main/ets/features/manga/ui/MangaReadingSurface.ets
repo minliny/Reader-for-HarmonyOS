@@ -2554,7 +2554,7 @@ export struct MangaReadingSurface {
     Column() { this.topControls(); }
       .width(this.topControlsWidth())
       .position(this.topControlsPosition())
-      .hitTestBehavior(HitTestMode.Default).touchable(false);
+      .hitTestBehavior(HitTestMode.None);
     if (this.bottomControlViewportHeight() > 12) {
       Scroll() { this.bottomControls(); }
         .width(this.dockWidth(this.interactiveInsets(this.windowMetricsRevision)))
@@ -2599,7 +2599,7 @@ export struct MangaReadingSurface {
           .fontSize(10).maxLines(4).fontColor(this.mutedColor()).id('reader-manga-offline-probe-status');
       }
     }.width('100%').padding({ left: 8, right: 8, top: 10 })
-      .hitTestBehavior(HitTestMode.Default).touchable(false);
+      .hitTestBehavior(HitTestMode.None);
   }
 
   private recoveryOverlayIdentity(): string {

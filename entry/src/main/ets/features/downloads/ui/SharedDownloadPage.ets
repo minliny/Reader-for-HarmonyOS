@@ -320,8 +320,7 @@ export struct SharedDownloadPage {
     if (this.fixedSelectionDockVisible()) {
       Column() { this.selectionDock(); }.width('100%').enabled(!this.modalBlocking())
         .accessibilityLevel(this.modalBlocking() ? 'no-hide-descendants' : 'auto')
-        .hitTestBehavior(this.modalBlocking() ? HitTestMode.None : HitTestMode.Default)
-        .touchable(false);
+        .hitTestBehavior(HitTestMode.None);
     }
   }
 
@@ -1148,7 +1147,7 @@ export struct SharedDownloadPage {
       .hitTestBehavior(HitTestMode.Default)
       .onTouch((): void => {})
       .onAreaChange(this.raisedDockAreaChangeHandler(true));
-    }.width('100%').clip(false).touchable(false);
+    }.width('100%').clip(false).hitTestBehavior(HitTestMode.None);
   }
 
   @Builder

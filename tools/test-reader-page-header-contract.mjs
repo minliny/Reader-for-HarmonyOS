@@ -181,13 +181,12 @@ async function case_scaffold_slots() {
     const layers = nodes.filter(node => [10, 20, 30].includes(node.zIndex));
     assert.deepEqual(layers.map(node => node.zIndex), [10, 20, 30], 'header, footer and overlay have one shared ordering');
     assert.deepEqual(layers.map(node => node.hitTestBehavior),
-      ['HitTestMode.Default', 'HitTestMode.Default', 'HitTestMode.Transparent']);
+      ['HitTestMode.None', clip ? 'HitTestMode.Default' : 'HitTestMode.None', 'HitTestMode.Transparent']);
     const footerLane = layers[1];
     assert.equal(footerLane.layoutGravity, 'LocalizedAlignment.BOTTOM');
     assert.equal(footerLane.height, undefined, 'the slot sizes to its measured content');
     assert.deepEqual(footerLane.padding, { bottom: clip ? 28 : 0 });
     assert.deepEqual(footerLane.margin, { bottom: clip ? 0 : 28 });
-    assert.equal(footerLane.touchable, clip, 'only the painted lane receives touches within its own frame');
     const body = nodes.find(node => node.type === 'Stack' && node.zIndex === 0 && node !== root);
     assert.equal(body.height, clip ? 'calc(100% - 82vp)' : '100%');
     assert.equal(body.clip, clip);
@@ -196,10 +195,9 @@ async function case_scaffold_slots() {
       .find(node => node.type === 'Column' && node.onAreaChange && node.zIndex === 10);
     header.onAreaChange({}, { height: 97 });
     const footer = nodes.find(node => node.type === 'Column' && node.onAreaChange);
-    assert.equal(layers[0].touchable, false);
-    assert.equal(footer.touchable, false);
+    assert.equal(header.hitTestBehavior, 'HitTestMode.Default', 'the painted header admits its child actions');
+    assert.equal(footer.hitTestBehavior, 'HitTestMode.None', 'the measurement carrier does not intercept touches');
     for (const carrier of [layers[0], footerLane, header, footer]) {
-      assert.equal(carrier.hitTestBehavior, 'HitTestMode.Default');
       assert.equal(carrier.onTouch, undefined, 'a layout carrier has no touch target of its own');
       assert.equal(carrier.onClick, undefined);
     }
@@ -210,88 +208,101 @@ async function case_scaffold_slots() {
 }
 
 async function case_footer_safe_lane() {
-const { default: assert } = await import('node:assert/strict');
-const { readFileSync } = await import('node:fs');
-const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
-const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
-const { actualReaderPageShell, readerPageShellSourceUrl } = await import('./lib/reader-page-shell-runtime-probe.mjs');
-const { verifyReaderPageFrameworkCoverage } = await import('./lib/reader-page-framework-coverage.mjs');
-const { readerPageBuilderSlots } = await import('./lib/reader-page-builder-slots.mjs');
-const { verifyFullDirectoryLayoutSuccession } = await import('./lib/reader-full-directory-layout-successor.mjs');
-const { verifyIndexSyncColdLayoutSuccession } = await import('./lib/index-sync-cold-layout-successor.mjs');
-const { sharedProducerShape } = await import('./lib/architecture-shared-producer-contract.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
-const { mangaDirectoryColor } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
-const { createDefaultReaderWindowMetrics, readerContentSafeTop } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
-const read = name => readFileSync(`entry/src/main/ets/ui/layout/${name}.ets`, 'utf8');
-const policySource = readFileSync(readerPageShellSourceUrl, 'utf8');
-const flatten = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(flatten)];
-const findChild = (owner, predicate) => {
-  for (const child of owner.children.values()) { if (predicate(child)) return child; const nested = findChild(child, predicate); if (nested) return nested; }
-};
-function actual(name, dependencies = {}, hooks = {}, source = read(name)) {
-  const properties = createArkUIPropertyRuntimeProbe();
-  return { ...createReaderBuilderProbe(source, boundedMembers(source), { ...properties.sdk, ...dependencies },
-    { ...properties.hooks, ...hooks }), properties };
-}
+  const { default: assert } = await import('node:assert/strict');
+  const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+  const fixture = await currentPageLayoutProbe({});
+  const scaffoldSource = layoutSource('ReaderPageScaffold');
 
-function footerProof(scaffoldSource = read('ReaderPageScaffold'), dependencies = {}, scheme = 'day') {
-  const probe = actual('ReaderPageScaffold', dependencies, {}, scaffoldSource);
-  const heights = []; let mounts = 0;
-  Object.assign(probe.owner, { variant: 'mangaDirectory', footerSurface: 'solid', appThemeScheme: scheme,
-    contentEndInset: 98, footerBottom: 42, footerInsetLeft: 20, footerInsetRight: 20,
-    content: () => mounts++, footer: () => {}, onFooterHeightChange: height => heights.push(height) });
-  probe.owner.initialRender();
-  const nodes = [...probe.owner.nodes.values()];
-  const viewport = nodes.find(node => node.type === 'Stack' && node.height === 'calc(100% - 98vp)');
-  assert.ok(viewport, 'the public frame owns a bounded native content viewport above the fixed dock');
-  assert.equal(viewport.clip, true, 'rows cannot paint or receive input below that viewport');
-  const backing = nodes.find(node => node.type === 'Column' && node.padding?.bottom === 42);
-  assert.ok(backing, 'the paper lane includes the complete bottom safe area rather than a transparent margin');
-  assert.equal(backing.width, '100%', 'paper covers both card gutters'); assert.equal(backing.clip, true);
-  assert.equal(backing.backgroundColor, mangaDirectoryColor('paper', scheme));
-  const measurement = nodes.find(node => node.type === 'Column' && node.onAreaChange);
-  measurement.onAreaChange({}, { height: '54vp' }); assert.deepEqual(heights, [54], 'dock measurement excludes the already reserved bottom safe lane');
-  probe.owner.footerSurface = 'transparent'; probe.owner.contentEndInset = 0; probe.properties.flush();
-  assert.equal(backing.backgroundColor, 'Color.Transparent'); assert.equal(backing.clip, false);
-  assert.deepEqual(backing.padding, { bottom: 0 }); assert.deepEqual(backing.margin, { bottom: 42 });
-  assert.equal(viewport.height, '100%'); assert.equal(viewport.clip, false); assert.equal(mounts, 1, 'footer style/inset updates retain the body actor');
-}
-footerProof();
-footerProof(undefined, {}, 'night');
-const scaffoldSource = read('ReaderPageScaffold');
-const noViewportClip = scaffoldSource.replace('.clip(this.contentEndInset > 0)', '.clip(false)');
-assert.notEqual(noViewportClip, scaffoldSource); assert.throws(() => footerProof(noViewportClip), assert.AssertionError);
-const noSafeLane = scaffoldSource.replace("bottom: this.footerSurface === 'solid' ? this.footerBottom : 0", 'bottom: 0');
-assert.notEqual(noSafeLane, scaffoldSource); assert.throws(() => footerProof(noSafeLane), assert.AssertionError);
-const noFooterPaint = policySource.replace('new ReaderPageFrameModifier(this.scheme, this.kind, this.readingUnderlayColor).applyNormalAttribute(instance);', 'instance.backgroundColor(Color.Transparent);');
-assert.notEqual(noFooterPaint, policySource); assert.throws(() => footerProof(scaffoldSource, actualReaderPageShell(noFooterPaint)), assert.AssertionError);
+  function frameStyle(layout, backgroundColor, footerSolid = false) {
+    return layout.readerFrameStyle({ backgroundColor, headerBackground: backgroundColor,
+      footerBackground: backgroundColor, footerSolid });
+  }
 
-{
-  const policy = actualReaderPageShell();
-  assert.throws(() => policy.readerStandardPageSpec('private99'), /Unknown|unknown/);
-  assert.throws(() => policy.readerPageInitialHeaderHeight('private99'), /Unknown|unknown/);
-}
+  function footerGeometry(layout, surface) {
+    const input = new layout.ReaderPageGeometryInput();
+    Object.assign(input, { viewportWidth: 393, viewportHeight: 852, footerHeight: 56, footerBottom: 42,
+      footerInsetLeft: 20, footerInsetRight: 20, footerSurface: surface });
+    return layout.resolveReaderPageGeometry(input);
+  }
 
-{
-  const probe = actual('ReaderPageScaffold');
-  probe.owner.variant = 'reader'; probe.owner.headerKind = 'reader';
-  let mounts = 0; probe.owner.content = () => mounts++;
-  probe.owner.initialRender();
-  const root = [...probe.owner.nodes.values()].find(node => node.type === 'Stack' && node.padding);
-  assert.equal(root.backgroundColor, readerAppColor('app.window.background', 'day'), 'reader first frame consumes the real window paper fact');
-  probe.owner.readingUnderlayColor = '#FF314159'; probe.properties.flush();
-  assert.equal(root.backgroundColor, '#FF314159', 'updated window paper reaches the retained common reading frame');
-  assert.equal(mounts, 1, 'window paper updates do not remount reading content');
-  probe.owner.pageVisible = false; probe.properties.flush();
-  assert.equal(root.opacity, 0); assert.equal(root.hitTestBehavior, 'HitTestMode.Transparent');
-  probe.owner.pageVisible = true; probe.properties.flush();
-  assert.equal(root.opacity, 1); assert.equal(root.hitTestBehavior, 'HitTestMode.Default');
-  assert.equal(mounts, 1, 'page visibility toggles preserve the persistent reader actor');
+  function footerProof(layoutFixture, scheme = 'day', source = scaffoldSource) {
+    const { layout, properties } = layoutFixture;
+    const paper = readerAppColor('TOK_PAPER', scheme);
+    const heights = [];
+    let mounts = 0;
+    const { owner } = layoutFixture.actual('ReaderPageScaffold', source, {
+      headerVisible: false, frameStyle: frameStyle(layout, paper, true), geometry: footerGeometry(layout, 'solid'),
+      footerMeasurementKey: 7, content: () => mounts++, footer: () => {},
+      onFooterHeightChange: (height, key) => heights.push([height, key]),
+    });
+    owner.initialRender();
+    const nodes = [...owner.nodes.values()];
+    const viewport = nodes.find(node => node.type === 'Stack' && node.height === 'calc(100% - 98vp)');
+    assert.ok(viewport, 'the public frame owns a bounded native content viewport above the fixed dock');
+    assert.equal(viewport.clip, true, 'rows cannot paint or receive input below that viewport');
+    const backing = nodes.find(node => node.type === 'Column' && node.zIndex === 20);
+    assert.equal(backing.width, '100%', 'paper covers both card gutters');
+    assert.equal(backing.backgroundColor, paper, 'the fixed lane paints its resolved paper color');
+    assert.equal(backing.clip, true);
+    assert.equal(backing.hitTestBehavior, 'HitTestMode.Default');
+    assert.deepEqual(backing.padding, { bottom: 42 }, 'the paper lane includes the complete bottom safe area');
+    assert.deepEqual(backing.margin, { bottom: 0 });
+    const measurement = nodes.find(node => node.type === 'Column' && node.onAreaChange);
+    assert.deepEqual(measurement.padding, { left: 20, right: 20 });
+    measurement.onAreaChange({}, { height: '54vp' });
+    assert.deepEqual(heights, [[54, 7]], 'dock measurement excludes the already reserved bottom safe lane');
 
-}
+    owner.frameStyle = frameStyle(layout, paper);
+    owner.geometry = footerGeometry(layout, 'transparent');
+    properties.flush();
+    assert.equal(backing.backgroundColor, '#00000000');
+    assert.equal(backing.clip, false);
+    assert.equal(backing.hitTestBehavior, 'HitTestMode.None');
+    assert.deepEqual(backing.padding, { bottom: 0 });
+    assert.deepEqual(backing.margin, { bottom: 42 });
+    assert.equal(viewport.height, '100%');
+    assert.equal(viewport.clip, false);
+    assert.equal(mounts, 1, 'footer style and inset updates retain the body actor');
+  }
 
+  footerProof(fixture);
+  footerProof(fixture, 'night');
+  const noViewportClip = scaffoldSource.replace('.clip(this.geometry.content.nativeEndInset > 0)', '.clip(false)');
+  assert.notEqual(noViewportClip, scaffoldSource);
+  assert.throws(() => footerProof(fixture, 'day', noViewportClip), /rows cannot paint/);
+  const noSafeLane = scaffoldSource.replace("bottom: this.footerSurfaceValue() === 'solid' ? this.geometry.footer.bottom : 0", 'bottom: 0');
+  assert.notEqual(noSafeLane, scaffoldSource);
+  assert.throws(() => footerProof(fixture, 'day', noSafeLane), /complete bottom safe area/);
+  const attributes = layoutSource('ReaderPageNativeAttributes');
+  const noFooterPaint = attributes.replace('instance.clip(this.style.clip).backgroundColor(this.style.backgroundColor);',
+    'instance.clip(this.style.clip);');
+  assert.notEqual(noFooterPaint, attributes);
+  const modifier = fixture.pureModuleProbe(noFooterPaint, 'ReaderPageNativeAttributes.ets', {}, ['ReaderFooterFrameModifier']);
+  const unpaintedFixture = await currentPageLayoutProbe({}, modifier);
+  assert.throws(() => footerProof(unpaintedFixture), /fixed lane paints/);
+
+  const { layout, properties } = fixture;
+  assert.throws(() => layout.readerStandardPageSpec('private99'), /Unknown|unknown/);
+  assert.throws(() => layout.readerPageInitialHeaderHeight('private99'), /Unknown|unknown/);
+  const windowPaper = readerAppColor('app.window.background', 'day');
+  let mounts = 0;
+  const { owner } = fixture.actual('ReaderPageScaffold', undefined, { headerVisible: false,
+    frameStyle: frameStyle(layout, windowPaper), geometry: layout.readerEmptyPageGeometry(), content: () => mounts++ });
+  owner.initialRender();
+  const root = [...owner.nodes.values()].find(node => node.type === 'Stack' && node.padding);
+  assert.equal(root.backgroundColor, windowPaper, 'the first frame uses the supplied window paper');
+  owner.frameStyle = frameStyle(layout, '#FF314159');
+  properties.flush();
+  assert.equal(root.backgroundColor, '#FF314159', 'updated window paper reaches the retained reading frame');
+  owner.pageVisible = false;
+  properties.flush();
+  assert.equal(root.opacity, 0);
+  assert.equal(root.hitTestBehavior, 'HitTestMode.Transparent');
+  owner.pageVisible = true;
+  properties.flush();
+  assert.equal(root.opacity, 1);
+  assert.equal(root.hitTestBehavior, 'HitTestMode.Default');
+  assert.equal(mounts, 1, 'paper and visibility updates preserve the persistent reader actor');
 }
 
 async function case_standard_page_layout() {
