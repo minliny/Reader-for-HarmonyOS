@@ -304,11 +304,15 @@ export struct ReaderDirectoryRules {
   build() {
     Column({ space: 8 }) {
       Text('本书目录层级规则').fontSize(TYPE_READER_DIRECTORY_RULE_HEADING.fontSizeFp)
+        .fontFamily(TYPE_READER_DIRECTORY_RULE_HEADING.fontFamily)
+        .fontColor(readerAppColor('TOK_INK', this.scheme))
         .fontWeight(TYPE_READER_DIRECTORY_RULE_HEADING.fontWeight as number)
         .id(this.focusTargetId.length > 0 ? this.focusTargetId : undefined)
         .focusable(this.interactionEnabled && this.focusTargetId.length > 0);
-      Text('只调整导航层级；0 为最外层，范围 0–31。删除所有规则可恢复默认，请先预览。').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp);
-      Text('正则匹配完整标题或独立行，例如“第一卷.*”可匹配“第一卷 童子行”。').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp);
+      Text('只调整导航层级；0 为最外层，范围 0–31。删除所有规则可恢复默认，请先预览。')
+        .fontFamily(TYPE_APP_INHERITED_HINT.fontFamily).fontWeight(TYPE_APP_INHERITED_HINT.fontWeight).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.scheme));
+      Text('正则匹配完整标题或独立行，例如“第一卷.*”可匹配“第一卷 童子行”。')
+        .fontFamily(TYPE_APP_INHERITED_HINT.fontFamily).fontWeight(TYPE_APP_INHERITED_HINT.fontWeight).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.scheme));
       ForEach([this.actorIdentity()], (identity: string) => {
       if (this.rules.length > 0) {
         Scroll(this.editingScroller) { Column({ space: 8 }) {
@@ -320,7 +324,7 @@ export struct ReaderDirectoryRules {
             onTextChange: (value: string): void => { if (this.ownsActor(identity)) this.edit(rule.id, 'pattern', value); } });
           Flex({ wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center,
             space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
-            Text('层级').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp);
+            Text('层级').fontFamily(TYPE_APP_INHERITED_HINT.fontFamily).fontWeight(TYPE_APP_INHERITED_HINT.fontWeight).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.scheme));
             ReaderFormField({ editingHost: this.editingHost, specId: 'directory-rule-level', scheme: this.scheme, text: this.currentRule(rule.id)?.level ?? '',
               fieldAccessibilityLabel: `规则${rule.id}层级`,
               isEditable: this.canEdit(),
@@ -333,7 +337,7 @@ export struct ReaderDirectoryRules {
               maxTriggerWidthVp: this.availableWidthVp >= 0 ? Math.max(0, this.availableWidthVp - 20) : -1,
               onSelect: (index: number, _value: string): void => { if (this.ownsActor(identity)) this.edit(rule.id, 'boundary', ['title', 'head', 'tail', 'any'][index]); },
             });
-            ReaderButton({ scheme: this.scheme, specId: 'rules-compact', label: '删除', actionEnabled: this.canEdit(), onAction: (): void => {
+            ReaderButton({ scheme: this.scheme, specId: 'rules-compact', variant: 'danger', visualSize: 'small', label: '删除', actionEnabled: this.canEdit(), onAction: (): void => {
               if (!this.ownsActor(identity) || !this.canEdit() || !this.rules.some((item: DirectoryRuleDraft): boolean => item.id === rule.id)) return;
               this.rules = this.rules.filter((item: DirectoryRuleDraft): boolean => item.id !== rule.id); this.changed();
             } });
@@ -347,18 +351,18 @@ export struct ReaderDirectoryRules {
           .onAreaChange((): void => this.editingHost.refresh());
       }
       Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
-        ReaderButton({ scheme: this.scheme, specId: 'rules-compact', label: '添加规则', actionEnabled: this.canEdit() && this.rules.length < 32, onAction: (): void => {
+        ReaderButton({ scheme: this.scheme, specId: 'rules-compact', variant: 'tonal', visualSize: 'small', label: '添加规则', actionEnabled: this.canEdit() && this.rules.length < 32, onAction: (): void => {
           if (!this.ownsActor(identity) || !this.canEdit() || this.rules.length >= 32) return;
           this.rules = [...this.rules, new DirectoryRuleDraft(++this.nextRuleId)]; this.changed();
         } });
-        ReaderButton({ scheme: this.scheme, specId: 'rules-compact', label: '预览', actionEnabled: this.canEdit(),
+        ReaderButton({ scheme: this.scheme, specId: 'rules-compact', variant: 'tonal', visualSize: 'small', label: '预览', actionEnabled: this.canEdit(),
           onAction: (): void => { if (this.ownsActor(identity)) void this.run(false); } });
-        ReaderButton({ scheme: this.scheme, specId: 'rules-compact', label: '应用', actionEnabled: this.canEdit() && this.previewReady && this.gateway?.supportsApply() === true,
+        ReaderButton({ scheme: this.scheme, specId: 'rules-compact', variant: 'primary', visualSize: 'small', label: '应用', actionEnabled: this.canEdit() && this.previewReady && this.gateway?.supportsApply() === true,
           onAction: (): void => { if (this.ownsActor(identity)) void this.run(true); } });
       }.width('100%');
       }, (identity: string): string => identity);
       if (!this.recoveryView().visible) {
-        Text(this.message).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp);
+        Text(this.message).fontFamily(TYPE_APP_INHERITED_HINT.fontFamily).fontWeight(TYPE_APP_INHERITED_HINT.fontWeight).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.scheme));
       }
       ForEach([this.recoveryIdentity()], (identity: string) => {
         if (!this.recoveryView().visible && !this.loaded && !this.busy) {
@@ -377,7 +381,7 @@ export struct ReaderDirectoryRules {
           LazyForEach(this.previewSource,(item: ReaderDirectoryRulesPreviewItem)=>{
             ListItem() {
               Text(item.node===undefined ? '' : `${'  '.repeat(Math.max(0,Math.min(32,item.node.depth)))}${item.node.title}`)
-                .fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).width('100%');
+                .fontFamily(TYPE_APP_INHERITED_HINT.fontFamily).fontWeight(TYPE_APP_INHERITED_HINT.fontWeight).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.scheme)).width('100%');
             }
           },(item: ReaderDirectoryRulesPreviewItem): string=>item.key);
         }.height(120).width('100%').cachedCount(2).maintainVisibleContentPosition(true)

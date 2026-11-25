@@ -10,7 +10,7 @@ import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../../..
 import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
-import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
+import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
@@ -115,7 +115,8 @@ struct SourceSwitchNovelRow {
   @State private candidate: SourceSwitchCandidate = this.row.candidate;
   @Prop @Watch('pressAdmissionChanged') rowEnabled: boolean = true;
   @Prop selected: boolean = false;
-  @State private pressed: boolean = false;
+  @State private pressPointer: number = -1;
+  @Prop reduceMotion: boolean = false;
   @Prop rowHeight: number = SOURCE_SWITCH_VISUAL.rowHeight;
   @Prop timingColumnWidth: number = SOURCE_SWITCH_VISUAL.timingColumnWidth;
   onSelect: () => void = (): void => {};
@@ -123,11 +124,15 @@ struct SourceSwitchNovelRow {
 
   // Keep the approved text carriers unchanged. Native ObjectLink delivers
   // every immutable gateway snapshot into this row's existing text actors.
-  private rowChanged(): void { this.candidate = this.row.candidate; }
-  private pressAdmissionChanged(): void { if (!this.rowEnabled) this.pressed = false; }
+  private rowChanged(): void { this.candidate = this.row.candidate; this.pressAdmissionChanged(); }
+  private pressAdmissionChanged(): void { if (!this.rowEnabled || this.candidate.isCurrent === true) this.pressPointer = -1; }
+  aboutToDisappear(): void { this.pressPointer = -1; }
   private rowTouch(event: TouchEvent): void {
-    this.pressed = this.rowEnabled && this.row.candidate.isCurrent !== true && event.type === TouchType.Down;
-    if (this.pressed) this.onPress();
+    const previous = this.pressPointer;
+    const next = readerPressPointer(event, previous, this.rowEnabled && this.row.candidate.isCurrent !== true);
+    if (next === previous) return;
+    readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressPointer = next; });
+    if (previous < 0 && next >= 0) this.onPress();
   }
   private dividerColor(): ResourceColor {
     const color = ColorMetrics.resourceColor(readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme));
@@ -135,6 +140,7 @@ struct SourceSwitchNovelRow {
   }
 
   build() {
+    Row() {
     Row({ space: SOURCE_SWITCH_VISUAL.rowGap }) {
       Column({ space: SOURCE_SWITCH_VISUAL.rowTextGap }) {
         Text(this.candidate.sourceName || this.candidate.sourceId).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_NAME.fontFamily)
@@ -166,8 +172,12 @@ struct SourceSwitchNovelRow {
     // and rounding inside the full-width row, keeping the divider unchanged.
     }.width('100%').height(this.rowHeight).padding({ top: SOURCE_SWITCH_VISUAL.rowPaddingY, bottom: SOURCE_SWITCH_VISUAL.rowPaddingY,
       right: SOURCE_SWITCH_VISUAL.scrollbarWidth + 5 })
-      .backgroundColor(this.selected || this.pressed ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : Color.Transparent)
-      .border({ width: { bottom: SOURCE_SWITCH_VISUAL.rowDividerWidth }, color: this.dividerColor() })
+      .backgroundColor(readerPressSurface(this.selected ? readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme) : Color.Transparent,
+        this.appThemeScheme, this.pressPointer >= 0, this.reduceMotion))
+      .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
+      .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion))
+      .border({ width: { bottom: SOURCE_SWITCH_VISUAL.rowDividerWidth }, color: this.dividerColor() });
+    }.width('100%').height(this.rowHeight)
       .enabled(this.rowEnabled && this.candidate.isCurrent !== true).accessibilityGroup(true)
       .accessibilityText(`${this.candidate.sourceName || this.candidate.sourceId}，${sourceSwitchNovelChapter(this.candidate)}，搜索用时 ${sourceSwitchNovelLatency(this.candidate)}`)
       .onTouch((event: TouchEvent): void => this.rowTouch(event))
@@ -256,7 +266,7 @@ export struct SourceSwitchWindow {
       });
     }
   }
-  aboutToDisappear(): void { this.mounted = false; this.retireMessages(); this.cancelPresentation(); }
+  aboutToDisappear(): void { this.mounted = false; this.filterPressPointer = -1; this.filterPressedAction = ''; this.retireMessages(); this.cancelPresentation(); }
   private coverChanged(): void { this.coverGeneration += 1; this.coverFailed = false; }
   private coverFailureHandler(): () => void {
     const generation = this.coverGeneration, url = this.coverUrl;
@@ -420,8 +430,10 @@ export struct SourceSwitchWindow {
     if (anchorKey.length > 0) {
       this.publishCandidates(next);
       this.restoreAnchor(anchorKey, Math.max(1 - this.rowHeight(), Math.min(0, Number.isFinite(itemY) ? itemY : 0)));
+    } else if (this.reduceMotion) {
+      this.publishCandidates(next);
     } else {
-      this.getUIContext().animateTo(readerMotionAnimateParam('source.switch.list.update', this.reduceMotion),
+      this.getUIContext().animateTo(readerMotionAnimateParam('source.switch.list.update', false),
         (): void => { this.publishCandidates(next); });
     }
   }
@@ -600,7 +612,7 @@ export struct SourceSwitchWindow {
         LazyForEach(this.candidateDataSource, (row: SourceSwitchCandidateRow) => {
           ListItem() {
             SourceSwitchNovelRow({ row: row, rowHeight: this.rowHeight(), timingColumnWidth: this.timingWidth(),
-              rowEnabled: this.state.kind === 'candidates' && !this.busy(),
+              rowEnabled: this.state.kind === 'candidates' && !this.busy(), reduceMotion: this.reduceMotion,
               selected: this.selectedKey === row.key,
               onPress: (): void => { this.heldKey = row.key; },
               onSelect: (): void => this.selectCandidate(row.key) });
@@ -642,16 +654,14 @@ export struct SourceSwitchWindow {
         top: SOURCE_SWITCH_VISUAL.emptyPaddingY, bottom: SOURCE_SWITCH_VISUAL.emptyPaddingY });
   }
   private emptyHeight(): number {
-    const grip = this.compactWindow() || this.flowChrome() ? 0 :
-      SOURCE_SWITCH_VISUAL.gripHeight + SOURCE_SWITCH_VISUAL.gripMarginTop + SOURCE_SWITCH_VISUAL.gripMarginBottom;
-    const fixed = this.flowChrome() ? 0 : this.headingHeight() + this.discoveryHeight() + this.columnsHeight() + this.footerHeight() + grip;
-    return Math.max(this.rowHeight(), this.drawerHeight() - this.safeBottom() - fixed - this.listHeaderHeight());
+    return Math.max(this.rowHeight(), this.drawerHeight() - this.safeBottom() -
+      this.drawerTopInset() - this.fixedDrawerHeaderHeight() - (this.flowChrome() ? 0 : this.footerHeight()) -
+      this.listHeaderHeight());
   }
   @Builder
   private recoveryNotice() {
-    ReaderRecoveryNotice({ view: this.recoveryView(), layoutWidthVp: Math.max(0, this.drawerWidth() - this.novelSafeLeft() - this.novelSafeRight() - this.sideInset() * 2), maxHeightVp: Math.max(0, this.drawerHeight() - this.headingHeight() -
-      this.safeBottom() - (!this.compactWindow() && !this.flowChrome() ?
-        SOURCE_SWITCH_VISUAL.gripHeight + SOURCE_SWITCH_VISUAL.gripMarginTop + SOURCE_SWITCH_VISUAL.gripMarginBottom : 0)), tag: this.rollbackRequired() ? '待撤销' : '待核对',
+    ReaderRecoveryNotice({ view: this.recoveryView(), layoutWidthVp: Math.max(0, this.drawerWidth() - this.novelSafeLeft() - this.novelSafeRight() - this.sideInset() * 2),
+      maxHeightVp: Math.max(0, this.drawerHeight() - this.safeBottom() - this.recoveryTop()), tag: this.rollbackRequired() ? '待撤销' : '待核对',
       actionLabel: this.rollbackRequired() ? '撤销切换' : '重试核对',
       onReconcile: (generation: number): void => this.recoverOriginal(generation) });
   }
@@ -681,11 +691,29 @@ export struct SourceSwitchWindow {
   }
   private compactWindow(): boolean { return sourceSwitchNovelCompact(this.frameHeight()); }
   private scrollBook(): boolean { return this.flowChrome() || this.compactWindow() || this.novelFontScale() !== 1; }
-  private flowChrome(): boolean {
-    const grip = this.compactWindow() || this.sideDrawer() ? 0 :
+  private gripHeight(): number {
+    return this.compactWindow() || this.sideDrawer() ? 0 :
       SOURCE_SWITCH_VISUAL.gripHeight + SOURCE_SWITCH_VISUAL.gripMarginTop + SOURCE_SWITCH_VISUAL.gripMarginBottom;
+  }
+  @State private measuredSearchAndSortHeight: number = 0;
+  private searchAndSortHeight(): number {
+    return this.measuredSearchAndSortHeight > 0 ? this.measuredSearchAndSortHeight :
+      90 + (this.isSweeping() && this.sweepProgress() !== undefined ? 24 : 0);
+  }
+  private fixedDrawerHeaderHeight(): number {
+    if (this.flowChrome()) return this.searchAndSortHeight();
+    return this.gripHeight() + this.headingHeight() + (this.scrollBook() ? 0 : this.bookHeight()) +
+      this.discoveryHeight() + this.searchAndSortHeight() + this.columnsHeight();
+  }
+  private recoveryTop(): number {
+    // In a flowing drawer the heading starts the scroll after the fixed
+    // filter; keep its title and close action reachable under the overlay.
+    return this.drawerTopInset() + this.fixedDrawerHeaderHeight() + (this.flowChrome() ? this.headingHeight() : 0);
+  }
+  private flowChrome(): boolean {
     return this.drawerHeight() - this.safeBottom() - this.drawerTopInset() <
-      this.headingHeight() + this.discoveryHeight() + this.columnsHeight() + this.footerHeight() + grip + this.rowHeight() + 92;
+      this.headingHeight() + this.discoveryHeight() + this.searchAndSortHeight() + this.columnsHeight() +
+      this.footerHeight() + this.gripHeight() + this.rowHeight() + 92;
   }
   private headingHeight(): number { return sourceSwitchNovelHeadingHeight(this.novelFontScale()); }
   private discoveryHeight(): number { return sourceSwitchNovelDiscoveryHeight(this.novelFontScale(), this.narrowWindow()); }
@@ -868,34 +896,31 @@ export struct SourceSwitchWindow {
     Column({ space: 2 }) {
       if (this.isSweeping() && this.sweepProgress() !== undefined) this.sweepBar();
       Row({ space: 4 }) {
-        Row({ space: 0 }) {
-          Column() {
-            ReaderSearchField({ variant: 'readerDirectory', mode: 'live', text: this.filterText,
-              placeholder: '筛选书源名或最新章节…', editingFocusId: `reader-source-filter:${this.surfaceScope}:${this.surfaceAttachment}`,
-              editingCurrent: (): boolean => this.filterInputCurrent(),
-              onTextChange: (value: string): void => this.updateFilter(value) });
-          }.layoutWeight(1);
-          Button({ type: ButtonType.Normal, stateEffect: false }) {
-            Image(readerActionIcon('close', this.appThemeScheme)).width(14).height(14).accessibilityLevel('no');
-          }.width(44).height(44).padding(0).backgroundColor(Color.Transparent).accessibilityText('清空书源筛选')
-            .visibility(this.filterText.length > 0 ? Visibility.Visible : Visibility.Hidden)
-            .onClick((): void => this.updateFilter(''));
+        Column() {
+          ReaderSearchField({ variant: 'readerDirectory', mode: 'live', text: this.filterText,
+            placeholder: '筛选书源名或最新章节…', clearAccessibilityLabel: '清空书源筛选',
+            editingFocusId: `reader-source-filter:${this.surfaceScope}:${this.surfaceAttachment}`,
+            editingCurrent: (): boolean => this.filterInputCurrent(),
+            onTextChange: (value: string): void => this.updateFilter(value) });
         }.layoutWeight(1);
         this.filterButton('定位当前', false, this.currentSourceId.length > 0, (): void => this.locateCurrentSource());
       }.width('100%');
       Row() {
-        Text(`已发现 ${sourceSwitchSourceCount(this.displayedCandidates)} 个候选书源`).fontSize(11)
+        Text(`已发现 ${sourceSwitchSourceCount(this.displayedCandidates)} 个候选书源`).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontFamily).fontWeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontWeight).fontSize(11)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).fontFeature('"tnum" 1')
           .layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         this.filterButton(this.latestFirst ? '最新章优先' : '延迟优先', true, true, (): void => this.toggleOrder());
       }.width('100%');
-    }.width('100%');
+    }.width('100%').onAreaChange((_before: Area, after: Area): void => {
+      const height = Number(after.height);
+      if (Number.isFinite(height) && height > 0) this.measuredSearchAndSortHeight = height;
+    });
   }
 
   @Builder
   private sweepBar() {
     Column({ space: 3 }) {
-      Text(`${this.sweepProgress()?.checked ?? 0} / ${this.sweepProgress()?.total ?? 0}`).fontSize(11).fontFeature('"tnum" 1')
+      Text(`${this.sweepProgress()?.checked ?? 0} / ${this.sweepProgress()?.total ?? 0}`).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontFamily).fontWeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontWeight).fontSize(11).fontFeature('"tnum" 1')
         .fontColor(readerAppColor('TOK_ACCENT', this.appThemeScheme));
       Progress({ value: this.sweepProgress()?.checked ?? 0, total: this.sweepProgress()?.total ?? 1, type: ProgressType.Linear })
         .color(readerAppColor('TOK_ACCENT', this.appThemeScheme)).backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
@@ -909,28 +934,50 @@ export struct SourceSwitchWindow {
     return sourceSwitchSourceCount(candidates);
   }
 
+  @State private filterPressedAction: string = '';
+  private filterPressPointer: number = -1;
+
+  private observeFilterPress(event: TouchEvent, key: string, enabled: boolean): void {
+    if (this.filterPressedAction.length > 0 && this.filterPressedAction !== key) return;
+    const next = readerPressPointer(event, this.filterPressPointer, enabled);
+    if (next === this.filterPressPointer) return;
+    this.filterPressPointer = next;
+    readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.filterPressedAction = next < 0 ? '' : key; });
+  }
+
   @Builder
   private filterButton(label: string, sort: boolean, enabled: boolean, action: () => void) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Row({ space: 4 }) {
-        Text(label).fontSize(12).fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme));
+        Text(label).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontFamily)
+          .fontWeight(TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontWeight).fontSize(TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontSizeFp)
+          .lineHeight(TYPE_SOURCE_SWITCH_NOVEL_ACTION.lineHeightFp as number).halfLeading(true)
+          .fontColor(readerAppColor(sort && this.latestFirst ? 'TOK_GREEN' : 'TOK_INK', this.appThemeScheme))
+          .maxLines(1);
         if (sort) {
           Image(this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_primary_theme_night') :
             $r('app.media.reader_chevron_down_primary')).width(12).height(12).accessibilityLevel('no');
         }
-      }.padding({ left: 8, right: 8 }).height(32).borderRadius(11)
-        .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme));
-    }.padding(0).height(44).enabled(enabled).accessibilityText(label)
-      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 11, 11, enabled))
-      .opacity(enabled ? 1 : .45).onClick(action);
+      }.padding({ left: 10, right: 10 }).height(32).borderRadius(16)
+        .backgroundColor(readerPressSurface(readerAppColor(sort && this.latestFirst ? 'TOK_PRIMARY_SOFT' : 'TOK_CARD_BG',
+          this.appThemeScheme), this.appThemeScheme, this.filterPressedAction === (sort ? 'sort' : 'locate'), this.reduceMotion))
+        .border({ width: 1, color: readerAppColor(sort && this.latestFirst ? 'TOK_PRIMARY_BORDER' : 'TOK_LINE', this.appThemeScheme) })
+        .scale(readerPressScale(this.filterPressedAction === (sort ? 'sort' : 'locate'), this.reduceMotion))
+        .opacity(readerPressOpacity(this.filterPressedAction === (sort ? 'sort' : 'locate'), this.reduceMotion))
+        .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
+    }.padding(0).height(44).constraintSize({ minWidth: 44 }).backgroundColor(Color.Transparent)
+      .enabled(enabled && this.filterInputCurrent()).accessibilityText(label)
+      .opacity(enabled ? 1 : .45)
+      .onTouch((event: TouchEvent): void => this.observeFilterPress(event, sort ? 'sort' : 'locate', enabled && this.filterInputCurrent()))
+      .onClick((): void => { if (enabled && this.filterInputCurrent()) action(); });
   }
 
   @Builder
   private currentSourceRow() {
     Column({ space: 2 }) {
-      Text(`当前 · ${this.currentSourceName || this.currentSourceId}`).fontSize(14)
+      Text(`当前 · ${this.currentSourceName || this.currentSourceId}`).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_CURRENT_SOURCE.fontFamily).fontWeight(TYPE_SOURCE_SWITCH_NOVEL_CURRENT_SOURCE.fontWeight).fontSize(14)
         .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-      Text(this.latestChapterTitle || this.currentChapterTitle).fontSize(12)
+      Text(this.latestChapterTitle || this.currentChapterTitle).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_CHAPTER.fontFamily).fontWeight(TYPE_SOURCE_SWITCH_NOVEL_CHAPTER.fontWeight).fontSize(12)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
     }.width('100%').height('100%').padding({ left: 12, right: 12 }).justifyContent(FlexAlign.Center)
       .alignItems(HorizontalAlign.Start).borderRadius(14).backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
@@ -980,8 +1027,7 @@ export struct SourceSwitchWindow {
     if (this.hasPendingRecovery()) {
       Column() { this.recoveryNotice(); }
         .width('100%').padding({ left: this.novelSafeLeft() + this.sideInset(), right: this.novelSafeRight() + this.sideInset(),
-          top: this.headingHeight() + (!this.compactWindow() && !this.flowChrome() ?
-            SOURCE_SWITCH_VISUAL.gripHeight + SOURCE_SWITCH_VISUAL.gripMarginTop + SOURCE_SWITCH_VISUAL.gripMarginBottom : 0) })
+          top: this.recoveryTop() })
         .hitTestBehavior(HitTestMode.Transparent);
     }
     }.width('100%').height('100%');

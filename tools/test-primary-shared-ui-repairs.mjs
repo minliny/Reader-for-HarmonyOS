@@ -38,7 +38,7 @@ const definitions = {
   'library-watch-parent-delivery': 'Library search PropWatch fences input before its 120ms paint-only fade; settled navigation and coverage notify the current parent after render.',
   'detail-entry-dto-geometry': 'Actual search matched-shelf selection and shelf info entry project canonical kind/cover facts through the shipping Host mapper before comparing their real detail geometry.',
   'detail-directory-action': 'Actual text/manga detail directory actors enter the detail-directory journey without dispatching reading; a late prepared-page delivery is rejected after the detail session has ended.',
-  'bookshelf-action-lanes': 'The shelf section pays the full icon hit lane while the group selector preserves compact paint inside a native44vp carrier.',
+  'bookshelf-action-lanes': 'The shelf section keeps two nonoverlapping 44vp hit lanes around one centered sliding or reduced-motion selection pill.',
   'labeled-action-paint': 'Finite labeled actions retain their authored compact paint heights and distinct glyphs with an independent44vp native carrier and natural text growth.',
   'select-watch-parent-delivery': 'A closing/reduce-motion PropWatch fences input immediately, fades only the shared select paint for 120ms and rejects dismissal from a retired identity.',
   'directory-watch-parent-delivery': 'Directory focus revocation fences the native input immediately and delivers the parent callback on the next frame only while its current identity still owns it.',
@@ -70,7 +70,7 @@ for (const id of selectContractCases(definitions)) {
             mangaFontsReady: true, introExpanded: length === 'long', introMeasured: true,
             admissionIdentity: 'same-opening', appThemeScheme: 'day', inBookshelf: true });
           owner.refreshGeometry();
-          if (kind === 'manga') owner.prepareMangaPreview();
+          if (kind === 'manga') owner.refreshChapterPreview();
           owner.detailContent();
           const scrolls = nodes(owner).filter(node => node.type === 'Scroll');
           if (kind === 'unknown-remote') {
@@ -79,7 +79,7 @@ for (const id of selectContractCases(definitions)) {
             assert.equal(scrolls.length, 1);
             assert.equal(scrolls[0].align, 'Alignment.Top', `${kind}/${length}/${scale} document uses its declared top origin`);
             assert.equal(scrolls[0].height, '100%');
-            assert.equal(scrolls[0].create, kind === 'manga' ? undefined : owner.detailScroller);
+            assert.equal(scrolls[0].create, owner.detailScroller, 'both book kinds use the same live header scroll source');
             const column = nodes(owner).find(node => node.type === 'Column' && node.padding?.top === owner.geometry.content.startInset &&
               node.padding?.bottom === owner.geometry.content.endInset);
             assert.ok(column, 'the actual detail column retains the resolved header and footer clearance');
@@ -500,14 +500,57 @@ for (const id of selectContractCases(definitions)) {
   if (id === 'bookshelf-action-lanes') {
     const shared = iconButtonControls();
     const section = read('features/bookshelf/ui/BookshelfSectionHeader.ets');
+    const geometry = pureModuleProbe(section.slice(0, section.indexOf('@Component')), 'BookshelfSectionHeaderGeometry.ets', {},
+      ['SHELF_SECTION_ACTION_SIZE', 'SHELF_SECTION_TRACK_HEIGHT', 'SHELF_SECTION_TRACK_INSET',
+        'SHELF_SECTION_PILL_HEIGHT', 'SHELF_SECTION_PILL_WIDTH']);
     for (const scale of [1, 1.3, 1.6, 2]) {
+      const animations = [], frames = [];
       const owner = shared.consumer(section, boundedMembers(section), { ...readerTypographyRoles, ...surfaceFontResolvers(),
-        ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: scale }) }, readerAppColor, TOK_SPACE_XS: 8, SHELF_SECTION_ACTION_SIZE: 34 });
-      Object.assign(owner, { contentWidth: 320, windowRevision: 1, appThemeScheme: 'day' }); owner.initialRender();
+        ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: scale }) }, readerAppColor, TOK_SPACE_XS: 8,
+        ...geometry, ...productionReaderMotionSdk(), ReaderPostLayoutFrame: actualReaderPostLayoutFrame() });
+      owner.getUIContext = () => ({ animateTo: (options, transition) => { animations.push(options); transition(); },
+        postFrameCallback: frame => frames.push(frame) });
+      Object.assign(owner, { contentWidth: 320, windowRevision: 1, appThemeScheme: 'day' });
+      owner.aboutToAppear(); owner.initialRender();
       const parent = nodes(owner).find(node => node.type === 'Row' && node.constraintSize !== undefined);
       assert.ok(parent.constraintSize.minHeight >= 44, 'the section parent reserves the expanded response height');
       const actors = [...owner.children.values()]; assert.equal(actors.length, 3);
-      for (const actor of actors) assert.equal(shared.nodes(actor).find(node => node.type === 'Image').width, 20);
+      const segments = actors.filter(actor => actor.specId === 'shelf-view-segment');
+      const filter = actors.find(actor => actor.specId === 'shelf-section');
+      assert.equal(segments.length, 2);
+      assert.ok(filter);
+      for (const actor of actors) {
+        assert.equal(shared.nodes(actor).find(node => node.type === 'Image').width, 15);
+        const button = shared.nodes(actor).find(node => node.type === 'Button');
+        assert.equal(button.width, 44);
+        assert.equal(button.height, 44);
+      }
+      assert.ok(nodes(owner).some(node => node.type === 'Stack' && node.width === 88));
+      const pill = () => nodes(owner).find(node => node.type === 'Row' && node.width === 38);
+      assert.equal(pill().height, 28);
+      assert.equal(pill().borderRadius, 14);
+      assert.equal(pill().translate.x, 0);
+      assert.ok(nodes(owner).some(node => node.type === 'Stack' && node.padding?.left === 3 && node.padding?.right === 3));
+      shared.update(owner, { viewMode: 'list' }); owner.replay();
+      assert.equal(pill().translate.x, 44, 'the same painted pill moves to the center of the next target');
+      assert.equal(animations.at(-1).duration, productionReaderMotionSdk().motionAnimateParam('app.navigation.pill').duration);
+      owner.__reduceMotion.reset(true);
+      shared.update(owner, { viewMode: 'cover' }); owner.replay();
+      assert.equal(pill().opacity, 0);
+      const frame = frames.shift();
+      frame.onFrame(0);
+      frame.onIdle(0);
+      owner.replay();
+      assert.equal(pill().translate.x, 0);
+      assert.equal(pill().opacity, 1);
+      assert.equal(animations.at(-1).duration, 120);
+      const hasFilterDot = () => nodes(owner).some(node => node.type === 'Row' && node.width === 6 &&
+        node.opacity === 1 && node.backgroundColor === readerAppColor('TOK_PRIMARY_DARK', 'day'));
+      assert.equal(hasFilterDot(), false);
+      owner.hasActiveFilters = true; owner.replay();
+      assert.equal(hasFilterDot(), true, 'collapsed active filter uses an independent pine dot');
+      owner.filterExpanded = true; owner.replay();
+      assert.equal(hasFilterDot(), false, 'expanded filter paints its button state without a second indicator');
       owner.actionsEnabled = false; owner.replay();
       assert.equal(parent.constraintSize.minHeight, Math.ceil(38 + readerTypographyRoles.TYPE_APP_SECTION_LABEL.lineHeightFp * (scale - 1)),
         'empty shelf keeps its authored heading height while omitting unavailable actions');
@@ -518,14 +561,22 @@ for (const id of selectContractCases(definitions)) {
     const properties = createArkUIPropertyRuntimeProbe();
     const owner = createReaderBuilderProbe(source, boundedMembers(source), { ...properties.sdk, ...readerTypographyRoles, readerAppColor,
       ...accessibility }, properties.hooks).owner;
-    Object.assign(owner, { selected: true, busy: false, appThemeScheme: 'day' }); owner.initialRender();
-    const button = nodes(owner).find(node => node.type === 'Button');
+    Object.assign(owner, { selectedGroup: '收藏分组', groups: [{ groupId: 2, groupName: '收藏分组' }],
+      busy: false, appThemeScheme: 'day' }); owner.initialRender();
+    const button = nodes(owner).find(node => node.type === 'Button' && node.accessibilityText === '默认分组');
     const paint = nodes(owner).find(node => node.type === 'Text' && node.create === '默认');
     assert.ok(button.constraintSize.minHeight >= 44 && button.constraintSize.minWidth >= 44);
-    assert.equal(button.backgroundColor, 'Color.Transparent'); assert.equal(paint.borderRadius, 999);
+    assert.equal(button.backgroundColor, 'Color.Transparent');
+    assert.equal(paint.borderRadius, (readerTypographyRoles.TYPE_APP_FILTER_OPTION.lineHeightFp + 10) / 2);
     assert.deepEqual(paint.padding, { left: 12, right: 12, top: 5, bottom: 5 });
-    let selected = 0; owner.onSelect = () => selected++;
-    button.onClick(); owner.busy = true; button.onClick(); assert.equal(selected, 1);
+    const choices = [];
+    owner.onSelect = group => choices.push(group);
+    const clear = nodes(owner).find(node => node.type === 'Button' && node.accessibilityText === '清除分组');
+    const named = nodes(owner).find(node => node.type === 'Button' && node.accessibilityText === '收藏分组');
+    assert.ok(clear.enabled && named.enabled);
+    named.onClick(); clear.onClick(); button.onClick();
+    owner.busy = true; button.onClick(); clear.onClick();
+    assert.deepEqual(choices, ['收藏分组', '', '']);
   }
   if (id === 'labeled-action-paint') {
     const specs = labeledIconSpecs();
@@ -544,6 +595,10 @@ for (const id of selectContractCases(definitions)) {
       assert.equal(paint.height === undefined || !spec.naturalHeight, true, specId + ' natural paint grows with native text');
       const glyph = nodes(owner).find(node => node.type === 'Image');
       assert.equal(glyph.width, spec.iconSize); assert.equal(glyph.height, spec.iconSize);
+      assert.equal(glyph.width, spec.text.fontSizeFp >= 13 ? 16 : 14);
+      const label = nodes(owner).find(node => node.type === 'Text');
+      assert.equal(label.halfLeading, true);
+      assert.equal(label.lineHeight, spec.text.lineHeightFp ?? Math.round(spec.text.fontSizeFp * 1.5));
       assert.ok(!paint.padding?.top && !paint.padding?.bottom, 'authored horizontal padding does not add a second44vp surface');
     }
   }
@@ -777,6 +832,14 @@ for (const id of selectContractCases(definitions)) {
       const button = nodes(owner).find(node => node.type === 'Button');
       const text = nodes(owner).find(node => node.type === 'Text' && node.create === label);
       assert.equal(button.backgroundColor, 'Color.Transparent');
+      if (specId === 'source-management-detect') {
+        const row = nodes(owner).find(node => node.type === 'Row' && node.alignItems === 'VerticalAlign.Center');
+        assert.equal(row.translate, undefined, 'detect label keeps its native vertical center');
+        assert.equal(text.halfLeading, true);
+        assert.equal(text.lineHeight, 17);
+        assert.ok(button.width >= 44 && button.height >= 44);
+        continue;
+      }
       assert.equal(button.constraintSize.minWidth, 44); assert.equal(button.constraintSize.minHeight, 44);
       assert.equal(text.height, Math.ceil(paintHeight + (spec.text.lineHeightFp ?? spec.text.fontSizeFp * 1.5) * (fontScale - 1)));
       assert.equal(text.textAlign, 'TextAlign.Center');

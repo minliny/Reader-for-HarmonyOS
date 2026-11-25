@@ -53,8 +53,7 @@ const ownerDependencies = {
   ...style, ReadingSurfaceLayoutMap, readingChapterLayoutMap, ReadingPaginationPrefix, ParagraphRange, MeasurementParagraph, MeasuredReadingLine,
   PhysicalReadingPage, TextController: Controller, ReadingSurfacePageFragment: Fragment,
   ReaderNativeTextWindow: NativeWindow, readerNativeParagraphHeight: height, readerNativeParagraphKey: () => `p${++serial}`,
-  FontWeight: { Regular: 400 }, TextAlign: { JUSTIFY: 'justify', Start: 'start', Center: 'center' },
-  TYPE_READER_CHAPTER_TITLE: { fontFamily: 'system', fontWeight: 500, fontSizeFp: 24 },
+  FontWeight: { Regular: 400, Bold: 700 }, TextAlign: { JUSTIFY: 'justify', Start: 'start', Center: 'center' },
   copyReaderAppearanceSnapshot: value => ({ ...value }),
 };
 const Owner = productionMotionMethods(source, methods, ownerDependencies);
@@ -89,7 +88,7 @@ function create(paragraphs, endScalar, { capacity = 25, gap = 3, titleHeight = 0
     paginationIndex: lease, phase: 'ready', measured: [], resources: [],
     readerSettingsSnapshot: { navigationMode: 'paged' },
     appearanceSnapshot: { paragraphSpacing: gap, fontSize: 20, lineHeight: 1.5, indent: 'none', activeTheme: 'paper' },
-    getUIContext: () => ({ px2vp: x => x, vp2px: x => x, fp2px: x => x }),
+    getUIContext: () => ({ px2vp: x => x, vp2px: x => x, fp2px: x => x, getFont: () => ({}) }),
     measurementTextWidth: () => 100, readingLayout: () => ({ bodyHeightAfterTitle: h => capacity - h }),
     currentMeasurementGeneration: () => lease.measurementGeneration(),
     isMeasurementCurrent: (g, s, l) => l === 1 && lease.isMeasurementCurrent(g, s),

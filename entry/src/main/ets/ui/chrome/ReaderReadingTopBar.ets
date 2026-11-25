@@ -3,7 +3,7 @@ import type { UIContext } from '@ohos.arkui.UIContext';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerReadableFontScale } from '../foundation/ReaderSurfaceResolvers';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
-import { READER_FONT_NOTO_SERIF_SC_BOLD } from '../foundation/ReaderFontFamilies';
+import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../foundation/ReaderFontFamilies';
 import { TYPE_READER_CONTROL_BOOK_TITLE, TYPE_READER_CONTROL_CHAPTER_SOURCE,
   TYPE_READER_DIRECTORY_BOOK_TITLE, TYPE_READER_DIRECTORY_CHAPTER } from '../foundation/ReaderTypography';
 import { readerHeaderVeilBorder, readerHeaderVeilMaterial, readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
@@ -11,7 +11,8 @@ import { readerHeaderVeilBorder, readerHeaderVeilMaterial, readerSurfaceElevatio
 export type ReaderReadingTopBarVariant = 'reading' | 'directory' | 'manga';
 
 export function readerReadingTopBarFontsReady(variant: ReaderReadingTopBarVariant): boolean {
-  if (variant === 'manga') return readerFontFamilyReady(READER_FONT_NOTO_SERIF_SC_BOLD);
+  if (variant === 'manga') return readerFontFamilyReady(READER_FONT_NOTO_SANS_SC_UI_BOLD) &&
+    readerFontFamilyReady(READER_FONT_NOTO_SANS_SC_UI_REGULAR);
   const primary = variant === 'reading' ? TYPE_READER_CONTROL_BOOK_TITLE : TYPE_READER_DIRECTORY_BOOK_TITLE;
   const secondary = variant === 'reading' ? TYPE_READER_CONTROL_CHAPTER_SOURCE : TYPE_READER_DIRECTORY_CHAPTER;
   return readerFontFamilyReady(primary.fontFamily) && readerFontFamilyReady(secondary.fontFamily);
@@ -30,7 +31,8 @@ export function readerReadingTopBarHeight(context: UIContext, variant: ReaderRea
     return (line ?? size * 1.5) * readerReadableFontScale(readerWindowMetrics().systemFontScale);
   };
   if (variant === 'manga') return Math.max(minimumHeight, 44,
-    height(17, READER_FONT_NOTO_SERIF_SC_BOLD, 700) + height(11, undefined, 400) + 9);
+    height(17, READER_FONT_NOTO_SANS_SC_UI_BOLD, 700) +
+      height(11, READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400) + 9);
   const primary = variant === 'reading' ? TYPE_READER_CONTROL_BOOK_TITLE : TYPE_READER_DIRECTORY_BOOK_TITLE;
   const secondary = variant === 'reading' ? TYPE_READER_CONTROL_CHAPTER_SOURCE : TYPE_READER_DIRECTORY_CHAPTER;
   const title = height(primary.fontSizeFp, primary.fontFamily, primary.fontWeight, primary.lineHeightFp) +
@@ -55,7 +57,8 @@ export class ReaderReadingTopBarTitle implements AttributeModifier<TextAttribute
   applyNormalAttribute(instance: TextAttribute): void {
     instance.maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
     if (this.variant === 'manga') {
-      if (this.primary) instance.fontFamily(READER_FONT_NOTO_SERIF_SC_BOLD).fontWeight(FontWeight.Bold);
+      instance.fontFamily(this.primary ? READER_FONT_NOTO_SANS_SC_UI_BOLD : READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+        .fontWeight(this.primary ? FontWeight.Bold : FontWeight.Regular);
       instance.fontSize(this.primary ? 17 : 11).fontColor(readerAppColor(this.primary ? 'TOK_INK' : 'TOK_MUTED', this.scheme));
       return;
     }
@@ -105,24 +108,27 @@ export struct ReaderReadingTopBar {
   }
 
   build() {
-    Row({ space: this.variant === 'reading' ? 8 : 0 }) {
-      this.leading();
-      Column({ space: this.variant === 'manga' ? 1 : this.variant === 'reading' ? 5 : 6 }) {
-        Text(this.bookTitle).attributeModifier(new ReaderReadingTopBarTitle(this.variant, true, this.scheme, this.titleFontScale()));
-        Text(this.subtitle).attributeModifier(new ReaderReadingTopBarTitle(this.variant, false, this.scheme, this.titleFontScale()));
-      }.layoutWeight(1)
-        .constraintSize({ minWidth: 0 })
-        .margin({ left: this.variant === 'directory' ? 8 : 0 })
-        .alignItems(this.variant === 'reading' ? HorizontalAlign.Start : HorizontalAlign.Center);
-      this.trailing();
+    Stack({ alignContent: Alignment.Center }) {
+      Row({ space: this.variant === 'reading' ? 8 : 0 }) {
+        this.leading();
+        Column({ space: this.variant === 'manga' ? 1 : this.variant === 'reading' ? 5 : 6 }) {
+          Text(this.bookTitle).attributeModifier(new ReaderReadingTopBarTitle(this.variant, true, this.scheme, this.titleFontScale()));
+          Text(this.subtitle).attributeModifier(new ReaderReadingTopBarTitle(this.variant, false, this.scheme, this.titleFontScale()));
+        }.layoutWeight(1)
+          .constraintSize({ minWidth: 0 })
+          .margin({ left: this.variant === 'directory' ? 8 : 0 })
+          .alignItems(this.variant === 'reading' ? HorizontalAlign.Start : HorizontalAlign.Center);
+        this.trailing();
+      }.width('100%').height('100%')
+        .padding(this.variant === 'reading' ? { left: 13, right: 13 } : 0)
+        .alignItems(VerticalAlign.Center).enabled(this.inputEnabled)
+        .borderRadius(Math.max(0, this.resolvedHeight() / 2 - 1)).clip(this.variant === 'manga');
     }.width(this.barWidth).height(this.resolvedHeight())
-      .padding(this.variant === 'reading' ? { left: 13, right: 13 } : 0)
-      .alignItems(VerticalAlign.Center).enabled(this.inputEnabled)
       .backgroundColor(Color.Transparent)
       .backgroundEffect(readerHeaderVeilMaterial(true, this.scheme))
       .border({ width: 1, color: readerHeaderVeilBorder(this.scheme) })
       .borderRadius(this.resolvedHeight() / 2)
-      .clip(this.variant === 'manga')
+      .clip(false)
       .shadow(readerSurfaceElevation('raised', this.scheme));
   }
 }

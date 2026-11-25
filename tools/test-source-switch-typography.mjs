@@ -16,13 +16,11 @@ const roleKeys = {
 };
 const novelTuples = Object.entries(roleKeys).map(([name, key]) => {
   const weight = design.numbers[key + 'FontWeight'] ?? design.numbers.discoveryStatusFontWeight;
-  const cssFamily = name === 'HEADING' || name === 'BOOK_TITLE' || name === 'SWITCH_TITLE' ? design.strings.titleFontFamilyCss :
-    name.startsWith('LATENCY') || name === 'DISCOVERY_COUNT' ? design.strings.timingFontFamilyCss : design.strings.bodyFontFamilyCss;
-  const asset = design.fontAssets.find(font => font.cssFamily === cssFamily &&
-    (font.weight === weight || (name === 'DISCOVERY_COUNT' && font.supportedWeights?.includes(weight))));
-  assert.ok(asset, 'selected physical face for ' + name);
-  if(name==='DISCOVERY_COUNT')assert.deepEqual(asset.supportedWeights,[400,500],'only the approved Inter axes share this physical font');
-  return [name, fontFamilies[asset.nativeFamilyConstant], weight,
+  const nativeFamily = weight === 400 ? fontFamilies.READER_FONT_NOTO_SANS_SC_UI_REGULAR :
+    weight === 500 ? fontFamilies.READER_FONT_NOTO_SANS_SC_UI_MEDIUM :
+      weight === 700 ? fontFamilies.READER_FONT_NOTO_SANS_SC_UI_BOLD : undefined;
+  assert.ok(nativeFamily, 'HarmonyOS UI face for ' + name);
+  return [name, nativeFamily, weight,
     name==='ACTION_COMPACT'?design.numbers.compactDiscoveryActionFontSize:design.numbers[key + 'FontSize'], design.numbers[key + 'LineHeight']];
 });
 

@@ -12,10 +12,13 @@ const host=ts.createCompilerHost(options),read=host.getSourceFile.bind(host);
 host.getSourceFile=(path,...args)=>path===virtual?ts.createSourceFile(path,source,ts.ScriptTarget.Latest,true):read(path,...args);
 const program=ts.createProgram([virtual,...readdirSync(`${sdk}/declarations`).filter(n=>n.endsWith('.d.ts')).map(n=>`${sdk}/declarations/${n}`)],options,host);
 assert.deepEqual(ts.getPreEmitDiagnostics(program).filter(d=>d.category===ts.DiagnosticCategory.Error).map(d=>ts.flattenDiagnosticMessageText(d.messageText,'\n')),[]);
-const nodes=[],events=[];let lines=2;
+const nodes=[],events=[];let lines=2,bodyAttributesAvailable=true;
 const typeNode={createNode(_context,type){assert.equal(type,'Text');const node={disposed:0,props:{},initialize(content,options){events.push('initialize');this.content=content;this.controller=options.controller;},
  measure(constraint){events.push('measure');this.constraint=constraint;},layout(position){events.push('layout');this.position=position;},dispose(){this.disposed++;}};
- node.attribute={};for(const key of ['width','fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','textAlign','wordBreak','textIndent','direction','enableAutoSpacing','fallbackLineSpacing','compressLeadingPunctuation'])node.attribute[key]=v=>{node.props[key]=v;return node.attribute;};nodes.push(node);return node;}};
+ node.attribute={};for(const key of ['width','fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','textAlign','wordBreak','textIndent','direction'])node.attribute[key]=v=>{node.props[key]=v;return node.attribute;};
+ if(bodyAttributesAvailable) for(const key of ['enableAutoSpacing','fallbackLineSpacing','compressLeadingPunctuation'])
+   node.attribute[key]=v=>{node.props[key]=v;};
+ nodes.push(node);return node;}};
 const js=ts.transpileModule(source.replace(/^import.*$/gm,'').replace(/^export /gm,''),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
 const {Owner, geometryKey}=new Function('typeNode','WordBreak',js+';return {Owner:ReaderNativeTextMeasurement,geometryKey:readerNativeTextGeometryKey};')(typeNode,{BREAK_ALL:'all'});
 const owner=new Owner(),controller={getLayoutManager:()=>({getLineCount:()=>{events.push('read');return lines;}})};
@@ -36,6 +39,11 @@ const transferred=owner.take(transferredController);owner.clear();assert.equal(t
 assert.equal(transferred.props.textIndent,12);assert.equal(transferred.props.direction,'rtl');
 assert.throws(()=>owner.take(transferredController),/OWNERSHIP_MISSING/);
 transferred.dispose();assert.equal(transferred.disposed,1);
+bodyAttributesAvailable=false;
+owner.measure({vp2px:v=>v},mixed,controller,body);
+assert.equal(nodes.at(-1).content,mixed,'shaping attributes absent on a native node must not block measuring the original text');
+assert.equal(nodes.at(-1).props.enableAutoSpacing,undefined);
+owner.clear();
 lines=0;assert.throws(()=>owner.measure({vp2px:v=>v},'text',controller,style),/LAYOUT_UNAVAILABLE/);assert.equal(nodes.at(-1).disposed,1);
 assert.throws(()=>owner.measure({vp2px:v=>v},'text',controller,{...style,widthVp:0}),/WIDTH_INVALID/);
 console.log('native Text measurement: installed SDK types, synchronous native measure/layout/read, unchanged source/style/controller and exact disposal PASS; native raster qualification remains separate');

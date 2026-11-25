@@ -1,4 +1,4 @@
-import { TYPE_SHELF_COVER_PLACEHOLDER } from '../foundation/ReaderTypography';
+import { TYPE_SHELF_COVER_PLACEHOLDER, TYPE_SHELF_SELECTION_AUTHOR_WIDE } from '../foundation/ReaderTypography';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 
 /** The caller continues to own the book identity and accessible title. */
@@ -48,6 +48,7 @@ export struct NoCoverCover {
 
       Text(this.kindLabel.trim().length > 0 ? `无封面 · ${this.kindLabel}` : '无封面')
         .width(this.x(58)).textAlign(TextAlign.Center)
+        .fontFamily(TYPE_SHELF_SELECTION_AUTHOR_WIDE.fontFamily).fontWeight(TYPE_SHELF_SELECTION_AUTHOR_WIDE.fontWeight)
         .fontSize(`${this.scaleCoverUnit(7)}vp`)
         .lineHeight(`${this.scaleCoverUnit(10)}vp`)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))

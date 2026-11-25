@@ -25,10 +25,9 @@ assert.equal(registrar.readerFontFamilyReady('HarmonyOS Sans'),true);
 assert.equal(registrar.readerFontFamilyReady('unknown platform family'),false);
 assert.equal(registrar.readerFontFamilyReady('ReaderCustom_owned'),false);
 registrar.registerReaderShelfFonts(platform);registrar.registerReaderShelfFonts(platform);
-assert.deepEqual(calls.map(call=>call.family),[families.READER_FONT_INTER,
- families.READER_FONT_NOTO_SERIF_SC_BOLD,families.READER_FONT_NOTO_SANS_SC,
- families.READER_FONT_NOTO_SANS_SC_UI_REGULAR, families.READER_FONT_NOTO_SANS_SC_UI_BOLD,
- families.READER_FONT_NOTO_SANS_SC_UI_MEDIUM, families.READER_FONT_NOTO_SANS_SC_UI_600],
+assert.deepEqual(calls.map(call=>call.family),[families.READER_FONT_NOTO_SANS_SC,
+ families.READER_FONT_NOTO_SANS_SC_UI_REGULAR, families.READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
+ families.READER_FONT_NOTO_SANS_SC_UI_BOLD, families.READER_FONT_NOTO_SANS_SC_UI_600],
  'first-frame shelf messages have checked static 400/500/600 faces as well as ordinary shelf fonts');
 let shelfReady=false;const shelf=registrar.prepareReaderShelfFonts().then(()=>{shelfReady=true;});
 await Promise.resolve();assert.equal(shelfReady,false,'shelf submission is not readiness');
@@ -46,7 +45,7 @@ await shelf;pending.splice(0);assert.equal(shelfReady,true);
 assert.equal(registrar.readerFontFamilyReady('ReaderNotoSansSCUIRegular'),true);
 assert.ok(messageFaces.every(family=>registrar.readerFontFamilyReady(family)));
 registrar.registerReaderFonts(platform);registrar.registerReaderFonts(platform);
-assert.equal(calls.length,8);
+assert.equal(calls.length,6);
 assert.ok(!calls.some(c=>/WenKai|Fangsong|Sarasa/.test(c.src)),'startup does not load unused optional faces');
 let ready=false;const base=registrar.prepareReaderFonts().then(()=>{ready=true;});
 await Promise.resolve();assert.equal(ready,false,'submission is not readiness');
@@ -77,35 +76,20 @@ assert.equal(registrar.loadReaderFontChecked('ReaderCustom_hash','file:///owned/
 synchronousFailure=true;await assert.rejects(registrar.loadReaderFontChecked('new-face','file:///new.ttf'),/sync font error/);synchronousFailure=false;
 assert.equal(registrar.readerFontFamilyReady('new-face'),false);
 
-// Native custom VF weight failed physically on the VM. Bind on-demand panel
-// admission to immutable, pre-instantiated assets, not a weight setter alone.
-const mangaFamilies=[families.READER_FONT_NOTO_SANS_SC_UI_550,
+// Manga panels now use the preloaded UI 400/500/700 faces. Optional legacy
+// weight assets remain registered for historical reading inputs but are not
+// admitted by the panel.
+const mangaOnlyFamilies=[families.READER_FONT_NOTO_SANS_SC_UI_550,
  families.READER_FONT_NOTO_SANS_SC_UI_650,
  families.READER_FONT_NOTO_SANS_SC_UI_900];
-assert.ok(!calls.some(c=>mangaFamilies.includes(c.family)),
- 'shelf/startup must not load manga-only static faces');
+assert.ok(!calls.some(c=>mangaOnlyFamilies.includes(c.family)),
+ 'shelf/startup must not load legacy manga-only static faces');
 const provenance=JSON.parse(readFileSync(new URL('../docs/ui-design/MANGA_SHEET_FONTS_PROVENANCE.json',import.meta.url),'utf8'));
 const beforeManga=calls.length;
-let mangaReady=false;const manga=registrar.prepareMangaSheetFonts().then(value=>{mangaReady=value;});
-assert.deepEqual(calls.slice(beforeManga).map(c=>c.family),mangaFamilies);
-assert.deepEqual(calls.slice(beforeManga).map(c=>c.src),provenance.outputs.filter(f=>f.axis.wght!==600).map(f=>f.output.split('/').at(-1)),
- 'message title 600 reuses its completed startup receipt instead of loading again for manga');
-const mangaPending=pending.splice(0);
-mangaPending[0].resolve();
-await new Promise(resolve=>setImmediate(resolve));
-assert.equal(mangaReady,false,'chapter and group faces cannot authorize a panel while its header face is pending');
-assert.equal(registrar.readerFontFamilyReady(families.READER_FONT_NOTO_SANS_SC_UI_650),false);
-mangaPending[1].resolve();
-await new Promise(resolve=>setImmediate(resolve));
-assert.equal(registrar.readerFontFamilyReady(families.READER_FONT_NOTO_SANS_SC_UI_650),true);
-assert.equal(mangaReady,false,'the registered header does not authorize a still-pending fixed panel title');
-mangaPending[2].reject(Error('900 failed'));await assert.rejects(manga,/900 failed/);
-assert.equal(registrar.readerFontFamilyReady(mangaFamilies[2]),false);
-const mangaRetry=registrar.prepareMangaSheetFonts();
-assert.equal(calls.length,beforeManga+4,'only failed face is reloaded');
-pending.shift().resolve();assert.equal(await mangaRetry,true);
-await registrar.prepareMangaSheetFonts();assert.equal(calls.length,beforeManga+4);
-
+const manga=await registrar.prepareMangaSheetFonts();
+assert.equal(manga,true,'preloaded UI faces admit the manga panel');
+assert.equal(calls.length,beforeManga,'manga admission reuses the checked UI receipts');
+assert.ok(provenance.outputs.length >= 3,'legacy asset provenance remains available for the registry audit');
 
 }else if(id==='manga-progress'){
 const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
@@ -113,10 +97,8 @@ const {selectedProductionMethods}=await import('./lib/selected-production-method
 const families=await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
 const fontSource=readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderFonts.ets',import.meta.url),'utf8');
 const pageFile=new URL('../entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets',import.meta.url);
-const mangaFamilies=[families.READER_FONT_NOTO_SANS_SC_UI_REGULAR,families.READER_FONT_NOTO_SANS_SC_UI_BOLD,
- families.READER_FONT_NOTO_SANS_SC_UI_MEDIUM,families.READER_FONT_NOTO_SANS_SC_UI_550,
- families.READER_FONT_NOTO_SANS_SC_UI_600,families.READER_FONT_NOTO_SANS_SC_UI_650,families.READER_FONT_NOTO_SANS_SC_UI_900];
-const serif=families.READER_FONT_NOTO_SERIF_SC_BOLD;
+const mangaFamilies=[families.READER_FONT_NOTO_SANS_SC_UI_REGULAR,families.READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
+ families.READER_FONT_NOTO_SANS_SC_UI_BOLD];
 const tick=async()=>{for(let i=0;i<12;i++)await Promise.resolve();};
 function fixture(debug=true){
  const pending=new Map(),ready=new Set(),logs=[];
@@ -128,7 +110,7 @@ function fixture(debug=true){
   })),
  },['prepareMangaSheetFonts','prepareReaderFontFamily']);
  const Page=selectedProductionMethods(pageFile,'BookDirectoryPage',['prepareMangaPageFonts','traceMangaFontPreparation'],{
-  DEBUG:debug,...registrar,READER_FONT_NOTO_SERIF_SC_BOLD:serif,
+  DEBUG:debug,...registrar,
   hilog:{info(_domain,tag,_format,phase,generation,current,mounted,family,ready){logs.push({tag,phase,generation,current,mounted,family,ready});}},
  });
  const actor=Object.assign(new Page(),{mounted:true,mangaFontGeneration:0,mangaFontsReady:false,mangaFontsFailed:false});
@@ -136,32 +118,24 @@ function fixture(debug=true){
 }
 async function batch(f){
  f.actor.prepareMangaPageFonts();
- assert.deepEqual([...f.pending.keys()],[serif],'Serif receipt precedes every manga face');
- f.pending.get(serif).resolve();await tick();
- assert.deepEqual([...f.pending.keys()],[serif,...mangaFamilies]);
+ assert.deepEqual([...f.pending.keys()],mangaFamilies,'UI faces are the only manga readiness receipts');
 }
 const success=fixture();
 success.actor.prepareMangaPageFonts();await tick();
-assert.deepEqual(success.logs.map(x=>x.phase),['prepare.begin','serif.begin'],'pending Serif has no fabricated resolve');
+assert.deepEqual(success.logs.map(x=>x.phase),['prepare.begin','batch.begin',...mangaFamilies.map(()=> 'face.begin')],'pending UI faces have no fabricated resolve');
 assert.equal(success.actor.mangaFontsReady,false);
-success.pending.get(serif).resolve();await tick();
-assert.deepEqual(success.logs.filter(x=>x.phase==='face.begin').map(x=>x.family),mangaFamilies,'all seven actual faces have begin events');
 for(const family of mangaFamilies.slice(0,-1))success.pending.get(family).resolve();
 await tick();assert.equal(success.actor.mangaFontsReady,false);
 assert.equal(success.logs.some(x=>x.phase==='batch.resolve'),false,'one pending face keeps the final batch pending');
 success.pending.get(mangaFamilies.at(-1)).resolve();await tick();
 assert.equal(success.actor.mangaFontsReady,true);assert.equal(success.actor.mangaFontsFailed,false);
-assert.equal(success.logs.filter(x=>x.phase==='face.resolve').length,7);
+assert.equal(success.logs.filter(x=>x.phase==='face.resolve').length,3);
 assert.deepEqual(success.logs.slice(-2).map(x=>[x.phase,x.ready]),[['batch.resolve','true'],['prepare.accept','true']]);
 assert.ok(success.logs.every(x=>x.tag==='Reader'&&x.generation===1&&x.current===1&&x.mounted==='true'));
-for(const failedStage of ['serif','face']){
- const f=fixture();
- if(failedStage==='serif')f.actor.prepareMangaPageFonts();else await batch(f);
- f.pending.get(failedStage==='serif'?serif:mangaFamilies[3]).reject(Error('checked receipt rejected'));
- await tick();assert.equal(f.actor.mangaFontsFailed,true);assert.equal(f.actor.mangaFontsReady,false);
- assert.ok(f.logs.some(x=>x.phase===(failedStage==='serif'?'serif.reject':'face.reject')));
- assert.equal(f.logs.at(-1).phase,'prepare.failed');
-}
+const failed=fixture();await batch(failed);
+failed.pending.get(mangaFamilies[1]).reject(Error('checked receipt rejected'));
+await tick();assert.equal(failed.actor.mangaFontsFailed,true);assert.equal(failed.actor.mangaFontsReady,false);
+assert.ok(failed.logs.some(x=>x.phase==='face.reject'));assert.equal(failed.logs.at(-1).phase,'prepare.failed');
 for(const retirement of ['generation','unmounted'])for(const outcome of ['resolve','reject']){
  const f=fixture();await batch(f);
  if(retirement==='generation')f.actor.mangaFontGeneration++;else f.actor.mounted=false;
@@ -182,7 +156,7 @@ const defaultBatch=fixture(false),direct=defaultBatch.registrar.prepareMangaShee
 assert.deepEqual([...defaultBatch.pending.keys()],mangaFamilies);
 for(const family of mangaFamilies)defaultBatch.pending.get(family).resolve();
 assert.equal(await direct,true,'default callers retain checked all-face admission without a progress consumer');
-console.log(JSON.stringify({pendingStages:2,mangaFaces:7,releaseSilent:true,retiredCompletions:4,nativeResult:'NOT_RUN'}));
+console.log(JSON.stringify({pendingStages:1,mangaFaces:3,releaseSilent:true,retiredCompletions:4,nativeResult:'NOT_RUN'}));
 
 }else if(id==='manga-publication'){
 const {registerHooks}=await import('node:module');

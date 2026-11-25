@@ -1,3 +1,5 @@
+import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM, READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../../ui/foundation/ReaderFontFamilies';
+import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { TYPE_READER_DIRECTORY_TITLE, TYPE_READER_DIRECTORY_TITLE_INTER } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -8,14 +10,16 @@ import { readerDirectoryAccessibilityText, readerDirectoryIndentVp } from './Rea
 /** Shared chapter presentation; all storage operations remain with the owner. */
 @Component
 export struct ReaderDirectoryChapterRow {
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
+  @State private pressPointer: number = -1;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @Prop entry: LocalReadingTocEntry;
+  @Prop @Watch('clearPress') entry: LocalReadingTocEntry;
   @Prop rowHeight: number = 32;
   @Prop currentChapterIndex: number = -1;
   @Prop variant: 'control' | 'standalone' | 'detail-preview' = 'control';
   @Prop previewNested: boolean = false;
   @Prop previewGroupCollapsed: boolean = false;
-  @Prop previewEnabled: boolean = true;
+  @Prop @Watch('clearPress') previewEnabled: boolean = true;
   @Prop chapterDownloadEnabled: boolean = false;
   @Prop bookmarkActionsEnabled: boolean = true;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
@@ -27,6 +31,15 @@ export struct ReaderDirectoryChapterRow {
   onDeleteBookmarks: (times: number[]) => void = (_times: number[]): void => {};
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void =
     (_request: ReaderDirectoryChapterStartBookmarkRequest): void => {};
+
+  aboutToDisappear(): void { this.clearPress(); }
+
+  private clearPress(): void { this.pressPointer = -1; }
+
+  private observeChapterPress(event: TouchEvent, enabled: boolean): void {
+    const next = readerPressPointer(event, this.pressPointer, enabled && this.canActOnEntry?.(this.entry) !== false);
+    if (next !== this.pressPointer) readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressPointer = next; });
+  }
 
   private bookmarkActionEnabled(): boolean {
     return this.bookmarkActionsEnabled && this.entry.navigable !== false && this.entry.bookmarks !== undefined &&
@@ -79,21 +92,28 @@ export struct ReaderDirectoryChapterRow {
 
   @Builder
   private detailPreviewRow() {
+    Row() {
     Row({ space: 8 }) {
       Text(this.entry.title).layoutWeight(1).constraintSize({ minWidth: 0 })
-        .fontFamily('ReaderNotoSansSC').fontSize(14).lineHeight(22)
+        .fontFamily(this.entry.navigable === false ? READER_FONT_NOTO_SANS_SC_UI_MEDIUM : READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+        .fontSize(14).lineHeight(22)
         .fontWeight(this.entry.navigable === false ? FontWeight.Medium : FontWeight.Regular)
         .fontColor(readerAppColor(this.entry.navigable === false ? 'TOK_MUTED' : 'TOK_INK', this.appThemeScheme));
       if (this.entry.navigable === false) {
-        Text(this.previewGroupCollapsed ? '›' : '⌄').width(24).fontSize(18)
+        Text(this.previewGroupCollapsed ? '›' : '⌄').width(24)
+          .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(FontWeight.Regular).fontSize(18)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       }
     }.width('100%').constraintSize({ minHeight: this.entry.navigable === false ? 44 : 58 })
       .padding({ left: this.previewNested ? 26 : 10, right: 10, top: 10, bottom: 10 })
       .border({ width: { bottom: 0.5 }, color: { bottom: readerAppColor('TOK_CHAPTER_DIVIDER', this.appThemeScheme) } })
-      .backgroundColor(this.entry.navigable === false ? readerAppColor('TOK_CARD_BG', this.appThemeScheme) : Color.Transparent)
-      .borderRadius(this.entry.navigable === false ? 8 : 0)
+      .backgroundColor(readerPressSurface(this.entry.navigable === false ? readerAppColor('TOK_CARD_BG', this.appThemeScheme) : Color.Transparent,
+        this.appThemeScheme, this.pressPointer >= 0, this.reduceMotion))
+      .borderRadius(this.entry.navigable === false ? 8 : 0).scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
+      .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion));
+    }.width('100%')
       .attributeModifier(new ReaderActionAccessibility(this.previewActionLabel(), this.previewEnabled))
+      .onTouch((event: TouchEvent): void => this.observeChapterPress(event, this.previewEnabled))
       .onClick((): void => {
         if (!this.previewEnabled || this.canActOnEntry?.(this.entry) === false) return;
         if (this.entry.navigable === false) this.onTogglePreviewGroup(this.entry.index);
@@ -112,6 +132,7 @@ export struct ReaderDirectoryChapterRow {
     } else {
     Row() {
       Row() {
+      Row() {
         if (this.entry.index === this.currentChapterIndex) {
           Row().width(3).height(this.rowHeight).borderRadius(1.5).backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme));
         }
@@ -120,10 +141,15 @@ export struct ReaderDirectoryChapterRow {
         } else {
           this.chapterTitle();
         }
+      }.width('100%').height(this.rowHeight).borderRadius(6)
+        .backgroundColor(readerPressSurface(Color.Transparent, this.appThemeScheme, this.pressPointer >= 0, this.reduceMotion))
+        .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
+        .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion));
       }.layoutWeight(1).height(this.rowHeight).accessibilityText(readerDirectoryAccessibilityText(this.entry))
         .id(this.selectionFocusId)
         .enabled(this.entry.navigable !== false)
         .responseRegion({ x: 0, y: 0, width: '100%', height: this.rowHeight })
+        .onTouch((event: TouchEvent): void => this.observeChapterPress(event, this.entry.navigable !== false))
         .onClick((): void => {
           if (this.entry.navigable !== false && this.canActOnEntry?.(this.entry) !== false) this.onSelectChapter(this.entry.index);
         });

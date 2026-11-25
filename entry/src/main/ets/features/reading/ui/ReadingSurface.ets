@@ -1,6 +1,6 @@
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
 import { ReaderNativeParagraphRecipe } from './ReaderNativeParagraph';
-import { readerNativeTextGeometryKey } from './ReaderNativeTextMeasurement';
+import { readerNativeTextGeometryKey, READER_CHAPTER_TITLE_FONT_SIZE_FP } from './ReaderNativeTextMeasurement';
 import { ReaderNativeParagraphView } from './ReaderNativeParagraphView';
 import { readerThemeDefinition } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerHighlightCanvasColor, readerDynamicHighlightRectsEqual, ReaderHighlightTextCache,
@@ -12,7 +12,6 @@ import { copyReaderSelection } from '../../../platform/clipboard/ReaderClipboard
 import { readerSelectedOriginalText } from './ReaderTextSelectionProjection';
 import { readerCopySelectionForShare, readerSelectionShareAnchor, readerShareMessage, readerShareSelectionMenu, readerSystemShareActions } from './ReaderSharePresentation';
 import { registerReaderFonts, readerRegisteredFontFamily } from '../../../ui/foundation/ReaderFonts';
-import { TYPE_READER_CHAPTER_TITLE } from '../../../ui/foundation/ReaderTypography';
 import {
   createDefaultReaderAppearanceSnapshot,
   type ReaderAppearanceSnapshot,
@@ -405,9 +404,10 @@ export struct ReadingSurface {
           } else {
           Text(this.chapterTitle)
             .width('100%')
-            .fontFamily(TYPE_READER_CHAPTER_TITLE.fontFamily)
-            .fontWeight(TYPE_READER_CHAPTER_TITLE.fontWeight)
-            .fontSize(TYPE_READER_CHAPTER_TITLE.fontSizeFp)
+            .fontFamily(readerRegisteredFontFamily(this.getUIContext().getFont(),
+              readerAppearanceSnapshotFontFamily(this.appearance)))
+            .fontWeight(FontWeight.Bold)
+            .fontSize(READER_CHAPTER_TITLE_FONT_SIZE_FP)
             .lineHeight(this.layout.titleLineHeightFp)
             .fontColor(this.themeStyle().ink)
             .textAlign(TextAlign.Center)

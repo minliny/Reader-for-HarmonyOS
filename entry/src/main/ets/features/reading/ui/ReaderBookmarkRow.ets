@@ -1,7 +1,6 @@
 import { TYPE_READER_BOOKMARK_CHAPTER, TYPE_READER_BOOKMARK_EXCERPT, TYPE_READER_BOOKMARK_EXCERPT_LEGACY, TYPE_READER_BOOKMARK_META, TYPE_READER_BOOKMARK_PENDING, TYPE_READER_BOOKMARK_PENDING_LEGACY } from '../../../ui/foundation/ReaderTypography';
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import { TOK_LINE, TOK_READ_INK, TOK_READ_MUTED } from '../../../ui/foundation/ReaderTokens';
 import type { ReaderBookmarkRowModel } from '../presentation/ReaderBookmarkProjection';
 import { sampleReaderControlBookmark, type ReaderControlBookmarkFrame,
   type ReaderControlBookmarkNaturalSize } from './ReaderControlBookmarkGeometry';
@@ -79,7 +78,11 @@ export struct ReaderBookmarkRow {
           .fontFamily(TYPE_READER_BOOKMARK_CHAPTER.fontFamily).fontWeight(TYPE_READER_BOOKMARK_CHAPTER.fontWeight).fontSize(TYPE_READER_BOOKMARK_CHAPTER.fontSizeFp).lineHeight(TYPE_READER_BOOKMARK_CHAPTER.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         if (this.row.identityStatus === 'pendingConfirmation') {
-          Text(BOOKMARK_PENDING_LABEL).fontSize(TYPE_READER_BOOKMARK_PENDING.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).flexShrink(0);
+          Text(BOOKMARK_PENDING_LABEL)
+            .fontFamily(TYPE_READER_BOOKMARK_PENDING.fontFamily as string)
+            .fontWeight(TYPE_READER_BOOKMARK_PENDING.fontWeight as number)
+            .fontSize(TYPE_READER_BOOKMARK_PENDING.fontSizeFp)
+            .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).flexShrink(0);
         }
         Text(this.row.positionLabel).fontFamily(TYPE_READER_BOOKMARK_META.fontFamily as string).fontSize(TYPE_READER_BOOKMARK_META.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .maxLines(1).constraintSize({ maxWidth: 50 }).textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -89,7 +92,7 @@ export struct ReaderBookmarkRow {
         .position({ x: this.frame().title.x, y: this.frame().title.y });
       if (this.showExcerpt) {
         Text('').width(this.frame().accent.width).height(this.frame().accent.height)
-          .backgroundColor(readerAppColor('app.bookmark.excerptAccent', this.appThemeScheme)).borderRadius(1)
+          .backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme)).borderRadius(1)
           .position({ x: this.frame().accent.x, y: this.frame().accent.y });
         Text(this.row.excerpt).width(this.frame().excerpt.width).height(this.frame().excerpt.height)
           .fontFamily(TYPE_READER_BOOKMARK_EXCERPT.fontFamily).fontWeight(TYPE_READER_BOOKMARK_EXCERPT.fontWeight)
@@ -98,9 +101,6 @@ export struct ReaderBookmarkRow {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .position({ x: this.frame().excerpt.x, y: this.frame().excerpt.y });
       }
-      Text('').width(this.frame().divider.width).height(this.frame().divider.height)
-        .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
-        .position({ x: this.frame().divider.x, y: this.frame().divider.y });
     }.width(this.frame().card.width).height(this.frame().card.height).clip(true)
       .accessibilityText(`打开书签：${this.row.chapterTitle} ${this.row.positionLabel} ${this.row.timeLabel}` +
         (this.row.identityStatus === 'pendingConfirmation' ? ` ${BOOKMARK_PENDING_LABEL}` : '') +
@@ -154,7 +154,7 @@ export struct ReaderBookmarkRow {
         Text('')
           .width(1)
           .height(Math.max(26, (this.standaloneSize?.excerptHeight ?? 28) - 2))
-          .backgroundColor(readerAppColor('app.bookmark.excerptAccent', this.appThemeScheme))
+          .backgroundColor(readerAppColor('TOK_ACCENT', this.appThemeScheme))
           .borderRadius(1);
         Text(this.row.excerpt)
           .layoutWeight(1)
@@ -172,11 +172,6 @@ export struct ReaderBookmarkRow {
       .margin({ top: 7 })
       .alignItems(VerticalAlign.Center);
 
-      Text('')
-        .width('100%')
-        .height(1)
-        .margin({ top: 13 })
-        .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme));
     }
     .width('100%')
     .height(this.standaloneSize?.rowHeight ?? BOOKMARK_ROW_HEIGHT)

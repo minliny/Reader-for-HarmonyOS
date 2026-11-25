@@ -17,7 +17,7 @@ import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironm
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
-import { registerReaderFonts, prepareMangaSheetFonts, prepareReaderFontFamily } from '../../../ui/foundation/ReaderFonts';
+import { registerReaderFonts, prepareMangaSheetFonts } from '../../../ui/foundation/ReaderFonts';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderScrollLayout, readerScrollLayout } from '../../../ui/layout/ReaderScrollLayout';
 import { readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight, readerInteractiveSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
@@ -37,7 +37,7 @@ import { mangaDirectoryPresentation, mangaDirectoryVisibleEntries,
   type MangaDirectoryRowPresentation } from '../../manga/presentation/MangaDirectoryPresentation';
 import { mangaDirectoryEntryRows, type MangaDirectoryLayoutRow } from '../../manga/ui/MangaDirectoryLayout';
 import { MangaDirectoryEntryRow } from '../../manga/ui/MangaDirectoryEntryRow';
-import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SERIF_SC_BOLD } from '../../../ui/foundation/ReaderFontFamilies';
+import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../../../ui/foundation/ReaderFontFamilies';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { ReaderNativeSlotMeasurement } from '../../../ui/layout/ReaderNativeSlotMeasurement';
@@ -331,7 +331,7 @@ export struct BookDirectoryPage {
   @Builder
   private mangaSummary() {
     Column({ space: visual.summaryGap }) {
-      Text(this.bookTitle || '漫画目录').fontFamily(READER_FONT_NOTO_SERIF_SC_BOLD)
+      Text(this.bookTitle || '漫画目录').fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD)
         .fontWeight(visual.summaryFontWeight).fontSize(visual.summaryFontSize).lineHeight(visual.summaryLineHeight)
         .halfLeading(true).minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale()))
         .fontColor(mangaDirectoryColor('ink', this.appThemeScheme)).width('100%').wordBreak(WordBreak.BREAK_WORD);
@@ -443,17 +443,11 @@ export struct BookDirectoryPage {
   private prepareMangaPageFonts(): void {
     const generation = ++this.mangaFontGeneration;
     this.mangaFontsFailed = false;
-    let stage: string = 'serif';
     this.traceMangaFontPreparation(generation, 'prepare.begin');
-    this.traceMangaFontPreparation(generation, 'serif.begin', READER_FONT_NOTO_SERIF_SC_BOLD);
-    void prepareReaderFontFamily(READER_FONT_NOTO_SERIF_SC_BOLD).then((): Promise<boolean> => {
-      this.traceMangaFontPreparation(generation, 'serif.resolve', READER_FONT_NOTO_SERIF_SC_BOLD);
-      stage = 'batch';
-      this.traceMangaFontPreparation(generation, 'batch.begin');
-      return prepareMangaSheetFonts(DEBUG ? (family: string, phase: string): void => {
-        this.traceMangaFontPreparation(generation, `face.${phase}`, family);
-      } : undefined);
-    })
+    this.traceMangaFontPreparation(generation, 'batch.begin');
+    void prepareMangaSheetFonts(DEBUG ? (family: string, phase: string): void => {
+      this.traceMangaFontPreparation(generation, `face.${phase}`, family);
+    } : undefined)
       .then((ready: boolean): void => {
         this.traceMangaFontPreparation(generation, 'batch.resolve', '', ready);
         this.traceMangaFontPreparation(generation,
@@ -463,7 +457,7 @@ export struct BookDirectoryPage {
           this.mangaFontsFailed = !ready;
         }
       }).catch((): void => {
-        this.traceMangaFontPreparation(generation, `${stage}.reject`, stage === 'serif' ? READER_FONT_NOTO_SERIF_SC_BOLD : '');
+        this.traceMangaFontPreparation(generation, 'batch.reject');
         this.traceMangaFontPreparation(generation,
           this.mounted && generation === this.mangaFontGeneration ? 'prepare.failed' : 'prepare.discard');
         if (this.mounted && generation === this.mangaFontGeneration) this.mangaFontsFailed = true;

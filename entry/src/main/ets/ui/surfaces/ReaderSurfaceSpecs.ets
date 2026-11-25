@@ -16,8 +16,10 @@ class ReaderSurfaceElevationSpec {
 // The material relationship owns the lift. Fixed position does not imply
 // elevation; cover and reader-body lighting remain separate contracts.
 const FLAT_ELEVATION = new ReaderSurfaceElevationSpec(0, 0, 'app.surface.transparent');
-const FLOATING_ELEVATION = new ReaderSurfaceElevationSpec(20, 8, 'app.navigation.floatingShadow');
-const RAISED_ELEVATION = new ReaderSurfaceElevationSpec(28, 12, 'app.chrome.raisedShadowAmbient');
+const CHROME_SHADOW_RADIUS_VP = 11;
+const CHROME_SHADOW_OFFSET_VP = 3;
+const FLOATING_ELEVATION = new ReaderSurfaceElevationSpec(CHROME_SHADOW_RADIUS_VP, CHROME_SHADOW_OFFSET_VP, 'app.navigation.floatingShadow');
+const RAISED_ELEVATION = new ReaderSurfaceElevationSpec(CHROME_SHADOW_RADIUS_VP, CHROME_SHADOW_OFFSET_VP, 'app.chrome.raisedShadowAmbient');
 const POPOVER_ELEVATION = new ReaderSurfaceElevationSpec(20, 5, 'app.shadow.menu');
 const SHEET_ELEVATION = new ReaderSurfaceElevationSpec(24, -4, 'app.shadow.sheet');
 const CARD_ELEVATION = new ReaderSurfaceElevationSpec(2, 1, 'TOK_DOWNLOAD_SHADOW');
@@ -68,12 +70,12 @@ export class ReaderShadowLayerSpec {
 }
 
 export class ReaderRaisedSurfaceSpec {
-  readonly canvasOutsetVp: number = 48;
+  readonly canvasOutsetVp: number = 18;
   readonly casterShiftVp: number = 1024;
   // Paint far-to-near; CSS lists the frontmost contact shadow first.
   readonly layers: ReaderShadowLayerSpec[] = [
-    new ReaderShadowLayerSpec(28, 12, 3, 'app.chrome.raisedShadowAmbient'),
-    new ReaderShadowLayerSpec(8, 3, 0, 'app.chrome.raisedShadowNear'),
+    new ReaderShadowLayerSpec(CHROME_SHADOW_RADIUS_VP, CHROME_SHADOW_OFFSET_VP, 0, 'app.chrome.raisedShadowAmbient'),
+    new ReaderShadowLayerSpec(5, 1, 0, 'app.chrome.raisedShadowNear'),
     // A zero-blur offset casts a second hard outline beside the owner's border.
     // Keep contact depth, with a short falloff at every display density.
     new ReaderShadowLayerSpec(1, 1, 0, 'app.chrome.raisedShadowContact'),
@@ -132,7 +134,7 @@ export class DrawerSurfaceSpec {
   readonly closeIcon: number = SOURCE_SWITCH_VISUAL.closeIconSize;
   readonly closeTop: number = 0;
   readonly closeRight: number = 0;
-  readonly titleFontFamily: string = 'ReaderNotoSerifSCBold';
+  readonly titleFontFamily: string = 'ReaderNotoSansSCUIBold';
   readonly titleFontWeight: number = SOURCE_SWITCH_VISUAL.titleFontWeight;
   readonly titleFontSize: number = SOURCE_SWITCH_VISUAL.titleFontSize;
   readonly titleLineHeight: number = SOURCE_SWITCH_VISUAL.titleLineHeight;
@@ -143,7 +145,7 @@ export class DrawerSurfaceSpec {
   }
   readonly titleHeight: number = SOURCE_SWITCH_VISUAL.headingHeight;
   readonly titleBottom: number = 0;
-  readonly sideTitleFontFamily: string = 'ReaderNotoSerifSCBold';
+  readonly sideTitleFontFamily: string = 'ReaderNotoSansSCUIBold';
   readonly sideTitleFontWeight: number = SOURCE_SWITCH_VISUAL.titleFontWeight;
   readonly sideTitleFontSize: number = SOURCE_SWITCH_VISUAL.titleFontSize;
   readonly sideTitleLineHeight: number = SOURCE_SWITCH_VISUAL.titleLineHeight;
@@ -166,7 +168,7 @@ export function resolveDrawerSpec(id: DrawerSpecId): DrawerSurfaceSpec { return 
  */
 export type DialogSpecId = 'book-removal' | 'json-import' | 'shelf-group' | 'local-import' | 'download-confirmation';
 
-export type DialogHeaderFontFamily = 'ReaderMangaSans600' | 'ReaderNotoSerifSCBold';
+export type DialogHeaderFontFamily = 'ReaderNotoSansSCUIBold';
 
 /**
  * cap        — the surface column width is clamped to maxWidth (native modal).
@@ -217,7 +219,7 @@ export interface DialogSurfaceSpecInit {
 }
 
 export class DialogSurfaceSpec {
-  readonly headerFontWeight: number = 600;
+  readonly headerFontWeight: number = 700;
   readonly maxWidth: number;
   readonly edgeGap: number;
   readonly widthPercent: number;
@@ -280,7 +282,7 @@ const DIALOG_SPECS: Record<DialogSpecId, DialogSurfaceSpec> = {
     maxWidth: 306, edgeGap: 24, widthPercent: 0, frameMode: 'cap', usesKeyboardSafeArea: false,
     padding: 19, borderRadius: DIALOG_RADIUS,
     backgroundRole: 'TOK_SURFACE_ELEVATED', hasShadow: false, hasBorder: true,
-    headerFontSize: 18, headerFontFamily: 'ReaderNotoSerifSCBold', headerTextAlign: TextAlign.Start,
+    headerFontSize: 18, headerFontFamily: 'ReaderNotoSansSCUIBold', headerTextAlign: TextAlign.Start,
     headerLineHeight: 26, headerGap: 0, bodyActionsGap: 0, bodyActionsOwnMargin: 0,
     actionsLayout: 'row', actionHeight: 44, actionBorderRadius: DIALOG_ACTION_RADIUS, actionUsesPressFeedback: true,
     actionExtendsTouchRegion: false,
@@ -290,7 +292,7 @@ const DIALOG_SPECS: Record<DialogSpecId, DialogSurfaceSpec> = {
     maxWidth: 318, edgeGap: 20, widthPercent: 0, frameMode: 'cap', usesKeyboardSafeArea: false,
     padding: 19, borderRadius: DIALOG_RADIUS,
     backgroundRole: 'TOK_SURFACE_ELEVATED', hasShadow: true, hasBorder: true,
-    headerFontSize: 18, headerFontFamily: 'ReaderNotoSerifSCBold', headerTextAlign: TextAlign.Center,
+    headerFontSize: 18, headerFontFamily: 'ReaderNotoSansSCUIBold', headerTextAlign: TextAlign.Center,
     headerLineHeight: 26, headerGap: 10, bodyActionsGap: 20, bodyActionsOwnMargin: 0,
     actionsLayout: 'row', actionHeight: 44, actionBorderRadius: DIALOG_ACTION_RADIUS, actionUsesPressFeedback: true,
     actionExtendsTouchRegion: false,
@@ -300,7 +302,7 @@ const DIALOG_SPECS: Record<DialogSpecId, DialogSurfaceSpec> = {
     maxWidth: 344, edgeGap: 16, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,
     padding: 19, borderRadius: DIALOG_RADIUS,
     backgroundRole: 'TOK_SURFACE_ELEVATED', hasShadow: true, hasBorder: true,
-    headerFontSize: 18, headerFontFamily: 'ReaderNotoSerifSCBold', headerTextAlign: TextAlign.Start,
+    headerFontSize: 18, headerFontFamily: 'ReaderNotoSansSCUIBold', headerTextAlign: TextAlign.Start,
     headerLineHeight: 26, headerGap: 12, bodyActionsGap: 12, bodyActionsOwnMargin: 0,
     actionsLayout: 'row', actionHeight: 44, actionBorderRadius: DIALOG_ACTION_RADIUS, actionUsesPressFeedback: true,
     actionExtendsTouchRegion: false,
@@ -310,7 +312,7 @@ const DIALOG_SPECS: Record<DialogSpecId, DialogSurfaceSpec> = {
     maxWidth: 332, edgeGap: 16, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,
     padding: 19, borderRadius: DIALOG_RADIUS,
     backgroundRole: 'TOK_SURFACE_ELEVATED', hasShadow: true, hasBorder: true,
-    headerFontSize: 18, headerFontFamily: 'ReaderNotoSerifSCBold', headerTextAlign: TextAlign.Start,
+    headerFontSize: 18, headerFontFamily: 'ReaderNotoSansSCUIBold', headerTextAlign: TextAlign.Start,
     headerLineHeight: 26, headerGap: 4, bodyActionsGap: 16, bodyActionsOwnMargin: 0,
     actionsLayout: 'row', actionHeight: 44, actionBorderRadius: DIALOG_ACTION_RADIUS, actionUsesPressFeedback: true,
     actionExtendsTouchRegion: false,
@@ -320,7 +322,7 @@ const DIALOG_SPECS: Record<DialogSpecId, DialogSurfaceSpec> = {
     maxWidth: 344, edgeGap: 16, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,
     padding: 19, borderRadius: DIALOG_RADIUS,
     backgroundRole: 'TOK_SURFACE_ELEVATED', hasShadow: true, hasBorder: true,
-    headerFontSize: 18, headerFontFamily: 'ReaderNotoSerifSCBold', headerTextAlign: TextAlign.Start,
+    headerFontSize: 18, headerFontFamily: 'ReaderNotoSansSCUIBold', headerTextAlign: TextAlign.Start,
     headerLineHeight: 26, headerGap: 14, bodyActionsGap: 16, bodyActionsOwnMargin: 0,
     actionsLayout: 'row', actionHeight: 44, actionBorderRadius: DIALOG_ACTION_RADIUS, actionUsesPressFeedback: true,
     actionExtendsTouchRegion: false,
@@ -350,7 +352,7 @@ export class SheetSurfaceSpec {
   readonly titleInset: number = SOURCE_SWITCH_VISUAL.normalSideInset;
   readonly titleHeight: number = SOURCE_SWITCH_VISUAL.headingHeight;
   readonly titleBottom: number = 0;
-  readonly titleFontFamily: string = 'ReaderNotoSerifSCBold';
+  readonly titleFontFamily: string = 'ReaderNotoSansSCUIBold';
   readonly titleFontWeight: number = SOURCE_SWITCH_VISUAL.titleFontWeight;
   readonly titleFontSize: number = SOURCE_SWITCH_VISUAL.titleFontSize;
   readonly titleLineHeight: number = SOURCE_SWITCH_VISUAL.titleLineHeight;
@@ -577,7 +579,7 @@ const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
     pointerStrokeRole: 'app.border.menu',
     actionTextRole: 'TOK_INK',
     dividerRole: 'app.border.menuDivider',
-    actionFontFamily: 'ReaderNotoSansSC', actionFontSize: 15, actionLineHeight: 22,
+    actionFontFamily: 'ReaderNotoSansSCUIMedium', actionFontSize: 15, actionLineHeight: 22,
   }),
   // Source-switch window: the content state machine remains in the consumer;
   // this entry owns the finite outer frame used by phone and tablet hosts.
@@ -598,7 +600,7 @@ const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
     pointerStrokeRole: 'TOK_SS_WINDOW_BORDER',
     actionTextRole: 'TOK_SS_FOOTER_TEXT',
     dividerRole: 'TOK_SS_WINDOW_BORDER',
-    actionFontFamily: 'ReaderInter', actionFontSize: 0, actionLineHeight: 0,
+    actionFontFamily: 'ReaderNotoSansSCUIRegular', actionFontSize: 0, actionLineHeight: 0,
   }),
   // TTS manager content-cover card. The form remains owned by the TTS
   // consumer; this finite entry owns only the existing modal frame geometry

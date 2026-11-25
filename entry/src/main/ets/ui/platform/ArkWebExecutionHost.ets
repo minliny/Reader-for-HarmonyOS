@@ -10,6 +10,7 @@ import { ReaderActionAccessibility } from '../controls/ReaderActionAccessibility
 import { consumeReaderControlKeyboardBack } from '../foundation/ReaderKeyboardBack';
 import { ArkWebExecutor, type ArkWebPresentation, type ArkWebSurface } from '../../platform/network/ArkWebExecutor';
 import { redactedHttpUrl } from '../../platform/network/HttpTransportPolicy';
+import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../foundation/ReaderFontFamilies';
 
 /**
  * Serialized per-job Web surfaces. Only the numeric key is observed; native
@@ -199,6 +200,7 @@ export struct ArkWebExecutionHost {
           Row({ space: 12 }) {
             Button({ type: ButtonType.Normal, stateEffect: false }) {
               Text('取消')
+                .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD)
                 .fontSize(14)
                 .fontWeight(FontWeight.Bold)
                 .fontColor(readerAppColor('app.web.status', this.appThemeScheme))
@@ -212,6 +214,7 @@ export struct ArkWebExecutionHost {
             Column({ space: 2 }) {
               Text(this.title)
                 .width('100%')
+                .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD)
                 .fontSize(15)
                 .fontWeight(FontWeight.Bold)
                 .fontColor(readerAppColor('app.web.ink', this.appThemeScheme))
@@ -220,6 +223,7 @@ export struct ArkWebExecutionHost {
               if (this.currentUrl.length > 0) {
                 Text(this.currentUrl)
                   .width('100%')
+                  .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
                   .fontSize(11)
                   .fontColor(readerAppColor('app.web.muted', this.appThemeScheme))
                   .maxLines(1)
@@ -230,6 +234,7 @@ export struct ArkWebExecutionHost {
             .alignItems(HorizontalAlign.Start);
             Button({ type: ButtonType.Normal, stateEffect: false }) {
               Text('完成')
+                .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD)
                 .fontSize(14)
                 .fontWeight(FontWeight.Bold)
                 .fontColor(readerAppColor('app.web.action', this.appThemeScheme))

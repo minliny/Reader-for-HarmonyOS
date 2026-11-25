@@ -1,6 +1,7 @@
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../../../ui/foundation/ReaderFontFamilies';
+import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryFooterStacked } from './MangaDirectoryVisual';
 
 /** Shared current-position surface; only its title may be ellipsized. */
@@ -25,7 +26,7 @@ export struct MangaDirectoryCurrentFooter {
     Text('当前章节').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(visual.bodyFontWeight)
       .fontSize(visual.footerMetaFontSize).lineHeight(visual.footerMetaLineHeight).halfLeading(true)
       .minFontScale(Math.min(1, this.footerFontScale())).maxFontScale(Math.max(1, this.footerFontScale()))
-      .fontColor(mangaDirectoryColor('muted', this.scheme)).flexShrink(0);
+      .fontColor(readerAppColor('TOK_ACCENT', this.scheme)).flexShrink(0);
   }
   @Builder
   private chapter() {
@@ -40,7 +41,7 @@ export struct MangaDirectoryCurrentFooter {
       Text(this.pagePosition).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(visual.bodyFontWeight)
         .fontSize(visual.footerMetaFontSize).lineHeight(visual.footerMetaLineHeight).halfLeading(true).fontFeature("'tnum' 1")
         .minFontScale(Math.min(1, this.footerFontScale())).maxFontScale(Math.max(1, this.footerFontScale()))
-        .fontColor(mangaDirectoryColor('muted', this.scheme)).wordBreak(WordBreak.BREAK_WORD).flexShrink(0);
+        .fontColor(readerAppColor('TOK_ACCENT', this.scheme)).wordBreak(WordBreak.BREAK_WORD).flexShrink(0);
     }
   }
   build() {
@@ -61,9 +62,9 @@ export struct MangaDirectoryCurrentFooter {
     }.width('100%').constraintSize({ minHeight: visual.footerHeight })
       .justifyContent(FlexAlign.Center).alignItems(HorizontalAlign.Start)
       .padding({ left: visual.footerPaddingX, right: visual.footerPaddingX, top: visual.footerPaddingY, bottom: visual.footerPaddingY })
-      .backgroundColor(mangaDirectoryColor('soft', this.scheme))
+      .backgroundColor(readerAppColor('TOK_CARD_BG', this.scheme))
       .border({ width: visual.borderWidth, color: mangaDirectoryColor('line', this.scheme) }).borderRadius(visual.footerRadius)
-      .accessibilityText('当前阅读位置')
+      .accessibilityText(`当前阅读位置：${this.title}${this.pagePosition.length > 0 ? `，${this.pagePosition}` : ''}`)
       .onAreaChange((_old: Area, area: Area): void => {
         const width = readerPageAreaLength(area.width), height = readerPageAreaLength(area.height);
         if (Number.isFinite(width) && width > 0 && Math.abs(width - this.measuredWidth) > .1) this.measuredWidth = width;

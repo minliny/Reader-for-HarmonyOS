@@ -227,7 +227,7 @@ function checkMangaGeometry(candidate = localBookDetailSource) {
     const backImage = [...header.nodes.values()].find(node => node.type === 'Image');
     assert.equal(backImage?.create, `app.media.manga_directory_back${scheme === 'night' ? '_theme_night' : ''}`);
     const heading = nodes.find(node => node.type === 'Text' && node.create === '章节目录');
-    assert.deepEqual([heading.fontSize, heading.lineHeight, heading.fontWeight], [17, 25, [650, {enableVariableFontWeight: true}]]);
+    assert.deepEqual([heading.fontSize, heading.lineHeight, heading.fontWeight], [17, 25, 700]);
     assert.ok(nodes.some(node => node.create === '最新：最新事实'), 'business latest facts survive the visual conversion');
     nodes.find(node => node.create === '换源').onClick();
     nodes.find(node => node.type === 'Row' && node.onClick && node.constraintSize?.minHeight === 36 && node.flexShrink === 0).onClick();
@@ -268,17 +268,21 @@ assert.notEqual(doubledFp, localBookDetailSource); assert.throws(() => checkMang
 
 }
 if(selectedCase==='font-receipts') {
+metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 390, 900));
 const deferred = () => {let resolve, reject; const promise = new Promise((yes, no) => {resolve = yes; reject = no;}); return {promise, resolve, reject};};
 const nextFrame = () => new Promise(done => setImmediate(done));
 async function checkFontAdmission(candidate = localBookDetailSource, scenario = 'identity') {
-  const receipts = [], requests = [];
+  const receipts = [];
   const sdk = localBookDetailSdk({ReaderWindowCoordinator: {metrics: () => metrics},
-    prepareReaderFontFamily: async family => requests.push(family),
+    prepareReaderFontFamily: async () => assert.fail('manga detail must use the shared checked UI face batch'),
     prepareMangaSheetFonts: () => {const receipt = deferred(); receipts.push(receipt); return receipt.promise;}}, {source: candidate});
   const owner = sdk.owner; admitDetail(owner); owner.aboutToAppear(); await nextFrame();
   assert.equal(receipts.length, 1); assert.equal(owner.mangaFontsReady, false);
-  owner.initialRender(); assert.equal([...owner.children.values()].some(child => child instanceof sdk.Header), false,
-    'first manga header and glyphs wait for checked font receipts');
+  owner.initialRender();
+  assert.ok([...owner.children.values()].some(child => child instanceof sdk.Header),
+    'the shared header remains available during manga detail font preparation');
+  assert.equal([...owner.nodes.values()].some(node => node.type === 'Text' && node.create === owner.book.title), false,
+    'the manga title and content glyphs wait for checked font receipts');
   if (scenario === 'identity') {
     owner.book = {...mangaBook, bookId: 'next'}; owner.onBookChanged(); await nextFrame();
     assert.equal(receipts.length, 2); receipts[0].resolve(true); await nextFrame();
@@ -290,7 +294,9 @@ async function checkFontAdmission(candidate = localBookDetailSource, scenario = 
     // native branch scheduling and first pixels remain a renderer gate.
     const admitted = new sdk.Component(undefined, {}); admitDetail(admitted, {book: owner.book});
     admitted.mangaFontsReady = owner.mangaFontsReady; admitted.initialRender();
-    assert.ok([...admitted.children.values()].some(child => child instanceof sdk.Header));
+    assert.ok([...admitted.nodes.values()].some(node => node.type === 'Text' && node.create === owner.book.title &&
+      node.fontFamily === 'ReaderNotoSansSCUIBold' && node.fontWeight === 700),
+    'the shared checked receipt admits the actual manga title with UI Bold 700');
   } else if (scenario === 'unmount') {
     owner.aboutToDisappear(); receipts[0].resolve(true); await nextFrame();
     assert.equal(owner.mangaFontsReady, false, 'late font receipt cannot paint a retired detail');
@@ -300,7 +306,6 @@ async function checkFontAdmission(candidate = localBookDetailSource, scenario = 
     owner.prepareMangaDetailFonts(); await nextFrame(); receipts[1].resolve(true); await nextFrame();
     assert.equal(owner.mangaFontsReady, true); assert.equal(owner.mangaFontsFailed, false);
   }
-  assert.ok(requests.every(family => family === 'ReaderNotoSerifSCBold'));
 }
 await checkFontAdmission(); await checkFontAdmission(localBookDetailSource, 'unmount'); await checkFontAdmission(localBookDetailSource, 'retry');
 const unfencedFonts = localBookDetailSource.replaceAll('!this.mounted || generation !== this.mangaFontGeneration || identity !== this.mangaFontIdentity || ', '');
@@ -308,8 +313,8 @@ assert.notEqual(unfencedFonts, localBookDetailSource);
 await assert.rejects(() => checkFontAdmission(unfencedFonts), /late prior-book font callback/);
 const earlyGlyphs = localBookDetailSource.replace("this.book.contentKind !== 'manga' || this.mangaFontsReady", 'true');
 assert.notEqual(earlyGlyphs, localBookDetailSource);
-await assert.rejects(() => checkFontAdmission(earlyGlyphs), /first manga header and glyphs/);
-console.log('PASS actual SDK detail/header: novels retain original geometry; manga header548 cap/asymmetric safe edges, cover84x122, title24/34, fixed printed art, position12/19/500, section17/25/650,320/390/800vp ×font1/2/3.2×day/night, natural dock and measured clearance; same-key row/title/metadata/kind/current-click updates retain child and Scroll, checked fonts fence identity/unmount/failure/retry. Negative uncapped/transposed/novel-leak/captured-row/remount/old-cover/double-fp/early/late controls rejected; native branch layout/pixels remain unverified');
+await assert.rejects(() => checkFontAdmission(earlyGlyphs), /manga title and content glyphs/);
+console.log('PASS manga detail uses checked static UI fonts, fences retired receipts, and admits the actual title at UI Bold 700 after readiness.');
 
 }
 

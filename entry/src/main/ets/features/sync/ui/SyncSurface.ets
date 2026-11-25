@@ -4,12 +4,14 @@ import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFra
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { SyncPage } from './SyncPage';
 import { SyncPresentation } from '../presentation/SyncPresentation';
+import { TYPE_APP_ROW_DETAIL } from '../../../ui/foundation/ReaderTypography';
 
 @Component
 export struct SyncSurface {
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @ObjectLink presentation: SyncPresentation;
   @Prop expandedLayout: boolean = false;
+  @Prop embeddedWide: boolean = false;
   identity: string = '';
   onBack: () => void = (): void => {};
 
@@ -18,6 +20,7 @@ export struct SyncSurface {
       SyncPage({
         snapshot: this.presentation.snapshot,
         expandedLayout: this.expandedLayout,
+        embeddedWide: this.embeddedWide,
         onBack: (): void => { if (this.presentation.operations(this.identity) !== undefined) this.onBack(); },
         onReconcile: (expected: number): void => this.presentation.operations(this.identity)?.reconcile(expected),
         onSkipBackupRetention: (expected: number): void => this.presentation.operations(this.identity)?.skipBackupRetention(expected),
@@ -46,7 +49,7 @@ export struct SyncSurface {
 
   @Builder
   private preparingContent() {
-    Column() { Text('正在读取安全配置…'); }
+    Column() { Text('正在读取安全配置…').fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight); }
     .width('100%').height('100%').justifyContent(FlexAlign.Center);
   }
 }

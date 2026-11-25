@@ -57,17 +57,19 @@ const fields = [...mangaDirectoryAdaptiveFields, 'mounted', 'panel', 'panelOffse
   'quickHeaderMeasured', 'quickToolsMeasured', 'quickFooterMeasured', 'actionHeaderMeasuredHeight', 'windowMetricsRevision',
   'downloadActionsChapterIndex', 'downloadActionsGeneration', 'downloadActions', 'downloadActionsLoading', 'downloadActionsFailure',
   'rollbackChapterController', 'rollbackChapterImages', 'previousChapterPixels',
-  'panelFocusGeneration', 'panelReturnFocusTarget', 'pageTurnInputRevision', 'transientFeedback'];
+  'panelFocusGeneration', 'panelReturnFocusTarget', 'pageTurnInputRevision', 'transientFeedback',
+  'pageSliderGeneration', 'pageSliderPreview', 'pageSliderCommitted'];
 const methods = [...mangaDirectoryAdaptiveMembers, 'openPanel', 'closePanel', 'invalidatePanelMotion', 'dismissPanelKeyboard', 'settlePanel',
+  'clearPageSliderPreview',
   'preparePanelFonts', 'loadPanelFonts', 'retryPanelFonts', 'performPanelAction', 'beginPanelDrag', 'updatePanelDrag', 'finishPanelDrag', 'panelTravel', 'panelHeight',
   'panelWidth', 'panelContentHeight', 'windowInteractiveInsets', 'interactiveInsets', 'panelInsets', 'controlsPresentedForWindow', 'widePanel', 'persistentDirectory', 'directoryColumnWidth', 'tabletDirectory', 'panelTitle', 'panelOverlay', 'directoryPanel',
   'directoryTools', 'directoryCurrentFooter', 'directoryCurrentTitle', 'directoryCurrentIndex', 'directoryCurrentPagePosition', 'pageOrdinal', 'adjacentChapter', 'selectAdjacentChapter', 'directoryBody', 'panelContentInset', 'directoryFallback', 'modePanel', 'settingsPanel', 'morePanel', 'moreActions', 'performMoreAction', 'performMorePanelAction', 'sectionTitle', 'sheetChoice', 'fitLine', 'choiceIcon',
   'isActionPanel', 'actionPanelInsets', 'actionPanelSurface', 'actionPanelHeader', 'actionPanelBody', 'actionHeaderHeight',
   'directorySheet', 'directoryBottomHeader', 'directorySideHeader', 'measureDirectorySheetHeader', 'chromeScheme',
   'panelInputCurrent', 'downloadPanelInputCurrent', 'ownsDownloadActions', 'preferencePanelInputCurrent', 'requestPanelFocus', 'panelCloseFocusId', 'panelTriggerFocusId',
-  'isSheetChoiceSelected', 'paperColor', 'surfaceColor', 'inkColor', 'mutedColor', 'faintColor', 'lineColor',
+  'isSheetChoiceSelected', 'paperColor', 'surfaceColor', 'inkColor', 'mutedColor', 'lineColor',
   'softSurfaceColor', 'greenColor', 'accentColor', 'aboutToDisappear', 'handleBack', 'openDirectory',
-  'showDetail', 'openSourceSwitch', 'selectDirectoryTarget', 'displayedBrightnessPercent', 'resetMangaPreferences',
+  'showDetail', 'openSourceSwitch', 'selectDirectoryTarget', 'resetMangaPreferences',
   'onWindowChromeChanged', 'restoreAppWindowChrome', 'directoryFontScale', 'directoryToolHeight', 'directoryHeaderChrome', 'directoryInitialWidth', 'directoryQuickHeight', 'onDirectoryMetricsChanged'];
 function deferred() {
   let resolve, reject; const promise = new Promise((done, fail) => { resolve = done; reject = fail; });
@@ -99,7 +101,6 @@ function fixture(text = source, options = {}) {
     readerIsExpandedWidth, motionAnimateParam, readerMotionReducedFadeParam, readerActionIcon, READER_FEEDBACK_BRIEF_MS,
     inputMethod: { getController: () => ({ hideTextInput: () => { events.push('hide-input'); return options.keyboard ?? Promise.resolve(); } }) },
     prepareMangaSheetFonts: () => { events.push(['prepare-font', 'required-static-receipts']); return options.fontLoad?.() ?? options.font ?? Promise.resolve(true); },
-    prepareReaderFontFamily: family => { events.push(['prepare-serif', family]); return options.serifLoad?.(family) ?? options.serif ?? Promise.resolve(); },
     Curve: { EaseInOut: 'easeInOut' },
     hilog: { warn: (...args) => events.push(['keyboard-warning', ...args]) },
     ReaderWindowCoordinator: { isTabletDevice: () => false, brightness: () => ({ release: async () => {} }), metrics: () => ({systemFontScale:1,systemInsets:{left:0,top:0,right:0,bottom:0},cutoutInsets:{left:0,top:0,right:0,bottom:0},gestureInsets:{left:0,top:0,right:0,bottom:0},navigationInsets:{left:0,top:0,right:0,bottom:0},statusBarRect:{top:0,height:0}}) },
@@ -179,8 +180,6 @@ async function verifyMotion(text = source) {
     const f = fixture(text); await f.owner.openPanel(panel);
     assert.deepEqual(f.events.slice(0, 3), ['save', 'clear-focus', 'hide-input']);
     assert.ok(f.events.some(event => Array.isArray(event) && event[0] === 'prepare-font'), `${panel} waits for its required checked static font receipts`);
-    assert.deepEqual(f.events.find(event => Array.isArray(event) && event[0] === 'prepare-serif'),
-      ['prepare-serif', fonts.READER_FONT_NOTO_SERIF_SC_BOLD], 'the sidebar title face has its own checked receipt before panel admission');
     assertOpening(f, panel);
     const closing = f.owner.closePanel();
     assert.equal(f.owner.closePanel(), closing, 'repeated dismiss shares one completion');
@@ -298,10 +297,16 @@ async function verifyAllPanelFontAdmission(text = source) {
     assert.ok(!f.events.some(event => Array.isArray(event) && event[0] === 'prepare-font'), 'font demand begins with a panel, not the reader image owner');
     const opening = f.owner.openPanel(panel);
     await until(() => f.events.some(e => Array.isArray(e) && e[0] === 'prepare-font'), 'actual panel font port entered');
-    assert.equal(f.owner.panel, '', `${panel} cannot mount before four checked static faces`);
+    assert.equal(f.owner.panel, '', `${panel} cannot mount before its checked static UI faces`);
     assert.equal(f.frames.length, 0, `${panel} font admission precedes the frame fence`);
     font.resolve(true); await opening;
     assert.equal(f.owner.panel, panel); assert.equal(f.owner.panelFontsReady, true);
+    if (panel === 'directory') {
+      f.owner.directoryBottomHeader();
+      const title = f.nodes().find(node => node.type === 'Text' && node.create === '章节目录');
+      assert.equal(title?.fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_BOLD);
+      assert.equal(title?.fontWeight, 700);
+    }
     const count = f.events.filter(event => Array.isArray(event) && event[0] === 'prepare-font').length;
     await f.owner.openPanel('settings');
     assert.equal(f.events.filter(event => Array.isArray(event) && event[0] === 'prepare-font').length, count,
@@ -322,20 +327,6 @@ async function verifyAllPanelFontAdmission(text = source) {
   assert.equal(stale.owner.panel, 'settings', 'a late shared receipt cannot reopen the old panel');
 }
 if(selectedCase==='font-admission') await verifyAllPanelFontAdmission();
-
-async function verifySerifFontAdmission(text = source) {
-  const serif = deferred(), f = fixture(text, { serif: serif.promise });
-  const admission = f.owner.preparePanelFonts();
-  assert.equal(f.owner.panelFontsReady, false, 'sidebar Serif title cannot inherit a Sans-only receipt');
-  assert.ok(!f.events.some(event => Array.isArray(event) && event[0] === 'prepare-font'),
-    'Sans admission follows the checked Serif receipt rather than racing its load');
-  serif.resolve(); assert.equal(await admission, true);
-  const failed = fixture(text, { serif: Promise.reject(new Error('checked Serif file unavailable')) });
-  await failed.owner.openPanel('directory');
-  assert.equal(failed.owner.panelFontsReady, false); assert.equal(failed.owner.panel, '');
-  assert.equal(failed.frames.length, 0, 'a failed title face cannot paint a fallback frame');
-}
-if(selectedCase==='font-admission') await verifySerifFontAdmission();
 
 async function verifyResetPreferences(text = source) {
   const f = fixture(text), operations = [];
@@ -395,8 +386,8 @@ async function verifyPersistentFontAdmission(text = source) {
   assert.equal(await admission, true); assert.equal(f.owner.panelFontsReady, true);
   const ready = persistentFontSnapshot(f, text);
   assert.ok(!ready.nodes().some(node => node.type === 'TextInput'), 'persistent catalog has no phone search input');
-  assert.ok(ready.nodes().some(node => node.type === 'Text' && node.create === '示例漫画' && node.fontFamily === 'ReaderNotoSerifSCBold'),
-    'checked receipt admits the dynamic book title with the existing Serif face');
+  assert.ok(ready.nodes().some(node => node.type === 'Text' && node.create === '示例漫画' && node.fontFamily === 'ReaderNotoSansSCUIBold'),
+    'checked receipt admits the dynamic book title with the checked UI Bold face');
   assert.ok(ready.nodes().some(node => node.type === 'Text' && node.create === '章节目录' && node.fontFamily === 'ReaderNotoSansSCUIRegular'));
   const lateFont = deferred(), unmounted = fixture(text, { font: lateFont.promise });
   const lateAdmission = unmounted.owner.preparePanelFonts();
@@ -405,29 +396,27 @@ async function verifyPersistentFontAdmission(text = source) {
 }
 if(selectedCase==='font-admission') await verifyPersistentFontAdmission();
 // These use original openPanel/prepare/load/retry/tabletDirectory methods.
-// Serif and sheet promises are finite checked-load I/O ports, not replaced
+// The shared sheet-font promise is a finite checked-load I/O port, not replaced
 // business methods. Device paint, focus and font rasterization stay separate.
 async function verifyFontFailureRecovery(text = source) {
-  for (const stage of ['serif', 'sheet']) {
-    const load = deferred(); let first = true;
-    const next = () => { if (first) { first = false; return load.promise; } return Promise.resolve(stage === 'sheet' ? true : undefined); };
-    const f = fixture(text, stage === 'serif' ? { serifLoad: next } : { fontLoad: next });
-    Object.assign(f.owner, { sourceId: 'source', bookId: 'failure-' + stage });
-    const imageOwner = f.owner.controller, opening = f.owner.openPanel('settings');
-    await until(() => f.events.some(e => Array.isArray(e) && e[0] === (stage === 'serif' ? 'prepare-serif' : 'prepare-font')), 'checked font I/O entered');
-    load.reject(new Error('checked font I/O 25900006')); await opening;
-    assert.deepEqual([f.owner.panel, f.owner.panelPhase, f.owner.panelFontsReady, f.owner.panelFontsLoading, f.owner.panelFontsFailed],
-      ['', 'closed', false, false, true], 'current checked rejection retains cancelled panel and real failed state');
-    assert.deepEqual(f.feedback().map(x => [x.message, x.duration]), [['暂时无法打开面板，请重试', READER_FEEDBACK_BRIEF_MS]],
-      'current rejected open publishes one original short-failure fact');
-    assert.deepEqual([f.frames.length, f.animations.length, f.owner.controller], [0, 0, imageOwner],
-      'failed font admission keeps original images and starts no opening frame or animation');
-    await f.owner.openPanel('settings');
-    assert.deepEqual([f.owner.panelFontsReady, f.owner.panelFontsFailed, f.owner.panelFontsLoading], [true, false, false]);
-    assert.equal(f.owner.panelFontTask, undefined);
-    assertOpening(f, 'settings');
-    assert.equal(f.owner.controller, imageOwner, 'original successful retry retains image owner and normal opening');
-  }
+  const load = deferred(); let first = true;
+  const next = () => { if (first) { first = false; return load.promise; } return Promise.resolve(true); };
+  const f = fixture(text, { fontLoad: next });
+  Object.assign(f.owner, { sourceId: 'source', bookId: 'failure-sheet' });
+  const imageOwner = f.owner.controller, opening = f.owner.openPanel('settings');
+  await until(() => f.events.some(e => Array.isArray(e) && e[0] === 'prepare-font'), 'checked font I/O entered');
+  load.reject(new Error('checked font I/O 25900006')); await opening;
+  assert.deepEqual([f.owner.panel, f.owner.panelPhase, f.owner.panelFontsReady, f.owner.panelFontsLoading, f.owner.panelFontsFailed],
+    ['', 'closed', false, false, true], 'current checked rejection retains cancelled panel and real failed state');
+  assert.deepEqual(f.feedback().map(x => [x.message, x.duration]), [['暂时无法打开面板，请重试', READER_FEEDBACK_BRIEF_MS]],
+    'current rejected open publishes one original short-failure fact');
+  assert.deepEqual([f.frames.length, f.animations.length, f.owner.controller], [0, 0, imageOwner],
+    'failed font admission keeps original images and starts no opening frame or animation');
+  await f.owner.openPanel('settings');
+  assert.deepEqual([f.owner.panelFontsReady, f.owner.panelFontsFailed, f.owner.panelFontsLoading], [true, false, false]);
+  assert.equal(f.owner.panelFontTask, undefined);
+  assertOpening(f, 'settings');
+  assert.equal(f.owner.controller, imageOwner, 'original successful retry retains image owner and normal opening');
 }
 async function verifyRetiredFontFailure(text = source) {
   for (const edge of ['cancel', 'unmount', 'identity', 'context']) {
@@ -522,7 +511,7 @@ async function verifyPersistentFontRecovery(text = source) {
   retry.resolve(true); await retryTask; await Promise.resolve();
   assert.deepEqual([f.owner.panelFontsReady, f.owner.panelFontsFailed, f.owner.panelFontsLoading], [true, false, false]);
   const ready = persistentFontSnapshot(f, text);
-  assert.ok(ready.nodes().some(n => n.type === 'Text' && n.create === f.owner.bookTitle && n.fontFamily === 'ReaderNotoSerifSCBold'));
+  assert.ok(ready.nodes().some(n => n.type === 'Text' && n.create === f.owner.bookTitle && n.fontFamily === 'ReaderNotoSansSCUIBold'));
   assert.ok(ready.nodes().some(n => n.type === 'Text' && n.create === '章节目录' && n.fontFamily === 'ReaderNotoSansSCUIRegular'));
   assert.ok(!ready.nodes().some(n => n.type === 'Text' && n.create === '目录字体暂时无法载入，请重试'), 'fresh success state has original content without failure surface');
   const settledGeneration = f.owner.panelFontGeneration;
@@ -639,13 +628,10 @@ if(selectedCase==='font-admission') await assert.rejects(() => verifyPersistentF
 
 if(selectedCase==='font-admission') await assert.rejects(() => verifyAllPanelFontAdmission(mutate('openPanel', text =>
   text.replace('const fontsReady = await fontTask;', "const fontsReady = panel === 'directory' ? await fontTask : true;"))),
-/cannot mount before four/);
+/cannot mount before its checked/);
 if(selectedCase==='font-admission') await assert.rejects(() => verifyAllPanelFontAdmission(mutate('loadPanelFonts', text =>
   text.replace('this.panelFontsReady = ready;', 'this.panelFontsReady = true;').replace('return ready;', 'return true;'))),
 /unavailable receipt/);
-if(selectedCase==='font-admission') await assert.rejects(() => verifySerifFontAdmission(mutate('loadPanelFonts', text =>
-  text.replace('await prepareReaderFontFamily(READER_FONT_NOTO_SERIF_SC_BOLD);', ''))),
-/Sans admission follows/);
 if (selectedCase === 'font-admission') {
   await assert.rejects(() => verifyFontFailureRecovery(mutate('openPanel', text =>
     text.replace('const failed = this.panelFontsFailed', 'const failed = false && this.panelFontsFailed'))), /publishes one original short-failure fact/);

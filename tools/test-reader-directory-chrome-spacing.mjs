@@ -278,6 +278,7 @@ for (const id of selected) {
       const metrics = metricsApi.createDefaultReaderWindowMetrics();
       metrics.windowRect.width = 366; metrics.windowRect.height = 844; metrics.systemFontScale = 1;
       const frames = [], sdk = boundedSurfaceSdk({ windowMetrics: () => metrics });
+      sdk.hooks.childSources.PageBackBar = read('ui/chrome/PageBackBar.ets');
       const classes = pureModuleProbe(source.slice(source.indexOf('class DirectoryRulesFocusFrame'),
         source.indexOf('let fullDirectoryBackGeneration')), 'FullDirectoryFrames.ets', { FrameCallback: class {} , ReaderPostLayoutFrame: actualReaderPostLayoutFrame()},
       ['DirectoryRulesFocusFrame', 'FullDirectoryHeaderMeasurementFrame']);
@@ -285,13 +286,14 @@ for (const id of selected) {
       const declaration = tree.statements.find(node => ts.isStructDeclaration(node));
       const members = declaration.members.filter(member => member.name && member.name.getText(tree) !== 'build' &&
         !ts.getAllDecorators(member).some(decorator => decorator.getText(tree) === '@Builder')).map(member => member.name.getText(tree));
-      members.push('directoryHeader', 'topBar', 'topBarBack', 'topBarBackIcon', 'topBarActions', 'topBarSourceContent', 'topBarMoreIcon');
+      members.push('directoryHeader', 'topBar', 'topBarBack', 'topBarBackIcon', 'topBarActions', 'topBarSourceContent',
+        'topBarMoreIcon', 'detailMoreAction');
       const owner = sdk.consumer(source, members, { ...support, ...classes, ...surface,
         fullDirectoryBackGeneration: 0, ReaderRuntimeOwner: { current: () => undefined }, registerReaderFonts() {},
         uiContext: { getFont: () => ({}), postFrameCallback: frame => frames.push(frame),
           getComponentUtils: () => ({ getRectangleById() { throw Error('native measurement outside this SDK contract'); } }) } });
       Object.assign(owner, { containerWidth: 366, containerHeight: 844, sourceId: 'local', bookId: 'book', bookKind: 'epub',
-        bookTitle: 'Book', chapterTitle: 'Chapter', catalogContext: 'detail' });
+        bookTitle: 'Book', chapterTitle: 'Chapter', catalogContext: 'reader' });
       owner.aboutToAppear(); owner.directoryHeader(); sdk.properties.flush();
       const back = nodes(owner).find(node => node.type === 'Button' && node.accessibilityText === '收起目录');
       assert.ok(back); assert.equal(back.height, 44);

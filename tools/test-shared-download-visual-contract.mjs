@@ -56,7 +56,7 @@ if(selectedCase==='definition'){
  const demo=readFileSync(new URL('../docs/ui-design/shared-download/demo.html',import.meta.url)),storage=readFileSync(new URL('../docs/ui-design/shared-download/storage-demo.html',import.meta.url));
  assert.equal(visual.SHARED_DOWNLOAD_DEMO_SHA256,createHash('sha256').update(demo).digest('hex'));assert.equal(manifest.sourceSha256,visual.SHARED_DOWNLOAD_DEMO_SHA256);assert.equal(manifest.storageSourceSha256,createHash('sha256').update(storage).digest('hex'));assert.deepEqual({...visual.DOWNLOAD_VISUAL},manifest.fields);for(const field of Object.keys(manifest.fields))assert.ok(manifest.provenance[field]);for(const [field,receipt]of Object.entries(manifest.storageProvenance)){assert.equal(receipt.sourceSha256,manifest.storageSourceSha256);assert.deepEqual(manifest.provenance[field],receipt);}return;
 }
-const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');const {createArkUIPropertyRuntimeProbe}=await import('./lib/arkui-property-runtime-probe.mjs');
+const {createReaderBuilderProbe, productionReaderMotionSdk}=await import('./lib/reader-control-builder-probe.mjs');const {createArkUIPropertyRuntimeProbe}=await import('./lib/arkui-property-runtime-probe.mjs');
 const palette=Object.fromEntries(['day','night'].map(scheme=>[scheme,Object.fromEntries(Object.entries(manifest.palettes).filter(([,v])=>v[scheme]).map(([role,v])=>[role,'#'+[Math.round(v[scheme].a*255),v[scheme].r,v[scheme].g,v[scheme].b].map(n=>n.toString(16).padStart(2,'0')).join('').toUpperCase()]))]));
 const argb=color=>{assert.equal(typeof color,'string');return color.length===7?'#FF'+color.slice(1).toUpperCase():color.toUpperCase();};
 const source = readFileSync(new URL('../entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets', import.meta.url), 'utf8');
@@ -75,7 +75,7 @@ methods.push('searchInputRevision','appForeground','covered','focusGeneration','
 // admission. Retain them rather than replacing them with fixture defaults.
 methods.push('measurements', 'measurementRevision', 'reduceMotion', 'sheetWasVisible',
   'sheetMaskReady', 'sheetExitPending',
-  ...(['native-bindings', 'row-geometry-receipts', 'overlay-chrome'].includes(selectedCase) ? ['sheetActorGeneration', 'sheetActorAttachment', 'sheetActorOwner', 'sheetActors'] : ['sheetAnimationGeneration']),
+  'sheetActorGeneration', 'sheetActorAttachment', 'sheetActorOwner', 'sheetActors',
   'transientFeedback', 'managementGeneration', 'takeReadingFocus',
   'storageDockShape', 'selectionDockShape');
 // This selected renderer leaf must construct the same initialized production
@@ -118,7 +118,7 @@ if (['native-bindings', 'row-geometry-receipts', 'chapter-selection-actions'].in
   if (selectedCase === 'native-bindings') assert.ok(methods.includes('filterSourceOptions') && methods.includes('sheetActors'),
     'the real filter and Native sheet actor initializers are in the current dependency closure');
 }
-if (confluenceCases.has(selectedCase) || ['area-receipts','management-scroll'].includes(selectedCase)) {
+if (confluenceCases.has(selectedCase) || ['area-receipts', 'management-scroll', 'inline-settings', 'storage-publication', 'short-layout'].includes(selectedCase)) {
   methods.splice(0, methods.length, ...page.members.filter(node => node.name).map(node => node.name.getText(tree)));
 }
 const frameSource = tree.statements.find(node => node.name?.getText(tree) === 'SharedDownloadIdleFrame');
@@ -232,7 +232,8 @@ const probeDependencies = { resolveReaderRaisedShape,
   Scroller: class { scrollTo() {} scrollToIndex() {} currentOffset() { return { yOffset: 0 }; } },
   // This case observes static material attributes with reduceMotion enabled;
   // it passes the native identity recipe through without simulating frames.
-  TransitionEffect: { IDENTITY: 'TransitionEffect.IDENTITY' },
+  ...productionReaderMotionSdk(),
+  TransitionEffect: { IDENTITY: 'TransitionEffect.IDENTITY', OPACITY: { animation: params => params } },
   uiContext: {getFont:()=>({}),animateTo(_options,action){action();},getHostContext: () => ({ config: { fontSizeScale: platformFontScale } }),
     postFrameCallback: frame => scheduledFrames.push(frame), getMeasureUtils: () => ({ measureText, measureTextSize }),
     px2vp: value => { convertedWidths.push(value); return value / 3; } },
@@ -399,11 +400,11 @@ if (selectedCase === 'chapter-selection-actions') {
         managing: true, fontsReady: true, onIntent: intent => intents.push(intent) });
     f.selectionDock();
     const buttons = records(f).filter(node => node.type === 'Button').slice(-3);
-    const entries = buttons.map(node => [...f.nodes.entries()].find(([, value]) => value === node));
     f.selectChapters([running]);
     propertyRuntime.flush();
     assert.deepEqual(buttons.map(node => node.enabled), [true, true, true], 'selection updates retained SDK buttons');
-    for (const [id, node] of entries) assert.equal(f.nodes.get(id), node, 'same SDK Button record retained');
+    const current = records(f).filter(node => node.type === 'Button').slice(-3);
+    buttons.forEach((node, index) => assert.equal(current[index], node, 'same SDK Button record retained'));
     f.books = [{ ...book, chapters: [{ ...running, localComplete: true, queueState: 'completed' }] }];
     propertyRuntime.flush();
     assert.deepEqual(buttons.map(node => node.enabled), [false, false, true], 'same identity queue update disables both direct actions');
@@ -1218,7 +1219,7 @@ assert.equal(remountedFonts.fontsFailed, false);
 
 }
 if(selectedCase==='short-layout'){
-const original=windowMetrics;for(const [width,height,scale]of[[140,120,2],[366,809,1]]){windowMetrics={...original,windowRect:{left:0,top:0,width,height},systemFontScale:scale};const f=owner('day',{sheet:'filter',pageHeight:height});assert.ok(f.sheetMaxHeight()>=0&&f.sheetMaxHeight()<=height);f.sheetOverlay();const scrolls=records(f).filter(n=>n.type==='Scroll');assert.equal(scrolls.length,1);assert.ok(scrolls[0].constraintSize.maxHeight<=height);text(f,'筛选');text(f,'完成');const d=owner('day',{confirmation:'deleteLocal',pageHeight:height,actionBookKeys:[book.key]});d.confirmationOverlay();assert.equal(records(d).filter(n=>n.type==='Scroll').length,1);text(d,'取消');text(d,'删除内容');}windowMetrics=original;
+const original=windowMetrics;for(const [width,height,scale]of[[140,120,2],[366,809,1]]){windowMetrics={...original,windowRect:{left:0,top:0,width,height},systemFontScale:scale};const f=owner('day',{sheet:'filter',pageHeight:height,reduceMotion:true});assert.ok(f.sheetMaxHeight()>=0&&f.sheetMaxHeight()<=height);f.sheetOverlay();const scrolls=records(f).filter(n=>n.type==='Scroll');assert.equal(scrolls.length,1);assert.ok(scrolls[0].constraintSize.maxHeight<=height);text(f,'筛选');text(f,'完成');const d=owner('day',{confirmation:'deleteLocal',pageHeight:height,actionBookKeys:[book.key]});d.confirmationOverlay();assert.equal(records(d).filter(n=>n.type==='Scroll').length,1);text(d,'取消');text(d,'删除内容');}windowMetrics=original;
 
 }
 if(selectedCase==='reactive-metrics'){
@@ -1252,7 +1253,36 @@ assert.equal(reactivePage.observers.length, observerCount, 'metric changes updat
 
 }
 if(selectedCase==='storage-publication'){
-const MiB=1024*1024,GiB=MiB*1024,summary={totalBytes:3*GiB,retainedBytes:GiB,automaticBytes:2*GiB,cleanableBytes:512*MiB,availableBytes:8*GiB};const f=owner('day',{storageSummary:summary});f.settingsSheet();f.clearStorageButton();const values=['3.0 GB','1.0 GB','2.0 GB','8.0 GB'].map(v=>text(f,v)),ids=values.map(n=>n.id);const button=find(f,n=>n.type==='Button','actual cleanup');assert.equal(button.enabled,true);assert.equal(button.accessibilityText,'清理自动保存 · 512 MB');f.storageSummary={};propertyRuntime.flush();assert.deepEqual(values.map(label),['','','','']);assert.deepEqual(values.map(n=>f.nodes.get(n.id).id),ids);assert.equal(button.enabled,false);f.storageSummary={totalBytes:0,retainedBytes:0,automaticBytes:0,cleanableBytes:0,availableBytes:0};propertyRuntime.flush();assert.deepEqual(values.map(label),['0 MB','0 MB','0 MB','0 MB']);assert.equal(button.enabled,false);f.storageSummary=summary;propertyRuntime.flush();assert.deepEqual(values.map(label),['3.0 GB','1.0 GB','2.0 GB','8.0 GB']);assert.equal(button.enabled,true);const d=owner('day',{storageSummary:summary,sheet:'settings',confirmation:'cleanup'});d.confirmationOverlay();const confirm=records(d).filter(n=>n.type==='Button').at(-1),caption=text(d,'清理 512 MB');assert.equal(confirm.enabled,true);d.storageSummary={...summary,cleanableBytes:0};propertyRuntime.flush();assert.equal(label(caption),'清理 0 MB');assert.equal(confirm.enabled,false);
+ const MiB = 1024 * 1024, GiB = MiB * 1024;
+ const summary = { totalBytes: 3 * GiB, retainedBytes: GiB, automaticBytes: 2 * GiB,
+   cleanableBytes: 512 * MiB, availableBytes: 8 * GiB };
+ const f = owner('day', { storageSummary: summary });
+ f.settingsSheet(); f.clearStorageButton();
+ const knownValues = ['3.0 GB', '1.0 GB', '2.0 GB', '8.0 GB'];
+ const values = knownValues.map(value => text(f, value));
+ const ids = values.map(node => node.id);
+ const button = find(f, node => node.type === 'Button' && node.accessibilityText === '清理临时缓存 · 512 MB',
+   'actual shared cleanup action');
+ assert.equal(button.enabled, true);
+ f.storageSummary = {}; propertyRuntime.flush();
+ assert.deepEqual(values.map(label), ['', '', '', '']);
+ assert.deepEqual(values.map(node => f.nodes.get(node.id).id), ids);
+ assert.equal(button.enabled, false);
+ f.storageSummary = { totalBytes: 0, retainedBytes: 0, automaticBytes: 0, cleanableBytes: 0, availableBytes: 0 };
+ propertyRuntime.flush();
+ assert.deepEqual(values.map(label), ['0 MB', '0 MB', '0 MB', '0 MB']);
+ assert.equal(button.enabled, false);
+ f.storageSummary = summary; propertyRuntime.flush();
+ assert.deepEqual(values.map(label), knownValues);
+ assert.equal(button.enabled, true);
+ const d = owner('day', { storageSummary: summary, sheet: 'settings', confirmation: 'cleanup' });
+ d.confirmationOverlay();
+ const confirm = records(d).filter(node => node.type === 'Button').at(-1);
+ const caption = text(d, '清理 512 MB');
+ assert.equal(confirm.enabled, true);
+ d.storageSummary = { ...summary, cleanableBytes: 0 }; propertyRuntime.flush();
+ assert.equal(label(caption), '清理 0 MB');
+ assert.equal(confirm.enabled, false);
 
 }
 if(selectedCase==='retained-dto'){

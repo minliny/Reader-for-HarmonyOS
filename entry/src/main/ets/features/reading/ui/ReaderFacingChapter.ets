@@ -1,4 +1,4 @@
-import { READER_FONT_HARMONYOS_SANS } from '../../../ui/foundation/ReaderFontFamilies';
+import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../../../ui/foundation/ReaderFontFamilies';
 import { readerRegisteredFontFamily } from '../../../ui/foundation/ReaderFonts';
 import { readerAppColor, readerThemeDefinition } from '../../../ui/foundation/ReaderThemeRegistry';
 import { createDefaultReaderAppearanceSnapshot, type ReaderAppearanceSnapshot } from '../application/ReaderAppearanceState';
@@ -47,7 +47,7 @@ export struct ReaderFacingChapterColumn {
             if ((this.chapter?.title.trim().length ?? 0) > 0) {
               Text(this.chapter?.title ?? '')
                 .width('100%')
-                .fontFamily(READER_FONT_HARMONYOS_SANS)
+                .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
                 .fontSize(11)
                 .fontWeight(FontWeight.Medium)
                 .fontColor(readerThemeDefinition(this.appearance.activeTheme).chromeMeta)

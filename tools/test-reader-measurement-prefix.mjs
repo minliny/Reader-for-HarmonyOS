@@ -173,22 +173,30 @@ assert.equal(canonicalPage.measuredPageEndLimit(), undefined,
   'a containing canonical page cannot truncate a newly restored local page');
 console.log('PASS production known-page bounds: local precedence, exact rematerialization and stale-scope rejection');
 
-const Title = productionMotionMethods(source, ['captureChapterTitleMeasurementAfterLayout'], {
- ...style, TYPE_READER_CHAPTER_TITLE:{fontFamily:'system',fontWeight:500,fontSizeFp:24},TextAlign:{Center:'center'},
+const Title = productionMotionMethods(source, ['measureNativeChapterTitle','captureChapterTitleMeasurementAfterLayout'], {
+ ...style, TextAlign:{Center:'center'}, FontWeight:{Bold:700},
  ReaderNativeTextWindow:Window,readerNativeParagraphKey:()=>String(++serial),readerNativeParagraphHeight:nativeHeight,
 });
-{
- let takes=0,sets=0;
+for (const font of ['serif','kai','sans','fangSong','custom']) {
+ let takes=0,sets=0,measuredStyle;
+ const appearance={activeTheme:'paper',font,customFont:{familyName:'ReaderCustomHeadingFixture'}};
  const manager={getLineCount:()=>2,getLineMetrics:i=>({startIndex:i,endIndex:i+1,topHeight:i*20,height:20}),
   getRectsForRange:()=>[{rect:{top:0,bottom:45}}]};
  const title=Object.assign(new Title(),{measurementIncludesChapterTitle:()=>true,
-  chapterTitleMeasurementController:{getLayoutManager:()=>manager},getUIContext:()=>({px2vp:v=>v,vp2px:v=>v}),
-  measurementTextWidth:()=>300,readingLayout:()=>({titleLineHeightFp:20}),appearanceSnapshot:{activeTheme:'paper'},
-  requireMeasurementChapter:()=>({chapterTitle:'标题'}),nativeTextMeasurement:{take(){takes++;return {};}},
+  chapterTitleMeasurementController:{getLayoutManager:()=>manager},getUIContext:()=>({px2vp:v=>v,vp2px:v=>v,getFont:()=>({})}),
+  measurementTextWidth:()=>300,readingLayout:()=>({titleLineHeightFp:20}),appearanceSnapshot:appearance,
+  requireMeasurementChapter:()=>({chapterTitle:'标题'}),nativeTextMeasurement:{
+   measure(_context, text, _controller, style){assert.equal(text,'标题');measuredStyle=style;},
+   take(){takes++;return {};},
+  },
   nativeParagraphResources:{set(){sets++;}},fail:e=>{throw e;}});
+ title.measureNativeChapterTitle();
  assert.equal(title.captureChapterTitleMeasurementAfterLayout(1),true);
  assert.equal(title.measuredNativeTitle.text,'标题');
  assert.equal(title.measuredNativeTitle.lastLine,1);
+ assert.equal(measuredStyle.fontFamily,style.readerAppearanceSnapshotFontFamily(appearance),font);
+ assert.equal(measuredStyle.fontWeight,700,font);
+ assert.deepEqual(title.measuredNativeTitle.style,measuredStyle,`${font}: the renderer retains the actual measured title tuple`);
  assert.equal(title.measuredChapterTitleHeightVp,nativeHeight(manager,0,1));
  assert.equal(title.captureChapterTitleMeasurementAfterLayout(1),true);
  assert.equal(takes,1);assert.equal(sets,1,'title ownership transfers once across body batches');

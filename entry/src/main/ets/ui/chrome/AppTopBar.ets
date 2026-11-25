@@ -8,13 +8,13 @@ import {
   readerInteractiveSafeRight,
 } from '../foundation/ReaderWindowMetrics';
 import { TYPE_APP_HOME_TITLE } from '../foundation/ReaderTypography';
-import { READER_FONT_NOTO_SERIF_SC_BOLD } from '../foundation/ReaderFontFamilies.ts';
+import { READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../foundation/ReaderFontFamilies.ts';
 import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_HEADER_BAR_HEIGHT } from '../foundation/ReaderHeaderMetrics';
 import { readerScaledBarHeight } from '../foundation/ReaderSurfaceResolvers';
 import { readerHeaderVeilBorder, readerHeaderVeilMaterial, readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
 
 // AppTopBar —— 首页顶部标题栏统一组件 (Figma HomeTopBar): 58 高、左右 20 + 顶部 6
-// 内边距、29px 思源宋体粗题 + 可选尾部槽。收敛 Bookshelf/Discover/Settings 三页
+// 内边距、29px 思源黑体 UI 粗题 + 可选尾部槽。收敛 Bookshelf/Discover/Settings 三页
 // 标题栏 (此前各页复制 Row+title+按钮 结构)。RSS 例外:其 Figma 节点 (2305:26) 为
 // 胶囊簇紧贴标题 (Container 距标题 10)、非右对齐尾部, 与 layoutWeight 标题模型互斥,
 // 故 RssPage 保留页私有实现 (见该页注释)。
@@ -52,7 +52,7 @@ export struct AppTopBar {
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .textAlign(TextAlign.Center)
-          .fontFamily(READER_FONT_NOTO_SERIF_SC_BOLD)
+          .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD)
           .fontWeight(FontWeight.Bold)
           .fontSize(16)
           .lineHeight(28)
@@ -89,7 +89,7 @@ export struct AppTopBar {
     .border({ width: this.floating ? 1 : { bottom: this.divider ? 1 : 0 },
       color: this.floating ? readerHeaderVeilBorder(this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
     .borderRadius(this.floating ? this.barHeight() / 2 : 0)
-    .clip(this.floating)
+    .clip(false)
     .shadow(readerSurfaceElevation(this.floating ? 'raised' : 'fixed', this.appThemeScheme))
     .hitTestBehavior(HitTestMode.Transparent);
   }

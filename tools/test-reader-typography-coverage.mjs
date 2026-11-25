@@ -6,8 +6,9 @@ async function coverage(selectedFile){
 const {approvedTypographyContract}=await import('./lib/approved-manga-typography-carriers.mjs');
 const {auditTypographyConsumers,typographyExpressionContext,isSharedTypographyExpression,typographyRoleImports}=await import('./lib/reader-typography-consumer-audit.mjs');
 const {readerTypographyRoles}=await import('./lib/reader-typography-probe.mjs');
-const root=new URL('../entry/src/main/ets/features/reading/',import.meta.url),contracts=new Map();
-const retain = (file,method,property,expression,maximum,reason) => contracts.set(JSON.stringify([file,method,property,expression]), { maximum, count:0,reason });
+const root=new URL('../entry/src/main/ets/features/',import.meta.url),contracts=new Map();
+const retain = (file,method,property,expression,maximum,reason,owner) =>
+  contracts.set(JSON.stringify([file,method,property,expression,owner]), { maximum, count:0,reason });
 retain('ReaderControlAppearanceContent.ets','fontCell','fontFamily','this.visiblePreviewFamily(font)',1,
   'the retained preview forwards the actual selected/registered user face, not a fixed chrome family');
 retain('ReaderControlSettingsContent.ets','segmentRow','lineHeight','this.label(row).height',1,
@@ -15,15 +16,20 @@ retain('ReaderControlSettingsContent.ets','segmentRow','lineHeight','this.label(
 for (const [property,expression] of Object.entries({fontFamily:'style.fontFamily',fontWeight:'style.fontWeight',fontSize:'style.fontSize',lineHeight:'style.lineHeight',letterSpacing:'style.letterSpacing'}))
   retain('ReaderNativeTextMeasurement.ets','measure',property,expression,1,
     'the native measurement node transfers unchanged to the renderer and must share the actual body recipe');
-for (const [property,expression] of Object.entries({fontFamily:'readerRegisteredFontFamily(this.getUIContext().getFont(), readerAppearanceSnapshotFontFamily(this.appearance))',
+const readingFamily='readerRegisteredFontFamily(this.getUIContext().getFont(), readerAppearanceSnapshotFontFamily(this.appearance))';
+for (const [property,expression] of Object.entries({fontFamily:readingFamily,
   fontWeight:'FontWeight.Regular',fontSize:'this.appearance.fontSize',lineHeight:'readerAppearanceLineHeight(this.appearance)',letterSpacing:'this.appearance.letterSpacing'}))
-  retain('ReadingSurface.ets','build',property,expression,1,'the runtime body tuple belongs to the persisted reader appearance owner and pagination contract');
-retain('ReadingSurface.ets','build','lineHeight','this.layout.titleLineHeightFp',1,'the title line box belongs to the actual pagination/layout snapshot');
+  retain('ReadingSurface.ets','build',property,expression,1,'the runtime body tuple belongs to the persisted reader appearance owner and pagination contract','ReaderReadingTextFragment');
+for (const [property,expression] of Object.entries({fontFamily:readingFamily,
+  fontWeight:'FontWeight.Bold',fontSize:'READER_CHAPTER_TITLE_FONT_SIZE_FP',lineHeight:'this.layout.titleLineHeightFp'}))
+  retain('ReadingSurface.ets','build',property,expression,1,'the chapter heading uses the selected reading family and the measured native title layout','ReadingSurface');
 const isCalibrated = (file,node,property,expression) => file === 'ReaderPageChrome.ets' && node.method === 'build' &&
   expression === `this.topTextStyle().${({fontSize:'fontSizeFp',lineHeight:'lineHeightFp',letterSpacing:'letterSpacingFp'})[property]??property}`;
 let files=0,carriers=0,shared=0,calibrated=0,runtime=0,approvedArguments=0;
 { const file=selectedFile;
-  files++; const source=readFileSync(new URL(file,root),'utf8'),imports=typographyRoleImports(source,file),expressionContext=typographyExpressionContext(source,'entry/src/main/ets/features/reading/'+file);
+  const directory=file==='ReaderContentSearchPublication.ets'?'reading/presentation/':
+    file==='SourceSwitchPanel.ets'?'source/ui/':'reading/ui/';
+  files++; const source=readFileSync(new URL(directory+file,root),'utf8'),imports=typographyRoleImports(source,file),expressionContext=typographyExpressionContext(source,'entry/src/main/ets/features/'+directory+file);
   const approved=approvedTypographyContract(source,'reading/'+file);
   for (const node of auditTypographyConsumers(source,file)) {
     carriers++;
@@ -37,7 +43,9 @@ let files=0,carriers=0,shared=0,calibrated=0,runtime=0,approvedArguments=0;
       }
       if(isCalibrated(file,node,property,modifier.expression)){calibrated++;continue;}
       if(approved.has(node)){approvedArguments++;continue;}
-      const receipt=contracts.get(JSON.stringify([file,node.method,property,modifier.expression]));
+      const expression=modifier.expression.replace(/\s+/g,' ');
+      const receipt=contracts.get(JSON.stringify([file,node.method,property,expression,node.owner])) ??
+        contracts.get(JSON.stringify([file,node.method,property,expression,null]));
       assert.ok(receipt,`${file}:${node.line}/${property}: private typography must consume the public role (${modifier.expression})`);
       assert.ok(++receipt.count<=receipt.maximum,`${file}/${node.method}: no copied runtime exception`);runtime++;
     }
