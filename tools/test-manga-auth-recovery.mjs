@@ -11,11 +11,11 @@ const source = readFileSync(new URL('../entry/src/main/ets/platform/reading-reso
 let xmlFields = [], parseCalls = 0, failXml = false;
 const xml = {XmlPullParser: class {
   constructor(bytes,encoding){assert.ok(bytes.byteLength<=8192);assert.equal(encoding,'UTF-8');}
-  parse(options){parseCalls++;assert.equal(options.supportDoctype,false);if(failXml)throw Error('bad XML');
+  parseXml(options){parseCalls++;assert.equal(options.supportDoctype,false);if(failXml)throw Error('bad XML');
     for(const [name,value] of xmlFields)if(!options.tagValueCallbackFunction(name,value))break;
   }
 }};
-const classify = new Function('xml','url',stripTypeScriptTypes(source)+';return readingImageHttpError;')(xml,{URL});
+const classify = new Function('xml','url',stripTypeScriptTypes(source)+';return readingImageHttpError;')(xml,{URL:{parseURL: input => ({params: new URL(input).searchParams})}});
 const signed='https://images.example.test/p.png?X-Amz-Signature=secret&X-Amz-Credential=credential';
 const body=new TextEncoder().encode('<Error><Code>ExpiredToken</Code></Error>');
 const headers={'Content-Type':'application/xml; charset=utf-8'};
@@ -55,24 +55,27 @@ const Runtime=runtimeOwnerIdentityProbe(()=>currentOwner);
 const {SourceGateway}=actualSourceManagementTypes({ReaderRuntimeOwner:Runtime});
 const MangaSourceLogin=bookshelfOperationClass('features/manga/presentation/MangaSourceLogin.ts','MangaSourceLogin',{SourceGateway});
 const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-  ['loginMangaSource','currentReadingRuntime','currentReaderPresentationIdentity','isCurrentRuntime'],{
+  ['retainedReaderPorts','directoryNavigationPorts','currentReadingRuntime','currentReaderPresentationIdentity','isCurrentRuntime'],{
   ReaderRuntimeOwner:Runtime
 });
 const index=new Index();Object.assign(index,{mountedRuntimeOwner:owner,shelfReceiptRetired:false,route:'reading',
   searchAppForeground:true,navigationGeneration:1,detailShelfAdmissionMount:1,mangaSourceLogin:new MangaSourceLogin(),
-  sourceSwitchPresentation:{visible:false},mangaSourceSwitch:{selectionVisible:false},
+  libraryAcquisition:{currentOwner:()=>currentOwner},
+  directoryJourneyFixture:{operations:{},navigationPorts:()=>({})},
+  sourceSwitchPresentation:{isSurfacePresented:()=>false},mangaSourceSwitch:{selectionVisible:false},
   readingEntry:{book:{sourceId:'s',bookId:'b'},contentKind:'manga',sessionActive:true,mangaChapterRequestGeneration:1,
     readerPresentationIdentity:()=> 'reader-s-b'}});
-const task=index.loginMangaSource();await new Promise(r=>setImmediate(r));assert.equal(opened,1);
-await assert.rejects(index.loginMangaSource(),/IN_PROGRESS/);releaseLogin();await task;
+const {loginMangaSource}=index.retainedReaderPorts();
+const task=loginMangaSource();await new Promise(r=>setImmediate(r));assert.equal(opened,1);
+await assert.rejects(loginMangaSource(),/IN_PROGRESS/);releaseLogin();await task;
 for (const retire of [()=>index.navigationGeneration++,()=>index.readingEntry.mangaChapterRequestGeneration++]) {
-  const stale=index.loginMangaSource();await new Promise(r=>setImmediate(r));retire();
+  const stale=loginMangaSource();await new Promise(r=>setImmediate(r));retire();
   assert.equal(hostCurrent(),false,'queued native surface loses admission when its reader or chapter retires');
   releaseLogin();await assert.rejects(stale,/CANCELLED/);
 }
-sources=[];await assert.rejects(index.loginMangaSource(),/LOGIN_UNAVAILABLE/);assert.equal(opened,3);
-currentOwner=undefined;await assert.rejects(index.loginMangaSource(),/CANCELLED/);assert.equal(opened,3);
-currentOwner={};await assert.rejects(index.loginMangaSource(),/CANCELLED/);assert.equal(opened,3);
+sources=[];await assert.rejects(loginMangaSource(),/LOGIN_UNAVAILABLE/);assert.equal(opened,3);
+currentOwner=undefined;await assert.rejects(loginMangaSource(),/CANCELLED/);assert.equal(opened,3);
+currentOwner={};await assert.rejects(loginMangaSource(),/CANCELLED/);assert.equal(opened,3);
 currentOwner=owner;
-index.readingEntry.contentKind='text';await assert.rejects(index.loginMangaSource(),/CANCELLED/);
+index.readingEntry.contentKind='text';await assert.rejects(loginMangaSource(),/CANCELLED/);
 console.log('PASS production image HTTP classification and explicit reader login: bounded platform parser boundary, no guessed 403 refresh, single owner, absent login, stale navigation and no text route');

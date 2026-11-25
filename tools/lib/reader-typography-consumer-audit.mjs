@@ -157,6 +157,10 @@ export function isSharedTypographyExpression(expression, context, owner) {
   const parsed = ts.createSourceFile(virtualFilePath('TypographyArgument.ts'), `const value = (${expression});`, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   if (parsed.parseDiagnostics.length) return false;
   const root = parsed.statements[0]?.declarationList?.declarations[0]?.initializer;
+  const roleEndpoint = node => {
+    while (ts.isParenthesizedExpression(node) || ts.isAsExpression(node)) node = node.expression;
+    return ts.isPropertyAccessExpression(node) ? node : undefined;
+  };
   const visit = node => {
     if (!node) return false;
     if (ts.isParenthesizedExpression(node) || ts.isAsExpression(node)) return visit(node.expression);
@@ -174,8 +178,9 @@ export function isSharedTypographyExpression(expression, context, owner) {
     if (ts.isCallExpression(node)) {
       if (ts.isIdentifier(node.expression) && node.expression.text === 'readerControlLerp' && node.arguments.length === 3) {
         const [from, to, progress] = node.arguments;
-        return visit(from) && visit(to) && ts.isPropertyAccessExpression(from) && ts.isPropertyAccessExpression(to) &&
-          from.name.text === to.name.text && ['fontSizeFp', 'fontWeight'].includes(from.name.text) &&
+        const start = roleEndpoint(from), end = roleEndpoint(to);
+        return start !== undefined && end !== undefined && visit(start) && visit(end) &&
+          start.name.text === end.name.text && ['fontSizeFp', 'fontWeight', 'lineHeightFp'].includes(start.name.text) &&
           progress.getText(parsed) === 'this.p()';
       }
       if (node.expression.getText(parsed) === 'Math.round' && node.arguments.length === 1)

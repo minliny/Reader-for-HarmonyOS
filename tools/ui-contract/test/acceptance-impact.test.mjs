@@ -3,7 +3,9 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
+import { parseImpactArguments } from '../../gate-index-impact.mjs';
 import { createImpactView, diffImpactViews } from '../../lib/gate-index-impact.mjs';
+import { gateResourceDefinitionSha256 } from '../../lib/gate-resource-definition.mjs';
 
 const modelFile = 'tools/page-structure/model.json';
 const searchPath = 'entry/src/main/ets/features/search/ui/SearchPage.ets';
@@ -13,6 +15,16 @@ const ids = Array.from({ length: 9 }, (_, index) => `bookshelf.search-branch-${i
 const localCase = id => `tools/ui-contract/cases/${id}.json`;
 const findGap = (view, kind, extra = {}) => view.unresolved.find(gap =>
   gap.kind === kind && Object.entries(extra).every(([key, value]) => gap[key] === value));
+
+test('the impact CLI accepts grouped and repeated affected paths in argument order', () => {
+  const parsed = parseImpactArguments([
+    '--affected', searchPath, renamedPath, '--compare', 'previous.json', '--affected', modelFile, layoutPath,
+  ]);
+  assert.deepEqual(parsed.affected, [searchPath, renamedPath, modelFile, layoutPath]);
+  assert.equal(parsed.compare, 'previous.json');
+  assert.throws(() => parseImpactArguments(['--deps', 'ui-case:book', searchPath]), /Unexpected positional argument/);
+  assert.throws(() => parseImpactArguments([searchPath, '--affected', layoutPath]), /Unexpected positional argument/);
+});
 
 function fixture(t) {
   const root = mkdtempSync(join(tmpdir(), 'reader-acceptance-impact-'));
@@ -49,10 +61,13 @@ function fixture(t) {
   write(modelFile, model);
   write('tools/page-structure/register.json', { pages: [{ pageId: 'bookshelf', routeContractRef: 'nav.bookshelf' }] });
   write('tools/gate-index.json', reviewed);
+  write('tools/contract-case-manifest.json', { schemaVersion: 1, files: {}, legacy: {} });
   write('tools/retired-contract-tests.json', { schemaVersion: 1, entries: [{ id: 'H-retired', file: 'test-retired.mjs' }] });
   write('tools/ui-contract-impact-bindings.json', { schemaVersion: 1, cases: {} });
+  write('tools/ui-contract/cases/phase-0.registry.json', ['bookshelf.search-input-ime']);
   write('tools/ui-contract/cases/phase-1.registry.json', [...ids, 'reading.independent']);
-  write('tools/ui-contract/lib/cases.mjs', "export const phase0CaseIds = Object.freeze(['bookshelf.search-input-ime']);\nthrow new Error('index must read the declaration without loading the case runtime');");
+  write('tools/ui-contract/cases/phase-2.registry.json', []);
+  write('tools/ui-contract/lib/cases.mjs', "throw new Error('index must read the declaration without loading the case runtime');");
   write(localCase('bookshelf.search-input-ime'), { id: 'bookshelf.search-input-ime', pageId: 'bookshelf', steps: [], assertions: [] });
   write(renamedPath, 'export const moved = 1;\n');
   for (const [index, id] of ids.entries()) {
@@ -308,6 +323,103 @@ test('V4 impact distinguishes executable module references from comments and str
   assert.ok(findGap(query(),'DYNAMIC_REFERENCE',{id}));
   write(layoutPath, source + '\nconst result = `value: ${await import(pickModule())}`;');
   assert.ok(findGap(query(),'DYNAMIC_REFERENCE',{id}));
+  write(layoutPath, "const loaded = import ('./actual.mjs');");
+  assert.ok(createImpactView({root,affected:[helper]}).references.includes(id));
+  write(layoutPath, 'const loaded = import (pickModule());');
+  assert.ok(findGap(query(), 'DYNAMIC_REFERENCE', { id }));
+});
+
+test('impact registry uses all phases and reports invalid registrations without running cases', t => {
+  const { root, write } = fixture(t);
+  const id = 'bookshelf.public-book-reading';
+  const node = `ui-case:${id}`;
+  const phase2 = 'tools/ui-contract/cases/phase-2.registry.json';
+  const path = localCase(id);
+  const contract = { id, phase: 2, version: 1, pageId: 'bookshelf', steps: [], assertions: [] };
+  write(path, contract);
+  const query = () => createImpactView({root, deps:[node]});
+  assert.ok(findGap(query(), 'UNREGISTERED_CASE', { id: node }));
+  write(phase2, [id]);
+  assert.equal(query().nodes.find(candidate => candidate.id === node).qualification, 'EXPLICIT_CASE');
+  assert.ok(createImpactView({root, affected:[phase2]}).direct.includes(node));
+  write(path, { ...contract, phase: 1 });
+  assert.equal(query().nodes.find(candidate => candidate.id === node).entry, null);
+  assert.ok(findGap(query(), 'INVALID_CASE_REGISTRATION', { id: node, path }));
+  write(path, contract);
+  write(phase2, [id, id]);
+  assert.equal(query().nodes.find(candidate => candidate.id === node).entry, null);
+  assert.ok(findGap(query(), 'INVALID_CASE_REGISTRATION', { id: node, path: phase2 }));
+  write('tools/ui-contract/cases/phase-1.registry.json', [...ids, 'reading.independent', id]);
+  write(phase2, [id]);
+  const conflict = createImpactView({root, affected:[phase2]});
+  assert.ok(conflict.direct.includes(node));
+  assert.ok(findGap(conflict, 'INVALID_CASE_REGISTRATION', { id: node, path: phase2 }));
+});
+
+test('impact preserves missing evaluator references and fingerprints linked schema files', t => {
+  const { root, write } = fixture(t);
+  const schema = 'tools/ui-contract/schema/evidence.json';
+  const schemaQuery = {root, deps:[`ui-case:${ids[0]}`]};
+  const beforeSchema = createImpactView(schemaQuery);
+  write(schema, { title: 'Adjusted evidence schema' });
+  const diff = diffImpactViews(beforeSchema, createImpactView(schemaQuery));
+  assert.ok(diff.changedDefinitions.includes(`file:${schema}`));
+  assert.ok(diff.referencesToChangedDefinitions.includes(`ui-case:${ids[0]}`));
+
+  rmSync(join(root, layoutPath));
+  const missing = createImpactView({root, affected:[layoutPath]});
+  assert.ok(missing.references.includes(`ui-case:${ids[0]}`));
+  assert.ok(findGap(missing, 'CHANGED_PATH_ABSENT', { path: layoutPath }));
+  assert.ok(findGap(missing, 'STALE_ID_REFERENCE', { id: `ui-case:${ids[0]}`, dependency: `file:${layoutPath}` }));
+  assert.ok(!findGap(missing, 'UNMAPPED_PATH', { path: layoutPath }));
+});
+
+test('impact maps resource declarations and compares reviewed gate execution definitions', t => {
+  const { root, write } = fixture(t);
+  const catalog = 'tools/gate-index.json';
+  const manifest = 'tools/contract-case-manifest.json';
+  const entry = { id:'H-legacy', file:'tools/test-search.mjs', qualification:'QUALIFIED',
+    tests:['test-search.mjs'], definitionInputs:[{ path:'tools/test-search.mjs', sha256:'a'.repeat(64) }] };
+  const resource = { schemaVersion:1, legacy:{ 'test-search.mjs':{ resources:[] }, 'test-unrelated.mjs':{ resources:[] } }, files:{} };
+  entry.resourceDefinitionSha256 = gateResourceDefinitionSha256(resource, entry);
+  const writeCatalog = () => write(catalog, { schemaVersion:1, reviewedDefinitionsFrozen:true, entries:[entry] });
+  writeCatalog();
+  write(manifest, resource);
+  const query = {root, affected:[manifest]};
+  const initial = createImpactView(query);
+  const gate = 'gate:H-legacy';
+  const node = view => view.nodes.find(candidate => candidate.id === gate);
+  assert.ok(initial.direct.includes(gate));
+  assert.ok(initial.definitionIdentities[manifest]);
+  assert.deepEqual(node(initial).resourceDefinition, {path:manifest, expected:entry.resourceDefinitionSha256,
+    actual:entry.resourceDefinitionSha256});
+  resource.legacy['test-unrelated.mjs'].resources = ['build'];
+  write(manifest, resource);
+  assert.deepEqual(diffImpactViews(initial, createImpactView(query)).changedDefinitions, []);
+  resource.legacy['test-search.mjs'].resources = ['build'];
+  write(manifest, resource);
+  const manifestChanged = createImpactView(query);
+  assert.deepEqual(diffImpactViews(initial, manifestChanged).changedDefinitions, [gate]);
+  assert.notEqual(node(manifestChanged).resourceDefinition.expected, node(manifestChanged).resourceDefinition.actual);
+
+  entry.resourceDefinitionSha256 = 'b'.repeat(64);
+  writeCatalog();
+  const reviewChanged = createImpactView(query);
+  assert.deepEqual(diffImpactViews(manifestChanged, reviewChanged).changedDefinitions, [gate]);
+  entry.executionEnvUnset = ['READER_TEST_FIXTURE_SWITCH'];
+  writeCatalog();
+  assert.deepEqual(diffImpactViews(reviewChanged, createImpactView(query)).changedDefinitions, [gate]);
+});
+
+test('malformed case elements are reported without aborting unrelated queries', t => {
+  const { root, write } = fixture(t);
+  const id = 'bookshelf.malformed-case';
+  const path = localCase(id);
+  write(path, {id, version:1, phase:1, pageId:'bookshelf', steps:[null], assertions:[]});
+  const unrelated = createImpactView({root, deps:['gate:H-legacy']});
+  assert.ok(unrelated.direct.includes('gate:H-legacy'));
+  assert.ok(unrelated.otherDefinitionGaps.some(gap => gap.kind === 'INVALID_CASE_DISPATCH_INPUT' && gap.path === path));
+  assert.ok(findGap(createImpactView({root, affected:[path]}), 'INVALID_CASE_DISPATCH_INPUT', {path}));
 });
 
 test('V4 impact maps the pinned schema validator without resolving the SDK', t => {
@@ -457,14 +569,18 @@ test('V4 impact traces declared fixture and exact local checks without execution
   const mapping = 'tools/ui-contract-impact-bindings.json';
   const fixturePath = 'tools/ui-contract/fixtures/Public Source.json';
   const publicBook = 'tools/ui-contract/fixtures/public-books/移窗样本 01.txt';
+  const packagedBook = 'entry/src/main/resources/rawfile/reader-public-fixture-scroll-book-01-v1.txt';
+  const privateRawfile = 'entry/src/main/resources/rawfile/ordinary-book.txt';
   const testPath = 'tools/ui-contract/test/source.test.mjs';
   const name = 'local [row] with an exact test name';
   const id = 'ui-case:' + ids[0];
   const checkId = 'ui-local-check:' + testPath + '#' + name;
-  const support = { fixtures:[fixturePath,publicBook], checks:[{path:testPath, name}] };
+  const support = { fixtures:[fixturePath,publicBook,packagedBook], checks:[{path:testPath, name}] };
   write(mapping, {schemaVersion:1,cases:{[ids[0]]:support}});
   write(fixturePath, [{enabled:false}]);
   write(publicBook, '移窗样本\n本地公开测试正文');
+  write(packagedBook, '移窗样本\n随应用打包的同一份公开正文');
+  write(privateRawfile, '普通资源');
   write(testPath, "import test from 'node:test';\ntest('" + name + "', () => {});\nthrow new Error('index executed a local check');\n");
   const usage = createImpactView({root,affected:[fixturePath,testPath]});
   assert.equal(usage.status, 'NOT_RUN');
@@ -479,9 +595,13 @@ test('V4 impact traces declared fixture and exact local checks without execution
   assert.ok(deps.nodes.some(node => node.id === checkId));
   assert.ok(deps.nodes.some(node => node.id === 'file:' + fixturePath));
   assert.ok(deps.nodes.some(node => node.id === 'file:' + publicBook));
-  const bookChange = createImpactView({root,affected:[publicBook]});
+  assert.ok(deps.nodes.some(node => node.id === 'file:' + packagedBook));
+  const bookChange = createImpactView({root,affected:[publicBook,packagedBook]});
   assert.ok(bookChange.references.includes(id));
   assert.equal(bookChange.nodes.find(node => node.id === 'file:' + publicBook).type,'fixture-input');
+  assert.equal(bookChange.nodes.find(node => node.id === 'file:' + packagedBook).type,'fixture-input');
+  assert.ok(bookChange.relationships.some(edge => edge.consumer === id &&
+    edge.dependency === 'file:' + packagedBook && edge.kind === 'fixture-input'));
   assert.ok(!deps.prerequisites.includes(checkId));
   assert.ok(deps.relationships.some(edge => edge.consumer === id && edge.dependency === checkId &&
     edge.kind === 'supporting-check'));
@@ -494,7 +614,7 @@ test('V4 impact traces declared fixture and exact local checks without execution
   const commented = "test('" + name + "', () => {});";
   write(testPath, "import test from 'node:test';\n/*\n" + commented + "\n*/\nconst text = `\n" + commented + "\n`;");
   write(mapping, {schemaVersion:1,cases:{
-    [ids[0]]:{...support, fixtures:[fixturePath,'tools/ui-contract/fixtures/Missing.json','../private.json',
+    [ids[0]]:{...support, fixtures:[fixturePath,privateRawfile,'tools/ui-contract/fixtures/Missing.json','../private.json',
       'tools/ui-contract/fixtures/public-books/../private.txt']},
     'source-management.missing':support,
   }});
@@ -502,6 +622,8 @@ test('V4 impact traces declared fixture and exact local checks without execution
   assert.equal(missing.nodes.find(node => node.id === checkId).entry, null);
   assert.ok(findGap(missing, 'UNRESOLVED_LOCAL_CHECK', {id:checkId}));
   assert.ok(findGap(missing, 'STALE_PATH_REFERENCE', {path:'tools/ui-contract/fixtures/Missing.json'}));
+  assert.ok(findGap(missing, 'INVALID_LOCAL_SUPPORT', {fixturePath:privateRawfile}));
+  assert.ok(!missing.nodes.some(node => node.id === 'file:' + privateRawfile));
   assert.ok(findGap(missing, 'INVALID_LOCAL_SUPPORT'));
   assert.ok(findGap(missing, 'UNRESOLVED_LOCAL_SUPPORT_CASE', {id:'ui-case:source-management.missing'}));
   assert.ok(missing.nodes.every(node => node.execution === 'NOT_RUN'));
@@ -608,6 +730,26 @@ test('V7 impact diff propagates one model change and exposes removed dependencie
 
   const path = localCase(ids[0]);
   const contract = JSON.parse(readFileSync(join(root, path), 'utf8'));
+  const {version, ...withoutVersion} = contract;
+  write(path, withoutVersion);
+  const missingVersion = createImpactView(selected).dependencyCheck;
+  assert.equal(missingVersion.status, 'FAIL');
+  assert.match(missingVersion.errors[0].reason, /positive case version/u);
+  const endpoint = { id: 'search.retry.endpoint', evaluator: 'layout', required:false,
+    condition:'Retry settled', sample:'opened' };
+  const conditional = { ...contract, assertions: [endpoint] };
+  model.scenarioObligations[0].conditionalEndpoints = { opened:{ version, assertion:endpoint.id } };
+  write(modelFile, model);
+  write(path, conditional);
+  const endpointView = createImpactView(selected);
+  assert.equal(endpointView.dependencyCheck.status, 'PASS');
+  assert.ok(endpointView.relationships.some(edge => edge.consumer === `ui-case:${ids[0]}` &&
+    edge.kind === 'condition-applicability' && edge.conditionalEndpoint && edge.assertionId === endpoint.id));
+  write(path, { ...conditional, version: version + 1 });
+  const mismatchedVersion = createImpactView(selected);
+  assert.equal(mismatchedVersion.dependencyCheck.status, 'PASS');
+  assert.ok(!mismatchedVersion.relationships.some(edge => edge.assertionId === endpoint.id));
+  delete model.scenarioObligations[0].conditionalEndpoints;
   const postAction = { ...contract, steps: [
     { kind: 'action', id: 'open-search' }, { kind: 'sample', id: 'opened', afterAction: 'open-search' },
   ] };
@@ -695,7 +837,7 @@ test('source read impact exposes condition bindings, gaps and relationship chang
   const assertion = { id: assertionId, evaluator: 'source', kind: 'read-surface', required: false,
     condition: 'This source opening reports loading', sample: sampleId, action: actionId,
     expected: { state: 'loading' } };
-  const contract = { id: caseName, phase: 1, pageId: 'source-management', structure: { [role]: sampleId },
+  const contract = { id: caseName, phase: 1, version: 1, pageId: 'source-management', structure: { [role]: sampleId },
     steps: [{ id: actionId, kind: 'action' }, { id: sampleId, kind: 'sample', afterAction: actionId }],
     assertions: [assertion] };
   model.scenarioObligations.push(obligation);
@@ -804,6 +946,8 @@ test('V4 impact distinguishes scoped reading assertions from shared module loadi
   for (const file of [motion, effects, capsule, handoff, controlInput, receipt, declarationPath, readerPath, casesPath, exporter, replayLock, coverage, reseal,
     declaration.presentation, declaration.timeline, declaration.controller, ...declaration.support,
     localCase('reading.control-open-motion')]) write(file, currentSource(file));
+  const initialRegistry = 'tools/ui-contract/cases/phase-0.registry.json';
+  write(initialRegistry, currentSource(initialRegistry));
   write('tools/ui-contract/cli.mjs', "import './lib/receipt.mjs';\nthrow new Error('must not execute');");
   const registry = 'tools/ui-contract/cases/phase-1.registry.json';
   const auto = 'reading.auto';
@@ -960,4 +1104,49 @@ test('V4 impact distinguishes scoped reading assertions from shared module loadi
   assert.ok(findGap(absentModule, 'CHANGED_PATH_ABSENT', { path:capsule }));
   assert.ok(findGap(absentModule, 'UNVERIFIED_SCOPED_DISPATCH', { id:`file:${capsule}`, path:effects }));
   assert.ok(caseRefs(absentModule).includes(`ui-case:${speech}`));
+});
+
+test('impact recognizes local literal object contracts wired to the actual case loop', t => {
+  const { root, write } = fixture(t);
+  const path = 'tools/test-object-selection.mjs';
+  const runner = 'tools/lib/contract-case-selection.mjs';
+  const caseId = `ui-case:${ids[0]}`;
+  const checkId = name => `ui-local-contract-case:${path}#${name}`;
+  const runnerSource = readFileSync(new URL('../../lib/contract-case-selection.mjs', import.meta.url), 'utf8');
+  write(runner, runnerSource + "throw Error('must not execute the selector');");
+  write('tools/ui-contract-impact-bindings.json', {
+    schemaVersion: 1,
+    cases: { [ids[0]]: { contractCases: ['content-filter', 'orchestrator'].map(name => ({ path, name })) } },
+  });
+  const imports = "import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';\n";
+  const before = 'const earlier = () => ({ details: [1, 2] });\n';
+  const entries = `"content-filter": { "description": "Actual search filter", "resources": ["sdk"] },
+    orchestrator: 'Actual page owner',`;
+  const loop = 'for (const id of selectContractCases(defs)) { recordContractCasePass(id); }\n';
+  const query = () => createImpactView({ root, deps: [caseId] });
+  const putSource = (rows, dispatch = loop, prefix = before) => write(path,
+    imports + prefix + 'const defs = {' + rows + '};\n' + dispatch + "throw Error('must not execute the contract');");
+  putSource(entries);
+  const view = query();
+  for (const name of ['content-filter', 'orchestrator']) {
+    const node = view.nodes.find(item => item.id === checkId(name));
+    assert.equal(node?.entry, `node ${path} --case ${name}`);
+    assert.equal(node.execution, 'NOT_RUN');
+    assert.ok(!findGap(view, 'UNRESOLVED_LOCAL_CONTRACT_CASE', { id: checkId(name) }));
+  }
+  assert.ok(createImpactView({ root, affected: [runner] }).references.includes(caseId));
+
+  for (const writeInvalid of [
+    () => putSource(entries + " 'content-filter': 'Duplicate registration',"),
+    () => putSource(entries + ' ...computed,'),
+    () => putSource(entries + " ['advertised']: 'Computed key',"),
+    () => putSource(entries, loop.replace('selectContractCases(defs)', 'selectContractCases({ ...defs })')),
+    () => putSource(entries, loop + '}\n', 'function nested() {\n'),
+    () => putSource(entries, '// ' + loop),
+  ]) {
+    writeInvalid();
+    const invalid = query();
+    assert.equal(invalid.nodes.find(item => item.id === checkId('content-filter'))?.entry, null);
+    assert.ok(findGap(invalid, 'UNRESOLVED_LOCAL_CONTRACT_CASE', { id: checkId('content-filter') }));
+  }
 });

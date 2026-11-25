@@ -22,7 +22,14 @@ const actors=await import('../entry/src/main/ets/features/reading/ui/ReaderContr
 const ttsState=await import('../entry/src/main/ets/features/reading/application/ReaderTtsState.ts');
 const sourceIdentity=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
 
-const root=new URL('../entry/src/main/ets/features/reading/',import.meta.url);
+const root=new URL('../entry/src/main/ets/features/reading/ui/',import.meta.url);
+const ttsLabelDependencies = async () => {
+  const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+  const module = 'ReaderControlTtsMinimum.ets';
+  return pureModuleProbe(readFileSync(new URL(module, root), 'utf8'), module, { ...ttsConfig, ...ttsState, ...geometry },
+    ['readerControlTtsPlaybackLabel', 'readerControlTtsStatusLabel', 'readerControlTtsTwoDigits', 'readerControlTtsTimerSummary',
+      'readerControlTtsEngineLabel', 'readerControlTtsVoiceLabel', 'readerControlTtsSessionLabel']);
+};
 const near=(a,b,label)=>assert.ok(Math.abs(a-b)<0.0011,`${label}: ${a} != ${b}`);
 if(selectedCase==='historical-geometry'){
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/reader-control-playback-live-20260905.json', import.meta.url), 'utf8'));
@@ -220,12 +227,20 @@ if(selectedCase==='auto-headers'){
   const members = ['p', 'frame', 'effectiveRate', 'headerActor', 'headerMeta', 'quickLabelActor', 'moduleHeader', 'quickLabel',
     'playbackLabel', 'statusText', 'isActivelySpeaking', 'timerSummary', 'twoDigits', 'voiceSelectorRow', 'ttsSelectValueField',
     'fullInput', 'fieldLabel', 'fieldValue', 'fieldWidth', 'onlineServicePage', 'isHttpEngineSelected',
-    'systemEngineDisplay', 'currentVoiceLabel', 'currentEngineLabel', 'toggleRow', 'toggleValue', 'changeToggle'];
-  const { owner } = createReaderBuilderProbe(ttsSource, members, { ...geometry, ...actors, ...ttsState, ...ttsConfig });
+    'systemEngineDisplay', 'currentVoiceLabel', 'currentEngineLabel', 'toggleRow', 'toggleValue', 'changeToggle',
+    'displayedFacts', 'displayState', 'displayTimerMode', 'displayTimerMinutes', 'displayTimerSeconds', 'displayTimerDigits',
+    'textMinimum', 'selectedMinimum', 'preparedProfile', 'presentationPrepared', 'currentInputEnabled', 'fieldHeight',
+    'playbackExtraHeight', 'toggleLabel', 'headerMetaRadius'];
+  const { owner } = createReaderBuilderProbe(ttsSource, members,
+    { ...geometry, ...actors, ...ttsState, ...ttsConfig, ...await ttsLabelDependencies() });
   Object.assign(owner, { motionProgress: 0, availableWidth: 286, cachedProgress: -1, cachedWidth: -1,
     ratePreview: -1, state: { status: 'idle', rate: 1, totalSlices: 0 }, timerMinutes: 15, timerSeconds: 0,
-    interactionEnabled: true, engine: 'system', serviceTab: '', voiceOptions: [], language: 'zh-CN', person: 0, httpEngines: [{ id: 4, name: '新引擎' }],
-    followHighlight: true, pauseOnInterruption: true, allowMixing: false, failurePolicy: 'stop' });
+    interactionEnabled: true, sourceOnly: 'none', minimumProfiles: new Map(), engine: 'system', serviceTab: '', voiceOptions: [], language: 'zh-CN', person: 0, httpEngines: [{ id: 4, name: '新引擎' }],
+    followHighlight: true, pauseOnInterruption: true, allowMixing: false, failurePolicy: 'stop',
+    getUIContext: () => ({ px2vp: value => value, getMeasureUtils: () => ({
+      measureText: ({ textContent, fontSize }) => textContent.length * Number(fontSize),
+      measureTextSize: ({ fontSize }) => ({ height: Number(fontSize) }),
+    }) }) });
   const headerIds = ['playback', 'timer', 'speed'].map(kind => {
     const full = owner.observers.length; owner.moduleHeader(kind);
     const quick = owner.observers.length; owner.quickLabel(kind);
@@ -263,7 +278,8 @@ if(selectedCase==='auto-headers'){
   }
   owner.motionProgress = 1; owner.replay();
   const changed = []; owner.onFollowHighlightChange = value => changed.push(value);
-  const click = [...owner.nodes.values()].find(node => node.type === '__Common__' && node.onClick).onClick;
+  const click = [...owner.nodes.values()].find(node => node.type === 'Button' &&
+    node.accessibilityText?.startsWith(owner.toggleLabel('followHighlight'))).onClick;
   click(); owner.followHighlight = true; owner.replay(); click();
   assert.deepEqual(changed, [true, false], 'one retained click closure inverts latest state, not initial boolean');
   owner.engine = 'http-tts:4'; owner.replay();
@@ -292,8 +308,19 @@ function loadInputAdapter(name, source) {
   return new Function(...Object.keys(deps), `${stripTypeScriptTypes(adapter)}\nreturn ${name};`)(...Object.values(deps));
 }
 for (const [name, module] of selectedCase==='tts-source'?[['ReaderControlTtsContent','tts']]:[['ReaderControlAutoPageContent','autoPage']]) {
-  const source = readFileSync(new URL(`${name}.ets`, root), 'utf8');
-  const Component = loadInputAdapter(name, source), component = new Component(), reports = [];
+  const file = new URL(`${name}.ets`, root);
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const Component = module === 'tts' ? selectedProductionMethods(file, name, [
+    'reportMorphActor', 'measureActor', 'actorId', 'actorMeasurementScope', 'measuredActorCurrent', 'sharedInput', 'fullInput',
+    'currentInputEnabled', 'p', 'frame', 'effectiveRate', 'playbackExtraHeight', 'displayedFacts', 'displayState', 'onlineServicePage',
+    'isHttpEngineSelected', 'selectedMinimum', 'preparedProfile', 'presentationPrepared', 'onMotionChanged', 'syncMorphScroll',
+    'quickMinimumScrollPresentation', 'onFullDidScroll', 'dismissConfiguration', 'playbackLabel',
+  ], { ...deps, ...await ttsLabelDependencies() }) : loadInputAdapter(name, readFileSync(file, 'utf8'));
+  const component = new Component(), reports = [];
+  if (module === 'tts') Object.assign(component, { sourceOnly: 'none', sourceDetached: false, form: 'quick',
+    engine: 'system', serviceTab: '', minimumIdentity: '', minimumProfiles: new Map(), minimumKey: '', ratePreview: -1,
+    state: { status: 'idle', rate: 1, totalSlices: 0 }, motionProgress: 0, interactionEnabled: true, configField: '',
+    scroller: new deps.Scroller(), scrollMotion: morphScroll.createReaderControlMorphScroll(), availableWidth: 286, availableHeight: 190 });
   component.onMorphActorMeasured = (...args) => reports.push(args);
   const quick = { globalPosition: { x: '17.5', y: 456.25 }, width: 286, height: 190 };
   const full = { globalPosition: { x: 40, y: 179 }, width: 312, height: 128 };

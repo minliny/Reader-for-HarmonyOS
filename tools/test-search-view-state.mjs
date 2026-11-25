@@ -604,20 +604,21 @@ assert.ok(![...filterTrigger.nodes.values()].some(node => node.type === 'Stack' 
 
 const historySource = read('entry/src/main/ets/features/search/ui/ReaderSearchHistoryPanel.ets');
 const historyGeometry = await import('../entry/src/main/ets/features/search/ui/SearchHistoryGeometry.ts');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 let clears = 0;
 const { owner: history } = createReaderBuilderProbe(historySource,
-  ['build', 'actionsEnabled', 'rows', 'clearHistoryIcon'],
+  boundedMembers(historySource),
   { ...controls.dependencies, ...historyGeometry, readerPaperActionIcon: () => 'reader-paper-action-icon' }, controls.hooks);
 const historyGeometryValue = new historyGeometry.SearchHistoryGeometry(350, 180, 1, false);
-const historyRows = historyGeometry.projectSearchHistoryRows(['已保留关键词'], historyGeometryValue, () => 80);
+const historyLayout = historyGeometry.projectSearchHistoryPanel(['已保留关键词'], historyGeometryValue, false, () => 80);
 Object.assign(history, { appThemeScheme: 'day', history: ['已保留关键词'], status: undefined,
-  rows: historyRows, geometry: historyGeometryValue,
+  layout: historyLayout,
   onClear: () => clears++, onSelect() {}, getUIContext: () => ({ px2vp: value => value,
     getMeasureUtils: () => ({ measureText: () => 80 }) }) });
 history.initialRender();
 const clearHistory = controls.nodes(history).find(node => node.type === 'Button' && node.accessibilityText === '清空搜索历史');
 assert.ok(clearHistory, 'actual history clear is one native Button');
-assert.equal(clearHistory.height, history.geometry.headingHeight);
+assert.equal(clearHistory.height, history.layout.geometry.headingHeight);
 clearHistory.onClick(); assert.equal(clears, 1);
 history.status = 'loading'; clearHistory.onClick(); assert.equal(clears, 1, 'busy history rejects a retained native callback');
 assert.ok(![...history.nodes.values()].some(node => node.type === 'Row' && node.onClick),

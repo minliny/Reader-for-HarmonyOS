@@ -1,7 +1,7 @@
 import type { UIContext } from '@ohos.arkui.UIContext';
 import { TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK, TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL,
   TYPE_READER_SETTINGS_RETAINED_SCREEN_GROUP_LABEL, TYPE_READER_SETTINGS_RETAINED_SEGMENT_ROW_VALUE,
-  TYPE_READER_SETTINGS_RETAINED_ADDED_GROUP_LABEL, TYPE_READER_SETTINGS_RETAINED_TOGGLE_ROW_LABEL, ReaderTextStyle }
+  TYPE_READER_SETTINGS_RETAINED_ADDED_GROUP_LABEL, TYPE_READER_SETTINGS_RETAINED_TOGGLE_ROW_LABEL }
   from '../../../ui/foundation/ReaderTypography';
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
 import { readerControlSettingsBar, readerControlSettingsChoice,
@@ -44,9 +44,6 @@ function measureEndpoint(context: UIContext, width: number, full: boolean, group
   options: string[][], toggles: string[]): ReaderControlSettingsEndpointMinimum | undefined {
   const p = full ? 1 : 0;
   const role = full ? TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL : TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK;
-  // The live label uses an explicit 12fp -> 16fp line recipe, not these role aliases' AUTO.
-  const labelStyle = new ReaderTextStyle(role.fontFamily, TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontWeight,
-    role.fontSizeFp, full ? 16 : 12, undefined, role.scalePolicy, role.source);
   const title = measureReaderControlText(context, '屏幕样式', TYPE_READER_SETTINGS_RETAINED_SCREEN_GROUP_LABEL, Math.max(1, Math.min(160, width - 30)), 'wrap');
   const addedTitle = measureReaderControlText(context, '导航状态栏', TYPE_READER_SETTINGS_RETAINED_ADDED_GROUP_LABEL, Math.max(1, Math.min(160, width - 30)), 'wrap');
   if (title === undefined || addedTitle === undefined) return undefined;
@@ -54,9 +51,9 @@ function measureEndpoint(context: UIContext, width: number, full: boolean, group
   let fits = title.fitsWidth && addedTitle.fitsWidth;
   for (let row = 0; row < groupLabels.length; row++) {
     const bar = readerControlSettingsBar(row, p, width);
-    const label = measureReaderControlText(context, groupLabels[row], labelStyle, Math.max(1, width - 30));
+    const label = measureReaderControlText(context, groupLabels[row], role, Math.max(1, width - 30));
     if (label === undefined) return undefined;
-    labels.push(Math.max(full ? 16 : 12, label.heightVp)); fits = fits && label.fitsWidth;
+    labels.push(Math.max(role.lineHeightFp as number, label.heightVp)); fits = fits && label.fitsWidth;
     let naturalHeight = full ? 27 : 24; let largestWidth = 0; let originalFits = true;
     for (let i = 0; i < options[row].length; i++) {
       const original = readerControlSettingsChoice(options[row].length, i, p, bar.width);

@@ -1,9 +1,11 @@
-import { ProductionHost, compileHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
+import { compileHost, setRuntime } from './lib/reading-entry-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { registerHooks, stripTypeScriptTypes } from 'node:module';
 import { readFileSync } from 'node:fs';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { readingEntryActionFixture } from './lib/reading-entry-action-fixture.mjs';
+import { bookshelfOperationClass } from './lib/bookshelf-operation-owner-probe.mjs';
+import { readerHostFilesDirectory } from '../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts';
 registerHooks({resolve(s,c,n){try{return n(s,c)}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
 const base=new URL('../entry/src/main/ets/',import.meta.url), path=p=>new URL(p,base);
 const evidence=await import(path('features/reading/application/RemoteReadingEvidence.ts'));
@@ -13,9 +15,7 @@ const {RemoteReadingFlowGateway,RemoteChapterCacheRefreshError}=await import(pat
 const mapSource=readFileSync(path('features/reading/application/ReadingSurfaceLayoutMap.ts'),'utf8')
  .replace('constructor(private readonly content: string) {','constructor(content: string) { this.content = content;');
 const {ReadingSurfaceLayoutMap}=await import(`data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(mapSource)).toString('base64')}`);
-const initialTocSource=readFileSync(path('features/reading/ui/LocalReadingExperience.ets'),'utf8')
- .match(/class InitialReadingToc implements LocalReadingToc[\s\S]*?\n}/)[0];
-const InitialReadingToc=new Function(`${stripTypeScriptTypes(initialTocSource)}; return InitialReadingToc;`)();
+const {InitialReadingToc}=await import(path('features/reading/application/ReadingMeasurementFacts.ts'));
 const {RemoteReadingSourceError,remoteReadingFailureKindOf}=await import(path('features/reading/application/RemoteContentAdmission.ts'));
 const deferred=()=>{let resolve;const promise=new Promise(r=>resolve=r);return {promise,resolve};};
 const settle=async()=>{for(let i=0;i<8;i++)await new Promise(r=>setImmediate(r));};
@@ -27,11 +27,22 @@ const chapter=index=>({sourceId:'source',bookId:'book',chapterIndex:index,chapte
  content:'清晨的阳光照进房间，书中的故事从这里开始。'.repeat(20),images:[],contentVersion:'host-v1',
  bodyVersion:'body-v1',processingVersion:'processing-v1',extractionVia:'cache'});
 const context=offset=>({bodyVersion:'body-v1',processingVersion:'processing-v1',anchors:[{id:'restored',offset}]});
+const filesDir = '/fixture/shelf-resume/files';
+const BookmarkOperationIntentStore = bookshelfOperationClass(
+ 'features/reading/application/ReadingOperationIntents.ts', 'BookmarkOperationIntentStore', {
+  readerHostFilesDirectory,
+  fileIo: { async readText(path) {
+   assert.equal(path, filesDir + '/reader-bookmark-intent-v1.json');
+   throw Object.assign(new Error('fixture has no pending bookmark intent'), { code: 13900002 });
+  } },
+  replaceReaderAtomicSnapshot: assert.fail,
+ });
+const ShelfReadingHost = compileHost(undefined, { BookmarkOperationIntentStore });
 
 // The actual entry owners and LRE progress/context construction feed the
 // actual two gateways. Only Core RPC replies and native layout are controlled.
 function fixture({changedOffset=false,missingProgress=false,legacyProgress=false,holdCatalog=false,
-  warmed=false,layout,Host=ProductionHost,cacheDecision}={}){
+  warmed=false,layout,Host=ShelfReadingHost,cacheDecision}={}){
  const calls=[],errors=[],readers=[],opened=[];let revision=0;let bookmarks=[];
  const statusGate=deferred(),progressGate=deferred(),catalogGate=deferred();let holdProgress=changedOffset;
  const progress={sourceId:'source',bookId:'book',chapterIndex:1,chapterOffset:10,chapterProgress:0.2,updatedAt:100,
@@ -45,7 +56,7 @@ function fixture({changedOffset=false,missingProgress=false,legacyProgress=false
  const coordinator={readingProjectionRevision:()=>revision,currentSourceVersion:async()=> 'v1',beginAttempt:()=>1,
   reportVerdict:async()=>{},setPreparationVisible(){},acquireBookWithBackgroundRefresh:async()=>{
    if(holdCatalog)await catalogGate.promise;return {session};}};
- const owner={noteReadingPreparationIntent(){},readingEntryPreparations:()=>preparation,bookAcquisitions:()=>coordinator,
+ const owner={getUIAbilityContext:()=>({filesDir}),noteReadingPreparationIntent(){},readingEntryPreparations:()=>preparation,bookAcquisitions:()=>coordinator,
   captureReadingContentValidity:()=>()=>true,waitForReadingContentIdle:async()=>{},
   request:async(method,params,options)=>{
   calls.push({method,params});
@@ -67,7 +78,7 @@ function fixture({changedOffset=false,missingProgress=false,legacyProgress=false
  const LRE=productionMotionMethods(path('features/reading/ui/LocalReadingExperience.ets'),
   ['loadInitialReading','ensureReadingSession','restartPreparedReadingEntry','activeGateway','loadInitialChapter','tryInitialEntrySnapshot','loadInitialToc','openChapter','loadSessionChapter'],{readingParagraphBoundaryMode,ReadingSurfaceLayoutMap,InitialReadingToc,RemoteChapterCacheRefreshError,
    LOCAL_READING_SOURCE_ID:'local',RemoteReadingSourceError,remoteReadingFailureKindOf,ReadingSessionFlowGateway,ReaderRuntimeOwner:{current:()=>owner}});
- const shelf={sourceId:'source',bookId:'book',title:'书',author:'作者',currentChapterIndex:0};
+ const shelf={sourceId:'source',bookId:'book',contentKind:'text',title:'书',author:'作者',currentChapterIndex:0};
  let readerMounted = false;
  const x=readingEntryActionFixture({runtime:owner,Host,route:'bookshelf',shelfBooks:[shelf],
   failure:(...args)=>errors.push(args),cacheDecision,
@@ -183,7 +194,7 @@ for(const options of [{},{changedOffset:true},{missingProgress:true},{legacyProg
      f.bumpRevision();f.bumpRevision();assert.equal(current(),true);return chapter(index);
    }
  }
- f=fixture({Host:compileHost(undefined,{RemoteReadingFlowGateway:RefreshTransport}),
+ f=fixture({Host:compileHost(undefined,{RemoteReadingFlowGateway:RefreshTransport, BookmarkOperationIntentStore}),
   cacheDecision:async(_error,current)=>{assert.equal(current(),true);return true;}});
  f.navigation.show('detail');
  Object.assign(f.entry,{book:{...f.shelf,sourceName:'书源'},toc:session.entries,session});

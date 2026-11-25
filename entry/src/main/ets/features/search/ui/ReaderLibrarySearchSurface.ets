@@ -29,7 +29,7 @@ import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback'
 import { readerPressAnimation, readerPressOpacity, readerPressPointer, readerPressScale } from '../../../ui/foundation/ReaderPressMotion';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../../../ui/foundation/ReaderFontFamilies';
 import { ReaderSearchHistoryPanel, SearchHistoryMeasurements } from './ReaderSearchHistoryPanel';
-import { projectSearchHistoryRows, SearchHistoryGeometry, SearchHistoryRow, SearchHistoryViewport } from './SearchHistoryGeometry';
+import { projectSearchHistoryPanel, SearchHistoryGeometry, SearchHistoryPanelLayout, SearchHistoryViewport } from './SearchHistoryGeometry';
 import type { ReaderSurfaceRect } from '../../../ui/layout/ReaderSurfaceRect';
 import { ReaderLibrarySearchModel, READER_LIBRARY_SEARCH_BACK_FOCUS_ID } from '../presentation/ReaderLibrarySearchModel';
 
@@ -158,6 +158,11 @@ export struct ReaderLibrarySearchSurface {
   @State private historyHeight: number = 0;
   @State private displayedHistoryViewport: number = 0;
   @State private displayedHistoryLimit: number = 0;
+  @State private historyExpanded: boolean = false;
+  @State private historyResizeOpacity: number = 1;
+  private historyToggleRevision: number = 0;
+  private historyResizeRevision: number = 0;
+  private historyResizeHoldingCoverage: boolean = false;
   @State private searchMounted: boolean = false;
   @State private measurementKey: number = 0;
   @State private headerRaisedShape: ReaderRaisedShape | undefined = undefined;
@@ -210,6 +215,7 @@ export struct ReaderLibrarySearchSurface {
     this.searchActionPointer = -1;
     this.generation += 1;
     this.cardCoverageRevision += 1;
+    this.historyResizeRevision += 1;
     this.unbindInputBack?.();
     this.unbindInputBack = undefined;
     this.unbindInputFocusReady?.();
@@ -257,11 +263,18 @@ export struct ReaderLibrarySearchSurface {
   private modeChanged(): void {
     if (!this.mounted) return;
     const next = this.mode;
+    const newEntry = this.activeIdentity !== this.identity || this.activeMounting !== this.mounting;
+    if (newEntry) {
+      this.historyExpanded = false;
+      this.historyResizeOpacity = 1;
+      this.historyToggleRevision += 1;
+    }
     if (next === this.currentMode) {
       this.activeNavigation = this.navigationGeneration;
       this.activeMounting = this.mounting;
       this.activeIdentity = this.identity;
-      this.publishContinueCardCoverage(this.resolvedHistoryViewport().suppressContinueCard);
+      if (newEntry) this.retargetHistoryViewport(true);
+      else this.publishContinueCardCoverage(this.resolvedHistoryViewport().suppressContinueCard);
       if (this.reduceMotion && this.transitionKind !== 'none' && !this.reducedTransition) {
         this.fromShadowStrength = this.headerShadowStrength();
         this.beginReducedTransition(++this.generation);
@@ -269,6 +282,7 @@ export struct ReaderLibrarySearchSurface {
       return;
     }
     const previous = this.currentMode;
+    this.historyResizeOpacity = 1;
     this.searchActionPointer = -1;
     this.fromSurface = this.displayedSurfaceProgress;
     this.fromHistory = this.historyProgress();
@@ -339,17 +353,33 @@ export struct ReaderLibrarySearchSurface {
     const viewport = this.resolvedHistoryViewport();
     const limit = this.historyLimit();
     this.historyHeight = viewport.height;
+    if (this.displayedHistoryViewport === viewport.height && this.displayedHistoryLimit === limit) {
+      if (instant || this.reduceMotion) this.historyResizeHoldingCoverage = false;
+      this.publishContinueCardCoverage(viewport.suppressContinueCard);
+      return;
+    }
+    const previous = this.displayedHistoryViewport;
+    const revision = ++this.historyResizeRevision;
+    this.historyResizeHoldingCoverage = !instant && !this.reduceMotion && this.mode === 'input' &&
+      this.lastCardSuppressed && (this.historyResizeHoldingCoverage || previous > viewport.height);
     this.publishContinueCardCoverage(viewport.suppressContinueCard);
-    if (this.displayedHistoryViewport === viewport.height && this.displayedHistoryLimit === limit) return;
     const publish = (): void => {
       this.displayedHistoryViewport = viewport.height;
       this.displayedHistoryLimit = limit;
     };
+    const finish = (): void => {
+      if (!this.mounted || revision !== this.historyResizeRevision || !this.historyResizeHoldingCoverage) return;
+      this.historyResizeHoldingCoverage = false;
+      this.publishContinueCardCoverage(this.resolvedHistoryViewport().suppressContinueCard);
+    };
     if (instant || this.reduceMotion) publish();
-    else this.getUIContext().animateTo(motionAnimateParam('search.history.resize'), publish);
+    else {
+      try { this.getUIContext().animateTo(motionAnimateParam('search.history.resize', finish), publish); }
+      catch (_) { publish(); finish(); }
+    }
   }
   private publishContinueCardCoverage(inputWouldCover: boolean): void {
-    const suppressed = this.mode === 'input' ? inputWouldCover :
+    const suppressed = this.mode === 'input' ? inputWouldCover || this.historyResizeHoldingCoverage :
       this.lastCardSuppressed && this.historyProgress() > .01;
     const scope = `${this.identity}:${this.navigationGeneration}:${this.mounting}`;
     // The retained surface may still cover the card after its scope changes.
@@ -402,7 +432,10 @@ export struct ReaderLibrarySearchSurface {
     // Publish the exact painted endpoint independently of the animation clock reset.
     this.displayedSurfaceProgress = this.toSurface;
     this.elapsed = 0;
-    if (this.mode === 'idle') this.searchMounted = false;
+    if (this.mode === 'idle') {
+      this.searchMounted = false;
+      this.historyExpanded = false;
+    }
     if (this.mode !== 'input') {
       this.fieldFocused = false;
       this.publishContinueCardCoverage(false);
@@ -694,6 +727,32 @@ export struct ReaderLibrarySearchSurface {
       if (this.mounted && this.historyInteractive()) this.model.dispatchRetryHistory(owner);
     };
   }
+  private toggleHistoryAction(owner: number): () => void {
+    return (): void => {
+      if (!this.mounted || !this.historyInteractive() || !this.model.owns(owner) ||
+        this.model.historyStatus === 'loading') return;
+      const layout = this.historyLayout();
+      if (!layout.canToggle) return;
+      this.historyExpanded = !layout.expanded;
+      const toggleRevision = ++this.historyToggleRevision;
+      if (!this.reduceMotion) {
+        this.retargetHistoryViewport();
+        return;
+      }
+      const generation = this.generation;
+      const context = this.getUIContext();
+      this.historyResizeOpacity = 0;
+      this.retargetHistoryViewport(true);
+      try {
+        context.postFrameCallback(new LibrarySearchFrame((): void => {
+          if (!this.mounted || generation !== this.generation || toggleRevision !== this.historyToggleRevision) return;
+          try {
+            context.animateTo(readerMotionReducedFadeParam(), (): void => { this.historyResizeOpacity = 1; });
+          } catch (_) { this.historyResizeOpacity = 1; }
+        }));
+      } catch (_) { this.historyResizeOpacity = 1; }
+    };
+  }
   private contentHeight(): number {
     return Math.max(0, this.surfaceHeight() - this.headerBottom);
   }
@@ -745,8 +804,7 @@ export struct ReaderLibrarySearchSurface {
       (this.inputInteractive() || this.model.sweeping) && (this.model.sweeping || this.model.canSubmit);
   }
   private resolvedHistoryViewport(): SearchHistoryViewport {
-    const geometry = this.historyGeometry();
-    const height = geometry.contentHeight(this.historyRows(geometry).length, this.model.history.length);
+    const height = this.historyLayout().height;
     const cardTop = this.continueCardRect === undefined ? 0 : this.continueCardRect.y - this.surfaceWindowY;
     const cardBottom = cardTop + (this.continueCardRect?.height ?? 0);
     return new SearchHistoryViewport(height, this.historyBarBottom(), this.availableBottom(), cardBottom, cardTop);
@@ -757,8 +815,8 @@ export struct ReaderLibrarySearchSurface {
       this.measuredHistoryFeedbackKey === this.historyFeedbackKey() ? this.measuredHistoryFeedback : 0,
       this.spec.panelInnerInset);
   }
-  private historyRows(geometry: SearchHistoryGeometry): SearchHistoryRow[] {
-    return projectSearchHistoryRows(this.model.history, geometry, (keyword: string): number =>
+  private historyLayout(): SearchHistoryPanelLayout {
+    return projectSearchHistoryPanel(this.model.history, this.historyGeometry(), this.historyExpanded, (keyword: string): number =>
       this.historyMeasurements.measureControlWidth(this.getUIContext(), this.metricsRevision, keyword));
   }
   private historyFeedbackKey(): string {
@@ -999,6 +1057,15 @@ export struct ReaderLibrarySearchSurface {
     return Math.min(this.displayedHistoryViewport, limit);
   }
   @Builder
+  private historyPanel(owner: number) {
+    ReaderSearchHistoryPanel({ history: this.model.history, status: this.model.historyStatus,
+      layout: this.historyLayout(),
+      observeActions: this.model.verification?.enabled() === true,
+      onFeedbackHeight: this.historyFeedbackAction(owner),
+      onClear: this.clearHistoryAction(owner), onRetry: this.retryHistoryAction(owner),
+      onSelect: this.historyAction(owner), onToggle: this.toggleHistoryAction(owner) });
+  }
+  @Builder
   private header() {
     Stack({ alignContent: Alignment.TopStart }) {
       Column() {
@@ -1006,12 +1073,7 @@ export struct ReaderLibrarySearchSurface {
       if (this.searchMounted) {
         Stack({ alignContent: Alignment.TopStart }) {
           ForEach([this.model.currentOwner()], (owner: number) => {
-            ReaderSearchHistoryPanel({ history: this.model.history, status: this.model.historyStatus,
-              geometry: this.historyGeometry(), rows: this.historyRows(this.historyGeometry()),
-              observeActions: this.model.verification?.enabled() === true,
-              onFeedbackHeight: this.historyFeedbackAction(owner),
-              onClear: this.clearHistoryAction(owner), onRetry: this.retryHistoryAction(owner),
-              onSelect: this.historyAction(owner) });
+            this.historyPanel(owner);
           }, (owner: number): string => `search-history:${owner}`);
           Column() {
             Column().width('100%').height(1).backgroundColor(this.historyDividerColor());
@@ -1019,7 +1081,7 @@ export struct ReaderLibrarySearchSurface {
             .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
         }.width('100%').height(this.historyViewportHeight() * this.historyProgress()).clip(true)
           .id('reader-search-history-viewport')
-          .opacity(this.historyProgress() * this.reducedSearchOpacity)
+          .opacity(this.historyProgress() * this.reducedSearchOpacity * this.historyResizeOpacity)
           .enabled(this.historyInteractive())
           .hitTestBehavior(this.historyInteractive() ? HitTestMode.Default : HitTestMode.None)
           .accessibilityLevel(this.historyInteractive() ? 'auto' : 'no-hide-descendants');

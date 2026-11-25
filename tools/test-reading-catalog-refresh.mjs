@@ -1,21 +1,22 @@
 import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+const deferred = () => Promise.withResolvers();
 async function run(id){
-const { ProductionHost, setRuntime }=await import('./lib/reading-entry-owner-probe.mjs');
+const { compileHost, setRuntime }=await import('./lib/reading-entry-owner-probe.mjs');
+const { actualReadingEntryPresentation }=await import('./lib/reading-entry-presentation-probe.mjs');
 const { readingPrefetchOwnerProbe }=await import('./lib/reading-prefetch-owner-probe.mjs');
+const { pureModuleProbe }=await import('./lib/ets-pure-module-probe.mjs');
+const { readFileSync }=await import('node:fs');
 
 const { registerHooks }=await import('node:module');
 const { productionMotionMethods }=await import('./lib/reader-p1-motion-method-probe.mjs');
 registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
 const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts');
-const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
 const { ReadingChapterWindow } = await import('../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts');
-const { canAppendRemoteReadingCatalog, sameRemoteSessionEvidence } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingEvidence.ts');
+const { sameRemoteSessionEvidence } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingEvidence.ts');
 const { readingSessionDocuments } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionDocuments.ts');
-const { readReadingCatalog } = await import('../entry/src/main/ets/features/reading/application/ReadingEntrySnapshot.ts');
 const file = name => new URL(`../entry/src/main/ets/${name}`,import.meta.url);
-const deferred=()=>{let resolve,reject;const promise=new Promise((r,j)=>{resolve=r;reject=j;});return{promise,resolve,reject};};
 const pause=()=>new Promise(setImmediate);
 async function until(predicate){for(let turn=0;turn<1000;turn++){if(predicate())return;await pause();}assert.fail('controlled operation boundary not reached');}
 const sourceId='source',bookId='book',sourceVersion='rule-v8';
@@ -46,15 +47,42 @@ function fixture(cachedSourceVersion=sourceVersion){
  });
  const owner={bookAcquisitions:()=>runtime,request:(...a)=>runtime.request(...a),supportsCoreCapability:c=>c==='reading.catalog.page.v1',captureReadingContentValidity:()=>()=>true};
  setRuntime(owner);
- const ownerProbe=readingPrefetchOwnerProbe(()=>owner);
- const Index=productionMotionMethods(file('pages/Index.ets'),['readingPrefetchLease','refreshRemoteCatalogNearEnd','isRemoteCatalogNearEnd','onRemoteSessionReady','installRemoteReadingSession'],{
-  ...ownerProbe,LOCAL_SOURCE_ID:'local',ReadingEntryHost:ProductionHost,EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0},RemoteReadingFlowGateway,canAppendRemoteReadingCatalog,sameRemoteSessionEvidence,CATALOG_REFRESH_INTERVAL_MS:600000,CATALOG_REFRESH_RETRY_INTERVAL_MS:30000,CATALOG_REFRESH_NEAR_END:3,DOMAIN:0,hilog:{warn:(...a)=>warnings.push(a)} });
- const page=Object.assign(new Index(),{mountedRuntimeOwner:owner,detailShelfAdmissionMount:1,readingEntryScopeId:-1,shelfOperation:{generation:0,removalKey:'',busy:false},detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),shelfReceiptRetired:false,readingSessionActive:true,navigationGeneration:1,remoteSessionGeneration:1,remoteCatalogRefreshAt:new Map(),remoteCatalogRefreshAttemptAt:new Map(),remoteCatalogRefreshInFlight:new Map(),detailBook:{...seed,sourceName:'佩蒲裴榕'},detailToc:projection(catalog),directoryCurrentChapterIndex:955,
-  directoryBookmarkMutationGeneration:0,directoryBookmarkMutationActiveKey:'',offlineMutationGeneration:0,
-  refreshBookshelf(){} });
- const authority=ownerProbe.ReadingPrefetchHost.forRuntime(owner);
- for(const [alias,key] of [['remoteCatalogRefreshAt','refreshAt'],['remoteCatalogRefreshAttemptAt','attemptAt'],['remoteCatalogRefreshInFlight','refreshInFlight']])Object.defineProperty(page,alias,{get:()=>authority[key]});
- return{runtime,owner,page,calls,warnings,gate:g=>{tocGate=g;},fail:v=>{fail=v;},catalog:()=>catalog};
+ const {ReadingPrefetchHost} = readingPrefetchOwnerProbe(() => owner);
+ const Entry = actualReadingEntryPresentation({ReadingEntryHost:compileHost(undefined, {ReadingPrefetchHost})});
+ const entry = Object.assign(new Entry(), {book:{...seed,sourceName:'佩蒲裴榕'},toc:projection(catalog),
+   sessionActive:true,directoryCurrentChapterIndex:955});
+ const scene = {owner,retired:false,mounting:1,navigation:1,active:true,readyGeneration:0};
+ const bind = () => {
+   const generation = scene.navigation;
+   entry.bindReader(owner, {current:() => !scene.retired && scene.navigation === generation,
+     projectionVisible:() => false, membership:() => ({generation:0,blocked:false,value:false}),
+     cacheDecision:async () => false, notice() {}, refreshShelf() {}});
+ };
+ const commitPath = 'features/reading/presentation/ReadingCommitPresentation.ets';
+ const {ReadingCommitPresentation} = pureModuleProbe(readFileSync(file(commitPath),'utf8'),commitPath,
+   {Observed:value => value,ReadingPrefetchHost,sameRemoteSessionEvidence},['ReadingCommitPresentation']);
+ const acceptSession = value => entry.acceptReaderSession(owner,value,false,bind,
+   chapterIndex => commits.refreshNearEnd(value,chapterIndex));
+ const commits = new ReadingCommitPresentation({entry:() => entry, scene:() => ({...scene}),
+   ownsRuntime: candidate => candidate === owner, applyRefreshedSession:acceptSession,
+   refreshShelf() {}, diagnostic: (stage,message) => warnings.push({stage,message})});
+ const prefetch = ReadingPrefetchHost.forRuntime(owner);
+ bind();
+ return {runtime,owner,entry,prefetch,calls,warnings,acceptSession,
+   reenter() { scene.navigation++; bind(); },
+   installSession: value => entry.installSession(owner,value,bind),
+   refreshNearEnd: value => commits.refreshNearEnd(value,entry.directoryCurrentChapterIndex),
+   attachReader(view) {
+     const publish = entry.publish.bind(entry);
+     entry.publish = snapshot => {
+       const previous = entry.session;
+       publish(snapshot);
+       if (entry.session === previous) return;
+       view.remoteSession = entry.session;
+       view.onRemoteCatalogChanged();
+     };
+   },
+   gate: value => { tocGate = value; }, fail: value => { fail = value; }};
 }
 const View=productionMotionMethods(file('features/reading/ui/LocalReadingExperience.ets'),['onRemoteCatalogChanged','prepareRemoteCatalogNearEnd','hydrateEntryCatalog','admitTocEntries','readingTocEntries','adjacentChapterIndex','turnNextPage','queuePageTurnPreparation','drainPageTurnPreparationQueue','completePreparedPageTurn','notifyReadingPresentationReady'],{
  sameRemoteSessionEvidence,LOCAL_READING_SOURCE_ID:'local',readerPageTransitionUsesPreparedPages:()=>true,errorMessageOf:e=>e.message,hilog:{warn(){},error(){}},
@@ -78,17 +106,17 @@ try{
 if(id==='near-end'){
 await check('near-end force refresh bypasses prepared/durable catalogs, singleflights and appends chapter 950 in same mounted reader',async()=>{
  const f=fixture();try{
-  const old=await f.runtime.acquireBook(seed);f.page.remoteReadingSession=old;
+  const old=await f.runtime.acquireBook(seed);f.installSession(old);
   const gateway=new ReadingSessionFlowGateway(sourceId,bookId,{kind:'remote',session:old},f.owner),r=reader(gateway);
-  const publish=f.page.applyReadingEntrySnapshot.bind(f.page);f.page.applyReadingEntrySnapshot=s=>{publish(s);r.v.remoteSession=s.session;r.v.onRemoteCatalogChanged();};
+  f.attachReader(r.v);
   const gate=deferred();f.gate(gate);f.calls.length=0;
-  f.page.refreshRemoteCatalogNearEnd(old);f.page.refreshRemoteCatalogNearEnd(old);await until(()=>f.calls.some(c=>c.method==='book.toc'));
-  assert.equal(f.calls.filter(c=>c.method==='book.toc').length,1);assert.equal(f.page.remoteCatalogRefreshAt.size,0);
-  assert.equal(r.v.turnNextPage().kind,'boundary');gate.resolve();await until(()=>f.page.remoteCatalogRefreshInFlight.size===0);
+  f.refreshNearEnd(old);f.refreshNearEnd(old);await until(()=>f.calls.some(c=>c.method==='book.toc'));
+  assert.equal(f.calls.filter(c=>c.method==='book.toc').length,1);assert.equal(f.prefetch.refreshAt.size,0);
+  assert.equal(r.v.turnNextPage().kind,'boundary');gate.resolve();await until(()=>f.prefetch.refreshInFlight.size===0);
   assert.equal(f.calls.filter(c=>c.method==='cache.book.status').length,0);assert.equal(r.v.tocEntries.length,1370);
   assert.equal(gateway.remoteSession().catalogVersion,'new');assert.equal(r.v.chapter,r.body);assert.equal(r.v.visiblePage,r.page);assert.equal(r.v.lastCommittedProgress,r.progress);
-  assert.equal(r.v.turnNextPage().kind,'started');assert.equal(r.opened.at(-1)[0],956);assert.equal(f.page.detailToc[956].title,'第950章');
-  assert.equal(f.page.remoteCatalogRefreshAt.size,1);
+  assert.equal(r.v.turnNextPage().kind,'started');assert.equal(r.opened.at(-1)[0],956);assert.equal(f.entry.toc[956].title,'第950章');
+  assert.equal(f.prefetch.refreshAt.size,1);
  }finally{f.runtime.close();}
 });
 }
@@ -97,8 +125,8 @@ await check('actual coordinator re-admits v6 durable catalog under current v8 be
  const f=fixture('rule-v6');try{
   const old=await f.runtime.acquireBook({...seed,sourceVersion:'rule-v6'});
   assert.equal(old.sourceVersion,sourceVersion);assert.equal(old.requiresContextRefresh,true);assert.equal(old.entries.length,956);
-  f.page.remoteReadingSession=old;f.page.refreshRemoteCatalogNearEnd(old);await until(()=>f.page.remoteCatalogRefreshInFlight.size===0);
-  assert.equal(f.page.remoteReadingSession.sourceVersion,sourceVersion);assert.equal(f.page.remoteReadingSession.entries.length,1370);
+  f.installSession(old);f.refreshNearEnd(old);await until(()=>f.prefetch.refreshInFlight.size===0);
+  assert.equal(f.entry.session.sourceVersion,sourceVersion);assert.equal(f.entry.session.entries.length,1370);
   assert.equal(f.calls.filter(c=>c.method==='book.toc').length,1);
  }finally{f.runtime.close();}
 });
@@ -106,33 +134,33 @@ await check('actual coordinator re-admits v6 durable catalog under current v8 be
 if(id==='refresh-backoff'){
 await check('failed refresh preserves old catalog/page, uses short retry backoff and never marks freshness',async()=>{
  const f=fixture(),realNow=Date.now;let now=1000000;Date.now=()=>now;
- try{const old=await f.runtime.acquireBook(seed);f.page.remoteReadingSession=old;f.fail(true);f.calls.length=0;
-  f.page.refreshRemoteCatalogNearEnd(old);await until(()=>f.page.remoteCatalogRefreshInFlight.size===0);
-  assert.equal(f.page.remoteReadingSession,old);assert.equal(f.page.remoteCatalogRefreshAt.size,0);assert.equal(f.warnings.length,1);
-  f.page.refreshRemoteCatalogNearEnd(old);await pause();assert.equal(f.calls.filter(c=>c.method==='book.toc').length,1);
-  now+=30001;f.fail(false);f.page.refreshRemoteCatalogNearEnd(old);await until(()=>f.page.remoteCatalogRefreshInFlight.size===0);
-  assert.equal(f.page.remoteReadingSession.entries.length,1370);assert.equal(f.calls.filter(c=>c.method==='book.toc').length,2);
+ try{const old=await f.runtime.acquireBook(seed);f.installSession(old);f.fail(true);f.calls.length=0;
+  f.refreshNearEnd(old);await until(()=>f.prefetch.refreshInFlight.size===0);
+  assert.equal(f.entry.session,old);assert.equal(f.prefetch.refreshAt.size,0);assert.equal(f.warnings.length,1);
+  f.refreshNearEnd(old);await pause();assert.equal(f.calls.filter(c=>c.method==='book.toc').length,1);
+  now+=30001;f.fail(false);f.refreshNearEnd(old);await until(()=>f.prefetch.refreshInFlight.size===0);
+  assert.equal(f.entry.session.entries.length,1370);assert.equal(f.calls.filter(c=>c.method==='book.toc').length,2);
  }finally{Date.now=realNow;f.runtime.close();}
 });
 }
 if(id==='late-refresh'){
 await check('late refresh cannot overwrite a same-book reentry or newer catalog evidence',async()=>{
  for(const mutate of ['reentry','catalog']){const f=fixture();try{
-  const old=await f.runtime.acquireBook(seed);f.page.remoteReadingSession=old;const gate=deferred();f.gate(gate);
-  f.page.refreshRemoteCatalogNearEnd(old);await until(()=>f.calls.some(c=>c.method==='book.toc'));
-  if(mutate==='reentry')f.page.navigationGeneration++;else f.page.remoteReadingSession={...old,catalogVersion:'newer'};
-  const kept=f.page.remoteReadingSession;gate.resolve();await until(()=>f.page.remoteCatalogRefreshInFlight.size===0);
-  assert.equal(f.page.remoteReadingSession,kept);assert.equal(f.page.remoteCatalogRefreshAt.size,0);
+  const old=await f.runtime.acquireBook(seed);f.installSession(old);const gate=deferred();f.gate(gate);
+  f.refreshNearEnd(old);await until(()=>f.calls.some(c=>c.method==='book.toc'));
+  if(mutate==='reentry')f.reenter();else f.installSession({...old,catalogVersion:'newer'});
+  const kept=f.entry.session;gate.resolve();await until(()=>f.prefetch.refreshInFlight.size===0);
+  assert.equal(f.entry.session,kept);assert.equal(f.prefetch.refreshAt.size,0);
  }finally{f.runtime.close();}}
 });
 }
 if(id==='cold-near-end'){
 await check('cold cached entry acquires only after full catalog near end, and later cached pages trigger the same path',async()=>{
  for(const index of [955,946]){const f=fixture();try{
-  const gateway=new ReadingSessionFlowGateway(sourceId,bookId,{kind:'remote',seed,onSessionReady:s=>f.page.onRemoteSessionReady(s)},f.owner);
-  const r=reader(gateway,allEntries.slice(0,956),index);r.v.entryCatalogPending=true;f.page.directoryCurrentChapterIndex=index;
-  r.v.onReadingReady=value=>{f.page.directoryCurrentChapterIndex=value;};
-  const publish=f.page.applyReadingEntrySnapshot.bind(f.page);f.page.applyReadingEntrySnapshot=s=>{publish(s);r.v.remoteSession=s.session;r.v.onRemoteCatalogChanged();};
+  const gateway=new ReadingSessionFlowGateway(sourceId,bookId,{kind:'remote',seed,onSessionReady:s=>f.acceptSession(s)},f.owner);
+  const r=reader(gateway,allEntries.slice(0,956),index);r.v.entryCatalogPending=true;f.entry.directoryCurrentChapterIndex=index;
+  r.v.onReadingReady=value=>{f.entry.directoryCurrentChapterIndex=value;};
+  f.attachReader(r.v);
   await r.v.hydrateEntryCatalog();
   if(index===946){assert.equal(gateway.remoteSession(),undefined);assert.ok(f.calls.every(c=>c.method==='reading.catalog.page'));
    r.v.chapter=chapter(953);r.v.chapterWindow.setCurrent(r.v.chapter);r.v.visiblePage={...r.page};
@@ -150,9 +178,9 @@ await check('cold first acquisition joins real coordinator refresh1370; same gat
   const gate=deferred();f.gate(gate);
   const refresh=f.runtime.acquireBook(seed,{forceRefresh:true},'background');
   await until(()=>f.calls.some(c=>c.method==='book.toc'));
-  const gateway=new ReadingSessionFlowGateway(sourceId,bookId,{kind:'remote',seed,onSessionReady:s=>f.page.onRemoteSessionReady(s)},f.owner);
+  const gateway=new ReadingSessionFlowGateway(sourceId,bookId,{kind:'remote',seed,onSessionReady:s=>f.acceptSession(s)},f.owner);
   const r=reader(gateway),neighbour=chapter(954);r.v.chapterWindow.admitNeighbour(neighbour);r.v.entryCatalogPending=true;
-  const publish=f.page.applyReadingEntrySnapshot.bind(f.page);f.page.applyReadingEntrySnapshot=s=>{publish(s);r.v.remoteSession=s.session;r.v.onRemoteCatalogChanged();};
+  f.attachReader(r.v);
   const docs=readingSessionDocuments(f.owner);docs.configure(sourceId,bookId,allEntries.slice(7,956).map(e=>e.index),()=>true);docs.admit(r.body,true);docs.admit(neighbour,false);
   assert.ok(docs.read(sourceId,bookId,954));await r.v.hydrateEntryCatalog();assert.equal(gateway.remoteSession(),undefined);
   gate.resolve();await refresh;await until(()=>r.v.remoteCatalogSessionPreparation===undefined);
@@ -195,23 +223,23 @@ await check('cold near-end acquisition failures retain the visible page, singlef
 if(id==='accepted-retirement'){
 await check('retired presentation cannot replace unsettled native refresh; a later explicit retry uses the current lease',async()=>{
  const f=fixture(),realNow=Date.now;let now=1000000;Date.now=()=>now;
- try{const old=await f.runtime.acquireBook(seed);f.page.remoteReadingSession=old;const jobs=[];
+ try{const old=await f.runtime.acquireBook(seed);f.installSession(old);const jobs=[];
   f.runtime.acquireBook=(_seed,options)=>{const job=deferred();jobs.push({...job,options});return job.promise;};
-  f.page.refreshRemoteCatalogNearEnd(old);assert.equal(jobs.length,1);
-  f.page.navigationGeneration++;now+=30001;f.page.refreshRemoteCatalogNearEnd(old);assert.equal(jobs.length,1,'accepted native producer must settle before another refresh');
-  jobs[0].resolve(session(allEntries,'old-late'));await until(()=>f.page.remoteCatalogRefreshInFlight.size===0);
-  assert.equal(f.page.remoteReadingSession,old,'old result cannot update a reentered reader');
-  f.page.refreshRemoteCatalogNearEnd(old);assert.equal(jobs.length,2);
-  jobs[1].resolve(session(allEntries,'new'));await until(()=>f.page.remoteCatalogRefreshInFlight.size===0);assert.equal(f.page.remoteReadingSession.catalogVersion,'new');
+  f.refreshNearEnd(old);assert.equal(jobs.length,1);
+  f.reenter();now+=30001;f.refreshNearEnd(old);assert.equal(jobs.length,1,'accepted native producer must settle before another refresh');
+  jobs[0].resolve(session(allEntries,'old-late'));await until(()=>f.prefetch.refreshInFlight.size===0);
+  assert.equal(f.entry.session,old,'old result cannot update a reentered reader');
+  f.refreshNearEnd(old);assert.equal(jobs.length,2);
+  jobs[1].resolve(session(allEntries,'new'));await until(()=>f.prefetch.refreshInFlight.size===0);assert.equal(f.entry.session.catalogVersion,'new');
  }finally{Date.now=realNow;f.runtime.close();}
 });
 }
 if(id==='identity-rejection'){
 await check('parent and mounted gateway both reject incompatible refreshed catalog identities',async()=>{
  for(const mutate of [s=>s.sourceVersion='edited',s=>s.continuationVariables=[{name:'volume',value:'changed'}],s=>s.entries[955]={...s.entries[955],title:'other body'}]){
-  const f=fixture();try{const old=await f.runtime.acquireBook(seed);f.page.remoteReadingSession=old;const next=session(allEntries.slice(),'new');mutate(next);
-   f.runtime.acquireBook=async()=>next;f.page.refreshRemoteCatalogNearEnd(old);await until(()=>f.page.remoteCatalogRefreshInFlight.size===0);
-   assert.equal(f.page.remoteReadingSession,old);assert.equal(f.page.remoteCatalogRefreshAt.size,0);assert.equal(f.warnings.length,1);
+  const f=fixture();try{const old=await f.runtime.acquireBook(seed);f.installSession(old);const next=session(allEntries.slice(),'new');mutate(next);
+   f.runtime.acquireBook=async()=>next;f.refreshNearEnd(old);await until(()=>f.prefetch.refreshInFlight.size===0);
+   assert.equal(f.entry.session,old);assert.equal(f.prefetch.refreshAt.size,0);assert.equal(f.warnings.length,1);
   }finally{f.runtime.close();}
  }
 });

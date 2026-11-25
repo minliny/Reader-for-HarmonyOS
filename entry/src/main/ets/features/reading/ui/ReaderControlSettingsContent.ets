@@ -509,7 +509,9 @@ export struct ReaderControlSettingsContent {
   private segmentRow(group: ReaderControlSettingsGroup, row: number) {
     Text(this.groupLabel(group)).width(this.label(row).width).height(this.label(row).height)
       .fontFamily(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontFamily).fontWeight(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontWeight)
-      .fontSize(readerControlLerp(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontSizeFp, TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL.fontSizeFp, this.p())).lineHeight(readerControlLerp(12, 16, this.p()))
+      .fontSize(readerControlLerp(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontSizeFp, TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL.fontSizeFp, this.p()))
+      .lineHeight(readerControlLerp(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.lineHeightFp as number,
+        TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL.lineHeightFp as number, this.p()))
       .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1)
       .position({ x: this.label(row).x, y: this.label(row).y })
       .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)

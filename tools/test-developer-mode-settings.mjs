@@ -19,13 +19,25 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 // FrameNode seam. These cases cover the omissions the old screenshot exposed,
 // without treating a local tree fixture as compositor/device evidence.
 const clearedTimers = [];
+let reporterAttachments = 0;
+let reporterDetachments = 0;
 let timerCount = 0;
 const Owner = selectedProductionMethods(path.join(root,
   'entry/src/main/ets/app/composition/ReaderLayoutDebugOverlay.ets'), 'ReaderLayoutDebugOverlay',
 ['scanFrameTree', 'collectFrameBounds', 'intersectBounds', 'paintOutline', 'paintFrameBounds',
-  'onDeveloperModeChanged', 'aboutToDisappear'], {
-  FRAME_NODE_SCAN_LIMIT: 10000,
+  'onDeveloperModeChanged', 'aboutToDisappear', 'markFrameScanIncomplete', 'debugNodeLabel'], {
+  FRAME_NODE_SCAN_LIMIT: 4000,
+  FRAME_NODE_CHILD_QUERY_LIMIT: 2048,
+  CHILD_INDEX_PROBE_WINDOW: 16,
+  CHILD_INDEX_PROBE_MISS_LIMIT: 4,
   ExpandMode: { NOT_EXPAND: 0 },
+  ReaderUIVerificationProbe: {
+    attachSourceImportToastWindowReporter(reporter) {
+      assert.equal(typeof reporter, 'function');
+      reporterAttachments++;
+      return () => { reporterDetachments++; };
+    },
+  },
   setInterval: () => ++timerCount,
   clearInterval: handle => clearedTimers.push(handle),
 });
@@ -37,19 +49,22 @@ const strokeClips = [];
 const savedClips = [];
 let activeClips = [];
 let currentPath = [];
+const queriedParents = new Set();
 let childQueries = 0;
+let nextNodeId = 0;
 function node(id, type, x, y, width, height, children = [], geometryMissing = false) {
+  const uniqueId = ++nextNodeId;
   return {
     parent: null, id, x, y, children, visible: true, opacity: 1, clipped: false, properties: {},
     getId: () => id,
     getNodeType: () => type,
-    getUniqueId: () => id.length,
+    getUniqueId: () => uniqueId,
     getParent() { return this.parent; },
     isVisible() { return this.visible; },
     getOpacity() { return this.opacity; },
     getCustomProperty(key) { return this.properties[key]; },
     isClipToFrame() { return this.clipped; },
-    getPositionToWindow() { return { x: this.x, y: this.y }; },
+    getPositionToWindowWithTransform() { return { x: this.x, y: this.y }; },
     getMeasuredSize() {
       if (geometryMissing) throw new Error('virtual node has no rectangle');
       return { width: width * 3, height: height * 3 };
@@ -59,6 +74,7 @@ function node(id, type, x, y, width, height, children = [], geometryMissing = fa
     getChild(index, mode) {
       assert.equal(mode, 0, 'the production scanner never expands virtual list items');
       childQueries++;
+      queriedParents.add(id);
       return children[index] ?? null;
     },
   };
@@ -113,7 +129,8 @@ assert.deepEqual(rectangles.find(rect => rect[2] === 30), [18, 40, 30, 15],
 assert.ok(rectangles.some(rect => rect[3] === 1), 'one-vp Divider gets a complete boundary');
 assert.equal(labels.some(label => /overlay|hidden/.test(label[0])), false,
   'hidden children and the diagnostic subtree never enter the border set');
-assert.equal(childQueries, 6, 'hidden, transparent and diagnostic children are not traversed');
+assert.deepEqual(queriedParents, new Set(['root', '']), 'hidden, transparent and diagnostic children are not traversed');
+assert.ok(childQueries <= 6 + 2 * 4, 'lane enumeration limits the recovery queries past the declared range');
 assert.equal(owner.excludedTransparentBranches, 1);
 assert.equal(owner.frameScanTruncated, false);
 assert.ok(!rectangles.some(rect => rect[2] === 88 || rect[2] === 45), 'a mounted transparent branch contributes no pixels');
@@ -190,6 +207,8 @@ assert.equal(timerCount, 1);
 owner.developerModeEnabled = false;
 owner.onDeveloperModeChanged();
 assert.deepEqual(clearedTimers, [1], 'disabling the persisted switch cancels the scanner');
+assert.equal(reporterAttachments, 1);
+assert.equal(reporterDetachments, 1, 'disabling also retires the active window reporter');
 assert.equal(owner.frameCount, 0);
 assert.equal(rectangles.length, 0);
 owner.aboutToDisappear();

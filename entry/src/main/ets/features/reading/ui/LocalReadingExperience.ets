@@ -14619,7 +14619,7 @@ export struct ReadingExperience {
             .constraintSize({ maxWidth: '100%', maxHeight: Math.max(0, this.bookmarkPullOffset() - 6.5) })
             .opacity(this.bookmarkHintVisibleAlpha(this.pageTurnRenderRevision));
         }
-        Stack({ alignContent: Alignment.CenterStart }) {
+        Stack({ alignContent: Alignment.Start }) {
           Stack()
             .width(48 * Math.min(1, this.bookmarkPullOffset() / READER_BOOKMARK_TRIGGER_VP)).height('100%')
             .borderRadius(1.25).backgroundColor(this.bookmarkPullFeedbackColor())

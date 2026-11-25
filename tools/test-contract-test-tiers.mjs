@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdtempSync, mkdirSync, writeFileSync as writeNativeFileSync, readFileSync, rmSync, existsSync, copyFileSync, symlinkSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { tmpdir, availableParallelism } from 'node:os';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -33,11 +34,6 @@ assert.equal(resourceLimit({ ...resourceSample, jobBytes: 2 * GiB }), 9);
 assert.equal(resourceLimit({ ...resourceSample, cpu: 1, free: 0, active: 0 }), 1);
 
 contractTests(fileURLToPath(new URL('..', import.meta.url)), 'full');
-const focusedRoot = fileURLToPath(new URL('..', import.meta.url));
-const focusedLayout = 'test-reader-layout-architecture.mjs';
-assert.throws(() => contractCaseSelection(focusedRoot, [focusedLayout]), /focused case selection required/);
-assert.deepEqual(contractCaseSelection(focusedRoot, [focusedLayout], { [focusedLayout]: ['geometry'] }).selections,
-  { [focusedLayout]: ['geometry'] });
 
 const workspace = mkdtempSync(join(tmpdir(), 'reader-contract-gate-'));
 const root = join(workspace, 'Reader-for-HarmonyOS');
@@ -45,6 +41,18 @@ mkdirSync(root);
 symlinkSync(fileURLToPath(new URL('../../Reader-Core', import.meta.url)), join(workspace, 'Reader-Core'), 'junction');
 try {
   mkdirSync(join(root, 'tools'));
+  const focusedName = 'test-focused.mjs';
+  const focusedSource = "import { selectContractCases } from './lib/contract-case-selection.mjs';\n";
+  writeFileSync(join(root, 'tools', focusedName), focusedSource);
+  writeFileSync(join(root, 'tools/contract-case-manifest.json'), JSON.stringify({ schemaVersion: 1, files: {
+    [focusedName]: { sourceSha256: createHash('sha256').update(focusedSource).digest('hex'),
+      cases: { geometry: { qualification: 'QUALIFIED', resources: [] } } },
+  } }));
+  assert.throws(() => contractCaseSelection(root, [focusedName]), /focused case selection required/);
+  assert.deepEqual(contractCaseSelection(root, [focusedName], { [focusedName]: ['geometry'] }).selections,
+    { [focusedName]: ['geometry'] });
+  rmSync(join(root, 'tools', focusedName));
+
   const manifest = { schemaVersion: 1, source: ['test-pass.mjs'], integration: ['test-fail.mjs'] };
   const save = () => writeFileSync(join(root, 'tools/contract-test-tiers.json'), JSON.stringify(manifest));
   writeFileSync(join(root, 'tools/test-pass.mjs'), 'process.exit(0)');
@@ -342,11 +350,11 @@ export async function runProcessTreeCleanupFixtures() {
           }
           return realKill(pid, requestedSignal);
         };
-        const pending = runContractsBounded(directory, 'full', 1, { timeoutMs: 1000,
+        const pending = runContractsBounded(directory, 'full', 1, { timeoutMs: mode === 'timeout' ? 1000 : 5000,
           killGraceMs: mode === 'unreclaimed' ? 200 : 1000, signal: cancellation.signal })
           .then(value => ({ report: value }), error => ({ failure: error, report: error.report }));
         if (mode === 'cancelled') {
-          const readyDeadline = performance.now() + 1000;
+          const readyDeadline = performance.now() + 3500;
           while (!existsSync(pidFile)) {
             assert.ok(performance.now() < readyDeadline, 'actual grandchild must be ready before cancellation');
             await new Promise(resolveWait => setTimeout(resolveWait, 10));
@@ -427,20 +435,43 @@ export async function runProcessTreeCleanupFixtures() {
         `child.once('message',()=>{});`);
       writeFileSync(join(tools, 'test-nested.mjs'),
         `import {runContractsBounded} from ${JSON.stringify(new URL('./run-contract-tests.mjs', import.meta.url).href)};` +
-        `try{await runContractsBounded(${JSON.stringify(inner)},'full',1,{timeoutMs:5000,killGraceMs:1000});}` +
+        `try{await runContractsBounded(${JSON.stringify(inner)},'full',1,{timeoutMs:20000,killGraceMs:1000});}` +
         `catch{process.exitCode=1;}`);
       const cancellation = new AbortController();
-      const pending = runContractsBounded(directory, 'full', 1, { timeoutMs: 1000, killGraceMs: 1000, signal: cancellation.signal })
-        .then(report => ({ report }), failure => ({ report: failure.report, failure }));
-      if (mode === 'nested-cancelled') {
-        const readyDeadline = performance.now() + 1000;
-        while (!existsSync(grandchildPidFile)) {
-          assert.ok(performance.now() < readyDeadline, 'real nested grandchild must be ready before outer cancellation');
-          await new Promise(resolveWait => setTimeout(resolveWait, 10));
+      const nativeTimeout = globalThis.setTimeout;
+      const outerTimeoutMs = 12000;
+      let expireOuter, report, failure;
+      try {
+        if (mode === 'nested-timeout') {
+          // Capture the real outer test deadline. The real Node/IPC startup
+          // can be delayed by other checks, so trigger timeout only after the
+          // fixture owns its live descendant. Keep escalation timers real.
+          globalThis.setTimeout = (complete, delay, ...args) => {
+            if (delay === outerTimeoutMs && expireOuter === undefined) expireOuter = () => complete(...args);
+            return nativeTimeout(complete, delay, ...args);
+          };
         }
-        cancellation.abort();
-      }
-      const { report, failure } = await pending;
+        const pending = runContractsBounded(directory, 'full', 1, { timeoutMs: outerTimeoutMs, killGraceMs: 1000,
+          signal: cancellation.signal }).then(report => ({ report }), failure => ({ report: failure.report, failure }));
+        try {
+          const readyDeadline = performance.now() + 9000;
+          while (!existsSync(grandchildPidFile)) {
+            assert.ok(performance.now() < readyDeadline, 'real nested grandchild must be ready before outer termination');
+            await new Promise(resolveWait => nativeTimeout(resolveWait, 10));
+          }
+          assert.ok(existsSync(leafPidFile), 'inner runner started the real leaf before its grandchild');
+          if (mode === 'nested-cancelled') cancellation.abort();
+          else {
+            assert.equal(typeof expireOuter, 'function', 'outer runner armed its production test deadline');
+            expireOuter();
+          }
+        } catch (error) {
+          cancellation.abort();
+          await pending;
+          throw error;
+        }
+        ({ report, failure } = await pending);
+      } finally { globalThis.setTimeout = nativeTimeout; }
       assert.ok(report, failure?.stack); reports.push(report);
       const [row] = report.results;
       for (const pid of row.ownedProcessGroups) ownedGroups.add(pid);

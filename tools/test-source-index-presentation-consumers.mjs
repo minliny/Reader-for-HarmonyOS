@@ -19,7 +19,7 @@ const {boundedSurfaceSdk,boundedMembers} = await import('./lib/bounded-surface-s
 const {ReaderNativeAlertOwner} = await import('./lib/reader-native-alert-sdk-probe.mjs');
 const {runtimeOwnerIdentityProbe} = await import('./lib/reader-runtime-admission-probe.mjs');
 const {actualSourceManagementGeometry} = await import('./lib/source-management-owner-probe.mjs');
-const { resolveSourceManagementLayout } = await import('../entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts');
+const { resolveSourceManagementLayout, SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP_GAP } = await import('../entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts');
 const { readerReadableFontScale, readerScaledControlHeight } = await import('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts');
 const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
 const { foundationSpecs } = await import('./lib/reader-foundation-control-probe.mjs');
@@ -45,7 +45,9 @@ const jsonMethods = ordinarySourceMethods(jsonSource, 'JsonImportDialog');
 const journeySource=source('features/source/ui/SourceJourneySurface.ets'),journeyModel='features/source/presentation/SourceJourneyPresentation.ets';
 const ordinary=s=>stripTypeScriptTypes(s.replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''));
 const load=(p,n,d={})=>new Function(...Object.keys(d),ordinary(source(p))+`;return ${n};`)(...Object.values(d));
-const ReaderSourceJourney=load('app/composition/ReaderSourceJourney.ets','ReaderSourceJourney');
+const ReaderSourceJourney=load('app/composition/ReaderSourceJourney.ets','ReaderSourceJourney',{
+ ReaderUIVerificationProbe:{enabled:()=>false},
+});
 let installed,sequence=0,cases=0;const Runtime=runtimeOwnerIdentityProbe(()=>installed);
 const facts=load('app/ReaderOperationFacts.ts','{projectOperationFacts,projectCommitReadback}');
 const receipt=load('app/ReaderPersistedReceiptProjection.ts','projectPersistedReceipt',facts),ReaderWriteEvidence=load('app/ReaderWriteEvidence.ts','ReaderWriteEvidence');
@@ -85,7 +87,8 @@ function runtime(){return{rows:[row()],calls:[],lost:false,readFail:0,pause:unde
 function index(r,Presentation=SourceJourneyPresentation){
  const i=createReaderBuilderProbe(indexSource,names,{...sdk.deps,ReaderRuntimeOwner:Runtime,SourceJourneySurface:Child,JsonImportDialog:Child,deviceInfo:{deviceType:'phone'}},
   {...sdk.hooks,childSources:{SourceJourneySurface:journeySource,JsonImportDialog:jsonSource}}).owner;
- Object.assign(i,{route:'source',navigationGeneration:1,detailShelfAdmissionMount:1,mountedRuntimeOwner:r,shelfReceiptRetired:false,rssInstanceIdentity:++sequence,
+ Object.assign(i,{route:'source',navigationGeneration:1,sourceOpeningGeneration:1,sourceToolsOpeningGeneration:0,
+  detailShelfAdmissionMount:1,mountedRuntimeOwner:r,shelfReceiptRetired:false,rssInstanceIdentity:++sequence,
   libraryAcquisition:{currentOwner:()=>Runtime.isCurrent(r)?r:undefined,beginSearch:()=>Runtime.isCurrent(r)},
   searchAppForeground:true,arkWebCapturesInput:false,
   sourceJourney:new Presentation(),navigationOwner:new ReaderNavigation(),settingsPresentation:{snapshot:{reduceMotion:false}},rssJourney:{rssPresentationIdentity:''},rulesPresentation:{identity:''},expandedLayout:()=>false,
@@ -98,6 +101,8 @@ function index(r,Presentation=SourceJourneyPresentation){
  i.publishNavigation=snapshot=>{
   const changed=snapshot.route!==i.route;
   i.navigationGeneration=snapshot.generation;i.route=snapshot.route;
+  if(changed&&snapshot.route==='source')i.sourceOpeningGeneration=snapshot.generation;
+  if(changed&&snapshot.route==='sourceTools')i.sourceToolsOpeningGeneration=snapshot.generation;
   if(changed&&snapshot.route==='sourceTools')routes.push('tools');
   if(changed&&snapshot.route==='search')routes.push('search');
   if(changed&&snapshot.route==='settings')routes.push('back');
@@ -128,7 +133,7 @@ function index(r,Presentation=SourceJourneyPresentation){
  const page=()=>{
   const params=props(),p=sdk.consumer(pageSource,[...new Set(['appThemeScheme','operation','statusKind','statusMessage','onReconcile','onToggleSource','onDetectSource','onLoginSource','onAddSource','onOpenTools','onRetryLoad',
    'onMessageChanged','lastFeedbackIdentity','lastToastMessage','feedbackIdentity','mounted','recovery','sourceRow','sourceLeading','sourceInfo','currentSourceInfo','currentSourceRow','sourceActions','fontScale','layoutBudget','footerActionHeight','footerControlHeight','footerContentWidth','footerStacked','sourceBadgeStatus','sourceBadgeLabel','statusBadge','detectButton','loginButton','sourceSwitch','sourceSwitchValue','sourceSwitchName','sourceToggleBusy','sourceActionEnabled','sourceDetectEnabled','sourceActionLabel','bottomActionBar',
-   'sourceRowIsCurrent','sourceRowCommand','sourceRowToggle','sourceRenderKey','managementBackIsCurrent','managementOpeningIsCurrent',...sourcePageMethods])],{...actualSourceManagementGeometry(),...foundationSpecs(),resolveSourceManagementLayout,readerReadableFontScale,readerScaledControlHeight,...readerTypographyRoles,readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView'),ReaderToggle:Toggle,StatusBadge:Badge,readerSourceCategoryLabel:helpers.readerSourceCategoryLabel},params);
+   'sourceRowIsCurrent','sourceRowCommand','sourceRowToggle','sourceRenderKey','managementBackIsCurrent','managementOpeningIsCurrent','inputEnabled','isInputAllowed','isOpeningCurrent','projectedSources','verificationOpening',...sourcePageMethods])],{...actualSourceManagementGeometry(),...foundationSpecs(),resolveSourceManagementLayout,SOURCE_ROW_ICON_WIDTH,SOURCE_STATUS_CHIP_GAP,readerReadableFontScale,readerScaledControlHeight,...readerTypographyRoles,readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView'),ReaderToggle:Toggle,StatusBadge:Badge,readerSourceCategoryLabel:helpers.readerSourceCategoryLabel,httpUrlHostname:helpers.httpUrlHostname,ReaderUIVerificationProbe:{enabled:()=>false}},params);
   p.sources=params.sources;p.mounted=true;p.appForeground=true;p.groupOpen=false;p.temporaryBackIdentity='source-sdk-visit';p.contentFrame=()=>({width:350});p.actionBottomInset=()=>0;
   const currentSource=()=>{p.projectedSources=read().sources;return p.projectedSources[0];};
   const switchAction=()=>{p.sourceRow(currentSource());const c=[...p.children.values()].findLast(c=>c instanceof Toggle);c.initialRender();const onChange=sdk.nodes(c).find(n=>n.type==='Toggle'&&n.onChange).onChange,next=!c.value;return ()=>onChange(next);};
@@ -167,11 +172,14 @@ if(selectedCase==='toggle-readback-recovery'){
 for(const failure of['read','lost']){
  const r=runtime();installed=r;const a=index(r);await a.open();const p=a.page();if(failure==='read')r.readFail=1;else r.lost=true;
  const toggle=p.switchAction(),badge=sdk.walk(p.p).findLast(actor=>actor instanceof Badge);
- assert.ok(badge,'actual Source row keeps the current semantic StatusBadge actor');assert.deepEqual([badge.status,badge.label],['neutral','未检查']);
+ assert.ok(badge,'actual Source row keeps the current semantic StatusBadge actor');assert.deepEqual([badge.status,badge.label],['unknown','未检查']);
  const badgeFrame=sdk.nodes(badge).find(node=>node.type==='Stack'),mark=sdk.nodes(badge).find(node=>node.type==='Path');
  assert.equal(badgeFrame.accessibilityText,'未检查');assert.ok(mark.commands.length>0,'actual source badge retains its non-color native graphic');
  assert.equal(sdk.nodes(p.p).find(node=>node.type==='Toggle').enabled,true,'actual source switch remains natively eligible');
- toggle();await a.settle();assert.equal(a.read().operation.receipt.receipt.confirmation,failure==='read'?'confirmed':'unknown');
+ assert.equal(p.params.isInputAllowed(),true,'mounted Source owner admits the toggle gesture');
+ assert.equal(p.p.sourceRowIsCurrent(p.p.projectedSources[0],p.p.temporaryBackIdentity),true,'mounted Source row admits its current action');
+ toggle();await a.settle();assert.equal(r.count('source.update'),1,a.read().statusMessage);
+ assert.equal(a.read().operation.receipt.receipt.confirmation,failure==='read'?'confirmed':'unknown');
  const read=a.page().recovery();read();read();await a.settle();assert.equal(r.count('source.update'),1,'actual page native recovery only reads');
  if(failure==='lost'){const b=index(r);await b.open();b.page().switchAction()();await b.settle();assert.equal(r.count('source.update'),1,'same Runtime replacement cannot clear unknown by matching list');}
  cases++;
@@ -224,19 +232,22 @@ if(selectedCase==='attachment-negative-control'){
 
 if(selectedCase==='inline-import-return'){
 {
- const r=runtime();installed=r;const a=index(r);await a.open();let returned=0;
+ const r=runtime();installed=r;const a=index(r);let returned=0;
+ a.i.publishNavigation(a.i.navigationOwner.show('search'));
  a.i.librarySearch.returnFromSourceManagement=keyword=>{assert.equal(keyword,'original');returned++;};
  const importFromSearch=async()=>{
-  if(a.i.route==='search'){a.i.sourceNavigation.openManagement('search','original');await a.settle();}
-  a.i.navigationOwner.returns.setSourceOrigin('settings');
-  a.props().onAddSource();
-  a.i.navigationOwner.returns.setSourceOrigin('search','original');
-  a.json().params.onSelectLocal();await a.settle();
+  assert.equal(a.i.route,'search');
+  a.i.sourceNavigation.openManagement('search','original');await a.settle();
+  a.page().add()();
+  assert.equal(a.i.jsonImportPresentation.opening?.context,'bookSource');
+  a.json().local();await a.settle();
  };
  const inlineAction=()=>{
-  const page=sdk.consumer(pageSource,['appThemeScheme','operation','statusKind','statusMessage','statusActionLabel','statusActionGeneration','onStatusAction','onMessageChanged','feedbackIdentity','lastFeedbackIdentity','lastToastMessage','mounted','recovery','statusAction'],
-   {...actualSourceManagementGeometry(),...foundationSpecs(),resolveSourceManagementLayout,readerReadableFontScale,readerScaledControlHeight,...readerTypographyRoles,readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView')},
+  const page=sdk.consumer(pageSource,['appThemeScheme','operation','statusKind','statusMessage','statusActionLabel','statusActionGeneration','onStatusAction','mounted','appForeground','inputEnabled','isInputAllowed','isOpeningCurrent','groupOpen','temporaryBackIdentity',
+   'hasPendingSourceRecovery','sourceListInputIsCurrent','managementBackIsCurrent','managementOpeningIsCurrent','statusListAction','observeImportStatusAction','statusAction'],
+   {...actualSourceManagementGeometry(),...foundationSpecs(),resolveSourceManagementLayout,readerReadableFontScale,readerScaledControlHeight,...readerTypographyRoles,ReaderUIVerificationProbe:{enabled:()=>false}},
    a.props());
+  Object.assign(page,{mounted:true,temporaryBackIdentity:'source-sdk-inline-result'});
   page.statusAction();
   const button=sdk.walk(page).findLast(c=>c instanceof sdk.deps.ReaderRecoveryAction&&c.label==='重新搜索');
   assert.ok(button,'actual inline source result action');return sdk.nodes(button).find(n=>n.onClick).onClick;

@@ -12,6 +12,7 @@ import { publicAssertionDefinition } from './assertion-contract.mjs';
 import { sourceReadLoadingCase, sourceReadLoadingFrame } from './source-read.mjs';
 import { loadStructureDefinition, resolveStructureBindings, structureRuleOrder } from './structure-contract.mjs';
 import { planCapture } from './capture-plan.mjs';
+import { readCaseRegistrations } from './case-registry.mjs';
 import {
   sourceCategoryNativeChecksValid, sourceCategoryTouchEdgeCase, sourceCategoryTouchFixture,
   sourceFilterEdgeAllowed, sourceFilterEdgeCase, sourceFilterEdgeTarget, sourceGroupOptionEdgeCase, sourceGroupOptionEdgeFixture,
@@ -56,13 +57,11 @@ import { applyReservedTypographyNarrowWindow, isReservedTypographyCase, publicRe
   sourceReservedTypographyNarrowCase, sourceReservedTypographyNarrowFixture, usesReservedNativeToggle } from './source-reserved-typography.mjs';
 
 export const toolRoot = new URL('../', import.meta.url);
-export const phase0CaseIds = Object.freeze(['bookshelf.search-input-ime', 'reading.control-open-motion']);
-export const phase1CaseIds = Object.freeze(JSON.parse(readFileSync(new URL('cases/phase-1.registry.json', toolRoot), 'utf8')));
-export const phase2CaseIds = Object.freeze(JSON.parse(readFileSync(new URL('cases/phase-2.registry.json', toolRoot), 'utf8')));
-export const caseIds = Object.freeze([...phase0CaseIds, ...phase1CaseIds, ...phase2CaseIds]);
+const caseRegistry = readCaseRegistrations(path => JSON.parse(readFileSync(new URL(path, toolRoot), 'utf8')));
+requireEvidence(caseRegistry.issues.length === 0, 'Invalid or duplicated registered case ID');
+export const [phase0CaseIds, phase1CaseIds, phase2CaseIds] = caseRegistry.byPhase.map(ids => Object.freeze(ids));
+export const caseIds = Object.freeze([...caseRegistry.byId.keys()]);
 export const grabberReversalUnavailable = 'Grabber reversal requires a verified UiTest PointerMatrix runner in a separate test bundle, a pinned installation, and dry qualification before dispatch';
-requireEvidence(caseIds.every(id => typeof id === 'string' && /^[a-z][a-z0-9.-]+$/u.test(id)) &&
-  new Set(caseIds).size === caseIds.length, 'Invalid or duplicated registered case ID');
 
 const ownerPath = /^entry\/src\/main\/ets\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+\.(?:ets|ts)$/u;
 const sourceRef = /^(?:entry\/src\/main\/ets\/|tools\/page-structure\/)[A-Za-z0-9._/-]+#[A-Za-z0-9_.:-]+$/u;
@@ -921,7 +920,7 @@ export function loadCase(id) {
   const path = supplemental ? 'lib/source-reserved-typography-366-font-130.json' : `cases/${id}.json`;
   const inputContract = JSON.parse(readFileSync(new URL(path, toolRoot), 'utf8'));
   const contract = validate('case', narrow ? applyReservedTypographyNarrowWindow(inputContract) : inputContract);
-  const registeredPhase = supplemental || phase1CaseIds.includes(id) ? 1 : phase2CaseIds.includes(id) ? 2 : undefined;
+  const registeredPhase = supplemental ? 1 : caseRegistry.byId.get(id)?.phase;
   requireEvidence(contract.id === id && contract.phase === registeredPhase, 'Case file identity differs from its registration');
   if (supplemental || contract.fixture.id === sourceReservedTypographyFixture || usesReservedNativeToggle(contract.fixture.id) ||
       Object.hasOwn(contract.fixture.inputs ?? {}, sourceReservedTypographyInput) ||

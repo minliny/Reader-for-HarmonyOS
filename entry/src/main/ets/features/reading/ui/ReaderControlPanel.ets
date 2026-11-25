@@ -143,8 +143,9 @@ import {
   type ReaderControlContentMeasurer, type ReaderControlContentModule,
 } from './ReaderLayoutGeometry';
 import { ReaderControlPlacement, readerControlAlignment, readerControlDockLeft,
-  type ReaderControlAlignment, type ReaderHoldingHand } from './ReaderControlPlacement';
+  type ReaderControlAlignment } from './ReaderControlPlacement';
 import { subscribeReaderHoldingHand } from '../../../platform/interaction/HarmonyReaderGrip';
+import type { ReaderHoldingHand } from '../../../platform/interaction/ReaderHoldingHand';
 import { TYPE_READER_CONTROL_CHAPTER_TITLE, TYPE_READER_CONTROL_SOURCE_ACTION } from '../../../ui/foundation/ReaderTypography';
 
 import curves from '@ohos.curves';

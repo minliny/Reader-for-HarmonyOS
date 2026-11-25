@@ -370,7 +370,9 @@ function fixture() {
       externalCalls.push(['removeDerived', actualChapter, actualFiles, current]); return await current();
     },
   };
+  const { readerHostFilesDirectory } = await import('../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts');
   const Binding = productionMotionMethods(sourceFile, ['bindMangaStorage'], {
+    readerHostFilesDirectory,
     ReadingBodyImageHost: { instance: body,
       setDisplayCacheDir() { assert.fail('manga storage binding must not replace the ordinary novel cache namespace'); } },
   });

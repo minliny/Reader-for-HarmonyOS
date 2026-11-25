@@ -7,10 +7,12 @@ const { mangaSurfaceSdkDependencies, mountMangaViewportBuilder } = await import(
 const {default: assert} = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {createRequire,stripTypeScriptTypes} = await import('node:module');
-const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
+const {createReaderBuilderProbe,productionReaderMotionSdk} = await import('./lib/reader-control-builder-probe.mjs');
 const {createArkUIPropertyRuntimeProbe} = await import('./lib/arkui-property-runtime-probe.mjs');
 const {createDefaultReaderWindowMetrics,readerInteractiveSafeInsets} = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const {mangaUserError} = await import('../entry/src/main/ets/features/manga/presentation/MangaUserError.ts');
+const {readerPaperPullOffset} = await import('../entry/src/main/ets/features/reading/presentation/ReaderPaperPullMotion.ts');
+const {readerIsExpandedWidth} = await import('../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts');
 
 
 const source=readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets',import.meta.url),'utf8');
@@ -88,16 +90,18 @@ class RetainedItems {
   onDataReloaded(){this.reconcile();}
   onDataChange(index){if(this.visible.includes(index))this.reconcile([index]);}
 }
+const childSources={ReaderSearchField:readFileSync(
+  new URL('../entry/src/main/ets/ui/controls/ReaderSearchField.ets',import.meta.url),'utf8')};
 const built=createReaderBuilderProbe(source,names,{
-  ...properties.sdk,...mangaSurfaceSdkDependencies,MangaStripDataSource:DataSource,ListScroller,Scroller,PhotoViewScaleModel:class {},
-  ReaderWindowCoordinator:{metrics:()=>createDefaultReaderWindowMetrics()},readerInteractiveSafeInsets,mangaUserError,
+  ...properties.sdk,...mangaSurfaceSdkDependencies,...productionReaderMotionSdk(),MangaStripDataSource:DataSource,ListScroller,Scroller,PhotoViewScaleModel:class {},
+  ReaderWindowCoordinator:{metrics:()=>createDefaultReaderWindowMetrics(),isTabletDevice:()=>false},readerInteractiveSafeInsets,mangaUserError,readerPaperPullOffset,readerIsExpandedWidth,
   hilog:{warn(){},error(){}},
   ScrollAlign:{START:0},ImageFit:{Fill:0},ScrollDirection:{Horizontal:0},TouchType:{Down:0,Up:1},
   LazyForEach:{create(_id,generatedOwner,data,item,key){assert.equal(generatedOwner,owner);assert.equal(typeof item,'function');assert.equal(typeof key,'function');
     if(lazy===undefined){lazy=new RetainedItems(data,item,key);data.registerDataChangeListener(lazy);}lazy.reconcile();},pop(){}},
   Gesture:boundary,GestureGroup:boundary,PinchGesture:boundary,SwipeGesture:boundary,TapGesture:boundary,
   GesturePriority:{Parallel:0},GestureMode:{Exclusive:0},SwipeDirection:{Horizontal:0},
-},properties.hooks);
+},{...properties.hooks,childSources,initialParams:{windowChromeActive:true}});
 owner=built.owner;
 assert.match(built.output,/LazyForEach\.create/,'execute the compiler-emitted callback registration');
 const manifest={manifestVersion:'test-v1',pages:Array.from({length:3},(_,ordinal)=>({ordinal,pageId:`page-${ordinal}`,resourceRef:`manga:page-${ordinal}`}))};
@@ -105,7 +109,7 @@ const geometry=new Map(),tiles=new Map(),pages=new Map([[0,{ordinal:0,status:'pe
 owner.controller={tile:(ordinal,index)=>tiles.get(`${ordinal}:${index}`),visiblePages:()=>[...pages.values()],
   chapter:{manifest,chapterTitle:'Fixture'},totalPages:3,displayedOrdinal:0,recoveryRequired:false,savedLocation:null,
   pageGeometry:ordinal=>geometry.get(ordinal),pageAt:ordinal=>manifest.pages[ordinal]};
-owner.viewportWidth=300;owner.viewportHeight=600;
+owner.mounted=true;owner.viewportWidth=300;owner.viewportHeight=600;
 const project=()=>owner.data.projection.publish(manifest,index=>geometry.get(index),undefined,3,index=>manifest.pages[index]);
 const notify=()=>owner.data.notify(project(),0,0);
 const priorGesture=globalThis.Gesture;globalThis.Gesture=boundary;
@@ -137,7 +141,9 @@ assert.equal(listNode.cachedCount,0,'local image sync loading does not preload o
 for(const node of [listNode,scrollNode]){
   assert.ok(node);assert.notEqual(node.enabled,false,'image drag suppression must not disable its scrolling parent');
   assert.notEqual(node.hitTestBehavior,'HitTestMode.None','parent hit testing must remain available');
-  assert.equal(typeof node.onScroll,'function','the existing native scroll callback stays registered');
+  assert.equal(node.enableScrollInteraction,true,'image drag suppression must preserve native scroll admission');
+  assert.equal(typeof node.onDidScroll,'function','the current native post-scroll callback stays registered');
+  assert.equal(typeof node.onScrollStop,'function','the current native scroll-stop callback stays registered');
 }
 assert.equal(typeof listNode.onTouch,'function');
 const touchGeneration=owner.layoutGeneration;

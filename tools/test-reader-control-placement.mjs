@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import {
-  ReaderControlPlacement, readerControlAlignment, readerControlDockLeft, readerHoldingHand,
+  ReaderControlPlacement, readerControlAlignment, readerControlDockLeft,
 } from '../entry/src/main/ets/features/reading/ui/ReaderControlPlacement.ts';
 
 const cases = {
@@ -46,18 +46,18 @@ for (const id of selectContractCases(cases)) {
     assert.equal(readerControlDockLeft(0, 0, 0, 0, 'right'), 0);
   } else if (id === 'grip-settle') {
     const placement = new ReaderControlPlacement();
-    assert.deepEqual(placement.update('center', readerHoldingHand(0), false, 0),
+    assert.deepEqual(placement.update('center', undefined, false, 0),
       { alignment: 'center', settleInMs: 0 });
-    assert.equal(placement.update('center', readerHoldingHand(1), false, 100).alignment, 'center');
-    assert.equal(placement.update('center', readerHoldingHand(2), false, 180).alignment, 'center');
+    assert.equal(placement.update('center', 'left', false, 100).alignment, 'center');
+    assert.equal(placement.update('center', 'right', false, 180).alignment, 'center');
     assert.deepEqual(placement.update('center', 'right', false, 419),
       { alignment: 'center', settleInMs: 1 });
     assert.deepEqual(placement.update('center', 'right', true, 420),
       { alignment: 'center', settleInMs: 0 });
     assert.equal(placement.update('center', 'right', true, 700).alignment, 'center');
     assert.equal(placement.update('center', 'right', false, 700).alignment, 'right');
-    assert.equal(placement.update('left', readerHoldingHand(3), true, 800).alignment, 'right');
-    assert.equal(placement.update('left', readerHoldingHand(16), true, 1050).alignment, 'right');
+    assert.equal(placement.update('left', undefined, true, 800).alignment, 'right');
+    assert.equal(placement.update('left', undefined, true, 1050).alignment, 'right');
     assert.equal(placement.update('left', undefined, false, 1050).alignment, 'left');
     assert.equal(placement.update('right', undefined, true, 1100).alignment, 'left');
     assert.equal(placement.update('right', undefined, false, 1100).alignment, 'right');
@@ -80,8 +80,9 @@ async function gripPort() {
   let enabled = false, rejected = true, callback, removed, attempts = 0;
   const received = [];
   const { subscribeReaderHoldingHand } = pureModuleProbe(readFileSync(source, 'utf8'), 'HarmonyReaderGrip.ets', {
-    readerHarmonyCapabilities: () => ({ grip: enabled }), readerHoldingHand,
+    readerHarmonyCapabilities: () => ({ grip: enabled }),
     motion: {
+      HoldingHandStatus: { LEFT_HAND_HELD: 1, RIGHT_HAND_HELD: 2 },
       on: (type, listener) => {
         assert.equal(type, 'holdingHandChanged');
         attempts += 1;
@@ -99,12 +100,15 @@ async function gripPort() {
   rejected = false;
   const release = subscribeReaderHoldingHand(value => received.push(value));
   callback(1);
+  callback(2);
   callback(3);
-  assert.deepEqual(received, ['left', undefined]);
+  callback(0);
+  callback(16);
+  assert.deepEqual(received, ['left', 'right', undefined, undefined, undefined]);
   release();
   assert.equal(removed, callback);
   callback(2);
-  assert.deepEqual(received, ['left', undefined]);
+  assert.deepEqual(received, ['left', 'right', undefined, undefined, undefined]);
 }
 
 async function dockOwner() {

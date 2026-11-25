@@ -2,15 +2,13 @@ import { ProductionHost, setRuntime } from './lib/reading-entry-owner-probe.mjs'
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
-import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 registerHooks({ resolve(s, c, n) { try { return n(s, c); } catch (e) {
   if (s.startsWith('.') && !s.endsWith('.ts')) return n(`${s}.ts`, c); throw e;
 } } });
+const { currentCachedChapterFeedbackOwners } = await import('./lib/reader-download-feedback-current-owner-probe.mjs');
 const { BookAcquisitionCoordinator } = await import('../entry/src/main/ets/features/reading/application/BookAcquisitionCoordinator.ts');
 const { ReadingSessionFlowGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingSessionFlowGateway.ts');
-const { RemoteReadingFlowGateway, RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
-const evidence = await import('../entry/src/main/ets/features/reading/application/RemoteReadingEvidence.ts');
-const admission = await import('../entry/src/main/ets/features/reading/application/RemoteContentAdmission.ts');
+const { RemoteChapterCacheRefreshError } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r; }); return { promise, resolve }; };
 const session = { identity: { sourceId: 's', bookId: 'b' }, sourceVersion: 'v1', acquisitionMode: 'online',
@@ -61,38 +59,41 @@ for (const mode of ['success', 'decline', 'leave', 'rules-changed']) {
   });
   const owner = { request: (...args) => coordinator.request(...args), bookAcquisitions: () => coordinator };
   setRuntime(owner);
-  const Index = productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url),
-    ['refreshCachedChapterFromPrompt','bindReadingEntryReader'], { ReadingEntryHost:ProductionHost, EMPTY_READABLE_ADMISSION:{adding:false,cancelling:false,generation:0},...evidence, ...admission, RemoteReadingFlowGateway,
-      ReaderRuntimeOwner: { current: () => owner }, errorMessageOf: e => e.message });
-  const failures = [];
-  const page = Object.assign(new Index(), { mountedRuntimeOwner:owner,shelfReceiptRetired:false,detailShelfAdmissionMount:1,readingEntryScopeId:-1,detailReadableAdmission:()=>({adding:false,cancelling:false,generation:0}),route:'detail',detailToc:session.entries,detailBook:{sourceId:'s',bookId:'b',sourceName:'书源',title:'书',author:'作者'},remoteReadingSession:session,shelfOperation:{generation:0,removalKey:'',busy:false},navigationGeneration: 1, remoteContentVerdict: 'readable',
-    showReadingFailure: (...args) => failures.push(args),
-    installRemoteReadingSession: value => { page.remoteReadingSession = value; },
-    getUIContext: () => ({ showAlertDialog() { assert.fail('cache verification is nonmodal'); } }),
-  });
-  page.bindReadingEntryReader();
+  const host = ProductionHost.forRuntime(owner);
+  const failures = [], feedback = [], notices = [];
+  const { entry, receiver } = currentCachedChapterFeedbackOwners(owner, host, { get live() { return current; } }, feedback, notices);
+  Object.assign(entry, { book: { ...session.identity, ...session.book, sourceName: '书源' }, session,
+    toc: session.entries, verdict: 'readable' });
+  receiver.getUIContext = () => ({ showAlertDialog() { assert.fail('cache verification is nonmodal'); } });
+  entry.bindReader(owner, { current: () => current, projectionVisible: () => true,
+    membership: () => ({ generation: 0, blocked: false, value: false }), refreshShelf() {},
+    notice: (...args) => failures.push(args), cacheDecision: receiver.chooseCachedChapterRefresh });
   const cacheError = new RemoteChapterCacheRefreshError(session, 0, undefined, false);
-  const probe = await page.refreshCachedChapterFromPrompt(cacheError, () => current);
+  const probe = await host.recoverCachedChapter(entry.scopeId, cacheError, () => current);
   assert.equal(probe, undefined); assert.equal(calls.length, 0, 'a background probe never refreshes content');
-  assert.equal(page.indexRecoveryNotice.visible, true);
+  assert.equal(entry.recoveryNotice.visible, true);
+  assert.equal(notices.length, 1);
   if (mode === 'decline') { coordinator.close(); continue; }
-  // The real inline action admits this exact error before entering this existing lane.
-  page.remoteCacheRefreshConsent = cacheError;
-  const result = page.refreshCachedChapterFromPrompt(cacheError, () => current);
+  let result;
+  const recover = host.recoverCachedChapter.bind(host);
+  host.recoverCachedChapter = (...args) => { result = recover(...args); return result; };
+  entry.retryRecoveryNotice(entry.recoveryNotice.generation);
+  assert.ok(result, 'only the real inline action starts the accepted refresh');
   await tick();
+  assert.equal(calls.filter(method => method === 'chapter.content').length, 1);
   if (mode === 'leave') current = false;
   if (mode === 'rules-changed') await coordinator.request('replace-rule.put', {});
   gate.resolve();
   const selected = await result;
   if (mode === 'success') {
     assert.equal(selected, 0, 'an explicitly accepted refresh cannot cancel itself');
-    assert.equal(page.remoteContentVerdict, 'readable');
-    assert.equal(page.remoteReadingSession.preparedChapter.projectionRevision, coordinator.readingProjectionRevision());
+    assert.equal(entry.verdict, 'readable');
+    assert.equal(entry.session.preparedChapter.projectionRevision, coordinator.readingProjectionRevision());
     assert.equal(failures.length, 0);
+    assert.equal(feedback.length, 0);
   } else {
     assert.equal(selected, undefined, mode);
-    assert.equal(page.remoteReadingSession.preparedChapter, undefined, `${mode}: no stale prepared body may be installed`);
-    if (mode === 'decline') assert.equal(calls.length, 0);
+    assert.equal(entry.session.preparedChapter, undefined, `${mode}: no stale prepared body may be installed`);
   }
   coordinator.close();
 }

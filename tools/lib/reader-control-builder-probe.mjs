@@ -10,7 +10,11 @@ import { ReaderNavigation } from '../../entry/src/main/ets/app/navigation/Reader
 import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import * as directoryVisual from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
 import * as directoryChrome from '../../entry/src/main/ets/ui/foundation/ReaderDirectoryChromeVisual.ts';
-import { READER_FONT_NOTO_SERIF_SC_BOLD } from '../../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import {
+  READER_FONT_NOTO_SERIF_SC_BOLD,
+  READER_FONT_NOTO_SANS_SC_UI_BOLD,
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+} from '../../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 import * as directoryGeometry from '../../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts';
 import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import assert from 'node:assert/strict';
@@ -48,9 +52,9 @@ export function productionReaderMotionSdk() {
   const curves = { cubicBezierCurve: (...points) => points };
   const Curve = new Proxy({}, { get: (_target, name) => `Curve.${String(name)}` });
   const motion = loadMotionSource('MotionSpec', { ...motionTiming, curves, Curve,
-    MANGA_DIRECTORY_VISUAL: directoryChrome.DIRECTORY_CHROME_VISUAL }, ['motionAnimateParam', 'motionSpecGet']);
+    MANGA_DIRECTORY_VISUAL: directoryChrome.DIRECTORY_CHROME_VISUAL }, ['motionAnimateParam', 'motionSpecGet', 'readerMotionStandardCurve']);
   const policy = loadMotionSource('ReaderMotionPolicy', { ...motion, collapseMotionDurationMs },
-    ['readerMotionAnimateParam', 'readerMotionReducedFadeParam']);
+    ['readerMotionAnimateParam', 'readerMotionReducedFadeParam', 'readerMotionDurationMs']);
   return { ...motion, ...policy };
 }
 
@@ -383,11 +387,12 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     const hostDependencies = { ...dependencies };
     if (name === 'ReaderReadingTopBar') {
       const title = tree.statements.find(statement => ts.isClassDeclaration(statement) && statement.name?.text === 'ReaderReadingTopBarTitle');
-      hostDependencies.ReaderReadingTopBarTitle = new Function('readerAppColor', 'mangaDirectoryColor', 'READER_FONT_NOTO_SERIF_SC_BOLD',
+      hostDependencies.ReaderReadingTopBarTitle = new Function('readerAppColor',
+        'READER_FONT_NOTO_SANS_SC_UI_BOLD', 'READER_FONT_NOTO_SANS_SC_UI_REGULAR',
         'FontWeight', 'TextOverflow', 'TextAlign', ...Object.keys(readerTypographyRoles),
         `${stripTypeScriptTypes(title.getText(tree).replace(/^export /, ''))}; return ReaderReadingTopBarTitle;`)(
-        readerAppColor, directoryChrome.mangaDirectoryColor, READER_FONT_NOTO_SERIF_SC_BOLD,
-        { Bold: 'FontWeight.Bold' }, { Ellipsis: 'TextOverflow.Ellipsis' }, { Start: 'TextAlign.Start' }, ...Object.values(readerTypographyRoles));
+        readerAppColor, READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+        { Bold: 'FontWeight.Bold', Regular: 'FontWeight.Regular' }, { Ellipsis: 'TextOverflow.Ellipsis' }, { Start: 'TextAlign.Start' }, ...Object.values(readerTypographyRoles));
     }
     const host = createReaderBuilderProbe(definition, declaration.members.filter(member => member.name)
       .map(member => member.name.getText(tree)), hostDependencies, { ...hooks, componentName: name });
@@ -738,11 +743,13 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     const resolvers = pureModuleProbe(readFileSync(new URL('../../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts', import.meta.url), 'utf8'),
       'ReaderSurfaceResolvers.ts', {}, ['readerReadableFontScale']);
     const measurement = pureModuleProbe(header.slice(0, header.indexOf('@Component')), 'ReaderReadingTopBarMeasure.ets', {
-      ...readerTypographyRoles, ...resolvers, readerWindowMetrics: globals.readerWindowMetrics, READER_FONT_NOTO_SERIF_SC_BOLD,
+      ...readerTypographyRoles, ...resolvers, readerWindowMetrics: globals.readerWindowMetrics,
+      READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_REGULAR,
       readerFontFamilyReady: globals.readerFontFamilyReady,
     }, ['readerReadingTopBarHeight','readerReadingTopBarFontsReady']);
     globals.readerReadingTopBarHeight ??= measurement.readerReadingTopBarHeight;
     globals.readerReadingTopBarFontsReady ??= measurement.readerReadingTopBarFontsReady;
+    globals.readerReadableFontScale ??= resolvers.readerReadableFontScale;
   }
 
   globals.ReaderPressFeedback ??= productionReaderPressFeedback({ Color: globals.Color, ColorMetrics: globals.ColorMetrics });

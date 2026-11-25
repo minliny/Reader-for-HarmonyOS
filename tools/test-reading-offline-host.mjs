@@ -4,10 +4,21 @@ async function run(id){
 
 const { registerHooks }=await import('node:module');
 registerHooks({resolve(s,c,next){try{return next(s,c);}catch(e){if((s.startsWith('./')||s.startsWith('../'))&&!s.endsWith('.ts'))return next(s+'.ts',c);throw e;}}});
-const {ReadingOfflineHost}=await import(id.startsWith('sdk-') ? './lib/reader-reading-owner-sdk-probe.mjs' : '../entry/src/main/ets/features/reading/application/ReadingOfflineHost.ts');
 const {readingDirectoryRecovery}=await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts');
 const {ReadingOfflineGateway}=await import('../entry/src/main/ets/features/reading/application/ReadingOfflineGateway.ts');
 const {ReadingOfflineMaterializationError}=await import('../entry/src/main/ets/features/reading/application/ReadingOfflineContract.ts');
+const offlineHostFile = new URL('../entry/src/main/ets/features/reading/application/ReadingOfflineHost.ts', import.meta.url);
+async function loadSdkOfflineHost() {
+  const {readFileSync}=await import('node:fs');
+  const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
+  const {ReaderWriteEvidence}=await import('../entry/src/main/ets/app/ReaderWriteEvidence.ts');
+  const {projectPersistedReceipt}=await import('../entry/src/main/ets/app/ReaderPersistedReceiptProjection.ts');
+  const {MangaDownloadActionsGateway}=await import('../entry/src/main/ets/features/manga/application/MangaDownloadActionsGateway.ts');
+  return pureModuleProbe(readFileSync(offlineHostFile,'utf8'),'ReadingOfflineHost.ts',{
+    ReaderWriteEvidence,projectPersistedReceipt,ReadingOfflineGateway,MangaDownloadActionsGateway,
+  },['ReadingOfflineHost']);
+}
+const {ReadingOfflineHost}=id.startsWith('sdk-') ? await loadSdkOfflineHost() : await import(offlineHostFile.href);
 const clone=structuredClone,tick=()=>new Promise(r=>setImmediate(r));
 const defer=()=>{let resolve;return {promise:new Promise(r=>resolve=r),resolve:()=>resolve()};};
 function fixture(){let route=true,owner=true,entries=[{index:0,title:'Chapter',level:2,downloadState:'missing',bookmarks:[{time:4}]}];const delivered=[];

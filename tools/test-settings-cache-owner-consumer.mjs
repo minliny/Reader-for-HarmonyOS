@@ -9,14 +9,19 @@ const { stripTypeScriptTypes, createRequire }=await import('node:module');
 const { ReaderWriteEvidence }=await import('../entry/src/main/ets/app/ReaderWriteEvidence.ts');
 const { projectOperationFacts }=await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
 const { readerRecoveryView }=await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
+const { READER_FEEDBACK_EXTENDED_MS }=await import('../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts');
 const { ReaderNativeAlertOwner }=await import('./lib/reader-native-alert-sdk-probe.mjs');
 const { ReaderCoreRequestError, isReaderCoreTransactionPendingError }=await import('../entry/vendor/core-harmony/sdk/reader_core.ts');
+const { readerHostFilesDirectory }=await import('../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts');
 const { runtimeOwnerIdentityProbe }=await import('./lib/reader-runtime-admission-probe.mjs');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
 const { createReaderBuilderProbe }=await import('./lib/reader-control-builder-probe.mjs');
 const { boundedSurfaceSdk }=await import('./lib/bounded-surface-sdk-probe.mjs');
+const { pureModuleProbe }=await import('./lib/ets-pure-module-probe.mjs');
 const {fixture: generalSettingsFixture,defaults}=await import('./lib/general-settings-persistence-probe.mjs');
 const file=name=>new URL('../entry/src/main/ets/'+name,import.meta.url),source=name=>readFileSync(file(name),'utf8');
+const { emptyReaderAppBuildInfo }=pureModuleProbe(source('platform/bundle/ReaderAppBuildInfo.ts'),
+ 'ReaderAppBuildInfo.ts',{},['emptyReaderAppBuildInfo']);
 const CacheFeedback=productionMotionMethods(file('features/settings/ui/SettingsPage.ets'),['feedbackMessage']);
 const inlineMessage=snapshot=>Object.assign(new CacheFeedback(),{cacheCleanup:snapshot,resetMessage:'',recovery:()=>({visible:false})}).feedbackMessage();
 const ordinary=text=>stripTypeScriptTypes(text.replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^@Observed\n/gm,'').replace(/^export /gm,''));
@@ -39,7 +44,7 @@ function fixture(mode='valid'){
   AtomicFile:class {startWrite(){return{on(){},end:(value,_encoding,callback)=>{this.raw=value;queueMicrotask(callback);}};}finishWrite(){raw=this.raw;}failWrite(){}}};
  const replaceReaderAtomicSnapshot=load('app/ReaderAtomicSnapshotFile.ts','replaceReaderAtomicSnapshot',{fileIo});
  ActualCacheStore=load('features/reading/application/ReadingOperationIntents.ts','CacheClearOperationIntentStore',{
-  fileIo,replaceReaderAtomicSnapshot,ReaderRuntimeOwner:Runtime,ReaderCoreRequestError,isReaderCoreTransactionPendingError,
+  fileIo,replaceReaderAtomicSnapshot,readerHostFilesDirectory,ReaderRuntimeOwner:Runtime,ReaderCoreRequestError,isReaderCoreTransactionPendingError,
   util:{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`}});
  const runtime={getUIAbilityContext:()=>({filesDir:'/cache-fixture'}),async request(method,params,options){
   if(method==='cache.storage.summary')return{data:good()};
@@ -113,20 +118,24 @@ function fixture(mode='valid'){
  const declaration=tree.statements.find(node=>node.members&&node.members.some(member=>member.name?.getText(tree)==='build'));
  const names=[...declaration.members.filter(node=>ts.isPropertyDeclaration(node)).map(node=>node.name.getText(tree)),
   'cacheActionRow','cacheActionLabel','requestClearTextCache','clearTextCache','canClearTextCache',
-  'generalConfirmationCurrent','settingsNavigationCurrent','onCacheCleanupChanged','onSnapshotChanged','syncSnapshotValues',
+  'generalConfirmationCurrent','settingsNavigationCurrent','settingsInputIsCurrent','onCacheCleanupChanged','onSnapshotChanged','syncSnapshotValues',
   'onOperationChanged','operationFeedbackIdentity','cacheFeedbackIdentity','showFeedbackToast','hasPendingSettings','hasPendingCleanup','recovery'];
- function props(){const scene=createReaderBuilderProbe(source('app/composition/SettingsScenes.ets'),['settings'],{SettingsPage:Child},{childSources:{SettingsPage:pageSource}}).owner;
+ function props(){const scene=createReaderBuilderProbe(source('app/composition/SettingsScenes.ets'),['settings','inputIsCurrent'],{SettingsPage:Child},{childSources:{SettingsPage:pageSource}}).owner;
   Object.assign(scene,{route:index.route,section:'general',presentation,expandedLayout:false});
   scene.settings(presentation.identity);return [...scene.children.values()][0].params;}
  function page(identity='settings-back:test'){
-  const params=props(),owner=sdk.consumer(pageSource,names,{ReaderRuntimeOwner:Runtime,ReaderNativeAlertOwner,readerRecoveryView},params);
+  const params=props(),owner=sdk.consumer(pageSource,names,{ReaderRuntimeOwner:Runtime,ReaderNativeAlertOwner,
+   readerRecoveryView,emptyReaderAppBuildInfo,READER_FEEDBACK_EXTENDED_MS},params);
   const dialogs=[];
   Object.assign(owner,{mounted:true,themeOwner:runtime,temporaryBackIdentity:identity,appThemeScheme:'day',
    lastOperationFeedback:owner.operationFeedbackIdentity(),lastCacheFeedback:owner.cacheFeedbackIdentity(),
    transientFeedback:{show(_context,options,current){if(current())notices.push(options.message);}},
    getUIContext:()=>({showAlertDialog:options=>dialogs.push(options)})});
   owner.onCacheCleanupChanged();owner.cacheActionRow();
-  const row=()=>sdk.nodes(owner).find(node=>node.type==='Button'&&node.accessibilityText==='缓存清理');
+  const row=()=>{
+   const label=owner.cacheActionLabel();
+   return sdk.nodes(owner).find(node=>node.type==='Button'&&node.accessibilityText===(label==='清理'?'清理文字缓存':label));
+  };
   return{owner,dialogs,row,confirm(){row().onClick();dialogs.at(-1)?.secondaryButton.action();},label:()=>{owner.replay();return sdk.nodes(owner).find(node=>node.type==='Text'&&node.create===owner.cacheActionLabel())?.create;},
    update(){owner.updateStateVars({...props()});owner.onCacheCleanupChanged();owner.replay();}};
  }
@@ -143,7 +152,9 @@ if(id==='confirmation'){
 }
 if(id==='confirmed'){
 {
- const f=fixture(),p=f.page();assert.equal(p.owner.cacheActionLabel(),'清理文字缓存');p.confirm();p.confirm();await until(()=>f.snapshot()?.confirmation==='confirmed');p.update();
+ const f=fixture(),p=f.page();assert.equal(p.owner.cacheActionLabel(),'清理');assert.equal(p.row().accessibilityText,'清理文字缓存');
+ p.confirm();assert.equal(p.dialogs.length,1,'current native action presents the cleanup confirmation');p.confirm();
+ await until(()=>f.snapshot()!==undefined&&!f.snapshot().busy);p.update();
  assert.equal(f.calls.length,1);assert.equal(p.owner.cacheActionLabel(),'已清理');assert.equal(p.label(),'已清理');assert.equal(f.snapshot().operation.value.removedContentBytes,10);
  assert.equal(f.snapshot().operation.fact,'current');assert.equal(f.snapshot().operation.canRetry,false);
  assert.equal(f.notices.length,1,'a confirmed result produces one transient feedback');

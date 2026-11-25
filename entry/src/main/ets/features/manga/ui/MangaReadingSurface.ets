@@ -2351,7 +2351,7 @@ export struct MangaReadingSurface {
             if (this.previousChapterPixels.length > 0) { this.retainedChapterPixels(); }
             if (this.opened && this.showPageNumbers && !this.chapterEnd && !this.boundaryBusy) this.pageBadge();
             if (this.controlsPresentedForWindow() && !this.boundaryBusy) {
-              this.readerChrome(this.interactiveInsets(this.windowMetricsRevision));
+              this.readerChrome();
             }
             this.refreshProgress();
             this.recoveryOverlay();
@@ -2550,20 +2550,36 @@ export struct MangaReadingSurface {
         })));
   }
   @Builder
-  private readerChrome(insets: ReaderInsetsVp) {
+  private readerChrome() {
     Column() { this.topControls(); }
-      .width(`calc(100% - ${insets.left + insets.right}vp)`)
-      .position({ left: insets.left, top: insets.top })
+      .width(this.topControlsWidth())
+      .position(this.topControlsPosition())
       .hitTestBehavior(HitTestMode.Default).touchable(false);
     if (this.bottomControlViewportHeight() > 12) {
       Scroll() { this.bottomControls(); }
-        .width(this.dockWidth(insets)).height(this.bottomControlViewportHeight() - 12)
-        .position({ left: (this.viewportWidth - this.dockWidth(insets) + insets.left - insets.right) / 2,
-          bottom: insets.bottom + 12 })
+        .width(this.dockWidth(this.interactiveInsets(this.windowMetricsRevision)))
+        .height(this.bottomControlViewportHeight() - 12)
+        .position(this.bottomControlsPosition())
         .hitTestBehavior(HitTestMode.Default)
         .enableScrollInteraction(this.bottomControlViewportHeight() < this.dockHeight() + 12)
         .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None);
     }
+  }
+
+  private topControlsWidth(): string {
+    const insets = this.interactiveInsets(this.windowMetricsRevision);
+    return `calc(100% - ${insets.left + insets.right}vp)`;
+  }
+
+  private topControlsPosition(): Edges {
+    const insets = this.interactiveInsets(this.windowMetricsRevision);
+    return { left: insets.left, top: insets.top };
+  }
+
+  private bottomControlsPosition(): Edges {
+    const insets = this.interactiveInsets(this.windowMetricsRevision);
+    return { left: (this.viewportWidth - this.dockWidth(insets) + insets.left - insets.right) / 2,
+      bottom: insets.bottom + 12 };
   }
 
   @Builder

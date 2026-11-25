@@ -1,17 +1,12 @@
 import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass.ts';
+import type { ReaderHoldingHand } from '../../../platform/interaction/ReaderHoldingHand.ts';
 
 export type ReaderControlAlignment = 'left' | 'center' | 'right';
-export type ReaderHoldingHand = 'left' | 'right' | undefined;
 
 const GRIP_SETTLE_MS = 240;
 
 export function readerControlAlignment(value: string | undefined): ReaderControlAlignment {
   return value === 'left' || value === 'right' ? value : 'center';
-}
-
-/** Unknown, both hands and an unheld device use the local preference. */
-export function readerHoldingHand(status: number): ReaderHoldingHand {
-  return status === 1 ? 'left' : status === 2 ? 'right' : undefined;
 }
 
 export interface ReaderControlPlacementUpdate {

@@ -143,7 +143,9 @@ export class ReaderContentSearchPublication {
     const first = gateway.searchContentPage(bookId, keyword, limit, 0, current);
     // Admit one scope observation with the first page. Cache writes do not
     // publish a new search revision or change the existing result list.
-    void Promise.all([first, cacheScope]).then(([page, scope]): void => {
+    void Promise.all([first, cacheScope]).then((results): void => {
+      const page = results[0];
+      const scope = results[1];
       if (!current()) { this.releasePage(gateway, page); return; }
       this.cursor = page.nextCursor;
       this.publish(page.results.length === 0 ? { kind: 'empty', keyword, cacheScope: scope } : {

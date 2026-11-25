@@ -42,6 +42,8 @@ export function readerSurfaceSpecsForProbe(metrics = { densityPixels: 1 }) {
     readerFonts.READER_FONT_NOTO_SANS_SC_UI_BOLD);
 }
 const specs = readerSurfaceSpecsForProbe();
+const actionIconSource = stripped(read('ui/foundation', 'ReaderActionIconResources'));
+const actionIcons = new Function('$r', `${actionIconSource}; return { readerActionIcon, readerPaperActionIcon };`)(name => name);
 // Finite native color port for the actual per-book SVG stroke actor. Channel
 // values come from the registry; this records the native constructor inputs,
 // and does not simulate SVG rasterization or claim device pixel acceptance.
@@ -70,7 +72,7 @@ export function boundedSurfaceSdk(options={}){
   const ReaderMenuActionView=classOf(childSources.ReaderActionMenuSurface,'ReaderMenuActionView',{});
   const nativePan = options.panGesture ?? new Proxy({}, {get:()=>()=>{}});
   const nativeGesture = new Proxy({}, {get:()=>()=>{}});
-  const deps={...properties.sdk,readerWindowMetrics:options.windowMetrics??(()=>({systemFontScale:1})),...specs,...readerFoundationTokens,...typography,...readerFonts,readerAppColor,ReaderInsetsVp,ReaderMenuActionView,
+  const deps={...properties.sdk,readerWindowMetrics:options.windowMetrics??(()=>({systemFontScale:1})),...specs,...readerFoundationTokens,...typography,...readerFonts,...actionIcons,readerAppColor,ReaderInsetsVp,ReaderMenuActionView,
     readerReadableFontScale,readerScaledControlHeight,
     ColorMetrics:boundedColorMetrics,ColorFilter:BoundedColorFilter,
     PanGesture:nativePan, PanDirection:{Vertical:'vertical'}, GesturePriority:{Low:'low'},

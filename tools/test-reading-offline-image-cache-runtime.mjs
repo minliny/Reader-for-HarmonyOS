@@ -11,6 +11,7 @@ const { createHash }=await import('node:crypto');
 const { stripTypeScriptTypes }=await import('node:module');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
 const { createMangaAtomicPayloadReaderFixture, createMangaAtomicPayloadBindingFixture, checkMangaAtomicPayloadSdk }=await import('./lib/manga-atomic-payload-probe.mjs');
+const { readerHostFilesDirectory } = await import('../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts');
 
 if(id.startsWith('worker-'))checkMangaAtomicPayloadSdk();
 
@@ -107,9 +108,9 @@ const atomicReadHooks = {};
 const readMangaAtomicPayload = createMangaAtomicPayloadReaderFixture(io, atomicReadHooks);
 class MaterializationError extends Error {}
 const Cache = new Function('fileIo', 'statfs', 'cryptoFramework', 'util', 'canonicalReadingImageBaseUrl',
-  'assertReadingOfflineWriteCapacity', 'ReadingOfflineMaterializationError', 'readMangaAtomicPayload', `${executable}\nreturn ReadingImageDiskCache;`)(
+  'assertReadingOfflineWriteCapacity', 'ReadingOfflineMaterializationError', 'readMangaAtomicPayload', 'readerHostFilesDirectory', `${executable}\nreturn ReadingImageDiskCache;`)(
   io, { getFreeSize: async () => 1e9 }, crypto, util, canonicalBase,
-  (free, bytes, reserve) => { if (free < bytes + reserve) throw new Error('storage_full'); }, MaterializationError, readMangaAtomicPayload,
+  (free, bytes, reserve) => { if (free < bytes + reserve) throw new Error('storage_full'); }, MaterializationError, readMangaAtomicPayload, readerHostFilesDirectory,
 );
 const root = await fs.mkdtemp(join(tmpdir(), 'reader-image-cache-'));
 const cache = new Cache({ filesDir: root });

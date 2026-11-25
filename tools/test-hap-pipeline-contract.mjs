@@ -75,9 +75,12 @@ try {
 const guardFixture = mkdtempSync(join(tmpdir(), 'reader-hap-guard-test-'));
 try {
   const profile = '{}';
+  const appIdentity = JSON.stringify({ fixture: 'app-build-identity' });
   writeFileSync(resolve(guardFixture, 'build-profile.json5'), profile);
+  writeFileSync(resolve(guardFixture, '.reader-app-build.json'), appIdentity);
   writeFileSync(resolve(guardFixture, '.reader-pipeline-session.json'), JSON.stringify({
     token: 'test-token', profileSha256: createHash('sha256').update(profile).digest('hex'),
+    appIdentitySha256: createHash('sha256').update(appIdentity).digest('hex'),
   }), { mode: 0o600 });
   const env = { READER_HAP_PIPELINE_ROOT: guardFixture, READER_HAP_PIPELINE_TOKEN: 'test-token' };
   for (const task of ['assembleHap', ':entry:assembleHap', 'entry:default@PackageHap', 'default@SignHap', 'assembleApp']) {
@@ -96,6 +99,9 @@ try {
     'an IDE signing session must never bypass an invalid canonical marker');
   assert.throws(() => assertReaderHapInvocation(['assembleHap'], undefined, guardFixture, {}), /pipeline/,
     'raw packaging without a configured private signing session remains blocked');
+  writeFileSync(resolve(guardFixture, '.reader-app-build.json'), JSON.stringify({ fixture: 'changed' }));
+  assert.throws(() => assertCanonicalHapInvocation(['assembleHap'], guardFixture, env), /pipeline/);
+  writeFileSync(resolve(guardFixture, '.reader-app-build.json'), appIdentity);
   writeFileSync(resolve(guardFixture, 'build-profile.json5'), '{"changed":true}');
   assert.throws(() => assertCanonicalHapInvocation(['assembleHap'], guardFixture, env), /pipeline/);
 } finally { rmSync(guardFixture, { recursive: true, force: true }); }
@@ -299,6 +305,11 @@ try {
     scopePolicies: { 'search-return-runtime': { timeoutMs: 120000, failFast: true, layers: [{ id: 'fixture', tests: ['test-selected.mjs'],
       proves: 'Runs the real selected runtime-policy fixture.', doesNotProve: 'No native ICU responsiveness or full-suite acceptance.' }] } } };
   writeFileSync(join(scoped, 'tools/contract-test-tiers.json'), JSON.stringify(classification));
+  writeFileSync(join(scoped, 'tools/contract-case-manifest.json'), JSON.stringify({
+    schemaVersion: 1, files: {}, legacy: {
+      'test-selected.mjs': { resources: [] }, 'test-omitted.mjs': { resources: [] },
+    },
+  }));
   mkdirSync(join(scoped, 'scripts'));
   copyFileSync(new URL('../scripts/hap-pipeline.mjs', import.meta.url), join(scoped, 'scripts/hap-pipeline.mjs'));
   copyFileSync(new URL('./hap-contract-evidence-policy.json', import.meta.url), join(scoped, 'tools/hap-contract-evidence-policy.json'));
@@ -464,7 +475,7 @@ try {
     'tested source snapshot must be captured before the selected gate');
   assert.match(pipeline, /source inputs during contracts/); assert.match(pipeline, /contract toolchain inputs during contracts/);
   assert.match(pipeline, /contract toolchain inputs'\)/);
-  assert.match(pipeline, /nativeProvenanceArguments\(\), '--preflight'/);
+  assert.match(pipeline, /nativeProvenanceArguments\(nativeEnvironment\), '--preflight'/);
   assert.match(pipeline, /assertSigningMaterialAuthority\(signingProfile/);
   assert.match(pipeline, /'--no-daemon', '--no-incremental'/);
   console.log('PASS scoped HAP contracts: actual children, full inventory, early argv rejection, exact receipt/log/input binding and tamper rejection');

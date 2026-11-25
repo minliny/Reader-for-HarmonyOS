@@ -6,6 +6,7 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 import * as appearance from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
 import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceStore.ts';
 import { ReaderDocumentPickerActivity } from '../entry/src/main/ets/platform/ReaderDocumentPickerActivity.ts';
+import * as publicFixtureScope from '../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts';
 const definitions = {
   'font-boundary': { description: 'Full Host bounded import, cleanup, live retirement guard; actual Gateway/Store durable replacement', resources: [] },
   'font-handoff': { description: 'Full Host/Gateway/Store/FontLoadHost: pending A/B/A, actual async file port, checked receipt, cold registration', resources: [] },
@@ -43,6 +44,7 @@ function fixture(cached = false) {
   const native = async () => { state.nativeLoads++; if (state.failLoad) throw Error('native font rejected'); };
   const fontLoad = cached ? load('ui/platform/ReaderFontLoadHost.ts', { '@ohos.graphics.text': { default: { FontCollection: { getGlobalInstance: () => ({ loadFontWithCheck: native }) } } } }) : { loadReaderFontChecked: native };
   const { ReaderCustomFontHost: Host } = load('app/ReaderCustomFontHost.ts', {
+    './diagnostics/ReaderPublicFixtureScope': publicFixtureScope,
     '../platform/ReaderDocumentPickerActivity': { ReaderDocumentPickerActivity }, '../ui/platform/ReaderFontLoadHost': fontLoad,
     '@ohos.file.fs': { default: io }, '@ohos.file.picker': { default: { DocumentSelectOptions: class {}, DocumentViewPicker: class { async select() { return [provider]; } } } },
     '@ohos.file.fileuri': { default: { FileUri: class { constructor(uri) { this.name = uri.split('/').at(-1); } } } },

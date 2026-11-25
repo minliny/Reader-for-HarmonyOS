@@ -1,6 +1,12 @@
 import lazy { motion } from '@kit.MultimodalAwarenessKit';
 import { readerHarmonyCapabilities } from '../../app/HarmonyCapabilityProbe';
-import { readerHoldingHand, type ReaderHoldingHand } from '../../features/reading/ui/ReaderControlPlacement';
+import type { ReaderHoldingHand } from './ReaderHoldingHand';
+
+function readerHoldingHand(status: motion.HoldingHandStatus): ReaderHoldingHand {
+  if (status === motion.HoldingHandStatus.LEFT_HAND_HELD) return 'left';
+  if (status === motion.HoldingHandStatus.RIGHT_HAND_HELD) return 'right';
+  return undefined;
+}
 
 /** Registration verifies device support and the system-granted permission. */
 export function subscribeReaderHoldingHand(publish: (hand: ReaderHoldingHand) => void): (() => void) | undefined {

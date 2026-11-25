@@ -118,6 +118,8 @@ console.log('PASS changed catalog or malformed commit receipt is rejected; old o
 
 // Execute current MangaSourceSwitchPresentation, ReaderSourceSwitchJourney and entry owners.
 const indexFile=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
+const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+const SettingsPane=selectedProductionMethods(indexFile,'Index',['wideSettingsPane']);
 function deferred(){let resolve;const promise=new Promise(yes=>{resolve=yes;});return {promise,resolve};}
 const selectionTarget={...target,book:{title:'Target Manga',author:'Target Author',kind:'comic'},entries:[
  {index:2,title:'Volume One',url:'/volume',navigable:false,level:1},
@@ -177,6 +179,7 @@ function selectionFixture(mode='success',catalog=selectionTarget){
   assert.deepEqual([seed.sourceId,seed.bookId],['target','b']);assert.equal(admission.isCurrent(),true);return catalog;
  }});
  const x=mangaCurrentJourney({runtime,book:original,session:originalSession,toc:originalToc,candidate,messages,onRefresh:()=>refresh++});
+ Object.assign(x.callbacks,{wideSettingsPane:SettingsPane.prototype.wideSettingsPane,expandedLayout:()=>false});
  const preparation=x.host.mangaPreparationGateway(),fetch=preparation.fetchTargetToc.bind(preparation);
  preparation.fetchTargetToc=async(...args)=>{fetches.push(args);return fetch(...args);};
  return {...x,f,original,originalSession,originalToc,candidate,catalog,fetches,messages,

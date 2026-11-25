@@ -131,6 +131,16 @@ export function loadStructureDefinition() {
   return validateStructureDefinition(JSON.parse(readFileSync(modelUrl, 'utf8')));
 }
 
+export function resolveStructureCondition(obligation, role, version) {
+  const endpoints = obligation.conditionalEndpoints ?? {};
+  const endpoint = Object.hasOwn(endpoints, role) ? endpoints[role] : undefined;
+  if (endpoint && Number.isSafeInteger(endpoint.version) && endpoint.version === version) {
+    return { conditionId: endpoint.assertion, conditionalEndpoint: true };
+  }
+  const conditions = obligation.conditions ?? {};
+  return { conditionId: Object.hasOwn(conditions, role) ? conditions[role] : undefined, conditionalEndpoint: false };
+}
+
 export function resolveStructureBindings(contract, definition = loadStructureDefinition(), { historical = false } = {}) {
   const supplemental = isReservedTypographyCase(contract.id);
   const obligation = supplemental ? {
@@ -141,7 +151,8 @@ export function resolveStructureBindings(contract, definition = loadStructureDef
     expect(contract.phase !== 1 && contract.structure === undefined, `no model obligation for ${contract.id}`);
     return [];
   }
-  const {states, actions, conditions = {}, conditionalEndpoints = {}} = obligation;
+  expect(Number.isSafeInteger(contract.version) && contract.version > 0, `${contract.id} requires a positive case version`);
+  const {states, actions} = obligation;
   const firstOpening = usesSourceUnknownExpand(contract);
   const sharedCaptureActions = {
     'unknown-expand':sourceUnknownWriteAction,
@@ -155,7 +166,8 @@ export function resolveStructureBindings(contract, definition = loadStructureDef
   expect(historical || firstOpening || [...samples.keys()].every(sampleId => Object.values(contract.structure).includes(sampleId)),
     `${contract.id} has a full sample without a required state`);
   const assertions = new Map((contract.assertions ?? []).map(assertion => [assertion.id, assertion]));
-  const mappedConditions = new Set(Object.values(conditions));
+  const conditions = new Map(Object.keys(states).map(role => [role, resolveStructureCondition(obligation, role, contract.version)]));
+  const mappedConditions = new Set([...conditions.values()].map(binding => binding.conditionId));
   for (const assertion of assertions.values()) {
     if ((assertion.evaluator === 'source' && conditionBoundSourceKinds.includes(assertion.kind)) ||
         (assertion.evaluator === 'search' && assertion.kind === 'phase-history-loading') ||
@@ -173,10 +185,7 @@ export function resolveStructureBindings(contract, definition = loadStructureDef
     const rule = rules.get(ruleId);
     expect(rule, `${contract.id}/${role} has no rule ${ruleId}`);
     const actionId = sample.afterAction ?? null;
-    const endpoint = conditionalEndpoints[role];
-    const conditionalEndpoint = endpoint?.version === contract.version;
-    const conditionId = conditionalEndpoint ? endpoint.assertion :
-      Object.hasOwn(conditions, role) ? conditions[role] : undefined;
+    const {conditionId, conditionalEndpoint} = conditions.get(role);
     if (conditionId !== undefined) {
       const assertion = assertions.get(conditionId);
       expect(assertion?.condition && assertion.required === false && assertion.sample === sampleId &&

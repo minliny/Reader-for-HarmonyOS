@@ -7,7 +7,7 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { TYPE_SEARCH_HISTORY_EMPTY, TYPE_SEARCH_HISTORY_HEADING } from '../../../ui/foundation/ReaderTypography';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import type { SearchHistoryStatus } from '../presentation/SearchPresentation';
-import { SearchHistoryGeometry, SearchHistoryRow, SearchHistoryChip } from './SearchHistoryGeometry';
+import { SearchHistoryGeometry, SearchHistoryPanelLayout, SearchHistoryRow, SearchHistoryChip } from './SearchHistoryGeometry';
 import { resolveReaderButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
 import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
@@ -43,18 +43,19 @@ export class SearchHistoryMeasurements {
   }
 }
 
-/** A bounded, non-scrolling projection. Persistence remains with SearchHost. */
+/** A bounded history panel with a scrollable body when expanded. */
 @Component
 export struct ReaderSearchHistoryPanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop history: string[] = [];
-  @Prop rows: SearchHistoryRow[] = [];
   @Prop status: SearchHistoryStatus | undefined = undefined;
-  @Prop geometry: SearchHistoryGeometry = new SearchHistoryGeometry(0, 0, 1, false);
+  @Prop layout: SearchHistoryPanelLayout = new SearchHistoryPanelLayout(
+    new SearchHistoryGeometry(0, 0, 1, false), [], false, false, 0, 0);
   @Prop observeActions: boolean = false;
   onClear: () => void = (): void => {};
   onRetry: () => void = (): void => {};
   onSelect: (keyword: string) => void = (_keyword: string): void => {};
+  onToggle: () => void = (): void => {};
   onFeedbackHeight: (height: number, status: string) => void = (_height: number, _status: string): void => {};
 
   private actionsEnabled(): boolean { return this.status !== 'loading'; }
@@ -68,59 +69,88 @@ export struct ReaderSearchHistoryPanel {
     Image(readerPaperActionIcon('trash', this.appThemeScheme)).width(14).height(14).objectFit(ImageFit.Contain)
       .accessibilityLevel('no');
   }
+  @Builder
+  private toggleHistory(height: number) {
+    ReaderButton({ scheme: this.appThemeScheme, variant: 'subtle', visualSize: 'small',
+      controlHeight: height, focusId: 'reader-search-history-toggle',
+      label: this.layout.expanded ? '收起' : '展开',
+      actionAccessibilityLabel: this.layout.expanded ? '收起搜索历史' : '展开搜索历史',
+      actionEnabled: this.actionsEnabled(), onAction: (): void => { if (this.actionsEnabled()) this.onToggle(); } });
+  }
+  @Builder
+  private historyRows() {
+    Column({ space: this.layout.geometry.gap }) {
+      // A changed width or membership retires captured row and chip objects.
+      ForEach(this.layout.rows, (row: SearchHistoryRow) => {
+        Row({ space: this.layout.geometry.gap }) {
+          ForEach(row.chips, (chip: SearchHistoryChip) => {
+            ReaderButton({ scheme: this.appThemeScheme, specId: 'search-history-keyword', label: chip.keyword,
+              layout: 'full', actionEnabled: this.actionsEnabled(),
+              focusId: this.observeActions ? `reader-search-history-item-${this.history.indexOf(chip.keyword)}` : '',
+              actionAccessibilityLabel: `搜索${chip.keyword}`, onAction: (): void => this.onSelect(chip.keyword) })
+              .width(chip.width).height(this.layout.geometry.buttonHeight);
+          }, (chip: SearchHistoryChip): string => `history:${chip.keyword}`);
+        }.width('100%').height(this.layout.geometry.buttonHeight);
+      }, (row: SearchHistoryRow): string => `history-row:${this.layout.geometry.buttonHeight}:${JSON.stringify(row.chips)}`);
+      if (this.history.length === 0 && this.layout.geometry.emptyVisible) {
+        Text('暂无搜索历史').fontFamily(TYPE_SEARCH_HISTORY_EMPTY.fontFamily)
+          .fontWeight(TYPE_SEARCH_HISTORY_EMPTY.fontWeight)
+          .fontSize(TYPE_SEARCH_HISTORY_EMPTY.fontSizeFp)
+          .lineHeight(TYPE_SEARCH_HISTORY_EMPTY.lineHeightFp as number).halfLeading(true)
+          .height(this.layout.geometry.emptyHeight)
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+      }
+    }.width('100%').alignItems(HorizontalAlign.Start);
+  }
   build() {
     Column({ space: 0 }) {
-      if (this.geometry.headingVisible) {
-      Row() {
-        Text('最近搜索').fontFamily(TYPE_SEARCH_HISTORY_HEADING.fontFamily)
-          .fontWeight(TYPE_SEARCH_HISTORY_HEADING.fontWeight)
-          .fontSize(TYPE_SEARCH_HISTORY_HEADING.fontSizeFp)
-          .lineHeight(TYPE_SEARCH_HISTORY_HEADING.lineHeightFp as number)
-          .halfLeading(true)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).layoutWeight(1);
-        if (this.history.length > 0) {
-          ReaderButton({ variant: 'subtle', visualSize: 'small', scheme: this.appThemeScheme,
-            controlHeight: this.geometry.headingHeight,
-            label: '清空', actionAccessibilityLabel: '清空搜索历史', actionEnabled: this.actionsEnabled(),
-            leading: (): void => { this.clearHistoryIcon(); },
-            onAction: (): void => { if (this.actionsEnabled()) this.onClear(); } });
-        }
-      }.width('100%').height(this.geometry.headingHeight).alignItems(VerticalAlign.Center)
-        .margin({ bottom: this.geometry.headingGap });
+      if (this.layout.geometry.headingVisible) {
+        Row() {
+          if (this.layout.canToggle && this.layout.toggleInHeading) {
+            this.toggleHistory(this.layout.geometry.headingHeight);
+            Blank();
+          } else {
+            Text('最近搜索').fontFamily(TYPE_SEARCH_HISTORY_HEADING.fontFamily)
+              .fontWeight(TYPE_SEARCH_HISTORY_HEADING.fontWeight)
+              .fontSize(TYPE_SEARCH_HISTORY_HEADING.fontSizeFp)
+              .lineHeight(TYPE_SEARCH_HISTORY_HEADING.lineHeightFp as number)
+              .halfLeading(true)
+              .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).layoutWeight(1);
+          }
+          if (this.history.length > 0) {
+            ReaderButton({ variant: 'subtle', visualSize: 'small', scheme: this.appThemeScheme,
+              controlHeight: this.layout.geometry.headingHeight,
+              label: '清空', actionAccessibilityLabel: '清空搜索历史', actionEnabled: this.actionsEnabled(),
+              leading: (): void => { this.clearHistoryIcon(); },
+              onAction: (): void => { if (this.actionsEnabled()) this.onClear(); } });
+          }
+        }.width('100%').height(this.layout.geometry.headingHeight).alignItems(VerticalAlign.Center)
+          .margin({ bottom: this.layout.geometry.headingGap });
       }
-      if (this.geometry.feedbackVisible && this.status === 'loading') {
+      if (this.layout.geometry.feedbackVisible && this.status === 'loading') {
         ReaderPageState({ message: '正在读取搜索历史', loading: true, padded: false })
           .id('reader-search-history-loading')
           .onAreaChange(this.feedbackMeasurement(this.status));
-      } else if (this.geometry.feedbackVisible && (this.status === 'loadFailed' || this.status === 'clearFailed')) {
+      } else if (this.layout.geometry.feedbackVisible && (this.status === 'loadFailed' || this.status === 'clearFailed')) {
         ReaderPageState({ message: this.status === 'clearFailed' ? '搜索历史清空失败' : '搜索历史读取失败',
           padded: false, customActions: true, actionContent: (): void => { this.retryHistoryAction(); } })
           .onAreaChange(this.feedbackMeasurement(this.status));
       }
-      Column({ space: this.geometry.gap }) {
-        // A changed width/membership retires captured row/chip objects.
-        ForEach(this.rows, (row: SearchHistoryRow) => {
-          Row({ space: this.geometry.gap }) {
-            ForEach(row.chips, (chip: SearchHistoryChip) => {
-              ReaderButton({ scheme: this.appThemeScheme, specId: 'search-history-keyword', label: chip.keyword,
-                layout: 'full', actionEnabled: this.actionsEnabled(),
-                focusId: this.observeActions ? `reader-search-history-item-${this.history.indexOf(chip.keyword)}` : '',
-                actionAccessibilityLabel: `搜索${chip.keyword}`, onAction: (): void => this.onSelect(chip.keyword) })
-                .width(chip.width).height(this.geometry.buttonHeight);
-            }, (chip: SearchHistoryChip): string => `history:${chip.keyword}`);
-          }.width('100%').height(this.geometry.buttonHeight);
-        }, (row: SearchHistoryRow): string => `history-row:${this.geometry.buttonHeight}:${JSON.stringify(row.chips)}`);
-        if (this.history.length === 0 && this.geometry.emptyVisible) {
-          Text('暂无搜索历史').fontFamily(TYPE_SEARCH_HISTORY_EMPTY.fontFamily)
-            .fontWeight(TYPE_SEARCH_HISTORY_EMPTY.fontWeight)
-            .fontSize(TYPE_SEARCH_HISTORY_EMPTY.fontSizeFp)
-            .lineHeight(TYPE_SEARCH_HISTORY_EMPTY.lineHeightFp as number).halfLeading(true)
-            .height(this.geometry.emptyHeight)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
-        }
-      }.width('100%').alignItems(HorizontalAlign.Start);
-    }.width('100%').padding({ left: this.geometry.innerInset, right: this.geometry.innerInset,
-      top: this.geometry.topInset, bottom: this.geometry.bottomInset });
+      if (this.layout.expanded) {
+        Scroll() { this.historyRows(); }
+          .id('reader-search-history-scroll').width('100%').height(this.layout.bodyViewport)
+          .align(Alignment.TopStart).scrollBar(BarState.Auto);
+      } else {
+        this.historyRows();
+      }
+      if (this.layout.canToggle && !this.layout.toggleInHeading) {
+        Row() {
+          this.toggleHistory(this.layout.geometry.buttonHeight);
+        }.width('100%').height(this.layout.geometry.buttonHeight).justifyContent(FlexAlign.End)
+          .margin({ top: this.layout.geometry.gap });
+      }
+    }.width('100%').padding({ left: this.layout.geometry.innerInset, right: this.layout.geometry.innerInset,
+      top: this.layout.geometry.topInset, bottom: this.layout.geometry.bottomInset });
   }
   private feedbackMeasurement(status: string): (_old: Area, next: Area) => void {
     return (_old: Area, next: Area): void => {

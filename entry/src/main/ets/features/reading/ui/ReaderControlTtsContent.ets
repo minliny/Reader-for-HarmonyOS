@@ -1220,7 +1220,8 @@ export struct ReaderControlTtsContent {
         Text(kind === 'playback' ? '播放' : (kind === 'timer' ? '定时' : '语速'))
           .fontFamily(kind === 'playback' ? TYPE_READER_TTS_QUICK_PLAYBACK_LABEL.fontFamily : TYPE_READER_TTS_QUICK_SETTING_LABEL.fontFamily).fontWeight(kind === 'playback' ? TYPE_READER_TTS_QUICK_PLAYBACK_LABEL.fontWeight : TYPE_READER_TTS_QUICK_SETTING_LABEL.fontWeight).fontSize(kind === 'playback' ? TYPE_READER_TTS_QUICK_PLAYBACK_LABEL.fontSizeFp : TYPE_READER_TTS_QUICK_SETTING_LABEL.fontSizeFp)
           .fontColor(readerAppColor('TOK_TTS_INK', this.appScheme))
-          .lineHeight(kind === 'playback' ? TYPE_READER_TTS_QUICK_PLAYBACK_LABEL.lineHeightFp as number : 18)
+          .lineHeight(kind === 'playback' ? TYPE_READER_TTS_QUICK_PLAYBACK_LABEL.lineHeightFp as number :
+            TYPE_READER_TTS_QUICK_SETTING_LABEL.lineHeightFp as number)
           .height(kind === 'playback' ? this.textMinimum()?.quickPlaybackTitle ?? 16 : this.textMinimum()?.quickSettingTitle ?? 18).maxLines(1);
         if (kind === 'playback') {
           Row({ space: 4 }) {
@@ -1284,7 +1285,7 @@ export struct ReaderControlTtsContent {
         Row({ space: 6 }) {
           Image($r(this.appScheme === 'night' ? 'app.media.reader_tts_header_theme_night' : 'app.media.reader_tts_header')).width(16).height(16);
           Text('当前音色 · ' + this.currentVoiceLabel()).fontFamily(TYPE_READER_TTS_RETAINED_PLAYBACK_LABEL.fontFamily).fontSize(TYPE_READER_TTS_RETAINED_PLAYBACK_LABEL.fontSizeFp).fontWeight(TYPE_READER_TTS_RETAINED_PLAYBACK_LABEL.fontWeight)
-            .lineHeight(TYPE_READER_TTS_RETAINED_PLAYBACK_LABEL.lineHeightFp ?? 16).halfLeading(true)
+            .lineHeight(TYPE_READER_TTS_RETAINED_PLAYBACK_LABEL.lineHeightFp as number).halfLeading(true)
             .fontColor(readerAppColor('app.control.paint.5B5046', this.appScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1);
         }.width(this.frame().voice.width).height(this.frame().voice.height).alignItems(VerticalAlign.Center)
           .position({ x: this.frame().voice.x, y: this.frame().voice.y })
@@ -1771,7 +1772,7 @@ export struct ReaderControlTtsContent {
           .backgroundColor(readerAppColor('app.control.paint.212F6373', this.appScheme)).borderRadius(Math.min(this.textMinimum()?.voiceBadgeWidth ?? 24, this.textMinimum()?.voiceBadge ?? 24) / 2).flexShrink(0);
       }
       Text(this.fieldValue(kind)).layoutWeight(1).fontFamily(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY.fontFamily).fontWeight(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY.fontSizeFp)
-        .lineHeight(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY.lineHeightFp ?? 16).halfLeading(true)
+        .lineHeight(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY.lineHeightFp as number).halfLeading(true)
             .fontColor(kind === 'voice' ? readerAppColor('TOK_TTS_INK', this.appScheme) : readerAppColor('app.control.paint.5B5046', this.appScheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .textAlign(TextAlign.End);
       Image($r(this.appScheme === 'night' ? 'app.media.reader_appearance_make_chevron_theme_night' : 'app.media.reader_appearance_make_chevron')).width(12).height(12).flexShrink(0);
@@ -1993,7 +1994,7 @@ export struct ReaderControlTtsContent {
         Row({ space: 6 }) {
         Text(this.displayedFacts()?.manageLabel ?? (this.manageConfigured() ? '已配置 · 编辑' : '立即配置')).layoutWeight(1).fontFamily(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontFamily)
           .fontWeight(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontWeight).fontSize(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.fontSizeFp)
-          .lineHeight(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.lineHeightFp ?? 16).halfLeading(true)
+          .lineHeight(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_VALUE.lineHeightFp as number).halfLeading(true)
             .fontColor(this.manageConfigured() ? readerAppColor('TOK_TTS_TEAL', this.appScheme) : readerAppColor('app.control.paint.FFFAF4', this.appScheme));
         Image(!this.manageConfigured() ?
           (this.appScheme === 'night' ? $r('app.media.reader_tts_configure_chevron_theme_night') : $r('app.media.reader_tts_configure_chevron')) :

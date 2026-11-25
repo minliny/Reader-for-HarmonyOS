@@ -219,24 +219,42 @@ function method(src, name) {
 }
 if(selectedCase==='search-sdk'){
  const {foundationControls,foundationSpecs}=await import('./lib/reader-foundation-control-probe.mjs');
-const Search = new Function(stripTypeScriptTypes('class Probe {' +
-  ['canSearch', 'submit', 'statusText', 'dismissTemporaryLayer', 'onInputChanged'].map(n =>
-    method(searchUI, n)).join('\n') + '}') + ';return Probe;')();
+const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const searchUIRoot = 'entry/src/main/ets/features/reading/ui/';
+const searchLabels = pureModuleProbe(read(searchUIRoot + 'ReaderControlSearchMinimum.ets'), 'ReaderControlSearchMinimum.ets', {},
+  ['readerControlSearchStatusText', 'readerControlSearchResultTitle']);
+const { ReaderContentSearchPublication } = pureModuleProbe(
+  read('entry/src/main/ets/features/reading/presentation/ReaderContentSearchPublication.ets'), 'ReaderContentSearchPublication.ets', {},
+  ['ReaderContentSearchPublication']);
+const searchControlGeometry = await import('../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts');
+const searchStateMethods = ['currentEditorInputEnabled', 'currentInputEnabled', 'currentSearchState', 'displayState', 'displayedFacts'];
+const searchLayoutMethods = ['frame', 'naturalSize', 'currentMinimumProfile', 'preparedProfile', 'presentationPrepared'];
+const publish = (owner, state) => {
+  owner.searchPublication.publish(state);
+  owner.state = owner.searchPublication.stateAt(++owner.searchRevision);
+};
+const Search = new Function(...Object.keys(searchLabels), stripTypeScriptTypes('class Probe {' +
+  ['canSearch', 'submit', 'statusText', 'dismissTemporaryLayer', 'stopQueryEditing', 'onInputChanged', ...searchStateMethods].map(n =>
+    method(searchUI, n)).join('\n') + '}') + ';return Probe;')(...Object.values(searchLabels));
 const search = new Search(); let submit = 0, stopped = 0;
-Object.assign(search, { query: ' 雨夜 ', interactionEnabled: true, state: { kind: 'idle' },
+Object.assign(search, { query: ' 雨夜 ', interactionEnabled: true, queryInputMounted: true, queryEditing: true,
+  searchPublication: new ReaderContentSearchPublication(), searchRevision: 0,
   onSearch: () => submit++, inputController: { stopEditing() { stopped++; } },
   onResultLayoutChanged() {},
   onTemporaryLayerChange: active => assert.equal(active, false) });
+publish(search, { kind: 'idle' });
 search.submit(); assert.equal(submit, 1);
-search.state = { kind: 'loading', keyword: '雨夜' }; search.submit(); assert.equal(submit, 1);
+publish(search, { kind: 'loading', keyword: '雨夜' }); search.submit(); assert.equal(submit, 1);
 assert.equal(search.statusText(), '正在搜索…');
-search.state = { kind: 'error', message: '网络错误' }; assert.equal(search.statusText(), '网络错误');
-search.state = { kind: 'empty', keyword: '雨夜' }; assert.equal(search.statusText(), '未找到“雨夜”');
+publish(search, { kind: 'error', message: '网络错误' }); assert.equal(search.statusText(), '网络错误');
+publish(search, { kind: 'empty', keyword: '雨夜' }); assert.equal(search.statusText(), '未找到“雨夜”');
 search.interactionEnabled = false; search.onInputChanged(); assert.equal(stopped, 1);
 search.submit(); assert.equal(submit, 1);
 const resultState = { kind: 'results', keyword: '雨夜', results: [{ chapterIndex: 9, chapterOffset: 40 }] };
 const scroller = { x: 0, y: 108 };
-Object.assign(search, { state: resultState, resultScroller: scroller });
+publish(search, resultState);
+search.resultScroller = scroller;
 search.onInputChanged();
 assert.equal(search.query, ' 雨夜 ');
 assert.equal(search.state, resultState, 'morph input protection does not replace query/results');
@@ -244,9 +262,12 @@ assert.equal(search.resultScroller, scroller, 'keyboard dismissal never recreate
 assert.deepEqual(scroller, { x: 0, y: 108 });
   const fieldSpecSource = read('entry/src/main/ets/ui/controls/ReaderControlSpecs.ets');
   function checkMountedInputInsets(source, specsSource = fieldSpecSource) {
-    const shared = foundationControls({ specs: foundationSpecs(undefined, specsSource) });
-    const { owner } = createReaderBuilderProbe(source, ['frame', 'searchField', 'presentation'], { ...shared.dependencies, sampleReaderControlSearch, ...motionDeps }, shared.hooks);
-    Object.assign(owner, { motionProgress: 0, availableWidth: 286, availableHeight: 190, query: '', inputController: {} });
+    const specs = foundationSpecs(undefined, specsSource);
+    const shared = foundationControls({ specs });
+    const { owner } = createReaderBuilderProbe(source, ['searchField', 'presentation', ...searchLayoutMethods, ...searchStateMethods],
+      { ...shared.dependencies, sampleReaderControlSearch, ...searchControlGeometry, ...motionDeps }, shared.hooks);
+    Object.assign(owner, { motionProgress: 0, availableWidth: 286, availableHeight: 190, query: '', inputController: {},
+      queryInputMounted: true, interactionEnabled: true, minimumProfiles: new Map() });
     owner.searchField();
     const input = shared.nodes(owner).find(node => node.type === 'TextInput');
     for (const p of [0, .5, 1, 0]) {
@@ -255,7 +276,8 @@ assert.deepEqual(scroller, { x: 0, y: 108 });
       assert.deepEqual(input.padding, { left: 2, right: 2, top: 0, bottom: 0 },
         'compact input explicitly clears both native vertical content insets');
       assert.equal(input.create.text, '他', 'same native input receives current query');
-      assert.equal(input.fontSize, 10); assert.equal(input.height, 14);
+      assert.equal(input.fontSize, readerTypographyRoles.TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT.fontSizeFp);
+      assert.equal(input.height, owner.frame().inputHeightVp || specs.resolveReaderFormFieldSpec('reader-content-search').height);
       assert.ok(input.height <= owner.frame().field.height, 'text line stays inside the authored field at every p');
       assert.ok(input.height - input.padding.top - input.padding.bottom >= input.fontSize,
         'declared content box is not exhausted by vertical padding; native glyph visibility still needs validation');
@@ -267,39 +289,47 @@ assert.deepEqual(scroller, { x: 0, y: 108 });
   /compact input explicitly/, 'reject returning to unspecified platform vertical padding');
 
 
-  const searchMembers = ['frame', 'resultRow', 'resultSnippet', 'resultTitle', 'currentResult', 'currentResultIndex',
-    'currentSnippet', 'selectCurrentResult', 'presentation', 'resultClip', 'resultScrollFrame', 'resultLayout'];
+  const searchMembers = [...searchLayoutMethods, ...searchStateMethods, 'resultRow', 'resultSnippet', 'resultTitle', 'currentResult',
+    'currentResultIndex', 'currentSnippet', 'selectCurrentResult', 'displayedResultScope', 'presentation', 'resultClip',
+    'resultScrollFrame', 'resultLayout', 'resultLayoutAt'];
   function checkMountedSearchResults(source, frozen = false) {
-    const { owner } = createReaderBuilderProbe(source, searchMembers, { sampleReaderControlSearch, splitReaderSearchSnippet, ...searchScroll, ...motionDeps });
+    const { owner } = createReaderBuilderProbe(source, searchMembers,
+      { sampleReaderControlSearch, splitReaderSearchSnippet, ...searchScroll, ...searchLabels, ...motionDeps });
     const result = { sourceId: 's', bookId: 'b', chapterIndex: 9, chapterOffset: 2, chapterTitle: '旧标题', snippet: '甲乙他旧',
       snippetStart: 0, matchLength: 1 };
     Object.assign(owner, { motionProgress: 0, availableWidth: 286, availableHeight: 190,
-      ...motionProps, resultScrollPosition: searchScroll.createReaderControlSearchScroll(),
-      interactionEnabled: true, state: { kind: 'results', keyword: '他', results: [result] } });
+      ...motionProps, resultScrollPosition: searchScroll.createReaderControlSearchScroll(), resultRowIndexes: new Map(),
+      interactionEnabled: true, queryInputMounted: true, minimumProfiles: new Map(),
+      searchPublication: new ReaderContentSearchPublication(), searchRevision: 0 });
+    const results = [result];
+    publish(owner, { kind: 'results', keyword: '他', results });
+    const scope = owner.displayedResultScope();
     const selected = []; owner.onSelectResult = value => selected.push(value);
-    if (frozen) owner.resultRow(9, 2, result.sourceId, result.bookId, result);
-    else owner.resultRow(9, 2, result.sourceId, result.bookId);
+    if (frozen) owner.resultRow(9, 2, 0, result.sourceId, result.bookId, scope, result);
+    else owner.resultRow(9, 2, 0, result.sourceId, result.bookId, scope);
     const row = owner.nodes.get(0), click = row.onClick;
-    assert.equal(owner.nodes.get(1).create, '旧标题');
+    const title = [...owner.nodes.values()].find(node => node.type === 'Text' && node.create === '旧标题');
+    assert.ok(title, 'actual result title is mounted');
     const next = { ...result, chapterTitle: '新标题', snippet: '甲乙他新尾' };
-    owner.state = { kind: 'results', keyword: '他', results: [next] };
+    results[0] = next;
+    publish(owner, { kind: 'results', keyword: '他', results });
     for (const p of [1, .5, 0, .25, 1]) {
       Object.assign(owner, { motionProgress: p, availableWidth: 286 + 52 * p, availableHeight: 190 + 476 * p });
       owner.replay();
-      assert.equal(owner.nodes.get(1).create, '新标题', 'same-key replacement updates mounted title');
+      assert.equal(title.create, '新标题', 'same-key replacement updates mounted title');
       assert.deepEqual([...owner.nodes.values()].filter(n => n.type === 'Span').map(n => n.create), ['甲乙', '他', '新尾']);
       assert.equal(row.height, 54 + 18 * p, 'mounted result row uses live shared p');
       assert.equal(row.width, owner.frame().firstResult.width);
     }
     click(); assert.equal(selected.at(-1), next, 'retained click selects current result payload');
     owner.interactionEnabled = false; click(); assert.equal(selected.length, 1);
-    owner.interactionEnabled = true; owner.state = { kind: 'loading', keyword: '他' };
+    owner.interactionEnabled = true; publish(owner, { kind: 'loading', keyword: '他' });
     owner.replay(); click(); assert.equal(selected.length, 1, 'removed/invalidated result cannot dispatch stale selection');
   }
   checkMountedSearchResults(searchUI);
   const staleSearch = searchUI
-    .replace("private resultRow(chapterIndex: number, chapterOffset: number, sourceId: string = '', bookId: string = '')",
-      "private resultRow(chapterIndex: number, chapterOffset: number, sourceId: string = '', bookId: string = '', capturedResult: ReadingContentSearchResult)")
+    .replace('sourceId: string, bookId: string, resultScope: number) {',
+      'sourceId: string, bookId: string, resultScope: number, capturedResult: ReadingContentSearchResult) {')
     .replace('Text(this.resultTitle(this.currentResult(chapterIndex, chapterOffset)))', 'Text(this.resultTitle(capturedResult))');
   assert.notEqual(staleSearch, searchUI);
   assert.throws(() => checkMountedSearchResults(staleSearch, true), /same-key replacement/,

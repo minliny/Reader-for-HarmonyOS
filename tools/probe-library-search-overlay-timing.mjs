@@ -6,6 +6,7 @@ import { createReaderBuilderProbe, productionReaderMotionSdk } from './lib/reade
 import { readerProbeCubicBezierProgress } from './lib/reader-motion-curve-fixture.mjs';
 import { readerSurfaceSpecsForProbe } from './lib/bounded-surface-sdk-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
+import * as searchControlGeometry from '../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts';
 
 const base = new URL('../entry/src/main/ets/', import.meta.url);
 const surfaceFile = new URL('features/search/ui/ReaderLibrarySearchSurface.ets', base);
@@ -13,6 +14,10 @@ const presentationFile = new URL('features/search/presentation/LibrarySearchPres
 const indexFile = new URL('pages/Index.ets', base);
 const timelineFile = new URL('ui/foundation/MotionTimeline.ts', base);
 const { motionSegment } = pureModuleProbe(readFileSync(timelineFile, 'utf8'), 'MotionTimeline.ts', {}, ['motionSegment']);
+const historyGeometryFile = new URL('features/search/ui/SearchHistoryGeometry.ts', base);
+const { SearchHistoryGeometry, SearchHistoryViewport, projectSearchHistoryPanel } = pureModuleProbe(
+  readFileSync(historyGeometryFile, 'utf8'), 'SearchHistoryGeometry.ts', searchControlGeometry,
+  ['SearchHistoryGeometry', 'SearchHistoryViewport', 'projectSearchHistoryPanel']);
 const motion = productionReaderMotionSdk();
 const surfaceSpecs = readerSurfaceSpecsForProbe({ densityPixels: 2.5 });
 const timing = (id) => {
@@ -26,6 +31,7 @@ let now = 0;
 const Surface = selectedProductionMethods(surfaceFile, 'ReaderLibrarySearchSurface', [
   'applyTargets', 'snapToMode', 'transitionFor', 'durationFor', 'modeChanged', 'beginReducedTransition', 'aboutToDisappear',
   'retargetHistoryViewport', 'publishContinueCardCoverage', 'schedule', 'completeTransition',
+  'toggleHistoryAction',
   'segment', 'backFraction', 'sampleSurfaceProgress', 'resultsProgress', 'historyProgress',
   'scrimProgress', 'blend', 'headerVeil', 'headerStackShadow', 'headerShadowStrength',
 ], { ...motion, ...surfaceSpecs, motionSegment, readerMotionNowMs: () => now,
@@ -46,6 +52,8 @@ function createSurface(initial, reduceMotion = false) {
     mode: initial, scheme: 'night', reduceMotion, mounted: true, generation: 0, scheduledToken: -1,
     identity: 7, navigationGeneration: 9, mounting: 11, model: {}, lastCardSuppressed: false,
     lastCardCoverageScope: '', cardCoverageRevision: 0,
+    historyExpanded: false, historyResizeOpacity: 1, historyToggleRevision: 0,
+    historyResizeRevision: 0, historyResizeHoldingCoverage: false,
     openSpec: timing('open'), submitSpec: timing('submit'), backSpec: timing('back'),
     submitRetractFraction: .3, editCollapseFraction: .5, editHistoryStartFraction: .28,
     displayedHistoryViewport: 120, displayedHistoryLimit: 160,
@@ -86,6 +94,75 @@ verify('results return never paints a scrim or admits veil while mounted', () =>
   assert.equal(surface.headerVeil(), true);
 });
 
+verify('folded history keeps two complete rows and expanded history reaches the oldest keyword', () => {
+  const keywords = Array.from({ length: 35 }, (_, index) => `词条${index + 1}`);
+  const flatten = layout => layout.rows.flatMap(row => row.chips.map(chip => chip.keyword));
+  for (const [fontScale, controlWidth] of [[1, 100], [1.45, 130]]) {
+    const geometry = new SearchHistoryGeometry(328, 435, fontScale, false);
+    const folded = projectSearchHistoryPanel(keywords, geometry, false, () => controlWidth);
+    assert.equal(folded.canToggle, true);
+    assert.equal(folded.rows.length, 2);
+    assert.deepEqual(flatten(folded), keywords.slice(0, flatten(folded).length));
+    const expanded = projectSearchHistoryPanel(keywords, geometry, true, () => controlWidth);
+    assert.equal(expanded.expanded, true);
+    assert.deepEqual(flatten(expanded), keywords);
+    assert.ok(expanded.height <= 435);
+    assert.ok(expanded.bodyViewport < expanded.rows.length * geometry.buttonHeight);
+    const short = projectSearchHistoryPanel(keywords.slice(0, 1), geometry, false, () => controlWidth);
+    assert.equal(short.canToggle, false);
+  }
+  const keyboard = new SearchHistoryGeometry(328, 185, 1, false);
+  const expanded = projectSearchHistoryPanel(keywords, keyboard, true, () => 100);
+  assert.equal(expanded.expanded, true);
+  assert.ok(expanded.height <= 185);
+  assert.equal(flatten(expanded).at(-1), keywords.at(-1));
+});
+
+verify('collapsing history retains the covered card until the size animation completes', () => {
+  const { surface, covered, flushFrame, animations } = createSurface('input');
+  surface.historyInteractive = () => true;
+  surface.model.owns = owner => owner === 4;
+  surface.historyExpanded = true;
+  surface.historyLayout = () => ({ canToggle: true, expanded: surface.historyExpanded });
+  surface.resolvedHistoryViewport = () => surface.historyExpanded ?
+    { height: 120, suppressContinueCard: true } : { height: 80, suppressContinueCard: false };
+  surface.toggleHistoryAction(3)();
+  assert.equal(surface.historyExpanded, true);
+  surface.toggleHistoryAction(4)();
+  assert.equal(surface.historyExpanded, false);
+  assert.equal(covered(), true);
+  const resize = animations.shift();
+  resize.mutate();
+  flushFrame();
+  assert.equal(covered(), true);
+  resize.param.onFinish();
+  flushFrame();
+  assert.equal(covered(), false);
+});
+
+verify('rapid reduced-motion toggles schedule only the latest fade at the same panel height', () => {
+  const { surface, flushFrame, animations } = createSurface('input', true);
+  surface.historyInteractive = () => true;
+  surface.model.owns = owner => owner === 4;
+  surface.historyLayout = () => ({ canToggle: true, expanded: surface.historyExpanded });
+  const toggle = surface.toggleHistoryAction(4);
+  toggle();
+  toggle();
+  toggle();
+  flushFrame();
+  assert.equal(surface.historyExpanded, true);
+  assert.equal(animations.length, 1);
+  animations[0].mutate();
+  assert.equal(surface.historyResizeOpacity, 1);
+  toggle();
+  surface.identity += 1;
+  surface.modeChanged();
+  flushFrame();
+  assert.equal(surface.historyExpanded, false);
+  assert.equal(surface.historyResizeOpacity, 1);
+  assert.equal(animations.length, 1, 'the retired opening cannot start an opacity program');
+});
+
 verify('input return preserves the covering card until history falls away', () => {
   const { surface, move, flushFrame, covered } = createSurface('input');
   assert.equal(covered(), true);
@@ -103,6 +180,40 @@ verify('input return preserves the covering card until history falls away', () =
   flushFrame();
   assert.equal(surface.scrimProgress(), 0);
   assert.equal(covered(), false, 'settled close releases coverage');
+});
+
+verify('history retains a fully covered card as its lower edge passes across the card', () => {
+  for (const reduced of [false, true]) {
+    const { surface, move, flushFrame, covered, animations } = createSurface('input', reduced);
+    const none = new SearchHistoryViewport(0, 64, 380, 160, 90);
+    const below = new SearchHistoryViewport(24, 64, 380, 160, 90);
+    const partial = new SearchHistoryViewport(46, 64, 380, 160, 90);
+    const full = new SearchHistoryViewport(280, 64, 380, 160, 90);
+    assert.equal(none.suppressContinueCard, false);
+    assert.equal(below.suppressContinueCard, false);
+    assert.equal(partial.suppressContinueCard, true);
+    assert.equal(full.suppressContinueCard, true);
+    surface.resolvedHistoryViewport = () => full;
+    surface.retargetHistoryViewport(true);
+    flushFrame();
+    move('idle');
+    flushFrame();
+    assert.equal(covered(), true);
+    if (reduced) {
+      const fade = animations.shift();
+      fade.mutate();
+      assert.equal(covered(), true);
+      fade.param.onFinish();
+    } else {
+      now = surface.backSpec.durationMs * .75;
+      flushFrame();
+      assert.equal(covered(), true);
+      now = surface.backSpec.durationMs;
+      flushFrame();
+    }
+    flushFrame();
+    assert.equal(covered(), false);
+  }
 });
 
 verify('history submit and an interrupted edit retain only current coverage', () => {

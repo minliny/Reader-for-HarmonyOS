@@ -67,7 +67,7 @@ if (selectedCase === 'confirmation-admission') {
   const online = { sourceId: 'source', bookId: 'b', title: '在线书', addedAt: 2 };
   const localKey = 'local\0a';
   const tick = () => new Promise(resolve => setImmediate(resolve));
-  let nativeEvents, nativeController;
+  let nativeEvents, nativeController, backdropAnimations;
   let failNextOpen = false;
   class NativeController {
     constructor(options) { this.options = options; nativeController = this; }
@@ -79,15 +79,20 @@ if (selectedCase === 'confirmation-admission') {
     close() {
       nativeEvents.push('close');
       if (this.failClose) throw Error('native close unavailable');
+      this.options.onWillDisappear();
     }
-    cancelNatively() { nativeEvents.push('close'); this.options.cancel(); }
+    cancelNatively() {
+      nativeEvents.push('close');
+      this.options.onWillDisappear();
+      this.options.cancel();
+    }
   }
   class DialogChild {
     constructor(owner, params, _storage, id) { Object.assign(this, {owner, params, id}); }
   }
   const nativeHostSource = readFileSync(file('features/bookshelf/ui/BookRemovalDialogHost.ets'), 'utf8');
   const nativeHostMembers = ['aboutToAppear', 'aboutToDisappear', 'createDialog', 'dialogContent', 'clearBackdrop',
-    'backdropTicket', 'backdropSequence', 'build'];
+    'backdropTicket', 'backdropOpacity', 'backdropSequence', 'build'];
   const nativeProperties = createArkUIPropertyRuntimeProbe();
   const motion = productionReaderMotionSdk();
   let reduceMotion = false;
@@ -98,9 +103,11 @@ if (selectedCase === 'confirmation-admission') {
     AppStorage: { get: key => key === 'readerAppScheme' ? themeScheme : undefined }, readerAppColor,
     readerReduceMotionFromStorage: () => reduceMotion,
     readerMotionStandardCurve: () => motion.motionSpecGet('app.control.press').curve,
+    readerMotionReducedFadeParam: motion.readerMotionReducedFadeParam,
+    uiContext: { animateTo(options, update) { backdropAnimations.push(options); update(); } },
   }, { ...nativeProperties.hooks,
     childSources: { BookRemovalDialog: readFileSync(file('features/bookshelf/ui/BookRemovalDialog.ets'), 'utf8') } }).Component;
-  const hostMethods = ['openBookRemovalDialog', 'onBackPress', 'isCurrentRuntime'];
+  const hostMethods = ['openBookRemovalDialog', 'onBackPress', 'isCurrentRuntime', 'wideSettingsPane'];
   const Host = selectedProductionMethods(file('pages/Index.ets'), 'Index', hostMethods, {
     ReaderRuntimeOwner, hilog: { warn() {} }, DOMAIN: 0, errorMessageOf: error => error.message,
   });
@@ -108,6 +115,7 @@ if (selectedCase === 'confirmation-admission') {
   function fixture(route, book = local, paged = true) {
     const events = [], feedback = [], messages = [];
     nativeEvents = events;
+    backdropAnimations = [];
     const model = { books: [local, online], revision: 'r1', pending: undefined, failed: false };
     const state = () => ({ books: model.books, total: model.books.length,
       projectionRevision: paged ? model.revision : undefined });
@@ -122,7 +130,7 @@ if (selectedCase === 'confirmation-admission') {
     const binding = { identity: 'selection', current: () => true, emit() {} };
     projection.attach(binding);
     const host = Object.assign(new Host(), {
-      route, readingSessionActive: false, shelfRead: { snapshot: { books: [local, online] } },
+      route, expandedLayout: () => false, readingSessionActive: false, shelfRead: { snapshot: { books: [local, online] } },
       mangaSourceSwitch: { selectionVisible: false }, navigationGeneration: 1, bookRemovalConfirmation: new BookRemovalDialogPresentation(),
       detailShelfAdmissionMount: 1, mountedRuntimeOwner: runtime, shelfReceiptRetired: false,
       searchAppForeground: true, arkWebCapturesInput: false, currentReadingRuntime: () => runtime,
@@ -188,6 +196,7 @@ if (selectedCase === 'confirmation-admission') {
       assert.deepEqual(f.events, ['open'], 'repeated requests preserve one confirmation');
       const { width, height, backdropBlur, backgroundColor, hitTestBehavior, accessibilityLevel, focusable } = f.backdrop();
       assert.deepEqual([width, height, backdropBlur], ['100%', '100%', 6]);
+      assert.equal(f.backdrop().opacity, 1);
       assert.deepEqual([backgroundColor, hitTestBehavior, accessibilityLevel, focusable],
         ['Color.Transparent', 'HitTestMode.None', 'no-hide-descendants', false]);
       assert.equal(nativeController.options.maskColor, readerAppColor('app.scrim.modal', themeScheme));
@@ -208,8 +217,11 @@ if (selectedCase === 'confirmation-admission') {
       f.confirmCurrent();
       await tick();
       assert.equal(h.bookRemovalConfirmation.isOpen(), false);
-      assert.equal(f.backdrop().backdropBlur, 6, 'the underlay stays until native dismissal is complete');
+      assert.equal(f.backdrop().backdropBlur, 6, 'the underlay stays mounted through the exit fade');
+      assert.equal(f.backdrop().opacity, 0, 'native dismissal starts the underlay fade');
+      assert.deepEqual(backdropAnimations.map(animation => animation.duration), reduceMotion ? [120, 120] : [220, 180]);
       nativeController.options.onDidDisappear();
+      backdropAnimations.at(-1).onFinish();
       assert.deepEqual([f.backdrop().width, f.backdrop().height, f.backdrop().backdropBlur], [0, 0, 0]);
       assert.deepEqual(f.events, exit === 'confirm' ?
         ['open', 'close', [route === 'bookshelfMultiSelect' ? 'batch' : route, [{ sourceId: 'local', bookId: 'a' }]]] :
@@ -226,10 +238,12 @@ if (selectedCase === 'confirmation-admission') {
     open();
     const retired = nativeController;
     assert.equal(presentation.dismiss(), true);
+    const finishRetiredFade = backdropAnimations.at(-1).onFinish;
     open();
     const current = nativeController;
     retired.options.cancel();
     retired.options.onDidDisappear();
+    finishRetiredFade();
     assert.equal(presentation.isOpen(), true);
     assert.equal(f.backdrop().backdropBlur, 6, 'old native callbacks cannot clear a newer underlay');
     current.failClose = true;

@@ -119,28 +119,29 @@ export function scenarioCoverage(runs, definition = loadStructureDefinition(), r
     const exactCaseRuns = matching.filter(({receipt}) => contract && receipt.caseSha256 === caseSha256);
     const replayed = exactCaseRuns.filter(({receipt}) => receipt.structure?.bindingSha256 === bindingSha256);
     const eligibleRuns = new Set(replayed.filter(eligible).map(({receipt}) => receipt.runId));
-    const boundConditions = contract ? Object.fromEntries(resolveStructureBindings(contract, definition)
-      .filter(binding => binding.conditionId).map(({role, conditionId}) => [role, conditionId])) : obligation.conditions ?? {};
+    const bindings = contract ? resolveStructureBindings(contract, definition).map(({rule, ...binding}) =>
+      ({...binding, ruleId:rule.id})) : Object.entries(obligation.states).map(([role, ruleId]) =>
+      ({role, ruleId, conditionId:obligation.conditions?.[role]}));
     const conditionIds = new Set([
-      ...Object.values(boundConditions),
+      ...bindings.flatMap(({conditionId}) => conditionId === undefined ? [] : [conditionId]),
       ...(contract?.assertions ?? []).filter(assertion => assertion.condition).map(assertion => assertion.id),
     ]);
     const applies = (receipt, id) => receipt.conditions?.[id]?.status === 'APPLIES';
     const appliedConditions = new Set([...conditionIds].filter(id =>
       replayed.some(({receipt}) => applies(receipt,id))));
-    const matchesRole = (state, role, ruleId) => state.role === role && state.ruleId === ruleId &&
-      state.sampleId === contract.structure[role] && state.actionId === obligation.actions[role] &&
-      state.conditionId === boundConditions[role];
+    const matchesRole = (state, {role, ruleId, sampleId, actionId, conditionId}) =>
+      state.role === role && state.ruleId === ruleId && state.sampleId === sampleId &&
+      state.actionId === actionId && state.conditionId === conditionId;
     const allStatesObserved = ({receipt}) => receipt.structure.observations === 'COMPLETE' &&
-      Object.entries(obligation.states).every(([role, ruleId]) => receipt.structure.states.some(state =>
-        matchesRole(state, role, ruleId) && state.observationsComplete === true &&
+      bindings.every(binding => receipt.structure.states.some(state =>
+        matchesRole(state, binding) && state.observationsComplete === true &&
         (!appliedConditions.has(state.conditionId) || receipt.conditions?.[state.conditionId]?.status === 'APPLIES')));
     const structurallyComplete = replayed.filter(run => eligibleRuns.has(run.receipt.runId) && allStatesObserved(run));
     const complete = structurallyComplete.length > 0;
-    const states = Object.entries(obligation.states).map(([role, ruleId]) => {
-      const conditionId = boundConditions[role];
+    const states = bindings.map(binding => {
+      const {role, ruleId, conditionId} = binding;
       const assessments = replayed.flatMap(({receipt, rootSha256}) => receipt.structure.states
-        .filter(state => matchesRole(state, role, ruleId)).map(state => ({
+        .filter(state => matchesRole(state, binding)).map(state => ({
           sampleId:state.sampleId, actionId:state.actionId, verdict:state.verdict,
           observationsComplete:state.observationsComplete, runId:receipt.runId, rootSha256,
           ...(conditionId ? {applicability:receipt.conditions?.[conditionId]?.status ?? 'UNKNOWN'} : {}),

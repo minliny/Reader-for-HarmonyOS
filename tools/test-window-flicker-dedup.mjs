@@ -3,43 +3,44 @@ const definitions={"caller-barrier": {"description": "实际reader caller原Prom
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const {default: assert} = await import('node:assert/strict');
-const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
+const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
 
 const appRoot=new URL('../entry/src/main/ets/',import.meta.url);
 if(selectedCase==='caller-barrier') {
 // Callers must keep awaiting the deduped promise (persistence continues).
 {
-  let writes = 0, expectedSuppression = true;
-  const policy = {}, pending = new Promise(() => {});
+  let writes = 0, expectedSuppression = false;
+  const policy = {}, ownerLease = {}, pending = new Promise(() => {});
   const storage = new Map(), storageWrites = [];
-  const Owner = selectedProductionMethods(new URL('features/reading/ui/LocalReadingExperience.ets', appRoot),'LocalReadingExperience',
+  const Owner = productionMotionMethods(new URL('features/reading/ui/LocalReadingExperience.ets', appRoot),
     ['applyReaderWindowPolicy'], { AppStorage: {
       get(key) { return storage.get(key); },
       setOrCreate(key, value) { storage.set(key, value); storageWrites.push([key, value]); },
-    }, ReaderWindowCoordinator: { requestReaderWindowPolicy(value) {
+    }, ReaderWindowCoordinator: { requestReaderWindowPolicy(value, lease) {
       assert.equal(value, policy);
+      assert.equal(lease, ownerLease);
       assert.equal(storage.get('readerTopInfoSuppressed'), expectedSuppression,
         'page-info suppression must be current when the native policy request is forwarded');
       writes++; return pending;
     } } });
-  const owner = Object.assign(new Owner(), { windowChromeActive: true, isReaderIdentityCurrent: () => true,
+  const owner = Object.assign(new Owner(), { mounted: true, appForeground: true, windowPolicyOwner: ownerLease, windowChromeActive: true, isReaderIdentityCurrent: () => true,
     windowPolicyFor: () => policy, controlsPresentedForWindow: () => false });
   assert.equal(owner.applyReaderWindowPolicy({}), pending,
     'the settings commit path must return the coordinator promise without releasing its persistence barrier');
   assert.equal(writes, 1, 'each settings application forwards exactly one coordinator request');
-  assert.equal(storage.get('readerTopInfoSuppressed'), true,
-    'the default visible status bar suppresses page-owned information before forwarding its policy');
+  assert.equal(storage.get('readerTopInfoSuppressed'), false,
+    'an unobstructed reader retains its page information when applying the native policy');
   for (const hideStatusBar of [false, true]) for (const controls of [false, true]) {
     const before = writes, beforeStorage = storageWrites.length;
     owner.controlsPresentedForWindow = () => controls;
-    expectedSuppression = controls || !hideStatusBar;
+    expectedSuppression = controls;
     assert.equal(owner.applyReaderWindowPolicy({ hideStatusBar }), pending,
       'every current settings application retains the original coordinator promise');
     assert.equal(writes, before + 1, 'one settings application forwards exactly one policy request');
     assert.equal(storageWrites.length, beforeStorage + 1);
-    assert.deepEqual(storageWrites.at(-1), ['readerTopInfoSuppressed', controls || !hideStatusBar],
-      'current policy suppression follows the independent status preference and controls visibility');
-    assert.equal(storage.get('readerTopInfoSuppressed'), controls || !hideStatusBar);
+    assert.deepEqual(storageWrites.at(-1), ['readerTopInfoSuppressed', controls],
+      'current policy suppression follows the control presentation in both status-bar settings');
+    assert.equal(storage.get('readerTopInfoSuppressed'), controls);
   }
   for (const [active, current] of [[false, true], [true, false], [false, false]]) {
     owner.windowChromeActive = active;

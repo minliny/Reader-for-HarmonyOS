@@ -1,0 +1,5 @@
+{
+  "sourceId": "corpus-d510a10eb1ba",
+  "bookSourceName": "66书吧-起点",
+  "loginUrl": "function login() {\n     java.startBrowserAwait(\"https://66shuba.com/login\", '66书吧');\n}\n\nfunction xflogin() {\njava.startBrowserAwait(ho, '起点');\n}\n\nfunction dp() {\n\tlet dpkg = String(source.getVariable())\n\tif (dpkg == '0') {\n\t\tsource.setVariable('1');\n\t\tjava.longToast(\"\\n\\n段评已开启\");\n\t\t} else {\n\t\t\tsource.setVariable('0');\n\t\tjava.longToast(\"\\n\\n段评已关闭\");\n\t\t\t}\n\t}"
+}

@@ -312,7 +312,7 @@ export function reassessOriginalStructure({receiptPath, expectedRoot, historical
   const readiness = unresolvedReadiness(context, structure, conditions);
   const observationsComplete = supplied.observations === 'COMPLETE' && session.result === 'COMPLETED' &&
     !context.problems.length && !readiness.length;
-  const excluded = supplied.behavior === 'NOT_RUN' && hasVerifiedStructureExclusions(structure, conditions);
+  const excluded = supplied.behavior === 'NOT_RUN' && hasVerifiedStructureExclusions(structure, conditions, contract);
   return {
     source:{rootSha256:ref.sha256, caseId, caseVersion:contract.version, caseSha256, tool:supplied.tool,
       candidate:supplied.candidate.identity, session:supplied.session, chainTail},

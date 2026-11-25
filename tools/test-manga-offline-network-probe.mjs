@@ -485,7 +485,10 @@ try {
   async close(file){nodeFs.closeSync(file.fd);},async rename(a,b){nodeFs.renameSync(a,b);},async unlink(path){nodeFs.unlinkSync(path);},
   AtomicFile:class{constructor(path){this.path=path;}readFully(){const b=nodeFs.readFileSync(this.path);return b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength);}}};
  class LRUCache{constructor(capacity){this.capacity=capacity;this.data=new Map();}get(key){return this.data.get(key);}put(key,value){this.data.set(key,value);}remove(key){this.data.delete(key);}clear(){this.data.clear();}}
- const util={LRUCache,TextEncoder:class{encodeInto(text){return new TextEncoder().encode(text);}},TextDecoder:class{decodeWithStream(bytes){return new TextDecoder().decode(bytes);}}};
+ const util={LRUCache,TextEncoder:class{encodeInto(text){return new TextEncoder().encode(text);}},TextDecoder:class{
+  decodeToString(bytes){return new TextDecoder().decode(bytes);}
+  decodeWithStream(bytes){return this.decodeToString(bytes);}
+ }};
  let hashes=0,atomicReads=0,codecHeight=2;
  const cryptoFramework={createMd(){hashes++;const hash=createHash('sha256');return {async update({data}){hash.update(data);},async digest(){return {data:new Uint8Array(hash.digest())};}};}};
  const encoded=new Uint8Array([0x89,0x50,0x4e,0x47,1,2,3,4]);let nativeSources=0,nativePixels=0,nativePackers=0;
@@ -691,17 +694,22 @@ try {
 }
 if(selectedCase==='cold-ability') {
 const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const fixtureScope = await import('../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts');
+const { ReaderDocumentPickerActivity } = await import('../entry/src/main/ets/platform/ReaderDocumentPickerActivity.ts');
 const { readerCoreCopyOnlyEnabled } = pureModuleProbe(readFileSync(url('app/diagnostics/ReaderCoreCopyProbe.ts'),'utf8'), 'ReaderCoreCopyProbe.ts', {}, ['readerCoreCopyOnlyEnabled']);
 // Execute actual cold Ability entry; warm Wants cannot rearm either probe.
-for(const [debug,buildMode,parameters,expectedOffline,expectedReading,expectedSelection]of [
+for(const [debug,buildMode,parameters,expectedOffline,expectedReading,expectedSelection,expectedPage='pages/Index']of [
  [true,'debug',{readerMangaReadingProbe:true},false,true],
  [true,'debug',{readerMangaOfflineProbe:true},true,false],
  [true,'debug',{readerMangaOfflineProbe:true,readerMangaReadingProbe:true},false,false],
  [true,'debug',{readerMangaReadingProbe:'true'},false,false],
  [false,'debug',{readerMangaReadingProbe:true},false,false],
  [true,'release',{readerMangaReadingProbe:true},false,false],
- [true,'debug',{readerMangaReadingProbe:true,readerControlMotionVerification:true},false,false],
- [true,'debug',{readerMangaReadingProbe:true,readerOpenSourcePilot:true},false,false],
+ // The retired motion/renderer pages now use the ordinary Index. The actual
+ // alternate startup failure destination still excludes the manga probe.
+ [true,'debug',{readerMangaReadingProbe:true,readerControlMotionVerification:true},false,true],
+ [true,'debug',{readerMangaReadingProbe:true,readerOpenSourcePilot:true},false,true],
+ [true,'debug',{readerMangaReadingProbe:true,readerStartupMainLoadFailure:true},false,false,undefined,'pages/__ReaderStartupMainLoadFailure'],
  [true,'debug',{readerMangaReadingProbeSelectManga:true},false,false,'reading'],
  [true,'debug',{readerMangaOfflineProbeSelectManga:true},false,false,'offline'],
  [true,'debug',{readerMangaReadingProbeSelectManga:true,readerMangaOfflineProbeSelectManga:true},false,false],
@@ -716,7 +724,10 @@ for(const [debug,buildMode,parameters,expectedOffline,expectedReading,expectedSe
 ]) {
  const installs=[],receives=[],owner={start:async()=>{}};
  const installAtomic=createMangaAtomicPayloadInstallerFixture({});let atomicInstalls=0;
- const Ability=productionMotionMethods(url('entryability/EntryAbility.ets'),['onCreate','onNewWant'],{
+ const Ability=productionMotionMethods(url('entryability/EntryAbility.ets'),['onCreate','onNewWant','admitPublicFixture'],{
+  ...fixtureScope,EntryAbility:{dataMode:undefined},ReaderDocumentPickerActivity,
+  ReaderUIVerificationProbe:{configure(){}},ReaderNavigationAppearancePreferences:{attach(){}},
+  ReaderControlPlacementPreferences:{install:async()=>{}},
   DEBUG:debug,BUILD_MODE_NAME:buildMode,readerCoreCopyOnlyEnabled,readerControlVerificationColdStartPage,readerDisableOptionalEntryMemory,readerMangaOfflineProbeScope,readerMangaReadingProbeScope,readerMangaProbeSelectionMode,
   errorMessageOf,localReadFailureSummary,
   installMangaAtomicPayloadReader(){installAtomic();atomicInstalls++;},
@@ -726,11 +737,16 @@ for(const [debug,buildMode,parameters,expectedOffline,expectedReading,expectedSe
   ReaderRuntimeOwner:{install(...args){assert.equal(atomicInstalls,1,'production atomic reader binds synchronously before RuntimeOwner construction');installs.push(args);return owner;}},ReaderThemeHost:{install:async()=>{},setRecoveryBarrier(){}},
   SyncGateway:class{recoverInterruptedRestore=async()=>false;},LocalConfigurationReset:{recover:async()=>false},ReaderSettingsGateway:class{loadAfterConfigurationRecovery=async()=>{};},
   ReaderSystemFileOpenHost:{install(){},receive(want){receives.push(want);}},ConfigurationConstant:{ColorMode:{COLOR_MODE_DARK:1}},hilog:{info(){},error(){}},DOMAIN:0});
- const ability=new Ability();ability.context={config:{colorMode:0}};ability.prepareSelectedReadingFont=async()=>{};
+ const ability=new Ability();ability.context={config:{colorMode:0},terminateSelf:async()=>assert.fail('ordinary diagnostic start is not a public fixture rejection')};
+ ability.coreCopyProbeGeneration=0;ability.prepareSelectedReadingFont=async()=>{};
+ ability.frameworkCapture={start(_debug,_mode,seconds){assert.equal(seconds,undefined,'ordinary warm Want does not request framework capture');}};
  const selectionFlag=Object.keys(parameters).some(key=>key.endsWith('SelectManga'));
  const want={parameters:selectionFlag?parameters:{...parameters,readerMangaOfflineSourceId:scope.sourceId,readerMangaOfflineBookId:scope.bookId}};
  ability.onCreate(want,{});await ability.recoveryReady;
- assert.equal(installs.length,1);assert.equal(installs[0][4],expectedSelection);assert.equal(installs[0][2]!==undefined,expectedOffline);assert.equal(installs[0][3]!==undefined,expectedReading);
+ const scenario=JSON.stringify({debug,buildMode,parameters});
+ assert.equal(ability.coldStartPage,expectedPage,scenario);
+ assert.equal(installs.length,1,scenario);assert.equal(installs[0][4],expectedSelection,scenario);
+ assert.equal(installs[0][2]!==undefined,expectedOffline,scenario);assert.equal(installs[0][3]!==undefined,expectedReading,scenario);
  if(expectedReading)assert.deepEqual(installs[0][3],scope);if(expectedOffline)assert.deepEqual(installs[0][2],scope);
  ability.onNewWant({parameters:{readerMangaReadingProbe:true,readerMangaOfflineProbe:true,readerMangaReadingProbeSelectManga:true,readerMangaOfflineProbeSelectManga:true}},{});assert.equal(installs.length,1);assert.equal(receives.length,2);assert.equal(atomicInstalls,1,'warm Want never rebinds the atomic reader');
  if(parameters.readerMangaOfflineProbe===true&&parameters.readerMangaReadingProbe===true)assert.equal(ability.coldStartPage,'pages/Index','conflicting true probes keep ordinary Index/online routing');

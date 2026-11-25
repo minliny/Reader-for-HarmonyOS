@@ -23,7 +23,7 @@ const renderSeams = ['searchField', 'statsRow', 'filterArea', 'categoryFilter',
   'sourceRow'];
 const roots = ['appThemeScheme', 'sources', 'operation', 'statusKind', 'statusMessage',
   'statusActionLabel', 'statusActionGeneration', 'mounted', 'appForeground',
-  'temporaryBackIdentity', 'sourceList', 'pendingOverlay', 'statusAction'];
+  'temporaryBackIdentity', 'sourceList', 'pendingRecovery', 'statusAction'];
 
 /** Compute the complete member/initializer/Watch dependency closure from the
  * current production struct instead of maintaining a list of fixture fields.
@@ -102,6 +102,7 @@ export function sourceManagementRecoveryProbe(source, params = {}, options = {})
     ...actualSourceManagementGeometry(metrics), ...windowFacts, ...readerTypographyRoles, ...sourceScroll, ...surfaceResolvers,
     ...foundationSpecs(), ...labeledIconSpecs(), ...readerEditingSdk(), READER_FEEDBACK_EXTENDED_MS,
     resolveSourceManagementLayout, readerSourceCategoryLabel, readerRecoveryView, ...support,
+    ReaderUIVerificationProbe: { enabled: () => false },
     hilog: { info() {}, warn() {}, error() {} },
     ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
     BarState: { Off: 'BarState.Off' },
@@ -144,7 +145,7 @@ export function sourceManagementRecoveryProbe(source, params = {}, options = {})
       callback.call(owner, id, true);
     }
   }
-  owner.pendingOverlay(0);
+  owner.pendingRecovery();
   return { owner, sdk, closure };
 }
 

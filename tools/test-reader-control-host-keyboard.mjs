@@ -5,7 +5,9 @@ import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import * as layoutPolicy from '../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts';
-import { READER_PAGE_CHROME_BOOKMARK_SIZE } from '../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts';
+import { createDefaultReaderAppearanceSnapshot } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
+import { READER_BOOKMARK_RIBBON_HEIGHT } from '../entry/src/main/ets/features/reading/presentation/ReaderPageBookmarkModel.ts';
+import { SEARCH_CONTROL_CLEAR_END_INSET, SEARCH_CONTROL_CLEAR_SLOT } from '../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts';
 import {
   ReaderInsetsVp, ReaderRectVp, ReaderKeyboardAreaVp, ReaderWindowMetricsSnapshot,
 } from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
@@ -96,19 +98,20 @@ assert.equal(consumeReaderControlKeyboardBack(hidden, host), false,
 
 // Structural wiring only; platform IME interaction remains a device gate.
 
-const back = source.slice(source.indexOf('  private requestExit(): void {'), source.indexOf('  private beginExit(): void {'));
-assert.ok(back.indexOf('consumeReaderControlKeyboardBack') < back.indexOf('this.controlTemporaryLayer'));
-assert.ok(back.indexOf('consumeReaderControlKeyboardBack') < back.indexOf('backReaderControlHostSession'));
+const back = productionMethod('requestExit');
+const consume = back.indexOf('consumeReaderControlKeyboardBack');
+for (const lowerOwner of ['this.controlTemporaryLayer', 'backReaderControlHostSession', 'this.beginExit()']) {
+  assert.ok(consume >= 0 && back.indexOf(lowerOwner) > consume, `visible IME handles Back before ${lowerOwner}`);
+}
 assert.match(back, /ReaderWindowCoordinator\.metrics\(\), this\.controlKeyboardHost\(\)/);
-const closeStart = source.indexOf('  private hideControl(): void {');
-const closeEnd = source.indexOf('  private controlVisible(): boolean {');
-assert.ok(closeStart >= 0 && closeEnd > closeStart, 'close method boundaries must exist in order');
-const close = source.slice(closeStart, closeEnd);
-assert.match(close, /hideReaderControlKeyboard\(this\.controlKeyboardHost\(\)\)/);
-const commit = source.slice(source.indexOf('  private onControlSessionChanged(): void {'),
-  source.indexOf('  private expandControlDirectory(): void {'));
-assert.match(commit, /readerControlHostCloseCommitted[\s\S]*readerControlKeyboardVisible\(ReaderWindowCoordinator\.metrics\(\)\)[\s\S]*hideReaderControlKeyboard/);
-assert.match(source, /inputMethod\.getController\(\)\.hideTextInput\(\)/);
+const hideVisibleKeyboard = /if \(readerControlKeyboardVisible\(ReaderWindowCoordinator\.metrics\(\)\)\)\s*\{\s*hideReaderControlKeyboard\(this\.controlKeyboardHost\(\)\);\s*\}/;
+const close = productionMethod('hideControl');
+assert.match(close, hideVisibleKeyboard);
+assert.ok(close.search(hideVisibleKeyboard) < close.indexOf('dismissReaderControlSession'));
+const commit = productionMethod('onControlSessionChanged');
+const committed = commit.indexOf('if (!readerControlHostCloseCommitted(');
+assert.ok(committed >= 0 && commit.search(hideVisibleKeyboard) > committed);
+assert.match(productionMethod('controlKeyboardHost'), /inputMethod\.getController\(\)\.hideTextInput\(\)/);
 assert.doesNotMatch(source, /\.hideSoftKeyboard\(/);
 
 
@@ -116,15 +119,17 @@ assert.doesNotMatch(source, /\.hideSoftKeyboard\(/);
   if(id==='outer-frame') {
 const layoutMethods = ['effectiveViewportWidth', 'effectiveViewportHeight', 'readingLayout',
   'controlLayout', 'windowMetricsLayoutKey', 'onWindowMetricsRevisionChanged',
-  'reflowAfterWindowGeometryChange', 'bookmarkFeedbackTopBoundary', 'currentControlStructureKey', 'refreshControlEditingEnvironment'].map(productionMethod).join('\n');
+  'reflowAfterWindowGeometryChange', 'bookmarkFeedbackTopBoundary', 'bookmarkRibbonPaperTop',
+  'currentControlStructureKey', 'refreshControlEditingEnvironment', 'reconcileSessionLaunchLayout'].map(productionMethod).join('\n');
 const makeMetrics = keyboardBottom => new ReaderWindowMetricsSnapshot(
   new ReaderRectVp(0, 0, 1320 / 3.5, 816), new ReaderRectVp(0, 0, 1320 / 3.5, 816),
   new ReaderInsetsVp(), new ReaderInsetsVp(), new ReaderInsetsVp(),
   new ReaderInsetsVp(0, 0, 0, 28), new ReaderInsetsVp(0, 0, 0, keyboardBottom),
   3.5, 1, keyboardBottom > 0 ? 1 : 2, true);
 let currentMetrics = makeMetrics(314);
-const deps = { ...layoutPolicy, readerControlStructureKey,
-  readerPageChromeTopTextStyle:()=>({}), measureReaderPageChromeText:()=>({height:0}), READER_PAGE_CHROME_BOOKMARK_SIZE, ReaderWindowCoordinator: { metrics: () => currentMetrics } };
+const deps = { ...layoutPolicy, readerControlStructureKey, READER_BOOKMARK_RIBBON_HEIGHT,
+  readerPageChromeTopTextStyle:()=>({}), measureReaderPageChromeText:()=>({height:0}),
+  ReaderWindowCoordinator: { metrics: () => currentMetrics } };
 const LayoutHost = new Function(...Object.keys(deps),
   `${stripTypeScriptTypes(`class LayoutHost { ${layoutMethods} }`)}; return LayoutHost;`)(...Object.values(deps));
 const panelStart = source.indexOf('      ReaderControlPanel({');
@@ -134,9 +139,10 @@ assert.ok(binding, 'actual Panel layout binding exists');
 const readBinding = new Function(`return function() { return ${binding[1]}; };`)();
 const layoutHost = new LayoutHost();
 Object.assign(layoutHost, {
-  controlMinimumGeneration:0, scheduleControlMinimum() {}, mounted: true, viewportWidth: 1320 / 3.5, viewportHeight: 816, isTablet: false,
+  controlMinimumGeneration:0, scheduleControlMinimum() {}, mounted: true, viewportWidth: 1320 / 3.5, viewportHeight: 816, expandedLayout: false,
   readerSettingsSnapshot: { extendIntoCutout: false, navigationMode: 'paged', hideStatusBar: false }, pageTurnSettlementLayout: undefined,
-  pageTurnInputPhase: () => 'idle', sessionCapsuleMetrics:()=>({targetHeight:0}), getUIContext:()=>({}), chromeCalls: 0,
+  appearanceSnapshot: createDefaultReaderAppearanceSnapshot(),
+  pageTurnInputPhase: () => 'idle', sessionCapsuleMetrics:()=>({paintHeight:24}), getUIContext:()=>({}), chromeCalls: 0,
   applyWindowChrome() { this.chromeCalls++; },
   invalidatePageTurnRuntime() { assert.fail('keyboard-only change must not repaginate reading text'); },
   controlSession: holdReaderControlSession(enterReaderControlModule(
@@ -216,7 +222,8 @@ assert.ok(Math.abs(restoredQuickY - originalQuickY) < 1e-6,
       const measure=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlTextMeasurement.ets',import.meta.url),'utf8'),
         'ReaderControlTextMeasurement.ets',{WordBreak:{BREAK_WORD:'break'}},['measureReaderControlText']);
       const searchMinimum=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlSearchMinimum.ets',import.meta.url),'utf8'),
-        'ReaderControlSearchMinimum.ets',{...readerTypographyRoles,...readerMessageStyles,...typography,...measure,sampleReaderControlSearch},
+        'ReaderControlSearchMinimum.ets',{...readerTypographyRoles,...readerMessageStyles,...typography,...measure,
+          SEARCH_CONTROL_CLEAR_END_INSET, SEARCH_CONTROL_CLEAR_SLOT, sampleReaderControlSearch},
         ['measureReaderSearchMinimum','readerControlSearchMinimumFacts']);
       const advance=o=>Math.max(1,[...o.textContent].length*Number.parseFloat(o.fontSize));
       const measureContext={px2vp:v=>v,getMeasureUtils:()=>({measureText:advance,

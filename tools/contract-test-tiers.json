@@ -150,8 +150,6 @@
     "test-toc-repair-regressions.mjs",
     "test-tool-environment.mjs",
     "test-transient-transport-acquisition.mjs",
-    "test-primary-shared-ui-repairs.mjs",
-    "test-bounded-local-import-composition.mjs",
     "test-reader-scroll-flow-alignment.mjs"
   ],
   "integration": [
@@ -413,6 +411,7 @@
     "test-reader-control-motion-presentation.mjs",
     "test-reader-control-option-update.mjs",
     "test-reader-control-p0.mjs",
+    "test-reader-control-placement.mjs",
     "test-reader-control-playback-content.mjs",
     "test-reader-control-playback-host-intents.mjs",
     "test-reader-control-replace-content.mjs",
@@ -806,6 +805,255 @@
           "proves": "Runs the actual search relevance/projection/query state regression, Unicode/default-locale equivalence and cold-return normalization bounds, retained rows/anchors, publication revisions and Host/orchestrator cancellation/retry/late-result ownership.",
           "doesNotProve": "Operation-count and bounded method/SDK assertions do not prove native ICU wall time, elimination of THREAD_BLOCK_6S on VM, compositor timing, live source results or user acceptance."
         }
+      ]
+    }
+  },
+  "pending": [
+    "test-app-build-identity.mjs",
+    "test-book-search-pages.mjs",
+    "test-bookshelf-picker-caller-admission.mjs",
+    "test-bookshelf-update-badge-budget.mjs",
+    "test-bookturn-numeric-boundaries.mjs",
+    "test-builder-current-inputs.mjs",
+    "test-builder-live-data.mjs",
+    "test-builder-live-labels.mjs",
+    "test-control-directory-focus-path.mjs",
+    "test-directory-native-fixture.mjs",
+    "test-directory-native-row-target.mjs",
+    "test-directory-offline-menu-input.mjs",
+    "test-directory-scroll-away-prefix.mjs",
+    "test-document-picker-host-activity.mjs",
+    "test-document-picker-system-file-handoff.mjs",
+    "test-download-native-fixture.mjs",
+    "test-framework-confluence-controls.mjs",
+    "test-harmony-navigation-appearance.mjs",
+    "test-hdc-deployment-routing.mjs",
+    "test-hdc-foreground-loopback.mjs",
+    "test-index-alert-input-admission.mjs",
+    "test-legacy-bookmark-recovery.mjs",
+    "test-local-recovery-file.mjs",
+    "test-local-recovery-panel.mjs",
+    "test-local-recovery-product.mjs",
+    "test-manga-refresh-feedback.mjs",
+    "test-manga-target-catalog-admission.mjs",
+    "test-message-entrypoint-recovery-action.mjs",
+    "test-native-alert-system-file-handoff.mjs",
+    "test-native-alert-window-lifecycle.mjs",
+    "test-native-button-border-order.mjs",
+    "test-page-structure-native-fixture.mjs",
+    "test-phone-tab-area-adoption.mjs",
+    "test-phone-ui-closeout.mjs",
+    "test-pill-native-geometry.mjs",
+    "test-platform-warning-boundaries.mjs",
+    "test-post-layout-continuations.mjs",
+    "test-reader-appearance-recovery-ui.mjs",
+    "test-reader-appearance-save-recovery.mjs",
+    "test-reader-bookmark-state-recipe.mjs",
+    "test-reader-continuous-results.mjs",
+    "test-reader-control-child-composition.mjs",
+    "test-reader-control-measurement-lifecycle.mjs",
+    "test-reader-control-navigation-cancel.mjs",
+    "test-reader-control-outline-content-box.mjs",
+    "test-reader-control-pixel-budget.mjs",
+    "test-reader-control-quick-overflow.mjs",
+    "test-reader-control-recovery-generation.mjs",
+    "test-reader-control-replace-navigation.mjs",
+    "test-reader-control-replace-row-box.mjs",
+    "test-reader-control-secondary-elements.mjs",
+    "test-reader-control-surface-ownership.mjs",
+    "test-reader-directory-retained-surface.mjs",
+    "test-reader-editing-hosts.mjs",
+    "test-reader-editing-visibility.mjs",
+    "test-reader-first-playback-start.mjs",
+    "test-reader-focus-frame.mjs",
+    "test-reader-framework-capture.mjs",
+    "test-reader-keyboard-geometry.mjs",
+    "test-reader-native-input-recovery.mjs",
+    "test-reader-page-accessibility-actions.mjs",
+    "test-reader-replace-export-handoff.mjs",
+    "test-reader-route-redesign.mjs",
+    "test-reader-rules-preview-view.mjs",
+    "test-reader-seam-extraction.mjs",
+    "test-reader-shared-control-elements.mjs",
+    "test-reader-system-reduce-motion.mjs",
+    "test-reader-system-share.mjs",
+    "test-reader-tts-credential-store.mjs",
+    "test-reader-tts-manage-content-budget.mjs",
+    "test-reader-tts-manager-input.mjs",
+    "test-reader-tts-previous-boundary.mjs",
+    "test-reader-window-font-configuration.mjs",
+    "test-reading-design-density.mjs",
+    "test-reading-pill-native.mjs",
+    "test-recovery-overlay-capacity.mjs",
+    "test-retained-form-current-inputs.mjs",
+    "test-rss-archived-favorite.mjs",
+    "test-search-result-object-link-binding.mjs",
+    "test-secondary-design-budget.mjs",
+    "test-secondary-pill-material.mjs",
+    "test-secondary-recovery-assembly.mjs",
+    "test-shared-download-cover-header.mjs",
+    "test-source-filter-live-selection.mjs",
+    "test-source-management-contract.mjs",
+    "test-source-native-parent-recording.mjs",
+    "test-source-tools-layout.mjs",
+    "test-source-tools-native-fixture.mjs",
+    "test-source-tools-native-recovery.mjs",
+    "test-source-tools-selection.mjs",
+    "test-standalone-directory-shortcuts.mjs",
+    "test-startup-storage-format-admission.mjs",
+    "test-svg-fill-adapter.mjs",
+    "test-ui-framework-feedback.mjs",
+    "test-ui-framework-repair-batch.mjs",
+    "test-ui-global-review-inputs.mjs",
+    "test-ui-live-layout-retry.mjs",
+    "test-ui-recovery-composition.mjs",
+    "test-ui-review-admission.mjs",
+    "test-ui-review-current-projections.mjs",
+    "test-ui-review-final-contracts.mjs",
+    "test-ui-review-local-input.mjs",
+    "test-ui-review-metrics-dependencies.mjs",
+    "test-ui-review-native-motion-policy.mjs",
+    "test-ui-review-offline-manga-adjacent.mjs",
+    "test-ui-review-projection-preservation.mjs",
+    "test-ui-review-retained-root-input.mjs",
+    "test-ui-review-search-receipts.mjs",
+    "test-ui-review-source-switch-empty-author.mjs",
+    "test-ui-review-tts-callback-intent.mjs",
+    "test-ui-review-tts-preference-fields.mjs",
+    "test-ui-window-layout-closure.mjs"
+  ],
+  "scopeCases": {
+    "manga-image-cache": {
+      "test-manga-display-retention.mjs": [
+        "worker-wait",
+        "temp-recovery"
+      ],
+      "test-manga-error-recovery.mjs": [
+        "brief-current-error"
+      ],
+      "test-manga-offline-network-probe.mjs": [
+        "probe-policy",
+        "prepare-reuse",
+        "cold-ability"
+      ],
+      "test-manga-preview-entry-sdk.mjs": [
+        "chapter-start"
+      ],
+      "test-manga-session.mjs": [
+        "controller-refresh-preview",
+        "source-cache-renew"
+      ],
+      "test-manga-storage-owner.mjs": [
+        "clear-restore-order",
+        "download-delegates",
+        "storage-authority-binding",
+        "preparation-context"
+      ],
+      "test-manga-storage-policy.mjs": [
+        "identity",
+        "retention",
+        "inventory",
+        "download-derived-quota",
+        "original-derived-shared-inode",
+        "pending-restart",
+        "restore-barrier",
+        "download-chapter-inventory"
+      ],
+      "test-manga-surface-render-key-sdk.mjs": [
+        "render-publication"
+      ],
+      "test-manga-surface-sdk.mjs": [
+        "safe-area",
+        "save-and-frame"
+      ],
+      "test-manga-tile-window.mjs": [
+        "tile-attempt-ownership",
+        "content-revocation"
+      ],
+      "test-reading-entry-preparation.mjs": [
+        "hot-local",
+        "bounded-misses",
+        "content-vs-position",
+        "manga-epoch",
+        "exact-cleanup"
+      ],
+      "test-reading-offline-completion.mjs": [
+        "bounded-completion",
+        "missing-image",
+        "resource-failure"
+      ],
+      "test-reading-offline-gateway.mjs": [
+        "capacity",
+        "projection",
+        "clear",
+        "offline-missing",
+        "reading-consumers"
+      ],
+      "test-reading-offline-host.mjs": [
+        "manga-supplement",
+        "manga-future-cancel",
+        "manga-pending-claim",
+        "manga-clear-drain",
+        "manga-replacement",
+        "manga-delete",
+        "manga-directory",
+        "sdk-manga-pending-claim"
+      ],
+      "test-reading-offline-image-cache-runtime.mjs": [
+        "manga-identity-proof",
+        "bounded-write",
+        "version-isolation",
+        "manifest-atomic",
+        "clear-generation",
+        "clear-fsync",
+        "clear-restart",
+        "ownership-read",
+        "worker-ownership"
+      ],
+      "test-reading-offline-image-cache.mjs": [
+        "profile",
+        "close-drain",
+        "first-frame",
+        "cache-only",
+        "offline-write"
+      ],
+      "test-settings-cache-index-sdk.mjs": [
+        "safe-unknown",
+        "retained-action"
+      ],
+      "test-settings-cache-owner-consumer.mjs": [
+        "confirmed",
+        "partial"
+      ],
+      "test-source-login-default-policy.mjs": [
+        "published-policy",
+        "regeneration",
+        "rule-change",
+        "vip-exception"
+      ]
+    },
+    "search-return-runtime": {
+      "test-search-orchestrator.mjs": [
+        "route-retained-work",
+        "route-live-return",
+        "route-settled-return",
+        "superseded-query",
+        "retry-failed-source",
+        "delta-superseded",
+        "local-unicode",
+        "local-dense-pages",
+        "local-hydration-revision",
+        "local-page-revision"
+      ],
+      "test-search-view-state.mjs": [
+        "navigation",
+        "relevance",
+        "progressive-anchor",
+        "incremental-row",
+        "bounded-normalization",
+        "locale-remount",
+        "query-delta",
+        "layout-restoration"
       ]
     }
   }

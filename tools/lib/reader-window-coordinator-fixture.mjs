@@ -29,7 +29,7 @@ export async function createWindowCoordinatorFixture(){
  };
  const warnings=[];
  const displayInfo={id:0,rotation:0,densityPixels:1,scaledDensity:1};
- const kit={window:{Orientation:{UNSPECIFIED:0,PORTRAIT:1,LANDSCAPE:2,AUTO_ROTATION_UNSPECIFIED:3},
+ const kit={KeyboardAvoidMode:{OFFSET:0,RESIZE:1,NONE:2},window:{Orientation:{UNSPECIFIED:0,PORTRAIT:1,LANDSCAPE:2,AUTO_ROTATION_UNSPECIFIED:3},
    AvoidAreaType:{TYPE_SYSTEM:0,TYPE_CUTOUT:1,TYPE_SYSTEM_GESTURE:2,TYPE_NAVIGATION_INDICATOR:3,TYPE_KEYBOARD:4}},
    display:{getDefaultDisplaySync:()=>displayInfo,on(){},off(){}}};
  const deps={'@kit.ArkUI':kit,'@kit.BasicServicesKit':{deviceInfo:{deviceType:'phone'}},
@@ -45,7 +45,12 @@ export async function createWindowCoordinatorFixture(){
  const {ReaderWindowCoordinator:C,ReaderWindowChromeStyle:S,ReaderWindowPolicy:P}=module.exports;
  function windowPort(options={}){
    const zero={left:0,top:0,width:0,height:0};
-   const win={calls:[],properties:{},barEnabled:{status:true,navigation:true,navigationIndicator:true},nextColor:undefined,
+   let keyboardMode = kit.KeyboardAvoidMode.OFFSET;
+   const uiContext = {
+     getKeyboardAvoidMode: () => keyboardMode,
+     setKeyboardAvoidMode: mode => { keyboardMode = mode; },
+   };
+   const win={getUIContext:()=>uiContext,calls:[],properties:{},barEnabled:{status:true,navigation:true,navigationIndicator:true},nextColor:undefined,
      avoidTop:undefined,nextStatus:undefined,rect:{left:0,top:0,width:390,height:844},events:new Map(),
      orientation:options.orientation??0,keepScreenOn:options.keepScreenOn??false,
      getPreferredOrientation:()=>win.orientation,getWindowProperties:()=>({isKeepScreenOn:win.keepScreenOn,brightness:-1,windowRect:win.rect}),

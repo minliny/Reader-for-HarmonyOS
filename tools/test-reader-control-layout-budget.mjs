@@ -96,6 +96,7 @@ async function run(id) {
     const fontFamilies = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
     const { readerFoundationTokens } = await import('./lib/reader-tokens-probe.mjs');
     const { readerTypographyRoles, readerMessageStyles } = await import('./lib/reader-typography-probe.mjs');
+    const searchControls = await import('../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts');
     const geo = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
     const motion = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
     const controls = await import('../entry/src/main/ets/features/reading/ui/ReaderControlGeometry.ts');
@@ -114,7 +115,7 @@ async function run(id) {
     const ui = file => read('entry/src/main/ets/features/reading/ui/' + file);
     const classes = selectedProductionClasses(new URL('../entry/src/main/ets/ui/foundation/ReaderTypography.ets', import.meta.url), ['ReaderTextStyle', 'ReaderInheritedTextStyle']);
     const measure = pureModuleProbe(ui('ReaderControlTextMeasurement.ets'), 'ReaderControlTextMeasurement.ets', { WordBreak: { BREAK_WORD: 'break' } }, ['measureReaderControlText']);
-    const deps = { ScrollDirection: { Horizontal: 'horizontal', Vertical: 'vertical' }, ...readerTypographyRoles, ...readerMessageStyles, ...classes, ...measure, ...appearance, ...settings, ...search, ...replace, ...playback, ...headerGeometry, ...actor, ...controls, ...fontFamilies, ...readerFoundationTokens, readerAppColor };
+    const deps = { ScrollDirection: { Horizontal: 'horizontal', Vertical: 'vertical' }, ...readerTypographyRoles, ...readerMessageStyles, ...classes, ...measure, ...appearance, ...settings, ...search, ...searchControls, ...replace, ...playback, ...headerGeometry, ...actor, ...controls, ...fontFamilies, ...readerFoundationTokens, readerAppColor };
     const pure = (file, names, source = ui(file)) => pureModuleProbe(source, file, deps, names);
     const headerSource = read('entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets');
     const compiler = installedEtsCompiler();

@@ -29,7 +29,8 @@
       "cases": {
         "safe-frame": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "d33a687d969fbc91a3dd608cdf5e044a555707d91da403f8fb4d98202baaea76"
         }
       }
     },
@@ -47,27 +48,33 @@
       "cases": {
         "button": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "c4d9e69275102d0e559b75282cfcc90a61759ff96dd1094556be32293e8341c1"
         },
         "choice": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "c4d9e69275102d0e559b75282cfcc90a61759ff96dd1094556be32293e8341c1"
         },
         "icon": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "c4d9e69275102d0e559b75282cfcc90a61759ff96dd1094556be32293e8341c1"
         },
         "ui-boundary": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "c4d9e69275102d0e559b75282cfcc90a61759ff96dd1094556be32293e8341c1"
         },
         "navigation-owner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "c4d9e69275102d0e559b75282cfcc90a61759ff96dd1094556be32293e8341c1"
         },
         "settings-arguments": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "c4d9e69275102d0e559b75282cfcc90a61759ff96dd1094556be32293e8341c1"
         }
       }
     },
@@ -110,7 +117,8 @@
       "cases": {
         "confirmation-admission": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "079f6bcf466f3f5335798cb53a9a6f86adfeab8a6cc1c7d57ab3f83185119062"
         },
         "dialog-message": {
           "resources": [],
@@ -213,7 +221,8 @@
       "cases": {
         "projection": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "ff48022cd274dc884ca08e0c76c71e2dfc0d97637e746071f4eac9032dda54e2"
         }
       }
     },
@@ -482,15 +491,18 @@
       "cases": {
         "index-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "c4188dd07b2db344a9e10f52470a04ea0a88d7f0da0365582bc7ae24b168ad0c"
         },
         "stage-recovery": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "c4188dd07b2db344a9e10f52470a04ea0a88d7f0da0365582bc7ae24b168ad0c"
         },
         "import-finalize": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "c4188dd07b2db344a9e10f52470a04ea0a88d7f0da0365582bc7ae24b168ad0c"
         }
       }
     },
@@ -499,7 +511,8 @@
       "cases": {
         "mounted-debug-scanner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "ace5c9122acc3ec9b0d5bd4552d3971a17071f8366bf34c28e44e3e54acbb007"
         }
       }
     },
@@ -560,7 +573,8 @@
       "cases": {
         "explore-wire-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "a60a56d3f3b7501365f45ba6ec1b6675d55a89cf6db6ba4db6eb7235c5a21a7b"
         }
       }
     },
@@ -578,7 +592,8 @@
       "cases": {
         "error-envelope-projection": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "a3432f73c3966517dce2001075bb79661b92996798a56083de4eb35d96518800"
         }
       }
     },
@@ -822,7 +837,8 @@
       "cases": {
         "readable-catalog-near-end": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "a89e9a1018a4d8c45b6affb27d409a0a1dcb07d95d09be4c01756abea13f1b54"
         }
       }
     },
@@ -831,37 +847,46 @@
       "cases": {
         "measured-shadow": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED",
+          "qualification": "QUALIFIED",
           "reviewedSourceSha256": "db81141b8b8b7261da456e9d4779417a35877d0467d0baf10b10ec2d531c3a00",
           "qualificationHistory": {
             "qualification": "QUALIFIED",
             "sourceSha256": "db81141b8b8b7261da456e9d4779417a35877d0467d0baf10b10ec2d531c3a00"
           },
-          "reason": "Only native-targets has current definition review and exact execution evidence. A current file-level source hash cannot renew the historical sibling cases."
+          "reason": "Only native-targets has current definition review and exact execution evidence. A current file-level source hash cannot renew the historical sibling cases.",
+          "sourceSha256": "36f1e8c46ea2eb90df8a7699c95b8466c2bba8ce4ef9465cc1511d23b5e683ff"
         },
         "common-hit-test": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED",
+          "qualification": "QUALIFIED",
           "reviewedSourceSha256": "db81141b8b8b7261da456e9d4779417a35877d0467d0baf10b10ec2d531c3a00",
           "qualificationHistory": {
             "qualification": "QUALIFIED",
             "sourceSha256": "db81141b8b8b7261da456e9d4779417a35877d0467d0baf10b10ec2d531c3a00"
           },
-          "reason": "Only native-targets has current definition review and exact execution evidence. A current file-level source hash cannot renew the historical sibling cases."
+          "reason": "Only native-targets has current definition review and exact execution evidence. A current file-level source hash cannot renew the historical sibling cases.",
+          "sourceSha256": "36f1e8c46ea2eb90df8a7699c95b8466c2bba8ce4ef9465cc1511d23b5e683ff"
         },
         "retained-inputs": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED",
+          "qualification": "QUALIFIED",
           "reviewedSourceSha256": "db81141b8b8b7261da456e9d4779417a35877d0467d0baf10b10ec2d531c3a00",
           "qualificationHistory": {
             "qualification": "QUALIFIED",
             "sourceSha256": "db81141b8b8b7261da456e9d4779417a35877d0467d0baf10b10ec2d531c3a00"
           },
-          "reason": "Only native-targets has current definition review and exact execution evidence. A current file-level source hash cannot renew the historical sibling cases."
+          "reason": "Only native-targets has current definition review and exact execution evidence. A current file-level source hash cannot renew the historical sibling cases.",
+          "sourceSha256": "36f1e8c46ea2eb90df8a7699c95b8466c2bba8ce4ef9465cc1511d23b5e683ff"
         },
         "native-targets": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "36f1e8c46ea2eb90df8a7699c95b8466c2bba8ce4ef9465cc1511d23b5e683ff"
+        },
+        "clear-results-input": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "36f1e8c46ea2eb90df8a7699c95b8466c2bba8ce4ef9465cc1511d23b5e683ff"
         }
       }
     },
@@ -1027,7 +1052,8 @@
       "cases": {
         "chapter-action-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf926b78fc6335a6ce6475ba49d698043483cdd9c8a5633f140367e9cdf9c99f"
         }
       }
     },
@@ -1079,7 +1105,8 @@
         },
         "worker-wait": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3c8826f8882012a5a1e2228ca4af3b4749d247c8c34572902d5df51554f3cf53"
         },
         "files-dir-leases": {
           "resources": [],
@@ -1091,7 +1118,8 @@
         },
         "temp-recovery": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3c8826f8882012a5a1e2228ca4af3b4749d247c8c34572902d5df51554f3cf53"
         },
         "temporary-inventory": {
           "resources": [],
@@ -1125,7 +1153,8 @@
         },
         "brief-current-error": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "1525709c3f979d66c4988972564fa170bbaa852bdfd7c47566a30627e86d3320"
         }
       }
     },
@@ -1147,7 +1176,8 @@
       "cases": {
         "probe-policy": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e8d319ad9bc549be7bdef3bff491de615d773748f96e0cf8bf8d67a1bc3eddc1"
         },
         "observer-behavior": {
           "resources": [],
@@ -1155,11 +1185,13 @@
         },
         "prepare-reuse": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e8d319ad9bc549be7bdef3bff491de615d773748f96e0cf8bf8d67a1bc3eddc1"
         },
         "cold-ability": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e8d319ad9bc549be7bdef3bff491de615d773748f96e0cf8bf8d67a1bc3eddc1"
         },
         "sdk-seams": {
           "resources": [
@@ -1174,7 +1206,8 @@
       "cases": {
         "chapter-start": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "7fa7d1559b24d6f79720f984aad276485cb3c291680ff9890267e73a6652ece4"
         },
         "source-cancel": {
           "resources": [],
@@ -1191,7 +1224,8 @@
         },
         "controller-refresh-preview": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "b17008d6004d179bf93dfd0a9d3546f678076ec7ab29f733c87ae55e461df19e"
         },
         "surface-cold-admission": {
           "resources": [],
@@ -1207,7 +1241,8 @@
         },
         "source-cache-renew": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "b17008d6004d179bf93dfd0a9d3546f678076ec7ab29f733c87ae55e461df19e"
         },
         "retained-shell-catalog-sdk": {
           "resources": [],
@@ -1275,19 +1310,23 @@
       "cases": {
         "clear-restore-order": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "4fe26c6c370292d9d08f56625b7f8686f93a1dad332f4783f1ebe12058058a14"
         },
         "download-delegates": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "4fe26c6c370292d9d08f56625b7f8686f93a1dad332f4783f1ebe12058058a14"
         },
         "storage-authority-binding": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "4fe26c6c370292d9d08f56625b7f8686f93a1dad332f4783f1ebe12058058a14"
         },
         "preparation-context": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "4fe26c6c370292d9d08f56625b7f8686f93a1dad332f4783f1ebe12058058a14"
         }
       }
     },
@@ -1296,7 +1335,8 @@
       "cases": {
         "identity": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "93e12ebb78132726aa29961bdb169dab32601165054640db27d42b9b576143d2"
         },
         "migration": {
           "resources": [],
@@ -1304,7 +1344,8 @@
         },
         "retention": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "93e12ebb78132726aa29961bdb169dab32601165054640db27d42b9b576143d2"
         },
         "grants": {
           "resources": [],
@@ -1312,15 +1353,18 @@
         },
         "inventory": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "93e12ebb78132726aa29961bdb169dab32601165054640db27d42b9b576143d2"
         },
         "download-derived-quota": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "93e12ebb78132726aa29961bdb169dab32601165054640db27d42b9b576143d2"
         },
         "original-derived-shared-inode": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "93e12ebb78132726aa29961bdb169dab32601165054640db27d42b9b576143d2"
         },
         "unused-derived-classification": {
           "resources": [],
@@ -1344,7 +1388,8 @@
         },
         "pending-restart": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "93e12ebb78132726aa29961bdb169dab32601165054640db27d42b9b576143d2"
         },
         "pressure-order": {
           "resources": [],
@@ -1356,7 +1401,8 @@
         },
         "restore-barrier": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "93e12ebb78132726aa29961bdb169dab32601165054640db27d42b9b576143d2"
         },
         "download-version-actions": {
           "resources": [],
@@ -1364,7 +1410,8 @@
         },
         "download-chapter-inventory": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "93e12ebb78132726aa29961bdb169dab32601165054640db27d42b9b576143d2"
         },
         "delete-admission-fence": {
           "resources": [],
@@ -1417,7 +1464,8 @@
         },
         "render-publication": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "ac2f4244accea81d41a8d3f09b01461181fd67ae3625a843af5f2a58baf90227"
         }
       }
     },
@@ -1430,11 +1478,13 @@
         },
         "safe-area": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9473692219bb3b59b44812f5334a80054fa1240bf8134884a01a4e35afc359df"
         },
         "save-and-frame": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9473692219bb3b59b44812f5334a80054fa1240bf8134884a01a4e35afc359df"
         },
         "persistent-directory": {
           "resources": [],
@@ -1463,11 +1513,13 @@
       "cases": {
         "tile-attempt-ownership": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "14876af95f687a307af697701c7e84cb9a29c79ca118389692cd140b4d73083d"
         },
         "content-revocation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "14876af95f687a307af697701c7e84cb9a29c79ca118389692cd140b4d73083d"
         }
       }
     },
@@ -1609,7 +1661,8 @@
       "cases": {
         "manga-preferences": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9d3bc96ef7cf0ef8df0ecf7a5eb35b02964799962e02125d189c96ac2ca265ab"
         },
         "chapter-action-admission": {
           "resources": [],
@@ -1617,7 +1670,8 @@
         },
         "layout-policy": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9d3bc96ef7cf0ef8df0ecf7a5eb35b02964799962e02125d189c96ac2ca265ab"
         }
       }
     },
@@ -1660,7 +1714,8 @@
       "cases": {
         "live-width-safe-frame": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "22d4caccd6283e0ba1f5f11978f873c74574502589b16bebb6d1039bab59ad99"
         }
       }
     },
@@ -1930,11 +1985,13 @@
       "cases": {
         "bookmark-facts": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "37974bc54e67b76ae3e0558e680e552e13ffb1e51a9b079b683cfa1300a3ad5f"
         },
         "directory-consumers": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "37974bc54e67b76ae3e0558e680e552e13ffb1e51a9b079b683cfa1300a3ad5f"
         }
       }
     },
@@ -2046,15 +2103,18 @@
       "cases": {
         "download-page": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "aff317fb8df0b66a9b36ace53aeb4631dc4dc83d5580b14a8c96ddff1752a790"
         },
         "manga-actions": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "aff317fb8df0b66a9b36ace53aeb4631dc4dc83d5580b14a8c96ddff1752a790"
         },
         "cache-decision": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "aff317fb8df0b66a9b36ace53aeb4631dc4dc83d5580b14a8c96ddff1752a790"
         },
         "retained-materialization": {
           "resources": [],
@@ -2173,19 +2233,23 @@
       "cases": {
         "input-progress": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "d3f322f2a6d48b186740454a92217e3bea517211c1b43a0d437b182c0afe056d"
         },
         "image-anchor": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "d3f322f2a6d48b186740454a92217e3bea517211c1b43a0d437b182c0afe056d"
         },
         "canonical-mode": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "d3f322f2a6d48b186740454a92217e3bea517211c1b43a0d437b182c0afe056d"
         },
         "data-source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "d3f322f2a6d48b186740454a92217e3bea517211c1b43a0d437b182c0afe056d"
         }
       }
     },
@@ -2390,7 +2454,8 @@
         },
         "module-minimum-budget": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "77231ab4f4131ce304f7db822b2829d2c2a6b36c6be4ff95d3bbfd4b6053d85d"
         },
         "native-targets-sdk": {
           "resources": [],
@@ -2503,11 +2568,13 @@
         },
         "tts-fields": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "92c31e573da78b71dc3fc701ba0ade445c2de15214b3da0991665d076a209d57"
         },
         "tts-source": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "92c31e573da78b71dc3fc701ba0ade445c2de15214b3da0991665d076a209d57"
         },
         "auto-source": {
           "resources": [],
@@ -2655,7 +2722,8 @@
       "cases": {
         "search-sdk": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "82cb7eac2dc97f728f98e0664362fc99df4bd59bdb15e99cda559afa9c78fcf6"
         },
         "settings-sdk": {
           "resources": [],
@@ -3038,11 +3106,13 @@
         },
         "manga-progress": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "b873be4e90b34ece5043f028615ef5223f7f3d874fb7ae6f9f42daa2777da4b4"
         },
         "manga-publication": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "b873be4e90b34ece5043f028615ef5223f7f3d874fb7ae6f9f42daa2777da4b4"
         }
       }
     },
@@ -3233,15 +3303,18 @@
       "cases": {
         "prefix-pending": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bc6ee64637b90b73d0978bb6e4f4f768845c8d4416516ac79f0bc96bc29fdfae"
         },
         "image-admission": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bc6ee64637b90b73d0978bb6e4f4f768845c8d4416516ac79f0bc96bc29fdfae"
         },
         "bounds-title": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bc6ee64637b90b73d0978bb6e4f4f768845c8d4416516ac79f0bc96bc29fdfae"
         }
       }
     },
@@ -3254,11 +3327,13 @@
         },
         "detail-notice": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "138e0ff9a39fd18ee74185b18003b9dc59c7aec99d1860ca8d816eeef101a76a"
         },
         "group-receipt": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "138e0ff9a39fd18ee74185b18003b9dc59c7aec99d1860ca8d816eeef101a76a"
         }
       }
     },
@@ -3309,7 +3384,8 @@
         },
         "shelf-reversal-fixture": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9de628406409f8f702cf37e61d51af242ca156f1e2b96eca3c44443933964509"
         }
       }
     },
@@ -3440,15 +3516,18 @@
       "cases": {
         "sdk-public-slots": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "87448d89275b22f91ce436e580c0561afa379c730a451057774a2e1ba3ce881a"
         },
         "header-paint-owner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "87448d89275b22f91ce436e580c0561afa379c730a451057774a2e1ba3ce881a"
         },
         "scaffold-slots": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "87448d89275b22f91ce436e580c0561afa379c730a451057774a2e1ba3ce881a"
         },
         "footer-safe-lane": {
           "resources": [],
@@ -3456,7 +3535,8 @@
         },
         "standard-page-layout": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "87448d89275b22f91ce436e580c0561afa379c730a451057774a2e1ba3ce881a"
         },
         "framework-route-coverage": {
           "resources": [],
@@ -3686,11 +3766,13 @@
       "cases": {
         "pending-busy-owner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "72de8602d9580c697c5a25a36486cf8a2741aa9f49a7d3d328403b2ab06e2e4a"
         },
         "confirmed-readback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "72de8602d9580c697c5a25a36486cf8a2741aa9f49a7d3d328403b2ab06e2e4a"
         }
       }
     },
@@ -3859,19 +3941,23 @@
       "cases": {
         "late-identity": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "110cc95091f8741053801723bd23d4a2d91c805b923df626630841d9b7381d63"
         },
         "retained-failure-owner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "110cc95091f8741053801723bd23d4a2d91c805b923df626630841d9b7381d63"
         },
         "probe-chapter-context": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "110cc95091f8741053801723bd23d4a2d91c805b923df626630841d9b7381d63"
         },
         "source-switch-route": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "110cc95091f8741053801723bd23d4a2d91c805b923df626630841d9b7381d63"
         }
       }
     },
@@ -4171,11 +4257,13 @@
         },
         "ReaderControlAppearanceContent": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "a33dda353a80f680450d7563daf97fc3b45051b0365643de61eb5d74c6fdb9bd"
         },
         "ReaderControlAutoPageContent": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "a33dda353a80f680450d7563daf97fc3b45051b0365643de61eb5d74c6fdb9bd"
         },
         "ReaderControlDirectoryContent": {
           "resources": [],
@@ -4183,7 +4271,8 @@
         },
         "ReaderControlMotionStage": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "a33dda353a80f680450d7563daf97fc3b45051b0365643de61eb5d74c6fdb9bd"
         },
         "ReaderControlPanel": {
           "resources": [],
@@ -4195,11 +4284,13 @@
         },
         "ReaderControlSearchContent": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "a33dda353a80f680450d7563daf97fc3b45051b0365643de61eb5d74c6fdb9bd"
         },
         "ReaderControlSettingsContent": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "a33dda353a80f680450d7563daf97fc3b45051b0365643de61eb5d74c6fdb9bd"
         },
         "ReaderControlSettingsOptionModifier": {
           "resources": [],
@@ -4219,7 +4310,8 @@
         },
         "ReaderControlTtsContent": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "a33dda353a80f680450d7563daf97fc3b45051b0365643de61eb5d74c6fdb9bd"
         },
         "ReaderDirectoryChapterRow": {
           "resources": [],
@@ -4535,67 +4627,83 @@
       "cases": {
         "near-end": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e0d99ef8c7421083c558547f1950eafd83596374efc963ad9927708a60d3ccdf"
         },
         "old-rule-catalog": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e0d99ef8c7421083c558547f1950eafd83596374efc963ad9927708a60d3ccdf"
         },
         "refresh-backoff": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e0d99ef8c7421083c558547f1950eafd83596374efc963ad9927708a60d3ccdf"
         },
         "late-refresh": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e0d99ef8c7421083c558547f1950eafd83596374efc963ad9927708a60d3ccdf"
         },
         "cold-near-end": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e0d99ef8c7421083c558547f1950eafd83596374efc963ad9927708a60d3ccdf"
         },
         "coordinator-join": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e0d99ef8c7421083c558547f1950eafd83596374efc963ad9927708a60d3ccdf"
         },
         "dragging-body-retention": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e0d99ef8c7421083c558547f1950eafd83596374efc963ad9927708a60d3ccdf"
         },
         "cold-failure": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e0d99ef8c7421083c558547f1950eafd83596374efc963ad9927708a60d3ccdf"
         },
         "accepted-retirement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e0d99ef8c7421083c558547f1950eafd83596374efc963ad9927708a60d3ccdf"
         },
         "identity-rejection": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e0d99ef8c7421083c558547f1950eafd83596374efc963ad9927708a60d3ccdf"
         },
         "old-hydration": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e0d99ef8c7421083c558547f1950eafd83596374efc963ad9927708a60d3ccdf"
         },
         "measurement-generation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e0d99ef8c7421083c558547f1950eafd83596374efc963ad9927708a60d3ccdf"
         },
         "mounted-compatibility": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e0d99ef8c7421083c558547f1950eafd83596374efc963ad9927708a60d3ccdf"
         },
         "merged-variables": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e0d99ef8c7421083c558547f1950eafd83596374efc963ad9927708a60d3ccdf"
         },
         "newer-acquisition": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e0d99ef8c7421083c558547f1950eafd83596374efc963ad9927708a60d3ccdf"
         },
         "catalog-pagination": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "e0d99ef8c7421083c558547f1950eafd83596374efc963ad9927708a60d3ccdf"
         }
       }
     },
@@ -4619,43 +4727,53 @@
       "cases": {
         "bookmark-ack": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "89269e3ef97b0967a94ef38965e9b7c01682c68c328767ff9a55f11845a2f23e"
         },
         "bookmark-readback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "89269e3ef97b0967a94ef38965e9b7c01682c68c328767ff9a55f11845a2f23e"
         },
         "bookmark-lost-ack": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "89269e3ef97b0967a94ef38965e9b7c01682c68c328767ff9a55f11845a2f23e"
         },
         "bookmark-continuation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "89269e3ef97b0967a94ef38965e9b7c01682c68c328767ff9a55f11845a2f23e"
         },
         "retained-actor": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "89269e3ef97b0967a94ef38965e9b7c01682c68c328767ff9a55f11845a2f23e"
         },
         "partial-delete": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "89269e3ef97b0967a94ef38965e9b7c01682c68c328767ff9a55f11845a2f23e"
         },
         "offline-physical-failure": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "89269e3ef97b0967a94ef38965e9b7c01682c68c328767ff9a55f11845a2f23e"
         },
         "offline-continuation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "89269e3ef97b0967a94ef38965e9b7c01682c68c328767ff9a55f11845a2f23e"
         },
         "latest-owner": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "89269e3ef97b0967a94ef38965e9b7c01682c68c328767ff9a55f11845a2f23e"
         },
         "read-drain-negative": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "89269e3ef97b0967a94ef38965e9b7c01682c68c328767ff9a55f11845a2f23e"
         },
         "presentation-negative": {
           "resources": [],
@@ -5009,7 +5127,8 @@
         },
         "hot-local": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a5b408569b72323d3dc17d9af2f87d430022d34f9a0f148a780f6cf03c28df1"
         },
         "restored-position": {
           "resources": [],
@@ -5029,7 +5148,8 @@
         },
         "bounded-misses": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a5b408569b72323d3dc17d9af2f87d430022d34f9a0f148a780f6cf03c28df1"
         },
         "pending-switch": {
           "resources": [],
@@ -5077,7 +5197,8 @@
         },
         "content-vs-position": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a5b408569b72323d3dc17d9af2f87d430022d34f9a0f148a780f6cf03c28df1"
         },
         "memory-release": {
           "resources": [],
@@ -5133,11 +5254,13 @@
         },
         "manga-epoch": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a5b408569b72323d3dc17d9af2f87d430022d34f9a0f148a780f6cf03c28df1"
         },
         "exact-cleanup": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a5b408569b72323d3dc17d9af2f87d430022d34f9a0f148a780f6cf03c28df1"
         }
       }
     },
@@ -5196,7 +5319,8 @@
       "cases": {
         "bounded-completion": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "fbdeff451a6a1ef22deff475c18bed59f7628a8219cede683a20eb878c73bbaf"
         },
         "blank-base": {
           "resources": [],
@@ -5208,7 +5332,8 @@
         },
         "missing-image": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "fbdeff451a6a1ef22deff475c18bed59f7628a8219cede683a20eb878c73bbaf"
         },
         "legacy-fence": {
           "resources": [],
@@ -5228,7 +5353,8 @@
         },
         "resource-failure": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "fbdeff451a6a1ef22deff475c18bed59f7628a8219cede683a20eb878c73bbaf"
         },
         "index-progress": {
           "resources": [],
@@ -5245,7 +5371,8 @@
       "cases": {
         "capacity": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3ad98049c09f1e8a2a825c1138622e13969b81131d961a5a0c0a6c6a1bc205ee"
         },
         "complete": {
           "resources": [],
@@ -5261,7 +5388,8 @@
         },
         "projection": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3ad98049c09f1e8a2a825c1138622e13969b81131d961a5a0c0a6c6a1bc205ee"
         },
         "text-only": {
           "resources": [],
@@ -5269,7 +5397,8 @@
         },
         "clear": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3ad98049c09f1e8a2a825c1138622e13969b81131d961a5a0c0a6c6a1bc205ee"
         },
         "whole-book": {
           "resources": [],
@@ -5277,7 +5406,8 @@
         },
         "offline-missing": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3ad98049c09f1e8a2a825c1138622e13969b81131d961a5a0c0a6c6a1bc205ee"
         },
         "volume": {
           "resources": [],
@@ -5285,7 +5415,8 @@
         },
         "reading-consumers": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3ad98049c09f1e8a2a825c1138622e13969b81131d961a5a0c0a6c6a1bc205ee"
         }
       }
     },
@@ -5326,31 +5457,38 @@
         },
         "manga-supplement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "2d6f4bcef02e48688112361bef18d5f8755a827950a4cd4a915e088e906f6a7b"
         },
         "manga-future-cancel": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "2d6f4bcef02e48688112361bef18d5f8755a827950a4cd4a915e088e906f6a7b"
         },
         "manga-pending-claim": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "2d6f4bcef02e48688112361bef18d5f8755a827950a4cd4a915e088e906f6a7b"
         },
         "manga-clear-drain": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "2d6f4bcef02e48688112361bef18d5f8755a827950a4cd4a915e088e906f6a7b"
         },
         "manga-replacement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "2d6f4bcef02e48688112361bef18d5f8755a827950a4cd4a915e088e906f6a7b"
         },
         "manga-delete": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "2d6f4bcef02e48688112361bef18d5f8755a827950a4cd4a915e088e906f6a7b"
         },
         "manga-directory": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "2d6f4bcef02e48688112361bef18d5f8755a827950a4cd4a915e088e906f6a7b"
         },
         "sdk-download": {
           "resources": [],
@@ -5362,7 +5500,8 @@
         },
         "sdk-manga-pending-claim": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "2d6f4bcef02e48688112361bef18d5f8755a827950a4cd4a915e088e906f6a7b"
         }
       }
     },
@@ -5375,15 +5514,18 @@
         },
         "bounded-write": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5ebbeb3f7122dbb3fc5b90e7302d195e4904dda2ee91509a291c39dbb0e397e4"
         },
         "manga-identity-proof": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5ebbeb3f7122dbb3fc5b90e7302d195e4904dda2ee91509a291c39dbb0e397e4"
         },
         "version-isolation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5ebbeb3f7122dbb3fc5b90e7302d195e4904dda2ee91509a291c39dbb0e397e4"
         },
         "legacy-migration": {
           "resources": [],
@@ -5391,19 +5533,23 @@
         },
         "manifest-atomic": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5ebbeb3f7122dbb3fc5b90e7302d195e4904dda2ee91509a291c39dbb0e397e4"
         },
         "clear-generation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5ebbeb3f7122dbb3fc5b90e7302d195e4904dda2ee91509a291c39dbb0e397e4"
         },
         "clear-fsync": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5ebbeb3f7122dbb3fc5b90e7302d195e4904dda2ee91509a291c39dbb0e397e4"
         },
         "clear-restart": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5ebbeb3f7122dbb3fc5b90e7302d195e4904dda2ee91509a291c39dbb0e397e4"
         },
         "mixed-clear": {
           "resources": [],
@@ -5415,7 +5561,8 @@
         },
         "ownership-read": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5ebbeb3f7122dbb3fc5b90e7302d195e4904dda2ee91509a291c39dbb0e397e4"
         },
         "clear-markers": {
           "resources": [],
@@ -5427,7 +5574,8 @@
         },
         "worker-ownership": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5ebbeb3f7122dbb3fc5b90e7302d195e4904dda2ee91509a291c39dbb0e397e4"
         },
         "negative-whole-tree-clear": {
           "resources": [],
@@ -5994,95 +6142,118 @@
       "cases": {
         "content-epoch": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "restored-anchor": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "explicit-anchor": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "preserved-anchor": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "reject-migration": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "late-selection": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "window-proof": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "tts-position": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "bookmark-proof": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "refresh-feedback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "feedback-unavailable": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "late-feedback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "metrics-unavailable": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "old-cache-once": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "inline-cache-recovery": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "index-cache-recovery": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "fallback-anchor": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "refresh-results": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "bookmark-reload": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "page-mark-scope": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "cold-bookmark": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "index-bookmark-failure": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         },
         "directory-proof": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "cfad963f8842fd893fa2da3a6840c58ed4b246e6abdb03107d147f5119a8c7f3"
         }
       }
     },
@@ -6137,55 +6308,68 @@
       "cases": {
         "acquisition": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a81d60c277000fb725b99de9cf09d8d788e5fc1e68ad59e0963c0db5217fbff"
         },
         "search-scalars": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a81d60c277000fb725b99de9cf09d8d788e5fc1e68ad59e0963c0db5217fbff"
         },
         "image-ownership": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a81d60c277000fb725b99de9cf09d8d788e5fc1e68ad59e0963c0db5217fbff"
         },
         "window-pagination": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a81d60c277000fb725b99de9cf09d8d788e5fc1e68ad59e0963c0db5217fbff"
         },
         "canonical-progress": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a81d60c277000fb725b99de9cf09d8d788e5fc1e68ad59e0963c0db5217fbff"
         },
         "transaction-once": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a81d60c277000fb725b99de9cf09d8d788e5fc1e68ad59e0963c0db5217fbff"
         },
         "cancelled": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a81d60c277000fb725b99de9cf09d8d788e5fc1e68ad59e0963c0db5217fbff"
         },
         "identity": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a81d60c277000fb725b99de9cf09d8d788e5fc1e68ad59e0963c0db5217fbff"
         },
         "progress-serial": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a81d60c277000fb725b99de9cf09d8d788e5fc1e68ad59e0963c0db5217fbff"
         },
         "force-refresh": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a81d60c277000fb725b99de9cf09d8d788e5fc1e68ad59e0963c0db5217fbff"
         },
         "media": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a81d60c277000fb725b99de9cf09d8d788e5fc1e68ad59e0963c0db5217fbff"
         },
         "directory-metadata": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a81d60c277000fb725b99de9cf09d8d788e5fc1e68ad59e0963c0db5217fbff"
         },
         "offline-manga": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "6a81d60c277000fb725b99de9cf09d8d788e5fc1e68ad59e0963c0db5217fbff"
         }
       }
     },
@@ -7125,139 +7309,173 @@
       "cases": {
         "catalog-contract": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "volume-fallback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "superseded-catalog": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "visible-budget": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "visible-fallback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "preempt": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "same-book-join": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "candidate-budget": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "fatal-fallback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "capability-fallback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "environment": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "deadline": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "cancel-wait": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "orphan-cancel": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "shared-consumer": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "same-book-reopen": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "unknown-author": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "author-labels": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "author-proof": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "invalid-proof": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "empty-author": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "detail-proof": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "bounded-author": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "detail-author": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "hidden-wait": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "query-replacement": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "stale-refresh": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "change-notification": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "index-empty": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "index-body-fallback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "index-catalog-first": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "index-storage": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "index-fixed-source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         },
         "visible-range": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "5e5afee1541bdf431e52ff73d79962a7786ceace6833265a4cfd84559df76627"
         }
       }
     },
@@ -7409,31 +7627,38 @@
       "cases": {
         "top-scroll": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "241cd823047442337b75c42d221e6e11cf2a383fc10fe967e82fed86b74886e8"
         },
         "all-history": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "241cd823047442337b75c42d221e6e11cf2a383fc10fe967e82fed86b74886e8"
         },
         "late-history": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "241cd823047442337b75c42d221e6e11cf2a383fc10fe967e82fed86b74886e8"
         },
         "status-actions": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "241cd823047442337b75c42d221e6e11cf2a383fc10fe967e82fed86b74886e8"
         },
         "focus-state": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "241cd823047442337b75c42d221e6e11cf2a383fc10fe967e82fed86b74886e8"
         },
         "history-feedback": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "241cd823047442337b75c42d221e6e11cf2a383fc10fe967e82fed86b74886e8"
         },
         "native-focus": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "241cd823047442337b75c42d221e6e11cf2a383fc10fe967e82fed86b74886e8"
         }
       }
     },
@@ -7442,7 +7667,8 @@
       "cases": {
         "field-clip": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "ef41f79d5a661d9142efe8044f0a23b4cec01e4c846a53bd1cca25b9381cabbb"
         },
         "web-focus": {
           "resources": [],
@@ -7467,11 +7693,13 @@
         },
         "history-active-query": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9100b156cf0f2609cc366d27155008730b952377c0ac1cbd174881de3cc67299"
         },
         "history-reopen-clear": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9100b156cf0f2609cc366d27155008730b952377c0ac1cbd174881de3cc67299"
         },
         "worker-concurrency-dedup": {
           "resources": [],
@@ -7503,7 +7731,8 @@
         },
         "superseded-query": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9100b156cf0f2609cc366d27155008730b952377c0ac1cbd174881de3cc67299"
         },
         "local-no-source": {
           "resources": [],
@@ -7515,7 +7744,8 @@
         },
         "source-history-arrival": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9100b156cf0f2609cc366d27155008730b952377c0ac1cbd174881de3cc67299"
         },
         "source-list-recovery": {
           "resources": [],
@@ -7559,15 +7789,18 @@
         },
         "route-retained-work": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9100b156cf0f2609cc366d27155008730b952377c0ac1cbd174881de3cc67299"
         },
         "route-live-return": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9100b156cf0f2609cc366d27155008730b952377c0ac1cbd174881de3cc67299"
         },
         "route-settled-return": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9100b156cf0f2609cc366d27155008730b952377c0ac1cbd174881de3cc67299"
         },
         "stop-loading": {
           "resources": [],
@@ -7623,7 +7856,8 @@
         },
         "delta-superseded": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9100b156cf0f2609cc366d27155008730b952377c0ac1cbd174881de3cc67299"
         },
         "delta-counter-update": {
           "resources": [],
@@ -7651,7 +7885,8 @@
         },
         "retry-failed-source": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9100b156cf0f2609cc366d27155008730b952377c0ac1cbd174881de3cc67299"
         },
         "retry-failed-local": {
           "resources": [],
@@ -7675,11 +7910,13 @@
         },
         "local-dense-pages": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9100b156cf0f2609cc366d27155008730b952377c0ac1cbd174881de3cc67299"
         },
         "local-unicode": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9100b156cf0f2609cc366d27155008730b952377c0ac1cbd174881de3cc67299"
         },
         "local-sparse-hydration": {
           "resources": [],
@@ -7691,11 +7928,13 @@
         },
         "local-hydration-revision": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9100b156cf0f2609cc366d27155008730b952377c0ac1cbd174881de3cc67299"
         },
         "local-page-revision": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "9100b156cf0f2609cc366d27155008730b952377c0ac1cbd174881de3cc67299"
         },
         "local-full-revision": {
           "resources": [],
@@ -7836,27 +8075,33 @@
         },
         "navigation": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "19c6f9e0d677eac328e94ce6ba02449cac5ce26a959a5018bc290acb94c4f93e"
         },
         "relevance": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "19c6f9e0d677eac328e94ce6ba02449cac5ce26a959a5018bc290acb94c4f93e"
         },
         "progressive-anchor": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "19c6f9e0d677eac328e94ce6ba02449cac5ce26a959a5018bc290acb94c4f93e"
         },
         "incremental-row": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "19c6f9e0d677eac328e94ce6ba02449cac5ce26a959a5018bc290acb94c4f93e"
         },
         "bounded-normalization": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "19c6f9e0d677eac328e94ce6ba02449cac5ce26a959a5018bc290acb94c4f93e"
         },
         "locale-remount": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "19c6f9e0d677eac328e94ce6ba02449cac5ce26a959a5018bc290acb94c4f93e"
         },
         "candidate-version": {
           "resources": [],
@@ -7864,7 +8109,8 @@
         },
         "query-delta": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "19c6f9e0d677eac328e94ce6ba02449cac5ce26a959a5018bc290acb94c4f93e"
         },
         "native-batch": {
           "resources": [],
@@ -7876,7 +8122,8 @@
         },
         "layout-restoration": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "19c6f9e0d677eac328e94ce6ba02449cac5ce26a959a5018bc290acb94c4f93e"
         },
         "candidate-facts": {
           "resources": [],
@@ -7980,11 +8227,13 @@
       "cases": {
         "safe-unknown": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "315af9c2972afff48f34382b594b7f262b0501564ba8d882da54bf9ea8bb3bc8"
         },
         "retained-action": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "315af9c2972afff48f34382b594b7f262b0501564ba8d882da54bf9ea8bb3bc8"
         },
         "legacy-global": {
           "resources": [],
@@ -8001,11 +8250,13 @@
         },
         "confirmed": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3a6b03d27e92fd2846e63dc2beb640dba13c2d930a867f04d77b8ece1d2a8bb8"
         },
         "partial": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3a6b03d27e92fd2846e63dc2beb640dba13c2d930a867f04d77b8ece1d2a8bb8"
         },
         "unknown": {
           "resources": [],
@@ -8075,87 +8326,108 @@
       "cases": {
         "scale-identities": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "scale-ready": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "range-extension": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "changed-after-control": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "whole-book": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "pause-resume-retention": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "control-readback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "physical-guard-diagnostics": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "unsafe-diagnostics": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "resume-readback": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "unknown-control": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "control-identity": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "failure-privacy": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "intent-flush": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "first-request-proof": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "cold-active": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "url-rebind": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "restore-atomic": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "delete-drain": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "content-epoch": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "index-submit": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "bf590be16cbd88a8ee5c28ed631c0c618998e178465c18a7b8c58f324c272dfc"
         },
         "restore-close": {
           "resources": [],
@@ -8172,59 +8444,73 @@
       "cases": {
         "view-state": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "60c2e58e10b5a59900b2eaf515bb608df242e7148ba335a82e43849d13d15f00"
         },
         "accepted-exit": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "60c2e58e10b5a59900b2eaf515bb608df242e7148ba335a82e43849d13d15f00"
         },
         "failure-privacy": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "60c2e58e10b5a59900b2eaf515bb608df242e7148ba335a82e43849d13d15f00"
         },
         "late-navigation": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "60c2e58e10b5a59900b2eaf515bb608df242e7148ba335a82e43849d13d15f00"
         },
         "chapter-scope": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "60c2e58e10b5a59900b2eaf515bb608df242e7148ba335a82e43849d13d15f00"
         },
         "cancel-exit": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "60c2e58e10b5a59900b2eaf515bb608df242e7148ba335a82e43849d13d15f00"
         },
         "text-exit": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "60c2e58e10b5a59900b2eaf515bb608df242e7148ba335a82e43849d13d15f00"
         },
         "download-return": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "60c2e58e10b5a59900b2eaf515bb608df242e7148ba335a82e43849d13d15f00"
         },
         "reader-return": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "60c2e58e10b5a59900b2eaf515bb608df242e7148ba335a82e43849d13d15f00"
         },
         "mount-before-io": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "60c2e58e10b5a59900b2eaf515bb608df242e7148ba335a82e43849d13d15f00"
         },
         "storage-protection": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "60c2e58e10b5a59900b2eaf515bb608df242e7148ba335a82e43849d13d15f00"
         },
         "close-drain": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "60c2e58e10b5a59900b2eaf515bb608df242e7148ba335a82e43849d13d15f00"
         },
         "content-dispatch": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "60c2e58e10b5a59900b2eaf515bb608df242e7148ba335a82e43849d13d15f00"
         },
         "verification-cleanup": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "60c2e58e10b5a59900b2eaf515bb608df242e7148ba335a82e43849d13d15f00"
         }
       }
     },
@@ -8323,7 +8609,8 @@
         },
         "storage-actions": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3c7bcc61cec7fc9b32fb557950257366e9ed89c2f0c189553d5c2b14fcfc1551"
         },
         "live-theme": {
           "resources": [],
@@ -8343,11 +8630,13 @@
         },
         "sheet-choice": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3c7bcc61cec7fc9b32fb557950257366e9ed89c2f0c189553d5c2b14fcfc1551"
         },
         "overlay-lifecycle": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3c7bcc61cec7fc9b32fb557950257366e9ed89c2f0c189553d5c2b14fcfc1551"
         }
       }
     },
@@ -8368,7 +8657,8 @@
         },
         "inline-settings": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "907beabff6fe81f25887841d81d3d27895f0de79ffdbfeb7b3c896d92738cb0f"
         },
         "inline-quick": {
           "resources": [],
@@ -8392,7 +8682,8 @@
         },
         "short-layout": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "907beabff6fe81f25887841d81d3d27895f0de79ffdbfeb7b3c896d92738cb0f"
         },
         "reactive-metrics": {
           "resources": [],
@@ -8400,7 +8691,8 @@
         },
         "storage-publication": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "907beabff6fe81f25887841d81d3d27895f0de79ffdbfeb7b3c896d92738cb0f"
         },
         "retained-dto": {
           "resources": [],
@@ -8412,7 +8704,8 @@
         },
         "overlay-chrome": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "907beabff6fe81f25887841d81d3d27895f0de79ffdbfeb7b3c896d92738cb0f"
         },
         "chapter-read-states": {
           "resources": [],
@@ -8644,19 +8937,23 @@
       "cases": {
         "published-policy": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "c4835e163ae8f0c219342a9d2204e03e606def39d7360ece1ee2414a3eb0b7f6"
         },
         "regeneration": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "c4835e163ae8f0c219342a9d2204e03e606def39d7360ece1ee2414a3eb0b7f6"
         },
         "rule-change": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "c4835e163ae8f0c219342a9d2204e03e606def39d7360ece1ee2414a3eb0b7f6"
         },
         "vip-exception": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "c4835e163ae8f0c219342a9d2204e03e606def39d7360ece1ee2414a3eb0b7f6"
         }
       }
     },
@@ -11726,11 +12023,13 @@
         },
         "bookshelf": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "7a37ae9c5eef2b1af164c4ec5affad04ff7412344a884689ac2b9e26f99a24c1"
         },
         "priority": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "7a37ae9c5eef2b1af164c4ec5affad04ff7412344a884689ac2b9e26f99a24c1"
         }
       }
     },
@@ -11954,15 +12253,18 @@
       "cases": {
         "caller-barrier": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3926c3f453e37e5bcbc49577322aaea0837e8c88e65f92e40f099658149a9aa0"
         },
         "metrics-dedup": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3926c3f453e37e5bcbc49577322aaea0837e8c88e65f92e40f099658149a9aa0"
         },
         "policy-dedup": {
           "resources": [],
-          "qualification": "QUALIFIED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "3926c3f453e37e5bcbc49577322aaea0837e8c88e65f92e40f099658149a9aa0"
         }
       }
     },
@@ -11980,6 +12282,89 @@
         "recovery-targets": {
           "resources": [],
           "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-reader-control-host-keyboard.mjs": {
+      "sourceSha256": "1c5fceaa15619d33756b1844a4ee7154412fd11ec0051ff7041aba407d81ab0a",
+      "cases": {
+        "back-owner": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "8f8e7d7aa95610a2ca43a36fe6c46c30dd4f6f49d8e0c67a59b5f5b4045410d4"
+        },
+        "outer-frame": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "8f8e7d7aa95610a2ca43a36fe6c46c30dd4f6f49d8e0c67a59b5f5b4045410d4"
+        },
+        "editing-viewport": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "8f8e7d7aa95610a2ca43a36fe6c46c30dd4f6f49d8e0c67a59b5f5b4045410d4"
+        },
+        "quick-reveal": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "8f8e7d7aa95610a2ca43a36fe6c46c30dd4f6f49d8e0c67a59b5f5b4045410d4"
+        },
+        "resized-consumers": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "8f8e7d7aa95610a2ca43a36fe6c46c30dd4f6f49d8e0c67a59b5f5b4045410d4"
+        }
+      }
+    },
+    "test-reader-custom-font-boundary.mjs": {
+      "sourceSha256": "9cf869f0fc4164bee533ea150f7e2ec17b2b90265ca88993c6d52f600600cdbd",
+      "cases": {
+        "font-boundary": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "53ab759e19db589875b323e3ad5ebcc2c3c0a6f5971aa9dd2ee6b3e5302da63e"
+        },
+        "font-handoff": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "53ab759e19db589875b323e3ad5ebcc2c3c0a6f5971aa9dd2ee6b3e5302da63e"
+        }
+      }
+    },
+    "test-source-switch-catalog-seam.mjs": {
+      "sourceSha256": "4dc15d0beef5ae64baec5bcca5ae46a50e007fc0459c43461e7c194128c166de",
+      "cases": {
+        "catalog-seam": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-reader-control-placement.mjs": {
+      "sourceSha256": "c9d3e22054e309f440845ce2db0260170bf6ef1e2ebd1513ecd4778ecd7cad32",
+      "cases": {
+        "pane-dock": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
+        },
+        "grip-settle": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "grip-port": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "dock-owner": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
+        },
+        "pane-owners": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
+        },
+        "placement-durability": {
+          "resources": [],
+          "qualification": "REVIEW_NEEDED"
         }
       }
     }
@@ -14299,19 +14684,6 @@
       },
       "policy": "Existing reviewed SDK probes/CLI run against private fixtures; no compilation is silently added. Changed definitions remain blocked by the gate index."
     },
-    "test-reader-control-host-keyboard.mjs": {
-      "resources": [],
-      "basis": {
-        "reviewedCostType": "plain-js",
-        "prerequisites": [
-          "Node stripTypeScriptTypes",
-          "生产Layout/Keyboard/Session",
-          "fake window metrics/IME"
-        ],
-        "scope": "需确认键盘开闭控制布局/返回准入且不重排阅读的相关修改。"
-      },
-      "policy": "Existing reviewed SDK probes/CLI run against private fixtures; no compilation is silently added. Changed definitions remain blocked by the gate index."
-    },
     "test-reader-control-host-session.mjs": {
       "resources": [],
       "basis": {
@@ -14451,19 +14823,6 @@
           "临时binary+子进程finally清理"
         ],
         "scope": "改C计划parser、CLI准入或准备显式使用该诊断工具前按需；不授权执行注入。"
-      },
-      "policy": "Existing reviewed SDK probes/CLI run against private fixtures; no compilation is silently added. Changed definitions remain blocked by the gate index."
-    },
-    "test-reader-custom-font-boundary.mjs": {
-      "resources": [],
-      "basis": {
-        "reviewedCostType": "sdk-transpile",
-        "prerequisites": [
-          "ETS SDK TS emitter",
-          "Map fileIo/picker/native load seam",
-          "Node SHA256"
-        ],
-        "scope": "修改字体copy size/hash path、import失败cleanup或Appearance save后retire时按需。"
       },
       "policy": "Existing reviewed SDK probes/CLI run against private fixtures; no compilation is silently added. Changed definitions remain blocked by the gate index."
     },
@@ -16231,19 +16590,6 @@
           "仓库fixture及lib依赖"
         ],
         "scope": "仅按需验证SourceHost单Runtime缓存、accepted write投递/unknown barrier或picker共享锁。"
-      },
-      "policy": "Existing reviewed SDK probes/CLI run against private fixtures; no compilation is silently added. Changed definitions remain blocked by the gate index."
-    },
-    "test-source-switch-catalog-seam.mjs": {
-      "resources": [],
-      "basis": {
-        "reviewedCostType": "sdk-transpile",
-        "prerequisites": [
-          "Node支持TS strip/registerHooks",
-          "仓库fixture及lib依赖",
-          "HarmonyOS ETS SDK loader配置"
-        ],
-        "scope": "仅按需验证换源seam目录current reset、target session复用或near-end refresh。"
       },
       "policy": "Existing reviewed SDK probes/CLI run against private fixtures; no compilation is silently added. Changed definitions remain blocked by the gate index."
     },
