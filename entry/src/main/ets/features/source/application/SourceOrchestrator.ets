@@ -171,6 +171,7 @@ export class SourceOrchestrator {
   /** Retained across page sessions until the exact V9 import IDs read back. */
   private pendingImportReadback: PendingImportReadback | undefined;
   private readonly deniedLoginReports: Map<string, string> = new Map<string, string>();
+  private readonly verifiedLoginSources: Map<string, string> = new Map<string, string>();
   private reportClearTimes = new Map<string, number>();
   private checkingSourceIds: Map<string, SourceCheckCapture> = new Map<string, SourceCheckCapture>();
   private emitProjection: (projection: SourceManagementProjection) => void = (_projection: SourceManagementProjection): void => {};
@@ -662,8 +663,7 @@ export class SourceOrchestrator {
           undefined, 'search', ['L1', 'L2'],
         );
         if (await this.validateSourceCheck(capture, definition) !== undefined) {
-          // This recheck reports source availability. L2 can pass for public search.
-          this.applySourceCheckOutcome(outcome, capture);
+          this.applySourceCheckOutcome(outcome, capture, Date.now(), true);
         }
       })
       .catch(async (error: Error): Promise<void> => {
@@ -686,19 +686,18 @@ export class SourceOrchestrator {
   private async clearLoginReport(capture: SourceCheckCapture): Promise<boolean> {
     const current = (): boolean => this.isCurrentSourceCheck(capture);
     if (!current()) throw new Error('书源登录已结束');
-    const clearedAt = Date.now();
-    try {
-      const cleared = await this.gateway.clearSourceCheckReports([capture.sourceId], current);
-      return cleared.supported;
-    } finally {
-      if (current()) {
-        this.reportClearTimes.set(capture.sourceId, clearedAt);
-        this.deniedLoginReports.delete(capture.sourceId);
-        this.importedReports.delete(capture.sourceId);
-        this.checkResults.delete(capture.sourceId);
-        this.presentSources(this.sources);
-      }
-    }
+    this.resetLoginProjection(capture.sourceId);
+    this.presentSources(this.sources);
+    const cleared = await this.gateway.clearSourceCheckReports([capture.sourceId], current);
+    return cleared.supported;
+  }
+
+  private resetLoginProjection(id: string): void {
+    this.reportClearTimes.set(id, Date.now());
+    this.verifiedLoginSources.delete(id);
+    this.deniedLoginReports.delete(id);
+    this.importedReports.delete(id);
+    this.checkResults.delete(id);
   }
 
   private observeRowLoginControl(source: BookSource, loginUrl: string): void {
@@ -878,6 +877,8 @@ export class SourceOrchestrator {
     // the serial chain means this retry only waits out the external operation,
     // never a concurrent toggle.
     if (!ReaderRuntimeOwner.isCurrent(this.owner) || (this.latestProjection.receipt?.receipt.confirmation === 'unknown' || this.originalBlocked())) return;
+    const enabledSource = this.sources.find((source: BookSource): boolean => source.sourceId === id);
+    const clearLoginReport = !enabled && (enabledSource?.loginUrl?.trim().length ?? 0) > 0;
     const evidence = new ReaderWriteEvidence();
     this.gateway.observeWrites(evidence);
     try { await this.updateSourceWithRetry(id, enabled); }
@@ -887,8 +888,23 @@ export class SourceOrchestrator {
     }
     finally { this.gateway.observeWrites(undefined); }
     this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'reading');
-    if (!enabled) {
-      this.deniedLoginReports.delete(id);
+    if (clearLoginReport) this.resetLoginProjection(id);
+    if (!enabled) this.deniedLoginReports.delete(id);
+    if (this.isCurrentSession(session)) {
+      // The toggle is already confirmed. Publish the cleared projection before
+      // cookie/report cleanup or list readback can wait on I/O.
+      this.presentSources(this.sources.map((source: BookSource): BookSource => {
+        if (source.sourceId !== id) return source;
+        const updated: BookSource = {
+          sourceId: source.sourceId, name: source.name, baseUrl: source.baseUrl, enabled,
+          enabledExplore: source.enabledExplore, group: source.group, sourceVersion: source.sourceVersion,
+          category: source.category, loginUrl: source.loginUrl, loginState: source.loginState,
+          checkState: source.checkState, checkLevels: source.checkLevels, checkMessage: source.checkMessage,
+          checkReports: source.checkReports, lastCheckSummary: source.lastCheckSummary,
+          offlineDetectReportVersion: source.offlineDetectReportVersion,
+        };
+        return updated;
+      }));
     }
     if (!enabled && !this.gateway.handlesSourceCleanup()) {
       try {
@@ -901,35 +917,19 @@ export class SourceOrchestrator {
           id, (error as Error).message);
       }
     }
+    let reportCleanupWarning = '';
+    if (clearLoginReport && ReaderRuntimeOwner.isCurrent(this.owner)) {
+      try {
+        const cleared = await this.gateway.clearSourceCheckReports([id], (): boolean => ReaderRuntimeOwner.isCurrent(this.owner));
+        if (!cleared.supported) reportCleanupWarning = '书源已停用，当前 Core 无法清除已保存的检测报告';
+      } catch (error) {
+        reportCleanupWarning = '书源已停用，未能确认旧检测报告已清除';
+        hilog.warn(DOMAIN, 'Reader', 'Disabled source report cleanup failed: %{private}s', errorMessageOf(error));
+      }
+    }
     if (!this.isCurrentSession(session)) {
       this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'failed', '列表尚未刷新');
       return;
-    }
-    // `updateSource` resolved → the toggle IS persisted (Core awaits the Host
-    // snapshot put). Reflect it locally even if the reload below fails, so a
-    // reload failure is never reported as "nothing changed". The flip and the
-    // reload share the session guard: leaving and re-entering Source
-    // Management starts a fresh list load that supersedes this write-back.
-    if (this.isCurrentSession(session)) {
-      this.presentSources(this.sources.map((source): BookSource => {
-        if (source.sourceId !== id) {
-          return source;
-        }
-        const updated: BookSource = {
-          sourceId: source.sourceId,
-          name: source.name,
-          baseUrl: source.baseUrl,
-          enabled,
-          enabledExplore: source.enabledExplore,
-          group: source.group,
-          category: source.category,
-          loginUrl: source.loginUrl,
-          checkState: source.checkState,
-          checkLevels: source.checkLevels,
-          checkMessage: source.checkMessage,
-        };
-        return updated;
-      }));
     }
     let sources: BookSource[];
     try {
@@ -945,6 +945,7 @@ export class SourceOrchestrator {
       this.presentSources(sources);
       this.hasRead = true;
       this.publishToggleReceipt(session, id, evidence.confirmation(), 'succeeded', observation, undefined, sources);
+      if (reportCleanupWarning.length > 0) this.publishStatus('warning', reportCleanupWarning);
     }
   }
 
@@ -1085,7 +1086,7 @@ export class SourceOrchestrator {
   }
 
   private applySourceCheckOutcome(outcome: SourceCheckOutcome, capture: SourceCheckCapture,
-    checkedAtMs: number = Date.now()): boolean {
+    checkedAtMs: number = Date.now(), completedLogin: boolean = false): boolean {
     if (!this.isCurrentSourceCheck(capture) || outcome.sourceId !== capture.sourceId) return false;
     if (outcome.report?.ruleDigest !== undefined && capture.definition?.sourceVersion !== undefined &&
       outcome.report.ruleDigest !== capture.definition.sourceVersion) {
@@ -1097,8 +1098,13 @@ export class SourceOrchestrator {
     this.importedReports.delete(capture.sourceId);
     this.deniedLoginReports.delete(capture.sourceId);
     const source = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === capture.sourceId);
-    if (source?.loginUrl !== undefined && entry !== undefined && sourceV9AuthenticationDenied(outcome)) {
-      this.deniedLoginReports.set(capture.sourceId, entry.report.traceId);
+    if (source?.enabled === true && (source.loginUrl?.trim().length ?? 0) > 0) {
+      if (sourceV9AuthenticationDenied(outcome)) {
+        this.verifiedLoginSources.delete(capture.sourceId);
+        if (entry !== undefined) this.deniedLoginReports.set(capture.sourceId, entry.report.traceId);
+      } else if (completedLogin && outcome.available && outcome.levelsPassed.includes('L1') && outcome.levelsPassed.includes('L2')) {
+        this.verifiedLoginSources.set(capture.sourceId, capture.signature);
+      }
     }
     this.setCheckProjection(outcome.sourceId, outcome.available ? 'passed' : 'failed', outcome.levelsPassed,
       outcome.available ? `${outcome.mode === 'explore' ? '发现' : '搜索'}检测通过 · ${outcome.durationMs}ms` :
@@ -1190,6 +1196,10 @@ export class SourceOrchestrator {
   }
 
   private presentSources(sources: BookSource[]): void {
+    this.verifiedLoginSources.forEach((signature: string, id: string): void => {
+      if (!sources.some((source: BookSource): boolean => source.sourceId === id &&
+        this.sourceCheckSignature(source) === signature)) this.verifiedLoginSources.delete(id);
+    });
     this.checkingSourceIds.forEach((capture: SourceCheckCapture, id: string): void => {
       if (capture.session !== this.session || !sources.some((source: BookSource): boolean =>
         source.sourceId === id && this.sourceCheckSignature(source) === capture.signature)) this.checkingSourceIds.delete(id);
@@ -1217,7 +1227,10 @@ export class SourceOrchestrator {
       const deniedTrace = this.deniedLoginReports.get(source.sourceId);
       const deniedCurrent = deniedTrace !== undefined && deniedTrace === history[0]?.report.traceId;
       if (deniedTrace !== undefined && !deniedCurrent) this.deniedLoginReports.delete(source.sourceId);
-      return projectSourceV9Check(source, history, previous, clearedAt, deniedCurrent);
+      const projected = projectSourceV9Check(source, history, previous, clearedAt, deniedCurrent,
+        this.verifiedLoginSources.has(source.sourceId));
+      if (projected.loginState === 'expired') this.verifiedLoginSources.delete(source.sourceId);
+      return projected;
     });
     if (this.isCurrentSession(this.session)) { try { this.emit(this.sources); } catch (_) {} }
   }

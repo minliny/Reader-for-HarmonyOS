@@ -1643,7 +1643,6 @@ struct Index {
       isInputAllowed: (): boolean => this.searchAppForeground && !this.arkWebCapturesInput &&
         this.jsonImportPresentation.opening === undefined,
       onBack: (): void => { this.onBackPress(); },
-      onOpenTools: (): void => this.sourceNavigation.openTools(),
       captureImportSearchAction: (): (() => void) | undefined => this.sourceNavigation.importSearchAction(),
       onTemporaryBackBridge: (handler: (() => boolean) | undefined, bridgeIdentity: string): void => {
         this.registerTemporaryBackBridge('source', generation, owner, handler, bridgeIdentity);

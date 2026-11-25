@@ -416,11 +416,12 @@ function recoveryOverlays() {
 function arkwebHost() {
   const source = read('ui/platform/ArkWebExecutionHost.ets');
   const members = ['build', 'surfacesForRender', 'safeLeft', 'safeTop', 'safeWidth', 'safeHeight', 'toolbarHeight',
-    'toolbarAreaHandler', 'toolbarActionWidth', 'controlsHeight', 'controlsAreaHandler', 'fontScale', 'consumeBack',
+    'toolbarAreaHandler', 'toolbarActionWidth', 'controlsHeight', 'controlsColumns', 'controlsActionHeight',
+    'controlsAreaHandler', 'fontScale', 'consumeBack',
     'browserAction', 'navigate', 'updateHistory', 'updateAddress', 'clearSession'];
   const keyboard = pureModuleProbe(read('ui/layout/ReaderKeyboardGeometry.ts'),
     'ReaderKeyboardGeometry.ts', safe, ['readerKeyboardHostBottom']);
-  for (const scale of [1, 1.45, 2]) for (const wide of [false, true]) {
+  for (const scale of [1, 1.45, 2, 3.2]) for (const wide of [false, true]) for (const scheme of ['day', 'night']) {
     const value = metrics(wide ? 1024 : 320, wide ? 640 : 360, scale), c = context(value);
     const calls = [], current = { id: 1, controller: {} };
     const executor = {
@@ -437,7 +438,7 @@ function arkwebHost() {
       consumeReaderControlKeyboardBack, inputMethod: { getController: () => ({
         hideTextInput: () => { calls.push(['keyboard']); return Promise.resolve(); },
       }) }, hilog: { warn() {} }, $r: id => id };
-    const fields = { appThemeScheme: 'day', readerWindowMetricsRevision: 1, mounted: true, currentSurface: current,
+    const fields = { appThemeScheme: scheme, readerWindowMetricsRevision: 1, mounted: true, currentSurface: current,
       interactiveBackSurface: current, surfaceId: 1, interactive: true, title: '书源网页登录',
       currentUrl: 'https://example.test/login', currentHost: 'example.test',
       canGoBack: true, canGoForward: true, canClear: true, pageLoading: false, pageProgress: 0, clearing: false,
@@ -461,6 +462,21 @@ function arkwebHost() {
     const actions = nodes.filter(n => n.type === 'Button');
     assert.equal(actions.length, 6);
     assert.ok(actions.every(n => n.constraintSize.minWidth >= 44 && n.constraintSize.minHeight >= 44));
+    const controlsPerRow = (wide && scale < 3.2) || scale === 1 ? 4 : 2;
+    assert.ok(actions.slice(2).every(action => action.width === (controlsPerRow === 4 ? '25%' : '50%')));
+    const controlsContentHeight = (4 / controlsPerRow) * actions[2].constraintSize.minHeight;
+    assert.equal(controls.height, Math.min(controlsContentHeight, bounds.height - toolbar.height));
+    const brand = readerAppColor('app.sourceUi.primary', scheme);
+    const specs = [['取消', brand], ['后退', brand], ['前进', brand], ['刷新', brand],
+      ['清除登录态', readerAppColor('app.sourceUi.danger', scheme)]];
+    for (const [label, color] of specs) {
+      const node = nodes.find(node => node.type === 'Text' && node.create === label);
+      assert.equal(node?.fontColor, color, `${scheme} ${label} uses its matching semantic tone`);
+      assert.equal(node.fontFamily, 'ReaderNotoSansSCUIRegular');
+      assert.equal(node.maxLines, undefined, `${label} remains readable when it wraps`);
+    }
+    const done = nodes.find(node => node.type === 'Text' && node.create === '完成');
+    assert.equal(done?.backgroundColor, brand);
     owner.pageLoading = true;
     web.onNavigationEntryCommitted({ isMainFrame: false, isSameDocument: true, url: 'https://example.test/frame' });
     assert.equal(owner.pageLoading, true, 'subframe navigation does not settle the browser');
@@ -478,13 +494,19 @@ function arkwebHost() {
     assert.equal(owner.consumeBack(), true); assert.deepEqual(calls.at(-1), ['cancel', 1]);
     value.keyboardInsets = new safe.ReaderInsetsVp(0, 0, 0, 180);
     assert.equal(owner.consumeBack(), true); assert.deepEqual(calls.at(-1), ['keyboard'], 'IME dismissal precedes cancellation');
+    if (wide) {
+      value.keyboardArea = new safe.ReaderKeyboardAreaVp(true, true, [new safe.ReaderRectVp(0, 400, 200, 240)]);
+      assert.equal(owner.safeHeight(), bounds.height, 'a floating keyboard beside the pane does not shrink it');
+      value.keyboardArea = new safe.ReaderKeyboardAreaVp(true, true, [new safe.ReaderRectVp(400, 400, 450, 240)]);
+      assert.equal(owner.safeHeight(), 400 - bounds.top, 'a keyboard overlapping the pane reserves its occupied lane');
+    }
     const background = createReaderBuilderProbe(source, members, dependencies, c.hooks).owner;
     Object.assign(background, { ...fields, interactive: false });
     background.initialRender();
     const hidden = c.nodes(background).find(n => n.type === 'Web');
     assert.equal(hidden.width, '100%'); assert.equal(hidden.height, '100%'); assert.equal(hidden.focusable, false);
     assert.ok(c.nodes(background).some(n => n.type === 'Stack' && n.width === 1 && n.height === 1), 'background Web keeps the 1vp execution host');
-    if (scale === 1 && !wide) {
+    if (scale === 1 && !wide && scheme === 'day') {
       const coveredSource = source.replace('y: this.interactive ? this.safeTop() + this.toolbarHeight() : 0', 'y: 0');
       assert.notEqual(coveredSource, source);
       const covered = createReaderBuilderProbe(coveredSource, members, dependencies, c.hooks).owner;
@@ -493,7 +515,7 @@ function arkwebHost() {
       assert.throws(() => assert.equal(before.find(n => n.type === 'Web').position.y,
         before.find(n => n.type === 'Scroll').position.y + before.find(n => n.type === 'Scroll').height), /AssertionError/, 'Web under the toolbar is rejected');
     }
-    results.push({ case: 'arkweb-host', scale, wide, toolbarHeight: toolbar.height, webY: web.position.y,
+    results.push({ case: 'arkweb-host', scale, wide, scheme, controlsPerRow, toolbarHeight: toolbar.height, webY: web.position.y,
       webHeight: web.height, controlsHeight: controls.height });
   }
 }

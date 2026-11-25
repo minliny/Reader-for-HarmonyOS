@@ -62,6 +62,8 @@ export struct ReaderSelectPanel {
   @Prop @Watch('onGeometryChanged') menuHeaderHeight: number = 0;
   @Prop emptyOptionsText: string = '';
   @BuilderParam menuHeader: () => void = this.emptyMenuHeader;
+  @Prop @Watch('onGeometryChanged') menuFooterHeight: number = 0;
+  @BuilderParam menuFooter: () => void = this.emptyMenuHeader;
   onMenuHeaderCollapse: ((identity: string) => void) | undefined = undefined;
   /** Optional current appearance host budget. Zero keeps the original menu contract. */
   @Prop @Watch('onGeometryChanged') maxPanelHeight: number = 0;
@@ -246,7 +248,7 @@ export struct ReaderSelectPanel {
   }
 
   private panelHeight(): number {
-    const height = Math.max(this.menuHeaderHeight, this.expandedHeight);
+    const height = Math.max(this.menuHeaderHeight, this.menuFooterHeight, this.expandedHeight);
     return this.hostBottomVp >= 0 ? Math.min(height, Math.max(0, this.hostBottomVp - this.hostTopVp)) : height;
   }
 
@@ -276,6 +278,7 @@ export struct ReaderSelectPanel {
         }.width('100%').layoutWeight(1).scrollBar(BarState.Auto)
           .onScrollStop(this.onOptionsScrollStop === undefined ? (): void => {} : this.optionsScrollStopAction());
       } else { this.optionContent(); }
+      if (this.menuFooterHeight > 0) { this.menuFooter(); }
     }
     .id(this.nativeAnchorId)
     .width(this.resolvedWidth())
@@ -633,7 +636,7 @@ export struct ReaderSelectPanel {
       if (this.fillsMeasuredSourceGroupHeight(maximum - this.menuHeaderHeight)) return maximum;
       const appearance = this.variant === 'appearanceLibrary';
       const minimum = appearance ? APPEARANCE_SELECT_OPTION_HEIGHT : 44;
-      let height = this.menuHeaderHeight + (appearance ? 8 : TOK_BORDER_W * 2);
+      let height = this.menuHeaderHeight + (this.menuFooterHeight || 0) + (appearance ? 8 : TOK_BORDER_W * 2);
       if (height >= maximum) return maximum;
       const selected = this.renderedValue();
       // The identity includes the complete option list. Resolve it once per
@@ -664,7 +667,7 @@ export struct ReaderSelectPanel {
 
   private fillsMeasuredSourceGroupHeight(maximum: number): boolean {
     if (this.variant !== 'sourceGroup' || this.controlWidth <= 0) return false;
-    if (this.menuHeaderHeight > 0) return Math.max(1, this.renderedOptions().length) * 44 + TOK_BORDER_W * 2 >= maximum;
+    if (this.menuHeaderHeight > 0) return Math.max(1, this.renderedOptions().length) * 44 + (this.menuFooterHeight || 0) + TOK_BORDER_W * 2 >= maximum;
     // The selected row is always present, even if its value left the option list.
     let minimum = 44 + TOK_BORDER_W * 2;
     const selected = this.renderedValue();

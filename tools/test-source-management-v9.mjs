@@ -5,7 +5,7 @@ import {
   projectSourceV9Check,
   sourceV9AuthenticationDenied,
   sourceV9CheckStepText,
-  sourceV9Primary,
+  sourceV9DiagnosticTone,
   sourceV9ReportFill,
   sourceV9ReportTone,
   sourceV9ParentView,
@@ -115,7 +115,7 @@ test('leaving a drilled report restores the stopped batch and its own check opti
   const { owner } = createReaderBuilderProbe(content, [
     'batchRows', 'close', 'stop', 'consumeBack', 'singleSource',
     'report', 'outcome', 'restoreOptions', 'progress', 'progressLabel', 'batchProgressCounts', 'checkTotal',
-  ], { readerAppColor: role => role, sourceV9Primary, sourceV9LatestReport: () => undefined,
+  ], { readerAppColor: role => role, sourceV9LatestReport: () => undefined, sourceV9DiagnosticTone, sourceV9ReportFill,
     READER_FONT_NOTO_SANS_SC_UI_REGULAR: 'ReaderNotoSansSCUIRegular' });
   const first = source('首条书源');
   const pending = source('未检测书源');
@@ -623,4 +623,74 @@ test('v9 a newer import owns the Search action even while a previously admitted 
   fixture.journey.runSearchAction(identity, fixture.journey.snapshot().searchActionRevision);
   assert.equal(newestSearchInvocations, 1);
   assert.equal(fixture.searchInvocations(), 0);
+});
+
+async function sourceV9TransferBuilderProbe(methods, dependencies = {}) {
+  const { readFileSync } = await import('node:fs');
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { sourceV9DisplayUrl } = await import('../entry/src/main/ets/features/source/presentation/SourceManagementV9.ts');
+  const fonts = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+  const content = readFileSync(new URL('../entry/src/main/ets/features/source/ui/SourceV9TransferPage.ets', import.meta.url), 'utf8');
+  const { owner } = createReaderBuilderProbe(content, [...methods, 'badge', 'color'], {
+    readerAppColor: role => role,
+    sourceV9DisplayUrl,
+    ...fonts,
+    ...dependencies,
+  });
+  Object.assign(owner, { scheme: 'day', editable: () => true, checkbox: () => {} });
+  return owner;
+}
+
+function transferText(owner) {
+  return [...owner.nodes.values()].filter(node => node.type === 'Text');
+}
+
+test('transfer import renders the normalized domain, original group and exact existing source badge', async () => {
+  const owner = await sourceV9TransferBuilderProbe(['importRow', 'importCaption', 'reportAction']);
+  const existing = 'https://Sources.Example/existing?secret=gone';
+  owner.state = { knownSourceIds: [existing] };
+  owner.inputCurrent = () => true;
+  const candidate = {
+    supported: true,
+    name: '既有书源',
+    sourceId: existing,
+    bookSource: { bookSourceGroup: '  原始分组  ' },
+  };
+  owner.importRow({ index: 0, candidate, selected: true, report: { available: true } }, 0);
+  owner.importRow({ index: 1, candidate: { ...candidate, sourceId: 'https://sources.example/new', name: '新增书源' },
+    selected: true, report: { available: false } }, 1);
+  const labels = transferText(owner);
+  const byLabel = text => labels.filter(node => node.create === text);
+  assert.equal(byLabel('更新').length, 1, 'same-host candidates must not be confused with the existing exact ID');
+  assert.equal(byLabel('更新')[0].backgroundColor, 'app.sourceUi.selected');
+  assert.equal(byLabel('https://sources.example · 原始分组').length, 2);
+  assert.equal(byLabel('通过')[0].fontColor, 'app.status.good');
+  assert.equal(byLabel('未通过')[0].fontColor, 'app.sourceUi.danger');
+  assert.ok(labels.every(node => !String(node.create).includes('secret')));
+});
+
+test('transfer subscription diff renders a single card and distinguishes selected updates from kept conflicts', async () => {
+  const owner = await sourceV9TransferBuilderProbe(['reviewList', 'reviewRow', 'reviewCaption', 'changeBadge'], {
+    LengthMetrics: { vp: value => value },
+  });
+  const selection = [];
+  owner.checkbox = (checked, enabled, label) => selection.push([label, checked, enabled]);
+  owner.action = () => {};
+  owner.state = { reviews: [{ subscription: { id: 1, name: '订阅一' }, rows: [
+    { key: 'update', name: '更新项', sourceId: 'https://sources.example/private', kind: 'update',
+      selected: true, selectable: true },
+    { key: 'conflict', name: '冲突项', sourceId: 'https://sources.example/other', kind: 'conflict',
+      selected: true, selectable: true, overwrite: false },
+  ] }, { subscription: { id: 2, name: '订阅二' }, rows: [] }] };
+  owner.reviewList();
+  const cards = [...owner.nodes.values()].filter(node => node.backgroundColor === 'TOK_CARD_BG');
+  assert.equal(cards.length, 1);
+  assert.equal(cards[0].borderRadius, 14);
+  const labels = transferText(owner);
+  const byLabel = text => labels.find(node => node.create === text);
+  assert.equal(byLabel('更新').backgroundColor, 'app.sourceUi.selected');
+  assert.equal(byLabel('冲突').backgroundColor, 'app.status.warningSoft');
+  assert.ok(byLabel('https://sources.example · 订阅一'));
+  assert.ok(byLabel('订阅二 · 没有变更'));
+  assert.deepEqual(selection, [['更新项', true, true], ['冲突项', false, false]]);
 });

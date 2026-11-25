@@ -14,11 +14,11 @@ import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { readerPageAreaLength, readerStandardPageSpec, READER_STANDARD_PAGE_CONTENT_GAP } from '../../../ui/layout/ReaderPageShell';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
 import { ReaderPageGeometry, ReaderPageGeometryInput, applyReaderStandardFloatingHeader, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
-import { resolveReaderButtonMatrixSize, resolveReaderButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
+import { resolveReaderButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { resolveSourceManagementLayout, SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP_GAP, type SourceManagementLayout } from '../presentation/SourceManagementLayout';
 import { sourceManagementFilterKey, copySourceManagementScroll, type SourceManagementScrollState } from '../presentation/SourceManagementScrollState';
-import { SOURCE_V9_HEADER_HEIGHT, projectSourceManagementV9, sourceV9Primary, sourceV9ReportFill, sourceV9ReportTone, sourceV9Supports,
+import { projectSourceManagementV9, sourceV9DisplayUrl, sourceV9ReportTone, sourceV9Supports,
   type SourceV9Counts, type SourceV9ListAction, type SourceV9Projection, type SourceV9View } from '../presentation/SourceManagementV9';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
@@ -31,7 +31,7 @@ import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { ReaderRecoveryNotice, type ReaderRecoveryBodyPresentation, type ReaderRecoveryTextAction } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
-import { TYPE_SELECT_SOURCE_GROUP_VALUE, TYPE_SEARCH_RESULT_INTRO, TYPE_SOURCE_MANAGEMENT_COUNT, TYPE_SOURCE_MANAGEMENT_STATUS, TYPE_SOURCE_MANAGEMENT_ROW_TITLE, TYPE_SOURCE_STATE_TITLE } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_SELECT_SOURCE_GROUP_VALUE, TYPE_SEARCH_RESULT_INTRO, TYPE_SOURCE_MANAGEMENT_STATUS, TYPE_SOURCE_MANAGEMENT_ROW_TITLE, TYPE_SOURCE_MANAGEMENT_ROW_URL, TYPE_SOURCE_STATE_TITLE } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
@@ -40,8 +40,6 @@ import {
 } from '../application/SourceGateway';
 import type { SourceManagementStatusKind, SourceManagementProjection } from '../application/SourceOrchestrator';
 import { readerSourceCategoryLabel, type ReaderSourceCategory } from '../application/ReaderSourceCategory';
-import { httpUrlHostname } from '../../../platform/network/HttpTransportPolicy';
-import { TYPE_SOURCE_MANAGEMENT_ROW_URL, TYPE_SEARCH_SOURCE_INPUT } from '../../../ui/foundation/ReaderTypography';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { ReaderUIVerificationProbe } from '../../../app/diagnostics/ReaderUIVerificationProbe';
 import { sourceReadLoadingFrame, SOURCE_READ_FAILURE_TITLE } from './SourceReadLoadingVerification';
@@ -54,13 +52,16 @@ import { sourceVerificationOfflineDetectIdentity, sourceVerificationOpening, sou
   type SourceImportStatusActionObservation, type SourceRecoveryVerificationFacts,
   type SourceToggleReadyObservation, type SourceV9ListReturnView, type SourceV9ListTransitionObservation } from './SourceManagementVerification';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
+import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
+import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { readerFloatingBarBottomInset } from '../../../ui/layout/ReaderFloatingBarMetrics';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
+import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
 import { ReaderSelect } from '../../../ui/controls/ReaderSelect';
 import { ReaderSelectPanel } from '../../../ui/controls/ReaderSelectPanel';
-import { StatusBadge, type ReaderStatusBadgeStatus } from '../../../ui/controls/StatusBadge';
+import { SourceV9CircleCheck, SourceV9DetectButton, SourceV9TypeSeal } from './SourceV9Chrome';
 import {
   SurfaceHorizontalFrame,
 } from '../../../ui/layout/SurfaceHorizontalGeometry';
@@ -72,9 +73,9 @@ import {
   TOK_SPACE_XS,
 } from '../../../ui/foundation/ReaderTokens';
 
-const SOURCE_TEXT_ROLES = ['stats', 'status/all', 'category/all', 'row/title',
-  'row/domain', 'row/detect', 'footer/manage', 'footer/add'];
-const SOURCE_RESERVED_TEXT_ROLES = ['row/domain', 'row/detect'];
+const SOURCE_TEXT_ROLES = ['status/all', 'category/all', 'row/title',
+  'row/domain', 'footer/manage', 'footer/add'];
+const SOURCE_RESERVED_TEXT_ROLES = ['row/domain'];
 let sourceTemporaryGeneration: number = 0;
 
 class SourceListLayoutFrame extends ReaderPostLayoutFrame {}
@@ -189,7 +190,6 @@ export struct SourceManagementPage {
   onDetectSource: (id: string) => void = (_id: string): void => {};
   onLoginSource: (id: string, loginUrl: string) => void = (_id: string, _loginUrl: string): void => {};
   onAddSource: (preferred?: string, fallback?: string) => void = (): void => {};
-  onOpenTools: (viewState: SourceManagementViewState) => void = (_viewState: SourceManagementViewState): void => {};
   onV9Action: (action: SourceV9ListAction, sourceIds: string[]) => void =
     (_action: SourceV9ListAction, _sourceIds: string[]): void => {};
   onRetryLoad: () => void = (): void => {};
@@ -222,18 +222,15 @@ export struct SourceManagementPage {
   // 列表本身由 LazyForEach 数据源驱动，这里只保留普通引用并以计数触发重渲染。
   private projectedSources: BookSource[] = [];
   @State private projectedSourceCount: number = 0;
-  @State private projectedEnabledSourceCount: number = 0;
   private groupOptionsCache: string[] = [];
   private groupOptionsCacheSource: BookSource[] | undefined = undefined;
   private projectionRebuildPending: boolean = false;
   private readonly sourceDataSource: SourceListDataSource = new SourceListDataSource();
   private readonly sourceScroller: Scroller = new Scroller();
   private listMounted: boolean = false;
-  private firstVisibleSourceId: string = '';
   private pendingSourceAnchor: string = '';
   private anchorRestoreScheduled: boolean = false;
   private pendingScroll: SourceManagementScrollState | undefined;
-  private capturedScroll: SourceManagementScrollState | undefined;
   private scrollRestoreEpoch: number = 0;
   private firstVisibleListIndex: number = 0;
   private lastProjectionFilterKey: string = '';
@@ -365,8 +362,6 @@ export struct SourceManagementPage {
     }
     this.listMounted = false;
     this.cancelScrollRestore();
-    this.capturedScroll = undefined;
-    this.firstVisibleSourceId = '';
     this.pendingSourceAnchor = '';
     this.anchorRestoreScheduled = false;
     this.pendingToolsFocus = undefined;
@@ -443,7 +438,7 @@ export struct SourceManagementPage {
     if (!this.managementInputIsCurrent()) return;
     if (this.requestGroupClose(this.groupSelectionId) || this.groupOptions().length <= 1 ||
       this.groupTriggerWidth <= 0 || this.groupTriggerHeight <= 0) return;
-    if (this.overlayBottom() - this.groupOverlayTop() < this.groupTriggerHeight + 44 + 2 * TOK_BORDER_W ||
+    if (this.overlayBottom() - this.groupOverlayTop() < this.groupTriggerHeight + 44 * 2 + 2 * TOK_BORDER_W ||
       this.groupX - this.originX >= this.overlayRight()) return;
     this.cancelGroupFocus();
     this.cancelToolsReturnFocus('group');
@@ -535,20 +530,6 @@ export struct SourceManagementPage {
         }
       }));
     } catch (_unmounted) {}
-  }
-
-  private requestOpenTools(entry: SourceToolsEntry): void {
-    if (!this.managementBackIsCurrent(this.temporaryBackIdentity) || this.isInputAllowed?.() === false || this.groupOpen) return;
-    this.captureScroll('tools');
-    this.cancelToolsReturnFocus('open-tools');
-    const pending = (this.pendingScroll !== undefined || this.pendingSourceAnchor.length > 0) && this.sourceReturnFiltersMatch();
-    const scroll = copySourceManagementScroll(pending ? this.pendingScroll : this.capturedScroll);
-    const anchorSourceId = scroll?.anchorId ?? (pending ? this.pendingSourceAnchor : this.firstVisibleSourceId);
-    const index = this.projectedSources.findIndex((source: BookSource): boolean => source.sourceId === anchorSourceId);
-    this.onOpenTools({ searchQuery: this.searchQuery, status: this.statusValue,
-      category: this.categoryValue, group: this.groupValue, anchorSourceId,
-      anchorFallbackIndex: pending ? this.initialViewState?.anchorFallbackIndex ?? index : index,
-      toolsEntry: entry, scroll });
   }
 
   private toolsFocusId(entry: SourceToolsEntry): string { return `${this.temporaryBackIdentity}:tools:${entry}`; }
@@ -768,6 +749,8 @@ export struct SourceManagementPage {
         menuHeaderHeight: this.groupClosingAnchor?.height ?? this.groupTriggerHeight,
         emptyOptionsText: '没有匹配的分组',
         menuHeader: (): void => { this.groupSearchField(this.groupSelectionId); },
+        menuFooter: (): void => { this.manageGroupsOption(this.groupSelectionId); },
+        menuFooterHeight: 44,
         onMenuHeaderCollapse: (identity: string): void => this.collapseGroupSearch(identity),
         reduceMotion: this.reduceMotion,
         closing: this.groupClosing,
@@ -788,9 +771,31 @@ export struct SourceManagementPage {
   }
 
   @Builder
+  private manageGroupsOption(identity: string) {
+    Button({ type: ButtonType.Normal }) {
+      Row({ space: 7 }) {
+        Image($r('app.media.bookshelf_more_settings')).width(15).height(15)
+          .fillColor(readerAppColor('app.sourceUi.primary', this.appThemeScheme)).accessibilityLevel('no');
+        Text('管理分组').fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily).fontSize(12).maxLines(1)
+          .fontColor(readerAppColor('app.sourceUi.primary', this.appThemeScheme));
+      }.width('100%').padding({ left: 12, right: 12 });
+    }.id('reader-source-v9-manage-groups').width('100%').height(44).padding(0).borderRadius(0)
+      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+      .border({ width: { top: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+      .enabled(!this.groupClosing).onClick((): void => {
+        if (!this.groupSearchIsCurrent(identity)) return;
+        this.hideManagementKeyboard(this.temporaryBackIdentity);
+        this.retireGroupSelection();
+        this.prepareV9ListReturn('groups');
+        this.onV9Action('groups', []);
+      });
+  }
+
+  @Builder
   private groupSearchField(identity: string) {
     ReaderSearchField({
       variant: 'sourceGroup',
+      sourceV9Chrome: true,
       mode: 'live',
       editingFocusId: `${identity}:search`,
       naturalFieldHeightVp: this.groupClosingAnchor?.height ?? this.groupTriggerHeight,
@@ -804,23 +809,17 @@ export struct SourceManagementPage {
   @Builder
   private backBar(identity: string = this.temporaryBackIdentity) {
     if (this.batchMode) {
-      Row() {
-        Button('取消', { type: ButtonType.Capsule }).backgroundColor(Color.Transparent)
-          .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
-          .fontColor(readerAppColor('app.sourceUi.muted', this.appThemeScheme))
-          .fontSize(14).height(36).onClick((): void => this.endBatch());
-        Text(`已选 ${this.batchSourceIds.length} 项`).layoutWeight(1).textAlign(TextAlign.Center)
-          .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
-          .fontSize(15).fontWeight(FontWeight.Medium).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-        Button(this.visibleBatchSelected() ? '取消全选' : '全选', { type: ButtonType.Capsule })
-          .backgroundColor(Color.Transparent).fontSize(14).height(36)
-          .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
-          .fontColor(sourceV9Primary(this.appThemeScheme))
-          .onClick((): void => this.toggleVisibleBatch());
-      }.width('100%').height(SOURCE_V9_HEADER_HEIGHT).padding({ left: 12, right: 12 });
+      PageBackBar({ floating: true, centered: true, elevation: 'floating', showBack: false,
+        trailingWidthVp: 76, title: `已选 ${this.batchSourceIds.length} 项`,
+        leadingActionLabel: '取消', onLeadingAction: (): void => this.endBatch(),
+        trailing: (): void => {
+          this.batchHeaderAction(this.visibleBatchSelected() ? '取消全选' : '全选',
+            (): void => this.toggleVisibleBatch());
+        },
+      });
     } else {
       PageBackBar({
-        floating: true, centered: true, elevation: 'floating', minimumBarHeightVp: SOURCE_V9_HEADER_HEIGHT,
+        floating: true, centered: true, elevation: 'floating',
         showBack: !this.embeddedWide,
         title: '书源管理',
         backFocusId: 'reader-source-back',
@@ -843,6 +842,15 @@ export struct SourceManagementPage {
     }
   }
 
+  @Builder
+  private batchHeaderAction(label: string, run: () => void) {
+    Button({ type: ButtonType.Normal }) {
+      Text(label).fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily).fontSize(13)
+        .maxLines(1).minFontSize(10).maxFontSize(13)
+        .fontColor(readerAppColor('app.sourceUi.primary', this.appThemeScheme));
+    }.width('100%').height(44).padding(0).backgroundColor(Color.Transparent).onClick(run);
+  }
+
   private sourceMorePopup(): CustomPopupOptions {
     return { builder: (): void => { this.sourceMoreMenu(); }, placement: Placement.BottomRight,
       popupColor: readerAppColor('TOK_CARD_BG', this.appThemeScheme), enableArrow: false,
@@ -856,13 +864,24 @@ export struct SourceManagementPage {
       this.sourceMoreAction('分组管理', 'groups');
       this.sourceMoreAction('批量检测', 'detect');
       this.sourceMoreAction('导出全部书源', 'export');
-    }.id('reader-source-v9-more-menu').width(164).padding(8).borderRadius(14);
+    }.id('reader-source-v9-more-menu').width(174).padding(6).borderRadius(14)
+      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+      .border({ width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+      .shadow(readerSurfaceElevation('popover', this.appThemeScheme));
   }
 
   @Builder
   private sourceMoreAction(label: string, action: SourceV9ListAction) {
-    Button(label, { type: ButtonType.Capsule }).id(`reader-source-v9-open-${action}`).width('100%').height(36)
-      .fontSize(13).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).backgroundColor(Color.Transparent)
+    Button({ type: ButtonType.Normal }) {
+      Row({ space: 8 }) {
+        Image(this.sourceMoreIcon(action)).width(17).height(17).fillColor(readerAppColor('TOK_INK', this.appThemeScheme)).accessibilityLevel('no');
+        Text(label).fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily).fontSize(13)
+          .layoutWeight(1).maxLines(1).minFontSize(10).maxFontSize(13)
+          .textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.Start)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+      }.width('100%').justifyContent(FlexAlign.Start);
+    }.id(`reader-source-v9-open-${action}`).width('100%').height(36)
+      .padding({ left: 10, right: 10 }).backgroundColor(Color.Transparent)
       .enabled(action !== 'detect' || this.projectedSourceCount > 0)
       .onClick((): void => {
         if (!this.managementInputIsCurrent() || !this.moreMenuOpen) return;
@@ -870,6 +889,13 @@ export struct SourceManagementPage {
         if (action === 'groups') this.prepareV9ListReturn('groups');
         this.onV9Action(action, action === 'detect' ? this.visibleIds() : []);
       });
+  }
+
+  private sourceMoreIcon(action: SourceV9ListAction): Resource {
+    if (action === 'groups' || action === 'move') return readerActionIcon('folder', this.appThemeScheme);
+    if (action === 'detect') return $r('app.media.source_v9_wave');
+    if (action === 'export') return $r('app.media.source_v9_upload');
+    return $r('app.media.source_v9_cloud');
   }
 
   private visibleIds(): string[] {
@@ -954,37 +980,7 @@ export struct SourceManagementPage {
     this.rebuildSourceProjection('edit');
   }
 
-  @Builder
-  private importAction(identity: string) {
-    Stack({ alignContent: Alignment.Center }) {
-      ReaderIconButton({ icon: this.sourceAddIcon(), specId: 'form-primary-icon', accessibilityLabel: '导入书源',
-        minimumTargetSize: 44,
-        focusId: this.importFocusId(identity, 'header'),
-        onFocused: (): void => this.cancelToolsReturnFocus('other-focus'),
-        actionEnabled: this.mounted,
-        onTap: (): void => {
-          if (this.mounted && identity === this.temporaryBackIdentity)
-            this.onAddSource(this.importFocusId(identity, 'header'), this.toolsFocusId('header'));
-        } });
-    }.width(44).height(44);
-  }
-
-  private importFocusId(identity: string, entry: 'header' | 'footer'): string { return `${identity}:import:${entry}`; }
-
-  @Builder
-  private statsRow() {
-    Text(this.statsText(), this.verificationTextOptions?.('stats', undefined, this.statsText()))
-      .id('reader-source-stats')
-      .width(this.contentFrame().width)
-      .fontFamily(TYPE_SOURCE_MANAGEMENT_COUNT.fontFamily)
-      .fontWeight(TYPE_SOURCE_MANAGEMENT_COUNT.fontWeight)
-      .fontSize(TYPE_SOURCE_MANAGEMENT_COUNT.fontSizeFp)
-      .lineHeight(TYPE_SOURCE_MANAGEMENT_COUNT.lineHeightFp as number)
-      .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
-      .maxFontScale(this.fontScale())
-      .wordBreak(WordBreak.BREAK_WORD)
-      .margin({ top: TOK_SPACE_XS });
-  }
+  private importFocusId(identity: string): string { return `${identity}:import:footer`; }
 
   private recovery(): ReaderRecoveryView { return readerRecoveryView(this.operation.receipt, this.operation.readFacts, this.operation.confirmedParts ?? 0); }
 
@@ -1044,7 +1040,7 @@ export struct SourceManagementPage {
   private readPageStateMessage(): string {
     return this.sourceListLoading() ? '请稍候' : this.hasEmptyImportReadbackFailure() ?
       '已确认导入，但当前列表尚未核对完成，请刷新列表。' : this.hasEmptyListReadFailure() ?
-      '请稍后重试。' : '点击下方「＋ 新增书源」导入 Legado 书源 JSON';
+      '请稍后重试。' : '点击下方「＋ 导入书源」导入 Legado 书源 JSON';
   }
 
   private verificationReadTextScope(): SourceSurfaceTextScope | undefined {
@@ -1600,9 +1596,10 @@ export struct SourceManagementPage {
             category === 'all' ? this.verificationTextOptions?.('category/all', undefined, '全部') : undefined)
             .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
             .fontSize(12).fontWeight(FontWeight.Medium).maxLines(1)
-            .fontColor(readerAppColor(this.categoryValue === category ? 'TOK_INK' : 'app.sourceUi.muted', this.appThemeScheme));
+            .fontColor(readerAppColor(this.categoryValue === category ? 'app.sourceUi.primary' : 'app.sourceUi.muted', this.appThemeScheme));
         }.layoutWeight(1).height('100%').padding(2).borderRadius(8)
           .backgroundColor(this.categoryValue === category ? readerAppColor('TOK_CARD_BG', this.appThemeScheme) : Color.Transparent)
+          .shadow({ radius: this.categoryValue === category ? 3 : 0, color: readerAppColor('app.sourceUi.headerShadow', this.appThemeScheme), offsetY: 1 })
           .accessibilityText(`书源类型，${category === 'all' ? '全部' : readerSourceCategoryLabel(category as ReaderSourceCategory)}`)
           .accessibilitySelected(this.categoryValue === category)
           .id(`source-category-${category}`)
@@ -1614,7 +1611,7 @@ export struct SourceManagementPage {
           });
       }, (category: string): string => category);
     }.id('reader-source-category-filter').width(this.contentFrame().width)
-      .height(Math.max(32, Math.ceil(22 * this.fontScale()))).padding(2).borderRadius(10).margin({ top: 8 })
+      .height(32).padding(2).borderRadius(10).margin({ top: 8 })
       .backgroundColor(readerAppColor('app.sourceUi.field', this.appThemeScheme));
   }
 
@@ -1640,14 +1637,15 @@ export struct SourceManagementPage {
       Text(`${label} ${this.statusCount(verificationId)}`, verificationId === 'all' ? this.verificationTextOptions?.('status/all', undefined, `${label} ${this.statusCount(verificationId)}`) :
         this.filterTextLayoutOptions('status', verificationId, `${label} ${this.statusCount(verificationId)}`))
         .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
-        .fontSize(11).fontWeight(FontWeight.Medium).textAlign(TextAlign.Center).maxLines(2)
+        .fontSize(11).fontWeight(FontWeight.Medium).textAlign(TextAlign.Center).maxLines(1)
+        .minFontSize(8).maxFontSize(11)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .fontColor(readerAppColor(this.statusValue === label ? 'app.sourceUi.onPrimary' : 'app.sourceUi.muted', this.appThemeScheme));
     }.id(`reader-source-status-${verificationId}`).layoutWeight(1)
-      .constraintSize({ minHeight: Math.max(32, Math.ceil(22 * this.fontScale())) }).padding(2)
-      .backgroundColor(this.statusValue === label ? sourceV9Primary(this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+      .height(32).padding({ left: 3, right: 3 })
+      .backgroundColor(this.statusValue === label ? readerAppColor('app.sourceUi.primary', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: this.statusValue === label ?
-        sourceV9Primary(this.appThemeScheme) : readerAppColor('app.sourceUi.border', this.appThemeScheme) })
+        readerAppColor('app.sourceUi.primary', this.appThemeScheme) : readerAppColor('app.sourceUi.border', this.appThemeScheme) })
       .accessibilityText(`书源状态，${label}，${this.statusCount(verificationId)} 项`).accessibilitySelected(this.statusValue === label)
       .onClick((): void => {
         if (!this.managementInputIsCurrent() || this.groupOpen) return;
@@ -1682,7 +1680,7 @@ export struct SourceManagementPage {
     }
     .id('reader-source-group-filter')
     .width(this.groupSelectWidth())
-    .constraintSize({ minHeight: 44 })
+    .height(40)
     .alignItems(VerticalAlign.Center);
   }
 
@@ -1770,7 +1768,6 @@ export struct SourceManagementPage {
       if (!this.listMounted || this.pendingScroll !== undefined || this.pendingSourceAnchor.length > 0) return;
       this.firstVisibleListIndex = Math.max(0, start);
       // The permanent filter header is the first native ListItem.
-      this.firstVisibleSourceId = start > 0 ? this.projectedSources[start - 1]?.sourceId ?? '' : '';
     })
     .onScrollStop((): void => this.captureScroll('settled'))
     .onTouch((event: TouchEvent): void => { if (event.type === TouchType.Down) this.cancelScrollRestore(); })
@@ -1826,7 +1823,6 @@ export struct SourceManagementPage {
               const desired = pending !== undefined && pending.layoutKey === this.scrollLayoutKey() ?
                 pending.itemY : readerScrollStartOffset(this.scrollLayout());
               if (rect.height > 0 && Number.isFinite(rect.y)) this.sourceScroller.scrollBy(0, rect.y - desired);
-              this.firstVisibleSourceId = targetId;
               this.firstVisibleListIndex = index + 1;
             }
           } catch (_unbound) {}
@@ -1878,7 +1874,6 @@ export struct SourceManagementPage {
   private captureScroll(trigger: string): void {
     const measured = this.readCurrentScroll();
     if (measured === undefined) return;
-    this.capturedScroll = measured;
     this.observeVerificationScroll(trigger, measured);
   }
 
@@ -1906,6 +1901,33 @@ export struct SourceManagementPage {
 
   @Builder
   private sourceRow(source: BookSource) {
+    Column() {
+      if (this.batchMode) {
+        Button({ type: ButtonType.Normal }) {
+          this.sourceRowContent(source);
+        }.width('100%').padding(10).backgroundColor(Color.Transparent).borderRadius(0)
+          .accessibilitySelected(this.batchSourceIds.includes(source.sourceId))
+          .accessibilityText(source.name)
+          .onClick((): void => this.toggleBatchSource(this.currentSourceRow(source),
+            !this.batchSourceIds.includes(source.sourceId)));
+      } else {
+        this.sourceRowContent(source);
+      }
+    }
+    .id(this.verificationRowId(source.sourceId))
+    .width(this.contentFrame().width)
+    .constraintSize({ minHeight: this.layoutBudget(this.currentSourceRow(source)).rowMinHeight })
+    .padding(this.batchMode ? 0 : 10)
+    .alignItems(HorizontalAlign.Start)
+    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+    .borderRadius({ topLeft: this.isFirstSource(source) ? 14 : 0, topRight: this.isFirstSource(source) ? 14 : 0,
+      bottomLeft: this.isLastSource(source) ? 14 : 0, bottomRight: this.isLastSource(source) ? 14 : 0 })
+    .border({ width: { left: 1, right: 1, bottom: this.isLastSource(source) ? 1 : 0, top: 1 },
+      color: readerAppColor('TOK_LINE', this.appThemeScheme) });
+  }
+
+  @Builder
+  private sourceRowContent(source: BookSource) {
     Column({ space: TOK_SPACE_XS }) {
       if (this.layoutBudget(this.currentSourceRow(source)).rowForm === 'stacked-leading') {
         this.sourceLeading(source);
@@ -1924,12 +1946,15 @@ export struct SourceManagementPage {
         }
       }
     }
-    .id(this.verificationRowId(source.sourceId))
-    .width(this.contentFrame().width)
-    .constraintSize({ minHeight: this.layoutBudget(this.currentSourceRow(source)).rowMinHeight })
-    .padding({ right: TOK_SPACE_XS })
+    .width('100%')
     .alignItems(HorizontalAlign.Start)
-    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
+    .accessibilityLevel(this.batchMode ? 'no-hide-descendants' : 'auto')
+    .hitTestBehavior(this.batchMode ? HitTestMode.None : HitTestMode.Default);
+  }
+
+  private isFirstSource(source: BookSource): boolean { return this.projectedSources[0]?.sourceId === source.sourceId; }
+  private isLastSource(source: BookSource): boolean {
+    return this.projectedSources[this.projectedSources.length - 1]?.sourceId === source.sourceId;
   }
 
   private currentSourceRow(source: BookSource): BookSource {
@@ -1949,31 +1974,18 @@ export struct SourceManagementPage {
   private sourceLeading(source: BookSource) {
     if (this.batchMode) {
       Stack({ alignContent: Alignment.Center }) {
-        Checkbox({ name: source.sourceId, group: 'source-management-v9' })
-          .select(this.batchSourceIds.includes(source.sourceId))
-          .selectedColor(sourceV9ReportFill('content', this.appThemeScheme) ?? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
-          .accessibilityText(`选择${source.name}`)
-          .onChange((selected: boolean): void => this.toggleBatchSource(this.currentSourceRow(source), selected));
+        SourceV9CircleCheck({ selected: this.batchSourceIds.includes(source.sourceId), interactive: false });
       }.width(SOURCE_ROW_ICON_WIDTH).height(34);
     } else {
       Stack({ alignContent: Alignment.Center }) {
-        Text(source.category === 'comic' ? '漫' : '文')
-          .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
-          .fontSize(15).fontWeight(FontWeight.Bold)
-          .fontColor(source.category === 'comic' ?
-            (this.appThemeScheme === 'night' ? '#E0A36C' : '#A65E38') :
-              (sourceV9ReportFill('content', this.appThemeScheme) ?? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)));
-      }.width(SOURCE_ROW_ICON_WIDTH).height(34).borderRadius(10)
-        .backgroundColor(readerAppColor(source.category === 'comic' ? 'app.sourceUi.overwrite' : 'app.sourceUi.selected', this.appThemeScheme))
-        .accessibilityLevel('no')
+        SourceV9TypeSeal({ category: source.category });
+      }.width(SOURCE_ROW_ICON_WIDTH).height(34).accessibilityLevel('no')
         .onClick(this.sourceRowCommand(this.currentSourceRow(source), 'check'));
     }
   }
 
   private sourceDomain(source: BookSource): string {
-    const host = httpUrlHostname(source.baseUrl);
-    if (host === undefined || host.length === 0) return '';
-    return `${source.baseUrl.toLowerCase().startsWith('http://') ? 'http' : 'https'}://${host}`;
+    return sourceV9DisplayUrl(source.baseUrl);
   }
 
 
@@ -2013,14 +2025,18 @@ export struct SourceManagementPage {
     .accessibilityText(`${source.name}，${readerSourceCategoryLabel(source.category)}，${source.baseUrl}`)
     .alignItems(HorizontalAlign.Start)
     .onClick((): void => {
-      if (this.batchMode) this.toggleBatchSource(source, !this.batchSourceIds.includes(source.sourceId));
-      else this.sourceRowCommand(source, 'check')();
+      if (!this.batchMode) this.sourceRowCommand(source, 'check')();
     });
   }
 
   @Builder
   private sourceActions(source: BookSource) {
-    if (!this.batchMode) {
+    if (this.batchMode) {
+      Text(this.currentSourceRow(source).enabled ? '已启用' : '已停用').fontSize(11).maxLines(1)
+        .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
+        .fontColor(readerAppColor(this.currentSourceRow(source).enabled ? 'app.sourceUi.primary' : 'app.sourceUi.muted',
+          this.appThemeScheme));
+    } else {
       Row({ space: 6 }) {
         ForEach([this.currentSourceRow(source)], (current: BookSource): void => {
           if (current.loginUrl !== undefined && current.loginUrl.trim().length > 0) this.loginButton(current);
@@ -2035,49 +2051,44 @@ export struct SourceManagementPage {
 
   @Builder
   private detectButton(source: BookSource) {
-    Button({ type: ButtonType.Circle }) {
-      Text(this.detectGlyph(source)).fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
-        .fontWeight(FontWeight.Bold).fontSize(14)
-        .fontColor(readerAppColor(sourceV9ReportTone(source) === 'unverified' ?
-          'app.sourceUi.muted' : 'app.sourceUi.onPrimary', this.appThemeScheme))
-        .id(this.offlineDetectBadgeId(source));
-    }.id(source.offlineDetectReportVersion !== undefined && ReaderUIVerificationProbe.enabled() ?
-      'reader-source-v9-fixture-detect' : this.verificationRowTextId(source.sourceId, 'reader-source-text-row-detect'))
-      .width(28).height(28).padding(0).responseRegion({ x: -6, y: -8, width: 40, height: 44 })
-      .backgroundColor(sourceV9ReportFill(sourceV9ReportTone(source), this.appThemeScheme) ??
-        readerAppColor('app.sourceUi.field', this.appThemeScheme))
-      .enabled(this.sourceDetectEnabled(source.sourceId))
-      .accessibilityText(this.sourceActionLabel(source, `检测，${this.sourceBadgeLabel(source)}`,
-        this.sourceDetectEnabled(source.sourceId), source.checkState === 'checking'))
-      .onClick(this.sourceRowCommand(source, 'check'));
+    SourceV9DetectButton({ tone: sourceV9ReportTone(source), checking: source.checkState === 'checking',
+      controlId: source.offlineDetectReportVersion !== undefined && ReaderUIVerificationProbe.enabled() ?
+        'reader-source-v9-fixture-detect' : this.verificationRowTextId(source.sourceId, 'reader-source-text-row-detect'),
+      iconId: this.offlineDetectBadgeId(source), actionEnabled: this.sourceDetectEnabled(source.sourceId),
+      label: this.sourceActionLabel(source, `检测，${this.sourceBadgeLabel(source)}`, this.sourceDetectEnabled(source.sourceId),
+        source.checkState === 'checking'),
+      onTap: this.sourceRowCommand(source, 'check') });
   }
 
-  private detectGlyph(source: BookSource): string {
-    if (source.checkState === 'checking') return '…';
-    const tone = sourceV9ReportTone(source);
-    return tone === 'unverified' ? '–' : tone === 'earlyFailure' || tone === 'deepFailure' ? '×' : '✓';
+  private loginInk(source: BookSource): string {
+    return readerAppColor(source.loginState === 'verified' ? 'app.status.good' :
+      source.loginState === 'expired' ? 'app.sourceUi.danger' : 'app.sourceUi.muted', this.appThemeScheme);
+  }
+
+  private loginSurface(source: BookSource): string {
+    return readerAppColor(source.loginState === 'verified' ? 'app.status.goodSoft' :
+      source.loginState === 'expired' ? 'app.sourceUi.dangerSurface' : 'app.sourceUi.field', this.appThemeScheme);
   }
 
   @Builder
   private loginButton(source: BookSource) {
     Button({ type: ButtonType.Capsule }) {
       Row({ space: 3 }) {
-        Text(source.loginState === 'verified' ? '✓' : source.loginState === 'expired' ? '×' : '?')
-          .width(13).height(13).textAlign(TextAlign.Center).fontWeight(FontWeight.Bold).fontSize('9vp').borderRadius(999)
-          .accessibilityLevel('no')
+        Stack({ alignContent: Alignment.Center }) {
+          Image(source.loginState === 'verified' ? readerActionIcon('check', this.appThemeScheme) :
+            source.loginState === 'expired' ? readerActionIcon('close', this.appThemeScheme) : $r('app.media.source_v9_question'))
+            .width(9).height(9).fillColor(this.loginInk(source));
+        }.width(13).height(13).borderRadius(7).border({ width: 1, color: this.loginInk(source) }).accessibilityLevel('no');
+        Text('登录', this.textLayoutOptions?.('row/login', source.sourceId, '登录'))
+          .fontSize(11).fontWeight(FontWeight.Medium).maxLines(1)
           .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
-          .backgroundColor((source.loginState === 'verified' ? sourceV9ReportFill('content', this.appThemeScheme) :
-            source.loginState === 'expired' ? sourceV9ReportFill('earlyFailure', this.appThemeScheme) : undefined) ??
-              readerAppColor('app.sourceUi.faint', this.appThemeScheme))
-          .fontColor(readerAppColor('app.sourceUi.onPrimary', this.appThemeScheme));
-        Text('登录').fontSize(11).fontWeight(FontWeight.Medium).maxLines(1)
-          .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+          .fontColor(this.loginInk(source));
       }.justifyContent(FlexAlign.Center);
     }.id(this.verificationRowActionsCurrent(source) ? 'reader-source-text-row-login' : '')
       .width(58).height(26).padding(2).flexShrink(0)
       .responseRegion({ x: 0, y: -9, width: 58, height: 44 })
-      .backgroundColor(readerAppColor('app.sourceUi.field', this.appThemeScheme))
+      .borderRadius(999).backgroundColor(this.loginSurface(source))
+      .border({ width: 1, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
       .enabled(this.sourceActionEnabled() && source.checkState !== 'checking')
       .accessibilityText(this.sourceActionLabel(source, source.loginState === 'verified' ? '登录，已验证' :
         source.loginState === 'expired' ? '登录，验证失效' : '登录，状态未知', this.sourceActionEnabled(), false))
@@ -2110,15 +2121,6 @@ export struct SourceManagementPage {
     };
   }
 
-  @Builder
-  private statusBadge(source: BookSource) {
-    StatusBadge({ status: this.sourceBadgeStatus(source), label: this.sourceBadgeLabel(source), symbolOnly: true,
-      verificationId: this.verificationRowActionsCurrent(source) ?
-        `reader-source-row-status-${source.checkState ?? 'unchecked'}` : '' })
-      .id(this.offlineDetectBadgeId(source))
-      .flexShrink(0);
-  }
-
   private offlineDetectBadgeId(source: BookSource): string {
     if (source.offlineDetectReportVersion === undefined || !ReaderUIVerificationProbe.enabled()) return '';
     if (source.checkState === 'unchecked') return 'reader-source-offline-detect-ready';
@@ -2144,7 +2146,7 @@ export struct SourceManagementPage {
   @Builder
   private sourceSwitch(value: boolean, onTap: (next: boolean) => void, sourceId: string, sourceName: string = '') {
     ForEach([`${this.temporaryBackIdentity}:${sourceId}`], (identity: string): void => {
-      ReaderToggle({ value: this.sourceSwitchValue(sourceId, value), specId: 'standard-toggle', inputIdentity: identity, checkedColor: sourceV9Primary(this.appThemeScheme),
+      ReaderToggle({ value: this.sourceSwitchValue(sourceId, value), specId: 'standard-toggle', inputIdentity: identity, checkedColor: readerAppColor('app.sourceUi.primary', this.appThemeScheme),
         accessibilityLabel: `${this.sourceSwitchName(sourceId, sourceName).trim() || sourceId}，启用书源${this.sourceToggleBusy() ? '，忙碌' : this.sourceActionEnabled() ? '' : '，暂不可用'}`, actionEnabled: this.sourceActionEnabled(), isBusy: this.sourceToggleBusy(),
         onToggle: (next: boolean): void => {
           if (identity === `${this.temporaryBackIdentity}:${sourceId}` && this.sourceActionEnabled() && !this.sourceToggleBusy()) onTap(next);
@@ -2181,20 +2183,21 @@ export struct SourceManagementPage {
   private bottomActionBar(identity: string = this.temporaryBackIdentity) {
     if (this.batchMode) {
       Row() {
-        this.batchAction('✓', '启用', 'enable');
-        this.batchAction('Ⅱ', '停用', 'disable');
-        this.batchAction('⇥', '移至分组', 'move');
-        this.batchAction('∿', '检测', 'detect');
-        this.batchAction('×', '删除', 'delete');
+        this.batchAction($r('app.media.reader_action_check'), '启用', 'enable');
+        this.batchAction($r('app.media.reader_action_pause'), '停用', 'disable');
+        this.batchAction($r('app.media.reader_action_folder'), '移至分组', 'move');
+        this.batchAction($r('app.media.source_v9_wave'), '检测', 'detect');
+        this.batchAction($r('app.media.download_visual_trash'), '删除', 'delete');
       }.id('reader-source-v9-batch-dock').width(this.contentFrame().width).height(this.footerActionHeight())
         .padding({ left: 6, right: 6 }).borderRadius(999).margin({ top: TOK_SPACE_SM, bottom: this.actionBottomInset() })
         .border({ width: TOK_BORDER_W, color: readerAppColor('app.sourceUi.border', this.appThemeScheme) })
-        .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme));
+        .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+        .shadow(readerSurfaceElevation('floating', this.appThemeScheme));
     } else {
       Flex({ direction: this.footerStacked() ? FlexDirection.Column : FlexDirection.Row,
         alignItems: ItemAlign.Center, space: { main: LengthMetrics.vp(TOK_SPACE_CONTROL_INLINE) } }) {
         ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-manage', label: '批量管理', layout: 'full',
-          variant: 'tonal', visualSize: 'large', actionEnabled: this.hasReadableSources,
+          controlHeight: this.footerControlHeight(), actionEnabled: this.hasReadableSources,
           textLayoutOptions: this.textLayoutOptions?.('footer/manage', undefined, '批量管理'),
           focusId: this.toolsFocusId('footer'), onFocused: (): void => this.onToolsEntryFocused(identity, 'footer'),
           onAction: (): void => {
@@ -2206,16 +2209,18 @@ export struct SourceManagementPage {
             }
           } })
           .id(this.verificationTextOptions === undefined ? '' : 'reader-source-text-footer-manage')
+          .height(this.footerControlHeight())
           .width(this.footerStacked() ? '100%' : this.footerManageWidth())
           .onAreaChange((_old: Area, area: Area): void => this.onToolsEntryLayout(identity, 'footer', area));
-        ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'source-management-add', label: '导入书源', fillWidth: true, surfaceColor: sourceV9Primary(this.appThemeScheme),
+        ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'source-management-add', label: '导入书源', fillWidth: true, surfaceColor: readerAppColor('app.sourceUi.primary', this.appThemeScheme),
           textLayoutOptions: this.textLayoutOptions?.('footer/add', undefined, '导入书源'),
-          icon: this.sourceAddIcon(), focusId: this.importFocusId(identity, 'footer'),
+          icon: this.sourceAddIcon(), focusId: this.importFocusId(identity),
           onAction: (): void => {
             if (this.managementInputIsCurrent() && identity === this.temporaryBackIdentity && !this.groupOpen)
-              this.onAddSource(this.importFocusId(identity, 'footer'), this.toolsFocusId('header'));
+              this.onAddSource(this.importFocusId(identity), this.toolsFocusId('header'));
           } })
           .id(this.verificationTextOptions === undefined ? '' : 'reader-source-text-footer-add')
+          .height(this.footerControlHeight())
           .width(this.footerStacked() ? '100%' : undefined).layoutWeight(this.footerStacked() ? 0 : 1);
       }.id(this.footerStacked() ? 'reader-source-footer-stacked' : 'reader-source-footer-row')
         .width(this.contentFrame().width).constraintSize({ minHeight: this.layoutBudget().footerHeight })
@@ -2224,16 +2229,19 @@ export struct SourceManagementPage {
     }
   }
 
+  private batchActionInk(action: SourceV9ListAction): string {
+    return readerAppColor(action === 'delete' ? 'app.sourceUi.danger' : action === 'disable' ? 'TOK_MUTED' :
+      action === 'move' ? 'TOK_INK' : 'app.sourceUi.primary', this.appThemeScheme);
+  }
+
   @Builder
-  private batchAction(glyph: string, label: string, action: SourceV9ListAction) {
+  private batchAction(icon: Resource, label: string, action: SourceV9ListAction) {
     Button({ type: ButtonType.Capsule }) {
       Column({ space: 2 }) {
-        Text(glyph).fontSize(16).fontWeight(FontWeight.Medium)
-          .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
-          .fontColor(action === 'delete' ? readerAppColor('app.sourceUi.danger', this.appThemeScheme) : sourceV9Primary(this.appThemeScheme));
-        Text(label).fontSize(10).fontWeight(FontWeight.Medium).maxLines(2).textAlign(TextAlign.Center)
-          .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
-          .fontColor(readerAppColor(action === 'delete' ? 'app.sourceUi.danger' : 'TOK_INK', this.appThemeScheme));
+        Image(icon).width(16).height(16).fillColor(this.batchActionInk(action)).accessibilityLevel('no');
+        Text(label).fontSize(10).fontWeight(FontWeight.Medium).maxLines(1).textAlign(TextAlign.Center)
+          .minFontSize(8).maxFontSize(10).textOverflow({ overflow: TextOverflow.Ellipsis })
+          .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily).fontColor(this.batchActionInk(action));
       }
     }.layoutWeight(1).height('100%').padding(2).backgroundColor(Color.Transparent)
       .id(`reader-source-batch-${action}`).accessibilityText(label).enabled(this.batchSourceIds.length > 0)
@@ -2270,13 +2278,6 @@ export struct SourceManagementPage {
   private verificationRowTextId(sourceId: string, textId: string): string {
     return this.verificationTextOptions !== undefined &&
       (sourceId === this.verificationTextRowId || sourceId === this.verificationReservedTextRowId) ? textId : '';
-  }
-
-  private sourceBadgeStatus(source: BookSource): ReaderStatusBadgeStatus {
-    if (source.checkState === 'passed') return 'success';
-    if (source.checkState === 'failed') return 'error';
-    if (source.checkState === 'checking') return 'pending';
-    return 'unknown';
   }
 
   private sourceBadgeLabel(source: BookSource): string {
@@ -2566,13 +2567,6 @@ export struct SourceManagementPage {
     ReaderUIVerificationProbe.emit('source.overlay', 'business', observation);
   }
 
-  private statsText(): string {
-    const filteredCount = this.projectedSourceCount;
-    const prefix = filteredCount === this.sources.length ? `${this.sources.length} 个书源` :
-      `显示 ${filteredCount}/${this.sources.length} 个书源`;
-    return `${prefix} · ${this.projectedEnabledSourceCount} 个启用`;
-  }
-
   private filterProjection(): SourceV9Projection {
     return projectSourceManagementV9(this.sources, { keyword: this.searchQuery,
       group: this.groupValue === '全部分组' ? undefined : this.groupValue === '未分组' ? '' : this.groupValue,
@@ -2635,16 +2629,12 @@ export struct SourceManagementPage {
         this.verificationReservedTextRowId = reservedRow;
       }
     }
-    this.sourceDataSource.replace(projected);
     this.projectedSources = projected;
     this.projectedSourceCount = projected.length;
-    this.projectedEnabledSourceCount = projected.reduce(
-      (count: number, source: BookSource): number => source.enabled ? count + 1 : count, 0);
+    this.sourceDataSource.replace(projected);
     if (changed && this.mounted) {
       this.cancelScrollRestore();
-      this.capturedScroll = undefined;
       this.firstVisibleListIndex = 0;
-      this.firstVisibleSourceId = '';
       // 过滤条件变化后的大列表重排不能占用点击回调的同一帧：先让本次状态提交返回，
       // 再在下一帧请求回顶，避免 800+ 行场景下主线程被连续重排阻塞。
       if (this.listMounted) {
@@ -2800,19 +2790,16 @@ export struct SourceManagementPage {
     const scale = this.fontScale();
     return resolveSourceManagementLayout({ availableWidth: this.contentFrame().width, fontScale: scale,
       hasLogin: !this.batchMode && source?.loginUrl !== undefined && source.loginUrl.trim().length > 0,
-      detectWidth: this.batchMode ? 0 : 28,
+      detectWidth: this.batchMode ? 0 : 28, batchStatusWidth: this.batchMode ? Math.ceil(35 * scale) : 0,
       actionWidth: 58, actionHeight: this.batchMode ? 34 : 44,
       loginHeight: 26,
-      filterHeight: Math.max(40, readerScaledControlHeight(40,
-        TYPE_SEARCH_SOURCE_INPUT.lineHeightFp ?? TYPE_SEARCH_SOURCE_INPUT.fontSizeFp * 1.5, scale)), footerHeight: this.footerActionHeight(),
+      filterHeight: 40, footerHeight: this.footerActionHeight(),
       titleLineHeight: TYPE_SOURCE_MANAGEMENT_ROW_TITLE.lineHeightFp ?? TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontSizeFp * 1.5,
       metaLineHeight: TYPE_SOURCE_MANAGEMENT_ROW_URL.lineHeightFp ?? TYPE_SOURCE_MANAGEMENT_ROW_URL.fontSizeFp * 1.5 });
   }
 
   private footerControlHeight(): number {
-    const footer = resolveReaderButtonMatrixSize('large');
-    return Math.max(48, readerScaledControlHeight(footer.height, footer.lineHeight, this.fontScale()),
-      readerScaledControlHeight(44, 20, this.fontScale()));
+    return readerScaledControlHeight(44, resolveReaderLabeledIconActionSpec('source-management-add').text.lineHeightFp ?? 20, this.fontScale());
   }
 
   private footerContentWidth(): number {
@@ -2822,6 +2809,7 @@ export struct SourceManagementPage {
     input.viewportHeight = this.viewportHeight;
     input.contentMaxWidth = readerStandardPageSpec('sourceManagement').maxWidth;
     input.contentHorizontalPadding = 19;
+    input.contentHorizontalSafeArea = 'interactive';
     return resolveReaderPageGeometry(input).content.frame.width;
   }
 
@@ -2831,12 +2819,10 @@ export struct SourceManagementPage {
 
   private footerStacked(): boolean {
     const scale = this.fontScale();
-    const manage = resolveReaderButtonMatrixSize('large');
     const add = resolveReaderLabeledIconActionSpec('source-management-add');
     // Both current labels are four full-width CJK glyphs in their shared font.
-    const manageWidth = Math.ceil(manage.fontSize * scale) * '批量管理'.length + manage.horizontalPadding * 2;
-    const addWidth = Math.ceil(add.text.fontSizeFp * scale) * '新增书源'.length + add.iconSize + add.gap;
-    return this.footerContentWidth() < Math.max(112, manageWidth) + TOK_SPACE_CONTROL_INLINE + addWidth;
+    const addWidth = Math.ceil(add.text.fontSizeFp * scale) * '导入书源'.length + add.iconSize + add.gap;
+    return this.footerContentWidth() < this.footerManageWidth() + TOK_SPACE_CONTROL_INLINE + addWidth;
   }
 
   private footerActionHeight(): number {
@@ -2855,12 +2841,13 @@ export struct SourceManagementPage {
     input.viewportWidth = this.viewportWidth;
     input.viewportHeight = this.viewportHeight;
     input.measurementRevision = ++this.measurementRevision;
-    input.headerHeight = this.measurements.readForGeneration('source:header', this.measurementKey, SOURCE_V9_HEADER_HEIGHT);
+    input.headerHeight = this.measurements.readForGeneration('source:header', this.measurementKey, APP_FLOATING_HEADER_BAR_HEIGHT);
     applyReaderStandardFloatingHeader(input);
     input.contentGap = READER_STANDARD_PAGE_CONTENT_GAP;
     input.footerHeight = this.measurements.readForGeneration('source:footer', this.footerMeasurementKey, this.footerFallbackHeight());
     input.contentMaxWidth = readerStandardPageSpec('sourceManagement').maxWidth;
     input.contentHorizontalPadding = 19;
+    input.contentHorizontalSafeArea = 'interactive';
     input.contentEndInset = input.footerHeight;
     this.geometry = resolveReaderPageGeometry(input);
     this.observeVerificationGeometry();
@@ -2901,10 +2888,6 @@ export struct SourceManagementPage {
       return new SurfaceHorizontalFrame(0, 0, 0);
     }
     return this.geometry.content.frame;
-  }
-
-  private filterControlWidth(): number {
-    return Math.max(0, this.contentFrame().width - 44 - TOK_SPACE_XS);
   }
 
   private groupSelectWidth(): number {

@@ -31,6 +31,9 @@ export struct PageBackBar {
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop title: string = '';
   @Prop trailingWidthVp: number = 44;
+  @Prop leadingActionLabel: string = '';
+  onLeadingAction: () => void = (): void => {};
+  @Prop balancedCenteredSlots: boolean = false;
   @Prop centered: boolean = false;
   @Prop minimumBarHeightVp: number = 0;
   @Prop @Watch('onRaisedRecipeChanged') floating: boolean = false;
@@ -77,27 +80,25 @@ export struct PageBackBar {
   @Builder
   private panel() {
     Row({ space: this.variant === 'standard' ? TOK_SPACE_CONTROL_INLINE : 0 }) {
-      if (!this.showBack) {
+      if (this.leadingActionLabel.length > 0) {
+        Button({ type: ButtonType.Normal }) {
+          Text(this.leadingActionLabel).fontFamily(TYPE_PAGE_TITLE.fontFamily).fontSize(13)
+            .maxLines(1).minFontSize(10).maxFontSize(13)
+            .fontColor(readerAppColor('app.sourceUi.primary', this.appThemeScheme));
+        }.width(this.trailingWidthVp).height(44).padding(0).backgroundColor(Color.Transparent)
+          .onClick((): void => this.onLeadingAction());
+      } else if (!this.showBack) {
         if (this.centered || this.variant === 'download') {
           Blank().width(this.variant === 'download' ? DOWNLOAD_HEADER_SLOT_WIDTH : this.trailingWidthVp).height(44);
         }
       } else if (this.variant === 'download') {
         this.downloadBack();
       } else {
-        Button({ type: ButtonType.Normal, stateEffect: false }) {
-          Image(this.backIconResource())
-            .width(this.variant === 'mangaDirectory' ? visual.headerIcon : 24)
-            .height(this.variant === 'mangaDirectory' ? visual.headerIcon : 24)
-            .objectFit(ImageFit.Contain).accessibilityLevel('no');
+        if (this.centered && this.balancedCenteredSlots) {
+          Row() { this.backButton(); }.width(this.trailingWidthVp);
+        } else {
+          this.backButton();
         }
-        .width(this.variant === 'mangaDirectory' ? visual.headerSlot : 44)
-        .height(this.variant === 'mangaDirectory' ? visual.headerSlot : 44)
-        .padding(0).backgroundColor(Color.Transparent)
-        .borderRadius(this.variant === 'mangaDirectory' ? visual.headerButtonRadius : 22)
-        .attributeModifier(new MangaDirectoryPressFeedback(true, this.variant === 'mangaDirectory', this.appThemeScheme, 'nativeButton'))
-        .accessibilityText(this.backLabel).accessibilityRole(AccessibilityRoleType.BUTTON)
-        .id(this.backFocusId)
-        .onClick((): void => this.onBack());
       }
 
       if (this.variant === 'download') {
@@ -156,6 +157,24 @@ export struct PageBackBar {
     .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion(this.veil() || this.surface === 'solid'))
     .onTouch((): void => {})
     .onAreaChange(this.panelAreaChangeHandler());
+  }
+
+  @Builder
+  private backButton() {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
+      Image(this.backIconResource())
+        .width(this.variant === 'mangaDirectory' ? visual.headerIcon : 24)
+        .height(this.variant === 'mangaDirectory' ? visual.headerIcon : 24)
+        .objectFit(ImageFit.Contain).accessibilityLevel('no');
+    }
+    .width(this.variant === 'mangaDirectory' ? visual.headerSlot : 44)
+    .height(this.variant === 'mangaDirectory' ? visual.headerSlot : 44)
+    .padding(0).backgroundColor(Color.Transparent)
+    .borderRadius(this.variant === 'mangaDirectory' ? visual.headerButtonRadius : 22)
+    .attributeModifier(new MangaDirectoryPressFeedback(true, this.variant === 'mangaDirectory', this.appThemeScheme, 'nativeButton'))
+    .accessibilityText(this.backLabel).accessibilityRole(AccessibilityRoleType.BUTTON)
+    .id(this.backFocusId)
+    .onClick((): void => this.onBack());
   }
 
   @Builder

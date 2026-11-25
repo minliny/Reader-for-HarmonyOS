@@ -41,8 +41,8 @@ export async function runSourceInteractionCases(selected, evidencePath) {
     }
     return parsed.get(key);
   }
-  function member(path, symbol) {
-    const parsed = component(path);
+  function member(path, symbol, componentName) {
+    const parsed = component(path, componentName);
     const value = parsed.members.get(symbol); assert.ok(value, `${path}#${symbol}`); return { ...parsed, value };
   }
   function exposureSet(path) {
@@ -55,10 +55,11 @@ export async function runSourceInteractionCases(selected, evidencePath) {
           const expression = n.expression.getText(tree);
           if (expression.startsWith('this.')) {
             const candidate = members.get(expression.slice(5));
-            if (candidate && ts.getAllDecorators(candidate).some(d => d.getText(tree) === '@Builder')) visitBuilder(expression.slice(5));
+            if (candidate && ts.isMethodDeclaration(candidate)) visitBuilder(expression.slice(5));
           }
           if (['PageBackBar', 'ReaderIconButton', 'ReaderSearchField', 'ReaderRecoveryNotice', 'ReaderRecoveryAction',
-            'ReaderButton', 'ReaderSelect', 'ReaderSelectPanel', 'ReaderPageState', 'ReaderToggle', 'ReaderLabeledIconAction'].includes(expression)) {
+            'ReaderButton', 'ReaderSelect', 'ReaderSelectPanel', 'ReaderPageState', 'ReaderToggle', 'ReaderLabeledIconAction',
+            'SourceV9DetectButton'].includes(expression)) {
             exposures.push(`${name}:${expression}`);
           }
           if (ts.isPropertyAccessExpression(n.expression) && n.expression.name.text === 'onClick') exposures.push(`${name}:native:onClick`);
@@ -83,7 +84,7 @@ export async function runSourceInteractionCases(selected, evidencePath) {
     for (const target of inventory.targets) {
       assert.ok(seen.has(target.pageBinding.symbol), `${target.id} is reachable from actual build`);
       member(target.pageBinding.path, target.pageBinding.symbol);
-      member(target.drawHost.path, target.drawHost.symbol);
+      member(target.drawHost.path, target.drawHost.symbol, target.drawHost.component);
       if (target.panelBinding) member(target.panelBinding.path, target.panelBinding.symbol);
       assert.equal(target.nativeEvidence, 'OPEN');
       assert.ok(knownControls.has(target.controlRef), `${target.id}: controlRef resolves to current control registry`);
@@ -105,7 +106,7 @@ export async function runSourceInteractionCases(selected, evidencePath) {
     assert.deepEqual(stateActions, [false, true, true], 'retained loading is non-actionable; read retry and filter clear own independent actions');
     const { readerSourceCategoryLabel } = await import('../../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
     for (const target of inventory.targets.filter(t => t.category))
-      assert.equal(target.label, target.category === 'all' ? '全部类型' : readerSourceCategoryLabel(target.category));
+      assert.equal(target.label, target.category === 'all' ? '全部' : readerSourceCategoryLabel(target.category));
     const registeredCategories = inventory.targets.filter(t => t.category).map(t => t.category);
     const { tree: pageTree, value: categoryBuilder } = member(pagePath, 'categoryFilter');
     const actualCategories = [];
@@ -153,6 +154,8 @@ export async function runSourceInteractionCases(selected, evidencePath) {
     const { pureModuleProbe } = await import('../lib/ets-pure-module-probe.mjs');
     const { readerTypographyRoles } = await import('../lib/reader-typography-probe.mjs');
     const { readerAppColor } = await import('../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+    const { readerSourceCategoryLabel } = await import('../../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
+    const { sourceV9ReportFill, sourceV9ReportTone } = await import('../../entry/src/main/ets/features/source/presentation/SourceManagementV9.ts');
     const { productionMangaDirectoryPressFeedback } = await import('../lib/manga-directory-press-feedback-probe.mjs');
     const { productionReaderPressFeedback } = await import('../lib/reader-press-feedback-probe.mjs');
     const { readerControlNativeTree } = await import('../fixtures/reader-control-native-tree.mjs');
@@ -185,28 +188,65 @@ export async function runSourceInteractionCases(selected, evidencePath) {
         getUIContext:()=>({getMeasureUtils:()=>({measureText:()=>0}),px2vp:x=>x}),renderedValue:()=>'',renderedOptions:()=>[],measureTextStyle:()=>({fontSizeFp:13}) }).resolvedWidth();
       assert.ok(sourceWidths.groupSelectWidth()>=44 && panelWidth>=44,'actual Source trigger and zero-measure Panel minima pay percentage width');
       const controls = foundationControls({ windowMetrics: () => metrics });
-      const optionTargets = inventory.targets.filter(t => ['status-chip', 'category-chip'].includes(t.sdkGroup));
-      for (const [group, specId, label, layout, variant, visualSize, targetId, enabled = true] of [
-        ...optionTargets.map(t => [t.sdkGroup, t.category ? 'source-management-category' :
-          ['status-enabled', 'status-unchecked', 'status-custom'].includes(t.id) ? 'source-management-status-wide' : 'source-management-status-compact',
-          t.label, 'intrinsic', t.id.endsWith('-all') ? 'tonal' : 'subtle', 'small', t.id, t.id !== 'status-custom']),
-        ['row-login', 'source-management-login', '登录', 'intrinsic', 'subtle', 'small'],
-        ['row-detect', 'source-management-detect', '检测', 'intrinsic', 'tonal', 'small'],
-        ['footer-manage', 'source-management-manage', '批量管理', 'full', 'tonal', 'large'],
-      ]) {
-        let actions = 0;
-        const actor = new controls.button.Component(undefined, { specId, label, layout, variant, visualSize, availableWidth: width - 38,
-          primary: targetId?.endsWith('-all') ?? false, selectionSemantic: targetId !== undefined,
-          scheme: 'day', actionEnabled: enabled, onAction: () => actions++ });
-        actor.aboutToAppear(); actor.initialRender(); const frame = hit(controls.nodes(actor), group);
-        assert.ok(Math.max(frame.height ?? 0, frame.constraintSize?.minHeight ?? 0) >= 44); frame.onClick(); assert.equal(actions, enabled ? 1 : 0);
-        actor.actionEnabled = false; frame.onClick(); assert.equal(actions, enabled ? 1 : 0, 'existing callback obeys disabled state');
-        record(group, width, scale, frame, { ...(targetId ? { targetId } : {}), label });
+      const chrome = read('entry/src/main/ets/features/source/ui/SourceV9Chrome.ets');
+      const sdk = boundedSurfaceSdk({ properties: controls.properties });
+      const rowDeps = { ...sdk.deps, readerSourceCategoryLabel, sourceV9ReportFill, sourceV9ReportTone };
+      const Detect = createReaderBuilderProbe(chrome, boundedMembers(chrome, 'SourceV9DetectButton'),
+        rowDeps, { ...controls.hooks, componentName: 'SourceV9DetectButton' }).Component;
+      const row = createReaderBuilderProbe(read(pagePath), ['statusFilter','chip','statusCount','categoryFilter',
+        'loginButton','loginInk','loginSurface','detectButton','sourceBadgeLabel','sourceActionLabel'],
+        { ...rowDeps, SourceV9DetectButton: Detect },
+        { ...controls.hooks, childSources: { SourceV9DetectButton: chrome } }).owner;
+      let actions = 0;
+      Object.assign(row, { appThemeScheme: 'day', inputEnabled: true, contentFrame: () => ({ width: width - 38 }),
+        statusValue: '全部', categoryValue: 'all', statusCounts: { all: 7, enabled: 4, disabled: 3, abnormal: 2 },
+        filterTextLayoutOptions: () => undefined, managementInputIsCurrent: () => true, cancelToolsReturnFocus() {},
+        rebuildSourceProjection: () => actions++, sourceDetectEnabled: () => true, sourceActionEnabled: () => true,
+        sourceRowCommand: () => () => actions++, verificationRowTextId: () => '', offlineDetectBadgeId: () => '',
+        verificationRowActionsCurrent: () => false,
+      });
+      row.statusFilter(); row.categoryFilter();
+      for (const target of inventory.targets.filter(t => ['status-chip', 'category-chip'].includes(t.sdkGroup))) {
+        const id = target.category ? 'source-category-' + target.category : 'reader-source-' + target.id;
+        const frame = [...row.nodes.values()].find(node => node.id === id);
+        assert.ok(frame && frame.onClick, target.id);
+        assert.equal(frame.height, target.category ? '100%' : 32);
+        frame.onClick();
+        record(target.sdkGroup, width, scale, frame, { targetId: target.id, label: target.label,
+          fontEvidence: 'authored single-line selector, native text layout NOT_RUN' });
       }
+      assert.equal(actions, 7);
+      const book = { sourceId: 'src', name: '书源', loginUrl: 'https://src.test/login', checkState: 'unchecked' };
+      row.loginButton(book); row.detectButton(book);
+      const login = [...row.nodes.values()].find(node => node.accessibilityText?.includes('登录，状态未知'));
+      const detect = hit(controls.nodes([...row.children.values()].find(actor => actor instanceof Detect)), 'row-detect');
+      assert.deepEqual([login.width, login.height, login.responseRegion.height], [58, 26, 44]);
+      assert.deepEqual([detect.width, detect.height, detect.responseRegion.width, detect.responseRegion.height], [28, 28, 40, 44]);
+      record('row-login', width, scale, login, { fontEvidence: 'authored compact row control, native text layout NOT_RUN' });
+      record('row-detect', width, scale, detect, { fontEvidence: 'fixed vector glyph' });
       const labeled = labeledIconControls({ foundation: controls });
-      const add = new labeled.component(undefined, { specId: 'source-management-add', label: '新增书源', icon: 'source_add', scheme: 'day' });
-      add.aboutToAppear(); add.initialRender(); const addFrame = hit(labeled.nodes(add), 'footer-add');
-      assert.ok(addFrame.height >= 44); record('footer-add', width, scale, addFrame);
+      const dock = createReaderBuilderProbe(read(pagePath), ['bottomActionBar', 'sourceAddIcon', 'importFocusId', 'toolsFocusId'],
+        { ...labeled.dependencies, readerLayoutCarrierResponseRegion: () => ({}) }, labeled.hooks).owner;
+      let imports = 0;
+      Object.assign(dock, { appThemeScheme: 'day', temporaryBackIdentity: 'source-current',
+        hasReadableSources: true, groupOpen: false, batchMode: false, footerStacked: () => false,
+        footerControlHeight: () => sizing.readerScaledControlHeight(44, 20, scale), footerManageWidth: () => 112,
+        contentFrame: () => ({width: width - 38}), layoutBudget: () => ({footerHeight: 44}), actionBottomInset: () => 0,
+        managementInputIsCurrent: () => true, onToolsEntryFocused() {}, onToolsEntryLayout() {}, onAddSource: () => imports++,
+        prepareV9ListReturn() {}, observeV9ListEntry() {},
+      });
+      dock.bottomActionBar();
+      const add = [...dock.children.values()].find(actor => actor.specId === 'source-management-add');
+      const addFrame = hit(labeled.nodes(add), 'footer-add');
+      assert.equal(add.label, '导入书源');
+      assert.ok(addFrame.height >= 44);
+      addFrame.onClick(); assert.equal(imports, 1);
+      dock.temporaryBackIdentity = 'source-retired'; addFrame.onClick(); assert.equal(imports, 1);
+      record('footer-add', width, scale, addFrame, { boundary: 'Actual bottomActionBar dispatch, current opening and retired identity' });
+      const manage = [...dock.children.values()].find(actor => actor.specId === 'source-management-manage');
+      const manageFrame = hit(labeled.nodes(manage), 'footer-manage');
+      assert.ok(manageFrame.height >= 44); manageFrame.onClick(); assert.equal(dock.batchMode, true);
+      record('footer-manage', width, scale, manageFrame);
 
       // The finite legacy icon resolver strips imports but not unrelated
       // re-exports. Exclude only AST ExportDeclarations in this local adapter;
@@ -287,39 +327,23 @@ export async function runSourceInteractionCases(selected, evidencePath) {
       const directProps=createArkUIPropertyRuntimeProbe(),directTree=readerControlNativeTree(['Row','Stack','Button'],{crossComponent:true});
       class ControlPort {constructor(owner,params,storage,id){Object.assign(this,params,{owner,id,params});}}
       const directHooks={...directProps.hooks,...directTree.hooks,mountChildren:true,lifecycleChildren:true};
-      const iconForPage=createReaderBuilderProbe(read(common('ReaderIconButton')),boundedMembers(read(common('ReaderIconButton'))),
-        {...icons.dependencies,...directProps.sdk,...directTree.dependencies},directHooks).Component;
-      const direct=createReaderBuilderProbe(read(pagePath),['searchField','filterArea','groupFilter','importAction',
-        'sourceAddIcon','importFocusId','sourceSearchInputIdentity','toolsFocusId','groupTriggerFocusId'],
-        {...directProps.sdk,...directTree.dependencies,...readerFoundationTokens,readerAppColor,ReaderIconButton:iconForPage,
+      const direct=createReaderBuilderProbe(read(pagePath),['searchField','groupFilter',
+        'sourceSearchInputIdentity','groupTriggerFocusId'],
+        {...directProps.sdk,...directTree.dependencies,...readerFoundationTokens,readerAppColor,
           ReaderSearchField:ControlPort,ReaderSelect:ControlPort},
-        {...directHooks,childSources:{ReaderIconButton:read(common('ReaderIconButton')),ReaderSearchField:searchSource,
-          ReaderSelect:read(common('ReaderSelect'))}}).owner;
-      let imports=0, toggles=0;
+        {...directHooks,childSources:{ReaderSearchField:searchSource,ReaderSelect:read(common('ReaderSelect'))}}).owner;
+      let toggles=0;
       Object.assign(direct,{mounted:true,temporaryBackIdentity:'source-current',searchInputRevision:0,appThemeScheme:'day',searchQuery:'',
         groupValue:groupLabel,groupOptions:()=>[groupLabel,'分组A'],groupSelectWidth:()=>sourceWidths.groupSelectWidth(),
-        toggleGroupSelection:()=>toggles++,statusFilter:()=>{},
-        contentFrame:()=>({width:width-38}),layoutBudget:()=>({filterHeight:queryFieldHeight}),onAddSource:()=>imports++});
+        toggleGroupSelection:()=>toggles++,
+        contentFrame:()=>({width:width-38}),layoutBudget:()=>({filterHeight:queryFieldHeight})});
       direct.searchField();
       const queryRow=[...direct.nodes.values()].find(node=>node.id==='reader-source-search');
       const groupSlot=[...direct.nodes.values()].find(node=>node.id==='reader-source-group-filter');
       assert.ok(queryRow && groupSlot && groupSlot.parentId===queryRow.nativeKey,
         'current source query shares the row with its paid group selector');
       assert.equal(queryRow.width,width-38); assert.ok(queryRow.constraintSize.minHeight>=44);
-      direct.filterArea();
-      const directNodes=icons.nodes(direct),importFrame=hit(directNodes,'search-import');
       assert.equal(directTree.remaining(),0,'actual query/filter row create-pop are balanced');
-      const importCarrier=directNodes.find(node=>node.nativeKey===importFrame.parentId);
-      const filterRow=directNodes.find(node=>node.nativeKey===importCarrier?.parentId);
-      assert.ok(importCarrier&&filterRow);assert.equal(importCarrier.type,'Stack');assert.equal(importCarrier.width,44);assert.equal(importCarrier.height,44);
-      assert.equal(importCarrier.onClick,undefined,'non-interactive carrier creates no duplicate action');
-      assert.equal(filterRow.type,'Row');assert.equal(filterRow.width,width-38);assert.ok(filterRow.constraintSize.minHeight>=44);
-      assert.equal(importFrame.width,44);assert.equal(importFrame.height,44);
-      const importOffset={x:(importCarrier.width-importFrame.width)/2,y:(importCarrier.height-importFrame.height)/2};
-      assert.deepEqual(importFrame.responseRegion,{x:0,y:0,width:44,height:44});importFrame.onClick();assert.equal(imports,1);
-      const importResponse={x:importOffset.x+importFrame.responseRegion.x,y:importOffset.y+importFrame.responseRegion.y,
-        width:importFrame.responseRegion.width,height:importFrame.responseRegion.height};
-      assert.deepEqual(importResponse,{x:0,y:0,width:44,height:44});
       const searchFieldRow=[...search.nodes.values()].find(node=>node.type==='Row'&&node.width==='100%');
       const searchIcon=[...search.nodes.values()].find(node=>node.type==='Image');
       assert.equal(input.layoutWeight,1);assert.equal(searchFieldRow.width,'100%');
@@ -328,7 +352,6 @@ export async function runSourceInteractionCases(selected, evidencePath) {
       assert.ok(queryWidthMinimum>=44,'actual Row allocation pays query percentage response');
       Object.assign(records.find(r=>r.group==='query-input'&&r.width===width&&r.fontScaleContext===scale),
         {parentWidthMinimum:queryWidthMinimum,parentBasis:'Source search Row remainder after group selector and field padding/icon/gap/border'});
-      record('search-import',width,scale,importFrame,{parentCarrier:{width:44,height:44},paintOffset:importOffset,responseInCarrier:importResponse});
 
       const choice = choiceRowProbe();
       for (const specId of ['source-group-selected', 'source-group-option']) {
@@ -352,10 +375,10 @@ export async function runSourceInteractionCases(selected, evidencePath) {
       assert.equal(select.controlWidth, sourceWidths.groupSelectWidth());
       assert.equal(select.resolvedWidth(), select.controlWidth);
       const selectNodes = selectSdk.nodes(select), trigger = hit(selectNodes, 'group-trigger');
-      assert.equal(trigger.height, 44); assert.equal(trigger.responseRegion.height, 44);
+      assert.equal(trigger.height, 40); assert.equal(trigger.responseRegion.height, 44);
       assert.equal(trigger.accessibilityText, `分组：${groupLabel}`);
-      assert.ok(selectNodes.some(node => node.type === 'Row' && node.borderRadius === 22 &&
-        node.backgroundColor === readerAppColor('TOK_SURFACE_FIELD', 'day')), 'the shared trigger owns capsule paint');
+      assert.ok(selectNodes.some(node => node.type === 'Row' && node.borderRadius === 10 &&
+        node.backgroundColor === readerAppColor('app.sourceUi.field', 'day')), 'the shared trigger owns the v9 field paint');
       trigger.onClick(); assert.equal(toggles, 1);
       select.options = [groupLabel]; selectSdk.properties.flush();
       assert.equal(trigger.enabled, false); trigger.onClick(); assert.equal(toggles, 1);

@@ -3,7 +3,7 @@ const definitions={"native-current-replacement": {"description": "Preserved orig
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const {switchSpecs} = await import('./lib/reader-switch-control-probe.mjs');
-const {iconButtonControls} = await import('./lib/reader-icon-button-probe.mjs');
+const {labeledIconControls} = await import('./lib/reader-labeled-icon-action-probe.mjs');
 const {default:assert} = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {stripTypeScriptTypes, registerHooks} = await import('node:module');
@@ -23,6 +23,7 @@ const { resolveSourceManagementLayout, SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP
 const { readerReadableFontScale, readerScaledControlHeight } = await import('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts');
 const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
 const { foundationSpecs } = await import('./lib/reader-foundation-control-probe.mjs');
+const v9 = await import('../entry/src/main/ets/features/source/presentation/SourceManagementV9.ts');
 const {sourceManagementRecoveryProbe,sourceRecoveryNativeAction}=await import('./lib/source-management-recovery-probe.mjs');
 const {ReaderNavigation} = await import('../entry/src/main/ets/app/navigation/ReaderNavigation.ts');
 const {JsonImportPresentation} = await import('./lib/json-import-presentation-probe.mjs');
@@ -54,16 +55,23 @@ const receipt=load('app/ReaderPersistedReceiptProjection.ts','projectPersistedRe
 const helpers={...load('app/ErrorMessage.ts','{errorMessageOf}'),...load('platform/network/HttpTransportPolicy.ts','{httpUrlHostname,isPrivateNetworkTarget}'),...load('features/source/application/ReaderSourceCategory.ts','{classifyReaderSource,readerSourceCategoryLabel}')};
 const typed=e=>e.typedAdmission===true;
 const Gateway=load('features/source/application/SourceGateway.ts','SourceGateway',{ReaderRuntimeOwner:Runtime,isReaderCoreTransactionPendingError:typed,...helpers});
-const Orchestrator=load('features/source/application/SourceOrchestrator.ets','SourceOrchestrator',{SourceGateway:Gateway,ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,isReaderCoreTransactionPendingError:typed,hilog:{error(){},warn(){},info(){}},projectPersistedReceipt:receipt,...facts,...helpers});
+const Orchestrator=load('features/source/application/SourceOrchestrator.ets','SourceOrchestrator',{SourceGateway:Gateway,ReaderRuntimeOwner:Runtime,ReaderWriteEvidence,isReaderCoreTransactionPendingError:typed,hilog:{error(){},warn(){},info(){}},projectPersistedReceipt:receipt,...facts,...helpers,...v9});
 const Host=load('features/source/application/SourceHost.ets','SourceHost',{ReaderRuntimeOwner:Runtime,SourceOrchestrator:Orchestrator,SourceGateway:Gateway});
 const {SourceJourneyPresentation,EMPTY_SOURCE_JOURNEY}=load(journeyModel,'{SourceJourneyPresentation,EMPTY_SOURCE_JOURNEY}',{SourceHost:Host,EMPTY_SOURCE_TOOLS_SNAPSHOT:{}});
 const sdk=boundedSurfaceSdk();sdk.hooks.lifecycleChildren=true;
 const toggleSource=source('ui/controls/ReaderToggle.ets');
 sdk.hooks.childSources.ReaderToggle=toggleSource;
 const Toggle=createReaderBuilderProbe(toggleSource,boundedMembers(toggleSource),{...sdk.deps,...switchSpecs(),DEBUG:false,AccessibilityRoleType:{SWITCH:'AccessibilityRoleType.SWITCH'}},sdk.hooks).Component;
-const badgeSource=source('ui/controls/StatusBadge.ets');sdk.hooks.childSources.StatusBadge=badgeSource;
-const Badge=createReaderBuilderProbe(badgeSource,boundedMembers(badgeSource),{...sdk.deps,
- LineJoinStyle:{Round:'LineJoinStyle.Round'},uiContext:{vp2px:value=>value}},sdk.hooks).Component;
+const chromeSource=source('features/source/ui/SourceV9Chrome.ets');
+const controls=labeledIconControls();
+for(const componentName of ['SourceV9DetectButton','SourceV9TypeSeal','SourceV9CircleCheck']) {
+ sdk.hooks.childSources[componentName]=chromeSource;
+ sdk.deps[componentName]=createReaderBuilderProbe(chromeSource,boundedMembers(chromeSource,componentName),
+  {...sdk.deps,...v9},{...sdk.hooks,componentName}).Component;
+}
+Object.assign(sdk.deps,{ReaderLabeledIconAction:controls.component,ReaderButton:controls.button.Component,
+ resolveReaderLabeledIconActionSpec:controls.dependencies.resolveReaderLabeledIconActionSpec});
+Object.assign(sdk.hooks.childSources,controls.hooks.childSources);
 class Child{constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
 const names=['sourceJourneyContent','sourceJourneySurface','sourceNavigationPorts','isCurrentRoute','isCurrentRuntime','currentReadingRuntime',
  'jsonImportContent','dismissJsonImport'];
@@ -122,8 +130,12 @@ function index(r,Presentation=SourceJourneyPresentation){
    surface?.aboutToDisappear();
    i.sourceJourneyContent(false);
    const bridge=[...i.children.values()].findLast(c=>c.params.presentation===i.sourceJourney).params;
-   surface=createReaderBuilderProbe(journeySource,boundedMembers(journeySource),{...sdk.deps,SourceJourneyPresentation,EMPTY_SOURCE_JOURNEY,SourceManagementPage:Child,SourceToolsPage:Child},
-    {...sdk.hooks,childSources:{SourceManagementPage:pageSource,SourceToolsPage:toolsSource}}).owner;
+   surface=createReaderBuilderProbe(journeySource,boundedMembers(journeySource),{...sdk.deps,...v9,...helpers,SourceJourneyPresentation,EMPTY_SOURCE_JOURNEY,
+    SourceManagementPage:Child,SourceToolsPage:Child,SourceV9TransferPage:Child,SourceV9CheckDialog:Child,SourceV9GroupsPage:Child},
+    {...sdk.hooks,childSources:{SourceManagementPage:pageSource,SourceToolsPage:toolsSource,
+     SourceV9TransferPage:source('features/source/ui/SourceV9TransferPage.ets'),
+     SourceV9CheckDialog:source('features/source/ui/SourceV9CheckDialog.ets'),
+     SourceV9GroupsPage:source('features/source/ui/SourceV9GroupsPage.ets')}}).owner;
    Object.assign(surface,bridge);
    surface.aboutToAppear();
   }
@@ -131,25 +143,26 @@ function index(r,Presentation=SourceJourneyPresentation){
   return [...surface.children.values()].findLast(c=>c.params.sources)?.params;
  };
  const page=()=>{
-  const params=props(),p=sdk.consumer(pageSource,[...new Set(['appThemeScheme','operation','statusKind','statusMessage','onReconcile','onToggleSource','onDetectSource','onLoginSource','onAddSource','onOpenTools','onRetryLoad',
-   'onMessageChanged','lastFeedbackIdentity','lastToastMessage','feedbackIdentity','mounted','recovery','sourceRow','sourceLeading','sourceInfo','currentSourceInfo','currentSourceRow','sourceActions','fontScale','layoutBudget','footerActionHeight','footerControlHeight','footerContentWidth','footerStacked','sourceBadgeStatus','sourceBadgeLabel','statusBadge','detectButton','loginButton','sourceSwitch','sourceSwitchValue','sourceSwitchName','sourceToggleBusy','sourceActionEnabled','sourceDetectEnabled','sourceActionLabel','bottomActionBar',
-   'sourceRowIsCurrent','sourceRowCommand','sourceRowToggle','sourceRenderKey','managementBackIsCurrent','managementOpeningIsCurrent','inputEnabled','isInputAllowed','isOpeningCurrent','projectedSources','verificationOpening',...sourcePageMethods])],{...actualSourceManagementGeometry(),...foundationSpecs(),resolveSourceManagementLayout,SOURCE_ROW_ICON_WIDTH,SOURCE_STATUS_CHIP_GAP,readerReadableFontScale,readerScaledControlHeight,...readerTypographyRoles,readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView'),ReaderToggle:Toggle,StatusBadge:Badge,readerSourceCategoryLabel:helpers.readerSourceCategoryLabel,httpUrlHostname:helpers.httpUrlHostname,ReaderUIVerificationProbe:{enabled:()=>false}},params);
+  const params=props(),p=sdk.consumer(pageSource,[...new Set(['appThemeScheme','operation','statusKind','statusMessage','onReconcile','onToggleSource','onDetectSource','onLoginSource','onAddSource','onRetryLoad',
+   'onMessageChanged','lastFeedbackIdentity','lastToastMessage','feedbackIdentity','mounted','recovery','sourceRow','sourceRowContent','sourceLeading','sourceInfo','currentSourceInfo','currentSourceRow','sourceActions','fontScale','layoutBudget','footerActionHeight','footerControlHeight','footerContentWidth','footerStacked','sourceBadgeLabel','detectButton','loginButton','sourceSwitch','sourceSwitchValue','sourceSwitchName','sourceToggleBusy','sourceActionEnabled','sourceDetectEnabled','sourceActionLabel','bottomActionBar',
+   'sourceRowIsCurrent','sourceRowCommand','sourceRowToggle','sourceRenderKey','managementBackIsCurrent','managementOpeningIsCurrent','inputEnabled','isInputAllowed','isOpeningCurrent','projectedSources','verificationOpening',...sourcePageMethods])],{...actualSourceManagementGeometry(),...foundationSpecs(),...v9,resolveSourceManagementLayout,SOURCE_ROW_ICON_WIDTH,SOURCE_STATUS_CHIP_GAP,readerReadableFontScale,readerScaledControlHeight,...readerTypographyRoles,readerRecoveryView:load('app/ReaderRecoveryProjection.ts','readerRecoveryView'),ReaderToggle:Toggle,readerSourceCategoryLabel:helpers.readerSourceCategoryLabel,httpUrlHostname:helpers.httpUrlHostname,ReaderUIVerificationProbe:{enabled:()=>false},readerLayoutCarrierResponseRegion:()=>({}),EllipsisMode:{END:'EllipsisMode.END'}},params);
   p.sources=params.sources;p.mounted=true;p.appForeground=true;p.groupOpen=false;p.temporaryBackIdentity='source-sdk-visit';p.contentFrame=()=>({width:350});p.actionBottomInset=()=>0;
   const currentSource=()=>{p.projectedSources=read().sources;return p.projectedSources[0];};
   const switchAction=()=>{p.sourceRow(currentSource());const c=[...p.children.values()].findLast(c=>c instanceof Toggle);c.initialRender();const onChange=sdk.nodes(c).find(n=>n.type==='Toggle'&&n.onChange).onChange,next=!c.value;return ()=>onChange(next);};
   const action=(spec,label)=>{const actor=sdk.walk(p).findLast(c=>c.specId===spec&&(!label||c.label===label));assert.ok(actor,'actual '+spec+' component');
    const hit=sdk.nodes(actor).find(n=>typeof n.onClick==='function');assert.ok(hit,'actual '+spec+' native action');return hit.onClick;};
-  const login=()=>{p.loginButton(currentSource());return action('source-management-login','登录');};
-  const detect=()=>{p.detectButton(currentSource());return action('source-management-detect','检测');};
-  const add=()=>{p.bottomActionBar();return action('source-management-add','新增书源');};
+  const login=()=>{p.loginButton(currentSource());return [...p.nodes.values()].findLast(n=>n.onClick&&n.accessibilityText?.includes('登录')).onClick;};
+  const detect=()=>{p.detectButton(currentSource());const actor=sdk.walk(p).findLast(child=>child instanceof sdk.deps.SourceV9DetectButton);
+   return sdk.nodes(actor).find(n=>n.type==='Button'&&n.onClick).onClick;};
+  const add=()=>{p.bottomActionBar();return action('source-management-add','导入书源');};
   const recovery=()=>sourceRecoveryNativeAction(sourceManagementRecoveryProbe(pageSource,params,{sdk})).onClick;
   return{p,params,switchAction,login,detect,add,recovery};
  };
  const json=()=>{i.jsonImportContent();const params=[...i.children.values()].findLast(c=>c.params.onSelectLocal)?.params;
   const p=sdk.consumer(jsonSource,[...new Set(['onSelectLocal','onImportOnline','onDismiss','urlDraft','validationMessage','localButton','submitOnlineImport','mounted','focusRevision','openingId','isInputAllowed','urlInputRevision',...jsonMethods])],{registerReaderFonts() {}},params);p.aboutToAppear();p.localButton();
   return{p,local:sdk.nodes(p).find(n=>n.onClick).onClick,params};};
- const settle=async()=>{await tick();await i.sourceJourney.registry.orchestrator.operationChain;await tick();};
- return{i,r,props,page,json,read,routes,settle,open:async()=>{i.sourceNavigation.openPresentation('source');await settle();}};
+ const settle=async()=>{await tick();await i.sourceJourney.registry.orchestrator?.operationChain;await tick();};
+ return{i,r,props,page,json,read,routes,settle,get surface(){return surface;},open:async()=>{i.sourceNavigation.openPresentation('source');await settle();}};
 }
 
 if(selectedCase==='native-current-replacement'){
@@ -157,7 +170,7 @@ if(selectedCase==='native-current-replacement'){
  const r=runtime();installed=r;const a=index(r);await a.open();const old=a.page(),oldToggle=old.switchAction(),oldLogin=old.login(),oldDetect=old.detect(),oldAdd=old.add();
  oldAdd();const oldJson=a.json();const b=index(r);await b.open();const id=b.i.sourceJourney.managementIdentity();
  a.i.sourceNavigation.openPresentation('source');assert.equal(b.i.sourceJourney.isManagementCurrent(id),true,'alive old Index getter cannot steal replacement lease');
- oldToggle();oldLogin();oldDetect();oldAdd();old.params.onRetryLoad();old.params.onBack();old.params.onOpenTools();old.params.onTemporaryBackBridge(()=>true,'old');oldJson.local();oldJson.params.onDismiss();await b.settle();
+ oldToggle();oldLogin();oldDetect();oldAdd();old.params.onRetryLoad();old.params.onBack();old.params.onTemporaryBackBridge(()=>true,'old');oldJson.local();oldJson.params.onDismiss();await b.settle();
  assert.equal(r.count('source.update'),0);assert.equal(r.count('source.check.run'),0);assert.equal(r.logins,0);assert.equal(r.pickers,0);assert.equal(a.routes.length,0);
  const live=b.page();live.switchAction()();await b.settle();assert.equal(r.count('source.update'),1);assert.equal(b.read().operation.receipt.receipt.confirmation,'confirmed');
  const staleLogin=live.login();r.rows[0].bookSource.loginUrl='https://a.test/new-login';live.params.onRetryLoad();await b.settle();
@@ -171,10 +184,10 @@ if(selectedCase==='native-current-replacement'){
 if(selectedCase==='toggle-readback-recovery'){
 for(const failure of['read','lost']){
  const r=runtime();installed=r;const a=index(r);await a.open();const p=a.page();if(failure==='read')r.readFail=1;else r.lost=true;
- const toggle=p.switchAction(),badge=sdk.walk(p.p).findLast(actor=>actor instanceof Badge);
- assert.ok(badge,'actual Source row keeps the current semantic StatusBadge actor');assert.deepEqual([badge.status,badge.label],['unknown','未检查']);
- const badgeFrame=sdk.nodes(badge).find(node=>node.type==='Stack'),mark=sdk.nodes(badge).find(node=>node.type==='Path');
- assert.equal(badgeFrame.accessibilityText,'未检查');assert.ok(mark.commands.length>0,'actual source badge retains its non-color native graphic');
+ const toggle=p.switchAction(),detect=sdk.walk(p.p).findLast(actor=>actor instanceof sdk.deps.SourceV9DetectButton);
+ assert.ok(detect,'actual v9 row uses the shared detection button');assert.equal(detect.tone,'unverified');
+ const detectFrame=sdk.nodes(detect).find(node=>node.type==='Button'),mark=sdk.nodes(detect).find(node=>node.type==='Image');
+ assert.match(detectFrame.accessibilityText,/尚无有效检测报告/);assert.equal(mark.create,'app.media.source_v9_wave');
  assert.equal(sdk.nodes(p.p).find(node=>node.type==='Toggle').enabled,true,'actual source switch remains natively eligible');
  assert.equal(p.params.isInputAllowed(),true,'mounted Source owner admits the toggle gesture');
  assert.equal(p.p.sourceRowIsCurrent(p.p.projectedSources[0],p.p.temporaryBackIdentity),true,'mounted Source row admits its current action');
@@ -205,8 +218,14 @@ if(selectedCase==='pending-picker-retirement'){
 
 if(selectedCase==='retired-native-actions'){
 for(const retirement of['nav','mount','unset']){
- const r=runtime();installed=r;const a=index(r);await a.open();const p=a.page(),old=p.switchAction();if(retirement==='nav')a.i.nextNavigationGeneration();else if(retirement==='mount')a.i.detailShelfAdmissionMount++;else installed=undefined;
- old();p.params.onRetryLoad();p.params.onBack();await a.settle();assert.equal(r.count('source.update'),0);assert.equal(a.routes.length,0);cases++;
+ const r=runtime();installed=r;const a=index(r);await a.open();const p=a.page(),old=p.switchAction();
+ if(retirement==='nav')a.i.nextNavigationGeneration();else if(retirement==='mount')a.i.detailShelfAdmissionMount++;else installed=undefined;
+ const navigationsBefore = a.routes.filter(route => typeof route === 'string');
+ old();p.params.onRetryLoad();p.params.onBack();await a.settle();
+ assert.equal(r.count('source.update'),0);
+ assert.deepEqual(a.routes.filter(route => typeof route === 'string'), navigationsBefore,
+   'retired source actions cannot navigate; mounting bridge records are independent');
+ cases++;
 }
 }
 
@@ -292,19 +311,14 @@ if(selectedCase==='viewport-measurements'){
 if(selectedCase==='import-trigger-admission'){
 {
  const r=runtime();installed=r;const a=index(r);await a.open();
- const icons=iconButtonControls({properties:sdk.properties});
- const p=icons.consumer(pageSource,['importAction','mounted','temporaryBackIdentity','onAddSource'],{},a.props());
- p.mounted=true;p.temporaryBackIdentity='source-add-1';p.importAction(p.temporaryBackIdentity);
- const icon=icons.walk(p).find(child=>child instanceof icons.icon.Component);assert.equal(icon?.specId,'form-primary-icon');
- const button=icons.nodes(icon).find(n=>n.type==='Button'&&n.accessibilityText==='导入书源');assert.ok(button);
- const glyph=icons.nodes(icon).find(n=>n.type==='Image');assert.deepEqual([glyph.width,glyph.height],[18,18]);
- assert.deepEqual([button.width,button.height,button.borderRadius,button.focusable],[40,40,12,true]);
- assert.deepEqual(button.responseRegion,{x:-2,y:-2,width:44,height:44});
- button.onClick();assert.notEqual(a.i.jsonImportPresentation.opening,undefined);
- a.i.dismissJsonImport();p.temporaryBackIdentity='source-add-2';button.onClick();assert.equal(a.i.jsonImportPresentation.opening,undefined);
- p.importAction(p.temporaryBackIdentity);
- const current=icons.nodes(p).findLast(n=>n.type==='Button'&&n.accessibilityText==='导入书源');
- p.mounted=false;current.onClick();assert.equal(a.i.jsonImportPresentation.opening,undefined);cases++;
+ const fixture=a.page(),button=fixture.add(),p=fixture.p;
+ const action=sdk.walk(p).find(actor=>actor.specId==='source-management-add');
+ const glyph=sdk.nodes(action).find(node=>node.type==='Image');assert.ok(glyph?.create,'actual Dock uses a vector add icon');
+ const native=sdk.nodes(action).find(node=>node.type==='Button'&&node.onClick);assert.equal(native.height,44);
+ button();assert.equal(a.surface.pane,'import');
+ a.surface.consumeBack();assert.equal(a.surface.pane,'list');
+ p.temporaryBackIdentity='source-add-2';button();assert.equal(a.surface.pane,'list');
+ const current=fixture.add();p.mounted=false;current();assert.equal(a.surface.pane,'list');cases++;
 }
 
 }

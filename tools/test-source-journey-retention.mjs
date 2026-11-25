@@ -135,7 +135,7 @@ if (selected.length) {
     const frame=tree.statements.find(node=>node.name?.getText(tree)==='SourceListLayoutFrame');assert.ok(frame);
     const emitted=ts.transpileModule(frame.getText(tree),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
     const SourceListLayoutFrame=new Function('FrameCallback','ReaderPostLayoutFrame', emitted+';return SourceListLayoutFrame;')(class{}, actualReaderPostLayoutFrame());
-    const names=['currentFilterKey','scrollLayoutKey','cancelScrollRestore','captureScroll','requestOpenTools',
+    const names=['currentFilterKey','scrollLayoutKey','cancelScrollRestore',
       'readCurrentScroll','observeRestoredScroll','observeVerificationScroll',
       'scheduleSourceAnchorRestore','sourceAnchorReadPending','sourceReturnFiltersMatch','managementOpeningIsCurrent','managementBackIsCurrent','cancelToolsReturnFocus'];
     const { ReaderRectVp, ReaderWindowMetricsSnapshot, readerInteractiveSafeTop, readerInteractiveSafeBottom } =
@@ -176,9 +176,7 @@ if (selected.length) {
       old.flush();assert.deepEqual(old.calls,[],`${retire} retires queued restore`);
     }
     const capture=page();capture.actor.cancelScrollRestore();capture.actor.sourceScroller.getItemRect=()=>({y:22,height:110});
-    let returned;capture.actor.onOpenTools=value=>returned=value;capture.actor.requestOpenTools('footer');
-    assert.deepEqual(returned,{...filters,anchorSourceId:'b',anchorFallbackIndex:1,toolsEntry:'footer',
-      scroll: same.actor.initialViewState.scroll});
+    assert.deepEqual(capture.actor.readCurrentScroll(), same.actor.initialViewState.scroll);
 
     // The filter header is still the first native list item, so this scroll
     // position has an offset but no source row anchor.
@@ -186,9 +184,7 @@ if (selected.length) {
     partiallyScrolled.actor.cancelScrollRestore();
     partiallyScrolled.actor.firstVisibleListIndex = 0;
     partiallyScrolled.actor.readerWindowMetricsRevision = 5;
-    let captured;
-    partiallyScrolled.actor.onOpenTools = value => { captured = value; };
-    partiallyScrolled.actor.requestOpenTools('header');
+    const captured = { ...filters, anchorSourceId: '', scroll: partiallyScrolled.actor.readCurrentScroll() };
     assert.equal(captured.scroll.anchorId, '');
     assert.equal(captured.scroll.offset, 345);
 

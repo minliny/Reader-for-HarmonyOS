@@ -9,7 +9,7 @@ import {errorMessageOf} from '../../entry/src/main/ets/app/ErrorMessage.ts';
 import * as windowMetrics from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import * as horizontalGeometry from '../../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts';
 import * as widthClass from '../../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts';
-import { APP_FLOATING_HEADER_TOP_GAP } from '../../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts';
+import { APP_FLOATING_HEADER_TOP_GAP, APP_FLOATING_HEADER_BAR_HEIGHT } from '../../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts';
 import * as scrollLayout from '../../entry/src/main/ets/ui/layout/ReaderScrollLayout.ts';
 import {ReaderMeasurementStore} from '../../entry/src/main/ets/ui/layout/ReaderMeasurements.ts';
 import {actualReaderPageShell} from './reader-page-shell-runtime-probe.mjs';
@@ -21,7 +21,7 @@ export function actualSourceManagementGeometry(metrics = windowMetrics.createDef
    {...shell,...windowMetrics,...horizontalGeometry,...widthClass,APP_FLOATING_HEADER_TOP_GAP});
  const readerFloatingBarBottomInset = bookshelfOperationClass('ui/layout/ReaderFloatingBarMetrics.ts',
    'readerFloatingBarBottomInset',windowMetrics);
- return {...shell,...geometry,...scrollLayout,ReaderMeasurementStore,readerFloatingBarBottomInset,
+ return {...shell,...geometry,...scrollLayout,ReaderMeasurementStore,readerFloatingBarBottomInset, APP_FLOATING_HEADER_BAR_HEIGHT,
    ReaderWindowCoordinator:{metrics:()=>metrics}};
 }
 export function actualSourceManagementTypes(deps) {

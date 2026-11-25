@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const selected = selectContractCases({
-  'safe-frame': 'Actual SourceManagementPage safe geometry, source row native carriers and query parent/input and responsive footer at320/366, safe edges0/40, scales1/1.3/1.6/2/3.2. Includes busy labels, long external metadata and old forced-inline/hard-min/fixed44 negatives. Code-side dimensions and callback admission only.',
+  'safe-frame': 'Actual SourceManagementPage safe geometry, source row, 40vp query with expanded hit targets, and responsive footer at 320/366, safe edges 0/40, scales 1/1.3/1.6/2/3.2. Includes busy states, long metadata, and old forced-inline/hard-min/clear-overflow negatives. Code-side dimensions and callback admission only.',
 });
 if (selected.length === 0) process.exit(0);
 registerHooks({ resolve(specifier, context, next) {
@@ -17,14 +17,15 @@ registerHooks({ resolve(specifier, context, next) {
 } });
 const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { sourceV9ChromeControls } = await import('./lib/source-v9-chrome-sdk-probe.mjs');
 const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { foundationControls, readerFoundationTokens, foundationSpecs } = await import('./lib/reader-foundation-control-probe.mjs');
 const { switchSpecs } = await import('./lib/reader-switch-control-probe.mjs');
 const { labeledIconControls, labeledIconSpecs } = await import('./lib/reader-labeled-icon-action-probe.mjs');
 const { iconButtonControls } = await import('./lib/reader-icon-button-probe.mjs');
 const searchGeometry = await import('../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts');
-const { httpUrlHostname } = await import('../entry/src/main/ets/platform/network/HttpTransportPolicy.ts');
-const { SOURCE_V9_HEADER_HEIGHT, sourceV9Primary, sourceV9ReportFill, sourceV9ReportTone } = await import('../entry/src/main/ets/features/source/presentation/SourceManagementV9.ts');
+const { APP_FLOATING_HEADER_BAR_HEIGHT } = await import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts');
+const { sourceV9DisplayUrl, sourceV9ReportFill, sourceV9ReportTone } = await import('../entry/src/main/ets/features/source/presentation/SourceManagementV9.ts');
 const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
 const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
 const { actualSourceManagementGeometry } = await import('./lib/source-management-owner-probe.mjs');
@@ -51,7 +52,7 @@ function geometryOwner(metrics, resolver = resolveSourceManagementLayout) {
   const Page = selectedProductionMethods(pageFile, 'SourceManagementPage',
     ['fontScale', 'layoutBudget', 'footerControlHeight', 'footerFallbackHeight', 'footerContentWidth', 'footerStacked', 'footerManageWidth', 'footerActionHeight', 'refreshGeometry', 'contentFrame'],
     { ...geometry, ...readerTypographyRoles, ...readerFoundationTokens, ...specs, ...labeledIconSpecs(),
-      readerReadableFontScale, readerScaledControlHeight, SOURCE_V9_HEADER_HEIGHT, resolveSourceManagementLayout: resolver });
+      readerReadableFontScale, readerScaledControlHeight, APP_FLOATING_HEADER_BAR_HEIGHT, resolveSourceManagementLayout: resolver });
   const page = Object.assign(new Page(), { readerWindowMetricsRevision: 1,
     viewportWidth: metrics.windowRect.width, viewportHeight: metrics.windowRect.height, measurementRevision: 0,
     measurementKey: 1, measurements: new geometry.ReaderMeasurementStore(), actionBottomInset: () => 16,
@@ -66,7 +67,8 @@ function controls(metrics, fieldSource = searchSource) {
   const icon = iconButtonControls({ properties: foundation.properties });
   const dependencies = { ...labeled.dependencies, ...switchSpecs(), ...icon.dependencies,
     ...readerTypographyRoles, ...readerFoundationTokens, ...searchGeometry, readerScaledControlHeight, readerReadableFontScale,
-    SOURCE_ROW_ICON_WIDTH, sourceV9Primary, sourceV9ReportFill, sourceV9ReportTone, httpUrlHostname, readerAppColor, readerSourceCategoryLabel, LineJoinStyle: { Round: 'LineJoinStyle.Round' }, readerWindowMetrics: () => metrics,
+    SOURCE_ROW_ICON_WIDTH, sourceV9DisplayUrl, sourceV9ReportFill, sourceV9ReportTone, readerAppColor, readerSourceCategoryLabel,
+    readerWindowMetrics: () => metrics,
     uiContext: { getFont: () => ({}), vp2px: value => value } };
   const toggle = createReaderBuilderProbe(toggleSource, boundedMembers(toggleSource), dependencies, foundation.hooks);
   const modifiers = pureModuleProbe(fieldSource.slice(0, fieldSource.indexOf('@Component')),
@@ -83,17 +85,20 @@ function controls(metrics, fieldSource = searchSource) {
     ReaderSearchField: field.Component });
   const hooks = { ...labeled.hooks, childSources: { ...labeled.hooks.childSources,
     ReaderToggle: toggleSource, ...icon.hooks.childSources, ReaderSearchField: fieldSource } };
-  return { foundation, dependencies, hooks, nodes: owner => foundation.nodes(owner), ordered: owner => foundation.orderedNodes(owner),
-    consumer(source, names) { return createReaderBuilderProbe(source, names, dependencies, hooks).owner; } };
+  const chrome = sourceV9ChromeControls(dependencies, hooks);
+  return { foundation, nodes: owner => foundation.nodes(owner),
+    consumer(source, names) { return createReaderBuilderProbe(source, names, chrome.dependencies, chrome.hooks).owner; } };
 }
 
-const rowMembers = ['sourceRow', 'sourceLeading', 'sourceInfo', 'sourceDomain', 'sourceActions', 'detectButton', 'detectGlyph',
-  'loginButton', 'sourceSwitch', 'sourceSwitchValue', 'sourceSwitchName', 'currentSourceRow', 'currentSourceInfo',
+const rowMembers = ['sourceRow', 'sourceRowContent', 'isFirstSource', 'isLastSource', 'sourceLeading', 'sourceInfo', 'sourceDomain',
+  'sourceActions', 'detectButton', 'loginInk', 'loginSurface', 'loginButton', 'sourceSwitch', 'sourceSwitchValue',
+  'sourceSwitchName', 'currentSourceRow', 'currentSourceInfo',
   'sourceRenderKey', 'projectedSources', 'sources', 'verificationRowTextId', 'verificationRowId'];
 function mountRow(c, page, book, source = pageSource) {
   const owner = c.consumer(source, rowMembers);
   Object.assign(owner, { appThemeScheme: 'day', contentFrame: page.contentFrame.bind(page), fontScale: page.fontScale.bind(page),
     layoutBudget: page.layoutBudget.bind(page), temporaryBackIdentity: 'source-opening', verificationOpening: '',
+    projectedSources: [book],
     cancelToolsReturnFocus() {}, sourceRowCommand: () => () => {}, sourceRowToggle: () => () => {},
     sourceDetectEnabled: () => book.checkState !== 'checking', sourceActionEnabled: () => true,
     sourceToggleBusy: () => false, sourceActionLabel: (_source, action) => action,
@@ -107,7 +112,7 @@ function assertRow(c, owner, page, book) {
   const budget = page.layoutBudget(book), nodes = c.nodes(owner);
   const row = nodes.find(node => node.type === 'Column' && node.constraintSize?.minHeight === budget.rowMinHeight);
   assert.ok(row && row.height === undefined, 'source row grows from its native children');
-  const physicalWidth = row.width - row.padding.right;
+  const physicalWidth = row.width - row.padding * 2 - row.border.width.left - row.border.width.right;
   const info = nodes.find(node => node.type === 'Column' && node.accessibilityText?.includes(book.baseUrl));
   assert.ok(budget.textAvailableWidth >= 0 && info.constraintSize.minWidth >= 0 &&
     info.constraintSize.minWidth <= budget.textAvailableWidth && budget.textAvailableWidth <= physicalWidth,
@@ -123,7 +128,8 @@ function assertRow(c, owner, page, book) {
   for (const button of buttons) assert.equal(button.enabled, !busy);
   const actualText = nodes.filter(node => node.type === 'Text').map(node => node.create);
   assert.equal(actualText.includes('登录'), !!book.loginUrl);
-  assert.ok(actualText.includes(busy ? '…' : '–'));
+  assert.equal(nodes.filter(node => node.type === 'LoadingProgress' && node.width === 15).length, busy ? 1 : 0);
+  assert.equal(nodes.filter(node => node.type === 'Image' && node.create === 'app.media.source_v9_wave').length, busy ? 0 : 1);
   const toggle = nodes.find(node => node.type === 'Toggle');
   assert.ok(toggle);
   const actualWidths = [...buttons.map(button => button.width), toggle.width];
@@ -134,7 +140,7 @@ function assertRow(c, owner, page, book) {
   assert.equal(actionHeight, budget.actionsHeight);
   assert.equal(budget.actionRowCount, 1);
   const title = nodes.find(node => node.type === 'Text' && node.create === book.name);
-  const metadata = nodes.find(node => node.type === 'Text' && node.create === `https://${httpUrlHostname(book.baseUrl)}`);
+  const metadata = nodes.find(node => node.type === 'Text' && node.create === sourceV9DisplayUrl(book.baseUrl));
   assert.equal(title.maxLines, 1); assert.equal(metadata.maxLines, 1);
   assert.ok(!actualText.includes(book.checkMessage) && !actualText.includes(book.baseUrl.replace('https://', '')),
     'visual rows retain the host and omit the historical report summary and URL path');
@@ -144,7 +150,8 @@ function assertRow(c, owner, page, book) {
   const infoRequiredHeight = (title.lineHeight + metadata.lineHeight) * page.fontScale() + 3;
   const bodyHeight = budget.rowForm === 'stacked-leading' ? stamp.height + gap + infoRequiredHeight : Math.max(stamp.height, infoRequiredHeight);
   const requiredHeight = budget.rowForm === 'inline' ? Math.max(bodyHeight, actionHeight) : bodyHeight + gap + actionHeight;
-  assert.ok(budget.rowMinHeight >= requiredHeight, 'row minimum pays the title and domain lineboxes and the actual action lane');
+  assert.ok(budget.rowMinHeight >= requiredHeight + row.padding * 2 + row.border.width.top + row.border.width.bottom,
+    'row minimum pays the title and domain lineboxes, actual action lane, card padding and borders');
   if (budget.rowForm === 'inline') {
     assert.ok(stamp.width + 2 * gap + info.constraintSize.minWidth + actionWidth <= physicalWidth, 'inline row width fits the actual host');
     assert.ok(info.constraintSize.minWidth >= 96 * page.fontScale(), 'inline text has the preferred reading width');
@@ -156,7 +163,8 @@ function mountQuery(c, page) {
   const owner = c.consumer(pageSource, ['searchField', 'sourceSearchInputIdentity', 'applySourceSearchInput']);
   Object.assign(owner, { appThemeScheme: 'day', contentFrame: page.contentFrame.bind(page), layoutBudget: page.layoutBudget.bind(page),
     temporaryBackIdentity: 'source-opening', searchQuery: '初始查询', searchInputRevision: 0, appForeground: true, mounted: true, groupOpen: false,
-    managementOpeningIsCurrent: () => true, cancelToolsReturnFocus() {}, rebuildSourceProjection() {}, groupFilter() {} });
+    managementOpeningIsCurrent: () => true, managementInputIsCurrent: () => true,
+    cancelToolsReturnFocus() {}, rebuildSourceProjection() {}, groupFilter() {} });
   owner.searchField();
   const field = [...owner.children.values()].flatMap(child => [...(child.children?.values() ?? [])]).find(child => child.variant === 'sourceManagement') ??
     [...owner.children.values()].find(child => child.variant === 'sourceManagement');
@@ -170,15 +178,18 @@ function assertQuery(c, query, page) {
   const borderRow = nodes.find(node => node.type === 'Row' && node.border && node.height === query.field.fieldHeight());
   assert.ok(input && borderRow);
   assert.equal(borderRow.borderRadius, 10, 'v9 query frame has its rectangular rounding');
-  const lineHeight = readerTypographyRoles.TYPE_SEARCH_SOURCE_INPUT.lineHeightFp ?? readerTypographyRoles.TYPE_SEARCH_SOURCE_INPUT.fontSizeFp * 1.5;
-  const required = readerScaledControlHeight(40, lineHeight, page.fontScale());
-  assert.ok(borderRow.height >= required, 'query field pays current source text line growth');
+  assert.equal(borderRow.height, 40);
+  assert.equal(borderRow.border.width, 1);
   assert.equal(input.height, borderRow.height - borderRow.border.width * 2, 'native input uses the paid inner height');
-  assert.equal(input.maxFontScale, page.fontScale(), 'query keeps the current system font scale');
-  assert.ok(page.layoutBudget().filterHeight >= borderRow.height, 'ordinary filter parent pays the real field height');
+  const lineHeight = readerTypographyRoles.TYPE_SEARCH_SOURCE_INPUT.lineHeightFp;
+  assert.equal(input.maxFontScale, Math.min(page.fontScale(), input.height / lineHeight), 'fixed query bounds the scaled text line');
+  assert.equal(page.layoutBudget().filterHeight, borderRow.height, 'ordinary filter parent pays the exact field height');
   assert.equal(input.responseRegion.height, Math.max(44, input.height));
   assert.equal(input.responseRegion.y, Math.min(0, (input.height - 44) / 2));
-  assert.equal(nodes.filter(node => node.type === 'Button' && node.accessibilityText === '清空书源搜索').length, 1, 'a nonempty query has one clear action');
+  const clear = nodes.filter(node => node.type === 'Button' && node.accessibilityText === '清空书源搜索');
+  assert.equal(clear.length, 1, 'a nonempty query has one clear action');
+  assert.equal(clear[0].height, borderRow.height, 'clear paint stays within the query frame');
+  assert.deepEqual([clear[0].responseRegion.y, clear[0].responseRegion.width, clear[0].responseRegion.height], [-2, 44, 44]);
   input.onChange('保留查询'); assert.equal(query.owner.searchQuery, '保留查询');
   query.owner.temporaryBackIdentity = 'new-opening';
   input.onChange('旧查询'); assert.equal(query.owner.searchQuery, '保留查询', 'old input owner is rejected');
@@ -188,8 +199,9 @@ function assertQuery(c, query, page) {
 function assertFooter(c, page) {
   const owner = c.consumer(pageSource, ['bottomActionBar', 'importFocusId', 'sourceAddIcon']);
   Object.assign(owner, { appThemeScheme: 'day', contentFrame: page.contentFrame.bind(page), layoutBudget: page.layoutBudget.bind(page),
-    footerStacked: page.footerStacked.bind(page), footerManageWidth: page.footerManageWidth.bind(page), temporaryBackIdentity: 'footer-opening', mounted: true,
-    toolsFocusId: () => 'source-footer-tools', onToolsEntryFocused() {}, onToolsEntryLayout() {}, requestOpenTools() {},
+    footerStacked: page.footerStacked.bind(page), footerManageWidth: page.footerManageWidth.bind(page),
+    footerControlHeight: page.footerControlHeight.bind(page), temporaryBackIdentity: 'footer-opening', mounted: true,
+    toolsFocusId: () => 'source-footer-tools', onToolsEntryFocused() {}, onToolsEntryLayout() {},
     onAddSource() {}, actionBottomInset: () => 16 });
   owner.bottomActionBar();
   const nodes = c.nodes(owner), footer = nodes.find(node => node.type === 'Flex' && node.margin);
@@ -198,6 +210,7 @@ function assertFooter(c, page) {
   assert.ok(buttons.every(button => button.width === '100%'), 'both actual native footer actions fill their paid outer allocation');
   const wrappers = [...owner.nodes.values()].filter(node => node.type === '__Common__');
   assert.equal(wrappers.length, 2);
+  assert.ok(wrappers.every(wrapper => wrapper.height === page.footerControlHeight()));
   const stacked = page.footerStacked();
   const [manageWrapper, addWrapper] = wrappers;
   if (stacked) assert.ok(wrappers.every(wrapper => wrapper.width === '100%'));
@@ -214,13 +227,13 @@ function assertFooter(c, page) {
     assert.ok(textWidth + extraWidth <= paidWidth, 'footer must pay the actual scaled CJK label, icon and gap');
     return { label: text.create, textWidth, extraWidth, paidWidth };
   });
-  const manageCapsule = nodes.find(node => node.type === 'Row' && node.borderRadius === 999);
-  assert.ok(manageCapsule);
-  const heights = buttons.map(button => button === add ? button.height :
-    Math.max(button.constraintSize.minHeight, manageCapsule.constraintSize.minHeight));
+  const manage = buttons.find(button => button.accessibilityText === '批量管理');
+  assert.equal(manage.borderRadius, 999);
+  const heights = buttons.map(button => button.height ?? button.constraintSize.minHeight);
+  assert.deepEqual(heights, [page.footerControlHeight(), page.footerControlHeight()]);
   const requiredHeight = stacked ? heights[0] + heights[1] + footer.create.space.main.value : Math.max(...heights);
   assert.ok(footer.constraintSize.minHeight >= requiredHeight, 'footer minimum pays all current native actions');
-  const expectedFooterHeight = page.layoutBudget().footerHeight;
+  const expectedFooterHeight = page.footerActionHeight();
   const contentFrame = page.contentFrame;
   page.contentFrame = () => assert.fail('footer fallback must resolve the safe width before page geometry exists');
   assert.equal(page.footerFallbackHeight(), expectedFooterHeight + readerFoundationTokens.TOK_SPACE_SM + 16);
@@ -276,15 +289,15 @@ for (const width of widths) for (const safe of safeEdges) for (const scale of fo
     const hardMin = pageSource.replace('minWidth: this.layoutBudget(source).textMinWidth', 'minWidth: 120 * this.fontScale()');
     assert.notEqual(hardMin, pageSource);
     assert.throws(() => assertRow(c, mountRow(c, page, book, hardMin), page, book), /text minimum/, 'old hard text minimum must fail');
-    const fixedField = searchSource.replace(/if \(this.variant === 'sourceManagement'\) \{\n      return readerScaledControlHeight\(this.sourceV9Chrome \? 40 : 44,[\s\S]+?\n    \}/, "if (this.variant === 'sourceManagement') {\n      return 44;\n    }")
-      .replace("if (this.variant === 'sourceManagement') {\n      return Math.max(this.sourceV9Chrome ? 0 : 44, this.fieldHeight() - this.fieldBorderWidth() * 2);\n    }", "if (this.variant === 'sourceManagement') {\n      return 42;\n    }");
-    assert.notEqual(fixedField, searchSource);
-    const oldControls = controls(metrics, fixedField);
-    assert.throws(() => assertQuery(oldControls, mountQuery(oldControls, page), page), /query field pays/, 'actual fixed44/42 source field must fail growing text');
+    const protrudingClear = searchSource.replace('.height(this.sourceV9Chrome ? 40 : SEARCH_CONTROL_MIN_TARGET)', '.height(SEARCH_CONTROL_MIN_TARGET)');
+    assert.notEqual(protrudingClear, searchSource);
+    const oldControls = controls(metrics, protrudingClear);
+    assert.throws(() => assertQuery(oldControls, mountQuery(oldControls, page), page), /clear paint stays within/,
+      'the previous 44vp visual control must fail in the 40vp query frame');
   }
 }
 const report = { status: 'PASS', case: 'safe-frame', sourceRows: samples.length, geometrySamples: widths.length * safeEdges.length * fontScales.length, querySamples: 20, footerSamples: 20,
-  widths, safeEdges, fontScales, negativeControls: ['forced-inline', 'hard-text-minimum', 'fixed44-field42-input', 'forced-equal-footer'],
+  widths, safeEdges, fontScales, negativeControls: ['forced-inline', 'hard-text-minimum', 'protruding-clear', 'forced-equal-footer'],
   boundary: 'Actual SDK emitted native properties and current production geometry arithmetic, query owner admission. Native layout solver, IME scheduling, pixels and device interaction are outside this code-side result.', samples };
 console.log(JSON.stringify({ case: report.case, status: report.status, sourceRows: report.sourceRows, geometrySamples: report.geometrySamples, negativeControls: report.negativeControls, boundary: report.boundary }));
 recordContractCasePass('safe-frame');

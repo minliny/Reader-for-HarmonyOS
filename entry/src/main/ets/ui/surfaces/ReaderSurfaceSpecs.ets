@@ -281,7 +281,7 @@ const DIALOG_SPECS: Record<DialogSpecId, DialogSurfaceSpec> = {
   'source-v9-check': new DialogSurfaceSpec({
     maxWidth: 460, edgeGap: 14, widthPercent: 0, frameMode: 'card-inset', usesKeyboardSafeArea: true,
     padding: 14, borderRadius: 14,
-    backgroundRole: 'app.sourceUi.surface', hasShadow: true, hasBorder: true,
+    backgroundRole: 'TOK_CARD_BG', hasShadow: true, hasBorder: true,
     headerFontSize: 17, headerFontFamily: 'ReaderNotoSansSCUIBold', headerTextAlign: TextAlign.Start,
     headerLineHeight: 24, headerGap: 9, bodyActionsGap: 10, bodyActionsOwnMargin: 0,
     actionsLayout: 'row', actionHeight: 44, actionBorderRadius: DIALOG_ACTION_RADIUS, actionUsesPressFeedback: true,

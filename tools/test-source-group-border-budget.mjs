@@ -4,7 +4,7 @@ import {registerHooks} from 'node:module';
 import {fileURLToPath} from 'node:url';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 registerHooks({resolve(s,c,n){if(s.startsWith('.')&&!/\.[a-z]+$/i.test(s)){const u=new URL(s+'.ts',c.parentURL);if(existsSync(fileURLToPath(u)))return n(u.href,c);}return n(s,c);}});
-const selected=selectContractCases({'parent-chain':'Actual SDK Panel border/content/percent ChoiceRow chain; old44 outer is42 content, current46 is44; dimensions only','trigger-parent':'Actual Source group label measurement and Row payment with actual Select minimum/response, old74 width and old36 target negatives; other variants unchanged'});
+const selected=selectContractCases({'parent-chain':'Actual SDK Panel border/content/percent ChoiceRow chain; old44 outer is42 content, current46 is44; dimensions only','trigger-parent':'Actual source group label measurement and parent width, 40vp visual and 44vp response, old74 width and old36 target negatives; other variants unchanged'});
 const {selectedProductionMethods,selectedProductionValues}=await import('./lib/selected-production-methods.mjs');
 const {readerFoundationTokens}=await import('./lib/reader-foundation-control-probe.mjs');
 const {readerControlNativeTree}=await import('./fixtures/reader-control-native-tree.mjs');
@@ -27,11 +27,15 @@ for(const width of [320,366])for(const fontScale of [1,1.3,1.6,2])for(const [pat
  const source=readFileSync(new URL(path,root),'utf8'),properties=createArkUIPropertyRuntimeProbe(),tree=readerControlNativeTree(['Column','Scroll']);
  const choice=choiceRowProbe();
  const members=['build','optionContent','selectedRow','optionRow'];if(source.includes('private panelBody'))members.push('panelBody','panelHeight');if(source.includes('private optionFocusId'))members.push('optionFocusId');
- const {owner}=createReaderBuilderProbe(source,members,{...properties.sdk,...tree.dependencies,...readerFoundationTokens,ReaderChoiceRow:choice.Component,readerSurfaceElevation:()=>({})}, {...properties.hooks,...tree.hooks,childSources:{ReaderChoiceRow:readFileSync(new URL('entry/src/main/ets/ui/controls/ReaderChoiceRow.ets',root),'utf8')},mountChildren:true,lifecycleChildren:true});
- Object.assign(owner,{focusIdPrefix:'',variant:'sourceGroup',appThemeScheme:'day',closeInFlight:false,y:0,expandedHeight:200,chevronAngle:0,wrapsOptions:()=>true,resolvedWidth:()=>outer,panelX:()=>0,panelY:()=>0,panelCornerRadius:()=>8,panelBackgroundColor:()=>'',panelBorderColor:()=>'',renderedValue:()=>'全部分组',renderedOptions:()=>['全部分组','A'],optionHeightHandler:()=>()=>{},wrapsOptions:()=>true,selectAndCollapse(){},expandPanel(){}});
+ if(source.includes('@BuilderParam menuFooter'))members.push('menuFooter','emptyMenuHeader');
+ if(source.includes('private showsSelectedRow'))members.push('showsSelectedRow');
+ const {owner}=createReaderBuilderProbe(source,members,{...properties.sdk,...tree.dependencies,...readerFoundationTokens,...selectGeometry,ReaderChoiceRow:choice.Component,readerSurfaceElevation:()=>({})}, {...properties.hooks,...tree.hooks,childSources:{ReaderChoiceRow:readFileSync(new URL('entry/src/main/ets/ui/controls/ReaderChoiceRow.ets',root),'utf8')},mountChildren:true,lifecycleChildren:true});
+ Object.assign(owner,{focusIdPrefix:'',variant:'sourceGroup',appThemeScheme:'day',closeInFlight:false,y:0,expandedHeight:200,menuHeaderHeight:0,menuFooterHeight:0,chevronAngle:0,wrapsOptions:()=>true,resolvedWidth:()=>outer,panelX:()=>0,panelY:()=>0,panelCornerRadius:()=>8,panelBackgroundColor:()=>'',panelBorderColor:()=>'',renderedValue:()=>'全部分组',renderedOptions:()=>['全部分组','A'],optionHeightHandler:()=>()=>{},wrapsOptions:()=>true,selectAndCollapse(){},expandPanel(){}});
  owner.initialRender();assert.equal(tree.remaining(),0);
- const panel=[...owner.nodes.values()].find(n=>n.type==='Column'&&n.border),scroll=[...owner.nodes.values()].find(n=>n.type==='Scroll'),inner=[...owner.nodes.values()].find(n=>n.type==='Column'&&n.parentId===scroll.id);
- assert.equal(panel.width,outer);assert.equal(panel.padding,0);assert.equal(panel.border.width,readerFoundationTokens.TOK_BORDER_W);assert.equal(scroll.parentId,panel.id);assert.equal(scroll.width,'100%');assert.equal(inner.width,'100%');
+ const [panelId,panel]=[...owner.nodes.entries()].find(([,node])=>node.type==='Column'&&node.border);
+ const [scrollId,scroll]=[...owner.nodes.entries()].find(([,node])=>node.type==='Scroll');
+ const inner=[...owner.nodes.values()].find(n=>n.type==='Column'&&n.parentId===scrollId);
+ assert.equal(panel.width,outer);assert.equal(panel.padding,0);assert.equal(panel.border.width,readerFoundationTokens.TOK_BORDER_W);assert.equal(scroll.parentId,panelId);assert.equal(scroll.width,'100%');assert.equal(inner.width,'100%');
  const children=[...owner.children.values()];assert.equal(children.length,2);
  const actualRows=children.map(c=>{assert.equal(c.owner,owner);assert.equal(c.wrapLabel,true);return [...c.nodes.values()].find(n=>n.type==='Button'&&n.onClick);});
  for(const row of actualRows){assert.equal(row.width,'100%');assert.equal(row.responseRegion,undefined,'new native Button uses its real layout target');assert.equal(row.constraintSize.minHeight,44);}
@@ -55,36 +59,49 @@ async function triggerParent(){
      textContent.length*scale:Number.NaN,
    measureTextSize:()=>({height:baseValueHeight*scale}),
   })};
-  const constants=selectedProductionValues(new URL(select===oldSelect?beforeRoot+'ReaderSelect.ets':selectPath,root),['TRIGGER_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H','SELECT_CHROME','APPEARANCE_TRIGGER_H','APPEARANCE_HIT_OUTSET','APPEARANCE_VALUE_VERTICAL_SPACE'],readerFoundationTokens);
+  const constantNames=['TRIGGER_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H','APPEARANCE_TRIGGER_H','APPEARANCE_HIT_OUTSET','APPEARANCE_VALUE_VERTICAL_SPACE'];
+  if(select===oldSelect)constantNames.push('SELECT_CHROME');
+  const constants=selectedProductionValues(new URL(select===oldSelect?beforeRoot+'ReaderSelect.ets':selectPath,root),constantNames,readerFoundationTokens);
   assert.equal(constants.TRIGGER_H,select===oldSelect?36:44,'use the actual fixture and current product constants');
   const selectProbe=createReaderBuilderProbe(select,boundedMembers(select),{...props.sdk,...readerTypographyRoles,...readerFoundationTokens,...constants,...selectGeometry,uiContext,
    readerMotionAnimateParam:()=>({duration:0}),registerReaderFonts(){},readerAppColor:()=>'',readerWindowMetrics:()=>({systemFontScale:scale})},props.hooks);
   const names=page===oldPage?['GROUP_FILTER_WIDTH','GROUP_SELECT_WIDTH']:[];
   const pageConstants=selectedProductionValues(new URL(page===oldPage?beforeRoot+'SourceManagementPage.ets':pagePath,root),names);
-  const methods=['filterControlWidth','groupSelectWidth'];
+  const methods=page===oldPage?['filterControlWidth','groupSelectWidth']:['groupSelectWidth'];
   const Widths=selectedProductionMethods(new URL(page===oldPage?beforeRoot+'SourceManagementPage.ets':pagePath,root),'SourceManagementPage',methods,{...pageConstants,...readerTypographyRoles,...readerFoundationTokens});
   const widths=Object.assign(new Widths(),{expandedLayout:false,groupValue:'全部分组',contentFrame:()=>({width:width-38}),fontScale:()=>scale,getUIContext:()=>uiContext});
   const {owner}=createReaderBuilderProbe(page,['groupFilter'],{...props.sdk,...pageConstants,...readerFoundationTokens,...readerTypographyRoles,
    ReaderSelect:selectProbe.Component,readerAppColor:()=>''},{...props.hooks,childSources:{ReaderSelect:select},mountChildren:true,lifecycleChildren:true});
   Object.assign(owner,{appThemeScheme:'day',groupValue:'全部分组',groupOpen:false,reduceMotion:true,groupOptions:()=>['全部分组','A'],groupTriggerFocusId:()=>'',toggleGroupSelection(){},
-   filterControlWidth:widths.filterControlWidth.bind(widths),groupSelectWidth:widths.groupSelectWidth.bind(widths)});
+   filterControlWidth:widths.filterControlWidth?.bind(widths),groupSelectWidth:widths.groupSelectWidth.bind(widths)});
   owner.groupFilter();
   const row=[...owner.nodes.values()].find(n=>n.type==='Row'),label=[...owner.nodes.values()].find(n=>n.type==='Text'&&n.create==='分组'),icon=[...owner.nodes.values()].find(n=>n.type==='Image');
   const common=[...owner.nodes.values()].find(n=>n.type==='__Common__'&&n.margin),child=[...owner.children.values()][0];
   const target=[...child.nodes.values()].find(n=>n.type==='Button'&&n.onClick),frame=[...child.nodes.values()].find(n=>n.type==='Stack');
+  const paint=[...child.nodes.values()].find(n=>n.type==='Row'&&n.border);
+  const text=[...child.nodes.values()].find(n=>n.type==='Text'&&n.create==='全部分组');
   const labelWidth=page===oldPage?(label.width??Math.ceil(readerTypographyRoles.TYPE_FORM_LABEL_ACTION.fontSizeFp*2*scale)):
     Math.ceil(readerTypographyRoles.TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp*4*scale);
   const requiredWidth=page===oldPage?icon.width+label.margin.left+labelWidth+common.margin.left+frame.width:labelWidth+42;
   if(page!==oldPage)assert.ok(widths.contentFrame().width-row.width-readerFoundationTokens.TOK_SPACE_XS>=44);
-  return{owner,widths,selectProbe,props,target,frame,row,requiredWidth,labelWidth};
+  return{owner,widths,selectProbe,props,target,frame,paint,text,row,requiredWidth,labelWidth};
  }
- function assertPaid(sample){assert.ok(sample.requiredWidth<=sample.row.width,'group Row must pay measured label growth and the actual child width');assert.ok(sample.target.height>=44&&sample.target.responseRegion.height>=44,'actual source-group Native/response minimum44');}
+ function assertPaid(sample){
+  assert.ok(sample.requiredWidth<=sample.row.width,'group Row must pay measured label growth and the actual child width');
+  assert.deepEqual([sample.target.height,sample.target.responseRegion?.height,sample.target.responseRegion?.y],[40,44,-2],
+   '40vp source-group trigger has a centered 44vp response');
+  assert.equal(sample.paint.height,40);
+  assert.equal(sample.paint.borderRadius,10);
+  assert.equal(sample.paint.border.width,1);
+  assert.equal(sample.text.maxLines,1);
+  assert.ok(sample.text.maxFontScale*sample.text.lineHeight<=sample.paint.height-2*sample.paint.border.width);
+ }
  for(const width of [320,366])for(const scale of [1,1.3,1.45,1.6,2])for(const measured of [true,false]){
   const current=compose(pageSource,selectSource,width,scale,measured);assertPaid(current);
   samples.push({width,fontScale:scale,measurePort:measured?'finite-label-width':'nonfinite-fallback',availableWidth:current.row.width,requiredWidth:current.requiredWidth,labelWidth:current.labelWidth,triggerWidth:current.frame.width,triggerHeight:current.target.height,responseHeight:current.target.responseRegion.height});
  }
  assert.throws(()=>assertPaid(compose(oldPage,selectSource,320,1.45)),/pay measured label/,'old fixed74 budget cannot pay actual growing label');
- assert.throws(()=>assertPaid(compose(pageSource,oldSelect,320,1)),/minimum44/,'actual old production36 target fails without changing its constant');
+ assert.throws(()=>assertPaid(compose(pageSource,oldSelect,320,1)),/centered 44vp response/,'actual old production36 target fails without changing its constant');
  for(const variant of ['default','appearanceLibrary','settingsPhone','settingsTablet']){
   const sizes=[];for(const source of [oldSelect,selectSource]){
    const c=compose(pageSource,source,320,1);const child=[...c.owner.children.values()][0];

@@ -8,8 +8,10 @@ const selected = selectContractCases({
   'filter-projection': 'Actual page methods: trim, checking membership, clear four filters and filtered enabled statistics; no transport.',
   'list-state': 'SDK-lowered sourceList and real PageState: filtered/empty/error/loading/recovery priority and native end-offset forwarding.',
   'login-status': 'SDK-lowered login/status carriers with actual ReaderButton admission and badge label; no native focus or pixels.',
-  'login-session': 'Actual SourceHost/Orchestrator/Gateway: current login checks once; old-session resolve/reject cannot check or project into a successor presentation.',
+  'login-session': 'Actual SourceHost/Orchestrator/Gateway: explicit completion plus L1–L2 verifies, clearing and disabling revoke, authentication denial expires, and retired sessions never project.',
   'action-admission': 'Actual SDK write-toggle admission and independent diagnostic admission: blocked/unknown permitted; checking/stale presentation/removed entity/unmounted denied. No native or full source-version result proof.',
+  'shared-page-shell': 'Five source routes share the standard floating back bar and safe-frame owner.',
+  'pane-dialog-geometry': 'Source dialog resolved card width and fixed cancel / flexible apply in an embedded pane.',
   'footer-geometry': 'Actual page geometry plus actual shared resolver: measured footer determines scroll tail; measured keys remain distinct.',
 });
 if (selected.length) {
@@ -221,16 +223,19 @@ if (selected.length) {
     }
     const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
     const controls = foundationControls();
-    const detectMembers = ['detectButton','detectGlyph','sourceBadgeLabel','offlineDetectBadgeId',
+    const { sourceV9ChromeControls } = await import('./lib/source-v9-chrome-sdk-probe.mjs');
+    const chrome = sourceV9ChromeControls({ ...controls.dependencies, ...v9, readerAppColor },
+      controls.hooks, ['SourceV9DetectButton']);
+    const detectMembers = ['detectButton','sourceBadgeLabel','offlineDetectBadgeId',
       'verificationRowTextId','sourceDetectEnabled','sourceActionLabel','sourceRowCommand','sourceRowIsCurrent',
       'sourceRenderKey','managementBackIsCurrent','managementOpeningIsCurrent'];
     const renderDetect = (source, operation) => {
       let calls = 0;
-      const page = createReaderBuilderProbe(text, detectMembers, {...controls.dependencies,...v9}, controls.hooks).owner;
+      const page = createReaderBuilderProbe(text, detectMembers, chrome.dependencies, chrome.hooks).owner;
       Object.assign(page,{mounted:true,appForeground:true,inputEnabled:true,temporaryBackIdentity:'detect-admission',
         sources:[source],projectedSources:[source],appThemeScheme:'day',operation,onDetectSource:()=>calls++});
       page.detectButton(source);
-      const button = [...page.nodes.values()].find(node => node.type === 'Button' && node.onClick);
+      const button = controls.nodes(page).find(node => node.type === 'Button' && node.onClick);
       assert.ok(button);
       return {page,button,calls:()=>calls};
     };
@@ -255,14 +260,16 @@ if (selected.length) {
 
   async function loginStatus() {
     const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
+    const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
     const controls = foundationControls();
-    const rowMethods = ['loginButton','verificationRowActionsCurrent','sourceActionEnabled','sourceActionLabel',
+    const rowMethods = ['loginButton','loginInk','loginSurface','verificationRowActionsCurrent','sourceActionEnabled','sourceActionLabel',
       'sourceRowCommand','sourceRowIsCurrent','sourceRenderKey','managementBackIsCurrent','managementOpeningIsCurrent'];
     for (const [checkState, blocked, unknown, expected] of [
       ['unchecked',false,false,1],['checking',false,false,0],['unchecked',true,false,0],['unchecked',false,true,0],
     ]) {
       let calls = 0;
-      const page = createReaderBuilderProbe(text,rowMethods,{...controls.dependencies,...v9},controls.hooks).owner;
+      const page = createReaderBuilderProbe(text, rowMethods, { ...controls.dependencies, ...v9, readerAppColor,
+        readerActionIcon: (kind, scheme) => `icon:${kind}:${scheme}`, $r: value => value }, controls.hooks).owner;
       const source = {...base('a'),loginUrl:'https://a.test/login',checkState};
       Object.assign(page,{mounted:true,appForeground:true,inputEnabled:true,temporaryBackIdentity:'login-sdk',
         sources:[source],projectedSources:[source],appThemeScheme:'day',
@@ -274,6 +281,28 @@ if (selected.length) {
       assert.match(button.accessibilityText,/登录，状态未知/);
       button.onClick();
       assert.equal(calls,expected);
+    }
+    for (const scheme of ['day', 'night']) for (const [loginState, ink, surface, icon, accessibilityText] of [
+      ['verified', 'app.status.good', 'app.status.goodSoft', `icon:check:${scheme}`, '登录，已验证'],
+      ['expired', 'app.sourceUi.danger', 'app.sourceUi.dangerSurface', `icon:close:${scheme}`, '登录，验证失效'],
+      ['unknown', 'app.sourceUi.muted', 'app.sourceUi.field', 'app.media.source_v9_question', '登录，状态未知'],
+    ]) {
+      const page = createReaderBuilderProbe(text, rowMethods, { ...controls.dependencies, ...v9, readerAppColor,
+        readerActionIcon: (kind, theme) => `icon:${kind}:${theme}`, $r: value => value }, controls.hooks).owner;
+      const source = { ...base('a'), loginState, loginUrl: 'https://a.test/login' };
+      Object.assign(page, { mounted: true, appForeground: true, inputEnabled: true, temporaryBackIdentity: 'login-sdk',
+        sources: [source], projectedSources: [source], appThemeScheme: scheme, operation: {} });
+      page.loginButton(source);
+      const nodes = [...page.nodes.values()];
+      const button = nodes.find(node => node.type === 'Button' && node.onClick);
+      const ring = nodes.find(node => node.type === 'Stack' && node.width === 13);
+      const glyph = nodes.find(node => node.type === 'Image');
+      assert.deepEqual([button.width, button.height, button.responseRegion.height], [58, 26, 44]);
+      assert.equal(button.backgroundColor, readerAppColor(surface, scheme));
+      assert.equal(ring.border.color, readerAppColor(ink, scheme));
+      assert.equal(glyph.fillColor, readerAppColor(ink, scheme));
+      assert.equal(glyph.create, icon);
+      assert.ok(button.accessibilityText.includes(accessibilityText));
     }
     const Status = methods(['sourceBadgeLabel']);
     const status = new Status();
@@ -306,30 +335,43 @@ if (selected.length) {
     function runtime(gate, completion) {
       const denied = completion === 'current-denied';
       const olderReport = report(true);
+      olderReport.traceId = 'older-login-check';
       olderReport.steps[1].reason = '登录失效';
-      return { rows: [row('a')], calls: [], logins: [], reports: completion === 'current-clear' ?
+      return { rows: [row('a')], calls: [], logins: [], cookiesCleared: [], gate,
+        reports: completion === 'current-clear' ?
           [{ report: olderReport, stale: false, checkedAtMs: 1 }] : [],
         supportsCoreCapability: capability => ['source.check.mode.v1', 'source.check.report.v2',
           'source.check.report.clear.v1'].includes(capability),
         takeSourceHttpDiagnostics: requestId => denied ? [{ sourceId: 'a', requestId, traceId,
           stage: 'L2', method: 'GET', url: 'https://a.test/search', statusCode: 401, durationMs: 1, timestampMs: 1 }] : [],
-        async openSourceLogin(...args) { this.logins.push(args); await gate.promise; },
+        async openSourceLogin(...args) { this.logins.push(args); await this.gate.promise; },
+        async clearSourceCookieSession(id) { this.cookiesCleared.push(id); },
         async request(method, params, options = {}) {
           assert.notEqual(options.canDispatch?.(), false); assert.notEqual(options.canContinue?.(), false);
           this.calls.push({ method, params: structuredClone(params) });
+          options.onDispatch?.();
           if (method === 'source.list') return { data: { sources: structuredClone(this.rows.map(source => ({
             ...source, checkReports: params.includeCheckReports ? this.reports : undefined,
           }))) } };
           if (method === 'source.check.report.clear') {
+            this.beforeReportClear?.();
             const clearedCount = this.reports.length;
             this.reports = [];
             return { data: { sourceIds: params.sourceIds, clearedCount } };
           }
-          if (method === 'source.check.run') return { requestId: 71, data: { traceId, results: [{
-            sourceId: params.sourceIds[0], available: !denied, levelsPassed: denied ? ['L1'] : ['L1', 'L2'], durationMs: 1,
-            ...(denied ? { failureReason: 'L2: HTTP 401' } : {}), report: report(denied, params.timeoutMs),
-            debugLogs: [{ state: 1, msg: 'fixture check completed', timestampMs: 1 }],
-          }] } };
+          if (method === 'source.update') {
+            this.rows = this.rows.map(source => source.sourceId === params.sourceId ? { ...source, enabled: params.enabled } : source);
+            return { data: { source: { enabled: params.enabled } } };
+          }
+          if (method === 'source.check.run') {
+            const currentReport = report(denied, params.timeoutMs);
+            this.reports = [{ report: currentReport, stale: false, checkedAtMs: Date.now() }];
+            return { requestId: 71, data: { traceId, results: [{
+              sourceId: params.sourceIds[0], available: !denied, levelsPassed: denied ? ['L1'] : ['L1', 'L2'], durationMs: 1,
+              ...(denied ? { failureReason: 'L2: network' } : {}), report: currentReport,
+              debugLogs: [{ state: 1, msg: 'fixture check completed', timestampMs: 1 }],
+            }] } };
+          }
           assert.fail(`Unexpected runtime I/O ${method}`);
         },
       };
@@ -347,13 +389,23 @@ if (selected.length) {
         async open() { host.open(identity); await this.settle(); },
       };
     }
-    for (const completion of ['current-resolve', 'current-denied', 'current-clear', 'old-resolve', 'old-reject']) {
+    for (const completion of ['current-resolve', 'current-denied', 'current-clear', 'single-disable',
+      'batch-disable', 'ordinary-check', 'old-resolve', 'old-reject']) {
       const gate = deferred(), owner = runtime(gate, completion); installed = owner;
       const a = presentation(owner, `A:${completion}`); await a.open();
+      if (completion === 'ordinary-check') {
+        a.host.checkSource('a', a.identity);
+        await a.settle();
+        assert.equal(a.values.at(-1)[0].checkState, 'passed');
+        assert.equal(a.values.at(-1)[0].loginState, 'unknown');
+        assert.equal(owner.logins.length, 0);
+        continue;
+      }
+      assert.equal(a.values.at(-1)[0].loginState, completion === 'current-clear' ? 'expired' : 'unknown');
       a.host.loginSource('a','https://a.test/login',a.identity);a.host.loginSource('a','https://a.test/login',a.identity);
       for (let i = 0; i < 100 && owner.logins.length === 0; i++) await tick();
       assert.equal(owner.logins.length,1);assert.deepEqual(owner.logins[0].slice(0,3),['a','https://a.test/login','a'],'one login captures the original source identity and intent');assert.equal(owner.logins[0][3](),true,'native login receives the current task identity guard');
-      if (completion === 'current-resolve' || completion === 'current-denied') {
+      if (!completion.startsWith('old-')) {
         gate.resolve(); await a.settle();
         assert.equal(owner.calls.filter(call => call.method === 'source.check.run').length, 1);
         const params = owner.calls.find(call => call.method === 'source.check.run').params;
@@ -362,17 +414,36 @@ if (selected.length) {
         const denied = completion === 'current-denied';
         assert.equal(value.checkState, denied ? 'failed' : 'passed');
         assert.equal(value.checkReports[0].report.traceId, traceId);
-        assert.equal(value.loginState, denied ? 'expired' : 'unknown',
-          'the typed public-search pass proves source availability but does not confirm the account');
-      } else if (completion === 'current-clear') {
-        assert.equal(a.values.at(-1)[0].loginState, 'expired');
-        assert.equal(await owner.logins[0][4](), true, 'current clear delegates and validates Core report deletion');
-        assert.equal(owner.reports.length, 0);
-        assert.equal(a.values.at(-1)[0].loginState, 'unknown');
-        assert.deepEqual(a.values.at(-1)[0].checkReports, []);
-        gate.reject(Object.assign(new Error('cancelled'), { code: 'CANCELLED' }));
-        await a.settle();
-        assert.equal(owner.calls.filter(call => call.method === 'source.check.run').length, 0, 'clear followed by cancel does not trigger a new check');
+        assert.equal(value.loginState, denied ? 'expired' : 'verified');
+        owner.beforeReportClear = () => {
+          const projected = a.values.at(-1).find(source => source.sourceId === 'a');
+          assert.equal(projected.loginState, 'unknown', 'clear publishes the reset before Core report cleanup');
+          assert.deepEqual(projected.checkReports, []);
+        };
+        if (completion === 'current-clear') {
+          owner.gate = deferred();
+          a.host.loginSource('a', 'https://a.test/login', a.identity);
+          for (let i = 0; i < 100 && owner.logins.length < 2; i++) await tick();
+          assert.equal(await owner.logins[1][4](), true, 'current clear validates Core report deletion');
+          owner.gate.reject(Object.assign(new Error('cancelled'), { code: 'CANCELLED' }));
+          await a.settle();
+          assert.equal(owner.calls.filter(call => call.method === 'source.check.run').length, 1, 'clear followed by cancel makes no new check');
+        } else if (completion === 'single-disable' || completion === 'batch-disable') {
+          if (completion === 'single-disable') a.host.toggleSource('a', false, a.identity);
+          else a.host.toggleSources(['a'], false, a.identity);
+          await a.settle();
+          assert.deepEqual(owner.cookiesCleared, ['a']);
+          assert.equal(a.values.at(-1)[0].enabled, false);
+          a.host.toggleSource('a', true, a.identity);
+          await a.settle();
+          assert.equal(a.values.at(-1)[0].enabled, true);
+        }
+        if (['current-clear', 'single-disable', 'batch-disable'].includes(completion)) {
+          assert.equal(owner.reports.length, 0);
+          assert.equal(a.values.at(-1)[0].loginState, 'unknown');
+          assert.deepEqual(a.values.at(-1)[0].checkReports, []);
+          assert.equal(owner.calls.filter(call => call.method === 'source.check.report.clear').length, 1);
+        }
       } else {
         a.retire(); owner.rows = [row('b')];
         const b = presentation(owner, `B:${completion}`);
@@ -386,6 +457,81 @@ if (selected.length) {
         assert.deepEqual(b.values.at(-1).map(value => value.sourceId), ['b'], 'the successor performs its own current read');
         assert.ok(!b.values.at(-1).some(value => value.checkState === 'passed' || value.checkMessage === '登录 / 验证已取消'));
       }
+    }
+  }
+
+  async function sharedPageShell() {
+    const sourceUi = path => readFileSync(new URL('../entry/src/main/ets/features/source/ui/' + path, import.meta.url), 'utf8');
+    const groups = sourceUi('SourceV9GroupsPage.ets');
+    const transfer = sourceUi('SourceV9TransferPage.ets');
+    const bar = /PageBackBar\(\{\s*floating: true, centered: true, elevation: 'floating'/g;
+    for (const [source, count] of [[text, 2], [groups, 1], [transfer, 2]]) {
+      assert.match(source, /ReaderPageScaffold\(\{/);
+      assert.match(source, /applyReaderStandardFloatingHeader\(input\)/);
+      assert.equal([...source.matchAll(bar)].length, count);
+      assert.doesNotMatch(source, /SourceV9FlatHeader|Button\(['"]←/);
+    }
+    assert.match(text, /showBack: !this\.embeddedWide/);
+    assert.match(text, /leadingActionLabel: '取消'/);
+    assert.match(groups, /detailGroupId === undefined \? '分组管理' :/);
+    assert.match(transfer, /title: '书源订阅'/);
+    assert.match(transfer, /title: '导入书源'/);
+    assert.match(transfer, /input\.footerBottom = readerFloatingBarBottomInset\(metrics, TRANSFER_BODY_TAIL\)/);
+
+    const { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp } =
+      await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+    const { actualSourceManagementGeometry } = await import('./lib/source-management-owner-probe.mjs');
+    const metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 1100, 800));
+    metrics.systemInsets = new ReaderInsetsVp(24, 36, 12, 24);
+    const geometry = actualSourceManagementGeometry(metrics);
+    const transferFile = new URL('../entry/src/main/ets/features/source/ui/SourceV9TransferPage.ets', import.meta.url);
+    const Transfer = selectedProductionMethods(transferFile, 'SourceV9TransferPage', ['refreshLayout'], {
+      ...geometry, readerWindowMetrics: () => metrics, TRANSFER_MAX_WIDTH: 640, TRANSFER_BODY_TAIL: 12,
+      TRANSFER_FOOTER_TOP: 8,
+    });
+    for (const pane of ['import', 'subscriptions']) {
+      const owner = new Transfer();
+      Object.assign(owner, { mounted: true, embeddedWide: true, paneX: 320, paneWidth: 420, paneHeight: 800,
+        headerHeight: 52, footerHeight: 50, pane, footerButtonHeight: () => 44 });
+      owner.refreshLayout();
+      assert.equal(owner.geometry.content.frame.left, 19, 'pane is already clear of the window left inset');
+      assert.ok(owner.geometry.content.startInset >= owner.headerHeight);
+      assert.ok(owner.geometry.content.endInset >= geometry.readerFloatingBarBottomInset(metrics, 12) +
+        (pane === 'import' ? 52 : 0));
+    }
+  }
+
+  async function paneDialogGeometry() {
+    const { readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
+    const { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } =
+      await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
+    const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+    const { resolveDialogSpec } = readerSurfaceSpecsForProbe();
+    const dialogFile = new URL('../entry/src/main/ets/ui/surfaces/ReaderDialogSurface.ets', import.meta.url);
+    const Surface = selectedProductionMethods(dialogFile, 'ReaderDialogSurface',
+      ['spec', 'resolvedFrame', 'frameWidth', 'fixedActionWidth'], {
+        resolveDialogSpec, SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame,
+        readerWindowMetrics: () => ({ windowRect: { width: 1100 } }),
+        readerInteractiveSafeLeft: () => 22, readerInteractiveSafeRight: () => 12,
+      });
+    const dialog = new Surface();
+    Object.assign(dialog, { specId: 'source-v9-check', readerWindowMetricsRevision: 0, leadingActionWidthVp: 80,
+      actions: [{ id: 'cancel' }, { id: 'apply' }] });
+    for (const paneWidth of [220, 320, 420, 600]) {
+      dialog.containerWidthVp = paneWidth;
+      assert.equal(dialog.frameWidth(), Math.min(460, paneWidth - 28));
+      assert.equal(dialog.fixedActionWidth('cancel'), Math.min(80, dialog.frameWidth() / 3));
+      assert.equal(dialog.fixedActionWidth('apply'), undefined);
+    }
+    dialog.containerWidthVp = 0;
+    assert.equal(dialog.frameWidth(), 460);
+    for (const [scheme, primary, pass, card] of [
+      ['day', '#FF1F3D31', '#247551', '#FFFBF8F2'],
+      ['night', '#FF7BB094', '#3FA374', '#FF1F2320'],
+    ]) {
+      assert.equal(readerAppColor(dialog.spec().actionPrimarySurfaceRole, scheme), primary);
+      assert.equal(v9.sourceV9ReportFill('content', scheme), pass);
+      assert.equal(readerAppColor(dialog.spec().backgroundRole, scheme), card);
     }
   }
 
@@ -404,6 +550,6 @@ if (selected.length) {
     assert.ok(page.geometry.revision>=7,'current measurement revision reaches the unique resolver');
   }
 
-  const cases = { 'filter-projection': projection, 'list-state': listState, 'login-status': loginStatus, 'login-session': loginSession, 'action-admission': actionAdmission, 'footer-geometry': footerGeometry };
+  const cases = { 'filter-projection': projection, 'list-state': listState, 'login-status': loginStatus, 'login-session': loginSession, 'action-admission': actionAdmission, 'shared-page-shell': sharedPageShell, 'pane-dialog-geometry': paneDialogGeometry, 'footer-geometry': footerGeometry };
   for (const id of selected) { await cases[id](); recordContractCasePass(id); }
 }

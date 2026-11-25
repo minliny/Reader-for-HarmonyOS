@@ -58,36 +58,24 @@
     },
     {
       "controlId": "source-add-inline",
-      "owner": "ReaderIconButton",
+      "owner": "SourceManagementPage",
       "sources": [
         {
-          "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "symbol": "importAction"
-        },
-        {
-          "path": "tools/test-source-management-layout.mjs"
-        },
-        {
-          "path": "tools/page-structure/test-source-interaction-inventory.mjs"
-        },
-        {
-          "path": "entry/src/main/ets/ui/controls/ReaderIconButton.ets",
-          "symbol": "build"
+          "path": "tools/page-structure/source-interaction-inventory.json"
         }
       ],
       "states": [
-        "idle",
-        "pressed"
+        "retired"
       ],
       "hitTarget": {
-        "width": 44,
-        "height": 44,
+        "width": null,
+        "height": null,
         "unit": "vp",
-        "status": "spec"
+        "status": "unverified"
       },
-      "accessibleNameSource": "importAction ReaderIconButton.accessibilityLabel('导入书源')",
+      "accessibleNameSource": "No active accessibility node",
       "status": "manual",
-      "knownGap": "Current complete confluence producer covers this named SDK carrier and parent constraint across the declared width/font contexts. Native pointer dispatch, clipping, focus, glyphs and screen-reader acceptance remain OPEN. E2/E3 page gates remain FAIL."
+      "knownGap": "Historical inline import icon identity, retained for old model references. Current active control is footer-add. v9 native evidence remains NOT_RUN."
     },
     {
       "controlId": "source-search",
@@ -122,15 +110,11 @@
     },
     {
       "controlId": "source-filter-chip",
-      "owner": "ReaderButton",
+      "owner": "SourceManagementPage",
       "sources": [
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
           "symbol": "chip"
-        },
-        {
-          "path": "entry/src/main/ets/ui/controls/ReaderControlSpecs.ets",
-          "symbol": "SOURCE_MANAGEMENT_STATUS"
         },
         {
           "path": "tools/test-source-filter-live-selection.mjs"
@@ -143,14 +127,14 @@
         "disabled"
       ],
       "hitTarget": {
-        "width": 44,
-        "height": 44,
+        "width": null,
+        "height": 32,
         "unit": "vp",
         "status": "spec"
       },
-      "accessibleNameSource": "ReaderButton label",
+      "accessibleNameSource": "Source status and current count passed to chip.accessibilityText",
       "status": "partial",
-      "knownGap": "Current complete confluence producer covers this named SDK carrier and parent constraint across the declared width/font contexts. Native pointer dispatch, clipping, focus, glyphs and screen-reader acceptance remain OPEN. E2/E3 page gates remain FAIL."
+      "knownGap": "Four equally weighted 32vp visual lanes with one line per label. Native pointer dispatch, glyphs and focus remain NOT_RUN."
     },
     {
       "controlId": "source-group-select",
@@ -197,7 +181,8 @@
         }
       ],
       "states": [
-        "idle"
+        "idle",
+        "selected"
       ],
       "hitTarget": {
         "width": null,
@@ -205,24 +190,17 @@
         "unit": "vp",
         "status": "unverified"
       },
-      "accessibleNameSource": "source name and base URL content; no row onClick",
+      "accessibleNameSource": "Book source name in batch mode; name, category and URL in the normal metadata lane",
       "status": "manual",
-      "knownGap": "Non-interactive collection unit; feature-local layout switches inline/stacked-actions/stacked-leading, minimum height grows. Native glyph calibration pending."
+      "knownGap": "Batch rows toggle selection. Normal row metadata opens detection for its current source. Native pointer dispatch, glyphs and focus remain NOT_RUN."
     },
     {
       "controlId": "source-login",
-      "owner": "ReaderButton",
+      "owner": "SourceManagementPage",
       "sources": [
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
           "symbol": "loginButton"
-        },
-        {
-          "path": "entry/src/main/ets/ui/controls/ReaderControlSpecs.ets",
-          "symbol": "SOURCE_MANAGEMENT_LOGIN"
-        },
-        {
-          "path": "entry/src/main/ets/ui/controls/ReaderButton.ets"
         }
       ],
       "states": [
@@ -232,29 +210,26 @@
         "disabled"
       ],
       "hitTarget": {
-        "width": 44,
+        "width": 58,
         "height": 44,
         "unit": "vp",
         "status": "spec"
       },
-      "accessibleNameSource": "ReaderButton label='登录'",
+      "accessibleNameSource": "Book source name and current login state passed to loginButton.accessibilityText",
       "status": "partial",
-      "knownGap": "The actual shared ReaderButton producer retains authored28vp compact paint at normal scale with centered text and natural font growth inside a minimum44vp native carrier. SourceManagement parent budget pays max44/scaledPaint. Selected SDK and matrix evidence is local. Native glyphs, clipping, pointer delivery, focus, screen reader and E2/E3 acceptance remain OPEN/FAIL."
+      "knownGap": "The authored 58×26vp capsule has a 58×44vp response. Native pointer dispatch, glyphs and focus remain NOT_RUN."
     },
     {
       "controlId": "source-detect",
-      "owner": "ReaderButton",
+      "owner": "SourceV9DetectButton",
       "sources": [
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
           "symbol": "detectButton"
         },
         {
-          "path": "entry/src/main/ets/ui/controls/ReaderControlSpecs.ets",
-          "symbol": "SOURCE_MANAGEMENT_DETECT"
-        },
-        {
-          "path": "entry/src/main/ets/ui/controls/ReaderButton.ets"
+          "path": "entry/src/main/ets/features/source/ui/SourceV9Chrome.ets",
+          "symbol": "SourceV9DetectButton"
         }
       ],
       "states": [
@@ -264,42 +239,35 @@
         "disabled"
       ],
       "hitTarget": {
-        "width": 44,
+        "width": 40,
         "height": 44,
         "unit": "vp",
         "status": "spec"
       },
-      "accessibleNameSource": "ReaderButton label=检测/检测中",
+      "accessibleNameSource": "Book source name and detection status passed to SourceV9DetectButton.label",
       "status": "partial",
-      "knownGap": "The actual shared ReaderButton producer retains authored28vp compact paint at normal scale with centered text and natural font growth inside a minimum44vp native carrier. SourceManagement parent budget pays max44/scaledPaint. Selected SDK and matrix evidence is local. Native glyphs, clipping, pointer delivery, focus, screen reader and E2/E3 acceptance remain OPEN/FAIL."
+      "knownGap": "The authored 28vp pulse has a 40×44vp response. Native pointer dispatch, glyphs and focus remain NOT_RUN."
     },
     {
       "controlId": "source-status",
-      "owner": "StatusBadge",
+      "owner": "SourceManagementPage",
       "sources": [
         {
-          "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "symbol": "statusBadge"
-        },
-        {
-          "path": "entry/src/main/ets/ui/controls/StatusBadge.ets"
+          "path": "tools/page-structure/source-interaction-inventory.json"
         }
       ],
       "states": [
-        "unchecked",
-        "checking",
-        "passed",
-        "failed"
+        "retired"
       ],
       "hitTarget": {
-        "width": 24,
-        "height": 18,
+        "width": null,
+        "height": null,
         "unit": "vp",
-        "status": "spec"
+        "status": "unverified"
       },
-      "accessibleNameSource": "SourceManagementPage.statusBadgeLabel(source) passed to statusBadge Row.accessibilityText(label)",
-      "status": "partial",
-      "knownGap": "Four status labels and accessibilityGroup are bound in source. Status is non-interactive content; actual reader announcement/focus and unchanged native geometry remain NOT_RUN."
+      "accessibleNameSource": "No active accessibility node",
+      "status": "manual",
+      "knownGap": "Historical standalone source status badge identity, retained for old model references. Current active control is source-detect. v9 native evidence remains NOT_RUN."
     },
     {
       "controlId": "source-toggle",
@@ -383,25 +351,17 @@
         "unit": "vp",
         "status": "spec"
       },
-      "accessibleNameSource": "ReaderLabeledIconAction label='新增书源'",
+      "accessibleNameSource": "ReaderLabeledIconAction label='导入书源'",
       "status": "partial",
       "knownGap": "Current complete confluence producer covers this named SDK carrier and parent constraint across the declared width/font contexts. Native pointer dispatch, clipping, focus, glyphs and screen-reader acceptance remain OPEN. E2/E3 page gates remain FAIL."
     },
     {
       "controlId": "source-category-chip",
-      "owner": "ReaderButton",
+      "owner": "SourceManagementPage",
       "sources": [
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
           "symbol": "categoryFilter"
-        },
-        {
-          "path": "entry/src/main/ets/ui/controls/ReaderControlSpecs.ets",
-          "symbol": "SOURCE_MANAGEMENT_CATEGORY"
-        },
-        {
-          "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
-          "symbol": "ReaderButtonFrameModifier"
         }
       ],
       "states": [
@@ -411,14 +371,14 @@
         "disabled"
       ],
       "hitTarget": {
-        "width": 44,
-        "height": 44,
+        "width": null,
+        "height": null,
         "unit": "vp",
-        "status": "spec"
+        "status": "unverified"
       },
-      "accessibleNameSource": "ReaderButton category label (seven values; custom disabled)",
+      "accessibleNameSource": "Source type passed to categoryFilter accessibilityText",
       "status": "partial",
-      "knownGap": "The actual shared ReaderButton producer retains authored32vp compact paint at normal scale with centered text and natural font growth inside a minimum44vp native carrier. SourceManagement parent budget pays max44/scaledPaint. Selected SDK and matrix evidence is local. Native glyphs, clipping, pointer delivery, focus, screen reader and E2/E3 acceptance remain OPEN/FAIL."
+      "knownGap": "Three equally weighted options in the 32vp segmented track. Native pointer dispatch, glyphs and focus remain NOT_RUN."
     },
     {
       "controlId": "source-group-option",

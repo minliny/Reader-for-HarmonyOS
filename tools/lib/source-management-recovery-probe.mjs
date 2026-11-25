@@ -20,7 +20,7 @@ import { READER_FEEDBACK_EXTENDED_MS } from '../../entry/src/main/ets/ui/feedbac
 
 // Only unrelated material/scroll rendering is outside this action proof.
 // No Watch callback or member reachable from one may cross this seam.
-const renderSeams = ['searchField', 'statsRow', 'filterArea', 'categoryFilter',
+const renderSeams = ['searchField', 'filterArea', 'categoryFilter',
   'sourceRow'];
 const roots = ['appThemeScheme', 'sources', 'operation', 'statusKind', 'statusMessage',
   'statusActionLabel', 'statusActionGeneration', 'mounted', 'appForeground',
@@ -120,7 +120,7 @@ export function sourceManagementRecoveryProbe(source, params = {}, options = {})
     temporaryBackIdentity: 'source-recovery-producer',
     onReconcile: missing('onReconcile'), onRetryLoad: missing('onRetryLoad'),
     onStatusAction: missing('onStatusAction'), onContinueOriginal: missing('onContinueOriginal'),
-    searchField() {}, statsRow() {}, filterArea() {}, categoryFilter() {}, sourceRow() {},
+    searchField() {}, filterArea() {}, categoryFilter() {}, sourceRow() {},
     viewportWidth: 366, viewportHeight: 844,
     ...params,
   });

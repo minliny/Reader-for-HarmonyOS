@@ -611,12 +611,6 @@ struct ReaderPageStructureVerification {
           onDetectSource: (id: string): void => this.fixtureIntent(presentation, 'detect', id),
           onLoginSource: (id: string): void => this.fixtureIntent(presentation, 'login', id),
           onAddSource: (): void => this.fixtureIntent(presentation, 'add'),
-          onOpenTools: (viewState: SourceManagementViewState): void => {
-            if (!this.current(presentation)) return;
-            this.filters = { searchQuery: viewState.searchQuery, statusValue: viewState.status,
-              categoryValue: viewState.category, groupValue: viewState.group };
-            this.fixtureIntent(presentation, 'tools');
-          },
           onRetryLoad: (): void => this.fixtureIntent(presentation, 'refresh'),
           onReconcile: (revision: number): void => this.reconcileFixture(presentation, revision),
           onContinueOriginal: (revision: number): void => this.continueFixture(presentation, revision),

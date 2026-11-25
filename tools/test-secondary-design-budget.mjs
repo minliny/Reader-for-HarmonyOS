@@ -153,18 +153,24 @@ function themeAppearanceIdentity() {
 
 function sourceStats() {
   const source = read('features/source/ui/SourceManagementPage.ets');
-  for (const width of [282, 328]) for (const scale of [1, 1.3, 1.6, 2]) {
-    const owner = createReaderBuilderProbe(source, ['statsRow'], deps).owner;
-    const label = '显示 123456/999999 个书源 · 123456 个启用';
-    Object.assign(owner, { appThemeScheme: 'day', statsText: () => label, contentFrame: () => ({ width }), fontScale: () => scale });
-    owner.statsRow();
-    const node = [...owner.nodes.values()].find(node => node.type === 'Text');
-    assert.equal(node.create, label);
-    assert.equal(node.width, width);
-    assert.equal(node.maxLines, undefined);
-    assert.equal(node.height, undefined);
-    assert.equal(node.maxFontScale, scale);
-    assert.equal(node.wordBreak, 'WordBreak.BREAK_WORD');
+  for (const width of [282, 328]) {
+    const owner = createReaderBuilderProbe(source, ['statusFilter', 'chip', 'statusCount'], deps).owner;
+    Object.assign(owner, { appThemeScheme: 'day', statusValue: '全部',
+      statusCounts: { all: 999999, enabled: 123456, disabled: 876543, abnormal: 100001 },
+      contentFrame: () => ({ width }), filterTextLayoutOptions: () => undefined });
+    owner.statusFilter();
+    const nodes = [...owner.nodes.values()];
+    const row = nodes.find(node => node.id === 'reader-source-status-filter');
+    const chips = nodes.filter(node => node.type === 'Button');
+    const labels = nodes.filter(node => node.type === 'Text');
+    assert.equal(row.width, width);
+    assert.equal(chips.length, 4);
+    assert.ok(chips.every(chip => chip.layoutWeight === 1 && chip.height === 32));
+    assert.ok(labels.every(label => label.maxLines === 1 && label.textOverflow.overflow === 'TextOverflow.Ellipsis'));
+    assert.deepEqual(chips.map(chip => chip.accessibilityText), [
+      '书源状态，全部，999999 项', '书源状态，已启用，123456 项',
+      '书源状态，已停用，876543 项', '书源状态，异常，100001 项',
+    ]);
   }
 }
 
@@ -238,7 +244,7 @@ for (const id of selectContractCases({
   'theme-appearance-identity': 'Same FormRow actor reappearance rebinds the actual SDK Area factory and rejects the prior appearance callback.',
   'theme-measurement-identity': 'Actual FormRow Area callback captures label/configuration/window/branch identity, rejects retired receipts and admits current width.',
   theme: 'Actual SDK FormRow real measured-label allocation at320/366×1/1.3/1.6/2, shared width authority and retired geometry.',
-  'source-stats': 'Actual SDK Source statistics retains full long counts without single-line/fixed-height cap.',
+  'source-stats': 'Actual v9 status chips keep equal single-line budgets and expose full counts through accessibility.',
   'batch-summary': 'Actual SDK four readonly counter texts use natural width/height and wrap within their parent.',
   'sync-recovery': 'Actual SDK Sync Notice primary/secondary binding, config/retention/query separation and original identity guards.',
 })) {

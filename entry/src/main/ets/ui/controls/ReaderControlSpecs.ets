@@ -313,9 +313,9 @@ SOURCE_MANAGEMENT_LOGIN.centerText = true; SOURCE_MANAGEMENT_LOGIN.maxLines = 1;
 SOURCE_MANAGEMENT_LOGIN.secondarySurface = 'TOK_CARD_BG'; SOURCE_MANAGEMENT_LOGIN.secondaryBorder = 'app.border.sourceGroup';
 const SOURCE_MANAGEMENT_MANAGE: ReaderButtonSpec = copyReaderButtonSpec();
 SOURCE_MANAGEMENT_MANAGE.text = TYPE_FORM_LABEL_ACTION; SOURCE_MANAGEMENT_MANAGE.height = 44;
-SOURCE_MANAGEMENT_MANAGE.radius = 8; SOURCE_MANAGEMENT_MANAGE.stacked = true; SOURCE_MANAGEMENT_MANAGE.centerText = false;
+SOURCE_MANAGEMENT_MANAGE.radius = 999; SOURCE_MANAGEMENT_MANAGE.stacked = false; SOURCE_MANAGEMENT_MANAGE.centerText = true;
 SOURCE_MANAGEMENT_MANAGE.maxLines = 1; SOURCE_MANAGEMENT_MANAGE.disabledOpacity = 1;
-SOURCE_MANAGEMENT_MANAGE.secondarySurface = 'TOK_SURFACE_SOLID'; SOURCE_MANAGEMENT_MANAGE.secondaryBorder = 'app.border.searchField';
+SOURCE_MANAGEMENT_MANAGE.secondarySurface = 'TOK_CARD_BG'; SOURCE_MANAGEMENT_MANAGE.secondaryBorder = 'TOK_LINE';
 SOURCE_MANAGEMENT_MANAGE.secondaryText = 'TOK_INK';
 
 // Remaining actual Search/Discover/Sync actions retain their authored tuples.

@@ -2,7 +2,7 @@ import { LengthMetrics } from '@kit.ArkUI';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
-import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
+import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
@@ -11,20 +11,30 @@ import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
   READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../../ui/foundation/ReaderFontFamilies';
 import { readerAppColor, type ReaderAppColorRole } from '../../../ui/foundation/ReaderThemeRegistry';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
-import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
+import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
+import { readerReadableFontScale } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
+import { ReaderPageGeometry, ReaderPageGeometryInput, applyReaderStandardFloatingHeader,
+  resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
+import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
+import { readerPageAreaLength, readerStandardPageContentEndInset, readerStandardPageSpec,
+  READER_STANDARD_PAGE_CONTENT_GAP } from '../../../ui/layout/ReaderPageShell';
 import { DialogActionView, ReaderDialogSurface } from '../../../ui/surfaces/ReaderDialogSurface';
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { httpUrlHostname } from '../../../platform/network/HttpTransportPolicy';
 import type { BookSource, SourceGroupCatalogData, SourceGroupMutateParams, SourceGroupRecord } from '../application/SourceGateway';
 import { SourceInitialMembershipUnconfirmed } from '../application/SourceInitialMembershipUnconfirmed';
 import type { SourceManagementProjection, SourceManagementStatusKind } from '../application/SourceOrchestrator';
-import { sourceV9Primary, sourceV9ReportFill, sourceV9ReportTone, sourceV9Supports } from '../presentation/SourceManagementV9';
+import { sourceV9DisplayUrl, sourceV9ReportTone, sourceV9Supports } from '../presentation/SourceManagementV9';
+import { SourceV9AddAction, SourceV9CircleCheck, SourceV9DetectButton, SourceV9TypeSeal } from './SourceV9Chrome';
 
 type GroupDialog = 'none' | 'create' | 'rename' | 'delete' | 'add' | 'move';
 type GroupActionTone = 'primary' | 'soft' | 'neutral' | 'danger';
 
-const GROUP_HEADER_HEIGHT = 48;
-const GROUP_FEEDBACK_TOP = GROUP_HEADER_HEIGHT + 8;
+const GROUP_MEMBER_INSET = 10;
+const GROUP_MEMBER_GAP = 6;
+const GROUP_TITLE_GAP = 8;
+const GROUP_TITLE_BUDGET = 132;
+const GROUP_MEMBER_CHROME_WIDTH = 34 + GROUP_TITLE_GAP + 28 + 44 + 2 * GROUP_MEMBER_GAP;
 
 interface GroupRow {
   id: string;
@@ -64,6 +74,7 @@ export struct SourceV9GroupsPage {
   @Prop @Watch('externalMoveChanged') moveSourceIds: string[] = [];
   @Prop inputEnabled: boolean = true;
   @Prop moveOnly: boolean = false;
+  @Prop embeddedWide: boolean = false;
   @Prop statusKind: SourceManagementStatusKind = 'idle';
   @Prop statusMessage: string = '';
   @Prop operation: SourceManagementProjection = { action: 'load', sourceId: '' };
@@ -91,7 +102,10 @@ export struct SourceV9GroupsPage {
   @State private selection: string[] = [];
   @State private target: string | undefined = '';
   @State private bodyLimit: number = 200;
+  @State private paneWidth: number = 0;
   @State private paneHeight: number = 0;
+  @State private paneLeft: number = 0;
+  @State private headerHeight: number = APP_FLOATING_HEADER_BAR_HEIGHT;
   @State private mutationProblem: string = '';
   private mounted: boolean = false;
   private externalMove: boolean = false;
@@ -287,9 +301,7 @@ export struct SourceV9GroupsPage {
   }
 
   private displayUrl(source: BookSource): string {
-    const host = httpUrlHostname(source.baseUrl);
-    const scheme = source.baseUrl.toLowerCase().startsWith('http://') ? 'http://' : 'https://';
-    return host !== undefined ? scheme + host : source.baseUrl;
+    return sourceV9DisplayUrl(source.baseUrl);
   }
 
   private groupExists(groupId: string): boolean { return groupId === '' || this.groupNames.has(groupId); }
@@ -435,19 +447,13 @@ export struct SourceV9GroupsPage {
     if (ids.length > 0) this.onBatchUngrouped(ids);
   }
 
-  private color(role: ReaderAppColorRole): ResourceColor { return role === 'app.sourceUi.primary' ? sourceV9Primary(this.scheme) : readerAppColor(role, this.scheme); }
-
-  private frameInset(left: boolean): number {
-    if (this.windowRevision < 0) return 14;
-    const metrics = ReaderWindowCoordinator.metrics();
-    return Math.max(14, left ? readerInteractiveSafeLeft(metrics) : readerInteractiveSafeRight(metrics));
-  }
+  private color(role: ReaderAppColorRole): string { return readerAppColor(role, this.scheme); }
 
   private actionSurface(tone: GroupActionTone): ResourceColor {
     if (tone === 'primary') return this.color('app.sourceUi.primary');
     if (tone === 'soft') return this.color('app.sourceUi.selected');
     if (tone === 'danger') return this.color('app.sourceUi.dangerSurface');
-    return this.color('app.sourceUi.surface');
+    return this.color('TOK_CARD_BG');
   }
 
   private actionInk(tone: GroupActionTone): ResourceColor {
@@ -460,13 +466,6 @@ export struct SourceV9GroupsPage {
   private rowKey(source: BookSource): string {
     return JSON.stringify([source.sourceId, source.name, source.baseUrl, source.category, source.enabled,
       source.checkState, sourceV9ReportTone(source)]);
-  }
-
-  private checkGlyph(source: BookSource): string {
-    if (source.checkState === 'checking') return '…';
-    const tone = sourceV9ReportTone(source);
-    if (tone === 'unverified') return '–';
-    return tone === 'earlyFailure' || tone === 'deepFailure' ? '×' : '✓';
   }
 
   private dialogTitle(): string {
@@ -491,27 +490,73 @@ export struct SourceV9GroupsPage {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      if (!this.moveOnly) {
-        this.page();
-        if (this.dialog === 'none' && this.feedbackHeight() > 0) this.pageFeedback();
-      }
-      if (this.dialog !== 'none') {
-        this.groupDialog();
-      }
+      if (!this.moveOnly) this.page();
+      if (this.dialog !== 'none' && this.paneWidth > 0) this.groupDialog();
     }.width('100%').height('100%').clip(true)
-      .onSizeChange((_previous: SizeOptions, next: SizeOptions): void => {
-        const height = Number(next.height);
-        if (Number.isFinite(height) && height >= 0) {
-          this.paneHeight = height;
-          if (height > 0) this.bodyLimit = Math.max(84, Math.min(208, height - 245));
-        }
-      });
+      .onAreaChange((_previous: Area, next: Area): void => this.recordPane(next));
+  }
+
+  private recordPane(area: Area): void {
+    const width = readerPageAreaLength(area.width);
+    const height = readerPageAreaLength(area.height);
+    const left = readerPageAreaLength(area.globalPosition.x);
+    if (!this.mounted || !Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) return;
+    if (Math.abs(width - this.paneWidth) > .1) this.paneWidth = width;
+    if (Math.abs(height - this.paneHeight) > .1) {
+      this.paneHeight = height;
+      this.bodyLimit = Math.max(84, Math.min(208, height - 245));
+    }
+    if (Number.isFinite(left) && Math.abs(left - this.paneLeft) > .1) this.paneLeft = left;
+  }
+
+  private pageGeometry(): ReaderPageGeometry {
+    this.windowRevision;
+    const metrics = ReaderWindowCoordinator.metrics();
+    const input = new ReaderPageGeometryInput(metrics);
+    input.viewportWidth = this.paneWidth;
+    input.viewportHeight = this.paneHeight;
+    input.originX = this.embeddedWide ? this.paneLeft : undefined;
+    input.headerHeight = this.headerHeight;
+    // Index has already applied the interactive top inset for this route.
+    applyReaderStandardFloatingHeader(input);
+    input.contentGap = READER_STANDARD_PAGE_CONTENT_GAP;
+    input.contentMaxWidth = readerStandardPageSpec('sourceManagement').maxWidth;
+    input.contentHorizontalPadding = 19;
+    input.contentHorizontalSafeArea = 'interactive';
+    input.contentEndInset = readerStandardPageContentEndInset('sourceManagement', metrics);
+    return resolveReaderPageGeometry(input);
+  }
+
+  private frameStyle(): ReaderFrameStyle {
+    const background = this.color('TOK_PAPER');
+    return readerFrameStyle({ backgroundColor: background, headerBackground: background,
+      headerTransparent: true, footerBackground: background });
   }
 
   @Builder
   private page() {
     Column() {
-      this.header();
+      ReaderPageScaffold({ frameStyle: this.frameStyle(), geometry: this.pageGeometry(),
+        headerMeasurementKey: this.windowRevision,
+        content: (): void => { this.pageBody(this.pageGeometry()); },
+        header: (): void => { this.header(); },
+        overlayContent: (): void => {
+          if (this.dialog === 'none' && this.feedbackHeight() > 0) this.pageFeedback();
+        },
+        onHeaderHeightChange: (height: number, key: number): void => {
+          if (this.mounted && key === this.windowRevision && height > 0 && Math.abs(height - this.headerHeight) > .1) {
+            this.headerHeight = height;
+          }
+        },
+      });
+    }.id('reader-source-v9-groups').width('100%').height('100%')
+      .accessibilityLevel(this.dialog === 'none' ? 'auto' : 'no-hide-descendants')
+      .enabled(this.dialog === 'none' && this.inputEnabled);
+  }
+
+  @Builder
+  private pageBody(geometry: ReaderPageGeometry) {
+    Column() {
       if (this.catalog === undefined) {
         ReaderPageState({ title: '正在读取书源分组', loading: true, loadingActive: this.inputEnabled })
           .layoutWeight(1);
@@ -520,20 +565,22 @@ export struct SourceV9GroupsPage {
       } else {
         this.groupDetail();
       }
-    }.id('reader-source-v9-groups').width('100%').height('100%').backgroundColor(this.color('TOK_PAPER'))
-      .accessibilityLevel(this.dialog === 'none' ? 'auto' : 'no-hide-descendants')
-      .enabled(this.dialog === 'none' && this.inputEnabled);
+    }.width('100%').height('100%').padding({ left: geometry.content.frame.left, right: geometry.content.frame.right,
+      top: geometry.content.startInset, bottom: geometry.content.endInset });
   }
 
-  private feedbackHeight(): number { return Math.max(0, Math.min(208, this.paneHeight - GROUP_FEEDBACK_TOP - 12)); }
+  private feedbackHeight(): number {
+    const content = this.pageGeometry().content;
+    return Math.max(0, Math.min(208, this.paneHeight - content.startInset - content.endInset));
+  }
 
   @Builder
   private pageFeedback() {
     Column() {
       this.actionFeedback(this.feedbackHeight());
     }.id('reader-source-v9-group-feedback').width('100%')
-      .padding({ left: this.frameInset(true), right: this.frameInset(false) })
-      .margin({ top: GROUP_FEEDBACK_TOP }).hitTestBehavior(HitTestMode.Transparent);
+      .padding({ left: this.pageGeometry().content.frame.left, right: this.pageGeometry().content.frame.right })
+      .margin({ top: this.pageGeometry().content.startInset }).hitTestBehavior(HitTestMode.Transparent);
   }
 
   @Builder
@@ -555,36 +602,37 @@ export struct SourceV9GroupsPage {
 
   @Builder
   private header() {
-    Row({ space: 6 }) {
-      ReaderIconButton({
-        icon: this.scheme === 'night' ? $r('app.media.book_detail_back_theme_night') : $r('app.media.book_detail_back'),
-        specId: 'navigation-back', minimumTargetSize: 44, accessibilityLabel: '返回', focusId: 'reader-source-v9-group-back',
-        actionEnabled: this.inputEnabled, onTap: (): void => this.back(),
-      });
-      Text(this.detailGroupId === undefined ? '分组管理' : this.detailName).layoutWeight(1).maxLines(1)
-        .textOverflow({ overflow: TextOverflow.Ellipsis }).fontSize(18).fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD)
-        .fontColor(this.color('TOK_INK'));
-      if (this.detailGroupId === undefined) {
-        this.action('＋ 新建', 'soft', this.pageEditable(), (): void => this.openDialog('create'), 36, 12,
-          'reader-source-v9-group-create');
-      } else if (this.detailGroupId === '') {
-        this.action('批量归组', 'soft', this.pageEditable() && this.detailCount > 0, (): void => this.batchUngrouped(), 36, 12,
-          'reader-source-v9-group-batch-ungrouped');
-      } else {
-        this.action('＋ 添加', 'soft', this.pageEditable(), (): void => this.openDialog('add'), 36, 12,
-          'reader-source-v9-group-add');
-      }
-    }.width('100%').height(GROUP_HEADER_HEIGHT).padding({ left: this.frameInset(true), right: this.frameInset(false) })
-      .border({ width: { bottom: 1 }, color: this.color('TOK_LINE') });
+    PageBackBar({ floating: true, centered: true, elevation: 'floating', balancedCenteredSlots: true, trailingWidthVp: 84,
+      title: this.detailGroupId === undefined ? '分组管理' : this.detailName,
+      backFocusId: 'reader-source-v9-group-back', onBack: (): void => this.back(),
+      trailing: (): void => { this.headerActions(); },
+    });
+  }
+
+  @Builder
+  private headerActions() {
+    if (this.detailGroupId === undefined) {
+      SourceV9AddAction({ label: '新建', actionEnabled: this.pageEditable(), controlId: 'reader-source-v9-group-create',
+        onTap: (): void => this.openDialog('create') });
+    } else if (this.detailGroupId === '') {
+      this.action('批量归组', 'soft', this.pageEditable() && this.detailCount > 0, (): void => this.batchUngrouped(), 32, 12,
+        'reader-source-v9-group-batch-ungrouped');
+    } else {
+      SourceV9AddAction({ label: '添加', actionEnabled: this.pageEditable(), controlId: 'reader-source-v9-group-add',
+        onTap: (): void => this.openDialog('add') });
+    }
   }
 
   @Builder
   private action(label: string, tone: GroupActionTone, enabled: boolean, run: () => void,
     height: number = 32, size: number = 12, controlId: string = '') {
-    Button(label, { type: ButtonType.Capsule }).height(height).padding({ left: height < 30 ? 8 : 12, right: height < 30 ? 8 : 12 })
-      .id(controlId)
-      .fontSize(size).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
-      .fontColor(this.actionInk(tone)).backgroundColor(this.actionSurface(tone))
+    Button({ type: ButtonType.Capsule }) {
+      Text(label).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontColor(this.actionInk(tone))
+        .fontSize(size).minFontSize(9).maxFontSize(size).maxLines(1)
+        .heightAdaptivePolicy(TextHeightAdaptivePolicy.LAYOUT_CONSTRAINT_FIRST)
+        .textOverflow({ overflow: TextOverflow.Ellipsis });
+    }.height(height).padding({ left: height < 30 ? 7 : 12, right: height < 30 ? 7 : 12 })
+      .id(controlId).backgroundColor(this.actionSurface(tone)).accessibilityText(label)
       .border({ width: tone === 'neutral' ? 1 : 0, color: this.color('TOK_LINE_STRONG') })
       .opacity(enabled ? 1 : 0.48).enabled(enabled).flexShrink(0)
       .responseRegion({ y: height < 30 ? -(44 - height) / 2 : -4, height: height < 30 ? 44 : height + 8 })
@@ -598,8 +646,7 @@ export struct SourceV9GroupsPage {
         ForEach(this.groups, (group: GroupRow): void => {
           this.groupRow(group);
         }, (group: GroupRow): string => JSON.stringify([group.id, group.name, group.members, group.enabled]));
-      }.width('100%').padding({ left: Math.max(16, this.frameInset(true)),
-        right: Math.max(16, this.frameInset(false)), top: 12, bottom: 16 });
+      }.width('100%').padding({ bottom: 4 });
     }.width('100%').layoutWeight(1).scrollBar(BarState.Off).align(Alignment.Top);
   }
 
@@ -628,12 +675,12 @@ export struct SourceV9GroupsPage {
         .accessibilityText(`${group.name}，共 ${group.members} 个，已启用 ${group.enabled} 个`)
         .onClick((): void => this.openGroup(group.id));
       if (group.id !== '') {
-        ReaderToggle({ checkedColor: sourceV9Primary(this.scheme), value: group.members > 0 && group.enabled === group.members, inputIdentity: group.id,
+        ReaderToggle({ checkedColor: this.color('app.sourceUi.primary'), value: group.members > 0 && group.enabled === group.members, inputIdentity: group.id,
           actionEnabled: this.pageEditable() && group.members > 0, accessibilityLabel: `启用${group.name}全部书源`,
           onToggle: (next: boolean): void => this.toggleGroup(group.id, next) }).flexShrink(0);
       }
     }.width('100%').padding({ left: 14, right: 14, top: 8, bottom: 8 }).borderRadius(14)
-      .border({ width: 1, color: this.color('TOK_LINE') }).backgroundColor(this.color('app.sourceUi.surface'))
+      .border({ width: 1, color: this.color('TOK_LINE') }).backgroundColor(this.color('TOK_CARD_BG'))
       .shadow(readerSurfaceElevation('card', this.scheme));
   }
 
@@ -652,13 +699,12 @@ export struct SourceV9GroupsPage {
         this.action('删除分组', 'danger', this.pageEditable(), (): void => this.openDialog('delete'), 32, 12,
           'reader-source-v9-group-delete');
       }
-    }.width('100%').padding({ left: Math.max(16, this.frameInset(true)),
-      right: Math.max(16, this.frameInset(false)), top: 12, bottom: 8 });
+    }.width('100%').padding({ bottom: 8 });
     Column() {
       if (this.detailCount === 0) {
         ReaderPageState({ title: '当前分组暂无书源', variant: 'inline', padded: true })
           .width('100%').borderRadius(14).border({ width: 1, color: this.color('TOK_LINE') })
-          .backgroundColor(this.color('app.sourceUi.surface'));
+          .backgroundColor(this.color('TOK_CARD_BG'));
       } else {
         List() {
           LazyForEach(this.detailData, (source: BookSource): void => {
@@ -669,53 +715,76 @@ export struct SourceV9GroupsPage {
         }.width('100%').constraintSize({ maxHeight: '100%' }).scrollBar(BarState.Off).cachedCount(4)
           .divider({ strokeWidth: 1, color: this.color('TOK_LINE') })
           .borderRadius(14).clip(true).border({ width: 1, color: this.color('TOK_LINE') })
-          .backgroundColor(this.color('app.sourceUi.surface'));
+          .backgroundColor(this.color('TOK_CARD_BG'));
       }
-    }.width('100%').layoutWeight(1).padding({ left: Math.max(16, this.frameInset(true)),
-      right: Math.max(16, this.frameInset(false)), top: 4, bottom: 16 })
+    }.width('100%').layoutWeight(1).padding({ top: 4, bottom: 4 })
       .justifyContent(FlexAlign.Start);
   }
 
   @Builder
   private sourceRow(source: BookSource) {
-    Row({ space: 6 }) {
-      Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Row({ space: 8 }) {
-          Text(source.category === 'comic' ? '漫' : '文').width(34).height(34).textAlign(TextAlign.Center)
-            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(14).borderRadius(10).flexShrink(0)
-            .fontColor(this.color(source.category === 'comic' ? 'app.status.warning' : 'app.sourceUi.primary'))
-            .backgroundColor(this.color(source.category === 'comic' ? 'app.status.warningSoft' : 'app.sourceUi.selected'));
-          Column({ space: 1 }) {
-            Text(source.name).width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-              .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(14).fontColor(this.color('TOK_INK'));
-            Text(this.displayUrl(source)).width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-              .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(11).fontColor(this.color('app.sourceUi.faint'));
-          }.layoutWeight(1).alignItems(HorizontalAlign.Start);
-        }.width('100%');
-      }.id(`reader-source-v9-group-source-row-${source.sourceId}`)
-        .layoutWeight(1).constraintSize({ minHeight: 44 }).padding(0)
-        .backgroundColor(Color.Transparent).enabled(this.pageEditable()).accessibilityText(`${source.name}，检测详情`)
-        .onClick((): void => this.checkMember(source.sourceId));
-      Button({ type: ButtonType.Circle }) {
-        Text(this.checkGlyph(source)).fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(14)
-          .fontColor(this.color(sourceV9ReportTone(source) === 'unverified' ? 'app.sourceUi.muted' : 'app.sourceUi.onPrimary'));
-      }.id(`reader-source-v9-group-source-check-${source.sourceId}`)
-        .width(28).height(28).padding(0).flexShrink(0).responseRegion({ y: -8, height: 44 })
-        .backgroundColor(sourceV9ReportFill(sourceV9ReportTone(source), this.scheme) ?? this.color('app.sourceUi.field'))
-        .enabled(this.pageEditable()).accessibilityText(`${source.name}，检测`)
-        .onClick((): void => this.checkMember(source.sourceId));
-      this.action(this.detailGroupId === '' ? '归入分组' : '移动', 'neutral', this.pageEditable(),
-        (): void => { if (this.rowValid(source.sourceId)) this.openMove([source.sourceId], this.sourceGroup(source)); }, 26, 11,
-        `reader-source-v9-group-source-move-${source.sourceId}`);
-      if (this.detailGroupId !== '') {
-        this.action('移出', 'danger', this.pageEditable(), (): void => this.removeMember(source.sourceId), 26, 11,
-          `reader-source-v9-group-source-remove-${source.sourceId}`);
+    Column() {
+      Row({ space: GROUP_MEMBER_GAP }) {
+        this.memberTitle(source);
+        SourceV9DetectButton({ tone: sourceV9ReportTone(source), checking: source.checkState === 'checking',
+          actionEnabled: this.pageEditable(), label: `${source.name}，检测`,
+          controlId: `reader-source-v9-group-source-check-${source.sourceId}`,
+          onTap: (): void => this.checkMember(source.sourceId) });
+        ReaderToggle({ checkedColor: this.color('app.sourceUi.primary'), value: source.enabled, inputIdentity: source.sourceId,
+          actionEnabled: this.pageEditable(), accessibilityLabel: `启用${source.name}`,
+          onToggle: (next: boolean): void => { if (this.rowValid(source.sourceId)) this.onToggle([source.sourceId], next); } })
+          .flexShrink(0);
+        if (!this.memberActionsStacked()) this.memberActions(source);
+      }.width('100%').constraintSize({ minHeight: 44 });
+      if (this.memberActionsStacked()) {
+        Row({ space: GROUP_MEMBER_GAP }) {
+          this.memberActions(source);
+        }.id(`reader-source-v9-group-member-actions-${source.sourceId}`).width('100%').constraintSize({ minHeight: 44 })
+          .justifyContent(FlexAlign.End);
       }
-      ReaderToggle({ checkedColor: sourceV9Primary(this.scheme), value: source.enabled, inputIdentity: source.sourceId,
-        actionEnabled: this.pageEditable(), accessibilityLabel: `启用${source.name}`,
-        onToggle: (next: boolean): void => { if (this.rowValid(source.sourceId)) this.onToggle([source.sourceId], next); } })
-        .flexShrink(0);
-    }.width('100%').padding({ left: 10, right: 10, top: 6, bottom: 6 });
+    }.width('100%').padding({ left: GROUP_MEMBER_INSET, right: GROUP_MEMBER_INSET, top: 6, bottom: 6 });
+  }
+
+  private memberActionsStacked(): boolean {
+    return this.memberTitleWidth(true) < GROUP_TITLE_BUDGET;
+  }
+
+  private memberTitleWidth(inlineActions: boolean): number {
+    const available = this.pageGeometry().content.frame.width - 2 * (GROUP_MEMBER_INSET + 1);
+    const scale = readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+    const actionCount = this.detailGroupId === '' ? 1 : 2;
+    // Each action has two 11fp glyphs and 7vp horizontal padding on either side.
+    const actions = actionCount * (Math.ceil(22 * scale) + 14 + GROUP_MEMBER_GAP);
+    return Math.max(0, available - GROUP_MEMBER_CHROME_WIDTH - (inlineActions ? actions : 0));
+  }
+
+  @Builder
+  private memberTitle(source: BookSource) {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
+      Row({ space: GROUP_TITLE_GAP }) {
+        SourceV9TypeSeal({ category: source.category });
+        Column({ space: 1 }) {
+          Text(source.name).width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(14).fontColor(this.color('TOK_INK'));
+          Text(this.displayUrl(source)).width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(11).fontColor(this.color('app.sourceUi.muted'));
+        }.layoutWeight(1).alignItems(HorizontalAlign.Start);
+      }.width('100%');
+    }.id(`reader-source-v9-group-source-row-${source.sourceId}`)
+      .layoutWeight(1).constraintSize({ minHeight: 44 }).padding(0)
+      .backgroundColor(Color.Transparent).enabled(this.pageEditable()).accessibilityText(`${source.name}，检测详情`)
+      .onClick((): void => this.checkMember(source.sourceId));
+  }
+
+  @Builder
+  private memberActions(source: BookSource) {
+    this.action(this.detailGroupId === '' ? '归组' : '移动', 'neutral', this.pageEditable(),
+      (): void => { if (this.rowValid(source.sourceId)) this.openMove([source.sourceId], this.sourceGroup(source)); }, 26, 11,
+      `reader-source-v9-group-source-move-${source.sourceId}`);
+    if (this.detailGroupId !== '') {
+      this.action('移出', 'danger', this.pageEditable(), (): void => this.removeMember(source.sourceId), 26, 11,
+        `reader-source-v9-group-source-remove-${source.sourceId}`);
+    }
   }
 
   @Builder
@@ -723,7 +792,8 @@ export struct SourceV9GroupsPage {
     Stack({ alignContent: Alignment.Center }) {
       Rect().width('100%').height('100%').fill(this.color('app.scrim.warmModal'))
         .accessibilityLevel('no').onClick((): void => { this.consumeBack(); });
-      ReaderDialogSurface({ specId: 'source-v9-check', primarySurfaceColor: sourceV9Primary(this.scheme), title: this.dialogTitle(),
+      ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: this.paneWidth,
+        primarySurfaceColor: this.color('app.sourceUi.primary'), title: this.dialogTitle(),
         actions: [new DialogActionView('cancel', '取消', 'default', this.dialogEditable(), true),
           new DialogActionView('confirm', this.confirmLabel(), this.dialog === 'delete' ? 'danger' : 'primary',
             this.dialogParams() !== undefined)],
@@ -784,19 +854,10 @@ export struct SourceV9GroupsPage {
   }
 
   @Builder
-  private mark(selected: boolean) {
-    Text(selected ? '✓' : '').width(18).height(18).borderRadius(5).textAlign(TextAlign.Center)
-      .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(12).flexShrink(0)
-      .fontColor(this.color('app.sourceUi.onPrimary'))
-      .border({ width: 1, color: this.color(selected ? 'app.sourceUi.primary' : 'TOK_LINE_STRONG') })
-      .backgroundColor(selected ? this.color('app.sourceUi.primary') : Color.Transparent);
-  }
-
-  @Builder
   private candidateRow(source: BookSource) {
     Button({ type: ButtonType.Normal, stateEffect: true }) {
       Row({ space: 8 }) {
-        this.mark(this.selection.includes(source.sourceId));
+        SourceV9CircleCheck({ selected: this.selection.includes(source.sourceId), actionEnabled: this.dialogEditable(), interactive: false });
         Column({ space: 1 }) {
           Text(source.name).width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
             .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(13).fontColor(this.color('TOK_INK'));
@@ -835,7 +896,7 @@ export struct SourceV9GroupsPage {
   private targetOption(id: string | undefined, label: string) {
     Button({ type: ButtonType.Capsule }) {
       Row({ space: 8 }) {
-        this.mark(this.target === id);
+        SourceV9CircleCheck({ selected: this.target === id, actionEnabled: this.dialogEditable(), interactive: false });
         Text(label).layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(13)
           .fontColor(this.color(id === undefined ? 'app.sourceUi.primary' : 'TOK_INK'));

@@ -272,7 +272,7 @@
       "sample": "selected-tail",
       "action": "select-tail-option",
       "expected": {
-        "groupIndex": 12,
+        "groupIndex": 13,
         "sourceCount": 12
       }
     },
@@ -293,7 +293,7 @@
       "sample": "panel-tail",
       "action": "scroll-group-options",
       "expected": {
-        "groupIndex": 12,
+        "groupIndex": 13,
         "sourceCount": 12
       }
     }

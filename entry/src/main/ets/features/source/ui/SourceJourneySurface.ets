@@ -15,8 +15,7 @@ import type { SourceV9ConfirmedImport } from '../application/SourceV9TransferOwn
 import { sourceV9GroupRows, sourceV9ParentView, sourceV9Supports, type SourceV9ListAction,
   type SourceV9View } from '../presentation/SourceManagementV9';
 import type { SourceToolsSelection } from '../application/SourceToolsOrchestrator';
-import { EMPTY_SOURCE_JOURNEY, SourceJourneyPresentation, type SourceJourneySnapshot,
-  type SourceManagementViewState } from '../presentation/SourceJourneyPresentation';
+import { EMPTY_SOURCE_JOURNEY, SourceJourneyPresentation, type SourceJourneySnapshot } from '../presentation/SourceJourneyPresentation';
 
 @Component
 export struct SourceJourneySurface {
@@ -31,7 +30,6 @@ export struct SourceJourneySurface {
   showingTools: boolean = false;
   isInputAllowed: (() => boolean) | undefined = undefined;
   onBack: () => void = (): void => {};
-  onOpenTools: () => void = (): void => {};
   captureImportSearchAction: (() => (() => void) | undefined) | undefined = undefined;
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
     (_handler: (() => boolean) | undefined, _identity: string): void => {};
@@ -259,7 +257,7 @@ export struct SourceJourneySurface {
   private groupsPage() {
     SourceV9GroupsPage({
       catalog: this.catalog, sources: this.projectedRows, detailGroupId: this.detailGroupId,
-      moveOnly: this.pane === 'list', moveSourceIds: this.moveSourceIds,
+      embeddedWide: this.embeddedWide, moveOnly: this.pane === 'list', moveSourceIds: this.moveSourceIds,
       inputEnabled: this.inputEnabled && this.checkSourceIds.length === 0,
       isInputAllowed: (): boolean => this.managementInputIsCurrent() && this.checkSourceIds.length === 0,
       onBack: (): void => { this.consumeBack(); },
@@ -338,9 +336,6 @@ export struct SourceJourneySurface {
       },
       onAddSource: (): void => this.openPane('import'),
       onV9Action: (action: SourceV9ListAction, ids: string[]): void => this.listAction(action, ids),
-      onOpenTools: (viewState: SourceManagementViewState): void => {
-        if (this.managementInputIsCurrent() && this.presentation.retainManagementViewForTools(this.identity, viewState)) this.onOpenTools();
-      },
       onRetryLoad: (): void => {
         if (this.managementInputIsCurrent()) this.presentation.management(this.identity)?.retryLoad(this.identity);
       },

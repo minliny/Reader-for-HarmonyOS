@@ -1,27 +1,67 @@
-import { actualReaderPostLayoutFrame } from './lib/reader-post-layout-frame-probe.mjs';
-import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"action-admission": {"description": "实际Source consumer/native action/busy/captured source/retired", "resources": []}, "responsive-chip": {"description": "实际chip finite width消费在输入边界内", "resources": []}, "trailing-tools": {"description": "实际backBar trailing→shared Icon native callback", "resources": []}};
-definitions['status-badge-semantics']={description:'Actual native badge paths/labels, Source check facts and closed RSS/Settings compatibility, retired appearance API; no wide/device',resources:[]};
-for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
-async function runSelectedCase(selectedCase){
-if(selectedCase==='status-badge-semantics'){await runStatusBadgeSemantics();return;}
-const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
-const {default: assert} = await import('node:assert/strict');
-const {createRequire,stripTypeScriptTypes} = await import('node:module');
-const {readFileSync} = await import('node:fs');
-const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
-const {labeledIconControls} = await import('./lib/reader-labeled-icon-action-probe.mjs');
-const {iconButtonControls} = await import('./lib/reader-icon-button-probe.mjs');
-const {readerAppColor} = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
-const {readerSourceCategoryLabel} = await import('../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
-const {sourceManagementRecoveryClosure}=await import('./lib/source-management-recovery-probe.mjs');
-const {actualSourceManagementGeometry}=await import('./lib/source-management-owner-probe.mjs');
+import { registerHooks } from 'node:module';
+import { existsSync, readFileSync } from 'node:fs';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
-const source=readFileSync(new URL('../entry/src/main/ets/features/source/ui/SourceManagementPage.ets',import.meta.url),'utf8');
-const golden=JSON.parse(readFileSync(new URL('./fixtures/design/source-management-action-baseline.json',import.meta.url),'utf8'));
-const keys=['fontFamily','fontWeight','fontSize','lineHeight','letterSpacing','fontColor','textAlign','maxLines','width','height','layoutWeight','padding','backgroundColor','border','borderRadius','opacity'];
-const physical=n=>Object.fromEntries(keys.filter(k=>Object.hasOwn(n,k)).map(k=>[k,n[k]]));
-let count=0;
+const definitions = {
+  'action-admission': { description: 'Actual v9 source row and Dock actions, including retired and busy callbacks' },
+  'responsive-chip': { description: 'Actual v9 status filter, equal lanes and bounded single-line labels' },
+  'trailing-tools': { description: 'Actual shared trailing icon opens the four v9 menu actions' },
+  'status-badge-semantics': { description: 'Source v9 detection facts and shared RSS/Settings badge semantics' },
+};
+const selected = selectContractCases(definitions);
+if (selected.length > 0) registerHooks({ resolve(specifier, context, next) {
+  if (specifier.startsWith('.') && !/\.[a-z]+$/i.test(specifier)) {
+    const url = new URL(specifier + '.ts', context.parentURL);
+    if (existsSync(url)) return next(url.href, context);
+  }
+  return next(specifier, context);
+} });
+
+for (const id of selected) {
+  if (id === 'status-badge-semantics') await runStatusBadgeSemantics();
+  else await runSourceControls(id);
+  recordContractCasePass(id);
+}
+
+async function runSourceControls(selectedCase) {
+const { default: assert } = await import('node:assert/strict');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+const { boundedMembers, boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { labeledIconControls } = await import('./lib/reader-labeled-icon-action-probe.mjs');
+const { iconButtonControls } = await import('./lib/reader-icon-button-probe.mjs');
+const { sourceV9ReportTone, sourceV9ReportFill } = await import('../entry/src/main/ets/features/source/presentation/SourceManagementV9.ts');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const readerFonts = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+const { readerActionIcon } = boundedSurfaceSdk().deps;
+const read = path => readFileSync(new URL('../entry/src/main/ets/' + path, import.meta.url), 'utf8');
+const source = read('features/source/ui/SourceManagementPage.ets');
+const chrome = read('features/source/ui/SourceV9Chrome.ets');
+const controls = labeledIconControls();
+const deps = { ...controls.dependencies, ...readerFonts, ...readerTypographyRoles, readerAppColor, readerActionIcon,
+  sourceV9ReportTone, sourceV9ReportFill, LengthMetrics: { vp: value => value },
+  Placement: { BottomRight: 'Placement.BottomRight' },
+  ReaderUIVerificationProbe: { enabled: () => false },
+  readerLayoutCarrierResponseRegion: () => ({}) };
+const hooks = { ...controls.hooks, childSources: { ...controls.hooks.childSources, SourceV9DetectButton: chrome } };
+deps.SourceV9DetectButton = createReaderBuilderProbe(chrome, boundedMembers(chrome, 'SourceV9DetectButton'),
+  deps, { ...hooks, componentName: 'SourceV9DetectButton' }).Component;
+const pageMembers = ['appThemeScheme', 'mounted', 'inputEnabled', 'temporaryBackIdentity', 'projectedSources', 'sources',
+  'batchMode', 'batchSourceIds', 'onAddSource', 'onV9Action', 'onDetectSource', 'onLoginSource',
+  'managementInputIsCurrent', 'managementOpeningIsCurrent', 'managementBackIsCurrent', 'isOpeningCurrent',
+  'isInputAllowed', 'appForeground', 'groupOpen'];
+function page(members, scheme, extra = {}) {
+  const owner = createReaderBuilderProbe(source, [...new Set([...pageMembers, ...members])], deps, hooks).owner;
+  Object.assign(owner, { appThemeScheme: scheme, mounted: true, inputEnabled: true, appForeground: true,
+    temporaryBackIdentity: 'source-v9-controls', isOpeningCurrent: () => true, isInputAllowed: () => true,
+    contentFrame: () => ({ width: 322 }), onToolsEntryFocused() {}, onToolsEntryLayout() {},
+    scheduleImportStatusReadyObservation() {}, rebuildSourceProjection() {},
+    offlineDetectBadgeId: () => '', verificationRowActionsCurrent: () => false, verificationRowTextId: () => '',
+    sourceActionEnabled: () => true, ...extra });
+  return owner;
+}
+let count = 0;
 if(selectedCase==='action-admission') {
  // The historical hand-painted banner is not a production consumer. Preserve
  // its artifact as history; replace only its obsolete samples with the real
@@ -43,32 +83,121 @@ if(selectedCase==='action-admission') {
   count++;
  }
 }
-if(selectedCase==='action-admission') for(const g of golden.cases.filter(item=>item.method!=='statusBanner')){
- const {id,method,label,scheme,active}=g,p=labeledIconControls();
- const commands=['detectButton','loginButton'].includes(method)?['sourceRowCommand','sourceRowIsCurrent','sourceRenderKey','managementBackIsCurrent','managementOpeningIsCurrent']:[];
- const closure=sourceManagementRecoveryClosure(source,[],[method,...commands]);
- const support=new Function('FrameCallback','ReaderPostLayoutFrame', stripTypeScriptTypes(closure.support)+';return {SourceListDataSource,SourceListLayoutFrame};')(class {}, actualReaderPostLayoutFrame());
- const owner=createReaderBuilderProbe(source,closure.members,{...p.dependencies,...support,...actualSourceManagementGeometry(),readerSourceCategoryLabel,hilog:{info(){},warn(){},error(){}},ScrollDirection:{Horizontal:'ScrollDirection.Horizontal'}},p.hooks).owner,calls=[];
- const book={sourceId:'exact-source',loginUrl:'https://source.test/login',checkState:active?'checking':'idle'},width=id.endsWith('wide')?72:58;
- owner.sources=[book]; // Real Source @Prop arrives before mounting and watched status updates.
- Object.assign(owner,{mounted:true,appForeground:true,temporaryBackIdentity:'source-action-probe',groupOpen:false,projectedSources:[book],
-  appThemeScheme:scheme,statusKind:'error',statusMessage:'真实消息',categoryValue:active?'all':'novel',filterControlWidth:()=>280,contentFrame:()=>({width:350}),actionBottomInset:()=>0,recovery:()=>({visible:false,canRetry:true,generation:9}),onReconcile:g=>calls.push(['reconcile',g]),onRetryLoad:()=>calls.push('read'),rebuildSourceProjection:()=>calls.push('filter'),onDetectSource:v=>calls.push(['detect',v]),onLoginSource:(v,url)=>calls.push(['login',v,url]),onOpenTools:()=>calls.push('manage'),onAddSource:()=>calls.push('add')});
- if(method==='chip')owner.chip(label,width,active,!active);else if(method==='detectButton'||method==='loginButton')owner[method](book);else owner[method]();
- const actor=[...owner.children.values()].find(c=>c.specId===id&&(c.label===label||id==='source-management-detect'&&c.label==='检测中'));
- assert.ok(actor,id+' actual Page constructs the finite shared component');
- const nativeNodes=p.orderedNodes(actor),actual=nativeNodes.filter(n=>['Text','Image','Row','Stack'].includes(n.type));
- assert.ok(actual.some(node=>node.type==='Text'&&node.create===actor.label),id+' actual finite label reaches native child');
- const hit=nativeNodes.find(n=>n.type==='Button'&&typeof n.onClick==='function');assert.ok(hit,id+' actual native Button handler');hit.onClick();
- const enabled=method!=='chip'||!active,dispatch=enabled&&!(method==='detectButton'&&active);
- assert.equal(calls.length,dispatch?1:0,id+' actual page admission/callback');
- if(method==='detectButton'&&dispatch)assert.deepEqual(calls[0],['detect','exact-source']);
- if(method==='loginButton')assert.deepEqual(calls[0],['login','exact-source',book.loginUrl]);
- if(commands.length>0){
-  owner.groupOpen=true;hit.onClick();owner.groupOpen=false;
-  owner.projectedSources=[{...book,loginUrl:'https://source.test/changed'}];hit.onClick();
-  assert.equal(calls.length,dispatch?1:0,'the group overlay and a replacement row reject the retained physical action');
- }
- actor.aboutToDisappear();hit.onClick();assert.equal(calls.length,dispatch?1:0,id+' retired common physical actor rejects late click');count++;
+
+if (selectedCase === 'action-admission') for (const scheme of ['day', 'night']) {
+  const events = [];
+  const owner = page(['loginButton', 'loginInk', 'loginSurface', 'detectButton', 'sourceBadgeLabel',
+    'sourceActionLabel', 'sourceDetectEnabled', 'sourceRowCommand', 'sourceRowIsCurrent', 'sourceRenderKey',
+    'bottomActionBar', 'sourceAddIcon', 'importFocusId', 'toolsFocusId'], scheme, {
+    onDetectSource: id => events.push(['detect', id]), onLoginSource: (id, url) => events.push(['login', id, url]),
+    onAddSource: (...ids) => events.push(['import', ...ids]), footerStacked: () => false, footerControlHeight: () => 44,
+    footerManageWidth: () => 112, layoutBudget: () => ({ footerHeight: 44 }), actionBottomInset: () => 0,
+    hasReadableSources: true, prepareV9ListReturn: view => events.push(['enter', view]), observeV9ListEntry() {},
+  });
+  const book = { sourceId: 'exact-source', name: '测试书源', checkState: 'unchecked', loginUrl: 'https://source.test/login' };
+  owner.mounted = false;
+  owner.sources = [book];
+  owner.mounted = true;
+  owner.projectedSources = [book];
+  owner.loginButton(book);
+  owner.detectButton(book);
+  const login = [...owner.nodes.values()].find(node => node.accessibilityText?.includes('登录，状态未知'));
+  const detectActor = [...owner.children.values()].find(child => child instanceof deps.SourceV9DetectButton);
+  const detect = controls.nodes(detectActor).find(node => node.type === 'Button' && node.onClick);
+  assert.deepEqual([login.width, login.height, detect.width, detect.height], [58, 26, 28, 28]);
+  assert.ok(controls.nodes(detectActor).some(node => node.type === 'Image' && node.create === 'app.media.source_v9_wave'));
+  login.onClick();
+  detect.onClick();
+  owner.groupOpen = true;
+  login.onClick();
+  detect.onClick();
+  owner.groupOpen = false;
+  owner.projectedSources = [{ ...book, loginUrl: 'https://source.test/replaced' }];
+  login.onClick();
+  detect.onClick();
+  assert.deepEqual(events.splice(0), [['login', book.sourceId, book.loginUrl], ['detect', book.sourceId]]);
+
+  const checking = { ...book, checkState: 'checking' };
+  owner.mounted = false;
+  owner.sources = [checking];
+  owner.mounted = true;
+  owner.projectedSources = [checking];
+  owner.detectButton(checking);
+  const busy = [...owner.children.values()].findLast(child => child instanceof deps.SourceV9DetectButton);
+  assert.equal(controls.nodes(busy).find(node => node.type === 'Button').enabled, false);
+  assert.ok(controls.nodes(busy).some(node => node.type === 'LoadingProgress'));
+
+  owner.bottomActionBar();
+  const manage = [...owner.children.values()].find(child => child.specId === 'source-management-manage');
+  const add = [...owner.children.values()].find(child => child.specId === 'source-management-add');
+  assert.equal(add.label, '导入书源');
+  const addHit = controls.nodes(add).find(node => node.type === 'Button' && node.onClick);
+  const manageHit = controls.nodes(manage).find(node => node.type === 'Button' && node.onClick);
+  addHit.onClick();
+  assert.deepEqual(events.splice(0), [['import', 'source-v9-controls:import:footer', 'source-v9-controls:tools:header']]);
+  owner.temporaryBackIdentity = 'replacement';
+  addHit.onClick();
+  assert.deepEqual(events, [], 'old Dock callback is fenced by its opening identity');
+  manageHit.onClick();
+  assert.deepEqual(events.splice(0), [['enter', 'batch']]);
+  assert.equal(owner.batchMode, true);
+  owner.mounted = false;
+  detect.onClick();
+  assert.deepEqual(events, []);
+  count += 2;
+}
+
+if (selectedCase === 'responsive-chip') for (const width of [280, 322, 440, 680]) {
+  const owner = page(['statusFilter', 'chip', 'statusCount', 'statusCounts', 'statusValue', 'filterTextLayoutOptions'], 'day', {
+    contentFrame: () => ({ width }), statusCounts: { all: 12345, enabled: 90, disabled: 12, abnormal: 6 },
+    statusValue: '全部', filterTextLayoutOptions: () => undefined,
+  });
+  owner.statusFilter();
+  const nodes = [...owner.nodes.values()];
+  const chips = nodes.filter(node => node.type === 'Button');
+  assert.deepEqual(chips.map(node => [node.layoutWeight, node.height]), Array(4).fill([1, 32]));
+  assert.ok(nodes.filter(node => node.type === 'Text').every(node => node.maxLines === 1));
+  assert.deepEqual(nodes.filter(node => node.type === 'Text').map(node => node.create), ['全部 12345', '已启用 90', '已停用 12', '异常 6']);
+  assert.equal(nodes.find(node => node.id === 'reader-source-status-filter').width, width);
+  count++;
+}
+
+if (selectedCase === 'trailing-tools') for (const scheme of ['day', 'night']) {
+  const { require, root } = installedEtsCompiler();
+  const syntax = require(root + '/lib/validate_ui_syntax.js');
+  syntax.builderParamObjectCollection.set('PageBackBar', new Set(['trailing']));
+  const Icon = iconButtonControls({ properties: controls.properties }).icon.Component;
+  class Back {
+    constructor(owner, params) { Object.assign(this, { owner }, params); }
+    initialRender() {}
+  }
+  deps.ReaderIconButton = Icon;
+  deps.PageBackBar = Back;
+  hooks.childSources.ReaderIconButton = read('ui/controls/ReaderIconButton.ets');
+  hooks.childSources.PageBackBar = read('ui/chrome/PageBackBar.ets');
+  const events = [];
+  const owner = page(['backBar', 'sourceMorePopup', 'sourceMoreMenu', 'sourceMoreAction', 'sourceMoreIcon',
+    'moreMenuOpen', 'toolsFocusId', 'visibleIds', 'projectedSourceCount'], scheme, {
+    onBack() {}, projectedSourceCount: 1, projectedSources: [{ sourceId: 'a' }],
+    prepareV9ListReturn: view => events.push(['return', view]), onV9Action: (action, ids) => events.push([action, ids]),
+  });
+  owner.backBar();
+  [...owner.children.values()].find(child => child instanceof Back).trailing();
+  const icon = [...owner.children.values()].find(child => child instanceof Icon);
+  const hit = controls.nodes(icon).find(node => node.onClick);
+  assert.ok(hit && controls.nodes(icon).some(node => node.type === 'Image'));
+  hit.onClick();
+  assert.equal(owner.moreMenuOpen, true);
+  owner.sourceMorePopup().builder();
+  const buttons = [...owner.nodes.values()].filter(node => node.type === 'Button' && node.id?.startsWith('reader-source-v9-open'));
+  assert.deepEqual(buttons.map(node => node.id), ['subscriptions', 'groups', 'detect', 'export'].map(action => 'reader-source-v9-open-' + action));
+  const check = buttons.find(node => node.id.endsWith('detect'));
+  check.onClick();
+  check.onClick();
+  assert.deepEqual(events, [['detect', ['a']]], 'an already closed popup cannot dispatch a second action');
+  count++;
+}
+console.log('PASS actual source v9 controls, fixtures ' + count);
 }
 
 async function runStatusBadgeSemantics(){
@@ -81,6 +210,7 @@ async function runStatusBadgeSemantics(){
  const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
  const {verifySharedProducerInputCalls}=await import('./lib/shared-producer-inputs.mjs');
  const {readerAppColor}=await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+ const {sourceV9ReportTone}=await import('../entry/src/main/ets/features/source/presentation/SourceManagementV9.ts');
  const root=new URL('../entry/src/main/ets/',import.meta.url),file=path=>new URL(path,root),read=path=>readFileSync(file(path),'utf8');
  const badgePath='ui/controls/StatusBadge.ets',badgeSource=read(badgePath),{ts,options}=installedEtsCompiler();
  function open(status,label,scheme='day',density=1,source=badgeSource){
@@ -92,7 +222,7 @@ async function runStatusBadgeSemantics(){
  }
  function readable(f,label){
   const path=f.nodes().find(node=>node.type==='Path');assert.ok(path&&typeof path.commands==='string'&&path.commands.length>0,'status must have a visible non-color native path');
-  const frame=f.nodes().find(node=>node.type==='Stack');assert.ok(frame);assert.equal(frame.width,24);assert.equal(frame.height,18);assert.equal(frame.borderRadius,999);
+  const frame=f.nodes().find(node=>node.type==='Stack');assert.ok(frame);assert.equal(frame.width,24);assert.equal(frame.height,18);assert.equal(frame.borderRadius,6);
   assert.equal(frame.accessibilityText,label);assert.equal(frame.accessibilityGroup,true);
   assert.equal(path.width,12);assert.equal(path.height,12);assert.equal(path.accessibilityLevel,'no');
   assert.equal(f.nodes().some(node=>node.type==='Text'),false,'decorative mark is a graphic rather than font-scaled body text');
@@ -119,47 +249,35 @@ async function runStatusBadgeSemantics(){
  assert.notEqual(readable(densityRevision,'检查中').commands,densityBefore,'actual configuration revision refreshes the native density conversion');
  const colorOnly=badgeSource.replace('.commands(this.symbolPath())',".commands('')");assert.notEqual(colorOnly,badgeSource);
  assert.throws(()=>readable(open('success','检查通过','day',1,colorOnly),'检查通过'),/non-color native path/,'restoring color-only rendering must fail');
- function argument(path,ownerName,method,receiver,bindings){
+ function argument(path,ownerName,method,receiver,bindings,component='StatusBadge'){
   const source=read(path),tree=ts.createSourceFile(path,source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.deepEqual(tree.parseDiagnostics,[]);
   const owner=tree.statements.find(node=>node.name?.text===ownerName),member=owner.members.find(node=>node.name?.text===method);assert.ok(member);
-  const calls=[];const visit=node=>{if((ts.isCallExpression(node)||ts.isEtsComponentExpression(node))&&node.expression.getText(tree)==='StatusBadge')calls.push(node.arguments[0]);ts.forEachChild(node,visit);};visit(member);assert.equal(calls.length,1);
+  const calls=[];const visit=node=>{if((ts.isCallExpression(node)||ts.isEtsComponentExpression(node))&&node.expression.getText(tree)===component)calls.push(node.arguments[0]);ts.forEachChild(node,visit);};visit(member);assert.equal(calls.length,1);
   const js=ts.transpileModule('const value=('+calls[0].getText(tree)+');',{compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
   return new Function(...Object.keys(bindings),js+';return value;').call(receiver,...Object.values(bindings));
  }
  const sourcePage='features/source/ui/SourceManagementPage.ets',rssPage='features/rss/ui/RssPage.ets',settingsPage='features/settings/ui/SettingsPage.ets';
- const Source=selectedProductionMethods(file(sourcePage),'SourceManagementPage',['sourceBadgeStatus','sourceBadgeLabel']),source=new Source();
- for(const [checkState,status,label]of [[undefined,'neutral','未检查'],['unchecked','neutral','未检查'],['checking','pending','检查中'],['passed','success','检查通过'],['failed','error','检查失败']]){
-  const params=argument(sourcePage,'SourceManagementPage','statusBadge',source,{source:{sourceId:'source',name:'书源',enabled:true,checkState}});
-  assert.deepEqual(params,{status,label});readable(open(params.status,params.label),label);
+ const Source=selectedProductionMethods(file(sourcePage),'SourceManagementPage',['sourceBadgeLabel','sourceActionLabel'],{sourceV9ReportTone});
+ const source=new Source();
+ Object.assign(source,{verificationRowTextId:()=>'',offlineDetectBadgeId:()=>'',sourceDetectEnabled:()=>true,sourceRowCommand:()=>()=>{}});
+ for(const [checkState,checkMaxLevel,tone,label]of [[undefined,undefined,'unverified','尚无有效检测报告'],
+  ['checking',undefined,'unverified','检测中'],['passed','L2','partial','检测通过'],
+  ['passed','L5','content','检测通过'],['failed','L3','earlyFailure','检测失败'],['failed','L5','deepFailure','检测失败']]){
+  const checkReports=checkMaxLevel===undefined?[]:[{stale:false,report:{steps:[{
+   level:checkMaxLevel,executed:true,status:checkState==='passed'?'pass':'fail',
+  }]}}];
+  const params=argument(sourcePage,'SourceManagementPage','detectButton',source,
+   {source:{sourceId:'source',name:'书源',enabled:true,checkState,checkReports},sourceV9ReportTone},'SourceV9DetectButton');
+  assert.equal(params.tone,tone);
+  assert.equal(params.checking,checkState==='checking');
+  assert.ok(params.label.includes(label));
  }
  const Rss=selectedProductionMethods(file(rssPage),'RssPage',['sourceBadgeStatus','sourceBadgeLabel']),rss=new Rss();
- for(const enabled of [true,false]){const params=argument(rssPage,'RssPage','sourceItem',rss,{sub:{enabled}});assert.deepEqual(params,{status:enabled?'enabled':'paused',label:enabled?'订阅已启用':'订阅已暂停'});readable(open(params.status,params.label),params.label);}
+ for(const enabled of [true,false]){const params=argument(rssPage,'RssPage','sourceItem',rss,{sub:()=>({enabled})});assert.deepEqual(params,{status:enabled?'enabled':'paused',label:enabled?'订阅已启用':'订阅已暂停'});readable(open(params.status,params.label),params.label);}
  for(const label of ['文件访问','通知权限','电池优化']){const params=argument(settingsPage,'SettingsPage','permissionRow',{}, {label});assert.deepEqual(params,{status:'unknown',label:`${label}状态未查询`});readable(open(params.status,params.label),params.label);}
- for(const consumerFile of [sourcePage,rssPage,settingsPage]){
+ for(const consumerFile of [rssPage,settingsPage]){
   const consumer=read(consumerFile),calls=verifySharedProducerInputCalls(badgeSource,consumer,{component:'StatusBadge',producerFile:badgePath,consumerFile});assert.equal(calls.length,1);assert.deepEqual(calls[0].keys.sort(),['label','status']);
   const wrong=consumer.replace('StatusBadge({','StatusBadge({ bg: "#fff",');assert.notEqual(wrong,consumer);assert.throws(()=>verifySharedProducerInputCalls(badgeSource,wrong,{component:'StatusBadge',producerFile:badgePath,consumerFile}),/illegal shared input bg/);
  }
  console.log('PASS actual native badge seven graphics/labels, density, reactive Props, Source facts, closed RSS/Settings compatibility and retired appearance negative controls; no device claim');
-}
-
-// Frozen old UI producer outputs, now consumed through the actual new Page.
-if(selectedCase==='responsive-chip') for(const g of golden.widths){const p=labeledIconControls(),owner=createReaderBuilderProbe(source,['chip'],p.dependencies,p.hooks).owner;
- Object.assign(owner,{appThemeScheme:'day',filterControlWidth:()=>g.availableWidth,rebuildSourceProjection(){}});owner.chip('有限状态',g.width,false,true);
- const actor=[...owner.children.values()].at(-1);const width=p.nodes(actor).find(n=>n.type==='Text').width;assert.ok(Number.isFinite(width)&&width>=0);if(g.availableWidth>0)assert.ok(width<=g.availableWidth,'current finite chip stays inside admitted width');}
-const syntax=createRequire(import.meta.url)((resolveEtsLoaderRoot())+'/lib/validate_ui_syntax.js');
-syntax.builderParamObjectCollection.set('PageBackBar',new Set(['trailing']));
-// Actual shared native icon hit target consumes the Page's real trailing slot.
-if(selectedCase==='trailing-tools') for(const scheme of ['day','night']){
- const p=labeledIconControls(),iconSource=readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderIconButton.ets',import.meta.url),'utf8');
- const Icon=iconButtonControls({properties:p.properties}).icon.Component;
- class Back{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id},params);}initialRender(){}}
- const owner=createReaderBuilderProbe(source,['backBar'],{...p.dependencies,ReaderIconButton:Icon,PageBackBar:Back},{...p.hooks,childSources:{...p.hooks.childSources,ReaderIconButton:iconSource,PageBackBar:readFileSync(new URL('../entry/src/main/ets/ui/chrome/PageBackBar.ets',import.meta.url),'utf8')}}).owner;
- let clicks=0;Object.assign(owner,{appThemeScheme:scheme,onOpenTools:()=>clicks++,onBack(){}});owner.backBar();
- const bar=[...owner.children.values()].find(c=>c instanceof Back);bar.trailing();
- const icon=[...owner.children.values()].find(c=>c instanceof Icon),nodes=p.nodes(icon),hit=nodes.find(n=>n.type==='Stack');
- assert.ok(hit&&nodes.some(n=>n.type==='Image'));hit.onClick();assert.equal(clicks,1);
-}
-
-console.log(`PASS Source actual Page→shared controls: ${count} frozen original SDK tuples/callbacks/retired physical actors + 12 actual responsive-width consumers`);
-
 }

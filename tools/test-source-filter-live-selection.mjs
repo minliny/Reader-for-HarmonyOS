@@ -5,7 +5,6 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
-import { sourceV9Primary } from '../entry/src/main/ets/features/source/presentation/SourceManagementV9.ts';
 import { readerSourceCategoryLabel } from '../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts';
 
 const root = new URL('../', import.meta.url);
@@ -24,7 +23,7 @@ const categories = [['all', '全部'], ['novel', '小说'], ['comic', '漫画']]
 function scenario(source) {
   const controls = foundationControls({ windowMetrics: () => ({ systemFontScale: 1.45 }) });
   const probe = createReaderBuilderProbe(source, ['statusValue', 'categoryValue', 'statusCounts', 'statusFilter', 'chip', 'statusCount', 'categoryFilter'], {
-    ...controls.dependencies, readerSourceCategoryLabel, sourceV9Primary,
+    ...controls.dependencies, readerSourceCategoryLabel, readerAppColor,
   }, controls.hooks);
   const parent = probe.owner;
   let rebuilds = 0;
@@ -94,7 +93,7 @@ if (selected.includes('sdk-selection')) {
   const source = read(pagePath);
   const live = scenario(source);
   assertSelection(live.status, value => `reader-source-status-${statuses.find(([, label]) => label === value)[0]}`,
-    'app.sourceUi.selected', 'TOK_CARD_BG');
+    'app.sourceUi.primary', 'TOK_CARD_BG');
   assertSelection(live.category, value => `source-category-${value}`, 'TOK_CARD_BG', 'Color.Transparent');
   assertCounts(live);
   const old = source.replace('private chip(label: string, verificationId: string)', 'private chip(label: string, verificationId: string, count: number)')

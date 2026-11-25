@@ -60,6 +60,9 @@ export struct ReaderDialogSurface {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop specId: DialogSpecId = 'book-removal';
   @Prop title: string = '';
+  /** Available width after the parent pane has applied its window insets. */
+  @Prop containerWidthVp: number = 0;
+  @Prop leadingActionWidthVp: number = 0;
   @Prop primarySurfaceColor: string | undefined = undefined;
   @Prop showCloseButton: boolean = false;
   @Prop actions: DialogActionView[] = [];
@@ -167,8 +170,8 @@ export struct ReaderDialogSurface {
         .fontFamily(MESSAGE_ACTION.fontFamily).fontWeight(MESSAGE_ACTION.fontWeight).fontSize(MESSAGE_ACTION.fontSizeFp).lineHeight(MESSAGE_ACTION.lineHeightFp as number)
         .fontColor(this.actionLabelColor(this.action(id)));
     }
-    .width(this.spec().actionsLayout === 'stack' ? '100%' : undefined)
-    .layoutWeight(this.spec().actionsLayout === 'stack' ? undefined : 1)
+    .width(this.spec().actionsLayout === 'stack' ? '100%' : this.fixedActionWidth(id))
+    .layoutWeight(this.spec().actionsLayout === 'stack' || this.fixedActionWidth(id) !== undefined ? undefined : 1)
     .constraintSize({ minHeight: this.actionHeight() }).padding({ top: 6, bottom: 6 })
     .opacity(this.action(id).enabled ? 1 : 0.45)
     .enabled(this.action(id).enabled)
@@ -181,6 +184,11 @@ export struct ReaderDialogSurface {
         this.onAction(id);
       }
     });
+  }
+
+  private fixedActionWidth(id: string): number | undefined {
+    return this.leadingActionWidthVp > 0 && this.actions[0]?.id === id
+      ? Math.min(this.leadingActionWidthVp, this.resolvedFrame().width / 3) : undefined;
   }
 
   private action(id: string): DialogActionView {
@@ -254,6 +262,10 @@ export struct ReaderDialogSurface {
       return new SurfaceHorizontalFrame(0, 0, 0);
     }
     const spec = this.spec();
+    if (this.containerWidthVp > 0) {
+      return resolveHorizontalFrame(this.containerWidthVp, 0, 0,
+        new SurfaceWidthSpec(spec.maxWidth, spec.edgeGap, spec.edgeGap));
+    }
     const metrics = readerWindowMetrics();
     return resolveHorizontalFrame(metrics.windowRect.width,
       readerInteractiveSafeLeft(metrics, spec.usesKeyboardSafeArea),

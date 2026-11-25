@@ -87,10 +87,10 @@ export struct ReaderSelect {
     .height(this.triggerHeight())
     .padding(0)
     .backgroundColor(Color.Transparent)
-    .borderRadius(this.triggerHeight() / 2)
-    .responseRegion({ x: 0, y: this.variant === 'appearanceLibrary' ? -APPEARANCE_HIT_OUTSET : 0,
+    .borderRadius(this.variant === 'sourceGroup' ? 10 : this.triggerHeight() / 2)
+    .responseRegion({ x: 0, y: this.variant === 'appearanceLibrary' ? -APPEARANCE_HIT_OUTSET : this.variant === 'sourceGroup' ? -2 : 0,
       width: '100%', height: this.variant === 'appearanceLibrary' ?
-        this.triggerHeight() + APPEARANCE_HIT_OUTSET * 2 : this.triggerHeight() })
+        this.triggerHeight() + APPEARANCE_HIT_OUTSET * 2 : this.variant === 'sourceGroup' ? 44 : this.triggerHeight() })
     .id(this.focusId)
     .accessibilityText(this.variant === 'sourceGroup' ? `分组：${this.value}` : this.value)
     .accessibilityDescription(this.isOpen ? '已展开' : '已收起')
@@ -154,6 +154,8 @@ export struct ReaderSelect {
         .fontFamily(TYPE_SELECT_DEFAULT_VALUE.fontFamily).fontWeight(TYPE_SELECT_DEFAULT_VALUE.fontWeight)
         .fontSize(TYPE_SELECT_DEFAULT_VALUE.fontSizeFp)
         .lineHeight(TYPE_SELECT_DEFAULT_VALUE.lineHeightFp as number).halfLeading(true)
+        .maxFontScale(this.variant === 'sourceGroup' ? (this.triggerHeight() - 2 * TOK_BORDER_W) /
+          (TYPE_SELECT_DEFAULT_VALUE.lineHeightFp as number) : undefined)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).textAlign(TextAlign.Start)
         .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       Image(this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down'))
@@ -164,9 +166,9 @@ export struct ReaderSelect {
     .id(this.variant === 'sourceGroup' && this.focusId.length > 0 ? `${this.focusId}:frame` : '')
     .width('100%').height(this.triggerHeight())
     .padding({ left: SELECT_PAD, right: SELECT_PAD })
-    .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
+    .backgroundColor(readerAppColor(this.variant === 'sourceGroup' ? 'app.sourceUi.field' : 'TOK_SURFACE_FIELD', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
-    .borderRadius(this.triggerHeight() / 2)
+    .borderRadius(this.variant === 'sourceGroup' ? 10 : this.triggerHeight() / 2)
     .alignItems(VerticalAlign.Center);
   }
 
@@ -198,6 +200,7 @@ export struct ReaderSelect {
 
   private triggerHeight(): number {
     if (this.variant === 'appearanceLibrary') return this.appearanceLibraryTriggerHeight(this.readerWindowMetricsRevision);
+    if (this.variant === 'sourceGroup') return 40;
     const style = TYPE_SELECT_DEFAULT_VALUE;
     return Math.max(TRIGGER_H, this.measuredValueHeight(style.fontSizeFp, style.fontFamily, style.fontWeight,
       style.lineHeightFp) + 16);

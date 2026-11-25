@@ -25,10 +25,11 @@ if (selected.length) {
   const { foundationControls, foundationSpecs, readerFoundationTokens } = await import('./lib/reader-foundation-control-probe.mjs');
   const { labeledIconControls, labeledIconSpecs } = await import('./lib/reader-labeled-icon-action-probe.mjs');
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { sourceV9ChromeControls } = await import('./lib/source-v9-chrome-sdk-probe.mjs');
   const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
   const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
   const { switchSpecs, toggleSource } = await import('./lib/reader-switch-control-probe.mjs');
-  const { sourceV9Primary, sourceV9ReportFill, sourceV9ReportTone } = await import('../entry/src/main/ets/features/source/presentation/SourceManagementV9.ts');
+  const { sourceV9DisplayUrl, sourceV9ReportFill, sourceV9ReportTone } = await import('../entry/src/main/ets/features/source/presentation/SourceManagementV9.ts');
   const { readerReadableFontScale, readerScaledControlHeight } = await import('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts');
   const { resolveSourceManagementLayout, SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP_GAP } =
     await import('../entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts');
@@ -37,7 +38,6 @@ if (selected.length) {
   const { ReaderWindowMetricsSnapshot, ReaderRectVp } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
   const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
   const { readerSourceCategoryLabel } = await import('../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
-  const { httpUrlHostname } = await import('../entry/src/main/ets/platform/network/HttpTransportPolicy.ts');
   const file = new URL('../entry/src/main/ets/features/source/ui/SourceManagementPage.ets', import.meta.url);
   const source = readFileSync(file, 'utf8');
   const shapes = [{ width: 320 }, { width: 366 }, { width: 460, originX: 240 }, { width: 700, originX: 256 }];
@@ -49,11 +49,12 @@ if (selected.length) {
     ...labeledIconSpecs(), ReaderWindowCoordinator: { metrics: () => metrics } };
   const Page = selectedProductionMethods(file, 'SourceManagementPage', ['fontScale', 'layoutBudget', 'footerControlHeight', 'footerFallbackHeight',
     'footerContentWidth', 'footerStacked', 'footerManageWidth', 'footerActionHeight'], deps);
-  const rowMembers = ['sourceRow', 'currentSourceRow', 'currentSourceInfo', 'sourceRenderKey', 'projectedSources', 'sourceLeading',
-    'sourceInfo', 'sourceDomain', 'sourceActions', 'detectButton', 'detectGlyph', 'loginButton', 'sourceSwitch',
+  const rowMembers = ['sourceRow', 'sourceRowContent', 'isFirstSource', 'isLastSource', 'currentSourceRow', 'currentSourceInfo',
+    'sourceRenderKey', 'projectedSources', 'sourceLeading', 'sourceInfo', 'sourceDomain', 'sourceActions',
+    'detectButton', 'loginInk', 'loginSurface', 'loginButton', 'sourceSwitch',
     'sourceBadgeLabel', 'sourceActionLabel', 'verificationRowId', 'verificationRowTextId'];
   const filterMembers = ['statusFilter', 'chip', 'statusCount', 'categoryFilter'];
-  const footerMembers = ['bottomActionBar', 'batchAction', 'sourceAddIcon'];
+  const footerMembers = ['bottomActionBar', 'batchAction', 'batchActionInk', 'sourceAddIcon'];
   const targets = [], budgets = [], samples = [];
   for (const { width, originX } of shapes) for (const scale of fontScales) {
     metrics.windowRect.width = width + (originX ?? 0);
@@ -68,16 +69,19 @@ if (selected.length) {
     const childHooks = { ...shared.hooks, childSources: { ...shared.hooks.childSources, ReaderToggle: toggleSource } };
     const toggleDeps = { ...controls.dependencies, ...switchSpecs(), readerAppColor };
     const { Component: ReaderToggle } = createReaderBuilderProbe(toggleSource, boundedMembers(toggleSource), toggleDeps, childHooks);
-    const dependencies = { ...shared.dependencies, ...readerFoundationTokens, ReaderToggle,
-      readerAppColor, readerSourceCategoryLabel, httpUrlHostname, sourceV9Primary, sourceV9ReportFill, sourceV9ReportTone,
-      SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP_GAP, readerLayoutCarrierResponseRegion: () => ({}) };
-    const { Component: Probe } = createReaderBuilderProbe(source, [...rowMembers, ...filterMembers, ...footerMembers], dependencies, childHooks);
+    const chrome = sourceV9ChromeControls({ ...shared.dependencies, ...readerFoundationTokens, ReaderToggle,
+      readerAppColor, readerSourceCategoryLabel, sourceV9DisplayUrl, sourceV9ReportFill, sourceV9ReportTone,
+      SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP_GAP, readerLayoutCarrierResponseRegion: () => ({}) }, childHooks);
+    const { Component: Probe } = createReaderBuilderProbe(source, [...rowMembers, ...filterMembers, ...footerMembers],
+      chrome.dependencies, chrome.hooks);
     function actor(book) {
       const rendered = new Probe(undefined, {});
       Object.assign(rendered, { appThemeScheme: 'day', verificationOpening: '', contentFrame: page.contentFrame,
         fontScale: page.fontScale.bind(page), footerStacked: page.footerStacked.bind(page),
-        layoutBudget: page.layoutBudget.bind(page), footerManageWidth: page.footerManageWidth.bind(page), footerActionHeight: page.footerActionHeight.bind(page),
+        layoutBudget: page.layoutBudget.bind(page), footerManageWidth: page.footerManageWidth.bind(page),
+        footerActionHeight: page.footerActionHeight.bind(page), footerControlHeight: page.footerControlHeight.bind(page),
         batchMode: page.batchMode, batchSourceIds: page.batchMode ? [book.sourceId] : [], temporaryBackIdentity: 'test-source',
+        projectedSources: [book],
         sourceDetectEnabled: () => true, sourceActionEnabled: () => true, sourceToggleBusy: () => false,
         sourceSwitchValue: (_sourceId, value) => value, sourceSwitchName: (_sourceId, name) => name,
         sourceRowCommand: () => () => {}, offlineDetectBadgeId: () => '', verificationRowActionsCurrent: () => false,
@@ -107,6 +111,10 @@ if (selected.length) {
       const nodes = shared.nodes(rendered);
       const row = nodes.find(node => node.type === 'Column' && node.constraintSize?.minHeight === budget.rowMinHeight);
       assert.ok(row); assert.equal(row.width, contentWidth); assert.equal(row.height, undefined, 'row can grow from real text measurement');
+      const paddedRow = batchMode ? nodes.find(node => node.type === 'Button' && node.accessibilityText === book.name) : row;
+      assert.equal(paddedRow.padding, 10);
+      assert.equal(row.backgroundColor, readerAppColor('TOK_CARD_BG', 'day'));
+      assert.deepEqual(row.borderRadius, { topLeft: 14, topRight: 14, bottomLeft: 14, bottomRight: 14 });
       const leading = nodes.find(node => node.type === 'Stack' && node.width === 34 && node.height === 34);
       assert.ok(leading, 'the SDK stamp/selection carrier pays the fixed 34vp lane');
       const title = nodes.find(node => node.type === 'Text' && node.create === book.name);
@@ -119,7 +127,9 @@ if (selected.length) {
       const logins = nodes.filter(node => node.type === 'Button' && node.width === 58 && node.height === 26);
       const switches = nodes.filter(node => node.type === 'Toggle' && node.width === 44 && node.height === 26);
       const actionWidths = [...logins, ...detections, ...switches].map(node => node.width);
-      assert.equal(nodes.filter(node => node.type === 'Checkbox').length, batchMode ? 1 : 0);
+      const roundCheck = nodes.find(node => node.type === 'Stack' && node.width === 20 && node.height === 20);
+      assert.equal(Boolean(roundCheck), batchMode);
+      if (roundCheck) assert.equal(roundCheck.backgroundColor, readerAppColor('app.sourceUi.primary', 'day'));
       assert.equal(detections.length, batchMode ? 0 : 1);
       assert.equal(logins.length, batchMode || !login ? 0 : 1);
       assert.equal(switches.length, batchMode ? 0 : 1);
@@ -137,24 +147,26 @@ if (selected.length) {
         'expanded Detect hit area stays out of the adjacent controls');
         if (login) {
           assert.deepEqual(logins[0].responseRegion, { x: 0, y: -9, width: 58, height: 44 });
-          const loginMark = nodes.find(node => node.type === 'Text' && node.create === '?');
-          assert.equal(loginMark.width, 13);
-          assert.equal(loginMark.height, 13);
-          assert.equal(loginMark.fontSize, '9vp', 'decorative login glyph stays inside its fixed 13vp status circle');
+          const loginMark = nodes.find(node => node.type === 'Stack' && node.width === 13 && node.height === 13);
+          assert.equal(loginMark.border.width, 1);
+          assert.ok(nodes.some(node => node.type === 'Image' && node.width === 9 && node.height === 9));
         }
       } else {
-        assert.deepEqual([budget.trailingWidth, budget.actionsHeight, budget.actionRowCount], [0, 0, 0]);
+        assert.equal(budget.trailingWidth, Math.ceil(35 * scale));
+        assert.deepEqual([budget.actionsHeight, budget.actionRowCount], [34, 1]);
+        assert.ok(nodes.some(node => node.type === 'Text' && node.create === '已启用' && node.maxLines === 1));
       }
       const gap = readerFoundationTokens.TOK_SPACE_XS;
-      const rowWidth = budget.rowForm === 'inline' ? leading.width + gap + budget.textMinWidth +
-        (batchMode ? 0 : gap + budget.trailingWidth) : Math.max(budget.trailingWidth, leading.width,
+      const rowWidth = budget.rowForm === 'inline' ? leading.width + gap + budget.textMinWidth + gap +
+        budget.trailingWidth : Math.max(budget.trailingWidth, leading.width,
         budget.textMinWidth + (budget.rowForm === 'stacked-actions' ? leading.width + gap : 0));
       const infoHeight = (title.lineHeight + domain.lineHeight) * scale + 3;
       const contentHeight = budget.rowForm === 'stacked-leading' ? leading.height + gap + infoHeight :
         Math.max(leading.height, infoHeight);
       const rowHeight = budget.rowForm === 'inline' ? Math.max(contentHeight, budget.actionsHeight) :
-        contentHeight + (batchMode ? 0 : gap + budget.actionsHeight);
-      recordBudget('row', contentWidth, rowWidth + gap, budget.rowMinHeight, rowHeight,
+        contentHeight + gap + budget.actionsHeight;
+      recordBudget('row', contentWidth, rowWidth + paddedRow.padding * 2 + 2, budget.rowMinHeight,
+        rowHeight + paddedRow.padding * 2 + 2,
         budget.rowForm === 'inline' ? 'single-line' : 'stacked', !batchMode && login);
       if (!batchMode && login) {
         for (const [ref, button] of [['source-detect', detections[0]], ['source-login', logins[0]]]) {
@@ -171,6 +183,7 @@ if (selected.length) {
     const dockActions = batchNodes.filter(node => node.type === 'Button');
     assert.deepEqual(dockActions.map(node => node.accessibilityText), ['启用', '停用', '移至分组', '检测', '删除']);
     assert.ok(dockActions.every(node => node.layoutWeight === 1 && node.height === '100%'));
+    assert.equal(batchNodes.filter(node => node.type === 'Image' && node.width === 16 && node.height === 16).length, 5);
     page.batchMode = false;
     const before = page.contentFrame;
     page.contentFrame = () => assert.fail('footer fallback must not recurse into pageGeometry');
@@ -189,11 +202,16 @@ if (selected.length) {
     assert.equal(status.width, contentWidth); assert.equal(category.width, contentWidth);
     assert.equal(status.create.space, SOURCE_STATUS_CHIP_GAP);
     assert.equal(statusButtons.length, 4); assert.ok(statusButtons.every(node => node.layoutWeight === 1));
-    assert.equal(statusButtons.find(node => node.id === 'reader-source-status-all').backgroundColor, sourceV9Primary('day'));
+    assert.equal(statusButtons.find(node => node.id === 'reader-source-status-all').backgroundColor,
+      readerAppColor('app.sourceUi.primary', 'day'));
+    assert.notEqual(readerAppColor('app.sourceUi.primary', 'day'), sourceV9ReportFill('content', 'day'));
+    assert.ok(statusButtons.filter(node => node.id !== 'reader-source-status-all')
+      .every(node => node.backgroundColor === readerAppColor('TOK_CARD_BG', 'day')));
     assert.equal(parentNodes.find(node => node.type === 'Text' && node.create === '全部 8').fontColor,
       readerAppColor('app.sourceUi.onPrimary', 'day'));
     assert.equal(categoryButtons.length, 3); assert.ok(categoryButtons.every(node => node.layoutWeight === 1));
-    const statusHeight = statusButtons[0].constraintSize.minHeight;
+    const statusHeight = statusButtons[0].height;
+    assert.ok(statusButtons.every(node => node.height === statusHeight));
     assert.equal(statusHeight, category.height);
     const chipWidth = (status.width - SOURCE_STATUS_CHIP_GAP * 3) / 4;
     recordTarget('source-filter-chip', chipWidth, statusHeight);
@@ -203,6 +221,8 @@ if (selected.length) {
     const manageSlot = parentSlots.find(node => typeof node.onAreaChange === 'function');
     const addSlot = parentSlots.find(node => node !== manageSlot);
     assert.ok(footer && manageSlot && addSlot, 'SDK Flex owns two custom-button wrappers');
+    assert.equal(manageSlot.height, page.footerControlHeight());
+    assert.equal(addSlot.height, manageSlot.height, 'both ordinary dock slots have the same authored height');
     if (stacked) {
       assert.equal(manageSlot.width, '100%'); assert.equal(addSlot.width, '100%');
     } else {
@@ -220,7 +240,7 @@ if (selected.length) {
       assert.ok(targetWidth > 0);
       recordTarget(ref, targetWidth, page.footerControlHeight());
     }
-    assert.equal(footer.constraintSize.minHeight, height);
+    assert.equal(footer.constraintSize.minHeight, Math.max(48, height));
     recordBudget('footer', contentWidth, contentWidth, footer.constraintSize.minHeight, height, stacked ? 'stacked' : 'single-line');
   }
   const paths = [
@@ -270,6 +290,7 @@ if (selected.length) {
     'entry/src/main/ets/features/source/presentation/SourceSwitchPresentation.ets',
     'entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts',
     'entry/src/main/ets/features/source/ui/SourceManagementPage.ets',
+    'entry/src/main/ets/features/source/ui/SourceV9Chrome.ets',
     'entry/src/main/ets/platform/network/HttpTransportPolicy.ts',
     'entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets',
     'entry/src/main/ets/ui/controls/ReaderButton.ets',
@@ -343,6 +364,7 @@ if (selected.length) {
     'tools/lib/reading-entry-presentation-probe.mjs',
     'tools/lib/selected-production-methods.mjs',
     'tools/lib/source-switch-presentation-probe.mjs',
+    'tools/lib/source-v9-chrome-sdk-probe.mjs',
     'tools/lib/tool-environment.mjs',
     'tools/test-source-management-layout.mjs',
   ];

@@ -188,20 +188,34 @@ export struct ArkWebExecutionHost {
   private safeHeight(): number {
     const metrics = readerWindowMetrics();
     const bottom = readerKeyboardHostBottom(metrics, this.hostY,
-      this.hostHeight > 0 ? this.hostHeight : metrics.windowRect.height, this.hostX,
-      this.hostWidth > 0 ? this.hostWidth : metrics.windowRect.width);
+      this.hostHeight > 0 ? this.hostHeight : metrics.windowRect.height,
+      this.hostX + this.safeLeft(), this.safeWidth());
     const bounds = this.interactiveBounds;
     const paneBottom = bounds === undefined ? bottom : Math.min(bottom, bounds.top + bounds.height - this.hostY);
     return Math.max(0, paneBottom - this.safeTop());
   }
   private toolbarHeight(): number {
-    const lines = 14.5 * 1.5 + (this.currentUrl.length > 0 ? 10.5 * 1.5 + 2 : 0);
+    const lines = 14.5 * 1.5 + (this.currentHost.length > 0 ? 10.5 * 1.5 + 2 : 0);
     return Math.min(this.safeHeight(), Math.max(this.measuredToolbarHeight, 48, lines * this.fontScale() + 4));
   }
 
   private controlsHeight(): number {
     return Math.min(Math.max(0, this.safeHeight() - this.toolbarHeight()),
-      Math.max(44, this.measuredControlsHeight, 12 * 1.5 * this.fontScale() + 12));
+      Math.max(this.measuredControlsHeight, (4 / this.controlsColumns()) * this.controlsActionHeight()));
+  }
+
+  private controlsColumns(): number {
+    const available = Math.max(0, this.safeWidth() - 16);
+    const longest = 5 * 12 * this.fontScale() + 4;
+    return available >= 4 * Math.max(44, longest) ? 4 : 2;
+  }
+
+  private controlsActionHeight(): number {
+    const scale = this.fontScale();
+    const width = Math.max(0, this.safeWidth() - 16) / this.controlsColumns();
+    const charsPerLine = Math.max(1, Math.floor((width - 4) / (12 * scale)));
+    const lines = Math.ceil(5 / charsPerLine);
+    return Math.max(44, Math.ceil(lines * 18 * scale + 10));
   }
 
   private toolbarActionWidth(): number {
@@ -230,10 +244,11 @@ export struct ArkWebExecutionHost {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Text(text)
         .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(12).fontWeight(FontWeight.Medium)
-        .fontColor(readerAppColor(danger ? 'app.sourceUi.danger' : 'app.web.ink', this.appThemeScheme))
+        .fontColor(readerAppColor(danger ? 'app.sourceUi.danger' : 'app.sourceUi.primary', this.appThemeScheme))
         .opacity(enabled ? 1 : 0.45).textAlign(TextAlign.Center).accessibilityLevel('no');
     }
-    .layoutWeight(1).constraintSize({ minWidth: 44, minHeight: 44 }).padding({ left: 2, right: 2, top: 4, bottom: 4 })
+    .width(this.controlsColumns() === 4 ? '25%' : '50%')
+    .constraintSize({ minWidth: 44, minHeight: this.controlsActionHeight() }).padding({ left: 2, right: 2, top: 4, bottom: 4 })
     .backgroundColor(Color.Transparent).borderRadius(999).enabled(enabled)
     .attributeModifier(new ReaderActionAccessibility(text, enabled, false, true, undefined, 'nativeButton'))
     .onClick(action);
@@ -345,7 +360,7 @@ export struct ArkWebExecutionHost {
                 .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
                 .fontSize(13)
                 .fontWeight(FontWeight.Medium)
-                .fontColor(readerAppColor('app.web.muted', this.appThemeScheme))
+                .fontColor(readerAppColor('app.sourceUi.primary', this.appThemeScheme))
                 .accessibilityLevel('no');
             }
               .width(this.toolbarActionWidth()).constraintSize({ minWidth: 44, minHeight: 44 })
@@ -411,7 +426,7 @@ export struct ArkWebExecutionHost {
           }
 
           Scroll() {
-            Row() {
+            Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center }) {
               this.browserAction('后退', this.canGoBack && !this.clearing && !this.pageLoading, false,
                 (): void => this.navigate(surface, 'back'));
               this.browserAction('前进', this.canGoForward && !this.clearing && !this.pageLoading, false,
@@ -422,7 +437,7 @@ export struct ArkWebExecutionHost {
                 (): void => this.clearSession(surface));
             }
             .width(this.safeWidth()).constraintSize({ minHeight: 44 }).padding({ left: 8, right: 8 })
-            .onAreaChange(this.controlsAreaHandler(surface)).alignItems(VerticalAlign.Center)
+            .onAreaChange(this.controlsAreaHandler(surface))
             .backgroundColor(readerAppColor('app.web.surface', this.appThemeScheme))
             .border({ width: { top: 0.5 }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
           }

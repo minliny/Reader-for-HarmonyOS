@@ -628,7 +628,9 @@ export struct ReaderSearchField {
           .onKeyPreIme((event: KeyEvent): boolean => this.onDirectoryInputKey(inputFocusId, event))
           .layoutWeight(1)
           .height(this.inputHeight())
-          .attributeModifier(new ReaderSearchInputTarget(this.variant, this.inputHeight(), this.directoryFontScale(),
+          .attributeModifier(new ReaderSearchInputTarget(this.variant, this.inputHeight(),
+            this.sourceV9Chrome ? Math.min(this.directoryFontScale(),
+              this.inputHeight() / (TYPE_SEARCH_SOURCE_INPUT.lineHeightFp as number)) : this.directoryFontScale(),
             this.directoryFocusAllowed ? inputFocusId : '',
             (focused: boolean): void => this.onDirectoryInputFocus(inputFocusId, focused),
             (area: Area): void => this.onDirectoryInputArea(inputFocusId, area), this.directoryKeyboardOnFocus,
@@ -679,12 +681,12 @@ export struct ReaderSearchField {
       Image(this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear'))
         .width(SEARCH_CONTROL_CLEAR_ICON_SIZE).height(SEARCH_CONTROL_CLEAR_ICON_SIZE)
         .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
-    }.width(SEARCH_CONTROL_CLEAR_SLOT).height(SEARCH_CONTROL_MIN_TARGET).padding({ left: 10 })
+    }.width(SEARCH_CONTROL_CLEAR_SLOT).height(this.sourceV9Chrome ? 40 : SEARCH_CONTROL_MIN_TARGET).padding({ left: 10 })
       .backgroundColor(Color.Transparent)
       .responseRegion({
         // The adjacent group chevron keeps its whole 44vp target.
         x: this.variant === 'sourceGroup' ? SEARCH_CONTROL_CLEAR_SLOT - SEARCH_CONTROL_MIN_TARGET : -SEARCH_CONTROL_CLEAR_END_INSET,
-        y: 0, width: SEARCH_CONTROL_MIN_TARGET, height: SEARCH_CONTROL_MIN_TARGET,
+        y: this.sourceV9Chrome ? -2 : 0, width: SEARCH_CONTROL_MIN_TARGET, height: SEARCH_CONTROL_MIN_TARGET,
       })
       .id(this.isBookField() ? this.bookPanelClearId : '')
       .focusOnTouch(false)
@@ -758,9 +760,11 @@ export struct ReaderSearchField {
       return readerScaledControlHeight(44, TYPE_SEARCH_RSS_HINT.lineHeightFp ?? TYPE_SEARCH_RSS_HINT.fontSizeFp * 1.5,
         this.directoryFontScale());
     }
-    if (this.variant === 'sourceGroup') return Math.max(SEARCH_CONTROL_MIN_TARGET, this.naturalFieldHeightVp);
+    if (this.variant === 'sourceGroup') return this.sourceV9Chrome ?
+      Math.max(40, this.naturalFieldHeightVp) : Math.max(SEARCH_CONTROL_MIN_TARGET, this.naturalFieldHeightVp);
     if (this.variant === 'sourceManagement') {
-      return readerScaledControlHeight(this.sourceV9Chrome ? 40 : 44, TYPE_SEARCH_SOURCE_INPUT.lineHeightFp ??
+      if (this.sourceV9Chrome) return 40;
+      return readerScaledControlHeight(44, TYPE_SEARCH_SOURCE_INPUT.lineHeightFp ??
         TYPE_SEARCH_SOURCE_INPUT.fontSizeFp * 1.5, this.directoryFontScale());
     }
     if (this.variant === 'readerDirectory') {
@@ -813,7 +817,7 @@ export struct ReaderSearchField {
   }
 
   private fieldBackgroundColor(): string {
-    return readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme);
+    return readerAppColor(this.sourceV9Chrome ? 'app.sourceUi.field' : 'TOK_SURFACE_FIELD', this.appThemeScheme);
   }
 
   private fieldBorderWidth(): number {
@@ -822,6 +826,7 @@ export struct ReaderSearchField {
   }
 
   private fieldBorderColor(): string {
+    if (this.sourceV9Chrome) return readerAppColor('TOK_LINE_STRONG', this.appThemeScheme);
     if (this.catalogChrome) return readerAppColor('TOK_LINE', this.appThemeScheme);
     return this.variant === 'sourceManagement' ? readerAppColor('app.border.searchField', this.appThemeScheme) : readerAppColor('TOK_BORDER', this.appThemeScheme);
   }
