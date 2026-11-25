@@ -296,8 +296,15 @@ if(selectedCase==='http-owner') {
 for (const releaseFails of [false, true]) {
   const host = Object.create(hostModule.HarmonyHttpTtsHost.prototype);
   const calls = [];
+  let pendingReleaseFailure = releaseFails;
   const player = { state: 'playing', async stop() { calls.push('stop'); throw Error('stop failed'); },
-    async release() { calls.push('release'); if (releaseFails) throw Error('release failed'); } };
+    async release() {
+      calls.push('release');
+      if (pendingReleaseFailure) {
+        pendingReleaseFailure = false;
+        throw Error('release failed');
+      }
+    } };
   Object.assign(host, { player, speakGeneration: 0, networkGeneration: 0 });
   const stopped = host.stop();
   assert.deepEqual(calls, ['stop'], 'native stop dispatches before awaiting anything');
