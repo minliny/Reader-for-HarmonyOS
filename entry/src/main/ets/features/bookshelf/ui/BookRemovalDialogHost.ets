@@ -1,7 +1,7 @@
 import { BookRemovalDialog } from './BookRemovalDialog';
 import { BookRemovalDialogPresentation, type BookRemovalDialogHandle } from '../presentation/BookRemovalDialogPresentation';
 import { readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
-import { readerReduceMotionFromStorage } from '../../../ui/foundation/ReaderMotionPolicy';
+import { readerMotionReducedFadeParam, readerReduceMotionFromStorage } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 
 /** Mounted ArkUI owner for the native dialog. The scene supplies admission
@@ -11,6 +11,7 @@ export struct BookRemovalDialogHost {
   presentation: BookRemovalDialogPresentation | undefined;
   private detach: (() => void) | undefined;
   @State private backdropTicket: number = 0;
+  @State private backdropOpacity: number = 0;
   private backdropSequence: number = 0;
 
   aboutToAppear(): void {
@@ -21,7 +22,7 @@ export struct BookRemovalDialogHost {
   }
 
   aboutToDisappear(): void {
-    this.backdropTicket = 0;
+    this.clearBackdrop(this.backdropTicket);
     this.detach?.();
     this.detach = undefined;
   }
@@ -31,18 +32,39 @@ export struct BookRemovalDialogHost {
     const reducedMotion = readerReduceMotionFromStorage();
     const curve = readerMotionStandardCurve();
     const scheme = AppStorage.get<string>('readerAppScheme') ?? 'day';
+    const openDuration = 220;
+    const closeDuration = 180;
+    let backdropExiting = false;
+    const fadeBackdrop = (opacity: number, duration: number, onFinish?: () => void): void => {
+      if (this.backdropTicket !== backdropTicket) return;
+      const update = (): void => { this.backdropOpacity = opacity; };
+      try {
+        this.getUIContext().animateTo(reducedMotion ? readerMotionReducedFadeParam(onFinish) :
+          { duration, curve, onFinish }, update);
+      } catch (_detached) {
+        update();
+        onFinish?.();
+      }
+    };
+    const beginBackdropExit = (): void => {
+      if (backdropExiting || this.backdropTicket !== backdropTicket) return;
+      backdropExiting = true;
+      fadeBackdrop(0, closeDuration, (): void => this.clearBackdrop(backdropTicket));
+    };
     const controller: CustomDialogController = new CustomDialogController({
       builder: (): void => this.dialogContent(message, id, controller, presentation, reducedMotion),
       alignment: DialogAlignment.Center,
       customStyle: true,
       autoCancel: true,
       maskColor: readerAppColor('app.scrim.modal', scheme),
-      // The native transition moves the whole dialog, so the reduced mode fades only its content.
-      openAnimation: { duration: reducedMotion ? 0 : 220, curve },
-      closeAnimation: { duration: reducedMotion ? 0 : 180, curve },
+      // Reduced motion leaves the native dialog geometry still.
+      openAnimation: { duration: reducedMotion ? 0 : openDuration, curve },
+      closeAnimation: { duration: reducedMotion ? 0 : closeDuration, curve },
       cancel: (): void => presentation.nativeDismissed(id),
+      onWillDisappear: beginBackdropExit,
       onDidDisappear: (): void => {
-        this.clearBackdrop(backdropTicket);
+        // Fallback when the native dismissal did not deliver its start event.
+        beginBackdropExit();
         presentation.nativeDismissed(id);
       },
     });
@@ -51,6 +73,7 @@ export struct BookRemovalDialogHost {
         this.backdropTicket = backdropTicket;
         try {
           controller.open();
+          if (!backdropExiting) fadeBackdrop(1, openDuration);
         } catch (error) {
           this.clearBackdrop(backdropTicket);
           throw error as Error;
@@ -69,7 +92,9 @@ export struct BookRemovalDialogHost {
   }
 
   private clearBackdrop(ticket: number): void {
-    if (this.backdropTicket === ticket) this.backdropTicket = 0;
+    if (this.backdropTicket !== ticket) return;
+    this.backdropOpacity = 0;
+    this.backdropTicket = 0;
   }
 
   @Builder
@@ -88,6 +113,7 @@ export struct BookRemovalDialogHost {
       .height(this.backdropTicket > 0 ? '100%' : 0)
       .backgroundColor(Color.Transparent)
       .backdropBlur(this.backdropTicket > 0 ? 6 : 0)
+      .opacity(this.backdropOpacity)
       .hitTestBehavior(HitTestMode.None)
       .accessibilityLevel('no-hide-descendants')
       .focusable(false);

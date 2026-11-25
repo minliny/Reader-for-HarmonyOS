@@ -123,6 +123,7 @@ export struct ReaderLibrarySearchSurface {
   private fromHistory: number = 0;
   private fromResults: number = 0;
   private fromScrim: number = 0;
+  private fromShadowStrength: number = 1;
   private toSurface: number = 0;
   private toHistory: number = 0;
   private toResults: number = 0;
@@ -139,6 +140,7 @@ export struct ReaderLibrarySearchSurface {
   @State private measuredHistoryFeedbackKey: string = '';
   private lastCardSuppressed: boolean = false;
   private lastCardCoverageScope: string = '';
+  private cardCoverageRevision: number = 0;
   private fieldFocused: boolean = false;
   private automaticInputFocusAllowed: boolean = true;
   private unbindInputBack: (() => void) | undefined;
@@ -182,6 +184,7 @@ export struct ReaderLibrarySearchSurface {
     this.fromHistory = 0;
     this.fromResults = 0;
     this.fromScrim = 0;
+    this.fromShadowStrength = 1;
     this.applyTargets(this.mode);
     this.transitionKind = this.mode === 'results' ? 'submit' : 'open';
     this.transitionDurationMs = this.durationFor(this.transitionKind);
@@ -200,6 +203,7 @@ export struct ReaderLibrarySearchSurface {
   aboutToDisappear(): void {
     this.mounted = false;
     this.generation += 1;
+    this.cardCoverageRevision += 1;
     this.unbindInputBack?.();
     this.unbindInputBack = undefined;
     this.unbindInputFocusReady?.();
@@ -251,8 +255,9 @@ export struct ReaderLibrarySearchSurface {
       this.activeNavigation = this.navigationGeneration;
       this.activeMounting = this.mounting;
       this.activeIdentity = this.identity;
-      this.publishContinueCardCoverage(next === 'input' && this.resolvedHistoryViewport().suppressContinueCard);
+      this.publishContinueCardCoverage(this.resolvedHistoryViewport().suppressContinueCard);
       if (this.reduceMotion && this.transitionKind !== 'none' && !this.reducedTransition) {
+        this.fromShadowStrength = this.headerShadowStrength();
         this.beginReducedTransition(++this.generation);
       }
       return;
@@ -262,6 +267,7 @@ export struct ReaderLibrarySearchSurface {
     this.fromHistory = this.historyProgress();
     this.fromResults = this.resultsProgress();
     this.fromScrim = this.scrimProgress();
+    this.fromShadowStrength = this.headerShadowStrength();
     this.currentMode = next;
     this.measurementKey += 1;
     const token = ++this.generation;
@@ -272,7 +278,6 @@ export struct ReaderLibrarySearchSurface {
     this.automaticInputFocusAllowed = next === 'input';
     if (next !== 'input') this.fieldFocused = false;
     this.applyTargets(next);
-    this.retargetHistoryViewport();
     this.reducedTransition = false;
     this.reducedSearchOpacity = 1;
     this.transitionKind = this.transitionFor(previous, next);
@@ -280,6 +285,7 @@ export struct ReaderLibrarySearchSurface {
     this.transitionStartedMs = readerMotionNowMs();
     this.elapsed = 0;
     this.displayedSurfaceProgress = this.sampleSurfaceProgress();
+    this.retargetHistoryViewport();
     if (next === 'results' || next === 'idle') this.getUIContext().getFocusController().clearFocus();
     if (next !== 'idle') this.searchMounted = true;
     if (this.transitionKind === 'none' || this.transitionDurationMs <= 0) this.completeTransition(true);
@@ -318,7 +324,7 @@ export struct ReaderLibrarySearchSurface {
     const viewport = this.resolvedHistoryViewport();
     const limit = this.historyLimit();
     this.historyHeight = viewport.height;
-    this.publishContinueCardCoverage(this.mode === 'input' && viewport.suppressContinueCard);
+    this.publishContinueCardCoverage(viewport.suppressContinueCard);
     if (this.displayedHistoryViewport === viewport.height && this.displayedHistoryLimit === limit) return;
     const publish = (): void => {
       this.displayedHistoryViewport = viewport.height;
@@ -327,17 +333,21 @@ export struct ReaderLibrarySearchSurface {
     if (instant || this.reduceMotion) publish();
     else this.getUIContext().animateTo(motionAnimateParam('search.history.resize'), publish);
   }
-  private publishContinueCardCoverage(suppressed: boolean): void {
+  private publishContinueCardCoverage(inputWouldCover: boolean): void {
+    const suppressed = this.mode === 'input' ? inputWouldCover :
+      this.lastCardSuppressed && this.historyProgress() > .01;
     const scope = `${this.identity}:${this.navigationGeneration}:${this.mounting}`;
     // The retained surface may still cover the card after its scope changes.
     const publish = suppressed !== this.lastCardSuppressed || (suppressed && scope !== this.lastCardCoverageScope);
     this.lastCardCoverageScope = scope;
     this.lastCardSuppressed = suppressed;
     if (publish) {
-      const token = this.generation, identity = this.identity, navigation = this.navigationGeneration, mounting = this.mounting;
+      // Coverage can outlive a motion generation while history is still visible.
+      const revision = ++this.cardCoverageRevision;
+      const identity = this.identity, navigation = this.navigationGeneration, mounting = this.mounting;
       this.getUIContext().postFrameCallback(new LibrarySearchFrame((): void => {
-        if (this.mounted && token === this.generation && identity === this.identity && navigation === this.navigationGeneration &&
-          mounting === this.mounting && scope === this.lastCardCoverageScope && suppressed === this.lastCardSuppressed)
+        if (this.mounted && revision === this.cardCoverageRevision && identity === this.identity &&
+          navigation === this.navigationGeneration && mounting === this.mounting)
           this.onHistoryCoverageChanged(suppressed, identity, navigation, mounting);
       }));
     }
@@ -356,6 +366,9 @@ export struct ReaderLibrarySearchSurface {
         else {
           this.elapsed = next;
           this.displayedSurfaceProgress = this.sampleSurfaceProgress();
+          if (this.mode !== 'input' && this.lastCardSuppressed && this.historyProgress() <= .01) {
+            this.publishContinueCardCoverage(false);
+          }
           running = true;
         }
       }
@@ -375,7 +388,10 @@ export struct ReaderLibrarySearchSurface {
     this.displayedSurfaceProgress = this.toSurface;
     this.elapsed = 0;
     if (this.mode === 'idle') this.searchMounted = false;
-    if (this.mode !== 'input') this.fieldFocused = false;
+    if (this.mode !== 'input') {
+      this.fieldFocused = false;
+      this.publishContinueCardCoverage(false);
+    }
     if (this.mode === 'input' && wasOpen) this.scheduleInputFocus(token, 0);
     if (this.activeIdentity === this.identity && this.activeNavigation === this.navigationGeneration &&
       this.activeMounting === this.mounting) {
@@ -425,10 +441,6 @@ export struct ReaderLibrarySearchSurface {
   private segment(startMs: number, durationMs: number, entry: MotionSpecEntry): number {
     return motionSegment(this.elapsed, startMs, durationMs, (fraction: number): number =>
       (entry.curve as curves.ICurve).interpolate(fraction));
-  }
-  private transitionFraction(): number {
-    if (this.transitionDurationMs <= 0) return 1;
-    return Math.max(0, Math.min(1, this.elapsed / this.transitionDurationMs));
   }
   private backFraction(): number { return this.segment(0, this.backSpec.durationMs, this.backSpec); }
   private sampleSurfaceProgress(): number {
@@ -487,12 +499,7 @@ export struct ReaderLibrarySearchSurface {
       const end = this.backSpec.durationMs * this.editCollapseFraction;
       return this.blend(this.fromScrim, this.toScrim, this.segment(0, end, this.backSpec));
     }
-    if (this.transitionKind === 'back') {
-      const progress = this.transitionFraction();
-      const veil = this.fromResults > .99 ? 1 : Math.min(1, progress / .06);
-      const release = 1 - motionSegment(progress, .55, .45, (fraction: number): number => fraction);
-      return Math.max(this.fromScrim * (1 - progress), veil * release);
-    }
+    if (this.transitionKind === 'back') return this.blend(this.fromScrim, this.toScrim, this.backFraction());
     return this.toScrim;
   }
   private inputInteractive(): boolean {
@@ -901,7 +908,10 @@ export struct ReaderLibrarySearchSurface {
     return readerAppColor(this.scheme === 'night' || this.historyProgress() > .01 ?
       'app.search.panelBorder' : 'app.border.control', this.scheme);
   }
-  private headerVeil(): boolean { return this.mode === 'idle' && this.historyProgress() <= .01; }
+  private headerVeil(): boolean {
+    return this.mode === 'idle' && !this.searchMounted && this.transitionKind === 'none' &&
+      this.resultsProgress() <= .01 && this.historyProgress() <= .01;
+  }
   private headerSurfaceGeometryKey(): string {
     const metrics = ReaderWindowCoordinator.metrics();
     return JSON.stringify([metrics.windowRect.width, this.horizontalInset(true), this.horizontalInset(false),
@@ -978,18 +988,38 @@ export struct ReaderLibrarySearchSurface {
           .accessibilityLevel(this.historyInteractive() ? 'auto' : 'no-hide-descendants');
       }
       }.width('100%')
-        .backgroundColor(this.headerVeil() ? Color.Transparent : readerAppColor('app.search.panelSurface', this.scheme))
-        .backgroundEffect(this.headerVeil() ? readerHeaderVeilMaterial(this.headerScrolled, this.scheme) : undefined)
-        .border({ width: this.spec.borderWidth, color: this.headerVeil() ? readerHeaderVeilBorder(this.scheme) : this.panelBorderColor() })
-        .borderRadius(this.headerMaterialRadius()).clip(true).hitTestBehavior(HitTestMode.Default)
-        .shadow(readerSurfaceElevation(this.headerVeil() ? 'raised' : 'fixed', this.scheme))
-        .onAreaChange(this.headerSurfaceAreaChange());
+        .borderRadius(Math.max(0, this.headerMaterialRadius() - this.spec.borderWidth)).clip(true);
     }.width('100%').clip(false)
-      .shadow(this.headerStackShadow());
+      .backgroundColor(this.headerVeil() ? Color.Transparent : readerAppColor('app.search.panelSurface', this.scheme))
+      .backgroundEffect(this.headerVeil() ? readerHeaderVeilMaterial(this.headerScrolled, this.scheme) : undefined)
+      .border({ width: this.spec.borderWidth, color: this.headerVeil() ? readerHeaderVeilBorder(this.scheme) : this.panelBorderColor() })
+      .borderRadius(this.headerMaterialRadius()).hitTestBehavior(HitTestMode.Default)
+      .shadow(this.headerStackShadow())
+      .onAreaChange(this.headerSurfaceAreaChange());
   }
   private headerStackShadow(): ShadowOptions {
     this.metricsRevision;
-    return readerSurfaceElevation(this.headerVeil() ? 'fixed' : this.historyProgress() > .01 ? 'popover' : 'fixed', this.scheme);
+    const sampled = this.headerShadowStrength();
+    const strength = sampled <= .001 ? 0 : sampled;
+    const raised = readerSurfaceElevation('raised', this.scheme);
+    const color = raised.color as string;
+    const alpha = Math.round(Number.parseInt(color.slice(1, 3), 16) * strength);
+    const shadowColor = `#${alpha.toString(16).padStart(2, '0').toUpperCase()}${color.slice(3)}`;
+    return { radius: (raised.radius as number) * strength, offsetX: raised.offsetX,
+      offsetY: (raised.offsetY as number) * strength, color: shadowColor, type: raised.type, fill: raised.fill };
+  }
+
+  private headerShadowStrength(): number {
+    const target = 1 - this.toResults;
+    if (this.transitionKind === 'none') return target;
+    if (this.reducedTransition) {
+      // Follow the existing opacity fade while reduced motion holds the layout fixed.
+      const fade = this.transitionKind === 'back' ? 1 - this.reducedSearchOpacity : this.reducedSearchOpacity;
+      return this.blend(this.fromShadowStrength, target, fade);
+    }
+    const spec = this.transitionKind === 'open' ? this.openSpec :
+      this.transitionKind === 'submit' ? this.submitSpec : this.backSpec;
+    return this.blend(this.fromShadowStrength, target, this.segment(0, spec.durationMs, spec));
   }
 
   build() {

@@ -333,9 +333,6 @@ export struct SharedDownloadPage {
       // Keep an empty carrier until its actually mounted Native actors exit.
       ForEach([this.sheetActorAttachment], (attachment: number): void => {
         Stack() { this.sheetOverlay(attachment, this.sheetActorOwner); }.width('100%').height('100%')
-          // Keep the operations sheet mounted so cancel can return to it.
-          // The confirmation still paints over the underlying page.
-          .opacity(this.isOperationsSheet() && this.confirmation.length > 0 ? 0 : 1)
           .enabled(this.confirmation.length === 0)
           .accessibilityLevel(this.confirmation.length > 0 ? 'no-hide-descendants' : 'auto')
           .hitTestBehavior(this.confirmation.length > 0 ? HitTestMode.None : HitTestMode.Transparent);
@@ -1274,7 +1271,9 @@ export struct SharedDownloadPage {
         safeInsets: new ReaderInsetsVp(0, 0, 0, this.operationsBottomInset()),
         header: (): void => { this.operationsHeader(opening); }, body: (): void => { this.operationsBody(opening); } })
         .hitTestBehavior(HitTestMode.Default);
-    }.width('100%')
+    }.opacity(this.confirmation.length > 0 ? 0 : 1)
+      .animation(this.reduceMotion ? readerMotionReducedFadeParam() : motionAnimateParam('app.sheet.scrim'))
+      .width('100%')
       .padding({ left: readerVisualSafeLeft(this.currentMetrics()), right: readerVisualSafeRight(this.currentMetrics()) })
       .onAppear((): void => this.onSheetActorAppeared(attachment, ownerGeneration, 'operations:' + opening, opening))
       .transition(this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) : TransitionEffect.asymmetric(
@@ -1714,7 +1713,10 @@ export struct SharedDownloadPage {
   @Builder
   private confirmationOverlay(opening: number = this.confirmationGeneration) {
     Stack({ alignContent: Alignment.Center }) {
-      Rect().width('100%').height('100%').fill(downloadVisualColor('scrim', this.appThemeScheme));
+      // A nested confirmation keeps the sheet's existing backdrop in place.
+      if (this.sheet.length === 0 && !this.sheetExitPending) {
+        Rect().width('100%').height('100%').fill(downloadVisualColor('scrim', this.appThemeScheme));
+      }
       Column() {
         ReaderDialogSurface({ specId: 'download-confirmation', body: (): void => { this.confirmationSurfaceBody(opening); } }).clip(true);
       }.width('100%').padding({ left: DOWNLOAD_VISUAL.dialogOuterSide, right: DOWNLOAD_VISUAL.dialogOuterSide,
@@ -2023,27 +2025,19 @@ export struct SharedDownloadPage {
 
   private overlayWindowChrome(): ReaderWindowChromeStyle {
     const scheme = this.appThemeScheme;
-    const confirmationVisible = this.confirmation.length > 0;
+    const hasSheet = this.sheet.length > 0;
     const operationsSheet = this.isOperationsSheet();
-    const sheetVisible = this.sheet.length > 0 && (!operationsSheet || !confirmationVisible);
-    const confirmationScrim = downloadVisualColor('scrim', scheme);
-    const firstScrim = sheetVisible ? this.sheetScrimColor() : confirmationScrim;
+    const sheetVisible = hasSheet && (!operationsSheet || this.confirmation.length === 0);
+    const scrim = hasSheet ? this.sheetScrimColor() : downloadVisualColor('scrim', scheme);
     const pageInk = downloadVisualColor('ink', scheme);
-    let statusPaper = readerScrimmedOpaqueColor(downloadVisualColor('paper', scheme), firstScrim);
-    let statusInk = readerScrimmedOpaqueColor(pageInk, firstScrim);
+    const statusPaper = readerScrimmedOpaqueColor(downloadVisualColor('paper', scheme), scrim);
+    const statusInk = readerScrimmedOpaqueColor(pageInk, scrim);
     let navigationPaper = statusPaper;
     let navigationInk = statusInk;
     if (sheetVisible) {
       const drawer = resolveDrawerSpec('reader-action-sheet');
       navigationPaper = readerAppColor(operationsSheet ? drawer.surfaceRole : 'app.surface.menuSolid', scheme);
       navigationInk = operationsSheet ? readerAppColor(drawer.inkRole, scheme) : pageInk;
-      if (confirmationVisible) {
-        // The confirmation covers the page-and-sheet stack at the top and the sheet at the bottom.
-        statusPaper = readerScrimmedOpaqueColor(statusPaper, confirmationScrim);
-        statusInk = readerScrimmedOpaqueColor(statusInk, confirmationScrim);
-        navigationPaper = readerScrimmedOpaqueColor(navigationPaper, confirmationScrim);
-        navigationInk = readerScrimmedOpaqueColor(navigationInk, confirmationScrim);
-      }
     }
     const style = new ReaderWindowChromeStyle(statusPaper, scheme === 'night' ? 'light' : 'dark', statusInk);
     style.navigationUnderlayColor = navigationPaper;

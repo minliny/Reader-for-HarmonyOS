@@ -118,7 +118,7 @@ if (['native-bindings', 'row-geometry-receipts', 'chapter-selection-actions'].in
   if (selectedCase === 'native-bindings') assert.ok(methods.includes('filterSourceOptions') && methods.includes('sheetActors'),
     'the real filter and Native sheet actor initializers are in the current dependency closure');
 }
-if (confluenceCases.has(selectedCase) || ['area-receipts', 'management-scroll', 'inline-settings', 'storage-publication', 'short-layout'].includes(selectedCase)) {
+if (confluenceCases.has(selectedCase) || ['area-receipts', 'management-scroll', 'inline-settings', 'storage-publication', 'short-layout', 'overlay-chrome'].includes(selectedCase)) {
   methods.splice(0, methods.length, ...page.members.filter(node => node.name).map(node => node.name.getText(tree)));
 }
 const frameSource = tree.statements.find(node => node.name?.getText(tree) === 'SharedDownloadIdleFrame');
@@ -176,8 +176,6 @@ const currentChromePalette = Object.fromEntries(['day', 'night'].map(scheme => {
     actionScrim, actionPaper: nativeBlendReceipt(pagePaper, actionScrim), actionInk: nativeBlendReceipt(pageInk, actionScrim),
     actionSurface: readerAppColor(action.surfaceRole, scheme), actionSurfaceInk: readerAppColor(action.inkRole, scheme),
     sheetPaper, sheetInk: pageInk,
-    doublePaper: nativeBlendReceipt(paper, scrim), doubleInk: nativeBlendReceipt(ink, scrim),
-    confirmationOnSheet: nativeBlendReceipt(sheetPaper, scrim), confirmationOnSheetInk: nativeBlendReceipt(pageInk, scrim),
   }];
 }));
 const nativeColorMetrics = { resourceColor: value => ({ value: argb(value), blendColor(overlay) {
@@ -1738,30 +1736,24 @@ assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), currentC
 chrome.appThemeScheme = 'night'; await microtasks();
 assert.equal(argb(chromeRequests.at(-1).style.underlayColor), currentChromePalette.night.paper);
 assert.equal(argb(chromeRequests.at(-1).style.contentColor), currentChromePalette.night.ink);
+chrome.sheet = 'settings'; chrome.confirmation = ''; await microtasks();
+const storageChrome = chromeRequests.at(-1).style;
 nativeStart = nativeBlendCalls.length;
-chrome.sheet = 'settings'; chrome.confirmation = 'cleanup'; await microtasks();
-assert.equal(argb(chromeRequests.at(-1).style.underlayColor), currentChromePalette.night.doublePaper);
-assert.equal(argb(chromeRequests.at(-1).style.contentColor), currentChromePalette.night.doubleInk);
-assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), currentChromePalette.night.confirmationOnSheet);
-assert.equal(argb(chromeRequests.at(-1).style.navigationContentColor), currentChromePalette.night.confirmationOnSheetInk);
-assert.notEqual(currentChromePalette.night.confirmationOnSheet, currentChromePalette.night.doublePaper,
-  'navigation is the opaque sheet plus confirmation, not the doubly-masked page');
+chrome.confirmation = 'cleanup'; await microtasks();
+assert.deepEqual(chromeRequests.at(-1).style, storageChrome, 'nested storage confirmation leaves both system-bar bands unchanged');
 assert.deepEqual(nativeBlendCalls.slice(nativeStart), [
   [argb(currentChromePalette.night.pagePaper), argb(currentChromePalette.night.scrim)],
   [argb(currentChromePalette.night.pageInk), argb(currentChromePalette.night.scrim)],
-  [currentChromePalette.night.paper, argb(currentChromePalette.night.scrim)],
-  [currentChromePalette.night.ink, argb(currentChromePalette.night.scrim)],
-  [argb(currentChromePalette.night.sheetPaper), argb(currentChromePalette.night.scrim)],
-  [argb(currentChromePalette.night.sheetInk), argb(currentChromePalette.night.scrim)],
-], 'nested confirmation keeps the independent status-band and sheet-band owners');
+], 'nested confirmation keeps a single mask over page paper and ink');
 chrome.appThemeScheme = 'day'; await microtasks();
-assert.equal(argb(chromeRequests.at(-1).style.underlayColor), currentChromePalette.day.doublePaper);
-assert.equal(argb(chromeRequests.at(-1).style.contentColor), currentChromePalette.day.doubleInk);
-assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), currentChromePalette.day.confirmationOnSheet);
+assert.equal(argb(chromeRequests.at(-1).style.underlayColor), currentChromePalette.day.paper);
+assert.equal(argb(chromeRequests.at(-1).style.contentColor), currentChromePalette.day.ink);
+assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), argb(currentChromePalette.day.sheetPaper));
+assert.equal(argb(chromeRequests.at(-1).style.navigationContentColor), argb(currentChromePalette.day.sheetInk));
+const dayStorageChrome = chromeRequests.at(-1).style;
 chrome.confirmation = ''; await microtasks();
 assert.equal(chromeRequests.at(-1).owner, 'overlay', 'cancel retains the same storage sheet with its single scrim');
-assert.equal(argb(chromeRequests.at(-1).style.underlayColor), currentChromePalette.day.paper);
-assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), argb(currentChromePalette.day.sheetPaper));
+assert.deepEqual(chromeRequests.at(-1).style, dayStorageChrome);
 const attachment = chrome.sheetActorAttachment, ownerGeneration = chrome.sheetActorOwner;
 const sheetActor = 'sheet:' + chrome.sheetOpeningGeneration;
 chrome.onSheetActorAppeared(attachment, ownerGeneration, 'scrim');

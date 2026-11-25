@@ -868,7 +868,7 @@ struct Index {
       navigationGeneration: this.navigationGeneration, mounting: this.detailShelfAdmissionMount,
       // Search owns an opaque material. Keep the real List position so closing
       // search or returning from detail never flashes the idle tint at mid-list.
-      headerScrolled: this.route === 'bookshelf' && this.librarySearch.mode === 'idle' &&
+      headerScrolled: (this.route === 'bookshelf' || (this.route === 'search' && this.librarySearch.mode === 'idle')) &&
         this.shelfRead.snapshot.visualAdmitted && this.shelfRead.headerScrolled,
       moreIdentity: this.librarySearch.shelfMoreIdentity(this.navigationGeneration, this.detailShelfAdmissionMount),
       animateOnAppear: this.librarySearch.animateOnAppear, expandedLayout: this.expandedLayout(),

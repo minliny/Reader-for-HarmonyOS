@@ -456,6 +456,7 @@ const { owner } = createReaderBuilderProbe(source, [...new Set([...helpers, 'she
   'confirmationContent', 'confirmationButton', 'confirmationBody', 'sheetOverlay', 'operationsSurface',
   ...pageMembers.filter(member => ['sheetActorGeneration', 'sheetActorAttachment', 'sheetActorOwner', 'sheetActors', 'sheetSurface'].includes(member.name?.getText(pageTree))).map(member => member.name.getText(pageTree))])], {
   ...bounded.deps, ...properties.sdk, ...metricsApi, ...projection, ...visual, ...backDependencies, SharedDownloadIdleFrame: IdleFrame,
+  globalThis: Object.assign(Object.create(globalThis), bounded.deps.globalThis),
   ButtonType: { Normal: 'normal' }, HitTestMode: { None: 'none', Default: 'default' },
   ...motion, setTimeout: action => { timers.push(action); },
   readerSurfaceElevation: () => ({}),
