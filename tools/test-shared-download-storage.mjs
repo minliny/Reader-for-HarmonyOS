@@ -23,11 +23,14 @@ const handles = new Map();
 let rejectUnlink = () => false;
 let beforeUnlink = async () => {};
 let beforeSync = async () => {};
+let beforeAccess = async () => {};
+let beforeStat = async () => {};
+let omitMtime = () => false;
 const io = {
   OpenMode: { CREATE: 1, READ_WRITE: 2, TRUNC: 4 },
-  access: path => fs.access(path).then(() => true, () => false),
-  stat: async path => { const s = await fs.stat(path), n = await fs.stat(path, { bigint: true }); return {
-    size:s.size,ino:n.ino,mtimeNs:n.mtimeNs,ctimeNs:n.ctimeNs,
+  access: async path => { await beforeAccess(path); return fs.access(path).then(() => true, () => false); },
+  stat: async path => { await beforeStat(path); const s = await fs.stat(path), n = await fs.stat(path, { bigint: true }); return {
+    size:s.size,ino:n.ino,mtimeNs:omitMtime(path) ? undefined : n.mtimeNs,ctimeNs:n.ctimeNs,
     isFile:()=>s.isFile(),isDirectory:()=>s.isDirectory(),
   }; },
   mkdir: (path, recursive) => fs.mkdir(path, { recursive }), listFile: path => fs.readdir(path), rmdir: path => fs.rmdir(path),
@@ -286,9 +289,143 @@ if(id==='settings-partial-ack'){
     await assert.rejects(f.gateway.cleanupSettingsText(evidence, () => true), /UNCONFIRMED/);
     assert.equal(evidence.dispatchedCount, 2); assert.equal(evidence.confirmedCount, 1);
     const pending = await f.gateway.readSettingsTextCleanup();
-    assert.ok(pending.result.removedContentBytes > 0, 'known first-batch receipt is preserved without falsely confirming the entire operation');
+    assert.ok(pending.removedContentBytes > 0, 'known first-batch bytes are preserved without falsely confirming the entire operation');
+    assert.equal(pending.phase, 'pending');
+    const cold = new Storage(f.runtime, f.disk, f.persistence);
+    await assert.rejects(cold.reconcileSettingsTextCleanup(() => true), /UNCONFIRMED/);
+    assert.equal(cleanupBatches, 2);
     assert.equal(f.bodies.size, 172);
   }
+}
+if(id==='settings-recover-staged'){
+    const f = await fixture({ bodyCount: 1 }), r = resource(identity(0));
+    await f.disk.storeResource(r, new Uint8Array([1, 2, 3, 4]));
+    const receipt = f.disk.readingStorageCleanupReceipt.bind(f.disk);
+    f.disk.readingStorageCleanupReceipt = async () => { throw Error('post-cleanup inventory unavailable'); };
+    await assert.rejects(f.gateway.cleanupSettingsText(new ReaderWriteEvidence(), () => true), /post-cleanup inventory/);
+    assert.equal((await f.gateway.readSettingsTextCleanup()).phase, 'host_completed');
+    assert.equal(f.bodies.size, 0);
+    f.disk.readingStorageCleanupReceipt = receipt;
+    const cold = new Storage(f.runtime, f.disk, f.persistence);
+    const recovered = await cold.reconcileSettingsTextCleanup(() => true);
+    assert.ok(recovered.removedContentBytes > 0 && recovered.deletedBytes > 0);
+    assert.equal(f.calls.filter(call => call.method === 'cache.storage.cleanup').length, 1);
+    assert.equal((await cold.readSettingsTextCleanup()).phase, 'confirmed');
+
+    const preferenceSource = readFileSync(join(repo,
+      'entry/src/main/ets/features/downloads/application/SharedDownloadIntentPreferences.ts'), 'utf8');
+    const preferenceCode = stripTypeScriptTypes(preferenceSource.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
+    let legacy = { version: 2, scope: 'text', phase: 'pending' }, atomicFile;
+    const prefs = { async getPreferences() { return { get: async () => JSON.stringify(legacy) }; } };
+    const fileIo = { async readText() {
+      if (atomicFile === undefined) throw Object.assign(Error('missing journal'), { code: 13900002 });
+      return atomicFile;
+    } };
+    const writeSnapshot = async (path, parent, raw) => {
+      assert.equal(parent, f.dir);
+      assert.equal(path, join(f.dir, 'reader-settings-text-cleanup-v2.json'));
+      atomicFile = raw;
+    };
+    const Preferences = new Function('readerHostFilesDirectory', 'readerHostPreferencesName', 'preferences',
+      'fileIo', 'replaceReaderAtomicSnapshot', `${preferenceCode}\nreturn SharedDownloadIntentPreferences;`)(
+      readerHostFilesDirectory, (_files, name) => name, prefs, fileIo, writeSnapshot);
+    assert.deepEqual(await new Preferences({filesDir:f.dir}).loadSettingsTextCleanup(), legacy);
+    legacy = JSON.parse(JSON.stringify({ ...legacy, phase: 'confirmed', result: recovered }));
+    assert.deepEqual(await new Preferences({filesDir:f.dir}).loadSettingsTextCleanup(), legacy);
+    const persisted = new Preferences({filesDir:f.dir});
+    const completed = { version: 2, scope: 'text', phase: 'host_completed', removedContentBytes: 16, beforeTextFiles: [] };
+    await persisted.saveSettingsTextCleanup(completed);
+    assert.deepEqual(await new Preferences({filesDir:f.dir}).loadSettingsTextCleanup(), completed);
+    await persisted.saveSettingsTextCleanup(undefined);
+    assert.equal(await new Preferences({filesDir:f.dir}).loadSettingsTextCleanup(), undefined, 'an empty new journal shadows old Preferences');
+    atomicFile = '';
+    await assert.rejects(new Preferences({filesDir:f.dir}).loadSettingsTextCleanup(), /JOURNAL_INVALID/);
+}
+if(id==='settings-recover-host'){
+    const f = await fixture({ bodyCount: 130 });
+    const first = resource(identity(0)), second = resource(identity(1)), protectedLater = resource(identity(2));
+    for (const r of [first, second, protectedLater]) await f.disk.storeResource(r, new Uint8Array([1, 2, 3, 4]));
+    const firstPath = await f.disk.resourcePath(first), secondPath = await f.disk.resourcePath(second);
+    const protectedPath = await f.disk.resourcePath(protectedLater);
+    rejectUnlink = actual => actual === secondPath;
+    await assert.rejects(f.gateway.cleanupSettingsText(new ReaderWriteEvidence(), () => true), /injected unlink/);
+    const checkpoint = await f.gateway.readSettingsTextCleanup();
+    assert.equal(checkpoint.phase, 'core_confirmed');
+    assert.equal(checkpoint.pendingHostChapters.length, 128);
+    assert.equal(f.bodies.size, 2);
+    assert.equal(await io.access(firstPath), false);
+    assert.equal(await io.access(secondPath), true);
+    rejectUnlink = () => false;
+
+    // The same ordinal/path can be published again while the app is waiting
+    // for reconciliation. Its current physical identity must be preserved.
+    const replacement = Uint8Array.of(9, 8, 7, 6);
+    await f.disk.storeResource(first, replacement);
+    f.keep([identity(2)]);
+    const cold = new Storage(f.runtime, f.disk, f.persistence);
+    const result = await cold.reconcileSettingsTextCleanup(() => true);
+    assert.equal(result.removedContentBytes, checkpoint.removedContentBytes);
+    assert.equal(await io.access(secondPath), false);
+    assert.deepEqual(new Uint8Array(await fs.readFile(firstPath)), replacement);
+    assert.equal(await io.access(protectedPath), true);
+    assert.equal(f.calls.filter(call => call.method === 'cache.storage.cleanup').length, 1);
+    assert.equal(typeof result.cleanupError, 'string');
+
+    const unverified = await fixture({ bodyCount: 1 });
+    const unverifiedResource = resource(identity(0));
+    await unverified.disk.storeResource(unverifiedResource, replacement);
+    const unverifiedPath = await unverified.disk.resourcePath(unverifiedResource);
+    omitMtime = candidate => candidate.startsWith(dirname(unverifiedPath) + '/');
+    try {
+      const noTimestamp = await unverified.gateway.cleanupSettingsText(new ReaderWriteEvidence(), () => true);
+      assert.equal(noTimestamp.cleanupError, 'TEXT_CACHE_CLEANUP_PARTIAL');
+      assert.equal(noTimestamp.deletedFiles, 0);
+      assert.deepEqual(new Uint8Array(await fs.readFile(unverifiedPath)), replacement);
+    } finally { omitMtime = () => false; }
+}
+if(id==='inventory-concurrent-enoent'){
+    const f = await fixture(), r = resource(identity(0));
+    await f.disk.storeResource(r, Uint8Array.of(4, 5, 6, 7));
+    const path = await f.disk.resourcePath(r);
+    let injected = 0;
+    beforeStat = async candidate => {
+      if (candidate === path && injected++ === 0) await fs.unlink(path);
+    };
+    const inventory = await f.disk.captureReadingStorageInventory();
+    assert.equal(injected, 1);
+    assert.equal(inventory.files.some(file => file.path === path), false);
+    const another = resource(identity(1));
+    await f.disk.storeResource(another, Uint8Array.of(1, 2, 3, 4));
+    const denied = await f.disk.resourcePath(another);
+    beforeStat = async candidate => {
+      if (candidate === denied) throw Object.assign(Error('injected disk error'), { code: 'EIO' });
+    };
+    await assert.rejects(f.disk.captureReadingStorageInventory(), /injected disk error/);
+    let mutationStarted = false;
+    beforeStat = async candidate => {
+      if (candidate !== denied || mutationStarted) return;
+      mutationStarted = true;
+      await f.disk.clearChapter(another.sourceId, another.bookId, another.chapterIndex);
+    };
+    const changed = await f.disk.captureReadingStorageInventory();
+    const summary = await f.disk.readingStorageSummary(changed, () => ({ retained:false, inUse:false }));
+    assert.equal(mutationStarted, true);
+    assert.equal(summary.cleanableBytes, undefined, 'a moving snapshot cannot authorize capacity eviction');
+}
+if(id==='policy-retry'){
+    const f = await fixture();
+    await f.disk.configurePolicy({ capacityBytes: 128 * 1024 ** 2, expiryDays: 19 });
+    const cold = new Cache({filesDir:f.dir}, { getFreeBytes: async () => 4 * 1024 ** 3, getTotalBytes: async () => 8 * 1024 ** 3 });
+    let accesses = 0;
+    beforeAccess = async candidate => {
+      if (candidate.endsWith('/storage-policy.json') && ++accesses === 1) throw Error('temporary policy access failure');
+    };
+    const first = cold.readPolicy(), concurrent = cold.readPolicy();
+    await assert.rejects(first, /temporary policy access/);
+    await assert.rejects(concurrent, /temporary policy access/);
+    assert.equal(accesses, 1, 'concurrent readers share the same in-flight attempt');
+    assert.deepEqual(await cold.readPolicy(), { capacityBytes: 128 * 1024 ** 2, expiryDays: 19 });
+    assert.equal(accesses, 2);
 }
 if(id==='automatic-policy'){
   {
@@ -327,7 +464,11 @@ if(id==='automatic-policy'){
     disk.close();
   }
 }
-}finally{rejectUnlink=()=>false;beforeUnlink=async()=>{};beforeSync=async()=>{};for(const handle of handles.values())await handle.close().catch(()=>{});await fs.rm(root,{recursive:true,force:true});}
+}finally{rejectUnlink=()=>false;beforeUnlink=async()=>{};beforeSync=async()=>{};beforeAccess=async()=>{};beforeStat=async()=>{};for(const handle of handles.values())await handle.close().catch(()=>{});await fs.rm(root,{recursive:true,force:true});}
 }
 const definitions={"inventory-ownership": "inventory-ownership actual scoped owner/gateway/storage path; controlled Core/OS ports", "legacy-migration": "legacy-migration actual scoped owner/gateway/storage path; controlled Core/OS ports", "legacy-flush": "legacy-flush actual scoped owner/gateway/storage path; controlled Core/OS ports", "bounded-cleanup": "bounded-cleanup actual scoped owner/gateway/storage path; controlled Core/OS ports", "late-protection": "late-protection actual scoped owner/gateway/storage path; controlled Core/OS ports", "unlink-retry": "unlink-retry actual scoped owner/gateway/storage path; controlled Core/OS ports", "unknown-alias": "unknown-alias actual scoped owner/gateway/storage path; controlled Core/OS ports", "settings-text": "settings-text actual scoped owner/gateway/storage path; controlled Core/OS ports", "settings-unknown": "settings-unknown actual scoped owner/gateway/storage path; controlled Core/OS ports", "settings-local-flush": "settings-local-flush actual scoped owner/gateway/storage path; controlled Core/OS ports", "settings-nonexecution": "settings-nonexecution actual scoped owner/gateway/storage path; controlled Core/OS ports", "settings-partial-ack": "settings-partial-ack actual scoped owner/gateway/storage path; controlled Core/OS ports", "automatic-policy": "automatic-policy actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+definitions['settings-recover-staged'] = 'recover a confirmed cleanup after statistics fail without replaying Core';
+definitions['settings-recover-host'] = 'restart a partly applied Host deletion and preserve replaced and newly protected files';
+definitions['inventory-concurrent-enoent'] = 'ignore disappeared cache entries but preserve true storage errors';
+definitions['policy-retry'] = 'allow a new storage-policy read after the shared in-flight attempt fails';
 for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

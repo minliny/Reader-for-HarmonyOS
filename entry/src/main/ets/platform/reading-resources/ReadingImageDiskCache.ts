@@ -76,14 +76,17 @@ export interface MangaExternalStorage {
   removeDerived?(chapter: MangaStorageChapter, files: MangaExternalFile[], current: () => Promise<boolean>): Promise<boolean>;
 }
 export interface MangaWriteReservation { release(): void; }
-type MangaInventoryFile = MangaExternalFile & { size: number; physicalKey: string; external: boolean; };
+type MangaInventoryFile = MangaExternalFile & { size: number; physicalKey: string; mtime: string; external: boolean; };
 export type SharedDownloadStoragePolicy = { capacityBytes: number; expiryDays: number; };
 export type ReadingTextStorageChapter = { sourceId: string; bookId: string; chapterIndex: number; };
 export type ReadingTextStorageImageChapter = ReadingTextStorageChapter & { contentBytes: number; cachedAtSeconds?: number; };
 export type ReadingTextStoragePolicy = { retained: boolean; inUse: boolean; };
 export type ReadingImageStorageSummary = { totalBytes: number; retainedBytes: number; automaticBytes: number;
   cleanableBytes?: number; availableBytes?: number; classificationKnown: boolean; };
+export type ReadingImageCleanupFile = { path: string; physicalKey: string; size: number; mtime: string;
+  textOwner?: ReadingTextStorageChapter; };
 type ReadingInventoryFile = MangaInventoryFile & { textOwner?: ReadingTextStorageChapter; };
+type ReadingImageCleanupInventory = { files: ReadingImageCleanupFile[]; };
 export type ReadingImageStorageSnapshot = { files: ReadingInventoryFile[]; writeRevision: number;
   hostImageChapters: ReadingTextStorageImageChapter[]; protectedChapters: ReadingTextStorageChapter[]; };
 
@@ -511,6 +514,7 @@ export class ReadingImageDiskCache {
     }
     const chapters = new Map<string, ReadingTextStorageImageChapter>();
     const protectedChapters = new Map<string, ReadingTextStorageChapter>();
+    let scanChanged = false;
     for (const aliases of physical.values()) {
       const text = aliases.filter(file => file.textOwner !== undefined);
       const owner = text[0]?.textOwner;
@@ -522,8 +526,12 @@ export class ReadingImageDiskCache {
         if (file.textOwner === undefined || file.live || this.inFlightWrites.has(file.path) ||
           this.bookMutationTails.has(this.bookMutationKey(owner.sourceId, owner.bookId)) ||
           this.textStorageKey(file.textOwner) !== key) protectedChapters.set(key, owner);
-        if (!(await fileIo.access(file.path))) continue;
-        const stat = await fileIo.stat(file.path);
+        const stat = await this.statIfPresent(file.path);
+        if (stat === undefined || this.mangaPhysicalKey(stat) !== file.physicalKey || String(stat.mtimeNs) !== file.mtime) {
+          scanChanged = true;
+          protectedChapters.set(key, owner);
+          continue;
+        }
         const seconds = Math.floor(Number(stat.mtimeNs) / 1000000000);
         if (Number.isSafeInteger(seconds) && seconds >= 0)
           measured.cachedAtSeconds = Math.max(measured.cachedAtSeconds ?? 0, seconds);
@@ -534,7 +542,7 @@ export class ReadingImageDiskCache {
       }
       chapters.set(key, measured);
     }
-    return { files, writeRevision,
+    return { files, writeRevision: scanChanged ? -1 : writeRevision,
       hostImageChapters: Array.from(chapters.values()), protectedChapters: Array.from(protectedChapters.values()) };
   }
 
@@ -626,19 +634,25 @@ export class ReadingImageDiskCache {
 
   /** A successful Core image-only cleanup selector is not a disk receipt.
    * Compare actual remaining paths and inodes only after Host unlink settles. */
-  async readingStorageCleanupReceipt(before: ReadingImageStorageSnapshot): Promise<MangaStorageCleanup> {
-    const after = await this.readingInventory();
-    const retained = new Set(after.map(file => file.physicalKey));
-    const released = new Set<string>();
-    let deletedBytes = 0, deletedFiles = 0;
-    for (const file of before.files) {
-      if (await fileIo.access(file.path)) continue;
-      deletedFiles += 1;
-      if (!retained.has(file.physicalKey) && !released.has(file.physicalKey)) {
-        released.add(file.physicalKey); deletedBytes += file.size;
+  async readingStorageCleanupReceipt(before: ReadingImageCleanupInventory): Promise<MangaStorageCleanup> {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      const writeRevision = this.inFlightWriteRevision;
+      const after = await this.readingInventory();
+      const retained = new Set(after.map(file => file.physicalKey));
+      const released = new Set<string>();
+      const removedPaths = new Set<string>();
+      let deletedBytes = 0;
+      for (const file of before.files) {
+        if (await this.statIfPresent(file.path) !== undefined) continue;
+        removedPaths.add(file.path);
+        if (!retained.has(file.physicalKey) && !released.has(file.physicalKey)) {
+          released.add(file.physicalKey); deletedBytes += file.size;
+        }
       }
+      if (!this.closed && writeRevision === this.inFlightWriteRevision)
+        return { deletedBytes, deletedFiles: removedPaths.size };
     }
-    return { deletedBytes, deletedFiles };
+    throw new Error('DOWNLOAD_STORAGE_INVENTORY_CHANGED');
   }
 
   private textStorageKey(chapter: ReadingTextStorageChapter): string {
@@ -647,7 +661,7 @@ export class ReadingImageDiskCache {
 
   private async readingInventory(): Promise<ReadingInventoryFile[]> {
     const result: ReadingInventoryFile[] = await this.mangaInventory();
-    for (const root of [this.rootDirectory(), this.legacyRootDirectory()]) if (await fileIo.access(root))
+    for (const root of [this.rootDirectory(), this.legacyRootDirectory()])
       await this.collectTextStorageFiles(root, result);
     const paths = new Map<string, ReadingInventoryFile>();
     for (const file of result) {
@@ -672,22 +686,27 @@ export class ReadingImageDiskCache {
         for (const hash of manifest.resourceHashes) knownFiles.add(`${hash}.bin`);
       }
     }
-    for (const name of await fileIo.listFile(directory)) {
+    for (const name of await this.listFileIfPresent(directory)) {
       const path = `${directory}/${name}`;
-      if (!(await fileIo.access(path))) continue;
-      const stat = await fileIo.stat(path);
+      const stat = await this.statIfPresent(path);
+      if (stat === undefined) continue;
       if (stat.isDirectory()) {
         if (name !== '.manga' && name !== '.clear') await this.collectTextStorageFiles(path, result);
       } else if (stat.isFile() && owner !== undefined && knownFiles.has(name)) {
         result.push({ path, owners: [], textOwner: owner, live: false, size: stat.size,
-          physicalKey: this.mangaPhysicalKey(stat), external: false });
+          physicalKey: this.mangaPhysicalKey(stat), mtime: String(stat.mtimeNs), external: false });
       }
     }
   }
 
   private async loadStoragePolicy(): Promise<void> {
     if (this.storagePolicyReady === undefined) this.storagePolicyReady = this.readStoragePolicy();
-    await this.storagePolicyReady;
+    const work = this.storagePolicyReady;
+    try { await work; }
+    catch (error) {
+      if (this.storagePolicyReady === work) this.storagePolicyReady = undefined;
+      throw error;
+    }
   }
 
   private async readStoragePolicy(): Promise<void> {
@@ -1007,16 +1026,13 @@ export class ReadingImageDiskCache {
   private async mangaInventory(): Promise<MangaInventoryFile[]> {
     const result: MangaInventoryFile[] = [];
     // A missing/invalid identity is counted conservatively and never grants deletion.
-    for (const root of [this.rootDirectory(), this.legacyRootDirectory()]) {
-      if (await fileIo.access(root)) await this.collectMangaFiles(root, [], result);
-    }
+    for (const root of [this.rootDirectory(), this.legacyRootDirectory()]) await this.collectMangaFiles(root, [], result);
     if (this.mangaExternal !== undefined) {
       for (const file of await this.mangaExternal.inventory()) {
         if (!file.path.startsWith(`${readerHostFilesDirectory(this.context.filesDir)}/`) || file.path.split('/').indexOf('..') >= 0) throw new Error('manga external path escapes app storage');
-        if (!(await fileIo.access(file.path))) continue;
-        const stat = await fileIo.stat(file.path);
-        if (!stat.isFile()) continue;
-        result.push({ ...file, size: stat.size, physicalKey: this.mangaPhysicalKey(stat), external: true });
+        const stat = await this.statIfPresent(file.path);
+        if (stat === undefined || !stat.isFile()) continue;
+        result.push({ ...file, size: stat.size, physicalKey: this.mangaPhysicalKey(stat), mtime: String(stat.mtimeNs), external: true });
       }
     }
     return result;
@@ -1039,15 +1055,16 @@ export class ReadingImageDiskCache {
         await this.readManifestIdentity(directory, LEGACY_CACHE_FORMAT_VERSION, undefined, true);
       if (manifest !== undefined && manifest.manga !== true) return;
     }
-    for (const name of await fileIo.listFile(directory)) {
+    for (const name of await this.listFileIfPresent(directory)) {
       const path = `${directory}/${name}`;
-      if (!(await fileIo.access(path))) continue;
-      const stat = await fileIo.stat(path);
+      const stat = await this.statIfPresent(path);
+      if (stat === undefined) continue;
       if (stat.isDirectory()) await this.collectMangaFiles(path, owners, result);
       else if (stat.isFile()) {
         // Exact novel manifests keep their existing quota policy. Unknown old
         // manga bytes remain protected, even when their ordinal is recognizable.
-        result.push({ path, owners, live: false, size: stat.size, physicalKey: this.mangaPhysicalKey(stat), external: false });
+        result.push({ path, owners, live: false, size: stat.size, physicalKey: this.mangaPhysicalKey(stat),
+          mtime: String(stat.mtimeNs), external: false });
       }
     }
   }
@@ -1694,7 +1711,7 @@ export class ReadingImageDiskCache {
     try {
       bytes = new Uint8Array(new fileIo.AtomicFile(path).readFully());
     } catch (error) {
-      if (retryIoErrors) throw error;
+      if (retryIoErrors && !this.isNotFoundError(error)) throw error;
       return undefined;
     }
     try {
@@ -1758,17 +1775,47 @@ export class ReadingImageDiskCache {
 
   /** Core and the download coordinator revoke the exact text consumer first.
    * A durable chapter intent shares the existing book mutation serialization. */
-  async clearChapter(sourceId: string, bookId: string, chapterIndex: number): Promise<void> {
+  async clearChapter(sourceId: string, bookId: string, chapterIndex: number, captured?: ReadingImageCleanupFile[],
+    current?: () => boolean): Promise<void> {
     this.assertNonBlank(sourceId, 'sourceId'); this.assertNonBlank(bookId, 'bookId');
     if (!Number.isSafeInteger(chapterIndex) || chapterIndex < 0) throw new Error('invalid chapterIndex');
     const key = this.bookMutationKey(sourceId, bookId);
     this.bookClearGenerations.set(key, (this.bookClearGenerations.get(key) ?? 0) + 1);
     await this.enqueueBookMutation(key, async (): Promise<void> => {
+      if (captured !== undefined) {
+        await this.clearCapturedTextFiles(sourceId, bookId, chapterIndex, captured, current);
+        return;
+      }
       await this.ensureDirectory(`${this.rootDirectory()}/.clear`);
       const marker = `${await this.clearMarkerPath(sourceId, bookId)}.chapter-${chapterIndex}`;
       await this.writeAtomicBytes(marker, new util.TextEncoder().encodeInto('clear'));
       await this.finishPendingChapterClears(sourceId, bookId);
     });
+  }
+
+  /** Settings already durably recorded the exact Core ACK and captured files.
+   * Reopening the app must not clear a newer publication at the same ordinal. */
+  private async clearCapturedTextFiles(sourceId: string, bookId: string, chapterIndex: number,
+    captured: ReadingImageCleanupFile[], current?: () => boolean): Promise<void> {
+    const currentRoot = `${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}/${chapterIndex}/`;
+    const legacy = `${this.legacyRootDirectory()}/${await this.legacyBookHash(sourceId, bookId)}/${chapterIndex}/`;
+    const currentFile = /^[0-9a-f]{64}\/(?:manifest\.json|text-identity\.json|[0-9a-f]{64}\.bin)$/;
+    const legacyFile = /^(?:manifest\.json|[0-9a-f]{64}\.bin)$/;
+    for (const file of captured) {
+      if (!(file.path.startsWith(currentRoot) && currentFile.test(file.path.substring(currentRoot.length))) &&
+        !(file.path.startsWith(legacy) && legacyFile.test(file.path.substring(legacy.length))))
+        throw new Error('TEXT_CACHE_CLEANUP_FILE_IDENTITY_INVALID');
+    }
+    const ordered = [...captured].sort((a, b) => Number(a.path.endsWith('.json')) - Number(b.path.endsWith('.json')));
+    for (const file of ordered) {
+      const stat = await this.statIfPresent(file.path);
+      if (stat === undefined || !stat.isFile() || this.mangaPhysicalKey(stat) !== file.physicalKey ||
+        stat.size !== file.size || typeof stat.mtimeNs !== 'bigint' || stat.mtimeNs.toString() !== file.mtime) continue;
+      if (current?.() === false) throw new Error('TEXT_CACHE_CLEANUP_PROTECTION_CHANGED');
+      this.verifiedDigests.remove(file.path);
+      try { await fileIo.unlink(file.path); }
+      catch (error) { if (!this.isNotFoundError(error)) throw error; }
+    }
   }
 
   private async finishPendingChapterClears(sourceId: string, bookId: string): Promise<void> {
@@ -1971,11 +2018,13 @@ export class ReadingImageDiskCache {
     key: string,
     operation: () => Promise<void>,
   ): Promise<void> {
+    this.inFlightWriteRevision += 1;
     const previous = this.bookMutationTails.get(key) ?? Promise.resolve();
     const task = previous.catch((): void => {}).then(operation);
     const settled = task.catch((): void => {});
     this.bookMutationTails.set(key, settled);
     return task.finally((): void => {
+      this.inFlightWriteRevision += 1;
       if (this.bookMutationTails.get(key) === settled) {
         this.bookMutationTails.delete(key);
       }
@@ -2167,6 +2216,27 @@ export class ReadingImageDiskCache {
       if (!(await fileIo.access(path))) {
         throw error;
       }
+    }
+  }
+
+  private isNotFoundError(error: unknown): boolean {
+    const code = (error as { code?: number | string } | undefined)?.code;
+    return code === 13900002 || code === 'ENOENT';
+  }
+
+  private async statIfPresent(path: string): Promise<fileIo.Stat | undefined> {
+    try { return await fileIo.stat(path); }
+    catch (error) {
+      if (this.isNotFoundError(error)) return undefined;
+      throw error;
+    }
+  }
+
+  private async listFileIfPresent(path: string): Promise<string[]> {
+    try { return await fileIo.listFile(path); }
+    catch (error) {
+      if (this.isNotFoundError(error)) return [];
+      throw error;
     }
   }
 

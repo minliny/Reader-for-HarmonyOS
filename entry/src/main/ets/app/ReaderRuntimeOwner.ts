@@ -713,6 +713,10 @@ export class ReaderRuntimeOwner {
     if (this.state !== 'ready') throw new Error('READER_RUNTIME_NOT_READY');
     return this.getDownloadStorageGateway().readSettingsTextCleanup();
   }
+  reconcileSettingsTextCleanup(current: () => boolean): Promise<SharedDownloadCleanupResult | undefined> {
+    if (this.state !== 'ready') throw new Error('READER_RUNTIME_NOT_READY');
+    return this.getDownloadStorageGateway().reconcileSettingsTextCleanup(current);
+  }
 
   async configureDownloadStorage(limitMb: number, cleanupAfterDays: number): Promise<SharedDownloadStoragePolicyResult> {
     if (this.state !== 'ready') throw new Error('READER_RUNTIME_NOT_READY');

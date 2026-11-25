@@ -37,7 +37,7 @@ const good=()=>({scope:'text',removedContentBytes:10,deletedBytes:20,deletedFile
 const typedPending=()=>new ReaderCoreRequestError({protocolVersion:1,requestId:1,type:'error',error:{code:'TRANSACTION_PENDING',message:'pre-execution gate',retryable:true,details:{transactionKind:'persistenceMutation',pendingHostOperationCount:0,retryAfterMillis:0}}});
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
 const sdkRequire=createRequire(import.meta.url),sdkRoot=resolveEtsLoaderRoot();
-const Storage=load('features/downloads/application/SharedDownloadStorageGateway.ts','SharedDownloadStorageGateway',{ReaderCoreRequestError,isReaderCoreTransactionPendingError,SharedDownloadIntentPreferences:class{}});const RuntimeCleanup=productionMotionMethods(file('app/ReaderRuntimeOwner.ts'),['clearTextRebuildableCache','readSettingsTextCleanup']);
+const Storage=load('features/downloads/application/SharedDownloadStorageGateway.ts','SharedDownloadStorageGateway',{ReaderCoreRequestError,isReaderCoreTransactionPendingError,SharedDownloadIntentPreferences:class{}});const RuntimeCleanup=productionMotionMethods(file('app/ReaderRuntimeOwner.ts'),['clearTextRebuildableCache','readSettingsTextCleanup','reconcileSettingsTextCleanup']);
 function fixture(mode='valid'){
  const calls=[],notices=[];let currentMode=mode,gate,report=good(),textJournal,remainingEntries=10,head,receipt,raw='',uuid=0,queryMode,committedParams;const queries=[];
  const fileIo={OpenMode:{READ_ONLY:0,READ_WRITE:2},async readText(){return raw;},async open(){return{fd:1};},async close(){},async fsync(){},
@@ -74,7 +74,9 @@ function fixture(mode='valid'){
  // Actual Runtime delegation and whole storage owner execute unchanged.
  // Only disk inventory/receipts and Core transaction responses are ports.
  const disk={readPolicy:async()=>({capacityBytes:1024,expiryDays:30}),captureReadingStorageInventory:async()=>({files:[],hostImageChapters:[],protectedChapters:[]}),
-  readingStorageCleanupReceipt:async()=>({deletedBytes:report.deletedBytes??0,deletedFiles:report.deletedFiles??0}),
+  isReadingStorageInventoryCurrent:()=>true,
+  readingStorageCleanupReceipt:async()=>{if(currentMode==='receipt-fail')throw Error('disk statistics temporarily unavailable');
+    return {deletedBytes:report.deletedBytes??0,deletedFiles:report.deletedFiles??0};},
   readingStorageSummary:async()=>({totalBytes:0,retainedBytes:0,automaticBytes:0,cleanableBytes:0}),readingStorageBookIndex:async()=>new Map(),
   clearChapter:async()=>assert.fail('empty removal response cannot clear a chapter')};
  const persistence={loadLegacyProtection:async()=>[],saveLegacyProtection:async()=>{},loadSettingsTextCleanup:async()=>structuredClone(textJournal),saveSettingsTextCleanup:async value=>{textJournal=structuredClone(value);}};
@@ -82,6 +84,7 @@ function fixture(mode='valid'){
  const storage=new Storage(runtime,disk,persistence);runtime.state='ready';runtime.getDownloadStorageGateway=()=>storage;
  runtime.clearTextRebuildableCache=RuntimeCleanup.prototype.clearTextRebuildableCache;
  runtime.readSettingsTextCleanup=RuntimeCleanup.prototype.readSettingsTextCleanup;
+ runtime.reconcileSettingsTextCleanup=RuntimeCleanup.prototype.reconcileSettingsTextCleanup;
 
  installed=runtime;
  const general=generalSettingsFixture();general.setActive(runtime);const actual=general.host();assert.equal(actual.host.bindPresentation(runtime,'cache-compiler',()=>true),true);
@@ -242,6 +245,20 @@ if(id==='pre-dispatch-retire'){
  const f=fixture();f.index.settingsHost.emitCacheCleanup=snapshot=>{if(snapshot.busy)f.index.navigationGeneration++;};
  await f.index.clearTextCache();assert.equal(f.calls.length,0);assert.equal(f.snapshot().confirmation,'undispatched','retired before actual Gateway admission stays undispatched');
 }
+if(id==='reconcile-staged-text'){
+ const f=fixture('receipt-fail'),p=f.page();
+ p.confirm();await until(()=>f.snapshot()?.busy===false);
+ assert.equal(f.snapshot().confirmation,'confirmed');
+ assert.equal(f.snapshot().operation.canRetry,true);
+ assert.equal((await f.runtime.readSettingsTextCleanup()).phase,'host_completed');
+ f.mode('valid');
+ p.owner.mounted=false;f.index.route='bookshelf';f.index.openSettings();
+ const reopened=f.page('settings-back:staged-recovery');
+ await until(()=>f.snapshot()?.busy===false);reopened.update();
+ assert.equal(reopened.label(),'已清理');
+ assert.equal(f.snapshot().operation.value.removedContentBytes,10);
+ assert.equal(f.calls.length,1,'opening Settings recovers the receipt without dispatching text cleanup again');
+}
 }
 if(id==='publication-reentry'){
 {
@@ -258,4 +275,5 @@ if(id==='publisher-failure'){
 }finally{installed=undefined;}
 }
 const definitions={"confirmation": "confirmation actual scoped owner/gateway/storage path; controlled Core/OS ports", "confirmed": "confirmed actual scoped owner/gateway/storage path; controlled Core/OS ports", "partial": "partial actual scoped owner/gateway/storage path; controlled Core/OS ports", "unknown": "unknown actual scoped owner/gateway/storage path; controlled Core/OS ports", "typed-refusal": "typed-refusal actual scoped owner/gateway/storage path; controlled Core/OS ports", "legacy-query": "legacy-query actual scoped owner/gateway/storage path; controlled Core/OS ports", "malformed-core": "malformed-core actual scoped owner/gateway/storage path; controlled Core/OS ports", "retirement": "retirement actual scoped owner/gateway/storage path; controlled Core/OS ports", "retained-row": "retained-row actual scoped owner/gateway/storage path; controlled Core/OS ports", "reopened-ack": "reopened-ack actual scoped owner/gateway/storage path; controlled Core/OS ports", "pre-dispatch-retire": "pre-dispatch-retire actual scoped owner/gateway/storage path; controlled Core/OS ports", "publication-reentry": "publication-reentry actual scoped owner/gateway/storage path; controlled Core/OS ports", "publisher-failure": "publisher-failure actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+definitions['reconcile-staged-text']='reopening Settings completes a known cleanup receipt without another write';
 for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}
