@@ -1,4 +1,95 @@
 export type JsonObject = { [key: string]: unknown };
+export type JsonValue = null | boolean | number | string | JsonValue[] | { [key: string]: JsonValue };
+
+export const SOURCE_CHECK_KEYWORD_OVERRIDE_V1 = "source.check.keyword_override.v1";
+export const SOURCE_CHECK_EPHEMERAL_V1 = "source.check.ephemeral.v1";
+export const SOURCE_CHECK_REPORT_CLEAR_V1 = "source.check.report.clear.v1";
+
+export type SourceCheckMode = "legacy" | "search" | "explore";
+export type SourceCheckLevel = "L1" | "L2" | "L3" | "L4" | "L5";
+
+type SourceCheckOptions = {
+  /** Core uses "我的" when no keyword is provided. */
+  keyword?: string;
+  /** A nonblank keyword takes precedence over the source's checkKeyWord in search or legacy mode. */
+  keywordOverride?: boolean;
+  /** Whole-command Core budget. The SDK wait budget can be set separately. */
+  timeoutMs?: number;
+  /** Reporting subset. Omission or an empty array selects L1–L5. */
+  levels?: SourceCheckLevel[];
+};
+
+export type SourceCheckRunParams = SourceCheckOptions & {
+  sourceIds: string[];
+  /** Defaults to legacy. */
+  mode?: SourceCheckMode;
+  reportVersion?: 1 | 2;
+};
+
+export type SourceCheckEphemeralRunParams = SourceCheckOptions & {
+  /** One to 100 raw Legado BookSource candidates. Each entry is validated independently by Core. */
+  sources: JsonValue[];
+  /** Defaults to search. */
+  mode?: SourceCheckMode;
+  reportVersion?: 2;
+};
+
+export type SourceCheckExecutionOptions = { timeoutMs: number };
+
+export type SourceCheckStep = {
+  level: SourceCheckLevel;
+  requested: boolean;
+  executed: boolean;
+  status: "pass" | "fail" | "not_requested" | "not_supported" | "blocked" | "cancelled";
+  durationMs: number;
+  reason?: string;
+};
+
+export type SourceCheckReport = {
+  mode: SourceCheckMode;
+  traceId: string;
+  ruleDigest?: string;
+  inputDigest: string;
+  steps: SourceCheckStep[];
+  contentKind?: "text" | "url_only" | "image" | "audio" | "empty" | "unsupported";
+} & (
+  | { version: 1; executionOptions?: never; executionOptionsDigest?: never }
+  | { version: 2; executionOptions: SourceCheckExecutionOptions; executionOptionsDigest: string }
+);
+
+export type SourceCheckDebugLog = {
+  state: number;
+  msg: string;
+  timestampMs: number;
+  step?: string;
+  rule?: string;
+  extractedCount?: number;
+  errorKind?: string;
+};
+
+export type SourceCheckResult = {
+  sourceId: string;
+  available: boolean;
+  levelsPassed: SourceCheckLevel[];
+  failureReason?: string;
+  durationMs: number;
+  debugLogs?: SourceCheckDebugLog[];
+  report?: SourceCheckReport;
+};
+
+export type SourceCheckResultData = { results: SourceCheckResult[]; traceId?: string };
+
+export type SourceCheckReportClearParams = {
+  /** Surrounding whitespace is trimmed unless it is part of an exact stored legacy ID. */
+  sourceIds: string[];
+};
+
+export type SourceCheckReportClearData = {
+  /** Number of report records removed across both history versions. */
+  clearedCount: number;
+  /** Unique resolved IDs in request order, including IDs with no reports. */
+  sourceIds: string[];
+};
 
 /** Reader-owned source organization, separate from executable BookSource rules. */
 export type SourceGroupRecord = { groupId: string; name: string };
@@ -177,6 +268,7 @@ const TERMINAL_DIAGNOSTIC_METHODS = new Set<string>([
   "runtime.storage.restore", "runtime.storage.flush", "runtime.storage.export", "runtime.storage.apply",
   "runtime.storage.backup.create", "runtime.storage.backup.restore",
   "source.group.catalog", "source.list", "source.import", "source.supply", "source.update", "source.delete",
+  "source.check.run", "source.check.ephemeral.run", "source.check.report.clear",
   "book.search", "book.detail", "book.toc", "chapter.content",
   "bookshelf.list", "bookshelf.get", "bookshelf.add", "bookshelf.book.update",
   "local_book.toc", "local_book.content.metrics", "local_book.chapter.content",
@@ -214,12 +306,12 @@ export type ReaderCoreCommand = {
   params?: JsonObject;
 };
 
-export type ReaderCoreResultEvent = {
+export type ReaderCoreResultEvent<TData extends JsonObject = JsonObject> = {
   deliveryId?: number;
   protocolVersion: 1;
   requestId: number;
   type: "result";
-  data: JsonObject;
+  data: TData;
 };
 
 export type ReaderCoreError = {
@@ -902,6 +994,41 @@ export class ReaderCoreRuntime {
       if (this.closed || waiter.interruption !== undefined) finish();
       else timer = setTimeout(finish, waitMs);
     });
+  }
+
+  runSourceCheck(
+    params: SourceCheckRunParams, options: RequestOptions = {}
+  ): Promise<ReaderCoreResultEvent<SourceCheckResultData>> {
+    return this.requestSourceCheck("source.check.run", params, options);
+  }
+
+  /**
+   * Results align with the input array, including duplicate candidates.
+   * Each sourceId is its normalized bookSourceUrl when available, or
+   * `ephemeral:<one-based input index>` when the URL is unusable.
+   */
+  runEphemeralSourceCheck(
+    params: SourceCheckEphemeralRunParams, options: RequestOptions = {}
+  ): Promise<ReaderCoreResultEvent<SourceCheckResultData>> {
+    return this.requestSourceCheck("source.check.ephemeral.run", params, options);
+  }
+
+  clearSourceCheckReports(
+    params: SourceCheckReportClearParams, options: RequestOptions = {}
+  ): Promise<ReaderCoreResultEvent<SourceCheckReportClearData>> {
+    return this.request("source.check.report.clear", params, options) as Promise<ReaderCoreResultEvent<SourceCheckReportClearData>>;
+  }
+
+  private requestSourceCheck(
+    method: "source.check.run" | "source.check.ephemeral.run",
+    params: SourceCheckRunParams | SourceCheckEphemeralRunParams,
+    options: RequestOptions
+  ): Promise<ReaderCoreResultEvent<SourceCheckResultData>> {
+    return this.request(method, params, {
+      ...options,
+      // Give Core time to publish a terminal result after its own budget expires.
+      timeoutMs: options.timeoutMs ?? (params.timeoutMs ?? 180_000) + 5_000,
+    }) as Promise<ReaderCoreResultEvent<SourceCheckResultData>>;
   }
 
   async sourceGroupCatalog(timeoutMs = 5000): Promise<ReaderCoreResultEvent> {
