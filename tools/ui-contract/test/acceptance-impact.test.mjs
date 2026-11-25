@@ -57,12 +57,12 @@ function fixture(t) {
   write(renamedPath, 'export const moved = 1;\n');
   for (const [index, id] of ids.entries()) {
     const assertions = [{ id: 'input', evaluator: 'layout', sample: 'opened', source: `${searchPath}#projection` }];
-    write(localCase(id), { id, phase: 1, pageId: 'bookshelf', steps: [{ id: 'opened', kind: 'sample' }],
+    write(localCase(id), { id, version: 1, phase: 1, pageId: 'bookshelf', steps: [{ id: 'opened', kind: 'sample' }],
       structure: { opened: 'opened' }, assertions, ownerSources: [index === 0 ? renamedPath : searchPath] });
   }
   model.scenarioObligations.push({ caseId: 'reading.independent', states: { shown: 'unrelated' }, actions: { shown: null } });
   write(modelFile, model);
-  write(localCase('reading.independent'), { id: 'reading.independent', phase: 1, pageId: 'reading',
+  write(localCase('reading.independent'), { id: 'reading.independent', version: 1, phase: 1, pageId: 'reading',
     steps: [{ id: 'shown', kind: 'sample' }], structure: { shown: 'shown' }, assertions: [] });
   write(layoutPath, `import { sample } from './photo.mjs';\nthrow new Error('must never import or execute a checked module');`);
   write('tools/ui-contract/lib/photo.mjs', `export { sample } from './layout.mjs';\nconst path = chosenByDevice();\nawait import(path);`);

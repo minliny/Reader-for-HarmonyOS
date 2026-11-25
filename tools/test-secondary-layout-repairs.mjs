@@ -361,19 +361,22 @@ function recoveryOverlays() {
   Object.assign(negative, { appThemeScheme: 'day', view: { visible: true, message: '旧未决消息', generation: 1, canRetry: false }, maxHeightVp: 100, clipped: false, expanded: true, actionsWidth: 0, actionsHeight: 44, titleLineHeight: 22, reservedSpace: '', tag: '待处理', actionLabel: '', secondaryActionLabel: '' });
   negative.initialRender(); assert.throws(() => assert.ok(sdk.nodes(negative).some(n => n.type === 'Scroll')), /AssertionError/);
   const c = context(value);
+  Object.assign(c.deps, pureModuleProbe(read('ui/layout/ReaderKeyboardGeometry.ts'),
+    'ReaderKeyboardGeometry.ts', safe, ['readerKeyboardHostBottom']));
   const boundCases = [
     ['app/composition/ReaderJourneyRecoveryNotices.ets', 'availableHeight', { hostHeight: 180, hostY: 0, topInset: 70 }, []],
   ];
   for (const [rel, method, fields, args] of boundCases) {
     const owner = c.actor(rel, [method], fields); assert.ok(owner[method](...args) <= 110);
   }
-  for (const [rel, builder] of [['features/source/ui/SourceToolsPage.ets', 'pendingRecovery'],
+  for (const [rel, builder] of [['features/source/ui/SourceToolsPage.ets', 'recoveryAction'],
     ['features/settings/ui/SettingsPage.ets', 'pendingFeedback']]) {
     const source = read(rel), { ts, options } = installedEtsCompiler();
     const tree = ts.createSourceFile(rel, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
     assert.deepEqual(tree.parseDiagnostics, []);
     const component = tree.statements.find(node => ts.isStructDeclaration(node));
     const content = component.members.find(member => member.name?.getText(tree) === builder);
+    assert.ok(content, `${rel} binds the current recovery builder ${builder}`);
     assert.equal(content.parameters.length, 0, `${rel} supplies no page-local scalar geometry`);
     const slots = [];
     const visit = node => {
@@ -393,7 +396,20 @@ function recoveryOverlays() {
   assert.equal(frame.margin.top, standard.geometry.content.startInset);
   assert.equal(frame.width, standard.geometry.content.frame.width);
   assert.ok(frame.margin.top + frame.constraintSize.maxHeight <= standard.geometry.footer.top);
-  for (const rel of ['features/source/ui/SourceManagementPage.ets', 'features/source/ui/SourceSwitchWindow.ets', 'features/downloads/ui/SharedDownloadPage.ets']) assert.match(read(rel), /maxHeightVp:/, `${rel} explicitly supplies its actual host remainder`);
+  const sources = c.actor('features/source/ui/SourceManagementPage.ets',
+    ['pendingRecovery', 'recoveryOverlayTop', 'recoveryOverlayBottom'], {
+      geometry: { content: { startInset: 70 }, footer: { top: 145 } },
+      overlayBottom: () => 180, recoveryOverlayVisible: () => true, operation: {},
+      contentFrame: () => ({ left: 19, width: 282 }), layoutBudget: () => ({ filterHeight: 44 }),
+    });
+  sources.pendingRecovery();
+  const sourceFrame = c.nodes(sources).find(node => node.id === 'reader-source-pending-recovery');
+  assert.ok(sourceFrame && sourceFrame.type === 'Scroll', 'source recovery uses its bounded host scroll');
+  assert.equal(sourceFrame.margin.top, 70, 'short source host retains a visible recovery lane');
+  assert.equal(sourceFrame.constraintSize.maxHeight, 75, 'source recovery ends at the footer boundary');
+  for (const rel of ['features/source/ui/SourceSwitchWindow.ets', 'features/downloads/ui/SharedDownloadPage.ets']) {
+    assert.match(read(rel), /maxHeightVp:/, `${rel} explicitly supplies its actual host remainder`);
+  }
   results.push({ case: 'recovery-overlays', fullMessageActions: 3, zeroBudget: 'bounded', staleGeneration: 'rejected', oldGenerationArea: 'rejected', sameGenerationOldLayoutArea: 'rejected', oldMetricsArea: 'rejected', retiredMountArea: 'rejected', oldInlineAreaMutation: 'reproduced-and-rejected', coldTextThenActions: 'PASS-one-delivery-each', coldActionsThenText: 'PASS-one-delivery-each', resultKeyedMutation: 'rejected-both-orders' });
 }
 function arkwebHost() {
@@ -730,7 +746,7 @@ function supplementalInputTargets() {
 }
 function standardRecoveryDocument(c, { width, height, header, content }, definition = read('ui/layout/ReaderStandardPage.ets')) {
   const members = ['geometry', 'viewportWidth', 'viewportHeight', 'boundedOverlayVisible', 'boundedOverlayContent',
-    'overlayContent', 'emptySlot', 'emptyOverlaySlot', 'pageOverlay', 'overlayAvailableHeight', 'refreshGeometry'];
+    'boundedOverlayLeadingReserve', 'overlayContent', 'emptySlot', 'emptyOverlaySlot', 'pageOverlay', 'overlayTop', 'overlayBottom', 'refreshGeometry'];
   const owner = createReaderBuilderProbe(definition, members, { ...c.deps, ...actualReaderPageLayout() }, c.hooks).owner;
   Object.assign(owner, { appThemeScheme: 'day', viewportWidth: width, viewportHeight: height, variant: 'settingsGeneral',
     geometryRevision: 0, contentLeadingRail: 0, contentEndInset: -1, headerHeight: () => header, footerHeight: () => 0,
@@ -794,7 +810,9 @@ function pageBackBarTitleWrap() {
     assert.ok(text && row);
     assert.equal(text.maxLines, floating ? 1 : 2, 'header title follows fixed or floating layout policy');
     assert.equal(text.textOverflow.overflow, nativeEnums.TextOverflow.Ellipsis);
-    assert.equal(text.fontSize, floating ? 16 : readerTypographyRoles.TYPE_PAGE_TITLE.fontSizeFp);
+    assert.equal(text.fontSize, 17, 'fixed and floating secondary titles share the same size');
+    assert.equal(text.fontFamily, 'ReaderNotoSansSCUIBold');
+    assert.equal(text.fontWeight, 700);
     assert.equal(text.maxFontScale, 2);
     assert.equal(text.layoutWeight, 1);
     assert.equal(row.height, undefined, 'row height follows native single or multiline text');
@@ -805,6 +823,9 @@ function pageBackBarTitleWrap() {
   const before = source.replace('.maxLines(this.multilineTitle() ? 2 : 1)', '.maxLines(1)');
   assert.notEqual(before, source);
   assert.throws(() => expect(before, false), /header title follows fixed or floating layout policy/);
+  const formerFloatingSize = source.replace('visual.headerFontSize : TYPE_PAGE_TITLE.fontSizeFp',
+    'visual.headerFontSize : this.floating ? 16 : TYPE_PAGE_TITLE.fontSizeFp');
+  assert.throws(() => expect(formerFloatingSize, true), /fixed and floating secondary titles share the same size/);
   results.push({ case: 'page-back-bar-title-wrap', fixedHeaderGrowth: true, floatingSingleLine: true });
 }
 

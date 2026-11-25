@@ -34,6 +34,8 @@ const metricsApi = await import('../entry/src/main/ets/ui/foundation/ReaderWindo
 const geometryApi = await import('../entry/src/main/ets/ui/layout/ReaderPageGeometry.ts');
 const support = {
   ...metricsApi, ...geometryApi,
+  ...await import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts'),
+  ...await import('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts'),
   ...await import('../entry/src/main/ets/ui/layout/ReaderMeasurements.ts'),
   ...await import('../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts'),
   ...await import('../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery.ts'),
@@ -54,6 +56,17 @@ function mountedText(source, width = 366, height = 844, context = 'detail') {
   const metrics = metricsApi.createDefaultReaderWindowMetrics();
   metrics.windowRect.width = width; metrics.windowRect.height = height;
   const frames = [], sdk = boundedSurfaceSdk({ windowMetrics: () => metrics });
+  // The contract exercises the parent header slot and geometry. Register the
+  // real child declarations for SDK BuilderParam lowering and keep their
+  // native drawing outside this finite fixture.
+  class HeaderPort {
+    constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
+    updateStateVars(params) { Object.assign(this.params, params); }
+  }
+  for (const name of ['PageBackBar', 'ReaderReadingTopBar']) {
+    sdk.childSources[name] = read(`ui/chrome/${name}.ets`);
+    sdk.deps[name] = HeaderPort;
+  }
   const classes = pureModuleProbe(source.slice(source.indexOf('class DirectoryRulesFocusFrame'),
     source.indexOf('let fullDirectoryBackGeneration')), 'DirectoryFrames.ets', { FrameCallback: class {} , ReaderPostLayoutFrame: actualReaderPostLayoutFrame()},
   ['DirectoryRulesFocusFrame', 'FullDirectoryHeaderMeasurementFrame']);

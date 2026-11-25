@@ -103,7 +103,7 @@ function footerRoundingAtWindowBottom(carrier, body, windowRect, actions, tolera
     inner.left + inner.width <= outer.left + outer.width && bottom(inner) <= bottom(outer);
   if (carrier.type !== 'Column' || carrier.visible !== true || !(carrier.opacity > 0) ||
       carrier.clip !== false || carrier.backgroundAlpha !== 0 || carrier.clickable !== false ||
-      carrier.hitTestMode !== 'HitTestMode.Transparent' || !rectPresent(authored) ||
+      carrier.hitTestMode !== 'HitTestMode.Default' || !rectPresent(authored) ||
       !rectPresent(visible) || !rectPresent(windowRect) || !fullyVisible(body) ||
       body.parentPath !== carrier.path || !inside(visible, body.visibleRectPx) ||
       !actions.every(action => fullyVisible(action) && inside(body.visibleRectPx, action.visibleRectPx))) return false;

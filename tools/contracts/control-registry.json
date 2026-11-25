@@ -98,6 +98,10 @@
           "symbol": "searchField"
         },
         {
+          "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+          "symbol": "groupSearchField"
+        },
+        {
           "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets"
         }
       ],
@@ -112,7 +116,7 @@
         "unit": "vp",
         "status": "spec"
       },
-      "accessibleNameSource": "ReaderSearchField.accessibilityLabel('搜索书源名称或域名')",
+      "accessibleNameSource": "ReaderSearchField page query accessibilityLabel or group-menu placeholder",
       "status": "partial",
       "knownGap": "Current complete confluence producer covers this named SDK carrier and parent constraint across the declared width/font contexts. Native pointer dispatch, clipping, focus, glyphs and screen-reader acceptance remain OPEN. E2/E3 page gates remain FAIL."
     },

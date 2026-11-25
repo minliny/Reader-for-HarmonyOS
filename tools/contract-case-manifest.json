@@ -796,7 +796,7 @@
       }
     },
     "test-independent-directory-foreground.mjs": {
-      "sourceSha256": "1dc7a89d131753b01e92697416def1f5fded757c3311e3c7b59561ca71729a2f",
+      "sourceSha256": "37cea09b5397232c995bd8e5ade50aa094214225113406d736f82da14b3c0841",
       "cases": {
         "header-stability": {
           "resources": [],
@@ -3436,7 +3436,7 @@
       }
     },
     "test-reader-page-header-contract.mjs": {
-      "sourceSha256": "6063fb83227ca8fb8ed6fde318092e054cb5e81e4f4be59eecd3c3b751741d2a",
+      "sourceSha256": "c3b5464919dd448401661a59b812d1099da0b676e66a2164b2e37bb284af1a1c",
       "cases": {
         "sdk-public-slots": {
           "resources": [],
@@ -3444,11 +3444,11 @@
         },
         "header-paint-owner": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED"
         },
         "scaffold-slots": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED"
         },
         "footer-safe-lane": {
           "resources": [],
@@ -3456,7 +3456,7 @@
         },
         "standard-page-layout": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED"
         },
         "framework-route-coverage": {
           "resources": [],
@@ -7934,7 +7934,7 @@
       }
     },
     "test-secondary-layout-repairs.mjs": {
-      "sourceSha256": "99b08349c1982fc9e443f00c4fa0993a524078f11e74099da952a9b9e00e5f49",
+      "sourceSha256": "17149c4d7a93f0f84c0cb7f078e6b389aaaf62ec2b335300f9a9fa6371c2cf72",
       "cases": {
         "select-host": {
           "resources": [],
@@ -7955,6 +7955,10 @@
         "download-chapter-width": {
           "resources": [],
           "qualification": "REVIEW_NEEDED"
+        },
+        "page-back-bar-title-wrap": {
+          "resources": [],
+          "qualification": "QUALIFIED"
         }
       }
     },
@@ -8611,7 +8615,7 @@
       }
     },
     "test-source-journey-retention.mjs": {
-      "sourceSha256": "5745f5fd0aa877b5eb727dca47461bf3cdbc9a5838dccdcfcb20d37cfe53011d",
+      "sourceSha256": "36c749fd74a4f9364c3e7a55635008d6a66e24a88cce7cbd837a1dbf44a40238",
       "cases": {
         "journey-retention": {
           "resources": [],
@@ -8626,6 +8630,10 @@
           "qualification": "QUALIFIED"
         },
         "tools-focus-echo": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "header-top-growth": {
           "resources": [],
           "qualification": "QUALIFIED"
         }
@@ -8707,11 +8715,11 @@
       }
     },
     "test-source-management-layout.mjs": {
-      "sourceSha256": "8435534006dc8b418694eaecd2aa1ce1f780beabadecf5cf830a72bdec7a2503",
+      "sourceSha256": "76c96f1a2cae37eab39ff5138ce26d3b464acfd06992bf74436085e3ed80798b",
       "cases": {
         "matrix": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED"
         }
       }
     },
@@ -9478,23 +9486,27 @@
       }
     },
     "test-source-tools-typography-sdk.mjs": {
-      "sourceSha256": "727bc1efb84c35249a629f783652f052ff4cb3036e0705da2a453a100dc5d3d3",
+      "sourceSha256": "a3b2ebbceee1a3c72d87955f56c195447dc8c1153b7353b47e8a411e557d1ff8",
       "cases": {
         "carrier-propagation": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED"
         },
         "input-selection": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED"
         },
         "guard-admission": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED"
         },
         "raw-debug": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED"
+        },
+        "inline-native-admission": {
+          "resources": [],
+          "qualification": "QUALIFIED"
         }
       }
     },
@@ -11949,6 +11961,23 @@
           "qualification": "QUALIFIED"
         },
         "policy-dedup": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        }
+      }
+    },
+    "test-source-interaction-inventory.mjs": {
+      "sourceSha256": "57b631d5660dd84abef62c050fc94fa377199e2118759ecbf01b246a296e31b7",
+      "cases": {
+        "inventory": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "sdk-targets": {
+          "resources": [],
+          "qualification": "QUALIFIED"
+        },
+        "recovery-targets": {
           "resources": [],
           "qualification": "QUALIFIED"
         }

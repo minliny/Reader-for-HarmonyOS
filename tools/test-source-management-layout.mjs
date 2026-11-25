@@ -30,12 +30,14 @@ if (selected.length) {
   const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
   const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
   const { readerReadableFontScale, readerScaledControlHeight } = await import('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts');
-  const { resolveSourceManagementLayout } = await import('../entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts');
+  const { resolveSourceManagementLayout, SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP_GAP } =
+    await import('../entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts');
   const { ReaderPageGeometryInput, resolveReaderPageGeometry } = await import('../entry/src/main/ets/ui/layout/ReaderPageGeometry.ts');
   const { readerStandardPageSpec } = await import('../entry/src/main/ets/ui/layout/ReaderPageShell.ts');
   const { ReaderWindowMetricsSnapshot, ReaderRectVp } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
   const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
   const { readerSourceCategoryLabel } = await import('../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
+  const { httpUrlHostname } = await import('../entry/src/main/ets/platform/network/HttpTransportPolicy.ts');
   const file = new URL('../entry/src/main/ets/features/source/ui/SourceManagementPage.ets', import.meta.url);
   const source = readFileSync(file, 'utf8'), widths = [320, 366], fontScales = [1, 1.3, 1.6, 2];
   let scale = 1;
@@ -48,18 +50,19 @@ if (selected.length) {
   const Page = selectedProductionMethods(file, 'SourceManagementPage', ['fontScale', 'layoutBudget', 'footerControlHeight', 'footerFallbackHeight',
     'footerContentWidth', 'footerStacked', 'footerActionHeight'], deps);
   const targets = [], budgets = [], samples = [];
-  function assertFooterWrapper(nodes) {
+  function assertFooterWrapper(nodes, stacked = false) {
     const wrappers = nodes.filter(node => node.type === '__Common__' && typeof node.onAreaChange === 'function');
     assert.equal(wrappers.length, 1, 'actual footer has one measured custom-component wrapper');
-    assert.equal(wrappers[0].layoutWeight, 1, 'the native Row sibling __Common__ must own its equal allocation');
+    if (stacked) assert.equal(wrappers[0].width, '100%', 'a stacked footer fills the fixed outer lane');
+    else assert.equal(wrappers[0].layoutWeight, 1, 'the native Row sibling __Common__ must own its equal allocation');
     const buttons = nodes.filter(node => node.type === 'Button' && node.accessibilityText === '批量管理');
     assert.equal(buttons.length, 1, 'actual footer has one batch NativeButton');
     assert.equal(buttons[0].width, '100%', 'the inner native Button must fill its allocated __Common__');
     const add = nodes.find(node => node.type === 'Button' && node.accessibilityText === '新增书源');
     assert.ok(add); assert.equal(add.width, '100%', 'the add Native carrier fills its own allocated wrapper');
     assert.equal(add.layoutWeight, undefined, 'the add Native carrier must not borrow a second inner equal allocation');
-    assert.equal(nodes.filter(node => node.type === '__Common__' && node.layoutWeight === 1).length, 2,
-      'both external wrappers own their equal footer allocation');
+    assert.equal(nodes.filter(node => node.type === '__Common__' && (stacked ? node.width === '100%' : node.layoutWeight === 1)).length, 2,
+      'both external wrappers own their footer allocation');
   }
   for (const width of widths) for (scale of fontScales) {
     metrics.windowRect.width = width; metrics.systemFontScale = scale;
@@ -76,42 +79,56 @@ if (selected.length) {
     Object.assign(page, { readerWindowMetricsRevision: 1, viewportWidth: width, viewportHeight: 844,
       contentFrame: () => ({ width: contentWidth }), actionBottomInset: () => 16 });
     for (const login of [false, true]) for (const summary of [false, true]) {
-      const book = { name: '示例书源 A', category: 'novel', baseUrl: 'https://a.example.test',
+      const book = { sourceId: 'fixture-source-a', enabled: true, name: '示例书源 A', category: 'novel', baseUrl: 'https://a.example.test',
         loginUrl: login ? 'https://a.example.test/login' : undefined, checkState: 'passed', checkMessage: summary ? '检测通过' : undefined };
       const budget = page.layoutBudget(book);
       assert.ok(budget.textAvailableWidth >= budget.textMinWidth, 'declared minimum text column survives each arrangement');
       assert.ok(budget.trailingWidth <= contentWidth - 8, 'all actions fit on their row without shrinking touch targets');
-      if (budget.rowForm === 'stacked-actions') assert.ok(budget.rowMinHeight >= 40 + controls.targets.detect.height + 24,
-        'stacked first row must reserve the actual 40vp icon as well as the action row and 24vp padding/gap');
       assert.ok(budget.footerHeight >= controls.targets.manage.height && budget.footerHeight >= controls.targets.add.height);
       assert.ok(budget.filterHeight >= controls.targets.statusWide.height && budget.filterHeight >= controls.targets.category.height);
       const sdk = boundedSurfaceSdk();
-      const actor = sdk.consumer(source, ['sourceRow', 'currentSourceRow', 'currentSourceInfo', 'sourceRenderKey', 'projectedSources', 'sourceLeading', 'sourceInfo', 'sourceActions', 'statusFilter', 'categoryFilter', 'bottomActionBar'], {
-        ...readerFoundationTokens, ...readerTypographyRoles, readerAppColor, readerSourceCategoryLabel,
+      const actor = sdk.consumer(source, ['sourceRow', 'currentSourceRow', 'currentSourceInfo', 'sourceRenderKey',
+        'projectedSources', 'sourceLeading', 'sourceCategoryIcon', 'sourceInfo', 'sourceDomain', 'sourceActions',
+        'verificationRowId', 'verificationRowTextId'], {
+        ...readerFoundationTokens, ...readerTypographyRoles, ...foundationSpecs(),
+        readerAppColor, readerSourceCategoryLabel, httpUrlHostname, SOURCE_ROW_ICON_WIDTH,
+        WordBreak: { BREAK_ALL: 'break-all' },
         Alignment: { Center: 'center' }, VerticalAlign: { Center: 'center' }, HorizontalAlign: { Start: 'start' },
         TextOverflow: { Ellipsis: 'ellipsis' }, ScrollDirection: { Horizontal: 'horizontal' }, HitTestMode: { Transparent: 'transparent' },
       });
       let actionCount = 0;
-      Object.assign(actor, { appThemeScheme: 'day', contentFrame: page.contentFrame, fontScale: () => scale,
+      Object.assign(actor, { appThemeScheme: 'day', verificationOpening: '', contentFrame: page.contentFrame, fontScale: () => scale,
         footerStacked: page.footerStacked.bind(page),
         layoutBudget: page.layoutBudget.bind(page), detectButton: () => actionCount++, loginButton: () => actionCount++,
         sourceRowToggle:()=>()=>{}, statusBadge() {}, statusBadgeBackground: () => '', statusBadgeDot: () => '', statusBadgeLabel: () => '', sourceSwitch: () => actionCount++ });
       actor.sourceRow(book);
       assert.equal(actionCount, login ? 3 : 2, 'each actual branch preserves exactly one copy of every action');
-      const row = sdk.nodes(actor).find(n => n.type === 'Column' && n.constraintSize?.minHeight === budget.rowMinHeight);
+      const rowNodes = sdk.nodes(actor);
+      const row = rowNodes.find(n => n.type === 'Column' && n.constraintSize?.minHeight === budget.rowMinHeight);
       assert.ok(row); assert.equal(row.height, undefined, 'row can grow from real text measurement');
-      const title = sdk.nodes(actor).find(n => n.type === 'Text' && n.create === book.name);
+      if (budget.rowForm === 'stacked-actions') {
+        const leading = rowNodes.find(n => n.type === 'Stack' && n.width === SOURCE_ROW_ICON_WIDTH);
+        assert.ok(Number.isFinite(leading?.height), 'stacked leading icon has an actual height');
+        assert.ok(budget.rowMinHeight >= leading.height + readerFoundationTokens.TOK_SPACE_XS + budget.actionsHeight,
+          'stacked row pays the leading icon, inter-row gap and both action touch rows');
+      }
+      const title = rowNodes.find(n => n.type === 'Text' && n.create === book.name);
       assert.equal(title.maxFontScale, scale);
       samples.push({ width, scale, login, summary, budget });
     }
     // The fallback may not ask for contentFrame: pageGeometry itself owns it.
     const before = page.contentFrame; page.contentFrame = () => assert.fail('footer fallback must not recurse into pageGeometry');
-    assert.equal(page.footerFallbackHeight(), page.footerControlHeight() + readerFoundationTokens.TOK_SPACE_SM + 16);
+    const stacked = page.footerStacked();
+    const height = page.footerControlHeight() * (stacked ? 2 : 1) +
+      (stacked ? readerFoundationTokens.TOK_SPACE_CONTROL_INLINE : 0);
+    assert.equal(page.footerFallbackHeight(), height + readerFoundationTokens.TOK_SPACE_SM + 16);
     page.contentFrame = before;
     const budget = page.layoutBudget({ loginUrl: 'login', checkMessage: '检测通过', checkState: 'passed' });
     const shared = labeledIconControls({ foundation: foundationControls({ windowMetrics: () => ({ systemFontScale: scale }) }) });
-    const parent = createReaderBuilderProbe(source, ['statusFilter', 'chip', 'categoryFilter', 'bottomActionBar'], {
-      ...shared.dependencies, readerSourceCategoryLabel, ScrollDirection: { Horizontal: 'horizontal' }, HitTestMode: { Transparent: 'transparent' },
+    const footerMembers = ['bottomActionBar', 'sourceAddIcon'];
+    const parent = createReaderBuilderProbe(source, ['statusFilter', 'chip', 'categoryFilter', ...footerMembers], {
+      ...shared.dependencies, readerSourceCategoryLabel, SOURCE_STATUS_CHIP_GAP,
+      ScrollDirection: { Horizontal: 'horizontal' }, HitTestMode: { Transparent: 'transparent' },
     }, shared.hooks).owner;
     Object.assign(parent, { appThemeScheme: 'day', contentFrame: page.contentFrame, filterControlWidth: () => contentWidth,
       footerStacked: page.footerStacked.bind(page),
@@ -119,7 +136,7 @@ if (selected.length) {
       rebuildSourceProjection() {}, onOpenTools() {}, onAddSource() {}, toolsFocusId:()=>'',importFocusId:()=>'' });
     parent.statusFilter(); parent.categoryFilter(); parent.bottomActionBar();
     const parentNodes = shared.nodes(parent);
-    assertFooterWrapper(parentNodes);
+    assertFooterWrapper(parentNodes, stacked);
     const scrolls = parentNodes.filter(n => n.type === 'Scroll');
     assert.equal(scrolls.length, 2);
     assert.ok(scrolls.every(n => n.height === budget.filterHeight && n.scrollable === 'horizontal'), 'both real filter viewports grow with their child controls');
@@ -131,7 +148,7 @@ if (selected.length) {
       const before = source.replace("        .layoutWeight(this.footerStacked() ? 0 : 1)\n        .onAreaChange((_old: Area, area: Area): void => this.onToolsEntryLayout(identity, 'footer', area));",
         "        .onAreaChange((_old: Area, area: Area): void => this.onToolsEntryLayout(identity, 'footer', area));");
       assert.notEqual(before, source, 'controlled regression removes only the external footer allocation');
-      const old = createReaderBuilderProbe(before, ['bottomActionBar'], shared.dependencies, shared.hooks).owner;
+      const old = createReaderBuilderProbe(before, footerMembers, shared.dependencies, shared.hooks).owner;
       Object.assign(old, { appThemeScheme: 'day', contentFrame: page.contentFrame, layoutBudget: page.layoutBudget.bind(page),
         footerStacked: page.footerStacked.bind(page),
         actionBottomInset: () => 16, toolsFocusId: () => '', importFocusId: () => '' });
@@ -141,7 +158,7 @@ if (selected.length) {
       const innerIntrinsic = source.replace("specId: 'source-management-manage', label: '批量管理', layout: 'full'",
         "specId: 'source-management-manage', label: '批量管理', layout: 'equal'");
       assert.notEqual(innerIntrinsic, source, 'controlled regression restores only the old inner equal mode');
-      const intrinsic = createReaderBuilderProbe(innerIntrinsic, ['bottomActionBar'], shared.dependencies, shared.hooks).owner;
+      const intrinsic = createReaderBuilderProbe(innerIntrinsic, footerMembers, shared.dependencies, shared.hooks).owner;
       Object.assign(intrinsic, { appThemeScheme: 'day', contentFrame: page.contentFrame, layoutBudget: page.layoutBudget.bind(page),
         footerStacked: page.footerStacked.bind(page),
         actionBottomInset: () => 16, toolsFocusId: () => '', importFocusId: () => '' });
@@ -151,15 +168,23 @@ if (selected.length) {
     }
     for (const [name, controlRef] of [['detect', 'source-detect'], ['login', 'source-login'], ['statusWide', 'source-filter-chip'], ['manage', 'footer-batch'], ['add', 'footer-add']]) {
       const t = controls.targets[name];
-      const targetWidth = typeof t.width === 'number' ? t.width : (contentWidth - readerFoundationTokens.TOK_SPACE_CONTROL_INLINE) / 2;
+      const targetWidth = typeof t.width === 'number' ? t.width : stacked ? contentWidth :
+        (contentWidth - readerFoundationTokens.TOK_SPACE_CONTROL_INLINE) / 2;
       targets.push({ controlRef, width, fontScale: scale, visual: { width: targetWidth, height: t.height }, response: null });
     }
-    const rowWidth = budget.rowForm === 'inline' ? 36 + 16 + budget.textMinWidth + budget.trailingWidth + 8 :
-      Math.max(budget.trailingWidth, budget.textMinWidth + (budget.rowForm === 'stacked-actions' ? 44 : 0)) + 8;
+    const rowGap = readerFoundationTokens.TOK_SPACE_XS;
+    const rowWidth = budget.rowForm === 'inline' ?
+      SOURCE_ROW_ICON_WIDTH + rowGap * 3 + budget.textMinWidth + budget.trailingWidth :
+      Math.max(budget.trailingWidth, SOURCE_ROW_ICON_WIDTH,
+        budget.textMinWidth + (budget.rowForm === 'stacked-actions' ? SOURCE_ROW_ICON_WIDTH + rowGap : 0)) + rowGap;
+    const statusStripWidth = 2 * controls.targets.statusCompact.width + 3 * controls.targets.statusWide.width +
+      4 * SOURCE_STATUS_CHIP_GAP;
     for (const [region, availableWidth, requiredWidth, availableHeight, requiredHeight, rowForm] of [
       ['row', contentWidth, rowWidth, budget.rowMinHeight, budget.rowMinHeight, budget.rowForm === 'inline' ? 'single-line' : 'stacked'],
-      ['chip', budget.statusContentWidth, 3 * controls.targets.statusCompact.width + 2 * controls.targets.statusWide.width + 32, budget.filterHeight, controls.targets.statusWide.height, 'single-line'],
-      ['footer', contentWidth, contentWidth, budget.footerHeight, Math.max(controls.targets.manage.height, controls.targets.add.height), 'single-line'],
+      ['chip', budget.statusContentWidth, statusStripWidth, budget.filterHeight, controls.targets.statusWide.height, 'single-line'],
+      ['footer', contentWidth, contentWidth, budget.footerHeight, stacked ?
+        controls.targets.manage.height + controls.targets.add.height + readerFoundationTokens.TOK_SPACE_CONTROL_INLINE :
+        Math.max(controls.targets.manage.height, controls.targets.add.height), stacked ? 'stacked' : 'single-line'],
     ]) {
       assert.ok(requiredWidth <= availableWidth && requiredHeight <= availableHeight,
         `${region} ${width}/${scale}: ${requiredWidth}×${requiredHeight} exceeds ${availableWidth}×${availableHeight}`);
@@ -212,6 +237,7 @@ if (selected.length) {
     'entry/src/main/ets/features/source/presentation/SourceSwitchPresentation.ets',
     'entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts',
     'entry/src/main/ets/features/source/ui/SourceManagementPage.ets',
+    'entry/src/main/ets/platform/network/HttpTransportPolicy.ts',
     'entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets',
     'entry/src/main/ets/ui/controls/ReaderButton.ets',
     'entry/src/main/ets/ui/controls/ReaderControlSpecs.ets',

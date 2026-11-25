@@ -113,7 +113,7 @@
       "admission": "ReaderButton mounted + actionEnabled + not busy",
       "sdkGroup": "status-chip",
       "nativeEvidence": "OPEN",
-      "label": "启用",
+      "label": "已启用",
       "controlRef": "source-filter-chip"
     },
     {
@@ -151,7 +151,7 @@
       "admission": "ReaderButton mounted + actionEnabled + not busy",
       "sdkGroup": "status-chip",
       "nativeEvidence": "OPEN",
-      "label": "未检测",
+      "label": "未测速",
       "controlRef": "source-filter-chip"
     },
     {
@@ -322,7 +322,7 @@
       },
       "drawHost": {
         "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
-        "symbol": "sourceGroupTrigger"
+        "symbol": "standardTrigger"
       },
       "eventOwner": "SourceManagementPage.group selection",
       "condition": "always",
@@ -330,6 +330,24 @@
       "sdkGroup": "group-trigger",
       "nativeEvidence": "OPEN",
       "controlRef": "source-group-select"
+    },
+    {
+      "id": "group-search-input",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "groupSearchField",
+        "component": "ReaderSearchField"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+        "symbol": "autoLineHeightField"
+      },
+      "eventOwner": "SourceManagementPage.changeGroupSearch",
+      "condition": "groupOpen with current group-selection identity",
+      "admission": "Group closing and retired identities reject text changes",
+      "sdkGroup": "group-search-input",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-search"
     },
     {
       "id": "group-selected-option",

@@ -136,12 +136,14 @@ if (selected.length) {
     const emitted=ts.transpileModule(frame.getText(tree),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
     const SourceListLayoutFrame=new Function('FrameCallback','ReaderPostLayoutFrame', emitted+';return SourceListLayoutFrame;')(class{}, actualReaderPostLayoutFrame());
     const names=['currentFilterKey','scrollLayoutKey','cancelScrollRestore','captureScroll','requestOpenTools',
+      'readCurrentScroll','observeRestoredScroll','observeVerificationScroll',
       'scheduleSourceAnchorRestore','sourceAnchorReadPending','sourceReturnFiltersMatch','managementOpeningIsCurrent','managementBackIsCurrent','cancelToolsReturnFocus'];
     const { ReaderRectVp, ReaderWindowMetricsSnapshot, readerInteractiveSafeTop, readerInteractiveSafeBottom } =
       await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
     let metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 366, 809));
     const Page=selectedProductionMethods(file,'SourceManagementPage',names,{SourceListLayoutFrame,sourceManagementFilterKey,copySourceManagementScroll,
       ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeTop,readerInteractiveSafeBottom,
+      ReaderUIVerificationProbe:{enabled:()=>false},
       readerScrollStartOffset:value=>value.startInset,ScrollAlign:{START:'start'},Edge:{Top:'top'}});
     function page(initial) {
       const actor=new Page(),frames=[],calls=[];
@@ -209,6 +211,9 @@ if (selected.length) {
     const file = new URL('../entry/src/main/ets/features/source/ui/SourceManagementPage.ets', import.meta.url);
     const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
     const { ts, options } = installedEtsCompiler();
+    const { APP_FLOATING_HEADER_BAR_HEIGHT, APP_FLOATING_HEADER_TOP_GAP } = await import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts');
+    const { applyReaderStandardFloatingHeader } = await import('../entry/src/main/ets/ui/layout/ReaderPageGeometry.ts');
+    const { READER_STANDARD_PAGE_CONTENT_GAP } = await import('../entry/src/main/ets/ui/layout/ReaderPageShell.ts');
     const tree = ts.createSourceFile('SourceHeaderScroll.ets', readFileSync(file, 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
     const frame = tree.statements.find(node => node.name?.getText(tree) === 'SourceListLayoutFrame');
     assert.ok(frame);
@@ -216,9 +221,12 @@ if (selected.length) {
     const SourceListLayoutFrame = new Function('ReaderPostLayoutFrame', emitted + ';return SourceListLayoutFrame;')(actualReaderPostLayoutFrame());
     const layout = actualSourceManagementGeometry();
     const Page = selectedProductionMethods(file, 'SourceManagementPage', [
-      'recordMeasurement', 'alignListTopAfterHeaderChange', 'refreshGeometry', 'managementOpeningIsCurrent',
+      'recordMeasurement', 'alignListTopAfterHeaderChange', 'refreshGeometry', 'observeVerificationGeometry', 'managementOpeningIsCurrent',
       'managementBackIsCurrent', 'cancelScrollRestore',
-    ], { ...layout, SourceListLayoutFrame, Edge: { Top: 'top' } });
+    ], { ...layout, APP_FLOATING_HEADER_BAR_HEIGHT, READER_STANDARD_PAGE_CONTENT_GAP, applyReaderStandardFloatingHeader,
+      ReaderUIVerificationProbe: { enabled: () => false },
+      SourceListLayoutFrame, Edge: { Top: 'top' } });
+    const fallbackContentStart = APP_FLOATING_HEADER_TOP_GAP + APP_FLOATING_HEADER_BAR_HEIGHT + READER_STANDARD_PAGE_CONTENT_GAP;
     function current() {
       const frames = [], calls = [];
       const actor = Object.assign(new Page(), { mounted: true, appForeground: true, listMounted: true,
@@ -226,17 +234,18 @@ if (selected.length) {
         footerMeasurementKey: 3, measurements: new layout.ReaderMeasurementStore(), measurementRevision: 0,
         viewportWidth: 320, viewportHeight: 770, footerFallbackHeight: () => 64,
         getUIContext: () => ({ postFrameCallback: callback => frames.push(callback) }),
-        sourceScroller: { getItemRect: () => ({ y: 58, height: 330 }), scrollEdge: edge => calls.push(edge) } });
+        sourceScroller: { getItemRect: () => ({ y: fallbackContentStart, height: 330 }), scrollEdge: edge => calls.push(edge) } });
       actor.refreshGeometry();
       return { actor, frames, calls, flush: () => { for (const f of frames.splice(0)) f.onIdle(1); } };
     }
     const top = current();
-    assert.equal(top.actor.geometry.content.startInset, 58);
+    assert.equal(top.actor.geometry.content.startInset, fallbackContentStart);
     top.actor.recordMeasurement('source:header', 132, 2);
-    assert.equal(top.actor.geometry.content.startInset, 58);
+    assert.equal(top.actor.geometry.content.startInset, fallbackContentStart);
     top.actor.recordMeasurement('source:header', 132, 3);
     top.actor.recordMeasurement('source:header', 140, 3);
-    assert.equal(top.actor.geometry.content.startInset, 140);
+    assert.equal(top.actor.geometry.content.startInset,
+      APP_FLOATING_HEADER_TOP_GAP + 140 + READER_STANDARD_PAGE_CONTENT_GAP);
     assert.equal(top.frames.length, 1, 'same opening coalesces header measurements');
     assert.deepEqual(top.calls, [], 'wait for the new contentStartOffset');
     top.flush();

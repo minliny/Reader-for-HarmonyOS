@@ -5,18 +5,30 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parseArgs } from 'node:util';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-const usage = 'Usage: node scripts/check-header-geometry.mjs --rationale <item-specific reason> [--json]';
-const args = process.argv.slice(2);
-const rationaleIndex = args.indexOf('--rationale');
-if (rationaleIndex < 0 || !args[rationaleIndex + 1]?.trim() || args[rationaleIndex + 1].startsWith('--') ||
-    args.length > 3 || args.some((arg, index) => arg !== '--rationale' && arg !== '--json' && index !== rationaleIndex + 1)) {
+const usage = 'Usage: node scripts/check-header-geometry.mjs --rationale <item-specific reason> [--check <id>]... [--json]';
+const options = {
+  rationale: { type: 'string' },
+  check: { type: 'string', multiple: true, default: [] },
+  json: { type: 'boolean', default: false },
+};
+let values;
+try {
+  ({ values } = parseArgs({ options }));
+} catch (error) {
+  console.error(error.message);
   console.error(usage);
   process.exit(2);
 }
-const rationale = args[rationaleIndex + 1].trim();
-const json = args.includes('--json');
+const rationale = values.rationale?.trim();
+if (!rationale) {
+  console.error(usage);
+  process.exit(2);
+}
+const { json } = values;
+const requested = new Set(values.check);
 
 const file = (path) => readFileSync(resolve(root, path), 'utf8');
 const count = (source, needle) => source.split(needle).length - 1;
@@ -42,6 +54,7 @@ const appSources = sourceFiles(resolve(root, 'entry/src/main/ets'))
   .filter((path) => path.endsWith('.ets') || path.endsWith('.ts'));
 
 const metrics = file('entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts');
+const typography = file('entry/src/main/ets/ui/foundation/ReaderTypography.ets');
 const specs = file('entry/src/main/ets/ui/foundation/ReaderHeaderSpecs.ets');
 const appTopBar = file('entry/src/main/ets/ui/chrome/AppTopBar.ets');
 const pageBackBar = file('entry/src/main/ets/ui/chrome/PageBackBar.ets');
@@ -90,6 +103,7 @@ const mangaLayout = file('entry/src/main/ets/features/manga/ui/MangaLayoutPolicy
 
 const results = [];
 function check(id, fn) {
+  if (requested.size > 0 && !requested.has(id)) return;
   try {
     fn();
     results.push({ id, status: 'PASS' });
@@ -107,7 +121,7 @@ check('single-app-bar-constant-owner', () => {
     assert.doesNotMatch(source, /(?:const|let|var)\s+APP_(?:FLOATING_)?HEADER_BAR_HEIGHT\s*=/, `${name}: duplicate app bar constant`);
     assert.doesNotMatch(source, /(?:const|let|var)\s+APP_FLOATING_HEADER_TOP_GAP\s*=/, `${name}: duplicate header top gap constant`);
   }
-  assert.ok(has(appTopBar, "from '../../ui/foundation/ReaderHeaderMetrics'"));
+  assert.match(appTopBar, /import\s*\{\s*APP_FLOATING_HEADER_BAR_HEIGHT,\s*APP_HEADER_BAR_HEIGHT\s*\}\s*from '\.\.\/foundation\/ReaderHeaderMetrics';/);
   assert.ok(has(appTopBar, 'readerScaledBarHeight(APP_FLOATING_HEADER_BAR_HEIGHT, 28, scale, 0)'));
   assert.ok(has(appTopBar, 'readerScaledBarHeight(APP_HEADER_BAR_HEIGHT, TYPE_APP_HOME_TITLE.lineHeightFp as number, scale, 6)'));
   assert.doesNotMatch(appTopBar, /\.height\(\s*(?:52|58)\s*\)/);
@@ -117,10 +131,14 @@ check('single-app-bar-constant-owner', () => {
 });
 
 check('page-back-bar-consumes-app-bar-metrics', () => {
-  assert.ok(has(pageBackBar, "import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_HEADER_BAR_HEIGHT } from '../../ui/foundation/ReaderHeaderMetrics';"));
+  assert.match(pageBackBar, /import\s*\{\s*APP_FLOATING_HEADER_BAR_HEIGHT,\s*APP_HEADER_BAR_HEIGHT,\s*DOWNLOAD_HEADER_HEIGHT,[^}]*\}\s*from '\.\.\/foundation\/ReaderHeaderMetrics';/);
   const source = compact(pageBackBar);
-  assert.ok(source.includes(compact('readerScaledBarHeight(APP_FLOATING_HEADER_BAR_HEIGHT, 28, this.fontScale(), 0)')));
+  assert.ok(source.includes(compact('readerScaledBarHeight(APP_FLOATING_HEADER_BAR_HEIGHT, TYPE_PAGE_TITLE.lineHeightFp as number, this.fontScale(), 0)')));
   assert.ok(source.includes(compact('readerScaledBarHeight(APP_HEADER_BAR_HEIGHT, TYPE_PAGE_TITLE.lineHeightFp as number, this.fontScale(), 0)')));
+  assert.match(typography, /export const TYPE_PAGE_TITLE = new ReaderTextStyle\(\s*READER_FONT_NOTO_SANS_SC_UI_BOLD, 700, 17, 24,/);
+  assert.ok(has(typography, 'export const TYPE_DOWNLOAD_HEADER_TITLE = TYPE_PAGE_TITLE;'));
+  assert.ok(has(source, 'if (this.variant === \'download\') return DOWNLOAD_HEADER_HEIGHT;'));
+  assert.ok(has(source, 'if (this.variant === \'mangaDirectory\') return mangaDirectoryHeaderHeight(this.mangaFontScale());'));
   assert.doesNotMatch(pageBackBar, /this\.floating\s*\?\s*52\s*:\s*58/);
 });
 
@@ -160,8 +178,8 @@ check('scaffold-geometry-only', () => {
   }
   assert.ok(has(mainTabShell, 'geometry: this.pageGeometry(), headerMeasurementKey:'));
   assert.doesNotMatch(file('entry/src/main/ets/ui/layout/ReaderPageGeometry.ts'), /variant:\s*ReaderPageShellKind/);
-  assert.ok(has(bookDetail, 'geometry: this.pageGeometry(),'));
-  assert.ok(has(bookDirectoryPage, 'geometry: this.mangaPageGeometry(),'));
+  assert.match(bookDetail, /ReaderPageScaffold\(\{[^}]*geometry: this\.geometry,/);
+  assert.match(bookDirectoryPage, /ReaderPageScaffold\(\{[^}]*geometry: this\.geometry,/);
 });
 
 check('scaffold-call-site-geometry', () => {
@@ -197,8 +215,8 @@ check('scaffold-header-receipt-excludes-header-top', () => {
   assert.equal(count(mainTabShell, 'readerPresentedHeaderBottom(this.headerTop, height)'), 1);
   assert.doesNotMatch(mainTabShell, /height \+ this\.headerTop/);
   assert.ok(compact(downloadPage).includes(compact(
-    'readerPresentedHeaderBottom(this.headerTop(), Math.max(DOWNLOAD_VISUAL.headerHeight, this.resolvedHeaderHeight())) + this.headerContentGap()')));
-  assert.doesNotMatch(downloadPage, /this\.headerTop\(\) \+ Math\.max\(DOWNLOAD_VISUAL\.headerHeight/);
+    'readerPresentedHeaderBottom(this.headerTop(), Math.max(DOWNLOAD_HEADER_HEIGHT, this.resolvedHeaderHeight())) + this.headerContentGap()')));
+  assert.doesNotMatch(downloadPage, /this\.headerTop\(\)\s*\+\s*Math\.max\((?:DOWNLOAD_VISUAL\.headerHeight|DOWNLOAD_HEADER_HEIGHT)/);
 });
 
 check('detail-header-spec-consumed', () => {
@@ -206,12 +224,12 @@ check('detail-header-spec-consumed', () => {
   assert.ok(has(specs, 'readonly barHeight: number = APP_FLOATING_HEADER_BAR_HEIGHT;'));
   assert.equal(numericField(specs, 'contentGap'), 16);
   assert.ok(has(specs, 'return Math.max(0, topInset) + this.topGap;'));
-  assert.ok(has(bookDetail, "import { DetailHeaderSpec, detailHeaderSpec } from '../../ui/foundation/ReaderHeaderSpecs';"));
+  assert.ok(has(bookDetail, "import { DetailHeaderSpec, detailHeaderSpec } from '../../../ui/foundation/ReaderHeaderSpecs';"));
   assert.ok(has(bookDetail, 'private readonly headerSpec: DetailHeaderSpec = detailHeaderSpec();'));
   assert.ok(has(bookDetail, 'private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();'));
   assert.ok(has(bookDetail, "this.recordFrameHeight('detail:header', height, presentedKey);"));
   assert.ok(has(bookDetail, 'input.headerTop = this.headerSpec.headerTop(readerInteractiveSafeTop(metrics));'));
-  assert.ok(has(bookDetail, "this.measurements.read('detail:header', minimumHeaderHeight)"));
+  assert.ok(has(bookDetail, "this.measurements.readForGeneration('detail:header', this.measurementKey, minimumHeaderHeight)"));
   assert.ok(has(bookDetail, 'const geometry = resolveReaderPageGeometry(input);'));
   assert.ok(has(bookDetail, '.padding({ top: this.geometry.content.startInset, bottom: this.geometry.content.endInset });'));
   assert.doesNotMatch(specs, /contentStart\(topInset: number, measuredBarHeight: number\)/);
@@ -243,14 +261,15 @@ check('book-directory-page-header-spec-consumed', () => {
 
 check('standard-page-content-start-single-owner', () => {
   assert.equal(count(pageShell, 'export const READER_STANDARD_PAGE_CONTENT_GAP = 8;'), 1);
-  assert.ok(has(standardPage, "import { APP_HEADER_BAR_HEIGHT } from '../foundation/ReaderHeaderMetrics';"));
+  assert.ok(has(standardPage, "import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_HEADER_BAR_HEIGHT } from '../foundation/ReaderHeaderMetrics';"));
   assert.ok(has(standardPage, 'private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();'));
-  assert.ok(has(standardPage, "this.measurements.read('standard:header', APP_HEADER_BAR_HEIGHT)"));
+  assert.ok(has(compact(standardPage), "this.measurements.readForGeneration('standard:header', this.measurementKey, this.floatingHeader ? APP_FLOATING_HEADER_BAR_HEIGHT : APP_HEADER_BAR_HEIGHT)"));
   assert.ok(has(standardPage, "this.recordMeasurement('standard:header', height, key)"));
   assert.ok(has(standardPage, 'this.measurements.record(slot, height, presentedKey)'));
   assert.ok(has(standardPage, 'input.contentGap = READER_STANDARD_PAGE_CONTENT_GAP;'));
   assert.ok(has(standardPage, 'this.geometry = resolveReaderPageGeometry(input);'));
-  assert.ok(has(standardPage, 'overlayContent: (): void => { this.overlayContent(this.geometry.content.startInset); },'));
+  assert.ok(has(standardPage, 'overlayContent: (): void => { this.pageOverlay(); },'));
+  assert.ok(has(standardPage, 'this.overlayContent(this.geometry.content.startInset);'));
   assert.doesNotMatch(standardPage, /readerPageContentStartInset/);
 });
 
@@ -279,11 +298,13 @@ check('directory-header-spec-consumed', () => {
 check('download-header-single-measurement-owner', () => {
   assert.equal(count(downloadPage, 'private readonly measurements: ReaderMeasurementStore = new ReaderMeasurementStore();'), 1);
   assert.equal(count(downloadPage, "this.measurements.record('download:header'"), 1);
-  assert.equal(count(downloadPage, "this.measurements.read('download:header'"), 1);
-  assert.equal(count(downloadPage, "this.measurements.record('download:dock'"), 1);
+  assert.equal(count(downloadPage, "this.measurements.readForGeneration('download:header', this.measurementGeneration(), DOWNLOAD_HEADER_HEIGHT)"), 1);
+  assert.equal(count(downloadPage, 'onHeightChange: this.headerHeightChangeHandler()'), 1);
+  assert.ok(has(pageBackBar, 'if (variant === \'download\') this.onHeightChange(readerPageAreaLength(next.height));'));
+  assert.ok(has(block(downloadPage, 'private recordDockHeight(', 'private '), 'this.measurements.record(identity, height, this.measurementGeneration(), 0.5)'));
   assert.equal(count(downloadPage, 'onHeaderHeightChange:'), 0,
     'the relocatable download top bar must not also consume the scaffold measurement');
-  assert.ok(has(downloadPage, 'mainChromeOverflow'));
+  assert.match(downloadPage, /input\.headerHeight = this\.resolvedHeaderHeight\(\);/);
 });
 
 check('search-spec-values', () => {
@@ -711,6 +732,11 @@ check('dynamic-control-heights', () => {
     'expandedHeightFor(this.fontScale())'));
 });
 
+const unknown = [...requested].filter(id => !results.some(result => result.id === id));
+if (unknown.length > 0) {
+  console.error(`Unknown check: ${unknown.join(', ')}`);
+  process.exit(2);
+}
 const failures = results.filter((result) => result.status === 'FAIL');
 if (json) {
   console.log(JSON.stringify({ status: failures.length === 0 ? 'PASS' : 'FAIL', rationale, checks: results }, null, 2));
