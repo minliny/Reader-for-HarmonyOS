@@ -41,7 +41,7 @@ import {
 import type { SourceManagementStatusKind, SourceManagementProjection } from '../application/SourceOrchestrator';
 import { readerSourceCategoryLabel, type ReaderSourceCategory } from '../application/ReaderSourceCategory';
 import { httpUrlHostname } from '../../../platform/network/HttpTransportPolicy';
-import { TYPE_SOURCE_MANAGEMENT_META, TYPE_SEARCH_SOURCE_INPUT } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_SOURCE_MANAGEMENT_ROW_URL, TYPE_SEARCH_SOURCE_INPUT } from '../../../ui/foundation/ReaderTypography';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { ReaderUIVerificationProbe } from '../../../app/diagnostics/ReaderUIVerificationProbe';
 import { sourceReadLoadingFrame, SOURCE_READ_FAILURE_TITLE } from './SourceReadLoadingVerification';
@@ -806,12 +806,15 @@ export struct SourceManagementPage {
     if (this.batchMode) {
       Row() {
         Button('取消', { type: ButtonType.Capsule }).backgroundColor(Color.Transparent)
+          .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
           .fontColor(readerAppColor('app.sourceUi.muted', this.appThemeScheme))
           .fontSize(14).height(36).onClick((): void => this.endBatch());
         Text(`已选 ${this.batchSourceIds.length} 项`).layoutWeight(1).textAlign(TextAlign.Center)
+          .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
           .fontSize(15).fontWeight(FontWeight.Medium).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
         Button(this.visibleBatchSelected() ? '取消全选' : '全选', { type: ButtonType.Capsule })
           .backgroundColor(Color.Transparent).fontSize(14).height(36)
+          .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
           .fontColor(sourceV9Primary(this.appThemeScheme))
           .onClick((): void => this.toggleVisibleBatch());
       }.width('100%').height(SOURCE_V9_HEADER_HEIGHT).padding({ left: 12, right: 12 });
@@ -1625,11 +1628,12 @@ export struct SourceManagementPage {
         .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
         .fontSize(11).fontWeight(FontWeight.Medium).textAlign(TextAlign.Center).maxLines(2)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .fontColor(this.statusValue === label ? sourceV9Primary(this.appThemeScheme) : readerAppColor('app.sourceUi.muted', this.appThemeScheme));
+        .fontColor(readerAppColor(this.statusValue === label ? 'app.sourceUi.onPrimary' : 'app.sourceUi.muted', this.appThemeScheme));
     }.id(`reader-source-status-${verificationId}`).layoutWeight(1)
       .constraintSize({ minHeight: Math.max(32, Math.ceil(22 * this.fontScale())) }).padding(2)
-      .backgroundColor(readerAppColor(this.statusValue === label ? 'app.sourceUi.selected' : 'TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('app.sourceUi.border', this.appThemeScheme) })
+      .backgroundColor(this.statusValue === label ? sourceV9Primary(this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: this.statusValue === label ?
+        sourceV9Primary(this.appThemeScheme) : readerAppColor('app.sourceUi.border', this.appThemeScheme) })
       .accessibilityText(`书源状态，${label}，${this.statusCount(verificationId)} 项`).accessibilitySelected(this.statusValue === label)
       .onClick((): void => {
         if (!this.managementInputIsCurrent() || this.groupOpen) return;
@@ -1976,11 +1980,11 @@ export struct SourceManagementPage {
       Text(this.sourceDomain(source), this.textLayoutOptions?.('row/domain', source.sourceId, this.sourceDomain(source)))
         .id(this.verificationRowTextId(source.sourceId, 'reader-source-text-row-domain'))
         .width('100%')
-        .fontFamily(TYPE_SOURCE_MANAGEMENT_META.fontFamily as string)
-        .fontWeight(TYPE_SOURCE_MANAGEMENT_META.fontWeight ?? 400)
-        .fontSize(TYPE_SOURCE_MANAGEMENT_META.fontSizeFp)
+        .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_URL.fontFamily as string)
+        .fontWeight(TYPE_SOURCE_MANAGEMENT_ROW_URL.fontWeight ?? 400)
+        .fontSize(TYPE_SOURCE_MANAGEMENT_ROW_URL.fontSizeFp)
         .maxFontScale(this.fontScale())
-        .lineHeight(TYPE_SOURCE_MANAGEMENT_META.lineHeightFp as number)
+        .lineHeight(TYPE_SOURCE_MANAGEMENT_ROW_URL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
         .wordBreak(WordBreak.BREAK_ALL)
         .maxLines(1)
@@ -2056,8 +2060,8 @@ export struct SourceManagementPage {
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
       }.justifyContent(FlexAlign.Center);
     }.id(this.verificationRowActionsCurrent(source) ? 'reader-source-text-row-login' : '')
-      .width(58).height(28).padding(2).flexShrink(0)
-      .responseRegion({ x: 0, y: -8, width: 58, height: 44 })
+      .width(58).height(26).padding(2).flexShrink(0)
+      .responseRegion({ x: 0, y: -9, width: 58, height: 44 })
       .backgroundColor(readerAppColor('app.sourceUi.field', this.appThemeScheme))
       .enabled(this.sourceActionEnabled() && source.checkState !== 'checking')
       .accessibilityText(this.sourceActionLabel(source, source.loginState === 'verified' ? '登录，已验证' :
@@ -2783,11 +2787,11 @@ export struct SourceManagementPage {
       hasLogin: !this.batchMode && source?.loginUrl !== undefined && source.loginUrl.trim().length > 0,
       detectWidth: this.batchMode ? 0 : 28,
       actionWidth: 58, actionHeight: this.batchMode ? 34 : 44,
-      loginHeight: 28,
+      loginHeight: 26,
       filterHeight: Math.max(40, readerScaledControlHeight(40,
         TYPE_SEARCH_SOURCE_INPUT.lineHeightFp ?? TYPE_SEARCH_SOURCE_INPUT.fontSizeFp * 1.5, scale)), footerHeight: this.footerActionHeight(),
       titleLineHeight: TYPE_SOURCE_MANAGEMENT_ROW_TITLE.lineHeightFp ?? TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontSizeFp * 1.5,
-      metaLineHeight: TYPE_SOURCE_MANAGEMENT_META.lineHeightFp ?? TYPE_SOURCE_MANAGEMENT_META.fontSizeFp * 1.5 });
+      metaLineHeight: TYPE_SOURCE_MANAGEMENT_ROW_URL.lineHeightFp ?? TYPE_SOURCE_MANAGEMENT_ROW_URL.fontSizeFp * 1.5 });
   }
 
   private footerControlHeight(): number {

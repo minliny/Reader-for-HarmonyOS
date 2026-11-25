@@ -115,7 +115,7 @@ function assertRow(c, owner, page, book) {
   const actions = nodes.find(node => node.type === 'Row' && node.constraintSize?.minHeight === budget.actionsHeight);
   assert.ok(actions?.width <= physicalWidth, 'trailing carrier is physically bounded');
   const detects = nodes.filter(node => node.type === 'Button' && node.width === 28 && node.height === 28);
-  const logins = nodes.filter(node => node.type === 'Button' && node.width === 58 && node.height === 28);
+  const logins = nodes.filter(node => node.type === 'Button' && node.width === 58 && node.height === 26);
   assert.equal(detects.length, 1);
   assert.equal(logins.length, book.loginUrl ? 1 : 0);
   const buttons = [...logins, ...detects];

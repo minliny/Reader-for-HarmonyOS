@@ -62,8 +62,11 @@ export struct SourceJourneySurface {
     this.mounted = true;
     this.unsubscribe = this.presentation.observe((view: SourceJourneySnapshot): void => {
       if (this.showingTools ? this.presentation.tools(this.identity) !== undefined : this.presentation.isManagementCurrent(this.identity)) {
+        const original = this.view.operation.original;
         this.view = view;
         this.projectedRows = sourceV9GroupRows(view.sources, this.catalog);
+        if (!this.showingTools && original?.method === 'source.group.mutate' && original.blocked &&
+          view.operation.original?.blocked !== true) void this.refreshCatalog();
       }
     });
     if (!this.showingTools) {
@@ -270,7 +273,13 @@ export struct SourceJourneySurface {
         this.moveSourceIds = [];
         if (applied === true) this.batchApplied += 1;
       },
-      statusKind: this.view.statusKind, statusMessage: this.view.statusMessage,
+      operation: this.view.operation, statusKind: this.view.statusKind, statusMessage: this.view.statusMessage,
+      onReconcile: (generation: number): void => {
+        if (this.managementInputIsCurrent()) this.presentation.management(this.identity)?.reconcile(generation, this.identity);
+      },
+      onContinueOriginal: (generation: number): void => {
+        if (this.managementInputIsCurrent()) this.presentation.management(this.identity)?.continueOriginal(generation, this.identity);
+      },
       onMutate: (params: SourceGroupMutateParams): Promise<void> => this.mutateGroup(params),
       onToggle: (ids: string[], enabled: boolean): void => {
         if (this.managementInputIsCurrent())

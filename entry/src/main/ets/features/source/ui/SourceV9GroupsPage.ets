@@ -5,6 +5,8 @@ import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
+import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
+import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
   READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../../ui/foundation/ReaderFontFamilies';
 import { readerAppColor, type ReaderAppColorRole } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -14,11 +16,14 @@ import { DialogActionView, ReaderDialogSurface } from '../../../ui/surfaces/Read
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { httpUrlHostname } from '../../../platform/network/HttpTransportPolicy';
 import type { BookSource, SourceGroupCatalogData, SourceGroupMutateParams, SourceGroupRecord } from '../application/SourceGateway';
-import type { SourceManagementStatusKind } from '../application/SourceOrchestrator';
+import type { SourceManagementProjection, SourceManagementStatusKind } from '../application/SourceOrchestrator';
 import { sourceV9Primary, sourceV9ReportFill, sourceV9ReportTone, sourceV9Supports } from '../presentation/SourceManagementV9';
 
 type GroupDialog = 'none' | 'create' | 'rename' | 'delete' | 'add' | 'move';
 type GroupActionTone = 'primary' | 'soft' | 'neutral' | 'danger';
+
+const GROUP_HEADER_HEIGHT = 48;
+const GROUP_FEEDBACK_TOP = GROUP_HEADER_HEIGHT + 8;
 
 interface GroupRow {
   id: string;
@@ -60,6 +65,7 @@ export struct SourceV9GroupsPage {
   @Prop moveOnly: boolean = false;
   @Prop statusKind: SourceManagementStatusKind = 'idle';
   @Prop statusMessage: string = '';
+  @Prop operation: SourceManagementProjection = { action: 'load', sourceId: '' };
   onBack: () => void = (): void => {};
   onOpenGroup: (groupId: string) => void = (_groupId: string): void => {};
   onCloseMove: (applied?: boolean) => void = (_applied?: boolean): void => {};
@@ -68,6 +74,8 @@ export struct SourceV9GroupsPage {
   onCheck: (ids: string[], group?: boolean) => void = (_ids: string[], _group?: boolean): void => {};
   onBatchUngrouped: (ids: string[]) => void = (_ids: string[]): void => {};
   onLogin: (id: string, url: string) => void = (_id: string, _url: string): void => {};
+  onReconcile: (generation: number) => void = (_generation: number): void => {};
+  onContinueOriginal: (generation: number) => void = (_generation: number): void => {};
   onTemporaryBackBridge: (handler: (() => boolean) | undefined) => void = (_handler: (() => boolean) | undefined): void => {};
   isInputAllowed: () => boolean = (): boolean => true;
 
@@ -82,6 +90,7 @@ export struct SourceV9GroupsPage {
   @State private selection: string[] = [];
   @State private target: string | undefined = '';
   @State private bodyLimit: number = 200;
+  @State private paneHeight: number = 0;
   @State private mutationProblem: string = '';
   private mounted: boolean = false;
   private externalMove: boolean = false;
@@ -165,9 +174,50 @@ export struct SourceV9GroupsPage {
 
   private inputCurrent(): boolean { return this.mounted && this.inputEnabled && this.isInputAllowed(); }
   private pageEditable(): boolean {
-    return this.inputCurrent() && this.catalog !== undefined && !this.pending && this.dialog === 'none';
+    return this.inputCurrent() && this.catalog !== undefined && !this.pending && this.dialog === 'none' && !this.hasPendingRecovery();
   }
   private dialogEditable(): boolean { return this.inputCurrent() && !this.pending && this.dialog !== 'none'; }
+
+  private hasPendingRecovery(): boolean {
+    return this.operation.original?.blocked === true || this.operation.receipt?.receipt.confirmation === 'unknown';
+  }
+
+  private recoveryBusy(): boolean {
+    return this.pending || this.operation.original?.busy === true || this.operation.receipt?.facts.fact === 'refreshing';
+  }
+
+  private recoveryView(): ReaderRecoveryView {
+    const original = this.operation.original;
+    if (original?.blocked === true) {
+      return { message: original.message, visible: true, canRetry: true, generation: original.generation };
+    }
+    const receipt = this.operation.receipt;
+    return { message: receipt?.receipt.message ?? '', visible: receipt?.receipt.confirmation === 'unknown',
+      canRetry: receipt?.facts.canRetry === true, generation: receipt?.facts.generation ?? 0 };
+  }
+
+  private recoveryKeys(): string[] {
+    if (!this.hasPendingRecovery()) return [];
+    const original = this.operation.original;
+    return [JSON.stringify([this.detailGroupId ?? null, this.dialog, this.dialogGroupId, this.moveOnly,
+      original?.blocked === true ? original.operationId ?? '' : null, this.recoveryView().generation,
+      original?.blocked === true ? original.writeStage : null])];
+  }
+
+  private continueLabel(): string {
+    const original = this.operation.original;
+    if (original?.blocked !== true || !original.canRetryOriginal) return '';
+    return original.confirmation === 'confirmed' && original.writeStage === 'cleanup' ? '继续清理' : '继续';
+  }
+
+  private recover(key: string, generation: number, retry: boolean): void {
+    if (!this.inputCurrent() || this.recoveryBusy() || !this.recoveryKeys().includes(key)) return;
+    if (this.dialog === 'none' && this.feedbackHeight() <= 0) return;
+    const view = this.recoveryView();
+    if (view.generation !== generation) return;
+    if (retry && this.continueLabel().length > 0) this.onContinueOriginal(generation);
+    else if (!retry && view.canRetry) this.onReconcile(generation);
+  }
 
   private externalMoveChanged(): void {
     if (!this.mounted) return;
@@ -277,7 +327,7 @@ export struct SourceV9GroupsPage {
 
   private dialogParams(): SourceGroupMutateParams | undefined {
     const expectedRevision = this.catalog?.revision;
-    if (!this.dialogEditable() || expectedRevision === undefined) return undefined;
+    if (!this.dialogEditable() || this.hasPendingRecovery() || expectedRevision === undefined) return undefined;
     const name = this.name.trim();
     const groupId = this.dialogGroupId;
     switch (this.dialog) {
@@ -428,9 +478,10 @@ export struct SourceV9GroupsPage {
   }
 
   build() {
-    Stack({ alignContent: Alignment.Center }) {
+    Stack({ alignContent: Alignment.TopStart }) {
       if (!this.moveOnly) {
         this.page();
+        if (this.dialog === 'none' && this.feedbackHeight() > 0) this.pageFeedback();
       }
       if (this.dialog !== 'none') {
         this.groupDialog();
@@ -438,7 +489,10 @@ export struct SourceV9GroupsPage {
     }.width('100%').height('100%').clip(true)
       .onSizeChange((_previous: SizeOptions, next: SizeOptions): void => {
         const height = Number(next.height);
-        if (Number.isFinite(height) && height > 0) this.bodyLimit = Math.max(84, Math.min(208, height - 245));
+        if (Number.isFinite(height) && height >= 0) {
+          this.paneHeight = height;
+          if (height > 0) this.bodyLimit = Math.max(84, Math.min(208, height - 245));
+        }
       });
   }
 
@@ -446,7 +500,6 @@ export struct SourceV9GroupsPage {
   private page() {
     Column() {
       this.header();
-      if (this.dialog === 'none') this.actionFeedback();
       if (this.catalog === undefined) {
         ReaderPageState({ title: '正在读取书源分组', loading: true, loadingActive: this.inputEnabled })
           .layoutWeight(1);
@@ -460,9 +513,28 @@ export struct SourceV9GroupsPage {
       .enabled(this.dialog === 'none' && this.inputEnabled);
   }
 
+  private feedbackHeight(): number { return Math.max(0, Math.min(208, this.paneHeight - GROUP_FEEDBACK_TOP - 12)); }
+
   @Builder
-  private actionFeedback() {
-    if (this.mutationProblem.length > 0) {
+  private pageFeedback() {
+    Column() {
+      this.actionFeedback(this.feedbackHeight());
+    }.id('reader-source-v9-group-feedback').width('100%')
+      .padding({ left: this.frameInset(true), right: this.frameInset(false) })
+      .margin({ top: GROUP_FEEDBACK_TOP }).hitTestBehavior(HitTestMode.Transparent);
+  }
+
+  @Builder
+  private actionFeedback(maxRecoveryHeight: number) {
+    if (this.hasPendingRecovery()) {
+      ForEach(this.recoveryKeys(), (key: string): void => {
+        ReaderRecoveryNotice({ view: this.recoveryView(), busy: this.recoveryBusy(), actionEnabled: this.inputEnabled,
+          secondaryActionEnabled: this.inputEnabled, actionLabel: '核对', secondaryActionLabel: this.continueLabel(),
+          focusIdPrefix: 'reader-source-v9-group-original', maxHeightVp: maxRecoveryHeight,
+          onReconcile: (generation: number): void => this.recover(key, generation, false),
+          onSecondaryAction: (generation: number): void => this.recover(key, generation, true) });
+      }, (key: string): string => key);
+    } else if (this.mutationProblem.length > 0) {
       ReaderPageState({ variant: 'inline', padded: false, message: this.mutationProblem });
     } else if ((this.statusKind === 'error' || this.statusKind === 'warning') && this.statusMessage.length > 0) {
       ReaderPageState({ variant: 'inline', padded: false, message: this.statusMessage });
@@ -487,7 +559,7 @@ export struct SourceV9GroupsPage {
       } else {
         this.action('＋ 添加', 'soft', this.pageEditable(), (): void => this.openDialog('add'), 36);
       }
-    }.width('100%').height(48).padding({ left: this.frameInset(true), right: this.frameInset(false) })
+    }.width('100%').height(GROUP_HEADER_HEIGHT).padding({ left: this.frameInset(true), right: this.frameInset(false) })
       .border({ width: { bottom: 1 }, color: this.color('TOK_LINE') });
   }
 
@@ -657,7 +729,7 @@ export struct SourceV9GroupsPage {
       } else if (this.dialog === 'move') {
         this.moveTargets();
       }
-      this.actionFeedback();
+      this.actionFeedback(this.bodyLimit);
     }.width('100%').alignItems(HorizontalAlign.Start);
   }
 

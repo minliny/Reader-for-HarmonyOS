@@ -215,8 +215,10 @@ export class RulesManagementGateway {
       .map((value: unknown): ManagedRuleSubscription => this.decodeRuleSubscription(value));
   }
 
-  async saveRuleSubscription(draft: RuleSubscriptionDraft): Promise<ManagedRuleSubscription> {
-    const result = await this.requestMutation('rule-sub.put', this.ruleSubscriptionParams(draft));
+  async saveRuleSubscription(draft: RuleSubscriptionDraft, admit?: (id: number) => Promise<void>): Promise<ManagedRuleSubscription> {
+    const params = this.ruleSubscriptionParams(draft);
+    const prepare = admit === undefined ? undefined : (): Promise<void> => admit(params['id'] as number);
+    const result = await this.requestMutation('rule-sub.put', params, prepare);
     return this.decodeRuleSubscription(result.data['sub']);
   }
 
@@ -417,11 +419,12 @@ export class RulesManagementGateway {
       (journey.failedParts > 0 ? `；${journey.failedParts} 个未完成` : '') + '；订阅更新时间已保存';
   }
 
-  private async requestMutation(method: string, params: JsonObject): Promise<ReaderCoreResultEvent> {
+  private async requestMutation(method: string, params: JsonObject, prepare?: () => Promise<void>): Promise<ReaderCoreResultEvent> {
     const admission = this.mutationAdmission;
     return RulesMutationOwner.forRuntime(this.owner).run('Core 规则写入',
       (): boolean => ReaderRuntimeOwner.isCurrent(this.owner) && (admission?.() ?? true),
       async (request, confirmed) => {
+        if (prepare !== undefined) await prepare();
         const result = await request(method, params);
         this.qualifyMutation(method, params, result.data);
         confirmed(); return result;

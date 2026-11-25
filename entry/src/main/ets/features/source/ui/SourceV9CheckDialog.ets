@@ -14,6 +14,14 @@ interface SourceV9CheckChoice {
   title: string;
 }
 
+interface SourceV9BatchReturn {
+  mode: SourceV9Mode;
+  depth: SourceV9Depth;
+  keyword: string;
+  completed: number;
+  stopped: boolean;
+}
+
 const MODES: SourceV9CheckChoice[] = [{ value: 'search', title: '搜索' }, { value: 'explore', title: '发现' }];
 const DEPTHS: SourceV9CheckChoice[] = [
   { value: 'L2', title: 'L2 快速' }, { value: 'L4', title: 'L4 目录' }, { value: 'L5', title: 'L5 正文' },
@@ -47,6 +55,7 @@ export struct SourceV9CheckDialog {
   @State private stage: string = '';
   @State private bodyHeight: number = 400;
   @State private runError: string = '';
+  private batchReturn: SourceV9BatchReturn | undefined = undefined;
   private generation: number = 0;
   private mounted: boolean = false;
 
@@ -133,10 +142,17 @@ export struct SourceV9CheckDialog {
     if (!this.mounted || !this.inputEnabled) return;
     if (this.running) this.stop();
     if (this.drillId.length > 0) {
+      const parent = this.batchReturn;
       this.drillId = '';
       this.runError = '';
-      this.stopped = false;
-      this.completed = this.rows.length;
+      this.batchReturn = undefined;
+      if (parent !== undefined) {
+        this.mode = parent.mode;
+        this.depth = parent.depth;
+        this.keyword = parent.keyword;
+        this.stopped = parent.stopped;
+        this.completed = parent.completed;
+      }
     } else this.onClose();
   }
 
@@ -234,14 +250,38 @@ export struct SourceV9CheckDialog {
   @Builder
   private progress() {
     Column({ space: 4 }) {
-      Text(this.running ? `${this.currentName || '正在准备检测'}${this.stage.length > 0 ? ' · ' + this.stage : ''}` :
-        this.stopped ? '已停止检测' : '本轮检测结束')
+      Text(this.progressLabel())
         .width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(12).fontColor(readerAppColor('TOK_INK', this.scheme));
-      Progress({ value: this.completed, total: this.singleSource() === undefined ? this.sources.length : 1, type: ProgressType.Linear })
-        .width('100%').color(readerAppColor('TOK_PRIMARY_DARK', this.scheme))
-        .accessibilityText(`已完成 ${this.completed} 项检测`);
+      if (this.singleSource() === undefined && this.completed > 0) {
+        Text(this.batchProgressCounts()).width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+          .fontSize(11).fontColor(readerAppColor('TOK_MUTED', this.scheme));
+      }
+      Progress({ value: this.completed, total: this.checkTotal(), type: ProgressType.Linear })
+        .width('100%').color(sourceV9Primary(this.scheme))
+        .accessibilityText(`已完成 ${this.completed} 项检测，共 ${this.checkTotal()} 项`);
     }.width('100%');
+  }
+
+  private checkTotal(): number {
+    return this.singleSource() === undefined ? this.sources.length : 1;
+  }
+
+  private progressLabel(): string {
+    const total = this.checkTotal();
+    if (this.running) {
+      const source = this.currentName.length > 0 ? ' · ' + this.currentName : '';
+      const stage = this.stage.length > 0 ? ' · ' + this.stage : '';
+      return `检测中 ${Math.min(this.completed + 1, total)}/${total}${source}${stage}`;
+    }
+    return `${this.stopped ? '已停止检测' : '本轮检测结束'} · ${this.completed}/${total}`;
+  }
+
+  private batchProgressCounts(): string {
+    const passed = this.rows.filter((row: SourceV9CheckRow): boolean => row.outcome?.available === true).length;
+    const failed = this.rows.filter((row: SourceV9CheckRow): boolean => row.outcome?.available === false).length;
+    const unavailable = this.rows.length - passed - failed;
+    return `通过 ${passed} · 失败 ${failed}` + (unavailable > 0 ? ` · 未取得报告 ${unavailable}` : '');
   }
 
   @Builder
@@ -271,7 +311,7 @@ export struct SourceV9CheckDialog {
           .fontColor(readerAppColor('TOK_MUTED', this.scheme));
       }.layoutWeight(1);
       if (step?.executed) {
-        Text(`累计 ${step.durationMs} ms`).fontSize(11).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+        Text(`${step.durationMs} ms`).fontSize(11).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
           .fontColor(readerAppColor('TOK_MUTED', this.scheme));
       }
     }.width('100%').padding({ left: 10, right: 10, top: 7, bottom: 7 })
@@ -296,10 +336,15 @@ export struct SourceV9CheckDialog {
           .border({ width: { bottom: 1 }, color: readerAppColor('TOK_LINE', this.scheme) })
           .enabled(!this.running && this.inputEnabled)
           .onClick((): void => {
+            this.batchReturn = { mode: this.mode, depth: this.depth, keyword: this.keyword,
+              completed: this.completed, stopped: this.stopped };
             this.drillId = row.source.sourceId;
             this.runError = row.error ?? '';
             this.stopped = false;
             this.completed = 0;
+            this.mode = 'search';
+            this.depth = 'L2';
+            this.keyword = '';
             this.restoreOptions(this.singleSource());
           });
       }, (row: SourceV9CheckRow): string => row.source.sourceId);

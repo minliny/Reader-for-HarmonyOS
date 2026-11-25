@@ -5,6 +5,8 @@ import {
   projectSourceV9Check,
   sourceV9AuthenticationDenied,
   sourceV9CheckStepText,
+  sourceV9Primary,
+  sourceV9ReportFill,
   sourceV9ReportTone,
   sourceV9ParentView,
   sourceV9GroupRows,
@@ -43,6 +45,13 @@ test('detection paint uses the most recent current report and actual failed stag
   assert.equal(sourceV9ReportTone(source('late failure', { checkReports: history('not_supported', 'L5') })), 'deepFailure');
   assert.equal(sourceV9ReportTone(source('directory', { checkReports: history('pass', 'L4') })), 'partial');
   assert.equal(sourceV9ReportTone(source('body', { checkReports: history('pass', 'L5') })), 'content');
+  for (const [tone, day, night] of [
+    ['content', '#247551', '#3FA374'], ['partial', '#7C9C35', '#98BA52'],
+    ['deepFailure', '#C97A22', '#E09F46'], ['earlyFailure', '#C24136', '#E0655B'],
+  ]) {
+    assert.equal(sourceV9ReportFill(tone, 'day'), day);
+    assert.equal(sourceV9ReportFill(tone, 'night'), night);
+  }
 });
 
 test('internal back keeps group detail under its overview', () => {
@@ -97,6 +106,43 @@ test('drilldown replaces the exact parent row only with a real new outcome', () 
   const updated = recordSourceV9Check(rows, retested);
   assert.deepEqual(updated, [retested, other]);
   assert.equal(rows[0], first);
+});
+
+test('leaving a drilled report restores the stopped batch and its own check options', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const content = readFileSync(new URL('../entry/src/main/ets/features/source/ui/SourceV9CheckDialog.ets', import.meta.url), 'utf8');
+  const { owner } = createReaderBuilderProbe(content, [
+    'batchRows', 'close', 'stop', 'consumeBack', 'singleSource',
+    'report', 'outcome', 'restoreOptions', 'progress', 'progressLabel', 'batchProgressCounts', 'checkTotal',
+  ], { readerAppColor: role => role, sourceV9Primary, sourceV9LatestReport: () => undefined,
+    READER_FONT_NOTO_SANS_SC_UI_REGULAR: 'ReaderNotoSansSCUIRegular' });
+  const first = source('首条书源');
+  const pending = source('未检测书源');
+  const parentRows = [{ source: first, outcome: { available: true,
+    report: { mode: 'search', steps: [{ level: 'L4', requested: true }] } } }];
+  Object.assign(owner, {
+    scheme: 'day', sources: [first, pending], rows: parentRows,
+    mounted: true, inputEnabled: true, batch: true, drillId: '', running: false,
+    stopped: true, completed: 1, mode: 'explore', depth: 'L5', keyword: '保留批量词', runError: '',
+  });
+  owner.batchRows();
+  const reportButton = [...owner.nodes.values()].find(node => node.type === 'Button');
+  assert.ok(reportButton?.onClick);
+  reportButton.onClick();
+  assert.equal(owner.drillId, first.sourceId);
+  assert.deepEqual([owner.mode, owner.depth, owner.keyword], ['search', 'L4', '']);
+  owner.keyword = '只用于单源';
+  assert.equal(owner.consumeBack(), true);
+  assert.equal(owner.drillId, '');
+  assert.equal(owner.stopped, true);
+  assert.equal(owner.completed, 1);
+  assert.deepEqual([owner.mode, owner.depth, owner.keyword], ['explore', 'L5', '保留批量词']);
+  assert.deepEqual(owner.rows, parentRows);
+  owner.progress();
+  const text = [...owner.nodes.values()].filter(node => node.type === 'Text').map(node => node.create);
+  assert.ok(text.includes('已停止检测 · 1/2'));
+  assert.ok(text.includes('通过 1 · 失败 0'));
 });
 
 test('batch and group disable send every supported member through the actual cookie cleanup path', async () => {

@@ -824,8 +824,10 @@ export class ArkWebExecutor {
         webview.WebCookieManager.clearAllCookiesSync(true);
       } catch (error) {
         // Keep the owner error (including cancellation and page errors).
-        // The next job must still clear private cookies before loading.
-        if (!jobFailed) throw error;
+        // An accepted Clear still reaches the source owner's cleanup after
+        // this surface detaches. A replacement must clear native cookies
+        // before seeding the new session or loading a document.
+        if (!jobFailed && job.clearRequested !== true) throw error;
       } finally {
         if (this.active === job) {
           try { this.clearOwnedDnsPin(); } catch (_) { /* Retry before a later page. */ }

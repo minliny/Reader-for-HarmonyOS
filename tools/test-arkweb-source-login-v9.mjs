@@ -11,6 +11,7 @@ function fixture() {
   const shown = [];
   let generation = 1;
   let canForward = false;
+  let nativeClearFailures = 0;
   let executor;
   class Controller {
     static setHostIP() {}
@@ -34,7 +35,13 @@ function fixture() {
     WebviewController: Controller,
     ProxyController: { removeProxyOverride(callback) { callback(); } },
     WebCookieManager: {
-      clearAllCookiesSync() { events.push('clear-native'); },
+      clearAllCookiesSync() {
+        events.push('clear-native');
+        if (nativeClearFailures > 0) {
+          nativeClearFailures--;
+          throw new Error('incognito cookie clear failed');
+        }
+      },
       fetchAllCookies: async () => [],
     },
   };
@@ -60,7 +67,8 @@ function fixture() {
     if (presentation.visible) shown.push(presentation);
   });
   return { executor, events, shown, advanceGeneration: () => { generation++; },
-    addForwardHistory: () => { canForward = true; } };
+    addForwardHistory: () => { canForward = true; },
+    failNativeClears: count => { nativeClearFailures = count; } };
 }
 
 async function until(condition, detail) {
@@ -134,5 +142,33 @@ const loginUrl = 'https://public.example/login';
   f.executor.requestInteractiveSessionClear(f.executor.active.surface);
   await assert.rejects(completion, /SOURCE_LOGIN_SESSION_RETIRED/);
   assert.equal(f.shown.length, 1, 'concurrent Host revocation must not be undone');
+}
+for (const failures of [1, 2]) {
+  const f = fixture();
+  const completion = f.executor.openInteractive(loginUrl, 'source-teardown', 'Example', () => true, async () => {
+    assert.ok(f.events.some(event => Array.isArray(event) && event[0] === 'detach'));
+    f.events.push('clear-owner-cookies', 'clear-core-report');
+    f.advanceGeneration();
+    return { cookiesCleared: true, report: 'cleared' };
+  });
+  const completed = completion.then(() => undefined, error => error);
+  await until(() => f.shown.length === 1, 'initial login is visible');
+  const old = f.executor.active.surface;
+  f.failNativeClears(failures);
+  assert.equal(f.executor.requestInteractiveSessionClear(old), true);
+  await until(() => f.events.includes('clear-core-report'), 'native teardown failure must not consume accepted Clear');
+  if (failures === 1) {
+    await until(() => f.shown.length === 2, 'opening may resume after successful native cleanup on replacement');
+    f.executor.cancelInteractive(f.executor.active.surface);
+    assert.equal((await completed)?.code, 'CANCELLED');
+  } else {
+    assert.match((await completed)?.message ?? '', /incognito cookie clear failed/);
+    assert.equal(f.shown.length, 1);
+    assert.equal(f.events.filter(event => Array.isArray(event) && event[0] === 'load').length, 1,
+      'replacement must clear native cookies successfully before loading');
+  }
+  assert.equal(f.events.filter(event => event === 'clear-owner-cookies').length, 1);
+  assert.equal(f.events.filter(event => event === 'clear-core-report').length, 1);
+  assert.equal(f.events.some(event => Array.isArray(event) && event[0] === 'capture'), false);
 }
 console.log('PASS source-login-v9 (native controller ports, profile fencing and clear/finish lifecycle)');

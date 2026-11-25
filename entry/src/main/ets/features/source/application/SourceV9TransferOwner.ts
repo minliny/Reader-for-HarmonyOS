@@ -4,10 +4,10 @@ import { errorMessageOf } from '../../../app/ErrorMessage';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { isPrivateNetworkTarget } from '../../../platform/network/HttpTransportPolicy';
 import { RulesManagementGateway, type ManagedRuleSubscription, type RuleSourceChange, type RuleSourceSubscriptionPreview,
-  type RuleSubscriptionDraft } from '../../settings/application/RulesManagementGateway';
+  type RuleSubscriptionDraft, type RuleSubscriptionType } from '../../settings/application/RulesManagementGateway';
 import { SourceGateway, type BookSource, type SourceCheckOutcome, type SourceGroupMembership, type SourceGroupRecord, type SourceGroupedImportOutcome, type SourceGroupedImportPlan, type SourceGroupedImportPreview, type SourceImportCandidate, type SourceImportFailure, type SourceImportGroupTarget, type SourceGroupedImportRow } from './SourceGateway';
 import { applyV9ImportReport, assignV9ImportSelection, buildV9ImportRows, chooseV9ImportRow,
-  runV9CandidateChecks, sourceV9CanonicalDocument, sourceV9ChangesToApply, sourceV9ImportedReports, sourceV9ReplaceRuleComparable,
+  resetV9ImportChecks, runV9CandidateChecks, sourceV9CanonicalDocument, sourceV9ChangesToApply, sourceV9ImportedReports, sourceV9ReplaceRuleComparable,
   sourceV9Levels, sourceV9SelectedImportRows, type SourceV9Change, type SourceV9Depth, type SourceV9GroupStrategy,
   type SourceV9ImportedReport, type SourceV9ImportOrigin, type SourceV9ImportRow, type SourceV9Mode } from './SourceV9TransferState';
 
@@ -57,7 +57,7 @@ export interface SourceV9SubscriptionReview {
   subscription: ManagedRuleSubscription;
   sourcePlan?: RuleSourceSubscriptionPreview;
   remoteDocument?: string;
-  ruleBaseline?: string;
+  ruleBaseline?: SourceV9RuleRow[];
   rows: SourceV9Change[];
 }
 export interface SourceV9TransferSnapshot {
@@ -103,7 +103,11 @@ export function requireSourceV9OnlineUrl(value: string): string {
   let parsed: url.URL;
   try { parsed = url.URL.parseURL(text); } catch (_) { throw new Error(invalid); }
   if (parsed.hostname.length === 0 || isPrivateNetworkTarget(parsed.hostname)) throw new Error(invalid);
-  return text;
+  return parsed.toString();
+}
+
+function sameSourceV9Provider(left: string, right: string): boolean {
+  try { return requireSourceV9OnlineUrl(left) === requireSourceV9OnlineUrl(right); } catch (_) { return false; }
 }
 
 export class SourceV9TransferOwner {
@@ -243,6 +247,13 @@ export class SourceV9TransferOwner {
     if (this.canStart()) this.patch({ rows: assignV9ImportSelection(this.snapshot.rows, selected, passedOnly) });
   }
 
+  skipImportChecks(): void {
+    if (!this.canStart() || this.snapshot.importStep !== 2) return;
+    this.checkEpoch++;
+    this.patch({ rows: resetV9ImportChecks(this.snapshot.rows), completedChecks: 0, totalChecks: 0, checkFailures: 0,
+      checkingName: '', checkingStage: '', unavailableChecks: 0, checkIssue: '', status: '' });
+  }
+
   stopChecks(): void {
     this.checkEpoch++;
     if (this.snapshot.runningCheck) {
@@ -336,13 +347,19 @@ export class SourceV9TransferOwner {
 
   private async finishImport(result: SourceGroupedImportOutcome, rows: SourceV9ImportRow[],
     save: SourceV9ImportSave, existingSourceIds: string[], current: () => boolean): Promise<void> {
-    const selected = sourceV9SelectedImportRows(rows);
     const existing = new Set(existingSourceIds);
-    const details: SourceV9TransferItemResult[] = selected.map((item: SourceImportCandidate): SourceV9TransferItemResult => {
-      const receipt = result.results.find((row: SourceGroupedImportRow): boolean => row.index === item.index);
-      const rejected = result.failures.find((failure: SourceImportFailure): boolean => failure.index === item.index);
-      return { index: item.index, name: item.name, outcome: receipt?.status === 'imported' ?
-        (existing.has(item.sourceId) ? '更新' : '新增') : (rejected?.message ?? '导入失败') };
+    const receipts = new Map(result.results.map((row: SourceGroupedImportRow): [number, SourceGroupedImportRow] => [row.index, row]));
+    const failures = new Map(result.failures.map((failure: SourceImportFailure): [number, string] => [failure.index, failure.message]));
+    const details = rows.map((row: SourceV9ImportRow): SourceV9TransferItemResult => {
+      const receipt = receipts.get(row.index);
+      const candidate = row.candidate;
+      const name = candidate?.name || `第 ${row.index + 1} 项`;
+      if (row.problem !== undefined) return { index: row.index, name, outcome: row.problem };
+      if (candidate?.supported === false) return { index: row.index, name, outcome: '已过滤 · 不支持的书源类型' };
+      if (!row.selected) return { index: row.index, name, outcome: '未选中' };
+      const outcome = receipt?.status === 'imported' ?
+        (existing.has(receipt.sourceId) ? '更新' : '新增') : (failures.get(row.index) ?? receipt?.error ?? '导入失败');
+      return { index: row.index, name, outcome };
     });
     const summary: SourceV9ImportResult = { addedCount: result.addedCount, updatedCount: result.updatedCount,
       failedCount: result.failedCount, unsupportedCount: rows.filter((row: SourceV9ImportRow): boolean => row.candidate?.supported === false).length,
@@ -350,39 +367,52 @@ export class SourceV9TransferOwner {
     if (!current()) return;
     this.pendingImport = undefined;
     this.patch({ importResult: summary, importStep: 3 });
-    const reports = await this.qualifyTransferredReports(sourceV9ImportedReports(rows, result.sourceIds), current);
+    const importedRows = rows.filter((row: SourceV9ImportRow): boolean => receipts.get(row.index)?.status === 'imported');
+    const reports = await this.qualifyTransferredReports(sourceV9ImportedReports(importedRows, result.sourceIds), current);
     if (!current()) return;
     this.readBack(reports, { sourceIds: result.sourceIds, result: summary });
     if (result.sourceIds.length > 0 && save.subscriptionUrl !== undefined &&
-      save.subscriptionUrl === this.acceptedImportUrl && current()) {
-      let subscription: ManagedRuleSubscription;
-      try {
-        subscription = await this.rules.saveRuleSubscription({ name: save.subscriptionName?.trim() || '在线书源订阅',
-          url: save.subscriptionUrl, type: 0, customOrder: 0, autoUpdate: true });
-      } catch (_) {
-        if (current()) this.publishOperationError('书源已导入，订阅保存未确认');
-        return;
-      }
-      if (!current()) return;
-      this.patch({ status: '已保存为书源订阅' });
-      await this.captureImportedSubscriptionBaseline(subscription, selected, result.sourceIds, current);
+      sameSourceV9Provider(save.subscriptionUrl, this.acceptedImportUrl) && current()) {
+      await this.saveImportedSubscription(save.subscriptionName, sourceV9SelectedImportRows(importedRows), result.sourceIds, current);
     }
   }
 
-  private async captureImportedSubscriptionBaseline(subscription: ManagedRuleSubscription, selected: SourceImportCandidate[],
+  private async saveImportedSubscription(name: string | undefined, imported: SourceImportCandidate[],
+    sourceIds: string[], current: () => boolean): Promise<void> {
+    const url = this.acceptedImportUrl;
+    let subscription: ManagedRuleSubscription;
+    try {
+      const list = await this.rules.listRuleSubscriptions(current);
+      if (!current()) return;
+      if (this.findSubscriptionProvider(list, url, 0) !== undefined) {
+        this.patch({ status: '已保留已有书源订阅' });
+        return;
+      }
+      subscription = await this.rules.saveRuleSubscription({ name: name?.trim() || '在线书源订阅',
+        url, type: 0, customOrder: 0, autoUpdate: true },
+      (id: number): Promise<void> => this.admitSubscriptionSave(undefined, id, url, 0, current));
+    } catch (_) {
+      if (current()) this.publishOperationError('书源已导入，订阅保存未确认');
+      return;
+    }
+    if (!current()) return;
+    this.patch({ status: '已保存为书源订阅' });
+    await this.captureImportedSubscriptionBaseline(subscription, imported, sourceIds, current);
+  }
+
+  private async captureImportedSubscriptionBaseline(subscription: ManagedRuleSubscription, imported: SourceImportCandidate[],
     sourceIds: string[], current: () => boolean): Promise<void> {
     try {
-      const imported = new Set(sourceIds);
-      const document = JSON.stringify(selected.filter((row: SourceImportCandidate): boolean => imported.has(row.sourceId))
-        .map((row: SourceImportCandidate): JsonObject => row.bookSource));
+      const importedIds = new Set(sourceIds);
+      const document = JSON.stringify(imported.map((row: SourceImportCandidate): JsonObject => row.bookSource));
       const expected = await this.rules.captureSourceSubscription(subscription, current);
       const plan = await this.rules.previewSourceSubscription(subscription.id, document, expected, current);
       if (!current()) return;
       const matched = plan.changes.filter((change: RuleSourceChange): boolean =>
-        imported.has(change.sourceId) && change.kind === 'unchanged').length;
+        importedIds.has(change.sourceId) && change.kind === 'unchanged').length;
       // Core only records unchanged fingerprints in an empty selection.
       if (matched > 0) await this.rules.applySourceSubscription(plan, [], current);
-      if (current() && matched !== imported.size) this.publishOperationError('部分已导入书源的订阅基线未确认');
+      if (current() && matched !== importedIds.size) this.publishOperationError('部分已导入书源的订阅基线未确认');
     } catch (_) {
       if (current()) this.publishOperationError('已导入书源的订阅基线未确认');
     }
@@ -408,11 +438,35 @@ export class SourceV9TransferOwner {
   saveSubscription(draft: RuleSubscriptionDraft): Promise<void> {
     return this.operation(async (current: () => boolean): Promise<void> => {
       const url = requireSourceV9OnlineUrl(draft.url);
-      await this.rules.saveRuleSubscription({ ...draft, url });
+      const original = this.snapshot.subscriptions.find((row: ManagedRuleSubscription): boolean => row.id === draft.id);
+      if (draft.id !== undefined && original === undefined) throw new Error('订阅已变化，请重新读取');
+      const sameProvider = original !== undefined && original.type === draft.type && sameSourceV9Provider(original.url, url);
+      // Core binds its baseline to the exact stored provider URL.
+      const acceptedUrl = sameProvider && original !== undefined ? original.url : url;
+      const update = sameProvider ? original?.update ?? 0 : 0;
+      await this.rules.saveRuleSubscription({ ...draft, url: acceptedUrl, update },
+        (id: number): Promise<void> => this.admitSubscriptionSave(original, id, url, draft.type, current));
       if (!current()) return;
       this.patch({ status: '订阅已保存' });
       await this.readSubscriptions(current);
     });
+  }
+
+  private findSubscriptionProvider(rows: ManagedRuleSubscription[], url: string, type: RuleSubscriptionType,
+    excludingId?: number): ManagedRuleSubscription | undefined {
+    return rows.find((row: ManagedRuleSubscription): boolean =>
+      row.id !== excludingId && row.type === type && sameSourceV9Provider(row.url, url));
+  }
+
+  private async admitSubscriptionSave(expected: ManagedRuleSubscription | undefined, id: number,
+    url: string, type: RuleSubscriptionType, current: () => boolean): Promise<void> {
+    const subscriptions = await this.rules.listRuleSubscriptions(current);
+    const stored = subscriptions.find((row: ManagedRuleSubscription): boolean => row.id === id);
+    if (!current() || sourceV9CanonicalDocument(stored) !== sourceV9CanonicalDocument(expected))
+      throw new Error('订阅已变化，请重新读取');
+    const unchangedProvider = stored !== undefined && stored.type === type && sameSourceV9Provider(stored.url, url);
+    if (!unchangedProvider && this.findSubscriptionProvider(subscriptions, url, type, id) !== undefined)
+      throw new Error('该链接已添加为订阅');
   }
 
   deleteSubscription(id: number): Promise<void> {
@@ -460,7 +514,8 @@ export class SourceV9TransferOwner {
           kind: previous === undefined ? 'added' : identical ? 'unchanged' : 'conflict',
           selectable: !identical, selected: previous === undefined, overwrite: false, rule: row.body };
       });
-      return { subscription, rows, ruleBaseline: sourceV9CanonicalDocument(stored) };
+      const remoteIds = new Set(remote.map((row: SourceV9RuleRow): number => row.id));
+      return { subscription, rows, ruleBaseline: stored.filter((row: SourceV9RuleRow): boolean => remoteIds.has(row.id)) };
     }
 
     const expected = await this.rules.captureSourceSubscription(subscription, current);
@@ -473,8 +528,9 @@ export class SourceV9TransferOwner {
     const prepared = Array.isArray(parsed) && parsed.length === 0 ?
       { items: [], failures: [], filteredUnsupportedCount: 0 } as SourceGroupedImportPreview :
       this.gateway.prepareGroupedSourceDocument(document);
+    if (prepared.failures.length > 0) throw new Error('订阅文档含无效书源，无法比较');
     const supported = prepared.items.filter((item: SourceImportCandidate): boolean => item.supported);
-    if (supported.length === 0 && prepared.items.length + prepared.failures.length > 0) {
+    if (supported.length === 0 && prepared.items.length > 0) {
       throw new Error('订阅文档没有受支持的书源');
     }
     const remote = JSON.stringify(supported.map((item: SourceImportCandidate): JsonObject => item.bookSource));
@@ -493,8 +549,9 @@ export class SourceV9TransferOwner {
         selectable: candidate !== undefined && (normalApply || overwriteSupported),
         selected: candidate !== undefined && normalApply };
     });
-    const skipped = prepared.filteredUnsupportedCount + prepared.failures.length;
-    if (current() && skipped > 0) this.patch({ checkIssue: `订阅文档已过滤 ${skipped} 项不支持或无效的书源` });
+    if (current() && prepared.filteredUnsupportedCount > 0) {
+      this.patch({ checkIssue: `订阅文档已过滤 ${prepared.filteredUnsupportedCount} 项不支持的书源` });
+    }
     return { subscription, sourcePlan: plan, remoteDocument: remote, rows };
   }
 
@@ -589,7 +646,7 @@ export class SourceV9TransferOwner {
                 const latest = subscriptions.find((row: ManagedRuleSubscription): boolean => row.id === review.subscription.id);
                 const stored = await this.storedReplaceRules(current);
                 if (!current() || sourceV9CanonicalDocument(latest) !== sourceV9CanonicalDocument(review.subscription) ||
-                  sourceV9CanonicalDocument(stored) !== review.ruleBaseline) {
+                  !this.sameSelectedRuleBaseline(rules, review.ruleBaseline ?? [], stored)) {
                   throw new Error('订阅或净化规则已变化，请重新检查');
                 }
               });
@@ -639,6 +696,15 @@ export class SourceV9TransferOwner {
       if (!current()) return;
       if (appliedCount > 0) this.readBack(transferred);
       await this.readSubscriptions(current);
+    });
+  }
+
+  private sameSelectedRuleBaseline(rules: JsonObject[], expected: SourceV9RuleRow[], stored: SourceV9RuleRow[]): boolean {
+    const before = new Map(expected.map((row: SourceV9RuleRow): [number, JsonObject] => [row.id, row.body]));
+    const current = new Map(stored.map((row: SourceV9RuleRow): [number, JsonObject] => [row.id, row.body]));
+    return rules.every((rule: JsonObject): boolean => {
+      const id = rule['id'];
+      return typeof id === 'number' && sourceV9CanonicalDocument(before.get(id)) === sourceV9CanonicalDocument(current.get(id));
     });
   }
 

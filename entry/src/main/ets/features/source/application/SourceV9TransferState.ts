@@ -61,6 +61,12 @@ export function assignV9ImportSelection(rows: SourceV9ImportRow[], selected: boo
   }));
 }
 
+export function resetV9ImportChecks(rows: SourceV9ImportRow[]): SourceV9ImportRow[] {
+  return rows.map((row: SourceV9ImportRow): SourceV9ImportRow => ({
+    ...row, selected: row.candidate?.supported === true, report: undefined, observedAtMs: undefined,
+  }));
+}
+
 export function applyV9ImportReport(rows: SourceV9ImportRow[], index: number, report: SourceCheckOutcome,
   observedAtMs: number): SourceV9ImportRow[] {
   return rows.map((row: SourceV9ImportRow): SourceV9ImportRow => {

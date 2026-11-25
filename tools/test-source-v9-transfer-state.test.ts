@@ -1,3 +1,4 @@
+import type { RuleSubscriptionDraft } from '../entry/src/main/ets/features/settings/application/RulesManagementGateway';
 import { expect, test } from 'bun:test';
 import {
   applyV9ImportReport, buildV9ImportRows, chooseV9ImportRow, runV9CandidateChecks,
@@ -163,11 +164,17 @@ async function transferFixture(SourceGateway: object, RulesManagementGateway: ob
 
 test('online import with a subscription adopts only confirmed matching sources as its initial baseline', async () => {
   const url = 'https://packages.example/source.json';
+  const equivalentUrl = 'HTTPS://PACKAGES.EXAMPLE:443/source.json';
   const second = { ...novel, index: 1, sourceId: 'https://other.example',
     bookSource: { bookSourceUrl: 'https://other.example', bookSourceName: '另一书源' } };
   const subscription = { id: 11, name: '书源订阅', url, type: 0, autoUpdate: true, customOrder: 0, update: 0 };
-  const runtime = { async loadOnlineJsonDocument() { return { text: 'downloaded package' }; } };
+  const downloads: string[] = [];
+  const runtime = { async loadOnlineJsonDocument(value: string) {
+    downloads.push(value);
+    return { text: 'downloaded package' };
+  } };
   const applied: string[][] = [];
+  const saved: RuleSubscriptionDraft[] = [];
   class ImportGateway {
     supportsEphemeralSourceCheck() { return false; }
     prepareGroupedSourceDocument() { return { items: [novel, second], failures: [], filteredUnsupportedCount: 0 }; }
@@ -180,7 +187,12 @@ test('online import with a subscription adopts only confirmed matching sources a
   class RuleGateway {
     observeWrites() {}
     mutationSnapshot() { return { blocked: false, generation: 0, canRetryOriginal: false }; }
-    async saveRuleSubscription() { return subscription; }
+    async listRuleSubscriptions() { return saved.length > 0 ? [subscription] : []; }
+    async saveRuleSubscription(draft: RuleSubscriptionDraft, admit: (id: number) => Promise<void>) {
+      await admit(subscription.id);
+      saved.push(draft);
+      return subscription;
+    }
     async captureSourceSubscription(row: object) { return { subscription: row }; }
     async previewSourceSubscription(id: number, document: string, expected: object) {
       expect([id, JSON.parse(document), expected]).toEqual([11, [novel.bookSource], { subscription }]);
@@ -198,6 +210,15 @@ test('online import with a subscription adopts only confirmed matching sources a
   await flow.importSelected({ strategy: 'preserve', subscriptionName: subscription.name, subscriptionUrl: url });
   expect(applied).toEqual([[]]);
   expect(state?.status).toBe('已保存为书源订阅');
+  expect(state?.importResult).toMatchObject({ addedCount: 1, failedCount: 1 });
+
+  flow.resetImport();
+  await flow.parseImport({ origin: 'url', url: equivalentUrl, paste: '' });
+  await flow.importSelected({ strategy: 'preserve', subscriptionName: '等价链接', subscriptionUrl: equivalentUrl });
+  expect(downloads).toEqual([url, url]);
+  expect(saved).toEqual([{ name: subscription.name, url, type: 0, customOrder: 0, autoUpdate: true }]);
+  expect(applied).toEqual([[]]);
+  expect(state?.status).toBe('已保留已有书源订阅');
   expect(state?.importResult).toMatchObject({ addedCount: 1, failedCount: 1 });
 });
 
@@ -387,7 +408,7 @@ test('an unconfirmed grouped import resumes the exact retained operation and com
   expect(state?.importStep).toBe(3);
   expect(state?.writePending).toBe(false);
   expect(state?.importResult).toMatchObject({ addedCount: 1, updatedCount: 1, failedCount: 1, unsupportedCount: 1 });
-  expect(state?.importResult?.details.map(row => row.outcome)).toEqual(['新增', '更新', '规则无效']);
+  expect(state?.importResult?.details.map(row => row.outcome)).toEqual(['新增', '已过滤 · 不支持的书源类型', '更新', '规则无效']);
   expect(receipts).toHaveLength(1);
   expect(receipts[0]).toMatchObject([[{ sourceId: novel.sourceId, report: { available: false } },
     { sourceId: existing.sourceId }], { sourceIds, result: state?.importResult }]);
@@ -405,4 +426,171 @@ test('a Gateway-qualified positional L1 failure appears on only the submitted ro
   const reselected = chooseV9ImportRow(failed, 0, true);
   expect(reselected[0].selected).toBe(true);
   expect(sourceV9ImportedReports(reselected, [novel.sourceId])).toEqual([]);
+});
+
+test('checking all replacement-rule subscriptions applies disjoint selected IDs and fences a changed selected rule', async () => {
+  const subscriptions = [21, 22, 23].map(id => ({
+    id, name: '净化 ' + id, url: 'https://rules.example/' + id, type: 2, autoUpdate: true, customOrder: 0, update: 0,
+  }));
+  const packages = new Map(subscriptions.map(sub => [sub.url, [{ id: sub.id, name: sub.name, pattern: '广告' }]]));
+  const rules = new Map<number, object>();
+  const applied: number[] = [];
+  class Source {
+    supportsEphemeralSourceCheck() { return true; }
+  }
+  class Rules {
+    observeWrites() {}
+    mutationSnapshot() { return { blocked: false, generation: 0, canRetryOriginal: false }; }
+    async listRuleSubscriptions() { return subscriptions; }
+    async exportBundle() { return { json: JSON.stringify({ replaceRules: Array.from(rules.values()) }) }; }
+    async refreshSubscription(_subscription: object, document: string, _plan: undefined,
+      _current: () => boolean, count: (value: number) => void, prepare: () => Promise<void>) {
+      await prepare();
+      const incoming = JSON.parse(document) as { id: number }[];
+      for (const rule of incoming) {
+        rules.set(rule.id, rule);
+        applied.push(rule.id);
+      }
+      count(incoming.length);
+    }
+  }
+  const flowClass = await transferFixture(Source, Rules);
+  let state: SourceV9TransferSnapshot | undefined;
+  const flow = new flowClass({ async loadOnlineJsonDocument(provider: string) {
+    return { text: JSON.stringify(packages.get(provider)) };
+  } }, (next: SourceV9TransferSnapshot) => { state = next; }, () => true, () => {});
+  await flow.loadSubscriptions();
+  await flow.previewSubscriptions([21, 22, 23]);
+  expect(state?.reviews.map(review => review.rows[0].kind)).toEqual(['added', 'added', 'added']);
+  const unrelatedLocalEdit = { id: 23, name: '本地已先保存', pattern: '不同' };
+  rules.set(23, unrelatedLocalEdit);
+  await flow.applyReviews();
+  expect(applied).toEqual([21, 22]);
+  expect(rules.get(23)).toEqual(unrelatedLocalEdit);
+  expect(state?.status).toBe('已确认应用 2 项');
+  expect(state?.error).toBe('未确认全部更新 · 净化 23');
+});
+
+test('subscription save uses normalized provider identity and only resets a changed provider timestamp', async () => {
+  const first = { id: 1, name: '原订阅', url: 'HTTPS://PACKAGES.EXAMPLE:443/books.json', type: 0,
+    customOrder: 0, autoUpdate: true, update: 456 };
+  const second = { ...first, id: 2, name: '净化', type: 2 };
+  const subscriptions = [first, second];
+  const writes: RuleSubscriptionDraft[] = [];
+  let nextId = 10;
+  let beforeAdmit = () => {};
+  class Source { supportsEphemeralSourceCheck() { return false; } }
+  class Rules {
+    observeWrites() {}
+    mutationSnapshot() { return { blocked: false, generation: 0, canRetryOriginal: false }; }
+    async listRuleSubscriptions() { return subscriptions.slice(); }
+    async saveRuleSubscription(draft: RuleSubscriptionDraft, admit?: (id: number) => Promise<void>) {
+      beforeAdmit();
+      const id = draft.id ?? nextId++;
+      await admit?.(id);
+      writes.push({ ...draft, id });
+      const index = subscriptions.findIndex(row => row.id === id);
+      const row = { ...draft, id, update: draft.update ?? 0 };
+      if (index >= 0) subscriptions[index] = row;
+      else subscriptions.push(row);
+      return row;
+    }
+  }
+  const flowClass = await transferFixture(Source, Rules);
+  let state: SourceV9TransferSnapshot | undefined;
+  const flow = new flowClass({}, (next: SourceV9TransferSnapshot) => { state = next; }, () => true, () => {});
+  await flow.loadSubscriptions();
+  await flow.saveSubscription({ ...first, id: undefined, url: 'https://packages.example/books.json' });
+  expect(writes).toEqual([]);
+  expect(state?.error).toBe('该链接已添加为订阅');
+  await flow.saveSubscription({ ...first, name: '仅改名', url: 'https://packages.example/books.json' });
+  expect(writes[0]).toMatchObject({ id: 1, name: '仅改名', url: first.url, update: 456 });
+  await flow.saveSubscription({ ...writes[0], url: 'HTTPS://PACKAGES.EXAMPLE:443/next.json' });
+  expect(writes[1]).toMatchObject({ id: 1, url: 'https://packages.example/next.json', update: 0 });
+  beforeAdmit = () => { subscriptions[0] = { ...subscriptions[0], name: '另一操作已改名' }; };
+  await flow.saveSubscription({ ...writes[1], name: '过期表单' });
+  expect(writes).toHaveLength(2);
+  expect(subscriptions[0].name).toBe('另一操作已改名');
+});
+
+test('a partial malformed subscription package cannot masquerade as a remote removal', async () => {
+  const sub = { id: 1, url: 'https://pkg.example/book.json', name: '书源包', type: 0,
+    autoUpdate: true, customOrder: 0, update: 0 };
+  let malformed = true;
+  const corePackages: unknown[] = [];
+  class Source {
+    supportsEphemeralSourceCheck() { return true; }
+    prepareGroupedSourceDocument() {
+      return { items: [novel, audio], filteredUnsupportedCount: 1,
+        failures: malformed ? [{ index: 2, sourceId: '', message: '无效' }] : [] };
+    }
+  }
+  class Rules {
+    observeWrites() {}
+    mutationSnapshot() { return { blocked: false, generation: 0, canRetryOriginal: false }; }
+    async listRuleSubscriptions() { return [sub]; }
+    async captureSourceSubscription() { return {}; }
+    async previewSourceSubscription(_id: number, document: string) {
+      corePackages.push(JSON.parse(document));
+      return { changes: [] };
+    }
+  }
+  const flowClass = await transferFixture(Source, Rules);
+  let state: SourceV9TransferSnapshot | undefined;
+  const runtime = { supportsCoreCapability: () => false, async loadOnlineJsonDocument() {
+    return { text: JSON.stringify([novel.bookSource, audio.bookSource, ...(malformed ? [null] : [])]) };
+  } };
+  const flow = new flowClass(runtime, (next: SourceV9TransferSnapshot) => { state = next; }, () => true, () => {});
+  await flow.loadSubscriptions();
+  await flow.previewSubscriptions([sub.id]);
+  expect(corePackages).toEqual([]);
+  expect(state?.reviews).toEqual([]);
+  expect(state?.error).toContain('书源包');
+  malformed = false;
+  await flow.previewSubscriptions([sub.id]);
+  expect(corePackages).toEqual([[novel.bookSource]]);
+  expect(state?.checkIssue).toContain('已过滤 1 项');
+});
+
+test('switching off preflight restores static selection and all original details remain visible after import', async () => {
+  const other = { ...novel, index: 3, name: '可不选的书源', sourceId: 'https://other.example',
+    bookSource: { bookSourceUrl: 'https://other.example', bookSourceName: '可不选的书源' } };
+  const transfers: unknown[] = [];
+  class Source {
+    supportsEphemeralSourceCheck() { return true; }
+    prepareGroupedSourceDocument() {
+      return { items: [novel, audio, other], filteredUnsupportedCount: 1,
+        failures: [{ index: 2, sourceId: '', message: '静态规则无效' }] };
+    }
+    async loadSourceGroupCatalog() { return { groups: [], memberships: [], revision: 1 }; }
+    async checkEphemeralSources(rows: SourceImportCandidate['bookSource'][]) {
+      return rows.map(row => ({ ...report(false), sourceId: row.bookSourceUrl }));
+    }
+    async importGroupedSources(selected: SourceImportCandidate[]) {
+      expect(selected).toEqual([novel]);
+      return { addedCount: 1, updatedCount: 0, failedCount: 0, sourceIds: [novel.sourceId],
+        results: [{ index: novel.index, status: 'imported' }], failures: [] };
+    }
+  }
+  class Rules {
+    observeWrites() {}
+    mutationSnapshot() { return { blocked: false, generation: 0, canRetryOriginal: false }; }
+  }
+  const flowClass = await transferFixture(Source, Rules);
+  let state: SourceV9TransferSnapshot | undefined;
+  const flow = new flowClass({}, (next: SourceV9TransferSnapshot) => { state = next; }, () => true,
+    (reports: unknown) => { transfers.push(reports); });
+  await flow.parseImport({ origin: 'paste', url: '', paste: 'document' });
+  await flow.checkImport({ mode: 'search', depth: 'L2', keyword: '' });
+  expect(state?.rows.map(row => row.selected)).toEqual([false, false, false, false]);
+  flow.skipImportChecks();
+  expect(state?.rows.map(row => [row.selected, row.report])).toEqual([
+    [true, undefined], [false, undefined], [false, undefined], [true, undefined],
+  ]);
+  expect(state?.completedChecks).toBe(0);
+  flow.chooseImportRow(other.index, false);
+  await flow.importSelected({ strategy: 'preserve' });
+  expect(state?.importResult).toMatchObject({ addedCount: 1, invalidCount: 1, unsupportedCount: 1 });
+  expect(state?.importResult?.details.map(row => row.outcome)).toEqual(['新增', '已过滤 · 不支持的书源类型', '静态规则无效', '未选中']);
+  expect(transfers).toEqual([[]]);
 });

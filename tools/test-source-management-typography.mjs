@@ -10,10 +10,12 @@ async function metadata() {
  const {httpUrlHostname}=await import('../entry/src/main/ets/platform/network/HttpTransportPolicy.ts');
  const read=name=>readFileSync(new URL('../entry/src/main/ets/'+name,import.meta.url),'utf8');
  const roles=loadReaderTypographyRoles(read('ui/foundation/ReaderTypography.ets')),source=read('features/source/ui/SourceManagementPage.ets');
- const original=roles.TYPE_SOURCE_MANAGEMENT_META;
+ const original=roles.TYPE_SOURCE_MANAGEMENT_ROW_URL;
+ assert.equal(roles.TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontSizeFp,14);
+ assert.equal(original.fontSizeFp,11);
  for(const scheme of ['day','night'])for(const role of [original,{...original,fontFamily:'ReaderTestRole',fontWeight:500,fontSizeFp:original.fontSizeFp+2,lineHeightFp:original.lineHeightFp+3}])for(const api24 of [false,true]) {
   const {owner}=createReaderBuilderProbe(source,['sourceInfo','sourceDomain'],{...readerFoundationTokens,...roles,
-   TYPE_SOURCE_MANAGEMENT_META:role,readerAppColor,readerSourceCategoryLabel,httpUrlHostname,
+   TYPE_SOURCE_MANAGEMENT_ROW_URL:role,readerAppColor,readerSourceCategoryLabel,httpUrlHostname,
    Alignment:{Center:'center'},VerticalAlign:{Center:'center'},HorizontalAlign:{Start:'start'},
    TextOverflow:{Ellipsis:'ellipsis'},EllipsisMode:{CENTER:'center',END:'end'},WordBreak:{BREAK_ALL:'break-all'}});
   Object.assign(owner,{appThemeScheme:scheme,fontScale:()=>2,layoutBudget:()=>({rowForm:'inline'})});
@@ -28,6 +30,7 @@ async function metadata() {
   assert.ok(title&&domain,'the real source row retains the entire title and domain strings for measurement');
   assert.deepEqual([...owner.nodes.values()].filter(n=>n.type==='Text').map(n=>n.create), [title.create,domain.create],
    'the row exposes only title and host as visible text');
+  assert.equal(title.fontSize,14);
   assert.deepEqual([domain.fontFamily,domain.fontWeight,domain.fontSize,domain.lineHeight],
     [role.fontFamily,role.fontWeight,role.fontSizeFp,role.lineHeightFp]);
   assert.equal(domain.fontColor,readerAppColor('TOK_CONTROL_INK',scheme));

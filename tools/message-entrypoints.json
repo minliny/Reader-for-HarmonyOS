@@ -1629,8 +1629,19 @@
       "member": "actionFeedback",
       "family": "shared.page-state",
       "category": "书源分组当前操作异常提示",
-      "effectiveHost": "当前分组表单或分组页内容展示刚被拒绝的操作结果，或当前书源管理 owner 的错误和待核对状态。",
+      "effectiveHost": "当前分组表单或分组页的反馈层展示刚被拒绝的操作结果，或书源管理 owner 的错误与警告。",
       "retireRule": "开始同一表单的新操作、表单退役或管理 owner 替换状态时撤销对应提示；原写入核对继续由书源管理 owner 持有。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/source/ui/SourceV9GroupsPage.ets#SourceV9GroupsPage.actionFeedback::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/source/ui/SourceV9GroupsPage.ets",
+      "owner": "SourceV9GroupsPage",
+      "member": "actionFeedback",
+      "family": "shared.recovery-notice",
+      "category": "分组页原书源操作核对与继续",
+      "effectiveHost": "分组总览或详情在头栏下的独立有界覆盖层展示当前原操作；分组表单存在时由表单内容承载同一条恢复消息。",
+      "retireRule": "操作身份或代际、承载分组或表单、或管理旅程变化时拒绝旧动作。分组页仅调用原书源管理 owner 的核对和继续。",
       "status": "registered-source-entry"
     },
     {

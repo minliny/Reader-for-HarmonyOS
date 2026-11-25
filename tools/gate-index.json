@@ -409469,7 +409469,7 @@
       ],
       "resourceNeeds": [],
       "estimatedCostType": "sdk-lowering/selected-production-methods",
-      "reviewedSourceSha256": "368c81e03d1aee70f53ace248779f84f2b1eeee8f7a65dc623ba969f445a7356",
+      "reviewedSourceSha256": "613641df64e471786e0fd648a64eb9db378dff4f0211a3a3d84f379f2fe5dcdd",
       "definitionInputs": [
         {
           "path": "../Reader-UI/theme/registry.json",
@@ -409677,7 +409677,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "e8fa5f915a82eeacc149d3fa385904b43043f940d892e16305aab37e0e3d4ced"
+          "sha256": "e821164d8aa5f3b2a45293c4de359b6b91951de5d797b29d6a21906b646c33cc"
         },
         {
           "path": "entry/src/main/ets/platform/network/HttpTransportPolicy.ts",
@@ -409817,7 +409817,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ReaderTypography.ets",
-          "sha256": "9a52bc1d2acf1b9f046f5da8d0af82890ca76cc8703f75f16792169b930bedca"
+          "sha256": "6ce00d9828a0e86eb602fb4e6f2e08d55d04749186315fda6744fe76e2eea30e"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ReaderWidthClass.ts",
@@ -410049,7 +410049,7 @@
         },
         {
           "path": "tools/test-source-management-layout.mjs",
-          "sha256": "368c81e03d1aee70f53ace248779f84f2b1eeee8f7a65dc623ba969f445a7356"
+          "sha256": "613641df64e471786e0fd648a64eb9db378dff4f0211a3a3d84f379f2fe5dcdd"
         }
       ],
       "definitionInputProblems": [],
@@ -410113,19 +410113,19 @@
       "validationEvidence": {
         "execution": "PASS",
         "currentPublicationExecution": "NOT_RUN",
-        "trace": ".reader-artifacts/source-v9-continuation/matrix-inputs.json",
-        "traceSha256": "705920b775802f1759d8bf5d7107a62503466fe96632654a39c0987903bc1530",
-        "sourceSetSha256": "962aba03b1e510a5a2e348a30614a82252fe1285188c78bcf554756797c7c488",
+        "trace": ".reader-artifacts/source-v9-acceptance-followup/matrix-inputs.json",
+        "traceSha256": "1bae31fe714e1e0bc76ef173bd6849ba66fde4ac966cc19d2cd40a5078c9d166",
+        "sourceSetSha256": "616ea32cf472d13b23b58dc812c5f25750311728fcc1b3e4bfb384f1a3395661",
         "traceIntegrity": "PASS",
         "testExitCode": 0,
-        "report": ".reader-artifacts/source-v9-continuation/matrix.json",
-        "reportSha256": "d13ece64d5327f15b343c88ace91912ad0d15b5be507e02a86d02b0b899186ef",
+        "report": ".reader-artifacts/source-v9-acceptance-followup/matrix.json",
+        "reportSha256": "6b3828b61f2f62e1a7d7ffa52be1cdf19554c01ecfe62cf7f5fd4d718f34afbb",
         "actualCommand": [
           "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-source-management-layout.mjs",
           "--case",
           "matrix",
           "--write-evidence",
-          "--evidence-path=.reader-artifacts/source-v9-continuation/matrix.json"
+          "--evidence-path=.reader-artifacts/source-v9-acceptance-followup/matrix.json"
         ],
         "sdkMatrix": {
           "rowLayouts": 64,
@@ -410135,7 +410135,7 @@
         "authoredTargetMinimum": false,
         "nativeE3": "NOT_RUN"
       },
-      "resourceDefinitionSha256": "be3155d56f7f9a016f5481c132bec322f3823b8be1474dead6df873df0341e1d",
+      "resourceDefinitionSha256": "f11dac9b098ab87034c233852399009247959da313177224e24cca1c3ade7945",
       "repairAction": null,
       "repair": null,
       "compileInputAdaptationReview": {

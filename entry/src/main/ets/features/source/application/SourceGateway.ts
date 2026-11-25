@@ -1092,9 +1092,10 @@ export class SourceGateway {
       timeoutMs: timeoutMs + 5000, canDispatch: current, canContinue: current,
       shouldCancel: (): boolean => !current(),
     };
-    if (onStage !== undefined) options.onSourceCheckStage = (stage: string): void => {
-      if (current()) onStage(stage);
-    };
+    if (onStage !== undefined) {
+      options.onDispatch = (): void => { if (current()) onStage('L1'); };
+      options.onSourceCheckStage = (stage: string): void => { if (current()) onStage(stage); };
+    }
     return options;
   }
 

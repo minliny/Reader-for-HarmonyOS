@@ -116,7 +116,7 @@ if (selected.length) {
       }
       assert.ok(!nodes.some(node => node.type === 'Text' && node.create === book.checkMessage));
       const detections = nodes.filter(node => node.type === 'Button' && node.width === 28 && node.height === 28);
-      const logins = nodes.filter(node => node.type === 'Button' && node.width === 58 && node.height === 28);
+      const logins = nodes.filter(node => node.type === 'Button' && node.width === 58 && node.height === 26);
       const switches = nodes.filter(node => node.type === 'Toggle' && node.width === 44 && node.height === 26);
       const actionWidths = [...logins, ...detections, ...switches].map(node => node.width);
       assert.equal(nodes.filter(node => node.type === 'Checkbox').length, batchMode ? 1 : 0);
@@ -136,7 +136,7 @@ if (selected.length) {
           detectRegion.x + detectRegion.width <= detections[0].width + actionsLane.create.space,
         'expanded Detect hit area stays out of the adjacent controls');
         if (login) {
-          assert.deepEqual(logins[0].responseRegion, { x: 0, y: -8, width: 58, height: 44 });
+          assert.deepEqual(logins[0].responseRegion, { x: 0, y: -9, width: 58, height: 44 });
           const loginMark = nodes.find(node => node.type === 'Text' && node.create === '?');
           assert.equal(loginMark.width, 13);
           assert.equal(loginMark.height, 13);
@@ -189,6 +189,9 @@ if (selected.length) {
     assert.equal(status.width, contentWidth); assert.equal(category.width, contentWidth);
     assert.equal(status.create.space, SOURCE_STATUS_CHIP_GAP);
     assert.equal(statusButtons.length, 4); assert.ok(statusButtons.every(node => node.layoutWeight === 1));
+    assert.equal(statusButtons.find(node => node.id === 'reader-source-status-all').backgroundColor, sourceV9Primary('day'));
+    assert.equal(parentNodes.find(node => node.type === 'Text' && node.create === '全部 8').fontColor,
+      readerAppColor('app.sourceUi.onPrimary', 'day'));
     assert.equal(categoryButtons.length, 3); assert.ok(categoryButtons.every(node => node.layoutWeight === 1));
     const statusHeight = statusButtons[0].constraintSize.minHeight;
     assert.equal(statusHeight, category.height);

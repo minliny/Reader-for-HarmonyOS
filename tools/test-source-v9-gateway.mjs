@@ -27,6 +27,7 @@ function fixture(capabilities, handlers) {
     request(method, params, options) {
       commands.push({ method, params, options });
       assert.ok(handlers[method], method);
+      options?.onDispatch?.();
       return Promise.resolve(handlers[method](params));
     },
   };
@@ -81,10 +82,16 @@ async function realCheck() {
   const modern = fixture(['source.check.mode.v1', 'source.check.report.v2', 'source.check.keyword_override.v1',
     'source.check.ephemeral.v1'], handlers);
   let active = true;
-  assert.equal((await modern.gateway.checkSource(id, () => active, ' 斗破 ', 'search', levels, 1200)).available, true);
+  const stages = [];
+  const recordStage = stage => stages.push(stage);
+  assert.equal((await modern.gateway.checkSource(id, () => active, ' 斗破 ', 'search', levels, 1200, recordStage)).available, true);
+  assert.deepEqual(stages, ['L1']);
+  modern.commands[0].options.onSourceCheckStage('L2');
   assert.equal(modern.commands[0].params.keyword, '斗破');
   assert.equal(modern.commands[0].params.keywordOverride, true);
   active = false;
+  modern.commands[0].options.onSourceCheckStage('L3');
+  assert.deepEqual(stages, ['L1', 'L2']);
   assert.equal(modern.commands[0].options.shouldCancel(), true);
   assert.equal(modern.commands[0].options.canContinue(), false);
   await modern.gateway.checkSource(id, () => true, '  ', 'search', levels, 1200);
@@ -92,7 +99,9 @@ async function realCheck() {
   assert.equal(Object.hasOwn(modern.commands[1].params, 'keyword'), false);
   await modern.gateway.checkSource(id, () => true, '海贼', 'explore', levels, 1200);
   assert.equal(Object.hasOwn(modern.commands[2].params, 'keyword'), false);
-  assert.deepEqual((await modern.gateway.checkEphemeralSources([{}], () => true, '斗破'))[0].levelsPassed, []);
+  assert.deepEqual((await modern.gateway.checkEphemeralSources([{}], () => true, '斗破', 'search',
+    levels, 1200, recordStage))[0].levelsPassed, []);
+  assert.deepEqual(stages, ['L1', 'L2', 'L1']);
   assert.equal(modern.commands[3].params.reportVersion, 2);
   assert.equal(modern.commands[3].params.keywordOverride, true);
   assert.equal(modern.commands[3].options.shouldCancel(), false);

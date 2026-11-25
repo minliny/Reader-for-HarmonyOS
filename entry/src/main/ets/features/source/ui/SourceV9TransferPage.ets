@@ -553,7 +553,11 @@ export struct SourceV9TransferPage {
           Blank();
           ReaderToggle({ checkedColor: sourceV9Primary(this.scheme), value: this.state.checkSupported && this.checkEnabled, accessibilityLabel: '导入前可用性检测',
             actionEnabled: this.editable() && this.state.checkSupported,
-            onToggle: (next: boolean): void => { if (this.editable()) this.checkEnabled = next; } });
+            onToggle: (next: boolean): void => {
+              if (!this.editable()) return;
+              this.checkEnabled = next;
+              if (!next) this.flow?.skipImportChecks();
+            } });
         }.width('100%');
       }
       if ((subscription || this.checkEnabled) && this.state.checkSupported) {
