@@ -1001,6 +1001,14 @@ export struct SourceManagementPage {
     return this.sources.length === 0 && (fact === 'failed' || fact === 'refreshFailed');
   }
 
+  private hasEmptyImportReadbackFailure(): boolean {
+    const receipt = this.operation.receipt;
+    return this.sources.length === 0 && !this.hasPendingSourceRecovery() && !this.sourceListLoading() &&
+      !this.hasEmptyListReadFailure() && this.operation.action === 'import' &&
+      this.operation.importIdentity !== undefined && receipt?.receipt.confirmation === 'confirmed' &&
+      receipt.receipt.readback === 'failed' && this.recovery().canRetry;
+  }
+
   private sourceListInputIsCurrent(opening: string): boolean {
     return this.managementBackIsCurrent(opening) && this.inputEnabled && this.isInputAllowed?.() !== false &&
       !this.groupOpen && !this.hasPendingSourceRecovery();
@@ -1008,9 +1016,13 @@ export struct SourceManagementPage {
 
   private retryEmptyListAction(opening: string): (generation: number) => void {
     return (generation: number): void => {
+      if (!this.sourceListInputIsCurrent(opening) || this.sourceListLoading()) return;
+      if (this.hasEmptyImportReadbackFailure()) {
+        if (this.recovery().generation === generation) this.onReconcile(generation);
+        return;
+      }
       const read = this.operation.readFacts;
-      if (!this.sourceListInputIsCurrent(opening) || this.sourceListLoading() ||
-        !this.hasEmptyListReadFailure() || read === undefined || read.generation !== generation) return;
+      if (!this.hasEmptyListReadFailure() || read === undefined || read.generation !== generation) return;
       if (read.canRetry) this.onReconcile(generation);
       else this.onRetryLoad();
     };
@@ -1025,11 +1037,13 @@ export struct SourceManagementPage {
   }
 
   private readPageStateTitle(): string {
-    return this.sourceListLoading() ? '正在读取书源' : this.hasEmptyListReadFailure() ? '书源读取失败' : '暂无书源';
+    return this.sourceListLoading() ? '正在读取书源' : this.hasEmptyImportReadbackFailure() ? '书源列表待刷新' :
+      this.hasEmptyListReadFailure() ? '书源读取失败' : '暂无书源';
   }
 
   private readPageStateMessage(): string {
-    return this.sourceListLoading() ? '请稍候' : this.hasEmptyListReadFailure() ?
+    return this.sourceListLoading() ? '请稍候' : this.hasEmptyImportReadbackFailure() ?
+      '已确认导入，但当前列表尚未核对完成，请刷新列表。' : this.hasEmptyListReadFailure() ?
       '请稍后重试。' : '点击下方「＋ 新增书源」导入 Legado 书源 JSON';
   }
 
@@ -1039,7 +1053,7 @@ export struct SourceManagementPage {
       this.categoryValue !== 'all' || this.groupValue !== '全部分组') return undefined;
     const read = this.operation.readFacts?.fact;
     const state = this.verificationProjectionState();
-    if (state === 'empty' && read === 'current') return 'read-empty';
+    if (state === 'empty' && read === 'current' && !this.hasEmptyImportReadbackFailure()) return 'read-empty';
     if (state === 'readFailure' && (read === 'failed' || read === 'refreshFailed')) return 'read-failed';
     if (state === 'rows' && read === 'refreshFailed' && this.recovery().canRetry) return 'retained-read-failed';
     return undefined;
@@ -1711,10 +1725,11 @@ export struct SourceManagementPage {
             loadingProgressId: 'reader-source-loading-progress',
             onLoadingProgressVisible: this.verificationLoadingObserver(),
             loadingActive: !this.reduceMotion,
-            actionLabel: this.hasEmptyListReadFailure() ? '重试' : '',
-            actionFocusId: this.hasEmptyListReadFailure() ? 'reader-source-read-retry' : '',
+            actionLabel: this.hasEmptyImportReadbackFailure() ? '刷新列表' : this.hasEmptyListReadFailure() ? '重试' : '',
+            actionFocusId: this.hasEmptyImportReadbackFailure() ? 'reader-source-import-readback-retry' :
+              this.hasEmptyListReadFailure() ? 'reader-source-read-retry' : '',
             actionTextLayoutOptions: this.readPageStateTextOptions('retry'),
-            actionGeneration: this.operation.readFacts?.generation ?? 0,
+            actionGeneration: this.hasEmptyImportReadbackFailure() ? this.recovery().generation : this.operation.readFacts?.generation ?? 0,
             onAction: this.retryEmptyListAction(this.temporaryBackIdentity) });
         }.id('reader-source-empty-state');
       }

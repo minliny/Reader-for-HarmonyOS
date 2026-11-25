@@ -88,8 +88,9 @@ export class SourceHost {
   }
   deleteSources(ids: string[], identity: string): void { this.admitted(identity)?.deleteSources(ids); }
   exportAll(identity: string): void { this.admitted(identity)?.exportAll(); }
-  acceptTransferredReports(reports: SourceV9ImportedReport[], sourceIds: string[], identity: string): Promise<boolean> {
-    return this.admitted(identity)?.acceptTransferredReports(reports, sourceIds) ?? Promise.resolve(false);
+  acceptTransferredReports(reports: SourceV9ImportedReport[], sourceIds: string[], identity: string,
+    onImportAdmitted?: (importIdentity: number) => void): Promise<boolean> {
+    return this.admitted(identity)?.acceptTransferredReports(reports, sourceIds, onImportAdmitted) ?? Promise.resolve(false);
   }
   runSourceCheck(id: string, options: SourceV9CheckOptions, current: () => boolean,
     onStage: (stage: string) => void, identity: string): Promise<SourceCheckOutcome | undefined> {

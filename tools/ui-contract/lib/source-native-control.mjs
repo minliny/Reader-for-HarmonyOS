@@ -13,6 +13,7 @@ const targets = new Map([
   ['reader-source-footer-add-button', {id:/^source-back:\d+:import:footer$/u,scope:[footer]}],
   ['reader-source-clear-filters', {scope:['reader-source-filtered-empty',list]}],
   ['reader-source-read-retry', {scope:['reader-source-empty-state',list]}],
+  ['reader-source-import-readback-retry', {scope:['reader-source-empty-state',list]}],
   ['reader-source-retained-read-retry', {scope:['reader-source-filter-block',list]}],
   ['reader-source-status-action', {scope:['reader-source-filter-block',list]}],
   ['reader-source-original-reconcile', {scope:['reader-source-original-recovery','reader-source-pending-recovery']}],

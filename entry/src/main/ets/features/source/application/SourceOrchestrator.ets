@@ -28,6 +28,7 @@ import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 
 const DOMAIN = 0x5244;
 let sourceProjectionGeneration: number = 0;
+let sourceImportReadbackIdentity: number = 0;
 let offlineDetectVerificationSequence: number = 0;
 let sourceControlVerificationSequence: number = 0;
 
@@ -58,12 +59,19 @@ interface SourceReadRetryObservation {
   readonly count: number;
 }
 
+interface PendingImportReadback {
+  readonly identity: number;
+  readonly sourceIds: string[];
+  readonly confirmedParts: number;
+}
+
 export interface SourceManagementProjection {
   action: string;
   sourceId: string;
   receipt?: PersistedReceiptProjection<BookSource[]>;
   readFacts?: OperationFacts<BookSource[]>;
   confirmedParts?: number;
+  importIdentity?: number;
   original?: RulesMutationSnapshot;
 }
 
@@ -120,12 +128,16 @@ export class SourceOrchestrator {
     try { if (identity.length === 0 || !ReaderRuntimeOwner.isCurrent(this.owner) || !current()) return false; }
     catch (_) { return false; }
     if (this.presentationIdentity !== identity) this.session += 1;
+    const session = this.session;
     this.presentationIdentity = identity;
     this.emit = emit; this.isCurrent = current; this.emitStatus = status; this.emitProjection = projection;
     if (this.hasRead) { try { emit(this.sources); } catch (_) {} }
+    if (!this.isCurrentSession(session)) return true;
     try { projection(this.latestProjection); } catch (_) {}
     const receipt = this.latestProjection.receipt;
-    if (receipt !== undefined) this.publishStatus(receipt.receipt.fact === 'confirmedCurrent' ? 'idle' : 'warning', receipt.receipt.message);
+    if (receipt !== undefined && this.isCurrentSession(session)) {
+      this.publishStatus(receipt.receipt.fact === 'confirmedCurrent' ? 'idle' : 'warning', receipt.receipt.message);
+    }
     return true;
   }
   detachPresentation(identity: string): void {
@@ -156,6 +168,8 @@ export class SourceOrchestrator {
   /** Session-local source-check projections; Core remains authoritative. */
   private checkResults: Map<string, BookSource> = new Map<string, BookSource>();
   private importedReports = new Map<string, SourceV9ImportedReport>();
+  /** Retained across page sessions until the exact V9 import IDs read back. */
+  private pendingImportReadback: PendingImportReadback | undefined;
   private readonly deniedLoginReports: Map<string, string> = new Map<string, string>();
   private reportClearTimes = new Map<string, number>();
   private checkingSourceIds: Map<string, SourceCheckCapture> = new Map<string, SourceCheckCapture>();
@@ -194,14 +208,15 @@ export class SourceOrchestrator {
       const receipt = this.latestProjection.receipt;
       const read = this.latestProjection.readFacts;
       if (receipt?.facts.generation === generation && receipt.facts.canRetry) {
+        const importIdentity = this.latestProjection.importIdentity;
         this.publishReceipt(session, this.latestProjection.action, this.latestProjection.sourceId,
-          receipt.receipt.confirmation, 'reading');
-        await this.loadList(session);
+          receipt.receipt.confirmation, 'reading', undefined, undefined, importIdentity);
+        await this.loadList(session, importIdentity === undefined);
       } else if (read?.generation === generation && read.canRetry) {
         this.publishRead(session, 'loading');
         const started = this.latestProjection.readFacts?.generation;
         if (started !== undefined) this.observeReadRetry(session, 'started', generation, started);
-        await this.loadList(session);
+        await this.loadList(session, this.pendingImportReadback === undefined);
         if (started !== undefined) this.observeReadRetry(session, 'settled', generation, started);
       }
     });
@@ -285,7 +300,7 @@ export class SourceOrchestrator {
     if (!this.isCurrentSession(session)) return;
     const previous = this.latestProjection;
     this.latestProjection = { action: previous.action, sourceId: previous.sourceId, receipt: previous.receipt,
-      readFacts: previous.readFacts, confirmedParts: previous.confirmedParts,
+      readFacts: previous.readFacts, confirmedParts: previous.confirmedParts, importIdentity: previous.importIdentity,
       original: this.gateway.originalMutationSnapshot() };
     try {this.emitProjection(this.latestProjection);} catch (_) {}
   }
@@ -305,29 +320,54 @@ export class SourceOrchestrator {
     if (!this.isCurrentSession(session)) return;
     if (recover) await this.recoverOriginal(session,false);
     if (!this.isCurrentSession(session)) return;
+    const importIdentity = this.latestProjection.importIdentity;
     let sources: BookSource[];
     try {
       sources = await this.loadSourcesWithRetry(session);
     } catch (error) {
-      if (this.isCurrentSession(session)) {
-        this.publishRead(session, 'failed', (error as Error).message);
-        const receipt = this.latestProjection.receipt;
-        if (receipt !== undefined) this.publishReceipt(session, this.latestProjection.action,
-          this.latestProjection.sourceId, receipt.receipt.confirmation, 'failed', (error as Error).message);
-        if (receipt === undefined) this.publishStatus('error', `书源列表读取失败：${(error as Error).message}`);
-        hilog.error(DOMAIN, 'Reader',
-          'Source management load failed: %{private}s', (error as Error).message);
+      if (!this.isCurrentSession(session) || this.latestProjection.importIdentity !== importIdentity) return;
+      const message = error instanceof Error ? error.message : String(error);
+      this.publishRead(session, 'failed', message);
+      if (!this.isCurrentSession(session) || this.latestProjection.importIdentity !== importIdentity) return;
+      const receipt = this.latestProjection.receipt;
+      const pending = this.pendingImportReadback;
+      if (pending !== undefined && this.latestProjection.action === 'import' && pending.identity === importIdentity) {
+        this.publishReceipt(session, 'import', '', 'confirmed', 'failed', message, pending.confirmedParts, pending.identity);
+      } else if (receipt !== undefined && importIdentity === undefined) {
+        this.publishReceipt(session, this.latestProjection.action,
+          this.latestProjection.sourceId, receipt.receipt.confirmation, 'failed', message);
+      } else {
+        this.publishStatus('error', `书源列表读取失败：${message}`);
+      }
+      hilog.error(DOMAIN, 'Reader', 'Source management load failed: %{private}s', message);
+      return;
+    }
+    if (!this.isCurrentSession(session) || this.latestProjection.importIdentity !== importIdentity) return;
+    this.presentSources(sources);
+    this.hasRead = true;
+    this.publishRead(session, 'succeeded');
+    if (!this.isCurrentSession(session) || this.latestProjection.importIdentity !== importIdentity) return;
+    const pending = this.pendingImportReadback;
+    const receipt = this.latestProjection.receipt;
+    if (pending !== undefined && this.latestProjection.action === 'import' && pending.identity === importIdentity) {
+      if (this.originalBlocked()) {
+        this.publishStatus('warning', '');
+        return;
+      }
+      const currentIds = new Set(this.sources.map((source: BookSource): string => source.sourceId));
+      if (pending.sourceIds.every((id: string): boolean => currentIds.has(id))) {
+        this.pendingImportReadback = undefined;
+        this.publishReceipt(session, 'import', '', 'confirmed', 'succeeded', undefined, pending.confirmedParts, pending.identity);
+      } else {
+        this.publishReceipt(session, 'import', '', 'confirmed', 'failed', '列表中未能核对全部已导入书源',
+          pending.confirmedParts, pending.identity);
       }
       return;
     }
-    if (this.isCurrentSession(session)) {
-      this.presentSources(sources);
-      this.hasRead = true;
-      this.publishRead(session, 'succeeded');
-      const receipt = this.latestProjection.receipt;
-      if (receipt !== undefined) this.publishReceipt(session, this.latestProjection.action,
+    if (receipt !== undefined && importIdentity === undefined) {
+      this.publishReceipt(session, this.latestProjection.action,
         this.latestProjection.sourceId, receipt.receipt.confirmation, 'succeeded');
-      if (receipt?.receipt.confirmation === 'unknown') return;
+    } else if (receipt === undefined || receipt.receipt.fact === 'confirmedCurrent') {
       this.publishStatus('idle', '');
     }
   }
@@ -366,7 +406,25 @@ export class SourceOrchestrator {
     this.operationChain = this.operationChain.then(async (): Promise<void> => {
       if (!this.isCurrentSession(session) || this.originalBlocked()) return;
       const result = await this.gateway.deleteSources(selected);
+      const pending = this.pendingImportReadback;
+      if (pending !== undefined) {
+        // A confirmed, idempotent delete leaves all selected IDs absent.
+        const remaining = pending.sourceIds.filter((id: string): boolean => !selected.includes(id));
+        if (remaining.length === 0) {
+          this.pendingImportReadback = undefined;
+          const previous = this.latestProjection;
+          if (previous.importIdentity === pending.identity) {
+            this.latestProjection = { action: 'load', sourceId: '', readFacts: previous.readFacts,
+              original: previous.original };
+          }
+        } else {
+          this.pendingImportReadback = { identity: pending.identity, sourceIds: remaining, confirmedParts: pending.confirmedParts };
+        }
+      }
       await this.loadList(session);
+      if (!this.isCurrentSession(session)) return;
+      if (this.pendingImportReadback !== undefined &&
+        this.latestProjection.receipt?.receipt.fact === 'confirmedRefreshFailed') return;
       const message = `已删除 ${result.deletedCount} 个书源`;
       this.publishStatus(result.cookieCleanupFailures === 0 ? 'success' : 'warning',
         result.cookieCleanupFailures === 0 ? message : `${message}，${result.cookieCleanupFailures} 个登录会话清理失败`);
@@ -430,27 +488,37 @@ export class SourceOrchestrator {
     return run;
   }
 
-  acceptTransferredReports(reports: SourceV9ImportedReport[], confirmedSourceIds: string[]): Promise<boolean> {
+  acceptTransferredReports(reports: SourceV9ImportedReport[], confirmedSourceIds: string[],
+    onImportAdmitted?: (importIdentity: number) => void): Promise<boolean> {
     const session = this.session;
-    for (const item of reports) {
-      if (item.sourceVersion !== undefined && item.report.sourceId === item.sourceId &&
-        item.report.report?.ruleDigest === item.sourceVersion) {
-        this.importedReports.set(item.sourceId, item);
-      }
-    }
+    const ids = confirmedSourceIds.slice();
     const readback = this.operationChain.then(async (): Promise<boolean> => {
-      if (!this.isCurrentSession(session)) return false;
-      const imported = confirmedSourceIds.length;
-      if (imported > 0) this.publishReceipt(session, 'import', '', 'confirmed', 'reading', undefined, imported);
-      await this.loadList(session);
-      if (!this.isCurrentSession(session) || this.originalBlocked() ||
-        this.latestProjection.readFacts?.fact !== 'current' || imported === 0) return false;
-      if (!confirmedSourceIds.every((id: string): boolean =>
-        this.sources.some((source: BookSource): boolean => source.sourceId === id))) {
-        this.publishReceipt(session, 'import', '', 'confirmed', 'failed', '列表中未能核对全部已导入书源', imported);
+      if (ids.length === 0 && !this.isCurrentSession(session)) return false;
+      for (const item of reports) {
+        if (item.sourceVersion !== undefined && item.report.sourceId === item.sourceId &&
+          item.report.report?.ruleDigest === item.sourceVersion) {
+          this.importedReports.set(item.sourceId, item);
+        }
+      }
+      if (ids.length === 0) {
+        await this.loadList(session);
         return false;
       }
-      return this.latestProjection.receipt?.receipt.fact === 'confirmedCurrent';
+      const sourceIds = Array.from(new Set(ids));
+      const pending: PendingImportReadback = { identity: ++sourceImportReadbackIdentity, sourceIds,
+        confirmedParts: sourceIds.length };
+      this.pendingImportReadback = pending;
+      if (this.isCurrentSession(session)) {
+        try { onImportAdmitted?.(pending.identity); } catch (_) { /* Presentation cannot change a confirmed import. */ }
+      }
+      if (!this.isCurrentSession(session)) {
+        this.publishReceipt(session, 'import', '', 'confirmed', 'failed', '列表尚未刷新', pending.confirmedParts, pending.identity);
+        return false;
+      }
+      this.publishReceipt(session, 'import', '', 'confirmed', 'reading', undefined, pending.confirmedParts, pending.identity);
+      await this.loadList(session);
+      return this.isCurrentSession(session) && this.latestProjection.importIdentity === pending.identity &&
+        this.latestProjection.receipt?.receipt.fact === 'confirmedCurrent';
     });
     this.operationChain = readback.then((): void => {}, (): void => {});
     return readback;
@@ -900,27 +968,34 @@ export class SourceOrchestrator {
   }
 
   private publishRead(session: number, phase: 'loading' | 'failed' | 'succeeded', message?: string): void {
+    if (!this.isCurrentSession(session)) return;
     this.latestProjection = { action: this.latestProjection.action, sourceId: this.latestProjection.sourceId,
       receipt: this.latestProjection.receipt, confirmedParts: this.latestProjection.confirmedParts,
+      importIdentity: this.latestProjection.importIdentity,
       original: this.gateway.originalMutationSnapshot(),
       readFacts: projectOperationFacts({ phase,
       value: this.hasRead ? this.sources : undefined, canRetry: phase === 'failed',
       generation: ++sourceProjectionGeneration, message }) };
-    if (this.isCurrentSession(session)) { try { this.emitProjection(this.latestProjection); } catch (_) {} }
+    try { this.emitProjection(this.latestProjection); } catch (_) {}
   }
 
   private publishReceipt(session: number, action: string, sourceId: string,
     confirmation: CommitConfirmationKind, readback: 'reading' | 'failed' | 'succeeded',
-    refreshError?: string, confirmedParts?: number): PersistedReceiptProjection<BookSource[]> {
-    const original=this.gateway.originalMutationSnapshot();
-    if (original?.blocked) confirmation=original.confirmation;
+    refreshError?: string, confirmedParts?: number, importIdentity?: number): PersistedReceiptProjection<BookSource[]> {
+    if (importIdentity === undefined && (action === 'import' || action === 'toggle')) this.pendingImportReadback = undefined;
+    const original = this.gateway.originalMutationSnapshot();
+    if (original?.blocked && importIdentity === undefined) confirmation = original.confirmation;
     const receipt = projectPersistedReceipt<BookSource[]>({ confirmation, readback, value: this.hasRead ? this.sources : undefined,
       refreshError, canRetry: confirmation !== 'undispatched' && readback !== 'reading' && (readback === 'failed' || confirmation === 'unknown'),
       generation: ++sourceProjectionGeneration });
-    this.latestProjection = { action, sourceId, receipt, readFacts: this.latestProjection.readFacts,
-      confirmedParts: confirmedParts ?? this.latestProjection.confirmedParts,original };
+    const previous = this.latestProjection;
+    const retainedParts = previous.importIdentity === importIdentity ? previous.confirmedParts : undefined;
+    this.latestProjection = { action, sourceId, receipt, readFacts: previous.readFacts,
+      confirmedParts: confirmedParts ?? retainedParts, importIdentity, original };
     if (this.isCurrentSession(session)) {
       try { this.emitProjection(this.latestProjection); } catch (_) {}
+    }
+    if (this.isCurrentSession(session) && this.latestProjection.receipt === receipt) {
       this.publishStatus(readback === 'reading' ? 'loading' : readback === 'failed' || confirmation !== 'confirmed' ? 'warning' : 'idle',
         readback === 'succeeded' && confirmation === 'confirmed' ? '' :
           receipt.receipt.message + (refreshError === undefined ? '' : `：${refreshError}`));

@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import { assertCombinedFilterResetAction, evaluateSource } from '../lib/source.mjs';
 import { sourceFilterNativeAssertion, sourceFilterNativeDispatch } from '../lib/source-filter-edge.mjs';
 import { sourceReadRetryTouchAssertion } from '../lib/source-read-retry-touch.mjs';
+import { sourceNativeControlAllowed } from '../lib/source-native-control.mjs';
 import { requestedOperation, requireActionDispatch } from '../collectors/harmonyos/records.mjs';
 import { normalizeHarmonyLayout } from '../lib/layout.mjs';
 import { conditionApplicability } from '../lib/receipt-conditions.mjs';
@@ -576,6 +577,48 @@ test('source read surfaces distinguish current owner, transient loading and rece
   assert.deepEqual(check('pending-recovery',[recovery],context => { delete context.samples['source-read']; }),['NOT_RUN','UNKNOWN']);
   assert.deepEqual(check('pending-recovery',[recovery],context => { context.samples['source-read'].captureComplete = false; }),
     ['NOT_RUN','APPLIES']);
+});
+
+test('source empty import readback uses the receipt generation and a registered empty-state refresh control', async () => {
+  const { selectedProductionComponentCallback, selectedProductionMethods } = await import('../../lib/selected-production-methods.mjs');
+  const { readerRecoveryView } = await import('../../../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
+  const file = new URL('../../../entry/src/main/ets/features/source/ui/SourceManagementPage.ets', import.meta.url);
+  const pageSource = readFileSync(file, 'utf8');
+  assert.equal(sourceNativeControlAllowed('reader-source-import-readback-retry'), true);
+  assert.match(pageSource, /actionFocusId: this\.hasEmptyImportReadbackFailure\(\) \? 'reader-source-import-readback-retry'/u);
+  const Page = selectedProductionMethods(file, 'SourceManagementPage', [
+    'recovery', 'hasPendingSourceRecovery', 'sourceListLoading', 'hasEmptyListReadFailure', 'hasEmptyImportReadbackFailure',
+    'sourceListInputIsCurrent', 'retryEmptyListAction', 'managementBackIsCurrent', 'managementOpeningIsCurrent',
+    'readPageStateTitle', 'readPageStateMessage', 'verificationReadTextScope', 'verificationProjectionState',
+  ], { readerRecoveryView });
+  const reconciled = [];
+  const state = new Page();
+  Object.assign(state, {
+    sources: [], statusKind: 'warning', mounted: true, appForeground: true, inputEnabled: true,
+    temporaryBackIdentity: 'current-opening', sourceAnchorReadPending: () => false,
+    searchQuery: '', statusValue: '全部', categoryValue: 'all', groupValue: '全部分组', verificationTextMetrics: {},
+    operation: { action: 'import', importIdentity: 4, readFacts: { fact: 'current', generation: 12 },
+      receipt: { receipt: { confirmation: 'confirmed', readback: 'failed', fact: 'confirmedRefreshFailed' },
+        facts: { canRetry: true, generation: 21 } } },
+    onReconcile: generation => reconciled.push(generation),
+  });
+  assert.equal(state.readPageStateTitle(), '书源列表待刷新');
+  assert.match(state.readPageStateMessage(), /已确认导入/u);
+  assert.equal(state.verificationReadTextScope(), undefined);
+  assert.equal(selectedProductionComponentCallback(file, 'ReaderPageState', 'actionGeneration', state), 21);
+  const refresh = state.retryEmptyListAction('current-opening');
+  refresh(12);
+  refresh(21);
+  state.temporaryBackIdentity = 'next-opening';
+  refresh(21);
+  assert.deepEqual(reconciled, [21]);
+  state.operation = { action: 'load', readFacts: { fact: 'current', generation: 22 } };
+  assert.equal(state.verificationReadTextScope(), 'read-empty');
+  state.operation.readFacts = { fact: 'failed', canRetry: true, generation: 23 };
+  assert.equal(state.verificationReadTextScope(), 'read-failed');
+  assert.equal(selectedProductionComponentCallback(file, 'ReaderPageState', 'actionGeneration', state), 23);
+  state.retryEmptyListAction('next-opening')(23);
+  assert.deepEqual(reconciled, [21, 23]);
 });
 
 test('source read retry requires a causal native click, a new read and its matching terminal surface', () => {

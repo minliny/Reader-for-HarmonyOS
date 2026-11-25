@@ -256,44 +256,371 @@ test('current HTTP authentication denial projects expired, with exact matched st
   assert.equal(sourceV9CheckStepText(report.steps[0], 'L4: HTTP status 403'), '失败 · network');
 });
 
-test('v9 import arms the original Search action only after exact current list readback', async () => {
-  const { actualSourceJourneyTypes } = await import('./lib/source-management-owner-probe.mjs');
-  const id = 'https://imported.example/';
-  const raw = { sourceId: id, name: '导入书源', baseUrl: id, enabled: true, enabledExplore: false,
+const firstImportedId = 'https://first-imported.example/';
+const secondImportedId = 'https://second-imported.example/';
+const importedBatch = { sourceIds: [firstImportedId, secondImportedId] };
+
+function importedSource(id) {
+  return { sourceId: id, name: '导入书源', baseUrl: id, enabled: true, enabledExplore: false,
     bookSource: { bookSourceType: 0, bookSourceUrl: id, bookSourceName: '导入书源' } };
+}
+
+async function importReadbackFixture() {
+  const { actualSourceJourneyTypes } = await import('./lib/source-management-owner-probe.mjs');
   let rows = [];
+  let nextList;
+  let searchInvocations = 0;
+  const requests = [];
+  const snapshots = [];
   const runtime = {
     supportsCoreCapability: () => false,
-    async request(method) {
-      assert.equal(method, 'source.list');
-      return { data: { sources: rows } };
+    async request(method, params, options) {
+      requests.push(method);
+      if (method === 'source.list') {
+        const read = nextList;
+        nextList = undefined;
+        return { data: { sources: read === undefined ? rows : await read() } };
+      }
+      if (method === 'source.update') {
+        options?.onDispatch?.();
+        const row = rows.find(source => source.sourceId === params.sourceId);
+        assert.ok(row, 'toggle targets a listed source');
+        row.enabled = params.enabled;
+        return { data: { source: row } };
+      }
+      if (method === 'source.delete') {
+        options?.onDispatch?.();
+        const previousCount = rows.length;
+        rows = rows.filter(row => !params.sourceIds.includes(row.sourceId));
+        return { data: { deleted: previousCount - rows.length } };
+      }
+      assert.fail(`Unexpected Core request: ${method}`);
     },
+    async clearSourceCookieSession() {},
   };
   const { SourceJourneyPresentation } = actualSourceJourneyTypes({ ReaderRuntimeOwner: { isCurrent: owner => owner === runtime },
     hilog: { info() {}, warn() {}, error() {} } });
   const journey = new SourceJourneyPresentation();
-  let used = 0;
-  const imported = { sourceIds: [id] };
-  const search = () => { used++; };
-  journey.openManagement(runtime, 'import-opening', () => true);
-  await journey.registry.orchestrator.operationChain;
-  await journey.readBackTransfer('import-opening', [], imported, search);
-  assert.equal(journey.snapshot().operation.receipt.receipt.confirmation, 'confirmed');
-  assert.equal(journey.snapshot().operation.receipt.receipt.readback, 'failed');
-  assert.equal(journey.snapshot().searchActionLabel, '');
+  const search = () => { searchInvocations += 1; };
+  const open = identity => journey.openManagement(runtime, identity, () => true);
+  const settled = () => journey.registry.orchestrator.operationChain;
+  journey.observe(view => snapshots.push({
+    operation: view.operation,
+    sourceIds: view.sources.map(row => row.sourceId),
+    statusKind: view.statusKind,
+    statusMessage: view.statusMessage,
+    searchActionLabel: view.searchActionLabel,
+    searchActionRevision: view.searchActionRevision,
+  }));
+  return {
+    journey, open, settled, snapshots, requests,
+    searchInvocations: () => searchInvocations,
+    setSources: (...ids) => { rows = ids.map(importedSource); },
+    readNextList: read => { nextList = read; },
+    readBack: (identity, imported = importedBatch) => journey.readBackTransfer(identity, [], imported, search),
+    async reconcile(identity) {
+      journey.registry.reconcile(journey.snapshot().operation.receipt.facts.generation, identity);
+      await settled();
+    },
+    resetTrace() { snapshots.length = 0; requests.length = 0; },
+  };
+}
 
-  rows = [raw];
-  await journey.readBackTransfer('import-opening', [], undefined, search);
-  assert.equal(journey.snapshot().searchActionLabel, '');
-  await journey.readBackTransfer('import-opening', [], imported, search);
-  assert.equal(journey.snapshot().operation.action, 'import');
-  assert.equal(journey.snapshot().operation.receipt.receipt.readback, 'succeeded');
-  assert.equal(journey.snapshot().searchActionLabel, '重新搜索');
-  const revision = journey.snapshot().searchActionRevision;
-  journey.runSearchAction('stale-opening', revision);
-  journey.runSearchAction('import-opening', revision - 1);
-  assert.equal(used, 0);
-  journey.runSearchAction('import-opening', revision);
-  journey.runSearchAction('import-opening', revision);
-  assert.equal(used, 1);
+function importReceiptTransitions(snapshots) {
+  const receipts = new Map();
+  for (const { operation } of snapshots) {
+    if (operation.action === 'import' && operation.receipt !== undefined) {
+      receipts.set(operation.receipt.facts.generation, operation.receipt.receipt.readback);
+    }
+  }
+  return [...receipts.values()];
+}
+
+function searchActivationCount(snapshots) {
+  return new Set(snapshots.filter(view => view.searchActionLabel === '重新搜索')
+    .map(view => view.searchActionRevision)).size;
+}
+
+function assertRetiredReadIgnored(snapshots) {
+  assert.ok(snapshots.every(view => view.statusKind === 'loading' && view.searchActionLabel === '' &&
+    view.sourceIds.length === 0 && view.operation.receipt?.receipt.fact !== 'confirmedCurrent'),
+  'only the new opening may publish while waiting for its own list');
+}
+
+function assertConfirmedReadbackFailure(fixture, error = '列表中未能核对全部已导入书源') {
+  const { operation, statusKind, statusMessage, searchActionLabel } = fixture.journey.snapshot();
+  assert.equal(operation.receipt.receipt.confirmation, 'confirmed');
+  assert.equal(operation.receipt.receipt.fact, 'confirmedRefreshFailed');
+  assert.equal(operation.receipt.facts.canRetry, true);
+  assert.equal(operation.receipt.refreshError, error);
+  assert.equal(statusKind, 'warning');
+  assert.ok(statusMessage.includes(error));
+  assert.equal(searchActionLabel, '');
+  assert.equal(searchActivationCount(fixture.snapshots), 0);
+  assert.ok(fixture.snapshots.every(view => view.operation.action !== 'import' ||
+    view.operation.receipt?.receipt.fact !== 'confirmedCurrent'));
+  const firstLoading = fixture.snapshots.findIndex(view => view.statusKind === 'loading');
+  if (firstLoading !== -1) {
+    assert.ok(fixture.snapshots.slice(firstLoading).every(view => view.statusKind !== 'idle'));
+  }
+}
+
+test('v9 import publishes reading then failure, and same-opening read-only retries activate Search exactly once', async () => {
+  const fixture = await importReadbackFixture();
+  const identity = 'import-opening';
+  fixture.setSources(firstImportedId);
+  fixture.open(identity);
+  await fixture.settled();
+  fixture.resetTrace();
+
+  await fixture.readBack(identity, { sourceIds: [...importedBatch.sourceIds, firstImportedId] });
+  assert.deepEqual(importReceiptTransitions(fixture.snapshots), ['reading', 'failed']);
+  assert.deepEqual(fixture.requests, ['source.list']);
+  assertConfirmedReadbackFailure(fixture);
+  const { importIdentity, confirmedParts } = fixture.journey.snapshot().operation;
+  assert.ok(Number.isInteger(importIdentity));
+  assert.equal(confirmedParts, 2);
+
+  fixture.resetTrace();
+  await fixture.reconcile(identity);
+  assert.deepEqual(importReceiptTransitions(fixture.snapshots), ['reading', 'failed']);
+  assert.deepEqual(fixture.requests, ['source.list']);
+  assertConfirmedReadbackFailure(fixture);
+  assert.equal(fixture.journey.snapshot().operation.importIdentity, importIdentity);
+
+  fixture.resetTrace();
+  fixture.setSources(...importedBatch.sourceIds);
+  await fixture.reconcile(identity);
+  assert.deepEqual(importReceiptTransitions(fixture.snapshots), ['reading', 'succeeded']);
+  assert.deepEqual(fixture.requests, ['source.list']);
+  assert.equal(fixture.journey.snapshot().operation.importIdentity, importIdentity);
+  assert.equal(searchActivationCount(fixture.snapshots), 1);
+  const revision = fixture.journey.snapshot().searchActionRevision;
+  fixture.journey.runSearchAction('stale-opening', revision);
+  fixture.journey.runSearchAction(identity, revision - 1);
+  assert.equal(fixture.searchInvocations(), 0);
+  fixture.journey.runSearchAction(identity, revision);
+  fixture.journey.runSearchAction(identity, revision);
+  assert.equal(fixture.searchInvocations(), 1);
+});
+
+test('v9 import can activate Search on its first exact readback and report-only reads do not publish another success', async () => {
+  const fixture = await importReadbackFixture();
+  const identity = 'complete-import';
+  fixture.open(identity);
+  await fixture.settled();
+  fixture.resetTrace();
+  fixture.setSources(...importedBatch.sourceIds);
+  await fixture.readBack(identity);
+  assert.deepEqual(importReceiptTransitions(fixture.snapshots), ['reading', 'succeeded']);
+  assert.equal(searchActivationCount(fixture.snapshots), 1);
+  const successfulGeneration = fixture.journey.snapshot().operation.receipt.facts.generation;
+
+  assert.equal(await fixture.journey.registry.acceptTransferredReports([], [], identity), false);
+  assert.deepEqual(importReceiptTransitions(fixture.snapshots), ['reading', 'succeeded']);
+  assert.equal(fixture.journey.snapshot().operation.receipt.facts.generation, successfulGeneration);
+  assert.equal(searchActivationCount(fixture.snapshots), 1);
+  assert.deepEqual(fixture.requests, ['source.list', 'source.list']);
+});
+
+test('v9 report-only refresh and reopening keep missing IDs pending, then a reopened retry cannot activate old Search', async () => {
+  const fixture = await importReadbackFixture();
+  const identity = 'original-opening';
+  const reopened = 'reopened';
+  fixture.open(identity);
+  await fixture.settled();
+  await fixture.readBack(identity);
+  const { importIdentity } = fixture.journey.snapshot().operation;
+  assert.deepEqual(fixture.journey.snapshot().sources, []);
+  fixture.resetTrace();
+  await fixture.readBack(identity, { sourceIds: [] });
+  assertConfirmedReadbackFailure(fixture);
+  assert.deepEqual(fixture.requests, ['source.list']);
+  assert.equal(fixture.journey.snapshot().operation.importIdentity, importIdentity);
+
+  fixture.journey.retire();
+  fixture.resetTrace();
+  fixture.open(reopened);
+  await fixture.settled();
+  assertConfirmedReadbackFailure(fixture);
+  assert.deepEqual(fixture.requests, ['source.list']);
+  assert.equal(fixture.journey.snapshot().operation.importIdentity, importIdentity);
+
+  fixture.resetTrace();
+  fixture.setSources(...importedBatch.sourceIds);
+  await fixture.reconcile(reopened);
+  assert.deepEqual(importReceiptTransitions(fixture.snapshots), ['reading', 'succeeded']);
+  assert.deepEqual(fixture.requests, ['source.list']);
+  assert.equal(searchActivationCount(fixture.snapshots), 0);
+});
+
+test('v9 import keeps a confirmed batch through a list error and verifies the same IDs after retry', async () => {
+  const fixture = await importReadbackFixture();
+  const identity = 'failing-list';
+  fixture.open(identity);
+  await fixture.settled();
+  fixture.resetTrace();
+  fixture.readNextList(() => { throw new Error('读回异常'); });
+  await fixture.readBack(identity);
+  assert.deepEqual(importReceiptTransitions(fixture.snapshots), ['reading', 'failed']);
+  assert.deepEqual(fixture.requests, ['source.list']);
+  assertConfirmedReadbackFailure(fixture, '读回异常');
+
+  fixture.resetTrace();
+  fixture.setSources(firstImportedId);
+  await fixture.reconcile(identity);
+  assert.deepEqual(importReceiptTransitions(fixture.snapshots), ['reading', 'failed']);
+  assert.deepEqual(fixture.requests, ['source.list']);
+  assertConfirmedReadbackFailure(fixture);
+
+  fixture.resetTrace();
+  fixture.setSources(...importedBatch.sourceIds);
+  await fixture.reconcile(identity);
+  assert.deepEqual(importReceiptTransitions(fixture.snapshots), ['reading', 'succeeded']);
+  assert.deepEqual(fixture.requests, ['source.list']);
+  assert.equal(searchActivationCount(fixture.snapshots), 1);
+});
+
+function delayNextSourceList(fixture) {
+  const entered = Promise.withResolvers();
+  const result = Promise.withResolvers();
+  fixture.readNextList(() => {
+    entered.resolve();
+    return result.promise;
+  });
+  return { entered: entered.promise, complete: (...ids) => result.resolve(ids.map(importedSource)) };
+}
+
+test('v9 import accepted before leaving still has a batch to check if its queue work starts after reopening', async () => {
+  const fixture = await importReadbackFixture();
+  const firstRead = delayNextSourceList(fixture);
+  fixture.open('first-opening');
+  await firstRead.entered;
+  const queued = fixture.readBack('first-opening');
+  fixture.journey.retire();
+  fixture.open('next-opening');
+  fixture.resetTrace();
+  const newRead = delayNextSourceList(fixture);
+  firstRead.complete(...importedBatch.sourceIds);
+  await newRead.entered;
+  assertRetiredReadIgnored(fixture.snapshots);
+  newRead.complete(firstImportedId);
+  await queued;
+  await fixture.settled();
+  assertConfirmedReadbackFailure(fixture);
+  assert.deepEqual(fixture.requests, ['source.list']);
+  assert.ok(fixture.snapshots.every(view => !view.sourceIds.includes(secondImportedId)));
+});
+
+test('v9 import discards a retired readback while the next opening verifies the batch on its own list', async () => {
+  const fixture = await importReadbackFixture();
+  fixture.open('original-opening');
+  await fixture.settled();
+  const originalReadback = delayNextSourceList(fixture);
+  const original = fixture.readBack('original-opening');
+  await originalReadback.entered;
+  fixture.journey.retire();
+  fixture.open('next-opening');
+  fixture.resetTrace();
+  const currentReadback = delayNextSourceList(fixture);
+  originalReadback.complete(...importedBatch.sourceIds);
+  await currentReadback.entered;
+  assertRetiredReadIgnored(fixture.snapshots);
+  currentReadback.complete(firstImportedId);
+  await original;
+  await fixture.settled();
+  assertConfirmedReadbackFailure(fixture);
+  assert.deepEqual(fixture.requests, ['source.list']);
+  assert.ok(fixture.snapshots.every(view => !view.sourceIds.includes(secondImportedId)));
+});
+
+test('v9 delete removes its IDs from the pending batch and a later toggle replaces an unrelated import receipt', async () => {
+  const fixture = await importReadbackFixture();
+  const identity = 'writes-after-import';
+  fixture.setSources(firstImportedId);
+  fixture.open(identity);
+  await fixture.settled();
+  await fixture.readBack(identity);
+  const { importIdentity } = fixture.journey.snapshot().operation;
+
+  fixture.resetTrace();
+  fixture.journey.registry.deleteSources([firstImportedId], identity);
+  await fixture.settled();
+  assert.deepEqual(fixture.requests, ['source.delete', 'source.list']);
+  assert.equal(fixture.journey.snapshot().operation.receipt.receipt.fact, 'confirmedRefreshFailed');
+  assert.equal(fixture.journey.snapshot().operation.importIdentity, importIdentity);
+
+  fixture.resetTrace();
+  fixture.setSources(secondImportedId);
+  await fixture.reconcile(identity);
+  assert.deepEqual(importReceiptTransitions(fixture.snapshots), ['reading', 'succeeded']);
+  assert.deepEqual(fixture.requests, ['source.list'], 'the intentionally deleted ID is no longer required');
+
+  await fixture.readBack(identity, { sourceIds: [firstImportedId] });
+  assert.equal(fixture.journey.snapshot().operation.receipt.receipt.fact, 'confirmedRefreshFailed');
+  assert.notEqual(fixture.journey.snapshot().operation.importIdentity, importIdentity);
+  fixture.resetTrace();
+  fixture.journey.registry.toggleSource(secondImportedId, false, identity);
+  await fixture.settled();
+  await fixture.readBack(identity, { sourceIds: [] });
+  assert.deepEqual(fixture.requests, ['source.update', 'source.list', 'source.list']);
+  assert.equal(fixture.journey.snapshot().operation.action, 'toggle');
+  assert.equal(fixture.journey.snapshot().operation.importIdentity, undefined);
+  assert.equal(fixture.journey.snapshot().operation.receipt.receipt.fact, 'confirmedCurrent');
+  assert.deepEqual(importReceiptTransitions(fixture.snapshots), []);
+});
+
+test('v9 deleting the last pending source clears the readback without arming Search', async () => {
+  const fixture = await importReadbackFixture();
+  const identity = 'delete-last-pending';
+  fixture.setSources(firstImportedId);
+  fixture.open(identity);
+  await fixture.settled();
+  fixture.resetTrace();
+  fixture.readNextList(() => { throw new Error('读回异常'); });
+  await fixture.readBack(identity, { sourceIds: [firstImportedId] });
+  assertConfirmedReadbackFailure(fixture, '读回异常');
+
+  fixture.resetTrace();
+  fixture.journey.registry.deleteSources([firstImportedId], identity);
+  await fixture.settled();
+  assert.deepEqual(fixture.requests, ['source.delete', 'source.list']);
+  assert.deepEqual(fixture.journey.snapshot().sources, []);
+  assert.equal(fixture.journey.snapshot().operation.importIdentity, undefined);
+  assert.equal(searchActivationCount(fixture.snapshots), 0);
+});
+
+test('v9 a newer import owns the Search action even while a previously admitted readback finishes', async () => {
+  const fixture = await importReadbackFixture();
+  const identity = 'overlapping-imports';
+  fixture.open(identity);
+  await fixture.settled();
+  fixture.resetTrace();
+
+  const firstRead = delayNextSourceList(fixture);
+  const first = fixture.readBack(identity, { sourceIds: [firstImportedId] });
+  await firstRead.entered;
+  const olderImport = fixture.snapshots.find(view => view.operation.receipt?.receipt.readback === 'reading')
+    ?.operation.importIdentity;
+  assert.ok(Number.isInteger(olderImport));
+  let newestSearchInvocations = 0;
+  const second = fixture.journey.readBackTransfer(identity, [], { sourceIds: [secondImportedId] },
+    () => { newestSearchInvocations += 1; });
+  firstRead.complete(firstImportedId);
+  await first;
+  await second;
+
+  assert.deepEqual(fixture.requests, ['source.list', 'source.list']);
+  assert.deepEqual(importReceiptTransitions(fixture.snapshots), ['reading', 'succeeded', 'reading', 'failed']);
+  assert.ok(fixture.journey.snapshot().operation.importIdentity > olderImport);
+  assert.equal(searchActivationCount(fixture.snapshots), 0);
+  fixture.resetTrace();
+  fixture.setSources(secondImportedId);
+  await fixture.reconcile(identity);
+  assert.deepEqual(fixture.requests, ['source.list']);
+  assert.deepEqual(importReceiptTransitions(fixture.snapshots), ['reading', 'succeeded']);
+  assert.equal(searchActivationCount(fixture.snapshots), 1);
+  fixture.journey.runSearchAction(identity, fixture.journey.snapshot().searchActionRevision);
+  assert.equal(newestSearchInvocations, 1);
+  assert.equal(fixture.searchInvocations(), 0);
 });

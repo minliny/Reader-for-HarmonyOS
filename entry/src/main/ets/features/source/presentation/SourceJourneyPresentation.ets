@@ -53,6 +53,12 @@ interface SourceJourneyPatch {
   tools?: SourceToolsSnapshot;
 }
 
+interface PendingSourceImportSearchAction {
+  readonly managementLease: string;
+  readonly action: () => void;
+  importIdentity?: number;
+}
+
 /** One presentation across source management and tools. Both Core operation
  * owners retain their existing transaction and recovery lifetimes. */
 export class SourceJourneyPresentation {
@@ -65,6 +71,7 @@ export class SourceJourneyPresentation {
   private managementViewState: SourceManagementViewState | undefined;
   private toolsReturn: SourceToolsReturn | undefined;
   private searchAction: (() => void) | undefined;
+  private pendingSearchAction: PendingSourceImportSearchAction | undefined;
   readonly registry: SourceHost = new SourceHost(
     (sources: BookSource[]): void => {
       if (this.isManagementCurrent(this.managementLease)) this.publish({ sources });
@@ -73,7 +80,19 @@ export class SourceJourneyPresentation {
       if (this.isManagementCurrent(this.managementLease)) this.publish({ statusKind, statusMessage });
     },
     (operation: SourceManagementProjection): void => {
-      if (this.isManagementCurrent(this.managementLease)) this.publish({ operation });
+      if (!this.isManagementCurrent(this.managementLease)) return;
+      const pending = this.pendingSearchAction;
+      if (pending?.importIdentity !== undefined && this.isManagementCurrent(pending.managementLease)) {
+        if (operation.action !== 'import' || operation.importIdentity !== pending.importIdentity) {
+          this.pendingSearchAction = undefined;
+        } else if (operation.receipt?.receipt.fact === 'confirmedCurrent') {
+          this.pendingSearchAction = undefined;
+          this.searchAction = pending.action;
+          this.publish({ operation, searchActionLabel: '重新搜索', searchActionRevision: this.view.searchActionRevision + 1 });
+          return;
+        }
+      }
+      this.publish({ operation });
     },
   );
 
@@ -154,11 +173,10 @@ export class SourceJourneyPresentation {
     if (this.managementOwner === undefined && this.toolsHost === undefined) this.toolsReturn = undefined;
     this.retireManagement();
     this.retireTools();
-    this.searchAction = undefined;
-    if (this.view.searchActionLabel.length > 0) this.publish({ searchActionLabel: '' });
   }
 
   importSources(identity: string, onlineUrl?: string, searchAction?: () => void): void {
+    this.retireImportSearchAction(identity);
     this.management(identity)?.importBookSources(onlineUrl, (completion: SourceImportCompletion): void => {
       if (!this.isManagementCurrent(identity)) return;
       const base = completion.refreshWarning ?? `Core 已导入 ${completion.importedCount} 个书源`;
@@ -173,16 +191,30 @@ export class SourceJourneyPresentation {
     searchAction?: () => void): Promise<void> {
     const host = this.management(identity);
     if (host === undefined) return;
-    let confirmed = false;
-    try { confirmed = await host.acceptTransferredReports(reports, imported?.sourceIds ?? [], identity); }
-    catch (_) { return; }
-    if (!confirmed || !this.isManagementCurrent(identity) || searchAction === undefined) return;
-    this.searchAction = searchAction;
-    this.publish({ searchActionLabel: '重新搜索', searchActionRevision: this.view.searchActionRevision + 1 });
+    const sourceIds = imported?.sourceIds ?? [];
+    let pending: PendingSourceImportSearchAction | undefined;
+    if (sourceIds.length > 0) {
+      this.retireImportSearchAction(identity);
+      if (searchAction !== undefined && this.isManagementCurrent(identity)) {
+        pending = { managementLease: identity, action: searchAction };
+        this.pendingSearchAction = pending;
+      }
+    }
+    try {
+      await host.acceptTransferredReports(reports, sourceIds, identity, (importIdentity: number): void => {
+        if (pending !== undefined && this.pendingSearchAction === pending && this.isManagementCurrent(identity)) {
+          pending.importIdentity = importIdentity;
+        }
+      });
+    } catch (_) {
+      if (this.pendingSearchAction === pending) this.pendingSearchAction = undefined;
+    }
   }
 
   retireImportSearchAction(identity: string): void {
-    if (!this.isManagementCurrent(identity) || this.searchAction === undefined) return;
+    if (!this.isManagementCurrent(identity)) return;
+    this.pendingSearchAction = undefined;
+    if (this.searchAction === undefined) return;
     this.searchAction = undefined;
     this.publish({ searchActionLabel: '', searchActionRevision: this.view.searchActionRevision + 1 });
   }
@@ -222,10 +254,15 @@ export class SourceJourneyPresentation {
   }
 
   private retireManagement(): void {
+    this.pendingSearchAction = undefined;
+    this.searchAction = undefined;
     this.registry.detachPresentation(this.managementLease);
     this.managementLease = '';
     this.managementOwner = undefined;
     this.managementViewState = undefined;
+    if (this.view.searchActionLabel.length > 0) {
+      this.publish({ searchActionLabel: '', searchActionRevision: this.view.searchActionRevision + 1 });
+    }
   }
 
   private retireTools(): void {

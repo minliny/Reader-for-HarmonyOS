@@ -65,7 +65,8 @@ if (selected.length) {
     function render({ sources = [base('a')], statusKind = 'idle', operation = {} } = {}) {
       let clears = 0;
       const page = sdk.consumer(text, ['sourceList', 'hasPendingSourceRecovery', 'sourceListLoading',
-        'sourceAnchorReadPending', 'hasFilteredEmpty', 'hasEmptyListReadFailure', 'readPageStateTitle', 'readPageStateMessage', 'retryEmptyListAction', 'retryRetainedListAction'],
+        'sourceAnchorReadPending', 'hasFilteredEmpty', 'hasEmptyListReadFailure', 'hasEmptyImportReadbackFailure',
+        'readPageStateTitle', 'readPageStateMessage', 'retryEmptyListAction', 'retryRetainedListAction'],
       { readerScrollStartOffset, readerScrollEndOffset,
         ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} } });
       Object.assign(page, { sources, hasReadableSources: sources.some(v9.sourceV9Supports),

@@ -409677,7 +409677,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "e821164d8aa5f3b2a45293c4de359b6b91951de5d797b29d6a21906b646c33cc"
+          "sha256": "fc82fde01a902e5df4d24bc510723b52b1742bd744314817674bd455631792b4"
         },
         {
           "path": "entry/src/main/ets/platform/network/HttpTransportPolicy.ts",
