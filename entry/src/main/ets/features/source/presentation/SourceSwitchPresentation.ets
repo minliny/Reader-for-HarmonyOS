@@ -102,6 +102,7 @@ export class SourceSwitchPresentation {
   visible: boolean = false;
   state: SourceSwitchPanelState = { kind: 'discovering' };
   failureMessage: string = '';
+  rollbackInFlight: boolean = false;
   /** Projection of the Host receipt, retained until the target's measured commit. */
   pending: SourceSwitchPendingTransaction | undefined;
   namedCandidate: SourceSwitchCandidate | undefined;
@@ -180,7 +181,11 @@ export class SourceSwitchPresentation {
   acquire(scene: SourceSwitchScene): SourceSwitchHost | undefined {
     const owner = scene.owner;
     if (owner === undefined || scene.retired || !ReaderRuntimeOwner.isCurrent(owner)) return undefined;
-    if (this.activeHost?.owns(owner) !== true) this.activeHost = SourceSwitchHost.forRuntime(owner);
+    if (this.activeHost?.owns(owner) !== true) {
+      this.activeHost = SourceSwitchHost.forRuntime(owner);
+      this.pending = undefined;
+      this.rollbackInFlight = false;
+    }
     return this.activeHost;
   }
 
@@ -215,6 +220,7 @@ export class SourceSwitchPresentation {
     this.scopeId = snapshot.scopeId;
     this.state = snapshot.state;
     this.failureMessage = snapshot.failureMessage;
+    this.rollbackInFlight = snapshot.rollbackInFlight;
     this.pending = snapshot.pending;
     this.visible = snapshot.visible;
   }
@@ -226,6 +232,7 @@ export class SourceSwitchPresentation {
     const host = this.activeHost;
     if (host !== undefined && host.current().scopeId === this.scopeId) host.retire();
     this.visible = false;
+    this.rollbackInFlight = false;
   }
 
   open(host: SourceSwitchHost, context: SourceSwitchContext, lease: SourceSwitchLease): void {
@@ -391,7 +398,9 @@ export class SourceSwitchPresentation {
   }
 
   currentTransaction(identity: RemoteReadingIdentity | undefined): string | undefined {
-    return identity === undefined ? undefined : this.activeHost?.currentTransactionId(identity);
+    const pending = this.pending;
+    return identity !== undefined && pending?.targetSourceId === identity.sourceId && pending.targetBookId === identity.bookId ?
+      pending.transactionId : undefined;
   }
 
   finalizeTarget(scene: SourceSwitchScene, identity: RemoteReadingIdentity, transactionId: string): SourceSwitchPendingTransaction | undefined {
@@ -465,6 +474,11 @@ export class SourceSwitchPresentation {
   stop(scopeId?: number): void { if (scopeId !== undefined) this.activeHost?.stop(scopeId); }
   retry(scopeId?: number): void { if (scopeId !== undefined) this.activeHost?.retry(scopeId); }
   rollback(scopeId?: number): void { if (scopeId !== undefined) this.activeHost?.rollback(scopeId); }
+  rollbackReaderTarget(identity: RemoteReadingIdentity, transactionId: string, scopeId: number): void {
+    if (!this.isSurfacePresented() && this.scopeId === scopeId) {
+      void this.activeHost?.rollbackReaderTarget(identity, transactionId, scopeId);
+    }
+  }
   close(scopeId?: number): void {
     if (scopeId !== undefined && this.matchesScope(scopeId)) this.activeHost?.close(scopeId);
   }

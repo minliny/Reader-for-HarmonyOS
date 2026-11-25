@@ -22,7 +22,8 @@ const emit = (path, names, deps={}) => pureModuleProbe(read(path),path,{Observed
 const { readerSourceSwitchActions } = emit('app/composition/ReaderSourceSwitchActions.ets',['readerSourceSwitchActions']);
 const { ReadingCommitPresentation } = emit('features/reading/presentation/ReadingCommitPresentation.ets',['ReadingCommitPresentation'],{
   sameRemoteSessionEvidence,SourceSwitchCompletionPresentation,
-  ReadingPrefetchHost:{forRuntime:()=>({nearEnd:()=>false,prefetch:async()=>{}})},
+  ReadingPrefetchHost:{forRuntime:()=>({nearEnd:()=>false,prefetch:async()=>{},
+    retireDeepReading(){},noteReadingProgress(){}})},
 });
 const IndexMangaPorts=selectedProductionMethods(new URL('../../entry/src/main/ets/pages/Index.ets',import.meta.url),
   'Index',['mangaSourceSwitchPorts','nextNavigationGeneration'],{READER_FEEDBACK_EXTENDED_MS});

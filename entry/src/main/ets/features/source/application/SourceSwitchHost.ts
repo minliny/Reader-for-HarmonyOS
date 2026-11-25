@@ -207,7 +207,7 @@ export class SourceSwitchHost {
   }
 
   retry(scopeId: number): void {
-    if (!this.currentScope(scopeId) || !this.snapshot.visible) return;
+    if (!this.currentScope(scopeId) || !this.snapshot.visible || this.snapshot.rollbackInFlight) return;
     if (this.snapshot.state.kind === 'failure' && this.failedCandidate !== undefined) {
       this.retryFailed(scopeId); return;
     }
@@ -215,7 +215,7 @@ export class SourceSwitchHost {
       void this.reconcileRollback(true); return;
     }
     if (this.snapshot.write?.confirmation === 'unknown' || this.snapshot.write?.intentPending || this.snapshot.write?.readbackFailed) {
-      void this.recoverIntent(true); return;
+      void this.recoverIntent(true, { pickerForceDiscovery: false }); return;
     }
     if (this.snapshot.state.kind === 'discoveryError' || this.snapshot.state.kind === 'empty') void this.discover(true);
   }
@@ -378,6 +378,11 @@ export class SourceSwitchHost {
     try {
       const restored = await this.prepareNextChoice(generation);
       if (!admitted()) return;
+      if (restored?.sourceId === candidate.sourceId && restored.bookId === candidate.bookUrl) {
+        this.hide();
+        this.deliver({ kind: 'closed' });
+        return;
+      }
       const toc = await this.gateway.fetchTargetToc(candidate.sourceId, candidate.bookUrl, admitted, candidate);
       if (!admitted()) return;
       this.gateway.assertAcquiredBook(candidate, toc.readingSession, context.query);
@@ -404,7 +409,7 @@ export class SourceSwitchHost {
           targetChapterIndex: outcome.matchedChapter.order, transactionId: outcome.transactionId } };
         // ACK establishes Core acceptance. Query provides the actual retained
         // lineage/phase needed to persist and retire this Host intent safely.
-        await this.recoverIntent(false, false);
+        await this.recoverIntent(false, { deliverResult: false });
         if (this.fixedIntent !== undefined) return;
         if (!admitted()) return;
         this.hide(); this.deliver({ kind: 'targetReady', book: outcome.book, session: toc.readingSession,
@@ -468,6 +473,12 @@ export class SourceSwitchHost {
     await this.rollbackTransaction(this.snapshot.state.transactionId);
   }
 
+  async rollbackReaderTarget(identity: RemoteReadingIdentity, transactionId: string, scopeId: number): Promise<void> {
+    if (!this.currentScope(scopeId) || this.snapshot.visible || this.busyOrUnknown() ||
+      !this.sameIdentity(identity, this.identity()) || this.currentTransactionId(identity) !== transactionId) return;
+    await this.rollbackTransaction(transactionId, identity);
+  }
+
   async rollbackPending(): Promise<void> {
     const pending = this.snapshot.pending;
     if (pending === undefined || !this.currentLease() || this.snapshot.rollbackInFlight) return;
@@ -519,20 +530,36 @@ export class SourceSwitchHost {
     return pending;
   }
 
-  private async rollbackTransaction(transactionId: string): Promise<void> {
+  private async rollbackTransaction(transactionId: string, readerTarget?: RemoteReadingIdentity): Promise<void> {
+    if (this.snapshot.rollbackInFlight) return;
+    const scope = this.snapshot.scopeId;
     const generation = ++this.generation, evidence = new ReaderWriteEvidence();
     const admitted = (): boolean => this.admitted(generation);
+    const stillPending = (): boolean => readerTarget === undefined || this.currentTransactionId(readerTarget) === transactionId;
     this.stopDiscovery();
     this.snapshot = { ...this.snapshot, rollbackInFlight: true,
       state: { kind: 'switching', targetSourceId: '' } }; this.publish();
     try {
-      const result = await this.gateway.rollbackSwitch(transactionId, admitted, evidence);
+      if (readerTarget !== undefined) {
+        // Cold reader admission knows the pending Core journal before the caller
+        // intent is hydrated. Retain that exact payload for lost-ACK readback.
+        const intent = this.fixedIntent ?? this.confirmedIntent ?? await this.intents.load();
+        if (!admitted()) return;
+        if (intent !== undefined && intent.operationId !== transactionId) {
+          throw new SourceSwitchIntentRecoveryError('blocked', '已有另一笔换源需要核对，原记录已保留');
+        }
+        if (intent?.phase === 'confirmed') this.confirmedIntent = intent;
+        else this.fixedIntent = intent;
+      }
+      if (!stillPending()) { this.hide(); return; }
+      const result = await this.gateway.rollbackSwitch(transactionId, (): boolean => admitted() && stillPending(), evidence);
       this.recordWrite(generation, 'rollback', evidence, undefined, transactionId);
       if (this.snapshot.pending?.transactionId === transactionId) this.snapshot = { ...this.snapshot, pending: undefined };
       await this.clearTerminalIntent(transactionId, admitted);
       if (!admitted()) return;
       this.hide(); this.deliver({ kind: 'rollbackReady', book: result.restoredBook });
     } catch (error) {
+      if (admitted() && !stillPending() && evidence.confirmation() === 'undispatched') { this.hide(); return; }
       this.recordWrite(generation, 'rollback', evidence, this.publicFailure(error), transactionId);
       if (admitted()) {
         const confirmation = evidence.confirmation();
@@ -543,7 +570,10 @@ export class SourceSwitchHost {
       }
       if (evidence.confirmation() === 'unknown') await this.reconcileRollback(false);
     } finally {
-      this.snapshot = { ...this.snapshot, rollbackInFlight: false }; this.publish();
+      if (scope === this.snapshot.scopeId) {
+        this.snapshot = { ...this.snapshot, rollbackInFlight: false }; this.publish();
+        if (readerTarget !== undefined) this.settleRetired(generation);
+      }
     }
   }
 
@@ -742,7 +772,7 @@ export class SourceSwitchHost {
     try {
       this.fixedIntent = await this.intents.load();
       if (!this.admitted(generation)) return;
-      if (this.fixedIntent !== undefined) { await this.recoverIntent(false); return; }
+      if (this.fixedIntent !== undefined) { await this.recoverIntent(false, { pickerForceDiscovery: forceDiscovery }); return; }
       if (hasUnknown && this.snapshot.write?.action === 'rollback') { await this.reconcileRollback(false); return; }
       if (hasUnknown) { await this.reconcileUnknown(); return; }
       await this.discover(forceDiscovery);
@@ -755,7 +785,7 @@ export class SourceSwitchHost {
     }
   }
 
-  private async recoverIntent(retryWrite: boolean, deliverResult: boolean = true): Promise<void> {
+  private async recoverIntent(retryWrite: boolean, options?: { deliverResult?: boolean; pickerForceDiscovery?: boolean }): Promise<void> {
     const generation = this.generation, admitted = (): boolean => this.admitted(generation);
     let intent = this.fixedIntent;
     try {
@@ -807,7 +837,15 @@ export class SourceSwitchHost {
       this.fixedIntent = undefined;
       this.confirmedIntent = transaction.phase === 'pending' ? fixed : undefined;
       this.snapshot = { ...this.snapshot, write: { ...this.snapshot.write!, intentPending: false } };
-      if (!deliverResult) return;
+      if (options?.deliverResult === false) return;
+      const forceDiscovery = options?.pickerForceDiscovery;
+      if (forceDiscovery !== undefined && transaction.phase !== 'rolledBack' &&
+        this.sameIdentity(this.identity(), transaction.target)) {
+        // An explicit picker open on the target can happen before the reader
+        // confirms its first page. Retain the receipt while showing choices.
+        await this.discover(forceDiscovery);
+        return;
+      }
       await this.deliverRecovered(transaction, generation);
     } catch (error) {
       if (!admitted()) return;
@@ -874,7 +912,8 @@ export class SourceSwitchHost {
       } else if (transaction.phase === 'finalized') {
         await this.clearTerminalIntent(transaction.operationId, current);
         if (!current()) return;
-        this.snapshot = { ...this.snapshot, pending: undefined, write: { ...write, confirmation: 'undispatched' },
+        this.snapshot = { ...this.snapshot, pending: undefined, write: { ...write, confirmation: 'undispatched',
+          intentPending: false, readbackFailed: false },
           state: { kind: 'failure', message: '阅读位置已经确认，换源不能再撤销；当前阅读已保留', confirmation: 'confirmed' } };
         this.publish();
       } else if (retry) {

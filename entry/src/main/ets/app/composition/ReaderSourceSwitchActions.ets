@@ -1,4 +1,5 @@
 import type { MangaSourceSwitchPresentation } from '../../features/manga/presentation/MangaSourceSwitchPresentation';
+import type { RemoteReadingIdentity } from '../../features/reading/application/RemoteReadingContract';
 import type { SourceSwitchCandidate } from '../../features/source/application/SourceSwitchGateway';
 import type { SourceSwitchPresentation, SourceSwitchWorkflowPorts } from '../../features/source/presentation/SourceSwitchPresentation';
 
@@ -10,6 +11,7 @@ export interface ReaderSourceSwitchActions {
   refresh: (scope?: number) => void;
   select: (candidate: SourceSwitchCandidate, scope?: number) => void;
   rollback: (scope?: number) => void;
+  rollbackReaderTarget: (identity: RemoteReadingIdentity, transactionId: string, scopeId: number) => void;
   retryFailure: (scope?: number) => void;
   dismissFailure: (scope?: number) => void;
 }
@@ -40,6 +42,9 @@ export function readerSourceSwitchActions(source: () => SourceSwitchPresentation
     select: (candidate: SourceSwitchCandidate, scope?: number): void =>
       forCurrentKind(scope, (): void => manga().pick(candidate), (): void => source().pickText(candidate, scope)),
     rollback: (scope?: number): void => source().rollback(scope),
+    rollbackReaderTarget: (identity: RemoteReadingIdentity, transactionId: string, scopeId: number): void => {
+      if (!isManga()) source().rollbackReaderTarget(identity, transactionId, scopeId);
+    },
     retryFailure: (scope?: number): void =>
       forCurrentKind(scope, (): void => { manga().retryFailure(); }, (): void => { source().retryTextFailure(scope); }),
     dismissFailure: (scope?: number): void =>

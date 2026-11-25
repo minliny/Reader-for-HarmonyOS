@@ -80,6 +80,20 @@ for (const [message, capability] of [
   assert.equal(error.command, 'chapter.content');
   assert.equal(error.capability, capability);
 }
+for (const [command, category, reason, expected] of [
+  ['chapter.content', 'STORAGE_FAILURE', 'SOURCE_SWITCH_POSITION_PROTECTION', 'SOURCE_SWITCH_POSITION_PROTECTION'],
+  ['chapter.content', 'STORAGE_FAILURE', 'SQLITE_WRITE_FAILURE', 'SQLITE_WRITE_FAILURE'],
+  ['chapter.content', 'STORAGE_FAILURE', 'OTHER_STORAGE_FAILURE', 'OTHER_STORAGE_FAILURE'],
+  ['chapter.content', 'STORAGE_FAILURE', 'untrusted detail', undefined],
+  ['chapter.content', 'STORAGE_FAILURE', undefined, undefined],
+  ['chapter.content', 'SOURCE_HTTP_FAILED', 'SQLITE_WRITE_FAILURE', undefined],
+  ['cache.book.status', 'STORAGE_FAILURE', 'SQLITE_WRITE_FAILURE', undefined],
+]) {
+  const error = classifyRemoteReadingCommandFailure(command, {
+    event: { error: { details: { category, chapterPublicationFailure: reason } } },
+  });
+  assert.equal(error.diagnostic?.chapterPublicationFailure, expected);
+}
 const transportError = classifyRemoteReadingCommandFailure('book.toc', new Error('network down'));
 assert.equal(transportError.code, 'commandFailed');
 assert.equal(transportError.command, 'book.toc');

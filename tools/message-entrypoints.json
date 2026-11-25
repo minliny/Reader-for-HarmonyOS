@@ -858,8 +858,8 @@
       "member": "readingFailureActions",
       "family": "shared.recovery-action",
       "category": "阅读/换源失败恢复及设置/书源导航动作",
-      "effectiveHost": "当前ReadingExperience生命周期与章节selection；换源动作ForEach捕获sourceSwitchScopeId，原恢复动作捕获readerRecoveryView.generation；普通retryReading仍走原reader准入。",
-      "retireRule": "实体/lifecycle/selection或换源scope变化由原reader拒旧并清理恢复；阅读设置/切源是导航意图，展示不是durable ACK；未决进度必须沿原恢复，不因点击通用重试而重派。",
+      "effectiveHost": "当前ReadingExperience生命周期与章节selection；换回原书源捕获待处理换源标识、scope和章节尝试代次，原恢复动作捕获readerRecoveryView.generation；普通retryReading仍走原reader准入。",
+      "retireRule": "正文离开失败或阅读实体、章节尝试、待处理换源标识、scope变化即拒绝旧动作；SourceSwitchHost再核对精确事务、目标和当前租约，并串行化回滚与另选书源。",
       "status": "registered-source-entry"
     },
     {
@@ -869,7 +869,7 @@
       "member": "readingFailureContent",
       "family": "shared.page-state",
       "category": "当前正文不可用或换源失败",
-      "effectiveHost": "当前文字阅读正文预算内的可滚动失败投影，继续使用当前纸色和原恢复动作。",
+      "effectiveHost": "当前文字阅读正文预算内的可滚动失败投影。换源进度保护原因来自原业务诊断，待处理目标的回滚资格来自原换源事务。",
       "retireRule": "正文恢复或当前会话退役后退出。换源失败的继续动作捕获原 scope，刷新及其他动作仍交回阅读 owner。",
       "status": "registered-source-entry"
     },
