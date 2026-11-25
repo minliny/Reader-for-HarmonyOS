@@ -54,7 +54,7 @@ const cases = {
     resources: [],
   },
   'detail-cover-back': {
-    description: 'Detail cover consumes repeated Back and edges until a post-layout replay can remount the reader once.',
+    description: 'Queued Detail Back resumes one reader while keeping Detail above its original parent until the replacement reader lays out.',
     resources: [],
   },
   'detail-cover-background': {
@@ -594,7 +594,7 @@ async function routeTransitionEffects() {
   indexOwner.route = 'detail';
   assert.equal(indexOwner.appRouteLane(), 'detail');
   assert.match(index, /ReaderRouteStackSurface\(\{\s*route: this\.appRouteLane\(\)/);
-  assert.match(index, /\}\)\.transition\(readerSceneTransition\(this\.routeViewportWidth\(\), this\.appReduceMotion,\s*this\.searchAppForeground && !this\.readerDetailCover\)\)/);
+  assert.match(index, /\}\)\.transition\(readerSceneTransition\(this\.routeViewportWidth\(\), this\.appReduceMotion, this\.readerSceneMotionEnabled\(\)\)\)/);
   assert.match(index, /\.opacity\(this\.readerParentMotionProgress\(\) \* READER_ROUTE_PARENT_DIM\)\s*\.hitTestBehavior\(HitTestMode\.None\)/);
   const readerShell = readMotion('features/reading/ui/ReaderShell');
   const shell = createReaderBuilderProbe(readerShell, ['frameStyle'], { readerFrameStyle }).owner;
@@ -1217,6 +1217,7 @@ async function readerCoverStack(route, names, source = routeFixtureSource('app/n
       calls.push(['popToName', name, animated]);
     }
     pop(animated) { this.entries.pop(); calls.push(['pop', animated]); }
+    clear(animated) { this.entries = []; calls.push(['clear', animated]); }
   }
   const { Component } = createReaderBuilderProbe(source, [
     'route', 'initialRoot', 'routeMotion', 'reduceMotion', 'viewportWidth', 'rootRoute', 'pathStack', 'mounted', 'routeUpdate',
@@ -1273,6 +1274,7 @@ async function downloadEntryRouteFixture({ earlyDetail = false, immediateBack = 
   const index = createReaderBuilderProbe(source, [
     'appRouteLane', 'publishNavigation', 'updateReaderParentMotion', 'readerParentMotionProgress',
     'completeReaderDetailCover', 'appRouteBackGestureEnabled', 'readerDetailCoverGeneration',
+    'replayingReaderDetailBack', 'readerDetailReturnPaint', 'retireReaderDetailReturnPaintAfterLayout', 'readerSceneMotionEnabled',
     'onBackPress', 'dispatchBackDestination', 'handleDetailBack',
   ], {
     retainedReaderRoute, ...productionReaderMotionSdk(),
@@ -1348,7 +1350,7 @@ async function detailCoverBack() {
   async function check(immediateBack = false) {
     const { index, actions, exit, navigation, entry, frames, publish } = await downloadEntryRouteFixture({ immediateBack });
     const mounted = () => (entry.sessionActive || index.readerDetailCover) && entry.book !== undefined;
-    publish(navigation.show('detail'));
+    navigation.returns.rememberBookshelfReaderOrigin();
     actions.openReading(undefined);
     const generation = entry.readyGeneration;
     exit.requestBookInfo(); exit.accepted('reader');
@@ -1371,6 +1373,21 @@ async function detailCoverBack() {
     assert.equal(entry.readyGeneration, generation + 1);
     assert.equal(mounted(), true);
     assert.equal(navigation.snapshot().route, 'reading');
+    assert.equal(index.appRouteLane(), 'detail', 'the outgoing detail must cover the bookshelf until the replacement reader has laid out');
+    assert.equal(index.readerSceneMotionEnabled(), false, 'the replacement reader must paint its full viewport on its first layout');
+    assert.equal(index.onBackPress(), true, 'duplicate Back stays fenced during the replacement layout');
+    assert.equal(navigation.snapshot().route, 'reading');
+    const { host, calls } = await readerCoverStack('detail', ['detail']);
+    host.route = index.appRouteLane(); host.routeMotion = index.visibleRouteMotion;
+    host.reconcile();
+    assert.deepEqual(calls, [], 'the native stack must keep the rendered detail destination');
+    assert.equal(frames.length, 1);
+    frames.shift().run();
+    assert.equal(index.readerSceneMotionEnabled(), true, 'ordinary reader exit still has its native motion');
+    assert.equal(index.appRouteLane(), 'bookshelf');
+    host.route = index.appRouteLane(); host.routeMotion = index.visibleRouteMotion;
+    host.reconcile();
+    assert.deepEqual(calls, [['clear', false]], 'align the original parent silently after it is covered by the reader');
     exit.requestBookInfo(); exit.accepted('reader');
     assert.equal(index.onBackPress(), true);
     index.completeReaderDetailCover(index.readerDetailCoverGeneration);
@@ -1393,6 +1410,16 @@ async function detailCoverBack() {
   withTopLayer.frames.shift().run();
   assert.equal(closed, true, 'replayed Back still goes to the foreground surface');
   assert.equal(withTopLayer.navigation.snapshot().route, 'detail');
+  assert.equal(withTopLayer.index.readerDetailReturnPaint, undefined, 'a foreground owner can consume Back without starting the reader handoff');
+  const refused = await downloadEntryRouteFixture();
+  refused.actions.openReading(undefined);
+  refused.exit.requestBookInfo(); refused.exit.accepted('reader');
+  refused.entry.verdict = 'unreadable';
+  assert.equal(refused.index.onBackPress(), true);
+  refused.index.completeReaderDetailCover(refused.index.readerDetailCoverGeneration);
+  refused.frames.shift().run();
+  assert.equal(refused.navigation.snapshot().route, 'detail');
+  assert.equal(refused.index.readerDetailReturnPaint, undefined, 'a rejected resume leaves the active detail in normal ownership');
   const { host, calls } = await readerCoverStack('detail', ['detail']);
   host.readerCoverGeneration = 1; host.backGestureEnabled = true;
   host.beginPreview(90);

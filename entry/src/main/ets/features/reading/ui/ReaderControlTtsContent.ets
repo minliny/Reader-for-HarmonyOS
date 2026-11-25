@@ -8,7 +8,7 @@ import { TYPE_READER_PANEL_LABEL, TYPE_READER_PANEL_NUMBER, TYPE_APP_ROW_DETAIL,
 import { ReaderTtsWaveform } from './ReaderTtsWaveform';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
-import { FrameCallback } from '@kit.ArkUI';
+import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
@@ -46,7 +46,9 @@ import {
 } from './ReaderControlPlaybackGeometry';
 import { ReaderControlSwitchTrack } from './ReaderControlSwitchTrack';
 import { readerTtsPlayGradientStart } from './ReaderControlTtsStyle';
-import { ReaderIslandAction, READER_ISLAND_PLAYBACK_HEIGHT_VP } from './ReaderIslandControlStyle';
+import { ReaderIslandAction, readerIslandTtsPlaybackLayout, type ReaderIslandTtsPlaybackLayout,
+  READER_ISLAND_PLAYBACK_INSET_X, READER_ISLAND_PLAYBACK_INSET_Y, READER_ISLAND_PLAYBACK_STATUS_GAP,
+  READER_ISLAND_PLAYBACK_ACTION_GAP } from './ReaderIslandControlStyle';
 import { sampleReaderControlMotionPresentation, ReaderControlMotionPathCache, readerControlMotionOutlineOpacity,
   readerControlMotionClipRects, readerControlMotionClipPath,
   type ReaderControlMotionPresentation } from './ReaderControlMotionPresentation';
@@ -757,7 +759,13 @@ export struct ReaderControlTtsContent {
     }
   }
 
-  private islandPlaybackHeight(): number { return READER_ISLAND_PLAYBACK_HEIGHT_VP; }
+  private islandPlaybackLayout(): ReaderIslandTtsPlaybackLayout {
+    this.readerWindowMetricsRevision;
+    return readerIslandTtsPlaybackLayout(this.availableWidth, ReaderWindowCoordinator.metrics().systemFontScale,
+      Math.max(this.controlText('previous').length, this.controlText('next').length));
+  }
+
+  private islandPlaybackHeight(): number { return this.islandPlaybackLayout().height; }
 
   @Builder
   private islandContent() {
@@ -811,7 +819,7 @@ export struct ReaderControlTtsContent {
 
   @Builder
   private islandPlaybackContents() {
-    Column({ space: 2 }) {
+    Column({ space: READER_ISLAND_PLAYBACK_STATUS_GAP }) {
       Row({ space: 6 }) {
         Text('朗读').fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appScheme));
         if (this.state.status === 'playing') {
@@ -823,15 +831,18 @@ export struct ReaderControlTtsContent {
         Blank().layoutWeight(1);
         Text(this.statusText()).fontFamily(TYPE_READER_PANEL_META.fontFamily).fontWeight(TYPE_READER_PANEL_META.fontWeight).fontSize(TYPE_READER_PANEL_META.fontSizeFp).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme));
-      }.width('100%').height(22);
-      Row({ space: 6 }) {
+      }.width('100%').height(this.islandPlaybackLayout().statusHeight);
+      Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween,
+        space: { main: LengthMetrics.vp(READER_ISLAND_PLAYBACK_ACTION_GAP),
+          cross: LengthMetrics.vp(READER_ISLAND_PLAYBACK_ACTION_GAP) } }) {
         this.islandTransport('previous', this.hasActiveQueue());
         this.islandTransport('toggle', this.state.status !== 'stopping');
         this.islandTransport('stop', this.hasActiveQueue());
         this.islandTransport('next', this.hasActiveQueue());
       }.width('100%');
     }.width('100%').height('100%')
-      .padding({ left: 10, right: 10, top: 6, bottom: 6 });
+      .padding({ left: READER_ISLAND_PLAYBACK_INSET_X, right: READER_ISLAND_PLAYBACK_INSET_X,
+        top: READER_ISLAND_PLAYBACK_INSET_Y, bottom: READER_ISLAND_PLAYBACK_INSET_Y });
   }
 
   private islandTransportAsset(kind: ReaderControlTransportKind): string {
@@ -861,7 +872,8 @@ export struct ReaderControlTtsContent {
         else if (kind === 'stop') this.onStop();
         else { this.reportMorphActor(); this.onToggle(); }
       },
-    }).layoutWeight(kind === 'toggle' ? 1.25 : 1);
+    }).width(kind === 'toggle' ? this.islandPlaybackLayout().toggleWidth : this.islandPlaybackLayout().actionWidth)
+      .height(this.islandPlaybackLayout().rowHeight);
   }
 
   @Builder

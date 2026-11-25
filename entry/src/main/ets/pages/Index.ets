@@ -235,17 +235,22 @@ struct Index {
   @State private readerDetailCover: boolean = false;
   private readerDetailCoverGeneration: number = 0;
   @State private pendingBackDuringCover: number | undefined = undefined;
+  private replayingReaderDetailBack: boolean = false;
+  @State private readerDetailReturnPaint: number | undefined = undefined;
   private readerOriginLane: ReaderRoute = 'bookshelf';
   @State private sourceOpeningGeneration: number = 0;
   @State private sourceToolsOpeningGeneration: number = 0;
   private publishNavigation(snapshot: ReaderNavigationSnapshot): void {
     const restoringDirectory = this.route === 'reading' && snapshot.route === 'directory' &&
       snapshot.directoryReturnTarget === 'detail';
+    const returningFromCover = this.replayingReaderDetailBack && this.route === 'detail' &&
+      snapshot.route === 'reading' && this.readingEntry.sessionActive;
     if (snapshot.generation !== this.navigationGeneration || snapshot.route !== this.route) {
       this.bookRemovalConfirmation.dismiss();
       this.jsonImportPresentation.dismiss();
       this.pendingBackDuringCover = undefined;
       this.readerDetailCover = false;
+      this.readerDetailReturnPaint = returningFromCover ? snapshot.generation : undefined;
     }
     if (this.route === 'bookshelf' && snapshot.route !== 'bookshelf' && this.bookshelfModalVisible()) {
       if (this.shelfMutations.snapshot.importPresentation !== undefined) this.shelfMutations.closeImport();
@@ -267,7 +272,7 @@ struct Index {
       else if (to === 'sourceTools') this.sourceToolsOpeningGeneration = snapshot.generation;
       const shelfSearch = (from === 'bookshelf' && to === 'search') || (from === 'search' && to === 'bookshelf');
       const readerChangesHost = !fromReader && toReader && previousLane !== this.navigationOwner.returns.snapshot().readingOrigin;
-      this.visibleRouteMotion = shelfSearch || (fromReader && toReader) || readerChangesHost ?
+      this.visibleRouteMotion = shelfSearch || (fromReader && toReader) || readerChangesHost || returningFromCover ?
         'none' : this.navigationOwner.routeMotion();
     }
     // Keep the last right-hand pane mounted while the whole Settings tab leaves.
@@ -286,7 +291,7 @@ struct Index {
     this.route = snapshot.route;
     if (routeChanged) {
       if (fromReader !== toReader) {
-        const lane = this.appRouteLane();
+        const lane = returningFromCover ? this.navigationOwner.returns.snapshot().readingOrigin : this.appRouteLane();
         const sameLane = previousLane === lane;
         if (toReader) this.readerOriginLane = lane;
         // Hold the exited reader's paint below the native detail push.
@@ -296,9 +301,10 @@ struct Index {
           this.readerDetailCoverGeneration += 1;
           this.readerDetailCover = true;
         }
-        this.updateReaderParentMotion(toReader, sameLane && !this.readerDetailCover);
+        this.updateReaderParentMotion(toReader, sameLane && !this.readerDetailCover && !returningFromCover);
       }
     }
+    if (returningFromCover) this.retireReaderDetailReturnPaintAfterLayout(snapshot.generation);
     if (restoringDirectory) this.directoryJourney.refreshDetailPosition();
   }
   private setSettingsSection(section: SettingsSection): void {
@@ -336,11 +342,31 @@ struct Index {
       context.postFrameCallback(new ReaderPostLayoutFrame(context, (): void => {
         if (this.pendingBackDuringCover !== generation) return;
         this.pendingBackDuringCover = undefined;
-        if (this.route === 'detail' && this.searchAppForeground) this.onBackPress();
+        if (this.route !== 'detail' || !this.searchAppForeground) return;
+        this.replayingReaderDetailBack = true;
+        try { this.onBackPress(); }
+        finally { this.replayingReaderDetailBack = false; }
       }));
     } catch (_) {
       this.pendingBackDuringCover = undefined;
     }
+  }
+
+  private retireReaderDetailReturnPaintAfterLayout(generation: number): void {
+    // Keep the outgoing detail beneath the opaque replacement reader until its
+    // first layout. Align the native stack silently once it is covered.
+    const release = (): void => {
+      if (this.readerDetailReturnPaint === generation && this.navigationGeneration === generation)
+        this.readerDetailReturnPaint = undefined;
+    };
+    try {
+      const context = this.getUIContext();
+      context.postFrameCallback(new ReaderPostLayoutFrame(context, release));
+    } catch (_) { release(); }
+  }
+
+  private readerSceneMotionEnabled(): boolean {
+    return this.searchAppForeground && !this.readerDetailCover && this.readerDetailReturnPaint === undefined;
   }
 
   private appRouteBackGestureEnabled(): boolean {
@@ -739,6 +765,7 @@ struct Index {
     this.shelfReceiptRetired = true;
     this.readerDetailCover = false;
     this.pendingBackDuringCover = undefined;
+    this.readerDetailReturnPaint = undefined;
     this.sourceSwitchPresentation.retireMangaRecovery();
     this.entryStartupTrace.retire();
     this.libraryAcquisition.dispose();
@@ -782,7 +809,7 @@ struct Index {
       this.pendingBackDuringCover = this.readerDetailCoverGeneration;
       return true;
     }
-    if (this.pendingBackDuringCover !== undefined) return true;
+    if (this.pendingBackDuringCover !== undefined || this.readerDetailReturnPaint !== undefined) return true;
     return this.navigationOwner.dispatchBack({
       wideSettings: this.wideSettingsPane() !== undefined,
       nativeSurface: (): boolean => this.arkWebBack?.() === true ||
@@ -1050,10 +1077,10 @@ struct Index {
             source: this.sourceSwitchPresentation, manga: this.mangaSourceSwitch,
             visibleRoute: this.readerDetailCover ? 'reading' : retainedReaderRoute(this.route, this.directoryReturnTarget),
             expandedLayout: this.expandedLayout(), reduceMotion: this.appReduceMotion,
-            inputAllowed: this.readingEntry.sessionActive && this.searchAppForeground && !this.arkWebCapturesInput,
+            inputAllowed: this.readingEntry.sessionActive && this.searchAppForeground && !this.arkWebCapturesInput &&
+              this.readerDetailReturnPaint === undefined,
             ports: this.retainedReaderPorts(),
-          }).transition(readerSceneTransition(this.routeViewportWidth(), this.appReduceMotion,
-            this.searchAppForeground && !this.readerDetailCover));
+          }).transition(readerSceneTransition(this.routeViewportWidth(), this.appReduceMotion, this.readerSceneMotionEnabled()));
         }
       }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent)
         .zIndex(this.detailAboveReader() ? 0 : 1);
@@ -1075,6 +1102,7 @@ struct Index {
   }
 
   private appRouteLane(): ReaderRoute {
+    if (this.readerDetailReturnPaint !== undefined) return 'detail';
     if (this.route === 'search') return 'bookshelf';
     if (retainedReaderRoute(this.route, this.directoryReturnTarget) !== undefined) {
       return this.navigationOwner.returns.snapshot().readingOrigin;
@@ -1705,6 +1733,7 @@ struct Index {
     if (!this.searchAppForeground) {
       this.readerDetailCover = false;
       this.pendingBackDuringCover = undefined;
+      this.readerDetailReturnPaint = undefined;
     }
     this.transientFeedback.reset();
     if (this.libraryAcquisition.currentOwner() === undefined || this.shelfReceiptRetired) return;

@@ -734,7 +734,8 @@
     "test-reading-record-device-identity.mjs",
     "test-sync-local-preferences-recovery.mjs",
     "test-harmony-navigation-appearance.mjs",
-    "test-reader-named-fixture-directory.mjs"
+    "test-reader-named-fixture-directory.mjs",
+    "test-reader-tts-island-transport-layout.mjs"
   ],
   "scopes": {
     "manga-image-cache": [

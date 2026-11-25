@@ -3,10 +3,10 @@
   "completeReview": true,
   "reviewedDefinitionsFrozen": true,
   "scope": "703-file historical review; 39 user-approved retirements excluded from active execution. Two UI-framework leaves have current definition qualification; navigation-owner remains NEEDS_EVIDENCE. Default OFF; source review is not product or release acceptance. The2026-11-13 framework confluence batch adds selected current SDK/owner cases and three reviewed direct Source-interaction entries. Historical Library siblings remain REVIEW_NEEDED.",
-  "reviewedFiles": 719,
-  "inventoryFiles": 719,
+  "reviewedFiles": 720,
+  "inventoryFiles": 720,
   "qualificationCounts": {
-    "NAVIGATION": 381,
+    "NAVIGATION": 382,
     "QUALIFIED": 242,
     "REVIEW_NEEDED": 97
   },
@@ -92709,7 +92709,7 @@
       ],
       "repair": null,
       "repairAction": null,
-      "reviewedSourceSha256": "608c2c7cd209437515c94ae4107f671e219b9d4e1c5c7938dc4a85bbe73b2bc6",
+      "reviewedSourceSha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc",
       "estimatedCostType": "selected-method/fixture",
       "definitionInputProblems": [],
       "definitionInputs": [
@@ -92743,7 +92743,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "6c5ce9738b02cd2bbb2e0b09f941640a99ab035220a54e68a40ee6f8d2023401"
+          "sha256": "25288dee3d7ed366a3a5a984d2852d3c01954745b543e6257a558b199a1d0bb5"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
@@ -92807,7 +92807,7 @@
         },
         {
           "path": "tools/test-reader-route-redesign.mjs",
-          "sha256": "608c2c7cd209437515c94ae4107f671e219b9d4e1c5c7938dc4a85bbe73b2bc6"
+          "sha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc"
         }
       ],
       "definitionIdentityState": "FROZEN",
@@ -92871,7 +92871,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "6c5ce9738b02cd2bbb2e0b09f941640a99ab035220a54e68a40ee6f8d2023401"
+          "sha256": "25288dee3d7ed366a3a5a984d2852d3c01954745b543e6257a558b199a1d0bb5"
         },
         {
           "path": "scripts/lib/harmony-toolchain.mjs",
@@ -93966,6 +93966,84 @@
         {
           "path": "tools/test-reader-named-fixture-directory.mjs",
           "sha256": "d5aaafcb2719504d922c070c5c6d3ce4431708ef1aec9b4623f6c5017f06bddb"
+        }
+      ],
+      "definitionIdentityState": "FROZEN",
+      "definitionIdentityPurpose": "Explicit case and bounded SDK or native-port fixture definitions."
+    },
+    {
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "implementation": "IMPLEMENTED",
+      "necessityReason": "User-requested focused HarmonyOS detail Back and enlarged TTS fixes.",
+      "estimatedCostType": "selected-method/fixture",
+      "resourceNeeds": [],
+      "definitionInputProblems": [],
+      "prerequisites": [
+        "Node.js. SDK-backed leaves also use the installed Harmony ETS compiler."
+      ],
+      "nestedActions": [],
+      "nestedCalls": [],
+      "overlap": "Only the specified behavior at the production seam is exercised.",
+      "limitations": "Source or host regression with controlled platform ports, without VM or physical-device behavior.",
+      "evidenceBoundary": "Source or host regression with controlled platform ports, without VM or physical-device behavior.",
+      "repair": null,
+      "repairAction": null,
+      "releaseEligible": null,
+      "id": "H-reader-tts-island-transport-layout",
+      "file": "tools/test-reader-tts-island-transport-layout.mjs",
+      "qualification": "NAVIGATION",
+      "focusedEntries": [
+        "H-reader-tts-island-transport-layout#reflow"
+      ],
+      "tests": [
+        "test-reader-tts-island-transport-layout.mjs"
+      ],
+      "protectedBehavior": "Measured responsive TTS sentence actions at enlarged system font scale",
+      "mechanism": "Select one documented production behavior and dispatch only its test case.",
+      "productionBinding": "ReaderControlTtsContent.ets, ReaderIslandControlStyle.ets",
+      "needs": [
+        "Measured responsive TTS sentence actions at enlarged system font scale"
+      ],
+      "minimumTrigger": "Measured responsive TTS sentence actions at enlarged system font scale",
+      "failureExample": "See the focused case counterexample.",
+      "reviewedSourceSha256": "a9825d2d819c92e51c7b9148d9e7982bca42f8d266feeb86732c9b4d8c356330",
+      "definitionInputs": [
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "f6361c4c97459d1d67f0821d326cee09b75d3f708b96a73b3e0262d7e83fa4bf"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/lib/ets-pure-module-probe.mjs",
+          "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
+        },
+        {
+          "path": "tools/lib/gate-resource-definition.mjs",
+          "sha256": "c3cc74f468435463cf43ddf0d544b1c64dce89044d9c3d002c85a75ea704a9ac"
+        },
+        {
+          "path": "tools/lib/reader-control-builder-probe.mjs",
+          "sha256": "13fca5944d992ebbf586de5922601fdcba805eec622d5d613d964f15205e148a"
+        },
+        {
+          "path": "tools/lib/reader-typography-probe.mjs",
+          "sha256": "f83afa8a50a72411b1c3d6fae1bcc86b0a42f3f8884f52900a00f72bd1822249"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "f530873df73fc323264b3036aace8b427348c9377f4a4cb4d0d7a99f86c0df5f"
+        },
+        {
+          "path": "tools/test-reader-tts-island-transport-layout.mjs",
+          "sha256": "a9825d2d819c92e51c7b9148d9e7982bca42f8d266feeb86732c9b4d8c356330"
         }
       ],
       "definitionIdentityState": "FROZEN",
@@ -459959,7 +460037,7 @@
       "nestedCalls": [],
       "estimatedCostType": "selected-method/fixture",
       "resourceNeeds": [],
-      "reviewedSourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2",
+      "reviewedSourceSha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc",
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
@@ -460004,7 +460082,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "8368f157eb960c3a6b15a8f8fb998eecd1983a5e7751269839b6b19840573f7c"
+          "sha256": "25288dee3d7ed366a3a5a984d2852d3c01954745b543e6257a558b199a1d0bb5"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
@@ -460076,10 +460154,10 @@
         },
         {
           "path": "tools/test-reader-route-redesign.mjs",
-          "sha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+          "sha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc"
         }
       ],
-      "resourceDefinitionSha256": "2efa523b3c48d3bf03bfb328273c9eef2c895653ed96b3c79684c65351b06d15"
+      "resourceDefinitionSha256": "cea261df59341e2d5a51105587a4d89044abd6f272c7568c2c6e6de2ae7f282b"
     },
     {
       "id": "H-reader-route-redesign#download-chapter-transition",
@@ -460116,7 +460194,7 @@
       "nestedCalls": [],
       "estimatedCostType": "selected-method/fixture",
       "resourceNeeds": [],
-      "reviewedSourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2",
+      "reviewedSourceSha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc",
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
@@ -460161,7 +460239,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "8368f157eb960c3a6b15a8f8fb998eecd1983a5e7751269839b6b19840573f7c"
+          "sha256": "25288dee3d7ed366a3a5a984d2852d3c01954745b543e6257a558b199a1d0bb5"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
@@ -460233,10 +460311,10 @@
         },
         {
           "path": "tools/test-reader-route-redesign.mjs",
-          "sha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+          "sha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc"
         }
       ],
-      "resourceDefinitionSha256": "2efa523b3c48d3bf03bfb328273c9eef2c895653ed96b3c79684c65351b06d15"
+      "resourceDefinitionSha256": "cea261df59341e2d5a51105587a4d89044abd6f272c7568c2c6e6de2ae7f282b"
     },
     {
       "id": "H-reader-route-redesign#detail-cover-back",
@@ -460254,11 +460332,11 @@
           "detail-cover-back"
         ]
       },
-      "protectedBehavior": "Coalesce Back during detail cover, gate edge input and restore the reader once after layout.",
-      "mechanism": "Coalesce Back during detail cover, gate edge input and restore the reader once after layout.",
+      "protectedBehavior": "Queued Detail Back resumes one reader while keeping Detail above its original parent until the replacement reader lays out.",
+      "mechanism": "Queued Detail Back resumes one reader while keeping Detail above its original parent until the replacement reader lays out.",
       "minimumTrigger": "Coalesce Back during detail cover, gate edge input and restore the reader once after layout.",
       "productionBinding": "entry/src/main/ets/pages/Index.ets, entry/src/main/ets/app/navigation/ReaderNavigation.ts, entry/src/main/ets/app/navigation/ReaderRouteMotion.ets, entry/src/main/ets/app/navigation/ReaderRouteStackSurface.ets, entry/src/main/ets/app/composition/ReaderReadingEntryActions.ets, entry/src/main/ets/app/composition/ReaderExitActions.ets, entry/src/main/ets/app/composition/ReaderLibraryJourney.ets, entry/src/main/ets/ui/foundation/ProductMotionTiming.ts, entry/src/main/ets/ui/foundation/ReaderMotionDurationPolicy.ts, entry/src/main/ets/features/reading/presentation/ReadingEntryPresentation.ets",
-      "failureExample": "The case checks actual behavior against the stated regression.",
+      "failureExample": "The application publishes the bookshelf lane while the replacement reader has yet to lay out.",
       "needs": [
         "Reader scene transitions and navigation timing."
       ],
@@ -460273,7 +460351,7 @@
       "nestedCalls": [],
       "estimatedCostType": "selected-method/fixture",
       "resourceNeeds": [],
-      "reviewedSourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2",
+      "reviewedSourceSha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc",
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
@@ -460318,7 +460396,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "8368f157eb960c3a6b15a8f8fb998eecd1983a5e7751269839b6b19840573f7c"
+          "sha256": "25288dee3d7ed366a3a5a984d2852d3c01954745b543e6257a558b199a1d0bb5"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
@@ -460390,10 +460468,10 @@
         },
         {
           "path": "tools/test-reader-route-redesign.mjs",
-          "sha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+          "sha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc"
         }
       ],
-      "resourceDefinitionSha256": "2efa523b3c48d3bf03bfb328273c9eef2c895653ed96b3c79684c65351b06d15"
+      "resourceDefinitionSha256": "cea261df59341e2d5a51105587a4d89044abd6f272c7568c2c6e6de2ae7f282b"
     },
     {
       "id": "H-reader-route-redesign#detail-cover-background",
@@ -460430,7 +460508,7 @@
       "nestedCalls": [],
       "estimatedCostType": "selected-method/fixture",
       "resourceNeeds": [],
-      "reviewedSourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2",
+      "reviewedSourceSha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc",
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
@@ -460475,7 +460553,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "8368f157eb960c3a6b15a8f8fb998eecd1983a5e7751269839b6b19840573f7c"
+          "sha256": "25288dee3d7ed366a3a5a984d2852d3c01954745b543e6257a558b199a1d0bb5"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
@@ -460547,10 +460625,10 @@
         },
         {
           "path": "tools/test-reader-route-redesign.mjs",
-          "sha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+          "sha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc"
         }
       ],
-      "resourceDefinitionSha256": "2efa523b3c48d3bf03bfb328273c9eef2c895653ed96b3c79684c65351b06d15"
+      "resourceDefinitionSha256": "cea261df59341e2d5a51105587a4d89044abd6f272c7568c2c6e6de2ae7f282b"
     },
     {
       "id": "H-reader-native-input-recovery#opening-recovery",
@@ -460608,7 +460686,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "8368f157eb960c3a6b15a8f8fb998eecd1983a5e7751269839b6b19840573f7c"
+          "sha256": "25288dee3d7ed366a3a5a984d2852d3c01954745b543e6257a558b199a1d0bb5"
         },
         {
           "path": "scripts/lib/harmony-toolchain.mjs",
@@ -461817,7 +461895,7 @@
       "nestedCalls": [],
       "estimatedCostType": "selected-method/fixture",
       "resourceNeeds": [],
-      "reviewedSourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2",
+      "reviewedSourceSha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc",
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
@@ -461862,7 +461940,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "8368f157eb960c3a6b15a8f8fb998eecd1983a5e7751269839b6b19840573f7c"
+          "sha256": "25288dee3d7ed366a3a5a984d2852d3c01954745b543e6257a558b199a1d0bb5"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
@@ -461934,10 +462012,10 @@
         },
         {
           "path": "tools/test-reader-route-redesign.mjs",
-          "sha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+          "sha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc"
         }
       ],
-      "resourceDefinitionSha256": "2efa523b3c48d3bf03bfb328273c9eef2c895653ed96b3c79684c65351b06d15"
+      "resourceDefinitionSha256": "cea261df59341e2d5a51105587a4d89044abd6f272c7568c2c6e6de2ae7f282b"
     },
     {
       "id": "H-reader-route-redesign#settings-tools-return",
@@ -461974,7 +462052,7 @@
       "nestedCalls": [],
       "estimatedCostType": "selected-method/fixture",
       "resourceNeeds": [],
-      "reviewedSourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2",
+      "reviewedSourceSha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc",
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
@@ -462019,7 +462097,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "8368f157eb960c3a6b15a8f8fb998eecd1983a5e7751269839b6b19840573f7c"
+          "sha256": "25288dee3d7ed366a3a5a984d2852d3c01954745b543e6257a558b199a1d0bb5"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
@@ -462091,10 +462169,10 @@
         },
         {
           "path": "tools/test-reader-route-redesign.mjs",
-          "sha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+          "sha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc"
         }
       ],
-      "resourceDefinitionSha256": "2efa523b3c48d3bf03bfb328273c9eef2c895653ed96b3c79684c65351b06d15"
+      "resourceDefinitionSha256": "cea261df59341e2d5a51105587a4d89044abd6f272c7568c2c6e6de2ae7f282b"
     },
     {
       "id": "H-reader-route-redesign#settings-scroll-roundtrip",
@@ -462131,7 +462209,7 @@
       "nestedCalls": [],
       "estimatedCostType": "selected-method/fixture",
       "resourceNeeds": [],
-      "reviewedSourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2",
+      "reviewedSourceSha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc",
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
@@ -462176,7 +462254,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "8368f157eb960c3a6b15a8f8fb998eecd1983a5e7751269839b6b19840573f7c"
+          "sha256": "25288dee3d7ed366a3a5a984d2852d3c01954745b543e6257a558b199a1d0bb5"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
@@ -462248,10 +462326,10 @@
         },
         {
           "path": "tools/test-reader-route-redesign.mjs",
-          "sha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+          "sha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc"
         }
       ],
-      "resourceDefinitionSha256": "2efa523b3c48d3bf03bfb328273c9eef2c895653ed96b3c79684c65351b06d15"
+      "resourceDefinitionSha256": "cea261df59341e2d5a51105587a4d89044abd6f272c7568c2c6e6de2ae7f282b"
     },
     {
       "id": "H-reader-route-redesign#wide-settings-panes",
@@ -462288,7 +462366,7 @@
       "nestedCalls": [],
       "estimatedCostType": "selected-method/fixture",
       "resourceNeeds": [],
-      "reviewedSourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2",
+      "reviewedSourceSha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc",
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
@@ -462333,7 +462411,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "8368f157eb960c3a6b15a8f8fb998eecd1983a5e7751269839b6b19840573f7c"
+          "sha256": "25288dee3d7ed366a3a5a984d2852d3c01954745b543e6257a558b199a1d0bb5"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
@@ -462405,10 +462483,10 @@
         },
         {
           "path": "tools/test-reader-route-redesign.mjs",
-          "sha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+          "sha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc"
         }
       ],
-      "resourceDefinitionSha256": "2efa523b3c48d3bf03bfb328273c9eef2c895653ed96b3c79684c65351b06d15"
+      "resourceDefinitionSha256": "cea261df59341e2d5a51105587a4d89044abd6f272c7568c2c6e6de2ae7f282b"
     },
     {
       "id": "H-reader-route-redesign#retained-directory-back",
@@ -462445,7 +462523,7 @@
       "nestedCalls": [],
       "estimatedCostType": "selected-method/fixture",
       "resourceNeeds": [],
-      "reviewedSourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2",
+      "reviewedSourceSha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc",
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
@@ -462490,7 +462568,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "8368f157eb960c3a6b15a8f8fb998eecd1983a5e7751269839b6b19840573f7c"
+          "sha256": "25288dee3d7ed366a3a5a984d2852d3c01954745b543e6257a558b199a1d0bb5"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
@@ -462562,10 +462640,10 @@
         },
         {
           "path": "tools/test-reader-route-redesign.mjs",
-          "sha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+          "sha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc"
         }
       ],
-      "resourceDefinitionSha256": "2efa523b3c48d3bf03bfb328273c9eef2c895653ed96b3c79684c65351b06d15"
+      "resourceDefinitionSha256": "cea261df59341e2d5a51105587a4d89044abd6f272c7568c2c6e6de2ae7f282b"
     },
     {
       "id": "H-reader-route-redesign#retained-route-ports",
@@ -462602,7 +462680,7 @@
       "nestedCalls": [],
       "estimatedCostType": "selected-method/fixture",
       "resourceNeeds": [],
-      "reviewedSourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2",
+      "reviewedSourceSha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc",
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
@@ -462647,7 +462725,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "8368f157eb960c3a6b15a8f8fb998eecd1983a5e7751269839b6b19840573f7c"
+          "sha256": "25288dee3d7ed366a3a5a984d2852d3c01954745b543e6257a558b199a1d0bb5"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
@@ -462719,10 +462797,10 @@
         },
         {
           "path": "tools/test-reader-route-redesign.mjs",
-          "sha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+          "sha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc"
         }
       ],
-      "resourceDefinitionSha256": "2efa523b3c48d3bf03bfb328273c9eef2c895653ed96b3c79684c65351b06d15"
+      "resourceDefinitionSha256": "cea261df59341e2d5a51105587a4d89044abd6f272c7568c2c6e6de2ae7f282b"
     },
     {
       "id": "H-reader-route-redesign#download-directory-return",
@@ -462759,7 +462837,7 @@
       "nestedCalls": [],
       "estimatedCostType": "selected-method/fixture",
       "resourceNeeds": [],
-      "reviewedSourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2",
+      "reviewedSourceSha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc",
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
@@ -462804,7 +462882,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "8368f157eb960c3a6b15a8f8fb998eecd1983a5e7751269839b6b19840573f7c"
+          "sha256": "25288dee3d7ed366a3a5a984d2852d3c01954745b543e6257a558b199a1d0bb5"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
@@ -462876,10 +462954,10 @@
         },
         {
           "path": "tools/test-reader-route-redesign.mjs",
-          "sha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+          "sha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc"
         }
       ],
-      "resourceDefinitionSha256": "2efa523b3c48d3bf03bfb328273c9eef2c895653ed96b3c79684c65351b06d15"
+      "resourceDefinitionSha256": "cea261df59341e2d5a51105587a4d89044abd6f272c7568c2c6e6de2ae7f282b"
     },
     {
       "id": "H-reader-route-redesign#legacy-download-chapter-return",
@@ -462916,7 +462994,7 @@
       "nestedCalls": [],
       "estimatedCostType": "selected-method/fixture",
       "resourceNeeds": [],
-      "reviewedSourceSha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2",
+      "reviewedSourceSha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc",
       "definitionInputProblems": [],
       "releaseEligible": null,
       "repairAction": null,
@@ -462961,7 +463039,7 @@
         },
         {
           "path": "entry/src/main/ets/pages/Index.ets",
-          "sha256": "8368f157eb960c3a6b15a8f8fb998eecd1983a5e7751269839b6b19840573f7c"
+          "sha256": "25288dee3d7ed366a3a5a984d2852d3c01954745b543e6257a558b199a1d0bb5"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
@@ -463033,10 +463111,10 @@
         },
         {
           "path": "tools/test-reader-route-redesign.mjs",
-          "sha256": "28dbe14d03ba470e56a1c664826d059132871b2fc99b11a2a977eb71b4278aa2"
+          "sha256": "c8f59f0f71776c89edda92ec722491bde586676d30bce2910f7f322dfe2bf4dc"
         }
       ],
-      "resourceDefinitionSha256": "2efa523b3c48d3bf03bfb328273c9eef2c895653ed96b3c79684c65351b06d15"
+      "resourceDefinitionSha256": "cea261df59341e2d5a51105587a4d89044abd6f272c7568c2c6e6de2ae7f282b"
     },
     {
       "defaultExecution": "OFF",
@@ -465858,6 +465936,87 @@
         }
       ],
       "resourceDefinitionSha256": "48daaf9c7277186b9cad19de5b41813598215c237c8c35932dbce573b1d0769f"
+    },
+    {
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "implementation": "IMPLEMENTED",
+      "necessityReason": "User-requested focused HarmonyOS detail Back and enlarged TTS fixes.",
+      "estimatedCostType": "selected-method/fixture",
+      "resourceNeeds": [],
+      "definitionInputProblems": [],
+      "prerequisites": [
+        "Node.js. SDK-backed leaves also use the installed Harmony ETS compiler."
+      ],
+      "nestedActions": [],
+      "nestedCalls": [],
+      "overlap": "Only the specified behavior at the production seam is exercised.",
+      "limitations": "Source or host regression with controlled platform ports, without VM or physical-device behavior.",
+      "evidenceBoundary": "Source or host regression with controlled platform ports, without VM or physical-device behavior.",
+      "repair": null,
+      "repairAction": null,
+      "releaseEligible": null,
+      "id": "H-reader-tts-island-transport-layout#reflow",
+      "parentId": "H-reader-tts-island-transport-layout",
+      "caseId": "reflow",
+      "file": "tools/test-reader-tts-island-transport-layout.mjs",
+      "tests": [
+        "test-reader-tts-island-transport-layout.mjs"
+      ],
+      "caseSelection": {
+        "test-reader-tts-island-transport-layout.mjs": [
+          "reflow"
+        ]
+      },
+      "protectedBehavior": "Fixed-island TTS fits both sentence labels at enlarged system text and preserves transport input and frozen-source identity",
+      "mechanism": "Fixed-island TTS fits both sentence labels at enlarged system text and preserves transport input and frozen-source identity",
+      "productionBinding": "ReaderControlTtsContent.ets, ReaderIslandControlStyle.ets",
+      "failureExample": "A 2× three-character sentence label overflows the original weighted action slot at the same 326 vp playback width.",
+      "minimumTrigger": "Measured responsive TTS sentence actions at enlarged system font scale",
+      "needs": [
+        "Measured responsive TTS sentence actions at enlarged system font scale"
+      ],
+      "qualification": "QUALIFIED",
+      "reviewedSourceSha256": "a9825d2d819c92e51c7b9148d9e7982bca42f8d266feeb86732c9b4d8c356330",
+      "definitionInputs": [
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "f6361c4c97459d1d67f0821d326cee09b75d3f708b96a73b3e0262d7e83fa4bf"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/lib/ets-pure-module-probe.mjs",
+          "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
+        },
+        {
+          "path": "tools/lib/gate-resource-definition.mjs",
+          "sha256": "c3cc74f468435463cf43ddf0d544b1c64dce89044d9c3d002c85a75ea704a9ac"
+        },
+        {
+          "path": "tools/lib/reader-control-builder-probe.mjs",
+          "sha256": "13fca5944d992ebbf586de5922601fdcba805eec622d5d613d964f15205e148a"
+        },
+        {
+          "path": "tools/lib/reader-typography-probe.mjs",
+          "sha256": "f83afa8a50a72411b1c3d6fae1bcc86b0a42f3f8884f52900a00f72bd1822249"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "f530873df73fc323264b3036aace8b427348c9377f4a4cb4d0d7a99f86c0df5f"
+        },
+        {
+          "path": "tools/test-reader-tts-island-transport-layout.mjs",
+          "sha256": "a9825d2d819c92e51c7b9148d9e7982bca42f8d266feeb86732c9b4d8c356330"
+        }
+      ],
+      "resourceDefinitionSha256": "ad42b4c38d2f752c4f29d57af831a10396e71f59debcd5f121cd352a184399b7"
     }
   ],
   "externalEntries": [
@@ -466727,14 +466886,14 @@
     }
   ],
   "implementationCounts": {
-    "IMPLEMENTED": 250,
+    "IMPLEMENTED": 251,
     "MIGRATED_TO_EXISTING": 4,
     "IMPLEMENTED_WITH_EXPLICIT_SCOPE": 46,
     "COMPLETE": 78,
     "IMPLEMENTED_WITH_EVIDENCE_GAP": 1
   },
   "caseQualificationCounts": {
-    "QUALIFIED": 1587,
+    "QUALIFIED": 1588,
     "REVIEW_NEEDED": 950,
     "DIAGNOSTIC_ONLY": 29,
     "NEEDS_EVIDENCE": 1
