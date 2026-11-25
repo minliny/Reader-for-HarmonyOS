@@ -553,7 +553,7 @@ const lre=file('features/reading/ui/LocalReadingExperience.ets');
 const panel=file('features/reading/ui/ReaderControlPanel.ets');
 // Real listener registration + full metric refresh: move without resize,
 // duplicate events, hidden 180-degree rotation, unregister, and old callback.
-const {ReaderInsetsVp:I}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const {ReaderInsetsVp:I,ReaderKeyboardAreaVp:K}=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const events=new Map(),displayEvents=new Map(),published=[];
 let displayInfo={id:1,rotation:0,densityPixels:3,scaledDensity:3};
 let globalX=0,hidden=false;
@@ -562,9 +562,11 @@ const movingWindow={on:(name,fn)=>events.set(name,fn),off:(name,fn)=>{assert.equ
  getWindowAvoidArea:type=>({leftRect:{width:0},rightRect:{width:0},bottomRect:{height:0},
   topRect:{left:0,top:0,width:1170,height:type===0&&!hidden?144:0}})};
 const moving={mainWindow:movingWindow,metricsSnapshot:new M(),statusBarMeasurement:new ReaderStatusBarMeasurement(),statusBarHiddenApplied:false,
- desiredWindowPolicyOwner:'reader',desiredReaderWindowPolicy:{hideStatusBar:false},brightnessWriter:{reset(){}},installEpoch:1,windowPolicyRevision:1};
-const MC=productionMotionMethods(file('app/ReaderWindowCoordinator.ts'),['registerWindowListeners','refreshMetrics','statusBarRectVp','topAvoidRectVp','topCornersVp','rectVp','avoidInsetsVp','sameRectVp','sameCornerVp','sameInsetsVp','detach'],
- {ReaderWindowCoordinator:moving,ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderInsetsVp:I,ReaderWindowMetricsSnapshot:M,ReaderStatusBarMeasurement,
+ desiredWindowPolicyOwner:'reader',desiredReaderWindowPolicy:{hideStatusBar:false},brightnessWriter:{reset(){}},installEpoch:1,windowPolicyRevision:1,uiConfigurationRevision:0};
+const MC=productionMotionMethods(file('app/ReaderWindowCoordinator.ts'),[
+ 'registerWindowListeners','refreshMetrics','statusBarRectVp','topAvoidRectVp','topCornersVp','rectVp','avoidInsetsVp',
+ 'sameRectVp','sameCornerVp','sameInsetsVp','keyboardAreaVp','keyboardInsetsVp','sameKeyboardAreaVp','publishUiConfigurationRevision','detach'],
+ {ReaderWindowCoordinator:moving,ReaderRectVp:R,ReaderDisplayCornerVp:C,ReaderInsetsVp:I,ReaderKeyboardAreaVp:K,ReaderWindowMetricsSnapshot:M,ReaderStatusBarMeasurement,
   window:{AvoidAreaType:{TYPE_SYSTEM:0,TYPE_CUTOUT:1,TYPE_SYSTEM_GESTURE:2,TYPE_NAVIGATION_INDICATOR:3,TYPE_KEYBOARD:4}},
   display:{getDefaultDisplaySync:()=>displayInfo,CornerType:{TOP_LEFT:0,TOP_RIGHT:1},on:(n,f)=>displayEvents.set(n,f),off:(n,f)=>{assert.equal(displayEvents.get(n),f);displayEvents.delete(n);}},
   AppStorage:{setOrCreate:(...args)=>published.push(args)}});

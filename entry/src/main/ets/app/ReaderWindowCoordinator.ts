@@ -119,6 +119,17 @@ interface ReaderWindowChromeDiagnostic {
   windowRectAtRequest: ReaderRectVp;
 }
 
+interface ReaderWindowPolicyStep {
+  name: string;
+  write: () => void | Promise<void>;
+  supported?: boolean;
+}
+
+interface ReaderWindowStepResult {
+  applied: boolean;
+  failure?: Error;
+}
+
 const APP_CHROME_STYLE = new ReaderWindowChromeStyle('#F8F4EC', 'dark', '#FF2B241D');
 
 /**
@@ -166,6 +177,8 @@ export class ReaderWindowCoordinator {
   // Exactly one temporary TTS manager override, bound to its reader/window.
   private static keyboardOverride: ReaderWindowKeyboardOverride | undefined = undefined;
   private static appliedPolicyRevision: number = -1;
+  // A known unsupported step settles the policy without a complete native ACK.
+  private static limitedPolicyRevision: number = -1;
   /**
    * Install/detach race guard. detach() and every install() bump this epoch;
    * each await inside install() re-checks it, so an async install that has been
@@ -191,30 +204,31 @@ export class ReaderWindowCoordinator {
     ReaderWindowCoordinator.configurationFontScale = ReaderWindowCoordinator.validConfigurationFontScale(configuration?.fontSizeScale);
     // Listener reinstall can reuse the same live window. Only the Ability's
     // actual destruction path retires its native dialog attachments.
-    const windowId = win.getWindowProperties().id;
-    ReaderNativeAlertWindow.bind(windowId);
-    ReaderDocumentPickerActivity.bind(windowId);
+    const properties = win.getWindowProperties();
+    ReaderNativeAlertWindow.bind(properties.id);
+    ReaderDocumentPickerActivity.bind(properties.id);
     ReaderDocumentPickerActivity.setForeground(AppStorage.get<boolean>('readerAppForeground') !== false);
     ReaderWindowCoordinator.desiredWindowPolicyOwner = 'app';
-    ReaderWindowCoordinator.appOrientation = appOrientation ?? win.getPreferredOrientation();
-    ReaderWindowCoordinator.appKeepScreenOn = win.getWindowProperties().isKeepScreenOn;
-    await win.setWindowLayoutFullScreen(true);
-    if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) {
-      return false;
-    }
-    await win.setWindowSystemBarEnable(['status', 'navigation']);
-    if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) {
-      return false;
-    }
+    ReaderWindowCoordinator.appOrientation = appOrientation ?? window.Orientation.UNSPECIFIED;
+    ReaderWindowCoordinator.appKeepScreenOn = properties.isKeepScreenOn;
     ReaderWindowCoordinator.registerWindowListeners(win);
-    if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) {
-      return false;
+    ReaderWindowCoordinator.refreshPolicyMetrics();
+    const systemBarsSupported = !ReaderWindowCoordinator.isTwoInOneDevice();
+    if (appOrientation === undefined && systemBarsSupported) {
+      try { ReaderWindowCoordinator.appOrientation = win.getPreferredOrientation(); }
+      catch (error) { ReaderWindowCoordinator.reportWindowStepFailure('initial-orientation-read', error as BusinessError); }
     }
+    await ReaderWindowCoordinator.attemptWindowStep('fullscreen', (): Promise<void> => win.setWindowLayoutFullScreen(true));
+    if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) return false;
+    await ReaderWindowCoordinator.attemptWindowStep('initial-system-bars',
+      (): Promise<void> => win.setWindowSystemBarEnable(['status', 'navigation']), systemBarsSupported);
+    if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) return false;
     if (appOrientation !== undefined) {
-      await ReaderWindowCoordinator.requestAppWindowPolicy();
+      try { await ReaderWindowCoordinator.requestAppWindowPolicy(); }
+      catch (_) { /* Individual failed writes have been recorded and remain retryable. */ }
       if (!ReaderWindowCoordinator.installStillCurrent(epoch, win)) return false;
     }
-    ReaderWindowCoordinator.refreshMetrics();
+    ReaderWindowCoordinator.refreshPolicyMetrics();
     ReaderWindowCoordinator.publishUiConfigurationRevision();
     ReaderWindowCoordinator.requestAppChrome();
     return true;
@@ -242,18 +256,11 @@ export class ReaderWindowCoordinator {
     ReaderWindowCoordinator.appKeyboardAvoidMode = undefined;
     ReaderWindowCoordinator.keyboardOverride = undefined;
     ReaderWindowCoordinator.desiredReaderWindowOwner = undefined;
-    if (win !== undefined) {
-      try {
-        if (ReaderWindowCoordinator.windowSizeListener !== undefined) {
-          win.off('windowSizeChange', ReaderWindowCoordinator.windowSizeListener);
-        }
-        if (ReaderWindowCoordinator.avoidAreaListener !== undefined) {
-          win.off('avoidAreaChange', ReaderWindowCoordinator.avoidAreaListener);
-        }
-      } catch (_error) {
-        // A destroyed Window can reject listener removal. The references still
-        // must be cleared so the next stage never reuses stale callbacks.
-      }
+    if (win !== undefined && ReaderWindowCoordinator.windowSizeListener !== undefined) {
+      try { win.off('windowSizeChange', ReaderWindowCoordinator.windowSizeListener); } catch (_error) {}
+    }
+    if (win !== undefined && ReaderWindowCoordinator.avoidAreaListener !== undefined) {
+      try { win.off('avoidAreaChange', ReaderWindowCoordinator.avoidAreaListener); } catch (_error) {}
     }
     if (win !== undefined && ReaderWindowCoordinator.windowRectListener !== undefined) {
       try { win.off('windowRectChange', ReaderWindowCoordinator.windowRectListener); } catch (_error) {}
@@ -271,6 +278,7 @@ export class ReaderWindowCoordinator {
     ReaderWindowCoordinator.windowSizeListener = undefined;
     ReaderWindowCoordinator.avoidAreaListener = undefined;
     ReaderWindowCoordinator.appliedPolicyRevision = -1;
+    ReaderWindowCoordinator.limitedPolicyRevision = -1;
     ReaderWindowCoordinator.appliedChromeRevision = -1;
     if (win !== undefined) ReaderWindowCoordinator.publishUiConfigurationRevision();
   }
@@ -288,6 +296,8 @@ export class ReaderWindowCoordinator {
   static isTabletDevice(): boolean {
     return deviceInfo.deviceType === 'tablet';
   }
+
+  private static isTwoInOneDevice(): boolean { return deviceInfo.deviceType === '2in1'; }
 
   static brightness(): ReaderBrightnessWriter {
     return ReaderWindowCoordinator.brightnessWriter;
@@ -329,7 +339,7 @@ export class ReaderWindowCoordinator {
     if (sameOwner && ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader' &&
       ReaderWindowCoordinator.sameWindowPolicy(
         ReaderWindowCoordinator.desiredReaderWindowPolicy, policy) &&
-      ReaderWindowCoordinator.appliedPolicyRevision === ReaderWindowCoordinator.windowPolicyRevision) {
+      ReaderWindowCoordinator.currentPolicySettled()) {
       return Promise.resolve();
     }
     ReaderWindowCoordinator.desiredWindowPolicyOwner = 'reader';
@@ -342,7 +352,9 @@ export class ReaderWindowCoordinator {
     AppStorage.setOrCreate<boolean>('readerWindowHideNavigationBar', policy.hideNavigationBar);
     AppStorage.setOrCreate<boolean>('readerWindowExtendIntoCutout', policy.extendIntoCutout);
     return ReaderWindowCoordinator.enqueueWindowPolicy(revision,
-      (win: window.Window): Promise<void> => ReaderWindowCoordinator.applyReaderWindowPolicy(win, policy, revision));
+      (win: window.Window): Promise<boolean> => ReaderWindowCoordinator.applyWindowPolicy(win, revision,
+        ReaderWindowCoordinator.orientationValue(policy.orientation), policy.keepScreenOn,
+        policy.hideStatusBar, policy.hideNavigationBar));
   }
 
   /** Restore the app policy captured when the Ability installed the window. */
@@ -350,7 +362,7 @@ export class ReaderWindowCoordinator {
     if (owner !== undefined && (ReaderWindowCoordinator.desiredWindowPolicyOwner !== 'reader' ||
       ReaderWindowCoordinator.desiredReaderWindowOwner !== owner)) return Promise.resolve();
     if (ReaderWindowCoordinator.desiredWindowPolicyOwner === 'app' &&
-      ReaderWindowCoordinator.appliedPolicyRevision === ReaderWindowCoordinator.windowPolicyRevision) {
+      ReaderWindowCoordinator.currentPolicySettled()) {
       return Promise.resolve();
     }
     ReaderWindowCoordinator.desiredWindowPolicyOwner = 'app';
@@ -362,7 +374,8 @@ export class ReaderWindowCoordinator {
     AppStorage.setOrCreate<boolean>('readerWindowHideNavigationBar', false);
     AppStorage.setOrCreate<boolean>('readerWindowExtendIntoCutout', false);
     return ReaderWindowCoordinator.enqueueWindowPolicy(revision,
-      (win: window.Window): Promise<void> => ReaderWindowCoordinator.applyAppWindowPolicy(win, revision));
+      (win: window.Window): Promise<boolean> => ReaderWindowCoordinator.applyWindowPolicy(win, revision,
+        ReaderWindowCoordinator.appOrientation, ReaderWindowCoordinator.appKeepScreenOn, false, false));
   }
 
   /** Reapply the latest semantic policy after foreground/window restoration. */
@@ -371,16 +384,14 @@ export class ReaderWindowCoordinator {
     // Revoke only the applied receipt; the ordinary request path still owns
     // serialization and supersedes this restore when a newer intent arrives.
     ReaderWindowCoordinator.appliedPolicyRevision = -1;
+    ReaderWindowCoordinator.limitedPolicyRevision = -1;
     const restore = ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader' ?
       ReaderWindowCoordinator.requestReaderWindowPolicy(ReaderWindowCoordinator.desiredReaderWindowPolicy,
         ReaderWindowCoordinator.desiredReaderWindowOwner) :
       ReaderWindowCoordinator.requestAppWindowPolicy();
-    void restore.catch((error: Error): void => {
-      // A failed restore stays unapplied for the next explicit admission.
-      // Foreground recovery owns this rejection and never starts a retry loop.
-      hilog.warn(0x5244, 'Reader', 'Window policy restore failed: %{public}s',
-        ReaderWindowCoordinator.chromeErrorCode(error as BusinessError));
-    });
+    // Individual steps record the failure. The next explicit admission owns
+    // the retry; foreground recovery only consumes the rejection here.
+    void restore.catch((_error: Error): void => {});
   }
 
   /** TTS manager keeps its existing RESIZE behavior without restoring a stale
@@ -448,19 +459,27 @@ export class ReaderWindowCoordinator {
   }
 
   private static registerWindowListeners(win: window.Window): void {
+    const epoch = ReaderWindowCoordinator.installEpoch;
+    const refreshCurrent = (): void => {
+      if (ReaderWindowCoordinator.mainWindow === win && ReaderWindowCoordinator.installEpoch === epoch) {
+        ReaderWindowCoordinator.refreshMetrics();
+      }
+    };
     ReaderWindowCoordinator.windowSizeListener = (_size: window.Size): void => {
-      ReaderWindowCoordinator.refreshMetrics();
+      refreshCurrent();
     };
     ReaderWindowCoordinator.avoidAreaListener = (_options: window.AvoidAreaOptions): void => {
-      ReaderWindowCoordinator.refreshMetrics();
+      refreshCurrent();
     };
-    win.on('windowSizeChange', ReaderWindowCoordinator.windowSizeListener);
-    win.on('avoidAreaChange', ReaderWindowCoordinator.avoidAreaListener);
+    try { win.on('windowSizeChange', ReaderWindowCoordinator.windowSizeListener); }
+    catch (error) { ReaderWindowCoordinator.reportWindowStepFailure('window-size-listener', error as BusinessError); }
+    try { win.on('avoidAreaChange', ReaderWindowCoordinator.avoidAreaListener); }
+    catch (error) { ReaderWindowCoordinator.reportWindowStepFailure('avoid-area-listener', error as BusinessError); }
     ReaderWindowCoordinator.windowRectListener = (_options: window.RectChangeOptions): void => {
-      if (ReaderWindowCoordinator.mainWindow === win) ReaderWindowCoordinator.refreshMetrics();
+      refreshCurrent();
     };
     ReaderWindowCoordinator.displayChangeListener = (_id: number): void => {
-      if (ReaderWindowCoordinator.mainWindow === win) ReaderWindowCoordinator.refreshMetrics();
+      refreshCurrent();
     };
     // Position-only moves and same-size rotation need a refresh too. Snapshot
     // equality below deduplicates overlapping size/rect/avoid notifications.
@@ -476,76 +495,120 @@ export class ReaderWindowCoordinator {
     return ReaderWindowCoordinator.windowPolicyRevision;
   }
 
+  private static currentPolicySettled(): boolean {
+    const revision = ReaderWindowCoordinator.windowPolicyRevision;
+    return ReaderWindowCoordinator.appliedPolicyRevision === revision ||
+      ReaderWindowCoordinator.limitedPolicyRevision === revision;
+  }
+
+  private static windowPolicyStillCurrent(win: window.Window, epoch: number, revision: number): boolean {
+    const owner = ReaderWindowCoordinator.desiredReaderWindowOwner;
+    return ReaderWindowCoordinator.installStillCurrent(epoch, win) &&
+      revision === ReaderWindowCoordinator.windowPolicyRevision &&
+      (ReaderWindowCoordinator.desiredWindowPolicyOwner === 'app' || owner === undefined || owner.accepts());
+  }
+
   private static enqueueWindowPolicy(
     revision: number,
-    apply: (win: window.Window) => Promise<void>,
+    apply: (win: window.Window) => Promise<boolean>,
   ): Promise<void> {
     const operation = ReaderWindowCoordinator.windowPolicyTail
       .catch((_error: Error): void => {})
-      .then((): Promise<void> => {
+      .then(async (): Promise<void> => {
         const win = ReaderWindowCoordinator.mainWindow;
-        if (revision !== ReaderWindowCoordinator.windowPolicyRevision) {
-          return Promise.resolve();
+        const epoch = ReaderWindowCoordinator.installEpoch;
+        if (revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
+        if (win === undefined) throw new Error('Reader main window is unavailable');
+        if (!ReaderWindowCoordinator.windowPolicyStillCurrent(win, epoch, revision)) return;
+        try {
+          const applied = await apply(win);
+          if (!ReaderWindowCoordinator.windowPolicyStillCurrent(win, epoch, revision)) return;
+          ReaderWindowCoordinator.appliedPolicyRevision = applied ? revision : -1;
+          ReaderWindowCoordinator.limitedPolicyRevision = applied ? -1 : revision;
+        } finally {
+          // Successful siblings can change the real window even when another
+          // write failed. Publish their geometry before rejecting to the caller.
+          if (ReaderWindowCoordinator.windowPolicyStillCurrent(win, epoch, revision)) {
+            ReaderWindowCoordinator.refreshPolicyMetrics();
+          }
         }
-        if (win === undefined) {
-          return Promise.reject(new Error('Reader main window is unavailable'));
-        }
-        const owner = ReaderWindowCoordinator.desiredReaderWindowOwner;
-        if (ReaderWindowCoordinator.desiredWindowPolicyOwner === 'reader' && owner !== undefined && !owner.accepts())
-          return Promise.resolve();
-        return apply(win)
-          .then((): void => {
-            if (win === ReaderWindowCoordinator.mainWindow &&
-              revision === ReaderWindowCoordinator.windowPolicyRevision) {
-              ReaderWindowCoordinator.appliedPolicyRevision = revision;
-              ReaderWindowCoordinator.refreshMetrics();
-            }
-          });
       });
     ReaderWindowCoordinator.windowPolicyTail = operation.catch((_error: Error): void => {});
     return operation;
   }
 
-  private static async applyReaderWindowPolicy(
-    win: window.Window,
-    policy: ReaderWindowPolicy,
-    revision: number,
-  ): Promise<void> {
-    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
-    ReaderWindowCoordinator.applyKeyboardAvoidance(win);
-    await win.setPreferredOrientation(ReaderWindowCoordinator.orientationValue(policy.orientation));
-    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
-    await win.setWindowKeepScreenOn(policy.keepScreenOn);
-    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
-    const statusEpoch = ReaderWindowCoordinator.installEpoch;
-    ReaderWindowCoordinator.statusBarRevealPending = !policy.hideStatusBar &&
-      (ReaderWindowCoordinator.statusBarRevealPending || ReaderWindowCoordinator.statusBarHiddenApplied);
-    await win.setSpecificSystemBarEnabled('status', !policy.hideStatusBar, false);
-    if (ReaderWindowCoordinator.installStillCurrent(statusEpoch, win)) {
-      ReaderWindowCoordinator.statusBarHiddenApplied = policy.hideStatusBar;
+  private static async applyWindowPolicy(win: window.Window, revision: number,
+    orientation: window.Orientation, keepScreenOn: boolean, hideStatusBar: boolean,
+    hideNavigationBar: boolean): Promise<boolean> {
+    const epoch = ReaderWindowCoordinator.installEpoch;
+    const orientationAndBarsSupported = !ReaderWindowCoordinator.isTwoInOneDevice();
+    const steps: ReaderWindowPolicyStep[] = [
+      { name: 'keyboard-avoidance', write: (): void => ReaderWindowCoordinator.applyKeyboardAvoidance(win) },
+      { name: 'orientation', supported: orientationAndBarsSupported,
+        write: (): Promise<void> => win.setPreferredOrientation(orientation) },
+      { name: 'keep-screen-on', write: (): Promise<void> => win.setWindowKeepScreenOn(keepScreenOn) },
+      { name: 'status', supported: orientationAndBarsSupported,
+        write: (): Promise<void> => ReaderWindowCoordinator.applyStatusBarPolicy(win, epoch, hideStatusBar) },
+      { name: 'navigation', supported: orientationAndBarsSupported,
+        write: (): Promise<void> => win.setSpecificSystemBarEnabled('navigation', !hideNavigationBar, false) },
+      { name: 'navigation-indicator', supported: orientationAndBarsSupported,
+        write: (): Promise<void> => win.setSpecificSystemBarEnabled('navigationIndicator', !hideNavigationBar, false) },
+    ];
+    let firstFailure: Error | undefined = undefined;
+    let applied = true;
+    for (const step of steps) {
+      if (!ReaderWindowCoordinator.windowPolicyStillCurrent(win, epoch, revision)) return false;
+      const result = await ReaderWindowCoordinator.attemptWindowStep(step.name, step.write, step.supported);
+      applied = applied && result.applied;
+      firstFailure ??= result.failure;
     }
-    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
-    await win.setSpecificSystemBarEnabled('navigation', !policy.hideNavigationBar, false);
-    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
-    await win.setSpecificSystemBarEnabled('navigationIndicator', !policy.hideNavigationBar, false);
+    if (firstFailure !== undefined) throw firstFailure;
+    return applied;
   }
 
-  private static async applyAppWindowPolicy(win: window.Window, revision: number): Promise<void> {
-    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
-    ReaderWindowCoordinator.applyKeyboardAvoidance(win);
-    await win.setPreferredOrientation(ReaderWindowCoordinator.appOrientation);
-    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
-    await win.setWindowKeepScreenOn(ReaderWindowCoordinator.appKeepScreenOn);
-    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
-    const statusEpoch = ReaderWindowCoordinator.installEpoch;
-    ReaderWindowCoordinator.statusBarRevealPending = ReaderWindowCoordinator.statusBarRevealPending ||
-      ReaderWindowCoordinator.statusBarHiddenApplied;
-    await win.setSpecificSystemBarEnabled('status', true, false);
-    if (ReaderWindowCoordinator.installStillCurrent(statusEpoch, win)) ReaderWindowCoordinator.statusBarHiddenApplied = false;
-    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
-    await win.setSpecificSystemBarEnabled('navigation', true, false);
-    if (win !== ReaderWindowCoordinator.mainWindow || revision !== ReaderWindowCoordinator.windowPolicyRevision) return;
-    await win.setSpecificSystemBarEnabled('navigationIndicator', true, false);
+  private static async applyStatusBarPolicy(win: window.Window, epoch: number, hidden: boolean): Promise<void> {
+    const previousReveal = ReaderWindowCoordinator.statusBarRevealPending;
+    ReaderWindowCoordinator.statusBarRevealPending = !hidden &&
+      (previousReveal || ReaderWindowCoordinator.statusBarHiddenApplied);
+    try {
+      await win.setSpecificSystemBarEnabled('status', !hidden, false);
+      if (ReaderWindowCoordinator.installStillCurrent(epoch, win)) ReaderWindowCoordinator.statusBarHiddenApplied = hidden;
+    } catch (error) {
+      if (ReaderWindowCoordinator.installStillCurrent(epoch, win)) ReaderWindowCoordinator.statusBarRevealPending = previousReveal;
+      throw error;
+    }
+  }
+
+  private static async attemptWindowStep(name: string, write: () => void | Promise<void>,
+    supported: boolean = true): Promise<ReaderWindowStepResult> {
+    if (!supported) {
+      ReaderWindowCoordinator.logWindowStep(name, 'unsupported', '2in1');
+      return { applied: false };
+    }
+    try {
+      await write();
+      return { applied: true };
+    } catch (error) {
+      const code = ReaderWindowCoordinator.reportWindowStepFailure(name, error as BusinessError);
+      if (code === '801') return { applied: false };
+      return { applied: false, failure: (error as Error | undefined) ?? new Error('Native window step failed') };
+    }
+  }
+
+  private static reportWindowStepFailure(name: string, error: BusinessError): string {
+    const code = ReaderWindowCoordinator.chromeErrorCode(error);
+    ReaderWindowCoordinator.logWindowStep(name, code === '801' ? 'unsupported' : 'failed', code);
+    return code;
+  }
+
+  private static logWindowStep(name: string, outcome: 'unsupported' | 'failed', code: string): void {
+    try { hilog.warn(0x5244, 'Reader', 'Window step %{public}s %{public}s: %{public}s', name, outcome, code); }
+    catch (_) { /* A diagnostic sink never owns a native window write. */ }
+  }
+
+  private static refreshPolicyMetrics(): void {
+    try { ReaderWindowCoordinator.refreshMetrics(); }
+    catch (error) { ReaderWindowCoordinator.reportWindowStepFailure('metrics', error as BusinessError); }
   }
 
   private static orientationValue(policy: ReaderWindowOrientationPolicy): window.Orientation {
