@@ -616,7 +616,7 @@ if (selectedCase === 'navigation-owner') {
   const entryActionSource = read('app/composition/ReaderReadingEntryActions.ets');
   for (const [kind, before, after] of [
     ['local', 'this.openLocalDetail(book, true, parent, download);', 'this.openLocalDetail(book, true, undefined, download);'],
-    ['remote', '}, parent, download);', '}, undefined, download);'],
+    ['remote', 'validatedSession: download.session }, parent, download,', 'validatedSession: download.session }, undefined, download,'],
   ]) {
     const changed = entryActionSource.replace(before, after); assert.notEqual(changed, entryActionSource);
     const BrokenActions = pureModuleProbe(changed, 'ReaderReadingEntryActions.ets',

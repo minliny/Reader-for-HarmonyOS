@@ -124,7 +124,8 @@ export class ReaderReadingEntryActions {
           this.openLocalDetail(book, true, parent, download);
         } else {
           this.openRemoteDetail({ seed: download.seed, sourceName: download.sourceLabel, shelfSnapshot: book,
-            resumeImmediately: true, validatedSession: download.session }, parent, download);
+            resumeImmediately: true, validatedSession: download.session }, parent, download,
+            (resolved: DownloadReadingEntry): void => this.openDownloadChapter(resolved, restoreDownloads));
         }
       },
       readingActive: (): boolean => this.ports.entry().sessionActive,
@@ -136,14 +137,16 @@ export class ReaderReadingEntryActions {
     const owner = this.ports.runtime();
     if (owner === undefined) return;
     const admitted = this.ports.entry().enterLocalDetail(owner, book, resume, (): ReadingEntryPorts => {
-      this.ports.show(this.prepareDetailRoute(owner, resume, parent));
+      const route = this.prepareDetailRoute(owner, resume, parent);
+      if (download === undefined) this.ports.show(route);
       this.ports.search().host.visibilityChanged();
       return this.ports.entryPorts(owner);
     });
     if (admitted && resume) this.resumeDetail(owner, download);
   }
 
-  openRemoteDetail(input: RemoteReadingEntryInput, parent?: DetailReturnRoute, download?: DownloadReadingEntry): void {
+  openRemoteDetail(input: RemoteReadingEntryInput, parent?: DetailReturnRoute, download?: DownloadReadingEntry,
+    retryDownload?: (resolved: DownloadReadingEntry) => void): void {
     const owner = this.ports.runtime();
     if (owner === undefined) return;
     const readGeneration = ++this.detailReadGeneration;
@@ -157,7 +160,13 @@ export class ReaderReadingEntryActions {
           this.ports.failure('书籍类型尚未确认', '请重试读取书架信息。');
           return;
         }
-        this.openRemoteDetail(readingEntryInputForShelfSnapshot(input, book), parent, download);
+        const resolved = readingEntryInputForShelfSnapshot(input, book);
+        if (download !== undefined && retryDownload !== undefined) {
+          // Re-admit after the asynchronous shelf read so Download still owns Back.
+          retryDownload({ ...download, shelfBook: book, seed: resolved.seed });
+        } else {
+          this.openRemoteDetail(resolved, parent, download);
+        }
       }).catch((_error: Error): void => {
         if (current() && this.ports.detailReadAllowed?.() !== false) this.ports.failure('读取书架信息失败', '请重试读取书架信息。');
       });
@@ -170,7 +179,8 @@ export class ReaderReadingEntryActions {
       (projectKind: () => void, fallbackSeeds: RemoteReadingBookSeed[]): RemoteDetailOpening => {
         const route = this.prepareDetailRoute(owner, resume, parent);
         projectKind();
-        this.ports.show(route);
+        // A download chapter uses the detail admission without opening that page.
+        if (download === undefined) this.ports.show(route);
         const search = this.ports.search();
         search.host.visibilityChanged();
         const candidates = search.admissionCandidates(input.seed, fallbackSeeds);

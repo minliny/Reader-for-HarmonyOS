@@ -49,6 +49,18 @@ const cases = {
     description: 'An admitted download chapter carries its projected kind through the real reading route and back without modifying the legacy shelf row.',
     resources: [],
   },
+  'download-chapter-transition': {
+    description: 'Download chapters publish one reader entry and silently align the underlying native stack.',
+    resources: [],
+  },
+  'detail-cover-back': {
+    description: 'Detail cover consumes repeated Back and edges until a post-layout replay can remount the reader once.',
+    resources: [],
+  },
+  'detail-cover-background': {
+    description: 'Retained and native detail covers retire before starting after backgrounding, including late native callbacks.',
+    resources: [],
+  },
 };
 
 function back(navigation, destination, temporary = {}) {
@@ -243,8 +255,9 @@ async function routeTransitionEffects() {
     'finishTabTransition', 'rootTabs', 'rootTabOpacity', 'rootTabScale', 'nativeTransition',
     'laneX', 'laneDimOpacity', 'laneOpacity', 'laneVisibleDuringReaderCover', 'laneAcceptsInput',
     'aboutToAppear', 'backGestureEnabled', 'hasDestination',
-    'readerCoverBehind', 'readerCoverGeneration', 'readerCoverSettled', 'onReaderCovered',
-    'onReaderCoverChanged', 'settleReaderCover', 'revealRetainedDetail',
+    'readerCoverGeneration', 'readerCoverStartGeneration', 'readerCoverSettled', 'onReaderCovered',
+    'onReaderCoverChanged', 'settleReaderCover', 'revealRetainedDetail', 'readerCoverCanAnimate',
+    'retireStaleReaderCover', 'finishReaderCoverAnimation',
     'preview', 'beginPreview', 'updatePreview', 'endPreview', 'resolvePreview', 'applyPreviewResult',
   ], {
     ...properties.sdk,
@@ -312,9 +325,9 @@ async function routeTransitionEffects() {
     const cover = new navigationProbe.Component(undefined, { route: 'directory', initialRoot: 'bookshelf', viewportWidth: 400, reduceMotion });
     cover.aboutToAppear();
     cover.pathStack.names = ['detail', 'directory'];
-    cover.readerCoverBehind = true;
+    cover.readerCoverGeneration = 1;
     let readerCovered = 0;
-    cover.onReaderCovered = () => { readerCovered += 1; cover.readerCoverBehind = false; };
+    cover.onReaderCovered = generation => { assert.equal(generation, 1); readerCovered += 1; cover.readerCoverGeneration = undefined; };
     cover.route = 'detail';
     cover.routeMotion = 'push';
     cover.reconcile();
@@ -322,7 +335,7 @@ async function routeTransitionEffects() {
     assert.equal(cover.laneVisibleDuringReaderCover('bookshelf', 'reader-route-root'), false);
     assert.equal(cover.laneVisibleDuringReaderCover('directory', 'directory'), false);
     assert.equal(readerCovered, 0, 'the reader stays visible until the native detail destination covers it');
-    const detailPush = cover.nativeTransition({ name: 'directory' }, { name: 'detail' }, 'push');
+    const detailPush = cover.nativeTransition({ name: 'directory' }, { name: 'detail', param: { readerCoverGeneration: 1 } }, 'push');
     detailPush.transition({});
     assert.equal(cover.laneVisibleDuringReaderCover('detail', 'detail'), true);
     assert.equal(cover.laneAcceptsInput('detail'), false);
@@ -338,8 +351,8 @@ async function routeTransitionEffects() {
     const retained = new navigationProbe.Component(undefined, { route: 'detail', initialRoot: 'bookshelf', viewportWidth: 400, reduceMotion });
     retained.aboutToAppear();
     const stablePath = retained.pathStack.getAllPathName();
-    retained.readerCoverBehind = true;
-    retained.onReaderCovered = () => { readerCovered += 1; retained.readerCoverBehind = false; };
+    retained.readerCoverGeneration = 2;
+    retained.onReaderCovered = generation => { assert.equal(generation, 2); readerCovered += 1; retained.readerCoverGeneration = undefined; };
     retained.routeMotion = 'push';
     retained.reconcile();
     assert.deepEqual(retained.pathStack.getAllPathName(), stablePath, 'an existing top detail is animated without a second native route');
@@ -530,7 +543,7 @@ async function routeTransitionEffects() {
   const routeOwner = new ReaderNavigation();
   const parentTimings = [];
   const indexOwner = createReaderBuilderProbe(index, [
-    'appRouteLane', 'publishNavigation', 'updateReaderParentMotion', 'readerParentMotionProgress', 'detailAboveReader',
+    'appRouteLane', 'publishNavigation', 'updateReaderParentMotion', 'readerParentMotionProgress', 'detailAboveReader', 'readerDetailCoverGeneration',
   ], { retainedReaderRoute, ...motionSpec }).owner;
   Object.assign(indexOwner, { route: 'search', wideSettingsPane: () => undefined,
     navigationOwner: routeOwner, searchAppForeground: true, visibleRouteMotion: 'none',
@@ -1181,6 +1194,258 @@ function legacyDownloadChapterReturn() {
   });
 }
 
+const routeFixtureSource = path => readFileSync(new URL(`../entry/src/main/ets/${path}.ets`, import.meta.url), 'utf8');
+
+function alternateRouteSource(source, exact, replacement) {
+  assert.ok(source.includes(exact), `negative control locates ${exact}`);
+  return source.replace(exact, replacement);
+}
+
+async function readerCoverStack(route, names, source = routeFixtureSource('app/navigation/ReaderRouteStackSurface')) {
+  const { createReaderBuilderProbe, productionReaderMotionSdk } = await import('./lib/reader-control-builder-probe.mjs');
+  const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+  const properties = createArkUIPropertyRuntimeProbe();
+  const calls = [], frames = [], animations = [], timers = new Map();
+  let timerId = 0;
+  class NavPathStack {
+    entries = [];
+    getAllPathName() { return this.entries.map(entry => entry.name); }
+    size() { return this.entries.length; }
+    pushPath(entry, animated) { this.entries.push(entry); calls.push(['push', entry.name, animated]); }
+    popToName(name, animated) {
+      this.entries = this.entries.slice(0, this.getAllPathName().lastIndexOf(name) + 1);
+      calls.push(['popToName', name, animated]);
+    }
+    pop(animated) { this.entries.pop(); calls.push(['pop', animated]); }
+  }
+  const { Component } = createReaderBuilderProbe(source, [
+    'route', 'initialRoot', 'routeMotion', 'reduceMotion', 'viewportWidth', 'rootRoute', 'pathStack', 'mounted', 'routeUpdate',
+    'animationGeneration', 'tabGeneration', 'tabProgress', 'previousTab', 'hasDestination', 'pendingTabResetFrom',
+    'activeRouteAnimation', 'readerCoverGeneration', 'readerCoverStartGeneration', 'readerCoverSettled', 'preview',
+    'paint', 'progress', 'routeEndTimer', 'onReaderCovered', 'aboutToAppear', 'reconcile', 'finishTabTransition',
+    'onRouteChanged', 'onReaderCoverChanged', 'readerCoverCanAnimate', 'retireStaleReaderCover', 'finishReaderCoverAnimation',
+    'settleReaderCover', 'settleAnimation', 'completeRouteAnimation', 'revealRetainedDetail', 'nativeTransition',
+    'clearRouteDeadline', 'armRouteDeadline', 'backGestureEnabled', 'beginPreview', 'updatePreview',
+  ], {
+    ...properties.sdk, ...productionReaderMotionSdk(), NavPathStack,
+    NavigationOperation: { PUSH: 'push', POP: 'pop' }, ROOT_LANE: 'reader-route-root', RETAINED_READER_LANE: 'retained-reader',
+    NATIVE_START_TIMEOUT_MS: 300, NATIVE_END_GRACE_MS: 100, readerMotionNowMs: () => 0,
+    setTimeout(callback) { timers.set(++timerId, callback); return timerId; },
+    clearTimeout(id) { timers.delete(id); },
+    ReaderPostLayoutFrame: class { constructor(_context, run) { this.run = run; } },
+    uiContext: { postFrameCallback: frame => frames.push(frame), animateTo(params, mutate) { animations.push(params); mutate(); } },
+  }, properties.hooks);
+  const host = new Component(undefined, { initialRoot: 'bookshelf', route, viewportWidth: 400 });
+  host.aboutToAppear();
+  host.pathStack.entries = names.map(name => ({ name }));
+  calls.length = 0;
+  return { host, calls, frames, animations, timers };
+}
+
+async function downloadEntryRouteFixture({ earlyDetail = false, immediateBack = false } = {}) {
+  const { createReaderBuilderProbe, productionReaderMotionSdk } = await import('./lib/reader-control-builder-probe.mjs');
+  const indexSource = routeFixtureSource('pages/Index');
+  const source = immediateBack ? alternateRouteSource(indexSource,
+    'if (this.readerDetailCover) {\n      this.pendingBackDuringCover', 'if (false) {\n      this.pendingBackDuringCover') : indexSource;
+  const entrySource = routeFixtureSource('app/composition/ReaderReadingEntryActions');
+  const actionSource = earlyDetail ? alternateRouteSource(entrySource,
+    'if (download === undefined) this.ports.show(route);', 'this.ports.show(route);') : entrySource;
+  const { ReaderReadingEntryActions } = pureModuleProbe(actionSource, 'ReaderReadingEntryActions.ets', {
+    Observed: value => value,
+  }, ['ReaderReadingEntryActions']);
+  const { ReaderExitActions } = pureModuleProbe(routeFixtureSource('app/composition/ReaderExitActions'),
+    'ReaderExitActions.ets', {}, ['ReaderExitActions']);
+  const { ReaderLibraryJourney } = pureModuleProbe(routeFixtureSource('app/composition/ReaderLibraryJourney'),
+    'ReaderLibraryJourney.ets', {}, ['ReaderLibraryJourney']);
+  const navigation = new ReaderNavigation();
+  const runtime = {};
+  const book = { sourceId: 'local', bookId: 'book' };
+  const entry = {
+    book, verdict: 'readable', sessionActive: false, readyGeneration: 0,
+    beginReaderPresentation() { this.readyGeneration += 1; },
+    beginReading() { this.sessionActive = true; },
+    finishReading() { this.sessionActive = false; },
+    enterLocalDetail(_runtime, supplied, _resume, prepare) { prepare(); this.book = supplied; return true; },
+    acceptReaderExit() { return this.sessionActive; },
+    currentExitLease() { return this.sessionActive ? { readerIdentity: 'reader', request() {} } : undefined; },
+  };
+  const frames = [], parentTimings = [], publications = [];
+  const index = createReaderBuilderProbe(source, [
+    'appRouteLane', 'publishNavigation', 'updateReaderParentMotion', 'readerParentMotionProgress',
+    'completeReaderDetailCover', 'appRouteBackGestureEnabled', 'readerDetailCoverGeneration',
+    'onBackPress', 'dispatchBackDestination', 'handleDetailBack',
+  ], {
+    retainedReaderRoute, ...productionReaderMotionSdk(),
+    ReaderPostLayoutFrame: class { constructor(_context, run) { this.run = run; } },
+  }).owner;
+  Object.assign(index, {
+    route: 'bookshelf', navigationGeneration: 0, navigationOwner: navigation, directoryReturnTarget: 'detail',
+    wideSettingsPane: () => undefined, searchAppForeground: true, visibleRouteMotion: 'none', readerParentProgress: 0,
+    currentReadingRuntime: () => runtime, readingEntry: entry, appReduceMotion: false, journeyRecoveryInputAllowed: () => true,
+    getUIContext: () => ({
+      postFrameCallback(frame) { frames.push(frame); },
+      animateTo(params, update) { parentTimings.push(params.duration); update(); },
+    }),
+    bookRemovalConfirmation: { dismiss() {}, isOpen: () => false }, jsonImportPresentation: { dismiss() {} },
+    shelfGroupPresentation: { retire() {}, back: () => false }, bookshelfModalVisible: () => false,
+    mangaSourceSwitch: { selectionVisible: false }, sourceSwitchPresentation: { isSurfacePresented: () => false },
+  });
+  const publish = snapshot => { index.publishNavigation(snapshot); publications.push(snapshot.route); };
+  const advance = () => { const snapshot = navigation.advance(); publish(snapshot); return snapshot.generation; };
+  const actions = new ReaderReadingEntryActions(navigation, { begin() {} }, {
+    runtime: () => runtime, entry: () => entry, removalPending: () => false, advance,
+    show: route => publish(navigation.show(route)), bindReader() {}, entryPorts: () => ({}),
+    search: () => ({ host: { visibilityChanged() {} } }), sourceSwitch: () => ({}),
+    restoreReaderReturn: context => {
+      if (context === undefined) return false;
+      navigation.returns.restoreReaderReturn(context, () => {});
+      return true;
+    },
+  });
+  index.readingEntryActions = actions;
+  index.libraryJourney = new ReaderLibraryJourney(navigation, { runtime: () => runtime, readingActions: () => actions });
+  const exit = new ReaderExitActions(navigation, {
+    runtime: () => runtime, entry: () => entry, advance, publish, bindReader() {}, refreshDetail() {}, refreshShelf() {},
+    captureReturn: () => navigation.returns.captureReaderReturn(runtime, () => ({})),
+  });
+  return { index, actions, exit, navigation, entry, book, frames, parentTimings, publications, publish };
+}
+
+async function downloadChapterTransition() {
+  async function check(origin, earlyDetail = false) {
+    const { index, actions, navigation, book, parentTimings, publications, publish } = await downloadEntryRouteFixture({ earlyDetail });
+    if (origin === 'detail') publish(navigation.show('detail'));
+    publish(navigation.openDownloads({ kind: 'fresh', detailKey: '' }, () => book, () => navigation.advance()));
+    const names = origin === 'detail' ? ['detail', 'downloads'] : ['downloads'];
+    const { host, calls, animations } = await readerCoverStack('downloads', names);
+    publications.length = 0;
+    actions.openDownloadChapter({ shelfBook: book, chapterIndex: 1 }, assert.fail);
+    assert.equal(navigation.snapshot().route, 'reading');
+    assert.ok(!publications.includes('detail'), 'download opening must not publish an intermediate detail');
+    assert.equal(index.appRouteLane(), 'detail');
+    assert.equal(index.readerParentMotionProgress(), 0);
+    assert.deepEqual(parentTimings, []);
+    host.route = index.appRouteLane(); host.routeMotion = index.visibleRouteMotion;
+    host.reconcile();
+    assert.deepEqual(calls, [[origin === 'detail' ? 'popToName' : 'push', 'detail', false]]);
+    assert.deepEqual(animations, []);
+  }
+  await check('bookshelf');
+  await check('detail');
+  await assert.rejects(check('detail', true), /must not publish an intermediate detail/);
+  const failed = await downloadEntryRouteFixture();
+  failed.publish(failed.navigation.openDownloads({ kind: 'fresh', detailKey: '' }, () => failed.book,
+    () => failed.navigation.advance()));
+  const restores = [];
+  const enter = failed.entry.enterLocalDetail;
+  failed.entry.enterLocalDetail = (...args) => { enter.call(failed.entry, ...args); failed.entry.book = undefined; return true; };
+  failed.actions.openDownloadChapter({ shelfBook: failed.book, chapterIndex: 1 }, intent => restores.push(intent));
+  assert.equal(failed.navigation.snapshot().route, 'downloads');
+  assert.deepEqual(restores, [{ kind: 'resume' }], 'a partially admitted reader reopens the retired downloads presentation');
+}
+
+async function detailCoverBack() {
+  async function check(immediateBack = false) {
+    const { index, actions, exit, navigation, entry, frames, publish } = await downloadEntryRouteFixture({ immediateBack });
+    const mounted = () => (entry.sessionActive || index.readerDetailCover) && entry.book !== undefined;
+    publish(navigation.show('detail'));
+    actions.openReading(undefined);
+    const generation = entry.readyGeneration;
+    exit.requestBookInfo(); exit.accepted('reader');
+    const cover = index.readerDetailCoverGeneration;
+    assert.equal(mounted(), true);
+    assert.equal(index.appRouteBackGestureEnabled(), false);
+    assert.equal(index.onBackPress(), true);
+    assert.equal(navigation.snapshot().route, 'detail', 'Back must not re-enter while the old cover is mounted');
+    assert.equal(index.onBackPress(), true);
+    assert.equal(entry.readyGeneration, generation);
+    index.completeReaderDetailCover(cover - 1);
+    assert.equal(mounted(), true, 'a stale cover completion cannot dismiss the retained reader');
+    index.completeReaderDetailCover(cover);
+    index.completeReaderDetailCover(cover);
+    assert.equal(mounted(), false);
+    assert.equal(index.appRouteBackGestureEnabled(), false, 'duplicate input is fenced until replay');
+    assert.equal(index.onBackPress(), true);
+    assert.equal(frames.length, 1);
+    frames.shift().run();
+    assert.equal(entry.readyGeneration, generation + 1);
+    assert.equal(mounted(), true);
+    assert.equal(navigation.snapshot().route, 'reading');
+    exit.requestBookInfo(); exit.accepted('reader');
+    assert.equal(index.onBackPress(), true);
+    index.completeReaderDetailCover(index.readerDetailCoverGeneration);
+    publish(navigation.advance());
+    frames.shift().run();
+    assert.equal(navigation.snapshot().route, 'detail');
+    assert.equal(entry.readyGeneration, generation + 1, 'queued Back cannot escape its navigation generation');
+  }
+  await check();
+  await assert.rejects(check(true), /Back must not re-enter/);
+  const withTopLayer = await downloadEntryRouteFixture();
+  withTopLayer.publish(withTopLayer.navigation.show('detail'));
+  withTopLayer.actions.openReading(undefined);
+  withTopLayer.exit.requestBookInfo();
+  withTopLayer.exit.accepted('reader');
+  assert.equal(withTopLayer.index.onBackPress(), true);
+  withTopLayer.index.completeReaderDetailCover(withTopLayer.index.readerDetailCoverGeneration);
+  let closed = false;
+  withTopLayer.index.detailMoreBack = () => { closed = true; return true; };
+  withTopLayer.frames.shift().run();
+  assert.equal(closed, true, 'replayed Back still goes to the foreground surface');
+  assert.equal(withTopLayer.navigation.snapshot().route, 'detail');
+  const { host, calls } = await readerCoverStack('detail', ['detail']);
+  host.readerCoverGeneration = 1; host.backGestureEnabled = true;
+  host.beginPreview(90);
+  assert.deepEqual(calls, [], 'even stale enabled props cannot initiate a native Back edge during cover');
+}
+
+async function detailCoverBackground() {
+  async function pendingFrame(source) {
+    const { host, frames, animations, timers } = await readerCoverStack('detail', ['detail'], source);
+    Object.assign(host, { readerCoverGeneration: 5, routeMotion: 'push' });
+    host.reconcile();
+    assert.equal(timers.size, 1);
+    assert.equal(frames.length, 1);
+    // Start can observe the policy before the rest of the cover props arrive.
+    host.routeMotion = 'none';
+    frames.shift().run();
+    assert.deepEqual(animations, [], 'foreground policy must be rechecked at animation start');
+    assert.equal(host.activeRouteAnimation, undefined);
+    assert.equal(timers.size, 0);
+    assert.equal(host.paint, undefined);
+    assert.equal(host.progress, 1);
+  }
+  await pendingFrame();
+  const source = routeFixtureSource('app/navigation/ReaderRouteStackSurface');
+  await assert.rejects(pendingFrame(alternateRouteSource(source, 'if (!this.readerCoverCanAnimate(generation)) { finish(); return; }', '')),
+    /foreground policy must be rechecked/);
+
+  for (const late of ['custom-transition', 'proxy', 'frame']) {
+    const { host, frames, animations, timers } = await readerCoverStack('directory', ['detail', 'directory']);
+    Object.assign(host, { route: 'detail', routeMotion: 'push', readerCoverGeneration: 7 });
+    host.reconcile();
+    const detail = host.pathStack.entries.at(-1);
+    assert.deepEqual(detail.param, { readerCoverGeneration: 7 });
+    const makeTransition = () => host.nativeTransition({ name: 'directory' }, detail, 'push');
+    let native = late === 'custom-transition' ? undefined : makeTransition();
+    let finished = 0;
+    const proxy = { finishTransition() { finished += 1; } };
+    if (late === 'frame') native.transition(proxy);
+    Object.assign(host, { readerCoverGeneration: undefined, routeMotion: 'none' });
+    host.onReaderCoverChanged();
+    assert.equal(timers.size, 0, `background retires the ${late} timer`);
+    assert.equal(host.activeRouteAnimation, undefined);
+    assert.equal(host.paint, undefined);
+    if (late === 'custom-transition') native = makeTransition();
+    if (late !== 'frame') native.transition(proxy);
+    frames.shift()?.run();
+    native.onTransitionEnd?.(true);
+    assert.equal(finished, 1, `${late} native proxy receives one finish`);
+    assert.deepEqual(animations, [], `${late} must not paint a retired cover`);
+    assert.equal(host.progress, 1);
+  }
+}
+
 const checks = {
   'directory-reading-return': directoryReadingReturn,
   'settings-tools-return': settingsToolsReturn,
@@ -1191,6 +1456,9 @@ const checks = {
   'retained-route-ports': retainedRoutePorts,
   'download-directory-return': downloadDirectoryReturn,
   'legacy-download-chapter-return': legacyDownloadChapterReturn,
+  'download-chapter-transition': downloadChapterTransition,
+  'detail-cover-back': detailCoverBack,
+  'detail-cover-background': detailCoverBackground,
 };
 for (const id of selectContractCases(cases)) {
   await checks[id]();

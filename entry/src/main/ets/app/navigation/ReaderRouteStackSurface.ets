@@ -44,6 +44,10 @@ interface ReaderRouteAnimation {
   readerCoverGeneration?: number;
 }
 
+interface ReaderCoverPath {
+  readerCoverGeneration: number;
+}
+
 /** Renders the admitted app route in a native stack. Index owns all Back decisions. */
 @Component
 export struct ReaderRouteStackSurface {
@@ -51,14 +55,14 @@ export struct ReaderRouteStackSurface {
   @Prop @Watch('onRouteChanged') route: ReaderRouteSurfaceKey = 'settings';
   @Prop surfaceId: string = '';
   @Prop initialRoot: ReaderRouteSurfaceKey | undefined = undefined;
-  @Prop routeMotion: ReaderRouteSurfaceMotion = 'none';
+  @Prop @Watch('onRouteChanged') routeMotion: ReaderRouteSurfaceMotion = 'none';
   @Prop @Watch('onEdgeAvailabilityChanged') reduceMotion: boolean = false;
   @Prop @Watch('onEdgeAvailabilityChanged') viewportWidth: number = 0;
   @Prop @Watch('onEdgeAvailabilityChanged') backGestureEnabled: boolean = false;
-  @Prop @Watch('onReaderCoverChanged') readerCoverBehind: boolean = false;
+  @Prop @Watch('onReaderCoverChanged') readerCoverGeneration: number | undefined = undefined;
   @BuilderParam content: (route: ReaderRouteSurfaceKey) => void;
   onBack: () => boolean = (): boolean => false;
-  onReaderCovered: () => void = (): void => {};
+  onReaderCovered: (generation: number) => void = (_generation: number): void => {};
 
   private readonly pathStack: NavPathStack = new NavPathStack();
   @State private rootRoute: ReaderRouteSurfaceKey = 'settings';
@@ -75,7 +79,7 @@ export struct ReaderRouteStackSurface {
   private activeRouteAnimation: ReaderRouteAnimation | undefined = undefined;
   private routeEndTimer: number = -1;
   private preview: ReaderRouteBackPreview | undefined = undefined;
-  private readerCoverGeneration: number = 0;
+  private readerCoverStartGeneration: number | undefined = undefined;
   private readerCoverSettled: boolean = false;
 
   aboutToAppear(): void {
@@ -93,7 +97,10 @@ export struct ReaderRouteStackSurface {
     this.resolvePreview('cancel');
     const preview = this.preview;
     if (preview?.animation !== undefined) this.settleAnimation(preview.animation, preview.result === 'commit');
+    const animation = this.activeRouteAnimation;
+    if (animation?.readerCoverGeneration !== undefined) this.settleAnimation(animation, true);
     this.clearRouteDeadline();
+    this.readerCoverStartGeneration = undefined;
     this.animationGeneration += 1;
     this.activeRouteAnimation = undefined;
     this.pendingTabResetFrom = undefined;
@@ -121,12 +128,13 @@ export struct ReaderRouteStackSurface {
   }
 
   private onReaderCoverChanged(): void {
-    this.readerCoverGeneration += 1;
     this.readerCoverSettled = false;
-    if (this.readerCoverBehind) this.onRouteChanged();
+    this.retireStaleReaderCover();
+    this.onRouteChanged();
   }
 
   private reconcile(): void {
+    this.retireStaleReaderCover();
     const preview = this.preview;
     if (preview !== undefined) {
       if (preview.requested && this.route === preview.to) this.resolvePreview('commit');
@@ -136,12 +144,12 @@ export struct ReaderRouteStackSurface {
     const names = this.pathStack.getAllPathName();
     const top = names.length > 0 ? names[names.length - 1] : this.rootRoute;
     // Reconcile the latest destination after the native end acknowledgement.
-    if (this.activeRouteAnimation !== undefined) return;
-    const coveringReader = this.readerCoverBehind && this.route === 'detail' && !this.readerCoverSettled;
+    if (this.activeRouteAnimation !== undefined || this.readerCoverStartGeneration !== undefined) return;
+    const cover = this.route === 'detail' && !this.readerCoverSettled ? this.readerCoverGeneration : undefined;
     if (top === this.route) {
-      if (coveringReader) {
-        if (this.routeMotion === 'none') this.settleReaderCover(this.readerCoverGeneration);
-        else this.revealRetainedDetail(names.length > 0 ? top : ROOT_LANE);
+      if (cover !== undefined) {
+        if (this.routeMotion === 'none') this.settleReaderCover(cover);
+        else this.revealRetainedDetail(names.length > 0 ? top : ROOT_LANE, cover);
       }
       return;
     }
@@ -153,13 +161,20 @@ export struct ReaderRouteStackSurface {
     }
     if (this.routeMotion !== 'tab') this.finishTabTransition();
     const animate = this.routeMotion !== 'none';
-    if (coveringReader) {
+    if (cover !== undefined) {
       // The underlying directory may already have a detail ancestor. This
       // detail is a foreground push over the reader even in that case.
-      const generation = this.readerCoverGeneration;
-      if (animate) this.armRouteDeadline(NATIVE_START_TIMEOUT_MS, (): void => this.settleReaderCover(generation));
-      this.pathStack.pushPath({ name: this.route }, animate);
-      if (!animate) this.settleReaderCover(generation);
+      const param: ReaderCoverPath = { readerCoverGeneration: cover };
+      if (animate) {
+        this.readerCoverStartGeneration = cover;
+        this.armRouteDeadline(NATIVE_START_TIMEOUT_MS, (): void => {
+          this.readerCoverStartGeneration = undefined;
+          this.settleReaderCover(cover);
+          this.onRouteChanged();
+        });
+      }
+      this.pathStack.pushPath({ name: this.route, param }, animate);
+      if (!animate) this.settleReaderCover(cover);
     } else if (this.routeMotion === 'tab') {
       if (names.length === 0) {
         this.switchRootTab(this.route);
@@ -259,16 +274,36 @@ export struct ReaderRouteStackSurface {
   }
 
   private settleReaderCover(generation: number): void {
-    if (!this.readerCoverBehind || generation !== this.readerCoverGeneration || this.readerCoverSettled ||
-      this.route !== 'detail') return;
+    if (generation !== this.readerCoverGeneration || this.readerCoverSettled || this.route !== 'detail') return;
     this.readerCoverSettled = true;
-    this.onReaderCovered();
+    this.onReaderCovered(generation);
   }
 
-  private revealRetainedDetail(lane: string): void {
+  private readerCoverCanAnimate(generation: number): boolean {
+    return this.mounted && generation === this.readerCoverGeneration && !this.readerCoverSettled &&
+      this.route === 'detail' && this.routeMotion !== 'none';
+  }
+
+  private retireStaleReaderCover(): void {
+    const generation = this.readerCoverStartGeneration;
+    if (generation !== undefined && !this.readerCoverCanAnimate(generation)) {
+      this.readerCoverStartGeneration = undefined;
+      this.clearRouteDeadline();
+    }
+    const animation = this.activeRouteAnimation;
+    if (animation?.readerCoverGeneration !== undefined && !this.readerCoverCanAnimate(animation.readerCoverGeneration))
+      this.finishReaderCoverAnimation(animation);
+  }
+
+  private finishReaderCoverAnimation(animation: ReaderRouteAnimation): void {
+    this.settleAnimation(animation, true);
+    this.completeRouteAnimation(animation);
+  }
+
+  private revealRetainedDetail(lane: string, generation: number): void {
     // Detail can already be the retained lane. Apply the same native push
     // to that destination without duplicating it in the navigation stack.
-    const animation: ReaderRouteAnimation = { settled: false, readerCoverGeneration: this.readerCoverGeneration };
+    const animation: ReaderRouteAnimation = { settled: false, readerCoverGeneration: generation };
     this.activeRouteAnimation = animation;
     this.paint = { from: RETAINED_READER_LANE, to: lane, motion: 'push', fade: this.reduceMotion, fadeOutgoing: false };
     this.progress = 0;
@@ -277,6 +312,7 @@ export struct ReaderRouteStackSurface {
     const context = this.getUIContext();
     const start = (): void => {
       if (this.activeRouteAnimation !== animation) return;
+      if (!this.readerCoverCanAnimate(generation)) { finish(); return; }
       try { context.animateTo(timing, (): void => { this.progress = 1; }); }
       catch (_) { finish(); }
     };
@@ -298,8 +334,18 @@ export struct ReaderRouteStackSurface {
   }
 
   private nativeTransition(from: NavContentInfo, to: NavContentInfo, operation: NavigationOperation): NavigationAnimatedTransition {
-    const ticket = ++this.animationGeneration;
     const nativePop = operation === NavigationOperation.POP;
+    // The route param ties a late native start to the original detail cover.
+    const cover = !nativePop && to.name === 'detail' ? (to.param as ReaderCoverPath | undefined)?.readerCoverGeneration : undefined;
+    if (cover !== undefined && !this.readerCoverCanAnimate(cover)) {
+      const stale: ReaderRouteAnimation = { settled: false };
+      return { transition: (proxy: NavigationTransitionProxy): void => {
+        stale.proxy = proxy;
+        this.settleAnimation(stale, true);
+      } };
+    }
+    if (cover !== undefined && this.readerCoverStartGeneration === cover) this.readerCoverStartGeneration = undefined;
+    const ticket = ++this.animationGeneration;
     const preview = nativePop && from.name === this.preview?.from ? this.preview : undefined;
     const tabReset = nativePop && from.name !== undefined && from.name === this.pendingTabResetFrom && to.name === undefined;
     if (this.pendingTabResetFrom !== undefined) {
@@ -314,7 +360,7 @@ export struct ReaderRouteStackSurface {
     const timeout = preview !== undefined ? undefined : duration === undefined ? 1000 : duration + 300;
     const animation: ReaderRouteAnimation = {
       settled: false, deadline: timeout === undefined ? undefined : readerMotionNowMs() + timeout,
-      readerCoverGeneration: this.readerCoverBehind && !nativePop && to.name === 'detail' ? this.readerCoverGeneration : undefined,
+      readerCoverGeneration: cover,
     };
     if (this.mounted) {
       this.activeRouteAnimation = animation;
@@ -330,7 +376,12 @@ export struct ReaderRouteStackSurface {
         if (animation.settled || animation.proxy !== undefined) return;
         animation.proxy = proxy;
         if (!this.mounted || ticket !== this.animationGeneration || this.activeRouteAnimation !== animation) {
-          if (preview !== undefined) this.settleAnimation(animation, preview.result === 'commit');
+          if (cover !== undefined) this.settleAnimation(animation, true);
+          else if (preview !== undefined) this.settleAnimation(animation, preview.result === 'commit');
+          return;
+        }
+        if (cover !== undefined && !this.readerCoverCanAnimate(cover)) {
+          this.finishReaderCoverAnimation(animation);
           return;
         }
         this.paint = { from: from.name ?? ROOT_LANE, to: to.name ?? ROOT_LANE, motion, fade,
@@ -346,6 +397,10 @@ export struct ReaderRouteStackSurface {
         const context = this.getUIContext();
         const start = (): void => {
           if (!this.mounted || this.activeRouteAnimation !== animation || animation.settled) return;
+          if (cover !== undefined && !this.readerCoverCanAnimate(cover)) {
+            this.finishReaderCoverAnimation(animation);
+            return;
+          }
           try {
             context.animateTo(parameters, (): void => {
               if (this.activeRouteAnimation === animation) this.progress = 1;
@@ -386,7 +441,7 @@ export struct ReaderRouteStackSurface {
       if (lane === paint.from) return width * this.progress;
       if (lane === paint.to) return -width * READER_ROUTE_PARENT_PARALLAX * (1 - this.progress);
     } else {
-      if (lane === paint.from) return this.readerCoverBehind ? 0 : -width * READER_ROUTE_PARENT_PARALLAX * this.progress;
+      if (lane === paint.from) return this.readerCoverGeneration !== undefined ? 0 : -width * READER_ROUTE_PARENT_PARALLAX * this.progress;
       if (lane === paint.to) return width * (1 - this.progress);
     }
     return 0;
@@ -394,7 +449,7 @@ export struct ReaderRouteStackSurface {
 
   private laneDimOpacity(lane: string): number {
     const paint = this.paint;
-    if (paint === undefined || paint.fade || this.readerCoverBehind) return 0;
+    if (paint === undefined || paint.fade || this.readerCoverGeneration !== undefined) return 0;
     return paint.motion === 'pop' ?
       (lane === paint.to ? READER_ROUTE_PARENT_DIM * (1 - this.progress) : 0) :
       (lane === paint.from ? READER_ROUTE_PARENT_DIM * this.progress : 0);
@@ -408,11 +463,12 @@ export struct ReaderRouteStackSurface {
   }
 
   private laneVisibleDuringReaderCover(route: ReaderRouteSurfaceKey, lane: string): boolean {
-    return !this.readerCoverBehind || (route === this.route && (this.readerCoverSettled || lane === this.paint?.to));
+    return this.readerCoverGeneration === undefined ||
+      (route === this.route && (this.readerCoverSettled || lane === this.paint?.to));
   }
 
   private laneAcceptsInput(route: ReaderRouteSurfaceKey): boolean {
-    return route === this.route && (!this.readerCoverBehind || this.readerCoverSettled);
+    return route === this.route && (this.readerCoverGeneration === undefined || this.readerCoverSettled);
   }
 
   private destinationBack(route: ReaderRouteSurfaceKey): boolean {
@@ -426,7 +482,7 @@ export struct ReaderRouteStackSurface {
   }
 
   private beginPreview(offset: number): void {
-    if (!this.backGestureEnabled || this.reduceMotion || !this.hasDestination || this.viewportWidth <= 0 ||
+    if (this.readerCoverGeneration !== undefined || !this.backGestureEnabled || this.reduceMotion || !this.hasDestination || this.viewportWidth <= 0 ||
       this.preview !== undefined || this.activeRouteAnimation !== undefined) return;
     const names = this.pathStack.getAllPathName();
     if (names[names.length - 1] !== this.route) return;

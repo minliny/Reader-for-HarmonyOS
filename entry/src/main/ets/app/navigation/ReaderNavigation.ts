@@ -777,10 +777,11 @@ export class ReaderNavigation {
       ports.openBook(parent);
       return this.current.generation !== opening.generation && this.current.route === 'reading' && ports.readingActive();
     });
-    // If admission opened a detail but never started its reader, restore the
-    // original downloads view. A refusal before navigation leaves it intact.
+    // Detail admission may retire the downloads opening before starting the reader.
+    // A refusal without a generation change leaves the opening intact.
     if (!admitted && this.current.generation !== opening.generation &&
-      this.current.route === 'detail' && !ports.readingActive()) ports.restoreDownloads({ kind: 'resume' });
+      (this.current.route === 'downloads' || this.current.route === 'detail') && !ports.readingActive())
+      ports.restoreDownloads({ kind: 'resume' });
   }
 
   openDownloads(intent: SharedDownloadOpeningIntent, currentBook: () => ShelfBook | undefined,

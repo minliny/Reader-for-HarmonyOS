@@ -118,6 +118,7 @@ import { ReaderNavigation, retainedReaderRoute, type DetailReturnRoute, type Dir
 import { readerSceneTransition, READER_ROUTE_PARENT_DIM, READER_ROUTE_PARENT_PARALLAX } from '../app/navigation/ReaderRouteMotion';
 import { motionAnimateParam } from '../ui/foundation/MotionSpec';
 import { ReaderRouteStackSurface, type ReaderRouteSurfaceKey } from '../app/navigation/ReaderRouteStackSurface';
+import { ReaderPostLayoutFrame } from '../ui/layout/ReaderPostLayoutFrame';
 import { ReaderLayoutDebugOverlay } from '../app/composition/ReaderLayoutDebugOverlay';
 
 const DOMAIN = 0x5244;
@@ -232,6 +233,8 @@ struct Index {
   @State private visibleRouteMotion: ReaderRouteMotionKind | 'none' = 'none';
   @State private readerParentProgress: number = 0;
   @State private readerDetailCover: boolean = false;
+  private readerDetailCoverGeneration: number = 0;
+  @State private pendingBackDuringCover: number | undefined = undefined;
   private readerOriginLane: ReaderRoute = 'bookshelf';
   @State private sourceOpeningGeneration: number = 0;
   @State private sourceToolsOpeningGeneration: number = 0;
@@ -241,6 +244,8 @@ struct Index {
     if (snapshot.generation !== this.navigationGeneration || snapshot.route !== this.route) {
       this.bookRemovalConfirmation.dismiss();
       this.jsonImportPresentation.dismiss();
+      this.pendingBackDuringCover = undefined;
+      this.readerDetailCover = false;
     }
     if (this.route === 'bookshelf' && snapshot.route !== 'bookshelf' && this.bookshelfModalVisible()) {
       if (this.shelfMutations.snapshot.importPresentation !== undefined) this.shelfMutations.closeImport();
@@ -261,7 +266,9 @@ struct Index {
       if (to === 'source') this.sourceOpeningGeneration = snapshot.generation;
       else if (to === 'sourceTools') this.sourceToolsOpeningGeneration = snapshot.generation;
       const shelfSearch = (from === 'bookshelf' && to === 'search') || (from === 'search' && to === 'bookshelf');
-      this.visibleRouteMotion = shelfSearch || (fromReader && toReader) ? 'none' : this.navigationOwner.routeMotion();
+      const readerChangesHost = !fromReader && toReader && previousLane !== this.navigationOwner.returns.snapshot().readingOrigin;
+      this.visibleRouteMotion = shelfSearch || (fromReader && toReader) || readerChangesHost ?
+        'none' : this.navigationOwner.routeMotion();
     }
     // Keep the last right-hand pane mounted while the whole Settings tab leaves.
     const pane = this.navigationOwner.settingsPane();
@@ -278,14 +285,17 @@ struct Index {
     this.settingsSection = snapshot.settingsSection;
     this.route = snapshot.route;
     if (routeChanged) {
-      this.readerDetailCover = false;
       if (fromReader !== toReader) {
         const lane = this.appRouteLane();
         const sameLane = previousLane === lane;
         if (toReader) this.readerOriginLane = lane;
         // Hold the exited reader's paint below the native detail push.
-        this.readerDetailCover = fromReader && snapshot.route === 'detail' && this.visibleRouteMotion === 'push' &&
+        const cover = fromReader && snapshot.route === 'detail' && this.visibleRouteMotion === 'push' &&
           this.searchAppForeground && this.readingEntry.book !== undefined;
+        if (cover) {
+          this.readerDetailCoverGeneration += 1;
+          this.readerDetailCover = true;
+        }
         this.updateReaderParentMotion(toReader, sameLane && !this.readerDetailCover);
       }
     }
@@ -314,6 +324,28 @@ struct Index {
 
   private detailAboveReader(): boolean {
     return this.route === 'detail' && this.visibleRouteMotion === 'push';
+  }
+
+  private completeReaderDetailCover(generation: number): void {
+    if (!this.readerDetailCover || generation !== this.readerDetailCoverGeneration || this.route !== 'detail') return;
+    this.readerDetailCover = false;
+    if (this.pendingBackDuringCover !== generation) return;
+    // Allow the retired reader surface to leave layout before Back recreates it.
+    try {
+      const context = this.getUIContext();
+      context.postFrameCallback(new ReaderPostLayoutFrame(context, (): void => {
+        if (this.pendingBackDuringCover !== generation) return;
+        this.pendingBackDuringCover = undefined;
+        if (this.route === 'detail' && this.searchAppForeground) this.onBackPress();
+      }));
+    } catch (_) {
+      this.pendingBackDuringCover = undefined;
+    }
+  }
+
+  private appRouteBackGestureEnabled(): boolean {
+    return !this.readerDetailCover && this.pendingBackDuringCover === undefined && this.journeyRecoveryInputAllowed() &&
+      retainedReaderRoute(this.route, this.directoryReturnTarget) === undefined;
   }
   @StorageLink('readerAppForeground') @Watch('onSearchVisibilityChanged') private searchAppForeground: boolean = true;
   @State private jsonImportPresentation: JsonImportPresentation = new JsonImportPresentation();
@@ -705,6 +737,8 @@ struct Index {
 
   aboutToDisappear(): void {
     this.shelfReceiptRetired = true;
+    this.readerDetailCover = false;
+    this.pendingBackDuringCover = undefined;
     this.sourceSwitchPresentation.retireMangaRecovery();
     this.entryStartupTrace.retire();
     this.libraryAcquisition.dispose();
@@ -744,6 +778,11 @@ struct Index {
 
   onBackPress(): boolean {
     if (this.currentReadingRuntime() === undefined) return false;
+    if (this.readerDetailCover) {
+      this.pendingBackDuringCover = this.readerDetailCoverGeneration;
+      return true;
+    }
+    if (this.pendingBackDuringCover !== undefined) return true;
     return this.navigationOwner.dispatchBack({
       wideSettings: this.wideSettingsPane() !== undefined,
       nativeSurface: (): boolean => this.arkWebBack?.() === true ||
@@ -992,10 +1031,9 @@ struct Index {
           route: this.appRouteLane(), routeMotion: this.searchAppForeground ? this.visibleRouteMotion : 'none',
           surfaceId: 'reader-app-route-stack',
           viewportWidth: this.routeViewportWidth(), reduceMotion: this.appReduceMotion,
-          readerCoverBehind: this.readerDetailCover,
-          onReaderCovered: (): void => { this.readerDetailCover = false; },
-          backGestureEnabled: this.journeyRecoveryInputAllowed() &&
-            retainedReaderRoute(this.route, this.directoryReturnTarget) === undefined,
+          readerCoverGeneration: this.readerDetailCover ? this.readerDetailCoverGeneration : undefined,
+          onReaderCovered: (generation: number): void => this.completeReaderDetailCover(generation),
+          backGestureEnabled: this.appRouteBackGestureEnabled(),
           content: (route: ReaderRouteSurfaceKey): void => { this.appRouteContent(route as ReaderRoute); },
           onBack: (): boolean => this.onBackPress(),
         });
@@ -1664,7 +1702,10 @@ struct Index {
   }
 
   private onSearchVisibilityChanged(): void {
-    if (!this.searchAppForeground) this.readerDetailCover = false;
+    if (!this.searchAppForeground) {
+      this.readerDetailCover = false;
+      this.pendingBackDuringCover = undefined;
+    }
     this.transientFeedback.reset();
     if (this.libraryAcquisition.currentOwner() === undefined || this.shelfReceiptRetired) return;
     this.readingEntry.shelfPreparationVisibilityChanged((): ReadingShelfPreparationScene => this.readingShelfPreparationScene());
