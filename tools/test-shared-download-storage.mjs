@@ -11,6 +11,7 @@ const { createHash }=await import('node:crypto');
 const { stripTypeScriptTypes }=await import('node:module');
 const { ReaderCoreRequestError, isReaderCoreTransactionPendingError }=await import('../entry/vendor/core-harmony/sdk/reader_core.ts');
 const { ReaderWriteEvidence }=await import('../entry/src/main/ets/app/ReaderWriteEvidence.ts');
+const { readerHostFilesDirectory }=await import('../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts');
 const { createMangaAtomicPayloadReaderFixture }=await import('./lib/manga-atomic-payload-probe.mjs');
 
 // Full production methods, real temporary files. The sparse quota fixtures
@@ -46,9 +47,9 @@ const util = {
 const crypto = {createMd:()=>{const h=createHash('sha256');return{update:async({data})=>{h.update(data);},digest:async()=>({data:h.digest()})};}};
 class MaterializationError extends Error {constructor(kind,message){super(message);this.kind=kind;this.code=kind;}}
 const readMangaAtomicPayload = createMangaAtomicPayloadReaderFixture(io);
-const Cache = new Function('fileIo','statfs','cryptoFramework','util','canonicalReadingImageBaseUrl','assertReadingOfflineWriteCapacity','ReadingOfflineMaterializationError','readMangaAtomicPayload', `${executable}\nreturn ReadingImageDiskCache;`)(
+const Cache = new Function('fileIo','statfs','cryptoFramework','util','canonicalReadingImageBaseUrl','assertReadingOfflineWriteCapacity','ReadingOfflineMaterializationError','readMangaAtomicPayload','readerHostFilesDirectory', `${executable}\nreturn ReadingImageDiskCache;`)(
   io,{getFreeSize:async()=>8*1024**3},crypto,util,b=>b?.trim().split('#')[0]||undefined,
-  (free,bytes,reserve)=>{if(free<bytes+reserve)throw new MaterializationError('storage_full','MANGA_CACHE_STORAGE_FULL');},MaterializationError,readMangaAtomicPayload,
+  (free,bytes,reserve)=>{if(free<bytes+reserve)throw new MaterializationError('storage_full','MANGA_CACHE_STORAGE_FULL');},MaterializationError,readMangaAtomicPayload,readerHostFilesDirectory,
 );
 
 const storageSource = readFileSync(join(repo, 'entry/src/main/ets/features/downloads/application/SharedDownloadStorageGateway.ts'), 'utf8');
@@ -62,9 +63,10 @@ const resource = c => ({ ...c, contentVersion: 'body-v1', imageUrl: `https://fix
 let serial = 0;
 async function fixture(options = {}) {
   const { legacy = [], bodyCount = 0 } = options;
+  const { freeBytes = () => 4 * 1024 ** 3, extraAutomaticBytes = () => 0 } = options;
   const migration = Object.hasOwn(options, 'migration') ? options.migration : [];
   const dir = join(root, `case-${++serial}`); await fs.mkdir(dir);
-  const disk = new Cache({ filesDir: dir }, { getFreeBytes: async () => 4 * 1024 ** 3, getTotalBytes: async () => 8 * 1024 ** 3 });
+  const disk = new Cache({ filesDir: dir }, { getFreeBytes: async () => freeBytes(), getTotalBytes: async () => 8 * 1024 ** 3 });
   disk.setMangaStorageAuthority({ classify: async () => 'unknown', candidates: async () => [], pending: async () => [],
     policy: async () => ({ status: 'unknown', inUse: true, lastReadAt: null }) });
   const bodies = new Map(), calls = []; let retained = [], protectedRows = [], revision = 0, completed = false;
@@ -79,7 +81,7 @@ async function fixture(options = {}) {
   const totals = params => {
     const retainedKeys = new Set((params.retainedChapters ?? []).map(chapterKey));
     const protectedKeys = new Set((params.protectedChapters ?? []).map(chapterKey));
-    let totalBytes = 0, retainedBytes = 0, cleanableBytes = 0;
+    let totalBytes = extraAutomaticBytes(), retainedBytes = 0, cleanableBytes = 0;
     for (const [key, row] of bodies) { const bytes = utf8(row.content); totalBytes += bytes;
       if (retainedKeys.has(key)) retainedBytes += bytes; else if (!protectedKeys.has(key)) cleanableBytes += bytes; }
     return { totalBytes, retainedBytes, automaticBytes: totalBytes - retainedBytes, cleanableBytes,
@@ -289,6 +291,25 @@ if(id==='settings-partial-ack'){
   }
 }
 if(id==='automatic-policy'){
+  {
+    const mib = 1024 ** 2;
+    let free = 4 * 1024 ** 3, used = 40 * mib;
+    const f = await fixture({ freeBytes: () => free, extraAutomaticBytes: () => used, bodyCount: 1 });
+    await f.disk.configurePolicy({ capacityBytes: 128 * mib, expiryDays: 7 });
+    f.keep([identity(0)]);
+    assert.equal(await f.gateway.canPrefetchTextChapter(() => true), true);
+    used = 100 * mib;
+    assert.equal(await f.gateway.canPrefetchTextChapter(() => true), false, 'keep cache headroom below the user-set limit');
+    used = 128 * mib;
+    assert.equal(await f.gateway.canPrefetchTextChapter(() => true), false, 'deny when the cache limit is reached');
+    used = 40 * mib; free = 520 * mib;
+    assert.equal(await f.gateway.canPrefetchTextChapter(() => true), false, 'keep headroom above the existing system reserve');
+    free = 4 * 1024 ** 3;
+    assert.equal(await f.gateway.canPrefetchTextChapter(() => false), false, 'retired admission is refused');
+    assert.equal(f.calls.every(call => call.method === 'cache.storage.summary'), true, 'admission never runs storage cleanup');
+    assert.equal(f.bodies.has(chapterKey(identity(0))), true, 'retained download remains present under pressure');
+    f.disk.close();
+  }
 {
     const dir = join(root, `case-${++serial}`); await fs.mkdir(dir);
     const volumeBytes = 1024 ** 3 + 123;

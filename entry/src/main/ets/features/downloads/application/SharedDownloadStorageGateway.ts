@@ -34,6 +34,8 @@ export interface SettingsTextCleanupJournal {
 interface StorageCleanupOptions { textOnly?: boolean; evidence?: ReaderWriteEvidence; current?: () => boolean; }
 export interface SharedDownloadStoragePolicyResult extends SharedDownloadStoragePolicy { maintenanceMessage?: string; }
 
+const TEXT_PREFETCH_HEADROOM_BYTES = 32 * 1024 * 1024;
+
 /** Reader ownership adapter joining existing Core transactions with existing
  * Host image grants. No second cache, LRU, queue, or guessed physical receipt. */
 export class SharedDownloadStorageGateway {
@@ -63,6 +65,29 @@ export class SharedDownloadStorageGateway {
   readPolicy(): Promise<SharedDownloadStoragePolicy> { return this.disk.readPolicy(); }
   hasActiveMutation(): boolean { return this.activeMutations > 0; }
   waitForActiveMutation(): Promise<void> { return this.mutationTail; }
+
+  /** Check shared automatic-cache use before a single optional chapter.
+   * Keep room above the system reserve for SQLite writes and foreground work. */
+  async canPrefetchTextChapter(current: () => boolean): Promise<boolean> {
+    if (!current() || this.hasActiveMutation()) return false;
+    const revision = this.summaryRevision;
+    try {
+      const owned = this.runtime.captureDownloadStorageValidity?.();
+      const capacity = await this.disk.mangaStorageCapacity();
+      const minimumFree = capacity.systemReserveBytes + TEXT_PREFETCH_HEADROOM_BYTES;
+      if (!current() || revision !== this.summaryRevision || capacity.freeBytes < minimumFree ||
+        capacity.cacheBudgetBytes < TEXT_PREFETCH_HEADROOM_BYTES) return false;
+
+      const usage = await this.summary();
+      return current() && revision === this.summaryRevision && owned?.() !== false &&
+        this.indexedInventory !== undefined && this.disk.isReadingStorageInventoryCurrent(this.indexedInventory) &&
+        this.number(usage.automaticBytes) <= capacity.cacheBudgetBytes - TEXT_PREFETCH_HEADROOM_BYTES &&
+        this.number(usage.availableBytes) >= minimumFree;
+    } catch (_) {
+      return false;
+    }
+  }
+
   bookImageBytes(sourceId: string, bookId: string): number | undefined {
     if (this.indexedInventory === undefined || !this.disk.isReadingStorageInventoryCurrent(this.indexedInventory)) return undefined;
     return this.imageBookBytes.get(JSON.stringify([sourceId, bookId]));

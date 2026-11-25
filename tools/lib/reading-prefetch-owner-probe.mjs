@@ -6,12 +6,13 @@ const { ReadingOfflineGateway } = await import('../../entry/src/main/ets/feature
 const { RemoteReadingFlowGateway } = await import('../../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 const { sameRemoteSessionEvidence, canAppendRemoteReadingCatalog } = await import('../../entry/src/main/ets/features/reading/application/RemoteReadingEvidence.ts');
 const { errorMessageOf } = await import('../../entry/src/main/ets/app/ErrorMessage.ts');
+const deepPrefetch = await import('../../entry/src/main/ets/features/reading/application/ReadingDeepPrefetchPolicy.ts');
 const source = readFileSync(new URL('../../entry/src/main/ets/features/reading/application/ReadingPrefetchHost.ts',import.meta.url),'utf8');
 /** Complete original feature owner and Gateways. Runtime installation is the
  * only authority seam; IO, timing and native layout are separate fixtures. */
-export function readingPrefetchOwnerProbe(readCurrent, overrides={}) {
+export function readingPrefetchOwnerProbe(readCurrent, overrides={}, sourceText=source) {
   const Runtime=runtimeOwnerIdentityProbe(readCurrent);
-  const deps={ReaderRuntimeOwner:Runtime,ReadingOfflineGateway,RemoteReadingFlowGateway,sameRemoteSessionEvidence,canAppendRemoteReadingCatalog,errorMessageOf,...overrides};
-  const Host=new Function(...Object.keys(deps),stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm,'')).replace(/\bexport /g,'')+';return ReadingPrefetchHost;')(...Object.values(deps));
+  const deps={ReaderRuntimeOwner:Runtime,ReadingOfflineGateway,RemoteReadingFlowGateway,sameRemoteSessionEvidence,canAppendRemoteReadingCatalog,errorMessageOf,...deepPrefetch,...overrides};
+  const Host=new Function(...Object.keys(deps),stripTypeScriptTypes(sourceText.replace(/^import[\s\S]*?;\n/gm,'')).replace(/\bexport /g,'')+';return ReadingPrefetchHost;')(...Object.values(deps));
   return {ReadingPrefetchHost:Host,ReaderRuntimeOwner:Runtime};
 }

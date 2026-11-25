@@ -17,6 +17,7 @@ export interface ReaderControlSearchFrame {
   snippetHeightVp: number;
   loadMoreHeightVp: number;
   loadMoreWidthVp: number;
+  cacheScopeHeightVp: number;
 }
 export interface ReaderControlSearchNaturalSize {
   fieldHeightVp: number;
@@ -26,6 +27,7 @@ export interface ReaderControlSearchNaturalSize {
   rowHeightVp: number;
   loadMoreHeightVp: number;
   loadMoreWidthVp: number;
+  cacheScopeHeightVp?: number;
   statusHeightVp: number;
   backHeightVp: number;
   backWidthVp: number;
@@ -96,5 +98,6 @@ export function sampleReaderControlSearch(p: number, availableWidth: number,
     snippetHeightVp: natural?.snippetHeightVp ?? 28,
     loadMoreHeightVp: natural?.loadMoreHeightVp ?? 0,
     loadMoreWidthVp: natural?.loadMoreWidthVp ?? 112,
+    cacheScopeHeightVp: natural?.cacheScopeHeightVp ?? 0,
   };
 }

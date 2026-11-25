@@ -1,4 +1,5 @@
 import { commonEventManager } from '@kit.BasicServicesKit';
+import screenLock from '@ohos.screenLock';
 import { inputConsumer, KeyCode, type KeyEvent } from '@kit.InputKit';
 import type { ReaderPageTurnDirection } from '../features/reading/ui/ReaderPageGestureState';
 
@@ -12,6 +13,8 @@ const KEY_PRESSED_ACTION = 1;
 export class ReaderReadingSystemEventHost {
   private volumeHandler: ((direction: ReaderPageTurnDirection) => void) | undefined = undefined;
   private screenOffHandler: (() => void) | undefined = undefined;
+  private screenLockHandler: ((locked: boolean) => void) | undefined = undefined;
+  private screenStateRevision: number = 0;
   private volumeRegistered: boolean = false;
   private screenOffSubscriber: commonEventManager.CommonEventSubscriber | undefined = undefined;
   private screenOffSubscriptionGeneration: number = 0;
@@ -64,6 +67,33 @@ export class ReaderReadingSystemEventHost {
     }
   }
 
+  setScreenLockHandler(handler: (locked: boolean) => void): void {
+    if (this.disposed) return;
+    this.screenLockHandler = handler;
+    void this.ensureScreenOffSubscription().then((): void => this.readScreenLock());
+  }
+
+  private readScreenLock(): void {
+    if (this.disposed || this.screenLockHandler === undefined) return;
+    const revision = ++this.screenStateRevision;
+    void screenLock.isScreenLocked().then((locked: boolean): void => {
+      if (!this.disposed && revision === this.screenStateRevision) this.screenLockHandler?.(locked);
+    }).catch((): void => {});
+  }
+
+  private handleScreenEvent(event: string): void {
+    const support = commonEventManager.Support;
+    this.screenStateRevision += 1;
+    if (event === support.COMMON_EVENT_SCREEN_OFF) this.screenOffHandler?.();
+    if (event === support.COMMON_EVENT_SCREEN_OFF || event === support.COMMON_EVENT_SCREEN_LOCKED) {
+      this.screenLockHandler?.(true);
+    } else if (event === support.COMMON_EVENT_SCREEN_UNLOCKED) {
+      this.screenLockHandler?.(false);
+    } else if (event === support.COMMON_EVENT_SCREEN_ON) {
+      this.readScreenLock();
+    }
+  }
+
   dispose(): void {
     if (this.disposed) {
       return;
@@ -71,6 +101,7 @@ export class ReaderReadingSystemEventHost {
     this.disposed = true;
     this.volumeHandler = undefined;
     this.screenOffHandler = undefined;
+    this.screenLockHandler = undefined;
     this.unregisterVolumeKeys();
     this.screenOffSubscriptionGeneration += 1;
     const subscriber = this.screenOffSubscriber;
@@ -107,7 +138,8 @@ export class ReaderReadingSystemEventHost {
     this.screenOffSubscriptionGeneration = generation;
     try {
       const subscriber = await commonEventManager.createSubscriber({
-        events: [commonEventManager.Support.COMMON_EVENT_SCREEN_OFF],
+        events: [commonEventManager.Support.COMMON_EVENT_SCREEN_OFF, commonEventManager.Support.COMMON_EVENT_SCREEN_ON,
+          commonEventManager.Support.COMMON_EVENT_SCREEN_LOCKED, commonEventManager.Support.COMMON_EVENT_SCREEN_UNLOCKED],
       });
       if (this.disposed || generation !== this.screenOffSubscriptionGeneration) {
         commonEventManager.unsubscribe(subscriber);
@@ -115,7 +147,7 @@ export class ReaderReadingSystemEventHost {
       }
       await commonEventManager.subscribeToEvent(
         subscriber,
-        (_data: commonEventManager.CommonEventData): void => this.screenOffHandler?.(),
+        (data: commonEventManager.CommonEventData): void => this.handleScreenEvent(data.event),
       );
       if (this.disposed || generation !== this.screenOffSubscriptionGeneration) {
         commonEventManager.unsubscribe(subscriber);

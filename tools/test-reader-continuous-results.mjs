@@ -8,6 +8,7 @@ import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { ReaderContentSearchPublication } from './lib/reader-content-search-owner-probe.mjs';
 import { searchListDependencies } from './lib/reader-content-search-list-probe.mjs';
 import * as geometry from '../entry/src/main/ets/features/reading/ui/ReaderControlSearchGeometry.ts';
+import * as searchControlGeometry from '../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts';
 import { readerTypographyRoles as typography, readerMessageStyles as message } from './lib/reader-typography-probe.mjs';
 const styles=selectedProductionClasses(new URL('../entry/src/main/ets/ui/foundation/ReaderTypography.ets',import.meta.url),['ReaderTextStyle','ReaderInheritedTextStyle']);
 const file = name => new URL('../entry/src/main/ets/features/reading/ui/'+name,import.meta.url);
@@ -45,7 +46,7 @@ for(const id of selectContractCases(defs)){
  if(id==='normal-budget'){
   const measured=[];
   const {readerControlSearchMinimumFacts:facts,measureReaderSearchMinimum:measure}=pureModuleProbe(readFileSync(file('ReaderControlSearchMinimum.ets'),'utf8'),'ReaderControlSearchMinimum.ets',{
-   ...geometry,...typography,...message,...styles,measureReaderControlText:(_ctx,text)=>{measured.push(text);return{heightVp:14,widthVp:20,singleLineWidthVp:20,fitsWidth:true};}
+   ...geometry,...searchControlGeometry,...typography,...message,...styles,measureReaderControlText:(_ctx,text)=>{measured.push(text);return{heightVp:14,widthVp:20,singleLineWidthVp:20,fitsWidth:true};}
   },['readerControlSearchMinimumFacts','measureReaderSearchMinimum']);
   const row={chapterIndex:0,chapterTitle:'章',snippet:'词'};
   for(const state of [{kind:'results',keyword:'词',results:[row],hasMore:true},{kind:'results',keyword:'词',results:[row],hasMore:true,loadingMore:true},
@@ -60,6 +61,32 @@ for(const id of selectContractCases(defs)){
    assert.equal(f.loadMoreLabel,retry?'重试':'重新搜索');const p=measure({}, {quickContentWidthVp:286,fullContentWidthVp:338},f);
    assert.ok(p.quick.natural.loadMoreHeightVp>=44);assert.ok(p.full.natural.loadMoreHeightVp>=44);
   }
+  const widths={quickContentWidthVp:286,fullContentWidthVp:338};
+  const state={kind:'results',keyword:'词',results:[row],cacheScope:{cachedChapters:12,totalChapters:20}};
+  const local=facts({query:'词',state,retainedLoadMoreFailure:false});
+  const online=facts({query:'词',state,onlineBook:true,retainedLoadMoreFailure:false});
+  assert.equal(local.message,'');
+  assert.equal(online.message,'仅搜索已缓存章节（目录已缓存 12 / 20 章）');
+  const localProfile=measure({},widths,local), onlineProfile=measure({},widths,online);
+  const SearchContent=selectedProductionMethods(file('ReaderControlSearchContent.ets'),'ReaderControlSearchContent',['resultLayoutAt']);
+  const view=Object.assign(new SearchContent(),{displayState:()=>state});
+  for(const [endpoint,progress,width,height] of [['quick',0,286,190],['full',1,338,666]]){
+   const localForm=localProfile[endpoint],onlineForm=onlineProfile[endpoint];
+   const localFrame=geometry.sampleReaderControlSearch(progress,width,height,localForm.natural);
+   const onlineFrame=geometry.sampleReaderControlSearch(progress,width,height,onlineForm.natural);
+   assert.equal(localForm.natural.cacheScopeHeightVp,0);
+   assert.equal(onlineForm.natural.cacheScopeHeightVp,14);
+   assert.equal(onlineForm.minimum.heightVp,localForm.minimum.heightVp+14);
+   assert.equal(onlineForm.natural.rowHeightVp,localForm.natural.rowHeightVp);
+   assert.equal(onlineForm.natural.loadMoreHeightVp,0);
+   assert.deepEqual(onlineFrame.field,localFrame.field);
+   assert.deepEqual(onlineFrame.firstResult,localFrame.firstResult);
+   assert.equal(view.resultLayoutAt(onlineFrame).viewportHeightVp,view.resultLayoutAt(localFrame).viewportHeightVp-14);
+  }
+  const idle=facts({query:'',state:{kind:'idle'},onlineBook:true,retainedLoadMoreFailure:false});
+  assert.equal(idle.message,'仅搜索已缓存章节');
+  const empty=facts({query:'词',state:{kind:'empty',keyword:'词',cacheScope:state.cacheScope},onlineBook:true,retainedLoadMoreFailure:false});
+  assert.equal(empty.message,'未找到“词”\n仅搜索已缓存章节（目录已缓存 12 / 20 章）');
  }
  if(id==='incremental-cost'){
   const p=new ReaderContentSearchPublication(),Source=searchListDependencies.ReaderContentSearchDataSource,source=new Source();

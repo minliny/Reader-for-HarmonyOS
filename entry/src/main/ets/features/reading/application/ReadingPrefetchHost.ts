@@ -5,12 +5,14 @@ import { RemoteReadingFlowGateway, type RemoteReadingSession, type RemoteReading
 import type { LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import type { RemoteReadingIdentity } from './RemoteReadingContract';
 import { sameRemoteSessionEvidence, canAppendRemoteReadingCatalog } from './RemoteReadingEvidence';
+import { DEEP_PREFETCH_STEP_INTERVAL_MS, deepPrefetchAllowed, hasDeepPrefetchLowWater,
+  immediateReadingPrefetchWindow, nextDeepPrefetchChapter,
+  ReadingDeepPrefetchBreaker, ReadingTrialClock, type DeepPrefetchOutcome } from './ReadingDeepPrefetchPolicy';
 
-const READING_CACHE_BEFORE = 2;
-const READING_CACHE_AFTER = 2;
 const CATALOG_REFRESH_NEAR_END = 3;
 const CATALOG_REFRESH_INTERVAL_MS = 10 * 60 * 1000;
 const CATALOG_REFRESH_RETRY_INTERVAL_MS = 30 * 1000;
+const DEEP_PREFETCH_CACHE_OBSERVATION_MS = 30_000;
 
 export interface ReadingPrefetchLease {
   /** Captured page navigation/session/lifecycle admission, never a fresh ID. */
@@ -20,8 +22,32 @@ export interface ReadingPrefetchLease {
   projected: (entries: LocalReadingTocEntry[]) => void;
   refreshed: (session: RemoteReadingSession) => void;
   diagnostic: (stage: 'window' | 'catalog', message: string) => void;
+  manualBusy?: () => boolean;
 }
 export type ReadingPrefetchMode = 'reader' | 'shelf' | 'opportunistic';
+export interface ReadingPrefetchActivity {
+  chapterIndex: number;
+  chapterOffset: number;
+  active: boolean;
+  playing: boolean;
+  interacted?: boolean;
+  yieldToReading?: boolean;
+}
+interface DeepReadingWindow {
+  session: RemoteReadingSession;
+  lease: ReadingPrefetchLease;
+  current: () => boolean;
+  onShelf: () => boolean;
+  chapterIndex: number;
+  progressChapterIndex: number;
+  chapterOffset: number;
+  active: boolean;
+  playing: boolean;
+  refilling: boolean;
+  attempted: Set<number>;
+  settled: boolean;
+  cacheObservation?: { at: number; indexes: Set<number> };
+}
 interface ReadingWindowIntent {
   key: string;
   session: RemoteReadingSession;
@@ -50,6 +76,16 @@ export class ReadingPrefetchHost {
   private refreshAt: Map<string, number> = new Map();
   private attemptAt: Map<string, number> = new Map();
   private refreshInFlight: Map<string, () => boolean> = new Map();
+  private trial: ReadingTrialClock = new ReadingTrialClock();
+  private breaker: ReadingDeepPrefetchBreaker = new ReadingDeepPrefetchBreaker();
+  private deep: DeepReadingWindow | undefined;
+  private deepTask: Promise<void> | undefined;
+  private deepTimer: number = -1;
+  private deepWakeAt: number = 0;
+  private deepRevision: number = 0;
+  private deepNextStepAt: number = 0;
+  private stopDeepNetwork: (() => void) | undefined;
+  private stopForegroundWork: (() => void) | undefined;
 
   constructor(runtime: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) { this.runtime = runtime; }
   static forRuntime(runtime: ReaderRuntimeOwner = ReaderRuntimeOwner.current()): ReadingPrefetchHost {
@@ -64,9 +100,178 @@ export class ReadingPrefetchHost {
     this.lifecycle += 1; this.requestedKey = ''; this.pending = undefined; this.completed = undefined;
     this.readableToc = undefined; this.indexes = []; this.positions.clear();
     this.pruneSettledTimes(Date.now());
+    this.retireDeepReading();
     // Active native work remains with the existing Gateway until its actual
     // leases/reports settle. A later admission shares that drain, never spawns
     // a second concurrent reader-window producer.
+  }
+
+  retireDeepReading(): void {
+    this.trial.pause(Date.now());
+    this.deep = undefined;
+    this.interruptDeep();
+    this.stopDeepNetwork?.(); this.stopDeepNetwork = undefined;
+    this.stopForegroundWork?.(); this.stopForegroundWork = undefined;
+  }
+
+  observeReading(session: RemoteReadingSession, activity: ReadingPrefetchActivity,
+    lease: ReadingPrefetchLease, onShelf: () => boolean): void {
+    if (!deepPrefetchAllowed(session.contentKind, session.identity.sourceId, true, true) ||
+      session.acquisitionMode !== 'online' || !lease.isCurrent()) return;
+    const now = Date.now(), prior = this.deep;
+    if (prior === undefined || !prior.current() || !sameRemoteSessionEvidence(prior.session, session)) {
+      if (!activity.active) return;
+      this.interruptDeep();
+      const contentCurrent = this.runtime.captureReadingContentValidity(session.identity.sourceId, session.identity.bookId);
+      this.deep = { session, lease, onShelf, chapterIndex: activity.chapterIndex, progressChapterIndex: activity.chapterIndex,
+        chapterOffset: activity.chapterOffset,
+        active: false, playing: false, refilling: false, settled: false, attempted: new Set<number>(),
+        current: (): boolean => ReaderRuntimeOwner.isCurrent(this.runtime) && contentCurrent() &&
+          lease.isCurrent() && sameRemoteSessionEvidence(lease.displayedSession(), session) };
+      this.stopDeepNetwork ??= this.runtime.observeDeepReadingPrefetchNetwork((): void => {
+        this.interruptDeep();
+        this.wakeDeep();
+      });
+      this.stopForegroundWork ??= this.runtime.bookAcquisitions().observeForegroundReadingWork((): void => {
+        if (this.runtime.bookAcquisitions().hasForegroundReadingWork()) this.interruptDeep();
+        this.wakeDeep();
+      });
+    }
+    const work = this.deep;
+    if (work === undefined) return;
+    const needsImmediateWindow = activity.active && (!work.active || activity.chapterIndex !== work.chapterIndex);
+    if (!activity.active || activity.yieldToReading === true || lease.manualBusy?.() === true) this.interruptDeep();
+    if (activity.active) this.moveDeepWindow(work, activity.chapterIndex);
+    work.active = activity.active;
+    work.playing = activity.playing;
+    this.trial.observe(this.key(session.identity), now, activity.active, activity.playing, false, activity.interacted);
+    if (needsImmediateWindow) void this.prefetch(session, activity.chapterIndex, lease, 'reader')
+      .catch((error: Error): void => this.diagnostic(lease, 'window', errorMessageOf(error)));
+    this.wakeDeep();
+  }
+
+  /** Only accepted position changes count as reading advancement. A ready or
+   * repeated persistence receipt alone cannot qualify a trial. */
+  noteReadingProgress(session: RemoteReadingSession, chapterIndex: number, chapterOffset: number): void {
+    const work = this.deep;
+    if (work === undefined || !work.active || !work.current() || !sameRemoteSessionEvidence(work.session, session)) return;
+    const advanced = chapterIndex !== work.progressChapterIndex || chapterOffset !== work.chapterOffset;
+    work.progressChapterIndex = chapterIndex;
+    work.chapterOffset = chapterOffset;
+    if (advanced) this.trial.observe(this.key(session.identity), Date.now(), true, work.playing, true);
+    this.wakeDeep();
+  }
+
+  private moveDeepWindow(work: DeepReadingWindow, chapterIndex: number): void {
+    if (work.chapterIndex === chapterIndex) return;
+    this.interruptDeep();
+    this.readableIndexes(work.session);
+    const prior = this.positions.get(work.chapterIndex), next = this.positions.get(chapterIndex);
+    if (work.settled || prior === undefined || next === undefined || Math.abs(prior - next) !== 1) {
+      work.refilling = false;
+      work.attempted.clear();
+    }
+    work.chapterIndex = chapterIndex;
+    work.settled = false;
+  }
+
+  private interruptDeep(): void {
+    this.deepRevision += 1;
+    if (this.deepTimer >= 0) clearTimeout(this.deepTimer);
+    this.deepTimer = -1;
+    this.deepWakeAt = 0;
+    this.deepNextStepAt = Date.now() + DEEP_PREFETCH_STEP_INTERVAL_MS;
+  }
+
+  private wakeDeep(): void {
+    const work = this.deep;
+    if (work === undefined || !work.active || !work.current()) {
+      this.trial.pause(Date.now());
+      return;
+    }
+    if (work.settled || work.lease.manualBusy?.() === true || this.task !== undefined || this.deepTask !== undefined ||
+      this.runtime.bookAcquisitions().hasForegroundReadingWork() ||
+      !this.runtime.deepReadingPrefetchNetworkAllowed()) return;
+    this.readableIndexes(work.session);
+    const position = this.positions.get(work.chapterIndex);
+    if (position === undefined || position + 3 >= this.indexes.length) return;
+    const now = Date.now(), key = this.key(work.session.identity);
+    const observed = work.cacheObservation;
+    if (!work.refilling && observed !== undefined && now >= observed.at && now - observed.at < DEEP_PREFETCH_CACHE_OBSERVATION_MS &&
+      !hasDeepPrefetchLowWater(this.indexes, position, (index: number): boolean => observed.indexes.has(index))) return;
+    const delay = this.trial.isUnlocked(key, now, work.onShelf(), position) ? 0 : this.trial.unlockDelay(key, now);
+    if (delay === undefined) return;
+    const wakeAt = Math.max(now + delay, this.deepNextStepAt, this.breaker.blockedUntil(work.session.identity.sourceId, now) ?? 0);
+    if (this.deepTimer >= 0 && this.deepWakeAt <= wakeAt) return;
+    if (this.deepTimer >= 0) clearTimeout(this.deepTimer);
+    this.deepWakeAt = wakeAt;
+    this.deepTimer = setTimeout((): void => {
+      this.deepTimer = -1;
+      this.deepWakeAt = 0;
+      if (!work.current() || work !== this.deep || !work.active) {
+        this.wakeDeep();
+        return;
+      }
+      const at = Date.now();
+      if (at < wakeAt || !this.trial.isUnlocked(key, at, work.onShelf(), position)) {
+        this.wakeDeep();
+        return;
+      }
+      const revision = this.deepRevision;
+      const current = (): boolean => work === this.deep && work.active && work.current() && revision === this.deepRevision &&
+        work.lease.manualBusy?.() !== true && this.task === undefined && !this.runtime.bookAcquisitions().hasForegroundReadingWork() &&
+        this.runtime.deepReadingPrefetchNetworkAllowed();
+      if (!current()) { this.wakeDeep(); return; }
+      this.deepTask = this.runDeepStep(work, position, current).finally((): void => {
+        this.deepTask = undefined;
+        this.deepNextStepAt = Math.max(this.deepNextStepAt, Date.now() + DEEP_PREFETCH_STEP_INTERVAL_MS);
+        this.wakeDeep();
+      });
+    }, Math.max(0, wakeAt - now));
+  }
+
+  private async runDeepStep(work: DeepReadingWindow, position: number, current: () => boolean): Promise<void> {
+    const gateway = new ReadingOfflineGateway(this.runtime);
+    let index: number | undefined;
+    try {
+      const availability = await gateway.loadTextPrefetchAvailability(work.session, current);
+      if (!current()) return;
+      work.cacheObservation = { at: Date.now(), indexes: availability.cached };
+      const excluded = new Set<number>([...work.attempted, ...availability.reserved]);
+      index = nextDeepPrefetchChapter(this.readableIndexes(work.session), position,
+        (item: number): boolean => availability.cached.has(item), excluded, work.refilling, false);
+      if (index === undefined) {
+        work.refilling = false;
+        work.settled = true;
+        return;
+      }
+      const admitted = await this.runtime.canDeepReadingPrefetchWrite(current).catch((): boolean => false);
+      if (!admitted) {
+        this.deepNextStepAt = Date.now() + CATALOG_REFRESH_RETRY_INTERVAL_MS;
+        return;
+      }
+      if (!current()) return;
+      work.refilling = true;
+      const chapter = await gateway.prefetchTextChapter(work.session, index, current);
+      if (!current()) return;
+      availability.cached.add(index);
+      this.breaker.record(work.session.identity.sourceId, Date.now(), 'success');
+      this.publish([chapter], work.session, current, work.lease);
+    } catch (error) {
+      if (!current()) return;
+      if (index === undefined) {
+        this.deepNextStepAt = Date.now() + CATALOG_REFRESH_RETRY_INTERVAL_MS;
+        return;
+      }
+      work.attempted.add(index);
+      const outcome: DeepPrefetchOutcome = gateway.deepPrefetchFailure(error as Error);
+      const sourceId = work.session.identity.sourceId, now = Date.now();
+      this.breaker.record(sourceId, now, outcome);
+      if (this.breaker.blockedUntil(sourceId, now) !== undefined) {
+        work.refilling = false;
+        work.attempted.clear();
+      }
+    }
   }
 
   noteCatalogRefresh(identity: RemoteReadingIdentity, lastCheckAt: number | undefined): void {
@@ -97,9 +302,10 @@ export class ReadingPrefetchHost {
     }
     if (chapterIndex === undefined) return;
     const position = readerOwned ? this.positions.get(chapterIndex) : indexes.indexOf(chapterIndex);
-    if (position === undefined || position < 0) return;
-    const startInclusive = indexes[Math.max(0, position - READING_CACHE_BEFORE)];
-    const endExclusive = indexes[Math.min(indexes.length - 1, position + READING_CACHE_AFTER)] + 1;
+    if (position === undefined) return;
+    const window = immediateReadingPrefetchWindow(indexes, position);
+    if (window === undefined) return;
+    const { startInclusive, endExclusive } = window;
     if (!readerOwned) {
       const result = await new ReadingOfflineGateway(this.runtime).prefetchWindow(session, startInclusive, endExclusive, current);
       this.publish(result.entries, session, current, lease);
@@ -114,7 +320,10 @@ export class ReadingPrefetchHost {
     this.requestedKey = key;
     this.pending = { key, session, startInclusive, endExclusive, lease,
       isCurrent: (): boolean => current() && this.requestedKey === key };
-    if (this.task === undefined) this.task = this.drain();
+    if (this.task === undefined) {
+      if (this.deep !== undefined) this.interruptDeep();
+      this.task = this.drain();
+    }
     return this.task;
   }
 
@@ -172,7 +381,7 @@ export class ReadingPrefetchHost {
           this.active = undefined;
         }
       }
-    } finally { this.task = undefined; }
+    } finally { this.task = undefined; this.wakeDeep(); }
   }
 
   private readableIndexes(session: RemoteReadingSession): number[] {

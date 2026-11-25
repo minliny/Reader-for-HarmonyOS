@@ -1,20 +1,13 @@
 import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
+import {readingPrefetchOwnerProbe} from './lib/reading-prefetch-owner-probe.mjs';
 async function run(id){
 
-const {registerHooks,stripTypeScriptTypes}=await import('node:module');
 const {readFileSync}=await import('node:fs');
-registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&!s.endsWith('.ts'))return n(`${s}.ts`,c);throw e;}}});
-const {ReadingOfflineGateway}=await import('../entry/src/main/ets/features/reading/application/ReadingOfflineGateway.ts');
-const {RemoteReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
-const evidence=await import('../entry/src/main/ets/features/reading/application/RemoteReadingEvidence.ts');
-const {errorMessageOf}=await import('../entry/src/main/ets/app/ErrorMessage.ts');
 let currentOwner;const ownedHosts=[];
 const source=readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReadingPrefetchHost.ts',import.meta.url),'utf8');
-const compile=source=>new Function('ReaderRuntimeOwner','ReadingOfflineGateway','RemoteReadingFlowGateway','sameRemoteSessionEvidence','canAppendRemoteReadingCatalog','errorMessageOf',
- stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm,'')).replace(/\bexport /g,'')+';return ReadingPrefetchHost;')(
- {current:()=>currentOwner,isCurrent:owner=>currentOwner===owner},ReadingOfflineGateway,RemoteReadingFlowGateway,evidence.sameRemoteSessionEvidence,evidence.canAppendRemoteReadingCatalog,errorMessageOf);
-const ProductionHost=compile(source),checks=[],warnings=[];
+const {ReadingPrefetchHost:ProductionHost}=readingPrefetchOwnerProbe(()=>currentOwner);
+const checks=[],warnings=[];
 const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 async function until(predicate){for(let turn=0;turn<1000;turn++){if(predicate())return;await new Promise(setImmediate);}assert.fail('controlled production boundary not reached');}
 function fixture(count=1370){
@@ -139,7 +132,8 @@ if(id==='refresh-retirement'){
 if(id==='lifecycle-negative'){
 {
  const unsafe=source.replaceAll('lifecycle === this.lifecycle &&','true &&');assert.notEqual(unsafe,source);
- const f=fixture(12),BadHost=compile(unsafe),host=new BadHost(f.runtime),gate=deferred();let published=0;
+ const f=fixture(12),{ReadingPrefetchHost:BadHost}=readingPrefetchOwnerProbe(()=>currentOwner,{},unsafe);
+ const host=new BadHost(f.runtime),gate=deferred();let published=0;
  f.runtime.bookAcquisitions=()=>({async acquireBook(){await gate.promise;return{...f.session,catalogVersion:'catalog2'};}});
  const lease={isCurrent:()=>true,displayedSession:()=>f.session,directory:()=>f.page.detailToc,projected(){},refreshed(){published++;},diagnostic(){}};
  const work=host.refreshNearEnd(f.session,lease);host.retire();gate.resolve();await work;

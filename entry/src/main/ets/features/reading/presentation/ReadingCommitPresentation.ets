@@ -4,7 +4,7 @@ import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGatewa
 import type { RemoteReadingSession } from '../application/RemoteReadingFlowGateway';
 import type { ReadingEntryPresentation } from './ReadingEntryPresentation';
 import { sameRemoteSessionEvidence } from '../application/RemoteReadingEvidence';
-import { ReadingPrefetchHost, type ReadingPrefetchLease } from '../application/ReadingPrefetchHost';
+import { ReadingPrefetchHost, type ReadingPrefetchActivity, type ReadingPrefetchLease } from '../application/ReadingPrefetchHost';
 import type { SourceSwitchPendingTransaction } from '../../source/application/SourceSwitchHost';
 import { SourceSwitchCompletionPresentation } from '../../source/presentation/SourceSwitchCompletionPresentation';
 
@@ -60,12 +60,30 @@ export class ReadingCommitPresentation {
     if (session?.identity.sourceId === commit.sourceId && session.identity.bookId === commit.bookId) {
       void this.prefetch(session, commit.chapterIndex)
         .catch((error: Error): void => this.ports.diagnostic('window', error.message));
+      const owner = this.ports.scene().owner;
+      if (owner !== undefined && this.ports.ownsRuntime(owner)) {
+        ReadingPrefetchHost.forRuntime(owner).noteReadingProgress(session, commit.chapterIndex, commit.chapterOffset);
+      }
       this.refreshNearEnd(session, commit.chapterIndex);
     }
     this.ports.notifyFileNavigation();
   }
 
-  retire(): void { this.completion = undefined; }
+  retire(): void {
+    this.completion = undefined;
+    const owner = this.ports.scene().owner;
+    if (owner !== undefined && this.ports.ownsRuntime(owner)) ReadingPrefetchHost.forRuntime(owner).retireDeepReading();
+  }
+
+  observeReading(sourceId: string, bookId: string, activity: ReadingPrefetchActivity): void {
+    const entry = this.ports.entry(), owner = this.ports.scene().owner;
+    const session = entry.session;
+    if (owner === undefined || !this.ports.ownsRuntime(owner) || session === undefined ||
+      session.identity.sourceId !== sourceId || session.identity.bookId !== bookId) return;
+    const lease = this.lease(session, owner, true);
+    ReadingPrefetchHost.forRuntime(owner).observeReading(session, activity, lease,
+      (): boolean => this.ports.entry().inBookshelf);
+  }
 
   async prefetch(session: RemoteReadingSession, preferredChapterIndex?: number,
     shelfCurrent?: () => boolean, capturedOwner?: ReaderRuntimeOwner): Promise<void> {
@@ -103,6 +121,7 @@ export class ReadingCommitPresentation {
     return { isCurrent: current,
       displayedSession: (): RemoteReadingSession | undefined => this.ports.entry().session,
       directory: (): LocalReadingTocEntry[] => this.ports.entry().toc,
+      manualBusy: (): boolean => this.ports.entry().offlineOperationActive,
       projected: (entries: LocalReadingTocEntry[]): void => { if (current()) this.ports.entry().toc = entries; },
       refreshed: (refreshed: RemoteReadingSession): void => {
         if (!current()) return;

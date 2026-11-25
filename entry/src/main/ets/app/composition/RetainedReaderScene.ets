@@ -3,6 +3,7 @@ import { MangaSourceSwitchPresentation } from '../../features/manga/presentation
 import { readerEntryPresentation, type ReaderRetainedPresentation } from '../../features/reading/ui/LocalReadingExperience';
 import type { ReadingCommit } from '../../features/reading/application/ReadingCommit';
 import type { LocalReadingTocEntry } from '../../features/reading/application/LocalReadingFlowGateway';
+import type { ReadingPrefetchActivity } from '../../features/reading/application/ReadingPrefetchHost';
 import type { ReaderPageBookmarkToggleRequest } from '../../features/reading/presentation/ReaderDirectoryMarkerState';
 import type { RemoteReadingFailureKind } from '../../features/reading/application/RemoteContentAdmission';
 import type { RemoteReadingSession } from '../../features/reading/application/RemoteReadingFlowGateway';
@@ -110,6 +111,8 @@ export struct RetainedReaderScene {
         onReadingFailure: (sourceId: string, bookId: string, message: string, kind?: RemoteReadingFailureKind): void => {
           if (this.ports?.runtime() !== undefined) this.reading.projectReaderFailure(sourceId, bookId, message, kind);
         },
+        onReadingPrefetchActivity: (sourceId: string, bookId: string, activity: ReadingPrefetchActivity): void =>
+          this.commits.observeReading(sourceId, bookId, activity),
         onChapterCommitted: (chapter: number, title: string): void => {
           const ports = this.ports, owner = ports?.runtime();
           if (ports !== undefined && owner !== undefined) this.reading.commitDirectoryChapter(owner, chapter, title, ports.resetFeedback);

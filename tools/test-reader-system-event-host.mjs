@@ -9,10 +9,16 @@ function fixture({failDown=false}={}) {
 
  const listeners=new Map(),on=[],off=[],creates=[],unsubscribed=[],callbacks=new Map();
  const inputConsumer={on(type,options,callback){on.push({type,options,callback});if(failDown&&options.key==='DOWN')throw Error('DOWN unavailable');listeners.set(options.key,callback);},off(type,callback){off.push({type,callback});for(const[key,value]of listeners)if(value===callback)listeners.delete(key);}};
- const commonEventManager={Support:{COMMON_EVENT_SCREEN_OFF:'SCREEN_OFF'},createSubscriber(options){const gate=deferred();creates.push({options,gate});return gate.promise;},async subscribeToEvent(subscriber,callback){callbacks.set(subscriber,callback);},unsubscribe(subscriber){unsubscribed.push(subscriber);callbacks.delete(subscriber);}};
+ const screenState=deferred();
+ const commonEventManager={Support:{COMMON_EVENT_SCREEN_OFF:'SCREEN_OFF',COMMON_EVENT_SCREEN_ON:'SCREEN_ON',
+   COMMON_EVENT_SCREEN_LOCKED:'SCREEN_LOCKED',COMMON_EVENT_SCREEN_UNLOCKED:'SCREEN_UNLOCKED'},
+   createSubscriber(options){const gate=deferred();creates.push({options,gate});return gate.promise;},
+   async subscribeToEvent(subscriber,callback){callbacks.set(subscriber,callback);},
+   unsubscribe(subscriber){unsubscribed.push(subscriber);callbacks.delete(subscriber);}};
  const body=source.replace(/^import[\s\S]*?;\n/gm,'').replace(/^export /gm,'');
- const Host=new Function('inputConsumer','KeyCode','commonEventManager',stripTypeScriptTypes(body)+';return ReaderReadingSystemEventHost;')(inputConsumer,{KEYCODE_VOLUME_UP:'UP',KEYCODE_VOLUME_DOWN:'DOWN'},commonEventManager);
- return{host:new Host(),listeners,on,off,creates,unsubscribed,callbacks};
+ const Host=new Function('inputConsumer','KeyCode','commonEventManager','screenLock',stripTypeScriptTypes(body)+';return ReaderReadingSystemEventHost;')(
+   inputConsumer,{KEYCODE_VOLUME_UP:'UP',KEYCODE_VOLUME_DOWN:'DOWN'},commonEventManager,{isScreenLocked:()=>screenState.promise});
+ return{host:new Host(),listeners,on,off,creates,unsubscribed,callbacks,screenState};
 }
 function volume() {
  const f=fixture(),directions=[];f.host.setVolumeKeyHandler(value=>directions.push(value));
@@ -25,13 +31,26 @@ function volume() {
 }
 async function screenOff() {
  const f=fixture(),events=[];f.host.setScreenOffHandler(()=>events.push('old'));f.host.setScreenOffHandler(()=>events.push('current'));
- assert.deepEqual(f.creates.map(x=>x.options),[{events:['SCREEN_OFF']},{events:['SCREEN_OFF']}]);
+ const systemEvents={events:['SCREEN_OFF','SCREEN_ON','SCREEN_LOCKED','SCREEN_UNLOCKED']};
+ assert.deepEqual(f.creates.map(x=>x.options),[systemEvents,systemEvents]);
  const stale={},current={};f.creates[0].gate.resolve(stale);await tick();assert.deepEqual(f.unsubscribed,[stale]);assert.equal(f.callbacks.has(stale),false);
- f.creates[1].gate.resolve(current);await tick();f.callbacks.get(current)({});assert.deepEqual(events,['current']);
- f.host.setScreenOffHandler(undefined);f.callbacks.get(current)({});assert.deepEqual(events,['current'],'cleared handler does not dispatch');
+ f.creates[1].gate.resolve(current);await tick();f.callbacks.get(current)({event:'SCREEN_OFF'});assert.deepEqual(events,['current']);
+ f.host.setScreenOffHandler(undefined);f.callbacks.get(current)({event:'SCREEN_OFF'});assert.deepEqual(events,['current'],'cleared handler does not dispatch');
  f.host.dispose();f.host.dispose();assert.deepEqual(f.unsubscribed,[stale,current],'owned subscriber released exactly once');
  const late=fixture();late.host.setScreenOffHandler(()=>assert.fail('retired event'));late.host.dispose();const subscriber={};late.creates[0].gate.resolve(subscriber);await tick();assert.deepEqual(late.unsubscribed,[subscriber]);assert.equal(late.callbacks.size,0);
  const rejected=fixture();rejected.host.setScreenOffHandler(()=>{});rejected.creates[0].gate.reject(Error('unsupported'));await tick();rejected.host.setScreenOffHandler(()=>{});assert.equal(rejected.creates.length,2,'failed creation can be retried by a mounted reader');rejected.host.dispose();rejected.creates[1].gate.resolve({});await tick();
+
+ const lock=fixture(),states=[],lockSubscriber={};
+ lock.host.setScreenLockHandler(locked=>states.push(locked));
+ lock.creates[0].gate.resolve(lockSubscriber);await tick();
+ lock.callbacks.get(lockSubscriber)({event:'SCREEN_LOCKED'});
+ lock.screenState.resolve(false);await tick();
+ assert.deepEqual(states,[true],'a late initial read cannot reopen a locked screen');
+ lock.callbacks.get(lockSubscriber)({event:'SCREEN_UNLOCKED'});
+ lock.callbacks.get(lockSubscriber)({event:'SCREEN_OFF'});
+ lock.callbacks.get(lockSubscriber)({event:'SCREEN_ON'});await tick();
+ assert.deepEqual(states,[true,false,true,false]);
+ lock.host.dispose();
 }
 const cases={volume,'screen-off':screenOff};
 for(const id of selectContractCases({volume:'Actual Host UP/DOWN, replacement, partial registration and disposal','screen-off':'Actual Host latest subscriber, retirement and retry'})){await cases[id]();recordContractCasePass(id);}

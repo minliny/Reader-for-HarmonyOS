@@ -228,6 +228,7 @@ export class ReaderRuntimeOwner {
   private bookCoordinator: BookAcquisitionCoordinator | undefined = undefined;
   private entryPreparations: ReadingEntryPreparation | undefined = undefined;
   private preparationNetwork: ReaderPreparationNetworkHost | undefined;
+  private deepReadingPrefetchObservers?: Set<() => void>;
   private preparationWakeTimer: number = -1;
   private preparationForeground: boolean = false;
   private preparationCatalogAllowed: boolean = false;
@@ -621,6 +622,26 @@ export class ReaderRuntimeOwner {
     return this.state === 'ready' && this.preparationForeground && this.preparationNetwork?.allowed() === true;
   }
 
+  /** Deep text preparation may observe the same network lifecycle without
+   * importing or owning the network host. The returned disposer is idempotent
+   * and keeps the callback out of the runtime after its route retires. */
+  observeDeepReadingPrefetchNetwork(advance: () => void): () => void {
+    if (this.state === 'closing' || this.state === 'closed') return (): void => {};
+    const observers = this.deepReadingPrefetchObservers ??= new Set<() => void>();
+    observers.add(advance);
+    return (): void => { observers.delete(advance); };
+  }
+
+  deepReadingPrefetchNetworkAllowed(): boolean {
+    return this.state === 'ready' && this.preparationForeground && this.preparationNetwork?.deepAllowed() === true;
+  }
+
+  canDeepReadingPrefetchWrite(current: () => boolean): Promise<boolean> {
+    return this.getDownloadStorageGateway().canPrefetchTextChapter(
+      (): boolean => current() && this.deepReadingPrefetchNetworkAllowed(),
+    );
+  }
+
   readPreparedEntry(params: JsonObject): JsonObject {
     const trace = ReaderStartupTrace.current();
     const entryId = trace?.currentEntryId() ?? 0;
@@ -731,6 +752,9 @@ export class ReaderRuntimeOwner {
         this.bookCoordinator?.visibilityChanged();
         MangaChapterPreparationCoordinator.forRuntime(this).networkChanged();
         this.wakeReadingPreparations();
+        this.deepReadingPrefetchObservers?.forEach((observer: () => void): void => {
+          try { observer(); } catch (_) { /* Network notification cannot break the owner. */ }
+        });
       });
       this.preparationNetwork.setForeground(foreground);
     } else if (changed) this.preparationNetwork.setForeground(foreground);
@@ -1601,6 +1625,7 @@ export class ReaderRuntimeOwner {
     this.mangaOfflineProbe?.release('runtime-close');
     this.preparationForeground = false;
     this.preparationNetwork?.close();
+    this.deepReadingPrefetchObservers?.clear();
     if (this.preparationWakeTimer >= 0) clearTimeout(this.preparationWakeTimer);
     this.preparationWakeTimer = -1;
     this.entryPreparations?.close();

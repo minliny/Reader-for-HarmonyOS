@@ -19,6 +19,7 @@ import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import type { ReaderWindowMetricsSnapshot } from '../../../ui/foundation/ReaderWindowMetrics';
 import { ReadingExperience, ReaderRetainedPresentation } from './LocalReadingExperience';
 import type { ReadingCommit } from '../application/ReadingCommit';
+import type { ReadingPrefetchActivity } from '../application/ReadingPrefetchHost';
 import type { ReaderBookmarkAnchorRequest } from '../presentation/ReaderBookmarkAnchorRequest';
 import { ReaderDirectoryDestination } from './ReaderDirectoryDestination';
 import { SourceSwitchPanel } from '../../source/ui/SourceSwitchPanel';
@@ -140,6 +141,7 @@ export struct ReaderShell {
     failureKind?: RemoteReadingFailureKind) => void =
     (_sourceId: string, _bookId: string, _message: string,
       _failureKind?: RemoteReadingFailureKind): void => {};
+  onReadingPrefetchActivity?: (sourceId: string, bookId: string, activity: ReadingPrefetchActivity) => void;
   onChapterCommitted: (chapterIndex: number, chapterTitle: string) => void =
     (_chapterIndex: number, _chapterTitle: string): void => {};
   onSelectChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
@@ -306,6 +308,9 @@ export struct ReaderShell {
           },
           onOpenBookInfo: (): void => {
             if (this.acceptsTextInput(_identity)) this.onOpenBookInfo();
+          onReadingPrefetchActivity: (activity: ReadingPrefetchActivity): void => {
+            if (_identity === this.readingIdentityKey()) this.onReadingPrefetchActivity?.(this.sourceId, this.bookId, activity);
+          },
           },
           onSwitchSource: (focusId?: string): void => {
             if (this.acceptsTextInput(_identity)) this.onSwitchSource(focusId);

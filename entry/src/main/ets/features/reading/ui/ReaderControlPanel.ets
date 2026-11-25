@@ -455,7 +455,7 @@ export struct ReaderControlPanel {
     (_regions: ReaderControlBackdropRect[], _ready: boolean): void => {};
   @Prop bookTitle: string = '';
   @Prop @Watch('publishMinimumMeasurer') chapterTitle: string = '';
-  @Prop sourceId: string = '';
+  @Prop @Watch('onMinimumFactsPropsChanged') sourceId: string = '';
   @Prop sourceBookId: string = '';
   @Prop sourceName: string = '';
   @Prop progressPercent: number = 0;
@@ -1053,6 +1053,7 @@ export struct ReaderControlPanel {
     if (module === 'search') {
       const state = this.searchPublication.stateAt(this.searchRevision);
       return { module: module, search: readerControlSearchMinimumFacts({ query: this.searchQuery, state: state,
+        onlineBook: this.sourceId !== 'local' && (this.sourceId?.length ?? 0) > 0,
         resultScope: this.searchPublication.resultScrollScopeFor(state), retainedLoadMoreFailure: false }) };
     }
     if (module === 'settings') return { module: module, settings: readerControlSettingsMinimumFacts() };
@@ -2771,6 +2772,7 @@ export struct ReaderControlPanel {
       onTemporaryLayerChange: this.moduleTemporaryLayerHandler('search'),
       editorInputCurrent: (): boolean => this.moduleEditorInputEnabled('search'),
       query: this.searchQuery,
+      onlineBook: this.sourceId !== 'local' && (this.sourceId?.length ?? 0) > 0,
       searchPublication: this.searchPublication,
       searchRevision: this.searchRevision,
       onBack: (): void => this.requestPage('home', 'module-back'),

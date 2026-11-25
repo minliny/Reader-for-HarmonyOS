@@ -77,6 +77,7 @@ export struct ReaderControlSearchContent {
   inputCurrent?: () => boolean;
   @Prop @Watch('dismissTemporaryLayer') dismissTemporaryRevision: number = 0;
   @Prop @Watch('publishMinimumMeasurer') query: string = '';
+  @Prop @Watch('publishMinimumMeasurer') onlineBook: boolean = false;
   searchPublication: ReaderContentSearchPublication = new ReaderContentSearchPublication();
   @Prop @Watch('acceptSearchPublication') searchRevision: number = 0;
   @State @Watch('onResultDataChanged') private state: ReaderQuickSearchState = { kind: 'idle' };
@@ -291,6 +292,7 @@ export struct ReaderControlSearchContent {
     const identity = this.minimumIdentity;
     const state = this.currentSearchState();
     const facts = readerControlSearchMinimumFacts({ query: this.query, state: state,
+      onlineBook: this.onlineBook,
       resultScope: this.searchPublication.resultScrollScopeFor(state), retainedLoadMoreFailure: this.retainedLoadMoreFailure });
     if (this.preparedMinimumRequired) { this.onMinimumFactsChanged(identity, { module: 'search', search: facts }); return; }
     const signature = JSON.stringify([identity, this.minimumMetricsRevision, readerControlModuleFactsGeometryKey({ module: 'search', search: facts })]);
@@ -327,6 +329,8 @@ export struct ReaderControlSearchContent {
     const profile = this.currentMinimumProfile();
     if (profile === undefined) return undefined;
     const q = profile.quick.natural, f = profile.full.natural;
+    const quickScopeHeight = q.cacheScopeHeightVp ?? 0;
+    const fullScopeHeight = f.cacheScopeHeightVp ?? 0;
     return { fieldHeightVp: q.fieldHeightVp + (f.fieldHeightVp - q.fieldHeightVp) * progress,
       inputHeightVp: q.inputHeightVp + (f.inputHeightVp - q.inputHeightVp) * progress,
       titleHeightVp: q.titleHeightVp + (f.titleHeightVp - q.titleHeightVp) * progress,
@@ -334,6 +338,7 @@ export struct ReaderControlSearchContent {
       rowHeightVp: q.rowHeightVp + (f.rowHeightVp - q.rowHeightVp) * progress,
       loadMoreHeightVp: q.loadMoreHeightVp + (f.loadMoreHeightVp - q.loadMoreHeightVp) * progress,
       loadMoreWidthVp: q.loadMoreWidthVp + (f.loadMoreWidthVp - q.loadMoreWidthVp) * progress,
+      cacheScopeHeightVp: quickScopeHeight + (fullScopeHeight - quickScopeHeight) * progress,
       statusHeightVp: q.statusHeightVp + (f.statusHeightVp - q.statusHeightVp) * progress,
       backHeightVp: q.backHeightVp + (f.backHeightVp - q.backHeightVp) * progress,
       backWidthVp: q.backWidthVp + (f.backWidthVp - q.backWidthVp) * progress };
@@ -346,7 +351,7 @@ export struct ReaderControlSearchContent {
   private resultLayoutAt(frame: ReaderControlSearchFrame): ReaderControlSearchScrollLayout {
     const displayState = this.displayState();
     return { rowHeightVp: frame.rowHeight, viewportHeightVp: Math.max(0, frame.results.height - frame.loadMoreHeightVp -
-      (frame.loadMoreHeightVp > 0 ? 4 : 0)),
+      (frame.loadMoreHeightVp > 0 ? 4 : 0) - frame.cacheScopeHeightVp),
       contentOriginVp: frame.firstResult.y, contentEndPaddingVp: frame.resultEndPadding,
       resultCount: displayState.kind === 'results' ? displayState.results.length : 0 };
   }
@@ -765,6 +770,15 @@ export struct ReaderControlSearchContent {
         }.width(this.frame().firstResult.width).height(this.resultLayout().viewportHeightVp)
           .position({ x: this.frame().firstResult.x, y: 0 }).clip(true);
         this.loadMoreAction();
+        if (this.frame().cacheScopeHeightVp > 0) {
+          Text(this.statusText()).width(this.frame().results.width).height(this.frame().cacheScopeHeightVp)
+            .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
+            .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
+            .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center)
+            .wordBreak(WordBreak.BREAK_WORD).hitTestBehavior(HitTestMode.None)
+            .position({ x: 0, y: Math.max(0, this.frame().results.height - this.frame().cacheScopeHeightVp) })
+            .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
+        }
       } else {
         Stack({ alignContent: Alignment.Center }) {
           ReaderPageState({ message: this.statusText(), loading: this.displayState().kind === 'loading', padded: false,
@@ -836,7 +850,8 @@ export struct ReaderControlSearchContent {
             actionEnabled: this.loadMoreActionEnabled(true),
             onReconcile: (expected: number): void => this.performLoadMore(true, expected) });
         }.width(this.frame().results.width).height(Math.max(44, this.frame().loadMoreHeightVp)).justifyContent(FlexAlign.Center)
-          .position({ x: 0, y: Math.max(0, this.frame().results.height - Math.max(44, this.frame().loadMoreHeightVp)) })
+          .position({ x: 0, y: Math.max(0, this.frame().results.height - (this.frame().cacheScopeHeightVp ?? 0) -
+            Math.max(44, this.frame().loadMoreHeightVp)) })
           .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
 
       }
@@ -954,8 +969,7 @@ export struct ReaderControlSearchContent {
   }
 
   private statusText(): string {
-    const displayState = this.displayState();
-    return readerControlSearchStatusText(displayState);
+    return this.displayedFacts()?.message ?? readerControlSearchStatusText(this.displayState(), this.onlineBook);
   }
 
 }

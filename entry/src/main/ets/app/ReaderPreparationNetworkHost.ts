@@ -1,6 +1,6 @@
 import connection from '@ohos.net.connection';
 
-/** Optional shelf backfill uses the selected system network only when its
+/** Optional reading preparation uses the selected system network only when its
  * unmetered capability is known. Explicit reading/add/download keeps its
  * normal request policy. This host never binds a network or changes a route. */
 export class ReaderPreparationNetworkHost {
@@ -10,17 +10,25 @@ export class ReaderPreparationNetworkHost {
   private closed: boolean = false;
   private epoch: number = 0;
   private admitted: boolean = false;
+  private unmeteredWifi: boolean = false;
   private readonly changed: () => void;
 
   constructor(changed: () => void) { this.changed = changed; }
 
   allowed(): boolean { return !this.closed && this.foreground && this.registered && this.admitted; }
 
+  /** Deep text prefetch is restricted to the currently selected Wi-Fi route.
+   * `allowed()` intentionally remains the broader non-metered admission used
+   * by existing shelf preparation. */
+  deepAllowed(): boolean {
+    return this.allowed() && this.unmeteredWifi;
+  }
+
   setForeground(foreground: boolean): void {
     if (this.closed) return;
     this.foreground = foreground;
     this.epoch += 1;
-    this.publish(false);
+    this.publish(false, false);
     if (!foreground) return;
     if (this.observer === undefined) {
       try {
@@ -35,7 +43,7 @@ export class ReaderPreparationNetworkHost {
             this.epoch += 1;
             this.registered = false;
             if (this.observer === observer) this.observer = undefined;
-            this.publish(false);
+            this.publish(false, false);
             return;
           }
           if (this.closed) { observer.unregister((): void => {}); return; }
@@ -51,7 +59,7 @@ export class ReaderPreparationNetworkHost {
 
   private async refresh(): Promise<void> {
     const epoch = ++this.epoch;
-    this.publish(false);
+    this.publish(false, false);
     if (this.closed || !this.foreground || !this.registered) return;
     try {
       const app = await connection.getAppNet();
@@ -59,15 +67,22 @@ export class ReaderPreparationNetworkHost {
       if (network === undefined || network === null || network.netId <= 0) return;
       const capabilities = await connection.getNetCapabilities(network);
       if (this.closed || !this.foreground || !this.registered || epoch !== this.epoch) return;
-      this.publish(capabilities.networkCap?.includes(connection.NetCap.NET_CAPABILITY_NOT_METERED) === true);
+      const bearers = capabilities.bearerTypes;
+      this.publish(
+        capabilities.networkCap?.includes(connection.NetCap.NET_CAPABILITY_NOT_METERED) === true,
+        bearers?.includes(connection.NetBearType.BEARER_WIFI) === true &&
+          !bearers.includes(connection.NetBearType.BEARER_CELLULAR),
+      );
     } catch (_) {
-      if (epoch === this.epoch) this.publish(false);
+      if (epoch === this.epoch) this.publish(false, false);
     }
   }
 
-  private publish(allowed: boolean): void {
-    if (this.admitted === allowed) return;
+  private publish(allowed: boolean, wifi: boolean): void {
+    const unmeteredWifi = allowed && wifi;
+    if (this.admitted === allowed && this.unmeteredWifi === unmeteredWifi) return;
     this.admitted = allowed;
+    this.unmeteredWifi = unmeteredWifi;
     this.changed();
   }
 
@@ -76,7 +91,7 @@ export class ReaderPreparationNetworkHost {
     this.closed = true;
     this.registered = false;
     this.epoch += 1;
-    this.publish(false);
+    this.publish(false, false);
     const observer = this.observer;
     this.observer = undefined;
     if (observer !== undefined) {

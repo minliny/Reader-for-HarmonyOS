@@ -303,6 +303,7 @@ import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { estimateRetainedRemoteSessionBytes } from '../application/ReadingEntryHandoff';
 import { ReaderTtsCredentialStore } from '../../../platform/tts/ReaderTtsCredentialStore';
 import { ReaderReadingSystemEventHost } from '../../../app/ReaderReadingSystemEventHost';
+import type { ReadingPrefetchActivity } from '../application/ReadingPrefetchHost';
 import {
   ReaderWindowChromeStyle,
   ReaderWindowCoordinator,
@@ -711,6 +712,7 @@ export struct ReadingExperience {
   */
   onReadingReady: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onReadingCommitted: (commit: ReadingCommit) => void = (_commit: ReadingCommit): void => {};
+  onReadingPrefetchActivity?: (activity: ReadingPrefetchActivity) => void;
   onReadingFailure: (sourceId: string, bookId: string, message: string,
     failureKind?: RemoteReadingFailureKind) => void =
     (_sourceId: string, _bookId: string, _message: string,
@@ -728,7 +730,7 @@ export struct ReadingExperience {
   onDeleteBookmarks: (bookmarkTimes: number[]) => void = (_bookmarkTimes: number[]): void => {};
   onDownloadChapter: (chapterIndex: number) => void = (_chapterIndex: number): void => {};
   onDownloadBook: () => void = (): void => {};
-  @Prop offlineBookOperationActive: boolean = false;
+  @Prop @Watch('onPrefetchDownloadActivityChanged') offlineBookOperationActive: boolean = false;
   onDirectoryProjectionChanged: (entries: LocalReadingTocEntry[]) => void =
     (_entries: LocalReadingTocEntry[]): void => {};
   onLoadControlBookmarks: (sourceId: string, bookId: string, isCurrent: () => boolean) => Promise<void> =
@@ -920,6 +922,7 @@ export struct ReadingExperience {
       if (status === 'stopped' && this.staticSessionCapsuleOrigin?.location.module === 'autoPage') {
         this.staticSessionCapsuleOrigin = undefined;
       }
+      this.observeReadingPrefetch();
     },
   });
   private automaticReadingState(): Readonly<ReaderAutoPageState> {
@@ -1056,6 +1059,7 @@ export struct ReadingExperience {
   private screenAwakeLease: ReaderScreenAwakeLease | undefined = undefined;
   private screenAwakeKeepScreenOn: boolean = false;
   private readingSystemEventHost: ReaderReadingSystemEventHost | undefined = undefined;
+  private readingPrefetchScreenLocked: boolean = false;
   private readonly readingRecordGateway: ReadingRecordGateway =
     ReaderRuntimeOwner.current().getReadingRecordGateway();
   private ttsGateway: ReaderTtsGateway | undefined = undefined;
@@ -1407,6 +1411,13 @@ export struct ReadingExperience {
     this.screenAwakeLease = new ReaderScreenAwakeLease((keepScreenOn: boolean): void =>
       this.onScreenAwakeKeepScreenOnChanged(keepScreenOn));
     this.readingSystemEventHost = new ReaderReadingSystemEventHost();
+    this.readingPrefetchScreenLocked = false;
+    if (this.sourceId !== LOCAL_READING_SOURCE_ID && this.onReadingPrefetchActivity !== undefined) {
+      this.readingSystemEventHost.setScreenLockHandler((locked: boolean): void => {
+        this.readingPrefetchScreenLocked = locked;
+        this.observeReadingPrefetch();
+      });
+    }
     this.clearDeferredPageTurnWork();
     this.invalidatePageTurnRuntime(false);
     this.lastWindowMetricsLayoutKey = this.windowMetricsLayoutKey();
@@ -1791,6 +1802,7 @@ export struct ReadingExperience {
   }
 
   aboutToDisappear(): void {
+    this.observeReadingPrefetch?.(false, false, true);
     if (this.controlFontOrderRequest !== undefined) this.finishControlFontOrderPresentation(this.controlFontOrderRequest, false);
     this.controlVerification.stop();
     this.retireReaderRecovery();
@@ -4607,6 +4619,7 @@ export struct ReadingExperience {
         this.preparedNextPage = undefined;
     }
     this.remoteCatalogAdmissionRevision += 1;
+    this.observeReadingPrefetch?.();
     this.entryCatalogNavigation = undefined;
     this.entryCatalogPending = false;
     this.admitTocEntries(session.entries.map((item): LocalReadingTocEntry => ({ index: item.index,
@@ -7059,6 +7072,7 @@ export struct ReadingExperience {
       return;
     }
     this.exitRequested = true;
+    this.observeReadingPrefetch?.();
     this.exitAttemptGeneration += 1;
     this.stopReaderTtsAudition();
     this.captureReadingRecordElapsed(false);
@@ -8700,6 +8714,7 @@ export struct ReadingExperience {
         if (isOwnerCurrent() && this.ttsCoordinator === coordinator) {
           const wasAwake = this.ttsWindowAwakeRequested();
           this.ttsState = state;
+          this.observeReadingPrefetch?.();
           this.reconcileTtsWindowAwake(wasAwake);
           // Keep the TTS state publication usable in lightweight production
           // probes that do not mount the paged presentation owner.
@@ -9726,7 +9741,26 @@ export struct ReadingExperience {
     this.pauseAutoPage('touch');
   }
 
+  private observeReadingPrefetch(interacted: boolean = false, yieldToReading: boolean = false,
+    retiring: boolean = false): void {
+    if (this.onReadingPrefetchActivity === undefined || this.sourceId === LOCAL_READING_SOURCE_ID ||
+      this.isReaderIdentityCurrent() === false) return;
+    const chapter = this.pageTurnPreparation?.origin.chapter ?? this.chapter;
+    if (chapter === undefined) return;
+    const active = !retiring && this.mounted && !this.exitRequested && this.appForeground &&
+      this.windowChromeActive && !this.windowChromeOverlayActive && !this.interactionBlocked && !this.controlObscured &&
+      !this.readingPrefetchScreenLocked && this.phase === 'ready';
+    this.onReadingPrefetchActivity({ chapterIndex: chapter.chapterIndex,
+      chapterOffset: this.lastCommittedProgress?.chapterIndex === chapter.chapterIndex ?
+        this.lastCommittedProgress.chapterOffset : this.visiblePage?.startScalar ?? 0,
+      active, playing: this.ttsState.status === 'playing' || this.automaticReadingState().status === 'running',
+      interacted, yieldToReading });
+  }
+
+  private onPrefetchDownloadActivityChanged(): void { this.observeReadingPrefetch(); }
+
   private onReaderManualInteraction(): void {
+    this.observeReadingPrefetch?.(true, true);
     this.retirePendingPlaybackStarts();
     this.retireReaderRecovery();
     this.invalidateTtsPageFollow?.();
@@ -11935,6 +11969,7 @@ export struct ReadingExperience {
   }
 
   private onControlInputBoundaryChanged(): void {
+    this.observeReadingPrefetch?.();
     if (this.controlFontOrderRequest !== undefined) this.reconcileControlFontOrderPresentation();
     this.refreshAppearanceSaveRecovery(this.lifecycleToken);
     if (!this.readerInputIsCurrent() || this.windowChromeOverlayActive) this.retirePendingPlaybackStarts();
@@ -12726,6 +12761,7 @@ export struct ReadingExperience {
   }
 
   private requestReadingDownload(chapterIndex?: number): void {
+    this.observeReadingPrefetch?.(false, true);
     const lifecycleToken = this.lifecycleToken;
     const isCurrent = (): boolean => this.isSessionActive(lifecycleToken);
     void this.activeGateway().ensureRemoteSession(isCurrent).then((): void => {
@@ -12887,6 +12923,7 @@ export struct ReadingExperience {
     if (ttsOwner !== undefined && !this.isTtsFollowLeaseCurrent(ttsOwner)) return;
     if (ttsOwner === undefined) this.invalidateTtsPageFollow?.();
     if (!this.mounted || !Number.isSafeInteger(chapterIndex) || chapterIndex < 0) return;
+    this.observeReadingPrefetch?.(ttsOwner === undefined, true);
     if (stopTts) this.retirePendingPlaybackStarts();
     if (!this.isKnownControlChapter(chapterIndex)) {
       if (this.entryCatalogPending) {
@@ -13242,6 +13279,7 @@ export struct ReadingExperience {
     try { this.onReadingReady(chapter.chapterIndex); }
     catch (error) { hilog.error(0x5244, 'Reader', '%{private}s', `ReadingExperience ready observer failed: ${this.errorMessage(error as Error)}`); }
     if (!isCurrent()) return false;
+    this.observeReadingPrefetch?.();
     this.prepareRemoteCatalogNearEnd?.();
     this.ttsFollowPositioning = undefined;
     this.scheduleTtsPageFollowResume?.();
@@ -15533,6 +15571,7 @@ export struct ReadingExperience {
       this.commitInFlight || this.progressProducers.continuousInFlight || readerRapidPageTurnHasWork(this.rapidPageTurnState))) return { kind: 'busy' };
     if (origin === 'ttsFollow' && (ttsOwner === undefined || !this.isTtsFollowLeaseCurrent(ttsOwner))) return { kind: 'blocked', reason: 'lifecycle' };
     if (this.activePagePointerId >= 0) return { kind: 'busy' };
+    this.observeReadingPrefetch?.(origin === 'manual', true);
     if (this.readerSettingsSnapshot.navigationMode === 'continuous') {
       return this.performContinuousPageTurn(direction);
     }
