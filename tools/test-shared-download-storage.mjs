@@ -370,6 +370,23 @@ if(id==='settings-recover-staged'){
 }
 if(id==='settings-recover-host'){
   {
+    const f = await fixture({ bodyCount: 1 }), r = resource(identity(0));
+    await f.disk.storeResource(r, Uint8Array.of(1, 2, 3, 4));
+    const path = await f.disk.resourcePath(r), before = await io.stat(path);
+    let readingBook = false;
+    f.runtime.protectsDownloadStorageChapter = chapter => readingBook && chapter.sourceId === 'source' && chapter.bookId === 'book';
+    const request = f.runtime.request;
+    f.runtime.request = async (method, params, options) => {
+      const response = await request(method, params, options);
+      if (method === 'cache.storage.cleanup') { readingBook = true; f.bump(); }
+      return response;
+    };
+    const result = await f.gateway.cleanupSettingsText(new ReaderWriteEvidence(), () => true);
+    assert.equal((await io.stat(path)).ino, before.ino, 'the active book is protected before its chapter has been published');
+    assert.equal(result.cleanupError, 'TEXT_CACHE_CLEANUP_PARTIAL');
+    assert.equal(f.calls.filter(call => call.method === 'cache.storage.cleanup').length, 1);
+  }
+  {
     const f = await fixture({ bodyCount: 129 });
     const alreadyAcknowledged = identity(0), r = resource(alreadyAcknowledged);
     await f.disk.storeResource(r, Uint8Array.of(1, 2, 3, 4));

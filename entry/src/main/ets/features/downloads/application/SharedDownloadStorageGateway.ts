@@ -13,6 +13,7 @@ export interface SharedDownloadStorageBindings {
 export interface SharedDownloadStorageRuntime extends ReadingGatewayRuntime {
   readDownloadStorageBindings(): Promise<SharedDownloadStorageBindings>;
   captureDownloadStorageValidity?(): () => boolean;
+  protectsDownloadStorageChapter?(chapter: ReadingTextStorageChapter): boolean;
 }
 export interface SharedDownloadLegacyProtectionPersistence {
   loadLegacyProtection(): Promise<ReadingTextStorageChapter[] | undefined>;
@@ -55,6 +56,7 @@ export class SharedDownloadStorageGateway {
   private summaryRead?: { revision: number; current: () => boolean; work: Promise<DownloadStorageSummary>; };
   private imageBookBytes: Map<string, number | undefined> = new Map();
   private indexedInventory: ReadingImageStorageSnapshot | undefined;
+  private settingsCoreAcknowledgement: SettingsTextCleanupJournal | undefined;
 
   constructor(runtime: SharedDownloadStorageRuntime, disk: ReadingImageDiskCache,
     persistence?: SharedDownloadLegacyProtectionPersistence) {
@@ -158,8 +160,9 @@ export class SharedDownloadStorageGateway {
   private async bindings(snapshot: ReadingImageStorageSnapshot): Promise<SharedDownloadStorageBindings> {
     await this.restoreLegacyProtection();
     const actual = await this.runtime.readDownloadStorageBindings();
+    const activeImages = snapshot.hostImageChapters.filter(chapter => this.runtime.protectsDownloadStorageChapter?.(chapter) === true);
     return { retainedChapters: this.unique(actual.retainedChapters),
-      protectedChapters: this.unique([...actual.protectedChapters, ...this.legacyProtection ?? [], ...snapshot.protectedChapters]) };
+      protectedChapters: this.unique([...actual.protectedChapters, ...this.legacyProtection ?? [], ...snapshot.protectedChapters, ...activeImages]) };
   }
 
   private async measureSummary(): Promise<DownloadStorageSummary> {
@@ -192,6 +195,7 @@ export class SharedDownloadStorageGateway {
     return this.serialized(() => this.maintain('clear', options));
   }
   readSettingsTextCleanup(): Promise<SettingsTextCleanupJournal | undefined> {
+    if (this.settingsCoreAcknowledgement !== undefined) return Promise.resolve(this.settingsCoreAcknowledgement);
     if (this.persistence.loadSettingsTextCleanup === undefined) throw new Error('TEXT_CACHE_CLEANUP_PERSISTENCE_UNAVAILABLE');
     return this.persistence.loadSettingsTextCleanup();
   }
@@ -205,6 +209,7 @@ export class SharedDownloadStorageGateway {
       await this.restoreLegacyProtection();
       const policy = await this.readPolicy();
       let checkpoint: SettingsTextCleanupJournal | undefined;
+      const acknowledgedChapters = new Set<string>();
       for (;;) {
         const owned = this.runtime.captureDownloadStorageValidity?.() ?? ((): boolean => true);
         const admitted = (): boolean => owned() && current();
@@ -214,6 +219,11 @@ export class SharedDownloadStorageGateway {
           if (checkpoint === undefined) throw new Error('TEXT_CACHE_CLEANUP_NOT_DISPATCHED');
           break;
         }
+        // An exact Host file can survive a confirmed batch. Keep its chapter
+        // out of later Core selections while allowing the remaining batch.
+        const acknowledgedImages = snapshot.hostImageChapters.filter(chapter => acknowledgedChapters.has(this.key(chapter)));
+        if (acknowledgedImages.length > 0)
+          bindings.protectedChapters = this.unique([...bindings.protectedChapters, ...acknowledgedImages]);
         let data: JsonObject;
         let removedContentBytes: number;
         try {
@@ -231,8 +241,10 @@ export class SharedDownloadStorageGateway {
           if (evidence.hasDispatched()) throw new Error('TEXT_CACHE_CLEANUP_NOT_DISPATCHED');
           throw error as Error;
         }
-        const chapters = this.unique(this.chapters(data['removedChapters']));
+        const returned = this.unique(this.chapters(data['removedChapters']));
+        const chapters = returned.filter(chapter => !acknowledgedChapters.has(this.key(chapter)));
         const selected = new Set(chapters.map(chapter => this.key(chapter)));
+        for (const key of selected) acknowledgedChapters.add(key);
         const files = snapshot.files.filter(file => file.textOwner !== undefined && selected.has(this.key(file.textOwner)));
         const beforeTextFiles = [...checkpoint?.beforeTextFiles ?? []];
         const existing = new Set(beforeTextFiles.map(file => JSON.stringify([file.path, file.physicalKey, file.mtime])));
@@ -244,12 +256,13 @@ export class SharedDownloadStorageGateway {
             textOwner: file.textOwner });
         }
         const more = data['hasMore'] === true;
-        const blocked = typeof data['cleanupError'] === 'string' || (more && chapters.length === 0);
+        const blocked = typeof data['cleanupError'] === 'string' || chapters.length !== returned.length ||
+          (more && chapters.length === 0);
         evidence.confirmed();
         const confirmed: SettingsTextCleanupJournal = { version: 2, scope: 'text', phase: 'core_confirmed',
           removedContentBytes, beforeTextFiles, pendingHostChapters: chapters,
           cleanupError: more || blocked ? 'TEXT_CACHE_CLEANUP_PARTIAL' : undefined };
-        await this.saveSettingsTextCleanup(confirmed);
+        await this.persistSettingsCoreAcknowledgement(confirmed);
         checkpoint = await this.completeSettingsTextHost(confirmed);
         if (!more || blocked || !admitted()) break;
         await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
@@ -266,6 +279,7 @@ export class SharedDownloadStorageGateway {
       if (journal === undefined || !current()) return undefined;
       if (journal.phase === 'pending') throw new Error('TEXT_CACHE_CLEANUP_UNCONFIRMED');
       if (journal.phase === 'confirmed') return journal.result;
+      if (journal === this.settingsCoreAcknowledgement) await this.persistSettingsCoreAcknowledgement(journal);
       const completed = journal.phase === 'core_confirmed' ? await this.completeSettingsTextHost(journal) : journal;
       return this.finishSettingsTextReceipt(completed);
     });
@@ -274,6 +288,14 @@ export class SharedDownloadStorageGateway {
   private saveSettingsTextCleanup(journal: SettingsTextCleanupJournal | undefined): Promise<void> {
     if (this.persistence.saveSettingsTextCleanup === undefined) throw new Error('TEXT_CACHE_CLEANUP_PERSISTENCE_UNAVAILABLE');
     return this.persistence.saveSettingsTextCleanup(journal);
+  }
+
+  private async persistSettingsCoreAcknowledgement(journal: SettingsTextCleanupJournal): Promise<void> {
+    // Retain the exact acknowledged batch in this live owner if the durable
+    // write fails. A new owner reads the still-unknown on-disk marker instead.
+    this.settingsCoreAcknowledgement = journal;
+    await this.saveSettingsTextCleanup(journal);
+    this.settingsCoreAcknowledgement = undefined;
   }
 
   private async completeSettingsTextHost(journal: SettingsTextCleanupJournal): Promise<SettingsTextCleanupJournal> {
@@ -305,12 +327,14 @@ export class SharedDownloadStorageGateway {
       const key = this.key(chapter);
       const exact = byChapter.get(key);
       if (exact === undefined) continue;
-      if (current?.() === false) throw new Error('TEXT_CACHE_CLEANUP_PROTECTION_CHANGED');
-      if (protectedKeys.has(key)) {
+      const reading = (): boolean => this.runtime.protectsDownloadStorageChapter?.(chapter) === true;
+      if (protectedKeys.has(key) || reading()) {
         cleanupError = 'TEXT_CACHE_CLEANUP_PARTIAL';
         continue;
       }
-      await this.disk.clearChapter(chapter.sourceId, chapter.bookId, chapter.chapterIndex, exact, current);
+      if (current?.() === false) throw new Error('TEXT_CACHE_CLEANUP_PROTECTION_CHANGED');
+      await this.disk.clearChapter(chapter.sourceId, chapter.bookId, chapter.chapterIndex, exact,
+        (): boolean => current?.() !== false && !reading());
     }
     const completed: SettingsTextCleanupJournal = { ...journal, phase: 'host_completed', pendingHostChapters: undefined, cleanupError };
     await this.saveSettingsTextCleanup(completed);

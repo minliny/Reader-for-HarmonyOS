@@ -552,6 +552,12 @@ export class ReaderRuntimeOwner {
       revision === this.downloadProtectionRevision && before === signature();
   }
 
+  protectsDownloadStorageChapter(chapter: ReadingTextStorageChapter): boolean {
+    const reading = this.downloadReadingProtection;
+    return reading !== undefined && reading.sourceId === chapter.sourceId && reading.bookId === chapter.bookId &&
+      (reading.chapterIndex === undefined || reading.chapterIndex === chapter.chapterIndex);
+  }
+
   async readDownloadStorageBindings(): Promise<{ retainedChapters: ReadingTextStorageChapter[]; protectedChapters: ReadingTextStorageChapter[]; }> {
     const coordinator = this.getDownloadCoordinator();
     await coordinator.restore();
