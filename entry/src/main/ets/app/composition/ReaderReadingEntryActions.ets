@@ -163,7 +163,14 @@ export class ReaderReadingEntryActions {
         const resolved = readingEntryInputForShelfSnapshot(input, book);
         if (download !== undefined && retryDownload !== undefined) {
           // Re-admit after the asynchronous shelf read so Download still owns Back.
-          retryDownload({ ...download, shelfBook: book, seed: resolved.seed });
+          retryDownload({
+            shelfBook: book,
+            chapterIndex: download.chapterIndex,
+            mangaOfflineChapterId: download.mangaOfflineChapterId,
+            seed: resolved.seed,
+            sourceLabel: download.sourceLabel,
+            session: download.session,
+          });
         } else {
           this.openRemoteDetail(resolved, parent, download);
         }
