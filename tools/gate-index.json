@@ -164442,13 +164442,13 @@
       ],
       "productionBinding": "ReaderPageScaffold/ReaderFixedHeaderHost/ReaderStandardPage实际ETS与完整ReaderPageShell.ts；Index route dispatcher。",
       "overlap": "layout-architecture/typography共享producer/witness；本项独有真实保留body与动态header，但目录历史冻结跨出当前页框架范围。",
-      "minimumTrigger": "common page/frame或route注册改变时按需，待拆分后选择。; exact case: footer-safe-lane",
-      "necessityReason": "SDK节点保留/测量有实际反例；当前经architecture-shared-producer-contract导入approved helper，启动先校验多域历史witness，不能声称精确header入口。",
+      "minimumTrigger": "A change to the shared footer hit region, hit-test mode, or painted safe lane.",
+      "necessityReason": "The approved touchable migration changes this exact interaction contract.",
       "limitations": "Only selected actual production methods/SDK/declared native test with controlled boundary ports. Does not prove product-wide behavior, native pixels, physical interaction or user acceptance. Architecture inventory/succession cases explicitly inspect their named complete route/baseline scope; isolated SDK cases do not invoke them.",
       "id": "H-reader-page-header-contract#footer-safe-lane",
       "parentId": "H-reader-page-header-contract",
       "caseId": "footer-safe-lane",
-      "qualification": "REVIEW_NEEDED",
+      "qualification": "QUALIFIED",
       "defaultExecution": "OFF",
       "execution": "NOT_RUN",
       "tests": [
@@ -164460,12 +164460,12 @@
         ]
       },
       "resourceNeeds": [],
-      "protectedBehavior": "Actual retained bounded footer viewport/safe lane and omitted clip/paint negatives",
+      "protectedBehavior": "The actual SDK footer reserves its painted lane while unpainted margins and empty carriers pass through. Children keep normal sibling-hit ordering.",
       "prerequisites": [
         "Node.js; installed ETS compiler only for actual ETS/SDK probes; native-build only on declared native case"
       ],
-      "mechanism": "Actual retained bounded footer viewport/safe lane and omitted clip/paint negatives; owner implementation record: [\"抽pure sharedProducerShape去掉approved导入副作用；独立SDK frame、route coverage、迁移witness三入口，取消无当前授权依据的全样式字形冻结。\", \"提纯sharedProducerShape；frame行为、route注册、migration witness分开。\"]",
-      "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
+      "mechanism": "Execute the retained page scaffold and footer actions with bounded SDK instances, including mutations to None and full-width empty carrier response.",
+      "failureExample": "Negative controls reject blanket None and a nonempty response region on an unpainted footer carrier.",
       "estimatedCostType": "selected-method/fixture",
       "reviewedSourceSha256": "7721972d97e99553ef551e213f643b09300a681d5d4d11462f7f00d99eb09497",
       "definitionInputs": [
@@ -164648,8 +164648,8 @@
       ],
       "definitionInputProblems": [],
       "releaseEligible": null,
-      "repairAction": "Review and select this exact case when its protected behavior changes",
-      "repair": "Keep default OFF. Review the named production methods or run this exact case if needed.",
+      "repairAction": null,
+      "repair": null,
       "implementation": "IMPLEMENTED",
       "validationEvidence": {
         "execution": "NOT_RUN",
@@ -463106,8 +463106,8 @@
     "IMPLEMENTED_WITH_EVIDENCE_GAP": 1
   },
   "caseQualificationCounts": {
-    "QUALIFIED": 1546,
-    "REVIEW_NEEDED": 954,
+    "QUALIFIED": 1547,
+    "REVIEW_NEEDED": 953,
     "DIAGNOSTIC_ONLY": 29,
     "NEEDS_EVIDENCE": 1
   },
