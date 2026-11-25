@@ -24,7 +24,8 @@ const { ReaderRectVp: Rect, ReaderDisplayCornerVp: Corner, ReaderWindowMetricsSn
 const { resolveReaderReadingLayout, READER_PAGE_CHROME_TOP_ROW_PADDING_VP } =
   await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
 const { readerAppearanceThemeStyle, readerAppearanceChromeTone } = await import('../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts');
-const { findReaderTheme, readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { findReaderTheme, readerAppColor, readerThemeDefinition, READER_THEME_DEFINITIONS } =
+  await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const bookmarkModel = await import('../entry/src/main/ets/features/reading/presentation/ReaderPageBookmarkModel.ts');
 const { ReaderPageBookmarkSnapshot, readerBookmarkRibbonPull, readerBookmarkHintAlpha } = bookmarkModel;
 const motion = productionReaderMotionSdk();
@@ -34,7 +35,7 @@ const typography = readFileSync(new URL('../entry/src/main/ets/ui/foundation/Rea
 const { TYPE_READER_IMMERSIVE_TIME, TYPE_READER_IMMERSIVE_PROGRESS, TYPE_READER_IMMERSIVE_PAGE_ORDINAL } =
   loadReaderTypographyRoles(typography);
 const roles = { TYPE_READER_IMMERSIVE_TIME, TYPE_READER_IMMERSIVE_PROGRESS, TYPE_READER_IMMERSIVE_PAGE_ORDINAL };
-const dependencies = { ...chromeLayout, ...roles, ...bookmarkModel, ...readerMessageStyles, readerAppColor,
+const dependencies = { ...chromeLayout, ...roles, ...bookmarkModel, ...readerMessageStyles, readerAppColor, readerThemeDefinition,
   measureReaderPageChromeText, readerPageChromeTopTextStyle, readerAppearanceChromeTone, readerRenderStageKind };
 const lreSource = readFileSync(file('LocalReadingExperience.ets'), 'utf8');
 const chromeSource = geometryCase ? readFileSync(file('ReaderPageChrome.ets'), 'utf8') : undefined;
@@ -66,17 +67,20 @@ function context(scale) {
       measureTextSize: ({textContent}) => ({width: textContent.length * 7.2 * 3 * scale, height: 20 * 3 * scale}) }) };
 }
 const chromeMembers = ['build', 'chromeLayout', 'textMeasure', 'topTextStyle', 'footerExitX', 'footerExitY', 'metaColor'];
+const bookmarkViewportMembers = ['currentBookmarkViewport', 'currentReadingViewportStart'];
 const bookmarkMembers = ['bookmarkCornerFeedback', 'bookmarkCornerLayout', 'bookmarkFeedbackLabel',
   'pageBookmarkFeedbackFilled', 'pageBookmarkFeedbackMode', 'pageBookmarkFeedbackAnchor', 'bookmarkFeedbackOwnerKey',
-  'bookmarkUnavailableHintFits', 'bookmarkUnavailableHintCurrent', 'bookmarkHintVisibleAlpha', 'bookmarkHintVisibleHeight', 'bookmarkFeedbackTopBoundary',
-  'bookmarkRibbonPaperTop', 'bookmarkRibbonX', 'continuousBookmarkRibbonFrame', 'currentBookmarkRibbonFrame'];
+  'bookmarkUnavailableHintFits', 'bookmarkUnavailableHintCurrent', 'bookmarkHintVisibleAlpha', 'bookmarkFeedbackTopBoundary',
+  'bookmarkRibbonPaperTop', 'bookmarkRibbonX', 'continuousBookmarkRibbonFrame', 'currentBookmarkRibbonFrame',
+  'bookmarkPullOffset', 'bookmarkPullPaperTop', 'bookmarkPaperWell', 'bookmarkPullFeedbackColor',
+  ...bookmarkViewportMembers];
 const RibbonSource = readFileSync(file('ReaderPageBookmarkRibbon.ets'), 'utf8');
 const RIBBON_PATH = RibbonSource.match(/^const RIBBON_PATH = '([^']+)';$/m)?.[1];
 assert.equal(RIBBON_PATH, 'M1.5,0.5 H14.5 V33 L8,27.5 L1.5,33 Z');
-const ribbonDependencies = { ...dependencies, RIBBON_PATH };
+const ribbonDependencies = { ...dependencies, RIBBON_PATH, GradientDirection: { Bottom: 'bottom' } };
 const ribbonProperties = createArkUIPropertyRuntimeProbe();
 const RibbonComponent = createReaderBuilderProbe(RibbonSource,
-  ['build', 'ink', 'x', 'paperTop', 'offsetY', 'fillHeight', 'alpha', 'night', 'bookmarked'],
+  ['build', 'ink', 'x', 'paperTop', 'paperScale', 'offsetY', 'fillHeight', 'alpha', 'night', 'bookmarked'],
   { ...ribbonDependencies, ...ribbonProperties.sdk }, ribbonProperties.hooks).Component;
 ribbonDependencies.ReaderPageBookmarkRibbon = class extends RibbonComponent {
   constructor(owner, params, storage, id, ...rest) {
@@ -103,6 +107,10 @@ const UnderlayComponent = geometryCase ? createReaderBuilderProbe(lreSource, ['r
 const StatusPaperComponent = geometryCase ? createReaderBuilderProbe(statusPaperSource, ['build'], {
   ReaderPaperBackground: StatusPaper, findReaderTheme,
 }, { childSources: { ReaderPaperBackground: paperBackgroundSource } }).Component : undefined;
+function publishContinuousViewport(owner, startScalar, endScalar) {
+  Object.assign(owner, { continuousVisibleScalar: startScalar,
+    continuousVisibleEndFragmentIndex: 0, continuousFragments: [{ endScalar }] });
+}
 function render(layout, state = {}, time = '12:30') {
   const ui = context(layout.systemFontScale);
   const chrome = new ChromeComponent(undefined, {});
@@ -120,23 +128,31 @@ function render(layout, state = {}, time = '12:30') {
     bookmarkPreviewStatus: state.currentPageBookmarkStatus?.() ?? 'bookmarked',
     lifecycleToken: 1, chapterSelectionToken: 1, bookmarkUnavailableMessage: '',
     controlVisible: () => false, controlObscured: false, bookmarkPageOffsetY: 0, bookmarkPreviewChanged: false,
-    windowChromeActive: true, windowControlsPresented: false, pageTurnRenderRevision: 1,
+    windowChromeActive: true, windowControlsPresented: false, pageTurnRenderRevision: 1, pageTurnOffsetX: 0,
     hasContinuousRenderContent: () => true, readerAppScheme: 'day', bookTitle: chrome.topStartText, pageChromeClockText: time,
     readingLayout: () => layout, getUIContext: () => ui, ...state });
-  bookmark.readerSettingsSnapshot = { hideStatusBar: true, ...state.readerSettingsSnapshot, navigationMode: 'continuous' };
-  bookmark.visibleReadingAppearance = () => ({ activeTheme: state.night ? 'night' : 'paper' });
+  bookmark.readerSettingsSnapshot = { hideStatusBar: true, navigationMode: 'continuous', ...state.readerSettingsSnapshot };
+  bookmark.hasCurrentMaterializedChapter = () => true;
+  publishContinuousViewport(bookmark, 0, 50);
+  bookmark.visibleReadingAppearance = () => ({ activeTheme: state.activeTheme ?? (state.night ? 'night' : 'paper') });
   bookmark.bookmarkPreviewOwner = bookmark.bookmarkFeedbackOwnerKey();
+  if (bookmark.bookmarkUnavailableMessage.length > 0) bookmark.bookmarkUnavailableOwner = bookmark.bookmarkPreviewOwner;
   bookmark.bookmarkCornerLayout();
   if (bookmark.bookmarkPageOffsetY > 0) {
-    bookmark.bookmarkRibbonFrame = readerBookmarkRibbonPull(bookmark.bookmarkPageOffsetY, bookmark.bookmarkPreviewStatus === 'bookmarked', false);
+    bookmark.bookmarkRibbonFrame = readerBookmarkRibbonPull(bookmark.bookmarkPageOffsetY,
+      bookmark.bookmarkPreviewStatus === 'bookmarked', bookmark.reduceMotion === true);
     bookmark.bookmarkPullHintOpacity = readerBookmarkHintAlpha(bookmark.bookmarkPageOffsetY);
+  }
+  if (readerRenderStageKind(bookmark.readerSettingsSnapshot.navigationMode, true) === 'paged' && bookmark.bookmarkPullOffset() > 0) {
+    bookmark.bookmarkPaperWell();
+    bookmark.bookmarkCornerFeedback(true);
   }
   bookmark.bookmarkCornerFeedback();
   const nodes = [...chrome.nodes.values()];
   const actor = ribbonActor(bookmark);
   const actorRoot = actor && [...actor.nodes.values()].find(node => node.type === 'Stack' && node.clip === true && node.position);
   const marker = actor && { ...actor.params, ...actorRoot, paths: [...actor.nodes.values()].filter(node => node.type === 'Path') };
-  return { chrome, bookmark, clock: nodes.find(n => n.type === 'Text' && n.create === time),
+  return { chrome, bookmark, paint: [...bookmark.nodes.values()], clock: nodes.find(n => n.type === 'Text' && n.create === time),
     title: nodes.find(n => n.type === 'Text' && n.create.startsWith('A very')),
     marker, icon: marker?.alpha > 0 ? marker : undefined,
     hint: (() => {
@@ -152,11 +168,12 @@ function disjoint(a, b) {
   return noOverlap(a, b) || a.y + a.height <= b.y + 1e-8 || b.y + b.height <= a.y + 1e-8;
 }
 function renderStatusComposition(layout, state) {
-  state = { ...state, readerSettingsSnapshot: { navigationMode: 'paged', ...state.readerSettingsSnapshot } };
+  state = { ...state, readerSettingsSnapshot: { navigationMode: 'continuous', ...state.readerSettingsSnapshot } };
   actualLayoutMetrics = layout.pageChromeStatusMetrics;
   const geometry = Object.assign(new ActualLayout(), {
     effectiveViewportWidth: () => layout.viewportWidth, effectiveViewportHeight: () => layout.viewportHeight,
     expandedLayout: false, sessionCapsuleMetrics: () => ({ targetHeight: 0 }), readerSettingsSnapshot: { extendIntoCutout: layout.fixtureExtended, ...state.readerSettingsSnapshot },
+    appearanceSnapshot: { activeTheme: state.activeTheme ?? 'paper' },
     bookTitle: 'A very long book title that must not overlap', pageChromeClockText: '12:30',
     getUIContext: () => context(layout.systemFontScale),
   });
@@ -165,7 +182,7 @@ function renderStatusComposition(layout, state) {
   drawn.layout = layout;
   const underlay = new UnderlayComponent(undefined, {});
   Object.assign(underlay, { windowChromeActive: true, windowControlsPresented: state.controlVisible?.() === true,
-    readerSettingsSnapshot: state.readerSettingsSnapshot, appearanceSnapshot: { activeTheme: 'paper' },
+    readerSettingsSnapshot: state.readerSettingsSnapshot, appearanceSnapshot: { activeTheme: state.activeTheme ?? 'paper' },
     readerWindowMetricsRevision: 1, readingLayout: () => layout });
   underlay.readerStatusBarUnderlay();
   const paper = [...underlay.children.values()][0];
@@ -262,15 +279,16 @@ const empty = render(paperLayout, { currentPageBookmarkStatus: () => 'empty' });
 assert.equal(empty.marker.alpha, 0);
 assert.equal(empty.marker.offsetY, -34);
 assert.equal(empty.hint, undefined);
-const partial = render(paperLayout, { currentPageBookmarkStatus: () => 'empty', bookmarkPageOffsetY: 22 });
-assert.equal(partial.marker.offsetY, -12);
-assert.equal(partial.hint.create, '下拉添加书签');
-const full = render(paperLayout, { currentPageBookmarkStatus: () => 'empty', bookmarkPageOffsetY: 46, bookmarkPreviewChanged: true });
-assert.equal(full.marker.offsetY, 0);
-assert.equal(full.hint.create, '松手添加书签');
-assert.ok(full.hint.opacity > partial.hint.opacity, 'hint alpha grows smoothly');
-assert.equal(partial.hint.fontFamily, readerMessageStyles.MESSAGE_META.fontFamily);
-assert.equal(partial.bookmark.bookmarkCornerLayout(), partial.bookmark.bookmarkCornerLayout(), 'pull reuses chrome geometry cache');
+const reduced = render(paperLayout, { readerSettingsSnapshot: { navigationMode: 'paged' },
+  currentPageBookmarkStatus: () => 'empty', reduceMotion: true, bookmarkPullHintOpacity: 0.5 });
+assert.equal(reduced.hint.create, '下拉添加书签', 'the reduced hint remains in the quiet slot');
+assert.equal(reduced.hint.opacity, 0.5);
+assert.ok(!reduced.paint.some(node => node.id === 'reader-bookmark-pull-feedback' || node.id === 'reader-bookmark-paper-well'));
+const unavailable = render(paperLayout, { readerSettingsSnapshot: { navigationMode: 'paged' },
+  bookmarkUnavailableMessage: '页面切换中，请稍后下拉' });
+assert.equal(unavailable.hint.create, '页面切换中，请稍后下拉');
+assert.equal(unavailable.hint.hitTestBehavior, 'HitTestMode.None');
+assert.equal(unavailable.hint.opacity, 1);
 for (const state of [{ controlVisible: () => true }, { controlObscured: true }]) assert.equal(render(paperLayout, state).icon, undefined);
 console.log(`PASS ribbon/status composition: ${statusCompositions} actual layouts and SDK paint trees; fixed 16×34 geometry, chrome, cutout, scale and controls`);
 
@@ -289,37 +307,176 @@ registerChild('ReaderPageTurnSurface', stageSource); registerChild('ReadingSurfa
 registerChild('ReaderNativeParagraphView', readFileSync(file('ReaderNativeParagraphView.ets'), 'utf8'));
 registerChild('ReaderPageChrome', chromeSource); registerChild('ReaderReadingTextFragment', readingSource);
 registerChild('ReaderPaperBackground', readFileSync(file('ReaderPaperBackground.ets'), 'utf8'));
+registerChild('ReaderFacingChapterColumn', readFileSync(file('ReaderFacingChapter.ets'), 'utf8'));
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
-for (const pull of [0, 8, 46, 18, 0]) {
+const stageSourceDefinition = stageSource.slice(stageSource.lastIndexOf('@Component', stageSource.indexOf('export struct ReaderPageTurnStage')));
+const StageComponent = createReaderBuilderProbe(stageSourceDefinition, ['build', 'bookmarkEdgeFactor', 'bookmarkClipTop'],
+  { ReaderPageTurnSurface: Child }).Component;
+function renderStage(pull, layout, paperTop, settings = {}) {
   const frame = readerBookmarkRibbonPull(pull, false, false);
-  const source = stageSource.slice(stageSource.lastIndexOf('@Component', stageSource.indexOf('export struct ReaderPageTurnStage')));
-  const stage = createReaderBuilderProbe(source, ['build'], { ReaderPageTurnSurface: Child }).owner;
-  Object.assign(stage, { translateY: pull, topInfoMovesWithPage: true, bookmarkRibbon: frame, currentPageSlot: 'a', layout, appearance: { activeTheme: 'paper' },
+  const stage = new StageComponent(undefined, {});
+  Object.assign(stage, { translateY: pull, topInfoMovesWithPage: true, bookmarkRibbon: frame, currentPageSlot: 'a',
+    bookmarkPaperTop: paperTop, offsetX: 0, layout, appearance: { activeTheme: 'paper' },
     slotPage: () => ({ fragments: [], bookmark: new ReaderPageBookmarkSnapshot('hidden', 0, 10, 0, 16, 34), chromeTopStartText: 'Book', chromeTopEndText: '12:30' }),
     slotIdentity: slot => slot, slotSnapshotId: () => '', slotX: () => 0,
-    slotVisible: slot => slot === 'a', slotLayer: () => 0, slotShadow: () => 0, hasActiveTurn: () => false });
+    slotVisible: slot => slot === 'a', slotLayer: () => 0, slotShadow: () => 0, hasActiveTurn: () => false, ...settings });
   stage.initialRender();
-  const root = [...stage.nodes.values()].find(n => n.translate?.y === pull);
+  return stage;
+}
+function paintNode(nodes, name) { return nodes.find(node => node.id === `reader-bookmark-${name}`); }
+const paintByScheme = {
+  day: { well: '#172B241D', shadow: [['#002B241D', 0], ['#1F2B241D', 1]], track: '#242B241D', edge: '#2E2B241D' },
+  night: { well: '#57000000', shadow: [['#00000000', 0], ['#6B000000', 1]], track: '#29ECE8E0', edge: '#33ECE8E0' },
+};
+let pullCompositions = 0;
+assert.equal(READER_THEME_DEFINITIONS.length, 8);
+const pullFixture = cases[0];
+for (const theme of READER_THEME_DEFINITIONS) for (const hideStatusBar of [false, true]) {
+  // Fixture has a 32vp notch inside a 48vp status bar.
+  const paperTop = hideStatusBar ? 32 : 48;
+  for (const [pull, labelAlpha, wellAlpha, edgeAlpha, fillWidth, changed, removing] of [
+    [0, 0, 0, 0, 0, false, false], [0.5, 0, 0, 0, 0, false, false], [5, 0, 0.5, 5 / 18, 120 / 23, false, false],
+    [22, 0.5, 1, 1, 528 / 23, false, false], [46, 0.92, 1, 1, 48, true, false],
+    [46, 0.92, 1, 1, 48, false, false], [86, 0.92, 1, 1, 48, true, true], [0, 0, 0, 0, 0, false, false],
+  ]) {
+    const { bookmark, paint, paper, layout } = renderStatusComposition(pullFixture, {
+      readerSettingsSnapshot: { navigationMode: 'paged', hideStatusBar }, activeTheme: theme.id,
+      currentPageBookmarkStatus: () => removing ? 'bookmarked' : 'empty',
+      bookmarkPageOffsetY: pull, bookmarkPreviewChanged: changed,
+    });
+    const visualOffset = bookmark.bookmarkPullOffset();
+    const stage = renderStage(visualOffset, layout, visualOffset > 0 ? bookmark.bookmarkPullPaperTop(layout) : undefined,
+      { appearance: { activeTheme: theme.id } });
+    const stagePaint = [...stage.nodes.values()];
+    const root = stagePaint.find(node => node.translate?.y !== undefined);
+    assert.equal(root.width, '100%');
+    assert.equal(root.height, '100%');
+    assert.equal(root.clip, true);
+    assert.equal(visualOffset, pull <= 0.5 ? 0 : pull);
+    assert.equal(root.translate.y, visualOffset > 0 ? paperTop + pull : 0);
+    assert.deepEqual(root.borderRadius, { topLeft: 14 * edgeAlpha, topRight: 14 * edgeAlpha, bottomLeft: 0, bottomRight: 0 });
+    const edge = paintNode(stagePaint, 'paper-edge');
+    if (pull <= 0.5) {
+      assert.ok(paint.every(node => typeof node.id !== 'string' || !node.id.startsWith('reader-bookmark-')));
+      assert.equal(edge, undefined);
+      continue;
+    }
+    const palette = paintByScheme[theme.scheme];
+    const base = paintNode(paint, 'paper-base');
+    const well = paintNode(paint, 'paper-well');
+    const shadow = paintNode(paint, 'paper-shadow');
+    const feedback = paintNode(paint, 'pull-feedback');
+    const track = paintNode(paint, 'pull-track');
+    const fill = paintNode(paint, 'pull-fill');
+    const label = paint.find(node => node.type === 'Text');
+    for (const node of [base, well, shadow, edge]) {
+      assert.equal(node.width, '100%');
+      assert.equal(node.hitTestBehavior, 'HitTestMode.None');
+      assert.equal(node.accessibilityLevel, 'no');
+    }
+    assert.deepEqual(base.position, { x: 0, y: 0 });
+    assert.equal(base.backgroundColor, theme.paperStart);
+    assert.equal(base.height, paperTop + pull + 18);
+    assert.deepEqual(well.position, { x: 0, y: paperTop });
+    assert.equal(well.height, pull + 18);
+    assert.equal(well.backgroundColor, palette.well);
+    assert.equal(well.opacity, wellAlpha);
+    assert.ok(paint.indexOf(base) < paint.indexOf(well) && paint.indexOf(well) < paint.indexOf(shadow) &&
+      paint.indexOf(shadow) < paint.indexOf(feedback), 'paper base, well and shadow paint under the guidance');
+    assert.deepEqual(shadow.linearGradient.colors, palette.shadow);
+    assert.equal(shadow.height, pull < 12 ? pull : 12);
+    assert.ok(shadow.position.y >= paperTop);
+    assert.equal(shadow.position.y + shadow.height, paperTop + pull);
+    assert.equal(shadow.opacity, edgeAlpha);
+    assert.deepEqual(feedback.position, { x: 0, y: paperTop });
+    assert.equal(feedback.height, pull);
+    assert.equal(feedback.clip, true);
+    assert.equal(feedback.justifyContent, 'FlexAlign.Center');
+    assert.equal(feedback.hitTestBehavior, 'HitTestMode.None');
+    if (paper) assert.equal(well.position.y, paper.y + paper.height, 'well touches the crop below visible system chrome');
+    assert.equal(track.width, 48);
+    assert.equal(track.height, 2.5);
+    assert.equal(track.clip, true);
+    assert.equal(track.backgroundColor, palette.track);
+    assert.ok(Math.abs(fill.width - fillWidth) < 1e-10);
+    const ink = changed ? readerAppColor(removing ? 'TOK_ACCENT' : 'TOK_READ_PRIMARY', theme.scheme) : theme.chromeMeta;
+    assert.equal(fill.backgroundColor, ink);
+    if (labelAlpha > 0) {
+      assert.equal(label.create, removing ? '松手移除本页书签' : changed ? '松手添加书签' : '下拉添加书签');
+      assert.equal(label.fontColor, ink);
+      assert.equal(label.fontFamily, readerMessageStyles.MESSAGE_META.fontFamily);
+      assert.ok(Math.abs(label.opacity - labelAlpha) < 1e-10);
+    } else assert.equal(label, undefined, 'early shallow pulls retain room for the depth indicator');
+    assert.equal(edge.height, 1);
+    assert.equal(edge.backgroundColor, palette.edge);
+    assert.equal(edge.opacity, edgeAlpha);
+    assert.equal(edge.position.y + root.translate.y, paperTop + pull, 'rim and page clip use the same moving edge');
+    pullCompositions++;
+  }
+}
+console.log(`PASS paper well: ${pullCompositions} active SDK paint trees over 8 themes and both status modes; idle, 0.5vp and rollback endpoints carry no new paint`);
+for (const style of ['simulation', 'cover', 'slide', 'none']) {
+  for (const blockers of [{}, { reduceMotion: true }, { pageTurnOffsetX: 24 }, { pageTurnDirection: 'next' }]) {
+    const { bookmark, paint } = render(layout, { readerSettingsSnapshot: { navigationMode: 'paged' },
+      currentPageBookmarkStatus: () => 'empty', bookmarkPageOffsetY: 46, ...blockers });
+    const offset = bookmark.bookmarkPullOffset();
+    const stage = renderStage(offset, layout, offset > 0 ? bookmark.bookmarkPullPaperTop(layout) : undefined,
+      { pageTurnStyle: style, offsetX: blockers.pageTurnOffsetX ?? 0, turnDirection: blockers.pageTurnDirection });
+    const active = Object.keys(blockers).length === 0;
+    assert.equal(offset, active ? 46 : 0);
+    assert.equal(paintNode(paint, 'paper-well') !== undefined, active);
+    assert.equal(paintNode([...stage.nodes.values()], 'paper-edge') !== undefined, active);
+  }
+}
+const continuous = render(layout, { bookmarkPageOffsetY: 46 });
+assert.ok(continuous.icon && paintNode(continuous.paint, 'paper-well') === undefined,
+  'continuous reading retains its host marker and does not mount the paged well');
+assert.match(lreSource, /this\.continuousPageChromeContent\(\);\s*}\s*else\s*{\s*if\s*\(this\.bookmarkPullOffset\(\) > 0\)\s*{\s*this\.bookmarkPaperWell\(\);\s*this\.bookmarkCornerFeedback\(true\);\s*}\s*ReaderPageTurnStage\(/,
+  'the live reading host mounts pull paint only behind the paged stage');
+for (const pull of [0, 8, 46, 18, 0]) {
+  const paperTop = pull > 0 ? 32 : undefined;
+  const ribbonLayout = { ...layout, contentTop: 56 };
+  const stage = renderStage(pull, ribbonLayout, paperTop);
+  const root = [...stage.nodes.values()].find(n => n.translate?.y !== undefined);
   assert.ok(root); assert.equal(root.clip, true, 'the physical paper clips the ribbon to its own bounds');
   for (const page of stage.children.values()) {
     assert.equal(page.params.chromeTopTranslateY, 0);
+    assert.equal(page.params.bookmarkPaperTop, page.params.slotIdentity === 'a' ? paperTop : undefined);
     const slot = createReaderBuilderProbe(stageSource, ['build'], { ReadingSurface: Child,
       COVER_OCCLUSION_RADIUS_VP: 1, COVER_OCCLUSION_OFFSET_X_VP: 1 }, {componentName:'ReaderPageTurnSurface'}).owner;
     Object.assign(slot, page.params, { staticSnapshotId: '', slotIdentity: 'a', shadowColor: () => '#00000000' });
     slot.initialRender();
+    const slotRoot = [...slot.nodes.values()].find(node => node.translate?.x !== undefined);
+    if (page.params.slotIdentity === 'a') {
+      assert.equal(root.translate.y + (slotRoot.translate.y ?? 0), pull, 'the body moves by the gesture offset alone');
+      assert.equal(slotRoot.width, '100%');
+      assert.equal(slotRoot.height, '100%');
+    }
     const readingParams = [...slot.children.values()][0].params;
     assert.equal(readingParams.chromeTopTranslateY, 0);
-    const reading = createReaderBuilderProbe(readingSource.slice(readingSource.lastIndexOf('@Component', readingSource.indexOf('export struct ReadingSurface'))), ['build', 'usesHighlightCanvas', 'pageBookmarkMode', 'pageBookmarkRibbonFrame'], { ...ribbonDependencies,
-      ReaderPageChrome: Child, ReaderNativeParagraphView: Child, ReaderReadingTextFragment: Child, ReaderPaperBackground: Child,
+    assert.equal(readingParams.bookmarkPaperTop, page.params.bookmarkPaperTop);
+    const reading = createReaderBuilderProbe(readingSource.slice(readingSource.lastIndexOf('@Component', readingSource.indexOf('export struct ReadingSurface'))), ['build', 'usesHighlightCanvas', 'pageBookmarkMode', 'pageBookmarkRibbonFrame', 'pageBookmarkRibbonScale'], { ...ribbonDependencies,
+      ReaderPageChrome: Child, ReaderNativeParagraphView: Child, ReaderReadingTextFragment: Child,
+      ReaderPaperBackground: Child, ReaderFacingChapterColumn: Child,
       GradientDirection: { Bottom: 'bottom' } }, ribbonHooks).owner;
     Object.assign(reading, readingParams, { themeStyle: () => ({ sourcePaperLighting: false, paperTexture: false,
       paperStart: '#FFFFFF', paperEnd: '#FFFFFF' }), renderFragments: () => [], pageParagraphs: [],
-      showChapterTitle: false, staticSnapshotId: '', contentInsets: () => ({}), layout, dynamicHighlightBlend: () => 0 });
+      showChapterTitle: false, staticSnapshotId: '', contentInsets: () => ({}), layout: ribbonLayout, dynamicHighlightBlend: () => 0 });
     reading.initialRender();
     const finalParams = [...reading.children.values()].find(child => 'topTranslateY' in child.params).params;
     assert.equal(finalParams.topTranslateY, 0, 'the chrome travels with its physical paper');
     assert.equal(ribbonParams(reading).offsetY, page.params.bookmarkRibbon?.y ?? -34);
     assert.equal(ribbonParams(reading).fillHeight, page.params.bookmarkRibbon?.fillHeight ?? 0);
+    assert.equal(ribbonParams(reading).paperTop, page.params.bookmarkPaperTop ?? 0,
+      'the ribbon docks to the moved edge and returns to its existing anchor at rest');
+    const ribbonRoot = [...ribbonActor(reading).nodes.values()].find(node => node.clip === true && node.position);
+    if (page.params.slotIdentity === 'a' && paperTop !== undefined) {
+      assert.equal(root.translate.y + (slotRoot.translate.y ?? 0) + ribbonParams(reading).paperTop, paperTop + pull);
+      assert.deepEqual(ribbonRoot.scale, { x: 24 / 34, y: 24 / 34, centerX: 0, centerY: 0 },
+        'the active ribbon fits under the hidden cutout without covering the first line or moving its anchor');
+    } else {
+      assert.equal(ribbonRoot.scale, undefined, 'the resting ribbon keeps its original size');
+    }
   }
 }
 assert.match(lreSource, /\.clip\(true\)\s*\.onTouch/, 'reading viewport retains outer clipping');
@@ -342,9 +499,11 @@ function retainedMarker(initial = 'bookmarked') {
     currentChapterIndex: () => owner.chapter.chapterIndex, controlDirectoryEntries: () => owner.directoryEntries,
     controlVisible: () => false, visibleReadingAppearance: () => ({ activeTheme: 'paper' }),
     readerSettingsSnapshot: { navigationMode: 'continuous', hideStatusBar: true }, hasContinuousRenderContent: () => true,
+    hasCurrentMaterializedChapter: () => true,
     readingLayout: () => ({ pageChromeVisualSafeTop: 0 }),
     bookmarkCornerLayout: () => ({ topAccessoryWidth: 16, topAccessoryHeight: 16, topAccessoryX: 0, topAccessoryY: 0 }),
   });
+  publishContinuousViewport(owner, 0, 50);
   for (const key of Object.keys(state)) Object.defineProperty(owner, key, {
     get() { const id = active.at(-1); if (id !== undefined) subscriptions.get(id).add(key); return state[key]; },
   });
@@ -362,7 +521,7 @@ function retainedMarker(initial = 'bookmarked') {
       return ids;
     },
     page(startScalar, endScalar) {
-      owner.visiblePage = { startScalar, endScalar };
+      publishContinuousViewport(owner, startScalar, endScalar);
       return this.update('pageTurnRenderRevision', state.pageTurnRenderRevision + 1);
     },
   };
@@ -391,14 +550,17 @@ if (selectedCase === 'transaction') {
 // rebound, late write/projection, page/book changes and failed deletion.
 assert.deepEqual(motion.motionAnimateParam('reader.bookmark.rollback'), { duration: 300, curve: [0.2, 0, 0, 1] });
 assert.equal(motion.readerMotionReducedFadeParam().duration, 120);
+const vibrationRequests = [];
 const bookmarkMotionDeps = { ...gesture, ...bookmarkModel, ...motion, LOCAL_READING_SOURCE_ID: 'local',
-  vibrator: { startVibration: () => Promise.resolve() } };
+  readerMotionStandardCurve: () => ({ interpolate: fraction => fraction }),
+  vibrator: { startVibration: (effect, options) => { vibrationRequests.push({ effect, options }); return Promise.resolve(); } } };
 const H = productionMotionMethods(file('LocalReadingExperience.ets'), ['onReaderBookmarkGestureStateChanged',
-  'onReaderBookmarkGestureReleased', 'finishBookmarkRollback', 'bookmarkMatchesCurrentChapter', 'toggleCurrentPageBookmark', 'currentPageBookmarkStatus',
+  'onReaderBookmarkGestureReleased', 'animateBookmarkRollback', 'finishBookmarkRollback', 'bookmarkMatchesCurrentChapter', 'toggleCurrentPageBookmark', 'currentPageBookmarkStatus',
   'pageBookmarkFeedbackAnchor', 'pageBookmarkFeedbackFilled', 'reconcilePageBookmarkFeedback',
-  'canStartReaderBookmarkGesture', 'isReaderBookmarkGestureCurrent', 'bookmarkFeedbackOwnerKey'], bookmarkMotionDeps);
+  'canStartReaderBookmarkGesture', 'isReaderBookmarkGestureCurrent', 'bookmarkFeedbackOwnerKey', ...bookmarkViewportMembers], bookmarkMotionDeps);
 let entries = [{ index: 0, title: 'C', bookmarks: [] }], pending = [];
 const host = Object.assign(new H(), { mounted: true, sourceId: 'local', bookId: 'b', visiblePage: { startScalar: 0, endScalar: 50 },
+  readerSettingsSnapshot: { navigationMode: 'paged' },
   currentChapterIndex: () => 0, currentPageBookmarkText: () => 'body', controlDirectoryEntries: () => entries,
   bookmarkPendingTarget: '', bookmarkPreviewChanged: false, bookmarkRollbackGeneration: 0, bookmarkMutationGeneration: 0,
   bookmarkGestureAnchor: '', lifecycleToken: 1, chapterSelectionToken: 1, pagePointerEpoch: 1, pageTurnInputRevision: 1,
@@ -430,18 +592,19 @@ assert.equal(host.pageBookmarkFeedbackFilled(), false, 'old book completion does
 // the production methods, marker cache and merge remain unmodified.
 const pointerReleaseTicks = [];
 const Normal = productionMotionMethods(file('LocalReadingExperience.ets'), [
-  'onReaderBookmarkGestureStateChanged', 'onReaderBookmarkGestureReleased', 'finishBookmarkRollback',
+  'onReaderBookmarkGestureStateChanged', 'onReaderBookmarkGestureReleased', 'animateBookmarkRollback', 'finishBookmarkRollback',
   'bookmarkMatchesCurrentChapter', 'toggleCurrentPageBookmark', 'currentPageBookmarkStatus', 'pageBookmarkFeedbackAnchor',
   'pageBookmarkFeedbackFilled', 'reconcilePageBookmarkFeedback', 'canStartReaderBookmarkGesture',
-  'isReaderBookmarkGestureCurrent', 'bookmarkFeedbackOwnerKey',
+  'isReaderBookmarkGestureCurrent', 'bookmarkFeedbackOwnerKey', 'bookmarkPullFeedbackColor',
   'onReaderPageGestureStateChanged',
   'acquirePagePointer', 'releasePagePointer', 'pageTurnTapOnlyInput', 'regrabPageTurn',
-  'controlDirectorySourceEntries', 'controlDirectoryEntries', 'invalidatePageTurnRuntime',
+  'controlDirectorySourceEntries', 'controlDirectoryEntries', 'invalidatePageTurnRuntime', ...bookmarkViewportMembers,
 ], { ...bookmarkMotionDeps, ...rapid,
   setTimeout: callback => { pointerReleaseTicks.push(callback); return pointerReleaseTicks.length; } });
 function normalHost(bookmarked = false) {
-  const requests = [], animations = [];
+  const requests = [], animations = [], reboundFrames = [];
   const h = Object.assign(new Normal(), { mounted: true, sourceId: 'local', bookId: 'b', chapter: undefined,
+    readerSettingsSnapshot: { navigationMode: 'paged' },
     visiblePage: { startScalar: 50, endScalar: 100 },
     directoryEntries: [{ index: 16, title: 'chapter17', bookmarks: bookmarked ? [{ time: 10, chapterOffset: 50 }] : [] }],
     tocEntries: [], currentChapterIndex: () => 16, currentPageBookmarkText: () => 'text', canTurnPage: () => true,
@@ -452,14 +615,47 @@ function normalHost(bookmarked = false) {
     reduceMotion: false, appForeground: false, flushDeferredPageChromeState() {},
     autoPageCoordinator: { cancelPendingTurn() {} },
     onTogglePageBookmark: r => requests.push(r),
-    getUIContext: () => ({ animateTo: (options, closure) => { animations.push(options.onFinish); closure(); } }),
+    getUIContext: () => ({
+      animateTo: (options, closure) => { animations.push(options.onFinish); closure(); },
+      createAnimator: options => ({
+        play() {
+          assert.equal(options.duration, 300);
+          assert.equal(options.begin, 0);
+          assert.equal(options.end, 1);
+          reboundFrames.push(fraction => this.onFrame(fraction));
+          animations.push(() => this.onFinish());
+        },
+        cancel() { this.onCancel(); },
+      }),
+    }),
     rapidPageTurnState: rapid.createReaderRapidPageTurnState(),
     autoPageCoordinator: { cancelPendingTurn() {} },
     clearPageTurnProjection() {}, finishPageTurnPerf() {}, cancelPageTurnSettlementDeadline() {},
     clearBookTurnCapturedIdentities() {}, releaseBookTurnTextureContent() {}, releaseBookTurnPendingSnapshot() {},
     releaseUnretainedReadingImages() {},
   });
-  return { h, requests, animations };
+  return { h, requests, animations, reboundFrames };
+}
+for (const reduceMotion of [false, true]) {
+  const { h } = normalHost();
+  Object.assign(h, { reduceMotion, visibleReadingAppearance: () => ({ activeTheme: 'paper' }) });
+  assert.equal(h.canStartReaderBookmarkGesture(), true);
+  let state = gesture.beginReaderPageGesture(390, 200, 300, 0, 844);
+  const startingPulses = vibrationRequests.length;
+  for (const [dx, dy, armed, pulses] of [
+    [0, 24, false, 0], [0, 96, true, 1], [0, 110, true, 1],
+    [150, 96, false, 1], [0, 96, true, 2], [0, 24, false, 2],
+  ]) {
+    state = gesture.moveReaderPageGesture(state, dx, dy);
+    h.onReaderBookmarkGestureStateChanged(state);
+    assert.equal(h.bookmarkPullFeedbackColor(), armed ? readerAppColor('TOK_READ_PRIMARY', 'day') :
+      readerThemeDefinition('paper').chromeMeta);
+    assert.equal(vibrationRequests.length - startingPulses, reduceMotion ? 0 : pulses,
+      'the same armed state switches the feedback ink and requests a single new haptic per crossing');
+  }
+  if (!reduceMotion) assert.deepEqual(vibrationRequests.at(-1), {
+    effect: { type: 'time', duration: 10 }, options: { usage: 'touch' },
+  });
 }
 function normalRelease(h, cancelled = false) {
   assert.equal(h.canStartReaderBookmarkGesture(), true);
@@ -477,7 +673,7 @@ const ReboundInput = productionMotionMethods(file('ReaderPageInteractionLayer.et
   ['acceptCurrentInput', 'startRawPointer', 'handleTouch', 'cancelPan', 'resetRawPointer'],
   { ...gesture, TouchType: { Down: 'down', Up: 'up', Move: 'move', Cancel: 'cancel' } });
 for (const reduced of [false, true]) for (const cancelled of [false, true]) {
-  const { h, requests, animations } = normalHost();
+  const { h, requests, animations, reboundFrames } = normalHost();
   Object.assign(h, { activePagePointerId: -1, reduceMotion: reduced,
     pageTurnFrozenRevision: 0, pageTurnRenderRevision: 0, pageTurnSessionCapsuleFrozen: true });
   assert.equal(h.acquirePagePointer(11), true);
@@ -495,6 +691,10 @@ for (const reduced of [false, true]) for (const cancelled of [false, true]) {
   if (!reduced) {
     assert.equal(animations.length, 1);
     assert.equal(h.pageTurnInputOwned, true, 'the released bookmark owns its rebound');
+    const releasedOffset = h.bookmarkPageOffsetY;
+    assert.ok(releasedOffset > 0, 'releasing a visible drag retains the moving paper and well for rebound');
+    reboundFrames[0](0.5);
+    assert.equal(h.bookmarkPageOffsetY, releasedOffset / 2, 'normal rebound delivers intermediate paper offsets');
     const input = Object.assign(new ReboundInput(), { interactionEnabled: true, activePointerId: -1,
       gestureState: decision.state, deferredSegmentReserved: false, systemOwnsPointer: () => false,
       onPointerStart: pointerId => h.acquirePagePointer(pointerId),
@@ -513,12 +713,15 @@ for (const reduced of [false, true]) for (const cancelled of [false, true]) {
     assert.equal(input.activePointerId, -1, 'a segment rejected during rebound cannot replay after it finishes');
   } else {
     assert.equal(animations.length, 1, 'reduced motion retains a 120ms alpha settlement');
+    assert.equal(reboundFrames.length, 0, 'reduced motion never starts the paper animator');
     assert.equal(h.bookmarkPageOffsetY, 0);
     assert.equal(h.bookmarkRibbonFrame.y, -13);
     animations[0]();
   }
   assert.equal(h.pageTurnGestureState.phase, 'idle');
   assert.equal(h.pageTurnInputOwned, false);
+  assert.equal(h.bookmarkPageOffsetY, 0);
+  assert.equal(h.bookmarkRibbonFrame, undefined);
   assert.equal(h.acquirePagePointer(13), true, 'a genuinely new DOWN is admitted after rebound finishes');
   assert.equal(h.pagePointerEpoch, epoch + 1);
 }
@@ -609,6 +812,8 @@ assert.equal(invalidated.h.bookmarkPendingTarget, 'bookmarked', 'early ACK holds
 invalidated.h.invalidatePageTurnRuntime();
 assert.equal(invalidated.h.bookmarkPendingTarget, '', 'runtime cancellation also reconciles confirmed projection');
 invalidated.h.visiblePage = { startScalar: 100, endScalar: 150 };
+invalidated.reboundFrames[0](0.5);
+assert.equal(invalidated.h.bookmarkPageOffsetY, 0, 'a stale rebound frame cannot reopen the well');
 invalidated.animations[0]();
 assert.equal(invalidated.h.pageBookmarkFeedbackFilled(), false, 'late old animation cannot mark the new page');
 const late = normalHost();
@@ -728,7 +933,7 @@ for (const [initial, next] of [ ['empty', 'bookmarked'], ['bookmarked', 'empty']
 const feedbackTimers = [], nativeToasts = [];
 const Feedback = productionMotionMethods(file('LocalReadingExperience.ets'), [
   'onReaderBookmarkGestureUnavailable', 'bookmarkUnavailableHintFits', 'bookmarkFeedbackOwnerKey',
-  'bookmarkUnavailableHintCurrent', 'bookmarkCornerLayout', 'pageBookmarkFeedbackAnchor',
+  'bookmarkUnavailableHintCurrent', 'bookmarkCornerLayout', 'pageBookmarkFeedbackAnchor', ...bookmarkViewportMembers,
 ], { ...dependencies, setTimeout: callback => { feedbackTimers.push(callback); return feedbackTimers.length; }, clearTimeout() {} });
 const feedbackLayout = { ...cases[1], contentTop: cases[1].contentTop + 80 };
 const feedback = Object.assign(new Feedback(), { mounted: true, lifecycleToken: 1, chapterSelectionToken: 1,

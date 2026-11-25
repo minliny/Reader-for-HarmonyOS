@@ -115,23 +115,27 @@ for (const mode of ['simulation', 'none']) {
 async function case_sdk_build_slot_binding() {
 const { default: assert } = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
-const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
 const file=new URL('../entry/src/main/ets/features/reading/ui/ReaderPageTurnStage.ets',import.meta.url);
 const names=["slotPage", "refreshRenderPages", "currentRenderPage", "adjacentRenderPage", "slotIdentity", "slotSnapshotId", "slotPresented", "hasActiveTurn", "slotVisible", "slotX", "slotLayer", "slotShadow", "hasLiveTurnWidth", "previousPageX", "nextPageX", "turnProgress", "coverOcclusionStrength"];
 const dependencies={READER_PAGE_TURN_SLOT_A:'reader-page-slot-a',READER_PAGE_TURN_SLOT_B:'reader-page-slot-b'};
-const Subject=productionMotionMethods(file,names,dependencies);
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
 const stage=readFileSync(file,'utf8');class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
-const {owner}=createReaderBuilderProbe(stage,['build',...names,'slotContentReady'],{...dependencies,ReaderPageTurnSurface:Child},{componentName:'ReaderPageTurnStage',childSources:{ReaderPageTurnSurface:stage}});
+const stageMembers = ['build', ...names, 'slotContentReady', 'bookmarkEdgeFactor', 'bookmarkClipTop'];
+const {owner}=createReaderBuilderProbe(stage,stageMembers,{...dependencies,ReaderPageTurnSurface:Child},{componentName:'ReaderPageTurnStage',childSources:{ReaderPageTurnSurface:stage}});
 const origin={identity:'origin',textureIdentity:'origin-pixels',renderRevision:1,fragments:[{text:'origin'}],
   facingChapter:{title:'Next chapter',paragraphs:['Its first paragraph'],identity:'next'}},
   next={identity:'next',textureIdentity:'next-pixels',renderRevision:2,fragments:[{text:'next'}]};
-const params={currentPageSnapshotId:'',contentRevision:1,currentPageSlot:'a',pageTurnStyle:'slide',turnDirection:'next',offsetX:-120,viewportWidth:400,translateY:12,layout:{viewportWidth:400,viewportHeight:800},appearance:{activeTheme:'paper'},currentPageProvider:()=>origin,previousPageProvider:()=>undefined,nextPageProvider:()=>next,emptyPage:{fragments:[]},onDynamicHighlights(){},onCurrentPagePresented(){},longPressSelectText:true};Object.assign(owner,params);
+const params={currentPageSnapshotId:'',contentRevision:1,currentPageSlot:'a',pageTurnStyle:'slide',turnDirection:'next',offsetX:-120,viewportWidth:400,translateY:12,bookmarkPaperTop:32,layout:{viewportWidth:400,viewportHeight:800},appearance:{activeTheme:'paper'},currentPageProvider:()=>origin,previousPageProvider:()=>undefined,nextPageProvider:()=>next,emptyPage:{fragments:[]},onDynamicHighlights(){},onCurrentPagePresented(){},longPressSelectText:true};Object.assign(owner,params);
 owner.initialRender();const children=[...owner.children.values()];assert.equal(children.length,2,'two current physical slot actors are mounted by actual build');
 const a=children.find(child=>child.params.slotIdentity==='reader-page-slot-a'),b=children.find(child=>child.params.slotIdentity==='reader-page-slot-b');assert.ok(a&&b);
 assert.equal(a.params.pageIdentity,'origin');assert.equal(b.params.pageIdentity,'next');assert.equal(a.params.pageFragmentsProvider(),origin.fragments);assert.equal(b.params.pageFragmentsProvider(),next.fragments);assert.equal(a.params.translateX,-120);assert.equal(b.params.translateX,280);assert.equal(a.params.chromeTopTranslateY,-12);assert.equal(a.params.longPressSelectText,true);assert.equal(b.params.longPressSelectText,false);
 assert.equal(a.params.facingChapter,origin.facingChapter,'the origin retains its own adjacent chapter during a turn');
 assert.equal(b.params.facingChapter,undefined,'the destination cannot inherit the origin preview');
+assert.equal(a.params.bookmarkPaperTop, undefined, 'a horizontal turn cannot move the bookmark anchor');
+assert.equal(b.params.bookmarkPaperTop, undefined);
+assert.ok([...owner.nodes.values()].every(node => node.id !== 'reader-bookmark-paper-edge'));
+assert.deepEqual([...owner.nodes.values()].find(node => node.width === '100%' && node.height === '100%').borderRadius,
+  { topLeft: 0, topRight: 0, bottomLeft: 0, bottomRight: 0 }, 'a horizontal turn cannot round the paper edge');
 const surface=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReadingSurface.ets',import.meta.url),'utf8');
 const {owner:slot}=createReaderBuilderProbe(stage,['build'],{ReadingSurface:Child,COVER_OCCLUSION_RADIUS_VP:0,
   COVER_OCCLUSION_OFFSET_X_VP:0},{componentName:'ReaderPageTurnSurface',childSources:{ReadingSurface:surface}});
@@ -144,7 +148,7 @@ slot.replay();
 assert.equal([...slot.children.values()][0],page,'the page actor survives chapter-preview removal');
 assert.equal(page.params.facingChapter,undefined,'the retained page clears stale preview text');
 const wrong=stage.replace("slotIdentity: this.slotIdentity('b')", "slotIdentity: this.slotIdentity('a')");assert.notEqual(wrong,stage);
-const mutant=createReaderBuilderProbe(wrong,['build',...names,'slotContentReady'],{...dependencies,ReaderPageTurnSurface:Child},{componentName:'ReaderPageTurnStage',childSources:{ReaderPageTurnSurface:stage}}).owner;Object.assign(mutant,params);mutant.initialRender();
+const mutant=createReaderBuilderProbe(wrong,stageMembers,{...dependencies,ReaderPageTurnSurface:Child},{componentName:'ReaderPageTurnStage',childSources:{ReaderPageTurnSurface:stage}}).owner;Object.assign(mutant,params);mutant.initialRender();
 assert.ok([...mutant.children.values()].every(child=>child.params.slotIdentity==='reader-page-slot-a'),'negative control proves actual payload can duplicate a physical slot; original identity matrix rejects it');
 
 }

@@ -8,6 +8,7 @@ const RIBBON_PATH = 'M1.5,0.5 H14.5 V33 L8,27.5 L1.5,33 Z';
 export struct ReaderPageBookmarkRibbon {
   @Prop x: number = 0;
   @Prop paperTop: number = 0;
+  @Prop paperScale: number = 1;
   @Prop offsetY: number = 0;
   @Prop fillHeight: number = 0;
   @Prop alpha: number = 0;
@@ -37,6 +38,7 @@ export struct ReaderPageBookmarkRibbon {
     }
     .width(READER_BOOKMARK_RIBBON_WIDTH).height(READER_BOOKMARK_RIBBON_HEIGHT).clip(true)
     .position({ x: this.x, y: this.paperTop })
+    .scale(this.paperScale < 1 ? { x: this.paperScale, y: this.paperScale, centerX: 0, centerY: 0 } : undefined)
     .accessibilityText('本页已添加书签').accessibilityLevel(this.bookmarked ? 'yes' : 'no')
     .hitTestBehavior(HitTestMode.None);
   }

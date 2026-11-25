@@ -30,7 +30,7 @@ import {
   createDefaultReaderReadingLayout,
 } from './ReaderLayoutGeometry';
 import { ReaderPageChrome } from './ReaderPageChrome';
-import { ReaderBookmarkRibbonFrame, readerBookmarkRibbonRest, type ReaderPageBookmarkMode,
+import { READER_BOOKMARK_RIBBON_HEIGHT, ReaderBookmarkRibbonFrame, readerBookmarkRibbonRest, type ReaderPageBookmarkMode,
   type ReaderPageBookmarkSnapshot } from '../presentation/ReaderPageBookmarkModel';
 import { ReaderPageBookmarkRibbon } from './ReaderPageBookmarkRibbon';
 import { ReaderPaperBackground } from './ReaderPaperBackground';
@@ -367,6 +367,7 @@ export struct ReadingSurface {
   @Prop bookmarkMode: ReaderPageBookmarkMode | undefined = undefined;
   @Prop bookmarkOpacity: number | undefined = undefined;
   @Prop bookmarkRibbon: ReaderBookmarkRibbonFrame | undefined = undefined;
+  @Prop bookmarkPaperTop: number | undefined = undefined;
 
   aboutToAppear(): void {
     this.highlightMounted = true; this.highlightLifecycle += 1;
@@ -537,7 +538,8 @@ export struct ReadingSurface {
       if (this.bookmark !== undefined) {
         ReaderPageBookmarkRibbon({
           x: this.bookmark.topAccessoryX,
-          paperTop: this.bookmark.topAccessoryY,
+          paperTop: this.bookmarkPaperTop ?? this.bookmark.topAccessoryY,
+          paperScale: this.pageBookmarkRibbonScale(),
           offsetY: this.pageBookmarkRibbonFrame().y,
           fillHeight: this.pageBookmarkRibbonFrame().fillHeight,
           alpha: this.pageBookmarkRibbonFrame().opacity,
@@ -583,6 +585,14 @@ export struct ReadingSurface {
     if (this.bookmarkRibbon !== undefined) return this.bookmarkRibbon;
     const rest = readerBookmarkRibbonRest(this.pageBookmarkMode() === 'filled');
     return new ReaderBookmarkRibbonFrame(rest.y, rest.fillHeight, this.bookmarkOpacity ?? this.bookmark?.opacity ?? rest.opacity);
+  }
+
+  private pageBookmarkRibbonScale(): number {
+    if (this.bookmarkPaperTop === undefined) return 1;
+    const room = this.layout.contentTop - this.bookmarkPaperTop;
+    // The hidden-bar cutout can move the painted edge below the resting
+    // ribbon's anchor. Keep its entire silhouette above the existing text.
+    return Math.max(0, Math.min(1, room / READER_BOOKMARK_RIBBON_HEIGHT));
   }
 
   private usesHighlightCanvas(): boolean {

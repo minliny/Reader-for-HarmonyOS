@@ -140,6 +140,7 @@ struct ReaderPageTurnSurface {
   @Prop bookmarkMode: ReaderPageBookmarkMode | undefined = undefined;
   @Prop bookmarkOpacity: number | undefined = undefined;
   @Prop bookmarkRibbon: ReaderBookmarkRibbonFrame | undefined = undefined;
+  @Prop bookmarkPaperTop: number | undefined = undefined;
   @Prop translateX: number = 0;
   @Prop shadowStrength: number = 0;
   @Prop compositorIsolation: boolean = false;
@@ -214,6 +215,7 @@ struct ReaderPageTurnSurface {
           bookmarkMode: this.bookmarkMode,
           bookmarkOpacity: this.bookmarkOpacity,
           bookmarkRibbon: this.bookmarkRibbon,
+          bookmarkPaperTop: this.bookmarkPaperTop,
           ttsHighlightStart: this.ttsHighlightStart,
           ttsHighlightEnd: this.ttsHighlightEnd,
           autoPageHighlightStart: this.autoPageHighlightStart,
@@ -246,7 +248,9 @@ struct ReaderPageTurnSurface {
     .accessibilityLevel(this.pageVisible ? 'auto' : 'no-hide-descendants')
     .zIndex(this.layerOrder)
     .renderGroup(this.compositorIsolation)
-    .translate({ x: this.translateX })
+    // The stage moves its clip origin to the full-width paper edge. Preserve
+    // the existing content coordinates inside that clip.
+    .translate({ x: this.translateX, y: -(this.bookmarkPaperTop ?? 0) })
     .shadow({
       radius: COVER_OCCLUSION_RADIUS_VP * this.shadowStrength,
       color: this.shadowColor(),
@@ -290,6 +294,7 @@ export struct ReaderPageTurnStage {
   @Prop offsetX: number = 0;
   @Prop viewportWidth: number = 0;
   @Prop translateY: number = 0;
+  @Prop bookmarkPaperTop: number | undefined = undefined;
   @Prop topInfoMovesWithPage: boolean = false;
   @Prop bookmarkMode: ReaderPageBookmarkMode | undefined = undefined;
   @Prop bookmarkOpacity: number | undefined = undefined;
@@ -348,6 +353,7 @@ export struct ReaderPageTurnStage {
         bookmarkMode: this.currentPageSlot === 'a' && this.turnDirection === undefined ? this.bookmarkMode : undefined,
         bookmarkOpacity: this.currentPageSlot === 'a' && this.turnDirection === undefined ? this.bookmarkOpacity : undefined,
         bookmarkRibbon: this.currentPageSlot === 'a' && this.turnDirection === undefined ? this.bookmarkRibbon : undefined,
+        bookmarkPaperTop: this.currentPageSlot === 'a' && this.bookmarkEdgeFactor() > 0 ? this.bookmarkPaperTop : undefined,
         longPressSelectText: this.currentPageSlot === 'a' && this.longPressSelectText,
         selectionInputCurrent: (): boolean => this.currentPageSlot === 'a' && this.selectionInputCurrent?.() !== false,
         translateX: this.slotX('a'),
@@ -390,6 +396,7 @@ export struct ReaderPageTurnStage {
         bookmarkMode: this.currentPageSlot === 'b' && this.turnDirection === undefined ? this.bookmarkMode : undefined,
         bookmarkOpacity: this.currentPageSlot === 'b' && this.turnDirection === undefined ? this.bookmarkOpacity : undefined,
         bookmarkRibbon: this.currentPageSlot === 'b' && this.turnDirection === undefined ? this.bookmarkRibbon : undefined,
+        bookmarkPaperTop: this.currentPageSlot === 'b' && this.bookmarkEdgeFactor() > 0 ? this.bookmarkPaperTop : undefined,
         longPressSelectText: this.currentPageSlot === 'b' && this.longPressSelectText,
         selectionInputCurrent: (): boolean => this.currentPageSlot === 'b' && this.selectionInputCurrent?.() !== false,
         translateX: this.slotX('b'),
@@ -402,12 +409,33 @@ export struct ReaderPageTurnStage {
         autoPageHighlightStart: this.currentPageSlot === 'b' ? this.autoPageHighlightStart : undefined,
         autoPageHighlightEnd: this.currentPageSlot === 'b' ? this.autoPageHighlightEnd : undefined,
       });
+      if (this.bookmarkEdgeFactor() > 0) {
+        Stack()
+          .width('100%').height(1)
+          .position({ x: 0, y: 0 })
+          .backgroundColor(readerThemeDefinition(this.appearance.activeTheme).scheme === 'day' ?
+            '#2E2B241D' : '#33ECE8E0')
+          .opacity(this.bookmarkEdgeFactor()).zIndex(2)
+          .id('reader-bookmark-paper-edge').hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+      }
     }
     .width('100%')
     .height('100%')
-    .translate({ y: this.translateY })
+    .translate({ y: this.translateY + this.bookmarkClipTop() })
+    .borderRadius({
+      topLeft: 14 * this.bookmarkEdgeFactor(), topRight: 14 * this.bookmarkEdgeFactor(), bottomLeft: 0, bottomRight: 0,
+    })
     // Keep a counter-translated header inside the outer reading viewport.
-    .clip(this.topInfoMovesWithPage || this.translateY <= 0);
+    .clip(this.topInfoMovesWithPage || this.translateY <= 0 || this.bookmarkEdgeFactor() > 0);
+  }
+
+  private bookmarkEdgeFactor(): number {
+    return this.bookmarkPaperTop !== undefined && this.translateY > 0.5 && this.offsetX === 0 &&
+      this.turnDirection === undefined ? Math.min(1, this.translateY / 18) : 0;
+  }
+
+  private bookmarkClipTop(): number {
+    return this.bookmarkEdgeFactor() > 0 ? this.bookmarkPaperTop ?? 0 : 0;
   }
 
   private slotPage(slot: ReaderPageTurnSlot): ReaderPageTurnRenderPage {

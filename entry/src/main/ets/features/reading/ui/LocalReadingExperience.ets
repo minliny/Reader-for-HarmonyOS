@@ -142,7 +142,7 @@ import {
   ReaderPageTurnStage,
   type ReaderPageTurnSlot,
 } from './ReaderPageTurnStage';
-import { READER_BOOKMARK_RIBBON_HEIGHT, READER_BOOKMARK_RIBBON_WIDTH,
+import { READER_BOOKMARK_RIBBON_HEIGHT, READER_BOOKMARK_RIBBON_WIDTH, READER_BOOKMARK_TRIGGER_VP,
   ReaderBookmarkRibbonFrame, ReaderPageBookmarkSnapshot, readerBookmarkHintAlpha, readerBookmarkRibbonPull,
   readerBookmarkRibbonRest, type ReaderPageBookmarkMode } from '../presentation/ReaderPageBookmarkModel';
 import { ReaderPageBookmarkRibbon } from './ReaderPageBookmarkRibbon';
@@ -290,7 +290,7 @@ import {
   readingParagraphBoundaryMode,
 } from '../application/ReadingParagraphProjection';
 import { registerReaderFonts, readerRegisteredFontFamily, prepareReaderFontFamily, readerFontFamilyReady } from '../../../ui/foundation/ReaderFonts';
-import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
+import { motionAnimateParam, readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { ComponentContent, FrameCallback, window } from '@kit.ArkUI';
 import { image } from '@kit.ImageKit';
@@ -796,6 +796,7 @@ export struct ReadingExperience {
   @State private bookmarkRibbonFrame: ReaderBookmarkRibbonFrame | undefined = undefined;
   @State private bookmarkPullHintOpacity: number = 0;
   private bookmarkRollbackGeneration: number = 0;
+  private bookmarkRollbackAnimator: AnimatorResult | undefined = undefined;
   @State private bookmarkPendingTarget: string = '';
   private bookmarkPendingAnchor: string = '';
   private bookmarkPendingOwner: string = '';
@@ -2018,6 +2019,10 @@ export struct ReadingExperience {
         });
         this.continuousPageChromeContent();
       } else {
+        if (this.bookmarkPullOffset() > 0) {
+          this.bookmarkPaperWell();
+          this.bookmarkCornerFeedback(true);
+        }
         ReaderPageTurnStage({
           contentRevision: this.pageTurnRenderRevision,
           bookmarkPresentationRevision: this.bookmarkPresentationRevision,
@@ -2043,7 +2048,8 @@ export struct ReadingExperience {
           autoPageHighlightEnd: this.autoPageHighlightEnd(),
           longPressSelectText: this.readerTextSelectionEnabled(),
           selectionInputCurrent: (): boolean => this.readerTextSelectionEnabled(),
-          translateY: this.bookmarkPageOffsetY,
+          translateY: this.bookmarkPullOffset(),
+          bookmarkPaperTop: this.bookmarkPullOffset() > 0 ? this.bookmarkPullPaperTop(this.readingLayout()) : undefined,
           onCurrentPagePresented: (revision: number): void => {
             this.onBookTurnArkUIFramePresented(revision);
             this.onSourceSwitchPagePresented(revision);
@@ -14161,14 +14167,58 @@ export struct ReadingExperience {
     const finish = (): void => {
       if (owner === this.bookmarkFeedbackOwnerKey()) this.finishBookmarkRollback(generation);
     };
-    this.getUIContext().animateTo(
-      this.reduceMotion ? readerMotionReducedFadeParam(finish) : motionAnimateParam('reader.bookmark.rollback', finish),
-      (): void => {
+    if (this.reduceMotion) {
+      this.getUIContext().animateTo(readerMotionReducedFadeParam(finish), (): void => {
         this.bookmarkPageOffsetY = 0;
         this.bookmarkRibbonFrame = target;
         this.bookmarkPullHintOpacity = 0;
-      },
-    );
+      });
+    } else {
+      this.animateBookmarkRollback(generation, finish, target);
+    }
+  }
+
+  private animateBookmarkRollback(generation: number, finish: () => void, target: ReaderBookmarkRibbonFrame): void {
+    const offset = this.bookmarkPageOffsetY;
+    const ribbon = this.bookmarkRibbonFrame ?? target;
+    const curve = readerMotionStandardCurve();
+    const hintOpacity = this.bookmarkPullHintOpacity;
+    // Sample the shared curve so the transient clip and paint use the same
+    // offset as the returning paper for every frame, including the last one.
+    try {
+      const animator = this.getUIContext().createAnimator({
+        duration: motionAnimateParam('reader.bookmark.rollback').duration ?? 0,
+        easing: 'linear', delay: 0, fill: 'forwards', direction: 'normal', iterations: 1, begin: 0, end: 1,
+      });
+      this.bookmarkRollbackAnimator = animator;
+      animator.onFrame = (fraction: number): void => {
+        if (!this.mounted || this.bookmarkRollbackAnimator !== animator ||
+          generation !== this.bookmarkRollbackGeneration || this.reduceMotion) {
+          // ArkUI cancellation can deliver a terminal frame synchronously.
+          animator.onFrame = (_value: number): void => {};
+          animator.cancel();
+          return;
+        }
+        const remaining = 1 - curve.interpolate(Math.max(0, Math.min(1, fraction)));
+        this.bookmarkPageOffsetY = offset * remaining;
+        this.bookmarkRibbonFrame = new ReaderBookmarkRibbonFrame(
+          target.y + (ribbon.y - target.y) * remaining,
+          target.fillHeight + (ribbon.fillHeight - target.fillHeight) * remaining,
+          target.opacity + (ribbon.opacity - target.opacity) * remaining);
+        this.bookmarkPullHintOpacity = hintOpacity * remaining;
+      };
+      const complete = (): void => {
+        if (this.bookmarkRollbackAnimator !== animator) return;
+        this.bookmarkRollbackAnimator = undefined;
+        finish();
+      };
+      animator.onFinish = complete;
+      animator.onCancel = complete;
+      animator.play();
+    } catch (_) {
+      this.bookmarkRollbackAnimator = undefined;
+      finish();
+    }
   }
 
   private finishBookmarkRollback(generation: number): void {
@@ -14273,7 +14323,9 @@ export struct ReadingExperience {
 
   private currentBookmarkRibbonFrame(_renderRevision: number): ReaderBookmarkRibbonFrame | undefined {
     const frame = this.bookmarkRibbonFrame;
-    return frame !== undefined && this.bookmarkPreviewOwner === this.bookmarkFeedbackOwnerKey() ? frame : undefined;
+    if (frame === undefined || this.bookmarkPreviewOwner !== this.bookmarkFeedbackOwnerKey()) return undefined;
+    return this.reduceMotion && this.bookmarkPageOffsetY > 0 ?
+      readerBookmarkRibbonPull(this.bookmarkPageOffsetY, this.bookmarkPreviewStatus === 'bookmarked', true) : frame;
   }
 
   private pageBookmarkStatusFor(
@@ -14458,14 +14510,53 @@ export struct ReadingExperience {
     return this.bookmarkPreviewOwner === this.bookmarkFeedbackOwnerKey() ? alpha : 0;
   }
 
-  private bookmarkHintVisibleHeight(_renderRevision: number): number {
-    if (this.reduceMotion || this.bookmarkUnavailableHintCurrent(_renderRevision)) return this.bookmarkHintHeight;
-    return Math.max(0, Math.min(this.bookmarkHintHeight, this.bookmarkHintBodyTop + this.bookmarkPageOffsetY - this.bookmarkHintY));
+  private bookmarkPullOffset(): number {
+    return !this.reduceMotion && this.bookmarkPageOffsetY > 0.5 && this.pageTurnOffsetX === 0 &&
+      this.pageTurnDirection === undefined ? this.bookmarkPageOffsetY : 0;
+  }
+
+  private bookmarkPullPaperTop(layout: ReaderReadingLayoutSnapshot): number {
+    const metrics = layout.pageChromeStatusMetrics;
+    const cutout = metrics?.statusBarCutoutRect;
+    // The resting ribbon can use a side lane beside the cutout. A full-width
+    // edge needs to clear its lower boundary even with the status bar hidden.
+    return Math.max(this.bookmarkRibbonPaperTop(layout), metrics?.cutoutInsets.top ?? 0,
+      cutout !== undefined && cutout.height > 0 ? cutout.top + cutout.height : 0);
+  }
+
+  private bookmarkPullFeedbackColor(): string {
+    const theme = readerThemeDefinition(this.visibleReadingAppearance().activeTheme);
+    if (!this.bookmarkPreviewChanged) return theme.chromeMeta;
+    return readerAppColor(this.bookmarkPreviewStatus === 'bookmarked' ? 'TOK_ACCENT' : 'TOK_READ_PRIMARY', theme.scheme);
   }
 
   @Builder
-  private bookmarkCornerFeedback() {
-    if (!this.controlVisible() && !this.controlObscured &&
+  private bookmarkPaperWell() {
+    Stack()
+      .width('100%').height(this.bookmarkPullPaperTop(this.readingLayout()) + this.bookmarkPullOffset() + 18)
+      .position({ x: 0, y: 0 })
+      .backgroundColor(readerThemeDefinition(this.visibleReadingAppearance().activeTheme).paperStart)
+      .id('reader-bookmark-paper-base').hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+    Stack()
+      .width('100%').height(this.bookmarkPullOffset() + 18)
+      .position({ x: 0, y: this.bookmarkPullPaperTop(this.readingLayout()) })
+      .backgroundColor(readerThemeDefinition(this.visibleReadingAppearance().activeTheme).scheme === 'day' ?
+        '#172B241D' : '#57000000')
+      .opacity(Math.min(1, this.bookmarkPullOffset() / 10))
+      .id('reader-bookmark-paper-well').hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+    Stack()
+      .width('100%').height(Math.min(12, this.bookmarkPullOffset()))
+      .position({ x: 0, y: this.bookmarkPullPaperTop(this.readingLayout()) + Math.max(0, this.bookmarkPullOffset() - 12) })
+      .linearGradient({ direction: GradientDirection.Bottom, colors:
+        readerThemeDefinition(this.visibleReadingAppearance().activeTheme).scheme === 'day' ?
+          [['#002B241D', 0], ['#1F2B241D', 1]] : [['#00000000', 0], ['#6B000000', 1]] })
+      .opacity(Math.min(1, this.bookmarkPullOffset() / 18))
+      .id('reader-bookmark-paper-shadow').hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+  }
+
+  @Builder
+  private bookmarkCornerFeedback(paperWell: boolean = false) {
+    if (!paperWell && !this.controlVisible() && !this.controlObscured &&
       readerRenderStageKind(this.readerSettingsSnapshot.navigationMode, this.hasContinuousRenderContent()) === 'continuous') {
       // The paged actor belongs to its physical slot. Only the List needs a host marker.
       ReaderPageBookmarkRibbon({
@@ -14478,8 +14569,36 @@ export struct ReadingExperience {
         night: readerAppearanceChromeTone(this.visibleReadingAppearance().activeTheme) === 'light',
       });
     }
-    // Retain the same hint node through drag and rebound so Alpha can interpolate.
-    if (!this.controlVisible() && !this.controlObscured) {
+    if (paperWell && !this.controlVisible() && !this.controlObscured &&
+      !this.bookmarkUnavailableHintCurrent(this.pageTurnRenderRevision)) {
+      Column({ space: 4 }) {
+        if (this.bookmarkHintVisibleAlpha(this.pageTurnRenderRevision) > 0) {
+          Text(this.bookmarkFeedbackLabel())
+            .fontFamily(MESSAGE_META.fontFamily).fontWeight(MESSAGE_META.fontWeight)
+            .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
+            .fontColor(this.bookmarkPullFeedbackColor())
+            .textAlign(TextAlign.Center).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+            .constraintSize({ maxWidth: '100%', maxHeight: Math.max(0, this.bookmarkPullOffset() - 6.5) })
+            .opacity(this.bookmarkHintVisibleAlpha(this.pageTurnRenderRevision));
+        }
+        Stack({ alignContent: Alignment.CenterStart }) {
+          Stack()
+            .width(48 * Math.min(1, this.bookmarkPullOffset() / READER_BOOKMARK_TRIGGER_VP)).height('100%')
+            .borderRadius(1.25).backgroundColor(this.bookmarkPullFeedbackColor())
+            .id('reader-bookmark-pull-fill');
+        }
+        .width(48).height(2.5).borderRadius(1.25).clip(true)
+        .backgroundColor(readerThemeDefinition(this.visibleReadingAppearance().activeTheme).scheme === 'day' ?
+          '#242B241D' : '#29ECE8E0')
+        .id('reader-bookmark-pull-track').accessibilityLevel('no');
+      }
+      .width('100%').height(this.bookmarkPullOffset()).justifyContent(FlexAlign.Center).clip(true)
+      .position({ x: 0, y: this.bookmarkPullPaperTop(this.readingLayout()) })
+      .id('reader-bookmark-pull-feedback').hitTestBehavior(HitTestMode.None);
+    }
+    // Keep the quiet node mounted for reduced-motion alpha interpolation.
+    if (!paperWell && !this.controlVisible() && !this.controlObscured &&
+      (this.reduceMotion || this.bookmarkUnavailableHintCurrent(this.pageTurnRenderRevision))) {
       Row() {
         Text(this.bookmarkUnavailableHintCurrent(this.pageTurnRenderRevision) ? this.bookmarkUnavailableMessage :
           this.bookmarkFeedbackLabel())
@@ -14488,7 +14607,7 @@ export struct ReadingExperience {
           .fontColor(readerThemeDefinition(this.visibleReadingAppearance().activeTheme).chromeMeta)
           .textAlign(TextAlign.Center).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       }
-        .width(this.bookmarkHintWidth).height(this.bookmarkHintVisibleHeight(this.pageTurnRenderRevision)).justifyContent(FlexAlign.Center)
+        .width(this.bookmarkHintWidth).height(this.bookmarkHintHeight).justifyContent(FlexAlign.Center)
         .position({ x: this.bookmarkHintX, y: this.bookmarkHintY })
         .opacity(this.bookmarkHintVisibleAlpha(this.pageTurnRenderRevision))
         .accessibilityLevel(this.bookmarkHintVisibleAlpha(this.pageTurnRenderRevision) > 0 ? 'auto' : 'no-hide-descendants')
