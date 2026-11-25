@@ -13,7 +13,7 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 const selected = selectContractCases({
   'sheet-token-recovery': 'Actual book/More leaf rejects live-retired token before one-shot state and accepts a fresh same-opening token after input returns.',
   'source-choice-recovery': 'Actual Source option does not first collapse while live-retired and the same panel can accept after input returns.',
-  'shelf-local-admission': 'Actual More icon, book tokens, More tokens and first-read local state consume original live input.',
+  'shelf-local-admission': 'Actual More icon, book tokens, More tokens and book selection consume original live input.',
   'source-filter-admission': 'Actual category/status/group inputs and clear consume the existing live management owner.',
   'directory-consumer-admission': 'All semantic/flat directory consumers forward original live input to first local fold/retry/clear and tools.',
 });
@@ -58,6 +58,7 @@ function sample(foregroundLost) {
   const page = Object.assign(new Page(), { mounted: true, navigationGeneration: 9, books: [book],
     actionBook: undefined, actionSheetRevision: 0, actionSheetId: '', bookActionSheetVisible: false,
     isCurrentShelfInput: navigation => scene.isInteractive(navigation),
+    currentVisibleBook: selection => selection === book ? book : undefined,
     isCurrentChromeHost: navigation => scene.isCurrent(navigation),
     restoreBookActionFocus() {},
     bookActionSheetSpec: () => ({ hostMaskRole: 'mask', hostBackgroundRole: 'surface' }), appThemeScheme: 'day' });
@@ -104,27 +105,25 @@ function sample(foregroundLost) {
     temporaryBackIdentity: 'shelf-back', releaseMoreSheetChrome() {},
     isCurrentShelfInput: selectedProductionComponentCallback(source('features/bookshelf/ui/BookshelfScene.ets'), 'BookshelfShell', 'isCurrentShelfInput', scene),
     onImportRequested: () => { if (scene.isInteractive(9)) acceptedImports += 1; } });
-  const importAction = shell.moreIntentAction('more-1', () => {
-    shell.moreImportSheetId = 'more-1'; shell.dismissMoreMenu();
-  });
+  const importAction = selectedProductionComponentCallback(source('features/bookshelf/ui/BookshelfShell.ets'),
+    'BookshelfMoreActionSheet', 'onLocalImport', shell, { presentationId: 'more-1' });
   if (foregroundLost) index.searchAppForeground = false;
   const moreInputAllowedBefore = scene.isInteractive(9);
   importAction();
-  const pendingImportWhileUnavailable = shell.moreImportSheetId === 'more-1';
+  const pendingImportWhileUnavailable = typeof shell.afterMoreClose === 'function';
   index.searchAppForeground = true;
   shell.finishMoreSheet('more-1');
-  let captures = 0, selections = 0;
-  page.viewState = { openedBookKey: '' };
-  page.saveShelfViewport = () => captures++;
-  page.measureBookOrigin = () => { captures++; return {}; };
-  page.onBookSelected = () => selections++;
+  let viewportSaves = 0;
+  const selections = [];
+  page.saveShelfViewport = () => viewportSaves++;
+  page.measureBookOrigin = () => assert.fail('book selection must skip cover measurement');
+  page.onBookSelected = (...args) => selections.push(args);
   const read = page.bookSelectionHandler(() => book, true);
   if (foregroundLost) index.searchAppForeground = false;
   read();
-  assert.equal(captures, foregroundLost ? 0 : 2);
-  assert.equal(selections, foregroundLost ? 0 : 1);
-  assert.equal(page.viewState.openedBookKey, foregroundLost ? '' : JSON.stringify([book.sourceId, book.bookId]));
-  return { ...opening, captures, selections, bookAction: { inputAllowedBefore: bookActionInputAllowedBefore,
+  assert.equal(viewportSaves, foregroundLost ? 0 : 1);
+  assert.deepEqual(selections, foregroundLost ? [] : [[book, 9]]);
+  return { ...opening, viewportSaves, selections: selections.length, bookAction: { inputAllowedBefore: bookActionInputAllowedBefore,
     pendingWhileUnavailable: pendingBookActionWhileUnavailable, deliveredAfterForegroundReturn: acceptedBookActions },
     moreImportAction: { inputAllowedBefore: moreInputAllowedBefore, pendingWhileUnavailable: pendingImportWhileUnavailable,
       deliveredAfterForegroundReturn: acceptedImports } };
@@ -321,7 +320,8 @@ function bookSample(lostBeforeFirstToken) {
   const book = { sourceId: 'local', bookId: 'retained-book' }, id = 'book-opening';
   const page = Object.assign(new Page(), { mounted: true, navigationGeneration: 9, actionSheetNavigation: 9,
     actionSheetId: id, actionBook: book, bookActionSheetVisible: true, books: [book],
-    isCurrentShelfInput: () => live, onBookMultiSelectRequested() {} });
+    isCurrentShelfInput: () => live, currentVisibleBook: selection => selection === book ? book : undefined,
+    onBookMultiSelectRequested() {} });
   const pageIsCurrent = selectedProductionComponentCallback(pageFile, 'BookshelfBookActionSheet', 'isCurrent', page,
     { presentationId: id, book });
   const pageAction = selectedProductionComponentCallback(pageFile, 'BookshelfBookActionSheet', 'onMultiSelect', page,
@@ -357,7 +357,7 @@ function moreSample(lostBeforeFirstToken) {
   let live = true;
   const id = 'more-opening';
   const shell = Object.assign(new Shell(), { mounted: true, navigationGeneration: 9, moreSheetNavigation: 9,
-    moreSheetCurrentId: id, moreSelectionId: id, moreMenuVisible: true, moreImportSheetId: '',
+    moreSheetCurrentId: id, moreSelectionId: id, moreMenuVisible: true,
     isCurrentShelfInput: () => live, dismissMoreMenu() { this.moreMenuVisible = false; } });
   const moreIsCurrent = selectedProductionComponentCallback(shellFile, 'BookshelfMoreActionSheet', 'isCurrent', shell);
   const moreAction = selectedProductionComponentCallback(shellFile, 'BookshelfMoreActionSheet', 'onLocalImport', shell,
@@ -368,21 +368,21 @@ function moreSample(lostBeforeFirstToken) {
   live = !lostBeforeFirstToken;
   const before = { live, openingCurrent: moreIsCurrent(id), leafDispatchedId: leaf.dispatchedId };
   nativeIntent(id + '::import');
-  const afterFirst = { live, leafDispatchedId: leaf.dispatchedId, moreImportSheetId: shell.moreImportSheetId,
+  const afterFirst = { live, leafDispatchedId: leaf.dispatchedId, pendingImport: typeof shell.afterMoreClose === 'function',
     sheetVisible: shell.moreMenuVisible, openingCurrent: moreIsCurrent(id) };
   live = true;
   nativeIntent(id + '::import');
-  const afterResume = { live, leafDispatchedId: leaf.dispatchedId, moreImportSheetId: shell.moreImportSheetId,
+  const afterResume = { live, leafDispatchedId: leaf.dispatchedId, pendingImport: typeof shell.afterMoreClose === 'function',
     sheetVisible: shell.moreMenuVisible, openingCurrent: moreIsCurrent(id) };
   if (lostBeforeFirstToken) {
-    assert.equal(afterFirst.moreImportSheetId, '');
+    assert.equal(afterFirst.pendingImport, false);
     assert.equal(afterFirst.sheetVisible, true);
     assert.equal(afterFirst.leafDispatchedId, '');
-    assert.equal(afterResume.moreImportSheetId, id);
+    assert.equal(afterResume.pendingImport, true);
     assert.equal(afterResume.leafDispatchedId, id);
     assert.equal(afterResume.sheetVisible, false);
   } else {
-    assert.equal(afterFirst.moreImportSheetId, id);
+    assert.equal(afterFirst.pendingImport, true);
     assert.equal(afterFirst.sheetVisible, false);
   }
   return { lostBeforeFirstToken, before, afterFirst, afterResume };

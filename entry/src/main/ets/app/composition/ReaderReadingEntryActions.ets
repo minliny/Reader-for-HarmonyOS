@@ -22,7 +22,6 @@ export interface ReaderReadingEntryActionPorts {
   sourceSwitch: () => SourceSwitchPresentation;
   shelfBooks: () => ShelfBook[];
   removalPending: () => boolean;
-  readerExitPending: () => boolean;
   advance: () => number;
   show: (route: ReaderRoute) => void;
   bindReader: () => void;
@@ -64,8 +63,7 @@ export class ReaderReadingEntryActions {
   readingReadyCallback(sourceId: string, bookId: string, generation: number): (chapterIndex: number) => void {
     return (chapterIndex: number): void => {
       const owner = this.ports.runtime();
-      if (owner === undefined || this.ports.readerExitPending() ||
-        !this.ports.entry().acceptReaderPageReady(owner, sourceId, bookId, generation, chapterIndex)) return;
+      if (owner === undefined || !this.ports.entry().acceptReaderPageReady(owner, sourceId, bookId, generation, chapterIndex)) return;
       this.presentPreparedReading(chapterIndex);
       this.scheduleNavigationBackfillAfterReady(owner, sourceId, bookId, generation);
     };
@@ -240,8 +238,8 @@ export class ReaderReadingEntryActions {
 
   presentPreparedReading(chapterIndex: number): void {
     const route = this.navigation.snapshot();
-    if (this.ports.readerExitPending() || (route.route !== 'reading' && route.route !== 'detail' &&
-      route.route !== 'directory' && !(route.route === 'bookshelf' && this.shelfPreparing))) return;
+    if (route.route !== 'reading' && route.route !== 'detail' && route.route !== 'directory' &&
+      !(route.route === 'bookshelf' && this.shelfPreparing)) return;
     this.ports.entry().presentPreparedPage(chapterIndex, route.route === 'directory', (): PreparedReaderOpening => {
       this.startup.ready(this.shelfPreparing && this.shelfEntryNavigation === route.generation ? route.generation : undefined);
       this.shelfPreparing = false;

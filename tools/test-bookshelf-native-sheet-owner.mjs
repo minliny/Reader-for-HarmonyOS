@@ -62,7 +62,7 @@ function fixture(definition=pageSource,{width=390,left=0,right=0,reduceMotion=fa
     viewModePending:()=>false,shelfPane(){},numericAreaLength:Number,isCurrentChromeHost:()=>false,
     shelfContentWidth:()=>assert.fail('book actions must not use the shelf cover frame'),
     saveShelfViewport(){},resetViewSwitchMotion(){},queueShelfProjection(){},publishVisibleReadingBooks(){},viewState:{},projectionGeneration:0,viewportRestoreGeneration:0,viewModeRevision:0,
-    publishContinueCardRect(){},scheduleReturnMotionOrigin(){},scheduleContinueCardMeasurement(){},transientFeedback:{reset(){}},
+    publishContinueCardRect(){},scheduleContinueCardMeasurement(){},transientFeedback:{reset(){}},
     onBookMultiSelectRequested:book=>calls.push(['multi',book]),onBookInfoRequested:book=>calls.push(['info',book]),onBookGroupRequested:book=>calls.push(['group',book]),onBookRemoveRequested:book=>calls.push(['remove',book]),
   });
   owner.bookshelfTabContent();
@@ -227,7 +227,7 @@ for(const retirement of ['current','runtime','route','mount'])for(const actionIn
     openSelection:book=>dispatched.push(['multi',book]),
     requestSingleRemoval:book=>dispatched.push(['remove',book])});
   const scene=mountBookshelfSceneProbe({
-    read:index.shelfRead,mutations:index.shelfMutations,catalog:{snapshot:{}},motion:{},
+    read:index.shelfRead,mutations:index.shelfMutations,catalog:{snapshot:{}},
     navigation:index.navigationGeneration,feedbackEnabled:true,reduceMotion:false,continueCardSuppressed:false,
     ports:index.bookshelfScenePorts(runtime,index.detailShelfAdmissionMount),
   },{BookshelfShell:Child,BookshelfPage:Child,BookshelfEmptyPage:Child,BookshelfStatusContent:Child});

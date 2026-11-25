@@ -40,20 +40,34 @@ assert.equal(rootPaints.length, 1, 'the app root has one authoritative window fi
 const indexPaint = new Function('readerAppColor', `return ${stripTypeScriptTypes(rootPaints[0].getText(tree))};`);
 if(selectedCase==='root-palette'){
 const mainShell = read('entry/src/main/ets/features/shell/MainTabShell.ets');
-const syntax = require(`${sdk}/lib/validate_ui_syntax.js`);
-syntax.componentCollection.customComponents.add('MainTabBar');
-const { owner: sharedShell } = createReaderBuilderProbe(mainShell, ['content','build'], {
-  MainTabBar: class { constructor(owner, params, _storage, id) { Object.assign(this, {owner,params,id}); } },
-});
-Object.assign(sharedShell, { appThemeScheme: 'day', showTabletRail: false, showBottomNav: false, content() {} });
+const [{boundedSurfaceSdk, boundedMembers}, {actualReaderPageLayout}, {readerEditingSdk},
+  {pureModuleProbe}, {actualReaderPostLayoutFrame}, metrics] = await Promise.all([
+  import('./lib/bounded-surface-sdk-probe.mjs'), import('./lib/reader-page-shell-runtime-probe.mjs'),
+  import('./lib/reader-editing-sdk-probe.mjs'), import('./lib/ets-pure-module-probe.mjs'),
+  import('./lib/reader-post-layout-frame-probe.mjs'), import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts'),
+]);
+const surface = boundedSurfaceSdk();
+const {ReaderNativeSlotMeasurement} = pureModuleProbe(read('entry/src/main/ets/ui/layout/ReaderNativeSlotMeasurement.ets'),
+  'ReaderNativeSlotMeasurement.ets', {ReaderPostLayoutFrame: actualReaderPostLayoutFrame(),
+    readerMeasureSurfaceRect: () => undefined}, ['ReaderNativeSlotMeasurement']);
+class NavigationChild {
+  constructor(owner, params, _storage, id) { Object.assign(this, {owner, params, id}); }
+}
+surface.childSources.MainNavigationOverlay = read('entry/src/main/ets/features/shell/MainNavigationOverlay.ets');
+surface.childSources.ReaderBottomNavigation = read('entry/src/main/ets/app/navigation/ReaderBottomNavigation.ets');
+const dependencies = {...surface.deps, ...metrics, ...actualReaderPageLayout(), ...readerEditingSdk(), ReaderNativeSlotMeasurement,
+  ReaderWindowCoordinator: {metrics: metrics.createDefaultReaderWindowMetrics}, readerMainNavigationMode: () => 'bottom',
+  MainNavigationOverlay: NavigationChild, ReaderBottomNavigation: NavigationChild};
+const { owner: sharedShell } = createReaderBuilderProbe(mainShell, boundedMembers(mainShell), dependencies, surface.hooks);
+Object.assign(sharedShell, { appThemeScheme: 'day', headerVisible: false, content() {} });
 sharedShell.initialRender();
 // The app facade delegates paint to the actual shared native frame.
-const sharedFrame = [...sharedShell.children.values()].find(child => child.variant === 'mainTab');
+const sharedFrame = [...sharedShell.children.values()].find(child => child.frameStyle && child.geometry);
 assert.ok(sharedFrame, 'the app facade mounts the production page frame');
 const contentRoot = [...sharedFrame.nodes.values()].find(node => node.type === 'Stack' && node.backgroundColor !== undefined);
 assert.ok(contentRoot, 'full-size shared app shell paints beneath failure content');
 for (const scheme of ['day','night','day']) {
-  sharedFrame.appThemeScheme = scheme; sharedFrame.replay();
+  sharedShell.appThemeScheme = scheme; sharedShell.replay(); surface.properties.flush();
   const windowPaint = readerAppColor('app.window.background', scheme);
   assert.equal(indexPaint.call({appThemeScheme:scheme}, readerAppColor), windowPaint, 'Index root follows window chrome');
   assert.equal(contentRoot.backgroundColor, windowPaint, 'shared shelf shell, including failure, follows the same live palette');
@@ -71,13 +85,16 @@ const calls = (node, name, sourceTree = tree) => {
   }; visit(node); return result;
 };
 const shellContent = shelfScene.members.find(node => node.name?.getText(shelfSceneTree) === 'build');
-const indexContent = indexType.members.find(node => node.name?.getText(tree) === 'indexContent');
 const pageSurfaces = indexType.members.find(node => node.name?.getText(tree) === 'pageSurfaces');
+const routeContent = indexType.members.find(node => node.name?.getText(tree) === 'appRouteContent');
+const bookshelfRoute = indexType.members.find(node => node.name?.getText(tree) === 'bookshelfRoute');
 assert.ok(shellContent);
-assert.equal(calls(build, 'this.indexContent').length, 1);
-assert.equal(calls(indexContent, 'this.pageSurfaces').length, 1);
-assert.equal(calls(indexContent, 'ArkWebExecutionHost').length, 1);
-assert.equal(calls(pageSurfaces, 'BookshelfScene').length, 1);
+assert.equal(calls(build, 'this.pageSurfaces').length, 1);
+assert.equal(calls(build, 'ArkWebExecutionHost').length, 1);
+assert.equal(calls(pageSurfaces, 'ReaderRouteStackSurface').length, 1);
+assert.equal(calls(pageSurfaces, 'this.appRouteContent').length, 1);
+assert.equal(calls(routeContent, 'this.bookshelfRoute').length, 1);
+assert.equal(calls(bookshelfRoute, 'BookshelfScene').length, 1);
 assert.equal(calls(shellContent, 'BookshelfShell', shelfSceneTree).length, 1);
 assert.equal(calls(shellContent, 'this.shelfContent', shelfSceneTree).length, 1, 'shared shell receives the readiness content slot');
 const shelfShellTree = parse(read('entry/src/main/ets/features/bookshelf/ui/BookshelfShell.ets'));
@@ -86,10 +103,11 @@ const failure = calls(content, 'BookshelfStatusContent', shelfSceneTree); assert
 const failedProp = failure[0].arguments[0].properties.find(node => node.name?.getText(shelfSceneTree) === 'failed');
 assert.equal(failedProp.initializer.getText(shelfSceneTree), 'this.read.failed');
 const status = read('entry/src/main/ets/features/bookshelf/ui/BookshelfStatusContent.ets');
-syntax.componentCollection.customComponents.add('SearchSpinner');
-const { owner: failureContent } = createReaderBuilderProbe(status, ['build'], { READER_FLOATING_TOP_BAR_HEIGHT: 58 });
-Object.assign(failureContent, { failed:true, appThemeScheme:'night', onRetry() {},
-  minimumContentHeight: () => 400, bottomContentInset: () => 99 });
+const { owner: failureContent } = createReaderBuilderProbe(status, boundedMembers(status), {
+  ...dependencies, bookshelfHeaderSpec: () => ({frameHeight: 58}), readerMainViewport: () => ({width: 365}),
+  readerFloatingTabContentInset: () => 99,
+}, surface.hooks);
+failureContent.failed = true;
 failureContent.initialRender();
 const messageTree = current => [...current.nodes.values(), ...[...current.children.values()].flatMap(child => child.nodes ? messageTree(child) : [])];
 assert.ok(messageTree(failureContent).some(node => node.type === 'Text' && node.create === '书架加载失败'));
@@ -100,13 +118,52 @@ assert.ok([...failureContent.nodes.values()].every(node => node.backgroundColor 
 }
 
 if(selectedCase==='root-edges'){
- const Owner=selectedProductionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),'Index',['readerOwnsWindowEdges','mangaOwnsWindowEdges']);
- const cases=[['detail',false,'detail',undefined,false,false],['detail',false,'detail',{contentKind:'text'},true,false],['directory',false,'detail',{contentKind:'manga'},true,false],['directory',false,'detail',{contentKind:'text'},false,false],['directory',true,'readerControl',undefined,true,false],['reading',true,'detail',undefined,true,false],['reading',true,'detail',undefined,true,true]];
- for(const [route,active,target,detail,reader,manga]of cases){const o=Object.assign(new Owner(),{route,directoryReturnTarget:target,mangaSourceSwitch:{selectionVisible:false},readingEntry:{sessionActive:active,book:detail,contentKind:manga?'manga':'text'}});assert.equal(o.readerOwnsWindowEdges(),reader);assert.equal(o.mangaOwnsWindowEdges(),manga);}
- const modifiers=new Map();let e=build.body.statements[0].expression;while(ts.isCallExpression(e)&&ts.isPropertyAccessExpression(e.expression)){modifiers.set(e.expression.name.text,e.arguments);e=e.expression.expression;}
- const keys=['padding','expandSafeArea','ignoreLayoutSafeArea'];for(const key of keys)assert.ok(modifiers.has(key),'actual Index root '+key);
+ const Owner=selectedProductionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),'Index',[
+  'readerOwnsWindowEdges','mangaOwnsWindowEdges','isDetailDirectoryRoute','appRouteSafeTop','overlaySafeTop']);
+ const cases=[
+  {route:'detail', reader:false},
+  {route:'detail', book:{contentKind:'text'}, reader:true},
+  {route:'directory', book:{contentKind:'manga'}, reader:true},
+  {route:'directory', book:{contentKind:'text'}, reader:true},
+  {route:'directory', target:'readerControl', active:true, reader:true},
+  {route:'reading', active:true, reader:true},
+  {route:'reading', active:true, contentKind:'manga', reader:true, manga:true},
+  {route:'detail', book:{contentKind:'manga'}, contentKind:'manga', reader:true},
+  {route:'detail', book:{contentKind:'manga'}, contentKind:'manga', retainingReader:true, reader:true, manga:true},
+  {route:'bookshelf', sourcePicker:true, reader:true, manga:true},
+ ];
+ const output = (member) => {
+  const modifiers=new Map();
+  let expression=member.body.statements[0].expression;
+  while(ts.isCallExpression(expression)&&ts.isPropertyAccessExpression(expression.expression)){
+    modifiers.set(expression.expression.name.text,expression.arguments);
+    expression=expression.expression.expression;
+  }
+  return modifiers;
+ };
+ const modifiers=output(build);
+ for(const key of ['expandSafeArea','ignoreLayoutSafeArea'])assert.ok(modifiers.has(key),'actual Index root '+key);
  const enums=Object.fromEntries(['SafeAreaType','SafeAreaEdge','LayoutSafeAreaType','LayoutSafeAreaEdge'].map(name=>[name,new Proxy({},{get:(_,key)=>name+'.'+String(key)})]));
- for(const [reader,manga]of[[false,false],[true,false],[true,true]]){const o={readerOwnsWindowEdges:()=>reader,mangaOwnsWindowEdges:()=>manga,appContentTopInset:()=>37};const evaluate=key=>new Function(...Object.keys(enums),'return ['+modifiers.get(key).map(n=>n.getText(tree)).join(',')+'];').call(o,...Object.values(enums));assert.equal(evaluate('padding')[0].top,reader?0:37);const areas=evaluate('expandSafeArea');assert.equal(areas[1].includes('SafeAreaEdge.TOP'),reader||manga);assert.equal(areas[1].includes('SafeAreaEdge.START'),manga);const ignore=evaluate('ignoreLayoutSafeArea');assert.equal(ignore[0].includes('LayoutSafeAreaType.SYSTEM'),manga);}
+ const evaluate = (key, owner) => new Function(...Object.keys(enums),
+  `return [${modifiers.get(key).map(node=>node.getText(tree)).join(',')}];`).call(owner,...Object.values(enums));
+ for(const {route,target='detail',active=false,book,contentKind='text',retainingReader=false,sourcePicker=false,reader,manga=false} of cases){
+  const owner=Object.assign(new Owner(),{route,directoryReturnTarget:target,readerDetailCover:retainingReader,
+    mangaSourceSwitch:{selectionVisible:sourcePicker},readingEntry:{sessionActive:active,book,contentKind},appContentTopInset:()=>37});
+  assert.equal(owner.readerOwnsWindowEdges(),reader);
+  assert.equal(owner.mangaOwnsWindowEdges(),manga);
+  assert.equal(owner.overlaySafeTop(),reader?0:37);
+  const areas=evaluate('expandSafeArea',owner);
+  assert.equal(areas[1].includes('SafeAreaEdge.TOP'),reader);
+  assert.equal(areas[1].includes('SafeAreaEdge.START'),manga);
+  assert.equal(evaluate('ignoreLayoutSafeArea',owner)[0].includes('LayoutSafeAreaType.SYSTEM'),manga);
+ }
+ const routeContent=indexType.members.find(node=>node.name?.getText(tree)==='appRouteContent');
+ const routePadding=output(routeContent).get('padding')[0].getText(tree);
+ const evaluatePadding=new Function('route',`return ${routePadding};`);
+ const owner=Object.assign(new Owner(),{appContentTopInset:()=>37});
+ for(const [route,top] of [['bookshelf',37],['settings',37],['detail',0],['directory',0]]){
+  assert.equal(evaluatePadding.call(owner,route).top,top);
+ }
 }
 if(selectedCase==='paired-chrome'){
  const {createWindowCoordinatorFixture}=await import('./lib/reader-window-coordinator-fixture.mjs'),f=await createWindowCoordinatorFixture();try{const w=f.windowPort();await f.C.install(w);for(const [paper,tone,ink]of[['#FFF8F4EC','dark','#FF14110F'],['#FF1C1E1A','light','#FFEAE7DE']]){const style=new f.S(paper,tone,ink);f.C.requestOverlayChrome(style);for(let i=0;i<20;i++)await Promise.resolve();assert.equal(w.properties.statusBarColor,paper);assert.equal(w.properties.navigationBarColor,paper);assert.equal(w.properties.statusBarContentColor,ink);assert.equal(w.properties.navigationBarContentColor,ink);assert.equal(f.app.get('readerWindowChromeOwner'),'overlay');}}finally{f.cleanup();}

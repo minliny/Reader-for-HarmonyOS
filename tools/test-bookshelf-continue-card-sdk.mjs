@@ -13,13 +13,19 @@ const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-
 const { readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
 const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+const { readerFoundationTokens } = await import('./lib/reader-tokens-probe.mjs');
 const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts');
 const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts');
+const { bookCoverDisplayUrl } = await import('../entry/src/main/ets/app/library/BookCoverDisplay.ts');
 
 
 const source=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets',import.meta.url),'utf8');
 const frameSource=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfContinueCardSpec.ets',import.meta.url),'utf8');
 const {bookshelfContinueCardFrame}=pureModuleProbe(frameSource,'BookshelfContinueCardSpec.ets',readerTypographyRoles,['bookshelfContinueCardFrame']);
+const gridSource=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfGridSpec.ets',import.meta.url),'utf8');
+const {BOOKSHELF_LIST_PROGRESS_STROKE}=pureModuleProbe(gridSource,'BookshelfGridSpec.ets',readerFoundationTokens,['BOOKSHELF_LIST_PROGRESS_STROKE']);
+const noCoverSource=readFileSync(new URL('../entry/src/main/ets/ui/patterns/NoCoverCover.ets',import.meta.url),'utf8');
+const {noCoverGlyph}=pureModuleProbe(noCoverSource.split('@Component')[0],'NoCoverGlyph.ets',{},['noCoverGlyph']);
 const require=createRequire(import.meta.url);
 const sdk=resolveEtsLoaderRoot();
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
@@ -37,10 +43,11 @@ function mount(book) {
   class NoCover {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
   const {owner}=createReaderBuilderProbe(source,['mangaRevision','continueReadingCard','continueCardCover','continueCardCopy',
     'continueCardReadAction','continueCardFrame','continueCardFontScale','continueCardRectId','continueCardBookKey',
-    'continueBookProgress','continueBookProgressLabel','continueReadingPosition','mangaReadingPosition','bookCoverMotionId',
-    'isShelfPresentationCurrent','bookSelectionHandler','hasCover',
+    'continueBookProgress','continueBookProgressLabel','continueReadingPosition','mangaReadingPosition',
+    'isShelfPresentationCurrent','bookSelectionHandler','hasCover','coverUrl','coverErrorHandler','failedCoverUrls',
     'shelfPressed','shelfPressKey','shelfPressPointer','observeShelfPress'],{
-      ShelfBookPresentation,MangaBookPresentation,ObservedPropertySimplePU,NoCoverCover:NoCover,ImageFit:{Cover:'cover'},
+      ShelfBookPresentation,MangaBookPresentation,bookCoverDisplayUrl,noCoverGlyph,BOOKSHELF_LIST_PROGRESS_STROKE,
+      ObservedPropertySimplePU,ObservedPropertyObjectPU:ObservedPropertySimplePU,NoCoverCover:NoCover,ImageFit:{Cover:'cover'},
       bookshelfContinueCardFrame, ReaderWindowCoordinator:{metrics:()=>({systemFontScale:1})},
       readerSurfaceElevation: readerSurfaceSpecsForProbe().readerSurfaceElevation,
     },{
@@ -48,8 +55,8 @@ function mount(book) {
       onObserverExit(){activeId=-1;},
     });
   Object.assign(owner,{appThemeScheme:'day',continueReading:book, shelfContentWidth:()=>352, readerWindowMetricsRevision:0,
-    mounted:true,navigationGeneration:1, viewState:{}, isCurrentShelfInput:()=>true,
-    continueCardAreaHandler:()=>()=>{},saveShelfViewport(){},measureBookOrigin:()=>undefined,onBookSelected:book=>selected.push(book)});
+    mounted:true,navigationGeneration:1, isCurrentShelfInput:()=>true,
+    continueCardAreaHandler:()=>()=>{},saveShelfViewport(){},onBookSelected:book=>selected.push(book)});
   owner.continueReadingCard(()=>owner.continueReading,false);
   const textNodes=()=>[...owner.nodes.values()].filter(node=>node.type==='Text');
   const card=[...owner.nodes.values()].find(node=>typeof node.onClick==='function');

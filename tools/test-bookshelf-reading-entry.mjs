@@ -93,9 +93,10 @@ function create(remote = false) {
   const wiring = Object.assign(new IndexWiring(), {
     currentReadingRuntime:()=>runtime,navigationOwner:x.navigation,readingEntry:x.entry,
     readingEntryActions:x.actions,readingExitActions:x.exit,libraryJourney:x.journey,
+    wideSettingsPane:()=>undefined,
     mangaSourceSwitch:{selectionVisible:false},bookRemovalConfirmation:{isOpen:()=>false},
     jsonImportPresentation:{opening:undefined},sourceSwitchPresentation:x.source,sourceSwitchActions:{},
-    shelfMutations:{snapshot:{}},shelfGroupPresentation:{back:()=>false},shelfMotion:{pendingExitId:-1},
+    shelfMutations:{snapshot:{}},shelfGroupPresentation:{back:()=>false},
     directoryJourney:{operations:{},navigationPorts:()=>({})},
   });
   Object.defineProperty(wiring,'route',{get:()=>x.navigation.snapshot().route});
@@ -299,14 +300,16 @@ function exitCallbacksAt(tree, receiverTree, childName, owner) {
     return [name, factory.call(owner)];
   }));
 }
-const Reading = productionMotionMethods(readingFile, ['requestExit', 'beginExit', 'finishExit', 'controlTiming'], {
+const Reading = productionMotionMethods(readingFile, ['requestExit', 'beginExit', 'finishExit', 'controlTiming',
+  'readerRecoveryRequestCurrent', 'cancelControlNavigationIntent'], {
   ...readerControlState, ...readerControlHost, ...readerControlKeyboard, ...readerTiming, ...readerRapid, ...readerAuto, readerControlMotionMs,
   ReaderWindowCoordinator: { metrics: () => ({ ready: true, keyboardInsets: { bottom: 0 } }) },
 });
 const MorePanel = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url),
   ['performMoreAction', 'dismissMoreMenu', 'setMoreMenuVisible', 'syncProgressInput', 'progressInputEnabled',
     'invalidateProgressInput', 'contentLocation', 'contentInputEnabled', 'minimumInputReady', 'isExpanded',
-    'hasCurrentTemporaryInput', 'currentTemporaryInputScope']);
+    'hasCurrentTemporaryInput', 'currentTemporaryInputScope', 'currentLayout', 'paintedPresentationReceipt',
+    'currentMoreMenuOwnerScope']);
 const homeControl = () => readerControlState.openReaderControlSession(readerControlState.createReaderControlSessionState(), 0);
 const autoControl = () => readerControlState.enterReaderControlModule(homeControl(), 'autoPage', 0);
 
@@ -337,12 +340,14 @@ async function infoExitHarness(state) {
   const readingCallbacks = exitCallbacksAt(shellTree, readingTree, 'ReadingExperience', shell);
   const reading = Object.assign(new Reading(), {
     mounted: true, lifecycleToken: 9, exitRequested: false, exitDelivered: false, exitAttemptGeneration: 0, reduceMotion: false,
-    latestControlVisualSession: state, controlSession: state, controlTemporaryLayer: false,
+    latestControlVisualSession: state, controlSession: state, controlTemporaryLayer: '',
     rapidPageTurnState: readerRapid.createReaderRapidPageTurnState(),
     autoPageState: readerAuto.pauseReaderAutoPage(readerAuto.startReaderAutoPage(readerAuto.createReaderAutoPageState(8)), 'manual'),
     autoPageCoordinator: { cancelPendingTurn() {}, dispose() {} },
     readerSettingsSnapshot: { navigationMode: 'paged' },
     invalidateControlBackdrop() {}, isControlInputEnabled: () => true,
+    controlVerification: { backConsumer() {} },
+    requestControlSession(next) { this.latestControlVisualSession = next; this.controlSession = next; },
     controlKeyboardHost: () => ({ hideTextInput: async () => {}, onFailure() {} }),
     isSessionActive: token => token === 9, isMountedToken: token => token === 9,
     pageTurnInputPhase: () => 'idle', stopReaderTtsAudition() {}, captureReadingRecordElapsed() {},
@@ -364,10 +369,13 @@ async function infoExitHarness(state) {
     moreMenuVisible: true, moreMenuGeneration:0, inputEnabled: true, controlObscured:false, frame: () => ({ visibility: 1 }),
     runtimeMounted:true,runtimeLifecycle:1,controlOpenRevision:0,progressInputScope:'',progressInputRevision:0,progressPreviewPercent:-1,
     lastVisibleContentLocation:state.location,layout:{isExpanded:()=>state.location.form==='full'},minimumIdentity:'',
-    minimumReady:false,minimumKey:'',temporaryLayerActive:false,visualVisibilityProgress:1,visualTransitionKind:'',visualHeldPointerId:-1,
-    onTemporaryLayerChange: visible => { reading.controlTemporaryLayer = visible; },
+    minimumReady:false,minimumKey:'',temporaryLayerActive:false,temporaryInputKind:'',temporaryInputScope:'',
+    visualVisibilityProgress:1,visualTransitionKind:'',visualHeldPointerId:-1,
+    observeMoreMenuFrames() {}, refreshDockPlacement() {},
+    onTemporaryLayerChange: visible => { reading.controlTemporaryLayer = visible ? 'moreMenu' : ''; },
     onOpenBookInfo: () => invokeInfo.call(reading),
   });
+  panel.moreMenuOwnerScope = panel.currentMoreMenuOwnerScope();
   return { ...t, index, reading, shell, panel, calls, stop, record, progress };
 }
 

@@ -251,26 +251,26 @@ for (const [from, to] of [['cover', 'list'], ['list', 'cover']]) {
 const measured = fixture();
 metrics.systemFontScale = 1;
 let width = grid.BOOKSHELF_LIST_COVER_WIDTH, height = grid.BOOKSHELF_LIST_COVER_HEIGHT, viewportWidth = 326;
-const currentId = measured.bookCoverMotionId(book,false), viewportId = measured.shelfViewportMotionId();
+const currentId = measured.bookCoverMotionId(book), viewportId = measured.shelfViewportMotionId();
 const node = (x,y) => ({getPositionToWindowWithTransform:()=>({x,y})});
 Object.assign(measured,{viewMode:'list',viewSwitchRunning:false,isWideViewport:()=>false,
-  continueCardFrame:()=>({coverWidth:56,coverHeight:78}),shelfHeaderClearance:()=>52,shelfContentEndInset:()=>68,
+  shelfHeaderClearance:()=>52,shelfContentEndInset:()=>68,
   getUIContext:()=>({getFrameNodeById:id=>id===currentId?node(20,70):id===viewportId?node(0,0):null,
     getComponentUtils:()=>({getRectangleById:id=>id===currentId?{size:{width,height},scale:{x:1,y:1}}:
       {size:{width:viewportWidth,height:700}}}),px2vp:value=>value})});
-assert.equal(measured.measureBookOrigin(book,false).radius,6);
+assert.deepEqual(measured.measureBookOrigin(book),{x:20,y:70,width,height});
 metrics.systemFontScale = 2;
-assert.equal(measured.measureBookOrigin(book,false),undefined,'the previous font-scale cover rect is stale');
+assert.equal(measured.measureBookOrigin(book),undefined,'the previous font-scale cover rect is stale');
 height = measured.listContentHeight(false);
-assert.equal(measured.measureBookOrigin(book,false).radius,6,'detail motion accepts the current scaled list origin');
+assert.deepEqual(measured.measureBookOrigin(book),{x:20,y:70,width,height},'view switching accepts the current scaled list cover');
 metrics.systemFontScale = 1;
-assert.equal(measured.measureBookOrigin({...book,sourceId:'different'},false),undefined,'same bookId in another source has no origin');
+assert.equal(measured.measureBookOrigin({...book,sourceId:'different'}),undefined,'same bookId in another source has no mounted cover');
 measured.viewMode='cover';
-assert.equal(measured.measureBookOrigin(book,false),undefined,'the old list dimensions cannot fly in the cover projection');
+assert.equal(measured.measureBookOrigin(book),undefined,'old list dimensions fail measurement in the cover projection');
 width=grid.bookshelfGridFrame(viewportWidth,false).cardWidth;height=grid.bookshelfCoverHeight(width,false);
-assert.equal(measured.measureBookOrigin(book,false).radius,8);
+assert.deepEqual(measured.measureBookOrigin(book),{x:20,y:70,width,height});
 viewportWidth=650;
-assert.equal(measured.measureBookOrigin(book,false),undefined,'a sample from the retired viewport shape cannot fly');
+assert.equal(measured.measureBookOrigin(book),undefined,'a sample from the previous viewport shape cannot be ranked');
 
 // Mount production cover/list builders once, then replay the real observer
 // closures. Retain both default-cover children or both native Image nodes

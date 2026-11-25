@@ -50,10 +50,10 @@ async function routingFixture(initialRoute) {
   };
   const actions = new EntryActions(navigation, new ReaderEntryStartupTrace(() => {}), {
     runtime, mounting: () => 1, entry: () => entry, search: () => search, sourceSwitch: () => source,
-    shelfBooks: () => [...f.shelves.values()], removalPending: () => false, readerExitPending: () => false,
+    shelfBooks: () => [...f.shelves.values()], removalPending: () => false,
     advance, show: next => navigation.show(next), bindReader, restoreReaderReturn: restoreReturn,
     entryPorts, sourceName: (_id, name) => name ?? 'Named Source', failure: f.lease.notice,
-    afterOpening: project => project(),
+    afterOpening: project => project(), postFrame: action => action(), refreshNearEnd() {},
   });
   const reopenEvents = [];
   const sourceJourney = new SourceJourney(navigation, {
@@ -63,7 +63,7 @@ async function routingFixture(initialRoute) {
     invalidateDownloads: () => reopenEvents.push(['invalidate']),
   });
   return {
-    f, entry, navigation, actions, sourceJourney, route, captureReturn, downloadView, restoredViews, reopenEvents, book, seed, until,
+    f, entry, navigation, actions, sourceJourney, route, captureReturn, downloadView, restoredViews, reopenEvents, book: (...identity) => ({ ...book(...identity), contentKind: 'text' }), seed, until,
     close() { entry.retire(); f.close(); },
   };
 }
@@ -83,7 +83,7 @@ async function detailChild(fixture) {
   }
   const properties = createArkUIPropertyRuntimeProbe();
   const scene = createReaderBuilderProbe(read('features/bookshelf/ui/BookshelfDetailScene.ets'),
-    ['build', 'detailSurface', 'onEntryChanged', 'aboutToAppear', 'bodyBook', 'bodyToc', 'sourceBook', 'sourceToc'],
+    ['build', 'detailSurface', 'onEntryChanged', 'aboutToAppear', 'detailKey', 'detailInputCurrent', 'bodyBook', 'bodyToc', 'sourceBook', 'sourceToc'],
     { ...properties.sdk, LocalBookDetail, remoteContentVerdictLabel },
     { ...properties.hooks, childSources: { LocalBookDetail: read('features/reading/ui/LocalBookDetail.ets') } }).owner;
   const opening = fixture.navigation.snapshot();

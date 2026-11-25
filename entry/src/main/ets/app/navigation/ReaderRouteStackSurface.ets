@@ -7,6 +7,7 @@ import { readerMotionNowMs } from '../../ui/foundation/ReaderMotionClock';
 import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
 
 const ROOT_LANE = 'reader-route-root';
+const RETAINED_READER_LANE = 'retained-reader';
 const EDGE_WIDTH_VP = 18;
 const EDGE_BACK_COMMIT_FRACTION = 0.33;
 const NATIVE_START_TIMEOUT_MS = 300;
@@ -40,6 +41,7 @@ interface ReaderRouteAnimation {
   settled: boolean;
   interactiveReady?: boolean;
   deadline?: number;
+  readerCoverGeneration?: number;
 }
 
 /** Renders the admitted app route in a native stack. Index owns all Back decisions. */
@@ -53,8 +55,10 @@ export struct ReaderRouteStackSurface {
   @Prop @Watch('onEdgeAvailabilityChanged') reduceMotion: boolean = false;
   @Prop @Watch('onEdgeAvailabilityChanged') viewportWidth: number = 0;
   @Prop @Watch('onEdgeAvailabilityChanged') backGestureEnabled: boolean = false;
+  @Prop @Watch('onReaderCoverChanged') readerCoverBehind: boolean = false;
   @BuilderParam content: (route: ReaderRouteSurfaceKey) => void;
   onBack: () => boolean = (): boolean => false;
+  onReaderCovered: () => void = (): void => {};
 
   private readonly pathStack: NavPathStack = new NavPathStack();
   @State private rootRoute: ReaderRouteSurfaceKey = 'settings';
@@ -71,6 +75,8 @@ export struct ReaderRouteStackSurface {
   private activeRouteAnimation: ReaderRouteAnimation | undefined = undefined;
   private routeEndTimer: number = -1;
   private preview: ReaderRouteBackPreview | undefined = undefined;
+  private readerCoverGeneration: number = 0;
+  private readerCoverSettled: boolean = false;
 
   aboutToAppear(): void {
     this.mounted = true;
@@ -114,6 +120,12 @@ export struct ReaderRouteStackSurface {
     });
   }
 
+  private onReaderCoverChanged(): void {
+    this.readerCoverGeneration += 1;
+    this.readerCoverSettled = false;
+    if (this.readerCoverBehind) this.onRouteChanged();
+  }
+
   private reconcile(): void {
     const preview = this.preview;
     if (preview !== undefined) {
@@ -123,9 +135,16 @@ export struct ReaderRouteStackSurface {
     }
     const names = this.pathStack.getAllPathName();
     const top = names.length > 0 ? names[names.length - 1] : this.rootRoute;
-    if (top === this.route) return;
     // Reconcile the latest destination after the native end acknowledgement.
     if (this.activeRouteAnimation !== undefined) return;
+    const coveringReader = this.readerCoverBehind && this.route === 'detail' && !this.readerCoverSettled;
+    if (top === this.route) {
+      if (coveringReader) {
+        if (this.routeMotion === 'none') this.settleReaderCover(this.readerCoverGeneration);
+        else this.revealRetainedDetail(names.length > 0 ? top : ROOT_LANE);
+      }
+      return;
+    }
     if (this.pendingTabResetFrom !== undefined) {
       // ArkUI has not yet observed the clear. A newer tab can replace the
       // incoming root under the same outgoing destination.
@@ -134,7 +153,14 @@ export struct ReaderRouteStackSurface {
     }
     if (this.routeMotion !== 'tab') this.finishTabTransition();
     const animate = this.routeMotion !== 'none';
-    if (this.routeMotion === 'tab') {
+    if (coveringReader) {
+      // The underlying directory may already have a detail ancestor. This
+      // detail is a foreground push over the reader even in that case.
+      const generation = this.readerCoverGeneration;
+      if (animate) this.armRouteDeadline(NATIVE_START_TIMEOUT_MS, (): void => this.settleReaderCover(generation));
+      this.pathStack.pushPath({ name: this.route }, animate);
+      if (!animate) this.settleReaderCover(generation);
+    } else if (this.routeMotion === 'tab') {
       if (names.length === 0) {
         this.switchRootTab(this.route);
       } else {
@@ -232,6 +258,33 @@ export struct ReaderRouteStackSurface {
     }, delay);
   }
 
+  private settleReaderCover(generation: number): void {
+    if (!this.readerCoverBehind || generation !== this.readerCoverGeneration || this.readerCoverSettled ||
+      this.route !== 'detail') return;
+    this.readerCoverSettled = true;
+    this.onReaderCovered();
+  }
+
+  private revealRetainedDetail(lane: string): void {
+    // Detail can already be the retained lane. Apply the same native push
+    // to that destination without duplicating it in the navigation stack.
+    const animation: ReaderRouteAnimation = { settled: false, readerCoverGeneration: this.readerCoverGeneration };
+    this.activeRouteAnimation = animation;
+    this.paint = { from: RETAINED_READER_LANE, to: lane, motion: 'push', fade: this.reduceMotion, fadeOutgoing: false };
+    this.progress = 0;
+    const finish = (): void => this.completeRouteAnimation(animation);
+    const timing = this.reduceMotion ? readerMotionReducedFadeParam(finish) : motionAnimateParam('app.navigation.push', finish);
+    const context = this.getUIContext();
+    const start = (): void => {
+      if (this.activeRouteAnimation !== animation) return;
+      try { context.animateTo(timing, (): void => { this.progress = 1; }); }
+      catch (_) { finish(); }
+    };
+    this.armRouteDeadline(NATIVE_START_TIMEOUT_MS + (timing.duration ?? 0), finish);
+    try { context.postFrameCallback(new ReaderPostLayoutFrame(context, start)); }
+    catch (_) { start(); }
+  }
+
   private completeRouteAnimation(animation: ReaderRouteAnimation, preview?: ReaderRouteBackPreview): void {
     if (!this.mounted || this.activeRouteAnimation !== animation) return;
     this.clearRouteDeadline();
@@ -240,6 +293,7 @@ export struct ReaderRouteStackSurface {
     this.progress = 1;
     if (preview !== undefined && this.preview === preview) this.preview = undefined;
     this.hasDestination = this.pathStack.size() > 0;
+    if (animation.readerCoverGeneration !== undefined) this.settleReaderCover(animation.readerCoverGeneration);
     this.onRouteChanged();
   }
 
@@ -258,8 +312,10 @@ export struct ReaderRouteStackSurface {
     const fade = this.reduceMotion || motion === 'tab';
     const duration = this.reduceMotion ? motionSpecGet('app.motion.reduced.fade')?.durationMs : motionSpecGet(id)?.durationMs;
     const timeout = preview !== undefined ? undefined : duration === undefined ? 1000 : duration + 300;
-    const animation: ReaderRouteAnimation = { settled: false,
-      deadline: timeout === undefined ? undefined : readerMotionNowMs() + timeout };
+    const animation: ReaderRouteAnimation = {
+      settled: false, deadline: timeout === undefined ? undefined : readerMotionNowMs() + timeout,
+      readerCoverGeneration: this.readerCoverBehind && !nativePop && to.name === 'detail' ? this.readerCoverGeneration : undefined,
+    };
     if (this.mounted) {
       this.activeRouteAnimation = animation;
       if (preview !== undefined) preview.animation = animation;
@@ -330,18 +386,18 @@ export struct ReaderRouteStackSurface {
       if (lane === paint.from) return width * this.progress;
       if (lane === paint.to) return -width * READER_ROUTE_PARENT_PARALLAX * (1 - this.progress);
     } else {
-      if (lane === paint.from) return -width * READER_ROUTE_PARENT_PARALLAX * this.progress;
+      if (lane === paint.from) return this.readerCoverBehind ? 0 : -width * READER_ROUTE_PARENT_PARALLAX * this.progress;
       if (lane === paint.to) return width * (1 - this.progress);
     }
     return 0;
   }
 
-  private laneBrightness(lane: string): number {
+  private laneDimOpacity(lane: string): number {
     const paint = this.paint;
-    if (paint === undefined || paint.fade) return 1;
+    if (paint === undefined || paint.fade || this.readerCoverBehind) return 0;
     return paint.motion === 'pop' ?
-      (lane === paint.to ? 1 - READER_ROUTE_PARENT_DIM * (1 - this.progress) : 1) :
-      (lane === paint.from ? 1 - READER_ROUTE_PARENT_DIM * this.progress : 1);
+      (lane === paint.to ? READER_ROUTE_PARENT_DIM * (1 - this.progress) : 0) :
+      (lane === paint.from ? READER_ROUTE_PARENT_DIM * this.progress : 0);
   }
 
   private laneOpacity(lane: string): number {
@@ -349,6 +405,14 @@ export struct ReaderRouteStackSurface {
     if (paint?.fade !== true) return 1;
     if (paint.fadeOutgoing) return lane === paint.from ? 1 - this.progress : 1;
     return lane === paint.to ? this.progress : 1;
+  }
+
+  private laneVisibleDuringReaderCover(route: ReaderRouteSurfaceKey, lane: string): boolean {
+    return !this.readerCoverBehind || (route === this.route && (this.readerCoverSettled || lane === this.paint?.to));
+  }
+
+  private laneAcceptsInput(route: ReaderRouteSurfaceKey): boolean {
+    return route === this.route && (!this.readerCoverBehind || this.readerCoverSettled);
   }
 
   private destinationBack(route: ReaderRouteSurfaceKey): boolean {
@@ -439,14 +503,17 @@ export struct ReaderRouteStackSurface {
   private lane(route: ReaderRouteSurfaceKey, lane: string) {
     Stack({ alignContent: Alignment.TopStart }) {
       this.content(route);
+      Column().width('100%').height('100%').backgroundColor(Color.Black)
+        .opacity(this.laneDimOpacity(lane)).hitTestBehavior(HitTestMode.None)
+        .accessibilityLevel('no-hide-descendants');
     }
     .width('100%').height('100%')
     .backgroundColor(readerAppColor('app.window.background', this.scheme))
-    .translate({ x: this.laneX(lane) }).brightness(this.laneBrightness(lane))
-    .opacity(this.laneOpacity(lane))
-    .enabled(route === this.route)
-    .hitTestBehavior(route === this.route ? HitTestMode.Default : HitTestMode.None)
-    .accessibilityLevel(route === this.route ? 'auto' : 'no-hide-descendants');
+    .translate({ x: this.laneX(lane) })
+    .opacity(this.laneVisibleDuringReaderCover(route, lane) ? this.laneOpacity(lane) : 0)
+    .enabled(this.laneAcceptsInput(route))
+    .hitTestBehavior(this.laneAcceptsInput(route) ? HitTestMode.Default : HitTestMode.None)
+    .accessibilityLevel(this.laneAcceptsInput(route) ? 'auto' : 'no-hide-descendants');
   }
 
   @Builder
@@ -479,6 +546,7 @@ export struct ReaderRouteStackSurface {
       .navDestination(this.destination)
       .customNavContentTransition((from: NavContentInfo, to: NavContentInfo, operation: NavigationOperation): NavigationAnimatedTransition =>
         this.nativeTransition(from, to, operation))
+      .backgroundColor(Color.Transparent)
       .width('100%').height('100%');
       if (this.backGestureEnabled && !this.reduceMotion && this.hasDestination) {
         Row()

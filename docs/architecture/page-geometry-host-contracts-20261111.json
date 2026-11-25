@@ -337,7 +337,6 @@
       "decision": "RETAIN",
       "reason": "SDK-native node measurement and coordinate conversion; cannot fold into pure Rect types without TS→ETS dependency. Search presentation consumes pure rect identities without SDK.",
       "actualImporters": [
-        "features/bookshelf/ui/BookshelfNavigationPresentation.ets",
         "features/bookshelf/ui/BookshelfPage.ets"
       ]
     },
@@ -388,9 +387,8 @@
     {
       "file": "ReaderSurfaceRect.ts",
       "decision": "RETAIN",
-      "reason": "Pure window-space rect/owner/generation contract shared by navigation presentation, Index and search; distinct from page layout arithmetic.",
+      "reason": "Pure window-space rect/owner/generation contract shared by retained bookshelf and search measurements; distinct from page layout arithmetic.",
       "actualImporters": [
-        "features/bookshelf/ui/BookshelfNavigationPresentation.ets",
         "features/bookshelf/ui/BookshelfPage.ets",
         "features/bookshelf/ui/BookshelfScene.ets",
         "features/search/presentation/LibrarySearchPresentation.ets",

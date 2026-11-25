@@ -3,14 +3,15 @@ import { readFileSync } from 'node:fs';
 import { ReaderNavigation, retainedReaderRoute } from '../entry/src/main/ets/app/navigation/ReaderNavigation.ts';
 import { downloadBookFromReadingDetail, remoteReadingSeedForShelf } from '../entry/src/main/ets/features/reading/presentation/ReadingBookDetail.ts';
 import { readingEntryInputForSearchContext, readingEntrySeedForContentKind } from '../entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts';
-import {
-  READER_NAVIGATION_POP_MS, READER_NAVIGATION_PUSH_MS, READER_NAVIGATION_TAB_MS, READER_REDUCED_FADE_MS,
-} from '../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts';
+import * as productTiming from '../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts';
+import { DIRECTORY_CHROME_VISUAL } from '../entry/src/main/ets/ui/foundation/ReaderDirectoryChromeVisual.ts';
+import { readerFrameStyle } from '../entry/src/main/ets/ui/layout/ReaderFrameStyle.ts';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { settingsNavigationItems } from '../entry/src/main/ets/features/settings/presentation/SettingsNavigationItems.ts';
 import { createDownloadBookView, describeDownloadReadingTarget, downloadReadingShelfBook } from '../entry/src/main/ets/features/downloads/presentation/SharedDownloadProjection.ts';
 
+const { READER_NAVIGATION_POP_MS, READER_NAVIGATION_PUSH_MS, READER_NAVIGATION_TAB_MS, READER_REDUCED_FADE_MS } = productTiming;
 const cases = {
   'directory-reading-return': {
     description: 'Actual route owner opens reading under the detail directory and returns one level at a time.',
@@ -159,12 +160,10 @@ async function routeTransitionEffects() {
   const effect = (kind, value) => ({
     kind, value,
     animation(timing) { return effect(kind, { value, timing }); },
-    combine(other) { return effect('combined', [this, other]); },
   });
   const TransitionEffect = {
     IDENTITY: effect('identity'),
     opacity: value => effect('opacity', value),
-    scale: value => effect('scale', value),
     translate: value => effect('translate', value),
     move: value => effect('move', value),
     asymmetric: (enter, exit) => ({ enter, exit }),
@@ -174,29 +173,35 @@ async function routeTransitionEffects() {
     'app.navigation.pop': READER_NAVIGATION_POP_MS,
     'app.navigation.tab': READER_NAVIGATION_TAB_MS,
   };
-  const source = readFileSync(new URL('../entry/src/main/ets/app/navigation/ReaderRouteMotion.ets', import.meta.url), 'utf8');
-  const { readerRouteTransition } = pureModuleProbe(source, 'ReaderRouteMotion.ets', {
+  const readMotion = path => readFileSync(new URL(`../entry/src/main/ets/${path}.ets`, import.meta.url), 'utf8');
+  const motionSpec = pureModuleProbe(readMotion('ui/foundation/MotionSpec'), 'MotionSpec.ets', {
+    ...productTiming,
+    MANGA_DIRECTORY_VISUAL: DIRECTORY_CHROME_VISUAL,
+    Curve: new Proxy({}, { get: (_, name) => name }),
+    curves: new Proxy({}, { get: (_, name) => (...args) => ({ name, args }) }),
+  }, ['motionAnimateParam', 'motionSpecGet']);
+  const motionPolicy = pureModuleProbe(readMotion('ui/foundation/ReaderMotionPolicy'), 'ReaderMotionPolicy.ets',
+    motionSpec, ['readerMotionAnimateParam', 'readerMotionReducedFadeParam']);
+  const { readerSceneTransition } = pureModuleProbe(
+    readMotion('app/navigation/ReaderRouteMotion'), 'ReaderRouteMotion.ets', {
     TransitionEffect,
     TransitionEdge: { END: 'end' },
-    readerMotionAnimateParam: id => ({ duration: timing[id] }),
-    readerMotionReducedFadeParam: () => ({ duration: READER_REDUCED_FADE_MS }),
-  }, ['readerRouteTransition']);
-
-  const push = readerRouteTransition('push', 400, false);
-  const pop = readerRouteTransition('pop', 400, false);
-  assert.deepEqual(push.enter.value, { value: { x: 400, y: 0 }, timing: { duration: 260 } });
-  assert.deepEqual(pop.exit.value, { value: { x: 400, y: 0 }, timing: { duration: 240 } });
-  assert.deepEqual(push.exit.value.value.map(node => node.value), [{ x: -64, y: 0 }, 0.96]);
-  assert.deepEqual(pop.enter.value.value.map(node => node.value), [{ x: -64, y: 0 }, 0.96]);
-  const tab = readerRouteTransition('tab', 400, false);
-  assert.equal(tab.value.timing.duration, 180);
-  assert.deepEqual(tab.value.value.map(node => [node.kind, node.value]), [
-    ['opacity', 0.72], ['scale', { x: 0.992, y: 0.992 }],
-  ]);
-  for (const kind of ['push', 'pop', 'tab']) {
-    const reduced = readerRouteTransition(kind, 400, true);
-    assert.equal(reduced.kind, 'opacity');
-    assert.deepEqual(reduced.value, { value: 0, timing: { duration: 120 } });
+    ...motionSpec, ...motionPolicy,
+  }, ['readerSceneTransition']);
+  const reader = readerSceneTransition(400, false, true);
+  const standard = { name: 'cubicBezierCurve', args: [0.2, 0, 0, 1] };
+  for (const [effect, duration] of [[reader.enter, 260], [reader.exit, 240]]) {
+    assert.equal(effect.kind, 'translate');
+    assert.deepEqual(effect.value.value, { x: 400, y: 0 });
+    assert.equal(effect.value.timing.duration, duration);
+    assert.deepEqual(effect.value.timing.curve, standard);
+  }
+  const fadedReader = readerSceneTransition(400, true, true);
+  assert.equal(fadedReader.kind, 'opacity', 'the symmetric effect fades both appearance and disappearance');
+  assert.equal(fadedReader.value.value, 0);
+  assert.equal(fadedReader.value.timing.duration, 120);
+  for (const reduced of [false, true]) {
+    assert.equal(readerSceneTransition(400, reduced, false), TransitionEffect.IDENTITY);
   }
 
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
@@ -236,11 +241,14 @@ async function routeTransitionEffects() {
     'reconcile', 'settleAnimation', 'switchRootTab', 'onRouteChanged', 'routeEndTimer',
     'clearRouteDeadline', 'armRouteDeadline', 'completeRouteAnimation',
     'finishTabTransition', 'rootTabs', 'rootTabOpacity', 'rootTabScale', 'nativeTransition',
-    'laneX', 'laneBrightness', 'laneOpacity', 'aboutToAppear', 'backGestureEnabled', 'hasDestination',
+    'laneX', 'laneDimOpacity', 'laneOpacity', 'laneVisibleDuringReaderCover', 'laneAcceptsInput',
+    'aboutToAppear', 'backGestureEnabled', 'hasDestination',
+    'readerCoverBehind', 'readerCoverGeneration', 'readerCoverSettled', 'onReaderCovered',
+    'onReaderCoverChanged', 'settleReaderCover', 'revealRetainedDetail',
     'preview', 'beginPreview', 'updatePreview', 'endPreview', 'resolvePreview', 'applyPreviewResult',
   ], {
     ...properties.sdk,
-    Color: { Transparent: '#00000000' },
+    Color: { Transparent: '#00000000', Black: '#FF000000' },
     NavDestination: {
       name: 'NavDestination',
       create(builder) { buildDestinationContent = builder; },
@@ -252,6 +260,7 @@ async function routeTransitionEffects() {
     NavPathStack,
     NavigationOperation: { PUSH: 'push', POP: 'pop' },
     ROOT_LANE: 'reader-route-root',
+    RETAINED_READER_LANE: 'retained-reader',
     NATIVE_START_TIMEOUT_MS: Number(surface.match(/^const NATIVE_START_TIMEOUT_MS = (\d+);$/m)?.[1]),
     NATIVE_END_GRACE_MS: Number(surface.match(/^const NATIVE_END_GRACE_MS = (\d+);$/m)?.[1]),
     PREVIEW_END_TIMEOUT_MS: Number(surface.match(/^const PREVIEW_END_TIMEOUT_MS = (\d+);$/m)?.[1]),
@@ -295,9 +304,56 @@ async function routeTransitionEffects() {
   frames.shift().run();
   host.progress = .5;
   assert.equal(host.laneX('reader-route-root'), -32);
-  assert.equal(host.laneBrightness('reader-route-root'), .98);
+  assert.equal(host.laneDimOpacity('reader-route-root'), .02);
   assert.equal(host.laneX('detail'), 200);
   native.onTransitionEnd(true);
+
+  for (const reduceMotion of [false, true]) {
+    const cover = new navigationProbe.Component(undefined, { route: 'directory', initialRoot: 'bookshelf', viewportWidth: 400, reduceMotion });
+    cover.aboutToAppear();
+    cover.pathStack.names = ['detail', 'directory'];
+    cover.readerCoverBehind = true;
+    let readerCovered = 0;
+    cover.onReaderCovered = () => { readerCovered += 1; cover.readerCoverBehind = false; };
+    cover.route = 'detail';
+    cover.routeMotion = 'push';
+    cover.reconcile();
+    assert.deepEqual(pathCalls.at(-1), ['push', 'detail', true], 'detail covers the reader even with an existing detail ancestor');
+    assert.equal(cover.laneVisibleDuringReaderCover('bookshelf', 'reader-route-root'), false);
+    assert.equal(cover.laneVisibleDuringReaderCover('directory', 'directory'), false);
+    assert.equal(readerCovered, 0, 'the reader stays visible until the native detail destination covers it');
+    const detailPush = cover.nativeTransition({ name: 'directory' }, { name: 'detail' }, 'push');
+    detailPush.transition({});
+    assert.equal(cover.laneVisibleDuringReaderCover('detail', 'detail'), true);
+    assert.equal(cover.laneAcceptsInput('detail'), false);
+    assert.equal(cover.laneX('detail'), reduceMotion ? 0 : 400);
+    assert.equal(cover.laneOpacity('detail'), reduceMotion ? 0 : 1);
+    assert.equal(cover.laneDimOpacity('directory'), 0, 'there is no second dim on the outgoing app lane');
+    frames.shift().run();
+    assert.equal(animations.at(-1).duration, reduceMotion ? 120 : 260);
+    detailPush.onTransitionEnd(true);
+    assert.equal(readerCovered, 1);
+    assert.equal(cover.laneAcceptsInput('detail'), true);
+
+    const retained = new navigationProbe.Component(undefined, { route: 'detail', initialRoot: 'bookshelf', viewportWidth: 400, reduceMotion });
+    retained.aboutToAppear();
+    const stablePath = retained.pathStack.getAllPathName();
+    retained.readerCoverBehind = true;
+    retained.onReaderCovered = () => { readerCovered += 1; retained.readerCoverBehind = false; };
+    retained.routeMotion = 'push';
+    retained.reconcile();
+    assert.deepEqual(retained.pathStack.getAllPathName(), stablePath, 'an existing top detail is animated without a second native route');
+    assert.equal(retained.laneVisibleDuringReaderCover('detail', 'detail'), true);
+    assert.equal(retained.laneX('detail'), reduceMotion ? 0 : 400);
+    assert.equal(retained.laneOpacity('detail'), reduceMotion ? 0 : 1);
+    retained.settleReaderCover(retained.readerCoverGeneration - 1);
+    assert.equal(readerCovered, 1, 'the existing detail also needs to finish its reveal');
+    frames.shift().run();
+    assert.equal(animations.at(-1).duration, reduceMotion ? 120 : 260);
+    animations.at(-1).onFinish();
+    assert.equal(readerCovered, 2);
+  }
+
   native = host.nativeTransition({ name: 'settings-general' }, { name: 'settings-developer' }, 'push');
   native.transition({});
   frames.shift().run();
@@ -472,18 +528,49 @@ async function routeTransitionEffects() {
   assert.deepEqual(pathCalls.at(-1), ['push', 'settings-general', false], 'initial wide entry avoids a second animation');
 
   const routeOwner = new ReaderNavigation();
-  const indexOwner = createReaderBuilderProbe(index, ['appRouteLane'], { retainedReaderRoute }).owner;
+  const parentTimings = [];
+  const indexOwner = createReaderBuilderProbe(index, [
+    'appRouteLane', 'publishNavigation', 'updateReaderParentMotion', 'readerParentMotionProgress', 'detailAboveReader',
+  ], { retainedReaderRoute, ...motionSpec }).owner;
   Object.assign(indexOwner, { route: 'search', wideSettingsPane: () => undefined,
-    navigationOwner: routeOwner,
-    shelfMotion: { retainsOpeningBackground: () => false } });
+    navigationOwner: routeOwner, searchAppForeground: true, visibleRouteMotion: 'none',
+    readerParentProgress: 0,
+    getUIContext: () => ({ animateTo(params, update) { parentTimings.push(params.duration); update(); } }),
+    bookRemovalConfirmation: { dismiss() {} }, jsonImportPresentation: { dismiss() {} },
+    readingEntry: { book: { sourceId: 'local', bookId: 'book' } }, shelfGroupPresentation: { retire() {} },
+    bookshelfModalVisible: () => false });
   assert.equal(indexOwner.appRouteLane(), 'bookshelf', 'the shelf and editor share one lane');
   indexOwner.route = 'reading';
-  indexOwner.shelfMotion.retainsOpeningBackground = () => true;
-  assert.equal(indexOwner.appRouteLane(), 'bookshelf', '3D opening owns the still-visible shelf');
-  indexOwner.shelfMotion.retainsOpeningBackground = () => false;
   assert.equal(indexOwner.appRouteLane(), 'detail', 'the reader paints above its real Detail origin');
   routeOwner.returns.rememberBookshelfReaderOrigin();
-  assert.equal(indexOwner.appRouteLane(), 'bookshelf', 'shelf remains under the reader after the 3D handoff');
+  indexOwner.route = 'bookshelf';
+  indexOwner.publishNavigation(routeOwner.show('reading'));
+  assert.equal(indexOwner.visibleRouteMotion, 'push');
+  assert.equal(indexOwner.appRouteLane(), 'bookshelf', 'the shelf stays under the reader during native motion');
+  assert.equal(indexOwner.readerParentMotionProgress(), 1);
+  indexOwner.publishNavigation(routeOwner.showReadingOrigin());
+  assert.equal(indexOwner.route, 'bookshelf');
+  assert.equal(indexOwner.visibleRouteMotion, 'pop');
+  assert.equal(indexOwner.appRouteLane(), 'bookshelf');
+  assert.equal(indexOwner.readerParentMotionProgress(), 0);
+  assert.deepEqual(parentTimings, [260, 240]);
+  for (const policy of [{ appReduceMotion: true }, { searchAppForeground: false }]) {
+    Object.assign(indexOwner, policy);
+    indexOwner.publishNavigation(routeOwner.show('reading'));
+    assert.equal(indexOwner.readerParentMotionProgress(), 0);
+    indexOwner.publishNavigation(routeOwner.showReadingOrigin());
+    Object.assign(indexOwner, { appReduceMotion: false, searchAppForeground: true });
+  }
+  assert.deepEqual(parentTimings, [260, 240], 'disabled and reduced motion do not animate the parent');
+  routeOwner.returns.completeDetailEntry('bookshelf', undefined, false);
+  indexOwner.publishNavigation(routeOwner.show('detail'));
+  indexOwner.publishNavigation(routeOwner.show('reading'));
+  assert.deepEqual(parentTimings, [260, 240, 260]);
+  indexOwner.publishNavigation(routeOwner.show('detail', 'push'));
+  assert.equal(indexOwner.readerDetailCover, true, 'reader book information is a foreground push even when its host lane was detail');
+  assert.equal(indexOwner.detailAboveReader(), true);
+  assert.deepEqual(parentTimings, [260, 240, 260], 'the reader-to-detail cover has no extra parent animation');
+  assert.equal(indexOwner.readerParentMotionProgress(), 0);
   routeOwner.returns.rememberDirectoryReaderOrigin();
   indexOwner.route = 'directory'; indexOwner.directoryReturnTarget = 'readerControl';
   assert.equal(indexOwner.appRouteLane(), 'directory', 'the reader control catalog keeps the same underlying origin');
@@ -494,6 +581,13 @@ async function routeTransitionEffects() {
   indexOwner.route = 'detail';
   assert.equal(indexOwner.appRouteLane(), 'detail');
   assert.match(index, /ReaderRouteStackSurface\(\{\s*route: this\.appRouteLane\(\)/);
+  assert.match(index, /\}\)\.transition\(readerSceneTransition\(this\.routeViewportWidth\(\), this\.appReduceMotion,\s*this\.searchAppForeground && !this\.readerDetailCover\)\)/);
+  assert.match(index, /\.opacity\(this\.readerParentMotionProgress\(\) \* READER_ROUTE_PARENT_DIM\)\s*\.hitTestBehavior\(HitTestMode\.None\)/);
+  const readerShell = readMotion('features/reading/ui/ReaderShell');
+  const shell = createReaderBuilderProbe(readerShell, ['frameStyle'], { readerFrameStyle }).owner;
+  Object.assign(shell, { chromeUnderlayColor: '#FFF2E9D7', contentKind: 'text' });
+  assert.equal(shell.frameStyle().backgroundColor, '#FFF2E9D7');
+  assert.match(readerShell, /ReaderPageScaffold\(\{ frameStyle: this\.frameStyle\(\)/);
   const surfaceIds = [...index.matchAll(/surfaceId: '(reader-[^']+-stack)'/g)].map(match => match[1]);
   assert.equal(surfaceIds.length, 2);
   const settingsOwner = createReaderBuilderProbe(settings, ['settingsSubroute', 'settingsRouteBack', 'settingsStackSurfaceId']).owner;
@@ -894,7 +988,7 @@ async function retainedRoutePorts() {
   class SharedDownloadScene extends ScenePayload {}
   class BookshelfScene extends ScenePayload {}
   const { owner } = createReaderBuilderProbe(read('pages/Index'), [
-    'settingsContent', 'settingsPaintCurrent', 'downloadsContent', 'bookshelfRouteContent', 'bookshelfScenePorts', 'isCurrentRoute',
+    'settingsContent', 'settingsPaintCurrent', 'downloadsContent', 'bookshelfRoute', 'bookshelfScenePorts', 'isCurrentRoute',
   ], { ...properties.sdk, SettingsScenes, SharedDownloadScene, BookshelfScene }, { ...properties.hooks,
     allowEmptyBranchAdmission: true, childSources: {
     SettingsScenes: read('app/composition/SettingsScenes'),
@@ -938,7 +1032,7 @@ async function retainedRoutePorts() {
   assert.deepEqual(back, [{ scope: 'downloads', navigation: 9, runtime: nextRuntime, handler: dismiss, identity: 'download-selector' }]);
 
   owner.route = 'bookshelf';
-  owner.bookshelfRouteContent();
+  owner.bookshelfRoute();
   const firstShelf = [...owner.children.values()].find(child => child instanceof BookshelfScene);
   assert.equal(firstShelf.params.ports.isInteractive(9), true);
   owner.navigationGeneration = 10; owner.replay();

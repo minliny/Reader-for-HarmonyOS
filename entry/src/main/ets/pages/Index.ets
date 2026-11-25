@@ -63,9 +63,6 @@ import { ReaderSourceSwitchSurfaces } from '../app/composition/ReaderSourceSwitc
 import { ReaderSourceSwitchJourney, type ReaderSourceSwitchJourneyPorts, type ReaderSourceSwitchScope } from '../app/composition/ReaderSourceSwitchJourney';
 import { readerSourceSwitchActions, type ReaderSourceSwitchActions } from '../app/composition/ReaderSourceSwitchActions';
 import { ReaderTransientToast } from '../ui/feedback/ReaderTransientToast';
-import { BookshelfNavigationPaintSurface, BookshelfNavigationTransition } from '../features/bookshelf/ui/BookshelfNavigationTransition';
-import type { BookshelfBookOrigin } from '../features/bookshelf/presentation/BookshelfNavigationMotion';
-import { BookshelfNavigationPresentation, type BookshelfOpeningPaint } from '../features/bookshelf/ui/BookshelfNavigationPresentation';
 import type { ReaderSurfaceRect } from '../ui/layout/ReaderSurfaceRect';
 import { LOCAL_SOURCE_ID } from '../features/reading/application/LocalReadingFlowGateway';
 import type { ReadingBookDetail } from '../features/reading/presentation/ReadingBookDetail';
@@ -118,7 +115,8 @@ import { isReaderProductSurfaceEnabled } from '../app/ReaderProductScope';
 import { ReaderNavigation, retainedReaderRoute, type DetailReturnRoute, type DirectoryReturnTarget,
   type ReaderNavigationSnapshot, type ReaderReturnContext, type ReaderRoute, type SettingsSection,
   type ReaderBackTarget, type ReaderRouteMotionKind, type TemporaryBackScope } from '../app/navigation/ReaderNavigation';
-import { readerRouteTransition } from '../app/navigation/ReaderRouteMotion';
+import { readerSceneTransition, READER_ROUTE_PARENT_DIM, READER_ROUTE_PARENT_PARALLAX } from '../app/navigation/ReaderRouteMotion';
+import { motionAnimateParam } from '../ui/foundation/MotionSpec';
 import { ReaderRouteStackSurface, type ReaderRouteSurfaceKey } from '../app/navigation/ReaderRouteStackSurface';
 import { ReaderLayoutDebugOverlay } from '../app/composition/ReaderLayoutDebugOverlay';
 
@@ -151,15 +149,7 @@ struct Index {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
 
-  @StorageLink('readerWindowMetricsRevision') @Watch('onShelfMotionWindowChanged') readerWindowMetricsRevision: number = 0;
-  @State private shelfMotion: BookshelfNavigationPresentation = new BookshelfNavigationPresentation({
-    context: (): UIContext => this.getUIContext(), route: (): string => this.route,
-    readingOrigin: (): string => this.navigationOwner.returns.snapshot().readingOrigin, readingActive: (): boolean => this.readingEntry.sessionActive,
-    book: (): ReadingBookDetail | undefined => this.readingEntry.book,
-    contentKind: (): string => this.readingEntry.contentKind, generation: (): number => this.navigationGeneration,
-    expanded: (): boolean => this.expandedLayout(),
-    completeReturn: (coveredMotionId?: number): void => this.readingExitActions.completeReturn(coveredMotionId),
-  });
+  @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   private readonly entryStartupTrace: ReaderEntryStartupTrace = new ReaderEntryStartupTrace(
     (phase: ReaderShelfEntryPhase, attempt: number, navigation: number, elapsedMs: number): void => {
       hilog.info(DOMAIN, 'Reader',
@@ -240,6 +230,9 @@ struct Index {
   @State private wideSettingsLane: ReaderRouteSurfaceKey = 'settings-general';
   @State private wideSettingsMotion: ReaderRouteMotionKind = 'tab';
   @State private visibleRouteMotion: ReaderRouteMotionKind | 'none' = 'none';
+  @State private readerParentProgress: number = 0;
+  @State private readerDetailCover: boolean = false;
+  private readerOriginLane: ReaderRoute = 'bookshelf';
   @State private sourceOpeningGeneration: number = 0;
   @State private sourceToolsOpeningGeneration: number = 0;
   private publishNavigation(snapshot: ReaderNavigationSnapshot): void {
@@ -258,15 +251,17 @@ struct Index {
       this.detailMoreBack = undefined;
       this.detailMoreBackIdentity = '';
     }
-    if (snapshot.route !== this.route) {
+    const routeChanged = snapshot.route !== this.route;
+    const fromReader = this.route === 'reading' || (this.route === 'directory' && this.directoryReturnTarget === 'readerControl');
+    const toReader = snapshot.route === 'reading' ||
+      (snapshot.route === 'directory' && snapshot.directoryReturnTarget === 'readerControl');
+    const previousLane = routeChanged && !fromReader && toReader ? this.appRouteLane() : this.readerOriginLane;
+    if (routeChanged) {
       const from = this.route, to = snapshot.route;
       if (to === 'source') this.sourceOpeningGeneration = snapshot.generation;
       else if (to === 'sourceTools') this.sourceToolsOpeningGeneration = snapshot.generation;
       const shelfSearch = (from === 'bookshelf' && to === 'search') || (from === 'search' && to === 'bookshelf');
-      const shelfReading = (from === 'bookshelf' && to === 'reading') || (from === 'reading' && to === 'bookshelf');
-      const retainedReader = (from === 'reading' && to === 'directory' && snapshot.directoryReturnTarget === 'readerControl') ||
-        (from === 'directory' && to === 'reading' && this.directoryReturnTarget === 'readerControl');
-      this.visibleRouteMotion = shelfSearch || shelfReading || retainedReader ? 'none' : this.navigationOwner.routeMotion();
+      this.visibleRouteMotion = shelfSearch || (fromReader && toReader) ? 'none' : this.navigationOwner.routeMotion();
     }
     // Keep the last right-hand pane mounted while the whole Settings tab leaves.
     const pane = this.navigationOwner.settingsPane();
@@ -282,6 +277,18 @@ struct Index {
     this.directoryReturnTarget = snapshot.directoryReturnTarget;
     this.settingsSection = snapshot.settingsSection;
     this.route = snapshot.route;
+    if (routeChanged) {
+      this.readerDetailCover = false;
+      if (fromReader !== toReader) {
+        const lane = this.appRouteLane();
+        const sameLane = previousLane === lane;
+        if (toReader) this.readerOriginLane = lane;
+        // Hold the exited reader's paint below the native detail push.
+        this.readerDetailCover = fromReader && snapshot.route === 'detail' && this.visibleRouteMotion === 'push' &&
+          this.searchAppForeground && this.readingEntry.book !== undefined;
+        this.updateReaderParentMotion(toReader, sameLane && !this.readerDetailCover);
+      }
+    }
     if (restoringDirectory) this.directoryJourney.refreshDetailPosition();
   }
   private setSettingsSection(section: SettingsSection): void {
@@ -290,9 +297,23 @@ struct Index {
   private navigateTo(route: ReaderRoute, motion?: ReaderRouteMotionKind): void {
     this.publishNavigation(this.navigationOwner.show(route, motion));
   }
-  private routeTransition(): TransitionEffect {
-    return readerRouteTransition(this.searchAppForeground ? this.visibleRouteMotion : 'none',
-      ReaderWindowCoordinator.metrics().windowRect.width, this.appReduceMotion);
+  private updateReaderParentMotion(open: boolean, sameLane: boolean): void {
+    const progress = open && sameLane ? 1 : 0;
+    if (this.readerParentProgress === progress) return;
+    if (sameLane && this.searchAppForeground && !this.appReduceMotion) {
+      const timing = motionAnimateParam(open ? 'app.navigation.push' : 'app.navigation.pop');
+      this.getUIContext().animateTo(timing, (): void => { this.readerParentProgress = progress; });
+    } else {
+      this.readerParentProgress = progress;
+    }
+  }
+
+  private readerParentMotionProgress(): number {
+    return this.searchAppForeground && !this.appReduceMotion ? this.readerParentProgress : 0;
+  }
+
+  private detailAboveReader(): boolean {
+    return this.route === 'detail' && this.visibleRouteMotion === 'push';
   }
   @StorageLink('readerAppForeground') @Watch('onSearchVisibilityChanged') private searchAppForeground: boolean = true;
   @State private jsonImportPresentation: JsonImportPresentation = new JsonImportPresentation();
@@ -308,7 +329,6 @@ struct Index {
       sourceSwitch: (): SourceSwitchPresentation => this.sourceSwitchPresentation,
       shelfBooks: (): ShelfBook[] => this.shelfRead.snapshot.books,
       removalPending: (): boolean => this.shelfMutations.snapshot.removalKey.length > 0,
-      readerExitPending: (): boolean => this.shelfMotion.pendingExitId >= 0,
       advance: (): number => this.nextNavigationGeneration(),
       show: (route: ReaderRoute): void => this.navigateTo(route),
       bindReader: (): void => this.bindReadingEntryReader(),
@@ -317,7 +337,7 @@ struct Index {
       sourceName: (sourceId: string, name?: string): string => this.sourceDisplayName(sourceId, name),
       detailReadAllowed: (): boolean => this.journeyRecoveryInputAllowed(),
       failure: (title: string, message: string): void => this.showReadingFailure(title, message),
-      afterOpening: (project: () => void): void => this.shelfMotion.projectAfterOpening(project),
+      afterOpening: (project: () => void): void => project(),
       postFrame: (action: () => void): void => this.getUIContext().postFrameCallback(new ReaderNavigationBackfillFrame(action)),
       refreshNearEnd: (session: RemoteReadingSession, chapterIndex: number): void => this.readingCommits.refreshNearEnd(session, chapterIndex),
     };
@@ -367,7 +387,7 @@ struct Index {
       restoreReturn: (context: ReaderReturnContext | undefined): boolean => this.downloadNavigation.restoreReaderReturn(context),
       advance: (): void => { this.nextNavigationGeneration(); },
       showReading: (): void => this.navigateTo('reading'),
-      leaveReader: (): void => this.returnToReadingOrigin(),
+      leaveReader: (): void => this.readingExitActions.completeReturn(),
       bindReader: (): void => this.bindReadingEntryReader(),
       sourceName: (sourceId: string, name?: string): string => this.sourceDisplayName(sourceId, name),
       invalidateDownloads: (): void => this.downloadPresentation.invalidateMembership(),
@@ -631,16 +651,14 @@ struct Index {
         ReaderDocumentPickerActivity.isPending() ||
         this.shelfMutations.snapshot.removalKey.length > 0 ||
         (this.route === 'bookshelf' && this.shelfMutations.snapshot.importPresentation !== undefined),
-      advance: (preserveShelfMotion?: boolean): void => { this.nextNavigationGeneration(preserveShelfMotion); },
+      advance: (): void => { this.nextNavigationGeneration(); },
       publish: (snapshot: ReaderNavigationSnapshot): void => this.publishNavigation(snapshot),
       bindReader: (): void => this.bindReadingEntryReader(),
       hydrateMangaPosition: (book: ReadingBookDetail): void => this.hydrateMangaPositions([book]),
       refreshDetail: (): void => { void this.readingEntryActions.refreshDetailAcquisition(); },
       refreshShelf: (): void => this.refreshBookshelf(),
-      resumeReturnMotion: (coveredMotionId: number): void => this.shelfMotion.resumeReturn(coveredMotionId),
       returnToBookshelf: (): void => this.libraryJourney.returnToBookshelf(),
       returnFromDetail: (): void => this.libraryJourney.returnFromDetail(),
-      returnToReadingOrigin: (animate?: boolean): void => this.returnToReadingOrigin(animate),
       showDownloads: (intent: SharedDownloadOpeningIntent): void => this.downloadNavigation.open(intent),
       showRules: (): void => this.settingsNavigation.presentRulesFromReader(),
       unavailableDownloads: (): void => this.showOfflineDownloadFeedback('阅读位置尚未就绪，请稍后打开下载管理'),
@@ -696,7 +714,6 @@ struct Index {
     this.documentPickerUnsubscribe?.();
     this.documentPickerUnsubscribe = undefined;
     this.readingExitActions.dispose();
-    this.shelfMotion.clear(true, false, false);
     this.transientFeedback.reset();
     this.downloadPresentation.dispose();
     this.readingCommits.retire();
@@ -764,9 +781,7 @@ struct Index {
       case 'downloadsOrigin': this.downloadNavigation.returnFromDownloads(); break;
       case 'rulesOrigin': this.settingsNavigation.returnFromRulesManagement(); break;
       case 'directoryOrigin': this.closeDirectory(); break;
-      case 'readerExit':
-        if (this.shelfMotion.pendingExitId < 0) this.requestReadingExit();
-        break;
+      case 'readerExit': this.requestReadingExit(); break;
       case 'detailExit': this.handleDetailBack(); break;
       case 'rss': this.rssJourney.returnToRss(); break;
       case 'rssFeed': this.rssJourney.returnFromRssSourceFeed(); break;
@@ -808,7 +823,7 @@ struct Index {
           case 'downloads': this.downloadNavigation.open(); break;
         }
       },
-      openBook: (book: ShelfBook, origin?: BookshelfBookOrigin): void => this.openShelfBookWithMotion(book, origin),
+      openBook: (selection: ShelfBook): void => this.openShelfBook(selection),
       openSelection: (book?: ShelfBook): void => this.libraryJourney.openBookshelfMultiSelect(book),
       openBookInfo: (book: ShelfBook, focus?: BookshelfDetailReturnFocus): void =>
         this.navigationOwner.openBookshelfDetail(focus, (): void => this.openShelfBookInfo(book)),
@@ -941,22 +956,6 @@ struct Index {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      this.indexContent();
-      BookshelfNavigationTransition({
-        request: this.shelfMotion.request,
-        reduceMotion: this.appReduceMotion || !this.searchAppForeground,
-        onCovered: (id: number): void => this.shelfMotion.coverClosed(id),
-        onOpeningPaint: (id: number, paint: BookshelfOpeningPaint): void => this.shelfMotion.publishOpeningPaint(id, paint),
-        onFinished: (id: number): void => this.shelfMotion.finish(id),
-      });
-    }
-    .id('reader-bookshelf-motion-host')
-    .width('100%').height('100%');
-  }
-
-  @Builder
-  private indexContent() {
-    Stack({ alignContent: Alignment.TopStart }) {
       this.pageSurfaces();
       Stack({ alignContent: Alignment.TopStart }) {
         BookRemovalDialogHost({ presentation: this.bookRemovalConfirmation });
@@ -988,27 +987,38 @@ struct Index {
   @Builder
   private pageSurfaces() {
     Stack({ alignContent: Alignment.TopStart }) {
-      ReaderRouteStackSurface({
-        route: this.appRouteLane(), routeMotion: this.searchAppForeground ? this.visibleRouteMotion : 'none',
-        surfaceId: 'reader-app-route-stack',
-        viewportWidth: this.routeViewportWidth(), reduceMotion: this.appReduceMotion,
-        backGestureEnabled: this.journeyRecoveryInputAllowed() &&
-          retainedReaderRoute(this.route, this.directoryReturnTarget) === undefined,
-        content: (route: ReaderRouteSurfaceKey): void => { this.appRouteContent(route as ReaderRoute); },
-        onBack: (): boolean => this.onBackPress(),
-      });
-      if (this.readingEntry.sessionActive && this.readingEntry.book !== undefined) {
-        RetainedReaderScene({
-          reading: this.readingEntry, commits: this.readingCommits,
-          source: this.sourceSwitchPresentation, manga: this.mangaSourceSwitch,
-          visibleRoute: retainedReaderRoute(this.route, this.directoryReturnTarget),
-          expandedLayout: this.expandedLayout(), reduceMotion: this.appReduceMotion,
-          motionPaint: this.shelfMotion.paint,
-          inputAllowed: this.searchAppForeground && !this.arkWebCapturesInput &&
-            this.shelfMotion.pendingExitId < 0 && this.shelfMotion.request?.direction !== 'open',
-          ports: this.retainedReaderPorts(),
-        }).transition(this.routeTransition());
-      }
+      Stack({ alignContent: Alignment.TopStart }) {
+        ReaderRouteStackSurface({
+          route: this.appRouteLane(), routeMotion: this.searchAppForeground ? this.visibleRouteMotion : 'none',
+          surfaceId: 'reader-app-route-stack',
+          viewportWidth: this.routeViewportWidth(), reduceMotion: this.appReduceMotion,
+          readerCoverBehind: this.readerDetailCover,
+          onReaderCovered: (): void => { this.readerDetailCover = false; },
+          backGestureEnabled: this.journeyRecoveryInputAllowed() &&
+            retainedReaderRoute(this.route, this.directoryReturnTarget) === undefined,
+          content: (route: ReaderRouteSurfaceKey): void => { this.appRouteContent(route as ReaderRoute); },
+          onBack: (): boolean => this.onBackPress(),
+        });
+        Column().width('100%').height('100%').backgroundColor(Color.Black)
+          .opacity(this.readerParentMotionProgress() * READER_ROUTE_PARENT_DIM)
+          .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
+      }.width('100%').height('100%')
+        .translate({ x: -this.routeViewportWidth() * READER_ROUTE_PARENT_PARALLAX * this.readerParentMotionProgress() })
+        .zIndex(this.detailAboveReader() ? 1 : 0);
+      Stack({ alignContent: Alignment.TopStart }) {
+        if ((this.readingEntry.sessionActive || this.readerDetailCover) && this.readingEntry.book !== undefined) {
+          RetainedReaderScene({
+            reading: this.readingEntry, commits: this.readingCommits,
+            source: this.sourceSwitchPresentation, manga: this.mangaSourceSwitch,
+            visibleRoute: this.readerDetailCover ? 'reading' : retainedReaderRoute(this.route, this.directoryReturnTarget),
+            expandedLayout: this.expandedLayout(), reduceMotion: this.appReduceMotion,
+            inputAllowed: this.readingEntry.sessionActive && this.searchAppForeground && !this.arkWebCapturesInput,
+            ports: this.retainedReaderPorts(),
+          }).transition(readerSceneTransition(this.routeViewportWidth(), this.appReduceMotion,
+            this.searchAppForeground && !this.readerDetailCover));
+        }
+      }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent)
+        .zIndex(this.detailAboveReader() ? 0 : 1);
       this.pageOverlays();
     }
     .width('100%').height('100%')
@@ -1027,7 +1037,7 @@ struct Index {
   }
 
   private appRouteLane(): ReaderRoute {
-    if (this.route === 'search' || this.shelfMotion.retainsOpeningBackground()) return 'bookshelf';
+    if (this.route === 'search') return 'bookshelf';
     if (retainedReaderRoute(this.route, this.directoryReturnTarget) !== undefined) {
       return this.navigationOwner.returns.snapshot().readingOrigin;
     }
@@ -1059,17 +1069,9 @@ struct Index {
 
   @Builder
   private bookshelfRoute() {
-    BookshelfNavigationPaintSurface({
-      paint: this.shelfMotion.paint,
-      content: (): void => { this.bookshelfRouteContent(); },
-    });
-  }
-
-  @Builder
-  private bookshelfRouteContent() {
     ForEach([this.detailShelfAdmissionMount], (mounting: number): void => {
       BookshelfScene({
-        read: this.shelfRead, mutations: this.shelfMutations, catalog: this.shelfCatalog, motion: this.shelfMotion,
+        read: this.shelfRead, mutations: this.shelfMutations, catalog: this.shelfCatalog,
         navigation: this.navigationGeneration,
         feedbackEnabled: this.route === 'bookshelf' && !this.readingEntry.sessionActive && !this.readingEntryActions.shelfPreparing,
         continueCardSuppressed: this.route === 'search' &&
@@ -1180,7 +1182,7 @@ struct Index {
       ReaderTransientToast()
     }
     .width('100%').height('100%').padding({ top: this.overlaySafeTop() })
-    .hitTestBehavior(HitTestMode.Transparent);
+    .zIndex(2).hitTestBehavior(HitTestMode.Transparent);
   }
 
   @Builder
@@ -1421,7 +1423,8 @@ struct Index {
 
   private mangaOwnsWindowEdges(): boolean {
     if (this.mangaSourceSwitch.selectionVisible) return true;
-    return this.readingEntry.sessionActive && this.readingEntry.contentKind === 'manga' && this.readerOwnsWindowEdges();
+    return (this.readingEntry.sessionActive || this.readerDetailCover) && this.readingEntry.contentKind === 'manga' &&
+      this.readerOwnsWindowEdges();
   }
 
   private appContentTopInset(): number {
@@ -1661,7 +1664,7 @@ struct Index {
   }
 
   private onSearchVisibilityChanged(): void {
-    this.shelfMotion.visibilityChanged(this.searchAppForeground);
+    if (!this.searchAppForeground) this.readerDetailCover = false;
     this.transientFeedback.reset();
     if (this.libraryAcquisition.currentOwner() === undefined || this.shelfReceiptRetired) return;
     this.readingEntry.shelfPreparationVisibilityChanged((): ReadingShelfPreparationScene => this.readingShelfPreparationScene());
@@ -1669,16 +1672,6 @@ struct Index {
     this.librarySearch.host.visibilityChanged();
     void this.readingEntryActions.refreshDetailAcquisition();
     this.readingExitActions.navigationSettled();
-  }
-
-
-
-  private onShelfMotionWindowChanged(): void {
-    this.shelfMotion.windowChanged();
-  }
-
-  private openShelfBookWithMotion(selection: ShelfBook, origin?: BookshelfBookOrigin): void {
-    this.shelfMotion.open(selection, origin, (book: ShelfBook): void => this.openShelfBook(book));
   }
 
   private openShelfBook(selection: ShelfBook): void {
@@ -1839,10 +1832,6 @@ struct Index {
 
   private retryDirectoryCatalog(): void { this.directoryJourney.retryDetailCatalog(); }
 
-  private returnToReadingOrigin(animateCover: boolean = true): void {
-    this.shelfMotion.returnToOrigin(animateCover);
-  }
-
   private requestMangaShelfMutation(): void {
     this.readingExitActions.requestMangaShelfMutation((): void => this.detailShelf.request(this.detailShelf.identity()));
   }
@@ -1930,7 +1919,6 @@ struct Index {
       readerIdentity === this.currentReaderPresentationIdentity() &&
       retainedReaderRoute(this.route, this.directoryReturnTarget) === 'reading' &&
       this.searchAppForeground && !this.arkWebCapturesInput &&
-      this.shelfMotion.pendingExitId < 0 && this.shelfMotion.request?.direction !== 'open' &&
       !this.sourceSwitchPresentation.isSurfacePresented() && !this.mangaSourceSwitch.selectionVisible;
   }
 
@@ -1980,8 +1968,7 @@ struct Index {
     return this.searchAppForeground && !this.arkWebCapturesInput && this.currentReadingRuntime() !== undefined &&
       !this.bookshelfModalVisible() && !this.bookRemovalConfirmation.isOpen() &&
       this.jsonImportPresentation.opening === undefined && !this.sourceSwitchPresentation.isSurfacePresented() &&
-      !this.mangaSourceSwitch.selectionVisible && this.shelfMotion.pendingExitId < 0 &&
-      this.shelfMotion.request?.direction !== 'open';
+      !this.mangaSourceSwitch.selectionVisible;
   }
 
   private canPresentMangaRecovery(): boolean {
@@ -2045,8 +2032,7 @@ struct Index {
 
 
 
-  private nextNavigationGeneration(preserveShelfMotion: boolean = false): number {
-    if (!preserveShelfMotion) this.shelfMotion.clear(false, false, false);
+  private nextNavigationGeneration(): number {
     this.transientFeedback.reset();
     this.downloadPresentation.retire();
     this.readingCommits.retire();

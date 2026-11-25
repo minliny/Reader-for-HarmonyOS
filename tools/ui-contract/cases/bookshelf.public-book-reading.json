@@ -13,7 +13,7 @@
       "id": "bookshelf-ready",
       "kind": "sample",
       "anchors": [
-        "reader-bookshelf-motion-host",
+        "reader-app-route-stack",
         "reader-bookshelf-search-bar",
         "reader-bookshelf-search-entry"
       ],
@@ -71,6 +71,8 @@
     }
   ],
   "ownerSources": [
+    "entry/src/main/ets/pages/Index.ets",
+    "entry/src/main/ets/app/navigation/ReaderRouteStackSurface.ets",
     "entry/src/main/ets/features/search/ui/ReaderLibrarySearchSurface.ets",
     "entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets",
     "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",

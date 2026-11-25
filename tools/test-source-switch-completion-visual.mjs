@@ -120,14 +120,15 @@ if(selectedCase==='ack-boundary'){
   // The Runtime's pending-list and the cache IO are controlled fixture ports.
   const {fixture: ownerFixture, Runtime, settle, setCurrentRuntime} = await import('./lib/source-switch-owner-probe.mjs');
   const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
-  const {ReaderNavigation} = await import('../entry/src/main/ets/app/navigation/ReaderNavigation.ts');
-  const {readerSourceSwitchActions} = await import('../entry/src/main/ets/app/composition/ReaderSourceSwitchActions.ts');
-  const {ReaderSourceSwitchJourney} = await import('../entry/src/main/ets/app/composition/ReaderSourceSwitchJourney.ts');
-  const {readerDirectoryActions} = await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryActions.ts');
+  const {ReaderNavigation, retainedReaderRoute} = await import('../entry/src/main/ets/app/navigation/ReaderNavigation.ts');
+  const readerSourceSwitchActions = bookshelfOperationClass('app/composition/ReaderSourceSwitchActions.ets', 'readerSourceSwitchActions');
+  const ReaderSourceSwitchJourney = bookshelfOperationClass('app/composition/ReaderSourceSwitchJourney.ets', 'ReaderSourceSwitchJourney');
+  const readerDirectoryActions = bookshelfOperationClass('features/reading/presentation/ReaderDirectoryActions.ets', 'readerDirectoryActions');
   const ReaderReadingEntryActions = bookshelfOperationClass('app/composition/ReaderReadingEntryActions.ets',
     'ReaderReadingEntryActions', {Observed: value => value});
   const ReadingCommitPresentation = bookshelfOperationClass('features/reading/presentation/ReadingCommitPresentation.ets',
-    'ReadingCommitPresentation', {Observed: value => value, SourceSwitchCompletionPresentation});
+    'ReadingCommitPresentation', {Observed: value => value, SourceSwitchCompletionPresentation,
+      ReadingPrefetchHost: {forRuntime: () => ({retireDeepReading() {}})}});
   const p = boundedSurfaceSdk();
   const identity = {sourceId: 'target', bookId: 'book'};
   const origin = {sourceId: 'old', bookId: 'old-book'};
@@ -141,15 +142,19 @@ if(selectedCase==='ack-boundary'){
   const page = p.consumer(read('pages/Index.ets'), ['navigationOwner', 'publishNavigation', 'nextNavigationGeneration',
     'isCurrentRuntime', 'jsonImportPresentation', 'readingCommits', 'readingCommitPorts', 'sourceSwitchActions',
     'retainedReaderPorts', 'directoryNavigationPorts', 'currentReadingRuntime', 'resolveReaderSourceSwitchTransaction',
-    'getSourceSwitchHost', 'retireSourceSwitchPresentation', 'sourceDisplayName',
+    'getSourceSwitchHost', 'sourceSwitchScene', 'retireSourceSwitchPresentation', 'sourceDisplayName',
+    'appRouteLane', 'updateReaderParentMotion',
     'readingEntryActions', 'readingEntryActionPorts', 'sourceSwitchJourney', 'sourceSwitchJourneyPorts'],
-    {ReaderNavigation, ReadingCommitPresentation, readerSourceSwitchActions, ReaderSourceSwitchJourney, ReaderReadingEntryActions, ReaderRuntimeOwner: Runtime,
+    {ReaderNavigation, retainedReaderRoute, ReadingCommitPresentation, readerSourceSwitchActions, ReaderSourceSwitchJourney,
+      ReaderReadingEntryActions, ReaderRuntimeOwner: Runtime,
+      ReaderDirectoryHost: {forRuntime: () => undefined, currentForRuntime: () => undefined},
       SourceSwitchHost: owner.Constructor, ReadingOfflineHost: {forRuntime: () => offline}});
   const lifetime = {retire() {}};
   const manga = {retire() {}, canCancelPreparation: () => false};
   Object.assign(page, {mountedRuntimeOwner: owner.runtime, shelfReceiptRetired: false, detailShelfAdmissionMount: 1,
-    searchAppForeground: true, libraryAcquisition: {currentOwner: () => owner.runtime},
-    shelfMotion: {clear() {}}, transientFeedback: {reset() {}}, downloadPresentation: lifetime,
+    searchAppForeground: true, appReduceMotion: true, readerParentProgress: 0, wideSettingsPane: () => undefined,
+    libraryAcquisition: {currentOwner: () => owner.runtime},
+    transientFeedback: {reset() {}}, downloadPresentation: lifetime,
     settingsPresentation: lifetime, sourceJourney: lifetime, rssJourney: lifetime, shelfCatalog: lifetime,
     shelfMutations: {retireSelection() {}}, shelfManagement: lifetime, shelfGroupPresentation: lifetime,
     discoverPresentation: lifetime, rulesPresentation: lifetime, syncPresentation: lifetime, nativeAlertOwner: lifetime,
@@ -166,10 +171,17 @@ if(selectedCase==='ack-boundary'){
     constructor(parent, params, _storage, id) { Object.assign(this, {owner: parent, params, id}); }
   }
   const sceneSource = read('app/composition/RetainedReaderScene.ets');
-  const sceneParams = () => ({reading: entry, commits: page.readingCommits, source, manga,
-    visibleRoute: 'reading', ports: page.retainedReaderPorts()});
+  const observed = p.properties.sdk.ObservedObject;
+  const links = Object.fromEntries(Object.entries({ reading: entry, commits: page.readingCommits, source, manga })
+    .map(([name, value]) => [name, observed.createNew(value, undefined)]));
+  const sceneParams = () => ({...links, visibleRoute: 'reading', ports: page.retainedReaderPorts()});
+  const syntax = createRequire(import.meta.url)(resolveEtsLoaderRoot() + '/lib/validate_ui_syntax.js');
+  for (const name of ['ReadingEntryPresentation', 'ReadingCommitPresentation', 'SourceSwitchPresentation', 'MangaSourceSwitchPresentation']) {
+    syntax.observedClassCollection.add(name);
+  }
   const {Component: RetainedReaderScene} = createReaderBuilderProbe(sceneSource, boundedMembers(sceneSource),
-    {...p.deps, ReaderShell: ReaderShellPort, readerDirectoryActions}, {...p.hooks, initialParams: sceneParams(),
+    {...p.deps, ReaderShell: ReaderShellPort, readerDirectoryActions,
+      SynchedPropertyNesedObjectPU: p.properties.sdk.SynchedPropertyNestedObjectPU}, {...p.hooks, initialParams: sceneParams(),
       childSources: {...p.childSources, ReaderShell: read('features/reading/ui/ReaderShell.ets')}});
   const render = () => {
     const scene = new RetainedReaderScene(undefined, sceneParams());

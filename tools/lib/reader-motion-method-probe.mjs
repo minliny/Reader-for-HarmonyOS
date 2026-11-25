@@ -292,7 +292,7 @@ if (names.includes('traceBoundary')) capturedOwnerFields += '\n' + ordinaryField
       capturedOwnerFields += '\nget sourceSwitchJourney() { return this.sourceSwitchJourneyFixture ??= new ReaderSourceSwitchJourney(this.navigationOwner, this.sourceSwitchJourneyPorts()); }';
     }
     if (needsReadingExitActions && !names.includes('readingExitActions')) {
-      dependencies.ReaderExitActions ??= bookshelfOperationClass('app/composition/ReaderExitActions.ts', 'ReaderExitActions',
+      dependencies.ReaderExitActions ??= bookshelfOperationClass('app/composition/ReaderExitActions.ets', 'ReaderExitActions',
         { ReaderSystemFileOpenNavigationHost: dependencies.ReaderSystemFileOpenNavigationHost });
       capturedOwnerFields += '\nget readingExitActions() { return this.exitActionsFixture ??= new ReaderExitActions(this.navigationOwner, this.readingExitActionPorts()); }';
     }

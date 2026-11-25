@@ -246,7 +246,7 @@ export class ReadingEntryPresentation {
   acceptReaderExit(owner: ReaderRuntimeOwner, readerIdentity: string): boolean {
     if (!this.sessionActive || readerIdentity !== this.readerPresentationIdentity() ||
       readerIdentity === this.acceptedExitIdentity) return false;
-    // Shelf return motion can retain the session until its cover settles.
+    // Reject duplicate exit acknowledgements for the same reader.
     this.acceptedExitIdentity = readerIdentity;
     const book = this.book;
     if (this.contentKind === 'manga' && book !== undefined) owner.finishMangaOfflineProbe?.(book.sourceId, book.bookId);

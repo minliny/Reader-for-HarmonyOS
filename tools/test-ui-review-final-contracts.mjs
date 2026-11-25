@@ -35,7 +35,7 @@ function rootInput() {
     currentReadingRuntime: () => ({}), readingEntry: reading,
     currentReaderPresentationIdentity: () => reading.readerPresentationIdentity(),
     route: 'reading', directoryReturnTarget: 'readerControl', searchAppForeground: true, arkWebCapturesInput: false,
-    shelfMotion: { pendingExitId: -1 }, sourceSwitchPresentation: { isSurfacePresented: () => false },
+    sourceSwitchPresentation: { isSurfacePresented: () => false },
     mangaSourceSwitch: { selectionVisible: false },
   });
   const Shell = selectedProductionMethods(file('features/reading/ui/ReaderShell.ets'), 'ReaderShell',

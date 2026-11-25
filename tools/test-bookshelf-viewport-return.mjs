@@ -15,7 +15,8 @@ async function runSelectedCase(selectedCase){
 const [
  {createReaderBuilderProbe}, {boundedMembers,boundedSurfaceSdk}, metricsApi,
  {readerFloatingTabContentInset}, {productionMotionMethods}, {readerRecoveryView},
- {BookshelfViewState}, headerMetrics, {pureModuleProbe}, {readerFoundationTokens},
+ {BookshelfViewState}, headerMetrics, {pureModuleProbe}, {readerFoundationTokens}, {DEFAULT_BOOKSHELF_VIEW},
+ {actualReaderPageLayout}, {actualReaderPostLayoutFrame}, {readerEditingSdk},
 ]=await Promise.all([
  import('./lib/reader-control-builder-probe.mjs'),
  import('./lib/bounded-surface-sdk-probe.mjs'),
@@ -27,14 +28,18 @@ const [
  import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts'),
  import('./lib/ets-pure-module-probe.mjs'),
  import('./lib/reader-foundation-control-probe.mjs'),
+ import('../entry/src/main/ets/features/bookshelf/application/BookshelfViewMode.ts'),
+ import('./lib/reader-page-shell-runtime-probe.mjs'),
+ import('./lib/reader-post-layout-frame-probe.mjs'),
+ import('./lib/reader-editing-sdk-probe.mjs'),
 ]);
 const source=new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets',import.meta.url);
 const headerSpecSource=readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderHeaderSpecs.ets',import.meta.url),'utf8');
 const headerSpecs=pureModuleProbe(headerSpecSource,'ViewportReturnHeaderSpecs.ets',
  {...headerMetrics,TOK_BORDER_W:readerFoundationTokens.TOK_BORDER_W},['bookshelfHeaderSpec']);
 class Frame { constructor(callback){this.callback=callback;} }
-const Page=productionMotionMethods(source,['shelfHeaderItems','saveShelfViewport','restoreShelfViewport','publishVisibleReadingBooks','aboutToDisappear','aboutToAppear','viewModeRecovery','publishHeaderScrolled','onScrollToTopRequested','takeDetailReturnFocus','cancelBookActionFocus','bookActionFocusRevision','restoreDetailReturnFocus'],{
- ...headerSpecs,readerRecoveryView, BookshelfMotionFrameCallback:Frame, ScrollAlign:{START:'start'}, Edge:{Top:'top'}, registerReaderShelfFonts(){}
+const Page=productionMotionMethods(source,['shelfHeaderItems','saveShelfViewport','restoreShelfViewport','publishVisibleReadingBooks','aboutToDisappear','aboutToAppear','viewModeRecovery','publishHeaderScrolled','onScrollToTopRequested','takeDetailReturnFocus','cancelBookActionFocus','bookActionFocusRevision','restoreDetailReturnFocus','resetShelfPress'],{
+ ...headerSpecs,readerRecoveryView,DEFAULT_BOOKSHELF_VIEW,BookshelfMotionFrameCallback:Frame, ScrollAlign:{START:'start'}, Edge:{Top:'top'}, registerReaderShelfFonts(){}
 });
 const state=new BookshelfViewState(); const frames=[]; const calls=[]; const prepared=[];const materials=[];
 const books=[{sourceId:'source',bookId:'first',group:'历史分组'},{sourceId:'another',bookId:'same',group:'默认'}].map(Object.freeze);
@@ -51,8 +56,8 @@ function page(){ return Object.assign(new Page(), {
   scrollToIndex:index=>{calls.push(['index',index]);itemY=0;},scrollBy:(_x,y)=>calls.push(['by',y])},
  rowDataSource:{totalCount:()=>rows.length,getData:index=>rows[index]},
  getUIContext:()=>({postFrameCallback:frame=>frames.push(frame.callback),getFont:()=>({})}),
- resetViewSwitchMotion(){},setRestingProjectionOpacity(){},rebuildShelfProjection(){},loadViewMode(){},
- transientFeedback:{reset(){}},publishContinueCardRect(){},scheduleContinueCardMeasurement(){},scheduleReturnMotionOrigin(){},
+ resetViewSwitchMotion(){},setRestingProjectionOpacity(){},rebuildShelfProjection(){},loadViewMode(){},prepareListTextFonts(){},
+ transientFeedback:{reset(){}},publishContinueCardRect(){},scheduleContinueCardMeasurement(){},
  actionSheetChromeId:'',shelfContentStartInset:()=>80,onHeaderScrolledChanged:scrolled=>materials.push(scrolled),
  onVisibleBooksChanged:books=>prepared.push(books),
 });}
@@ -122,9 +127,11 @@ assert.match(shelfScene,/BookshelfPage\(\{[\s\S]*?noticeTopInset: this\.read\.no
 assert.match(readPresentation,/this\.viewState\.anchorKey = '';\s*this\.viewState\.anchorOffset = 0;\s*this\.viewState\.anchorCaptured = false/,
  'a changed shelf filter revokes the captured viewport rather than restoring numeric zero as a saved scroll');
 const detail=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/presentation/BookshelfDetailPresentation.ets',import.meta.url),'utf8');
+const libraryJourney=readFileSync(new URL('../entry/src/main/ets/app/composition/ReaderLibraryJourney.ets',import.meta.url),'utf8');
 assert.match(detail,/private pendingReadbackKey: string = ''/,
   'detail shelf admission retains a confirmed identity until the bookshelf route readback');
-assert.match(index,/this\.navigateTo\('bookshelf'\);\s*this\.refreshBookshelf\(\);[\s\S]*?this\.detailShelf\.readbackOnBookshelf\(\);/);
+assert.match(index,/refreshShelf: \(\): void => this\.refreshBookshelf\(\),\s*readbackOnBookshelf: \(\): void => this\.detailShelf\.readbackOnBookshelf\(\)/);
+assert.match(libraryJourney,/this\.ports\.publish\(next\);[\s\S]*?this\.ports\.refreshShelf\(\);[\s\S]*?this\.ports\.readbackOnBookshelf\(\);/);
 assert.match(index,/postFrame: \(action: \(\) => void\): void => this\.getUIContext\(\)\.postFrameCallback\(new ReaderNavigationBackfillFrame\(action\)\)/);
 assert.match(detail,/readbackOnBookshelf\(\): void \{[\s\S]*?this\.scope\.postFrame\(\(\): void => \{/,
   'bookshelf return schedules a fresh read after the route binding is mounted');
@@ -139,25 +146,39 @@ console.log('PASS bookshelf route return: complete native samples, captured zero
 function headerScrollerIdentity(){
  const returned=page();const text=readFileSync(source,'utf8');
  const sdk=boundedSurfaceSdk(),mainText=readFileSync(new URL('../entry/src/main/ets/features/shell/MainTabShell.ets',import.meta.url),'utf8');
- sdk.childSources.MainTabBar=readFileSync(new URL('../entry/src/main/ets/features/shell/MainTabBar.ets',import.meta.url),'utf8');
- class Tab {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
- const deps={...sdk.deps,...metricsApi,readerFloatingTabContentInset,ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics},
-  MainTabBar:Tab,LazyForEach:{create(){},pop(){}},ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}}};
- const listOwner=createReaderBuilderProbe(text,['bookshelfList','shelfPageHandler','shelfScrollHandler','isShelfPresentationCurrent'],deps,sdk.hooks).owner;
+ const layout=actualReaderPageLayout();
+ const nativeSlotSource=readFileSync(new URL('../entry/src/main/ets/ui/layout/ReaderNativeSlotMeasurement.ets',import.meta.url),'utf8');
+ const {ReaderNativeSlotMeasurement}=pureModuleProbe(nativeSlotSource,'ReaderNativeSlotMeasurement.ets',{
+  ReaderPostLayoutFrame:actualReaderPostLayoutFrame(),readerMeasureSurfaceRect:()=>undefined,
+ },['ReaderNativeSlotMeasurement']);
+ sdk.childSources.BookshelfSectionHeader=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets',import.meta.url),'utf8');
+ sdk.childSources.MainNavigationOverlay=readFileSync(new URL('../entry/src/main/ets/features/shell/MainNavigationOverlay.ets',import.meta.url),'utf8');
+ sdk.childSources.ReaderBottomNavigation=readFileSync(new URL('../entry/src/main/ets/app/navigation/ReaderBottomNavigation.ets',import.meta.url),'utf8');
+ class Child {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
+ const deps={...sdk.deps,...metricsApi,...headerSpecs,...layout,...readerEditingSdk(),readerFloatingTabContentInset,ReaderNativeSlotMeasurement,
+  ReaderWindowCoordinator:{metrics:metricsApi.createDefaultReaderWindowMetrics},
+  ReaderBottomNavigation:Child,MainNavigationOverlay:Child,BookshelfSectionHeader:Child,readerMainNavigationMode:()=> 'bottom',
+  LazyForEach:{create(){},pop(){}},
+  ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}}};
+ const listOwner=createReaderBuilderProbe(text,['bookshelfList','shelfPageHandler','shelfScrollHandler',
+  'shelfViewportScrollHandler','shelfViewportMotionId','shelfFirstItemPadding','isShelfPresentationCurrent'],deps,sdk.hooks).owner;
  const scroller=returned.shelfScroller;
  Object.assign(listOwner,{appThemeScheme:'day',readerWindowMetricsRevision:0,mounted:true,navigationGeneration:1,
   shelfScroller:scroller,continueReading:undefined,filterRowVisible:false,viewModeError:'',visibleBookCount:1,headerClearance:74,
-  shelfContentWidth:()=>352,rowDataSource:{totalCount:()=>0},isWideViewport:()=>false,sectionAction(){},saveShelfViewport:returned.saveShelfViewport.bind(returned),restoreShelfViewport:returned.restoreShelfViewport.bind(returned)});
+  shelfContentWidth:()=>352,rowDataSource:{totalCount:()=>0},isWideViewport:()=>false,
+  scrollLayout:()=>new layout.ReaderScrollLayout(listOwner.headerClearance,0,'contentOffset'),
+  currentFilterBookCount:()=>1,hasActiveFilters:()=>false,viewModeAction:()=>()=>{},filterPanel(){},
+  saveShelfViewport:returned.saveShelfViewport.bind(returned),restoreShelfViewport:returned.restoreShelfViewport.bind(returned)});
  const frame=createReaderBuilderProbe(mainText,boundedMembers(mainText),deps,sdk.hooks).owner;
- Object.assign(frame,{showBottomNav:false,showTabletRail:false,headerKind:'floating',headerTop:8,
+ Object.assign(frame,{headerKind:'floating',headerTop:8,
   content:()=>listOwner.bookshelfList(false),onHeaderHeightChange:height=>{listOwner.headerClearance=height+14;listOwner.replay();}});
  frame.initialRender();
  const list=sdk.nodes(listOwner).find(node=>node.type==='List'),items=sdk.nodes(listOwner).filter(node=>node.type==='ListItem');
  assert.equal(list.create.scroller,scroller,'public migration keeps the actual viewport Scroller owner');
  assert.equal(list.contentStartOffset,74);assert.equal(list.maintainVisibleContentPosition,true);
- assert.equal(items.length,1,'header remains outside the List and does not add an index-shifting item');
+ assert.equal(items.length,1,'the shelf section is the only list item while the app header stays outside it');
  assert.ok(sdk.nodes(frame).some(node=>node.type==='Stack'&&node.backgroundColor),'actual Scaffold paints the same page root');
- const headerOwner=sdk.walk(frame).find(owner=>owner.kind==='floating'&&typeof owner.onHeightChange==='function');
+ const headerOwner=sdk.walk(frame).find(owner=>owner.style?.transparent && typeof owner.onHeightChange==='function');
  const measured=[...headerOwner.nodes.values()].find(node=>node.type==='Column'&&node.onAreaChange);
  assert.ok(measured,'public HeaderHost owns measurement');measured.onAreaChange({}, {height:'96vp'});
  assert.equal(list.contentStartOffset,118,'public height plus top gap and approved list gap propagate once');

@@ -3,8 +3,6 @@ import type { ReaderSurfaceRect } from '../../../ui/layout/ReaderSurfaceRect';
 import { BookshelfCatalogPresentation } from '../presentation/BookshelfCatalogPresentation';
 import { BookshelfEmptyPage } from './BookshelfEmptyPage';
 import { BookshelfMutationPresentation } from '../presentation/BookshelfMutationPresentation';
-import type { BookshelfBookOrigin } from '../presentation/BookshelfNavigationMotion';
-import { BookshelfNavigationPresentation } from './BookshelfNavigationPresentation';
 import { BookshelfPage } from './BookshelfPage';
 import { BookshelfReadPresentation } from '../presentation/BookshelfReadPresentation';
 import { BookshelfShell } from './BookshelfShell';
@@ -22,7 +20,7 @@ export interface BookshelfScenePorts {
   measureContinueCard: (rect: ReaderSurfaceRect | undefined, navigation: number, bookKey: string) => void;
   prepareVisibleBooks: (books: ShelfBook[]) => void;
   openDestination: (destination: BookshelfSceneDestination) => void;
-  openBook: (book: ShelfBook, origin?: BookshelfBookOrigin) => void;
+  openBook: (book: ShelfBook) => void;
   openSelection: (book?: ShelfBook) => void;
   openBookInfo: (book: ShelfBook, focus?: BookshelfDetailReturnFocus) => void;
   takeDetailReturnFocus: (navigation: number) => BookshelfDetailReturnFocus | undefined;
@@ -34,7 +32,6 @@ export struct BookshelfScene {
   @ObjectLink read: BookshelfReadPresentation;
   @ObjectLink mutations: BookshelfMutationPresentation;
   @ObjectLink catalog: BookshelfCatalogPresentation;
-  @ObjectLink motion: BookshelfNavigationPresentation;
   @Prop navigation: number = 0;
   @Prop feedbackEnabled: boolean = true;
   @Prop continueCardSuppressed: boolean = false;
@@ -97,12 +94,8 @@ export struct BookshelfScene {
         onRssRequested: (presentedNavigation?: number): void => this.open('rss', presentedNavigation ?? navigation),
         onSettingsRequested: (presentedNavigation?: number): void => this.open('settings', presentedNavigation ?? navigation),
         onDiscoverRequested: (presentedNavigation?: number): void => this.open('discover', presentedNavigation ?? navigation),
-        returnMotionBookKey: this.motion.returnBookKey,
-        onReturnMotionOrigin: (origin: BookshelfBookOrigin, presentedNavigation?: number): void => {
-          if (this.isCurrent(presentedNavigation ?? navigation)) this.motion.receiveReturnOrigin(origin);
-        },
-        onBookSelected: (book: ShelfBook, presentedNavigation?: number, origin?: BookshelfBookOrigin): void => {
-          if (this.isInteractive(presentedNavigation ?? navigation)) this.ports?.openBook(book, origin);
+        onBookSelected: (book: ShelfBook, presentedNavigation?: number): void => {
+          if (this.isInteractive(presentedNavigation ?? navigation)) this.ports?.openBook(book);
         },
         onVisibleBooksChanged: (books: ShelfBook[], presentedNavigation?: number): void => {
           if (this.isCurrent(presentedNavigation ?? navigation)) this.ports?.prepareVisibleBooks(books);

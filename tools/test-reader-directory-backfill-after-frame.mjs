@@ -35,7 +35,7 @@ function reader(bookId, kind = 'epub') {
   const navigation = new ReaderNavigation();
   navigation.show('reading');
   const page = Object.assign(new Index(), {
-    shelfReceiptRetired: false, shelfMotion: { pendingExitId: -1 }, route: 'reading',
+    shelfReceiptRetired: false, route: 'reading',
     readingEntry: Object.assign(new ReadingEntry(), { book: { sourceId: 'local', bookId, kind }, sessionActive: true, readyGeneration: 7 }),
     mountedRuntimeOwner: owner, detailShelfAdmissionMount: 1, navigationGeneration: navigation.snapshot().generation,
     navigationOwner: navigation, libraryAcquisition: { currentOwner: () => owner },

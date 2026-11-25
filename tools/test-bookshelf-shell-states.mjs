@@ -16,8 +16,8 @@ const { resolve } = await import('node:path');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { iconButtonControls } = await import('./lib/reader-icon-button-probe.mjs');
 const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
 const metricsApi = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
-const { isReaderProductSurfaceEnabled } = await import('../entry/src/main/ets/app/ReaderProductScope.ts');
 
 
 const root = resolve(import.meta.dirname, '..');
@@ -47,6 +47,9 @@ for (const match of index.matchAll(/from ['"]([^'"]+)['"]/g)) {
 for (const m of index.matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g)) builders.add(m[1]);
 for (const [name, file, slot] of [
   ['BookshelfShell', 'features/bookshelf/ui/BookshelfShell.ets', 'content'],
+  ['BookshelfPage', 'features/bookshelf/ui/BookshelfPage.ets'],
+  ['BookshelfEmptyPage', 'features/bookshelf/ui/BookshelfEmptyPage.ets'],
+  ['BookshelfStatusContent', 'features/bookshelf/ui/BookshelfStatusContent.ets'],
   ['MainTabShell', 'features/shell/MainTabShell.ets', 'content'],
   ['MainTabBar', 'features/shell/MainTabBar.ets'],
   ['AppTopBar', 'ui/chrome/AppTopBar.ets', 'trailing'],
@@ -56,7 +59,6 @@ for (const [name, file, slot] of [
   ['ReaderLibrarySearchSurface', 'features/search/ui/ReaderLibrarySearchSurface.ets', 'results'],
   ['SearchSpinner', 'features/search/ui/SearchSpinner.ets'],
 ]) register(name, existsSync(resolve(root, 'entry/src/main/ets', file)) ? read(file) : '', slot);
-const enumValues = name => new Proxy({}, { get: (_, key) => `${name}.${String(key)}` });
 const results = [];
 function check(name, action) {
   const family=name.startsWith('Index')?'index':name.startsWith('status ')?'status':'shell';
@@ -65,10 +67,12 @@ function check(name, action) {
   catch (error) { results.push({ name, passed: false, message: error.message }); }
 }
 function indexFixture(state, source = 'online') {
-  const names = ['arkWebCapturesInput', 'indexContent', 'pageSurfaces', 'mangaOwnsWindowEdges', 'bookshelfScenePorts', 'librarySearchSurface'];
-  const { owner } = createReaderBuilderProbe(index, names, {
-    ...dependencies, isReaderProductSurfaceEnabled, SafeAreaType: enumValues('SafeAreaType'), SafeAreaEdge: enumValues('SafeAreaEdge'),
-    LayoutSafeAreaType: enumValues('LayoutSafeAreaType'), LayoutSafeAreaEdge: enumValues('LayoutSafeAreaEdge'),
+  const properties = createArkUIPropertyRuntimeProbe();
+  const names = ['bookshelfRoute', 'bookshelfScenePorts', 'librarySearchSurface'];
+  const { owner } = createReaderBuilderProbe(index, names, { ...properties.sdk, ...dependencies }, {
+    ...properties.hooks, allowEmptyBranchAdmission: true,
+    childSources: { BookshelfScene: read('features/bookshelf/ui/BookshelfScene.ets'),
+      ReaderLibrarySearchSurface: read('features/search/ui/ReaderLibrarySearchSurface.ets') },
   });
   admitBookshelfSdkCarrier(owner);
   owner.calls = [];
@@ -77,10 +81,10 @@ function indexFixture(state, source = 'online') {
   owner.shelfRead.failed = state === 'failure';
   owner.shelfRead.refresh = () => owner.calls.push('refreshBookshelf');
   Object.assign(owner, {
-    appThemeScheme: 'day', settingsPresentation: { snapshot: { reduceMotion: false } },
-    shelfMotion: { retainsOpeningBackground: () => false }, shelfCatalog: { snapshot: {},
+    appThemeScheme: 'day', appReduceMotion: false, settingsPresentation: { snapshot: {} },
+    shelfCatalog: { snapshot: {},
       manual: () => owner.calls.push('startManualBookshelfUpdate') },
-    sourceSwitchPresentation: { visible: false }, mangaSourceSwitch: { selectionVisible: false },
+    sourceSwitchPresentation: { isSurfacePresented: () => false }, mangaSourceSwitch: { selectionVisible: false },
     jsonImportPresentation: {}, rssJourney: { openRss: () => owner.calls.push('openRss') },
     readerOwnsWindowEdges: () => false, appContentTopInset: () => 39, messageSafeTop: () => 39,
     expandedLayout: () => false, librarySearchResults() {},
@@ -97,7 +101,7 @@ function indexFixture(state, source = 'online') {
   };
   owner.downloadNavigation = { open: () => owner.calls.push('openDownloads') };
   owner.openDiscover = () => owner.calls.push('openDiscover');
-  owner.indexContent();
+  owner.bookshelfRoute();
   const scene = [...owner.children.values()].find(child => child instanceof dependencies.BookshelfScene);
   assert.ok(scene, 'Index mounts one real feature scene for the shelf');
   owner.shelfScene = mountBookshelfSceneProbe(scene.params, dependencies);
@@ -118,7 +122,7 @@ for (const state of ['loading', 'empty', 'populated', 'failure']) {
   check(`Index ${state} real slot admits only its Core readiness content and live actions`, () => {
     const owner = indexFixture(state);
     const shell = childOf(owner, 'BookshelfShell')[0];
-    shell.params.content();
+    shell.params.content(() => 0);
     const expected = state === 'populated' ? 'BookshelfPage' : state === 'empty' ? 'BookshelfEmptyPage' : 'BookshelfStatusContent';
     const body = childOf(owner, expected);
     assert.equal(body.length, 1);
@@ -160,7 +164,7 @@ check('Index state changes update the retained shell child props, including serv
     Object.assign(owner.shelfRead.snapshot, { visualAdmitted: state === 'populated', coreEmpty: state === 'empty' });
     owner.shelfRead.failed = state === 'failure';
     Object.assign(owner.shelfCatalog.snapshot, { done: 3, total: 7 });
-    owner.settingsPresentation.snapshot.reduceMotion = true;
+    owner.appReduceMotion = true;
     const scene = childOf(owner, 'BookshelfScene')[0];
     owner.replayOnly([scene.id]);
     owner.shelfScene.reduceMotion = scene.params.reduceMotion;
@@ -176,20 +180,63 @@ check('Index state changes update the retained shell child props, including serv
   owner.shelfRead.snapshot.hasOnlineBooks = false; owner.shelfScene.replayOnly([shell.id]); assert.equal(shell.params.canCheckUpdates, false);
 });
 const actualMainSource = read('features/shell/MainTabShell.ets');
-const actualHeaderSource = read('ui/chrome/AppTopBar.ets');
 const actualIcons = iconButtonControls();
 const shellMetrics = () => new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0, 0, 365, 844));
+const {actualReaderPageLayout} = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const {boundedSurfaceSdk} = await import('./lib/bounded-surface-sdk-probe.mjs');
+
+if (selectedCase === 'shell') {
 const {createTemporaryBackLeafFixtures} = await import('./lib/temporary-back-leaf-fixture.mjs');
-const nativeShelf = selectedCase === 'shell' ? (await createTemporaryBackLeafFixtures()).shelfFixture : undefined;
+const {harness, shelfSource} = await createTemporaryBackLeafFixtures();
+const {ReaderMeasurementStore} = actualReaderPageLayout();
+async function nativeShelf() {
+  const host = harness();
+  const {p} = host;
+  const source = read('ui/surfaces/ReaderBottomSheet.ets');
+  const transition = () => ({animation: () => ({})});
+  p.hooks.allowEmptyBranchAdmission = true;
+  p.hooks.allowEmptyBranchRemoval = true;
+  p.hooks.childSources.ReaderBottomSheet = source;
+  Object.assign(p.deps, {ReaderMeasurementStore, readerWindowMetrics: p.deps.ReaderWindowCoordinator.metrics,
+    ReaderWindowChromeStyle: class {}, readerScrimmedOpaqueColor: color => color,
+    ModalTransition: {NONE: 'none'}, TransitionEdge: {BOTTOM: 'bottom'},
+    TransitionEffect: {OPACITY: transition(), move: transition, asymmetric: (enter, exit) => ({enter, exit})},
+    readerMotionAnimateParam: id => ({id}), readerMotionReducedFadeParam: () => ({id: 'app.motion.reduced.fade'}),
+  });
+  p.deps.ReaderBottomSheet = createReaderBuilderProbe(source, boundedMembers(source), p.deps, p.hooks).Component;
+  const f = host.owner(shelfSource, {populated: true, canBatchManage: true, canCheckUpdates: true});
+  const calls = [];
+  Object.assign(f.o, {content() {}, onImportRequested: () => calls.push('import'),
+    onBatchManageRequested: () => calls.push('batch'), onBookshelfSettingsRequested: () => calls.push('settings'),
+    onCheckUpdatesRequested: () => calls.push('update'), onDownloadsRequested: () => calls.push('downloads'),
+    onBookshelfManagementRequested: () => calls.push('management')});
+  f.o.moreOpenAction(f.events.at(-1).identity)();
+  f.o.initialRender();
+  const cover = p.walk(f.o).find(actor => actor instanceof p.deps.ReaderBottomSheet);
+  assert.ok(cover, 'bookshelf More mounts the real shared bottom sheet');
+  const anchor = [...cover.nodes.values()].find(node => node.bindContentCover);
+  assert.equal(anchor.bindContentCover[0], true);
+  const [, body, options] = anchor.bindContentCover;
+  body.builder(); options.onWillAppear(); options.onAppear();
+  await Promise.resolve();
+  p.properties.flush();
+  const frame = [...cover.nodes.values()].find(node => node.id === 'reader-bookshelf-more-sheet');
+  frame.onAppear();
+  const sheet = p.walk(f.o).find(actor => actor instanceof p.deps.BookshelfMoreActionSheet);
+  assert.ok(sheet, 'native content cover renders the production More actions');
+  return { ...f, calls, frame, anchor, sheet, options };
+}
+const retainedShelf = await nativeShelf();
 
 check('one bookshelf shell retains its navigation/content carrier and current More through theme/readiness changes', () => {
-  const f = nativeShelf();
+  const f = retainedShelf;
   const navigation = [...f.o.children.values()].find(actor => actor instanceof f.p.deps.MainTabShell);
-  const sheet = f.sheet().sheet;
+  assert.ok(navigation, 'the real shell mounts its tab carrier');
   for (const scheme of ['night', 'day', 'night']) {
     f.o.appThemeScheme = scheme;
     f.o.populated = !f.o.populated;
-    assert.equal(f.sheet().sheet, sheet);
+    f.p.properties.flush();
+    assert.ok(f.p.walk(f.o).includes(f.sheet), 'theme and readiness keep the same More actor');
     assert.ok([...f.o.children.values()].includes(navigation));
   }
   const settings = [];
@@ -197,31 +244,42 @@ check('one bookshelf shell retains its navigation/content carrier and current Mo
   navigation.params.onMainTab('settings', f.o.navigationGeneration);
   assert.deepEqual(settings, [['settings', f.o.navigationGeneration]]);
 });
-check('More consumes native close and dispatches current batch, import, update and settings actions', () => {
-  for (const [label, intent] of [['批量管理', 'batch'], ['本地导入', 'import'], ['检查更新', 'update'], ['下载管理', 'downloads'], ['书架设置', 'settings']]) {
-    const f = nativeShelf(), {options, row} = f.sheet();
-    const action = row(label).onClick;
+for (const [label, intent] of [['批量管理', 'batch'], ['本地导入', 'import'], ['检查更新', 'update'],
+  ['下载管理', 'downloads'], ['书架设置', 'settings'], ['书架数据管理', 'management']]) {
+  const f = await nativeShelf();
+  check(`More consumes native close and dispatches ${intent} once`, () => {
+    const action = f.p.nodes(f.sheet).find(node => node.accessibilityText === label && node.onClick)?.onClick;
+    assert.ok(action, `native action row exists for ${label}`);
     action(); action();
     assert.equal(f.o.moreMenuVisible, false);
-    assert.deepEqual(f.calls, intent === 'import' ? [] : [intent]);
+    assert.deepEqual(f.calls, intent === 'update' ? [intent] : []);
     assert.equal(f.events.at(-1).handler(), true, 'dismissal still owns Back before native disappearance');
-    options.onDisappear(); options.onDisappear();
+    f.p.properties.flush();
+    assert.equal(f.anchor.bindContentCover[0], true, 'native cover persists during the exit');
+    f.frame.transition[1](false);
+    f.p.properties.flush();
+    assert.equal(f.anchor.bindContentCover[0], false);
+    f.options.onDisappear(); f.options.onDisappear();
     assert.deepEqual(f.calls, [intent]);
     assert.equal(f.events.at(-1).handler(), false);
-  }
-});
+  });
+}
+}
 // The retired shell header and measured popover coordinates had no live
 // consumers. Search/More input is now the Library surface's own route actor.
 for (const failed of [false,true]) check(`status ${failed ? 'failure' : 'loading'} actual content preserves retry/spinner and live theme`, () => {
-  const { owner } = createReaderBuilderProbe(read('features/bookshelf/ui/BookshelfStatusContent.ets'), ['build'], {
-    ...dependencies, READER_FLOATING_TOP_BAR_HEIGHT: 58,
-  });
-  let retries = 0; Object.assign(owner, { failed, reduceMotion:false, appThemeScheme:'day', onRetry:()=>retries++,
-    minimumContentHeight: () => 400, bottomContentInset: () => 99 });
+  const p = boundedSurfaceSdk();
+  const source = read('features/bookshelf/ui/BookshelfStatusContent.ets');
+  const { owner } = createReaderBuilderProbe(source, boundedMembers(source), {
+    ...p.deps, ...metricsApi, ...actualReaderPageLayout(), bookshelfHeaderSpec: () => ({frameHeight: 58}),
+    ReaderWindowCoordinator: {metrics: shellMetrics}, readerMainViewport: () => ({width: 365}),
+    readerMainNavigationMode: () => 'bottom', readerFloatingTabContentInset: () => 99,
+  }, p.hooks);
+  let retries = 0; Object.assign(owner, { failed, onRetry:()=>retries++ });
   owner.initialRender();
   if (failed) {
     assert.deepEqual(nodesOf(owner,'Text').map(node=>node.create), ['书架加载失败','无法读取书架内容，请重试。','重试']);
-    const retry = nodesOf(owner,'Stack').find(node=>node.constraintSize?.minHeight===44 && node.onClick);
+    const retry = nodesOf(owner,'Button').find(node=>node.accessibilityText==='重试' && node.constraintSize?.minHeight===44 && node.onClick);
     assert.ok(retry, 'actual shared soft action owns the native hit'); retry.onClick(); assert.equal(retries,1);
   } else {
     assert.deepEqual(nodesOf(owner,'Text').map(node=>node.create), ['正在加载书架…']);
@@ -233,13 +291,20 @@ for (const failed of [false,true]) check(`status ${failed ? 'failure' : 'loading
   for (const actor of actors(owner)) actor.replay?.();
   assert.ok(nodesOf(owner,'Text').some((node,i)=>node.fontColor!==before[i]), 'mounted content recolors with theme');
 });
+if (selectedCase === 'shell') {
+const {readerEditingSdk} = await import('./lib/reader-editing-sdk-probe.mjs');
+const {syncNativeSlotMeasurement} = await import('./lib/sync-index-real-fixture.mjs');
 check('opaque Index Scaffold registration reproduces the missing shared content slot', () => {
   const broken = createReaderBuilderProbe(actualMainSource, boundedMembers(actualMainSource), {
-    ...dependencies, ...actualIcons.dependencies, ...metricsApi,
+    ...dependencies, ...actualIcons.dependencies, ...metricsApi, ...actualReaderPageLayout(), ...readerEditingSdk(),
+    ReaderNativeSlotMeasurement: syncNativeSlotMeasurement(read),
     ReaderWindowCoordinator: { metrics: shellMetrics },
     readerMainViewport: () => ({ width: 365, height: 844 }),
     ReaderPageScaffold: class extends Child {},
-  }, { ...actualIcons.hooks, childSources: { ...actualIcons.hooks.childSources, AppTopBar: actualHeaderSource } });
+  }, { ...actualIcons.hooks, childSources: { ...actualIcons.hooks.childSources,
+    MainNavigationOverlay: read('features/shell/MainNavigationOverlay.ets'),
+    ReaderBottomNavigation: read('app/navigation/ReaderBottomNavigation.ets'),
+  } });
   let contentCalls = 0;
   broken.owner.content = () => { contentCalls++; };
   broken.owner.initialRender();
@@ -247,6 +312,7 @@ check('opaque Index Scaffold registration reproduces the missing shared content 
     error => error.code === 'ERR_ASSERTION' && error.actual === 0 && error.expected === 1,
     'restoring the old opaque import must fail the unchanged shared-content admission');
 });
+}
 // This executes SDK-emitted observers, not Harmony native layout/removal or dependency scheduling.
 // Each readiness slot is checked independently; persistence is asserted on the actual parent child-update path.
 assert.ok(results.length,'selected family executes at least one actual SDK case');

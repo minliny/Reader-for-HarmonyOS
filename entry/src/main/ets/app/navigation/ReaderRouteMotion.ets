@@ -1,26 +1,18 @@
-import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../../ui/foundation/ReaderMotionPolicy';
-import type { ReaderRouteMotionKind } from './ReaderNavigation';
+import { motionAnimateParam } from '../../ui/foundation/MotionSpec';
+import { readerMotionReducedFadeParam } from '../../ui/foundation/ReaderMotionPolicy';
 
 export const READER_ROUTE_PARENT_PARALLAX = 0.16;
 export const READER_ROUTE_PARENT_DIM = 0.04;
 
-export function readerRouteTransition(kind: ReaderRouteMotionKind | 'none', width: number,
-  reduced: boolean): TransitionEffect {
-  if (kind === 'none') return TransitionEffect.IDENTITY;
-  if (reduced) return TransitionEffect.opacity(0).animation(readerMotionReducedFadeParam());
-  if (kind === 'tab') {
-    return TransitionEffect.opacity(0.72).combine(TransitionEffect.scale({ x: 0.992, y: 0.992 }))
-      .animation(readerMotionAnimateParam('app.navigation.tab', false));
-  }
+export function readerSceneTransition(width: number, reduceMotion: boolean, animated: boolean): TransitionEffect {
+  if (!animated) return TransitionEffect.IDENTITY;
+  if (reduceMotion) return TransitionEffect.opacity(0).animation(readerMotionReducedFadeParam());
 
-  const fullWidth = Number.isFinite(width) && width > 0 ? width : 0;
-  const foreground = fullWidth > 0 ? TransitionEffect.translate({ x: fullWidth, y: 0 }) :
-    TransitionEffect.move(TransitionEdge.END);
-  const background = TransitionEffect.translate({ x: -fullWidth * READER_ROUTE_PARENT_PARALLAX, y: 0 })
-    .combine(TransitionEffect.opacity(1 - READER_ROUTE_PARENT_DIM));
-  const timing = readerMotionAnimateParam(kind === 'push' ? 'app.navigation.push' : 'app.navigation.pop', false);
+  const fromRight = (): TransitionEffect => Number.isFinite(width) && width > 0 ?
+    TransitionEffect.translate({ x: width, y: 0 }) : TransitionEffect.move(TransitionEdge.END);
+  // ArkUI reuses the effect attached before the conditional reader is removed.
   return TransitionEffect.asymmetric(
-    (kind === 'push' ? foreground : background).animation(timing),
-    (kind === 'pop' ? foreground : background).animation(timing),
+    fromRight().animation(motionAnimateParam('app.navigation.push')),
+    fromRight().animation(motionAnimateParam('app.navigation.pop')),
   );
 }

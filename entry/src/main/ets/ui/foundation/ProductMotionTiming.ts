@@ -13,8 +13,6 @@ export const READER_NAVIGATION_POP_MS = 240;
 export const READER_NAVIGATION_TAB_MS = 180;
 export const READER_NAVIGATION_PILL_MS = 220;
 
-export const READER_BOOK_OPEN_MS = 400;
-export const READER_BOOK_CLOSE_MS = 340;
 export const READER_SHELF_REFLOW_MS = 320;
 export const READER_SHELF_STAGGER_MS = 24;
 export const READER_SHELF_STAGGER_CAP_MS = 120;

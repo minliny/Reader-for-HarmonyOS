@@ -97,7 +97,7 @@ export function actualProjectionSdkFeedback(f) {
  const {ts,options}=installedEtsCompiler(),syntax=createRequire(import.meta.url)(resolveEtsLoaderRoot()+'/lib/validate_ui_syntax.js');
  syntax.builderParamObjectCollection.set('BookshelfShell',new Set([...read('features/bookshelf/ui/BookshelfShell.ets').matchAll(/@BuilderParam\s+(\w+)\s*:/g)].map(match=>match[1])));
  for(const path of ['features/bookshelf/presentation/BookshelfReadPresentation.ets','features/bookshelf/presentation/BookshelfMutationPresentation.ets',
-  'features/bookshelf/presentation/BookshelfCatalogPresentation.ets','features/bookshelf/ui/BookshelfNavigationPresentation.ets']){
+  'features/bookshelf/presentation/BookshelfCatalogPresentation.ets']){
   const tree=ts.createSourceFile(path,read(path),ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
   for(const node of tree.statements.filter(ts.isClassDeclaration))if(ts.getAllDecorators(node).some(d=>d.getText(tree)==='@Observed'))
    syntax.observedClassCollection.add(node.name.text);
@@ -111,7 +111,7 @@ export function actualProjectionSdkFeedback(f) {
  const project=()=>{
   Object.assign(parent,f.index);parent.bookshelfScenePorts=f.index.bookshelfScenePorts.bind(f.index);parent.payload();
   const params=[...parent.children.values()].find(child=>child instanceof Child).params;
-  const links=Object.fromEntries(['read','mutations','catalog','motion'].map(name=>[name,sdk.properties.sdk.ObservedObject.createNew(params[name],undefined)]));
+  const links=Object.fromEntries(['read','mutations','catalog'].map(name=>[name,sdk.properties.sdk.ObservedObject.createNew(params[name],undefined)]));
   const scene=createReaderBuilderProbe(sceneText,boundedMembers(sceneText),deps,{...hooks,initialParams:{...params,...links}}).owner;
   scene.initialRender();
   const shell=sdk.walk(scene).find(child=>child instanceof deps.BookshelfShell);

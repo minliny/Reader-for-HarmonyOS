@@ -1,5 +1,4 @@
 import type { ReaderRuntimeOwner } from '../ReaderRuntimeOwner';
-import { BookshelfNavigationPaint } from '../../features/bookshelf/ui/BookshelfNavigationPresentation';
 import { MangaSourceSwitchPresentation } from '../../features/manga/presentation/MangaSourceSwitchPresentation';
 import { readerEntryPresentation, type ReaderRetainedPresentation } from '../../features/reading/ui/LocalReadingExperience';
 import type { ReadingCommit } from '../../features/reading/application/ReadingCommit';
@@ -51,14 +50,13 @@ export struct RetainedReaderScene {
   @Prop visibleRoute: 'reading' | 'directory' | undefined = undefined;
   @Prop reduceMotion: boolean = false;
   @Prop expandedLayout: boolean = false;
-  @ObjectLink motionPaint: BookshelfNavigationPaint;
   @Prop inputAllowed: boolean = true;
   ports: RetainedReaderScenePorts | undefined = undefined;
   private readonly directoryActions: ReaderDirectoryActions = readerDirectoryActions(() => this.reading,
     () => this.ports?.directoryNavigation, () => this.ports?.directory);
 
   build() {
-    if (this.reading.sessionActive && this.reading.book !== undefined && this.ports !== undefined) {
+    if (this.reading.book !== undefined && this.ports !== undefined) {
       ReaderShell({
         contentKind: this.reading.contentKind, inBookshelf: this.reading.inBookshelf,
         bookId: this.reading.book.bookId, bookTitle: this.reading.book.title,
@@ -148,7 +146,7 @@ export struct RetainedReaderScene {
         onCloseSourceSwitch: this.ports.sourceSwitch.close, onRetrySourceSwitch: this.ports.sourceSwitch.retry,
         onRefreshSourceSwitch: this.ports.sourceSwitch.refresh, onStopSourceSwitch: this.ports.sourceSwitch.stop,
         onPickSource: this.ports.sourceSwitch.select, onRollbackSourceSwitch: this.ports.sourceSwitch.rollback,
-      }).clip(true).opacity(this.motionPaint.opening.readerOpacity).enabled(this.inputAllowed)
+      }).clip(true).enabled(this.inputAllowed)
         .accessibilityLevel(this.inputAllowed ? 'auto' : 'no-hide-descendants');
     }
   }

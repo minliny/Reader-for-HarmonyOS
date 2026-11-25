@@ -128,10 +128,11 @@ async function case_source_switch_route() {
   const { actualReadingEntryPresentation } = await import('./lib/reading-entry-presentation-probe.mjs');
   const { actualSourceSwitchPresentation } = await import('./lib/source-switch-presentation-probe.mjs');
   const { ReaderNavigation } = await import('../entry/src/main/ets/app/navigation/ReaderNavigation.ts');
-  const { ReaderSourceSwitchJourney } = await import('../entry/src/main/ets/app/composition/ReaderSourceSwitchJourney.ts');
+  const { bookshelfOperationClass } = await import('./lib/bookshelf-operation-owner-probe.mjs');
+  const ReaderSourceSwitchJourney = bookshelfOperationClass('app/composition/ReaderSourceSwitchJourney.ets', 'ReaderSourceSwitchJourney');
   const indexFile = fileURLToPath(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url));
   const Index = selectedProductionMethods(indexFile, 'Index', [
-    'openSourceSwitch', 'openDetailSourceSwitch', 'sourceSwitchJourneyPorts', 'navigateTo', 'publishNavigation',
+    'openSourceSwitch', 'openDetailSourceSwitch', 'sourceSwitchJourneyPorts',
   ]);
   const ReadingEntry = actualReadingEntryPresentation();
 
@@ -148,36 +149,27 @@ async function case_source_switch_route() {
       ReaderRuntimeOwner: { isCurrent: owner => owner === runtime },
       SourceSwitchHost: { forRuntime: () => host },
     });
+    const navigationOwner = new ReaderNavigation();
+    const opening = navigationOwner.show(route === 'reader-fallback' ? 'detail' : route);
     const page = Object.assign(new Index(), {
       mountedRuntimeOwner: runtime, shelfReceiptRetired: false, detailShelfAdmissionMount: 1,
       readingEntry: Object.assign(new ReadingEntry(), { book, sessionActive: route === 'reading' }),
-      navigationOwner: new ReaderNavigation(), sourceSwitchPresentation: new SourceSwitch(),
+      navigationOwner, route: opening.route, navigationGeneration: opening.generation, sourceSwitchPresentation: new SourceSwitch(),
       mangaSourceSwitch: { selectionVisible: false }, shelfMutations: { snapshot: { removalKey: '' } },
       shelfRead: { snapshot: { books: [] } },
-      bookRemovalConfirmation: { dismiss() {} }, jsonImportPresentation: { dismiss() {} },
-      nextNavigationGeneration() {
-        calls.push('navigation');
-        this.sourceSwitchPresentation.retire();
-        this.publishNavigation(this.navigationOwner.advance());
-      },
+      nextNavigationGeneration: () => calls.push('navigation'),
       bindReadingEntryReader: () => calls.push('bind'),
-      returnToReadingOrigin: () => calls.push('origin'),
+      readingExitActions: { completeReturn: () => calls.push('origin') },
+      bindSourceSwitchFocus: focusId => calls.push(['focus', focusId]),
     });
     page.sourceSwitchJourney = new ReaderSourceSwitchJourney(page.navigationOwner, page.sourceSwitchJourneyPorts());
-    if (route === 'reader-fallback') {
-      page.navigateTo('detail');
-      page.sourceSwitchJourney.openDetail = () => calls.push('detail');
-      page.openSourceSwitch();
-      assert.deepEqual(calls, ['origin', 'detail']);
-      continue;
-    }
-    page.navigateTo(route);
-    if (route === 'reading') page.openSourceSwitch();
-    else page.openDetailSourceSwitch();
-    const expected = route === 'directory' ? [] : ['navigation', 'bind'];
-    assert.deepEqual(calls, [...expected, ['open', 'b', true]]);
-    assert.equal(page.route, route);
-    assert.equal(page.navigationGeneration, route === 'directory' ? 0 : 1);
+    if (route === 'reading' || route === 'reader-fallback') page.openSourceSwitch('trigger');
+    else page.openDetailSourceSwitch('trigger');
+    assert.deepEqual(calls, [['open', 'b', true], ['focus', 'trigger']],
+      'opening reserves the current scene without advancing navigation or rebinding its reader');
+    assert.equal(page.route, opening.route);
+    assert.equal(page.navigationGeneration, opening.generation);
+    assert.equal(navigationOwner.snapshot(), opening);
   }
 
 }

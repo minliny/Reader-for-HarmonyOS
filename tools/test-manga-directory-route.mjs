@@ -28,7 +28,7 @@ const directoryNavigation = new Journey(navigation, {
   runtime: () => runtime, entry: () => entry, advance: () => navigation.advance(), bindReader() {},
 }).navigationPorts();
 const actions = Object.assign(new Actions(), {navigation, startup: { ready() {} }, ports: {
-  runtime: () => runtime, entry: () => entry, readerExitPending: () => false,
+  runtime: () => runtime, entry: () => entry,
   show: route => navigation.show(route), mounting: () => 1,
 }});
 const scene = {

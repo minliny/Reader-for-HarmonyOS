@@ -78,7 +78,7 @@ if(sourceTypes){
     settingsPresentation:{snapshot:{reduceMotion:false},retire(){}},
     sourceSwitchPresentation:{visible:false,retire(){}},mangaSourceSwitch:{selectionVisible:false},shelfMutations:{snapshot:{}},
     shelfGroupPresentation:{back:()=>false,retire(){}},shelfCatalog:{retire(){}},
-    shelfMotion:{clear(){}},readingCommits:{retire(){}},transientFeedback:{reset(){}},retireSourceSwitchPresentation(){}});
+    readingCommits:{retire(){}},transientFeedback:{reset(){}},retireSourceSwitchPresentation(){}});
   index.openSourcePresentation('source');
 }
   const calls=[];index.hasVisibleImportDialog=()=>false;index.returnToBookshelf=()=>calls.push('bookshelf');index.returnFromSourceManagement=()=>calls.push('source-route');index.returnToSettings=()=>calls.push('settings-route');index.dismissBookRemovalDialog=()=>calls.push('delete');index.dismissJsonImport=()=>calls.push('json');index.closeSourceSwitch=()=>calls.push('source-switch');index.closeImportDialog=()=>calls.push('import');index.shelfRecovery=()=>({message:'',visible:false,canRetry:false,generation:0});
@@ -88,6 +88,7 @@ if(sourceTypes){
     const retire=()=>{};
     Object.assign(index,{
       libraryAcquisition:{currentOwner:()=>installed},
+      wideSettingsPane:()=>undefined,
       shelfRead:createBookshelfReadProjectionProbe(),librarySearch:createLibraryShelfChromeProbe(),
       settingsPresentation:{snapshot:{reduceMotion:false},retire},searchAppForeground:true,mangaSourceSwitch:{selectionVisible:false},
       shelfCatalog:{snapshot:{},retire(){}},
@@ -95,7 +96,7 @@ if(sourceTypes){
       bookRemovalConfirmation:{isOpen:()=>false,dismiss(){}},jsonImportPresentation:{opening:undefined,dismiss(){}},
       sourceSwitchPresentation:{isSurfacePresented:()=>false},retireSourceSwitchPresentation:retire,
       readingEntry:{sessionActive:false,retire},readingEntryActions:{shelfPreparing:false,retirePreparation:retire},
-      shelfMotion:{clear(){}},transientFeedback:{reset(){}},downloadPresentation:{retire},readingCommits:{retire},
+      transientFeedback:{reset(){}},downloadPresentation:{retire},readingCommits:{retire},
       sourceJourney:{retire},rssJourney:{retire},shelfManagement:{retire},discoverPresentation:{retire},
       rulesPresentation:{retire},syncPresentation:{retire},nativeAlertOwner:{retire},
       shelfMutations:{snapshot:{importPresentation:undefined},recovery,canContinueRemoval:()=>false,retireSelection(){},
@@ -125,7 +126,7 @@ if(sourceTypes){
   function props(){
     if(scope==='bookshelf'){
       const scene=mountBookshelfSceneProbe({
-        read:index.shelfRead,mutations:index.shelfMutations,catalog:index.shelfCatalog,motion:{},
+        read:index.shelfRead,mutations:index.shelfMutations,catalog:index.shelfCatalog,
         navigation:index.navigationGeneration,feedbackEnabled:true,reduceMotion:false,
         ports:index.bookshelfScenePorts(runtime,index.detailShelfAdmissionMount),
       },{BookshelfShell:Child,BookshelfPage:Child,BookshelfEmptyPage:Child,BookshelfStatusContent:Child});

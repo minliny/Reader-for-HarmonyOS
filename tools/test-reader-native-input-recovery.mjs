@@ -7,7 +7,7 @@ import { retainedReaderRoute } from '../entry/src/main/ets/app/navigation/Reader
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
 const cases = selectContractCases({
-  'opening-recovery': 'Actual Root/Scene callback and Shell native input attributes recover on the delivered opening Prop using installed SDK dependency tracking. Live first-input rejection remains active.',
+  'opening-recovery': 'Actual ReaderShell accepts input on its first foreground render and recovers on delivered Props using installed SDK dependency tracking. Live input rejection remains active.',
 });
 const root = new URL('../entry/src/main/ets/', import.meta.url);
 const file = name => new URL(name, root);
@@ -27,16 +27,14 @@ function check(source) {
     ['readerContentInputCurrent', 'currentReadingRuntime', 'currentReaderPresentationIdentity'], { retainedReaderRoute });
   const Entry = selectedProductionMethods(file('features/reading/presentation/ReadingEntryPresentation.ets'),
     'ReadingEntryPresentation', ['readerPresentationIdentity']);
-  const Motion = selectedProductionMethods(file('features/bookshelf/ui/BookshelfNavigationPresentation.ets'),
-    'BookshelfNavigationPresentation', ['finish', 'coverClosed', 'resetOpeningPaint']);
   const scenarios = [];
-  for (const boundary of ['opening', 'hidden', 'directory', 'source', 'manga']) {
+  for (const boundary of ['current', 'hidden', 'directory', 'source', 'manga', 'detail-cover']) {
     const runtime = {};
-    const reading = Object.assign(new Entry(), { sessionActive: true, book: { sourceId: 'local', bookId: 'book' }, readyGeneration: 1 });
-    const motion = Object.assign(new Motion(), { request: boundary === 'opening' ? { id: 3, direction: 'open' } : undefined,
-      pendingExitId: -1, paint: { opening: { readerOpacity: 0 } }, deferredShelfMotionProjection: undefined, returnBookKey: '' });
-    const host = Object.assign(new Root(), { readingEntry: reading, shelfMotion: motion,
-      route: boundary === 'directory' ? 'directory' : 'reading', directoryReturnTarget: 'readerControl',
+    const reading = Object.assign(new Entry(), { sessionActive: boundary !== 'detail-cover',
+      book: { sourceId: 'local', bookId: 'book' }, readyGeneration: 1 });
+    const host = Object.assign(new Root(), { readingEntry: reading,
+      route: boundary === 'directory' ? 'directory' : boundary === 'detail-cover' ? 'detail' : 'reading',
+      directoryReturnTarget: 'readerControl',
       searchAppForeground: boundary !== 'hidden', arkWebCapturesInput: false, shelfReceiptRetired: false,
       mountedRuntimeOwner: runtime, libraryAcquisition: { currentOwner: () => runtime },
       sourceSwitchPresentation: { isSurfacePresented: () => host.sourcePresented }, sourcePresented: boundary === 'source',
@@ -54,8 +52,8 @@ function check(source) {
       inputCurrent: selectedProductionComponentCallback(file('app/composition/RetainedReaderScene.ets'), 'ReaderShell', 'inputCurrent', scene) });
     owner.selectedInputHost();
     const node = [...owner.nodes.values()].find(node => node.type === 'Stack');
-    assert.equal(node.enabled, false, `${boundary} starts disabled`);
-    if (boundary === 'opening') motion.finish(3);
+    assert.equal(node.enabled, boundary === 'current', `${boundary} initial native input admission`);
+    reading.sessionActive = true;
     host.searchAppForeground = true; host.route = 'reading'; host.sourcePresented = false;
     host.mangaSourceSwitch.selectionVisible = false;
     owner.updateStateVars({ visible: true, route: 'reading', sourceSwitchPresented: false, sourceSwitchCovered: false,
@@ -83,7 +81,7 @@ for (const id of cases) {
   const old = source.replace(/return this\.inputAllowed && this\.visible && this\.route === 'reading' &&\s*!this\.sourceSwitchPresented && !this\.sourceSwitchCovered &&\s*\(this\.inputCurrent\?\.\(this\.readingIdentityKey\(\)\) \?\? true\);/,
     "return (this.inputCurrent?.(this.readingIdentityKey()) ?? true) && this.inputAllowed && this.visible && this.route === 'reading' && !this.sourceSwitchPresented && !this.sourceSwitchCovered;");
   assert.notEqual(old, source, 'negative restores the preceding live-first predicate');
-  assert.throws(() => check(old), /opening native host recovers on delivered Props/);
+  assert.throws(() => check(old), /hidden native host recovers on delivered Props/);
   console.log(JSON.stringify({ case: id, result, rejectedOldPredicate: true }));
   recordContractCasePass(id);
 }

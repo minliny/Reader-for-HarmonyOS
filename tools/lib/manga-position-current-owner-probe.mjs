@@ -70,9 +70,6 @@ export function mangaPositionOwnerFixture({ runtime = {}, observe = value => val
   index.nextNavigationGeneration = () => { entry.retire(false); return navigation.advance().generation; };
   index.navigateTo = route => navigation.show(route);
   index.publishNavigation = () => {}; // Navigation already owns the published snapshot.
-  index.shelfMotion = { pendingExitId: -1, projectAfterOpening: project => project(), resumeReturn() {},
-    returnToOrigin: () => index.readingExitActions.completeReturn() }; // Native cover completion port.
-  index.returnToReadingOrigin = () => index.shelfMotion.returnToOrigin();
   index.readingEntryActions = new Actions(navigation, new ReaderEntryStartupTrace(() => {}), index.readingEntryActionPorts());
   // The metadata path is selected explicitly; ordinary return does not create
   // unrelated transport work in these position-only fixtures.

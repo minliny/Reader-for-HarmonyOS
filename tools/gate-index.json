@@ -85836,10 +85836,6 @@
           "sha256": "3c90a8a1af43ee4366a4e897a0f9506956a58872ef98696b8f0797e2b4f06f60"
         },
         {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
-        },
-        {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets",
           "sha256": "1fffc2b3a9b0d0a0ec985758b54be7590127c917d4818f4e55dafc088e62fbcc"
         },
@@ -158824,11 +158820,11 @@
         ]
       },
       "resourceNeeds": [],
-      "protectedBehavior": "Actual Shelf methods with explicitly synthetic timing tokens and curve/frame ports; reversal/retarget only",
+      "protectedBehavior": "Actual BookshelfPage list/cover reflow reversal and reduced-motion fade with synthetic curve/frame ports",
       "prerequisites": [
         "Node.js; installed ETS compiler only for actual ETS/SDK probes; native-build only on declared native case"
       ],
-      "mechanism": "Actual Shelf methods with explicitly synthetic timing tokens and curve/frame ports; reversal/retarget only; owner implementation record: [\"拆四域入口并去与专项重复；删日志capsule误称；Shelf tokens改真实spec或声明纯timingfixture。\", \"四域分别target，Shelf token用真实spec；删除只有日志的capsule宣称。\"]",
+      "mechanism": "Actual BookshelfPage list/cover reflow reversal and reduced-motion fade with synthetic curve/frame ports; owner implementation record: [\"拆四域入口并去与专项重复；删日志capsule误称；Shelf tokens改真实spec或声明纯timingfixture。\", \"四域分别target，Shelf token用真实spec；删除只有日志的capsule宣称。\"]",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
       "reviewedSourceSha256": "ae41fa8f0426e8e3c3fef38f43adb89c535ab81945c31f5d717661d88ddb39a9",
@@ -409410,10 +409406,6 @@
           "sha256": "8e7a509c63f9ff473ff1331f36bc5cbe4bd92452f96695bfebdf3c3bc283331d"
         },
         {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
-        },
-        {
           "path": "entry/src/main/ets/features/downloads/ui/DownloadTypography.ets",
           "sha256": "b1f4bc9b15d99225d450111b4dd0196ee241e9edeb243f4817f52f02c53e9bac"
         },
@@ -410389,10 +410381,6 @@
         {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfGroupSelector.ets",
           "sha256": "3c90a8a1af43ee4366a4e897a0f9506956a58872ef98696b8f0797e2b4f06f60"
-        },
-        {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
         },
         {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets",
@@ -411379,10 +411367,6 @@
           "sha256": "3c90a8a1af43ee4366a4e897a0f9506956a58872ef98696b8f0797e2b4f06f60"
         },
         {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
-        },
-        {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets",
           "sha256": "a50bf0237e21206d5e01bbe1bef3148732a37678398898ac0d8c48afd28981c0"
         },
@@ -412349,10 +412333,6 @@
         {
           "path": "entry/src/main/ets/features/bookshelf/presentation/LocalImportPresentationOwner.ts",
           "sha256": "8e7a509c63f9ff473ff1331f36bc5cbe4bd92452f96695bfebdf3c3bc283331d"
-        },
-        {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
         },
         {
           "path": "entry/src/main/ets/features/downloads/ui/DownloadTypography.ets",
@@ -413330,10 +413310,6 @@
         {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfGroupSelector.ets",
           "sha256": "3c90a8a1af43ee4366a4e897a0f9506956a58872ef98696b8f0797e2b4f06f60"
-        },
-        {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
         },
         {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets",
@@ -414320,10 +414296,6 @@
           "sha256": "3c90a8a1af43ee4366a4e897a0f9506956a58872ef98696b8f0797e2b4f06f60"
         },
         {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
-        },
-        {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets",
           "sha256": "a50bf0237e21206d5e01bbe1bef3148732a37678398898ac0d8c48afd28981c0"
         },
@@ -415306,10 +415278,6 @@
         {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfGroupSelector.ets",
           "sha256": "3c90a8a1af43ee4366a4e897a0f9506956a58872ef98696b8f0797e2b4f06f60"
-        },
-        {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
         },
         {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets",
@@ -416296,10 +416264,6 @@
           "sha256": "3c90a8a1af43ee4366a4e897a0f9506956a58872ef98696b8f0797e2b4f06f60"
         },
         {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
-        },
-        {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets",
           "sha256": "a50bf0237e21206d5e01bbe1bef3148732a37678398898ac0d8c48afd28981c0"
         },
@@ -417282,10 +417246,6 @@
         {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfGroupSelector.ets",
           "sha256": "3c90a8a1af43ee4366a4e897a0f9506956a58872ef98696b8f0797e2b4f06f60"
-        },
-        {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
         },
         {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets",
@@ -418271,10 +418231,6 @@
         {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfGroupSelector.ets",
           "sha256": "3c90a8a1af43ee4366a4e897a0f9506956a58872ef98696b8f0797e2b4f06f60"
-        },
-        {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
         },
         {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets",
@@ -419265,10 +419221,6 @@
           "sha256": "3c90a8a1af43ee4366a4e897a0f9506956a58872ef98696b8f0797e2b4f06f60"
         },
         {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
-        },
-        {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets",
           "sha256": "a50bf0237e21206d5e01bbe1bef3148732a37678398898ac0d8c48afd28981c0"
         },
@@ -420251,10 +420203,6 @@
         {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfGroupSelector.ets",
           "sha256": "3c90a8a1af43ee4366a4e897a0f9506956a58872ef98696b8f0797e2b4f06f60"
-        },
-        {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
         },
         {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets",
@@ -421241,10 +421189,6 @@
           "sha256": "3c90a8a1af43ee4366a4e897a0f9506956a58872ef98696b8f0797e2b4f06f60"
         },
         {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
-        },
-        {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets",
           "sha256": "a50bf0237e21206d5e01bbe1bef3148732a37678398898ac0d8c48afd28981c0"
         },
@@ -422227,10 +422171,6 @@
         {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfGroupSelector.ets",
           "sha256": "3c90a8a1af43ee4366a4e897a0f9506956a58872ef98696b8f0797e2b4f06f60"
-        },
-        {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
         },
         {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets",
@@ -423217,10 +423157,6 @@
           "sha256": "3c90a8a1af43ee4366a4e897a0f9506956a58872ef98696b8f0797e2b4f06f60"
         },
         {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
-        },
-        {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets",
           "sha256": "a50bf0237e21206d5e01bbe1bef3148732a37678398898ac0d8c48afd28981c0"
         },
@@ -424203,10 +424139,6 @@
         {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfGroupSelector.ets",
           "sha256": "3c90a8a1af43ee4366a4e897a0f9506956a58872ef98696b8f0797e2b4f06f60"
-        },
-        {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
         },
         {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets",
@@ -425193,10 +425125,6 @@
           "sha256": "3c90a8a1af43ee4366a4e897a0f9506956a58872ef98696b8f0797e2b4f06f60"
         },
         {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
-        },
-        {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets",
           "sha256": "a50bf0237e21206d5e01bbe1bef3148732a37678398898ac0d8c48afd28981c0"
         },
@@ -426163,10 +426091,6 @@
         {
           "path": "entry/src/main/ets/features/bookshelf/presentation/LocalImportPresentationOwner.ts",
           "sha256": "8e7a509c63f9ff473ff1331f36bc5cbe4bd92452f96695bfebdf3c3bc283331d"
-        },
-        {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
         },
         {
           "path": "entry/src/main/ets/features/downloads/ui/DownloadTypography.ets",
@@ -438039,10 +437963,6 @@
           "sha256": "8e7a509c63f9ff473ff1331f36bc5cbe4bd92452f96695bfebdf3c3bc283331d"
         },
         {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
-        },
-        {
           "path": "entry/src/main/ets/features/downloads/ui/DownloadTypography.ets",
           "sha256": "b1f4bc9b15d99225d450111b4dd0196ee241e9edeb243f4817f52f02c53e9bac"
         },
@@ -438928,10 +438848,6 @@
         {
           "path": "entry/src/main/ets/features/bookshelf/presentation/LocalImportPresentationOwner.ts",
           "sha256": "8e7a509c63f9ff473ff1331f36bc5cbe4bd92452f96695bfebdf3c3bc283331d"
-        },
-        {
-          "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfNavigationPresentation.ets",
-          "sha256": "7d80955192ef418c7861107e416f26207ad09983fc0ba7edb313aaaabbbbcf42"
         },
         {
           "path": "entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets",

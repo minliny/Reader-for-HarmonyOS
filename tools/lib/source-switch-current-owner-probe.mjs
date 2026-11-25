@@ -70,7 +70,7 @@ export function currentSourceSwitchOwners(f,{navigation=1,reading=false,cacheAut
   // Use Index's actual navigation retirement fan-out, retaining every active
   // source/manga/entry owner. Unrelated feature lifecycles remain finite ports.
   const inactive=()=>({retire(){}});
-  const navigationReceiver={shelfMotion:{clear(){}},transientFeedback:{reset(){}},downloadPresentation:inactive(),
+  const navigationReceiver={transientFeedback:{reset(){}},downloadPresentation:inactive(),
     settingsPresentation:inactive(),sourceJourney:inactive(),rssJourney:inactive(),shelfCatalog:inactive(),
     shelfManagement:inactive(),shelfGroupPresentation:inactive(),discoverPresentation:inactive(),rulesPresentation:inactive(),
     syncPresentation:inactive(),nativeAlertOwner:inactive(),shelfMutations:{retireSelection(){}},readingEntry:x.entry,

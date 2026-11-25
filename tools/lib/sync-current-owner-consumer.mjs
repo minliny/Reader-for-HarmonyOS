@@ -50,7 +50,7 @@ export function currentSyncIndex(f,runtime,{enabled=()=>isReaderProductSurfaceEn
  const index=Object.assign(new Index(),{navigationOwner:navigation,route:'settings',navigationGeneration:0,
   shelfReceiptRetired:false,detailShelfAdmissionMount:1,rssInstanceIdentity:++instance,mountedRuntimeOwner:runtime,
   syncPresentation:presentation,readingEntry:new Reading(),bookRemovalConfirmation:{dismiss(){}},jsonImportPresentation:{dismiss(){}},
-  shelfMotion:{clear(){}},transientFeedback:{reset(){}},downloadPresentation:dormant(),readingCommits:dormant(),settingsPresentation:dormant(),
+  transientFeedback:{reset(){}},downloadPresentation:dormant(),readingCommits:dormant(),settingsPresentation:dormant(),
   sourceJourney:dormant(),retireSourceSwitchPresentation(){},rssJourney:dormant(),shelfCatalog:dormant(),shelfMutations:{retireSelection(){}},
   shelfManagement:dormant(),shelfGroupPresentation:dormant(),discoverPresentation:dormant(),rulesPresentation:dormant(),nativeAlertOwner:dormant(),
   readingEntryActions:{retirePreparation(){}},expandedLayout:()=>false,
