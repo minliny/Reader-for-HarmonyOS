@@ -197,7 +197,7 @@ export class ReadingImageDiskCache {
   private nextWriteLane: number = 0;
   private nextTemporaryFile: number = 0;
   private mangaAuthority: MangaStorageAuthority | undefined;
-  private mangaAuthorityReady: Promise<void> = Promise.resolve();
+  private mangaAuthorityReady: Promise<void> | undefined;
   private mangaExternal: MangaExternalStorage | undefined;
   private mangaPolicyTail: Promise<void> = Promise.resolve();
   private mangaExpiryTask: Promise<void> | undefined;
@@ -230,11 +230,26 @@ export class ReadingImageDiskCache {
 
   setMangaStorageAuthority(authority: MangaStorageAuthority): void {
     this.mangaAuthority = authority;
-    this.mangaAuthorityReady = this.enqueueMangaPolicy(async (): Promise<void> => {
-      for (const grant of await authority.pending()) this.mangaEvicting.set(this.mangaChapterKey(grant), grant);
-    });
-    // Keep admission failures observable without an unhandled setup rejection.
-    this.mangaAuthorityReady.catch((): void => {});
+    this.mangaAuthorityReady = undefined;
+    void this.loadMangaStorageAuthority().catch((): void => {});
+  }
+
+  private async loadMangaStorageAuthority(): Promise<void> {
+    const authority = this.mangaAuthority;
+    if (authority === undefined) return;
+    if (this.mangaAuthorityReady === undefined) {
+      this.mangaAuthorityReady = this.enqueueMangaPolicy(async (): Promise<void> => {
+        const pending = await authority.pending();
+        if (this.mangaAuthority !== authority || this.closed) return;
+        for (const grant of pending) this.mangaEvicting.set(this.mangaChapterKey(grant), grant);
+      });
+    }
+    const work = this.mangaAuthorityReady;
+    try { await work; }
+    catch (error) {
+      if (this.mangaAuthorityReady === work) this.mangaAuthorityReady = undefined;
+      throw error;
+    }
   }
   setMangaExternalStorage(storage: MangaExternalStorage): void { this.mangaExternal = storage; }
 
@@ -247,13 +262,23 @@ export class ReadingImageDiskCache {
     try {
       return await this.enqueueMangaPolicy(async (): Promise<T> => {
         await Promise.all(Array.from(this.bookMutationTails.values()).map(task => task.catch((): void => {})));
-        try { return await restore(); }
-        finally {
+        let restored = false;
+        try {
+          const value = await restore();
+          restored = true;
+          return value;
+        } finally {
           this.mangaRestoreBlocked = true;
-          const pending = await this.mangaAuthority?.pending() ?? [];
-          this.mangaEvicting.clear();
-          for (const grant of pending) this.mangaEvicting.set(this.mangaChapterKey(grant), grant);
-          this.mangaClaiming.clear(); this.mangaRestoreBlocked = false;
+          try {
+            const pending = await this.mangaAuthority?.pending() ?? [];
+            this.mangaEvicting.clear();
+            for (const grant of pending) this.mangaEvicting.set(this.mangaChapterKey(grant), grant);
+            this.mangaClaiming.clear(); this.mangaRestoreBlocked = false;
+          } catch (error) {
+            // Keep admission blocked until maintenance reconciles Core's
+            // pending set. Preserve an earlier restore error for its owner.
+            if (restored) throw error;
+          }
         }
       });
     } finally { this.mangaRestoreRequests -= 1; }
@@ -288,7 +313,7 @@ export class ReadingImageDiskCache {
     const unpin = this.pinMangaChapter(chapter);
     let ordinaryReservation = false;
     try {
-      await this.mangaAuthorityReady;
+      await this.loadMangaStorageAuthority();
       await this.enqueueMangaPolicy(async (): Promise<void> => {
         if (this.mangaRestoreRequests > 0 || this.mangaRestoreBlocked) throw new Error('MANGA_CACHE_STORAGE_RESTORING');
         if (this.mangaEvicting.has(this.mangaChapterKey(chapter))) throw new Error('MANGA_CACHE_EVICTING');
@@ -394,7 +419,7 @@ export class ReadingImageDiskCache {
   }
 
   private async runMangaExpiry(scope: MangaStorageScope | undefined, ttlSeconds: number): Promise<void> {
-    await this.mangaAuthorityReady;
+    await this.loadMangaStorageAuthority();
     const epoch = this.mangaStorageEpoch;
     const ready = await this.enqueueMangaPolicy(async (): Promise<boolean> => {
       if (this.closed || this.mangaRestoreRequests > 0 || epoch !== this.mangaStorageEpoch ||
@@ -504,7 +529,7 @@ export class ReadingImageDiskCache {
   /** One actual file inventory is shared by the global summary, Core's
    * image-only selectors and all book rows. No per-book full disk walks. */
   async captureReadingStorageInventory(): Promise<ReadingImageStorageSnapshot> {
-    await this.mangaAuthorityReady;
+    await this.loadMangaStorageAuthority();
     const writeRevision = this.inFlightWriteRevision;
     const files = await this.readingInventory();
     const physical = new Map<string, ReadingInventoryFile[]>();
@@ -711,9 +736,18 @@ export class ReadingImageDiskCache {
 
   private async readStoragePolicy(): Promise<void> {
     const path = `${readerHostFilesDirectory(this.context.filesDir)}/reader-offline/storage-policy.json`;
-    if (!(await fileIo.access(path))) return;
+    let bytes: Uint8Array;
     try {
-      const bytes = await this.readMangaMetadata(path, MANGA_IDENTITY_METADATA_BYTES);
+      if (!(await fileIo.access(path))) return;
+      bytes = await this.readMangaMetadata(path, MANGA_IDENTITY_METADATA_BYTES);
+    } catch (error) {
+      // A missing or structurally invalid policy keeps the volume default.
+      // Transient I/O must evict the failed shared read so the next user
+      // action can observe the persisted policy instead of a permanent default.
+      if (this.isNotFoundError(error) || (error instanceof Error && error.message === 'MANGA_ATOMIC_PAYLOAD_BUDGET')) return;
+      throw error;
+    }
+    try {
       const value = JSON.parse(util.TextDecoder.create('utf-8', { fatal: true }).decodeToString(bytes)) as
         { version: number; limitMb?: number; cleanupAfterDays: number; };
       if (value.version !== 1 || (value.limitMb !== undefined &&
@@ -727,7 +761,7 @@ export class ReadingImageDiskCache {
   /** Physical cleanup receipt, including partial I/O success. Count reclaimed
    * inodes once; unlinking one of several aliases never claims released bytes. */
   async clearMangaRebuildableCache(scope?: MangaStorageScope): Promise<MangaStorageCleanup> {
-    await this.mangaAuthorityReady;
+    await this.loadMangaStorageAuthority();
     return this.enqueueMangaPolicy(async (): Promise<MangaStorageCleanup> => {
       if (this.mangaRestoreRequests > 0 || this.mangaRestoreBlocked || this.closed)
         return { deletedBytes: 0, deletedFiles: 0 };
@@ -763,7 +797,7 @@ export class ReadingImageDiskCache {
    * manifests, text books and user data are never passed to this entry point.
    */
   async clearMangaDerivedCache(scope?: MangaStorageScope): Promise<void> {
-    await this.mangaAuthorityReady;
+    await this.loadMangaStorageAuthority();
     await this.enqueueMangaPolicy(async (): Promise<void> => {
       if (this.mangaRestoreRequests > 0 || this.mangaRestoreBlocked || this.closed) return;
       await this.trimMangaDownloadDerived('clear', scope);
@@ -779,7 +813,7 @@ export class ReadingImageDiskCache {
   ): Promise<Array<{ sourceId: string; bookId: string; chapterId: string; }>> {
     this.assertNonBlank(sourceId, 'sourceId'); this.assertNonBlank(bookId, 'bookId');
     const epoch = this.mangaStorageEpoch;
-    await this.mangaAuthorityReady;
+    await this.loadMangaStorageAuthority();
     return this.enqueueMangaPolicy(async (): Promise<Array<{ sourceId: string; bookId: string; chapterId: string; }>> => {
       const chapters = new Map<string, { sourceId: string; bookId: string; chapterId: string; }>();
       for (const owner of await this.mangaDownloadOwners(sourceId, bookId, undefined, epoch, isCurrent)) {
@@ -799,7 +833,7 @@ export class ReadingImageDiskCache {
   ): Promise<string[]> {
     for (const value of [chapter.sourceId, chapter.bookId, chapter.chapterId]) this.assertNonBlank(value, 'manga storage identity');
     const epoch = this.mangaStorageEpoch;
-    await this.mangaAuthorityReady;
+    await this.loadMangaStorageAuthority();
     return this.enqueueMangaPolicy(async (): Promise<string[]> => {
       const owners = await this.mangaDownloadOwners(chapter.sourceId, chapter.bookId, chapter.chapterId, epoch, isCurrent);
       return owners.map(owner => owner.contentVersion);
@@ -836,7 +870,7 @@ export class ReadingImageDiskCache {
   async deleteMangaVersion(chapter: MangaStorageChapter, isCurrent?: () => boolean): Promise<boolean> {
     this.assertMangaStorageChapter(chapter);
     const epoch = this.mangaStorageEpoch;
-    await this.mangaAuthorityReady;
+    await this.loadMangaStorageAuthority();
     return this.enqueueMangaPolicy(async (): Promise<boolean> => {
       this.assertMangaPolicyCurrent(epoch, isCurrent);
       const authority = this.mangaAuthority;
@@ -1100,7 +1134,22 @@ export class ReadingImageDiskCache {
     const current = (): boolean => !this.closed && epoch === this.mangaStorageEpoch &&
       this.mangaRestoreRequests === 0 && !this.mangaRestoreBlocked &&
       (expiry === undefined || expiry.ttlSeconds === (this.configuredCleanupTtlSeconds ?? MANGA_READ_TTL_SECONDS));
-    const pending = await authority.pending();
+    const pending = await this.mangaPolicyStep(batched, async (): Promise<MangaStorageGrant[]> => {
+      if (!current() || this.mangaAuthority !== authority) return [];
+      const grants = await authority.pending();
+      if (!current() || this.mangaAuthority !== authority) return [];
+      // A successful Core completion may have lost its reply. Refresh the
+      // temporary local fences from the exact authoritative pending set in
+      // the same policy lane used by claim/completion.
+      const active = new Set<string>();
+      for (const grant of grants) {
+        const key = this.mangaChapterKey(grant);
+        active.add(key);
+        this.mangaEvicting.set(key, grant);
+      }
+      for (const key of this.mangaEvicting.keys()) if (!active.has(key)) this.mangaEvicting.delete(key);
+      return grants;
+    });
     for (const grant of pending) {
       if (!current()) return;
       if (scope !== undefined && (grant.sourceId !== scope.sourceId || grant.bookId !== scope.bookId)) continue;
@@ -1456,7 +1505,7 @@ export class ReadingImageDiskCache {
   private async assertMangaAdmission(identity: ReadingImageChapterIdentity): Promise<void> {
     const chapter = this.mangaChapter(identity);
     if (chapter === undefined) return;
-    await this.mangaAuthorityReady;
+    await this.loadMangaStorageAuthority();
     if (this.mangaRestoreRequests > 0 || this.mangaRestoreBlocked) throw new Error('MANGA_CACHE_STORAGE_RESTORING');
     if (this.mangaEvicting.has(this.mangaChapterKey(chapter))) throw new Error('MANGA_CACHE_EVICTING');
   }
@@ -1820,24 +1869,25 @@ export class ReadingImageDiskCache {
 
   private async finishPendingChapterClears(sourceId: string, bookId: string): Promise<void> {
     const clearRoot = `${this.rootDirectory()}/.clear`;
-    if (!(await fileIo.access(clearRoot))) return;
+    const entries = await this.listFileIfPresent(clearRoot);
+    if (entries.length === 0) return;
     const prefix = `${await this.bookHash(sourceId, bookId)}.pending.chapter-`;
-    for (const name of await fileIo.listFile(clearRoot)) {
+    for (const name of entries) {
       if (!name.startsWith(prefix) || !/^(0|[1-9][0-9]*)$/.test(name.substring(prefix.length))) continue;
       const ordinal = name.substring(prefix.length);
       const chapter = `${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}/${ordinal}`;
-      if (await fileIo.access(chapter)) {
-        for (const version of await fileIo.listFile(chapter)) {
+      if ((await this.statIfPresent(chapter))?.isDirectory() === true) {
+        for (const version of await this.listFileIfPresent(chapter)) {
           if (!/^[0-9a-f]{64}$/.test(version)) continue;
           const directory = `${chapter}/${version}`;
-          if (!(await fileIo.stat(directory)).isDirectory()) continue;
+          if ((await this.statIfPresent(directory))?.isDirectory() !== true) continue;
           for (const proof of this.verifiedDigests.keys()) if (proof.startsWith(`${directory}/`)) this.verifiedDigests.remove(proof);
           await this.clearOwnedTextDirectory(directory, CACHE_FORMAT_VERSION, sourceId, bookId, ordinal, version);
         }
         await this.removeEmptyDirectory(chapter);
       }
       const legacy = `${this.legacyRootDirectory()}/${await this.legacyBookHash(sourceId, bookId)}/${ordinal}`;
-      if (await fileIo.access(legacy) && (await fileIo.stat(legacy)).isDirectory())
+      if ((await this.statIfPresent(legacy))?.isDirectory() === true)
         await this.clearOwnedTextDirectory(legacy, LEGACY_CACHE_FORMAT_VERSION, sourceId, bookId, ordinal);
       await this.unlinkIfPresent(`${clearRoot}/${name}`);
     }
@@ -1848,15 +1898,15 @@ export class ReadingImageDiskCache {
     const marker = await this.clearMarkerPath(sourceId, bookId);
     if (!(await fileIo.access(marker))) return;
     const book = `${this.rootDirectory()}/${await this.bookHash(sourceId, bookId)}`;
-    if (await fileIo.access(book)) {
-      for (const ordinal of await fileIo.listFile(book)) {
+    if ((await this.statIfPresent(book))?.isDirectory() === true) {
+      for (const ordinal of await this.listFileIfPresent(book)) {
         if (!/^(0|[1-9][0-9]*)$/.test(ordinal)) continue;
         const chapter = `${book}/${ordinal}`;
-        if (!(await fileIo.stat(chapter)).isDirectory()) continue;
-        for (const version of await fileIo.listFile(chapter)) {
+        if ((await this.statIfPresent(chapter))?.isDirectory() !== true) continue;
+        for (const version of await this.listFileIfPresent(chapter)) {
           if (!/^[0-9a-f]{64}$/.test(version)) continue;
           const directory = `${chapter}/${version}`;
-          if (!(await fileIo.stat(directory)).isDirectory()) continue;
+          if ((await this.statIfPresent(directory))?.isDirectory() !== true) continue;
           await this.clearOwnedTextDirectory(directory, CACHE_FORMAT_VERSION, sourceId, bookId, ordinal, version);
         }
         await this.removeEmptyDirectory(chapter);
@@ -1864,13 +1914,13 @@ export class ReadingImageDiskCache {
       await this.removeEmptyDirectory(book);
     }
     const legacyBook = `${this.legacyRootDirectory()}/${await this.legacyBookHash(sourceId, bookId)}`;
-    if (await fileIo.access(legacyBook)) {
-      for (const name of await fileIo.listFile(legacyBook)) {
+    if ((await this.statIfPresent(legacyBook))?.isDirectory() === true) {
+      for (const name of await this.listFileIfPresent(legacyBook)) {
         if (!/^(0|[1-9][0-9]*)$/.test(name)) continue;
         const directory = `${legacyBook}/${name}`;
         // v1 delimiter keys could collide. Never delete another pair's data,
         // nor claim unidentifiable legacy garbage merely by directory number.
-        if ((await fileIo.stat(directory)).isDirectory()) {
+        if ((await this.statIfPresent(directory))?.isDirectory() === true) {
           await this.clearOwnedTextDirectory(directory, LEGACY_CACHE_FORMAT_VERSION, sourceId, bookId, name);
         }
       }
@@ -1885,11 +1935,11 @@ export class ReadingImageDiskCache {
   /** Same manga signals used by the upstream Host; no retention policy here. */
 
   private async containsMangaManifest(directory: string): Promise<boolean> {
-    if (!(await fileIo.access(directory))) return false;
-    for (const name of await fileIo.listFile(directory)) {
+    for (const name of await this.listFileIfPresent(directory)) {
       const path = `${directory}/${name}`;
       if (name === '.manga' || name === 'manga-identity.json' || name === 'manifest-script-bgra-v2.json') return true;
-      const stat = await fileIo.stat(path);
+      const stat = await this.statIfPresent(path);
+      if (stat === undefined) continue;
       if (stat.isDirectory()) {
         if (await this.containsMangaManifest(path)) return true;
       } else if (name === 'manifest.json') {
@@ -1926,14 +1976,18 @@ export class ReadingImageDiskCache {
     // leave both the original pending intent and enough proof for its retry.
     for (const hash of hashes) {
       const path = `${directory}/${hash}.bin`;
-      if (await fileIo.access(path) && !(await fileIo.stat(path)).isDirectory()) await fileIo.unlink(path);
+      if ((await this.statIfPresent(path))?.isFile() === true) await this.unlinkIfPresent(path);
     }
     for (const fileName of ownedFiles) await this.unlinkIfPresent(`${directory}/${fileName}`);
     await this.removeEmptyDirectory(directory);
   }
 
   private async removeEmptyDirectory(directory: string): Promise<void> {
-    if (await fileIo.access(directory) && (await fileIo.listFile(directory)).length === 0) await fileIo.rmdir(directory);
+    try {
+      if ((await fileIo.listFile(directory)).length === 0) await fileIo.rmdir(directory);
+    } catch (error) {
+      if (!this.isNotFoundError(error)) throw error;
+    }
   }
 
   private async ownsTextResource(identity: ReadingImageCacheIdentity): Promise<boolean> {
@@ -2142,6 +2196,7 @@ export class ReadingImageDiskCache {
         tmpPath,
         fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC,
       );
+      let written = false;
       try {
         let writtenBytes = 0;
         while (writtenBytes < bytes.byteLength) {
@@ -2156,8 +2211,10 @@ export class ReadingImageDiskCache {
           writtenBytes += written;
         }
         await fileIo.fsync(file.fd);
+        written = true;
       } finally {
-        await fileIo.close(file);
+        try { await fileIo.close(file); }
+        catch (error) { if (written) throw error; }
       }
       this.assertCurrent(isCurrent);
       await fileIo.rename(tmpPath, path);
@@ -2241,9 +2298,11 @@ export class ReadingImageDiskCache {
   }
 
   private async unlinkIfPresent(path: string): Promise<void> {
-    if (await fileIo.access(path)) {
+    try {
       await fileIo.unlink(path);
       this.inFlightWriteRevision += 1;
+    } catch (error) {
+      if (!this.isNotFoundError(error)) throw error;
     }
   }
 

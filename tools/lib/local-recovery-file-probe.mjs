@@ -118,6 +118,7 @@ export function localRecoveryFileProbe(freeBytes = 2 * 1024 ** 3) {
       'LOCAL_RECOVERY_MAX_BYTES', 'sealRecoveryFile', 'openRecoveryFile', 'recoveryVisitFile',
       'recoveryReserve', 'selectRecoveryDocument', 'LocalRecoveryFileError', 'recoveryHashFile', 'recoveryCopyBytes',
       'recoveryDigest', 'recoveryOutput', 'recoveryRead', 'recoveryText', 'recoveryUtf8',
+      'recoveryWithFile',
     ]);
   return { support, io, util, statvfs, crypto, handles, updateSizes, setPicker: action => { pickerOperation = action; } };
 }

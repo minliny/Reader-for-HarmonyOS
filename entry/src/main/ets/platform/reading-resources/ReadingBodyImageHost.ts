@@ -142,11 +142,18 @@ export class ReadingBodyImageHost {
     const retention = this.mangaDisplay;
     const current = (): boolean => this.mangaTemporaryRecoveryEnabled && generation === this.resourceGeneration &&
       directory === this.mangaDisplayDir && retention === this.mangaDisplay;
-    if (directory === undefined || !current() || !(await fs.access(directory))) return;
+    if (directory === undefined || !current()) return;
+    let entries: string[];
+    try { entries = await fs.listFile(directory); }
+    catch (error) {
+      const code = (error as { code?: number | string } | undefined)?.code;
+      if (code === 13900002 || code === 'ENOENT') return;
+      throw error;
+    }
     // In the dedicated filesDir namespace these exact names are created only
     // by Body's disposable derived write path. Unknown payloads and sidecars
     // are not inferred disposable from a missing ownership record.
-    for (const name of await fs.listFile(directory)) {
+    for (const name of entries) {
       if (!/^\.reading-body-tmp-[0-9a-f]{64}-[1-9][0-9]*$/.test(name)) continue;
       const path = `${directory}/${name}`;
       if (!current() || this.displayTemporaryFiles.has(path) || this.displayFileReferences.has(path) || this.displayFileWrites.has(path)) continue;
@@ -770,6 +777,7 @@ export class ReadingBodyImageHost {
     this.displayTemporaryFiles.add(tmpPath);
     try {
       const file = await fs.open(tmpPath, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
+      let written = false;
       try {
         if (downsampled) {
           const packer = image.createImagePacker();
@@ -799,8 +807,10 @@ export class ReadingBodyImageHost {
         // or offline original. Closing the completed write before atomic
         // rename is sufficient for the image loader; a durability barrier
         // on every page would stall pagination for no recoverable user data.
+        written = true;
       } finally {
-        await fs.close(file);
+        try { await fs.close(file); }
+        catch (error) { if (written) throw error; }
       }
       const displayBytes = (await fs.stat(tmpPath)).size;
       if (!Number.isSafeInteger(displayBytes) || displayBytes <= 0 ||

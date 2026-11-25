@@ -89,6 +89,9 @@ export class MangaDisplayRetention {
     const payload = { ...record.payload, pixelMap: undefined };
     acquire?.(payload);
     return payload;
+    } catch (error) {
+      if (current() && this.isMissingFile(error)) return undefined;
+      throw error;
     } finally {
       this.releaseRead(recordPath);
       if (activePath !== undefined) this.releaseRead(activePath);
@@ -167,6 +170,7 @@ export class MangaDisplayRetention {
       const encoded = new util.TextEncoder().encodeInto(JSON.stringify(record));
       const file = await fs.open(temp, fs.OpenMode.CREATE | fs.OpenMode.READ_WRITE | fs.OpenMode.TRUNC);
       ownsTemp = true; this.temporaryOwners.set(temp, { ...owner });
+      let written = false;
       try {
         let offset = 0;
         while (offset < encoded.byteLength) {
@@ -175,7 +179,11 @@ export class MangaDisplayRetention {
           if (!Number.isSafeInteger(written) || written <= 0 || written > part.byteLength) throw new Error('MANGA_DISPLAY_WRITE');
           offset += written;
         }
-      } finally { await fs.close(file); }
+        written = true;
+      } finally {
+        try { await fs.close(file); }
+        catch (error) { if (written) throw error; }
+      }
       if (!current()) throw new Error('MANGA_RESOURCE_CANCELLED');
       await fs.rename(temp, recordPath);
       ownsTemp = false; this.temporaryOwners.delete(temp);
@@ -194,9 +202,14 @@ export class MangaDisplayRetention {
 
   async inventory(): Promise<MangaDisplayInventoryFile[]> {
     const result: MangaDisplayInventoryFile[] = [];
-    if (!(await fs.access(this.directory))) return result;
+    let entries: string[];
+    try { entries = await fs.listFile(this.directory); }
+    catch (error) {
+      if (this.isMissingFile(error)) return result;
+      throw error;
+    }
     const owners = new Map<string, MangaStorageChapter[]>();
-    for (const name of await fs.listFile(this.directory)) {
+    for (const name of entries) {
       const match = /^manga-display-([0-9a-f]{64})\.json$/.exec(name);
       if (match === null) continue;
       const record = await this.readRecord(match[1]);
@@ -204,7 +217,7 @@ export class MangaDisplayRetention {
       const path = this.payloadPath(record.payload, match[1]);
       if (path !== undefined) { owners.set(path, [record.owner]); owners.set(`${this.directory}/${name}`, [record.owner]); this.knownFiles.add(path); }
     }
-    for (const name of await fs.listFile(this.directory)) {
+    for (const name of entries) {
       if (!/^(reading-body-manga-|manga-display-|\.manga-display-|\.reading-body-tmp-)/.test(name)) continue;
       const path = `${this.directory}/${name}`;
       const temporaryOwner = this.temporaryOwners.get(path);
@@ -229,7 +242,7 @@ export class MangaDisplayRetention {
       if (await fs.access(file.path)) {
         if (current !== undefined && !(await current())) return false;
         if (this.live(file.path) || this.writes.has(file.path) || this.reads.has(file.path)) return false;
-        await fs.unlink(file.path);
+        await this.unlinkIfPresent(file.path);
       }
       this.knownFiles.delete(file.path); this.temporaryOwners.delete(file.path);
       this.validatedFiles.delete(file.path);
@@ -263,7 +276,7 @@ export class MangaDisplayRetention {
         if (!file.path.startsWith(`${this.directory}/`) || file.path.slice(this.directory.length + 1).includes('/')) continue;
         if (await fs.access(file.path)) {
           if (!current() || this.live(file.path) || this.writes.has(file.path) || this.reads.has(file.path)) continue;
-          await fs.unlink(file.path);
+          await this.unlinkIfPresent(file.path);
         }
         this.knownFiles.delete(file.path); this.temporaryOwners.delete(file.path);
         this.validatedFiles.delete(file.path);
@@ -277,6 +290,16 @@ export class MangaDisplayRetention {
 
   private sameOwner(a: MangaStorageChapter, b: MangaStorageChapter): boolean {
     return a.sourceId === b.sourceId && a.bookId === b.bookId && a.chapterId === b.chapterId && a.contentVersion === b.contentVersion;
+  }
+
+  private isMissingFile(error: unknown): boolean {
+    const code = (error as { code?: number | string } | undefined)?.code;
+    return code === 13900002 || code === 'ENOENT';
+  }
+
+  private async unlinkIfPresent(path: string): Promise<void> {
+    try { await fs.unlink(path); }
+    catch (error) { if (!this.isMissingFile(error)) throw error; }
   }
 
   private payloadPath(payload: ReadingBodyImagePayload, key: string): string | undefined {

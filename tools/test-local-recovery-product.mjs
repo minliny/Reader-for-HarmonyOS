@@ -31,7 +31,7 @@ const HostRegistry = selectedProductionMethods(new URL('app/ReaderHostRegistry.t
   'prepareSystemLocalBookInput', 'ensureStageRecovery', 'requireSelectedFileName', 'stageLocalBook', 'copyAndHashLocalBook',
   'digestToHex', 'commitLocalBookInput', 'discardLocalBookInput', 'retainedLocalBookSourcePath', 'rollbackLocalBookAsset',
   'localBookStageDirectory', 'localBookAssetDirectory', 'requireLocalBookHash', 'requireLocalBookStagePath',
-  'requireLocalBookAssetPath', 'unlinkIfPresent', 'ensureDirectory', 'nextStagePath', 'pendingLocalImportFinalizeDirectory',
+  'requireLocalBookAssetPath', 'unlinkIfPresent', 'isMissingFile', 'ensureDirectory', 'nextStagePath', 'pendingLocalImportFinalizeDirectory',
 ], { fileIo: io, fileUri, statvfs, cryptoFramework: crypto, isReaderLocalBookFileName, localImportFailure, errorMessageOf });
 
 // AtomicFile is the platform seam. SDK-emitted production code retains the
