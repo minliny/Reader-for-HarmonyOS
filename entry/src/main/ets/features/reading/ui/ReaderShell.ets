@@ -299,6 +299,9 @@ export struct ReaderShell {
           onReadingCommitted: (commit: ReadingCommit): void => {
             if (_identity === this.readingIdentityKey()) this.onReadingCommitted(commit);
           },
+          onReadingPrefetchActivity: (activity: ReadingPrefetchActivity): void => {
+            if (_identity === this.readingIdentityKey()) this.onReadingPrefetchActivity?.(this.sourceId, this.bookId, activity);
+          },
           onReadingFailure: (sourceId: string, bookId: string, message: string,
             failureKind?: RemoteReadingFailureKind): void => {
             if (_identity === this.readingIdentityKey()) this.onReadingFailure(sourceId, bookId, message, failureKind);
@@ -308,9 +311,6 @@ export struct ReaderShell {
           },
           onOpenBookInfo: (): void => {
             if (this.acceptsTextInput(_identity)) this.onOpenBookInfo();
-          onReadingPrefetchActivity: (activity: ReadingPrefetchActivity): void => {
-            if (_identity === this.readingIdentityKey()) this.onReadingPrefetchActivity?.(this.sourceId, this.bookId, activity);
-          },
           },
           onSwitchSource: (focusId?: string): void => {
             if (this.acceptsTextInput(_identity)) this.onSwitchSource(focusId);
