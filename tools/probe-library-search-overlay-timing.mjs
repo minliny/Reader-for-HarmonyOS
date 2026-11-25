@@ -300,6 +300,67 @@ verify('reduced return waits for fade completion before admitting veil or releas
   }
 });
 
+for (const initial of ['input', 'results']) {
+  verify(`${initial} return hands off its painted state when reduced motion turns on mid-flight`, () => {
+    for (const switchAt of initial === 'input' ? [100, 199] : [100]) {
+      now = 0;
+      const { surface, move, flushFrame, covered, animations } = createSurface(initial);
+      const tracks = () => [surface.displayedSurfaceProgress, surface.historyProgress(),
+        surface.resultsProgress(), surface.scrimProgress()];
+      move('idle');
+      now = switchAt;
+      assert.ok(now < surface.backSpec.durationMs);
+      flushFrame();
+      flushFrame(); // Deliver any coverage change queued by the sampled frame.
+      const before = tracks();
+      const shadow = surface.headerStackShadow();
+      const activeTrack = initial === 'input' ? before[1] : before[2];
+      assert.ok(activeTrack > 0 && activeTrack < 1, 'handoff happens inside the return');
+      const keepCoverage = initial === 'input' && switchAt === 100;
+      assert.equal(before[1] > .01, keepCoverage);
+      assert.equal(covered(), keepCoverage);
+
+      surface.reduceMotion = true;
+      surface.modeChanged();
+      assert.deepEqual(tracks(), before, `visual tracks jump at ${switchAt}ms`);
+      assert.deepEqual(surface.headerStackShadow(), shadow);
+      flushFrame();
+      assert.equal(animations.length, 1);
+      const fade = animations[0];
+      assert.equal(fade.param.duration, 120);
+      assert.equal(surface.reducedSearchOpacity, 1);
+
+      const painted = () => [surface.reducedSearchOpacity,
+        ...tracks().map(progress => progress * surface.reducedSearchOpacity)];
+      let previous = painted();
+      const verifyFrame = () => {
+        assert.deepEqual(tracks(), before, 'geometry remains fixed during the fade');
+        assert.equal(surface.headerVeil(), false);
+        assert.equal(covered(), keepCoverage);
+        const current = painted();
+        assert.ok(current.every((value, index) => value >= 0 && value <= previous[index]), 'paint fades monotonically');
+        previous = current;
+      };
+      // The test context records animateTo. Sample its registered curve at the native opacity seam.
+      for (let elapsed = 0; elapsed < fade.param.duration; elapsed += 30) {
+        now = switchAt + elapsed;
+        surface.reducedSearchOpacity = 1 - readerProbeCubicBezierProgress(elapsed / fade.param.duration, ...fade.param.curve);
+        flushFrame();
+        verifyFrame();
+      }
+      now = switchAt + fade.param.duration;
+      fade.mutate();
+      verifyFrame();
+      assert.ok(previous.every(value => value === 0));
+      fade.param.onFinish();
+      flushFrame();
+      assert.deepEqual(tracks(), [0, 0, 0, 0]);
+      assert.equal(surface.headerVeil(), true);
+      assert.equal(covered(), false);
+    }
+  });
+}
+
 verify('reduced open, submit and edit keep geometry fixed during the opacity fade', () => {
   for (const [from, to] of [['idle', 'input'], ['input', 'results'], ['results', 'input']]) {
     const { surface, move, flushFrame, animations } = createSurface(from, true);

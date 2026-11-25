@@ -276,6 +276,10 @@ export struct ReaderLibrarySearchSurface {
       if (newEntry) this.retargetHistoryViewport(true);
       else this.publishContinueCardCoverage(this.resolvedHistoryViewport().suppressContinueCard);
       if (this.reduceMotion && this.transitionKind !== 'none' && !this.reducedTransition) {
+        this.fromSurface = this.displayedSurfaceProgress;
+        this.fromHistory = this.historyProgress();
+        this.fromResults = this.resultsProgress();
+        this.fromScrim = this.scrimProgress();
         this.fromShadowStrength = this.headerShadowStrength();
         this.beginReducedTransition(++this.generation);
       }
