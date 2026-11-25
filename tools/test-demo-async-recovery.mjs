@@ -134,7 +134,7 @@ const fakeFileIo={
  close:async file=>{positions.delete(file.fd);},
 };
 const fakeCrypto={createMd:()=>{const chunks=[];return {update:async({data})=>chunks.push(Buffer.from(data)),digest:async()=>({data:Uint8Array.from(createHash('sha256').update(Buffer.concat(chunks)).digest())})};}};
-const Recovery=new Function('fileIo','cryptoFramework','hilog','LOG_DOMAIN','errorMessageOf',stripTypeScriptTypes('class Recovery { static LocalBookLimitBytes=64*1024*1024; static HashChunkBytes=1024*1024;'+recoveryMethods+'};')+'return Recovery;')(fakeFileIo,fakeCrypto,{warn(){},error(){}},0x5244,e=>e instanceof Error?e.message:String(e));
+const Recovery=new Function('fileIo','cryptoFramework','hilog','LOG_DOMAIN','errorMessageOf',stripTypeScriptTypes('class Recovery { static LocalBookLimitBytes=64*1024*1024; static HashChunkBytes=1024*1024; static deferredStages=new Map();'+recoveryMethods+'};')+'return Recovery;')(fakeFileIo,fakeCrypto,{warn(){},error(){}},0x5244,e=>e instanceof Error?e.message:String(e));
 {
  const h=new Recovery();Object.assign(h,{localBookStageDirectory:()=>'/stage',localBookAssetDirectory:()=>'/assets',ensureDirectory:async()=>{},unlinkIfPresent:async p=>files.delete(p)});
  await h.recoverAbandonedStages();assert.equal(files.has('/stage/1-1.book'),false);

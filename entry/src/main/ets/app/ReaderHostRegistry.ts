@@ -92,6 +92,7 @@ export class ReaderHostRegistry {
   private static readonly LocalBookLimitBytes = 64 * 1024 * 1024;
   private static readonly StageSpaceReserveBytes = 16 * 1024 * 1024;
   private static readonly stageRecoveries = new Map<string, Promise<void>>();
+  private static readonly deferredStages = new Map<string, string[]>();
   // Stage paths are allocated by short-lived Host instances as UIAbility
   // windows are recreated. Share the sequence per directory so two such
   // instances in one process cannot truncate each other's `.book` file.
@@ -138,17 +139,19 @@ export class ReaderHostRegistry {
     const directory = this.localBookStageDirectory();
     this.stageRecovery = ReaderHostRegistry.stageRecoveryFor(
       directory,
-      (): Promise<void> => this.recoverAbandonedStages(),
+      (): Promise<boolean> => this.recoverAbandonedStages(),
     );
     void this.stageRecovery.catch((): void => {});
   }
 
-  private static stageRecoveryFor(directory: string, recover: () => Promise<void>): Promise<void> {
+  private static stageRecoveryFor(directory: string, recover: () => Promise<boolean>): Promise<void> {
     const existing = ReaderHostRegistry.stageRecoveries.get(directory);
     if (existing !== undefined) {
       return existing;
     }
-    const pending = recover();
+    const pending = recover().then((complete: boolean): void => {
+      if (complete === false) ReaderHostRegistry.stageRecoveries.delete(directory);
+    });
     const retryable = pending.catch((error: Error): Promise<never> => {
       if (ReaderHostRegistry.stageRecoveries.get(directory) === retryable) {
         ReaderHostRegistry.stageRecoveries.delete(directory);
@@ -378,21 +381,18 @@ export class ReaderHostRegistry {
   }
 
   private async ensureStageRecovery(): Promise<void> {
+    const directory = this.localBookStageDirectory();
     try {
       await this.stageRecovery;
-      return;
+      if (!ReaderHostRegistry.deferredStages.has(directory)) return;
     } catch (_) {
-      // stageRecoveryFor removes a failed shared entry. Re-acquire the
-      // directory-scoped single-flight promise so the next attempt can make
-      // progress after a transient filesystem failure. If the retry also
-      // fails, propagate that concrete error to the picker caller; a later
-      // invocation will get another retry opportunity.
-      this.stageRecovery = ReaderHostRegistry.stageRecoveryFor(
-        this.localBookStageDirectory(),
-        (): Promise<void> => this.recoverAbandonedStages(),
-      );
-      await this.stageRecovery;
+      // Listing must succeed once before any live stages can be admitted.
     }
+    this.stageRecovery = ReaderHostRegistry.stageRecoveryFor(
+      directory,
+      (): Promise<boolean> => this.recoverAbandonedStages(),
+    );
+    await this.stageRecovery;
   }
 
   /**
@@ -703,6 +703,13 @@ export class ReaderHostRegistry {
     await this.ensureDirectory(this.localBookStageDirectory());
     try {
       const contentHash = await this.copyAndHashLocalBook(uri, stagePath);
+      const abandoned = ReaderHostRegistry.deferredStages.get(this.localBookStageDirectory());
+      if (abandoned?.some((name: string): boolean =>
+        name.endsWith(`-${contentHash}.source`) || name.endsWith(`-${contentHash}.epub`)) === true) {
+        // A new import's rollback must not remove the asset that the older
+        // Core transaction may already reference.
+        throw new Error('Local book original is awaiting stage recovery');
+      }
       // Every complete original gets a recovery identity before Core sees it.
       const recoverablePath = `${stagePath.slice(0, -5)}-${contentHash}.source`;
       await fileIo.moveFile(stagePath, recoverablePath);
@@ -898,17 +905,20 @@ export class ReaderHostRegistry {
     }
   }
 
-  private async recoverAbandonedStages(): Promise<void> {
+  private async recoverAbandonedStages(): Promise<boolean> {
     const directory = this.localBookStageDirectory();
-    // Startup runs once before new staging. Recover complete originals
-    // first: Core may have committed their resource references before death.
-    let entries: string[];
-    try { entries = await fileIo.listFile(directory); }
-    catch (error) {
-      if (this.isMissingFile(error)) return;
-      throw error;
+    let entries = ReaderHostRegistry.deferredStages.get(directory);
+    if (entries === undefined) {
+      // Capture the abandoned names before admitting any new staging. Later
+      // retries use just the failed entries, since a fresh listing would
+      // also contain live imports and their protected originals.
+      try { entries = await fileIo.listFile(directory); }
+      catch (error) {
+        if (this.isMissingFile(error)) return true;
+        throw error;
+      }
     }
-    let deferred: unknown;
+    const deferred: string[] = [];
     for (const name of entries) {
       const stagePath = `${directory}/${name}`;
       const complete = /^[0-9]+-[0-9]+-([0-9a-f]{64})\.(source|epub)$/.exec(name);
@@ -935,15 +945,17 @@ export class ReaderHostRegistry {
         try {
           if (this.isMissingFile(error) && !(await fileIo.access(stagePath))) continue;
         } catch (_) { /* The original failure still needs reconciliation. */ }
-        deferred = deferred ?? error;
+        deferred.push(name);
         hilog.warn(LOG_DOMAIN, 'Reader', 'Local-book stage recovery deferred for %{private}s: %{private}s',
           name, errorMessageOf(error));
       }
     }
-    // Resolve the shared readiness promise only after the abandoned stages
-    // are reconciled. A later picker retries transient failures before it can
-    // publish live stages in this directory.
-    if (deferred !== undefined) throw deferred;
+    if (deferred.length > 0) {
+      ReaderHostRegistry.deferredStages.set(directory, deferred);
+      return false;
+    }
+    ReaderHostRegistry.deferredStages.delete(directory);
+    return true;
   }
 
   private localBookStageDirectory(): string {
@@ -1030,9 +1042,14 @@ export class ReaderHostRegistry {
 
   private nextStagePath(): string {
     const directory = this.localBookStageDirectory();
-    const next = (ReaderHostRegistry.stageSequences.get(directory) ?? 0) + 1;
+    const timestamp = Date.now();
+    let next = (ReaderHostRegistry.stageSequences.get(directory) ?? 0) + 1;
+    const abandoned = ReaderHostRegistry.deferredStages.get(directory);
+    // A clock change or immediate process restart can repeat a timestamp.
+    while (abandoned?.some((name: string): boolean =>
+      name === `${timestamp}-${next}.book` || name.startsWith(`${timestamp}-${next}-`)) === true) next += 1;
     ReaderHostRegistry.stageSequences.set(directory, next);
-    return `${directory}/${Date.now()}-${next}.book`;
+    return `${directory}/${timestamp}-${next}.book`;
   }
 
   private async writeSnapshot(event: ReaderCoreHostRequestEvent): Promise<JsonObject> {

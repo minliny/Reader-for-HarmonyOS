@@ -9919,7 +9919,7 @@
       ],
       "repair": "Choose an exact reviewed case or stated coverage-adoption target; parent never expands to siblings.",
       "repairAction": null,
-      "reviewedSourceSha256": "bd8349aef9497dffcc62ef05f317bf8017ff62c4559c137e51a5fd16a645cd72",
+      "reviewedSourceSha256": "5fc7184b7e45ea8fa719fd53f71d25b235bd99ad159835ae30504ac4a60fe161",
       "estimatedCostType": "sdk-transpile",
       "definitionInputProblems": [],
       "definitionInputs": [
@@ -9942,6 +9942,10 @@
         {
           "path": "tools/lib/ets-compiler-runtime.mjs",
           "sha256": "3d3be1c159621d2aac47bb74c973c47dd53ad829d86a91ac4d9bf080bf343762"
+        },
+        {
+          "path": "tools/lib/gate-resource-definition.mjs",
+          "sha256": "c3cc74f468435463cf43ddf0d544b1c64dce89044d9c3d002c85a75ea704a9ac"
         },
         {
           "path": "tools/lib/general-settings-owner-probe.mjs",
@@ -9993,7 +9997,7 @@
         },
         {
           "path": "tools/test-demo-async-recovery.mjs",
-          "sha256": "bd8349aef9497dffcc62ef05f317bf8017ff62c4559c137e51a5fd16a645cd72"
+          "sha256": "5fc7184b7e45ea8fa719fd53f71d25b235bd99ad159835ae30504ac4a60fe161"
         }
       ],
       "definitionIdentityState": "REVIEWED",
@@ -44251,25 +44255,33 @@
         "cwd Harmony项目根"
       ],
       "repair": null,
-      "reviewedSourceSha256": "3b72034f7ac315b4b4f89659e5b41abad9ac902c12a0110496b4213ff697954e",
+      "reviewedSourceSha256": "c72d6f6520c16320c01b7da13659195e810ba33248b26410e004f3d2b4e67e19",
       "estimatedCostType": "plain-js",
       "definitionInputProblems": [],
       "definitionInputs": [
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "f6361c4c97459d1d67f0821d326cee09b75d3f708b96a73b3e0262d7e83fa4bf"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/lib/gate-resource-definition.mjs",
+          "sha256": "c3cc74f468435463cf43ddf0d544b1c64dce89044d9c3d002c85a75ea704a9ac"
+        },
         {
           "path": "tools/retired-contract-tests.json",
           "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "f530873df73fc323264b3036aace8b427348c9377f4a4cb4d0d7a99f86c0df5f"
         },
         {
           "path": "tools/test-reader-host-path-boundary.mjs",
-          "sha256": "3b72034f7ac315b4b4f89659e5b41abad9ac902c12a0110496b4213ff697954e"
-        },
-        {
-          "path": "tools/gate-index.mjs",
-          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+          "sha256": "c72d6f6520c16320c01b7da13659195e810ba33248b26410e004f3d2b4e67e19"
         }
       ],
       "definitionIdentityState": "REVIEWED",
@@ -93473,7 +93485,8 @@
         "H-arkts-persistence-faults#storage-policy-read-retry",
         "H-arkts-persistence-faults#manga-grant-reconcile",
         "H-arkts-persistence-faults#cache-write-primary-error",
-        "H-arkts-persistence-faults#manga-display-disappearance"
+        "H-arkts-persistence-faults#manga-display-disappearance",
+        "H-arkts-persistence-faults#archive-completion-sync"
       ],
       "tests": [
         "test-arkts-persistence-faults.mjs"
@@ -93486,7 +93499,7 @@
       ],
       "minimumTrigger": "Fault handoff across asset, recovery, staging and cache ownership.",
       "failureExample": "See the focused case counterexample.",
-      "reviewedSourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2",
+      "reviewedSourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -93526,7 +93539,7 @@
         },
         {
           "path": "tools/test-arkts-persistence-faults.mjs",
-          "sha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+          "sha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
         }
       ],
       "definitionIdentityState": "FROZEN",
@@ -102740,16 +102753,16 @@
         ]
       },
       "resourceNeeds": [],
-      "protectedBehavior": "实际Index readable admission/membership stale拒绝",
+      "protectedBehavior": "实际Entry/Detail owner admission/membership stale拒绝",
       "prerequisites": [
         "Node.js with built-in TypeScript/stripTypeScriptTypes/registerHooks support",
         "Installed Harmony ETS SDK selected by tools/lib/tool-environment.mjs; local production/fixture inputs named in this case",
         "Only explicit local fake native/IO/owner/measurement ports used by the selected branch; no implicit Core/network/device"
       ],
-      "mechanism": "实际Index readable admission/membership stale拒绝; owner implementation record: [\"按Index admission、Host stage、import finalize拆三个case，各自fault loop留原真实方法；保hash而非filename、unknown不补偿、deterministic rejection丢stage，去单入口跨四层必跑。\"]",
+      "mechanism": "实际Entry/Detail owner admission/membership stale拒绝",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "c4188dd07b2db344a9e10f52470a04ea0a88d7f0da0365582bc7ae24b168ad0c",
+      "reviewedSourceSha256": "5fc7184b7e45ea8fa719fd53f71d25b235bd99ad159835ae30504ac4a60fe161",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -102825,7 +102838,7 @@
         },
         {
           "path": "tools/test-demo-async-recovery.mjs",
-          "sha256": "c4188dd07b2db344a9e10f52470a04ea0a88d7f0da0365582bc7ae24b168ad0c"
+          "sha256": "5fc7184b7e45ea8fa719fd53f71d25b235bd99ad159835ae30504ac4a60fe161"
         }
       ],
       "definitionInputProblems": [],
@@ -102841,7 +102854,7 @@
       "evidenceBoundary": null,
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "06f5096ac4ea9ac2f2a5370826924d0b19195a5ba765b32bea8b5311eb0ed47b"
+      "resourceDefinitionSha256": "4f4a38b4fbbafe04a14ef6e611a7a94e3051d746ea6847b7477491fb399b8d04"
     },
     {
       "file": "tools/test-demo-async-recovery.mjs",
@@ -102878,10 +102891,10 @@
         "Installed Harmony ETS SDK selected by tools/lib/tool-environment.mjs; local production/fixture inputs named in this case",
         "Only explicit local fake native/IO/owner/measurement ports used by the selected branch; no implicit Core/network/device"
       ],
-      "mechanism": "真实Host abandoned stages/hash完整性假文件端口; owner implementation record: [\"按Index admission、Host stage、import finalize拆三个case，各自fault loop留原真实方法；保hash而非filename、unknown不补偿、deterministic rejection丢stage，去单入口跨四层必跑。\"]",
+      "mechanism": "真实Host abandoned stages/hash完整性假文件端口",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "c4188dd07b2db344a9e10f52470a04ea0a88d7f0da0365582bc7ae24b168ad0c",
+      "reviewedSourceSha256": "5fc7184b7e45ea8fa719fd53f71d25b235bd99ad159835ae30504ac4a60fe161",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -102957,7 +102970,7 @@
         },
         {
           "path": "tools/test-demo-async-recovery.mjs",
-          "sha256": "c4188dd07b2db344a9e10f52470a04ea0a88d7f0da0365582bc7ae24b168ad0c"
+          "sha256": "5fc7184b7e45ea8fa719fd53f71d25b235bd99ad159835ae30504ac4a60fe161"
         }
       ],
       "definitionInputProblems": [],
@@ -102973,7 +102986,7 @@
       "evidenceBoundary": null,
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "06f5096ac4ea9ac2f2a5370826924d0b19195a5ba765b32bea8b5311eb0ed47b"
+      "resourceDefinitionSha256": "4f4a38b4fbbafe04a14ef6e611a7a94e3051d746ea6847b7477491fb399b8d04"
     },
     {
       "file": "tools/test-demo-async-recovery.mjs",
@@ -103010,10 +103023,10 @@
         "Installed Harmony ETS SDK selected by tools/lib/tool-environment.mjs; local production/fixture inputs named in this case",
         "Only explicit local fake native/IO/owner/measurement ports used by the selected branch; no implicit Core/network/device"
       ],
-      "mechanism": "实际parse/persist/add lostACK与确定拒绝资产归属; owner implementation record: [\"按Index admission、Host stage、import finalize拆三个case，各自fault loop留原真实方法；保hash而非filename、unknown不补偿、deterministic rejection丢stage，去单入口跨四层必跑。\"]",
+      "mechanism": "实际parse/persist/add lostACK与确定拒绝资产归属",
       "failureExample": "The selected case has source assertions; see its owner record for actual negative controls. No new mutant/device result is inferred from the historical parent review.",
       "estimatedCostType": "selected-method/fixture",
-      "reviewedSourceSha256": "c4188dd07b2db344a9e10f52470a04ea0a88d7f0da0365582bc7ae24b168ad0c",
+      "reviewedSourceSha256": "5fc7184b7e45ea8fa719fd53f71d25b235bd99ad159835ae30504ac4a60fe161",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -103089,7 +103102,7 @@
         },
         {
           "path": "tools/test-demo-async-recovery.mjs",
-          "sha256": "c4188dd07b2db344a9e10f52470a04ea0a88d7f0da0365582bc7ae24b168ad0c"
+          "sha256": "5fc7184b7e45ea8fa719fd53f71d25b235bd99ad159835ae30504ac4a60fe161"
         }
       ],
       "definitionInputProblems": [],
@@ -103105,7 +103118,7 @@
       "evidenceBoundary": null,
       "nestedActions": [],
       "nestedCalls": [],
-      "resourceDefinitionSha256": "06f5096ac4ea9ac2f2a5370826924d0b19195a5ba765b32bea8b5311eb0ed47b"
+      "resourceDefinitionSha256": "4f4a38b4fbbafe04a14ef6e611a7a94e3051d746ea6847b7477491fb399b8d04"
     },
     {
       "file": "tools/test-developer-mode-settings.mjs",
@@ -463856,7 +463869,7 @@
         "Fault handoff across asset, recovery, staging and cache ownership."
       ],
       "qualification": "QUALIFIED",
-      "reviewedSourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2",
+      "reviewedSourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -463896,10 +463909,10 @@
         },
         {
           "path": "tools/test-arkts-persistence-faults.mjs",
-          "sha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+          "sha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
         }
       ],
-      "resourceDefinitionSha256": "f7231e28a0438277bb8a2d76512d2324c69c4ebf92ce566db4c08a13305afb3c"
+      "resourceDefinitionSha256": "48daaf9c7277186b9cad19de5b41813598215c237c8c35932dbce573b1d0769f"
     },
     {
       "defaultExecution": "OFF",
@@ -463941,7 +463954,7 @@
         "Fault handoff across asset, recovery, staging and cache ownership."
       ],
       "qualification": "QUALIFIED",
-      "reviewedSourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2",
+      "reviewedSourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -463981,10 +463994,10 @@
         },
         {
           "path": "tools/test-arkts-persistence-faults.mjs",
-          "sha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+          "sha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
         }
       ],
-      "resourceDefinitionSha256": "f7231e28a0438277bb8a2d76512d2324c69c4ebf92ce566db4c08a13305afb3c"
+      "resourceDefinitionSha256": "48daaf9c7277186b9cad19de5b41813598215c237c8c35932dbce573b1d0769f"
     },
     {
       "defaultExecution": "OFF",
@@ -464017,16 +464030,16 @@
           "local-book-stage-retry"
         ]
       },
-      "protectedBehavior": "Host startup keeps unreadable completed stages, processes siblings, and retries that same stage on import",
-      "mechanism": "Host startup keeps unreadable completed stages, processes siblings, and retries that same stage on import",
+      "protectedBehavior": "Host retries only abandoned stages, preserves unreadable originals and admits unrelated picker and system imports",
+      "mechanism": "Host retries only abandoned stages, preserves unreadable originals and admits unrelated picker and system imports",
       "productionBinding": "entry/src/main/ets/app/ReaderHostRegistry.ts, entry/src/main/ets/platform/backup/LocalRecoveryFile.ts, entry/src/main/ets/features/bookshelf/application/LocalRecoveryGateway.ts, entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts, entry/src/main/ets/platform/reading-resources/MangaDisplayRetention.ts, entry/src/main/ets/platform/reading-resources/ReadingBodyImageHost.ts",
-      "failureExample": "A regression violates the selected explicit production assertion.",
+      "failureExample": "An unreadable abandoned local-book stage blocks unrelated imports, collides with live staging, or stops being retried across owner replacement.",
       "minimumTrigger": "Fault handoff across asset, recovery, staging and cache ownership.",
       "needs": [
         "Fault handoff across asset, recovery, staging and cache ownership."
       ],
       "qualification": "QUALIFIED",
-      "reviewedSourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2",
+      "reviewedSourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -464066,10 +464079,10 @@
         },
         {
           "path": "tools/test-arkts-persistence-faults.mjs",
-          "sha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+          "sha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
         }
       ],
-      "resourceDefinitionSha256": "f7231e28a0438277bb8a2d76512d2324c69c4ebf92ce566db4c08a13305afb3c"
+      "resourceDefinitionSha256": "48daaf9c7277186b9cad19de5b41813598215c237c8c35932dbce573b1d0769f"
     },
     {
       "defaultExecution": "OFF",
@@ -464111,7 +464124,7 @@
         "Fault handoff across asset, recovery, staging and cache ownership."
       ],
       "qualification": "QUALIFIED",
-      "reviewedSourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2",
+      "reviewedSourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -464151,10 +464164,10 @@
         },
         {
           "path": "tools/test-arkts-persistence-faults.mjs",
-          "sha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+          "sha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
         }
       ],
-      "resourceDefinitionSha256": "f7231e28a0438277bb8a2d76512d2324c69c4ebf92ce566db4c08a13305afb3c"
+      "resourceDefinitionSha256": "48daaf9c7277186b9cad19de5b41813598215c237c8c35932dbce573b1d0769f"
     },
     {
       "defaultExecution": "OFF",
@@ -464196,7 +464209,7 @@
         "Fault handoff across asset, recovery, staging and cache ownership."
       ],
       "qualification": "QUALIFIED",
-      "reviewedSourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2",
+      "reviewedSourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -464236,10 +464249,10 @@
         },
         {
           "path": "tools/test-arkts-persistence-faults.mjs",
-          "sha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+          "sha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
         }
       ],
-      "resourceDefinitionSha256": "f7231e28a0438277bb8a2d76512d2324c69c4ebf92ce566db4c08a13305afb3c"
+      "resourceDefinitionSha256": "48daaf9c7277186b9cad19de5b41813598215c237c8c35932dbce573b1d0769f"
     },
     {
       "defaultExecution": "OFF",
@@ -464281,7 +464294,7 @@
         "Fault handoff across asset, recovery, staging and cache ownership."
       ],
       "qualification": "QUALIFIED",
-      "reviewedSourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2",
+      "reviewedSourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -464321,10 +464334,10 @@
         },
         {
           "path": "tools/test-arkts-persistence-faults.mjs",
-          "sha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+          "sha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
         }
       ],
-      "resourceDefinitionSha256": "f7231e28a0438277bb8a2d76512d2324c69c4ebf92ce566db4c08a13305afb3c"
+      "resourceDefinitionSha256": "48daaf9c7277186b9cad19de5b41813598215c237c8c35932dbce573b1d0769f"
     },
     {
       "defaultExecution": "OFF",
@@ -464366,7 +464379,7 @@
         "Fault handoff across asset, recovery, staging and cache ownership."
       ],
       "qualification": "QUALIFIED",
-      "reviewedSourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2",
+      "reviewedSourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -464406,10 +464419,10 @@
         },
         {
           "path": "tools/test-arkts-persistence-faults.mjs",
-          "sha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+          "sha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
         }
       ],
-      "resourceDefinitionSha256": "f7231e28a0438277bb8a2d76512d2324c69c4ebf92ce566db4c08a13305afb3c"
+      "resourceDefinitionSha256": "48daaf9c7277186b9cad19de5b41813598215c237c8c35932dbce573b1d0769f"
     },
     {
       "defaultExecution": "OFF",
@@ -464451,7 +464464,7 @@
         "Fault handoff across asset, recovery, staging and cache ownership."
       ],
       "qualification": "QUALIFIED",
-      "reviewedSourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2",
+      "reviewedSourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -464491,10 +464504,10 @@
         },
         {
           "path": "tools/test-arkts-persistence-faults.mjs",
-          "sha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+          "sha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
         }
       ],
-      "resourceDefinitionSha256": "f7231e28a0438277bb8a2d76512d2324c69c4ebf92ce566db4c08a13305afb3c"
+      "resourceDefinitionSha256": "48daaf9c7277186b9cad19de5b41813598215c237c8c35932dbce573b1d0769f"
     },
     {
       "defaultExecution": "OFF",
@@ -465760,6 +465773,91 @@
         }
       ],
       "resourceDefinitionSha256": "6b2de44beb9ff1efaba6a0038bf8d9fe2e5bf912fd7f3c72f5a02cff25ee4eaa"
+    },
+    {
+      "defaultExecution": "OFF",
+      "execution": "NOT_RUN",
+      "implementation": "IMPLEMENTED",
+      "necessityReason": "User-requested ArkTS source audit and production fault injection.",
+      "estimatedCostType": "selected-method/fixture",
+      "resourceNeeds": [],
+      "definitionInputProblems": [],
+      "prerequisites": [
+        "Node.js. SDK-backed leaves also use the installed Harmony ETS compiler."
+      ],
+      "nestedActions": [],
+      "nestedCalls": [],
+      "overlap": "Only the specified behavior at the production seam is exercised.",
+      "limitations": "Source or host regression with controlled platform ports, without VM or physical-device behavior.",
+      "evidenceBoundary": "Source or host regression with controlled platform ports, without VM or physical-device behavior.",
+      "repair": null,
+      "repairAction": null,
+      "releaseEligible": null,
+      "id": "H-arkts-persistence-faults#archive-completion-sync",
+      "parentId": "H-arkts-persistence-faults",
+      "caseId": "archive-completion-sync",
+      "file": "tools/test-arkts-persistence-faults.mjs",
+      "tests": [
+        "test-arkts-persistence-faults.mjs"
+      ],
+      "caseSelection": {
+        "test-arkts-persistence-faults.mjs": [
+          "archive-completion-sync"
+        ]
+      },
+      "protectedBehavior": "Recovery keeps the confirmed restore receipt and its replayable archive when the journal unlink cannot be synced",
+      "mechanism": "Recovery keeps the confirmed restore receipt and its replayable archive when the journal unlink cannot be synced",
+      "productionBinding": "entry/src/main/ets/features/bookshelf/application/LocalRecoveryGateway.ts, entry/src/main/ets/platform/backup/LocalRecoveryFile.ts",
+      "failureExample": "After an injected directory fsync failure, the already committed restore is reported failed or its staged archive disappears before journal unlink is durable.",
+      "minimumTrigger": "A confirmed restore reaches a recovery directory sync failure after its journal entry was unlinked.",
+      "needs": [
+        "A confirmed restore reaches a recovery directory sync failure after its journal entry was unlinked."
+      ],
+      "qualification": "QUALIFIED",
+      "reviewedSourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9",
+      "definitionInputs": [
+        {
+          "path": "tools/gate-index.mjs",
+          "sha256": "f6361c4c97459d1d67f0821d326cee09b75d3f708b96a73b3e0262d7e83fa4bf"
+        },
+        {
+          "path": "tools/lib/contract-case-selection.mjs",
+          "sha256": "10264fe3b4b889f386ee410db8df74173ca21431fcad8f247fdf1bb7a805b58a"
+        },
+        {
+          "path": "tools/lib/ets-compiler-runtime.mjs",
+          "sha256": "3d3be1c159621d2aac47bb74c973c47dd53ad829d86a91ac4d9bf080bf343762"
+        },
+        {
+          "path": "tools/lib/ets-pure-module-probe.mjs",
+          "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
+        },
+        {
+          "path": "tools/lib/gate-resource-definition.mjs",
+          "sha256": "c3cc74f468435463cf43ddf0d544b1c64dce89044d9c3d002c85a75ea704a9ac"
+        },
+        {
+          "path": "tools/lib/local-recovery-file-probe.mjs",
+          "sha256": "ea1017277726425b8162ae9c5a3827b139850f7930c946e433de6cb1f4885204"
+        },
+        {
+          "path": "tools/lib/selected-production-methods.mjs",
+          "sha256": "f3c48ccfc1a33cbcf688ab9ef994869a8f41542135672ed3419a0351f8e87bbd"
+        },
+        {
+          "path": "tools/retired-contract-tests.json",
+          "sha256": "de08ed0d3fa09144c318b97654cd5c3612d89e6e629a6e70d5a594bc9c313efb"
+        },
+        {
+          "path": "tools/run-contract-tests.mjs",
+          "sha256": "f530873df73fc323264b3036aace8b427348c9377f4a4cb4d0d7a99f86c0df5f"
+        },
+        {
+          "path": "tools/test-arkts-persistence-faults.mjs",
+          "sha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
+        }
+      ],
+      "resourceDefinitionSha256": "48daaf9c7277186b9cad19de5b41813598215c237c8c35932dbce573b1d0769f"
     }
   ],
   "externalEntries": [
@@ -466636,7 +466734,7 @@
     "IMPLEMENTED_WITH_EVIDENCE_GAP": 1
   },
   "caseQualificationCounts": {
-    "QUALIFIED": 1586,
+    "QUALIFIED": 1587,
     "REVIEW_NEEDED": 950,
     "DIAGNOSTIC_ONLY": 29,
     "NEEDS_EVIDENCE": 1

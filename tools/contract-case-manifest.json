@@ -487,22 +487,22 @@
       }
     },
     "test-demo-async-recovery.mjs": {
-      "sourceSha256": "f565b7da3341a922a9d2e2ffe1f7e36323a58a76aecbc9c67b2b07dd0bf32878",
+      "sourceSha256": "5fc7184b7e45ea8fa719fd53f71d25b235bd99ad159835ae30504ac4a60fe161",
       "cases": {
         "index-admission": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "c4188dd07b2db344a9e10f52470a04ea0a88d7f0da0365582bc7ae24b168ad0c"
+          "sourceSha256": "5fc7184b7e45ea8fa719fd53f71d25b235bd99ad159835ae30504ac4a60fe161"
         },
         "stage-recovery": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "c4188dd07b2db344a9e10f52470a04ea0a88d7f0da0365582bc7ae24b168ad0c"
+          "sourceSha256": "5fc7184b7e45ea8fa719fd53f71d25b235bd99ad159835ae30504ac4a60fe161"
         },
         "import-finalize": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "c4188dd07b2db344a9e10f52470a04ea0a88d7f0da0365582bc7ae24b168ad0c"
+          "sourceSha256": "5fc7184b7e45ea8fa719fd53f71d25b235bd99ad159835ae30504ac4a60fe161"
         }
       }
     },
@@ -12602,47 +12602,52 @@
       }
     },
     "test-arkts-persistence-faults.mjs": {
-      "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2",
+      "sourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9",
       "cases": {
         "archive-primary-error": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+          "sourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
         },
         "archive-stale-work": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+          "sourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
         },
         "local-book-stage-retry": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+          "sourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
         },
         "text-clear-disappearance": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+          "sourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
         },
         "storage-policy-read-retry": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+          "sourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
         },
         "manga-grant-reconcile": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+          "sourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
         },
         "cache-write-primary-error": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+          "sourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
         },
         "manga-display-disappearance": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "0c17e853191dfe98113f12e4b0573a47bcb140e11a9eff6f4dfe6af35f6e99c2"
+          "sourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
+        },
+        "archive-completion-sync": {
+          "resources": [],
+          "qualification": "QUALIFIED",
+          "sourceSha256": "b8e2fbc141f7e03f49feba5e54f3321739a24ac75320a6a53dff9d57dacc83d9"
         }
       }
     },

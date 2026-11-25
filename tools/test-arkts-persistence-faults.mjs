@@ -10,14 +10,15 @@ import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { localRecoveryFileProbe } from './lib/local-recovery-file-probe.mjs';
 import { selectedProductionMethods } from './lib/selected-production-methods.mjs';
 import { localImportFailure } from '../entry/src/main/ets/app/LocalImportFailure.ts';
-import { isReaderLocalBookFileName } from '../entry/src/main/ets/app/ReaderLocalBookFormatAdmission.ts';
+import { isReaderLocalBookFileName, READER_LOCAL_BOOK_PICKER_FILTER } from '../entry/src/main/ets/app/ReaderLocalBookFormatAdmission.ts';
 import { readerHostFilesDirectory } from '../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts';
 import { ReaderDocumentPickerActivity } from '../entry/src/main/ets/platform/ReaderDocumentPickerActivity.ts';
 
 export const CONTRACT_CASES = {
   'archive-primary-error': { description: 'Recovery file preserves primary errors while closing and wipes derived bytes when cipher creation fails', resources: [] },
   'archive-stale-work': { description: 'Recovery gateway skips a disappeared owned work directory and completes normal picker cancellation', resources: [] },
-  'local-book-stage-retry': { description: 'Host startup keeps unreadable completed stages, processes siblings, and retries that same stage on import', resources: [] },
+  'archive-completion-sync': { description: 'Recovery keeps the confirmed restore receipt and its replayable archive when the journal unlink cannot be synced', resources: [] },
+  'local-book-stage-retry': { description: 'Host retries only abandoned stages, preserves unreadable originals and admits unrelated picker and system imports', resources: [] },
   'text-clear-disappearance': { description: 'Durable book clear continues and acknowledges idempotent concurrent directory and byte removal', resources: [] },
   'storage-policy-read-retry': { description: 'A transient metadata worker failure allows retry of the persisted disk policy', resources: [] },
   'manga-grant-reconcile': { description: 'Cold pending-grant read and lost completion acknowledgement reconcile before manga readmission', resources: [] },
@@ -95,10 +96,107 @@ async function archiveStaleWork(root) {
   } finally { ReaderDocumentPickerActivity.destroy(); }
 }
 
+async function archiveCompletionSync(root) {
+  const { io, util, support, handles } = localRecoveryFileProbe();
+  const base = join(root, 'reader-local-recovery');
+  const archivePath = join(base, 'pending.readerbackup');
+  const journalPath = join(base, 'restore.json');
+  const operationId = 'quarantined-v1-918087e2-82f5-4a33-a22c-8940ea25dbaa';
+  const packageSha256 = 'a'.repeat(64);
+  const content = 'fixture Core package payload';
+  const passphrase = 'fixture passphrase';
+  const originalBytes = support.recoveryUtf8('Reader');
+  const original = { sha256: await support.recoveryDigest(originalBytes), byteLength: originalBytes.length, sourceFormat: 'txt' };
+  const bookId = 'fixture-book';
+  const inspectRows = [{ bookId, original }];
+  const header = support.recoveryUtf8(JSON.stringify({ content, packageSha256, rows: [{ bookId, original, included: true }] }));
+  const prefix = new Uint8Array(4);
+  new DataView(prefix.buffer).setUint32(0, header.length);
+  await fs.mkdir(base);
+  await support.sealRecoveryFile(archivePath, passphrase, async emit => {
+    await emit(prefix);
+    await emit(header);
+    await emit(originalBytes);
+  });
+  const journal = JSON.stringify({
+    schemaVersion: 1, operationId, packageSha256, bundleSha256: await support.recoveryHashFile(archivePath),
+    rollbackKind: 'physical', rollbackId: 'b'.repeat(32), rollbackSha256: 'c'.repeat(64),
+  });
+  await fs.writeFile(journalPath, journal);
+  const commands = [];
+  const runtime = {
+    getUIAbilityContext: () => ({ filesDir: root }),
+    async request(method, params) {
+      commands.push(method);
+      if (method === 'library.package.inspect') {
+        assert.equal(params.content, content);
+        return { data: { packageSha256, scope: 'coreLibraryMetadata', localOriginals: inspectRows } };
+      }
+      if (method === 'library.package.restore.status') {
+        assert.deepEqual({ ...params }, { operationId, packageSha256 });
+        return { data: { operationId, packageSha256, status: 'committedCurrent' } };
+      }
+      assert.equal(method, 'library.resource.restore.status');
+      assert.equal(params.binding.parentOperationId, operationId);
+      assert.equal(params.binding.bookId, bookId);
+      return { data: { status: 'finalized', parentStatus: 'current', binding: params.binding } };
+    },
+  };
+  const warnings = [];
+  const Recovery = productionClass('features/bookshelf/application/LocalRecoveryGateway.ts', 'LocalRecoveryGateway', {
+    fileIo: io, util, fileUri, ...support, ReaderRuntimeOwner: { current: () => runtime }, readerHostFilesDirectory,
+    isReaderLocalBookFileName, hilog: { warn(_domain, _tag, message) { warnings.push(message); } },
+  });
+  const open = io.open, close = io.close, fsync = io.fsync;
+  let directoryFd;
+  let failSync = true;
+  let syncFailures = 0;
+  io.open = async (path, mode) => {
+    const handle = await open(path, mode);
+    if (path === base) directoryFd = handle.fd;
+    return handle;
+  };
+  io.close = async handle => {
+    if (handle.fd === directoryFd) directoryFd = undefined;
+    await close(handle);
+  };
+  io.fsync = async fd => {
+    if (fd === directoryFd && failSync) {
+      assert.equal(await io.access(journalPath), false);
+      syncFailures++;
+      throw new Error('injected recovery directory fsync failure');
+    }
+    await fsync(fd);
+  };
+  const expected = { state: 'restored', included: 1, missing: 0 };
+  const recovery = new Recovery();
+  assert.deepEqual({ ...await recovery.resumePackage(passphrase) }, expected);
+  assert.equal(syncFailures, 1);
+  assert.deepEqual(warnings, ['Completed local recovery cleanup deferred']);
+  assert.equal(await recovery.pending(), false);
+  assert.equal(await io.access(archivePath), true, 'retain staged bytes until directory sync acknowledges journal removal');
+  assert.equal((await recovery.inspectPackage(passphrase, current)).state, 'failed');
+  assert.equal(syncFailures, 2);
+  assert.equal(await io.access(archivePath), true, 'a later operation cannot clear the still-unqualified archive');
+
+  // Model a crash recovering the old journal directory entry.
+  await fs.writeFile(journalPath, journal);
+  failSync = false;
+  assert.deepEqual({ ...await new Recovery().resumePackage(passphrase) }, expected);
+  assert.equal(await recovery.pending(), false);
+  assert.equal(await io.access(archivePath), false);
+  assert.deepEqual(commands, [
+    'library.package.inspect', 'library.package.restore.status', 'library.resource.restore.status',
+    'library.package.inspect', 'library.package.restore.status', 'library.resource.restore.status',
+  ], 'the same completed parent and resource are reconciled without applying the restore again');
+  assert.equal(handles.size, 0);
+}
+
 const hostPath = new URL('app/ReaderHostRegistry.ts', sourceRoot);
 const stageMethods = [
   'LocalBookLimitBytes', 'StageSpaceReserveBytes', 'HashChunkBytes', 'stageSequences', 'stagingReservations',
-  'stageRecoveries', 'stageRecoveryFor', 'prepareSystemLocalBookInput', 'ensureStageRecovery', 'requireSelectedFileName',
+  'stageRecoveries', 'deferredStages', 'stageRecoveryFor', 'selectLocalBookInputs', 'LocalBookSelectionLimit', 'LocalBookStagingConcurrency',
+  'prepareSystemLocalBookInput', 'ensureStageRecovery', 'requireSelectedFileName',
   'stageLocalBook', 'copyAndHashLocalBook', 'digestToHex', 'recoverAbandonedStages', 'hashLocalBookFile',
   'localBookStageDirectory', 'localBookAssetDirectory', 'pendingLocalImportFinalizeDirectory',
   'unlinkIfPresent', 'isMissingFile', 'ensureDirectory', 'nextStagePath',
@@ -106,9 +204,14 @@ const stageMethods = [
 
 async function localBookStageRetry(root) {
   const { io, statvfs, crypto, handles } = localRecoveryFileProbe();
+  const newBook = join(root, 'next.txt');
+  await fs.writeFile(newBook, 'new selection');
+  const uri = pathToFileURL(newBook).href;
   const Host = selectedProductionMethods(hostPath, 'ReaderHostRegistry', stageMethods, {
     fileIo: io, statvfs, cryptoFramework: crypto, fileUri, errorMessageOf, isReaderLocalBookFileName, localImportFailure,
     LOG_DOMAIN: 0, hilog: { warn() {}, error() {} },
+    READER_LOCAL_BOOK_PICKER_FILTER, ReaderDocumentPickerActivity,
+    picker: { DocumentSelectOptions: class {}, DocumentViewPicker: class { async select() { return [uri]; } } },
   });
   const host = Object.assign(new Host(), { context: { filesDir: root } });
   const stage = host.localBookStageDirectory(), assets = host.localBookAssetDirectory();
@@ -121,10 +224,18 @@ async function localBookStageRetry(root) {
   await fs.writeFile(first, firstBytes);
   await fs.writeFile(sibling, siblingBytes);
   await fs.writeFile(raced, 'incomplete');
-  const open = io.open, unlink = io.unlink;
+  const open = io.open, unlink = io.unlink, list = io.listFile;
   let fail = true;
+  let scans = 0, firstAttempts = 0;
+  io.listFile = async path => {
+    if (path === stage) scans++;
+    return list(path);
+  };
   io.open = async (path, mode) => {
-    if (path === first && fail) throw Object.assign(new Error('injected stage read failure'), { code: 'EIO' });
+    if (path === first) {
+      firstAttempts++;
+      if (fail) throw Object.assign(new Error('injected stage read failure'), { code: 'EIO' });
+    }
     return open(path, mode);
   };
   io.unlink = async path => {
@@ -132,13 +243,36 @@ async function localBookStageRetry(root) {
     if (path === raced) throw missing('ENOENT');
   };
   host.stageRecovery = Host.stageRecoveryFor(stage, () => host.recoverAbandonedStages());
-  await assert.rejects(host.stageRecovery, /injected stage read failure/);
+  await host.stageRecovery;
   assert.deepEqual(await fs.readFile(first), firstBytes);
   assert.deepEqual(await fs.readFile(join(assets, `${hash(siblingBytes)}.source`)), siblingBytes);
+  const now = Date.now;
+  Date.now = () => 1;
+  let system;
+  try { system = await host.prepareSystemLocalBookInput(uri); }
+  finally { Date.now = now; }
+  assert.equal(system.state, 'ready', 'an unreadable abandoned stage cannot block an independent system import');
+  assert.match(basename(system.input.stagedPath), /^1-2-/, 'a repeated clock value cannot reuse a deferred stage name');
+  assert.deepEqual(await fs.readFile(first), firstBytes);
+  ReaderDocumentPickerActivity.bind(1);
+  ReaderDocumentPickerActivity.setForeground(true);
+  let selected;
+  try { [selected] = await host.selectLocalBookInputs(current); }
+  finally { ReaderDocumentPickerActivity.destroy(); }
+  assert.equal(selected.state, 'ready', 'the picker can open and stage a new book while the old failure persists');
+  assert.deepEqual(await fs.readFile(system.input.stagedPath, 'utf8'), 'new selection');
+  const sameBook = join(root, 'same.txt');
+  await fs.writeFile(sameBook, firstBytes);
+  assert.equal((await host.prepareSystemLocalBookInput(pathToFileURL(sameBook).href)).state, 'failed',
+    'a new import cannot claim ownership of the same unresolved original');
   fail = false;
-  const newBook = join(root, 'next.txt');
-  await fs.writeFile(newBook, 'new selection');
-  assert.equal((await host.prepareSystemLocalBookInput(pathToFileURL(newBook).href)).state, 'ready');
+  const successor = Object.assign(new Host(), { context: host.context,
+    stageRecovery: Host.stageRecoveryFor(stage, () => host.recoverAbandonedStages()) });
+  assert.equal((await successor.prepareSystemLocalBookInput(uri)).state, 'ready');
+  assert.ok(firstAttempts >= 3, 'the same unreadable entry remains eligible for retry');
+  assert.equal(scans, 1, 'recovery never rescans a staging directory after new imports have been admitted');
+  assert.deepEqual(await fs.readFile(system.input.stagedPath, 'utf8'), 'new selection');
+  assert.deepEqual(await fs.readFile(selected.input.stagedPath, 'utf8'), 'new selection');
   assert.deepEqual(await fs.readFile(join(assets, `${hash(firstBytes)}.source`)), firstBytes);
   assert.equal(handles.size, 0);
 
@@ -346,6 +480,7 @@ async function mangaDisplayDisappearance(root) {
 const cases = {
   'archive-primary-error': archivePrimaryError,
   'archive-stale-work': archiveStaleWork,
+  'archive-completion-sync': archiveCompletionSync,
   'local-book-stage-retry': localBookStageRetry,
   'text-clear-disappearance': textClearDisappearance,
   'storage-policy-read-retry': storagePolicyReadRetry,

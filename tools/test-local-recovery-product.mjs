@@ -27,7 +27,7 @@ const fileUri = { getUriFromPath: path => pathToFileURL(path).href,
   FileUri: class { constructor(uri) { this.name = basename(fileURLToPath(uri)); } } };
 const errorMessageOf = error => error instanceof Error ? error.message : String(error);
 const HostRegistry = selectedProductionMethods(new URL('app/ReaderHostRegistry.ts', etsRoot), 'ReaderHostRegistry', [
-  'LocalBookLimitBytes', 'StageSpaceReserveBytes', 'HashChunkBytes', 'stageSequences', 'stagingReservations',
+  'LocalBookLimitBytes', 'StageSpaceReserveBytes', 'HashChunkBytes', 'stageSequences', 'stagingReservations', 'deferredStages',
   'prepareSystemLocalBookInput', 'ensureStageRecovery', 'requireSelectedFileName', 'stageLocalBook', 'copyAndHashLocalBook',
   'digestToHex', 'commitLocalBookInput', 'discardLocalBookInput', 'retainedLocalBookSourcePath', 'rollbackLocalBookAsset',
   'localBookStageDirectory', 'localBookAssetDirectory', 'requireLocalBookHash', 'requireLocalBookStagePath',

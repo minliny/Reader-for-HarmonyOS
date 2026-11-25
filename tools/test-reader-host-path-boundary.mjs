@@ -17,6 +17,7 @@ function extract(signature) {
 const methods = [
   extract('localBookStageDirectory()'),
   extract('localBookAssetDirectory()'),
+  extract('pendingLocalImportFinalizeDirectory()'),
   extract('nextStagePath()'),
   extract('requireLocalBookHash(bookId: string)'),
   extract('requireLocalBookStagePath(input: LocalBookInput, hash: string)'),
@@ -25,6 +26,7 @@ const methods = [
 const Harness = new Function(
   `${stripTypeScriptTypes(`class Harness {
     static stageSequences = new Map();
+    static deferredStages = new Map();
     constructor() {
       this.context = { filesDir: '/data/files' };
     }

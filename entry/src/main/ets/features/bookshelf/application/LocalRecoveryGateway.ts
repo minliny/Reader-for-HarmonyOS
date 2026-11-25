@@ -1,6 +1,7 @@
 import fileIo from '@ohos.file.fs';
 import fileUri from '@ohos.file.fileuri';
 import util from '@ohos.util';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { replaceReaderAtomicSnapshot } from '../../../app/ReaderAtomicSnapshotFile';
@@ -56,6 +57,7 @@ const MAX_ORIGINAL_BYTES = 64 * 1024 * 1024;
 const MAX_ORIGINALS = 10000;
 const HASH = /^[a-f0-9]{64}$/;
 const TIMEOUT = 120000;
+const LOG_DOMAIN = 0x5244;
 
 export class LocalRecoveryGateway {
   private static readonly active = new Set<string>();
@@ -203,9 +205,13 @@ export class LocalRecoveryGateway {
         await this.restoreOriginal(this.originalPath(work, index, row.original), row.bookId, row.original, journal);
       }
     }
-    await fileIo.unlink(this.journalPath());
-    await this.syncDirectory();
-    await this.clearUnaccepted().catch(() => {});
+    try { await fileIo.unlink(this.journalPath()); }
+    catch (error) { if (!this.isMissingFile(error)) throw error; }
+    try { await this.clearUnaccepted(); }
+    catch (_) {
+      // Core and every included original already have committed receipts.
+      hilog.warn(LOG_DOMAIN, 'Reader', 'Completed local recovery cleanup deferred');
+    }
     return this.outcome('restored', archive.rows);
   }
 
@@ -455,7 +461,12 @@ export class LocalRecoveryGateway {
 
   private async clearUnaccepted(): Promise<void> {
     if (await this.pending()) return;
-    try { await fileIo.unlink(this.packagePath()); }
+    const path = this.packagePath();
+    if (!(await fileIo.access(path))) return;
+    // Persist the journal's absence before deleting the archive it needs
+    // if an interrupted directory update is replayed after a crash.
+    await this.syncDirectory();
+    try { await fileIo.unlink(path); }
     catch (error) { if (!this.isMissingFile(error)) throw error; }
   }
 
