@@ -4,11 +4,6 @@ import type { ReaderRouteMotionKind } from './ReaderNavigation';
 export const READER_ROUTE_PARENT_PARALLAX = 0.16;
 export const READER_ROUTE_PARENT_DIM = 0.04;
 
-export function readerRouteUnderlayAnimation(kind: ReaderRouteMotionKind | 'none', reduced: boolean): AnimateParam {
-  return readerMotionAnimateParam(kind === 'pop' ? 'app.navigation.pop' : 'app.navigation.push',
-    reduced || kind === 'none');
-}
-
 export function readerRouteTransition(kind: ReaderRouteMotionKind | 'none', width: number,
   reduced: boolean): TransitionEffect {
   if (kind === 'none') return TransitionEffect.IDENTITY;

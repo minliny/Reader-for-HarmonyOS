@@ -1031,6 +1031,8 @@ export struct LocalBookDetail {
       .constraintSize({ minHeight: this.book.contentKind === 'manga' ? visual.detailDockHeight : DETAIL_DOCK_HEIGHT })
       .padding(this.book.contentKind === 'manga' ? visual.detailDockPadding : 9)
       .attributeModifier(new ReaderPanelFrame('floating-action-dock', this.appThemeScheme, false, this.dockNativeShape()))
+      .hitTestBehavior(HitTestMode.Default)
+      .onTouch((): void => {})
       .onAreaChange(this.dockAreaChangeHandler(this.footerMeasurementKey));
   }
   private detailColor(token: ReaderAppColorRole, role: string): string {

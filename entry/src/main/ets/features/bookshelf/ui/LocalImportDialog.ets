@@ -4,14 +4,15 @@ import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/f
 import { MESSAGE_TITLE, MESSAGE_BODY, MESSAGE_META } from '../../../ui/foundation/ReaderMessageStyle';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
+import { ReaderButton } from '../../../ui/controls/ReaderButton';
+import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
+import { readerPaperActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
-import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSurfaceHeader';
-import { ReaderBoundedSurfaceActions } from '../../../ui/surfaces/ReaderBoundedSurfaceActions';
+import { readerImportCardTransition, readerImportOverlayTransition } from '../../../ui/surfaces/ReaderImportDialogStyle';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { TYPE_APP_INHERITED_HINT, TYPE_FILE_IMPORT_BADGE, TYPE_FILE_IMPORT_HINT, TYPE_FILE_IMPORT_LABEL, TYPE_FILE_IMPORT_NAME, TYPE_FILE_IMPORT_PROGRESS, TYPE_FILE_IMPORT_WAIT } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import type { ReaderAppColorRole } from '../../../ui/foundation/ReaderThemeRegistry';
 import { motionAnimateParam, motionAnimateParamDelayed } from '../../../ui/foundation/MotionSpec';
 import { READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS } from './LocalImportMotion';
 import { readerMotionCurve, readerMotionDurationMs } from '../../../ui/foundation/ReaderMotionPolicy';
@@ -31,15 +32,8 @@ import {
   readerInteractiveSafeLeft,
   readerInteractiveSafeRight,
   readerInteractiveSafeTop,
-  readerInteractiveSafeBottom,
 } from '../../../ui/foundation/ReaderWindowMetrics';
 import {
-  TOK_BORDER,
-  TOK_GREEN,
-  TOK_INK,
-  TOK_MUTED,
-  TOK_ON_PRIMARY,
-  TOK_PAPER,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_MD,
   TOK_SPACE_SM,
@@ -67,7 +61,7 @@ class LocalImportSelectionFocusFrame extends FrameCallback {
  * Dialog container: 350 wide at x20, corner 20, shadow 0 25 50 -12 rgba(0,0,0,0.25),
  * File Selection 399.75 @y222.13 / Importing 228 @y308 / Result 636 @y104.
  * The title role at 2657:761 / 2657:805 is mapped by the current Figma file
- * to Noto Serif SC Bold and rendered with `ReaderNotoSerifSCBold`.
+ * to the preloaded Noto Sans SC UI Bold face.
  */
 @Component
 export struct LocalImportDialog {
@@ -172,23 +166,29 @@ export struct LocalImportDialog {
 
   build() {
     Stack({ alignContent: Alignment.Center }) {
-      Text('')
+      Row()
         .width('100%')
         .height('100%')
-        .backgroundColor(readerAppColor('app.scrim.warmModal', this.appThemeScheme));
+        .backgroundColor(readerAppColor('app.scrim.modal', this.appThemeScheme))
+        .backdropBlur(6)
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+        .accessibilityLevel('no');
 
       Stack({ alignContent: Alignment.Center }) {
-        if (this.state === 'fileSelection' || this.state === 'pickerOpening') {
-          this.fileSelectionPanel();
-        } else {
-          // One persistent opaque shell owns the importing -> result handoff.
-          ReaderBoundedSurface({ specId: 'local-import-progress', surfaceWidth: this.panelFrame().width,
-            surfaceHeight: this.state === 'importing' ? this.importingPanelHeight() : this.shellHeight, body: (): void => { this.progressLayers(); } });
-        }
+        Stack({ alignContent: Alignment.Center }) {
+          if (this.state === 'fileSelection' || this.state === 'pickerOpening') {
+            this.fileSelectionPanel();
+          } else {
+            // One persistent opaque shell owns the importing -> result handoff.
+            ReaderBoundedSurface({ specId: 'local-import-progress', surfaceWidth: this.panelFrame().width,
+              surfaceHeight: this.state === 'importing' ? this.importingPanelHeight() : this.shellHeight, body: (): void => { this.progressLayers(); } });
+          }
+        }.width(this.panelFrame().width).transition(readerImportCardTransition(this.reduceMotion));
       }
       .width('100%')
       .height('100%')
-      .padding({ left: this.panelFrame().left, right: this.panelFrame().right });
+      .padding({ left: this.panelFrame().left, right: this.panelFrame().right,
+        top: this.contentSafeTop(), bottom: this.contentBottomInset() });
       if (this.pendingImport()) {
         Column() {
           ReaderRecoveryNotice({ maxHeightVp: this.recoveryMaxHeight(), view: this.recovery, tag: '导入待确认', actionLabel: '核对导入结果',
@@ -201,15 +201,17 @@ export struct LocalImportDialog {
     .width('100%')
     .height('100%')
     .clip(true)
+    .transition(readerImportOverlayTransition(this.reduceMotion))
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
+      const originY = this.numericAreaLength(newValue.globalPosition?.y ?? 0);
+      const originChanged = Number.isFinite(originY) && Math.abs(originY - this.viewportOriginY) >= .1;
+      if (originChanged) this.viewportOriginY = originY;
       const height = this.numericAreaLength(newValue.height);
-      if (Number.isFinite(height) && height >= 0 && Math.abs(height - this.viewportHeight) >= .1) {
+      if (Number.isFinite(height) && height >= 0 && (originChanged || Math.abs(height - this.viewportHeight) >= .1)) {
         this.viewportHeight = height;
         if (this.state === 'importing') this.shellHeight = this.importingPanelHeight();
         if (this.state === 'result' && !this.pendingHandoff) this.shellHeight = this.resultPanelHeight();
       }
-      const originY = this.numericAreaLength(newValue.globalPosition?.y ?? 0);
-      if (Number.isFinite(originY)) this.viewportOriginY = originY;
       const width = this.numericAreaLength(newValue.width);
       if (width > 0 && Math.abs(width - this.viewportWidth) >= 0.01) {
         this.viewportWidth = width;
@@ -241,24 +243,40 @@ export struct LocalImportDialog {
 
   @Builder
   private fileSelectionHeader() {
-    this.importHeader((): string => '导入本地书籍');
+    Row({ space: 6 }) {
+      Text('导入本地书籍').layoutWeight(1).fontFamily(MESSAGE_TITLE.fontFamily).fontWeight(MESSAGE_TITLE.fontWeight)
+        .fontSize(MESSAGE_TITLE.fontSizeFp).lineHeight(MESSAGE_TITLE.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+      ReaderIconButton({ specId: 'toolbar-standard', scheme: this.appThemeScheme,
+        icon: readerPaperActionIcon('close', this.appThemeScheme), accessibilityLabel: '关闭',
+        actionEnabled: this.canDismissSelection(), onTap: (): void => this.dismissSelection() });
+    }.width('100%').padding({ left: 20, right: 12, top: 8 });
   }
 
   @Builder
   private fileSelectionActions() {
     Row({ space: 10 }) {
-      ReaderRecoveryAction({ label: '选择文件', actionEnabled: this.canSelectFiles(),
-        isBusy: this.state === 'pickerOpening', onReconcile: (): void => this.selectFiles() }).layoutWeight(1);
-      ReaderRecoveryAction({ label: '取消', actionEnabled: this.canDismissSelection(),
-        onReconcile: (): void => { if (this.canDismissSelection()) this.onClose(); } }).layoutWeight(1);
-    }.width('100%').padding(17);
+      ReaderButton({ specId: 'form-action', scheme: this.appThemeScheme, label: '选择文件',
+        primary: true, layout: 'equal', actionEnabled: this.canSelectFiles(),
+        leading: (): void => {
+          if (this.state === 'pickerOpening' && this.foreground && !this.reduceMotion) {
+            LoadingProgress().width(14).height(14).color(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
+              .accessibilityLevel('no');
+          }
+        }, onAction: (): void => this.selectFiles() });
+      ReaderButton({ specId: 'form-action', scheme: this.appThemeScheme, label: '取消',
+        layout: 'equal', actionEnabled: this.canDismissSelection(), onAction: (): void => this.dismissSelection() });
+    }.width('100%').padding(20);
+  }
 
+  private dismissSelection(): void {
+    if (this.canDismissSelection()) this.onClose();
   }
 
   @Builder
   private fileSelectionBody() {
       Column({ space: 0 }) {
-        // Drop zone: 310 wide, dashed 2px #C1C7CD on #F8F4EC, radius 14.
+        // The document picker remains the sole owner of native file selection.
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Column({ space: TOK_SPACE_SM }) {
           Stack({ alignContent: Alignment.Center }) {
@@ -266,7 +284,7 @@ export struct LocalImportDialog {
           }
           .width(44)
           .height(44)
-          .backgroundColor(readerAppColor('app.import.selectedSurface', this.appThemeScheme))
+          .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
           .borderRadius(22);
 
           Column({ space: 0 }) {
@@ -288,24 +306,24 @@ export struct LocalImportDialog {
           }
           .alignItems(HorizontalAlign.Center);
 
-          Row({ space: 6 }) {
-            this.formatBadge('TXT', 'TOK_GREEN');
-            this.formatBadge('EPUB', 'app.import.formatText');
-            this.formatBadge('MOBI', 'app.import.formatEpub');
-            this.formatBadge('AZW3', 'app.import.formatArchive');
-          }
+          Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.Center }) {
+            this.formatBadge('TXT', true);
+            this.formatBadge('EPUB', true);
+            this.formatBadge('MOBI', false);
+            this.formatBadge('AZW3', false);
+          }.width('100%');
         }
         .width('100%')
-        .padding({ top: 30, bottom: 30, left: 2, right: 2 })
+        .padding(20)
         .justifyContent(FlexAlign.Center)
         .alignItems(HorizontalAlign.Center)
           .accessibilityLevel('no-hide-descendants');
         }
         .width('100%')
         .padding(0)
-        .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
-        .border({ width: 2, color: readerAppColor('TOK_BORDER', this.appThemeScheme), style: BorderStyle.Dashed })
-        .borderRadius(14)
+        .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
+        .border({ width: 2, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme), style: BorderStyle.Dashed })
+        .borderRadius(16)
         .id(LOCAL_IMPORT_FILE_FOCUS_ID)
         .attributeModifier(new ReaderActionAccessibility('从系统文件中选择', this.canSelectFiles(), false, true, undefined, 'nativeButton'))
         .onClick((): void => this.selectFiles());
@@ -329,7 +347,7 @@ export struct LocalImportDialog {
 
       }
       .width('100%')
-      .padding({ left: 20, right: 20, top: 20 });
+      .padding({ left: 20, right: 20, top: 8 });
   }
 
   @Builder
@@ -495,17 +513,19 @@ export struct LocalImportDialog {
   }
 
   @Builder
-  private formatBadge(label: string, colorRole: ReaderAppColorRole) {
+  private formatBadge(label: string, accent: boolean) {
     Text(label)
       .fontFamily(TYPE_FILE_IMPORT_BADGE.fontFamily)
       .fontWeight(TYPE_FILE_IMPORT_BADGE.fontWeight)
       .fontSize(TYPE_FILE_IMPORT_BADGE.fontSizeFp)
       .lineHeight(TYPE_FILE_IMPORT_BADGE.lineHeightFp as number)
       .letterSpacing(TYPE_FILE_IMPORT_BADGE.letterSpacingFp as number)
-      .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
-      .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-      .backgroundColor(readerAppColor(colorRole, this.appThemeScheme))
-      .borderRadius(4);
+      .fontColor(readerAppColor(accent ? 'TOK_PRIMARY_TEXT' : 'TOK_MUTED', this.appThemeScheme))
+      .padding({ left: 8, right: 8, top: 2, bottom: 2 })
+      .margin({ left: 3, right: 3, bottom: 3 })
+      .backgroundColor(readerAppColor(accent ? 'TOK_PRIMARY_SOFT' : 'TOK_CARD_BG', this.appThemeScheme))
+      .border({ width: 1, color: readerAppColor(accent ? 'TOK_PRIMARY_BORDER' : 'TOK_LINE', this.appThemeScheme) })
+      .borderRadius(6);
   }
 
   private resultItems(): LocalImportItem[] {
@@ -553,24 +573,32 @@ export struct LocalImportDialog {
   }
 
   private availableHeight(): number {
+    return readerSurfaceMaxHeight(this.contentBottom(), this.contentSafeTop() + 40);
+  }
+
+  private contentSafeTop(): number {
+    this.readerWindowMetricsRevision;
+    return Math.max(0, readerInteractiveSafeTop(ReaderWindowCoordinator.metrics()) - this.viewportOriginY);
+  }
+
+  private contentBottom(): number {
     this.readerWindowMetricsRevision;
     const metrics = ReaderWindowCoordinator.metrics();
     const height = this.viewportHeight >= 0 ? this.viewportHeight : metrics.windowRect.height;
-    return readerSurfaceMaxHeight(height,
-      readerInteractiveSafeTop(metrics) + readerInteractiveSafeBottom(metrics) + 40);
+    return readerKeyboardHostBottom(metrics, this.viewportOriginY, height);
+  }
+
+  private contentBottomInset(): number {
+    const height = this.viewportHeight >= 0 ? this.viewportHeight : ReaderWindowCoordinator.metrics().windowRect.height;
+    return Math.max(0, height - this.contentBottom());
   }
 
   private recoveryTop(): number {
-    this.readerWindowMetricsRevision;
-    return Math.max(0, readerInteractiveSafeTop(ReaderWindowCoordinator.metrics()) - this.viewportOriginY) + 8;
+    return this.contentSafeTop() + 8;
   }
 
   private recoveryMaxHeight(): number {
-    this.readerWindowMetricsRevision;
-    const metrics = ReaderWindowCoordinator.metrics();
-    const windowHeight = Math.max(0, metrics.windowRect.height - this.viewportOriginY);
-    const height = Math.min(this.viewportHeight >= 0 ? this.viewportHeight : windowHeight, windowHeight);
-    return readerSurfaceMaxHeight(readerKeyboardHostBottom(metrics, this.viewportOriginY, height), this.recoveryTop() + 8);
+    return readerSurfaceMaxHeight(this.contentBottom(), this.recoveryTop() + 8);
   }
 
   private allSucceeded(): boolean {

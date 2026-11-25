@@ -540,12 +540,12 @@ function checkCurrentWeight(candidate = source) {
   const { owner } = probe('day', false, 390, 1, candidate);
   owner.mangaNumberCell(gridData.getData(1));
   const title = [...owner.nodes.values()].find(native => native.type === 'Text' && native.create === '02');
-  assert.deepEqual(title.fontWeight, [550, {enableVariableFontWeight: true}], 'current native number explicitly declares the demo 550 role');
+  assert.deepEqual(title.fontWeight, 500, 'current native number explicitly declares the static UI Medium 500 role');
 }
 checkCurrentWeight();
 const wrongCurrentWeight = source.replaceAll('MANGA_DIRECTORY_VISUAL.currentFontWeight', 'MANGA_DIRECTORY_VISUAL.bodyFontWeight');
 assert.notEqual(wrongCurrentWeight, source);
-assert.throws(() => checkCurrentWeight(wrongCurrentWeight), /explicitly declares the demo 550/);
+assert.throws(() => checkCurrentWeight(wrongCurrentWeight), /explicitly declares the static UI Medium 500/);
 {
   const verifySeam = (seamNodes, expectedColumns, expectedOrdinal, label) => {
     const requests = [], localView = { ...gridView, viewId: label, visibleTotal: seamNodes.length,
@@ -590,8 +590,8 @@ for (const scheme of ['day', 'night']) {
   assert.equal(cell.height, 46, 'a 44vp response plus two 1vp borders reserves no second current-reading line');
   assert.equal(cell.borderRadius, 8);
   assert.equal(cell.backgroundColor, scheme === 'night' ? '#303C2D' : '#E8EDE2');
-  assert.equal(rendered.find(item => item.type === 'Text' && item.create === '02').fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_550);
-  assert.deepEqual(rendered.find(item => item.type === 'Text' && item.create === '02').fontWeight, [550, { enableVariableFontWeight: true }]);
+  assert.equal(rendered.find(item => item.type === 'Text' && item.create === '02').fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_MEDIUM);
+  assert.deepEqual(rendered.find(item => item.type === 'Text' && item.create === '02').fontWeight, 500);
   const current = rendered.find(item => item.type === 'Image');
   assert.equal(current.width, 10); assert.equal(current.height, 10);
   assert.deepEqual(current.margin, { top: 5, right: 5 });

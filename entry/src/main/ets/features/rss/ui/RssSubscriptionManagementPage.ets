@@ -20,15 +20,8 @@ import type { RssSubscription } from '../application/RssGateway';
 import type { RssManagementOperationProjection } from '../application/RssOrchestrator';
 import {
   TOK_BORDER_W,
-  TOK_CARD_BG_HI,
-  TOK_INK,
-  TOK_MUTED,
-  TOK_PRIMARY_BG,
-  TOK_PRIMARY_SOFT,
-  TOK_ROW_DIVIDER,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_XS,
-  TOK_SURFACE_PANEL_SOFT,
 } from '../../../ui/foundation/ReaderTokens';
 
 /**
@@ -99,6 +92,7 @@ export struct RssSubscriptionManagementPage {
 
   build() {
     ReaderStandardPage({
+      floatingHeader: true,
       variant: 'rssManagement',
       scrollOwner: 'native-list',
       header: (): void => { this.backBar(); },
@@ -119,6 +113,7 @@ export struct RssSubscriptionManagementPage {
   @Builder
   private backBar() {
     PageBackBar({
+      floating: true, centered: true, elevation: 'floating',
       title: '订阅源管理', trailingWidthVp: this.addActionWidth(),
       onBack: (): void => this.onBack(),
     }) {
@@ -129,7 +124,7 @@ export struct RssSubscriptionManagementPage {
         Text('添加')
           .fontFamily(TYPE_FORM_COMPACT_ACTION.fontFamily)
           .fontWeight(TYPE_FORM_COMPACT_ACTION.fontWeight)
-          .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp)
+          .fontSize(TYPE_FORM_COMPACT_ACTION.fontSizeFp).lineHeight(17).halfLeading(true)
           .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
           .maxLines(1);
       }
@@ -262,7 +257,8 @@ export struct RssSubscriptionManagementPage {
 
   @Builder
   private sourceDocumentAction(label: string, action: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'form-document-action', label, layout: 'full', onAction: action }).layoutWeight(1);
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'form-document-action', label, variant: 'tonal', visualSize: 'medium',
+      layout: 'full', onAction: action }).layoutWeight(1);
   }
 
   @Builder
@@ -376,7 +372,8 @@ export struct RssSubscriptionManagementPage {
         (): void => this.onEditSource(subscriptionId()));
       this.actionTarget('立即刷新', (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.discover_refresh_theme_night') : $r('app.media.discover_refresh')), false, true,
         (): void => this.onRefresh(subscriptionId()));
-      this.actionTarget('删除', (): Resource => $r('app.media.rss_manage_delete'), true, true,
+      this.actionTarget('删除', (): Resource => this.appThemeScheme === 'night' ?
+        $r('app.media.rss_manage_delete_theme_night') : $r('app.media.rss_manage_delete'), true, true,
         (): void => this.onDelete(subscriptionId()));
     }
     .width('100%')

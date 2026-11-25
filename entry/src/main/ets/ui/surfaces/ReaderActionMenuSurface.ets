@@ -99,7 +99,7 @@ export struct ReaderActionMenuSurface {
         }
         Text(this.action(id).label)
           .fontFamily(this.spec().actionFontFamily).fontWeight(this.spec().actionFontWeight)
-          .fontSize(this.spec().actionFontSize).lineHeight(this.spec().actionLineHeight)
+          .fontSize(this.spec().actionFontSize).lineHeight(this.spec().actionLineHeight).halfLeading(true)
           .fontColor(readerAppColor(this.spec().actionTextRole, this.effectiveScheme()))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .layoutWeight(this.spec().actionIconSize > 0 ? 1 : undefined);
@@ -142,7 +142,7 @@ export struct ReaderActionMenuSurface {
             .backgroundColor(readerAppColor(this.action(id).tone === 'danger' ? 'TOK_DOWNLOAD_DANGER' : 'TOK_GREEN', this.effectiveScheme()))
             .borderRadius(this.actionSheetSpec().iconRadius);
         }
-        Text(this.action(id).label).fontSize(this.actionSheetSpec().labelFontSize).lineHeight(this.actionSheetSpec().labelLineHeight)
+        Text(this.action(id).label).fontSize(this.actionSheetSpec().labelFontSize).lineHeight(this.actionSheetSpec().labelLineHeight).halfLeading(true)
           .fontFamily(this.actionSheetSpec().labelFontFamily).fontWeight(this.actionSheetSpec().labelFontWeight)
           .fontColor(this.color(this.action(id).tone === 'danger' ? 'danger' : 'ink'))
           .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1);

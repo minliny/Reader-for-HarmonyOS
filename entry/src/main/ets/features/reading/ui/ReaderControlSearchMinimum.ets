@@ -4,6 +4,7 @@ import type { UIContext } from '@ohos.arkui.UIContext';
 import { ReaderTextStyle, ReaderInheritedTextStyle, TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT, TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE, TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET, TYPE_READER_SEARCH_RETAINED_QUICK_BACK_BACK } from '../../../ui/foundation/ReaderTypography';
 
 import { MESSAGE_ACTION, MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
+import { SEARCH_CONTROL_CLEAR_END_INSET, SEARCH_CONTROL_CLEAR_SLOT } from '../../../ui/foundation/ReaderSearchControlGeometry';
 import type { ReaderControlCandidateWidths, ReaderControlFormMinimum } from './ReaderLayoutGeometry';
 import { type ReaderControlSearchNaturalSize, sampleReaderControlSearch } from './ReaderControlSearchGeometry';
 
@@ -69,9 +70,10 @@ export interface ReaderSearchMinimumProfile {
 function form(context: UIContext, width: number, full: boolean,
   facts: ReaderSearchMinimumFacts): ReaderSearchFormProfile | undefined {
   const original = sampleReaderControlSearch(full ? 1 : 0, width, full ? 666 : 190);
-  if (original.field.width <= 22 || original.firstResult.width <= 18) return undefined;
+  const fieldChrome = facts.query.length > 0 ? 9 + SEARCH_CONTROL_CLEAR_END_INSET + SEARCH_CONTROL_CLEAR_SLOT + 4 : 22;
+  if (original.field.width <= fieldChrome || original.firstResult.width <= 18) return undefined;
   const field = measureReaderControlText(context, facts.query || '搜索正文内容', TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT,
-    original.field.width - 22);
+    original.field.width - fieldChrome);
   const title = measureReaderControlText(context, facts.title, TYPE_READER_SEARCH_RETAINED_RESULT_ROW_TITLE,
     original.firstResult.width - 18);
   const snippetRole = TYPE_READER_SEARCH_RETAINED_RESULT_SNIPPET_SNIPPET;
@@ -82,7 +84,7 @@ function form(context: UIContext, width: number, full: boolean,
   const snippet = measureReaderControlText(context, facts.snippet, snippetStyle, original.firstResult.width - 18);
   const match = measureReaderControlText(context, facts.snippet, matchStyle, original.firstResult.width - 18);
   const back = measureReaderControlText(context, '返回', TYPE_READER_SEARCH_RETAINED_QUICK_BACK_BACK, 51);
-  const glyph = measureReaderControlText(context, '字', TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT, original.field.width - 22);
+  const glyph = measureReaderControlText(context, '字', TYPE_READER_SEARCH_RETAINED_SEARCH_FIELD_INPUT, original.field.width - fieldChrome);
   const noAction: ReaderControlTextExtent = { widthVp: 0, heightVp: 0, singleLineWidthVp: 0, fitsWidth: true };
   const loadAction = facts.loadMoreLabel.length > 0 ?
     measureReaderControlText(context, facts.loadMoreLabel, MESSAGE_ACTION, Math.max(1, width - 36), 'wrap') : noAction;
@@ -97,14 +99,14 @@ function form(context: UIContext, width: number, full: boolean,
     new ReaderInheritedTextStyle(MESSAGE_BODY.fontFamily, undefined, MESSAGE_BODY.fontSizeFp,
       MESSAGE_BODY.lineHeightFp, undefined, 'system', 'appBaseline'),
     Math.max(1, original.results.width - loadWidth - loadActionGap), 'wrap');
+  const statusWidth = facts.resultsMode ? original.results.width : Math.max(1, width - 4);
   const status = facts.message.length === 0 ? noAction :
     measureReaderControlText(context, facts.message, MESSAGE_BODY, statusWidth, 'wrap');
-  const statusWidth = facts.resultsMode ? original.results.width : Math.max(1, width - 4);
   if (field === undefined || title === undefined || snippet === undefined || match === undefined ||
     loadAction === undefined || loadMessage === undefined || status === undefined || back === undefined || glyph === undefined) return undefined;
   const inputHeight = Math.max(14, field.heightVp);
   const backHeight = Math.max(24, back.heightVp + 8);
-  const fieldHeight = Math.max(full ? 32 : 24, inputHeight, full ? 0 : backHeight);
+  const fieldHeight = Math.max(original.field.height, inputHeight, full ? 0 : backHeight);
   const titleHeight = Math.max(13, title.heightVp);
   // The actual Text keeps maxLines(2); both real Span weights share this
   // declared line-height upper bound, including short and long result rows.
@@ -122,10 +124,10 @@ function form(context: UIContext, width: number, full: boolean,
   const viewport = facts.hasResults ? rowHeight + actual.firstResult.y + loadHeight + (loadHeight > 0 ? 4 : 0) +
     actual.resultEndPadding + cacheScopeHeight :
     facts.resultsMode ? Math.max(1, loadHeight + cacheScopeHeight) : natural.statusHeightVp;
-  const minWidth = Math.max(width - actual.field.width + 22 + glyph.singleLineWidthVp,
+  const minWidth = Math.max(width - actual.field.width + fieldChrome + glyph.singleLineWidthVp,
     facts.loadMoreLabel.length > 0 ? loadWidth + 4 : 0);
   return { minimum: { heightVp: actual.results.y + Math.max(1, viewport) + 1, minWidthVp: minWidth,
-    fits: width + .1 >= minWidth && actual.field.width > 22 }, natural };
+    fits: width + .1 >= minWidth && actual.field.width > fieldChrome }, natural };
 }
 
 export function measureReaderSearchMinimum(context: UIContext, widths: ReaderControlCandidateWidths,

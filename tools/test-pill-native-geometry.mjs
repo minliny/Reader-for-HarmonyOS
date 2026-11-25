@@ -117,7 +117,8 @@ function testControls() {
   group.initialRender();
   const chip = nodes(group, 'Text').find(node => node.create === '默认');
   assert.equal(chip.borderRadius, (readerTypographyRoles.TYPE_APP_FILTER_OPTION.lineHeightFp + 10) / 2);
-  assert.equal(nodes(group, 'Button')[0].constraintSize.minHeight, 44);
+  const defaultGroup = nodes(group, 'Button').find(node => node.accessibilityText === '默认分组');
+  assert.equal(defaultGroup.constraintSize.minHeight, 44);
 
   const fieldSource = readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderSearchField.ets', import.meta.url), 'utf8');
   const field = createReaderBuilderProbe(fieldSource, ['passiveField', 'cornerRadius', 'nativeFieldBackground',
@@ -260,8 +261,9 @@ function testControlFamilies() {
   const source = name => readFileSync(new URL(`../entry/src/main/ets/ui/controls/${name}.ets`, import.meta.url), 'utf8');
   const search = source('ReaderSearchField');
   const field = createReaderBuilderProbe(search,
-    ['fixedLineHeightField', 'bookEditorLane', 'nativeFieldBackground', 'nativeInputBackground',
-      'fieldHeight', 'inputHeight', 'horizontalPadding', 'isBookField', 'fieldBackgroundColor', 'fieldBorderWidth', 'fieldBorderColor'],
+    ['fixedLineHeightField', 'bookEditorLane', 'clearButton', 'nativeFieldBackground', 'nativeInputBackground',
+      'fieldHeight', 'inputHeight', 'horizontalPadding', 'isBookField', 'fieldBackgroundColor', 'fieldBorderWidth', 'fieldBorderColor',
+      'resolvedClearAccessibilityLabel', 'clearAccessibilityLabel'],
     shared.dependencies, shared.hooks).owner;
   Object.assign(field, {
     variant: 'bookPanel', appThemeScheme: 'day', placeholder: '搜索书名', text: '第12章',
@@ -282,7 +284,11 @@ function testControlFamilies() {
   assert.equal(input.height, 44);
   assert.equal(input.borderRadius, 0);
   assert.equal(input.fontFeature, '"tnum" 1');
-  assert.deepEqual([clear.width, clear.height], [44, 44]);
+  assert.deepEqual([clear.width, clear.height], [32, 44]);
+  assert.deepEqual(clear.responseRegion, { x: -6, y: 0, width: 44, height: 44 });
+  assert.equal(clear.focusOnTouch, false);
+  assert.equal(nodes(field, 'Image').filter(node => node.width === 18 && node.height === 18).length, 1);
+  assert.deepEqual(nodes(field, 'Row').find(node => node.padding?.right === 6).padding, { left: 14, right: 6 });
 
   const switches = switchControls();
   for (const specId of ['standard-toggle', 'bookshelf-update-toggle']) {

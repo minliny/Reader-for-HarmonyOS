@@ -17,23 +17,18 @@ export interface ReaderCardSpec {
   contentSpacing?: number;
 }
 
-// CategorySection and Sync configuration already use the same actual tuple.
-// Share that one specification; status cards use the large radius token.
+// Settings menus and Sync configuration and status cards share one frame.
 const STANDARD_CARD: ReaderCardSpec = {
   backgroundRole: 'TOK_CARD_BG', borderRole: 'TOK_LINE',
   borderWidth: TOK_BORDER_W, radius: 14, maxWidth: TOK_CONTENT_MAX_W_TABLET, elevation: 'card',
 };
-const SYNC_STATUS_CARD: ReaderCardSpec = {
-  backgroundRole: 'TOK_CARD_BG', borderRole: 'TOK_LINE',
-  borderWidth: TOK_BORDER_W, radius: TOK_RADIUS_LG, maxWidth: TOK_CONTENT_MAX_W_TABLET, elevation: 'card',
-};
 const EDITOR_SECTION_CARD: ReaderCardSpec = {
   backgroundRole: 'TOK_CARD_BG', borderRole: 'TOK_LINE', borderWidth: TOK_BORDER_W,
-  radius: 10, maxWidth: Number.MAX_SAFE_INTEGER, contentPadding: TOK_SPACE_SM, contentSpacing: TOK_SPACE_SM,
+  radius: STANDARD_CARD.radius, maxWidth: Number.MAX_SAFE_INTEGER, contentPadding: TOK_SPACE_SM, contentSpacing: TOK_SPACE_SM,
 };
 const BORDERED_LIST_SECTION_CARD: ReaderCardSpec = {
   backgroundRole: 'TOK_CARD_BG', borderRole: 'TOK_LINE', borderWidth: TOK_BORDER_W,
-  radius: 10, maxWidth: Number.MAX_SAFE_INTEGER, contentPadding: TOK_SPACE_SM, contentSpacing: TOK_SPACE_XS,
+  radius: STANDARD_CARD.radius, maxWidth: Number.MAX_SAFE_INTEGER, contentPadding: TOK_SPACE_SM, contentSpacing: TOK_SPACE_XS,
 };
 const PREFERENCE_PANEL_CARD: ReaderCardSpec = {
   backgroundRole: 'TOK_CARD_BG', borderRole: 'TOK_LINE', borderWidth: TOK_BORDER_W,
@@ -45,11 +40,10 @@ const DANGER_ACTION_CARD: ReaderCardSpec = {
 };
 const TASK_DIAGNOSTICS_CARD: ReaderCardSpec = {
   backgroundRole: 'TOK_CARD_BG', borderRole: 'TOK_LINE', borderWidth: TOK_BORDER_W,
-  radius: 12, maxWidth: Number.MAX_SAFE_INTEGER, contentPadding: 17, contentSpacing: TOK_SPACE_SM,
+  radius: STANDARD_CARD.radius, maxWidth: Number.MAX_SAFE_INTEGER, contentPadding: 17, contentSpacing: TOK_SPACE_SM,
 };
 
 export function resolveReaderCardSpec(id: ReaderCardSpecId): ReaderCardSpec {
-  if (id === 'sync-status') return SYNC_STATUS_CARD;
   if (id === 'editor-section') return EDITOR_SECTION_CARD;
   if (id === 'bordered-list-section') return BORDERED_LIST_SECTION_CARD;
   if (id === 'preference-panel') return PREFERENCE_PANEL_CARD;

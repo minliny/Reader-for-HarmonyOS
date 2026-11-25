@@ -86,14 +86,14 @@ export struct ReaderIconButton {
         .objectFit(ImageFit.Contain)
         .opacity(this.specId === 'reader-chapter-step' || this.actionEnabled ? 1 : 0.45)
         .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
-    }.width(this.paintBoxSize()).height(this.paintBoxSize()).border(this.activeBorder())
+    }.width(this.paintBoxSize()).height(this.paintBoxSize()).border(this.activeBorder()).borderRadius(this.restingRadius())
       .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
       .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion,
         this.specId === 'reader-chapter-step' && !this.actionEnabled ? 0.4 : 1))
       .animation(readerPressAnimation(this.reduceMotion))
       .attributeModifier(new ReaderPressFeedback(this.frameSurface(), this.effectiveScheme(),
         this.restingRadius(),
-        Math.min(resolveReaderIconButtonSpec(this.specId).pressedRadius, resolveReaderIconButtonSpec(this.specId).boxSize / 2),
+        Math.min(resolveReaderIconButtonSpec(this.specId).pressedRadius, this.paintBoxSize() / 2),
         this.canAct() && resolveReaderIconButtonSpec(this.specId).pressFeedback !== false, this.pressPointer >= 0))
       .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
   }
@@ -108,30 +108,30 @@ export struct ReaderIconButton {
   private canAct(): boolean { return this.mounted && this.actionEnabled && this.accessibilityLabel.trim().length > 0; }
   private restingRadius(): number {
     const spec = resolveReaderIconButtonSpec(this.specId);
-    return Math.min(spec.radius, spec.boxSize / 2);
+    return Math.min(spec.radius, this.paintBoxSize() / 2);
   }
 
   private paintBoxSize(): number {
-    return this.specId === 'form-primary-icon' ? this.formPrimaryBoxSize() : resolveReaderIconButtonSpec(this.specId).boxSize;
+    const spec = resolveReaderIconButtonSpec(this.specId);
+    return this.specId === 'form-primary-icon' ? this.formPrimaryBoxSize() : spec.paintSize ?? spec.boxSize;
   }
   private formPrimaryBoxSize(): number {
     return Math.max(resolveReaderIconButtonSpec(this.specId).boxSize, this.minimumTargetSize);
   }
   private effectiveScheme(): string { return this.scheme === 'day' || this.scheme === 'night' ? this.scheme : this.appThemeScheme; }
   private frameSurface(): ResourceColor {
-    const activeFill = resolveReaderIconButtonSpec(this.specId).activeFill;
-    if (activeFill !== undefined && this.actionEnabled && this.selectionState !== 'none') {
-      return readerAppColor(activeFill, this.effectiveScheme());
-    }
+    const spec = resolveReaderIconButtonSpec(this.specId);
+    const fill = this.actionEnabled && this.selectionState !== 'none' ? spec.activeFill ?? spec.restingFill : spec.restingFill;
+    if (fill !== undefined) return readerAppColor(fill, this.effectiveScheme());
     if (this.specId === 'form-primary-icon') return readerAppColor('TOK_PRIMARY_DARK', this.effectiveScheme());
     if (this.specId !== 'reader-chapter-step') return Color.Transparent;
     return readerAppColor(this.actionEnabled ? 'TOK_READ_ELEVATED' : 'TOK_READ_DISABLED_BG', this.effectiveScheme());
   }
   private activeBorder(): BorderOptions | undefined {
-    const role = resolveReaderIconButtonSpec(this.specId).activeBorder;
-    if (role === undefined) return undefined;
-    return { width: this.actionEnabled && this.selectionState !== 'none' ? 1 : 0,
-      color: readerAppColor(role, this.effectiveScheme()) };
+    const spec = resolveReaderIconButtonSpec(this.specId);
+    const role = this.actionEnabled && this.selectionState !== 'none' ?
+      spec.activeBorder ?? spec.restingBorder : spec.restingBorder;
+    return role === undefined ? undefined : { width: 1, color: readerAppColor(role, this.effectiveScheme()) };
   }
   private commit(): void { if (this.canAct()) this.onTap(); }
   private actionHandler(): () => void {

@@ -27,14 +27,24 @@ class BookshelfNavigationFrame extends FrameCallback {
   onIdle(_remaining: number): void {}
 }
 
+export interface BookshelfOpeningPaint {
+  readerOpacity: number;
+  shelfOpacity: number;
+  shelfScale: number;
+  shelfBrightness: number;
+}
+
+/** The two paint layers subscribe here without observing Index on each frame. */
+@Observed
+export class BookshelfNavigationPaint {
+  opening: BookshelfOpeningPaint = { readerOpacity: 1, shelfOpacity: 1, shelfScale: 1, shelfBrightness: 1 };
+}
+
 /** Cover transition geometry and visual phases. The root owns reader admission and exit. */
 @Observed
 export class BookshelfNavigationPresentation {
   request: BookshelfMotionRequest | undefined = undefined;
-  readerOpacity: number = 1;
-  shelfOpacity: number = 1;
-  shelfScale: number = 1;
-  shelfBrightness: number = 1;
+  readonly paint: BookshelfNavigationPaint = new BookshelfNavigationPaint();
   returnBookKey: string = '';
   private shelfMotionSequence: number = 0;
   private shelfMotionOrigin: BookshelfBookOrigin | undefined = undefined;
@@ -53,8 +63,7 @@ export class BookshelfNavigationPresentation {
     this.deferredShelfMotionProjection = undefined;
     this.shelfMotionSequence += 1;
     this.request = undefined;
-    this.readerOpacity = 1;
-    this.resetShelfPaint();
+    this.resetOpeningPaint(1);
     this.returnBookKey = '';
     this.shelfMotionReturnNavigation = -1;
     if (forgetOrigin) {
@@ -69,8 +78,7 @@ export class BookshelfNavigationPresentation {
     if (this.request?.id !== id) return;
     if (this.pendingExitId === id) this.coverClosed(id);
     this.request = undefined;
-    this.readerOpacity = 1;
-    this.resetShelfPaint();
+    this.resetOpeningPaint(1);
     this.returnBookKey = '';
     const project = this.deferredShelfMotionProjection;
     this.deferredShelfMotionProjection = undefined;
@@ -82,25 +90,14 @@ export class BookshelfNavigationPresentation {
       this.request?.direction === 'open';
   }
 
-  publishReaderOpacity(id: number, opacity: number): void {
+  publishOpeningPaint(id: number, paint: BookshelfOpeningPaint): void {
     if (this.request?.id !== id || this.request.direction !== 'open' ||
-      !this.scope.readingActive() || this.scope.route() !== 'reading' || !Number.isFinite(opacity)) return;
-    const next = Math.max(0, Math.min(1, opacity));
-    if (Math.abs(next - this.readerOpacity) > 0.0001) this.readerOpacity = next;
+      !this.scope.readingActive() || this.scope.route() !== 'reading') return;
+    this.paint.opening = paint;
   }
 
-  publishShelfPaint(id: number, opacity: number, scale: number, brightness: number): void {
-    if (this.request?.id !== id || !this.retainsOpeningBackground() ||
-      ![opacity, scale, brightness].every((value: number): boolean => Number.isFinite(value))) return;
-    this.shelfOpacity = Math.max(0, Math.min(1, opacity));
-    this.shelfScale = Math.max(0.97, Math.min(1, scale));
-    this.shelfBrightness = Math.max(0.6, Math.min(1, brightness));
-  }
-
-  private resetShelfPaint(): void {
-    this.shelfOpacity = 1;
-    this.shelfScale = 1;
-    this.shelfBrightness = 1;
+  private resetOpeningPaint(readerOpacity: number): void {
+    this.paint.opening = { readerOpacity, shelfOpacity: 1, shelfScale: 1, shelfBrightness: 1 };
   }
 
   coverClosed(id: number): void {
@@ -195,7 +192,7 @@ export class BookshelfNavigationPresentation {
       origin: bookshelfMotionLocalOrigin(source, viewport),
       target: this.shelfMotionPageFallback(viewport),
       fadeOnly: !measured || this.scope.contentKind() !== 'text' };
-    this.readerOpacity = 0;
+    this.resetOpeningPaint(0);
     this.request = request;
     this.backfillShelfMotionPage(request.id, this.shelfMotionPageIdentity(request.id), 4);
   }

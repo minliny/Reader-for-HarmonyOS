@@ -1,11 +1,8 @@
 import { ReaderCard } from '../../../ui/surfaces/ReaderCard';
+import { resolveReaderCardSpec } from '../../../ui/surfaces/ReaderCardSpecs';
 import { ReaderSectionHeading } from '../../../ui/controls/ReaderSectionHeading';
 
-
-// CategorySection —— Settings / Sync 分类区块 (Figma Page/Settings General Section):
-// 卡片容器 (bg TOK_CARD_BG + border TOK_BORDER + r8) + Heading 2 + 数据行栈。行由
-// CategoryRow 提供, 调用方经 content @BuilderParam 注入。Width Fill / Height Hug。
-// 普通页面不再复制 Card + Heading + row-stack 结构 (FIGMA_NATIVE_UI_ARCHITECTURE_PLAN §六)。
+/** Settings section caption and its shared 14vp paper card. */
 @Component
 export struct CategorySection {
   @Prop title: string = '';
@@ -13,17 +10,16 @@ export struct CategorySection {
   @BuilderParam content: () => void;
 
   build() {
-    ReaderCard({ specId: 'settings-category', cardWidth: this.cardWidth }) {
-      Column() {
+    Column({ space: 6 }) {
+      if (this.title.length > 0) {
         ReaderSectionHeading({ title: this.title });
+      }
+      ReaderCard({ specId: 'settings-category', cardWidth: this.cardWidth }) {
         Column() {
           this.content();
-        }
-        .width('100%')
-        .padding({ top: 5 });
+        }.width('100%');
       }
-      .width('100%')
-      .padding({ top: 9, bottom: 1 });
-    }
+    }.width(this.cardWidth > 0 ? this.cardWidth : '100%')
+      .constraintSize({ maxWidth: resolveReaderCardSpec('settings-category').maxWidth });
   }
 }

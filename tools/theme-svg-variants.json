@@ -121,6 +121,7 @@
   "rss_item_chevron",
   "rss_link",
   "rss_manage",
+  "rss_manage_delete",
   "rss_manage_edit",
   "rss_manage_view_all",
   "rss_refresh",

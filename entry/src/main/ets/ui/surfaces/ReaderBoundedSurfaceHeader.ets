@@ -1,3 +1,4 @@
+import { readerPaperActionIcon } from '../foundation/ReaderActionIconResources';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerReadableFontScale } from '../foundation/ReaderSurfaceResolvers';
 import { TYPE_SOURCE_SWITCH_HEADING, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_CONFIGURATION_TITLE, TYPE_FILE_IMPORT_TITLE, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE } from '../foundation/ReaderTypography';
@@ -188,7 +189,7 @@ export struct ReaderBoundedSurfaceHeader {
 
   @Builder private sheetClose() {
     Button({ type: ButtonType.Normal }) {
-      Image(this.appThemeScheme === 'night' ? $r('app.media.reader_action_close_theme_night') : $r('app.media.reader_action_close'))
+      Image(readerPaperActionIcon('close', this.appThemeScheme))
         .width(this.sheetSpec().closeIcon).height(this.sheetSpec().closeIcon);
     }.width(this.sheetSpec().closeSize).height(this.sheetSpec().closeSize).padding(0)
       .backgroundColor(Color.Transparent).enabled(this.actionEnabled).accessibilityText('关闭面板')

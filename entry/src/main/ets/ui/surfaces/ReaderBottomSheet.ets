@@ -27,6 +27,7 @@ export struct ReaderBottomSheet {
   @State private frameVisible: boolean = false;
   private mounted: boolean = false;
   private coverReady: boolean = false;
+  private coverAppearance: number = 0;
   private frameAttached: boolean = false;
   private opened: boolean = false;
 
@@ -35,7 +36,10 @@ export struct ReaderBottomSheet {
     this.onVisibilityChanged();
   }
 
-  aboutToDisappear(): void { this.mounted = false; }
+  aboutToDisappear(): void {
+    this.mounted = false;
+    this.coverAppearance += 1;
+  }
 
   private onVisibilityChanged(): void {
     if (!this.mounted) return;
@@ -55,15 +59,19 @@ export struct ReaderBottomSheet {
       onAppear: (): void => {
         if (!this.mounted) return;
         this.coverReady = true;
-        // Enter from an already mounted transparent cover so first-open and
-        // later opens use the same child transition.
-        if (this.visible) this.frameVisible = true;
-        else this.coverVisible = false;
+        const appearance = ++this.coverAppearance;
+        // The native cover may announce appearance during its first render.
+        void Promise.resolve().then((): void => {
+          if (!this.mounted || appearance !== this.coverAppearance || !this.coverVisible) return;
+          if (this.visible) this.frameVisible = true;
+          else this.coverVisible = false;
+        });
       },
       onWillDismiss: (_action: DismissContentCoverAction): void => {
         if (this.mounted && this.visible) this.onRequestClose();
       },
       onDisappear: (): void => {
+        this.coverAppearance += 1;
         this.coverReady = false;
         this.frameVisible = false;
         this.frameAttached = false;

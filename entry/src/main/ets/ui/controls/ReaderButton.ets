@@ -1,12 +1,13 @@
 import { ReaderButtonLayout, ReaderButtonMatrixPaint, ReaderButtonMatrixSize, ReaderButtonSize, ReaderButtonSpecId, ReaderButtonVariant,
   READER_DIALOG_FORM_ACTION_SIZE, resolveReaderButtonMatrixPaint, resolveReaderButtonMatrixSize, resolveReaderButtonSpec } from './ReaderControlSpecs';
-import { readerSearchActionWidth, readerSearchControlHeight, readerSearchHistoryControlHeight } from '../foundation/ReaderSearchControlGeometry';
+import { readerSearchActionWidth, readerSearchControlHeight, readerSearchHistoryControlHeight,
+  SEARCH_CONTROL_MIN_TARGET, SEARCH_HISTORY_GAP } from '../foundation/ReaderSearchControlGeometry';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerPressAnimation, readerPressOpacity, readerPressPointer, readerPressScale } from '../foundation/ReaderPressMotion';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { TOK_BORDER_W, TOK_SPACE_XS } from '../foundation/ReaderTokens';
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
-import { TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_FORM_LABEL_ACTION } from '../foundation/ReaderTypography';
+import { TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_SEGMENT_LABEL } from '../foundation/ReaderTypography';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 
 /** Shared action presentation. Admission and business work stay at the owner;
@@ -36,8 +37,11 @@ class ReaderButtonLabelModifier implements AttributeModifier<TextAttribute> {
       instance.maxFontScale(Math.max(1, this.fontScale));
     }
     if (text.lineHeightFp !== undefined) instance.lineHeight(text.lineHeightFp);
-    // Split the line leading above/below CJK glyphs to center them beside the icon.
-    if (spec.leadingSlot) instance.halfLeading(true);
+    // Split the line leading above/below the CJK glyphs inside compact actions.
+    if (spec.leadingSlot || this.id === 'search-history-keyword') {
+      instance.halfLeading(true);
+      if (text.lineHeightFp === undefined) instance.lineHeight(Math.round(text.fontSizeFp * 1.5));
+    }
     if (text.letterSpacingFp !== undefined) instance.letterSpacing(text.letterSpacingFp);
     instance.fontColor(readerAppColor(this.primary ? spec.primaryText : spec.secondaryText, this.scheme));
     if (spec.centerText) instance.textAlign(TextAlign.Center);
@@ -76,7 +80,6 @@ class ReaderButtonFrameModifier implements AttributeModifier<CommonAttribute> {
       instance.width(readerSearchActionWidth(this.id === 'search-field-wide', this.fontScale));
       instance.height(readerSearchControlHeight(this.fontScale));
     }
-    if (this.id === 'search-history-keyword') instance.height(readerSearchHistoryControlHeight(this.fontScale));
     if (spec.fixedWidth > 0) {
       const width = spec.scaleWidth ? spec.fixedWidth * this.fontScale : spec.fixedWidth;
       instance.width(spec.responsiveStatusWidth ? width * Math.min(1, Math.max(0, this.availableWidth - TOK_SPACE_XS * 4) / 318) : width);
@@ -140,6 +143,7 @@ class ReaderButtonTextModifier implements AttributeModifier<TextAttribute> {
       this.availableWidth, this.fontScale);
     if (this.enabled && this.pressed) frame.applyPressedAttribute(instance);
     else frame.applyNormalAttribute(instance);
+    if (this.id === 'search-history-keyword') instance.align(Alignment.Center);
   }
   applyPressedAttribute(instance: TextAttribute): void {
     new ReaderButtonLabelModifier(this.id, this.primary, this.scheme, this.fontScale).applyNormalAttribute(instance);
@@ -175,9 +179,13 @@ export struct ReaderButton {
   // Available width remains an input for the variants that author a width cap.
   // Source management reserves its scaled status widths in the parent layout.
   @Prop availableWidth: number = 0;
+  @Prop controlWidth: number = 0;
+  /** An optional compact matrix slot with a centered 44vp minimum touch region. */
+  @Prop controlHeight: number = 0;
   @Prop actionAccessibilityLabel: string = '';
   @Prop selectionSemantic: boolean = false;
   @Prop focusId: string = '';
+  @Prop preferDefaultFocus: boolean = false;
   @State private pressPointer: number = -1;
   textLayoutOptions: TextOptions | undefined = undefined;
   @BuilderParam leading: () => void = this.emptyLeading;
@@ -192,21 +200,26 @@ export struct ReaderButton {
     if (this.variant !== undefined || this.specId === 'form-action') {
       this.matrixButton();
     } else if (this.specId === 'search-filter-option' || this.specId === 'source-management-category' ||
-      this.specId === 'source-management-login') {
-      // The capsule keeps its compact visual size inside a separate native
-      // target. Its 44vp slot belongs to layout instead of an outer response
-      // region, so adjacent filter targets never overlap.
+      this.specId === 'source-management-login' || this.specId === 'search-history-keyword') {
+      // A history chip fills its packed slot. Only the vertical touch target
+      // borrows the free space between rows.
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Text(this.label, this.textLayoutOptions)
           .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
           .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion))
           .animation(readerPressAnimation(this.reduceMotion))
           .attributeModifier(new ReaderButtonTextModifier(this.specId, this.primary, this.actionEnabled,
-            'intrinsic', this.scheme, this.isBusy, this.availableWidth, this.fontScale(), this.pressPointer >= 0))
+            this.specId === 'search-history-keyword' ? this.layout : 'intrinsic',
+            this.scheme, this.isBusy, this.availableWidth, this.fontScale(), this.pressPointer >= 0))
           .accessibilityLevel('no')
           .hitTestBehavior(HitTestMode.None);
       }.padding(0).backgroundColor(Color.Transparent).borderRadius(0).opacity(1)
-        .constraintSize({ minWidth: 44, minHeight: 44 })
+        .width(this.specId === 'search-history-keyword' && this.layout === 'full' ? '100%' : undefined)
+        .height(this.specId === 'search-history-keyword' ? readerSearchHistoryControlHeight(this.fontScale()) : undefined)
+        .constraintSize({ minWidth: SEARCH_CONTROL_MIN_TARGET,
+          minHeight: this.specId === 'search-history-keyword' ? undefined : SEARCH_CONTROL_MIN_TARGET })
+        .responseRegion(this.specId === 'search-history-keyword' ?
+          { y: -SEARCH_HISTORY_GAP / 2, height: readerSearchHistoryControlHeight(this.fontScale()) + SEARCH_HISTORY_GAP } : {})
         .enabled(this.actionEnabled)
         .id(this.focusId)
         .onFocus((): void => { if (this.mounted) this.onFocused(); })
@@ -217,11 +230,10 @@ export struct ReaderButton {
         .onClick((): void => this.commit());
     } else if (resolveReaderButtonSpec(this.specId).stacked) {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Stack({ alignContent: resolveReaderButtonSpec(this.specId).leadingSlot ? Alignment.End : Alignment.Center }) {
+        Stack({ alignContent: Alignment.Center }) {
           if (resolveReaderButtonSpec(this.specId).leadingSlot) {
             Row({ space: 5 }) { this.leading(); Text(this.label, this.textLayoutOptions).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale())); }
-              .width('100%').justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
-              .translate({ y: this.specId === 'source-management-detect' ? 8 : 0 });
+              .width('100%').justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center);
           } else {
             Text(this.label, this.textLayoutOptions).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale()));
           }
@@ -263,21 +275,23 @@ export struct ReaderButton {
       Row({ space: 5 }) {
         this.leading();
         Text(this.label, this.textLayoutOptions)
-          .fontFamily(this.variant === undefined ? TYPE_FORM_LABEL_ACTION.fontFamily : TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily)
+          .fontFamily(this.matrixLabelStyle().fontFamily)
           .fontSize(this.matrixSize().fontSize)
           .lineHeight(`${this.matrixSize().lineHeight}fp`)
-          .fontWeight(this.matrixVariant() === 'subtle' || !this.actionEnabled ? 500 : 600)
+          .halfLeading(true)
+          .fontWeight(this.matrixLabelStyle().fontWeight)
           .fontColor(readerAppColor(this.matrixPaint().ink, this.scheme))
-          .fontFeature('"tnum" 1')
+          .minFontScale(Math.min(1, this.fontScale())).maxFontScale(Math.max(1, this.fontScale()))
+          .maxLines(resolveReaderButtonSpec(this.specId).maxLines || undefined)
+          .textOverflow({ overflow: TextOverflow.Ellipsis })
           .textAlign(TextAlign.Center);
-      }.width(this.layout === 'intrinsic' ? undefined : '100%')
+      }.width(this.layout === 'intrinsic' && this.matrixWidth() === undefined ? undefined : '100%')
         .constraintSize({ minHeight: readerScaledControlHeight(this.matrixSize().height,
           this.matrixSize().lineHeight, this.fontScale()) })
-        .padding({ left: this.matrixSize().horizontalPadding,
-          right: this.matrixSize().horizontalPadding })
+        .padding({ left: this.matrixPadding(), right: this.matrixPadding() })
         .alignItems(VerticalAlign.Center).justifyContent(FlexAlign.Center)
         .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
-        .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion, this.actionEnabled ? 1 : 0.45))
+        .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion, this.matrixOpacity()))
         .animation(readerPressAnimation(this.reduceMotion))
         .attributeModifier(new ReaderPressFeedback(
           readerAppColor(this.matrixPaint().surface, this.scheme),
@@ -285,10 +299,17 @@ export struct ReaderButton {
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
     }.padding(0).backgroundColor(Color.Transparent).borderRadius(0)
       .layoutWeight(this.layout === 'equal' ? 1 : undefined)
-      .width(this.layout === 'full' ? '100%' : undefined)
-      .constraintSize({ minWidth: 44, minHeight: 44 })
+      .width(this.layout === 'full' ? '100%' : this.matrixWidth())
+      .height(this.controlHeight > 0 ? this.controlHeight : undefined)
+      .constraintSize({ minWidth: SEARCH_CONTROL_MIN_TARGET,
+        minHeight: this.controlHeight > 0 ? this.controlHeight : SEARCH_CONTROL_MIN_TARGET })
+      .responseRegion(this.controlHeight > 0 ? {
+        y: -Math.max(0, SEARCH_CONTROL_MIN_TARGET - this.controlHeight) / 2,
+        height: Math.max(SEARCH_CONTROL_MIN_TARGET, this.controlHeight),
+      } : {})
       .enabled(this.actionEnabled)
       .id(this.focusId)
+      .defaultFocus(this.preferDefaultFocus)
       .onFocus((): void => { if (this.mounted) this.onFocused(); })
       .accessibilityRole(AccessibilityRoleType.BUTTON)
       .attributeModifier(new ReaderButtonSelectionModifier(this.selectionSemantic, this.primary))
@@ -302,6 +323,31 @@ export struct ReaderButton {
     return this.variant === undefined ? READER_DIALOG_FORM_ACTION_SIZE : resolveReaderButtonMatrixSize(this.visualSize);
   }
   private matrixPaint(): ReaderButtonMatrixPaint { return resolveReaderButtonMatrixPaint(this.matrixVariant(), this.actionEnabled); }
+
+  private matrixLabelStyle() {
+    return this.matrixVariant() === 'subtle' || !this.actionEnabled ? TYPE_APP_SEGMENT_LABEL : TYPE_APP_COMPACT_PRIMARY_ACTION;
+  }
+
+  private matrixWidth(): number | undefined {
+    if (this.controlWidth > 0) return Math.max(44, this.controlWidth);
+    const spec = resolveReaderButtonSpec(this.specId);
+    if (spec.fixedWidth <= 0) return undefined;
+    const width = spec.fixedWidth * (spec.scaleWidth ? this.fontScale() : 1);
+    return Math.max(44, spec.responsiveStatusWidth ?
+      width * Math.min(1, Math.max(0, this.availableWidth - TOK_SPACE_XS * 4) / 318) : width);
+  }
+
+  private matrixPadding(): number {
+    const spec = resolveReaderButtonSpec(this.specId);
+    if (this.matrixWidth() === undefined) return this.matrixSize().horizontalPadding;
+    // Reserved source-row slots also need enough room for their icon and label.
+    return spec.leadingSlot ? 0 : Math.min(4, this.matrixSize().horizontalPadding);
+  }
+
+  private matrixOpacity(): number {
+    const busyOpacity = this.isBusy ? resolveReaderButtonSpec(this.specId).busyOpacity : 1;
+    return !this.actionEnabled && busyOpacity === 1 ? 0.45 : busyOpacity;
+  }
 
   private fontScale(): number {
     if (this.readerWindowMetricsRevision < 0) return 1;

@@ -39,19 +39,22 @@ const selected = selectContractCases({
 });
 const read = file => readFileSync(new URL('../entry/src/main/ets/' + file, import.meta.url), 'utf8');
 const ui = name => read('features/reading/ui/' + name + '.ets');
+const pageChrome = await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
+const { READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT } = pageChrome;
 const capsuleSource = ui('ReaderSessionCapsule');
 const capsuleMeasureSource = capsuleSource.slice(0, capsuleSource.indexOf('/** The static capsule'));
 const textMeasurement = pureModuleProbe(ui('ReaderControlTextMeasurement'), 'ReaderControlTextMeasurement.ets', {
   WordBreak: { BREAK_WORD: 'break-word' },
 }, ['measureReaderControlText']);
 const capsuleMeasurement = pureModuleProbe(capsuleMeasureSource, 'ReaderSessionCapsuleMeasure.ets', {
-  ...readerTypographyRoles, ...textMeasurement,
+  ...readerTypographyRoles, ...textMeasurement, READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT,
 }, ['measureReaderSessionCapsule', 'readerSessionCapsuleMinimumWidth']);
 const { buildReaderSessionLaunchGeometry, sampleReaderSessionLaunch } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
+const { READER_SESSION_LAUNCH_DURATION_MS } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchTimeline.ts');
 const { ReaderSessionMorphSourceMeasurement } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
 const { readerFullDirectoryHeights } = await import('../entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts');
 const listPositioning = await import('../entry/src/main/ets/features/reading/ui/ReaderControlListPositioning.ts');
-const pageChrome = await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
+const { READER_BOOKMARK_RIBBON_HEIGHT } = await import('../entry/src/main/ets/features/reading/presentation/ReaderPageBookmarkModel.ts');
 const deps = { ...readerTypographyRoles, ...readerFoundationTokens, ...geometry, ...controls,
   readerAppColor, ...capsuleMeasurement, READER_FONT_NOTO_SANS_SC_UI_REGULAR, readerControlAppearanceEndpoint, readerControlReplaceEndpoint };
 const owner = (source, methods, extra = {}, hooks = {}) => createReaderBuilderProbe(source, methods, { ...deps, ...extra }, hooks).owner;
@@ -61,12 +64,13 @@ for (const id of selected) {
     const metrics = createDefaultReaderWindowMetrics();
     metrics.systemInsets.top = 24; metrics.navigationInsets.bottom = 24;
     const source = ui('LocalReadingExperience');
-    const model = owner(source, ['readingLayout', 'controlLayout', 'sessionCapsuleMetrics', 'readerRecoveryBaseLayout', 'readerRecoveryTop', 'readerRecoveryViewportHeight'], {
-      ReaderWindowCoordinator: { metrics: () => metrics }, readerReadingTopBarFontsReady: () => true,
+    const model = owner(source, ['readingLayout', 'controlLayout', 'sessionCapsuleMetrics', 'readerRecoveryBaseLayout', 'readerRecoveryTop', 'readerRecoveryViewportHeight',
+      'bookmarkRibbonPaperTop', 'bookmarkFeedbackTopBoundary'], {
+      READER_BOOKMARK_RIBBON_HEIGHT, ReaderWindowCoordinator: { metrics: () => metrics }, readerReadingTopBarFontsReady: () => true,
     });
     Object.assign(model, { sourceId: 'local', bookId: 'current', viewportWidth: 366, viewportHeight: 844,
       effectiveViewportWidth() { return this.viewportWidth; }, effectiveViewportHeight() { return this.viewportHeight; },
-      readerSettingsSnapshot: { navigationMode: 'paged', extendIntoCutout: false }, recoveryTopBarRevision: -1,
+      readerSettingsSnapshot: { navigationMode: 'paged', extendIntoCutout: false }, appearanceSnapshot: {}, recoveryTopBarRevision: -1,
       getUIContext: () => ({}), controlVisible: () => false, readerRecoveryTopBarHeight: () => 54, controlMinimumRevision: 0,
     });
     for (const [width, height] of [[320, 568], [366, 844], [568, 320], [760, 960]]) for (const scale of [1, 1.3, 1.6, 2]) {
@@ -96,7 +100,8 @@ for (const id of selected) {
       assert.equal(model.readingLayout().contentBottom, stableBottom, 'inactive and launch share the same paid lane');
       assert.ok(Number.isFinite(stableBottom));
       metrics.keyboardInsets.bottom = 300;
-      const resizedBody = geometry.resolveReaderReadingLayout(width, Math.max(220, height - 300), width >= 600, metrics, false, undefined, 0, 0, 44);
+      const resizedBody = geometry.resolveReaderReadingLayout(width, Math.max(220, height - 300), width >= 600, metrics,
+        false, undefined, 0, 0, undefined, 0, floatingBody.pageChromeFooterHeight);
       assert.equal(resizedBody.contentBottom, stableBottom, 'RESIZE changes the viewport without charging keyboard a second time');
       metrics.keyboardInsets.bottom = 0;
       const oldBody = geometry.resolveReaderReadingLayout(width, height, width >= 600, metrics, false, undefined, 0, 180);
@@ -235,7 +240,8 @@ for (const id of selected) {
       READER_SESSION_CAPSULE_SHADOW: { radius: 8, color: '#00000000', offsetX: 0, offsetY: 3 },
     }, ['ReaderSessionCapsuleFrame']);
     const nativeDeps = { ...capsuleMeasurement, ...frames, READER_SESSION_CAPSULE_RADIUS: 12, ReaderSessionCapsuleLeading: CapsuleChild,
-      ReaderSessionCapsulePause: CapsuleChild, readerSessionCapsuleAccessibility: () => '会话', uiContext: context };
+      ReaderSessionCapsulePause: CapsuleChild, READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT,
+      readerSessionCapsuleAccessibility: () => '会话', uiContext: context };
     const childSources = { ReaderSessionCapsuleLeading: capsuleSource, ReaderSessionCapsulePause: capsuleSource };
     for (scale of [1, 1.3, 1.6, 2]) for (const type of ['autoPage', 'tts']) {
       const metrics = capsuleMeasurement.measureReaderSessionCapsule(context, type, scale);
@@ -257,14 +263,14 @@ for (const id of selected) {
       const launch = buildReaderSessionLaunchGeometry({ source, targetLeft: 200, targetTop: 700,
         capsuleWidth: metrics.width, capsuleHeight: metrics.paintHeight, topBarExitDistance: 60, dockExitDistance: 330 });
       const curves = { flight: p => p, expand: p => p, easeIn: p => p, easeOut: p => p, easeInOut: p => p };
-      const dot = sampleReaderSessionLaunch(1500, launch, curves);
-      assert.equal(dot.proxyHeight, 24, 'the flight still ends in the authored dot');
-      const final = sampleReaderSessionLaunch(3500, launch, curves);
+      const initial = sampleReaderSessionLaunch(0, launch, curves);
+      assert.equal(initial.proxyHeight, source.height);
+      const final = sampleReaderSessionLaunch(READER_SESSION_LAUNCH_DURATION_MS, launch, curves);
       assert.equal(final.proxyHeight, metrics.paintHeight);
       assert.equal(final.proxyTop, launch.targetTop);
-      const stage = owner(ui('ReaderSessionLaunchStage'), ['build', 'metrics', 'sourceSharpContent', 'sourceBlurContent', 'effectiveSourceSurfaceColor',
+      const stage = owner(ui('ReaderSessionLaunchStage'), ['build', 'metrics', 'sourceSharpContent', 'effectiveSourceSurfaceColor',
         'effectiveSourceBorderColor', 'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor'], nativeDeps, { childSources });
-      Object.assign(stage, { sample: final, fontScale: scale, sourceClip: () => ({}), sourceSharpContent() {}, sourceBlurContent() {},
+      Object.assign(stage, { sample: final, fontScale: scale, sourceClip: () => ({}), sourceSharpContent() {},
         themeScheme: 'day', surfaceColor: '', surfaceBorderColor: '', sourceSurfaceColor: '', sourceBorderColor: '',
         sourceSurfaceTopInset: 0, sourceGradientStart: '', sourceGradientEnd: '', sourceBorderWidth: 1,
         sourceShadowRadius: 0, sourceShadowOffsetY: 0, sourceShadowColor: '#00000000', sourceHighlightColor: '#00000000',
@@ -272,16 +278,21 @@ for (const id of selected) {
       stage.initialRender();
       const launchTarget = [...stage.nodes.values()].find(node => node.type === 'Button');
       assert.equal(launchTarget.height, metrics.targetHeight);
+      assert.equal(launchTarget.position.y + launchTarget.height / 2, final.proxyTop + final.proxyHeight / 2);
       const revealed = [...stage.children.values()].find(child => child.params.labelHeight !== undefined);
       assert.equal(revealed.params.labelHeight, metrics.labelHeight);
       for (const [width, height] of [[320, 568], [366, 844], [844, 366], [760, 960]]) for (const safeBottom of [0, 24, 48]) {
         const window = createDefaultReaderWindowMetrics(); window.navigationInsets.bottom = safeBottom;
         const layout = geometry.resolveReaderReadingLayout(width, height, width >= 600, window,
-          false, undefined, 0, 0, metrics.targetHeight);
+          false, undefined, 0, 0, undefined, 0, metrics.paintHeight);
         const chrome = pageChrome.resolveReaderPageChromeLayout(layout, new pageChrome.ReaderPageChromeMeasurements(
           0, 0, 0, 0, 0, 0, 0, 0, true, metrics.width, metrics.targetHeight));
-        assert.ok(height - layout.contentBottom <= chrome.sessionY, 'body ends before the capsule native carrier');
-        assert.ok(chrome.sessionY + metrics.targetHeight <= height - Math.max(23, safeBottom) + .001);
+        const bodyBottom = height - layout.contentBottom;
+        assert.ok(bodyBottom <= chrome.sessionY, 'static target begins at or below the body end');
+        assert.ok(bodyBottom <= chrome.footerTop + layout.pageChromeFooterHeight / 2 - launchTarget.height / 2,
+          'settled launch target begins at or below the body end');
+        assert.equal(chrome.sessionY + metrics.targetHeight / 2, chrome.footerTop + layout.pageChromeFooterHeight / 2,
+          'capsule paint and footer share the same center');
       }
     }
     assert.ok(16 < 12.5 * 2, 'the old fixed label box clips 2x native line extent');

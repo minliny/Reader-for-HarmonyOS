@@ -11,7 +11,8 @@ import { BookshelfShell } from './BookshelfShell';
 import { BookshelfStatusContent } from './BookshelfStatusContent';
 import type { BookshelfDetailReturnFocus } from '../presentation/BookshelfViewState';
 
-export type BookshelfSceneDestination = 'search' | 'discover' | 'rss' | 'settings' | 'bookshelfSettings' | 'downloads';
+export type BookshelfSceneDestination =
+  'search' | 'discover' | 'rss' | 'settings' | 'bookshelfSettings' | 'bookshelfManagement' | 'downloads';
 
 export interface BookshelfScenePorts {
   isCurrent: (navigation: number) => boolean;
@@ -176,6 +177,7 @@ export struct BookshelfScene {
         else void this.mutations.reconcile(generation);
       },
       reduceMotion: this.reduceMotion,
+      canBatchManage: this.read.snapshot.visualAdmitted && this.read.snapshot.books.length > 0,
       canCheckUpdates: this.read.canCheckUpdates(),
       updateRunning: this.catalog.snapshot.manualRunning,
       backgroundUpdateRunning: this.catalog.snapshot.automaticRunning,
@@ -185,9 +187,10 @@ export struct BookshelfScene {
         if (this.isInteractive(navigation)) this.mutations.openImport(focusTarget);
       },
       onBookshelfSettingsRequested: (navigation?: number): void => this.open('bookshelfSettings', navigation),
+      onBookshelfManagementRequested: (navigation?: number): void => this.open('bookshelfManagement', navigation),
       onDownloadsRequested: (navigation?: number): void => this.open('downloads', navigation),
       onBatchManageRequested: (navigation?: number): void => {
-        if (this.isInteractive(navigation)) this.ports?.openSelection();
+        if (this.isInteractive(navigation) && this.read.snapshot.books.length > 0) this.ports?.openSelection();
       },
       onCheckUpdatesRequested: (navigation?: number): void => {
         if (this.isInteractive(navigation)) this.catalog.manual(this.read.snapshot.books);

@@ -1,7 +1,7 @@
 import { TYPE_READER_TIMER_WHEEL_RETAINED_NEIGHBOUR, TYPE_READER_TIMER_WHEEL_RETAINED_SELECTED } from '../../../ui/foundation/ReaderTypography';
 import { TYPE_READER_TIMER_RETAINED_BUILD_VALUE } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import { TOK_BORDER_W, TOK_LINE, TOK_READ_INK, TOK_READ_MUTED } from '../../../ui/foundation/ReaderTokens';
+import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 
 /** Shared timer input surface; owners keep their existing range/commit rules.
  * TTS uses five visible rows, AutoPage three. No timer or animation is owned here.

@@ -25,7 +25,8 @@ for (const id of selectContractCases(cases)) {
     }
     const { SettingsPresentation } = pureModuleProbe(read('features/settings/presentation/SettingsPresentation.ets'),
       'SettingsPresentation.ets', { ...policy, AppStorage, SettingsHost, SettingsGateway, Observed: type => type,
-        createDefaultSettingsSnapshot: () => ({ wideNavigationRail: false }), READER_REDUCE_MOTION_STORAGE_KEY: 'reduce' }, ['SettingsPresentation']);
+        createDefaultSettingsSnapshot: () => ({ wideNavigationRail: false }), READER_REDUCE_MOTION_STORAGE_KEY: 'reduce',
+        watchReaderSystemReduceMotion: () => () => {} }, ['SettingsPresentation']);
     for (const stored of [false, true]) {
       const owner = { getUIAbilityContext: () => ({}) }, p = new SettingsPresentation();
       p.snapshot = { wideNavigationRail: stored };
@@ -46,11 +47,11 @@ for (const id of selectContractCases(cases)) {
     }
     console.log('wide-admission: compile actual navigation');
     const metrics = { windowRect: { width: 1000, height: 1000 }, systemFontScale: 1 };
+    const widthClass = await import('../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts');
     const navigationDependencies = {
-      ...policy, AppStorage, ReaderWindowCoordinator: { metrics: () => metrics },
+      ...policy, ...widthClass, AppStorage, ReaderWindowCoordinator: { metrics: () => metrics },
       readerMainTabItemHeight: () => 44, MAIN_TABS: [{ key: 'bookshelf' }, { key: 'settings' }],
       readerInteractiveSafeBottom: () => 0, readerInteractiveSafeLeft: () => 0, readerVisualSafeTop: () => 0,
-      READER_EXPANDED_MIN_WIDTH: 600,
     };
     // Keep the production re-export of MAIN_TABS. A CommonJS compiler seam
     // resolves the real module boundary without rewriting its exports.
@@ -69,10 +70,15 @@ for (const id of selectContractCases(cases)) {
       assert.ok(imports.has(name), 'explicit navigation dependency: ' + name); return navigationDependencies;
     }, module, module.exports, AppStorage);
     const nav = module.exports;
-    nav.publishReaderMainViewport(1000, 1000);
     assert.equal(nav.mainNavigationMode(true, 1000, 1000, 0, 0, 2), 'rail', 'geometry alone could admit rail');
-    assert.equal(nav.readerMainNavigationMode(true), 'bottom', 'production entry applies product admission even for raw true');
     assert.equal(policy.effectiveReaderWideNavigationRail(true), false);
+    for (const width of [599, 600, 1000]) {
+      nav.publishReaderMainViewport(width, 1000);
+      assert.equal(nav.readerMainNavigationMode(false), 'bottom', 'production default is the bottom capsule');
+      assert.equal(nav.readerMainNavigationMode(true), 'bottom', 'production rejects a retained legacy preference');
+    }
+    assert.equal(nav.mainTabBottomWidth(2), 196, 'two available tabs match the frozen capsule width');
+    assert.equal(nav.mainTabBottomWidth(4), 360, 'wide navigation keeps the shared upper width bound');
   } else {
     const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
     const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');

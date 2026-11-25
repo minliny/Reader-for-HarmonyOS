@@ -10,6 +10,7 @@ import { EMPTY_SOURCE_JOURNEY, SourceJourneyPresentation, type SourceJourneySnap
 export struct SourceJourneySurface {
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @Prop expandedLayout: boolean = false;
+  @Prop embeddedWide: boolean = false;
   @Prop reduceMotion: boolean = false;
   @Prop inputEnabled: boolean = true;
   presentation: SourceJourneyPresentation = new SourceJourneyPresentation();
@@ -58,6 +59,7 @@ export struct SourceJourneySurface {
   @Builder
   private managementPage() {
     SourceManagementPage({
+      embeddedWide: this.embeddedWide,
       verificationOpening: this.identity,
       inputEnabled: this.inputEnabled,
       isOpeningCurrent: (): boolean => this.presentation.isManagementCurrent(this.identity),
@@ -107,7 +109,7 @@ export struct SourceJourneySurface {
 
   @Builder
   private toolsPage() {
-    SourceToolsPage({ reduceMotion: this.reduceMotion,
+    SourceToolsPage({ reduceMotion: this.reduceMotion, embeddedWide: this.embeddedWide,
       snapshot: this.view.tools,
       isOpeningCurrent: (): boolean => this.presentation.tools(this.identity) !== undefined,
       isInputAllowed: (): boolean => this.toolsInputIsCurrent(),

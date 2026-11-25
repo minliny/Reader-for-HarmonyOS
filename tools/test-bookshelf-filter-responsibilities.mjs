@@ -6,6 +6,7 @@ import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe, productionReaderMotionSdk } from './lib/reader-control-builder-probe.mjs';
+import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 const path = name => new URL(`../entry/src/main/ets/features/bookshelf/ui/${name}.ets`, import.meta.url);
 const source = name => readFileSync(path(name), 'utf8');
@@ -29,8 +30,11 @@ assert.equal(books[2].group, '历史');
 const shelfSource = source('BookshelfPage');
 const memberNames = ['isFilterSelected','hasActiveFilters','selectFilter','clearFilters',
   'onShelfFiltersChanged','queueShelfProjection','setFilterExpanded','settleFilterPanel','isShelfPresentationCurrent'];
-const { owner: shelf } = createReaderBuilderProbe(shelfSource, ['filterRow','filterChip',...memberNames],
-  { ...productionReaderMotionSdk(), uiContext: { animateTo(options, apply) { apply(); options.onFinish?.(); } } });
+const shelfProperties = createArkUIPropertyRuntimeProbe();
+const { owner: shelf } = createReaderBuilderProbe(shelfSource, ['filterRow','filterChip',
+  'shelfPressed','shelfPressKey','shelfPressPointer','observeShelfPress',...memberNames],
+  { ...shelfProperties.sdk, ...productionReaderMotionSdk(),
+    uiContext: { animateTo(options, apply) { apply(); options.onFinish?.(); } } }, shelfProperties.hooks);
 Object.assign(shelf, { appThemeScheme:'day', storedSelectedGroup:'', readingFilter:'all',contentFilter:'all',sourceFilter:'all',
   feedbackEnabled:true,navigationGeneration:7,isCurrentShelfInput:()=>true,filterRowVisible:true, viewMode:'list', mounted:true,reduceMotion:true,viewState:{},filterMotionGeneration:0,
   projectionQueued:false,projectionGeneration:0, rebuildShelfProjection(){this.rebuilds=(this.rebuilds??0)+1;} });
@@ -46,15 +50,23 @@ assert.ok(![...shelf.nodes.values()].some(n=>n.type==='Text'&&typeof n.onClick==
 button('漫画').onClick(); shelf.onShelfFiltersChanged(); button('在线').onClick(); shelf.onShelfFiltersChanged(); shelf.replay();
 await Promise.resolve();assert.equal(shelf.rebuilds,1,'same gesture/storage notifications publish the final projection only once');
 assert.equal(shelf.readingFilter,'all','content selection clears obsolete reading-state filtering');assert.equal(shelf.contentFilter,'manga');assert.equal(shelf.sourceFilter,'online');
-assert.equal(button('漫画').backgroundColor, readerAppColor('TOK_PRIMARY_SOFT','day'));
-assert.equal(button('小说').backgroundColor, readerAppColor('TOK_CARD_BG','day'));
+const chipPaint = label => {
+  const nodes = [...shelf.nodes.values()];
+  const buttonIndex = nodes.indexOf(button(label));
+  return nodes.slice(buttonIndex + 1).find(node => node.type === 'Row' && node.borderRadius === 999);
+};
+assert.equal(chipPaint('漫画').backgroundColor, readerAppColor('TOK_PRIMARY_DARK','day'));
+assert.equal(chipPaint('小说').backgroundColor, readerAppColor('TOK_CARD_BG','day'));
+assert.equal(chipPaint('小说').constraintSize.minHeight, 32);
+assert.equal(button('小说').constraintSize.minHeight, 44);
+assert.equal(button('小说').constraintSize.minWidth, 44);
 assert.equal(button('漫画').accessibilitySelected,true);
 assert.equal(button('小说').accessibilitySelected,false);
 shelf.filterRowVisible=false;
 const Header = productionMotionMethods(path('BookshelfSectionHeader'), ['isActive','actionLabel','activate']);
 const header = Object.assign(new Header(),{viewMode:shelf.viewMode,actionsEnabled:true,filterExpanded:false,
   hasActiveFilters:shelf.hasActiveFilters()});
-assert.equal(header.isActive('bookshelf_filter'),true,'closed filter keeps active-condition indication');
+assert.equal(header.isActive('bookshelf_filter'),false,'a closed filter is not the expanded button state');
 assert.match(header.actionLabel('bookshelf_filter'),/已有筛选条件/);
 button('清除').onClick(); shelf.onShelfFiltersChanged(); shelf.replay();
 await Promise.resolve();assert.equal(shelf.rebuilds,2,'clearing both dimensions is one reload');

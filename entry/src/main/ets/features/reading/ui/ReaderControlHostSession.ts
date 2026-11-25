@@ -15,6 +15,7 @@ export interface ReaderControlHostTiming {
   layerDurationMs?: number;
   directSheetDurationMs?: number;
   directSheetCloseDurationMs?: number;
+  fixedIsland?: boolean;
 }
 
 export function readerControlIsDirectSheet(module: ReaderControlModule): boolean {
@@ -91,6 +92,11 @@ export function setReaderControlHostPage(session: ReaderControlSessionState,
       { level: 'secondary', module, directoryTab: sameModule ? location.directoryTab : 'directory', form: 'full' },
       timing.directSheetDurationMs);
   }
+  if (timing.fixedIsland) {
+    if (sameModule && readerControlTargetLocation(session).form === 'quick') return session;
+    return enterReaderControlModule(session, module,
+      location.level === 'home' ? timing.layerDurationMs ?? timing.navigateDurationMs : timing.navigateDurationMs);
+  }
   const next = sameModule ? session : enterReaderControlModule(session, module,
     location.level === 'home' ? timing.layerDurationMs ?? timing.navigateDurationMs : timing.navigateDurationMs);
   const full = page === 'fullTts' || page === 'fullAppearance' || page === 'fullSettings' ||
@@ -111,6 +117,9 @@ export function backReaderControlHostSession(session: ReaderControlSessionState,
     return { state: session, consumed: true };
   }
   if (timing.directSheetDurationMs !== undefined && content.level === 'secondary' && readerControlIsDirectSheet(content.module)) {
+    return { state: setReaderControlHostPage(session, 'home', timing), consumed: true };
+  }
+  if (timing.fixedIsland && content.level === 'secondary') {
     return { state: setReaderControlHostPage(session, 'home', timing), consumed: true };
   }
   const candidate = backReaderControlSession(session, timing.morphDurationMs);

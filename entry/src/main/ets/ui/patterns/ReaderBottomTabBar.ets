@@ -22,8 +22,6 @@ export struct ReaderBottomTabBar {
   @Prop @Watch('moveActivePill') current: string = '';
   @Prop scheme: string = 'day';
   @Prop @Watch('traceGeometry') surfaceWidth: number = 0;
-  @Prop translateX: number = 0;
-  @Prop bottomInset: number = 0;
   @Prop fontScale: number = 1;
   @Prop inputEnabled: boolean = true;
   onSelect: (key: string) => void = (_key: string): void => {};
@@ -55,11 +53,17 @@ export struct ReaderBottomTabBar {
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       if (this.hasPaintGeometry()) {
-        Row({ space: this.itemGap }) {
-          this.activePill();
-          ForEach(this.items, (tab: ReaderBottomTabItem): void => {
-            this.tabItem(tab);
-          }, (tab: ReaderBottomTabItem): string => `main-tab-${tab.key}`);
+        Stack({ alignContent: Alignment.Start }) {
+          Stack({ alignContent: Alignment.Start }) {
+            this.activePill();
+            Row({ space: this.itemGap }) {
+              ForEach(this.items, (tab: ReaderBottomTabItem): void => {
+                this.tabItem(tab);
+              }, (tab: ReaderBottomTabItem): string => `main-tab-${tab.key}`);
+            }.width('100%').alignItems(VerticalAlign.Center);
+          }.width('100%')
+            .borderRadius(Math.max(0, this.materialRadius() - TOK_SPACE_XS - TOK_BORDER_W))
+            .clip(this.requiresChildClip()).hitTestBehavior(HitTestMode.Default);
         }
         .width(this.surfaceWidth)
         .constraintSize({ minHeight: readerFloatingTabBarHeight(this.fontScale) })
@@ -68,15 +72,14 @@ export struct ReaderBottomTabBar {
         .border({ width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.scheme) })
         .borderRadius(this.materialRadius())
         .shadow(readerSurfaceElevation('raised', this.scheme))
-        .clip(this.requiresChildClip())
-        .hitTestBehavior(HitTestMode.Transparent)
+        .clip(false)
+        .hitTestBehavior(HitTestMode.Default)
+        .onTouch((): void => {})
         .onAreaChange(this.measurementHandler(this.surfaceWidth, this.fontScale));
       }
     }.width(this.hasPaintGeometry() ? this.surfaceWidth : 0)
       .constraintSize({ minHeight: readerFloatingTabBarHeight(this.fontScale) }).clip(false)
-      .hitTestBehavior(HitTestMode.Transparent)
-      .margin({ bottom: this.bottomInset })
-      .translate({ x: this.translateX });
+      .hitTestBehavior(HitTestMode.Default);
   }
 
   @Builder
@@ -84,7 +87,6 @@ export struct ReaderBottomTabBar {
     if (this.paintedTab >= 0) {
       Row()
         .width(this.pillWidth()).height(readerMainTabItemHeight(this.fontScale, false))
-        .position({ x: TOK_SPACE_XS + TOK_BORDER_W, y: this.pillTop() })
         .translate({ x: this.paintedTab * (this.pillWidth() + this.itemGap) })
         .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.scheme))
         .borderRadius(readerMainTabItemHeight(this.fontScale, false) / 2)
@@ -99,11 +101,6 @@ export struct ReaderBottomTabBar {
     const inset = TOK_SPACE_XS + TOK_BORDER_W;
     const width = this.currentRaisedShape()?.width ?? this.surfaceWidth;
     return count > 0 ? Math.max(0, (width - 2 * inset - (count - 1) * this.itemGap) / count) : 0;
-  }
-
-  private pillTop(): number {
-    const height = this.currentRaisedShape()?.height ?? readerFloatingTabBarHeight(this.fontScale);
-    return Math.max(0, (height - readerMainTabItemHeight(this.fontScale, false)) / 2);
   }
 
   private activeTabIndex(): number {

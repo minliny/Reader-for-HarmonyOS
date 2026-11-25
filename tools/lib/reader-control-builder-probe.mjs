@@ -54,11 +54,12 @@ export function productionReaderMotionSdk() {
   return { ...motion, ...policy };
 }
 
-function productionReaderPressMotion() {
+function productionReaderPressMotion(dependencies) {
   const motion = productionReaderMotionSdk();
-  const TouchType = { Down: 'down', Move: 'move', Up: 'up', Cancel: 'cancel' };
-  return loadMotionSource('ReaderPressMotion', { ...motion, TouchType },
-    ['readerPressScale', 'readerPressOpacity', 'readerPressAnimation', 'readerPressPointer']);
+  const TouchType = dependencies.TouchType ?? { Down: 'down', Move: 'move', Up: 'up', Cancel: 'cancel' };
+  const ReaderPressFeedback = productionReaderPressFeedback({ Color: dependencies.Color, ColorMetrics: dependencies.ColorMetrics });
+  return loadMotionSource('ReaderPressMotion', { ...motion, TouchType, ReaderPressFeedback },
+    ['readerPressScale', 'readerPressOpacity', 'readerPressAnimation', 'readerPressPointer', 'readerPressSurface', 'readerAnimatePress']);
 }
 
 const sdkRoot = resolveEtsLoaderRoot();
@@ -473,6 +474,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     ['ReaderLayoutDebugOverlay', '../../entry/src/main/ets/app/composition/ReaderLayoutDebugOverlay.ets'],
     ['ReaderInlineSelect', '../../entry/src/main/ets/ui/controls/ReaderInlineSelect.ets'],
     ['ReaderFullDirectory', '../../entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets'],
+    ['ReaderPageBookmarkGlyph', '../../entry/src/main/ets/features/reading/ui/ReaderPageBookmarkRibbon.ets'],
     ['BookDirectoryPage', '../../entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets'],
   ];
   for (const [name, relative] of knownChildren) {
@@ -682,7 +684,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     ...Object.fromEntries(recoveryChildren.map(name => [name, Child])), $r: value => value,
     ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Grid', 'GridItem', 'LazyForEach', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Rect', 'Shape', 'Path', 'Polygon', 'Polyline', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'Slider', 'Toggle', 'Checkbox', 'Radio', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
-    ...Object.fromEntries(['TextDecorationType', 'TextHeightAdaptivePolicy', 'BorderStyle', 'FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'LayoutPolicy', 'AccessibilityRoleType',
+    ...Object.fromEntries(['TextDecorationType', 'TextHeightAdaptivePolicy', 'BorderStyle', 'FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'LocalizedAlignment', 'LayoutPolicy', 'AccessibilityRoleType',
       'LineCapStyle', 'ImageFit', 'TextAlign', 'TextOverflow', 'WordBreak', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign', 'ToggleType', 'ButtonType',
       'SafeAreaType','SafeAreaEdge','LayoutSafeAreaType','LayoutSafeAreaEdge'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
@@ -699,7 +701,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       return metrics;
     } },
     readerInteractiveSafeBottom: metrics => metrics.interactiveSafeInsets?.bottom ?? 0,
-    ...(source.includes('readerPressScale') ? productionReaderPressMotion() : {}),
+    ...(source.includes('readerPressScale') ? productionReaderPressMotion(dependencies) : {}),
     ...dependencies };
   // Existing fixtures supply an explicit fake metrics source under the old
   // owner-shaped I/O port. The UI consumes the real readonly adapter instead.
@@ -743,7 +745,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     globals.readerReadingTopBarFontsReady ??= measurement.readerReadingTopBarFontsReady;
   }
 
-  globals.ReaderPressFeedback ??= productionReaderPressFeedback({ Color: globals.Color });
+  globals.ReaderPressFeedback ??= productionReaderPressFeedback({ Color: globals.Color, ColorMetrics: globals.ColorMetrics });
   globals.MangaDirectoryPressFeedback ??= productionMangaDirectoryPressFeedback(undefined,
     { LengthMetrics: globals.LengthMetrics, ColorMetrics: globals.ColorMetrics });
   if (members.some(member => member.includes('new ReaderPanelFrame('))) globals.ReaderPanelFrame ??= readerPanelFrameForProbe(globals);

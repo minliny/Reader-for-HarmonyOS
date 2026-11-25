@@ -88,7 +88,7 @@ for (const book of refreshed.slice(1)) group.admit(book, false);
 assert.equal(group.sourceCount, 55);
 assert.equal(sourceSwitchSourceCount(candidates), group.sourceCount);
 const panel = new FooterProbe();
-panel.displayedCandidates = candidates;
+panel.latestCandidates = candidates.filter(candidate => candidate.isCurrent !== true);
 panel.isSweeping = () => panel.state?.kind === 'candidates' && panel.state?.refreshing === true;
 panel.busy = () => false;
 panel.state = { kind: 'candidates', candidates };
@@ -233,9 +233,11 @@ assert.ok(calls.every(method => ['source.list', 'search-book.batch.get', 'search
 const detail = read('features/reading/ui/LocalBookDetail.ets');
 const detailIntro = detail.slice(detail.indexOf('  private displayIntro()'), detail.indexOf('  private chapterEmptyMessage()'));
 const cardStart = page.indexOf('struct SearchResultCard');
+const cardBook = page.slice(cardStart).match(/^  private displayBook\(\): SearchBook \{[^\n]+\}/m)?.[0];
+assert.ok(cardBook, 'the synopsis probe uses the current search card book accessor');
 const cardIntro = page.slice(page.indexOf('  private displayIntro()', cardStart), page.indexOf('  private coverWidth()', cardStart));
 const { bookIntroText, DetailIntro, SearchIntro } = await executable(`${read('app/library/BookIntroText.ts')}
-  class DetailIntro { ${detailIntro} } class SearchIntro { ${cardIntro} } export { DetailIntro, SearchIntro };`);
+  class DetailIntro { ${detailIntro} } class SearchIntro { ${cardBook} ${cardIntro} } export { DetailIntro, SearchIntro };`);
 const detailProbe = new DetailIntro();
 const cardProbe = new SearchIntro();
 // HTML/entity semantics are tested at Core's standard display boundary. Host
@@ -254,12 +256,13 @@ for (const [raw, expected] of fixtures) {
   assert.equal(bookIntroText(raw), expected);
   assert.equal(detailProbe.displayIntro(), expected);
   assert.equal(cardProbe.displayIntro(), expected);
+  assert.equal(cardProbe.showResultIntro(), expected.length > 0, 'empty search summaries do not reserve a row');
   assert.equal(book.intro, raw);
 }
 const longIntro = '正文 & '.repeat(10000);
 assert.equal(bookIntroText(longIntro), '正文 & '.repeat(10000).trim(), 'large synopses remain complete');
 assert.equal(bookIntroText(`<span ${' '.repeat(100000)}`), '<span', 'an unfinished tag remains text without nested whitespace backtracking');
-assert.match(page.slice(cardStart), /if \(this\.displayIntro\(\)\.length > 0\)/, 'markup-only search summaries must not reserve a blank row');
+assert.match(page.slice(cardStart), /if \(this\.showResultIntro\(\)\)/, 'the search card uses the tested synopsis visibility policy');
 assert.match(page.slice(cardStart), /Text\(this\.displayIntro\(\)\)/);
 assert.match(detail, /Text\(this\.displayIntro\(\) \|\| '暂无简介'\)/);
 console.log('shared metadata: canonical 56/55 source sets; Search retains transitive 74/73 history while source switching verifies current title/author; remount, no network, synopsis presentation: PASS');

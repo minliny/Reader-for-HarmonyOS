@@ -27,7 +27,8 @@ class ReaderLabeledIconLabelModifier implements AttributeModifier<TextAttribute>
       instance.minFontScale(1);
       instance.maxFontScale(readerReadableFontScale(this.scale));
     }
-    if (text.lineHeightFp !== undefined) instance.lineHeight(text.lineHeightFp);
+    instance.lineHeight(text.lineHeightFp ?? Math.round(text.fontSizeFp * 1.5));
+    instance.halfLeading(true);
     if (text.letterSpacingFp !== undefined) instance.letterSpacing(text.letterSpacingFp);
     if (spec.labelMarginLeft !== undefined) instance.margin({ left: spec.labelMarginLeft });
     instance.fontColor(readerAppColor(this.danger && spec.dangerRole !== undefined ? spec.dangerRole : spec.textRole, this.scheme));

@@ -71,7 +71,7 @@ function checkOrdinary(source) {
     assert.equal(rowProbe(source, view.nodes[1], { scheme }).row.padding.left, 26, 'one normalization gives the exact child inset outside search');
     assert.equal(row.create.space, 12);
     assert.equal(title.fontFamily, fontFamilies.READER_FONT_NOTO_SANS_SC_UI_REGULAR);
-    assert.deepEqual(title.fontWeight, [400, {enableVariableFontWeight: true}], 'native weight declares the generated body role');
+    assert.deepEqual(title.fontWeight, 400, 'native weight declares the generated body role');
     assert.equal(title.lineHeight, 22);
     const parent = nodes.find(item => item.type === 'Text' && item.create === '确定卷组');
     assert.equal(parent.fontSize, 10); assert.equal(parent.lineHeight, 16);
@@ -218,7 +218,7 @@ function checkCatalogVariants(source) {
     assert.deepEqual(current.row.padding, { left: 26, right: 10, top: 14, bottom: 14 });
     assert.equal(current.row.border.width.top, 1, 'catalog tree keeps its own scrolling first boundary');
     assert.equal(current.title.fontSize, 13); assert.equal(current.title.lineHeight, 22);
-    assert.equal(current.title.fontFamily, fontFamilies.READER_FONT_NOTO_SANS_SC_UI_550);
+    assert.equal(current.title.fontFamily, fontFamilies.READER_FONT_NOTO_SANS_SC_UI_MEDIUM);
     assert.equal(current.row.create.space, 12);
     const state = current.nodes.find(node => node.type === 'Text' && node.create === '正在读');
     assert.equal(state.fontSize, 10); assert.equal(state.lineHeight, 17);
@@ -266,7 +266,7 @@ assert.notEqual(fixedPhoneHeight, listSource);
 assert.throws(() => checkScrollableBoundary(fixedPhoneHeight), /every entrance/);
 for (const scheme of ['day', 'night']) {
   const { nodes, row, title } = rowProbe(listSource, view.nodes[0], { scheme, index: 40 });
-  assert.equal(title.fontFamily, fontFamilies.READER_FONT_NOTO_SANS_SC_UI_600); assert.equal(title.fontWeight, 600);
+  assert.equal(title.fontFamily, fontFamilies.READER_FONT_NOTO_SANS_SC_UI_BOLD); assert.equal(title.fontWeight, 700);
   assert.equal(title.lineHeight, 21); assert.equal(row.create.space, 14);
   assert.equal(row.constraintSize.minHeight, 48); assert.equal(row.margin.top, 0);
   assert.equal(row.border.width.bottom, 0);
@@ -285,12 +285,12 @@ for (const scheme of ['day', 'night']) {
   const ordinary = rowProbe(listSource, view.nodes[1], { scheme });
   assert.ok(!ordinary.nodes.some(item => item.type === 'Text' && item.create === '确定卷组'), 'normal rows do not add search-only context');
   const current = rowProbe(listSource, view.nodes[1], { scheme, current: true });
-  assert.equal(current.title.fontFamily, fontFamilies.READER_FONT_NOTO_SANS_SC_UI_550); assert.deepEqual(current.title.fontWeight, [550, {enableVariableFontWeight: true}]);
+  assert.equal(current.title.fontFamily, fontFamilies.READER_FONT_NOTO_SANS_SC_UI_MEDIUM); assert.deepEqual(current.title.fontWeight, 500);
   assert.ok(current.nodes.some(item => item.type === 'Text' && item.create === '正在读'));
   assert.ok(!current.nodes.some(item => item.type === 'Image'));
   ordinary.owner.currentChapterIndex = wireChild.chapterIndex;
   ordinary.owner.replay();
-  assert.equal(ordinary.title.fontFamily, fontFamilies.READER_FONT_NOTO_SANS_SC_UI_550, 'mounted native title observer switches to the exact fixed 550 face');
+  assert.equal(ordinary.title.fontFamily, fontFamilies.READER_FONT_NOTO_SANS_SC_UI_MEDIUM, 'mounted native title observer switches to the exact fixed UI Medium face face');
   ordinary.owner.currentChapterIndex = -1; ordinary.owner.replay();
   assert.equal(ordinary.title.fontFamily, fontFamilies.READER_FONT_NOTO_SANS_SC_UI_REGULAR, 'same mounted title switches back to fixed 400');
 }
@@ -376,7 +376,7 @@ const canonical = [
   assert.equal(rowDisabled.constraintSize.minHeight, 58); assert.equal(rowDisabled.border.width.bottom, 1);
   assert.equal(rowDisabled.backgroundColor, 'Color.Transparent');
   const title = ordinary.find(item => item.type === 'Text');
-  assert.deepEqual(title.fontWeight, [400, {enableVariableFontWeight: true}]); assert.equal(title.fontColor, '#1F1B17'); assert.equal(rowDisabled.opacity, .36);
+  assert.deepEqual(title.fontWeight, 400); assert.equal(title.fontColor, '#1F1B17'); assert.equal(rowDisabled.opacity, .36);
   assert.ok(!ordinary.some(item => item.create === '整卷可读'), 'a volume word does not create a semantic fact');
 }
 function checkFallbackCountRefresh(source) {
@@ -445,4 +445,4 @@ const unfencedClose = listSource.replaceAll('this.selectionGeneration += 1;', ''
   .replaceAll('this.interactionEnabled !== false && ', '').replaceAll('this.interactionEnabled === false || ', '');
 assert.notEqual(unfencedClose, listSource);
 await assert.rejects(() => checkClosing(unfencedClose), /closing cancels/);
-console.log('PASS manga directory actual gateway -> SDK parity: fixed 400/550/600 families without VF dependence, Radix SVG, one depth normalization, full-tree metadata, group spacing, flat search, all entrances58 with13/22 typography and adaptive columns, content-owned first-rank boundary, 50/12 positioning and preserved native anchors; same native group Image receives 0/-90/0 with live title/count/second click and same-view page admission; fifteen old-implementation negative controls rejected. SDK animation requests verified, compositor frames require VM evidence');
+console.log('PASS manga directory actual gateway -> SDK parity: fixed 400/500/700 families without VF dependence, Radix SVG, one depth normalization, full-tree metadata, group spacing, flat search, all entrances58 with13/22 typography and adaptive columns, content-owned first-rank boundary, 50/12 positioning and preserved native anchors; same native group Image receives 0/-90/0 with live title/count/second click and same-view page admission; fifteen old-implementation negative controls rejected. SDK animation requests verified, compositor frames require VM evidence');

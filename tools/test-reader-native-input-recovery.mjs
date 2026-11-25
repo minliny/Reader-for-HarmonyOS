@@ -28,13 +28,13 @@ function check(source) {
   const Entry = selectedProductionMethods(file('features/reading/presentation/ReadingEntryPresentation.ets'),
     'ReadingEntryPresentation', ['readerPresentationIdentity']);
   const Motion = selectedProductionMethods(file('features/bookshelf/ui/BookshelfNavigationPresentation.ets'),
-    'BookshelfNavigationPresentation', ['finish', 'coverClosed', 'resetShelfPaint']);
+    'BookshelfNavigationPresentation', ['finish', 'coverClosed', 'resetOpeningPaint']);
   const scenarios = [];
   for (const boundary of ['opening', 'hidden', 'directory', 'source', 'manga']) {
     const runtime = {};
     const reading = Object.assign(new Entry(), { sessionActive: true, book: { sourceId: 'local', bookId: 'book' }, readyGeneration: 1 });
     const motion = Object.assign(new Motion(), { request: boundary === 'opening' ? { id: 3, direction: 'open' } : undefined,
-      pendingExitId: -1, readerOpacity: 0, deferredShelfMotionProjection: undefined, returnBookKey: '' });
+      pendingExitId: -1, paint: { opening: { readerOpacity: 0 } }, deferredShelfMotionProjection: undefined, returnBookKey: '' });
     const host = Object.assign(new Root(), { readingEntry: reading, shelfMotion: motion,
       route: boundary === 'directory' ? 'directory' : 'reading', directoryReturnTarget: 'readerControl',
       searchAppForeground: boundary !== 'hidden', arkWebCapturesInput: false, shelfReceiptRetired: false,

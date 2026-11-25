@@ -23,8 +23,7 @@ import { createReaderControlMorphScroll, advanceReaderControlMorphScroll, observ
   readerControlMorphScrollTranslation, readerControlMorphScrollExtent, readerControlMorphScrollAllowsNative,
   type ReaderControlMorphScrollState } from './ReaderControlMorphScroll';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
-import { TOK_BORDER_W, TOK_LINE, TOK_READ_ACTIVE_SOFT, TOK_READ_ELEVATED,
-  TOK_READ_INK, TOK_READ_MUTED, TOK_READ_PRIMARY, TOK_SURFACE_SOLID } from '../../../ui/foundation/ReaderTokens';
+import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import { errorMessageOf } from '../../../app/ErrorMessage';
 import type { ReaderReplaceRule, ReaderControlReplaceDraft } from '../application/ReaderReplaceQuickState';
 import { ReaderReplacePreview } from '../application/ReaderReplaceQuickGateway';
@@ -603,8 +602,10 @@ export struct ReaderControlReplaceContent {
   private toolbarButton(focusRole: string, label: string, icon: () => Resource, add: boolean, index: number, action: () => void) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
     Row({ space: 6 }) {
-      Image(icon()).width(20).height(20);
+      Image(icon()).width(14).height(14);
       Text(label).fontFamily(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontFamily).fontSize(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontSizeFp).fontWeight(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontWeight)
+        .lineHeight(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.lineHeightFp ??
+          Math.round(TYPE_READER_REPLACE_RETAINED_TOOLBAR_BUTTON_LABEL.fontSizeFp * 1.5)).halfLeading(true)
         .fontColor(add ? readerAppColor('app.replace.onToolbarAction', this.appThemeScheme) : readerAppColor('TOK_READ_INK', this.appThemeScheme)).maxLines(1);
     }.id('reader-control-replace-tool-' + focusRole)
       .width('100%').height('100%').justifyContent(FlexAlign.Center);

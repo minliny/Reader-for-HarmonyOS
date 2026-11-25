@@ -28,6 +28,7 @@ export interface SourceManagementLayout {
 }
 
 export const SOURCE_ROW_ICON_WIDTH = 29;
+export const SOURCE_STATUS_CHIP_GAP = 4;
 
 /** Keep the two text lines together at narrow widths and large font scales. */
 export function resolveSourceManagementLayout(input: SourceManagementLayoutInput): SourceManagementLayout {
@@ -53,5 +54,5 @@ export function resolveSourceManagementLayout(input: SourceManagementLayoutInput
     bodyHeight + 8 + actionsHeight + (rowForm === 'stacked-leading' ? 40 : 0));
   return { rowForm, textMinWidth, textAvailableWidth, trailingWidth, actionsHeight, actionRowCount, rowMinHeight,
     filterHeight: input.filterHeight, footerHeight: Math.max(48, input.footerHeight),
-    statusContentWidth: Math.ceil(318 * scale + 32) };
+    statusContentWidth: Math.ceil((2 * 54 + 3 * 66) * scale + 4 * SOURCE_STATUS_CHIP_GAP) };
 }

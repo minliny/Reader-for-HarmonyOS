@@ -129,6 +129,8 @@ export struct ReaderReadingTopBar {
       .border({ width: 1, color: readerHeaderVeilBorder(this.scheme) })
       .borderRadius(this.resolvedHeight() / 2)
       .clip(false)
-      .shadow(readerSurfaceElevation('raised', this.scheme));
+      .shadow(readerSurfaceElevation('raised', this.scheme))
+      .hitTestBehavior(HitTestMode.Default)
+      .onTouch((): void => {});
   }
 }

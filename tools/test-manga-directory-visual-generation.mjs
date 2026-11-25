@@ -4,6 +4,7 @@ import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { createRequire } from 'node:module';
 import { execFileSync } from 'node:child_process';
+import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryColumns, mangaDirectoryLabelsFit,
   mangaDirectoryHeaderHeight, mangaDirectoryContentTop, mangaDirectoryFooterStacked, mangaDirectoryQuickFlowGaps,
   mangaDirectoryQuickMinimumListHeight, mangaDirectoryFullFlowFooter } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
@@ -33,13 +34,15 @@ assert.equal(declaration(baseline,'.search-field input,.search-field > span','fo
 assert.equal(declaration(baseline,'.directory-summary strong','font'), "700 24px/34px 'Reader Serif',serif");
 assert.equal(declaration(baseline,'.chapter-state','line-height'), `${visual.stateLineHeight}px`);
 assert.equal(visual.toolLineHeight, 11 * 1.5, 'browser-resolved inherited tool line-height, independent of generated value');
-assert.equal(visual.bodyFontWeight, 400); assert.equal(visual.currentFontWeight, 550); assert.equal(visual.groupFontWeight, 600);
+assert.equal(visual.bodyFontWeight, 400); assert.equal(visual.currentFontWeight, 500); assert.equal(visual.groupFontWeight, 700);
+const cssColor = argb => '#' + argb.slice(3) + (argb.slice(1, 3) === 'FF' ? '' : argb.slice(1, 3));
 const palettes = [':is(.manga-app,.manga-sheet-body,.adaptive-reader)', ':is(.manga-app,.manga-sheet-body,.adaptive-reader).theme-dark'];
 for (const [index, scheme] of ['day','night'].entries()) {
   for (const role of ['paper','surface','soft','ink','muted','faint','green','accent','onGreen','active','line','frame']) {
     const property = `--${({soft:'surface-soft',active:'soft-green',onGreen:'on-green'})[role] ?? role}`;
-    assert.equal(mangaDirectoryColor(role, scheme).toLowerCase(), declaration(baseline,palettes[index],property).toLowerCase());
-    assert.equal(declaration(generated,palettes[index],property), spec.palette[scheme][role]);
+    const expected = readerAppColor(spec.paletteRoles[role], scheme);
+    assert.equal(mangaDirectoryColor(role, scheme), expected);
+    assert.equal(declaration(generated,palettes[index],property), cssColor(expected));
   }
 }
 assert.equal(mangaDirectoryQuickMinimumListHeight(1), 58, 'a compact list retains the CSS named-row minimum');
@@ -73,6 +76,6 @@ const arrow = readFileSync(new URL('arrow-left.svg',ui),'utf8');
 assert.equal(receipt.version,'1.3.2'); assert.equal(receipt.license,'MIT');
 assert.equal(createHash('sha256').update(arrow).digest('hex'),receipt.svgSha256);
 for (const [name, role, scheme] of [['back','ink','day'],['back_theme_night','ink','night'],['previous','accent','day'],['previous_theme_night','accent','night']]) {
-  assert.equal(readFileSync(new URL(`../entry/src/main/resources/base/media/manga_directory_${name}.svg`,import.meta.url),'utf8'), arrow.replaceAll('currentColor',spec.palette[scheme][role]));
+  assert.equal(readFileSync(new URL(`../entry/src/main/resources/base/media/manga_directory_${name}.svg`,import.meta.url),'utf8'), arrow.replaceAll('currentColor',cssColor(readerAppColor(spec.paletteRoles[role], scheme))));
 }
-console.log('PASS directory visual generation: frozen CSS declarations, palette, shared responsive helpers, pinned parser, exact upstream icon geometry, output freshness');
+console.log('PASS directory visual generation: frozen CSS geometry and current canonical palette, shared responsive helpers, pinned parser, exact upstream icon geometry, output freshness');

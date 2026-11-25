@@ -16,6 +16,7 @@ if (selectedCase === 'settings-arguments') {
     SettingsShell: 'features/settings/ui/SettingsShell.ets',
     MainTabShell: 'features/shell/MainTabShell.ets',
     ReaderBottomNavigation: 'app/navigation/ReaderBottomNavigation.ets',
+    ReaderNavigationAppearanceHost: 'app/navigation/ReaderNavigationAppearanceHost.ets',
     ReaderBottomTabBar: 'ui/patterns/ReaderBottomTabBar.ets',
   };
   const verify = (component, consumerFile, expected, source = read(consumerFile)) => {
@@ -32,7 +33,9 @@ if (selectedCase === 'settings-arguments') {
   const page = 'features/settings/ui/SettingsPage.ets';
   const shelf = 'features/bookshelf/ui/BookshelfSettingsPage.ets';
   const settingsShell = 'features/settings/ui/SettingsShell.ets';
-  verify('SettingsPage', 'app/composition/SettingsScenes.ets', { navigationGeneration: 'this.generation' });
+  verify('SettingsPage', 'app/composition/SettingsScenes.ets', {
+    navigationGeneration: 'this.painted?.generation ?? this.generation',
+  });
   verify('SettingsShell', page, { navigationGeneration: 'this.navigationGeneration' });
   verify('MainTabShell', settingsShell, { navigationGeneration: 'this.navigationGeneration' });
   verify('ReaderBottomNavigation', shell, {
@@ -41,10 +44,13 @@ if (selectedCase === 'settings-arguments') {
     onCurrentTap: /this\.requestCurrentTab\(key, generation\)/,
   });
   const bottom = 'app/navigation/ReaderBottomNavigation.ets';
+  verify('ReaderNavigationAppearanceHost', bottom, {
+    inputEnabled: 'this.inputIsEnabled()', bottomInset: 'this.bottomInset()', translateX: 'this.bottomBarTranslateX()',
+  });
   const bottomInputs = {
     items: 'this.items()', current: 'this.current', scheme: 'this.appThemeScheme',
-    surfaceWidth: 'this.bottomBarFrame().width', translateX: 'this.bottomBarTranslateX()',
-    bottomInset: 'this.bottomInset()', fontScale: 'this.navigationFontScale()', inputEnabled: 'this.inputIsEnabled()',
+    surfaceWidth: 'this.bottomBarFrame().width',
+    fontScale: 'this.navigationFontScale()', inputEnabled: 'this.inputIsEnabled()',
     onSelect: /this\.acceptsInput\(key\).*this\.onSelect\(key\)/,
     onCurrentTap: /this\.acceptsInput\(key\).*this\.onCurrentTap\(key\)/,
   };
@@ -56,11 +62,16 @@ if (selectedCase === 'settings-arguments') {
     onViewportChange: /if \(this\.mounted\) publishReaderMainViewport\(width, height\)/,
   };
   verify('ReaderStandardPage', shell, shellInputs);
-  verify('ReaderPageScaffold', 'ui/layout/ReaderStandardPage.ets', {
-    geometry: 'this.geometry', headerMeasurementKey: 'this.measurementKey', footerMeasurementKey: 'this.measurementKey',
+  const standardPage = 'ui/layout/ReaderStandardPage.ets';
+  const scaffoldInputs = {
+    geometry: 'this.geometry', headerMeasurementKey: 'this.measurementKey', footerMeasurementKey: 'this.footerMeasurementKey',
     onHeaderHeightChange: /this\.recordMeasurement\('standard:header', height, key\)/,
     onFooterHeightChange: /this\.recordMeasurement\('standard:footer', height, key\)/,
-  });
+  };
+  verify('ReaderPageScaffold', standardPage, scaffoldInputs);
+  assert.throws(() => verify('ReaderPageScaffold', standardPage, scaffoldInputs,
+    read(standardPage).replace('footerMeasurementKey: this.footerMeasurementKey', 'footerMeasurementKey: this.measurementKey')),
+    /expected ReaderPageScaffold inputs/);
   verify('PageBackBar', shelf, { title: "'书架设置'", onBack: /this\.onBack\(\)/ });
   verify('ReaderFormRow', page, {
     actionEnabled: 'this.settingCanToggle(identity)', isBusy: 'this.settingToggleBusy()',
@@ -89,7 +100,8 @@ if (selectedCase === 'settings-arguments') {
     read(settingsShell).replace('navigationGeneration: this.navigationGeneration', 'navigationGeneration: 0')),
     /expected MainTabShell inputs/);
   assert.throws(() => verify('ReaderBottomTabBar', bottom, bottomInputs,
-    read(bottom).replace('inputEnabled: this.inputIsEnabled()', 'inputEnabled: true')),
+    read(bottom).replace('fontScale: this.navigationFontScale(), inputEnabled: this.inputIsEnabled()',
+      'fontScale: this.navigationFontScale(), inputEnabled: true')),
     /expected ReaderBottomTabBar inputs/);
   return;
 }

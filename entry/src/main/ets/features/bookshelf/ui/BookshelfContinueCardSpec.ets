@@ -16,15 +16,11 @@ export interface BookshelfContinueCardFrame {
   minHeight: number;
 }
 
-/** The recent book is inset independently of the shelf's section/list frame.
- * Typography remains at system scale; a narrow text budget moves the action
- * below the book instead of shrinking or clipping the native text. */
-export function bookshelfContinueCardFrame(contentWidth: number, expanded: boolean,
-  fontScale: number = 1): BookshelfContinueCardFrame {
-  const usable = Number.isFinite(contentWidth) ? Math.max(0, contentWidth) : 0;
+/** Use the shelf's already-inset content frame. At narrow widths the action
+ * moves below the book so the native text keeps its system scale. */
+export function bookshelfContinueCardFrame(contentWidth: number, fontScale: number = 1): BookshelfContinueCardFrame {
+  const width = Number.isFinite(contentWidth) ? Math.max(0, contentWidth) : 0;
   const scale = Number.isFinite(fontScale) ? Math.max(1, fontScale) : 1;
-  const inset = Math.min(expanded ? 20 : 12, usable * 0.04);
-  const width = Math.max(0, usable - inset * 2);
   const coverWidth = 56;
   const coverHeight = 78;
   const gap = 14;

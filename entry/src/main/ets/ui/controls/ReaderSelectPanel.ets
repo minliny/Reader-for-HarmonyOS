@@ -5,18 +5,12 @@ import { ReaderChoiceRow } from './ReaderChoiceRow';
 import { registerReaderFonts } from '../foundation/ReaderFonts';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
-import { ReaderSelectMenuKind, readerSelectAvailableWidth, readerSelectMenuWidth, SOURCE_GROUP_SELECT_ARROW_END,
-  SOURCE_GROUP_SELECT_ARROW_SIZE, SOURCE_GROUP_SELECT_ARROW_TARGET, SOURCE_GROUP_SELECT_PAINT_INSET,
+import { ReaderSelectMenuKind, readerSelectAvailableWidth, readerSelectMenuWidth,
+  SOURCE_GROUP_SELECT_ARROW_TARGET, SOURCE_GROUP_SELECT_PAINT_INSET,
   SOURCE_GROUP_SELECT_RADIUS } from '../foundation/ReaderSelectGeometry';
 import {
-  TOK_BORDER,
   TOK_BORDER_W,
-  TOK_CONTROL_INK,
-  TOK_FIELD_SURFACE,
-  TOK_INK,
-  TOK_PRIMARY_DARK,
   TOK_SPACE_CONTROL_INLINE,
-  TOK_SURFACE_PANEL_SOFT,
 } from '../foundation/ReaderTokens';
 import { motionAnimateParam, motionSpecGet } from '../foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../foundation/ReaderMotionPolicy';
@@ -26,7 +20,6 @@ import {
 import type { ReaderSelectVariant } from './ReaderSelect';
 import {
   TYPE_SELECT_DEFAULT_VALUE,
-  TYPE_SELECT_OPTION,
   TYPE_SELECT_SETTINGS_VALUE,
   TYPE_SELECT_SOURCE_GROUP_VALUE,
 } from '../foundation/ReaderTypography';
@@ -325,10 +318,10 @@ export struct ReaderSelectPanel {
       if (this.onMenuHeaderCollapse !== undefined) {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Stack({ alignContent: Alignment.TopStart }) {
-            Image(this.appThemeScheme === 'night' ? $r('app.media.source_group_chevron_theme_night') : $r('app.media.source_group_chevron'))
-              .width(SOURCE_GROUP_SELECT_ARROW_SIZE).height(SOURCE_GROUP_SELECT_ARROW_SIZE)
-              .position({ x: SOURCE_GROUP_SELECT_ARROW_TARGET - SOURCE_GROUP_SELECT_ARROW_SIZE - SOURCE_GROUP_SELECT_ARROW_END,
-                y: (SOURCE_GROUP_SELECT_ARROW_TARGET - SOURCE_GROUP_SELECT_ARROW_SIZE) / 2 })
+            Image(this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down'))
+              .width(CHEVRON_W).height(CHEVRON_H)
+              .position({ x: SOURCE_GROUP_SELECT_ARROW_TARGET - CHEVRON_W - SELECT_PAD,
+                y: (SOURCE_GROUP_SELECT_ARROW_TARGET - CHEVRON_H) / 2 })
               .rotate({ angle: this.chevronAngle }).accessibilityLevel('no');
           }.width('100%').height('100%');
         }.width(SOURCE_GROUP_SELECT_ARROW_TARGET).height(SOURCE_GROUP_SELECT_ARROW_TARGET)
@@ -351,7 +344,9 @@ export struct ReaderSelectPanel {
         } else if (this.renderedOptions().length === 0) {
           Text(this.emptyOptionsText).width('100%').height(44).padding({ left: 14, right: 14 })
             .fontFamily(TYPE_SELECT_SOURCE_GROUP_VALUE.fontFamily)
+            .fontWeight(TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight)
             .fontSize(TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp)
+            .lineHeight(TYPE_SELECT_SOURCE_GROUP_VALUE.lineHeightFp as number).halfLeading(true)
             .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         }

@@ -2351,19 +2351,7 @@ export struct MangaReadingSurface {
             if (this.previousChapterPixels.length > 0) { this.retainedChapterPixels(); }
             if (this.opened && this.showPageNumbers && !this.chapterEnd && !this.boundaryBusy) this.pageBadge();
             if (this.controlsPresentedForWindow() && !this.boundaryBusy) {
-              // Stack owns child placement. Component align() only aligns its
-              // own content and cannot position an intrinsic floating bar.
-              Stack({ alignContent: Alignment.Top }) {
-                this.topControls();
-              }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent)
-                .padding(this.interactiveInsets(this.windowMetricsRevision));
-              Stack({ alignContent: Alignment.Bottom }) {
-                Scroll() { this.bottomControls(); }
-                  .width('100%').height(this.bottomControlViewportHeight())
-                  .enableScrollInteraction(this.bottomControlViewportHeight() < this.dockHeight() + 12)
-                  .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None);
-              }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent)
-                .padding(this.interactiveInsets(this.windowMetricsRevision));
+              this.readerChrome(this.interactiveInsets(this.windowMetricsRevision));
             }
             this.refreshProgress();
             this.recoveryOverlay();
@@ -2562,6 +2550,23 @@ export struct MangaReadingSurface {
         })));
   }
   @Builder
+  private readerChrome(insets: ReaderInsetsVp) {
+    Column() { this.topControls(); }
+      .width(`calc(100% - ${insets.left + insets.right}vp)`)
+      .position({ left: insets.left, top: insets.top })
+      .hitTestBehavior(HitTestMode.Default).touchable(false);
+    if (this.bottomControlViewportHeight() > 12) {
+      Scroll() { this.bottomControls(); }
+        .width(this.dockWidth(insets)).height(this.bottomControlViewportHeight() - 12)
+        .position({ left: (this.viewportWidth - this.dockWidth(insets) + insets.left - insets.right) / 2,
+          bottom: insets.bottom + 12 })
+        .hitTestBehavior(HitTestMode.Default)
+        .enableScrollInteraction(this.bottomControlViewportHeight() < this.dockHeight() + 12)
+        .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None);
+    }
+  }
+
+  @Builder
   private topControls() {
     Column({ space: 8 }) {
       ReaderReadingTopBar({ variant: 'manga', barHeight: this.mangaTopBarHeight(), scheme: this.chromeScheme(),
@@ -2577,7 +2582,8 @@ export struct MangaReadingSurface {
         Text(this.offlineProbeStatus).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400)
           .fontSize(10).maxLines(4).fontColor(this.mutedColor()).id('reader-manga-offline-probe-status');
       }
-    }.width('100%').padding({ left: 8, right: 8, top: 10 });
+    }.width('100%').padding({ left: 8, right: 8, top: 10 })
+      .hitTestBehavior(HitTestMode.Default).touchable(false);
   }
 
   private recoveryOverlayIdentity(): string {
@@ -2686,6 +2692,9 @@ export struct MangaReadingSurface {
   private dockPageRowHeight(): number { return 44 + 3 + Math.max(16, 15 * this.controlFontScale()); }
   private dockActionHeight(): number { return Math.max(58, 22 + 4 + 16.5 * this.controlFontScale() + 12); }
   private dockHeight(): number { return this.dockPageRowHeight() + 4 + this.dockActionHeight() + 1 + 24; }
+  private dockWidth(insets: ReaderInsetsVp): number {
+    return Math.min(560, Math.max(1, this.viewportWidth - 60 - insets.left - insets.right));
+  }
   private recoveryNoticeHeight(): number {
     const insets = this.interactiveInsets(this.windowMetricsRevision);
     const available = this.viewportHeight - insets.top - insets.bottom;
@@ -2750,11 +2759,10 @@ export struct MangaReadingSurface {
         this.footerAction((): Resource => (this.backgroundPreference === 'ink' ? $r('app.media.reader_appearance_header_theme_night') : $r('app.media.reader_appearance_header')), '阅读方式', 'mode');
         this.footerAction((): Resource => (this.backgroundPreference === 'ink' ? $r('app.media.reader_settings_header_theme_night') : $r('app.media.reader_settings_header')), '设置', 'settings');
       }.width('100%').height(this.dockActionHeight() + 1).border({ width: { top: 1 }, color: this.lineColor() });
-    }.width(Math.max(1, this.viewportWidth - 60 - this.interactiveInsets(this.windowMetricsRevision).left -
-      this.interactiveInsets(this.windowMetricsRevision).right)).padding({ left: 14, right: 14, top: 13, bottom: 11 })
+    }.width('100%').padding({ left: 14, right: 14, top: 13, bottom: 11 })
       .attributeModifier(new ReaderPanelFrame('manga-dock', this.chromeScheme()))
-      .margin({ left: 30, right: 30, bottom: 12 })
-      .constraintSize({ maxWidth: 560 });
+      .hitTestBehavior(HitTestMode.Default)
+      .onTouch((): void => {});
   }
   @Builder
   private footerAction(icon: () => Resource, label: string, panel: string) {

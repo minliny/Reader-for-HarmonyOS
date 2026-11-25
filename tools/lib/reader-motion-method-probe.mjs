@@ -108,6 +108,11 @@ const ParagraphRange = new Function(stripTypeScriptTypes(paragraphRangeSource).r
 export function productionMotionMethods(file, names, dependencies = {}) {
   const fixtureRuntime = { captureReadingContentValidity: () => () => true, waitForReadingContentIdle: async () => {} };
   dependencies = { remoteReadingEntryKind, remoteReadingSeedForSession, remoteReadingSeedForShelf, remoteShelfDetailInput, readingFailureHint, mangaUserError, remoteReadingFailureKindOf, diagnosticCodeOf, ...mangaDirectoryAdaptiveDependencies, bookshelfSourceDisplayName, ReaderCoreNotDispatchedError, readerAppColor, readerThemeDefinition, prepareMangaSheetFonts: async () => true, readingChapterLayoutMap, prepareReadingChapterLayoutMap, prepareReadingParagraphUtf16Ranges, readingParagraphBoundaryMode, ParagraphRange, hasKnownReadingImageGeometry, errorMessageOf,
+    // Host probes retain the same selected family identity as the visible
+    // reader. Native registration and readiness receipts remain platform
+    // concerns outside this pure method harness.
+    readerRegisteredFontFamily: (_font, family) => family,
+    FontWeight: { Regular: 400, Medium: 500, Bold: 700 },
     // Execute the current complete page-shell policy through its finite import seam.
     ...actualReaderPageShell(),
     ...readerTypographyRoles, readerRuleMutationEffects, RssPresentationProjection, ReaderParagraphLayoutOwner, ReaderPhysicalPaginationOwner, ReaderStartupContentOwner, readerBackTarget, readerExitTarget, ReaderProgressProducerHost, ReaderNativeAlertOwner, ReaderNativeAlertLease, ReaderReadingImageResources, sameReaderReadingImageResource, ReaderReadingRecordHost, ReadingRecordRecoveryError,

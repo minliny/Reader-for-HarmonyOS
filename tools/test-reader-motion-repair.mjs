@@ -201,6 +201,92 @@ const shelfNames=['setViewMode','onReduceMotionChanged','startViewSwitch','sched
  'sampleViewSwitch','resetViewSwitchMotion','setRestingProjectionOpacity','projectionListProgress','fadeViewSwitch'];
 const { READER_SHELF_REFLOW_MS, READER_SHELF_STAGGER_MS, READER_SHELF_STAGGER_CAP_MS, READER_REDUCED_FADE_MS } =
  await import('../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts');
+const { READER_BOOK_OPEN_MS, READER_BOOK_CLOSE_MS } = await import('../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts');
+const { bookshelfMotionPaint } = await import('../entry/src/main/ets/features/bookshelf/presentation/BookshelfNavigationMotion.ts');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { boundedMembers, boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const actorSource = readFileSync(feature('bookshelf/ui/BookshelfNavigationTransition.ets'), 'utf8');
+const actorSdk = boundedSurfaceSdk();
+const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+const compiler = installedEtsCompiler();
+compiler.require(compiler.root + '/lib/validate_ui_syntax.js').observedClassCollection.add('BookshelfNavigationPaint');
+const shelfPaint = actorSdk.properties.sdk.ObservedObject.createNew({
+  opening: { readerOpacity: 0, shelfOpacity: 1, shelfScale: 1, shelfBrightness: 1 },
+}, undefined);
+const layerName = 'BookshelfNavigationPaintSurface';
+const layer = actorSdk.consumer(actorSource, boundedMembers(actorSource, layerName), {
+  SynchedPropertyNesedObjectPU: actorSdk.properties.sdk.SynchedPropertyNestedObjectPU,
+}, { paint: shelfPaint, content: () => {} }, layerName);
+layer.initialRender();
+const shelfStack = [...layer.nodes.values()].find(node => node.type === 'Stack');
+assert.equal(shelfStack.opacity, 1);
+shelfPaint.opening = { readerOpacity: .4, shelfOpacity: .7, shelfScale: .98, shelfBrightness: .8 };
+actorSdk.properties.flush();
+assert.equal(shelfStack.opacity, .7, 'the paint carrier updates the same shelf stack directly');
+assert.deepEqual(shelfStack.scale, { x: .98, y: .98 });
+assert.equal(shelfStack.brightness, .8);
+assert.equal(actorSdk.properties.updates.length, 0, 'painting the shelf does not publish child props');
+const actorName = 'BookshelfNavigationTransition';
+const coverActor = createReaderBuilderProbe(actorSource, boundedMembers(actorSource, actorName), {
+  ...actorSdk.deps, uiContext: UI, ReversibleMotionTimeline, motionSegment, readerMotionNowMs: () => now,
+  bookshelfMotionPaint, READER_BOOK_OPEN_MS, READER_BOOK_CLOSE_MS, READER_REDUCED_FADE_MS,
+  STANDARD: curve, FADE: curve, CLOSE_HANDOFF_FRACTION: .28,
+  BookshelfNavigationFrameCallback: Callback,
+}, { ...actorSdk.hooks, componentName: actorName }).owner;
+const origin = {sourceId:'source',bookId:'book',coverUrl:'',title:'Book',rect:{x:10,y:20,width:80,height:120},radius:8};
+const target = {x:0,y:0,width:390,height:844};
+const receipts = [];
+Object.assign(coverActor, {
+  request: {id:1,direction:'open',origin,target},
+  onOpeningPaint: (id, paint) => receipts.push(['paint', id, paint]),
+  onCovered: id => receipts.push(['cover', id]),
+  onFinished: id => receipts.push(['finished', id]),
+});
+coverActor.aboutToAppear();
+assert.deepEqual(receipts, [], 'seeding the opening actor never writes the Index owner during render');
+now += 280; frames.shift()();
+assert.equal(coverActor.sampledPhase, 0, 'startup layout cannot consume any authored opening frames');
+assert.deepEqual(receipts.map(([action, id]) => [action, id]), [['paint', 1]]);
+now += 16; frames.shift()();
+assert.equal(coverActor.sampledPhase, 16 / READER_BOOK_OPEN_MS);
+assert.ok(receipts.at(-1)[2].readerOpacity > 0);
+coverActor.reduceMotion = true; coverActor.onReduceMotionChanged();
+assert.equal(receipts.length, 2, 'a reduced-motion Prop update also defers opening paint');
+now += 200; frames.shift()(); frames.shift()();
+assert.equal(receipts.at(-1)[0], 'paint', 'reduced motion also starts with the first actual frame');
+now += READER_REDUCED_FADE_MS; frames.shift()();
+assert.deepEqual(receipts.at(-1), ['finished', 1]);
+coverActor.reduceMotion = false;
+coverActor.request = {id:2,direction:'close',origin,target,awaitingTarget:true};
+coverActor.onRequestChanged();
+now += READER_BOOK_CLOSE_MS; frames.shift()();
+assert.deepEqual(receipts.at(-1), ['finished', 1], 'first close frame also rebases');
+now += READER_BOOK_CLOSE_MS; frames.shift()();
+assert.deepEqual(receipts.at(-1), ['cover', 2]);
+assert.ok(Math.abs(coverActor.sampledPhase - .72) < 1e-8);
+coverActor.request = {...coverActor.request,awaitingTarget:false}; coverActor.onRequestChanged();
+assert.deepEqual(receipts.at(-1), ['cover', 2], 'a same-request target Prop change cannot finish into Index synchronously');
+now += 500; frames.shift()();
+assert.deepEqual(receipts.at(-1), ['cover', 2], 'shelf target wait cannot consume the remaining close');
+now += Math.ceil(READER_BOOK_CLOSE_MS * .72); frames.shift()();
+assert.deepEqual(receipts.at(-1), ['finished', 2]);
+
+coverActor.request = {id:3,direction:'open',origin,target};
+coverActor.onRequestChanged();
+frames.shift()();
+now += 80; frames.shift()();
+const precedingAngle = coverActor.coverAngle;
+coverActor.request = {id:4,direction:'close',origin,target,awaitingTarget:true};
+coverActor.onRequestChanged();
+now += 220; frames.shift()(); frames.shift()();
+assert.deepEqual(receipts.at(-1), ['cover', 4]);
+assert.ok(Math.abs(coverActor.sampledPhase - .2) < 1e-8, 'reversal waits at its prior visible phase');
+assert.ok(Math.abs(coverActor.coverAngle - precedingAngle) < 1e-8);
+coverActor.request = {...coverActor.request,awaitingTarget:false}; coverActor.onRequestChanged();
+now += 220; frames.shift()();
+assert.equal(coverActor.curtainOpacity, 1);
+now += 70; frames.shift()();
+assert.deepEqual(receipts.at(-1), ['finished', 4]);
 const Shelf=productionMotionMethods(shelfFile,shelfNames,{readerMotionNowMs:()=>now,ReversibleMotionTimeline,
  motionSegment,bookshelfViewCoverDelayMs:i=>Math.min(i*READER_SHELF_STAGGER_MS,READER_SHELF_STAGGER_CAP_MS),
  readerMotionReducedFadeParam:()=>({duration:READER_REDUCED_FADE_MS}),BookshelfMotionFrameCallback:Callback});

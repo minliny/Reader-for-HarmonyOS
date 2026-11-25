@@ -13,7 +13,7 @@ import { ReaderHeaderFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { readerPresentedHeaderBottom, readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { bookshelfHeaderSpec, searchHeaderSpec, SearchHeaderSpec } from '../../../ui/foundation/ReaderHeaderSpecs';
-import { readerSearchControlHeight, readerSearchActionWidth, SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
+import { readerSearchControlHeight, readerSearchControlVisualHeight, readerSearchActionWidth, SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerSurfaceElevation, readerHeaderVeilMaterial, readerHeaderVeilBorder } from '../../../ui/surfaces/ReaderSurfaceSpecs';
@@ -25,9 +25,11 @@ import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotio
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
 import type { ReaderSearchEditorEvent, ReaderSearchEditorObservation } from '../../../ui/controls/ReaderSearchField';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
+import { readerPressAnimation, readerPressOpacity, readerPressPointer, readerPressScale } from '../../../ui/foundation/ReaderPressMotion';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../../../ui/foundation/ReaderFontFamilies';
-import { ReaderSearchHistoryPanel } from './ReaderSearchHistoryPanel';
-import { SearchHistoryGeometry, SearchHistoryViewport } from './SearchHistoryGeometry';
+import { ReaderSearchHistoryPanel, SearchHistoryMeasurements } from './ReaderSearchHistoryPanel';
+import { projectSearchHistoryRows, SearchHistoryGeometry, SearchHistoryRow, SearchHistoryViewport } from './SearchHistoryGeometry';
 import type { ReaderSurfaceRect } from '../../../ui/layout/ReaderSurfaceRect';
 import { ReaderLibrarySearchModel, READER_LIBRARY_SEARCH_BACK_FOCUS_ID } from '../presentation/ReaderLibrarySearchModel';
 
@@ -80,11 +82,11 @@ export struct ReaderLibrarySearchSurface {
   private readonly editingScroller: Scroller = new Scroller();
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') @Watch('metricsChanged') private metricsRevision: number = 0;
-  @ObjectLink model: ReaderLibrarySearchModel;
+  @ObjectLink @Watch('historyChanged') model: ReaderLibrarySearchModel;
   @Prop @Watch('modeChanged') mode: LibrarySearchMode = 'idle';
   /** Restoring a retained query is a stable frame, not a new shelf opening. */
   @Prop animateOnAppear: boolean = true;
-  @Prop expandedLayout: boolean = false;
+  @Prop @Watch('metricsChanged') expandedLayout: boolean = false;
   @Prop @Watch('modeChanged') reduceMotion: boolean = false;
   @Prop @Watch('identityChanged') identity: number = 0;
   @Prop @Watch('presentationChanged') navigationGeneration: number = 0;
@@ -138,6 +140,8 @@ export struct ReaderLibrarySearchSurface {
   @State private surfaceViewportHeight: number = -1;
   @State private measuredHistoryFeedback: number = 0;
   @State private measuredHistoryFeedbackKey: string = '';
+  private readonly historyMeasurements: SearchHistoryMeasurements = new SearchHistoryMeasurements();
+  private historyProjectionKey: string = '';
   private lastCardSuppressed: boolean = false;
   private lastCardCoverageScope: string = '';
   private cardCoverageRevision: number = 0;
@@ -160,6 +164,7 @@ export struct ReaderLibrarySearchSurface {
   private raisedAppearanceEpoch: number = 0;
   private historyOpeningField: string = '';
   private historyObservationKey: string = '';
+  @State private searchActionPointer: number = -1;
 
   aboutToAppear(): void {
     this.raisedAppearanceEpoch += 1;
@@ -202,6 +207,7 @@ export struct ReaderLibrarySearchSurface {
   }
   aboutToDisappear(): void {
     this.mounted = false;
+    this.searchActionPointer = -1;
     this.generation += 1;
     this.cardCoverageRevision += 1;
     this.unbindInputBack?.();
@@ -263,6 +269,7 @@ export struct ReaderLibrarySearchSurface {
       return;
     }
     const previous = this.currentMode;
+    this.searchActionPointer = -1;
     this.fromSurface = this.displayedSurfaceProgress;
     this.fromHistory = this.historyProgress();
     this.fromResults = this.resultsProgress();
@@ -319,6 +326,14 @@ export struct ReaderLibrarySearchSurface {
     if (!this.mounted) return;
     this.measurementKey += 1;
     this.retargetHistoryViewport();
+  }
+  private historyChanged(): void {
+    if (!this.mounted) return;
+    const key = JSON.stringify([this.model.historyStatus, this.model.history]);
+    if (key === this.historyProjectionKey) return;
+    this.historyProjectionKey = key;
+    this.retargetHistoryViewport();
+    this.observeEntryHistory(false);
   }
   private retargetHistoryViewport(instant: boolean = false): void {
     const viewport = this.resolvedHistoryViewport();
@@ -512,12 +527,13 @@ export struct ReaderLibrarySearchSurface {
     return this.mode === 'input' && this.inputInteractive();
   }
   private controlHeight(): number {
-    const scale = this.metricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
-    return readerSearchControlHeight(Number.isFinite(scale) && scale > 0 ? scale : 1);
+    return readerSearchControlHeight(this.fontScale());
+  }
+  private searchActionVisualHeight(): number {
+    return readerSearchControlVisualHeight(this.fontScale());
   }
   private fontScale(): number {
-    this.metricsRevision;
-    const scale = ReaderWindowCoordinator.metrics().systemFontScale;
+    const scale = this.metricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
     return Number.isFinite(scale) && scale > 0 ? scale : 1;
   }
   private blend(a: number, b: number, fraction: number): number { return a + (b - a) * fraction; }
@@ -544,7 +560,6 @@ export struct ReaderLibrarySearchSurface {
     const safe = left ? readerInteractiveSafeLeft(metrics) : readerInteractiveSafeRight(metrics);
     return Math.max(this.spec.outerInset(this.expandedLayout), safe);
   }
-  private historyBottomInset(): number { return 13; }
   private fieldIdentity(): string {
     return JSON.stringify([this.identity, this.navigationGeneration, this.mounting, this.model.currentOwner()]);
   }
@@ -691,11 +706,11 @@ export struct ReaderLibrarySearchSurface {
     const metrics = ReaderWindowCoordinator.metrics();
     return readerKeyboardHostBottom(metrics, this.surfaceWindowY, this.surfaceHeight());
   }
-  private historyLimit(): number {
-    const barBottom = readerPresentedHeaderBottom(bookshelfHeaderSpec().topInset,
-      this.barHeight() + 2 * this.spec.borderWidth);
-    return Math.max(0, this.availableBottom() - barBottom);
+  private historyBarBottom(): number {
+    return readerPresentedHeaderBottom(bookshelfHeaderSpec().topInset,
+      this.spec.barHeight(this.searchLaneHeight()) + 2 * this.spec.borderWidth);
   }
+  private historyLimit(): number { return Math.max(0, this.availableBottom() - this.historyBarBottom()); }
   private captureHeader(height: number, key: number): void {
     if (!this.mounted || key !== this.measurementKey || !Number.isFinite(height) || height <= 0) return;
     const bottom = readerPresentedHeaderBottom(bookshelfHeaderSpec().topInset, height);
@@ -730,15 +745,21 @@ export struct ReaderLibrarySearchSurface {
       (this.inputInteractive() || this.model.sweeping) && (this.model.sweeping || this.model.canSubmit);
   }
   private resolvedHistoryViewport(): SearchHistoryViewport {
-    const barBottom = readerPresentedHeaderBottom(bookshelfHeaderSpec().topInset, this.barHeight() + 2 * this.spec.borderWidth);
-    const cardBottom = this.continueCardRect === undefined ? 0 :
-      this.continueCardRect.y + this.continueCardRect.height - this.surfaceWindowY;
-    return new SearchHistoryViewport(this.cardContentWidth(), barBottom, this.availableBottom(), cardBottom);
+    const geometry = this.historyGeometry();
+    const height = geometry.contentHeight(this.historyRows(geometry).length, this.model.history.length);
+    const cardTop = this.continueCardRect === undefined ? 0 : this.continueCardRect.y - this.surfaceWindowY;
+    const cardBottom = cardTop + (this.continueCardRect?.height ?? 0);
+    return new SearchHistoryViewport(height, this.historyBarBottom(), this.availableBottom(), cardBottom, cardTop);
   }
   private historyGeometry(): SearchHistoryGeometry {
-    return new SearchHistoryGeometry(this.cardContentWidth(), this.historyHeight, this.fontScale(),
+    return new SearchHistoryGeometry(this.cardContentWidth(), this.historyLimit(), this.fontScale(),
       this.expandedLayout, this.model.historyStatus ?? '',
-      this.measuredHistoryFeedbackKey === this.historyFeedbackKey() ? this.measuredHistoryFeedback : 0);
+      this.measuredHistoryFeedbackKey === this.historyFeedbackKey() ? this.measuredHistoryFeedback : 0,
+      this.spec.panelInnerInset);
+  }
+  private historyRows(geometry: SearchHistoryGeometry): SearchHistoryRow[] {
+    return projectSearchHistoryRows(this.model.history, geometry, (keyword: string): number =>
+      this.historyMeasurements.measureControlWidth(this.getUIContext(), this.metricsRevision, keyword));
   }
   private historyFeedbackKey(): string {
     return JSON.stringify([this.metricsRevision, this.cardContentWidth(), this.model.historyStatus]);
@@ -774,8 +795,10 @@ export struct ReaderLibrarySearchSurface {
     return (height: number, status: string): void => {
       if (!this.mounted || !this.model.owns(owner) || status !== this.model.historyStatus ||
         key !== this.historyFeedbackKey() || !Number.isFinite(height) || height <= 0) return;
+      if (this.measuredHistoryFeedbackKey === key && Math.abs(height - this.measuredHistoryFeedback) <= .1) return;
       this.measuredHistoryFeedbackKey = key;
-      if (Math.abs(height - this.measuredHistoryFeedback) > .1) this.measuredHistoryFeedback = height;
+      this.measuredHistoryFeedback = height;
+      this.retargetHistoryViewport();
       this.observeEntryHistory(false);
     };
   }
@@ -872,18 +895,32 @@ export struct ReaderLibrarySearchSurface {
                 .accessibilityLevel(this.inputInteractive() ? 'auto' : 'no-hide-descendants');
             }, (key: string): string => `search-field:${key}`);
             Button({ type: ButtonType.Normal, stateEffect: false }) {
-              Text(this.model.sweeping ? '停止' : '搜索')
-                .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(13).fontWeight(FontWeight.Bold)
-                .fontColor(readerAppColor('TOK_ON_PRIMARY', this.scheme)).accessibilityLevel('no');
-            }.width(this.actionWidth()).height(this.controlHeight()).padding(0).borderRadius(this.controlHeight() / 2)
+              Stack({ alignContent: Alignment.Center }) {
+                Text(this.model.sweeping ? '停止' : '搜索')
+                  .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(13).fontWeight(FontWeight.Bold)
+                  .lineHeight(18).halfLeading(true)
+                  .minFontScale(Math.min(1, this.fontScale())).maxFontScale(Math.max(1, this.fontScale()))
+                  .fontColor(readerAppColor('TOK_ON_PRIMARY', this.scheme));
+              }.width(this.actionWidth()).height(this.searchActionVisualHeight())
+                .attributeModifier(new ReaderPressFeedback(readerAppColor('app.action.fill', this.scheme), this.scheme,
+                  this.searchActionVisualHeight() / 2, this.searchActionVisualHeight() / 2,
+                  this.actionInteractive(), this.searchActionPointer >= 0))
+                .scale(readerPressScale(this.actionInteractive() && this.searchActionPointer >= 0, this.reduceMotion))
+                .opacity(readerPressOpacity(this.actionInteractive() && this.searchActionPointer >= 0, this.reduceMotion))
+                .animation(readerPressAnimation(this.reduceMotion))
+                .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+            }.width(this.actionWidth()).height(this.controlHeight()).padding(0)
               .id('reader-bookshelf-search-submit')
-              .backgroundColor(readerAppColor('app.action.fill', this.scheme))
+              .backgroundColor(Color.Transparent)
               .opacity(this.model.sweeping || this.model.canSubmit ? 1 : .38)
               .enabled(this.actionInteractive())
               .hitTestBehavior(this.actionInteractive() ? HitTestMode.Default : HitTestMode.None)
               .accessibilityRole(AccessibilityRoleType.BUTTON)
               .accessibilityText(this.model.sweeping ? '停止搜索' : '搜索')
               .accessibilityLevel(this.inputInteractive() ? 'auto' : 'no-hide-descendants')
+              .onTouch((event: TouchEvent): void => {
+                this.searchActionPointer = readerPressPointer(event, this.searchActionPointer, this.actionInteractive());
+              })
               .onClick(this.searchAction(this.model.currentOwner(), this.fieldIdentity()));
           }.width(this.searchLaneWidth()).height(this.searchLaneHeight())
             .id(this.stackedSearch() ? 'reader-bookshelf-search-lane-stacked' : 'reader-bookshelf-search-lane-row');
@@ -956,7 +993,7 @@ export struct ReaderLibrarySearchSurface {
       this.headerRaisedShape = shape;
     };
   }
-  private historyDividerColor(): string { return this.scheme === 'night' ? '#FF4A463F' : '#FFE8E2D8'; }
+  private historyDividerColor(): string { return readerAppColor('TOK_LINE', this.scheme); }
   private historyViewportHeight(): number {
     const limit = this.displayedHistoryLimit > 0 ? this.displayedHistoryLimit : this.historyLimit();
     return Math.min(this.displayedHistoryViewport, limit);
@@ -970,7 +1007,7 @@ export struct ReaderLibrarySearchSurface {
         Stack({ alignContent: Alignment.TopStart }) {
           ForEach([this.model.currentOwner()], (owner: number) => {
             ReaderSearchHistoryPanel({ history: this.model.history, status: this.model.historyStatus,
-              geometry: this.historyGeometry(),
+              geometry: this.historyGeometry(), rows: this.historyRows(this.historyGeometry()),
               observeActions: this.model.verification?.enabled() === true,
               onFeedbackHeight: this.historyFeedbackAction(owner),
               onClear: this.clearHistoryAction(owner), onRetry: this.retryHistoryAction(owner),
@@ -978,7 +1015,7 @@ export struct ReaderLibrarySearchSurface {
           }, (owner: number): string => `search-history:${owner}`);
           Column() {
             Column().width('100%').height(1).backgroundColor(this.historyDividerColor());
-          }.width('100%').height(1).padding({ left: 14, right: 14 })
+          }.width('100%').height(1).padding({ left: this.spec.panelInnerInset, right: this.spec.panelInnerInset })
             .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
         }.width('100%').height(this.historyViewportHeight() * this.historyProgress()).clip(true)
           .id('reader-search-history-viewport')

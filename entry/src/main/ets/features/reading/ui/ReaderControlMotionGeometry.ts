@@ -228,21 +228,41 @@ export class ReaderControlMotionFrameCache {
   private gap: number = -1;
   private offset: number = 0;
   private budget: ReaderControlContentBudget | undefined = undefined;
+  private island: 'legacy' | 'home' | 'module' = 'legacy';
+  private reduced: boolean = false;
 
   sample(visibility: number, progress: number, width: number, height: number,
     gap: number, quickHeight: number, offset: number = 0,
-    contentBudget?: ReaderControlContentBudget): ReaderControlMotionFrame {
+    contentBudget?: ReaderControlContentBudget, island: 'legacy' | 'home' | 'module' = 'legacy',
+    reduced: boolean = false): ReaderControlMotionFrame {
     if (this.frame !== undefined && this.visibility === visibility && this.progress === progress &&
       this.width === width && this.height === height && this.gap === gap &&
-      this.quickHeight === quickHeight && this.offset === offset && this.budget === contentBudget) return this.frame;
+      this.quickHeight === quickHeight && this.offset === offset && this.budget === contentBudget &&
+      this.island === island && this.reduced === reduced) return this.frame;
     const frame = sampleReaderControlMotionComposition({ visibilityProgress: visibility,
-      expansionProgress: progress }, readerControlMotionBounds(width, height, gap, quickHeight, contentBudget));
-    frame.shell.y += offset; frame.grabber.y += offset; frame.header.y += offset;
-    frame.contentSurface.y += offset; frame.content.y += offset;
-    frame.brightness.y += offset; frame.navigation.y += offset;
+      expansionProgress: island === 'legacy' ? progress : 0 },
+      readerControlMotionBounds(width, height, gap, island === 'legacy' ? quickHeight : height, contentBudget));
+    if (island === 'module') {
+      const top = frame.header.y + frame.header.height + 6;
+      frame.header.opacity = 1;
+      frame.content = actor(frame.header.x, top, frame.header.width, Math.max(0, frame.navigation.y - top - 6), 1);
+      frame.contentSurface.opacity = 0;
+      frame.brightness.opacity = 0;
+    } else if (island === 'home') {
+      frame.content.height = Math.min(frame.content.height, Math.max(0, frame.navigation.y - frame.content.y - 6));
+      frame.brightness.height = Math.min(frame.brightness.height, frame.content.height);
+    }
+    if (reduced) {
+      frame.topBar.translateY = 0;
+      frame.dock.translateY = 0;
+    } else {
+      frame.shell.y += offset; frame.grabber.y += offset; frame.header.y += offset;
+      frame.contentSurface.y += offset; frame.content.y += offset;
+      frame.brightness.y += offset; frame.navigation.y += offset;
+    }
     this.visibility = visibility; this.progress = progress; this.width = width;
     this.height = height; this.gap = gap; this.quickHeight = quickHeight; this.offset = offset;
-    this.budget = contentBudget;
+    this.budget = contentBudget; this.island = island; this.reduced = reduced;
     this.frame = frame;
     return frame;
   }

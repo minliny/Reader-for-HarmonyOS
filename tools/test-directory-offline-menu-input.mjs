@@ -14,7 +14,7 @@ class CapturedFull {constructor(owner,params){Object.assign(this,{owner,params})
 
 function fixture(source,expanded){
   const runtime={};
-  const rootOwner=Object.assign(new Root(),{mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,shelfReceiptRetired:false,searchAppForeground:true,arkWebCapturesInput:false,sourceSwitchPresentation:{isSurfacePresented:()=>false},mangaSourceSwitch:{selectionVisible:false},isCurrentRuntime:owner=>owner===runtime,readingEntry:{directoryPresentationGeneration:7}});
+  const rootOwner=Object.assign(new Root(),{mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,shelfReceiptRetired:false,searchAppForeground:true,arkWebCapturesInput:false,sourceSwitchPresentation:{isSurfacePresented:()=>false},mangaSourceSwitch:{selectionVisible:false},isCurrentRuntime:owner=>owner===runtime,readingEntry:{detailDirectoryPresentationGeneration:7}});
   const journey=Object.assign(new Journey(),{ports:rootOwner.directoryJourneyPorts(),navigation:{snapshot:()=>({route:'directory',directoryReturnTarget:'detail'})}});
   rootOwner.directoryJourney=journey;
   const scene={isOpeningCurrent:selectedProductionComponentCallback(file(paths.root),'DetailDirectoryScene','isOpeningCurrent',rootOwner)};
@@ -23,7 +23,7 @@ function fixture(source,expanded){
   Object.assign(assembly,destination,{contentKind:'text',canHandle:destination.canHandle.bind(destination),bookmarkSelection:()=>undefined});
   assembly.catalog(7);
   const params=[...assembly.children.values()][0].params;
-  const probe=createReaderBuilderProbe(source,['topBarActions','toggleTopBarMore','topBarMoreEnabled','topBarMoreLabel','isLocalBook','directoryInputCurrent','offlineBookAction','offlineBookMenuRow']);
+  const probe=createReaderBuilderProbe(source,['topBarActions','toggleTopBarMore','topBarMoreEnabled','topBarMoreLabel','isLocalBook','offlineMenuCanOpen','directoryInputCurrent','offlineBookAction','offlineBookMenuRow']);
   const full=probe.owner;
   Object.assign(full,params,{mounted:true,interactive:true,exitRequested:false,temporaryBackIdentity:'full-directory:1',bookId:'remote-book',sourceId:'remote-source',offlineMenuVisible:false,offlineMenuGeneration:0,offlineBookOperationActive:false,directoryRecovery:{offlineBlocked:false},directoryRulesVisible:false,appThemeScheme:'day',usesExpandedLayout:()=>expanded,headerControlHeight:()=>44,directoryRulesAvailable:()=>false,topBarSourceContent(){},topBarMoreIcon(){},switchDirectorySource(){},menuRowHeight:()=>44});
   full.topBarActions('full-directory:1','remote-book');
@@ -62,7 +62,7 @@ function check(source){
  return {samples,boundary:'Actual installed SDK native/custom buttons and original Root-to-Full callback chain. Runtime/navigation/geometry and final business sinks finite. No device action.'};
 }
 for(const id of cases){const source=readFileSync(file(paths.full),'utf8'),result=check(source);
- const noMore=source.replace('    if (!this.directoryInputCurrent(identity, bookId)) return;\n    if (this.directoryRulesAvailable())','    if (this.directoryRulesAvailable())');assert.notEqual(noMore,source);assert.throws(()=>check(noMore),/lost live input cannot first open More/);
+ const noMore=source.replace('    if (!this.directoryInputCurrent(identity, bookId)) return;\n    if (this.directoryRulesAvailable() &&','    if (this.directoryRulesAvailable() &&');assert.notEqual(noMore,source);assert.throws(()=>check(noMore),/lost live input cannot first open More/);
  const noAction=source.replace('if (!this.directoryInputCurrent(identity, bookId) || !this.offlineMenuVisible || generation !== this.offlineMenuGeneration) return;','if (!this.mounted || this.exitRequested || !this.offlineMenuVisible || generation !== this.offlineMenuGeneration) return;');assert.notEqual(noAction,source);assert.throws(()=>check(noAction),/lost live input cannot consume the original menu/);
  console.log(JSON.stringify({case:id,result,rejectedOldMore:true,rejectedOldMenuConsumption:true}));recordContractCasePass(id);
 }

@@ -99,7 +99,7 @@ export const svgRadixSheetRecipes = [
     .flatMap(([slot, component, role]) => ['day', 'night'].map(scheme => ({
       file: `manga_directory_${slot}${scheme === 'night' ? '_theme_night' : ''}`,
       semanticRole: `manga directory ${slot} ${scheme}`, originType: 'radix-component-derived',
-      component, ...SVG_RADIX_COMPONENT_SOURCES[component], color: mangaDirectoryColor(role, scheme),
+      component, ...SVG_RADIX_COMPONENT_SOURCES[component], color: '#' + mangaDirectoryColor(role, scheme).slice(3),
     }))),
 ];
 
@@ -177,7 +177,7 @@ const icons = [
   ...[['ascending', 'SortAsc'], ['descending', 'SortDesc']].flatMap(([name, component]) =>
     ['day', 'night'].map(scheme => icon(
       `manga_directory_sort_${name}${scheme === 'night' ? '_theme_night' : ''}`, component,
-      mangaDirectoryColor('accent', scheme), `manga directory ${name} sort ${scheme}`))),
+      '#' + mangaDirectoryColor('accent', scheme).slice(3), `manga directory ${name} sort ${scheme}`))),
   icon('bookshelf_rss_active', 'Rss', '#FFFAF4', 'bookshelf rss active navigation'),
   icon('bookshelf_rss_outline', 'Rss', '#756F69', 'bookshelf rss inactive navigation'),
   icon('bookshelf_search', 'Search', '#1F1B17', 'bookshelf search', { fillNone: true }),
@@ -448,6 +448,20 @@ export const svgActionForegroundRecipes = [
   ...(kind === 'trash' ? { strokeWidth: 1.75 } : {}),
 })));
 export const svgControlForegroundRecipes = [
+  ...[
+    ['close', 'download_visual_close', 'TOK_INK'],
+    ['trash', 'download_visual_trash', 'TOK_INK'],
+    ['download', 'download_visual_download', 'TOK_INK'],
+    ['bookmark_outline', 'reader_directory_marker_bookmark', 'TOK_READ_PRIMARY'],
+    ['bookmark_filled', 'reader_page_bookmark_filled', 'TOK_ACCENT'],
+  ].flatMap(([kind, baseFile, paletteRole]) => ['day', 'night'].map(scheme => ({
+    file: `reader_control_${kind}${scheme === 'night' ? '_theme_night' : ''}`,
+    baseFile, scheme, paletteRole, semanticRole: `reader ${kind} ${scheme} on paper`,
+  }))),
+  ...['compass', 'rss'].map(kind => ({
+    file: `bookshelf_${kind}_active_theme_night`, baseFile: `bookshelf_${kind}_active`,
+    scheme: 'night', paletteRole: 'TOK_ON_PRIMARY', semanticRole: `main tab ${kind} selected night foreground`,
+  })),
   { file: 'reader_control_replace_add_theme_night', baseFile: 'reader_control_replace_add', scheme: 'night',
     paletteRole: 'app.replace.onToolbarAction', namedWhiteStroke: true,
     semanticRole: 'reader replace add night foreground on the light primary control surface' },
@@ -455,6 +469,11 @@ export const svgControlForegroundRecipes = [
     file: `reader_tts_configure_chevron${scheme === 'night' ? '_theme_night' : ''}`,
     baseFile: 'reader_appearance_make_chevron', scheme, paletteRole: 'app.control.paint.FFFAF4',
     semanticRole: `reader TTS unconfigured service action chevron ${scheme} on primary control surface`,
+  })),
+  ...['day', 'night'].map(scheme => ({
+    file: `reader_autopage_nav_active${scheme === 'night' ? '_theme_night' : ''}`,
+    baseFile: 'rc_autopage', scheme, paletteRole: 'app.control.onPrimary',
+    semanticRole: `reader selected auto page module ${scheme} on primary control surface`,
   })),
 ].map(recipe => ({ ...recipe, originType: 'theme-palette-derived' }));
 export const svgAssetRecipes = [...icons, ...exactExports, ...makeExports, ...makeSourceExports, ...appearanceMakeExports, ...adaptedExports, ...paperPrimitives, ...readerThemeSources, ...themeVariants, ...svgRadixSheetRecipes, ...svgDownloadLucideRecipes, ...svgMessageLucideRecipes, ...svgActionForegroundRecipes, ...svgControlForegroundRecipes, ...svgTtsSelectedCRecipes]

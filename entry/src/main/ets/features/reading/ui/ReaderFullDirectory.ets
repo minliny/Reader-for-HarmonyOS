@@ -1,5 +1,5 @@
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
-import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerReadableFontScale, readerScaledBarHeight, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import type { ReaderDirectoryNavigationPortFactory } from '../application/ReaderDirectoryNavigation';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
@@ -9,6 +9,8 @@ import { ReaderDirectoryRules, type ReaderDirectoryRulesRecoveryProjection } fro
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../presentation/ReadingDirectoryRecovery';
 import { TYPE_READER_DIRECTORY_OFFLINE_ACTION, TYPE_READER_DIRECTORY_SOURCE_ACTION } from '../../../ui/foundation/ReaderTypography';
 import { ReaderReadingTopBar } from '../../../ui/chrome/ReaderReadingTopBar';
+import { PageBackBar } from '../../../ui/chrome/PageBackBar';
+import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
@@ -32,9 +34,6 @@ import {
   readerVisualSafeTop,
 } from '../../../ui/foundation/ReaderWindowMetrics';
 import {
-  TOK_LINE_STRONG,
-  TOK_READ_INK,
-  TOK_READ_MUTED,
   TOK_BORDER_W,
 } from '../../../ui/foundation/ReaderTokens';
 
@@ -64,11 +63,8 @@ class FullDirectoryHeaderMeasurementFrame extends ReaderPostLayoutFrame {}
 let fullDirectoryBackGeneration = 0;
 
 /**
- * The non-body layers of the two Final Reader Full Directory variants.
- *
- * Detail mounts this external catalog directly, without a reading instance.
- * ReaderShell may also retain its existing reading instance beneath it. The
- * component never creates body text, a reading position, or a local fixture.
+ * Book detail uses a standalone page. The reader keeps its overlay chrome.
+ * Both presentations share the catalog, selection and operation bindings.
  *
  * Figma source:
  * - Phone `943:11617`, Section `I943:11617;927:36` (left-14, top-18, 360×54)
@@ -93,7 +89,7 @@ export struct ReaderFullDirectory {
   onRetryCatalog: () => void = (): void => {};
   // The original owner retains recovery facts while this foreground catalog
   // owns the interaction surface. Its write admission remains authoritative.
-  @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
+  @Prop @Watch('reconcileOfflineMenu') directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
   onReconcileBookmarks: (generation: number, identity: string) => void = (): void => {};
   onContinueBookmarks: (generation: number, identity: string) => void = (): void => {};
   onReconcileOffline: (generation: number, identity: string) => void = (): void => {};
@@ -107,8 +103,8 @@ export struct ReaderFullDirectory {
   // LocalReadingFlowGateway.ts:89) — consolidated if those files are touched.
   @Prop @Watch('retireDirectoryRules') sourceId: string = '';
   @Prop mangaSearch: boolean = false;
-  @Prop interactive: boolean = true;
-  @Prop offlineBookOperationActive: boolean = false;
+  @Prop @Watch('reconcileOfflineMenu') interactive: boolean = true;
+  @Prop @Watch('reconcileOfflineMenu') offlineBookOperationActive: boolean = false;
   isOpeningCurrent: () => boolean = (): boolean => true;
   // R-LOCAL-TOC-01: forward the chapter tap from the panel body to the
   // owning flow so a full-directory tap actually enters that chapter.
@@ -139,6 +135,8 @@ export struct ReaderFullDirectory {
 
   @State private containerWidth: number = 0;
   @State private containerHeight: number = 0;
+  @State private containerOriginX: number = 0;
+  @State private moreTriggerRight: number = -1;
   // Authored dimensions are inputs to the measured frame and menu placement.
   private readonly headerSpec: FullDirectoryHeaderMetrics = {
     barHeight: 54,
@@ -206,7 +204,17 @@ export struct ReaderFullDirectory {
 
   @Builder
   private directoryOverlay() {
-    this.offlineBookMenu();
+    if (this.offlineMenuVisible && this.offlineMenuCanOpen()) {
+      this.offlineMenuBackdrop(this.temporaryBackIdentity, this.bookId, this.offlineMenuGeneration);
+      this.offlineBookMenu();
+    }
+  }
+
+  @Builder
+  private offlineMenuBackdrop(identity: string, bookId: string, generation: number) {
+    Row().width('100%').height('100%').backgroundColor(Color.Transparent).zIndex(7)
+      .accessibilityLevel('no')
+      .onClick((): void => { this.dismissOfflineMenu(identity, bookId, generation); });
   }
 
   build() {
@@ -223,6 +231,8 @@ export struct ReaderFullDirectory {
     }).onAreaChange((_oldValue: Area, newValue: Area): void => {
       const width = readerPageAreaLength(newValue.width);
       const height = readerPageAreaLength(newValue.height);
+      const originX = readerPageAreaLength(newValue.globalPosition.x);
+      if (Number.isFinite(originX)) this.containerOriginX = originX;
       this.recordViewportArea(width, height);
     }).enabled(!this.exitRequested)
       .accessibilityLevel(this.exitRequested ? 'no-hide-descendants' : 'auto');
@@ -234,6 +244,7 @@ export struct ReaderFullDirectory {
       Stack({ alignContent: Alignment.BottomStart }) {
         FullDirectoryPanel({ navigationPortFactory: this.navigationPortFactory,
           standaloneCatalog: true,
+          detailPage: this.catalogContext === 'detail',
           inputCurrent: (): boolean => this.directoryInputCurrent(identity, bookId) && !this.directoryRulesVisible,
           entries: this.entries,
           catalogMessage: this.catalogMessage,
@@ -309,6 +320,7 @@ export struct ReaderFullDirectory {
   }
 
   private retireDirectoryRules(): void {
+    this.offlineMenuVisible = false;
     this.directoryRulesFocusGeneration += 1;
     this.directoryRulesVisible = false;
     this.directoryRulesOpened = false;
@@ -415,10 +427,33 @@ export struct ReaderFullDirectory {
 
   @Builder
   private topBar(identity: string = this.temporaryBackIdentity, bookId: string = this.bookId) {
-    ReaderReadingTopBar({ variant: 'directory', barHeight: this.headerBarHeight(),
-      bookTitle: this.bookTitle, subtitle: this.chapterTitle, scheme: this.appThemeScheme,
-      leading: (): void => { this.topBarBack(identity); }, trailing: (): void => { this.topBarActions(identity, bookId); },
-    });
+    if (this.catalogContext === 'detail') {
+      PageBackBar({ title: '章节目录', floating: true, centered: true,
+        onBack: (): void => { this.consumeBack(identity); },
+        trailing: (): void => {
+          if (this.directoryRulesAvailable() || !this.isLocalBook()) {
+            this.detailMoreAction(identity, bookId);
+          }
+        },
+      });
+    } else {
+      ReaderReadingTopBar({ variant: 'directory', barHeight: this.headerBarHeight(),
+        bookTitle: this.bookTitle, subtitle: this.chapterTitle, scheme: this.appThemeScheme,
+        leading: (): void => { this.topBarBack(identity); }, trailing: (): void => { this.topBarActions(identity, bookId); },
+      });
+    }
+  }
+
+  @Builder
+  private detailMoreAction(identity: string, bookId: string) {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
+      this.topBarMoreIcon();
+    }.width(44).height(44).padding(0).borderRadius(22).backgroundColor(Color.Transparent)
+      .id(this.directoryRulesAvailable() ? this.directoryRulesFocusId(identity, false) : undefined)
+      .onAreaChange((_old: Area, area: Area): void => this.recordMoreTriggerRight(identity, bookId, area))
+      .attributeModifier(new ReaderActionAccessibility(this.directoryRulesVisible ? this.topBarMoreLabel() : '目录操作',
+        true, false, true, undefined, 'nativeButton'))
+      .onClick((): void => { this.toggleTopBarMore(identity, bookId); });
   }
 
   @Builder
@@ -467,6 +502,7 @@ export struct ReaderFullDirectory {
       }
       .width(44).height(this.headerControlHeight()).margin({ left: 8 })
       .id(this.directoryRulesAvailable() ? this.directoryRulesFocusId(identity, false) : undefined)
+      .onAreaChange((_old: Area, area: Area): void => this.recordMoreTriggerRight(identity, bookId, area))
       .opacity(!this.directoryRulesAvailable() && (this.isLocalBook() || this.offlineBookOperationActive) ? 0.4 : 1)
       .attributeModifier(new ReaderActionAccessibility(this.topBarMoreLabel(), this.topBarMoreEnabled()))
       .onClick((): void => { this.toggleTopBarMore(identity, bookId); });
@@ -489,6 +525,7 @@ export struct ReaderFullDirectory {
       .width(44).height(this.headerControlHeight())
       .padding(0).borderRadius(0).backgroundColor(Color.Transparent).margin({ left: 8 })
       .id(this.directoryRulesAvailable() ? this.directoryRulesFocusId(identity, false) : undefined)
+      .onAreaChange((_old: Area, area: Area): void => this.recordMoreTriggerRight(identity, bookId, area))
       .opacity(!this.directoryRulesAvailable() && (this.isLocalBook() || this.offlineBookOperationActive) ? 0.4 : 1)
       .attributeModifier(new ReaderActionAccessibility(this.topBarMoreLabel(), this.topBarMoreEnabled(), false, true, undefined, 'nativeButton'))
       .onClick((): void => { this.toggleTopBarMore(identity, bookId); });
@@ -508,6 +545,7 @@ export struct ReaderFullDirectory {
       .fontFamily(TYPE_READER_DIRECTORY_SOURCE_ACTION.fontFamily)
       .fontWeight(TYPE_READER_DIRECTORY_SOURCE_ACTION.fontWeight)
       .fontSize(TYPE_READER_DIRECTORY_SOURCE_ACTION.fontSizeFp)
+      .lineHeight(15).halfLeading(true)
       .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme))
       .textAlign(TextAlign.Center)
       .alignSelf(ItemAlign.Center);
@@ -525,6 +563,7 @@ export struct ReaderFullDirectory {
     return readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
   private headerBarHeight(): number {
+    if (this.catalogContext === 'detail') return readerScaledBarHeight(APP_FLOATING_HEADER_BAR_HEIGHT, 28, this.fontScale(), 0);
     return Math.max(this.headerSpec.barHeight, this.headerControlHeight(), Math.ceil(22 * this.fontScale()) + Math.ceil(17 * this.fontScale()) + 6);
   }
   private offlineMenuWidth(): number {
@@ -549,33 +588,63 @@ export struct ReaderFullDirectory {
       (!this.isLocalBook() && !this.offlineBookOperationActive && this.directoryRecovery.offlineBlocked !== true);
   }
 
+  private offlineMenuCanOpen(): boolean {
+    if (!this.interactive) return false;
+    if (this.catalogContext === 'detail') return !this.isLocalBook() || this.directoryRulesAvailable();
+    return !this.isLocalBook() && !this.offlineBookOperationActive && this.directoryRecovery.offlineBlocked !== true;
+  }
+
+  private reconcileOfflineMenu(): void {
+    if (this.offlineMenuVisible && !this.offlineMenuCanOpen()) this.offlineMenuVisible = false;
+  }
+
+  private dismissOfflineMenu(identity: string, bookId: string, generation: number): boolean {
+    if (!this.directoryInputCurrent(identity, bookId) || !this.offlineMenuVisible || generation !== this.offlineMenuGeneration)
+      return false;
+    this.offlineMenuVisible = false;
+    return true;
+  }
+
   private toggleTopBarMore(identity: string, bookId: string): void {
     if (!this.directoryInputCurrent(identity, bookId)) return;
-    if (this.directoryRulesAvailable()) {
+    if (this.directoryRulesAvailable() && (this.catalogContext === 'reader' || this.directoryRulesVisible)) {
       if (!this.directoryRulesCurrent(identity, bookId)) return;
       if (this.directoryRulesVisible) this.consumeBack(identity);
       else this.showDirectoryRules(identity, bookId, true);
       return;
     }
-    if (this.mounted && !this.exitRequested && !this.isLocalBook() &&
-      !this.offlineBookOperationActive && this.directoryRecovery.offlineBlocked !== true) {
+    if (this.offlineMenuCanOpen()) {
       if (!this.offlineMenuVisible) this.offlineMenuGeneration += 1;
       this.offlineMenuVisible = !this.offlineMenuVisible;
     }
   }
 
   @Builder
-  private offlineBookMenu() {
-    if (this.offlineMenuVisible && !this.isLocalBook()) {
+  private offlineBookMenu(identity: string = this.temporaryBackIdentity, bookId: string = this.bookId,
+    generation: number = this.offlineMenuGeneration) {
+    if (this.offlineMenuVisible && this.offlineMenuCanOpen()) {
       Column() {
-        this.offlineBookMenuRow('下载整书', '下载整书', this.offlineBookAction(this.offlineMenuGeneration, this.onDownloadBook));
-        Divider()
-          .color(readerAppColor('TOK_LINE_STRONG', this.appThemeScheme))
-          .strokeWidth(TOK_BORDER_W);
-        this.offlineBookMenuRow('清除本书离线', '清除本书离线内容', this.offlineBookAction(this.offlineMenuGeneration, this.onClearBookOffline));
+        if (this.catalogContext === 'detail' && this.directoryRulesAvailable()) {
+          this.offlineBookMenuRow('本书目录层级规则', '本书目录层级规则', (): void => {
+            if (this.dismissOfflineMenu(identity, bookId, generation)) this.showDirectoryRules(identity, bookId, true);
+          });
+        }
+        if (this.catalogContext === 'detail' && !this.isLocalBook()) {
+          if (this.directoryRulesAvailable()) {
+            Divider().color(readerAppColor('TOK_LINE_STRONG', this.appThemeScheme)).strokeWidth(TOK_BORDER_W);
+          }
+          this.offlineBookMenuRow('换源', '换源', this.offlineBookAction(this.offlineMenuGeneration, this.onSwitchSource, false));
+        }
+        if (!this.isLocalBook() && !this.offlineBookOperationActive && this.directoryRecovery.offlineBlocked !== true) {
+          if (this.catalogContext === 'detail') {
+            Divider().color(readerAppColor('TOK_LINE_STRONG', this.appThemeScheme)).strokeWidth(TOK_BORDER_W);
+          }
+          this.offlineBookMenuRow('下载整书', '下载整书', this.offlineBookAction(this.offlineMenuGeneration, this.onDownloadBook));
+          Divider().color(readerAppColor('TOK_LINE_STRONG', this.appThemeScheme)).strokeWidth(TOK_BORDER_W);
+          this.offlineBookMenuRow('清除本书离线', '清除本书离线内容', this.offlineBookAction(this.offlineMenuGeneration, this.onClearBookOffline));
+        }
       }
       .width(this.offlineMenuWidth())
-      .height(this.menuRowHeight() * 2 + 1)
       .attributeModifier(new ReaderPanelFrame('reader-menu', this.appThemeScheme))
       .position({ x: this.offlineMenuLeft(), y: this.offlineMenuTop() })
       .zIndex(8);
@@ -608,12 +677,13 @@ export struct ReaderFullDirectory {
     }
   }
 
-  private offlineBookAction(generation: number, action: () => void): () => void {
+  private offlineBookAction(generation: number, action: () => void, requiresOfflineAdmission: boolean = true): () => void {
     const identity = this.temporaryBackIdentity, bookId = this.bookId;
     return (): void => {
       if (!this.directoryInputCurrent(identity, bookId) || !this.offlineMenuVisible || generation !== this.offlineMenuGeneration) return;
       this.offlineMenuVisible = false;
-      if (!this.isLocalBook() && !this.offlineBookOperationActive && this.directoryRecovery.offlineBlocked !== true) action();
+      if (!this.isLocalBook() && (!requiresOfflineAdmission ||
+        (!this.offlineBookOperationActive && this.directoryRecovery.offlineBlocked !== true))) action();
     };
   }
 
@@ -628,8 +698,10 @@ export struct ReaderFullDirectory {
   }
 
   private topBarTop(): number {
+    if (this.catalogContext === 'detail') {
+      return this.readerWindowMetricsRevision < 0 ? 0 : readerVisualSafeTop(readerWindowMetrics());
+    }
     if (this.readerWindowMetricsRevision < 0) return this.headerSpec.topGap;
-    if (this.catalogContext === 'detail') return this.headerSpec.topGap;
     return Math.max(this.headerSpec.topGap, readerVisualSafeTop(readerWindowMetrics()));
   }
 
@@ -671,9 +743,16 @@ export struct ReaderFullDirectory {
   }
 
   private offlineMenuLeft(): number {
-    const figmaLeft = this.usesExpandedLayout() ? 548 : 206;
-    return Math.max(this.topBarLeft(), Math.min(figmaLeft,
-      this.liveContainerWidth() - this.topBarRight() - this.offlineMenuWidth()));
+    const limit = this.liveContainerWidth() - this.topBarRight();
+    const triggerRight = this.moreTriggerRight >= 0 ? this.moreTriggerRight - this.containerOriginX : limit;
+    return Math.max(this.topBarLeft(), Math.min(triggerRight, limit) - this.offlineMenuWidth());
+  }
+
+  private recordMoreTriggerRight(identity: string, bookId: string, area: Area): void {
+    if (!this.mounted || identity !== this.temporaryBackIdentity || bookId !== this.bookId) return;
+    const width = readerPageAreaLength(area.width);
+    const x = readerPageAreaLength(area.globalPosition.x);
+    if (Number.isFinite(x) && Number.isFinite(width) && width > 0) this.moreTriggerRight = x + width;
   }
 
   private offlineMenuTop(): number {
@@ -702,7 +781,7 @@ export struct ReaderFullDirectory {
     const designHeight = this.usesExpandedLayout() ? 852 : 736;
     const safeBottom = Math.max(20, readerInteractiveSafeBottom(readerWindowMetrics()));
     const available = Math.max(0, this.liveContainerHeight() - this.fullPanelTop() - safeBottom);
-    return Math.min(designHeight, available);
+    return this.catalogContext === 'detail' ? available : Math.min(designHeight, available);
   }
 
   private acceptHeaderHeight(height: number, key: number): void {
@@ -773,6 +852,7 @@ export struct ReaderFullDirectory {
 
   private invalidateFrame(): void {
     if (!this.mounted) return;
+    this.reconcileOfflineMenu();
     this.headerLayoutInputs = this.headerLayoutInputKey();
     this.measurementKey += 1;
     this.refreshGeometry();
@@ -792,10 +872,16 @@ export struct ReaderFullDirectory {
     input.headerInsetRight = this.topBarRight();
     input.contentGap = this.headerSpec.panelGap;
     const expanded = this.usesExpandedLayout();
-    input.contentMaxWidth = expanded ? 720 : 364;
-    input.contentLeftGap = expanded ? 27 : 12;
-    input.contentRightGap = expanded ? 13 : 12;
-    input.contentAlignment = expanded ? 'right' : 'center';
+    if (this.catalogContext === 'detail') {
+      input.contentMaxWidth = expanded ? 720 : Number.MAX_SAFE_INTEGER;
+      input.contentHorizontalPadding = 18;
+      input.contentHorizontalSafeArea = 'interactive';
+    } else {
+      input.contentMaxWidth = expanded ? 720 : 364;
+      input.contentLeftGap = expanded ? 27 : 12;
+      input.contentRightGap = expanded ? 13 : 12;
+      input.contentAlignment = expanded ? 'right' : 'center';
+    }
     this.geometry = resolveReaderPageGeometry(input);
   }
 

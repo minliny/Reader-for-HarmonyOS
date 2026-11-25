@@ -58,8 +58,7 @@ const Owner = productionMotionMethods(source, methods, {
   collectReadingParagraphUtf16Ranges, readingParagraphBoundaryMode, TextController,
   ReadingSurfacePageFragment: Fragment, ReaderNativeTextWindow: NativeWindow,
   readerNativeParagraphHeight, readerNativeParagraphKey: () => `fixture-${++serial}`,
-  FontWeight: { Regular: 400 }, TextAlign: { JUSTIFY: 'justify', Start: 'start', Center: 'center' },
-  TYPE_READER_CHAPTER_TITLE: { fontFamily: 'system', fontWeight: 500, fontSizeFp: 24 },
+  FontWeight: { Regular: 400, Bold: 700 }, TextAlign: { JUSTIFY: 'justify', Start: 'start', Center: 'center' },
   copyReaderAppearanceSnapshot: value => ({ ...value }),
   MAX_MEASUREMENT_BATCH_PARAGRAPHS: 8, MAX_MEASUREMENT_BATCH_UTF16: 12 * 1024,
 });
@@ -101,7 +100,7 @@ function fixture(paragraphs, { capacity = 25, offset = 0, gap = 0, known = false
     paginationIndex: new ReadingPaginationIndex(), measurementCompleting: false, batchProcessing: false,
     readerSettingsSnapshot: { navigationMode: 'paged' },
     appearanceSnapshot: { paragraphSpacing: gap, fontSize: 20, lineHeight: 1.5, lineHeightMultiplier: 1.5, indent: 'none', activeTheme: 'paper' },
-    getUIContext: () => ({ px2vp: x => x, vp2px: x => x, fp2px: x => x }),
+    getUIContext: () => ({ px2vp: x => x, vp2px: x => x, fp2px: x => x, getFont: () => ({}) }),
     readingLayout: () => ({ bodyHeightAfterTitle: height => capacity - height, titleLineHeightFp: 5 }),
     measurementTextWidth: () => 100, measurementPaginationKey: () => key,
     isSessionActive: lifecycle => lifecycle === 1,

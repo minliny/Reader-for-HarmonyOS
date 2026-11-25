@@ -55,6 +55,22 @@ export class ReaderNavigationAppearancePreferences {
     });
   }
 
+  static resetDefaults(ownerCurrent: () => boolean): Promise<void> {
+    const generation = this.generation;
+    return this.serialized(async (): Promise<void> => {
+      const store = await this.open(generation);
+      if (!ownerCurrent()) throw new Error('NAVIGATION_PREFERENCES_RETIRED');
+      const defaults = normalizeReaderNavigationPreferences(undefined);
+      await store.put(SNAPSHOT_KEY, JSON.stringify(defaults));
+      await store.flush();
+      this.current(generation);
+      if (!ownerCurrent()) throw new Error('NAVIGATION_PREFERENCES_RETIRED');
+      this.pendingChange = undefined;
+      this.publish(defaults);
+      AppStorage.setOrCreate<boolean>(NAVIGATION_APPEARANCE_SAVE_PENDING_KEY, false);
+    });
+  }
+
   private static async apply(generation: number): Promise<void> {
     const change = this.pendingChange!;
     try {

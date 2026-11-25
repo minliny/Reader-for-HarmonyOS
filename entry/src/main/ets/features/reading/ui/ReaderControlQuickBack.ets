@@ -19,7 +19,9 @@ export struct ReaderControlQuickBack {
       Row({ space: this.variant === 'replace' ? 5 : 4 }) {
         Image(this.icon()).width(11).height(11).accessibilityLevel('no');
         Text('返回').fontFamily(this.labelStyle().fontFamily).fontWeight(this.labelStyle().fontWeight)
-          .fontSize(this.labelStyle().fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.scheme))
+          .fontSize(this.labelStyle().fontSizeFp)
+          .lineHeight(this.labelStyle().lineHeightFp ?? Math.round(this.labelStyle().fontSizeFp * 1.5)).halfLeading(true)
+          .fontColor(readerAppColor('TOK_READ_PRIMARY', this.scheme))
           .accessibilityLevel('no');
       }.width('100%').constraintSize({ minHeight: 24 })
         .padding({ left: this.variant === 'search' ? 8 : this.variant === 'auto-page' ? 9 : 0,

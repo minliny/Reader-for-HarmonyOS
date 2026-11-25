@@ -41,7 +41,7 @@ export struct ReaderSearchTaskTrigger {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Row({ space: 4 }) {
         Text(this.summaryLabel()).layoutWeight(1).fontFamily(MESSAGE_META.fontFamily).fontWeight(MESSAGE_META.fontWeight)
-          .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number)
+          .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number).halfLeading(true)
           .fontColor(readerAppColor('TOK_MUTED', this.scheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         Image(this.scheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'))
           .width(10).height(10).objectFit(ImageFit.Contain);

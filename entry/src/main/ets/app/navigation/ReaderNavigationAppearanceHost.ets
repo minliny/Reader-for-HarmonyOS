@@ -12,6 +12,8 @@ export struct ReaderNavigationAppearanceHost {
   @StorageLink('readerSystemScheme') @Watch('refreshAppearance') private systemScheme: string = 'day';
   @StorageLink('readerAppForeground') @Watch('refreshAppearance') private foreground: boolean = true;
   @Prop @Watch('refreshAppearance') inputEnabled: boolean = true;
+  @Prop bottomInset: number = 0;
+  @Prop translateX: number = 0;
   @BuilderParam unifiedContent: () => void = this.emptyUnified;
   @BuilderParam nativeContent: (appearance: ReaderNavigationAppearance) => void = this.emptyNative;
   @State private shown: ReaderNavigationAppearance = 'unified';
@@ -39,7 +41,11 @@ export struct ReaderNavigationAppearanceHost {
       if (this.shown === 'unified') this.unifiedContent();
       else this.nativeContent(this.shown);
     }
-    .hitTestBehavior(HitTestMode.Transparent)
+    // The placement belongs to this touch observer so the safe-area margin
+    // and the space beside the translated capsule stay outside its hit region.
+    .margin({ bottom: this.bottomInset })
+    .translate({ x: this.translateX })
+    .hitTestBehavior(HitTestMode.Default)
     .onTouch((event: TouchEvent): void => this.onTouchActivity(event))
     .onFocus((): void => {
       if (this.mounted && this.inputEnabled && this.foreground) this.navigationFocused = true;

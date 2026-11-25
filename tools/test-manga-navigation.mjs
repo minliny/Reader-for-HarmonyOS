@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
+import { productionReaderMotionSdk } from './lib/reader-control-builder-probe.mjs';
 import {PhotoViewScaleModel} from '../entry/src/main/ets/features/manga/vendor/photoview/PhotoViewScaleModel.ts';
 import {sourceSwitchTriggerFocusId} from '../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts';
 import {createDefaultReaderSettingsSnapshot,normalizeReaderSettingsSnapshot,setReaderPageTurnStyle} from '../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts';
@@ -31,8 +32,14 @@ const sdk=resolveEtsLoaderRoot();
 const ts=require(`${sdk}/node_modules/typescript`);
 const tree=ts.createSourceFile(virtualFilePath('MangaNavigationProbe.ets'),surfaceSource,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(`${sdk}/lib/ets_checker.js`).compilerOptions);
 assert.equal(tree.parseDiagnostics.length,0);
-const frame=tree.statements.find(n=>n.name?.getText(tree)==='MangaLayoutFrame');assert.ok(frame);
-const MangaLayoutFrame=new Function('FrameCallback','ReaderPostLayoutFrame', `${stripTypeScriptTypes(frame.getText(tree))};return MangaLayoutFrame`)(class {}, actualReaderPostLayoutFrame());
+function frameClass(name) {
+  const declaration = tree.statements.find(node => node.name?.getText(tree) === name);
+  assert.ok(declaration);
+  return new Function('FrameCallback', 'ReaderPostLayoutFrame',
+    `${stripTypeScriptTypes(declaration.getText(tree))}; return ${name};`)(class {}, actualReaderPostLayoutFrame());
+}
+const MangaLayoutFrame = frameClass('MangaLayoutFrame');
+const MangaSheetFrame = frameClass('MangaSheetFrame');
 const timers=[],scrolls=[],frames=[],measurements=[];
 function flushLayout(width,height) {
   timers.splice(0).forEach(callback=>callback());
@@ -50,9 +57,10 @@ function flushLayout(width,height) {
 let xOffset=250;let clipped=100;let nativeWidth=1000;let nativeHeight=1000;
 const Surface=productionMotionMethods(surfaceURL,
  ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','changeFit','loginRequired','loginAndRetry','imageError','publish','requestedLast','measureVisibleWindow','openDirectory','openSourceSwitch','handleBack','positionIdentity','rememberVisible','restore','finishLayout','onViewportScroll','resizeViewport','changeZoom','toggleDirection','turnPage','saveVisible',
-  'readerPanelForeground','openPanel','panelTriggerFocusId','invalidatePanelMotion','panelOpeningCurrent','cancelPanelOpening',
+  'verticalTailVisible','clearPageSliderPreview','readerPanelForeground','openPanel','panelTriggerFocusId','panelCloseFocusId','invalidatePanelMotion','panelOpeningCurrent','cancelPanelOpening',
   'dismissPanelKeyboard','preparePanelFonts','loadPanelFonts','panelCloseFocusId','closePanel','performPanelAction'],
- {setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'},LengthMetrics:{vp:value=>({value,unit:'vp'})},MangaLayoutFrame,
+ {setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'},LengthMetrics:{vp:value=>({value,unit:'vp'})},MangaLayoutFrame,MangaSheetFrame,
+  readerMotionReducedFadeParam:productionReaderMotionSdk().readerMotionReducedFadeParam,
   inputMethod:{getController:()=>({hideTextInput:async()=>{}})}, READER_FONT_NOTO_SERIF_SC_BOLD, sourceSwitchTriggerFocusId,
   prepareReaderFontFamily:async family=>{assert.equal(family,READER_FONT_NOTO_SERIF_SC_BOLD);},
   prepareMangaSheetFonts:async()=>true});
@@ -61,9 +69,11 @@ const owner=Object.assign(new Surface(),{data:{totalCount:()=>p.totalCount(),get
  first:150,last:150,viewportWidth:500,viewportHeight:900,zoom:2,scalePolicy:new PhotoViewScaleModel(),horizontal:false,horizontalPage:0,
  opened:true,mounted:true,panel:'',panelPhase:'closed',panelGeneration:0,panelActionGeneration:0,panelFontGeneration:0,panelFontsReady:false,reduceMotion:true,chapterEnd:false,exiting:false,layoutGeneration:0,appliedLayoutGeneration:-1,presentationGeneration:0,recovering:false,
  appForeground:true,windowChromeActive:true,interactionBlocked:false,pageTurnInputRevision:0,
+ pageSliderGeneration:0,pageSliderPreview:-1,pageSliderCommitted:-1,
  settingsGateway:{updateMangaDirection:async value=>settings.push(value)},
  horizontalScroller:{currentOffset:()=>({xOffset}),scrollTo:position=>{xOffset=position.xOffset;scrolls.push(['x',position.xOffset]);}},
- getUIContext:()=>({postFrameCallback:frame=>frames.push(frame),getFocusController:()=>({clearFocus(){}})}),
+ getUIContext:()=>({postFrameCallback:frame=>frames.push(frame),getFocusController:()=>({clearFocus(){}}),
+   animateTo({onFinish}, update) { update(); queueMicrotask(() => onFinish?.()); }}),
  scroller:{getItemIndex:(x,y)=>{measurements.push([x,y]);return owner.first;},getItemRect:()=>({y:-clipped,width:nativeWidth,height:nativeHeight}),scrollToIndex:(...args)=>{assert.equal(args[3].extraOffset.unit,'vp');clipped=args[3].extraOffset.value;assert.ok(Number.isFinite(clipped));scrolls.push(['index',...args]);},scrollBy:(...args)=>{clipped=args[1];scrolls.push(['y',...args]);}},
  controller:{chapter:{manifest},totalPages:3,pageAt:ordinal=>manifest.pages[ordinal],pageGeometry:geometry,tile:()=>undefined,visiblePages:()=>[],savePosition:async(...args)=>saved.push(args),close:async()=>{}},updateViewport:()=>{},persistentDirectory:()=>false});
 owner.rememberVisible();assert.deepEqual(owner.visibleAnchor,{ordinal:1,y:0.501,x:0.25});
@@ -127,7 +137,15 @@ Object.assign(owner, {sourceId:'s',bookId:'b',panelFocusGeneration:0,directoryOp
 owner.saveVisible=()=>new Promise(resolve=>{finishSave=resolve;});
 owner.onDirectory=()=>actions.push('directory');owner.onSwitchSource=()=>actions.push('source');
 const directory=owner.openDirectory();assert.deepEqual(actions,[]);await directory;assert.equal(owner.panel,'directory');assert.deepEqual(actions,[]);
+const sheetFrameIndex = frames.findIndex(frame => frame instanceof MangaSheetFrame);
+assert.ok(sheetFrameIndex >= 0);
+const [sheetFrame] = frames.splice(sheetFrameIndex, 1);
+sheetFrame.onFrame(0);
+sheetFrame.onIdle(2_000_000);
+drainReaderPostLayoutFallbacks(frames);
+await Promise.resolve();
+assert.equal(owner.panelPhase, 'open');
 finishSave(); // Visual admission does not wait for storage; navigation below still does.
-const switching=owner.openSourceSwitch();finishSave();await switching;assert.deepEqual(actions,['source']);
+const switching=owner.openSourceSwitch();assert.deepEqual(actions,[]);finishSave();await switching;assert.deepEqual(actions,['source']);
 const stale=owner.openDirectory();owner.mounted=false;finishSave();await stale;assert.deepEqual(actions,['source']);
 console.log('PASS manga catalog/download and source controls use existing shell routes after position capture; disposed actions cannot navigate');

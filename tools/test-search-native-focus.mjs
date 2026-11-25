@@ -2,27 +2,111 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function fieldClip(){
-const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
-const read=p=>readFileSync(new URL('../entry/src/main/ets/'+p+'.ets',import.meta.url),'utf8');
-const {readerTypographyRoles}=await import('./lib/reader-typography-probe.mjs');const style=readerTypographyRoles.TYPE_SEARCH_BOOK_INPUT;
-for (const name of ['fixedLineHeightField', 'autoLineHeightField']) {
-  const { owner } = createReaderBuilderProbe(read('ui/controls/ReaderSearchField'), [name], {
-    TYPE_SEARCH_BOOK_INPUT: style,
-  });
-  Object.assign(owner, { appThemeScheme: 'day', text: '', placeholder: '搜索', clearable: false,
-    iconGap: () => 5, searchIcon: () => 'search', iconSize: () => 16, inputHeight: () => 36,
-    textStyle: () => style, inputColor: () => 'ink', caretColor: () => 'ink', placeholderColor: () => 'muted',
-    fieldHeight: () => 44, horizontalPadding: () => 12, fieldBackgroundColor: () => 'surface',
-    fieldBorderWidth: () => 1, fieldBorderColor: () => 'border', cornerRadius: () => 999,
-    resolvedAccessibilityLabel: () => '搜索',
-  });
-  owner[name]();
-  const nodes = [...owner.nodes.values()];
-  assert.equal(nodes.find(n => n.type === 'TextInput').borderRadius, 0,
-    'native start caret cannot be clipped by an inherited TextInput round rect');
-  assert.equal(nodes.find(n => n.type === 'Row').borderRadius, 999,
-    'outer authored search field retains its shape');
-}
+  const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+  const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const { compileTailConsumer } = await import('./lib/foundation-tail-consumer-probe.mjs');
+  const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
+  const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+  const { readerEditingSdk } = await import('./lib/reader-editing-sdk-probe.mjs');
+  const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+  const selectGeometry = await import('../entry/src/main/ets/ui/foundation/ReaderSelectGeometry.ts');
+  const accessibilitySource = readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets', import.meta.url), 'utf8');
+  const source = readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderSearchField.ets', import.meta.url), 'utf8');
+  const shared = foundationControls();
+  const classes = pureModuleProbe(source.slice(0, source.indexOf('@Component')), 'ReaderSearchFieldAdapters.ets',
+    { FrameCallback: class {}, readerActionTouchRegion: pureModuleProbe(accessibilitySource, 'ReaderActionAccessibility.ets', {},
+      ['readerActionTouchRegion']).readerActionTouchRegion },
+    ['ReaderSearchInputTarget', 'ReaderSearchFocusFrame']);
+  const keyType = { Down: 0, Up: 1 }, keyCode = { KEYCODE_BACK: 2 };
+  const frames = [], focuses = [];
+  const context = { postFrameCallback: frame => frames.push(frame),
+    getFocusController: () => ({ requestFocus: id => focuses.push(id) }) };
+  const { Component } = compileTailConsumer(source, boundedMembers(source),
+    { ...shared.dependencies, ...classes, ...readerEditingSdk(), ...readerTypographyRoles, ...selectGeometry,
+      readerAppColor, DEBUG: false, TextInputController: class {}, KeyType: keyType, KeyCode: keyCode, uiContext: context },
+    shared.hooks);
+  const variants = [
+    { variant: 'bookPanel', id: 'reader-book-search-input', clear: '清空搜索内容' },
+    { variant: 'sourceManagement', id: 'reader-source-editor', clear: '清空书源搜索' },
+    { variant: 'sourceGroup', id: 'reader-source-group-probe:search', clear: '清空分组搜索' },
+    { variant: 'readerDirectory', id: 'reader-control-directory-probe', clear: '清空章节搜索' },
+    { variant: 'rssPassive', id: 'reader-rss-search-input', clear: '清空订阅搜索' },
+  ];
+  for (const { variant, id, clear } of variants) {
+    const owner = new Component(undefined, {});
+    const events = [];
+    let current = true;
+    const isBook = variant === 'bookPanel';
+    const isDirectory = variant === 'readerDirectory';
+    Object.assign(owner, { variant, mode: isBook ? 'submit' : 'live', text: '关键词', placeholder: '搜索',
+      clearable: true, focusOnAppear: isBook, bookPanelClearId: 'reader-book-search-clear',
+      bookPanelFrameId: 'reader-bookshelf-search-field', directoryFocusId: isDirectory ? id : '',
+      fieldWidthVp: variant === 'rssPassive' ? 280 : 0,
+      directoryFocusAllowed: isDirectory, editingFocusId: id, editingCurrent: () => current,
+      editingHost: { focus: () => events.push('edit'), blur: () => events.push('release') },
+      onDirectoryKeyboardBack: id => events.push(id), onTextChange: value => events.push(value),
+    });
+    owner.aboutToAppear();
+    owner.initialRender();
+    const nodes = [...owner.nodes.values()];
+    const input = nodes.find(node => node.type === 'TextInput');
+    const button = nodes.find(node => node.type === 'Button' && node.accessibilityText === clear);
+    assert.equal(input.id, id);
+    assert.equal(input.borderRadius, 0, 'native start caret keeps a square clipping boundary');
+    if (variant === 'rssPassive') {
+      assert.deepEqual([input.fontSize, input.lineHeight, input.halfLeading], [14, 20, true],
+        'the live RSS caller uses the RSS-specific line box');
+    }
+    assert.ok(nodes.some(node => node.type === 'Row' && node.borderRadius > 0), 'outer search field stays round');
+    if (isBook) {
+      assert.equal(button.id, 'reader-book-search-clear');
+      assert.equal(focuses.length, 0);
+      frames.shift().onFrame();
+      assert.deepEqual(focuses.splice(0), [id], 'initial book focus requests the current editor after the frame');
+    }
+    assert.equal(button.width, 32);
+    assert.equal(button.focusOnTouch, false);
+    assert.deepEqual([button.responseRegion.width, button.responseRegion.height], [44, 44]);
+    current = false;
+    button.onClick();
+    assert.deepEqual(events, [], 'an overlay or retired owner cannot clear the underlying draft');
+    assert.equal(frames.length, 0);
+    current = true;
+    button.onClick();
+    assert.deepEqual(events.splice(0), ['']);
+    if (isBook) {
+      current = false;
+      frames.shift().onFrame();
+      assert.deepEqual(focuses, [], 'a covering overlay cancels deferred clear refocus');
+      current = true;
+      button.onClick();
+      frames.shift().onFrame();
+      assert.deepEqual(focuses.splice(0), [id], 'clear refocuses the same editor id when still current');
+      assert.deepEqual(events.splice(0), ['']);
+    } else {
+      assert.equal(frames.length, 0, 'clear does not request a new IME or focus for a live filter');
+    }
+    input.onEditChange(true);
+    if (isDirectory) input.onFocus();
+    assert.equal(input.onKeyPreIme({ type: keyType.Up, keyCode: keyCode.KEYCODE_BACK }), false);
+    assert.deepEqual(events, ['edit']);
+    assert.equal(input.onKeyPreIme({ type: keyType.Down, keyCode: keyCode.KEYCODE_BACK }), false,
+      'the editable adapter leaves the Back key to the IME');
+    assert.deepEqual(events.splice(0), isDirectory ? ['edit', id, 'release'] : ['edit', 'release']);
+    if (isBook) {
+      button.onClick();
+      assert.deepEqual(events.splice(0), ['']);
+      assert.equal(frames.length, 1);
+    }
+    owner.aboutToDisappear();
+    if (isBook) {
+      frames.shift().onFrame();
+      assert.deepEqual(focuses, [], 'a queued clear cannot restore focus after editor teardown');
+    }
+    events.length = 0;
+    button.onClick();
+    assert.deepEqual(events, [], 'a retained clear callback cannot write after editor teardown');
+  }
 }
 async function webFocus(){
 const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
@@ -78,4 +162,4 @@ owner.replayOnly([[...owner.nodes].find(([,node])=>node===web)[0]]);
 assert.equal(web.focusable, false); assert.equal(web.focusOnTouch, false);
 }
 const cases={'field-clip':fieldClip,'web-focus':webFocus};
-for(const id of selectContractCases({'field-clip':'Actual search input caret clip with current public role','web-focus':'Actual hidden/visible ArkWeb keyboard focus lifecycle'})){await cases[id]();recordContractCasePass(id);}
+for(const id of selectContractCases({'field-clip':'Actual search input clipping, clear target, guarded focus, and pre-IME Back','web-focus':'Actual hidden/visible ArkWeb keyboard focus lifecycle'})){await cases[id]();recordContractCasePass(id);}

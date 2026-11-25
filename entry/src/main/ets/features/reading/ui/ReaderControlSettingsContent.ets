@@ -1,7 +1,8 @@
+import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { readerControlActor, readerControlPaidResponses, readerControlLerp, readerControlUnit, type ReaderControlActorFrame } from './ReaderControlActorGeometry';
 import { readerControlSettingsMinimumFacts, readerControlSettingsGroupLabel, readerControlSettingsOptionLabel, measureReaderControlSettingsMinimum } from './ReaderControlSettingsMinimum';
 import { readerControlModuleProfileMatches, readerControlModuleFactsMatch, type ReaderControlPreparedModuleProfile, type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
-import { TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL, TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK, TYPE_READER_SETTINGS_RETAINED_ADDED_GROUP_LABEL, TYPE_READER_SETTINGS_RETAINED_JUSTIFY_TOGGLE_ROW_LABEL, TYPE_READER_SETTINGS_RETAINED_SCREEN_GROUP_LABEL, TYPE_READER_SETTINGS_RETAINED_SEGMENT_ROW_VALUE, TYPE_READER_SETTINGS_RETAINED_TOGGLE_ROW_LABEL } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_READER_PANEL_LABEL, TYPE_APP_ROW_DETAIL, TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL, TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK, TYPE_READER_SETTINGS_RETAINED_ADDED_GROUP_LABEL, TYPE_READER_SETTINGS_RETAINED_JUSTIFY_TOGGLE_ROW_LABEL, TYPE_READER_SETTINGS_RETAINED_SCREEN_GROUP_LABEL, TYPE_READER_SETTINGS_RETAINED_SEGMENT_ROW_VALUE, TYPE_READER_SETTINGS_RETAINED_TOGGLE_ROW_LABEL } from '../../../ui/foundation/ReaderTypography';
 
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { PathShape, RectShape } from '@ohos.arkui.shape';
@@ -38,6 +39,7 @@ const SETTINGS_TIMEOUT_OPTIONS: string[] = ['system', 'oneMinute', 'fiveMinutes'
 export struct ReaderControlSettingsContent {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
+  @Prop fixedIsland: boolean = false;
   @Prop @Watch('onPreparedMinimumChanged') preparedMinimum: ReaderControlPreparedModuleProfile | undefined = undefined;
   @Prop preparedMinimumRequired: boolean = false;
   onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts) => void =
@@ -335,7 +337,9 @@ export struct ReaderControlSettingsContent {
   }
 
   build() {
-    if (!this.preparedMinimumRequired || this.presentationPrepared() !== undefined) {
+    if (this.fixedIsland && (!this.preparedMinimumRequired || this.presentationPrepared() !== undefined)) {
+      this.islandContent();
+    } else if (!this.preparedMinimumRequired || this.presentationPrepared() !== undefined) {
     Scroll(this.scroller) {
       if (this.widePageLayoutAvailable) {
         Column() {
@@ -371,6 +375,86 @@ export struct ReaderControlSettingsContent {
   }
 
   @Builder
+  private islandContent() {
+    Scroll() {
+      Column({ space: 7 }) {
+        Column({ space: 5 }) {
+          this.islandHeading('屏幕样式');
+          this.islandOptions('direction');
+          this.islandOptions('pageTurn');
+          this.islandOptions('timeout');
+          if (this.widePageLayoutAvailable) {
+            this.widePageLayoutRow();
+          }
+        }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme));
+        Column() {
+          this.islandHeading('状态栏与显示');
+          this.islandToggle('隐藏状态栏', 'hideStatusBar');
+          this.islandToggle('隐藏底部导航栏', 'hideNavigationBar');
+          this.islandToggle('拓展到刘海（灵动岛）', 'extendIntoCutout');
+        }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme));
+        Column() {
+          this.islandHeading('正文排版');
+          this.islandToggle('文字两端对齐', 'justifyText');
+          this.islandToggle('底部对齐', 'alignPageBottom');
+        }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme));
+        Column() {
+          this.islandHeading('阅读操作');
+          this.islandToggle('音量键翻页', 'volumeKeysTurnPage');
+          this.islandToggle('息屏终止朗读', 'stopTtsOnScreenOff');
+          this.islandToggle('长按选择文本', 'longPressSelectText');
+        }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme));
+      }.width('100%').padding({ bottom: 2 });
+    }.id('reader-control-module-settings').width(this.availableWidth).height(this.availableHeight)
+      .scrollBar(BarState.Auto).edgeEffect(EdgeEffect.None).clip(true).enabled(this.currentInputEnabled());
+  }
+
+  @Builder
+  private islandHeading(label: string) {
+    Text(label).width('100%').padding({ top: 2, bottom: 2 }).fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
+      .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
+  }
+
+  @Builder
+  private islandOptions(group: ReaderControlSettingsGroup) {
+    Column({ space: 4 }) {
+      Text(this.groupLabel(group)).width('100%').fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+      Flex({ wrap: FlexWrap.Wrap }) {
+        ForEach(this.groupOptions(group), (option: string) => {
+          ReaderButton({ scheme: this.appThemeScheme, label: this.optionLabel(group, option),
+            visualSize: 'small', variant: this.isSegmentActive(group, option) ? 'primary' : 'reader-tonal',
+            focusId: `reader-control-settings-${group}-${option}`,
+            actionEnabled: this.currentInputEnabled() && this.isSegmentAvailable(group, option),
+            actionAccessibilityLabel: this.segmentAccessibilityText(group, option),
+            primary: this.isSegmentActive(group, option), selectionSemantic: true,
+            onAction: (): void => this.handleSegment(group, option),
+          }).margin({ right: 4 });
+        }, (option: string): string => option);
+      }.width('100%');
+    }.width('100%');
+  }
+
+  @Builder
+  private islandToggle(label: string, key: ReaderSettingsToggleKey) {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
+      Row({ space: 8 }) {
+        Text(label).layoutWeight(1).fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+        ReaderControlSwitchTrack({ value: key === 'justifyText' ? this.justifyText : this.toggleValue(key) });
+      }.width('100%').accessibilityLevel('no-hide-descendants');
+    }.width('100%').constraintSize({ minHeight: 44 }).padding({ left: 2, right: 2 })
+      .backgroundColor(Color.Transparent).borderRadius(0)
+      .border({ width: { top: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+      .enabled(this.currentInputEnabled() && (key === 'justifyText' || isReaderSettingsToggleAvailable(key)))
+      .opacity(key === 'justifyText' || isReaderSettingsToggleAvailable(key) ? 1 : .45)
+      .accessibilitySelected(key === 'justifyText' ? this.justifyText : this.toggleValue(key))
+      .accessibilityText(key === 'justifyText' ? label : this.toggleAccessibilityText(label, key))
+      .onClick((): void => {
+        if (key === 'justifyText') this.handleJustify();
+        else this.handleToggle(key);
+      });
+  }
+
+  @Builder
   private widePageLayoutRow() {
     Row({ space: 12 }) {
       Text('宽屏正文布局').layoutWeight(1)
@@ -386,7 +470,7 @@ export struct ReaderControlSettingsContent {
           accessibilityLabel: '宽屏正文布局', onSelect: (index: number): void => this.selectWidePageLayout(identity, index),
         });
       }, (identity: string): string => identity);
-    }.width(this.availableWidth).padding({ left: 15, right: 15, top: 4, bottom: 4 })
+    }.width(this.fixedIsland ? '100%' : this.availableWidth).padding(this.fixedIsland ? { top: 4, bottom: 4 } : { left: 15, right: 15, top: 4, bottom: 4 })
       .onAreaChange((_previous: Area, next: Area): void => {
         const height = readerPageAreaLength(next.height);
         if (Number.isFinite(height) && height >= 0 && Math.abs(height - this.widePageLayoutHeight) > .1) {
@@ -504,7 +588,7 @@ export struct ReaderControlSettingsContent {
     .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
     .position({ x: this.child('row', index).x, y: this.child('row', index).y })
     .opacity(this.child('row', index).opacity * (isReaderSettingsToggleAvailable(key) ? 1 : .55))
-    .enabled(this.currentInputEnabled() && this.p() > 0 && isReaderSettingsToggleAvailable(key))
+    .enabled(this.currentInputEnabled() && (this.fixedIsland || this.p() > 0) && isReaderSettingsToggleAvailable(key))
     .accessibilityText(this.toggleAccessibilityText(label, key))
     .onClick((): void => this.handleToggle(key));
   }
@@ -528,13 +612,13 @@ export struct ReaderControlSettingsContent {
   }
 
   private handleToggle(key: ReaderSettingsToggleKey): void {
-    if (this.currentInputEnabled() && this.p() > 0 && isReaderSettingsToggleAvailable(key)) {
+    if (this.currentInputEnabled() && (this.fixedIsland || this.p() > 0) && isReaderSettingsToggleAvailable(key)) {
       this.onToggleChange(key, !this.toggleValue(key));
     }
   }
 
   private handleJustify(): void {
-    if (this.currentInputEnabled() && this.p() > 0) this.onJustifyTextChange(!this.justifyText);
+    if (this.currentInputEnabled() && (this.fixedIsland || this.p() > 0)) this.onJustifyTextChange(!this.justifyText);
   }
 
   private groupOptions(group: ReaderControlSettingsGroup): string[] {

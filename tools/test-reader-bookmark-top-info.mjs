@@ -75,13 +75,17 @@ const bookmarkMembers = ['bookmarkCornerFeedback', 'bookmarkCornerLayout', 'book
   'bookmarkPullOffset', 'bookmarkPullPaperTop', 'bookmarkPaperWell', 'bookmarkPullFeedbackColor',
   ...bookmarkViewportMembers];
 const RibbonSource = readFileSync(file('ReaderPageBookmarkRibbon.ets'), 'utf8');
-const RIBBON_PATH = RibbonSource.match(/^const RIBBON_PATH = '([^']+)';$/m)?.[1];
-assert.equal(RIBBON_PATH, 'M1.5,0.5 H14.5 V33 L8,27.5 L1.5,33 Z');
-const ribbonDependencies = { ...dependencies, RIBBON_PATH, GradientDirection: { Bottom: 'bottom' } };
+const ribbonDependencies = { ...dependencies, uiContext: { vp2px: value => value * 3.5 }, GradientDirection: { Bottom: 'bottom' } };
 const ribbonProperties = createArkUIPropertyRuntimeProbe();
+const GlyphComponent = createReaderBuilderProbe(RibbonSource,
+  ['build', 'widthVp', 'pathCommands', 'metricsRevision', 'color', 'filled', 'heightVp'],
+  { ...ribbonDependencies, ...ribbonProperties.sdk },
+  { ...ribbonProperties.hooks, componentName: 'ReaderPageBookmarkGlyph' }).Component;
+ribbonDependencies.ReaderPageBookmarkGlyph = GlyphComponent;
 const RibbonComponent = createReaderBuilderProbe(RibbonSource,
   ['build', 'ink', 'x', 'paperTop', 'paperScale', 'offsetY', 'fillHeight', 'alpha', 'night', 'bookmarked'],
-  { ...ribbonDependencies, ...ribbonProperties.sdk }, ribbonProperties.hooks).Component;
+  { ...ribbonDependencies, ...ribbonProperties.sdk }, { ...ribbonProperties.hooks,
+    componentName: 'ReaderPageBookmarkRibbon', childSources: { ReaderPageBookmarkGlyph: RibbonSource }, mountChildren: true }).Component;
 ribbonDependencies.ReaderPageBookmarkRibbon = class extends RibbonComponent {
   constructor(owner, params, storage, id, ...rest) {
     super(owner, params, storage, id, ...rest);
@@ -151,7 +155,8 @@ function render(layout, state = {}, time = '12:30') {
   const nodes = [...chrome.nodes.values()];
   const actor = ribbonActor(bookmark);
   const actorRoot = actor && [...actor.nodes.values()].find(node => node.type === 'Stack' && node.clip === true && node.position);
-  const marker = actor && { ...actor.params, ...actorRoot, paths: [...actor.nodes.values()].filter(node => node.type === 'Path') };
+  const marker = actor && { ...actor.params, ...actorRoot,
+    paths: [...actor.children.values()].flatMap(glyph => [...glyph.nodes.values()].filter(node => node.type === 'Path')) };
   return { chrome, bookmark, paint: [...bookmark.nodes.values()], clock: nodes.find(n => n.type === 'Text' && n.create === time),
     title: nodes.find(n => n.type === 'Text' && n.create.startsWith('A very')),
     marker, icon: marker?.alpha > 0 ? marker : undefined,
@@ -210,6 +215,14 @@ if (selectedCase === 'transaction') {
 }
 const layout = cases[1];
 if (geometryCase) {
+const buttonGlyph = new GlyphComponent(undefined, {});
+buttonGlyph.initialRender();
+const glyphPath = [...buttonGlyph.nodes.values()].find(node => node.type === 'Path');
+assert.equal(glyphPath.create.width / glyphPath.create.height, 16 / 34, 'button glyph preserves the ribbon silhouette aspect');
+const pathNumbers = commands => [...commands.matchAll(/\d+(?:\.\d+)?/g)].map(match => Number(match[0]));
+const originalCoordinates = [1.5, 0.5, 14.5, 33, 8, 27.5, 1.5, 33];
+const buttonFactor = 3.5 * glyphPath.create.height / 34;
+assert.deepEqual(pathNumbers(glyphPath.create.commands), originalCoordinates.map(value => value * buttonFactor));
 let leftFallbacks = 0;
 for (const layout of cases) {
   const { clock, title, icon, chrome, bookmark } = render(layout);
@@ -232,6 +245,8 @@ for (const layout of cases) {
   assert.equal(icon.hitTestBehavior, 'HitTestMode.None');
   assert.equal(icon.paths.length, 2, 'one silhouette is painted as stroke plus a clipped fill');
   assert.equal(icon.paths[0].create.commands, icon.paths[1].create.commands);
+  assert.deepEqual(pathNumbers(icon.paths[0].create.commands), originalCoordinates.map(value => value * 3.5),
+    'the fully sized paper silhouette converts VP coordinates to device pixels exactly once');
   assert.equal(icon.paths[1].fill, readerAppColor('TOK_READ_PRIMARY', 'day'));
   if (a.x < b.x) leftFallbacks++;
   const cutout = layout.pageChromeStatusMetrics.statusBarCutoutRect;

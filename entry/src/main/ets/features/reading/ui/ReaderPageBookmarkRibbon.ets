@@ -1,7 +1,33 @@
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import { READER_BOOKMARK_RIBBON_HEIGHT, READER_BOOKMARK_RIBBON_WIDTH } from '../presentation/ReaderPageBookmarkModel';
+import { READER_BOOKMARK_GLYPH_HEIGHT_VP, READER_BOOKMARK_RIBBON_HEIGHT, READER_BOOKMARK_RIBBON_WIDTH }
+  from '../presentation/ReaderPageBookmarkModel';
 
-const RIBBON_PATH = 'M1.5,0.5 H14.5 V33 L8,27.5 L1.5,33 Z';
+@Component
+export struct ReaderPageBookmarkGlyph {
+  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @Prop color: ResourceColor = Color.Black;
+  @Prop filled: boolean = false;
+  @Prop heightVp: number = READER_BOOKMARK_GLYPH_HEIGHT_VP;
+
+  private widthVp(): number {
+    return this.heightVp * READER_BOOKMARK_RIBBON_WIDTH / READER_BOOKMARK_RIBBON_HEIGHT;
+  }
+
+  private pathCommands(): string {
+    this.metricsRevision;
+    // Path commands take pixels. Keep the original silhouette and scale both
+    // axes equally for the bookmark button and the paper-top ribbon.
+    const unit = this.getUIContext().vp2px(1) * this.heightVp / READER_BOOKMARK_RIBBON_HEIGHT;
+    return `M${1.5 * unit},${0.5 * unit} H${14.5 * unit} V${33 * unit} ` +
+      `L${8 * unit},${27.5 * unit} L${1.5 * unit},${33 * unit} Z`;
+  }
+
+  build() {
+    Path({ width: this.widthVp(), height: this.heightVp, commands: this.pathCommands() })
+      .fill(this.filled ? this.color : Color.Transparent).stroke(this.color).strokeWidth(1)
+      .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
+  }
+}
 
 /** One clipped paper-top actor. Its same vector silhouette receives the moving fill mask. */
 @Component
@@ -22,12 +48,10 @@ export struct ReaderPageBookmarkRibbon {
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) {
-        Path({ width: READER_BOOKMARK_RIBBON_WIDTH, height: READER_BOOKMARK_RIBBON_HEIGHT, commands: RIBBON_PATH })
-          .fill(Color.Transparent).stroke(this.ink()).strokeWidth(1)
+        ReaderPageBookmarkGlyph({ color: this.ink(), heightVp: READER_BOOKMARK_RIBBON_HEIGHT })
           .position({ x: 0, y: 0 });
         Stack({ alignContent: Alignment.TopStart }) {
-          Path({ width: READER_BOOKMARK_RIBBON_WIDTH, height: READER_BOOKMARK_RIBBON_HEIGHT, commands: RIBBON_PATH })
-            .fill(this.ink()).stroke(this.ink()).strokeWidth(1)
+          ReaderPageBookmarkGlyph({ color: this.ink(), heightVp: READER_BOOKMARK_RIBBON_HEIGHT, filled: true })
             .position({ x: 0, y: 0 });
         }
         .width(READER_BOOKMARK_RIBBON_WIDTH).height(this.fillHeight).clip(true)

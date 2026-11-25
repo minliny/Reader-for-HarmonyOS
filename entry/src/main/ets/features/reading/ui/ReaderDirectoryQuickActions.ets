@@ -32,11 +32,11 @@ export struct ReaderDirectoryQuickActions {
           .width(14).height(14).flexShrink(0);
         Column() {
           Text(`在读：${this.title}`).width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(12).fontWeight(FontWeight.Medium).lineHeight(16)
+            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(12).fontWeight(FontWeight.Medium).lineHeight(16).halfLeading(true)
             .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.scheme));
           if (this.positionLabel.length > 0) {
             Text(this.positionLabel).width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-              .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(10).lineHeight(12).fontFeature('"tnum" 1')
+              .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(10).lineHeight(12).halfLeading(true).fontFeature('"tnum" 1')
               .fontColor(readerAppColor('TOK_MUTED', this.scheme));
           }
         }.layoutWeight(1).constraintSize({ minWidth: 0 }).alignItems(HorizontalAlign.Start);
@@ -59,7 +59,7 @@ export struct ReaderDirectoryQuickActions {
           (this.scheme === 'night' ? $r('app.media.reader_directory_bottom_theme_night') : $r('app.media.reader_directory_bottom')))
           .width(13).height(13).flexShrink(0);
         Text(top ? '顶部' : '底部').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
-          .fontSize(12).fontWeight(FontWeight.Medium).lineHeight(16).maxLines(1)
+          .fontSize(12).fontWeight(FontWeight.Medium).lineHeight(16).halfLeading(true).maxLines(1)
           .fontColor(readerAppColor('TOK_INK', this.scheme));
       }.constraintSize({ minWidth: 44 }).height(this.actionHeight() - 8).padding({ left: 8, right: 8 })
         .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.scheme)).borderRadius((this.actionHeight() - 8) / 2)
@@ -83,7 +83,8 @@ export struct ReaderDirectoryQuickActions {
     }.width('100%').padding(6).borderRadius((this.actionHeight() + 12) / 2)
       .backgroundColor(readerAppColor('app.navigation.floatingSurface', this.scheme))
       .border({ width: 1, color: readerAppColor('app.navigation.floatingBorder', this.scheme) })
-      .backdropBlur(12).shadow(readerSurfaceElevation('floating', this.scheme))
-      .hitTestBehavior(HitTestMode.Default);
+      .shadow(readerSurfaceElevation('floating', this.scheme))
+      .hitTestBehavior(HitTestMode.Default)
+      .onTouch((): void => {});
   }
 }

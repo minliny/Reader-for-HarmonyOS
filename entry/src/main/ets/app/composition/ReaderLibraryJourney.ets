@@ -73,6 +73,7 @@ export interface ReaderLibraryJourneyPorts {
   refreshShelf: () => void;
   readbackOnBookshelf: () => void;
   clearRssSelection: () => void;
+  showDiscover: () => void;
   bookshelfInputAllowed: () => boolean;
   back: () => void;
 }
@@ -104,10 +105,15 @@ export class ReaderLibraryJourney {
   }
 
   isCurrentSearch(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number, host: SearchHost): boolean {
-    const scope = this.ports.scope(), route = this.navigation.snapshot();
+    const route = this.navigation.snapshot();
+    return route.route === 'search' && generation === route.generation && this.ownsSearchPresentation(owner, mounting, host);
+  }
+
+  ownsSearchPresentation(owner: ReaderRuntimeOwner | undefined, mounting: number, host: SearchHost): boolean {
+    const scope = this.ports.scope();
     return owner !== undefined && scope.owner === owner && this.ports.ownsRuntime(owner) &&
-      !scope.retired && route.route === 'search' && generation === route.generation &&
-      mounting === scope.mounting && this.ports.acquisition().currentOwner() === owner && this.ports.search().host === host;
+      !scope.retired && mounting === scope.mounting &&
+      this.ports.acquisition().currentOwner() === owner && this.ports.search().host === host;
   }
 
   isCurrentBookshelf(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number): boolean {
@@ -351,10 +357,11 @@ export class ReaderLibraryJourney {
         }
       },
       showBookshelf: (focus: BookshelfDetailReturnFocus | undefined): void => this.returnToBookshelf(focus),
+      showDiscover: (): void => this.ports.showDiscover(),
     });
   }
 
-  returnToBookshelf(focus?: BookshelfDetailReturnFocus): void {
+  returnToBookshelf(focus?: BookshelfDetailReturnFocus, motion?: 'tab'): void {
     const opening = this.navigation.snapshot(), search = this.ports.search(), verification = search.model.verification;
     const observe = opening.route === 'search' && verification?.enabled() === true;
     const previousOwner = observe ? search.model.currentOwner() : undefined;
@@ -364,7 +371,7 @@ export class ReaderLibraryJourney {
       this.ports.reading().leaveDetail(this.ports.runtime());
       this.ports.clearRssSelection();
       this.ports.acquisition().endSearch();
-    });
+    }, motion);
     if (next === undefined) return;
     this.ports.publish(next);
     if (observe && verification !== undefined) {

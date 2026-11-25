@@ -5,6 +5,10 @@ export const CONTRACT_CASES = {
     "description": "Actual frame and source-ready generation, clock during recovery and cancel handoff; fake runtime ports",
     "resources": []
   },
+  "stale-launch-handoff": {
+    "description": "Production frame, controller and stale Panel receipt converge to an input-owning terminal state",
+    "resources": []
+  },
   "more-menu": {
     "description": "Actual More menu refresh readiness and one-dispatch ownership",
     "resources": []
@@ -15,6 +19,10 @@ export const CONTRACT_CASES = {
   },
   "playback-theme-icons": {
     "description": "Actual SDK playback icons follow theme and playback state",
+    "resources": []
+  },
+  "tts-engine-roundtrip": {
+    "description": "Switching back from a configured HTTP engine re-enables the system service and island transport",
     "resources": []
   }
 };
@@ -40,7 +48,7 @@ const file=name=>new URL(`../entry/src/main/ets/features/reading/ui/${name}`,imp
 const curves={flight:p=>p,expand:p=>p,easeIn:p=>p,easeOut:p=>p,easeInOut:p=>p};
 const g=buildReaderSessionLaunchGeometry({source:new ReaderSessionMorphSourceMeasurement('quickTts','tts',30,510,286,190,1),targetLeft:260,targetTop:790,topBarExitDistance:90,dockExitDistance:330});
 const P=productionMotionMethods(file('ReaderControlPanel.ets'),['frame','currentLayout','controlPanelHeight',
-  'onLaunchSourceVisible','confirmLaunchSourceReady','launchSourceCurrent','onRuntimeEnabledChanged'], {readerControlMotionBounds});
+  'paintedPresentationReceipt','onLaunchSourceVisible','confirmLaunchSourceReady','launchSourceCurrent','onRuntimeEnabledChanged'], {readerControlMotionBounds});
 for(const time of [0,100,160,190,220,379,380]){
  const sample=sampleReaderSessionLaunch(time,g,curves),events=[];
  const p=Object.assign(new P(),{launchSample:sample,launchOwnsControls:false,launchRecovering:true,launchGeneration:7,
@@ -69,13 +77,14 @@ for(const time of [0,100,160,190,220,379,380]){
  p.controlObscured=false;p.launchRecovering=false;p.onRuntimeEnabledChanged();assert.equal(enabled.at(-1),false);
 }
 {
- const H=productionMotionMethods(file('LocalReadingExperience.ets'),['cancelSessionLaunch'],
+ const H=productionMotionMethods(file('LocalReadingExperience.ets'),['cancelSessionLaunch','restoreSessionLaunchControl'],
    {...sessionPolicy,READER_CONTROL_OPEN_MS,readerControlMotionMs});
  const source=sessionPolicy.expandReaderControlSession(sessionPolicy.enterReaderControlModule(
    sessionPolicy.openReaderControlSession(sessionPolicy.createReaderControlSessionState(),0),'tts',0),0);
  const current={ownership:'stage',geometry:{type:'tts'}};
  const next={...current,ownership:'handoffPending',sample:sampleReaderSessionLaunch(190,g,curves)};
  const h=Object.assign(new H(),{sessionLaunch:current,sessionLaunchSourceControl:source,reduceMotion:false,
+   sessionLaunchSourceLayoutKey:'layout',sessionLaunchLayoutKey:()=> 'layout',armSessionLaunchDeadline:()=>{},
    sessionLaunchController:{cancel:()=>next},applyWindowPolicyForChromeOwner:()=>{},
    capsuleVerification:{ownerState:()=>{},finish:()=>{}},sessionLaunchSpeechFacts:()=>undefined});
  h.cancelSessionLaunch('openControl');
@@ -93,6 +102,7 @@ for(const time of [0,100,160,190,220,379,380]){
  const h = Object.assign(new H(), {mounted:true,appForeground:true,exitRequested:false,reduceMotion:true,
    sessionLaunch:launch,sessionLaunchExitGeneration:0,readerWindowMetricsRevision:1,
    sessionLaunchStageOpacity:1,sessionLaunchFooterExiting:true,sessionLaunchFooterOffset:5,
+   armSessionLaunchDeadline:()=>{},
    sessionLaunchController:{finishExit:g=>g === launch.generation,snapshot:()=>launch},
    finishSessionCapsuleMorph:value=>states.push(value),
    getUIContext:()=>({animateTo:({duration,onFinish},update)=>{
@@ -108,6 +118,159 @@ for(const time of [0,100,160,190,220,379,380]){
  assert.deepEqual(states,[launch]);
 }
 
+}
+
+async function case_stale_launch_handoff() {
+  const assert = (await import('node:assert/strict')).default;
+  const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const session = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
+  const { readerControlMotionMs, READER_CONTROL_OPEN_MS } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionPolicy.ts');
+  const { ReaderSessionLaunchController } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchController.ts');
+  const { buildReaderSessionLaunchGeometry } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
+  const { ReaderSessionMorphSourceMeasurement } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
+  const file = name => new URL(`../entry/src/main/ets/features/reading/ui/${name}`, import.meta.url);
+  let clock = 0;
+  class Frame { constructor(run) { this.run = run; } }
+  let timerId = 0;
+  const timers = new Map();
+  const Host = productionMotionMethods(file('LocalReadingExperience.ets'), [
+    'scheduleSessionLaunchFrame', 'cancelSessionLaunch', 'onSessionLaunchSourceReady',
+    'commitSessionLaunchControlHidden', 'finishSessionCapsuleMorph', 'reconcileSessionLaunchLayout',
+    'restoreSessionLaunchControl', 'finishSessionLaunchHandoff', 'sessionLaunchAllowsControlInput',
+    'clearSessionLaunchDeadline', 'armSessionLaunchDeadline', 'fadeSessionLaunchExit', 'openReaderControl',
+    'rememberStaticSessionCapsuleOrigin', 'hideControl', 'admitReaderViewportSize',
+  ], { ...session, READER_CONTROL_OPEN_MS, readerControlMotionMs, ReaderUIFrameCallback: Frame,
+    SESSION_LAUNCH_CALLBACK_GRACE_MS: 250,
+    readerMotionNowMs: () => clock, cancelReaderRapidPageTurn: state => state, AppStorage: { setOrCreate() {} },
+    setTimeout: (run, duration) => (timers.set(++timerId, { run, duration }), timerId),
+    clearTimeout: timer => timers.delete(timer), motionAnimateParam: (_id, onFinish) => ({ duration: 200, onFinish }),
+    ReaderWindowCoordinator: { metrics: () => ({}) }, readerControlKeyboardVisible: () => false });
+  const Foreground = selectedProductionMethods(file('LocalReadingExperience.ets'), 'ReadingExperience',
+    ['onAppForegroundChanged']);
+  const Panel = productionMotionMethods(file('ReaderControlPanel.ets'), [
+    'launchSourceCurrent', 'onLaunchSourceVisible', 'confirmLaunchSourceReady',
+  ], { readerControlPlaybackProfileMatches: () => true, readerControlPlaybackSourceKindMatches: () => true });
+  for (const [type, kind] of [['autoPage', 'quickAutoPage'], ['tts', 'quickTts']]) for (const mode of ['flight', 'reopen', 'waiting', 'watchdog', 'fade-watchdog', 'settled', 'settled-full', 'settled-book-changed', 'settled-business-ended', 'settled-background', 'settled-dismiss', 'settled-local-viewport']) {
+    clock = 0;
+    const frames = [];
+    const linear = progress => progress;
+    const controller = new ReaderSessionLaunchController({ flight: linear, expand: linear,
+      easeIn: linear, easeOut: linear, easeInOut: linear });
+    const geometry = buildReaderSessionLaunchGeometry({ source: new ReaderSessionMorphSourceMeasurement(kind, 'playback', 30, 510, 286, 190, 1),
+      targetLeft: 260, targetTop: 790, topBarExitDistance: 90, dockExitDistance: 330 });
+    const launch = controller.begin({ lifecycle: 1, bookIdentity: 'book', moduleVisit: 1, viewportRevision: 1,
+      scrollRevision: 1, layoutRevision: 1, paletteRevision: 1, fontRevision: 1, sourceRevision: 1, sourceActorId: 'playback' },
+      geometry, 0, false);
+    const quick = session.enterReaderControlModule(session.openReaderControlSession(session.createReaderControlSessionState(), 0), type, 0);
+    const source = mode === 'settled-full' ? session.expandReaderControlSession(quick, 0) : quick;
+    const h = Object.assign(new Host(), { mounted: true, appForeground: true, exitRequested: false,
+      controlSession: source, latestControlVisualSession: source, sessionLaunchSourceControl: source,
+      sessionLaunch: launch, sessionLaunchController: controller, sessionLaunchSourceLayoutKey: 'metrics-1',
+      sessionLaunchExitGeneration: 0, sessionLaunchDeadlineTimer: -1, pageTurnRenderRevision: 0, reduceMotion: false, liveLayout: 'metrics-1',
+      viewportWidth: 390, viewportHeight: 844,
+      sessionLaunchLayoutKey() { return this.viewportWidth === 390 ? this.liveLayout : 'new-local-layout'; },
+      pageTurnInputPhase: () => 'idle', invalidatePageTurnRuntime() {}, hasMeasuredViewport: () => false,
+      usesBookTurnSimulation: () => false, windowMetricsLayoutKey: () => 'size-reconciled',
+      hasCurrentMaterializedChapter: () => false,
+      getUIContext: () => ({ postFrameCallback: frame => frames.push(frame), animateTo: (_params, update) => update() }),
+      capsuleVerification: { ownerState() {}, finish() {}, queuedFrameTime() {}, update() {}, discardHandoffFade() {}, beginHandoffFade: () => false },
+      controlVerification: { observing: () => false, accept() {} }, applyWindowPolicyForChromeOwner() {},
+      drainPageTurnPreparationQueue() {}, sessionLaunchSpeechFacts() {}, automaticReadingState: () => ({ status: 'running' }),
+      lifecycleToken: 1, sourceId: 'src', bookId: 'book', controlOpenRevision: 1, retireReaderRecovery() {},
+      isControlInputEnabled: () => true, isReaderPageInteractionEnabled: () => true, pageTurnOwnsReaderInput: () => false,
+      invalidateControlBackdrop() {}, controlTiming: () => ({ showDurationMs: 220, dismissDurationMs: 0 }),
+      loadContentMetricsIfNeeded: async () => {}, refreshReaderBrightness() {},
+      liveSessionCapsuleSnapshot: () => mode === 'settled-business-ended' ? undefined : { type, sessionState: 'paused' },
+      controlVisible() { return session.readerControlContentLocation(this.controlSession).level !== 'hidden'; },
+      dismissControlTemporaryLayers() {}, onControlInputBoundaryChanged() {}, cancelSourceSwitchCompletion() {},
+      onAppForegroundChanged: Foreground.prototype.onAppForegroundChanged,
+      stopReaderTtsAudition() {}, finishBookmarkRollback() {}, bookmarkRollbackGeneration: 0,
+      captureReadingRecordElapsed() {}, clearReadingRecordTimer() {}, flushReadingRecord: async () => {},
+      pauseAutoPage() {}, admitRetainedReadingRecency() {},
+    });
+    const oldReceipt = { module: type, metricsRevision: 1 };
+    const p = Object.assign(new Panel(), { runtimeMounted: true, launchSample: launch.sample, launchGeneration: launch.generation,
+      launchRecovering: true, minimumIdentity: 'book', minimumMetricsRevision: 2, capturedLaunchGeneration: launch.generation,
+      capturedLaunchSourceKind: kind, launchNaturalMinimum: oldReceipt, visualVisibilityProgress: 1,
+      launchSourceMinimum: { generation: launch.generation, kind, requiresNaturalProfile: true, receipt: oldReceipt },
+      onLaunchSourceReady: generation => h.onSessionLaunchSourceReady(generation),
+    });
+    if (mode === 'flight') {
+      h.scheduleSessionLaunchFrame(launch.generation);
+      clock = 110;
+      h.liveLayout = 'metrics-2';
+      frames.shift().run();
+    } else {
+      h.sessionLaunch = controller.advance(launch.generation, 380);
+      h.commitSessionLaunchControlHidden();
+      if (mode === 'reopen' || (mode.startsWith('settled') && mode !== 'settled-local-viewport')) h.liveLayout = 'metrics-2';
+      if (mode === 'settled-background') {
+        h.appForeground = false;
+        h.onAppForegroundChanged();
+        h.appForeground = true;
+        h.onAppForegroundChanged();
+      } else if (mode === 'settled-local-viewport') h.admitReaderViewportSize(406, 844, h.lifecycleToken);
+      else if (mode.startsWith('settled')) h.reconcileSessionLaunchLayout();
+      else h.cancelSessionLaunch('openControl');
+      if (mode === 'waiting') {
+        assert.equal(h.sessionLaunch.ownership, 'handoffPending');
+        h.liveLayout = 'metrics-2';
+        h.reconcileSessionLaunchLayout();
+      }
+      if (mode === 'watchdog') {
+        assert.equal(h.sessionLaunchAllowsControlInput(), false);
+        const timer = timers.get(h.sessionLaunchDeadlineTimer);
+        assert.equal(timer.duration, 470);
+        timer.run();
+      }
+      if (mode === 'fade-watchdog') {
+        p.minimumMetricsRevision = 1;
+        p.onLaunchSourceVisible(kind);
+        assert.equal(h.sessionLaunch.ownership, 'exitPending');
+        assert.equal(h.sessionLaunchAllowsControlInput(), true, 'a current source owns input before capsule fade ends');
+        const timer = timers.get(h.sessionLaunchDeadlineTimer);
+        assert.equal(timer.duration, 450);
+        timer.run();
+      }
+    }
+    if (mode !== 'fade-watchdog') {
+      p.onLaunchSourceVisible(kind);
+      assert.equal(p.launchSourceReadyGeneration, undefined, 'the old rectangle cannot acknowledge current window metrics');
+    }
+    assert.equal(h.sessionLaunch?.ownership, undefined, `${type}/${mode} must release the stage`);
+    assert.equal(h.sessionLaunchAllowsControlInput(), true);
+    assert.equal(timers.size, 0, 'retired launch timers are cleared');
+    if (mode !== 'fade-watchdog' && !mode.startsWith('settled')) {
+      assert.equal(session.readerControlContentLocation(h.controlSession).module, type);
+      assert.equal(session.sampleReaderControlSession(h.controlSession).visibilityProgress, 1);
+    }
+    if (mode.startsWith('settled')) {
+      assert.equal(session.readerControlContentLocation(h.controlSession).level, 'hidden');
+      if (mode === 'settled-book-changed') h.bookId = 'next-book';
+      h.openReaderControl();
+      const target = session.readerControlTargetLocation(h.controlSession);
+      if (mode === 'settled-book-changed' || mode === 'settled-business-ended') {
+        assert.equal(target.level, 'home', 'another reader or ended playback never restores the old controls');
+      } else {
+        assert.equal(target.module, type, 'static capsule must still open its original playback module after geometry retirement');
+        assert.equal(target.form, mode === 'settled-full' ? 'full' : 'quick');
+      }
+      assert.equal(h.staticSessionCapsuleOrigin, undefined, 'the panel owns the visit after reopening');
+      if (mode === 'settled-dismiss') {
+        h.hideControl('backdrop');
+        assert.equal(session.readerControlContentLocation(h.controlSession).level, 'hidden');
+        assert.equal(h.staticSessionCapsuleOrigin?.location.module, type, 'backdrop saves the live session module again');
+        h.openReaderControl();
+        assert.equal(session.readerControlTargetLocation(h.controlSession).module, type);
+        assert.equal(h.controlSession.transition.durationMs, 220);
+        h.controlSession = session.openReaderControlSession(session.createReaderControlSessionState(), 0);
+        h.hideControl('backdrop');
+        h.openReaderControl();
+        assert.equal(session.readerControlTargetLocation(h.controlSession).level, 'home');
+      }
+    }
+  }
 }
 
 async function case_more_menu() {
@@ -127,11 +290,14 @@ const {sampleReaderControlAutoPage} = await import('../entry/src/main/ets/featur
 const {createReaderControlMorphScroll,readerControlMorphScrollTranslation} = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts');
 const file=name=>new URL(`../entry/src/main/ets/features/reading/ui/${name}`,import.meta.url);
 const curves={flight:p=>p,expand:p=>p,easeIn:p=>p,easeOut:p=>p,easeInOut:p=>p};
-const P=productionMotionMethods(file('ReaderControlPanel.ets'),['frame','controlPanelHeight','onLaunchSourceVisible','confirmLaunchSourceReady','setMoreMenuVisible','dismissMoreMenu','performMoreAction','onRuntimeEnabledChanged']);
+const P=productionMotionMethods(file('ReaderControlPanel.ets'),['setMoreMenuVisible','dismissMoreMenu',
+ 'performMoreAction','currentMoreMenuOwnerScope']);
 for(const local of [true,false]){
- const actions=[],p=Object.assign(new P(),{inputEnabled:true,moreMenuVisible:false,frame:()=>({visibility:1}),
+ const actions=[],p=Object.assign(new P(),{inputEnabled:true,runtimeMounted:true,temporaryLayerKind:'',
+ moreMenuVisible:false,moreMenuGeneration:0,frame:()=>({visibility:1}),
  chapterRefreshEnabled:false,isLocalBook:()=>local,onTemporaryLayerChange:v=>actions.push(['temporary',v]),
- onRefreshChapter:()=>actions.push('refresh'),onOpenBookInfo:()=>actions.push('info')});
+ onRefreshChapter:()=>actions.push('refresh'),onOpenBookInfo:()=>actions.push('info'),
+ observeMoreMenuFrames(){},syncProgressInput(){},refreshDockPlacement(){}});
  p.setMoreMenuVisible(true);p.performMoreAction('refresh');assert.equal(p.moreMenuVisible,true);
  assert.ok(!actions.includes('refresh'),'unready chapter cannot refresh');
  p.chapterRefreshEnabled=true;p.performMoreAction('refresh');assert.equal(actions.at(-1),'refresh');assert.equal(p.moreMenuVisible,false);
@@ -172,6 +338,7 @@ for(const [name,module] of [['ReaderControlTtsContent.ets','tts'],['ReaderContro
    sourceMinimumMetricsRevision:-1,availableWidth:286,availableHeight:190,appScheme:'day',status:'stopped',
    motionProgress:form==='quick'?0:1,p:()=>form==='quick'?0:1,scrollMotion:createReaderControlMorphScroll(),
    presentation:()=>({contentOpacity:1,contentBlur:0}),
+   presentationPrepared:()=>({facts:{autoPage:{status:'已停止'}}}),
    frame:()=>({playback:{x:8,y:24,width:280,height:128},control:{width:280,height:100},
     content:{x:0,y:0,width:286,height:190},details:{x:5,y:100,width:270,height:70}}),
    playback:()=>sections.push('playback'),timer:()=>sections.push('timer'),speed:()=>sections.push('speed'),
@@ -187,7 +354,7 @@ for(const [name,module] of [['ReaderControlTtsContent.ets','tts'],['ReaderContro
   assert.equal(root.enabled,false);assert.equal(root.accessibilityLevel,'no-hide-descendants');
  }
  const C=productionMotionMethods(file(name),['onMotionChanged','measureActor','reportMorphActor','onFullDidScroll','onSourceDetachedChanged'],{readerControlPlaybackSourceKind});
- const c=Object.assign(new C(),{sourceOnly:'full',sourceDetached:false,scroller:{currentOffset:()=>{throw Error('source scroller invoked');}},
+ const c=Object.assign(new C(),{sourceOnly:'full',sourceDetached:false,p:()=>1,syncRunningPulse(){},scroller:{currentOffset:()=>{throw Error('source scroller invoked');}},
   syncMorphScroll:()=>{throw Error('source motion invoked');},onMorphActorMeasured:()=>{throw Error('source measured');}});
  c.onMotionChanged();c.measureActor(true,{});c.reportMorphActor();c.onFullDidScroll();c.onSourceDetachedChanged();
 }
@@ -217,7 +384,9 @@ for(const [name,builder] of [['ReaderControlAutoPageContent.ets','runningButton'
  const {owner}=createReaderBuilderProbe(source,builder==='roundControl'?[builder,'transportPaint','transportGlyphSize']:[builder],{readerTtsPlayGradientStart:()=> '#123456',FlexAlign:{Center:'center'}});
  Object.assign(owner,{p:()=>0,sourceOnly:'none',appScheme:'day',status:'running',state:{status:'playing'},serviceBusy:false,
  frame:()=>({playIcon:{x:0,y:0,width:32,height:32},toggle:{x:0,y:0,width:80,height:50}}),
- transport:()=>({x:0,y:0,width:40,height:40}),sharedInput:()=>true,onlineServicePage:()=>false,
+ transport:()=>({x:0,y:0,width:40,height:40}),transportResponse:()=>({x:0,y:0,width:44,height:44}),
+ textMetric:(_name,fallback)=>fallback,
+ sharedInput:()=>true,onlineServicePage:()=>false,
  isHttpEngineSelected:()=>false,isActivelySpeaking:()=>owner.status==='running',hasActiveQueue:()=>true,controlText:()=>''});
  if(builder==='roundControl')owner.roundControl('toggle');else owner.runningButton();
  for(const scheme of ['day','night'])for(const playing of [true,false]){
@@ -229,7 +398,38 @@ for(const [name,builder] of [['ReaderControlAutoPageContent.ets','runningButton'
 
 }
 
-const implementations = {'recovery-handoff':case_recovery_handoff,'more-menu':case_more_menu,'source-builder-isolation':case_source_builder_isolation,'playback-theme-icons':case_playback_theme_icons};
+async function case_tts_engine_roundtrip() {
+  const { default: assert } = await import('node:assert/strict');
+  const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+  const { readerTtsConfigChoices } = await import('../entry/src/main/ets/features/reading/presentation/ReaderTtsConfigOptions.ts');
+  const path = new URL('../entry/src/main/ets/features/reading/ui/ReaderControlTtsContent.ets', import.meta.url);
+  const Tts = productionMotionMethods(path, ['isHttpEngineSelected', 'onlineServicePage', 'onEngineChanged',
+    'configurationChoices', 'fieldWidth'], { readerTtsConfigChoices });
+  let serviceFacts;
+  const owner = Object.assign(new Tts(), { engine: 'system', serviceTab: '',
+    httpEngines: [{ id: 5, name: 'HTTP' }],
+    voiceOptions: [{ language: 'zh-CN', person: 2, label: '系统音色' }],
+    textMinimum: () => ({ sessionFieldWidth: 73 }),
+    publishMinimumMeasurer() { serviceFacts = this.onlineServicePage(); } });
+  assert.equal(owner.onlineServicePage(), false);
+  owner.engine = 'http-tts:5';
+  owner.onEngineChanged();
+  assert.equal(serviceFacts, true);
+  for (const field of ['voice', 'language']) {
+    owner.configField = field;
+    assert.deepEqual(owner.configurationChoices(), []);
+  }
+  owner.engine = 'system';
+  owner.onEngineChanged();
+  assert.equal(serviceFacts, false, 'system transport and choices must use the system service projection');
+  owner.configField = 'voice';
+  assert.equal(owner.configurationChoices()[0]?.id, 'voice:zh-CN:2');
+  owner.configField = 'language';
+  assert.equal(owner.configurationChoices()[0]?.id, 'zh-CN');
+  assert.equal(owner.fieldWidth('session'), 73, 'the session field consumes the prepared width without live measurement');
+}
+
+const implementations = {'recovery-handoff':case_recovery_handoff,'stale-launch-handoff':case_stale_launch_handoff,'more-menu':case_more_menu,'source-builder-isolation':case_source_builder_isolation,'playback-theme-icons':case_playback_theme_icons,'tts-engine-roundtrip':case_tts_engine_roundtrip};
 for (const id of selectContractCases(CONTRACT_CASES)) {
   await implementations[id]();
   recordContractCasePass(id);

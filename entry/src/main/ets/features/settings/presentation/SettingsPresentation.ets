@@ -25,6 +25,7 @@ export class SettingsPresentation {
   operation: SettingsOperationProjection = { action: 'load' };
   cacheCleanup: SettingsCacheCleanupSnapshot | undefined;
   identity: string = '';
+  homeScrollY: number = 0;
   private applicationSnapshot: SettingsSnapshot | undefined;
   private unsubscribe: (() => void) | undefined;
   private stopSystemMotion: (() => void) | undefined;
@@ -56,6 +57,7 @@ export class SettingsPresentation {
   }
 
   mount(owner: ReaderRuntimeOwner, changed: () => void): void {
+    this.homeScrollY = 0;
     this.unsubscribe?.();
     this.stopSystemMotion?.();
     this.systemReduceMotion = false;
@@ -89,7 +91,8 @@ export class SettingsPresentation {
     return this.applicationSnapshot?.autoCheckUpdate === true && this.snapshot.autoCheckUpdate;
   }
 
-  open(owner: ReaderRuntimeOwner, route: SettingsRoute, identity: string, isRouteCurrent: () => boolean): void {
+  open(owner: ReaderRuntimeOwner, route: SettingsRoute, identity: string, isRouteCurrent: () => boolean,
+    freshHome: boolean = false): void {
     if (!isRouteCurrent()) return;
     if (this.isCurrent(identity)) return;
     this.retire();
@@ -102,6 +105,7 @@ export class SettingsPresentation {
       this.opening = undefined;
       return;
     }
+    if (route === 'settings' && freshHome) this.homeScrollY = 0;
     this.identity = identity;
     if (route === 'settings') {
       this.cacheCleanup = this.settingsHost().cacheCleanupSnapshot(owner);
@@ -114,6 +118,16 @@ export class SettingsPresentation {
     const opening = this.opening;
     return identity.length > 0 && opening !== undefined && opening.identity === identity &&
       opening.isRouteCurrent() && this.host?.isPresentationCurrent(opening.owner, identity) === true;
+  }
+
+  paintIdentity(route: SettingsRoute): string {
+    return this.opening?.route === route && this.isCurrent(this.identity) ? this.identity : '';
+  }
+
+  rememberHomeScroll(identity: string, y: number): void {
+    if (this.opening?.route === 'settings' && this.isCurrent(identity) && Number.isFinite(y)) {
+      this.homeScrollY = Math.max(0, y);
+    }
   }
 
   retire(): void {

@@ -17,6 +17,9 @@ const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
 const { readerEditingSdk } = await import('./lib/reader-editing-sdk-probe.mjs');
 const { boundedMembers, readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { productionReaderPressFeedback } = await import('./lib/reader-press-feedback-probe.mjs');
+const { readerImportMotionForProbe } = await import('./lib/reader-import-motion-probe.mjs');
+const { JsonImportPresentation } = await import('./lib/json-import-presentation-probe.mjs');
+const { selectedProductionComponentCallback } = await import('./lib/selected-production-methods.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { readerTypographyRoles, readerMessageStyles } = await import('./lib/reader-typography-probe.mjs');
 const { ReaderWindowMetricsSnapshot, ReaderRectVp, ReaderInsetsVp,
@@ -74,15 +77,16 @@ class LiveSurfaceChild {
 }
 const foundation=foundationControls();
 const jsonMembers = ['editingHost', 'editingScroll', 'editingScroller', 'build', 'formBody', 'localButton', 'submitOnlineImport', 'focusScopeKey', 'localFocusKey',
-  'safeTop', 'availableHeight', 'inputIsCurrent', 'restoreFocusAction', 'updateUrlDraft'];
-const jsonDependencies = { ...readerEditingSdk(), ...readerMessageStyles, readerWindowMetrics: () => metrics, readerInteractiveSafeTop, readerInteractiveSafeBottom, readerPageAreaLength: value => Number.parseFloat(value) };
+  'safeTop', 'availableHeight', 'inputIsCurrent', 'dismissIfCurrent', 'restoreFocusAction', 'updateUrlDraft'];
+const jsonDependencies = { ...readerEditingSdk(), ...readerMessageStyles, ...readerImportMotionForProbe(),
+  readerWindowMetrics: () => metrics, readerInteractiveSafeTop, readerInteractiveSafeBottom, readerPageAreaLength: value => Number.parseFloat(value) };
 const { owner: dialog } = createReaderBuilderProbe(jsonSource,
   jsonMembers, {
   ...foundation.dependencies, ...jsonDependencies, ReaderDialogSurface: LiveSurfaceChild, DialogActionView,
   registerReaderFonts: () => {},
 }, { ...foundation.hooks, allowEmptyBranchAdmission: true });
 let dismissed = 0, selected = 0, imported = [];
-Object.assign(dialog, { appThemeScheme: 'day', readerWindowMetricsRevision: 0,
+Object.assign(dialog, { appThemeScheme: 'day', readerWindowMetricsRevision: 0, foreground: true,
   title: '导入 JSON', description: '支持选择本地 JSON 文件，或从在线链接下载后导入。',
   onDismiss: () => dismissed++, onSelectLocal: () => selected++,
   onImportOnline: url => imported.push(url),
@@ -103,7 +107,7 @@ const localButton = dialogNodes.find(n => n.type === 'Button' && n.accessibility
 assert.ok(localButton, 'local-file action renders inside the body');
 assert.ok(dialogNodes.indexOf(description) < dialogNodes.indexOf(localLabel),
   'the description precedes the local-file action');
-const urlLabel = dialogNodes.find(n => n.type === 'Text' && n.create === '在线链接');
+const urlLabel = dialogNodes.find(n => n.type === 'Text' && n.create === '或输入在线链接');
 const urlInput = dialogNodes.find(n => n.type === 'TextInput');
 assert.ok(urlLabel && urlInput, 'URL form renders');
 assert.ok(dialogNodes.indexOf(localLabel) < dialogNodes.indexOf(urlLabel) && dialogNodes.indexOf(urlLabel) < dialogNodes.indexOf(urlInput),
@@ -123,6 +127,9 @@ assert.equal(localPaint.constraintSize.minHeight, 44, 'frozen JSON local action 
 assert.equal(localLabel.fontSize, 13);
 assert.equal(localLabel.fontFamily, readerTypographyRoles.TYPE_FORM_LABEL_ACTION.fontFamily);
 assert.equal(localButton.constraintSize.minHeight, 44);
+const overlayMotion = dialogNodes.find(node => node.type === 'Stack' && node.transition?.appear?.kind === 'opacity').transition;
+assert.equal(overlayMotion.appear.parameters.duration, 220);
+assert.equal(overlayMotion.disappear.parameters.duration, 180);
 
 // Draft update clears validation; submit routes the trimmed URL; the empty
 // draft surfaces the admission message instead of dispatching.
@@ -153,16 +160,39 @@ localButton.onClick();
 assert.equal(selected, 1, 'the body local button routes to onSelectLocal');
 surfaceChild.params.onClose();
 assert.equal(dismissed, 1, 'the shared close affordance routes to onDismiss');
+const backdrop = dialogNodes.find(node => node.type === 'Row' && node.backdropBlur === 6);
+assert.ok(backdrop, 'full-window shade is its own hit target');
+backdrop.onClick();
+assert.equal(dismissed, 2, 'an admitted outside click dismisses');
+dialog.isInputAllowed = () => false;
+backdrop.onClick();
+assert.equal(dismissed, 2, 'a retired import opening rejects the outside click');
 surfaceChild.params.onAction('selectLocal');
 assert.equal(selected, 1, 'unrouted action ids never reach callbacks');
+
+const importPresentation = new JsonImportPresentation();
+const focusTargets = { preferred: 'rule-import-button', fallback: 'rule-management-back' };
+const rulesOwner = { operations: identity => identity === 'rules' ? {} : undefined };
+importPresentation.openRuleBundle(rulesOwner, 'rules', focusTargets);
+const opening = importPresentation.opening;
+const index = { jsonImportPresentation: importPresentation, route: 'rulesManagement', searchAppForeground: true };
+const capture = selectedProductionComponentCallback(file('pages/Index.ets'), 'JsonImportDialog', 'captureFocusReturn', index, { opening });
+const focusReturn = capture();
+assert.equal(focusReturn.preferred, focusTargets.preferred);
+assert.equal(focusReturn.fallback, focusTargets.fallback);
+assert.equal(focusReturn.isCurrent(), false, 'underlying Rules surface waits while import is open');
+importPresentation.dismiss(opening.id);
+assert.equal(focusReturn.isCurrent(), true);
+index.route = 'settings';
+assert.equal(focusReturn.isCurrent(), false, 'focus never crosses a route change');
 
 
 // The actual dialog, header and action Native Buttons share one bounded
 // document. This geometry layer uses the current host and IME snapshot.
 const realControls = foundationControls({ windowMetrics: () => metrics });
-const { readerActionIcon } = pureModuleProbe(readFileSync(file('ui/foundation/ReaderActionIconResources.ets'), 'utf8'),
-  'ReaderActionIconResources.ets', { $r: value => value }, ['readerActionIcon']);
-const surfaceDeps = { ...realControls.dependencies, ...readerTypographyRoles, ...readerMessageStyles, readerActionIcon,
+const { readerPaperActionIcon } = pureModuleProbe(readFileSync(file('ui/foundation/ReaderActionIconResources.ets'), 'utf8'),
+  'ReaderActionIconResources.ets', { $r: value => value }, ['readerPaperActionIcon']);
+const surfaceDeps = { ...realControls.dependencies, ...readerTypographyRoles, ...readerMessageStyles, readerPaperActionIcon,
   resolveDialogSpec, readerSurfaceElevation: readerSurfaceSpecsForProbe().readerSurfaceElevation,
   readerWindowMetrics: () => metrics, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   SurfaceWidthSpec, resolveHorizontalFrame, ReaderPressFeedback: productionReaderPressFeedback(),
@@ -193,7 +223,7 @@ for (const scale of [1, 1.45, 2, 3]) for (const ime of [0, 180]) {
   assert.ok(close.height >= 44 && close.constraintSize.minWidth >= 44, 'shared close button pays both native hit dimensions');
   assert.ok(all.some(node => node.type === 'Stack' && node.width === 32 && node.height === 32 &&
     node.borderRadius === 16 && node.hitTestBehavior === 'HitTestMode.None'), 'close paint is a passive 32vp capsule');
-  assert.ok(all.some(node => node.type === 'Image' && node.create === readerActionIcon('close', 'day') &&
+  assert.ok(all.some(node => node.type === 'Image' && node.create === readerPaperActionIcon('close', 'day') &&
     node.width === 15 && node.height === 15), 'close uses the generated vector at its frozen size');
   assert.ok(all.some(node => node.type === 'Text' && node.create === live.validationMessage), 'full long validation remains scrollable');
   const root = all.find(node => node.type === 'Stack' && typeof node.onAreaChange === 'function');

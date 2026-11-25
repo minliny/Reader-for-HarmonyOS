@@ -1,16 +1,19 @@
-import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
+import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../foundation/ReaderPressMotion';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
-import { TYPE_APP_INHERITED_LABEL, TYPE_APP_ROW_LABEL, TYPE_SETTINGS_DANGER_LABEL } from '../foundation/ReaderTypography';
-import { TOK_BORDER_W, TOK_SPACE_CONTROL_INLINE, TOK_SPACE_SM } from '../foundation/ReaderTokens';
+import { TYPE_APP_ROW_DETAIL, TYPE_APP_ROW_LABEL } from '../foundation/ReaderTypography';
+import { TOK_BORDER_W, TOK_SPACE_SM } from '../foundation/ReaderTokens';
 
 type ReaderFormRowKind = 'standard' | 'compact' | 'danger';
 
 /** A row either owns one native action or lays out its child control. */
 @Component
 export struct ReaderFormRow {
+  @StorageProp('readerReduceMotion') private reduceMotion: boolean = false;
+  @State private pressPointer: number = -1;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('refreshContentLayout') icon: Resource | undefined = undefined;
   @Prop @Watch('refreshContentLayout') label: string = '';
+  @Prop secondaryText: string = '';
   /** A known-width child may move below its label when the real text budget does not fit. */
   @Prop @Watch('refreshContentLayout') contentMinWidth: number = 0;
   @StorageLink('readerUiConfigurationRevision') @Watch('refreshContentLayout')
@@ -18,13 +21,13 @@ export struct ReaderFormRow {
   @StorageLink('readerWindowMetricsRevision') @Watch('refreshContentLayout')
   private windowMetricsRevision: number = 0;
   @State private contentAppearanceRevision: number = 0;
-  @State private contentStacked: boolean = true;
+  @State private contentStacked: boolean = false;
   private contentRowWidth: number = 0;
-  @Prop kind: ReaderFormRowKind = 'standard';
-  @Prop actionEnabled: boolean = true;
-  @Prop isBusy: boolean = false;
+  @Prop @Watch('refreshContentLayout') kind: ReaderFormRowKind = 'standard';
+  @Prop @Watch('clearPress') actionEnabled: boolean = true;
+  @Prop @Watch('clearPress') isBusy: boolean = false;
   @Prop disclosure: boolean = false;
-  @Prop actionId: string = '';
+  @Prop @Watch('clearPress') actionId: string = '';
   onAction: (() => void) | undefined = undefined;
   onLabelAction: (() => void) | undefined = undefined;
   @BuilderParam content: () => void = this.emptyContent;
@@ -35,7 +38,14 @@ export struct ReaderFormRow {
     this.contentAppearanceRevision += 1;
     this.refreshContentLayout();
   }
-  aboutToDisappear(): void { this.mounted = false; }
+  aboutToDisappear(): void { this.mounted = false; this.clearPress(); }
+
+  private clearPress(): void { this.pressPointer = -1; }
+
+  private observePress(event: TouchEvent): void {
+    const next = readerPressPointer(event, this.pressPointer, this.canAct());
+    if (next !== this.pressPointer) readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressPointer = next; });
+  }
 
   @Builder
   private emptyContent() {}
@@ -43,13 +53,18 @@ export struct ReaderFormRow {
   build() {
     if (this.onAction !== undefined) {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
-        this.rowContent();
+        Stack() { this.rowContent(); }.width('100%')
+          .backgroundColor(readerPressSurface(Color.Transparent, this.appThemeScheme, this.pressPointer >= 0, this.reduceMotion))
+          .borderRadius(14).scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
+          .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion));
       }
         .width('100%').constraintSize({ minHeight: 58 }).padding(0)
-        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 14, this.canAct()))
+        .borderRadius(0).backgroundColor(Color.Transparent)
+        .onTouch((event: TouchEvent): void => this.observePress(event))
         .enabled(this.canAct())
         .id(this.actionId)
         .accessibilityText(this.label)
+        .accessibilityDescription(this.secondaryText)
         .onClick((): void => { if (this.canAct()) this.onAction?.(); });
     } else {
       this.rowContent();
@@ -71,16 +86,20 @@ export struct ReaderFormRow {
         .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
         .onAreaChange(this.contentWidthChangeHandler());
     } else {
-      Row({ space: this.kind === 'danger' ? TOK_SPACE_CONTROL_INLINE : TOK_SPACE_SM }) {
+      Row({ space: TOK_SPACE_SM }) {
         if (this.onAction === undefined && this.onLabelAction !== undefined) {
           // The label target is a sibling of the native switch. Only the
           // switch is exposed to keyboard and assistive technologies.
           Button({ type: ButtonType.Normal, stateEffect: false }) {
-            this.labelContent();
+            Stack() { this.labelContent(); }.width('100%')
+              .backgroundColor(readerPressSurface(Color.Transparent, this.appThemeScheme, this.pressPointer >= 0, this.reduceMotion))
+              .borderRadius(14).scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
+              .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion));
           }
             .layoutWeight(1).constraintSize({ minHeight: 58 }).padding(0)
             .backgroundColor(Color.Transparent).enabled(this.canAct()).focusable(false)
             .accessibilityLevel('no-hide-descendants')
+            .onTouch((event: TouchEvent): void => this.observePress(event))
             .onClick((): void => { if (this.canAct()) this.onLabelAction?.(); });
         } else {
           this.labelContent();
@@ -93,17 +112,17 @@ export struct ReaderFormRow {
       }
         .width('100%')
         .constraintSize({ minHeight: this.kind === 'compact' ? 44 : 58 })
-        .padding({ left: this.kind === 'compact' ? 0 : this.kind === 'danger' ? 13 : TOK_SPACE_SM,
-          right: this.kind === 'compact' ? 0 : TOK_SPACE_SM })
+        .padding({ left: this.contentInset(), right: this.contentInset(),
+          top: this.secondaryText.length > 0 ? 6 : 0, bottom: this.secondaryText.length > 0 ? 6 : 0 })
         .alignItems(VerticalAlign.Center)
-        .border({ width: { top: this.kind === 'standard' ? TOK_BORDER_W : 0 },
+        .border({ width: { top: this.kind === 'compact' ? 0 : TOK_BORDER_W },
           color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
         .onAreaChange(this.contentWidthChangeHandler());
     }
   }
 
   private contentLayoutKey(): string {
-    return JSON.stringify([this.label, this.icon, this.contentMinWidth, this.uiConfigurationRevision,
+    return JSON.stringify([this.label, this.icon, this.kind, this.contentMinWidth, this.uiConfigurationRevision,
       this.windowMetricsRevision, this.contentStacked, this.contentAppearanceRevision]);
   }
 
@@ -130,35 +149,46 @@ export struct ReaderFormRow {
         fontWeight: TYPE_APP_ROW_LABEL.fontWeight }));
       if (!Number.isFinite(labelWidth) || labelWidth <= 0) return;
       const iconWidth = this.icon === undefined ? 0 : 28 + TOK_SPACE_SM;
-      this.contentStacked = this.contentRowWidth < 2 * TOK_SPACE_SM + iconWidth + labelWidth + TOK_SPACE_SM + this.contentMinWidth;
-    } catch (_) { /* Keep the complete label above its control until measurement is available. */ }
+      const requiredWidth = 2 * this.contentInset() + iconWidth + labelWidth + TOK_SPACE_SM + this.contentMinWidth;
+      this.contentStacked = this.contentRowWidth < Math.ceil(requiredWidth);
+    } catch (_) { /* Keep the current layout until measurement is available. */ }
   }
+
+  private contentInset(): number { return this.kind === 'compact' ? 0 : TOK_SPACE_SM; }
 
   @Builder
   private labelContent() {
-    Row({ space: this.kind === 'danger' ? TOK_SPACE_CONTROL_INLINE : TOK_SPACE_SM }) {
+    Row({ space: TOK_SPACE_SM }) {
       if (this.icon !== undefined) {
         Stack({ alignContent: Alignment.Center }) {
           Image(this.icon).width(15).height(15).objectFit(ImageFit.Contain).accessibilityLevel('no');
         }
           .width(28).height(28).borderRadius(14)
-          .backgroundColor(readerAppColor(this.kind === 'danger' ? 'TOK_SETTING_DANGER_ICON_BG' : 'TOK_SETTING_ICON_BG', this.appThemeScheme));
+          .backgroundColor(readerAppColor('TOK_SETTING_ICON_BG', this.appThemeScheme));
       }
-      if (this.kind === 'compact') {
-        Text(this.label).layoutWeight(1).fontSize(TYPE_APP_INHERITED_LABEL.fontSizeFp)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+      if (this.secondaryText.length > 0) {
+        Column({ space: 2 }) {
+          this.primaryLabel(true);
+          Text(this.secondaryText).width('100%')
+            .fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight)
+            .fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp).lineHeight(TYPE_APP_ROW_DETAIL.lineHeightFp as number).halfLeading(true)
+            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        }.layoutWeight(1).alignItems(HorizontalAlign.Start);
       } else {
-        Text(this.label).layoutWeight(1)
-          .fontFamily(this.kind === 'danger' ? TYPE_SETTINGS_DANGER_LABEL.fontFamily : TYPE_APP_ROW_LABEL.fontFamily)
-          .fontWeight(this.kind === 'danger' ? TYPE_SETTINGS_DANGER_LABEL.fontWeight : TYPE_APP_ROW_LABEL.fontWeight)
-          .fontSize(this.kind === 'danger' ? TYPE_SETTINGS_DANGER_LABEL.fontSizeFp : TYPE_APP_ROW_LABEL.fontSizeFp)
-          .lineHeight((this.kind === 'danger' ? TYPE_SETTINGS_DANGER_LABEL.lineHeightFp : TYPE_APP_ROW_LABEL.lineHeightFp) as number)
-          .fontColor(readerAppColor(this.kind === 'danger' ? 'TOK_DANGER' : 'TOK_INK', this.appThemeScheme))
-          .maxLines(this.contentMinWidth > 0 && this.contentStacked ? undefined : 1)
-          .textOverflow({ overflow: this.contentMinWidth > 0 && this.contentStacked ? TextOverflow.Clip : TextOverflow.Ellipsis });
+        this.primaryLabel(false);
       }
     }
       .width('100%').layoutWeight(this.contentMinWidth > 0 && this.contentStacked ? undefined : 1)
       .alignItems(VerticalAlign.Center);
+  }
+
+  @Builder
+  private primaryLabel(withDetail: boolean) {
+    Text(this.label).layoutWeight(withDetail ? undefined : 1).width(withDetail ? '100%' : undefined)
+      .fontFamily(TYPE_APP_ROW_LABEL.fontFamily).fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
+      .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp).lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number).halfLeading(true)
+      .fontColor(readerAppColor(this.kind === 'danger' ? 'TOK_DANGER' : 'TOK_INK', this.appThemeScheme))
+      .maxLines(this.contentMinWidth > 0 && this.contentStacked ? undefined : 1)
+      .textOverflow({ overflow: this.contentMinWidth > 0 && this.contentStacked ? TextOverflow.Clip : TextOverflow.Ellipsis });
   }
 }

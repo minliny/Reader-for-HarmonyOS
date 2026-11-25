@@ -22,13 +22,20 @@ export function runSourceLayoutControlProbe(width, scale) {
       maxFontScale: text.maxFontScale ?? null, maxLines: text.maxLines ?? null,
       responseRegion: frame.responseRegion ?? null, layoutWeight: frame.layoutWeight ?? null };
   };
-  function button(specId, label, layout = 'intrinsic') {
+  function button(specId, label, { layout = 'intrinsic', variant, visualSize } = {}) {
     const actor = new foundation.button.Component(undefined, {
-      specId, label, layout, availableWidth: width, scheme: 'day', primary: false,
+      specId, label, layout, variant, visualSize, availableWidth: width, scheme: 'day', primary: false,
       actionEnabled: true, isBusy: false, onAction() {},
     });
     actor.aboutToAppear(); actor.initialRender();
-    return scalarFrame(foundation.nodes(actor), label);
+    const nodes = foundation.nodes(actor);
+    const frame = scalarFrame(nodes, label);
+    if (variant !== undefined) {
+      const capsule = nodes.find(node => node.type === 'Row' && node.borderRadius === 999);
+      assert.ok(capsule, `actual matrix capsule for ${label}`);
+      frame.height = Math.max(frame.height, capsule.constraintSize.minHeight);
+    }
+    return frame;
   }
   function icon(specId, label, fillWidth = false) {
     const actor = new labeled.component(undefined, {
@@ -42,12 +49,12 @@ export function runSourceLayoutControlProbe(width, scale) {
     return frame;
   }
   return { width, scale, targets: {
-    detect: button('source-management-detect', '检测中'),
-    login: button('source-management-login', '登录'),
-    statusCompact: button('source-management-status-compact', '全部'),
-    statusWide: button('source-management-status-wide', '未检测'),
-    category: button('source-management-category', '全部类型'),
-    manage: button('source-management-manage', '批量管理', 'full'),
+    detect: button('source-management-detect', '检测中', { variant: 'tonal', visualSize: 'small' }),
+    login: button('source-management-login', '登录', { variant: 'subtle', visualSize: 'small' }),
+    statusCompact: button('source-management-status-compact', '全部', { variant: 'tonal', visualSize: 'small' }),
+    statusWide: button('source-management-status-wide', '未检测', { variant: 'subtle', visualSize: 'small' }),
+    category: button('source-management-category', '全部类型', { variant: 'tonal', visualSize: 'small' }),
+    manage: button('source-management-manage', '批量管理', { layout: 'full', variant: 'tonal', visualSize: 'large' }),
     add: icon('source-management-add', '新增书源', true),
   }, unchanged: {
     compact: button('source-compact', '普通操作'),

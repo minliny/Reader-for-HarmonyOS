@@ -6,6 +6,8 @@ import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { readerFoundationTokens } from './lib/reader-tokens-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
+import { READER_BOOKMARK_GLYPH_HEIGHT_VP, READER_BOOKMARK_GLYPH_WIDTH_VP }
+  from '../entry/src/main/ets/features/reading/presentation/ReaderPageBookmarkModel.ts';
 
 const definitions = {
   'home-composition': {
@@ -31,6 +33,7 @@ function homeComposition(source, geometry, control) {
       `  @Builder\n  private regressionHome() { ${statement} }\n  @Builder\n  private controlContent() {`);
     const owner = createReaderBuilderProbe(candidate, names, {
       ...control, ...readerFoundationTokens, ...readerTypographyRoles,
+      READER_BOOKMARK_GLYPH_HEIGHT_VP, READER_BOOKMARK_GLYPH_WIDTH_VP,
       readerControlExtentFits: geometry.readerControlExtentFits,
       ScrollDirection: { Horizontal: 'horizontal' }, sourceSwitchTriggerFocusId: () => 'source-trigger',
       measureReaderControlText(_context, value, style) {
@@ -39,7 +42,8 @@ function homeComposition(source, geometry, control) {
         singleLineWidthVp: Math.min(80, Math.max(1, [...value].length * 6 * scale)), fitsWidth: true };
       },
     }).owner;
-    Object.assign(owner, { chapterTitle: 'Chapter One', totalChapters: 1, minimumIdentity: '', appScheme: 'day',
+    Object.assign(owner, { chapterTitle: 'Chapter One', totalChapters: 273, readableChapterPosition: 99,
+      minimumIdentity: '', appScheme: 'day',
       currentLayout: () => ({ topBarVisible, quickPanelHeight: viewport + 140 }),
       frame: () => ({ progress: 0, content: { width: 264, height: viewport } }),
       selectedMinimumProfile: () => undefined, progressInputEnabled: () => true, canStepChapter: () => true,
@@ -78,6 +82,10 @@ function homeComposition(source, geometry, control) {
     assert.ok(progress.height >= slider.height);
     assert.equal(pill.width, 86);
     assert.equal(pill.height, 44);
+    const bookmarkLaneWeights = nodes.slice(nodes.indexOf(bookmark), nodes.indexOf(progress))
+      .filter(node => node.layoutWeight === 1);
+    assert.deepEqual(bookmarkLaneWeights.map(node => node.create), ['第 100 / 共 273 章'],
+      'chapter progress gets the entire remaining width after the bookmark target and gap');
     assert.ok(Math.abs(owner.homeContentMinimumHeight() - required) < 1e-9,
       'producer/fallback minimum agrees with independently summed emitted children, borders and Column spacing');
     assert.equal(geometry.readerControlExtentFits(natural, viewport), geometry.readerControlExtentFits(required, viewport),

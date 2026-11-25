@@ -114,6 +114,8 @@ export struct BookRemovalDialogHost {
       .backgroundColor(Color.Transparent)
       .backdropBlur(this.backdropTicket > 0 ? 6 : 0)
       .opacity(this.backdropOpacity)
+      .expandSafeArea(this.backdropTicket > 0 ? [SafeAreaType.SYSTEM] : [],
+        this.backdropTicket > 0 ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM] : [])
       .hitTestBehavior(HitTestMode.None)
       .accessibilityLevel('no-hide-descendants')
       .focusable(false);

@@ -68,6 +68,18 @@ export class ReaderControlPlacementPreferences {
     });
   }
 
+  static resetDefaults(): Promise<void> {
+    const owner = this.active;
+    return this.enqueue(async (): Promise<void> => {
+      if (owner === undefined || !owner.current()) throw new Error('CONTROL_PLACEMENT_RETIRED');
+      const store = await owner.open();
+      if (!owner.current()) throw new Error('CONTROL_PLACEMENT_RETIRED');
+      const original: ReaderControlPlacementSave = { generation: ++this.generation, alignment: 'center' };
+      owner.pending = original;
+      if (await owner.write(store, original) !== 'confirmed') throw new Error('CONTROL_PLACEMENT_RESET_UNCONFIRMED');
+    });
+  }
+
   private async open(): Promise<preferences.Preferences> {
     if (this.store !== undefined) return this.store;
     const store = await preferences.getPreferences(this.context, readerHostPreferencesName(this.context.filesDir, PREFERENCES_NAME));

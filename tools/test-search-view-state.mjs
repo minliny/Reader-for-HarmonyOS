@@ -56,7 +56,8 @@ const Page=selectedProductionMethods(new URL('../entry/src/main/ets/features/sea
     'filterPresentationIdentity', 'taskStatusIdentity', 'acceptsFilter', 'acceptsTaskStatus', 'dismissSearchFilters', 'dismissTaskStatus', 'searchPanelOwnsInput',
     'onListTouch', 'scheduleDeferredResults', 'restoreResultFocus', 'resultFocusId', 'resultViewportId',
     'acceptResultNoticeFacts', 'captureSearchNoticeFacts', 'searchProgressText', 'searchStopped', 'isSweeping', 'operation',
-    'partialSearchFailure', 'onCardDisplayFactsChange'],
+    'partialSearchFailure', 'onCardDisplayFactsChange', 'scheduleMoreResults', 'hasActiveSearchRequest',
+    'acceptsResultSelection', 'observePageAnchor', 'pageEvidence', 'presentationVisibilityChanged'],
   {...actualReaderPageShell(),...authorMetadata,...mediaIdentity,
     ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }), requestAppChrome: () => { restoredAppChrome++; } },
     nextSearchSurfaceOwner: 0, READER_LIBRARY_SEARCH_BACK_FOCUS_ID,
@@ -336,7 +337,8 @@ if (selectedCase === 'layout-restoration') {
     const p = Object.assign(new Page(), { viewState: state, publication, surfaceModel: model, publicationRevision: 1,
       listEpoch: 0, restoreEpoch: 0, viewStateRevision: -1, resultFlushEpoch: 0, taskStatusGeneration: 0,
       visibleStart: 0, visibleEnd: 0, warmupGroups: [], resultDataSource: new SearchResultDataSource(),
-      listMounted: false, headerAnchorPending: false, isPresentationCurrent: () => true, isPresentationVisible: () => true,
+      listMounted: false, presented: true, headerAnchorPending: false,
+      isPresentationCurrent: () => true, isPresentationVisible: () => p.presented,
       searchContentStartInset: () => 54, searchContentEndInset: () => 28, onVisibleGroups: groups => warmups.push(groups),
       getUIContext: () => ({
         getFont() {}, postFrameCallback: frame => frames.push(frame), px2vp: value => value / 2,
@@ -455,6 +457,38 @@ if (selectedCase === 'layout-restoration') {
     assert.deepEqual(f.focusRequests, target === 'realized' ? [f.p.resultFocusId('online:b')] :
       target === 'missing' ? [READER_LIBRARY_SEARCH_BACK_FOCUS_ID] : [], target);
   }
+
+  {
+    const f = restoration({ measured: true, focusKey: 'online:b' });
+    f.p.pendingResultFocus = '';
+    f.p.scheduleScrollRestore(); f.tick(); f.tick();
+    const epoch = f.p.pageEpoch;
+    const surfaceOwner = f.model.currentOwner();
+    const dataSource = f.p.resultDataSource;
+    const moves = [...f.moves];
+    const selected = f.p.visibleGroups[1].book;
+    assert.equal(f.p.acceptsResultSelection(selected), true);
+    const chrome = restoredAppChrome;
+    f.p.nativePanel = { kind: 'filter', identity: 'covered-filter', chromeClaimed: true };
+    f.p.publishSurfacePanelInput();
+    f.p.presented = false;
+    f.p.presentationVisibilityChanged();
+    assert.equal(f.p.acceptsResultSelection(selected), false);
+    assert.equal(f.model.panelOwnsInput, false, 'covering the retained page releases its temporary panel');
+    assert.equal(restoredAppChrome, chrome + 1);
+    f.p.viewState.rememberDetailResult('online:b');
+    f.p.viewState.returnFromDetail();
+    f.p.presented = true;
+    f.p.presentationVisibilityChanged();
+    assert.equal(f.p.acceptsResultSelection(selected), true);
+    assert.equal(f.p.pageEpoch, epoch);
+    assert.equal(f.model.currentOwner(), surfaceOwner);
+    assert.equal(f.p.resultDataSource, dataSource);
+    assert.equal(f.p.retainedViewportPending, false, 'revealing a mounted list does not paint the paper mask');
+    f.tick();
+    assert.deepEqual(f.moves, moves, 'the mounted list keeps its anchor without replaying scroll');
+    assert.deepEqual(f.focusRequests, [f.p.resultFocusId('online:b')]);
+  }
 }
 
 if(selectedCase==='candidate-facts'){
@@ -572,14 +606,16 @@ const historySource = read('entry/src/main/ets/features/search/ui/ReaderSearchHi
 const historyGeometry = await import('../entry/src/main/ets/features/search/ui/SearchHistoryGeometry.ts');
 let clears = 0;
 const { owner: history } = createReaderBuilderProbe(historySource,
-  ['build', 'actionsEnabled', 'projectedRows', 'measuredControlWidth', 'measuredWidths', 'measuredRevision', 'metricsRevision'],
-  { ...controls.dependencies, ...historyGeometry }, controls.hooks);
+  ['build', 'actionsEnabled', 'rows', 'clearHistoryIcon'],
+  { ...controls.dependencies, ...historyGeometry, readerPaperActionIcon: () => 'reader-paper-action-icon' }, controls.hooks);
+const historyGeometryValue = new historyGeometry.SearchHistoryGeometry(350, 180, 1, false);
+const historyRows = historyGeometry.projectSearchHistoryRows(['已保留关键词'], historyGeometryValue, () => 80);
 Object.assign(history, { appThemeScheme: 'day', history: ['已保留关键词'], status: undefined,
-  geometry: new historyGeometry.SearchHistoryGeometry(350, 180, 1, false),
+  rows: historyRows, geometry: historyGeometryValue,
   onClear: () => clears++, onSelect() {}, getUIContext: () => ({ px2vp: value => value,
     getMeasureUtils: () => ({ measureText: () => 80 }) }) });
 history.initialRender();
-const clearHistory = [...history.nodes.values()].find(node => node.type === 'Button' && node.accessibilityText === '清空搜索历史');
+const clearHistory = controls.nodes(history).find(node => node.type === 'Button' && node.accessibilityText === '清空搜索历史');
 assert.ok(clearHistory, 'actual history clear is one native Button');
 assert.equal(clearHistory.height, history.geometry.headingHeight);
 clearHistory.onClick(); assert.equal(clears, 1);

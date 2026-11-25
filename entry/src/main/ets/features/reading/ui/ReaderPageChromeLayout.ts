@@ -2,24 +2,23 @@ import type { ReaderReadingLayoutSnapshot } from './ReaderLayoutGeometry';
 import type { ReaderDisplayCornerVp } from '../../../ui/foundation/ReaderWindowMetrics';
 
 /** Figma `Reader/ImmersiveInfo`/`Reader/ImmersiveFooterStatus` semantic tracks. */
-export const READER_PAGE_CHROME_SIDE_INSET = 25;
 export const READER_PAGE_CHROME_TOP_INSET = 25;
 /** Minimum breathing room after a visible system status/cutout edge. */
 export const READER_PAGE_CHROME_SAFE_TOP_GAP = 8;
 export const READER_PAGE_CHROME_BOTTOM_INSET = 23;
 export const READER_PAGE_CHROME_FOOTER_HEIGHT = 24;
+export const READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT = 44;
 export const READER_PAGE_CHROME_FOOTER_GAP = 5;
 // A stable semantic slot keeps the clock still during bookmark drag/ACK.
 export const READER_PAGE_CHROME_BOOKMARK_SIZE = 24;
-// OpenHarmony SystemUI phone status_bar_padding_start/end. These are content
-// paddings, not statusBarRect.height-derived guesses or OEM glyph coordinates.
-// applications_systemui d0f84037f1975dd9bf13ccbd279bd2d9b56e8a01,
-// features/statusbarcomponent/src/main/resources/phone/element/float.json.
-export const READER_SYSTEM_STATUS_CONTENT_INSET = 24;
 // Same-page VYG-AL30 captures show a ~12px optical difference for a 57px
 // measured AUTO line. Use a proportional correction, not a device pixel
 // offset; the complete line remains constrained to the measured status lane.
 export const READER_SYSTEM_STATUS_TEXT_SHIFT_RATIO = 0.2;
+
+export function readerPageChromeBottomInset(safeBottom: number): number {
+  return Math.max(READER_PAGE_CHROME_BOTTOM_INSET, safeBottom);
+}
 
 export class ReaderPageChromeMeasurements {
   topStartWidth: number;
@@ -123,11 +122,11 @@ export function resolveReaderPageChromeLayout(
   measurements: ReaderPageChromeMeasurements,
 ): ReaderPageChromeLayoutSnapshot {
   const result = new ReaderPageChromeLayoutSnapshot();
-  const visualLeft = Math.max(READER_PAGE_CHROME_SIDE_INSET, layout.pageChromeVisualSafeLeft);
-  const visualRightInset = Math.max(READER_PAGE_CHROME_SIDE_INSET, layout.pageChromeVisualSafeRight);
-  const interactiveRightInset = measurements.sessionVisible ?
-    Math.max(visualRightInset, layout.pageChromeInteractiveSafeRight) : visualRightInset;
-  const visualRight = Math.max(visualLeft, layout.viewportWidth - visualRightInset);
+  const visualLeft = Math.max(layout.contentLeft, layout.pageChromeVisualSafeLeft);
+  // For a spread, contentRight describes the inside page edge. The footer
+  // and status row use the outside margin of the full reading surface.
+  const visualRight = Math.max(visualLeft, layout.viewportWidth -
+    Math.max(layout.contentLeft, layout.pageChromeVisualSafeRight));
   const metrics = layout.pageChromeStatusMetrics;
   // The authored information row occupies the system status-bar origin. A
   // visible status bar increases the visual safe inset for body content, but
@@ -145,10 +144,10 @@ export function resolveReaderPageChromeLayout(
     layout.pageChromeTopRegionHeight > 0 ? informationOrigin +
     Math.max(0, (layout.pageChromeTopRegionHeight - measurements.topStartHeight) / 2) :
     Math.max(READER_PAGE_CHROME_TOP_INSET, informationOrigin + READER_PAGE_CHROME_SAFE_TOP_GAP);
-  const bottomInset = measurements.sessionVisible ?
-    Math.max(READER_PAGE_CHROME_BOTTOM_INSET, layout.pageChromeInteractiveSafeBottom) :
-    Math.max(READER_PAGE_CHROME_BOTTOM_INSET, layout.pageChromeVisualSafeBottom);
-  const footerTop = Math.max(top, layout.viewportHeight - bottomInset - READER_PAGE_CHROME_FOOTER_HEIGHT);
+  const bottomInset = readerPageChromeBottomInset(
+    Math.max(layout.pageChromeVisualSafeBottom, layout.pageChromeInteractiveSafeBottom));
+  const footerHeight = layout.pageChromeFooterHeight;
+  const footerTop = Math.max(top, layout.viewportHeight - bottomInset - footerHeight);
 
   result.topStartX = visualLeft;
   result.topStartY = top;
@@ -178,17 +177,13 @@ export function resolveReaderPageChromeLayout(
     fallbackRowTop + measuredRowHeight;
   const rowHeight = Math.max(0, rowBottom - rowTop);
   if (metrics !== undefined && statusHeight > 0) {
-    // Public Window gives a region, not OEM status-glyph baselines. Use the
-    // upstream SystemUI content padding independently of the measured height,
-    // then clamp it against this window's physical cutout and rounded corners.
     const rect = metrics.statusBarRect;
     // rowTop/rowHeight bound the newly positioned labels and accessory. Use
     // that same interval for physical cutout and corner clearance, including
     // an oversized accessibility line that extends below the status region.
-    const left = Math.max(layout.pageChromeVisualSafeLeft, rect.left + READER_SYSTEM_STATUS_CONTENT_INSET,
+    const left = Math.max(visualLeft, rect.left,
       cornerEdge(metrics.topLeftCorner, rowTop, true));
-    const right = Math.min(layout.viewportWidth - layout.pageChromeVisualSafeRight,
-      rect.left + rect.width - READER_SYSTEM_STATUS_CONTENT_INSET,
+    const right = Math.min(visualRight, rect.width > 0 ? rect.left + rect.width : visualRight,
       cornerEdge(metrics.topRightCorner, rowTop, false));
     const cutout = metrics.statusBarCutoutRect;
     const intersectsCutout = cutout.width > 0 && cutout.height > 0 &&
@@ -230,30 +225,29 @@ export function resolveReaderPageChromeLayout(
       Math.min(topLeftLimit, result.topAccessoryX - gap) - result.topStartX);
   }
 
-  result.footerRight = Math.max(visualLeft, layout.viewportWidth - interactiveRightInset);
+  result.footerRight = visualRight;
   result.footerTop = footerTop;
   result.bottomStartX = visualLeft;
   result.bottomStartY = footerTop + Math.max(0,
-    (READER_PAGE_CHROME_FOOTER_HEIGHT - measurements.bottomStartHeight) / 2);
+    (footerHeight - measurements.bottomStartHeight) / 2);
 
   const reservedSession = measurements.sessionVisible ?
     measurements.sessionWidth + READER_PAGE_CHROME_FOOTER_GAP : 0;
   // The right-hand percentage is a required status slot. Reserve it from the
   // right edge first, then let a long chapter title consume only the remaining
   // left width and ellipsize there; a long title must never hide progress.
-  const footerEndRight = Math.max(visualLeft, result.footerRight - reservedSession);
+  const sessionRight = Math.min(result.footerRight, layout.viewportWidth - layout.pageChromeInteractiveSafeRight);
+  const footerEndRight = Math.max(visualLeft, (measurements.sessionVisible ? sessionRight : result.footerRight) - reservedSession);
   result.bottomEndMaxWidth = Math.max(0, footerEndRight - visualLeft);
   const resolvedBottomEndWidth = Math.min(measurements.bottomEndWidth, result.bottomEndMaxWidth);
   result.sessionX = measurements.sessionVisible ?
-    Math.max(visualLeft, result.footerRight - measurements.sessionWidth) : result.footerRight;
-  result.sessionY = Math.max(0, Math.min(footerTop +
-    (READER_PAGE_CHROME_FOOTER_HEIGHT - measurements.sessionHeight) / 2,
-    layout.viewportHeight - bottomInset - measurements.sessionHeight));
+    Math.max(visualLeft, sessionRight - measurements.sessionWidth) : result.footerRight;
+  result.sessionY = Math.max(0, footerTop + (footerHeight - measurements.sessionHeight) / 2);
   const bottomEndRight = measurements.sessionVisible ?
     result.sessionX - READER_PAGE_CHROME_FOOTER_GAP : result.footerRight;
   result.bottomEndX = Math.max(visualLeft, bottomEndRight - resolvedBottomEndWidth);
   result.bottomEndY = footerTop + Math.max(0,
-    (READER_PAGE_CHROME_FOOTER_HEIGHT - measurements.bottomEndHeight) / 2);
+    (footerHeight - measurements.bottomEndHeight) / 2);
   result.bottomStartMaxWidth = Math.max(0,
     result.bottomEndX - READER_PAGE_CHROME_FOOTER_GAP - result.bottomStartX);
   return result;

@@ -1,3 +1,4 @@
+import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { registerReaderFonts, prepareSourceSwitchNovelFonts, sourceSwitchNovelFontsReady } from '../../../ui/foundation/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
@@ -77,7 +78,11 @@ export struct SourceSwitchProgress {
             .fontSize(TYPE_SOURCE_SWITCH_NOVEL_SWITCH_CAPTION.fontSizeFp).lineHeight(TYPE_SOURCE_SWITCH_NOVEL_SWITCH_CAPTION.lineHeightFp).halfLeading(true)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center)
             .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis });
-        }.width('100%').constraintSize({ maxWidth: SOURCE_SWITCH_VISUAL.switchContentMaxWidth });
+        }.width('100%').constraintSize({ maxWidth: SOURCE_SWITCH_VISUAL.switchContentMaxWidth })
+          .padding({ left: 14, right: 14, top: 18, bottom: 18 }).borderRadius(20)
+          .border({ width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+          .backgroundColor(readerAppColor('TOK_SURFACE_ELEVATED', this.appThemeScheme))
+          .shadow(readerSurfaceElevation('card', this.appThemeScheme));
         }
       }.width('100%').constraintSize({ minHeight: this.availableHeight() }).justifyContent(FlexAlign.Center);
     }.width('100%').height('100%').scrollBar(BarState.Off)
@@ -94,7 +99,8 @@ export struct SourceSwitchProgress {
         }.width(44).height(44).padding(0).backgroundColor(Color.Transparent)
           .borderRadius(SOURCE_SWITCH_VISUAL.closeRadius)
           .margin({ top: this.topInset + SOURCE_SWITCH_VISUAL.switchPadding, right: SOURCE_SWITCH_VISUAL.switchPadding })
-          .id(this.focusId).accessibilityText('取消切换书源').onClick((): void => this.onCancel())
+          .id(this.focusId).accessibilityText('取消切换书源')
+          .onClick((): void => { if (this.mounted && this.active && this.allowCancel) this.onCancel(); })
           .onAppear((): void => this.onFocusReady());
       }
     }.width('100%').height('100%')

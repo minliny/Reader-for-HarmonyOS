@@ -15,12 +15,11 @@ async function verifyChapterActionAdmission() {
   const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
   const Surface = productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url),
     ['adjacentChapter','pageOrdinal','positionIdentity','finalBoundaryConfirmed','releaseNextBoundary','resumeFromChapterEnd','openChapterEnd',
-      'seekPage','nativeImageFailures','nativeFailureKey','wholeImageUnavailable','unavailableMarkerTile']);
+      'verticalTailVisible','seekPage','nativeImageFailures','nativeFailureKey','wholeImageUnavailable','unavailableMarkerTile']);
   const chapter = { chapterIndex: 8, manifest: { chapter: { sourceId: 's', bookId: 'b', chapterId: '/8' } } };
   const owner = Object.assign(new Surface(), { sourceId: 's', bookId: 'b', mounted: true, opened: true,
     appForeground: true, windowChromeActive: true, interactionBlocked: false, pageTurnInputRevision: 0,
     horizontal: true, horizontalPage: 3, displayedPage: 3, horizontalPageCount: 4,
-    confirmedPosition: { anchor: { ordinal: 3 } },
     controller: { chapter, totalPages: 4, pageAt: ordinal => ({pageId: `page-${ordinal}`}),
       tile: () => undefined, visiblePages: () => [], setVisible: async () => {} },
     remoteSession: { acquisitionMode: 'online', contentKind: 'manga', identity: { sourceId: 's', bookId: 'b' }, entries: [
@@ -31,7 +30,7 @@ async function verifyChapterActionAdmission() {
       { index: 10, title: '下一可读话', url: '/10', navigable: true },
     ] },
     data: {projection: {index: ordinal => ordinal}, totalCount: () => 4,
-      getData: index => ({key: `fixture:${index}`, ordinal: index, tileIndex: 0, known: false, width: 600, height: 800, sourceY: 0, sourceHeight: 800}), notify() {}},
+      getData: index => ({key: `fixture:${index}`, ordinal: index, tileIndex: 0, known: true, width: 600, height: 800, sourceY: 0, sourceHeight: 800}), notify() {}},
     saveVisible: async () => {}, requestPanelFocus: () => {}, restore: () => {}, presentationGeneration: 0, layoutGeneration:0,
   });
   assert.equal(owner.adjacentChapter(-1).index, 6);
@@ -39,26 +38,30 @@ async function verifyChapterActionAdmission() {
   owner.remoteSession.identity.bookId = 'other';
   assert.equal(owner.adjacentChapter(1), undefined, 'foreign or stale catalog cannot invent a next chapter');
   owner.remoteSession.identity.bookId = 'b';
-  owner.confirmedPosition = undefined;
   await owner.openChapterEnd();
   assert.equal(owner.chapterEnd, undefined, 'unmounted/unconfirmed last pixels do not certify completion');
-  owner.confirmedPosition = { anchor: { ordinal: 3 } };
+  const confirmedPosition = ordinal => ({ controller: owner.controller, manifest: chapter.manifest,
+    identity: owner.positionIdentity(ordinal), anchor: { ordinal } });
+  owner.confirmedPosition = confirmedPosition(3);
   await owner.openChapterEnd();
   assert.equal(owner.chapterEnd, true, 'horizontal mode admits a confirmed exact last ordinal');
   owner.resumeFromChapterEnd();
   assert.equal(owner.chapterEnd, false);
   owner.horizontalPage = 2;
-  owner.confirmedPosition = { anchor: { ordinal: 2 } };
+  owner.confirmedPosition = confirmedPosition(2);
   await owner.openChapterEnd();
   assert.equal(owner.chapterEnd, false, 'horizontal mode still rejects a confirmed nonfinal ordinal');
 
   owner.remoteSession.entries.pop();
   let atEnd = false;
-  const verticalPosition = { controller: owner.controller, manifest: chapter.manifest,
-    identity: owner.positionIdentity(2), anchor: { ordinal: 2 } };
+  const verticalPosition = confirmedPosition(2);
   Object.assign(owner, { horizontal: false, displayedPage: 2, confirmedPosition: verticalPosition,
     boundaryDragging: true, boundaryArmed: true, boundaryInputRevision: owner.pageTurnInputRevision,
-    scroller: { isAtEnd: () => atEnd }, controlsVisible: false });
+    first: 2, last: 3, viewportHeight: 600,
+    scroller: { isAtEnd: () => atEnd, getItemRect: index => {
+      assert.equal(index, 3);
+      return { y: 568, height: 800 };
+    } }, controlsVisible: false });
   await owner.releaseNextBoundary();
   assert.equal(owner.chapterEnd, false, 'a confirmed earlier page does not certify a mid-list release');
   owner.scroller.isAtEnd = () => { throw new Error('native list detached'); };

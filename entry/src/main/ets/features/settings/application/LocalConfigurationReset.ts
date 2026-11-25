@@ -3,17 +3,18 @@ import preferences from '@ohos.data.preferences';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
 import { ReaderThemeHost } from '../../../app/ReaderThemeHost';
+import { ReaderNavigationAppearancePreferences } from '../../../app/ReaderNavigationAppearancePreferences';
+import { ReaderControlPlacementPreferences } from '../../../app/ReaderControlPlacementPreferences';
 import { SettingsGateway, createDefaultSettingsSnapshot } from './SettingsGateway';
 import { ReaderSettingsGateway } from '../../reading/application/ReaderSettingsGateway';
 import { createDefaultReaderSettingsSnapshot } from '../../reading/application/ReaderSettingsState';
 import { ReaderTtsPreferencesGateway } from '../../reading/application/ReaderTtsPreferencesGateway';
 import { createDefaultReaderTtsPreferencesSnapshot } from '../../reading/application/ReaderTtsPreferencesState';
-import { WebDavCredentialStore } from '../../sync/application/WebDavCredentialStore';
+import { BookshelfViewModeHost } from '../../bookshelf/application/BookshelfViewModeHost';
 
 const RESET_PREFERENCES = 'reader_configuration_reset_v1';
 const RESET_INTENT_KEY = 'pending';
 const RESET_INTENT = 'interface-and-reading-settings-v1';
-const DEFAULT_BOOKSHELF_VIEW = 'list';
 
 /** User-approved, non-destructive configuration reset. The durable intent is
  * recorded before touching any setting, and removed only after all writes
@@ -100,14 +101,18 @@ export class LocalConfigurationReset {
     LocalConfigurationReset.assertOwner(owner);
     await new ReaderTtsPreferencesGateway(owner).update(createDefaultReaderTtsPreferencesSnapshot(), true);
     LocalConfigurationReset.assertOwner(owner);
-    await WebDavCredentialStore.instance.saveBookshelfViewMode(DEFAULT_BOOKSHELF_VIEW);
+    await BookshelfViewModeHost.instance.resetDefaults(owner);
     LocalConfigurationReset.assertOwner(owner);
     await ReaderThemeHost.resetAppearanceDefaults();
     LocalConfigurationReset.assertOwner(owner);
-    AppStorage.setOrCreate('readerBookshelfViewMode', DEFAULT_BOOKSHELF_VIEW);
+    await ReaderNavigationAppearancePreferences.resetDefaults((): boolean => ReaderRuntimeOwner.isCurrent(owner));
+    LocalConfigurationReset.assertOwner(owner);
+    await ReaderControlPlacementPreferences.resetDefaults();
+    LocalConfigurationReset.assertOwner(owner);
     AppStorage.setOrCreate('readerBookshelfSelectedGroup', '');
     AppStorage.setOrCreate('readerBookshelfReadingFilter', 'all');
     AppStorage.setOrCreate('readerBookshelfSourceFilter', 'all');
+    AppStorage.setOrCreate('readerBookshelfContentFilter', 'all');
     await store.delete(RESET_INTENT_KEY);
     try { await store.flush(); }
     catch (error) { await store.put(RESET_INTENT_KEY, RESET_INTENT); throw error; }

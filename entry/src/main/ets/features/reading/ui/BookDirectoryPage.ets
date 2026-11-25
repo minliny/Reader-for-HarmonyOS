@@ -323,7 +323,8 @@ export struct BookDirectoryPage {
         .onAreaChange(this.mangaHeightHandler('tools', this.mangaMeasurementKey));
     }.width(this.geometry.content.frame.width).alignItems(HorizontalAlign.Start)
       .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
-      .hitTestBehavior(inline ? HitTestMode.Default : HitTestMode.Transparent)
+      .hitTestBehavior(HitTestMode.Default)
+      .onTouch((): void => {})
       .position(inline ? undefined : { x: this.geometry.content.frame.left,
         y: this.geometry.content.startInset - this.mangaToolsHeight });
   }

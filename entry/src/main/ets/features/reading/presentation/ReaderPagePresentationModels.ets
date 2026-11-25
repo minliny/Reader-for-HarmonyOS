@@ -89,6 +89,7 @@ export interface ReaderTtsPlayIntent {
   sourceId: string;
   bookId: string;
   presentation: ReaderControlPlaybackPresentation;
+  capsuleFallback: boolean;
 }
 
 export interface ReaderControlSelectionDisplay {

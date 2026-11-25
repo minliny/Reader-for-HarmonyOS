@@ -1,3 +1,5 @@
+import { ReaderButton } from '../../../ui/controls/ReaderButton';
+import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { readReaderControlNativeActor, type MotionActor } from './ReaderControlVerificationMotion';
 import { ReaderAppearancePixelProbe } from '../../../app/diagnostics/ReaderAppearancePixelProbe';
 import type { ReaderControlVerificationSession } from './ReaderControlVerificationSession';
@@ -7,9 +9,9 @@ import { readerControlAppearanceSelectValue, readerControlAppearanceMetricLabel,
 import { readerControlModuleProfileMatches, readerControlModuleFactsMatch, type ReaderControlPreparedModuleProfile, type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
-import { TYPE_READER_APPEARANCE_RETAINED_FONT_CELL_PREVIEW, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_TERTIARY, TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL, TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_SELECT_FIELD_VALUE, TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE, TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE, TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_THEME_SHELL_VALUE } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_READER_PANEL_LABEL, TYPE_APP_ROW_DETAIL, TYPE_READER_PANEL_CAPTION, TYPE_READER_APPEARANCE_RETAINED_FONT_CELL_PREVIEW, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_FONT_HEADERS_LABEL_TERTIARY, TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL, TYPE_READER_APPEARANCE_RETAINED_LAYOUT_LIBRARY_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_SELECT_FIELD_VALUE, TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE, TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE, TYPE_READER_APPEARANCE_RETAINED_THEME_ACTION_VALUE, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_LABEL_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META, TYPE_READER_APPEARANCE_RETAINED_THEME_HEADERS_META_SECONDARY, TYPE_READER_APPEARANCE_RETAINED_THEME_SHELL_VALUE } from '../../../ui/foundation/ReaderTypography';
 import { prepareReaderFontFamily, readerFontFamilyReady, registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerAppColor, readerThemeDefinition, type ReaderThemeScheme } from '../../../ui/foundation/ReaderThemeRegistry';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { PathShape } from '@ohos.arkui.shape';
 import { FrameCallback } from '@kit.ArkUI';
@@ -34,10 +36,10 @@ import { APPEARANCE_LAYOUT_SURFACE, APPEARANCE_LAYOUT_BORDER, APPEARANCE_LAYOUT_
   READER_CONTROL_APPEARANCE_THEMES, readerControlAppearanceThemeLabel,
   readerControlAppearanceThemeSwatch,
   readerControlAppearanceThemeScheme } from './ReaderControlAppearanceStyle';
-import {
-  TOK_BORDER_W, TOK_LINE, TOK_READ_ACTIVE_SOFT, TOK_READ_INK, TOK_READ_MUTED,
-  TOK_READ_PRIMARY, TOK_SURFACE_PANEL_SOFT,
-} from '../../../ui/foundation/ReaderTokens';
+import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
+import { ReaderIslandAction } from './ReaderIslandControlStyle';
+import { ReaderControlSwitchTrack } from './ReaderControlSwitchTrack';
+import { readerControlSettingsOptionLabel } from './ReaderControlSettingsMinimum';
 import {
   createDefaultReaderAppearanceSnapshot, isReaderAppearanceFont, moveReaderAppearanceFontSlot,
   normalizeReaderAppearanceFontOrder,
@@ -47,10 +49,11 @@ import {
 } from '../application/ReaderAppearanceState';
 import { readerAppearanceFontSlotFamily, readerAppearanceFontSlotLabel } from './ReaderAppearanceRenderStyle';
 import type { ReaderChineseConversionMode } from '../application/ReaderChineseConversionGateway';
-import type { ReaderPageTurnStyle } from '../application/ReaderSettingsState';
+import { isReaderPageTurnStyleAvailable, type ReaderPageTurnStyle } from '../application/ReaderSettingsState';
 import {
   readerControlAppearanceEndpoint, readerControlAppearanceFontActor,
   readerControlAppearanceFontDropIndex, readerControlAppearanceFontInput, sampleReaderControlAppearance,
+  READER_CONTROL_ISLAND_FONT_TARGET_HEIGHT, readerControlIslandFontGrid, type ReaderControlIslandFontGrid,
   type ReaderControlAppearanceActor, type ReaderControlAppearanceFrame,
   type ReaderControlAppearanceImportLayout,
   type ReaderControlAppearanceMinimumProfile,
@@ -166,6 +169,7 @@ export struct ReaderControlAppearanceContent {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') @Watch('publishMinimumMeasurer') private minimumMetricsRevision: number = 0;
 
+  @Prop fixedIsland: boolean = false;
   @Prop @Watch('onPreparedMinimumChanged') preparedMinimum: ReaderControlPreparedModuleProfile | undefined = undefined;
   @Prop preparedMinimumRequired: boolean = false;
   onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts) => void =
@@ -226,6 +230,13 @@ export struct ReaderControlAppearanceContent {
   private previewLoadActive: boolean = false;
   private previewLifecycle: number = 0;
   private readonly scroller: Scroller = new Scroller();
+  private readonly islandScroller: Scroller = new Scroller();
+  private islandScrollTop: number = 0;
+  private islandScrollHeight: number = 0;
+  private islandFontScrollStart: number = 0;
+  private islandFontDragX: number = 0;
+  private islandFontDragY: number = 0;
+  private islandFontScrollTimer: number = -1;
   private fontPointerId: number = -1;
   private fontDownX: number = 0;
   private fontDownY: number = 0;
@@ -488,7 +499,7 @@ export struct ReaderControlAppearanceContent {
     return full ? this.fullEndpoint! : this.quickEndpoint!;
   }
   private fullInput(): boolean {
-    return readerControlAppearanceEndpoint(this.motionProgress, this.currentInputEnabled()) === 'full';
+    return this.fixedIsland ? this.currentInputEnabled() : readerControlAppearanceEndpoint(this.motionProgress, this.currentInputEnabled()) === 'full';
   }
   private sharedInput(): boolean {
     return readerControlAppearanceEndpoint(this.motionProgress, this.currentInputEnabled()) !== 'none';
@@ -742,7 +753,9 @@ export struct ReaderControlAppearanceContent {
   }
 
   build() {
-    if (!this.preparedMinimumRequired || this.presentationPrepared() !== undefined) {
+    if (this.fixedIsland && (!this.preparedMinimumRequired || this.presentationPrepared() !== undefined)) {
+      this.islandContent();
+    } else if (!this.preparedMinimumRequired || this.presentationPrepared() !== undefined) {
     Stack({ alignContent: Alignment.TopStart }) {
       Scroll(this.scroller) {
         Stack({ alignContent: Alignment.TopStart }) {
@@ -787,6 +800,200 @@ export struct ReaderControlAppearanceContent {
       });
 
     }
+  }
+
+  @Builder
+  private islandContent() {
+    Scroll(this.islandScroller) {
+      Column({ space: 6 }) {
+        Column({ space: 5 }) {
+          Text('阅读纸底').width('100%').fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
+            .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+          this.islandThemeRow('day');
+          this.islandThemeRow('night');
+          Row({ space: 5 }) {
+            this.islandDefaultTheme(true);
+            this.islandDefaultTheme(false);
+          }.width('100%');
+        }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme));
+        Column({ space: 5 }) {
+          Text('字体').width('100%').fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
+            .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+          Stack({ alignContent: Alignment.TopStart }) {
+            ForEach(this.fontIds(), (font: ReaderAppearanceFontSlot) => {
+              this.islandFont(font);
+            }, (font: ReaderAppearanceFontSlot): string => font);
+          }.width('100%').height(this.islandFontGridHeight());
+        }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme));
+        Column() {
+          Text('排版').width('100%').padding({ top: 8 }).fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
+            .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+          this.islandMetric('fontSize');
+          this.islandMetric('lineHeightMultiplier');
+          this.islandMetric('paragraphSpacing');
+          this.islandMetric('letterSpacing');
+          this.islandMetric('pageMarginOffset');
+          this.islandSelect('indent');
+          this.islandSelect('language');
+          Button({ type: ButtonType.Normal, stateEffect: false }) {
+            Row() {
+              Text('两端对齐').layoutWeight(1).fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+              ReaderControlSwitchTrack({ value: this.displaySnapshot().alignment === 'justify' });
+            }.width('100%');
+          }.width('100%').height(44).padding(0).backgroundColor(Color.Transparent)
+            .accessibilityText('两端对齐').accessibilitySelected(this.displaySnapshot().alignment === 'justify')
+            .onClick((): void => {
+              if (this.currentInputEnabled()) this.onAlignmentRequest(this.displaySnapshot().alignment);
+            });
+        }.width('100%').padding({ left: 8, right: 8 }).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme));
+        Column({ space: 4 }) {
+          Text('翻页方式').width('100%').fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
+            .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+          Row({ space: 4 }) {
+            this.islandTurn('cover');
+            this.islandTurn('slide');
+            this.islandTurn('simulation');
+          }.width('100%');
+          Row({ space: 4 }) {
+            this.islandTurn('scroll');
+            this.islandTurn('none');
+          }.width('100%');
+        }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme));
+      }.id('reader-control-font-grid').width('100%').padding({ bottom: 2 });
+    }.id('reader-control-module-appearance').width(this.availableWidth).height(this.availableHeight)
+      .enabled(this.currentInputEnabled()).enableScrollInteraction(this.draggedFontId === '')
+      .scrollBar(BarState.Auto).edgeEffect(EdgeEffect.None).clip(true)
+      .onWillScroll((_x: number, y: number, _state: ScrollState, source: ScrollSource): OffsetResult =>
+        ({ xOffset: 0, yOffset: this.draggedFontId === '' || source === ScrollSource.SCROLLER ? y : 0 }))
+      .onDidScroll((): void => this.syncIslandFontDrag())
+      .onAreaChange((_old: Area, area: Area): void => {
+        this.islandScrollTop = Number(area.globalPosition.y);
+        this.islandScrollHeight = Number(area.height);
+      });
+  }
+
+  @Builder
+  private islandTheme(theme: ReaderAppearanceTheme) {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
+      Column({ space: 3 }) {
+        Row() {
+          Text('Aa').fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp).fontColor(readerThemeDefinition(theme).ink);
+        }.width('100%').height(24).justifyContent(FlexAlign.Center).backgroundColor(this.themeColor(theme))
+          .borderRadius(6).border({ width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) });
+        Text(this.themeLabel(theme)).fontFamily(TYPE_READER_PANEL_CAPTION.fontFamily).fontWeight(TYPE_READER_PANEL_CAPTION.fontWeight).fontSize(TYPE_READER_PANEL_CAPTION.fontSizeFp).maxLines(1).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+      }.width('100%').padding(3).accessibilityLevel('no-hide-descendants');
+    }.layoutWeight(1).constraintSize({ minHeight: 48 }).padding(0)
+      .backgroundColor(readerAppColor(this.displaySnapshot().activeTheme === theme ? 'TOK_READ_ACTIVE_SOFT' :
+        'TOK_READ_ELEVATED', this.appThemeScheme))
+      .border({ width: 1, color: readerAppColor(this.displaySnapshot().activeTheme === theme ? 'TOK_READ_PRIMARY' :
+        'TOK_LINE', this.appThemeScheme) }).borderRadius(8)
+      .accessibilityText(`切换到${this.themeLabel(theme)}主题`).accessibilitySelected(this.displaySnapshot().activeTheme === theme)
+      .onClick((): void => { if (this.currentInputEnabled()) this.onThemeChange(theme); });
+  }
+
+  @Builder
+  private islandDefaultTheme(day: boolean) {
+    ReaderButton({ scheme: this.appThemeScheme, label: this.defaultThemeActionLabel(day),
+      layout: 'full', visualSize: 'small', variant: 'reader-tonal',
+      actionEnabled: this.currentInputEnabled(), onAction: (): void => this.requestDefaultTheme(day),
+    }).layoutWeight(1);
+  }
+
+  private islandFontGrid(): ReaderControlIslandFontGrid {
+    return readerControlIslandFontGrid(Math.max(0, this.availableWidth - 16 - TOK_BORDER_W * 2));
+  }
+
+  private islandFontGridHeight(): number {
+    const grid = this.islandFontGrid();
+    const rows = Math.ceil(this.fontIds().length / grid.columns);
+    return Math.max(0, rows - 1) * grid.rowStride + READER_CONTROL_ISLAND_FONT_TARGET_HEIGHT;
+  }
+
+  @Builder
+  private islandFont(font: ReaderAppearanceFontSlot) {
+    Stack() {
+      ReaderIslandAction({
+        scheme: this.appThemeScheme, kind: 'font',
+        label: readerAppearanceFontSlotLabel(this.displaySnapshot(), font),
+        accessibleLabel: font === 'import' ? '导入自定义字体' : readerAppearanceFontSlotLabel(this.displaySnapshot(), font),
+        previewFamily: this.visiblePreviewFamily(font), tone: this.activeFont(font) ? 'selected' : 'normal',
+        nativeId: 'reader-control-font-' + font, chosen: this.activeFont(font), actionReady: this.fontInput(font),
+        onAction: (): void => {
+          if (!this.fontInput(font) || this.draggedFontId !== '' || this.suppressFontClick) return;
+          if (font === 'import') this.onCustomFontImport();
+          else if (isReaderAppearanceFont(font)) this.onFontChange(font);
+        },
+      });
+    }.width(this.islandFontGrid().cellWidth).height(READER_CONTROL_ISLAND_FONT_TARGET_HEIGHT)
+      .position(this.fontCellPosition(font)).zIndex(this.draggedFontId === font ? 3 : 1)
+      .scale({ x: this.draggedFontId === font && !this.reduceMotion ? 1.05 : 1,
+        y: this.draggedFontId === font && !this.reduceMotion ? 1.05 : 1 })
+      .onVisibleAreaChange([0, .25], (visible: boolean, ratio: number): void => {
+        if (visible && ratio >= .25) this.requestVisibleFontPreview(font);
+      })
+      .onTouch((event: TouchEvent): void => this.fontTouch(font, event))
+      .gesture(LongPressGesture({ fingers: 1, repeat: false, duration: 160 })
+        .onAction((): void => this.beginFontDrag(font))
+        .onActionCancel((): void => { if (this.draggedFontId !== '') this.settleFontDrag(false); }));
+  }
+
+  @Builder
+  private islandMetric(metric: ReaderAppearanceMetric) {
+    Row({ space: 4 }) {
+      Text(this.metricLabel(metric)).layoutWeight(1).fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+      this.islandStep(metric, -1);
+      Text(this.metricValue(metric)).width(46).textAlign(TextAlign.Center).fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp)
+        .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
+      this.islandStep(metric, 1);
+    }.width('100%').border({ width: { bottom: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) });
+  }
+
+  @Builder
+  private islandStep(metric: ReaderAppearanceMetric, direction: ReaderAppearanceStepDirection) {
+    ReaderIslandAction({
+      scheme: this.appThemeScheme, label: direction < 0 ? '−' : '+',
+      actionReady: this.currentInputEnabled() && readerAppearanceCanStep(this.displaySnapshot(), metric, direction),
+      visualAvailable: readerAppearanceCanStep(this.displaySnapshot(), metric, direction),
+      accessibleLabel: `${direction < 0 ? '减少' : '增加'}${this.metricLabel(metric)}`,
+      onAction: (): void => {
+        if (this.currentInputEnabled() && readerAppearanceCanStep(this.displaySnapshot(), metric, direction)) {
+          this.onMetricStep(metric, direction);
+        }
+      },
+    });
+  }
+
+  @Builder
+  private islandSelect(kind: string) {
+    Column({ space: 3 }) {
+      Text(kind === 'indent' ? '首行缩进' : '简繁转换').width('100%').fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp)
+        .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
+      Flex({ wrap: FlexWrap.Wrap }) {
+        ForEach(this.selectOptions(kind), (value: string) => {
+          ReaderButton({ scheme: this.appThemeScheme, label: value,
+            visualSize: 'small', variant: this.selectValue(kind) === value ? 'primary' : 'reader-tonal',
+            primary: this.selectValue(kind) === value, selectionSemantic: true,
+            actionEnabled: this.currentInputEnabled(),
+            onAction: (): void => { if (this.currentInputEnabled()) this.applySelect(kind, value); },
+          }).margin({ right: 4 });
+        }, (value: string): string => value);
+      }.width('100%');
+    }.width('100%').padding({ top: 8 });
+  }
+
+  @Builder
+  private islandTurn(style: ReaderPageTurnStyle) {
+    ReaderButton({
+      scheme: this.appThemeScheme, label: readerControlSettingsOptionLabel('pageTurn', style),
+      layout: 'full', visualSize: 'small', variant: this.pageTurnStyle === style ? 'primary' : 'reader-tonal',
+      actionEnabled: this.currentInputEnabled() && isReaderPageTurnStyleAvailable(style) &&
+        (style !== 'simulation' || this.pageTurnSimulationAvailable),
+      primary: this.pageTurnStyle === style, selectionSemantic: true,
+      onAction: (): void => {
+        if (this.currentInputEnabled() && isReaderPageTurnStyleAvailable(style) &&
+          (style !== 'simulation' || this.pageTurnSimulationAvailable)) this.onPageTurnStyleChange(style);
+      },
+    }).layoutWeight(1);
   }
 
   @Builder
@@ -941,7 +1148,8 @@ export struct ReaderControlAppearanceContent {
       font === 'import', this.importLayout);
   }
   private fontInput(font: ReaderAppearanceFontSlot): boolean {
-    return !this.openSelect && readerControlAppearanceFontInput(this.motionProgress, this.currentInputEnabled(),
+    const progress = this.fixedIsland ? 1 : this.motionProgress;
+    return !this.openSelect && readerControlAppearanceFontInput(progress, this.currentInputEnabled(),
       font === 'import', this.importLayout);
   }
   private activeFont(font: ReaderAppearanceFontSlot): boolean {
@@ -1243,11 +1451,24 @@ export struct ReaderControlAppearanceContent {
     }
   }
   private metricLabel(metric: ReaderAppearanceMetric): string {
-    return readerControlAppearanceMetricLabel(metric);
+    return metric === 'pageMarginOffset' ? '页边距' : readerControlAppearanceMetricLabel(metric);
   }
   private metricValue(metric: ReaderAppearanceMetric): string {
+    if (metric === 'pageMarginOffset') {
+      const offset = this.displaySnapshot().pageMarginOffset ?? 0;
+      return offset === 0 ? '默认' : `${offset > 0 ? '+' : ''}${offset}`;
+    }
     return readerControlAppearanceMetricValue(this.displaySnapshot(), metric);
   }
+  @Builder
+  private islandThemeRow(scheme: ReaderThemeScheme) {
+    Row({ space: 5 }) {
+      ForEach(this.themeIds().filter((theme: ReaderAppearanceTheme): boolean => readerControlAppearanceThemeScheme(theme) === scheme),
+        (theme: ReaderAppearanceTheme) => { this.islandTheme(theme); },
+        (theme: ReaderAppearanceTheme): string => theme);
+    }.width('100%');
+  }
+
   private themeIds(): ReaderAppearanceTheme[] {
     return READER_CONTROL_APPEARANCE_THEMES;
   }
@@ -1271,6 +1492,12 @@ export struct ReaderControlAppearanceContent {
     this.draggedFontId = font;
     this.draggedFontOffsetX = 0;
     this.draggedFontOffsetY = 0;
+    if (this.fixedIsland) {
+      this.islandFontScrollStart = this.islandScroller.currentOffset()?.yOffset ?? 0;
+      this.islandFontDragX = 0;
+      this.islandFontDragY = this.fontDownY;
+      this.updateIslandFontAutoScroll();
+    }
     this.suppressFontClick = true;
     this.onFontReorderActivityChange(true);
     const facts: ReaderControlFontDragStart = {
@@ -1303,11 +1530,18 @@ export struct ReaderControlAppearanceContent {
       if (pointer.id !== this.fontPointerId) continue;
       if (this.draggedFontId === font) {
         event.stopPropagation();
-        this.updateFontDrag(pointer.windowX - this.fontDownX, pointer.windowY - this.fontDownY);
+        if (this.fixedIsland) {
+          this.islandFontDragX = pointer.windowX - this.fontDownX;
+          this.islandFontDragY = pointer.windowY;
+          this.syncIslandFontDrag();
+        } else {
+          this.updateFontDrag(pointer.windowX - this.fontDownX, pointer.windowY - this.fontDownY);
+        }
         if (event.type === TouchType.Up) {
           this.settleFontDrag(true);
           return;
         }
+        if (this.fixedIsland) this.updateIslandFontAutoScroll();
       }
       if (event.type === TouchType.Up) {
         this.fontPointerId = -1;
@@ -1317,14 +1551,47 @@ export struct ReaderControlAppearanceContent {
       return;
     }
   }
+
+  private syncIslandFontDrag(): void {
+    if (this.draggedFontId === '') return;
+    const scroll = this.islandScroller.currentOffset()?.yOffset ?? this.islandFontScrollStart;
+    this.updateFontDrag(this.islandFontDragX, this.islandFontDragY - this.fontDownY + scroll - this.islandFontScrollStart);
+  }
+
+  private islandFontAutoScrollDelta(): number {
+    if (this.draggedFontId === '' || this.islandScrollHeight <= 0) return 0;
+    const edge = Math.min(52, this.islandScrollHeight / 3);
+    const position = this.islandFontDragY - this.islandScrollTop;
+    if (position < edge) return -10 * Math.min(1, (edge - position) / edge);
+    return 10 * Math.max(0, Math.min(1, (position - this.islandScrollHeight + edge) / edge));
+  }
+
+  private updateIslandFontAutoScroll(): void {
+    if (this.islandFontScrollTimer >= 0 || this.islandFontAutoScrollDelta() === 0) return;
+    this.islandFontScrollTimer = setInterval((): void => {
+      const delta = this.islandFontAutoScrollDelta();
+      const offset = this.islandScroller.currentOffset()?.yOffset ?? 0;
+      if (delta === 0 || (delta < 0 && offset <= 0) || (delta > 0 && this.islandScroller.isAtEnd())) {
+        this.stopIslandFontAutoScroll();
+      } else {
+        this.islandScroller.scrollBy(0, delta);
+      }
+    }, 16);
+  }
+
+  private stopIslandFontAutoScroll(): void {
+    if (this.islandFontScrollTimer >= 0) clearInterval(this.islandFontScrollTimer);
+    this.islandFontScrollTimer = -1;
+  }
+
   private updateFontDrag(x: number, y: number): void {
     if (this.fontOriginalIndex < 0) return;
     const positions = this.captureFontPositions();
     const previous = this.previewFontOrder.join('|');
     this.draggedFontOffsetX = x;
     this.draggedFontOffsetY = y;
-    const target = readerControlAppearanceFontDropIndex(this.frame(), this.fontOrigin.x,
-      this.fontOrigin.y, x, y, this.fontOriginalOrder.length);
+    const target = this.fixedIsland ? this.islandFontDropIndex(x, y) :
+      readerControlAppearanceFontDropIndex(this.frame(), this.fontOrigin.x, this.fontOrigin.y, x, y, this.fontOriginalOrder.length);
     // Raw import source geometry cannot be moved or implicitly resolved by
     // a drag of another font. Its existing ordered index remains unchanged.
     if (this.importLayout === 'source-overlap-pending') {
@@ -1346,6 +1613,7 @@ export struct ReaderControlAppearanceContent {
       motionSpecGet('reader.font.reorder.shift')!.durationMs, 'shift');
   }
   private cancelFontDrag(): void {
+    this.stopIslandFontAutoScroll();
     this.retireFontOrderPresentation();
     const active = this.draggedFontId !== '';
     this.draggedFontId = '';
@@ -1365,8 +1633,26 @@ export struct ReaderControlAppearanceContent {
     if (this.draggedFontId === font) return { x: this.fontOrigin.x + this.draggedFontOffsetX,
       y: this.fontOrigin.y + this.draggedFontOffsetY };
     const track = this.fontTracks.get(font);
-    return track === undefined ? this.actorPosition(this.fontActor(font), font !== 'import') :
+    return track === undefined ? this.fontSlotPosition(font, this.frame(), this.fontIds()) :
       track.sample(this.fontMotionTimeMs, (p: number): number => this.fontMotionCurve.interpolate(p));
+  }
+
+  private fontSlotPosition(font: ReaderAppearanceFontSlot, frame: ReaderControlAppearanceFrame,
+    order: ReaderAppearanceFontSlot[]): ReaderControlAppearancePoint {
+    if (!this.fixedIsland) return this.actorPosition(this.fontActorAt(font, frame, order), font !== 'import');
+    const grid = this.islandFontGrid();
+    const index = Math.max(0, order.indexOf(font));
+    return { x: index % grid.columns * grid.columnStride, y: Math.floor(index / grid.columns) * grid.rowStride };
+  }
+
+  private islandFontDropIndex(x: number, y: number): number {
+    const grid = this.islandFontGrid();
+    const count = this.fontOriginalOrder.length;
+    const column = Math.min(grid.columns - 1, Math.max(0,
+      Math.floor((this.fontOrigin.x + grid.columnStride / 2 + x) / grid.columnStride)));
+    const row = Math.min(Math.ceil(count / grid.columns) - 1, Math.max(0,
+      Math.floor((this.fontOrigin.y + grid.rowStride / 2 + y) / grid.rowStride)));
+    return Math.max(0, Math.min(count - 1, row * grid.columns + column));
   }
 
   private captureFontPositions(): Map<string, ReaderControlAppearancePoint> {
@@ -1390,7 +1676,7 @@ export struct ReaderControlAppearanceContent {
       if (font === this.draggedFontId) continue;
       const from = positions.get(font);
       if (from === undefined) continue;
-      const to = this.actorPosition(this.fontActorAt(font, frame, targetOrder), font !== 'import');
+      const to = this.fontSlotPosition(font, frame, targetOrder);
       this.fontTracks.set(font, new MotionPointTrack(from, to, now, duration));
       if (observing) {
         observedTracks.push(new ReaderControlFontVerificationTrack('reader-control-font-' + font,

@@ -1,35 +1,55 @@
-import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions = {"live-width-safe-frame": {"description": "实际detail text/manga安全frame与Shelf Area解析", "resources": []}};
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+
+const definitions = {
+  'live-width-safe-frame': { description: '实际详情文字／漫画安全区与书架 Area 解析', resources: [] },
+};
 for (const id of selectContractCases(definitions)) {
-  await runSelectedCase(id);
+  await runLiveWidthSafeFrame();
   recordContractCasePass(id);
 }
-async function runSelectedCase(selectedCase) {
-const {default: assert} = await import('node:assert/strict');
-const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
-const horizontal = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
-const {MANGA_DIRECTORY_VISUAL: visual} = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
 
-let metrics={windowRect:{width:390,height:844},left:40,right:7};
-const deps={...horizontal,visual,ReaderWindowCoordinator:{metrics:()=>metrics},readerVisualSafeLeft:m=>m.left,readerVisualSafeRight:m=>m.right};
-const Detail=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalBookDetail.ets',import.meta.url),'LocalBookDetail',['contentFrame','dockFrame','liveWidth','safeLeft','safeRight'],deps);
-for(const contentKind of ['text','manga']) {
- const owner=Object.assign(new Detail(),{book:{contentKind},viewportWidth:0,readerWindowMetricsRevision:1});
- for(const width of [0,160,320,390,800]) {metrics={...metrics,windowRect:{width,height:844}};
-  for(const method of ['contentFrame','dockFrame']) {const frame=owner[method]();assert.ok(frame.width>=0&&Number.isFinite(frame.width));assert.ok(frame.left+frame.width<=width);assert.ok(frame.right+frame.width<=width);if(width>=metrics.left+metrics.right){assert.ok(frame.left>=metrics.left);assert.ok(frame.right>=metrics.right);}}
- }
- metrics={...metrics,windowRect:{width:800,height:844}};owner.viewportWidth=320;assert.equal(owner.liveWidth(),320,'real measured area wins over old window width');
- owner.viewportWidth=0;owner.readerWindowMetricsRevision=-1;assert.equal(owner.liveWidth(),0,'no invented 390/352 before live metrics');
-}
-const {actualReaderPageShell}=await import('./lib/reader-page-shell-runtime-probe.mjs');
-const {readerPageAreaLength}=actualReaderPageShell();
-const Shelf=selectedProductionMethods(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets',import.meta.url),
- 'BookshelfPage',['onFilterContentMeasured']);
-const shelf=Object.assign(new Shelf(),{mounted:true,filterRowVisible:false,filterNaturalHeight:13});
-for(const[value,expected]of[[24,24],['24vp',24],['75.5vp',75.5],[NaN,13],['invalid',13],[{},13],[Infinity,13]]) {
- shelf.filterNaturalHeight=13;
- shelf.onFilterContentMeasured(readerPageAreaLength(value));
- assert.equal(shelf.filterNaturalHeight,expected);
-}
+async function runLiveWidthSafeFrame() {
+  const { default: assert } = await import('node:assert/strict');
+  const { localBookDetailSdk } = await import('./lib/local-book-detail-sdk-probe.mjs');
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const { actualReaderPageShell } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+  const { ReaderInsetsVp, ReaderRectVp, ReaderWindowMetricsSnapshot } =
+    await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 
+  const metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 390, 844));
+  const safeLeft = 40;
+  const safeRight = 7;
+  metrics.systemInsets = new ReaderInsetsVp(safeLeft, 0, safeRight, 0);
+  const { owner } = localBookDetailSdk({ ReaderWindowCoordinator: { metrics: () => metrics } });
+  for (const contentKind of ['text', 'manga']) {
+    Object.assign(owner, { book: { contentKind }, viewportWidth: 0, readerWindowMetricsRevision: 1 });
+    for (const width of [0, 160, 320, 390, 800]) {
+      metrics.windowRect = new ReaderRectVp(0, 0, width, 844);
+      owner.refreshGeometry();
+      for (const method of ['contentFrame', 'dockFrame']) {
+        const frame = owner[method]();
+        const context = `${contentKind} ${method} at ${width}vp`;
+        assert.ok(Number.isFinite(frame.width) && frame.width >= 0, context);
+        assert.ok(frame.left + frame.width <= width && frame.right + frame.width <= width, context);
+        if (width >= safeLeft + safeRight) {
+          assert.ok(frame.left >= safeLeft && frame.right >= safeRight, context);
+        }
+      }
+    }
+    owner.viewportWidth = 320;
+    assert.equal(owner.liveWidth(), 320, 'real measured area wins over old window width');
+    owner.viewportWidth = 0;
+    owner.readerWindowMetricsRevision = -1;
+    assert.equal(owner.liveWidth(), 0, 'no invented 390/352 before live metrics');
+  }
+
+  const { readerPageAreaLength } = actualReaderPageShell();
+  const shelfSource = new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets', import.meta.url);
+  const Shelf = selectedProductionMethods(shelfSource, 'BookshelfPage', ['onFilterContentMeasured']);
+  const shelf = Object.assign(new Shelf(), { mounted: true, filterRowVisible: false, filterNaturalHeight: 13 });
+  for (const [value, expected] of [[24, 24], ['24vp', 24], ['75.5vp', 75.5], [NaN, 13], ['invalid', 13], [{}, 13], [Infinity, 13]]) {
+    shelf.filterNaturalHeight = 13;
+    shelf.onFilterContentMeasured(readerPageAreaLength(value));
+    assert.equal(shelf.filterNaturalHeight, expected);
+  }
 }

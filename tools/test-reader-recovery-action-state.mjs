@@ -121,17 +121,24 @@ if (selected.length > 0) {
       }
       visit(tree);
       const activeReadingHost = name === 'LocalReadingExperience';
-      assert.equal(argumentsFound.length, activeReadingHost ? 1 : 0,
+      assert.equal(argumentsFound.length, activeReadingHost ? 2 : 0,
         `${name} follows the active-reading or foreground-directory presentation policy`);
       if (!activeReadingHost) continue;
-      const emitted = ts.transpileModule(`function currentRecovery(grouped: boolean) { return ${argumentsFound[0]}; }`, {
-        compilerOptions: { target: ts.ScriptTarget.ES2022 },
-      }).outputText;
-      const project = new Function('EMPTY_READING_DIRECTORY_RECOVERY', emitted + ';return currentRecovery;')(EMPTY_READING_DIRECTORY_RECOVERY);
-      for (const action of ['reconcile', 'continue']) {
-        const value = recovery('bookmarks', 'unknown', 'reading', action);
-        const forwarded = project.call({ bookmarkRecovery: value, directoryRecovery: value }, true);
-        assert.equal(forwarded.bookmarksRecoveryAction, action, `${name} forwards current original action`);
+      for (const [family, actionKey, inactive] of [
+        ['bookmarks', 'bookmarksRecoveryAction', 'offline'], ['offline', 'offlineRecoveryAction', 'bookmarks'],
+      ]) {
+        const argumentsForFamily = argumentsFound.filter(expression => expression.includes(`${actionKey}:`));
+        assert.equal(argumentsForFamily.length, 1, `${family} has one active-reading owner`);
+        const emitted = ts.transpileModule(`function currentRecovery(grouped: boolean) { return ${argumentsForFamily[0]}; }`, {
+          compilerOptions: { target: ts.ScriptTarget.ES2022 },
+        }).outputText;
+        const project = new Function('EMPTY_READING_DIRECTORY_RECOVERY', emitted + ';return currentRecovery;')(EMPTY_READING_DIRECTORY_RECOVERY);
+        for (const action of ['reconcile', 'continue']) {
+          const value = recovery(family, 'unknown', 'reading', action);
+          const forwarded = project.call({ bookmarkRecovery: value }, true);
+          assert.equal(forwarded[actionKey], action, `${family} forwards the current original action`);
+          assert.deepEqual(forwarded[inactive], EMPTY_READING_DIRECTORY_RECOVERY[inactive]);
+        }
       }
     }
   }
@@ -176,7 +183,7 @@ if (selected.length > 0) {
         { family: 'offline', retained: {}, expectedKind: 'readback' },
         { family: 'bookmarks', retained: { completion: 'partial', confirmedCount: 1, requestedCount: 2 }, expectedKind: 'result' },
         { family: 'offline', retained: { materializationFailure: 'network error' }, expectedKind: 'result' },
-        { family: 'offline', retained: { progress: { failedChapters: 1, completedChapters: 1, totalChapters: 2 } }, expectedKind: 'result' },
+        { family: 'offline', retained: { action: 'download', progress: { failedChapters: 1, completedChapters: 1, totalChapters: 2 } }, expectedKind: 'result' },
       ];
       for (const { family, retained, expectedKind } of variants) {
         const key = family === 'bookmarks' ? 'bookmarksKind' : 'offlineKind';

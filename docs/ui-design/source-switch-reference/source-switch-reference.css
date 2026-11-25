@@ -3,7 +3,7 @@
  * Normal profile: 390x844, font scale 1.
  * Put data-width-profile="narrow" on the modal when available drawer width < 380.
  * data-content-profile="scrollable" means the markup adapter has moved book context into the results scroller.
- * Fonts below are the same checked assets as native roles; business state is supplied by the host.
+ * Fonts below are the checked reference assets. Business state is supplied by the host.
  */
 @font-face{font-family:ReaderSourceSwitchSans;src:url('../../../entry/src/main/resources/rawfile/NotoSansSC-UIRegular.otf');font-weight:400;font-style:normal}
 @font-face{font-family:ReaderSourceSwitchSans;src:url('../../../entry/src/main/resources/rawfile/NotoSansSC-UIMedium.otf');font-weight:500;font-style:normal}

@@ -1,3 +1,4 @@
+import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
@@ -49,18 +50,8 @@ import {
   readerVisualSafeRight,
 } from '../../../ui/foundation/ReaderWindowMetrics';
 import {
-  TOK_BORDER,
   TOK_BORDER_W,
-  TOK_CARD_BG,
   TOK_CONTENT_RAIL_W_TABLET,
-  TOK_GREEN,
-  TOK_INK,
-  TOK_MUTED,
-  TOK_ON_PRIMARY,
-  TOK_PAPER,
-  TOK_PRIMARY_DARK,
-  TOK_PRIMARY_GRADIENT_START,
-  TOK_PRIMARY_SOFT,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_MD,
   TOK_SPACE_ROW_BLOCK,
@@ -409,6 +400,7 @@ export struct SearchPage {
   private viewStateRevision: number = -1;
   @Prop expandedLayout: boolean;
   @Prop reduceMotion: boolean = false;
+  @Prop @Watch('presentationVisibilityChanged') presented: boolean = true;
   @Prop @Watch('externalHeaderChanged') externalHeaderHeight: number = 0;
   /** Optional persistent surface; the query page remains the business owner. */
   surfaceModel: ReaderLibrarySearchModel | undefined = undefined;
@@ -551,6 +543,28 @@ export struct SearchPage {
     this.userInteracting = false;
     this.userScrolling = false;
     if (current) this.onVisibleGroups([]);
+  }
+
+  private presentationVisibilityChanged(): void {
+    if (!this.ownsPageQuery()) return;
+    this.onVisibleGroups(this.warmupGroups);
+    if (!this.presented) {
+      this.retirePanelScope();
+      this.userInteracting = false;
+      this.userScrolling = false;
+      this.scheduleDeferredResults();
+      return;
+    }
+    // The mounted list already owns its viewport. Consume the return focus
+    // separately, without replaying the mount-time scroll or paper mask.
+    const returning = this.viewState.takeReturningResult();
+    if (returning.length > 0) {
+      this.pendingResultFocus = returning;
+      if (!this.hasSearchSession() || (this.ownsList() && this.scrollRestored)) {
+        this.restoreResultFocus((): boolean => this.pageInputCurrent());
+      }
+    }
+    this.scheduleMoreResults();
   }
 
   private ownsPageQuery(): boolean {
@@ -979,7 +993,7 @@ export struct SearchPage {
   private restoreClosedPanelFocus(kind: SearchPanelKind, identity: string): void {
     const matchingPanel = (): boolean => !this.searchPanelOwnsInput() &&
       identity === (kind === 'filter' ? this.filterPresentationIdentity() : this.taskStatusIdentity());
-    const current = (): boolean => this.ownsList() && !this.retainedViewportPending &&
+    const current = (): boolean => this.pageInputCurrent() && this.ownsList() && !this.retainedViewportPending &&
       AppStorage.get<boolean>('readerAppForeground') !== false && matchingPanel();
     if (this.lastOpenedPanel !== kind || !matchingPanel()) return;
     this.lastOpenedPanel = undefined;
@@ -1607,7 +1621,7 @@ export struct SearchPage {
           LazyForEach(this.resultDataSource, (group: SearchBookGroup) => {
             ListItem() {
               SearchResultCard({ group: group, viewState: this.viewState, queryRevision: this.viewState.revision,
-                displayIdleRevision: this.displayIdleRevision,
+                displayIdleRevision: this.displayIdleRevision, reduceMotion: this.reduceMotion,
                 expandedLayout: this.expandedLayout, cardWidth: this.searchResultWidth(),
                 focusId: this.resultFocusId(this.resultGroupKey(group.book)),
                 canRefreshDisplay: (): boolean => !this.userInteracting && !this.userScrolling,
@@ -1634,9 +1648,9 @@ export struct SearchPage {
         .scrollBar(BarState.Off)
         .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme))
         .opacity(this.retainedViewportPending ? 0 : 1)
-        .enabled(!this.retainedViewportPending)
-        .hitTestBehavior(this.retainedViewportPending ? HitTestMode.None : HitTestMode.Default)
-        .accessibilityLevel(this.retainedViewportPending ? 'no-hide-descendants' : 'auto')
+        .enabled(this.presented && !this.retainedViewportPending)
+        .hitTestBehavior(this.presented && !this.retainedViewportPending ? HitTestMode.Default : HitTestMode.None)
+        .accessibilityLevel(this.presented && !this.retainedViewportPending ? 'auto' : 'no-hide-descendants')
         .maintainVisibleContentPosition(true)
         .onTouch((event: TouchEvent): void => this.onListTouch(event.type))
         .onKeyEvent((event: KeyEvent): void => {
@@ -1914,7 +1928,7 @@ export struct SearchPage {
       this.getUIContext().postFrameCallback(new SearchLayoutFrame(this.getUIContext(), (): void => {
         if (this.pendingResultFocus !== key || !current()) return;
         this.pendingResultFocus = '';
-        if (!this.isPresentationVisible() || this.searchPanelOwnsInput()) return;
+        if (!this.pageInputCurrent() || this.searchPanelOwnsInput()) return;
         const resolved = this.viewState.resolveKey(key);
         try {
           const context = this.getUIContext();
@@ -2192,6 +2206,8 @@ struct SearchResultCard {
   viewState: SearchViewState = new SearchViewState();
   @Prop @Watch('acceptDisplayFacts') queryRevision: number = 0;
   @Prop @Watch('acceptDisplayFacts') displayIdleRevision: number = 0;
+  @Prop reduceMotion: boolean = false;
+  @State private pressPointer: number = -1;
   @Prop expandedLayout: boolean = false;
   @Prop cardWidth: number = 0;
   @Prop focusId: string = '';
@@ -2211,6 +2227,7 @@ struct SearchResultCard {
     this.visibilityEpoch += 1;
     this.selectionEpoch += 1;
     this.pressedSelection = undefined;
+    this.pressPointer = -1;
     this.displayVisible = false;
     this.acceptDisplayFacts();
   }
@@ -2223,6 +2240,7 @@ struct SearchResultCard {
     this.displayedBookInput = undefined;
     this.selectionEpoch += 1;
     this.pressedSelection = undefined;
+    this.pressPointer = -1;
   }
 
   private captureDisplayFacts(): SearchResultDisplayFacts {
@@ -2241,6 +2259,7 @@ struct SearchResultCard {
       this.visibilityEpoch += 1;
       this.selectionEpoch += 1;
       this.pressedSelection = undefined;
+      this.pressPointer = -1;
     }
     // Keep visible rows stable and leave offscreen height changes pending
     // while a gesture owns the list. A new query replaces its old display.
@@ -2486,22 +2505,27 @@ struct SearchResultCard {
     .width(this.cardWidth)
     .padding({ top: SEARCH_RESULT_GEOMETRY.rowPadding, bottom: SEARCH_RESULT_GEOMETRY.rowPadding })
     .alignItems(VerticalAlign.Top)
+    .backgroundColor(readerPressSurface(Color.Transparent, this.appThemeScheme, this.pressPointer >= 0, this.reduceMotion))
+    .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
+    .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion))
     .border({ width: { bottom: TOK_BORDER_W }, color: { bottom: readerAppColor('app.search.listRule', this.appThemeScheme) } });
     }
       .width(this.cardWidth).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
       .id(this.focusId)
       .onVisibleAreaChange([0], this.displayVisibilityHandler())
-      .onTouch((event: TouchEvent): void => this.onCardTouch(event.type))
+      .onTouch((event: TouchEvent): void => {
+        const next = readerPressPointer(event, this.pressPointer, this.mounted);
+        if (next !== this.pressPointer) readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressPointer = next; });
+        this.onCardTouch(event.type);
+      })
       .onClick((event: ClickEvent): void => this.selectResult(event.source));
   }
 
   @Builder
   private resultTag(label: string, primary: boolean) {
     Text(label)
-      .fontFamily('ReaderNotoSansSC')
-      .fontWeight(FontWeight.Medium)
-      .fontSize(9)
-      .lineHeight(14)
+      .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight).fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
+      .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
       .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
       .width(this.resultTagWidth())
       .height(this.resultTagHeight())

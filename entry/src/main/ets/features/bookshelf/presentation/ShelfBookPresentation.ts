@@ -3,6 +3,9 @@ import { MangaBookPresentation } from '../../manga/presentation/MangaBookPresent
 
 export type ShelfProgressVariant = 'list-status' | 'grid-caption';
 
+const NO_LATEST_CHAPTER = '暂无最新章节';
+const UNREAD_POSITION = '尚未阅读';
+
 /** Shared, display-only projection. It never changes Core metadata or order. */
 export class ShelfBookPresentation {
   static source(book: ShelfBook): string {
@@ -18,7 +21,28 @@ export class ShelfBookPresentation {
   }
 
   static latestChapter(book: ShelfBook): string {
-    return book.lastChapter?.trim() || '暂无最新章节';
+    return book.lastChapter?.trim() || NO_LATEST_CHAPTER;
+  }
+
+  static listSecondary(book: ShelfBook): string {
+    if (book.sourceId === 'local') {
+      const source = this.source(book);
+      const count = book.chapterCount;
+      return count !== undefined && Number.isSafeInteger(count) && count > 0 ? `${source} · 共 ${count} 章` : source;
+    }
+    const latest = this.latestChapter(book);
+    return latest === NO_LATEST_CHAPTER ? '' : `最新 ${latest}`;
+  }
+
+  static listUpdateBadge(book: ShelfBook, compact: boolean = false): string {
+    const count = book.unreadCount ?? 0;
+    if (count > 0) return compact ? `+${count}章` : `更新 ${count} 章`;
+    return '';
+  }
+
+  static listAttribute(book: ShelfBook): string {
+    if (book.sourceId === 'local') return this.originLabel(book);
+    return book.contentKind === 'manga' || book.contentKind === 'audio' ? this.contentLabel(book) : '';
   }
 
   /** Whole-book basis points only. Missing/nonfinite progress retains the
@@ -27,7 +51,24 @@ export class ShelfBookPresentation {
     if (book.contentKind === 'manga' && !this.hasMangaChapterProgress(book)) return '*%';
     const value = this.progressPercent(book);
     if (value <= 0) return book.contentKind === 'manga' ? '已读 0%' : variant === 'grid-caption' ? '' : '未读';
-    return value < 1 ? '已读 <1%' : `已读 ${Math.floor(value)}%`;
+    return `已读 ${this.percentLabel(value)}`;
+  }
+
+  static listProgress(book: ShelfBook): string {
+    const value = this.progressPercent(book);
+    if (book.contentKind === 'manga') {
+      if (value === 0 && MangaBookPresentation.outcome(book.sourceId, book.bookId) === 'confirmed-none') return '未读';
+      if (!this.hasMangaChapterProgress(book)) return '*%';
+    } else if (value === 0) {
+      if (this.listReadingPosition(book) === UNREAD_POSITION) return '未读';
+      const basisPoints = book.readProgress;
+      if (basisPoints === undefined || !Number.isFinite(basisPoints) || basisPoints < 0) return '*%';
+    }
+    return this.percentLabel(value);
+  }
+
+  private static percentLabel(value: number): string {
+    return value > 0 && value < 1 ? '<1%' : `${Math.floor(value)}%`;
   }
 
   static progressPercent(book: ShelfBook): number {
@@ -44,10 +85,17 @@ export class ShelfBookPresentation {
 
   static readingPosition(book: ShelfBook): string {
     if (book.contentKind === 'manga') {
-      if (MangaBookPresentation.outcome(book.sourceId, book.bookId) === 'confirmed-none') return '尚未阅读';
+      if (MangaBookPresentation.outcome(book.sourceId, book.bookId) === 'confirmed-none') return UNREAD_POSITION;
       return MangaBookPresentation.label(MangaBookPresentation.get(book.sourceId, book.bookId));
     }
-    return book.currentChapterTitle?.trim() || '尚未阅读';
+    return book.currentChapterTitle?.trim() || UNREAD_POSITION;
+  }
+
+  static listReadingPosition(book: ShelfBook): string {
+    const position = this.readingPosition(book);
+    if (position === UNREAD_POSITION && book.contentKind !== 'manga' &&
+      (book.readingPosition !== undefined || this.progressPercent(book) > 0)) return '阅读中';
+    return position.length === 0 || position === UNREAD_POSITION ? position : `读至 ${position}`;
   }
 
   static contentLabel(book: ShelfBook | undefined): string {

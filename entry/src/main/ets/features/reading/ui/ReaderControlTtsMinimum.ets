@@ -99,7 +99,12 @@ export function readerControlTtsMinimumFacts(input: ReaderTtsMinimumFactsInput):
     serviceDescription: service?.name ?? '第三方语音服务', manageLabel: input.httpEngines.length > 0 ? '已配置 · 编辑' : '立即配置',
     manageBorderWidth: input.httpEngines.length > 0 ? 0.5 : 0,
     engineValue: http ? readerControlTtsEngineLabel(input.engine, input.httpEngines) : '系统默认', languageValue: http ? '由在线服务提供' : readerTtsLanguageLabel(input.language),
+    sessionValue: readerControlTtsSessionLabel(input.allowMixing),
     failureValue: input.failurePolicy === 'skip' ? '跳过不可用内容' : '停止并提示' };
+}
+
+export function readerControlTtsSessionLabel(allowMixing: boolean): string {
+  return allowMixing ? '混音播放' : '语音播放';
 }
 /** Display facts captured by the mounted module, never another TTS state owner. */
 export interface ReaderTtsMinimumFacts {
@@ -124,6 +129,7 @@ export interface ReaderTtsMinimumFacts {
   manageBorderWidth?: number;
   engineValue: string;
   languageValue: string;
+  sessionValue: string;
   failureValue: string;
 }
 
@@ -173,6 +179,7 @@ export interface ReaderTtsTextMinimum {
   voiceFieldWidth: number;
   engineFieldWidth: number;
   languageFieldWidth: number;
+  sessionFieldWidth: number;
   failureFieldWidth: number;
   manageButton: number;
   manageButtonWidth: number;
@@ -280,9 +287,9 @@ function measureForm(context: UIContext, width: number, full: boolean,
     Math.max(1, (inner - 38) / 2 - 27), true);
   const tabSubtitle = largest(context, ['设备内置语音', facts.serviceDescription],
     actual(TYPE_READER_TTS_RETAINED_TTS_SERVICE_TYPE_TAB_VALUE_SECONDARY), Math.max(1, (inner - 38) / 2 - 24));
-  const labels = largest(context, ['语音引擎', '朗读语言', '不可用处理'],
+  const labels = largest(context, ['语音引擎', '朗读语言', '音频会话', '不可用处理'],
     actual(TYPE_READER_TTS_RETAINED_TTS_CLOSED_CONFIG_ROW_VALUE), inner);
-  const field = largest(context, [facts.voice, facts.engineValue, facts.languageValue, facts.failureValue],
+  const field = largest(context, [facts.voice, facts.engineValue, facts.languageValue, facts.sessionValue, facts.failureValue],
     actual(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY), inner);
   const fieldGlyph = largest(context, ['字'], actual(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY), inner);
   const voiceBadge = largest(context, ['女', '男', '声'], actual(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE), inner);
@@ -312,8 +319,10 @@ function measureForm(context: UIContext, width: number, full: boolean,
   const voiceValue = largest(context, [facts.voice], actual(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY), inner);
   const engineValue = largest(context, [facts.engineValue], actual(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY), inner);
   const languageValue = largest(context, [facts.languageValue], actual(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY), inner);
+  const sessionValue = largest(context, [facts.sessionValue], actual(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY), inner);
   const failureValue = largest(context, [facts.failureValue], actual(TYPE_READER_TTS_RETAINED_TTS_SELECT_VALUE_FIELD_VALUE_SECONDARY), inner);
-  if (voiceValue === undefined || engineValue === undefined || languageValue === undefined || failureValue === undefined) return undefined;
+  if (voiceValue === undefined || engineValue === undefined || languageValue === undefined ||
+    sessionValue === undefined || failureValue === undefined) return undefined;
   const text: ReaderTtsTextMinimum = {
     quickPlaybackTitle: Math.max(16, qPlayback.heightVp), quickPlaybackStatus: Math.max(13, qStatus.heightVp),
     quickSettingTitle: Math.max(18, qSetting.heightVp), header: Math.max(18, header.heightVp, playbackMeta.heightVp, timerMeta.heightVp, speedMeta.heightVp),
@@ -345,12 +354,14 @@ function measureForm(context: UIContext, width: number, full: boolean,
       Math.min(cap, Math.ceil(voiceValue.singleLineWidthVp) + 37 + Math.max(24, voiceBadge.singleLineWidthVp))),
     engineFieldWidth: Math.max(44, Math.min(cap, Math.ceil(engineValue.singleLineWidthVp) + 18)),
     languageFieldWidth: Math.max(44, Math.min(cap, Math.ceil(languageValue.singleLineWidthVp) + 18)),
+    sessionFieldWidth: Math.max(44, Math.min(cap, Math.ceil(sessionValue.singleLineWidthVp) + 18)),
     failureFieldWidth: Math.max(44, Math.min(cap, Math.ceil(failureValue.singleLineWidthVp) + 18)),
     manageButton: Math.max(44, manage.heightVp + 8), manageButtonWidth: Math.max(44, Math.min(cap, manage.singleLineWidthVp + manageHorizontalReserve)), seekY: 198, errorY: facts.seek ? 230 : 198,
   };
-  const closedLabel = largest(context, ['语音引擎', '朗读语言', '不可用处理'],
+  const closedLabel = largest(context, ['语音引擎', '朗读语言', '音频会话', '不可用处理'],
     actual(TYPE_READER_TTS_RETAINED_TTS_CLOSED_CONFIG_ROW_VALUE),
-    Math.max(1, inner - 28 - 8 - Math.max(text.engineFieldWidth, text.languageFieldWidth, text.failureFieldWidth)), true);
+    Math.max(1, inner - 28 - 8 - Math.max(text.engineFieldWidth, text.languageFieldWidth,
+      text.sessionFieldWidth, text.failureFieldWidth)), true);
   const voiceLabel = largest(context, ['音色'], actual(TYPE_READER_TTS_RETAINED_VOICE_SELECTOR_ROW_LABEL),
     Math.max(1, inner - 28 - text.voiceFieldWidth), true);
   const serviceLabel = largest(context, ['服务信息'], actual(TYPE_READER_TTS_RETAINED_ONLINE_SERVICE_INFO_ROW_LABEL),
@@ -500,7 +511,7 @@ function measureForm(context: UIContext, width: number, full: boolean,
     frame.contentHeight = frame.detail.y + frame.detail.height + 16;
     minWidth = width - inner + Math.max(32 + 44, 38 + 2 * (27 + 36),
       28 + 16 + 1 + text.timerStepperWidth,
-      28 + 8 + 44 + Math.max(text.engineFieldWidth, text.languageFieldWidth, text.failureFieldWidth),
+      28 + 8 + 44 + Math.max(text.engineFieldWidth, text.languageFieldWidth, text.sessionFieldWidth, text.failureFieldWidth),
       28 + 44 + text.voiceFieldWidth, 28 + 8 + 44 + text.manageButtonWidth);
 
   }
@@ -563,6 +574,7 @@ export function sampleReaderTtsTextMinimum(profile: ReaderTtsMinimumProfile,
     voiceFieldWidth: readerControlLerp(q.voiceFieldWidth, f.voiceFieldWidth, progress),
     engineFieldWidth: readerControlLerp(q.engineFieldWidth, f.engineFieldWidth, progress),
     languageFieldWidth: readerControlLerp(q.languageFieldWidth, f.languageFieldWidth, progress),
+    sessionFieldWidth: readerControlLerp(q.sessionFieldWidth, f.sessionFieldWidth, progress),
     failureFieldWidth: readerControlLerp(q.failureFieldWidth, f.failureFieldWidth, progress),
     manageButton: readerControlLerp(q.manageButton, f.manageButton, progress),
     manageButtonWidth: readerControlLerp(q.manageButtonWidth, f.manageButtonWidth, progress),

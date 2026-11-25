@@ -19,6 +19,7 @@ async function case_manga_preferences() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
+const { readerHostPreferencesName } = await import('../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts');
 const { createDefaultReaderSettingsSnapshot, normalizeReaderSettingsSnapshot, copyReaderSettingsSnapshot } = await import('../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts');
 const { runtimeOwnerIdentityProbe } = await import('./lib/reader-runtime-admission-probe.mjs');
 const initial = createDefaultReaderSettingsSnapshot();
@@ -46,14 +47,14 @@ const store = {
     durableValue = value;
   },
 };
-const runtimeOwner = { getUIAbilityContext: () => ({}) };
+const runtimeOwner = { getUIAbilityContext: () => ({ filesDir: '/reader-fixture' }) };
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReaderSettingsGateway.ts', import.meta.url), 'utf8')
   .replace(/^import[\s\S]*?;\s*\n/gm, '').replace(/^export /gm, '');
 const Gateway = new Function('preferences', 'ReaderRuntimeOwner', 'ReaderThemeHost', 'copyReaderSettingsSnapshot',
-  'createDefaultReaderSettingsSnapshot', 'normalizeReaderSettingsSnapshot',
+  'createDefaultReaderSettingsSnapshot', 'normalizeReaderSettingsSnapshot', 'readerHostPreferencesName',
   `${stripTypeScriptTypes(source)}; return ReaderSettingsGateway;`)(
   { getPreferences: async () => store }, runtimeOwnerIdentityProbe(() => runtimeOwner), { prepareUserChange: async () => {} },
-  copyReaderSettingsSnapshot, createDefaultReaderSettingsSnapshot, normalizeReaderSettingsSnapshot);
+  copyReaderSettingsSnapshot, createDefaultReaderSettingsSnapshot, normalizeReaderSettingsSnapshot, readerHostPreferencesName);
 const gateway = new Gateway(runtimeOwner);
 await gateway.load();
 await gateway.updateMangaPreferences({ mangaDirection: 'horizontal', mangaFit: 'contain', mangaBackground: 'ink', mangaPageNumbers: false });

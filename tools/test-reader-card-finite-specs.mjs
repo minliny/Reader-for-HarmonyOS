@@ -220,29 +220,19 @@ for (const method of ['build', ...methods]) for (const scheme of ['day', 'night'
   comparisons++;
 }
 assert.equal(comparisons, 48, 'six actual consumer sites by two schemes and four width inputs');
-// The two semantic names resolve to the same object, not copies of a standard
-// tuple. Changing that one actual shared source reaches both real consumers.
+// Settings and Sync semantic names share a specification. Changing the
+// standard radius reaches each actual consumer.
 {
  const base=cardSdk();assert.equal(base.resolveReaderCardSpec('settings-category'),base.resolveReaderCardSpec('sync-config'));
+ assert.equal(base.resolveReaderCardSpec('settings-category'),base.resolveReaderCardSpec('sync-status'));
  const standard = 'radius: 14, maxWidth: TOK_CONTENT_MAX_W_TABLET';
  const changed = originalSpec.replace(standard, standard.replace('14', '16'));
  assert.notEqual(changed, originalSpec);
- const category = parent({ specSource: changed });
- const configuration = parent({ method: 'webdavSection', specSource: changed });
- const status = parent({ method: 'manualActionsSection', specSource: changed });
- const statusRadius = base.resolveReaderCardSpec('sync-status').radius;
- assert.equal(category.outer().borderRadius, 16);
- assert.equal(configuration.outer().borderRadius, 16);
- assert.equal(status.outer().borderRadius, statusRadius, 'status variant stays isolated');
- const statusTuple = 'radius: TOK_RADIUS_LG, maxWidth: TOK_CONTENT_MAX_W_TABLET';
- const other = originalSpec.replace(statusTuple, statusTuple.replace('TOK_RADIUS_LG', String(statusRadius + 2)));
- assert.notEqual(other, originalSpec);
- for (const method of methods.slice(1)) {
-   assert.equal(parent({ method, specSource: other }).outer().borderRadius, statusRadius + 2,
-     'all four real status consumers share changed spec');
+ assert.equal(parent({ specSource: changed }).outer().borderRadius, 16);
+ for (const method of methods) {
+   assert.equal(parent({ method, specSource: changed }).outer().borderRadius, 16,
+     'all Sync consumers follow the shared card radius');
  }
- assert.equal(parent({ specSource: other }).outer().borderRadius, 14);
- assert.equal(parent({ method: 'webdavSection', specSource: other }).outer().borderRadius, 14);
 }
 // Retained V1 Props update the actual native Card without remounting its body;
 // obsolete physical props have no setters and cannot alter the outer geometry.

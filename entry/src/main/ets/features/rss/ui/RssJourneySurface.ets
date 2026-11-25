@@ -36,6 +36,9 @@ export struct RssJourneySurface {
     } else if (this.route === 'rssSourceFeed' && this.presentation.selectedRssSubscription !== undefined) {
       this.rssSourceFeedSurface(this.generation, this.owner, this.presentation.selectedRssSubscription.subscriptionId,
         this.mounting, this.presentation.rssOrchestrator, this.identity);
+    } else if (this.route === 'rssEntryDetail' && this.presentation.selectedRssArchive !== undefined) {
+      this.rssEntryDetailSurface(this.generation, this.owner, this.presentation.selectedRssArchive.subscriptionId,
+        this.presentation.selectedRssArchive.guid, this.mounting, this.presentation.rssOrchestrator, this.identity);
     } else if (this.route === 'rssEntryDetail' && this.presentation.selectedRssSubscription !== undefined &&
       this.presentation.selectedRssItem !== undefined) {
       this.rssEntryDetailSurface(this.generation, this.owner, this.presentation.selectedRssSubscription.subscriptionId,
@@ -59,7 +62,8 @@ export struct RssJourneySurface {
         if (this.presentation.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.presentation.loadRss(generation, facts.generation);
       },
       expandedLayout: this.expandedLayout,
-      activeMode: 'sources',
+      activeMode: this.presentation.rssMode,
+      feedItems: this.presentation.rssFeedItems,
       onBack: (): void => { if (this.presentation.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.onBookshelf(); },
       onRefresh: (): void => { if (this.presentation.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.presentation.refreshRss(); },
       onManage: (): void => { if (this.presentation.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss')) this.presentation.onRssManage(); },
@@ -125,6 +129,7 @@ export struct RssJourneySurface {
     RssEntryDetailPage({
       subscription: this.presentation.selectedRssSubscription,
       item: this.presentation.selectedRssItem,
+      archivedFavorite: this.presentation.selectedRssArchive,
       presentationIdentity: identity,
       original: this.presentation.rssEntryOriginal,
       onReconcileOriginal: (expected: RssOriginalMutationIdentity): void => { if (this.presentation.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) host?.reconcileEntryOriginal(expected, this.presentation.rssEntryBinding(generation, subscriptionId, guid, owner, host, identity, mounting), subscriptionId, guid); },
@@ -143,7 +148,8 @@ export struct RssJourneySurface {
       onViewSource: (): void => { if (this.presentation.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.presentation.returnToRssSourceFeed(); },
       onFavoriteRequested: (favorite: boolean): void => { if (this.presentation.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.presentation.onRssEntryFavoriteRequested(favorite); },
       onSourceSettings: (): void => { if (this.presentation.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.presentation.openRssManagementForSubscription(subscriptionId); },
-      onOpenOriginal: (): void => { if (this.presentation.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid)) this.presentation.onRssOpenOriginalRequested(); },
+      originalInputCurrent: (): boolean =>
+        this.presentation.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rssEntryDetail', subscriptionId, guid),
     });
   }
 

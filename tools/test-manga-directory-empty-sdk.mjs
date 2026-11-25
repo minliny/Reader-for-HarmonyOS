@@ -79,7 +79,7 @@ function check(candidate = pageSource, listCandidate = listSource, exhaustive = 
     const message = allNodes().find(node => node.type === 'Text' && node.create === '没有匹配章节');
     assert.ok(message, 'the native ListItem callback mounts the actual page empty builder');
     assert.ok(Number.isFinite(message.fontSize));assert.ok(Number.isFinite(message.lineHeight));
-    assert.equal(message.fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_600);
+    assert.equal(message.fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_MEDIUM);
     const empty = [...owner.nodes.values()].find(node => node.type === 'Column');
     assert.deepEqual(empty.constraintSize, { minHeight: visual.quietEmptyMinHeight });
 

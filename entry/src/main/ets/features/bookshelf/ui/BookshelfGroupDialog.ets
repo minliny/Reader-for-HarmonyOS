@@ -43,11 +43,17 @@ export struct BookshelfGroupDialog {
     Stack({ alignContent: Alignment.Center }) {
       Row().width('100%').height('100%').backgroundColor(readerAppColor('app.scrim.modal', this.appThemeScheme))
         .backdropBlur(6)
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .accessibilityLevel('no')
         .onClick((): void => { if (this.groupInputIsCurrent(identity)) this.presentation.dismiss(identity); });
-      ReaderDialogSurface({ specId: 'shelf-group', title: '编辑分组', actions: [],
-        body: (): void => { this.selector(identity); } })
-        .transition(this.cardTransition());
+      Stack() {
+        ReaderDialogSurface({ specId: 'shelf-group', title: '编辑分组', actions: [], showCloseButton: true,
+          onClose: (): void => { if (this.groupInputIsCurrent(identity)) this.presentation.dismiss(identity); },
+          body: (): void => { this.selector(identity); } })
+          .transition(this.cardTransition());
+      }.width('100%').height('100%')
+        .padding({ top: this.contentSafeTop(), bottom: this.contentBottomInset() })
+        .hitTestBehavior(HitTestMode.Transparent);
       Column() {
         if (this.presentation.snapshot.receipt !== undefined) {
           ForEach([this.presentation.snapshot.receipt.facts.generation], (expected: number): void => {
@@ -92,25 +98,43 @@ export struct BookshelfGroupDialog {
   }
 
   private recoveryInsetTop(): number {
+    return Math.max(this.recoveryTop, this.contentSafeTop()) + 12;
+  }
+
+  private contentSafeTop(): number {
     this.metricsRevision;
-    return Math.max(this.recoveryTop, readerInteractiveSafeTop(readerWindowMetrics(), true) - this.originY) + 12;
+    return Math.max(0, readerInteractiveSafeTop(readerWindowMetrics(), true) - this.originY);
+  }
+
+  private contentHeight(): number {
+    this.metricsRevision;
+    const metrics = readerWindowMetrics();
+    return this.viewportHeight >= 0 ? this.viewportHeight : metrics.windowRect.height;
+  }
+
+  private contentBottom(): number {
+    return readerKeyboardHostBottom(readerWindowMetrics(), this.originY, this.contentHeight());
+  }
+
+  private contentBottomInset(): number {
+    return Math.max(0, this.contentHeight() - this.contentBottom());
   }
 
   private recoveryAvailableHeight(): number {
-    this.metricsRevision;
-    const metrics = readerWindowMetrics();
-    const bottom = readerKeyboardHostBottom(metrics, this.originY,
-      this.viewportHeight >= 0 ? this.viewportHeight : metrics.windowRect.height);
-    return Math.max(0, bottom - this.recoveryInsetTop() - 12);
+    return Math.max(0, this.contentBottom() - this.recoveryInsetTop() - 12);
   }
 
   @Builder
   private selector(identity: string) {
     BookshelfGroupSelector({
-      selected: (this.presentation.book?.group?.trim() ?? '') === '',
+      selectedGroup: this.presentation.currentGroup(),
+      groups: this.presentation.snapshot.data.groups,
       busy: this.presentation.assigning || this.presentation.snapshot.busy || this.presentation.snapshot.mutationBlocked === true,
       focusId: this.selectorFocusKey(identity),
-      onSelect: (): void => { if (this.groupInputIsCurrent(identity)) void this.presentation.assignDefault(identity); },
+      maxOptionsHeight: Math.max(0, this.contentBottom() - this.contentSafeTop() - 140),
+      onSelect: (group: string): void => {
+        if (this.groupInputIsCurrent(identity)) void this.presentation.assignGroup(identity, group);
+      },
     });
   }
 

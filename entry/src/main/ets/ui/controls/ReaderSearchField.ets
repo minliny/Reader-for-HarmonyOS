@@ -16,22 +16,15 @@ import {
   TYPE_SEARCH_DIRECTORY_INPUT,
   TYPE_SEARCH_READER_QUICK_INPUT,
   TYPE_SEARCH_RSS_HINT,
+  TYPE_SEARCH_SOURCE_GROUP_INPUT,
   TYPE_SEARCH_SOURCE_INPUT,
-  TYPE_SELECT_SOURCE_GROUP_VALUE,
 } from '../foundation/ReaderTypography';
 import {
-  TOK_BORDER,
   TOK_BORDER_W,
-  TOK_INK,
-  TOK_MUTED,
-  TOK_PRIMARY_DARK,
-  TOK_READ_INK,
-  TOK_READ_MUTED,
-  TOK_READ_PRIMARY,
-  TOK_SURFACE_PANEL_SOFT,
 } from '../foundation/ReaderTokens';
-import { readerSearchControlHeight, SEARCH_CONTROL_MIN_TARGET } from '../foundation/ReaderSearchControlGeometry';
-import { SOURCE_GROUP_SELECT_ARROW_TARGET, SOURCE_GROUP_SELECT_RADIUS, SOURCE_GROUP_SELECT_TEXT_INSET } from '../foundation/ReaderSelectGeometry';
+import { readerSearchControlHeight, readerSearchControlVisualHeight, SEARCH_CONTROL_CLEAR_END_INSET,
+  SEARCH_CONTROL_CLEAR_ICON_SIZE, SEARCH_CONTROL_CLEAR_SLOT, SEARCH_CONTROL_MIN_TARGET } from '../foundation/ReaderSearchControlGeometry';
+import { SOURCE_GROUP_SELECT_ARROW_TARGET, SOURCE_GROUP_SELECT_TEXT_INSET } from '../foundation/ReaderSelectGeometry';
 
 export type ReaderSearchFieldVariant =
   | 'bookPanel'
@@ -125,6 +118,7 @@ export struct ReaderSearchField {
   @Prop accessibilityLabel: string = '';
   @Prop expandedLayout: boolean = false;
   @Prop clearable: boolean = false;
+  @Prop clearAccessibilityLabel: string = '';
   @Prop catalogChrome: boolean = false;
   @Prop bookPanelClearId: string = '';
   @Prop bookKeyboardOnFocus: boolean = true;
@@ -521,7 +515,7 @@ export struct ReaderSearchField {
   }
 
   build() {
-    if (this.mode === 'passive' || this.variant === 'rssPassive') {
+    if (this.mode === 'passive') {
       this.passiveField();
     } else if (this.isBookField()) {
       this.fixedLineHeightField();
@@ -533,10 +527,10 @@ export struct ReaderSearchField {
   @Builder
   private fixedLineHeightField() {
     Stack({ alignContent: Alignment.Center }) {
-      Row().width('100%').height(this.fieldHeight() - 4)
+      Row().width('100%').height(readerSearchControlVisualHeight(this.bookFontScale()))
         .nativeFieldBackground()
         .border({ width: this.fieldBorderWidth(), color: this.fieldBorderColor() })
-        .borderRadius((this.fieldHeight() - 4) / 2)
+        .borderRadius(readerSearchControlVisualHeight(this.bookFontScale()) / 2)
         .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
       this.bookEditorLane();
     }.id(this.bookPanelFrameId).width('100%').height(this.fieldHeight())
@@ -599,22 +593,13 @@ export struct ReaderSearchField {
         .enterKeyType(EnterKeyType.Search)
         .onSubmit((_enterKey: EnterKeyType): void => this.submit());
       if (this.clearable && this.text.length > 0) {
-        Button({ type: ButtonType.Normal, stateEffect: false }) {
-          Stack({ alignContent: Alignment.Center }) {
-            Image(this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear'))
-              .width(11).height(11).accessibilityLevel('no');
-          }.width(20).height(20).borderRadius(10)
-            .backgroundColor(readerAppColor('TOK_LINE_STRONG', this.appThemeScheme))
-            .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
-        }.width(SEARCH_CONTROL_MIN_TARGET).height(this.fieldHeight()).padding(0).backgroundColor(Color.Transparent)
-          .id(this.bookPanelClearId)
-          .accessibilityRole(AccessibilityRoleType.BUTTON).accessibilityText('清空搜索内容')
-          .onClick((): void => this.clearBookInput());
+        this.clearButton();
       }
     }
     .width('100%')
     .height(this.fieldHeight())
-    .padding({ left: this.horizontalPadding(), right: this.horizontalPadding() })
+    .padding({ left: this.horizontalPadding(), right: this.clearable && this.text.length > 0 ?
+      SEARCH_CONTROL_CLEAR_END_INSET : this.horizontalPadding() })
     .alignItems(VerticalAlign.Center);
   }
 
@@ -637,7 +622,7 @@ export struct ReaderSearchField {
         TextInput({ placeholder: this.placeholder, text: this.text, controller: this.directoryInputController })
           .onClick((): void => {
             if (this.variant === 'sourceManagement' || this.variant === 'sourceGroup') this.requestSourceManagementEditing();
-            else this.requestDirectoryEditing(inputFocusId);
+            else if (this.variant === 'readerDirectory') this.requestDirectoryEditing(inputFocusId);
           })
           .onKeyPreIme((event: KeyEvent): boolean => this.onDirectoryInputKey(inputFocusId, event))
           .layoutWeight(1)
@@ -657,6 +642,8 @@ export struct ReaderSearchField {
           .fontWeight(this.textStyle().fontWeight)
           .fontSize(this.textStyle().fontSizeFp)
           .fontFeature('"tnum" 1')
+          .lineHeight(this.textStyle().lineHeightFp as number)
+          .halfLeading(true)
           .maxLines(1)
           .fontColor(this.inputColor())
           .nativeInputBackground()
@@ -670,25 +657,42 @@ export struct ReaderSearchField {
           .onChange((value: string): void => this.changeText(value))
           .enterKeyType(EnterKeyType.Search)
           .onSubmit((_enterKey: EnterKeyType): void => this.submit());
-        if (this.variant === 'readerDirectory' && this.catalogChrome && this.text.length > 0) {
-          Button({ type: ButtonType.Normal, stateEffect: false }) {
-            Image(this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear'))
-              .width(11).height(11).accessibilityLevel('no');
-          }.width(44).height(44).padding(0).backgroundColor(Color.Transparent)
-            .accessibilityRole(AccessibilityRoleType.BUTTON).accessibilityText('清空章节搜索')
-            .onClick((): void => {
-              if (this.editingCurrent?.() !== false) this.changeText('');
-            });
+        if (this.autoClearButtonVisible()) {
+          this.clearButton();
         }
       }
       .width('100%')
       .height(this.variant === 'readerDirectory' ? Math.max(44, this.fieldHeight()) : this.fieldHeight())
-      .padding({ left: this.horizontalPadding(), right: this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_ARROW_TARGET : this.horizontalPadding() })
-      .backgroundColor(this.variant === 'readerDirectory' || this.variant === 'sourceGroup' ? Color.Transparent : this.fieldBackgroundColor())
+      .padding({ left: this.horizontalPadding(), right: this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_ARROW_TARGET :
+        (this.autoClearButtonVisible() ? SEARCH_CONTROL_CLEAR_END_INSET : this.horizontalPadding()) })
+      .backgroundColor(this.variant === 'readerDirectory' ? Color.Transparent : this.fieldBackgroundColor())
       .border({ width: this.catalogChrome ? 0 : this.fieldBorderWidth(), color: this.fieldBorderColor() })
       .borderRadius(this.cornerRadius())
       .alignItems(VerticalAlign.Center);
     }.width('100%').height(this.variant === 'readerDirectory' ? Math.max(44, this.fieldHeight()) : this.fieldHeight());
+  }
+
+  @Builder
+  private clearButton() {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
+      Image(this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear'))
+        .width(SEARCH_CONTROL_CLEAR_ICON_SIZE).height(SEARCH_CONTROL_CLEAR_ICON_SIZE)
+        .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
+    }.width(SEARCH_CONTROL_CLEAR_SLOT).height(SEARCH_CONTROL_MIN_TARGET).padding({ left: 10 })
+      .backgroundColor(Color.Transparent)
+      .responseRegion({
+        // The adjacent group chevron keeps its whole 44vp target.
+        x: this.variant === 'sourceGroup' ? SEARCH_CONTROL_CLEAR_SLOT - SEARCH_CONTROL_MIN_TARGET : -SEARCH_CONTROL_CLEAR_END_INSET,
+        y: 0, width: SEARCH_CONTROL_MIN_TARGET, height: SEARCH_CONTROL_MIN_TARGET,
+      })
+      .id(this.isBookField() ? this.bookPanelClearId : '')
+      .focusOnTouch(false)
+      .enabled(this.editingCurrent?.() !== false)
+      .accessibilityRole(AccessibilityRoleType.BUTTON).accessibilityText(this.resolvedClearAccessibilityLabel())
+      .onClick((): void => {
+        if (this.isBookField()) this.clearBookInput();
+        else if (this.editingCurrent?.() !== false) this.changeText('');
+      });
   }
 
   @Builder
@@ -702,6 +706,7 @@ export struct ReaderSearchField {
         .fontFamily(TYPE_SEARCH_RSS_HINT.fontFamily)
         .fontWeight(TYPE_SEARCH_RSS_HINT.fontWeight)
         .fontSize(TYPE_SEARCH_RSS_HINT.fontSizeFp)
+        .lineHeight(TYPE_SEARCH_RSS_HINT.lineHeightFp ?? Math.round(TYPE_SEARCH_RSS_HINT.fontSizeFp * 1.5)).halfLeading(true)
         .fontColor(readerAppColor('app.search.passiveText', this.appThemeScheme))
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
@@ -724,7 +729,8 @@ export struct ReaderSearchField {
   }
 
   private textStyle(): ReaderTextStyle {
-    if (this.variant === 'sourceGroup') return TYPE_SELECT_SOURCE_GROUP_VALUE;
+    if (this.variant === 'rssPassive') return TYPE_SEARCH_RSS_HINT;
+    if (this.variant === 'sourceGroup') return TYPE_SEARCH_SOURCE_GROUP_INPUT;
     if (this.variant === 'sourceManagement') {
       return TYPE_SEARCH_SOURCE_INPUT;
     }
@@ -778,14 +784,7 @@ export struct ReaderSearchField {
   }
 
   private iconSize(): number {
-    if (this.variant === 'bookPanel') return 22;
-    if (this.variant === 'sourceManagement') {
-      return 13;
-    }
-    if (this.variant === 'readerDirectory') {
-      return 16;
-    }
-    return 20;
+    return 16;
   }
 
   private iconGap(): number {
@@ -813,14 +812,7 @@ export struct ReaderSearchField {
   }
 
   private fieldBackgroundColor(): string {
-    if (this.variant === 'bookPanel' || this.catalogChrome) return readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme);
-    if (this.variant === 'sourceManagement') {
-      return readerAppColor('app.search.fieldSolid', this.appThemeScheme);
-    }
-    if (this.variant === 'rssPassive') {
-      return readerAppColor('app.search.fieldElevated', this.appThemeScheme);
-    }
-    return readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme);
+    return readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme);
   }
 
   private fieldBorderWidth(): number {
@@ -834,7 +826,6 @@ export struct ReaderSearchField {
   }
 
   private cornerRadius(): number {
-    if (this.variant === 'sourceGroup') return SOURCE_GROUP_SELECT_RADIUS;
     if (this.variant === 'rssPassive') return Math.min(Math.max(0, this.fieldWidthVp), this.fieldHeight()) / 2;
     return this.fieldHeight() / 2;
   }
@@ -863,6 +854,19 @@ export struct ReaderSearchField {
 
   private resolvedAccessibilityLabel(): string {
     return this.accessibilityLabel.length > 0 ? this.accessibilityLabel : this.placeholder;
+  }
+
+  private autoClearButtonVisible(): boolean {
+    return this.mode !== 'passive' && this.text.length > 0;
+  }
+
+  private resolvedClearAccessibilityLabel(): string {
+    if (this.clearAccessibilityLabel.length > 0) return this.clearAccessibilityLabel;
+    if (this.isBookField()) return '清空搜索内容';
+    if (this.variant === 'sourceManagement') return '清空书源搜索';
+    if (this.variant === 'sourceGroup') return '清空分组搜索';
+    if (this.variant === 'rssPassive') return '清空订阅搜索';
+    return '清空章节搜索';
   }
 
   private bookFontScale(): number {

@@ -43,6 +43,7 @@ export struct BookshelfShell {
   @Prop populated: boolean = false;
   @Prop @Watch('onReadRecoveryChanged') feedbackEnabled: boolean = true;
   @Prop reduceMotion: boolean = false;
+  @Prop canBatchManage: boolean = false;
   @Prop canCheckUpdates: boolean = false;
   @Prop updateRunning: boolean = false;
   @Prop backgroundUpdateRunning: boolean = false;
@@ -52,6 +53,7 @@ export struct BookshelfShell {
     (_generation?: number, _focusTarget?: string): void => {};
   onBatchManageRequested: (generation?: number) => void = (_generation?: number): void => {};
   onBookshelfSettingsRequested: (generation?: number) => void = (_generation?: number): void => {};
+  onBookshelfManagementRequested: (generation?: number) => void = (_generation?: number): void => {};
   onDownloadsRequested: (generation?: number) => void = (_generation?: number): void => {};
   onCheckUpdatesRequested: (generation?: number) => void = (_generation?: number): void => {};
   onMainTab: (key: string, presentedNavigation?: number) => void = (_key: string): void => {};
@@ -281,6 +283,7 @@ export struct BookshelfShell {
   private moreSheetContent(presentationId: string) {
       BookshelfMoreActionSheet({
         presentationId,
+        canBatchManage: this.canBatchManage,
         canCheckUpdates: this.canCheckUpdates,
         updateRunning: this.updateRunning,
         backgroundUpdateRunning: this.backgroundUpdateRunning,
@@ -291,6 +294,7 @@ export struct BookshelfShell {
           this.dismissMoreMenu();
         }),
         onBatchManage: this.moreIntentAction(presentationId, (generation: number): void => {
+          if (!this.canBatchManage) return;
           this.afterMoreClose = (): void => this.onBatchManageRequested(generation);
           this.dismissMoreMenu();
         }),
@@ -301,6 +305,10 @@ export struct BookshelfShell {
         }),
         onBookshelfSettings: this.moreIntentAction(presentationId, (generation: number): void => {
           this.afterMoreClose = (): void => this.onBookshelfSettingsRequested(generation);
+          this.dismissMoreMenu();
+        }),
+        onBookshelfManagement: this.moreIntentAction(presentationId, (generation: number): void => {
+          this.afterMoreClose = (): void => this.onBookshelfManagementRequested(generation);
           this.dismissMoreMenu();
         }),
         onDownloadsRequested: this.moreIntentAction(presentationId, (generation: number): void => {

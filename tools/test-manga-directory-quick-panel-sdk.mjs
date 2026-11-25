@@ -7,16 +7,19 @@ import { mangaSurfaceSdkDependencies } from './lib/manga-surface-sdk-probe.mjs';
 import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryDisplay.ts';
 import * as fonts from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url), 'utf8');
 const footerSource = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaDirectoryCurrentFooter.ets', import.meta.url), 'utf8');
 const names = [...mangaDirectoryAdaptiveFields, ...mangaDirectoryAdaptiveMembers, 'directoryCurrentChapterIndex', 'directoryEntries', 'directoryPanel', 'directoryTools', 'directoryCurrentFooter', 'directoryCurrentTitle', 'directoryCurrentIndex', 'directoryCurrentPagePosition', 'directoryBody', 'directoryFallback', 'adjacentChapter',
   'selectAdjacentChapter', 'pageOrdinal', 'accentColor', 'mutedColor', 'inkColor', 'lineColor',
   'directoryFontScale', 'directoryToolHeight', 'directoryHeaderChrome', 'directoryInitialWidth', 'directoryQuickHeight',
-  'directoryColumnWidth', 'windowInteractiveInsets', 'interactiveInsets', 'panelInsets', 'controlsPresentedForWindow', 'persistentDirectory', 'panelContentInset', 'panelWidth'];
+  'directoryQuickToolsHeight', 'directoryQuickRemainingHeight', 'directoryCurrentOpenInset',
+  'directoryColumnWidth', 'windowInteractiveInsets', 'interactiveInsets', 'panelInsets', 'controlsPresentedForWindow', 'persistentDirectory', 'panelContentInset', 'panelWidth', 'directoryUtilityHeight', 'isActionPanel'];
 function fixture({ current = 71, night = false, stale = false, candidate = source } = {}) {
   const properties = createArkUIPropertyRuntimeProbe();
   const dependencies = { ...mangaDirectoryAdaptiveDependencies, ...properties.sdk, ...mangaSurfaceSdkDependencies, ...fonts, mangaDirectoryDisplay };
+  dependencies.ReaderWindowCoordinator = { ...dependencies.ReaderWindowCoordinator, isTabletDevice: () => false };
   const hooks = { ...properties.hooks, childSources: { MangaDirectoryCurrentFooter: footerSource }, mountChildren: true };
   dependencies.MangaDirectoryCurrentFooter = createReaderBuilderProbe(footerSource, boundedMembers(footerSource), dependencies, hooks).Component;
   const probe = createReaderBuilderProbe(candidate, names, dependencies, hooks);
@@ -38,7 +41,7 @@ function fixture({ current = 71, night = false, stale = false, candidate = sourc
     publishedManifestVersion: 4, downloadEnabled: true, isReaderIdentityCurrent: () => true, stageWidth: 390, viewportWidth: 390,
     stageHeight: 844, viewportHeight: 844, error: '', openingRetry: false, recovering: false,
     loginRequiredForControls: false, controlsVisible: false, windowChromeOverlayActive: false,
-    windowMetricsRevision: 0, quickHeaderMeasured: 0, quickToolsMeasured: 0, quickFooterMeasured: 0,
+    windowMetricsRevision: 0, quickHeaderMeasured: 0, quickToolsMeasured: 0, quickFooterMeasured: 0, directoryUtilityMeasured: 0,
     directoryEntries: () => entries, widePanel: () => false, panelContentHeight: () => 610,
     performPanelAction: async action => { events.push('close-panel'); action(); },
     turnBoundaryChapter: async direction => { events.push(['chapter', direction]); return ''; },
@@ -63,8 +66,12 @@ for (const night of [false, true]) {
   footer.owner.directoryCurrentFooter();
   assert.ok(footer.nodes().some(node => node.create === '41 上'), 'canonical current title survives sparse chapter indexes');
   assert.ok(footer.nodes().some(node => node.create === '5 / 24 页'), 'footer reads current controller page position');
-  assert.equal(footer.nodes().find(node => node.accessibilityText === '当前阅读位置').constraintSize.minHeight, 48,
+  const position = footer.nodes().find(node => node.accessibilityText === '当前阅读位置：41 上，5 / 24 页');
+  assert.equal(position.constraintSize.minHeight, 48,
     'actual shared footer owns its minimum height; native natural measured height is not simulated');
+  const scheme = night ? 'night' : 'day';
+  assert.equal(position.backgroundColor, readerAppColor('TOK_CARD_BG', scheme));
+  assert.equal(footer.nodes().find(node => node.create === '5 / 24 页').fontColor, readerAppColor('TOK_ACCENT', scheme));
 }
 const boundary = fixture({ current: 55 }); boundary.owner.directoryTools();
 assert.equal(boundary.nodes().find(node => node.accessibilityText === '上一章节').enabled, false,
@@ -118,7 +125,13 @@ function quickFlow(candidate = source) {
   // The shared footer has no additional margin: the parent gap owns spacing.
   assert.ok(!f.nodes().some(node => node.margin?.top === 17), 'no duplicate footer margin');
   f.owner.panelContentHeight = () => 300;
-  assert.equal(f.owner.directoryQuickHeight(), 67, '300 minus30 handle/41 header/56 tools/48 footer/two17 gaps/24 padding leaves67vp of directory');
+  assert.equal(f.owner.directoryQuickHeight(), 58, 'the short viewport keeps one readable row while its outer sheet can scroll');
+  // Above the minimum, both gaps and the reserved utility strip must reduce
+  // the list capacity. Measured fixture inputs keep this independent of the
+  // platform layout engine and make the one-gap negative control observable.
+  f.owner.panelContentHeight = () => 430;
+  Object.assign(f.owner, { quickHeaderMeasured: 50, quickToolsMeasured: 65, quickFooterMeasured: 48, directoryUtilityMeasured: 92 });
+  assert.equal(f.owner.directoryQuickHeight(), 430 - (30 + 50 + 65 + 48 + 17 + 17 + 24 + 92));
   return f;
 }
 quickFlow();

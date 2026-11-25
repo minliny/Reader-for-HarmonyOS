@@ -5,7 +5,7 @@ import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../founda
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../layout/SurfaceHorizontalGeometry';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
-import { readerActionIcon } from '../foundation/ReaderActionIconResources';
+import { readerPaperActionIcon } from '../foundation/ReaderActionIconResources';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { DialogSpecId, DialogSurfaceSpec, readerSurfaceElevation, resolveDialogSpec } from './ReaderSurfaceSpecs';
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
@@ -115,7 +115,7 @@ export struct ReaderDialogSurface {
           .textAlign(this.spec().headerTextAlign);
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Stack({ alignContent: Alignment.Center }) {
-            Image(readerActionIcon('close', this.appThemeScheme)).width(15).height(15)
+            Image(readerPaperActionIcon('close', this.appThemeScheme)).width(15).height(15)
               .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
           }.width(32).height(32).borderRadius(16)
             .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))

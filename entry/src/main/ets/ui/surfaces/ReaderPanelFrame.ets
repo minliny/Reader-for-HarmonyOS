@@ -5,6 +5,7 @@ import { TOK_BORDER_W, TOK_RADIUS_XL } from '../foundation/ReaderTokens';
 import type { ReaderRaisedShape } from '../layout/ReaderRaisedShape';
 
 export type ReaderPanelFrameId = 'reader' | 'reader-menu' | 'reader-card' | 'reader-full-card' | 'reader-soft-control' | 'floating-action-dock' |
+  'reader-island-card' | 'reader-island-emphasis' |
   'reader-quick-fill' | 'reader-full-fill' | 'manga-toolbar' | 'manga-dock' |
   'manga-directory-sheet' | 'manga-directory-rail' | 'manga-chapter-end';
 
@@ -27,7 +28,7 @@ export class ReaderPanelFrame implements AttributeModifier<CommonAttribute> {
       case 'floating-action-dock':
         instance.backgroundColor(readerAppColor('app.surface.dock', this.scheme))
           .border({ width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.scheme) })
-          .borderRadius(this.raisedShape?.radius ?? TOK_RADIUS_XL).clip(true)
+          .borderRadius(this.raisedShape?.radius ?? TOK_RADIUS_XL).clip(false)
           .shadow(readerSurfaceElevation('raised', this.scheme));
         return;
       case 'reader':
@@ -42,6 +43,14 @@ export class ReaderPanelFrame implements AttributeModifier<CommonAttribute> {
           .border({ width: TOK_BORDER_W,
             color: readerAppColor(this.id === 'reader-card' ? 'TOK_LINE_STRONG' : 'TOK_LINE', this.scheme) })
           .borderRadius(this.id === 'reader-card' ? 8 : 12);
+        return;
+      case 'reader-island-card':
+      case 'reader-island-emphasis':
+        instance.backgroundColor(readerAppColor(this.id === 'reader-island-emphasis' ?
+          'TOK_READ_CARD_EMPHASIS' : 'TOK_READ_ELEVATED', this.scheme))
+          .border({ width: TOK_BORDER_W, color: readerAppColor(this.id === 'reader-island-emphasis' ?
+            'TOK_PRIMARY_BORDER' : 'TOK_LINE', this.scheme) })
+          .borderRadius(12);
         return;
       case 'reader-soft-control':
         instance.backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.scheme))

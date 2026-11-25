@@ -34,6 +34,7 @@ export struct ReaderBottomNavigation {
   build() {
     ReaderNavigationAppearanceHost({
       inputEnabled: this.inputIsEnabled(),
+      bottomInset: this.bottomInset(), translateX: this.bottomBarTranslateX(),
       unifiedContent: (): void => { this.unifiedTabBar(); },
       nativeContent: (appearance: ReaderNavigationAppearance): void => { this.nativeTabBar(appearance); },
     });
@@ -43,8 +44,8 @@ export struct ReaderBottomNavigation {
   private unifiedTabBar() {
     ReaderBottomTabBar({
       items: this.items(), current: this.current, scheme: this.appThemeScheme,
-      surfaceWidth: this.bottomBarFrame().width, translateX: this.bottomBarTranslateX(),
-      bottomInset: this.bottomInset(), fontScale: this.navigationFontScale(), inputEnabled: this.inputIsEnabled(),
+      surfaceWidth: this.bottomBarFrame().width,
+      fontScale: this.navigationFontScale(), inputEnabled: this.inputIsEnabled(),
       onSelect: (key: string): void => { if (this.acceptsInput(key)) this.onSelect(key); },
       onCurrentTap: (key: string): void => { if (this.acceptsInput(key)) this.onCurrentTap(key); },
       onGeometryTrace: (width: number, paintReady: boolean): void => this.recordTabGeometry(width, paintReady),
@@ -60,9 +61,7 @@ export struct ReaderBottomNavigation {
       inputEnabled: this.inputIsEnabled(),
       onSelect: (key: string): void => { if (this.acceptsInput(key)) this.onSelect(key); },
       onCurrentTap: (key: string): void => { if (this.acceptsInput(key)) this.onCurrentTap(key); },
-    })
-      .margin({ bottom: this.bottomInset() })
-      .translate({ x: this.bottomBarTranslateX() });
+    });
   }
 
   private items(): ReaderBottomTabItem[] {

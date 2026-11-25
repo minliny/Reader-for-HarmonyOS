@@ -156,6 +156,11 @@ export function createDownloadBookView(book: ShelfBook): DownloadBookView {
   };
 }
 
+/** Carry the admitted media projection without changing the stored shelf DTO. */
+export function downloadReadingShelfBook(book: DownloadBookView, contentKind: 'manga' | 'text'): ShelfBook {
+  return { ...book.shelfBook, contentKind };
+}
+
 export function downloadChapterStateLabel(state: LocalReadingDownloadState, complete: boolean): string {
   if (complete) return '已下载';
   if (state === 'failed') return '下载失败';

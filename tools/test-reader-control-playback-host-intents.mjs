@@ -22,7 +22,8 @@ const file=localFilePath(new URL('../entry/src/main/ets/features/reading/ui/Loca
 if(selectedCase==='business-intent'){
 const names=['toggleTts','stopTts','toggleAutoPage','startAutoPageSession','stopAutoPage','cancelPendingAutoPageStart',
   'cancelPendingTtsPlay','createTtsPlayIntent','isTtsPlayIntentCurrent','retirePendingPlaybackStarts',
-  'captureControlPlaybackPresentation','isControlPlaybackPresentationCurrent','toggleSessionCapsule'];
+  'captureControlPlaybackPresentation','isControlPlaybackPresentationCurrent','toggleSessionCapsule',
+  'rememberStaticSessionCapsuleOrigin','hideControlForStaticSessionCapsule','onSessionLaunchTtsState'];
 const Host=productionMotionMethods(file,names,{...autoPolicy,readerTtsSessionBlocksAutoPageStart,
   readerControlContentLocation:s=>s.location});
 function deferred(){let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return {promise,resolve,reject};}
@@ -41,7 +42,8 @@ function owner(){
   ttsTimerDurationMs:()=>0,logTtsFailure:(s)=>calls.push(`error:${s}`),
   beginSessionCapsuleMorph(type){calls.push(`visual:${type}`);this.sessionLaunch={generation:1,geometry:{type},ownership:'stage',businessStatus:'preparing',desiredPlaying:true};return true;},
   cancelSessionLaunch(reason){calls.push(`cancel:${reason}`);this.sessionLaunch=undefined;},
-  hideControl:()=>calls.push('hide'),onSessionLaunchTtsState:()=>calls.push('ack'),
+  hideControl(_origin,type){calls.push('hide');if(type!==undefined)this.rememberStaticSessionCapsuleOrigin(type,this.controlSession);},
+  sessionLaunchSpeechFacts:()=>undefined,
   armAutoPageTimer(resetDeadline){calls.push('autoTimer');this.autoPageCoordinator.armPageTimer(resetDeadline);},
   armAutoPageSessionTimer:()=>{},clearAutoPageTimer:()=>{},clearAutoPageSessionTimer:()=>{},resetAutoPageSessionDuration:()=>{},
   pauseAutoPage(reason){this.autoPageCoordinator.pause(reason);},
@@ -62,6 +64,7 @@ function owner(){
   setDesiredPlaying:(_g,v)=>{host.sessionLaunch.desiredPlaying=v;}};
  host.ttsCoordinator={setDesiredPlaying:v=>calls.push(`desired:${v}`),
   start:async(_input,desired)=>{calls.push(`start:${desired}`);host.ttsState={status:'preparing',rate:1};},
+  whenStarted:()=>Promise.resolve(true),
   pause:async()=>{calls.push('pause');host.ttsState.status='paused';},resume:async()=>{calls.push('resume');},
   stop:async()=>{calls.push('stop');host.ttsState.status='idle';}};
  return {host,calls,availability};
@@ -95,6 +98,60 @@ for(const availabilityDelay of [false,true]){
  assert.ok(calls.includes('autoTimer'));
  assert.ok(calls.some(call=>call.startsWith('schedule:')),'admitted countdown is armed on the play call');
  assert.equal(host.autoPageState.status,'running');
+}
+for (const module of ['tts','autoPage']) {
+ const {host,calls}=owner();host.controlSession.location.module=module;
+ if(module==='tts'){
+  host.ttsState.status='paused';
+  host.toggleTts();
+  assert.ok(calls.includes('resume'));
+ }else{
+  host.autoPageCoordinator.start();host.autoPageCoordinator.pause('manual');
+  host.toggleAutoPage();
+  assert.equal(host.autoPageState.status,'running');
+ }
+ assert.equal(calls[0],`visual:${module}`,'resume from the visible playback module starts its own capsule flight');
+ assert.equal(calls.includes('hide'),false,'an admitted flight owns the control exit');
+}
+for (const result of ['confirmed', 'failure', 'reopened', 'unconfirmed']) {
+ const {host,calls}=owner();
+ host.ttsState.status='paused';
+ host.beginSessionCapsuleMorph=()=>false;
+ host.toggleTts();
+ assert.ok(calls.includes('resume'));
+ assert.equal(calls.includes('hide'),false,'resume dispatch alone does not hide the panel');
+ if (result==='reopened') host.controlModuleVisitRevision++;
+ const state={...host.ttsState,status:result==='failure'?'error':'playing',audioStarted:result!=='unconfirmed'};
+ host.ttsState=state;
+ host.onSessionLaunchTtsState(state);
+ assert.equal(calls.includes('hide'),result==='confirmed','only a current confirmed native resume may hide the panel');
+ assert.equal(host.staticSessionCapsuleOrigin?.location.module,result==='confirmed'?'tts':undefined);
+}
+for(const [module, expected] of [['autoPage',true],['tts',true],['tts',false]]){
+ const {host,calls}=owner();host.controlSession.location.module=module;
+ const started=deferred();
+ host.beginSessionCapsuleMorph=()=>false;
+ host.ttsCoordinator.whenStarted=()=>started.promise;
+ if(module==='autoPage'){
+  host.toggleAutoPage();assert.equal(host.autoPageState.status,'running');
+ }else{
+  host.toggleTts();assert.ok(calls.includes('start:true'));
+  assert.equal(calls.includes('hide'),false,'failed source capture cannot hide controls during TTS preparation');
+  host.ttsState.status=expected?'playing':'failed';
+  started.resolve(expected);await drain();
+ }
+ assert.equal(calls.includes('hide'),expected,'successful fallback leaves the static capsule visible');
+ assert.equal(host.staticSessionCapsuleOrigin?.location.module,expected?module:undefined);
+}
+{
+ const {host,calls}=owner(),started=deferred();
+ host.beginSessionCapsuleMorph=()=>false;
+ host.ttsCoordinator.whenStarted=()=>started.promise;
+ host.toggleTts();
+ host.controlModuleVisitRevision++;
+ host.ttsState.status='playing';
+ started.resolve(true);await drain();
+ assert.equal(calls.includes('hide'),false,'late audio ACK cannot dismiss the new control visit');
 }
 {
  const {host,calls}=owner(),pause=deferred();host.ttsState.status='playing';host.controlSession.location.module='autoPage';
@@ -158,6 +215,7 @@ const visual=Object.assign(new Visual(),{mounted:true,appForeground:true,exitReq
  controlPage:()=> 'quickAutoPage',sessionMorphSourceMeasurement:()=>source,
  sessionLaunchMeasurementKey:()=> 'measured',sessionLaunchLayoutKey:()=> 'layout',readingLayout:()=>({}),
  currentChapterIndex:()=>4,visiblePage:{startScalar:20},pageChromeClockText:'10:00',
+ readerSettingsSnapshot: { navigationMode: 'paged' },
  latestControlVisualSession:createReaderControlSessionState(),currentPageTurnRenderPage:()=>({chromeTopStartText:'book',chromeTopEndText:'10:00',chromeBottomStartText:'1%',chromeBottomEndText:'1/50'}),
  ttsState:{status:'idle'},autoPageState:autoPolicy.createReaderAutoPageState(8),
  automaticReadingState(){return this.autoPageState;},
@@ -179,6 +237,18 @@ now=10380;frames.shift().onFrame(now*1e6);
 assert.equal(visual.sessionLaunch.sample.finished,true);assert.equal(visual.sessionLaunch.ownership,'stage');
 assert.equal(frames.length,0);assert.equal(storage.get('readerSessionChromeOverlayActive'),true);
 assert.equal(visual.pageTurnRenderRevision,1,'the stable stage does not hand the footer back to old page textures');
+const Window = productionMotionMethods(file, ['controlsPresentedForWindow', 'applyWindowPolicyForChromeOwner'], {
+ AppStorage:{setOrCreate:(key,value)=>storage.set(key,value)},readerControlHostVisible:()=>false,
+});
+const windowPolicy=[];
+const windowOwner=Object.assign(new Window(),{mounted:true,windowChromeActive:true,appForeground:true,
+ syncVolumeKeyPolicy(){},applyReaderWindowPolicy:async(_settings,show)=>{windowPolicy.push(show);},
+ sessionLaunch:{ownership:'stage',sample:{controlsPresented:false,finished:false}}});
+windowOwner.applyWindowPolicyForChromeOwner();
+assert.equal(windowOwner.windowControlsPresented,false,'authored control paint leaves during flight');
+windowOwner.sessionLaunch.sample.finished=true;
+windowOwner.applyWindowPolicyForChromeOwner();
+assert.deepEqual(windowPolicy,[true,false],'the native status-bar change is deferred beyond the measurable flight');
 console.log('Reader playback Host intents: PASS (production methods; immediate visual, 380ms settlement and stable ownership)');
 
 }

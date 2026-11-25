@@ -46,7 +46,8 @@ class ReaderFormFieldModifier implements AttributeModifier<TextInputAttribute> {
     else if (spec.allPadding !== undefined) instance.padding(spec.allPadding);
     else if (spec.horizontalPadding !== undefined) instance.padding({ left: spec.horizontalPadding, right: spec.horizontalPadding });
     if (spec.caretRole !== undefined) instance.caretColor(readerAppColor(spec.caretRole, this.scheme));
-    if (spec.placeholderStyle !== undefined) instance.placeholderFont({ size: spec.placeholderStyle.fontSizeFp, family: spec.placeholderStyle.fontFamily });
+    if (spec.placeholderStyle !== undefined) instance.placeholderFont({ size: spec.placeholderStyle.fontSizeFp,
+      family: spec.placeholderStyle.fontFamily, weight: spec.placeholderStyle.fontWeight });
     if (spec.placeholderRole !== undefined) instance.placeholderColor(readerAppColor(spec.placeholderRole, this.scheme));
   }
 }
@@ -128,7 +129,7 @@ export struct ReaderFormField {
     } else if (this.specId === 'reader-content-search') {
       TextInput({ text: this.text, placeholder: this.placeholder, controller: this.inputController ?? this.nativeInputController })
         .attributeModifier(new ReaderEditableInputModifier(this.editingTarget, this.nativeInputId(), (editing: boolean): void => this.editChanged(editing)))
-        .enableKeyboardOnFocus(true).maxLines(1).enterKeyType(EnterKeyType.Search)
+        .enableKeyboardOnFocus(true).maxLines(1).enterKeyType(EnterKeyType.Search).halfLeading(true)
         .attributeModifier(new ReaderFormFieldModifier(this.specId, this.scheme, this.fieldAccessibilityLabel, this.fontScale()))
         .attributeModifier(new ReaderContentSearchNaturalFrame(this.naturalInputHeightVp))
         .enabled(this.isEditable).onChange(this.textChangeHandler())

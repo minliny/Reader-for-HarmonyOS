@@ -8,7 +8,7 @@ import type { ReaderDirectoryNavigationPortFactory } from '../application/Reader
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import { mangaDirectoryContextEntries } from '../../manga/ui/MangaDirectoryState';
 import { mangaDirectoryPresentation } from '../../manga/presentation/MangaDirectoryPresentation';
-import { TYPE_READER_DIRECTORY_COLLAPSE, TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_HEADING, TYPE_READER_DIRECTORY_POSITION_INTER, TYPE_READER_DIRECTORY_TAB, TYPE_SEARCH_DIRECTORY_INPUT } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_READER_DIRECTORY_CURRENT_CAPTION, TYPE_READER_DIRECTORY_COLLAPSE, TYPE_READER_DIRECTORY_CURRENT_TITLE, TYPE_READER_DIRECTORY_HEADING, TYPE_READER_DIRECTORY_POSITION_INTER, TYPE_READER_DIRECTORY_TAB, TYPE_SEARCH_DIRECTORY_INPUT } from '../../../ui/foundation/ReaderTypography';
 import { readerDirectoryScopeKey } from '../application/ReaderDirectoryNavigation';
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -16,15 +16,9 @@ import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGatewa
 import { sameReaderDirectoryData, snapshotReaderDirectoryData } from '../presentation/ReaderDirectoryDataSnapshot';
 import type { ReaderDirectoryChapterStartBookmarkRequest } from '../presentation/ReaderDirectoryMarkerState';
 import {
-  TOK_LINE,
-  TOK_READ_HANDLE,
-  TOK_READ_INK,
-  TOK_READ_MUTED,
-  TOK_READ_PRIMARY,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
-  TOK_SURFACE_PANEL_SOFT,
 } from '../../../ui/foundation/ReaderTokens';
 
 import { registerReaderFonts, readerFontFamilyReady } from '../../../ui/foundation/ReaderFonts';
@@ -87,13 +81,18 @@ export struct FullDirectoryPanel {
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
   private readonly editingScroller: Scroller = new Scroller();
-  private standaloneAvailableHeight(): number { return Math.max(0, this.standaloneShort() ? this.panelHeight() - 12 : this.contentHeight()); }
+  private standaloneAvailableHeight(): number {
+    if (this.detailPage) return this.panelHeight();
+    return Math.max(0, this.standaloneShort() ? this.panelHeight() - 12 : this.contentHeight());
+  }
   private standaloneEditorNaturalHeight(): number {
-    return this.panelHeaderHeight() + TOK_SPACE_XS + this.tabStripHeight() + this.searchControlsHeight() + 2;
+    const headerHeight = this.detailPage ? 0 : this.panelHeaderHeight() + TOK_SPACE_XS;
+    return headerHeight + this.tabStripHeight() + this.searchControlsHeight() + 2;
   }
   private standaloneEditorHeight(): number {
+    const minimumRowHeight = this.detailPage && this.activeTab === 'bookmarks' ? this.listRowHeight('bookmarks') : this.directoryRowHeight();
     return this.standaloneShort() ? Math.min(this.standaloneAvailableHeight(),
-      Math.max(Math.min(44, this.standaloneAvailableHeight()), this.standaloneAvailableHeight() - this.directoryRowHeight())) :
+      Math.max(Math.min(44, this.standaloneAvailableHeight()), this.standaloneAvailableHeight() - minimumRowHeight)) :
       Math.min(this.standaloneAvailableHeight(), this.standaloneEditorNaturalHeight());
   }
   @StorageLink('readerWindowMetricsRevision') @Watch('onMotionProgressChanged') private readerWindowMetricsRevision: number = 0;
@@ -140,6 +139,7 @@ export struct FullDirectoryPanel {
   // mode only renders one persistent directory/bookmark content instance.
   @Prop embeddedInControl: boolean = false;
   @Prop standaloneCatalog: boolean = false;
+  @Prop @Watch('onStandaloneLayoutChanged') detailPage: boolean = false;
   @Prop @Watch('onMotionProgressChanged') motionProgress: number = 1;
   @Prop initialTab: string = 'directory';
   // The control keeps this panel mounted across quick/full transitions. A
@@ -301,6 +301,8 @@ export struct FullDirectoryPanel {
   build() {
     if (this.embeddedInControl) {
       this.embeddedBody();
+    } else if (this.detailPage) {
+      this.standaloneBody();
     } else {
       this.standalonePanel();
     }
@@ -314,36 +316,48 @@ export struct FullDirectoryPanel {
       Stack().width(this.innerWidth()).height(this.standaloneShort() ? this.standaloneAvailableHeight() : this.bodyContentHeight())
         .position({ x: 13, y: this.standaloneShort() ? 6 : 6 + this.panelHeaderHeight() + TOK_SPACE_XS })
         .attributeModifier(new ReaderPanelFrame('reader-full-card', this.appThemeScheme)).hitTestBehavior(HitTestMode.None);
-      Column({ space: 0 }) {
-        Scroll(this.editingScroller) {
-          Column({ space: 0 }) {
-            this.panelHeader();
-            Blank().height(TOK_SPACE_XS);
-            this.tabs(); this.searchControls();
-          }.width(this.innerWidth()).height(this.standaloneEditorNaturalHeight());
-        }.width(this.innerWidth()).height(this.standaloneEditorHeight()).clip(true).scrollBar(BarState.Off)
-          .id(this.editingScroll.id)
-          .onAppear((): void => this.editingScroll.mount(this.getUIContext(), this.editingHost, this.editingScroller))
-          .onDisAppear((): void => this.editingScroll.unmount())
-          .onAreaChange((): void => this.editingHost.refresh());
-        if (this.activeTab === 'bookmarks') this.bookmarkBody();
-        else {
-          Stack() {
-            this.chapterList();
-            if (this.projectedEntries.length === 0 && !this.navigationActive) this.standaloneCatalogState();
-          }.width(this.innerWidth()).height(this.chapterListHeight());
-          if (!this.standaloneShort()) {
-            if (this.standaloneCatalog) this.catalogFooter();
-            else this.statusFooter();
-          }
-        }
-      }.width(this.innerWidth()).height(this.standaloneAvailableHeight()).margin({ left: 13, top: 6 });
+      this.standaloneBody();
     }.width(this.panelWidth()).height(this.panelHeight())
       .attributeModifier(new ReaderPanelFrame('reader', this.appThemeScheme)).clip(true);
   }
 
+  @Builder
+  private standaloneBody() {
+    Column({ space: 0 }) {
+      Scroll(this.editingScroller) {
+        Column({ space: 0 }) {
+          if (!this.detailPage) {
+            this.panelHeader();
+            Blank().height(TOK_SPACE_XS);
+          }
+          this.tabs(); this.searchControls();
+        }.width(this.innerWidth()).height(this.standaloneEditorNaturalHeight());
+      }.width(this.innerWidth()).height(this.standaloneEditorHeight()).clip(true).scrollBar(BarState.Off)
+        .id(this.editingScroll.id)
+        .onAppear((): void => this.editingScroll.mount(this.getUIContext(), this.editingHost, this.editingScroller))
+        .onDisAppear((): void => this.editingScroll.unmount())
+        .onAreaChange((): void => this.editingHost.refresh());
+      if (this.activeTab === 'bookmarks') this.bookmarkBody();
+      else {
+        Stack() {
+          this.chapterList();
+          if (this.projectedEntries.length === 0 && !this.navigationActive) this.standaloneCatalogState();
+        }.width(this.innerWidth()).height(this.chapterListHeight());
+        if (!this.standaloneShort()) {
+          if (this.standaloneCatalog) this.catalogFooter();
+          else this.statusFooter();
+        }
+      }
+    }.width(this.innerWidth()).height(this.standaloneAvailableHeight())
+      .margin({ left: this.detailPage ? 0 : 13, top: this.detailPage ? 0 : 6 });
+  }
+
   private standaloneShort(): boolean {
     if (this.embeddedInControl) return false;
+    if (this.detailPage) {
+      const needed = this.activeTab === 'bookmarks' ? this.listRowHeight('bookmarks') : this.directoryRowHeight() + this.standaloneFooterHeight();
+      return this.panelHeight() - this.standaloneEditorNaturalHeight() < needed;
+    }
     const heights = this.heights();
     return this.activeTab === 'bookmarks' ? heights.bookmarkList < this.listRowHeight('bookmarks') :
       heights.chapterList < this.directoryRowHeight();
@@ -365,9 +379,13 @@ export struct FullDirectoryPanel {
   private standaloneCatalogState() {
     ReaderPageState({ loading: this.catalogBusy && this.entries.length === 0,
       message: this.catalogBusy && this.entries.length === 0 ? '正在加载目录' : this.catalogEmptyMessage(),
-      actionLabel: this.catalogRetryVisible() ? '重试加载目录' : '',
+      actionLabel: this.catalogClearSearchVisible() ? '清除搜索' : this.catalogRetryVisible() ? '重试加载目录' : '',
       mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme),
-      onAction: (): void => { if (this.panelInputCurrent() && this.catalogRetryVisible()) this.onRetryCatalog(); } });
+      onAction: (): void => {
+        if (!this.panelInputCurrent()) return;
+        if (this.catalogClearSearchVisible()) this.clearCatalogSearch();
+        else if (this.catalogRetryVisible()) this.onRetryCatalog();
+      } });
   }
 
 
@@ -475,7 +493,7 @@ export struct FullDirectoryPanel {
           .fontFamily(TYPE_READER_DIRECTORY_HEADING.fontFamily)
           .fontWeight(TYPE_READER_DIRECTORY_HEADING.fontWeight)
           .fontSize(TYPE_READER_DIRECTORY_HEADING.fontSizeFp)
-          .lineHeight(TYPE_READER_DIRECTORY_HEADING.lineHeightFp as number)
+          .lineHeight(TYPE_READER_DIRECTORY_HEADING.lineHeightFp as number).halfLeading(true)
           .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       }
       .layoutWeight(1)
@@ -543,6 +561,11 @@ export struct FullDirectoryPanel {
     return !this.catalogBusy;
   }
 
+  private catalogClearSearchVisible(): boolean {
+    return !this.navigationActive && this.entries.length > 0 && this.projectedEntries.length === 0 &&
+      this.searchQuery.length > 0;
+  }
+
   @Builder
   private tabs() {
     Column({ space: 0 }) {
@@ -586,7 +609,7 @@ export struct FullDirectoryPanel {
           .fontFamily(TYPE_READER_DIRECTORY_TAB.fontFamily)
           .fontWeight(TYPE_READER_DIRECTORY_TAB.fontWeight)
           .fontSize(TYPE_READER_DIRECTORY_TAB.fontSizeFp)
-          .lineHeight(TYPE_READER_DIRECTORY_TAB.lineHeightFp as number)
+          .lineHeight(TYPE_READER_DIRECTORY_TAB.lineHeightFp as number).halfLeading(true)
           .fontColor(this.activeTab === 'directory' ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center);
       }
@@ -626,18 +649,18 @@ export struct FullDirectoryPanel {
         if (this.activeTab === 'bookmarks') {
           Image(this.appThemeScheme === 'night' ? $r('app.media.reader_page_bookmark_filled_theme_night') :
             $r('app.media.reader_page_bookmark_filled'))
-            .width(15)
-            .height(15);
+            .width(14)
+            .height(14);
         } else {
           Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_theme_night') : $r('app.media.reader_directory_marker_bookmark')))
-            .width(15)
-            .height(15);
+            .width(14)
+            .height(14);
         }
         Text('书签')
           .fontFamily(TYPE_READER_DIRECTORY_TAB.fontFamily)
           .fontWeight(TYPE_READER_DIRECTORY_TAB.fontWeight)
           .fontSize(TYPE_READER_DIRECTORY_TAB.fontSizeFp)
-          .lineHeight(TYPE_READER_DIRECTORY_TAB.lineHeightFp as number)
+          .lineHeight(TYPE_READER_DIRECTORY_TAB.lineHeightFp as number).halfLeading(true)
           .fontColor(this.activeTab === 'bookmarks' ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }
       .width('100%')
@@ -727,6 +750,7 @@ export struct FullDirectoryPanel {
             },
             onFirstLayout: (): void => this.onListFirstLayout(),
             onUserScrollIntent: (): void => this.onListUserScroll(),
+            onClearSearch: (): void => { if (this.navigationActive) this.clearCatalogSearch(); },
             onTreeStateChange: (active: boolean): void => {
               this.navigationActive = active;
               if (active) this.initialListPositionReady = true;
@@ -759,7 +783,7 @@ export struct FullDirectoryPanel {
         entries: this.projectedEntries,
         prefixHeight: this.standalonePrefixHeight(),
         prefixBuilder: (): void => { this.standalonePrefix(); },
-        emptyBuilder: (): void => { this.standaloneCatalogState(); },
+        emptyBuilder: (): void => { if (this.embeddedInControl) this.standaloneCatalogState(); },
         deferEntriesDuringMotion: this.embeddedInControl && this.controlProgress() > 0 && this.controlProgress() < 1,
         rowHeight: this.directoryListRowHeight(),
         listPaddingX: this.directoryListPaddingX(),
@@ -933,9 +957,7 @@ export struct FullDirectoryPanel {
       Row({ space: TOK_SPACE_CONTROL_INLINE }) {
         Text('当前章节')
           .flexShrink(0)
-          .fontFamily('ReaderNotoSansSC')
-          .fontWeight(FontWeight.Regular)
-          .fontSize(9)
+          .fontFamily(TYPE_READER_DIRECTORY_CURRENT_CAPTION.fontFamily).fontWeight(TYPE_READER_DIRECTORY_CURRENT_CAPTION.fontWeight).fontSize(TYPE_READER_DIRECTORY_CURRENT_CAPTION.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
           .maxLines(1);
         Text(this.currentTitle())
@@ -973,6 +995,12 @@ export struct FullDirectoryPanel {
     this.searchQuery = nextQuery;
     this.rebuildProjection(this.activeTab, this.ascending, nextQuery);
     this.scheduleProjectionTopScroll();
+  }
+
+  private clearCatalogSearch(): void {
+    if (!this.panelInputCurrent() || this.activeTab !== 'directory' || this.searchQuery.length === 0) return;
+    this.searchDraft = '';
+    this.applySearch('');
   }
 
   private shortBookmarkStateActionKey(): number {
@@ -1487,7 +1515,7 @@ export struct FullDirectoryPanel {
   }
 
   private innerWidth(): number {
-    if (this.embeddedInControl) return this.panelWidth();
+    if (this.embeddedInControl || this.detailPage) return this.panelWidth();
     return Math.max(0, this.panelWidth() - 26);
   }
 
@@ -1551,6 +1579,7 @@ export struct FullDirectoryPanel {
 
   private chapterListHeight(): number {
     if (this.standaloneShort()) return Math.max(0, this.standaloneAvailableHeight() - this.standaloneEditorHeight());
+    if (this.detailPage) return Math.max(0, this.panelHeight() - this.standaloneEditorHeight() - this.standaloneFooterHeight());
     if (this.embeddedInControl) {
       return Math.max(0, this.panelHeight() - this.controlValue(48, 99) - this.embeddedToolbarGrowth() - 48 * this.controlProgress() - 1);
     }
@@ -1559,6 +1588,7 @@ export struct FullDirectoryPanel {
 
   private bookmarkListHeight(): number {
     if (this.standaloneShort()) return Math.max(0, this.standaloneAvailableHeight() - this.standaloneEditorHeight());
+    if (this.detailPage) return Math.max(0, this.panelHeight() - this.standaloneEditorHeight());
     if (this.embeddedInControl) return Math.max(0, this.panelHeight() - this.controlValue(47, 99) - this.embeddedToolbarGrowth() - 1);
     return this.heights().bookmarkList;
   }

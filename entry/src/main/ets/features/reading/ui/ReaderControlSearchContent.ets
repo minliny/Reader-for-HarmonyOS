@@ -21,8 +21,9 @@ import { sampleReaderControlMotionPresentation, readerControlMotionClipRects, re
 import { sampleReaderControlMorphScrollPath,
   type ReaderControlMorphScrollPath } from './ReaderControlMorphScroll';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
-import { TOK_BORDER_W, TOK_DANGER, TOK_LINE, TOK_LINE_STRONG, TOK_READ_INK,
-  TOK_READ_MUTED, TOK_READ_PRIMARY, TOK_SURFACE_PANEL_SOFT } from '../../../ui/foundation/ReaderTokens';
+import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
+import { SEARCH_CONTROL_CLEAR_END_INSET, SEARCH_CONTROL_CLEAR_ICON_SIZE, SEARCH_CONTROL_CLEAR_SLOT,
+  SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
 import type { ReadingContentSearchResult } from '../application/ReadingSessionFlowGateway';
 import { ReaderContentSearchPublication, type ReaderQuickSearchState, type ReaderQuickSearchResultsState } from '../presentation/ReaderContentSearchPublication';
 import { ReaderContentSearchDataSource, readerContentSearchResultKey } from './ReaderContentSearchDataSource';
@@ -676,7 +677,7 @@ export struct ReaderControlSearchContent {
 
   @Builder
   private searchField() {
-    Row({ space: 5 }) {
+    Row({ space: 0 }) {
       ReaderFormField({ editingHost: this.editingHost, specId: 'reader-content-search', scheme: this.appThemeScheme,
         editingContext: (field: ReaderRectVp): ReaderRectVp | undefined => this.queryEditingContext(field),
         naturalInputHeightVp: this.frame().inputHeightVp,
@@ -684,12 +685,33 @@ export struct ReaderControlSearchContent {
         fieldAccessibilityLabel: '搜索正文内容', onTextChange: (value: string): void => {
           if (this.currentEditorInputEnabled()) this.onQueryChange(value);
         },
-        onEditingChange: (editing: boolean): void => this.onQueryEditingChanged(editing), onSubmit: (): void => this.submit() });
+        onEditingChange: (editing: boolean): void => this.onQueryEditingChanged(editing), onSubmit: (): void => this.submit() })
+        .layoutWeight(1);
+      if (this.query.length > 0) {
+        Button({ type: ButtonType.Normal, stateEffect: false }) {
+          Image(this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear'))
+            .width(SEARCH_CONTROL_CLEAR_ICON_SIZE).height(SEARCH_CONTROL_CLEAR_ICON_SIZE)
+            .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
+        }.width(SEARCH_CONTROL_CLEAR_SLOT).height(this.frame().field.height).padding({ left: 10 })
+          .backgroundColor(Color.Transparent).focusOnTouch(false)
+          .responseRegion({ x: -SEARCH_CONTROL_CLEAR_END_INSET,
+            y: (this.frame().field.height - Math.max(this.frame().field.height, SEARCH_CONTROL_MIN_TARGET)) / 2,
+            width: SEARCH_CONTROL_MIN_TARGET, height: Math.max(this.frame().field.height, SEARCH_CONTROL_MIN_TARGET) })
+          .enabled(this.currentEditorInputEnabled()).accessibilityText('清空正文搜索')
+          .onClick((): void => {
+            if (!this.currentEditorInputEnabled()) return;
+            this.onQueryChange('');
+            this.focusQueryField();
+          });
+      }
     }
     .id('reader-control-search-field')
     .width(this.frame().field.width).height(this.frame().field.height)
-    .padding({ left: 9, right: 9 }).alignItems(VerticalAlign.Center)
-    .attributeModifier(new ReaderPanelFrame('reader-soft-control', this.appThemeScheme))
+    .padding({ left: 9, right: this.query.length > 0 ? SEARCH_CONTROL_CLEAR_END_INSET : 9 })
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+    .borderRadius(this.frame().field.height / 2)
     .position({ x: this.frame().field.x, y: this.frame().field.y })
     .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
     .onClick((): void => this.focusQueryField());

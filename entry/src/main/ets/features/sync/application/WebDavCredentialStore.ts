@@ -7,6 +7,7 @@ import asset from '@ohos.security.asset';
 import util from '@ohos.util';
 import { errorMessageOf } from '../../../app/ErrorMessage';
 import type { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
+import { DEFAULT_BOOKSHELF_VIEW } from '../../bookshelf/application/BookshelfViewMode.ts';
 import { readerHostFilesDirectory, readerHostPreferencesName, READER_PUBLIC_FIXTURE_IDS,
   type ReaderPublicFixtureId, type ReaderPublicFixtureScope } from '../../../app/diagnostics/ReaderPublicFixtureScope';
 
@@ -229,7 +230,7 @@ export class WebDavCredentialStore {
   private async readOrMigrateViewMode(allowMigration: boolean = true): Promise<'cover' | 'list'> {
     const store = await this.ensureLocalPreferences();
     const present = await store.has(LOCAL_VIEW_MODE_KEY);
-    const stored = await store.get(LOCAL_VIEW_MODE_KEY, 'cover');
+    const stored = await store.get(LOCAL_VIEW_MODE_KEY, DEFAULT_BOOKSHELF_VIEW);
     const version = await store.get(LOCAL_MIGRATION_KEY, 0);
     if (present) {
       if (stored !== 'cover' && stored !== 'list') throw new Error('BOOKSHELF_VIEW_MODE_INVALID');
@@ -241,7 +242,7 @@ export class WebDavCredentialStore {
     // Only a truly absent local key may consult the legacy raw Asset field.
     // Never interpret load()'s former synthetic cover as a prior user choice.
     const legacy = version === LOCAL_CONFIG_VERSION ? null : await this.load();
-    const mode = legacy?.bookshelfViewMode === 'list' ? 'list' : 'cover';
+    const mode = legacy?.bookshelfViewMode === 'cover' ? 'cover' : DEFAULT_BOOKSHELF_VIEW;
     await this.writeLocalViewMode(store, mode);
     return mode;
   }
@@ -249,7 +250,7 @@ export class WebDavCredentialStore {
   private async writeLocalViewMode(store: preferences.Preferences, mode: 'cover' | 'list',
     observation?: ReaderWriteEvidence, isCurrent: () => boolean = (): boolean => true): Promise<void> {
     const hadMode = await store.has(LOCAL_VIEW_MODE_KEY);
-    const priorMode = await store.get(LOCAL_VIEW_MODE_KEY, 'cover');
+    const priorMode = await store.get(LOCAL_VIEW_MODE_KEY, DEFAULT_BOOKSHELF_VIEW);
     const priorVersion = await store.get(LOCAL_MIGRATION_KEY, 0);
     if (!isCurrent()) throw new Error('BOOKSHELF_VIEW_MODE_RETIRED');
     observation?.dispatched();

@@ -32,7 +32,7 @@ export function withReaderSectionHeading(controls, roles=readerTypographyRoles) 
 }
 export function foundationModifiers(specs=foundationSpecs(),ColorMetrics,sourceOverrides={}) {
  const feedback=productionReaderPressFeedback({ColorMetrics});
- const common={...readerFoundationTokens,...specs,...surfaceFontResolvers(),readerAppColor,ReaderPressFeedback:feedback,TextAlign:{Center:'TextAlign.Center'},TextOverflow:{Ellipsis:'TextOverflow.Ellipsis'},VerticalAlign:{Center:'VerticalAlign.Center'},AccessibilityRoleType:{BUTTON:'AccessibilityRoleType.BUTTON',RADIO:'AccessibilityRoleType.RADIO'},Color:{Transparent:'Color.Transparent'}};
+ const common={...readerFoundationTokens,...specs,...surfaceFontResolvers(),readerAppColor,ReaderPressFeedback:feedback,Alignment:{Center:'Alignment.Center'},TextAlign:{Center:'TextAlign.Center'},TextOverflow:{Ellipsis:'TextOverflow.Ellipsis'},VerticalAlign:{Center:'VerticalAlign.Center'},AccessibilityRoleType:{BUTTON:'AccessibilityRoleType.BUTTON',RADIO:'AccessibilityRoleType.RADIO'},Color:{Transparent:'Color.Transparent'}};
  const load=(source,fileName,names)=>pureModuleProbe(source.slice(0,source.indexOf('@Component')),fileName,common,names);
  return {ReaderPressFeedback: feedback, ...load(sourceOverrides.buttonSource??buttonSource,'ReaderButton.ets',['ReaderButtonLabelModifier','ReaderButtonFrameModifier','ReaderButtonTextModifier','ReaderButtonSelectionModifier']),...load(sourceOverrides.fieldSource??fieldSource,'ReaderFormField.ets',['ReaderFormFieldModifier','ReaderFormAreaModifier','ReaderContentSearchNaturalFrame'])};
 }
@@ -43,7 +43,7 @@ export function foundationControls({specs=foundationSpecs(),ColorMetrics,buttonS
  const deps={...properties.sdk,...readerFoundationTokens,...specs,...surfaceFontResolvers(),...modifiers,readerWindowMetrics:windowMetrics,ReaderWindowCoordinator:{metrics:windowMetrics},InputType:{Password:'InputType.Password',Number:'InputType.Number'}};
  require(sdk+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('ReaderButton',new Set(['leading']));
  require(sdk+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('ReaderCard',new Set(['content']));
- const button=createReaderBuilderProbe(buttonDefinition,['readerWindowMetricsRevision','reduceMotion','scheme','specId','label','variant','visualSize','primary','actionEnabled','layout','isBusy','availableWidth','actionAccessibilityLabel','selectionSemantic','focusId','pressPointer','leading','emptyLeading','onAction','onFocused','mounted','aboutToAppear','aboutToDisappear','build','matrixButton','matrixVariant','matrixSize','matrixPaint','observePress','resetPress','commit','fontScale'],deps,properties.hooks);
+ const button=createReaderBuilderProbe(buttonDefinition,['readerWindowMetricsRevision','reduceMotion','scheme','specId','label','variant','visualSize','primary','actionEnabled','layout','isBusy','availableWidth','controlWidth','controlHeight','actionAccessibilityLabel','selectionSemantic','focusId','preferDefaultFocus','pressPointer','leading','emptyLeading','onAction','onFocused','mounted','aboutToAppear','aboutToDisappear','build','matrixButton','matrixVariant','matrixSize','matrixPaint','matrixLabelStyle','matrixWidth','matrixPadding','matrixOpacity','observePress','resetPress','commit','fontScale'],deps,properties.hooks);
  const editing = readerEditingSdk();
  const field = createReaderBuilderProbe(fieldDefinition, [
    'readerWindowMetricsRevision', 'scheme', 'specId', 'text', 'placeholder', 'isEditable', 'password',

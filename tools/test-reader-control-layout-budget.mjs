@@ -155,7 +155,7 @@ async function run(id) {
             },
         }) };
     Object.assign(deps, pureModuleProbe(read('entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts'), 'ReaderSurfaceResolvers.ts', {}, ['readerReadableFontScale', 'readerScaledControlHeight']));
-    const ttsFacts = { playbackLabel: '朗读内容', status: '未开始', voice: '很长的中文女声音色', timerCaption: '不开启', timerSummary: '00:00', minutes: '00', seconds: '00', rate: '1.00x', error: '', seek: false, online: false, serviceDescription: '设备内置语音', manageLabel: '已配置 · 编辑', engineValue: '系统语音', languageValue: '中文普通话', failureValue: '停止并提示' };
+    const ttsFacts = { playbackLabel: '朗读内容', status: '未开始', voice: '很长的中文女声音色', timerCaption: '不开启', timerSummary: '00:00', minutes: '00', seconds: '00', rate: '1.00x', error: '', seek: false, online: false, serviceDescription: '设备内置语音', manageLabel: '已配置 · 编辑', engineValue: '系统语音', languageValue: '中文普通话', sessionValue: '语音播放', failureValue: '停止并提示' };
     const widths = w => ({ panelWidthVp: w + 26, quickContentWidthVp: w - 52, fullContentWidthVp: w });
     const minimum = pure('ReaderControlMinimumMeasurement.ets', ['measureReaderControlMinimum',
         'readerControlModuleFactsGeometryKey', 'readerControlModuleFactsDisplayEqual',
@@ -1623,6 +1623,7 @@ async function run(id) {
             assert.ok(auto.fullText.timerPickerY + auto.fullText.wheelRowHeight * 3 + 4 + auto.fullText.wheelUnitHeight <= auto.full.timer.height - 33.39 + .1);
             const tts = tt.measureReaderTtsMinimum(context, w, ttsFacts);
             assert.ok(tts);
+            assert.ok(tts.quickText.sessionFieldWidth >= 44 && tts.fullText.sessionFieldWidth >= 44);
             for (const text of [tts.quickText, tts.fullText])
                 for (const key of ['timerPreset', 'timerStepButton', 'ratePreset', 'manageButton'])
                     assert.ok(text[key] >= 44, key);

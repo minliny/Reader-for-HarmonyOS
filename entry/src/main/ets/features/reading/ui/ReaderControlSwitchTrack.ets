@@ -1,5 +1,4 @@
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import { TOK_READ_ELEVATED, TOK_READ_PRIMARY } from '../../../ui/foundation/ReaderTokens';
 
 /** Visual-only shared switch. The owning row retains business availability,
  * accessibility and its click callback; this child never starts an animation or

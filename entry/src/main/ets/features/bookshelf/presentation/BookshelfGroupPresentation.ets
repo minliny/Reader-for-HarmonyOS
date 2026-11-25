@@ -94,7 +94,7 @@ export class BookshelfGroupPresentation {
     const mutation = this.snapshot.managementMutation;
     return this.snapshot.receipt?.facts.generation === expected && !this.snapshot.busy &&
       mutation?.canContinueOriginal === true && mutation.method === 'bookshelf.group.assign' &&
-      mutation.sourceId === this.book?.sourceId && mutation.bookId === this.book?.bookId && mutation.group === '';
+      mutation.sourceId === this.book?.sourceId && mutation.bookId === this.book?.bookId;
   }
 
   recovery(expected: number): ReaderRecoveryView {
@@ -117,15 +117,28 @@ export class BookshelfGroupPresentation {
     }
   }
 
-  async assignDefault(identity: string): Promise<void> {
+  currentGroup(): string {
+    const admitted = this.book;
+    if (admitted === undefined) return '';
+    const book = this.snapshot.data.books.find((row: ShelfBook): boolean =>
+      row.sourceId === admitted.sourceId && row.bookId === admitted.bookId);
+    return ((book ?? admitted).group ?? '').trim();
+  }
+
+  async assignGroup(identity: string, group: string): Promise<void> {
     const opening = this.opening;
     const host = this.host;
     const current = (): boolean => this.isCurrent(identity);
-    if (opening === undefined || host === undefined || !current() || this.assigning) return;
+    if (opening === undefined || host === undefined || !current() || this.assigning ||
+      this.snapshot.busy || this.snapshot.mutationBlocked === true) return;
+    if (group === this.currentGroup()) { this.dismiss(identity); return; }
+    if (group.length > 0 && !this.snapshot.data.groups.some(item => item.groupName === group)) return;
+    const priorGeneration = this.snapshot.receipt?.facts.generation;
     this.assigning = true;
     try {
-      const result = await host.assignDefaultGroup(opening.book, identity);
-      if (!current() || result?.receipt?.receipt.confirmation !== 'confirmed' || result.managementMutation?.blocked === true) return;
+      const result = await host.assignBookGroup(opening.book, group, identity);
+      if (!current() || result?.receipt?.receipt.confirmation !== 'confirmed' ||
+        result.receipt.facts.generation === priorGeneration || result.managementMutation?.blocked === true) return;
       opening.onApplied();
       if (result.receipt.receipt.fact === 'confirmedRefreshFailed') opening.onNotice('分组已保存，列表刷新失败', current);
       this.retire();

@@ -2,25 +2,16 @@ import { readerKeyboardHostBottom } from '../../ui/layout/ReaderKeyboardGeometry
 import { ReaderEditingVisibility } from '../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../ui/layout/ReaderEditingScrollBinding';
 import { readerWindowMetrics } from '../../ui/foundation/ReaderWindowEnvironment';
-import { readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../../ui/foundation/ReaderWindowMetrics';
+import { readerInteractiveSafeTop } from '../../ui/foundation/ReaderWindowMetrics';
 import { readerPageAreaLength } from '../../ui/layout/ReaderPageShell';
 import { ReaderButton } from '../../ui/controls/ReaderButton';
 import { ReaderFormField } from '../../ui/controls/ReaderFormField';
-import { TYPE_FORM_ACTION, TYPE_FORM_LABEL_ACTION, TYPE_FORM_NOTE, TYPE_FORM_URL_INPUT, TYPE_JSON_IMPORT_DESCRIPTION } from '../../ui/foundation/ReaderTypography';
+import { TYPE_FORM_ACTION } from '../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
 import { registerReaderFonts } from '../../ui/foundation/ReaderFonts';
-import {
-  TOK_BORDER,
-  TOK_BORDER_W,
-  TOK_DANGER,
-  TOK_INK,
-  TOK_MUTED,
-  TOK_SPACE_MD,
-  TOK_SPACE_SM,
-  TOK_SPACE_XS,
-  TOK_SURFACE_FIELD,
-} from '../../ui/foundation/ReaderTokens';
+import { TOK_SPACE_XS } from '../../ui/foundation/ReaderTokens';
 import { ReaderDialogSurface, DialogActionView } from '../../ui/surfaces/ReaderDialogSurface';
+import { readerImportCardTransition, readerImportOverlayTransition } from '../../ui/surfaces/ReaderImportDialogStyle';
 import { MESSAGE_BODY, MESSAGE_META } from '../../ui/foundation/ReaderMessageStyle';
 import { FrameCallback } from '@kit.ArkUI';
 import type { JsonImportFocusReturn } from './JsonImportPresentation';
@@ -51,6 +42,7 @@ export struct JsonImportDialog {
   private readonly editingScroller: Scroller = new Scroller();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerAppForeground') private foreground: boolean = true;
+  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   title: string = '导入 JSON';
@@ -79,6 +71,8 @@ export struct JsonImportDialog {
   aboutToDisappear(): void { this.mounted = false; this.focusRevision += 1; this.urlInputRevision += 1; }
 
   private inputIsCurrent(): boolean { return this.mounted && (this.isInputAllowed?.() ?? true); }
+
+  private dismissIfCurrent(): void { if (this.foreground && this.inputIsCurrent()) this.onDismiss(); }
 
   private focusScopeKey(): string { return `reader-json-import:${this.openingId}`; }
   private localFocusKey(): string { return `${this.focusScopeKey()}:local`; }
@@ -120,32 +114,26 @@ export struct JsonImportDialog {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
+      Row().width('100%').height('100%').backgroundColor(readerAppColor('app.scrim.modal', this.appThemeScheme))
+        .backdropBlur(6).accessibilityLevel('no')
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+        .onClick((): void => this.dismissIfCurrent());
       Scroll(this.editingScroller) {
-      Column() {
-      ReaderDialogSurface({
-        specId: 'json-import',
-        title: this.title,
-        showCloseButton: true,
-        actions: [
-          new DialogActionView('importOnline', '从在线链接导入', 'primary', true, false),
-        ],
-        onAction: (id: string): void => {
-          if (id === 'importOnline') {
-            this.submitOnlineImport();
-          }
-        },
-        onClose: (): void => this.onDismiss(),
-        body: (): void => {
-          this.formBody();
-        },
-      })
-      }.width('100%').constraintSize({ minHeight: this.availableHeight() }).justifyContent(FlexAlign.Center);
+        Column() {
+          ReaderDialogSurface({ specId: 'json-import', title: this.title, showCloseButton: true,
+            actions: [new DialogActionView('importOnline', '从在线链接导入', 'primary', true, false)],
+            onAction: (id: string): void => { if (id === 'importOnline') this.submitOnlineImport(); },
+            onClose: (): void => this.dismissIfCurrent(),
+            body: (): void => { this.formBody(); },
+          }).transition(readerImportCardTransition(this.reduceMotion)).hitTestBehavior(HitTestMode.Default);
+        }.width('100%').constraintSize({ minHeight: this.availableHeight() }).justifyContent(FlexAlign.Center)
+          .hitTestBehavior(HitTestMode.Transparent);
       }.width('100%').height(this.availableHeight()).position({ x: 0, y: this.safeTop() })
         .id(this.editingScroll.id)
         .onAppear((): void => this.editingScroll.mount(this.getUIContext(), this.editingHost, this.editingScroller))
         .onDisAppear((): void => this.editingScroll.unmount())
         .onAreaChange((): void => this.editingHost.refresh())
-        .scrollBar(BarState.Auto).clip(true);
+        .scrollBar(BarState.Auto).clip(true).hitTestBehavior(HitTestMode.Transparent);
     }
     .width('100%')
     .height('100%')
@@ -157,7 +145,7 @@ export struct JsonImportDialog {
     .id(this.focusScopeKey()).focusable(true).focusScopeId(this.focusScopeKey(), true, false)
     .onAppear((): void => this.requestInitialFocus())
     .onDisAppear(this.restoreFocusAction())
-    .backgroundColor(readerAppColor('app.scrim.import', this.appThemeScheme))
+    .transition(readerImportOverlayTransition(this.reduceMotion))
     .zIndex(200);
   }
 
@@ -175,7 +163,7 @@ export struct JsonImportDialog {
 
   @Builder
   private formBody() {
-    Column({ space: 16 }) {
+    Column({ space: 12 }) {
       Text(this.description)
         .width('100%')
         .fontFamily(MESSAGE_BODY.fontFamily as string)
@@ -186,7 +174,7 @@ export struct JsonImportDialog {
       this.localButton();
 
       Column({ space: TOK_SPACE_XS }) {
-        Text('在线链接')
+        Text('或输入在线链接')
           .width('100%')
           .fontFamily(TYPE_FORM_ACTION.fontFamily)
           .fontWeight(TYPE_FORM_ACTION.fontWeight)

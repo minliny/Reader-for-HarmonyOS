@@ -1,3 +1,4 @@
+import { readerPaperActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
@@ -199,11 +200,10 @@ export struct ReaderDirectoryToolbar {
   private catalogTool(sort: boolean, inputFocusId: string) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Stack({ alignContent: Alignment.Center }) {
-        Image(sort ? this.mangaSortIcon() : this.appThemeScheme === 'night' ?
-          $r('app.media.reader_action_download_theme_night') : $r('app.media.reader_action_download'))
+        Image(sort ? this.mangaSortIcon() : readerPaperActionIcon('download', this.appThemeScheme))
           .width(16).height(16).objectFit(ImageFit.Contain);
       }.width(36).height(36).borderRadius(18)
-        .backgroundColor(readerAppColor(sort && !this.ascending ? 'TOK_PRIMARY_SOFT' : 'TOK_SURFACE', this.appThemeScheme))
+        .backgroundColor(readerAppColor(sort && !this.ascending ? 'TOK_PRIMARY_SOFT' : 'TOK_CARD_BG', this.appThemeScheme))
         .border({ width: 1, color: readerAppColor(sort && !this.ascending ? 'TOK_PRIMARY_BORDER' : 'TOK_LINE', this.appThemeScheme) })
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
     }.width(44).height(44).padding(0).backgroundColor(Color.Transparent)

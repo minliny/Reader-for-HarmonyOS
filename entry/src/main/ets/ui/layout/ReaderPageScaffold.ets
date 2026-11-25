@@ -61,24 +61,25 @@ export struct ReaderPageScaffold {
             content: (): void => { this.header(); },
             onHeightChange: (height: number, presentedKey: number): void => this.onHeaderHeightChange(height, presentedKey) });
         }.width('100%').padding({ left: this.geometry.header.insetLeft, right: this.geometry.header.insetRight })
-          .margin({ top: this.geometry.header.top }).zIndex(10).hitTestBehavior(HitTestMode.Transparent);
+          .margin({ top: this.geometry.header.top }).zIndex(10)
+          .hitTestBehavior(HitTestMode.Default).touchable(false);
       }
-      Stack({ alignContent: Alignment.Bottom }) {
-        Column() {
-          Column() { this.footer(); }
-            .width('100%').padding({ left: this.geometry.footer.insetLeft, right: this.geometry.footer.insetRight })
-            .hitTestBehavior(this.footerSurfaceValue() === 'solid' ? HitTestMode.Default : HitTestMode.Transparent)
-            .id(this.footerMeasurement.id)
-            .onAppear((): void => this.footerMeasurement.mount(this.getUIContext(), this.footerMeasurementKey,
-              (height: number, key: number): void => this.onFooterHeightChange(height, key)))
-            .onDisAppear((): void => this.footerMeasurement.unmount())
-            .onAreaChange(this.footerAreaChangeHandler(this.footerMeasurementKey));
-        }.width('100%')
-          .hitTestBehavior(this.footerSurfaceValue() === 'solid' ? HitTestMode.Default : HitTestMode.Transparent)
-          .padding({ bottom: this.footerSurfaceValue() === 'solid' ? this.geometry.footer.bottom : 0 })
-          .margin({ bottom: this.footerSurfaceValue() === 'solid' ? 0 : this.geometry.footer.bottom })
-          .attributeModifier(new ReaderFooterFrameModifier(this.frameStyle.footer));
-      }.width('100%').height('100%').zIndex(20).hitTestBehavior(HitTestMode.Transparent);
+      // Keep sibling blocking on a child hit. A layout carrier's empty lane
+      // has no hit region of its own, even when it spans the viewport width.
+      Column() {
+        Column() { this.footer(); }
+          .width('100%').padding({ left: this.geometry.footer.insetLeft, right: this.geometry.footer.insetRight })
+          .hitTestBehavior(HitTestMode.Default).touchable(false)
+          .id(this.footerMeasurement.id)
+          .onAppear((): void => this.footerMeasurement.mount(this.getUIContext(), this.footerMeasurementKey,
+            (height: number, key: number): void => this.onFooterHeightChange(height, key)))
+          .onDisAppear((): void => this.footerMeasurement.unmount())
+          .onAreaChange(this.footerAreaChangeHandler(this.footerMeasurementKey));
+      }.width('100%').layoutGravity(LocalizedAlignment.BOTTOM).zIndex(20)
+        .hitTestBehavior(HitTestMode.Default).touchable(this.footerSurfaceValue() === 'solid')
+        .padding({ bottom: this.footerSurfaceValue() === 'solid' ? this.geometry.footer.bottom : 0 })
+        .margin({ bottom: this.footerSurfaceValue() === 'solid' ? 0 : this.geometry.footer.bottom })
+        .attributeModifier(new ReaderFooterFrameModifier(this.frameStyle.footer));
       Stack({ alignContent: Alignment.TopStart }) { this.overlayContent(); }
         .width('100%').height('100%').zIndex(30).hitTestBehavior(HitTestMode.Transparent);
     }.width('100%').height('100%')

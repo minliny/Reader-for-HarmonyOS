@@ -34,10 +34,12 @@ export function readerSurfaceSpecsForProbe(metrics = { densityPixels: 1 }) {
   const { readerWindowMetrics } = readerWindowEnvironmentForProbe(() => metrics);
   const implementation = stripped(read('ui/surfaces','ReaderSurfaceSpecs')).replace(/^import[^;]+;\s*/gm, '');
   return new Function('TextAlign', 'SOURCE_SWITCH_VISUAL', 'readerWindowMetrics', 'readerAppColor', 'ShadowType',
+    'READER_FONT_NOTO_SANS_SC_UI_BOLD',
     `${implementation};return { resolvePopupSpec, resolveSheetSpec, resolveDialogSpec, resolveActionSheetSpec,
       resolveDrawerSpec, readerSurfaceElevation, readerRaisedSurfaceSpec, readerHeaderVeilMaterial, readerHeaderVeilBorder,
       READER_GLASS_BLUR_VP, READER_HEAVY_GLASS_BLUR_VP };`)(
-    textAlign, SOURCE_SWITCH_VISUAL, readerWindowMetrics, readerAppColor, { COLOR: 'ShadowType.COLOR' });
+    textAlign, SOURCE_SWITCH_VISUAL, readerWindowMetrics, readerAppColor, { COLOR: 'ShadowType.COLOR' },
+    readerFonts.READER_FONT_NOTO_SANS_SC_UI_BOLD);
 }
 const specs = readerSurfaceSpecsForProbe();
 // Finite native color port for the actual per-book SVG stroke actor. Channel

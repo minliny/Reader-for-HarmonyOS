@@ -1,6 +1,6 @@
 import { ReaderTextStyle } from './ReaderTypography';
 import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
-  READER_FONT_NOTO_SANS_SC_UI_600 } from './ReaderFontFamilies';
+  READER_FONT_NOTO_SANS_SC_UI_BOLD } from './ReaderFontFamilies';
 
 export const MESSAGE_INLINE_STATE_SPACING = 4;
 
@@ -12,7 +12,7 @@ export const MESSAGE_INLINE_STATE_SPACING = 4;
 // some message bodies also inherit the default weight. A physical face
 // carries the reviewed weight for every consumer, including native measure.
 export const MESSAGE_TITLE = new ReaderTextStyle(
-  READER_FONT_NOTO_SANS_SC_UI_600, 600, 17, 24, undefined, 'system', 'appBaseline');
+  READER_FONT_NOTO_SANS_SC_UI_BOLD, 700, 17, 24, undefined, 'system', 'appBaseline');
 export const MESSAGE_BODY = new ReaderTextStyle(
   READER_FONT_NOTO_SANS_SC_UI_REGULAR, 400, 13, 21, undefined, 'system', 'appBaseline');
 export const MESSAGE_ACTION = new ReaderTextStyle(

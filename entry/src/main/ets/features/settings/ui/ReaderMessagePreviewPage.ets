@@ -37,6 +37,7 @@ function previewImportBatch(partial: boolean): LocalImportBatch {
  * this mounted preview and its generation; no real operation is dispatched. */
 @Component
 export struct ReaderMessagePreviewPage {
+  @Prop embeddedWide: boolean = false;
   @Prop @Watch('admissionChanged') previewEnabled: boolean = false;
   @StorageLink('readerAppForeground') @Watch('admissionChanged') private foreground: boolean = true;
   @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
@@ -160,7 +161,7 @@ export struct ReaderMessagePreviewPage {
   private taskActive(): boolean { return this.scene === 'task-running' || this.scene === 'task-success' || this.scene === 'task-partial'; }
 
   build() {
-    ReaderStandardPage({ variant: 'settingsGeneral', scroller: this.scroller,
+    ReaderStandardPage({ floatingHeader: true, embeddedWide: this.embeddedWide, variant: 'settingsGeneral', scroller: this.scroller,
       header: (): void => { this.header(); }, content: (): void => { this.content(); },
       boundedOverlayVisible: this.admitted() && this.noticeActive(),
       boundedOverlayContent: (): void => { this.noticePreview(); },
@@ -173,12 +174,12 @@ export struct ReaderMessagePreviewPage {
   }
 
   @Builder
-  private header() { PageBackBar({ title: '消息样式预览', onBack: (): void => this.back() }); }
+  private header() { PageBackBar({ floating: true, centered: true, elevation: 'floating', title: '消息样式预览', onBack: (): void => this.back() }); }
 
   @Builder
   private content() {
     Text('仅供开发预览，以下内容均为示例。不会修改书籍、设置或下载任务。')
-      .width('100%').fontFamily(MESSAGE_BODY.fontFamily).fontSize(MESSAGE_BODY.fontSizeFp)
+      .width('100%').fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight).fontSize(MESSAGE_BODY.fontSizeFp)
       .lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
     if (this.pageActive()) {
       this.pagePreview();
@@ -187,7 +188,7 @@ export struct ReaderMessagePreviewPage {
     }
     if (this.pageActive()) {
       ForEach([this.generation], (expected: number): void => {
-        ReaderButton({ specId: 'source-tools-action', label: '结束当前预览', layout: 'full', scheme: this.appThemeScheme,
+        ReaderButton({ variant: 'tonal', label: '结束当前预览', layout: 'full', scheme: this.appThemeScheme,
           actionEnabled: this.admitted(), onAction: (): void => this.end(expected) });
       }, (expected: number): string => expected.toString());
     }
@@ -231,13 +232,13 @@ export struct ReaderMessagePreviewPage {
       }.width('100%').padding(12);
     }
     Text('样式随当前日间 / 夜间主题显示。阅读手势、锁屏媒体和系统权限提醒不在此页触发。')
-      .width('100%').fontFamily(MESSAGE_META.fontFamily).fontSize(MESSAGE_META.fontSizeFp)
+      .width('100%').fontFamily(MESSAGE_META.fontFamily).fontWeight(MESSAGE_META.fontWeight).fontSize(MESSAGE_META.fontSizeFp)
       .lineHeight(MESSAGE_META.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
   }
 
   @Builder
   private sampleButton(label: string, action: () => void) {
-    ReaderButton({ specId: 'source-tools-action', label, scheme: this.appThemeScheme, layout: 'full', actionEnabled: this.admitted(), onAction: action });
+    ReaderButton({ variant: 'tonal', label, scheme: this.appThemeScheme, layout: 'full', actionEnabled: this.admitted(), onAction: action });
   }
 
   @Builder
@@ -270,7 +271,7 @@ export struct ReaderMessagePreviewPage {
           secondaryActionLabel: this.scene === 'notice-long' ? '结束预览' : '', busy: this.scene === 'notice-busy',
           onReconcile: (expected: number): void => this.reconcileNotice(expected),
           onSecondaryAction: (expected: number): void => this.end(expected) });
-        ReaderButton({ specId: 'source-tools-action', label: '结束提醒预览', scheme: this.appThemeScheme,
+        ReaderButton({ variant: 'tonal', visualSize: 'small', label: '结束提醒预览', scheme: this.appThemeScheme,
           layout: 'full', actionEnabled: this.owns(opening), onAction: (): void => this.end(opening) });
       }.width('100%');
     }, (opening: number): string => `preview-notice:${opening}`);
@@ -283,9 +284,9 @@ export struct ReaderMessagePreviewPage {
         ForEach([this.generation], (expected: number): void => {
           Row({ space: 8 }) {
             Text(this.taskActive() ? '任务消息示例 · 不会导入文件' : '确认弹窗示例 · 不会执行操作')
-              .layoutWeight(1).fontFamily(MESSAGE_META.fontFamily).fontSize(MESSAGE_META.fontSizeFp)
+              .layoutWeight(1).fontFamily(MESSAGE_META.fontFamily).fontWeight(MESSAGE_META.fontWeight).fontSize(MESSAGE_META.fontSizeFp)
               .lineHeight(MESSAGE_META.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
-            ReaderButton({ specId: 'source-tools-action', label: '结束预览', scheme: this.appThemeScheme, actionEnabled: this.owns(expected),
+            ReaderButton({ variant: 'tonal', visualSize: 'small', label: '结束预览', scheme: this.appThemeScheme, actionEnabled: this.owns(expected),
               onAction: (): void => this.end(expected) });
           }.width('100%').padding({ left: 19, right: 19, top: 8, bottom: 8 })
             .backgroundColor(readerAppColor('TOK_PAPER', this.appThemeScheme));
@@ -326,7 +327,7 @@ export struct ReaderMessagePreviewPage {
     Text(this.scene === 'dialog-danger' ?
       '这是危险操作样式示例。确认后仅显示预览反馈，不会删除书籍、缓存或其他数据。' :
       '这是普通确认样式示例。确认和取消仅结束本次预览，不会执行真实业务。')
-      .width('100%').fontFamily(MESSAGE_BODY.fontFamily).fontSize(MESSAGE_BODY.fontSizeFp)
+      .width('100%').fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight).fontSize(MESSAGE_BODY.fontSizeFp)
       .lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
   }
 

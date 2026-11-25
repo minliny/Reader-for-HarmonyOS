@@ -16,6 +16,26 @@ export interface ReaderControlAppearanceActor {
   opacity: number;
 }
 
+export const READER_CONTROL_ISLAND_FONT_TARGET_HEIGHT = 44;
+const READER_CONTROL_ISLAND_FONT_GAP = 4;
+
+export interface ReaderControlIslandFontGrid {
+  columns: number;
+  cellWidth: number;
+  columnStride: number;
+  rowStride: number;
+}
+
+/** Equal slots retain their widths on a partial last row. */
+export function readerControlIslandFontGrid(width: number): ReaderControlIslandFontGrid {
+  const gap = READER_CONTROL_ISLAND_FONT_GAP;
+  const columns = Math.max(1, Math.min(4,
+    Math.floor((width + gap) / (READER_CONTROL_ISLAND_FONT_TARGET_HEIGHT + gap))));
+  const cellWidth = Math.max(0, (width - gap * (columns - 1)) / columns);
+  return { columns: columns, cellWidth: cellWidth, columnStride: cellWidth + gap,
+    rowStride: READER_CONTROL_ISLAND_FONT_TARGET_HEIGHT + gap };
+}
+
 /** One selected candidate's finite natural row sizes, not a layout-node tree. */
 export interface ReaderControlAppearanceMinimumProfile {
   quickThemeColumns: number;

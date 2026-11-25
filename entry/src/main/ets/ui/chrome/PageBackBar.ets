@@ -65,7 +65,7 @@ export struct PageBackBar {
     if (this.raised()) {
       Stack({ alignContent: Alignment.TopStart }) {
         this.panel();
-      }.width('100%').clip(false).hitTestBehavior(HitTestMode.Transparent);
+      }.width('100%').clip(false).hitTestBehavior(HitTestMode.Default).touchable(false);
     } else {
       this.panel();
     }
@@ -148,10 +148,11 @@ export struct PageBackBar {
     .border({ width: this.framed() ? this.variant === 'mangaDirectory' ? visual.borderWidth : 1 : 0,
       color: this.veil() ? readerHeaderVeilBorder(this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
     .borderRadius(this.panelRadius())
-    .clip(this.variant === 'download' && this.elevation === 'fixed' && !this.veil())
+    .clip(this.variant === 'download' && this.elevation === 'fixed' && !this.veil() && this.surface === 'solid')
     .shadow(readerSurfaceElevation(this.raised() ? 'raised' : this.elevation === 'floating' ? 'floating' : 'fixed', this.appThemeScheme))
-    .hitTestBehavior(this.variant === 'download' || this.raised() ||
-      (this.variant === 'standard' && this.material === 'veil') ? HitTestMode.Default : HitTestMode.Transparent)
+    .hitTestBehavior(HitTestMode.Default)
+    .touchable(this.veil() || this.surface === 'solid')
+    .onTouch((): void => {})
     .onAreaChange(this.panelAreaChangeHandler());
   }
 

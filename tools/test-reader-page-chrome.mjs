@@ -71,6 +71,34 @@ for(const [w,h,safeR,safeB] of [[390,844,0,0],[760,832,0,0],[365.71,780,40,34]])
  assert.ok(active.bottomEndX+53<=active.sessionX,'ordinal never intersects the active capsule');
  const longer=resolveReaderPageChromeLayout(p,new ReaderPageChromeMeasurements(120,14.4,30,14.4,22,14.4,120,14.4,true,96,24));assert.equal(longer.sessionX,active.sessionX);assert.ok(longer.bottomEndX<active.bottomEndX);
 }
+const metrics = new windowMetrics.ReaderWindowMetricsSnapshot();
+metrics.gestureInsets.bottom = 34;
+const page = readingGeometry.resolveReaderReadingLayout(390, 844, false, metrics);
+const idle = resolveReaderPageChromeLayout(page, new ReaderPageChromeMeasurements(70, 14, 30, 14, 40, 14, 50, 14));
+const playing = resolveReaderPageChromeLayout(page,
+  new ReaderPageChromeMeasurements(70, 14, 30, 14, 40, 14, 50, 14, true, 96, 44));
+assert.equal(idle.footerTop, playing.footerTop, 'playback never shifts the footer vertically');
+assert.equal(playing.sessionY + 22, playing.footerTop + 12, 'capsule paint shares the footer center');
+assert.equal(page.viewportHeight - page.contentBottom, playing.sessionY,
+  'body ends at the transparent capsule target rather than under it');
+for (const [width, height] of [[390, 844], [844, 390], [760, 960]]) {
+  for (const footerPaintHeight of [24, 32, 44, 60]) {
+    const layout = readingGeometry.resolveReaderReadingLayout(width, height, width >= 600, metrics,
+      false, undefined, 0, 0, undefined, 0, footerPaintHeight);
+    const bodyBottom = height - layout.contentBottom;
+    const targetHeight = Math.max(44, footerPaintHeight);
+    const chrome = resolveReaderPageChromeLayout(layout,
+      new ReaderPageChromeMeasurements(70, 14, 30, 14, 40, 14, 50, 14, true, 96, targetHeight));
+    assert.ok(bodyBottom <= chrome.sessionY, 'the capsule target must never intersect the reading body');
+    assert.ok(chrome.footerTop - bodyBottom >= 4, 'keep at least four vp clear of footer paint');
+    assert.ok(chrome.footerTop - bodyBottom <= 10, 'do not reserve a second footer band');
+    assert.equal(chrome.sessionY + targetHeight / 2, chrome.footerTop + footerPaintHeight / 2);
+  }
+}
+assert.equal(idle.topStartX, page.contentLeft);
+assert.equal(idle.bottomStartX, page.contentLeft);
+assert.equal(idle.topEndX + 30, page.viewportWidth - page.contentLeft);
+assert.equal(idle.bottomEndX + 50, page.viewportWidth - page.contentLeft);
 assert.equal(formatReaderPageProgress(37.6), '38%');
 assert.equal(formatReaderPageOrdinal(new ReaderPageOrdinal(0, 7)), '第 1 / 7 页');
 assert.equal(formatReaderPageOrdinal(new ReaderPageOrdinal(8)), '第 9 页');

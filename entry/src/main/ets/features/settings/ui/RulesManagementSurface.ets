@@ -1,6 +1,11 @@
 import type { DictRuleDraft, ManagedRuleSubscription, ReplaceRuleDraft, RuleSubscriptionDraft, TxtTocRuleDraft } from '../application/RulesManagementGateway';
 import { RulesManagementPage } from './RulesManagementPage';
 import { RulesManagementPresentation } from '../presentation/RulesManagementPresentation';
+import type { JsonImportFocusTargets } from '../../../app/composition/JsonImportPresentation';
+
+export function rulesManagementImportFocus(identity: string): JsonImportFocusTargets {
+  return { preferred: `reader-rules-import:${identity}`, fallback: `reader-rules-back:${identity}` };
+}
 
 @Component
 export struct RulesManagementSurface {
@@ -13,6 +18,8 @@ export struct RulesManagementSurface {
   build() {
     RulesManagementPage({
       snapshot: this.presentation.snapshot,
+      importFocusId: rulesManagementImportFocus(this.identity).preferred,
+      backFocusId: rulesManagementImportFocus(this.identity).fallback,
       inputEnabled: this.inputEnabled,
       inputCurrent: (): boolean => this.presentation.inputAllowed(this.identity),
       onReconcile: (expected: number): void => this.presentation.inputOperations(this.identity)?.reconcile(expected, this.identity),

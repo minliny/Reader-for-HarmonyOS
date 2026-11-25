@@ -1,6 +1,6 @@
 import { actualReaderPostLayoutFrame } from './lib/reader-post-layout-frame-probe.mjs';
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions = {"search": {"description": "Search实际List/Scroll内部clearance与stats测量delta", "resources": []}, "source": {"description": "Source List与fixed footer边界/empty slots", "resources": []}, "multi-select": {"description": "多选实际remove footer测量delta保native List", "resources": []}, "directory": {"description": "目录实际header回执传tree/fallback", "resources": []}, "native-insets": {"description": "实际List/Grid单次inset发布/retained Surface传递", "resources": []}, "manga-catalog": {"description": "漫画实际toolbar→tree/flat→native inset闭包", "resources": []}, "search-anchor": {"description": "实际搜索saved anchor/signed offset/native top恢复", "resources": []}};
+const definitions = {"search": {"description": "Search实际List/Scroll内部clearance与stats测量delta", "resources": []}, "source": {"description": "Source List与fixed footer边界/empty slots", "resources": []}, "multi-select": {"description": "多选实际移除栏测量更新原生视口裁切，List保留独立尾距", "resources": []}, "directory": {"description": "目录实际header回执传tree/fallback", "resources": []}, "native-insets": {"description": "实际List/Grid单次inset发布/retained Surface传递", "resources": []}, "manga-catalog": {"description": "漫画实际toolbar→tree/flat→native inset闭包", "resources": []}, "search-anchor": {"description": "实际搜索saved anchor/signed offset/native top恢复", "resources": []}};
 for (const id of selectContractCases(definitions)) {
   await runSelectedCase(id);
   recordContractCasePass(id);
@@ -194,38 +194,63 @@ if(selectedCase==='source') for (const sourceCount of [0, 2]) {
 }
 
 if(selectedCase==='multi-select') {
-const pageGeometry = await import('../entry/src/main/ets/ui/layout/ReaderPageGeometry.ts');
-const scrollGeometry = await import('../entry/src/main/ets/ui/layout/ReaderScrollLayout.ts');
-const { readerFrameStyle } = await import('../entry/src/main/ets/ui/layout/ReaderFrameStyle.ts');
-const { ReaderMeasurementStore } = await import('../entry/src/main/ets/ui/layout/ReaderMeasurements.ts');
-Object.assign(deps, pageGeometry, scrollGeometry, { readerFrameStyle, ReaderMeasurementStore, ButtonType: { Normal: 'ButtonType.Normal' } });
+const { actualReaderPageLayout } = await import('./lib/reader-page-shell-runtime-probe.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const { readerInteractiveSafeLeft, readerInteractiveSafeRight } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const { readerIsExpandedWidth } = await import('../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts');
+const { READER_ACTION_MIN_TARGET } = pureModuleProbe(read('ui/controls/ReaderActionAccessibility.ets'),
+  'ReaderActionAccessibility.ets', {}, ['READER_ACTION_MIN_TARGET']);
+const { ReaderNativeSlotMeasurement } = pureModuleProbe(read('ui/layout/ReaderNativeSlotMeasurement.ets'),
+  'ReaderNativeSlotMeasurement.ets', { ReaderPostLayoutFrame: actualReaderPostLayoutFrame(),
+    readerMeasureSurfaceRect: () => undefined }, ['ReaderNativeSlotMeasurement']);
+Object.assign(deps, actualReaderPageLayout(), { readerInteractiveSafeLeft, readerInteractiveSafeRight, readerIsExpandedWidth,
+  READER_ACTION_MIN_TARGET, ReaderNativeSlotMeasurement, ButtonType: { Normal: 'ButtonType.Normal' } });
 let cancels = 0, selects = 0;
-const multi = fixture('multi', ['build', 'selectionTopBar', 'selectionAction', 'removeBar', 'removeBarClearance', 'bottomInset',
-  'geometry', 'measurementKey', 'measurementRevision', 'measurements', 'viewportWidth', 'viewportHeight', 'mounted',
-  'frameStyle', 'onGeometryInputsChanged', 'recordMeasurement', 'refreshGeometry', 'scrollLayout', 'liveWidth'], {
-  mounted: true, selectedKeys: [], busy: false, ready: true, bookRows: () => [],
+const multi = fixture('multi', ['build', 'selectionList', 'selectionTopBar', 'selectionAction', 'selectionInputEnabled',
+  'removeBar', 'canRemoveSelection', 'removeBarClearance', 'bottomInset', 'geometry', 'measurementKey',
+  'footerMeasurementKey', 'headerInputs', 'footerInputs', 'measurementRevision', 'measurements', 'viewportWidth', 'viewportHeight',
+  'mounted', 'frameStyle', 'onGeometryInputsChanged', 'recordMeasurement', 'refreshGeometry', 'scrollLayout', 'isWide', 'liveWidth'], {
+  mounted: true, appForeground: true, selectedKeys: [], busy: false, ready: true, visibleBooks: () => [{}], bookRows: () => [],
+  selectedVisibleCount: () => 0, selectionHeaderInline: () => false, selectionHeaderMinimumHeight: () => 58, canSelectAll: () => true,
   onCancel: () => cancels++, toggleAll: () => selects++,
   allSelected: () => false, bookKey: () => '', isListMode: () => false,
-  __Repeat() { return { each() { return this; }, key() { return this; }, virtualScroll() { return this; }, render() {} }; },
 });
 multi.onGeometryInputsChanged();
 multi.initialRender();
 const multiList = fullList(multi);
 assert.ok(multiList.contentStartOffset > 0);
-const removeHost = allNodes(multi).find(n => n.type === 'Column' && n.onAreaChange && n.padding?.left === 0 && n.padding?.right === 0);
+const scaffold = [...multi.children.values()].find(child => typeof child.params?.footer === 'function');
+assert.ok(scaffold, 'the page mounts the actual scaffold with a managed footer slot');
+const removeHost = nodes(scaffold).find(n => n.type === 'Column' && n.onAreaChange && n.padding?.left === 0 && n.padding?.right === 0);
 assert.ok(removeHost);
 assert.equal(removeHost.height, undefined, 'the footer can grow naturally with scaled or wrapped labels');
-assert.equal(allNodes(multi).find(n => n.type === 'Stack' && n.zIndex === 20).hitTestBehavior, 'HitTestMode.Transparent');
-const footerKey = multi.measurementKey;
-removeHost.onAreaChange({}, { height: 116 });
-multi.replayOnly([multiList.id]);
-const firstMeasuredEnd=multiList.contentEndOffset;
-removeHost.onAreaChange({}, {height:173}); multi.replayOnly([multiList.id]);
-assert.equal(multiList.contentEndOffset-firstMeasuredEnd, 173-116, 'measured footer delta updates retained clearance without shrinking List');
-assert.equal(multiList.contentEndOffset, multi.geometry.content.endInset);
-const scaffold = nodes(multi).find(n => n.onAreaChange);
-assert.ok(scaffold, 'the root scaffold publishes its actual viewport');
-scaffold.onAreaChange({}, { width: 760, height: 390 });
+assert.equal(removeHost.hitTestBehavior, 'HitTestMode.Default');
+assert.equal(nodes(scaffold).find(n => n.zIndex === 20).hitTestBehavior, 'HitTestMode.Default');
+const surface = nodes(multi).find(n => n.type === 'Column' && n.borderRadius?.topLeft === 24);
+assert.ok(surface);
+assert.equal(surface.hitTestBehavior, 'HitTestMode.Default');
+assert.equal(typeof surface.onTouch, 'function');
+assert.equal(surface.onClick, undefined);
+const viewport = nodes(scaffold).find(n => n.type === 'Stack' && n.zIndex === 0 &&
+  n.customProperty?.[0] === 'readerLayoutDebugContentUnderHeader');
+assert.ok(viewport);
+const footerKey = multi.footerMeasurementKey;
+for (const height of [116, 173]) {
+  removeHost.onAreaChange({}, { height });
+  multi.replay();
+  scaffold.replayOnly([viewport.id]);
+  assert.equal(multi.geometry.footer.height, height, 'the current remove bar measurement reaches the page geometry');
+  assert.equal(multi.geometry.content.nativeEndInset, height);
+  assert.equal(scaffold.params.geometry.content.nativeEndInset, height, 'the page passes the current geometry to its retained scaffold');
+  assert.equal(scaffold.geometry.content.nativeEndInset, height, 'the scaffold adopts the latest geometry Prop');
+  assert.equal(viewport.height, `calc(100% - ${height}vp)`, 'the measured bar clips the actual scaffold content carrier');
+  assert.equal(viewport.clip, true);
+  assert.equal(multi.nodes.get(multiList.id), multiList, 'the native List stays mounted');
+  assert.equal(multiList.contentEndOffset, 20, 'the List keeps its separate tail gap');
+}
+const viewportHost = nodes(multi).find(n => n.onAreaChange);
+assert.ok(viewportHost, 'the root scaffold publishes its actual viewport');
+viewportHost.onAreaChange({}, { width: 760, height: 390 });
 const newLayout = multi.geometry;
 assert.deepEqual([multi.viewportWidth, multi.viewportHeight], [760, 390]);
 assert.ok(Number.isFinite(newLayout.revision));
@@ -233,7 +258,7 @@ multi.recordMeasurement('selection:footer', 200, footerKey);
 assert.equal(multi.geometry.revision, newLayout.revision, 'a retired footer receipt cannot change the new layout');
 const cancel = nodes(multi).find(n => n.type === 'Button' && n.accessibilityText === '取消');
 const select = nodes(multi).find(n => n.type === 'Button' && n.accessibilityText === '全选');
-assert.deepEqual([cancel.height, select.height], [44,44]);
+assert.deepEqual([cancel.constraintSize.minHeight, select.constraintSize.minHeight], [44, 44]);
 cancel.onClick(); select.onClick();
 multi.busy = true;
 cancel.onClick(); select.onClick();

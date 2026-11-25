@@ -1,9 +1,10 @@
 import type { ReaderRuntimeOwner } from '../ReaderRuntimeOwner';
+import { BookshelfNavigationPaint } from '../../features/bookshelf/ui/BookshelfNavigationPresentation';
 import { MangaSourceSwitchPresentation } from '../../features/manga/presentation/MangaSourceSwitchPresentation';
 import { readerEntryPresentation, type ReaderRetainedPresentation } from '../../features/reading/ui/LocalReadingExperience';
 import type { ReadingCommit } from '../../features/reading/application/ReadingCommit';
-import type { LocalReadingTocEntry } from '../../features/reading/application/LocalReadingFlowGateway';
 import type { ReadingPrefetchActivity } from '../../features/reading/application/ReadingPrefetchHost';
+import type { LocalReadingTocEntry } from '../../features/reading/application/LocalReadingFlowGateway';
 import type { ReaderPageBookmarkToggleRequest } from '../../features/reading/presentation/ReaderDirectoryMarkerState';
 import type { RemoteReadingFailureKind } from '../../features/reading/application/RemoteContentAdmission';
 import type { RemoteReadingSession } from '../../features/reading/application/RemoteReadingFlowGateway';
@@ -50,7 +51,7 @@ export struct RetainedReaderScene {
   @Prop visibleRoute: 'reading' | 'directory' | undefined = undefined;
   @Prop reduceMotion: boolean = false;
   @Prop expandedLayout: boolean = false;
-  @Prop transitionOpacity: number = 1;
+  @ObjectLink motionPaint: BookshelfNavigationPaint;
   @Prop inputAllowed: boolean = true;
   ports: RetainedReaderScenePorts | undefined = undefined;
   private readonly directoryActions: ReaderDirectoryActions = readerDirectoryActions(() => this.reading,
@@ -110,11 +111,11 @@ export struct RetainedReaderScene {
         onToggleShelf: this.ports.toggleMangaShelf, onMangaLogin: this.ports.loginMangaSource,
         readingReadyGeneration: this.reading.readyGeneration, onReadingReady: this.ports.ready,
         onReadingCommitted: (commit: ReadingCommit): void => this.commits.accept(commit),
+        onReadingPrefetchActivity: (sourceId: string, bookId: string, activity: ReadingPrefetchActivity): void =>
+          this.commits.observeReading(sourceId, bookId, activity),
         onReadingFailure: (sourceId: string, bookId: string, message: string, kind?: RemoteReadingFailureKind): void => {
           if (this.ports?.runtime() !== undefined) this.reading.projectReaderFailure(sourceId, bookId, message, kind);
         },
-        onReadingPrefetchActivity: (sourceId: string, bookId: string, activity: ReadingPrefetchActivity): void =>
-          this.commits.observeReading(sourceId, bookId, activity),
         onChapterCommitted: (chapter: number, title: string): void => {
           const ports = this.ports, owner = ports?.runtime();
           if (ports !== undefined && owner !== undefined) this.reading.commitDirectoryChapter(owner, chapter, title, ports.resetFeedback);
@@ -147,7 +148,7 @@ export struct RetainedReaderScene {
         onCloseSourceSwitch: this.ports.sourceSwitch.close, onRetrySourceSwitch: this.ports.sourceSwitch.retry,
         onRefreshSourceSwitch: this.ports.sourceSwitch.refresh, onStopSourceSwitch: this.ports.sourceSwitch.stop,
         onPickSource: this.ports.sourceSwitch.select, onRollbackSourceSwitch: this.ports.sourceSwitch.rollback,
-      }).clip(true).opacity(this.transitionOpacity).enabled(this.inputAllowed)
+      }).clip(true).opacity(this.motionPaint.opening.readerOpacity).enabled(this.inputAllowed)
         .accessibilityLevel(this.inputAllowed ? 'auto' : 'no-hide-descendants');
     }
   }

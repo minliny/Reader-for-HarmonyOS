@@ -10,12 +10,13 @@ import { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS, readerTransientTe
   type ReaderTransientTextObserver } from '../../../ui/feedback/ReaderTransientFeedback';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
-import { readerPageAreaLength, readerPageContentStartInset, readerStandardPageSpec } from '../../../ui/layout/ReaderPageShell';
+import { readerPageAreaLength, readerStandardPageSpec, READER_STANDARD_PAGE_CONTENT_GAP } from '../../../ui/layout/ReaderPageShell';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
-import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
-import { resolveReaderButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
+import { ReaderPageGeometry, ReaderPageGeometryInput, applyReaderStandardFloatingHeader, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
+import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
+import { resolveReaderButtonMatrixSize, resolveReaderButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
-import { resolveSourceManagementLayout, SOURCE_ROW_ICON_WIDTH, type SourceManagementLayout } from '../presentation/SourceManagementLayout';
+import { resolveSourceManagementLayout, SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP_GAP, type SourceManagementLayout } from '../presentation/SourceManagementLayout';
 import { sourceManagementFilterKey, copySourceManagementScroll, type SourceManagementScrollState } from '../presentation/SourceManagementScrollState';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
@@ -28,7 +29,7 @@ import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { ReaderRecoveryNotice, type ReaderRecoveryBodyPresentation, type ReaderRecoveryTextAction } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
-import { TYPE_FORM_COMPACT_ACTION, TYPE_FORM_HINT, TYPE_SELECT_SOURCE_GROUP_VALUE, TYPE_SEARCH_RESULT_INTRO, TYPE_SOURCE_MANAGEMENT_COUNT, TYPE_SOURCE_MANAGEMENT_STATUS, TYPE_SOURCE_MANAGEMENT_ROW_TITLE, TYPE_SOURCE_STATE_TITLE } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_SELECT_SOURCE_GROUP_VALUE, TYPE_SEARCH_RESULT_INTRO, TYPE_SOURCE_MANAGEMENT_COUNT, TYPE_SOURCE_MANAGEMENT_STATUS, TYPE_SOURCE_MANAGEMENT_ROW_TITLE, TYPE_SOURCE_STATE_TITLE } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
@@ -66,16 +67,10 @@ import {
 } from '../../../ui/layout/SurfaceHorizontalGeometry';
 import {
   TOK_BORDER_W,
-  TOK_CARD_BG,
-  TOK_INK,
-  TOK_ON_PRIMARY,
-  TOK_PAPER,
-  TOK_ROW_DIVIDER,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_MD,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
-  TOK_SURFACE_SOLID,
 } from '../../../ui/foundation/ReaderTokens';
 
 const SOURCE_TEXT_ROLES = ['stats', 'status/all', 'category/all', 'row/title',
@@ -162,6 +157,7 @@ class SourceListDataSource implements IDataSource {
 
 @Component
 export struct SourceManagementPage {
+  @Prop @Watch('onGeometryInputsChanged') embeddedWide: boolean = false;
   private readonly metadataEllipsisMode: EllipsisMode = readerHarmonyApi24() ? EllipsisMode.CENTER : EllipsisMode.END;
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding('reader-source-list');
@@ -599,7 +595,7 @@ export struct SourceManagementPage {
   private frameStyle(): ReaderFrameStyle {
     const pageBackground = readerAppColor('TOK_PAPER', this.appThemeScheme);
     return readerFrameStyle({ backgroundColor: pageBackground,
-      headerBackground: readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme),
+      headerBackground: pageBackground, headerTransparent: true,
       footerBackground: pageBackground });
   }
 
@@ -653,7 +649,7 @@ export struct SourceManagementPage {
       .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
       .enabled(!this.groupOpen)
       .accessibilityLevel(this.groupOpen ? 'no-hide-descendants' : 'auto')
-      .hitTestBehavior(this.groupOpen ? HitTestMode.None : HitTestMode.Transparent);
+      .hitTestBehavior(this.groupOpen ? HitTestMode.None : HitTestMode.Default).touchable(false);
   }
 
   @Builder
@@ -708,6 +704,8 @@ export struct SourceManagementPage {
   @Builder
   private backBar(identity: string = this.temporaryBackIdentity) {
     PageBackBar({
+      floating: true, centered: true, elevation: 'floating',
+      showBack: !this.embeddedWide,
       title: '书源管理',
       backFocusId: 'reader-source-back',
       onBack: (): void => {
@@ -736,6 +734,8 @@ export struct SourceManagementPage {
             text: this.searchQuery,
             placeholder: '搜索书源名称或域名',
             accessibilityLabel: '搜索书源名称或域名',
+            editingCurrent: (): boolean => identity === this.sourceSearchInputIdentity() &&
+              this.managementInputIsCurrent() && !this.groupOpen,
             onTextChange: (value: string): void => this.applySourceSearchInput(identity, value),
             onSubmit: (): void => this.applySourceSearchInput(identity),
           });
@@ -1408,6 +1408,7 @@ export struct SourceManagementPage {
       Row({ space: TOK_SPACE_XS }) {
         ForEach(['all', 'novel', 'comic', 'music', 'download', 'external', 'other'], (category: string) => {
           ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-category',
+            variant: this.categoryValue === category ? 'tonal' : 'subtle', visualSize: 'small',
             textLayoutOptions: category === 'all' ? this.verificationTextOptions?.('category/all', undefined, '全部类型') :
               this.verificationFilterTextMetrics?.has('category') ?
                 this.filterTextLayoutOptions('category', category, readerSourceCategoryLabel(category as ReaderSourceCategory)) : undefined,
@@ -1437,7 +1438,7 @@ export struct SourceManagementPage {
   @Builder
   private statusFilter() {
     Scroll() {
-    Row({ space: TOK_SPACE_XS }) {
+    Row({ space: SOURCE_STATUS_CHIP_GAP }) {
       this.chip('全部', 'all', 58, true);
       this.chip('启用', 'enabled', 72, true, '已启用');
       this.chip('异常', 'error', 58, true);
@@ -1460,6 +1461,7 @@ export struct SourceManagementPage {
   @Builder
   private chip(label: string, verificationId: string, width: number, enabled: boolean, title: string = label) {
     ReaderButton({ scheme: this.appThemeScheme, specId: width === 58 ? 'source-management-status-compact' : 'source-management-status-wide',
+      variant: enabled && this.statusValue === label ? 'tonal' : 'subtle', visualSize: 'small',
       onFocused: (): void => this.cancelToolsReturnFocus('other-focus'),
       label: title, primary: enabled && this.statusValue === label, actionEnabled: enabled, availableWidth: this.filterControlWidth(),
       textLayoutOptions: verificationId !== 'all' && this.verificationFilterTextMetrics?.has('status') ?
@@ -1844,6 +1846,7 @@ export struct SourceManagementPage {
   @Builder
   private detectButton(source: BookSource) {
     ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-detect',
+      variant: 'tonal', visualSize: 'small',
       textLayoutOptions: this.textLayoutOptions?.('row/detect', source.sourceId, source.checkState === 'checking' ? '检测中' : '检测'),
       onFocused: (): void => this.cancelToolsReturnFocus('other-focus'),
       label: source.checkState === 'checking' ? '检测中' : '检测', isBusy: source.checkState === 'checking',
@@ -1859,6 +1862,7 @@ export struct SourceManagementPage {
   @Builder
   private loginButton(source: BookSource) {
     ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-login', label: '登录',
+      variant: 'subtle', visualSize: 'small',
       textLayoutOptions: this.textLayoutOptions?.('row/login', source.sourceId,
         this.verificationRowActionsCurrent(source) ? '登录' : undefined),
       onFocused: (): void => this.cancelToolsReturnFocus('other-focus'),
@@ -1967,6 +1971,7 @@ export struct SourceManagementPage {
     Flex({ direction: this.footerStacked() ? FlexDirection.Column : FlexDirection.Row,
       alignItems: ItemAlign.Center, space: { main: LengthMetrics.vp(TOK_SPACE_CONTROL_INLINE) } }) {
       ReaderButton({ scheme: this.appThemeScheme, specId: 'source-management-manage', label: '批量管理', layout: 'full',
+        variant: 'tonal', visualSize: 'large',
         textLayoutOptions: this.textLayoutOptions?.('footer/manage', undefined, '批量管理'),
         focusId: this.toolsFocusId('footer'), onFocused: (): void => this.onToolsEntryFocused(identity, 'footer'),
         onAction: (): void => this.requestOpenTools('footer') })
@@ -1989,7 +1994,7 @@ export struct SourceManagementPage {
     .width(this.contentFrame().width)
     .constraintSize({ minHeight: this.layoutBudget().footerHeight })
     .margin({ top: TOK_SPACE_SM, bottom: this.actionBottomInset() })
-    .hitTestBehavior(HitTestMode.Transparent);
+    .hitTestBehavior(HitTestMode.Default).touchable(false);
   }
 
   private actionBottomInset(actionHeight: number = this.footerActionHeight()): number {
@@ -2444,11 +2449,12 @@ export struct SourceManagementPage {
   private recordViewport(area: Area): void {
     if (!this.mounted) return;
     const x = this.numericAreaLength(area.globalPosition.x), y = this.numericAreaLength(area.globalPosition.y);
+    const originChanged = this.embeddedWide && Math.abs(x - this.originX) >= .01;
     this.originX = x;
     this.originY = y;
     const width = this.numericAreaLength(area.width), height = this.numericAreaLength(area.height);
     if (width > 0 && height > 0 &&
-      (Math.abs(width - this.viewportWidth) >= 0.01 || Math.abs(height - this.viewportHeight) >= 0.01)) {
+      (Math.abs(width - this.viewportWidth) >= 0.01 || Math.abs(height - this.viewportHeight) >= 0.01 || originChanged)) {
       this.viewportWidth = width;
       this.viewportHeight = height;
       this.onGeometryInputsChanged();
@@ -2470,7 +2476,8 @@ export struct SourceManagementPage {
     if (!this.mounted) return;
     const metrics = ReaderWindowCoordinator.metrics();
     const headerInputs = JSON.stringify([this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width, metrics.systemFontScale,
-      metrics.densityPixels, readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics)]);
+      metrics.densityPixels, readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics),
+      this.embeddedWide ? this.originX : undefined]);
     const footerInputs = JSON.stringify([headerInputs, this.footerFallbackHeight()]);
     if (headerInputs !== this.headerInputs) {
       this.headerInputs = headerInputs;
@@ -2535,13 +2542,13 @@ export struct SourceManagementPage {
     const scale = this.fontScale();
     const action = resolveReaderButtonSpec('source-management-detect');
     const login = resolveReaderButtonSpec('source-management-login');
-    const actionHeight = Math.max(44, readerScaledControlHeight(action.height ?? 44,
-      action.text.lineHeightFp ?? action.text.fontSizeFp * 1.5, scale));
+    const compact = resolveReaderButtonMatrixSize('small');
+    const actionHeight = Math.max(44, readerScaledControlHeight(compact.height, compact.lineHeight, scale));
     return resolveSourceManagementLayout({ availableWidth: this.contentFrame().width, fontScale: scale,
       hasLogin: source?.loginUrl !== undefined && source.loginUrl.trim().length > 0,
       detectWidth: action.fixedWidth * scale,
       actionWidth: login.fixedWidth * scale, actionHeight,
-      loginHeight: readerScaledControlHeight(login.height ?? 44, login.text.lineHeightFp ?? login.text.fontSizeFp * 1.5, scale),
+      loginHeight: actionHeight,
       filterHeight: Math.max(actionHeight, readerScaledControlHeight(44,
         TYPE_SEARCH_SOURCE_INPUT.lineHeightFp ?? TYPE_SEARCH_SOURCE_INPUT.fontSizeFp * 1.5, scale)), footerHeight: this.footerActionHeight(),
       titleLineHeight: TYPE_SOURCE_MANAGEMENT_ROW_TITLE.lineHeightFp ?? TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontSizeFp * 1.5,
@@ -2549,13 +2556,14 @@ export struct SourceManagementPage {
   }
 
   private footerControlHeight(): number {
-    const footer = resolveReaderButtonSpec('source-management-manage');
-    return Math.max(48, readerScaledControlHeight(footer.height ?? 44,
-      footer.text.lineHeightFp ?? footer.text.fontSizeFp * 1.5, this.fontScale()), readerScaledControlHeight(44, 20, this.fontScale()));
+    const footer = resolveReaderButtonMatrixSize('large');
+    return Math.max(48, readerScaledControlHeight(footer.height, footer.lineHeight, this.fontScale()),
+      readerScaledControlHeight(44, 20, this.fontScale()));
   }
 
   private footerContentWidth(): number {
     const input = new ReaderPageGeometryInput(ReaderWindowCoordinator.metrics());
+    input.originX = this.embeddedWide ? this.originX : undefined;
     input.viewportWidth = this.viewportWidth;
     input.viewportHeight = this.viewportHeight;
     input.contentMaxWidth = readerStandardPageSpec('sourceManagement').maxWidth;
@@ -2565,10 +2573,10 @@ export struct SourceManagementPage {
 
   private footerStacked(): boolean {
     const scale = this.fontScale();
-    const manage = resolveReaderButtonSpec('source-management-manage');
+    const manage = resolveReaderButtonMatrixSize('large');
     const add = resolveReaderLabeledIconActionSpec('source-management-add');
     // Both current labels are four full-width CJK glyphs in their shared font.
-    const manageWidth = Math.ceil(manage.text.fontSizeFp * scale) * '批量管理'.length;
+    const manageWidth = Math.ceil(manage.fontSize * scale) * '批量管理'.length + manage.horizontalPadding * 2;
     const addWidth = Math.ceil(add.text.fontSizeFp * scale) * '新增书源'.length + add.iconSize + add.gap;
     return (this.footerContentWidth() - TOK_SPACE_CONTROL_INLINE) / 2 < Math.max(manageWidth, addWidth);
   }
@@ -2584,10 +2592,13 @@ export struct SourceManagementPage {
 
   private refreshGeometry(): void {
     const input = new ReaderPageGeometryInput(ReaderWindowCoordinator.metrics());
+    input.originX = this.embeddedWide ? this.originX : undefined;
     input.viewportWidth = this.viewportWidth;
     input.viewportHeight = this.viewportHeight;
     input.measurementRevision = ++this.measurementRevision;
-    input.headerHeight = this.measurements.readForGeneration('source:header', this.measurementKey, readerPageContentStartInset());
+    input.headerHeight = this.measurements.readForGeneration('source:header', this.measurementKey, APP_FLOATING_HEADER_BAR_HEIGHT);
+    applyReaderStandardFloatingHeader(input);
+    input.contentGap = READER_STANDARD_PAGE_CONTENT_GAP;
     input.footerHeight = this.measurements.readForGeneration('source:footer', this.footerMeasurementKey, this.footerFallbackHeight());
     input.contentMaxWidth = readerStandardPageSpec('sourceManagement').maxWidth;
     input.contentHorizontalPadding = 19;

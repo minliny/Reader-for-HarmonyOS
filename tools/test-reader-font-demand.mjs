@@ -165,10 +165,17 @@ const {existsSync}=await import('node:fs');
 registerHooks({resolve(s,c,n){if(s.startsWith('.')&&!/\.[a-z]+$/i.test(s)){const u=new URL(s+'.ts',c.parentURL);if(existsSync(fileURLToPath(u)))return n(u.href,c);}return n(s,c);}});
 const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
 const {createArkUIPropertyRuntimeProbe}=await import('./lib/arkui-property-runtime-probe.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const { actualReaderPostLayoutFrame } = await import('./lib/reader-post-layout-frame-probe.mjs');
 const {ReaderPageGeometry}=await import('../entry/src/main/ets/ui/layout/ReaderPageGeometry.ts');
 const {readerFrameStyle}=await import('../entry/src/main/ets/ui/layout/ReaderFrameStyle.ts');
 const source=readFileSync(new URL('../entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets',import.meta.url),'utf8');
 const before=readFileSync(new URL('./fixtures/design/directory-confluence-before/manga-font-publication.ets.txt',import.meta.url),'utf8');
+const nativeSlotSource = readFileSync(new URL('../entry/src/main/ets/ui/layout/ReaderNativeSlotMeasurement.ets', import.meta.url), 'utf8');
+const { ReaderNativeSlotMeasurement } = pureModuleProbe(nativeSlotSource, 'ReaderNativeSlotMeasurement.ets', {
+  ReaderPostLayoutFrame: actualReaderPostLayoutFrame(),
+  readerMeasureSurfaceRect: () => undefined,
+}, ['ReaderNativeSlotMeasurement']);
 function publication(candidate){
  const properties=createArkUIPropertyRuntimeProbe(),calls=[];
  class Child{
@@ -181,7 +188,8 @@ function publication(candidate){
  const names=['mangaPage','mangaHeader','mangaFontsReady','mangaFontsFailed','geometry','measurementKey'];
  for(const name of ['mangaContentSlot','mangaFooterSlot','mangaOverlaySlot','mangaHeaderTrailingSlot'])if(candidate.includes('private '+name+'('))names.push(name);
  const probe=createReaderBuilderProbe(candidate,names,{
-  ...properties.sdk,ReaderPageGeometry,...Object.fromEntries(Object.keys(childPaths).map(name=>[name,name==='PageBackBar'?Header:Child])),
+  ...properties.sdk,ReaderPageGeometry,ReaderNativeSlotMeasurement,
+  ...Object.fromEntries(Object.keys(childPaths).map(name=>[name,name==='PageBackBar'?Header:Child])),
  },{...properties.hooks,childSources,mountChildren:true,allowEmptyBranchAdmission:true});
  const owner=probe.owner;
  Object.assign(owner,{mangaFrameStyle:()=>readerFrameStyle({backgroundColor:'white',headerBackground:'white',footerBackground:'white'}),recordViewport(){},recordHeaderHeight(){},

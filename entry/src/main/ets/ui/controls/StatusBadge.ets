@@ -1,4 +1,5 @@
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../foundation/ReaderFontFamilies';
 
 export type ReaderStatusBadgeStatus = 'success' | 'error' | 'pending' | 'neutral' | 'enabled' | 'paused' | 'unknown';
 
@@ -19,8 +20,8 @@ export struct StatusBadge {
       if (this.hasText()) {
         Row({ space: 4 }) {
           this.mark();
-          Text(this.text).fontSize(11).fontWeight(FontWeight.Medium)
-            .fontFeature('"tnum" 1').fontColor(this.symbolColor())
+          Text(this.text).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(11).fontWeight(500)
+            .fontColor(this.symbolColor())
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
             .accessibilityLevel('no');
         }.alignItems(VerticalAlign.Center);
@@ -31,7 +32,7 @@ export struct StatusBadge {
       .height(this.hasText() ? undefined : 18)
       .constraintSize({ minHeight: 18 })
       .padding(this.hasText() ? { left: 8, right: 8, top: 2, bottom: 2 } : 0)
-      .borderRadius(999).backgroundColor(this.symbolOnly ? Color.Transparent : this.surfaceColor())
+      .borderRadius(6).backgroundColor(this.symbolOnly ? Color.Transparent : this.surfaceColor())
       .id(this.verificationId)
       .accessibilityLevel(this.symbolOnly ? 'no' : 'auto')
       .accessibilityGroup(true).accessibilityText(this.label.trim().length > 0 ? this.label :

@@ -19,8 +19,10 @@ assert.match(sourcePage,
   'the variable-length source list must consume the notified lazy data source');
 assert.doesNotMatch(sourcePage, /Repeat\(this\.filteredSources\(\)\)/,
   'a reusable virtual Repeat must not consume a fresh derived array on every render');
-assert.match(sourcePage,
-  /private rebuildSourceProjection\(\): void \{\s*const projected = this\.filteredSources\(\);\s*this\.sourceDataSource\.replace\(projected\);\s*this\.projectedSources = projected;\s*\}/,
+const sourceProjection = sourcePage.match(/^  private rebuildSourceProjection\([^)]*\): void \{([\s\S]*?)^  \}/m)?.[1];
+assert.ok(sourceProjection, 'the source page owns the projection rebuild');
+assert.match(sourceProjection,
+  /const projected = this\.filteredSources\(\);[\s\S]*?this\.sourceDataSource\.replace\(projected\);\s*this\.projectedSources = projected;/,
   'filters and Core snapshots must atomically replace the projected source array');
 assert.match(sourcePage,
   /private sourceRenderKey\(source: BookSource\): string \{[\s\S]*source\.sourceId[\s\S]*source\.enabled[\s\S]*source\.checkState/,

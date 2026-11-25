@@ -65,7 +65,7 @@ export function sampleReaderControlSearch(p: number, availableWidth: number,
   // The unanimated Full Query parent left a 38.45vp empty band in Quick,
   // and clipped most of the first result. Adapt the viewport to the query
   // row while compensating its children so their authored screen paths stay.
-  const fieldHeight = natural === undefined ? field.height : Math.max(field.height, natural.fieldHeightVp);
+  const fieldHeight = Math.max(32, field.height, natural?.fieldHeightVp ?? 0);
   const actionWidth = action.width;
   const actionGrowth = actionWidth - action.width;
   const queryBottom = basisY + field.y + fieldHeight + lerp(5, 9, progress);

@@ -1,8 +1,6 @@
 import { actualReaderPostLayoutFrame } from './lib/reader-post-layout-frame-probe.mjs';
 import assert from 'node:assert/strict';
-import { createHash } from 'node:crypto';
-import { execFileSync } from 'node:child_process';
-import { iconButtonControls, compileIconButtonSpecs } from './lib/reader-icon-button-probe.mjs';
+import { iconButtonControls } from './lib/reader-icon-button-probe.mjs';
 import { readFileSync } from 'node:fs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
@@ -21,13 +19,16 @@ import * as windowMetrics from '../entry/src/main/ets/ui/foundation/ReaderWindow
 import { readerIsExpandedWidth } from '../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts';
 import { sourceSwitchTriggerFocusId } from '../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts';
 import * as headerMetrics from '../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts';
+import * as fontFamilies from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import { bookCoverDisplayUrl } from '../entry/src/main/ets/app/library/BookCoverDisplay.ts';
+import { DEFAULT_BOOKSHELF_VIEW } from '../entry/src/main/ets/features/bookshelf/application/BookshelfViewMode.ts';
 const definitions = {
     'shelf-selection-frame': { description: 'Actual selection card/list/details/header SDK, safe lane, font growth and old-code negative controls', resources: [] },
     'shelf-projection-frame': { description: 'Actual bookshelf retained projection SDK, list row/step/cover budgets and selection identity', resources: [] },
     'detail-action-target': { description: 'Actual text/manga detail native action targets and natural parent budgets', resources: [] },
     'detail-notice-width': { description: 'Actual detail notice SDK forwards current outer lane to both recovery surfaces and retains operation identity', resources: [] },
     'management-parent-frame': { description: 'Retained management actual shared controls, caller and Native full-width allocation, and font-aware list frames', resources: [] },
-    'shelf-list-residual-lane': { description: 'Actual shelf geometry and More residual lane, width-aware shared text budget, retained actors and font-ready cache', resources: [] },
+    'shelf-list-residual-lane': { description: 'Actual full-width list rows, optional copy, narrow badges, compact More and scaled retained actors', resources: [] },
     'shelf-filter-action-target': { description: 'Actual shelf filter clear and collapse Native two-axis targets, natural parent budget, and current callbacks', resources: [] },
 };
 const read = path => readFileSync(new URL('../entry/src/main/ets/' + path, import.meta.url), 'utf8');
@@ -41,12 +42,10 @@ const shelf = name => read('features/bookshelf/ui/' + name + '.ets');
 const selectionSource = shelf('BookshelfMultiSelectPage');
 const detailsSource = shelf('ShelfBookListDetails');
 const gridSource = shelf('BookshelfGridSpec');
-let listFontsReady = true;
-let prepareListFont = async () => {};
 const grid = pureModuleProbe(gridSource, 'BookshelfGridSpec.ets', { ...readerTypographyRoles, ...readerFoundationTokens,
-    readerFontFamilyReady: () => listFontsReady, prepareReaderFontFamily: family => prepareListFont(family),
-    WordBreak: { BREAK_WORD: 'WordBreak.BREAK_WORD' } }, ['bookshelfGridFrame', 'bookshelfCoverHeight', 'bookshelfGridTextFrame',
-    'bookshelfListTextHeight', 'bookshelfListTextFrame', 'BookshelfListTextBudget', 'prepareBookshelfListTextFonts', 'bookshelfSelectionCardHeight']);
+    ...fontFamilies, prepareReaderFontFamily: async () => {} }, ['bookshelfGridFrame', 'bookshelfCoverHeight', 'bookshelfGridTextFrame',
+    'bookshelfColumnCount', 'bookshelfListCardWidth', 'bookshelfListTextHeight', 'bookshelfListTextFrame', 'BookshelfListTextBudget',
+    'prepareBookshelfListTextFonts', 'bookshelfSelectionCardHeight', ...Array.from(gridSource.matchAll(/^export const (BOOKSHELF_\w+)/gm), match => match[1])]);
 const action = pureModuleProbe(read('ui/controls/ReaderActionAccessibility.ets'), 'ReaderActionAccessibility.ets', { AccessibilityRoleType: { BUTTON: 'AccessibilityRoleType.BUTTON' } }, ['ReaderActionAccessibility', 'READER_ACTION_MIN_TARGET']);
 const book = { sourceId: 'source', bookId: 'one', title: '一部长标题与真实当前书籍身份', author: '超长作者名称用于窄窗口与两倍系统字体',
     currentChapterTitle: '当前章节标题', latestChapterTitle: '最新章节标题', readProgress: 0.234, contentKind: 'text', coverUrl: 'https://example.test/cover' };
@@ -67,6 +66,7 @@ function Repeat(data) {
     };
 }
 const constants = source => pureModuleProbe(source.match(/^const .+;$/gm)?.join('\n') ?? '', 'PageConstants.ts', {}, [...source.matchAll(/^const (\w+) =/gm)].map(m => m[1]));
+const detailDeps = source => ({ ...fontFamilies, ...constants(source), EllipsisMode: { END: 'EllipsisMode.END' } });
 let metrics;
 function setMetrics(width, scale, left = 0, right = 0) {
     metrics = new windowMetrics.ReaderWindowMetricsSnapshot(new windowMetrics.ReaderRectVp(0, 0, width, 844));
@@ -84,7 +84,7 @@ const recursiveActors = owner => [owner, ...[...owner.children.values()].flatMap
 function selectionSdk(candidate = selectionSource, detailCandidate = detailsSource, overrides = {}) {
     const properties = createArkUIPropertyRuntimeProbe();
     const deps = { ...properties.sdk, ...readerTypographyRoles, ...readerFoundationTokens, ...windowMetrics, ...actualReaderPageLayout(), ...nativeSlotMeasurement, ...grid, ...action,
-        ...constants(candidate), Repeat, ListItemAlign: { Center: 'ListItemAlign.Center' }, ShelfBookPresentation, readerIsExpandedWidth, registerReaderFonts() { }, readerFontFamilyReady: () => true, prepareReaderFontFamily: async () => { },
+        ...constants(candidate), ...detailDeps(detailCandidate), Repeat, ListItemAlign: { Center: 'ListItemAlign.Center' }, ShelfBookPresentation, bookCoverDisplayUrl, DEFAULT_BOOKSHELF_VIEW, readerIsExpandedWidth, registerReaderFonts() { }, readerFontFamilyReady: () => true, prepareReaderFontFamily: async () => { },
         NoCoverCover: Cover, ReaderWindowCoordinator: { metrics: () => metrics }, readerActionIcon: () => '',
         uiContext: { getFont: () => ({}), px2vp: x => x, getMeasureUtils: () => ({ measureText(options) {
                     const size = Number.parseFloat(options.fontSize), factor = String(options.fontSize).endsWith('vp') ? 1 : metrics.systemFontScale, wide = options.fontFamily === readerTypographyRoles.TYPE_SHELF_SELECTION_HEADING.fontFamily;
@@ -107,20 +107,25 @@ function selectionSdk(candidate = selectionSource, detailCandidate = detailsSour
     probe.owner.refreshGeometry();
     return { ...probe, properties };
 }
-function checkDetails(owner) {
-    const details = [...owner.children.values()].find(child => child.book?.bookId === book.bookId && child.nodes);
+function checkDetails(owner, currentBook = book) {
+    const details = [...owner.children.values()].find(child => child.book?.bookId === currentBook.bookId && child.nodes);
     assert.ok(details, 'consumer mounts actual shared details child');
     const all = nodes(details), root = all.find(node => node.type === 'Column');
-    assert.equal(root.height, details.textFrame.height);
-    assert.ok(root.height >= (18 + 14 * 3) * metrics.systemFontScale + 11, 'four text lanes and progress gaps fit the actual details parent');
-    const tags = all.filter(node => node.type === 'Text' && ['小说', '在线'].includes(node.create));
-    assert.equal(tags.length, 2);
-    for (const tag of tags) {
-        assert.equal(tag.height, undefined);
-        assert.ok(tag.constraintSize.minHeight >= 16 * metrics.systemFontScale);
+    assert.equal(root.height, Math.max(88, details.textFrame.height), 'content and cover use the same inner height');
+    assert.equal(root.justifyContent, 'FlexAlign.SpaceBetween');
+    for (const value of [currentBook.title, currentBook.author, ShelfBookPresentation.listReadingPosition(currentBook),
+        ShelfBookPresentation.listSecondary(currentBook)].filter(Boolean)) {
+        const label = all.find(node => node.type === 'Text' && node.create === value);
+        assert.ok(label, value);
+        assert.equal(label.maxLines, 1);
+        assert.equal(label.ellipsisMode, 'EllipsisMode.END');
     }
-    const title = all.find(node => node.type === 'Text' && node.create === book.title);
-    assert.equal(title.maxLines, 1);
+    for (const value of [currentBook.title, currentBook.author]) {
+        const label = all.find(node => node.type === 'Text' && node.create === value);
+        assert.equal(label.layoutWeight, 1);
+        assert.equal(label.constraintSize.minWidth, 0);
+    }
+    assert.ok(!all.some(node => ['小说', '在线', '最新：暂无最新章节'].includes(node.create)));
     return details;
 }
 function selectionFrame(candidate = selectionSource, detailCandidate = detailsSource) {
@@ -160,7 +165,8 @@ function selectionFrame(candidate = selectionSource, detailCandidate = detailsSo
                 child.replay();
                 listFixture.properties.flush();
                 assert.deepEqual(nodes(child).map(n => n.id), childIds);
-                assert.equal(row.height, Math.max(80, listOwner.listTextFrame().height), 'same actor list budget reacts to system font change');
+                assert.equal(row.height, listOwner.listContentHeight() + 2 * (12 + readerFoundationTokens.TOK_BORDER_W),
+                    'same actor list budget reacts to system font change');
                 listOwner.removeVisibleSelection();
                 assert.deepEqual(selected, [[listOwner.bookKey(book)]]);
             }
@@ -241,15 +247,17 @@ function projectionFrame(candidate = shelf('BookshelfPage')) {
     };
     const methods = ['projectionRowHeight', 'projectionBookWidth', 'projectionBookHeight', 'projectionBookTranslateX', 'projectionBookTranslateY',
         'projectionCoverScale', 'projectionCoverRadius', 'projectionCoverCompensationX', 'projectionCoverCompensationY', 'projectionListDetailsWidth',
-        'projectionCoverLayerOpacity', 'gridBookCardHeight', 'gridProgressLabel', 'listCoverWidth', 'listCoverHeight', 'listRowHeight', 'listTextFrame', 'listTextBudget', 'listTextFontRevision', 'shelfBookCardWidth',
-        'bookCardWidth', 'bookCardHeight', 'bookRowSpace', 'projectionListDetails', 'projectionListProgress'];
+        'projectionCoverLayerOpacity', 'gridBookCardHeight', 'gridProgressLabel', 'listCoverWidth', 'listCoverHeight', 'listContentHeight',
+        'listRowHeight', 'listTextFrame', 'listTextBudget', 'listTextFontRevision', 'shelfBookCardWidth',
+        'bookCardWidth', 'bookCardHeight', 'bookRowSpace', 'projectionListDetails', 'projectionDetailsOpacity', 'projectionListProgress'];
     for (const width of [280, 326, 560, 720])
-        for (const scale of [1, 1.3, 1.6, 2]) {
+        for (const scale of [0.85, 1, 1.3, 1.6, 2]) {
             setMetrics(width, scale);
             const properties = createArkUIPropertyRuntimeProbe();
-            const deps = { ...properties.sdk, ...grid, ...action, ...readerFoundationTokens,
-                ...constants(candidate), resolveReaderIconButtonSpec: compileIconButtonSpecs(), ShelfBookPresentation, ReaderWindowCoordinator: { metrics: () => metrics } };
-            const hooks = { ...properties.hooks, mountChildren: true, childSources: { ShelfBookListDetails: detailsSource } };
+            const controls = iconButtonControls({ properties });
+            const deps = { ...controls.dependencies, ...grid, ...action, ...readerFoundationTokens, ...detailDeps(detailsSource),
+                ...constants(candidate), ShelfBookPresentation, ReaderWindowCoordinator: { metrics: () => metrics } };
+            const hooks = { ...controls.hooks, childSources: { ...controls.hooks.childSources, ShelfBookListDetails: detailsSource } };
             deps.ShelfBookListDetails = createReaderBuilderProbe(detailsSource, boundedMembers(detailsSource), deps, hooks).Component;
             const { owner } = createReaderBuilderProbe(candidate, methods, deps, hooks);
             const expanded = width >= 560;
@@ -257,24 +265,28 @@ function projectionFrame(candidate = shelf('BookshelfPage')) {
                 shelfContentWidth: () => width, viewSwitchListContentOpacity: 1, bookActionFocusKey: () => '', bookActionPresentationHandler: () => () => { } });
             owner.projectionListDetails(book, expanded);
             const row = nodes(owner).find(node => node.type === 'Row');
-            const minimumHeight = grid.bookshelfListTextHeight(scale);
-            assert.ok(Number.isFinite(row.height) && Number.isFinite(minimumHeight) && row.height >= minimumHeight - 1e-9,
-                'main shelf list parent reserves the real four-line details height');
+            const innerHeight = Math.max(88, 82 * scale + 6);
+            near(row.height, innerHeight, 'main shelf list parent reserves the scaled five-line details height');
             checkDetails(owner);
-            const rowHeight = owner.listRowHeight(expanded), step = owner.projectionBookTranslateY(1, expanded, 0);
+            const listColumns = expanded ? 2 : 1;
+            const rowHeight = owner.listRowHeight(expanded), step = owner.projectionBookTranslateY(listColumns, expanded, 0);
+            const projectionBookCount = 3 * listColumns;
+            near(rowHeight, innerHeight + 24, 'list card includes both 12vp insets');
             near(owner.projectionBookHeight(book, expanded, 0), rowHeight, 'projection card endpoint pays the current list height');
             near(step, rowHeight + readerFoundationTokens.TOK_SPACE_CONTROL_INLINE, 'projection step pays the current list height and gap');
-            near(owner.projectionRowHeight([book, book, book], expanded, 0), rowHeight * 3 + readerFoundationTokens.TOK_SPACE_CONTROL_INLINE * 2,
-                'projection row pays three list cards and two gaps');
-            assert.equal(owner.listCoverHeight(expanded), expanded ? 104 : 72, 'font growth preserves authored cover geometry');
+            near(owner.projectionRowHeight(Array(projectionBookCount).fill(book), expanded, 0), rowHeight * 3 + readerFoundationTokens.TOK_SPACE_CONTROL_INLINE * 2,
+                'projection row pays three list lines and two gaps');
+            assert.equal(owner.listCoverHeight(expanded), 88, 'both width classes share the nominal cover height');
+            assert.equal(owner.listCoverWidth(expanded), 62, 'both width classes share the nominal cover width');
             owner.viewMode = 'cover';
             owner.replay();
             assert.equal(row.enabled, false);
             assert.equal(row.hitTestBehavior, 'HitTestMode.None');
             owner.viewMode = 'list';
             metrics.systemFontScale = 2;
+            owner.readerWindowMetricsRevision += 1;
             owner.replay();
-            near(row.height, owner.listRowHeight(expanded), 'retained list row follows the current font budget');
+            near(row.height, owner.listRowHeight(expanded) - 24, 'retained details follow the current font budget');
         }
 }
 function detailActions(candidate = localBookDetailSource) {
@@ -334,7 +346,9 @@ function detailActions(candidate = localBookDetailSource) {
             const currentFooter = owner.geometry.footer.height;
             owner.recordFrameHeight('detail:dock', 200, key);
             assert.equal(owner.geometry.footer.height, currentFooter, 'old width-dependent dock receipt cannot rewrite the new generation');
-            const rows = nodes(owner).filter(node => node.type === 'Row' && node.width === '100%');
+            const beforeDock = nodes(owner).length;
+            owner.actionSurface();
+            const rows = nodes(owner).slice(beforeDock).filter(node => node.type === 'Row' && node.width === '100%');
             assert.ok(rows.length > 0);
             for (const row of rows)
                 assert.equal(row.height, undefined, 'detail action parent keeps natural height');
@@ -471,148 +485,87 @@ function shelfFilterTargets(candidate = shelf('BookshelfPage')) {
         assert.deepEqual(projectionRequests, ['current', 'current']);
     }
 }
-async function shelfResidualLane(candidate = shelf('BookshelfPage'), childSource = detailsSource) {
-    const fontPaths = ['NotoSerifSC-Bold.ttf', 'NotoSansSC-UIRegular.otf'].map(name =>
-        new URL('../entry/src/main/resources/rawfile/' + name, import.meta.url).pathname);
-    fontPaths.forEach(path => readFileSync(path));
-    const labels = ['…', '小说', '漫画', '有声', '本地', '在线', '未读', '已读 <1%', '已读 100%', '*%'];
-    const requests = [1, 1.3, 1.6, 2].flatMap(scale => [
-        { font: 0, size: 15 * scale }, { font: 1, size: 9 * scale }, { font: 1, size: 11 * scale },
-    ]);
-    const glyphReceipt = JSON.parse(execFileSync('python3', ['-c', `import json,sys
-from PIL import ImageFont, __version__ as pillow_version
-requests=json.loads(sys.argv[1]); labels=json.loads(sys.argv[2]); fonts=sys.argv[3:]
-result={}
-for request in requests:
- font=ImageFont.truetype(fonts[request['font']],round(request['size']*100))
- result[str(request['font'])+':'+format(request['size'],'.6f')]={label:font.getlength(label)/100 for label in labels}
-print(json.dumps({'widths':result,'runtime':{'python':sys.version,'executable':sys.executable,'pillow':pillow_version,'freetype':ImageFont.core.freetype2_version,'fontModule':ImageFont.__file__,'nativeModule':ImageFont.core.__file__}}))`, JSON.stringify(requests), JSON.stringify(labels), ...fontPaths], { encoding: 'utf8' }));
-    const widths = glyphReceipt.widths;
-    const glyphInputs = [glyphReceipt.runtime.executable, glyphReceipt.runtime.fontModule, glyphReceipt.runtime.nativeModule].map(path => {
-        const bytes = readFileSync(path);
-        return { path, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex') };
-    });
-    let measurements = 0;
-    const context = { getFont: () => ({}), px2vp: value => value, getMeasureUtils: () => ({
-        measureText(options) {
-            const font = options.fontFamily === readerTypographyRoles.TYPE_SHELF_LIST_TITLE.fontFamily ? 0 : 1;
-            const size = Number.parseFloat(options.fontSize);
-            const value = widths[font + ':' + size.toFixed(6)]?.[options.textContent];
-            if (value === undefined) throw new Error('finite shelf glyph fixture has no unrelated label');
-            measurements += 1;
-            return value;
-        },
-    }) };
-    const headers = pureModuleProbe(read('ui/foundation/ReaderHeaderSpecs.ets'), 'ReaderHeaderSpecs.ets',
-        { ...readerFoundationTokens, ...headerMetrics }, ['bookshelfHeaderSpec']);
+function shelfResidualLane(childSource = detailsSource) {
+    const source = shelf('BookshelfPage');
     const properties = createArkUIPropertyRuntimeProbe();
     const controls = iconButtonControls({ properties });
-    const deps = { ...controls.dependencies, ...headers, ...actualReaderPageLayout(), ...readerTypographyRoles,
-        ...readerFoundationTokens, ...windowMetrics, ...grid, ...constants(candidate), ShelfBookPresentation,
-        uiContext: context, ReaderWindowCoordinator: { metrics: () => metrics } };
+    const deps = { ...controls.dependencies, ...grid, ...detailDeps(childSource), ShelfBookPresentation,
+        ReaderWindowCoordinator: { metrics: () => metrics } };
     const hooks = { ...controls.hooks, childSources: { ...controls.hooks.childSources, ShelfBookListDetails: childSource } };
     deps.ShelfBookListDetails = createReaderBuilderProbe(childSource, boundedMembers(childSource), deps, hooks).Component;
-    const methods = ['contentGeometry', 'phoneContentFrame', 'phoneContentWidth', 'shelfContentWidth',
-        'listCoverWidth', 'listCoverHeight', 'listTextFrame', 'listTextBudget', 'listTextFontRevision',
-        'listTextFontGeneration', 'prepareListTextFonts', 'listRowHeight', 'projectionListDetailsWidth',
-        'projectionListDetails', 'projectionRowHeight', 'projectionBookHeight', 'projectionBookTranslateY',
-        'projectionListProgress', 'gridBookCardHeight', 'gridProgressLabel'];
-    const { owner } = createReaderBuilderProbe(candidate, methods, deps, hooks);
-    const currentBook = { ...book, readProgress: 10000, lastChapter: '第一百章长章节名称' };
+    const methods = ['listCoverWidth', 'listCoverHeight', 'listTextFrame', 'listTextBudget', 'listTextFontRevision',
+        'listContentHeight', 'projectionListDetailsWidth', 'projectionListDetails', 'projectionDetailsOpacity'];
+    const longChapter = '长章节标题'.repeat(16);
+    const onlineBook = { ...book, contentKind: 'audio', readProgress: 3400, unreadCount: 12,
+        currentChapterTitle: '当前' + longChapter, lastChapter: '最终' + longChapter };
+    const withoutLatest = { ...book, readProgress: 0, currentChapterTitle: undefined };
+    const localBook = { ...withoutLatest, sourceId: 'local', kind: 'epub', chapterCount: 27 };
     const moreCalls = [];
-    setMetrics(320, 1, 40, 40);
-    Object.assign(owner, { mounted: true, readerWindowMetricsRevision: 1, appThemeScheme: 'day', headerBottom: 80,
-        effectiveViewportWidth: () => 320, shelfContentEndValue: () => 0, railActive: () => false,
-        viewMode: 'list', viewSwitchListContentOpacity: 1, reduceMotion: true,
-        bookActionFocusKey: () => 'current-book-more', bookActionPresentationHandler: current => () => moreCalls.push(current.bookId) });
-    owner.projectionListDetails(currentBook, false);
-    const detail = [...owner.children.values()].find(child => child instanceof deps.ShelfBookListDetails);
-    const moreChild = [...owner.children.values()].find(child => child instanceof controls.icon.Component);
-    const row = nodes(owner).find(node => node.type === 'Row');
-    const more = controls.nodes(owner).find(node => node.type === 'Button');
-    assert.equal(owner.contentGeometry(false).content.frame.width, 240);
-    assert.equal(row.width, 182);
-    assert.equal(more.width, 44);
-    const childIds = nodes(detail).map(node => node.id), moreId = more.id;
-    for (const scale of [1, 1.3, 1.6, 2, 1]) {
-        metrics.systemFontScale = scale;
+    for (const [width, expanded, currentBook] of [[240, false, onlineBook], [760, true, onlineBook],
+        [240, false, withoutLatest], [650, true, localBook]]) {
+        setMetrics(width, 1);
+        const { owner } = createReaderBuilderProbe(source, methods, deps, hooks);
+        Object.assign(owner, { mounted: true, readerWindowMetricsRevision: 1, appThemeScheme: 'day',
+            shelfContentWidth: () => width, viewMode: 'list', viewSwitchListContentOpacity: 1,
+            bookActionFocusKey: () => 'current-book-more', bookActionPresentationHandler: () => () => moreCalls.push(currentBook.sourceId) });
+        owner.projectionListDetails(currentBook, expanded);
+        const details = checkDetails(owner, currentBook);
+        const wrapper = nodes(owner).find(node => node.type === 'Row');
+        const button = controls.nodes(details).find(node => node.type === 'Button');
+        const buttonIcon = controls.nodes(details).find(node => node.type === 'Image');
+        const detailActors = nodes(details).map(node => node.id);
+        const cardWidth = expanded ? (width - 10) / 2 : width;
+        assert.equal(wrapper.width, cardWidth - 98, 'details release the former right-side width reservation');
+        assert.deepEqual(wrapper.translate, { x: 86, y: 12 });
+        assert.equal(wrapper.height, 88);
+        assert.equal(button?.width, 20);
+        assert.equal(button?.height, 20);
+        assert.equal(buttonIcon?.width, 18);
+        assert.deepEqual(button?.responseRegion, { x: -12, y: -12, width: 44, height: 44 });
+        assert.equal(button?.accessibilityText, currentBook.title + '更多操作');
+        assert.equal(button?.enabled, true);
+        const defaultUpdate = nodes(details).find(node => node.create === '更新 12 章');
+        if (currentBook === onlineBook) {
+            assert.equal(defaultUpdate?.flexShrink, 0);
+            assert.equal(defaultUpdate?.borderRadius, 5);
+        }
+        const label = nodes(details).find(node => node.create === ShelfBookPresentation.listProgress(currentBook));
+        assert.equal(label?.fontFeature, '"tnum" 1');
+        assert.equal(label?.flexShrink, 0);
+        const nativeProgress = nodes(details).find(node => node.type === 'Progress');
+        assert.equal(nativeProgress?.height, 3);
+        assert.equal(nativeProgress?.layoutWeight, 1);
+        assert.equal(nativeProgress?.alignSelf, 'ItemAlign.End', 'the real stroke reaches the bottom of the last row');
+        assert.equal(nodes(details).filter(node => node.type === 'Text' && node.width === '100%').length,
+            currentBook === withoutLatest ? 1 : 2, 'optional secondary line takes a full row only when present');
+        if (currentBook === localBook) {
+            assert.ok(nodes(details).some(node => node.create === '本地 EPUB · 共 27 章'));
+            assert.ok(nodes(details).some(node => node.create === '本地' && node.flexShrink === 0));
+        }
+        metrics.systemFontScale = 2;
         owner.readerWindowMetricsRevision += 1;
         owner.replay();
         properties.flush();
-        const frame = owner.listTextFrame(false);
-        assert.equal(frame.width, 128, 'actual cover and More allocation leaves the diagnosed text lane');
-        if (scale === 2) {
-            assert.equal(frame.stackTitle, true, '128vp lane separates title from both metadata tags');
-            assert.equal(frame.stackStatus, true, '128vp lane separates latest chapter from progress');
-            assert.ok(frame.height >= 196, 'the parent pays both additional text rows');
+        assert.equal(wrapper.height, 170);
+        assert.equal(details.targetHeight, 170);
+        assert.equal(details.textFrame.width, wrapper.width);
+        // Change the rendered label without replacing its native text actor.
+        if (currentBook === onlineBook) {
+            const update = nodes(details).find(node => node.create === (expanded ? '更新 12 章' : '+12章'));
+            assert.equal(update, defaultUpdate);
         }
-        const title = nodes(detail).find(node => node.type === 'Text' && node.create === currentBook.title);
-        const latest = nodes(detail).find(node => node.type === 'Text' && String(node.create).startsWith('最新：'));
-        assert.equal(title.layoutWeight, frame.stackTitle ? 0 : 1, 'actual title uses the current width frame');
-        assert.equal(latest.layoutWeight, frame.stackStatus ? 0 : 1, 'actual latest uses the current width frame');
-        const metadata = nodes(detail).find(node => node.type === 'Flex' && node.width === frame.metadataWidth);
-        assert.ok(metadata, 'metadata has its measured intrinsic group width inside the shared text lane');
-        assert.ok(metadata.width <= frame.width);
-        assert.equal(metadata.height, frame.metadataHeight);
-        assert.equal(nodes(detail).find(node => node.type === 'Column').height, frame.height);
-        assert.equal(row.height, frame.height);
-        assert.equal(owner.projectionBookHeight(currentBook, false, 0), frame.height);
-        assert.equal(owner.projectionBookTranslateY(1, false, 0), frame.height + readerFoundationTokens.TOK_SPACE_CONTROL_INLINE);
-        assert.equal(owner.projectionRowHeight([currentBook, currentBook, currentBook], false, 0),
-            frame.height * 3 + readerFoundationTokens.TOK_SPACE_CONTROL_INLINE * 2);
-        assert.deepEqual(nodes(detail).map(node => node.id), childIds, 'Flex direction updates retain the native text actors');
-        assert.equal(owner.children.get(detail.id), detail);
-        assert.equal(owner.children.get(moreChild.id), moreChild, 'the same More component survives width and font reflow');
-        assert.equal(controls.nodes(owner).find(node => node.type === 'Button'), more);
-        assert.equal(more.id, moreId);
-        const count = measurements;
-        for (let iteration = 0; iteration < 30; iteration += 1) {
-            owner.listRowHeight(false);
-            owner.projectionRowHeight([currentBook, currentBook, currentBook], false, 0);
-            owner.projectionBookTranslateY(1, false, 0);
-        }
-        assert.equal(measurements, count, 'animation getters reuse one measured text budget');
+        assert.deepEqual(nodes(details).map(node => node.id), detailActors);
+        assert.equal(controls.nodes(details).find(node => node.type === 'Button'), button);
+        button.onClick();
+        owner.viewMode = 'cover';
+        owner.replay();
+        properties.flush();
+        assert.equal(wrapper.enabled, false);
+        assert.equal(wrapper.hitTestBehavior, 'HitTestMode.None');
+        assert.equal(button.enabled, false);
+        button.onClick();
     }
-    more.onClick();
-    assert.deepEqual(moreCalls, [currentBook.bookId]);
-    metrics.systemFontScale = 2;
-    listFontsReady = false;
-    const pendingCount = measurements;
-    owner.readerWindowMetricsRevision += 1;
-    owner.replay();
-    properties.flush();
-    assert.equal(row.height, owner.listTextFrame(false).height);
-    assert.equal(measurements, pendingCount, 'pending fonts use a conservative budget without native measurement');
-    const receipts = [];
-    prepareListFont = () => new Promise(resolve => receipts.push(resolve));
-    owner.prepareListTextFonts();
-    assert.equal(receipts.length, 2);
-    listFontsReady = true;
-    receipts.forEach(resolve => resolve());
-    await new Promise(done => setImmediate(done));
-    properties.flush();
-    assert.equal(owner.listTextFontRevision, 1);
-    assert.equal(owner.listTextFrame(false).height, 196, 'checked fonts replace the pending fallback budget');
-    assert.ok(measurements > pendingCount);
-    prepareListFont = async () => {};
-    const selection = selectionSdk(selectionSource, childSource, { uiContext: context }).owner;
-    selection.books = [currentBook];
-    selection.storedViewMode = 'list';
-    selection.selectionList();
-    const selectionFrame = selection.listTextFrame();
-    assert.equal(selectionFrame.width, 180);
-    assert.equal(selectionFrame.stackTitle, false, 'the selection lane retains its valid title and tags inline');
-    assert.equal(selectionFrame.stackStatus, false, 'the selection lane retains its valid latest and progress inline');
-    assert.equal(selectionFrame.height, 131);
-    const selectionRow = nodes(selection).find(node => node.type === 'Row' && typeof node.onClick === 'function');
-    const selectionDetails = [...selection.children.values()].find(child => child.book?.bookId === currentBook.bookId);
-    assert.equal(selectionRow.height, selectionFrame.height);
-    assert.equal(nodes(selectionDetails).find(node => node.type === 'Column').height, selectionFrame.height);
-    assert.equal(nodes(selectionDetails).find(node => node.type === 'Text' && node.create === currentBook.title).layoutWeight, 1);
-    assert.ok(nodes(selectionDetails).some(node => node.create === ShelfBookPresentation.progress(currentBook)));
-    console.log(JSON.stringify({ kind: 'shelf-residual-font-facts', tag: widths['1:18.000000']['小说'],
-        progress: widths['1:22.000000']['已读 100%'], titleEllipsis: widths['0:30.000000']['…'],
-        runtime: glyphReceipt.runtime, inputs: glyphInputs }));
+    assert.deepEqual(moreCalls, ['source', 'source', 'source', 'local'], 'only list-mode More dispatches');
 }
 for (const id of selectContractCases(definitions)) {
     if (id === 'shelf-selection-frame') {
@@ -622,12 +575,12 @@ for (const id of selectContractCases(definitions)) {
         const fixed = selectionSource.replace("return this.isListMode() ? this.geometry.content.frame.width : this.gridFrame().rowWidth;", 'return this.isWide() ? 622 : 351;');
         assert.notEqual(fixed, selectionSource);
         assert.throws(() => selectionFrame(fixed), /safe lane/);
-        const short = selectionSource.replace('.height(Math.max(80, this.listTextFrame().height))', '.height(80)');
+        const short = selectionSource.replace('.height(this.listContentHeight() + 2 * (BOOKSHELF_LIST_CARD_PADDING + TOK_BORDER_W))', '.height(80)');
         assert.notEqual(short, selectionSource);
         assert.throws(() => selectionFrame(short), /shared text height|same actor list budget/);
-        const details = detailsSource.replace('height(this.textFrame.height)', 'height(72)');
+        const details = detailsSource.replace('height(this.targetHeight)', 'height(72)');
         assert.notEqual(details, detailsSource);
-        assert.throws(() => selectionFrame(selectionSource, details), /strictly equal|four text lanes/);
+        assert.throws(() => selectionFrame(selectionSource, details), /content and cover/);
         const header = selectionSource.replace('.constraintSize({ minWidth: 72, minHeight: READER_ACTION_MIN_TARGET }).flexShrink(0)', '.width(72).height(44)');
         assert.notEqual(header, selectionSource);
         assert.throws(() => selectionFrame(header));
@@ -635,9 +588,9 @@ for (const id of selectContractCases(definitions)) {
     if (id === 'shelf-projection-frame') {
         projectionFrame();
         const source = shelf('BookshelfPage');
-        const short = source.replace('return Math.max(this.listCoverHeight(expandedLayout),\n      this.listTextFrame(expandedLayout).height);', 'return this.listCoverHeight(expandedLayout);');
+        const short = source.replace('return Math.max(this.listCoverHeight(expandedLayout), this.listTextFrame(expandedLayout).height);', 'return this.listCoverHeight(expandedLayout);');
         assert.notEqual(short, source);
-        assert.throws(() => projectionFrame(short), /four-line details height/);
+        assert.throws(() => projectionFrame(short), /five-line details height|retained details/);
     }
     if (id === 'detail-action-target') {
         detailActions();
@@ -676,16 +629,10 @@ for (const id of selectContractCases(definitions)) {
         assert.throws(() => shelfFilterTargets(narrow), /filter native action minimum width44/);
     }
     if (id === 'shelf-list-residual-lane') {
-        await shelfResidualLane();
-        const inline = detailsSource.replaceAll('this.textFrame.stackTitle', 'false')
-            .replaceAll('this.textFrame.stackStatus', 'false');
-        assert.notEqual(inline, detailsSource);
-        await assert.rejects(() => shelfResidualLane(shelf('BookshelfPage'), inline), /actual title uses the current width frame/);
-        const source = shelf('BookshelfPage');
-        const short = source.replace('return Math.max(this.listCoverHeight(expandedLayout),\n      this.listTextFrame(expandedLayout).height);',
-            'return this.listCoverHeight(expandedLayout);');
-        assert.notEqual(short, source);
-        await assert.rejects(() => shelfResidualLane(short), /strictly equal/);
+        shelfResidualLane();
+        const packed = detailsSource.replace('.justifyContent(FlexAlign.SpaceBetween)', '.justifyContent(FlexAlign.Start)');
+        assert.notEqual(packed, detailsSource);
+        assert.throws(() => shelfResidualLane(packed), /FlexAlign.SpaceBetween/);
     }
     recordContractCasePass(id);
 }

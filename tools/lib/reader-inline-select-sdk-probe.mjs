@@ -35,7 +35,7 @@ export function inlineSelectSdk({properties=createArkUIPropertyRuntimeProbe(),ui
  const deps={...properties.sdk,...readerFoundationTokens,...readerTypographyRoles,...appearance,...geometry,readerInteractiveSafeLeft,readerInteractiveSafeRight,readerInteractiveSafeTop,readerInteractiveSafeBottom,readerKeyboardHostBottom,...motion,...policy,...choice.dependencies,readerAppColor,registerReaderFonts(){},uiContext,Placement:enums('Placement'),Curve:enums('Curve'),...dependencies};
  for(const name of ['ReaderSelect','ReaderSelectPanel','ReaderInlineSelect']){
   const source=read(name);hooks.childSources[name]=source;
-  const moduleNames=name==='ReaderSelect'?['TRIGGER_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H','SELECT_CHROME']:name==='ReaderSelectPanel'?['OPTION_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H','SELECT_CHROME']:[];
+  const moduleNames=name==='ReaderSelect'?['TRIGGER_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H']:name==='ReaderSelectPanel'?['OPTION_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H','SELECT_CHROME']:[];
   const values=moduleNames.length?selectedProductionValues(file(name),moduleNames,deps):{};
   const localClasses=name==='ReaderSelectPanel'?pureModuleProbe(source.slice(0,source.indexOf('@Component')),
     'ReaderSelectPanelFrames.ets',{...deps,FrameCallback:class{}},['ReaderSelectParentFrame']):{};

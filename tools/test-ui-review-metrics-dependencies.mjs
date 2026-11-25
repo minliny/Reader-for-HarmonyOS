@@ -95,7 +95,8 @@ function nativeWitness(spec, source, metrics) {
       'ReaderControlTextMeasurement.ets', { WordBreak: { BREAK_WORD: 'WordBreak.BREAK_WORD' } }, ['measureReaderControlText']);
     const capsule = read('features/reading/ui/ReaderSessionCapsule.ets');
     Object.assign(dependencies, pureModuleProbe(capsule.slice(0, capsule.indexOf('export class ReaderSessionCapsuleFrame')),
-      'ReaderSessionCapsuleMeasurement.ets', { ...readerTypographyRoles, ...textMeasurement }, ['measureReaderSessionCapsule']));
+      'ReaderSessionCapsuleMeasurement.ets', { ...readerTypographyRoles, ...textMeasurement,
+        READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT: chromeGeometry.READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT }, ['measureReaderSessionCapsule']));
   }
   if (spec.path.endsWith('ReaderSelect.ets')) {
     Object.assign(dependencies, pureModuleProbe(source.slice(0, source.indexOf('@Component')),
@@ -365,8 +366,7 @@ const retainedLayout = {
   initialize(owner) { owner.lastWindowMetricsLayoutKey = owner.windowMetricsLayoutKey(); },
   change: m => { m.systemInsets.right = 0; m.systemInsets.left = 24; },
   value: owner => layoutProjection(owner.children.get(0).lastDelivery.layout),
-  expected: m => layoutProjection(readingGeometry.resolveReaderReadingLayout(393, 852, false, m, false,
-    undefined, 0, 0, 44)),
+  expected: m => layoutProjection(readingGeometry.resolveReaderReadingLayout(393, 852, false, m)),
 };
 const gestureConsumer = consumers.find(spec => spec.path.endsWith('LocalReadingExperience.ets'));
 Object.assign(gestureConsumer, { actualStorage: true, methods: [...gestureConsumer.methods, ...readingMethods],
@@ -413,12 +413,10 @@ delete capsuleParams.sessionCapsuleMetrics;
 consumers.push({ ...retainedLayout, actualStorage: false, marker: 'y: this.sessionCapsuleLayout().sessionY',
   observerName: undefined, methods: ['readingLayout', 'sessionCapsuleLayout', 'sessionCapsuleMetrics'],
   params: capsuleParams, initialize: undefined, initialMetrics: m => { m.systemInsets.right = 80; },
-  change: m => { m.systemInsets.right = 0; m.systemInsets.left = 80; },
+  change: m => { m.systemInsets.right = 0; m.systemInsets.left = 42; },
   value: (_owner, n) => n.position,
   expected: m => {
-    // Finite text port above returns 60vp width and 20vp height at scale 1.
-    // Production capsule measurement therefore reserves a 70vp target lane.
-    const layout = readingGeometry.resolveReaderReadingLayout(393, 852, false, m, false, undefined, 0, 0, 70);
+    const layout = readingGeometry.resolveReaderReadingLayout(393, 852, false, m);
     const result = chromeGeometry.resolveReaderPageChromeLayout(layout,
       new chromeGeometry.ReaderPageChromeMeasurements(0, 0, 0, 0, 0, 0, 0, 0, true, 96, 44));
     return { x: result.sessionX, y: result.sessionY };

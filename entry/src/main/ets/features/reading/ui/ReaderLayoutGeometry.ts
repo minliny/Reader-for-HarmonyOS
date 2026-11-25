@@ -13,6 +13,8 @@ import {
 import { readerWidthClassWithHint, type ReaderWidthClass } from '../../../ui/foundation/ReaderWidthClass.ts';
 import type { ReaderWidePageLayout } from '../application/ReaderSettingsState.ts';
 import { READER_CONTROL_TOP_BAR_HEIGHT } from './ReaderControlGeometry.ts';
+import { READER_PAGE_CHROME_FOOTER_HEIGHT, READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT,
+  readerPageChromeBottomInset } from './ReaderPageChromeLayout.ts';
 import {
   READER_CONTROL_MOTION_QUICK_CONTENT_VERTICAL_RESERVE,
   READER_CONTROL_MOTION_CONTENT_INSET_MAX,
@@ -44,6 +46,7 @@ export const READER_FULL_PANEL_BOTTOM_GAP = 20;
 // status-bar guess.  Keep enough vertical breathing room around the platform
 // text line while allowing large accessibility metrics to grow the lane.
 export const READER_PAGE_CHROME_TOP_ROW_PADDING_VP = 8;
+const READER_PAGE_CHROME_BODY_BOTTOM_GAP_VP = 4;
 export const READER_FULL_PANEL_INNER_INSET_X = 13;
 export type ReaderContentInsetProfile = {
   compact: number;
@@ -55,12 +58,16 @@ export const DEFAULT_READER_CONTENT_INSET_PROFILE: ReaderContentInsetProfile = {
 };
 /** Optical clearance below a live status/cutout edge for the 54vp control top bar. */
 export const READER_CONTROL_SAFE_TOP_GAP = 10;
+export const READER_CONTROL_ISLAND_HEIGHT = 330;
+
+export function readerControlIslandHeight(capacity: number): number {
+  return Math.min(READER_CONTROL_ISLAND_HEIGHT, Math.max(0, capacity));
+}
 
 class ReaderDesignProfile {
   referenceWidth: number;
   referenceHeight: number;
   contentTop: number;
-  contentBottom: number;
   contentHorizontal: number;
   topBarTop: number;
   topBarSideGap: number;
@@ -78,7 +85,6 @@ class ReaderDesignProfile {
       this.referenceWidth = READER_TABLET_REFERENCE_WIDTH;
       this.referenceHeight = READER_TABLET_REFERENCE_HEIGHT;
       this.contentTop = 92.44;
-      this.contentBottom = 56.44;
       this.contentHorizontal = 44.44;
       this.topBarTop = 19;
       this.topBarSideGap = 29;
@@ -95,7 +101,6 @@ class ReaderDesignProfile {
     this.referenceWidth = READER_PHONE_REFERENCE_WIDTH;
     this.referenceHeight = READER_PHONE_REFERENCE_HEIGHT;
     this.contentTop = 72;
-    this.contentBottom = 47.99;
     this.contentHorizontal = 32;
     this.topBarTop = 19;
     this.topBarSideGap = 15;
@@ -130,6 +135,7 @@ export class ReaderReadingLayoutSnapshot {
   pageChromeInteractiveSafeRight: number;
   pageChromeInteractiveSafeBottom: number;
   pageChromeStatusMetrics: ReaderWindowMetricsSnapshot | undefined;
+  readonly pageChromeFooterHeight: number;
   readonly facingChapterWidth: number;
 
   constructor(
@@ -150,6 +156,7 @@ export class ReaderReadingLayoutSnapshot {
     pageChromeTopRegionHeight: number = 0,
     pageChromeStatusMetrics?: ReaderWindowMetricsSnapshot,
     facingChapterWidth: number = 0,
+    pageChromeFooterHeight: number = READER_PAGE_CHROME_FOOTER_HEIGHT,
   ) {
     this.widthClass = widthClass;
     this.viewportWidth = viewportWidth;
@@ -170,6 +177,7 @@ export class ReaderReadingLayoutSnapshot {
     this.pageChromeInteractiveSafeRight = pageChromeInteractiveSafeRight;
     this.pageChromeInteractiveSafeBottom = pageChromeInteractiveSafeBottom;
     this.pageChromeStatusMetrics = pageChromeStatusMetrics;
+    this.pageChromeFooterHeight = pageChromeFooterHeight;
     this.facingChapterWidth = facingChapterWidth;
   }
 
@@ -330,8 +338,9 @@ export function resolveReaderReadingLayout(
   insetProfile?: ReaderContentInsetProfile,
   measuredTopInfoHeightVp: number = 0,
   measuredPersistentBottomVp: number = 0,
-  measuredSessionTargetHeightVp: number = 0,
   widePageLayout?: ReaderWidePageLayout,
+  pageMarginOffset: number = 0,
+  measuredFooterPaintHeightVp: number = READER_PAGE_CHROME_FOOTER_HEIGHT,
 ): ReaderReadingLayoutSnapshot {
   const widthClass = readerWidthClass(viewportWidth, expandedHint);
   const profile = new ReaderDesignProfile(widthClass === 'expanded');
@@ -342,7 +351,6 @@ export function resolveReaderReadingLayout(
   const cutoutSafeTop = Math.max(0, metrics.cutoutInsets.top,
     metrics.statusBarCutoutRect.height > 0 ?
       metrics.statusBarCutoutRect.top + metrics.statusBarCutoutRect.height : 0);
-  const cutoutSafeBottom = extendIntoCutout ? 0 : Math.max(0, metrics.cutoutInsets.bottom);
   const systemHorizontal = Math.max(
     Number.isFinite(metrics.systemInsets.left) ? Math.max(0, metrics.systemInsets.left) : 0,
     Number.isFinite(metrics.systemInsets.right) ? Math.max(0, metrics.systemInsets.right) : 0,
@@ -355,15 +363,16 @@ export function resolveReaderReadingLayout(
   const requestedHorizontal = insetProfile === undefined ? autoHorizontal :
     widthClass === 'expanded' ? insetProfile.expanded : insetProfile.compact;
   const configuredHorizontal = Number.isFinite(requestedHorizontal) ? Math.max(0, requestedHorizontal) : autoHorizontal;
-  const contentHorizontal = Math.max(configuredHorizontal, safeHorizontal,
-    widthClass === 'expanded' && insetProfile === undefined ? Math.max(0, (width - 720) / 2) : 0);
-  const spreadInset = Math.max(contentHorizontal, (width - READER_SPREAD_MAX_WIDTH) / 2);
+  const maxHorizontal = widthClass === 'expanded' && insetProfile === undefined ? Math.max(0, (width - 720) / 2) : 0;
+  const marginOffset = Number.isFinite(pageMarginOffset) ? pageMarginOffset : 0;
+  const contentHorizontal = Math.max(0, Math.max(configuredHorizontal, maxHorizontal) + marginOffset, safeHorizontal);
+  const spreadInset = Math.max(contentHorizontal, (width - READER_SPREAD_MAX_WIDTH) / 2 + marginOffset);
   const columnWidth = (width - spreadInset * 2 - READER_FACING_CHAPTER_GAP_VP) / 2;
   const wide = widthClass === 'expanded' && widePageLayout !== undefined;
   const facingChapterWidth = wide && widePageLayout === 'spread' && columnWidth >= READER_FACING_CHAPTER_MIN_WIDTH ?
     columnWidth : 0;
   const bodyLeft = !wide ? contentHorizontal : facingChapterWidth > 0 ? spreadInset :
-    Math.max(contentHorizontal, (width - READER_SINGLE_FOCUS_MAX_WIDTH) / 2);
+    Math.max(contentHorizontal, (width - READER_SINGLE_FOCUS_MAX_WIDTH) / 2 + marginOffset);
   const bodyRight = facingChapterWidth > 0 ? width - bodyLeft - facingChapterWidth : bodyLeft;
   // The immersive metadata uses the real status-bar origin and a lane that is
   // at least as high as the measured status region.  Its own text line also
@@ -399,34 +408,34 @@ export function resolveReaderReadingLayout(
     Math.max(profile.contentTop, contentTop);
   const persistentBottom = widthClass === 'compact' && width < height && Number.isFinite(measuredPersistentBottomVp) ?
     Math.max(0, measuredPersistentBottomVp) : 0;
-  const contentBottom = Math.max(
-    metrics.systemInsets.bottom,
-    cutoutSafeBottom,
-    metrics.gestureInsets.bottom,
-    metrics.navigationInsets.bottom,
-  );
+  const safeBottom = readerInteractiveSafeBottom(metrics);
+  const footerHeight = Number.isFinite(measuredFooterPaintHeightVp) ?
+    Math.max(READER_PAGE_CHROME_FOOTER_HEIGHT, measuredFooterPaintHeightVp) : READER_PAGE_CHROME_FOOTER_HEIGHT;
+  // Pay only the upper extension of the centered capsule target. Reserve it
+  // even while idle so playback never repaginates the current chapter.
+  const footerGap = Math.max(READER_PAGE_CHROME_BODY_BOTTOM_GAP_VP,
+    Math.ceil((READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT - footerHeight) / 2));
+  const contentBottom = readerPageChromeBottomInset(safeBottom) + footerHeight + footerGap;
   const systemFontScale = metrics.systemFontScale > 0 ? metrics.systemFontScale : 1;
-  const sessionTargetHeight = Number.isFinite(measuredSessionTargetHeightVp) ? Math.max(0, measuredSessionTargetHeightVp) : 0;
-  const sessionBottomBudget = sessionTargetHeight > 0 ?
-    Math.max(23, readerInteractiveSafeBottom(metrics, false)) + sessionTargetHeight : 0;
   return new ReaderReadingLayoutSnapshot(
     widthClass,
     width,
     height,
     Math.max(resolvedContentTop, persistentBottom > 0 ? persistentBottom + 8 : 0),
     bodyRight,
-    Math.max(profile.contentBottom, contentBottom, sessionBottomBudget),
+    contentBottom,
     bodyLeft,
     systemFontScale,
     informationTop,
     readerVisualSafeRight(metrics),
     readerVisualSafeBottom(metrics),
     readerVisualSafeLeft(metrics),
-    readerInteractiveSafeRight(metrics, true),
-    readerInteractiveSafeBottom(metrics, true),
+    readerInteractiveSafeRight(metrics),
+    safeBottom,
     informationLaneHeight,
     metrics,
     facingChapterWidth,
+    footerHeight,
   );
 }
 

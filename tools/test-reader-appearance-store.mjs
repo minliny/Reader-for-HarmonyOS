@@ -3,6 +3,7 @@ import { ReaderStartupTrace } from '../entry/src/main/ets/app/ReaderStartupTrace
 import { readFileSync } from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceStore.ts';
+import { readerHostPreferencesName } from '../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts';
 import * as state from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
 
 const reading = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
@@ -27,7 +28,7 @@ function persistence(snapshot = initial) {
   };
 }
 const Gateway = new Function('ReaderCustomFontHost', stripTypeScriptTypes(
-  read('ReaderAppearanceGateway.ts').replace(/^import[\s\S]*?;\n/gm, '')).replace('export class', 'class') +
+  read('application/ReaderAppearanceGateway.ts').replace(/^import[\s\S]*?;\n/gm, '')).replace('export class', 'class') +
   ';return ReaderAppearanceGateway;')(class {});
 const ownerFor = store => ({ getAppearanceStore: () => store, getUIAbilityContext: () => ({}) });
 const changeIndent = indent => current => state.setReaderAppearanceIndent(current, indent);
@@ -125,20 +126,20 @@ const changeIndent = indent => current => state.setReaderAppearanceIndent(curren
 
 // Compile unchanged production page methods; only OS font registration and
 // rendering are controlled. These checks catch the original stale recovery.
-const source = read('LocalReadingExperience.ets');
+const source = read('ui/LocalReadingExperience.ets');
 function method(name) {
   const start = new RegExp(`  private (?:async )?${name}\\(`).exec(source);
   assert.ok(start, name);
   const end = source.indexOf('\n  private ', start.index + 1);
   return source.slice(start.index, end < 0 ? source.length : end).replace(/\n  \/\*\*[\s\S]*$/, '');
 }
-const methods = ['loadAppearanceSnapshot', 'sameAppearanceFont', 'commitAppearanceChange',
+const methods = ['loadAppearanceSnapshot', 'sameAppearanceFont', 'commitAppearanceChange', 'commitAppearanceMutation',
   'observeAppearanceSave', 'changeAppearanceIndent', 'stepAppearanceMetric', 'stepAppearanceSnapshotMetric',
   'roundAppearanceMetric', 'toggleAppearanceAlignment'];
 let prepareFont = async () => {};
-const Page = new Function('ReaderThemeHost', 'prepareReaderFontFamily', 'readerAppearanceSnapshotFontFamily', ...Object.keys(state), stripTypeScriptTypes(
+const Page = new Function('ReaderThemeHost', 'prepareReaderFontFamily', 'readerAppearanceSnapshotFontFamily', 'hilog', ...Object.keys(state), stripTypeScriptTypes(
   `${source.match(/^const READER_APPEARANCE_\w+_STEP = .*;$/gm).join('\n')}
-  class Page { ${methods.map(method).join('\n')} }`) + ';return Page;')({prepareUserChange: async()=>{}}, (...args)=>prepareFont(...args), snapshot=>snapshot.font, ...Object.values(state));
+  class Page { ${methods.map(method).join('\n')} }`) + ';return Page;')({prepareUserChange: async()=>{}}, (...args)=>prepareFont(...args), snapshot=>snapshot.font, { warn() {} }, ...Object.values(state));
 function page(store, registration = async () => true) {
   const value = new Page();
   Object.assign(value, {
@@ -147,6 +148,8 @@ function page(store, registration = async () => true) {
     isSessionActive(token) { return this.active && token === this.lifecycleToken; },
     getUIContext: () => ({ getFont: () => ({}) }),
     admitAppearanceSnapshot(snapshot) { this.appearanceSnapshot = snapshot; },
+    refreshAppearanceSaveRecovery() {},
+    errorMessage(error) { return error.message; },
     showAppearanceFailure(message) { this.notices.push(message); },
   });
   value.appearanceGateway.registerCustomFont = registration;
@@ -190,16 +193,18 @@ assert.equal(custom.font, 'custom');
   const disk = persistence(), store = new ReaderAppearanceStore(disk), current = page(store);
   await current.loadAppearanceSnapshot(1);
   for (let index = 0; index < 3; index++) current.stepAppearanceMetric('fontSize', 1);
+  current.stepAppearanceMetric('pageMarginOffset', 1);
   current.changeAppearanceIndent('single'); current.changeAppearanceIndent('firstLine');
   current.toggleAppearanceAlignment('justify'); current.toggleAppearanceAlignment('justify');
   await tick(); await store.flush();
   assert.equal(disk.snapshot.fontSize, initial.fontSize + 6);
+  assert.equal(disk.snapshot.pageMarginOffset, 2);
   assert.equal(disk.snapshot.indent, 'firstLine');
   assert.equal(disk.snapshot.alignment, 'justify');
   assert.deepEqual(current.appearanceSnapshot, disk.snapshot);
   disk.failures = 1; current.changeAppearanceIndent('none'); await tick();
   assert.equal(current.appearanceSnapshot.indent, 'none');
-  assert.equal(current.notices.length, 1);
+  assert.equal(current.appearanceGateway.hasUnsavedChanges(), true);
   await store.flush();
 }
 
@@ -245,9 +250,9 @@ console.log('reader appearance shared store, page races and persistence recovery
     },
   };
   const adapter = readFileSync(new URL('../../app/ReaderAppearancePreferences.ts', reading), 'utf8');
-  const Preferences = new Function('preferences', ...Object.keys(state), stripTypeScriptTypes(
+  const Preferences = new Function('preferences', 'readerHostPreferencesName', ...Object.keys(state), stripTypeScriptTypes(
     adapter.replace(/^import[\s\S]*?;\n/gm, '')).replace('export class', 'class') +
-    ';return ReaderAppearancePreferences;')(preferences, ...Object.values(state));
+    ';return ReaderAppearancePreferences;')(preferences, readerHostPreferencesName, ...Object.values(state));
   const disk = new Preferences({ id: 'test-context' });
   assert.equal((await disk.load()).indent, 'single');
   assert.equal((await disk.load()).version, 4);

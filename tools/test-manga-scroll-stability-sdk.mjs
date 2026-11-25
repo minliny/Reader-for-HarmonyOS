@@ -3,11 +3,13 @@ import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mj
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { createReaderBuilderProbe, productionReaderMotionSdk } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { mangaSurfaceSdkDependencies, mountMangaViewportBuilder } from './lib/manga-surface-sdk-probe.mjs';
 import { createDefaultReaderWindowMetrics, readerInteractiveSafeInsets } from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import { mangaUserError } from '../entry/src/main/ets/features/manga/presentation/MangaUserError.ts';
+import { readerPaperPullOffset } from '../entry/src/main/ets/features/reading/presentation/ReaderPaperPullMotion.ts';
+import { readerMotionValueDurationMs } from '../entry/src/main/ets/ui/foundation/ReaderMotionDurationPolicy.ts';
 
 // Executes production Surface/Projection methods and actual installed-SDK
 // List/LazyForEach callbacks. Key retention and native rectangles are bounded
@@ -29,6 +31,11 @@ const DataSource = new Function('MangaStripProjection', `${stripTypeScriptTypes(
 const frameText = tree.statements.find(node => node.name?.getText(tree) === 'MangaLayoutFrame').getText(tree);
 const LayoutFrame = new Function('FrameCallback', 'ReaderPostLayoutFrame', `${stripTypeScriptTypes(frameText)};return MangaLayoutFrame`)(class {}, actualReaderPostLayoutFrame());
 const properties = createArkUIPropertyRuntimeProbe();
+const motion = productionReaderMotionSdk();
+const searchFieldSource = readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderSearchField.ets', import.meta.url), 'utf8');
+class SearchFieldBoundary {
+  constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
+}
 const boundary = new Proxy({}, { get: () => () => {} });
 const timers = [], frames = [];
 let nativeFirst = 0, nativeHeight = 300;
@@ -59,8 +66,12 @@ class RetainedItems {
 }
 const built = createReaderBuilderProbe(source, names, {
   ...properties.sdk, ...mangaSurfaceSdkDependencies,
+  ReaderSearchField: SearchFieldBoundary,
   MangaStripDataSource: DataSource, MangaLayoutFrame: LayoutFrame, ListScroller, Scroller, PhotoViewScaleModel: class {},
-  ReaderWindowCoordinator: { metrics: () => createDefaultReaderWindowMetrics() }, readerInteractiveSafeInsets, mangaUserError,
+  ReaderWindowCoordinator: { metrics: () => createDefaultReaderWindowMetrics(), isTabletDevice: () => false },
+  readerInteractiveSafeInsets, mangaUserError,
+  readerPaperPullOffset, readerMotionStandardCurve: () => motion.motionSpecGet('app.control.press').curve,
+  readerMotionDurationMs: (id, reduced) => readerMotionValueDurationMs(motion.motionSpecGet(id).durationMs, reduced),
   uiContext: { postFrameCallback: callback => frames.push(callback) }, setTimeout: callback => timers.push(callback),
   hilog: { warn() {}, error() {} }, ScrollAlign: { START: 0 }, ImageFit: { Fill: 0 },
   ScrollDirection: { Horizontal: 0 }, TouchType: { Down: 0, Up: 1 },
@@ -73,7 +84,7 @@ const built = createReaderBuilderProbe(source, names, {
   },
   Gesture: boundary, GestureGroup: boundary, PinchGesture: boundary, SwipeGesture: boundary, TapGesture: boundary,
   GesturePriority: { Parallel: 0 }, GestureMode: { Exclusive: 0 }, SwipeDirection: { Horizontal: 0 },
-}, properties.hooks);
+}, { ...properties.hooks, childSources: { ReaderSearchField: searchFieldSource } });
 owner = built.owner;
 const manifest = { chapter: { sourceId: 's', bookId: 'b', chapterId: '/c' }, manifestVersion: 'scroll-v1',
   pages: Array.from({ length: 5 }, (_, ordinal) => ({ ordinal, pageId: `page-${ordinal}`, resourceRef: `manga:page-${ordinal}` })) };
@@ -104,7 +115,7 @@ finally { if (priorGesture === undefined) delete globalThis.Gesture; else global
 assert.ok(lazy);
 const list = [...owner.nodes.values()].find(node => node.type === 'List');
 assert.equal(typeof list.onScrollIndex, 'function');
-assert.equal(typeof list.onScroll, 'function');
+assert.equal(typeof list.onDidScroll, 'function');
 assert.equal(typeof list.onTouch, 'function');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const snapshot = () => ({ keys: [...lazy.rows.values()].map(row => row.key),
@@ -117,7 +128,7 @@ function check(name, action) {
 }
 
 const ready = snapshot();
-list.onTouch({ type: 0 }); list.onScroll(); list.onScrollIndex(0, 1); await tick();
+list.onTouch({ type: 0 }); list.onDidScroll(); list.onScrollIndex(0, 1); await tick();
 owner.publish();
 check('unchanged scroll notifications retain decoded visible Images and row geometry', () => {
   assert.deepEqual(snapshot().keys, ready.keys); assert.deepEqual(snapshot().actors, ready.actors);

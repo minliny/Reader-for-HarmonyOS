@@ -43,8 +43,7 @@ import type { ReaderControlModuleMeasurer, ReaderControlCandidateWidths, ReaderC
 
 import { sampleReaderControlBookmark, type ReaderControlBookmarkNaturalSize } from './ReaderControlBookmarkGeometry';
 import { readerDirectorySignalScrollCommand, readerDirectorySignalScrollIntent } from '../presentation/ReaderDirectoryViewport';
-import { TOK_LINE, TOK_READ_ACTIVE_SOFT, TOK_READ_INK, TOK_READ_MUTED,
-  TOK_READ_PRIMARY, TOK_SURFACE_PANEL_SOFT, TOK_SPACE_SM } from '../../../ui/foundation/ReaderTokens';
+import { TOK_SPACE_SM } from '../../../ui/foundation/ReaderTokens';
 import { readerDirectoryToolbarBudget } from '../presentation/ReaderFullDirectoryBudget';
 
 interface ReaderControlDirectoryScrollFacts {
@@ -786,7 +785,8 @@ export struct ReaderControlDirectoryContent {
           Image(this.tab === tab ? (this.appThemeScheme === 'night' ? $r('app.media.reader_page_bookmark_filled_theme_night') : $r('app.media.reader_page_bookmark_filled')) :
             (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_theme_night') : $r('app.media.reader_directory_marker_bookmark'))).width(15).height(15);
         }
-        Text(title).fontFamily(TYPE_READER_DIRECTORY_TAB_COMPACT.fontFamily).fontWeight(TYPE_READER_DIRECTORY_TAB_COMPACT.fontWeight).fontSize(TYPE_READER_DIRECTORY_TAB_COMPACT.fontSizeFp).lineHeight(TYPE_READER_DIRECTORY_TAB_COMPACT.lineHeightFp as number)
+        Text(title).fontFamily(TYPE_READER_DIRECTORY_TAB_COMPACT.fontFamily).fontWeight(TYPE_READER_DIRECTORY_TAB_COMPACT.fontWeight)
+          .fontSize(TYPE_READER_DIRECTORY_TAB_COMPACT.fontSizeFp).lineHeight(TYPE_READER_DIRECTORY_TAB_COMPACT.lineHeightFp as number).halfLeading(true)
           .minFontScale(1).maxFontScale(this.fontScale())
           .fontColor(this.tab === tab ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       }.width('100%').height(this.tabHeight() - this.value(13, 8)).justifyContent(FlexAlign.Center)

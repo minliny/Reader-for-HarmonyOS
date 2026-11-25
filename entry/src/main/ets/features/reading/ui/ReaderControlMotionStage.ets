@@ -22,9 +22,7 @@ import {
   pauseReaderControlLayoutCompensation, rebaseReaderControlLayout,
   settleReaderControlLayoutCompensation, type ReaderControlLayoutCompensation,
 } from './ReaderControlLayoutRebase';
-import { TOK_BORDER_W, TOK_LINE, TOK_LINE_STRONG, TOK_READ_HANDLE, TOK_READ_SURFACE, TOK_SURFACE_PANEL,
-  TOK_SURFACE_SOLID }
-  from '../../../ui/foundation/ReaderTokens';
+import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import { READER_HEAVY_GLASS_BLUR_VP } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import type { ReaderControlBackdropRect } from './ReaderControlBackdropTouch';
 

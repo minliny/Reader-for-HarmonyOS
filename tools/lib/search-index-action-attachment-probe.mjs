@@ -52,7 +52,7 @@ export function searchAttachmentFixture({ mutatePredicate, pageDefinition = page
   let journeySource = read('app/composition/ReaderLibraryJourney.ets');
   if (mutatePredicate) {
     const journeyTree = parse(journeySource), journey = journeyTree.statements.find(node => node.name?.text === 'ReaderLibraryJourney');
-    const predicate = journey.members.find(node => node.name?.getText(journeyTree) === 'isCurrentSearch');
+    const predicate = journey.members.find(node => node.name?.getText(journeyTree) === 'ownsSearchPresentation');
     journeySource = journeySource.slice(0, predicate.getStart(journeyTree)) + mutatePredicate(predicate.getText(journeyTree)) + journeySource.slice(predicate.end);
   }
   const { ReaderLibraryJourney } = pureModuleProbe(journeySource,
@@ -110,7 +110,7 @@ export function searchAttachmentFixture({ mutatePredicate, pageDefinition = page
   const methods = component.members.filter(ts.isMethodDeclaration).map(node => node.name.getText(tree))
     .filter(name => !['build', 'aboutToAppear', 'aboutToDisappear'].includes(name));
   const fields = ['appThemeScheme', 'readerWindowMetricsRevision', 'presentation', 'publication', 'viewState',
-    'expandedLayout', 'reduceMotion', 'externalHeaderHeight', 'surfaceModel', 'isPresentationCurrent', 'isPresentationVisible',
+    'expandedLayout', 'reduceMotion', 'presented', 'externalHeaderHeight', 'surfaceModel', 'isPresentationCurrent', 'isPresentationVisible',
     'onBack', 'onSearch', 'onStop', 'onClearHistory', 'onRetryHistory', 'onSelectResult', 'onVisibleGroups', 'onRetry',
     'onManageSources', 'pageEpoch', 'pageMounted', 'queryAtMount', 'surfaceOwner', 'taskStatusExpanded', 'taskStatusGeneration',
     'filtersExpanded', 'filterGeneration', 'filterSheetIdentity', 'taskSheetIdentity',
@@ -118,7 +118,7 @@ export function searchAttachmentFixture({ mutatePredicate, pageDefinition = page
   const page = compileTailConsumer(pageDefinition, [...fields, ...methods], dependencies, hooks);
   dependencies.SearchPage = page.Component;
   const Results = compileTailConsumer(resultsSource, boundedMembers(resultsSource), dependencies, hooks).Component;
-  const names = ['searchPageContent', 'searchPageSurface', 'isCurrentSearchPresentation'];
+  const names = ['searchPageContent', 'searchPageSurface', 'isCurrentSearchPresentation', 'searchResultsAttached', 'searchResultsKey'];
   const currentIndex = `@Component struct Index {\n${names.map(name => member(searchIndexSource, name)).join('\n')}\nbuild(){this.searchPageContent();}\n}`;
   const composition = compileTailConsumer(currentIndex, [...names, 'build'],
     { ...dependencies, LibrarySearchResults: Results }, hooks);
@@ -137,7 +137,7 @@ export function searchAttachmentFixture({ mutatePredicate, pageDefinition = page
     navigationGeneration: { get: () => route.snapshot().generation } });
   Object.assign(index, {
     mountedRuntimeOwner: native, detailShelfAdmissionMount: 1, shelfReceiptRetired: false,
-    searchAppForeground: true, arkWebCapturesInput: false, librarySearch: library,
+    searchAppForeground: true, arkWebCapturesInput: false, librarySearch: library, navigationOwner: route,
     libraryAcquisition: { coordinator: () => coordinator, currentOwner: () => currentRuntime,
       beginSearch: () => coordinator.beginSearch(), endSearch: () => coordinator.endSearch() },
     settingsPresentation: { snapshot: { reduceMotion: false } }, expandedLayout: () => false,

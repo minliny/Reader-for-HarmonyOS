@@ -3,7 +3,7 @@ import { readerContentSearchFieldProbe } from './lib/reader-content-search-field
 const {Component,nodes}=readerContentSearchFieldProbe();
 const requests=[];
 const create=()=>Object.assign(new Component(undefined,{}),{motionProgress:1,availableWidth:338,availableHeight:666,
-  interactionEnabled:true,queryInputMounted:true,query:'保留查询',getUIContext:()=>({getFocusController:()=>({requestFocus:id=>requests.push(id)})}),
+  interactionEnabled:true,queryInputMounted:true,minimumIdentity:'',minimumKey:'',query:'保留查询',naturalSize:()=>undefined,getUIContext:()=>({getFocusController:()=>({requestFocus:id=>requests.push(id)})}),
   onQueryChange(){throw Error('focus cannot mutate query');},onSearch(){throw Error('focus cannot submit');}});
 const first=create(),second=create();assert.notEqual(first.queryInputId,second.queryInputId,'component instances own unique native focus ids');
 first.searchField();second.searchField();

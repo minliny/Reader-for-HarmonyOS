@@ -13,38 +13,44 @@ const definitions = {
 };
 
 function bookmarkPillPaint(source, path) {
+  const Metrics = selectedProductionMethods(path, 'ReaderControlPanel', ['bookmarkPillWidth', 'bookmarkPillHeight']);
   for (const appScheme of ['day', 'night']) {
-    const icon = 'reader_directory_marker_bookmark_active' + (appScheme === 'night' ? '_theme_night' : '');
+    const icon = 'reader_control_bookmark_filled' + (appScheme === 'night' ? '_theme_night' : '');
     const svg = readFileSync(new URL('../entry/src/main/resources/base/media/' + icon + '.svg', import.meta.url), 'utf8');
     const copper = '#' + readerAppColor('TOK_ACCENT', appScheme).slice(-6);
     assert.ok(svg.toUpperCase().includes(copper.toUpperCase()), 'generated glyph owns the copper imprint');
-    for (const pageBookmarkStatus of ['unknown', 'empty', 'bookmarked']) {
-      const { owner } = createReaderBuilderProbe(source, ['chapterBookmarkRow']);
-      const selected = pageBookmarkStatus === 'bookmarked';
-      const enabled = pageBookmarkStatus !== 'unknown';
-      let actions = 0, inputCurrent = true;
-      Object.assign(owner, { appScheme, pageBookmarkStatus, pageBookmarkEnabled: enabled,
-        pageBookmarkFill: selected ? 1 : 0, pageBookmarkTuck: 1, reduceMotion: false,
-        readableChapterPosition: 3, presentedHomeTotalChapters: () => 12, bookmarkLaneHeight: () => 32,
-        progressInputEnabled: () => inputCurrent, controlActionHandler: callback => callback,
-        onTogglePageBookmark() { actions += 1; } });
-      owner.chapterBookmarkRow();
-      const nodes = [...owner.nodes.values()];
-      const hit = nodes.find(node => node.id === 'novel-bookmark-pill');
-      const paint = nodes.find(node => node.type === 'Row' && node.width === 86 && node.height === 22);
-      const label = nodes.find(node => node.type === 'Text' && node.create === (selected ? '已加书签' : '加书签'));
-      assert.deepEqual([hit.width, hit.height, hit.enabled], [86, 44, enabled]);
-      assert.equal(paint.borderRadius, 11);
-      assert.equal(paint.backgroundColor, readerAppColor(selected ? 'TOK_READ_ACTIVE_SOFT' : 'TOK_SURFACE_PANEL_SOFT', appScheme));
-      assert.deepEqual(paint.border, { width: 1, color: readerAppColor(selected ? 'TOK_READ_PRIMARY' : 'app.border.readerConfig', appScheme) });
-      assert.equal(label.fontColor, readerAppColor(selected ? 'TOK_READ_PRIMARY' : 'TOK_READ_INK', appScheme));
-      const fill = nodes.find(node => node.type === 'Column' && node.width === 12 && node.clip === true);
-      assert.equal(fill.height, selected ? 12 : 0);
-      assert.ok(nodes.some(node => node.type === 'Image' && node.create === 'app.media.' + icon));
-      hit.onClick();
-      inputCurrent = false;
-      hit.onClick();
-      assert.equal(actions, enabled ? 1 : 0, 'the painted state cannot bypass the host bookmark and input gates');
+    for (const [fontScale, expectedWidth, expectedPaintHeight] of [[1, 86, 28], [2, 130, 40]]) {
+      for (const pageBookmarkStatus of ['unknown', 'empty', 'bookmarked']) {
+        const { owner } = createReaderBuilderProbe(source, ['chapterBookmarkRow']);
+        const selected = pageBookmarkStatus === 'bookmarked';
+        const enabled = pageBookmarkStatus !== 'unknown';
+        let actions = 0, inputCurrent = true;
+        Object.assign(owner, { appScheme, pageBookmarkStatus, pageBookmarkEnabled: enabled,
+          sessionFontScale: fontScale, bookmarkPillWidth: Metrics.prototype.bookmarkPillWidth,
+          bookmarkPillHeight: Metrics.prototype.bookmarkPillHeight,
+          pageBookmarkFill: selected ? 1 : 0, pageBookmarkTuck: 1, reduceMotion: false,
+          readableChapterPosition: 3, presentedHomeTotalChapters: () => 12, bookmarkLaneHeight: () => 32,
+          progressInputEnabled: () => inputCurrent, controlActionHandler: callback => callback,
+          onTogglePageBookmark() { actions += 1; } });
+        owner.chapterBookmarkRow();
+        const nodes = [...owner.nodes.values()];
+        const hit = nodes.find(node => node.id === 'novel-bookmark-pill');
+        const paint = nodes.find(node => node.type === 'Row' && node.width === expectedWidth &&
+          node.height === expectedPaintHeight);
+        const label = nodes.find(node => node.type === 'Text' && node.create === (selected ? '已加书签' : '加书签'));
+        assert.deepEqual([hit.width, hit.height, hit.enabled], [expectedWidth, 44, enabled]);
+        assert.equal(paint.borderRadius, 14);
+        assert.equal(paint.backgroundColor, readerAppColor(selected ? 'TOK_READ_ACTIVE_SOFT' : 'TOK_SURFACE_PANEL_SOFT', appScheme));
+        assert.deepEqual(paint.border, { width: 1, color: readerAppColor(selected ? 'TOK_READ_PRIMARY' : 'app.border.readerConfig', appScheme) });
+        assert.equal(label.fontColor, readerAppColor(selected ? 'TOK_READ_PRIMARY' : 'TOK_READ_INK', appScheme));
+        const fill = nodes.find(node => node.type === 'Stack' && node.width === 14 && node.clip === true);
+        assert.equal(fill.height, selected ? 14 : 0);
+        assert.ok(nodes.some(node => node.type === 'Image' && node.create === 'app.media.' + icon));
+        hit.onClick();
+        inputCurrent = false;
+        hit.onClick();
+        assert.equal(actions, enabled ? 1 : 0, 'the painted state cannot bypass the host bookmark and input gates');
+      }
     }
   }
 
@@ -63,7 +69,7 @@ function bookmarkPillPaint(source, path) {
     panel.pageBookmarkStatus = 'empty';
     panel.onPageBookmarkStatusChanged();
     assert.equal(panel.pageBookmarkFill, 0);
-    assert.deepEqual(animation.map(params => params.duration), reduceMotion ? [120, 120] : [240, 160]);
+    assert.deepEqual(animation.map(params => params.duration), reduceMotion ? [120, 120] : [240, 120, 160]);
   }
 }
 

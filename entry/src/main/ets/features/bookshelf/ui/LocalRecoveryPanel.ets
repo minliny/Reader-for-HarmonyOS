@@ -1,15 +1,19 @@
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
+import { resolveReaderButtonMatrixPaint } from '../../../ui/controls/ReaderControlSpecs';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
+import { ReaderFormRow } from '../../../ui/controls/ReaderFormRow';
+import { ReaderSectionHeading } from '../../../ui/controls/ReaderSectionHeading';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
-import { MESSAGE_BODY, MESSAGE_TITLE } from '../../../ui/foundation/ReaderMessageStyle';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { TOK_SPACE_SM } from '../../../ui/foundation/ReaderTokens';
 import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../../ui/platform/ReaderNativeAlertOwner';
-import { ReaderCard } from '../../../ui/surfaces/ReaderCard';
+import { CategorySection } from '../../settings/ui/CategorySection';
 import { LocalRecoveryGateway, type LocalRecoveryOutcome } from '../application/LocalRecoveryGateway';
 
 type LocalRecoveryAction = 'export' | 'inspect' | 'apply' | 'resume';
+const RECOVERY_PASSPHRASE_WIDTH = 168;
 
 @Component
 export struct LocalRecoveryPanel {
@@ -91,11 +95,13 @@ export struct LocalRecoveryPanel {
     if (!current() || this.confirmationOpen) return;
     this.confirmationOpen = true;
     try {
+      const paint = resolveReaderButtonMatrixPaint('primary', true);
       const alert = this.alert.present((native: ReaderNativeAlertOptions): void => this.getUIContext().showAlertDialog(native),
         'confirmation-cancelable', {
           title: '恢复本地阅读库', message: '恢复包将替换当前阅读库。导入的联网书源和自动更新需重新启用。',
           primaryButton: { value: '取消', action: (): void => {} },
-          secondaryButton: { value: '恢复', fontColor: readerAppColor('TOK_MESSAGE_DANGER', this.scheme),
+          secondaryButton: { value: '恢复', style: DialogButtonStyle.HIGHLIGHT,
+            backgroundColor: readerAppColor(paint.surface, this.scheme), fontColor: readerAppColor(paint.ink, this.scheme),
             action: (): void => { void this.perform('apply', revision); } },
         }, current);
       void alert.decision.then((decision): void => {
@@ -196,39 +202,40 @@ export struct LocalRecoveryPanel {
   @Builder
   private actions(expected: number) {
     if (this.preview !== undefined) {
-      Text('恢复包校验完成').fontSize(MESSAGE_TITLE.fontSizeFp).fontWeight(MESSAGE_TITLE.fontWeight)
-        .fontColor(readerAppColor('TOK_MESSAGE_INK', this.scheme)).width('100%');
-      if (this.originalCounts(this.preview).length > 0) {
-        Text(this.originalCounts(this.preview)).fontSize(MESSAGE_BODY.fontSizeFp)
-          .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.scheme)).width('100%');
-      }
-      Row({ space: 10 }) {
-        ReaderButton({ scheme: this.scheme, specId: 'form-action', label: '取消', layout: 'full',
-          onAction: (): void => this.clearPreview(expected) }).layoutWeight(1);
-        ReaderButton({ scheme: this.scheme, specId: 'form-action', label: '恢复…', primary: true, layout: 'full',
-          onAction: (): void => this.requestRestore(expected) }).layoutWeight(1);
-      }.width('100%');
+      ReaderFormRow({ kind: 'standard', label: '恢复包校验完成', secondaryText: this.originalCounts(this.preview) });
+      Row({ space: TOK_SPACE_SM }) {
+        ReaderButton({ scheme: this.scheme, variant: 'subtle', label: '取消', layout: 'equal',
+          onAction: (): void => this.clearPreview(expected) });
+        ReaderButton({ scheme: this.scheme, variant: 'primary', label: '恢复…', layout: 'equal',
+          onAction: (): void => this.requestRestore(expected) });
+      }.width('100%').padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, bottom: TOK_SPACE_SM });
     } else {
-      this.passphraseField();
-      if (this.pendingRestore) this.resumeControl();
-      else {
-        Row({ space: 10 }) {
-          ReaderButton({ scheme: this.scheme, specId: 'form-action', label: '导出恢复包', layout: 'full',
-            actionEnabled: this.passphrase.length > 0, onAction: (): void => { void this.perform('export', expected); } }).layoutWeight(1);
-          ReaderButton({ scheme: this.scheme, specId: 'form-action', label: '导入恢复包', layout: 'full',
-            actionEnabled: this.passphrase.length > 0, onAction: (): void => { void this.perform('inspect', expected); } }).layoutWeight(1);
-        }.width('100%');
+      ReaderFormRow({ kind: 'standard', label: '恢复包口令', contentMinWidth: RECOVERY_PASSPHRASE_WIDTH }) {
+        Column() { this.passphraseField(); }.width(RECOVERY_PASSPHRASE_WIDTH);
+      }
+      if (this.pendingRestore) {
+        Column() { this.resumeControl(); }.width('100%').padding(TOK_SPACE_SM);
+      } else {
+        Row({ space: TOK_SPACE_SM }) {
+          ReaderButton({ scheme: this.scheme, variant: 'tonal', label: '导出恢复包', layout: 'equal',
+            actionEnabled: this.passphrase.length > 0, onAction: (): void => { void this.perform('export', expected); } });
+          ReaderButton({ scheme: this.scheme, variant: 'tonal', label: '导入恢复包', layout: 'equal',
+            actionEnabled: this.passphrase.length > 0, onAction: (): void => { void this.perform('inspect', expected); } });
+        }.width('100%').padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, bottom: TOK_SPACE_SM });
       }
     }
   }
 
   build() {
-    ReaderCard({ specId: 'preference-panel' }) {
-      Text('本地备份与恢复').fontSize(MESSAGE_TITLE.fontSizeFp).fontWeight(MESSAGE_TITLE.fontWeight)
-        .fontColor(readerAppColor('TOK_MESSAGE_INK', this.scheme)).width('100%');
-      if (this.checking || this.active !== undefined) this.processing();
-      else if (this.statusUnavailable) this.statusReadFailed();
-      else {
+    CategorySection({ title: '' }) {
+      Column() {
+        ReaderSectionHeading({ title: '本地备份与恢复', variant: 'tool-card' });
+      }.width('100%').padding(TOK_SPACE_SM);
+      if (this.checking || this.active !== undefined) {
+        Column() { this.processing(); }.width('100%').padding(TOK_SPACE_SM);
+      } else if (this.statusUnavailable) {
+        Column() { this.statusReadFailed(); }.width('100%').padding(TOK_SPACE_SM);
+      } else {
         ForEach([this.revision], (expected: number): void => { this.actions(expected); },
           (expected: number): string => expected.toString());
       }

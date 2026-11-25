@@ -12,7 +12,8 @@ const { join } = await import('node:path');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
-const { deriveReaderSessionCapsule } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionCapsuleModel.ts');
+const { deriveReaderSessionCapsule, readerTtsSessionBlocksAutoPageStart } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionCapsuleModel.ts');
+const { READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT } = await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign, sampleReaderSessionLaunch } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
 const { ReaderSessionMorphSourceMeasurement } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
 const pageGesture = await import('../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts');
@@ -256,9 +257,10 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
   const Parent = createReaderBuilderProbe(`@Component struct CapsuleParentProbe { build() { ${parentText} } }`, ['build'],
     { ReaderControlPanel: CapsuleChild }, { childSources: { ReaderControlPanel: panelText } }).Component;
   const Raw = createReaderBuilderProbe(rawText, ['build']).Component;
-  const Stage = createReaderBuilderProbe(stageText, ['build', 'sourceSharpContent', 'sourceBlurContent',
+  const Stage = createReaderBuilderProbe(stageText, ['build', 'sourceSharpContent',
     'effectiveSourceSurfaceColor', 'effectiveSourceBorderColor', 'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor', 'metrics'], {
-    ...capsuleFrame, measureReaderSessionCapsule: (_context, type) => ({ width: type === 'tts' ? 94 : 96,
+    ...capsuleFrame, READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT,
+    measureReaderSessionCapsule: (_context, type) => ({ width: type === 'tts' ? 94 : 96,
       paintHeight: 24, targetHeight: 44, labelWidth: 42, labelHeight: 16, countdownSize: 16 }),
     ReaderSessionCapsuleLeading: CapsuleChild, ReaderSessionCapsulePause: CapsuleChild,
     readerSessionCapsuleAccessibility: () => 'capsule',
@@ -316,7 +318,7 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
     assert.equal(pointer.raw.activePointerId, -1);
   }
   const Toggle = productionMotionMethods(file, ['toggleSessionCapsule', 'sessionLaunchBusinessStatus', 'pageTurnInputPhase',
-    'readerInputIsCurrent', 'toggleTts', 'toggleAutoPage'], { readerControlHostInputEnabled });
+    'readerInputIsCurrent', 'toggleTts', 'toggleAutoPage'], { readerControlHostInputEnabled, readerTtsSessionBlocksAutoPageStart });
   const oldSource = source.replace('if (!this.readerInputIsCurrent() || this.pageTurnInputPhase()',
     'if (this.pageTurnInputPhase()');
   assert.notEqual(oldSource, source);
@@ -330,7 +332,8 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
     rmSync(mutantDirectory, { recursive: true, force: true });
   }
   const raw = new Raw(undefined, {}); let rawHits = 0;
-  Object.assign(raw, { interactionEnabled: true, allowTextSelection: false, handleTouch: () => rawHits++ }); raw.initialRender();
+  Object.assign(raw, { interactionEnabled: true, allowTextSelection: false, accessiblePageActions() {},
+    handleTouch: () => rawHits++ }); raw.initialRender();
   const rawActor = [...raw.nodes.values()].find(node => node.onTouch);
   assert.equal(rawActor.zIndex, 7); assert.equal(rawActor.width, '100%'); assert.equal(rawActor.height, '100%');
   assert.equal(rawActor.hitTestBehavior, 'HitTestMode.Block');
@@ -350,7 +353,7 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
       const calls = [], launch = { geometry, generation: 1, ownership: 'stage', businessStatus: status,
         desiredPlaying: status !== 'paused', sample: sampleReaderSessionLaunch(time, geometry, curves) };
       const host = Object.assign(new Toggle(), { sessionLaunch: launch, pageTurnGestureState: { phase: 'idle' },
-        mounted: true, exitRequested: false, appForeground: true, windowChromeActive: true,
+        mounted: true, exitRequested: false, appForeground: true, windowChromeActive: true, phase: 'ready',
         interactionBlocked: false, controlObscured: false, isReaderIdentityCurrent: () => true,
         inputCurrent: () => liveInput,
         ttsState: { status: geometry.type === 'tts' ? status : 'idle' }, ttsAvailabilityResolved: true,
@@ -361,7 +364,9 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
         createTtsPlayIntent: () => ({}), isTtsPlayIntentCurrent: () => true, cancelPendingAutoPageStart() {},
         cancelPendingTtsPlay() {}, captureControlPlaybackPresentation() {}, stopAutoPage() {},
         pauseAutoPage: reason => calls.push(['auto.pause', reason]),
-        autoPageCoordinator: { resume: () => calls.push(['auto.resume']) },
+        controlVerification: { observing: () => false },
+        autoPageCoordinator: { pendingStart: () => false, beginStart: () => 1, admitStart: () => true,
+          resume: () => calls.push(['auto.resume']) },
         hideControl() {}, armAutoPageTimer() {}, armAutoPageSessionTimer() {},
       });
       parent.sessionLaunch = launch; parent.replay();
@@ -373,7 +378,7 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
         sourceSurfaceTopInset: 0, sourceHighlightColor: '#00000000', sourceGradientStart: '', sourceGradientEnd: '',
         sourceBorderWidth: 1, sourceShadowColor: '#00000000', sourceShadowRadius: 0, sourceShadowOffsetY: 0,
         textColor: '', primaryColor: '', onPrimaryColor: '', themeScheme: 'day', shadowColor: '#00000000',
-        sourceClip: () => ({}), sourceSharpContent() {}, sourceBlurContent() {},
+        sourceClip: () => ({}), sourceSharpContent() {},
         onToggle: selectedProductionComponentCallback(
           new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url),
           'ReaderSessionLaunchStage', 'onToggle', {
@@ -431,6 +436,7 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
       interactionBlocked: false, controlObscured: false, isReaderIdentityCurrent: () => true,
       inputCurrent: () => liveInput,
       ttsState: { status: 'playing' }, ttsAvailabilityResolved: true, sessionCapsuleSnapshot: () => ({ type: 'tts' }),
+      controlVerification: { observing: () => false },
       createTtsPlayIntent: () => ({}), isTtsPlayIntentCurrent: () => true, cancelPendingAutoPageStart() {},
       cancelPendingTtsPlay() {}, captureControlPlaybackPresentation() {},
       ttsCoordinator: { pause: async () => calls.push('pause') },
@@ -443,7 +449,7 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
       textColor: '#000000', primaryColor: '#000000', onPrimaryColor: '#ffffff', themeScheme: 'day', shadowColor: '#00000000',
       sourceSurfaceTopInset: 0, sourceHighlightColor: '#00000000', sourceGradientStart: '', sourceGradientEnd: '',
       sourceBorderWidth: 1, sourceShadowColor: '#00000000', sourceShadowRadius: 0, sourceShadowOffsetY: 0,
-      sourceClip: () => ({}), sourceSharpContent() {}, sourceBlurContent() {}, onMeasured() {},
+      sourceClip: () => ({}), sourceSharpContent() {}, onMeasured() {},
       onToggle: label === 'static capsule'
         ? selectedProductionComponentCallback(file, 'ReaderSessionCapsule', 'onToggle', host)
         : selectedProductionComponentCallback(

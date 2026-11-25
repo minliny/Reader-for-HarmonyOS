@@ -213,6 +213,17 @@
       "status": "registered-source-entry"
     },
     {
+      "id": "entry/src/main/ets/features/bookshelf/ui/BookshelfMultiSelectPage.ets#BookshelfMultiSelectPage.selectionList::shared.page-state",
+      "file": "entry/src/main/ets/features/bookshelf/ui/BookshelfMultiSelectPage.ets",
+      "owner": "BookshelfMultiSelectPage",
+      "member": "selectionList",
+      "family": "shared.page-state",
+      "category": "页面或局部内容的加载/空态/无内容失败",
+      "effectiveHost": "当前批量管理入口的书架投影。尚未就绪显示加载，已就绪且当前投影没有书籍时显示空态。",
+      "retireRule": "当前书架投影恢复可操作书籍或离开多选页后移除空态；空态不提交书架操作。",
+      "status": "registered-source-entry"
+    },
+    {
       "id": "entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets#BookshelfPage.filteredEmptyCard::shared.page-state",
       "file": "entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets",
       "owner": "BookshelfPage",
@@ -409,17 +420,6 @@
       "category": "原操作待核对/待继续或明确结果的消息表面",
       "effectiveHost": "当前 mounted 的原导入呈现，recovery、import operation 与 result batch 决定消息及动作。",
       "retireRule": "导入呈现退场或 operation/result 变化后退役 UI；退出弹层不取消/确认已提交的导入。 view/原操作事实更新后重绘或清除；多事项保留独立身份，关闭展示不取消或确认原业务。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/features/bookshelf/ui/LocalImportDialog.ets#LocalImportDialog.fileSelectionActions::shared.recovery-action",
-      "file": "entry/src/main/ets/features/bookshelf/ui/LocalImportDialog.ets",
-      "owner": "LocalImportDialog",
-      "member": "fileSelectionActions",
-      "family": "shared.recovery-action",
-      "category": "本地导入文件选择及关闭动作，非原写入恢复通知",
-      "effectiveHost": "当前LocalImportDialog文件选择阶段；选择仅selectionEnabled且非pickerOpening，busy来自原pickerOpening事实，事件转交onSelectFiles；取消转交onClose。",
-      "retireRule": "原LocalImportPresentationOwner持有presentation/batch/picker准入；关窗只结束当前展示，不代表取消已进入的导入。组件generation默认0，不单凭公共Action证明跨opening准入。",
       "status": "registered-source-entry"
     },
     {
@@ -672,7 +672,7 @@
       "family": "shared.page-state",
       "category": "Current local loading, empty or unavailable-content facts",
       "effectiveHost": "The current detail or reading full-directory short-window List state item uses the original catalog loading/empty/failure facts and existing retry owner. Default empty wording follows allowUnanchoredBrowse while specific catalogMessage and filter-empty facts retain priority.",
-      "retireRule": "Current chapterActionsEnabled and catalogRetryVisible admission controls retry. Directory teardown or a replaced opening, source/book or parent presentation retires old callbacks. No original write or route state is owned here.",
+      "retireRule": "目录与输入身份约束重试及清除搜索。扁平目录仅在原目录有条目、当前查询无匹配时提供清除搜索。目录关闭、切换来源或替换父级入口后，旧回调失效。",
       "status": "registered-source-entry"
     },
     {
@@ -1215,6 +1215,17 @@
       "status": "registered-source-entry"
     },
     {
+      "id": "entry/src/main/ets/features/rss/ui/RssEntryDetailPage.ets#RssEntryDetailPage.openOriginal::shared.transient",
+      "file": "entry/src/main/ets/features/rss/ui/RssEntryDetailPage.ets",
+      "owner": "RssEntryDetailPage",
+      "member": "openOriginal",
+      "family": "shared.transient",
+      "category": "系统打不开 RSS 原文的短反馈",
+      "effectiveHost": "扩展产品 RSS 当前文章详情，校验 URL 后交给所在 UIAbility 打开。",
+      "retireRule": "原详情的展示身份和当前文章仍有效才发布。离开时清除短反馈，过期的系统回执不能显示。",
+      "status": "retained-disabled"
+    },
+    {
       "id": "entry/src/main/ets/features/rss/ui/RssEntryDetailPage.ets#RssEntryDetailPage.operationFeedback::shared.page-state",
       "file": "entry/src/main/ets/features/rss/ui/RssEntryDetailPage.ets",
       "owner": "RssEntryDetailPage",
@@ -1245,6 +1256,17 @@
       "category": "当前RSS宿主同实体原写未决事实",
       "effectiveHost": "L0 RSS关闭。original.blocked且原scope精确匹配management/editor/entry；editor核subscriptionId，entry再核guid。调用页以无参 boundedOverlayContent 提供自然内容，ReaderStandardPage 持有实时宿主几何；feed与foreign域不挂原写提示，原intent与全域写准入保留。",
       "retireRule": "动作key只绑定 presentationIdentity/scope/subscriptionId/guid 与原generation/operationId/method/scope/subscriptionId/guid六字段身份，message/busy仅为当前投影。current同时核mounted、身份仍存在和!busy；continue再核qualified+operationId+canRetryOriginal。实体或退场拒绝旧动作，读取不确认原写。",
+      "status": "retained-disabled"
+    },
+    {
+      "id": "entry/src/main/ets/features/rss/ui/RssPage.ets#RssPage.emptyFeedResults::shared.page-state",
+      "file": "entry/src/main/ets/features/rss/ui/RssPage.ets",
+      "owner": "RssPage",
+      "member": "emptyFeedResults",
+      "family": "shared.page-state",
+      "category": "RSS 当前内容范围的空状态和清除搜索",
+      "effectiveHost": "扩展产品 RSS 主页面，按当前订阅源、文章、收藏和本地筛选显示。",
+      "retireRule": "模式、筛选或读取事实变化后重新投影，清除只处理本页输入。",
       "status": "retained-disabled"
     },
     {
@@ -1734,10 +1756,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets#SourceToolsPage.sourceCard::shared.page-state",
+      "id": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets#SourceToolsPage.sourceCardHeader::shared.page-state",
       "file": "entry/src/main/ets/features/source/ui/SourceToolsPage.ets",
       "owner": "SourceToolsPage",
-      "member": "sourceCard",
+      "member": "sourceCardHeader",
       "family": "shared.page-state",
       "category": "筛选后的书源列表空态",
       "effectiveHost": "当前书源工具页已读入书源但没有匹配当前查询的条目。",
@@ -1833,10 +1855,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/Index.ets#Index.pageSurfaces::shared.transient-presentation",
+      "id": "entry/src/main/ets/pages/Index.ets#Index.feedbackOverlays::shared.transient-presentation",
       "file": "entry/src/main/ets/pages/Index.ets",
       "owner": "Index",
-      "member": "pageSurfaces",
+      "member": "feedbackOverlays",
       "family": "shared.transient-presentation",
       "category": "普通短反馈公共呈现宿主",
       "effectiveHost": "Index.pageSurfaces 当前调用宿主；消费原展示/业务owner提供的事实及动作，范围由调用方身份和generation决定。",

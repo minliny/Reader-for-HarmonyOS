@@ -23,6 +23,6 @@ export class ReaderFooterFrameModifier implements AttributeModifier<CommonAttrib
   private readonly style: ReaderFooterFrameStyle;
   constructor(style: ReaderFooterFrameStyle) { this.style = style; }
   applyNormalAttribute(instance: CommonAttribute): void {
-    instance.clip(this.style.clip).backgroundColor(this.style.backgroundColor).zIndex(0);
+    instance.clip(this.style.clip).backgroundColor(this.style.backgroundColor);
   }
 }

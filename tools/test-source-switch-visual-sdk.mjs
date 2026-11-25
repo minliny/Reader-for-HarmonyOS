@@ -69,6 +69,10 @@ if(selectedCase==='redesigned-picker'){
   reduced.aboutToDisappear();
 
   const [editor]=input();assert.equal(input().length,1);
+  assert.equal(target('清空书源筛选'), undefined, 'empty search reserves no clear target');
+  assert.equal(target('定位当前').height, 44);
+  assert.ok(nodes().some(node => node.type === 'Row' && node.height === 32 && node.borderRadius === 16 &&
+    node.border?.color === readerAppColor('TOK_LINE', 'day')), 'filter actions paint compact bordered pills');
   assert.equal(editor.id,'reader-source-filter:3:5');
   const [field]=p.walk(owner).filter(child=>child instanceof deps.ReaderSearchField);
   const candidateCount=count=>nodes().some(node=>node.type==='Text'&&node.create===`已发现 ${count} 个候选书源`);
@@ -211,7 +215,7 @@ function assertScene(x,width,height,s){
  assert.equal(x.rows.length,3);assert.equal(x.nodes.filter(n=>n.type==='ListItem'&&n.height===e.row).length,3);
  for(const row of x.rows){
   assert.equal(row.rowHeight,e.row);assert.equal(row.timingColumnWidth,e.timing);
-  const native=p.nodes(row),box=native.find(n=>n.type==='Row');assert.equal(box.height,e.row);
+  const native=p.nodes(row),box=native.find(n=>n.type==='Row'&&n.padding);assert.equal(box.height,e.row);
   assert.equal(box.width,'100%');assert.deepEqual(box.padding,{top:v.rowPaddingY,bottom:v.rowPaddingY,right:8},'8vp platform reserve keeps latency clear of the overlay thumb while preserving row/divider width');
   assert.ok(e.row >= (v.sourceNameLineHeight+v.latestChapterLineHeight+v.rowTextGap)*s+2*v.rowPaddingY,'scaled two-line content fits the selected row extent');
   assert.equal(native.find(n=>n.type==='Flex').width,e.timing);
@@ -254,9 +258,10 @@ function assertScene(x,width,height,s){
  assert.deepEqual(transition.parameters.appear.options.curve.values,[v.easingX1,v.easingY1,v.easingX2,v.easingY2]);
  const latest={...candidate('a','/alternate'),latencyMs:1,latestChapterTitle:'更新章节'};
  o.state={kind:'candidates',candidates:[candidate('a'),latest,candidate('b')],refreshing:true};o.acceptState();
- const hit=p.nodes(x.rows[1]).find(n=>n.type==='Row');
- hit.onTouch({type:deps.TouchType.Down});p.properties.flush();assert.equal(hit.backgroundColor,readerAppColor(design.strings.selectedRowRole,scheme));
- hit.onTouch({type:deps.TouchType.Up});p.properties.flush();hit.onClick();
+ const hit=p.nodes(x.rows[1]).find(n=>n.type==='Row'&&n.onTouch);
+ const paint=p.nodes(x.rows[1]).find(n=>n.type==='Row'&&n.padding);
+ hit.onTouch({type:deps.TouchType.Down,changedTouches:[{id:1}]});p.properties.flush();assert.equal(paint.scale.x,0.978);
+ hit.onTouch({type:deps.TouchType.Up,changedTouches:[{id:1}]});p.properties.flush();hit.onClick();
  assert.equal(x.selected[0],latest,'actual native row callbacks select the latest composite identity, including alternate URL');
  p.properties.flush();
  o.aboutToDisappear();
@@ -328,33 +333,38 @@ if (selectedCase === 'rows-safe-area') {
 {
  const cached={...candidate('cached'),latencyKind:undefined,latencyMs:undefined};
  const row=new deps.SourceSwitchNovelRow(undefined,{row:new deps.SourceSwitchCandidateRow(cached),timingColumnWidth:v.narrowTimingColumnWidth},undefined,++serial);row.initialRender();
- const native=p.nodes(row),box=native.find(n=>n.type==='Row'),dash=native.find(n=>n.create==='—');
+ const native=p.nodes(row),box=native.find(n=>n.type==='Row'&&n.padding),dash=native.find(n=>n.create==='—');
  assert.equal(box.width,'100%');assert.equal(box.height,50);assert.equal(box.padding.right,8);
  assert.equal(dash.width,v.narrowTimingColumnWidth);assert.equal(dash.textAlign,'TextAlign.End');
 }
 
 }
 if(selectedCase==='row-action-interaction'){
-// The selected CSS :active state follows the actual row event and property
-// lifecycle. Native disabled hit dispatch remains the platform boundary.
+// The row keeps its original hit geometry and selection identity while the
+// shared press implementation paints inside it. Only matching release retires it.
 {
  let presses=0,clicks=0;
  const row=new deps.SourceSwitchNovelRow(undefined,{row:new deps.SourceSwitchCandidateRow(candidate('press')),onPress:()=>presses++,onSelect:()=>clicks++},undefined,++serial);row.initialRender();
- const hit=p.nodes(row).find(n=>n.type==='Row'),soft=readerAppColor(design.strings.selectedRowRole,'day');
- assert.equal(hit.backgroundColor,'Color.Transparent');assert.equal(hit.enabled,true);
- for(const end of [deps.TouchType.Move,deps.TouchType.Up,deps.TouchType.Cancel]){
-  const before=presses;hit.onTouch({type:deps.TouchType.Down});p.properties.flush();assert.equal(row.pressed,true);assert.equal(hit.backgroundColor,soft);assert.equal(presses,before+1);
-  hit.onTouch({type:end});p.properties.flush();assert.equal(row.pressed,false);assert.equal(hit.backgroundColor,'Color.Transparent');assert.equal(presses,before+1);
- }
- hit.onTouch({type:deps.TouchType.Down});p.properties.flush();
+ const hit=p.nodes(row).find(n=>n.type==='Row'&&n.onTouch),paint=p.nodes(row).find(n=>n.type==='Row'&&n.padding);
+ const soft=readerAppColor(design.strings.selectedRowRole,'day');
+ const touch=(type,id=7)=>{hit.onTouch({type,changedTouches:[{id}]});p.properties.flush();};
+ assert.equal(paint.backgroundColor,'Color.Transparent');assert.equal(hit.enabled,true);
+ touch(deps.TouchType.Down);assert.equal(presses,1);assert.equal(paint.scale.x,0.978);
+ assert.equal(paint.backgroundColor,'sdk-blend:Color.Transparent:29,27,24,20');
+ touch(deps.TouchType.Move);touch(deps.TouchType.Up,8);assert.equal(paint.scale.x,0.978);
+ touch(deps.TouchType.Up);assert.equal(paint.scale.x,1);assert.equal(paint.backgroundColor,'Color.Transparent');
+ touch(deps.TouchType.Down);touch(deps.TouchType.Cancel);assert.equal(paint.scale.x,1);
+ touch(deps.TouchType.Down);
  row.updateStateVars({row:row.row,rowEnabled:false,selected:false});p.properties.flush();
- assert.equal(row.pressed,false,'disabling a retained row clears active feedback');assert.equal(hit.enabled,false);assert.equal(hit.backgroundColor,'Color.Transparent');
- let before=presses;hit.onTouch({type:deps.TouchType.Down});p.properties.flush();assert.equal(row.pressed,false);assert.equal(presses,before,'disabled rows cannot emit a press identity');
+ assert.equal(row.pressPointer,-1,'disabling a retained row clears active feedback');assert.equal(hit.enabled,false);
+ const before=presses;touch(deps.TouchType.Down);assert.equal(presses,before);
  row.row.update({...candidate('press'),isCurrent:true});row.updateStateVars({row:row.row,rowEnabled:true,selected:false});p.properties.flush();
- assert.equal(hit.enabled,false);hit.onTouch({type:deps.TouchType.Down});p.properties.flush();assert.equal(row.pressed,false);assert.equal(presses,before,'current source cannot enter the active state');assert.equal(hit.backgroundColor,'Color.Transparent');
- row.row.update(candidate('press'));row.updateStateVars({row:row.row,rowEnabled:true,selected:true});p.properties.flush();assert.equal(hit.enabled,true);assert.equal(hit.backgroundColor,soft);
- hit.onTouch({type:deps.TouchType.Cancel});p.properties.flush();assert.equal(hit.backgroundColor,soft,'selection feedback is retained independently of a cancelled press');
- row.updateStateVars({row:row.row,rowEnabled:true,selected:false});p.properties.flush();hit.onClick();assert.equal(clicks,1,'enabled native row retains its original selection callback');
+ assert.equal(hit.enabled,false);touch(deps.TouchType.Down);assert.equal(presses,before);
+ row.row.update(candidate('press'));row.updateStateVars({row:row.row,rowEnabled:true,selected:true,reduceMotion:true});p.properties.flush();
+ assert.equal(hit.enabled,true);assert.equal(paint.backgroundColor,soft);touch(deps.TouchType.Down);
+ assert.deepEqual(paint.scale,{x:1,y:1});assert.equal(paint.opacity,0.92);assert.equal(paint.backgroundColor,soft);
+ touch(deps.TouchType.Cancel);assert.equal(paint.opacity,1);assert.equal(paint.backgroundColor,soft);
+ hit.onClick();assert.equal(clicks,1,'enabled native row retains its original selection callback');
 }
 // Actual action hit callbacks retain the pressed recipe independently of
 // candidate enrichment, and restore it on pointer/cancellation/state changes.
@@ -365,15 +375,15 @@ for(const contentKind of ['text','manga'])for(const scheme of ['day','night'])fo
  const button=()=>p.nodes(o).find(n=>n.type==='Button'&&typeof n.onTouch==='function');
  const fill=()=>p.nodes(o).find(n=>n.type==='Row'&&n.create?.space===v.discoveryActionGap);
  const normal=readerAppColor(design.strings.discoveryActionBackgroundRole,scheme);
- const color=deps.ColorMetrics.resourceColor(readerAppColor('TOK_GREEN',scheme));
- const pressed=deps.ColorMetrics.rgba(color.red,color.green,color.blue,v.discoveryActionPressedOpacity).color;
+ const pressed=deps.ColorMetrics.resourceColor(normal).blendColor(
+  deps.ColorMetrics.resourceColor(readerAppColor('app.interaction.press',scheme))).color;
  assert.equal(fill().backgroundColor,normal);assert.equal(button().stateEffect,false);
  const actionWidth=button().width;
  const icon=scheme==='night'?'app.media.settings_gen_refresh_theme_night':'app.media.settings_gen_refresh';
  assert.equal(p.nodes(o).filter(n=>n.type==='Image'&&n.create===icon).length,running?0:1,'only the idle action displays the static refresh icon');
  for(const end of [deps.TouchType.Up,deps.TouchType.Move,deps.TouchType.Cancel]){
   button().onTouch({type:deps.TouchType.Down});p.properties.flush();
-  assert.equal(o.discoveryActionPressed,true);assert.equal(fill().backgroundColor,pressed,'press replaces the normal fill with exact14percent green');
+  assert.equal(o.discoveryActionPressed,true);assert.equal(fill().backgroundColor,pressed,'press composes neutral ink over the rest fill');
   button().onTouch({type:end});p.properties.flush();assert.equal(o.discoveryActionPressed,false);assert.equal(fill().backgroundColor,normal);
  }
  button().onTouch({type:deps.TouchType.Down});p.properties.flush();

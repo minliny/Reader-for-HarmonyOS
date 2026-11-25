@@ -1,4 +1,7 @@
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
+import { common } from '@kit.AbilityKit';
+import { url } from '@kit.ArkTS';
+import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
 import { readerPageAreaLength, readerStandardPageContentFrame } from '../../../ui/layout/ReaderPageShell';
 import { ReaderRaisedShape, resolveReaderRaisedShape } from '../../../ui/layout/ReaderRaisedShape';
 import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
@@ -16,6 +19,7 @@ import type { RssRouteOperationProjection } from '../application/RssRouteOperati
 import { TYPE_APP_SMALL_ACTION, TYPE_RSS_ARTICLE_BODY, TYPE_RSS_ARTICLE_TITLE, TYPE_RSS_BOTTOM_ACTION, TYPE_RSS_LINK_ACTION, TYPE_RSS_META, TYPE_RSS_SOURCE_TITLE } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import {
+  type RssFavorite,
   type RssItem,
   type RssSubscription,
 } from '../application/RssGateway';
@@ -27,11 +31,6 @@ import {
 } from '../../../ui/layout/SurfaceHorizontalGeometry';
 import {
   TOK_BORDER_W,
-  TOK_CARD_BG_HI,
-  TOK_INK,
-  TOK_MUTED,
-  TOK_PRIMARY_BG,
-  TOK_PRIMARY_SOFT,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
@@ -49,8 +48,9 @@ export struct RssEntryDetailPage {
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @StorageLink('readerUiConfigurationRevision') private uiConfigurationRevision: number = 0;
-  @Prop subscription: RssSubscription;
-  @Prop item: RssItem;
+  @Prop subscription: RssSubscription | undefined = undefined;
+  @Prop item: RssItem | undefined = undefined;
+  @Prop archivedFavorite: RssFavorite | undefined = undefined;
   @Prop expandedLayout: boolean;
   @Prop operation: RssRouteOperationProjection<RssEntrySnapshot> | undefined = undefined;
   @Prop readFacts: OperationFacts<RssEntrySnapshot> = projectOperationFacts<RssEntrySnapshot>({ phase: 'idle' });
@@ -65,7 +65,9 @@ export struct RssEntryDetailPage {
   onViewSource: () => void = (): void => {};
   onFavoriteRequested: (favorite: boolean) => void = (_favorite: boolean): void => {};
   onSourceSettings: () => void = (): void => {};
-  onOpenOriginal: () => void = (): void => {};
+  originalInputCurrent: () => boolean = (): boolean => false;
+  @State private originalOpening: boolean = false;
+  private readonly originalFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @State private viewportWidth: number = 0;
   @State private originalLinkPillShape: ReaderRaisedShape | undefined = undefined;
   @State private pillAppearanceRevision: number = 0;
@@ -78,10 +80,15 @@ export struct RssEntryDetailPage {
     registerReaderFonts(this.getUIContext().getFont());
   }
 
-  aboutToDisappear(): void { this.pillMounted = false; }
+  aboutToDisappear(): void {
+    this.pillMounted = false;
+    this.originalOpening = false;
+    this.originalFeedback.reset();
+  }
 
   build() {
     ReaderStandardPage({
+      floatingHeader: true,
       variant: 'rssDetail',
       header: (): void => { this.backBar(); },
       content: (): void => { this.pageContent(); },
@@ -99,14 +106,14 @@ export struct RssEntryDetailPage {
 
   @Builder
   private pageContent() {
-    this.operationFeedback();
+    if (this.archivedFavorite === undefined) { this.operationFeedback(); }
     this.sourceCard();
     this.summaryCard();
-    this.entryActions();
+    if (this.archivedFavorite === undefined) { this.entryActions(); }
     if (this.summaryParagraphs().length > 0) {
       this.summaryBodyCard();
     }
-    if (this.item.link !== undefined && this.item.link !== '') {
+    if (this.originalUrl().length > 0) {
       this.originalLinkCard();
     }
   }
@@ -138,6 +145,7 @@ export struct RssEntryDetailPage {
   }
 
   private hasPendingRecovery(): boolean {
+    if (this.archivedFavorite !== undefined) return false;
     return rssOriginalMatchesScope(this.original, 'entry', this.item?.subscriptionId ?? '', this.item?.guid ?? '') ||
       this.operation?.projection.receipt.confirmation === 'unknown' && this.feedbackView().visible;
   }
@@ -156,20 +164,22 @@ export struct RssEntryDetailPage {
   @Builder
   private backBar() {
     PageBackBar({
+      floating: true, elevation: 'floating',
       title: 'RSS 阅读', trailingWidthVp: 94,
       onBack: (): void => this.onBack(),
     }) {
       Row({ space: 6 }) {
-        this.favoriteAction();
-
-        Stack({ alignContent: Alignment.Center }) {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.rss_external_theme_night') : $r('app.media.rss_external'))).width(20).height(20);
+        if (this.archivedFavorite === undefined) { this.favoriteAction(); }
+        if (this.archivedFavorite === undefined || this.originalUrl().length > 0) {
+          Stack({ alignContent: Alignment.Center }) {
+            Image((this.appThemeScheme === 'night' ? $r('app.media.rss_external_theme_night') : $r('app.media.rss_external'))).width(20).height(20);
+          }
+          .width(44)
+          .constraintSize({ minHeight: 44 })
+          .opacity(this.hasOriginalLink() ? 1 : 0.38)
+          .enabled(this.hasOriginalLink())
+          .onClick((): void => { void this.openOriginal(); });
         }
-        .width(44)
-        .constraintSize({ minHeight: 44 })
-        .opacity(this.hasOriginalLink() ? 1 : 0.38)
-        .enabled(this.hasOriginalLink())
-        .onClick((): void => this.onOpenOriginal());
       }
       .width(94)
       .constraintSize({ minHeight: 44 })
@@ -207,7 +217,7 @@ export struct RssEntryDetailPage {
       .borderRadius(16);
 
       Column({ space: 3 }) {
-        Text(this.subscription.title)
+        Text(this.sourceTitle())
           .width('100%')
           .fontFamily(TYPE_RSS_SOURCE_TITLE.fontFamily)
           .fontWeight(TYPE_RSS_SOURCE_TITLE.fontWeight)
@@ -227,7 +237,9 @@ export struct RssEntryDetailPage {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start);
 
-      ReaderButton({ scheme: this.appThemeScheme, specId: 'rss-source-link', label: '查看源', onAction: (): void => this.onViewSource() });
+      if (this.archivedFavorite === undefined && this.subscription !== undefined) {
+        ReaderButton({ scheme: this.appThemeScheme, specId: 'rss-source-link', label: '查看源', onAction: (): void => this.onViewSource() });
+      }
     }
     .width('100%')
     .constraintSize({ minHeight: 58 })
@@ -241,7 +253,7 @@ export struct RssEntryDetailPage {
   @Builder
   private summaryCard() {
     Column({ space: TOK_SPACE_XS }) {
-      Text(this.item.title)
+      Text(this.archivedFavorite?.title ?? this.item?.title ?? '')
         .width('100%')
         .fontFamily(TYPE_RSS_ARTICLE_TITLE.fontFamily)
         .fontWeight(TYPE_RSS_ARTICLE_TITLE.fontWeight)
@@ -292,7 +304,7 @@ export struct RssEntryDetailPage {
           .lineHeight(TYPE_RSS_ARTICLE_BODY.lineHeightFp as number)
           .fontColor(readerAppColor('app.text.filter', this.appThemeScheme));
       }, (_paragraph: string, index: number): string =>
-        `rss-summary-${this.item.subscriptionId.length}:${this.item.subscriptionId}-${this.item.guid.length}:${this.item.guid}-${index}`);
+        this.summaryParagraphKey(index));
     }
     .width('100%')
     .padding({ left: 16, right: 16, top: 16, bottom: 16 })
@@ -321,7 +333,7 @@ export struct RssEntryDetailPage {
           .fontSize(TYPE_RSS_SOURCE_TITLE.fontSizeFp)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1);
-        Text(`${this.subscription.title} · 原始条目链接`)
+        Text(`${this.sourceTitle()} · 原始条目链接`)
           .width('100%')
           .fontFamily(TYPE_RSS_META.fontFamily)
           .fontWeight(TYPE_RSS_META.fontWeight)
@@ -338,7 +350,7 @@ export struct RssEntryDetailPage {
         .padding({ left: 9, right: 9 })
         .fontFamily(TYPE_RSS_LINK_ACTION.fontFamily)
         .fontWeight(TYPE_RSS_LINK_ACTION.fontWeight)
-        .fontSize(TYPE_RSS_LINK_ACTION.fontSizeFp)
+        .fontSize(TYPE_RSS_LINK_ACTION.fontSizeFp).lineHeight(17).halfLeading(true)
         .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
         .textAlign(TextAlign.Center)
         .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
@@ -352,7 +364,8 @@ export struct RssEntryDetailPage {
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
     .borderRadius(8)
-    .onClick((): void => this.onOpenOriginal());
+    .enabled(this.hasOriginalLink())
+    .onClick((): void => { void this.openOriginal(); });
   }
 
   private originalLinkPillMeasurementKey(): string {
@@ -382,25 +395,33 @@ export struct RssEntryDetailPage {
     Row({ space: TOK_SPACE_XS }) {
       ReaderButton({ scheme: this.appThemeScheme, specId: 'rss-detail-bottom', label: '返回列表', primary: true, layout: 'full', onAction: (): void => this.onBack() }).layoutWeight(1);
 
-      ReaderButton({ scheme: this.appThemeScheme, specId: 'rss-detail-bottom', label: '打开原文', layout: 'full', actionEnabled: this.hasOriginalLink(), onAction: (): void => this.onOpenOriginal() }).layoutWeight(1);
+      if (this.archivedFavorite === undefined || this.originalUrl().length > 0) {
+        ReaderButton({ scheme: this.appThemeScheme, specId: 'rss-detail-bottom', label: '打开原文', layout: 'full', actionEnabled: this.hasOriginalLink(), onAction: (): void => { void this.openOriginal(); } }).layoutWeight(1);
+      }
     }
     .width(this.contentFrame().width)
     .margin({ left: this.contentFrame().left, right: this.contentFrame().right })
     .constraintSize({ minHeight: RSS_DETAIL_ACTION_AREA_HEIGHT })
     .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
     .alignItems(VerticalAlign.Center)
-    .hitTestBehavior(HitTestMode.Transparent);
+    .hitTestBehavior(HitTestMode.Default)
+    .onTouch((): void => {});
   }
 
   private summaryParagraphs(): string[] {
-    if (this.item.description === undefined || this.item.description.trim().length === 0) {
-      return [];
-    }
-    return this.item.description
+    const value = this.archivedFavorite?.summary ?? this.item?.description ?? '';
+    return value
       .split(/\n+/)
       .map((paragraph: string): string => paragraph.trim())
       .filter((paragraph: string): boolean => paragraph.length > 0);
   }
+
+  private summaryParagraphKey(index: number): string {
+    return JSON.stringify([this.archivedFavorite?.subscriptionId ?? this.item?.subscriptionId,
+      this.archivedFavorite?.guid ?? this.item?.guid, index]);
+  }
+
+  private sourceTitle(): string { return this.archivedFavorite?.subscriptionTitle ?? this.subscription?.title ?? ''; }
 
   private canRequestFavorite(): boolean {
     return (this.favoriteState === 'favorited' || this.favoriteState === 'notFavorited') &&
@@ -410,17 +431,44 @@ export struct RssEntryDetailPage {
   }
 
   private hasOriginalLink(): boolean {
-    return this.item.link !== undefined && this.item.link.trim().length > 0;
+    return !this.originalOpening && this.originalUrl().length > 0;
+  }
+
+  private originalUrl(): string {
+    const value = (this.archivedFavorite?.link ?? this.item?.link ?? '').trim();
+    if (!/^https?:\/\/[^/\s]/i.test(value) || /[\u0000-\u0020\u007f\\]/.test(value)) return '';
+    try {
+      const parsed = url.URL.parseURL(value);
+      return parsed.hostname.length > 0 && parsed.username.length === 0 && parsed.password.length === 0 ? parsed.href : '';
+    } catch (_error) { return ''; }
+  }
+
+  private async openOriginal(): Promise<void> {
+    const identity = this.presentationIdentity;
+    const appearance = this.pillAppearanceRevision;
+    const link = this.originalUrl();
+    const current = (): boolean => this.pillMounted && this.pillAppearanceRevision === appearance &&
+      this.presentationIdentity === identity && this.originalInputCurrent();
+    if (!current() || this.originalOpening || link.length === 0 ||
+      AppStorage.get<boolean>('readerAppForeground') === false) return;
+    this.originalOpening = true;
+    try {
+      const context = this.getUIContext().getHostContext() as common.UIAbilityContext | undefined;
+      if (context === undefined || typeof context.openLink !== 'function') throw new Error('RSS_BROWSER_UNAVAILABLE');
+      await context.openLink(link, { appLinkingOnly: false, hideFailureTipDialog: true });
+    } catch (_error) {
+      this.originalFeedback.show(() => this.getUIContext(), { message: '无法打开原文链接' }, current);
+    } finally {
+      if (this.pillAppearanceRevision === appearance) this.originalOpening = false;
+    }
   }
 
   private itemMeta(): string {
     const parts: string[] = [];
-    if (this.item.pubDate !== undefined && this.item.pubDate !== '') {
-      parts.push(this.item.pubDate);
-    }
-    if (this.item.author !== undefined && this.item.author !== '') {
-      parts.push(this.item.author);
-    }
+    const date = this.archivedFavorite?.publishedAt ?? this.item?.pubDate;
+    const author = this.item?.author;
+    if (date !== undefined && date !== '') parts.push(date);
+    if (author !== undefined && author !== '') parts.push(author);
     return parts.join(' · ');
   }
 

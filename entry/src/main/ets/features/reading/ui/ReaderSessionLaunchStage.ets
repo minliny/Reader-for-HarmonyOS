@@ -5,6 +5,7 @@ import { READER_SESSION_CAPSULE_RADIUS, ReaderSessionCapsuleFrame, ReaderSession
   readerSessionCapsuleAccessibility, measureReaderSessionCapsule, type ReaderSessionCapsuleMetrics } from './ReaderSessionCapsule';
 import type { ReaderSessionCapsuleState } from './ReaderSessionCapsuleModel';
 import type { ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
+import { READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT } from './ReaderPageChromeLayout';
 
 /**
  * Persistent launch and playback actors. Parent owns positioning, lifecycle and clock.
@@ -110,9 +111,10 @@ export struct ReaderSessionLaunchStage {
     }
     .id('reader-session-launch-toggle')
     .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-    .width(Math.max(44, this.sample.proxyWidth)).height(Math.max(44, this.sample.proxyHeight))
+    .width(Math.max(44, this.sample.proxyWidth))
+    .height(Math.max(READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT, this.sample.proxyHeight))
     .position({ x: this.sample.proxyLeft - Math.max(0, 44 - this.sample.proxyWidth) / 2,
-      y: this.sample.proxyTop - Math.max(0, 44 - this.sample.proxyHeight) / 2 })
+      y: this.sample.proxyTop - Math.max(0, READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT - this.sample.proxyHeight) / 2 })
     .hitTestBehavior(this.interactionEnabled && this.sample.pauseOpacity > 0 ? HitTestMode.Block : HitTestMode.None)
     .enabled(this.interactionEnabled && this.sample.pauseOpacity > 0)
     .accessibilityText(readerSessionCapsuleAccessibility(this.sample.type, this.sessionState, this.desiredPlaying))

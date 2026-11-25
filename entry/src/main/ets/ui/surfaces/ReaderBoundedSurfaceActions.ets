@@ -77,9 +77,9 @@ export struct ReaderBoundedSurfaceActions {
     if (id === 'cancel') {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
       Row({ space: 6 }) {
-        Image(this.appThemeScheme === 'night' ? $r('app.media.import_cancel_theme_night') : $r('app.media.import_cancel')).width(13).height(13);
+        Image(this.appThemeScheme === 'night' ? $r('app.media.import_cancel_theme_night') : $r('app.media.import_cancel')).width(15).height(15);
         Text('取消').fontFamily(TYPE_FILE_IMPORT_CANCEL.fontFamily).fontWeight(TYPE_FILE_IMPORT_CANCEL.fontWeight)
-          .fontSize(TYPE_FILE_IMPORT_CANCEL.fontSizeFp).lineHeight(TYPE_FILE_IMPORT_CANCEL.lineHeightFp as number)
+          .fontSize(TYPE_FILE_IMPORT_CANCEL.fontSizeFp).lineHeight(TYPE_FILE_IMPORT_CANCEL.lineHeightFp as number).halfLeading(true)
           .letterSpacing(TYPE_FILE_IMPORT_CANCEL.letterSpacingFp as number).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
       }.justifyContent(FlexAlign.Center);
       }.padding(0).backgroundColor(Color.Transparent)
@@ -90,9 +90,9 @@ export struct ReaderBoundedSurfaceActions {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
       Row({ space: this.specId === 'local-import-result' ? 6 : TOK_SPACE_XS }) {
         Image(this.specId === 'local-import-result' ? $r('app.media.import_done') : $r('app.media.import_choose_file'))
-          .width(this.specId === 'local-import-result' ? 14 : 15).height(this.specId === 'local-import-result' ? 14 : 15);
+          .width(15).height(15);
         Text(this.primaryLabel).fontFamily(TYPE_FILE_IMPORT_ACTION.fontFamily).fontWeight(TYPE_FILE_IMPORT_ACTION.fontWeight)
-          .fontSize(TYPE_FILE_IMPORT_ACTION.fontSizeFp).lineHeight(TYPE_FILE_IMPORT_ACTION.lineHeightFp as number)
+          .fontSize(TYPE_FILE_IMPORT_ACTION.fontSizeFp).lineHeight(TYPE_FILE_IMPORT_ACTION.lineHeightFp as number).halfLeading(true)
           .letterSpacing(TYPE_FILE_IMPORT_ACTION.letterSpacingFp as number).fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
       }.justifyContent(FlexAlign.Center);
       }.padding(0).attributeModifier(new ReaderBoundedFileActionModifier(this.specId, this.actionWidth))

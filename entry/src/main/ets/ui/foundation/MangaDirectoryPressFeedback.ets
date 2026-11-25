@@ -8,14 +8,16 @@ export class MangaDirectoryPressFeedback implements AttributeModifier<CommonAttr
   private readonly enabled: boolean;
   private readonly applies: boolean;
   private readonly scheme: string;
+  private readonly sharedPressPaint: boolean;
   private readonly target: 'custom' | 'nativeButton';
 
   constructor(enabled: boolean = true, applies: boolean = true, scheme: string = 'day',
-    target: 'custom' | 'nativeButton' = 'custom') {
+    target: 'custom' | 'nativeButton' = 'custom', sharedPressPaint: boolean = false) {
     this.enabled = enabled;
     this.applies = applies;
     this.scheme = scheme;
     this.target = target;
+    this.sharedPressPaint = sharedPressPaint;
   }
 
   private applyFocusBox(instance: CommonAttribute, enabled: boolean = this.enabled): void {
@@ -27,19 +29,19 @@ export class MangaDirectoryPressFeedback implements AttributeModifier<CommonAttr
 
   applyNormalAttribute(instance: CommonAttribute): void {
     if (!this.applies) return;
-    instance.opacity(this.enabled ? 1 : MANGA_DIRECTORY_VISUAL.disabledOpacity);
+    if (!this.sharedPressPaint) instance.opacity(this.enabled ? 1 : MANGA_DIRECTORY_VISUAL.disabledOpacity);
     this.applyFocusBox(instance);
   }
 
   applyPressedAttribute(instance: CommonAttribute): void {
     if (!this.applies) return;
-    instance.opacity(this.enabled ? MANGA_DIRECTORY_VISUAL.pressOpacity : MANGA_DIRECTORY_VISUAL.disabledOpacity);
+    if (!this.sharedPressPaint) instance.opacity(this.enabled ? MANGA_DIRECTORY_VISUAL.pressOpacity : MANGA_DIRECTORY_VISUAL.disabledOpacity);
     this.applyFocusBox(instance);
   }
 
   applyDisabledAttribute(instance: CommonAttribute): void {
     if (!this.applies) return;
-    instance.opacity(MANGA_DIRECTORY_VISUAL.disabledOpacity);
+    if (!this.sharedPressPaint) instance.opacity(MANGA_DIRECTORY_VISUAL.disabledOpacity);
     this.applyFocusBox(instance, false);
   }
 }

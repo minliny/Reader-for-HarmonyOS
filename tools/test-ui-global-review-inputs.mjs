@@ -25,6 +25,13 @@ function checkTabItems(source) {
   const controls = foundationControls();
   const { readerPageAreaLength } = actualReaderPageShell();
   const { readerMainTabIconResource, MAIN_TABS } = actualReaderMainTabs();
+  for (const [key, icon] of [['discover', 'bookshelf_compass_active'], ['rss', 'bookshelf_rss_active']]) {
+    assert.equal(readerMainTabIconResource(key, true, 'day'), icon);
+    const night = readerMainTabIconResource(key, true, 'night');
+    assert.equal(night, icon + '_theme_night');
+    assert.match(readFileSync(new URL('../entry/src/main/resources/base/media/' + night + '.svg', import.meta.url), 'utf8'),
+      /#111B16/i, 'selected night glyph uses dark ink on the light primary fill');
+  }
   const Navigation = selectedProductionMethods(new URL('app/navigation/ReaderBottomNavigation.ets', root),
     'ReaderBottomNavigation', ['items'], { MAIN_TABS, readerMainTabIconResource, $r: value => value });
   const navigation = new Navigation();
@@ -79,6 +86,8 @@ function checkTabItems(source) {
   const pills = () => controls.nodes(owner).filter(node => node.type === 'Row' && node.accessibilityLevel === 'no' && node.translate);
   assert.equal(pills().length, 1, 'one paint-only pill spans tab changes');
   const pill = pills()[0];
+  assert.equal(pill.position, undefined, 'the pill uses the tab row content origin without adding the outer inset again');
+  assert.equal(pill.translate.x, 92, 'the second tab differs by just one item width and gap');
   assert.deepEqual(animations, [{ params: { duration: 220, curve: [0.22, 1.05, 0.36, 1] }, before: [0, 1], after: [1, 1] }]);
   owner.reduceMotion = true;
   deliver({ current: 'bookshelf', items: items('bookshelf', 'day') });

@@ -10,6 +10,7 @@ const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { createRequire } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
 const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
 const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts');
@@ -37,9 +38,11 @@ function mount(book) {
   const {owner}=createReaderBuilderProbe(source,['mangaRevision','continueReadingCard','continueCardCover','continueCardCopy',
     'continueCardReadAction','continueCardFrame','continueCardFontScale','continueCardRectId','continueCardBookKey',
     'continueBookProgress','continueBookProgressLabel','continueReadingPosition','mangaReadingPosition','bookCoverMotionId',
-    'isShelfPresentationCurrent','bookSelectionHandler','hasCover'],{
+    'isShelfPresentationCurrent','bookSelectionHandler','hasCover',
+    'shelfPressed','shelfPressKey','shelfPressPointer','observeShelfPress'],{
       ShelfBookPresentation,MangaBookPresentation,ObservedPropertySimplePU,NoCoverCover:NoCover,ImageFit:{Cover:'cover'},
       bookshelfContinueCardFrame, ReaderWindowCoordinator:{metrics:()=>({systemFontScale:1})},
+      readerSurfaceElevation: readerSurfaceSpecsForProbe().readerSurfaceElevation,
     },{
       onObserverEnter(_owner,id){activeId=id;dependencies.delete(id);},
       onObserverExit(){activeId=-1;},
@@ -49,7 +52,10 @@ function mount(book) {
     continueCardAreaHandler:()=>()=>{},saveShelfViewport(){},measureBookOrigin:()=>undefined,onBookSelected:book=>selected.push(book)});
   owner.continueReadingCard(()=>owner.continueReading,false);
   const textNodes=()=>[...owner.nodes.values()].filter(node=>node.type==='Text');
-  const cardClick=[...owner.nodes.values()].find(node=>typeof node.onClick==='function').onClick;
+  const card=[...owner.nodes.values()].find(node=>typeof node.onClick==='function');
+  const cardClick=card.onClick;
+  assert.equal(card.width,352,'the touch wrapper shares the shelf content width');
+  assert.equal(card.alignSelf,'ItemAlign.Center','the wrapper owns the card alignment');
   assert.equal([...owner.nodes.values()].filter(node=>typeof node.onClick==='function').length,1,
     'the card and its Reading button keep their existing shared row click action');
   assert.ok(textNodes().some(node=>node.create==='阅读'));

@@ -3,6 +3,7 @@ import { TYPE_READER_SESSION_COUNTDOWN, TYPE_READER_SESSION_LABEL } from '../../
 import type { ReaderSessionCapsuleState, ReaderSessionCapsuleType } from './ReaderSessionCapsuleModel';
 import type { UIContext } from '@ohos.arkui.UIContext';
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
+import { READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT } from './ReaderPageChromeLayout';
 
 const AUTO_PAGE_CAPSULE_MIN_WIDTH = 96;
 const TTS_CAPSULE_MIN_WIDTH = 94;
@@ -37,7 +38,7 @@ export function measureReaderSessionCapsule(context: UIContext, type: ReaderSess
     (countdown?.singleLineWidthVp ?? 10 * scale) + 2, (countdown?.heightVp ?? 8 * scale) + 2) : 16;
   const paintHeight = Math.max(READER_SESSION_CAPSULE_HEIGHT, labelHeight + 8, countdownSize + 8);
   return { width: readerSessionCapsuleMinimumWidth(type) + labelWidth - 42 + countdownSize - 16,
-    paintHeight, targetHeight: Math.max(44, paintHeight), labelWidth, labelHeight, countdownSize };
+    paintHeight, targetHeight: Math.max(READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT, paintHeight), labelWidth, labelHeight, countdownSize };
 }
 
 /** The static capsule and its launch actor share paint while retaining their own nodes. */
@@ -105,7 +106,7 @@ export struct ReaderSessionCapsuleLeading {
         .fontFamily(TYPE_READER_SESSION_LABEL.fontFamily)
         .fontWeight(TYPE_READER_SESSION_LABEL.fontWeight)
         .fontSize(TYPE_READER_SESSION_LABEL.fontSizeFp)
-        .lineHeight(TYPE_READER_SESSION_LABEL.lineHeightFp)
+        .lineHeight(TYPE_READER_SESSION_LABEL.lineHeightFp).halfLeading(true)
         .fontColor(this.effectiveTextColor()).textAlign(TextAlign.Center).maxLines(1);
     }
     .width(this.capsuleWidth).height(this.capsuleHeight).padding({ left: 6, right: 6 })

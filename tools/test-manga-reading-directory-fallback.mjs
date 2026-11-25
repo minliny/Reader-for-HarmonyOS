@@ -13,7 +13,7 @@ import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-pr
 import { projectReaderDirectoryEntries } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryProjection.ts';
 import { sameReaderDirectoryData, snapshotReaderDirectoryData } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts';
 import { readerDirectoryAccessibilityText } from '../entry/src/main/ets/features/reading/ui/ReaderDirectoryHierarchy.ts';
-import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600 } from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM, READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 import { ReaderDirectoryNavigationGateway } from '../entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation.ts';
 import { openReaderDirectoryNavigation } from './lib/reader-directory-navigation-session-probe.mjs';
 import { mangaDirectoryEntryRows, mangaDirectoryLabel, mangaDirectoryNearbyEntries } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryLayout.ts';
@@ -23,7 +23,7 @@ import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 const path = fileURLToPath(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingDirectoryFallback.ets', import.meta.url));
 const source = readFileSync(path, 'utf8');
 const timers = [];
-const deps = { ...directoryState, mangaDirectoryDisplay, visual, mangaDirectoryScale, mangaDirectoryColor, ReaderWindowCoordinator: {metrics: () => ({systemFontScale: 1})}, mangaDirectoryPresentation, mangaDirectoryVisibleEntries, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600, projectReaderDirectoryEntries, sameReaderDirectoryData, snapshotReaderDirectoryData,
+const deps = { ...directoryState, mangaDirectoryDisplay, visual, mangaDirectoryScale, mangaDirectoryColor, ReaderWindowCoordinator: {metrics: () => ({systemFontScale: 1})}, mangaDirectoryPresentation, mangaDirectoryVisibleEntries, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM, READER_FONT_NOTO_SANS_SC_UI_BOLD, projectReaderDirectoryEntries, sameReaderDirectoryData, snapshotReaderDirectoryData,
   mangaDirectoryEntryRows, mangaDirectoryLabel, mangaDirectoryNearbyEntries,
   readerDirectoryAccessibilityText, LengthMetrics: { vp: value => ({ value }) }, ScrollAlign: { START: 'start', CENTER: 'center' },
   setTimeout(action) { timers.push(action); } };
@@ -250,8 +250,8 @@ for (const current of [false, true]) {
   assert.equal(row.constraintSize.minHeight, 58); assert.equal(row.padding.left, 26);
   assert.equal(row.border.width.bottom, 1); assert.equal(row.borderRadius, undefined);
   assert.equal(title.fontSize, 13); assert.equal(title.lineHeight, 22); assert.equal(title.maxLines, undefined);
-  assert.deepEqual(title.fontWeight, [active ? 550 : 400, {enableVariableFontWeight: true}]);
-  assert.equal(title.fontFamily, active ? READER_FONT_NOTO_SANS_SC_UI_550 : READER_FONT_NOTO_SANS_SC_UI_REGULAR);
+  assert.deepEqual(title.fontWeight, active ? 500 : 400);
+  assert.equal(title.fontFamily, active ? READER_FONT_NOTO_SANS_SC_UI_MEDIUM : READER_FONT_NOTO_SANS_SC_UI_REGULAR);
   assert.equal(title.fontColor, active ? (scheme === 'night' ? '#B9CEB1' : '#425D45') :
     (scheme === 'night' ? '#EAE7DE' : '#1F1B17'));
   assert.equal(row.opacity, navigable === false ? .36 : 1);
@@ -447,10 +447,10 @@ function checkRetainedNamed(candidate = mangaDirectoryEntryRowSource) {
   owner.initialRender();
   const nodes = shared.nodes(owner), row = nodes.find(node => node.type === 'Row'), title = nodes.find(node => node.type === 'Text' && node.create === '起始章节');
   const actors = [...owner.observers];
-  assert.equal(title.fontFamily, READER_FONT_NOTO_SANS_SC_UI_550); assert.deepEqual(title.fontWeight, [550, {enableVariableFontWeight: true}]);
+  assert.equal(title.fontFamily, READER_FONT_NOTO_SANS_SC_UI_MEDIUM); assert.deepEqual(title.fontWeight, 500);
   owner.currentChapterIndex = -1; shared.properties.flush();
   assert.equal(title.fontFamily, READER_FONT_NOTO_SANS_SC_UI_REGULAR, 'retained current face returns to regular');
-  owner.currentChapterIndex = 11; shared.properties.flush(); assert.equal(title.fontFamily, READER_FONT_NOTO_SANS_SC_UI_550);
+  owner.currentChapterIndex = 11; shared.properties.flush(); assert.equal(title.fontFamily, READER_FONT_NOTO_SANS_SC_UI_MEDIUM);
   owner.query = '第1'; shared.properties.flush(); assert.equal(row.padding.left, 10, 'search targets use a flat inset');
   owner.query = ''; shared.properties.flush(); assert.equal(row.padding.left, 26);
   assert.deepEqual(owner.observers, actors, 'current/search changes keep the same named actors');
@@ -472,7 +472,7 @@ checkRetainedNamed(); checkRetainedCatalog();
 const plainCurrent = mangaDirectoryEntryRowSource.replace('@Prop currentChapterIndex:', 'currentChapterIndex:');
 assert.notEqual(plainCurrent, mangaDirectoryEntryRowSource);
 assert.throws(() => checkRetainedNamed(plainCurrent), /retained current face/, 'negative control detects lost child Prop scheduling');
-const capturedCurrent = mangaDirectoryEntryRowSource.replaceAll('this.current(entry) ? READER_FONT_NOTO_SANS_SC_UI_550', 'true ? READER_FONT_NOTO_SANS_SC_UI_550');
+const capturedCurrent = mangaDirectoryEntryRowSource.replaceAll('this.current(entry) ? READER_FONT_NOTO_SANS_SC_UI_MEDIUM', 'true ? READER_FONT_NOTO_SANS_SC_UI_MEDIUM');
 assert.notEqual(capturedCurrent, mangaDirectoryEntryRowSource);
 assert.throws(() => checkRetainedNamed(capturedCurrent), /retained current face/, 'a baked 550 face cannot remain on a former current target');
 const indentSearch = mangaDirectoryEntryRowSource.replace('this.query.trim().length > 0 || this.showContext', 'false || this.showContext');

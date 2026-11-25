@@ -8,9 +8,9 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { TYPE_SHELF_CONTINUE_TITLE } from '../../../ui/foundation/ReaderTypography';
 import { bookshelfMotionPaint, BookshelfMotionRequest } from '../presentation/BookshelfNavigationMotion';
 import { BOOKSHELF_COVER_SHADOW_RADIUS, BOOKSHELF_COVER_SHADOW_OFFSET_Y } from './BookshelfCoverVisual';
+import { BookshelfNavigationPaint, type BookshelfOpeningPaint } from './BookshelfNavigationPresentation';
 
-const CARRY = readerMotionStandardCurve();
-const SPINE = curves.cubicBezierCurve(0.22, 0.88, 0.26, 1);
+const STANDARD = readerMotionStandardCurve();
 const FADE = curves.cubicBezierCurve(0, 0, 0.58, 1);
 const COVER_PERSPECTIVE_VP = 1400;
 // Change the route while the paper plane covers the reader. The live shelf
@@ -31,11 +31,8 @@ export struct BookshelfNavigationTransition {
   @Prop @Watch('onReduceMotionChanged') reduceMotion: boolean = false;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   onCovered: (id: number) => void = (_id: number): void => {};
-  // The reader remains at its natural layout and scale; its visibility is a
-  // track on this actor's clock, guarded by the caller's request identity.
-  onReaderOpacity: (id: number, opacity: number) => void = (_id: number, _opacity: number): void => {};
-  onShelfPaint: (id: number, opacity: number, scale: number, brightness: number) => void =
-    (_id: number, _opacity: number, _scale: number, _brightness: number): void => {};
+  onOpeningPaint: (id: number, paint: BookshelfOpeningPaint) => void =
+    (_id: number, _paint: BookshelfOpeningPaint): void => {};
   onFinished: (id: number) => void = (_id: number): void => {};
 
   @State private visible: boolean = false;
@@ -70,6 +67,8 @@ export struct BookshelfNavigationTransition {
   private readerProgress: number = 0;
   private fadeStartProgress: number = 0;
   private sampledPhase: number = 0;
+  private nextFrameStart: number | undefined = undefined;
+  private closeResumePosition: number = 0;
 
   aboutToAppear(): void { this.mounted = true; this.onRequestChanged(); }
   aboutToDisappear(): void { this.mounted = false; this.clearActor(); }
@@ -78,6 +77,8 @@ export struct BookshelfNavigationTransition {
     this.generation += 1;
     this.running = false;
     this.waiting = false;
+    this.nextFrameStart = undefined;
+    this.closeResumePosition = 0;
     this.activeRequest = undefined;
     this.visible = false;
   }
@@ -98,7 +99,6 @@ export struct BookshelfNavigationTransition {
       }
       return;
     }
-    const now = readerMotionNowMs();
     const preceding = this.activeRequest;
     const reverse = this.running && !this.fading && preceding !== undefined && preceding.direction !== next.direction &&
       preceding.origin.sourceId === next.origin.sourceId && preceding.origin.bookId === next.origin.bookId;
@@ -122,9 +122,8 @@ export struct BookshelfNavigationTransition {
       next.direction === 'open' ? READER_BOOK_OPEN_MS : READER_BOOK_CLOSE_MS;
     this.timeline = new ReversibleMotionTimeline(this.duration);
     const position = this.fading ? 0 : reversedPosition * this.duration;
-    this.timeline.seek(position, now);
-    this.timeline.retarget(true, now);
-    this.sample(position);
+    this.nextFrameStart = position;
+    this.sample(position, false);
     this.scheduleFrame(this.generation);
   }
 
@@ -137,12 +136,12 @@ export struct BookshelfNavigationTransition {
     const easeOut = (value: number): number => FADE.interpolate(value);
     const ramp = motionSegment(time, 0, handoff, easeOut);
     this.curtainOpacity = !this.covered ? ramp :
-      1 - motionSegment(time, handoff, this.duration - handoff, easeOut);
+      1 - motionSegment(time, this.closeResumePosition, this.duration - this.closeResumePosition, easeOut);
     this.curtainX = request.target.x; this.curtainY = request.target.y;
     this.curtainWidth = request.target.width; this.curtainHeight = request.target.height;
   }
 
-  private sample(time: number): void {
+  private sample(time: number, publishPaint: boolean = true): void {
     const request = this.activeRequest;
     if (request === undefined) return;
     if (request.direction === 'close') this.sampleCurtain(request, time);
@@ -151,14 +150,14 @@ export struct BookshelfNavigationTransition {
       if (request.direction === 'open') {
         const p = motionSegment(time, 0, this.duration, (value: number): number => FADE.interpolate(value));
         this.readerProgress = this.fadeStartProgress + (1 - this.fadeStartProgress) * p;
-        this.onReaderOpacity(request.id, this.readerProgress);
-        this.onShelfPaint(request.id, 1, 1, 1);
+        if (publishPaint) this.onOpeningPaint(request.id,
+          { readerOpacity: this.readerProgress, shelfOpacity: 1, shelfScale: 1, shelfBrightness: 1 });
       }
       return;
     }
     this.sampledPhase = request.direction === 'open' ? time / this.duration : 1 - time / this.duration;
-    const paint = bookshelfMotionPaint(request, this.sampledPhase,
-      (value: number): number => CARRY.interpolate(value), (value: number): number => SPINE.interpolate(value));
+    const interpolate = (value: number): number => STANDARD.interpolate(value);
+    const paint = bookshelfMotionPaint(request, this.sampledPhase, interpolate, interpolate);
     this.actorX = paint.rect.x; this.actorY = paint.rect.y;
     this.actorWidth = paint.rect.width; this.actorHeight = paint.rect.height;
     this.actorRadius = paint.radius;
@@ -166,8 +165,11 @@ export struct BookshelfNavigationTransition {
     this.actorOpacity = paint.coverOpacity;
     if (request.direction === 'open') {
       this.readerProgress = paint.readerOpacity;
-      this.onReaderOpacity(request.id, paint.readerOpacity);
-      this.onShelfPaint(request.id, paint.shelfOpacity, paint.shelfScale, paint.shelfBrightness);
+      // A Prop update can seed this actor while Index is still rendering.
+      if (publishPaint) this.onOpeningPaint(request.id, {
+        readerOpacity: paint.readerOpacity, shelfOpacity: paint.shelfOpacity,
+        shelfScale: paint.shelfScale, shelfBrightness: paint.shelfBrightness,
+      });
     }
   }
 
@@ -175,17 +177,29 @@ export struct BookshelfNavigationTransition {
     this.getUIContext().postFrameCallback(new BookshelfNavigationFrameCallback((): void => {
       if (!this.current(token) || this.waiting) return;
       const now = readerMotionNowMs();
+      const start = this.nextFrameStart;
+      if (start !== undefined) {
+        // First paint, reversal and a resumed close begin from the last visible
+        // sample. Layout work before this callback cannot consume the motion.
+        this.nextFrameStart = undefined;
+        this.timeline.seek(start, now);
+        this.timeline.retarget(true, now);
+      }
       const time = this.timeline.sample(now);
       const request = this.activeRequest;
       if (request === undefined) return;
-      this.sample(time);
       if (request.direction === 'close' && !this.covered && time >= this.closeHandoffTime()) {
+        // A reversal can start beyond the handoff. Retain that visible cover
+        // phase instead of rewinding it while the destination is resolved.
+        this.closeResumePosition = Math.max(this.closeHandoffTime(), start ?? 0);
+        this.sample(this.closeResumePosition);
         this.covered = true;
         this.waiting = true;
         this.onCovered(request.id);
         if (this.current(token) && this.waiting && !this.activeRequest?.awaitingTarget) this.resumeReturn();
         return;
       }
+      this.sample(time);
       if (this.timeline.running(now)) this.scheduleFrame(token); else this.complete(token);
     }));
   }
@@ -195,10 +209,8 @@ export struct BookshelfNavigationTransition {
     if (request === undefined || !this.running || !this.waiting) return;
     this.waiting = false;
     this.fadeSurface = this.fading || request.fadeOnly === true;
-    const now = readerMotionNowMs();
-    const token = this.generation;
-    this.sample(this.timeline.sample(now));
-    if (this.timeline.running(now)) this.scheduleFrame(token); else this.complete(token);
+    this.nextFrameStart = this.closeResumePosition;
+    this.scheduleFrame(this.generation);
   }
 
   private complete(token: number): void {
@@ -221,19 +233,17 @@ export struct BookshelfNavigationTransition {
       this.curtainOpacity = 1;
       this.duration = READER_REDUCED_FADE_MS;
       this.timeline = new ReversibleMotionTimeline(this.duration);
-      const now = readerMotionNowMs();
-      this.timeline.seek(this.closeHandoffTime(), now);
-      this.timeline.retarget(true, now);
+      this.closeResumePosition = this.closeHandoffTime();
       return;
     }
     this.waiting = false;
     this.duration = READER_REDUCED_FADE_MS;
     this.timeline = new ReversibleMotionTimeline(this.duration);
     this.fadeStartProgress = request.direction === 'open' ? this.readerProgress : 0;
-    const now = readerMotionNowMs();
-    if (this.covered) this.timeline.seek(this.closeHandoffTime(), now);
-    this.timeline.retarget(true, now);
-    this.sample(this.timeline.sample(now));
+    const position = this.covered ? this.closeHandoffTime() : 0;
+    this.closeResumePosition = position;
+    this.nextFrameStart = position;
+    this.sample(position, false);
     this.scheduleFrame(this.generation);
   }
 
@@ -283,5 +293,22 @@ export struct BookshelfNavigationTransition {
     }
     .width('100%').height('100%').clip(true)
     .hitTestBehavior(HitTestMode.None).enabled(false).accessibilityLevel('no-hide-descendants');
+  }
+}
+
+/** Only this wrapper reads the painted shelf values on opening frames. */
+@Component
+export struct BookshelfNavigationPaintSurface {
+  @ObjectLink paint: BookshelfNavigationPaint;
+  @BuilderParam content: () => void;
+
+  build() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      this.content();
+    }
+    .width('100%').height('100%')
+    .opacity(this.paint.opening.shelfOpacity)
+    .scale({ x: this.paint.opening.shelfScale, y: this.paint.opening.shelfScale })
+    .brightness(this.paint.opening.shelfBrightness);
   }
 }

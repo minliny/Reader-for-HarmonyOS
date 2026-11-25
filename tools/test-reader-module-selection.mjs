@@ -5,7 +5,7 @@ const selected=selectContractCases({
 });
 async function runCase(selectedCase){
  const {default:assert}=await import('node:assert/strict');
- const assets=[['directory','reader_directory_list_active','rc_list','rc_list'],['tts','reader_tts_nav_active','rc_headphones','rc_headphones'],['appearance','reader_appearance_nav_active','rc_palette','rc_palette'],['settings','reader_settings_nav_active','rc_settings','rc_settings']];
+ const assets=[['autoPage','reader_autopage_nav_active','rc_autopage','rc_autopage'],['tts','reader_tts_nav_active','rc_headphones','rc_headphones'],['appearance','reader_appearance_nav_active','rc_palette','rc_palette'],['settings','reader_settings_nav_active','rc_settings','rc_settings']];
  if(selectedCase==='icon-map'){
   const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
   const Control=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets',import.meta.url),'ReaderControlPanel',['moduleIcon']);
@@ -36,6 +36,7 @@ for item in items:
  output.append({'scheme':item['scheme'],'paths':paths})
 json.dump(output,sys.stdout)`;
  const result=spawnSync('python3',['-c',script],{input:JSON.stringify(files),encoding:'utf8',timeout:10000});assert.ifError(result.error);assert.equal(result.status,0,result.stderr);
- for(const item of JSON.parse(result.stdout)){assert.ok(item.paths.length>0);for(const path of item.paths){assert.equal(path.fill,'none');assert.equal(path.stroke,item.scheme==='day'?'#FFFAF4':'#1C1A18');}}
+ const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+ for(const item of JSON.parse(result.stdout)){assert.ok(item.paths.length>0);for(const path of item.paths){assert.equal(path.fill,'none');assert.equal(path.stroke,`#${readerAppColor('app.control.onPrimary', item.scheme).slice(3)}`);}}
 }
 for(const id of selected){await runCase(id);recordContractCasePass(id);}

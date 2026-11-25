@@ -7,11 +7,12 @@ import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
-import { resolveReaderButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
+import { resolveReaderButtonMatrixSize, resolveReaderButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
 import { readerPageAreaLength, readerStandardPageSpec } from '../../../ui/layout/ReaderPageShell';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { resolveSourceToolsRowLayout, type SourceToolsRowLayout } from '../presentation/SourceToolsLayout';
 import { ReaderCard } from '../../../ui/surfaces/ReaderCard';
+import { ReaderCardSpecId, resolveReaderCardSpec } from '../../../ui/surfaces/ReaderCardSpecs';
 import { ReaderInlineSelect } from '../../../ui/controls/ReaderInlineSelect';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
 import { ReaderSectionHeading } from '../../../ui/controls/ReaderSectionHeading';
@@ -28,6 +29,8 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import {
+  TYPE_APP_ROW_DETAIL,
+  TYPE_APP_ROW_LABEL,
   TYPE_SOURCE_TOOLS_ACTION,
   TYPE_SOURCE_TOOLS_BODY,
   TYPE_SOURCE_TOOLS_CAPTION,
@@ -37,19 +40,14 @@ import {
   TYPE_SOURCE_TOOLS_DEBUG_LOG,
   TYPE_SOURCE_TOOLS_DESCRIPTION,
   TYPE_SOURCE_TOOLS_HINT,
-  TYPE_SOURCE_TOOLS_INHERITED_META,
   TYPE_SOURCE_TOOLS_STATUS,
   TYPE_SOURCE_TOOLS_URL,
 } from '../../../ui/foundation/ReaderTypography';
 import {
-  TOK_BORDER,
   TOK_BORDER_W,
-  TOK_INK,
-  TOK_MUTED,
-  TOK_PRIMARY_DARK,
+  TOK_RADIUS_PILL,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
-  TOK_SURFACE_PANEL_SOFT,
 } from '../../../ui/foundation/ReaderTokens';
 import type { BookSource, SourceDebugLog } from '../application/SourceGateway';
 import {
@@ -66,6 +64,25 @@ let nextSourceToolsBackIdentity: number = 0;
 type SourceToolsBatchAction = 'selectAll' | 'exportSelected' | 'check' | 'stop' | 'enable' | 'disable' | 'delete';
 type SourceToolsRowAction = 'select' | 'edit' | 'debug';
 type SourceToolsEditorAction = 'cancel' | 'save' | 'reconcile';
+
+class SourceToolsListCard implements AttributeModifier<ListItemGroupAttribute> {
+  private readonly specId: ReaderCardSpecId;
+  private readonly scheme: string;
+
+  constructor(specId: ReaderCardSpecId, scheme: string) {
+    this.specId = specId;
+    this.scheme = scheme;
+  }
+
+  applyNormalAttribute(instance: ListItemGroupAttribute): void {
+    const spec = resolveReaderCardSpec(this.specId);
+    instance.padding(spec.contentPadding ?? 0);
+    instance.margin({ bottom: readerStandardPageSpec('tools').space });
+    instance.backgroundColor(readerAppColor(spec.backgroundRole, this.scheme));
+    instance.border({ width: spec.borderWidth, color: readerAppColor(spec.borderRole, this.scheme) });
+    instance.borderRadius(spec.radius);
+  }
+}
 
 class SourceToolListRow {
   readonly source: BookSource;
@@ -190,6 +207,7 @@ class SourceDebugLogDataSource implements IDataSource {
 
 @Component
 export struct SourceToolsPage {
+  @Prop embeddedWide: boolean = false;
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private readonly pageScroller: Scroller = new Scroller();
   @Prop reduceMotion: boolean = false;
@@ -198,8 +216,6 @@ export struct SourceToolsPage {
   @StorageLink('readerAppForeground') private appForeground: boolean = true;
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @State private sourceListWidth: number = 0;
-  @State private batchFirstResultHeight: number = 0;
-  @State private batchFirstResultKey: string = '';
   @State private overlayHostWidth: number = 0;
   @State private recoveryLeadingReserve: number = 0;
   @State private sourceQuery: string = '';
@@ -301,7 +317,7 @@ export struct SourceToolsPage {
   }
 
   build() {
-    ReaderStandardPage({ editingHost: this.editingHost,
+    ReaderStandardPage({ floatingHeader: true, embeddedWide: this.embeddedWide, editingHost: this.editingHost,
       scroller: this.pageScroller,
       variant: 'tools',
       scrollOwner: 'native-list',
@@ -318,7 +334,7 @@ export struct SourceToolsPage {
 
   @Builder
   private pageHeader() {
-    PageBackBar({ title: '批量管理与书源工具', backFocusId: 'reader-source-tools-back',
+    PageBackBar({ floating: true, centered: true, elevation: 'floating', title: '批量管理与书源工具', backFocusId: 'reader-source-tools-back',
       onBack: this.toolsBackAction(this.temporaryBackIdentity) });
   }
 
@@ -344,24 +360,17 @@ export struct SourceToolsPage {
         ListItem() { this.batchCheckCard(); }.padding({ bottom: readerStandardPageSpec('tools').space });
       }, (key: string): string => `source-batch-progress:${key}`);
       if (this.showsBatchResults()) {
-        ListItem() { this.batchResultsCard(); }.padding({ bottom: readerStandardPageSpec('tools').space });
+        this.batchResultsCard();
       }
     }
-    ListItem() { this.sourceCard(); }.padding({ bottom: readerStandardPageSpec('tools').space });
+    this.sourceCard();
     if (this.snapshot.editorSourceId.length > 0) {
       // Retire the old native input and capture this editor's identity in its callbacks.
       ForEach([this.snapshot.editorRevision], (revision: number): void => {
         ListItem() { this.editorCard(revision); }.padding({ bottom: readerStandardPageSpec('tools').space });
       }, (revision: number): string => `source-editor:${revision}`);
     }
-    ListItem() { this.debugCard(); }.padding({ bottom: readerStandardPageSpec('tools').space });
-    LazyForEach(this.debugLogDataSource, (log: SourceDebugLog, index: number) => {
-      ListItem() {
-        ReaderCard({ specId: 'task-diagnostics' }) { this.debugLogRow(log, index); }
-      }.padding({ bottom: readerStandardPageSpec('tools').space });
-    }, (log: SourceDebugLog): string =>
-      `debug-${log.sourceId ?? ''}-${log.traceId ?? ''}-${log.requestId ?? 0}-` +
-        `${log.timestampMs}-${log.state}-${log.message}`);
+    this.debugCard();
   }
 
   private showsBatchProgress(): boolean {
@@ -382,7 +391,7 @@ export struct SourceToolsPage {
     context.postFrameCallback(new ReaderPostLayoutFrame(context, (): void => {
       if (!this.toolsInputIsCurrent(opening) || revision !== this.snapshot.editorRevision ||
         this.snapshot.editorSourceId.length === 0) return;
-      // The main actions and source list each occupy one outer ListItem.
+      // The main actions and source list each occupy one outer list slot.
       // Only mounted progress and result sections can precede the editor.
       const index = 2 + Number(this.showsBatchProgress()) + Number(this.showsBatchResults());
       this.pageScroller.scrollToIndex(index, false, ScrollAlign.START);
@@ -445,6 +454,7 @@ export struct SourceToolsPage {
   @Builder
   private batchButton(action: SourceToolsBatchAction) {
     ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-action',
+      variant: action === 'delete' ? 'danger' : 'tonal', visualSize: 'medium',
       label: this.batchButtonLabel(action), actionEnabled: this.batchButtonEnabled(action),
       onAction: this.batchButtonAction(action) })
       .constraintSize({ minWidth: this.actionMinimumWidth(this.batchButtonLabel(action)), maxWidth: '100%' });
@@ -532,12 +542,12 @@ export struct SourceToolsPage {
           .width(`${this.batchCheckPercent(this.snapshot.batchCheck)}%`)
           .height(8)
           .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
-          .borderRadius(4);
+          .borderRadius(TOK_RADIUS_PILL);
       }
       .width('100%')
       .height(8)
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-      .borderRadius(4);
+      .borderRadius(TOK_RADIUS_PILL);
       if (this.snapshot.batchCheck.currentSourceName.length > 0) {
         Text(`当前 ${this.snapshot.batchCheck.currentIndex}/${this.snapshot.batchCheck.total}：` +
           `${this.snapshot.batchCheck.currentSourceName}（检测所选能力）`)
@@ -570,42 +580,18 @@ export struct SourceToolsPage {
     return JSON.stringify([result.sourceId, result.traceId, result.state]);
   }
 
-  private measureFirstBatchResult(result: SourceBatchCheckResult, area: Area): void {
-    const first = this.snapshot.batchCheck.results[0];
-    const height = readerPageAreaLength(area.height);
-    if (!this.mounted || first === undefined || this.batchResultKey(first) !== this.batchResultKey(result) ||
-      !Number.isFinite(height) || height <= 0) return;
-    this.batchFirstResultKey = this.batchResultKey(first);
-    this.batchFirstResultHeight = height;
-  }
-
-  private batchResultsHeight(): number {
-    const results = this.snapshot.batchCheck.results;
-    const first = results[0];
-    const viewportBudget = Math.min(320, Math.max(58, results.length * 58) * this.toolsFontScale());
-    const measured = first !== undefined && this.batchFirstResultKey === this.batchResultKey(first) ? this.batchFirstResultHeight : 0;
-    return Math.max(viewportBudget, measured);
+  @Builder
+  private batchResultsCard() {
+    ListItemGroup({ header: (): void => { this.batchResultsHeader(); } }) {
+      LazyForEach(this.batchResultDataSource, (result: SourceBatchCheckResult) => {
+        ListItem() { this.batchResultRow(result); }
+      }, (result: SourceBatchCheckResult): string => this.batchResultKey(result));
+    }.attributeModifier(new SourceToolsListCard('task-diagnostics', this.appThemeScheme));
   }
 
   @Builder
-  private batchResultsCard() {
-    ReaderCard({ specId: 'task-diagnostics' }) {
-      Text('实时结果（最新在前）')
-        .width('100%')
-        .fontFamily(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontFamily)
-        .fontSize(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontSizeFp)
-        .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-      List() {
-        LazyForEach(this.batchResultDataSource, (result: SourceBatchCheckResult) => {
-          ListItem() {
-            this.batchResultRow(result);
-          }.onAreaChange((_old: Area, area: Area): void => this.measureFirstBatchResult(result, area));
-        }, (result: SourceBatchCheckResult): string => this.batchResultKey(result));
-      }.width('100%').height(this.batchResultsHeight())
-        .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST })
-        .scrollBar(BarState.Auto);
-    }
+  private batchResultsHeader() {
+    ReaderSectionHeading({ variant: 'tool-card', title: '实时结果（最新在前）' });
   }
 
   @Builder
@@ -620,7 +606,7 @@ export struct SourceToolsPage {
       .fontWeight(TYPE_SOURCE_TOOLS_COMPACT_ACTION.fontWeight)
       .fontColor(color())
       .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-      .borderRadius(7);
+      .borderRadius(TOK_RADIUS_PILL);
   }
 
   @Builder
@@ -631,9 +617,10 @@ export struct SourceToolsPage {
       Column({ space: 3 }) {
         Text(result.sourceName)
           .width('100%')
-          .fontFamily(TYPE_SOURCE_TOOLS_ACTION.fontFamily)
-          .fontSize(TYPE_SOURCE_TOOLS_ACTION.fontSizeFp)
-          .fontWeight(TYPE_SOURCE_TOOLS_ACTION.fontWeight)
+          .fontFamily(TYPE_APP_ROW_LABEL.fontFamily)
+          .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp)
+          .fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
+          .lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
           .wordBreak(WordBreak.BREAK_ALL);
         Text(result.sourceId)
@@ -788,7 +775,16 @@ export struct SourceToolsPage {
 
   @Builder
   private sourceCard() {
-    ReaderCard({ specId: 'bordered-list-section' }) {
+    ListItemGroup({ header: (): void => { this.sourceCardHeader(); } }) {
+      LazyForEach(this.sourceDataSource, (row: SourceToolListRow) => {
+        ListItem() { this.sourceRow(row); }
+      }, (row: SourceToolListRow): string => this.sourceRowKey(row));
+    }.attributeModifier(new SourceToolsListCard('bordered-list-section', this.appThemeScheme));
+  }
+
+  @Builder
+  private sourceCardHeader() {
+    Column({ space: TOK_SPACE_XS }) {
       ReaderSectionHeading({ variant: 'tool-card', title: `书源编辑（${this.visibleSources().length}）` });
       if (this.snapshot.sources.length > 0 && this.visibleSources().length === 0) {
         ForEach([this.temporaryBackIdentity], (opening: string): void => {
@@ -796,15 +792,8 @@ export struct SourceToolsPage {
             actionLabel: '清除筛选', onAction: (): void => this.changeSourceQuery(opening, '') });
         }, (opening: string): string => opening);
       }
-      List() {
-        LazyForEach(this.sourceDataSource, (row: SourceToolListRow) => {
-          ListItem() { this.sourceRow(row); }
-        }, (row: SourceToolListRow): string => this.sourceRowKey(row));
-      }.width('100%').height(this.sourceListHeight())
-        .onAreaChange((_old: Area, next: Area): void => this.recordSourceListWidth(next))
-        .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST })
-        .scrollBar(BarState.Auto);
-    }
+    }.width('100%').alignItems(HorizontalAlign.Start)
+      .onAreaChange((_old: Area, next: Area): void => this.recordSourceListWidth(next));
   }
 
   @Builder
@@ -825,10 +814,10 @@ export struct SourceToolsPage {
           Column({ space: 3 }) {
             Text(this.currentSourceForRow(row).name)
               .width('100%')
-              .fontFamily(TYPE_SOURCE_TOOLS_ACTION.fontFamily)
-              .fontSize(TYPE_SOURCE_TOOLS_ACTION.fontSizeFp)
-              .fontWeight(TYPE_SOURCE_TOOLS_ACTION.fontWeight)
-              .lineHeight(TYPE_SOURCE_TOOLS_ACTION.lineHeightFp ?? TYPE_SOURCE_TOOLS_ACTION.fontSizeFp * 1.5)
+              .fontFamily(TYPE_APP_ROW_LABEL.fontFamily)
+              .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp)
+              .fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
+              .lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number)
               .maxFontScale(this.toolsFontScale())
               .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
               .maxLines(1)
@@ -846,8 +835,10 @@ export struct SourceToolsPage {
             if (this.currentSourceForRow(row).lastCheckSummary !== undefined) {
               Text(this.currentSourceForRow(row).lastCheckSummary ?? '')
                 .width('100%')
-                .fontSize(TYPE_SOURCE_TOOLS_INHERITED_META.fontSizeFp)
-                .lineHeight(TYPE_SOURCE_TOOLS_INHERITED_META.lineHeightFp ?? TYPE_SOURCE_TOOLS_INHERITED_META.fontSizeFp * 1.5)
+                .fontFamily(TYPE_APP_ROW_DETAIL.fontFamily)
+                .fontWeight(TYPE_APP_ROW_DETAIL.fontWeight)
+                .fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp)
+                .lineHeight(TYPE_APP_ROW_DETAIL.lineHeightFp as number)
                 .maxFontScale(this.toolsFontScale())
                 .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
                 .maxLines(1)
@@ -891,6 +882,8 @@ export struct SourceToolsPage {
   @Builder
   private sourceRowButton(row: SourceToolListRow, action: SourceToolsRowAction) {
     ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-compact',
+      variant: action === 'select' && this.snapshot.selectedSourceIds.includes(row.source.sourceId) ? 'tonal' : 'subtle',
+      visualSize: 'small',
       label: this.sourceRowButtonLabel(row, action), actionEnabled: this.sourceRowButtonEnabled(row, action),
       onAction: this.currentSourceRowAction(row, action) });
   }
@@ -920,23 +913,17 @@ export struct SourceToolsPage {
 
   private sourceRowLayout(source: BookSource): SourceToolsRowLayout {
     const action = resolveReaderButtonSpec('source-tools-compact');
+    const compact = resolveReaderButtonMatrixSize('small');
     const scale = this.toolsFontScale();
-    const titleHeight = TYPE_SOURCE_TOOLS_ACTION.lineHeightFp ?? TYPE_SOURCE_TOOLS_ACTION.fontSizeFp * 1.5;
+    const titleHeight = TYPE_APP_ROW_LABEL.lineHeightFp as number;
     const urlHeight = TYPE_SOURCE_TOOLS_URL.lineHeightFp ?? TYPE_SOURCE_TOOLS_URL.fontSizeFp * 1.5;
     const summaryHeight = source.lastCheckSummary === undefined ? 0 :
-      (TYPE_SOURCE_TOOLS_INHERITED_META.lineHeightFp ?? TYPE_SOURCE_TOOLS_INHERITED_META.fontSizeFp * 1.5) * scale + 3;
+      (TYPE_APP_ROW_DETAIL.lineHeightFp as number) * scale + 3;
     return resolveSourceToolsRowLayout({ listWidth: this.sourceListWidth, fontScale: scale,
       actionWidth: action.fixedWidth * scale,
-      actionHeight: readerScaledControlHeight(action.height ?? 44,
-        action.text.lineHeightFp ?? action.text.fontSizeFp * 1.5, scale),
+      actionHeight: Math.max(44, readerScaledControlHeight(compact.height, compact.lineHeight, scale)),
       infoHeight: (titleHeight + urlHeight) * scale + 3 + summaryHeight,
       rowPadding: TOK_SPACE_XS, bottomBorderWidth: TOK_BORDER_W, gap: TOK_SPACE_XS });
-  }
-
-  private sourceListHeight(): number {
-    const height = this.visibleSources().reduce((total: number, source: BookSource): number =>
-      total + this.sourceRowLayout(source).rowMinHeight, 0);
-    return Math.min(420, Math.max(58, height));
   }
 
   private recordSourceListWidth(area: Area): void {
@@ -995,7 +982,18 @@ export struct SourceToolsPage {
 
   @Builder
   private debugCard() {
-    ReaderCard({ specId: 'task-diagnostics' }) {
+    ListItemGroup({ header: (): void => { this.debugCardHeader(); } }) {
+      LazyForEach(this.debugLogDataSource, (log: SourceDebugLog, index: number) => {
+        ListItem() { this.debugLogRow(log, index); }
+      }, (log: SourceDebugLog): string =>
+        `debug-${log.sourceId ?? ''}-${log.traceId ?? ''}-${log.requestId ?? 0}-` +
+          `${log.timestampMs}-${log.state}-${log.message}`);
+    }.attributeModifier(new SourceToolsListCard('task-diagnostics', this.appThemeScheme));
+  }
+
+  @Builder
+  private debugCardHeader() {
+    Column({ space: TOK_SPACE_SM }) {
       Text(this.snapshot.debugSourceId.length > 0 ? '最近一次检测详情' : '书源调试')
         .width('100%').fontFamily(MESSAGE_TITLE.fontFamily).fontWeight(MESSAGE_TITLE.fontWeight)
         .fontSize(MESSAGE_TITLE.fontSizeFp).lineHeight(MESSAGE_TITLE.lineHeightFp as number)
@@ -1047,7 +1045,7 @@ export struct SourceToolsPage {
           .fontFamily(MESSAGE_BODY.fontFamily as string).fontSize(MESSAGE_BODY.fontSizeFp)
           .lineHeight(MESSAGE_BODY.lineHeightFp as number).fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
       }
-    }
+    }.width('100%').alignItems(HorizontalAlign.Start);
   }
 
   @Builder
@@ -1075,7 +1073,7 @@ export struct SourceToolsPage {
   @Builder
   private editorButton(revision: number, action: SourceToolsEditorAction) {
     ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-action',
-      label: this.editorButtonLabel(action), primary: action === 'save',
+      label: this.editorButtonLabel(action), variant: action === 'save' ? 'primary' : 'subtle', visualSize: 'medium',
       actionEnabled: this.editorButtonEnabled(revision, action), layout: action === 'reconcile' ? 'full' : 'intrinsic',
       onAction: this.editorAction(revision, action) })
       .constraintSize({ minWidth: action === 'reconcile' ? undefined : this.actionMinimumWidth(this.editorButtonLabel(action)), maxWidth: '100%' });
@@ -1099,12 +1097,12 @@ export struct SourceToolsPage {
   }
 
   private actionMinimumWidth(label: string): number {
-    const spec = resolveReaderButtonSpec('source-tools-action');
+    const size = resolveReaderButtonMatrixSize('medium');
     const context = this.getUIContext();
     const width = context.px2vp(context.getMeasureUtils().measureText({
-      textContent: label, fontSize: `${spec.text.fontSizeFp * this.toolsFontScale()}vp`,
-      fontFamily: spec.text.fontFamily, fontWeight: spec.text.fontWeight }));
-    return Math.max(44, Math.ceil(width) + spec.horizontalPadding * 2 + TOK_BORDER_W * 2);
+      textContent: label, fontSize: `${size.fontSize * this.toolsFontScale()}vp`,
+      fontFamily: TYPE_SOURCE_TOOLS_ACTION.fontFamily, fontWeight: TYPE_SOURCE_TOOLS_ACTION.fontWeight }));
+    return Math.max(44, Math.ceil(width) + size.horizontalPadding * 2);
   }
 
   private canWriteSources(): boolean {
@@ -1152,7 +1150,8 @@ export struct SourceToolsPage {
 
   @Builder
   private fullWidthActionButton(label: string, primary: boolean, action: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-action', label, primary,
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'source-tools-action', label,
+      variant: primary ? 'primary' : 'tonal', visualSize: 'large',
       actionEnabled: !this.snapshot.busy && this.snapshot.sources.length > 0, layout: 'full', onAction: action });
   }
 

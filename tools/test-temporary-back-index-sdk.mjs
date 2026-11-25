@@ -154,7 +154,7 @@ if(sourceTypes){
   const params={...props(),sources:[],groups:['A','B']};
   const f=scope==='source'?sourceLeaf(params):h.owner(source,params);
   let openedCover;
-  const open=()=>{
+  const open=async()=>{
     if(scope==='settings')f.o.toggleSelection('language');
     else if(scope==='source')f.o.toggleGroupSelection();
     else {
@@ -169,6 +169,7 @@ if(sourceTypes){
       assert.equal(visible,true,'the current Bookshelf More presentation opens one native content cover');
       body.builder();
       options.onAppear();
+      await Promise.resolve();
       h.p.properties.flush();
       const frame=[...cover.nodes.values()].find(node=>node.id==='reader-bookshelf-more-sheet');
       frame.onAppear();
@@ -192,12 +193,12 @@ if(sourceTypes){
   return{index,runtime,calls,h,f,open,finish,props};
 }
 for(const scope of ['settings','source','bookshelf'].filter(scope=>scope===selectedCase)){
-  const x=fixture(scope);assert.ok(x.index.navigationOwner.temporaryBackLease,'actual SDK Index child constructor publishes real leaf lease');x.open();assert.equal(x.index.onBackPress(),true);assert.deepEqual(x.calls,[],'temporary Back never invokes route exit');
+  const x=fixture(scope);assert.ok(x.index.navigationOwner.temporaryBackLease,'actual SDK Index child constructor publishes real leaf lease');await x.open();assert.equal(x.index.onBackPress(),true);assert.deepEqual(x.calls,[],'temporary Back never invokes route exit');
   if(scope==='source')assert.equal(x.f.o.groupClosing,true,'Source collapse retains existing finish boundary');else assert.equal(scope==='settings'?x.f.o.openSelect:x.f.o.moreMenuVisible,scope==='settings'?'':false);
   x.finish();assert.equal(x.index.onBackPress(),scope!=='bookshelf');if(scope==='settings')assert.equal(x.index.settingsSection,'home');if(scope==='source')assert.deepEqual(x.calls,['source-route']);
 }
 for(const scope of ['settings','source','bookshelf'].filter(scope=>scope===selectedCase))for(const retired of ['navigation','route','unset','replacement','unmounted']){
-  const x=fixture(scope),callback=x.props().onTemporaryBackBridge,old=x.index.navigationOwner.temporaryBackLease;x.open();
+  const x=fixture(scope),callback=x.props().onTemporaryBackBridge,old=x.index.navigationOwner.temporaryBackLease;await x.open();
   if(retired==='navigation')x.index.nextNavigationGeneration();if(retired==='route')x.index.publishNavigation(x.index.navigationOwner.show('search'));if(retired==='unset')installed=undefined;if(retired==='replacement')installed={};if(retired==='unmounted')x.index.shelfReceiptRetired=true;
   assert.doesNotThrow(()=>callback(old.handler,old.identity,old.generation));assert.equal(consumeCurrentTemporaryBack(x.index),false);assert.equal(scope==='settings'?x.f.o.openSelect:scope==='source'?x.f.o.groupOpen:x.f.o.moreMenuVisible,scope==='settings'?'language':true,'stale host does not call live leaf close');
   if(retired==='unset')assert.throws(()=>Runtime.current(),/installed by EntryAbility/);
@@ -205,10 +206,10 @@ for(const scope of ['settings','source','bookshelf'].filter(scope=>scope===selec
 for(const scope of ['settings','source','bookshelf'].filter(scope=>scope===selectedCase)){
   const x=fixture(scope),old=x.index.navigationOwner.temporaryBackLease,callback=x.props().onTemporaryBackBridge;
   x.f.o.aboutToDisappear();x.f.o.aboutToAppear();const current=x.index.navigationOwner.temporaryBackLease;assert.notEqual(current.identity,old.identity);callback(undefined,old.identity,old.generation);assert.equal(x.index.navigationOwner.temporaryBackLease,current,'old unregister cannot remove replacement lease');
-  x.open();assert.equal(old.handler(),false);assert.equal(consumeCurrentTemporaryBack(x.index),true);
+  await x.open();assert.equal(old.handler(),false);assert.equal(consumeCurrentTemporaryBack(x.index),true);
 }
 if(selectedCase==='priority') for(const layer of ['delete','json','source-switch','import','group','busy-group']){
-  const x=fixture('settings');x.open();
+  const x=fixture('settings');await x.open();
   if(layer==='delete')x.index.bookRemovalConfirmation.open(()=>true,()=>{},()=>({open(){},close(){}}));if(layer==='json')x.index.jsonImportVisible=true;if(layer==='source-switch'){const source=sourceSwitchFixture();installed=source.runtime;x.index.mountedRuntimeOwner=source.runtime;x.index.sourceSwitchHost=source.host;x.index.sourceSwitchScopeId=source.changes.at(-1).scopeId;x.index.sourceSwitchVisible=true;x.source=source;}if(layer==='import')x.index.hasVisibleImportDialog=()=>true;
   if(layer.endsWith('group')){x.index.editingShelfGroupBook={bookId:'book'};x.index.editingShelfGroupBusy=layer==='busy-group';}
   assert.equal(x.index.onBackPress(),true);assert.equal(x.f.o.openSelect,'language','Index-owned higher layer wins before settings temporary Back');
@@ -223,7 +224,7 @@ if(selectedCase==='bookshelf'){
   const oldAction=o.moreOpenAction(firstId);
   assert.equal(chrome.shelfMoreIdentity(first.generation,mounting),firstId);
   o.content=()=>{};o.initialRender();const children=[...o.children.values()];
-  const disappeared=x.open().options.onDisappear;
+  const disappeared=(await x.open()).options.onDisappear;
   x.index.nextNavigationGeneration();assert.equal(x.index.navigationOwner.temporaryBackLease,undefined);
   const p=x.props();o.updateStateVars(p);x.h.p.properties.flush();
   const second=x.index.navigationOwner.temporaryBackLease;assert.equal(second.generation,2);assert.notEqual(second.identity,firstId);assert.equal(o.moreMenuVisible,false,'actual @Prop/@Watch retires old opening');assert.equal(first.handler(),false);
@@ -231,13 +232,13 @@ if(selectedCase==='bookshelf'){
   disappeared();oldAction();chrome.openShelfMore(firstId,first.generation,mounting);
   assert.equal(o.moreMenuVisible,false,'old top-bar More callback and presentation lease are retired');
   assert.equal(chrome.shelfMoreIdentity(second.generation,mounting),second.identity);
-  x.open();assert.equal(o.moreMenuVisible,true,'top-bar More bridge receives the current callback');
+  await x.open();assert.equal(o.moreMenuVisible,true,'top-bar More bridge receives the current callback');
   p.onTemporaryBackBridge(undefined,first.identity,first.generation);assert.equal(x.index.navigationOwner.temporaryBackLease,second);assert.equal(x.index.onBackPress(),true);assert.equal(o.moreMenuVisible,false);
   o.aboutToDisappear();assert.equal(x.index.navigationOwner.temporaryBackLease,undefined);o.aboutToAppear();assert.ok(x.index.navigationOwner.temporaryBackLease);assert.equal(second.handler(),false);
 }
 if(selectedCase==='bookshelf')for(const retired of ['current','navigation','route','unmounted']){
   const x=fixture('bookshelf'),o=x.f.o;
-  const {options}=x.open();
+  const {options}=await x.open();
   const action=[...o.children.values()].find(child=>child.params?.onLocalImport).params.onLocalImport;
   action();action();
   assert.equal(o.moreMenuVisible,false);assert.deepEqual(x.calls,[],'import waits for the native sheet to disappear');

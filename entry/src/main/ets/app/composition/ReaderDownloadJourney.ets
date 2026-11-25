@@ -1,7 +1,10 @@
 import type { ShelfBook } from '../ReaderCoreGateway';
 import type { ReaderRuntimeOwner } from '../ReaderRuntimeOwner';
 import type { DetailReturnRoute, ReaderNavigation, ReaderNavigationSnapshot, ReaderReturnContext } from '../navigation/ReaderNavigation';
-import { downloadBookFromReadingDetail } from '../../features/reading/presentation/ReadingBookDetail';
+import { downloadBookFromReadingDetail, remoteReadingSeedForShelf } from '../../features/reading/presentation/ReadingBookDetail';
+import { readingEntrySeedForContentKind } from '../../features/reading/presentation/ReadingEntryDto';
+import { LOCAL_SOURCE_ID } from '../../features/reading/application/LocalReadingFlowGateway';
+import type { RemoteReadingBookSeed } from '../../features/reading/application/RemoteReadingFlowGateway';
 import type { ReadingEntryPresentation } from '../../features/reading/presentation/ReadingEntryPresentation';
 import type { DownloadReadingEntry, SharedDownloadPresentation } from '../../features/downloads/presentation/SharedDownloadPresentation';
 import type { SharedDownloadOpeningIntent, SharedDownloadReturnState } from '../../features/downloads/presentation/SharedDownloadUiContract';
@@ -42,7 +45,8 @@ export class ReaderDownloadJourney {
   open(intent: SharedDownloadOpeningIntent = { kind: 'fresh', detailKey: '' }): void {
     const owner = this.ports.runtime();
     if (this.ports.reading().sessionActive || owner === undefined) return;
-    const next = this.navigation.openDownloads(intent, (): ShelfBook | undefined => this.currentBook(), this.ports.advance);
+    const next = this.navigation.openDownloads(intent, (): ShelfBook | undefined => this.currentBook(), this.ports.advance,
+      this.ports.reading().seed);
     if (next === undefined) return;
     const generation = next.generation, scope = this.ports.scope();
     const identity = JSON.stringify([scope.instance, scope.mounting, generation, 'downloads']);
@@ -68,14 +72,34 @@ export class ReaderDownloadJourney {
       showSettings: this.ports.showSettings,
       restoreReader: (context: ReaderReturnContext | undefined): boolean => this.restoreReaderReturn(context),
       resumeReader: (book: ShelfBook): void => this.ports.readingActions().resumeShelf(book),
-      showBook: (book: ShelfBook, parent: DetailReturnRoute, restoreDirectory: boolean): void => {
-        this.ports.readingActions().openShelfEntry(book, 'info', parent);
+      showBook: (book: ShelfBook, parent: DetailReturnRoute, restoreDirectory: boolean, detailSeed?: RemoteReadingBookSeed): void => {
+        this.reopenDetail(book, parent, detailSeed);
         const current = this.ports.reading().book;
-        if (restoreDirectory && current?.sourceId === book.sourceId && current?.bookId === book.bookId) {
+        if (restoreDirectory && this.navigation.snapshot().route === 'detail' &&
+          current?.sourceId === book.sourceId && current?.bookId === book.bookId) {
           this.ports.openDetailDirectory();
         }
       },
     });
+  }
+
+  private reopenDetail(book: ShelfBook, parent: DetailReturnRoute, detailSeed?: RemoteReadingBookSeed): void {
+    const actions = this.ports.readingActions();
+    if (book.sourceId === LOCAL_SOURCE_ID) {
+      actions.openShelfEntry(book, 'info', parent);
+      return;
+    }
+    const reading = this.ports.reading();
+    const current = reading.book;
+    const retained = current?.sourceId === book.sourceId && current.bookId === book.bookId;
+    const session = reading.session;
+    const validatedSession = retained && session?.identity.sourceId === book.sourceId &&
+      session.identity.bookId === book.bookId ? session : undefined;
+    const shelf = this.ports.shelfBooks().find((row: ShelfBook): boolean => row.sourceId === book.sourceId && row.bookId === book.bookId);
+    const seed = detailSeed ?? remoteReadingSeedForShelf(book);
+    actions.openRemoteDetail({ seed: readingEntrySeedForContentKind(seed, book.contentKind ?? seed.contentKind), sourceName: book.sourceName ?? '',
+      shelfSnapshot: shelf?.contentKind === undefined ? undefined : shelf, validatedSession,
+      displayCoverUrl: retained ? current?.displayCoverUrl : undefined }, parent);
   }
 
   openChapter(entry: DownloadReadingEntry): void {

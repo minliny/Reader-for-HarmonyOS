@@ -22,7 +22,8 @@ const pageSource=source('features/bookshelf/ui/BookshelfPage.ets');
 const {readerActionIcon}=pureModuleProbe(source('ui/foundation/ReaderActionIconResources.ets'),
   'ReaderActionIconResources.ets',{$r:value=>value},['readerActionIcon']);
 const names=['presentBookActionSheet','isCurrentBookActionSheet','dismissBookActionSheet','performBookAction','finishBookActionSheet',
-  'claimBookActionChrome','bookActionSheetSpec','onBooksChanged','aboutToDisappear','cancelBookActionFocus','bookActionFocusRevision','bookActionFocusKey',
+  'claimBookActionChrome','bookActionSheetSpec','onBooksChanged','aboutToDisappear','resetShelfPress','shelfPressKey','shelfPressPointer',
+  'cancelBookActionFocus','bookActionFocusRevision','bookActionFocusKey',
   'currentVisibleBook','projectedBooks','isShelfPresentationCurrent'];
 const book=(sourceId,bookId)=>({sourceId,bookId,title:bookId,author:'author',kind:'novel',currentChapterTitle:'chapter'});
 const A=book('a','same'),B=book('b','same');
@@ -65,14 +66,21 @@ function fixture(definition=pageSource,{width=390,left=0,right=0,reduceMotion=fa
     onBookMultiSelectRequested:book=>calls.push(['multi',book]),onBookInfoRequested:book=>calls.push(['info',book]),onBookGroupRequested:book=>calls.push(['group',book]),onBookRemoveRequested:book=>calls.push(['remove',book]),
   });
   owner.bookshelfTabContent();
-  const render=()=>{
+  const openCover=()=>{
     p.properties.flush();
     const sheet=p.walk(owner).findLast(c=>c instanceof p.deps.ReaderBottomSheet);
     const anchor=[...sheet.nodes.values()].find(node=>node.bindContentCover);
     assert.equal(anchor.bindContentCover[0],true,'State opens the native modal cover');
     anchor.bindContentCover[1].builder();
     const options=anchor.bindContentCover[2];
-    options.onWillAppear();options.onAppear();p.properties.flush();
+    options.onWillAppear();options.onAppear();
+    assert.equal(sheet.frameVisible,false,'cover appearance leaves render-time State untouched');
+    return {sheet,anchor,options};
+  };
+  const render=async()=>{
+    const {sheet,anchor,options}=openCover();
+    await Promise.resolve();
+    p.properties.flush();
     const frame=[...sheet.nodes.values()].find(node=>node.id==='reader-bookshelf-book-action-sheet');
     const mask=[...sheet.nodes.values()].find(node=>node.type==='Rect');
     frame.onAppear();
@@ -89,10 +97,19 @@ function fixture(definition=pageSource,{width=390,left=0,right=0,reduceMotion=fa
     };
     return{sheet,frame,mask,leaf,buttons,options,finish};
   };
-  return{p,owner,calls,render};
+  return{p,owner,calls,openCover,render};
+}
+{
+  const f=fixture();f.owner.presentBookActionSheet(A);
+  const {sheet,options}=f.openCover();
+  options.onWillDismiss({reason:'PRESS_BACK'});f.p.properties.flush();
+  await Promise.resolve();f.p.properties.flush();
+  assert.equal(sheet.frameVisible,false,'Back before deferred appearance suppresses the frame');
+  assert.equal(sheet.coverVisible,false,'a close before attachment releases the empty cover');
+  options.onDisappear();assert.equal(f.owner.actionBook,undefined);
 }
 for(const [width,left,right] of [[270,0,0],[390,0,0],[720,0,0],[1024,28,13],[320,24,18],[240,100,80]]){
- const f=fixture(pageSource,{width,left,right});f.owner.presentBookActionSheet(A);const current=f.render();
+ const f=fixture(pageSource,{width,left,right});f.owner.presentBookActionSheet(A);const current=await f.render();
  assert.equal(current.frame.width,Math.min(390,Math.max(0,width-left-right)),'sheet uses safe width with the source drawer cap');
  assert.equal(current.frame.translate.x,(left-right)/2);
  f.owner.paneWidth=300;
@@ -105,7 +122,7 @@ for(const [width,left,right] of [[270,0,0],[390,0,0],[720,0,0],[1024,28,13],[320
  assert.equal(current.frame.padding.bottom,16);
 }
 for(const [index,name]of[['0','multi'],['1','info'],['2','group'],['3','remove']]){
-  const f=fixture();f.owner.presentBookActionSheet(A);const current=f.render();
+  const f=fixture();f.owner.presentBookActionSheet(A);const current=await f.render();
   assert.equal(current.frame.height,undefined,'sheet follows measured content');
   assert.equal(current.options.modalTransition,'none');
   assert.equal(current.frame.backgroundColor,readerAppColor('app.bookshelf.sheetSurface','day'));
@@ -119,7 +136,7 @@ for(const [index,name]of[['0','multi'],['1','info'],['2','group'],['3','remove']
   assert.equal(f.owner.actionBook,undefined);
 }
 {
-  const f=fixture(pageSource,{reduceMotion:true});f.owner.presentBookActionSheet(A);const current=f.render();
+  const f=fixture(pageSource,{reduceMotion:true});f.owner.presentBookActionSheet(A);const current=await f.render();
   assert.deepEqual(current.frame.transition[0],{type:'opacity',duration:120});
   current.mask.onClick();
   assert.equal(f.owner.bookActionSheetVisible,true,'opening gesture cannot dismiss through the scrim');
@@ -128,9 +145,9 @@ for(const [index,name]of[['0','multi'],['1','info'],['2','group'],['3','remove']
   current.finish();assert.deepEqual(f.calls,[]);
 }
 {
-  const f=fixture();f.owner.presentBookActionSheet(A);const old=f.render(),oldId=f.owner.actionSheetId;
+  const f=fixture();f.owner.presentBookActionSheet(A);const old=await f.render(),oldId=f.owner.actionSheetId;
   old.frame.transition[1](true);old.mask.onClick();old.finish();
-  f.owner.presentBookActionSheet(B);const fresh=f.render();
+  f.owner.presentBookActionSheet(B);const fresh=await f.render();
   assert.notEqual(fresh.leaf,old.leaf,'sheet content remounts for a new presentation');
   assert.notEqual(f.owner.actionSheetId,oldId);
   old.options.onDisappear();assert.equal(f.owner.actionBook.sourceId,B.sourceId,'late disappearance cannot clear a newer presentation');
@@ -138,21 +155,21 @@ for(const [index,name]of[['0','multi'],['1','info'],['2','group'],['3','remove']
   fresh.buttons[1].onClick();fresh.finish();assert.deepEqual(f.calls,[['info',B]]);
 }
 {
-  const f=fixture();f.owner.presentBookActionSheet(A);const old=f.render();
+  const f=fixture();f.owner.presentBookActionSheet(A);const old=await f.render();
   old.options.onWillDismiss({reason:'PRESS_BACK'});old.finish();
-  f.owner.presentBookActionSheet(A);const fresh=f.render(),id=f.owner.actionSheetId;
+  f.owner.presentBookActionSheet(A);const fresh=await f.render(),id=f.owner.actionSheetId;
   old.options.onDisappear();old.buttons[2].onClick();assert.equal(f.owner.actionSheetId,id);assert.deepEqual(f.calls,[]);
   f.owner.aboutToDisappear();fresh.options.onDisappear();fresh.buttons[0].onClick();
   assert.deepEqual(f.calls,[]);assert.equal(f.owner.actionBook,undefined);assert.equal(f.owner.mounted,false);
 }
 {
-  const f=fixture();f.owner.presentBookActionSheet(A);const old=f.render();
+  const f=fixture();f.owner.presentBookActionSheet(A);const old=await f.render();
   f.owner.books=[B];f.owner.onBooksChanged();assert.equal(f.owner.bookActionSheetVisible,false,'removing current entity initiates exit');
   old.finish();old.buttons[3].onClick();assert.deepEqual(f.calls,[]);
   f.owner.presentBookActionSheet(A);assert.equal(f.owner.actionBook,undefined,'old shelf row cannot reopen a missing entity');
 }
 {
-  const f=fixture();f.owner.presentBookActionSheet(f.owner.books[0]);const physical=f.render(),id=f.owner.actionSheetId;
+  const f=fixture();f.owner.presentBookActionSheet(f.owner.books[0]);const physical=await f.render(),id=f.owner.actionSheetId;
   const raw=f.p.deps.ObservedObject.GetRawObject(f.owner.actionBook);
   assert.notEqual(f.owner.actionBook,raw,'actual State getter exposes a Proxy while the Builder captures its raw entity');
   assert.notEqual(raw,A,'actual one-way books Prop owns its copy of the row');
@@ -165,7 +182,7 @@ for(const [index,name]of[['0','multi'],['1','info'],['2','group'],['3','remove']
   assert.deepEqual(f.calls.map(([action,book])=>[action,book.sourceId,book.bookId]),[['remove',A.sourceId,A.bookId]],'refreshed row dispatches exactly once to its captured compound book');
 }
 {
-  const f=fixture();f.owner.presentBookActionSheet(A);const physical=f.render(),id=f.owner.actionSheetId;
+  const f=fixture();f.owner.presentBookActionSheet(A);const physical=await f.render(),id=f.owner.actionSheetId;
   f.owner.performBookAction(id,B,f.owner.onBookRemoveRequested);f.owner.dismissBookActionSheet(id,B);
   assert.equal(f.owner.actionSheetId,id,'same bookId from another source cannot act on or dismiss this opening');assert.equal(f.calls.length,0);
   const raw=f.p.deps.ObservedObject.GetRawObject(f.owner.actionBook);
@@ -175,17 +192,17 @@ for(const [index,name]of[['0','multi'],['1','info'],['2','group'],['3','remove']
   physical.finish();
 }
 {
-  const f=fixture();f.owner.presentBookActionSheet(A);const old=f.render();
+  const f=fixture();f.owner.presentBookActionSheet(A);const old=await f.render();
   f.owner.navigationGeneration+=1;f.p.properties.flush();
   assert.equal(f.owner.bookActionSheetVisible,false,'navigation Prop watcher dismisses the temporary sheet');
   for(const button of old.buttons)button.onClick();assert.equal(f.calls.length,0,'old physical handlers cannot borrow a new navigation');
-  old.finish();f.owner.presentBookActionSheet(B);const fresh=f.render();old.options.onDisappear();
+  old.finish();f.owner.presentBookActionSheet(B);const fresh=await f.render();old.options.onDisappear();
   fresh.buttons[2].onClick();fresh.finish();assert.deepEqual(f.calls,[['group',B]],'fresh navigation can present and dispatch normally');
 }
 {
-  const f=fixture();f.owner.presentBookActionSheet(A);const old=f.render();
+  const f=fixture();f.owner.presentBookActionSheet(A);const old=await f.render();
   f.owner.aboutToDisappear();for(const button of old.buttons)button.onClick();assert.equal(f.calls.length,0,'retired page refuses all former actions');
-  f.owner.mounted=true;f.owner.presentBookActionSheet(A);const fresh=f.render();old.options.onDisappear();
+  f.owner.mounted=true;f.owner.presentBookActionSheet(A);const fresh=await f.render();old.options.onDisappear();
   for(const button of old.buttons)button.onClick();assert.equal(f.calls.length,0,'retired physical handlers cannot target the same book on a later mount');
   fresh.buttons[1].onClick();fresh.finish();assert.deepEqual(f.calls,[['info',A]]);
 }
@@ -217,7 +234,7 @@ for(const retirement of ['current','runtime','route','mount'])for(const actionIn
   [...scene.children.values()].at(-1).params.content(()=>0);
   const props=[...scene.children.values()].find(child=>child.params.books).params;
   for(const name of ['onBookMultiSelectRequested','onBookInfoRequested','onBookGroupRequested','onBookRemoveRequested'])f.owner[name]=props[name];
-  f.owner.presentBookActionSheet(A);const physical=f.render();
+  f.owner.presentBookActionSheet(A);const physical=await f.render();
   if(retirement==='runtime')installed={};else if(retirement==='route')index.route='detail';else if(retirement==='mount')index.detailShelfAdmissionMount+=1;
   physical.buttons[actionIndex].onClick();
   physical.finish();
@@ -233,7 +250,7 @@ const originalGuard=pageSource
     'book === undefined || this.actionBook !== book) return;');
 assert.notEqual(originalGuard,pageSource);
 for(const index of [0,1,2,3]){
-  const f=fixture(originalGuard);f.owner.presentBookActionSheet(f.owner.books[0]);const physical=f.render(),id=f.owner.actionSheetId;
+  const f=fixture(originalGuard);f.owner.presentBookActionSheet(f.owner.books[0]);const physical=await f.render(),id=f.owner.actionSheetId;
   const raw=f.p.deps.ObservedObject.GetRawObject(f.owner.actionBook);
   assert.equal(f.owner.isCurrentBookActionSheet(id,raw),false,'negative control reproduces the raw/proxy guard rejection');
   physical.buttons[index].onClick();assert.equal(f.calls.length,0,'original guard blocks every native physical action');

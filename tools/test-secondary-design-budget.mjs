@@ -21,7 +21,7 @@ function theme() {
     // proves allocation consumes that measurement, not a native font raster.
     const labelWidth = 48 * scale;
     const owner = probe.row.owner;
-    Object.assign(owner, { label: 'App主题', icon: 'theme-icon', contentMinWidth: 168, mounted: true,
+    Object.assign(owner, { label: 'App主题', contentMinWidth: 168, mounted: true,
       getUIContext: () => ({ px2vp: value => value, getMeasureUtils: () => ({ measureText(input) {
         assert.equal(input.textContent, 'App主题');
         assert.equal(input.fontFamily, readerTypographyRoles.TYPE_APP_ROW_LABEL.fontFamily);
@@ -29,7 +29,7 @@ function theme() {
         return labelWidth;
       } }) }) });
     owner.recordContentWidth(width);
-    const required = 24 + 40 + labelWidth + 12 + 168;
+    const required = 24 + labelWidth + 12 + 168;
     assert.equal(owner.contentStacked, required > width);
     owner.initialRender();
     const nodes = [...owner.nodes.values()];
@@ -38,8 +38,8 @@ function theme() {
     assert.equal(text.maxLines, owner.contentStacked ? undefined : 1);
     if (owner.contentStacked) {
       assert.ok(nodes.some(node => node.type === 'Column' && node.padding === 12));
-      assert.ok(width - 24 - 40 >= labelWidth, 'complete label gets the full upper line');
-    } else assert.ok(width - 24 - 40 - 12 - 168 >= labelWidth);
+      assert.ok(width - 24 >= labelWidth, 'complete label gets the full upper line');
+    } else assert.ok(width - 24 - 12 - 168 >= labelWidth);
     owner.aboutToDisappear();
     const before = owner.contentRowWidth;
     owner.recordContentWidth(999);
@@ -51,8 +51,9 @@ function theme() {
   const page = createReaderBuilderProbe(read('features/settings/ui/SettingsPage.ets'), ['segmentRow'],
     { ...switchSpecs(), ReaderFormRow: Child }).owner;
   page.appThemeControl = () => {};
-  page.segmentRow('App主题', () => 'theme-icon');
+  page.segmentRow('App主题');
   const row = [...page.children.values()][0];
+  assert.equal(row.params.icon, undefined, 'general settings use the same left edge on every row');
   assert.equal(row.params.contentMinWidth, switchSpecs().resolveReaderSegmentSpec('app-theme-segment').width,
     'page and shared control use the same width authority');
   const oldWidth = 320 - 38 - 2 - 24 - 12 - 168 - 28 - 12;
@@ -101,10 +102,11 @@ function themeMeasurementIdentity() {
   Object.assign(first, { label: 'App主题', icon: 'theme-icon', contentMinWidth: 168, mounted: true,
     getUIContext: () => ({ px2vp: value => value, getMeasureUtils: () => ({ measureText: () => 48 }) }) });
   first.initialRender();
+  assert.equal(first.contentStacked, false, 'a retained control starts inline before the first area receipt');
   const firstArea = [...first.nodes.values()].find(node => node.onAreaChange).onAreaChange;
   firstArea({}, { width: 326 });
   assert.equal(first.contentRowWidth, 326); assert.equal(first.contentStacked, false,
-    'the first legitimate stacked-branch measurement can choose inline');
+    'the first measured width confirms the initial inline placement');
   for (let i = 0; i < 5; i++) first.contentWidthChangeHandler()({}, { width: 326 });
   assert.equal(first.contentStacked, false, 'equal current widths do not oscillate layout');
 
@@ -118,6 +120,10 @@ function themeMeasurementIdentity() {
     assert.equal(plain.contentRowWidth, 0);
     const button = [...plain.nodes.values()].find(node => node.type === 'Button');
     assert.equal(button.enabled, true); button.onClick(); assert.deepEqual(actions, [kind]);
+    const text = [...plain.nodes.values()].find(node => node.type === 'Text');
+    assert.equal(text.fontSize, 15); assert.equal(text.fontWeight, 500);
+    assert.equal(text.fontFamily, 'ReaderNotoSansSCUIMedium');
+    assert.equal(text.fontColor, readerAppColor(kind === 'danger' ? 'TOK_DANGER' : 'TOK_INK', 'day'));
     assert.equal([...plain.nodes.values()].filter(node => node.type === 'Column').length, 0,
       'default nonadaptive rows preserve their existing row branch');
   }

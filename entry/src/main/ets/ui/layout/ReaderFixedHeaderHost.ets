@@ -19,7 +19,7 @@ export struct ReaderFixedHeaderHost {
     Column() { this.content(); }
       .width('100%')
       .attributeModifier(new ReaderHeaderFrameModifier(this.style))
-      .hitTestBehavior(HitTestMode.Transparent)
+      .hitTestBehavior(HitTestMode.Default).touchable(!this.style.transparent)
       .id(this.nativeMeasurement.id)
       .customProperty('readerLayoutDebugOpaqueHeader', this.layoutDebugHeaderKey)
       .onAppear((): void => this.nativeMeasurement.mount(this.getUIContext(), this.measurementKey,

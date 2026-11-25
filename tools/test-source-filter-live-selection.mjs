@@ -6,10 +6,13 @@ import { foundationControls, foundationSpecs } from './lib/reader-foundation-con
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import { readerSourceCategoryLabel } from '../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts';
+import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 
 const root = new URL('../', import.meta.url);
 const pagePath = 'entry/src/main/ets/features/source/ui/SourceManagementPage.ets';
 const read = path => readFileSync(new URL(path, root), 'utf8');
+const layoutPath = 'entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts';
+const { SOURCE_STATUS_CHIP_GAP } = pureModuleProbe(read(layoutPath), layoutPath, {}, ['SOURCE_STATUS_CHIP_GAP']);
 const outputArgs = process.argv.slice(2).filter(arg => arg.startsWith('--evidence-path='));
 assert.ok(outputArgs.length <= 1);
 const evidencePath = outputArgs[0]?.slice('--evidence-path='.length);
@@ -20,18 +23,23 @@ const selected = selectContractCases({ 'sdk-selection': 'Retained actual SDK Sou
 function scenario(source) {
   const controls = foundationControls({ windowMetrics: () => ({ systemFontScale: 1.45 }) });
   const probe = createReaderBuilderProbe(source, ['statusValue', 'categoryValue', 'statusFilter', 'chip', 'categoryFilter'], {
-    ...controls.dependencies, readerSourceCategoryLabel, ScrollDirection: { Horizontal: 'horizontal' },
+    ...controls.dependencies, readerSourceCategoryLabel, SOURCE_STATUS_CHIP_GAP, ScrollDirection: { Horizontal: 'horizontal' },
   }, controls.hooks);
   const parent = probe.owner;
   let rebuilds = 0;
   Object.assign(parent, { appThemeScheme: 'day', contentFrame: () => ({ width: 328 }),
-    filterControlWidth: () => 328, layoutBudget: () => ({ statusContentWidth: 494, filterHeight: 52 }),
+    filterControlWidth: () => 276, layoutBudget: () => ({ statusContentWidth: 460, filterHeight: 52 }),
+    managementInputIsCurrent: () => true,
     cancelToolsReturnFocus(){},rebuildSourceProjection() { rebuilds++; } });
   parent.statusFilter();
   const statusChildren = [...parent.children.values()];
   parent.categoryFilter();
   const categoryChildren = [...parent.children.values()].filter(child => !statusChildren.includes(child));
-  assert.deepEqual(statusChildren.map(child => child.label), ['全部', '启用', '异常', '未检测', '自定义']);
+  assert.deepEqual(statusChildren.map(child => child.label), ['全部', '已启用', '异常', '未测速', '自定义']);
+  const specs = foundationSpecs();
+  const statusPaintWidth = statusChildren.slice(0, 4)
+    .reduce((width, child) => width + specs.resolveReaderButtonSpec(child.specId).fixedWidth, 3 * SOURCE_STATUS_CHIP_GAP);
+  assert.ok(statusPaintWidth + 4 <= parent.filterControlWidth(), 'the default-size untested border fits before the import action');
   assert.equal(categoryChildren.length, 7);
   const statusIds = statusChildren.map(child => child.id), categoryIds = categoryChildren.map(child => child.id);
   const initialChildren = [...parent.children.values()], initialObservers = parent.observers.length;
@@ -42,7 +50,8 @@ function scenario(source) {
     const carrier=[...child.nodes.values()].find(node=>node.type==='Button'&&typeof node.onClick==='function');
     assert.ok(carrier,'actual native Button owns the interactive state');
     return { label: child.label, specId: child.specId, primary: child.primary, selected: carrier.accessibilitySelected,
-      backgroundColor: carrier.backgroundColor, color: text.fontColor, enabled: carrier.enabled };
+      backgroundColor: child.specId === 'source-management-category' ? text.backgroundColor : carrier.backgroundColor,
+      color: text.fontColor, enabled: carrier.enabled };
   }
   function retainedReplay(ids) {
     parent.replayOnly(ids);
@@ -104,25 +113,29 @@ function assertSelection(samples, labelOfValue = value => value) {
 
 if (selected.includes('sdk-selection')) {
   const source = read(pagePath), live = scenario(source);
+  const statusLabel = value => value === '启用' ? '已启用' : value === '未检测' ? '未测速' : value;
   if (evidencePath) {
     writeFileSync(new URL(evidencePath.replace(/\.json$/, '-actual-sdk.js'), root), live.output);
     writeFileSync(new URL(evidencePath.replace(/\.json$/, '-observed.json'), root), JSON.stringify(live, null, 2) + '\n');
   }
-  assertSelection(live.status);
+  assertSelection(live.status, statusLabel);
   assertSelection(live.category, value => value === 'all' ? '全部类型' : readerSourceCategoryLabel(value));
-  assert.match(source, /private chip\(label: string, width: number, enabled: boolean\)/);
+  const liveSignature = 'private chip(label: string, verificationId: string, width: number, enabled: boolean, title: string = label)';
+  assert.ok(source.includes(liveSignature));
   assert.match(source, /primary: enabled && this\.statusValue === label/);
   // Recreate the previous bounded production defect while retaining all
   // current unrelated source bytes and the actual shared ReaderButton.
-  let old = source.replace('private chip(label: string, width: number, enabled: boolean)',
-    'private chip(label: string, width: number, active: boolean, enabled: boolean)')
+  let old = source.replace(liveSignature,
+    'private chip(label: string, verificationId: string, width: number, active: boolean, enabled: boolean, title: string = label)')
     .replace('primary: enabled && this.statusValue === label', 'primary: active');
-  for (const [label, width] of [['全部', 58], ['启用', 58], ['异常', 58], ['未检测', 72]])
-    old = old.replace(`this.chip('${label}', ${width}, true)`, `this.chip('${label}', ${width}, this.statusValue === '${label}', true)`);
-  old = old.replace("this.chip('自定义', 72, false)", "this.chip('自定义', 72, false, false)");
+  for (const [label, id, width] of [['全部', 'all', 58], ['启用', 'enabled', 72], ['异常', 'error', 58], ['未检测', 'unchecked', 72]]) {
+    old = old.replace(`this.chip('${label}', '${id}', ${width}, true`,
+      `this.chip('${label}', '${id}', ${width}, this.statusValue === '${label}', true`);
+  }
+  old = old.replace("this.chip('自定义', 'custom', 72, false)", "this.chip('自定义', 'custom', 72, false, false)");
   assert.notEqual(old, source);
   const stale = scenario(old);
-  assert.throws(() => assertSelection(stale.status), /current owner 启用/,
+  assert.throws(() => assertSelection(stale.status, statusLabel), /current owner 启用/,
     'same retained child updater rejects the previous primitive snapshot implementation');
   assertSelection(stale.category, value => value === 'all' ? '全部类型' : readerSourceCategoryLabel(value));
   const dependencies = [pagePath, 'entry/src/main/ets/ui/controls/ReaderButton.ets',
