@@ -50,6 +50,8 @@ Object.assign(owner, { windowRevision: -1, paneHeight: 180,
 const lastChild = prop => [...owner.children.values()].findLast(child => prop in child.params)?.params;
 
 owner.groupRow(group);
+assert.ok([...owner.nodes.values()].some(node => node.id === 'reader-source-v9-group-row-g'),
+  'group overview rows expose a stable native selector');
 const previousToggle = lastChild('onToggle');
 assert.equal(previousToggle.actionEnabled, true);
 previousToggle.onToggle(false);
