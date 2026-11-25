@@ -21,8 +21,7 @@ const ISLAND_ICON_LABEL_GAP = 3;
 const ISLAND_ACTION_INSET = 3;
 
 export interface ReaderIslandTtsPlaybackLayout {
-  actionWidth: number;
-  toggleWidth: number;
+  columns: number;
   rowHeight: number;
   statusHeight: number;
   height: number;
@@ -40,14 +39,12 @@ export function readerIslandTtsPlaybackLayout(cardWidth: number, fontScale: numb
   const compactWidth = Math.floor((innerWidth - 3 * gap) / 4.25);
   const pairWidth = Math.floor((innerWidth - gap) / 2);
   const columns = compactWidth >= minActionWidth ? 4 : pairWidth >= minActionWidth ? 2 : 1;
-  const actionWidth = columns === 4 ? compactWidth : columns === 2 ? pairWidth : innerWidth;
   const rowHeight = Math.max(ISLAND_TARGET_VP, Math.ceil((style.lineHeightFp ?? style.fontSizeFp) * scale));
   const statusHeight = Math.max(ISLAND_PLAYBACK_STATUS_MIN_HEIGHT_VP,
     Math.ceil((TYPE_READER_PANEL_LABEL.lineHeightFp ?? TYPE_READER_PANEL_LABEL.fontSizeFp) * scale));
   const rows = 4 / columns;
   return {
-    actionWidth,
-    toggleWidth: columns === 4 ? Math.floor(actionWidth * 1.25) : actionWidth,
+    columns,
     rowHeight,
     statusHeight,
     height: Math.max(READER_ISLAND_PLAYBACK_HEIGHT_VP, rows * rowHeight + (rows - 1) * gap +

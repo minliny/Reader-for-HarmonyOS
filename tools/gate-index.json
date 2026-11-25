@@ -94007,7 +94007,7 @@
       ],
       "minimumTrigger": "Measured responsive TTS sentence actions at enlarged system font scale",
       "failureExample": "See the focused case counterexample.",
-      "reviewedSourceSha256": "a9825d2d819c92e51c7b9148d9e7982bca42f8d266feeb86732c9b4d8c356330",
+      "reviewedSourceSha256": "3bebc17d4fc7bfb90a9e675a69ed7393cb60bc0f0e435d5d54b756cd698ff3f4",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -94043,7 +94043,7 @@
         },
         {
           "path": "tools/test-reader-tts-island-transport-layout.mjs",
-          "sha256": "a9825d2d819c92e51c7b9148d9e7982bca42f8d266feeb86732c9b4d8c356330"
+          "sha256": "3bebc17d4fc7bfb90a9e675a69ed7393cb60bc0f0e435d5d54b756cd698ff3f4"
         }
       ],
       "definitionIdentityState": "FROZEN",
@@ -465977,7 +465977,7 @@
         "Measured responsive TTS sentence actions at enlarged system font scale"
       ],
       "qualification": "QUALIFIED",
-      "reviewedSourceSha256": "a9825d2d819c92e51c7b9148d9e7982bca42f8d266feeb86732c9b4d8c356330",
+      "reviewedSourceSha256": "3bebc17d4fc7bfb90a9e675a69ed7393cb60bc0f0e435d5d54b756cd698ff3f4",
       "definitionInputs": [
         {
           "path": "tools/gate-index.mjs",
@@ -466013,10 +466013,10 @@
         },
         {
           "path": "tools/test-reader-tts-island-transport-layout.mjs",
-          "sha256": "a9825d2d819c92e51c7b9148d9e7982bca42f8d266feeb86732c9b4d8c356330"
+          "sha256": "3bebc17d4fc7bfb90a9e675a69ed7393cb60bc0f0e435d5d54b756cd698ff3f4"
         }
       ],
-      "resourceDefinitionSha256": "ad42b4c38d2f752c4f29d57af831a10396e71f59debcd5f121cd352a184399b7"
+      "resourceDefinitionSha256": "24c9c227de1bf992567af0de6afa35412549555d4397f29acfbe793361a01833"
     }
   ],
   "externalEntries": [

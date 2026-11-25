@@ -8,7 +8,7 @@ import { TYPE_READER_PANEL_LABEL, TYPE_READER_PANEL_NUMBER, TYPE_APP_ROW_DETAIL,
 import { ReaderTtsWaveform } from './ReaderTtsWaveform';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
-import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
+import { FrameCallback } from '@kit.ArkUI';
 import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
@@ -832,17 +832,33 @@ export struct ReaderControlTtsContent {
         Text(this.statusText()).fontFamily(TYPE_READER_PANEL_META.fontFamily).fontWeight(TYPE_READER_PANEL_META.fontWeight).fontSize(TYPE_READER_PANEL_META.fontSizeFp).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme));
       }.width('100%').height(this.islandPlaybackLayout().statusHeight);
-      Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween,
-        space: { main: LengthMetrics.vp(READER_ISLAND_PLAYBACK_ACTION_GAP),
-          cross: LengthMetrics.vp(READER_ISLAND_PLAYBACK_ACTION_GAP) } }) {
-        this.islandTransport('previous', this.hasActiveQueue());
-        this.islandTransport('toggle', this.state.status !== 'stopping');
-        this.islandTransport('stop', this.hasActiveQueue());
-        this.islandTransport('next', this.hasActiveQueue());
+      Column({ space: READER_ISLAND_PLAYBACK_ACTION_GAP }) {
+        if (this.islandPlaybackLayout().columns === 4) {
+          this.islandTransportRow(['previous', 'toggle', 'stop', 'next']);
+        } else if (this.islandPlaybackLayout().columns === 2) {
+          this.islandTransportRow(['previous', 'toggle']);
+          this.islandTransportRow(['stop', 'next']);
+        } else {
+          this.islandTransportRow(['previous']);
+          this.islandTransportRow(['toggle']);
+          this.islandTransportRow(['stop']);
+          this.islandTransportRow(['next']);
+        }
       }.width('100%');
     }.width('100%').height('100%')
       .padding({ left: READER_ISLAND_PLAYBACK_INSET_X, right: READER_ISLAND_PLAYBACK_INSET_X,
         top: READER_ISLAND_PLAYBACK_INSET_Y, bottom: READER_ISLAND_PLAYBACK_INSET_Y });
+  }
+
+  @Builder
+  private islandTransportRow(kinds: ReaderControlTransportKind[]) {
+    // Row resolves the fractional native width before distributing weights.
+    Row({ space: READER_ISLAND_PLAYBACK_ACTION_GAP }) {
+      ForEach(kinds, (kind: ReaderControlTransportKind): void => {
+        this.islandTransport(kind, kind === 'toggle' ? this.state.status !== 'stopping' : this.hasActiveQueue(),
+          kinds.length === 4);
+      }, (kind: ReaderControlTransportKind): string => kind);
+    }.width('100%').height(this.islandPlaybackLayout().rowHeight);
   }
 
   private islandTransportAsset(kind: ReaderControlTransportKind): string {
@@ -853,7 +869,7 @@ export struct ReaderControlTtsContent {
   }
 
   @Builder
-  private islandTransport(kind: ReaderControlTransportKind, available: boolean) {
+  private islandTransport(kind: ReaderControlTransportKind, available: boolean, emphasizeToggle: boolean) {
     ReaderIslandAction({
       scheme: this.appScheme, kind: 'transport',
       label: kind === 'toggle' ? this.isActivelySpeaking() ? '暂停' : '播放' : kind === 'stop' ? '停止' : this.controlText(kind),
@@ -872,7 +888,7 @@ export struct ReaderControlTtsContent {
         else if (kind === 'stop') this.onStop();
         else { this.reportMorphActor(); this.onToggle(); }
       },
-    }).width(kind === 'toggle' ? this.islandPlaybackLayout().toggleWidth : this.islandPlaybackLayout().actionWidth)
+    }).layoutWeight(emphasizeToggle && kind === 'toggle' ? 1.25 : 1)
       .height(this.islandPlaybackLayout().rowHeight);
   }
 
