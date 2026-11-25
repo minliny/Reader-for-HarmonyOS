@@ -1,4 +1,4 @@
-import type { BookSource, SourceCheckHistoryEntry, SourceCheckReport, SourceCheckReportStep, SourceGroupCatalogData } from '../application/SourceGateway';
+import type { BookSource, SourceCheckHistoryEntry, SourceCheckOutcome, SourceCheckReport, SourceCheckReportStep, SourceDebugLog, SourceGroupCatalogData } from '../application/SourceGateway';
 
 export const SOURCE_V9_HEADER_HEIGHT = 48;
 
@@ -105,7 +105,7 @@ export function sourceV9GroupRows(sources: BookSource[], catalog: SourceGroupCat
 }
 
 export function projectSourceV9Check(source: BookSource, history: SourceCheckHistoryEntry[],
-  previous: BookSource | undefined, clearedAt: number, verifiedLogin: string | undefined): BookSource {
+  previous: BookSource | undefined, clearedAt: number, verifiedLogin: string | undefined, deniedCurrentReport: boolean = false): BookSource {
   const latest = history[0];
   let loginState: 'unknown' | 'verified' | 'expired' = 'unknown';
   if (source.enabled && source.loginUrl !== undefined && latest !== undefined && !latest.stale) {
@@ -114,7 +114,7 @@ export function projectSourceV9Check(source: BookSource, history: SourceCheckHis
       return step.status === 'fail' &&
         (reason.includes('login') || reason.includes('登录') || reason.includes('401') || reason.includes('403'));
     });
-    if (denied) loginState = 'expired';
+    if (denied || deniedCurrentReport) loginState = 'expired';
     else if (verifiedLogin !== undefined) loginState = 'verified';
   }
   return { ...source, checkReports: history, checkState: previous?.checkState ?? source.checkState ?? 'unchecked',
@@ -126,4 +126,24 @@ export function projectSourceV9Check(source: BookSource, history: SourceCheckHis
 export function retainSourceV9Check(source: BookSource, state: BookSource['checkState'],
   levels: string[], message: string, history: SourceCheckHistoryEntry[] | undefined): BookSource {
   return { ...source, checkState: state, checkLevels: levels, checkMessage: message, checkReports: history };
+}
+
+/** A failed stage maps to a login denial only from the same Core/Host request. */
+export function sourceV9AuthenticationDenied(outcome: SourceCheckOutcome): boolean {
+  const failed = outcome.report?.steps.find((step: SourceCheckReportStep): boolean => step.executed && step.status === 'fail');
+  if (outcome.available || failed === undefined) return false;
+  return outcome.logs.some((log: SourceDebugLog): boolean =>
+    log.sourceId === outcome.sourceId && log.traceId === outcome.traceId && log.step === failed.level &&
+    (log.statusCode === 401 || log.statusCode === 403));
+}
+
+export function sourceV9CheckStepText(step: SourceCheckReportStep | undefined, currentFailure?: string): string {
+  if (step === undefined) return '待检测';
+  if (step.status === 'pass') return '通过';
+  const status = step.status === 'fail' ? '失败' : step.status === 'blocked' ? '已中止' :
+    step.status === 'not_supported' ? '不支持' : step.status === 'cancelled' ? '已取消' : '未请求';
+  const prefix = step.level + ':';
+  const reason = step.status === 'fail' && currentFailure?.startsWith(prefix) ?
+    currentFailure.slice(prefix.length).trim() : step.reason;
+  return reason === undefined || reason.length === 0 ? status : `${status} · ${reason}`;
 }

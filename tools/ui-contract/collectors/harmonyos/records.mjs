@@ -45,7 +45,7 @@ import { sourceFilterClearAction, sourceFilterClearPoint, sourceFilterClearStep 
 import { requireSourceOfflineDetectState, sourceOfflineDetectButton, sourceOfflineDetectEdgePoint,
   sourceOfflineDetectFixture } from '../../lib/source-offline-detect.mjs';
 import { sourceFooterAddButton, sourceLocalImportButton, sourcePickerFixture, sourcePickerGuard, sourcePickerRole,
-  sourcePickerTarget } from '../../lib/source-document-picker.mjs';
+  sourcePickerTarget, sourceV9ImportEntry, sourceV9ImportScope, sourceV9LocalImportButton } from '../../lib/source-document-picker.mjs';
 import { assertSourceToggleEdgeState, sourceToggleEdgeAllowed, sourceToggleEdgeTap, sourceToggleEdgeTarget,
   sourceToggleEdgeCase, sourceToggleTouchFixture, sourceToggleTouchStep, sourceToggleTouchTap } from '../../lib/source-toggle-edge.mjs';
 import { directoryImeDispatchWindowMs, directoryImeHideProfile, directoryImeHideTap, observeDirectoryImeHideKey } from '../../lib/directory-ime-key.mjs';
@@ -625,7 +625,9 @@ export function normalizeSample({ store, records, entry, before, after, refs, ca
     observeSourceOfflineDetect: fixture?.id === sourceOfflineDetectFixture && step?.kind === 'sample',
     observeSourceInlineImportDialog: [sourceInlineImportEdgeFixture,sourceChromeFixture].includes(fixture?.id) && step?.kind === 'sample',
     observeSourceNativeFocus: fixture?.id === sourceNativeFocusFixture && step?.kind === 'sample',
-    publicSourceToolsQuery: fixture?.id === 'public-source-tools-return-v2' ? fixture.inputs?.['public-source-prefix'] : undefined,
+    publicSourceToolsQuery: ['public-source-tools-return-v2','public-source-v9-group-return-v1'].includes(fixture?.id) ?
+      fixture.inputs?.['public-source-prefix'] : undefined,
+    publicSourceToolsGroup: fixture?.id === 'public-source-v9-group-return-v1' ? 'Phase1 Return Group A' : undefined,
     observeSourceRead: step?.anchors.some(id => id === 'reader-source-loading-progress' ||
       id === 'reader-source-read-failure-title' || id === 'reader-source-recovery-message') ||
       step?.waitFor?.some(predicate => predicate.kind === 'source.read-retry'),
@@ -648,6 +650,11 @@ export function normalizeSample({ store, records, entry, before, after, refs, ca
       /^source-back:[1-9]\d*:import:footer$/u.test(node.id ?? '') &&
       ancestorsOf(content,node).some(parent => parent.id === 'reader-source-footer'));
     if (buttons.length === 1) buttons[0].alias = sourceFooterAddButton;
+  }
+  if (fixture?.id === sourcePickerFixture && step?.id === sourceV9ImportEntry) {
+    const buttons = content.nodes.filter(node => node.type === 'Button' && node.id === sourceV9LocalImportButton &&
+      ancestorsOf(content,node).some(parent=>parent.type === 'Stack' && parent.id === sourceV9ImportScope));
+    if (buttons.length === 1) buttons[0].alias = sourceLocalImportButton;
   }
   if (fixture?.id === sourcePickerFixture && step?.id === 'import-dialog') {
     const buttons = content.nodes.filter(node => {

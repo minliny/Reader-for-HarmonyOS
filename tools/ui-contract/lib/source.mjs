@@ -311,7 +311,7 @@ function combinedFilterProgress(context, completed, expected) {
   return result('PASS','',{initial,previous,completed:reached});
 }
 
-function currentCombinedGroup(context, sample) {
+function currentCombinedGroup(context, sample, option = 'reader-source-group-option-1') {
   const before = context.samples.novel;
   const projection = latestAt(context,sample,'source.projection');
   const opened = latestAt(context,sample,'source.overlay',payload=>payload.overlay === 'group');
@@ -325,7 +325,7 @@ function currentCombinedGroup(context, sample) {
     opened.eventSeq <= input.afterSeq && opened.payload.phase === 'open' &&
     sameOwner(projection?.payload.owner,opened.payload.owner) && hasNativeGroupSelection(sample,opened) &&
     Boolean(oneNode(sample,'reader-source-group-selected') &&
-      oneNode(sample,{id:'reader-source-group-option-1',ancestors:[groupPanel]}));
+      oneNode(sample,{id:option,ancestors:[groupPanel]}));
 }
 
 export function assertCombinedFilterResetAction(contract,step,context,mark) {
@@ -354,15 +354,17 @@ function sourceToolsFilterProgress(context, expected) {
   if (!settledFilterProjection(initial) || !defaultSourceFilters(initial) || initial.projected !== initial.count ||
       opening.sample?.captureComplete !== true || !scopedSourceFirstRow(opening.sample,initial.firstAnchor))
     return result('NOT_RUN','No complete default public Source catalogue for the Tools round trip');
+  const v9Groups = expected.view === 'groups';
+  const status = v9Groups ? 'disabled' : 'unchecked';
   const plans = [
     {id:'select-public-fixture',from:'fixture-query-ime',to:'fixture-query-edited',
       op:'inputText',target:editor,trigger:'edit',changes:{queryLength:expected.queryLength}},
     {id:'leave-fixture-ime',from:'fixture-query-edited',to:'query-ready',op:'keyEvent'},
-    {id:'select-unchecked',from:'query-ready',to:'unchecked',op:'click',target:'reader-source-status-unchecked',
+    {id:`select-${status}`,from:'query-ready',to:status,op:'click',target:`reader-source-status-${status}`,
       trigger:'status',changes:{status:expected.status}},
-    {id:'select-novel',from:'unchecked',to:'novel',op:'click',target:'source-category-novel',
+    {id:'select-novel',from:status,to:'novel',op:'click',target:'source-category-novel',
       trigger:'category',changes:{category:expected.category}},
-    {id:'select-group',from:'group-open',to:'filtered',op:'click',target:'reader-source-group-option-1',
+    {id:'select-group',from:'group-open',to:'filtered',op:'click',target:`reader-source-group-option-${expected.groupIndex}`,
       trigger:'group',changes:{groupIndex:expected.groupIndex,allGroups:false}},
   ];
   let previous = initial;
@@ -414,7 +416,7 @@ function sourceToolsFilterProgress(context, expected) {
       const option = oneNode(from,{id:plan.target,ancestors:[groupPanel]});
       const label = option && from.nodes.some(node=>node.publicGroupOptionText === true && node.path.startsWith(option.path + '/'));
       refs.push(opened,...dismissed);
-      if (!currentCombinedGroup(context,from) || !label || dismissed.length !== 1 ||
+      if (!currentCombinedGroup(context,from,plan.target) || !label || dismissed.length !== 1 ||
           dismissed[0].payload.phase !== 'dismiss' || !sameOwner(initial.owner,dismissed[0].payload.owner) ||
           dismissed[0].payload.selectionId !== opened?.payload.selectionId || hasVisibleGroupPanel(to))
         return result('FAIL','The selected native novel group did not dismiss its own Source group opening');
@@ -428,21 +430,23 @@ function sourceToolsFilterProgress(context, expected) {
 }
 
 export function assertSourceToolsReturnAction(contract,step,context,mark) {
-  if (contract.id !== 'source-management.tool-return-filters' || contract.version !== 2 ||
-      !['scroll-list','open-tools'].includes(step.id)) return;
-  const expected = contract.assertions.find(assertion=>assertion.kind === 'tool-return-filters').expected;
+  const v9Groups = contract.id === 'source-management.v9-group-return' && contract.version === 1;
+  const legacy = contract.id === 'source-management.tool-return-filters' && contract.version === 2;
+  const open = v9Groups ? 'open-groups' : 'open-tools';
+  if ((!v9Groups && !legacy) || !['scroll-list',open].includes(step.id)) return;
+  const expected = contract.assertions.find(assertion=>assertion.kind === (v9Groups ? 'v9-list-return' : 'tool-return-filters')).expected;
   const progress = sourceToolsFilterProgress(context,expected);
   if (progress.verdict !== 'PASS') throw new EvidenceError(progress.reason);
   const point = {instanceId:mark.instanceId,beforeSeq:mark.eventSeq};
   const current = latestAt(context,point,'source.projection');
   if (!sameFilterState(progress.previous,current?.payload))
     throw new EvidenceError(`The verified filtered Source catalogue changed before ${step.id}`);
-  if (step.id === 'open-tools') {
+  if (step.id === open) {
     const scroll = latestAt(context,point,'source.scroll')?.payload;
     if (scroll?.trigger !== 'settled' || !sameOwner(progress.previous.owner,scroll.owner) ||
         scroll.filterRevision !== progress.previous.filterRevision || !(scroll.offsetVp > 0) ||
         !positiveInt(scroll.itemIndex) || !oneNode(context.samples.scrolled,{id:`reader-source-row-${scroll.anchor}`,ancestors:[list]}))
-      throw new EvidenceError('No settled and visibly anchored Source scroll before opening Tools');
+      throw new EvidenceError('No settled and visibly anchored Source scroll before opening the child view');
   }
 }
 
@@ -520,6 +524,91 @@ function sourceCheck(assertion, context) {
     report(okay && !complete ? 'NOT_RUN' : okay ? 'PASS' : 'FAIL', reason, {...actual, sampleId:sample?.sampleId}, observation, complete);
 
   switch (assertion.kind) {
+    case 'v9-list-return': {
+      const groups = expected.view === 'groups';
+      const target = groups ? sourceHeaderToolsButton : sourceFooterToolsButton;
+      const view = samples[assertion.toolsSample];
+      const departure = actions[assertion.departAction];
+      const origin = groups ? samples[assertion.entrySample] : baseline;
+      const openMore = actions[assertion.openAction];
+      const paneId = groups ? 'reader-source-v9-groups' : 'reader-source-v9-batch-dock';
+      const departureTarget = groups ? 'reader-source-v9-open-groups' : target.id;
+      if (departure?.op !== 'click' || departure.targetId !== departureTarget || departure.outcomeSettled !== true ||
+          action?.outcomeSettled !== true || !pairedNativeEndpoint(departure,baseline,view,assertion.baseline) ||
+          !pairedNativeBack(action,view,sample,assertion.toolsSample) ||
+          ![origin,baseline,view,sample].every(point => point?.captureComplete === true &&
+            point.window?.keyboard?.visible === false && sameWindowLayout(point,sample)))
+        return incomplete('Missing a current native child opening, System Back or complete same-layout Source samples');
+      if (groups && (openMore?.op !== 'click' || openMore.targetId !== target.id || openMore.outcomeSettled !== true ||
+          !pairedNativeEndpoint(openMore,origin,baseline,assertion.entrySample)))
+        return incomplete('Missing the native More button dispatch before Group management');
+      const enter = eventsAt(context,departure,view,'source.v9-list-transition');
+      const leave = eventsAt(context,action,sample,'source.v9-list-transition');
+      const routeChanges = eventsAt(context,groups ? openMore : departure,sample,'source.route');
+      const previous = latestAt(context,origin,'source.projection');
+      const current = latestAt(context,sample,'source.projection',payload=>payload.trigger === 'v9-return');
+      const observations = [origin,openMore,view,departure,previous,current,...enter,...leave,...routeChanges];
+      const called = oneNode(origin,target);
+      const returned = oneNode(sample,target);
+      const transition = enter[0]?.payload;
+      const terminal = leave[0]?.payload;
+      const routeBound = enter.length === 1 && leave.length === 1 && routeChanges.length === 0 &&
+        transition?.view === expected.view && terminal?.view === expected.view && transition.phase === 'enter' &&
+        terminal.phase === 'return' && positiveInt(transition.revision) && transition.revision === terminal.revision &&
+        sameOwner(transition.owner,terminal.owner);
+      const nativeEntry = !groups || (oneNode(baseline,'reader-source-v9-more-menu') &&
+        oneNode(baseline,{id:departureTarget,ancestors:['reader-source-v9-more-menu']})?.type === 'Button');
+      const nativeBound = Boolean(nativeEntry && oneNode(view,paneId) && !oneNode(sample,paneId) &&
+        oneNode(sample,list) && called?.type === 'Button' && called.clickable === true && called.enabled === true &&
+        returned?.type === 'Button' && returned.id === called.id && returned.clickable === true &&
+        returned.enabled === true && fullyVisible(returned) && (!groups || !oneNode(view,list)));
+      if (!enter.length && !oneNode(view,paneId))
+        return incomplete('No current owner event or native child view proves the requested transition');
+      if (!routeBound || !nativeBound)
+        return conclude(false,'The native child did not return to the same Source opening and original control',
+          {view:expected.view,routeBound,nativeBound},observations);
+      if (!settledFilterProjection(previous?.payload) || !settledFilterProjection(current?.payload) ||
+          current.eventSeq <= leave[0].eventSeq)
+        return incomplete('Missing the current retained catalogue projection');
+      if (terminal.filterMatchesDeparture !== true || !sameOwner(transition.owner,previous.payload.owner) ||
+          !sameFilterState(previous.payload,current.payload))
+        return conclude(false,'The child round trip changed the Source opening or current filters',
+          {before:previous.payload,after:current.payload},observations);
+      if (groups) {
+        const filters = sourceToolsFilterProgress(context,expected);
+        if (filters.verdict !== 'PASS') return report(filters.verdict,filters.reason,{commits:filters.completed},filters.refs);
+        if (!sameFilterState(filters.previous,previous.payload))
+          return conclude(false,'The filtered group round trip changed the proven public query or another filter',
+            {view:expected.view},[...observations,...filters.refs]);
+      }
+      if (expected.proof === 'focus') {
+        if (typeof returned.focused !== 'boolean') return incomplete('The returned native button has no focus readback');
+        return conclude(returned.focused,returned.focused ? '' : 'The original native button did not regain focus',
+          {view:expected.view,focused:returned.focused},observations);
+      }
+      const scrolled = latestAt(context,origin,'source.scroll',payload=>payload.trigger === 'settled');
+      const saved = eventsAt(context,departure,view,'source.scroll').findLast(event=>event.payload.trigger === 'v9-list-enter');
+      const restored = eventsAt(context,action,sample,'source.scroll').findLast(event=>event.payload.trigger === 'v9-list-return');
+      if (!scrolled || !saved || !restored) return incomplete('Missing retained native scroll measurements');
+      const a = saved.payload, b = restored.payload;
+      const anchor = {id:`reader-source-row-${a.anchor}`,ancestors:[list]};
+      const beforeRow = oneNode(origin,anchor);
+      const afterRow = oneNode(sample,anchor);
+      const density = sample.window.density;
+      if (!(density > 0) || !positiveInt(a.anchor) || !positiveInt(a.itemIndex) || !(a.offsetVp > 0) ||
+          !rectPresent(beforeRow?.visibleRectPx) || b.layoutMatchesSaved !== true ||
+          a.viewportWidthVp !== b.viewportWidthVp || a.viewportHeightVp !== b.viewportHeightVp)
+        return incomplete('The selected fixture lacks a visibly anchored scroll in the same list layout');
+      const delta = retainedRowDelta(beforeRow,afterRow);
+      const positionMatches = (left,right) => left.anchor === right.anchor && left.itemIndex === right.itemIndex &&
+        left.lastAnchor === right.lastAnchor && Math.abs(left.itemYVp - right.itemYVp) * density <= expected.tolerancePx &&
+        Math.abs(left.offsetVp - right.offsetVp) * density <= expected.tolerancePx;
+      const valid = [a,b,scrolled.payload].every(value=>sameOwner(value.owner,transition.owner) &&
+        value.filterRevision === previous.payload.filterRevision) && b.filterMatchesSaved === true &&
+        positionMatches(scrolled.payload,a) && positionMatches(a,b) && delta !== null && Math.abs(delta) <= expected.tolerancePx;
+      return conclude(valid,valid ? '' : 'The same-opening Source row anchor or offset changed on return',
+        {view:expected.view,saved:a,restored:b,nativeAnchorDeltaPx:delta},[...observations,scrolled,saved,restored]);
+    }
     case 'route-parent-after-tools': {
       const controls = sourceParentControls[expected.parent];
       const parent = samples[assertion.parentSample];

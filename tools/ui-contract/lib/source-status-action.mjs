@@ -3,6 +3,8 @@ import { sourceNativeCenterInteraction } from './source-native-center.mjs';
 import { ancestorsOf } from './layout.mjs';
 import { effectiveAppearance } from './structure.mjs';
 import { requireEvidence } from './evidence.mjs';
+import { sourceV9ImportEntry, sourceV9ImportScope, sourceV9ImportStages,
+  sourceV9LocalImportButton } from './source-document-picker.mjs';
 import { matchingSourceTransientRetirement, sourceTransientStatusEvent,
   sourceTransientStatusLifecycle } from './source-transient-status-text.mjs';
 
@@ -44,7 +46,7 @@ export const sourceStatusActionEdgeWaitForRetirement = {
 };
 
 export function sourceStatusActionEdgePostToastSample(contract, step) {
-  return contract.id === sourceStatusActionEdgeCase && contract.version === 2 &&
+  return contract.id === sourceStatusActionEdgeCase && [2,3].includes(contract.version) &&
     step.id === 'source-imported' && step.kind === 'sample';
 }
 
@@ -89,6 +91,36 @@ function returnedLocalResult(sample, projection, queryRevision) {
     observedViewportIds:lists.map(node=>node.id),publicRowPath:matches ? row.path : null};
 }
 
+function transferLocator(sample, origin, target, stage) {
+  if (!sample || !sameWindow(sample,origin) || sample.window.source !== 'window-metrics' ||
+      sample.window.keyboard?.visible !== false || !sample.evidenceRefs?.some(ref=>ref.path.endsWith('.json'))) return false;
+  const visible = node=>node.source === 'native-tree' && node.visible === true && node.opacity > 0;
+  const scopes = sample.nodes.filter(node=>node.id === sourceV9ImportScope && node.type === 'Stack' && visible(node));
+  if (scopes.length !== 1) return false;
+  const [scope] = scopes;
+  const scopedMatches = id=>sample.nodes.filter(node=>node.id === id && visible(node) && ancestorsOf(sample,node).includes(scope));
+  const buttons = scopedMatches(target);
+  return buttons.length === 1 && buttons[0].type === 'Button' && buttons[0].enabled === true && buttons[0].clickable === true &&
+    (stage === undefined || scopedMatches(stage).length === 1);
+}
+
+function v9ImportChain(actions,samples,origin,opened,picked,imported,observations) {
+  const entry = samples[sourceV9ImportEntry];
+  const picker = actions['open-picker'];
+  observations.push(entry);
+  if (!transferLocator(entry,origin,sourceV9LocalImportButton) || !precedes(opened,entry) || !precedes(entry,picker)) return false;
+  let previous = picked;
+  for (const stage of sourceV9ImportStages) {
+    const point = samples[stage.sample];
+    const click = actions[stage.action];
+    observations.push(point,click);
+    if (!transferLocator(point,origin,stage.target,stage.stage) || !precedes(previous,point) ||
+        !actionMatches(click,origin.instanceId,stage.sample,stage.target) || !precedes(point,click)) return false;
+    previous = click;
+  }
+  return precedes(previous,imported) && imported.nodes.every(node=>node.id !== sourceV9ImportScope || node.visible !== true);
+}
+
 export function evaluateSourceImportResearchStatusAction(assertion, context) {
   const {actions = {}, samples = {}, events = []} = context;
   const imported = samples[assertion.baseline];
@@ -101,6 +133,8 @@ export function evaluateSourceImportResearchStatusAction(assertion, context) {
   const add = actions['open-import-dialog'];
   const open = actions['open-picker'];
   const picked = actions['select-source-file'];
+  const v9 = assertion.expected.importWorkflow === 'v9';
+  const commit = v9 ? actions['commit-source-import'] : picked;
   const press = actions[assertion.action];
   const instance = imported?.instanceId;
   const trace = events.filter(event=>event.instanceId === instance && event.channel === 'business');
@@ -129,10 +163,16 @@ export function evaluateSourceImportResearchStatusAction(assertion, context) {
       typed.inputLength !== assertion.expected.keywordLength ||
       !actionMatches(entry,instance,'search-draft','reader-search-source-recovery-primary') ||
       !actionMatches(add,instance,'source-before-import','reader-source-footer-add-button') ||
-      !actionMatches(open,instance,'import-dialog','reader-source-import-local-file') || !pickerBound ||
+      !actionMatches(open,instance,v9 ? sourceV9ImportEntry : 'import-dialog','reader-source-import-local-file') || !pickerBound ||
       !precedes(typed,draft) || !precedes(draft,entry) || !precedes(entry,empty) || !precedes(empty,add) ||
       !precedes(add,open) || !precedes(picked,imported)) {
     return incomplete('No verified native action chain through normal Search, Source Management, and the exact public picker carriers');
+  }
+  if (v9 && !v9ImportChain(actions,samples,empty,add,picked,imported,observations)) {
+    return incomplete('No current native parse, review, grouped import and result-return chain');
+  }
+  if (v9 && at(statusEvent,picked.beforeSeq,commit.beforeSeq).some(event=>event.payload.phase === 'ready')) {
+    return report('FAIL','An import was reported ready before the explicit v9 apply action');
   }
 
   const drafts = at('search-draft-accepted',typed.beforeSeq,entry.beforeSeq);
@@ -140,10 +180,10 @@ export function evaluateSourceImportResearchStatusAction(assertion, context) {
   const routes = at('source.route',entry.beforeSeq,empty.beforeSeq);
   const opened = routes[0];
   const initial = at('source.projection',opened?.eventSeq,empty.beforeSeq).at(-1);
-  const ready = at(statusEvent,picked.beforeSeq,imported.beforeSeq).filter(event=>event.payload.phase === 'ready');
+  const ready = at(statusEvent,commit.beforeSeq,imported.beforeSeq).filter(event=>event.payload.phase === 'ready');
   const readyFact = ready.at(-1);
   const source = readyFact?.payload;
-  const rowProjection = at('source.projection',picked.beforeSeq,imported.beforeSeq).at(-1);
+  const rowProjection = at('source.projection',commit.beforeSeq,imported.beforeSeq).at(-1);
   observations.push(draftFact,opened,initial,readyFact,rowProjection);
   if (!draftFact || draftFact.payload.length !== assertion.expected.keywordLength ||
       !positiveInteger(draftFact.payload.queryRevision) || routes.length !== 1 || opened.payload.action !== 'open' ||

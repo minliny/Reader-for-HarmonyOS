@@ -6,7 +6,7 @@ import { DialogActionView, ReaderDialogSurface } from '../../../ui/surfaces/Read
 import type { BookSource, SourceCheckOutcome, SourceCheckReport, SourceCheckReportStep } from '../application/SourceGateway';
 import type { SourceV9CheckOptions } from '../application/SourceOrchestrator';
 import { sourceV9Levels, type SourceV9Depth, type SourceV9Mode } from '../application/SourceV9TransferState';
-import { sourceV9Primary, sourceV9LatestReport, sourceV9ReportFill } from '../presentation/SourceManagementV9';
+import { sourceV9CheckStepText, sourceV9Primary, sourceV9LatestReport, sourceV9ReportFill } from '../presentation/SourceManagementV9';
 import { recordSourceV9Check, runSourceV9Checks, type SourceV9CheckRow } from '../presentation/SourceV9CheckRun';
 
 interface SourceV9CheckChoice {
@@ -69,8 +69,12 @@ export struct SourceV9CheckDialog {
 
   private report(source: BookSource | undefined): SourceCheckReport | undefined {
     if (source === undefined) return undefined;
-    return this.rows.find((row: SourceV9CheckRow): boolean => row.source.sourceId === source.sourceId)?.outcome?.report ??
-      sourceV9LatestReport(source);
+    return this.outcome(source)?.report ?? sourceV9LatestReport(source);
+  }
+
+  private outcome(source: BookSource | undefined): SourceCheckOutcome | undefined {
+    if (source === undefined) return undefined;
+    return this.rows.find((row: SourceV9CheckRow): boolean => row.source.sourceId === source.sourceId)?.outcome;
   }
 
   private restoreOptions(source: BookSource | undefined): void {
@@ -209,7 +213,9 @@ export struct SourceV9CheckDialog {
         }
         if (this.running || this.stopped || this.completed > 0) this.progress();
         if (this.runError.length > 0) ReaderPageState({ variant: 'inline', message: this.runError, padded: false });
-        if (this.singleSource() !== undefined) this.reportSteps(this.report(this.singleSource()));
+        if (this.singleSource() !== undefined) {
+          this.reportSteps(this.report(this.singleSource()), this.outcome(this.singleSource())?.failureReason);
+        }
         else this.batchRows();
       }.width('100%').alignItems(HorizontalAlign.Start);
     }.width('100%').constraintSize({ maxHeight: this.bodyHeight }).scrollBar(BarState.Auto);
@@ -239,17 +245,17 @@ export struct SourceV9CheckDialog {
   }
 
   @Builder
-  private reportSteps(report: SourceCheckReport | undefined) {
+  private reportSteps(report: SourceCheckReport | undefined, currentFailure?: string) {
     Column() {
       ForEach(STAGES, (stage: SourceV9CheckChoice): void => {
-        this.step(stage, report?.steps.find((step: SourceCheckReportStep): boolean => step.level === stage.value));
+        this.step(stage, report?.steps.find((step: SourceCheckReportStep): boolean => step.level === stage.value), currentFailure);
       }, (stage: SourceV9CheckChoice): string => stage.value);
     }.width('100%').backgroundColor(readerAppColor('app.sourceUi.surface', this.scheme))
       .borderRadius(14).border({ width: 1, color: readerAppColor('TOK_LINE', this.scheme) });
   }
 
   @Builder
-  private step(stage: SourceV9CheckChoice, step: SourceCheckReportStep | undefined) {
+  private step(stage: SourceV9CheckChoice, step: SourceCheckReportStep | undefined, currentFailure?: string) {
     Row({ space: 8 }) {
       Text(stage.value).width(29).height(24).borderRadius(6).textAlign(TextAlign.Center)
         .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(11).fontWeight(FontWeight.Bold)
@@ -260,24 +266,16 @@ export struct SourceV9CheckDialog {
       Column({ space: 2 }) {
         Text(stage.title).width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(13)
           .fontColor(readerAppColor('TOK_INK', this.scheme));
-        Text(this.stage === stage.value && this.running ? '正在检测…' : this.stepText(step))
+        Text(this.stage === stage.value && this.running ? '正在检测…' : sourceV9CheckStepText(step, currentFailure))
           .width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(11)
           .fontColor(readerAppColor('TOK_MUTED', this.scheme));
       }.layoutWeight(1);
       if (step?.executed) {
-        Text(`${step.durationMs} ms`).fontSize(11).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+        Text(`累计 ${step.durationMs} ms`).fontSize(11).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
           .fontColor(readerAppColor('TOK_MUTED', this.scheme));
       }
     }.width('100%').padding({ left: 10, right: 10, top: 7, bottom: 7 })
       .border({ width: { top: stage.value === 'L1' ? 0 : 1 }, color: readerAppColor('TOK_LINE', this.scheme) });
-  }
-
-  private stepText(step: SourceCheckReportStep | undefined): string {
-    if (step === undefined) return '待检测';
-    if (step.status === 'pass') return '通过';
-    const status = step.status === 'fail' ? '失败' : step.status === 'blocked' ? '已中止' :
-      step.status === 'not_supported' ? '不支持' : step.status === 'cancelled' ? '已取消' : '未请求';
-    return step.reason === undefined || step.reason.length === 0 ? status : `${status} · ${step.reason}`;
   }
 
   @Builder

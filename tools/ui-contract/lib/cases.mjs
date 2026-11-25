@@ -35,7 +35,7 @@ import { sourceGroupOptionsScroll, sourceGroupOptionsTail, sourceGroupOptionsTex
 import { sourceGroupOptionsScrollCase, sourceGroupOptionsScrollFixture, sourceGroupOptionsScrollFixturePath,
   sourceGroupOptionsSwipePath } from './source-group-options-scroll.mjs';
 import { sourceGroupTextEvent, sourceGroupTextScope } from './source-group-options-text.mjs';
-import { sourceTransientStatusCases, sourceTransientStatusGuard, sourceTransientStatusStep } from './source-transient-status-text.mjs';
+import { sourceTransientStatusCase, sourceTransientStatusGuard, sourceTransientStatusStep } from './source-transient-status-text.mjs';
 import { sourceQueryEdgeAllowed, sourceQueryEdgeCase, sourceQueryEdgeFixture, sourceQueryEditor,
   sourceQueryPositions, sourceQueryTouchFixture, sourceQueryTouchPosition } from './source-query-edge.mjs';
 import { sourceNativeFocusCase, sourceNativeFocusFixture, sourceNativeFocusSteps } from './source-native-focus.mjs';
@@ -51,7 +51,7 @@ import { sourceFilterClearAction, sourceFilterClearCase, sourceFilterClearFixtur
 import { sourceOfflineDetectButton, sourceOfflineDetectCase, sourceOfflineDetectEdgeCase, sourceOfflineDetectFailed, sourceOfflineDetectFixture,
   sourceOfflineDetectFixturePath, sourceOfflineDetectObservation, sourceOfflineDetectReady } from './source-offline-detect.mjs';
 import { sourceFooterAddButton, sourceLocalImportButton, sourcePickerAnchor, sourcePickerCase, sourcePickerFile,
-  sourcePickerFixture, sourcePickerFixturePath, sourcePickerGuard, sourcePickerRole, sourcePickerRoles } from './source-document-picker.mjs';
+  sourcePickerFixture, sourcePickerFixturePath, sourcePickerGuard, sourcePickerRole, sourcePickerRoles, sourceV9ImportEntry, sourceV9ImportScope, sourceV9ImportStages } from './source-document-picker.mjs';
 import { applyReservedTypographyNarrowWindow, isReservedTypographyCase, publicReservedSourceHost, reservedSourceSample,
   sourceReservedTypographyFixture, sourceReservedTypographyFixtureV2, sourceReservedTypographyInput,
   sourceReservedTypographyNarrowCase, sourceReservedTypographyNarrowFixture, usesReservedNativeToggle } from './source-reserved-typography.mjs';
@@ -118,7 +118,8 @@ function validateScopedCase(contract, samples, actions) {
       }), 'Combined Source reset v3 requires a captured public catalogue and its fixed no-match query');
   }
   const toolsReturn = contract.id === 'source-management.tool-return-filters' && contract.version === 2;
-  const liveToolsProjection = contract.assertions.filter(item=>item.expected?.minimumProjected !== undefined);
+  const liveToolsProjection = contract.assertions.filter(item=>item.kind === 'tool-return-filters' &&
+    item.expected?.minimumProjected !== undefined);
   if (toolsReturn || liveToolsProjection.length || fixture.id === 'public-source-tools-return-v2') {
     const toolsCheck = liveToolsProjection[0];
     const focus = contract.assertions.find(item=>item.kind === 'tools-return-focus');
@@ -132,6 +133,30 @@ function validateScopedCase(contract, samples, actions) {
       departure.gesture !== true && departure.from === 'scrolled' && equalJson(departure.target,{
         id:'reader-source-header-tools-button',ancestors:['reader-source-header-tools'],
       }), 'The public Source Tools round trip requires the fixed query, four filters and actual header Button');
+  }
+  const v9ListReturn = contract.assertions.filter(item=>item.kind === 'v9-list-return');
+  const v9Groups = contract.id === 'source-management.v9-group-return';
+  const v9Batch = contract.id === 'source-management.v9-batch-return';
+  if (v9Groups || v9Batch || v9ListReturn.length) {
+    const view = v9Groups ? 'groups' : 'batch';
+    const depart = v9Groups ? 'open-groups' : 'open-batch';
+    const steps = Object.fromEntries(contract.steps.map(step=>[step.id,step]));
+    const toBoundNative = (step, id, parent) => equalJson(step?.target,{id,ancestors:[parent]});
+    requireEvidence((v9Groups || v9Batch) && contract.version === 1 && contract.pageId === 'source-management' &&
+      fixture.id === `public-source-v9-${v9Groups ? 'group' : 'batch'}-return-v1` && fixture.publicSources === true &&
+      (v9Groups ? equalJson(fixture.inputs,{'public-source-prefix':'Phase1Return'}) : fixture.inputs === undefined) &&
+      v9ListReturn.length === 2 && new Set(v9ListReturn.map(assertion=>assertion.expected.proof)).size === 2 &&
+      v9ListReturn.every(assertion=>assertion.expected.view === view && assertion.action === 'v9-back' &&
+        assertion.sample === 'restored' && assertion.departAction === depart && assertion.toolsSample === 'v9-child' &&
+        assertion.baseline === (v9Groups ? 'more-open' : 'scrolled') &&
+        (!v9Groups || assertion.entrySample === 'scrolled' && assertion.openAction === 'open-more')) &&
+      steps['v9-back']?.op === 'keyEvent' && steps['v9-back'].key === 'Back' && steps['v9-back'].from === 'v9-child' &&
+      steps[depart]?.op === 'click' && steps['v9-child']?.afterAction === depart &&
+      (v9Groups ? steps['open-more']?.op === 'click' &&
+        toBoundNative(steps['open-more'],'reader-source-header-tools-button','reader-source-header-tools') &&
+        toBoundNative(steps[depart],'reader-source-v9-open-groups','reader-source-v9-more-menu') :
+        toBoundNative(steps[depart],'reader-source-footer-tools-button','reader-source-footer')),
+    'Source v9 return requires bounded native child entry, same-opening position and focus, and normal System Back');
   }
   if (contract.id === searchEmptyBookshelfCase || fixture.id === searchEmptyBookshelfFixture ||
       contract.steps.some(step=>step.target === emptyBookshelfEntry || step.target?.id === emptyBookshelfEntry) ||
@@ -251,7 +276,7 @@ function validateScopedCase(contract, samples, actions) {
       contract.assertions.length === 2 && contract.assertions[1] === controlTouch,
     'The public Source control requires one current conditional target and one separate exact center or top dispatch');
   }
-  const transient = Object.hasOwn(sourceTransientStatusCases,contract.id) && sourceTransientStatusCases[contract.id];
+  const transient = sourceTransientStatusCase(contract.id,contract.version);
   const transientSamples = contract.steps.filter(step=>step.captureGuard === sourceTransientStatusGuard);
   const transientChecks = contract.assertions.filter(check=>check.expected?.requireTransientStatus !== undefined);
   if (transient?.version === contract.version || transientSamples.length || transientChecks.length) {
@@ -438,6 +463,7 @@ function validateScopedCase(contract, samples, actions) {
   const pickerActions = contract.steps.filter(step => sourcePickerRole(step.target));
   const localImport = contract.steps.filter(step => step.target === sourceLocalImportButton);
   const statusEdge = contract.id === sourceStatusActionEdgeCase;
+  const v9Import = statusEdge ? contract.version === 3 : contract.id === sourcePickerCase && contract.version === 4;
   const statusEdges = contract.steps.filter(step => step.id === 'press-research-top');
   const statusChecks = contract.assertions.filter(assertion => assertion.kind === 'import-research-status-action' &&
     assertion.expected?.position === 'top');
@@ -447,27 +473,27 @@ function validateScopedCase(contract, samples, actions) {
     const baseline = contract.steps.find(step=>step.id === check?.baseline);
     const endpoint = contract.steps.find(step=>step.id === check?.sample);
     const waitsForRetirement = baseline?.waitFor?.some(predicate=>equalJson(predicate,sourceStatusActionEdgeWaitForRetirement));
-    requireEvidence(statusEdge && [1,2].includes(contract.version) &&
+    requireEvidence(statusEdge && [1,2,3].includes(contract.version) &&
       (contract.version === 1 || waitsForRetirement && baseline.quietMs >= 500) &&
       statusEdges.length === 1 && sourceStatusActionEdgeStep(press) &&
       statusChecks.length === 1 && check.id === 'source.import-research-status-action.top' &&
       check.action === press.id && check.baseline === press.from &&
-      baseline?.kind === 'sample' && baseline.afterAction === 'select-source-file' &&
+      baseline?.kind === 'sample' && baseline.afterAction === (v9Import ? 'return-source-list' : 'select-source-file') &&
       endpoint?.kind === 'sample' && endpoint.id === 'search-returned' && endpoint.afterAction === press.id,
     'The Re-search upper edge requires the current public picker receipt and the bound search return');
   }
   if (statusEdge || contract.id === sourcePickerCase || fixture.publicDocument || pickerLocators.length || pickerActions.length || localImport.length) {
-    requireEvidence((statusEdge || contract.id === sourcePickerCase && [1,2,3].includes(contract.version)) &&
+    requireEvidence((statusEdge || contract.id === sourcePickerCase && [1,2,3,4].includes(contract.version)) &&
       contract.pageId === 'source-management' &&
       fixture.id === sourcePickerFixture && fixture.publicSources && fixture.publicDocument?.basename === sourcePickerFile &&
       fixture.publicDocument.sha256 === sha256(readFileSync(new URL(sourcePickerFixturePath,toolRoot))) &&
       pickerLocators.length === sourcePickerRoles.length && pickerActions.length === sourcePickerRoles.length &&
       localImport.length === 1, 'System picker actions require the exact public Source Management case and pinned document');
-    const dialog = contract.steps.find(step => step.id === 'import-dialog');
+    const dialog = contract.steps.find(step => step.id === (v9Import ? sourceV9ImportEntry : 'import-dialog'));
     const openDialog = contract.steps.find(step => step.id === dialog?.afterAction);
     const [openPicker] = localImport;
     requireEvidence(dialog?.kind === 'locate' && dialog.keyboard === false && dialog.quietMs >= 750 &&
-      dialog.anchors.includes(sourceLocalImportButton) &&
+      dialog.anchors.includes(sourceLocalImportButton) && (!v9Import || dialog.anchors.includes(sourceV9ImportScope)) &&
       openDialog?.op === 'click' && openDialog.target === sourceFooterAddButton && openDialog.from === 'source-before-import' &&
       openPicker.id === 'open-picker' && openPicker.op === 'click' && openPicker.from === dialog.id && !openPicker.gesture &&
       contract.steps.indexOf(openPicker) === contract.steps.indexOf(dialog)+1,
@@ -488,6 +514,33 @@ function validateScopedCase(contract, samples, actions) {
         contract.steps.filter(step => step.from === locator.id).length === 1,
       'System picker clicks must follow each exact current native carrier in order');
       previous = action;
+    }
+    const research = contract.assertions.find(assertion=>assertion.kind === 'import-research-status-action');
+    requireEvidence(research?.expected.importWorkflow === (v9Import ? 'v9' : undefined),
+      'Import Re-search assertion must identify its actual import workflow');
+    if (v9Import) {
+      requireEvidence(!previous.waitFor && !previous.wait,
+        'Selecting a file stages it before a separate parse and import');
+      let index = contract.steps.indexOf(previous)+1;
+      for (const {sample,action,target,stage} of sourceV9ImportStages) {
+        const {id:priorAction} = previous;
+        const locator = contract.steps[index++];
+        const next = contract.steps[index++];
+        requireEvidence(locator?.id === sample && locator.kind === 'locate' && locator.keyboard === false &&
+          locator.afterAction === priorAction && equalJson(locator.anchors,[sourceV9ImportScope,target,...(stage?[stage]:[])]) &&
+          next?.id === action && next.op === 'click' && next.from === sample && next.target === target &&
+          !next.gesture && !next.tapEdge,
+        'V9 import requires ordered scoped native parse, apply, and result-return clicks');
+        previous = next;
+      }
+      const imported = contract.steps[index];
+      requireEvidence(imported?.id === research.baseline && imported.afterAction === previous.id &&
+        previous.waitFor?.length === 1 && equalJson(previous.waitFor[0],imported.waitFor?.[0]) &&
+        previous.waitFor[0].kind === 'source.import-status-action' &&
+        previous.waitFor[0].fields?.['payload.phase'] === 'ready' &&
+        previous.waitFor[0].fields?.['payload.confirmation'] === 'confirmed' &&
+        previous.waitFor[0].fields?.['payload.readback'] === 'succeeded',
+        'The Source list and Re-search control follow the actual result return');
     }
   }
   const outsideActions = contract.steps.filter(step => step.target === sourceGroupBackdrop);

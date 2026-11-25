@@ -130,7 +130,8 @@ if (selected.length) {
           (actionWidths.length - 1) * actionsLane.create.space, 'unbroken v9 action widths and measured Row gaps are budgeted once');
         assert.equal(budget.actionRowCount, 1);
         const detectRegion = detections[0].responseRegion;
-        assert.equal(detectRegion.height, 44);
+        assert.deepEqual(detectRegion, { x: -6, y: -8, width: 40, height: 44 },
+          'the v9 Detect response region has the exact bounded envelope');
         assert.ok(detectRegion.x >= -actionsLane.create.space &&
           detectRegion.x + detectRegion.width <= detections[0].width + actionsLane.create.space,
         'expanded Detect hit area stays out of the adjacent controls');

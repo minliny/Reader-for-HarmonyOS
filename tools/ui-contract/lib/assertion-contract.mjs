@@ -77,7 +77,7 @@ const shapes = {
     },
     'recovery-body-text': {branch:'string',presentation:'string?'},
     'recovery-expand-edge': {branch:'string',target:'string',tapEdge:'string'},
-    'import-research-status-action': {target:'string',keywordLength:'number',position:'string?'},
+    'import-research-status-action': {target:'string',keywordLength:'number',position:'string?',importWorkflow:'string?'},
     'group-options-scroll': {groupIndex:'number',sourceCount:'number'},
     'group-options-text': {groupIndex:'number',sourceCount:'number'},
     'surface-text': {scope:'string',conditionAssertion:'string?',target:'string?',requireTransientStatus:'boolean?'},
@@ -143,6 +143,8 @@ const shapes = {
       projected:'number?',minimumProjected:'number?',entry:'string?',
     },
     'tools-return-focus': {focused:'boolean',entry:'string?'},
+    'v9-list-return': {view:'string',proof:'string',tolerancePx:'number',
+      status:'string?',category:'string?',groupIndex:'number?',queryLength:'number?',minimumProjected:'number?'},
     'footer-end': {maxOverlapAreaVp2:'number',minFraction:'number',requireFreshEnd:'boolean?'},
     'fixed-insets': {tolerancePx:'number'},
   },
@@ -236,6 +238,7 @@ const parameters = {
     'tool-return':['departAction','toolsSample'],
     'tool-return-filters':['departAction','toolsSample','priorAction','filteredSample'],
     'tools-return-focus':['departAction','toolsSample'],
+    'v9-list-return':['departAction','toolsSample','entrySample','openAction'],
     'fixed-insets':['movingSample','toolsSample','restoreSample','departAction','returnAction'],
   },
 };
@@ -607,6 +610,7 @@ export function publicAssertionDefinition(assertion) {
   }
   if (evaluator === 'source' && kind === 'import-research-status-action' &&
       (expected.target !== 'reader-source-status-action' || !Number.isSafeInteger(expected.keywordLength) ||
+       (expected.importWorkflow !== undefined && expected.importWorkflow !== 'v9') ||
        (expected.position !== undefined && expected.position !== 'top') ||
        expected.keywordLength < 1 || !assertion.entryAction || !assertion.action || !assertion.baseline ||
        !assertion.sample || assertion.required !== true || assertion.condition ||
@@ -790,6 +794,17 @@ export function publicAssertionDefinition(assertion) {
            (expected.minimumProjected === undefined ? expected.entry === undefined :
              expected.projected === undefined && expected.entry === 'header'))))) {
     throw new Error(`Assertion ${id}: invalid source Tools retention or focus relationship`);
+  }
+  if (evaluator === 'source' && kind === 'v9-list-return' &&
+      (!assertion.action || !assertion.baseline || !assertion.sample || !assertion.departAction || !assertion.toolsSample ||
+       !['groups','batch'].includes(expected.view) || !['position','focus'].includes(expected.proof) ||
+       expected.tolerancePx < 0 || expected.tolerancePx > 1 || assertion.required !== true || assertion.condition ||
+       !['native-tree','window-metrics','app-owner'].every(source=>assertion.sources?.includes(source)) ||
+       (expected.view === 'groups' ? !assertion.entrySample || !assertion.openAction || expected.status !== 'disabled' ||
+         expected.category !== 'novel' || expected.groupIndex !== 2 || expected.queryLength !== 12 || expected.minimumProjected !== 15 :
+         [assertion.entrySample,assertion.openAction,expected.status,expected.category,expected.groupIndex,expected.queryLength,
+           expected.minimumProjected].some(value=>value !== undefined)))) {
+    throw new Error(`Assertion ${id}: v9 uses an actual group or batch view and the same native Source opening`);
   }
   if (evaluator !== 'layout' && kind !== 'phase-relative') return;
   const selector = value => typeof value === 'string' && value.length > 0 ||

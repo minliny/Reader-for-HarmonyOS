@@ -5,6 +5,8 @@ import { evaluateSourceImportResearchStatusAction, sourceStatusActionEdgePostToa
   sourceStatusActionEdgeToastRetired, sourceStatusActionEdgeWaitForRetirement } from '../lib/source-status-action.mjs';
 import { evaluateSourceSurfaceText } from '../lib/source-surface-text.mjs';
 import { requestedOperation, requireActionDispatch } from '../collectors/harmonyos/records.mjs';
+import { sourceV9ImportEntry, sourceV9ImportScope, sourceV9ImportStages,
+  sourceV9LocalImportButton } from '../lib/source-document-picker.mjs';
 import { selectedProductionMethods } from '../../lib/selected-production-methods.mjs';
 
 const contract = JSON.parse(readFileSync(new URL('../cases/source-management.import-research-status-action.json',import.meta.url),'utf8'));
@@ -27,7 +29,11 @@ const action = (from,targetId,beforeSeq,afterSeq,extra={}) => ({
   instanceId,from,targetId,beforeSeq,afterSeq,op:'click',...extra,
 });
 const event = (eventSeq,kind,payload) => ({instanceId,eventSeq,kind,payload,channel:'business'});
-function scenario() {
+function scenario(legacy = false) {
+  const readyAt = legacy ? 27 : 38;
+  const importAt = legacy ? 32 : 41;
+  const pressAt = legacy ? 34 : 43;
+  const searchAt = legacy ? 41 : 51;
   const sourceFact = {owner,statusRevision:2,receiptGeneration:37,confirmation:'confirmed',
     readback:'succeeded',confirmedParts:1,fixturePresent:true,count:1};
   const actions = {
@@ -35,8 +41,8 @@ function scenario() {
     'type-query':action('ime-ready','reader-book-search-input',2,6,{op:'inputText',inputRole:'a',inputLength:6}),
     'manage-sources':action('search-draft','reader-search-source-recovery-primary',9,12),
     'open-import-dialog':action('source-before-import','reader-source-footer-add-button',16,17),
-    'open-picker':action('import-dialog','reader-source-import-local-file',18,19),
-    'press-research':action('source-imported',target,34,40,{sourceCenterTap:{x:54,y:118,probeSeq:12}}),
+    'open-picker':action(legacy ? 'import-dialog' : sourceV9ImportEntry,'reader-source-import-local-file',18,19),
+    'press-research':action('source-imported',target,pressAt,searchAt-1,{sourceCenterTap:{x:54,y:118,probeSeq:12}}),
   };
   for (const [index,[id,role]] of [['browse-files','browse'],['open-phone-storage','phone'],
     ['open-downloads','downloads'],['select-source-file','file']].entries()) {
@@ -55,21 +61,35 @@ function scenario() {
     node(viewportId,'0',null,'List',frame),
     {...node(null,'0/0','0','Button',buttonRect),alias:'reader-search-public-local-result',localSearchResult:true},
   ];
+  const samples = {'search-draft':sample(7),'source-before-import':sample(14),
+    'source-imported':{...sample(importAt,nodes),sampleId:'source-imported'},'search-returned':sample(searchAt,search)};
+  if (!legacy) {
+    const locator = (before,actionId,stage) => sample(before,[
+      node(sourceV9ImportScope,'0',null,'Stack',frame),
+      node(actionId,'0/0','0','Button',buttonRect),
+      ...(stage ? [node(stage,'0/1','0','Column',frame)] : []),
+    ]);
+    samples[sourceV9ImportEntry] = locator(17,sourceV9LocalImportButton);
+    const times = [[31,32,33],[33,34,36],[36,37,40]];
+    for (const [index,step] of sourceV9ImportStages.entries()) {
+      const [start,before,after] = times[index];
+      samples[step.sample] = locator(start,step.target,step.stage);
+      actions[step.action] = action(step.sample,step.target,before,after);
+    }
+  }
   return {
-    actions,
-    samples:{'search-draft':sample(7),'source-before-import':sample(14),
-      'source-imported':{...sample(32,nodes),sampleId:'source-imported'},'search-returned':sample(41,search)},
+    actions,samples,
     events:[
       event(5,'search-draft-accepted',{length:6,queryRevision:4}),
       event(11,'source.route',{action:'open',from:'search',to:'source',previousGeneration:5,...owner}),
       event(13,'source.projection',{owner,state:'empty',readFact:'current',count:0}),
-      event(27,'source.import-status-action',{phase:'ready',...sourceFact}),
-      event(28,'source.projection',{owner,state:'rows',readFact:'current',count:1}),
-      event(35,'source.import-status-action',{phase:'accepted',...sourceFact}),
-      event(36,'source.route',{action:'close',from:'source',to:'search',mounting:4,previousGeneration:6,generation:7}),
-      event(37,'source.import-search-return',{mounting:4,sourceGeneration:6,navigation:7,keywordLength:6,
+      event(readyAt,'source.import-status-action',{phase:'ready',...sourceFact}),
+      event(readyAt+1,'source.projection',{owner,state:'rows',readFact:'current',count:1}),
+      event(pressAt+1,'source.import-status-action',{phase:'accepted',...sourceFact}),
+      event(pressAt+2,'source.route',{action:'close',from:'source',to:'search',mounting:4,previousGeneration:6,generation:7}),
+      event(pressAt+3,'source.import-search-return',{mounting:4,sourceGeneration:6,navigation:7,keywordLength:6,
         previousQueryRevision:4,queryRevision:5,previousSearchGeneration:3,searchGeneration:4,draftMatches:true}),
-      event(39,'search-page-projection',{projection:'results',searchActive:false,queryRevision:5,page:8,viewportId}),
+      event(pressAt+5,'search-page-projection',{projection:'results',searchActive:false,queryRevision:5,page:8,viewportId}),
     ],
   };
 }
@@ -117,7 +137,7 @@ test('source status action binds real picker dispatch, confirmed readback, nativ
   assert.equal(verdict(staleQuery).verdict,'FAIL');
 
   const extraRestart = scenario();
-  extraRestart.events.splice(8,0,{...extraRestart.events[7],eventSeq:38});
+  extraRestart.events.splice(8,0,{...extraRestart.events[7],eventSeq:extraRestart.events[7].eventSeq+1});
   assert.equal(verdict(extraRestart).verdict,'FAIL');
 
   const noReturnedResult = scenario();
@@ -141,13 +161,34 @@ test('source status action binds real picker dispatch, confirmed readback, nativ
   assert.equal(verdict(wrongResultOwner).verdict,'FAIL');
 });
 
+test('v9 Re-search requires actual parse, commit, and result return with no premature success', () => {
+  const evaluate = context => evaluateSourceImportResearchStatusAction(assertion,context);
+  for (const stage of sourceV9ImportStages) {
+    const missingClick = scenario();
+    delete missingClick.actions[stage.action];
+    assert.equal(evaluate(missingClick).verdict,'NOT_RUN');
+
+    const wrongNativeOwner = scenario();
+    wrongNativeOwner.samples[stage.sample].nodes.find(item=>item.id === stage.target).parentPath = null;
+    assert.equal(evaluate(wrongNativeOwner).verdict,'NOT_RUN');
+  }
+  const premature = scenario();
+  premature.events.splice(3,0,{...premature.events[3],eventSeq:32});
+  assert.equal(evaluate(premature).verdict,'FAIL');
+  const noExplicitImport = scenario(true);
+  assert.equal(evaluate(noExplicitImport).verdict,'NOT_RUN');
+  const oldAssertion = {...assertion,expected:{target,keywordLength:6}};
+  assert.equal(evaluateSourceImportResearchStatusAction(oldAssertion,noExplicitImport).verdict,'PASS');
+});
+
 test('source Re-search upper edge preserves the confirmed import and exactly one retained-query return',()=>{
   const edge = JSON.parse(readFileSync(new URL('../cases/source-management.import-research-status-action-edge.json',import.meta.url)));
   const [proof] = edge.assertions;
   const step = edge.steps.find(item=>item.id === proof.action);
   const baseline = edge.steps.find(item=>item.id === proof.baseline);
-  assert.equal(edge.version,2);
+  assert.equal(edge.version,3);
   assert.equal(sourceStatusActionEdgePostToastSample(edge,baseline),true);
+  assert.equal(sourceStatusActionEdgePostToastSample({...edge,version:2},baseline),true);
   assert.equal(sourceStatusActionEdgePostToastSample({...edge,version:1},baseline),false);
   assert(baseline.waitFor.some(value=>JSON.stringify(value) === JSON.stringify(sourceStatusActionEdgeWaitForRetirement)));
   assert.equal(baseline.quietMs,500);
@@ -195,10 +236,10 @@ test('source Re-search upper edge preserves the confirmed import and exactly one
 });
 
 test('Source import Re-search glyph requires current ready receipt and uncut native Text', () => {
-  const current = contract.assertions.find(item=>item.id === 'source.import-research-status-glyph');
-  const glyphAssertion = {...current,expected:{scope:current.expected.scope}};
-  assert.equal(contract.version,3);
-  assert.equal(current.expected.requireTransientStatus,true);
+  const currentAssertion = contract.assertions.find(item=>item.id === 'source.import-research-status-glyph');
+  const glyphAssertion = {...currentAssertion,expected:{scope:currentAssertion.expected.scope}};
+  assert.equal(contract.version,4);
+  assert.equal(currentAssertion.expected.requireTransientStatus,true);
   function glyphScenario() {
     const context = scenario();
     const current = context.samples['source-imported'];
@@ -207,12 +248,12 @@ test('Source import Re-search glyph requires current ready receipt and uncut nat
     Object.assign(current.window,{revision:2,fontScale:1,rectPx:frame,keyboard:{visible:false,revision:2},
       nativeFont:{followsSystemFontScale:true,effectiveScale:1,fpPixels:1,vpPixels:1,maxFontScale:2}});
     current.nodes.push(node('','0/0/0/0','0/0/0','Text',{left:16,top:109,width:75,height:18}));
-    context.actions['select-source-file'].outcomeSettled = true;
+    context.actions[currentAssertion.action].outcomeSettled = true;
     const label = {role:'operation/action',utf16Length:4,startUtf16:0,endUtf16:4,complete:true,
       lines:[{start:0,end:4,leftPx:0,topPx:0,widthPx:60,heightPx:18,baselinePx:14}],
       rangeRects:[{leftPx:0,topPx:0,rightPx:60,bottomPx:18}],
       tailRects:[{leftPx:44,topPx:0,rightPx:60,bottomPx:18}]};
-    const text = {...event(30,'source.surface-text-layout',{
+    const text = {...event(40,'source.surface-text-layout',{
       scope:'operation-status',owner,branch:'import',generation:37,statusRevision:2,windowRevision:2,
       textProjectionRevision:3,readGeneration:2,filterRevision:1,widthVp:420,heightVp:880,
       density:1,systemFontScale:1,fontScale:1,labels:[label],

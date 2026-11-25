@@ -14,7 +14,7 @@ import { httpUrlHostname } from '../../../platform/network/HttpTransportPolicy';
 import type { ManagedRuleSubscription, RuleSubscriptionDraft, RuleSubscriptionType } from '../../settings/application/RulesManagementGateway';
 import type { SourceCheckOutcome, SourceCheckReportStep, SourceGroupRecord, SourceImportGroupTarget } from '../application/SourceGateway';
 import { EMPTY_SOURCE_V9_TRANSFER, SourceV9TransferOwner, type SourceV9CheckOptions, type SourceV9SubscriptionReview,
-  type SourceV9TransferItemResult, type SourceV9TransferSnapshot } from '../application/SourceV9TransferOwner';
+  type SourceV9ConfirmedImport, type SourceV9TransferItemResult, type SourceV9TransferSnapshot } from '../application/SourceV9TransferOwner';
 import { sourceV9ChangesToApply, sourceV9SelectedImportRows, type SourceV9Change, type SourceV9ChangeKind,
   type SourceV9Depth, type SourceV9GroupStrategy, type SourceV9ImportedReport, type SourceV9ImportOrigin,
   type SourceV9ImportRow, type SourceV9Mode, type SourceV9TransferPane } from '../application/SourceV9TransferState';
@@ -55,7 +55,8 @@ export struct SourceV9TransferPage {
   @Prop groups: SourceGroupRecord[] = [];
   owner: ReaderRuntimeOwner | undefined = undefined;
   onBack: () => void = (): void => {};
-  onReadBack: (reports: SourceV9ImportedReport[]) => void = (_reports: SourceV9ImportedReport[]): void => {};
+  onReadBack: (reports: SourceV9ImportedReport[], imported?: SourceV9ConfirmedImport) => void =
+    (_reports: SourceV9ImportedReport[], _imported?: SourceV9ConfirmedImport): void => {};
   onTemporaryBackBridge?: (handler: (() => boolean) | undefined) => void;
   isInputAllowed?: () => boolean;
   @State private state: SourceV9TransferSnapshot = EMPTY_SOURCE_V9_TRANSFER;
@@ -95,7 +96,9 @@ export struct SourceV9TransferPage {
       this.flow = new SourceV9TransferOwner(this.owner,
         (state: SourceV9TransferSnapshot): void => this.acceptState(state),
         (): boolean => this.inputCurrent(),
-        (reports: SourceV9ImportedReport[]): void => { if (this.mounted) this.onReadBack(reports); });
+        (reports: SourceV9ImportedReport[], imported?: SourceV9ConfirmedImport): void => {
+          if (this.mounted) this.onReadBack(reports, imported);
+        });
       if (this.pane === 'subscriptions') void this.flow.loadSubscriptions();
     }
     this.onTemporaryBackBridge?.((): boolean => this.consumeBack());
@@ -321,7 +324,8 @@ export struct SourceV9TransferPage {
       if (this.state.reviews.length > 0) this.subscriptionReview();
       if (this.dialog !== 'none') this.subscriptionDialog();
       if (this.visibleReport !== undefined) this.reportDialog();
-    }.width('100%').height('100%').clip(true)
+    }.id(this.pane === 'import' ? 'reader-source-v9-import' : 'reader-source-v9-subscriptions')
+      .width('100%').height('100%').clip(true)
       .onSizeChange((_old: SizeOptions, next: SizeOptions): void => {
         const height = Number(next.height);
         if (Number.isFinite(height) && height > 0) this.modalBodyHeight = Math.max(100, Math.min(480, height - 156));
@@ -352,8 +356,8 @@ export struct SourceV9TransferPage {
 
   @Builder
   private action(label: string, tone: TransferButtonTone, enabled: boolean, run: () => void,
-    height: number = 32, width: number | undefined = undefined, weight: number | undefined = undefined) {
-    Button(label, { type: ButtonType.Capsule }).height(height).width(width).layoutWeight(weight)
+    height: number = 32, width: number | undefined = undefined, weight: number | undefined = undefined, id: string = '') {
+    Button(label, { type: ButtonType.Capsule }).id(id).height(height).width(width).layoutWeight(weight)
       .padding({ left: 12, right: 12 }).fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
       .fontColor(this.toneInk(tone)).backgroundColor(this.toneSurface(tone))
       .enabled(enabled).opacity(enabled ? 1 : 0.47)
@@ -466,7 +470,8 @@ export struct SourceV9TransferPage {
             .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(11.5).fontColor(this.color('TOK_MUTED'))
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         }.width('100%').padding({ left: 12, right: 12, top: 14, bottom: 14 });
-      }.width('100%').padding(0).borderRadius(14).backgroundColor(this.color('app.sourceUi.surface'))
+      }.id('reader-source-v9-import-file').width('100%').padding(0).borderRadius(14)
+        .backgroundColor(this.color('app.sourceUi.surface'))
         .border({ width: 1, style: BorderStyle.Dashed, color: this.color('TOK_PRIMARY_BORDER') })
         .enabled(this.editable()).accessibilityText('选择本地书源文件')
         .onClick((): void => { if (this.editable()) void this.flow?.chooseFile(); });
@@ -609,7 +614,7 @@ export struct SourceV9TransferPage {
       if (this.state.rows.length - this.supportedImportCount() - this.unsupportedImportCount() > 0) {
         this.label('无效 ' + (this.state.rows.length - this.supportedImportCount() - this.unsupportedImportCount()), 12, 'TOK_DANGER');
       }
-    }.width('100%').padding(10).backgroundColor(this.color('app.sourceUi.field')).borderRadius(12);
+    }.id('reader-source-v9-import-review').width('100%').padding(10).backgroundColor(this.color('app.sourceUi.field')).borderRadius(12);
     this.checkPanel(false);
     this.groupPanel();
     Row({ space: 5 }) {
@@ -671,7 +676,7 @@ export struct SourceV9TransferPage {
       if ((this.state.importResult?.failedCount ?? 0) > 0) {
         this.label('导入失败 ' + (this.state.importResult?.failedCount ?? 0) + ' 项', 12, 'TOK_DANGER');
       }
-    }.width('100%').padding(13).backgroundColor(this.color('app.sourceUi.surface')).borderRadius(14);
+    }.id('reader-source-v9-import-result').width('100%').padding(13).backgroundColor(this.color('app.sourceUi.surface')).borderRadius(14);
     Column() {
       Button({ type: ButtonType.Normal }) {
         Row() {
@@ -708,15 +713,16 @@ export struct SourceV9TransferPage {
       if (this.state.importStep === 1) {
         this.action(this.state.busy ? '读取中…' : '下一步：解析书源', 'primary', this.canParse(), (): void => {
           void this.flow?.parseImport({ origin: this.origin, url: this.url, paste: this.paste });
-        }, 40, undefined, 1);
+        }, 40, undefined, 1, 'reader-source-v9-import-parse');
       } else if (this.state.importStep === 2) {
         this.action((this.checkEnabled && this.state.completedChecks > 0 ? '导入已选 (' : '跳过检测并导入 (') +
           this.selectedImportCount() + ')', 'primary',
           this.editable() && this.selectedImportCount() > 0 && this.targetReady(),
-          (): void => this.importSelected(), 40, undefined, 1);
+          (): void => this.importSelected(), 40, undefined, 1, 'reader-source-v9-import-commit');
       } else {
         this.action('继续导入', 'neutral', this.editable(), (): void => this.resetImport(), 40, undefined, 1);
-        this.action('返回书源列表', 'primary', !this.state.busy, (): void => this.back(), 40, undefined, 1);
+        this.action('返回书源列表', 'primary', !this.state.busy, (): void => this.back(),
+          40, undefined, 1, 'reader-source-v9-import-return');
       }
     }.width('100%').constraintSize({ maxWidth: 640 }).padding({ left: 14, right: 14, top: 8, bottom: this.embeddedWide ? 10 : 12 })
       .border({ width: { top: 1 }, color: this.color('TOK_LINE') });

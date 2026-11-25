@@ -9,7 +9,7 @@ import {
   type SourceDefinitionSnapshot,
 } from './SourceGateway';
 import type { SourceV9ImportedReport } from './SourceV9TransferState';
-import { projectSourceV9Check, retainSourceV9Check, sourceV9Supports } from '../presentation/SourceManagementV9';
+import { projectSourceV9Check, retainSourceV9Check, sourceV9AuthenticationDenied, sourceV9Supports } from '../presentation/SourceManagementV9';
 import type { BookSourceJsonSelection } from '../../../app/ReaderHostRegistry';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
@@ -42,6 +42,7 @@ interface SourceCheckCapture {
   sourceVersion?: string;
   signature: string;
   session: number;
+  active?: () => boolean;
   definition?: SourceDefinitionSnapshot;
   offlineDetect?: SourceOfflineDetectAdmission;
 }
@@ -156,6 +157,7 @@ export class SourceOrchestrator {
   private checkResults: Map<string, BookSource> = new Map<string, BookSource>();
   private importedReports = new Map<string, SourceV9ImportedReport>();
   private readonly verifiedLoginSources: Map<string, string> = new Map<string, string>();
+  private readonly deniedLoginReports: Map<string, string> = new Map<string, string>();
   private reportClearTimes = new Map<string, number>();
   private checkingSourceIds: Map<string, SourceCheckCapture> = new Map<string, SourceCheckCapture>();
   private emitProjection: (projection: SourceManagementProjection) => void = (_projection: SourceManagementProjection): void => {};
@@ -425,24 +427,39 @@ export class SourceOrchestrator {
     return run;
   }
 
-  acceptTransferredReports(reports: SourceV9ImportedReport[]): void {
+  acceptTransferredReports(reports: SourceV9ImportedReport[], confirmedSourceIds: string[]): Promise<boolean> {
     const session = this.session;
     for (const item of reports) {
       if (item.sourceVersion !== undefined && item.report.sourceId === item.sourceId && item.report.report !== undefined) {
         this.importedReports.set(item.sourceId, item);
       }
     }
-    this.operationChain = this.operationChain.then((): Promise<void> => this.loadList(session));
+    const readback = this.operationChain.then(async (): Promise<boolean> => {
+      if (!this.isCurrentSession(session)) return false;
+      const imported = confirmedSourceIds.length;
+      if (imported > 0) this.publishReceipt(session, 'import', '', 'confirmed', 'reading', undefined, imported);
+      await this.loadList(session);
+      if (!this.isCurrentSession(session) || this.originalBlocked() ||
+        this.latestProjection.readFacts?.fact !== 'current' || imported === 0) return false;
+      if (!confirmedSourceIds.every((id: string): boolean =>
+        this.sources.some((source: BookSource): boolean => source.sourceId === id))) {
+        this.publishReceipt(session, 'import', '', 'confirmed', 'failed', '列表中未能核对全部已导入书源', imported);
+        return false;
+      }
+      return this.latestProjection.receipt?.receipt.fact === 'confirmedCurrent';
+    });
+    this.operationChain = readback.then((): void => {}, (): void => {});
+    return readback;
   }
 
   /** Uses the same exact-definition and Core receipt checks as a row diagnostic. */
   runSourceCheck(id: string, options: SourceV9CheckOptions, active: () => boolean,
     onStage: (stage: string) => void): Promise<SourceCheckOutcome | undefined> {
     if (!active()) return Promise.resolve(undefined);
-    const capture = this.captureSourceCheck(id);
+    const capture = this.captureSourceCheck(id, active);
     if (capture === undefined) return Promise.resolve(undefined);
     this.observeOfflineDetectAdmission(capture);
-    const current = (): boolean => active() && this.isCurrentSourceCheck(capture);
+    const current = (): boolean => this.isCurrentSourceCheck(capture);
     const run = this.operationChain.then(async (): Promise<SourceCheckOutcome | undefined> => {
       if (!current()) return undefined;
       const definition = await this.validateSourceCheck(capture);
@@ -609,6 +626,7 @@ export class SourceOrchestrator {
       if (current()) {
         this.reportClearTimes.set(capture.sourceId, clearedAt);
         this.verifiedLoginSources.delete(capture.sourceId);
+        this.deniedLoginReports.delete(capture.sourceId);
         this.importedReports.delete(capture.sourceId);
         this.checkResults.delete(capture.sourceId);
         this.presentSources(this.sources);
@@ -802,7 +820,10 @@ export class SourceOrchestrator {
     }
     finally { this.gateway.observeWrites(undefined); }
     this.publishReceipt(session, 'toggle', id, evidence.confirmation(), 'reading');
-    if (!enabled) this.verifiedLoginSources.delete(id);
+    if (!enabled) {
+      this.verifiedLoginSources.delete(id);
+      this.deniedLoginReports.delete(id);
+    }
     if (!enabled && !this.gateway.handlesSourceCleanup()) {
       try {
         // Security policy: disabling a source removes both session and
@@ -915,13 +936,13 @@ export class SourceOrchestrator {
       source.group ?? null]);
   }
 
-  private captureSourceCheck(id: string): SourceCheckCapture | undefined {
+  private captureSourceCheck(id: string, active?: () => boolean): SourceCheckCapture | undefined {
     const source = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === id);
     if (!this.isCurrentSession(this.session) || source === undefined) return undefined;
     const previous = this.checkingSourceIds.get(id);
     if (previous !== undefined && this.isCurrentSourceCheck(previous)) return undefined;
     const capture: SourceCheckCapture = { sourceId: id, sourceVersion: source.sourceVersion,
-      signature: this.sourceCheckSignature(source), session: this.session };
+      signature: this.sourceCheckSignature(source), session: this.session, active };
     this.checkingSourceIds.set(id, capture);
     return capture;
   }
@@ -929,7 +950,7 @@ export class SourceOrchestrator {
   private isCurrentSourceCheck(capture: SourceCheckCapture): boolean {
     const source = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === capture.sourceId);
     return this.isCurrentSession(capture.session) && this.checkingSourceIds.get(capture.sourceId) === capture &&
-      source !== undefined && this.sourceCheckSignature(source) === capture.signature;
+      capture.active?.() !== false && source !== undefined && this.sourceCheckSignature(source) === capture.signature;
   }
 
   private async validateSourceCheck(capture: SourceCheckCapture,
@@ -1001,6 +1022,12 @@ export class SourceOrchestrator {
     const entry: SourceCheckHistoryEntry | undefined = outcome.report === undefined ? undefined :
       { checkedAtMs, stale: false, report: outcome.report };
     this.importedReports.delete(capture.sourceId);
+    this.deniedLoginReports.delete(capture.sourceId);
+    const source = this.sources.find((candidate: BookSource): boolean => candidate.sourceId === capture.sourceId);
+    if (source?.loginUrl !== undefined && entry !== undefined && sourceV9AuthenticationDenied(outcome)) {
+      this.verifiedLoginSources.delete(capture.sourceId);
+      this.deniedLoginReports.set(capture.sourceId, entry.report.traceId);
+    }
     this.setCheckProjection(outcome.sourceId, outcome.available ? 'passed' : 'failed', outcome.levelsPassed,
       outcome.available ? `${outcome.mode === 'explore' ? '发现' : '搜索'}检测通过 · ${outcome.durationMs}ms` :
         outcome.failureReason ?? '检测失败', entry);
@@ -1118,7 +1145,10 @@ export class SourceOrchestrator {
       const login = this.verifiedLoginSources.get(source.sourceId);
       const verified = login !== undefined && login === this.sourceCheckSignature(source) ? login : undefined;
       if (login !== undefined && verified === undefined) this.verifiedLoginSources.delete(source.sourceId);
-      return projectSourceV9Check(source, history, previous, clearedAt, verified);
+      const deniedTrace = this.deniedLoginReports.get(source.sourceId);
+      const deniedCurrent = deniedTrace !== undefined && deniedTrace === history[0]?.report.traceId;
+      if (deniedTrace !== undefined && !deniedCurrent) this.deniedLoginReports.delete(source.sourceId);
+      return projectSourceV9Check(source, history, previous, clearedAt, verified, deniedCurrent);
     });
     if (this.isCurrentSession(this.session)) { try { this.emit(this.sources); } catch (_) {} }
   }

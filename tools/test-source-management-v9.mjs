@@ -2,6 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   projectSourceManagementV9,
+  projectSourceV9Check,
+  sourceV9AuthenticationDenied,
+  sourceV9CheckStepText,
   sourceV9ReportTone,
   sourceV9ParentView,
   sourceV9GroupRows,
@@ -127,4 +130,124 @@ test('batch and group disable send every supported member through the actual coo
   assert.deepEqual(calls, [['disable', members[0]], ['clear', members[0]],
     ['disable', members[1]], ['clear', members[1]]]);
   assert.equal(rows[2].enabled, true);
+});
+
+test('stopping a check admits an immediate same-source retest and discards the retired result', async () => {
+  const { actualSourceManagementTypes } = await import('./lib/source-management-owner-probe.mjs');
+  const id = 'https://retest.example/';
+  const row = { sourceId: id, baseUrl: id, name: '同一书源', enabled: true, enabledExplore: false,
+    bookSource: { bookSourceType: 0, bookSourceUrl: id, bookSourceName: '同一书源' } };
+  const result = (requestId, available) => ({
+    requestId, data: { traceId: `source.check.run:${requestId}:1`, results: [{
+      sourceId: id, available, levelsPassed: available ? ['L1', 'L2'] : ['L1'], durationMs: 1,
+      ...(available ? {} : { failureReason: 'L2: 旧会话失败' }),
+      debugLogs: [{ state: available ? 0 : -1, msg: 'Core result', timestampMs: 1 }],
+    }] },
+  });
+  let notifyStarted, finishFirst;
+  const firstStarted = new Promise(resolve => { notifyStarted = resolve; });
+  const firstResult = new Promise(resolve => { finishFirst = resolve; });
+  const attempts = [];
+  const runtime = {
+    supportsCoreCapability: capability => capability === 'source.check.mode.v1' ||
+      capability === 'source.check.keyword-override.v1',
+    takeSourceHttpDiagnostics: () => [],
+    async request(method, params, options) {
+      if (method === 'source.list') return { data: { sources: [row] } };
+      assert.equal(method, 'source.check.run');
+      attempts.push({ options, params });
+      if (attempts.length === 1) {
+        notifyStarted();
+        return firstResult;
+      }
+      return result(12, true);
+    },
+  };
+  const { SourceHost } = actualSourceManagementTypes({ ReaderRuntimeOwner: { isCurrent: owner => owner === runtime },
+    hilog: { info() {}, warn() {}, error() {} } });
+  const projections = [];
+  const host = new SourceHost(rows => projections.push(rows[0]), () => {}, () => {});
+  assert.equal(host.bindPresentation(runtime, 'same-source-retest', () => true), true);
+  host.open('same-source-retest');
+  await host.orchestrator.operationChain;
+
+  let firstActive = true;
+  const observedStages = [];
+  const options = { mode: 'search', levels: ['L1', 'L2'], keyword: '' };
+  const first = host.runSourceCheck(id, options, () => firstActive,
+    stage => observedStages.push(stage), 'same-source-retest');
+  await firstStarted;
+  assert.equal(await host.runSourceCheck(id, options, () => true, () => {}, 'same-source-retest'), undefined);
+  firstActive = false;
+  const retest = host.runSourceCheck(id, options, () => true, () => {}, 'same-source-retest');
+  assert.equal(attempts[0].options.shouldCancel(), true);
+  attempts[0].options.onSourceCheckStage?.('L2');
+  assert.deepEqual(observedStages, []);
+  finishFirst(result(11, false));
+  assert.equal(await first, undefined);
+  assert.equal((await retest)?.traceId, 'source.check.run:12:1');
+  assert.equal(attempts.length, 2);
+  assert.ok(projections.every(row => row?.checkState !== 'failed'));
+  assert.equal(projections.at(-1)?.checkState, 'passed');
+});
+
+test('current HTTP authentication denial projects expired, with exact matched stage reason', () => {
+  const book = source('auth', { loginUrl: 'https://sources.example/login' });
+  const report = history('fail')[0].report;
+  report.steps[0].reason = 'network';
+  const fail = { sourceId: book.sourceId, traceId: report.traceId, available: false, report, logs: [] };
+  const denial = { sourceId: book.sourceId, traceId: report.traceId, step: 'L2', statusCode: 403 };
+  assert.equal(sourceV9AuthenticationDenied({ ...fail, logs: [denial] }), true);
+  assert.equal(sourceV9AuthenticationDenied({ ...fail, logs: [{ ...denial, traceId: 'retired' }] }), false);
+  assert.equal(sourceV9AuthenticationDenied({ ...fail, logs: [{ ...denial, step: 'L1' }] }), false);
+  assert.equal(sourceV9AuthenticationDenied({ ...fail, logs: [{ ...denial, statusCode: 500 }] }), false);
+  const currentHistory = [{ checkedAtMs: 10, stale: false, report }];
+  assert.equal(projectSourceV9Check(book, currentHistory, undefined, 0, 'verified', true).loginState, 'expired');
+  assert.equal(projectSourceV9Check({ ...book, enabled: false }, currentHistory, undefined, 0,
+    'verified', true).loginState, 'unknown');
+  assert.equal(projectSourceV9Check(book, [], undefined, 11, undefined, false).loginState, 'unknown');
+  assert.equal(sourceV9CheckStepText(report.steps[0], 'L2: HTTP status 403'), '失败 · HTTP status 403');
+  assert.equal(sourceV9CheckStepText(report.steps[0], 'L4: HTTP status 403'), '失败 · network');
+});
+
+test('v9 import arms the original Search action only after exact current list readback', async () => {
+  const { actualSourceJourneyTypes } = await import('./lib/source-management-owner-probe.mjs');
+  const id = 'https://imported.example/';
+  const raw = { sourceId: id, name: '导入书源', baseUrl: id, enabled: true, enabledExplore: false,
+    bookSource: { bookSourceType: 0, bookSourceUrl: id, bookSourceName: '导入书源' } };
+  let rows = [];
+  const runtime = {
+    supportsCoreCapability: () => false,
+    async request(method) {
+      assert.equal(method, 'source.list');
+      return { data: { sources: rows } };
+    },
+  };
+  const { SourceJourneyPresentation } = actualSourceJourneyTypes({ ReaderRuntimeOwner: { isCurrent: owner => owner === runtime },
+    hilog: { info() {}, warn() {}, error() {} } });
+  const journey = new SourceJourneyPresentation();
+  let used = 0;
+  const imported = { sourceIds: [id] };
+  const search = () => { used++; };
+  journey.openManagement(runtime, 'import-opening', () => true);
+  await journey.registry.orchestrator.operationChain;
+  await journey.readBackTransfer('import-opening', [], imported, search);
+  assert.equal(journey.snapshot().operation.receipt.receipt.confirmation, 'confirmed');
+  assert.equal(journey.snapshot().operation.receipt.receipt.readback, 'failed');
+  assert.equal(journey.snapshot().searchActionLabel, '');
+
+  rows = [raw];
+  await journey.readBackTransfer('import-opening', [], undefined, search);
+  assert.equal(journey.snapshot().searchActionLabel, '');
+  await journey.readBackTransfer('import-opening', [], imported, search);
+  assert.equal(journey.snapshot().operation.action, 'import');
+  assert.equal(journey.snapshot().operation.receipt.receipt.readback, 'succeeded');
+  assert.equal(journey.snapshot().searchActionLabel, '重新搜索');
+  const revision = journey.snapshot().searchActionRevision;
+  journey.runSearchAction('stale-opening', revision);
+  journey.runSearchAction('import-opening', revision - 1);
+  assert.equal(used, 0);
+  journey.runSearchAction('import-opening', revision);
+  journey.runSearchAction('import-opening', revision);
+  assert.equal(used, 1);
 });

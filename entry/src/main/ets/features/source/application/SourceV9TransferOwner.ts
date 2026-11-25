@@ -5,7 +5,7 @@ import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { isPrivateNetworkTarget } from '../../../platform/network/HttpTransportPolicy';
 import { RulesManagementGateway, type ManagedRuleSubscription, type RuleSourceChange, type RuleSourceSubscriptionPreview,
   type RuleSubscriptionDraft } from '../../settings/application/RulesManagementGateway';
-import { SourceGateway, type BookSource, type SourceCheckOutcome, type SourceGroupMembership, type SourceGroupRecord, type SourceGroupedImportOutcome, type SourceGroupedImportPreview, type SourceImportCandidate, type SourceImportFailure, type SourceImportGroupTarget, type SourceGroupedImportRow } from './SourceGateway';
+import { SourceGateway, type BookSource, type SourceCheckOutcome, type SourceGroupMembership, type SourceGroupRecord, type SourceGroupedImportOutcome, type SourceGroupedImportPlan, type SourceGroupedImportPreview, type SourceImportCandidate, type SourceImportFailure, type SourceImportGroupTarget, type SourceGroupedImportRow } from './SourceGateway';
 import { applyV9ImportReport, assignV9ImportSelection, buildV9ImportRows, chooseV9ImportRow,
   runV9CandidateChecks, sourceV9CanonicalDocument, sourceV9ChangesToApply, sourceV9ImportedReports, sourceV9ReplaceRuleComparable,
   sourceV9Levels, sourceV9SelectedImportRows, type SourceV9Change, type SourceV9Depth, type SourceV9GroupStrategy,
@@ -42,6 +42,16 @@ export interface SourceV9ImportResult {
   invalidCount: number;
   failedCount: number;
   details: SourceV9TransferItemResult[];
+}
+export interface SourceV9ConfirmedImport {
+  sourceIds: string[];
+  result: SourceV9ImportResult;
+}
+interface SourceV9PendingImport {
+  operationId: string;
+  plan: SourceGroupedImportPlan;
+  rows: SourceV9ImportRow[];
+  save: SourceV9ImportSave;
 }
 export interface SourceV9SubscriptionReview {
   subscription: ManagedRuleSubscription;
@@ -105,11 +115,12 @@ export class SourceV9TransferOwner {
   private checkEpoch: number = 0;
   private acceptedImportUrl: string = '';
   private disposed: boolean = false;
+  private pendingImport: SourceV9PendingImport | undefined = undefined;
 
   constructor(private readonly runtime: ReaderRuntimeOwner,
     private readonly emit: (state: SourceV9TransferSnapshot) => void,
     private readonly inputAllowed: () => boolean,
-    private readonly readBack: (reports: SourceV9ImportedReport[]) => void) {
+    private readonly readBack: (reports: SourceV9ImportedReport[], imported?: SourceV9ConfirmedImport) => void) {
     this.gateway = new SourceGateway(runtime);
     this.rules = new RulesManagementGateway(runtime);
     this.rules.observeWrites(undefined, (): boolean => this.current(this.generation) && this.inputAllowed());
@@ -279,49 +290,79 @@ export class SourceV9TransferOwner {
   }
 
   importSelected(save: SourceV9ImportSave): Promise<void> {
+    if (this.snapshot.importStep !== 2 || this.snapshot.writePending) return Promise.resolve();
     return this.operation(async (current: () => boolean): Promise<void> => {
       const revision = this.snapshot.groupRevision;
-      const selected = sourceV9SelectedImportRows(this.snapshot.rows);
+      const rows = this.snapshot.rows;
+      const selected = sourceV9SelectedImportRows(rows);
       if (selected.length === 0 || revision === undefined) return;
-      const existing = new Set(this.snapshot.knownSourceIds);
       let result: SourceGroupedImportOutcome;
+      let recoveryPlan: SourceGroupedImportPlan | undefined = undefined;
       try {
-        result = await this.gateway.importGroupedSources(selected, revision, save.strategy, save.target, current);
+        result = await this.gateway.importGroupedSources(selected, revision, save.strategy, save.target, current,
+          (plan: SourceGroupedImportPlan): void => { recoveryPlan = plan; });
       } catch (error) {
-        if (current() && !this.rules.mutationSnapshot().blocked) {
-          try {
-            const catalog = await this.gateway.loadSourceGroupCatalog(current);
-            if (current()) this.patch({ groups: catalog.groups, groupRevision: catalog.revision,
-              knownSourceIds: catalog.memberships.map((row: SourceGroupMembership): string => row.sourceId) });
-          } catch (_) { /* Preserve the original write failure for the current attempt. */ }
+        if (current()) {
+          this.keepPendingImport(recoveryPlan, rows, save);
+          if (!this.rules.mutationSnapshot().blocked) await this.refreshImportCatalog(current);
         }
         throw error;
       }
-      const details: SourceV9TransferItemResult[] = selected.map((item: SourceImportCandidate): SourceV9TransferItemResult => {
-        const receipt = result.results.find((row: SourceGroupedImportRow): boolean => row.index === item.index);
-        const rejected = result.failures.find((failure: SourceImportFailure): boolean => failure.index === item.index);
-        return { index: item.index, name: item.name, outcome: receipt?.status === 'imported' ?
-          (existing.has(item.sourceId) ? '更新' : '新增') : (rejected?.message ?? '导入失败') };
-      });
-      const rows = this.snapshot.rows;
       if (!current()) return;
-      this.patch({ importResult: { addedCount: result.addedCount, updatedCount: result.updatedCount,
-        failedCount: result.failedCount, unsupportedCount: rows.filter((row: SourceV9ImportRow): boolean => row.candidate?.supported === false).length,
-        invalidCount: rows.filter((row: SourceV9ImportRow): boolean => row.problem !== undefined).length, details }, importStep: 3 });
-      const reports = await this.qualifyTransferredReports(sourceV9ImportedReports(rows, result.sourceIds), current);
-      if (!current()) return;
-      this.readBack(reports);
-      if (result.sourceIds.length > 0 && save.subscriptionUrl !== undefined &&
-        save.subscriptionUrl === this.acceptedImportUrl && current()) {
-        try {
-          await this.rules.saveRuleSubscription({ name: save.subscriptionName?.trim() || '在线书源订阅',
-            url: save.subscriptionUrl, type: 0, customOrder: 0, autoUpdate: true });
-          if (current()) this.patch({ status: '已保存为书源订阅' });
-        } catch (_) {
-          if (current()) this.publishOperationError('书源已导入，订阅保存未确认');
-        }
+      if (this.keepPendingImport(recoveryPlan, rows, save)) {
+        throw new Error('书源写入已确认，请先核对原操作记录');
       }
+      await this.finishImport(result, rows, save, this.snapshot.knownSourceIds, current);
     });
+  }
+
+  private keepPendingImport(plan: SourceGroupedImportPlan | undefined,
+    rows: SourceV9ImportRow[], save: SourceV9ImportSave): boolean {
+    if (plan === undefined) return false;
+    const pending = this.rules.mutationSnapshot();
+    if (!pending.blocked || pending.operationId === undefined || pending.original?.method !== 'source.import.grouped' ||
+      sourceV9CanonicalDocument(pending.original.params) !== sourceV9CanonicalDocument(plan.params)) return false;
+    this.pendingImport = { operationId: pending.operationId, plan, rows, save };
+    return true;
+  }
+
+  private async refreshImportCatalog(current: () => boolean): Promise<void> {
+    try {
+      const catalog = await this.gateway.loadSourceGroupCatalog(current);
+      if (current()) this.patch({ groups: catalog.groups, groupRevision: catalog.revision,
+        knownSourceIds: catalog.memberships.map((row: SourceGroupMembership): string => row.sourceId) });
+    } catch (_) { /* Preserve the original failure and do not infer a revision. */ }
+  }
+
+  private async finishImport(result: SourceGroupedImportOutcome, rows: SourceV9ImportRow[],
+    save: SourceV9ImportSave, existingSourceIds: string[], current: () => boolean): Promise<void> {
+    const selected = sourceV9SelectedImportRows(rows);
+    const existing = new Set(existingSourceIds);
+    const details: SourceV9TransferItemResult[] = selected.map((item: SourceImportCandidate): SourceV9TransferItemResult => {
+      const receipt = result.results.find((row: SourceGroupedImportRow): boolean => row.index === item.index);
+      const rejected = result.failures.find((failure: SourceImportFailure): boolean => failure.index === item.index);
+      return { index: item.index, name: item.name, outcome: receipt?.status === 'imported' ?
+        (existing.has(item.sourceId) ? '更新' : '新增') : (rejected?.message ?? '导入失败') };
+    });
+    const summary: SourceV9ImportResult = { addedCount: result.addedCount, updatedCount: result.updatedCount,
+      failedCount: result.failedCount, unsupportedCount: rows.filter((row: SourceV9ImportRow): boolean => row.candidate?.supported === false).length,
+      invalidCount: rows.filter((row: SourceV9ImportRow): boolean => row.problem !== undefined).length, details };
+    if (!current()) return;
+    this.pendingImport = undefined;
+    this.patch({ importResult: summary, importStep: 3 });
+    const reports = await this.qualifyTransferredReports(sourceV9ImportedReports(rows, result.sourceIds), current);
+    if (!current()) return;
+    this.readBack(reports, { sourceIds: result.sourceIds, result: summary });
+    if (result.sourceIds.length > 0 && save.subscriptionUrl !== undefined &&
+      save.subscriptionUrl === this.acceptedImportUrl && current()) {
+      try {
+        await this.rules.saveRuleSubscription({ name: save.subscriptionName?.trim() || '在线书源订阅',
+          url: save.subscriptionUrl, type: 0, customOrder: 0, autoUpdate: true });
+        if (current()) this.patch({ status: '已保存为书源订阅' });
+      } catch (_) {
+        if (current()) this.publishOperationError('书源已导入，订阅保存未确认');
+      }
+    }
   }
 
   private async qualifyTransferredReports(reports: SourceV9ImportedReport[],
@@ -329,6 +370,7 @@ export class SourceV9TransferOwner {
     const verified: SourceV9ImportedReport[] = [];
     for (const report of reports) {
       if (!current()) return verified;
+      if (report.report.sourceId !== report.sourceId) continue;
       try {
         const stored = await this.gateway.readSourceDefinition(report.sourceId, current);
         if (stored?.hasRawBookSource === true && stored.sourceVersion !== undefined &&
@@ -604,7 +646,7 @@ export class SourceV9TransferOwner {
   }
 
   private collectReviewReport(row: SourceV9Change, reports: SourceV9ImportedReport[]): void {
-    if (row.sourceId !== undefined && row.candidate !== undefined && row.report !== undefined) {
+    if (row.sourceId !== undefined && row.candidate !== undefined && row.report?.sourceId === row.sourceId) {
       reports.push({ sourceId: row.sourceId, candidate: row.candidate, report: row.report, observedAtMs: row.observedAtMs });
     }
   }
@@ -614,6 +656,24 @@ export class SourceV9TransferOwner {
       const original = this.rules.mutationSnapshot();
       if (!original.blocked || original.generation !== expected || (retry && !original.canRetryOriginal)) return;
       const method = original.method;
+      const captured = this.pendingImport;
+      if (method === 'source.import.grouped' && captured !== undefined && captured.operationId === original.operationId) {
+        const result = await this.gateway.recoverOriginalGroupedImport(captured.plan, captured.operationId, current, retry);
+        if (!current()) return;
+        const pending = this.rules.mutationSnapshot();
+        this.patch({ status: pending.message || '原操作已核对' });
+        if (pending.blocked) return;
+        if (result !== undefined) {
+          await this.finishImport(result, captured.rows, captured.save, captured.plan.existingSourceIds, current);
+          return;
+        }
+        this.pendingImport = undefined;
+        if (pending.confirmation !== 'undispatched') {
+          this.patch({ importStep: 1, rows: [], importResult: undefined, error: '原导入结果无法显示，请核对当前书源列表' });
+        } else await this.refreshImportCatalog(current);
+        this.readBack([]);
+        return;
+      }
       if (original.subscription?.kind === 3 || method === 'source.import.grouped' ||
         method === 'source.update' || method === 'source.delete' || method === 'source.group.mutate') {
         await this.gateway.recoverOriginalSource(current, retry, original.operationId);
@@ -624,6 +684,8 @@ export class SourceV9TransferOwner {
       const pending = this.rules.mutationSnapshot();
       this.patch({ status: pending.message || '原操作已核对' });
       if (!pending.blocked) {
+        if (this.snapshot.importStep === 2) await this.refreshImportCatalog(current);
+        if (!current()) return;
         this.readBack([]);
         await this.readSubscriptions(current);
       }

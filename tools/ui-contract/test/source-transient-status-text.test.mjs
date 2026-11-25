@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { conditionApplicability } from '../lib/receipt-conditions.mjs';
 import { normalizeHarmonyLayout } from '../lib/layout.mjs';
+import { sourceV9ImportStages } from '../lib/source-document-picker.mjs';
 import { evaluateSourceSurfaceText } from '../lib/source-surface-text.mjs';
 import { sourceTransientStatusCases,sourceTransientStatusGuard,sourceTransientStatusStep } from '../lib/source-transient-status-text.mjs';
 import { assertCurrentActionState,sourceTransientWindowStable,stableNativeFontReadback,windowStable } from '../collectors/harmonyos/records.mjs';
@@ -32,6 +33,7 @@ function fixture(scope, options={}) {
   const policy = Object.values(sourceTransientStatusCases).find(item=>item.scope === scope);
   const sampleId = policy.sample;
   const actionId = policy.action;
+  const importReturn = sourceV9ImportStages.at(-1);
   const branch = isImport ? {branch:'import',generation:37} : {};
   const revisions = isImport ? {...branch,statusRevision:4} : {};
   const role = policy.role;
@@ -73,7 +75,8 @@ function fixture(scope, options={}) {
     event('source.transient-text-layout',18,1100,toast),
   ];
   const context = {events,samples:{[sampleId]:sample},actions:{[actionId]:{
-    id:actionId,op:'click',targetId:isImport ? 'reader-source-picker-file' : 'reader-settings-source-management',
+    id:actionId,op:'click',targetId:isImport ? importReturn.target : 'reader-settings-source-management',
+    ...(isImport ? {from:importReturn.sample} : {}),
     instanceId:'source',beforeSeq:10,afterSeq:16,outcomeSettled:true,evidenceRefs:refs,
   }}};
   const assertion = {id:policy.assertion,evaluator:'source',kind:'surface-text',sample:sampleId,action:actionId,
@@ -168,6 +171,7 @@ test('source transient capture permits only its measured lifecycle through captu
   assert.throws(()=>assertCurrentActionState(step,context.sample,after,[...context.context.events,gap,substituted,after]),/stale/u);
   const scoped = {id:'source-imported',kind:'sample',afterAction:'select-source-file',captureGuard:sourceTransientStatusGuard};
   assert.equal(sourceTransientStatusStep(context.policyFixture,scoped).scope,scope);
+  assert.equal(sourceTransientStatusStep(context.policyFixture,{...scoped,afterAction:'return-source-list'}).scope,scope);
   assert.ok(!sourceTransientStatusStep({id:'any-other-fixture'},scoped));
 });
 

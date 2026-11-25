@@ -2807,6 +2807,9 @@
         "reader-book-detail-verification"
       ]
     },
+    "source.v9-more": {"ids":["reader-source-v9-more-menu"]},
+    "source.v9-groups": {"ids":["reader-source-v9-groups"]},
+    "source.v9-batch": {"ids":["reader-source-v9-batch-dock"]},
     "source.tools-back": {
       "ids": [
         "reader-source-tools-back"
@@ -4735,6 +4738,28 @@
       ]
     },
     {
+      "id": "source.v9-more-open",
+      "layer": "overlay",
+      "basis": "书源管理 v9 顶栏更多操作与真实分组管理入口",
+      "requires": ["source.catalog"],
+      "checks": [{"kind":"present","node":"source.v9-more"}]
+    },
+    {
+      "id": "source.v9-groups-open",
+      "layer": "route",
+      "basis": "书源管理 v9 分组管理窗格覆盖原列表并保持其 owner",
+      "requires": [],
+      "checks": [{"kind":"present","node":"source.v9-groups"},{"kind":"absent","node":"source.list"}]
+    },
+    {
+      "id": "source.v9-batch-open",
+      "layer": "interaction",
+      "basis": "书源管理 v9 批量模式继续使用原列表并切换底部操作栏",
+      "requires": [],
+      "checks": [{"kind":"present","node":"source.list"},
+        {"kind":"descendant","node":"source.v9-batch","ancestor":"source.footer"}]
+    },
+    {
       "id": "source.tools",
       "layer": "route",
       "basis": "Phase 1 详细方案 §3 书源工具往返",
@@ -5639,7 +5664,7 @@
         "search-entry": "open-search",
         "search-draft": "hide-ime",
         "source-before-import": "manage-sources",
-        "source-imported": "select-source-file",
+        "source-imported": "return-source-list",
         "search-returned": "press-research-top"
       }
     },
@@ -5658,7 +5683,7 @@
         "search-entry": "open-search",
         "search-draft": "hide-ime",
         "source-before-import": "manage-sources",
-        "source-imported": "select-source-file",
+        "source-imported": "return-source-list",
         "search-returned": "press-research"
       }
     },
@@ -6339,6 +6364,44 @@
         "scrolled": "scroll-list",
         "tools": "open-tools",
         "restored": "tools-back"
+      }
+    },
+    {
+      "caseId": "source-management.v9-group-return",
+      "states": {
+        "source-ready": "source.filter-lanes",
+        "group-open": "source.group-open",
+        "filtered": "source.filter-lanes",
+        "scrolled": "source.catalog",
+        "more-open": "source.v9-more-open",
+        "v9-child": "source.v9-groups-open",
+        "restored": "source.catalog"
+      },
+      "actions": {
+        "source-ready": "open-sources",
+        "group-open": "open-group",
+        "filtered": "select-group",
+        "scrolled": "scroll-list",
+        "more-open": "open-more",
+        "v9-child": "open-groups",
+        "restored": "v9-back"
+      }
+    },
+    {
+      "caseId": "source-management.v9-batch-return",
+      "states": {
+        "source-ready": "source.filter-lanes",
+        "filtered": "source.filter-lanes",
+        "scrolled": "source.catalog",
+        "v9-child": "source.v9-batch-open",
+        "restored": "source.catalog"
+      },
+      "actions": {
+        "source-ready": "open-sources",
+        "filtered": "select-novel",
+        "scrolled": "scroll-list",
+        "v9-child": "open-batch",
+        "restored": "v9-back"
       }
     },
     {

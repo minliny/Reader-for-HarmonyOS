@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {test} from 'node:test';
+import {loadCase} from '../lib/cases.mjs';
+import {selectedProductionMethods} from '../../lib/selected-production-methods.mjs';
 import {requestedOperation, requireActionDispatch} from '../collectors/harmonyos/records.mjs';
 import {normalizeHarmonyLayout, sourceFooterToolsButton, sourceHeaderToolsButton} from '../lib/layout.mjs';
 import {sourceFilterNativeDispatch} from '../lib/source-filter-edge.mjs';
@@ -336,4 +338,138 @@ test('source Tools return admits restored footer focus only on the dispatched na
   assert.equal(evaluateReturn(native(7,false,{headerFocused:true})).verdict,'FAIL');
   assert.equal(evaluateReturn(native(7,true,{count:2})).verdict,'FAIL');
   assert.equal(evaluateReturn(native(7,true,{outside:true})).verdict,'FAIL');
+});
+
+function v9Context(view) {
+  const fixture = currentContext();
+  const groups = view === 'groups';
+  const target = groups ? sourceHeaderToolsButton.id : sourceFooterToolsButton.id;
+  const button = { ...node(`source-back:2:tools:${groups ? 'header' : 'footer'}`, groups ? '0/0/1/0' : '0/4/0', 'Button'),
+    alias:target, clickable:true };
+  const restored = fixture.samples.restored;
+  fixture.samples.scrolled.nodes = fixture.samples.scrolled.nodes.filter(item=>item.alias !== sourceHeaderToolsButton.id).concat(button);
+  restored.nodes = restored.nodes.filter(item=>item.alias !== sourceHeaderToolsButton.id).concat({...button,focused:true});
+  if (!groups) for (const sample of [fixture.samples.scrolled,restored]) sample.nodes.push(node('reader-source-footer','0/4'));
+  const popup = node('reader-source-v9-more-menu','0/5');
+  fixture.samples['more-open'] = capture('more-open',134,[popup,node('reader-source-v9-open-groups','0/5/0','Button')]);
+  fixture.samples['v9-child'] = capture('v9-child',142,groups ? [node('reader-source-v9-groups','0/0')] :
+    [node(sourceList,'0/1','List'),node('reader-source-v9-batch-dock','0/4')]);
+  const settled = {outcomeSettled:true};
+  fixture.actions['open-more'] = action('scrolled',131,133,'click',{...settled,targetId:target});
+  fixture.actions['open-groups'] = action('more-open',137,140,'click',{...settled,targetId:'reader-source-v9-open-groups'});
+  fixture.actions['open-batch'] = action('scrolled',137,140,'click',{...settled,targetId:target});
+  fixture.actions['v9-back'] = action('v9-child',147,150,'keyEvent',{...settled,key:'Back'});
+  fixture.samples.disabled = fixture.samples.unchecked;
+  fixture.actions['select-disabled'] = {...fixture.actions['select-unchecked'],targetId:'reader-source-status-disabled'};
+  fixture.actions['select-novel'].from = 'disabled';
+  fixture.actions['select-group'].targetId = 'reader-source-group-option-2';
+  fixture.actions['select-public-fixture'].inputLength = 12;
+  fixture.samples['group-open'].nodes.find(item=>item.alias === 'reader-source-group-option-1').alias = 'reader-source-group-option-2';
+  fixture.events = fixture.events.filter(item=>item.eventSeq < 128);
+  for (const {kind,payload} of fixture.events) if (kind === 'source.projection') {
+    if (payload.status === 'unchecked') payload.status = 'disabled';
+    if (payload.groupIndex === 1) payload.groupIndex = 2;
+    if (payload.queryLength === 3) payload.queryLength = 12;
+  }
+  const current = fixture.events.findLast(item=>item.kind === 'source.projection').payload;
+  const entry = {owner:beforeOwner,revision:1,view};
+  fixture.events.push(
+    event(138,'source.scroll',{...scroll,trigger:'v9-list-enter'}),
+    event(139,'source.v9-list-transition',{...entry,phase:'enter'}),
+    event(148,'source.v9-list-transition',{...entry,phase:'return',filterMatchesDeparture:true}),
+    event(149,'source.projection',{...current,trigger:'v9-return'}),
+    event(151,'source.scroll',{...scroll,trigger:'v9-list-return',layoutMatchesSaved:true,filterMatchesSaved:true}),
+  );
+  return fixture;
+}
+
+for (const view of ['groups','batch']) test(`v9 ${view} Back requires the same opening, scroll and actual origin focus`,()=>{
+  const leaf = view === 'groups' ? 'group' : 'batch';
+  const contract = loadCase(`source-management.v9-${leaf}-return`);
+  const fixture = v9Context(view);
+  const evaluateProof = (proof, context = fixture) => {
+    const assertion = contract.assertions.find(item=>item.kind === 'v9-list-return' && item.expected.proof === proof);
+    return evaluateSource({...assertion,acceptedSources:assertion.sources},context);
+  };
+  for (const proof of ['position','focus']) {
+    const result = evaluateProof(proof);
+    assert.equal(result.verdict,'PASS',result.reason);
+  }
+  if (view === 'groups') {
+    assert.doesNotThrow(()=>assertSourceToolsReturnAction(contract,{id:'open-groups'},fixture,{instanceId,eventSeq:137}));
+    const substituted = structuredClone(fixture);
+    substituted.samples['fixture-query-edited'].nodes[0].publicSourceToolsQueryMatches = false;
+    assert.equal(evaluateProof('position',substituted).verdict,'FAIL');
+  }
+  const changed = structuredClone(fixture);
+  const returned = changed.events.find(item=>item.payload.phase === 'return');
+  returned.payload.filterMatchesDeparture = false;
+  assert.equal(evaluateProof('position',changed).verdict,'FAIL','same-length filter substitution is rejected');
+  returned.payload.filterMatchesDeparture = true;
+  returned.payload.owner = afterOwner;
+  assert.equal(evaluateProof('focus',changed).verdict,'FAIL','old Tools route remounts are not evidence of same-opening return');
+  const unfocused = structuredClone(fixture);
+  unfocused.samples.restored.nodes.find(item=>item.focused).focused = false;
+  assert.equal(evaluateProof('focus',unfocused).verdict,'FAIL');
+  assert.equal(evaluateProof('position',unfocused).verdict,'PASS');
+  const offset = structuredClone(fixture);
+  const measurement = offset.events.find(item=>item.payload.trigger === 'v9-list-return');
+  measurement.payload.offsetVp += 1;
+  assert.equal(evaluateProof('position',offset).verdict,'FAIL');
+  offset.events = offset.events.filter(item=>item !== measurement);
+  assert.equal(evaluateProof('position',offset).verdict,'NOT_RUN');
+});
+
+const sourcePage = new URL('../../../entry/src/main/ets/features/source/ui/SourceManagementPage.ets',import.meta.url);
+
+test('v9 Source list focus executes through the production frame guard after child Back',()=>{
+  const calls = [];
+  const frames = [];
+  let verifying = true;
+  class Frame { constructor(_context,callback) { frames.push(callback); } }
+  const Page = selectedProductionMethods(sourcePage,'SourceManagementPage',[
+    'prepareV9ListReturn','onV9PaneChanged','observeV9ListEntry','completeV9ListReturn','endBatch',
+    'cancelToolsReturnFocus','scheduleToolsReturnFocus','onToolsEntryFocused','toolsFocusId',
+  ],{SourceListLayoutFrame:Frame,ReaderUIVerificationProbe:{enabled:()=>verifying}});
+  function actor() {
+    return Object.assign(new Page(),{
+      mounted:true,appForeground:true,v9Pane:'list',batchMode:false,temporaryBackIdentity:'source-back:9',
+      v9ListTransitionRevision:0,toolsFocusRevision:0,managementOpeningIsCurrent:()=>true,
+      managementInputIsCurrent:()=>true,managementBackIsCurrent(id) { return this.mounted && id === this.temporaryBackIdentity; },
+      readCurrentScroll:()=>({anchorId:'row',firstIndex:1}),currentFilterKey:()=> 'same',traceToolsReturnFocus() {},
+      observeVerificationScroll:(trigger,_measure,saved)=>calls.push([trigger,saved?.anchorId]),
+      observeV9ListTransition:(view,phase,revision)=>calls.push([view,phase,revision]),observeVerificationProjection() {},
+      scheduleImportStatusReadyObservation() {},
+      getUIContext:()=>({postFrameCallback() {},getFocusController:()=>({requestFocus:id=>calls.push(['focus',id])})}),
+    });
+  }
+  const flush = () => { while (frames.length) frames.shift()(); };
+  const groups = actor();
+  groups.prepareV9ListReturn('groups');
+  groups.v9Pane = 'groups'; groups.onV9PaneChanged();
+  groups.v9Pane = 'group-detail'; groups.onV9PaneChanged();
+  groups.v9Pane = 'groups'; groups.onV9PaneChanged();
+  assert.deepEqual(calls,[['v9-list-enter',undefined],['groups','enter',1]]);
+  groups.v9Pane = 'list'; groups.onV9PaneChanged();
+  frames.shift()(); frames.shift()();
+  groups.onToolsEntryFocused('source-back:9','header');
+  flush();
+  assert.deepEqual(calls.slice(2),[['groups','return',1],['v9-list-return','row'],['focus','source-back:9:tools:header']]);
+  const batch = actor(); verifying = false;
+  batch.prepareV9ListReturn('batch'); batch.batchMode = true; batch.observeV9ListEntry('batch');
+  batch.endBatch();
+  batch.cancelToolsReturnFocus('touch');
+  flush();
+  assert.equal(calls.filter(([kind])=>kind === 'focus').length,1,'new user input before the return frame prevents focus stealing');
+  batch.prepareV9ListReturn('batch'); batch.batchMode = true; batch.observeV9ListEntry('batch');
+  batch.endBatch();
+  frames.shift()(); frames.shift()();
+  batch.onToolsEntryFocused('source-back:9','footer');
+  flush();
+  assert.deepEqual(calls.at(-1),['focus','source-back:9:tools:footer']);
+  const retired = actor();
+  retired.prepareV9ListReturn('batch'); retired.batchMode = true; retired.observeV9ListEntry('batch');
+  retired.endBatch(); retired.temporaryBackIdentity = 'source-back:10';
+  flush();
+  assert.equal(calls.filter(([kind])=>kind === 'focus').length,2,'retired page cannot request native focus');
 });

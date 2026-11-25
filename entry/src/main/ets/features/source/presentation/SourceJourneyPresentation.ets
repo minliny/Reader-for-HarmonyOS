@@ -2,6 +2,8 @@ import { copySourceManagementScroll, type SourceManagementScrollState } from './
 import type { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import type { BookSource } from '../application/SourceGateway';
 import { SourceHost } from '../application/SourceHost';
+import type { SourceV9ConfirmedImport } from '../application/SourceV9TransferOwner';
+import type { SourceV9ImportedReport } from '../application/SourceV9TransferState';
 import type { SourceImportCompletion, SourceManagementProjection,
   SourceManagementStatusKind } from '../application/SourceOrchestrator';
 import { EMPTY_SOURCE_TOOLS_SNAPSHOT, SourceToolsOrchestrator, type SourceToolsSelection,
@@ -165,6 +167,24 @@ export class SourceJourneyPresentation {
     }, (error: Error): void => {
       if (this.isManagementCurrent(identity)) this.setImportResult('书源导入失败', error.message, 'error');
     }, identity);
+  }
+
+  async readBackTransfer(identity: string, reports: SourceV9ImportedReport[], imported?: SourceV9ConfirmedImport,
+    searchAction?: () => void): Promise<void> {
+    const host = this.management(identity);
+    if (host === undefined) return;
+    let confirmed = false;
+    try { confirmed = await host.acceptTransferredReports(reports, imported?.sourceIds ?? [], identity); }
+    catch (_) { return; }
+    if (!confirmed || !this.isManagementCurrent(identity) || searchAction === undefined) return;
+    this.searchAction = searchAction;
+    this.publish({ searchActionLabel: '重新搜索', searchActionRevision: this.view.searchActionRevision + 1 });
+  }
+
+  retireImportSearchAction(identity: string): void {
+    if (!this.isManagementCurrent(identity) || this.searchAction === undefined) return;
+    this.searchAction = undefined;
+    this.publish({ searchActionLabel: '', searchActionRevision: this.view.searchActionRevision + 1 });
   }
 
   runSearchAction(identity: string, revision: number): void {

@@ -64,7 +64,9 @@ export function assignV9ImportSelection(rows: SourceV9ImportRow[], selected: boo
 export function applyV9ImportReport(rows: SourceV9ImportRow[], index: number, report: SourceCheckOutcome,
   observedAtMs: number): SourceV9ImportRow[] {
   return rows.map((row: SourceV9ImportRow): SourceV9ImportRow => {
-    if (row.index !== index || row.candidate?.sourceId !== report.sourceId || row.candidate.supported !== true) return row;
+    if (row.index !== index || row.candidate?.supported !== true) return row;
+    const positionalFailure = report.oneRowEphemeralL1Failure === true && report.sourceId === 'ephemeral:1' && !report.available;
+    if (row.candidate.sourceId !== report.sourceId && !positionalFailure) return row;
     return { ...row, report, observedAtMs, selected: row.selected && report.available };
   });
 }
@@ -82,7 +84,8 @@ export function sourceV9ImportedReports(rows: SourceV9ImportRow[], importedSourc
   const imported = new Set(importedSourceIds);
   const reports: SourceV9ImportedReport[] = [];
   for (const row of rows) {
-    if (row.candidate?.supported === true && row.report !== undefined && imported.has(row.candidate.sourceId)) {
+    if (row.candidate?.supported === true && row.report?.sourceId === row.candidate.sourceId &&
+      imported.has(row.candidate.sourceId)) {
       reports.push({ sourceId: row.candidate.sourceId, candidate: row.candidate.bookSource,
         report: row.report, observedAtMs: row.observedAtMs });
     }

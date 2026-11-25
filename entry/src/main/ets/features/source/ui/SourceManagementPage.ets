@@ -19,7 +19,7 @@ import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/
 import { resolveSourceManagementLayout, SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP_GAP, type SourceManagementLayout } from '../presentation/SourceManagementLayout';
 import { sourceManagementFilterKey, copySourceManagementScroll, type SourceManagementScrollState } from '../presentation/SourceManagementScrollState';
 import { SOURCE_V9_HEADER_HEIGHT, projectSourceManagementV9, sourceV9Primary, sourceV9ReportFill, sourceV9ReportTone, sourceV9Supports,
-  type SourceV9Counts, type SourceV9ListAction, type SourceV9Projection } from '../presentation/SourceManagementV9';
+  type SourceV9Counts, type SourceV9ListAction, type SourceV9Projection, type SourceV9View } from '../presentation/SourceManagementV9';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
 import { resolveReaderLabeledIconActionSpec } from '../../../ui/controls/ReaderLabeledIconActionSpecs';
@@ -47,12 +47,12 @@ import { ReaderUIVerificationProbe } from '../../../app/diagnostics/ReaderUIVeri
 import { sourceReadLoadingFrame, SOURCE_READ_FAILURE_TITLE } from './SourceReadLoadingVerification';
 import { ReaderSourceTextMetrics, type SourceTextLayoutLabel } from '../../../pages/ReaderSourceTextMetrics';
 import { sourceVerificationOfflineDetectIdentity, sourceVerificationOpening, sourceVerificationRowActions,
-  sourceVerificationReservedTypographyRow, sourceVerificationToggleAnchor, SourceVerificationAnchors,
+  sourceVerificationReservedTypographyRow, sourceVerificationStatus, sourceVerificationToggleAnchor, SourceVerificationAnchors,
   type SourceGeometryObservation, type SourceProjectionObservation,
   type SourceProjectionState, type SourceProjectionTrigger, type SourceScrollObservation, type SourceVerificationOpening,
   type SourceOverlayObservation, type SourceRecoveryBranch, type SourceRecoveryTitleObservation,
   type SourceImportStatusActionObservation, type SourceRecoveryVerificationFacts,
-  type SourceToggleReadyObservation } from './SourceManagementVerification';
+  type SourceToggleReadyObservation, type SourceV9ListReturnView, type SourceV9ListTransitionObservation } from './SourceManagementVerification';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { readerFloatingBarBottomInset } from '../../../ui/layout/ReaderFloatingBarMetrics';
@@ -167,10 +167,11 @@ export struct SourceManagementPage {
   @StorageLink('readerWindowMetricsRevision') @Watch('onGeometryInputsChanged') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onSourcesChanged') sources: BookSource[];
   @Prop initialViewState: SourceManagementViewState | undefined = undefined;
+  @Prop @Watch('onV9PaneChanged') v9Pane: SourceV9View = 'list';
   @Prop expandedLayout: boolean;
   @Prop reduceMotion: boolean = false;
   verificationOpening: string = '';
-  @Prop inputEnabled: boolean = true;
+  @Prop @Watch('onV9ListInputChanged') inputEnabled: boolean = true;
   @Prop @Watch('onMessageChanged') operation: SourceManagementProjection = { action: 'load', sourceId: '' };
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   onContinueOriginal: (generation: number) => void = (_generation: number): void => {};
@@ -266,6 +267,11 @@ export struct SourceManagementPage {
   private toolsFocusScheduled: boolean = false;
   private toolsFocusRevision: number = 0;
   private toolsFocusAttempt: number = 0;
+  private v9ListReturnView: SourceV9ListReturnView | undefined = undefined;
+  private v9ListReturnScroll: SourceManagementScrollState | undefined = undefined;
+  private v9ListReturnFilterKey: string = '';
+  private v9ListReturnEntered: boolean = false;
+  private v9ListTransitionRevision: number = 0;
   // 展开面板锚点: 触发条全局坐标 - 根 Stack 原点 = 面板相对根 Stack 位置。
   @State private groupX: number = 0;
   @State private groupY: number = 0;
@@ -331,6 +337,9 @@ export struct SourceManagementPage {
 
   aboutToDisappear(): void {
     this.cancelToolsReturnFocus('retire');
+    this.v9ListReturnView = undefined;
+    this.v9ListReturnScroll = undefined;
+    this.v9ListReturnFilterKey = '';
     this.transientFeedback.reset();
     const identity = this.temporaryBackIdentity;
     this.mounted = false;
@@ -543,6 +552,78 @@ export struct SourceManagementPage {
   }
 
   private toolsFocusId(entry: SourceToolsEntry): string { return `${this.temporaryBackIdentity}:tools:${entry}`; }
+
+  private prepareV9ListReturn(view: SourceV9ListReturnView): void {
+    this.cancelToolsReturnFocus('v9-departure');
+    this.v9ListReturnView = view;
+    this.v9ListReturnEntered = false;
+    this.v9ListTransitionRevision += 1;
+    if (ReaderUIVerificationProbe.enabled()) {
+      this.v9ListReturnFilterKey = this.currentFilterKey();
+      this.v9ListReturnScroll = this.readCurrentScroll();
+      const saved = this.v9ListReturnScroll;
+      if (saved !== undefined) this.observeVerificationScroll('v9-list-enter', saved);
+    }
+  }
+
+  private onV9PaneChanged(): void {
+    if (this.v9Pane === 'list') this.scheduleImportStatusReadyObservation();
+    if (!this.mounted || this.v9ListReturnView !== 'groups') return;
+    if (this.v9Pane === 'groups') this.observeV9ListEntry('groups');
+    if (this.v9Pane === 'list' && this.v9ListReturnEntered) this.completeV9ListReturn('groups');
+  }
+
+  private onV9ListInputChanged(): void {
+    if (this.inputEnabled && this.v9Pane === 'list') this.scheduleImportStatusReadyObservation();
+  }
+
+  private observeV9ListEntry(view: SourceV9ListReturnView): void {
+    if (this.v9ListReturnView !== view || this.v9ListReturnEntered) return;
+    this.v9ListReturnEntered = true;
+    this.observeV9ListTransition(view, 'enter', this.v9ListTransitionRevision);
+  }
+
+  private completeV9ListReturn(view: SourceV9ListReturnView): void {
+    if (this.v9ListReturnView !== view || !this.v9ListReturnEntered) return;
+    const saved = this.v9ListReturnScroll;
+    const filterKey = this.v9ListReturnFilterKey;
+    this.v9ListReturnView = undefined;
+    this.v9ListReturnScroll = undefined;
+    this.v9ListReturnFilterKey = '';
+    this.v9ListReturnEntered = false;
+    const identity = this.temporaryBackIdentity;
+    const transition = this.v9ListTransitionRevision;
+    const focusRevision = this.toolsFocusRevision;
+    try {
+      const context = this.getUIContext();
+      context.postFrameCallback(new SourceListLayoutFrame(context, (): void => {
+        if (!this.managementBackIsCurrent(identity) || this.v9Pane !== 'list' ||
+          this.v9ListTransitionRevision !== transition || this.batchMode) return;
+        if (ReaderUIVerificationProbe.enabled()) {
+          this.observeV9ListTransition(view, 'return', transition, filterKey === this.currentFilterKey());
+          this.observeVerificationProjection('v9-return');
+          if (saved !== undefined) {
+            const measured = this.readCurrentScroll();
+            if (measured !== undefined) this.observeVerificationScroll('v9-list-return', measured, saved);
+          }
+        }
+        if (this.toolsFocusRevision !== focusRevision || !this.managementInputIsCurrent()) return;
+        this.pendingToolsFocus = view === 'groups' ? 'header' : 'footer';
+        this.toolsFocusReady = true;
+        this.toolsFocusAttempt = 0;
+        this.scheduleToolsReturnFocus();
+      }));
+    } catch (_unmounted) {}
+  }
+
+  private observeV9ListTransition(view: SourceV9ListReturnView, phase: 'enter' | 'return', revision: number,
+    filterMatchesDeparture?: boolean): void {
+    if (!ReaderUIVerificationProbe.enabled()) return;
+    const owner = sourceVerificationOpening(this.verificationOpening);
+    if (owner === undefined) return;
+    const observation: SourceV9ListTransitionObservation = { owner, view, phase, revision, filterMatchesDeparture };
+    ReaderUIVerificationProbe.emit('source.v9-list-transition', 'business', observation);
+  }
 
   private onToolsEntryLayout(identity: string, entry: SourceToolsEntry, area: Area): void {
     if (!this.managementBackIsCurrent(identity) || this.pendingToolsFocus !== entry || readerPageAreaLength(area.width) <= 0 ||
@@ -772,17 +853,18 @@ export struct SourceManagementPage {
       this.sourceMoreAction('分组管理', 'groups');
       this.sourceMoreAction('批量检测', 'detect');
       this.sourceMoreAction('导出全部书源', 'export');
-    }.width(164).padding(8).borderRadius(14);
+    }.id('reader-source-v9-more-menu').width(164).padding(8).borderRadius(14);
   }
 
   @Builder
   private sourceMoreAction(label: string, action: SourceV9ListAction) {
-    Button(label, { type: ButtonType.Capsule }).width('100%').height(36)
+    Button(label, { type: ButtonType.Capsule }).id(`reader-source-v9-open-${action}`).width('100%').height(36)
       .fontSize(13).fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).backgroundColor(Color.Transparent)
       .enabled(action !== 'detect' || this.projectedSourceCount > 0)
       .onClick((): void => {
         if (!this.managementInputIsCurrent() || !this.moreMenuOpen) return;
         this.moreMenuOpen = false;
+        if (action === 'groups') this.prepareV9ListReturn('groups');
         this.onV9Action(action, action === 'detect' ? this.visibleIds() : []);
       });
   }
@@ -794,6 +876,7 @@ export struct SourceManagementPage {
   private endBatch(): void {
     this.batchMode = false;
     this.batchSourceIds = [];
+    this.completeV9ListReturn('batch');
   }
 
   private visibleBatchSelected(): boolean {
@@ -1063,7 +1146,8 @@ export struct SourceManagementPage {
 
   private scheduleImportStatusReadyObservation(): void {
     const opening = this.temporaryBackIdentity;
-    if (!ReaderUIVerificationProbe.enabled() || !this.managementBackIsCurrent(opening) ||
+    if (!ReaderUIVerificationProbe.enabled() || this.v9Pane !== 'list' || !this.managementInputIsCurrent() ||
+      !this.managementBackIsCurrent(opening) ||
       this.statusActionLabel.length === 0 || this.verificationImportStatusPending === opening) return;
     this.verificationImportStatusPending = opening;
     try {
@@ -1085,7 +1169,8 @@ export struct SourceManagementPage {
     const receipt = this.operation.receipt;
     if (owner === undefined || receipt === undefined) return;
     if (phase === 'ready') {
-      if (this.statusActionGeneration <= 0 || this.sources.length === 0 || this.sourceListLoading() ||
+      if (this.v9Pane !== 'list' || !this.managementInputIsCurrent() ||
+        this.statusActionGeneration <= 0 || this.sources.length === 0 || this.sourceListLoading() ||
         receipt.receipt.confirmation !== 'confirmed' || receipt.receipt.readback !== 'succeeded') return;
       const key = JSON.stringify([owner.mounting, owner.generation, receipt.facts.generation, this.statusActionGeneration]);
       if (key === this.verificationImportStatusReadyKey) return;
@@ -2095,8 +2180,10 @@ export struct SourceManagementPage {
           focusId: this.toolsFocusId('footer'), onFocused: (): void => this.onToolsEntryFocused(identity, 'footer'),
           onAction: (): void => {
             if (this.managementInputIsCurrent() && !this.groupOpen) {
+              this.prepareV9ListReturn('batch');
               this.batchSourceIds = [];
               this.batchMode = true;
+              this.observeV9ListEntry('batch');
             }
           } })
           .id(this.verificationTextOptions === undefined ? '' : 'reader-source-text-footer-manage')
@@ -2220,8 +2307,7 @@ export struct SourceManagementPage {
     if (!this.mounted || !ReaderUIVerificationProbe.enabled()) return;
     const owner = sourceVerificationOpening(this.verificationOpening);
     if (owner === undefined) return;
-    const status = this.statusValue === '启用' ? 'enabled' : this.statusValue === '异常' ? 'error' :
-      this.statusValue === '未检测' ? 'unchecked' : 'all';
+    const status = sourceVerificationStatus(this.statusValue);
     const observation: SourceProjectionObservation = { owner, trigger, status, category: this.categoryValue,
       textProjectionRevision: ++this.verificationTextProjectionRevision,
       allGroups: this.groupValue === '全部分组', groupIndex: this.groupOptions().indexOf(this.groupValue),

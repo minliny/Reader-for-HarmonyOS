@@ -188,6 +188,7 @@ const nativeCases = {
   [sourceCategoryTouchEdgeCase]: [1,'public-source-category-touch-edges-v1','filter-selection'],
   'source-management.filter-selections': [6,'public-source-catalog-v1','filter-selection','group-geometry'],
   'source-management.footer-tools-return': [1,'public-source-footer-tools-v1','filter-selection'],
+  'source-management.v9-batch-return': [1,'public-source-v9-batch-return-v1','filter-selection'],
 };
 
 function nativeFilterSubject(assertion) {

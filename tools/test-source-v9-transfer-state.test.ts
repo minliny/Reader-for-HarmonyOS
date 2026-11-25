@@ -4,7 +4,7 @@ import {
   sourceV9ChangesToApply, sourceV9ImportedReports, sourceV9CanonicalDocument, sourceV9ReplaceRuleComparable, type SourceV9Change,
 } from '../entry/src/main/ets/features/source/application/SourceV9TransferState';
 import type { SourceV9TransferSnapshot } from '../entry/src/main/ets/features/source/application/SourceV9TransferOwner';
-import type { SourceCheckOutcome, SourceImportCandidate } from '../entry/src/main/ets/features/source/application/SourceGateway';
+import type { SourceCheckOutcome, SourceGroupedImportPlan, SourceImportCandidate } from '../entry/src/main/ets/features/source/application/SourceGateway';
 
 const novel: SourceImportCandidate = {
   index: 0, sourceId: 'https://books.example', name: '小说', category: 'novel', supported: true,
@@ -243,4 +243,108 @@ test('subscription conflict overwrite reconciles the Core baseline from the orig
   expect(fetches).toBe(3);
   expect(state?.status).toBe('已确认应用 1 项');
   expect(state?.error).toMatch(/订阅基线/);
+});
+
+test('an unconfirmed grouped import resumes the exact retained operation and completes the original result', async () => {
+  const existing = { ...novel, index: 2, name: '已存在', sourceId: 'https://old.example',
+    bookSource: { bookSourceUrl: 'https://old.example', bookSourceName: '已存在' } };
+  const rejected = { ...novel, index: 3, name: 'Core 拒绝', sourceId: 'https://invalid.example',
+    bookSource: { bookSourceUrl: 'https://invalid.example', bookSourceName: 'Core 拒绝' } };
+  const sourceIds = [novel.sourceId, existing.sourceId];
+  const operationId = 'original-import-operation';
+  const originalResult = {
+    revision: 21, addedCount: 1, updatedCount: 1, failedCount: 1, sourceIds,
+    results: [
+      { index: novel.index, sourceId: novel.sourceId, status: 'imported' },
+      { index: existing.index, sourceId: existing.sourceId, status: 'imported' },
+      { index: rejected.index, sourceId: rejected.sourceId, status: 'failed', error: '规则无效' },
+    ],
+    failures: [{ index: rejected.index, sourceId: rejected.sourceId, message: '规则无效' }],
+  };
+  const receipts: unknown[][] = [];
+  let writes = 0;
+  let mutation: { blocked: boolean; generation: number; canRetryOriginal: boolean; confirmation: string;
+    operationId?: string; original?: { method: string; params: object }; method?: string; message?: string } =
+    { blocked: false, generation: 0, canRetryOriginal: false, confirmation: 'undispatched' };
+  const recoveryCalls: boolean[] = [];
+  const prechecks = report(false);
+  class ImportGateway {
+    supportsEphemeralSourceCheck() { return true; }
+    prepareGroupedSourceDocument() {
+      return { items: [novel, audio, existing, rejected], failures: [], filteredUnsupportedCount: 1 };
+    }
+    async loadSourceGroupCatalog() { return { groups: [], revision: 20, memberships: [{ sourceId: existing.sourceId }] }; }
+    async checkEphemeralSources(sources: SourceImportCandidate['bookSource'][]) {
+      return sources.map(source => ({ ...prechecks, sourceId: source.bookSourceUrl,
+        available: source.bookSourceUrl !== novel.sourceId }));
+    }
+    async importGroupedSources(items: SourceImportCandidate[], revision: number, strategy: string, target: object,
+      _current: () => boolean, keep: (plan: SourceGroupedImportPlan) => void) {
+      writes++;
+      const params = { expectedRevision: revision, strategy, items: items.map(({ sourceId, bookSource }) => ({ sourceId, bookSource })) };
+      keep({ params, items, existingSourceIds: [existing.sourceId] });
+      expect(target).toBeUndefined();
+      mutation = { ...mutation, blocked: true, generation: 1, confirmation: 'unknown', operationId,
+        original: { method: 'source.import.grouped', params }, method: 'source.import.grouped', message: '回执未知' };
+      throw new Error('回执未知');
+    }
+    async recoverOriginalGroupedImport(plan: SourceGroupedImportPlan, id: string, current: () => boolean, retry: boolean) {
+      recoveryCalls.push(retry);
+      expect(id).toBe(operationId);
+      expect(current()).toBe(true);
+      expect(plan.items.map(item => item.index)).toEqual([novel.index, existing.index, rejected.index]);
+      expect(plan.params.expectedRevision).toBe(20);
+      mutation = retry ? { ...mutation, blocked: false, canRetryOriginal: false, confirmation: 'confirmed', message: '' } :
+        { ...mutation, generation: 2, canRetryOriginal: true };
+      return retry ? originalResult : undefined;
+    }
+    async readSourceDefinition(id: string) {
+      const candidate = [novel, existing].find(row => row.sourceId === id);
+      return { hasRawBookSource: true, sourceVersion: 'retained', text: JSON.stringify(candidate?.bookSource) };
+    }
+  }
+  class RuleGateway {
+    observeWrites() {}
+    mutationSnapshot() { return mutation; }
+  }
+  const flowClass = await transferFixture(ImportGateway, RuleGateway);
+  let state: SourceV9TransferSnapshot | undefined;
+  const flow = new flowClass({}, (next: SourceV9TransferSnapshot) => { state = next; }, () => true,
+    (reports: unknown, imported: unknown) => { receipts.push([reports, imported]); });
+  await flow.parseImport({ origin: 'paste', url: '', paste: 'original source document' });
+  await flow.checkImport({ mode: 'search', depth: 'L2', keyword: '' });
+  flow.chooseImportRow(novel.index, true);
+  await flow.importSelected({ strategy: 'preserve' });
+  expect(state?.importStep).toBe(2);
+  expect(state?.writePending).toBe(true);
+  await flow.importSelected({ strategy: 'preserve' });
+  await flow.recoverPending(1, false);
+  expect(state?.importStep).toBe(2);
+  expect(state?.canContinueOriginal).toBe(true);
+  expect(receipts).toEqual([]);
+  await flow.recoverPending(1, true);
+  await flow.recoverPending(2, true);
+  expect(writes).toBe(1);
+  expect(recoveryCalls).toEqual([false, true]);
+  expect(state?.importStep).toBe(3);
+  expect(state?.writePending).toBe(false);
+  expect(state?.importResult).toMatchObject({ addedCount: 1, updatedCount: 1, failedCount: 1, unsupportedCount: 1 });
+  expect(state?.importResult?.details.map(row => row.outcome)).toEqual(['新增', '更新', '规则无效']);
+  expect(receipts).toHaveLength(1);
+  expect(receipts[0]).toMatchObject([[{ sourceId: novel.sourceId, report: { available: false } },
+    { sourceId: existing.sourceId }], { sourceIds, result: state?.importResult }]);
+});
+
+test('a Gateway-qualified positional L1 failure appears on only the submitted row and never transfers', () => {
+  const rows = buildV9ImportRows([novel, audio], []);
+  const synthetic = { ...report(false), sourceId: 'ephemeral:1', levelsPassed: [], oneRowEphemeralL1Failure: true };
+  expect(applyV9ImportReport(rows, 0, { ...synthetic, oneRowEphemeralL1Failure: false }, 123)).toEqual(rows);
+  expect(applyV9ImportReport(rows, 0, { ...synthetic, available: true }, 123)).toEqual(rows);
+  expect(applyV9ImportReport(rows, 0, { ...synthetic, sourceId: 'ephemeral:2' }, 123)).toEqual(rows);
+  expect(applyV9ImportReport(rows, 1, synthetic, 123)).toEqual(rows);
+  const failed = applyV9ImportReport(rows, 0, synthetic, 123);
+  expect(failed[0]).toMatchObject({ candidate: { supported: true }, selected: false, report: synthetic });
+  const reselected = chooseV9ImportRow(failed, 0, true);
+  expect(reselected[0].selected).toBe(true);
+  expect(sourceV9ImportedReports(reselected, [novel.sourceId])).toEqual([]);
 });

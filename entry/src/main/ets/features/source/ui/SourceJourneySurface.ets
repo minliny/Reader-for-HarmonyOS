@@ -11,6 +11,7 @@ import type { BookSource, SourceCheckOutcome, SourceGroupCatalogData,
   SourceGroupMutateParams, SourceGroupRecord } from '../application/SourceGateway';
 import type { SourceV9CheckOptions } from '../application/SourceOrchestrator';
 import type { SourceV9ImportedReport } from '../application/SourceV9TransferState';
+import type { SourceV9ConfirmedImport } from '../application/SourceV9TransferOwner';
 import { sourceV9GroupRows, sourceV9ParentView, sourceV9Supports, type SourceV9ListAction,
   type SourceV9View } from '../presentation/SourceManagementV9';
 import type { SourceToolsSelection } from '../application/SourceToolsOrchestrator';
@@ -31,6 +32,7 @@ export struct SourceJourneySurface {
   isInputAllowed: (() => boolean) | undefined = undefined;
   onBack: () => void = (): void => {};
   onOpenTools: () => void = (): void => {};
+  captureImportSearchAction: (() => (() => void) | undefined) | undefined = undefined;
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string) => void =
     (_handler: (() => boolean) | undefined, _identity: string): void => {};
   onToolsTemporaryBackBridge: ((handler: (() => boolean) | undefined, identity: string) => void) | undefined = undefined;
@@ -49,6 +51,7 @@ export struct SourceJourneySurface {
   @State private batchApplied: number = 0;
   @State private ungroupedBatchIds: string[] = [];
   private catalogGeneration: number = 0;
+  private importSearchAction: (() => void) | undefined = undefined;
   private listBack: (() => boolean) | undefined = undefined;
   private paneBack: (() => boolean) | undefined = undefined;
   private checkBack: (() => boolean) | undefined = undefined;
@@ -132,6 +135,10 @@ export struct SourceJourneySurface {
   private openPane(pane: SourceV9View): void {
     if (!this.managementInputIsCurrent()) return;
     if (pane !== 'group-detail') this.detailGroupId = undefined;
+    if (pane === 'import') {
+      this.presentation.retireImportSearchAction(this.identity);
+      this.importSearchAction = this.captureImportSearchAction?.();
+    }
     this.pane = pane;
     if (pane === 'groups' || pane === 'import') void this.refreshCatalog();
   }
@@ -203,8 +210,9 @@ export struct SourceJourneySurface {
           isInputAllowed: (): boolean => this.managementInputIsCurrent(),
           onTemporaryBackBridge: (handler: (() => boolean) | undefined): void => { this.paneBack = handler; },
           onBack: (): void => this.openPane('list'),
-          onReadBack: (reports: SourceV9ImportedReport[]): void => {
-            this.presentation.management(this.identity)?.acceptTransferredReports(reports, this.identity);
+          onReadBack: (reports: SourceV9ImportedReport[], imported?: SourceV9ConfirmedImport): void => {
+            void this.presentation.readBackTransfer(this.identity, reports, imported,
+              imported === undefined ? undefined : this.importSearchAction);
             void this.refreshCatalog();
           },
         });
@@ -285,6 +293,7 @@ export struct SourceJourneySurface {
   private managementPage() {
     SourceManagementPage({
       embeddedWide: this.embeddedWide,
+      v9Pane: this.pane,
       verificationOpening: this.identity,
       inputEnabled: this.inputEnabled && this.listIsInteractive(),
       isOpeningCurrent: (): boolean => this.presentation.isManagementCurrent(this.identity),

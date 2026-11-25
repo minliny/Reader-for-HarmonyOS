@@ -409469,7 +409469,7 @@
       ],
       "resourceNeeds": [],
       "estimatedCostType": "sdk-lowering/selected-production-methods",
-      "reviewedSourceSha256": "76c96f1a2cae37eab39ff5138ce26d3b464acfd06992bf74436085e3ed80798b",
+      "reviewedSourceSha256": "368c81e03d1aee70f53ace248779f84f2b1eeee8f7a65dc623ba969f445a7356",
       "definitionInputs": [
         {
           "path": "../Reader-UI/theme/registry.json",
@@ -409477,7 +409477,7 @@
         },
         {
           "path": "entry/src/main/ets/app/BookRequestScheduler.ts",
-          "sha256": "38bb6beea0409ccc72b2c6e58a64bda67137219471b1146851557ff64614e3e7"
+          "sha256": "96d42643eb27344293529be9d65f235106e15d1733c9e7aef1cbf79275872edd"
         },
         {
           "path": "entry/src/main/ets/app/ErrorMessage.ts",
@@ -409533,7 +409533,7 @@
         },
         {
           "path": "entry/src/main/ets/app/navigation/ReaderNavigation.ts",
-          "sha256": "bb3c56c3d5932518125ef5e7736ff2ab9aaad3004c94ce400a13c66c675762a5"
+          "sha256": "84e933b956aef5dd441d6de3d19e194a180ab54fea14ab8717b1d61d00d8fb06"
         },
         {
           "path": "entry/src/main/ets/features/bookshelf/application/BookshelfReadOwner.ts",
@@ -409661,7 +409661,11 @@
         },
         {
           "path": "entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts",
-          "sha256": "4bac4170b82bb831d16e6e4726b033464928e6dc9fbc864ad03efa7858a9ee13"
+          "sha256": "879908dbebb710ed4c6675e358cda78c7944365db954ab0c04e0fb5b74fafebb"
+        },
+        {
+          "path": "entry/src/main/ets/features/source/presentation/SourceManagementV9.ts",
+          "sha256": "6755756dfa7021f00e0b1f4e84675894c411be9b6c295fd0489143364b52809e"
         },
         {
           "path": "entry/src/main/ets/features/source/presentation/SourceSwitchPresentation.ets",
@@ -409673,7 +409677,7 @@
         },
         {
           "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-          "sha256": "01d7cfce51618983c6d47eb0bb64eda7b14080742870e9fdabdbaf06868a6550"
+          "sha256": "e8fa5f915a82eeacc149d3fa385904b43043f940d892e16305aab37e0e3d4ced"
         },
         {
           "path": "entry/src/main/ets/platform/network/HttpTransportPolicy.ts",
@@ -409705,11 +409709,11 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderLabeledIconAction.ets",
-          "sha256": "439c51bcf60dc2242570dbfbcb896153889e2db6346f51d4bbc998c94fbe2f23"
+          "sha256": "f7c73f179dc9f6a2ceb29f5c183641c22a97d25ab7a1ee19b395c29ca031c49c"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderLabeledIconActionSpecs.ets",
-          "sha256": "80be0cdb7ce67e79f9ad787748d1223bca62ebd194d26feac691162e5105cea2"
+          "sha256": "979288b8ddf127a024e2c05f354e5fcdad440fc9d0b4f72925e4083358c8afde"
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderSectionHeading.ets",
@@ -409721,7 +409725,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/controls/ReaderToggle.ets",
-          "sha256": "c32e954d2e54f419234dfb3815fc35686db5ef0158c258f6e2da954071a4eefb"
+          "sha256": "cf27d9316ec8becde8dbffed32f5631ac440165a3d6112048efb7fea4e927053"
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderPageState.ets",
@@ -409730,10 +409734,6 @@
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
           "sha256": "b467d2e9fbea769031fe04f64273ce241a7dee4e40218c57f225bc347f591d3f"
-        },
-        {
-          "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryGroup.ets",
-          "sha256": "0f8bc8b1b4e13d91f7e9d568147524f211d86064be748d3d15098c1fdb202a03"
         },
         {
           "path": "entry/src/main/ets/ui/feedback/ReaderRecoveryNotice.ets",
@@ -409754,6 +409754,10 @@
         {
           "path": "entry/src/main/ets/ui/foundation/ProductMotionTiming.ts",
           "sha256": "5e714e572f88fb3a07bf2bb60a1e05154da8b1ace9a37c96199faf36825e966f"
+        },
+        {
+          "path": "entry/src/main/ets/ui/foundation/ReaderActionIconResources.ets",
+          "sha256": "c0727acfc68232427df3d892a7c2c07597979691d4d88568d2a2b98cbfd2e2b4"
         },
         {
           "path": "entry/src/main/ets/ui/foundation/ReaderDirectoryChromeVisual.ts",
@@ -409853,7 +409857,7 @@
         },
         {
           "path": "entry/src/main/ets/ui/layout/ReaderPageNativeAttributes.ets",
-          "sha256": "46eca3d257651a9c13cce9e875f4ba9bf44045eaabd20c0f4a5017a522ac3df4"
+          "sha256": "fac74d04a152ae3ebf28dc17c03b9aa5cc365119f414037e7bc580f66d715e1b"
         },
         {
           "path": "entry/src/main/ets/ui/layout/ReaderPageShell.ts",
@@ -409901,11 +409905,11 @@
         },
         {
           "path": "entry/src/main/ets/ui/surfaces/ReaderSurfaceSpecs.ets",
-          "sha256": "21550bf3e1f4b443be45b7cf7ca7eaec10760d61b48337a1b413b2fb56c3388e"
+          "sha256": "f983654f02a762701893a4127f439bffd0dcfefdbdf63ffb430cf08ae0efa309"
         },
         {
           "path": "entry/vendor/core-harmony/sdk/reader_core.ts",
-          "sha256": "5eb7cc236a7f2c523901204b972361cf0173a27b3117519382a9fc58a0954b5f"
+          "sha256": "9feaee2593dd2b27b48d544908be25cda2b49848821ee9e8350d373129d19353"
         },
         {
           "path": "scripts/lib/development-environment.mjs",
@@ -409944,6 +409948,10 @@
           "sha256": "44f75944af7b3a8bd8892e040299f63c531a0b0ca38bfe4eb85e0a39dd658f61"
         },
         {
+          "path": "tools/lib/execution-input-trace.mjs",
+          "sha256": "c0044add075575105723fe10b42bf2346fed7dea465c8c38fceb05854e4386c9"
+        },
+        {
           "path": "tools/lib/gate-resource-definition.mjs",
           "sha256": "c3cc74f468435463cf43ddf0d544b1c64dce89044d9c3d002c85a75ea704a9ac"
         },
@@ -409961,7 +409969,7 @@
         },
         {
           "path": "tools/lib/reader-control-builder-probe.mjs",
-          "sha256": "13fca5944d992ebbf586de5922601fdcba805eec622d5d613d964f15205e148a"
+          "sha256": "ef56b48389bf9978a845c551bed0b7f227ef7035954fcc40c2c5c1f80f057e97"
         },
         {
           "path": "tools/lib/reader-directory-operations-probe.mjs",
@@ -410024,10 +410032,6 @@
           "sha256": "f3c48ccfc1a33cbcf688ab9ef994869a8f41542135672ed3419a0351f8e87bbd"
         },
         {
-          "path": "tools/lib/source-layout-control-probe.mjs",
-          "sha256": "5038d2202363a6e143be7a99ed6da0f6283820e07ad35a962c29ff76b59a8ec3"
-        },
-        {
           "path": "tools/lib/source-switch-presentation-probe.mjs",
           "sha256": "d96f6025c9435faa824b795404b8c8fe10fb03eb04cb71e69d7ca48eb03d2050"
         },
@@ -410045,18 +410049,17 @@
         },
         {
           "path": "tools/test-source-management-layout.mjs",
-          "sha256": "76c96f1a2cae37eab39ff5138ce26d3b464acfd06992bf74436085e3ed80798b"
+          "sha256": "368c81e03d1aee70f53ace248779f84f2b1eeee8f7a65dc623ba969f445a7356"
         }
       ],
       "definitionInputProblems": [],
       "definitionIdentityState": "REVIEWED",
       "definitionIdentityPurpose": "Only this selected test/helper/fixture definition is reviewed. Normally changing production behavior remains the input under test.",
       "implementation": "IMPLEMENTED_WITH_EXPLICIT_SCOPE",
-      "productionBinding": "SourceManagementLayout/current Page layoutBudget, source row builders, status/category filters and actual external Common/inner Native footer wrappers.",
+      "productionBinding": "SourceManagementLayout, SourceManagementPage layoutBudget and row/chip/dock Builders, and the actual shared import and toggle controls.",
       "nestedActions": [
-        "Actual layout methods and same-domain source-layout control probe",
-        "Installed ETS current builders and finite control/property ports",
-        "Optional evidence output requires explicit --write-evidence and --evidence-path and is absent from indexed dispatch"
+        "Actual v9 layout methods, mounted SDK row/chip/dock Builders and shared control ports.",
+        "Optional report output requires explicit --write-evidence and --evidence-path and is absent from indexed dispatch."
       ],
       "nestedCalls": [
         "scripts/lib/development-environment.mjs",
@@ -410101,27 +410104,38 @@
           "matrix"
         ]
       },
-      "protectedBehavior": "Source list rows, filters and footer pay current control dimensions and equal outer/full inner allocations over the declared width/font matrix.",
-      "mechanism": "Actual320/366 x1/1.3/1.6/2 methods and mounted SDK controls produce32 layout,40 target and24 parent-budget samples.",
-      "failureExample": "An inner weight used in place of the external Common allocation can leave batch management at its intrinsic width.",
+      "protectedBehavior": "V9 Source row, filter and dock allocations over the declared phone, wide-settings pane and readable font-scale matrix.",
+      "mechanism": "Production layout methods and current ETS Builder/native-property ports at 320/366/460/700vp and scales 1/1.3/1.6/2. The independent 44vp target minimum remains an output fact.",
+      "failureExample": "Changing the bounded Detect response width from 40vp to 39vp, or removing the import control outer wrapper weight, fails the exact selected assertions.",
       "minimumTrigger": "Only changes to matrix behavior, its named producer or actual consumer wiring.",
-      "necessityReason": "An inner weight used in place of the external Common allocation can leave batch management at its intrinsic width.",
+      "necessityReason": "Keep v9 authored touch envelopes and shared control allocation accurate at narrow and large-font sizes.",
       "limitations": "Code-side production methods, installed ETS lowering, finite Native-property/measurement/transport ports and declared callback guards only. Platform layout, pixels, font rendering, pointer/gesture/IME/focus scheduling and user acceptance require separate evidence.",
       "validationEvidence": {
         "execution": "PASS",
         "currentPublicationExecution": "NOT_RUN",
-        "trace": ".reader-artifacts/harmonyos-ui-typography-closeout-20261125/gate-publication/fresh/source-management-matrix.json",
-        "traceSha256": "5952f706df6c9275d1e562f9af8454c37c8ee869763726880f8616e30b9bfe84",
-        "sourceSetSha256": "e3d1ee2478597fe6cb43c7268df775ebc28d56e6cc8cfcf47c94bab5e24990d6",
+        "trace": ".reader-artifacts/source-v9-continuation/matrix-inputs.json",
+        "traceSha256": "705920b775802f1759d8bf5d7107a62503466fe96632654a39c0987903bc1530",
+        "sourceSetSha256": "962aba03b1e510a5a2e348a30614a82252fe1285188c78bcf554756797c7c488",
         "traceIntegrity": "PASS",
         "testExitCode": 0,
+        "report": ".reader-artifacts/source-v9-continuation/matrix.json",
+        "reportSha256": "d13ece64d5327f15b343c88ace91912ad0d15b5be507e02a86d02b0b899186ef",
         "actualCommand": [
           "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-source-management-layout.mjs",
           "--case",
-          "matrix"
-        ]
+          "matrix",
+          "--write-evidence",
+          "--evidence-path=.reader-artifacts/source-v9-continuation/matrix.json"
+        ],
+        "sdkMatrix": {
+          "rowLayouts": 64,
+          "targets": 80,
+          "budgets": 48
+        },
+        "authoredTargetMinimum": false,
+        "nativeE3": "NOT_RUN"
       },
-      "resourceDefinitionSha256": "4a566be654d1428cb5d4f62bcf0e5f11835f1ec56dd5a21f986ed004e032d16c",
+      "resourceDefinitionSha256": "be3155d56f7f9a016f5481c132bec322f3823b8be1474dead6df873df0341e1d",
       "repairAction": null,
       "repair": null,
       "compileInputAdaptationReview": {
@@ -410185,6 +410199,30 @@
         "report": ".reader-artifacts/vm-ui-feedback-20261113/universal-audit/root-independent/source-layout-evidence.json",
         "reportSha256": "e96637ac869da5e35e974de9ff6ba95e9f08d9bee9215d7c93ff6e6614218073",
         "boundary": "Existing precise local evidence. Metadata publication does not rerun it. Native rendering, hit delivery, platform behavior and user acceptance remain separate."
+      },
+      "preV9ValidationEvidence": {
+        "execution": "PASS",
+        "currentPublicationExecution": "NOT_RUN",
+        "trace": ".reader-artifacts/harmonyos-ui-typography-closeout-20261125/gate-publication/fresh/source-management-matrix.json",
+        "traceSha256": "5952f706df6c9275d1e562f9af8454c37c8ee869763726880f8616e30b9bfe84",
+        "sourceSetSha256": "e3d1ee2478597fe6cb43c7268df775ebc28d56e6cc8cfcf47c94bab5e24990d6",
+        "traceIntegrity": "PASS",
+        "testExitCode": 0,
+        "actualCommand": [
+          "/Users/minliny/Documents/Reader/Reader-for-HarmonyOS/tools/test-source-management-layout.mjs",
+          "--case",
+          "matrix"
+        ]
+      },
+      "v9MethodReview": {
+        "decision": "QUALIFIED",
+        "scope": "ETS SDK properties and geometry inequalities only. Native hit dispatch, E2 minimum, glyph and user acceptance have separate evidence.",
+        "retainedSelectorInputs": 4,
+        "tracedInputs": 141,
+        "negativeControls": [
+          "detect response width 40 to 39vp",
+          "import outer wrapper loses weight"
+        ]
       }
     },
     {

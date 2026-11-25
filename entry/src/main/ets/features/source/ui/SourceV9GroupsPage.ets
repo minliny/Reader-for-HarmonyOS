@@ -455,7 +455,7 @@ export struct SourceV9GroupsPage {
       } else {
         this.groupDetail();
       }
-    }.width('100%').height('100%').backgroundColor(this.color('TOK_PAPER'))
+    }.id('reader-source-v9-groups').width('100%').height('100%').backgroundColor(this.color('TOK_PAPER'))
       .accessibilityLevel(this.dialog === 'none' ? 'auto' : 'no-hide-descendants')
       .enabled(this.dialog === 'none' && this.inputEnabled);
   }
@@ -474,7 +474,7 @@ export struct SourceV9GroupsPage {
     Row({ space: 6 }) {
       ReaderIconButton({
         icon: this.scheme === 'night' ? $r('app.media.book_detail_back_theme_night') : $r('app.media.book_detail_back'),
-        specId: 'navigation-back', minimumTargetSize: 44, accessibilityLabel: '返回',
+        specId: 'navigation-back', minimumTargetSize: 44, accessibilityLabel: '返回', focusId: 'reader-source-v9-group-back',
         actionEnabled: this.inputEnabled, onTap: (): void => this.back(),
       });
       Text(this.detailGroupId === undefined ? '分组管理' : this.detailName).layoutWeight(1).maxLines(1)

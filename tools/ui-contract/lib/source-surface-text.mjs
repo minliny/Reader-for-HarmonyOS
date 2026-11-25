@@ -2,6 +2,7 @@ import { ancestorsOf } from './layout.mjs';
 import { nativeSourceText, sourceTextPlacement } from './source-adaptation.mjs';
 import { sourceReadObservation } from './source-read.mjs';
 import { sourceRecoveryControl } from './source-recovery-control.mjs';
+import { sourceV9ImportStages } from './source-document-picker.mjs';
 import { evaluateSourceTransientStatusText } from './source-transient-status-text.mjs';
 
 const empty = 'reader-source-empty-state';
@@ -58,8 +59,11 @@ function readTitleClipAncestors(sample,node) {
   return parents.map(parent => ({path:parent.path,clip:parent.clip,rectPx:parent.visibleRectPx}));
 }
 
-function importStatusObservation(events, action, sample) {
-  if (action?.op !== 'click' || action.targetId !== 'reader-source-picker-file' ||
+function importStatusObservation(events, action, sample, assertion) {
+  const v9Return = sourceV9ImportStages.at(-1);
+  const targetMatches = assertion.action === v9Return.action ?
+    action?.targetId === v9Return.target && action.from === v9Return.sample : action?.targetId === 'reader-source-picker-file';
+  if (action?.op !== 'click' || !targetMatches ||
       action.outcomeSettled !== true || events.some(event => event.kind === 'source.route')) return null;
   const status = events.findLast(event => event.kind === 'source.import-status-action');
   const projection = events.findLast(event => event.kind === 'source.projection');
@@ -77,7 +81,7 @@ function importStatusObservation(events, action, sample) {
 
 function observeScope(assertion, context, scope, events, sample, action) {
   if (scope === 'operation-status') {
-    return importStatusObservation(events,action,sample);
+    return importStatusObservation(events,action,sample,assertion);
   }
   const state = {
     'read-empty':'empty', 'read-failed':'readFailure',

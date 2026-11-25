@@ -77,6 +77,11 @@ export interface SourceGroupedImportRow {
   index: number; sourceId: string; status: 'imported' | 'failed';
   name?: string; groupId?: string; locallyAssigned?: boolean; error?: string;
 }
+export interface SourceGroupedImportPlan {
+  params: JsonObject;
+  items: SourceImportCandidate[];
+  existingSourceIds: string[];
+}
 export interface SourceGroupedImportOutcome {
   revision: number; addedCount: number; updatedCount: number; failedCount: number;
   sourceIds: string[]; results: SourceGroupedImportRow[]; failures: SourceImportFailure[];
@@ -96,6 +101,8 @@ export type SourceCheckOutcome = {
   requestedLevels?: string[];
   capabilities?: SourceCapabilityCheck[];
   report?: SourceCheckReport;
+  /** Ordered one-candidate Core diagnostic failed before assigning a source identity. */
+  oneRowEphemeralL1Failure?: boolean;
 };
 
 export type SourceCheckReportStatus = 'pass' | 'fail' | 'not_requested' | 'not_supported' | 'blocked' | 'cancelled';
@@ -513,7 +520,7 @@ export class SourceGateway {
   }
 
   async importGroupedSources(items: SourceImportCandidate[], expectedRevision: number, strategy: SourceImportGroupStrategy,
-    target?: SourceImportGroupTarget, current?: () => boolean): Promise<SourceGroupedImportOutcome> {
+    target?: SourceImportGroupTarget, current?: () => boolean, keepPlan?: (plan: SourceGroupedImportPlan) => void): Promise<SourceGroupedImportOutcome> {
     if (!this.runtimeOwner.supportsCoreCapability('rules.mutation.source-groups.v1')) {
       throw new Error('当前 Core 不支持分组导入');
     }
@@ -529,7 +536,6 @@ export class SourceGateway {
     if (selected.length > MAX_BOOK_SOURCE_DOCUMENT_ENTRIES) throw new Error('选中书源超出文档条数上限');
     const catalog = await this.loadSourceGroupCatalog(current);
     if (catalog.revision !== expectedRevision) throw new Error('分组目录已更新，请重新核对导入预览');
-    const existing = new Set(catalog.memberships.map((item: SourceGroupMembership): string => item.sourceId));
     const params: JsonObject = {
       expectedRevision,
       strategy,
@@ -538,29 +544,49 @@ export class SourceGateway {
     };
     if (target?.groupId !== undefined) params['targetGroupId'] = target.groupId;
     if (target?.groupName !== undefined) params['targetGroupName'] = target.groupName.trim();
+    const plan: SourceGroupedImportPlan = { params, items: selected,
+      existingSourceIds: catalog.memberships.map((item: SourceGroupMembership): string => item.sourceId) };
+    keepPlan?.(plan);
     return RulesMutationOwner.forRuntime(this.runtimeOwner).run('分组导入书源',
       current ?? ((): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner)),
       async (request, confirmed): Promise<SourceGroupedImportOutcome> => {
         const data = (await request('source.import.grouped', params)).data;
-        const wire = this.readGroupedImport(params, data);
-        const results = wire.map((row: SourceGroupedImportRow): SourceGroupedImportRow =>
-          ({ ...row, index: selected[row.index].index }));
-        const sourceIds: string[] = [];
-        const failures: SourceImportFailure[] = [];
-        let addedCount = 0;
-        let updatedCount = 0;
-        for (const row of results) {
-          if (row.status === 'imported') {
-            sourceIds.push(row.sourceId);
-            if (existing.has(row.sourceId)) updatedCount += 1; else addedCount += 1;
-          } else {
-            failures.push({ index: row.index, sourceId: row.sourceId, message: row.error as string });
-          }
-        }
+        const outcome = this.groupedImportOutcome(plan, data);
         confirmed();
-        return { revision: data['revision'] as number, addedCount, updatedCount, failedCount: failures.length,
-          sourceIds, results, failures };
+        return outcome;
       }, this.writeEvidence);
+  }
+
+  async recoverOriginalGroupedImport(plan: SourceGroupedImportPlan, operationId: string,
+    current: () => boolean, retryOriginal: boolean): Promise<SourceGroupedImportOutcome | undefined> {
+    let outcome: SourceGroupedImportOutcome | undefined = undefined;
+    const owner = RulesMutationOwner.forRuntime(this.runtimeOwner);
+    await owner.recoverOriginal(current, (method: string, params: JsonObject, data: JsonObject): void => {
+      this.qualifyOriginalSource(method, params, data);
+      outcome = this.groupedImportOutcome(plan, data);
+    }, retryOriginal, 'source-management', undefined, operationId,
+    (method: string): boolean => method === 'source.import.grouped');
+    return owner.snapshot().confirmation === 'confirmed' ? outcome : undefined;
+  }
+
+  private groupedImportOutcome(plan: SourceGroupedImportPlan, data: JsonObject): SourceGroupedImportOutcome {
+    const existing = new Set(plan.existingSourceIds);
+    const results = this.readGroupedImport(plan.params, data)
+      .map((row: SourceGroupedImportRow): SourceGroupedImportRow => ({ ...row, index: plan.items[row.index].index }));
+    const sourceIds: string[] = [];
+    const failures: SourceImportFailure[] = [];
+    let addedCount = 0;
+    let updatedCount = 0;
+    for (const row of results) {
+      if (row.status === 'imported') {
+        sourceIds.push(row.sourceId);
+        if (existing.has(row.sourceId)) updatedCount += 1; else addedCount += 1;
+      } else {
+        failures.push({ index: row.index, sourceId: row.sourceId, message: row.error as string });
+      }
+    }
+    return { revision: data['revision'] as number, addedCount, updatedCount, failedCount: failures.length,
+      sourceIds, results, failures };
   }
 
   async overwriteSubscriptionSource(sourceId: string, candidate: JsonObject, expectedVersion: string,
@@ -1118,9 +1144,16 @@ export class SourceGateway {
       records.push(diagnostic);
       bySource.set(diagnostic.sourceId, records);
     }
-    return rawResults.map((raw: unknown, index: number): SourceCheckOutcome => this.readSourceCheckOutcome(
-      raw, correlated[index], traceId, requestId, bySource.get(correlated[index]) ?? [],
-      mode, selected, timeoutMs, reportVersion));
+    return rawResults.map((raw: unknown, index: number): SourceCheckOutcome => {
+      const outcome = this.readSourceCheckOutcome(raw, correlated[index], traceId, requestId,
+        bySource.get(correlated[index]) ?? [], mode, selected, timeoutMs, reportVersion);
+      if (ephemeral && expected.length === 1 && outcome.sourceId === 'ephemeral:1' &&
+        outcome.report?.steps.some((step: SourceCheckReportStep): boolean =>
+          step.level === 'L1' && step.executed && step.status === 'fail') === true) {
+        outcome.oneRowEphemeralL1Failure = true;
+      }
+      return outcome;
+    });
   }
 
   private readSourceCheckOutcome(raw: unknown, sourceId: string, traceId: string, requestId: number,

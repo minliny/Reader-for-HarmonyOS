@@ -7,6 +7,14 @@ export const sourcePickerFile = 'reader-phase1-status-research-source.json';
 export const sourcePickerFixturePath = `fixtures/source-status-action/${sourcePickerFile}`;
 export const sourceLocalImportButton = 'reader-source-import-local-file';
 export const sourceFooterAddButton = 'reader-source-footer-add-button';
+export const sourceV9ImportScope = 'reader-source-v9-import';
+export const sourceV9LocalImportButton = 'reader-source-v9-import-file';
+export const sourceV9ImportEntry = 'import-entry';
+export const sourceV9ImportStages = Object.freeze([
+  {sample:'import-file-selected',action:'parse-source-file',target:'reader-source-v9-import-parse'},
+  {sample:'import-reviewed',action:'commit-source-import',target:'reader-source-v9-import-commit',stage:'reader-source-v9-import-review'},
+  {sample:'import-result',action:'return-source-list',target:'reader-source-v9-import-return',stage:'reader-source-v9-import-result'},
+]);
 
 const phone = '我的手机';
 const downloads = 'Download';
@@ -66,8 +74,12 @@ export function sourcePickerTarget(tree, {windowId,displayId,fileName} = {}, ope
   if (!contains(pixelBounds(tree.attributes?.bounds),windowBounds)) return null;
 
   const hostEntries = readNodes(root,'0',attrs=>sameWindow(attrs) && attrs.type !== 'ModalPage');
-  if (hostEntries?.filter(({attributes})=>attributes.type === 'List' &&
-      attributes.id === 'reader-source-list' && declaredTrue(attributes.visible)).length !== 1) return null;
+  if (!hostEntries) return null;
+  const activeImportScopes = hostEntries.filter(({attributes})=>attributes.type === 'Stack' &&
+    attributes.id === sourceV9ImportScope && interactive(attributes));
+  const legacyList = hostEntries.filter(({attributes})=>attributes.type === 'List' &&
+    attributes.id === 'reader-source-list' && declaredTrue(attributes.visible));
+  if (activeImportScopes.length > 1 || activeImportScopes.length === 0 && legacyList.length !== 1) return null;
   const modals = (root.children ?? []).entries();
   const extensions = [];
   for (const [modalIndex,modal] of modals) {

@@ -1,11 +1,11 @@
 {
   "id": "source-management.import-research-status-action",
-  "version": 3,
+  "version": 4,
   "phase": 1,
   "pageId": "source-management",
   "fixture": {
     "id": "public-source-import-research-status-v1",
-    "description": "Use the isolated public Reader bookshelf with exactly the public long-directory book and an authoritatively empty source catalog. Verify the exact disabled public JSON already staged in Download, and permit only public filenames in the system picker. Type the public word without submitting, open Source Management from Search, select the fixed JSON through the system file picker, then tap the resulting Re-search button. The book is searched locally and no remote source is enabled. Measure the real short app status only if the current native capture observes it within its original visibility window.",
+    "description": "Use the isolated public Reader bookshelf with exactly the public long-directory book and an authoritatively empty source catalog. Verify the exact disabled public JSON already staged in Download, and permit only public filenames in the system picker. Type the public word without submitting, open Source Management from Search, stage the fixed JSON through the system file picker, explicitly parse and import it, return to the source list, then tap the resulting Re-search button. The book is searched locally and no remote source is enabled. Measure the real short app status only if the current native capture observes it within its original visibility window.",
     "bookTitle": "Reader Phase 1 公共长目录",
     "publicSources": true,
     "inputs": {
@@ -245,9 +245,10 @@
       ]
     },
     {
-      "id": "import-dialog",
+      "id": "import-entry",
       "kind": "locate",
       "anchors": [
+        "reader-source-v9-import",
         "reader-source-import-local-file"
       ],
       "keyboard": false,
@@ -258,7 +259,7 @@
       "id": "open-picker",
       "kind": "action",
       "op": "click",
-      "from": "import-dialog",
+      "from": "import-entry",
       "target": "reader-source-import-local-file"
     },
     {
@@ -331,7 +332,63 @@
       "kind": "action",
       "op": "click",
       "from": "picker-file",
-      "target": "reader-source-picker-file",
+      "target": "reader-source-picker-file"
+    },
+    {
+      "id": "import-file-selected",
+      "kind": "locate",
+      "anchors": [
+        "reader-source-v9-import",
+        "reader-source-v9-import-parse"
+      ],
+      "keyboard": false,
+      "afterAction": "select-source-file",
+      "quietMs": 250
+    },
+    {
+      "id": "parse-source-file",
+      "kind": "action",
+      "op": "click",
+      "from": "import-file-selected",
+      "target": "reader-source-v9-import-parse"
+    },
+    {
+      "id": "import-reviewed",
+      "kind": "locate",
+      "anchors": [
+        "reader-source-v9-import",
+        "reader-source-v9-import-commit",
+        "reader-source-v9-import-review"
+      ],
+      "keyboard": false,
+      "afterAction": "parse-source-file",
+      "quietMs": 250
+    },
+    {
+      "id": "commit-source-import",
+      "kind": "action",
+      "op": "click",
+      "from": "import-reviewed",
+      "target": "reader-source-v9-import-commit"
+    },
+    {
+      "id": "import-result",
+      "kind": "locate",
+      "anchors": [
+        "reader-source-v9-import",
+        "reader-source-v9-import-return",
+        "reader-source-v9-import-result"
+      ],
+      "keyboard": false,
+      "afterAction": "commit-source-import",
+      "quietMs": 250
+    },
+    {
+      "id": "return-source-list",
+      "kind": "action",
+      "op": "click",
+      "from": "import-result",
+      "target": "reader-source-v9-import-return",
       "waitFor": [
         {
           "kind": "source.import-status-action",
@@ -360,7 +417,7 @@
         "reader-source-status-action"
       ],
       "keyboard": false,
-      "afterAction": "select-source-file",
+      "afterAction": "return-source-list",
       "waitFor": [
         {
           "kind": "source.import-status-action",
@@ -493,7 +550,9 @@
     "entry/src/main/ets/ui/feedback/ReaderRecoveryAction.ets",
     "entry/src/main/ets/pages/ReaderSourceTextMetrics.ets",
     "entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts",
-    "entry/src/main/ets/ui/feedback/ReaderTransientToast.ets"
+    "entry/src/main/ets/ui/feedback/ReaderTransientToast.ets",
+    "entry/src/main/ets/features/source/ui/SourceV9TransferPage.ets",
+    "entry/src/main/ets/features/source/application/SourceV9TransferOwner.ts"
   ],
   "assertions": [
     {
@@ -513,7 +572,8 @@
       "entryAction": "manage-sources",
       "expected": {
         "target": "reader-source-status-action",
-        "keywordLength": 6
+        "keywordLength": 6,
+        "importWorkflow": "v9"
       }
     },
     {
@@ -528,7 +588,7 @@
         "app-owner"
       ],
       "sample": "source-imported",
-      "action": "select-source-file",
+      "action": "return-source-list",
       "expected": {
         "scope": "operation-status",
         "requireTransientStatus": true

@@ -43,8 +43,25 @@ export function sourceVerificationOpening(identity: string): SourceVerificationO
   }
 }
 
-export type SourceProjectionTrigger = 'mount' | 'owner-update' | 'edit' | 'clear' | 'status' | 'category' | 'group';
+export type SourceProjectionTrigger = 'mount' | 'owner-update' | 'edit' | 'clear' | 'status' | 'category' | 'group' | 'v9-return';
 export type SourceProjectionState = 'rows' | 'filteredEmpty' | 'empty' | 'loading' | 'readFailure' | 'recovery';
+
+export type SourceV9ListReturnView = 'groups' | 'batch';
+
+export interface SourceV9ListTransitionObservation {
+  readonly owner: SourceVerificationOpening;
+  readonly revision: number;
+  readonly view: SourceV9ListReturnView;
+  readonly phase: 'enter' | 'return';
+  readonly filterMatchesDeparture?: boolean;
+}
+
+export function sourceVerificationStatus(status: string): string {
+  if (status === '已启用' || status === '启用') return 'enabled';
+  if (status === '已停用') return 'disabled';
+  if (status === '异常') return 'error';
+  return status === '未检测' ? 'unchecked' : 'all';
+}
 
 export type SourceRecoveryBranch = 'original' | 'unknown';
 export interface SourceRecoveryVerificationFacts {

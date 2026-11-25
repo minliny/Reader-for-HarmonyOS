@@ -296,6 +296,7 @@ export function normalizeHarmonyLayout({
   observeSourceInlineImportDialog = false,
   observeSourceNativeFocus = false,
   publicSourceToolsQuery,
+  publicSourceToolsGroup = '小说 书源',
 }) {
   const metrics = report?.metrics;
   const density = metrics?.densityPixels;
@@ -428,7 +429,7 @@ export function normalizeHarmonyLayout({
       /^source-back:[0-9]+:group-trigger$/u.test(a.id ?? '');
     const groupTextOption = (observeSourceGroupOptionsText &&
       ['option:Phase1 Scroll 01','option:Phase1 Scroll 12'].includes(groupFocus?.[2])) ||
-      (publicSourceToolsQuery && groupFocus?.[2] === 'option:小说 书源');
+      (publicSourceToolsQuery && groupFocus?.[2] === `option:${publicSourceToolsGroup}`);
     const groupOptionTitle = groupTextOption ? groupFocus[2].slice('option:'.length) : parentGroupOptionTitle;
     const probeTransientText = observeSourceTransientStatus && a.type === 'Text' &&
       /^reader-transient-feedback-text-[1-9]\d*$/u.test(a.id ?? '');

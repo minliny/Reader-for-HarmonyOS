@@ -54,6 +54,8 @@
   "source-management.scroll-return",
   "source-management.tool-return-filters",
   "source-management.footer-tools-return",
+  "source-management.v9-group-return",
+  "source-management.v9-batch-return",
   "source-management.empty-library",
   "source-management.captured-parent-roundtrip",
   "source-management.read-loading",
