@@ -8,7 +8,8 @@ import { chapter, canonicalRemoteContent, FakeGateway, FakeHost } from './lib/re
 
 // Whole production platform adapter, with only unavailable Kit bindings supplied.
 // Invoking this real SpeakListener is code proof, never a device onStart receipt.
-const source = readFileSync(new URL('../entry/src/main/ets/platform/tts/HarmonySystemTtsHost.ts', import.meta.url), 'utf8');
+const source = ['HarmonyTtsAudioListenerRegistry', 'HarmonySystemTtsHost'].map(name =>
+  readFileSync(new URL(`../entry/src/main/ets/platform/tts/${name}.ts`, import.meta.url), 'utf8')).join('\n');
 const engines = [];
 let createGate;
 const makeEngine = () => {

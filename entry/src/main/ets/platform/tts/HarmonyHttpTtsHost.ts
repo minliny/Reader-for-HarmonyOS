@@ -1,4 +1,5 @@
 import { harmonyTtsAudioSessionLease } from './HarmonyTtsAudioSessionLease';
+import { HarmonyTtsAudioListenerRegistry } from './HarmonyTtsAudioListenerRegistry';
 import { audio } from '@kit.AudioKit';
 import { media } from '@kit.MediaKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -36,7 +37,7 @@ type PrefetchedTtsAudio = {
 /** Host-only network/audio transport for a Core-owned HttpTTS descriptor. */
 export class HarmonyHttpTtsHost implements ReaderTtsHost {
   private readonly gateway: ReaderHttpTtsGateway;
-  private audioSessionManager: audio.AudioSessionManager | undefined = undefined;
+  private audioListeners: HarmonyTtsAudioListenerRegistry | undefined = undefined;
   private readonly audioSessionDeactivatedCallback: (event: audio.AudioSessionDeactivatedEvent) => void;
   private readonly audioSessionStateChangedCallback: (event: audio.AudioSessionStateChangedEvent) => void;
   private readonly outputDeviceChangedCallback: (event: audio.CurrentOutputDeviceChangedEvent) => void;
@@ -50,7 +51,6 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   private prefetchedAudio: PrefetchedTtsAudio | undefined = undefined;
   private speakGeneration: number = 0;
   private startReported: boolean = false;
-  private audioListenersInstalled: boolean = false;
   private readonly audioSessionLease = harmonyTtsAudioSessionLease;
   private readonly audioSessionOwner: string = this.audioSessionLease.createOwner('http');
   private closed: boolean = false;
@@ -238,8 +238,10 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   publishPlaybackState(_state: 'preparing' | 'playing' | 'paused' | 'completed' | 'stopped' | 'error'): void {}
 
   async close(): Promise<void> {
-    if (this.closed) return;
+    const alreadyClosed = this.closed;
     this.closed = true;
+    this.audioListeners?.close();
+    if (alreadyClosed) return;
     this.speakGeneration += 1;
     this.cancelActiveRequest('Reader HttpTTS audio request closed');
     this.listener = undefined;
@@ -250,7 +252,6 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
     } catch (error) {
       this.logError('HttpTTS audio session teardown failed', error);
     }
-    this.removeAudioListeners();
   }
 
   private handlePlayerState(player: media.AVPlayer, requestId: string, state: media.AVPlayerState): void {
@@ -535,29 +536,9 @@ export class HarmonyHttpTtsHost implements ReaderTtsHost {
   }
 
   private installAudioListeners(): void {
-    if (this.audioListenersInstalled) return;
-    const audioSessionManager = this.ensureAudioSessionManager();
-    audioSessionManager.on('audioSessionDeactivated', this.audioSessionDeactivatedCallback);
-    audioSessionManager.on('audioSessionStateChanged', this.audioSessionStateChangedCallback);
-    audioSessionManager.on('currentOutputDeviceChanged', this.outputDeviceChangedCallback);
-    this.audioListenersInstalled = true;
-  }
-
-  private removeAudioListeners(): void {
-    if (!this.audioListenersInstalled) return;
-    const audioSessionManager = this.audioSessionManager;
-    if (audioSessionManager === undefined) return;
-    audioSessionManager.off('audioSessionDeactivated', this.audioSessionDeactivatedCallback);
-    audioSessionManager.off('audioSessionStateChanged', this.audioSessionStateChangedCallback);
-    audioSessionManager.off('currentOutputDeviceChanged', this.outputDeviceChangedCallback);
-    this.audioListenersInstalled = false;
-  }
-
-  private ensureAudioSessionManager(): audio.AudioSessionManager {
-    if (this.audioSessionManager === undefined) {
-      this.audioSessionManager = audio.getAudioManager().getSessionManager();
-    }
-    return this.audioSessionManager;
+    this.audioListeners ??= new HarmonyTtsAudioListenerRegistry(audio.getAudioManager().getSessionManager(),
+      this.audioSessionDeactivatedCallback, this.audioSessionStateChangedCallback, this.outputDeviceChangedCallback);
+    this.audioListeners.install();
   }
 
   private handleAudioStateHint(hint: audio.AudioSessionStateChangeHint): void {

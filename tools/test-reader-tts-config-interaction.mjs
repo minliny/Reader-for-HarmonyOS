@@ -158,7 +158,7 @@ assert.deepEqual(busyChanges,[false],'choice transaction does not own the manage
 }
 if(id==='audio-adapter'){
 for(const name of ['HarmonySystemTtsHost','HarmonyHttpTtsHost']) {
-  const Host=productionMotionMethods(new URL(`../entry/src/main/ets/app/${name}.ts`,import.meta.url),['activateAudioSession']);
+  const Host=productionMotionMethods(new URL(`../entry/src/main/ets/platform/tts/${name}.ts`,import.meta.url),['activateAudioSession']);
   const calls=[];
   const lease=new ReaderTtsAudioSessionLease({async activate(mix){calls.push(mix);},async deactivate(){}});
   const host=Object.assign(new Host(),{assertOpen(){},installAudioListeners(){},audioSessionLease:lease,
