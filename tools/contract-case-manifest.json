@@ -1479,7 +1479,7 @@
         "safe-area": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "cc0081d35250a697dac68390d817d7caa5938f58013ee83595e28a186283c484"
+          "sourceSha256": "2636f7bb7cc66e8978bd629f11fff1b53ba8fe841dc3116dad58f2e40c47ef47"
         },
         "save-and-frame": {
           "resources": [],
@@ -3522,16 +3522,17 @@
         "header-paint-owner": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "87448d89275b22f91ce436e580c0561afa379c730a451057774a2e1ba3ce881a"
+          "sourceSha256": "7721972d97e99553ef551e213f643b09300a681d5d4d11462f7f00d99eb09497"
         },
         "scaffold-slots": {
           "resources": [],
           "qualification": "QUALIFIED",
-          "sourceSha256": "6e38b54f03cf123848684ee2ceee1765a1fc3187be305691bdae1bf2a6b45f38"
+          "sourceSha256": "7721972d97e99553ef551e213f643b09300a681d5d4d11462f7f00d99eb09497"
         },
         "footer-safe-lane": {
           "resources": [],
-          "qualification": "REVIEW_NEEDED"
+          "qualification": "QUALIFIED",
+          "sourceSha256": "7721972d97e99553ef551e213f643b09300a681d5d4d11462f7f00d99eb09497"
         },
         "standard-page-layout": {
           "resources": [],

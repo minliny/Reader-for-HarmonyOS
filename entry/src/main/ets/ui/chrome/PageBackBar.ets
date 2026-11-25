@@ -1,3 +1,4 @@
+import { readerLayoutCarrierResponseRegion } from '../layout/ReaderPageNativeAttributes';
 import { DIRECTORY_CHROME_VISUAL as visual, mangaDirectoryScale, mangaDirectoryHeaderHeight } from '../foundation/ReaderDirectoryChromeVisual';
 import { MangaDirectoryPressFeedback } from '../foundation/MangaDirectoryPressFeedback';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
@@ -65,7 +66,8 @@ export struct PageBackBar {
     if (this.raised()) {
       Stack({ alignContent: Alignment.TopStart }) {
         this.panel();
-      }.width('100%').clip(false).hitTestBehavior(HitTestMode.None);
+      }.width('100%').clip(false).hitTestBehavior(HitTestMode.Default)
+        .responseRegion(readerLayoutCarrierResponseRegion());
     } else {
       this.panel();
     }
@@ -150,7 +152,7 @@ export struct PageBackBar {
     .borderRadius(this.panelRadius())
     .clip(this.variant === 'download' && this.elevation === 'fixed' && !this.veil() && this.surface === 'solid')
     .shadow(readerSurfaceElevation(this.raised() ? 'raised' : this.elevation === 'floating' ? 'floating' : 'fixed', this.appThemeScheme))
-    .hitTestBehavior(this.veil() || this.surface === 'solid' ? HitTestMode.Default : HitTestMode.None)
+    .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion(this.veil() || this.surface === 'solid'))
     .onTouch((): void => {})
     .onAreaChange(this.panelAreaChangeHandler());
   }

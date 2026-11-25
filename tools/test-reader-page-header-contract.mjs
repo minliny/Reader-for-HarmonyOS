@@ -68,6 +68,8 @@ for (const [name, file, slots] of [
 
 const layoutSource = name => readFileSync(new URL(
   `../entry/src/main/ets/ui/layout/${name}.ets`, import.meta.url), 'utf8');
+const emptyResponseRegion = { x: 0, y: 0, width: 0, height: 0 };
+const fullResponseRegion = { x: 0, y: 0, width: '100%', height: '100%' };
 
 async function currentPageLayoutProbe(windowMetrics, overrides = {}) {
   const [
@@ -125,6 +127,8 @@ async function case_header_paint_owner() {
     assert.equal(node.zIndex, 10, 'the measured header paints above the body');
     assert.equal(node.backgroundColor, opaque, 'genuine native mask paints the supplied surface');
     assert.equal(node.clip, true);
+    assert.equal(node.hitTestBehavior, 'HitTestMode.Default');
+    assert.deepEqual(node.responseRegion, fullResponseRegion);
     const firstArea = node.onAreaChange;
     for (const height of [88, '95vp', -1, 'invalid']) firstArea({}, { height });
     assert.deepEqual(heights, [[88, 1], [95, 1]], 'malformed/negative measured sizes are rejected');
@@ -133,6 +137,8 @@ async function case_header_paint_owner() {
     fixture.properties.flush();
     assert.equal(node.backgroundColor, '#00000000');
     assert.equal(node.clip, false, 'a floating header retains the bounded actor shadow');
+    assert.equal(node.hitTestBehavior, 'HitTestMode.Default', 'a descendant hit still stops lower siblings');
+    assert.deepEqual(node.responseRegion, emptyResponseRegion, 'the unpainted header has no response region of its own');
     firstArea({}, { height: 200 });
     node.onAreaChange({}, { height: 70 });
     assert.deepEqual(heights, [[88, 1], [95, 1], [70, 2]], 'outgoing measurement generation cannot reserve current page clearance');
@@ -140,6 +146,7 @@ async function case_header_paint_owner() {
     fixture.properties.flush();
     assert.equal(node.backgroundColor, alternate, 'a new feature-resolved surface reaches the retained native carrier');
     assert.equal(node.clip, true);
+    assert.deepEqual(node.responseRegion, fullResponseRegion);
     return fixture;
   }
 
@@ -181,8 +188,10 @@ async function case_scaffold_slots() {
     const layers = nodes.filter(node => [10, 20, 30].includes(node.zIndex));
     assert.deepEqual(layers.map(node => node.zIndex), [10, 20, 30], 'header, footer and overlay have one shared ordering');
     assert.deepEqual(layers.map(node => node.hitTestBehavior),
-      ['HitTestMode.None', clip ? 'HitTestMode.Default' : 'HitTestMode.None', 'HitTestMode.Transparent']);
+      ['HitTestMode.Default', 'HitTestMode.Default', 'HitTestMode.Transparent']);
+    assert.deepEqual(layers[0].responseRegion, emptyResponseRegion, 'header gutters have no response region');
     const footerLane = layers[1];
+    assert.deepEqual(footerLane.responseRegion, clip ? fullResponseRegion : emptyResponseRegion);
     assert.equal(footerLane.layoutGravity, 'LocalizedAlignment.BOTTOM');
     assert.equal(footerLane.height, undefined, 'the slot sizes to its measured content');
     assert.deepEqual(footerLane.padding, { bottom: clip ? 28 : 0 });
@@ -196,9 +205,10 @@ async function case_scaffold_slots() {
     header.onAreaChange({}, { height: 97 });
     const footer = nodes.find(node => node.type === 'Column' && node.onAreaChange);
     assert.equal(header.hitTestBehavior, 'HitTestMode.Default', 'the painted header admits its child actions');
-    assert.equal(footer.hitTestBehavior, 'HitTestMode.None', 'the measurement carrier does not intercept touches');
+    assert.equal(footer.hitTestBehavior, 'HitTestMode.Default', 'the measurement carrier preserves sibling ordering');
+    assert.deepEqual(footer.responseRegion, emptyResponseRegion);
     for (const carrier of [layers[0], footerLane, header, footer]) {
-      assert.equal(carrier.onTouch, undefined, 'a layout carrier has no touch target of its own');
+      assert.equal(carrier.onTouch, undefined, 'a layout carrier registers no touch handler');
       assert.equal(carrier.onClick, undefined);
     }
     footer.onAreaChange({}, { height: 54 });
@@ -245,6 +255,7 @@ async function case_footer_safe_lane() {
     assert.equal(backing.backgroundColor, paper, 'the fixed lane paints its resolved paper color');
     assert.equal(backing.clip, true);
     assert.equal(backing.hitTestBehavior, 'HitTestMode.Default');
+    assert.deepEqual(backing.responseRegion, fullResponseRegion);
     assert.deepEqual(backing.padding, { bottom: 42 }, 'the paper lane includes the complete bottom safe area');
     assert.deepEqual(backing.margin, { bottom: 0 });
     const measurement = nodes.find(node => node.type === 'Column' && node.onAreaChange);
@@ -257,7 +268,8 @@ async function case_footer_safe_lane() {
     properties.flush();
     assert.equal(backing.backgroundColor, '#00000000');
     assert.equal(backing.clip, false);
-    assert.equal(backing.hitTestBehavior, 'HitTestMode.None');
+    assert.equal(backing.hitTestBehavior, 'HitTestMode.Default', 'a dock child hit still stops lower siblings');
+    assert.deepEqual(backing.responseRegion, emptyResponseRegion, 'the transparent dock leaves gutters to the viewport');
     assert.deepEqual(backing.padding, { bottom: 0 });
     assert.deepEqual(backing.margin, { bottom: 42 });
     assert.equal(viewport.height, '100%');
@@ -273,6 +285,14 @@ async function case_footer_safe_lane() {
   const noSafeLane = scaffoldSource.replace("bottom: this.footerSurfaceValue() === 'solid' ? this.geometry.footer.bottom : 0", 'bottom: 0');
   assert.notEqual(noSafeLane, scaffoldSource);
   assert.throws(() => footerProof(fixture, 'day', noSafeLane), /complete bottom safe area/);
+  const mode = ".hitTestBehavior(HitTestMode.Default)\n        .responseRegion(readerLayoutCarrierResponseRegion(this.footerSurfaceValue() === 'solid'))";
+  const noSiblingFence = scaffoldSource.replace(mode, mode.replace('HitTestMode.Default',
+    "this.footerSurfaceValue() === 'solid' ? HitTestMode.Default : HitTestMode.None"));
+  assert.notEqual(noSiblingFence, scaffoldSource);
+  assert.throws(() => footerProof(fixture, 'day', noSiblingFence), /dock child hit still stops lower siblings/);
+  const noEmptyGutter = scaffoldSource.replace(mode, mode.replace("this.footerSurfaceValue() === 'solid'", 'true'));
+  assert.notEqual(noEmptyGutter, scaffoldSource);
+  assert.throws(() => footerProof(fixture, 'day', noEmptyGutter), /transparent dock leaves gutters/);
   const attributes = layoutSource('ReaderPageNativeAttributes');
   const noFooterPaint = attributes.replace('instance.clip(this.style.clip).backgroundColor(this.style.backgroundColor);',
     'instance.clip(this.style.clip);');

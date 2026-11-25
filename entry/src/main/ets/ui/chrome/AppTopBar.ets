@@ -1,3 +1,4 @@
+import { readerLayoutCarrierResponseRegion } from '../layout/ReaderPageNativeAttributes';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import {
   TOK_HOME_TOP_BAR_INSET,
@@ -91,7 +92,7 @@ export struct AppTopBar {
     .borderRadius(this.floating ? this.barHeight() / 2 : 0)
     .clip(false)
     .shadow(readerSurfaceElevation(this.floating ? 'raised' : 'fixed', this.appThemeScheme))
-    .hitTestBehavior(this.floating || this.surface === 'solid' ? HitTestMode.Default : HitTestMode.None)
+    .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion(this.floating || this.surface === 'solid'))
     .onTouch((): void => {});
   }
 

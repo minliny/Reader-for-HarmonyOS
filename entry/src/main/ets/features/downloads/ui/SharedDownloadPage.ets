@@ -1,3 +1,4 @@
+import { readerLayoutCarrierResponseRegion } from '../../../ui/layout/ReaderPageNativeAttributes';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import { ReaderEditableTarget, ReaderEditableInputModifier } from '../../../ui/layout/ReaderEditableTarget';
@@ -320,7 +321,8 @@ export struct SharedDownloadPage {
     if (this.fixedSelectionDockVisible()) {
       Column() { this.selectionDock(); }.width('100%').enabled(!this.modalBlocking())
         .accessibilityLevel(this.modalBlocking() ? 'no-hide-descendants' : 'auto')
-        .hitTestBehavior(HitTestMode.None);
+        .hitTestBehavior(this.modalBlocking() ? HitTestMode.None : HitTestMode.Default)
+        .responseRegion(readerLayoutCarrierResponseRegion());
     }
   }
 
@@ -1147,7 +1149,8 @@ export struct SharedDownloadPage {
       .hitTestBehavior(HitTestMode.Default)
       .onTouch((): void => {})
       .onAreaChange(this.raisedDockAreaChangeHandler(true));
-    }.width('100%').clip(false).hitTestBehavior(HitTestMode.None);
+    }.width('100%').clip(false).hitTestBehavior(HitTestMode.Default)
+      .responseRegion(readerLayoutCarrierResponseRegion());
   }
 
   @Builder

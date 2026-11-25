@@ -1,5 +1,5 @@
 import { readerPageAreaLength } from './ReaderPageShell';
-import { ReaderHeaderFrameModifier } from './ReaderPageNativeAttributes';
+import { ReaderHeaderFrameModifier, readerLayoutCarrierResponseRegion } from './ReaderPageNativeAttributes';
 import { ReaderHeaderFrameStyle } from './ReaderFrameStyle';
 import { ReaderNativeSlotMeasurement } from './ReaderNativeSlotMeasurement';
 
@@ -19,7 +19,7 @@ export struct ReaderFixedHeaderHost {
     Column() { this.content(); }
       .width('100%')
       .attributeModifier(new ReaderHeaderFrameModifier(this.style))
-      .hitTestBehavior(this.style.transparent ? HitTestMode.None : HitTestMode.Default)
+      .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion(!this.style.transparent))
       .id(this.nativeMeasurement.id)
       .customProperty('readerLayoutDebugOpaqueHeader', this.layoutDebugHeaderKey)
       .onAppear((): void => this.nativeMeasurement.mount(this.getUIContext(), this.measurementKey,

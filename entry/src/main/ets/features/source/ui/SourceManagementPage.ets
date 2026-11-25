@@ -1,3 +1,4 @@
+import { readerLayoutCarrierResponseRegion } from '../../../ui/layout/ReaderPageNativeAttributes';
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { readerHarmonyApi24 } from '../../../app/HarmonyCapabilityProbe';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
@@ -649,7 +650,8 @@ export struct SourceManagementPage {
       .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
       .enabled(!this.groupOpen)
       .accessibilityLevel(this.groupOpen ? 'no-hide-descendants' : 'auto')
-      .hitTestBehavior(HitTestMode.None);
+      .hitTestBehavior(this.groupOpen ? HitTestMode.None : HitTestMode.Default)
+      .responseRegion(readerLayoutCarrierResponseRegion());
   }
 
   @Builder
@@ -1994,7 +1996,7 @@ export struct SourceManagementPage {
     .width(this.contentFrame().width)
     .constraintSize({ minHeight: this.layoutBudget().footerHeight })
     .margin({ top: TOK_SPACE_SM, bottom: this.actionBottomInset() })
-    .hitTestBehavior(HitTestMode.None);
+    .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion());
   }
 
   private actionBottomInset(actionHeight: number = this.footerActionHeight()): number {

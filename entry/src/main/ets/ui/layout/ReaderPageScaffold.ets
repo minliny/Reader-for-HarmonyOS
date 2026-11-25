@@ -1,6 +1,6 @@
 import { ReaderFixedHeaderHost } from './ReaderFixedHeaderHost';
 import { ReaderFooterSurface, readerPageAreaLength } from './ReaderPageShell';
-import { ReaderFooterFrameModifier, ReaderPageFrameModifier } from './ReaderPageNativeAttributes';
+import { ReaderFooterFrameModifier, ReaderPageFrameModifier, readerLayoutCarrierResponseRegion } from './ReaderPageNativeAttributes';
 import { ReaderPageGeometry } from './ReaderPageGeometry';
 import { ReaderFrameStyle } from './ReaderFrameStyle';
 import { ReaderNativeSlotMeasurement } from './ReaderNativeSlotMeasurement';
@@ -62,21 +62,22 @@ export struct ReaderPageScaffold {
             onHeightChange: (height: number, presentedKey: number): void => this.onHeaderHeightChange(height, presentedKey) });
         }.width('100%').padding({ left: this.geometry.header.insetLeft, right: this.geometry.header.insetRight })
           .margin({ top: this.geometry.header.top }).zIndex(10)
-          .hitTestBehavior(HitTestMode.None);
+          .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion());
       }
       // Keep sibling blocking on a child hit. A layout carrier's empty lane
       // has no hit region of its own, even when it spans the viewport width.
       Column() {
         Column() { this.footer(); }
           .width('100%').padding({ left: this.geometry.footer.insetLeft, right: this.geometry.footer.insetRight })
-          .hitTestBehavior(HitTestMode.None)
+          .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion())
           .id(this.footerMeasurement.id)
           .onAppear((): void => this.footerMeasurement.mount(this.getUIContext(), this.footerMeasurementKey,
             (height: number, key: number): void => this.onFooterHeightChange(height, key)))
           .onDisAppear((): void => this.footerMeasurement.unmount())
           .onAreaChange(this.footerAreaChangeHandler(this.footerMeasurementKey));
       }.width('100%').layoutGravity(LocalizedAlignment.BOTTOM).zIndex(20)
-        .hitTestBehavior(this.footerSurfaceValue() === 'solid' ? HitTestMode.Default : HitTestMode.None)
+        .hitTestBehavior(HitTestMode.Default)
+        .responseRegion(readerLayoutCarrierResponseRegion(this.footerSurfaceValue() === 'solid'))
         .padding({ bottom: this.footerSurfaceValue() === 'solid' ? this.geometry.footer.bottom : 0 })
         .margin({ bottom: this.footerSurfaceValue() === 'solid' ? 0 : this.geometry.footer.bottom })
         .attributeModifier(new ReaderFooterFrameModifier(this.frameStyle.footer));

@@ -1,3 +1,4 @@
+import { readerLayoutCarrierResponseRegion } from '../../../ui/layout/ReaderPageNativeAttributes';
 import { TYPE_SHELF_SELECTION_ACTION, TYPE_SHELF_SELECTION_AUTHOR, TYPE_SHELF_SELECTION_AUTHOR_WIDE, TYPE_SHELF_SELECTION_HEADING, TYPE_SHELF_SELECTION_REMOVE, TYPE_SHELF_SELECTION_TITLE, TYPE_SHELF_SELECTION_TITLE_WIDE } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { APP_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
@@ -190,7 +191,7 @@ export struct BookshelfMultiSelectPage {
     .width('100%')
     .constraintSize({ minHeight: APP_HEADER_BAR_HEIGHT })
     .padding({ left: 20, right: 20, top: 7, bottom: 7 })
-    .hitTestBehavior(HitTestMode.None);
+    .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion());
   }
 
   @Builder

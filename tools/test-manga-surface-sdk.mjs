@@ -101,10 +101,19 @@ assert.ok(topBar,'the actual reading top bar is mounted in the safe root');
 assert.ok([...topBar.nodes.values()].some(node=>node.type==='Text'&&node.create==='fixture chapter'),
   'the shared native reading top bar renders the retained chapter title');
 const topDock=[...owner.nodes.values()].find(node=>node.type==='Column'&&typeof node.position?.top==='number');
+const topDockContent=[...owner.nodes.values()].find(node=>node.type==='Column'&&node.padding?.top===10&&node.padding?.left===8&&node.padding?.right===8);
 const bottomDock=[...owner.nodes.values()].find(node=>node.type==='Scroll'&&typeof node.position?.bottom==='number');
 assert.ok(topDock,'the real SDK positions the top chrome column');
+assert.ok(topDockContent,'the real SDK emits the layout around the painted top bar');
 assert.ok(bottomDock,'the real SDK positions the bounded bottom dock Scroll');
-assert.equal(topDock.hitTestBehavior,'HitTestMode.None','the top layout host leaves the viewport outside its chrome available to image gestures');
+for(const carrier of [topDock,topDockContent]) {
+  assert.equal(carrier.hitTestBehavior,'HitTestMode.Default','a chrome child hit still stops the viewport under its layout carrier');
+  assert.deepEqual(carrier.responseRegion,{x:0,y:0,width:0,height:0},'the carrier gutters remain available to viewport input');
+  assert.notEqual(carrier.clip,true,'a carrier with no own response region keeps child hit testing available');
+}
+const paintedTopBar=[...topBar.nodes.values()].find(node=>node.type==='Stack'&&node.onTouch);
+assert.ok(paintedTopBar,'the painted bar keeps its bounded touch target');
+assert.equal(paintedTopBar.hitTestBehavior,'HitTestMode.Default');
 assert.ok(bottomDock.height>0&&bottomDock.height<owner.viewportHeight,'the bottom dock reserves only its own bounds');
 const assertDocks=(left,top,right,bottom)=>{
   assert.equal(topDock.width,`calc(100% - ${left+right}vp)`);

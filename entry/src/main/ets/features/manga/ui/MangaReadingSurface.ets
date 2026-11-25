@@ -1,3 +1,4 @@
+import { readerLayoutCarrierResponseRegion } from '../../../ui/layout/ReaderPageNativeAttributes';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../../reading/presentation/ReadingDirectoryRecovery';
 import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwitchSurfaceLifecycle';
@@ -2554,7 +2555,7 @@ export struct MangaReadingSurface {
     Column() { this.topControls(); }
       .width(this.topControlsWidth())
       .position(this.topControlsPosition())
-      .hitTestBehavior(HitTestMode.None);
+      .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion());
     if (this.bottomControlViewportHeight() > 12) {
       Scroll() { this.bottomControls(); }
         .width(this.dockWidth(this.interactiveInsets(this.windowMetricsRevision)))
@@ -2599,7 +2600,7 @@ export struct MangaReadingSurface {
           .fontSize(10).maxLines(4).fontColor(this.mutedColor()).id('reader-manga-offline-probe-status');
       }
     }.width('100%').padding({ left: 8, right: 8, top: 10 })
-      .hitTestBehavior(HitTestMode.None);
+      .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion());
   }
 
   private recoveryOverlayIdentity(): string {
