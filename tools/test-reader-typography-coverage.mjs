@@ -21,6 +21,24 @@ function assertSearchRoles(nodes) {
   }
 }
 
+function assertTtsMeasuredLineHeights(ts, nodes, minimumSource) {
+  const explicitRoles = new Set(nodes.flatMap(node =>
+    [...(node.modifiers.lineHeight?.expression ?? '').matchAll(/\b(TYPE_\w+)\.lineHeightFp/gu)].map(match => match[1])));
+  assert.ok(explicitRoles.has('TYPE_READER_TTS_QUICK_SETTING_LABEL'));
+  const tree = ts.createSourceFile('ReaderControlTtsMinimum.ets', minimumSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS);
+  assert.deepEqual(tree.parseDiagnostics, []);
+  function visit(node) {
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && node.expression.text === 'actual') {
+      const role = node.arguments[0];
+      if (role && ts.isIdentifier(role)) {
+        assert.ok(!explicitRoles.has(role.text), `${role.text}: measurement drops lineHeight used by paint`);
+      }
+    }
+    ts.forEachChild(node, visit);
+  }
+  visit(tree);
+}
+
 async function coverage(selectedFile){
 const {approvedTypographyContract}=await import('./lib/approved-manga-typography-carriers.mjs');
 const {auditTypographyConsumers,typographyExpressionContext,isSharedTypographyExpression,typographyRoleImports}=await import('./lib/reader-typography-consumer-audit.mjs');
@@ -48,6 +66,16 @@ let files=0,carriers=0,shared=0,calibrated=0,runtime=0,approvedArguments=0;
     file==='SourceSwitchPanel.ets'?'source/ui/':'reading/ui/';
   files++; const source=readFileSync(new URL(directory+file,root),'utf8'),imports=typographyRoleImports(source,file),expressionContext=typographyExpressionContext(source,'entry/src/main/ets/features/'+directory+file);
   const nodes = auditTypographyConsumers(source, file);
+  if (file === 'ReaderControlTtsContent.ets') {
+    const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+    const { ts } = installedEtsCompiler();
+    const minimum = readFileSync(new URL('reading/ui/ReaderControlTtsMinimum.ets', root), 'utf8');
+    assertTtsMeasuredLineHeights(ts, nodes, minimum);
+    const dropped = minimum.replace("['定时', '语速'], TYPE_READER_TTS_QUICK_SETTING_LABEL",
+      "['定时', '语速'], actual(TYPE_READER_TTS_QUICK_SETTING_LABEL)");
+    assert.notEqual(dropped, minimum);
+    assert.throws(() => assertTtsMeasuredLineHeights(ts, nodes, dropped), /measurement drops lineHeight/u);
+  }
   const isCurrentSearch = file === 'ReaderControlSearchContent.ets';
   const approved = isCurrentSearch ? undefined : approvedTypographyContract(source, 'reading/' + file);
   if (isCurrentSearch) {

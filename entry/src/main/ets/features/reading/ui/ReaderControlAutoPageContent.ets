@@ -606,7 +606,7 @@ export struct ReaderControlAutoPageContent {
         Text('自动翻页').layoutWeight(1).fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
           .fontColor(readerAppColor('TOK_READ_INK', this.appScheme));
         if (this.sourceOnly === 'none') {
-          Circle().width(6).height(6).fill(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
+          Row().width(6).height(6).borderRadius(3).backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
             .scale({ x: this.runningPulseHigh ? 1.05 : .9, y: this.runningPulseHigh ? 1.05 : .9 })
             .opacity(this.status === 'running' ? this.runningPulseHigh || this.reducedMotion ? 1 : .6 : 0)
             .accessibilityLevel('no').onVisibleAreaChange([0, .01, 1], (visible: boolean, ratio: number): void => {
@@ -780,8 +780,8 @@ export struct ReaderControlAutoPageContent {
       Text(kind === 'control' ? '自动翻页控制' : '详细配置').layoutWeight(1).fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE.fontFamily).fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE.fontWeight)
         .fontSize(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1);
       if (kind === 'control') {
-        Circle().width(6).height(6).margin({ right: 5 })
-          .fill(readerAppColor(this.status === 'running' ? 'TOK_READ_PRIMARY' : 'TOK_READ_MUTED', this.appScheme))
+        Row().width(6).height(6).borderRadius(3).margin({ right: 5 })
+          .backgroundColor(readerAppColor(this.status === 'running' ? 'TOK_READ_PRIMARY' : 'TOK_READ_MUTED', this.appScheme))
           .scale({ x: this.runningPulseHigh ? 1.05 : .9, y: this.runningPulseHigh ? 1.05 : .9 })
           .opacity(this.status === 'stopped' ? 0 : this.runningPulseHigh || this.reducedMotion ? 1 : .6)
           .accessibilityLevel('no').hitTestBehavior(HitTestMode.None)
