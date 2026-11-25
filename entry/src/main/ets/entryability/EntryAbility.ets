@@ -11,6 +11,7 @@ import { ReaderControlPlacementPreferences } from '../app/ReaderControlPlacement
 import { AbilityConstant, ConfigurationConstant, type Configuration, UIAbility, Want } from '@kit.AbilityKit';
 import contextConstant from '@ohos.app.ability.contextConstant';
 import fileIo from '@ohos.file.fs';
+import type { BusinessError } from '@ohos.base';
 import { window } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
@@ -292,8 +293,8 @@ export default class EntryAbility extends UIAbility {
       if (path !== sandbox) {
         try { fileIo.mkdirSync(path); }
         catch (error) {
-          const code = (error as { code?: number | string } | undefined)?.code;
-          if (code !== 13900015 && code !== 'EEXIST') throw error;
+          const code = (error as BusinessError | undefined)?.code;
+          if (code !== 13900015) throw error as Error;
         }
       }
       // An existing path, including one created concurrently, must still

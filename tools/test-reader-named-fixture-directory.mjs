@@ -48,10 +48,10 @@ function freshAndConcurrent() {
   assert.deepEqual(fresh.calls.filter(([op]) => op === 'mkdir'), [['mkdir', parent, undefined], ['mkdir', root, undefined]]);
 
   const concurrent = fixture();
-  for (const [path, code] of [[parent, 13900015], [root, 'EEXIST']]) {
+  for (const path of [parent, root]) {
     concurrent.createFaults.set(path, () => {
       concurrent.entries.set(path, 'directory');
-      throw nativeError(code, 'concurrent creator');
+      throw nativeError(13900015, 'concurrent creator');
     });
   }
   concurrent.prepare();
