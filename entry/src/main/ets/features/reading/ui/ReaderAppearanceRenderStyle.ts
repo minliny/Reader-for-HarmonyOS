@@ -23,6 +23,14 @@ import type { ReaderReadingLayoutSnapshot } from './ReaderLayoutGeometry';
 const FIGMA_BODY_FONT_WEIGHT = 'regular';
 const READING_WRITING_MODE = 'horizontal-tb';
 
+export function sameReaderAppearanceLayout(left: ReaderAppearanceSnapshot, right: ReaderAppearanceSnapshot): boolean {
+  return readerAppearanceSnapshotFontFamily(left) === readerAppearanceSnapshotFontFamily(right) &&
+    left.fontSize === right.fontSize && left.lineHeightMultiplier === right.lineHeightMultiplier &&
+    left.paragraphSpacing === right.paragraphSpacing && left.letterSpacing === right.letterSpacing &&
+    (left.pageMarginOffset ?? 0) === (right.pageMarginOffset ?? 0) &&
+    left.indent === right.indent && left.alignment === right.alignment;
+}
+
 /**
  * Reading-surface values resolve from the shared registry. User correction
  * PH43 makes the original Make V9 swatches authoritative for paper base

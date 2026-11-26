@@ -232,6 +232,27 @@ export function copyReaderAppearanceSnapshot(snapshot: ReaderAppearanceSnapshot)
   return normalizeReaderAppearanceSnapshot(snapshot);
 }
 
+export function sameReaderAppearanceFont(left: ReaderAppearanceSnapshot, right: ReaderAppearanceSnapshot): boolean {
+  return left.font === right.font && (left.font !== 'custom' ||
+    JSON.stringify(left.customFont) === JSON.stringify(right.customFont));
+}
+
+export function resolveMeasuredReaderAppearanceSnapshot(
+  measured: ReaderAppearanceSnapshot | undefined,
+  current: ReaderAppearanceSnapshot,
+): ReaderAppearanceSnapshot {
+  if (measured === undefined) return current;
+  if (measured.activeTheme === current.activeTheme && measured.appThemeMode === current.appThemeMode &&
+    measured.dayTheme === current.dayTheme && measured.nightTheme === current.nightTheme) return measured;
+  // The measured line breaks keep their font and spacing. Colors can update immediately.
+  const rendered = copyReaderAppearanceSnapshot(measured);
+  rendered.activeTheme = current.activeTheme;
+  rendered.appThemeMode = current.appThemeMode;
+  rendered.dayTheme = current.dayTheme;
+  rendered.nightTheme = current.nightTheme;
+  return rendered;
+}
+
 export function appearanceThemeSelection(snapshot: ReaderAppearanceSnapshot): ReaderThemeSelection {
   return { appThemeMode: snapshot.appThemeMode, readerThemeId: snapshot.activeTheme,
     defaultDayReaderThemeId: snapshot.dayTheme, defaultNightReaderThemeId: snapshot.nightTheme };

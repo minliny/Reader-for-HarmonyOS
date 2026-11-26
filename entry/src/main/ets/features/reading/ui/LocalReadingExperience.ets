@@ -371,6 +371,7 @@ import { ReaderTtsPreferencesGateway } from '../application/ReaderTtsPreferences
 import { ReaderTtsPreferenceHost, type ReaderTtsPreferenceAdmission } from '../application/ReaderTtsPreferenceHost';
 import type { ReaderTtsVoiceOption } from '../application/ReaderTtsPreferencesState';
 import { ReaderAppearanceGateway } from '../application/ReaderAppearanceGateway';
+import { commitReadingAppearance, loadReadingAppearance } from '../application/ReadingAppearanceAdmission';
 import { ReaderAppearanceCommit, type ReaderAppearanceChange, type ReaderAppearanceSaveState } from '../application/ReaderAppearanceStore';
 import {
   ReaderChineseConversionGateway,
@@ -380,6 +381,8 @@ import {
   copyReaderAppearanceSnapshot,
   createDefaultReaderAppearanceSnapshot,
   normalizeReaderAppearanceFontOrder,
+  resolveMeasuredReaderAppearanceSnapshot,
+  sameReaderAppearanceFont,
   setReaderAppearanceAlignment,
   setReaderAppearanceFont,
   setReaderAppearanceFontOrder,
@@ -405,6 +408,7 @@ import {
   readerAppearanceParagraphIndent,
   readerAppearanceThemeStyle,
   readerAppearanceUsesJustify,
+  sameReaderAppearanceLayout,
 } from './ReaderAppearanceRenderStyle';
 import {
   READER_PHONE_REFERENCE_HEIGHT,
@@ -5061,7 +5065,7 @@ export struct ReadingExperience {
       this.measurementBatchPendingParagraph = -1;
       this.measurementBatchPendingLineCount = -1;
       const preserveContinuousDisplay = this.visiblePage?.measuredAppearance !== undefined &&
-        !this.sameAppearanceLayout(this.visiblePage.measuredAppearance, this.appearanceSnapshot) &&
+        !sameReaderAppearanceLayout(this.visiblePage.measuredAppearance, this.appearanceSnapshot) &&
         this.hasContinuousRenderContent();
       if (this.readerSettingsSnapshot.navigationMode === 'continuous' && !preserveContinuousDisplay) {
         this.rebuildContinuousFragments();
@@ -9104,66 +9108,30 @@ export struct ReadingExperience {
     }
   }
 
-  private async loadAppearanceSnapshot(lifecycleToken: number): Promise<void> {
-    const mutationGeneration = this.appearanceMutationGeneration;
-    try {
-      await this.appearanceGateway.load();
-      this.refreshAppearanceSaveRecovery(lifecycleToken);
-      while (this.isSessionActive(lifecycleToken) && mutationGeneration === this.appearanceMutationGeneration) {
-        const snapshot = this.appearanceGateway.current();
-        await prepareReaderFontFamily(readerAppearanceSnapshotFontFamily(snapshot));
-        if (!this.isSessionActive(lifecycleToken) || mutationGeneration !== this.appearanceMutationGeneration) return;
-        const ready = this.appearanceGateway.current();
-        if (!this.sameAppearanceFont(snapshot, ready)) continue;
-        if (snapshot.font !== 'custom' || snapshot.customFont === undefined) {
-          this.admitAppearanceSnapshot(ready);
-          this.appearanceLoaded = true;
-          this.observeAppearanceSave(this.appearanceGateway.flush(), lifecycleToken);
-          return;
-        }
-        const registered = await this.appearanceGateway.registerCustomFont(
-          this.getUIContext().getFont(),
-          snapshot,
-        );
-        // A disposed page must not recover its old font into a newer session.
-        if (!this.isSessionActive(lifecycleToken) || mutationGeneration !== this.appearanceMutationGeneration) return;
-        const latest = this.appearanceGateway.current();
-        if (!this.sameAppearanceFont(snapshot, latest)) continue;
-        if (!registered && snapshot.font === 'custom') {
-          const commit = await this.appearanceGateway.update(
-            (current: ReaderAppearanceSnapshot): ReaderAppearanceSnapshot => setReaderAppearanceFont(current, 'serif'),
-            (current: ReaderAppearanceSnapshot): boolean => this.isSessionActive(lifecycleToken) &&
-              mutationGeneration === this.appearanceMutationGeneration && this.sameAppearanceFont(snapshot, current),
-          );
-          if (commit !== undefined) this.observeAppearanceSave(commit.saved, lifecycleToken);
-          continue;
-        }
-        this.admitAppearanceSnapshot(latest);
+  private loadAppearanceSnapshot(lifecycleToken: number): Promise<void> {
+    const generation = this.appearanceMutationGeneration;
+    return loadReadingAppearance(this.appearanceGateway, (): void => this.refreshAppearanceSaveRecovery(lifecycleToken), {
+      current: (): boolean => this.isSessionActive(lifecycleToken) && generation === this.appearanceMutationGeneration,
+      prepareFont: (snapshot: ReaderAppearanceSnapshot): Promise<void> =>
+        prepareReaderFontFamily(readerAppearanceSnapshotFontFamily(snapshot)),
+      registerCustomFont: (snapshot: ReaderAppearanceSnapshot): Promise<boolean> =>
+        this.appearanceGateway.registerCustomFont(this.getUIContext().getFont(), snapshot),
+      admit: (snapshot: ReaderAppearanceSnapshot): void => {
+        this.admitAppearanceSnapshot(snapshot);
         this.appearanceLoaded = true;
-        this.observeAppearanceSave(this.appearanceGateway.flush(), lifecycleToken);
-        return;
-      }
-    } catch (error) {
-      if (this.isSessionActive(lifecycleToken) && mutationGeneration === this.appearanceMutationGeneration) {
+      },
+      observeSave: (saved: Promise<void>): void => this.observeAppearanceSave(saved, lifecycleToken),
+      loadFailed: (error: Error): void => {
         this.showAppearanceFailure('外观设置读取失败，请重新打开阅读页', error);
-        // Appearance is recoverable presentation state. It must never revoke
-        // an otherwise readable chapter during a shelf re-entry. Keep the
-        // user's persisted value untouched, admit an in-memory safe snapshot,
-        // and let the reader continue with the bundled system font.
+        // Keep a readable chapter available with the bundled system font.
         if (!this.appearanceLoaded) {
-          const fallback = setReaderAppearanceFont(this.appearanceSnapshot, 'serif');
-          this.admitAppearanceSnapshot(fallback);
+          this.admitAppearanceSnapshot(setReaderAppearanceFont(this.appearanceSnapshot, 'serif'));
           this.appearanceLoaded = true;
           hilog.warn(0x5244, 'Reader', '%{private}s',
-            `ReadingExperience appearance fallback admitted: ${errorMessageOf(error)}`);
+            'ReadingExperience appearance fallback admitted: ' + errorMessageOf(error));
         }
-      }
-    }
-  }
-
-  private sameAppearanceFont(first: ReaderAppearanceSnapshot, second: ReaderAppearanceSnapshot): boolean {
-    return first.font === second.font && (first.font !== 'custom' ||
-      JSON.stringify(first.customFont) === JSON.stringify(second.customFont));
+      },
+    });
   }
 
   private chineseConversionIdentity(): string {
@@ -9763,7 +9731,7 @@ export struct ReadingExperience {
         await prepareReaderFontFamily(readerAppearanceSnapshotFontFamily(snapshot));
         if (this.isSessionActive(lifecycleToken) && generation === this.appearanceMutationGeneration) {
           const latest = this.appearanceGateway.current();
-          if (this.sameAppearanceFont(snapshot, latest)) this.admitAppearanceSnapshot(latest);
+          if (sameReaderAppearanceFont(snapshot, latest)) this.admitAppearanceSnapshot(latest);
         }
       })
       .catch((error: Error): void => {
@@ -9797,33 +9765,22 @@ export struct ReadingExperience {
     });
   }
 
-  private async commitAppearanceMutation(
+  private commitAppearanceMutation(
     commitChange: (current: () => boolean) => Promise<ReaderAppearanceCommit | undefined>,
   ): Promise<ReaderAppearanceSnapshot | undefined> {
     this.appearanceMutationGeneration = this.appearanceMutationGeneration >= Number.MAX_SAFE_INTEGER ?
       1 : this.appearanceMutationGeneration + 1;
     const generation = this.appearanceMutationGeneration;
     const lifecycleToken = this.lifecycleToken;
-    try {
-      const commit = await commitChange((): boolean => this.isSessionActive(lifecycleToken));
-      if (commit === undefined) return undefined;
-      this.observeAppearanceSave(commit.saved, lifecycleToken);
-      const snapshot = this.appearanceGateway.current();
-      await prepareReaderFontFamily(readerAppearanceSnapshotFontFamily(snapshot));
-      // Keep every accepted change, but only the current page admits the latest view.
-      if (this.isSessionActive(lifecycleToken) && generation === this.appearanceMutationGeneration) {
-        const latest = this.appearanceGateway.current();
-        if (this.sameAppearanceFont(snapshot, latest)) {
-          this.admitAppearanceSnapshot(latest);
-          return latest;
-        }
-      }
-    } catch (error) {
-      if (this.isSessionActive(lifecycleToken) && generation === this.appearanceMutationGeneration) {
-        this.showAppearanceFailure('外观设置暂时无法修改，请重试', error as Error);
-      }
-    }
-    return undefined;
+    return commitReadingAppearance(this.appearanceGateway, commitChange, {
+      sessionCurrent: (): boolean => this.isSessionActive(lifecycleToken),
+      mutationCurrent: (): boolean => this.isSessionActive(lifecycleToken) && generation === this.appearanceMutationGeneration,
+      prepareFont: (snapshot: ReaderAppearanceSnapshot): Promise<void> =>
+        prepareReaderFontFamily(readerAppearanceSnapshotFontFamily(snapshot)),
+      admit: (snapshot: ReaderAppearanceSnapshot): void => this.admitAppearanceSnapshot(snapshot),
+      observeSave: (saved: Promise<void>): void => this.observeAppearanceSave(saved, lifecycleToken),
+      mutationFailed: (error: Error): void => this.showAppearanceFailure('外观设置暂时无法修改，请重试', error),
+    });
   }
 
   private observeAppearanceSave(saved: Promise<void>, lifecycleToken: number): void {
@@ -9845,7 +9802,7 @@ export struct ReadingExperience {
 
   private admitAppearanceSnapshot(snapshot: ReaderAppearanceSnapshot): void {
     const previous = this.appearanceSnapshot;
-    const layoutChanged = !this.sameAppearanceLayout(previous, snapshot);
+    const layoutChanged = !sameReaderAppearanceLayout(previous, snapshot);
     const themeChanged = previous.activeTheme !== snapshot.activeTheme;
     if ((layoutChanged || themeChanged) && this.pageTurnInputPhase() !== 'idle') {
       this.pageTurnPendingAppearanceSnapshot = snapshot;
@@ -9889,36 +9846,12 @@ export struct ReadingExperience {
     this.beginMeasurement(this.lifecycleToken);
   }
 
-  private sameAppearanceLayout(
-    left: ReaderAppearanceSnapshot,
-    right: ReaderAppearanceSnapshot,
-  ): boolean {
-    return readerAppearanceSnapshotFontFamily(left) === readerAppearanceSnapshotFontFamily(right) &&
-      left.fontSize === right.fontSize &&
-      left.lineHeightMultiplier === right.lineHeightMultiplier &&
-      left.paragraphSpacing === right.paragraphSpacing && left.letterSpacing === right.letterSpacing &&
-      (left.pageMarginOffset ?? 0) === (right.pageMarginOffset ?? 0) &&
-      left.indent === right.indent && left.alignment === right.alignment;
-  }
-
   private visibleReadingAppearance(): ReaderAppearanceSnapshot {
     return this.pageReadingAppearance(this.visiblePage);
   }
 
   private pageReadingAppearance(page: PhysicalReadingPage | undefined): ReaderAppearanceSnapshot {
-    const measured = page?.measuredAppearance;
-    const current = this.appearanceSnapshot;
-    if (measured === undefined) return current;
-    if (measured.activeTheme === current.activeTheme && measured.appThemeMode === current.appThemeMode &&
-      measured.dayTheme === current.dayTheme && measured.nightTheme === current.nightTheme) return measured;
-    // Theme changes do not alter native line breaks and stay immediate even
-    // while a newer font/spacing intent is still being measured off screen.
-    const rendered = copyReaderAppearanceSnapshot(measured);
-    rendered.activeTheme = current.activeTheme;
-    rendered.appThemeMode = current.appThemeMode;
-    rendered.dayTheme = current.dayTheme;
-    rendered.nightTheme = current.nightTheme;
-    return rendered;
+    return resolveMeasuredReaderAppearanceSnapshot(page?.measuredAppearance, this.appearanceSnapshot);
   }
 
   private shouldShowSessionCapsule(): boolean {
