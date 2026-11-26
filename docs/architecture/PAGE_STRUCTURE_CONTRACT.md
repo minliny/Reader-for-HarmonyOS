@@ -1,5 +1,7 @@
 # Reader 页面结构契约（RPSCM v0.2）
 
+> 2026-11-26 验证切换后，本文件记录原页面结构检查的设计与证据口径。相关登记和 schema 固定在 Host 提交 `84435670`，可用 `git show 84435670:tools/contracts/contract-map.json` 查阅，并按文中的原相对路径读取其他登记。现行验证入口见 [工作区检查索引](../../../GATE_INDEX.md)。
+
 > 2026-11-12 合流补充适用于本批新目录和运行时 owner。执行状态见 [合流实施记录](framework-confluence-20261112.md)，历史试点保留原输入与结果。
 
 ## 工程框架与页面契约的职责映射
@@ -104,17 +106,17 @@ Builder slot 中依赖可变状态的 UI 控制流须放入具名 `@Builder`，�
 | 平面 | 契约 ID | 事实源/owner | 状态 | 与 RPSCM 的关系 |
 |---|---|---|---|---|
 | P0 产品与范围 | `product` | [ReaderProductScope.ts](../../entry/src/main/ets/app/ReaderProductScope.ts)、[PAGES_AND_STATES.md](../ui-design/cross-platform-reference/PAGES_AND_STATES.md) §1 | 部分 | 只引用可见路由集合；不定义能力开关或灰度 |
-| P1 导航与路由 | `route` | [navigation-comparison.md](interaction-wiring-20261019/navigation-comparison.md)；[navigation-registry.json](../../tools/contracts/navigation-registry.json) | 部分 | 层 1 引用 `routeId`；不复制返回逻辑 |
+| P1 导航与路由 | `route` | [navigation-comparison.md](interaction-wiring-20261019/navigation-comparison.md)；`navigation-registry.json` | 部分 | 层 1 引用 `routeId`；不复制返回逻辑 |
 | P1 启动与恢复 | `startup` | `PAGES_AND_STATES.md` §4、`ReaderStartupRecovery.ets`、`ReaderSystemFileOpenHost.ts` | 部分 | 层 1/10 引用启动、恢复和外部打开事实 |
 | P2 页面骨架 | `page-frame` | [ui-page-framework-20261014.md](ui-page-framework-20261014.md)、`ReaderPageShell`/`ReaderPageScaffold` | 成熟 | 层 2/4/5 引用 |
 | P2 参数/几何 | `geometry` | [ui-parameter-contract-20261025.md](ui-parameter-contract-20261025.md)、`ReaderPageGeometry`/`ReaderMeasurementStore` | 成熟 | 层 4/5/13/15 引用 |
 | P2 表面/材质 | `surface` | [ui-surface-role-contract-20261028.md](ui-surface-role-contract-20261028.md)、`ReaderSurfaceSpecs` | 成熟（demo/设备待验） | 层 9/11/13 引用 |
 | P3 视觉表达 | `expression` | `Reader-UI/theme/registry.json`、`ReaderTypography`、`SVG_PROVENANCE`、`MotionSpec`、[STYLE_AND_MOTION.md](../ui-design/cross-platform-reference/STYLE_AND_MOTION.md) | 成熟 | 层 11/12/13 引用 token/spec |
-| P3 控件与状态 | `control` | [ReaderControlSpecs.ets](../../entry/src/main/ets/ui/controls/ReaderControlSpecs.ets)、`ReaderButton`/`ReaderFormField`/`ReaderChoiceRow`；[control-registry.json](../../tools/contracts/control-registry.json) | 部分 | 层 6/8/12/14 引用 `controlId` |
+| P3 控件与状态 | `control` | [ReaderControlSpecs.ets](../../entry/src/main/ets/ui/controls/ReaderControlSpecs.ets)、`ReaderButton`/`ReaderFormField`/`ReaderChoiceRow`；`control-registry.json` | 部分 | 层 6/8/12/14 引用 `controlId` |
 | P3 消息 | `message` | [FRAMEWORK.md](../message-ui/FRAMEWORK.md)、[message-entrypoints.json](../../tools/message-entrypoints.json) | 成熟 | 层 9/10 引用 `entryId` |
 | P4 操作与投影 | `operation` | [ReaderOperationFacts.ts](../../entry/src/main/ets/app/ReaderOperationFacts.ts)、Hosts/Orchestrators/Projection | 部分 | 层 10/16 引用 `operationId` |
 | P4 持久化/设置 | `persistence` | [Core 存储能力契约](../../../Reader-Core/docs/architecture/storage-capabilities-contract-20261110.md)、Settings owner | 成熟/部分 | 独立；页面只引用 |
-| P4 平台宿主 | `platform` | [ReaderSystemFileOpenHost.ts](../../entry/src/main/ets/app/composition/system-open/ReaderSystemFileOpenHost.ts)、native Alert/登录 Web 宿主；[platform-host-registry.json](../../tools/contracts/platform-host-registry.json) | 部分 | 层 1/9/10 引用 `hostId` |
+| P4 平台宿主 | `platform` | [ReaderSystemFileOpenHost.ts](../../entry/src/main/ets/app/composition/system-open/ReaderSystemFileOpenHost.ts)、native Alert/登录 Web 宿主；`platform-host-registry.json` | 部分 | 层 1/9/10 引用 `hostId` |
 | P5 适配 | `adaptation` | `ReaderPageGeometry`、`ReaderLayoutCapability`、`ReaderSurfaceResolvers` | 成熟/部分 | 层 13/15 引用 |
 | P5 无障碍 | `a11y` | 本文档 §6.10、E1–E6；独立审计待建 | 缺失/部分 | 层 14 引用 `a11y` block |
 | P6 版本/签名 | `release` | [工作区治理](../../../AGENTS.md)、签名权威、当前 App release ledger | 成熟 | 独立，不进入页面判定 |
@@ -716,7 +718,7 @@ node tools/check-overlay-assembly.mjs --check --inventory-file tools/page-struct
 - 平台宿主结果必须核对发起时的 identity；旧 session、旧页面、旧世代的回调丢弃。
 - 宿主 Back 顺序默认 `unknown`；没有平台证据时不能写“平台一定先”或“应用一定先”。
 - 源页当前只登记 `loginWeb`；JSON 导入不进入平台宿主表。
-- 小说详情的书籍信息、原文件和正文选文使用 Share Kit 系统面板。详情按当次书籍和输入准入捕获回程，选文按当前 ReaderShell 正文、段落或片段代次捕获原文。对应 `platform.detailShare` 和 `platform.readingSelectionShare` 登记了真实入口及平台结果。系统 Back、焦点恢复、面板几何与接收端读文件仍待原生证据。[平台宿主登记](../../tools/contracts/platform-host-registry.json) · [分享与复制控件登记](../../tools/contracts/control-registry.json)
+- 小说详情的书籍信息、原文件和正文选文使用 Share Kit 系统面板。详情按当次书籍和输入准入捕获回程，选文按当前 ReaderShell 正文、段落或片段代次捕获原文。对应 `platform.detailShare` 和 `platform.readingSelectionShare` 登记了真实入口及平台结果。系统 Back、焦点恢复、面板几何与接收端读文件仍待原生证据。`平台宿主登记` · `分享与复制控件登记`
 
 ### 6.9 控件状态
 
@@ -731,7 +733,7 @@ node tools/check-overlay-assembly.mjs --check --inventory-file tools/page-struct
 | 选择/chip | default / pressed / selected / disabled | 选中态有文字/图标，不只靠颜色 | 用填色变化冒充状态 |
 | 行级动作 | default / pressed / busy / disabled | 不与整行点击冲突 | 行点击和动作点击同一语义 |
 | 标签页 | default / selected / pressed / disabled | 有 role/state；焦点顺序稳定 | 选中态只靠颜色 |
-| 正文无障碍动作 | ready / disabled / hidden | 分页的上一页、打开阅读控制栏、下一页依次对应正文的左、中、右三等分；连续阅读提供中心控制栏入口；稳定 ID 在[控件登记](../../tools/contracts/control-registry.json) | 额外接管物理触摸或在被覆盖时派发动作 |
+| 正文无障碍动作 | ready / disabled / hidden | 分页的上一页、打开阅读控制栏、下一页依次对应正文的左、中、右三等分；连续阅读提供中心控制栏入口；稳定 ID 在`控件登记` | 额外接管物理触摸或在被覆盖时派发动作 |
 
 规则：
 

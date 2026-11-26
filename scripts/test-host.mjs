@@ -22,6 +22,7 @@ const featureDomains = new Map([
   ['rss', ['settings-sync-rss', 'navigation-geometry']],
   ['search', ['search', 'bookshelf', 'contracts', 'detail-reading', 'source-switch', 'navigation-geometry']],
   ['settings', ['settings-sync-rss', 'navigation-geometry']],
+  ['source', ['bookshelf', 'contracts', 'search', 'source-management', 'source-switch']],
   ['sync', ['settings-sync-rss']],
 ]);
 
@@ -91,7 +92,7 @@ function main(args) {
     console.log('Host tests NOT_RUN (no affected test domains)');
   } else {
     console.log(`Host domains: ${domains.join(', ')}`);
-    const result = spawnSync(process.execPath, ['--experimental-loader', './scripts/reader-ts-module-loader.mjs',
+    const result = spawnSync(process.execPath, ['--import', './scripts/lib/register-reader-ts-module-loader.mjs',
       '--test', ...files], { cwd: root, stdio: 'inherit' });
     if (result.error) throw result.error;
     process.exitCode = result.status ?? 1;

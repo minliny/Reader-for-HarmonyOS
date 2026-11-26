@@ -9,7 +9,7 @@ description = "Figma document identifier, not an API credential"
 condition = "AND"
 regexTarget = "secret"
 regexes = ["^klhs2jMM4MncaJFqZMfqEK$"]
-paths = ["(?:^|/)docs/ui\\-design/SVG_PROVENANCE\\.json$", "(?:^|/)tools/fixtures/reader\\-appearance\\-motion\\-figma\\-n\\-o\\.json$", "(?:^|/)tools/fixtures/reader\\-control\\-bookmark\\-live\\-20260906\\.json$", "(?:^|/)tools/fixtures/reader\\-control\\-playback\\-live\\-20260905\\.json$", "(?:^|/)tools/fixtures/reader\\-control\\-restored\\-baseline\\-20260905\\.json$", "(?:^|/)tools/fixtures/reader\\-control\\-search\\-results\\-clip\\-live\\-20260906\\.json$", "(?:^|/)tools/fixtures/reader\\-control\\-search\\-settings\\-live\\-20260905\\.json$", "(?:^|/)tools/fixtures/reader\\-control\\-shared\\-layer\\-live\\-20260906\\.json$", "(?:^|/)tools/fixtures/reader\\-directory\\-toolbar\\-hierarchy\\-20260905\\.json$", "(?:^|/)tools/svg\\-provenance\\.config\\.mjs$", "(?:^|/)tools/test\\-reader\\-appearance\\-motion\\-fixture\\.mjs$", "(?:^|/)tools/test\\-reader\\-control\\-bookmark\\-content\\.mjs$", "(?:^|/)tools/test\\-reader\\-control\\-directory\\-content\\.mjs$", "(?:^|/)tools/test\\-reader\\-control\\-search\\-settings\\-content\\.mjs$"]
+paths = ["(?:^|/)docs/ui\\-design/SVG_PROVENANCE\\.json$", "(?:^|/)tools/svg\\-provenance\\.config\\.mjs$"]
 
 [[rules.allowlists]]
 description = "Figma document identifier, not an API credential"
@@ -47,17 +47,6 @@ regexes = ["^AES/CBC/PKCS7Padding$"]
 paths = ["(?:^|/)entry/src/main/resources/rawfile/bundled\\-sources/f5ec8712c59eb1f2a55b3a206a8322ac3b02be3ba39dc5d77e8a48bc0e7026a1\\.json$", "(?:^|/)entry/src/main/resources/rawfile/reader\\-tested\\-book\\-source\\-collection\\.json$"]
 
 # Match only these reviewed literal values in their recorded source fields and files.
-
-[[rules.allowlists]]
-description = "Design document identifier"
-condition = "AND"
-regexTarget = "match"
-paths = [
-  "^(?:\\./)?tools/contracts/design-authority\\.json$",
-]
-regexes = [
-  "^fileKey\": \"klhs2jMM4MncaJFqZMfqEK\"$",
-]
 
 [[rules.allowlists]]
 description = "Historical content SHA-256"
@@ -124,77 +113,4 @@ paths = [
 ]
 regexes = [
   "^RssEntryDetailPage\\.ets\":\"c083bdbbc8cccc9a30b25d6ba7af6b2949c72f4c040badd3c5f3212798f96cd9\"$",
-]
-
-[[rules.allowlists]]
-description = "Historical content SHA-256"
-condition = "AND"
-regexTarget = "match"
-paths = [
-  "^(?:\\./)?tools/fixtures/design/unified-action-sheet-typography-successor-20261014\\.json$",
-]
-regexes = [
-  "^previousEntrySha256\": \"2cbd39400e2f6bf4db29066b2c1aaeefd61988b774cb36ba2a471cefb2156645\"$",
-  "^previousEntrySha256\": \"615d4f13f85186fd6eb67778a02780096b2fde780c04c97c934c68605a991a06\"$",
-]
-
-[[rules.allowlists]]
-description = "Historical content SHA-256"
-condition = "AND"
-regexTarget = "match"
-paths = [
-  "^(?:\\./)?tools/fixtures/design/ui-framework-typography-layout-successor-20261014\\.json$",
-]
-regexes = [
-  "^previousEntrySha256\": \"692caccbf843aebcd143a34108085788917f16fc8c147e744c7bec2ec600478f\"$",
-  "^previousEntrySha256\": \"7bd908c1e903ecc94f45b85ec425072845fbab43ec2a53e4464d1bde56d8b630\"$",
-  "^previousEntrySha256\": \"c95c9885d0c520d1e997ba99c172b9cfa4cc016b48107d23d5e85a83201d750d\"$",
-  "^previousEntrySha256\": \"cfed9cd86bd81e1bfc3bcba337bf63293d0a18fcf55199875528f4be997bccb0\"$",
-]
-
-[[rules.allowlists]]
-description = "Historical content SHA-256"
-condition = "AND"
-regexTarget = "match"
-paths = [
-  "^(?:\\./)?tools/fixtures/design/source-switch-frame-successor-20261014\\.json$",
-]
-regexes = [
-  "^previousEntrySha256\": \"6a530be338a025f6f22d10684296c16ed93dfc10b02fe647ae4d7d3821d109b5\"$",
-]
-
-[[rules.allowlists]]
-description = "Historical content SHA-256"
-condition = "AND"
-regexTarget = "match"
-paths = [
-  "^(?:\\./)?tools/fixtures/design/directory-recovery-typography-successor-20261016\\.json$",
-]
-regexes = [
-  "^previousEntrySha256\": \"83280418ef2b48a25b86e00cd9a9db7fed869116ab8016e1a71a53b1baf67bd0\"$",
-  "^previousEntrySha256\": \"a4ddc2e30371d44d0d9e67d9422b10e45472cf3ecfc46cd8c83ad1fdbe6991f2\"$",
-]
-
-[[rules.allowlists]]
-description = "Historical content SHA-256"
-condition = "AND"
-regexTarget = "match"
-paths = [
-  "^(?:\\./)?tools/fixtures/design/manga-directory-worktree-successor-20261015\\.json$",
-]
-regexes = [
-  "^previousEntrySha256\": \"8d6d5c30e88be97caa1ede4200e96b63a380b005428da1fb2bf23157cff249d3\"$",
-  "^previousEntrySha256\": \"cfed9cd86bd81e1bfc3bcba337bf63293d0a18fcf55199875528f4be997bccb0\"$",
-]
-
-[[rules.allowlists]]
-description = "Historical content SHA-256"
-condition = "AND"
-regexTarget = "match"
-paths = [
-  "^(?:\\./)?tools/fixtures/design/shared-source-switch-typography-successor-20261007\\.json$",
-]
-regexes = [
-  "^previousEntrySha256\": \"d9db00d41635b8bec5802937fe102882e9943dd293e4131e659fa24b902afa75\"$",
-  "^previousEntrySha256\": \"e2c238b274e3dee211fb5213beff8394c4b276b981e6939016d356a9c5b11b21\"$",
 ]

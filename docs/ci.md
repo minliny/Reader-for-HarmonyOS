@@ -1,6 +1,6 @@
 # HarmonyOS source and integration checks
 
-HarmonyOS CI runs the affected pure TypeScript Host domains on branch pushes and pull requests. `scripts/ci/run-impact-checks.mjs` compares the event base against the checked-out commit and invokes `node scripts/test-host.mjs --changed-from "$BASE_SHA" --committed`. The check reports selected and executed domain counts. Documentation and `.reader-artifacts/` changes alone produce `NOT_RUN`. CI rejects newly added ArkUI simulation and source layout regexes in Node tests and tools.
+HarmonyOS CI runs the affected pure TypeScript Host domains on branch pushes and pull requests. `scripts/ci/run-impact-checks.mjs` compares the event base against the checked-out commit and invokes `node scripts/test-host.mjs --changed-from "$BASE_SHA" --committed`. The check reports selected and executed domain counts. Documentation and `.reader-artifacts/` changes alone produce `NOT_RUN`. CI rejects newly added ArkUI simulation and source layout regexes in Node files under `scripts/`, `tests/` and `tools/`.
 
 Fork PRs exercise Host wire projections with the checked-in Core fixture snapshot. Trusted runs also compare that snapshot byte-for-byte with the Core-owned fixture from the revision locked in `scripts/core-dependency.json`. Source hygiene, affected Host checks, fixture parity and the trusted integration build feed the required `harmonyos-ci-gate` on PRs targeting `main`.
 

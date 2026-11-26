@@ -2,7 +2,7 @@
 Requires Pillow; no Reader production transform is imported or reproduced here.
 """
 from pathlib import Path
-import hashlib, json, shutil
+import hashlib, json
 from PIL import Image, ImageOps
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / 'entry/src/main/resources/rawfile/manga-platform-probe-v1'
@@ -28,10 +28,7 @@ for item in original['cases']:
         expectedSha256=put(pixels, expected), width=item['outputWidth'], height=item['outputHeight'],
         orientation=item['orientation'], lossy=name.endswith('.jpg'), previewWidth=preview_width, previewHeight=preview_height))
 graphics = ROOT / 'tools/fixtures/manga-graphics'
-with Image.open(graphics / 'input.png') as im:
-    (graphics / 'input-bgra.bin').write_bytes(im.convert('RGBA').tobytes('raw', 'BGRA'))
 pre_encoded = Image.frombytes('RGBA', (8, 103), (graphics / 'expected-rgba.bin').read_bytes()).tobytes('raw', 'BGRA')
-(graphics / 'expected-bgra.bin').write_bytes(pre_encoded)
 for name in ['input.png', 'plan.json', 'expected-rgba.bin']:
     put('graphics-' + name, (graphics / name).read_bytes())
 put('graphics-expected-bgra.bin', pre_encoded)

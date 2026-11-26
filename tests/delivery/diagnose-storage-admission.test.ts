@@ -5,8 +5,8 @@ import { mkdtempSync, writeFileSync, readFileSync, rmSync, symlinkSync, existsSy
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { EventEmitter } from 'node:events';
-import { runDiagnosticCli, parseDiagnosticArgs, validateDiagnosticAuthorization } from './diagnose-storage-admission.mjs';
-import { diagnosticNamespaceRef, createDiagnosticSignalScope } from '../scripts/lib/hap-diagnostic-transport.mjs';
+import { runDiagnosticCli, parseDiagnosticArgs, validateDiagnosticAuthorization } from '../../tools/diagnose-storage-admission.mjs';
+import { diagnosticNamespaceRef, createDiagnosticSignalScope } from '../../scripts/lib/hap-diagnostic-transport.mjs';
 const hash=b=>createHash('sha256').update(b).digest('hex');
 const target='127.0.0.1:5555',server='127.0.0.1:8710',uid=20020064,now=Date.parse('2026-11-11T06:00:00Z');
 const argv=opts=>Object.entries(opts).flatMap(([key,value])=>value===true?[key]:[key,value]);

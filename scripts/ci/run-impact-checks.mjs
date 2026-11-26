@@ -6,18 +6,22 @@ import { parseArgs } from 'node:util';
 import { affectedHostDomains, committedHostChanges, isHostDocument } from '../test-host.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
-const nodePaths = ['tests', 'tools'].flatMap(directory =>
+const nodePaths = ['scripts', 'tests', 'tools'].flatMap(directory =>
   ['js', 'cjs', 'mjs', 'ts', 'cts', 'mts'].map(extension => `:(glob)${directory}/**/*.${extension}`));
-const arkUI = /\bViewPU\b|@Builder\b/;
+// Split the literal markers so the detector can also scan this file.
+const arkUI = /\bViewP[U]\b|@Build[e]r\b/;
 const layoutSourceRegex = /\\+\.(?:width|height|size|padding|margin|position|translate|offset|constraintSize|alignItems|alignContent|layoutWeight|enabled|opacity|visibility|hitTestBehavior)\b/;
 
-function checkAddedTestLines(base, head) {
+function checkAddedNodeLines(base, head) {
   const patch = execFileSync('git', ['diff', '--no-ext-diff', '--no-textconv', '--no-color', '--no-renames',
     '--unified=0', base, head, '--', ...nodePaths], { cwd: root, encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
   let file = '';
+  let inHunk = false;
   for (const line of patch.split('\n')) {
-    if (line.startsWith('+++ ')) file = line.slice(4);
-    else if (line.startsWith('+') && (arkUI.test(line) || layoutSourceRegex.test(line))) {
+    if (line.startsWith('diff --git ')) inHunk = false;
+    else if (line.startsWith('@@ ')) inHunk = true;
+    else if (!inHunk && line.startsWith('+++ ')) file = line.slice(4);
+    else if (inHunk && line.startsWith('+') && (arkUI.test(line) || layoutSourceRegex.test(line))) {
       throw new Error(`${file} adds an ArkUI simulation marker or a source layout regex; use pure Host state or native VM evidence`);
     }
   }
@@ -39,7 +43,7 @@ function main() {
   let executed = 0;
   let failure = '';
   try {
-    checkAddedTestLines(base, head);
+    checkAddedNodeLines(base, head);
     if (selected.length > 0) {
       const outcome = spawnSync(process.execPath, ['scripts/test-host.mjs', '--changed-from', base, '--committed'],
         { cwd: root, stdio: 'inherit' });
