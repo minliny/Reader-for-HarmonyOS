@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  admitInitialReaderTts, admitReaderTtsRate, type ReaderTtsInitialAdmission, type ReaderTtsRateAdmission,
+  admitInitialReaderTts, admitReaderTtsRate, ReaderTtsPreparation, type ReaderTtsInitialAdmission, type ReaderTtsRateAdmission,
+  type ReaderTtsPreparationIntent, type ReaderTtsWarmupOwner,
 } from '../../entry/src/main/ets/features/reading/application/ReaderTtsConfigAdmission.ts';
 import type { ReaderTtsConfig } from '../../entry/src/main/ets/features/reading/application/ReaderTtsGateway.ts';
 import {
@@ -123,4 +124,92 @@ test('TTS rollback completion declines only while its intent remains current', a
   };
   await admitReaderTtsRate(transport.setRate, 1.25, 1, owner);
   assert.deepEqual(calls, ['transport:1.25', 'persist', 'inspect receipt', 'transport:1', 'report:write failed']);
+});
+
+test('TTS setup shares an in-flight probe and allows a retry independent of optional metadata', async () => {
+  const host = new ReaderTtsPreparation();
+  const metadata = Promise.withResolvers<void>();
+  const availability = Promise.withResolvers<boolean>();
+  const { calls, probe } = probeFixture();
+  const intent: ReaderTtsPreparationIntent = {
+    probe: { ...probe, probeAvailability: () => { calls.push('probe'); return availability.promise; } },
+    isCurrent: () => true,
+    loadMetadata: () => { calls.push('metadata'); return metadata.promise; },
+    admitConfig: () => { calls.push('admit'); },
+    reportFailure: () => assert.fail('no failure expected'),
+  };
+  const operation = host.initialize(false, () => true, () => intent);
+  assert.deepEqual(calls, ['metadata', 'probe']);
+  assert.equal(host.initialize(true, () => true, () => assert.fail('probe still pending')), operation);
+  availability.resolve(true);
+  assert.equal(await operation, true);
+  assert.equal(host.resolved(), true);
+  assert.equal(host.initialize(false, () => true, () => assert.fail('first result is retained')), operation);
+  assert.equal(await host.initialize(true, () => true, () => intent), true);
+  assert.deepEqual(calls, ['metadata', 'probe', 'read', 'admit', 0.75, 'probe', 'read', 'admit', 0.75]);
+  metadata.resolve();
+});
+
+test('a newer configuration intent retires the cold rate while keeping the availability result', async () => {
+  const host = new ReaderTtsPreparation();
+  const availability = Promise.withResolvers<boolean>();
+  const { calls, probe } = probeFixture();
+  const operation = host.initialize(false, () => true, () => ({
+    probe: { ...probe, probeAvailability: () => availability.promise },
+    isCurrent: () => true,
+    loadMetadata: () => Promise.resolve(),
+    admitConfig: () => assert.fail('stale config cannot publish'),
+    reportFailure: () => assert.fail('no failure expected'),
+  }));
+  const configure = host.beginConfiguration();
+  availability.resolve(true);
+  assert.equal(await operation, true);
+  assert.equal(host.resolved(), true);
+  assert.deepEqual(calls, ['read']);
+  host.reset();
+  assert.equal(configure(), true);
+  assert.equal(host.resolved(), false);
+});
+
+test('TTS warmup posts once and an old callback cannot release the current reader reservation', async () => {
+  const host = new ReaderTtsPreparation();
+  const callbacks: Array<() => void> = [];
+  let reader = 1;
+  let ready = false;
+  const initialized: number[] = [];
+  const capture = (): ReaderTtsWarmupOwner => {
+    const mounted = reader;
+    return { postFrame: callback => callbacks.push(callback), isMounted: () => mounted === reader,
+      isReady: () => ready, initialize: async () => { initialized.push(mounted); return true; } };
+  };
+  host.scheduleWarmup(false, capture);
+  host.scheduleWarmup(false, capture);
+  assert.equal(callbacks.length, 1);
+  reader += 1;
+  host.reset();
+  host.scheduleWarmup(false, capture);
+  callbacks[0]();
+  host.scheduleWarmup(false, capture);
+  assert.equal(callbacks.length, 2);
+  callbacks[1]();
+  assert.deepEqual(initialized, []);
+  host.scheduleWarmup(true, capture);
+  assert.equal(callbacks.length, 2);
+  host.scheduleWarmup(false, capture);
+  ready = true;
+  callbacks[2]();
+  assert.deepEqual(initialized, [2]);
+});
+
+test('configuration retains the original rejection and only the current operation notifies the reader', async () => {
+  const host = new ReaderTtsPreparation();
+  const first = Promise.withResolvers<void>();
+  const second = Promise.withResolvers<void>();
+  const calls: string[] = [];
+  const old = host.configure(1, id => { assert.equal(id, 1); return first.promise; }, () => true, () => calls.push('old'));
+  const current = host.configure(2, id => { assert.equal(id, 2); return second.promise; }, () => true, () => calls.push('current'));
+  first.reject(new Error('old'));
+  second.reject(new Error('current'));
+  await Promise.all([assert.rejects(old, /old/), assert.rejects(current, /current/)]);
+  assert.deepEqual(calls, ['current']);
 });
