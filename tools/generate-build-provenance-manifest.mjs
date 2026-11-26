@@ -251,6 +251,10 @@ if (protectedInputs.some(path => canonicalPath(path) === outputCanonical) ||
 
 const coreIdentity = JSON.parse(readRegular(identityPath, 'utf8'));
 validateCoreIdentity(coreIdentity);
+const requiredRustProfile = args.get('--rust-profile');
+if (requiredRustProfile !== undefined && coreIdentity.rustProfile !== requiredRustProfile) {
+  throw new Error(`Core build identity must use the selected Rust profile: ${requiredRustProfile}`);
+}
 const coreGit = gitRecord(coreRepo);
 const harmonyGit = gitRecord(harmonyRepo);
 if (coreIdentity.gitCommit !== coreGit.commit || coreIdentity.gitDirty !== coreGit.dirty) {

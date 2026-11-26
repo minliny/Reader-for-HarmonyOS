@@ -6,15 +6,22 @@ import { portableSpawnSync, resolveHarmonyTool } from './lib/harmony-toolchain.m
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 if (args.includes('--help') || args.includes('-h')) {
-  console.log('Usage: node scripts/deveco-build.mjs [Hvigor arguments]\nDefault: incremental debug assembleHap. Uses the project signing and output verification hooks.\nConfigure READER_DEVECO_HOME or HVIGORW; delivery HAPs use scripts/hap-pipeline.mjs.');
+  console.log(`Usage: node scripts/deveco-build.mjs [--compile-only | Hvigor arguments]
+Default: incremental debug assembleHap with project signing and output verification.
+--compile-only: run incremental :entry:default@CompileArkTS with the Hvigor daemon.
+Configure READER_DEVECO_HOME or HVIGORW. Delivery HAPs use scripts/hap-pipeline.mjs.`);
 } else {
   try {
-    const hvigor = resolveHarmonyTool('hvigorw', { cwd: root });
-    const result = portableSpawnSync(hvigor, args.length ? args : [
+    const compileOnly = args.includes('--compile-only');
+    if (compileOnly && args.length !== 1) throw new Error('--compile-only must be used on its own.');
+    const hvigorArgs = !args.length || compileOnly ? [
       '--mode', 'module', '-p', 'module=entry@default', '-p', 'product=default',
-      '-p', 'requiredDeviceType=phone', '-p', 'buildMode=debug', 'assembleHap',
+      '-p', 'requiredDeviceType=phone', '-p', 'buildMode=debug',
+      compileOnly ? 'default@CompileArkTS' : 'assembleHap',
       '--analyze=normal', '--parallel', '--incremental', '--daemon',
-    ], { cwd: root, env: process.env, stdio: 'inherit' });
+    ] : args;
+    const hvigor = resolveHarmonyTool('hvigorw', { cwd: root });
+    const result = portableSpawnSync(hvigor, hvigorArgs, { cwd: root, env: process.env, stdio: 'inherit' });
     if (result.error) throw result.error;
     process.exitCode = result.status || (result.signal ? 1 : 0);
   } catch (error) {
