@@ -161,8 +161,14 @@ export const journeys = {
     await ui.tap('打开已导入 TXT 的书籍信息', bookInfo, {
       route: 'detail', all: [text(LOCAL_TXT), text('本地藏书'), readBook], modalOpen: false,
     });
-    await ui.tap('进入本地 TXT 阅读', readBook, { route: 'reading', all: [readingStage] });
-    await ui.swipe('左滑翻页', readingStage, 'left', { route: 'reading', all: [readingStage] });
+    const activePage = { id: /^reader-page-slot-[ab]$/, enabled: 'true' };
+    const pageA = { id: 'reader-page-slot-a', enabled: 'true' };
+    const pageB = { id: 'reader-page-slot-b', enabled: 'true' };
+    await ui.tap('进入本地 TXT 阅读', readBook, { route: 'reading', all: [readingStage, activePage] });
+    const [beforeSwipe, afterSwipe] = ui.has(pageA) ? [pageA, pageB] : [pageB, pageA];
+    await ui.swipe('左滑翻页并核对绘制页面切换', readingStage, 'left', {
+      route: 'reading', all: [readingStage, afterSwipe], none: [beforeSwipe],
+    });
     await ui.tap('打开阅读控制并显示目录入口', readingStage, {
       route: 'reading', all: [readerDirectory],
     });
@@ -174,7 +180,7 @@ export const journeys = {
     });
     const target = ui.has(controlTitle(SECOND_LOCAL_CHAPTER)) ? THIRD_LOCAL_CHAPTER : SECOND_LOCAL_CHAPTER;
     await ui.tap(`从目录跳到 ${target} 并核对阅读内容`, chooseChapter(target), {
-      route: 'reading', all: [readingStage, controlTitle(target), { text: target, within: [readingStage, { type: 'CustomFrameNode' }] }],
+      route: 'reading', all: [readingStage, controlTitle(target), { text: target, within: [activePage, { type: 'CustomFrameNode' }] }],
       none: [activeDirectoryTab],
     });
     await ui.key('退出本地阅读返回详情', 'Back', {
