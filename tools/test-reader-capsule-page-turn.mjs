@@ -243,10 +243,10 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
   const frameSource = capsuleTree.statements.map(statement => statement.getText(capsuleTree))
     .filter(value => /^export (?:const READER_SESSION_CAPSULE_(?:RADIUS|SHADOW)\b|class ReaderSessionCapsule(?:Frame|MetricsCache)\b)/.test(value))
     .join('\n');
-  const measure = (_context, type) => ({ width: type === 'tts' ? 94 : 96,
-    paintHeight: 24, targetHeight: 44, labelWidth: 42, labelHeight: 16, countdownSize: 16 });
+  const measure = (_context, type) => ({ measured: true, metrics: { width: type === 'tts' ? 94 : 96,
+    paintHeight: 24, targetHeight: 44, labelWidth: 42, labelHeight: 16, countdownSize: 16 } });
   const ReaderPressFeedback = productionReaderPressFeedback();
-  const capsuleFrame = new Function('readerAppColor', 'ReaderPressFeedback', 'measureReaderSessionCapsule',
+  const capsuleFrame = new Function('readerAppColor', 'ReaderPressFeedback', 'readReaderSessionCapsuleMeasurement',
     `${stripTypeScriptTypes(frameSource.replace(/^export /gm, ''))}; return {
       ReaderSessionCapsuleFrame, READER_SESSION_CAPSULE_RADIUS, ReaderSessionCapsuleMetricsCache,
     };`)(readerAppColor, ReaderPressFeedback, measure);
@@ -273,14 +273,15 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
   const Raw = createReaderBuilderProbe(rawText, ['build']).Component;
   const Stage = createReaderBuilderProbe(stageText, ['build', 'sourceSharpContent',
     'effectiveSourceSurfaceColor', 'effectiveSourceBorderColor', 'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor',
-    'metrics', 'metricsCache', 'metricsRevision', 'pressPointer', 'paintDensity'], {
+    'metrics', 'metricsCache', 'metricsRevision', 'pressPointer', 'paintDensity', 'sample', 'interactionEnabled',
+    'onInteractionChanged', 'aboutToDisappear'], {
     ...paintInputs, READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT,
     ReaderSessionCapsuleLeading: CapsuleChild, ReaderSessionCapsulePause: CapsuleChild,
     readerSessionCapsuleAccessibility: () => 'capsule',
   }, { childSources: { ReaderSessionCapsuleLeading: capsuleText, ReaderSessionCapsulePause: capsuleText } }).Component;
   const Static = createReaderBuilderProbe(capsuleText, ['build', 'finalWidth',
     'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor', 'numericLength', 'metrics', 'measurementHandler',
-    'metricsCache', 'metricsRevision', 'pressPointer'], {
+    'metricsCache', 'metricsRevision', 'pressPointer', 'interactionEnabled', 'onInteractionChanged', 'aboutToDisappear'], {
     ...paintInputs,
     ReaderSessionCapsuleLeading: CapsuleChild, ReaderSessionCapsulePause: CapsuleChild,
     READER_SESSION_CAPSULE_HEIGHT: 24, readerSessionCapsuleMinimumWidth: type => type === 'tts' ? 94 : 96,
@@ -474,6 +475,27 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
     actorOwner.initialRender();
     const actor = [...actorOwner.nodes.values()].find(node => node.onClick);
     assert.equal(actor.type, 'Button', `${label}: pointer barrier and click share the native actor`);
+    const updateInput = (interactionEnabled, sample = actorOwner.sample) => actorOwner.updateStateVars({ interactionEnabled, sample });
+    actor.onTouch(touch(TouchType.Down));
+    assert.equal(actorOwner.pressPointer, 7);
+    updateInput(false);
+    assert.equal(actorOwner.pressPointer, -1, `${label}: disable clears press when no UP is delivered`);
+    updateInput(true);
+    actorOwner.replay();
+    assert.equal(actorOwner.pressPointer, -1, `${label}: re-enable leaves the capsule at rest`);
+    if (label === 'launch Stage') {
+      actor.onTouch(touch(TouchType.Down));
+      assert.equal(actorOwner.pressPointer, 7);
+      const visible = actorOwner.sample;
+      updateInput(true, { ...visible, pauseOpacity: 0 });
+      assert.equal(actorOwner.pressPointer, -1, 'hiding the pause actor clears its outstanding touch');
+      updateInput(true, visible);
+      actorOwner.replay();
+    }
+    actor.onTouch(touch(TouchType.Down));
+    assert.equal(actorOwner.pressPointer, 7);
+    actorOwner.aboutToDisappear();
+    assert.equal(actorOwner.pressPointer, -1, `${label}: disappearance clears an outstanding touch`);
     liveInput = false;
     actor.onClick();
     assert.deepEqual(calls, [], `${label}: lost original live input cannot pause`);

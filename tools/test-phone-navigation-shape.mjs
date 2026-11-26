@@ -4,7 +4,7 @@ export const CONTRACT_CASES = {
   'phone-first-measurement': { description: 'Unavailable initial viewport emits no native Tab material; the real navigation frame admits the first finite positive material. Native fan causality remains open.', resources: [] },
   'phone-child-containment': { description: 'Actual paid phone-tab geometry disables redundant parent clipping, narrow valid surfaces retain it and unavailable geometry emits no native material; no native raster claim.', resources: [] },
   'current-phone-shape': { description: 'Current phone Tab and six exact callers have a single measured material and outer shadow with bounded inner clipping, reject stale geometry and cannot restore phone Canvas; no Native raster claim.', resources: [] },
-  'measurement-identity': { description: 'Actual phone footer retains its geometry and mounted capsule across primary Tab switches and rejects retired callbacks.', resources: [] },
+  'measurement-identity': { description: 'Phone and tablet in bottom mode retain the mounted capsule across primary Tab switches and reject retired callbacks.', resources: [] },
   'footer-propagation': { description: 'Actual nonstandard bookshelf and standard settings consume measured occupied footer extent, including all three bookshelf states.', resources: [] },
 };
 
@@ -302,7 +302,7 @@ async function measurementIdentity(sourceOverride) {
 
 async function primaryTabPersistence(c) {
   const { assert, builder, children, deps, load, nodes } = c;
-  const root = builder('pages/Index.ets', ['primaryBottomNavigation', 'showsPrimaryBottomNavigation',
+  const root = builder('pages/Index.ets', ['primaryBottomNavigation', 'showsPrimaryBottomNavigation', 'usesBottomMainNavigation',
     'primaryBottomNavigationInputAllowed', 'recordPrimaryTabFooter', 'selectPrimaryBottomTab', 'retapPrimaryBottomTab',
     'expandedLayout'], {
     ...load('ui/layout/ReaderLayoutCapability.ts'),
@@ -357,6 +357,51 @@ async function primaryTabPersistence(c) {
   }
   assert.deepEqual(visits, ['settings', 'bookshelf'], 'retired primary invocation is inert');
 
+  root.route = 'bookshelf';
+  root.expandedLayout = () => true;
+  root.wideNavigationRail = true;
+  const originalWidth = c.metrics.windowRect.width;
+  c.metrics.windowRect.width = 900;
+  deps.publishReaderMainViewport(900, 844);
+  let hasSettingsPane = false;
+  let settingsAcceptsInput = true;
+  root.wideSettingsPane = () => hasSettingsPane ? 'general' : undefined;
+  root.wideSettingsInputAllowed = () => settingsAcceptsInput;
+  root.requestWideSettingsMainTab = key => visits.push('wide:' + key);
+  try {
+    root.replay();
+    assert.equal(navigation.params.current, 'bookshelf');
+    navigation.params.onSelect('settings');
+    root.route = 'settings';
+    root.navigationGeneration += 1;
+    hasSettingsPane = true;
+    root.replay();
+    assert.deepEqual(children(root).filter(child => child instanceof deps.ReaderBottomNavigation), [navigation],
+      'tablet bookshelf and settings share the same mounted footer');
+    assert.equal(navigation.params.current, 'settings');
+    root.route = 'source';
+    root.replay();
+    assert.equal(navigation.params.current, 'settings', 'the active tab survives a switch to a wide settings pane');
+    settingsAcceptsInput = false;
+    root.replay();
+    assert.equal(navigation.params.inputEnabled, false);
+    navigation.params.onSelect('bookshelf');
+    assert.deepEqual(visits, ['settings', 'bookshelf', 'settings']);
+    settingsAcceptsInput = true;
+    root.replay();
+    navigation.params.onSelect('bookshelf');
+    assert.deepEqual(visits, ['settings', 'bookshelf', 'settings', 'wide:bookshelf']);
+    root.route = 'bookshelf';
+    hasSettingsPane = false;
+    root.replay();
+    assert.deepEqual(children(root).filter(child => child instanceof deps.ReaderBottomNavigation), [navigation]);
+    assert.equal(navigation.params.current, 'bookshelf');
+  } finally {
+    c.metrics.windowRect.width = originalWidth;
+    deps.publishReaderMainViewport(390, 844);
+  }
+
+  visits.length = 0;
   const { productionReaderMotionSdk } = await import('./lib/reader-control-builder-probe.mjs');
   const path = 'ui/patterns/ReaderBottomTabBar.ets';
   const motions = [];
@@ -376,7 +421,7 @@ async function primaryTabPersistence(c) {
   assert.deepEqual(motions, [220], 'the retained watcher slides between primary tabs');
   assert.equal(tab.paintedTab, 1);
   originalTap();
-  assert.deepEqual(visits, ['settings', 'bookshelf']);
+  assert.deepEqual(visits, []);
   tab.reduceMotion = true;
   tab.updateStateVars({ current: 'bookshelf', actionGeneration: 3 });
   assert.deepEqual(motions, [220, 120], 'the retained watcher fades the active pill with reduced motion');

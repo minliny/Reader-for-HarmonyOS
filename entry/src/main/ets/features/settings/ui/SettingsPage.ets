@@ -125,7 +125,7 @@ export struct SettingsPage {
   private lastCacheFeedback: string = '';
   @State private openSelect: SettingsSelectField | '' = '';
   @State private selectionId: string = '';
-  private selectionField: SettingsSelectField | '' = '';
+  @State private selectionField: SettingsSelectField | '' = '';
   // 展开面板锚点: 触发条全局坐标减去宿主 Stack 原点, 得面板相对宿主 Stack 的位置。
   // selectAnchors 为普通 map(非 @State): 逐行 onAreaChange 写入, 打开时读入 anchorX/Y。
   @State private anchorRight: number = 0;
@@ -188,7 +188,7 @@ export struct SettingsPage {
     this.nativeAlertOwner.retire();
     this.retireResetDialog();
     this.resetRevision += 1;
-    this.retireSelection();
+    this.retireSelection(true);
     this.onTemporaryBackBridge(undefined, identity);
   }
 
@@ -298,7 +298,7 @@ export struct SettingsPage {
       onOpenSync: this.onOpenSync,
       onRssRequested: this.onRssRequested,
       onDiscoverRequested: this.onDiscoverRequested,
-      showOverlay: route === this.settingsSubroute() && this.openSelect !== '',
+      showOverlay: route === this.settingsSubroute() && this.selectionField !== '',
       boundedOverlayVisible: route === this.settingsSubroute() && this.pendingFeedbackVisible(),
       boundedOverlayContent: (): void => { this.pendingFeedback(); },
       onOverlayOriginChange: (x: number, y: number, width?: number): void => {
@@ -417,7 +417,7 @@ export struct SettingsPage {
   private openDeveloperPage(identity: string): void {
     if (!this.aboutPageCurrent(identity) || !this.settingsInputIsCurrent() || this.developerPageId !== '') return;
     this.nativeAlertOwner.retire();
-    this.retireSelection();
+    this.retireSelection(true);
     this.appThemeControlGeneration += 1;
     this.retainedDeveloperId = `developer:${++settingsSelectionGeneration}`;
     this.developerPageId = this.retainedDeveloperId;
@@ -450,7 +450,7 @@ export struct SettingsPage {
     this.aboutPageId = '';
     this.nativeAlertOwner.retire();
     this.retireResetDialog();
-    this.retireSelection();
+    this.retireSelection(true);
     this.retireDeveloperPages();
     if (this.mounted) this.prepareAboutSection();
   }
@@ -1115,8 +1115,15 @@ export struct SettingsPage {
     this.selectionId = `${field}:${++settingsSelectionGeneration}`;
   }
 
-  private retireSelection(): void {
-    this.openSelect = ''; this.selectionField = ''; this.selectionId = '';
+  private retireSelection(immediate: boolean = false): void {
+    this.openSelect = '';
+    if (immediate) this.finishSelectionClose(this.selectionId);
+  }
+
+  private finishSelectionClose(identity: string): void {
+    if (this.openSelect !== '' || identity !== this.selectionId) return;
+    this.selectionField = '';
+    this.selectionId = '';
   }
 
   private ownsSelection(identity: string | undefined): boolean {
@@ -1135,17 +1142,19 @@ export struct SettingsPage {
 
   @Builder
   private buildOverlay() {
-    if (this.openSelect !== '') {
+    if (this.selectionField !== '') {
       SettingsSelectOverlay({
+        visible: this.openSelect !== '',
         expandedLayout: this.paneExpanded(),
-        field: this.openSelect,
-        value: this.currentValue(this.openSelect),
-        options: this.selectOptions(this.openSelect),
+        field: this.selectionField,
+        value: this.currentValue(this.selectionField),
+        options: this.selectOptions(this.selectionField),
         anchorRight: this.anchorRight - this.originX,
         anchorBottom: this.anchorBottom - this.originY,
         selectionId: this.selectionId,
         onSelect: (opt: string, identity?: string): void => this.commitSelection(opt, identity),
         onDismiss: (identity?: string): void => this.dismissSelection(identity),
+        onClosed: (identity: string): void => this.finishSelectionClose(identity),
       });
     }
   }

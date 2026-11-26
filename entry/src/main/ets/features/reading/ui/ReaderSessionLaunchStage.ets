@@ -18,11 +18,11 @@ import { READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT } from './ReaderPageChromeLayo
 @Component
 export struct ReaderSessionLaunchStage {
   @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
-  @Prop sample: ReaderSessionLaunchSample;
+  @Prop @Watch('onInteractionChanged') sample: ReaderSessionLaunchSample;
   @Prop sessionState: ReaderSessionCapsuleState = 'preparing';
   @Prop desiredPlaying: boolean = true;
   @Prop countdown: number = 8;
-  @Prop interactionEnabled: boolean = true;
+  @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop fontScale: number = 1;
   @Prop surfaceColor: string = '';
   @Prop surfaceBorderColor: string = '';
@@ -48,6 +48,12 @@ export struct ReaderSessionLaunchStage {
 
   private sourceClipCache: ReaderControlMotionPathCache<PathShape> = new ReaderControlMotionPathCache<PathShape>(
     (path: string): PathShape => new PathShape().commands(path));
+
+  private onInteractionChanged(): void {
+    if (!this.interactionEnabled || this.sample.pauseOpacity <= 0) this.pressPointer = -1;
+  }
+
+  aboutToDisappear(): void { this.pressPointer = -1; }
 
   private sourceClip(): PathShape {
     const s = this.sample;

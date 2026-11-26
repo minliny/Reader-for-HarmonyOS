@@ -1,49 +1,77 @@
 import { ReaderNativeAlertOwner } from './lib/reader-native-alert-sdk-probe.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { choiceRowProbe } from './lib/reader-choice-row-probe.mjs';
-import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
-import { readerFoundationTokens } from './lib/reader-foundation-control-probe.mjs';
+import { registerHooks } from 'node:module';
+import { createReaderBuilderProbe, productionReaderMotionSdk } from './lib/reader-control-builder-probe.mjs';
+import { choiceRowProbe, choiceSource } from './lib/reader-choice-row-probe.mjs';
+import { boundedMembers, readerSurfaceSpecsForProbe } from './lib/bounded-surface-sdk-probe.mjs';
+import { readerFoundationTokens, surfaceFontResolvers } from './lib/reader-foundation-control-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
-import { stripTypeScriptTypes } from 'node:module';
+import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
+import { selectedProductionValues } from './lib/selected-production-methods.mjs';
+import { readerWidthClassWithHint } from '../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts';
+import * as safe from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import * as selectGeometry from '../entry/src/main/ets/ui/foundation/ReaderSelectGeometry.ts';
+registerHooks({ resolve(specifier, context, next) {
+  try { return next(specifier, context); } catch (error) {
+    if (error.code === 'ERR_MODULE_NOT_FOUND' && specifier.startsWith('.') && !specifier.endsWith('.ts')) {
+      return next(specifier + '.ts', context);
+    }
+    throw error;
+  }
+} });
+const { readerPageAreaLength } = await import('../entry/src/main/ets/ui/layout/ReaderPageShell.ts');
+const { readerKeyboardHostBottom } = await import('../entry/src/main/ets/ui/layout/ReaderKeyboardGeometry.ts');
 const source = readFileSync(new URL('../entry/src/main/ets/features/settings/ui/SettingsPage.ets', import.meta.url), 'utf8');
-const overlaySource = readFileSync(new URL('../entry/src/main/ets/features/settings/ui/SettingsSelectOverlay.ets', import.meta.url), 'utf8');
-const overlayMembers = ['isTablet', 'field', 'selectionId', 'value', 'options', 'anchorRight', 'anchorBottom',
-  'onSelect', 'onDismiss', 'appThemeScheme', 'mounted', 'closed', 'aboutToAppear', 'aboutToDisappear',
-  'onFieldChanged', 'ownsOpening', 'dismiss', 'choose', 'build', 'phoneSheet', 'phoneOption',
-  'tabletPanel', 'tabletOption', 'tabletSpec', 'isSelected', 'title'];
+const overlayUrl = new URL('../entry/src/main/ets/features/settings/ui/SettingsSelectOverlay.ets', import.meta.url);
+const overlaySource = readFileSync(overlayUrl, 'utf8');
+const overlayValues = selectedProductionValues(overlayUrl,
+  ['PHONE_HORIZONTAL_INSET', 'PHONE_BOTTOM_INSET', 'PHONE_OPTION_HEIGHT', 'PHONE_CANCEL_GAP', 'PHONE_RADIUS', 'PHONE_SHEET_CORNERS']);
+const scaleResolvers = surfaceFontResolvers();
+const choiceRegistry = choiceSource.slice(choiceSource.indexOf('type ReaderChoiceSpecId'), choiceSource.indexOf('/** The finite row spec'));
+const choiceGeometry = pureModuleProbe(choiceRegistry, 'ReaderChoiceRowGeometry.ts',
+  { ...readerTypographyRoles, ...scaleResolvers }, ['readerSettingsTabletOptionHeight']);
 const pageMembers = ['nativeAlertOwner', 'onTemporaryBackBridge', 'temporaryBackIdentity', 'themeOwner',
-  'mounted', 'resetRevision', 'isTablet', 'openSelect', 'selectionId', 'selectionField', 'selectAnchors',
+  'mounted', 'resetRevision', 'expandedLayout', 'paneWidth', 'paneExpanded', 'openSelect', 'selectionId', 'selectionField', 'selectAnchors',
   'languageValue', 'startupValue', 'animationValue', 'anchorRight', 'anchorBottom', 'originX', 'originY',
-  'buildOverlay', 'currentValue', 'selectOptions', 'setSelectValue', 'toggleSelection', 'retireSelection',
-  'ownsSelection', 'commitSelection', 'dismissSelection', 'aboutToDisappear'];
+  'buildOverlay', 'currentValue', 'selectOptions', 'setSelectValue', 'toggleSelection', 'retireSelection', 'finishSelectionClose',
+  'ownsSelection', 'commitSelection', 'dismissSelection', 'aboutToDisappear', 'retireResetDialog',
+  'retireDeveloperPages', 'closeMessagePreview'];
 function fixture(tablet, overlay = overlaySource) {
   const choice = choiceRowProbe();
+  const metrics = new safe.ReaderWindowMetricsSnapshot(new safe.ReaderRectVp(0, 0, tablet ? 800 : 390, 844));
+  const effect = kind => ({ animation: params => ({ kind, params }) });
   const platform = { ...choice.properties.sdk, ...choice.dependencies,
-    registerReaderFonts: () => {}, PHONE_HORIZONTAL_INSET: 14, PHONE_BOTTOM_INSET: 20,
-    PHONE_OPTION_HEIGHT: 52, PHONE_CANCEL_GAP: 10, PHONE_RADIUS: 12,
-    resolvePopupSpec: () => ({ width: 160, surfaceBackgroundRole: 'surface', surfaceBorderRole: 'border',
-      borderWidth: 1, borderRadius: 12, shadowRadius: 30, surfaceShadowRole: 'shadow', shadowOffsetY: 8, anchorOverlap: 6 }) };
-  const actualOverlay = createReaderBuilderProbe(overlay, overlayMembers, platform,
-    { ...choice.hooks, ...choice.properties.hooks });
+    ...readerTypographyRoles, ...scaleResolvers, ...choiceGeometry, ...overlayValues,
+    ...readerSurfaceSpecsForProbe(metrics), ...safe, ...productionReaderMotionSdk(),
+    readerWindowMetrics: () => metrics, ReaderWindowCoordinator: { metrics: () => metrics },
+    readerPageAreaLength, readerKeyboardHostBottom, readerWidthClassWithHint, registerReaderFonts() {},
+    TransitionEdge: { BOTTOM: 'bottom' }, TransitionEffect: {
+      OPACITY: effect('opacity'), move: () => effect('move'), asymmetric: (open, close) => ({ open, close }),
+    },
+  };
+  const actualOverlay = createReaderBuilderProbe(overlay, boundedMembers(overlay), platform,
+    { ...choice.hooks, ...choice.properties.hooks, allowEmptyBranchAdmission: true, allowEmptyBranchRemoval: true });
   const hooks = { ...choice.hooks, ...choice.properties.hooks,
+    allowEmptyBranchAdmission: true, allowEmptyBranchRemoval: true,
     childSources: { ...choice.hooks.childSources, SettingsSelectOverlay: overlay } };
   const { owner } = createReaderBuilderProbe(source, pageMembers,
     { ...platform, ReaderNativeAlertOwner, SettingsSelectOverlay: actualOverlay.Component, settingsSelectionGeneration: 0 }, hooks);
-  Object.assign(owner, { mounted: true, operation: {}, isTablet: tablet, anchorRight: 200, anchorBottom: 180 });
+  Object.assign(owner, { mounted: true, expandedLayout: tablet, anchorRight: 200, anchorBottom: 180,
+    transientFeedback: { reset() {} }, appearanceSaveRecovery: { generation: 0 }, messagePreviewId: '' });
   owner.toggleSelection('language'); owner.buildOverlay(); choice.properties.flush();
   const child = [...owner.children.values()][0];
   assert.equal(child.constructor, actualOverlay.Component, 'actual Page creates the complete SDK overlay');
   const sync = () => choice.properties.flush();
   const open = field => { owner.toggleSelection(field); sync(); return child.selectionId; };
   const currentBackdrop = () => [...child.nodes.values()].filter(n => n.type === 'Row' && n.width === '100%' && n.height === '100%' && n.onClick).at(-1).onClick;
-  const cancel = () => [...child.nodes.values()].filter(n => n.type === 'Stack' && n.height === 52 && n.onClick).at(-1)?.onClick;
+  const cancel = () => [...child.nodes.values()].filter(n => n.type === 'Button' && n.accessibilityText === '取消').at(-1)?.onClick;
   const row = value => [...child.children.values()].filter(c => c.constructor === choice.Component && c.label === value).at(-1);
   const click = value => { const actual = row(value); assert.ok(actual, 'actual shared row: ' + value);
     return [...actual.nodes.values()].find(n => n.onClick).onClick; };
   const projection = () => ({ selectionId: child.selectionId, onSelect: child.onSelect, onDismiss: child.onDismiss });
-  return { owner, child, choice, sync, open, currentBackdrop, cancel, click, projection };
+  const finishExit = () => child.attributeCalls.findLast(call => call.property === 'transition' && call.args.length === 2).args[1];
+  return { owner, child, choice, sync, open, currentBackdrop, cancel, click, projection, finishExit };
 }
 let cases = 0;
 for (const tablet of [false, true]) {
@@ -58,8 +86,11 @@ for (const tablet of [false, true]) {
   assert.equal(f.child, [...f.owner.children.values()][0], 'field switch retains the actual overlay');
   assert.equal(f.owner, originalParent, 'SettingsPage is never remounted'); cases++;
 
-  f.click('RSS')(); f.sync(); assert.equal(f.owner.startupValue, 'RSS'); assert.equal(f.owner.openSelect, ''); cases++;
+  const bExit = f.finishExit();
+  f.click('RSS')(); f.sync(); assert.equal(f.owner.startupValue, 'RSS'); assert.equal(f.owner.openSelect, '');
+  assert.equal(f.owner.selectionId, bId, 'closing retains the identity through the visual exit'); cases++;
   const cId = f.open('startup'); assert.notEqual(cId, bId); b.onDismiss(b.selectionId);
+  bExit(false); assert.equal(f.owner.selectionId, cId, 'old panel exit cannot release the reopened presentation');
   assert.equal(f.owner.openSelect, 'startup'); f.child.choose('not an option', cId);
   assert.equal(f.owner.openSelect, 'startup'); assert.equal(f.child.closed, false);
   f.currentBackdrop()(); f.sync(); assert.equal(f.owner.openSelect, ''); cases++;
@@ -95,30 +126,32 @@ assert.notEqual(unguardedChoose, overlaySource);
 
 // Replay the real trigger's native Area wrapper, including unit-bearing vp
 // coordinates, before passing its anchor to the retained actual overlay.
-const selectSource = readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderSelect.ets', import.meta.url), 'utf8');
-const actualConstants = text => stripTypeScriptTypes(text.slice(0, text.indexOf('@Component')))
-  .replace(/^import[\s\S]*?;\s*/gm, '').replace(/^export /gm, '');
-const selectConstants = new Function('TOK_SPACE_CONTROL_INLINE', actualConstants(selectSource) +
-  ';return {TRIGGER_H,SELECT_PAD,CHEVRON_GAP,CHEVRON_W,CHEVRON_H,SELECT_CHROME};')(readerFoundationTokens.TOK_SPACE_CONTROL_INLINE);
-const pageConstants = new Function(actualConstants(source) + ';return {SELECT_ROW_H,SELECT_TRIGGER_H,SELECT_TRIGGER_OFFSET};')();
+const selectUrl = new URL('../entry/src/main/ets/ui/controls/ReaderSelect.ets', import.meta.url);
+const selectSource = readFileSync(selectUrl, 'utf8');
+const selectConstants = selectedProductionValues(selectUrl, ['TRIGGER_H', 'SELECT_PAD', 'CHEVRON_GAP', 'CHEVRON_W', 'CHEVRON_H'], readerFoundationTokens);
 function triggerAnchor(pageSource = source) {
   const choice = choiceRowProbe(), uiContext = { getFont: () => ({}), px2vp: value => value,
-    getMeasureUtils: () => ({ measureText: ({ textContent }) => String(textContent).length * 12 }) };
+    getMeasureUtils: () => ({ measureText: ({ textContent }) => String(textContent).length * 12,
+      measureTextSize: () => ({ height: 16 }) }) };
   const platform = { ...choice.properties.sdk, ...choice.dependencies, ...readerFoundationTokens,
-    ...readerTypographyRoles, ...selectConstants, ...pageConstants, Curve:{Linear:'Curve.Linear'}, registerReaderFonts() {}, uiContext };
+    ...readerTypographyRoles, ...selectConstants, ...selectGeometry, ...productionReaderMotionSdk(),
+    readerWidthClassWithHint, readerPageAreaLength, registerReaderFonts() {}, uiContext };
   const select = createReaderBuilderProbe(selectSource, boundedMembers(selectSource), platform, choice.properties.hooks);
   const hooks = { ...choice.properties.hooks, ...choice.hooks,
     childSources: { ...choice.hooks.childSources, ReaderSelect: selectSource } };
-  const page = createReaderBuilderProbe(pageSource, [...pageMembers, 'selectRow', 'labelColumn', 'iconBox'],
+  const page = createReaderBuilderProbe(pageSource, [...pageMembers, 'selectRow'],
     { ...platform, ReaderNativeAlertOwner, ReaderSelect: select.Component, settingsSelectionGeneration: 0 }, hooks).owner;
-  Object.assign(page, { mounted:true, isTablet:true, selectAnchors:{}, openSelect:'', languageValue:'简体中文',
+  Object.assign(page, { mounted:true, expandedLayout:true, selectAnchors:{}, openSelect:'', languageValue:'简体中文',
     startupValue:'书架', animationValue:'平移', reduceMotionValue:true, appThemeScheme:'day' });
-  page.selectRow('语言', () => 'app.media.settings_gen_language', 'language', ['简体中文','English']);
-  const trigger = [...page.children.values()].find(child => child instanceof select.Component);
+  page.selectRow('语言', 'language', ['简体中文','English']);
+  const row = [...page.children.values()].find(child => child.children);
+  const triggerOwner = [row, page].find(owner => [...owner.children.values()].some(child => child instanceof select.Component));
+  const trigger = [...(triggerOwner?.children.values() ?? [])].find(child => child instanceof select.Component);
   assert.ok(trigger, 'actual SDK SettingsPage mounts the real ReaderSelect');
-  const area = [...page.nodes.values()].find(node => node.type === '__Common__' && node.onAreaChange && page.children.get(node.id + 1) === trigger);
+  const area = [...triggerOwner.nodes.values()].find(node => node.type === '__Common__' && node.onAreaChange &&
+    triggerOwner.children.get(node.id + 1) === trigger);
   assert.ok(area, 'native measurement wrapper belongs to the actual trigger');
-  return { page, trigger, area, sync: () => choice.properties.flush() };
+  return { page, triggerOwner, trigger, area, sync: () => choice.properties.flush() };
 }
 {
   const f = triggerAnchor(), actor = f.trigger;
@@ -131,7 +164,7 @@ function triggerAnchor(pageSource = source) {
   const button = [...actor.nodes.values()].find(node => node.onClick); assert.ok(button);
   button.onClick(); f.sync(); assert.equal(f.page.openSelect,'language');
   assert.deepEqual([f.page.anchorRight,f.page.anchorBottom],[310,204]);
-  assert.equal([...f.page.children.values()].find(child => child instanceof actor.constructor), actor,
+  assert.equal([...f.triggerOwner.children.values()].find(child => child instanceof actor.constructor), actor,
     'unit conversion and selection retain the actual trigger actor'); cases++;
 }
 {
@@ -143,10 +176,11 @@ function triggerAnchor(pageSource = source) {
 }
 {
   const shellSource=readFileSync(new URL('../entry/src/main/ets/features/settings/ui/SettingsShell.ets',import.meta.url),'utf8');
-  const shell=createReaderBuilderProbe(shellSource,['reportOverlayOrigin']).owner;
+  const shell=createReaderBuilderProbe(shellSource,['reportOverlayOrigin'], { readerPageAreaLength }).owner;
+  shell.routeCurrent = true;
   const points=[]; shell.onOverlayOriginChange=(x,y)=>points.push([x,y]);
   shell.reportOverlayOrigin({globalPosition:{x:10,y:39}});
   shell.reportOverlayOrigin({globalPosition:{x:'10vp',y:'39vp'}});
   assert.deepEqual(points,[[10,39],[10,39]],'actual SettingsShell uses the same local vp origin as trigger anchors'); cases++;
 }
-console.log(`Settings actual Page→complete SDK Overlay→shared Choice→native physical selection: PASS (${cases} groups; phone/tablet/current/stale backdrop/cancel/commit/field switch/reopen/unmount + two original-policy negatives).`);
+console.log(`Settings Page → SDK Overlay → shared Choice callback contract: PASS (${cases} groups covering phone and tablet selection, exit, reopen, unmount, stale callbacks and negative controls).`);

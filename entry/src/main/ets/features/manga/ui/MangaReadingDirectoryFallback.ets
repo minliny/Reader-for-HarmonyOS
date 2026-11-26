@@ -191,7 +191,7 @@ export struct MangaReadingDirectoryFallback {
 
   private onLocateCurrent(): void {
     if (!this.mounted) return;
-    this.locateExpectsQueryClear = this.query.trim().length > 0;
+    this.locateExpectsQueryClear = this.query.length > 0;
     const current = this.admittedEntries.find((entry: LocalReadingTocEntry): boolean => entry.index === this.currentChapterIndex);
     const ancestors = current === undefined ? [] : this.rowPresentation(current)?.ancestorGroupIndexes ?? [];
     this.collapsedGroups = this.collapsedGroups.filter((index: number): boolean => !ancestors.includes(index));

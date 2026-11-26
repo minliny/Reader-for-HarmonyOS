@@ -1029,11 +1029,16 @@ struct Index {
     return this.libraryJourney.isInteractiveBookshelf(generation, owner, mounting);
   }
 
-  private showsPrimaryBottomNavigation(): boolean {
-    if (this.route !== 'bookshelf' &&
-      (this.route !== 'settings' || this.settingsSection !== 'home' || this.expandedLayout())) return false;
+  private usesBottomMainNavigation(): boolean {
     return readerMainNavigationMode(this.wideNavigationRail, this.mainViewportRevision,
       this.readerWindowMetricsRevision) === 'bottom';
+  }
+
+  private showsPrimaryBottomNavigation(): boolean {
+    if (!this.usesBottomMainNavigation()) return false;
+    if (this.route === 'bookshelf') return true;
+    if (this.expandedLayout()) return this.wideSettingsPane() !== undefined;
+    return this.route === 'settings' && this.settingsSection === 'home';
   }
 
   private primaryBottomNavigationInputAllowed(): boolean {
@@ -1044,12 +1049,14 @@ struct Index {
       return this.isInteractiveBookshelfPresentation(this.navigationGeneration,
         this.mountedRuntimeOwner, this.detailShelfAdmissionMount);
     }
+    if (this.expandedLayout()) return this.wideSettingsInputAllowed();
     return this.settingsPresentation.paintIdentity('settings') !== '';
   }
 
   private selectPrimaryBottomTab(key: string): void {
     if (!this.primaryBottomNavigationInputAllowed()) return;
-    if (key === 'bookshelf' && this.route === 'settings') this.libraryJourney.returnToBookshelf();
+    if (this.expandedLayout() && this.route !== 'bookshelf') this.requestWideSettingsMainTab(key);
+    else if (key === 'bookshelf' && this.route === 'settings') this.libraryJourney.returnToBookshelf();
     else if (key === 'settings' && this.route === 'bookshelf') this.settingsNavigation.openSettings();
     else if (key === 'discover') this.openDiscover();
     else if (key === 'rss') this.rssJourney.openRss();
@@ -1059,7 +1066,7 @@ struct Index {
     if (!this.primaryBottomNavigationInputAllowed() || key !== this.route ||
       !this.settingsPresentation.snapshot.tapBottomScrollTop) return;
     if (key === 'bookshelf') this.shelfRead.scrollTopToken += 1;
-    else if (key === 'settings') this.settingsHomeScrollTopRequest += 1;
+    else if (key === 'settings' && !this.expandedLayout()) this.settingsHomeScrollTopRequest += 1;
   }
 
   private recordPrimaryTabFooter(area: Area): void {
@@ -1147,7 +1154,8 @@ struct Index {
     if (this.showsPrimaryBottomNavigation()) {
       Stack({ alignContent: Alignment.Bottom }) {
         Column() {
-          ReaderBottomNavigation({ current: this.route, inputEnabled: this.primaryBottomNavigationInputAllowed(),
+          ReaderBottomNavigation({ current: this.route === 'bookshelf' ? 'bookshelf' : 'settings',
+            inputEnabled: this.primaryBottomNavigationInputAllowed(),
             actionGeneration: this.navigationGeneration,
             onSelect: (key: string): void => this.selectPrimaryBottomTab(key),
             onCurrentTap: (key: string): void => this.retapPrimaryBottomTab(key),
@@ -1241,6 +1249,7 @@ struct Index {
     ReaderWideSettingsShell({
       pane: this.wideSettingsSelection(), collapsed: this.wideSettingsCollapsed,
       interactive: this.wideSettingsInputAllowed(),
+      sharedBottomNavigationHeight: this.usesBottomMainNavigation() ? this.primaryTabFooterHeight : -1,
       onToggle: (): void => {
         if (this.wideSettingsInputAllowed()) this.wideSettingsCollapsed = !this.wideSettingsCollapsed;
       },

@@ -348,6 +348,7 @@ export struct ArkWebExecutionHost {
           .height(this.interactive ? Math.max(0, this.safeHeight() - this.toolbarHeight() - this.controlsHeight()) : 1)
           .position({ x: this.interactive ? this.safeLeft() : 0,
             y: this.interactive ? this.safeTop() + this.toolbarHeight() : 0 })
+          .animation({ duration: 0 })
           // Background source execution must not acquire keyboard/navigation
           // focus. Hit-test exclusion alone only excludes pointer events.
           .focusable(this.interactive && !this.clearing)

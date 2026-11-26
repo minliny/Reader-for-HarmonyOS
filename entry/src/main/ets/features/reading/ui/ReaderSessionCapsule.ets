@@ -29,20 +29,33 @@ export interface ReaderSessionCapsuleMetrics {
   countdownSize: number;
 }
 
+interface ReaderSessionCapsuleMeasurement {
+  metrics: ReaderSessionCapsuleMetrics;
+  measured: boolean;
+}
+
 /** The authored 24vp shell grows only when its production text needs more room. */
 export function measureReaderSessionCapsule(context: UIContext, type: ReaderSessionCapsuleType,
   fontScale: number = 1): ReaderSessionCapsuleMetrics {
+  return readReaderSessionCapsuleMeasurement(context, type, fontScale).metrics;
+}
+
+function readReaderSessionCapsuleMeasurement(context: UIContext, type: ReaderSessionCapsuleType,
+  fontScale: number): ReaderSessionCapsuleMeasurement {
   const scale = Number.isFinite(fontScale) ? Math.max(1, fontScale) : 1;
   const label = measureReaderControlText(context, type === 'autoPage' ? '自动翻页' : '朗读',
     TYPE_READER_SESSION_LABEL, 4096);
-  const countdown = measureReaderControlText(context, '60', TYPE_READER_SESSION_COUNTDOWN, 4096);
+  const countdown = type === 'autoPage' ? measureReaderControlText(context, '60', TYPE_READER_SESSION_COUNTDOWN, 4096) : undefined;
   const labelWidth = Math.max(42, label?.singleLineWidthVp ?? 42 * scale);
   const labelHeight = Math.max(16, label?.heightVp ?? 12.5 * scale);
   const countdownSize = type === 'autoPage' ? Math.max(16,
     (countdown?.singleLineWidthVp ?? 10 * scale) + 2, (countdown?.heightVp ?? 8 * scale) + 2) : 16;
   const paintHeight = Math.max(READER_SESSION_CAPSULE_HEIGHT, labelHeight + 8, countdownSize + 8);
-  return { width: readerSessionCapsuleMinimumWidth(type) + labelWidth - 42 + countdownSize - 16,
-    paintHeight, targetHeight: Math.max(READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT, paintHeight), labelWidth, labelHeight, countdownSize };
+  const metrics: ReaderSessionCapsuleMetrics = {
+    width: readerSessionCapsuleMinimumWidth(type) + labelWidth - 42 + countdownSize - 16,
+    paintHeight, targetHeight: Math.max(READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT, paintHeight), labelWidth, labelHeight, countdownSize,
+  };
+  return { metrics, measured: label !== undefined && (type !== 'autoPage' || countdown !== undefined) };
 }
 
 export class ReaderSessionCapsuleMetricsCache {
@@ -55,12 +68,14 @@ export class ReaderSessionCapsuleMetricsCache {
     const fontScale = Number.isFinite(scale) ? Math.max(1, scale) : 1;
     const cached = this.value;
     if (cached !== undefined && type === this.type && fontScale === this.scale && revision === this.revision) return cached;
-    const next = measureReaderSessionCapsule(context, type, fontScale);
-    this.type = type;
-    this.scale = fontScale;
-    this.revision = revision;
-    this.value = next;
-    return next;
+    const next = readReaderSessionCapsuleMeasurement(context, type, fontScale);
+    if (next.measured) {
+      this.type = type;
+      this.scale = fontScale;
+      this.revision = revision;
+      this.value = next.metrics;
+    }
+    return next.metrics;
   }
 }
 
@@ -201,7 +216,7 @@ export struct ReaderSessionCapsule {
   @Prop onPrimaryColor: string = '';
   @Prop themeScheme: string = 'day';
   @Prop shadowColor: string = '';
-  @Prop interactionEnabled: boolean = true;
+  @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop capsuleWidth: number = 0;
   @Prop fontScale: number = 1;
   @Prop measurementIdentity: string = '';
@@ -210,6 +225,12 @@ export struct ReaderSessionCapsule {
   onToggle: () => void = (): void => {};
   onMeasured: (width: number, height: number, identity: string, type: ReaderSessionCapsuleType) => void =
     (_width: number, _height: number, _identity: string, _type: ReaderSessionCapsuleType): void => {};
+
+  private onInteractionChanged(): void {
+    if (!this.interactionEnabled) this.pressPointer = -1;
+  }
+
+  aboutToDisappear(): void { this.pressPointer = -1; }
 
   build() {
     Button({ type: ButtonType.Normal, stateEffect: false }) {

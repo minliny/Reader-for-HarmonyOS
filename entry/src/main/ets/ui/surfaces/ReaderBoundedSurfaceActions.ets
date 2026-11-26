@@ -19,8 +19,7 @@ export class ReaderBoundedFileActionModifier implements AttributeModifier<Common
   constructor(id: ReaderBoundedActionSpecId, width: number, scheme: string, enabled: boolean) {
     this.id = id;
     this.width = width;
-    const radius = id === 'local-import-result' ? 20 : 22;
-    this.feedback = new ReaderPressFeedback(readerAppColor('app.action.fill', scheme), scheme, radius, radius, enabled);
+    this.feedback = new ReaderPressFeedback(readerAppColor('app.action.fill', scheme), scheme, 999, 999, enabled);
   }
   applyNormalAttribute(instance: CommonAttribute): void {
     if (this.id === 'local-import-result') instance.width(this.width);

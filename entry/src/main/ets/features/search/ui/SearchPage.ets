@@ -2400,7 +2400,7 @@ struct SearchResultCard {
       }
       .width(this.coverWidth())
       .height(this.coverHeight())
-      .borderRadius(6);
+      .borderRadius(6).clip(true);
 
       Column({ space: SEARCH_RESULT_GEOMETRY.metadataGap }) {
         Column({ space: SEARCH_RESULT_GEOMETRY.metadataGap }) {

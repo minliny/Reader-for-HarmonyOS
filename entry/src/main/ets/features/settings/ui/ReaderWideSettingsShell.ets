@@ -19,6 +19,7 @@ export struct ReaderWideSettingsShell {
   @Prop pane: SettingsPane = 'general';
   @Prop collapsed: boolean = false;
   @Prop interactive: boolean = false;
+  @Prop sharedBottomNavigationHeight: number = -1;
   @State private paneWidth: number = 0;
   onToggle: () => void = (): void => {};
   onPane: (pane: SettingsPane) => void = (_pane: SettingsPane): void => {};
@@ -39,8 +40,12 @@ export struct ReaderWideSettingsShell {
           });
       }.layoutWeight(1).width('100%').alignItems(VerticalAlign.Top)
         .padding({ left: this.safeLeft(this.metricsRevision), right: this.safeRight(this.metricsRevision), top: 12, bottom: 12 });
-      ReaderBottomNavigation({ current: 'settings', inputEnabled: this.interactive,
-        onSelect: (tab: string): void => this.onMainTab(tab) });
+      if (this.sharedBottomNavigationHeight >= 0) {
+        Row().height(this.sharedBottomNavigationHeight).hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+      } else {
+        ReaderBottomNavigation({ current: 'settings', inputEnabled: this.interactive,
+          onSelect: (tab: string): void => this.onMainTab(tab) });
+      }
     }.width('100%').height('100%')
       .backgroundColor(readerAppColor('TOK_PAPER', this.scheme))
       .onAreaChange((_old: Area, next: Area): void =>
@@ -60,15 +65,17 @@ export struct ReaderWideSettingsShell {
               .fontSize(TYPE_PAGE_TITLE.fontSizeFp).lineHeight(TYPE_PAGE_TITLE.lineHeightFp as number).layoutWeight(1)
               .fontColor(readerAppColor('TOK_INK', this.scheme));
           }
-          Button({ type: ButtonType.Normal, stateEffect: false }) {
-            Stack({ alignContent: Alignment.Center }) {
+          Row() {
+            Button({ type: ButtonType.Normal, stateEffect: false }) {
               Image(this.scheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'))
                 .width(14).height(14).rotate({ angle: this.collapsed ? 0 : 180 }).accessibilityLevel('no');
-            }.width(32).height(32).borderRadius(999)
-              .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.scheme));
-          }.width(44).height(44).borderRadius(999).padding(0).backgroundColor(Color.Transparent)
-            .accessibilityText(this.collapsed ? '展开设置栏' : '收起设置栏').enabled(this.interactive)
-            .onClick((): void => { if (this.interactive) this.onToggle(); });
+            }.width(32).height(32).padding(0)
+              .responseRegion({ x: -6, y: -6, width: 44, height: 44 })
+              .attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_PRIMARY_SOFT', this.scheme),
+                this.scheme, 999, 999, this.interactive))
+              .accessibilityText(this.collapsed ? '展开设置栏' : '收起设置栏').enabled(this.interactive)
+              .onClick((): void => { if (this.interactive) this.onToggle(); });
+          }.width(44).height(44).justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center);
         }.width('100%').padding({ left: 6, right: 6, top: 4, bottom: 4 });
         ForEach(settingsNavigationItems(), (item: SettingsNavigationItem): void => {
           this.railItem(item.id, item.label, item.icon);

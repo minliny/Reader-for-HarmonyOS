@@ -92,7 +92,8 @@ export struct ReaderDirectoryToolbar {
 
   @Builder
   private tool(kind: ReaderDirectoryTool, action: () => void) {
-    Button({ type: ButtonType.Normal, stateEffect: false }) {
+    Stack({ alignContent: Alignment.Center }) {
+      Button({ type: ButtonType.Normal, stateEffect: false }) {
       Stack({ alignContent: Alignment.Center }) {
       // Keep exactly one native image, with explicit resource branches. This
       // preserves the device-safe lookup without stacking a second copy.
@@ -129,18 +130,19 @@ export struct ReaderDirectoryToolbar {
           Image($r('app.media.reader_directory_sort_descending')).width(this.iconSize()).height(this.iconSize());
         }
       }
-      }.width(this.variant === 'standard' ? 44 : 32).height(this.variant === 'standard' ? this.controlFieldHeight() : 32)
-        .backgroundColor(this.variant === 'manga-catalog' ? mangaDirectoryColor('soft', this.appThemeScheme) :
-          readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
+      }.width('100%').height('100%')
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-    }
-      .width(44).height(Math.max(44, this.controlFieldHeight()))
+      }
+      .width(this.variant === 'standard' ? 44 : 32).height(this.variant === 'standard' ? this.controlFieldHeight() : 32)
       .padding(0)
-      .backgroundColor(Color.Transparent).borderRadius(8)
       .attributeModifier(new ReaderActionAccessibility(this.toolLabel(kind), this.actionEnabled, false, true,
-        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 8, 8, this.actionEnabled), 'nativeButton'))
-      .responseRegion({ x: 0, y: 0, width: 44, height: Math.max(44, this.controlFieldHeight()) })
+        new ReaderPressFeedback(this.variant === 'manga-catalog' ? mangaDirectoryColor('soft', this.appThemeScheme) :
+          readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme), this.appThemeScheme, 8, 8, this.actionEnabled), 'nativeButton'))
+      .responseRegion({ x: this.variant === 'standard' ? 0 : -6,
+        y: this.variant === 'standard' ? 0 : (32 - Math.max(44, this.controlFieldHeight())) / 2,
+        width: 44, height: Math.max(44, this.controlFieldHeight()) })
       .onClick((): void => { if (this.actionEnabled) action(); });
+    }.width(44).height(Math.max(44, this.controlFieldHeight()));
   }
 
   private queryStacked(): boolean {
@@ -199,23 +201,24 @@ export struct ReaderDirectoryToolbar {
 
   @Builder
   private catalogTool(sort: boolean, inputFocusId: string) {
-    Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Stack({ alignContent: Alignment.Center }) {
+    Stack({ alignContent: Alignment.Center }) {
+      Button({ type: ButtonType.Normal, stateEffect: false }) {
         Image(sort ? this.mangaSortIcon() : readerPaperActionIcon('download', this.appThemeScheme))
-          .width(16).height(16).objectFit(ImageFit.Contain);
-      }.width(36).height(36).borderRadius(18)
-        .backgroundColor(readerAppColor(sort && !this.ascending ? 'TOK_PRIMARY_SOFT' : 'TOK_CARD_BG', this.appThemeScheme))
+          .width(16).height(16).objectFit(ImageFit.Contain)
+          .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
+      }.width(36).height(36).padding(0)
         .border({ width: 1, color: readerAppColor(sort && !this.ascending ? 'TOK_PRIMARY_BORDER' : 'TOK_LINE', this.appThemeScheme) })
-        .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-    }.width(44).height(44).padding(0).backgroundColor(Color.Transparent)
-      .attributeModifier(new ReaderActionAccessibility(sort ?
-        (this.ascending ? '按章节倒序排列' : '按章节正序排列') : '缓存管理', this.actionEnabled, false, true,
-        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 22, 22, this.actionEnabled), 'nativeButton'))
-      .onClick((): void => {
-        if (!this.actionEnabled || !this.currentDirectoryInput(inputFocusId)) return;
-        if (sort) this.onToggleSort();
-        else this.onOpenCacheManagement();
-      });
+        .attributeModifier(new ReaderActionAccessibility(sort ?
+          (this.ascending ? '按章节倒序排列' : '按章节正序排列') : '缓存管理', this.actionEnabled, false, true,
+          new ReaderPressFeedback(readerAppColor(sort && !this.ascending ? 'TOK_PRIMARY_SOFT' : 'TOK_CARD_BG', this.appThemeScheme),
+            this.appThemeScheme, 18, 18, this.actionEnabled), 'nativeButton'))
+        .responseRegion({ x: -4, y: -4, width: 44, height: 44 })
+        .onClick((): void => {
+          if (!this.actionEnabled || !this.currentDirectoryInput(inputFocusId)) return;
+          if (sort) this.onToggleSort();
+          else this.onOpenCacheManagement();
+        });
+    }.width(44).height(44);
   }
 
   @Builder

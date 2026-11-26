@@ -8,8 +8,8 @@ const selected = selectContractCases({
   'settings-compatibility': { description: 'SettingsShell legacy overlay API forwards nonzero inset values for Home and General while retaining its visibility guard.', resources: [] },
   'settings-actions': { description: 'The original settings and cleanup recovery callbacks retain current identities and immediately yield to active selection or retirement.', resources: [] },
   'reset-confirmation': { description: 'Actual settings cover tickets fence Back, stale actions and one write, then reset persists and publishes list layout.', resources: [] },
-  'wide-shell': { description: 'Actual tablet Settings shell preserves one rail, measured panel and bottom tab for four current routes and collapse.', resources: [] },
-  'settings-picker': { description: 'Actual responsive selector motion, safe anchoring, and accessible cancel admission.', resources: [] },
+  'wide-shell': { description: 'Actual tablet Settings shell reserves the measured shared footer and retains rail input and collapse.', resources: [] },
+  'settings-picker': { description: 'Actual responsive selector motion, safe anchoring, accessible cancel and close completion.', resources: [] },
   'preview-layers': { description: 'Runtime message preview notices use the bounded slot, while popup scenes preserve sample content and scroll and modal geometry stays locally live.', resources: [] },
 });
 
@@ -107,7 +107,7 @@ if (selected.length > 0) {
     'aboutPageCurrent', 'developerPageCurrent', 'messagePreviewCurrent', 'pendingFeedbackVisible', 'pendingFeedback',
     'pendingFeedbackItems', 'hasPendingSettings', 'hasPendingCleanup', 'recovery', 'recoveryActionIdentities', 'recoveryIdentityFor', 'capturedPendingAction',
     'recoveryActionKind', 'recoveryActionGeneration', 'recoveryActionCurrent', 'dispatchRecoveryAction', 'buildOverlay',
-    'currentValue', 'selectOptions', 'setSelectValue', 'ownsSelection', 'commitSelection', 'dismissSelection', 'retireSelection',
+    'currentValue', 'selectOptions', 'setSelectValue', 'ownsSelection', 'commitSelection', 'dismissSelection', 'retireSelection', 'finishSelectionClose',
     'selectionId', 'selectionField', 'languageValue', 'startupValue', 'animationValue', 'anchorRight', 'anchorBottom',
     'activeSection', 'operation', 'cacheCleanup', 'openSelect', 'aboutPageId', 'developerPageId', 'messagePreviewId',
     'temporaryBackIdentity', 'resetInFlight', 'originX', 'originY'];
@@ -208,7 +208,7 @@ if (selected.length > 0) {
         const ReaderPressFeedback = productionReaderPressFeedback({ ColorMetrics: {
           resourceColor: base => ({ blendColor: () => ({ color: `pressed:${base}` }) }),
         } });
-        const dismissals = [], choices = [];
+        const dismissals = [], choices = [], closed = [];
         registerShape('ReaderChoiceRow', choiceSource);
         const { owner } = createReaderBuilderProbe(source, boundedMembers(source), {
           ...sdk.deps, ...readerSurfaceSpecsForProbe(metrics), ...safe, ...choiceGeometry, ...choice.dependencies, ...scaleResolvers,
@@ -217,30 +217,35 @@ if (selected.length > 0) {
           TransitionEdge: { BOTTOM: 'bottom' }, TransitionEffect: {
             OPACITY: effect('opacity'), move: edge => effect('move', edge), asymmetric: (open, close) => ({ open, close }),
           }, PHONE_HORIZONTAL_INSET: 14, PHONE_BOTTOM_INSET: 20, PHONE_OPTION_HEIGHT: 52, PHONE_CANCEL_GAP: 10, PHONE_RADIUS: 12,
+          PHONE_SHEET_CORNERS: { topLeft: 24, topRight: 24 },
         }, { ...sdk.hooks, childSources: { ...sdk.childSources, ReaderChoiceRow: choiceSource } });
         Object.assign(owner, { expandedLayout, reduceMotion, selectionId: 'picker:1', options: ['书架', '发现'], field: 'startup',
           anchorRight: 300, anchorBottom: 398, onDismiss: identity => dismissals.push(identity),
-          onSelect: (option, identity) => choices.push([option, identity]) });
+          onSelect: (option, identity) => choices.push([option, identity]), onClosed: identity => closed.push(identity) });
         owner.aboutToAppear(); owner.initialRender(); sdk.properties.flush();
         const nodes = [...owner.nodes.values()];
         const backdrop = nodes.find(node => node.type === 'Row' && node.onClick && node.accessibilityLevel === 'no');
         assert.equal(backdrop.transition.params.duration, reduceMotion ? 120 : 160);
-        const scroller = nodes.find(node => node.type === 'Scroll' && node.transition);
+        const panel = nodes.find(node => node.type === (expandedLayout ? 'Scroll' : 'Column') && node.transition);
+        const [transition, finish] = owner.attributeCalls.find(call => call.id === panel.id && call.property === 'transition').args;
         if (reduceMotion) {
-          assert.equal(scroller.transition.kind, 'opacity');
-          assert.equal(scroller.transition.params.duration, 120);
+          assert.equal(transition.kind, 'opacity');
+          assert.equal(transition.params.duration, 120);
         } else {
-          assert.deepEqual([scroller.transition.open.params.duration, scroller.transition.close.params.duration], [260, 210]);
-          assert.equal(scroller.transition.open.kind, expandedLayout ? 'opacity' : 'move');
+          assert.deepEqual([transition.open.params.duration, transition.close.params.duration], [260, 210]);
+          assert.equal(transition.close.kind, expandedLayout ? 'opacity' : 'move');
         }
         if (expandedLayout) {
           assert.equal(choiceGeometry.readerSettingsTabletOptionHeight(2), 64);
-          assert.equal(scroller.position.y, 272);
-          assert.equal(scroller.shadow.radius, 40);
+          assert.equal(panel.position.y, 272);
+          assert.equal(panel.shadow.radius, 40);
         } else {
           const sheet = nodes.find(node => node.type === 'Column' && node.linearGradient);
           assert.deepEqual(sheet.borderRadius, { topLeft: 24, topRight: 24 });
-          assert.equal(sheet.shadow.radius, 48);
+          assert.equal(sheet.shadow, undefined);
+          assert.equal(panel.shadow.radius, 48, 'the sheet shadow lives outside the clipping scroll');
+          assert.equal(panel.clip, undefined);
+          assert.equal(nodes.find(node => node.type === 'Scroll').clip, true);
           const cancel = nodes.find(node => node.type === 'Button' && node.accessibilityText === '取消');
           assert.equal(cancel.accessibilityRole, 'AccessibilityRoleType.BUTTON');
           assert.equal(cancel.createWithChild.stateEffect, false);
@@ -248,9 +253,55 @@ if (selected.length > 0) {
           assert.deepEqual(dismissals, ['picker:1']);
           assert.deepEqual(choices, []);
         }
+        owner.updateStateVars({ visible: false });
+        sdk.properties.flush();
+        assert.deepEqual(closed, [], 'the mounted host waits for the panel callback');
+        finish(true);
+        assert.deepEqual(closed, [], 'enter completion leaves the host mounted');
+        finish(false);
+        assert.deepEqual(closed, ['picker:1']);
+        owner.updateStateVars({ visible: true, selectionId: 'picker:2' });
+        sdk.properties.flush();
+        finish(false);
+        assert.deepEqual(closed, ['picker:1'], 'a stale exit cannot finish the reopened panel');
         owner.aboutToDisappear();
         samples++;
       }
+      const sdk = boundedSurfaceSdk();
+      registerShape('SettingsSelectOverlay', source);
+      const page = createReaderBuilderProbe(sources.page,
+        ['openSelect', 'selectionId', 'selectionField', 'mounted', 'toggleSelection', 'retireSelection',
+          'finishSelectionClose', 'ownsSelection', 'commitSelection', 'dismissSelection', 'buildOverlay',
+          'currentValue', 'selectOptions', 'setSelectValue'],
+        { ...sdk.deps, SettingsSelectOverlay: ChromePort, settingsSelectionGeneration: 0 },
+        { ...sdk.hooks, childSources: { ...sdk.hooks.childSources, SettingsSelectOverlay: source } }).owner;
+      Object.assign(page, { mounted: true, paneExpanded: () => false, languageValue: '简体中文',
+        startupValue: '书架', anchorRight: 0, anchorBottom: 0, originX: 0, originY: 0 });
+      page.toggleSelection('language');
+      page.buildOverlay();
+      const overlay = [...page.children.values()].find(entry => entry instanceof ChromePort);
+      assert.ok(overlay);
+      const opening = overlay.selectionId;
+      overlay.onDismiss(opening);
+      sdk.properties.flush();
+      assert.equal(page.openSelect, '');
+      assert.equal(overlay.visible, false);
+      assert.equal(overlay.field, 'language', 'the outgoing sheet retains its presentation during exit');
+      assert.equal(overlay.selectionId, opening, 'the outgoing sheet retains its identity during exit');
+      overlay.onSelect('English', opening);
+      assert.equal(page.languageValue, '简体中文', 'closing immediately retires option input');
+      page.toggleSelection('startup');
+      sdk.properties.flush();
+      overlay.onClosed(opening);
+      assert.equal(page.openSelect, 'startup', 'the previous close completion cannot retire a reopened field');
+      const successor = overlay.selectionId;
+      overlay.onDismiss(successor);
+      sdk.properties.flush();
+      overlay.onClosed(successor);
+      sdk.properties.flush();
+      assert.equal(page.selectionField, '', 'the matching exit completion releases the retained host');
+      assert.equal(page.selectionId, '');
+      samples++;
     }
     if (id === 'settings-frame' || id === 'settings-compatibility') compatibilityForwarding();
     if (id === 'settings-compatibility') samples = 2;
@@ -362,36 +413,45 @@ if (selected.length > 0) {
     if (id === 'wide-shell') {
       const source = read('features/settings/ui/ReaderWideSettingsShell.ets');
       const bottom = read('app/navigation/ReaderBottomNavigation.ets');
-      const sdk = boundedSurfaceSdk();
+      const { productionReaderMotionSdk } = await import('./lib/reader-control-builder-probe.mjs');
+      const { settingsNavigationItems } = await import('../entry/src/main/ets/features/settings/presentation/SettingsNavigationItems.ts');
+      const sdk = boundedSurfaceSdk({ windowMetrics: safe.createDefaultReaderWindowMetrics });
       const viewport = [], selections = [], main = [], widths = [];
       let toggles = 0;
       registerShape('ReaderBottomNavigation', bottom);
       const { Component } = createReaderBuilderProbe(source, boundedMembers(source), {
-        ...sdk.deps, ReaderBottomNavigation: ChromePort, publishReaderMainViewport: (...size) => viewport.push(size),
+        ...sdk.deps, ...safe, ...productionReaderMotionSdk(), settingsNavigationItems,
+        ReaderBottomNavigation: ChromePort, publishReaderMainViewport: (...size) => viewport.push(size),
         readerPageAreaLength: Number, readerSurfaceElevation: () => ({}),
+        globalThis: { get Context() { return globalThis.Context; } },
       }, { ...sdk.hooks, childSources: { ...sdk.hooks.childSources, ReaderBottomNavigation: bottom } });
       const shell = new Component(undefined, { pane: 'general', interactive: true,
+        sharedBottomNavigationHeight: 88,
         onPane: pane => selections.push(pane), onToggle: () => toggles++,
         onMainTab: tab => main.push(tab), content: width => widths.push(width) });
       shell.initialRender(); sdk.properties.flush();
       const native = [...shell.nodes.values()];
-      const child = [...shell.children.values()].find(entry => entry instanceof ChromePort);
-      assert.ok(child); assert.equal(child.current, 'settings');
-      child.onSelect('bookshelf'); assert.deepEqual(main, ['bookshelf']);
+      assert.equal([...shell.children.values()].some(entry => entry instanceof ChromePort), false);
+      const footer = native.find(node => node.type === 'Row' && node.height === 88);
+      assert.ok(footer);
+      assert.equal(footer.hitTestBehavior, 'HitTestMode.None');
       const buttons = native.filter(node => node.type === 'Button' && node.onClick);
       assert.deepEqual(buttons.map(node => node.accessibilityText),
-        ['收起设置栏', '通用设置', '书源管理', '书架设置', '下载管理']);
+        ['收起设置栏', ...settingsNavigationItems().map(item => item.label)]);
+      assert.deepEqual(buttons[0].responseRegion, { x: -6, y: -6, width: 44, height: 44 });
+      assert.ok(shell.attributeCalls.some(call => call.id === buttons[0].id && call.property === 'attributeModifier'));
       buttons[0].onClick(); assert.equal(toggles, 1);
       buttons[2].onClick(); assert.deepEqual(selections, ['source']);
       const panel = native.find(node => node.type === 'Stack' && node.borderRadius === 20);
       assert.ok(panel); panel.onAreaChange({}, { width: 430 }); sdk.properties.flush();
       assert.equal(shell.paneWidth, 430);
-      const rail = native.find(node => node.type === 'Column' && node.borderRadius === 16);
+      const rail = native.find(node => node.type === 'Scroll' && node.borderRadius === 14);
       assert.equal(rail.width, 164);
-      shell.updateStateVars({ pane: 'downloads', collapsed: true, interactive: true });
+      shell.updateStateVars({ pane: 'downloads', collapsed: true, interactive: true, sharedBottomNavigationHeight: 102 });
       sdk.properties.flush();
       assert.equal(rail.width, 56); assert.equal(buttons[4].accessibilitySelected, true);
-      assert.ok([...shell.children.values()].includes(child), 'rail selection preserves the same main tab actor');
+      assert.equal(footer.height, 102);
+      assert.deepEqual(main, []);
       assert.equal(buttons[0].accessibilityText, '展开设置栏');
       samples++;
     }

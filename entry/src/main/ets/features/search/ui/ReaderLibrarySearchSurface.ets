@@ -1151,13 +1151,15 @@ export struct ReaderLibrarySearchSurface {
       Column().width('100%').height('100%')
         .backgroundColor(this.mode === 'input' && this.model.sourceRecoveryVisible ?
           Color.Transparent : readerAppColor('app.scrim.modal', this.scheme))
-        .backdropBlur(this.appearancePreferences.reduceTransparency || this.scrimProgress() <= .01 ? 0 : 6)
+        .backdropBlur(this.appearancePreferences.reduceTransparency || this.scrimProgress() <= .01 ||
+          (this.mode === 'input' && this.model.sourceRecoveryVisible) ? 0 : 6)
         .opacity(this.scrimProgress() * this.reducedSearchOpacity).zIndex(1)
         .hitTestBehavior(this.mode === 'input' && this.scrimProgress() > .01 ? HitTestMode.Default : HitTestMode.None)
         .onClick(this.backAction(this.identity, this.navigationGeneration, this.mounting));
       if (this.mode === 'input' && this.model.sourceRecoveryVisible) {
         Column().id('reader-library-search-recovery-scrim').width('100%').height('100%')
           .backgroundColor(readerAppColor('app.scrim.modal', this.scheme))
+          .backdropBlur(this.appearancePreferences.reduceTransparency || this.scrimProgress() <= .01 ? 0 : 6)
           .opacity(this.scrimProgress() * this.reducedSearchOpacity).zIndex(3).hitTestBehavior(HitTestMode.None);
       }
       Column() {

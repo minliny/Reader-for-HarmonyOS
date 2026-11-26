@@ -93,31 +93,44 @@ const methods = ['p', 'fullInput', 'sharedInput', 'effectiveRate', 'timerSummary
   'displayTimerMode', 'displayTimerMinutes', 'displayTimerSeconds', 'displayTimerDigits',
   'timerPresetSelected', 'timerPresetLabel', 'timerPresetIsSelected', 'chooseTimerPreset', 'timerPreset',
   'cycleQuickTimer', 'timerStepper', 'timerStepButton', 'stepTimer',
-  'ratePresets', 'ratePresetWidth', 'chooseRatePreset', 'ratePreset'];
+  'ratePresets', 'ratePresetWidth', 'chooseRatePreset', 'ratePreset',
+  'roundControl', 'transport', 'transportResponse', 'transportPaint', 'transportGlyphSize'];
 const {readerTypographyRoles}=await import('./lib/reader-typography-probe.mjs');
 const {readerAppColor}=await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
+const {productionReaderPressFeedback}=await import('./lib/reader-press-feedback-probe.mjs');
+const ReaderPressFeedback=productionReaderPressFeedback({ColorMetrics:{
+  resourceColor:color=>({color,blendColor:overlay=>({color:`blend(${color},${overlay.color})`})}),
+}});
 const accessibility=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderActionAccessibility.ets',import.meta.url),'utf8'),'ReaderActionAccessibility.ets',{AccessibilityRoleType:{BUTTON:'button'}},['ReaderActionAccessibility']);
 const presetActors=pureModuleProbe(source.slice(0,source.indexOf('@Component')),'ReaderTtsPresetActors.ets',{
-  ...accessibility,readerAppColor,FrameCallback:class{},Color:{Transparent:'transparent'},
+  ...accessibility,readerAppColor,ReaderPressFeedback,FrameCallback:class{},Color:{Transparent:'transparent'},
+  readerTtsPlayGradientStart: () => '#2F6373',
   ReaderWindowCoordinator:{metrics:()=>({densityPixels:2})},
-},['ReaderTtsPresetModifier','readerTtsPresetLabelColor']);
+},['ReaderTtsPresetModifier','ReaderTtsTransportModifier','readerTtsPresetLabelColor']);
 const timerLabels=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets',import.meta.url),'utf8'),
   'ReaderControlTtsMinimum.ets',{},['readerControlTtsTwoDigits','readerControlTtsTimerSummary','readerControlTtsTimerCaption']);
 const { owner } = createReaderBuilderProbe(source, methods, { ...geometry, ...actors, ...tts, ...readerTypographyRoles,
-  readerAppColor,...accessibility,...presetActors,...timerLabels });
+  readerAppColor,ReaderPressFeedback,...accessibility,...presetActors,...timerLabels });
+const transport = {
+  previous: { x: 0, y: 5, width: 44, height: 60 }, toggle: { x: 50, y: 5, width: 70, height: 60 },
+  stop: { x: 126, y: 5, width: 60, height: 60 }, next: { x: 192, y: 5, width: 44, height: 60 },
+  playback: { x: 0, y: 0, width: 240, height: 70 },
+};
 Object.assign(owner, { motionProgress: 1, interactionEnabled: true, state: { rate: 1 }, ratePreview: -1,
   timerMode: 'duration', timerMinutes: 25, timerSeconds: 0,
   appScheme: 'day', configField: '', textMinimum: () => undefined,
   displayedFacts: () => undefined,
   currentInputEnabled: () => owner.interactionEnabled,
-  frame: () => ({ speedPresets: { width: 280 } }) });
+  frame: () => ({ ...transport, speedPresets: { width: 280 } }),
+  isActivelySpeaking: () => false, onlineServicePage: () => false, controlText: kind => kind });
 for (const minutes of [0, 15, 30, 45, 60, 'chapterEnd']) owner.timerPreset(minutes);
-const presetShadow = [...owner.nodes.values()].find(node=>node.type==='Stack'&&node.shadow!==undefined).shadow;
+const presetShadow = [...owner.nodes.values()].find(node=>node.type==='Button'&&node.shadow!==undefined).shadow;
 assert.equal(presetShadow.radius,14);
 assert.equal(presetShadow.offsetY,4);
 owner.timerStepper(true); owner.timerStepper(false);
 owner.ratePresets().forEach(rate => owner.ratePreset(rate));
+owner.roundControl('toggle');
 const mountedCount = owner.observers.length, commands = [];
 owner.onTimerChange = (m, s, mode = 'duration') => {
   commands.push(['timer', m, s, mode]); owner.timerMode = mode;
@@ -125,6 +138,33 @@ owner.onTimerChange = (m, s, mode = 'duration') => {
 };
 owner.onRateChange = rate => { commands.push(['rate', rate]); owner.state = { rate }; };
 const button = label => [...owner.nodes.values()].find(n => n.accessibilityText === label);
+for (const [label, paintHeight, role] of [['定时30分钟', 36, 'TOK_TTS_FIELD'], ['语速1.00倍', 32, 'TOK_TTS_TEAL']]) {
+  const target = button(label);
+  assert.equal(target.height, paintHeight);
+  assert.deepEqual(target.responseRegion, { x: 0, y: (paintHeight - 44) / 2, width: '100%', height: 44 });
+  const normal = readerAppColor(role, 'day');
+  assert.equal(target.backgroundColor, normal);
+  const nodeId = [...owner.nodes].find(([, node]) => node === target)[0];
+  const modifier = owner.attributeCalls.find(call => call.id === nodeId && call.property === 'attributeModifier').args[0];
+  let pressed;
+  const attributes = { backgroundColor(value) { pressed = value; return this; }, borderRadius() { return this; } };
+  modifier.applyPressedAttribute(attributes);
+  assert.equal(pressed, `blend(${normal},${readerAppColor('app.interaction.press', 'day')})`);
+}
+const play = button('toggle');
+assert.deepEqual([play.width, play.height, play.position], [58, 58, { x: 56, y: 6 }]);
+assert.deepEqual(play.responseRegion, { x: -6, y: -1, width: 70, height: 60 }, 'play keeps the paid carrier response');
+const start = '#2F6373', end = readerAppColor('TOK_TTS_PLAY_END', 'day');
+assert.deepEqual(play.linearGradient.colors, [[start, 0], [end, 1]]);
+const playId = [...owner.nodes].find(([, node]) => node === play)[0];
+const playModifier = owner.attributeCalls.find(call => call.id === playId && call.property === 'attributeModifier').args[0];
+let gradient;
+const paintPort = new Proxy({}, { get: (_target, key) => value => { if (key === 'linearGradient') gradient = value; return paintPort; } });
+playModifier.applyPressedAttribute(paintPort);
+const ink = readerAppColor('app.interaction.press', 'day');
+assert.deepEqual(gradient.colors, [[`blend(${start},${ink})`, 0], [`blend(${end},${ink})`, 1]]);
+playModifier.applyNormalAttribute(paintPort);
+assert.deepEqual(gradient.colors, [[start, 0], [end, 1]]);
 for (const p of [0, .2, 1, .8, 1]) {
   owner.motionProgress = p; owner.replay();
   for (const label of ['定时30分钟', '增加五分钟', '语速1.25倍']) {

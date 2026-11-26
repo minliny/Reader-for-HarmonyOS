@@ -25,7 +25,7 @@ import { registerReaderFonts, readerFontFamilyReady } from '../../../ui/foundati
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
 import { ReaderDirectoryToolbar } from './ReaderDirectoryToolbar';
 import { ReaderDirectoryQuickActions, readerDirectoryQuickActionsHeight } from './ReaderDirectoryQuickActions';
-import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
+import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
@@ -98,7 +98,7 @@ export struct FullDirectoryPanel {
     const flowFooter = this.flowCatalogFooter();
     const editorMinimum = Math.min(44, flowFooter ? available / 2 : available);
     const listMinimum = flowFooter ? Math.min(available / 2, minimumRowHeight) : minimumRowHeight;
-    return Math.max(editorMinimum, available - listMinimum);
+    return Math.min(this.standaloneEditorNaturalHeight(), Math.max(editorMinimum, available - listMinimum));
   }
   @StorageLink('readerWindowMetricsRevision') @Watch('onMotionProgressChanged') private readerWindowMetricsRevision: number = 0;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
@@ -509,38 +509,31 @@ export struct FullDirectoryPanel {
 
       if (this.expandedLayout) {
         Stack({ alignContent: Alignment.Center }) {
-          this.collapsePaint();
+          this.collapseLabel();
         }
-        .constraintSize({ minWidth: 44, minHeight: this.panelHeaderHeight() }).height(this.panelHeaderHeight()).flexShrink(0)
-        .backgroundColor(Color.Transparent).borderRadius(8)
+        .constraintSize({ minWidth: 44 }).height(this.collapseHeight()).flexShrink(0)
+        .padding({ left: 10, right: 10, top: 0, bottom: 0 })
+        .responseRegion(readerActionTouchRegion('100%', this.collapseHeight()))
         .attributeModifier(new ReaderActionAccessibility('收起目录', this.panelInputCurrent(), false, true,
-          new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 8, 8, this.panelInputCurrent())))
+          new ReaderPressFeedback(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme),
+            this.appThemeScheme, 8, 8, this.panelInputCurrent())))
         .onClick((): void => { if (this.panelInputCurrent()) this.onExit(); });
       } else {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
-          this.collapsePaint();
+          this.collapseLabel();
         }
-        .constraintSize({ minWidth: 44, minHeight: this.panelHeaderHeight() }).height(this.panelHeaderHeight()).padding(0).flexShrink(0)
-        .backgroundColor(Color.Transparent).borderRadius(8)
+        .constraintSize({ minWidth: 44 }).height(this.collapseHeight()).flexShrink(0)
+        .padding({ left: 10, right: 10, top: 0, bottom: 0 })
+        .responseRegion(readerActionTouchRegion('100%', this.collapseHeight()))
         .attributeModifier(new ReaderActionAccessibility('收起目录', this.panelInputCurrent(), false, true,
-          new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 8, 8, this.panelInputCurrent()), 'nativeButton'))
+          new ReaderPressFeedback(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme),
+            this.appThemeScheme, 8, 8, this.panelInputCurrent()), 'nativeButton'))
         .onClick((): void => { if (this.panelInputCurrent()) this.onExit(); });
       }
     }
     .width(this.innerWidth())
     .height(this.panelHeaderHeight())
     .alignItems(VerticalAlign.Center);
-  }
-
-  @Builder
-  private collapsePaint() {
-    Stack({ alignContent: Alignment.Center }) {
-      this.collapseLabel();
-    }.constraintSize({ minWidth: 40,
-      minHeight: readerScaledControlHeight(26, TYPE_READER_DIRECTORY_COLLAPSE.lineHeightFp as number, this.fontScale()) })
-      .padding({ left: 10, right: 10, top: 0, bottom: 0 })
-      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
-      .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
   }
 
   @Builder
@@ -553,7 +546,7 @@ export struct FullDirectoryPanel {
       .lineHeight(TYPE_READER_DIRECTORY_COLLAPSE.lineHeightFp as number)
       .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
       .textAlign(TextAlign.Center)
-      .accessibilityLevel(this.expandedLayout ? 'auto' : 'no');
+      .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
   }
 
 
@@ -603,7 +596,7 @@ export struct FullDirectoryPanel {
     }.layoutWeight(1).height(this.tabHeight()).padding(0)
       .attributeModifier(new ReaderActionAccessibility('目录', this.panelInputCurrent(), this.activeTab === 'directory', true,
         new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, this.panelInputCurrent()), 'nativeButton'))
-      .responseRegion({ x: 0, y: 0, width: '100%', height: this.tabHeight() })
+      .responseRegion(readerActionTouchRegion('100%', this.tabHeight()))
       .onClick((): void => { this.choosePanelTab('directory'); });
   }
 
@@ -640,7 +633,7 @@ export struct FullDirectoryPanel {
     }.layoutWeight(1).height(this.tabHeight()).padding(0)
       .attributeModifier(new ReaderActionAccessibility('书签', this.panelInputCurrent(), this.activeTab === 'bookmarks', true,
         new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, this.panelInputCurrent()), 'nativeButton'))
-      .responseRegion({ x: 0, y: 0, width: '100%', height: this.tabHeight() })
+      .responseRegion(readerActionTouchRegion('100%', this.tabHeight()))
       .onClick((): void => { this.choosePanelTab('bookmarks'); });
   }
 
@@ -1538,6 +1531,9 @@ export struct FullDirectoryPanel {
     return readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
   private panelHeaderHeight(): number { return readerScaledControlHeight(30, 20, this.fontScale()); }
+  private collapseHeight(): number {
+    return readerScaledControlHeight(26, TYPE_READER_DIRECTORY_COLLAPSE.lineHeightFp as number, this.fontScale());
+  }
   private catalogToolbar(): boolean { return this.standaloneCatalog && !this.embeddedInControl && this.activeTab === 'directory'; }
   private queryHeight(): number { return readerScaledControlHeight(this.catalogToolbar() ? 36 : 32, 24, this.fontScale()); }
   private tabStripHeight(): number { return this.tabHeight() + 6; }

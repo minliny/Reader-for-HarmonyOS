@@ -386,13 +386,17 @@ export struct ReaderSelectPanel {
   private appearanceLibraryOption(opt: string, index: number = -1) {
     ReaderChoiceRow({
       specId: 'appearance-library', label: opt,
-      selected: index < 0 ? opt === this.renderedValue() : index === this.renderedSelectedIndex(), scheme: this.appThemeScheme,
+      selected: this.appearanceOptionSelected(opt, index), scheme: this.appThemeScheme,
       actionEnabled: !this.closeInFlight,
       wrapLabel: true,
-      focusId: this.optionFocusId(opt === this.renderedValue() ? 'selected' : `option:${opt}`),
-      onHeightChange: this.optionHeightHandler(opt, index < 0 ? opt === this.renderedValue() : index === this.renderedSelectedIndex()),
+      focusId: this.optionFocusId(this.appearanceOptionSelected(opt, index) ? 'selected' : `option:${index < 0 ? opt : index}`),
+      onHeightChange: this.optionHeightHandler(opt, this.appearanceOptionSelected(opt, index)),
       onChoose: (option: string): void => this.selectAndCollapse(option, index),
     });
+  }
+
+  private appearanceOptionSelected(opt: string, index: number): boolean {
+    return index < 0 ? opt === this.renderedValue() : index === this.renderedSelectedIndex();
   }
 
   @Builder
@@ -417,7 +421,7 @@ export struct ReaderSelectPanel {
       label: opt, scheme: this.appThemeScheme, actionEnabled: !this.closeInFlight,
       textLayoutOptions: this.optionTextLayoutOptions?.(opt, this.selectionId),
       wrapLabel: this.wrapsOptions(),
-      focusId: this.optionFocusId(`option:${opt}`),
+      focusId: this.optionFocusId(`option:${index < 0 ? opt : index}`),
       onHeightChange: this.optionHeightHandler(opt, false),
       onChoose: (option: string): void => this.selectAndCollapse(option, index),
     });

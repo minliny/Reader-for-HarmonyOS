@@ -22,6 +22,7 @@ const PHONE_BOTTOM_INSET = 20;
 const PHONE_OPTION_HEIGHT = 52;
 const PHONE_CANCEL_GAP = 10;
 const PHONE_RADIUS = 12;
+const PHONE_SHEET_CORNERS: BorderRadiuses = { topLeft: 24, topRight: 24 };
 
 /**
  * Settings-only responsive selector.
@@ -42,6 +43,7 @@ export struct SettingsSelectOverlay {
   @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
+  @Prop visible: boolean = true;
   @Prop expandedLayout: boolean = false;
   @Prop @Watch('onFieldChanged') field: SettingsSelectField = 'language';
   @Prop @Watch('onFieldChanged') selectionId: string = '';
@@ -51,6 +53,7 @@ export struct SettingsSelectOverlay {
   @Prop anchorBottom: number = 0;
   onSelect: (option: string, identity?: string) => void = (_option: string, _identity?: string): void => {};
   onDismiss: (identity?: string) => void = (_identity?: string): void => {};
+  onClosed: (identity: string) => void = (_identity: string): void => {};
 
   @State private hostWidth: number = 0;
   @State private hostHeight: number = -1;
@@ -63,13 +66,14 @@ export struct SettingsSelectOverlay {
     this.mounted = true;
     this.closed = false;
     registerReaderFonts(this.getUIContext().getFont());
+    if (!this.visible) this.onClosed(this.selectionId);
   }
 
   aboutToDisappear(): void { this.mounted = false; this.closed = true; }
 
   private onFieldChanged(): void { this.closed = false; }
   private ownsOpening(identity: string): boolean {
-    return this.mounted && !this.closed && identity.length > 0 && identity === this.selectionId;
+    return this.mounted && this.visible && !this.closed && identity.length > 0 && identity === this.selectionId;
   }
   private dismiss(identity: string): void {
     if (!this.ownsOpening(identity)) return;
@@ -91,41 +95,59 @@ export struct SettingsSelectOverlay {
         .animation(readerMotionAnimateParam('app.sheet.close', false)));
   }
 
+  private finishMotion(entering: boolean, identity: string): void {
+    if (!entering && this.mounted && !this.visible && identity === this.selectionId) this.onClosed(identity);
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       ForEach([this.selectionId], (identity: string) => {
-        Row()
-          .width('100%')
-          .height('100%')
-          .backgroundColor(this.expandedLayout ? Color.Transparent : readerAppColor('app.scrim.select', this.appThemeScheme))
-          .hitTestBehavior(HitTestMode.Default)
-          .accessibilityLevel('no')
-          .transition(TransitionEffect.OPACITY.animation(readerMotionAnimateParam('app.sheet.scrim', this.reduceMotion)))
-          .onClick((): void => this.dismiss(identity));
-      }, (identity: string): string => identity);
+        if (this.visible) {
+          Row()
+            .width('100%')
+            .height('100%')
+            .backgroundColor(this.expandedLayout ? Color.Transparent : readerAppColor('app.scrim.select', this.appThemeScheme))
+            .hitTestBehavior(HitTestMode.Default)
+            .accessibilityLevel('no')
+            .transition(TransitionEffect.OPACITY.animation(readerMotionAnimateParam('app.sheet.scrim', this.reduceMotion)))
+            .onClick((): void => this.dismiss(identity));
 
-      if (this.expandedLayout) {
-        this.tabletPanel();
-      } else {
-        Stack({ alignContent: Alignment.Bottom }) {
-          Scroll() { this.phoneSheet(); }
-            .width('100%').constraintSize({ maxHeight: this.safeHeight() }).scrollBar(BarState.Auto).clip(true)
-            .transition(this.panelTransition(true));
         }
-        .position({ x: this.safeLeft(), y: this.safeTop() })
-        .width(this.safeWidth())
-        .height(this.safeHeight())
-        .hitTestBehavior(HitTestMode.Transparent);
-      }
+        if (this.expandedLayout) {
+          if (this.visible) this.tabletPanel(identity);
+        } else {
+          this.phonePanel(identity);
+        }
+      }, (identity: string): string => identity);
     }
     .width('100%')
     .height('100%')
+    .hitTestBehavior(HitTestMode.Transparent)
     .onAreaChange((_old: Area, next: Area): void => {
       if (!this.mounted) return;
       this.hostWidth = readerPageAreaLength(next.width); this.hostHeight = readerPageAreaLength(next.height);
       this.hostX = readerPageAreaLength(next.globalPosition.x); this.hostY = readerPageAreaLength(next.globalPosition.y);
     })
     .zIndex(30);
+  }
+
+  @Builder
+  private phonePanel(identity: string) {
+    Stack({ alignContent: Alignment.Bottom }) {
+      if (this.visible) {
+        Column() {
+          Scroll() { this.phoneSheet(); }
+            .width('100%').constraintSize({ maxHeight: this.safeHeight() }).scrollBar(BarState.Auto)
+            .borderRadius(PHONE_SHEET_CORNERS).clip(true);
+        }.width('100%').borderRadius(PHONE_SHEET_CORNERS)
+          .shadow(readerSurfaceElevation('sheet', this.appThemeScheme))
+          .transition(this.panelTransition(true), (entering: boolean): void => this.finishMotion(entering, identity));
+      }
+    }
+    .position({ x: this.safeLeft(), y: this.safeTop() })
+    .width(this.safeWidth())
+    .height(this.safeHeight())
+    .hitTestBehavior(HitTestMode.Transparent);
   }
 
   @Builder
@@ -199,8 +221,7 @@ export struct SettingsSelectOverlay {
       angle: 180,
       colors: [[readerAppColor('app.surface.selectWarm', this.appThemeScheme), 0], [readerAppColor('app.surface.selectGradientEnd', this.appThemeScheme), 1]],
     })
-    .borderRadius({ topLeft: 24, topRight: 24 })
-    .shadow(readerSurfaceElevation('sheet', this.appThemeScheme));
+    .borderRadius(PHONE_SHEET_CORNERS);
   }
 
   @Builder
@@ -215,7 +236,7 @@ export struct SettingsSelectOverlay {
   }
 
   @Builder
-  private tabletPanel() {
+  private tabletPanel(identity: string) {
     Scroll() {
     Column() {
       ForEach(this.options, (option: string, index: number) => {
@@ -233,7 +254,7 @@ export struct SettingsSelectOverlay {
     .position({
       x: Math.max(this.safeLeft(), Math.min(this.anchorRight - this.tabletWidth(), this.safeLeft() + this.safeWidth() - this.tabletWidth())),
       y: this.tabletTop(),
-    }).transition(this.panelTransition(false));
+    }).transition(this.panelTransition(false), (entering: boolean): void => this.finishMotion(entering, identity));
   }
 
   @Builder

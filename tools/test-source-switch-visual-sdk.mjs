@@ -231,8 +231,11 @@ function assertScene(x,width,height,s){
  assert.equal(discovery.height,e.toolbar,'actual discovery row consumes its two-line toolbar height');
  assert.deepEqual(discovery.margin,{bottom:v.discoveryBottomGap});assert.equal(discovery.border,undefined,'selected toolbar has no outer card or divider');
  const actionChrome=chrome.find(n=>n.create.space===v.discoveryActionGap);
- assert.equal(actionChrome.height,e.actionVisible);assert.equal(actionChrome.backgroundColor,readerAppColor(design.strings.discoveryActionBackgroundRole,scheme));
- assert.equal(actionChrome.borderRadius,v.discoveryActionRadius);
+ const action=x.nodes.find(n=>n.type==='Button'&&n.accessibilityText==='停止查找书源');
+ assert.equal(actionChrome.height,e.actionVisible);assert.equal(actionChrome.backgroundColor,undefined);
+ assert.equal(action.height,e.actionVisible);assert.equal(action.backgroundColor,readerAppColor(design.strings.discoveryActionBackgroundRole,scheme));
+ assert.equal(action.borderRadius,v.discoveryActionRadius);
+ assert.deepEqual(action.responseRegion,{x:0,y:(e.actionVisible-e.actionHit)/2,width:'100%',height:e.actionHit});
  const actionButton=x.nodes.find(n=>n.type==='Button'&&n.width===e.actionWidth);
  assert.equal(actionButton.height,e.actionHit);assert.equal(actionButton.stateEffect,false);assert.equal(actionButton.backgroundColor,'Color.Transparent');
  const cover=x.nodes.find(n=>n.type==='Image'&&n.create==='owned-cover');
@@ -399,8 +402,8 @@ if(selectedCase==='row-action-interaction'){
  touch(deps.TouchType.Cancel);assert.equal(paint.opacity,1);assert.equal(paint.backgroundColor,soft);
  hit.onClick();assert.equal(clicks,1,'enabled native row retains its original selection callback');
 }
-// Native button state owns feedback for both recheck and stop. The central
-// compact fill stays in the same bounds, and the native target owns the overlay.
+// The native visual button blends both recheck and stop fills. The extra
+// touch area stays beyond its paint bounds in both states.
 for(const contentKind of ['text','manga'])for(const scheme of ['day','night'])for(const running of [false,true]){
  const rows=[candidate('a'),candidate('a','/alternate'),candidate('b')];
  const state={kind:'candidates',candidates:rows,refreshing:running};
@@ -408,28 +411,32 @@ for(const contentKind of ['text','manga'])for(const scheme of ['day','night'])fo
  const button=p.nodes(o).find(n=>n.type==='Button'&&n.accessibilityText===(running?'停止查找书源':'重新查找书源'));
  const fill=()=>p.nodes(o).find(n=>n.type==='Row'&&n.create?.space===v.discoveryActionGap);
  const normal=readerAppColor(design.strings.discoveryActionBackgroundRole,scheme);
- const pressed=deps.ColorMetrics.resourceColor('Color.Transparent').blendColor(
+ const pressed=deps.ColorMetrics.resourceColor(normal).blendColor(
   deps.ColorMetrics.resourceColor(readerAppColor('app.interaction.press',scheme))).color;
  const visualOwner = p.walk(o).find(child=>[...child.nodes.values()].includes(button));
  const nativeId = [...visualOwner.nodes].find(([,node])=>node===button)[0];
  const modifier = () => visualOwner.attributeCalls.filter(call=>call.id===nativeId&&call.property==='attributeModifier').at(-1).args[0];
  const paint = {};
  const port = new Proxy({}, {get:(_object,key)=>value=>{paint[key]=value;return port;}});
- assert.equal(fill().backgroundColor,normal);
+ assert.equal(fill().backgroundColor,undefined);
+ assert.equal(button.backgroundColor,normal);
+ assert.equal(button.height,o.discoveryActionVisibleHeight());
+ assert.deepEqual(button.responseRegion,{x:0,y:(o.discoveryActionVisibleHeight()-o.discoveryActionHitHeight())/2,
+  width:'100%',height:o.discoveryActionHitHeight()});
  assert.equal(button.createWithChild.stateEffect,false);
  assert.equal(button.focusOnTouch,false);
  assert.equal(button.onTouch,undefined,'a movement event cannot clear locally managed press state');
  modifier().applyPressedAttribute(port);
  assert.equal(paint.backgroundColor,pressed);
  modifier().applyNormalAttribute(port);
- assert.equal(paint.backgroundColor,'Color.Transparent');
+ assert.equal(paint.backgroundColor,normal);
  const actionWidth=button.width;
  const icon=scheme==='night'?'app.media.settings_gen_refresh_theme_night':'app.media.settings_gen_refresh';
  assert.equal(p.nodes(o).filter(n=>n.type==='Image'&&n.create===icon).length,running?0:1,'only the idle action displays the static refresh icon');
  o.state={...state,candidates:rows.map(c=>({...c,latestChapterTitle:'异步更新'}))};o.acceptState();p.properties.flush();
  modifier().applyPressedAttribute(port);
  assert.equal(paint.backgroundColor,pressed,'same-phase enrichment preserves the native target feedback');
- assert.equal(fill().backgroundColor,normal);
+ assert.equal(fill().backgroundColor,undefined);
  assert.equal(button.width,actionWidth);
  o.aboutToDisappear();
 }

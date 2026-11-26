@@ -949,15 +949,22 @@ export struct LocalBookDetail {
   @Builder
   private actionArea() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Column().width(this.liveWidth()).height(this.geometry.footer.height + this.geometry.footer.bottom + DETAIL_DOCK_CONTENT_GAP)
-        .position({ x: -this.geometry.footer.insetLeft, y: -DETAIL_DOCK_CONTENT_GAP })
-        .linearGradient({ direction: GradientDirection.Top, colors: [
-          [readerAppColor('app.detail.footerFadeSolid', this.appThemeScheme), 0],
-          [readerAppColor('app.detail.footerFadeSoft', this.appThemeScheme), .68],
-          [readerAppColor('app.detail.footerFadeTransparent', this.appThemeScheme), 1],
-        ] }).hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+      // Keep the fade out of the scaffold's footer measurement loop.
+      Stack({ alignContent: Alignment.TopStart }) {
+        Column().width(this.liveWidth()).height(this.geometry.footer.height + this.geometry.footer.bottom + this.dockContentGap())
+          .position({ x: -this.geometry.footer.insetLeft, y: -this.dockContentGap() })
+          .linearGradient({ direction: GradientDirection.Top, colors: [
+            [readerAppColor('app.detail.footerFadeSolid', this.appThemeScheme), 0],
+            [readerAppColor('app.detail.footerFadeSoft', this.appThemeScheme), .68],
+            [readerAppColor('app.detail.footerFadeTransparent', this.appThemeScheme), 1],
+          ] }).hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+      }.width(0).height(0).clip(false).hitTestBehavior(HitTestMode.None);
       this.actionSurface();
     }.width('100%').clip(false);
+  }
+
+  private dockContentGap(): number {
+    return this.book.contentKind === 'manga' ? visual.detailDockClearance : DETAIL_DOCK_CONTENT_GAP;
   }
 
   private dockAreaChangeHandler(presentedKey: number): (_old: Area, next: Area) => void {
@@ -1004,7 +1011,7 @@ export struct LocalBookDetail {
           .textAlign(TextAlign.Center).accessibilityLevel('no');
         }.layoutWeight(1)
           .constraintSize({ minHeight: 44 })
-          .padding(0).backgroundColor(Color.Transparent).borderRadius(999)
+          .padding(0).borderRadius(999)
           .opacity(this.readingActionAvailable() ? 1 : this.book.contentKind === 'manga' ? visual.disabledOpacity : 0.5)
           .attributeModifier(new ReaderActionAccessibility(this.readingActionLabel(), this.readingActionAvailable(), false, true,
             new ReaderPressFeedback(this.detailColor('TOK_PRIMARY_DARK', 'green'), this.appThemeScheme,
@@ -1027,7 +1034,7 @@ export struct LocalBookDetail {
           .accessibilityLevel('no');
         }.width(this.book.contentKind === 'manga' ? visual.detailSecondaryWidth : 94)
           .constraintSize({ minHeight: 44 })
-          .padding(0).backgroundColor(Color.Transparent).borderRadius(999)
+          .padding(0).borderRadius(999)
           .opacity(this.shelfActionAvailable() ? 1 : this.book.contentKind === 'manga' ? visual.disabledOpacity : 0.4)
           .border({ width: 1, color: this.detailColor('TOK_LINE', 'line') })
           .attributeModifier(new ReaderActionAccessibility(this.shelfActionLabel(), this.shelfActionAvailable(), false, true,
@@ -1147,7 +1154,7 @@ export struct LocalBookDetail {
     input.contentMaxWidth = manga ? visual.contentWidthMax : TOK_CONTENT_MAX_W_TABLET;
     input.contentHorizontalPadding = manga ? 20 : 18;
     input.contentEndInset = this.wideDetail() ? readerInteractiveSafeBottom(metrics) + 16 :
-      input.footerBottom + input.footerHeight + (manga ? visual.detailDockClearance : DETAIL_DOCK_CONTENT_GAP);
+      input.footerBottom + input.footerHeight + this.dockContentGap();
     const geometry = resolveReaderPageGeometry(input);
     if (manga) {
       const expansion = visual.contentPaddingX - visual.headerInsetX;

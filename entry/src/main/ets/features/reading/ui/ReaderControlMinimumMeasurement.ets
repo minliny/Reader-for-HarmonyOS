@@ -262,7 +262,7 @@ export function measureReaderControlMinimum(input: ReaderControlMinimumMeasureme
     if (input.preparedMinimumRequired === true && (input.moduleFacts === undefined ||
       !readerControlModuleFactsMatch(input.moduleFacts, module))) return undefined;
     const context = input.context;
-    const navigationCellWidth = Math.max(1, (widths.panelWidthVp - 24 - 9 - TOK_BORDER_W * 2 - 12) / 4);
+    const navigationCellWidth = Math.max(1, (widths.panelWidthVp - 24 - 18 - TOK_BORDER_W * 2 - 12) / 4);
     let navigationLabelHeight = 13.889;
     for (const label of ['目录', '朗读', '界面', '设置']) {
       const extent = measureReaderControlText(context, label,

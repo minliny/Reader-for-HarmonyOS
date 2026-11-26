@@ -141,6 +141,8 @@ if(selectedCase==='card'){
    assert.equal(cover.coverWidth,card.coverWidth());
    assert.equal(cover.coverHeight,card.coverHeight());
    const nodes=controls.nodes(card),shelfBadge=nodes.find(node=>node.type==='Text'&&node.create==='已在书架');
+   const coverFrame = nodes.find(node => node.type === 'Stack' && node.width === card.coverWidth() && node.height === card.coverHeight());
+   assert.equal(coverFrame?.clip, true, 'the rounded cover frame clips the shared placeholder');
    assert.equal(shelfBadge.fontFamily,READER_FONT_NOTO_SANS_SC_UI_MEDIUM);
    assert.equal(shelfBadge.fontWeight,undefined,'the static Medium face owns the badge weight');
    assert.equal(shelfBadge.textOverflow.overflow,'TextOverflow.Ellipsis');

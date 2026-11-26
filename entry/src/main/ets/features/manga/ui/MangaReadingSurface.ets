@@ -3546,7 +3546,8 @@ export struct MangaReadingSurface {
               .fontColor(this.greenColor()).textAlign(TextAlign.Center);
           }.width('100%').justifyContent(FlexAlign.Center).accessibilityLevel('no-hide-descendants');
         }.width('100%').constraintSize({ minHeight: 56 }).padding({ top: 8, bottom: 8, left: 16, right: 16 })
-          .backgroundColor(readerAppColor('TOK_SURFACE_ELEVATED', this.chromeScheme())).borderRadius(0)
+          .attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_SURFACE_ELEVATED', this.chromeScheme()),
+            this.chromeScheme(), 0, 0, this.readerPanelForeground() && this.chapterEnd && this.panel.length === 0))
           .border({ width: { top: 1 }, color: readerAppColor('TOK_LINE', this.chromeScheme()) })
           .accessibilityText(this.chapterEndActionLabel())
           .onClick((): void => {

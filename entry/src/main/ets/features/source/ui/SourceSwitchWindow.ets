@@ -861,7 +861,8 @@ export struct SourceSwitchWindow {
 
   @Builder
   private discoveryAction() {
-    Button({ type: ButtonType.Normal, stateEffect: false }) {
+    Stack({ alignContent: Alignment.Center }) {
+      Button({ type: ButtonType.Normal, stateEffect: false }) {
         Row({ space: SOURCE_SWITCH_VISUAL.discoveryActionGap }) {
           if (!this.isSweeping()) {
             Image(this.appThemeScheme === 'night' ? $r('app.media.settings_gen_refresh_theme_night') : $r('app.media.settings_gen_refresh'))
@@ -874,16 +875,18 @@ export struct SourceSwitchWindow {
             .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).maxLines(1);
         }.width('100%').height(this.discoveryActionVisibleHeight()).justifyContent(FlexAlign.Center)
           .padding({ left: this.compactDiscoveryAction() ? SOURCE_SWITCH_VISUAL.compactDiscoveryActionPaddingX : SOURCE_SWITCH_VISUAL.discoveryActionPaddingX,
-            right: this.compactDiscoveryAction() ? SOURCE_SWITCH_VISUAL.compactDiscoveryActionPaddingX : SOURCE_SWITCH_VISUAL.discoveryActionPaddingX })
-          .backgroundColor(readerAppColor(SOURCE_SWITCH_VISUAL.discoveryActionBackgroundRole, this.appThemeScheme))
-          .borderRadius(SOURCE_SWITCH_VISUAL.discoveryActionRadius);
-      }.width(this.discoveryActionWidth()).height(this.discoveryActionHitHeight()).padding(0).focusOnTouch(false)
-        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme,
+            right: this.compactDiscoveryAction() ? SOURCE_SWITCH_VISUAL.compactDiscoveryActionPaddingX : SOURCE_SWITCH_VISUAL.discoveryActionPaddingX });
+      }.width('100%').height(this.discoveryActionVisibleHeight()).padding(0).focusOnTouch(false)
+        .responseRegion({ x: 0, y: (this.discoveryActionVisibleHeight() - this.discoveryActionHitHeight()) / 2,
+          width: '100%', height: this.discoveryActionHitHeight() })
+        .attributeModifier(new ReaderPressFeedback(readerAppColor(SOURCE_SWITCH_VISUAL.discoveryActionBackgroundRole,
+          this.appThemeScheme), this.appThemeScheme,
           SOURCE_SWITCH_VISUAL.discoveryActionRadius, SOURCE_SWITCH_VISUAL.discoveryActionRadius,
           this.foreground && !this.busy() && !this.hasPendingRecovery()))
         .accessibilityText(this.isSweeping() ? '停止查找书源' : '重新查找书源')
         .enabled(this.foreground && !this.busy() && !this.hasPendingRecovery())
         .onClick((): void => this.requestRefresh());
+    }.width(this.discoveryActionWidth()).height(this.discoveryActionHitHeight());
   }
 
   @Builder

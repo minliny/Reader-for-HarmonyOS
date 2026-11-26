@@ -4,6 +4,7 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { selectedProductionMethods, selectedProductionComponentCallback } from './lib/selected-production-methods.mjs';
+import { productionReaderPressFeedback } from './lib/reader-press-feedback-probe.mjs';
 import { readerDirectoryToolbarBudget } from '../entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts';
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 
@@ -11,6 +12,7 @@ const selected = selectContractCases({
   'toolbar-dock': 'Standalone native cache/sort and current/top/bottom targets keep independent guarded callbacks.',
   'locate-and-cache': 'Current target clears old query and centers by source index, and cache opens only for the current Runtime.',
   'detail-directory-page': 'Book detail gets a safe-area standalone directory with a single Back header and full body budget; the reader keeps its overlay header.',
+  'short-editor': 'The short standalone editor gives the chapter list all space beyond the natural editor height.',
   'clear-search-and-more': 'The catalog restores results in both directory models and closes an anchored More menu when dismissed or blocked.',
 });
 const entry = new URL('../entry/src/main/ets/', import.meta.url);
@@ -30,8 +32,11 @@ for (const id of selected) {
       iconPath, { $r: value => value }, ['readerPaperActionIcon']);
     const calls = [];
     const toolSource = source('ReaderDirectoryToolbar');
-    const methods = ['catalogTool','mangaSortIcon','currentDirectoryInput'];
-    const tool = sdk.consumer(toolSource, methods, { ReaderActionAccessibility, readerPaperActionIcon, MangaDirectoryPressFeedback: class {} });
+    const methods = ['catalogTool','mangaSortIcon','currentDirectoryInput','tool','toolLabel','iconSize'];
+    const ReaderPressFeedback = productionReaderPressFeedback({ ColorMetrics: {
+      resourceColor: color => ({ color, blendColor: overlay => ({ color: `blend(${color},${overlay.color})` }) }),
+    } });
+    const tool = sdk.consumer(toolSource, methods, { ReaderActionAccessibility, readerPaperActionIcon, ReaderPressFeedback });
     Object.assign(tool, { appThemeScheme: 'day', ascending: true, actionEnabled: true, directoryMounted: true,
       directoryFocusId: 'current', directoryFocusCurrent: id => id === 'current',
       onOpenCacheManagement: () => calls.push('downloads'), onToggleSort: () => calls.push('sort') });
@@ -39,23 +44,41 @@ for (const id of selected) {
     tool.catalogTool(true, 'current');
     const buttons = sdk.nodes(tool).filter(node => node.type === 'Button');
     assert.equal(buttons.length,2);
-    assert.ok(buttons.every(button => button.width === 44 && button.height === 44));
-    const surfaces = sdk.nodes(tool).filter(node => node.type === 'Stack' && node.width === 36 && node.height === 36);
-    assert.equal(surfaces.length, 2);
+    assert.ok(buttons.every(button => button.width === 36 && button.height === 36 && button.borderRadius === 18));
+    for (const button of buttons) assert.deepEqual(button.responseRegion, { x: -4, y: -4, width: 44, height: 44 });
+    const carriers = sdk.nodes(tool).filter(node => node.type === 'Stack' && node.width === 44 && node.height === 44);
+    assert.equal(carriers.length, 2);
+    assert.ok(carriers.every(node => node.backgroundColor === undefined));
     for (const scheme of ['day', 'night']) {
       tool.appThemeScheme = scheme;
       tool.ascending = true;
       tool.replay();
-      assert.deepEqual(surfaces.map(node => node.backgroundColor), Array(2).fill(readerAppColor('TOK_CARD_BG', scheme)));
+      assert.deepEqual(buttons.map(node => node.backgroundColor), Array(2).fill(readerAppColor('TOK_CARD_BG', scheme)));
       tool.ascending = false;
       tool.replay();
-      assert.deepEqual(surfaces.map(node => node.backgroundColor),
+      assert.deepEqual(buttons.map(node => node.backgroundColor),
         [readerAppColor('TOK_CARD_BG', scheme), readerAppColor('TOK_PRIMARY_SOFT', scheme)]);
+      for (const button of buttons) assertPressFill(button, scheme);
     }
     buttons[0].onClick(); buttons[1].onClick();
     tool.directoryMounted = false;
     buttons[0].onClick();
     assert.deepEqual(calls,['downloads','sort']);
+    function assertPressFill(button, scheme) {
+      const nodeId = [...tool.nodes].find(([, node]) => node === button)[0];
+      const modifier = tool.attributeCalls.filter(call => call.id === nodeId && call.property === 'attributeModifier').at(-1).args[0];
+      let pressed;
+      const attributes = { backgroundColor(value) { pressed = value; return this; }, borderRadius() { return this; } };
+      modifier.applyPressedAttribute(attributes);
+      assert.equal(pressed, `blend(${button.backgroundColor},${readerAppColor('app.interaction.press', scheme)})`);
+    }
+    Object.assign(tool, { variant: 'full-directory', controlFieldHeight: () => 52 });
+    tool.tool('search', () => calls.push('search'));
+    const search = sdk.nodes(tool).find(node => node.type === 'Button' && node.width === 32);
+    assert.equal(search.height, 32);
+    assert.equal(search.backgroundColor, readerAppColor('TOK_SURFACE_PANEL_SOFT', 'night'));
+    assert.deepEqual(search.responseRegion, { x: -6, y: -10, width: 44, height: 52 });
+    assertPressFill(search, 'night');
     assert.equal(readerDirectoryToolbarBudget(294, true, 36, 104, 0, true).stacked,false);
     assert.equal(readerDirectoryToolbarBudget(294, true, 62, 224, 0, true).stacked,true);
 
@@ -153,6 +176,23 @@ for (const id of selected) {
     panel.panelHeight = () => 117;
     assert.ok(panel.standaloneShort());
     assert.equal(panel.bookmarkListHeight(), 73);
+  } else if (id === 'short-editor') {
+    const Panel = selectedProductionMethods(path('FullDirectoryPanel'), 'FullDirectoryPanel', [
+      'standaloneAvailableHeight', 'standaloneEditorNaturalHeight', 'standaloneEditorHeight',
+      'standaloneShort', 'flowCatalogFooter', 'chapterListHeight',
+    ]);
+    const panel = Object.assign(new Panel(), { detailPage: true, embeddedInControl: false, standaloneCatalog: true,
+      activeTab: 'directory', panelHeight: () => 210, tabStripHeight: () => 42, searchControlsHeight: () => 66,
+      standaloneFooterHeight: () => 78, directoryRowHeight: () => 40 });
+    assert.equal(panel.standaloneShort(), true);
+    assert.equal(panel.standaloneEditorHeight(), 110);
+    assert.equal(panel.chapterListHeight(), 100);
+    panel.panelHeight = () => 88;
+    assert.equal(panel.standaloneEditorHeight(), 48);
+    assert.equal(panel.chapterListHeight(), 40);
+    panel.panelHeight = () => 30;
+    assert.equal(panel.standaloneEditorHeight(), 15);
+    assert.equal(panel.chapterListHeight(), 15);
   } else {
     const catalogPath = path('FullDirectoryPanel');
     const Panel = selectedProductionMethods(catalogPath, 'FullDirectoryPanel', [

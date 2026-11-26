@@ -798,6 +798,7 @@ async function wideSettingsRailSelectionSdk() {
       navigationOwner: navigation, route: 'bookshelf', settingsSection: 'home', navigationGeneration: 0,
       bookRemovalConfirmation: { dismiss() {} }, jsonImportPresentation: { dismiss() {} },
       bookshelfModalVisible: () => false, wideSettingsInputAllowed: () => true,
+      usesBottomMainNavigation: () => true, primaryTabFooterHeight: 88,
       wideSettingsPane: () => navigation.settingsPane(),
       requestWideSettingsPane() {}, requestWideSettingsMainTab() {}, secondaryRouteStack() {},
     });
