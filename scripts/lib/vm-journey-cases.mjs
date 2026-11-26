@@ -364,11 +364,11 @@ export const journeys = {
       route: 'settings', all: [general], modalOpen: false, scheme: 'night',
     });
     await ui.tap('进入夜间通用设置核对主题控件', general, {
-      route: 'settings', all: [text('App主题'), day, { ...action('深色'), selected: 'true' }],
+      route: 'settings', all: [text('App 主题'), day, { ...action('深色'), selected: 'true' }],
       modalOpen: false, scheme: 'night', screenCapture: true,
     });
     await ui.tap('切回日间并核对通用设置恢复', day, {
-      route: 'settings', all: [text('App主题'), { ...day, selected: 'true' }], modalOpen: false, scheme: 'day',
+      route: 'settings', all: [text('App 主题'), { ...day, selected: 'true' }], modalOpen: false, scheme: 'day',
     });
   },
 };
