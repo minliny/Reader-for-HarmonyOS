@@ -2,8 +2,9 @@
 
 import { createHash, randomUUID, X509Certificate } from 'node:crypto';
 import { withHapZip } from './lib/hap-zip-reader.mjs';
+import { canOverlapHapSignature, startHapSignatureProcess } from './lib/hap-signature-process.mjs';
 import { regularInputSnapshot, sameIdentity, snapshotFileRecords as snapshottedFiles,
-  startRegularInputSnapshots } from './lib/regular-input-snapshot.mjs';
+  startRegularInputSnapshots, captureSealedInputSnapshot } from './lib/regular-input-snapshot.mjs';
 import { generateBuildProvenance } from '../tools/generate-build-provenance-manifest.mjs';
 import { createRequire } from 'node:module';
 import {
@@ -30,6 +31,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { portableSpawnSync, resolveHarmonyTool } from './lib/harmony-toolchain.mjs';
 import { assertPrivateFilePermissions } from './lib/private-file.cjs';
 import { performance } from 'node:perf_hooks';
+import { isMainThread, parentPort, Worker, workerData } from 'node:worker_threads';
 import { readSigningAuthority, assertSigningMaterialAuthority, assertSigningCertificateAuthority } from '../tools/reader-signing-authority.mjs';
 import { assertBuildTools } from '../tools/reader-build-tools.mjs';
 import { contentSnapshot, coreBuildSnapshot } from '../../Reader-Core/scripts/build-input-snapshot.mjs';
@@ -164,6 +166,11 @@ function buildTimingBreakdown() {
     [key, Math.round(milliseconds * 100) / 100]));
 }
 
+function recordBuildElapsed(label, started) {
+  const steps = activeBuildTimings?.steps;
+  if (steps) steps.set(label, (steps.get(label) ?? 0) + performance.now() - started);
+}
+
 function finishBuildAttempt(error) {
   if (activeBuildTimings) activeBuildAttempt.report.timingBreakdownMs = buildTimingBreakdown();
   activeBuildAttempt.finish(error);
@@ -194,6 +201,30 @@ export function run(binary, args, options = {}) {
     fail(`${binary} failed (${result.status}): ${stderr || stdout || '<no output>'}`);
   }
   return result;
+}
+
+// The worker runs the existing synchronous command and reports the child's
+// duration independently of synchronous probes on the main thread.
+export async function prepareDuringNativePreflight(args, prepare, onNativeTiming) {
+  const worker = new Worker(new URL(import.meta.url), { workerData: { hapNativePreflight: args } });
+  const native = new Promise((resolveResult, reject) => {
+    let result;
+    let workerError;
+    worker.once('message', message => { result = message; });
+    worker.once('error', error => { workerError = error; });
+    worker.once('exit', code => {
+      if (workerError || code !== 0 || !result) {
+        reject(workerError ?? new Error('Native preflight worker exited without a result (' + code + ')'));
+      } else resolveResult(result);
+    });
+  });
+  const [verification, prepared] = await Promise.allSettled([native, Promise.resolve().then(prepare)]);
+  if (verification.status === 'rejected') throw verification.reason;
+  const { milliseconds, error } = verification.value;
+  onNativeTiming?.(milliseconds);
+  if (error) throw Object.assign(new Error(error.message), error);
+  if (prepared.status === 'rejected') throw prepared.reason;
+  return prepared.value;
 }
 
 function capture(binary, args, options = {}) {
@@ -711,6 +742,37 @@ function incrementalDaemonToken(sandboxRoot, configuration, stopExistingDaemon) 
   return token;
 }
 
+function readWrapperTools(buildClass, incremental, beforeCopy = false) {
+  const sharedHvigorTools = resolve(process.env.HVIGOR_SHARED_TOOLS || resolve(homedir(), '.hvigor/wrapper/tools'));
+  if (!existsSync(sharedHvigorTools)) fail('prepared Hvigor wrapper tools are missing: ' + sharedHvigorTools);
+
+  // The version check follows the two pnpm paths. Seal their resolved files
+  // as well as the wrapper tree's own link entries until the result is used.
+  const pnpmInputs = beforeCopy ? ['node_modules/pnpm/package.json', 'node_modules/pnpm/bin/pnpm.cjs'].map(file => {
+    const path = resolve(sharedHvigorTools, file);
+    const target = existsSync(path) ? realpathSync(path) : undefined;
+    const proof = target && captureSealedInputSnapshot(dirname(target), [basename(target)], 'Prepared pnpm input');
+    return { path, target, proof };
+  }) : [];
+  const packageManager = measureBuildStep('toolchain.packageManager', () =>
+    assertBuildTools(sharedHvigorTools, { profile: buildClass === 'acceptance' ? 'release' : 'development' }));
+  // Preserve the old handling of a linked tools root by capturing its
+  // fingerprint at the normal point, close to materialization.
+  const proof = beforeCopy && incremental && lstatSync(sharedHvigorTools).isDirectory()
+    ? measureBuildStep('toolchain.snapshot', () =>
+      captureSealedInputSnapshot(sharedHvigorTools, ['.'], 'Shared Hvigor wrapper tools', { allowLinks: true }))
+    : undefined;
+  return { sharedHvigorTools, packageManager, sourceTools: proof?.snapshot,
+    assertUnchanged() {
+      for (const { path, target, proof } of pnpmInputs) {
+        if (!target || !existsSync(path) || realpathSync(path) !== target) fail('Prepared pnpm inputs changed after version verification');
+        proof.assertUnchanged();
+      }
+      proof?.assertUnchanged();
+    },
+  };
+}
+
 function prepareHvigorWrapperTools(shared, destination, fingerprint, sourceTools, stopExistingDaemon) {
   const copyOptions = { recursive: true, mode: constants.COPYFILE_FICLONE, preserveTimestamps: true, verbatimSymlinks: true };
   if (fingerprint === undefined) {
@@ -798,29 +860,35 @@ function verifiedProfileIdentity(profilePath) {
   }
 }
 
+function signatureArguments(hapPath, verifyRoot) {
+  const signTool = resolveHarmonyTool('signTool');
+  return ['-jar', signTool, 'verify-app', '-inFile', hapPath,
+    '-outCertChain', resolve(verifyRoot, 'cert-chain.cer'), '-outProfile', resolve(verifyRoot, 'profile.p7b')];
+}
+
+function verifiedSignatureResult(result, verifyRoot) {
+  if (result.commandError) fail(`HAP signature verifier process failed (${result.commandError})`);
+  const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
+  if (result.status === 0 && output.includes('verify-app success') &&
+      output.includes('verify codesign success') && output.includes('Digest verify result: true')) {
+    const profile = output.match(/profile type is:\s*([^\s]+)/i)?.[1]?.toLowerCase() ?? 'unknown';
+    const identity = measureBuildStep('signerProfile', () => verifiedProfileIdentity(resolve(verifyRoot, 'profile.p7b')));
+    assertSigningCertificateAuthority(identity.certificateSha256);
+    return { status: 'signed', verified: true, profileType: profile, ...identity };
+  }
+  if (/signature not found|No Hap Signing Block/i.test(output)) {
+    return { status: 'unsigned', verified: false, profileType: 'none' };
+  }
+  fail('HAP signature verification failed');
+}
+
 function verifySignature(hapPath) {
   const java = resolveHarmonyTool('java');
-  const signTool = resolveHarmonyTool('signTool');
   const verifyRoot = mkdtempSync(join(tmpdir(), 'reader-hap-signature-'));
   try {
-    const result = measureBuildStep('signTool', () => run(java, [
-      '-jar', signTool, 'verify-app',
-      '-inFile', hapPath,
-      '-outCertChain', resolve(verifyRoot, 'cert-chain.cer'),
-      '-outProfile', resolve(verifyRoot, 'profile.p7b'),
-    ], { allowFailure: true }));
-    const output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`;
-    if (result.status === 0 && output.includes('verify-app success') &&
-        output.includes('verify codesign success') && output.includes('Digest verify result: true')) {
-      const profile = output.match(/profile type is:\s*([^\s]+)/i)?.[1]?.toLowerCase() ?? 'unknown';
-      const identity = measureBuildStep('signerProfile', () => verifiedProfileIdentity(resolve(verifyRoot, 'profile.p7b')));
-      assertSigningCertificateAuthority(identity.certificateSha256);
-      return { status: 'signed', verified: true, profileType: profile, ...identity };
-    }
-    if (/signature not found|No Hap Signing Block/i.test(output)) {
-      return { status: 'unsigned', verified: false, profileType: 'none' };
-    }
-    fail('HAP signature verification failed');
+    const args = signatureArguments(hapPath, verifyRoot);
+    const result = measureBuildStep('signTool', () => run(java, args, { allowFailure: true }));
+    return verifiedSignatureResult(result, verifyRoot);
   } finally {
     rmSync(verifyRoot, { recursive: true, force: true });
   }
@@ -834,6 +902,46 @@ const bundledSourceEntry = 'resources/rawfile/reader-tested-book-source-collecti
 const storageBootstrapEntry = `resources/rawfile/${STORAGE_BOOTSTRAP_RESOURCE}`;
 
 function inspectHapForSeal(hapPath, kind, publicPath, requiredResources, abi, expectedVersion, expectedBundledSources) {
+  let signature;
+  const archive = readHapForSeal(hapPath, kind, publicPath, requiredResources, abi, expectedVersion, expectedBundledSources, () => {
+    signature = verifySignature(hapPath);
+    checkExpectedSignature(hapPath, kind, signature);
+  });
+  return archive.seal(signature);
+}
+
+function checkExpectedSignature(hapPath, kind, signature) {
+  if (kind === 'signed' && signature.status !== 'signed') fail(`${hapPath} is not signed`);
+  if (kind === 'unsigned' && signature.status !== 'unsigned') fail(`${hapPath} is not unsigned`);
+}
+
+/** Build-only path. One JVM may run while the already opened ZIP is inspected. */
+async function inspectBuiltHapForSeal(hapPath, kind, publicPath, requiredResources, abi, expectedVersion, expectedBundledSources) {
+  const java = resolveHarmonyTool('java');
+  if (!canOverlapHapSignature(java)) return measureBuildStep('inspectHap.synchronousSigner', () =>
+    inspectHapForSeal(hapPath, kind, publicPath, requiredResources, abi, expectedVersion, expectedBundledSources));
+  const verifyRoot = mkdtempSync(join(tmpdir(), 'reader-hap-signature-'));
+  let task;
+  try {
+    const args = signatureArguments(hapPath, verifyRoot);
+    const archive = measureBuildStep('inspectHap.archive', () => readHapForSeal(
+      hapPath, kind, publicPath, requiredResources, abi, expectedVersion, expectedBundledSources, () => {
+        task = startHapSignatureProcess(java, args, REPO_ROOT);
+      }));
+    const waiting = performance.now();
+    const result = await task.result;
+    recordBuildElapsed('inspectHap.signToolWait', waiting);
+    archive.assertUnchanged(hapPath);
+    const signature = measureBuildStep('inspectHap.signatureResult', () => verifiedSignatureResult(result, verifyRoot));
+    checkExpectedSignature(hapPath, kind, signature);
+    return archive.seal(signature);
+  } finally {
+    try { await task?.stop(); }
+    finally { rmSync(verifyRoot, { recursive: true, force: true }); }
+  }
+}
+
+function readHapForSeal(hapPath, kind, publicPath, requiredResources, abi, expectedVersion, expectedBundledSources, admitSignature) {
   if (abi !== 'arm64-v8a' && abi !== 'x86_64') fail(`unsupported HAP inspection ABI: ${abi}`);
   return withHapZip(hapPath, zip => {
     const record = (path, bytes) => ({ path, bytes: bytes.length, sha256: sha256Bytes(bytes) });
@@ -846,10 +954,8 @@ function inspectHapForSeal(hapPath, kind, publicPath, requiredResources, abi, ex
       fail(`unexpected native archive layout in ${hapPath}: ${JSON.stringify(nativeEntries)}`);
     }
     const hapRecord = measureBuildStep('hapDigest', () => zip.fileRecord(publicPath));
-    const signature = verifySignature(hapPath);
+    admitSignature();
     zip.assertUnchanged();
-    if (kind === 'signed' && signature.status !== 'signed') fail(`${hapPath} is not signed`);
-    if (kind === 'unsigned' && signature.status !== 'unsigned') fail(`${hapPath} is not unsigned`);
     let embeddedBootstrap;
     if (requiredResources) measureBuildStep('requiredResources', () =>
       verifyRequiredHapResources(requiredResources, zip.names, (entry) => {
@@ -862,21 +968,29 @@ function inspectHapForSeal(hapPath, kind, publicPath, requiredResources, abi, ex
       if (bundled.bytes !== expectedBundledSources.bytes || bundled.sha256 !== expectedBundledSources.sha256) {
         fail(`${hapPath} bundled source bytes differ from the current build input`);
       }
-      console.log(`${hapPath}: bundled source byte identity PASS (${bundled.bytes} bytes); source behavior NOT_RUN`);
     });
     const nativePath = `libs/${abi}/libreader_core_napi.so`;
     const { embeddedNative, compatibility } = measureBuildStep('embeddedNative', () => {
       const bytes = zip.read(nativePath);
       return { embeddedNative: record(nativePath, bytes), compatibility: embeddedStorageCompatibility(bytes) };
     });
+    const assertUnchanged = candidate => {
+      if (candidate !== hapPath) fail('HAP does not match the inspected staging path');
+      zip.assertUnchanged();
+    };
     return {
-      artifact: { kind, ...hapRecord, signature, appVersion, nativeEntries,
-        embeddedCoreNapi: { ...embeddedNative, storageCompatibility: compatibility },
-        ...(requiredResources ? { requiredResources } : {}) },
-      inspectedHap: { hapRecord, embeddedNative, embeddedBootstrap },
-      assertUnchanged(candidate) {
-        if (candidate !== hapPath) fail('HAP does not match the inspected staging path');
-        zip.assertUnchanged();
+      assertUnchanged,
+      seal(signature) {
+        assertUnchanged(hapPath);
+        if (expectedBundledSources) {
+          console.log(`${hapPath}: bundled source byte identity PASS (${expectedBundledSources.bytes} bytes); source behavior NOT_RUN`);
+        }
+        return {
+          artifact: { kind, ...hapRecord, signature, appVersion, nativeEntries,
+            embeddedCoreNapi: { ...embeddedNative, storageCompatibility: compatibility },
+            ...(requiredResources ? { requiredResources } : {}) },
+          inspectedHap: { hapRecord, embeddedNative, embeddedBootstrap }, assertUnchanged,
+        };
       },
     };
   });
@@ -1449,10 +1563,25 @@ async function buildImpl(options, inputs, buildStarted) {
   let unpublishedRunDir = null;
   let afterSnapshots;
   try {
-    measureBuildStep('nativePreflight', () => run(process.execPath, [resolve(REPO_ROOT, 'tools/generate-build-provenance-manifest.mjs'),
+    const readAppIdentity = () => measureBuildStep('appIdentity', () => prepareAppIdentity(REPO_ROOT, APP_CONTENT_INPUTS, { abi,
+      channel: option(options, '--channel', process.env.READER_APP_CHANNEL), buildClass, signed: signingMode === 'local',
+      precomputedRecords }));
+    const readWorkspaceContract = () => measureBuildStep('workspaceContractBefore', () => workspaceContractSnapshot());
+    const nativeArgs = measureBuildStep('nativePreflightArguments', () => [resolve(REPO_ROOT, 'tools/generate-build-provenance-manifest.mjs'),
       ...nativeProvenanceArguments(nativeEnvironment), '--preflight', '--output', resolve(sandboxRoot, 'native-preflight.json'),
       ...(buildClass === 'iteration' ? ['--allow-dirty'] : []),
-    ]));
+    ]);
+    let prepared;
+    if (buildClass === 'iteration' && !options.has('--live-source-ids')) {
+      prepared = await prepareDuringNativePreflight(nativeArgs, () => ({
+        workspaceContract: readWorkspaceContract(),
+        appIdentity: readAppIdentity(),
+        wrapperTools: readWrapperTools(buildClass, incremental, true),
+      }), milliseconds => activeBuildTimings?.steps.set('nativePreflight', milliseconds));
+      measureBuildStep('toolchain.verifyPreparedInputs', () => prepared.wrapperTools.assertUnchanged());
+    } else {
+      measureBuildStep('nativePreflight', () => run(process.execPath, nativeArgs));
+    }
     const artifactRoot = resolve(option(options, '--artifact-root', DEFAULT_ARTIFACT_ROOT));
     const keepRuns = retentionLimit(options);
     const retention = measureBuildStep('retention', () => applyHapRetention(planHapRetention(artifactRoot, keepRuns, 1)));
@@ -1463,7 +1592,7 @@ async function buildImpl(options, inputs, buildStarted) {
         !controllerRequiresContractEvidence(harmonyGateBefore)) {
       fail('current HAP controller requires the contract evidence policy');
     }
-    const workspaceContractBefore = measureBuildStep('workspaceContractBefore', () => workspaceContractSnapshot());
+    const workspaceContractBefore = prepared?.workspaceContract ?? readWorkspaceContract();
     const contractToolchainBefore = contentSnapshot(WORKSPACE_ROOT, []);
     console.log(JSON.stringify({ stage: 'harmonyContracts', status: 'NOT_RUN', scope: 'none', fullSuite: 'NOT_RUN' }));
     if (options.has('--live-source-ids')) {
@@ -1480,9 +1609,7 @@ async function buildImpl(options, inputs, buildStarted) {
       }
     }
 
-    const appIdentity = measureBuildStep('appIdentity', () => prepareAppIdentity(REPO_ROOT, APP_CONTENT_INPUTS, { abi,
-      channel: option(options, '--channel', process.env.READER_APP_CHANNEL), buildClass, signed: signingMode === 'local',
-      precomputedRecords }));
+    const appIdentity = prepared?.appIdentity ?? readAppIdentity();
     console.log(JSON.stringify({ stage: 'appBuildIdentity', ...appIdentity.expectedVersion }));
     const hvigorw = resolveHarmonyTool('hvigorw', { cwd: REPO_ROOT });
     const hvigorUserHome = resolve(sandboxRoot, 'hvigor-user-home');
@@ -1526,16 +1653,11 @@ async function buildImpl(options, inputs, buildStarted) {
     ];
     const buildCommand = `${hvigorw} ${buildArgs.join(' ')}`;
     const startedAt = new Date().toISOString();
-    const sharedHvigorTools = resolve(
-      process.env.HVIGOR_SHARED_TOOLS || resolve(homedir(), '.hvigor/wrapper/tools'),
-    );
-    if (!existsSync(sharedHvigorTools)) {
-      fail(`prepared Hvigor wrapper tools are missing: ${sharedHvigorTools}`);
-    }
-    const packageManager = measureBuildStep('toolchain.packageManager', () =>
-      assertBuildTools(sharedHvigorTools, { profile: buildClass === 'acceptance' ? 'release' : 'development' }));
-    const sourceTools = incremental ? measureBuildStep('toolchain.snapshot', () =>
-      contentSnapshot(sharedHvigorTools, ['.'])) : undefined;
+    const wrapperTools = prepared?.wrapperTools ?? readWrapperTools(buildClass, incremental);
+    const { sharedHvigorTools, packageManager } = wrapperTools;
+    if (prepared) measureBuildStep('toolchain.verifyPreparedInputs', () => wrapperTools.assertUnchanged());
+    const sourceTools = wrapperTools.sourceTools ?? (incremental ? measureBuildStep('toolchain.snapshot', () =>
+      contentSnapshot(sharedHvigorTools, ['.'])) : undefined);
     const wrapperToolFingerprint = incremental ? sha256Bytes(JSON.stringify({
       sharedHvigorTools, hvigorw, wrapper: fileRecord(hvigorw).sha256, packageManager, tools: sourceTools.fingerprint,
       project: snapshotSubset(sourceBefore, ['hvigor', 'hvigor-config.json5']).fingerprint,
@@ -1615,15 +1737,15 @@ async function buildImpl(options, inputs, buildStarted) {
     }));
     const expectedBundledSources = sourceRecord(`entry/src/main/${bundledSourceEntry}`);
     if (!expectedBundledSources) fail('bundled source input is missing from the build snapshot');
-    const inspected = new Map(artifactPaths.map(path => [path, measureBuildStep('inspectHap', () => inspectHapForSeal(
-      path,
-      basename(path).endsWith('-signed.hap') ? 'signed' : 'unsigned',
-      basename(path),
-      requiredResources,
-      abi,
-      appIdentity.expectedVersion,
-      expectedBundledSources,
-    ))]));
+    const inspected = new Map();
+    for (const path of artifactPaths) {
+      const started = performance.now();
+      try {
+        inspected.set(path, await inspectBuiltHapForSeal(path,
+          basename(path).endsWith('-signed.hap') ? 'signed' : 'unsigned', basename(path),
+          requiredResources, abi, appIdentity.expectedVersion, expectedBundledSources));
+      } finally { recordBuildElapsed('inspectHap', started); }
+    }
     const artifacts = [...inspected.values()].map(evidence => evidence.artifact);
     if (buildClass === 'acceptance' && !artifacts.some((artifact) => artifact.kind === 'signed')) {
       fail('acceptance build did not produce a signed artifact');
@@ -2575,7 +2697,16 @@ async function main() {
   }
 }
 
-if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
+if (!isMainThread && workerData?.hapNativePreflight) {
+  const started = performance.now();
+  let failure;
+  try {
+    run(process.execPath, workerData.hapNativePreflight);
+  } catch (error) {
+    failure = { name: error.name, message: error.message, code: error.code, exitCode: error.exitCode };
+  }
+  parentPort.postMessage({ milliseconds: performance.now() - started, error: failure });
+} else if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url) {
   try {
     await main();
   } catch (error) {

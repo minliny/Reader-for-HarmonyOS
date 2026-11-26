@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { contentSnapshot } from '../../../Reader-Core/scripts/build-input-snapshot.mjs';
-import { regularInputSnapshot, startRegularInputSnapshots } from './regular-input-snapshot.mjs';
+import { captureSealedInputSnapshot, regularInputSnapshot, startRegularInputSnapshots } from './regular-input-snapshot.mjs';
 
 async function fixture(action) {
   const dir = mkdtempSync(join(tmpdir(), 'reader-snapshot-worker-fixture-'));
@@ -138,5 +138,39 @@ test('late replacement of an ancestor is rejected even if selected bytes still m
       writeFileSync(item, 'same bytes');
       assert.throws(batch.assertUnchanged, /snapshot input changed before publication: parent/);
     } finally { await batch.stop(); }
+  });
+});
+
+test('a wrapper tools proof reproduces the full Core fingerprint including pnpm symlinks', async () => {
+  await fixture(dir => {
+    const bin = join(dir, 'bin');
+    mkdirSync(bin);
+    const cli = join(bin, 'pnpm.cjs');
+    writeFileSync(cli, 'first tool bytes');
+    symlinkSync(join('bin', 'pnpm.cjs'), join(dir, 'pnpm'), 'file');
+    symlinkSync('missing-entry', join(dir, 'dangling'), 'file');
+    const proof = captureSealedInputSnapshot(dir, ['.'], 'Wrapper tools fixture', { allowLinks: true });
+    assert.deepEqual(proof.snapshot, contentSnapshot(dir, ['.']));
+    assert.doesNotThrow(proof.assertUnchanged);
+    const old = fs.statSync(cli);
+    utimesSync(cli, old.atime, new Date(old.mtimeMs + 5000));
+    assert.doesNotThrow(proof.assertUnchanged);
+    writeFileSync(cli, 'other tool bytes');
+    utimesSync(cli, old.atime, old.mtime);
+    assert.throws(proof.assertUnchanged, /snapshot input changed before use:.*pnpm\.cjs/);
+  });
+});
+
+test('a wrapper tools proof rejects link replacement and late members', async () => {
+  await fixture(dir => {
+    const alias = join(dir, 'pnpm');
+    symlinkSync('old-tool', alias, 'file');
+    const proof = captureSealedInputSnapshot(dir, ['.'], 'Wrapper tools fixture', { allowLinks: true });
+    rmSync(alias);
+    symlinkSync('new-tool', alias, 'file');
+    assert.throws(proof.assertUnchanged, /snapshot input changed before use:.*pnpm/);
+    const laterProof = captureSealedInputSnapshot(dir, ['.'], 'Wrapper tools fixture', { allowLinks: true });
+    writeFileSync(join(dir, 'late-input'), 'bytes');
+    assert.throws(laterProof.assertUnchanged, /snapshot input changed before use/);
   });
 });

@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { closeSync, constants, fstatSync, lstatSync, openSync, readdirSync, readSync } from 'node:fs';
+import { closeSync, constants, fstatSync, lstatSync, openSync, readdirSync, readlinkSync, readSync } from 'node:fs';
 import { dirname, isAbsolute, relative, resolve, sep } from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { isMainThread, parentPort, Worker, workerData } from 'node:worker_threads';
@@ -27,6 +27,10 @@ function sealMatches(seal, current, recheck) {
   if (!recheck) return false;
   // A timestamp-only change can be admitted by proving the same members or
   // exact digest under the original node identity.
+  if (seal.record?.type === 'symlink') {
+    const target = readlinkSync(seal.path);
+    return sameIdentity(current, stat(seal.path)) && target === seal.record.target;
+  }
   if (seal.record) {
     if (current.size !== seal.identity.size) return false;
     const { repo, label, buffer } = recheck;
@@ -60,7 +64,7 @@ function fileRecord(repo, path, before, buffer, label) {
   }
 }
 
-function captureRegularInputSnapshot(repo, inputs, label = 'Build inputs', validatedDigests) {
+function captureRegularInputSnapshot(repo, inputs, label = 'Build inputs', validatedDigests, allowLinks = false) {
   repo = resolve(repo);
   const records = [];
   const seals = new Map();
@@ -86,6 +90,12 @@ function captureRegularInputSnapshot(repo, inputs, label = 'Build inputs', valid
         visit(child, childStat);
       }
       requireInput(sameIdentity(before, stat(path)), label, 'directory changed while taking the snapshot: ' + relative(repo, path));
+    } else if (allowLinks && before.isSymbolicLink()) {
+      const target = readlinkSync(path);
+      const record = { path: relative(repo, path), type: 'symlink', target, sha256: createHash('sha256').update(target).digest('hex') };
+      recordSeal(path, before, true, { record });
+      requireInput(sameIdentity(before, stat(path)), label, 'tool link changed while taking the snapshot: ' + relative(repo, path));
+      records.push(record);
     } else {
       requireInput(before.isFile(), label, 'snapshot inputs must contain only regular files and real directories: ' + relative(repo, path));
       const cached = validatedDigests?.get(path);
@@ -140,6 +150,25 @@ export function regularInputSnapshot(repo, inputs, label, validatedDigests) {
   return captureRegularInputSnapshot(repo, inputs, label, validatedDigests).snapshot;
 }
 
+function assertCapturedInputs({ seals, repo, label }, buffer, message) {
+  const recheck = { repo, label, buffer };
+  for (const seal of seals) {
+    requireInput(sealMatches(seal, stat(seal.path), recheck), label, message + relative(repo, seal.path));
+  }
+}
+
+// Keep the record and proof private to the current build. Wrapper trees can
+// opt in to link records in Core's format without following those links.
+export function captureSealedInputSnapshot(repo, inputs, label, { allowLinks = false } = {}) {
+  const captured = captureRegularInputSnapshot(repo, inputs, label, undefined, allowLinks);
+  return {
+    snapshot: captured.snapshot,
+    assertUnchanged() {
+      assertCapturedInputs(captured, Buffer.allocUnsafe(CHUNK_BYTES), 'snapshot input changed before use: ');
+    },
+  };
+}
+
 /** Schedule one or two independent snapshots while the owning process performs other build checks. */
 export function startRegularInputSnapshots(requests) {
   if (!Array.isArray(requests) || requests.length < 1 || requests.length > MAX_WORKERS) {
@@ -173,11 +202,8 @@ export function startRegularInputSnapshots(requests) {
       assertUnchanged() {
         if (!captured) throw new Error('Snapshot results must be awaited before checking their input identities');
         const buffer = Buffer.allocUnsafe(CHUNK_BYTES);
-        for (const { seals, repo, label } of captured) {
-          const recheck = { repo, label, buffer };
-          for (const seal of seals) {
-            requireInput(sealMatches(seal, stat(seal.path), recheck), label, 'snapshot input changed before publication: ' + relative(repo, seal.path));
-          }
+        for (const rows of captured) {
+          assertCapturedInputs(rows, buffer, 'snapshot input changed before publication: ');
         }
       },
       async stop() { await Promise.allSettled(workers.map(worker => worker.terminate())); },
