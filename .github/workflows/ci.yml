@@ -125,8 +125,8 @@ jobs:
           docker pull --platform linux/amd64 "$image"
           df -h "$docker_root" "$RUNNER_TEMP"
           printf 'image=%s\n' "$image" >> "$GITHUB_OUTPUT"
-      - name: ${{ matrix.sdk == 'api26r' && 'Compile Native and verify the unsigned HAP' || 'Compile Native only' }}
-        id: evidence
+      - name: Compile Native and prepare the toolchain
+        id: prepare
         shell: bash
         env:
           IMAGE: ${{ steps.sdk.outputs.image }}
@@ -134,25 +134,39 @@ jobs:
         run: |
           build_temp=$(mktemp -d "$RUNNER_TEMP/reader-unsigned.XXXXXX")
           node_home=$(dirname "$(dirname "$(command -v node)")")
-          args=()
+          mode=--prepare
           if [ "$SDK" != api26r ]; then
-            args+=(--native-only)
+            mode=--native-only
           fi
           docker run --rm --platform linux/amd64 \
-            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/workspace" \
-            --mount "type=bind,src=$node_home,dst=/reader-node,readonly" \
             --mount "type=bind,src=$build_temp,dst=/reader-ci" \
-            "$IMAGE" bash /workspace/Reader-for-HarmonyOS/scripts/ci/build-unsigned-hap.sh "${args[@]}"
-          if [ "$SDK" = api26r ]; then
-            printf 'directory=%s/public\n' "$build_temp" >> "$GITHUB_OUTPUT"
-          fi
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/reader-ci/workspace" \
+            --mount "type=bind,src=$node_home,dst=/reader-ci/node,readonly" \
+            --env GITHUB_SHA --env IMAGE --env SDK \
+            "$IMAGE" bash /reader-ci/workspace/Reader-for-HarmonyOS/scripts/ci/build-unsigned-hap.sh "$mode"
+          printf 'directory=%s\n' "$build_temp" >> "$GITHUB_OUTPUT"
+      - name: Resolve local OHPM dependencies, build and verify the HAP offline
+        if: matrix.sdk == 'api26r'
+        shell: bash
+        env:
+          IMAGE: ${{ steps.sdk.outputs.image }}
+          SDK: ${{ matrix.sdk }}
+          BUILD_TEMP: ${{ steps.prepare.outputs.directory }}
+        run: |
+          node_home=$(dirname "$(dirname "$(command -v node)")")
+          docker run --rm --network none --platform linux/amd64 \
+            --mount "type=bind,src=$BUILD_TEMP,dst=/reader-ci" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/reader-ci/workspace" \
+            --mount "type=bind,src=$node_home,dst=/reader-ci/node,readonly" \
+            --env GITHUB_SHA --env IMAGE --env SDK \
+            "$IMAGE" bash /reader-ci/workspace/Reader-for-HarmonyOS/scripts/ci/build-unsigned-hap.sh --package-offline
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         if: matrix.sdk == 'api26r'
         with:
           name: unsigned-hap-evidence-${{ matrix.sdk }}-attempt-${{ github.run_attempt }}
           path: |
-            ${{ steps.evidence.outputs.directory }}/manifest.json
-            ${{ steps.evidence.outputs.directory }}/source-snapshot.json
-            ${{ steps.evidence.outputs.directory }}/build-summary.txt
+            ${{ steps.prepare.outputs.directory }}/public/manifest.json
+            ${{ steps.prepare.outputs.directory }}/public/source-snapshot.json
+            ${{ steps.prepare.outputs.directory }}/public/build-summary.txt
           if-no-files-found: error
           retention-days: 5
