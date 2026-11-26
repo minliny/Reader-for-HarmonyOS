@@ -852,10 +852,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.readingFailureActions::shared.recovery-action",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
-      "member": "readingFailureActions",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingFailureSurface.ets#ReaderReadingFailureSurface.failureActions::shared.recovery-action",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingFailureSurface.ets",
+      "owner": "ReaderReadingFailureSurface",
+      "member": "failureActions",
       "family": "shared.recovery-action",
       "category": "阅读/换源失败恢复及设置/书源导航动作",
       "effectiveHost": "当前ReadingExperience生命周期与章节selection；换回原书源捕获待处理换源标识、scope和章节尝试代次，原恢复动作捕获readerRecoveryView.generation；普通retryReading仍走原reader准入。",
@@ -863,10 +863,10 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets#ReadingExperience.readingFailureContent::shared.page-state",
-      "file": "entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets",
-      "owner": "ReadingExperience",
-      "member": "readingFailureContent",
+      "id": "entry/src/main/ets/features/reading/ui/ReaderReadingFailureSurface.ets#ReaderReadingFailureSurface.build::shared.page-state",
+      "file": "entry/src/main/ets/features/reading/ui/ReaderReadingFailureSurface.ets",
+      "owner": "ReaderReadingFailureSurface",
+      "member": "build",
       "family": "shared.page-state",
       "category": "当前正文不可用或换源失败",
       "effectiveHost": "当前文字阅读正文预算内的可滚动失败投影。换源进度保护原因来自原业务诊断，待处理目标的回滚资格来自原换源事务。",

@@ -2110,8 +2110,6 @@ export struct ReaderControlPanel {
           sample: this.launchSample, sessionState: this.launchBusinessStatus,
           desiredPlaying: this.launchDesiredPlaying, countdown: this.launchCountdown,
           interactionEnabled: this.launchInteractionEnabled,
-          surfaceColor: readerAppColor('app.sessionCapsule.surface', this.appScheme),
-          surfaceBorderColor: readerAppColor('app.sessionCapsule.border', this.appScheme),
           sourceSurfaceColor: readerAppColor(this.fixedIsland ? 'TOK_READ_CARD_EMPHASIS' : this.launchSourceKind === 'fullAutoPagePlayback' ?
             'TOK_SURFACE_PANEL_SOFT' : this.launchSourceKind === 'fullTtsPlayback' ? 'TOK_TTS_CARD' :
               this.launchSourceKind === 'quickTts' ? 'TOK_TTS_QUICK_CARD' : 'TOK_SURFACE_PANEL', this.appScheme),
@@ -2122,9 +2120,6 @@ export struct ReaderControlPanel {
           sourceHighlightColor: this.launchSourceKind === 'fullTtsPlayback' ? readerAppColor('app.control.paint.99FFFFFF', this.appScheme) : '#00000000',
           sourceGradientStart: !this.fixedIsland && this.launchSourceKind === 'quickTts' ? readerAppColor('app.control.paint.FFFAF4', this.appScheme) : '',
           sourceGradientEnd: !this.fixedIsland && this.launchSourceKind === 'quickTts' ? readerAppColor('app.control.paint.F6ECDD', this.appScheme) : '',
-          textColor: readerAppColor('app.sessionCapsule.ink', this.appScheme),
-          primaryColor: readerAppColor('TOK_READ_PRIMARY', this.appScheme),
-          onPrimaryColor: readerAppColor('app.sessionCapsule.onPrimary', this.appScheme),
           themeScheme: this.appScheme,
           sourceSharpContent: (): void => { this.launchSourceContent(); },
           onToggle: (): void => this.onLaunchToggle(),

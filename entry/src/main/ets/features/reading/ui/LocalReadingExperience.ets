@@ -26,8 +26,8 @@ import { ReaderRecoveryGroup } from '../../../ui/feedback/ReaderRecoveryGroup';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../presentation/ReadingDirectoryRecovery';
 import { ReaderDirectoryRecoverySurface } from './ReaderDirectoryRecoverySurface';
-import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
-import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
+import { ReaderRecoveryOverlay } from './ReaderRecoveryOverlay';
+import { ReaderReadingFailureSurface, type ReaderSourceSwitchRecoveryTarget } from './ReaderReadingFailureSurface';
 import { MESSAGE_META } from '../../../ui/foundation/ReaderMessageStyle';
 import vibrator from '@ohos.vibrator';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
@@ -669,12 +669,6 @@ const PAGE_TURN_PREPARATION_RETRY_LIMIT = 16;
 /** Persist real foreground reading time in bounded atomic deltas. */
 /** One visible search page; Core returns an explicit hasMore bit for the rest. */
 const READER_CONTENT_SEARCH_PAGE_SIZE = 50;
-
-interface ReaderSourceSwitchRecoveryTarget {
-  transactionId: string | undefined;
-  scopeId: number;
-  selectionToken: number;
-}
 
 interface ReaderBookmarkViewport {
   startScalar: number;
@@ -2448,16 +2442,43 @@ export struct ReadingExperience {
       this.readerStatusBarUnderlay();
       this.chapterLoadingContent();
       if (this.phase === 'failed' || this.sourceSwitchFailureMessage.length > 0) {
-        this.readingFailureContent();
+        ReaderReadingFailureSurface({
+          theme: this.appearanceSnapshot.activeTheme,
+          layout: { width: this.readingLayout().bodyWidth(), height: this.readingLayout().bodyHeight(false),
+            left: this.readingLayout().contentLeft, top: this.readingLayout().contentTop },
+          sourceSwitchFailureMessage: this.sourceSwitchFailureMessage,
+          failureHint: this.failureHint,
+          sourceSwitchScopeId: this.sourceSwitchScopeId,
+          recoveryGeneration: this.readerRecoveryView.visible && this.readerRecoveryView.canRetry ?
+            this.readerRecoveryView.generation : undefined,
+          recoveryActionLabel: this.readerRecoveryActionLabel,
+          rollbackInFlight: this.sourceSwitchRollbackInFlight,
+          rollbackTarget: this.phase === 'failed' && this.sourceSwitchTransactionId !== undefined ?
+            { transactionId: this.sourceSwitchTransactionId, scopeId: this.sourceSwitchScopeId,
+              selectionToken: this.chapterSelectionToken } : undefined,
+          switchSourceFocusId: this.sourceId !== LOCAL_READING_SOURCE_ID ?
+            sourceSwitchTriggerFocusId(this.sourceId, this.bookId, 'reader-recovery') : undefined,
+          onRetryFailedSourceSwitch: (scopeId: number): void => this.onRetryFailedSourceSwitch(scopeId),
+          onRetryRecovery: (generation: number): void => {
+            if (this.readerInputIsCurrent()) this.reconcileReaderRecovery(generation);
+          },
+          onRetryReading: (): void => {
+            if (!this.sourceSwitchRollbackInFlight && this.readerInputIsCurrent()) this.retryReading();
+          },
+          onOpenSettings: (): void => this.openReaderControl(),
+          onDismissSourceSwitchFailure: (scopeId: number): void => this.onDismissSourceSwitchFailure(scopeId),
+          onRollbackSourceSwitch: (target: ReaderSourceSwitchRecoveryTarget): void => {
+            if (!this.readerInputIsCurrent() || this.phase !== 'failed' || this.sourceSwitchRollbackInFlight ||
+              target.scopeId !== this.sourceSwitchScopeId || target.selectionToken !== this.chapterSelectionToken ||
+              target.transactionId === undefined || target.transactionId !== this.sourceSwitchTransactionId) return;
+            this.onRollbackReaderTarget(target.transactionId, target.scopeId);
+          },
+          onSwitchSource: (): void => this.onSwitchSource(sourceSwitchTriggerFocusId(this.sourceId, this.bookId, 'reader-recovery')),
+        });
       }
       if (this.sessionLaunch === undefined && this.shouldShowSessionCapsule()) {
         ReaderSessionCapsule({
           type: this.sessionCapsuleType(), sessionState: this.sessionCapsuleState(), countdown: this.sessionCapsuleCountdown(),
-          surfaceColor: readerAppColor('app.sessionCapsule.surface', this.readerAppScheme),
-          surfaceBorderColor: readerAppColor('app.sessionCapsule.border', this.readerAppScheme),
-          textColor: readerAppColor('app.sessionCapsule.ink', this.readerAppScheme),
-          primaryColor: readerAppColor('TOK_READ_PRIMARY', this.readerAppScheme),
-          onPrimaryColor: readerAppColor('app.sessionCapsule.onPrimary', this.readerAppScheme),
           themeScheme: this.readerAppScheme,
           fontScale: this.readingLayout().systemFontScale,
           measurementIdentity: this.sessionCapsuleMeasurementIdentity(this.sessionCapsuleType()),
@@ -2487,7 +2508,17 @@ export struct ReadingExperience {
             TransitionEffect.IDENTITY);
       }
       this.sourceSwitchPreparationContent();
-      this.readerRecoveryContent();
+      if (!this.sourceSwitchPresentationVisible && this.hasReaderRecoveryContent()) {
+        ReaderRecoveryOverlay({
+          overlayId: this.readerRecoveryOverlayId(),
+          widthVp: this.controlLayout(this.readerWindowMetricsRevision).topBarWidth,
+          maxHeightVp: this.readerRecoveryViewportHeight(),
+          leftVp: (this.viewportWidth - this.controlLayout(this.readerWindowMetricsRevision).topBarWidth) / 2,
+          topVp: this.readerRecoveryTop(),
+          interactionEnabled: this.readerRecoveryInputCurrent(),
+          content: (): void => { this.readerRecoveryOverlayItems(); },
+        });
+      }
     }
     .width('100%')
     .height('100%')
@@ -2729,35 +2760,15 @@ export struct ReadingExperience {
   }
 
   @Builder
-  private readerRecoveryContent() {
-    // This floating surface displays the original operation without changing
-    // body pagination, page-turn ownership or the control expansion budget.
-    if (!this.sourceSwitchPresentationVisible && this.hasReaderRecoveryContent()) {
-      Scroll() {
-        Column({ space: 8 }) {
-          if (this.bookmarkRecovery.bookmarks.visible && (this.bookmarkRecovery.bookmarksKind ?? 'pending') !== 'pending') {
-            this.readerBookmarkRecoveryContent(false);
-          }
-          if (this.readerOfflineRecoveryVisible() && (this.bookmarkRecovery.offlineKind ?? 'pending') !== 'pending') {
-            this.readerOfflineRecoveryContent(false);
-          }
-          if (this.hasReaderPendingGroup()) {
-            ReaderRecoveryGroup({ content: (): void => { this.readerRecoveryItems(); } });
-          }
-        }.width('100%');
-      }
-      .width(this.controlLayout(this.readerWindowMetricsRevision).topBarWidth)
-      .constraintSize({ maxHeight: this.readerRecoveryViewportHeight() })
-      .position({ x: (this.viewportWidth - this.controlLayout(this.readerWindowMetricsRevision).topBarWidth) / 2,
-        y: this.readerRecoveryTop() })
-      .id(this.readerRecoveryOverlayId())
-      // This surface owns its actions and scrolling. Its touches must not
-      // reach the reading host's outside-control dismissal recognizer.
-      .onTouch((event: TouchEvent): void => event.stopPropagation())
-      .opacity(this.readerRecoveryInputCurrent() ? 1 : 0)
-      .enabled(this.readerRecoveryInputCurrent())
-      .accessibilityLevel(this.readerRecoveryInputCurrent() ? 'auto' : 'no-hide-descendants')
-      .zIndex(8).hitTestBehavior(this.readerRecoveryInputCurrent() ? HitTestMode.Default : HitTestMode.None);
+  private readerRecoveryOverlayItems() {
+    if (this.bookmarkRecovery.bookmarks.visible && (this.bookmarkRecovery.bookmarksKind ?? 'pending') !== 'pending') {
+      this.readerBookmarkRecoveryContent(false);
+    }
+    if (this.readerOfflineRecoveryVisible() && (this.bookmarkRecovery.offlineKind ?? 'pending') !== 'pending') {
+      this.readerOfflineRecoveryContent(false);
+    }
+    if (this.hasReaderPendingGroup()) {
+      ReaderRecoveryGroup({ content: (): void => { this.readerRecoveryItems(); } });
     }
   }
 
@@ -3622,16 +3633,8 @@ export struct ReadingExperience {
         this.continuousVisibleFragmentIndex,
         this.continuousVisibleEndFragmentIndex + 1,
       ) : this.visibleFragments;
-    const textFragments = visible.filter(
-      (fragment: ReadingSurfacePageFragment): boolean => fragment.text.length > 0,
-    );
-    if (textFragments.length === 0) {
-      return undefined;
-    }
-    const elapsed = Math.max(0, this.automaticReadingState().speedSeconds - this.automaticReadingState().remainingSeconds);
-    const ratio = Math.max(0, Math.min(1, elapsed / this.automaticReadingState().speedSeconds));
-    const index = Math.min(textFragments.length - 1, Math.floor(ratio * textFragments.length));
-    return textFragments[index];
+    return this.autoPageCoordinator.highlightVisibleFragment(visible,
+      (fragment: ReadingSurfacePageFragment): boolean => fragment.text.length > 0);
   }
 
   private ttsFollowScope(): ReaderTtsFollowScope {
@@ -15478,74 +15481,6 @@ export struct ReadingExperience {
     this.failureCode = '';
     this.armFirstPageReadyDeadline(this.lifecycleToken, this.chapterSelectionToken);
     void this.loadInitialReading(this.lifecycleToken);
-  }
-
-  @Builder
-  private readingFailureActions() {
-    Column({ space: 12 }) {
-      if (this.sourceSwitchFailureMessage.length > 0) {
-        ForEach([this.sourceSwitchScopeId], (scopeId: number): void => {
-          ReaderRecoveryAction({ label: '重试', onReconcile: (): void => this.onRetryFailedSourceSwitch(scopeId) });
-        }, (scopeId: number): string => `${scopeId}`);
-      } else {
-        if (this.readerRecoveryView.visible && this.readerRecoveryView.canRetry) {
-          ForEach([this.readerRecoveryView.generation], (generation: number): void => {
-            ReaderRecoveryAction({ label: this.readerRecoveryActionLabel,
-              onReconcile: (): void => {
-                if (this.readerInputIsCurrent()) this.reconcileReaderRecovery(generation);
-              } });
-          }, (generation: number): string => `${generation}`);
-        } else {
-          ReaderRecoveryAction({ label: '重试', actionEnabled: !this.sourceSwitchRollbackInFlight, onReconcile: (): void => {
-            if (!this.sourceSwitchRollbackInFlight && this.readerInputIsCurrent()) this.retryReading();
-          } });
-        }
-      }
-      ReaderRecoveryAction({ label: '阅读设置', onReconcile: (): void => this.openReaderControl() });
-      if (this.sourceSwitchFailureMessage.length > 0) {
-        ForEach([this.sourceSwitchScopeId], (scopeId: number): void => {
-          ReaderRecoveryAction({ label: '继续当前书源', onReconcile: (): void => this.onDismissSourceSwitchFailure(scopeId) });
-        }, (scopeId: number): string => `${scopeId}`);
-      }
-      if (this.phase === 'failed' && this.sourceSwitchTransactionId !== undefined) {
-        ForEach([{ transactionId: this.sourceSwitchTransactionId, scopeId: this.sourceSwitchScopeId,
-          selectionToken: this.chapterSelectionToken }], (target: ReaderSourceSwitchRecoveryTarget): void => {
-          ReaderRecoveryAction({ label: '换回原书源', isBusy: this.sourceSwitchRollbackInFlight,
-            onReconcile: (): void => {
-              if (!this.readerInputIsCurrent() || this.phase !== 'failed' || this.sourceSwitchRollbackInFlight ||
-                target.scopeId !== this.sourceSwitchScopeId || target.selectionToken !== this.chapterSelectionToken ||
-                target.transactionId === undefined || target.transactionId !== this.sourceSwitchTransactionId) return;
-              this.onRollbackReaderTarget(target.transactionId, target.scopeId);
-            } });
-        }, (target: ReaderSourceSwitchRecoveryTarget): string =>
-          JSON.stringify([target.transactionId, target.scopeId, target.selectionToken]));
-      }
-      if (this.sourceId !== LOCAL_READING_SOURCE_ID) {
-        ReaderRecoveryAction({ label: '切换书源', actionEnabled: !this.sourceSwitchRollbackInFlight,
-          focusId: sourceSwitchTriggerFocusId(this.sourceId, this.bookId, 'reader-recovery'),
-          onReconcile: (): void => this.onSwitchSource(sourceSwitchTriggerFocusId(this.sourceId, this.bookId, 'reader-recovery')) });
-      }
-    }
-    .width('100%');
-  }
-
-  @Builder
-  private readingFailureContent() {
-    Scroll() {
-      ReaderPageState({
-        title: this.sourceSwitchFailureMessage.length > 0 ? '换源未完成' : '正文暂时无法显示',
-        message: this.sourceSwitchFailureMessage.length > 0 ? this.sourceSwitchFailureMessage : this.failureHint,
-        padded: false, customActions: true,
-        inkColor: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink,
-        mutedColor: readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).ink,
-        actionContent: (): void => this.readingFailureActions(),
-      }).padding(24);
-    }
-    .width(this.readingLayout().bodyWidth())
-    .height(this.readingLayout().bodyHeight(false))
-    .position({ x: this.readingLayout().contentLeft, y: this.readingLayout().contentTop })
-    .backgroundColor(readerAppearanceThemeStyle(this.appearanceSnapshot.activeTheme).paperStart)
-    .zIndex(6);
   }
 
   private errorMessage(error: Error): string {

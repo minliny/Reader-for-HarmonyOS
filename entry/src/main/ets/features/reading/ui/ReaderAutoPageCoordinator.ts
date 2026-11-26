@@ -46,6 +46,16 @@ export class ReaderAutoPageCoordinator {
 
   snapshot(_revision: number = 0): Readonly<ReaderAutoPageState> { return this.state; }
   configurationAt(_revision: number = 0): Readonly<ReaderAutoPageFullConfiguration> { return this.configuration; }
+  /** Pick one text fragment at the current cadence within the caller's admitted viewport. */
+  highlightVisibleFragment<T>(visible: T[], hasText: (fragment: T) => boolean): T | undefined {
+    const textFragments = visible.filter(hasText);
+    if (textFragments.length === 0) return undefined;
+    const elapsed = Math.max(0, this.state.speedSeconds - this.state.remainingSeconds);
+    const ratio = Math.max(0, Math.min(1, elapsed / this.state.speedSeconds));
+    const index = Math.min(textFragments.length - 1, Math.floor(ratio * textFragments.length));
+    return textFragments[index];
+  }
+
   pendingStart(): boolean { return this.startPending; }
   beginStart(): number { this.cancelStart(); this.startPending = true; return this.startGeneration; }
   admitStart(generation: number): boolean {
