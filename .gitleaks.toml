@@ -53,17 +53,6 @@ description = "Design document identifier"
 condition = "AND"
 regexTarget = "match"
 paths = [
-  "^(?:\\./)?docs/audits/icons-20261020/duplicate-cleanup-map\\.json$",
-]
-regexes = [
-  "^figmaFileKey\": \"klhs2jMM4MncaJFqZMfqEK\"$",
-]
-
-[[rules.allowlists]]
-description = "Design document identifier"
-condition = "AND"
-regexTarget = "match"
-paths = [
   "^(?:\\./)?tools/contracts/design-authority\\.json$",
 ]
 regexes = [
@@ -75,24 +64,6 @@ description = "Historical content SHA-256"
 condition = "AND"
 regexTarget = "match"
 paths = [
-  "^(?:\\./)?docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/baseline\\.json$",
-]
-regexes = [
-  "^ReaderTokens\\.ets\": \"040889752658f2060da49079b7fce61e0b3277a8cc5357d82da10b02c4b8b1ad\"$",
-  "^ReaderTtsCredentialStore\\.ts\": \"9a9ca01dd1b85a526066586f09d0b185a7cf93f69b06f8f99ac78950a193d5c1\"$",
-  "^WebDavCredentialStore\\.ts\": \"69fd611ebd19b725ec39121b5b861541425118a7c4db5eb7706ad8fa3db960ff\"$",
-  "^sync_backup_password\\.svg\": \"8eaae2c25320c2b2aaec2fcadf2269fe3e77f79b62349c62e300bf90b44e4f16\"$",
-  "^sync_backup_password_theme_night\\.svg\": \"5ce014056e65fc0090a38ec9896168b3bd5975c9352b98ddadd5caff7030c044\"$",
-  "^sync_password\\.svg\": \"bdab92a0b1c3fde3ac297e0f58d313efca9b66716175c307818af8fbf9c02e89\"$",
-  "^sync_password_theme_night\\.svg\": \"928811b1328f84b50169be298032cc5e3eab0d816f7c6896b850d2b2e8892654\"$",
-]
-
-[[rules.allowlists]]
-description = "Historical content SHA-256"
-condition = "AND"
-regexTarget = "match"
-paths = [
-  "^(?:\\./)?docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/app\\.bundle\\.js$",
   "^(?:\\./)?docs/ui-design/source-switch-reference/approved-source/app\\.bundle\\.js$",
   "^(?:\\./)?docs/ui-design/source-switch-reference/catalogue\\.bundle\\.js$",
 ]
@@ -112,32 +83,6 @@ description = "Historical content SHA-256"
 condition = "AND"
 regexTarget = "match"
 paths = [
-  "^(?:\\./)?docs/audits/icons-20261020/night-coverage\\.json$",
-]
-regexes = [
-  "^sync_backup_password\": \"8eaae2c25320c2b2aaec2fcadf2269fe3e77f79b62349c62e300bf90b44e4f16\"$",
-  "^sync_backup_password_theme_night\": \"5ce014056e65fc0090a38ec9896168b3bd5975c9352b98ddadd5caff7030c044\"$",
-  "^sync_password\": \"bdab92a0b1c3fde3ac297e0f58d313efca9b66716175c307818af8fbf9c02e89\"$",
-  "^sync_password_theme_night\": \"928811b1328f84b50169be298032cc5e3eab0d816f7c6896b850d2b2e8892654\"$",
-]
-
-[[rules.allowlists]]
-description = "Historical content SHA-256"
-condition = "AND"
-regexTarget = "match"
-paths = [
-  "^(?:\\./)?docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/coverage-evidence/book-actions-canvas-inputs\\.json$",
-]
-regexes = [
-  "^tokens\\.css\": \"7c69cceb21e27c6ffa8c2bdfa76dd009b78c7ed737fbba74751c991148804018\"$",
-]
-
-[[rules.allowlists]]
-description = "Historical content SHA-256"
-condition = "AND"
-regexTarget = "match"
-paths = [
-  "^(?:\\./)?docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/delivery\\.json$",
   "^(?:\\./)?docs/ui-design/source-switch-reference/reference-manifest\\.json$",
 ]
 regexes = [
@@ -166,18 +111,6 @@ regexes = [
   "^key === 'delta-journal-v1'$",
 ]
 
-[[rules.allowlists]]
-description = "Source commit ID in compiler warning ledger"
-condition = "AND"
-regexTarget = "match"
-paths = [
-  "^(?:\\./)?docs/audits/arkts-source-20261125/warning-ledger\\.csv$",
-]
-regexes = [
-  "^credential-digest,57f45089338424bb554f0259525d14cfcbe11bf8$",
-  "^local-epub-access,c2ed5d024f1597489280a51f858f5b87662f7e39$",
-]
-
 [[rules]]
 id = "sentry-access-token"
 
@@ -186,18 +119,6 @@ description = "Historical content SHA-256"
 condition = "AND"
 regexTarget = "match"
 paths = [
-  "^(?:\\./)?docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/baseline\\.json$",
-]
-regexes = [
-  "^RssEntryDetailPage\\.ets\": \"c083bdbbc8cccc9a30b25d6ba7af6b2949c72f4c040badd3c5f3212798f96cd9\"$",
-]
-
-[[rules.allowlists]]
-description = "Historical content SHA-256"
-condition = "AND"
-regexTarget = "match"
-paths = [
-  "^(?:\\./)?docs/history/worktrees/source-switch-design-20261006/demos/source-switch-density/app-baseline/app\\.bundle\\.js$",
   "^(?:\\./)?docs/ui-design/source-switch-reference/approved-source/app\\.bundle\\.js$",
   "^(?:\\./)?docs/ui-design/source-switch-reference/catalogue\\.bundle\\.js$",
 ]
@@ -264,18 +185,6 @@ paths = [
 regexes = [
   "^previousEntrySha256\": \"8d6d5c30e88be97caa1ede4200e96b63a380b005428da1fb2bf23157cff249d3\"$",
   "^previousEntrySha256\": \"cfed9cd86bd81e1bfc3bcba337bf63293d0a18fcf55199875528f4be997bccb0\"$",
-]
-
-[[rules.allowlists]]
-description = "Historical content SHA-256"
-condition = "AND"
-regexTarget = "match"
-paths = [
-  "^(?:\\./)?docs/history/worktrees/manga-directory-rules-20261007/tools/fixtures/design/shared-book-detail-typography-successor-20261008\\.json$",
-  "^(?:\\./)?docs/history/worktrees/manga-three-agent-20261009/tools/fixtures/design/shared-book-detail-typography-successor-20261008\\.json$",
-]
-regexes = [
-  "^previousEntrySha256\": \"be34ea9d7c2c1d711da0da2d3874dd7943dd3549f3eff234647daf39c0f5f52a\"$",
 ]
 
 [[rules.allowlists]]
