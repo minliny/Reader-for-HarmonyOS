@@ -199,8 +199,9 @@ export class ReaderNativeParagraphController extends NodeController {
   glyphRects(start: number, end: number): ReaderNativeGlyphRect[] { return this.window?.glyphRects(start, end) ?? []; }
 
   selection(enabled: boolean, background: ResourceColor, onCopy: (range: TextRange) => void,
-    onShare?: (range: TextRange, copyRequested: boolean) => void): void {
-    this.window?.selection(enabled, background, onCopy, onShare);
+    onShare?: (range: TextRange, quoteRequested: boolean) => void, onActivity?: (active: boolean) => void,
+    quoteAvailable: boolean = false): void {
+    this.window?.selection(enabled, background, onCopy, onShare, onActivity, quoteAvailable);
   }
   visibleStartUtf16(): number { return this.window?.visibleStartUtf16() ?? 0; }
   visibleEndUtf16(): number { return this.window?.visibleEndUtf16() ?? 0; }

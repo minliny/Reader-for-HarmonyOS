@@ -1,5 +1,8 @@
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions = {"json-url-form-admission": {"description": "实际JSON dialog URL controlled draft/IME/本地选择/取消", "resources": []}};
+const definitions = {
+  'json-url-form-admission': { description: '实际JSON dialog URL controlled draft/IME/本地选择/取消', resources: [] },
+  'json-clipboard-paste': { description: '系统粘贴控件仅更新 URL 草稿并保留失败前内容', resources: [] },
+};
 for (const id of selectContractCases(definitions)) {
   await runSelectedCase(id);
   recordContractCasePass(id);
@@ -76,9 +79,25 @@ class LiveSurfaceChild {
   }
 }
 const foundation=foundationControls();
+const clipboardSource = readFileSync(file('platform/clipboard/ReaderClipboardHost.ts'), 'utf8');
+let clipboardReads = 0;
+let clipboardText;
+const feedbackMessages = [];
+const clipboard = pureModuleProbe(clipboardSource, 'ReaderClipboardHost.ts', {
+  pasteboard: { getSystemPasteboard: () => ({ getData() {
+    clipboardReads += 1;
+    return Promise.resolve({ getPrimaryText: () => clipboardText });
+  } }) },
+}, ['ReaderClipboardDraftPaste', 'readerClipboardPasteMessage']);
+const PasteButtonOnClickResult = { SUCCESS: 0, TEMPORARY_AUTHORIZATION_FAILED: 1 };
 const jsonMembers = ['editingHost', 'editingScroll', 'editingScroller', 'build', 'formBody', 'localButton', 'submitOnlineImport', 'focusScopeKey', 'localFocusKey',
-  'safeTop', 'availableHeight', 'inputIsCurrent', 'dismissIfCurrent', 'restoreFocusAction', 'updateUrlDraft'];
+  'safeTop', 'availableHeight', 'inputIsCurrent', 'dismissIfCurrent', 'restoreFocusAction', 'updateUrlDraft',
+  'draftPaste', 'transientFeedback', 'retireClipboardPaste', 'pasteUrlDraft'];
 const jsonDependencies = { ...readerEditingSdk(), ...readerMessageStyles, ...readerImportMotionForProbe(),
+  ...clipboard, PasteButtonOnClickResult,
+  ReaderTransientFeedback: class { show(_getContext, options, current) {
+    if (current()) feedbackMessages.push(options.message);
+  } },
   readerWindowMetrics: () => metrics, readerInteractiveSafeTop, readerInteractiveSafeBottom, readerPageAreaLength: value => Number.parseFloat(value) };
 const { owner: dialog } = createReaderBuilderProbe(jsonSource,
   jsonMembers, {
@@ -105,6 +124,8 @@ assert.ok(description, 'description renders');
 const localLabel = dialogNodes.find(n => n.type === 'Text' && n.create === '选择本地 JSON 文件');
 const localButton = dialogNodes.find(n => n.type === 'Button' && n.accessibilityText === '选择本地 JSON 文件');
 assert.ok(localButton, 'local-file action renders inside the body');
+const pasteButton = dialogNodes.find(node => node.type === 'PasteButton');
+assert.ok(pasteButton, 'the URL form renders a native security PasteButton');
 assert.ok(dialogNodes.indexOf(description) < dialogNodes.indexOf(localLabel),
   'the description precedes the local-file action');
 const urlLabel = dialogNodes.find(n => n.type === 'Text' && n.create === '或输入在线链接');
@@ -156,6 +177,26 @@ assert.equal(dialog.urlDraft, '  https://example.com/books.json  ', 'dispatch do
 urlInput.onSubmit('Enter');
 assert.deepEqual(imported, ['https://example.com/books.json', 'https://example.com/books.json'],
   'keyboard submit shares the same admission path');
+if (selectedCase === 'json-clipboard-paste') {
+  pasteButton.onClick({}, PasteButtonOnClickResult.TEMPORARY_AUTHORIZATION_FAILED);
+  assert.equal(clipboardReads, 0);
+  assert.equal(dialog.urlDraft, '  https://example.com/books.json  ');
+  assert.equal(feedbackMessages.at(-1), '未获准读取剪贴板，可重试或手动输入');
+  pasteButton.onClick({}, PasteButtonOnClickResult.SUCCESS);
+  await Promise.resolve();
+  assert.equal(clipboardReads, 1);
+  assert.equal(dialog.urlDraft, '  https://example.com/books.json  ');
+  assert.equal(feedbackMessages.at(-1), '剪贴板中没有可粘贴的文字');
+  clipboardText = '  https://example.test/pasted.json  ';
+  pasteButton.onClick({}, PasteButtonOnClickResult.SUCCESS);
+  await Promise.resolve();
+  assert.equal(dialog.urlDraft, clipboardText);
+  assert.equal(imported.length, 2, 'pasting only replaces the draft');
+  dialog.isInputAllowed = () => false;
+  pasteButton.onClick({}, PasteButtonOnClickResult.SUCCESS);
+  assert.equal(clipboardReads, 2, 'a stale dialog callback cannot read the clipboard');
+  return;
+}
 localButton.onClick();
 assert.equal(selected, 1, 'the body local button routes to onSelectLocal');
 surfaceChild.params.onClose();

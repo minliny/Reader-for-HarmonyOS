@@ -30,8 +30,10 @@ import { ReaderRaisedShape, resolveReaderRaisedShape } from '../../../ui/layout/
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconAction';
 import type { ReadingBookDetail } from '../presentation/ReadingBookDetail';
-import { readerCanShareOriginal, type ReaderShareResult, type RetainedShareFile } from '../application/ReaderShareActions';
-import { readerShareMessage, readerSystemShareActions } from './ReaderSharePresentation';
+import { common } from '@kit.AbilityKit';
+import { ReaderDocumentSaveHost, type ReaderDocumentSaveResult } from '../../../platform/share/ReaderDocumentSaveHost';
+import { readerCanShareOriginal, readerOriginalBookExtension, type ReaderShareResult, type RetainedShareFile } from '../application/ReaderShareActions';
+import { readerDocumentSaveMessage, readerShareMessage, readerSystemShareActions } from './ReaderSharePresentation';
 import { bookIntroText } from '../../../app/library/BookIntroText';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
@@ -110,6 +112,7 @@ export struct LocalBookDetail {
   @Prop catalogBusy: boolean = false;
   isDetailActionCurrent: () => boolean = (): boolean => true;
   retainedShareFile: RetainedShareFile | undefined = undefined;
+  captureDocumentSave: (() => (() => boolean)) | undefined = undefined;
   onContinue: () => void = (): void => {};
   onSelectChapter: (index: number) => void = (_index: number): void => {};
   onOpenDirectory: () => void = (): void => {};
@@ -155,6 +158,7 @@ export struct LocalBookDetail {
   private mounted: boolean = false;
   private shareGeneration: number = 0;
   @State private shareBusy: boolean = false;
+  @State private savingOriginal: boolean = false;
   private pendingDirectoryFocus: string = '';
   private directoryFocusGeneration: number = 0;
   private mangaFontGeneration: number = 0;
@@ -396,12 +400,13 @@ export struct LocalBookDetail {
       this.shareAction('复制书籍信息', 'copy');
       if (this.retainedShareFile !== undefined && readerCanShareOriginal(this.book)) {
         this.shareAction('分享原文件', 'file');
+        this.shareAction('保存原书', 'save');
       }
     }.width('100%');
   }
 
   @Builder
-  private shareAction(label: string, action: 'book' | 'copy' | 'file') {
+  private shareAction(label: string, action: 'book' | 'copy' | 'file' | 'save') {
     Button(label, { type: ButtonType.Normal, stateEffect: false })
       .constraintSize({ minWidth: READER_ACTION_MIN_TARGET, minHeight: READER_ACTION_MIN_TARGET })
       .padding({ left: 10, right: 10 })
@@ -410,11 +415,37 @@ export struct LocalBookDetail {
       .id(`reader-detail-share-${action}`)
       .attributeModifier(new ReaderActionAccessibility(label, this.shareActionAvailable(), false, true,
         new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 999, 999, this.shareActionAvailable()), 'nativeButton'))
-      .onClick((): void => { void this.runShareAction(action); });
+      .onClick((): void => {
+        if (action === 'save') void this.saveOriginalBook();
+        else void this.runShareAction(action);
+      });
   }
 
   private shareActionAvailable(): boolean {
-    return this.appForeground && !this.shareBusy && this.acceptsDetailInput() && this.detailBookAvailable();
+    return this.appForeground && !this.shareBusy && !this.savingOriginal && this.acceptsDetailInput() && this.detailBookAvailable();
+  }
+
+  private async saveOriginalBook(): Promise<void> {
+    const book = this.book;
+    const retained = this.retainedShareFile;
+    const extension = readerOriginalBookExtension(book);
+    if (!this.shareActionAvailable() || !readerCanShareOriginal(book) || retained === undefined || extension === undefined) return;
+    const context = this.getUIContext().getHostContext() as common.UIAbilityContext | undefined;
+    const identity = this.detailScrollIdentity();
+    const routeCurrent = this.captureDocumentSave?.() ?? this.isDetailActionCurrent;
+    const current = (): boolean => this.mounted && routeCurrent() && this.detailBookAvailable() &&
+      this.detailScrollIdentity() === identity;
+    this.savingOriginal = true;
+    let result: ReaderDocumentSaveResult = 'failed';
+    try {
+      const path = await retained(book.bookId, current);
+      if (context !== undefined && path !== undefined && current()) {
+        result = await new ReaderDocumentSaveHost(context).saveOriginal(path, book.title, extension, current);
+      }
+    } catch (_) { /* The retained bytes were unavailable for this request. */ }
+    finally { this.savingOriginal = false; }
+    const message = readerDocumentSaveMessage(result, '原书');
+    if (message !== undefined) this.transientFeedback.show(() => this.getUIContext(), { message }, current);
   }
 
   private async runShareAction(action: 'book' | 'copy' | 'file'): Promise<void> {

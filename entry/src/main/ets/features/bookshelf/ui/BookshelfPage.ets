@@ -95,6 +95,27 @@ import {
 } from './BookshelfGridSpec';
 
 import { DEFAULT_BOOKSHELF_VIEW, type BookshelfViewMode } from '../application/BookshelfViewMode';
+import { bookshelfFileDropTypes, type BookshelfFileDrop } from '../application/BookshelfFileDrop';
+import { dispatchBookshelfFileDrop, showBookshelfFileDropFeedback } from './BookshelfFileDropEvent';
+
+@Builder
+export function bookshelfFileDropHint(topInset: number, scheme: string) {
+  Row() {
+    Text('松开以导入书籍')
+      .fontFamily(TYPE_SECTION_HEADING.fontFamily)
+      .fontWeight(TYPE_SECTION_HEADING.fontWeight)
+      .fontSize(TYPE_SECTION_HEADING.fontSizeFp)
+      .fontColor(readerAppColor('TOK_PRIMARY_TEXT', scheme))
+      .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING, top: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
+      .backgroundColor(readerAppColor('TOK_PAPER', scheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_PRIMARY_BORDER', scheme) })
+      .borderRadius(TOK_RADIUS_MD);
+  }
+  .width('100%')
+  .padding({ top: topInset + TOK_SPACE_MD })
+  .justifyContent(FlexAlign.Center)
+  .hitTestBehavior(HitTestMode.None);
+}
 
 class BookshelfMotionFrameCallback extends FrameCallback {
   private readonly callback: () => void;
@@ -216,12 +237,16 @@ export struct BookshelfPage {
   @Prop @Watch('onScrollToTopRequested') scrollToTopToken: number = 0;
   @Prop @Watch('onShelfPresentationChanged') navigationGeneration: number = 0;
   @Prop @Watch('modeFeedback') feedbackEnabled: boolean = true;
+  @Prop @Watch('resetFileDropHover') fileDropEnabled: boolean = false;
+  @State private fileDropHover: boolean = false;
   @Prop unfilteredOnlineBooks: boolean = false;
   onNextPageRequested: (navigation?: number) => void = (): void => {};
   onPreviousPageRequested: (navigation?: number) => void = (): void => {};
   onFilterRequested: (readingState: string, sourceKind: string, contentKind?: string, navigation?: number) => void = (_readingState: string, _sourceKind: string): void => {};
   onEmptySearch: (navigation: number) => void = (_navigation: number): void => {};
   onEmptyImport: (navigation: number, focusTarget: string) => void = (_navigation: number, _focusTarget: string): void => {};
+  onFilesDropped: (drop: BookshelfFileDrop, navigation: number) => boolean =
+    (_drop: BookshelfFileDrop, _navigation: number): boolean => false;
   @Prop @Watch('onContinueReadingChanged') continueReading: ShelfBook | undefined;
   /** Keep the shelf slot stable when the IME leaves no room to cover the card. */
   @Prop continueCardSuppressed: boolean = false;
@@ -389,6 +414,7 @@ export struct BookshelfPage {
   }
 
   aboutToDisappear(): void {
+    this.resetFileDropHover();
     this.resetShelfPress();
     this.listTextFontGeneration += 1;
     this.transientFeedback.reset();
@@ -422,10 +448,30 @@ export struct BookshelfPage {
     this.bookshelfTabContent();
   }
 
+  private resetFileDropHover(): void { this.fileDropHover = false; }
+
+  private fileDropCurrent(): boolean {
+    return this.fileDropEnabled && this.actionSheetId.length === 0 &&
+      this.isCurrentShelfInput(this.navigationGeneration);
+  }
+
+  private onFileDrag(event: DragEvent): void {
+    this.fileDropHover = showBookshelfFileDropFeedback(event, this.fileDropCurrent());
+  }
+
+  private onFileDrop(event: DragEvent): void {
+    this.resetFileDropHover();
+    dispatchBookshelfFileDrop(event, this.fileDropCurrent(), this.reduceMotion,
+      (drop: BookshelfFileDrop): boolean => this.onFilesDropped(drop, this.navigationGeneration));
+  }
+
   @Builder
   private bookshelfTabContent() {
     Stack({ alignContent: Alignment.TopStart }) {
       this.shelfPane();
+      if (this.fileDropHover && this.fileDropEnabled && this.actionSheetId.length === 0) {
+        bookshelfFileDropHint(this.headerBottom, this.appThemeScheme);
+      }
       if (this.viewModePending()) {
         Column() {
           ForEach([this.navigationGeneration], (navigation: number): void => {
@@ -444,6 +490,11 @@ export struct BookshelfPage {
     }
     .width('100%')
     .height('100%')
+    .allowDrop(this.fileDropEnabled ? bookshelfFileDropTypes() : null)
+    .onDragEnter((event: DragEvent): void => this.onFileDrag(event))
+    .onDragMove((event: DragEvent): void => this.onFileDrag(event))
+    .onDragLeave((): void => this.resetFileDropHover())
+    .onDrop((event: DragEvent): void => this.onFileDrop(event))
     .onAreaChange((_old: Area, area: Area): void => this.recordShelfPane(area));
   }
 
@@ -1601,6 +1652,7 @@ export struct BookshelfPage {
   }
 
   private onShelfPresentationChanged(): void {
+    this.fileDropHover = false;
     this.resetShelfPress();
     // Props update the retained page; revoke only its temporary Sheet.
     this.dismissBookActionSheet(this.actionSheetId, this.actionBook);

@@ -28,21 +28,57 @@ import {
 import { registerReaderShelfFonts } from '../../../ui/foundation/ReaderFonts';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { BookshelfSectionHeader } from './BookshelfSectionHeader';
+import { bookshelfFileDropHint } from './BookshelfPage';
+import { bookshelfFileDropTypes, type BookshelfFileDrop } from '../application/BookshelfFileDrop';
+import { dispatchBookshelfFileDrop, showBookshelfFileDropFeedback } from './BookshelfFileDropEvent';
 
 @Component
 export struct BookshelfEmptyPage {
   @StorageLink('readerMainViewportRevision') private mainViewportRevision: number = 0;
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @StorageLink('readerWideNavigationRail') private wideNavigationRail: boolean = false;
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   /** Presented header bottom (top + measured height), owned by the route. */
   @Prop headerBottom: number = bookshelfHeaderSpec().frameHeight;
   @Prop measuredFooterHeight: number = 0;
+  @Prop @Watch('resetFileDropHover') fileDropEnabled: boolean = false;
+  @Prop @Watch('resetFileDropHover') navigationGeneration: number = 0;
+  @Prop reduceMotion: boolean = false;
+  @State private fileDropHover: boolean = false;
+  isCurrentShelfInput: (navigation: number) => boolean = (_navigation: number): boolean => false;
+  onFilesDropped: (drop: BookshelfFileDrop, navigation: number) => boolean =
+    (_drop: BookshelfFileDrop, _navigation: number): boolean => false;
   private readonly importFocusId: string = 'reader-bookshelf-import-entry';
   onImportRequested: (focusTarget: string) => void = (_focusTarget: string): void => {};
   onSearchRequested: () => void = (): void => {};
 
   aboutToAppear(): void {
     registerReaderShelfFonts(this.getUIContext().getFont());
+  }
+
+  aboutToDisappear(): void { this.resetFileDropHover(); }
+
+  private resetFileDropHover(): void { this.fileDropHover = false; }
+
+  private fileDropCurrent(): boolean {
+    return this.fileDropEnabled && this.isCurrentShelfInput(this.navigationGeneration);
+  }
+
+  private onFileDrag(event: DragEvent): void {
+    this.fileDropHover = showBookshelfFileDropFeedback(event, this.fileDropCurrent());
+  }
+
+  private onFileDrop(event: DragEvent): void {
+    this.resetFileDropHover();
+    dispatchBookshelfFileDrop(event, this.fileDropCurrent(), this.reduceMotion,
+      (drop: BookshelfFileDrop): boolean => this.onFilesDropped(drop, this.navigationGeneration));
+  }
+
+  @Builder
+  private fileDropOverlay() {
+    if (this.fileDropHover && this.fileDropEnabled) {
+      bookshelfFileDropHint(this.headerBottom, this.appThemeScheme);
+    }
   }
 
   build() {
@@ -66,6 +102,12 @@ export struct BookshelfEmptyPage {
     .height('100%')
     .align(Alignment.Top)
     .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
+    .allowDrop(this.fileDropEnabled ? bookshelfFileDropTypes() : null)
+    .onDragEnter((event: DragEvent): void => this.onFileDrag(event))
+    .onDragMove((event: DragEvent): void => this.onFileDrag(event))
+    .onDragLeave((): void => this.resetFileDropHover())
+    .onDrop((event: DragEvent): void => this.onFileDrop(event))
+    .overlay((): void => { this.fileDropOverlay(); }, { align: Alignment.Top })
     .scrollBar(BarState.Off);
   }
 

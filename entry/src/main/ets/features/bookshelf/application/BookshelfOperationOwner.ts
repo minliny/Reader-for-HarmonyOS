@@ -95,7 +95,8 @@ export class BookshelfOperationOwner {
     } finally { this.finish(generation); }
   }
 
-  async importFiles(filter: BookshelfFilter, admitted: () => boolean): Promise<BookshelfImportOutcome | undefined> {
+  async importFiles(filter: BookshelfFilter, admitted: () => boolean, droppedUris?: string[]):
+    Promise<BookshelfImportOutcome | undefined> {
     if (!this.canMutate() || !this.admitted(admitted) || this.presentation.current()?.state !== 'fileSelection') return undefined;
     const identity = this.presentation.generation();
     // Admission belongs to the currently attached presentation of this exact
@@ -109,19 +110,20 @@ export class BookshelfOperationOwner {
     await this.recoverRemoval(filter, callerCurrent);
     if (!this.canMutate() || !callerCurrent() || this.presentation.current()?.state !== 'fileSelection') return undefined;
     const generation = this.begin('import', filter);
-    this.presentation.write(identity, 'pickerOpening'); this.publishPresentation('');
+    this.presentation.write(identity, droppedUris === undefined ? 'pickerOpening' : 'importing'); this.publishPresentation('');
     const gateway = new BookshelfFlowGateway(this.owner, filter);
     const evidence = new ReaderWriteEvidence();
     try {
       // This launch predicate follows the latest adapter of the captured
       // opening. It is checked only before Native starts, never as authority
       // to cancel an accepted selection or an already dispatched Core write.
-      const selections = await gateway.selectLocalBookInputs((): boolean => current() &&
-        this.admitted(this.pickerLaunchAdmission));
+      const selections = droppedUris === undefined ?
+        await gateway.selectLocalBookInputs((): boolean => current() && this.admitted(this.pickerLaunchAdmission)) :
+        await gateway.prepareDroppedBookInputs(droppedUris, current);
       if (!current()) { await gateway.releaseUnusedSelections(selections); return undefined; }
       if (selections.length === 0) { this.presentation.write(identity, 'fileSelection'); this.publishPresentation(); return undefined; }
-      this.presentation.write(identity, 'importing'); this.publishPresentation();
-      const outcome = await gateway.importPreparedSelections(selections, (): void => evidence.dispatched());
+      if (droppedUris === undefined) { this.presentation.write(identity, 'importing'); this.publishPresentation(); }
+      const outcome = await gateway.importPreparedSelections(selections, (): void => evidence.dispatched(), droppedUris !== undefined);
       this.receipt({ receipt: outcome.readback, facts: outcome.operation, value: outcome.shelf,
         hasValue: outcome.shelf !== undefined, refreshError: outcome.refreshWarning }, generation);
       if (current()) {

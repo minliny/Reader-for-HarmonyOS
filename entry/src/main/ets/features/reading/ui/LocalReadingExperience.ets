@@ -1,6 +1,8 @@
 import type { ReaderControlTemporaryInputKind } from './ReaderControlSessionState';
 import { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryDataSnapshot';
 import { readerControlStructureKey } from '../../../ui/layout/ReaderKeyboardGeometry';
+import { ReaderTextSelectionActivity } from '../application/ReaderKeyboardShortcuts';
+import { readerHardwareKeyboardShortcut } from '../../../platform/interaction/ReaderHardwareKeyboard';
 import { drainReaderPagePreparation, type ReaderPagePreparationAttempt } from './ReaderPagePreparationCoordinator';
 import { measureReaderControlMinimumCandidates } from './ReaderControlMinimumReceipt';
 import { admitReaderControlVisualSnapshot } from './ReaderControlVisualHostPort';
@@ -40,6 +42,9 @@ import { drawing } from '@kit.ArkGraphics2D';
 import { ParagraphRange, MeasurementParagraph, MeasuredReadingLine, PhysicalReadingPage } from './ReadingMeasurementModels';
 import { ReaderNativeTextWindow, readerNativeParagraphHeight } from './ReaderNativeTextWindow';
 import { ReaderNativeParagraphResources, ReaderNativeParagraphRecipe, readerNativeParagraphKey } from './ReaderNativeParagraph';
+import { exportReaderQuoteCard } from './ReaderQuoteCardExporter';
+import { readerSystemShareActions } from './ReaderSharePresentation';
+import type { ReaderQuoteCardAction } from '../application/ReaderShareActions';
 import { ReaderNativeTextMeasurement, READER_CHAPTER_TITLE_FONT_SIZE_FP, type ReaderNativeTextStyle } from './ReaderNativeTextMeasurement';
 import { readPreparedReadingEntrySnapshot, type ReadingEntryNavigation, type ReadingEntryNavigationItem, type ReadingEntrySnapshot as CoreReadingEntrySnapshot } from '../application/ReadingEntrySnapshot';
 import { ReaderTtsPageFollow, readerTtsFollowActive, type ReaderTtsFollowScope,
@@ -192,7 +197,7 @@ import { readerControlMeasuredProfileGeometryKey, readerControlModuleProfileMatc
 import { readerControlThemeStyle } from './ReaderControlThemeStyle';
 import {
   copyReaderControlSessionState, createReaderControlSessionState, dismissReaderControlSession, openReaderControlSession,
-  readerControlContentLocation, advanceReaderControlSession, resumeReaderControlSessionTarget,
+  readerControlContentLocation, readerControlTargetLocation, advanceReaderControlSession, resumeReaderControlSessionTarget,
   type ReaderControlSessionState, type ReaderControlLocation,
 } from './ReaderControlSessionState';
 import {
@@ -865,6 +870,7 @@ export struct ReadingExperience {
   @State private failureHint: string = readingFailureHint('');
   private cacheNoticeLifecycle: number = -1;
   @Prop bookTitle: string = '';
+  @Prop bookAuthor: string = '';
   @Prop sourceName: string = '';
   @Prop totalChapters: number = 0;
   @Prop @Watch('onControlDirectoryDataChanged') directoryEntries: LocalReadingTocEntry[] = [];
@@ -1324,6 +1330,20 @@ export struct ReadingExperience {
   private visiblePageSelectionToken: number = -1;
   @State private mounted: boolean = false;
   @State private exitRequested: boolean = false;
+  private readonly textSelectionActivity: ReaderTextSelectionActivity = new ReaderTextSelectionActivity();
+  private quoteShareGeneration: number = 0;
+  private readonly quoteCardAction: ReaderQuoteCardAction = (text: string, anchor: string, selectionCurrent: () => boolean) => {
+    const generation = ++this.quoteShareGeneration;
+    const selection = this.chapterSelectionToken;
+    const current = (): boolean => generation === this.quoteShareGeneration &&
+      selection === this.chapterSelectionToken && this.readerTextSelectionEnabled() && selectionCurrent();
+    const title = this.bookTitle;
+    const author = this.bookAuthor;
+    const appearance = this.visibleReadingAppearance();
+    const actions = readerSystemShareActions(() => this.getUIContext(), anchor);
+    return actions.shareQuoteCard(text, title,
+      (): Promise<string | undefined> => exportReaderQuoteCard(this.getUIContext(), text, title, author, appearance, current), current);
+  };
   private exitDelivered: boolean = false;
   private exitAttemptGeneration: number = 0;
   private readonly readingRecordHost: ReaderReadingRecordHost = new ReaderReadingRecordHost(
@@ -2004,6 +2024,8 @@ export struct ReadingExperience {
           autoPageHighlightEnd: this.autoPageHighlightEnd(),
           longPressSelectText: this.readerTextSelectionEnabled(),
           selectionInputCurrent: (): boolean => this.readerTextSelectionEnabled(),
+          quoteCardAction: this.quoteCardAction,
+          onSelectionActivity: (owner: string, active: boolean): void => this.textSelectionActivity.change(owner, active),
           interactionEnabled: this.isReaderPageInteractionEnabled(),
           onVisibleRangeChanged: this.sourceSwitchContinuousRangeObserver(this.continuousRenderRevision),
           onScrollStopped: (): void => this.onContinuousScrollStopped(),
@@ -2060,6 +2082,8 @@ export struct ReadingExperience {
           autoPageHighlightEnd: this.autoPageHighlightEnd(),
           longPressSelectText: this.readerTextSelectionEnabled(),
           selectionInputCurrent: (): boolean => this.readerTextSelectionEnabled(),
+          quoteCardAction: this.quoteCardAction,
+          onSelectionActivity: (owner: string, active: boolean): void => this.textSelectionActivity.change(owner, active),
           translateY: this.bookmarkPullOffset(),
           bookmarkPaperTop: this.bookmarkPullOffset() > 0 ? this.bookmarkPullPaperTop(this.readingLayout()) : undefined,
           onCurrentPagePresented: (revision: number): void => {
@@ -2454,6 +2478,9 @@ export struct ReadingExperience {
     .width('100%')
     .height('100%')
     .id('reader-reading-stage')
+    .focusable(true)
+    .defaultFocus(true)
+    .onKeyEvent((event: KeyEvent): boolean => this.onReaderKeyEvent(event))
     .clip(true)
     .onTouch((event: TouchEvent): void => this.onControlBackdropTouch(event))
     .onAreaChange((_oldValue: Area, newValue: Area): void => {
@@ -11752,6 +11779,21 @@ export struct ReadingExperience {
     return this.readerInputIsCurrent() && !this.controlVisible();
   }
 
+  private onReaderKeyEvent(event: KeyEvent): boolean {
+    const action = readerHardwareKeyboardShortcut(event, {
+      bodyOwnsInput: this.isReaderPageInteractionEnabled() && !this.windowChromeOverlayActive &&
+        !this.sourceSwitchPresentationVisible && this.controlTemporaryLayer.length === 0 &&
+        this.sessionLaunch === undefined && !this.readerRecoveryRequestCurrent() && this.phase === 'ready',
+      inputFocused: readerControlKeyboardVisible(ReaderWindowCoordinator.metrics()),
+      selectionActive: this.textSelectionActivity.active(),
+    });
+    if (action === undefined) return false;
+    if (action === 'back') this.requestExit();
+    else if (action === 'next' || action === 'previous') this.requestPageTurn(action);
+    else this.openReaderControl(undefined, action);
+    return true;
+  }
+
   /**
    * Only a visual/Core settlement is non-interruptible. Speculative neighbour
    * measurement has its own readiness gate and must leave controls responsive.
@@ -11834,7 +11876,8 @@ export struct ReadingExperience {
       this.controlOpenRevision, this.sourceId === 'local', this.reduceMotion, this.chapter?.chapterIndex ?? -1);
   }
 
-  private openReaderControl(verificationOrigin?: ReaderControlVerificationOrigin): void {
+  private openReaderControl(verificationOrigin?: ReaderControlVerificationOrigin,
+    shortcutModule?: 'search' | 'directory'): void {
     this.retireReaderRecovery();
     if (this.sessionLaunch !== undefined) { this.cancelSessionLaunch('openControl'); return; }
     if (this.pageTurnSettlementActive && this.pageTurnCommitStarted && !this.pageTurnCommitFinished) {
@@ -11858,9 +11901,13 @@ export struct ReadingExperience {
     const playbackOrigin = origin !== undefined && origin.lifecycleToken === this.lifecycleToken &&
       origin.sourceId === this.sourceId && origin.bookId === this.bookId &&
       this.liveSessionCapsuleSnapshot()?.type === origin.location.module ? origin.location : undefined;
-    const nextControl = playbackOrigin === undefined ? openReaderControlSession(this.controlSession, duration) :
-      resumeReaderControlSessionTarget(this.controlSession, playbackOrigin, duration);
-    if (playbackOrigin !== undefined && nextControl.transition !== undefined) {
+    const opened = openReaderControlSession(this.controlSession, duration);
+    const shortcutTarget = shortcutModule === undefined ? undefined : readerControlTargetLocation(
+      setReaderControlHostPage(opened, shortcutModule === 'search' ? 'quickSearch' : 'moduleDirectory', this.controlTiming()));
+    const target = shortcutTarget ?? playbackOrigin;
+    const nextControl = target === undefined ? opened :
+      resumeReaderControlSessionTarget(this.controlSession, target, duration);
+    if (target !== undefined && nextControl.transition !== undefined) {
       nextControl.transition.kind = 'open';
       nextControl.transition.intent = 'forward';
     }

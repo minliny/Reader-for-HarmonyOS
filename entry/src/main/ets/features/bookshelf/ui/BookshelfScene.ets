@@ -4,6 +4,7 @@ import { BookshelfCatalogPresentation } from '../presentation/BookshelfCatalogPr
 import { BookshelfEmptyPage } from './BookshelfEmptyPage';
 import { BookshelfMutationPresentation } from '../presentation/BookshelfMutationPresentation';
 import { BookshelfPage } from './BookshelfPage';
+import type { BookshelfFileDrop } from '../application/BookshelfFileDrop';
 import { BookshelfReadPresentation } from '../presentation/BookshelfReadPresentation';
 import { BookshelfShell } from './BookshelfShell';
 import { BookshelfStatusContent } from './BookshelfStatusContent';
@@ -86,6 +87,9 @@ export struct BookshelfScene {
         onEmptyImport: (presentedNavigation: number, focusTarget: string): void => {
           if (this.isInteractive(presentedNavigation)) this.mutations.openImport(focusTarget);
         },
+        fileDropEnabled: this.feedbackEnabled,
+        onFilesDropped: (drop: BookshelfFileDrop, presentedNavigation: number): boolean =>
+          this.isInteractive(presentedNavigation) && this.mutations.importDroppedFiles(drop, presentedNavigation),
         continueReading: this.read.snapshot.continueReading,
         continueCardSuppressed: this.continueCardSuppressed,
         onContinueCardRect: (rect: ReaderSurfaceRect | undefined, presentedNavigation: number, bookKey: string): void => {
@@ -123,6 +127,12 @@ export struct BookshelfScene {
       BookshelfEmptyPage({
         headerBottom: this.read.headerBottom,
         measuredFooterHeight: measuredFooterHeight(),
+        fileDropEnabled: this.feedbackEnabled,
+        navigationGeneration: this.navigation,
+        reduceMotion: this.reduceMotion,
+        isCurrentShelfInput: (presentedNavigation: number): boolean => this.isInteractive(presentedNavigation),
+        onFilesDropped: (drop: BookshelfFileDrop, presentedNavigation: number): boolean =>
+          this.isInteractive(presentedNavigation) && this.mutations.importDroppedFiles(drop, presentedNavigation),
         onImportRequested: (focusTarget: string): void => {
           if (this.isInteractive(navigation)) this.mutations.openImport(focusTarget);
         },

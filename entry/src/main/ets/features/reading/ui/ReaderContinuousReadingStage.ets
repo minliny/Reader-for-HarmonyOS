@@ -1,4 +1,5 @@
 import { FrameCallback } from '@kit.ArkUI';
+import type { ReaderQuoteCardAction } from '../application/ReaderShareActions';
 import { LengthMetrics } from '@ohos.arkui.node';
 import { READER_ACTION_MIN_TARGET } from '../../../ui/controls/ReaderActionAccessibility';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
@@ -129,6 +130,8 @@ export struct ReaderContinuousReadingStage {
   @Prop autoPageHighlightEnd: number | undefined = undefined;
   @Prop longPressSelectText: boolean = false;
   selectionInputCurrent: (() => boolean) | undefined = undefined;
+  quoteCardAction: ReaderQuoteCardAction | undefined = undefined;
+  onSelectionActivity: ((owner: string, active: boolean) => void) | undefined = undefined;
   @Prop @Watch('onInteractionEnabledChanged') interactionEnabled: boolean = true;
   @Prop @Watch('onInputRevisionChanged') inputRevision: number = 0;
   inputCurrent: ((revision: number) => boolean) | undefined = undefined;
@@ -271,6 +274,8 @@ export struct ReaderContinuousReadingStage {
                     inkColor: readerAppearanceThemeStyle(this.appearance.activeTheme).ink,
                     selectionEnabled: this.longPressSelectText,
                     selectionInputCurrent: (): boolean => this.selectionInputCurrent?.() !== false,
+                    quoteCardAction: this.quoteCardAction,
+                    onSelectionActivity: this.onSelectionActivity,
                     selectionColor: readerThemeDefinition(this.appearance.activeTheme).selection,
                     highlightStart: this.ttsHighlightStart ?? this.autoPageHighlightStart,
                     highlightEnd: this.ttsHighlightEnd ?? this.autoPageHighlightEnd,

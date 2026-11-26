@@ -10,7 +10,8 @@ import { text as graphicsText } from '@kit.ArkGraphics2D';
 import type { image } from '@kit.ImageKit';
 import { copyReaderSelection } from '../../../platform/clipboard/ReaderClipboardHost';
 import { readerSelectedOriginalText } from './ReaderTextSelectionProjection';
-import { readerCopySelectionForShare, readerSelectionShareAnchor, readerShareMessage, readerShareSelectionMenu, readerSystemShareActions } from './ReaderSharePresentation';
+import { readerQuoteSelection, readerSelectionShareAnchor, readerShareMessage, readerShareSelectionMenu, readerSystemShareActions } from './ReaderSharePresentation';
+import type { ReaderQuoteCardAction } from '../application/ReaderShareActions';
 import { registerReaderFonts, readerRegisteredFontFamily } from '../../../ui/foundation/ReaderFonts';
 import {
   createDefaultReaderAppearanceSnapshot,
@@ -120,6 +121,8 @@ export struct ReaderReadingTextFragment {
   @Prop @Watch('scheduleHighlightGeometry') autoPageHighlightEnd: number | undefined = undefined;
   @Prop @Watch('onTextSelectionEnabledChanged') longPressSelectText: boolean = false;
   selectionInputCurrent: (() => boolean) | undefined = undefined;
+  quoteCardAction: ReaderQuoteCardAction | undefined = undefined;
+  onSelectionActivity: ((owner: string, active: boolean) => void) | undefined = undefined;
   @Prop @Watch('scheduleHighlightGeometry') separateHighlight: boolean = false;
   onHighlightGeometry: (key: number, rects: ReaderDynamicHighlightRect[]) => void =
     (_key: number, _rects: ReaderDynamicHighlightRect[]): void => {};
@@ -140,6 +143,7 @@ export struct ReaderReadingTextFragment {
     this.highlightMounted = false; this.highlightLifecycle += 1; this.highlightQueued = false;
     this.highlightHadGeometry = false;
     if (this.separateHighlight) this.onHighlightGeometry(this.startScalar, []);
+    this.onSelectionActivity?.(this.selectionShareAnchor, false);
     this.textController.closeSelectionMenu();
   }
 
@@ -176,10 +180,15 @@ export struct ReaderReadingTextFragment {
       .fontColor(this.themeStyle().ink)
       .copyOption(this.longPressSelectText ? CopyOptions.InApp : CopyOptions.None)
       .editMenuOptions({
-        onCreateMenu: (items: Array<TextMenuItem>): Array<TextMenuItem> => readerShareSelectionMenu(items),
+        onCreateMenu: (items: Array<TextMenuItem>): Array<TextMenuItem> =>
+          readerShareSelectionMenu(items, this.quoteCardAction !== undefined),
         onMenuItemClick: (item: TextMenuItem, range: TextRange): boolean => this.onTextMenuItemClick(item, range),
       })
       .selectedBackgroundColor(readerThemeDefinition(this.appearance.activeTheme).selection)
+      .onTextSelectionChange((start: number, end: number): void => {
+        this.onSelectionActivity?.(this.selectionShareAnchor, this.highlightMounted && this.longPressSelectText &&
+          this.selectionInputCurrent?.() !== false && start >= 0 && end > start);
+      })
       .textAlign(readerAppearanceUsesJustify(this.appearance.alignment) ? TextAlign.JUSTIFY : TextAlign.Start)
       .onAreaChange((_old: Area, area: Area): void => {
         this.highlightGlobalX = Number.parseFloat(`${area.globalPosition.x}`);
@@ -232,14 +241,15 @@ export struct ReaderReadingTextFragment {
   private onTextSelectionEnabledChanged(): void {
     this.selectionEpoch += 1;
     if (!this.longPressSelectText) {
+      this.onSelectionActivity?.(this.selectionShareAnchor, false);
       this.textController.closeSelectionMenu();
     }
   }
 
   private onTextMenuItemClick(item: TextMenuItem, range: TextRange): boolean {
-    const copyForShare = readerCopySelectionForShare(item.id);
+    const quote = this.quoteCardAction !== undefined && readerQuoteSelection(item.id);
     const share = item.id.equals(TextMenuItemId.SHARE);
-    if (!share && !copyForShare && !item.id.equals(TextMenuItemId.COPY)) return false;
+    if (!share && !quote && !item.id.equals(TextMenuItemId.COPY)) return false;
     // A dismissed selection cannot act on a new fragment or the synthetic display text.
     const lifecycle = this.highlightLifecycle;
     const epoch = this.selectionEpoch;
@@ -250,9 +260,9 @@ export struct ReaderReadingTextFragment {
     if (!current()) return true;
     const selected = readerSelectedOriginalText(this.text, this.indentPrefix().length, range.start, range.end);
     if (selected === undefined || selected.length === 0) return true;
-    if (share || copyForShare) {
+    if (share || quote) {
       this.textController.closeSelectionMenu();
-      void this.shareSelection(selected, current, copyForShare);
+      void this.shareSelection(selected, current, quote);
       return true;
     }
     try {
@@ -264,10 +274,11 @@ export struct ReaderReadingTextFragment {
     return true;
   }
 
-  private async shareSelection(text: string, current: () => boolean, copyRequested: boolean): Promise<void> {
-    const actions = readerSystemShareActions(() => this.getUIContext(), this.selectionShareAnchor);
-    const message = readerShareMessage(await actions.shareSelection(text, current, copyRequested),
-      copyRequested ? '已复制选文' : undefined);
+  private async shareSelection(text: string, current: () => boolean, quoteRequested: boolean): Promise<void> {
+    const result = quoteRequested && this.quoteCardAction !== undefined ?
+      await this.quoteCardAction(text, this.selectionShareAnchor, current) :
+      await readerSystemShareActions(() => this.getUIContext(), this.selectionShareAnchor).shareSelection(text, current);
+    const message = readerShareMessage(result);
     if (message !== undefined) this.transientFeedback.show(() => this.getUIContext(), { message }, current);
   }
 
@@ -355,6 +366,8 @@ export struct ReadingSurface {
   @Prop bottomJustifyGap: number = 0;
   @Prop longPressSelectText: boolean = false;
   selectionInputCurrent: (() => boolean) | undefined = undefined;
+  quoteCardAction: ReaderQuoteCardAction | undefined = undefined;
+  onSelectionActivity: ((owner: string, active: boolean) => void) | undefined = undefined;
   @Prop chromeTopStartText: string = '';
   @Prop chromeTopEndText: string = '';
   @Prop chromeTopTranslateY: number = 0;
@@ -453,6 +466,8 @@ export struct ReadingSurface {
                   gapVp: this.bottomJustifyGap,
                   selectionEnabled: this.longPressSelectText,
                   selectionInputCurrent: (): boolean => this.selectionInputCurrent?.() !== false,
+                  quoteCardAction: this.quoteCardAction,
+                  onSelectionActivity: this.onSelectionActivity,
                   selectionColor: readerThemeDefinition(this.appearance.activeTheme).selection,
                   highlightStart: this.ttsHighlightStart ?? this.autoPageHighlightStart,
                   highlightEnd: this.ttsHighlightEnd ?? this.autoPageHighlightEnd,
@@ -476,6 +491,8 @@ export struct ReadingSurface {
                   autoPageHighlightEnd: this.autoPageHighlightEnd,
                   longPressSelectText: this.longPressSelectText,
                   selectionInputCurrent: (): boolean => this.selectionInputCurrent?.() !== false,
+                  quoteCardAction: this.quoteCardAction,
+                  onSelectionActivity: this.onSelectionActivity,
                   separateHighlight: this.staticSnapshotId.length > 0,
                   queueHighlightMeasurement: (action: () => void): void => this.enqueueHighlightMeasurement(action),
                   onHighlightGeometry: (key: number, rects: ReaderDynamicHighlightRect[]): void => {
@@ -503,7 +520,9 @@ export struct ReadingSurface {
                 autoPageHighlightStart: this.autoPageHighlightStart,
                 autoPageHighlightEnd: this.autoPageHighlightEnd,
                 longPressSelectText: this.longPressSelectText,
-                  selectionInputCurrent: (): boolean => this.selectionInputCurrent?.() !== false,
+                selectionInputCurrent: (): boolean => this.selectionInputCurrent?.() !== false,
+                quoteCardAction: this.quoteCardAction,
+                  onSelectionActivity: this.onSelectionActivity,
               });
             }, (paragraph: string, index: number): string => `${index}:${paragraph}`);
           }

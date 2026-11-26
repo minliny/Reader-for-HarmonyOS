@@ -2,7 +2,8 @@ import { ReaderCoreGateway, type ShelfBookUpsert } from '../../../app/ReaderCore
 import type { JsonObject, ReaderCoreResultEvent } from '@reader/core-harmony';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { errorMessageOf } from '../../../app/ErrorMessage';
-import { localImportFailure, type LocalImportFailure } from '../../../app/LocalImportFailure';
+import { LocalBookSelectionFailure, localImportFailure, type LocalImportFailure } from '../../../app/LocalImportFailure';
+import { BOOKSHELF_DROP_FILE_LIMIT } from './BookshelfFileDrop';
 import type {
   LocalBookAssetCommit,
   LocalBookInput,
@@ -15,7 +16,7 @@ const DOMAIN = 0x5244;
 export type LocalImportItem = {
   fileName: string;
   state: 'success' | 'failed';
-  /** Only set from Core bookshelf.add's acknowledged created fact. */
+  /** From the bookshelf add receipt or a verified existing content identity. */
   disposition?: 'created' | 'existing';
   /** The shelf ACK is durable even when the import journal needs later cleanup. */
   cleanupDeferred?: boolean;
@@ -48,27 +49,46 @@ export class LocalBookImportGateway {
     return this.runtimeOwner.selectLocalBookInputs(canOpenPicker);
   }
 
+  async prepareDroppedBookInputs(uris: string[], isCurrent: () => boolean): Promise<LocalBookPreparation[]> {
+    if (uris.length > BOOKSHELF_DROP_FILE_LIMIT) throw new LocalBookSelectionFailure('selectionLimit');
+    const selections: LocalBookPreparation[] = [];
+    try {
+      for (const uri of uris) {
+        if (!isCurrent()) break;
+        // Drag import accepts TXT, EPUB, MOBI, AZW and AZW3.
+        selections.push(await this.runtimeOwner.prepareSystemLocalBookInput(uri,
+          (fileName: string): boolean => !fileName.toLowerCase().endsWith('.kf8')));
+      }
+      return selections;
+    } catch (error) {
+      await this.releaseUnusedSelections(selections);
+      throw error;
+    }
+  }
+
   async releaseUnusedSelections(selections: LocalBookPreparation[]): Promise<void> {
     for (const selection of selections) {
       if (selection.state !== 'failed') await this.runtimeOwner.discardLocalBookInput(selection.input);
     }
   }
 
-  async importPreparedSelections(selections: LocalBookPreparation[], onDispatched?: () => void): Promise<LocalImportBatch> {
+  async importPreparedSelections(selections: LocalBookPreparation[], onDispatched?: () => void,
+    preserveExisting: boolean = false): Promise<LocalImportBatch> {
     if (selections.length === 0) {
       return { state: 'cancelled', imported: 0, failed: 0, items: [] };
     }
     const items: LocalImportItem[] = [];
     let imported = 0;
     for (const selection of selections) {
-      const item = await this.importPreparedSelection(selection, onDispatched);
+      const item = await this.importPreparedSelection(selection, onDispatched, preserveExisting);
       items.push(item);
       if (item.state === 'success') imported += 1;
     }
     return { state: 'completed', imported, failed: items.length - imported, items };
   }
 
-  private async importPreparedSelection(selection: LocalBookPreparation, onDispatched?: () => void): Promise<LocalImportItem> {
+  private async importPreparedSelection(selection: LocalBookPreparation, onDispatched: (() => void) | undefined,
+    preserveExisting: boolean): Promise<LocalImportItem> {
     if (selection.state === 'failed') {
       return { fileName: selection.fileName, state: 'failed', failure: selection.failure ?? localImportFailure('read') };
     }
@@ -78,6 +98,12 @@ export class LocalBookImportGateway {
     let persistenceStarted = false;
     let shelfAddStarted = false;
     try {
+      if (preserveExisting && await this.bookshelf.loadShelfBook('local', selection.input.bookId) !== undefined) {
+        // A second copy of the same bytes can replenish a missing original.
+        // Leave existing catalog metadata, progress, bookmarks and notes alone.
+        await this.runtimeOwner.commitLocalBookInput(selection.input);
+        return { fileName: selection.input.fileName, state: 'success', disposition: 'existing' };
+      }
       const parsed = await this.runtimeOwner.request('import.parse', {
         kind: 'localBook',
         input: this.localBookParseParams(selection.input),

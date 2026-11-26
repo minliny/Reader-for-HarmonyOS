@@ -116,10 +116,12 @@ test('transfer footer and dialog reserve only actual keyboard occlusion in this 
 
 test('subscription cancel and system back both dismiss a pending write without dispatching a replacement', async () => {
   const Page = selectedProductionMethods(transferPage, 'SourceV9TransferPage',
-    ['inputCurrent', 'editable', 'canDismissDialog', 'consumeBack', 'confirmDialog']);
+    ['inputCurrent', 'editable', 'canDismissDialog', 'consumeBack', 'confirmDialog', 'retireClipboardPaste']);
+  let retiredPastes = 0;
   const page = Object.assign(new Page(), {
     mounted: true, dialog: 'form', state: { writePending: true, busy: false, runningCheck: false, reviews: [] },
     flow: { saveSubscription: () => assert.fail('cancel must not issue a write') },
+    draftPaste: { retire: () => retiredPastes += 1 },
   });
   assert.equal(page.canDismissDialog(), true);
   assert.equal(page.editable(), false);
@@ -128,10 +130,12 @@ test('subscription cancel and system back both dismiss a pending write without d
   await page.confirmDialog('cancel');
   assert.equal(page.dialog, 'none');
   assert.equal(page.state.writePending, true);
+  assert.equal(retiredPastes, 1);
 
   page.dialog = 'form';
   assert.equal(page.consumeBack(), true);
   assert.equal(page.dialog, 'none');
+  assert.equal(retiredPastes, 2);
 
   page.dialog = 'form';
   page.state.busy = true;
@@ -139,6 +143,7 @@ test('subscription cancel and system back both dismiss a pending write without d
   await page.confirmDialog('cancel');
   assert.equal(page.consumeBack(), true);
   assert.equal(page.dialog, 'form');
+  assert.equal(retiredPastes, 2);
 });
 
 test('short keyboard-constrained dialogs keep a scrollable input row', () => {

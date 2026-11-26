@@ -1362,6 +1362,11 @@ struct Index {
         const owner = this.mountedRuntimeOwner;
         return (): boolean => this.isCurrentDetailPresentation(identity, owner);
       },
+      captureDocumentSave: (identity: string): (() => boolean) => {
+        const owner = this.mountedRuntimeOwner;
+        return (): boolean => this.detailOwnsRoute() && owner !== undefined &&
+          this.mountedRuntimeOwner === owner && this.isCurrentRuntime(owner) && this.detailShelf.isCurrent(identity);
+      },
       retainedShareFile: async (bookId: string, current: () => boolean): Promise<string | undefined> => {
         const owner = this.currentReadingRuntime();
         return owner === undefined || !current() ? undefined : owner.retainedLocalBookSourcePath(bookId, current);
@@ -1416,7 +1421,11 @@ struct Index {
   }
 
   private detailContentIsForeground(): boolean {
-    return this.searchAppForeground !== false && !this.arkWebCapturesInput && this.route === 'detail' &&
+    return this.searchAppForeground !== false && this.detailOwnsRoute();
+  }
+
+  private detailOwnsRoute(): boolean {
+    return !this.arkWebCapturesInput && this.route === 'detail' &&
       this.shelfGroupPresentation.identity.length === 0 &&
       !this.sourceSwitchPresentation.isSurfacePresented() && !this.mangaSourceSwitch.selectionVisible;
   }

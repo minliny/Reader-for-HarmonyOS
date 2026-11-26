@@ -51,19 +51,31 @@ async function rootFirstActions(){
 
 async function nativeSelectionCopy(){
   const projection=await import('../entry/src/main/ets/features/reading/ui/ReaderTextSelectionProjection.ts');
+  const {ReaderTextSelectionActivity}=await import('../entry/src/main/ets/features/reading/application/ReaderKeyboardShortcuts.ts');
   const menuId={equals:value=>value==='COPY'},range={start:0,end:2},copied=[];let live=true,menu;
   const Native=selectedProductionMethods(file('features/reading/ui/ReaderNativeTextWindow.ets'),'ReaderNativeTextWindow',['selection'],
     {CopyOptions:{InApp:'inapp',None:'none'},TextMenuItemId:{COPY:'COPY'}});
-  const attrs={copyOption(){return this;},selectedBackgroundColor(){return this;},editMenuOptions(value){menu=value;return this;}};
+  let onSelectionChange;
+  const attrs={copyOption(){return this;},selectedBackgroundColor(){return this;},editMenuOptions(value){menu=value;return this;},
+    onTextSelectionChange(value){onSelectionChange=value;return this;}};
   const native=Object.assign(new Native(),{closed:false,selectionEpoch:0,node:{attribute:attrs},controller:{closeSelectionMenu(){}}});
   const View=selectedProductionMethods(file('features/reading/ui/ReaderNativeParagraphView.ets'),'ReaderNativeParagraphView',['updateSelection'],
     {...projection,copyReaderSelection:text=>copied.push(text)});
-  const owner=Object.assign(new View(),{mounted:true,epoch:1,selectionEnabled:true,selectionInputCurrent:()=>live,
+  const selection = new ReaderTextSelectionActivity();
+  const owner=Object.assign(new View(),{mounted:true,epoch:1,selectionEpoch:0,selectionEnabled:true,selectionInputCurrent:()=>live,
+    selectionShareAnchor:'paragraph-a',onSelectionActivity:(source,active)=>selection.change(source,active),
     recipe:{text:'原文内容'},controller:{selection:(...args)=>native.selection(...args),visibleStartUtf16:()=>0,visibleEndUtf16:()=>4}});
-  owner.updateSelection();const captured=menu.onMenuItemClick;live=false;
-  assert.equal(captured({id:menuId},range),true,'retired COPY is still consumed rather than running system default');assert.deepEqual(copied,[]);
-  live=true;assert.equal(captured({id:menuId},range),true);assert.deepEqual(copied,['原文']);
-  owner.epoch++;captured({id:menuId},range);assert.equal(copied.length,1,'old geometry epoch still retires copy');
+  owner.updateSelection();
+  const retiredObserver=onSelectionChange;
+  onSelectionChange(0,2);assert.equal(selection.active(),true);
+  onSelectionChange(-1,-1);assert.equal(selection.active(),false);
+  owner.updateSelection();retiredObserver(0,2);assert.equal(selection.active(),false);
+  live=false;onSelectionChange(0,2);assert.equal(selection.active(),false);
+  live=true;owner.updateSelection();
+  const currentCopy=menu.onMenuItemClick;live=false;
+  assert.equal(currentCopy({id:menuId},range),true,'retired COPY is still consumed rather than running system default');assert.deepEqual(copied,[]);
+  live=true;assert.equal(currentCopy({id:menuId},range),true);assert.deepEqual(copied,['原文']);
+  owner.epoch++;currentCopy({id:menuId},range);assert.equal(copied.length,1,'old geometry epoch still retires copy');
   const Fragment=selectedProductionMethods(file('features/reading/ui/ReadingSurface.ets'),'ReaderReadingTextFragment',
     ['onTextMenuItemClick','indentPrefix'],{...projection,TextMenuItemId:{COPY:'COPY'},copyReaderSelection:text=>copied.push(text)});
   const fragment=Object.assign(new Fragment(),{highlightMounted:true,longPressSelectText:true,selectionInputCurrent:()=>live,

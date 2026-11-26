@@ -19,7 +19,7 @@ for (const [start, end] of [[-1, 2], [3, 1], [0, 99], [NaN, 4], [0.5, 4], [0, In
 
 // Exercise the actual OS adapter with a synchronous pasteboard implementation.
 const adapter = readFileSync(new URL('../entry/src/main/ets/platform/clipboard/ReaderClipboardHost.ts', import.meta.url), 'utf8')
-  .replace(/^import .*;\n/m, '').replace(/^export function/gm, 'function');
+  .replace(/^import .*;\n/m, '').replace(/^export /gm, '');
 const events = [];
 const data = {
   property: {},
@@ -34,21 +34,21 @@ const pasteboard = {
 const clipboard = new Function('pasteboard', stripTypeScriptTypes(adapter) + ';return {copyReaderSelection,copyReaderShareText};')(pasteboard);
 assert.equal(clipboard.copyReaderSelection(original), undefined);
 assert.equal(data.text, original);
-assert.equal(data.property.shareOption, 'inapp');
+assert.equal(data.property.shareOption, 'local', 'ordinary selected text can be pasted into other local apps');
 assert.deepEqual(events, ['property', 'write']);
 clipboard.copyReaderShareText(original);
 assert.equal(data.property.shareOption, 'local', 'explicit share fallback may be pasted into other local apps');
 
 // Execute the production native-menu handler, including error and stale events.
 const surface = new URL('../entry/src/main/ets/features/reading/ui/ReadingSurface.ets', import.meta.url);
-const copyId = {}, shareId = {}, exportId = {};
+const copyId = {}, shareId = {}, quoteId = {};
 let copied, shared;
 let failWrite = false;
 let closed = 0;
 let warned = 0;
 const Menu = selectedProductionMethods(surface, 'ReaderReadingTextFragment', ['onTextMenuItemClick'], {
   TextMenuItemId: { COPY: copyId, SHARE: shareId }, readerSelectedOriginalText,
-  readerCopySelectionForShare: id => id.equals(exportId),
+  readerQuoteSelection: id => id.equals(quoteId),
   copyReaderSelection: text => {
     if (failWrite) throw Error('controlled clipboard failure');
     copied = text;
@@ -62,7 +62,7 @@ menu.longPressSelectText = true;
 menu.indentPrefix = () => '\u3000\u3000';
 menu.textController = { closeSelectionMenu() { closed += 1; } };
 menu.transientFeedback = { show(_context, _options, current) { if (current()) warned += 1; } };
-menu.shareSelection = (text, current, copyRequested) => { shared = { text, current, copyRequested }; };
+menu.shareSelection = (text, current, quoteRequested) => { shared = { text, current, quoteRequested }; };
 const copy = { id: { equals: value => value === copyId } };
 const share = { id: { equals: value => value === shareId } };
 const other = { id: { equals: () => false } };
@@ -87,9 +87,12 @@ assert.equal(menu.onTextMenuItemClick(share, { start: 5, end: 7 }), true);
 assert.equal(shared.text, '😀');
 assert.equal(closed, 2, 'share follows native menu dismissal');
 assert.equal(shared.current(), true);
-assert.equal(shared.copyRequested, false);
-assert.equal(menu.onTextMenuItemClick({ id: { equals: value => value === exportId } }, { start: 5, end: 7 }), true);
-assert.equal(shared.copyRequested, true);
+assert.equal(shared.quoteRequested, false);
+const quote = { id: { equals: value => value === quoteId } };
+assert.equal(menu.onTextMenuItemClick(quote, { start: 5, end: 7 }), false, 'quote is absent when its owner is unavailable');
+menu.quoteCardAction = () => {};
+assert.equal(menu.onTextMenuItemClick(quote, { start: 5, end: 7 }), true);
+assert.equal(shared.quoteRequested, true);
 menu.text = 'successor';
 assert.equal(shared.current(), false, 'an old share failure cannot copy the prior fragment');
 console.log('PASS native menu uses the original UTF-16 selection and fences stale share and copy');

@@ -74,6 +74,18 @@ export class MangaResourceGateway {
     return this.loadOwnedPage(scope, page, allowNetwork, isCurrent, mangaPosition, mangaPreview);
   }
 
+  async readPageForSave(scope: MangaResourceScope, page: MangaResourcePage, allowNetwork: boolean,
+    current: () => boolean): Promise<Uint8Array | undefined> {
+    this.assertCurrent(current);
+    this.assertPage(scope, page);
+    if (page.resourceRef === undefined) return undefined;
+    return this.runtime.readMangaImageForSave?.({
+      sourceId: scope.sourceId, bookId: scope.bookId, chapterIndex: scope.chapterIndex,
+      chapterId: scope.chapterUrl, contentVersion: scope.contentVersion, mangaDecodeRevision: scope.decodeRevision,
+      imageUrl: page.requestRule ?? page.url, resourceRef: page.resourceRef, baseUrl: scope.chapterUrl,
+    }, scope.sourceRuleVersion, allowNetwork, current);
+  }
+
   /** Optional next-chapter work uses the same Runtime owner as foreground and
    * explicit downloads, without a display lease or offline completion receipt. */
   async prefetchPage(scope: MangaResourceScope, page: MangaResourcePage, isCurrent: () => boolean,

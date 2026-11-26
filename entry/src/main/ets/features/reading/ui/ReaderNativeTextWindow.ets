@@ -1,4 +1,4 @@
-import { readerCopySelectionForShare, readerShareSelectionMenu } from './ReaderSharePresentation';
+import { readerQuoteSelection, readerShareSelectionMenu } from './ReaderSharePresentation';
 import { FrameNode, LengthMetrics, typeNode } from '@ohos.arkui.node';
 import { UIContext } from '@ohos.arkui.UIContext';
 import { text as graphicsText } from '@kit.ArkGraphics2D';
@@ -203,22 +203,26 @@ export class ReaderNativeTextWindow {
   }
 
   selection(enabled: boolean, background: ResourceColor, onCopy: (range: TextRange) => void,
-    onShare?: (range: TextRange, copyRequested: boolean) => void): void {
+    onShare?: (range: TextRange, quoteRequested: boolean) => void, onActivity?: (active: boolean) => void,
+    quoteAvailable: boolean = false): void {
     if (this.closed) return;
     const epoch = ++this.selectionEpoch;
     if (!enabled) this.controller.closeSelectionMenu();
+    this.node.attribute.onTextSelectionChange((start: number, end: number): void => {
+      if (!this.closed && epoch === this.selectionEpoch) onActivity?.(enabled && start >= 0 && end > start);
+    });
     this.node.attribute.copyOption(enabled ? CopyOptions.InApp : CopyOptions.None)
       .selectedBackgroundColor(background).editMenuOptions({
         onCreateMenu: (items: Array<TextMenuItem>): Array<TextMenuItem> =>
-          onShare === undefined ? items : readerShareSelectionMenu(items),
+          onShare === undefined ? items : readerShareSelectionMenu(items, quoteAvailable),
         onMenuItemClick: (item: TextMenuItem, range: TextRange): boolean => {
-          const copyForShare = onShare !== undefined && readerCopySelectionForShare(item.id);
-          const share = onShare !== undefined && (copyForShare || item.id.equals(TextMenuItemId.SHARE));
+          const quote = quoteAvailable && readerQuoteSelection(item.id);
+          const share = onShare !== undefined && (quote || item.id.equals(TextMenuItemId.SHARE));
           if (!share && !item.id.equals(TextMenuItemId.COPY)) return false;
           if (!this.closed && enabled && epoch === this.selectionEpoch) {
             if (share) {
               this.controller.closeSelectionMenu();
-              onShare?.(range, copyForShare);
+              onShare?.(range, quote);
             } else {
               onCopy(range);
             }

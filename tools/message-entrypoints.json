@@ -69,6 +69,17 @@
       "status": "registered-source-entry"
     },
     {
+      "id": "entry/src/main/ets/app/composition/JsonImportDialog.ets#JsonImportDialog.pasteUrlDraft::shared.transient",
+      "file": "entry/src/main/ets/app/composition/JsonImportDialog.ets",
+      "owner": "JsonImportDialog",
+      "member": "pasteUrlDraft",
+      "family": "shared.transient",
+      "category": "用户主动粘贴的授权失败、无可粘贴文字或读取失败",
+      "effectiveHost": "仍可交互的当前 JSON 导入弹窗及 URL 草稿；仅由系统粘贴控件发起。",
+      "retireRule": "离开前台、关闭弹窗、编辑或提交草稿后忽略旧读取结果；退场重置短反馈。",
+      "status": "registered-source-entry"
+    },
+    {
       "id": "entry/src/main/ets/app/composition/ReaderJourneyRecoveryNotices.ets#ReaderJourneyRecoveryNotices.recoveryItems::shared.recovery-notice",
       "file": "entry/src/main/ets/app/composition/ReaderJourneyRecoveryNotices.ets",
       "owner": "ReaderJourneyRecoveryNotices",
@@ -610,6 +621,17 @@
       "status": "registered-source-entry"
     },
     {
+      "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.savePageImage::shared.transient",
+      "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
+      "owner": "MangaReadingSurface",
+      "member": "savePageImage",
+      "family": "shared.transient",
+      "category": "当前页图片另存完成或明确失败",
+      "effectiveHost": "当前漫画、章节控制器及原可见逻辑页。由系统文档选择器与文件写入回执决定。",
+      "retireRule": "取消不发消息。页面或章节切换、原控制器退役后停止写入及反馈。",
+      "status": "registered-source-entry"
+    },
+    {
       "id": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets#MangaReadingSurface.recoveryOverlay::shared.recovery-notice",
       "file": "entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets",
       "owner": "MangaReadingSurface",
@@ -750,6 +772,17 @@
       "category": "分享降级与指令明确失败短反馈",
       "effectiveHost": "当前前景书籍详情，绑定本次详情标识及书籍身份。",
       "retireRule": "书籍详情退役或切换后拒绝旧回执。仅展示明确复制和失败事实，取消不发消息。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets#LocalBookDetail.saveOriginalBook::shared.transient",
+      "file": "entry/src/main/ets/features/reading/ui/LocalBookDetail.ets",
+      "owner": "LocalBookDetail",
+      "member": "saveOriginalBook",
+      "family": "shared.transient",
+      "category": "原书另存完成或明确失败",
+      "effectiveHost": "当前仍可操作的书籍详情和已保留原书，沿用详情展示与书籍身份。",
+      "retireRule": "取消不发消息。详情退役后停止写入及反馈，失败保留原书。",
       "status": "registered-source-entry"
     },
     {
@@ -1176,8 +1209,8 @@
       "owner": "ReaderNativeParagraphView",
       "member": "shareSelection",
       "family": "shared.transient",
-      "category": "分享降级与指令明确失败短反馈",
-      "effectiveHost": "当前原生段落和原选区，绑定布局 epoch、前景输入准入及选区原文。",
+      "category": "文字或书摘图片分享降级与明确失败短反馈",
+      "effectiveHost": "当前原生段落和原选区，绑定布局 epoch、前景输入准入及选区原文；书摘图片使用当前阅读者的书籍与样式。",
       "retireRule": "段落重排或退场后抛弃旧回执；清理沿既有段落反馈退役。",
       "status": "registered-source-entry"
     },
@@ -1209,7 +1242,7 @@
       "owner": "ReaderReadingTextFragment",
       "member": "shareSelection",
       "family": "shared.transient",
-      "category": "分享降级与指令明确失败短反馈",
+      "category": "文字或书摘图片分享降级与明确失败短反馈",
       "effectiveHost": "当前已挂载正文片段，绑定片段生命周期、源文本和选区输入准入。",
       "retireRule": "失去选区输入或片段退场后拒收旧回执，沿现有反馈退役。",
       "status": "registered-source-entry"
@@ -2227,6 +2260,17 @@
       "category": "导入读取、解析或保存时的内容状态",
       "effectiveHost": "当前导入步骤基于原读取和写入状态呈现。",
       "retireRule": "退场停止展示并忽略旧投影，待核对沿原操作恢复。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/source/ui/SourceV9TransferPage.ets#SourceV9TransferPage.onPasteDraft::shared.transient",
+      "file": "entry/src/main/ets/features/source/ui/SourceV9TransferPage.ets",
+      "owner": "SourceV9TransferPage",
+      "member": "onPasteDraft",
+      "family": "shared.transient",
+      "category": "用户主动粘贴的授权失败、无可粘贴文字或读取失败",
+      "effectiveHost": "当前有效的书源导入或订阅草稿；仅由系统粘贴控件发起。",
+      "retireRule": "切换来源、页面、草稿、前台状态或原导入阶段后忽略旧读取结果；退出重置短反馈。",
       "status": "registered-source-entry"
     },
     {
