@@ -5,7 +5,7 @@ import { ReaderCoreGateway } from '../../../app/ReaderCoreGateway';
 import type { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { SharedDownloadGateway } from './SharedDownloadGateway';
 import { createDownloadBookView, projectDownloadBookAvailability, type DownloadBookView, type DownloadStorageSummary, type DownloadStoragePolicyView, type SharedDownloadActionTarget } from '../presentation/SharedDownloadProjection';
-import { SharedDownloadProjectionRefreshError, type SharedDownloadCoordinatorSnapshot } from './SharedDownloadCoordinator';
+import { SharedDownloadAdmissionError, SharedDownloadProjectionRefreshError, type SharedDownloadCoordinatorSnapshot } from './SharedDownloadCoordinator';
 
 export type SharedDownloadBookAction = 'download' | 'pause' | 'cancel' | 'deleteLocal';
 
@@ -14,7 +14,7 @@ export interface SharedDownloadBatchReceipt {
   requested: number;
   confirmed: number;
   unavailable: number;
-  stop?: 'scopeChanged' | 'operationUnconfirmed' | 'readbackFailed';
+  stop?: 'scopeChanged' | 'operationRejected' | 'operationUnconfirmed' | 'readbackFailed';
   error?: Error;
 }
 
@@ -129,9 +129,11 @@ export class SharedDownloadHost {
 
   private withShelfMetadata(view: DownloadBookView, book: ShelfBook): DownloadBookView {
     const fresh = createDownloadBookView(book);
+    const contentKind = book.contentKind === undefined && view.shelfBook.contentKind === undefined ?
+      view.contentKind : fresh.contentKind;
     return { ...view, key: fresh.key, shelfBook: book, sourceId: fresh.sourceId,
       bookId: fresh.bookId, coverUrl: fresh.coverUrl, title: fresh.title, author: fresh.author,
-      sourceLabel: fresh.sourceLabel, contentKind: fresh.contentKind, recentRead: fresh.recentRead };
+      sourceLabel: fresh.sourceLabel, contentKind, recentRead: fresh.recentRead };
   }
 
   async reload(current: () => boolean): Promise<void> {
@@ -316,6 +318,8 @@ export class SharedDownloadHost {
         if (error instanceof SharedDownloadProjectionRefreshError) {
           receipt.confirmed += 1;
           receipt.stop = 'readbackFailed';
+        } else if (error instanceof SharedDownloadAdmissionError) {
+          receipt.stop = 'operationRejected';
         } else {
           receipt.stop = 'operationUnconfirmed';
         }
@@ -388,6 +392,7 @@ export class SharedDownloadHost {
     const failed = job.status === 'failed' && !requestedComplete;
     return { ...projected, state: running || failed ? 'downloading' : projected.state,
       stateLabel: running ? '下载中' : failed ? '下载失败' : projected.stateLabel,
+      statusAction: running || projected.statusAction === 'pause' ? 'pause' : failed ? 'retry' : projected.statusAction,
       downloadError: failed ? (job.error || '下载任务已停止，请重试') : undefined };
   }
 
@@ -407,7 +412,8 @@ export class SharedDownloadHost {
   private reuseIndexedRow(fresh: DownloadBookView, revision: string | undefined): DownloadBookView | undefined {
     if (revision === undefined || fresh.contentKind === undefined) return undefined;
     const indexed = this.statusIndex?.get(fresh.key);
-    if (indexed === undefined || indexed.statusRevision !== revision || indexed.view.contentKind !== fresh.contentKind) return undefined;
+    if (indexed === undefined || indexed.statusRevision !== revision ||
+      indexed.view.shelfBook.contentKind !== fresh.shelfBook.contentKind) return undefined;
     const cached = indexed.view;
     if (this.requiresMangaHostRecheck(cached)) return undefined;
     if (JSON.stringify(cached.shelfBook) === JSON.stringify(fresh.shelfBook)) return cached;

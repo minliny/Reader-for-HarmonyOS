@@ -3,6 +3,9 @@ import {selectContractCases,recordContractCasePass} from './lib/contract-case-se
 const definitions={"text-projection": {"description": "实际Gateway exact text cache selector/部分未知/正文bytes与过滤/读目标/失效", "resources": []}, "storage-admission": {"description": "实际storage bytes格式与已证cleanable<=automatic准入", "resources": []}, "manga-projection": {"description": "实际Manga entry解码与Host image证明/元数据不可冒充diskbytes", "resources": []}, "manga-proof-batch": {"description": "实际Gateway9章图片证明并发预算与缺页降级，受控microtask", "resources": []}, "page-actions": {"description": "实际SDK书/章节意图范围、精确reading target与最新Scroll保存", "resources": []}, "storage-policy": {"description": "实际SDK non-preset/fractional容量策略与dirty draft保护", "resources": []}, "storage-actions": {"description": "实际SDK清理确认/取消/最新证明/retired generation且不伪造删除", "resources": []}, "live-theme": {"description": "实际SDK业务控件语义色/当前资源scheme更新", "resources": []}, "host-single-flight": {"description": "完整实际Host同书single-flight与retired拒绝", "resources": []}, "host-index": {"description": "完整实际Host下载revision索引跨页面复用与重复burst单书刷新", "resources": []}, "host-intents": {"description": "实际Host Runtime任务变更刷新、注销observer及批量确认/未决/跳过回执", "resources": []}};
 definitions['sheet-choice'] = { description: '实际下载选项单一点击、稳定 identity、过期面板回调拒绝', resources: [] };
 definitions['overlay-lifecycle'] = { description: '下载面板退场连续返回、嵌套确认焦点和同页陈旧确认', resources: [] };
+definitions['book-status-action'] = { description: '书行按钮以结构化状态决定显示、读屏与动作，覆盖改写文案与陈旧点击', resources: [] };
+definitions['local-action-admission'] = { description: '本地导入书与旧记录的前置业务拒绝、短反馈和后续合法操作', resources: [] };
+definitions['legacy-manga-projection'] = { description: '旧书架无类型时，按实际漫画清单分类并核验图片', resources: [] };
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const downloadNodes = owner => [...(owner.nodes?.values() ?? []), ...[...(owner.children?.values() ?? [])].flatMap(downloadNodes)];
@@ -120,6 +123,54 @@ assert.equal(canCleanDownloadStorage({ ...storageFixture, cleanableBytes: storag
   'the inclusive candidate bound accepts an explicitly proven complete automatic set');
 
 }
+if(selectedCase==='legacy-manga-projection'){
+  const legacy = { ...comic, contentKind: undefined };
+  const calls = [], proofs = [];
+  const load = async (book, proof, identity = entry.chapter.manifest.chapter, chapterIndex = 1) => new SharedDownloadGateway({
+    supportsCoreCapability: capability => capability === 'manga.entry.v1',
+    request: async (method) => {
+      calls.push(method);
+      if (method === 'cache.book.status') return { data: status(book, [row(chapterIndex, 'completed', 0, {
+        mangaManifestVersion: proof,
+      })]) };
+      return { data: { entry: { ...entry, chapter: { ...entry.chapter,
+        manifest: { ...entry.chapter.manifest, chapter: identity } } } } };
+    },
+    isOfflineImageChapterComplete: async proof => { proofs.push(proof); return true; },
+  }).load(book, () => true);
+  const view = await load(legacy, 'v1');
+  assert.equal(view.contentKind, 'manga');
+  assert.equal(view.shelfBook.contentKind, undefined, 'the canonical shelf input is not rewritten');
+  assert.equal(view.chapters[0].stateLabel, '已下载');
+  assert.equal(view.downloadedChapters, 1);
+  assert.deepEqual(calls, ['cache.book.status', 'manga.entry.get']);
+  assert.deepEqual(proofs, [{
+    sourceId: legacy.sourceId, bookId: legacy.bookId, chapterIndex: 1, chapterId: 'chapter:1',
+    contentVersion: 'v1', mangaDecodeRevision: 'identity-v1',
+  }]);
+  assert.equal((await load(legacy, '  ')).contentKind, 'novel', 'an empty manifest does not prove a manga');
+  assert.equal((await load({ ...legacy, contentKind: 'text' }, 'v1')).contentKind, 'novel', 'explicit media kind wins');
+  const beforeInvalidIndex = calls.length;
+  const invalidIndex = await load(legacy, 'v1', undefined, -1);
+  assert.equal(invalidIndex.projectionStatus, 'unavailable');
+  assert.equal(invalidIndex.contentKind, 'novel', 'a rejected catalog cannot prove manga media type');
+  assert.deepEqual(calls.slice(beforeInvalidIndex), ['cache.book.status']);
+  const wrong = await load(legacy, 'v1', { ...entry.chapter.manifest.chapter, chapterId: 'other-chapter' });
+  assert.equal(wrong.chapters[0].localComplete, false);
+  assert.equal(proofs.length, 1, 'foreign manifest cannot count as local artwork');
+  const { bookshelfOperationClass } = await import('./lib/bookshelf-operation-owner-probe.mjs');
+  const Host = bookshelfOperationClass('features/downloads/application/SharedDownloadHost.ts', 'SharedDownloadHost',
+    { ...projection, SharedDownloadGateway, ReaderCoreGateway: class {} });
+  const host = new Host({
+    bookAcquisitions: () => ({ downloadStatusRevision: () => 1 }),
+  }, () => {});
+  host.indexLoadedRow(view, '1:');
+  const updated = { ...legacy, title: 'Updated title' };
+  const reused = host.reuseIndexedRow(createDownloadBookView(updated), '1:');
+  assert.equal(reused?.contentKind, 'manga', 'unchanged Core download revision preserves locally verified manga type');
+  assert.equal(reused?.title, updated.title, 'metadata refresh does not erase the inferred type');
+  assert.equal(host.reuseIndexedRow(createDownloadBookView({ ...updated, contentKind: 'text' }), '1:'), undefined);
+}
 if(selectedCase==='manga-projection'){
 const comicCalls = [], comicParams = [], proofs = [];
 const cachedEntry = (index) => ({ ...entry, chapter: { ...entry.chapter, chapterIndex: index,
@@ -210,7 +261,7 @@ if(selectedCase==='manga-proof-batch'){
   assert.equal(batchCalls.filter(method => method === 'manga.entry.get').length, 9);
 }
 }
-if(['page-actions','storage-policy','storage-actions','live-theme','sheet-choice','overlay-lifecycle'].includes(selectedCase)){
+if(['page-actions','storage-policy','storage-actions','live-theme','sheet-choice','overlay-lifecycle','book-status-action','local-action-admission'].includes(selectedCase)){
 // Run the actual SDK-emitted page callbacks. Native paint is a separate gate.
 const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
 const fixtureChapter=(book,index,complete)=>({key:JSON.stringify([book.sourceId,book.bookId,index]),sourceId:book.sourceId,bookId:book.bookId,index,title:`第${index+1}章`,chapterId:`chapter:${index}`,navigable:true,localComplete:complete,stateLabel:complete?'已下载':'未下载',queueState:'missing'});
@@ -233,6 +284,135 @@ const mixed = projectDownloadBookAvailability(mangaView, [
 ], 2);
 
 const events=[],saved=[];
+if (selectedCase === 'book-status-action' || selectedCase === 'local-action-admission') {
+  const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const { ReaderMenuActionView } = boundedSurfaceSdk().deps;
+  const methods = [...helpers, 'statusButton'];
+  const { owner } = createReaderBuilderProbe(source, methods, {
+    ...projection, ...visual, ...backDependencies, ReaderMenuActionView, readerActionIcon: id => id,
+  });
+  Object.assign(owner, {
+    books: [mixed], detailKey: '', actionBookKeys: [], actionChapters: [],
+    managing: false, mounted: true, appForeground: true, covered: false,
+    presentationIdentity: 'download-action', mountedIdentity: 'download-action', presentationGeneration: 0,
+    sheetOpeningGeneration: 1, sheet: '', confirmation: '', onIntent: intent => events.push(intent),
+  });
+  if (selectedCase === 'book-status-action') {
+    owner.statusButton(() => mixed, 0);
+    const rendered = downloadNodes(owner);
+    const control = rendered.find(node => node.accessibilityText === mixed.title + '，下载失败，暂停');
+    assert.ok(control, 'the actual status action is announced as pause');
+    assert.equal(rendered.find(node => node.type === 'Text')?.create, '暂停');
+    assert.match(String(rendered.find(node => node.type === 'Image')?.create), /download_visual_pause/);
+    control.onClick();
+    assert.deepEqual(events, [{ action: 'pause', scope: 'books', books: [{
+      sourceId: mixed.sourceId, bookId: mixed.bookId, chapterIndices: undefined, expectedChapters: undefined,
+    }] }]);
+    const failed = projectDownloadBookAvailability(mixed, [mixed.chapters[1]], 1);
+    const revisedCopy = { ...failed, stateLabel: '传输中断' };
+    owner.books = [revisedCopy];
+    owner.statusButton(() => revisedCopy, 0);
+    const revisedNodes = downloadNodes(owner);
+    assert.ok(revisedNodes.some(node => node.accessibilityText === revisedCopy.title + '，传输中断，重试'),
+      'the actual retry action is announced despite different display copy');
+    assert.ok(revisedNodes.some(node => node.type === 'Text' && node.create === '重试'));
+    assert.match(String(owner.statusIcon(revisedCopy)), /download_visual_retry/);
+    const sameCopy = { ...view, statusAction: 'range', stateLabel: '下载失败' };
+    assert.match(String(owner.statusIcon(sameCopy)), /download_visual_download/, 'copy alone cannot activate retry');
+    owner.books = [{ ...mangaView, stateLabel: '仍可离线阅读' }];
+    control.onClick();
+    assert.equal(events.length, 1, 'a retained callback cannot send a stale pause once the row is complete');
+  } else {
+    const { bookshelfOperationClass } = await import('./lib/bookshelf-operation-owner-probe.mjs');
+    const { readingOfflineFailureHint } = await import('../entry/src/main/ets/features/reading/presentation/ReadingOfflineFailurePresentation.ts');
+    const { errorMessageOf } = await import('../entry/src/main/ets/app/ErrorMessage.ts');
+    const { classifyReaderSource } = await import('../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
+    const { RemoteReadingFlowGateway } = await import('../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
+    const { ReadingOfflineGateway } = await import('../entry/src/main/ets/features/reading/application/ReadingOfflineGateway.ts');
+    const Coordinator = bookshelfOperationClass('features/downloads/application/SharedDownloadCoordinator.ts',
+      '({ SharedDownloadCoordinator, SharedDownloadProjectionRefreshError, SharedDownloadAdmissionError: typeof SharedDownloadAdmissionError === "undefined" ? undefined : SharedDownloadAdmissionError })',
+      { classifyReaderSource, RemoteReadingFlowGateway, ReadingOfflineGateway, readingOfflineFailureHint });
+    const Host = bookshelfOperationClass('features/downloads/application/SharedDownloadHost.ts', 'SharedDownloadHost',
+      { ...Coordinator, ...projection, SharedDownloadGateway: class {}, ReaderCoreGateway: class {} });
+    const Presentation = bookshelfOperationClass('features/downloads/presentation/SharedDownloadPresentation.ets',
+      'SharedDownloadPresentation', {
+        Observed: value => value, ...projection, readingOfflineFailureHint, errorMessageOf, hilog: { warn() {} },
+      });
+    const book = shelf('local', 'imported');
+    const cached = projectDownloadBookAvailability(createDownloadBookView(book), [fixtureChapter(book, 0, true)], 1, 10);
+    Object.assign(owner, { books: [cached, view], actionBookKeys: [cached.key], sheet: 'book-actions' });
+    const localBookDelete = owner.operationsActions().find(action => action.id === 'deleteLocal');
+    owner.performOperationsAction('deleteLocal', 0, 1);
+    const confirmation = owner.confirmation;
+    owner.sendAction('deleteLocal');
+    owner.sheet = 'chapter-actions';
+    owner.actionChapters = [owner.chapterProof(cached.chapters[0])];
+    const localChapterDelete = owner.operationsActions().find(action => action.id === 'deleteLocal');
+    owner.actionBookKeys = [view.key];
+    owner.actionChapters = [];
+    owner.sheet = 'book-actions';
+    assert.ok(owner.operationsActions().some(action => action.id === 'deleteLocal' && action.enabled), 'remote cache remains deletable');
+    let saves = 0, requests = 0, restores = 0, reloads = 0;
+    const runtime = { getDownloadCoordinator: () => coordinator,
+      request: async () => { requests++; throw Error('unexpected RPC'); },
+    };
+    const coordinator = new Coordinator.SharedDownloadCoordinator(runtime, () => true, {
+      load: async () => { restores++; return []; }, save: async () => { saves++; },
+    });
+    const host = new Host(runtime, () => {});
+    const snapshot = { books: [cached], storageSummary: {}, loading: false, error: '' };
+    host.snapshot = snapshot;
+    host.reload = async () => { reloads++; };
+    const presentation = Object.assign(new Presentation(), {
+      host, snapshot, opening: { owner: runtime, identity: 'current', isRouteCurrent: () => true },
+    });
+    const invalid = { action: 'deleteLocal', scope: 'books', books: [cached] };
+    const feedback = [];
+    for (let attempt = 0; attempt < 2; attempt++) {
+      await presentation.applyIntent('current', invalid, message => feedback.push(message));
+    }
+    assert.deepEqual({
+      bookMenu: localBookDelete?.enabled, chapterMenu: localChapterDelete?.enabled, confirmation, events,
+      feedback, recovery: presentation.batchRecovery.visible, pending: presentation.batchObservations.length,
+      saves, requests, restores, reloads,
+    }, {
+      bookMenu: undefined, chapterMenu: undefined, confirmation: '', events: [],
+      feedback: Array(2).fill('本地导入内容由书籍导入管理，不支持网络下载'), recovery: false, pending: 0,
+      saves: 0, requests: 0, restores: 0, reloads: 0,
+    });
+    const legacy = { ...novel, contentKind: undefined };
+    const legacyView = projectDownloadBookAvailability(createDownloadBookView(legacy), [fixtureChapter(legacy, 0, false)], 1);
+    snapshot.books = [legacyView];
+    const calls = [], legacyFeedback = [];
+    let sourceKind = 1;
+    runtime.request = async (method, params) => {
+      calls.push(method);
+      if (method === 'source.list') return { data: { sources: [{
+        sourceId: legacy.sourceId, bookSource: { bookSourceType: sourceKind },
+      }] } };
+      if (method === 'cache.book.status') return { data: {
+        ...status(legacy, [row(0, 'inProgress', 0, { maxAttempts: 1, variables: [] })]), continuationVariables: [],
+      } };
+      if (method === 'cache.download.pause') return { data: { ...params, status: 'paused' } };
+      throw Error(`unexpected ${method}`);
+    };
+    const intent = { action: 'pause', scope: 'books', books: [legacyView] };
+    const publish = message => legacyFeedback.push(message);
+    for (let attempt = 0; attempt < 2; attempt++) await presentation.applyIntent('current', intent, publish);
+    assert.deepEqual(legacyFeedback, Array(2).fill('当前下载页尚未支持此类内容'));
+    assert.deepEqual(calls, ['source.list', 'source.list'], 'definite rejection never dispatches a write or blocks a later attempt');
+    assert.equal(saves, 0);
+    assert.equal(reloads, 0);
+    assert.equal(presentation.batchRecovery.visible, false);
+    assert.equal(presentation.batchObservations.length, 0);
+
+    sourceKind = 0;
+    await presentation.applyIntent('current', intent, publish);
+    assert.ok(calls.includes('cache.download.pause'), 'a later confirmed text source admits the same operation');
+    assert.equal(legacyFeedback.at(-1), '下载已暂停');
+
+  }
+}
 if(selectedCase==='page-actions'||selectedCase==='storage-policy'){
 const { owner } = createReaderBuilderProbe(source, names, { ...projection, ...visual, ...backDependencies });
 Object.assign(owner, { books: [view, mixed], detailKey: '', actionBookKeys: [mixed.key], actionChapters: [],
@@ -248,7 +428,7 @@ Object.assign(owner, { books: [view, mixed], detailKey: '', actionBookKeys: [mix
   sourceFilter: 'all', sortField: 'recent', sortDirection: 'desc' });
 if(selectedCase==='page-actions'){
 assert.equal(mixed.stateLabel, '下载失败');
-assert.equal(owner.bookIsRunning(mixed), true, 'pause decision must use queue facts, not label text');
+assert.equal(mixed.statusAction, 'pause', 'pause decision uses queue facts');
 owner.sendAction('cancel');
 assert.equal(events[0].scope, 'books');
 assert.equal(events[0].books[0].chapterIndices, undefined);
@@ -683,7 +863,7 @@ for (const scheme of ['day', 'night', 'day']) {
     'the primary matrix action follows the live theme');
   assert.ok(actual.some(node => node.create === '次操作' && node.fontColor === theme('TOK_PRIMARY_DARK')),
     'the tonal matrix action follows the live theme');
-  assert.ok(actual.some(node => node.create === '重试' && node.fontColor === downloadVisualColor('danger', scheme)), 'failure retains demo danger foreground');
+  assert.ok(actual.some(node => node.create === '暂停' && node.fontColor === downloadVisualColor('danger', scheme)), 'mixed running/failure status retains danger foreground');
   const danger = colorProbe.deps.resolveActionSheetSpec('grouped').dangerRole;
   assert.ok(actual.some(node => node.create === '删除本地内容' && node.fontColor === colorProbe.deps.readerAppColor(danger, scheme)),
     'shared sheet renders the destructive row with the live theme');
@@ -793,6 +973,19 @@ if(selectedCase==='host-intents'){
   const snapshots = [], intentHost = new intentExports.SharedDownloadHost({ getDownloadCoordinator: () => coordinator },
     snapshot => snapshots.push(snapshot));
   await intentHost.reload(() => true);
+  const raw = createDownloadBookView(novel);
+  const acceptedView = { ...raw, projectionStatus: 'ready', chapters: [{
+    key: JSON.stringify([raw.sourceId, raw.bookId, 0]), sourceId: raw.sourceId, bookId: raw.bookId,
+    index: 0, chapterId: 'a', title: '第一章', navigable: true, localComplete: false, queueState: 'missing',
+  }], totalChapters: 1 };
+  jobs[0] = { ...jobs[0], status: 'failed', requestedIndexes: [0], error: '短错误' };
+  assert.equal(intentHost.withAcceptedIntent(acceptedView).statusAction, 'retry');
+  jobs[0] = { ...jobs[0], status: 'downloading' };
+  assert.equal(intentHost.withAcceptedIntent(acceptedView).statusAction, 'pause');
+  assert.equal(intentHost.withAcceptedIntent({ ...acceptedView, chapters: [
+    { ...acceptedView.chapters[0], queueState: 'failed' },
+  ] }).statusAction, 'pause', 'a current accepted job remains pausable while chapter status catches up');
+  jobs[0] = { ...jobs[0], status: 'paused', requestedIndexes: [] };
   const beforeIntentLoads = intentLoads, unchanged = snapshots.at(-1).books.find(book => book.key === comicKey);
   jobs[0] = { ...jobs[0], revision: 2, updatedAt: 2 };
   subscriber({ books: [novel, comic], jobs }); subscriber({ books: [novel, comic], jobs });
@@ -805,9 +998,11 @@ if(selectedCase==='host-intents'){
   const { bookshelfOperationClass } = await import('./lib/bookshelf-operation-owner-probe.mjs');
   const { errorMessageOf } = await import('../entry/src/main/ets/app/ErrorMessage.ts');
   const RefreshError = bookshelfOperationClass('features/downloads/application/SharedDownloadCoordinator.ts', 'SharedDownloadProjectionRefreshError');
+  const AdmissionError = bookshelfOperationClass('features/downloads/application/SharedDownloadCoordinator.ts', 'SharedDownloadAdmissionError');
   const { Host, withoutDownloadStorageSummary } = bookshelfOperationClass('features/downloads/application/SharedDownloadHost.ts',
     '({Host: SharedDownloadHost, withoutDownloadStorageSummary})',
-    { SharedDownloadGateway: StatusPort, ReaderCoreGateway: CoreReadPort, SharedDownloadProjectionRefreshError: RefreshError });
+    { SharedDownloadGateway: StatusPort, ReaderCoreGateway: CoreReadPort,
+      SharedDownloadProjectionRefreshError: RefreshError, SharedDownloadAdmissionError: AdmissionError });
   let storageReloads = 0, storageRechecks = 0;
   class StorageHost extends Host {
     resume(snapshot) { this.snapshot = snapshot; this.publish(snapshot); }

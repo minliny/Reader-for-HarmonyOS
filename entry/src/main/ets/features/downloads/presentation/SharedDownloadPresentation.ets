@@ -266,6 +266,7 @@ export class SharedDownloadPresentation {
     }
     if (receipt.requested === 1) {
       if (receipt.stop === 'scopeChanged') return '目录已变化，章节操作未执行，请刷新后重新选择';
+      if (receipt.stop === 'operationRejected') return receipt.error?.message ?? '目标书籍暂不可操作';
       if (receipt.stop === 'operationUnconfirmed') {
         const hint = receipt.error === undefined ? '' : readingOfflineFailureHint(receipt.error);
         const status = '下载操作结果未确认';
@@ -274,11 +275,13 @@ export class SharedDownloadPresentation {
       return '目标书籍暂不可操作，请刷新后重新选择';
     }
     const unconfirmed = receipt.stop === 'operationUnconfirmed' ? 1 : 0;
-    const remaining = receipt.requested - receipt.confirmed - receipt.unavailable - unconfirmed;
+    const rejected = receipt.stop === 'operationRejected' ? 1 : 0;
+    const remaining = receipt.requested - receipt.confirmed - receipt.unavailable - unconfirmed - rejected;
     const parts: string[] = [];
     if (receipt.confirmed > 0) parts.push(`已确认 ${receipt.confirmed} 本`);
     if (receipt.unavailable > 0) parts.push(`目标不可用 ${receipt.unavailable} 本`);
     if (unconfirmed > 0) parts.push('1 本结果未确认');
+    if (rejected > 0) parts.push(`1 本操作未执行${receipt.error === undefined ? '' : `（${receipt.error.message}）`}`);
     if (remaining > 0) parts.push(`${remaining} 本未处理`);
     if (receipt.stop === 'scopeChanged') parts.push('章节目录已变化');
     if (receipt.stop === 'readbackFailed') parts.push('已保存的状态未能读回');

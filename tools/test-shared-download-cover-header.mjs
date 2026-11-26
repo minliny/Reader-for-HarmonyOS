@@ -25,7 +25,7 @@ async function run(id) {
     function fixture(coverSource = source, params = {}) {
       const properties = createArkUIPropertyRuntimeProbe();
       const placeholderClass = createReaderBuilderProbe(placeholder,
-        ['appThemeScheme', 'coverWidth', 'coverHeight', 'glyph', 'kindLabel', 'build', 'x', 'y', 'scaleCoverUnit'],
+        ['appThemeScheme', 'coverWidth', 'coverHeight', 'glyph', 'kindLabel', 'build', 'x', 'y', 'scaleCoverUnit', 'isComic', 'titleUnits'],
         properties.sdk, properties.hooks).Component;
       const probe = createReaderBuilderProbe(coverSource, members,
         { ...properties.sdk, NoCoverCover: placeholderClass }, { ...properties.hooks,
@@ -44,7 +44,7 @@ async function run(id) {
     for (const coverUrl of ['', '   ']) {
       const owner = fixture(source, { coverUrl });
       assert.equal(image(owner), undefined, 'empty/whitespace URLs use only the shared placeholder');
-      assert.deepEqual(coverText(owner), ['实际下载书名', '无封面 · 小说'], 'shared placeholder receives live row metadata');
+      assert.deepEqual(coverText(owner), ['实际下载书名', '小说'], 'shared placeholder receives live row metadata');
     }
     const current = fixture();
     assert.equal(current.children.size, 0, 'valid images do not reveal placeholder text through transparent pixels');
@@ -53,7 +53,7 @@ async function run(id) {
     current.nodes.clear(); current.keys.clear(); current.observers.length = 0;
     current.initialRender();
     assert.equal(image(current), undefined, 'the failed image is no longer admitted by the actual builder');
-    assert.deepEqual(coverText(current), ['实际下载书名', '无封面 · 小说'], 'failed images paint the actual shared placeholder');
+    assert.deepEqual(coverText(current), ['实际下载书名', '小说'], 'failed images paint the actual shared placeholder');
 
     function rejectsRetired(coverSource) {
       for (const patch of [{ bookKey: 'source-b/book-b' }, { coverUrl: 'https://invalid.test/cover-b.png' },

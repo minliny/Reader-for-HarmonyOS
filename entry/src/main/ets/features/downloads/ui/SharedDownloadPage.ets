@@ -803,7 +803,7 @@ export struct SharedDownloadPage {
 
   @Builder
   private statusButton(book: () => DownloadBookView, ownerGeneration: number = this.presentationGeneration) {
-    if (book().stateLabel === '已下载') {
+    if (book().statusAction === 'completed') {
       Row({ space: DOWNLOAD_VISUAL.statusGap }) {
         Image(this.statusIcon(book())).width(DOWNLOAD_VISUAL.statusIconSize).height(DOWNLOAD_VISUAL.statusIconSize);
         Text(book().stateLabel).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
@@ -815,7 +815,7 @@ export struct SharedDownloadPage {
     Button({ type: ButtonType.Normal }) {
       Row({ space: DOWNLOAD_VISUAL.statusGap }) {
         Image(this.statusIcon(book())).width(DOWNLOAD_VISUAL.statusIconSize).height(DOWNLOAD_VISUAL.statusIconSize);
-        Text(book().stateLabel === '下载失败' ? '重试' : book().stateLabel).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
+        Text(this.statusActionLabel(book())).fontFamily(TYPE_DOWNLOAD_META.fontFamily).fontWeight(TYPE_DOWNLOAD_META.fontWeight)
           .fontSize(TYPE_DOWNLOAD_META.fontSizeFp).lineHeight(TYPE_DOWNLOAD_META.lineHeightFp as number).halfLeading(true)
           .fontColor(this.statusInk(book()))
           .textAlign(TextAlign.Center).layoutWeight(1);
@@ -826,12 +826,12 @@ export struct SharedDownloadPage {
       .padding({ left: DOWNLOAD_VISUAL.statusPaddingX, right: DOWNLOAD_VISUAL.statusPaddingX }).borderRadius(DOWNLOAD_VISUAL.statusRadius)
       .backgroundColor(downloadVisualColor('soft', this.appThemeScheme))
       .enabled(!this.managing).opacity(this.managing ? DOWNLOAD_VISUAL.disabledOpacity : 1)
-      .accessibilityText(`${book().title}，${book().stateLabel}${this.bookIsRunning(book()) ? '，暂停' : book().stateLabel === '下载失败' ? '，重试' : ''}`)
+      .accessibilityText(this.statusActionAccessibility(book()))
       .onClick((): void => {
         const current = this.eventBook(book, ownerGeneration);
-        if (this.managing || current === undefined) return;
+        if (this.managing || current === undefined || current.statusAction === 'completed') return;
         this.actionBookKeys = [current.key]; this.actionChapters = [];
-        if (this.bookIsRunning(current)) this.sendAction('pause');
+        if (current.statusAction === 'pause') this.sendAction('pause');
         else { this.prepareRange(current.key); this.openSheet('range', 'book-status:' + current.key); }
       });
     }
@@ -1465,15 +1465,18 @@ export struct SharedDownloadPage {
   }
 
   private operationsActions(): ReaderMenuActionView[] {
+    const books = this.actionBooks();
+    const deletion = books.some((book: DownloadBookView): boolean => book.sourceId !== 'local') ? [
+      new ReaderMenuActionView('deleteLocal', '删除本地内容', this.actionAvailable('deleteLocal', books),
+        readerActionIcon('trash', this.appThemeScheme), '删除本地内容', '', '', '', 'danger'),
+    ] : [];
     if (this.sheet === 'book-actions') {
       if (this.managing && this.detailKey.length === 0) {
         return [
           new ReaderMenuActionView('cancel', '取消下载任务', this.actionAvailable('cancel'), readerActionIcon('close', this.appThemeScheme)),
-          new ReaderMenuActionView('deleteLocal', '删除本地内容', this.actionAvailable('deleteLocal'),
-            readerActionIcon('trash', this.appThemeScheme), '删除本地内容', '', '', '', 'danger'),
+          ...deletion,
         ];
       }
-      const books = this.actionBooks();
       const complete = books.length > 0 && books.every((book: DownloadBookView): boolean => book.projectionStatus === 'ready' &&
         book.totalChapters !== undefined && book.totalChapters > 0 && book.downloadedChapters === book.totalChapters &&
         book.chapters.filter((chapter: DownloadChapterView): boolean => chapter.navigable).length === book.totalChapters &&
@@ -1482,8 +1485,7 @@ export struct SharedDownloadPage {
       return [
         new ReaderMenuActionView(cancel ? 'cancel' : 'download', complete ? '已下载' : cancel ? '取消下载' : '下载',
           !complete && this.actionAvailable(cancel ? 'cancel' : 'download'), readerActionIcon(complete ? 'check' : cancel ? 'close' : 'download', this.appThemeScheme)),
-        new ReaderMenuActionView('deleteLocal', '删除本地内容', this.actionAvailable('deleteLocal'),
-          readerActionIcon('trash', this.appThemeScheme), '删除本地内容', '', '', '', 'danger'),
+        ...deletion,
       ];
     }
     // Chapter actions retain their established download/pause/cancel entries.
@@ -1492,8 +1494,7 @@ export struct SharedDownloadPage {
       new ReaderMenuActionView(running ? 'pause' : 'download', running ? '暂停' : '下载',
         this.actionAvailable(running ? 'pause' : 'download'), readerActionIcon(running ? 'pause' : 'download', this.appThemeScheme)),
       new ReaderMenuActionView('cancel', '取消下载任务', this.actionAvailable('cancel'), readerActionIcon('close', this.appThemeScheme)),
-      new ReaderMenuActionView('deleteLocal', '删除本地内容', this.actionAvailable('deleteLocal'),
-        readerActionIcon('trash', this.appThemeScheme), '删除本地内容', '', '', '', 'danger'),
+      ...deletion,
     ];
   }
 
@@ -2173,9 +2174,6 @@ export struct SharedDownloadPage {
     });
     return choices;
   }
-  private bookIsRunning(book: DownloadBookView): boolean {
-    return book.chapters.some((chapter: DownloadChapterView): boolean => chapter.navigable && this.chapterIsRunning(chapter));
-  }
   private chapterIsRunning(chapter: DownloadChapterView): boolean {
     return !chapter.localComplete && (chapter.queueState === 'inProgress' || chapter.queueState === 'queued');
   }
@@ -2186,10 +2184,19 @@ export struct SharedDownloadPage {
     if (chapter.queueState === 'paused') return '继续';
     return chapter.queueState === 'unknown' ? '' : '下载';
   }
+  private statusActionLabel(book: DownloadBookView): string {
+    const action = book.statusAction;
+    return action === 'pause' ? '暂停' : action === 'retry' ? '重试' : book.stateLabel;
+  }
+  private statusActionAccessibility(book: DownloadBookView): string {
+    const actionLabel = this.statusActionLabel(book);
+    const status = book.stateLabel === actionLabel ? actionLabel : `${book.stateLabel}，${actionLabel}`;
+    return `${book.title}，${status}`;
+  }
   private statusIcon(book: DownloadBookView): Resource {
-    if (book.stateLabel === '已下载') return this.visualIcon('check');
-    if (book.stateLabel === '下载失败') return this.visualIcon('retry');
-    if (this.bookIsRunning(book)) return this.visualIcon('pause');
+    const action = book.statusAction;
+    if (action === 'completed') return this.visualIcon('check');
+    if (action === 'pause' || action === 'retry') return this.visualIcon(action);
     if (book.chapters.some((chapter: DownloadChapterView): boolean => chapter.queueState === 'paused' && !chapter.localComplete)) return this.visualIcon('play');
     return this.visualIcon('download');
   }
@@ -2490,7 +2497,8 @@ export struct SharedDownloadPage {
   }
 
   private removalActionBooks(action: 'cancel' | 'deleteLocal'): DownloadBookView[] {
-    const books = this.actionBooks();
+    const books = this.actionBooks().filter((book: DownloadBookView): boolean =>
+      action !== 'deleteLocal' || book.sourceId !== 'local');
     if (!this.managing || this.detailKey.length > 0) return books;
     return books.filter((book: DownloadBookView): boolean => this.actionAvailable(action, [book], []));
   }
@@ -2530,7 +2538,7 @@ export struct SharedDownloadPage {
   private actionAvailable(action: SharedDownloadUiAction, books: DownloadBookView[] = this.actionBooks(),
     proofs: SharedDownloadExpectedChapter[] = this.actionChapters): boolean {
     return books.some((book: DownloadBookView): boolean => {
-      if (book.projectionStatus !== 'ready') return false;
+      if (book.projectionStatus !== 'ready' || (action === 'deleteLocal' && book.sourceId === 'local')) return false;
       const chapters = this.actionChapterRows(book, proofs);
       if (proofs.length > 0 && chapters.length !== proofs.length) return false;
       if (action === 'download') return chapters.some((chapter: DownloadChapterView): boolean => !chapter.localComplete && chapter.queueState !== 'unknown');

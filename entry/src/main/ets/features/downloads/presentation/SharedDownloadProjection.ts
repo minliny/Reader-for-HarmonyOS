@@ -17,6 +17,7 @@ export class SharedDownloadActionTarget {
   }
 }
 export type DownloadBookState = 'downloading' | 'downloaded' | 'none';
+export type DownloadBookStatusAction = 'pause' | 'retry' | 'range' | 'completed';
 export type DownloadProjectionStatus = 'unloaded' | 'ready' | 'unavailable';
 
 /** Verified storage-owner measurements; unknown is never a bookshelf estimate. */
@@ -88,6 +89,8 @@ export interface DownloadBookView {
   totalChapters?: number;
   downloadedChapters?: number;
   state?: DownloadBookState;
+  /** Book-row control derived from current queue and verified availability. */
+  statusAction: DownloadBookStatusAction;
   /** Finite availability label. Failure explanations never become action captions. */
   stateLabel: string;
   /** Accepted Runtime task failure; independent of a metadata/projection read failure. */
@@ -150,7 +153,7 @@ export function createDownloadBookView(book: ShelfBook): DownloadBookView {
     sourceId: book.sourceId, bookId: book.bookId, coverUrl: book.coverUrl,
     title: book.title, author: book.author,
     sourceLabel: book.sourceName ?? (book.sourceId === 'local' ? '本地' : ''),
-    contentKind, recentRead: book.lastReadAt, chapters: [], stateLabel: '',
+    contentKind, recentRead: book.lastReadAt, chapters: [], stateLabel: '', statusAction: 'range',
     projectionStatus: contentKind === undefined ? 'unavailable' : 'unloaded',
     projectionError: contentKind === undefined ? '当前下载页尚未支持音频内容' : undefined,
   };
@@ -196,7 +199,9 @@ export function projectDownloadBookAvailability(view: DownloadBookView,
     downloadedChapters > 0 ? 'downloaded' : totalChapters !== undefined ? 'none' : undefined;
   const stateLabel = failed ? '下载失败' : active ? '下载中' : paused ? '已暂停' :
     downloadedChapters > 0 ? '已下载' : state === 'none' ? '未下载' : '';
-  return { ...view, chapters, totalChapters, downloadedChapters, state, stateLabel, bytes,
+  const statusAction: DownloadBookStatusAction = active ? 'pause' : failed ? 'retry' :
+    state === 'downloaded' ? 'completed' : 'range';
+  return { ...view, chapters, totalChapters, downloadedChapters, state, stateLabel, statusAction, bytes,
     progressPercent: totalChapters === undefined || totalChapters === 0 ? undefined :
       Math.min(100, Math.round(downloadedChapters / totalChapters * 100)),
     projectionStatus: 'ready', projectionError: undefined };

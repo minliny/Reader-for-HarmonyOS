@@ -24,10 +24,10 @@ class ClearIntentPort {
     assert.equal(current(), true); return qualify((await this.runtime.request(method, params)).data);
   }
 }
-const { SharedDownloadCoordinator, SharedDownloadProjectionRefreshError } = new Function('ReadingOfflineGateway', 'RemoteReadingFlowGateway',
+const { SharedDownloadCoordinator, SharedDownloadProjectionRefreshError, SharedDownloadAdmissionError } = new Function('ReadingOfflineGateway', 'RemoteReadingFlowGateway',
   'MangaDownloadActionsGateway', 'CacheClearOperationIntentStore', 'SharedDownloadIntentPreferences',
   'readingOfflineFailureHint', 'classifyReaderSource',
-  `${executable}\nreturn { SharedDownloadCoordinator, SharedDownloadProjectionRefreshError };`)(ReadingOfflineGateway, RemoteReadingFlowGateway,
+  `${executable}\nreturn { SharedDownloadCoordinator, SharedDownloadProjectionRefreshError, SharedDownloadAdmissionError };`)(ReadingOfflineGateway, RemoteReadingFlowGateway,
   MangaDownloadActionsGateway, ClearIntentPort, class { constructor() { throw Error('test persistence must be explicit'); } },
   readingOfflineFailureHint, classifyReaderSource);
 
@@ -474,14 +474,14 @@ if(id==='intent-flush'){
 if(id==='legacy-book-kind'){
 const book = { sourceId: 'source', bookId: 'legacy-book', title: 'Fixture book', author: '', addedAt: 1 };
 const source = { sourceId: book.sourceId, name: 'Fixture novels', bookSource: { bookSourceType: 0 } };
-for (const [name, sources] of [
+for (const [name, sources, knownUnsupported] of [
   ['exact text source', [source]],
   ['foreign source', [{ ...source, sourceId: 'other' }]],
   ['ambiguous source', [source, source]],
-  ['audio', [{ ...source, bookSource: { bookSourceType: 1 } }]],
+  ['audio', [{ ...source, bookSource: { bookSourceType: 1 } }], true],
   ['missing kind', [{ ...source, bookSource: {} }]],
   ['null kind', [{ ...source, bookSource: { bookSourceType: null } }]],
-  ['misdeclared file source', [{ ...source, name: 'download list' }]],
+  ['misdeclared file source', [{ ...source, name: 'download list' }], true],
 ]) {
   const f = fixture(); f.setAutomatic(true);
   const request = f.runtime.request.bind(f.runtime);
@@ -502,7 +502,9 @@ for (const [name, sources] of [
     assert.deepEqual(f.calls.filter(call => call[0] === 'cache.book.prefetch').map(call => call[1].chapterRange), [[4, 5]]);
     assert.ok(f.calls.findIndex(call => call[0] === 'flush') < f.calls.findIndex(call => call[0] === 'cache.book.prefetch'));
   } else {
-    await assert.rejects(submit(), /下载内容类型需要重新确认/, name);
+    await assert.rejects(submit(), error => knownUnsupported ?
+      error instanceof SharedDownloadAdmissionError && error.message === '当前下载页尚未支持此类内容' :
+      !(error instanceof SharedDownloadAdmissionError) && error.message === '下载内容类型需要重新确认', name);
     assert.deepEqual(f.calls.map(call => call[0]), ['source.list'], `${name} never reaches catalog or intent writes`);
   }
   await f.close();

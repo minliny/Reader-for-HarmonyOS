@@ -306,7 +306,7 @@ const book = {
 const another = {
   ...projection.createDownloadBookView({ sourceId: 'source-two', bookId: 'book-two', title: '漫画示例',
     author: '作者', sourceName: '另一书源', contentKind: 'manga', addedAt: 2 }),
-  downloadedChapters: 1, totalChapters: 2, state: 'downloaded', stateLabel: '已下载',
+  downloadedChapters: 1, totalChapters: 2, state: 'downloaded', stateLabel: '已下载', statusAction: 'completed',
   progressPercent: 50, projectionStatus: 'ready',
 };
 function owner(scheme = 'day', changes = {}, Component = probe.Component) {
@@ -812,14 +812,13 @@ if (selectedCase === 'book-row-input-owners') {
   const click = Object.freeze({ x: 12, y: 12, windowX: 12, windowY: 12, timestamp: 1 });
   assert.ok(Object.keys(click).every(name => clickApi.has(name)));
   for (const contentKind of [undefined, 'text', 'manga']) for (const managing of [false, true]) {
-    const dto = { ...book, contentKind, stateLabel: '下载中' };
+    const dto = { ...book, contentKind, stateLabel: '下载中', statusAction: 'pause' };
     const row = owner('day', { books: [dto], managing });
     const intent = [];
     row.onOpenBook = () => intent.push('open');
     row.toggleBook = (key, selected) => intent.push(['select', key, selected]);
     row.openSheet = kind => intent.push(kind);
     row.sendAction = kind => intent.push(kind);
-    row.bookIsRunning = () => true;
     row.bookRow(() => dto, false);
     const all = records(row);
     const carrier = all.find(n => n.type === 'Stack' && n.width === 44 && n.height === 24);
@@ -881,8 +880,8 @@ if (selectedCase === 'book-row-density') {
     windowMetrics.systemFontScale = scale;
     platformFontScale = scale;
     for (const secondary of [false, true]) for (const managing of [false, true]) {
-      for (const stateLabel of ['下载中', '下载失败', '已下载']) {
-        const dto = { ...book, title: '短书名', author: '作者', sourceName: '书源', stateLabel, downloadError: '' };
+      for (const [stateLabel, statusAction] of [['下载中', 'range'], ['下载失败', 'retry'], ['已下载', 'completed']]) {
+        const dto = { ...book, title: '短书名', author: '作者', sourceName: '书源', stateLabel, statusAction, downloadError: '' };
         const row = owner('day', { books: [dto], managing });
         row.bookRow(() => dto, secondary);
         const cover = find(row, node => node.type === 'Image' && node.create === dto.coverUrl, 'actual cover');
@@ -1054,7 +1053,7 @@ for(const scheme of ['day','night']){
  assert.equal(closing.sheetActorAttachment,successor,'old exit callbacks cannot retire the next opening');
  assert.deepEqual(closing.sheetActors,['scrim'],'old exit callback leaves the next Native actor admitted');
  const row=owner(scheme);row.bookRow(()=>book,false);const title=text(row,book.title),meta=text(row,row.authorSource(book));assert.ok(title.maxLines===undefined||title.maxLines>1);assert.ok(meta.maxLines===undefined||meta.maxLines>1);const image=find(row,n=>n.type==='Image'&&n.create===book.coverUrl,'actual cover'),copy=find(row,n=>n.type==='Column'&&n.layoutWeight===1&&n.onAreaChange,'measured book copy');assert.equal(copy.height,undefined);const old=image.height;copy.onAreaChange({}, {height:old+57});row.replay();propertyRuntime.flush();assert.equal(image.height,old+57);
- const status=owner(scheme);status.statusButton(()=>book);assert.equal(argb(text(status,'下载中').fontColor),argb(visual.downloadVisualColor('green',scheme)));const failed=owner(scheme);failed.statusButton(()=>({...book,stateLabel:'下载失败'}));assert.equal(argb(text(failed,'重试').fontColor),argb(visual.downloadVisualColor('danger',scheme)));
+ const status=owner(scheme);status.statusButton(()=>book);assert.equal(argb(text(status,'下载中').fontColor),argb(visual.downloadVisualColor('green',scheme)));const failed=owner(scheme);failed.statusButton(()=>({...book,stateLabel:'下载失败',statusAction:'retry'}));assert.equal(argb(text(failed,'重试').fontColor),argb(visual.downloadVisualColor('danger',scheme)));
  assert.match(find(failed,n=>n.type==='Button'&&typeof n.accessibilityText==='string','failure action keeps its state semantics').accessibilityText,/下载失败.*重试/);
  for (const result of [header, row, status, failed]) {
   for (const actor of inline.walk(result)) {
