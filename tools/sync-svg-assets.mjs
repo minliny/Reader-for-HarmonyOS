@@ -15,6 +15,7 @@ import {
   SVG_RADIX_COMPONENT_SOURCES,
   svgRadixSheetRecipes,
   svgAssetRecipes,
+  svgSourceOnlyRecipes,
   svgThemeVariantRecipe,
   SVG_DOWNLOAD_LUCIDE_PACKAGE,
   SVG_DOWNLOAD_LUCIDE_SOURCES,
@@ -244,7 +245,7 @@ export async function renderSvgSource(recipe) {
     } };
   }
   if (recipe.originType === 'theme-palette-derived') {
-    const base = svgAssetRecipes.find(value => value.file === recipe.baseFile);
+    const base = [...svgAssetRecipes, ...svgSourceOnlyRecipes].find(value => value.file === recipe.baseFile);
     assert.ok(base && base.originType !== 'theme-palette-derived', 'night variant requires an original trusted design asset');
     if (recipe.paletteRole) assert.deepEqual(recipe, [...svgActionForegroundRecipes, ...svgControlForegroundRecipes]
       .find(value => value.file === recipe.file), 'explicit foreground adapters must use a registered finite recipe');

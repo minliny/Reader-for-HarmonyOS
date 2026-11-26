@@ -20,6 +20,7 @@ export struct ReaderBottomNavigation {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop current: string = 'bookshelf';
   @Prop inputEnabled: boolean = true;
+  @Prop actionGeneration: number = 0;
   onSelect: (key: string) => void = (_key: string): void => {};
   onCurrentTap: (key: string) => void = (_key: string): void => {};
   private mounted: boolean = false;
@@ -45,7 +46,7 @@ export struct ReaderBottomNavigation {
     ReaderBottomTabBar({
       items: this.items(), current: this.current, scheme: this.appThemeScheme,
       surfaceWidth: this.bottomBarFrame().width,
-      fontScale: this.navigationFontScale(), inputEnabled: this.inputIsEnabled(),
+      fontScale: this.navigationFontScale(), inputEnabled: this.inputIsEnabled(), actionGeneration: this.actionGeneration,
       onSelect: (key: string): void => { if (this.acceptsInput(key)) this.onSelect(key); },
       onCurrentTap: (key: string): void => { if (this.acceptsInput(key)) this.onCurrentTap(key); },
       onGeometryTrace: (width: number, paintReady: boolean): void => this.recordTabGeometry(width, paintReady),

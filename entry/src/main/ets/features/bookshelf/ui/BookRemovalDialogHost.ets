@@ -57,9 +57,9 @@ export struct BookRemovalDialogHost {
       customStyle: true,
       autoCancel: true,
       maskColor: readerAppColor('app.scrim.modal', scheme),
-      // Reduced motion leaves the native dialog geometry still.
+      // The content owns the reduced entrance fade after its first layout.
       openAnimation: { duration: reducedMotion ? 0 : openDuration, curve },
-      closeAnimation: { duration: reducedMotion ? 0 : closeDuration, curve },
+      closeAnimation: reducedMotion ? readerMotionReducedFadeParam() : { duration: closeDuration, curve },
       cancel: (): void => presentation.nativeDismissed(id),
       onWillDisappear: beginBackdropExit,
       onDidDisappear: (): void => {

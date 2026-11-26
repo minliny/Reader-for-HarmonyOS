@@ -135,6 +135,8 @@ export struct SettingsPage {
   @State private paneWidth: number = 0;
   private selectAnchors: Record<string, SettingsSelectAnchor> = {};
   @Prop homeScrollY: number = 0;
+  @Prop sharedBottomNavigationHeight: number = -1;
+  @Prop homeScrollTopRequest: number = 0;
   private readonly homeScroller: Scroller = new Scroller();
   onBack: () => void = (): void => {};
   onHomeScrollDeparture: (y: number) => void = (_y: number): void => {};
@@ -282,6 +284,8 @@ export struct SettingsPage {
       embeddedWide: this.embeddedWide,
       homeScroller: this.homeScroller, homeScrollY: this.homeScrollY,
       navigationGeneration: this.navigationGeneration,
+      sharedBottomNavigationHeight: this.sharedBottomNavigationHeight,
+      homeScrollTopRequest: this.homeScrollTopRequest,
       tapBottomScrollTop: this.tapBottomScrollTopValue,
       reduceMotion: this.appReduceMotion,
       onSectionChange: (section: 'home' | 'general'): void => {

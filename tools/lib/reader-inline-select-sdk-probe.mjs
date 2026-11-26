@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
-import {boundedMembers} from './bounded-surface-sdk-probe.mjs';
+import {boundedMembers,readerSurfaceSpecsForProbe} from './bounded-surface-sdk-probe.mjs';
 import {createArkUIPropertyRuntimeProbe} from './arkui-property-runtime-probe.mjs';
 import {choiceRowProbe,choiceSource,resolveReaderChoiceSpec} from './reader-choice-row-probe.mjs';
 import {readerTypographyRoles} from './reader-typography-probe.mjs';
@@ -30,9 +30,10 @@ export function inlineSelectSdk({properties=createArkUIPropertyRuntimeProbe(),ui
  const enums=name=>new Proxy({},{get:(_,key)=>name+'.'+String(key)}),curves=new Proxy({},{get:(_,name)=>(...args)=>({nativeCurve:String(name),args})});
  const motion=pureModuleProbe(read('MotionSpec','foundation'),'MotionSpec.ets',{...timing,curves,Curve:enums('Curve'),SOURCE_SWITCH_VISUAL,MANGA_DIRECTORY_VISUAL},['motionAnimateParam','motionSpecGet']);
  const policy=pureModuleProbe(read('ReaderMotionPolicy','foundation'),'ReaderMotionPolicy.ets',{...motion,collapseMotionDurationMs},['readerMotionAnimateParam','readerMotionReducedFadeParam']);
+ const {readerSurfaceElevation}=readerSurfaceSpecsForProbe(dependencies.readerWindowMetrics?.());
  const choice=choiceRowProbe(resolveReaderChoiceSpec,choiceSource,properties,dependencies.readerWindowMetrics);
  const hooks={...properties.hooks,mountChildren:true,lifecycleChildren:true,allowEmptyBranchAdmission:true,childSources:{...choice.hooks.childSources}};
- const deps={...properties.sdk,...readerFoundationTokens,...readerTypographyRoles,...appearance,...geometry,readerInteractiveSafeLeft,readerInteractiveSafeRight,readerInteractiveSafeTop,readerInteractiveSafeBottom,readerKeyboardHostBottom,...motion,...policy,...choice.dependencies,readerAppColor,registerReaderFonts(){},uiContext,Placement:enums('Placement'),Curve:enums('Curve'),...dependencies};
+ const deps={...properties.sdk,...readerFoundationTokens,...readerTypographyRoles,...appearance,...geometry,readerInteractiveSafeLeft,readerInteractiveSafeRight,readerInteractiveSafeTop,readerInteractiveSafeBottom,readerKeyboardHostBottom,...motion,...policy,...choice.dependencies,readerAppColor,readerSurfaceElevation,registerReaderFonts(){},uiContext,Placement:enums('Placement'),Curve:enums('Curve'),BlurStyle:enums('BlurStyle'),...dependencies};
  for(const name of ['ReaderSelect','ReaderSelectPanel','ReaderInlineSelect']){
   const source=read(name);hooks.childSources[name]=source;
   const moduleNames=name==='ReaderSelect'?['TRIGGER_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H']:name==='ReaderSelectPanel'?['OPTION_H','SELECT_PAD','CHEVRON_GAP','CHEVRON_W','CHEVRON_H','SELECT_CHROME']:[];
@@ -40,7 +41,7 @@ export function inlineSelectSdk({properties=createArkUIPropertyRuntimeProbe(),ui
   const localClasses=name==='ReaderSelectPanel'?pureModuleProbe(source.slice(0,source.indexOf('@Component')),
     'ReaderSelectPanelFrames.ets',{...deps,FrameCallback:class{}},['ReaderSelectParentFrame']):{};
   deps[name]=createReaderBuilderProbe(source,boundedMembers(source),{...deps,...values,...localClasses,
-    TransitionEffect:deps.TransitionEffect??{IDENTITY:{animation:params=>({kind:'identity',animation:params})}}},hooks).Component;
+    TransitionEffect:deps.TransitionEffect??{OPACITY:{animation:params=>({kind:'opacity',animation:params})}}},hooks).Component;
  }
  const walk=owner=>[owner,...[...(owner.children?.values()??[])].flatMap(walk)],nodes=owner=>walk(owner).flatMap(actor=>[...(actor.nodes?.values()??[])]);
  return{dependencies:deps,hooks,properties,walk,nodes,

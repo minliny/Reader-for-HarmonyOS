@@ -201,7 +201,7 @@ if (selectedCase === 'confirmation-admission') {
         ['Color.Transparent', 'HitTestMode.None', 'no-hide-descendants', false]);
       assert.equal(nativeController.options.maskColor, readerAppColor('app.scrim.modal', themeScheme));
       assert.deepEqual([nativeController.options.openAnimation.duration, nativeController.options.closeAnimation.duration],
-        reduceMotion ? [0, 0] : [220, 180]);
+        reduceMotion ? [0, 120] : [220, 180]);
       assert.equal(f.currentDialog().reducedMotion, reduceMotion, 'the native builder forwards the opening preference');
       if (!reduceMotion) {
         assert.deepEqual(nativeController.options.openAnimation.curve, [0.2, 0, 0, 1]);

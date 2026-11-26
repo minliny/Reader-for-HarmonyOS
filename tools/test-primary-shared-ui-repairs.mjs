@@ -559,8 +559,11 @@ for (const id of selectContractCases(definitions)) {
     const accessibility = pureModuleProbe(read('ui/controls/ReaderActionAccessibility.ets'), 'ReaderActionAccessibility.ets',
       { AccessibilityRoleType: { BUTTON: 'AccessibilityRoleType.BUTTON' } }, ['ReaderActionAccessibility']);
     const properties = createArkUIPropertyRuntimeProbe();
+    const ReaderPressFeedback = productionReaderPressFeedback({ ColorMetrics: {
+      resourceColor: color => ({ blendColor: () => ({ color: 'pressed-group-chip' }) }),
+    } });
     const owner = createReaderBuilderProbe(source, boundedMembers(source), { ...properties.sdk, ...readerTypographyRoles, readerAppColor,
-      ...accessibility }, properties.hooks).owner;
+      ReaderPressFeedback, ...accessibility }, properties.hooks).owner;
     Object.assign(owner, { selectedGroup: '收藏分组', groups: [{ groupId: 2, groupName: '收藏分组' }],
       busy: false, appThemeScheme: 'day' }); owner.initialRender();
     const button = nodes(owner).find(node => node.type === 'Button' && node.accessibilityText === '默认分组');
@@ -569,6 +572,13 @@ for (const id of selectContractCases(definitions)) {
     assert.equal(button.backgroundColor, 'Color.Transparent');
     assert.equal(paint.borderRadius, (readerTypographyRoles.TYPE_APP_FILTER_OPTION.lineHeightFp + 10) / 2);
     assert.deepEqual(paint.padding, { left: 12, right: 12, top: 5, bottom: 5 });
+    assert.equal(paint.fontColor, readerAppColor('TOK_INK', 'day'));
+    const modifier = owner.attributeCalls.find(call => call.id === button.id && call.property === 'attributeModifier').args[0];
+    const pressed = {};
+    const pressPort = new Proxy({}, { get: (_object, key) => value => { pressed[key] = value; return pressPort; } });
+    modifier.applyPressedAttribute(pressPort);
+    assert.equal(pressed.backgroundColor, 'pressed-group-chip');
+    assert.equal(pressed.borderRadius, 999);
     const choices = [];
     owner.onSelect = group => choices.push(group);
     const clear = nodes(owner).find(node => node.type === 'Button' && node.accessibilityText === '清除分组');

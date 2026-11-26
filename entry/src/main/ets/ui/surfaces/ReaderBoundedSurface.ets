@@ -3,6 +3,7 @@ import { PopupSurfaceSpec, READER_GLASS_BLUR_VP, READER_HEAVY_GLASS_BLUR_VP, rea
   resolvePopupSpec, resolveSheetSpec, resolveDialogSpec, resolveDrawerSpec,
   type SheetSpecId } from './ReaderSurfaceSpecs';
 import { ReaderInsetsVp } from '../foundation/ReaderWindowMetrics';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 
 export type ReaderBoundedSurfaceId = 'source-switch-window' | 'source-switch-drawer' | 'reader-action-sheet' | 'tts-config-manager' | 'tts-config-picker' | SheetSpecId | 'local-import-selection' | 'local-import-progress' | 'local-import-result-content' | 'reader-replace-editor';
 
@@ -79,13 +80,14 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
     }
     instance.border({ width: spec.borderWidth, color: readerAppColor(spec.surfaceBorderRole, this.scheme) })
       .borderRadius(this.id === 'tts-config-picker' ? 14 : spec.borderRadius);
-    if (this.id !== 'source-switch-window') instance.constraintSize({
-      maxWidth: this.id === 'tts-config-manager' ? spec.width : this.width, maxHeight: '100%',
-    }).shadow({
-        radius: this.id === 'tts-config-picker' ? 36 : spec.shadowRadius,
+    if (this.id !== 'source-switch-window') {
+      const density = readerWindowMetrics().densityPixels;
+      instance.constraintSize({ maxWidth: this.id === 'tts-config-manager' ? spec.width : this.width, maxHeight: '100%' }).shadow({
+        radius: (this.id === 'tts-config-picker' ? 36 : spec.shadowRadius) * density,
         color: readerAppColor(this.id === 'tts-config-picker' ? 'app.shadow.readerConfigSecondary' : spec.surfaceShadowRole, this.scheme),
-        offsetY: this.id === 'tts-config-picker' ? 14 : spec.shadowOffsetY,
+        offsetY: (this.id === 'tts-config-picker' ? 14 : spec.shadowOffsetY) * density,
       }).clip(true);
+    }
   }
 }
 

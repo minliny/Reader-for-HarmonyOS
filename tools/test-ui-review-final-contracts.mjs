@@ -306,7 +306,7 @@ async function multiSelectForegroundRecovery(source = read('features/bookshelf/u
     const page = sdk.consumer(source, ['appForeground', 'appReduceMotion', 'appThemeScheme', 'books', 'ready', 'busy',
       'selectedKeys', 'selectionTopBar', 'selectionHeading', 'selectionAction', 'removeBar', 'selectionInputEnabled',
       'selectionRowAction', 'currentBook', 'toggleAll', 'allSelected', 'canRemoveSelection', 'removeVisibleSelection',
-      'reconcileSelection', 'canRetainSelectedKey', 'hasBookKey', 'bookKey', 'isSelected', 'visibleBooks'], {
+      'reconcileSelection', 'hasBookKey', 'bookKey', 'isSelected', 'visibleBooks'], {
       ...action, ShelfBookPresentation, APP_HEADER_BAR_HEIGHT: 52,
     });
     const calls = [];

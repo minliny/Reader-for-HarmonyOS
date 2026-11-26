@@ -7,6 +7,7 @@ import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { TOK_SPACE_SM } from '../../../ui/foundation/ReaderTokens';
 import { ReaderNativeAlertOwner, type ReaderNativeAlertOptions } from '../../../ui/platform/ReaderNativeAlertOwner';
 import { CategorySection } from '../../settings/ui/CategorySection';
@@ -19,6 +20,7 @@ const RECOVERY_PASSPHRASE_WIDTH = 168;
 export struct LocalRecoveryPanel {
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @Prop @Watch('refreshOpening') navigationGeneration: number = 0;
+  editingHost: ReaderEditingVisibility | undefined = undefined;
   isInputAllowed: () => boolean = (): boolean => true;
   @State private passphrase: string = '';
   @State private checking: boolean = true;
@@ -169,7 +171,7 @@ export struct LocalRecoveryPanel {
 
   @Builder
   private passphraseField() {
-    ReaderFormField({ scheme: this.scheme, specId: 'sync-credential', text: this.passphrase, password: true,
+    ReaderFormField({ editingHost: this.editingHost, scheme: this.scheme, specId: 'sync-credential', text: this.passphrase, password: true,
       placeholder: '恢复包口令', fieldAccessibilityLabel: '恢复包口令', isEditable: this.active === undefined,
       onTextChange: (value: string): void => {
         if (this.mounted && this.isInputAllowed() && this.active === undefined) this.passphrase = value;

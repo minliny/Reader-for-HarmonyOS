@@ -111,7 +111,7 @@ function checkDetails(owner, currentBook = book) {
     const details = [...owner.children.values()].find(child => child.book?.bookId === currentBook.bookId && child.nodes);
     assert.ok(details, 'consumer mounts actual shared details child');
     const all = nodes(details), root = all.find(node => node.type === 'Column');
-    assert.equal(root.height, Math.max(88, details.textFrame.height), 'content and cover use the same inner height');
+    assert.equal(root.height, Math.max(88, details.textFrame.height), 'details reserve the full text lane');
     assert.equal(root.justifyContent, 'FlexAlign.SpaceBetween');
     for (const value of [currentBook.title, currentBook.author, ShelfBookPresentation.listReadingPosition(currentBook),
         ShelfBookPresentation.listSecondary(currentBook)].filter(Boolean)) {
@@ -276,7 +276,8 @@ function projectionFrame(candidate = shelf('BookshelfPage')) {
             near(step, rowHeight + readerFoundationTokens.TOK_SPACE_CONTROL_INLINE, 'projection step pays the current list height and gap');
             near(owner.projectionRowHeight(Array(projectionBookCount).fill(book), expanded, 0), rowHeight * 3 + readerFoundationTokens.TOK_SPACE_CONTROL_INLINE * 2,
                 'projection row pays three list lines and two gaps');
-            assert.equal(owner.listCoverHeight(expanded), 88, 'both width classes share the nominal cover height');
+            near(owner.listCoverHeight(expanded), grid.bookshelfCoverHeight(62, expanded),
+                'both width classes preserve the grid cover aspect ratio in list mode');
             assert.equal(owner.listCoverWidth(expanded), 62, 'both width classes share the nominal cover width');
             owner.viewMode = 'cover';
             owner.replay();
@@ -440,6 +441,7 @@ function shelfFilterTargets(candidate = shelf('BookshelfPage')) {
         Object.assign(owner, {
             appThemeScheme: 'day', contentFilter: 'manga', sourceFilter: 'online',
             mounted: true, navigationGeneration: 7, feedbackEnabled: true, isCurrentShelfInput: () => true,
+            shelfPressed: () => false,
             queueShelfProjection: () => projectionRequests.push('current'),
             setFilterExpanded: value => collapseRequests.push(value),
         });
@@ -464,11 +466,17 @@ function shelfFilterTargets(candidate = shelf('BookshelfPage')) {
         assert.ok(targets.reduce((width, target) => width + target.constraintSize.minWidth, 0) +
             readerFoundationTokens.TOK_SPACE_MD * 2 <= lane, 'both 44vp targets and their two parent gaps fit the safe lane');
         const chips = all.filter(node => node.type === 'Button' && !targetLabels.includes(node.accessibilityText));
+        const chipPaint = all.filter(node => node.type === 'Row' && node.constraintSize?.maxWidth === 160);
         assert.equal(chips.length, 6);
+        assert.equal(chipPaint.length, 6);
         for (const chip of chips) {
-            assert.equal(chip.padding.left, 12);
-            assert.equal(chip.padding.right, 12);
-            assert.equal(chip.constraintSize.minWidth, undefined, 'longer chips retain their existing natural-width recipe');
+            assert.equal(chip.padding, 0);
+            assert.equal(chip.constraintSize.minWidth, 44, 'chip button pays the native minimum target');
+        }
+        for (const paint of chipPaint) {
+            assert.equal(paint.padding.left, 12);
+            assert.equal(paint.padding.right, 12);
+            assert.equal(paint.constraintSize.minWidth, undefined, 'chip paint retains the natural-width recipe');
         }
         assert.equal(targets[0].enabled, true);
         targets[0].onClick();
@@ -580,7 +588,7 @@ for (const id of selectContractCases(definitions)) {
         assert.throws(() => selectionFrame(short), /shared text height|same actor list budget/);
         const details = detailsSource.replace('height(this.targetHeight)', 'height(72)');
         assert.notEqual(details, detailsSource);
-        assert.throws(() => selectionFrame(selectionSource, details), /content and cover/);
+        assert.throws(() => selectionFrame(selectionSource, details), /full text lane/);
         const header = selectionSource.replace('.constraintSize({ minWidth: 72, minHeight: READER_ACTION_MIN_TARGET }).flexShrink(0)', '.width(72).height(44)');
         assert.notEqual(header, selectionSource);
         assert.throws(() => selectionFrame(header));
@@ -588,7 +596,8 @@ for (const id of selectContractCases(definitions)) {
     if (id === 'shelf-projection-frame') {
         projectionFrame();
         const source = shelf('BookshelfPage');
-        const short = source.replace('return Math.max(this.listCoverHeight(expandedLayout), this.listTextFrame(expandedLayout).height);', 'return this.listCoverHeight(expandedLayout);');
+        const short = source.replace('return Math.max(BOOKSHELF_LIST_COVER_HEIGHT, this.listTextFrame(expandedLayout).height);',
+            'return BOOKSHELF_LIST_COVER_HEIGHT;');
         assert.notEqual(short, source);
         assert.throws(() => projectionFrame(short), /five-line details height|retained details/);
     }

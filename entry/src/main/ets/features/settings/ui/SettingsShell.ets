@@ -17,6 +17,8 @@ export struct SettingsShell {
   @Prop routeCurrent: boolean = true;
   @Prop embeddedWide: boolean = false;
   @Prop navigationGeneration: number = 0;
+  @Prop sharedBottomNavigationHeight: number = -1;
+  @Prop @Watch('scrollHomeToTop') homeScrollTopRequest: number = 0;
   @Prop tapBottomScrollTop: boolean = true;
   @Prop reduceMotion: boolean = false;
   @Prop showOverlay: boolean = false;
@@ -61,6 +63,7 @@ export struct SettingsShell {
         floatingHeader: true,
         standardInitialScrollY: this.homeScrollY,
         navigationGeneration: this.navigationGeneration,
+        sharedBottomNavigationHeight: this.sharedBottomNavigationHeight,
         onMainTab: (key: string): void => this.onMainTab(key),
         onCurrentTabTap: (_key: string): void => this.scrollHomeToTop(),
         content: (): void => { this.homeContent(); },

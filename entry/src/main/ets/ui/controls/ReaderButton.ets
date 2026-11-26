@@ -237,14 +237,15 @@ export struct ReaderButton {
           } else {
             Text(this.label, this.textLayoutOptions).attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale()));
           }
-        }.scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
-          .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion))
+        }.opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion))
           .animation(readerPressAnimation(this.reduceMotion))
           .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
       }.padding(0).backgroundColor(Color.Transparent).borderRadius(0).opacity(1)
         .type(resolveReaderButtonSpec(this.specId).radius === 999 ? ButtonType.Capsule : ButtonType.Normal)
         .accessibilityRole(AccessibilityRoleType.BUTTON)
         .attributeModifier(new ReaderButtonFrameModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth, this.fontScale(), this.selectionSemantic))
+        .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
+        .animation(readerPressAnimation(this.reduceMotion))
         .enabled(this.actionEnabled)
         .id(this.focusId)
         .onFocus((): void => { if (this.mounted) this.onFocused(); })
@@ -253,7 +254,6 @@ export struct ReaderButton {
     } else {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Text(this.label, this.textLayoutOptions)
-          .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
           .opacity(readerPressOpacity(this.pressPointer >= 0, this.reduceMotion))
           .animation(readerPressAnimation(this.reduceMotion))
           .attributeModifier(new ReaderButtonLabelModifier(this.specId, this.primary, this.scheme, this.fontScale()))
@@ -262,6 +262,8 @@ export struct ReaderButton {
         .type(resolveReaderButtonSpec(this.specId).radius === 999 ? ButtonType.Capsule : ButtonType.Normal)
         .accessibilityRole(AccessibilityRoleType.BUTTON)
         .attributeModifier(new ReaderButtonFrameModifier(this.specId, this.primary, this.actionEnabled, this.layout, this.scheme, this.isBusy, this.availableWidth, this.fontScale(), this.selectionSemantic))
+        .scale(readerPressScale(this.pressPointer >= 0, this.reduceMotion))
+        .animation(readerPressAnimation(this.reduceMotion))
         .enabled(this.actionEnabled)
         .id(this.focusId)
         .onFocus((): void => { if (this.mounted) this.onFocused(); })

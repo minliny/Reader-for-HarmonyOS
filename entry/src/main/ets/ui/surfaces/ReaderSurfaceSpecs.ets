@@ -3,7 +3,7 @@ import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { SOURCE_CHROME_VISUAL as SOURCE_SWITCH_VISUAL } from '../foundation/ReaderSourceChromeVisual';
 
-export type ReaderSurfaceElevationKind = 'embedded' | 'fixed' | 'floating' | 'raised' | 'popover' | 'sheet' | 'card' | 'dialog';
+export type ReaderSurfaceElevationKind = 'embedded' | 'fixed' | 'floating' | 'raised' | 'popover' | 'sheet' | 'card' | 'cover' | 'control' | 'dialog';
 class ReaderSurfaceElevationSpec {
   readonly radiusVp: number;
   readonly offsetYVp: number;
@@ -14,7 +14,7 @@ class ReaderSurfaceElevationSpec {
 }
 
 // The material relationship owns the lift. Fixed position does not imply
-// elevation; cover and reader-body lighting remain separate contracts.
+// elevation; cover and reader-body lighting retain their own theme roles.
 const FLAT_ELEVATION = new ReaderSurfaceElevationSpec(0, 0, 'app.surface.transparent');
 const CHROME_SHADOW_RADIUS_VP = 11;
 const CHROME_SHADOW_OFFSET_VP = 3;
@@ -23,6 +23,8 @@ const RAISED_ELEVATION = new ReaderSurfaceElevationSpec(CHROME_SHADOW_RADIUS_VP,
 const POPOVER_ELEVATION = new ReaderSurfaceElevationSpec(20, 5, 'app.shadow.menu');
 const SHEET_ELEVATION = new ReaderSurfaceElevationSpec(24, -4, 'app.shadow.sheet');
 const CARD_ELEVATION = new ReaderSurfaceElevationSpec(2, 1, 'TOK_DOWNLOAD_SHADOW');
+const COVER_ELEVATION = new ReaderSurfaceElevationSpec(26, 8, 'app.shadow.cover');
+const CONTROL_ELEVATION = new ReaderSurfaceElevationSpec(4, 2, 'app.shadow.control');
 const DIALOG_ELEVATION = new ReaderSurfaceElevationSpec(30, 10, 'app.shadow.dialog');
 
 function resolveSurfaceElevationSpec(kind: ReaderSurfaceElevationKind): ReaderSurfaceElevationSpec {
@@ -32,6 +34,8 @@ function resolveSurfaceElevationSpec(kind: ReaderSurfaceElevationKind): ReaderSu
   if (kind === 'popover') return POPOVER_ELEVATION;
   if (kind === 'sheet') return SHEET_ELEVATION;
   if (kind === 'card') return CARD_ELEVATION;
+  if (kind === 'cover') return COVER_ELEVATION;
+  if (kind === 'control') return CONTROL_ELEVATION;
   if (kind === 'dialog') return DIALOG_ELEVATION;
   throw new Error('Unknown Reader surface elevation');
 }

@@ -28,6 +28,8 @@ export struct SettingsScenes {
   @Prop @Watch('capturePaint') section: SettingsSection = 'home';
   @Prop expandedLayout: boolean = false;
   @Prop embeddedWide: boolean = false;
+  @Prop sharedBottomNavigationHeight: number = -1;
+  @Prop homeScrollTopRequest: number = 0;
   @Prop @Watch('capturePaint') generation: number = 0;
   @Prop @Watch('capturePaint') active: boolean = true;
   isPaintCurrent: (() => boolean) | undefined = undefined;
@@ -99,6 +101,8 @@ export struct SettingsScenes {
     SettingsPage({
       navigationGeneration: this.painted?.generation ?? this.generation,
       homeScrollY: this.painted?.homeScrollY ?? this.presentation.homeScrollY,
+      sharedBottomNavigationHeight: this.sharedBottomNavigationHeight,
+      homeScrollTopRequest: this.homeScrollTopRequest,
       activeSection: this.painted?.section ?? this.section,
       snapshot: this.painted?.snapshot ?? this.presentation.snapshot, operation: this.painted?.operation ?? this.presentation.operation,
       cacheCleanup: this.painted === undefined ? this.presentation.cacheCleanup : this.painted.cacheCleanup,

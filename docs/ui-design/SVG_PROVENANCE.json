@@ -595,41 +595,6 @@
       "sha256": "f02bf267147e6ccc706c8795e6384b43bbb47a24504c6d079cbe7c97df4b7658"
     },
     {
-      "file": "bookshelf_more_batch_theme_night.svg",
-      "semanticRole": "bookshelf_more_batch night app palette",
-      "originType": "theme-palette-derived",
-      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
-      "figmaNodeId": "4575:5",
-      "license": "Reader project design",
-      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/bookshelf_more_batch.svg",
-      "sourceSha256": "d977e06549acd85a7991764669674a20c8ed460703ca5abedf257f7a10fa3b2e",
-      "transform": {
-        "pathMutation": "none",
-        "palette": "night",
-        "colorRoles": [
-          "app.icon.bookshelf_more_batch.1F1B17"
-        ]
-      },
-      "baseAsset": "bookshelf_more_batch.svg",
-      "baseSha256": "d977e06549acd85a7991764669674a20c8ed460703ca5abedf257f7a10fa3b2e",
-      "themeRegistrySha256": "efad38df0006760c5af699c54f7f6166766c171d69bd686ac455f4abf957ce8b",
-      "sha256": "c9a62b60d238462e9062c9cec1958dbe3dad589a6e1326943b5285b3eab4818c"
-    },
-    {
-      "file": "bookshelf_more_batch.svg",
-      "semanticRole": "bookshelf more batch action",
-      "originType": "figma-node-export",
-      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
-      "figmaNodeId": "4575:5",
-      "license": "Reader project design",
-      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/bookshelf_more_batch.svg",
-      "sourceSha256": "d977e06549acd85a7991764669674a20c8ed460703ca5abedf257f7a10fa3b2e",
-      "transform": {
-        "pathMutation": "none"
-      },
-      "sha256": "d977e06549acd85a7991764669674a20c8ed460703ca5abedf257f7a10fa3b2e"
-    },
-    {
       "file": "bookshelf_more_download_theme_night.svg",
       "semanticRole": "bookshelf_more_download night app palette",
       "originType": "theme-palette-derived",
@@ -2227,6 +2192,27 @@
       "sha256": "e9f0fa1ae5412e4879bc9365dcd11dd62a84a1d600c4f188b3a1f1b3ed05b4f1"
     },
     {
+      "file": "import_choose_file_theme_night.svg",
+      "semanticRole": "import_choose_file night foreground on the import primary action",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "2657:791",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/import_choose_file.svg",
+      "sourceSha256": "6a826e1537064a45daadae1ecfe3c132fd1a4461dddc87746c13ece12ce3f72e",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "TOK_ON_PRIMARY"
+        ]
+      },
+      "baseAsset": "import_choose_file.svg",
+      "baseSha256": "6a826e1537064a45daadae1ecfe3c132fd1a4461dddc87746c13ece12ce3f72e",
+      "themeRegistrySha256": "efad38df0006760c5af699c54f7f6166766c171d69bd686ac455f4abf957ce8b",
+      "sha256": "823989f7876907e744547ac207c570c84c3d81f6e5958f36d17b158160d8aebd"
+    },
+    {
       "file": "import_choose_file.svg",
       "semanticRole": "local import choose file",
       "originType": "figma-node-export",
@@ -2274,6 +2260,27 @@
         "pathMutation": "none"
       },
       "sha256": "e351c249dea65aebc346eb4138b9b7208800b70c8d5130bbd292d330a4edd16a"
+    },
+    {
+      "file": "import_done_theme_night.svg",
+      "semanticRole": "import_done night foreground on the import primary action",
+      "originType": "theme-palette-derived",
+      "figmaFileKey": "klhs2jMM4MncaJFqZMfqEK",
+      "figmaNodeId": "2657:907",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/figma-page-assets/import_done.svg",
+      "sourceSha256": "52abdd033c182b97790ef47351d825db90d3498db3ddc4f83b00be70673957b1",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "TOK_ON_PRIMARY"
+        ]
+      },
+      "baseAsset": "import_done.svg",
+      "baseSha256": "52abdd033c182b97790ef47351d825db90d3498db3ddc4f83b00be70673957b1",
+      "themeRegistrySha256": "efad38df0006760c5af699c54f7f6166766c171d69bd686ac455f4abf957ce8b",
+      "sha256": "25ac04bc23310d8f7c30830a460b9e1e3c6aeec64995f98752757e3d36e6185b"
     },
     {
       "file": "import_done.svg",

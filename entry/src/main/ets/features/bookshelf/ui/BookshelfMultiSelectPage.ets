@@ -5,6 +5,8 @@ import { APP_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetric
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
+import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { READER_ACTION_MIN_TARGET, ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ShelfBookListDetails } from './ShelfBookListDetails';
 import { ShelfBookPresentation } from '../presentation/ShelfBookPresentation';
@@ -43,11 +45,8 @@ export struct BookshelfMultiSelectPage {
 
   @StorageLink('readerWindowMetricsRevision') @Watch('onGeometryInputsChanged') private readerWindowMetricsRevision: number = 0;
   @StorageLink('readerBookshelfViewMode') private storedViewMode: string = DEFAULT_BOOKSHELF_VIEW;
-  @StorageLink('readerBookshelfSelectedGroup') @Watch('reconcileSelection') private storedSelectedGroup: string = '';
-  @StorageLink('readerBookshelfReadingFilter') @Watch('reconcileSelection') private readingFilter: string = 'all';
   @StorageLink('readerBookshelfSourceFilter') @Watch('reconcileSelection') private sourceFilter: string = 'all';
   @StorageLink('readerBookshelfContentFilter') @Watch('reconcileSelection') private contentFilter: string = 'all';
-  @StorageLink('readerMangaPresentationRevision') @Watch('onMangaPresentationChanged') private mangaRevision: number = 0;
   @Prop @Watch('reconcileSelection') books: ShelfBook[] = [];
   @Prop initialSelectedKey: string = '';
   @Prop busy: boolean = false;
@@ -78,7 +77,7 @@ export struct BookshelfMultiSelectPage {
     registerReaderFonts(this.getUIContext().getFont());
     this.prepareSelectionHeaderFonts();
     this.prepareListTextFonts();
-    if (this.initialSelectedKey.length > 0 && this.canRetainSelectedKey(this.initialSelectedKey)) {
+    if (this.initialSelectedKey.length > 0 && this.hasBookKey(this.initialSelectedKey)) {
       this.selectedKeys = [this.initialSelectedKey];
     }
     this.onGeometryInputsChanged();
@@ -173,17 +172,17 @@ export struct BookshelfMultiSelectPage {
     Column({ space: 0 }) {
       if (this.selectionHeaderInline()) {
         Row() {
-          this.selectionAction((): string => '取消', TextAlign.Start, (): void => this.onCancel());
+          this.selectionAction((): string => '取消', (): void => this.onCancel());
           this.selectionHeading();
-          this.selectionAction((): string => this.allSelected() ? '取消全选' : '全选', TextAlign.End,
+          this.selectionAction((): string => this.allSelected() ? '取消全选' : '全选',
             (): void => this.toggleAll(), (): boolean => this.canSelectAll());
         }.width('100%').alignItems(VerticalAlign.Center);
       } else {
         this.selectionHeading();
         Row() {
-          this.selectionAction((): string => '取消', TextAlign.Start, (): void => this.onCancel());
+          this.selectionAction((): string => '取消', (): void => this.onCancel());
           Blank().layoutWeight(1);
-          this.selectionAction((): string => this.allSelected() ? '取消全选' : '全选', TextAlign.End,
+          this.selectionAction((): string => this.allSelected() ? '取消全选' : '全选',
             (): void => this.toggleAll(), (): boolean => this.canSelectAll());
         }.width('100%').alignItems(VerticalAlign.Center);
       }
@@ -231,8 +230,8 @@ export struct BookshelfMultiSelectPage {
           fontSize: `${style.fontSizeFp}fp`, fontFamily: style.fontFamily, fontWeight: style.fontWeight }));
       };
       const heading = measure(`已选择 ${this.selectedVisibleCount()} 本`, true);
-      const cancel = Math.max(72, measure('取消', false));
-      const select = Math.max(72, measure(this.allSelected() ? '取消全选' : '全选', false));
+      const cancel = Math.max(72, measure('取消', false) + 16);
+      const select = Math.max(72, measure(this.allSelected() ? '取消全选' : '全选', false) + 16);
       return Number.isFinite(heading) && Number.isFinite(cancel) && Number.isFinite(select) &&
         heading > 0 && heading + cancel + select <= width;
     } catch (_unavailableMeasure) {
@@ -241,9 +240,9 @@ export struct BookshelfMultiSelectPage {
   }
 
   @Builder
-  private selectionAction(label: () => string, alignment: TextAlign, action: () => void,
+  private selectionAction(label: () => string, action: () => void,
     available: () => boolean = (): boolean => true) {
-    Button({ type: ButtonType.Normal }) {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
       Text(label())
         .constraintSize({ minWidth: 72 }).maxLines(1)
         .fontFamily(TYPE_SHELF_SELECTION_ACTION.fontFamily)
@@ -251,11 +250,12 @@ export struct BookshelfMultiSelectPage {
         .fontSize(TYPE_SHELF_SELECTION_ACTION.fontSizeFp)
         .lineHeight(TYPE_SHELF_SELECTION_ACTION.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-        .textAlign(alignment)
+        .textAlign(TextAlign.Center).padding({ left: 8, right: 8 })
         .accessibilityLevel('no');
     }
     .constraintSize({ minWidth: 72, minHeight: READER_ACTION_MIN_TARGET }).flexShrink(0)
-    .padding(0).backgroundColor(Color.Transparent).borderRadius(8)
+    .padding(0).attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_CARD_BG', this.appThemeScheme), this.appThemeScheme, 999, 999,
+      this.selectionInputEnabled() && available()))
     .enabled(this.selectionInputEnabled() && available())
     .opacity(available() ? 1 : 0.45)
     .accessibilityText(label())
@@ -272,7 +272,7 @@ export struct BookshelfMultiSelectPage {
             .height(this.coverHeight())
             .objectFit(ImageFit.Cover)
             .borderRadius(8)
-            .shadow({ radius: 26, color: readerAppColor('app.shadow.cover', this.appThemeScheme), offsetX: 0, offsetY: 8 })
+            .shadow(readerSurfaceElevation('cover', this.appThemeScheme))
             .onError(this.coverErrorHandler(this.coverUrl(this.currentBook(book))));
         } else {
           NoCoverCover({ coverWidth: this.cardWidth(), coverHeight: this.coverHeight(),
@@ -335,9 +335,10 @@ export struct BookshelfMultiSelectPage {
         }.width('100%').alignItems(HorizontalAlign.Center)
           .opacity(this.canRemoveSelection() ? 1 : 0.38)
           .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
-        Button({ type: ButtonType.Normal }) {}
+        Button({ type: ButtonType.Normal, stateEffect: false }) {}
           .width(LayoutPolicy.matchParent).height(LayoutPolicy.matchParent)
-          .padding(0).borderRadius(8).backgroundColor(Color.Transparent)
+          .padding(0).attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 999, 999,
+            this.canRemoveSelection()))
           .accessibilityText('移除书架')
           .enabled(this.canRemoveSelection())
           .onClick((): void => this.removeVisibleSelection());
@@ -407,20 +408,7 @@ export struct BookshelfMultiSelectPage {
   }
 
   private reconcileSelection(): void {
-    this.selectedKeys = this.selectedKeys.filter((key: string): boolean => this.canRetainSelectedKey(key));
-  }
-
-  private onMangaPresentationChanged(): void {
-    if (this.mounted) this.reconcileSelection();
-  }
-
-  private canRetainSelectedKey(key: string): boolean {
-    if (this.hasBookKey(key)) return true;
-    // A missing optional display receipt is not evidence that an explicitly
-    // selected book became unread/read. Keep that identity pending, while the
-    // submit fence below still requires the current confirmed filter match.
-    return ShelfBookPresentation.visible(this.books, this.storedSelectedGroup, 'all', this.sourceFilter, this.contentFilter)
-      .some((book: ShelfBook): boolean => this.bookKey(book) === key && ShelfBookPresentation.readingStatePending(book));
+    this.selectedKeys = this.selectedKeys.filter((key: string): boolean => this.hasBookKey(key));
   }
 
   private canRemoveSelection(): boolean {
@@ -433,11 +421,10 @@ export struct BookshelfMultiSelectPage {
 
   private removeVisibleSelection(): void {
     if (!this.canRemoveSelection()) return;
-    // Protect a click delivered before the Prop watcher has reconciled a
-    // book whose progress/group changed underneath an active filter.
+    // Protect a click delivered before the watcher reconciles a changed shelf
+    // snapshot or source/content filter.
     this.reconcileSelection();
-    const keys = this.selectedKeys.filter((key: string): boolean => this.hasBookKey(key));
-    if (keys.length > 0) this.onRemoveSelected(keys);
+    if (this.selectedKeys.length > 0) this.onRemoveSelected([...this.selectedKeys]);
   }
 
   private toggleBook(book: ShelfBook): void {
@@ -454,12 +441,7 @@ export struct BookshelfMultiSelectPage {
   private toggleAll(): void {
     if (!this.selectionInputEnabled() || !this.canSelectAll()) return;
     const visible = this.visibleBooks();
-    if (this.allSelected()) {
-      this.selectedKeys = this.selectedKeys.filter((key: string): boolean => !this.hasBookKey(key) && this.canRetainSelectedKey(key));
-      return;
-    }
-    const pending = this.selectedKeys.filter((key: string): boolean => !this.hasBookKey(key) && this.canRetainSelectedKey(key));
-    this.selectedKeys = [...pending, ...visible.map((book: ShelfBook): string => this.bookKey(book))];
+    this.selectedKeys = this.allSelected() ? [] : visible.map((book: ShelfBook): string => this.bookKey(book));
   }
 
   private canSelectAll(): boolean { return this.books.length > 0 && this.visibleBooks().length > 0; }
@@ -478,9 +460,11 @@ export struct BookshelfMultiSelectPage {
     return this.appForeground && this.mounted && this.ready && !this.busy && (this.isInputAllowed?.() ?? true);
   }
 
-  private selectionRowAction(book: ShelfBook): ReaderActionAccessibility {
+  private selectionRowAction(book: ShelfBook, surface: ResourceColor = Color.Transparent): ReaderActionAccessibility {
     const selected = this.isSelected(book);
-    return new ReaderActionAccessibility(`${this.currentBook(book).title}，${selected ? '已选择' : '未选择'}`, this.selectionInputEnabled(), selected);
+    const enabled = this.selectionInputEnabled();
+    return new ReaderActionAccessibility(`${this.currentBook(book).title}，${selected ? '已选择' : '未选择'}`, enabled, selected,
+      true, new ReaderPressFeedback(surface, this.appThemeScheme, 14, 14, enabled));
   }
 
   private currentBook(snapshot: ShelfBook): ShelfBook {
@@ -493,8 +477,7 @@ export struct BookshelfMultiSelectPage {
   }
 
   private visibleBooks(): ShelfBook[] {
-    if (this.mangaRevision < 0) return [];
-    return ShelfBookPresentation.visible(this.books, this.storedSelectedGroup, this.readingFilter, this.sourceFilter, this.contentFilter);
+    return ShelfBookPresentation.visible(this.books, '', 'all', this.sourceFilter, this.contentFilter);
   }
 
   private bookKey(book: ShelfBook): string {
@@ -537,11 +520,9 @@ export struct BookshelfMultiSelectPage {
     .width(this.listCardWidth())
     .height(this.listContentHeight() + 2 * (BOOKSHELF_LIST_CARD_PADDING + TOK_BORDER_W))
     .padding(BOOKSHELF_LIST_CARD_PADDING)
-    .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-    .borderRadius(14)
     .alignItems(VerticalAlign.Center)
-    .attributeModifier(this.selectionRowAction(book))
+    .attributeModifier(this.selectionRowAction(book, readerAppColor('TOK_CARD_BG', this.appThemeScheme)))
     .onClick((): void => this.toggleBook(book));
   }
 
@@ -555,7 +536,7 @@ export struct BookshelfMultiSelectPage {
     .width(22).height(22).margin({ right: inset, bottom: inset })
     .backgroundColor(this.isSelected(book) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.surface.menuSolid', this.appThemeScheme))
     .border({ width: this.isSelected(book) ? 0 : 1.5, color: readerAppColor('app.border.control', this.appThemeScheme) })
-    .borderRadius(11).shadow({ radius: 4, color: readerAppColor('app.shadow.control', this.appThemeScheme), offsetX: 0, offsetY: 2 });
+    .borderRadius(11).shadow(readerSurfaceElevation('control', this.appThemeScheme));
   }
 
   private isListMode(): boolean {

@@ -28,8 +28,8 @@ export struct NoCoverCover {
         .position({ x: this.x(14.5), y: this.y(13.5) });
 
       Row().width(this.scaleCoverUnit(10)).height(this.scaleCoverUnit(10)).borderRadius(this.scaleCoverUnit(2))
-        .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-        .border({ width: this.scaleCoverUnit(0.7), color: readerAppColor('TOK_GREEN', this.appThemeScheme) })
+        .backgroundColor(readerAppColor('app.status.sealSoft', this.appThemeScheme))
+        .border({ width: this.scaleCoverUnit(0.7), color: readerAppColor('TOK_ACCENT', this.appThemeScheme) })
         .position({ x: this.x(61), y: this.y(18) });
 
       Stack({ alignContent: Alignment.Center }) {

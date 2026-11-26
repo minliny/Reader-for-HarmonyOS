@@ -314,7 +314,6 @@ const exactExports = [
   exact('reader_control_replace_delete', '1939:1261', 'restored in-reader replace delete rule'),
   exact('reader_control_replace_back', 'I1938:12631;411:72', 'restored in-reader replace Quick back'),
   exact('bookshelf_more', '4578:583', 'bookshelf more vertical override'),
-  exact('bookshelf_more_batch', '4575:5', 'bookshelf more batch action'),
   exact('bookshelf_more_import', '4575:14', 'bookshelf more local import action'),
   exact('bookshelf_more_settings', '4575:24', 'bookshelf more settings action'),
   exact('import_cancel', '2657:797', 'local import cancel'),
@@ -450,6 +449,9 @@ export const svgTtsSelectedCRecipes = [
 // The approved action-sheet family uses the original icon geometry with a
 // foreground palette selected before SVG rasterization, without a runtime
 // ColorFilter. These aliases do not recolor their original page/status assets.
+export const svgSourceOnlyRecipes = [
+  exact('bookshelf_more_batch', '4575:5', 'bookshelf more batch action'),
+];
 export const svgActionForegroundRecipes = [
   ['check', 'bookshelf_more_batch'], ['info', 'settings_row_about'],
   ['folder', 'source_group_folder'], ['trash', 'download_visual_trash'],
@@ -479,6 +481,10 @@ export const svgControlForegroundRecipes = [
   ...['compass', 'rss'].map(kind => ({
     file: `bookshelf_${kind}_active_theme_night`, baseFile: `bookshelf_${kind}_active`,
     scheme: 'night', paletteRole: 'TOK_ON_PRIMARY', semanticRole: `main tab ${kind} selected night foreground`,
+  })),
+  ...['import_choose_file', 'import_done'].map(baseFile => ({
+    file: `${baseFile}_theme_night`, baseFile, scheme: 'night', paletteRole: 'TOK_ON_PRIMARY',
+    semanticRole: `${baseFile} night foreground on the import primary action`,
   })),
   { file: 'reader_control_replace_add_theme_night', baseFile: 'reader_control_replace_add', scheme: 'night',
     paletteRole: 'app.replace.onToolbarAction', namedWhiteStroke: true,

@@ -1,8 +1,8 @@
 import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { bookCoverDisplayUrl } from '../../../app/library/BookCoverDisplay';
 import { BOOKSHELF_GRID_TEXT_GAP, BOOKSHELF_GRID_TITLE_LINES } from './BookshelfGridSpec';
-import { BOOKSHELF_COVER_SHADOW_RADIUS, BOOKSHELF_COVER_SHADOW_OFFSET_Y } from './BookshelfCoverVisual';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { readerMainViewport } from '../../shell/MainNavigationSpec';
@@ -599,6 +599,7 @@ export struct BookshelfPage {
           .hitTestBehavior(HitTestMode.None);
         Text(this.continueBookProgressLabel(bookProvider())).fontFamily(TYPE_SHELF_LIST_STATUS.fontFamily)
           .fontSize(TYPE_SHELF_LIST_STATUS.fontSizeFp).fontColor(readerAppColor('TOK_ACCENT', this.appThemeScheme))
+          .fontFeature('"tnum" 1')
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       }.width('100%').alignItems(VerticalAlign.Center);
     }.layoutWeight(1).constraintSize({ minHeight: this.continueCardFrame(expandedLayout).textMinHeight })
@@ -990,15 +991,18 @@ export struct BookshelfPage {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Text('清除').fontFamily(TYPE_APP_INHERITED_BODY.fontFamily).fontWeight(TYPE_APP_INHERITED_BODY.fontWeight).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
             .constraintSize({ minHeight: 28 }).textAlign(TextAlign.Center);
-        }.padding(0).backgroundColor(Color.Transparent).borderRadius(0)
+        }.padding(0)
           .constraintSize({ minWidth: 44, minHeight: 44 }).enabled(this.hasActiveFilters()).opacity(this.hasActiveFilters() ? 1 : 0.5)
-          .attributeModifier(new ReaderActionAccessibility('清除内容类型和来源筛选', this.hasActiveFilters(), false, true, undefined, 'nativeButton'))
+          .attributeModifier(new ReaderActionAccessibility('清除内容类型和来源筛选', this.hasActiveFilters(), false, true,
+            new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 22, 22, this.hasActiveFilters()), 'nativeButton'))
           .onClick((): void => this.clearFilters(navigation));
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Text('收起').fontFamily(TYPE_APP_INHERITED_BODY.fontFamily).fontWeight(TYPE_APP_INHERITED_BODY.fontWeight).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .constraintSize({ minHeight: 28 }).textAlign(TextAlign.Center);
-        }.padding(0).backgroundColor(Color.Transparent).borderRadius(0)
-          .constraintSize({ minWidth: 44, minHeight: 44 }).attributeModifier(new ReaderActionAccessibility('收起筛选', true, false, true, undefined, 'nativeButton'))
+        }.padding(0)
+          .constraintSize({ minWidth: 44, minHeight: 44 })
+          .attributeModifier(new ReaderActionAccessibility('收起筛选', true, false, true,
+            new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 22), 'nativeButton'))
           .onClick((): void => this.setFilterExpanded(false, navigation));
       }.width('100%');
       Text('内容类型').width('100%').fontFamily(TYPE_APP_INHERITED_BODY.fontFamily).fontWeight(TYPE_APP_INHERITED_BODY.fontWeight).fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
@@ -1178,11 +1182,12 @@ export struct BookshelfPage {
     .width(this.shelfBookCardWidth(expandedLayout))
     .height(this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout))
     .id(this.bookCoverMotionId(book))
+    .backgroundColor(readerAppColor('TOK_META_BG', this.appThemeScheme))
     .borderRadius(this.projectionCoverRadius(expandedLayout, index()))
-    .clip(true)
+    .shadow(readerSurfaceElevation(this.hasCover(book) ? 'cover' : 'embedded', this.appThemeScheme))
     .scale({
       x: this.projectionCoverScale(expandedLayout, index()),
-      y: this.projectionCoverScaleY(expandedLayout, index()),
+      y: this.projectionCoverScale(expandedLayout, index()),
       centerX: '50%',
       centerY: '50%',
     })
@@ -1204,15 +1209,13 @@ export struct BookshelfPage {
    */
   @Builder
   private projectionBookCoverLayer(book: ShelfBook, expandedLayout: boolean, morphLayer: boolean, index: () => number) {
-    Stack({ alignContent: Alignment.Bottom }) {
+    Stack({ alignContent: Alignment.TopEnd }) {
       if (this.hasCover(book)) {
         Image(this.coverUrl(book) as string)
           .width(this.shelfBookCardWidth(expandedLayout))
           .height(this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout))
           .objectFit(ImageFit.Cover)
           .borderRadius(this.projectionCoverRadius(expandedLayout, index()))
-          .shadow({ radius: BOOKSHELF_COVER_SHADOW_RADIUS, color: readerAppColor('app.shadow.cover', this.appThemeScheme),
-            offsetX: 0, offsetY: BOOKSHELF_COVER_SHADOW_OFFSET_Y })
           .onError(this.coverErrorHandler(this.coverUrl(book)));
       } else {
         NoCoverCover({
@@ -1239,7 +1242,6 @@ export struct BookshelfPage {
           .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme))
           .borderRadius(Math.min(Math.max(0, this.shelfBookCardWidth(expandedLayout) - 14),
             (TYPE_SHELF_UPDATE_BADGE.lineHeightFp as number) * this.continueCardFontScale() + 6) / 2)
-          .align(Alignment.TopEnd)
           .margin({ top: 7, right: 7 })
           .opacity(this.viewSwitchGridContentOpacity);
       }
@@ -1296,7 +1298,7 @@ export struct BookshelfPage {
           .lineHeight(`${TYPE_SHELF_LIST_STATUS.lineHeightFp}fp`)
           .letterSpacing(TYPE_SHELF_LIST_STATUS.letterSpacingFp)
           .fontColor(readerAppColor('TOK_ACCENT', this.appThemeScheme))
-          .maxLines(1);
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
       }
     }
     .width(this.shelfBookCardWidth(expandedLayout))
@@ -1547,8 +1549,8 @@ export struct BookshelfPage {
     return BOOKSHELF_LIST_COVER_WIDTH;
   }
 
-  private listCoverHeight(_expandedLayout: boolean): number {
-    return BOOKSHELF_LIST_COVER_HEIGHT;
+  private listCoverHeight(expandedLayout: boolean): number {
+    return bookshelfCoverHeight(this.listCoverWidth(expandedLayout), expandedLayout);
   }
 
   private prepareListTextFonts(): void {
@@ -1565,7 +1567,7 @@ export struct BookshelfPage {
   }
 
   private listContentHeight(expandedLayout: boolean): number {
-    return Math.max(this.listCoverHeight(expandedLayout), this.listTextFrame(expandedLayout).height);
+    return Math.max(BOOKSHELF_LIST_COVER_HEIGHT, this.listTextFrame(expandedLayout).height);
   }
 
   private listRowHeight(expandedLayout: boolean): number {
@@ -1721,7 +1723,7 @@ export struct BookshelfPage {
         .every((value: number): boolean => Number.isFinite(value)) || width <= 0 || height <= 0) return undefined;
       const expanded = this.isWideViewport();
       const coverWidth = this.viewMode === 'list' ? this.listCoverWidth(expanded) : this.shelfBookCardWidth(expanded);
-      const coverHeight = this.viewMode === 'list' ? this.listContentHeight(expanded) : this.bookCardHeight(coverWidth, expanded);
+      const coverHeight = this.viewMode === 'list' ? this.listCoverHeight(expanded) : this.bookCardHeight(coverWidth, expanded);
       if (Math.abs(width - coverWidth) > 2 || Math.abs(height - coverHeight) > 2 ||
         Math.abs(viewportWidth - this.shelfContentWidth(expanded)) > 2) return undefined;
       // Rank only fully visible covers, excluding the header and floating navigation.
@@ -2073,10 +2075,12 @@ export struct BookshelfPage {
     return mode === 'cover' ? this.viewSwitchGridContentOpacity : this.viewSwitchListContentOpacity;
   }
 
-  private projectionListProgress(index: number, scale: boolean = false, row: boolean = false): number {
+  private projectionListProgress(index: number, scale: boolean = false, columnCount: number = 1): number {
     if (!this.viewSwitchRunning || this.reduceMotion) return this.viewMode === 'list' ? 1 : 0;
-    const visibleIndex = this.viewSwitchRanks.get(index) ??
-      (row ? this.viewSwitchRanks.get(index + 1) ?? this.viewSwitchRanks.get(index + 2) : undefined);
+    let visibleIndex = this.viewSwitchRanks.get(index);
+    for (let column = 1; visibleIndex === undefined && column < columnCount; column += 1) {
+      visibleIndex = this.viewSwitchRanks.get(index + column);
+    }
     if (visibleIndex === undefined) return this.pendingViewMode === 'list' ? 1 : 0;
     const progress = motionSegment(this.viewSwitchTimeMs,
       this.viewMotion.layoutCommitMs + bookshelfViewCoverDelayMs(visibleIndex),
@@ -2092,7 +2096,7 @@ export struct BookshelfPage {
     const listRows = Math.ceil(row.length / bookshelfColumnCount(expandedLayout, true));
     const list = listRows * this.listRowHeight(expandedLayout) +
       Math.max(0, listRows - 1) * TOK_SPACE_CONTROL_INLINE;
-    return grid + (list - grid) * this.projectionListProgress(index, false, true);
+    return grid + (list - grid) * this.projectionListProgress(index, false, bookshelfColumnCount(expandedLayout));
   }
 
   private projectionBookWidth(expandedLayout: boolean, index: number): number {
@@ -2121,12 +2125,6 @@ export struct BookshelfPage {
 
   private projectionCoverScale(expandedLayout: boolean, index: number): number {
     const list = this.listCoverWidth(expandedLayout) / Math.max(1, this.shelfBookCardWidth(expandedLayout));
-    return 1 + (list - 1) * this.projectionListProgress(index, true);
-  }
-
-  private projectionCoverScaleY(expandedLayout: boolean, index: number): number {
-    const gridHeight = this.bookCardHeight(this.shelfBookCardWidth(expandedLayout), expandedLayout);
-    const list = this.listContentHeight(expandedLayout) / Math.max(1, gridHeight);
     return 1 + (list - 1) * this.projectionListProgress(index, true);
   }
 

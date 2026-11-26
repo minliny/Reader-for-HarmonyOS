@@ -1,6 +1,7 @@
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { motionAnimateParam } from '../foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../foundation/ReaderMotionPolicy';
+import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { ReaderPostLayoutFrame } from '../layout/ReaderPostLayoutFrame';
 import { TOK_BORDER_W, TOK_RADIUS_PILL, TOK_SPACE_XS } from '../foundation/ReaderTokens';
 import { TYPE_MAIN_TAB_LABEL } from '../foundation/ReaderTypography';
@@ -24,6 +25,7 @@ export struct ReaderBottomTabBar {
   @Prop @Watch('traceGeometry') surfaceWidth: number = 0;
   @Prop fontScale: number = 1;
   @Prop inputEnabled: boolean = true;
+  @Prop actionGeneration: number = 0;
   onSelect: (key: string) => void = (_key: string): void => {};
   onCurrentTap: (key: string) => void = (_key: string): void => {};
   onGeometryTrace: (width: number, paintReady: boolean) => void =
@@ -168,12 +170,17 @@ export struct ReaderBottomTabBar {
     .layoutWeight(1)
     .constraintSize({ minHeight: readerMainTabItemHeight(this.fontScale, false) })
     .padding(0)
-    .backgroundColor(Color.Transparent)
+    .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.scheme,
+      readerMainTabItemHeight(this.fontScale, false) / 2, readerMainTabItemHeight(this.fontScale, false) / 2, this.inputEnabled))
     .enabled(this.inputEnabled)
     .accessibilityText(`${this.currentTab(tab).label}${this.current === tab.key ? '，已选中' : ''}`)
     .id(`reader-main-tab-${tab.key}`)
     .accessibilitySelected(this.current === tab.key)
-    .onClick((): void => this.activate(tab.key));
+    .onClick(this.tabAction(tab.key, this.actionGeneration));
+  }
+
+  private tabAction(key: string, generation: number): () => void {
+    return (): void => { if (generation === this.actionGeneration) this.activate(key); };
   }
 
   private currentTab(snapshot: ReaderBottomTabItem): ReaderBottomTabItem {

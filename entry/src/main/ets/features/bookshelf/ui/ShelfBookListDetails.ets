@@ -40,7 +40,7 @@ export struct ShelfBookListDetails {
         if (this.moreFocusId !== '') {
           ReaderIconButton({
             specId: 'shelf-list-more',
-            icon: this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more'),
+            icon: this.appThemeScheme === 'night' ? $r('app.media.rc_dots_theme_night') : $r('app.media.rc_dots'),
             focusId: this.moreFocusId, accessibilityLabel: this.moreAccessibilityLabel,
             actionEnabled: this.moreEnabled, onTap: this.onMore,
           }).hitTestBehavior(this.moreEnabled ? HitTestMode.Default : HitTestMode.None);

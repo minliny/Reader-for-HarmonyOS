@@ -56,7 +56,7 @@ export struct AppTopBar {
           .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD)
           .fontWeight(FontWeight.Bold)
           .fontSize(16)
-          .lineHeight(28)
+          .lineHeight('28fp')
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
 
         if (this.trailing !== undefined) {
@@ -72,7 +72,7 @@ export struct AppTopBar {
           .fontFamily(TYPE_APP_HOME_TITLE.fontFamily)
           .fontWeight(TYPE_APP_HOME_TITLE.fontWeight)
           .fontSize(TYPE_APP_HOME_TITLE.fontSizeFp)
-          .lineHeight(TYPE_APP_HOME_TITLE.lineHeightFp as number)
+          .lineHeight(`${TYPE_APP_HOME_TITLE.lineHeightFp}fp`)
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
 
         if (this.trailing !== undefined) {

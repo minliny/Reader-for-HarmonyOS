@@ -27,7 +27,7 @@ export struct BookshelfSectionHeader {
   @Prop titleOpacity: number = 1;
   @Prop actionsEnabled: boolean = true;
   @Prop actionsOpacity: number = 1;
-  @Prop @Watch('moveViewModePill') viewMode: 'cover' | 'list' = 'cover';
+  @Prop @Watch('moveViewModePill') viewMode: 'cover' | 'list' = 'list';
   @Prop filterExpanded: boolean = false;
   @Prop hasActiveFilters: boolean = false;
   @Prop bookCount: number = -1;

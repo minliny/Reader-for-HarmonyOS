@@ -29,6 +29,8 @@ export struct MainTabShell {
   @Prop standardPageVariant: ReaderStandardPageVariant = 'settingsHome';
   @Prop standardInitialScrollY: number = 0;
   @Prop floatingHeader: boolean = false;
+  // A primary page receives the occupied extent of the app-owned capsule.
+  @Prop sharedBottomNavigationHeight: number = -1;
   scroller: Scroller = new Scroller();
   @Prop navigationGeneration: number = 0;
   private mounted: boolean = false;
@@ -130,10 +132,14 @@ export struct MainTabShell {
   @Builder
   private bottomNavigation() {
     if (this.navigationMode() === 'bottom') {
-      ForEach([this.navigationGeneration], (generation: number) => {
-        ReaderBottomNavigation({ current: this.activeTab, onSelect: (key: string): void => this.requestMainTab(key, generation),
-          onCurrentTap: (key: string): void => this.requestCurrentTab(key, generation) });
-      }, (generation: number): string => generation.toString());
+      if (this.sharedBottomNavigationHeight >= 0) {
+        Row().height(this.sharedBottomNavigationHeight).hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+      } else {
+        ForEach([this.navigationGeneration], (generation: number) => {
+          ReaderBottomNavigation({ current: this.activeTab, onSelect: (key: string): void => this.requestMainTab(key, generation),
+            onCurrentTap: (key: string): void => this.requestCurrentTab(key, generation) });
+        }, (generation: number): string => generation.toString());
+      }
     }
   }
 

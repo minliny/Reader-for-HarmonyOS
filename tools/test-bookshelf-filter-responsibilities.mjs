@@ -140,13 +140,15 @@ empty.projectedBookCount=200;
 assert.equal(empty.currentFilterBookCount(),200,'the count reports the matching result, not the current pagination window');
 
 const Batch = productionMotionMethods(path('BookshelfMultiSelectPage'),['visibleBooks','bookKey','reconcileSelection','removeVisibleSelection',
-  'toggleBook','hasBookKey','toggleAll','allSelected','selectionInputEnabled','canRemoveSelection','isSelected','selectedVisibleCount',
-  'canRetainSelectedKey'],{ShelfBookPresentation});
+  'toggleBook','hasBookKey','toggleAll','canSelectAll','allSelected','selectionInputEnabled','canRemoveSelection',
+  'isSelected','selectedVisibleCount'],{ShelfBookPresentation});
 let removed=[];
 const batch = Object.assign(new Batch(),{books,storedSelectedGroup:'默认',readingFilter:'reading',sourceFilter:'online',selectedKeys:[],busy:false,ready:true,mounted:true,appForeground:true,onRemoveSelected:k=>removed.push(k)});
-assert.equal(ids(batch.visibleBooks()),'bd');batch.toggleAll();assert.equal(batch.selectedKeys.length,2);
-batch.books=books.map(b=>b.bookId==='b'?{...b,readProgress:10000}:b);
-batch.removeVisibleSelection();assert.deepEqual(removed,[['online\u0000d']],'a selected book hidden by a new progress value is never removed');
+assert.equal(ids(batch.visibleBooks()),'bde','the batch shares the shelf source/content filters and ignores legacy preferences');
+batch.toggleAll();assert.equal(batch.selectedKeys.length,3);
+batch.books=books.map(b=>b.bookId==='b'?{...b,readProgress:10000,group:'历史'}:b);
+batch.removeVisibleSelection();assert.deepEqual(removed,[['online\u0000b','online\u0000d','online\u0000e']],
+  'group and progress updates preserve the selected identities');
 batch.sourceFilter='local';batch.reconcileSelection();assert.equal(batch.selectedKeys.length,0);
 batch.toggleBook(books[1]);assert.equal(batch.selectedKeys.length,0,'stale recycled clicks cannot select hidden books');
 batch.removeVisibleSelection();assert.equal(removed.length,1);
@@ -199,9 +201,9 @@ await Promise.resolve();
 await Promise.resolve();
 assert.deepEqual(readBack, [filter]);
 assert.deepEqual(dispatches, [[{sourceId:'online',bookId:'b'}]], 'accepted confirmation submits only the visible identity');
-for(const text of [source('BookshelfMultiSelectPage')]) {
-  for(const key of ['readerBookshelfSelectedGroup','readerBookshelfReadingFilter','readerBookshelfSourceFilter','readerBookshelfContentFilter'])assert.ok(text.includes(`@StorageLink('${key}')`));
-}
+const batchSource = source('BookshelfMultiSelectPage');
+for(const key of ['readerBookshelfSourceFilter','readerBookshelfContentFilter'])assert.ok(batchSource.includes(`@StorageLink('${key}')`));
+for(const key of ['readerBookshelfSelectedGroup','readerBookshelfReadingFilter'])assert.ok(!batchSource.includes(`@StorageLink('${key}')`));
 for(const key of ['readerBookshelfSelectedGroup','readerBookshelfSourceFilter'])assert.ok(shelfSource.includes(`@StorageLink('${key}')`));
 assert.ok(!shelfSource.includes("@StorageLink('readerBookshelfReadingFilter')"),'current shelf filters do not resurrect the retired reading-state producer');
 assert.ok(shelfSource.includes("@StorageLink('readerBookshelfContentFilter')"),'content type has its own storage dimension');

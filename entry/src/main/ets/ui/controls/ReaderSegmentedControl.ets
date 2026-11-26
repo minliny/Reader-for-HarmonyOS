@@ -5,6 +5,7 @@ import { CapsuleSegmentButtonV2, SegmentButtonV2Items, type SegmentButtonV2ItemO
 import { TextModifier } from '@ohos.arkui.modifier';
 import { ColorMetrics, LengthMetrics } from '@ohos.arkui.node';
 import { FrameCallback } from '@kit.ArkUI';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 
 interface ReaderSegmentOpening { identity: string; ids: string[]; }
 
@@ -186,7 +187,9 @@ export struct ReaderSegmentedControl {
         itemSelectedFontColor: ColorMetrics.resourceColor(readerAppColor(this.spec().activeText, this.appThemeScheme)),
         buttonPadding: LengthMetrics.vp(0), buttonMinHeight: LengthMetrics.vp(44),
         itemSelectedBackgroundColor: ColorMetrics.resourceColor(readerAppColor(this.spec().selectedSurface, this.appThemeScheme)),
-        itemShadow: { radius: 3, color: readerAppColor('app.chrome.raisedShadowNear', this.appThemeScheme), offsetX: 0, offsetY: 1 },
+        itemShadow: { radius: 3 * readerWindowMetrics().densityPixels,
+          color: readerAppColor('app.chrome.raisedShadowNear', this.appThemeScheme),
+          offsetX: 0, offsetY: readerWindowMetrics().densityPixels },
         buttonBackgroundColor: ColorMetrics.resourceColor(readerAppColor('app.surface.transparent', this.appThemeScheme)), buttonBorderRadius: LengthMetrics.vp(this.spec().radius),
       }).width('100%');
     }, (opening: ReaderSegmentOpening): string => opening.identity + JSON.stringify(opening.ids));

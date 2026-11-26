@@ -37,6 +37,7 @@ export struct BookshelfScene {
   @Prop continueCardSuppressed: boolean = false;
   @Prop reduceMotion: boolean = false;
   @Prop tapBottomScrollTop: boolean = false;
+  @Prop sharedBottomNavigationHeight: number = -1;
   ports: BookshelfScenePorts | undefined;
 
   private isCurrent(navigation?: number): boolean {
@@ -149,6 +150,7 @@ export struct BookshelfScene {
       feedbackEnabled: this.feedbackEnabled,
       headerBottom: this.read.headerBottom,
       navigationGeneration: this.navigation,
+      sharedBottomNavigationHeight: this.sharedBottomNavigationHeight,
       onNoticeHeightChange: (height: number, navigation?: number): void => {
         if (this.isCurrent(navigation)) this.read.noticeHeight = height;
       },

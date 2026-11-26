@@ -119,6 +119,9 @@ import { ReaderNavigation, retainedReaderRoute, type DetailReturnRoute, type Dir
 import { readerSceneTransition, READER_ROUTE_PARENT_DIM, READER_ROUTE_PARENT_PARALLAX } from '../app/navigation/ReaderRouteMotion';
 import { motionAnimateParam } from '../ui/foundation/MotionSpec';
 import { ReaderRouteStackSurface, type ReaderRouteSurfaceKey } from '../app/navigation/ReaderRouteStackSurface';
+import { ReaderBottomNavigation } from '../app/navigation/ReaderBottomNavigation';
+import { readerMainNavigationMode } from '../features/shell/MainNavigationSpec';
+import { readerLayoutCarrierResponseRegion } from '../ui/layout/ReaderPageNativeAttributes';
 import { ReaderPostLayoutFrame } from '../ui/layout/ReaderPostLayoutFrame';
 import { ReaderLayoutDebugOverlay } from '../app/composition/ReaderLayoutDebugOverlay';
 
@@ -229,6 +232,10 @@ struct Index {
   @State private navigationGeneration: number = this.navigationOwner.snapshot().generation;
   @State private directoryReturnTarget: DirectoryReturnTarget = this.navigationOwner.snapshot().directoryReturnTarget;
   @State private settingsSection: SettingsSection = this.navigationOwner.snapshot().settingsSection;
+  @StorageLink('readerWideNavigationRail') private wideNavigationRail: boolean = false;
+  @StorageLink('readerMainViewportRevision') private mainViewportRevision: number = 0;
+  @State private primaryTabFooterHeight: number = 0;
+  @State private settingsHomeScrollTopRequest: number = 0;
   @State private wideSettingsCollapsed: boolean = false;
   @State private wideSettingsLane: ReaderRouteSurfaceKey = 'settings-general';
   @State private wideSettingsMotion: ReaderRouteMotionKind = 'tab';
@@ -1022,6 +1029,45 @@ struct Index {
     return this.libraryJourney.isInteractiveBookshelf(generation, owner, mounting);
   }
 
+  private showsPrimaryBottomNavigation(): boolean {
+    if (this.route !== 'bookshelf' &&
+      (this.route !== 'settings' || this.settingsSection !== 'home' || this.expandedLayout())) return false;
+    return readerMainNavigationMode(this.wideNavigationRail, this.mainViewportRevision,
+      this.readerWindowMetricsRevision) === 'bottom';
+  }
+
+  private primaryBottomNavigationInputAllowed(): boolean {
+    if (!this.showsPrimaryBottomNavigation() || !this.searchAppForeground || this.arkWebCapturesInput ||
+      this.bookRemovalConfirmation.isOpen() || this.jsonImportPresentation.opening !== undefined ||
+      ReaderNativeAlertWindow.isPresented()) return false;
+    if (this.route === 'bookshelf') {
+      return this.isInteractiveBookshelfPresentation(this.navigationGeneration,
+        this.mountedRuntimeOwner, this.detailShelfAdmissionMount);
+    }
+    return this.settingsPresentation.paintIdentity('settings') !== '';
+  }
+
+  private selectPrimaryBottomTab(key: string): void {
+    if (!this.primaryBottomNavigationInputAllowed()) return;
+    if (key === 'bookshelf' && this.route === 'settings') this.libraryJourney.returnToBookshelf();
+    else if (key === 'settings' && this.route === 'bookshelf') this.settingsNavigation.openSettings();
+    else if (key === 'discover') this.openDiscover();
+    else if (key === 'rss') this.rssJourney.openRss();
+  }
+
+  private retapPrimaryBottomTab(key: string): void {
+    if (!this.primaryBottomNavigationInputAllowed() || key !== this.route ||
+      !this.settingsPresentation.snapshot.tapBottomScrollTop) return;
+    if (key === 'bookshelf') this.shelfRead.scrollTopToken += 1;
+    else if (key === 'settings') this.settingsHomeScrollTopRequest += 1;
+  }
+
+  private recordPrimaryTabFooter(area: Area): void {
+    const height = readerPageAreaLength(area.height);
+    if (this.showsPrimaryBottomNavigation() && Number.isFinite(height) && height > 0 &&
+      Math.abs(height - this.primaryTabFooterHeight) >= 0.1) this.primaryTabFooterHeight = height;
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       this.pageSurfaces();
@@ -1087,12 +1133,33 @@ struct Index {
         }
       }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent)
         .zIndex(this.detailAboveReader() ? 0 : 1);
+      this.primaryBottomNavigation();
       this.pageOverlays();
     }
     .width('100%').height('100%')
     .enabled(!this.arkWebCapturesInput)
     .hitTestBehavior(this.arkWebCapturesInput ? HitTestMode.None : HitTestMode.Default)
     .accessibilityLevel(this.arkWebCapturesInput ? 'no-hide-descendants' : 'auto');
+  }
+
+  @Builder
+  private primaryBottomNavigation() {
+    if (this.showsPrimaryBottomNavigation()) {
+      Stack({ alignContent: Alignment.Bottom }) {
+        Column() {
+          ReaderBottomNavigation({ current: this.route, inputEnabled: this.primaryBottomNavigationInputAllowed(),
+            actionGeneration: this.navigationGeneration,
+            onSelect: (key: string): void => this.selectPrimaryBottomTab(key),
+            onCurrentTap: (key: string): void => this.retapPrimaryBottomTab(key),
+          });
+        }.width('100%').onAreaChange((_old: Area, next: Area): void => this.recordPrimaryTabFooter(next))
+          .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion());
+      }.width('100%').height('100%')
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+        .accessibilityLevel(this.primaryBottomNavigationInputAllowed() ? 'auto' : 'no-hide-descendants')
+        .hitTestBehavior(this.primaryBottomNavigationInputAllowed() ? HitTestMode.Default : HitTestMode.None)
+        .responseRegion(readerLayoutCarrierResponseRegion());
+    }
   }
 
   private routeViewportWidth(): number {
@@ -1147,6 +1214,7 @@ struct Index {
           this.librarySearch.continueCardSuppressed(this.navigationGeneration, this.detailShelfAdmissionMount),
         reduceMotion: this.appReduceMotion,
         tapBottomScrollTop: this.settingsPresentation.snapshot.tapBottomScrollTop,
+        sharedBottomNavigationHeight: this.primaryTabFooterHeight,
         ports: this.bookshelfScenePorts(this.mountedRuntimeOwner, mounting),
       })
         .enabled(this.bookshelfContentAcceptsInput())
@@ -1541,6 +1609,8 @@ struct Index {
       active: this.settingsPaintCurrent(route, section),
       isPaintCurrent: (): boolean => this.settingsPaintCurrent(route, section),
       expandedLayout: this.expandedLayout(), embeddedWide, generation: this.navigationGeneration,
+      sharedBottomNavigationHeight: this.primaryTabFooterHeight,
+      homeScrollTopRequest: this.settingsHomeScrollTopRequest,
       isInputAllowed: (): boolean => this.searchAppForeground && !this.arkWebCapturesInput &&
         this.route === route && this.currentReadingRuntime() !== undefined,
       onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string, blocksSettingsSwitch?: () => boolean): void =>

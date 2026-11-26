@@ -11,6 +11,7 @@ import * as readerFonts from '../../entry/src/main/ets/ui/foundation/ReaderFontF
 import { SOURCE_CHROME_VISUAL as SOURCE_SWITCH_VISUAL } from '../../entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts';
 import { ReaderInsetsVp, readerVisualSafeTop } from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import { readerWindowEnvironmentForProbe } from './reader-window-environment-probe.mjs';
+import { productionReaderPressFeedback } from './reader-press-feedback-probe.mjs';
 const read=(directory,name)=>readFileSync(new URL(`../../entry/src/main/ets/${directory}/${name}.ets`,import.meta.url),'utf8');
 const sdk=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url),ts=require(`${sdk}/node_modules/typescript`);
@@ -56,7 +57,7 @@ const boundedColorMetrics={resourceColor:color=>({color,...bookIconChannels.get(
 class BoundedColorFilter {
  constructor(matrix){assert.equal(matrix.length,20);assert.ok(matrix.every(Number.isFinite),'actual SVG color matrix has finite channels');this.matrix=matrix.slice();}
 }
-function classOf(source,name,deps){const start=source.indexOf(`export class ${name}`),end=source.indexOf('@Component',start);
+function classOf(source,name,deps){const start=source.indexOf(`class ${name}`),end=source.indexOf('@Component',start);
   return new Function(...Object.keys(deps),`${stripped(source.slice(start,end))};return ${name};`)(...Object.values(deps));}
 /** Test-specific composition: actual SDK emitted children, V1 property classes,
  * shared producer modifiers and mounted slots. Uses the existing compiler helper
@@ -72,18 +73,23 @@ export function boundedSurfaceSdk(options={}){
   const ReaderMenuActionView=classOf(childSources.ReaderActionMenuSurface,'ReaderMenuActionView',{});
   const nativePan = options.panGesture ?? new Proxy({}, {get:()=>()=>{}});
   const nativeGesture = new Proxy({}, {get:()=>()=>{}});
-  const deps={...properties.sdk,readerWindowMetrics:options.windowMetrics??(()=>({systemFontScale:1})),...specs,...readerFoundationTokens,...typography,...readerFonts,...actionIcons,readerAppColor,ReaderInsetsVp,ReaderMenuActionView,
+  const windowMetrics = options.windowMetrics ?? (() => ({ systemFontScale: 1, densityPixels: 1 }));
+  const Color = { Transparent: 'Color.Transparent' };
+  const ReaderPressFeedback = productionReaderPressFeedback({ Color, ColorMetrics: boundedColorMetrics });
+  const actionPaint = { Color, readerAppColor, ReaderPressFeedback };
+  const deps={...properties.sdk,readerWindowMetrics:windowMetrics,...specs,...readerFoundationTokens,...typography,...readerFonts,...actionIcons,readerAppColor,ReaderInsetsVp,ReaderMenuActionView,ReaderPressFeedback,
     readerReadableFontScale,readerScaledControlHeight,
     ColorMetrics:boundedColorMetrics,ColorFilter:BoundedColorFilter,
     PanGesture:nativePan, PanDirection:{Vertical:'vertical'}, GesturePriority:{Low:'low'},
     globalThis:{Gesture:nativeGesture,PanGesture:nativePan},
     ReaderBoundedFrameModifier:classOf(childSources.ReaderBoundedSurface,'ReaderBoundedFrameModifier',{...specs,readerAppColor,ReaderInsetsVp,
-      HitTestMode:{Default:'HitTestMode.Default'},Color:{Transparent:'Color.Transparent'}}),
-    ReaderDrawerCloseFocusModifier:new Function(stripped(childSources.ReaderBoundedSurfaceHeader.slice(
+      HitTestMode:{Default:'HitTestMode.Default'},Color,readerWindowMetrics:windowMetrics}),
+    ReaderDrawerCloseFocusModifier:new Function('ReaderPressFeedback', 'Color', stripped(childSources.ReaderBoundedSurfaceHeader.slice(
       childSources.ReaderBoundedSurfaceHeader.indexOf('class ReaderDrawerCloseFocusModifier'),
-      childSources.ReaderBoundedSurfaceHeader.indexOf('/** Only set attributes')))+';return ReaderDrawerCloseFocusModifier;')(),
+      childSources.ReaderBoundedSurfaceHeader.indexOf('/** Only set attributes')))+';return ReaderDrawerCloseFocusModifier;')(ReaderPressFeedback, Color),
     ReaderBoundedTitleModifier:classOf(childSources.ReaderBoundedSurfaceHeader,'ReaderBoundedTitleModifier',{readerAppColor,...typography}),
-    ReaderBoundedFileActionModifier:classOf(childSources.ReaderBoundedSurfaceActions,'ReaderBoundedFileActionModifier',{}),
+    ReaderBoundedFileActionModifier:classOf(childSources.ReaderBoundedSurfaceActions,'ReaderBoundedFileActionModifier',actionPaint),
+    ReaderBoundedTtsPrimaryPaint:classOf(childSources.ReaderBoundedSurfaceActions, 'ReaderBoundedTtsPrimaryPaint', actionPaint),
   };
   const hooks={...properties.hooks,childSources,mountChildren:true,lifecycleChildren:true,allowEmptyBranchAdmission:options.allowEmptyBranchAdmission===true};
   for(const name of Object.keys(childSources))deps[name]=createReaderBuilderProbe(childSources[name],boundedMembers(childSources[name]),deps,hooks).Component;

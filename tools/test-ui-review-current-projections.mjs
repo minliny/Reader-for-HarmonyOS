@@ -418,7 +418,7 @@ function multiSelectCurrent(source) {
     dependencies.ShelfBookListDetails = createReaderBuilderProbe(details, boundedMembers(details), dependencies, hooks).Component;
     const members = ['books', 'ready', 'busy', 'appForeground', 'selectedKeys', 'selectionList', 'selectionCard', 'selectionListCard',
       'selectionBadge', 'selectionRowAction', 'currentBook', 'hasCover', 'bookKey', 'isSelected', 'hasBookKey',
-      'toggleBook', 'visibleBooks', 'bookRows', 'isListMode', 'selectionInputEnabled', 'reconcileSelection', 'canRetainSelectedKey'];
+      'toggleBook', 'visibleBooks', 'bookRows', 'isListMode', 'selectionInputEnabled', 'reconcileSelection'];
     const { owner } = createReaderBuilderProbe(source, members, dependencies, hooks);
     const first = { sourceId: 'source', bookId: 'one', title: '旧标题', author: '旧作者',
       coverUrl: 'https://example.invalid/old.png', contentKind: 'text', currentChapterTitle: '旧章节',

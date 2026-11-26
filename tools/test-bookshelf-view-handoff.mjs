@@ -14,7 +14,6 @@ import { readerSurfaceSpecsForProbe } from './lib/bounded-surface-sdk-probe.mjs'
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import { createDefaultReaderWindowMetrics } from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import { bookCoverDisplayUrl } from '../entry/src/main/ets/app/library/BookCoverDisplay.ts';
-import * as coverVisual from '../entry/src/main/ets/features/bookshelf/ui/BookshelfCoverVisual.ts';
 import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts';
 
 // Execute the real SDK-emitted Builder callbacks and production sample methods.
@@ -72,7 +71,6 @@ const methods = ['sampleViewSwitch', 'resetViewSwitchMotion', 'setRestingProject
   'captureViewSwitchRanks', 'projectionDetailsOpacity', 'projectionListProgress', 'projectionRowHeight',
   'projectionBookWidth', 'projectionBookHeight',
   'projectionBookTranslateX', 'projectionBookTranslateY', 'projectionCoverScale', 'projectionCoverRadius',
-  'projectionCoverScaleY',
   'projectionCoverCompensationX', 'projectionCoverCompensationY', 'projectionListDetailsWidth',
   'projectionCoverLayerOpacity', 'gridBookCardHeight', 'gridProgressLabel', 'listCoverWidth', 'listCoverHeight',
   'listContentHeight', 'listRowHeight', 'listTextFrame', 'listTextBudget', 'listTextFontRevision',
@@ -83,7 +81,7 @@ const methods = ['sampleViewSwitch', 'resetViewSwitchMotion', 'setRestingProject
   'measureBookOrigin', 'shelfViewportMotionId'];
 function fixture(text = source) {
   const properties = createArkUIPropertyRuntimeProbe();
-  const { owner } = createReaderBuilderProbe(text, methods, { ...properties.sdk, ...readerFoundationTokens, ...tokens, ...grid, ...coverVisual, bookCoverDisplayUrl,
+  const { owner } = createReaderBuilderProbe(text, methods, { ...properties.sdk, ...readerFoundationTokens, ...tokens, ...grid, bookCoverDisplayUrl,
     ReaderWindowCoordinator: { metrics: () => metrics },
     motionSegment, bookshelfViewCoverDelayMs, noCoverGlyph, NoCoverCover: Child, ShelfBookListDetails: Child, ShelfBookPresentation,
     ImageFit: { Cover: 'cover' }, readerSurfaceElevation: readerSurfaceSpecsForProbe().readerSurfaceElevation,
@@ -153,9 +151,12 @@ assert.deepEqual([...viewport.viewSwitchRanks.keys()], [4, 5, 6, 7, 8, 9, 10, 11
 sample(viewport, 'cover', 'list', 1);
 assert.equal(viewport.projectionListProgress(2), 1, 'offscreen previous row takes final layout immediately');
 assert.equal(viewport.projectionListProgress(13), 1, 'covers after the first visible group take final layout immediately');
-assert.equal(viewport.projectionListProgress(3, false, true), viewport.projectionListProgress(4),
+assert.equal(viewport.projectionListProgress(3, false, 3), viewport.projectionListProgress(4),
   'row keeps the same timing when its first cover is clipped');
 assert.equal(viewport.projectionListProgress(5), 0, 'second visible cover waits for its stagger');
+viewport.viewSwitchRanks = new Map([[7, 0], [8, 1]]);
+assert.equal(viewport.projectionListProgress(4, false, 4), viewport.projectionListProgress(7),
+  'tablet row follows its fourth cover when the first three are clipped');
 
 // Final sampled geometry tolerates finite endpoint interpolation rounding.
 // Visible opacity, frame fields and actor identity retain strict comparisons.
@@ -197,7 +198,7 @@ function frame(owner, tablet, index) {
   return { rowHeight: owner.projectionRowHeight(Array(columns).fill(book), tablet, index - column),
     width: owner.projectionBookWidth(tablet, index), height: owner.projectionBookHeight(book, tablet, index),
     x: owner.projectionBookTranslateX(column, tablet, index), y: owner.projectionBookTranslateY(column, tablet, index),
-    scale: owner.projectionCoverScale(tablet, index), scaleY: owner.projectionCoverScaleY(tablet, index),
+    scale: owner.projectionCoverScale(tablet, index),
     radius: owner.projectionCoverRadius(tablet, index),
     compensationX: owner.projectionCoverCompensationX(tablet, index), compensationY: owner.projectionCoverCompensationY(tablet, index),
     detailsWidth: owner.projectionListDetailsWidth(tablet), coverOpacity: coverOpacity(owner),
@@ -214,7 +215,7 @@ for (const [from, to] of [['cover', 'list'], ['list', 'cover']]) {
         actual.resetViewSwitchMotion();
         const after = frame(actual, tablet, index);
         assert.deepEqual(Object.keys(after), Object.keys(before), 'reset retains every frame field');
-        for (const name of ['rowHeight', 'width', 'height', 'x', 'y', 'scale', 'scaleY', 'radius', 'compensationX', 'compensationY', 'detailsWidth']) {
+        for (const name of ['rowHeight', 'width', 'height', 'x', 'y', 'scale', 'radius', 'compensationX', 'compensationY', 'detailsWidth']) {
           near(after[name], before[name], `${from}->${to} reset retains final ${name}`);
         }
         for (const name of ['coverOpacity', 'headerOpacity', 'gridOpacity', 'listOpacity']) {
@@ -227,9 +228,11 @@ for (const [from, to] of [['cover', 'list'], ['list', 'cover']]) {
           const coverHeight = actual.bookCardHeight(coverWidth, tablet);
           near(before.height, innerHeight + 2 * padding, 'final list card reserves the scaled details and both insets');
           near(coverWidth * before.scale, grid.BOOKSHELF_LIST_COVER_WIDTH, 'cover actor reaches the list width');
-          near(coverHeight * before.scaleY, innerHeight, 'cover actor reaches the same height as list details');
+          const listCoverHeight = grid.bookshelfCoverHeight(grid.BOOKSHELF_LIST_COVER_WIDTH, tablet);
+          near(coverHeight * before.scale, listCoverHeight, 'cover actor retains its aspect ratio at any text scale');
           near(coverWidth * (1 - before.scale) / 2 + before.compensationX, padding, 'cover visual left reaches the card inset');
-          near(coverHeight * (1 - before.scaleY) / 2 + before.compensationY, padding, 'cover visual top reaches the card inset');
+          near(coverHeight * (1 - before.scale) / 2 + before.compensationY, padding + (innerHeight - listCoverHeight) / 2,
+            'cover remains centered as list text grows');
           near(before.detailsWidth, before.width - grid.BOOKSHELF_LIST_COVER_WIDTH - 2 * padding - grid.BOOKSHELF_LIST_DETAILS_GAP,
             'details fill the rest of the list card');
           const coverColumns = grid.bookshelfColumnCount(tablet);
@@ -250,7 +253,7 @@ for (const [from, to] of [['cover', 'list'], ['list', 'cover']]) {
 
 const measured = fixture();
 metrics.systemFontScale = 1;
-let width = grid.BOOKSHELF_LIST_COVER_WIDTH, height = grid.BOOKSHELF_LIST_COVER_HEIGHT, viewportWidth = 326;
+let width = grid.BOOKSHELF_LIST_COVER_WIDTH, height = measured.listCoverHeight(false), viewportWidth = 326;
 const currentId = measured.bookCoverMotionId(book), viewportId = measured.shelfViewportMotionId();
 const node = (x,y) => ({getPositionToWindowWithTransform:()=>({x,y})});
 Object.assign(measured,{viewMode:'list',viewSwitchRunning:false,isWideViewport:()=>false,
@@ -260,9 +263,11 @@ Object.assign(measured,{viewMode:'list',viewSwitchRunning:false,isWideViewport:(
       {size:{width:viewportWidth,height:700}}}),px2vp:value=>value})});
 assert.deepEqual(measured.measureBookOrigin(book),{x:20,y:70,width,height});
 metrics.systemFontScale = 2;
-assert.equal(measured.measureBookOrigin(book),undefined,'the previous font-scale cover rect is stale');
+assert.deepEqual(measured.measureBookOrigin(book),{x:20,y:70,width,height},'font scaling keeps the same cover dimensions');
+const fixedCoverHeight = height;
 height = measured.listContentHeight(false);
-assert.deepEqual(measured.measureBookOrigin(book),{x:20,y:70,width,height},'view switching accepts the current scaled list cover');
+assert.equal(measured.measureBookOrigin(book),undefined,'text lane height cannot be used as the cover height');
+height = fixedCoverHeight;
 metrics.systemFontScale = 1;
 assert.equal(measured.measureBookOrigin({...book,sourceId:'different'}),undefined,'same bookId in another source has no mounted cover');
 measured.viewMode='cover';
@@ -293,6 +298,10 @@ for (const hasImage of [false, true]) {
     const childProps = childPropsFor(owner);
     const covers = [...owner.nodes.values()].filter(node => node.type === 'Image' && node.create === rowBook.coverUrl);
     assert.equal(covers.length, hasImage ? 2 : 0, 'the two cover actors use the same current image');
+    const cover = [...owner.nodes.values()].find(node => node.id === owner.bookCoverMotionId(rowBook));
+    assert.ok(cover);
+    assert.equal(cover.clip ?? false, false, 'the shared cover shadow sits outside the clipped layers');
+    assert.deepEqual(cover.shadow, readerSurfaceSpecsForProbe().readerSurfaceElevation(hasImage ? 'cover' : 'embedded', owner.appThemeScheme));
     const defaultCovers = [...owner.children.values()].filter(child => 'coverWidth' in child.params);
     assert.equal(defaultCovers.length, hasImage ? 0 : 2);
     if (!hasImage) assert.deepEqual(defaultCovers[0].params, defaultCovers[1].params, 'both default-cover actors have identical geometry');
@@ -304,6 +313,7 @@ for (const hasImage of [false, true]) {
       owner.replay();
       verifyGroupedCoverActors(owner);
       verifyDetailsInput(owner);
+      assert.equal(cover.scale.x, cover.scale.y, 'the emitted cover actor scales uniformly throughout the morph');
       assert.deepEqual(branches, initialBranches, 'opacity updates do not replace a conditional cover subtree');
       assert.deepEqual([...owner.nodes.keys()], nodeIds);
       assert.deepEqual([...owner.children.keys()], childIds);

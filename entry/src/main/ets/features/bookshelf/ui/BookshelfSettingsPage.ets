@@ -1,6 +1,7 @@
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { BookshelfViewModeHost, type BookshelfViewModeSnapshot } from '../application/BookshelfViewModeHost';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { ReaderRecoveryGroup } from '../../../ui/feedback/ReaderRecoveryGroup';
@@ -22,6 +23,7 @@ import { DEFAULT_BOOKSHELF_VIEW, type BookshelfViewMode } from '../application/B
 @Component
 export struct BookshelfSettingsPage {
   @Prop embeddedWide: boolean = false;
+  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
 
   @StorageLink('readerBookshelfViewMode') private mode: string = DEFAULT_BOOKSHELF_VIEW;
@@ -148,6 +150,7 @@ export struct BookshelfSettingsPage {
     ReaderStandardPage({
       embeddedWide: this.embeddedWide,
       floatingHeader: true,
+      editingHost: this.editingHost,
       variant: 'settings',
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
@@ -216,7 +219,7 @@ export struct BookshelfSettingsPage {
       }
 
     }
-    LocalRecoveryPanel({ navigationGeneration: this.navigationGeneration,
+    LocalRecoveryPanel({ navigationGeneration: this.navigationGeneration, editingHost: this.editingHost,
       isInputAllowed: (): boolean => this.userInputIsCurrent() });
   }
 

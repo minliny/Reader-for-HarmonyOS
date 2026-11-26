@@ -97,7 +97,7 @@ export struct BookshelfManagementPage {
     this.groupsCard();
     this.assignmentCard();
     this.recordsCard();
-    Text('在此新建分组、为书籍设置归属；分组会出现在书架的筛选行中。数据直接存取 Core 书架。')
+    Text('在此创建和管理分组，也可以为所选书籍设置或清除分组。')
       .width('100%')
       .fontFamily(TYPE_SHELF_MANAGEMENT_NOTE.fontFamily)
       .fontWeight(TYPE_SHELF_MANAGEMENT_NOTE.fontWeight)
@@ -277,7 +277,7 @@ export struct BookshelfManagementPage {
             this.assignmentBookRow(repeatItem.item);
           }
         })
-        .key((book: ShelfBook): string => `assign-book-${book.sourceId}:${book.bookId}`)
+        .key((book: ShelfBook): string => `assign-book-${book.sourceId}\u0000${book.bookId}\u0000${book.group ?? '未分组'}`)
         .virtualScroll({ reusable: true });
       }
       .width('100%')

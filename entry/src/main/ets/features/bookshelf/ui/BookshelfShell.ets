@@ -39,6 +39,7 @@ export struct BookshelfShell {
   @Prop removalActionLabel: string = '继续原删除操作';
   onContinueRemoval: (generation: number, navigation: number) => void = (_generation: number, _navigation: number): void => {};
   @Prop @Watch('onNavigationGenerationChanged') navigationGeneration: number = 0;
+  @Prop sharedBottomNavigationHeight: number = -1;
   isCurrentShelfInput: ((navigation: number) => boolean) | undefined = undefined;
   @Prop populated: boolean = false;
   @Prop @Watch('onReadRecoveryChanged') feedbackEnabled: boolean = true;
@@ -234,6 +235,7 @@ export struct BookshelfShell {
       MainTabShell({
         activeTab: 'bookshelf', headerKind: 'floating', headerVisible: false,
         navigationGeneration: this.navigationGeneration,
+        sharedBottomNavigationHeight: this.sharedBottomNavigationHeight,
         footerMeasurementKey: this.footerMeasurementKey,
         onFooterHeightChange: (height: number, presentedKey: number): void => this.recordFooterHeight(height, presentedKey),
         onMainTab: (key: string, generation?: number): void => this.requestMainTab(key, generation ?? this.navigationGeneration),

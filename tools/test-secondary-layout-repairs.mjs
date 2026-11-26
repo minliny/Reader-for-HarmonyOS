@@ -43,6 +43,7 @@ const selected = selectContractCases({
   'title-scale': 'Actual standard and action-sheet titles at2.5 with platformmax3 and current linebox parent.',
   'page-back-bar-title-wrap': 'Actual PageBackBar fixed heading wraps at original font with a naturally growing Row. Floating standard heading stays single-line. Old truncation fails.',
   'select-reduce-motion': 'Nine real InlineSelect callers and both directory/source-tool propagation chains preserve true/false preferences and popup lifecycle.',
+  'inline-select-indexed-popup': 'Actual InlineSelect popup rows preserve duplicate option labels, exact source index, and reduced-motion native options.',
   'bookshelf-group-recovery-capacity': 'Actual group build/surface/recovery pays current safe host capacity, including expanded long text, zero, busy and retired actions.',
 });
 const root = new URL('../entry/src/main/ets/', import.meta.url);
@@ -1029,8 +1030,9 @@ async function selectReduceMotion() {
       c.foundation.properties.flush(); select.menu(select.selectionId); c.foundation.properties.flush();
       const nativePopup = () => [...select.nodes.values()].find(node => node.bindPopup !== undefined).bindPopup[1];
       const originalPopupOptions = nativePopup();
-      assert.deepEqual(originalPopupOptions.transition, reduceMotion ? { kind: 'identity', animation: { duration: 0 } } : undefined,
-        'actual native popup consumes the current reduce-motion preference');
+      assert.equal(originalPopupOptions.transition?.kind, reduceMotion ? 'opacity' : undefined);
+      assert.equal(originalPopupOptions.transition?.animation.duration, reduceMotion ? 120 : undefined);
+      assert.equal(originalPopupOptions.backgroundBlurStyle, 'BlurStyle.NONE');
       const panel = inline.walk(select).find(child => child instanceof inline.dependencies.ReaderSelectPanel && child.selectionId === select.selectionId);
       assert.equal(panel.reduceMotion, reduceMotion);
       const before = animations.length; panel.expandPanel();
@@ -1038,15 +1040,15 @@ async function selectReduceMotion() {
       else assert.ok(animations.at(-1).duration > 0, 'ordinary preference retains the current animation recipe');
       select.reduceMotion = true; c.foundation.properties.flush();
       assert.equal(panel.reduceMotion, true, 'open popup receives a live preference update');
-      assert.deepEqual(nativePopup().transition, { kind: 'identity', animation: { duration: 0 } },
-        'live preference also updates the native popup options');
+      assert.equal(nativePopup().transition.kind, 'opacity');
+      assert.equal(nativePopup().transition.animation.duration, 120, 'live preference updates the native popup');
       const oldIdentity = panel.selectionId;
-      panel.onCommit(panel.options[0], oldIdentity); assert.equal(commits.length, 1);
-      select.toggle(); panel.onCommit(panel.options[0], oldIdentity);
+      panel.onCommit(panel.options[0], oldIdentity, 0); assert.equal(commits.length, 1);
+      select.toggle(); panel.onCommit(panel.options[0], oldIdentity, 0);
       originalPopupOptions.onStateChange({ isVisible: false });
       assert.equal(select.open, true, 'late native dismissal cannot close the successor popup');
       assert.equal(commits.length, 1, 'an old popup cannot commit into the new opening');
-      select.aboutToDisappear(); select.commit(panel.options[0], select.selectionId);
+      select.aboutToDisappear(); select.commit(panel.options[0], select.selectionId, 0);
       assert.equal(commits.length, 1, 'unmounted select cannot commit');
     }
     // Each intermediate constructor is executed by the normal SDK Builder.
@@ -1330,7 +1332,34 @@ function supplementalChapterWidths() {
     results.push({ case: 'download-chapter-width', chapter: { width, safeInset, scale, managing, innerWidth, titleMinimum: title.constraintSize.minWidth, tagWidth, sideLane, keepsSideLaneInline } });
   }
 }
+function inlineSelectIndexedPopup() {
+  const value = metrics(320, 360, 1);
+  for (const reduceMotion of [false, true]) {
+    const inline = inlineSelectSdk({ uiContext: uiContext(), dependencies: { readerWindowMetrics: () => value } });
+    const commits = [];
+    const select = new inline.dependencies.ReaderInlineSelect(undefined, {
+      value: '同名', options: ['同名', '其他', '同名'], selectedIndex: 2, reduceMotion,
+      onSelect: (index, label) => commits.push([index, label]),
+    });
+    select.aboutToAppear(); select.initialRender();
+    select.toggle(); inline.properties.flush();
+    const native = inline.nodes(select).find(node => node.bindPopup !== undefined).bindPopup[1];
+    assert.equal(native.backgroundBlurStyle, 'BlurStyle.NONE');
+    assert.equal(native.shadow.radius, 0);
+    assert.equal(native.transition?.kind, reduceMotion ? 'opacity' : undefined);
+    assert.equal(native.transition?.animation.duration, reduceMotion ? 120 : undefined);
+    select.menu(select.selectionId); inline.properties.flush();
+    const panel = inline.walk(select).find(child => child instanceof inline.dependencies.ReaderSelectPanel);
+    const sameLabels = inline.walk(panel).filter(child =>
+      child instanceof inline.dependencies.ReaderChoiceRow && child.label === '同名');
+    assert.deepEqual(sameLabels.map(row => row.selected), [true, false]);
+    inline.nodes(sameLabels[1]).find(node => node.onClick).onClick();
+    assert.deepEqual(commits, [[0, '同名']], 'the first equal label commits its original index');
+    results.push({ case: 'inline-select-indexed-popup', reduceMotion });
+  }
+}
 const runners = { 'select-host': selectHost, 'actions-tools-rules': actionsToolsRules, 'recovery-overlays': recoveryOverlays,
+  'inline-select-indexed-popup': inlineSelectIndexedPopup,
   'select-reduce-motion': selectReduceMotion, 'bookshelf-group-recovery-capacity': bookshelfGroupRecoveryCapacity,
   'arkweb-host': arkwebHost, 'retained-and-settings': retainedAndSettings, 'title-scale': titleScale,
   'page-back-bar-title-wrap': pageBackBarTitleWrap,

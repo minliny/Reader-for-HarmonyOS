@@ -38,7 +38,7 @@ const motion = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/fo
   'MotionSpec.ets', { ...productTiming, SOURCE_SWITCH_VISUAL, MANGA_DIRECTORY_VISUAL, curves: nativeCurves, Curve: nativeCurve },
   ['motionAnimateParam', 'motionAnimateParamDelayed', 'motionSpecGet']);
 const policy = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderMotionPolicy.ets', import.meta.url), 'utf8'),
-  'ReaderMotionPolicy.ets', { ...motion, collapseMotionDurationMs }, ['readerMotionCurve', 'readerMotionDurationMs']);
+  'ReaderMotionPolicy.ets', { ...motion, collapseMotionDurationMs }, ['readerMotionCurve', 'readerMotionDurationMs', 'readerMotionReducedFadeParam']);
 const feedbackSource=readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts',import.meta.url),'utf8');
 const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
 const props=o=>({state:o.state,batch:o.batch,reduceMotion:o.reduceMotion,failureMessage:o.failureMessage,originalPending:o.originalPending,recovery:o.recovery,selectionEnabled:o.selectionEnabled,selectionBlockedMessage:o.selectionBlockedMessage});
@@ -50,7 +50,7 @@ function mount(params={},options={},input=source,viewportHeight=0){
     if(key==='readerTransientToast'&&value.visible)feedback.push(value.message);
   }};
   const feedbackDeps=pureModuleProbe(feedbackSource,'ReaderTransientFeedback.ts',{AppStorage},['ReaderTransientFeedback','READER_FEEDBACK_BRIEF_MS']);
-  const o=p.consumer(input,boundedMembers(input),{...horizontal,...metricsApi,...feedbackDeps,...motion,...policy,...modalMotion,READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS,localImportResultLayout,readerSurfaceMaxHeight,readerKeyboardHostBottom,LOCAL_IMPORT_FILE_FOCUS_ID,
+  const o=p.consumer(input,boundedMembers(input),{...horizontal,...metricsApi,...feedbackDeps,...motion,...modalMotion,...policy,READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS,localImportResultLayout,readerSurfaceMaxHeight,readerKeyboardHostBottom,LOCAL_IMPORT_FILE_FOCUS_ID,
     ReaderWindowCoordinator:{metrics:()=>metrics},registerReaderFonts(){},readerMotionNowMs:()=>now,readerActionIcon,
     BorderStyle:{Dashed:'BorderStyle.Dashed'},Curve:{Linear:'Curve.Linear'},curves:{cubicBezierCurve:(...values)=>values},
     uiContext:{animateTo:(options,work)=>{animations.push(options);work();}}}, {state:'fileSelection',reduceMotion:true,...params});
@@ -175,7 +175,7 @@ if(selectedCase==='picker-admission') {
 if(selectedCase==='result-receipts') {
 {
   const recovery={message:'保存结果待确认',visible:true,canRetry:true,generation:7};
-  const {p,o}=mount({state:'importing',batch:undefined,recovery,selectionEnabled:false,originalPending:true},{allowEmptyBranchAdmission:true});let close=0,reconcile=[];o.onClose=()=>close++;o.onReconcile=g=>reconcile.push(g);
+  const {p,o,animations}=mount({state:'importing',batch:undefined,recovery,selectionEnabled:false,originalPending:true},{allowEmptyBranchAdmission:true});let close=0,reconcile=[];o.onClose=()=>close++;o.onReconcile=g=>reconcile.push(g);
   const shell=p.walk(o).find(x=>x instanceof p.deps.ReaderBoundedSurface&&x.specId==='local-import-progress');
   const shellNative=[...shell.nodes.values()].find(n=>n.type==='Stack');assert.ok(Number.isFinite(shellNative.height));
   assert.equal(p.walk(o).some(x=>x instanceof p.deps.ReaderBoundedSurface&&x.specId==='local-import-result-content'),false);
@@ -185,6 +185,7 @@ if(selectedCase==='result-receipts') {
   assert.ok(shell&&result&&footer);const resultNative=[...result.nodes.values()].find(n=>n.type==='Column');
   assert.equal(resultNative.backgroundColor,undefined,'transparent result does not duplicate persistent shell');assert.equal(resultNative.shadow,undefined);
   assert.equal(o.resultOpacity,1);assert.equal(o.importingOpacity,0);assert.equal(shellNative.height,o.resultPanelHeight());assert.ok(p.walk(o).includes(shell),'late batch admits one result layer while retaining the original opaque shell');
+  animations[0].onFinish();p.properties.flush();
   const resultIdentity=result;o.updateStateVars({...props(o),recovery:{...recovery,message:'saved result visible'}});p.properties.flush();assert.ok(p.walk(o).includes(resultIdentity));
   const measure=p.nodes(o).find(n=>n.type==='Column'&&n.onAreaChange&&String(n.onAreaChange).includes('measuredHeaderHeight')),measureFooter=p.nodes(o).find(n=>n.type==='Column'&&n.onAreaChange&&String(n.onAreaChange).includes('measuredFooterHeight'));
   measure.onAreaChange({}, {height:'73vp'});measureFooter.onAreaChange({}, {height:100});p.properties.flush();assert.equal(o.measuredHeaderHeight,73);assert.equal(o.measuredFooterHeight,100);assert.equal(shellNative.height,o.resultPanelHeight());assert.equal(resultNative.height,o.resultPanelHeight());
@@ -226,6 +227,17 @@ if(selectedCase==='result-receipts') {
   o.updateStateVars({...props(o),reduceMotion:true});p.properties.flush();
 
   o.foreground=false;o.aboutToDisappear();
+}
+{
+  const {p,o,animations}=mount({state:'importing',reduceMotion:true,batch:{items:[],imported:0}});
+  o.updateStateVars({...props(o),state:'result',batch:{items:[],imported:0}});p.properties.flush();
+  assert.deepEqual(animations.map(animation=>animation.duration),[120],'reduced handoff animates only one opacity fade');
+  assert.deepEqual([o.importingOpacity,o.resultOpacity,o.shellHeight],[0,1,o.resultPanelHeight()]);
+  assert.equal(o.resultAcceptsInput(),false);
+  o.updateStateVars({...props(o),batch:{items:[],imported:0}});p.properties.flush();
+  assert.equal(animations.length,1,'receipt refresh cannot restart the active reduced fade');
+  animations[0].onFinish();
+  assert.equal(o.resultAcceptsInput(),true);
 }
 {
   const first={fileName:'same.txt',state:'failed',failure:{code:'recoveryPending',message:'first ACK unknown'}};

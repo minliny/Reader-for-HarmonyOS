@@ -4,6 +4,7 @@ import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/f
 import { MESSAGE_TITLE, MESSAGE_BODY, MESSAGE_META } from '../../../ui/foundation/ReaderMessageStyle';
 import { ReaderRecoveryAction } from '../../../ui/feedback/ReaderRecoveryAction';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
 import { readerPaperActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
@@ -15,7 +16,8 @@ import { TYPE_APP_INHERITED_HINT, TYPE_FILE_IMPORT_BADGE, TYPE_FILE_IMPORT_HINT,
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { motionAnimateParam, motionAnimateParamDelayed } from '../../../ui/foundation/MotionSpec';
 import { READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS } from './LocalImportMotion';
-import { readerMotionCurve, readerMotionDurationMs } from '../../../ui/foundation/ReaderMotionPolicy';
+import { readerMotionCurve, readerMotionDurationMs, readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
+import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../../../ui/foundation/ReaderFontFamilies';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
 import { localImportResultLayout, LocalImportResultLayout } from './LocalImportLayout';
 import type { LocalImportDialogState } from '../presentation/LocalImportPresentationOwner';
@@ -97,6 +99,7 @@ export struct LocalImportDialog {
   @State private motionGeneration: number = 0;
   private pendingHandoff: boolean = false;
   private handoffEndsAt: number = 0;
+  private handoffReduced: boolean = false;
   private resultMeasured: boolean = false;
   private wasImporting: boolean = false;
   @State private viewportWidth: number = 0;
@@ -321,11 +324,11 @@ export struct LocalImportDialog {
         }
         .width('100%')
         .padding(0)
-        .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
         .border({ width: 2, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme), style: BorderStyle.Dashed })
-        .borderRadius(16)
         .id(LOCAL_IMPORT_FILE_FOCUS_ID)
-        .attributeModifier(new ReaderActionAccessibility('从系统文件中选择', this.canSelectFiles(), false, true, undefined, 'nativeButton'))
+        .attributeModifier(new ReaderActionAccessibility('从系统文件中选择', this.canSelectFiles(), false, true,
+          new ReaderPressFeedback(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme), this.appThemeScheme, 16, 16,
+            this.canSelectFiles()), 'nativeButton'))
         .onClick((): void => this.selectFiles());
 
         Row({ space: TOK_SPACE_XS }) {
@@ -491,7 +494,7 @@ export struct LocalImportDialog {
         Image(this.appThemeScheme === 'night' ? $r('app.media.import_doc_theme_night') : $r('app.media.import_doc'))
           .width(16).height(16).margin({ top: 3 });
         Column({ space: 4 }) {
-          Text(item().fileName).width('100%').fontFamily(MESSAGE_BODY.fontFamily).fontWeight(500)
+          Text(item().fileName).width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
             .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
             .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme));
           Text(item().state === 'success' ? (item().disposition === 'created' ? '新增成功' :
@@ -646,7 +649,8 @@ export struct LocalImportDialog {
     if (this.state === 'result') {
       // Receipt and viewport updates resize the same result. Only a new
       // result or an interrupted reveal needs to settle the handoff.
-      if (!this.resultInputReady && this.handoffEndsAt > 0 && (this.reduceMotion || !this.foreground)) {
+      if (!this.resultInputReady && this.handoffEndsAt > 0 &&
+        (!this.foreground || (this.reduceMotion && !this.handoffReduced))) {
         this.motionGeneration += 1;
         this.handoffEndsAt = 0;
         this.wasImporting = false;
@@ -663,7 +667,7 @@ export struct LocalImportDialog {
     const height = this.resultPanelHeight();
     if (!this.pendingHandoff) {
       const remaining = Math.max(0, this.handoffEndsAt - readerMotionNowMs());
-      if (remaining > 0 && !this.reduceMotion && this.foreground) {
+      if (remaining > 0 && !this.handoffReduced && this.foreground) {
         this.getUIContext().animateTo(
           { duration: remaining, curve: readerMotionCurve('bookshelf.import.handoff.resize') },
           (): void => { this.shellHeight = height; });
@@ -672,11 +676,25 @@ export struct LocalImportDialog {
     }
     this.pendingHandoff = false;
     const generation = ++this.motionGeneration;
-    if (this.reduceMotion || !this.foreground || !this.wasImporting) {
+    if (!this.foreground || !this.wasImporting) {
       this.wasImporting = false;
       this.handoffEndsAt = 0;
       this.shellHeight = height; this.importingOpacity = 0; this.resultOpacity = 1;
       this.resultInputReady = true;
+      return;
+    }
+    this.handoffReduced = this.reduceMotion;
+    if (this.handoffReduced) {
+      const fade = readerMotionReducedFadeParam((): void => this.finishResultHandoff(generation));
+      this.handoffEndsAt = readerMotionNowMs() + (fade.duration ?? 0);
+      this.shellHeight = height;
+      const showResult = (): void => { this.importingOpacity = 0; this.resultOpacity = 1; };
+      try {
+        this.getUIContext().animateTo(fade, showResult);
+      } catch (_unavailable) {
+        showResult();
+        this.finishResultHandoff(generation);
+      }
       return;
     }
     this.handoffEndsAt = readerMotionNowMs() + readerMotionDurationMs('bookshelf.import.handoff.resize', false);
@@ -685,12 +703,15 @@ export struct LocalImportDialog {
     this.getUIContext().animateTo(motionAnimateParam('bookshelf.import.handoff.resize'),
       (): void => { this.shellHeight = height; });
     this.getUIContext().animateTo(motionAnimateParamDelayed('bookshelf.import.handoff.reveal',
-      READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS, (): void => {
-        if (!this.mounted || generation !== this.motionGeneration || this.state !== 'result') return;
-        this.wasImporting = false;
-        this.handoffEndsAt = 0;
-        this.resultInputReady = true;
-      }), (): void => { this.resultOpacity = 1; });
+      READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS, (): void => this.finishResultHandoff(generation)),
+      (): void => { this.resultOpacity = 1; });
+  }
+
+  private finishResultHandoff(generation: number): void {
+    if (!this.mounted || generation !== this.motionGeneration || this.state !== 'result') return;
+    this.wasImporting = false;
+    this.handoffEndsAt = 0;
+    this.resultInputReady = true;
   }
 
   private numericAreaLength(value: Length): number {

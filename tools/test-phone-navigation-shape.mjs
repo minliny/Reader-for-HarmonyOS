@@ -4,7 +4,7 @@ export const CONTRACT_CASES = {
   'phone-first-measurement': { description: 'Unavailable initial viewport emits no native Tab material; the real navigation frame admits the first finite positive material. Native fan causality remains open.', resources: [] },
   'phone-child-containment': { description: 'Actual paid phone-tab geometry disables redundant parent clipping, narrow valid surfaces retain it and unavailable geometry emits no native material; no native raster claim.', resources: [] },
   'current-phone-shape': { description: 'Current phone Tab and six exact callers have a single measured material and outer shadow with bounded inner clipping, reject stale geometry and cannot restore phone Canvas; no Native raster claim.', resources: [] },
-  'measurement-identity': { description: 'Actual phone shape and footer handlers retain accepted geometry while rejecting retired measurement callbacks.', resources: [] },
+  'measurement-identity': { description: 'Actual phone footer retains its geometry and mounted capsule across primary Tab switches and rejects retired callbacks.', resources: [] },
   'footer-propagation': { description: 'Actual nonstandard bookshelf and standard settings consume measured occupied footer extent, including all three bookshelf states.', resources: [] },
 };
 
@@ -78,6 +78,7 @@ async function context() {
       BookshelfStatusContent: 'features/bookshelf/ui/BookshelfStatusContent.ets', ReaderStandardPage: 'ui/layout/ReaderStandardPage.ets',
       MainNavigationOverlay: 'features/shell/MainNavigationOverlay.ets', ReaderFixedHeaderHost: 'ui/layout/ReaderFixedHeaderHost.ets',
       BookshelfMoreActionSheet: 'features/bookshelf/ui/BookshelfMoreActionSheet.ets',
+      ReaderBottomSheet: 'ui/surfaces/ReaderBottomSheet.ets',
       ReaderPageScrollHost: 'ui/layout/ReaderPageScrollHost.ets',
     };
     for (const [name, path] of Object.entries(childFiles)) { deps[name] = class extends Child {}; childSources[name] = read(path); }
@@ -166,7 +167,7 @@ async function currentPhoneShape(sources={}) {
   assert.equal(tabButtons.length,2,'both admitted tabs use the real native Button');
   for(const button of tabButtons){
     assert.equal(button.createWithChild.type,'ButtonType.Capsule','native tab capsule owns half-minimum actual corners');
-    assert.equal(button.borderRadius,undefined,'the tab never sends the unbounded pill token to native Button corners');
+    assert.equal(button.borderRadius,25,'press feedback applies the finite measured tab radius');
   }
   assert.equal(metrics.systemFontScale,1);
   const savedDensity=metrics.densityPixels;
@@ -290,12 +291,101 @@ async function measurementIdentity(sourceOverride) {
   shelf.recordFooterHeight(130,11);assert.equal(shelf.measuredFooterHeight,130);
   shelf.mounted=false;shelf.recordFooterHeight(999,11);assert.equal(shelf.measuredFooterHeight,130,'unmounted footer owner is inert');
   if(sourceOverride===undefined){
+    await primaryTabPersistence(c);
     const source=c.read(path),needle='identity !== this.raisedShapeIdentity()';
     assert.ok(source.includes(needle),'actual current measurement has identity guards');
     const mutant=source.replaceAll(needle,'false');
     assert.notEqual(mutant,source,'identity regression was injected');
     await rejected(c,'old-measurement-overwrites-successor',()=>measurementIdentity(mutant),/old layout receipt|successor box/);
   }
+}
+
+async function primaryTabPersistence(c) {
+  const { assert, builder, children, deps, load, nodes } = c;
+  const root = builder('pages/Index.ets', ['primaryBottomNavigation', 'showsPrimaryBottomNavigation',
+    'primaryBottomNavigationInputAllowed', 'recordPrimaryTabFooter', 'selectPrimaryBottomTab', 'retapPrimaryBottomTab',
+    'expandedLayout'], {
+    ...load('ui/layout/ReaderLayoutCapability.ts'),
+    ReaderNativeAlertWindow: { isPresented: () => false },
+  }).owner;
+  const visits = [];
+  Object.assign(root, { route: 'bookshelf', settingsSection: 'home', mainViewportRevision: 0,
+    readerWindowMetricsRevision: 0, navigationGeneration: 1, searchAppForeground: true, primaryTabFooterHeight: 0,
+    arkWebCapturesInput: false, wideNavigationRail: false, bookRemovalConfirmation: { isOpen: () => false },
+    jsonImportPresentation: {}, isInteractiveBookshelfPresentation: () => true,
+    settingsPresentation: { paintIdentity: () => 'settings:1', snapshot: { tapBottomScrollTop: true } },
+    shelfRead: { scrollTopToken: 0 }, settingsHomeScrollTopRequest: 0,
+    settingsNavigation: { openSettings: () => visits.push('settings') },
+    libraryJourney: { returnToBookshelf: () => visits.push('bookshelf') },
+  });
+  root.primaryBottomNavigation();
+  const navigation = children(root).find(child => child instanceof deps.ReaderBottomNavigation);
+  assert.ok(navigation, 'app-level builder creates one native navigation host');
+  assert.equal(navigation.params.current, 'bookshelf');
+  const footer = nodes(root, 'Column').find(node => node.onAreaChange);
+  footer.onAreaChange({}, { height: '98vp' });
+  assert.equal(root.primaryTabFooterHeight, 98, 'the shared host measures its entire occupied footer');
+  navigation.params.onCurrentTap('bookshelf');
+  navigation.params.onSelect('settings');
+  assert.equal(root.shelfRead.scrollTopToken, 1);
+  root.route = 'settings';
+  root.navigationGeneration += 1;
+  root.replay();
+  assert.deepEqual(children(root).filter(child => child instanceof deps.ReaderBottomNavigation), [navigation]);
+  assert.equal(navigation.params.current, 'settings', 'the mounted host receives the new active tab as a prop');
+  assert.equal(navigation.params.actionGeneration, 2);
+  navigation.params.onCurrentTap('settings');
+  navigation.params.onSelect('bookshelf');
+  assert.equal(root.settingsHomeScrollTopRequest, 1);
+  const settingsShell = builder('features/settings/ui/SettingsShell.ets', ['homeScrollTopRequest', 'scrollHomeToTop']).owner;
+  const scrolls = [];
+  Object.assign(settingsShell, { routeCurrent: true, activeSection: 'home', tapBottomScrollTop: true, reduceMotion: false,
+    homeScroller: { scrollTo: offset => scrolls.push(offset) } });
+  settingsShell.updateStateVars({ homeScrollTopRequest: root.settingsHomeScrollTopRequest });
+  assert.deepEqual(scrolls, [{ xOffset: 0, yOffset: 0, animation: true }], 'a repeated settings Tab scrolls its original home scroller');
+  settingsShell.routeCurrent = false;
+  settingsShell.updateStateVars({ homeScrollTopRequest: 2 });
+  assert.equal(scrolls.length, 1, 'the retired settings shell refuses the scroll request');
+  assert.deepEqual(visits, ['settings', 'bookshelf']);
+  root.settingsSection = 'general';
+  assert.equal(root.showsPrimaryBottomNavigation(), false);
+  root.settingsSection = 'home';
+  for (const route of ['detail', 'search', 'directory', 'reading', 'source', 'bookshelfSettings']) {
+    root.route = route;
+    assert.equal(root.showsPrimaryBottomNavigation(), false, `${route} has no primary capsule`);
+    navigation.params.onSelect('bookshelf');
+  }
+  assert.deepEqual(visits, ['settings', 'bookshelf'], 'retired primary invocation is inert');
+
+  const { productionReaderMotionSdk } = await import('./lib/reader-control-builder-probe.mjs');
+  const path = 'ui/patterns/ReaderBottomTabBar.ets';
+  const motions = [];
+  const tab = builder(path, [...c.methods(path), 'current', 'reduceMotion', 'paintedTab', 'pillOpacity', 'actionGeneration'], {
+    ...productionReaderMotionSdk(),
+    ReaderPostLayoutFrame: class { constructor(_context, callback) { this.callback = callback; } },
+  }).owner;
+  Object.assign(tab, { mounted: true, surfaceWidth: 196, fontScale: 1, scheme: 'day', inputEnabled: true,
+    items: deps.MAIN_TABS, paintedTab: 0, pillGeneration: 0, pillOpacity: 1, actionGeneration: 1,
+    onSelect: key => visits.push(key),
+    getUIContext: () => ({ animateTo: ({ duration }, apply) => { motions.push(duration); apply(); },
+      postFrameCallback: frame => frame.callback() }),
+  });
+  tab.updateStateVars({ current: 'bookshelf', actionGeneration: 1 });
+  const originalTap = tab.tabAction('settings', 1);
+  tab.updateStateVars({ current: 'settings', actionGeneration: 2 });
+  assert.deepEqual(motions, [220], 'the retained watcher slides between primary tabs');
+  assert.equal(tab.paintedTab, 1);
+  originalTap();
+  assert.deepEqual(visits, ['settings', 'bookshelf']);
+  tab.reduceMotion = true;
+  tab.updateStateVars({ current: 'bookshelf', actionGeneration: 3 });
+  assert.deepEqual(motions, [220, 120], 'the retained watcher fades the active pill with reduced motion');
+  assert.equal(tab.paintedTab, 0);
+  assert.equal(tab.pillOpacity, 1);
+  tab.initialRender();
+  const buttons = nodes(tab, 'Button');
+  assert.equal(buttons.length, 2);
+  assert.ok(buttons.every(button => button.borderRadius === 25), 'tab press feedback keeps the native capsule corners');
 }
 
 async function footerPropagation(overrides={}) {
@@ -307,7 +397,9 @@ async function footerPropagation(overrides={}) {
   for(const [state,name,method]of variants){
     const scenePath='features/bookshelf/ui/BookshelfScene.ets';
     const scene=builder(scenePath,['build','shelfContent','isCurrent','isInteractive','open'],{},overrides.sceneSource??c.read(scenePath)).owner;
-    Object.assign(scene,{navigation:5,feedbackEnabled:true,read:{snapshot:{visualAdmitted:state==='populated',coreEmpty:state==='empty',books:[],revision:''},
+    Object.assign(scene,{navigation:5,feedbackEnabled:true,sharedBottomNavigationHeight:occupied,
+      read:{snapshot:{visualAdmitted:state==='populated',coreEmpty:state==='empty',books:[],revision:'',
+        filter:{sourceKind:'all',contentKind:'all'},matchedTotal:0},
       noticeTopInset:()=>0,headerBottom:100,viewState:{},scrollTopToken:0,recovery:()=>recovery,canCheckUpdates:()=>false},
       mutations:{snapshot:{},recovery:()=>recovery,canContinueRemoval:()=>false},catalog:{snapshot:{manualRunning:false,automaticRunning:false}},
       ports:{isCurrent:n=>n===5,isInteractive:n=>n===5},motion:{returnBookKey:''}});
@@ -322,12 +414,17 @@ async function footerPropagation(overrides={}) {
     shell.initialRender();
     const mainParams=children(shell).find(child=>child.params?.activeTab==='bookshelf')?.params;
     assert.ok(mainParams,'actual bookshelf constructs current MainTabShell');
+    assert.equal(mainParams.sharedBottomNavigationHeight, occupied, 'the app-owned extent reaches the current shelf page shell');
     const main=builder('features/shell/MainTabShell.ets').owner;
     Object.assign(main,{...mainParams,mounted:true,readerWindowMetricsRevision:0,mainViewportRevision:0,wideNavigationRail:false,
       appThemeScheme:'day',headerTop:0,headerMeasurementKey:0,viewportWidth:390,viewportHeight:844});
     main.initialRender();
     const scaffoldParams=children(main).find(child=>child.params?.onFooterHeightChange)?.params;
     assert.ok(scaffoldParams,'actual nonstandard shell forwards footer measurement');
+    scaffoldParams.footer();
+    assert.ok(c.nodes(main, 'Row').some(node => node.height === occupied && node.hitTestBehavior === 'HitTestMode.None'),
+      'only a hit-transparent layout placeholder occupies the primary page footer');
+    assert.equal(children(main).filter(child => child instanceof deps.ReaderBottomNavigation).length, 0);
     const scaffold=builder('ui/layout/ReaderPageScaffold.ets',['footerAreaChangeHandler']).owner;
     Object.assign(scaffold,scaffoldParams);
     scaffoldParams.content();
@@ -368,7 +465,7 @@ async function footerPropagation(overrides={}) {
   const scrollParams=children(standard).find(child=>child.params?.layout)?.params;
   assert.ok(scrollParams,'actual standard content forwards resolved layout to its native scroll host');
   const scroll=builder('ui/layout/ReaderPageScrollHost.ets').owner;
-  Object.assign(scroll,scrollParams);scroll.initialRender();
+  Object.assign(scroll,scrollParams,{editingScroll:{id:'settings-footer-scroll'}});scroll.initialRender();
   assert.ok(c.nodes(scroll,'Column').some(n=>n.padding?.bottom===occupied+16),'actual native scroll content consumes the adopted footer budget');
   for(const bad of [0,NaN,Infinity,-1])assert.equal(deps.readerFloatingTabContentInset(c.metrics,bad),deps.readerFloatingTabContentInset(c.metrics),'invalid/unmeasured receipt keeps authored fallback');
   if(!overrides.negative){
