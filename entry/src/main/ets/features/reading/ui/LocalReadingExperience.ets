@@ -1889,6 +1889,7 @@ export struct ReadingExperience {
     this.readingSystemEventHost?.dispose();
     this.readingSystemEventHost = undefined;
     this.mounted = false;
+    this.loadingChapterIndex = undefined;
     this.onControlInputBoundaryChanged();
     if (this.isReaderIdentityCurrent?.() !== false && this.windowChromeActive)
       ReaderWindowCoordinator.requestAppChrome();
@@ -4752,7 +4753,6 @@ export struct ReadingExperience {
     if (requested === undefined || !this.mounted) {
       return;
     }
-    this.loadingChapterIndex = requested;
     if (this.pageTurnSettlementActive) {
       this.pageTurnPendingRequestedChapterChange = true;
       return;
@@ -4767,6 +4767,7 @@ export struct ReadingExperience {
     this.chapterSelectionToken += 1;
     const selectionToken = this.chapterSelectionToken;
     this.resetForChapterSelection();
+    this.loadingChapterIndex = requested;
     // A manual directory selection is not a restore; start the chapter at its
     // natural first scalar.
     this.restoredProgress = undefined;
@@ -4892,6 +4893,7 @@ export struct ReadingExperience {
    * screen or title-only PaperLayer.
    */
   private resetForChapterSelection(preserveRapidPageTarget: boolean = false, preserveTtsFollow: boolean = false): void {
+    this.loadingChapterIndex = undefined;
     this.paragraphWindowRecoveryAttempts = 0;
     this.nativeTextLayoutRetryCount = 0;
     this.transientFeedback.reset();
@@ -6875,6 +6877,7 @@ export struct ReadingExperience {
         this.visiblePage = visiblePage;
         this.visiblePageSelectionToken = selectionToken;
         this.visibleFragments = visiblePage.fragments;
+        this.loadingChapterIndex = undefined;
         if (this.readerSettingsSnapshot.navigationMode === 'continuous' && !coldFirstPaint) {
           this.rebuildContinuousFragments();
           this.setContinuousInitialAnchor(visiblePage.startScalar);
@@ -7018,6 +7021,7 @@ export struct ReadingExperience {
     this.visiblePage = visiblePage;
     this.visiblePageSelectionToken = selectionToken;
     this.visibleFragments = visiblePage.fragments;
+    this.loadingChapterIndex = undefined;
     if (this.readerSettingsSnapshot.navigationMode === 'continuous') {
       this.rebuildContinuousFragments();
       this.setContinuousInitialAnchor(visiblePage.startScalar);
@@ -11817,7 +11821,9 @@ export struct ReadingExperience {
   private onReaderKeyEvent(event: KeyEvent): boolean {
     const action = readerHardwareKeyboardShortcut(event, {
       bodyOwnsInput: this.isReaderPageInteractionEnabled() && !this.windowChromeOverlayActive &&
-        !this.sourceSwitchPresentationVisible && this.controlTemporaryLayer.length === 0 && !ReaderNativeAlertWindow.isPresented() &&
+        !this.sourceSwitchPresentationVisible && this.sourceSwitchFailureMessage.length === 0 &&
+        !this.sourceSwitchRollbackInFlight && !this.shouldShowSourceSwitchPreparation() && !this.shouldShowChapterLoading() &&
+        this.controlTemporaryLayer.length === 0 && !ReaderNativeAlertWindow.isPresented() &&
         this.sessionLaunch === undefined && !this.readerRecoveryRequestCurrent() && this.phase === 'ready',
       inputFocused: readerControlKeyboardVisible(ReaderWindowCoordinator.metrics()),
       selectionActive: this.textSelectionActivity.active(),
@@ -11855,7 +11861,7 @@ export struct ReadingExperience {
         ReaderNativeAlertWindow.isPresented(),
       selectionActive: this.textSelectionActivity.active(),
       zoomed: false,
-      chapterLoading: this.phase !== 'ready' || this.loadingChapterIndex !== undefined ||
+      chapterLoading: this.phase !== 'ready' || this.shouldShowChapterLoading() ||
         this.pendingControlSelection !== undefined || this.pageTurnOwnsReaderInput(),
       sourceSwitching: this.sourceSwitchRollbackInFlight || this.sourceSwitchFailureMessage.length > 0 ||
         this.sessionGateway?.hasPendingSourceSwitch() === true,
@@ -13076,7 +13082,6 @@ export struct ReadingExperience {
     const selectionControlRevision = controlOwnerRevision === -2 ?
       (this.controlVisible() && !this.controlShellExitArmed() ? this.controlOpenRevision : -1) :
       controlOwnerRevision;
-    this.loadingChapterIndex = chapterIndex;
     if (this.pageTurnSettlementActive) {
       this.pageTurnPendingChapterSelection = new ReaderDeferredChapterSelection(
         chapterIndex,
@@ -13116,6 +13121,7 @@ export struct ReadingExperience {
       requireChapterStart, stopTts, requestedProgress, selectionControlRevision, closeControlOnCommit, refreshContent, positionContext, ttsOwner);
     this.controlSelectionReconciliationInFlight = false;
     this.resetForChapterSelection(false, ttsOwner !== undefined);
+    this.loadingChapterIndex = chapterIndex;
     this.restoredProgress = undefined;
     this.armFirstPageReadyDeadline(lifecycleToken, selectionToken);
     if (closeControlOnCommit && selectionControlRevision === this.controlOpenRevision &&
@@ -16232,6 +16238,7 @@ export struct ReadingExperience {
     // A timeout/error revokes outstanding acquisition and measurement work;
     // remaining mounted must not allow a late reply to resurrect that attempt.
     this.chapterSelectionToken += 1;
+    this.loadingChapterIndex = undefined;
     this.measurementCompleting = false;
     this.remeasurePending = false;
     this.resetPaginationDraft();

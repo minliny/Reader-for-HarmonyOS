@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
-import { mkdir, mkdtemp, readFile, rm, symlink, writeFile } from 'node:fs/promises';
+import { lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, unlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
@@ -144,7 +144,10 @@ test('backup reserves before preferences, releases the owner after failure, and 
     'ReaderBackupExtensionAbility', ['generation', 'backup', 'releaseTask', 'onBackupEx', 'prepareBackup', 'onRelease', 'clearReleasedArchive'], {
       ...policy,
       migrationResult: (error = '') => ({ error }),
-      fileIo: { access: async () => true, unlink: async path => removed.push(path) },
+      fileIo: {
+        lstat: async path => ({ isDirectory: () => path.endsWith(policy.READER_SYSTEM_MIGRATION_DIRECTORY), isFile: () => true }),
+        listFile: async () => [], unlink: async path => removed.push(path),
+      },
       systemMigrationPayload: directory => join(directory, 'library.readerbackup'),
       readerSystemMigrationIncludesOriginals: () => prefs,
       createReaderSystemMigrationArchive: async (_extension, directory, include, current) => {
@@ -155,7 +158,7 @@ test('backup reserves before preferences, releases the owner after failure, and 
       },
     });
   const backup = Object.assign(new Backup(), { context: {
-    getApplicationContext: () => ({ filesDir: '/reader-files' }),
+    filesDir: '/extension-files', getApplicationContext: () => ({ filesDir: '/reader-files' }),
   } });
   const first = backup.onBackupEx('{}');
   assert.deepEqual(await backup.onBackupEx('{}'), { error: 'READER_SYSTEM_MIGRATION_EXPORT_BUSY' });
@@ -167,6 +170,60 @@ test('backup reserves before preferences, releases the owner after failure, and 
   await backup.onRelease(1);
   assert.deepEqual(removed, ['/reader-files/reader-system-migration-v1/manifest.json',
     '/reader-files/reader-system-migration-v1/library.readerbackup']);
+});
+
+test('release waits for export, reclaims only owned staging and is safe to repeat', async () => {
+  await sandbox(async ({ directory }) => {
+    const app = join(directory, 'app'), extension = join(directory, 'extension');
+    const published = join(app, policy.READER_SYSTEM_MIGRATION_DIRECTORY);
+    const work = join(extension, policy.READER_SYSTEM_MIGRATION_EXPORT_WORK_DIRECTORY);
+    const stale = join(published, 'library-stale.stage');
+    const linkedStage = join(published, 'library-linked.stage');
+    const original = join(app, 'retained.txt');
+    const pending = join(app, policy.READER_SYSTEM_MIGRATION_PENDING_DIRECTORY, 'manifest.json');
+    for (const output of [stale, join(published, 'library.readerbackup'), join(published, 'manifest.json'),
+      join(published, 'other.stage'), join(work, 'reader-local-recovery', 'work-interrupted', 'quarantine'), original, pending]) {
+      await mkdir(join(output, '..'), { recursive: true });
+      await writeFile(output, 'retained fixture');
+    }
+    await symlink(original, linkedStage);
+    let started, finish;
+    const exporting = new Promise(resolve => { started = resolve; });
+    const exportHeld = new Promise(resolve => { finish = resolve; });
+    const Backup = selectedProductionMethods(new URL('ets/backup/ReaderBackupExtensionAbility.ets', root),
+      'ReaderBackupExtensionAbility', ['generation', 'backup', 'releaseTask', 'onBackupEx', 'prepareBackup', 'onRelease', 'clearReleasedArchive'], {
+        ...policy, migrationResult: (error = '') => ({ error }),
+        fileIo: { lstat, listFile: readdir, unlink, rmdir: path => rm(path, { recursive: true }) },
+        systemMigrationPayload: path => join(path, 'library.readerbackup'),
+        readerSystemMigrationIncludesOriginals: async () => false,
+        createReaderSystemMigrationArchive: async () => { started(); await exportHeld; },
+      });
+    const backup = Object.assign(new Backup(), { context: {
+      filesDir: extension, getApplicationContext: () => ({ filesDir: app }),
+    } });
+    const completing = backup.onBackupEx('{}');
+    await exporting;
+    const firstRelease = backup.onRelease(1);
+    const secondRelease = backup.onRelease(1);
+    try {
+      assert.deepEqual(await backup.onBackupEx('{}'), { error: 'READER_SYSTEM_MIGRATION_EXPORT_BUSY' });
+      assert.ok((await lstat(work)).isDirectory());
+      assert.ok((await lstat(stale)).isFile());
+    } finally { finish(); }
+    assert.deepEqual(await completing, { error: 'READER_SYSTEM_MIGRATION_EXPORT_CANCELLED' });
+    await Promise.all([firstRelease, secondRelease]);
+    await backup.onRelease(1);
+    await assert.rejects(lstat(work), { code: 'ENOENT' });
+    assert.deepEqual((await readdir(published)).sort(), ['library-linked.stage', 'other.stage']);
+    assert.equal(await readFile(original, 'utf8'), 'retained fixture');
+    assert.equal(await readFile(pending, 'utf8'), 'retained fixture');
+    assert.ok((await lstat(linkedStage)).isSymbolicLink());
+
+    await symlink(app, work);
+    await backup.onRelease(1);
+    assert.ok((await lstat(work)).isSymbolicLink());
+    assert.equal(await readFile(original, 'utf8'), 'retained fixture');
+  });
 });
 
 test('system archive reads the admitted application database through the read-only SDK port', async () => {

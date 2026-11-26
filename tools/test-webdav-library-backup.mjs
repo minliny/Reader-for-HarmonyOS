@@ -6,6 +6,7 @@ import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { installedEtsCompiler } from './lib/ets-compiler-runtime.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
+import { selectedProductionMethods } from './lib/selected-production-methods.mjs';
 import { virtualFilePath } from './lib/tool-environment.mjs';
 
 const sourcePathOnHost = fileURLToPath(new URL('../entry/src/main/ets/features/sync/application/WebDavLibraryBackup.ts', import.meta.url));
@@ -121,7 +122,7 @@ function provider(options = {}) {
     },
   };
 
-  const { WebDavLibraryBackup, WEB_DAV_ARCHIVE_READ_WINDOW } = pureModuleProbe(source, 'WebDavLibraryBackup.ts', {
+  const { WebDavLibraryBackup, WebDavLibraryBackupError, WEB_DAV_ARCHIVE_READ_WINDOW } = pureModuleProbe(source, 'WebDavLibraryBackup.ts', {
     LOCAL_RECOVERY_MAX_BYTES: maximum,
     recoveryDigest: async bytes => digest(bytes),
     recoveryReserve: async (path, bytes) => { assert.equal(path, '/sandbox'); assert.ok(bytes <= maximum); },
@@ -149,7 +150,7 @@ function provider(options = {}) {
       encodeToStringSync(bytes) { return Buffer.from(bytes).toString('base64'); }
       decodeSync(text) { return Buffer.from(text, 'base64'); }
     } },
-  }, ['WebDavLibraryBackup', 'WEB_DAV_ARCHIVE_READ_WINDOW']);
+  }, ['WebDavLibraryBackup', 'WebDavLibraryBackupError', 'WEB_DAV_ARCHIVE_READ_WINDOW']);
   const assertCurrent = async () => {
     if (!active) throw new Error('original provider retired');
   };
@@ -165,7 +166,8 @@ function provider(options = {}) {
   };
 
   return {
-    transport, requests, calls, remote, store, files, proofs, verification, readWindow: WEB_DAV_ARCHIVE_READ_WINDOW,
+    transport, WebDavLibraryBackupError, requests, calls, remote, store, files, proofs, verification,
+    readWindow: WEB_DAV_ARCHIVE_READ_WINDOW, getUptime: () => uptime,
     async publish(bytes, metadata, authenticated) {
       files.set(sourcePath, bytes);
       const hash = digest(bytes);
@@ -180,6 +182,82 @@ function provider(options = {}) {
     async receive(sha256) { return transport.downloadLatest(restoredPath, sha256); },
   };
 }
+
+function retirementGateway(service) {
+  const gatewaySource = new URL('../entry/src/main/ets/features/sync/application/SyncGateway.ts', import.meta.url);
+  const identity = '13945f39-a019-4371-ba3b-367a26ec2782';
+  const directory = `/sandbox/${identity}`;
+  const journalPath = `${directory}/retirement.json`;
+  const pausedPath = sha256 => `${directory}/retirement-paused-${sha256}.json`;
+  const local = new Map();
+  const localActions = [];
+  const missing = Object.assign(new Error('absent'), { code: 'ENOENT' });
+  const Gateway = selectedProductionMethods(gatewaySource, 'SyncGateway', [
+    'removeLibraryArchive', 'resumeLibraryRetirement', 'leaveLibraryRetirement', 'libraryRetirement',
+    'libraryRetirementStatus', 'writeLibraryRetirement', 'pausedLibraryRetirementPath',
+    'driveLibraryRetirement', 'libraryLocalStat', 'unlinkLibraryFile',
+  ], {
+    LOCAL_RECOVERY_MAX_BYTES: maximum,
+    WEB_DAV_ARCHIVE_READ_WINDOW: service.readWindow,
+    WebDavLibraryBackupError: service.WebDavLibraryBackupError,
+    systemDateTime: { TimeType: { STARTUP: 0 }, getUptime: service.getUptime },
+    recoveryWithFile: async (path, _mode, work) => {
+      assert.equal(path, directory);
+      await work({ fd: 1 });
+    },
+    replaceReaderAtomicSnapshot: async (path, parent, content) => {
+      assert.equal(parent, directory);
+      localActions.push(['write', path]);
+      local.set(path, content);
+    },
+    fileIo: {
+      OpenMode: { READ_ONLY: 0 },
+      async access(path) { return path === directory || local.has(path); },
+      async lstat(path) {
+        if (!local.has(path)) throw missing;
+        return { isFile: () => true, size: local.get(path).length };
+      },
+      async readText(path) { return local.get(path); },
+      async unlink(path) { localActions.push(['unlink', path]); if (!local.delete(path)) throw missing; },
+      async rename(from, to) {
+        assert.ok(local.has(from));
+        assert.equal(local.has(to), false);
+        localActions.push(['rename', from, to]);
+        local.set(to, local.get(from));
+        local.delete(from);
+      },
+      async fsync() { localActions.push(['fsync']); },
+    },
+  });
+  return {
+    identity, journalPath, pausedPath, local, localActions,
+    open: () => Object.assign(new Gateway(), {
+      libraryDirectory: id => { assert.equal(id, identity); return directory; },
+      withLibraryArchiveVerification: (_provider, _directory, _current, work) => work(service.verification),
+      async runLibraryOperation(current, work, scope) {
+        assert.equal(scope, 'staging');
+        const assertCurrent = async () => { if (!current()) throw new Error('retired'); };
+        try {
+          await assertCurrent();
+          return await work({ identity, transport: service.transport, assertCurrent });
+        } catch (error) {
+          if (!current()) return { state: 'cancelled' };
+          if (error instanceof service.WebDavLibraryBackupError) return { state: error.reason };
+          throw error;
+        }
+      },
+    }),
+    async row(sha256) {
+      const row = (await service.transport.listArchives({})).find(item => item.sha256 === sha256);
+      assert.ok(row);
+      return { ...row, providerIdentity: identity };
+    },
+  };
+}
+
+const currentRetirement = () => true;
+const archiveWrites = requests => requests.filter(request => request.name !== probe &&
+  ['PUT', 'DELETE', 'MKCOL'].includes(request.method));
 
 test('publishes verified chunks before the immutable manifest and restores the exact encrypted archive', async () => {
   const service = provider({ hasDirectory: false, bodyless: true, directory: '/ReaderBackup/ReaderHarmony',
@@ -731,6 +809,112 @@ test('a legacy retirement plan can only be upgraded with its exact original mani
   await assert.rejects(service.transport.removeRetiredParts(legacy, service.verification), reason('replacementUnverified'));
   assert.deepEqual(archiveDeletes(service.requests.slice(start)), []);
   assert.ok(service.remote.has(partName(old)));
+});
+
+test('an unsupported DELETE probe leaves no retirement journal or archive changes and still permits recovery', async () => {
+  let host;
+  const service = provider({ before(method, name, context) {
+    if (method === 'DELETE' && name === probe) {
+      assert.deepEqual(host.localActions, [], 'preflight precedes every retirement journal write');
+      return context.response(405);
+    }
+  } });
+  host = retirementGateway(service);
+  const old = await service.publish(Buffer.from('older backup archive'), authored(1000, '7'.repeat(32)));
+  const latest = await service.publish(Buffer.from('newer backup archive'), authored(2000, '7'.repeat(32)));
+  const row = await host.row(old);
+  const before = service.requests.length;
+  const original = service.remote.get(manifestName(old)).body;
+  assert.deepEqual(await host.open().removeLibraryArchive(row, currentRetirement), { state: 'deletionUnavailable' });
+  assert.deepEqual(host.localActions, []);
+  assert.deepEqual(archiveWrites(service.requests.slice(before)), []);
+  assert.deepEqual(service.remote.get(manifestName(old)).body, original);
+  assert.equal(service.remote.has(retiredName(old)), false);
+  assert.equal(await service.receive(latest), 'downloaded');
+});
+
+test('a stale exit cannot discard a receipt and an exact untouched legacy retirement can be abandoned', async () => {
+  const service = provider();
+  const host = retirementGateway(service);
+  const old = await service.publish(Buffer.from('older backup archive'), authored(1000, '7'.repeat(32)));
+  await service.publish(Buffer.from('newer backup archive'), authored(2000, '7'.repeat(32)));
+  const row = await host.row(old);
+  const plan = await service.transport.planRemoval(old, row.manifestSha256, service.verification);
+  const legacy = { schemaVersion: 1, configOperationId: host.identity, plan: { ...plan, replacementProof: undefined } };
+  host.local.set(host.journalPath, JSON.stringify(legacy));
+  const before = service.requests.length;
+  assert.deepEqual(await host.open().leaveLibraryRetirement('stale receipt', currentRetirement), { state: 'cancelled' });
+  assert.equal(service.requests.length, before);
+  assert.equal(host.local.has(host.journalPath), true);
+  const receipt = host.open().libraryRetirementStatus(legacy).receipt;
+  assert.deepEqual(await host.open().leaveLibraryRetirement(receipt, currentRetirement), { state: 'retirementAbandoned' });
+  assert.deepEqual(host.localActions, [['unlink', host.journalPath], ['fsync']]);
+  assert.deepEqual(archiveWrites(service.requests.slice(before)), []);
+  assert.equal(await service.receive(old), 'downloaded');
+  assert.equal(await host.open().libraryRetirement(host.identity), undefined);
+});
+
+test('a changed or unreadable pre-unpublish archive retains its full receipt and releases unrelated retirements', async () => {
+  for (const fault of ['changed', 'missing', 'transport']) {
+    const service = provider({ before(method, name, context) {
+      if (method === 'GET' && name === unavailableName) return context.response(503);
+    } });
+    let unavailableName;
+    const host = retirementGateway(service);
+    const old = await service.publish(Buffer.from('older backup archive'), authored(1000, '7'.repeat(32)));
+    const middle = await service.publish(Buffer.from('middle backup archive'), authored(2000, '7'.repeat(32)));
+    await service.publish(Buffer.from('newest backup archive'), authored(3000, '7'.repeat(32)));
+    const row = await host.row(old);
+    const plan = await service.transport.planRemoval(old, row.manifestSha256, service.verification);
+    const journal = { schemaVersion: 1, configOperationId: host.identity, plan };
+    const bytes = JSON.stringify(journal);
+    host.local.set(host.journalPath, bytes);
+    const name = manifestName(old);
+    const original = service.remote.get(name);
+    if (fault === 'changed') service.store(name, original.body, { etag: '"new-version"' });
+    if (fault === 'missing') service.remote.delete(name);
+    if (fault === 'transport') unavailableName = name;
+    const before = service.requests.length;
+    const receipt = host.open().libraryRetirementStatus(journal).receipt;
+    assert.deepEqual(await host.open().leaveLibraryRetirement(receipt, currentRetirement), { state: 'retirementPaused' });
+    assert.deepEqual(archiveWrites(service.requests.slice(before)), []);
+    assert.equal(host.local.get(host.pausedPath(old)), bytes);
+    assert.equal(await host.open().libraryRetirement(host.identity), undefined);
+    assert.deepEqual(await host.open().removeLibraryArchive(row, currentRetirement), { state: 'retirementPaused' });
+    unavailableName = undefined;
+    service.remote.set(name, original);
+    assert.deepEqual(await host.open().removeLibraryArchive(await host.row(middle), currentRetirement),
+      { state: 'retirementPending' });
+  }
+});
+
+test('an unavailable successor during grace permits a durable exit without further remote requests or deletion', async () => {
+  const service = provider();
+  const host = retirementGateway(service);
+  const old = await service.publish(Buffer.from('older backup archive'), authored(1000, '7'.repeat(32)));
+  const middle = await service.publish(Buffer.from('middle backup archive'), authored(2000, '7'.repeat(32)));
+  const latest = await service.publish(Buffer.from('newest backup archive'), authored(3000, '7'.repeat(32)));
+  const row = await host.row(old);
+  assert.deepEqual(await host.open().removeLibraryArchive(row, currentRetirement), { state: 'retirementPending' });
+  const active = await host.open().libraryRetirement(host.identity);
+  const original = host.local.get(host.journalPath);
+  const { receipt, phase } = host.open().libraryRetirementStatus(active);
+  assert.equal(phase, 'waiting');
+  const successor = service.remote.get(manifestName(latest));
+  service.remote.delete(manifestName(latest));
+  const before = service.requests.length;
+  assert.deepEqual(await host.open().resumeLibraryRetirement(receipt, currentRetirement), { state: 'replacementUnverified' });
+  assert.deepEqual(archiveWrites(service.requests.slice(before)), []);
+  const beforeExit = service.requests.length;
+  assert.deepEqual(await host.open().leaveLibraryRetirement(receipt, currentRetirement), { state: 'retirementPaused' });
+  assert.equal(service.requests.length, beforeExit);
+  assert.equal(await host.open().libraryRetirement(host.identity), undefined);
+  assert.deepEqual(await host.open().resumeLibraryRetirement(receipt, currentRetirement), { state: 'cancelled' });
+  assert.equal(host.local.get(host.pausedPath(old)), original);
+  for (const name of [partName(old), retiredName(old), removedName(old)]) assert.equal(service.remote.has(name), true);
+  service.remote.set(manifestName(latest), successor);
+  assert.deepEqual(await host.open().removeLibraryArchive(await host.row(middle), currentRetirement),
+    { state: 'retirementPending' });
 });
 
 test('uses the installed declarations and ArkTS 1.1 checks for the production transport', () => {

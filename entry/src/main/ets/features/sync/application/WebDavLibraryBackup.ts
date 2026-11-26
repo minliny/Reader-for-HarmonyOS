@@ -273,6 +273,9 @@ export class WebDavLibraryBackup {
       await recoveryDigest(target.object.bytes) !== exactManifestSha256) {
       throw new WebDavLibraryBackupError('cleanupFailed');
     }
+    if (originalReplacementSha256 === undefined && await this.hasRetirementMarker(sha256)) {
+      throw new WebDavLibraryBackupError('conflict');
+    }
     const candidates = archives.filter((candidate: ReadableArchive): boolean =>
       (originalReplacementSha256 === undefined || candidate.manifest.sha256 === originalReplacementSha256) &&
       this.canRemove(target, candidate));
@@ -324,7 +327,20 @@ export class WebDavLibraryBackup {
     return upgraded;
   }
 
-  async unpublish(plan: WebDavArchiveRemoval, verification: WebDavArchiveVerification): Promise<void> {
+  async canDiscardRemovalPlan(plan: WebDavArchiveRemoval): Promise<boolean> {
+    this.retirementContent(plan);
+    if (await this.hasRetirementMarker(plan.sha256)) return false;
+    const target = await this.getObject(`${PREFIX}${plan.sha256}.manifest`, MAX_MANIFEST_BYTES);
+    return target !== undefined && target.etag === plan.manifestEtag &&
+      await recoveryDigest(target.bytes) === plan.manifestSha256 && !await this.hasRetirementMarker(plan.sha256);
+  }
+
+  async checkRetirementReplacement(plan: WebDavArchiveRemoval): Promise<void> {
+    await this.readReplacementManifest(plan);
+  }
+
+  async unpublish(plan: WebDavArchiveRemoval, verification: WebDavArchiveVerification,
+    conditionalDeletionProven: boolean = false): Promise<void> {
     const markerContent = this.retirementContent(plan);
     const markerName = this.retirementName(plan.sha256);
     const removedName = this.removedName(plan.sha256);
@@ -350,7 +366,7 @@ export class WebDavLibraryBackup {
       throw new WebDavLibraryBackupError('cleanupFailed');
     }
     await this.confirmReplacement(plan, verification);
-    await this.proveConditionalDeletion();
+    if (!conditionalDeletionProven) await this.proveConditionalDeletion();
     if (marker === undefined) await this.publishImmutable(markerName, markerContent, MAX_MANIFEST_BYTES);
     await this.readReplacementManifest(plan);
     await this.deleteExact(name, plan.manifestEtag, MAX_MANIFEST_BYTES);
@@ -540,7 +556,7 @@ export class WebDavLibraryBackup {
     return after;
   }
 
-  private async proveConditionalDeletion(): Promise<void> {
+  async proveConditionalDeletion(): Promise<void> {
     const before = await this.proveConditionalCreation();
     const wrongTag = before.etag === '"reader-retirement-test"' ? '"reader-retirement-mismatch"' : '"reader-retirement-test"';
     const refused = await this.deleteObject(CONDITIONAL_PROBE, wrongTag);

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { ReaderNativeAlertOwner } from './lib/reader-native-alert-sdk-probe.mjs';
-import { selectedProductionMethods } from './lib/selected-production-methods.mjs';
+import { selectedProductionComponentCallback, selectedProductionMethods } from './lib/selected-production-methods.mjs';
 
 const file = new URL('../entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets', import.meta.url);
 const Panel = selectedProductionMethods(file, 'ReaderWebDavLibraryPanel', [
@@ -23,7 +23,7 @@ function setup() {
   const requests = [];
   const messages = [];
   const panel = Object.assign(new Panel(), {
-    mounted: true, revision: 1, loading: false, editing: false, configured: true, cleanupReceipt: '',
+    mounted: true, openingGeneration: 1, revision: 1, loading: false, editing: false, configured: true, cleanupReceipt: '',
     pendingConfigId: '', archives: [selected], isInputAllowed: () => true, alert: new ReaderNativeAlertOwner(),
     feedback: { reset() {} }, readConfiguration: async () => {},
     showMessage(message, current) { if (current()) messages.push(message); },
@@ -107,18 +107,58 @@ test('interrupted configuration recovers the original ID and never starts a new 
   assert.deepEqual(messages, ['WebDAV 配置已保存']);
 });
 
+test('failed conditional deletion hides deletion for the opening without disabling backup preview', async () => {
+  const { panel, requests, messages } = setup();
+  panel.gateway.removeLibraryArchive = async row => {
+    requests.push(['remove', row]);
+    return { state: 'deletionUnavailable' };
+  };
+  panel.gateway.previewLibraryBackup = async (_recovery, current) => {
+    assert.equal(current(), true);
+    return { state: 'preview', included: 1, missing: 0 };
+  };
+  await panel.run('remove', selected);
+  assert.equal(panel.deletionUnavailable, true);
+  assert.equal(panel.readOnly, undefined);
+  assert.match(messages[0], /不支持条件删除.*仍可读取和恢复/);
+  await panel.run('remove', selected);
+  assert.deepEqual(requests, [['remove', selected]]);
+  await panel.run('inspect');
+  assert.equal(panel.preview.state, 'preview');
+});
+
+test('the retirement notice exit is current-generation only and uses the exact active receipt', async () => {
+  const { panel, requests, messages } = setup();
+  panel.removal = { receipt: 'exact retirement receipt', phase: 'waiting', waitMinutes: 17 };
+  panel.gateway.leaveLibraryRetirement = async (receipt, current) => {
+    assert.equal(current(), true);
+    requests.push(['leave', receipt]);
+    return { state: 'retirementPaused' };
+  };
+  const exit = selectedProductionComponentCallback(file, 'ReaderRecoveryNotice', 'onSecondaryAction', panel);
+  exit(panel.revision - 1);
+  await nextTick();
+  assert.deepEqual(requests, []);
+  exit(panel.revision);
+  await nextTick();
+  assert.deepEqual(requests, [['leave', 'exact retirement receipt']]);
+  assert.match(messages[0], /保留了远端现有文件和原清理回执/);
+});
+
 const gatewayFile = new URL('../entry/src/main/ets/features/sync/application/SyncGateway.ts', import.meta.url);
 const libraryRoot = '/fixture/reader-webdav-library';
-const provider = '1'.repeat(36);
-const otherProvider = '2'.repeat(36);
+const provider = '11111111-1111-4111-8111-111111111111';
+const otherProvider = '22222222-2222-4222-8222-222222222222';
 const directory = `${libraryRoot}/${provider}`;
+const inactiveDirectory = `${libraryRoot}/${otherProvider}`;
 const encryptedName = `${'a'.repeat(64)}.readerbackup`;
 const fixtureUrl = 'https://dav.example.invalid';
 
 function setupLocalMaintenance(failMethod, failPath) {
-  const directories = new Set([libraryRoot, directory]);
-  const files = new Map([[`${directory}/${encryptedName}`, 'encrypted scratch']]);
+  const directories = new Set([libraryRoot, directory, inactiveDirectory]);
+  const files = new Map([[`${inactiveDirectory}/${encryptedName}`, 'encrypted scratch']]);
   const removed = [];
+  const transportStarted = [];
   const forbiddenStatus = Object.assign(new Error('local volume permission failure'), { code: 'EACCES' });
   const absent = Object.assign(new Error('absent'), { code: 'ENOENT' });
   let fail = failMethod;
@@ -126,27 +166,34 @@ function setupLocalMaintenance(failMethod, failPath) {
   let switchAtDirectoryRead = false;
   let retirementError = false;
   let credentialError = false;
+  let configUnsettled = false;
   let payloadStat;
   const stat = (isDirectory, size) => ({ isDirectory: () => isDirectory, isFile: () => !isDirectory, size });
   const SyncGateway = selectedProductionMethods(gatewayFile, 'SyncGateway', [
     'libraryBackupConfiguration', 'sweepLibraryPayloads', 'retireUnusedLibraryPayloads',
-    'unlinkUnownedLibraryPayload', 'libraryLocalStat', 'unlinkLibraryFile',
+    'retireInactiveLibraryStaging', 'librarySweepIsCurrent', 'libraryLocalStat', 'unlinkLibraryFile', 'libraryPayload',
     'libraryProviderIdentity', 'libraryPublication', 'libraryCleanupReceipt', 'libraryDirectory',
     'runLibraryOperation', 'listLibraryArchives', 'previewLibraryBackup', 'restoreLibraryBackup',
-    'backupLibrary', 'removeLibraryArchive', 'resumeLibraryRetirement', 'cancelLibraryPreview',
+    'backupLibrary', 'removeLibraryArchive', 'resumeLibraryRetirement', 'cancelLibraryPreview', 'saveConfig',
   ], {
     DEFAULT_WEBDAV_DIRECTORY: '/reader',
+    DEFAULT_SYNC_SNAPSHOT: {},
     LOCAL_RECOVERY_MAX_BYTES: 1024,
     SyncLibraryProviderChanged: class extends Error {},
     WebDavLibraryBackupError: class extends Error {},
     WebDavLibraryBackup: class {
+      constructor() { transportStarted.push(true); }
       async listArchives() { return []; }
       async downloadLatest() { return 'downloaded'; }
     },
+    recoveryWithFile: async (path, _mode, action) => action({ fd: path }),
+    util: { generateRandomUUID: () => provider },
     fileIo: {
+      OpenMode: { READ_ONLY: 0 },
+      async fsync(path) { assert.ok(directories.has(path)); },
       async lstat(path) {
         if (fail === 'lstat' && path === failPath) throw forbiddenStatus;
-        if (payloadStat && path === `${directory}/${encryptedName}`) {
+        if (payloadStat && path === `${inactiveDirectory}/${encryptedName}`) {
           payloadStat.enter();
           await payloadStat.wait;
         }
@@ -156,7 +203,7 @@ function setupLocalMaintenance(failMethod, failPath) {
       },
       async listFile(path) {
         if (fail === 'listFile' && path === failPath) throw forbiddenStatus;
-        if (switchAtDirectoryRead && path === directory) {
+        if (switchAtDirectoryRead && path === inactiveDirectory) {
           saved = { ...saved, saveOperationId: otherProvider };
         }
         return [...directories, ...files.keys()]
@@ -181,11 +228,19 @@ function setupLocalMaintenance(failMethod, failPath) {
     runtimeOwner: { async readLibraryBackupIdentity() { return undefined; } }, assertOwner() {}, isOwner: () => true,
     assertAdmission(current) { assert.ok(current()); }, authorization: () => undefined,
     async requireStoredConfig(config) { return config; },
+    async requireBackupSettled() {}, requireBaseUrl: url => url, reuseSecret: secret => secret,
+    requireDirectory: path => path, requireCredentialPair() {}, copySnapshot: snapshot => snapshot,
     libraryRoot: () => libraryRoot,
     credentials: {
       async reconcileConfigIntent() { return undefined; },
       async loadSerializedState() { if (credentialError) throw forbiddenStatus; return saved; },
-      async requireConfigSettled() {},
+      async loadSerialized() { return saved.config; },
+      async save(config, _evidence, admitted, operationId) {
+        assert.equal(saved.saveOperationId, otherProvider);
+        assert.ok(admitted());
+        saved = { config, saveOperationId: operationId, savePayloadHash: 'c'.repeat(64) };
+      },
+      async requireConfigSettled() { if (configUnsettled) throw new Error('prior configuration rescue pending'); },
     },
     async libraryRetirement() { if (retirementError) throw forbiddenStatus; return undefined; },
     listLibraryArchives: async () => { requests.push(['list']); return { state: 'empty', archives: [] }; },
@@ -196,7 +251,7 @@ function setupLocalMaintenance(failMethod, failPath) {
   });
   Object.assign(panel, { gateway, onRestoreStateChanged: () => {} });
   delete panel.readConfiguration;
-  return { gateway, panel, files, directories, removed, requests,
+  return { gateway, panel, files, directories, removed, requests, transportStarted,
     useProductionOperations() {
       for (const method of ['listLibraryArchives', 'previewLibraryBackup', 'restoreLibraryBackup',
         'backupLibrary', 'removeLibraryArchive']) delete gateway[method];
@@ -212,6 +267,8 @@ function setupLocalMaintenance(failMethod, failPath) {
     clearFault: () => { fail = undefined; },
     faultRetirement: () => { retirementError = true; },
     faultCredentials: () => { credentialError = true; },
+    setConfigUnsettled: value => { configUnsettled = value; },
+    selectPreviousConfig: () => { saved = { ...saved, saveOperationId: otherProvider }; },
     switchProviderOnDirectoryRead: () => { switchAtDirectoryRead = true; },
   };
 }
@@ -248,12 +305,43 @@ test('a suspended staging sweep keeps remote list and restore usable while preve
     release();
   }
   assert.equal(await sweep, 'done');
-  assert.deepEqual(removed, [`${directory}/${encryptedName}`]);
+  assert.deepEqual(removed, [`${inactiveDirectory}/${encryptedName}`]);
+});
+
+test('a remote list keeps this opening’s old-configuration sweep and its feedback live', async () => {
+  const { panel, removed, requests, suspendPayloadStat } = setupLocalMaintenance();
+  const { reached, release } = suspendPayloadStat();
+  await panel.readConfiguration(panel.revision);
+  await reached;
+  try {
+    await panel.run('list');
+    assert.deepEqual(requests, [['list']]);
+    assert.deepEqual(removed, []);
+  } finally { release(); }
+  await nextTick();
+  assert.deepEqual(removed, [`${inactiveDirectory}/${encryptedName}`]);
+  assert.equal(panel.localCleanupPending, false);
+});
+
+test('a cancelled sweep remains retryable in the current opening and ignores a retired opening', async () => {
+  const { panel, gateway } = setupLocalMaintenance();
+  await panel.readConfiguration(panel.revision);
+  await nextTick();
+  gateway.sweepLibraryPayloads = async () => 'cancelled';
+  await panel.refreshLocalCleanup(panel.revision);
+  assert.equal(panel.localCleanupPending, true);
+  gateway.sweepLibraryPayloads = async () => {
+    panel.openingGeneration += 1;
+    panel.localCleanupPending = false;
+    return 'pending';
+  };
+  await panel.refreshLocalCleanup(panel.revision);
+  assert.equal(panel.localCleanupPending, false);
 });
 
 for (const method of ['lstat', 'listFile', 'unlink']) {
   test(`local ${method} failure is retryable without blocking remote list or recovery`, async () => {
-    const failurePath = method === 'unlink' ? `${directory}/${encryptedName}` : libraryRoot;
+    const failurePath = method === 'unlink' ? `${inactiveDirectory}/${encryptedName}` : libraryRoot;
     const { panel, files, removed, requests, clearFault } = setupLocalMaintenance(method, failurePath);
     await panel.readConfiguration(panel.revision);
     await nextTick();
@@ -270,13 +358,14 @@ for (const method of ['lstat', 'listFile', 'unlink']) {
     clearFault();
     await panel.refreshLocalCleanup(panel.revision);
     assert.equal(panel.localCleanupPending, false);
-    assert.equal(files.has(`${directory}/${encryptedName}`), false);
+    assert.equal(files.has(`${inactiveDirectory}/${encryptedName}`), false);
   });
 }
 
 test('unreadable journals pause only their operations and preserve their staging', async () => {
   const { panel, files, requests, removed, faultRetirement } = setupLocalMaintenance();
   files.set(`${directory}/publish.json`, 'malformed JSON');
+  files.set(`${directory}/${encryptedName}`, 'active ciphertext');
   await panel.readConfiguration(panel.revision);
   await nextTick();
   assert.equal(panel.publicationUnavailable, true);
@@ -285,8 +374,9 @@ test('unreadable journals pause only their operations and preserve their staging
   await panel.run('export');
   await panel.run('remove', selected);
   assert.deepEqual(requests, [['remove', selected], ['list']]);
-  assert.deepEqual(removed, []);
+  assert.deepEqual(removed, [`${inactiveDirectory}/${encryptedName}`]);
   assert.equal(files.get(`${directory}/publish.json`), 'malformed JSON');
+  assert.equal(files.get(`${directory}/${encryptedName}`), 'active ciphertext');
 
   files.delete(`${directory}/publish.json`);
   files.set(`${directory}/retirement.json`, 'unreadable journal');
@@ -313,6 +403,62 @@ test('a provider change during enumeration prevents any local unlink', async () 
   switchProviderOnDirectoryRead();
   assert.equal(await gateway.sweepLibraryPayloads(provider, () => true), 'cancelled');
   assert.deepEqual(removed, []);
+});
+
+test('a committed configuration switch retires exact obsolete ciphertext and journals without creating a transport', async () => {
+  const { gateway, files, removed, transportStarted, selectPreviousConfig, setConfigUnsettled } = setupLocalMaintenance();
+  const publication = { schemaVersion: 1, sha256: 'a'.repeat(64), bytes: 'encrypted scratch'.length };
+  const oldJournal = `${inactiveDirectory}/publish.json`;
+  const oldPayload = `${inactiveDirectory}/${encryptedName}`;
+  const activeJournal = `${directory}/publish.json`;
+  const activePayload = `${directory}/${encryptedName}`;
+  files.set(oldJournal, JSON.stringify({ ...publication, configOperationId: otherProvider }));
+  files.set(activeJournal, JSON.stringify({ ...publication, configOperationId: provider }));
+  files.set(activePayload, 'active ciphertext');
+  selectPreviousConfig();
+  assert.equal(await gateway.sweepLibraryPayloads(provider, () => true), 'cancelled');
+  assert.deepEqual(removed, []);
+  assert.equal((await gateway.saveConfig(fixtureUrl, 'reader', 'service password', 'archive password', '/reader',
+    undefined, () => true)).ok, true);
+  setConfigUnsettled(true);
+  assert.equal(await gateway.sweepLibraryPayloads(provider, () => true), 'pending');
+  assert.deepEqual(removed, []);
+  setConfigUnsettled(false);
+  assert.equal(await gateway.sweepLibraryPayloads(provider, () => true), 'done');
+  assert.equal(await gateway.sweepLibraryPayloads(provider, () => true), 'done');
+  assert.deepEqual(removed, [oldPayload, oldJournal]);
+  assert.equal(files.get(activePayload), 'active ciphertext');
+  assert.ok(files.has(activeJournal));
+  assert.deepEqual(transportStarted, []);
+});
+
+test('invalid retired journals preserve their payload and a payload already removed can finish cleanup', async () => {
+  const { gateway, files, removed, transportStarted } = setupLocalMaintenance();
+  const oldJournal = `${inactiveDirectory}/publish.json`;
+  const oldPayload = `${inactiveDirectory}/${encryptedName}`;
+  files.set(oldJournal, JSON.stringify({ schemaVersion: 1, configOperationId: provider, sha256: 'a'.repeat(64), bytes: 17 }));
+  assert.equal(await gateway.sweepLibraryPayloads(provider, () => true), 'pending');
+  assert.deepEqual(removed, []);
+  assert.ok(files.has(oldPayload));
+  files.set(oldJournal, JSON.stringify({ schemaVersion: 1, configOperationId: otherProvider, sha256: 'a'.repeat(64), bytes: 17 }));
+  files.delete(oldPayload);
+  assert.equal(await gateway.sweepLibraryPayloads(provider, () => true), 'done');
+  assert.deepEqual(removed, [oldJournal]);
+  assert.deepEqual(transportStarted, []);
+});
+
+test('a directory that cannot be a saved configuration generation is outside the sweep', async () => {
+  const { gateway, files, directories, removed } = setupLocalMaintenance();
+  const malformed = '3'.repeat(36);
+  const unrelated = `${libraryRoot}/${malformed}`;
+  directories.add(unrelated);
+  files.set(`${unrelated}/publish.json`, JSON.stringify({ schemaVersion: 1, configOperationId: malformed,
+    sha256: 'a'.repeat(64), bytes: 17 }));
+  files.set(`${unrelated}/${encryptedName}`, 'unrelated fixture');
+  assert.equal(await gateway.sweepLibraryPayloads(provider, () => true), 'done');
+  assert.deepEqual(removed, [`${inactiveDirectory}/${encryptedName}`]);
+  assert.ok(files.has(`${unrelated}/publish.json`));
+  assert.equal(files.get(`${unrelated}/${encryptedName}`), 'unrelated fixture');
 });
 
 test('configuration read errors still surface independently of the local sweep', async () => {

@@ -9,7 +9,8 @@ import { replaceReaderAtomicSnapshot } from '../app/ReaderAtomicSnapshotFile';
 import { recoveryReserve } from '../platform/backup/LocalRecoveryFile';
 import { copySystemMigrationPayload, ensureSystemMigrationDirectory, systemMigrationPayload } from './ReaderSystemMigrationFiles';
 import {
-  READER_SYSTEM_MIGRATION_DIRECTORY, READER_SYSTEM_MIGRATION_MANIFEST, type ReaderSystemMigrationManifest,
+  READER_SYSTEM_MIGRATION_DIRECTORY, READER_SYSTEM_MIGRATION_EXPORT_WORK_DIRECTORY,
+  READER_SYSTEM_MIGRATION_MANIFEST, type ReaderSystemMigrationManifest,
 } from './ReaderSystemMigrationPolicy';
 
 async function requireSnapshotIdentity(context: common.Context, probe: ReaderCoreStorageProbe): Promise<void> {
@@ -41,7 +42,7 @@ export async function createReaderSystemMigrationArchive(context: common.Context
   const secret = (util.generateRandomUUID(false) + util.generateRandomUUID(false)).replace(/-/g, '');
   const source = new ReaderLocalRecoveryExportPort(applicationFilesDir);
   const port: LocalRecoveryExportPort = {
-    filesDir: `${context.filesDir}/reader-system-migration-export-work`,
+    filesDir: `${context.filesDir}/${READER_SYSTEM_MIGRATION_EXPORT_WORK_DIRECTORY}`,
     capture: (passphrase: string) => exportReaderCoreLibraryReadOnlyAsync(dataDirectory, passphrase, current),
     retainedLocalBookSourcePath: (bookId: string, live: () => boolean): Promise<string | undefined> =>
       source.retainedLocalBookSourcePath(bookId, live),

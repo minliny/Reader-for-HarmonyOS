@@ -14,7 +14,8 @@ import { LocalRecoveryGateway } from '../../bookshelf/application/LocalRecoveryG
 import { CategorySection } from '../../settings/ui/CategorySection';
 import { SyncGateway, type SyncLibraryArchiveRow, type SyncLibraryBackupResult, type SyncLibraryRemovalStatus } from '../application/SyncGateway';
 
-type LibraryAction = 'saveConfig' | 'export' | 'cleanup' | 'list' | 'inspect' | 'apply' | 'remove' | 'retireParts';
+type LibraryAction = 'saveConfig' | 'export' | 'cleanup' | 'list' | 'inspect' | 'apply' | 'remove' | 'retireParts' |
+  'leaveRetirement';
 
 @Component
 export struct ReaderWebDavLibraryPanel {
@@ -47,6 +48,7 @@ export struct ReaderWebDavLibraryPanel {
   @State private active: LibraryAction | undefined = undefined;
   @State private preview: SyncLibraryBackupResult | undefined = undefined;
   private mounted: boolean = false;
+  private openingGeneration: number = 0;
   private revision: number = 0;
   private confirmationOpen: boolean = false;
   private readonly gateway: SyncGateway = new SyncGateway();
@@ -58,6 +60,7 @@ export struct ReaderWebDavLibraryPanel {
   aboutToDisappear(): void { this.mounted = false; this.retireOpening(); }
 
   private retireOpening(): void {
+    this.openingGeneration++;
     this.revision++;
     this.alert.retire();
     this.feedback.reset();
@@ -100,6 +103,7 @@ export struct ReaderWebDavLibraryPanel {
       this.configured = state.configured;
       if (this.providerIdentity !== state.providerIdentity) {
         this.archives = undefined;
+        this.deletionUnavailable = false;
         this.localCleanupPending = false;
       }
       this.providerIdentity = state.providerIdentity;
@@ -122,11 +126,14 @@ export struct ReaderWebDavLibraryPanel {
 
   private async refreshLocalCleanup(revision: number): Promise<void> {
     const provider = this.providerIdentity;
-    if (provider === undefined) return;
-    const current = (): boolean => this.current(revision) && this.isInputAllowed() && this.providerIdentity === provider;
+    if (provider === undefined || !this.current(revision)) return;
+    const opening = this.openingGeneration;
+    // Reading the remote list or preview advances the action revision only.
+    const current = (): boolean => this.mounted && this.openingGeneration === opening && this.isInputAllowed() &&
+      this.providerIdentity === provider && !this.editing && !this.loadError && this.pendingConfigId.length === 0;
     if (!current()) return;
     const status = await this.gateway.sweepLibraryPayloads(provider, current);
-    if (current() && status !== 'cancelled') this.localCleanupPending = status === 'pending';
+    if (current()) this.localCleanupPending = status !== 'done';
   }
 
   private async run(action: LibraryAction, row?: SyncLibraryArchiveRow): Promise<void> {
@@ -138,7 +145,8 @@ export struct ReaderWebDavLibraryPanel {
     if (action === 'cleanup' && this.cleanupReceipt.length === 0) return;
     if (action === 'remove' && (row === undefined || this.removal !== undefined || this.readOnly || this.deletionUnavailable ||
       this.retirementUnavailable)) return;
-    if (action === 'retireParts' && (this.removal === undefined || this.retirementUnavailable)) return;
+    if ((action === 'retireParts' || action === 'leaveRetirement') &&
+      (this.removal === undefined || this.retirementUnavailable)) return;
     const revision = ++this.revision;
     const current = (): boolean => this.current(revision) && this.isInputAllowed();
     this.active = action;
@@ -173,6 +181,8 @@ export struct ReaderWebDavLibraryPanel {
       else if (action === 'remove' && row !== undefined) outcome = await this.gateway.removeLibraryArchive(row, current);
       else if (action === 'retireParts' && this.removal !== undefined) {
         outcome = await this.gateway.resumeLibraryRetirement(this.removal.receipt, current);
+      } else if (action === 'leaveRetirement' && this.removal !== undefined) {
+        outcome = await this.gateway.leaveLibraryRetirement(this.removal.receipt, current);
       } else if (action === 'apply') outcome = await this.gateway.restoreLibraryBackup(this.recovery, current);
     } catch (_) { /* Outcome stays failed for the current owner. */ }
     if (!this.current(revision)) return;
@@ -184,6 +194,7 @@ export struct ReaderWebDavLibraryPanel {
     if (action === 'list' && outcome.archives !== undefined) this.archives = outcome.archives;
     this.preview = undefined;
     const removal = action === 'remove' || action === 'retireParts';
+    if (outcome.state === 'deletionUnavailable') this.deletionUnavailable = true;
     if (outcome.state === 'readOnly') {
       if (removal) this.deletionUnavailable = true;
       else this.readOnly = true;
@@ -192,11 +203,11 @@ export struct ReaderWebDavLibraryPanel {
     if (action !== 'saveConfig' && outcome.state !== 'listed') {
       this.showMessage(action === 'cleanup' && outcome.state === 'exported' ? '本机暂存已清理' :
         removal && outcome.state === 'conflict' ? '所选旧包或替代备份已变化，清理未继续' :
-          removal && outcome.state === 'readOnly' ? '服务未通过条件删除校验，现有备份仍可读取' : this.outcomeMessage(outcome), current);
+          removal && outcome.state === 'readOnly' ? '服务端不支持条件删除，现有备份仍可读取和恢复' : this.outcomeMessage(outcome), current);
     }
-    if (action === 'export' || action === 'cleanup' || action === 'saveConfig' || action === 'remove' || action === 'retireParts') {
+    if (action === 'export' || action === 'cleanup' || action === 'saveConfig' || removal || action === 'leaveRetirement') {
       if (!this.editing || action === 'saveConfig') await this.readConfiguration(revision, this.editing);
-      if (action === 'remove' || action === 'retireParts') {
+      if (removal) {
         const refreshed = await this.gateway.listLibraryArchives(current);
         if (this.current(revision) && refreshed.archives !== undefined) this.archives = refreshed.archives;
       } else if (action === 'export' && outcome.state === 'exported' && this.current(revision)) this.archives = undefined;
@@ -209,7 +220,10 @@ export struct ReaderWebDavLibraryPanel {
       case 'cleanupPending': return '远端备份已完成回读校验，本机暂存待清理';
       case 'retirementPending': return '远端旧包清理待续办，请查看清理状态';
       case 'retirementCompleted': return '所选旧备份已清理';
-      case 'cleanupFailed': return '远端旧包清理未完成，可以继续原操作';
+      case 'retirementAbandoned': return '已放弃本次清理，旧备份仍可读取';
+      case 'retirementPaused': return '本次清理已停止，保留了远端现有文件和原清理回执';
+      case 'deletionUnavailable': return '服务端不支持条件删除，现有备份仍可读取和恢复';
+      case 'cleanupFailed': return '远端旧包清理未完成，可以继续原操作或退出';
       case 'replacementUnverified': return '未能验证可恢复的同库替代备份，清理已暂停。请核对备份口令或远端列表。';
       case 'replacementMissingOriginals': return '替代备份缺少旧备份中的原书，清理已暂停。';
       case 'restored': return '阅读库已恢复';
@@ -356,10 +370,18 @@ export struct ReaderWebDavLibraryPanel {
   private retirementNotice() {
     ReaderRecoveryNotice({ tag: '远端旧包清理待续办',
       actionLabel: this.removal?.phase === 'manifest' ? '核对所选旧备份' : '继续清理分片',
+      secondaryActionLabel: this.removal?.phase === 'manifest' ? '放弃本次清理' : '退出本次清理',
       view: { visible: true, canRetry: true, generation: this.revision,
         message: this.removal?.phase === 'waiting' ? `为已开始的读取保留分片，预计还需 ${this.removal?.waitMinutes ?? 0} 分钟。` :
           '只续办已确认的旧备份，不重新上传。' },
-      onReconcile: (expected: number): void => { if (this.current(expected)) void this.run('retireParts'); } });
+      onReconcile: (expected: number): void => { if (this.current(expected)) void this.run('retireParts'); },
+      onSecondaryAction: (expected: number): void => { if (this.current(expected)) void this.run('leaveRetirement'); } });
+  }
+
+  @Builder
+  private deletionUnavailableNotice() {
+    ReaderRecoveryNotice({ tag: '服务端不支持条件删除',
+      view: { visible: true, canRetry: false, generation: this.revision, message: '现有备份仍可读取和恢复。' } });
   }
 
   @Builder
@@ -419,7 +441,8 @@ export struct ReaderWebDavLibraryPanel {
       title: this.loading ? '正在读取 WebDAV 配置…' : this.active === 'saveConfig' ? '正在保存 WebDAV 配置…' :
         this.active === 'export' ? '正在上传和核对备份…' : this.active === 'cleanup' ? '正在清理本机暂存…' :
           this.active === 'list' ? '正在读取远端备份列表…' : this.active === 'remove' || this.active === 'retireParts' ?
-            '正在核对远端旧备份…' : this.active === 'inspect' ? '正在下载和校验备份…' : '正在恢复阅读库…' });
+            '正在核对远端旧备份…' : this.active === 'leaveRetirement' ? '正在退出旧备份清理…' :
+              this.active === 'inspect' ? '正在下载和校验备份…' : '正在恢复阅读库…' });
   }
 
   @Builder
@@ -453,6 +476,9 @@ export struct ReaderWebDavLibraryPanel {
         }
         if (this.removal !== undefined && !this.retirementUnavailable) {
           Column() { this.retirementNotice(); }.width('100%').padding(TOK_SPACE_SM);
+        }
+        if (this.deletionUnavailable) {
+          Column() { this.deletionUnavailableNotice(); }.width('100%').padding(TOK_SPACE_SM);
         }
         if (!this.publicationUnavailable && (this.cleanupReceipt.length > 0 || (this.pending && !this.readOnly))) {
           Column() { this.pendingNotice(); }.width('100%').padding(TOK_SPACE_SM);

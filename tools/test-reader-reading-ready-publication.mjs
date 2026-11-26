@@ -9,6 +9,7 @@ import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import * as selection from '../entry/src/main/ets/features/reading/application/ReaderControlSelectionTransaction.ts';
 import { readerTextSelectionEnabled } from '../entry/src/main/ets/features/reading/ui/ReaderTextSelectionPolicy.ts';
+import { readerControlHostInputEnabled } from '../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts';
 import { ReadingSessionProgressOwner } from './lib/reader-progress-owner-probe.mjs';
 
 const sourceFile=new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url);
@@ -27,7 +28,7 @@ const classes=Object.fromEntries(classNames.map(name=>{
 }));
 const methods=['publishMeasuredFirstPage','resumeSupersededAppearanceMeasurement','completeFirstPage','reconcileFailedControlSelection','promotePreparedPageTurn',
   'isOrdinaryPageMeasurement','canPresentOrdinaryPage','isChapterFirstPageStart',
-  'persistOrdinaryFirstPage','isOrdinaryFirstPagePresentationCurrent','awaitOrdinaryFirstPagePersistence','canTurnPage','readerTextSelectionEnabled',
+  'persistOrdinaryFirstPage','isOrdinaryFirstPagePresentationCurrent','awaitOrdinaryFirstPagePersistence','canTurnPage','readerTextSelectionEnabled','readerInputIsCurrent',
   'notifyReadingPresentationReady', 'notifyControlSelectionReadingReady','completeControlSelectionAfterCommit','selectionDisplayAnchor',
   'admitCommittedProgress','schedulePageTurnPreparation','prefetchNextChapter','requestPageTurnChapter',
   'isStableVisiblePageOwner','isSelectionCurrent','isMountedToken','isSessionActive','isSelectionActive','isMeasurementCurrent','resumeDeferredMeasurement'];
@@ -37,7 +38,7 @@ async function settle(){for(let i=0;i<12;i++)await Promise.resolve();}
 function fixture({file=sourceFile,mode='paged',storedIndex=0,storedOffset=0}={}){
   const events=[],queued=[],logs=[],loads=[];
   const Owner=productionMotionMethods(file,methods,{...selection,...classes,readerPageTransitionUsesPreparedPages:()=>true,
-    readerTextSelectionEnabled,readerRapidPageTurnHasWork:()=>false,readerTtsSessionBlocksAutoPageStart:()=>false,
+    readerTextSelectionEnabled,readerControlHostInputEnabled,readerRapidPageTurnHasWork:()=>false,readerTtsSessionBlocksAutoPageStart:()=>false,
     setTimeout:(fn,delay)=>{if(delay===0){queueMicrotask(fn);return 0;}queued.push(fn);return queued.length;},hilog:{error:(...args)=>logs.push(args)}});
   const owner=new Owner(),chapter={chapterIndex:0,chapterTitle:'当前章',sourceId:'s',bookId:'b',images:[]},page={startScalar:0,fragments:[{text:'已测量正文'}]};
   const context={chapter,layoutMap:{scalarCount:()=>100},paragraphRanges:[{startScalar:0}]};
@@ -59,6 +60,7 @@ function fixture({file=sourceFile,mode='paged',storedIndex=0,storedOffset=0}={})
   // this presentation test controls its ACK, not the Core receipt algorithm.
   gateway.persistCanonicalProgress=(...args)=>gateway.resolveAndUpdateProgress(...args);
   Object.assign(owner,{mounted:true,exitRequested:false,lifecycleToken:1,sourceId:'s',bookId:'b',chapter,
+    appForeground:true,windowChromeActive:true,interactionBlocked:false,controlObscured:false,pageTurnGestureState:{phase:'idle'},
     chapterSelectionToken:2,materializedChapterSelectionToken:2,visiblePageSelectionToken:2,
     measurementGeneration:3,measurementSelectionToken:2,measurementCompleting:true,phase:'measuring',visibleFragments:[],
     ordinaryPageMeasurementSelection:-1,paragraphRanges:context.paragraphRanges,
@@ -69,6 +71,7 @@ function fixture({file=sourceFile,mode='paged',storedIndex=0,storedOffset=0}={})
     isReaderIdentityCurrent:()=>true,
     activeGateway:()=>gateway,sessionGateway:gateway,requireChapter:()=>owner.chapter,requireChapterLayoutMap:()=>context.layoutMap,coreLayout:()=>({}),
     captureMaterializedChapterContext:()=>context,currentPaginationKey:()=>({}),paginationLayoutSignature:()=> 'layout',
+    readingLayout:()=>({facingChapterWidth:0}),
     restoreMaterializedChapterContext(next){this.chapter=next.chapter;this.paragraphRanges=next.paragraphRanges;},clearPageTurnProjection(){},
     releaseUnretainedReadingImages(){},beginReadingRecordClock(){},finishPageTurnPerf(){},
     drainPageTurnPreparationQueue(){},cancelFirstPageReadyDeadline(){},cancelFirstPageCompletionDeadline(){},completeRapidPageTurnTransaction(){},
@@ -136,9 +139,11 @@ for (const admission of ['current','no-ticket','selection','lifecycle','chapter'
 }
 for(const mode of ['paged','continuous']){
   const f=fixture({mode});f.hold();f.owner.remeasurePending=true;
+  f.owner.loadingChapterIndex=f.chapter.chapterIndex;
   const pending=f.first();await settle();assert.equal(f.events.filter(e=>e.type==='ready').length,1,'available body admits reading before Core write');
   assert.equal(f.events.filter(e=>e.type==='commitObserver'||e.type==='chapterObserver').length,0,'durable observers still await storage');
   assert.equal(f.owner.visiblePage,f.page,'cold measured body paints before durable progress');
+  assert.equal(f.owner.loadingChapterIndex,undefined,'ordinary first-page publication clears the loading title');
   assert.equal(f.owner.phase,'ready','measured ordinary body is usable before persistence');
   assert.equal(f.owner.isMeasurementCurrent(3,2,1),false,'the finished measurement owner is no longer the write lease');
   assert.equal(f.owner.canTurnPage(),true,'ordinary initial save does not disable page input');
@@ -146,6 +151,7 @@ for(const mode of ['paged','continuous']){
   assert.equal(f.writeOwners[0](),true,'independent persistence ownership remains valid');
   assert.ok(f.owner.pageTurnRenderRevision>10);f.gate.resolve();await pending;
   const ready=expectPublished(f,`first ${mode}`);assert.equal(f.counts().writes,1);
+  assert.deepEqual(f.logs,[],'ordinary first-page persistence and publication emit no errors');
   assert.equal(f.owner.phase,'measuring');assert.equal(f.events.at(-1).type,'remeasure');
   if(mode==='continuous')assert.equal(ready.continuousRevision,1);
   assert.equal(f.loads.length,1);assert.equal(f.loads[0].isCurrent(),true,'prefetch owns final preparation generation');
@@ -163,15 +169,30 @@ for(const blocker of ['visible','control','source-switch']){
   if(blocker==='visible'){f.owner.visiblePage={startScalar:9,fragments:[{text:'retained'}]};f.owner.visibleFragments=f.owner.visiblePage.fragments;}
   if(blocker==='control')f.owner.pendingControlSelection=f.ticket;
   if(blocker==='source-switch')f.owner.sourceSwitchTransactionId='transaction';
+  f.owner.loadingChapterIndex=f.chapter.chapterIndex;
   const previous=f.owner.visiblePage,revision=f.owner.pageTurnRenderRevision;
   const pending=f.first();await Promise.resolve();
   assert.equal(f.owner.visiblePage,previous,`${blocker}: uncommitted target cannot publish`);
   assert.equal(f.owner.pageTurnRenderRevision,revision);assert.equal(f.events.length,0);
   assert.equal(pixelRequests.length,0,'uncommitted control target cannot own late pixels');
+  assert.equal(f.owner.loadingChapterIndex,f.chapter.chapterIndex,'pending target retains its loading title');
   f.gate.resolve();await pending;expectPublished(f,`${blocker}: durable publication`);
+  assert.equal(f.owner.loadingChapterIndex,undefined,'accepted first page clears its loading title');
   assert.equal(pixelRequests.length,1,`${blocker}: committed image page starts pixels through the shared readiness path`);
   assert.equal(pixelRequests[0][1],image);
   report.push(`first-projection-fence:${blocker}`);
+}
+{
+  const f=fixture();f.hold();f.owner.loadingChapterIndex=f.chapter.chapterIndex;
+  f.owner.visiblePage={startScalar:9,fragments:[]};
+  const pending=f.first();await settle();
+  assert.equal(f.counts().writes,1,'first selection is still waiting for its write receipt');
+  f.owner.chapterSelectionToken++;
+  f.owner.loadingChapterIndex=3;
+  f.gate.resolve();await pending;
+  assert.equal(f.owner.loadingChapterIndex,3,'an obsolete first-page receipt leaves the successor loading title alone');
+  assert.equal(f.owner.visiblePage.startScalar,9,'an obsolete first-page receipt does not replace the visible page');
+  report.push('first-projection-fence:obsolete-selection-retains-successor-loading-title');
 }
 for(const action of ['origin','target'])for(const mode of ['paged','continuous']){
   const f=fixture({mode});await f.recover(action);expectPublished(f,`recovery ${action}/${mode}`);

@@ -133,6 +133,9 @@ export struct LocalRecoveryPanel {
       (action === 'apply') !== (this.preview !== undefined) || (this.systemPending && action !== 'export')) return;
     const revision = ++this.revision, navigation = this.navigationGeneration;
     const current = (): boolean => this.current(revision, navigation);
+    const admit = async (): Promise<void> => {
+      if (!current() || !this.isInputAllowed()) throw new Error('Local recovery opening retired');
+    };
     const passphrase = this.passphrase;
     this.active = action;
     this.confirmationOpen = false;
@@ -142,11 +145,9 @@ export struct LocalRecoveryPanel {
     try {
       if (action === 'export') outcome = await this.gateway.exportPackage(passphrase, current);
       else if (action === 'inspect') outcome = await this.gateway.inspectPackage(passphrase, current);
-      else if (action === 'apply') outcome = await this.gateway.applyPackage(passphrase, async (): Promise<void> => {
-        if (!current() || !this.isInputAllowed()) throw new Error('Local recovery opening retired');
-      });
-      else if (action === 'rollback') outcome = await this.gateway.rollbackPackage(passphrase);
-      else outcome = await this.gateway.resumePackage(passphrase);
+      else if (action === 'apply') outcome = await this.gateway.applyPackage(passphrase, admit);
+      else if (action === 'rollback') outcome = await this.gateway.rollbackPackage(passphrase, admit);
+      else outcome = await this.gateway.resumePackage(passphrase, admit);
     } catch (_) {
       outcome = { state: 'failed' };
     }

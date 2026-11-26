@@ -1,4 +1,5 @@
 export const READER_SYSTEM_MIGRATION_DIRECTORY = 'reader-system-migration-v1';
+export const READER_SYSTEM_MIGRATION_EXPORT_WORK_DIRECTORY = 'reader-system-migration-export-work';
 export const READER_SYSTEM_MIGRATION_PENDING_DIRECTORY = 'reader-system-migration-pending-v1';
 export const READER_SYSTEM_MIGRATION_PAYLOAD = 'library.readerbackup';
 export const READER_SYSTEM_MIGRATION_MANIFEST = 'manifest.json';

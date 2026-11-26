@@ -41,6 +41,72 @@ test('each blocked reader state consumes every recognized gesture without busine
   }
 });
 
+test('a novel chapter jump admits page, scroll and Back gestures when the selected page becomes visible', () => {
+  const Experience = selectedProductionMethods(new URL(
+    '../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url), 'ReadingExperience', [
+    'smartGestureDecision', 'dispatchSmartGesture', 'shouldShowChapterLoading', 'shouldShowSourceSwitchPreparation',
+  ], {
+    readerSmartGestureAction,
+    readerControlContentLocation: () => ({ level: 'closed' }),
+    ReaderNativeAlertWindow: { isPresented: () => false },
+    READER_SMART_GESTURE_VIEWPORT_FRACTION: 0.75,
+  });
+  const actions = [];
+  const owner = Object.assign(new Experience(), {
+    phase: 'ready', windowChromeActive: true, sourceSwitchFailureMessage: '',
+    visiblePage: {}, visiblePageSelectionToken: 1, chapterSelectionToken: 2, loadingChapterIndex: 9,
+    readerInputIsCurrent: () => true, controlVisible: () => false,
+    textSelectionActivity: { active: () => false }, readerRecoveryRequestCurrent: () => false,
+    pageTurnOwnsReaderInput: () => false, controlTemporaryLayer: '', smartGestureSettings: enabled,
+    readerSettingsSnapshot: { navigationMode: 'paged' },
+    requestPageTurn: direction => actions.push(['page', direction]),
+    requestExit: () => actions.push(['back']),
+    onReaderManualInteraction: () => actions.push(['manual']),
+    performContinuousPageTurn: (direction, fraction) => actions.push(['scroll', direction, fraction]),
+  });
+  for (const gesture of gestures) {
+    assert.equal(owner.smartGestureDecision(gesture), 'block');
+    owner.dispatchSmartGesture(owner.smartGestureDecision(gesture));
+  }
+  assert.deepEqual(actions, []);
+
+  owner.visiblePageSelectionToken = 2;
+  owner.dispatchSmartGesture(owner.smartGestureDecision('slideForward'));
+  owner.readerSettingsSnapshot.navigationMode = 'continuous';
+  owner.dispatchSmartGesture(owner.smartGestureDecision('tap'));
+  owner.dispatchSmartGesture(owner.smartGestureDecision('backPress'));
+  assert.deepEqual(actions, [['page', 'next'], ['manual'], ['scroll', 'next', 0.75], ['back']]);
+});
+
+test('reset retires the old loading title and a directory selection installs only its own index', () => {
+  const Experience = selectedProductionMethods(new URL(
+    '../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url), 'ReadingExperience', [
+    'onRequestedChapterChanged', 'resetForChapterSelection',
+  ]);
+  const opens = [];
+  const resetHelpers = [
+    'showReaderRecovery', 'invalidatePageTurnRuntime', 'clearContinuousRenderProjection', 'resetPendingPage',
+    'resetPaginationDraft', 'cancelMeasurementDeadline', 'cancelFirstPageReadyDeadline',
+    'cancelFirstPageCompletionDeadline', 'cancelPageTurnPreparationRetry', 'clearTtsChapterEndTimer',
+    'armFirstPageReadyDeadline',
+  ];
+  const owner = Object.assign(new Experience(), Object.fromEntries(resetHelpers.map(name => [name, () => {}])), {
+    mounted: true, lifecycleToken: 1, chapterSelectionToken: 4, loadingChapterIndex: 7, sessionGateway: {},
+    transientFeedback: { reset() {} }, physicalPagination: { index: { invalidateMeasurement() {} } },
+    nativeTextMeasurement: { clear() {} }, paragraphLayout: { batch: [], ranges: [] },
+    continuousImageResolutions: new Map(), chapterImageByStartScalar: new Map(), chapterImagePositionByKey: new Map(),
+    openChapter: (...args) => opens.push(args),
+  });
+  owner.resetForChapterSelection();
+  assert.equal(owner.loadingChapterIndex, undefined);
+  for (const chapterIndex of [9, 11]) {
+    owner.requestedChapterIndex = chapterIndex;
+    owner.onRequestedChapterChanged();
+    assert.equal(owner.loadingChapterIndex, chapterIndex);
+  }
+  assert.deepEqual(opens, [[9, false, 1, 5], [11, false, 1, 6]]);
+});
+
 function nativeMonitor(admitted = true) {
   const calls = [];
   const { HarmonySmartGestureHost } = selectedProductionClasses(new URL(

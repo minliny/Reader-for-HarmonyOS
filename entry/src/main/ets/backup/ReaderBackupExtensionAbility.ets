@@ -4,7 +4,8 @@ import lazy { createReaderSystemMigrationArchive } from './ReaderSystemMigration
 import { readerSystemMigrationIncludesOriginals } from '../app/ReaderSystemMigrationPreferences';
 import { readSystemMigrationManifest, stageSystemMigration, systemMigrationPayload, systemMigrationPendingDirectory } from
   './ReaderSystemMigrationFiles';
-import { READER_SYSTEM_MIGRATION_DIRECTORY, READER_SYSTEM_MIGRATION_MANIFEST } from './ReaderSystemMigrationPolicy';
+import { READER_SYSTEM_MIGRATION_DIRECTORY, READER_SYSTEM_MIGRATION_EXPORT_WORK_DIRECTORY,
+  READER_SYSTEM_MIGRATION_MANIFEST } from './ReaderSystemMigrationPolicy';
 
 interface MigrationResult {
   type: string;
@@ -72,10 +73,22 @@ export default class ReaderBackupExtensionAbility extends BackupExtensionAbility
   private async clearReleasedArchive(generation: number, pending?: Promise<void>): Promise<void> {
     await pending?.catch((): void => {});
     if (generation !== this.generation) return;
+    const work = `${this.context.filesDir}/${READER_SYSTEM_MIGRATION_EXPORT_WORK_DIRECTORY}`;
+    try {
+      if ((await fileIo.lstat(work)).isDirectory() && generation === this.generation) await fileIo.rmdir(work);
+    } catch (_) {}
+    if (generation !== this.generation) return;
     const directory = `${this.context.getApplicationContext().filesDir}/${READER_SYSTEM_MIGRATION_DIRECTORY}`;
-    for (const path of [`${directory}/${READER_SYSTEM_MIGRATION_MANIFEST}`, systemMigrationPayload(directory)]) {
+    try { if (!(await fileIo.lstat(directory)).isDirectory()) return; }
+    catch (_) { return; }
+    let stages: string[] = [];
+    try { stages = (await fileIo.listFile(directory)).filter((name: string): boolean => /^library-[a-zA-Z0-9-]{1,64}\.stage$/.test(name)); }
+    catch (_) {}
+    const paths = [`${directory}/${READER_SYSTEM_MIGRATION_MANIFEST}`, systemMigrationPayload(directory),
+      ...stages.map((name: string): string => `${directory}/${name}`)];
+    for (const path of paths) {
       if (generation !== this.generation) return;
-      try { if (await fileIo.access(path) && generation === this.generation) await fileIo.unlink(path); } catch (_) {}
+      try { if ((await fileIo.lstat(path)).isFile() && generation === this.generation) await fileIo.unlink(path); } catch (_) {}
     }
   }
 }

@@ -192,3 +192,46 @@ console.log('PASS a system pause exposes no user recovery action and still permi
   await assert.rejects(admission(), /opening retired/);
 }
 console.log('PASS leaving an accepted preview while validation awaits retires its pre-journal dispatch authority');
+
+for (const action of ['resume', 'rollback']) {
+  let admission;
+  let finishInspection;
+  const inspection = new Promise(resolve => { finishInspection = resolve; });
+  let inputAllowed = true;
+  const gatewayMethod = action === 'resume' ? 'resumePackage' : 'rollbackPackage';
+  const { panel, dialogs, events, notices } = fixture({
+    pendingAction: async () => 'restore',
+    async [gatewayMethod](_passphrase, admit) {
+      admission = admit;
+      await inspection;
+      await admit();
+      events.push(`${action} dispatched`);
+      return { state: action === 'resume' ? 'restored' : 'rolledBack' };
+    },
+  });
+  panel.isInputAllowed = () => inputAllowed;
+  panel.aboutToAppear(); await tick();
+  panel.passphrase = 'fixture passphrase';
+  let operation;
+  if (action === 'rollback') {
+    panel.requestRestore(panel.revision, 'rollback');
+    decide(dialogs[0], 'secondaryButton');
+  } else {
+    operation = panel.perform('resume', panel.revision);
+  }
+  await tick();
+  await admission();
+  if (action === 'resume') {
+    panel.aboutToDisappear();
+  } else {
+    inputAllowed = false;
+  }
+  await assert.rejects(admission(), /opening retired/);
+  finishInspection();
+  await operation;
+  await tick();
+  assert.equal(events.includes(`${action} dispatched`), false);
+  assert.deepEqual(notices, []);
+  if (action === 'rollback') panel.aboutToDisappear();
+  console.log(`PASS pending recovery ${action} requires the original opening and current input admission before dispatch`);
+}

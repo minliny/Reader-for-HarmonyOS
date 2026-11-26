@@ -635,7 +635,7 @@ function fixture(options={}) {
   const tree=ts.createSourceFile(virtualFilePath('RecoverableLoading.ets'),raw,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);
   const reader=tree.statements.find(node=>node.name?.text==='ReadingExperience');
   const selected=['chapterLoadingContent','shouldShowChapterLoading','loadingChapterTitle',
-    'shouldShowSourceSwitchPreparation','beginExit','isSessionActive','isMountedToken','loadingChapterIndex'];
+    'shouldShowSourceSwitchPreparation','beginExit','isSessionActive','isMountedToken','readerInputIsCurrent','loadingChapterIndex'];
   const members=selected.map(name=>{const node=reader.members.find(member=>member.name?.getText(tree)===name);
     assert.ok(node,`real loading member ${name}`);return node.getText(tree);});
   const call='      this.chapterLoadingContent();';
@@ -649,7 +649,7 @@ function fixture(options={}) {
     const enums=Object.fromEntries(['GradientDirection','ImageFit','ImageInterpolation','ImageRepeat'].map(name=>
       [name,new Proxy({},{get:(_target,key)=>`${name}.${key}`})]));
     const deps={...controls.dependencies,readerAppearanceThemeStyle,readerAppearanceChromeTone,
-      readerVisualSafeTop,readerInteractiveSafeLeft,cancelReaderRapidPageTurn,...enums};
+      readerVisualSafeTop,readerInteractiveSafeLeft,cancelReaderRapidPageTurn,readerControlHostInputEnabled,...enums};
     const hooks={...controls.hooks,childSources:{...controls.hooks.childSources,
       ReaderPaperBackground:paperSource,ReaderChapterLoadingState:loadingSource}};
     const Paper=createReaderBuilderProbe(paperSource,boundedMembers(paperSource),deps,hooks).Component;
@@ -686,8 +686,8 @@ function fixture(options={}) {
     const back=nodes.find(node=>node.accessibilityText==='取消加载并返回');assert.ok(back?.onClick);
     const position=[...layer.nodes.values()].find(node=>node.type==='__Common__'&&node.position);
     assert.ok(position.position.x>=readerInteractiveSafeLeft(metrics)&&position.position.y>=readerVisualSafeTop(metrics),'cancel actor stays within current safe edges; exact design offsets require separate evidence');
-    back.onClick();assert.equal(f.owner.exitRequested,true);assert.deepEqual(f.exit,[1],
-      'the native icon invokes the real beginExit rather than a label-only back seam');
+    back.onClick();assert.equal(f.owner.exitRequested,active);assert.deepEqual(f.exit,active?[1]:[],
+      'the native icon invokes the real beginExit only while the reader owns input');
   }
   const cases=[
     [{phase:'failed'},false,'failed retains its actionable failure content'],
@@ -754,7 +754,9 @@ function fixture(options={}) {
     assert.equal(r.phase,'failed');assert.equal(notices.length,1);
     assert.equal(loadingFixture({phase:r.phase,pendingControlSelection:ticket}).loading().length,0,
       'unresolved reconciliation exposes recovery rather than an indefinite spinner');
-    const failureSdk=boundedSurfaceSdk(),failure=failureSdk.consumer(raw,['readingFailureContent','readingFailureActions'],{LOCAL_READING_SOURCE_ID:'local',readerAppearanceThemeStyle});
+    const { sourceSwitchTriggerFocusId } = await import('../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts');
+    const failureSdk=boundedSurfaceSdk(),failure=failureSdk.consumer(raw,['readingFailureContent','readingFailureActions'],
+      {LOCAL_READING_SOURCE_ID:'local',readerAppearanceThemeStyle,sourceSwitchTriggerFocusId});
     Object.assign(failure,{sourceId:'target',sourceSwitchFailureMessage:'',failureCode:'章节加载失败',appearanceSnapshot:{activeTheme:'day'},
       readerRecoveryView:{visible:false},
       readingLayout:()=>({bodyWidth:()=>300,bodyHeight:()=>600,contentLeft:16,contentTop:30}),

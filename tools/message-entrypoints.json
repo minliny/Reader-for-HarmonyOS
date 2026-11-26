@@ -1951,7 +1951,18 @@
       "family": "shared.recovery-notice",
       "category": "远端所选旧备份的数据清理待续办",
       "effectiveHost": "当前安全配置代次和持久清理回执。",
-      "retireRule": "只能继续原删除与分片清理。30 分钟读取保护由业务 owner 判定。",
+      "retireRule": "当前代次只能续办或退出确切的原清理回执。退出时仅移除已证实未动的日志，不确定或已开始的退役则持久保留回执；30 分钟读取保护由网关判定。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets#ReaderWebDavLibraryPanel.deletionUnavailableNotice::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/sync/ui/ReaderWebDavLibraryPanel.ets",
+      "owner": "ReaderWebDavLibraryPanel",
+      "member": "deletionUnavailableNotice",
+      "family": "shared.recovery-notice",
+      "category": "WebDAV 未通过条件删除校验",
+      "effectiveHost": "当前 WebDAV 面板及其配置代次的删除能力。读取和恢复独立。",
+      "retireRule": "面板或配置换代撤下提示，按当前配置重新检查能力。",
       "status": "registered-source-entry"
     },
     {
@@ -1984,7 +1995,7 @@
       "family": "shared.recovery-notice",
       "category": "WebDAV 本机暂存清理失败",
       "effectiveHost": "当前通用设置 WebDAV 面板与保存配置代次。暂存清理结果独立于配置读取。",
-      "retireRule": "重试复核面板、Runtime、保存配置和原操作代次，仅处理无日志牵涉的本机暂存。",
+      "retireRule": "绑定面板打开代次及当前已提交配置。远端读取不取消本机清理，退页或配置变化停止旧回调。重试只处理已退役配置的本机暂存。",
       "status": "registered-source-entry"
     },
     {
@@ -1994,7 +2005,7 @@
       "member": "processing",
       "family": "shared.page-state",
       "category": "书库备份配置读取与实际操作中",
-      "effectiveHost": "当前通用设置 WebDAV 面板当次读取、备份、隔离校验或恢复。",
+      "effectiveHost": "当前通用设置 WebDAV 面板当次读取、备份、隔离校验、退役退出或恢复。",
       "retireRule": "当次操作结算或面板退役后移除，原备份及恢复日志继续由 gateway 持有。",
       "status": "registered-source-entry"
     },
@@ -2027,7 +2038,7 @@
       "owner": "ReaderWebDavLibraryPanel",
       "member": "showMessage",
       "family": "shared.transient",
-      "category": "WebDAV 配置或备份校验、完成及失败的短反馈",
+      "category": "WebDAV 配置、备份校验和退役退出的结果短反馈",
       "effectiveHost": "当前前景通用设置的 WebDAV 面板代次。",
       "retireRule": "新动作、换页或前景变化阻止旧短反馈。持续的中断和待核对由原日志及对应入口保留。",
       "status": "registered-source-entry"

@@ -128,7 +128,8 @@ export type SyncRestoreResult = {
 
 export type SyncLibraryBackupState = LocalRecoveryOutcome['state'] | 'notConfigured' | 'authentication' |
   'readOnly' | 'empty' | 'missingDirectory' | 'providerChanged' | 'conflict' | 'unconfirmed' | 'cleanupPending' |
-  'listed' | 'retirementPending' | 'retirementCompleted' | 'cleanupFailed' | 'replacementUnverified' | 'replacementMissingOriginals';
+  'listed' | 'retirementPending' | 'retirementCompleted' | 'retirementAbandoned' | 'retirementPaused' |
+  'deletionUnavailable' | 'cleanupFailed' | 'replacementUnverified' | 'replacementMissingOriginals';
 
 export interface SyncLibraryBackupResult {
   state: SyncLibraryBackupState;
@@ -372,13 +373,21 @@ export class SyncGateway {
       if (!row.canDelete) return { state: 'conflict' };
       if (await this.libraryRetirement(provider.identity) !== undefined) return { state: 'retirementPending' };
       const directory = this.libraryDirectory(provider.identity);
+      if (await this.libraryLocalStat(this.pausedLibraryRetirementPath(directory, row.sha256)) !== undefined) {
+        return { state: 'retirementPaused' };
+      }
       if (!await fileIo.access(directory)) await fileIo.mkdir(directory, true);
       return this.withLibraryArchiveVerification(provider, directory, current, async (verification): Promise<SyncLibraryBackupResult> => {
         const plan = await provider.transport.planRemoval(row.sha256, row.manifestSha256, verification);
+        try { await provider.transport.proveConditionalDeletion(); }
+        catch (error) {
+          if (error instanceof WebDavLibraryBackupError && error.reason === 'readOnly') return { state: 'deletionUnavailable' };
+          throw error;
+        }
         await provider.assertCurrent();
         const journal: SyncLibraryRemovalJournal = { schemaVersion: 1, configOperationId: provider.identity, plan };
         await this.writeLibraryRetirement(directory, journal);
-        return this.driveLibraryRetirement(provider, directory, journal, verification);
+        return this.driveLibraryRetirement(provider, directory, journal, verification, true);
       });
     }, 'staging');
   }
@@ -390,6 +399,27 @@ export class SyncGateway {
       const directory = this.libraryDirectory(provider.identity);
       return this.withLibraryArchiveVerification(provider, directory, current, (verification): Promise<SyncLibraryBackupResult> =>
         this.driveLibraryRetirement(provider, directory, journal, verification));
+    }, 'staging');
+  }
+
+  async leaveLibraryRetirement(receipt: string, current: () => boolean): Promise<SyncLibraryBackupResult> {
+    return this.runLibraryOperation(current, async (provider): Promise<SyncLibraryBackupResult> => {
+      const journal = await this.libraryRetirement(provider.identity);
+      if (journal === undefined || this.libraryRetirementStatus(journal).receipt !== receipt) return { state: 'cancelled' };
+      const directory = this.libraryDirectory(provider.identity);
+      const active = `${directory}/retirement.json`;
+      let discard = false;
+      if (journal.removedAtUptime === undefined) {
+        try { discard = await provider.transport.canDiscardRemovalPlan(journal.plan); }
+        catch (_) { /* An ambiguous remote outcome requires a retained receipt. */ }
+      }
+      const paused = this.pausedLibraryRetirementPath(directory, journal.plan.sha256);
+      if (!discard && await this.libraryLocalStat(paused) !== undefined) return { state: 'cleanupFailed' };
+      await provider.assertCurrent();
+      if (discard) await this.unlinkLibraryFile(active);
+      else await fileIo.rename(active, paused);
+      await recoveryWithFile(directory, fileIo.OpenMode.READ_ONLY, (file): Promise<void> => fileIo.fsync(file.fd));
+      return { state: discard ? 'retirementAbandoned' : 'retirementPaused' };
     }, 'staging');
   }
 
@@ -511,40 +541,59 @@ export class SyncGateway {
     const rootStat = await this.libraryLocalStat(root);
     if (rootStat === undefined) return 'done';
     if (!rootStat.isDirectory()) return 'pending';
+    let pending = false;
     for (const identity of await fileIo.listFile(root)) {
       if (!current() || !this.isOwner() || SyncGateway.libraryStaging.has(this.runtimeOwner)) return 'cancelled';
-      if (!/^[a-f0-9-]{36}$/.test(identity)) continue;
-      const directory = this.libraryDirectory(identity);
-      if (!(await this.libraryLocalStat(directory))?.isDirectory()) continue;
-      for (const name of await fileIo.listFile(directory)) {
-        if (name !== 'verify.readerbackup' && !/^[a-f0-9]{64}\.readerbackup$/.test(name)) continue;
-        if (!await this.unlinkUnownedLibraryPayload(directory, name, saved, current)) return 'cancelled';
-      }
+      if (identity === saved.saveOperationId || !/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/.test(identity)) continue;
+      try {
+        if (!await this.retireInactiveLibraryStaging(identity, saved, current)) return 'cancelled';
+      } catch (_) { pending = true; }
     }
-    return 'done';
+    return pending ? 'pending' : 'done';
   }
 
-  private async unlinkUnownedLibraryPayload(directory: string, name: string, saved: StoredWebDavState,
+  private async retireInactiveLibraryStaging(identity: string, saved: StoredWebDavState,
     current: () => boolean): Promise<boolean> {
     if (!current() || !this.isOwner() || SyncGateway.libraryStaging.has(this.runtimeOwner)) return false;
     SyncGateway.libraryStaging.add(this.runtimeOwner);
     try {
+      const directory = this.libraryDirectory(identity);
       if (!(await this.libraryLocalStat(directory))?.isDirectory()) return true;
-      const journal = name === 'verify.readerbackup' ? 'retirement.json' : 'publish.json';
-      // Keep a stage that can still belong to a durable operation, even when
-      // its journal is unreadable or its configuration is no longer selected.
-      if (await this.libraryLocalStat(`${directory}/${journal}`) !== undefined) return true;
-      const path = `${directory}/${name}`;
-      if (!(await this.libraryLocalStat(path))?.isFile()) return true;
-      await this.credentials.requireConfigSettled();
-      const actual = await this.credentials.loadSerializedState();
-      if (!current() || !this.isOwner() || this.libraryProviderIdentity(actual) !== saved.saveOperationId ||
-        actual.savePayloadHash !== saved.savePayloadHash) return false;
-      await this.unlinkLibraryFile(path);
+      const publication = await this.libraryPublication(identity);
+      if (publication !== undefined) {
+        const path = this.libraryPayload(directory, publication.sha256);
+        const stat = await this.libraryLocalStat(path);
+        if (stat !== undefined && (!stat.isFile() || stat.size !== publication.bytes)) {
+          throw new Error('Invalid retired WebDAV publication payload');
+        }
+        if (!await this.librarySweepIsCurrent(saved, current)) return false;
+        if (stat !== undefined) await this.unlinkLibraryFile(path);
+        // Keep identification until ciphertext removal is durable. Reopening
+        // after interruption can finish a journal whose payload is absent.
+        await recoveryWithFile(directory, fileIo.OpenMode.READ_ONLY, (file): Promise<void> => fileIo.fsync(file.fd));
+        if (!await this.librarySweepIsCurrent(saved, current)) return false;
+        await this.unlinkLibraryFile(`${directory}/publish.json`);
+      }
+      for (const name of await fileIo.listFile(directory)) {
+        if (name === 'verify.readerbackup') {
+          if (await this.libraryLocalStat(`${directory}/retirement.json`) !== undefined) continue;
+        } else if (!/^[a-f0-9]{64}\.readerbackup$/.test(name)) continue;
+        const path = `${directory}/${name}`;
+        if (!(await this.libraryLocalStat(path))?.isFile()) continue;
+        if (!await this.librarySweepIsCurrent(saved, current)) return false;
+        await this.unlinkLibraryFile(path);
+      }
       return true;
     } finally {
       SyncGateway.libraryStaging.delete(this.runtimeOwner);
     }
+  }
+
+  private async librarySweepIsCurrent(saved: StoredWebDavState, current: () => boolean): Promise<boolean> {
+    await this.credentials.requireConfigSettled();
+    const actual = await this.credentials.loadSerializedState();
+    return current() && this.isOwner() && this.libraryProviderIdentity(actual) === saved.saveOperationId &&
+      actual.savePayloadHash === saved.savePayloadHash;
   }
 
   private libraryPayload(directory: string, sha256: string): string { return `${directory}/${sha256}.readerbackup`; }
@@ -559,7 +608,8 @@ export class SyncGateway {
     if (stat === undefined) return undefined;
     if (!stat.isFile() || stat.size <= 0 || stat.size > 1024) throw new Error('Invalid pending library publication');
     const saved = JSON.parse(await fileIo.readText(path)) as SyncLibraryPublication;
-    if (saved.schemaVersion !== 1 || saved.configOperationId !== identity || !/^[a-f0-9]{64}$/.test(saved.sha256) ||
+    if (saved.schemaVersion !== 1 || saved.configOperationId !== identity || typeof saved.sha256 !== 'string' ||
+      !/^[a-f0-9]{64}$/.test(saved.sha256) ||
       !Number.isSafeInteger(saved.bytes) || saved.bytes <= 0 || saved.bytes > LOCAL_RECOVERY_MAX_BYTES ||
       (saved.remoteVerified !== undefined && saved.remoteVerified !== true) || (saved.metadata !== undefined &&
         (!Number.isSafeInteger(saved.metadata.createdAt) || saved.metadata.createdAt <= 0 ||
@@ -632,6 +682,11 @@ export class SyncGateway {
     return replaceReaderAtomicSnapshot(`${directory}/retirement.json`, directory, JSON.stringify(journal));
   }
 
+  private pausedLibraryRetirementPath(directory: string, sha256: string): string {
+    if (!/^[a-f0-9]{64}$/.test(sha256)) throw new Error('Invalid paused archive identity');
+    return `${directory}/retirement-paused-${sha256}.json`;
+  }
+
   private async withLibraryArchiveVerification(provider: SyncLibraryProvider, directory: string, current: () => boolean,
     action: (verification: WebDavArchiveVerification) => Promise<SyncLibraryBackupResult>): Promise<SyncLibraryBackupResult> {
     const path = `${directory}/verify.readerbackup`;
@@ -644,14 +699,15 @@ export class SyncGateway {
   }
 
   private async driveLibraryRetirement(provider: SyncLibraryProvider, directory: string,
-    journal: SyncLibraryRemovalJournal, verification: WebDavArchiveVerification): Promise<SyncLibraryBackupResult> {
+    journal: SyncLibraryRemovalJournal, verification: WebDavArchiveVerification,
+    conditionalDeletionProven: boolean = false): Promise<SyncLibraryBackupResult> {
     if (journal.removedAtUptime === undefined) {
       if (journal.plan.replacementProof === undefined) {
         journal.plan = await provider.transport.upgradeRemovalPlan(journal.plan, verification);
         await provider.assertCurrent();
         await this.writeLibraryRetirement(directory, journal);
       }
-      await provider.transport.unpublish(journal.plan, verification);
+      await provider.transport.unpublish(journal.plan, verification, conditionalDeletionProven);
       journal.removedAtUptime = systemDateTime.getUptime(systemDateTime.TimeType.STARTUP);
       await this.writeLibraryRetirement(directory, journal);
       return { state: 'retirementPending' };
@@ -662,7 +718,10 @@ export class SyncGateway {
       journal.removedAtUptime = now;
       await this.writeLibraryRetirement(directory, journal);
     }
-    if (this.libraryRetirementStatus(journal).phase !== 'parts') return { state: 'retirementPending' };
+    if (this.libraryRetirementStatus(journal).phase !== 'parts') {
+      await provider.transport.checkRetirementReplacement(journal.plan);
+      return { state: 'retirementPending' };
+    }
     try {
       await provider.transport.removeRetiredParts(journal.plan, verification);
       await this.unlinkLibraryFile(`${directory}/retirement.json`);

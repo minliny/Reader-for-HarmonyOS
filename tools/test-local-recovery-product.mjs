@@ -446,9 +446,18 @@ try {
   assert.equal(provider.remote.has(oldPart), true, 'the manifest-first transition keeps parts during admitted reads');
   const pendingRetirement = (await sync.libraryBackupConfiguration()).removal;
   assert.equal(pendingRetirement.phase, 'waiting');
-  const beforePendingRetry = [...provider.requests];
+  const beforePendingRetry = provider.requests.length;
   assert.deepEqual(await sync.resumeLibraryRetirement(pendingRetirement.receipt, current), { state: 'retirementPending' });
-  assert.deepEqual(provider.requests, beforePendingRetry);
+  assert.ok(provider.requests.slice(beforePendingRetry).every(([method]) => method === 'GET'),
+    'the grace period only permits read-only replacement checks');
+  const replacementManifest = `reader-library-v1-${latest.sha256}.manifest`;
+  const retainedManifest = provider.remote.get(replacementManifest);
+  provider.remote.delete(replacementManifest);
+  const beforeWaitingLoss = provider.requests.length;
+  assert.deepEqual(await sync.resumeLibraryRetirement(pendingRetirement.receipt, current), { state: 'replacementUnverified' });
+  assert.ok(provider.requests.slice(beforeWaitingLoss).every(([method]) => method === 'GET'));
+  assert.equal(provider.remote.has(oldPart), true);
+  provider.remote.set(replacementManifest, retainedManifest);
   webDavDonor.close();
 
   provider.moveClock(31 * 60_000);
@@ -456,8 +465,6 @@ try {
   currentRuntime = webDavDonor;
   sync = provider.gateway(webDavDonor);
   assert.equal((await sync.libraryBackupConfiguration()).removal.phase, 'parts');
-  const replacementManifest = `reader-library-v1-${latest.sha256}.manifest`;
-  const retainedManifest = provider.remote.get(replacementManifest);
   provider.remote.delete(replacementManifest);
   const beforeMissingReplacement = provider.requests.length;
   assert.deepEqual(await sync.resumeLibraryRetirement(pendingRetirement.receipt, current), { state: 'replacementUnverified' });

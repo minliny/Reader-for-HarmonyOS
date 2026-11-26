@@ -52,18 +52,21 @@ test('retiring one native text surface does not release a different active selec
 });
 
 const ui = new URL('../entry/src/main/ets/features/', import.meta.url);
-function routeMethods(path, struct, alertPresented = () => false) {
-  return selectedProductionMethods(new URL(path, ui), struct, ['onReaderKeyEvent'], {
+function routeMethods(path, struct, alertPresented = () => false, keyboardVisible = () => false) {
+  const methods = ['onReaderKeyEvent'];
+  if (struct === 'ReadingExperience') methods.push('shouldShowChapterLoading', 'shouldShowSourceSwitchPreparation');
+  return selectedProductionMethods(new URL(path, ui), struct, methods, {
     readerHardwareKeyboardShortcut: readerKeyboardShortcut,
     readerControlKeyboardVisible: metrics => metrics.visible,
-    ReaderWindowCoordinator: { metrics: () => ({ visible: false }) },
+    ReaderWindowCoordinator: { metrics: () => ({ visible: keyboardVisible() }) },
     ReaderNativeAlertWindow: { isPresented: alertPresented },
   });
 }
 
 test('novel shortcuts use the existing page, Back and control owners', () => {
   let alert = false;
-  const Experience = routeMethods('reading/ui/LocalReadingExperience.ets', 'ReadingExperience', () => alert);
+  let inputFocus = false;
+  const Experience = routeMethods('reading/ui/LocalReadingExperience.ets', 'ReadingExperience', () => alert, () => inputFocus);
   const actions = [];
   const selection = new ReaderTextSelectionActivity();
   const owner = Object.assign(new Experience(), {
@@ -71,6 +74,9 @@ test('novel shortcuts use the existing page, Back and control owners', () => {
     readerRecoveryRequestCurrent: () => false,
     controlTemporaryLayer: '',
     phase: 'ready',
+    sourceSwitchFailureMessage: '',
+    windowChromeActive: true, chapterSelectionToken: 2, visiblePageSelectionToken: 2,
+    visiblePage: {}, visibleFragments: [{}], isReaderIdentityCurrent: () => true,
     textSelectionActivity: selection,
     requestExit: () => actions.push('back'),
     requestPageTurn: direction => actions.push(direction),
@@ -85,12 +91,46 @@ test('novel shortcuts use the existing page, Back and control owners', () => {
     assert.equal(owner.onReaderKeyEvent(event), false);
   }
   alert = false;
+  inputFocus = true;
+  assert.equal(owner.onReaderKeyEvent(key), false);
+  inputFocus = false;
   selection.change('paragraph', true);
   assert.equal(owner.onReaderKeyEvent(key), false);
   selection.change('paragraph', false);
   owner.sourceSwitchPresentationVisible = true;
   assert.equal(owner.onReaderKeyEvent(key), false);
   assert.deepEqual(actions, ['back', 'next', 'directory', 'search']);
+});
+
+test('novel shortcut dispatch pauses for each source switch and chapter overlay and resumes when it clears', () => {
+  const Experience = routeMethods('reading/ui/LocalReadingExperience.ets', 'ReadingExperience');
+  const calls = [];
+  const ready = {
+    phase: 'ready', windowChromeActive: true, sourceSwitchFailureMessage: '', sourceSwitchRollbackInFlight: false,
+    sourceSwitchTransactionId: undefined, visiblePageSelectionToken: 2, chapterSelectionToken: 2,
+  };
+  const fixtures = [
+    ['failure', { sourceSwitchFailureMessage: 'source switch failed' }],
+    ['rollback', { sourceSwitchRollbackInFlight: true }],
+    ['preparing', { sourceSwitchTransactionId: 'switch', visiblePageSelectionToken: 1 }],
+    ['loading', { visiblePageSelectionToken: 1 }],
+  ];
+  const inputs = [{ ...key, key: 'PageDown' }, { ...key, key: 'Escape' }, { ...key, key: 'D', ctrl: true }];
+  const owner = Object.assign(new Experience(), {
+    isReaderPageInteractionEnabled: () => true, readerRecoveryRequestCurrent: () => false,
+    isReaderIdentityCurrent: () => true, controlTemporaryLayer: '', visiblePage: {}, visibleFragments: [{}],
+    textSelectionActivity: { active: () => false }, requestExit: () => calls.push('back'),
+    requestPageTurn: direction => calls.push(direction), openReaderControl: (_origin, module) => calls.push(module),
+  });
+  const verdicts = fixtures.map(([state, blocker]) => {
+    Object.assign(owner, ready, blocker);
+    return [state, inputs.map(event => owner.onReaderKeyEvent(event))];
+  });
+  assert.deepEqual(verdicts, fixtures.map(([state]) => [state, [false, false, false]]));
+  assert.deepEqual(calls, []);
+  Object.assign(owner, ready);
+  assert.deepEqual(inputs.map(event => owner.onReaderKeyEvent(event)), [true, true, true]);
+  assert.deepEqual(calls, ['next', 'back', 'directory']);
 });
 
 test('manga shortcuts page horizontally, scroll vertically and defer to a visible panel', () => {
