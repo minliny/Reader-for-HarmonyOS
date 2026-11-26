@@ -73,25 +73,6 @@ export class ReaderRetainedPresentation {
   }
 }
 
-export interface ReaderControlPlaybackPresentation {
-  lifecycleToken: number;
-  sourceId: string;
-  bookId: string;
-  openRevision: number;
-  moduleVisitRevision: number;
-  module: string;
-}
-
-export interface ReaderTtsPlayIntent {
-  generation: number;
-  lifecycleToken: number;
-  selectionToken: number;
-  sourceId: string;
-  bookId: string;
-  presentation: ReaderControlPlaybackPresentation;
-  capsuleFallback: boolean;
-}
-
 export interface ReaderControlSelectionDisplay {
   context: ReaderMaterializedChapterContext;
   page: PhysicalReadingPage;

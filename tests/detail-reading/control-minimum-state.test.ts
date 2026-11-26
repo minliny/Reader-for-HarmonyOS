@@ -150,3 +150,65 @@ test('profiled control minimum checks candidate generation before evaluating the
   assert.equal(owner.acceptsProfiledCandidates(current, input.identity, readEnvironment), false);
   assert.equal(environmentReads, 2);
 });
+
+test('minimum admission checks the current profile before deferring page input and reuses only matching geometry', () => {
+  const { owner, input, host, frames, sampleMeasured } = fixture();
+  const stale = sampleMeasured();
+  const actions: string[] = [];
+  let idle = false;
+  let same = false;
+  owner.bind(input.identity, minimum, key => { actions.push(`profile:${key}`); return 12; }, host.environment, 'facts', 'geometry');
+  let candidates: ReaderControlCandidateMinimum[] = [];
+  owner.schedule({ ...host, admit: measured => { candidates = measured; } });
+  frames.shift()!();
+  const admission = {
+    current: host.current,
+    environment: () => { actions.push('environment'); return input.environment; },
+    inputIdle: () => { actions.push('input'); return idle; },
+    location: host.location,
+    window: host.window,
+    matchesProfile: (profile: number) => { actions.push(`match:${profile}`); return profile === 12; },
+    previousReceipt: () => { actions.push('previous'); return 'receipt'; },
+    sameGeometry: (receipt: string) => { actions.push(`same:${receipt}`); return same; },
+  };
+  assert.deepEqual(owner.prepareAdmission(stale, input.identity, admission), { kind: 'ignored' });
+  assert.deepEqual(actions, []);
+  assert.deepEqual(owner.prepareAdmission([], input.identity, admission), { kind: 'unavailable' });
+  assert.deepEqual(actions.splice(0), ['environment']);
+  assert.deepEqual(owner.prepareAdmission(candidates, input.identity, admission), { kind: 'ignored' });
+  assert.deepEqual(actions.splice(0), ['environment', 'input']);
+  assert.deepEqual(owner.deferred, { candidates, identity: input.identity });
+  idle = true;
+  same = true;
+  assert.deepEqual(owner.prepareAdmission(candidates, input.identity, admission), { kind: 'reuse', profile: 12 });
+  assert.deepEqual(actions.splice(0), ['environment', 'input', `profile:${candidates[0].key}`, 'match:12',
+    'previous', 'environment', 'same:receipt']);
+  same = false;
+  const next = owner.prepareAdmission(candidates, input.identity, admission);
+  assert.equal(next.kind, 'new-profile');
+  if (next.kind === 'new-profile') {
+    assert.equal(next.environment, input.environment);
+    assert.equal(next.layout.minimumKey, candidates[0].key);
+  }
+});
+
+test('unprofiled minimums retain legacy admission and profile disagreement reports unavailable', () => {
+  const { owner, input, host, frames, sampleMeasured } = fixture();
+  const unprofiled = sampleMeasured();
+  const admission = {
+    current: host.current,
+    environment: host.environment,
+    inputIdle: () => true,
+    location: host.location,
+    window: host.window,
+    matchesProfile: () => false,
+    previousReceipt: () => assert.fail('a rejected profile cannot inspect the prior receipt'),
+    sameGeometry: () => assert.fail('a rejected profile cannot compare geometry'),
+  };
+  assert.deepEqual(owner.prepareAdmission(unprofiled, input.identity, admission), { kind: 'unprofiled' });
+  owner.bind(input.identity, minimum, () => 12, host.environment, 'facts', 'geometry');
+  let measured: ReaderControlCandidateMinimum[] = [];
+  owner.schedule({ ...host, admit: candidates => { measured = candidates; } });
+  frames.shift()!();
+  assert.deepEqual(owner.prepareAdmission(measured, input.identity, admission), { kind: 'unavailable' });
+});

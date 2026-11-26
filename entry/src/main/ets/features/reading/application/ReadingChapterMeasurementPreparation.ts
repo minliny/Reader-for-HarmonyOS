@@ -1,4 +1,6 @@
 import { retainReadingEntryImageHandles, type ReadingSessionChapter, type ReadingSessionImage } from './ReadingChapterWindow.ts';
+import type { ReadingParagraphWindowDirection } from './ReadingDocumentWindow';
+import type { ReadingSessionFlowGateway } from './ReadingSessionFlowGateway';
 import { ParagraphRange } from './ReadingMeasurementFacts.ts';
 import {
   prepareReadingParagraphUtf16Ranges,
@@ -21,7 +23,7 @@ export interface ReadingParagraphWindowProjection extends ReadingChapterMeasurem
 export interface ReadingEntryExpansionHost {
   firstPagePersistence: () => Promise<void> | undefined;
   boundaryMode: () => ReadingParagraphBoundaryMode;
-  admit: (expanded: ReadingSessionChapter, ranges: ParagraphRange[]) => void;
+  admit: (expanded: ReadingSessionChapter, ranges: ParagraphRange[], map: ReadingSurfaceLayoutMap) => void;
 }
 
 function projectParagraph(
@@ -79,8 +81,55 @@ export function completeReadingEntryWindow(
       ranges.push(projectParagraph(utf16Ranges[index], index, map));
     }
     if (!isCurrent()) return;
-    host.admit(expanded, ranges);
+    host.admit(expanded, ranges, map);
   });
+}
+
+export function lastMeasurableParagraphScalar(
+  content: string, map: ReadingSurfaceLayoutMap, ranges: ParagraphRange[],
+): number {
+  for (let index = ranges.length - 1; index >= 0; index -= 1) {
+    const range = ranges[index];
+    for (let scalar = range.endScalar - 1; scalar >= range.startScalar; scalar -= 1) {
+      const startUtf16 = map.utf16ForScalar(scalar);
+      const endUtf16 = map.utf16ForScalar(scalar + 1);
+      if (content.substring(startUtf16, endUtf16).trim().length > 0) return scalar;
+    }
+  }
+  throw new Error('READING_CONTENT_EMPTY');
+}
+
+export interface ReadingMeasurementStart {
+  readonly expand: ReadingParagraphWindowDirection | undefined;
+  readonly offset: number;
+  readonly progress: number;
+}
+
+/** Clamp only a presentation offset in the resident window. A request for
+ * missing original context is returned before reading any paragraph text. */
+export function planForwardReadingMeasurement(
+  requested: number, content: string, map: ReadingSurfaceLayoutMap, ranges: ParagraphRange[],
+): ReadingMeasurementStart {
+  const scalarCount = map.scalarCount();
+  if (requested < map.residentStart()) return { expand: 'before', offset: requested, progress: 0 };
+  if (requested >= map.residentEnd() && map.residentEnd() < scalarCount) {
+    return { expand: 'after', offset: requested, progress: 0 };
+  }
+  const last = lastMeasurableParagraphScalar(content, map, ranges);
+  const offset = Math.max(ranges[0].startScalar, Math.min(last, requested));
+  return { expand: undefined, offset, progress: scalarCount === 0 ? 0 : offset / scalarCount };
+}
+
+export function readMeasuredParagraphWindow(
+  gateway: ReadingSessionFlowGateway, chapter: ReadingSessionChapter, anchor: number,
+  direction: ReadingParagraphWindowDirection, mode: ReadingParagraphBoundaryMode, current: () => boolean,
+  admit: (expanded: ReadingSessionChapter, projection: ReadingChapterMeasurementProjection) => void,
+  recover: (error: Error) => Promise<void>,
+): Promise<void> {
+  return gateway.loadParagraphWindow(chapter, anchor, direction, mode, current)
+    .then((result: ReadingSessionChapter): Promise<void> =>
+      prepareReadingParagraphWindowMeasurement(result, chapter, mode, current, admit))
+    .catch(recover);
 }
 
 /** A bounded adjacent window never replaces the active measurement after its lease expires. */

@@ -1,3 +1,4 @@
+import type { ReaderTtsPlaybackCoordinator } from './ReaderTtsPlaybackOwner';
 import type { ReaderTtsHost, ReaderTtsHostEvent, ReaderTtsNativeSpeakPoint } from './ReaderTtsHostContract.ts';
 import { diagnosticCodeOf } from '../../../app/LogPrivacy.ts';
 import { ReaderStartupTrace, type ReaderTtsCapsuleTiming } from '../../../app/ReaderStartupTrace.ts';
@@ -173,7 +174,7 @@ function createHostTtsTransportState(): HostTtsTransportState {
  * Serial bridge between Core's queue and the actual Harmony system engine.
  * Every public intent and every Host callback enters one operation tail.
  */
-export class ReaderTtsSessionCoordinator {
+export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator {
   private readonly gateway: ReaderTtsCoordinatorGateway;
   private readonly host: ReaderTtsHost;
   private readonly progressCommit: (progress: ReaderTtsProgressCommit) => Promise<void>;

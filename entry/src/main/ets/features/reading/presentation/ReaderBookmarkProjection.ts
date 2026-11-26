@@ -348,3 +348,62 @@ export function readerBookmarkRowsFromRecords(
   }
   return rows;
 }
+
+export interface ReaderControlBookmarkReadIntent {
+  isCurrent(): boolean;
+  load(isCurrent: () => boolean): Promise<void>;
+  failed(error: Error): void;
+}
+
+/** Directory opens and content refreshes share one observation generation.
+ * The parent reader index remains the only writer of canonical bookmark rows. */
+export class ReaderControlBookmarkRead {
+  private generation: number = 0;
+  private pending: boolean = false;
+  private noticeKey: string = '';
+
+  isPending(): boolean { return this.pending; }
+
+  open(capture: (ownsGeneration: () => boolean) => ReaderControlBookmarkReadIntent, clearFailure: () => void): void {
+    const generation = ++this.generation;
+    const intent = capture((): boolean => generation === this.generation);
+    clearFailure();
+    this.pending = true;
+    this.queue(intent, generation);
+  }
+
+  refresh(capture: (ownsGeneration: () => boolean) => ReaderControlBookmarkReadIntent, clearFailure: () => void): void {
+    const generation = ++this.generation;
+    const intent = capture((): boolean => generation === this.generation);
+    this.pending = true;
+    clearFailure();
+    this.queue(intent, generation);
+  }
+
+  clearNotice(): void { this.noticeKey = ''; }
+
+  admitNotice(key: string): boolean {
+    if (this.noticeKey === key) return false;
+    this.noticeKey = key;
+    return true;
+  }
+
+  private queue(intent: ReaderControlBookmarkReadIntent, generation: number): void {
+    const isCurrent = (): boolean => intent.isCurrent();
+    void Promise.resolve().then((): Promise<void> => {
+      if (!isCurrent()) return Promise.resolve();
+      return intent.load(isCurrent);
+    }).catch((error: Error): void => {
+      if (isCurrent()) intent.failed(error);
+    }).finally((): void => {
+      if (generation === this.generation) this.pending = false;
+    });
+  }
+}
+
+/** A newer complete projection supersedes failure of an older list observation. */
+export function readerBookmarkReadFailureSuperseded(message: string, started: LocalReadingTocEntry[],
+  current: LocalReadingTocEntry[]): boolean {
+  return message.length === 0 && current !== started &&
+    !current.some((entry: LocalReadingTocEntry): boolean => entry.bookmarks === undefined);
+}

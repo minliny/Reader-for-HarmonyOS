@@ -57,6 +57,21 @@ interface ReaderControlMinimumFrameHost<Facts> {
   admit: (candidates: ReaderControlCandidateMinimum[], identity: string) => void;
 }
 
+export interface ReaderControlMinimumAdmissionHost<Profile, Receipt> {
+  current(identity: string): boolean;
+  environment(): string;
+  inputIdle(): boolean;
+  location(): ReaderControlLocation;
+  window(): ReaderControlMinimumWindow;
+  matchesProfile(profile: Profile, layout: ReaderControlLayoutSnapshot, location: ReaderControlLocation, identity: string): boolean;
+  previousReceipt(): Receipt | undefined;
+  sameGeometry(receipt: Receipt, identity: string, environment: string, layout: ReaderControlLayoutSnapshot, profile: Profile): boolean;
+}
+
+export type ReaderControlMinimumAdmission<Profile> =
+  { kind: 'ignored' } | { kind: 'unavailable' } | { kind: 'unprofiled' } | { kind: 'reuse'; profile: Profile } |
+  { kind: 'new-profile'; profile: Profile; layout: ReaderControlLayoutSnapshot; location: ReaderControlLocation; environment: string };
+
 export interface ReaderDeferredControlMinimum {
   candidates: ReaderControlCandidateMinimum[];
   identity: string;
@@ -216,6 +231,34 @@ export class ReaderControlMinimumState<Profile, Facts> {
     const prefix = this.prefix(identity, this.generation);
     return !candidates.some((candidate: ReaderControlCandidateMinimum): boolean => !candidate.key.startsWith(prefix)) &&
       this.providerEnvironment === environment();
+  }
+
+  prepareAdmission<Receipt>(candidates: ReaderControlCandidateMinimum[], identity: string,
+    host: ReaderControlMinimumAdmissionHost<Profile, Receipt>): ReaderControlMinimumAdmission<Profile> {
+    if (!host.current(identity)) return { kind: 'ignored' };
+    if (this.profileReader !== undefined) {
+      if (!this.acceptsProfiledCandidates(candidates, identity, (): string => host.environment())) return { kind: 'ignored' };
+      if (candidates.length === 0) return { kind: 'unavailable' };
+    }
+    if (!host.inputIdle()) {
+      this.defer(candidates, identity);
+      return { kind: 'ignored' };
+    }
+    const readProfile = this.profileReader;
+    const location = readProfile === undefined ? undefined : host.location();
+    const directSheet = readerControlMinimumUsesDirectSheet(location);
+    const geometry = host.window();
+    const layout = resolveReaderControlLayout(geometry.width, geometry.height, geometry.expanded, geometry.metrics,
+      0, candidates, directSheet);
+    if (readProfile === undefined || location === undefined) return { kind: 'unprofiled' };
+    const profile = readProfile(layout.minimumKey);
+    if (layout.minimumStatus === 'legacy' || profile === undefined ||
+      !host.matchesProfile(profile, layout, location, identity)) return { kind: 'unavailable' };
+    const previous = host.previousReceipt();
+    const environment = host.environment();
+    if (previous !== undefined && host.sameGeometry(previous, identity, environment, layout, profile))
+      return { kind: 'reuse', profile };
+    return { kind: 'new-profile', profile, layout, location, environment };
   }
 
   schedule(host: ReaderControlMinimumFrameHost<Facts>): void {

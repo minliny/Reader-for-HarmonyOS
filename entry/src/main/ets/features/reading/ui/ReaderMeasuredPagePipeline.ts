@@ -1,3 +1,4 @@
+import { hasKnownReadingImageGeometry, type ReadingSessionImage } from '../application/ReadingChapterWindow.ts';
 import type { MeasuredReadingLine } from '../application/ReadingMeasurementFacts';
 import type { ReadingDocumentRange } from '../application/ReadingSurfaceLayoutMap';
 import type { ReadingPaginationIndex, ReadingPaginationKey, ReadingPaginationPrefix } from '../application/ReadingPaginationIndex';
@@ -44,6 +45,51 @@ export function advanceMeasuredReadingBatch<TParagraph, TFragment>(
 export function admittedMeasuredPageCapacity(capacity: number): number {
   if (!Number.isFinite(capacity) || capacity <= 0) throw new Error('PAGINATION_SURFACE_HEIGHT_INVALID');
   return capacity;
+}
+
+export interface ReaderMeasuredImageGeometry {
+  capacity: (startScalar: number) => number;
+  lineHeight: () => number;
+  paragraphSpacing: () => number;
+  scaledHeight: (capacity: number) => number;
+}
+
+export interface ReaderMeasuredImagePlan {
+  readonly result: 'waiting' | 'page-ready' | 'outside-page' | 'admitted';
+  readonly height: number;
+}
+
+function measuredImageHeight(image: ReadingSessionImage, input: ReaderMeasuredImageGeometry, capacity: number): number {
+  return image.state === 'ready' || hasKnownReadingImageGeometry(image) ?
+    input.scaledHeight(capacity) : input.lineHeight();
+}
+
+export function planForwardMeasuredImage<TFragment>(
+  image: ReadingSessionImage, packing: ReaderPhysicalPaginationOwner<TFragment>, input: ReaderMeasuredImageGeometry,
+): ReaderMeasuredImagePlan {
+  const capacity = admittedMeasuredPageCapacity(input.capacity(image.startScalar));
+  // An already full text page must not wait for the next page's decode.
+  if (!packing.canAppend(Math.min(1, input.lineHeight()), true, input.paragraphSpacing(), capacity)) {
+    return { result: 'page-ready', height: 0 };
+  }
+  if (image.state === 'pending' && !hasKnownReadingImageGeometry(image)) return { result: 'waiting', height: 0 };
+  const height = measuredImageHeight(image, input, capacity);
+  return packing.canAppend(height, true, input.paragraphSpacing(), capacity) ?
+    { result: 'admitted', height } : { result: 'page-ready', height: 0 };
+}
+
+export function planReverseMeasuredImage<TFragment>(
+  image: ReadingSessionImage, endScalar: number, packing: ReaderPhysicalPaginationOwner<TFragment>,
+  input: ReaderMeasuredImageGeometry,
+): ReaderMeasuredImagePlan {
+  if (image.state === 'pending' && !hasKnownReadingImageGeometry(image)) return { result: 'waiting', height: 0 };
+  if (!(image.endScalar <= endScalar)) return { result: 'outside-page', height: 0 };
+  // Reverse capacity may read the chapter title, so only request it for an
+  // image eligible to belong to the prior page.
+  const capacity = input.capacity(image.startScalar);
+  const height = measuredImageHeight(image, input, capacity);
+  return packing.canPrepend(height, input.paragraphSpacing(), capacity) ?
+    { result: 'admitted', height } : { result: 'page-ready', height: 0 };
 }
 
 export interface ReaderForwardMeasuredLinesInput {

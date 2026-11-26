@@ -1,3 +1,4 @@
+import type { ReaderControlFontOrderReadback } from './ReaderControlPresentationCoordinator';
 import { readerAppearanceFontSlotLabel, readerAppearanceFontSlotFamily } from './ReaderAppearanceRenderStyle';
 import { readerFontFamilyReady } from '../../../ui/foundation/ReaderFonts';
 import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
@@ -77,9 +78,7 @@ export function readerControlAppearanceMinimumFacts(input: ReaderControlAppearan
       (metric: string): string => readerControlAppearanceMetricValue(snapshot, metric)) };
 }
 export interface ReaderControlAppearanceFontMinimumInput { label: string; family: string; }
-export interface ReaderControlAppearanceMinimumInput {
-  readViewSnapshot: () => ReaderAppearanceSnapshot;
-  readViewFontOrder: () => ReaderAppearanceFontSlot[];
+export interface ReaderControlAppearanceMinimumInput extends ReaderControlFontOrderReadback {
   themes: string[];
   themeSummary: string;
   themeActions: string[];
