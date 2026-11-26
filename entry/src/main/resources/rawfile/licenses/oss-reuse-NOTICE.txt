@@ -1,6 +1,6 @@
 Reader: notices for the crypto / EPUB structural-parser reuse slice.
 These notices supplement the existing project third-party notices.
-Versions/checksums and source license hashes: Reader-Core-Native/third_party/oss-reuse-licenses/manifest.json.
+Versions/checksums and source license hashes: Reader-Core/third_party/oss-reuse-licenses/manifest.json.
 The MIT option is selected where a package offers MIT OR Apache-2.0. ISC and MIT packages retain their original license below. MPL-2.0 dependencies include their complete license and fixed-version source links.
 
 aes 0.8.4
@@ -207,11 +207,12 @@ IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 
 
-scraper 0.19.1
-https://github.com/causal-agent/scraper
+scraper 0.26.0
+https://github.com/rust-scraper/scraper
 ISC
 Copyright © 2016, June McEnroe <june@causal.agency>
 Copyright © 2017, Vivek Kushwaha <yoursvivek@gmail.com>
+Copyright © 2024-2025, rust-scraper Contributors
 
 Permission to use, copy, modify, and/or distribute this software for any
 purpose with or without fee is hereby granted, provided that the above

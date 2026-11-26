@@ -1,8 +1,29 @@
 Reader contains libmobi 0.12.
 Copyright (c) 2014-2022 Bartek Fabiszewski and contributors.
 Upstream: https://github.com/bfabiszewski/libmobi/tree/v0.12
-License: GNU Lesser General Public License, version 3 or later.
-Library source: Reader-Core-Native/third_party/libmobi-0.12.
-Reader adapter: Reader-Core-Native/crates/reader-local-book/src/mobi_bridge.c
+License: GNU Lesser General Public License, version 3 or later (LGPL-3.0-or-later).
+Library source: Reader-Core/third_party/libmobi-0.12 (unmodified upstream sources; the archive URL and digest are recorded in UPSTREAM.json).
+Reader adapter: Reader-Core/crates/reader-local-book/src/mobi_bridge.c
+Build integration: Reader-Core/crates/reader-local-book/build.rs compiles the library sources and the adapter statically with cc; bindings/harmony/native/CMakeLists.txt links the resulting Rust static library with z.
 Encryption and DRM code are not enabled.
-See READER_INTEGRATION.md in the source package for build and relinking details.
+
+LGPL-3.0 section 4 - corresponding source and relinking
+------------------------------------------------------
+Reader statically links libmobi into the HarmonyOS native library. Under LGPL-3.0 section 4 the combined work is distributed under terms that let a recipient modify libmobi and relink the application. The following materials satisfy that obligation once the release URLs are filled in.
+
+Corresponding source for libmobi:
+  - Public source URL: <TO_BE_FILLED_AT_RELEASE>
+  - Pinned upstream tag (unmodified): https://github.com/bfabiszewski/libmobi/tree/v0.12
+  - Exact archive URL and digest: Reader-Core/third_party/libmobi-0.12/UPSTREAM.json
+
+Relinking material:
+  - Public application source URL: <TO_BE_FILLED_AT_RELEASE>
+  - Relink procedure: Reader-Core/third_party/libmobi-0.12/READER_INTEGRATION.md, section "Rebuilding with a modified library".
+  - Summary of steps, using the same materials as the release build:
+      1. Install the Rust toolchain pinned in rust-toolchain.toml and the HarmonyOS SDK.
+      2. Modify or replace Reader-Core/third_party/libmobi-0.12/src (or swap in an interface-compatible copy and adapt the explicit source list).
+      3. From the Reader-Core repository, run scripts/build-harmony-napi.sh to rebuild and relink the Core NAPI library.
+      4. Repackage and sign the HAP as described in HAP_BUILD_SYSTEM.md.
+  - The relinked native library replaces only the decoder; no signing key or proprietary blob is required to exercise the modification.
+
+Release-placeholder notice: every <TO_BE_FILLED_AT_RELEASE> token must be replaced with a stable public URL before the first public distribution. Do not substitute a fabricated URL, and do not rely on a private-only repository, because that does not give recipients the corresponding source. Reader must not restrict modification of libmobi or reverse engineering needed to debug such modifications, and must not require a fee beyond the cost of distribution for these materials. See READER_INTEGRATION.md for the full build and distribution requirements.

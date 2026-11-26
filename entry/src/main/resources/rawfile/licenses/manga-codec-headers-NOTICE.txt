@@ -8,7 +8,7 @@ Reader uses the MIT license option for both packages.
 
 Reader uses upstream header parsing only, with a read-only getter added to
 zune-jpeg for allocation classification and an exact local zune-core dependency.
-Reader-Core-Native/third_party retains source, archive hashes and patch notes.
+Reader-Core/third_party retains source, archive hashes and patch notes.
 Platform ImageKit continues to perform pixel decoding.
 
 MIT License
