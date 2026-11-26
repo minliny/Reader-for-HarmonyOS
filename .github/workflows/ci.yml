@@ -5,7 +5,6 @@ on:
     branches: ['**']
     paths-ignore: ['docs/**', '**/*.md', '.reader-artifacts/**']
   pull_request:
-    paths-ignore: ['docs/**', '**/*.md', '.reader-artifacts/**']
   workflow_dispatch:
     inputs:
       sdk:
@@ -28,16 +27,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     outputs:
-      main_push: ${{ steps.push_ref.outputs.main_push }}
+      non_document: ${{ steps.impact.outputs.non_document }}
+      selected: ${{ steps.impact.outputs.selected }}
+      executed: ${{ steps.impact.outputs.executed }}
     steps:
-      - name: Check the exact main branch ref
-        id: push_ref
-        if: github.event_name == 'push'
-        shell: bash
-        run: |
-          if [ "$GITHUB_REF" = refs/heads/main ]; then
-            printf 'main_push=true\n' >> "$GITHUB_OUTPUT"
-          fi
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
@@ -48,6 +41,7 @@ jobs:
         with:
           directory: .
       - name: Run affected Host checks
+        id: impact
         shell: bash
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
@@ -57,7 +51,8 @@ jobs:
           elif ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
             git fetch --no-tags --no-recurse-submodules --depth=1 origin "$BASE_SHA"
           fi
-          node scripts/ci/run-impact-checks.mjs --base "$BASE_SHA" --summary-file "$GITHUB_STEP_SUMMARY"
+          node scripts/ci/run-impact-checks.mjs --base "$BASE_SHA" \
+            --summary-file "$GITHUB_STEP_SUMMARY" --output-file "$GITHUB_OUTPUT"
 
   unsigned-hap-build:
     name: ${{ format('{0} ({1})', matrix.sdk == 'api26r' && 'unsigned-hap-build' || 'core-native-only', matrix.sdk) }}
@@ -65,9 +60,12 @@ jobs:
     if: >-
       ${{
         !cancelled() && github.repository == 'minliny/Reader-for-HarmonyOS' && github.actor != 'dependabot[bot]' &&
-        ((github.event_name == 'push' && needs.host-fast-checks.outputs.main_push == 'true' && !github.event.deleted) ||
-         (github.event_name == 'pull_request' && github.event.pull_request.head.repo.id == github.event.repository.id) ||
-         github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')
+        ((needs.host-fast-checks.result == 'success' &&
+          ((github.event_name == 'push' && github.ref == 'refs/heads/main' && !github.event.deleted) ||
+           (github.event_name == 'pull_request' && github.event.pull_request.head.repo.id == github.event.repository.id &&
+            needs.host-fast-checks.outputs.non_document == 'true'))) ||
+         (needs.host-fast-checks.result == 'skipped' &&
+          (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')))
       }}
     runs-on: ubuntu-24.04
     timeout-minutes: 85
@@ -170,3 +168,54 @@ jobs:
             ${{ steps.prepare.outputs.directory }}/public/build-summary.txt
           if-no-files-found: error
           retention-days: 5
+
+  harmonyos-ci-gate:
+    # A branch push on the PR head must not publish the required PR check.
+    name: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && 'harmonyos-ci-gate' || 'harmonyos-ci-result' }}
+    if: always()
+    needs: [host-fast-checks, unsigned-hap-build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify the required job results
+        shell: bash
+        env:
+          HOST_RESULT: ${{ needs.host-fast-checks.result }}
+          BUILD_RESULT: ${{ needs.unsigned-hap-build.result }}
+          NON_DOCUMENT: ${{ needs.host-fast-checks.outputs.non_document }}
+          SELECTED: ${{ needs.host-fast-checks.outputs.selected }}
+          EXECUTED: ${{ needs.host-fast-checks.outputs.executed }}
+          SAME_REPO_PR: ${{ github.event.pull_request.head.repo.id == github.event.repository.id }}
+          DELETED_PUSH: ${{ github.event.deleted || false }}
+        run: |
+          set -euo pipefail
+          expected_host=success
+          expected_build=skipped
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              if [[ "$SAME_REPO_PR" == true && "$NON_DOCUMENT" == true ]]; then
+                expected_build=success
+              fi
+              ;;
+            push)
+              if [[ "$DELETED_PUSH" == true ]]; then
+                expected_host=skipped
+              elif [[ "$GITHUB_REF" == refs/heads/main && "$GITHUB_REPOSITORY" == minliny/Reader-for-HarmonyOS && "$GITHUB_ACTOR" != 'dependabot[bot]' ]]; then
+                expected_build=success
+              fi
+              ;;
+            workflow_dispatch|schedule)
+              expected_host=skipped
+              expected_build=success
+              ;;
+            *) exit 1 ;;
+          esac
+          printf 'Host %s (expected %s), build %s (expected %s)\n' "$HOST_RESULT" "$expected_host" "$BUILD_RESULT" "$expected_build"
+          [[ "$HOST_RESULT" == "$expected_host" && "$BUILD_RESULT" == "$expected_build" ]] || exit 1
+          if [[ "$expected_host" == success ]]; then
+            [[ "$NON_DOCUMENT" == true || "$NON_DOCUMENT" == false ]] || exit 1
+            [[ "$SELECTED" =~ ^(0|[1-9][0-9]*)$ && "$EXECUTED" =~ ^(0|[1-9][0-9]*)$ ]] || exit 1
+            (( EXECUTED <= SELECTED )) || exit 1
+            [[ "$NON_DOCUMENT" == true || "$SELECTED" == 0 ]] || exit 1
+            printf 'Non-document changes: %s; Node gates selected: %s, executed: %s\n' "$NON_DOCUMENT" "$SELECTED" "$EXECUTED"
+          fi

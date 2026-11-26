@@ -27,6 +27,7 @@ function readArguments() {
       files: { type: 'string', multiple: true },
       'max-cases': { type: 'string', default: '20' },
       'summary-file': { type: 'string' },
+      'output-file': { type: 'string' },
       help: { type: 'boolean' },
     },
   });
@@ -81,13 +82,16 @@ function hostPath(path) {
   return normalized;
 }
 
-function nonDocumentPaths(paths) {
+function nonDocumentPaths({ paths, baseTree }) {
   const unique = new Set();
   for (const path of paths) {
     const normalized = hostPath(path);
     if (!normalized) throw new Error(`Expected a Host-relative path, got ${JSON.stringify(path)}.`);
-    if (!normalized.startsWith('docs/') && !normalized.startsWith('.reader-artifacts/') && !normalized.endsWith('.md')) {
-      unique.add(normalized);
+    // Git paths already use forward slash separators. A literal backslash in a
+    // Git filename must not turn a non-document change into a docs/ path.
+    const relativePath = baseTree ? path : normalized;
+    if (!relativePath.startsWith('docs/') && !relativePath.startsWith('.reader-artifacts/') && !relativePath.endsWith('.md')) {
+      unique.add(relativePath);
     }
   }
   return [...unique].sort();
@@ -193,13 +197,16 @@ function affectedGates(paths, baseTree) {
     .sort((left, right) => left.id.localeCompare(right.id, 'en'));
 }
 
-function printResult(summaryFile, status, paths, results, reason = '') {
+function printResult(options, status, paths, results, started, reason = '') {
   const title = `${status} — Host incremental checks${reason ? ` (${reason})` : ''}`;
-  const detail = `Non-document paths: ${paths.length}`;
+  const detail = `Non-document paths: ${paths.length}\nNode gates selected: ${results.length}, executed: ${started}`;
   const rows = results.map(({ id, status, reason }) => `- ${id}: ${status}${reason ? ` (${reason})` : ''}`).join('\n');
   const report = `${title}\n\n${detail}${rows ? `\n\n${rows}` : ''}`;
   console.log(report);
-  if (summaryFile !== undefined) appendFileSync(summaryFile, `\n## ${report}\n`);
+  if (options['summary-file'] !== undefined) appendFileSync(options['summary-file'], `\n## ${report}\n`);
+  if (options['output-file'] !== undefined) {
+    appendFileSync(options['output-file'], `non_document=${paths.length > 0}\nselected=${results.length}\nexecuted=${started}\n`);
+  }
 }
 
 function hasDefinitionDrift(reason, inputs) {
@@ -210,7 +217,7 @@ function hasDefinitionDrift(reason, inputs) {
 function main() {
   const options = readArguments();
   if (options.help) {
-    console.log('Usage: node scripts/ci/run-impact-checks.mjs (--base <commit> [--head <commit>] | --files <path>...) [--max-cases <count>] [--summary-file <path>]');
+    console.log('Usage: node scripts/ci/run-impact-checks.mjs (--base <commit> [--head <commit>] | --files <path>...) [--max-cases <count>] [--summary-file <path>] [--output-file <path>]');
     return;
   }
   const cap = Number(options['max-cases']);
@@ -218,9 +225,10 @@ function main() {
     throw new Error('--max-cases must be a positive integer.');
   }
   const changes = changedPaths(options);
-  const paths = nonDocumentPaths(changes.paths);
+  const paths = nonDocumentPaths(changes);
   const results = [];
-  const candidates = paths.length ? affectedGates(paths, changes.baseTree) : [];
+  const impactPaths = [...new Set(paths.map(hostPath))];
+  const candidates = impactPaths.length ? affectedGates(impactPaths, changes.baseTree) : [];
   let started = 0;
   for (const { id, definitionInputs } of candidates) {
     if (started === cap) {
@@ -249,7 +257,7 @@ function main() {
   const failed = results.some(result => result.status === 'FAIL');
   const status = failed ? 'FAIL' : started ? 'PASS' : 'NOT_RUN';
   const reason = candidates.length ? '' : paths.length ? 'no eligible impacted gate' : 'no non-document changes';
-  printResult(options['summary-file'], status, paths, results, reason);
+  printResult(options, status, paths, results, started, reason);
   if (failed) process.exitCode = 1;
 }
 
