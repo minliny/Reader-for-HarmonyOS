@@ -56,8 +56,9 @@ async function search(ui, title, inBookshelf, screenCapture = false) {
     route: 'search', all: [searchRow(title), text(title)],
   });
   const membershipBadge = { ...text('已在书架'), within: searchRow(title) };
+  const settledSearch = { ...text('搜索'), within: searchSubmit };
   await ui.wait(`核对 ${title} 的搜索结果归属`, {
-    route: 'search', all: inBookshelf ? [searchRow(title), membershipBadge] : [searchRow(title)],
+    route: 'search', all: [searchRow(title), ...(inBookshelf ? [membershipBadge] : []), ...(screenCapture ? [settledSearch] : [])],
     none: inBookshelf ? [] : [membershipBadge], screenCapture,
   });
 }
