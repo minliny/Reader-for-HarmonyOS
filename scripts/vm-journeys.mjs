@@ -6,11 +6,10 @@ import { setTimeout as delay } from 'node:timers/promises';
 import { parseArgs } from 'node:util';
 import { journeys } from './lib/vm-journey-cases.mjs';
 import { openProbe } from '../tools/ui-contract/collectors/harmonyos/transport.mjs';
-import { assertInstalled, assertRemoteVmReadiness } from '../tools/ui-contract/collectors/harmonyos/records.mjs';
+import { assertInstalled, assertRemoteVmReadiness, remoteVmServer } from '../tools/ui-contract/collectors/harmonyos/candidate-evidence.mjs';
 import { assertUnlockedFocus, assertVmLockDismissed, classifyFocusWindow, vmLockDismissalOperation } from '../tools/ui-contract/collectors/harmonyos/focus-window.mjs';
 import { candidateIdentity, nativeBounds, normalReaderWindowRoots, sha256 } from '../tools/lib/native-ui-evidence.mjs';
 
-const SERVER = '192.168.1.10:8710';
 const LAYOUT_MARKER = 'READER_LAYOUT_INVARIANTS ';
 const FIXTURE_MARKER = 'Public UI fixture VM journeys verified';
 const STEP_MS = 12000;
@@ -88,7 +87,7 @@ function records(text, marker) {
 }
 
 async function runJourney(id, run, candidate, options, outputDir) {
-  const probe = openProbe({ hdc: options.hdc, server: SERVER, target: options.target, outputDir });
+  const probe = openProbe({ hdc: options.hdc, server: remoteVmServer, target: options.target, outputDir });
   const steps = [];
   const receipt = { journey: id, appBuildId: candidate.appBuildId, hapSha256: candidate.hapSha256, status: 'FAIL', steps };
   const start = performance.now();
@@ -248,7 +247,7 @@ async function main() {
   const manifest = readJson(values.manifest);
   const deployment = readJson(values.deployment);
   const identity = candidateIdentity(manifest, deployment, readJson(join(dirname(values.manifest), 'source-snapshot.json')));
-  demand(deployment.targetKind === 'vm' && deployment.vmLocation === 'remote' && deployment.hdcServer === SERVER &&
+  demand(deployment.targetKind === 'vm' && deployment.vmLocation === 'remote' && deployment.hdcServer === remoteVmServer &&
     deployment.dataPolicy === 'preserve' && deployment.readiness?.evidenceScope === 'guest-only' &&
     manifest.abi === 'x86_64' && deployment.postInstall?.cpuAbi === 'x86_64' &&
     identity.targetRef === sha256(values.target).slice(0, 12), 'Deployment is not an admitted x86_64 remote VM candidate');

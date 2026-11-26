@@ -34,6 +34,7 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           persist-credentials: false
+          fetch-depth: 0
       - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
           node-version: 22.23.3
@@ -49,10 +50,52 @@ jobs:
           if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]]; then
             BASE_SHA=$(git hash-object -w -t tree --stdin </dev/null)
           elif ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
-            git fetch --no-tags --no-recurse-submodules --depth=1 origin "$BASE_SHA"
+            git fetch --no-tags --no-recurse-submodules origin "$BASE_SHA"
           fi
           node scripts/ci/run-impact-checks.mjs --base "$BASE_SHA" \
             --summary-file "$GITHUB_STEP_SUMMARY" --output-file "$GITHUB_OUTPUT"
+
+  core-fixture-parity:
+    needs: host-fast-checks
+    if: >-
+      ${{
+        !cancelled() && github.repository == 'minliny/Reader-for-HarmonyOS' && github.actor != 'dependabot[bot]' &&
+        ((needs.host-fast-checks.result == 'success' &&
+          ((github.event_name == 'push' && github.ref == 'refs/heads/main' && !github.event.deleted) ||
+           (github.event_name == 'pull_request' && github.event.pull_request.head.repo.id == github.event.repository.id &&
+            needs.host-fast-checks.outputs.non_document == 'true'))) ||
+         (needs.host-fast-checks.result == 'skipped' &&
+          (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')))
+      }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: Reader-for-HarmonyOS
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Read the locked Core commit
+        id: core
+        shell: bash
+        run: |
+          commit=$(node -p 'require("./Reader-for-HarmonyOS/scripts/core-dependency.json").coreCommit')
+          [[ "$commit" =~ ^[a-f0-9]{40}$ ]]
+          printf 'commit=%s\n' "$commit" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: minliny/Reader-Core
+          path: Reader-Core
+          ref: ${{ steps.core.outputs.commit }}
+          token: ${{ secrets.READER_CORE_READ_TOKEN || github.token }}
+          persist-credentials: false
+      - name: Verify the Host snapshot against the Core-owned fixture
+        shell: bash
+        run: |
+          cmp -- Reader-Core/fixtures/harmonyos/rpc-projections.json Reader-for-HarmonyOS/tests/contracts/rpc-projections.json
+          echo 'Host contract snapshot matches the locked Core fixture.'
 
   unsigned-hap-build:
     name: ${{ format('{0} ({1})', matrix.sdk == 'api26r' && 'unsigned-hap-build' || 'core-native-only', matrix.sdk) }}
@@ -173,7 +216,7 @@ jobs:
     # A branch push on the PR head must not publish the required PR check.
     name: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && 'harmonyos-ci-gate' || 'harmonyos-ci-result' }}
     if: always()
-    needs: [host-fast-checks, unsigned-hap-build]
+    needs: [host-fast-checks, core-fixture-parity, unsigned-hap-build]
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
@@ -181,6 +224,7 @@ jobs:
         shell: bash
         env:
           HOST_RESULT: ${{ needs.host-fast-checks.result }}
+          CORE_FIXTURE_RESULT: ${{ needs.core-fixture-parity.result }}
           BUILD_RESULT: ${{ needs.unsigned-hap-build.result }}
           NON_DOCUMENT: ${{ needs.host-fast-checks.outputs.non_document }}
           SELECTED: ${{ needs.host-fast-checks.outputs.selected }}
@@ -190,32 +234,38 @@ jobs:
         run: |
           set -euo pipefail
           expected_host=success
-          expected_build=skipped
+          expected_trusted=skipped
+          trusted=false
+          if [[ "$GITHUB_REPOSITORY" == minliny/Reader-for-HarmonyOS && "$GITHUB_ACTOR" != 'dependabot[bot]' ]]; then
+            trusted=true
+          fi
           case "$GITHUB_EVENT_NAME" in
             pull_request)
-              if [[ "$SAME_REPO_PR" == true && "$NON_DOCUMENT" == true ]]; then
-                expected_build=success
+              if [[ "$trusted" == true && "$SAME_REPO_PR" == true && "$NON_DOCUMENT" == true ]]; then
+                expected_trusted=success
               fi
               ;;
             push)
               if [[ "$DELETED_PUSH" == true ]]; then
                 expected_host=skipped
-              elif [[ "$GITHUB_REF" == refs/heads/main && "$GITHUB_REPOSITORY" == minliny/Reader-for-HarmonyOS && "$GITHUB_ACTOR" != 'dependabot[bot]' ]]; then
-                expected_build=success
+              elif [[ "$trusted" == true && "$GITHUB_REF" == refs/heads/main ]]; then
+                expected_trusted=success
               fi
               ;;
             workflow_dispatch|schedule)
               expected_host=skipped
-              expected_build=success
+              if [[ "$trusted" == true ]]; then expected_trusted=success; fi
               ;;
             *) exit 1 ;;
           esac
-          printf 'Host %s (expected %s), build %s (expected %s)\n' "$HOST_RESULT" "$expected_host" "$BUILD_RESULT" "$expected_build"
-          [[ "$HOST_RESULT" == "$expected_host" && "$BUILD_RESULT" == "$expected_build" ]] || exit 1
+          printf 'Host %s (expected %s), Core fixture %s and build %s (expected %s)\n' \
+            "$HOST_RESULT" "$expected_host" "$CORE_FIXTURE_RESULT" "$BUILD_RESULT" "$expected_trusted"
+          [[ "$HOST_RESULT" == "$expected_host" && "$CORE_FIXTURE_RESULT" == "$expected_trusted" &&
+            "$BUILD_RESULT" == "$expected_trusted" ]] || exit 1
           if [[ "$expected_host" == success ]]; then
             [[ "$NON_DOCUMENT" == true || "$NON_DOCUMENT" == false ]] || exit 1
             [[ "$SELECTED" =~ ^(0|[1-9][0-9]*)$ && "$EXECUTED" =~ ^(0|[1-9][0-9]*)$ ]] || exit 1
-            (( EXECUTED <= SELECTED )) || exit 1
+            (( EXECUTED == SELECTED )) || exit 1
             [[ "$NON_DOCUMENT" == true || "$SELECTED" == 0 ]] || exit 1
-            printf 'Non-document changes: %s; Node gates selected: %s, executed: %s\n' "$NON_DOCUMENT" "$SELECTED" "$EXECUTED"
+            printf 'Non-document changes: %s; Host domains selected: %s, executed: %s\n' "$NON_DOCUMENT" "$SELECTED" "$EXECUTED"
           fi

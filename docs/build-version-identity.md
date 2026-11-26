@@ -44,4 +44,4 @@
 
 开发打包：`node scripts/hap-pipeline.mjs build --class iteration --channel DEV --abi x86_64`。默认 contracts none，不附带业务全量。DevEco 直接 Build/Run 使用相同台账与身份，原 Native ABI 必须匹配当前模块配置。
 
-新增检查位于 tools/test-app-build-identity.mjs；无参仅列 NOT_RUN，使用 --case 精确选择。构建成功、历史复验、安装比对、关于页实际交互及用户验收分别记账。旧 0.2.0 包未满足包内完整身份合同；其既有 Core 修复与数据保留证据不因此作废。
+用 `node scripts/hap-pipeline.mjs verify --manifest <manifest.json>` 复算快照与 HAP 身份。构建成功、历史复验、安装比对、关于页实际交互和用户验收分别记账。旧 0.2.0 包的 Core 修复与数据保留证据按原回执解释。
