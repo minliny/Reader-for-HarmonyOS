@@ -111,6 +111,7 @@ test('late directory timestamp changes preserve the seal only with the same memb
     try {
       await batch.result;
       utimesSync(selected, 1, 1);
+      utimesSync(item, 1, 1);
       assert.doesNotThrow(batch.assertUnchanged);
       writeFileSync(join(selected, 'new'), 'new');
       assert.throws(batch.assertUnchanged, /snapshot input changed before publication: selected/);

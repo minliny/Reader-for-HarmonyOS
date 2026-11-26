@@ -20,14 +20,19 @@ function fileIdentity({ dev, ino, mode, size, mtimeNs, ctimeNs }) {
   return { dev, ino, mode, size, mtimeNs, ctimeNs };
 }
 
-function sealMatches(seal, current, recheckMembers = false) {
+function sealMatches(seal, current, recheck) {
   if (seal.identity === undefined) return current === undefined;
   if (!sameNode(seal.identity, current)) return false;
   if (!seal.full || sameIdentity(seal.identity, current)) return true;
-  if (!recheckMembers || !seal.members) return false;
-  // Build tooling can touch directory timestamps after its task has returned.
-  // Keep directory identity and membership sealed, and check file bytes through
-  // each file's own identity seal.
+  if (!recheck) return false;
+  // A timestamp-only change can be admitted by proving the same members or
+  // exact digest under the original node identity.
+  if (seal.record) {
+    if (current.size !== seal.identity.size) return false;
+    const { repo, label, buffer } = recheck;
+    const now = fileRecord(repo, seal.path, current, buffer, label);
+    return now.sha256 === seal.record.sha256;
+  }
   const members = readdirSync(seal.path).sort();
   return sameIdentity(current, stat(seal.path)) && members.length === seal.members.length &&
     members.every((name, index) => name === seal.members[index]);
@@ -62,18 +67,18 @@ function captureRegularInputSnapshot(repo, inputs, label = 'Build inputs', valid
   const buffer = Buffer.allocUnsafe(CHUNK_BYTES);
   const root = stat(repo);
   requireInput(root?.isDirectory(), label, 'snapshot root must be a real directory');
-  const recordSeal = (path, before, full, members) => {
+  const recordSeal = (path, before, full, content) => {
     const previous = seals.get(path);
     requireInput(!previous || sealMatches(previous, before), label, 'snapshot input changed: ' + relative(repo, path));
     if (!previous || (!previous.full && full)) {
-      seals.set(path, { path, identity: before && fileIdentity(before), full, members });
+      seals.set(path, { path, identity: before && fileIdentity(before), full, ...content });
     }
   };
   recordSeal(repo, root, false);
   const visit = (path, before) => {
     if (before.isDirectory()) {
       const members = readdirSync(path).sort();
-      recordSeal(path, before, true, members);
+      recordSeal(path, before, true, { members });
       for (const name of members) {
         const child = resolve(path, name);
         const childStat = stat(child);
@@ -83,15 +88,17 @@ function captureRegularInputSnapshot(repo, inputs, label = 'Build inputs', valid
       requireInput(sameIdentity(before, stat(path)), label, 'directory changed while taking the snapshot: ' + relative(repo, path));
     } else {
       requireInput(before.isFile(), label, 'snapshot inputs must contain only regular files and real directories: ' + relative(repo, path));
-      recordSeal(path, before, true);
       const cached = validatedDigests?.get(path);
+      let record;
       if (cached && sameIdentity(cached.stat, before)) {
-        records.push({ path: relative(repo, path), type: 'file', mode: Number(before.mode & 0o777n),
-          bytes: Number(before.size), sha256: cached.sha256 });
+        record = { path: relative(repo, path), type: 'file', mode: Number(before.mode & 0o777n),
+          bytes: Number(before.size), sha256: cached.sha256 };
         requireInput(sameIdentity(before, stat(path)), label, 'regular input changed while verifying the cached digest: ' + relative(repo, path));
       } else {
-        records.push(fileRecord(repo, path, before, buffer, label));
+        record = fileRecord(repo, path, before, buffer, label);
       }
+      recordSeal(path, before, true, { record });
+      records.push(record);
     }
   };
   for (const input of inputs) {
@@ -165,8 +172,12 @@ export function startRegularInputSnapshots(requests) {
       timingsMs() { return captured.map(({ milliseconds }) => milliseconds); },
       assertUnchanged() {
         if (!captured) throw new Error('Snapshot results must be awaited before checking their input identities');
-        for (const { seals, repo, label } of captured) for (const seal of seals) {
-          requireInput(sealMatches(seal, stat(seal.path), true), label, 'snapshot input changed before publication: ' + relative(repo, seal.path));
+        const buffer = Buffer.allocUnsafe(CHUNK_BYTES);
+        for (const { seals, repo, label } of captured) {
+          const recheck = { repo, label, buffer };
+          for (const seal of seals) {
+            requireInput(sealMatches(seal, stat(seal.path), recheck), label, 'snapshot input changed before publication: ' + relative(repo, seal.path));
+          }
         }
       },
       async stop() { await Promise.allSettled(workers.map(worker => worker.terminate())); },
