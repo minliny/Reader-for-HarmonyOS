@@ -9,6 +9,8 @@ import { readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
 import { readerPageAreaLength } from '../layout/ReaderPageShell';
 import { readerFloatingTabBarHeight, readerMainTabItemHeight } from '../layout/ReaderFloatingBarMetrics';
 import { ReaderRaisedShape, resolveReaderRaisedShape } from '../layout/ReaderRaisedShape';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences, readerImmersiveMaterial, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
 
 export interface ReaderBottomTabItem {
   key: string;
@@ -31,6 +33,9 @@ export struct ReaderBottomTabBar {
   onGeometryTrace: (width: number, paintReady: boolean) => void =
     (_width: number, _paintReady: boolean): void => {};
   @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageProp('readerNavigationAppearancePreferences')
+  private navigationPreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerReduceMotion') @Watch('motionPreferenceChanged') private reduceMotion: boolean = false;
   @State private paintedTab: number = -1;
   @State private pillOpacity: number = 1;
@@ -69,11 +74,14 @@ export struct ReaderBottomTabBar {
         }
         .width(this.surfaceWidth)
         .constraintSize({ minHeight: readerFloatingTabBarHeight(this.fontScale) })
-        .padding(TOK_SPACE_XS)
-        .backgroundColor(readerAppColor('app.navigation.floatingSurface', this.scheme))
-        .border({ width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.scheme) })
+        .padding(TOK_SPACE_XS + (this.material().native ? TOK_BORDER_W : 0))
+        .backgroundEffect(undefined)
+        .backgroundColor(this.material().native ? Color.Transparent : readerAppColor('app.navigation.floatingSurface', this.scheme))
+        .border(this.material().native ? { width: 0, color: Color.Transparent } :
+          { width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.scheme) })
         .borderRadius(this.materialRadius())
-        .shadow(readerSurfaceElevation('raised', this.scheme))
+        .shadow(this.material().native ? undefined : readerSurfaceElevation('raised', this.scheme))
+        .systemMaterial(readerImmersiveMaterial(this.material()))
         .clip(false)
         .hitTestBehavior(HitTestMode.Default)
         .onTouch((): void => {})
@@ -82,6 +90,10 @@ export struct ReaderBottomTabBar {
     }.width(this.hasPaintGeometry() ? this.surfaceWidth : 0)
       .constraintSize({ minHeight: readerFloatingTabBarHeight(this.fontScale) }).clip(false)
       .hitTestBehavior(HitTestMode.Default);
+  }
+
+  private material(): ReaderSurfaceMaterialDecision {
+    return readerSurfaceMaterialDecision('chromeBar', this.navigationPreferences, this.scheme, this.systemScheme);
   }
 
   @Builder

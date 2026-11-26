@@ -8,6 +8,7 @@ import { READER_SESSION_CAPSULE_RADIUS, ReaderSessionCapsuleFrame, ReaderSession
 import type { ReaderSessionCapsuleState } from './ReaderSessionCapsuleModel';
 import type { ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
 import { READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT } from './ReaderPageChromeLayout';
+import type { ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
 
 /**
  * Persistent launch and playback actors. Parent owns positioning, lifecycle and clock.
@@ -24,6 +25,7 @@ export struct ReaderSessionLaunchStage {
   @Prop countdown: number = 8;
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop fontScale: number = 1;
+  @Prop material: ReaderSurfaceMaterialDecision | undefined = undefined;
   @Prop surfaceColor: string = '';
   @Prop surfaceBorderColor: string = '';
   @Prop sourceSurfaceColor: string = '';
@@ -74,7 +76,8 @@ export struct ReaderSessionLaunchStage {
         .id('reader-session-launch-surface')
         .width('100%').height('100%')
         .attributeModifier(new ReaderSessionCapsuleFrame(this.themeScheme, this.surfaceColor, this.surfaceBorderColor, this.shadowColor,
-          this.paintDensity(), this.interactionEnabled && this.sample.pauseOpacity > 0 && this.pressPointer >= 0))
+          this.paintDensity(), this.interactionEnabled && this.sample.pauseOpacity > 0 && this.pressPointer >= 0,
+          this.sample.canonicalSurfaceOpacity > 0 ? this.material : undefined))
         .opacity(this.sample.canonicalSurfaceOpacity).hitTestBehavior(HitTestMode.None);
 
       // SourceRegion owns its surface; the single content actor retains uniform scale.

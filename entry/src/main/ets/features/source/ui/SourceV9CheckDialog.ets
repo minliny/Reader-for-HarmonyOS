@@ -1,3 +1,5 @@
+import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { errorMessageOf } from '../../../app/ErrorMessage';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
@@ -43,6 +45,8 @@ const QUICK_WORDS: string[] = ['我的', '斗破', '海贼'];
 
 @Component
 export struct SourceV9CheckDialog {
+  @StorageProp('readerNavigationAppearancePreferences')
+  private appearancePreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
   @StorageLink('readerWindowMetricsRevision') private windowRevision: number = 0;
@@ -188,8 +192,10 @@ export struct SourceV9CheckDialog {
 
   build() {
     Stack({ alignContent: Alignment.Center }) {
-      Column().width('100%').height('100%')
-        .backgroundColor(readerAppColor('app.scrim.modal', this.scheme))
+      Stack().width('100%').height('100%')
+        .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
+          readerAppColor('app.scrim.modal', this.scheme)))
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .accessibilityLevel('no').onClick((): void => this.close());
       Column() {
         Scroll() {

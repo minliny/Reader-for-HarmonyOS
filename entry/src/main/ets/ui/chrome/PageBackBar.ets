@@ -1,3 +1,4 @@
+import { isReaderRealtimeBlurEnabled } from '../../app/HarmonyCapabilityPolicy';
 import { READER_LAYOUT_DEBUG_BUILD } from '../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantTag } from '../../ui/layout/LayoutInvariantEvaluator';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
@@ -20,6 +21,8 @@ import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_MEDIUM } 
 import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_FLOATING_HEADER_TOP_GAP, APP_HEADER_BAR_HEIGHT, DOWNLOAD_HEADER_HEIGHT,
   DOWNLOAD_HEADER_ACTION_WIDTH, DOWNLOAD_HEADER_ACTION_HEIGHT } from '../foundation/ReaderHeaderMetrics';
 import { readerScaledBarHeight } from '../foundation/ReaderSurfaceResolvers';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences, readerImmersiveMaterial, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
 
 const DOWNLOAD_HEADER_SLOT_WIDTH = 80;
 const DOWNLOAD_HEADER_PADDING_Y = 3;
@@ -30,6 +33,9 @@ const DOWNLOAD_HEADER_RADIUS = 18;
 @Component
 export struct PageBackBar {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences')
+  private navigationAppearance: ReaderNavigationPreferences = defaultNavigationPreferences();
 
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop title: string = '';
@@ -159,14 +165,18 @@ export struct PageBackBar {
     .constraintSize({ minHeight: this.barHeight() })
     .padding({ left: this.leftInset(), right: this.rightInset(), top: this.verticalInset(), bottom: this.verticalInset() })
     .alignItems(VerticalAlign.Center)
-    .backgroundEffect(this.veil() ? readerHeaderVeilMaterial(this.scrolled, this.appThemeScheme) : undefined)
-    .backgroundColor(this.veil() || this.surface === 'transparent' ? Color.Transparent :
-      readerAppColor('TOK_PAPER', this.appThemeScheme))
-    .border({ width: this.framed() ? this.variant === 'mangaDirectory' ? visual.borderWidth : 1 : 0,
-      color: this.veil() ? readerHeaderVeilBorder(this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
+    .backgroundEffect(this.veil() && !this.surfaceMaterial()?.native && isReaderRealtimeBlurEnabled(this.navigationAppearance) ?
+      readerHeaderVeilMaterial(this.scrolled, this.appThemeScheme) : undefined)
+    .backgroundColor(this.panelBackground())
+    .border({ width: this.surfaceMaterial()?.native || !this.framed() ? 0 :
+      this.variant === 'mangaDirectory' ? visual.borderWidth : 1,
+      color: this.surfaceMaterial()?.native ? Color.Transparent : this.veil() ?
+        readerHeaderVeilBorder(this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
     .borderRadius(this.panelRadius())
     .clip(this.variant === 'download' && this.elevation === 'fixed' && !this.veil() && this.surface === 'solid')
-    .shadow(readerSurfaceElevation(this.raised() ? 'raised' : this.elevation === 'floating' ? 'floating' : 'fixed', this.appThemeScheme))
+    .shadow(this.surfaceMaterial()?.native ? undefined :
+      readerSurfaceElevation(this.raised() ? 'raised' : this.elevation === 'floating' ? 'floating' : 'fixed', this.appThemeScheme))
+    .systemMaterial(readerImmersiveMaterial(this.surfaceMaterial()))
     .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion(this.veil() || this.surface === 'solid'))
     .onTouch((): void => {})
     .onAreaChange(this.panelAreaChangeHandler());
@@ -212,6 +222,16 @@ export struct PageBackBar {
   private verticalInset(): number { return this.variant === 'download' ? DOWNLOAD_HEADER_PADDING_Y : 0; }
   private raised(): boolean { return this.variant === 'standard' && this.elevation === 'raised'; }
   private veil(): boolean { return this.floating || (this.variant === 'standard' && this.material === 'veil'); }
+
+  private surfaceMaterial(): ReaderSurfaceMaterialDecision | undefined {
+    return this.veil() ?
+      readerSurfaceMaterialDecision('chromeBar', this.navigationAppearance, this.appThemeScheme, this.systemScheme) : undefined;
+  }
+
+  private panelBackground(): ResourceColor {
+    const solid = this.veil() ? !isReaderRealtimeBlurEnabled(this.navigationAppearance) : this.surface === 'solid';
+    return solid ? readerAppColor('TOK_PAPER', this.appThemeScheme) : Color.Transparent;
+  }
 
   private backIconResource(): Resource {
     if (this.variant === 'mangaDirectory') {

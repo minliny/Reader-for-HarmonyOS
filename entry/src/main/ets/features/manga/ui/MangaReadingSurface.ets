@@ -5,6 +5,8 @@ import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwit
 import type { ReaderExitRequest } from '../../reading/presentation/ReadingEntryPresentation';
 import type { ReaderDirectoryTargetProof } from '../../reading/application/ReaderDirectoryTargetProof';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision, ReaderSurfaceMaterialRole } from '../../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences, readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderReadingTopBar, readerReadingTopBarHeight, readerReadingTopBarFontsReady } from '../../../ui/chrome/ReaderReadingTopBar';
 import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/feedback/ReaderTransientFeedback';
 import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
@@ -218,6 +220,9 @@ export struct MangaReadingSurface {
   private exiting: boolean = false;
   private navigationExitRequested: boolean = false;
   @StorageProp('readerAppScheme') @Watch('synchronizePaper') private appThemeScheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private navigationPreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @State @Watch('onWindowChromeChanged') private controlsVisible: boolean = false;
   @State @Watch('onWindowChromeChanged') private panel: string = '';
   @State private panelOffset: number = 0;
@@ -2099,13 +2104,21 @@ export struct MangaReadingSurface {
     return readerAppColor('TOK_PAPER', this.chromeScheme());
   }
   private chromeScheme(): 'day' | 'night' { return this.backgroundPreference === 'ink' ? 'night' : 'day'; }
+  private surfaceMaterial(role: ReaderSurfaceMaterialRole): ReaderSurfaceMaterialDecision {
+    return readerSurfaceMaterialDecision(role, this.navigationPreferences, this.appThemeScheme, this.systemScheme);
+  }
+  private floatingChromeScheme(role: ReaderSurfaceMaterialRole): 'day' | 'night' {
+    // Native chrome follows the system. Unified chrome still follows the independently selected manga paper.
+    return this.surfaceMaterial(role).native ? (this.systemScheme === 'night' ? 'night' : 'day') : this.chromeScheme();
+  }
+  private sheetScheme(): 'day' | 'night' { return this.floatingChromeScheme('modalSheet'); }
   private surfaceColor(): string { return mangaDirectoryColor('surface', this.chromeScheme()); }
-  private inkColor(): string { return mangaDirectoryColor('ink', this.backgroundPreference === 'ink' ? 'night' : 'day'); }
-  private mutedColor(): string { return mangaDirectoryColor('muted', this.backgroundPreference === 'ink' ? 'night' : 'day'); }
-  private lineColor(): string { return mangaDirectoryColor('line', this.backgroundPreference === 'ink' ? 'night' : 'day'); }
-  private softSurfaceColor(): string { return mangaDirectoryColor('soft', this.backgroundPreference === 'ink' ? 'night' : 'day'); }
-  private greenColor(): string { return readerAppColor('TOK_PRIMARY_DARK', this.chromeScheme()); }
-  private accentColor(): string { return mangaDirectoryColor('accent', this.backgroundPreference === 'ink' ? 'night' : 'day'); }
+  private inkColor(scheme: 'day' | 'night' = this.chromeScheme()): string { return mangaDirectoryColor('ink', scheme); }
+  private mutedColor(scheme: 'day' | 'night' = this.chromeScheme()): string { return mangaDirectoryColor('muted', scheme); }
+  private lineColor(scheme: 'day' | 'night' = this.chromeScheme()): string { return mangaDirectoryColor('line', scheme); }
+  private softSurfaceColor(scheme: 'day' | 'night'): string { return mangaDirectoryColor('soft', scheme); }
+  private greenColor(scheme: 'day' | 'night' = this.chromeScheme()): string { return readerAppColor('TOK_PRIMARY_DARK', scheme); }
+  private accentColor(scheme: 'day' | 'night'): string { return mangaDirectoryColor('accent', scheme); }
   private isSheetChoiceSelected(kind: string): boolean {
     if (kind === 'vertical') return !this.horizontal;
     if (kind === 'horizontal') return this.horizontal;
@@ -2114,7 +2127,7 @@ export struct MangaReadingSurface {
   }
   private choiceIcon(kind: string): Resource {
     const selected = this.isSheetChoiceSelected(kind);
-    const night = this.backgroundPreference === 'ink';
+    const night = this.sheetScheme() === 'night';
     if (kind === 'vertical') return selected ? $r('app.media.manga_sheet_vertical_active') : night ? $r('app.media.manga_sheet_vertical_theme_night') : $r('app.media.manga_sheet_vertical');
     if (kind === 'horizontal') return selected ? $r('app.media.manga_sheet_horizontal_active') : night ? $r('app.media.manga_sheet_horizontal_theme_night') : $r('app.media.manga_sheet_horizontal');
     if (kind === 'sun') return selected ? $r('app.media.manga_sheet_sun_active') : night ? $r('app.media.manga_sheet_sun_theme_night') : $r('app.media.manga_sheet_sun');
@@ -2603,7 +2616,7 @@ export struct MangaReadingSurface {
   @Builder
   private topControls() {
     Column({ space: 8 }) {
-      ReaderReadingTopBar({ variant: 'manga', barHeight: this.mangaTopBarHeight(), scheme: this.chromeScheme(),
+      ReaderReadingTopBar({ variant: 'manga', barHeight: this.mangaTopBarHeight(), scheme: this.floatingChromeScheme('chromeBar'),
         bookTitle: this.bookTitle || this.remoteSession?.book.title || this.remoteBookSeed?.title || '漫画阅读', subtitle: this.title,
         leading: (): void => { this.mangaTopBarBack(); }, trailing: (): void => { this.mangaTopBarActions(); },
       });
@@ -2680,7 +2693,7 @@ export struct MangaReadingSurface {
   @Builder
   private mangaTopBarBack() {
     Row() {
-      this.iconAction((): Resource => this.backgroundPreference === 'ink' ? $r('app.media.book_detail_back_theme_night') :
+      this.iconAction((): Resource => this.floatingChromeScheme('chromeBar') === 'night' ? $r('app.media.book_detail_back_theme_night') :
         $r('app.media.book_detail_back'), '返回', (): void => { void this.handleBack(); });
       Blank().width(44);
     }.width(88);
@@ -2690,16 +2703,16 @@ export struct MangaReadingSurface {
     Row() {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Column({ space: 2 }) {
-          Image(this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_switch_theme_night') :
+          Image(this.floatingChromeScheme('chromeBar') === 'night' ? $r('app.media.reader_directory_switch_theme_night') :
             $r('app.media.reader_directory_switch')).width(13).height(13);
-          Text('换源').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(10).lineHeight(15).halfLeading(true).fontColor(this.inkColor()).maxLines(1);
+          Text('换源').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(10).lineHeight(15).halfLeading(true).fontColor(this.inkColor(this.floatingChromeScheme('chromeBar'))).maxLines(1);
         }.alignItems(HorizontalAlign.Center).accessibilityLevel('no-hide-descendants');
       }.width(44).height(Math.max(44, 20 + 15 * this.controlFontScale())).padding(0)
-        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 10, 10, this.readerPanelInputEnabled()))
+        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.floatingChromeScheme('chromeBar'), 10, 10, this.readerPanelInputEnabled()))
         .id(sourceSwitchTriggerFocusId(this.sourceId, this.bookId, 'manga-source'))
         .enabled(this.readerPanelInputEnabled()).accessibilityText('换源')
         .onClick((): void => { void this.openSourceSwitch(); });
-      this.iconAction((): Resource => this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_more_theme_night') :
+      this.iconAction((): Resource => this.floatingChromeScheme('chromeBar') === 'night' ? $r('app.media.reader_directory_more_theme_night') :
         $r('app.media.reader_directory_more'), '更多', (): void => {
           void this.openPanel('more', this.panelTriggerFocusId('more'));
         }, this.panelTriggerFocusId('more'));
@@ -2708,7 +2721,7 @@ export struct MangaReadingSurface {
   @Builder
   private iconAction(icon: () => Resource, label: string, action: () => void, focusId: string = '') {
     ReaderIconButton({ icon: icon(), specId: 'manga-reader-action',
-      scheme: this.backgroundPreference === 'ink' ? 'night' : 'day', accessibilityLabel: label, focusId, onTap: action });
+      scheme: this.floatingChromeScheme('chromeBar'), accessibilityLabel: label, focusId, onTap: action });
   }
   private mangaTopBarRevision: number = -1;
   private mangaTopBarMeasuredHeight: number = 52;
@@ -2761,14 +2774,14 @@ export struct MangaReadingSurface {
   private bottomControls() {
     Column({ space: 4 }) {
       Row({ space: 10 }) {
-        ReaderIconButton({ scheme: this.chromeScheme(), specId: 'manga-dock-step',
-          icon: this.chromeScheme() === 'night' ? $r('app.media.rc_chevron_left_theme_night') :
+        ReaderIconButton({ scheme: this.floatingChromeScheme('floatingDock'), specId: 'manga-dock-step',
+          icon: this.floatingChromeScheme('floatingDock') === 'night' ? $r('app.media.rc_chevron_left_theme_night') :
             $r('app.media.rc_chevron_left'), accessibilityLabel: '上一页',
           actionEnabled: this.opened && this.pageOrdinal() > 0, onTap: (): void => { void this.stepPage(-1); } });
         Column({ space: 3 }) {
           Slider({ value: this.presentedPage(), min: 1, max: Math.max(1, this.horizontalPageCount), step: 1 })
-            .height(44).selectedColor(readerAppColor('TOK_ACCENT', this.chromeScheme()))
-            .blockColor(this.greenColor()).trackColor(this.lineColor())
+            .height(44).selectedColor(readerAppColor('TOK_ACCENT', this.floatingChromeScheme('floatingDock')))
+            .blockColor(this.greenColor(this.floatingChromeScheme('floatingDock'))).trackColor(this.lineColor(this.floatingChromeScheme('floatingDock')))
             .enabled(this.opened && this.horizontalPageCount > 1)
             .accessibilityText('漫画页码')
             .onTouch((event: TouchEvent): void => {
@@ -2779,24 +2792,25 @@ export struct MangaReadingSurface {
             });
           Row() {
             Text(this.opened ? `${this.presentedPage()} / ${this.horizontalPageCount}` : '—')
-              .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(10).fontFeature('"tnum" 1').fontColor(this.mutedColor());
+              .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(10).fontFeature('"tnum" 1').fontColor(this.mutedColor(this.floatingChromeScheme('floatingDock')));
             if (this.opened) {
-              Text(' 页').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(10).fontColor(this.mutedColor());
+              Text(' 页').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(10).fontColor(this.mutedColor(this.floatingChromeScheme('floatingDock')));
             }
           }.width('100%').justifyContent(FlexAlign.Center).height(Math.max(16, 15 * this.controlFontScale()));
         }.layoutWeight(1);
-        ReaderIconButton({ scheme: this.chromeScheme(), specId: 'manga-dock-step',
-          icon: this.chromeScheme() === 'night' ? $r('app.media.rc_chevron_right_theme_night') :
+        ReaderIconButton({ scheme: this.floatingChromeScheme('floatingDock'), specId: 'manga-dock-step',
+          icon: this.floatingChromeScheme('floatingDock') === 'night' ? $r('app.media.rc_chevron_right_theme_night') :
             $r('app.media.rc_chevron_right'), accessibilityLabel: '下一页',
           actionEnabled: this.opened, onTap: (): void => { void this.stepPage(1); } });
       }.width('100%').height(this.dockPageRowHeight()).alignItems(VerticalAlign.Top);
       Row() {
-        this.footerAction((): Resource => (this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_directory_theme_night') : $r('app.media.reader_directory_directory')), '目录', 'directory');
-        this.footerAction((): Resource => (this.backgroundPreference === 'ink' ? $r('app.media.reader_appearance_header_theme_night') : $r('app.media.reader_appearance_header')), '阅读方式', 'mode');
-        this.footerAction((): Resource => (this.backgroundPreference === 'ink' ? $r('app.media.reader_settings_header_theme_night') : $r('app.media.reader_settings_header')), '设置', 'settings');
-      }.width('100%').height(this.dockActionHeight() + 1).border({ width: { top: 1 }, color: this.lineColor() });
+        this.footerAction((): Resource => (this.floatingChromeScheme('floatingDock') === 'night' ? $r('app.media.reader_directory_directory_theme_night') : $r('app.media.reader_directory_directory')), '目录', 'directory');
+        this.footerAction((): Resource => (this.floatingChromeScheme('floatingDock') === 'night' ? $r('app.media.reader_appearance_header_theme_night') : $r('app.media.reader_appearance_header')), '阅读方式', 'mode');
+        this.footerAction((): Resource => (this.floatingChromeScheme('floatingDock') === 'night' ? $r('app.media.reader_settings_header_theme_night') : $r('app.media.reader_settings_header')), '设置', 'settings');
+      }.width('100%').height(this.dockActionHeight() + 1).border({ width: { top: 1 }, color: this.lineColor(this.floatingChromeScheme('floatingDock')) });
     }.width('100%').padding({ left: 14, right: 14, top: 13, bottom: 11 })
-      .attributeModifier(new ReaderPanelFrame('manga-dock', this.chromeScheme()))
+      .attributeModifier(new ReaderPanelFrame('manga-dock', this.floatingChromeScheme('floatingDock'), false, undefined,
+        this.surfaceMaterial('floatingDock')))
       .hitTestBehavior(HitTestMode.Default)
       .onTouch((): void => {});
   }
@@ -2806,11 +2820,11 @@ export struct MangaReadingSurface {
       Column() {
         Stack({ alignContent: Alignment.Center }) { Image(icon()).width(14).height(14); }
           .width(30).height(28).accessibilityLevel('no');
-        Text(label).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(12).lineHeight(18).halfLeading(true).fontColor(this.inkColor()).maxLines(1);
+        Text(label).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(12).lineHeight(18).halfLeading(true).fontColor(this.inkColor(this.floatingChromeScheme('floatingDock'))).maxLines(1);
       }.width('100%').justifyContent(FlexAlign.Center).accessibilityLevel('no-hide-descendants');
     }.id(this.panelTriggerFocusId(panel)).enabled(this.readerPanelInputEnabled())
       .layoutWeight(1).height(this.dockActionHeight()).padding(0)
-      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 8, 8, this.readerPanelInputEnabled()))
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.floatingChromeScheme('floatingDock'), 8, 8, this.readerPanelInputEnabled()))
       .onClick((): void => { void this.openPanel(panel, this.panelTriggerFocusId(panel)); }).accessibilityText(label);
   }
   @Builder
@@ -2848,7 +2862,7 @@ export struct MangaReadingSurface {
             Scroll(this.directoryOuterScroller) { this.directoryPanel(directoryIdentity); }
               .width('100%').constraintSize({ maxHeight: Math.max(1, this.panelContentHeight() - this.directoryHeaderChrome() - this.directoryUtilityHeight()) })
               .scrollBar(BarState.Auto).scrollBarWidth(visual.scrollbarWidth)
-              .scrollBarColor(mangaDirectoryColor('scrollbar', this.chromeScheme()))
+              .scrollBarColor(mangaDirectoryColor('scrollbar', this.sheetScheme()))
               .onAreaChange((_old: Area, area: Area): void => this.onDirectoryOuterArea(directoryIdentity, Number(area.height)))
               .onWillStartDragging((): void => this.onDirectoryOuterUserScroll(directoryIdentity));
           }
@@ -2857,11 +2871,11 @@ export struct MangaReadingSurface {
             maxHeight: this.panelContentHeight() });
         if (!this.widePanel()) {
           Button({ type: ButtonType.Normal, stateEffect: false }) {
-            Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_sheet_close_theme_night') : $r('app.media.manga_sheet_close'))
+            Image(this.sheetScheme() === 'night' ? $r('app.media.manga_sheet_close_theme_night') : $r('app.media.manga_sheet_close'))
               .width(visual.closeIcon).height(visual.closeIcon);
           }.id(this.panelCloseFocusId(opening)).width(44).height(44).padding(0)
             .backgroundColor(Color.Transparent).borderRadius(12)
-            .attributeModifier(new MangaDirectoryPressFeedback(true, true, this.chromeScheme(), 'nativeButton'))
+            .attributeModifier(new MangaDirectoryPressFeedback(true, true, this.sheetScheme(), 'nativeButton'))
             .margin({ top: visual.closeTop, right: visual.closeRight })
             .onClick((): void => {
               if (this.panelInputCurrent(opening) && this.directorySheetInputCurrent(directoryIdentity)) void this.closePanel();
@@ -2872,7 +2886,8 @@ export struct MangaReadingSurface {
         right: this.panelInsets(this.windowMetricsRevision).right,
         top: this.widePanel() ? this.panelInsets(this.windowMetricsRevision).top : 0,
         bottom: this.panelInsets(this.windowMetricsRevision).bottom,
-      }).attributeModifier(new ReaderPanelFrame('manga-directory-sheet', this.chromeScheme(), this.widePanel()))
+      }).attributeModifier(new ReaderPanelFrame('manga-directory-sheet', this.sheetScheme(), this.widePanel(), undefined,
+        this.surfaceMaterial('modalSheet')))
         .enabled(this.panelPhase === 'open' || this.panelPhase === 'dragging');
     }.width(this.panelWidth()).height(this.widePanel() ? this.panelHeight() : undefined)
       .translate({ x: this.widePanel() ? this.panelOffset : 0, y: this.widePanel() ? 0 : this.panelOffset })
@@ -2887,19 +2902,19 @@ export struct MangaReadingSurface {
       Row({ space: 12 }) {
         Text(this.panelTitle()).fontSize(visual.wideHeaderFontSize)
           .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontWeight(visual.wideHeaderFontWeight)
-          .fontColor(this.inkColor()).lineHeight(visual.wideHeaderLineHeight).halfLeading(true)
+          .fontColor(this.inkColor(this.sheetScheme())).lineHeight(visual.wideHeaderLineHeight).halfLeading(true)
           .minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale())).layoutWeight(1);
         Button({ type: ButtonType.Normal, stateEffect: false }) {
-          Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_sheet_close_theme_night') : $r('app.media.manga_sheet_close'))
+          Image(this.sheetScheme() === 'night' ? $r('app.media.manga_sheet_close_theme_night') : $r('app.media.manga_sheet_close'))
             .width(18).height(18);
         }.id(this.panelCloseFocusId(opening)).width(44).height(44).padding(0)
-          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 12, 12, this.panelInputCurrent(opening)))
+          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.sheetScheme(), 12, 12, this.panelInputCurrent(opening)))
           .enabled(this.panelInputCurrent(opening))
           .onClick((): void => { if (this.panelInputCurrent(opening)) void this.closePanel(); }).accessibilityText('关闭宽屏面板');
       }.width('100%').constraintSize({ minHeight: Math.max(visual.wideHeaderMinHeight, 44 + visual.wideHeaderPaddingY * 2 + 1) })
         .padding({ top: visual.wideHeaderPaddingY, bottom: visual.wideHeaderPaddingY })
         .onAreaChange((_old: Area, area: Area): void => this.measureDirectorySheetHeader(Number(area.height)))
-        .border({ width: { bottom: 1 }, color: this.lineColor() });
+        .border({ width: { bottom: 1 }, color: this.lineColor(this.sheetScheme()) });
     }.width('100%').padding({ left: this.panelContentInset(), right: this.panelContentInset() })
       .margin({ bottom: visual.wideHeaderBottom });
   }
@@ -2908,7 +2923,7 @@ export struct MangaReadingSurface {
   private directoryBottomHeader(opening: number = this.actionPanelPresentationGeneration) {
     Row() {
       Column().width(visual.handleWidth).height(visual.handleHeight).borderRadius(3)
-        .backgroundColor(mangaDirectoryColor('handle', this.chromeScheme()));
+        .backgroundColor(mangaDirectoryColor('handle', this.sheetScheme()));
     }.width('100%').height(visual.handleZone).justifyContent(FlexAlign.Center)
       .gesture(PanGesture({ fingers: 1, direction: PanDirection.Vertical, distance: 1 })
         .onActionStart((): void => { if (this.panelInputCurrent(opening)) this.beginPanelDrag(); })
@@ -2916,7 +2931,7 @@ export struct MangaReadingSurface {
         .onActionEnd((event: GestureEvent): void => { if (this.panelInputCurrent(opening)) this.finishPanelDrag(event.offsetY, event.velocityY); })
         .onActionCancel((): void => { if (this.panelInputCurrent(opening)) this.finishPanelDrag(0, 0); }));
     Text(this.panelTitle()).fontSize(visual.quickHeaderFontSize)
-      .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontWeight(700).fontColor(this.inkColor())
+      .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontWeight(700).fontColor(this.inkColor(this.sheetScheme()))
       .width('100%').padding({ left: visual.quickPaddingX, right: Math.max(visual.quickHeaderPaddingRight, 44 + visual.closeRight + 8), bottom: visual.quickHeaderPaddingBottom })
       .lineHeight(visual.quickHeaderLineHeight).halfLeading(true)
       .minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale()))
@@ -2949,7 +2964,7 @@ export struct MangaReadingSurface {
     Column() {
       ReaderBoundedSurface({ specId: 'reader-action-sheet', surfaceWidth: this.panelWidth(),
         surfaceHeight: this.widePanel() ? this.panelHeight() : 0, maxSurfaceHeight: this.panelHeight(),
-        placement: this.widePanel() ? 'side' : 'bottom', scheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
+        placement: this.widePanel() ? 'side' : 'bottom', scheme: this.sheetScheme(),
         safeInsets: this.actionPanelInsets(), header: (): void => { this.actionPanelHeader(opening); },
         body: (): void => { this.actionPanelBody(opening); },
       }).enabled(this.panelPhase === 'open' || this.panelPhase === 'dragging');
@@ -2961,7 +2976,7 @@ export struct MangaReadingSurface {
   @Builder
   private actionPanelHeader(opening: number = this.actionPanelPresentationGeneration) {
     ReaderBoundedSurfaceHeader({ specId: 'reader-action-sheet', title: this.panelTitle(), surfaceWidth: Number(this.panelWidth()),
-      placement: this.widePanel() ? 'side' : 'bottom', scheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
+      placement: this.widePanel() ? 'side' : 'bottom', scheme: this.sheetScheme(),
       actionEnabled: this.panelPhase === 'open' || this.panelPhase === 'dragging',
       closeFocusId: this.panelCloseFocusId(opening),
       onAreaChanged: (_old: Area, area: Area): void => {
@@ -2993,7 +3008,7 @@ export struct MangaReadingSurface {
               onContinueOffline: (expected: number, presentation: string): void => {
                 if (this.downloadPanelInputCurrent(opening, generation)) this.onContinueOffline(expected, presentation);
               },
-              failureMessage: this.downloadActionsFailure, panelScheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
+              failureMessage: this.downloadActionsFailure, panelScheme: this.sheetScheme(),
               onAction: (action: MangaDownloadActionId): void => this.performDownloadAction(action, generation),
               onRetry: (): void => {
                 if (this.ownsDownloadActions(generation) && this.panel === 'downloads' &&
@@ -3031,7 +3046,7 @@ export struct MangaReadingSurface {
   @Builder
   private directoryUtility(identity: string) {
     Column({ space: this.directoryUtilityGeometry().gap }) {
-      ReaderSearchField({ variant: 'readerDirectory', mode: 'live', colorScheme: this.chromeScheme(), text: this.directoryQuery,
+      ReaderSearchField({ variant: 'readerDirectory', mode: 'live', colorScheme: this.sheetScheme(), text: this.directoryQuery,
         naturalFieldHeightVp: this.directoryUtilityGeometry().searchHeight,
         placeholder: this.directoryFontScale() >= 1.75 ? '话名或序号' : '搜索话名或序号…',
         accessibilityLabel: '搜索话名或序号', editingFocusId: `reader-manga-directory-query:${identity}`,
@@ -3042,17 +3057,17 @@ export struct MangaReadingSurface {
       Row({ space: 8 }) {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Row({ space: 4 }) {
-            Image(this.chromeScheme() === 'night' ? $r('app.media.manga_sheet_locate_theme_night') : $r('app.media.manga_sheet_locate'))
+            Image(this.sheetScheme() === 'night' ? $r('app.media.manga_sheet_locate_theme_night') : $r('app.media.manga_sheet_locate'))
               .width(14).height(14).accessibilityLevel('no');
             Text('定位当前话').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontWeight(500).fontSize(12)
               .lineHeight(MANGA_DIRECTORY_UTILITY_ACTION_LINE).halfLeading(true).maxLines(1)
               .minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale()))
-              .fontColor(this.greenColor());
+              .fontColor(this.greenColor(this.sheetScheme()));
           }.accessibilityLevel('no-hide-descendants');
         }.constraintSize({ minWidth: 44 }).height(this.directoryUtilityGeometry().actionHeight).padding({ left: 8, right: 8 })
           .responseRegion({ x: 0, y: this.directoryUtilityGeometry().actionResponseY,
             width: '100%', height: this.directoryUtilityGeometry().actionResponseHeight })
-          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 8, 8, this.directoryCurrentIndex() >= 0))
+          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.sheetScheme(), 8, 8, this.directoryCurrentIndex() >= 0))
           .accessibilityText('定位当前话').enabled(this.directoryCurrentIndex() >= 0)
           .onClick((): void => {
             if (!this.directorySheetInputCurrent(identity) || this.directoryCurrentIndex() < 0) return;
@@ -3066,12 +3081,12 @@ export struct MangaReadingSurface {
             Text(this.directoryAscending ? '正序' : '倒序').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontWeight(500).fontSize(12)
               .lineHeight(MANGA_DIRECTORY_UTILITY_ACTION_LINE).halfLeading(true).maxLines(1)
               .minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale()))
-              .fontColor(this.greenColor());
+              .fontColor(this.greenColor(this.sheetScheme()));
           }.accessibilityLevel('no-hide-descendants');
         }.constraintSize({ minWidth: 44 }).height(this.directoryUtilityGeometry().actionHeight).padding({ left: 8, right: 8 })
           .responseRegion({ x: 0, y: this.directoryUtilityGeometry().actionResponseY,
             width: '100%', height: this.directoryUtilityGeometry().actionResponseHeight })
-          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 8))
+          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.sheetScheme(), 8))
           .accessibilityText(this.directoryAscending ? '正序，切换倒序' : '倒序，切换正序')
           .onClick((): void => {
             if (this.directorySheetInputCurrent(identity)) this.directoryAscending = !this.directoryAscending;
@@ -3087,9 +3102,9 @@ export struct MangaReadingSurface {
   }
 
   private directorySortIcon(): Resource {
-    if (this.directoryAscending) return this.chromeScheme() === 'night' ? $r('app.media.manga_directory_sort_ascending_theme_night') :
+    if (this.directoryAscending) return this.sheetScheme() === 'night' ? $r('app.media.manga_directory_sort_ascending_theme_night') :
       $r('app.media.manga_directory_sort_ascending');
-    return this.chromeScheme() === 'night' ? $r('app.media.manga_directory_sort_descending_theme_night') :
+    return this.sheetScheme() === 'night' ? $r('app.media.manga_directory_sort_descending_theme_night') :
       $r('app.media.manga_directory_sort_descending');
   }
   @Builder
@@ -3097,34 +3112,34 @@ export struct MangaReadingSurface {
       Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween, alignItems: ItemAlign.Center, space: { main: LengthMetrics.vp(visual.toolsGap), cross: LengthMetrics.vp(visual.toolsGap) } }) {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
         Row({ space: visual.toolGap }) {
-          Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_directory_previous_theme_night') : $r('app.media.manga_directory_previous')).width(visual.toolIcon).height(visual.toolIcon);
-          Text('上一章节').fontSize(visual.toolFontSize).lineHeight(visual.toolLineHeight).halfLeading(true).minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale())).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontColor(this.accentColor());
+          Image(this.sheetScheme() === 'night' ? $r('app.media.manga_directory_previous_theme_night') : $r('app.media.manga_directory_previous')).width(visual.toolIcon).height(visual.toolIcon);
+          Text('上一章节').fontSize(visual.toolFontSize).lineHeight(visual.toolLineHeight).halfLeading(true).minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale())).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontColor(this.accentColor(this.sheetScheme()));
         }.accessibilityLevel('no-hide-descendants');
         }.padding(0).backgroundColor(Color.Transparent).borderRadius(0)
           .constraintSize({ minHeight: this.directoryToolHeight() }).enabled(this.adjacentChapter(-1) !== undefined)
           .opacity(this.adjacentChapter(-1) === undefined ? 0.36 : 1)
-          .attributeModifier(new MangaDirectoryPressFeedback(this.adjacentChapter(-1) !== undefined, true, this.backgroundPreference === 'ink' ? 'night' : 'day', 'nativeButton'))
+          .attributeModifier(new MangaDirectoryPressFeedback(this.adjacentChapter(-1) !== undefined, true, this.sheetScheme(), 'nativeButton'))
           .onClick((): void => {
             if (this.directorySheetInputCurrent(directoryIdentity)) void this.selectAdjacentChapter(-1, true);
           }).accessibilityText('上一章节');
         Button({ type: ButtonType.Normal, stateEffect: false }) {
         Row({ space: visual.toolGap }) {
-          Text('完整目录').fontSize(visual.toolFontSize).lineHeight(visual.toolLineHeight).halfLeading(true).minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale())).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontColor(this.accentColor());
-          Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_directory_chevron_right_accent_theme_night') : $r('app.media.manga_directory_chevron_right_accent')).width(visual.toolIcon).height(visual.toolIcon);
+          Text('完整目录').fontSize(visual.toolFontSize).lineHeight(visual.toolLineHeight).halfLeading(true).minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale())).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontColor(this.accentColor(this.sheetScheme()));
+          Image(this.sheetScheme() === 'night' ? $r('app.media.manga_directory_chevron_right_accent_theme_night') : $r('app.media.manga_directory_chevron_right_accent')).width(visual.toolIcon).height(visual.toolIcon);
         }.accessibilityLevel('no-hide-descendants');
         }.padding(0).backgroundColor(Color.Transparent).borderRadius(0)
           .constraintSize({ minHeight: this.directoryToolHeight() })
-          .attributeModifier(new MangaDirectoryPressFeedback(true, true, this.backgroundPreference === 'ink' ? 'night' : 'day', 'nativeButton'))
+          .attributeModifier(new MangaDirectoryPressFeedback(true, true, this.sheetScheme(), 'nativeButton'))
           .onClick((): void => this.openDirectoryDestination(false, directoryIdentity)).accessibilityText('完整目录');
         Button({ type: ButtonType.Normal, stateEffect: false }) {
         Row({ space: visual.toolGap }) {
-          Text('下一章节').fontSize(visual.toolFontSize).lineHeight(visual.toolLineHeight).halfLeading(true).minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale())).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontColor(this.accentColor());
-          Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_directory_chevron_right_accent_theme_night') : $r('app.media.manga_directory_chevron_right_accent')).width(visual.toolIcon).height(visual.toolIcon);
+          Text('下一章节').fontSize(visual.toolFontSize).lineHeight(visual.toolLineHeight).halfLeading(true).minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale())).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontColor(this.accentColor(this.sheetScheme()));
+          Image(this.sheetScheme() === 'night' ? $r('app.media.manga_directory_chevron_right_accent_theme_night') : $r('app.media.manga_directory_chevron_right_accent')).width(visual.toolIcon).height(visual.toolIcon);
         }.accessibilityLevel('no-hide-descendants');
         }.padding(0).backgroundColor(Color.Transparent).borderRadius(0)
           .constraintSize({ minHeight: this.directoryToolHeight() }).enabled(this.adjacentChapter(1) !== undefined)
           .opacity(this.adjacentChapter(1) === undefined ? 0.36 : 1)
-          .attributeModifier(new MangaDirectoryPressFeedback(this.adjacentChapter(1) !== undefined, true, this.backgroundPreference === 'ink' ? 'night' : 'day', 'nativeButton'))
+          .attributeModifier(new MangaDirectoryPressFeedback(this.adjacentChapter(1) !== undefined, true, this.sheetScheme(), 'nativeButton'))
           .onClick((): void => {
             if (this.directorySheetInputCurrent(directoryIdentity)) void this.selectAdjacentChapter(1, true);
           }).accessibilityText('下一章节');
@@ -3186,7 +3201,7 @@ export struct MangaReadingSurface {
     Row() {
     MangaDirectoryCurrentFooter({ title: this.directoryCurrentTitle(),
       pagePosition: this.directoryCurrentPagePosition(),
-      scheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
+      scheme: this.sheetScheme(),
       availableWidth: this.directoryInitialWidth(false),
       onHeightChanged: (height: number): void => { if (Math.abs(height - this.quickFooterMeasured) > .1) this.quickFooterMeasured = height; },
     }).width('100%');
@@ -3315,7 +3330,7 @@ export struct MangaReadingSurface {
       openRevision: catalog ? this.publishedManifestVersion : `${this.publishedManifestVersion}:${this.directoryOpenRevision}`,
       locateCurrentRevision: this.directoryRevision, mangaDisplay: true,
       mangaInitialViewportWidth: this.directoryInitialWidth(catalog),
-      mangaScheme: this.backgroundPreference === 'ink' ? 'night' : 'day', rowHeight: 58, listPaddingX: 0, listPaddingY: 0,
+      mangaScheme: catalog ? this.chromeScheme() : this.sheetScheme(), rowHeight: 58, listPaddingX: 0, listPaddingY: 0,
       chapterEntries: this.directoryEntries(), mangaRowMinHeight: 58,
       mangaCurrentOpenInset: this.directoryCurrentOpenInset(catalog),
       mangaCatalogDisplay: catalog, mangaCatalogNarrow: catalog ? this.stageWidth <= 700 :
@@ -3345,7 +3360,7 @@ export struct MangaReadingSurface {
       query: catalog ? '' : this.directoryQuery, ascending: this.directoryAscending,
       currentChapterIndex: this.directoryCurrentIndex(),
       locateCurrentRevision: this.directoryRevision,
-      mangaScheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
+      mangaScheme: catalog ? this.chromeScheme() : this.sheetScheme(),
       rowHeight: 58, mangaCatalogDisplay: catalog, mangaCatalogNarrow: catalog ? this.stageWidth <= 700 :
         this.widePanel() ? Number(this.panelWidth()) <= 340 : (this.stageWidth > 0 ? this.stageWidth : this.viewportWidth) <= visual.narrowWidth,
       currentOpenInset: this.directoryCurrentOpenInset(catalog),
@@ -3383,7 +3398,7 @@ export struct MangaReadingSurface {
       }.width('100%');
     }.width('100%');
     Column() {
-      Text('图片适配').fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontWeight(700).lineHeight(21).fontColor(this.inkColor()).width('100%').margin({ bottom: 12 });
+      Text('图片适配').fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontWeight(700).lineHeight(21).fontColor(this.inkColor(this.sheetScheme())).width('100%').margin({ bottom: 12 });
       this.fitLine('跟随书源', 'source', (): void => {
         if (this.preferencePanelInputCurrent(opening, 'mode')) void this.changeFit('source');
       });
@@ -3397,7 +3412,7 @@ export struct MangaReadingSurface {
   }
   @Builder
   private sectionTitle(label: string) {
-    Text(label).fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontWeight(700).lineHeight(21).fontColor(this.inkColor()).width('100%');
+    Text(label).fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontWeight(700).lineHeight(21).fontColor(this.inkColor(this.sheetScheme())).width('100%');
   }
   @Builder
   private sheetChoice(kind: string, label: string, action: () => void) {
@@ -3405,12 +3420,12 @@ export struct MangaReadingSurface {
     Row({ space: 6 }) {
       Image(this.choiceIcon(kind)).width(14).height(14);
       Text(label).layoutWeight(1).textAlign(TextAlign.Center).fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).lineHeight(18)
-        .halfLeading(true).fontColor(this.isSheetChoiceSelected(kind) ? readerAppColor('TOK_ON_PRIMARY', this.chromeScheme()) : this.mutedColor());
+        .halfLeading(true).fontColor(this.isSheetChoiceSelected(kind) ? readerAppColor('TOK_ON_PRIMARY', this.sheetScheme()) : this.mutedColor(this.sheetScheme()));
     }.width('100%').justifyContent(FlexAlign.Center).accessibilityLevel('no-hide-descendants');
     }.layoutWeight(1).constraintSize({ minHeight: 44 }).padding(8)
-      .attributeModifier(new ReaderPressFeedback(this.isSheetChoiceSelected(kind) ? this.greenColor() : this.softSurfaceColor(),
-        this.chromeScheme(), 12))
-      .border({ width: 1, color: this.isSheetChoiceSelected(kind) ? this.greenColor() : this.lineColor() }).onClick(action)
+      .attributeModifier(new ReaderPressFeedback(this.isSheetChoiceSelected(kind) ? this.greenColor(this.sheetScheme()) : this.softSurfaceColor(this.sheetScheme()),
+        this.sheetScheme(), 12))
+      .border({ width: 1, color: this.isSheetChoiceSelected(kind) ? this.greenColor(this.sheetScheme()) : this.lineColor(this.sheetScheme()) }).onClick(action)
       .accessibilityText(`${label}，${this.isSheetChoiceSelected(kind) ? '已选择' : '未选择'}`);
   }
   @Builder
@@ -3418,12 +3433,12 @@ export struct MangaReadingSurface {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
     Row({ space: 12 }) {
       Text(label).fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).lineHeight(18)
-        .halfLeading(true).fontColor(this.inkColor()).layoutWeight(1);
-      if (this.fitPreference === fit) { Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_sheet_check_theme_night') : $r('app.media.manga_sheet_check')).width(14).height(14); }
+        .halfLeading(true).fontColor(this.inkColor(this.sheetScheme())).layoutWeight(1);
+      if (this.fitPreference === fit) { Image(this.sheetScheme() === 'night' ? $r('app.media.manga_sheet_check_theme_night') : $r('app.media.manga_sheet_check')).width(14).height(14); }
     }.width('100%').height('100%').accessibilityLevel('no-hide-descendants');
     }.width('100%').height(this.sheetActionHeight()).padding(0)
-      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme()))
-      .border({ width: { bottom: 1 }, color: this.lineColor() }).onClick(action)
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.sheetScheme()))
+      .border({ width: { bottom: 1 }, color: this.lineColor(this.sheetScheme()) }).onClick(action)
       .accessibilityText(`${label}，${this.fitPreference === fit ? '已选择' : '未选择'}`);
   }
   @Builder
@@ -3441,10 +3456,10 @@ export struct MangaReadingSurface {
     }.width('100%');
     Column() {
       Row() {
-        Text('亮度').fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontWeight(700).lineHeight(21).fontColor(this.inkColor()).layoutWeight(1);
+        Text('亮度').fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontWeight(700).lineHeight(21).fontColor(this.inkColor(this.sheetScheme())).layoutWeight(1);
         Text(this.automaticBrightness ? '跟随系统' : `${Math.round(this.brightnessPercent)}%`)
-          .fontSize(11).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontColor(this.mutedColor());
-        ReaderToggle({ value: this.automaticBrightness, checkedColor: this.greenColor(),
+          .fontSize(11).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontColor(this.mutedColor(this.sheetScheme()));
+        ReaderToggle({ value: this.automaticBrightness, checkedColor: this.greenColor(this.sheetScheme()),
           inputIdentity: `${this.panelCloseFocusId(opening)}:brightness-auto`, accessibilityLabel: '亮度跟随系统',
           actionEnabled: this.preferencePanelInputCurrent(opening, 'settings'),
           onToggle: (enabled: boolean): void => {
@@ -3455,21 +3470,21 @@ export struct MangaReadingSurface {
       }.width('100%').margin({ bottom: 10 });
       Slider({ value: this.brightnessPercent, min: 1, max: 100, step: 1 }).width('100%').height(44)
         .enabled(this.preferencePanelInputCurrent(opening, 'settings'))
-        .selectedColor(this.greenColor()).blockColor(this.greenColor()).trackColor(this.lineColor())
+        .selectedColor(this.greenColor(this.sheetScheme())).blockColor(this.greenColor(this.sheetScheme())).trackColor(this.lineColor(this.sheetScheme()))
         .onChange((value: number, mode: SliderChangeMode): void => this.changeBrightnessSlider(value, mode, opening))
         .accessibilityText('阅读亮度');
       Row() {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Text('常驻页码').width('100%').textAlign(TextAlign.Start).fontSize(12)
             .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).lineHeight(18)
-            .fontColor(this.inkColor()).accessibilityLevel('no');
+            .fontColor(this.inkColor(this.sheetScheme())).accessibilityLevel('no');
         }.layoutWeight(1).height('100%').padding(0)
-          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 0, 0,
+          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.sheetScheme(), 0, 0,
             this.preferencePanelInputCurrent(opening, 'settings')))
           .onClick((): void => {
             if (this.preferencePanelInputCurrent(opening, 'settings')) this.setPageNumbers(!this.showPageNumbers);
           }).accessibilityText(`常驻页码，${this.showPageNumbers ? '已启用' : '已关闭'}`);
-        ReaderToggle({ value: this.showPageNumbers, checkedColor: this.greenColor(),
+        ReaderToggle({ value: this.showPageNumbers, checkedColor: this.greenColor(this.sheetScheme()),
           inputIdentity: `${this.panelCloseFocusId(opening)}:page-numbers`, accessibilityLabel: '常驻页码',
           actionEnabled: this.preferencePanelInputCurrent(opening, 'settings'),
           onToggle: (enabled: boolean): void => {
@@ -3477,14 +3492,14 @@ export struct MangaReadingSurface {
               this.setPageNumbers(enabled);
             }
           } });
-      }.width('100%').height(this.sheetActionHeight()).border({ width: { bottom: 1 }, color: this.lineColor() })
+      }.width('100%').height(this.sheetActionHeight()).border({ width: { bottom: 1 }, color: this.lineColor(this.sheetScheme()) })
         .hitTestBehavior(this.widePanel() ? HitTestMode.Block : HitTestMode.Default);
     }.width('100%');
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Text('恢复默认').fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400)
-        .lineHeight(18).fontColor(this.accentColor()).textAlign(TextAlign.Center).accessibilityLevel('no');
+        .lineHeight(18).fontColor(this.accentColor(this.sheetScheme())).textAlign(TextAlign.Center).accessibilityLevel('no');
     }.width('100%').height(this.sheetActionHeight()).padding(0)
-      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 0, 0,
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.sheetScheme(), 0, 0,
         this.preferencePanelInputCurrent(opening, 'settings')))
       .accessibilityText('恢复默认').onClick((): void => {
         if (!this.preferencePanelInputCurrent(opening, 'settings')) return;
@@ -3498,7 +3513,7 @@ export struct MangaReadingSurface {
   private morePanel(opening: number = this.actionPanelPresentationGeneration) {
     ReaderActionMenuSurface({
       variant: this.moreMenuVariant, actions: this.moreActions(),
-      scheme: this.backgroundPreference === 'ink' ? 'night' : 'day',
+      scheme: this.sheetScheme(),
       onAction: (id: string): void => this.performMoreAction(id, opening),
     });
   }
@@ -3506,7 +3521,7 @@ export struct MangaReadingSurface {
   private moreActions(): ReaderMenuActionView[] {
     const refreshLabel = this.title.includes('卷') ? '重新打开本卷' : '重新打开本话';
     const refreshSecondary = this.refreshing ? '正在更新本章' : !this.opened ? '章节尚未打开' : this.offline ? '离线时不可用' : '';
-    const scheme = this.backgroundPreference === 'ink' ? 'night' : 'day';
+    const scheme = this.sheetScheme();
     const actions: ReaderMenuActionView[] = [
       new ReaderMenuActionView('source', '更换书源', true, readerActionIcon('source', scheme), '更换书源',
         '阅读', '', '', 'default', true),

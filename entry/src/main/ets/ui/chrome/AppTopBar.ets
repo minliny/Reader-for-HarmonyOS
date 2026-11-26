@@ -1,3 +1,4 @@
+import { isReaderRealtimeBlurEnabled } from '../../app/HarmonyCapabilityPolicy';
 import { READER_LAYOUT_DEBUG_BUILD } from '../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantTag } from '../../ui/layout/LayoutInvariantEvaluator';
 import { readerLayoutCarrierResponseRegion } from '../layout/ReaderPageNativeAttributes';
@@ -15,6 +16,8 @@ import { READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../foundation/ReaderFontFamili
 import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_FLOATING_HEADER_TOP_GAP, APP_HEADER_BAR_HEIGHT } from '../foundation/ReaderHeaderMetrics';
 import { readerScaledBarHeight } from '../foundation/ReaderSurfaceResolvers';
 import { readerHeaderVeilBorder, readerHeaderVeilMaterial, readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences, readerImmersiveMaterial, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
 
 // AppTopBar —— 首页顶部标题栏统一组件 (Figma HomeTopBar): 58 高、左右 20 + 顶部 6
 // 内边距、29px 思源黑体 UI 粗题 + 可选尾部槽。收敛 Bookshelf/Discover/Settings 三页
@@ -24,6 +27,9 @@ import { readerHeaderVeilBorder, readerHeaderVeilMaterial, readerSurfaceElevatio
 @Component
 export struct AppTopBar {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences')
+  private navigationAppearance: ReaderNavigationPreferences = defaultNavigationPreferences();
 
   @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
   @Prop title: string = '';
@@ -93,16 +99,26 @@ export struct AppTopBar {
     .constraintSize({ minHeight: this.barHeight(), maxWidth: this.floating ? 580 : undefined })
     .padding({ left: this.floating ? 9 : this.leftInset(), right: this.floating ? 9 : this.rightInset(), top: this.floating ? 0 : 6 })
     .alignItems(VerticalAlign.Center)
-    .backgroundEffect(this.floating ? readerHeaderVeilMaterial(false, this.appThemeScheme) : undefined)
-    .backgroundColor(!this.floating && this.surface === 'solid' ?
+    .backgroundEffect(this.floating && !this.surfaceMaterial()?.native && isReaderRealtimeBlurEnabled(this.navigationAppearance) ?
+      readerHeaderVeilMaterial(false, this.appThemeScheme) : undefined)
+    .backgroundColor((this.floating && !isReaderRealtimeBlurEnabled(this.navigationAppearance)) ||
+      (!this.floating && this.surface === 'solid') ?
       readerAppColor('TOK_PAPER', this.appThemeScheme) : Color.Transparent)
-    .border({ width: this.floating ? 1 : { bottom: this.divider ? 1 : 0 },
-      color: this.floating ? readerHeaderVeilBorder(this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
+    .border({ width: this.surfaceMaterial()?.native ? 0 : this.floating ? 1 : { bottom: this.divider ? 1 : 0 },
+      color: this.surfaceMaterial()?.native ? Color.Transparent : this.floating ?
+        readerHeaderVeilBorder(this.appThemeScheme) : readerAppColor('TOK_LINE', this.appThemeScheme) })
     .borderRadius(this.floating ? this.barHeight() / 2 : 0)
     .clip(false)
-    .shadow(readerSurfaceElevation(this.floating ? 'raised' : 'fixed', this.appThemeScheme))
+    .shadow(this.surfaceMaterial()?.native ? undefined :
+      readerSurfaceElevation(this.floating ? 'raised' : 'fixed', this.appThemeScheme))
+    .systemMaterial(readerImmersiveMaterial(this.surfaceMaterial()))
     .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion(this.floating || this.surface === 'solid'))
     .onTouch((): void => {});
+  }
+
+  private surfaceMaterial(): ReaderSurfaceMaterialDecision | undefined {
+    return this.floating ?
+      readerSurfaceMaterialDecision('chromeBar', this.navigationAppearance, this.appThemeScheme, this.systemScheme) : undefined;
   }
 
   private leftInset(): number {

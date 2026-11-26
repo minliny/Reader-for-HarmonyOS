@@ -3,7 +3,8 @@ import type { ReaderRuntimeOwner } from '../ReaderRuntimeOwner';
 import type { BookshelfDetailReturnFocus } from '../../features/bookshelf/presentation/BookshelfViewState';
 import type { SharedDownloadOpeningIntent, SharedDownloadReturnState } from '../../features/downloads/presentation/SharedDownloadUiContract';
 import type { RemoteReadingBookSeed } from '../../features/reading/application/RemoteReadingFlowGateway';
-import { settingsNavigationItems, type SettingsPane } from '../../features/settings/presentation/SettingsNavigationItems.ts';
+import type { SettingsPane } from '../../features/settings/presentation/SettingsNavigationItems.ts';
+import { isReaderProductSurfaceEnabled } from '../ReaderProductScope.ts';
 
 export type ReaderRoute = 'bookshelf' | 'discover' | 'detail' | 'reading' | 'directory' | 'search' |
   'bookshelfManagement' | 'bookshelfMultiSelect' | 'bookshelfSettings' |
@@ -12,7 +13,7 @@ export type ReaderRoute = 'bookshelf' | 'discover' | 'detail' | 'reading' | 'dir
 
 export type DirectoryReturnTarget = 'detail' | 'readerControl';
 export type RulesManagementReturnTarget = 'settings' | 'reader';
-export type SettingsSection = 'home' | 'general' | 'about';
+export type SettingsSection = 'home' | 'general' | 'backup' | 'about';
 export type DetailOriginRoute = 'bookshelf' | 'search' | 'discover';
 export type DetailReturnRoute = DetailOriginRoute | 'reader';
 export type ReadingOriginRoute = 'bookshelf' | 'detail' | 'directory';
@@ -605,11 +606,12 @@ export class ReaderNavigation {
 
   settingsPane(): SettingsPane | undefined {
     const route = this.current.route;
-    if (route === 'settings') return this.current.settingsSection === 'about' ? 'about' : 'general';
+    if (route === 'settings') return this.current.settingsSection === 'home' ? 'general' : this.current.settingsSection;
     if ((route === 'source' || route === 'sourceTools') && this.returns.sourceOrigin().target === 'settings') return 'source';
-    if (route === 'sync' && settingsNavigationItems().some(item => item.id === 'sync')) return 'sync';
+    if (route === 'sync' && isReaderProductSurfaceEnabled('sync')) return route;
     if (route === 'bookshelfSettings' && this.bookshelfSettingsReturn === 'settings') return route;
     if (route === 'downloads' && this.returns.downloadsFromSettings()) return route;
+    if (route === 'rulesManagement' && this.rulesManagementReturn === 'settings') return route;
     return undefined;
   }
 

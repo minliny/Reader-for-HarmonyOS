@@ -17,6 +17,7 @@ import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/f
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { READER_ACTION_MIN_TARGET, ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
+import { defaultNavigationPreferences, readerImmersiveMaterial, ReaderModalScrimModifier, readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import type { MeasureOptions } from '@ohos.measure';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { bookContentKindLabel, bookCoverDisplayUrl } from '../../../app/library/BookCoverDisplay';
@@ -37,7 +38,7 @@ import { readerCanShareOriginal, type ReaderShareResult, type RetainedShareFile 
 import { readerShareMessage, readerSystemShareActions } from './ReaderSharePresentation';
 import { bookIntroText } from '../../../app/library/BookIntroText';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
-import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision, ReaderSurfaceMaterialRole } from '../../../app/HarmonyCapabilityPolicy';
 import { ReaderUIVerificationProbe } from '../../../app/diagnostics/ReaderUIVerificationProbe';
 import {
   readerVisualSafeLeft,
@@ -87,11 +88,11 @@ class DetailDirectoryFocusFrame extends FrameCallback {
 export struct LocalBookDetail {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
   @StorageLink('readerAppForeground') @Watch('onShareForegroundChanged') private appForeground: boolean = true;
   @StorageProp('readerReduceMotion') private appReduceMotion: boolean = false;
-  @StorageProp('readerNavigationAppearancePreferences') private navigationAppearance: ReaderNavigationPreferences = {
-    override: 'unset', reduceTransparency: false,
-  };
+  @StorageProp('readerNavigationAppearancePreferences') private navigationAppearance: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @StorageLink('readerWindowMetricsRevision') @Watch('onMangaGeometryChanged') readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onBookChanged') book: ReadingBookDetail;
   @Prop @Watch('onTocChanged') toc: LocalReadingTocEntry[] = [];
@@ -618,9 +619,10 @@ export struct LocalBookDetail {
   @Builder
   private detailMoreMenu() {
     Stack({ alignContent: Alignment.TopEnd }) {
-      Column().width('100%').height('100%').opacity(.32)
-        .backgroundColor(readerAppColor('app.scrim.select', this.appThemeScheme))
-        .backdropBlur(this.navigationAppearance.reduceTransparency ? 0 : 6)
+      Stack().width('100%').height('100%').opacity(.32)
+        .attributeModifier(new ReaderModalScrimModifier(this.navigationAppearance, this.appThemeScheme,
+          readerAppColor('app.scrim.select', this.appThemeScheme), this.surfaceMaterial('popoverMenu').native))
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .accessibilityLevel('no').onClick((): void => this.closeMore(true));
       Stack({ alignContent: Alignment.TopEnd }) {
         Column() {
@@ -630,18 +632,28 @@ export struct LocalBookDetail {
             reduceMotion: this.appReduceMotion, actions: this.detailMenuActions(),
             onAction: (id: string): void => this.chooseMoreAction(id) });
         }.width('100%').padding({ top: 6, bottom: 6 }).borderRadius(16)
-          .backgroundColor(readerAppColor('TOK_SURFACE_ELEVATED', this.appThemeScheme))
-          .border({ width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-          .shadow(readerSurfaceElevation('dialog', this.appThemeScheme));
-        Column().width(12).height(12).rotate({ angle: 45 })
-          .backgroundColor(readerAppColor('TOK_SURFACE_ELEVATED', this.appThemeScheme))
-          .border({ width: { top: 1, left: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-          .position({ x: DETAIL_MENU_WIDTH - 28, y: -6 }).zIndex(1)
-          .hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+          .backgroundEffect(undefined)
+          .backgroundColor(this.surfaceMaterial('popoverMenu').native ? Color.Transparent :
+            readerAppColor('TOK_SURFACE_ELEVATED', this.appThemeScheme))
+          .border({ width: this.surfaceMaterial('popoverMenu').native ? 0 : 1,
+            color: this.surfaceMaterial('popoverMenu').native ? Color.Transparent : readerAppColor('TOK_LINE', this.appThemeScheme) })
+          .shadow(this.surfaceMaterial('popoverMenu').native ? undefined : readerSurfaceElevation('dialog', this.appThemeScheme))
+          .systemMaterial(readerImmersiveMaterial(this.surfaceMaterial('popoverMenu')));
+        if (!this.surfaceMaterial('popoverMenu').native) {
+          Column().width(12).height(12).rotate({ angle: 45 })
+            .backgroundColor(readerAppColor('TOK_SURFACE_ELEVATED', this.appThemeScheme))
+            .border({ width: { top: 1, left: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+            .position({ x: DETAIL_MENU_WIDTH - 28, y: -6 }).zIndex(1)
+            .hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+        }
       }.width(DETAIL_MENU_WIDTH).clip(false)
         .margin({ top: this.geometry.content.startInset, right: this.geometry.header.insetRight })
         .transition(this.detailMoreTransition());
     }.width('100%').height('100%');
+  }
+
+  private surfaceMaterial(role: ReaderSurfaceMaterialRole): ReaderSurfaceMaterialDecision {
+    return readerSurfaceMaterialDecision(role, this.navigationAppearance, this.appThemeScheme, this.systemScheme);
   }
 
   private detailMoreTransition(): TransitionEffect {
@@ -1078,7 +1090,8 @@ export struct LocalBookDetail {
         ? { role: 'primary-dock', id: 'detail-dock' } as LayoutInvariantTag : undefined)
       .constraintSize({ minHeight: this.book.contentKind === 'manga' ? visual.detailDockHeight : DETAIL_DOCK_HEIGHT })
       .padding(this.book.contentKind === 'manga' ? visual.detailDockPadding : 9)
-      .attributeModifier(new ReaderPanelFrame('floating-action-dock', this.appThemeScheme, false, this.dockNativeShape()))
+      .attributeModifier(new ReaderPanelFrame('floating-action-dock', this.appThemeScheme, false, this.dockNativeShape(),
+        this.surfaceMaterial('floatingDock')))
       .hitTestBehavior(HitTestMode.Default)
       .onTouch((): void => {})
       .onAreaChange(this.dockAreaChangeHandler(this.footerMeasurementKey));

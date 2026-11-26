@@ -16,6 +16,9 @@ import { measureReaderControlMinimum, readerControlModuleFactsGeometryKey, reade
 import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwitchSurfaceLifecycle';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision, ReaderSurfaceMaterialRole } from '../../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences, readerImmersiveMaterial, ReaderModalScrimModifier,
+  readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderControlChapterProgressCard } from './ReaderControlChapterProgressCard';
 import { ReaderControlModuleNavigation, type ReaderControlNavigationModule } from './ReaderControlModuleNavigation';
 import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
@@ -274,6 +277,9 @@ export struct ReaderControlPanel {
 
   @Prop sessionFontScale: number = 1;
   @StorageLink('readerAppScheme') private appScheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private navigationPreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @Prop @Watch('onLaunchSampleChanged') launchSample: ReaderSessionLaunchSample | undefined = undefined;
   @Prop @Watch('onLaunchSampleChanged') launchGeneration: number = 0;
   @Prop @Watch('onLaunchSampleChanged') launchSourceMinimum: ReaderControlPlaybackLaunchProfile | undefined = undefined;
@@ -1938,6 +1944,10 @@ export struct ReaderControlPanel {
     if (this.directSheetVisible() && !this.directSheetClosing && this.controlActionInputEnabled()) this.requestPage('home');
   }
 
+  private surfaceMaterial(role: ReaderSurfaceMaterialRole): ReaderSurfaceMaterialDecision {
+    return readerSurfaceMaterialDecision(role, this.navigationPreferences, this.appScheme, this.systemScheme);
+  }
+
   // The production component owns both the clock and every actor builder.
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -1958,8 +1968,10 @@ export struct ReaderControlPanel {
             height: Number(current.height) });
         });
       if (this.directSheetVisible()) {
-        Rect().width('100%').height('100%').id('reader-control-direct-sheet-scrim')
-          .fill(readerAppColor('app.scrim.warmModal', this.appScheme)).backdropBlur(6)
+        Stack().width('100%').height('100%').id('reader-control-direct-sheet-scrim')
+          .attributeModifier(new ReaderModalScrimModifier(this.navigationPreferences, this.appScheme,
+            readerAppColor('app.scrim.warmModal', this.appScheme), this.surfaceMaterial('controlPanel').native))
+          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
           .opacity(this.visualExpansionProgress)
           .accessibilityLevel('no').onClick((): void => this.closeDirectSheet());
       }
@@ -1968,7 +1980,8 @@ export struct ReaderControlPanel {
           .id('reader-control-motion-shell')
           .width(this.frame().shell.width).height(this.frame().shell.height)
           .position({ x: 0, y: this.frame().shell.y })
-          .attributeModifier(new ReaderPanelFrame('reader', this.appScheme))
+          .attributeModifier(new ReaderPanelFrame('reader', this.appScheme, false, undefined,
+            this.frame().visibility > 0 ? this.surfaceMaterial('controlPanel') : undefined))
           .opacity(this.frame().shell.opacity)
           // The shell is a visual actor only.  A full-size Block here steals
           // pointer hit testing from the mounted header/content actors below,
@@ -2110,6 +2123,7 @@ export struct ReaderControlPanel {
           sample: this.launchSample, sessionState: this.launchBusinessStatus,
           desiredPlaying: this.launchDesiredPlaying, countdown: this.launchCountdown,
           interactionEnabled: this.launchInteractionEnabled,
+          material: this.surfaceMaterial('sessionCapsule'),
           sourceSurfaceColor: readerAppColor(this.fixedIsland ? 'TOK_READ_CARD_EMPHASIS' : this.launchSourceKind === 'fullAutoPagePlayback' ?
             'TOK_SURFACE_PANEL_SOFT' : this.launchSourceKind === 'fullTtsPlayback' ? 'TOK_TTS_CARD' :
               this.launchSourceKind === 'quickTts' ? 'TOK_TTS_QUICK_CARD' : 'TOK_SURFACE_PANEL', this.appScheme),
@@ -2271,6 +2285,7 @@ export struct ReaderControlPanel {
   private readerMorePopupOptions(generation: number): CustomPopupOptions {
     const surface = this.readerMoreSurfaceSpec();
     const density = readerWindowMetrics().densityPixels;
+    const material = this.surfaceMaterial('popoverMenu');
     return {
       builder: (): void => { this.readerMoreMenu(generation); },
       placement: Placement.BottomRight,
@@ -2279,15 +2294,17 @@ export struct ReaderControlPanel {
       radius: surface.borderRadius,
       arrowPointPosition: ArrowPointPosition.CENTER,
       targetSpace: 8,
-      popupColor: readerAppColor(surface.surfaceBackgroundRole, this.appScheme),
+      popupColor: material.native ? Color.Transparent : readerAppColor(surface.surfaceBackgroundRole, this.appScheme),
       backgroundBlurStyle: BlurStyle.NONE,
-      borderWidth: surface.borderWidth,
-      borderLinearGradient: { colors: [
+      borderWidth: material.native ? 0 : surface.borderWidth,
+      borderLinearGradient: material.native ? undefined : { colors: [
         [readerAppColor(surface.surfaceBorderRole, this.appScheme), 0],
         [readerAppColor(surface.surfaceBorderRole, this.appScheme), 1],
       ] },
-      shadow: { radius: surface.shadowRadius * density, color: readerAppColor(surface.surfaceShadowRole, this.appScheme),
+      shadow: material.native ? undefined : { radius: surface.shadowRadius * density,
+        color: readerAppColor(surface.surfaceShadowRole, this.appScheme),
         offsetY: surface.shadowOffsetY * density },
+      systemMaterial: readerImmersiveMaterial(material),
       autoCancel: true, mask: true, focusable: true, followTransformOfTarget: true,
       transition: this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) : undefined,
       onStateChange: (event: PopupStateChangeParam): void => {

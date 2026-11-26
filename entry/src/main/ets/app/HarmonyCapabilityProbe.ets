@@ -1,4 +1,5 @@
 import deviceInfo from '@ohos.deviceInfo';
+import { uiMaterial } from '@kit.ArkUI';
 import lazy { hdsMaterial } from '@kit.UIDesignKit';
 import {
   harmonyDistributionSupportsApi24, probeHarmonyCapabilities, readHarmonyDistributionVersion,
@@ -29,6 +30,7 @@ export function readerHarmonyCapabilities(): ReaderHarmonyCapabilities {
         canIUse('SystemCapability.UIDesign.HDSComponent.Core'),
       material: nativeNavigationMaterial,
       grip: (): boolean => canIUse('SystemCapability.MultimodalAwareness.Motion'),
+      surfaceMaterial: (): boolean => uiMaterial.isImmersiveMaterialSupported(),
     });
   }
   return capabilities;

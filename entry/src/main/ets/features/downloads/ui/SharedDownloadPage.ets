@@ -54,6 +54,10 @@ import { ReaderInlineSelect } from '../../../ui/controls/ReaderInlineSelect';
 import { ReaderChoiceRow } from '../../../ui/controls/ReaderChoiceRow';
 import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfaces/ReaderActionMenuSurface';
 import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
+import { isReaderRealtimeBlurEnabled, resolveReaderModalScrimSpec, type ReaderNavigationPreferences }
+  from '../../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences, ReaderModalScrimModifier, readerSurfaceMaterialDecision }
+  from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSurfaceHeader';
 import { resolveDrawerSpec, resolveActionSheetSpec, readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
@@ -105,6 +109,9 @@ export struct SharedDownloadPage {
   private readonly rangeEndTarget: ReaderEditableTarget = new ReaderEditableTarget();
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') @Watch('syncOverlayChrome') private appThemeScheme: string = 'day';
+  @StorageLink('readerSystemScheme') @Watch('syncOverlayChrome') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') @Watch('syncOverlayChrome')
+  private appearancePreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
   @StorageLink('readerAppForeground') @Watch('onInputEligibilityChanged') private appForeground: boolean = true;
   @StorageLink('readerWindowMetricsRevision') @Watch('onListGeometryChanged') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onBooksChanged') books: DownloadBookView[] = [];
@@ -1207,7 +1214,11 @@ export struct SharedDownloadPage {
   private sheetOverlay(attachment: number = this.sheetActorAttachment, ownerGeneration: number = this.sheetActorOwner) {
     Stack({ alignContent: Alignment.Bottom }) {
       if (this.sheet.length > 0) {
-        Rect().width('100%').height('100%').fill(this.sheetScrimColor())
+        Stack().width('100%').height('100%')
+          .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
+            this.sheetScrimColor(), this.operationsSheetUsesNativeMaterial()))
+          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+          .accessibilityLevel('no')
           .onClick((): void => {
             if (this.uiInputIsCurrent() && this.sheetActorIsCurrent(attachment, ownerGeneration) &&
               this.sheetMaskReady && this.confirmation.length === 0)
@@ -1243,6 +1254,11 @@ export struct SharedDownloadPage {
   }
 
   private isOperationsSheet(): boolean { return this.sheet === 'book-actions' || this.sheet === 'chapter-actions'; }
+
+  private operationsSheetUsesNativeMaterial(): boolean {
+    return this.isOperationsSheet() &&
+      readerSurfaceMaterialDecision('modalSheet', this.appearancePreferences, this.appThemeScheme, this.systemScheme).native;
+  }
 
   private sheetScrimColor(): string {
     return readerAppColor(this.isOperationsSheet() ? resolveDrawerSpec('reader-action-sheet').scrimRole :
@@ -1689,7 +1705,11 @@ export struct SharedDownloadPage {
     Stack({ alignContent: Alignment.Center }) {
       // A nested confirmation keeps the sheet's existing backdrop in place.
       if (this.sheet.length === 0 && !this.sheetExitPending) {
-        Rect().width('100%').height('100%').fill(downloadVisualColor('scrim', this.appThemeScheme));
+        Stack().width('100%').height('100%')
+          .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
+            downloadVisualColor('scrim', this.appThemeScheme)))
+          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+          .accessibilityLevel('no');
       }
       Column() {
         ReaderDialogSurface({ specId: 'download-confirmation', body: (): void => { this.confirmationSurfaceBody(opening); } }).clip(true);
@@ -1997,7 +2017,9 @@ export struct SharedDownloadPage {
     const hasSheet = this.sheet.length > 0;
     const operationsSheet = this.isOperationsSheet();
     const sheetVisible = hasSheet && (!operationsSheet || this.confirmation.length === 0);
-    const scrim = hasSheet ? this.sheetScrimColor() : downloadVisualColor('scrim', scheme);
+    const scrim = resolveReaderModalScrimSpec(this.appearancePreferences, scheme,
+      hasSheet ? this.sheetScrimColor() : downloadVisualColor('scrim', scheme),
+      hasSheet && this.operationsSheetUsesNativeMaterial()).scrimColor;
     const pageInk = downloadVisualColor('ink', scheme);
     const statusPaper = readerScrimmedOpaqueColor(downloadVisualColor('paper', scheme), scrim);
     const statusInk = readerScrimmedOpaqueColor(pageInk, scrim);
@@ -2005,7 +2027,8 @@ export struct SharedDownloadPage {
     let navigationInk = statusInk;
     if (sheetVisible) {
       const drawer = resolveDrawerSpec('reader-action-sheet');
-      navigationPaper = readerAppColor(operationsSheet ? drawer.surfaceRole : 'app.surface.menuSolid', scheme);
+      const operationsRole = isReaderRealtimeBlurEnabled(this.appearancePreferences) ? drawer.surfaceRole : 'TOK_SURFACE_SOLID';
+      navigationPaper = readerAppColor(operationsSheet ? operationsRole : 'app.surface.menuSolid', scheme);
       navigationInk = operationsSheet ? readerAppColor(drawer.inkRole, scheme) : pageInk;
     }
     const style = new ReaderWindowChromeStyle(statusPaper, scheme === 'night' ? 'light' : 'dark', statusInk);

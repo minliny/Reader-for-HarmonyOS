@@ -9,6 +9,8 @@ import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
 import { readerPaperActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
+import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
 import { readerImportCardTransition, readerImportOverlayTransition } from '../../../ui/surfaces/ReaderImportDialogStyle';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
@@ -69,6 +71,8 @@ class LocalImportSelectionFocusFrame extends FrameCallback {
 export struct LocalImportDialog {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
 
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onPresentationChanged') state: LocalImportDialogState;
@@ -169,11 +173,9 @@ export struct LocalImportDialog {
 
   build() {
     Stack({ alignContent: Alignment.Center }) {
-      Row()
-        .width('100%')
-        .height('100%')
-        .backgroundColor(readerAppColor('app.scrim.modal', this.appThemeScheme))
-        .backdropBlur(6)
+      Stack().width('100%').height('100%')
+        .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
+          readerAppColor('app.scrim.modal', this.appThemeScheme)))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .accessibilityLevel('no');
 

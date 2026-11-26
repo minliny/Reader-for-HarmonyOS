@@ -1,3 +1,4 @@
+import { isReaderRealtimeBlurEnabled } from '../../app/HarmonyCapabilityPolicy';
 import { readerFontFamilyReady } from '../foundation/ReaderFonts';
 import type { UIContext } from '@ohos.arkui.UIContext';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
@@ -7,6 +8,8 @@ import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_REGULAR }
 import { TYPE_READER_CONTROL_BOOK_TITLE, TYPE_READER_CONTROL_CHAPTER_SOURCE,
   TYPE_READER_DIRECTORY_BOOK_TITLE, TYPE_READER_DIRECTORY_CHAPTER } from '../foundation/ReaderTypography';
 import { readerHeaderVeilBorder, readerHeaderVeilMaterial, readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences, readerImmersiveMaterial, readerSurfaceMaterialDecision } from '../surfaces/ReaderSurfaceMaterial';
 
 export type ReaderReadingTopBarVariant = 'reading' | 'directory' | 'manga';
 
@@ -78,6 +81,10 @@ export class ReaderReadingTopBarTitle implements AttributeModifier<TextAttribute
 @Component
 export struct ReaderReadingTopBar {
   @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
+  @StorageProp('readerAppScheme') private appScheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private navigationPreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @Prop variant: ReaderReadingTopBarVariant = 'reading';
   @Prop barWidth: number | string = '100%';
   @Prop barHeight: number = 54;
@@ -107,6 +114,10 @@ export struct ReaderReadingTopBar {
     return this.measuredHeight;
   }
 
+  private materialDecision(): ReaderSurfaceMaterialDecision {
+    return readerSurfaceMaterialDecision('chromeBar', this.navigationPreferences, this.appScheme, this.systemScheme);
+  }
+
   build() {
     Stack({ alignContent: Alignment.Center }) {
       Row({ space: this.variant === 'reading' ? 8 : 0 }) {
@@ -124,12 +135,16 @@ export struct ReaderReadingTopBar {
         .alignItems(VerticalAlign.Center).enabled(this.inputEnabled)
         .borderRadius(Math.max(0, this.resolvedHeight() / 2 - 1)).clip(this.variant === 'manga');
     }.width(this.barWidth).height(this.resolvedHeight())
-      .backgroundColor(Color.Transparent)
-      .backgroundEffect(readerHeaderVeilMaterial(true, this.scheme))
-      .border({ width: 1, color: readerHeaderVeilBorder(this.scheme) })
+      .backgroundColor(!this.materialDecision().native && !isReaderRealtimeBlurEnabled(this.navigationPreferences) ?
+        readerAppColor('TOK_READ_SURFACE', this.scheme) : Color.Transparent)
+      .backgroundEffect(this.materialDecision().native || !isReaderRealtimeBlurEnabled(this.navigationPreferences) ?
+        undefined : readerHeaderVeilMaterial(true, this.scheme))
+      .border(this.materialDecision().native ? { width: 0, color: Color.Transparent } :
+        { width: 1, color: readerHeaderVeilBorder(this.scheme) })
       .borderRadius(this.resolvedHeight() / 2)
       .clip(false)
-      .shadow(readerSurfaceElevation('raised', this.scheme))
+      .shadow(this.materialDecision().native ? undefined : readerSurfaceElevation('raised', this.scheme))
+      .systemMaterial(readerImmersiveMaterial(this.materialDecision()))
       .hitTestBehavior(HitTestMode.Default)
       .onTouch((): void => {});
   }

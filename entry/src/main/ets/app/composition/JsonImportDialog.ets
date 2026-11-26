@@ -11,6 +11,8 @@ import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
 import { registerReaderFonts } from '../../ui/foundation/ReaderFonts';
 import { TOK_SPACE_XS } from '../../ui/foundation/ReaderTokens';
 import { ReaderDialogSurface, DialogActionView } from '../../ui/surfaces/ReaderDialogSurface';
+import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../ui/surfaces/ReaderSurfaceMaterial';
+import type { ReaderNavigationPreferences } from '../HarmonyCapabilityPolicy';
 import { readerImportCardTransition, readerImportOverlayTransition } from '../../ui/surfaces/ReaderImportDialogStyle';
 import { MESSAGE_BODY, MESSAGE_META } from '../../ui/foundation/ReaderMessageStyle';
 import { FrameCallback } from '@kit.ArkUI';
@@ -41,6 +43,8 @@ export struct JsonImportDialog {
   private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
   private readonly editingScroller: Scroller = new Scroller();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @StorageLink('readerAppForeground') private foreground: boolean = true;
   @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
 
@@ -114,8 +118,10 @@ export struct JsonImportDialog {
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Row().width('100%').height('100%').backgroundColor(readerAppColor('app.scrim.modal', this.appThemeScheme))
-        .backdropBlur(6).accessibilityLevel('no')
+      Stack().width('100%').height('100%')
+        .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
+          readerAppColor('app.scrim.modal', this.appThemeScheme)))
+        .accessibilityLevel('no')
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .onClick((): void => this.dismissIfCurrent());
       Scroll(this.editingScroller) {

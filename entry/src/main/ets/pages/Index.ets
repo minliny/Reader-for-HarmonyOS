@@ -81,7 +81,7 @@ import type {
 import { RssJourneyPresentation, type RssRoute } from '../features/rss/presentation/RssJourneyPresentation';
 import { RssJourneySurface } from '../features/rss/ui/RssJourneySurface';
 import { SettingsPresentation, type SettingsRoute } from '../features/settings/presentation/SettingsPresentation';
-import { SettingsScenes, type SettingsDestination } from '../app/composition/SettingsScenes';
+import { SettingsScenes, settingsDestinationAllowedInSection, type SettingsDestination } from '../app/composition/SettingsScenes';
 import { ReaderWideSettingsShell } from '../features/settings/ui/ReaderWideSettingsShell';
 import type { SettingsPane } from '../features/settings/presentation/SettingsNavigationItems';
 import { ReaderLibraryAcquisitionBinding } from '../app/composition/ReaderLibraryAcquisitionBinding';
@@ -290,7 +290,8 @@ struct Index {
     // Keep the last right-hand pane mounted while the whole Settings tab leaves.
     const pane = this.navigationOwner.settingsPane();
     if (pane !== undefined) {
-      const lane: ReaderRouteSurfaceKey = pane === 'general' ? 'settings-general' : pane === 'about' ? 'settings-about' :
+      const lane: ReaderRouteSurfaceKey = pane === 'general' ? 'settings-general' :
+        pane === 'backup' ? 'settings-backup' : pane === 'about' ? 'settings-about' :
         snapshot.route === 'sourceTools' ? 'sourceTools' : pane;
       if (lane !== this.wideSettingsLane) {
         this.wideSettingsMotion = snapshot.route === this.route ? 'tab' : this.navigationOwner.routeMotion();
@@ -1481,12 +1482,13 @@ struct Index {
 
   private wideSettingsPane(): SettingsPane | undefined {
     if (!this.expandedLayout()) return undefined;
-    if (this.route === 'settings') return this.settingsSection === 'about' ? 'about' : 'general';
+    if (this.route === 'settings') return this.settingsSection === 'home' ? 'general' : this.settingsSection;
     return this.navigationOwner.settingsPane();
   }
 
   private wideSettingsSelection(): SettingsPane {
     if (this.wideSettingsLane === 'settings-general') return 'general';
+    if (this.wideSettingsLane === 'settings-backup') return 'backup';
     if (this.wideSettingsLane === 'settings-about') return 'about';
     if (this.wideSettingsLane === 'sourceTools') return 'source';
     return this.wideSettingsLane as SettingsPane;
@@ -1504,7 +1506,8 @@ struct Index {
       this.sourceNavigation.returnToManagement();
       return;
     }
-    if (pane === 'general' || pane === 'about') {
+    if (this.wideSettingsPane() === pane) return;
+    if (pane === 'general' || pane === 'backup' || pane === 'about') {
       this.settingsNavigation.returnToSettings(pane);
     } else {
       this.settingsNavigation.returnToSettings('home', false);
@@ -1537,6 +1540,8 @@ struct Index {
   private wideSettingsContent(route: ReaderRouteSurfaceKey) {
     if (route === 'settings-general') {
       this.settingsContent('settings', true, 'general');
+    } else if (route === 'settings-backup') {
+      this.settingsContent('settings', true, 'backup');
     } else if (route === 'settings-about') {
       this.settingsContent('settings', true, 'about');
     } else {
@@ -1573,7 +1578,7 @@ struct Index {
     } else if (route === 'downloads') {
       this.downloadsContent(embeddedWide);
     } else if (route === 'rulesManagement') {
-      this.rulesManagementContent();
+      this.rulesManagementContent(embeddedWide);
     } else if (route === 'source' || route === 'sourceTools') {
       this.sourceJourneyContent(route === 'sourceTools', embeddedWide);
     } else if (isReaderProductSurfaceEnabled('sync') && route === 'sync') {
@@ -1657,7 +1662,7 @@ struct Index {
   }
 
   @Builder
-  private settingsContent(route: SettingsRoute, embeddedWide: boolean = false, section?: 'general' | 'about') {
+  private settingsContent(route: SettingsRoute, embeddedWide: boolean = false, section?: 'general' | 'backup' | 'about') {
     SettingsScenes({
       presentation: this.settingsPresentation, route, section: section ?? this.settingsSection,
       active: this.settingsPaintCurrent(route, section),
@@ -1678,14 +1683,15 @@ struct Index {
         else this.libraryJourney.returnToBookshelf();
       },
       onOpen: (destination: SettingsDestination): void => {
-        if (this.route === 'settings' && this.settingsSection === 'home' && this.currentReadingRuntime() !== undefined) {
+        if (this.route === 'settings' && settingsDestinationAllowedInSection(this.settingsSection, destination) &&
+          this.currentReadingRuntime() !== undefined) {
           this.openSettingsDestination(destination);
         }
       },
     });
   }
 
-  private settingsPaintCurrent(route: SettingsRoute, section: 'general' | 'about' | undefined): boolean {
+  private settingsPaintCurrent(route: SettingsRoute, section: SettingsSection | undefined): boolean {
     return this.route === route && (section === undefined || this.wideSettingsPane() === section);
   }
 
@@ -1702,19 +1708,19 @@ struct Index {
   }
 
   @Builder
-  private rulesManagementContent() {
+  private rulesManagementContent(embeddedWide: boolean = false) {
     ForEach([this.navigationGeneration], (generation: number): void => {
-      this.rulesManagementSurface(this.settingsNavigation.rulesIdentity(generation, this.detailShelfAdmissionMount));
+      this.rulesManagementSurface(this.settingsNavigation.rulesIdentity(generation, this.detailShelfAdmissionMount), embeddedWide);
     }, (generation: number): string => generation.toString());
   }
 
   @Builder
-  private rulesManagementSurface(identity: string) {
+  private rulesManagementSurface(identity: string, embeddedWide: boolean) {
     RulesManagementSurface({ presentation: this.rulesPresentation, identity,
-      inputEnabled: this.rulesManagementInputAllowed(),
+      inputEnabled: this.rulesManagementInputAllowed(), embeddedWide,
       onBack: (): void => this.settingsNavigation.returnFromRulesManagement(),
       onImport: (): void => this.jsonImportPresentation.openRuleBundle(this.rulesPresentation, identity,
-        rulesManagementImportFocus(identity)),
+        rulesManagementImportFocus(identity, embeddedWide)),
     }).enabled(this.jsonImportPresentation.opening === undefined)
       .accessibilityLevel(this.jsonImportPresentation.opening === undefined ? 'auto' : 'no-hide-descendants');
   }

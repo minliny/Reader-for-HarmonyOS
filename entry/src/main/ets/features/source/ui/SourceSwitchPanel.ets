@@ -5,6 +5,9 @@ import type { SourceSwitchPresentation } from '../presentation/SourceSwitchPrese
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { resolveDrawerSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { defaultNavigationPreferences, ReaderModalScrimModifier,
+  readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import type { SourceSwitchCandidate } from '../application/SourceSwitchGateway';
 import type { SourceSwitchPanelState } from '../presentation/SourceSwitchPresentationState';
@@ -22,6 +25,9 @@ class SourceSwitchSurfaceFrame extends FrameCallback {
 @Component
 export struct SourceSwitchPanel {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @StorageLink('readerAppForeground') private appForeground: boolean = true;
   @Prop @Watch('surfaceChanged') scopeId: number = 0;
   @Prop @Watch('surfaceChanged') showing: boolean = true;
@@ -98,6 +104,11 @@ export struct SourceSwitchPanel {
     return this.mounted && this.acceptsInput() && scopeId === this.scopeId;
   }
 
+  private drawerUsesNativeMaterial(): boolean {
+    // The drawer can remain visible as it transitions to switching progress.
+    return readerSurfaceMaterialDecision('modalSheet', this.appearancePreferences, this.appThemeScheme, this.systemScheme).native;
+  }
+
   build() {
     ForEach(this.attachment > 0 ? [this.attachment] : [], (attachment: number): void => {
       this.panel(this.scopeId, attachment);
@@ -111,8 +122,10 @@ export struct SourceSwitchPanel {
       Stack()
         .width('100%')
         .height('100%')
-        .backgroundColor(readerAppColor(resolveDrawerSpec('source-switch-drawer').scrimRole, this.appThemeScheme))
-        .backdropBlur(6)
+        .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
+          readerAppColor(resolveDrawerSpec('source-switch-drawer').scrimRole, this.appThemeScheme), this.drawerUsesNativeMaterial()))
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+        .accessibilityLevel('no')
         .transition(TransitionEffect.OPACITY.animation(this.reduceMotion ?
           readerMotionReducedFadeParam() : motionAnimateParam('app.sheet.scrim')),
           (transitionIn: boolean): void => this.surface?.surfaceTransitionFinished(attachment, scopeId, 'scrim', transitionIn))

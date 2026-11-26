@@ -1,3 +1,5 @@
+import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { LengthMetrics } from '@kit.ArkUI';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
@@ -61,6 +63,8 @@ const KEYWORDS: string[] = ['我的', '斗破', '海贼'];
 
 @Component
 export struct SourceV9TransferPage {
+  @StorageProp('readerNavigationAppearancePreferences')
+  private appearancePreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
   @StorageLink('readerWindowMetricsRevision') @Watch('refreshLayout') private windowRevision: number = 0;
@@ -1191,7 +1195,10 @@ export struct SourceV9TransferPage {
 
   @Builder
   private scrim() {
-    Rect().width('100%').height('100%').fill(this.color('app.scrim.warmModal'))
+    Stack().width('100%').height('100%')
+      .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
+        this.color('app.scrim.warmModal')))
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
       .accessibilityLevel('no').onClick((): void => { if (this.inputCurrent()) this.consumeBack(); });
   }
 

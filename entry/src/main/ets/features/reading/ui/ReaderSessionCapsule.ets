@@ -8,6 +8,8 @@ import { readerSessionCapsuleColor } from './ReaderSessionCapsulePaint';
 import type { UIContext } from '@ohos.arkui.UIContext';
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
 import { READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT } from './ReaderPageChromeLayout';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
+import { defaultNavigationPreferences, readerImmersiveMaterial, readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 
 const AUTO_PAGE_CAPSULE_MIN_WIDTH = 96;
 const TTS_CAPSULE_MIN_WIDTH = 94;
@@ -88,18 +90,28 @@ export class ReaderSessionCapsuleFrame implements AttributeModifier<CommonAttrib
   private readonly shadow: string;
   private readonly density: number;
   private readonly pressed: boolean;
+  private readonly material: ReaderSurfaceMaterialDecision | undefined;
 
-  constructor(scheme: string, surface: string, border: string, shadow: string, density: number = 1, pressed: boolean = false) {
+  constructor(scheme: string, surface: string, border: string, shadow: string, density: number = 1, pressed: boolean = false,
+    material?: ReaderSurfaceMaterialDecision) {
     this.scheme = scheme;
     this.surface = surface;
     this.border = border;
     this.shadow = shadow;
     this.density = density;
     this.pressed = pressed;
+    this.material = material;
   }
 
   applyNormalAttribute(instance: CommonAttribute): void {
+    if (this.material?.native === true) {
+      instance.backgroundEffect(undefined).backgroundColor(Color.Transparent)
+        .border({ width: 0, color: Color.Transparent }).borderRadius(READER_SESSION_CAPSULE_RADIUS)
+        .shadow(undefined).systemMaterial(readerImmersiveMaterial(this.material));
+      return;
+    }
     const fill = readerSessionCapsuleColor('surface', this.scheme, this.surface);
+    instance.systemMaterial(undefined);
     new ReaderPressFeedback(fill, this.scheme, READER_SESSION_CAPSULE_RADIUS,
       READER_SESSION_CAPSULE_RADIUS, true, this.pressed).applyNormalAttribute(instance);
     instance.border({ width: 1, color: readerSessionCapsuleColor('border', this.scheme, this.border) })
@@ -206,6 +218,9 @@ export function readerSessionCapsuleAccessibility(
 @Component
 export struct ReaderSessionCapsule {
   @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private navigationPreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @Prop type: ReaderSessionCapsuleType = 'autoPage';
   @Prop sessionState: ReaderSessionCapsuleState = 'playing';
   @Prop desiredPlaying: boolean = true;
@@ -248,7 +263,8 @@ export struct ReaderSessionCapsule {
     }
     .width(this.finalWidth()).height(this.metrics().paintHeight)
     .attributeModifier(new ReaderSessionCapsuleFrame(this.themeScheme, this.surfaceColor, this.surfaceBorderColor, this.shadowColor,
-      this.metricsRevision < 0 ? 1 : readerWindowMetrics().densityPixels, this.interactionEnabled && this.pressPointer >= 0))
+      this.metricsRevision < 0 ? 1 : readerWindowMetrics().densityPixels, this.interactionEnabled && this.pressPointer >= 0,
+      readerSurfaceMaterialDecision('sessionCapsule', this.navigationPreferences, this.themeScheme, this.systemScheme)))
     .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
     }
     .padding(0)

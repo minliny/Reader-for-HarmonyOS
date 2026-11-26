@@ -16,7 +16,8 @@ const PREVIEW_END_TIMEOUT_MS = 1000;
 
 type ReaderRouteSurfaceMotion = ReaderRouteMotionKind | 'none';
 export type ReaderRouteSurfaceKey = ReaderRoute |
-  'settings-home' | 'settings-general' | 'settings-about' | 'settings-developer' | 'settings-message-preview';
+  'settings-home' | 'settings-general' | 'settings-backup' | 'settings-about' | 'settings-licenses' |
+  'settings-developer' | 'settings-message-preview';
 
 interface ReaderRoutePaint {
   from: string;

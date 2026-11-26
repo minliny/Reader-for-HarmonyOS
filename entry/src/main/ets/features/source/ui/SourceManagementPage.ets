@@ -6,6 +6,7 @@ import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../../../ui/foundation/Reade
 import { readerLayoutCarrierResponseRegion } from '../../../ui/layout/ReaderPageNativeAttributes';
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { readerHarmonyApi24 } from '../../../app/HarmonyCapabilityProbe';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
@@ -59,6 +60,8 @@ import { sourceVerificationOfflineDetectIdentity, sourceVerificationOpening, sou
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { readerSurfaceElevation, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { defaultNavigationPreferences, readerImmersiveMaterial,
+  readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { readerFloatingBarBottomInset } from '../../../ui/layout/ReaderFloatingBarMetrics';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
@@ -168,6 +171,9 @@ export struct SourceManagementPage {
   private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding('reader-source-list');
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @StorageLink('readerAppForeground') @Watch('onToolsFocusContextChanged') private appForeground: boolean = true;
 
   @StorageLink('readerWindowMetricsRevision') @Watch('onGeometryInputsChanged') private readerWindowMetricsRevision: number = 0;
@@ -960,6 +966,10 @@ export struct SourceManagementPage {
       TransitionEffect.OPACITY.animation(readerMotionAnimateParam('dropdown.menu.collapse', false)));
   }
 
+  private moreMenuMaterial(): ReaderSurfaceMaterialDecision {
+    return readerSurfaceMaterialDecision('popoverMenu', this.appearancePreferences, this.appThemeScheme, this.systemScheme);
+  }
+
   @Builder
   private sourceMoreMenu() {
     if (this.moreMenuOpen) {
@@ -975,14 +985,19 @@ export struct SourceManagementPage {
             onAction: (id: string): void => this.chooseMoreAction(id) });
         }.width('100%').padding({ top: 6, bottom: 6 })
           .borderRadius(resolvePopupSpec('source-v9-more-menu').borderRadius).clip(true)
-          .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
-          .border({ width: 1, color: readerAppColor('app.border.menu', this.appThemeScheme) })
-          .shadow(readerSurfaceElevation('popover', this.appThemeScheme));
-        Row().width(12).height(12).rotate({ angle: 45 })
-          .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
-          .border({ width: { top: 1, left: 1 }, color: readerAppColor('app.border.menu', this.appThemeScheme) })
-          .position({ x: this.morePointerX(), y: -6 }).zIndex(1)
-          .hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+          .backgroundEffect(undefined)
+          .backgroundColor(this.moreMenuMaterial().native ? Color.Transparent : readerAppColor('app.surface.menuSolid', this.appThemeScheme))
+          .border(this.moreMenuMaterial().native ? { width: 0, color: Color.Transparent } :
+            { width: 1, color: readerAppColor('app.border.menu', this.appThemeScheme) })
+          .shadow(this.moreMenuMaterial().native ? undefined : readerSurfaceElevation('popover', this.appThemeScheme))
+          .systemMaterial(readerImmersiveMaterial(this.moreMenuMaterial()));
+        if (!this.moreMenuMaterial().native) {
+          Row().width(12).height(12).rotate({ angle: 45 })
+            .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
+            .border({ width: { top: 1, left: 1 }, color: readerAppColor('app.border.menu', this.appThemeScheme) })
+            .position({ x: this.morePointerX(), y: -6 }).zIndex(1)
+            .hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+        }
       }.width(this.moreWidth()).clip(false).position({ x: this.moreLeft(), y: this.moreTop() })
         .transition(this.moreTransition());
     }

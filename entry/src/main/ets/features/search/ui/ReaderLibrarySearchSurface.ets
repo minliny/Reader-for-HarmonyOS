@@ -9,7 +9,8 @@ import inputMethod from '@ohos.inputMethod';
 import { PathShape } from '@ohos.arkui.shape';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
-import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
+import { isReaderRealtimeBlurEnabled } from '../../../app/HarmonyCapabilityPolicy';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
 import { readerVisualSafeTop, readerVisualSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
 import { ReaderFixedHeaderHost } from '../../../ui/layout/ReaderFixedHeaderHost';
 import { ReaderHeaderFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
@@ -23,6 +24,8 @@ import { resolveSearchHeaderField, SearchHeaderFieldGeometry } from '../../../ui
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerSurfaceElevation, readerHeaderVeilMaterial, readerHeaderVeilBorder } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { defaultNavigationPreferences, readerImmersiveMaterial, ReaderModalScrimModifier,
+  readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderRaisedShape, resolveReaderRaisedShape } from '../../../ui/layout/ReaderRaisedShape';
 import { motionSegment } from '../../../ui/foundation/MotionTimeline';
 import { motionAnimateParam, motionSpecGet, MotionSpecEntry } from '../../../ui/foundation/MotionSpec';
@@ -88,8 +91,9 @@ export struct ReaderLibrarySearchSurface {
   private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding('reader-library-search-surface');
   private readonly editingScroller: Scroller = new Scroller();
   @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
   @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
-    { override: 'unset', reduceTransparency: false };
+    defaultNavigationPreferences();
   @StorageLink('readerWindowMetricsRevision') @Watch('metricsChanged') private metricsRevision: number = 0;
   @ObjectLink @Watch('historyChanged') model: ReaderLibrarySearchModel;
   @Prop @Watch('modeChanged') mode: LibrarySearchMode = 'idle';
@@ -1050,6 +1054,10 @@ export struct ReaderLibrarySearchSurface {
     return (this.mode === 'idle' && !this.searchMounted) ||
       (this.mode === 'results' && this.resultsProgress() > .01);
   }
+  private headerMaterial(): ReaderSurfaceMaterialDecision | undefined {
+    return this.headerVeil() ?
+      readerSurfaceMaterialDecision('chromeBar', this.appearancePreferences, this.scheme, this.systemScheme) : undefined;
+  }
   private headerSurfaceGeometryKey(): string {
     const metrics = ReaderWindowCoordinator.metrics();
     return JSON.stringify([metrics.windowRect.width, this.horizontalInset(true), this.horizontalInset(false),
@@ -1134,11 +1142,18 @@ export struct ReaderLibrarySearchSurface {
       }.width('100%')
         .borderRadius(Math.max(0, this.headerMaterialRadius() - this.spec.borderWidth)).clip(true);
     }.width('100%').clip(false)
-      .backgroundColor(this.headerVeil() ? Color.Transparent : readerAppColor('app.search.panelSurface', this.scheme))
-      .backgroundEffect(this.headerVeil() ? readerHeaderVeilMaterial(this.headerScrolled, this.scheme) : undefined)
-      .border({ width: this.spec.borderWidth, color: this.headerVeil() ? readerHeaderVeilBorder(this.scheme) : this.panelBorderColor() })
+      .padding(this.headerMaterial()?.native ? this.spec.borderWidth : 0)
+      .backgroundColor(this.headerVeil() && isReaderRealtimeBlurEnabled(this.appearancePreferences) ? Color.Transparent :
+        readerAppColor('app.search.panelSurface', this.scheme))
+      .backgroundEffect(this.headerVeil() && !this.headerMaterial()?.native &&
+        isReaderRealtimeBlurEnabled(this.appearancePreferences) ?
+        readerHeaderVeilMaterial(this.headerScrolled, this.scheme) : undefined)
+      .border({ width: this.headerMaterial()?.native ? 0 : this.spec.borderWidth,
+        color: this.headerMaterial()?.native ? Color.Transparent :
+          this.headerVeil() ? readerHeaderVeilBorder(this.scheme) : this.panelBorderColor() })
       .borderRadius(this.headerMaterialRadius()).hitTestBehavior(HitTestMode.Default)
-      .shadow(this.headerStackShadow())
+      .shadow(this.headerMaterial()?.native ? undefined : this.headerStackShadow())
+      .systemMaterial(readerImmersiveMaterial(this.headerMaterial()))
       .onAreaChange(this.headerSurfaceAreaChange());
   }
   private headerStackShadow(): ShadowOptions {
@@ -1182,18 +1197,20 @@ export struct ReaderLibrarySearchSurface {
           (this.mode === 'input' && this.inputInteractive() && this.model.sourceRecoveryVisible) ?
           'auto' : 'no-hide-descendants');
       // Keep backdrop clicks behind the recovery actions while dimming the recovery surface.
-      Column().width('100%').height('100%')
-        .backgroundColor(this.mode === 'input' && this.model.sourceRecoveryVisible ?
-          Color.Transparent : readerAppColor('app.scrim.modal', this.scheme))
-        .backdropBlur(this.appearancePreferences.reduceTransparency || this.scrimProgress() <= .01 ||
-          (this.mode === 'input' && this.model.sourceRecoveryVisible) ? 0 : 6)
+      Stack().width('100%').height('100%')
+        .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
+          this.mode === 'input' && this.model.sourceRecoveryVisible ? Color.Transparent :
+            readerAppColor('app.scrim.modal', this.scheme), this.headerMaterial()?.native === true,
+          this.scrimProgress() > .01 && !(this.mode === 'input' && this.model.sourceRecoveryVisible)))
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .opacity(this.scrimProgress() * this.reducedSearchOpacity).zIndex(1)
         .hitTestBehavior(this.mode === 'input' && this.scrimProgress() > .01 ? HitTestMode.Default : HitTestMode.None)
         .onClick(this.backAction(this.identity, this.navigationGeneration, this.mounting));
       if (this.mode === 'input' && this.model.sourceRecoveryVisible) {
-        Column().id('reader-library-search-recovery-scrim').width('100%').height('100%')
-          .backgroundColor(readerAppColor('app.scrim.modal', this.scheme))
-          .backdropBlur(this.appearancePreferences.reduceTransparency || this.scrimProgress() <= .01 ? 0 : 6)
+        Stack().id('reader-library-search-recovery-scrim').width('100%').height('100%')
+          .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
+            readerAppColor('app.scrim.modal', this.scheme), this.headerMaterial()?.native === true, this.scrimProgress() > .01))
+          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
           .opacity(this.scrimProgress() * this.reducedSearchOpacity).zIndex(3).hitTestBehavior(HitTestMode.None);
       }
       Column() {

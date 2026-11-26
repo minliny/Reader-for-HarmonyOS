@@ -3,6 +3,8 @@ import { FrameCallback } from '@kit.ArkUI';
 import { BookshelfGroupPresentation } from '../presentation/BookshelfGroupPresentation';
 import { BookshelfGroupSelector } from './BookshelfGroupSelector';
 import { ReaderDialogSurface } from '../../../ui/surfaces/ReaderDialogSurface';
+import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
@@ -21,6 +23,8 @@ class BookshelfGroupFocusFrame extends FrameCallback {
 @Component
 export struct BookshelfGroupDialog {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @StorageLink('readerAppForeground') private foreground: boolean = true;
   @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
   @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
@@ -41,8 +45,9 @@ export struct BookshelfGroupDialog {
   @Builder
   private surface(identity: string) {
     Stack({ alignContent: Alignment.Center }) {
-      Row().width('100%').height('100%').backgroundColor(readerAppColor('app.scrim.modal', this.appThemeScheme))
-        .backdropBlur(6)
+      Stack().width('100%').height('100%')
+        .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
+          readerAppColor('app.scrim.modal', this.appThemeScheme)))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .accessibilityLevel('no')
         .onClick((): void => { if (this.groupInputIsCurrent(identity)) this.presentation.dismiss(identity); });

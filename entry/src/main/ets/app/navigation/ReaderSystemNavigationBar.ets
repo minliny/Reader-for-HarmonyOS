@@ -1,14 +1,18 @@
 import lazy { HdsTabs, hdsMaterial } from '@kit.UIDesignKit';
 import type { HdsTabsFloatingStyle } from '@kit.UIDesignKit';
 import { MAIN_TABS, readerMainTabIconResource, type MainTabDef } from './ReaderMainTabs';
-import type { ReaderNavigationAppearance } from '../HarmonyCapabilityPolicy';
+import type { ReaderNavigationAppearance, ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../HarmonyCapabilityPolicy';
 import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
+import { defaultNavigationPreferences, readerImmersiveMaterial, readerSurfaceMaterialDecision } from '../../ui/surfaces/ReaderSurfaceMaterial';
 
 /** HDS renders the bounded navigation bar. The shell's routed page and its
  * scroller stay mounted as siblings of this navigation-only host. */
 @Component
 export struct ReaderSystemNavigationBar {
   @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences')
+  private navigationAppearance: ReaderNavigationPreferences = defaultNavigationPreferences();
   @Prop current: string = 'bookshelf';
   @Prop appearance: ReaderNavigationAppearance = 'adaptive';
   @Prop surfaceWidth: number = 0;
@@ -59,10 +63,19 @@ export struct ReaderSystemNavigationBar {
     }.width(this.surfaceWidth).height(this.surfaceHeight)
     .vertical(true).barPosition(BarPosition.Start).barOverlap(false).barMode(BarMode.Fixed)
     .barWidth(this.surfaceWidth).barHeight(this.surfaceHeight)
-    .barBackgroundBlurStyle(BlurStyle.COMPONENT_THICK)
+    .barBackgroundColor(Color.Transparent)
+    .barBackgroundBlurStyle(this.railMaterial()?.native ? BlurStyle.NONE : BlurStyle.COMPONENT_THICK)
+    .backgroundEffect(undefined).backgroundColor(Color.Transparent)
+    .border({ width: 0, color: Color.Transparent }).shadow(undefined)
+    .systemMaterial(readerImmersiveMaterial(this.railMaterial()))
     .scrollable(false).animationDuration(0).enabled(this.inputEnabled)
     .onContentWillChange(this.selectionHandler(this.current))
     .onTabBarClick(this.currentTapHandler(this.current));
+  }
+
+  private railMaterial(): ReaderSurfaceMaterialDecision | undefined {
+    return this.appearance === 'immersive' ?
+      readerSurfaceMaterialDecision('chromeBar', this.navigationAppearance, this.scheme, this.systemScheme) : undefined;
   }
 
   private selectedIndex(): number {

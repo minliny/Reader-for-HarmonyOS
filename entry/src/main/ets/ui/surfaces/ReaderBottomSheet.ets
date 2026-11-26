@@ -1,3 +1,4 @@
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
 import { READER_LAYOUT_DEBUG_BUILD, newReaderLayoutModalId, publishReaderLayoutModal } from '../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantTag } from '../../ui/layout/LayoutInvariantEvaluator';
 import { READER_REDUCED_FADE_MS, READER_SHEET_CLOSE_MS } from '../foundation/ProductMotionTiming';
@@ -7,12 +8,17 @@ import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeTop, readerVisualSafeBottom, readerVisualSafeLeft, readerVisualSafeRight }
   from '../foundation/ReaderWindowMetrics';
 import { readerSurfaceElevation, resolveSheetSpec, type SheetSpecId, type SheetSurfaceSpec } from './ReaderSurfaceSpecs';
+import { defaultNavigationPreferences, readerImmersiveMaterial, ReaderModalScrimModifier,
+  readerSurfaceMaterialDecision } from './ReaderSurfaceMaterial';
 
 /** The cover owns native modal isolation and system Back. The scrim and
  * independently timed sheet are drawn over the live page inside that cover. */
 @Component
 export struct ReaderBottomSheet {
   @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @Prop @Watch('onVisibilityChanged') visible: boolean = false;
   @Prop specId: SheetSpecId = 'bookshelf-book-action';
   @Prop surfaceWidth: number = 390;
@@ -110,9 +116,10 @@ export struct ReaderBottomSheet {
   private sheetCoverContent() {
     Stack({ alignContent: Alignment.Bottom }) {
       if (this.frameVisible) {
-        Rect().width('100%').height('100%')
-          .fill(readerAppColor(this.spec().hostMaskRole, this.scheme))
-          .backdropBlur(6)
+        Stack().width('100%').height('100%')
+          .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
+            readerAppColor(this.spec().hostMaskRole, this.scheme), this.frameMaterial().native))
+          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
           .accessibilityLevel('no')
           .onClick((): void => {
             if (this.mounted && this.visible && this.opened) this.onRequestClose();
@@ -139,10 +146,13 @@ export struct ReaderBottomSheet {
       .constraintSize({ maxHeight: this.frameMaxHeight() })
       .padding({ bottom: this.safeBottom() })
       .translate({ x: this.safeCenterOffset() })
-      .backgroundColor(readerAppColor(this.spec().hostBackgroundRole, this.scheme))
-      .border({ width: { top: this.spec().hostBorderWidth }, color: readerAppColor(this.spec().hostBorderRole, this.scheme) })
+      .backgroundEffect(undefined)
+      .backgroundColor(this.frameMaterial().native ? Color.Transparent : readerAppColor(this.spec().hostBackgroundRole, this.scheme))
+      .border(this.frameMaterial().native ? { width: 0, color: Color.Transparent } :
+        { width: { top: this.spec().hostBorderWidth }, color: readerAppColor(this.spec().hostBorderRole, this.scheme) })
       .borderRadius({ topLeft: this.spec().borderRadius, topRight: this.spec().borderRadius })
-      .shadow(this.frameShadow()).clip(true)
+      .shadow(this.frameMaterial().native ? undefined : this.frameShadow())
+      .systemMaterial(readerImmersiveMaterial(this.frameMaterial())).clip(true)
       .hitTestBehavior(HitTestMode.Default).focusable(true).focusScopeId(this.nativeId, true, false)
       .onAppear((): void => { this.frameAttached = true; })
       .transition(this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) :
@@ -166,6 +176,10 @@ export struct ReaderBottomSheet {
   }
 
   private spec(): SheetSurfaceSpec { return resolveSheetSpec(this.specId); }
+
+  private frameMaterial(): ReaderSurfaceMaterialDecision {
+    return readerSurfaceMaterialDecision('modalSheet', this.appearancePreferences, this.scheme, this.systemScheme);
+  }
 
   private frameMaxHeight(): Length {
     this.metricsRevision;
