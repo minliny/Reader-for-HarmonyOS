@@ -1,6 +1,6 @@
 {
-  "coreCommit": "83319441e4fb9f395131eef965f889ccc9e54ff3",
-  "coreInputFingerprint": "3f18fa16476c3b2fb2f099ba07e9678586e63c1faa4a1d54d975c58d900c8faa",
+  "coreCommit": "d83a0359df41d93d60c920063d27ccb81b70c65c",
+  "coreInputFingerprint": "58dbab1eebe2853693697b55f52b3de760d89af5311adee53f314b2dee4699ec",
   "abis": ["arm64-v8a"],
   "rustTarget": "aarch64-unknown-linux-ohos",
   "rustToolchain": "1.97.1",
