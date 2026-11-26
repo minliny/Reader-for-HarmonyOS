@@ -2,15 +2,18 @@ import type { DictRuleDraft, ManagedRuleSubscription, ReplaceRuleDraft, RuleSubs
 import { RulesManagementPage } from './RulesManagementPage';
 import { RulesManagementPresentation } from '../presentation/RulesManagementPresentation';
 import type { JsonImportFocusTargets } from '../../../app/composition/JsonImportPresentation';
+import { RULES_MANAGEMENT_SETTINGS_ACTION_ID } from '../presentation/SettingsNavigationItems';
 
-export function rulesManagementImportFocus(identity: string): JsonImportFocusTargets {
-  return { preferred: `reader-rules-import:${identity}`, fallback: `reader-rules-back:${identity}` };
+export function rulesManagementImportFocus(identity: string, embeddedWide: boolean = false): JsonImportFocusTargets {
+  return { preferred: `reader-rules-import:${identity}`,
+    fallback: embeddedWide ? RULES_MANAGEMENT_SETTINGS_ACTION_ID : `reader-rules-back:${identity}` };
 }
 
 @Component
 export struct RulesManagementSurface {
   @ObjectLink presentation: RulesManagementPresentation;
   @Prop inputEnabled: boolean = true;
+  @Prop embeddedWide: boolean = false;
   identity: string = '';
   onBack: () => void = (): void => {};
   onImport: () => void = (): void => {};
@@ -18,6 +21,7 @@ export struct RulesManagementSurface {
   build() {
     RulesManagementPage({
       snapshot: this.presentation.snapshot,
+      embeddedWide: this.embeddedWide,
       importFocusId: rulesManagementImportFocus(this.identity).preferred,
       backFocusId: rulesManagementImportFocus(this.identity).fallback,
       inputEnabled: this.inputEnabled,

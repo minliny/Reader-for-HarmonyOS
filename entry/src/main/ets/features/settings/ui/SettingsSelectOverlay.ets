@@ -12,10 +12,13 @@ import {
   TYPE_SETTINGS_SELECT_TITLE,
 } from '../../../ui/foundation/ReaderTypography';
 import { PopupSurfaceSpec, readerSurfaceElevation, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { defaultNavigationPreferences, readerImmersiveMaterial, ReaderModalScrimModifier,
+  readerSurfaceMaterialDecision } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../../app/HarmonyCapabilityPolicy';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 
-export type SettingsSelectField = 'language' | 'startup' | 'animation';
+export type SettingsSelectField = 'language' | 'startup';
 
 const PHONE_HORIZONTAL_INSET = 14;
 const PHONE_BOTTOM_INSET = 20;
@@ -40,6 +43,9 @@ const PHONE_SHEET_CORNERS: BorderRadiuses = { topLeft: 24, topRight: 24 };
 @Component
 export struct SettingsSelectOverlay {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerSystemScheme') private systemScheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
+    defaultNavigationPreferences();
   @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
@@ -99,14 +105,18 @@ export struct SettingsSelectOverlay {
     if (!entering && this.mounted && !this.visible && identity === this.selectionId) this.onClosed(identity);
   }
 
+  private panelMaterial(role: 'modalSheet' | 'popoverMenu'): ReaderSurfaceMaterialDecision {
+    return readerSurfaceMaterialDecision(role, this.appearancePreferences, this.appThemeScheme, this.systemScheme);
+  }
+
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       ForEach([this.selectionId], (identity: string) => {
         if (this.visible) {
-          Row()
-            .width('100%')
-            .height('100%')
-            .backgroundColor(this.expandedLayout ? Color.Transparent : readerAppColor('app.scrim.select', this.appThemeScheme))
+          Stack().width('100%').height('100%')
+            .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
+              this.expandedLayout ? Color.Transparent : readerAppColor('app.scrim.select', this.appThemeScheme),
+              this.panelMaterial('modalSheet').native, !this.expandedLayout))
             .hitTestBehavior(HitTestMode.Default)
             .accessibilityLevel('no')
             .transition(TransitionEffect.OPACITY.animation(readerMotionAnimateParam('app.sheet.scrim', this.reduceMotion)))
@@ -139,8 +149,13 @@ export struct SettingsSelectOverlay {
           Scroll() { this.phoneSheet(); }
             .width('100%').constraintSize({ maxHeight: this.safeHeight() }).scrollBar(BarState.Auto)
             .borderRadius(PHONE_SHEET_CORNERS).clip(true);
-        }.width('100%').borderRadius(PHONE_SHEET_CORNERS)
-          .shadow(readerSurfaceElevation('sheet', this.appThemeScheme))
+        }.width('100%')
+          .backgroundEffect(undefined)
+          .backgroundColor(Color.Transparent)
+          .border({ width: 0, color: Color.Transparent })
+          .borderRadius(PHONE_SHEET_CORNERS)
+          .shadow(this.panelMaterial('modalSheet').native ? undefined : readerSurfaceElevation('sheet', this.appThemeScheme))
+          .systemMaterial(readerImmersiveMaterial(this.panelMaterial('modalSheet')))
           .transition(this.panelTransition(true), (entering: boolean): void => this.finishMotion(entering, identity));
       }
     }
@@ -185,7 +200,8 @@ export struct SettingsSelectOverlay {
         }, (option: string): string => `settings-phone-option-${this.field}-${option}`);
       }
       .width('100%')
-      .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
+      .backgroundColor(this.panelMaterial('modalSheet').native ? Color.Transparent :
+        readerAppColor('app.surface.menuSolid', this.appThemeScheme))
       .border({ width: 1, color: readerAppColor('app.border.control', this.appThemeScheme) })
       .borderRadius(PHONE_RADIUS)
       .clip(true);
@@ -205,7 +221,8 @@ export struct SettingsSelectOverlay {
         .height(readerScaledControlHeight(PHONE_OPTION_HEIGHT, TYPE_SETTINGS_SELECT_PHONE_CANCEL.lineHeightFp as number, this.fontScale()))
         .padding(0)
         .border({ width: 1, color: readerAppColor('app.border.control', this.appThemeScheme) })
-        .attributeModifier(new ReaderPressFeedback(readerAppColor('app.surface.menuSolid', this.appThemeScheme),
+        .attributeModifier(new ReaderPressFeedback(this.panelMaterial('modalSheet').native ? Color.Transparent :
+          readerAppColor('app.surface.menuSolid', this.appThemeScheme),
           this.appThemeScheme, PHONE_RADIUS, PHONE_RADIUS, this.ownsOpening(identity)))
         .accessibilityRole(AccessibilityRoleType.BUTTON).accessibilityText('取消')
         .onClick((): void => this.dismiss(identity));
@@ -217,7 +234,7 @@ export struct SettingsSelectOverlay {
       right: PHONE_HORIZONTAL_INSET,
       bottom: PHONE_BOTTOM_INSET,
     })
-    .linearGradient({
+    .linearGradient(this.panelMaterial('modalSheet').native ? undefined : {
       angle: 180,
       colors: [[readerAppColor('app.surface.selectWarm', this.appThemeScheme), 0], [readerAppColor('app.surface.selectGradientEnd', this.appThemeScheme), 1]],
     })
@@ -246,11 +263,15 @@ export struct SettingsSelectOverlay {
     .width('100%');
     }
     .width(this.tabletWidth()).constraintSize({ maxHeight: Math.max(0, this.safeTop() + this.safeHeight() - this.tabletTop()) }).scrollBar(BarState.Auto)
-    .backgroundColor(readerAppColor(this.tabletSpec().surfaceBackgroundRole, this.appThemeScheme))
-    .border({ width: this.tabletSpec().borderWidth, color: readerAppColor(this.tabletSpec().surfaceBorderRole, this.appThemeScheme) })
+    .backgroundEffect(undefined)
+    .backgroundColor(this.panelMaterial('popoverMenu').native ? Color.Transparent :
+      readerAppColor(this.tabletSpec().surfaceBackgroundRole, this.appThemeScheme))
+    .border(this.panelMaterial('popoverMenu').native ? { width: 0, color: Color.Transparent } :
+      { width: this.tabletSpec().borderWidth, color: readerAppColor(this.tabletSpec().surfaceBorderRole, this.appThemeScheme) })
     .borderRadius(this.tabletSpec().borderRadius)
     .clip(true)
-    .shadow(readerSurfaceElevation('popover', this.appThemeScheme))
+    .shadow(this.panelMaterial('popoverMenu').native ? undefined : readerSurfaceElevation('popover', this.appThemeScheme))
+    .systemMaterial(readerImmersiveMaterial(this.panelMaterial('popoverMenu')))
     .position({
       x: Math.max(this.safeLeft(), Math.min(this.anchorRight - this.tabletWidth(), this.safeLeft() + this.safeWidth() - this.tabletWidth())),
       y: this.tabletTop(),
@@ -304,12 +325,6 @@ export struct SettingsSelectOverlay {
   }
 
   private title(): string {
-    if (this.field === 'language') {
-      return '选择语言';
-    }
-    if (this.field === 'startup') {
-      return '选择启动页';
-    }
-    return '选择动画效果';
+    return this.field === 'language' ? '选择语言' : '选择启动页';
   }
 }

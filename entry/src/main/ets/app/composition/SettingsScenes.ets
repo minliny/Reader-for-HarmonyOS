@@ -11,6 +11,10 @@ import type { ReaderAppThemeMode } from '../../ui/foundation/ReaderThemeRegistry
 
 export type SettingsDestination = 'source' | 'rulesManagement' | 'sync' | 'bookshelfSettings' | 'downloads' | 'rss' | 'discover';
 
+export function settingsDestinationAllowedInSection(section: SettingsSection, destination: SettingsDestination): boolean {
+  return section === 'home' || (section === 'general' && destination === 'downloads');
+}
+
 interface SettingsScenePaint {
   identity: string;
   generation: number;
@@ -63,7 +67,8 @@ export struct SettingsScenes {
   }
 
   private open(identity: string, destination: SettingsDestination): void {
-    if (this.route === 'settings' && this.section === 'home' && this.inputIsCurrent(identity)) {
+    if (this.route === 'settings' && settingsDestinationAllowedInSection(this.section, destination) &&
+      this.inputIsCurrent(identity)) {
       this.onOpen(destination);
     }
   }
@@ -106,7 +111,7 @@ export struct SettingsScenes {
       activeSection: this.painted?.section ?? this.section,
       snapshot: this.painted?.snapshot ?? this.presentation.snapshot, operation: this.painted?.operation ?? this.presentation.operation,
       cacheCleanup: this.painted === undefined ? this.presentation.cacheCleanup : this.painted.cacheCleanup,
-      expandedLayout: this.expandedLayout, embeddedWide: this.embeddedWide,
+      expandedLayout: this.expandedLayout, embeddedWide: this.embeddedWide, wideWindow: this.expandedLayout,
       isOpeningCurrent: (): boolean => this.route === 'settings' && this.active !== false &&
         this.isPaintCurrent?.() !== false && this.presentation.isCurrent(identity),
       isInputAllowed: (): boolean => this.route === 'settings' && this.inputIsCurrent(identity),
@@ -128,6 +133,7 @@ export struct SettingsScenes {
         }
       },
       onOpenSourceManagement: (): void => this.open(identity, 'source'),
+      onOpenRulesManagement: (): void => this.open(identity, 'rulesManagement'),
       onOpenSync: (): void => this.open(identity, 'sync'),
       onOpenBookshelfSettings: (): void => this.open(identity, 'bookshelfSettings'),
       onOpenDownloads: (): void => this.open(identity, 'downloads'),

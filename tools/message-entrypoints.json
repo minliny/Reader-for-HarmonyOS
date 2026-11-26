@@ -48,12 +48,6 @@
       "status": "retired-unreachable",
       "authority": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
       "rule": "The private hand-drawn legacy banner has been removed after its only references were obsolete tool probes. Production sourceList/statusAction/pendingRecovery use ReaderRecoveryAction, ReaderPageState and ReaderRecoveryNotice; onMessageChanged retains the transient adapter. Old tool samples now target those real producers; no business owner, write or retry policy is replaced."
-    },
-    {
-      "scope": "RulesManagementPage",
-      "status": "retained-unconsumed",
-      "authority": "entry/src/main/ets/features/settings/ui/RulesManagementPage.ets",
-      "rule": "No consumed current route/Host entry; no message integration or feature restoration is inferred from component source."
     }
   ],
   "entries": [
@@ -318,41 +312,40 @@
       "member": "processing",
       "family": "shared.page-state",
       "category": "本地恢复包操作状态",
-      "effectiveHost": "当前书架设置中的恢复包面板。展示核对、导出、隔离校验或恢复状态。",
+      "effectiveHost": "当前本地备份页或扩展备份与同步页的恢复包面板。展示核对、导出、隔离校验或恢复状态。",
       "retireRule": "操作返回或面板代次退役即清除当前呈现，持久恢复由原 gateway 持有。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.requestRestore::native.alert",
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.dialogContent::shared.dialog-surface",
       "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
       "owner": "LocalRecoveryPanel",
-      "member": "requestRestore",
-      "family": "native.alert",
-      "category": "经 ReaderNativeAlertOwner 发起恢复确认",
-      "effectiveHost": "当前书架设置，隔离校验完成且预览、口令和动作仍属于当前代次。",
-      "retireRule": "原生回调由确认 lease 封装，退役拒绝旧按钮，恢复结果仍由 gateway 持有。",
-      "status": "registered-source-entry",
-      "bridge": "owned-alert-native-callback"
-    },
-    {
-      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.requestRestore::shared.alert-owner",
-      "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
-      "owner": "LocalRecoveryPanel",
-      "member": "requestRestore",
-      "family": "shared.alert-owner",
-      "category": "本地恢复的明确确认",
-      "effectiveHost": "当前书架设置与已校验预览。",
-      "retireRule": "确认、取消或打开代次退役时结束 lease。确认动作提交恢复，完成状态由原业务回执确认。",
+      "member": "dialogContent",
+      "family": "shared.dialog-surface",
+      "category": "恢复包的口令录入、导出确认与恢复确认",
+      "effectiveHost": "当前本地备份页或扩展备份与同步页的恢复包面板，弹层票据、打开代次与预览决定可用动作。",
+      "retireRule": "取消或退场清除口令草稿；确认仅在弹层退场且原打开代次有效后提交。恢复完成状态由 gateway 回执确认。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.resumeControl::shared.recovery-notice",
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.resumeFields::shared.recovery-action",
       "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
       "owner": "LocalRecoveryPanel",
-      "member": "resumeControl",
+      "member": "resumeFields",
+      "family": "shared.recovery-action",
+      "category": "提交口令继续中断的本地恢复",
+      "effectiveHost": "当前本地备份页或扩展备份与同步页的恢复包面板，原 journal 确认有待续操作。",
+      "retireRule": "动作核对当前打开代次和原恢复资格后交给 gateway。退场清除口令草稿，原恢复状态仍可读取。",
+      "status": "registered-source-entry"
+    },
+    {
+      "id": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets#LocalRecoveryPanel.resumeFields::shared.recovery-notice",
+      "file": "entry/src/main/ets/features/bookshelf/ui/LocalRecoveryPanel.ets",
+      "owner": "LocalRecoveryPanel",
+      "member": "resumeFields",
       "family": "shared.recovery-notice",
       "category": "本地恢复中断后的继续入口",
-      "effectiveHost": "当前书架设置中的恢复包面板，恢复 journal 确认有待续操作。",
+      "effectiveHost": "当前本地备份页或扩展备份与同步页的恢复包面板，原 journal 确认有待续操作。",
       "retireRule": "继续动作核对当前打开代次并交给 gateway。退场只撤销本次交互与口令，原恢复状态可再次读取。",
       "status": "registered-source-entry"
     },
@@ -363,7 +356,7 @@
       "member": "showOutcome",
       "family": "shared.transient",
       "category": "本地导出、恢复、取消与明确失败的短反馈",
-      "effectiveHost": "当前前景书架设置中的恢复包面板，绑定打开代次和当前动作。",
+      "effectiveHost": "当前前景本地备份页或扩展备份与同步页的恢复包面板，绑定打开代次和当前动作。",
       "retireRule": "打开代次退役及新动作重置当前发布。中断恢复由独立待续通知承载。",
       "status": "registered-source-entry"
     },
@@ -374,7 +367,7 @@
       "member": "statusReadFailed",
       "family": "shared.page-state",
       "category": "恢复 journal 状态无法读取",
-      "effectiveHost": "当前书架设置中的恢复包面板。",
+      "effectiveHost": "当前本地备份页或扩展备份与同步页的恢复包面板。",
       "retireRule": "重新读取成功或面板代次退役时清除，重试仅核对原恢复状态。",
       "status": "registered-source-entry"
     },
@@ -1473,20 +1466,20 @@
       "owner": "RulesManagementPage",
       "member": "recoveryAction",
       "family": "shared.recovery-action",
-      "category": "保留规则实体页原规则恢复/列表读取动作",
-      "effectiveHost": "按现有retainedScopes.RulesManagementPage保留未开放；snapshot.ruleMutation/receipt/readFacts决定文案和recovery generation，不因Index有builder声明认定当前可达。",
-      "retireRule": "generation转交原onReconcile，写入/核对仍归规则owner；开放前验证Runtime/实体/原操作准入及未决写入不重放。",
-      "status": "retained-before-open"
+      "category": "规则与订阅页的原规则操作核对和列表读取",
+      "effectiveHost": "设置内的规则与订阅路由或宽屏右侧面板。当前 RulesManagementSurface 传递原打开身份，snapshot.ruleMutation、receipt 与 readFacts 提供恢复内容及代次。",
+      "retireRule": "退场或过期身份的动作不派发。有效代次交给原 onReconcile，规则 owner 持有写入、核对与重读。",
+      "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/settings/ui/NavigationAppearanceSettings.ets#NavigationAppearanceSettings.saveRecovery::shared.recovery-notice",
-      "file": "entry/src/main/ets/features/settings/ui/NavigationAppearanceSettings.ets",
-      "owner": "NavigationAppearanceSettings",
-      "member": "saveRecovery",
-      "family": "shared.recovery-notice",
-      "category": "本机导航外观保存待确认",
-      "effectiveHost": "通用设置当前导航代次；只重试本机外观 owner 持有的原写入意图。",
-      "retireRule": "退场停止反馈和输入，原意图保留到本机写入确认或 Ability 退役。",
+      "id": "entry/src/main/ets/features/settings/ui/SettingsLicensesPage.ets#SettingsLicensesPage.pageContent::shared.page-state",
+      "file": "entry/src/main/ets/features/settings/ui/SettingsLicensesPage.ets",
+      "owner": "SettingsLicensesPage",
+      "member": "pageContent",
+      "family": "shared.page-state",
+      "category": "许可资源读取状态与重试",
+      "effectiveHost": "关于 Reader 打开的只读许可页，当前所选打包资源和读取代次限定加载与失败展示。",
+      "retireRule": "返回目录、退场或打开另一条目后，旧读取代次失效。重试读取当前资源。",
       "status": "registered-source-entry"
     },
     {
@@ -1573,9 +1566,9 @@
       "owner": "SettingsPage",
       "member": "showAboutFeedback",
       "family": "shared.transient",
-      "category": "普通完成/失败短反馈",
-      "effectiveHost": "当前已挂载且可输入的设置首页关于 Reader 子页；复制前及展示中检查 aboutPageId、isOpeningCurrent、runtime 和当前输入准入。",
-      "retireRule": "关于页返回、设置切换或退场清除 aboutPageId 并 reset 短反馈；旧代复制与短反馈失效，不涉及任何业务写入。",
+      "category": "复制构建信息与开发者入口解锁的短反馈",
+      "effectiveHost": "当前已挂载且可输入的关于 Reader 子页。复制、版本连击及反馈展示检查当前关于页身份与输入资格。",
+      "retireRule": "离开关于页或退场时重置短反馈和未完成的连击计数。旧打开身份的反馈失效。",
       "status": "registered-source-entry"
     },
     {

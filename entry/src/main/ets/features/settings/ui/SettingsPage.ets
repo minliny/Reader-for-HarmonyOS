@@ -15,7 +15,7 @@ import { readerAppColor, type ReaderAppThemeMode } from '../../../ui/foundation/
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderRouteStackSurface, type ReaderRouteSurfaceKey } from '../../../app/navigation/ReaderRouteStackSurface';
 import type { SettingsSection } from '../../../app/navigation/ReaderNavigation';
-import { settingsNavigationItems, type SettingsNavigationItem, type SettingsPane } from '../presentation/SettingsNavigationItems';
+import { settingsNavigationGroups, type SettingsNavigationGroup, type SettingsNavigationItem, type SettingsPane } from '../presentation/SettingsNavigationItems';
 import { ReaderControlPlacementPreferences } from '../../../app/ReaderControlPlacementPreferences';
 import { readerControlAlignment } from '../../reading/ui/ReaderControlPlacement';
 import { readerWidthClassWithHint } from '../../../ui/foundation/ReaderWidthClass';
@@ -30,7 +30,6 @@ import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
 import { ReaderSelect } from '../../../ui/controls/ReaderSelect';
 import { ReaderSegmentedControl, READER_APP_THEME_SEGMENT_WIDTH } from '../../../ui/controls/ReaderSegmentedControl';
-import { StatusBadge } from '../../../ui/controls/StatusBadge';
 import { CategorySection } from './CategorySection';
 import { ReaderCard } from '../../../ui/surfaces/ReaderCard';
 import { DialogActionView, ReaderDialogSurface } from '../../../ui/surfaces/ReaderDialogSurface';
@@ -38,14 +37,24 @@ import { readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { ReaderFormRow } from '../../../ui/controls/ReaderFormRow';
+import type { ReaderNavigationPreferenceChange, ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
+import { ReaderNavigationAppearancePreferences } from '../../../app/ReaderNavigationAppearancePreferences';
+import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
+import { DEFAULT_BOOKSHELF_VIEW, type BookshelfViewMode } from '../../bookshelf/application/BookshelfViewMode';
+import { LocalRecoveryPanel } from '../../bookshelf/ui/LocalRecoveryPanel';
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { SettingsSelectOverlay, type SettingsSelectField } from './SettingsSelectOverlay';
-import { NavigationAppearanceSettings } from './NavigationAppearanceSettings';
+import { NavigationAppearanceSettings, readerRenderModeLabel } from './NavigationAppearanceSettings';
+import { SettingsLicensesPage } from './SettingsLicensesPage';
 import { isReaderProductSurfaceEnabled } from '../../../app/ReaderProductScope';
 import { emptyReaderAppBuildInfo, readReaderAppBuildInfo, readerAppBuildDisplay, readerAppBuildCopy, type ReaderAppBuildInfo } from '../../../platform/bundle/ReaderAppBuildInfo';
 import { copyReaderBuildIdentity } from '../../../platform/clipboard/ReaderClipboardHost';
 
 // App主题 为分段控件 (Figma ThemeSegment 2114:20635), 非下拉; 标签用 Figma 原文。
 const SEG_OPTIONS: string[] = ['跟随', '浅色', '深色'];
+const THEME_SUMMARIES: string[] = ['跟随系统主题', '浅色主题', '深色主题'];
+const DEVELOPER_UNLOCK_TAPS: number = 5;
+const DEVELOPER_UNLOCK_MAX_GAP_MS: number = 1500;
 
 interface SettingsSelectAnchor {
   right: number;
@@ -57,10 +66,19 @@ let settingsSelectionGeneration: number = 0;
 @Component
 export struct SettingsPage {
   @Prop embeddedWide: boolean = false;
+  @Prop wideWindow: boolean = false;
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerAppForeground') private appForeground: boolean = true;
   @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
+  @StorageProp('readerSystemReduceMotion') private systemReduceMotion: boolean = false;
+  @StorageProp('readerBookshelfViewMode') private bookshelfViewMode: BookshelfViewMode = DEFAULT_BOOKSHELF_VIEW;
+  @StorageProp('readerNavigationAppearancePreferences')
+  private navigationPreferences: ReaderNavigationPreferences = defaultNavigationPreferences();
+  @StorageProp('readerNavigationAppearanceSavePending') private navigationSavePending: boolean = false;
+  @StorageLink('readerDeveloperToolsUnlocked') private developerToolsUnlocked: boolean = false;
+  @State private navigationSaving: boolean = false;
+  @State private backupBusy: boolean = false;
 
   @Prop @Watch('onActiveSectionChanged') activeSection: SettingsSection = 'home';
   @Prop @Watch('onAppearanceSaveHostChanged') navigationGeneration: number = 0;
@@ -83,10 +101,7 @@ export struct SettingsPage {
   @State private controlPlacementSaving: boolean = false;
   @State private languageValue: string = '简体中文';
   @State private startupValue: string = '书架';
-  @State private animationValue: string = '标准';
-  @State private autoCheckUpdateValue: boolean = true;
   @State private tapBottomScrollTopValue: boolean = true;
-  @State private reduceMotionValue: boolean = false;
   @State private crashLogValue: boolean = true;
   @State private developerModeValue: boolean = false;
   @State private wideNavigationRailValue: boolean = false;
@@ -112,6 +127,12 @@ export struct SettingsPage {
   @State private aboutInfo: ReaderAppBuildInfo = emptyReaderAppBuildInfo();
   @State private developerPageId: string = '';
   @State private messagePreviewId: string = '';
+  @State private licensesPageId: string = '';
+  private retainedLicensesId: string = '';
+  private licensesBackHandler: (() => boolean) | undefined = undefined;
+  private developerTapCount: number = 0;
+  private developerLastTap: number = 0;
+  private readonly backupEditingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private retainedAboutId: string = '';
   private retainedDeveloperId: string = '';
   private retainedMessagePreviewId: string = '';
@@ -141,6 +162,7 @@ export struct SettingsPage {
   onBack: () => void = (): void => {};
   onHomeScrollDeparture: (y: number) => void = (_y: number): void => {};
   onOpenSourceManagement: () => void = (): void => {};
+  onOpenRulesManagement: () => void = (): void => {};
   onOpenBookshelfSettings: () => void = (): void => {};
   onOpenDownloads: () => void = (): void => {};
   onOpenSync: () => void = (): void => {};
@@ -157,6 +179,7 @@ export struct SettingsPage {
     try { this.themeOwner = ReaderRuntimeOwner.current(); }
     catch (_unavailable) { this.themeOwner = undefined; }
     registerReaderFonts(this.getUIContext().getFont());
+    this.aboutInfo = readReaderAppBuildInfo();
     this.syncSnapshotValues();
     this.prepareAboutSection();
     this.lastOperationFeedback = this.operationFeedbackIdentity();
@@ -164,7 +187,7 @@ export struct SettingsPage {
     const identity = `settings-back:${++settingsSelectionGeneration}`;
     this.temporaryBackIdentity = identity;
     this.onTemporaryBackBridge((): boolean => this.consumeTemporaryBack(identity), identity,
-      (): boolean => this.mounted && identity === this.temporaryBackIdentity && this.resetDialogTicket > 0);
+      (): boolean => this.mounted && identity === this.temporaryBackIdentity && (this.resetDialogTicket > 0 || this.backupBusy));
     const owner = this.themeOwner;
     this.appearanceSaveUnsubscribe?.();
     if (owner !== undefined) this.appearanceSaveUnsubscribe = owner.getAppearanceStore().subscribeSaveState(
@@ -180,6 +203,7 @@ export struct SettingsPage {
       generation: this.appearanceSaveRecovery.generation + 1 };
     this.appearanceSaveRecoveryBusy = false;
     this.aboutPageId = '';
+    this.closeLicensesPage();
     this.retireDeveloperPages();
     const identity = this.temporaryBackIdentity;
     this.mounted = false;
@@ -194,6 +218,7 @@ export struct SettingsPage {
 
   private consumeTemporaryBack(identity: string): boolean {
     if (!this.mounted || identity !== this.temporaryBackIdentity) return false;
+    if (this.activeSection === 'backup' && this.backupBusy) return true;
     if (this.resetDialogTicket > 0) {
       this.closeResetDialog(this.resetDialogTicket);
       return true;
@@ -204,6 +229,10 @@ export struct SettingsPage {
     }
     if (this.developerPageCurrent(this.developerPageId)) {
       this.retireDeveloperPages();
+      return true;
+    }
+    if (this.licensesPageCurrent(this.licensesPageId)) {
+      if (this.licensesBackHandler?.() !== true) this.closeLicensesPage();
       return true;
     }
     if (!this.ownsSelection(this.selectionId)) return false;
@@ -232,7 +261,7 @@ export struct SettingsPage {
       route: this.settingsSubroute(), initialRoot: this.embeddedWide ? undefined : 'settings-home', routeMotion: 'push',
       surfaceId: this.settingsStackSurfaceId(),
       viewportWidth: this.paneWidth, reduceMotion: this.appReduceMotion,
-      backGestureEnabled: this.settingsInputIsCurrent() && this.resetDialogTicket === 0 && this.openSelect === '',
+      backGestureEnabled: this.settingsInputIsCurrent() && !this.backupBusy && this.resetDialogTicket === 0 && this.openSelect === '',
       content: (route: ReaderRouteSurfaceKey): void => { this.settingsPageContent(route); },
       onBack: (): boolean => this.settingsRouteBack(),
     });
@@ -245,7 +274,9 @@ export struct SettingsPage {
   private settingsSubroute(): ReaderRouteSurfaceKey {
     if (this.messagePreviewId.length > 0) return 'settings-message-preview';
     if (this.developerPageId.length > 0) return 'settings-developer';
+    if (this.licensesPageId.length > 0) return 'settings-licenses';
     if (this.activeSection === 'about') return 'settings-about';
+    if (this.activeSection === 'backup') return 'settings-backup';
     return this.activeSection === 'home' ? 'settings-home' : 'settings-general';
   }
 
@@ -277,6 +308,21 @@ export struct SettingsPage {
       ForEach([this.retainedDeveloperId], (identity: string): void => {
         this.developerPage(identity);
       }, (identity: string): string => identity);
+    } else if (route === 'settings-licenses') {
+      ForEach([this.retainedLicensesId], (identity: string): void => {
+        SettingsLicensesPage({
+          current: this.licensesPageCurrent(identity),
+          embeddedWide: this.embeddedWide,
+          onBack: (): void => {
+            if (this.licensesPageCurrent(identity)) this.closeLicensesPage();
+          },
+          onBackHandlerChange: (handler: (() => boolean) | undefined): void => {
+            if (this.licensesPageCurrent(identity)) this.licensesBackHandler = handler;
+          },
+        });
+      }, (identity: string): string => identity);
+    } else if (route === 'settings-backup') {
+      this.backupPage();
     } else {
     SettingsShell({
       activeSection: route === 'settings-home' ? 'home' : 'general',
@@ -315,6 +361,25 @@ export struct SettingsPage {
     }
   }
 
+  @Builder
+  private backupPage() {
+    ReaderStandardPage({ floatingHeader: true, embeddedWide: this.embeddedWide, variant: 'settingsGeneral',
+      editingHost: this.backupEditingHost,
+      header: (): void => {
+        PageBackBar({ floating: true, centered: true, elevation: 'floating', showBack: !this.embeddedWide,
+          title: '本地备份与恢复', onBack: (): void => { this.settingsRouteBack(); } });
+      },
+      content: (): void => {
+        LocalRecoveryPanel({ navigationGeneration: this.navigationGeneration, editingHost: this.backupEditingHost,
+          isOpeningCurrent: (): boolean => this.activeSection === 'backup' && this.isOpeningCurrent(),
+          isInputAllowed: (): boolean => this.activeSection === 'backup' && this.settingsInputIsCurrent(),
+          onBusyChange: (busy: boolean): void => {
+            if (this.activeSection === 'backup') this.backupBusy = busy;
+          } });
+      },
+    });
+  }
+
   private aboutPageCurrent(identity: string): boolean {
     return identity.length > 0 && identity === this.aboutPageId && this.mounted && this.activeSection === 'about' &&
       this.isOpeningCurrent() && ReaderRuntimeOwner.isCurrent(this.themeOwner);
@@ -322,7 +387,8 @@ export struct SettingsPage {
 
   private prepareAboutSection(): void {
     if (this.activeSection !== 'about') return;
-    this.aboutInfo = readReaderAppBuildInfo();
+    this.developerTapCount = 0;
+    this.developerLastTap = 0;
     this.retainedAboutId = `about:${++settingsSelectionGeneration}`;
     this.aboutPageId = this.retainedAboutId;
   }
@@ -366,12 +432,10 @@ export struct SettingsPage {
   @Builder
   private aboutPageContent(identity: string) {
     CategorySection({ title: '版本与构建' }) {
-      Column({ space: 12 }) {
-        Text(readerAppBuildDisplay(this.aboutInfo)).width('100%')
-          .fontFamily(TYPE_APP_INHERITED_BODY.fontFamily).fontWeight(TYPE_APP_INHERITED_BODY.fontWeight)
-          .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-        if (this.aboutInfo.status === 'available') {
+      ReaderFormRow({ label: '版本号', secondaryText: readerAppBuildDisplay(this.aboutInfo),
+        actionEnabled: this.aboutPageCurrent(identity), onAction: (): void => this.tapAboutVersion(identity) });
+      if (this.aboutInfo.status === 'available') {
+        Column({ space: 12 }) {
           Text(`版本代码：${this.aboutInfo.versionCode}`).width('100%')
             .fontFamily(TYPE_APP_INHERITED_BODY.fontFamily).fontWeight(TYPE_APP_INHERITED_BODY.fontWeight)
             .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
@@ -381,15 +445,51 @@ export struct SettingsPage {
           Text(`内容摘要：${this.aboutInfo.appContentHash}`).width('100%').wordBreak(WordBreak.BREAK_ALL)
             .fontFamily(TYPE_APP_INHERITED_BODY.fontFamily).fontWeight(TYPE_APP_INHERITED_BODY.fontWeight)
             .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp).fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-        }
-      }.width('100%').padding(12);
-      ReaderFormRow({ label: '复制完整构建信息', disclosure: true,
+        }.width('100%').padding(12);
+      }
+      ReaderFormRow({ label: '复制完整构建信息',
         actionEnabled: this.aboutInfo.status === 'available' && this.aboutPageCurrent(identity),
         onAction: (): void => this.copyAboutBuild(identity) });
     }
-    CategorySection({ title: '开发工具' }) {
-      this.subpageNavRow('开发者模式', (): void => this.openDeveloperPage(identity));
+    CategorySection({ title: '开源许可' }) {
+      this.subpageNavRow('查看开源许可与声明', (): void => this.openLicensesPage(identity));
     }
+    if (this.developerToolsUnlocked || this.developerModeValue) {
+      CategorySection({ title: '开发工具' }) {
+        this.subpageNavRow('开发者模式', (): void => this.openDeveloperPage(identity));
+      }
+    }
+  }
+
+  private tapAboutVersion(identity: string): void {
+    if (!this.aboutPageCurrent(identity) || !this.settingsInputIsCurrent() || this.aboutInfo.versionName === '' ||
+      this.developerToolsUnlocked || this.developerModeValue || this.settingsSubroute() !== 'settings-about') return;
+    const now = Date.now();
+    this.developerTapCount = now - this.developerLastTap <= DEVELOPER_UNLOCK_MAX_GAP_MS ? this.developerTapCount + 1 : 1;
+    this.developerLastTap = now;
+    const remaining = DEVELOPER_UNLOCK_TAPS - this.developerTapCount;
+    if (remaining === 0) {
+      this.developerToolsUnlocked = true;
+      this.showAboutFeedback('开发者模式入口已解锁', identity);
+    } else if (remaining <= 2) {
+      this.showAboutFeedback(`再点击 ${remaining} 次解锁开发者模式`, identity);
+    }
+  }
+
+  private licensesPageCurrent(identity: string): boolean {
+    return identity !== '' && identity === this.licensesPageId && this.aboutPageCurrent(this.aboutPageId) &&
+      this.settingsInputIsCurrent();
+  }
+
+  private openLicensesPage(identity: string): void {
+    if (!this.aboutPageCurrent(identity) || !this.settingsInputIsCurrent() || this.settingsSubroute() !== 'settings-about') return;
+    this.retainedLicensesId = `licenses:${++settingsSelectionGeneration}`;
+    this.licensesPageId = this.retainedLicensesId;
+  }
+
+  private closeLicensesPage(): void {
+    this.licensesPageId = '';
+    this.licensesBackHandler = undefined;
   }
 
   private settingsNavigationCurrent(): boolean {
@@ -415,7 +515,8 @@ export struct SettingsPage {
   }
 
   private openDeveloperPage(identity: string): void {
-    if (!this.aboutPageCurrent(identity) || !this.settingsInputIsCurrent() || this.developerPageId !== '') return;
+    if (!this.aboutPageCurrent(identity) || !this.settingsInputIsCurrent() || this.settingsSubroute() !== 'settings-about' ||
+      (!this.developerToolsUnlocked && !this.developerModeValue)) return;
     this.nativeAlertOwner.retire();
     this.retireSelection(true);
     this.appThemeControlGeneration += 1;
@@ -442,12 +543,14 @@ export struct SettingsPage {
   }
 
   private onActiveSectionChanged(): void {
+    this.backupBusy = false;
     this.onAppearanceSaveHostChanged();
     this.appThemeControlGeneration += 1;
     this.resetSectionRevision += 1;
     this.resetMessage = '';
     if (this.aboutPageId.length > 0) this.transientFeedback.reset();
     this.aboutPageId = '';
+    this.closeLicensesPage();
     this.nativeAlertOwner.retire();
     this.retireResetDialog();
     this.retireSelection(true);
@@ -458,6 +561,15 @@ export struct SettingsPage {
   private toggleDeveloperBoundary(value: boolean, identity: string): void {
     if (!this.developerPageCurrent(identity) || this.messagePreviewId !== '') return;
     this.toggleSetting('developerMode', value);
+  }
+
+  private hideDeveloperTools(identity: string): void {
+    if (!this.developerPageCurrent(identity) || this.messagePreviewId !== '' || !this.settingCanToggle(this.temporaryBackIdentity)) return;
+    this.developerToolsUnlocked = false;
+    this.developerTapCount = 0;
+    this.developerLastTap = 0;
+    if (this.developerModeValue) this.toggleSetting('developerMode', false);
+    this.retireDeveloperPages();
   }
 
   @Builder
@@ -491,6 +603,8 @@ export struct SettingsPage {
           actionEnabled: this.settingCanToggle(this.temporaryBackIdentity), isBusy: this.settingToggleBusy(),
           onToggle: (next: boolean): void => this.toggleDeveloperBoundary(next, identity) });
       }
+      ReaderFormRow({ label: '关闭并隐藏开发者模式', actionEnabled: this.settingCanToggle(this.temporaryBackIdentity),
+        onAction: (): void => this.hideDeveloperTools(identity) });
     }
     this.operationFeedback();
   }
@@ -498,11 +612,27 @@ export struct SettingsPage {
   @Builder
   private buildHome() {
     this.operationFeedback();
-    CategorySection({ title: '应用与阅读' }) {
-      ForEach(settingsNavigationItems(), (item: SettingsNavigationItem): void => {
+    ForEach(settingsNavigationGroups(), (group: SettingsNavigationGroup): void => {
+      this.homeNavigationGroup(group);
+    }, (group: SettingsNavigationGroup): string => group.id);
+  }
+
+  @Builder
+  private homeNavigationGroup(group: SettingsNavigationGroup) {
+    CategorySection({ title: group.label }) {
+      ForEach(group.items, (item: SettingsNavigationItem): void => {
         this.navRow(item.label, (): Resource => $r(`app.media.${item.icon}${this.appThemeScheme === 'night' ? '_theme_night' : ''}`),
-          (): void => this.openHomeDestination(item.id), item.actionId ?? '');
+          (): void => this.openHomeDestination(item.id), item.actionId ?? '', this.homeDestinationSummary(item.id));
       }, (item: SettingsNavigationItem): string => item.id);
+    }
+  }
+
+  private homeDestinationSummary(pane: SettingsPane): string {
+    switch (pane) {
+      case 'general': return `${THEME_SUMMARIES[this.themeIndex()]} · ${readerRenderModeLabel(this.navigationPreferences.renderMode)}`;
+      case 'bookshelfSettings': return `${this.bookshelfViewMode === 'cover' ? '封面' : '列表'} · 自动检查更新${this.snapshot.autoCheckUpdate ? '已开启' : '已关闭'}`;
+      case 'about': return this.aboutInfo.versionName;
+      default: return '';
     }
   }
 
@@ -512,8 +642,10 @@ export struct SettingsPage {
     catch (_detached) {}
     switch (pane) {
       case 'general':
+      case 'backup':
       case 'about': this.onSectionChange(pane); break;
       case 'source': this.onOpenSourceManagement(); break;
+      case 'rulesManagement': this.onOpenRulesManagement(); break;
       case 'sync': this.onOpenSync(); break;
       case 'bookshelfSettings': this.onOpenBookshelfSettings(); break;
       case 'downloads': this.onOpenDownloads(); break;
@@ -525,9 +657,6 @@ export struct SettingsPage {
     this.preferenceCard();
     this.behaviorCard();
     this.maintenanceCard();
-    if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
-      this.permissionCard();
-    }
     this.dangerRow();
     this.operationFeedback();
   }
@@ -645,7 +774,27 @@ export struct SettingsPage {
 
   private pendingFeedbackVisible(): boolean {
     return this.settingsInputIsCurrent() && !this.resetInFlight && this.openSelect === '' &&
-      (this.hasPendingSettings() || this.hasPendingCleanup() || this.hasPendingAppearanceSave() || this.hasPendingControlPlacement());
+      (this.hasPendingSettings() || this.hasPendingCleanup() || this.hasPendingAppearanceSave() ||
+        this.hasPendingControlPlacement() || this.hasPendingNavigationAppearance());
+  }
+
+  private hasPendingNavigationAppearance(): boolean {
+    return this.activeSection === 'general' && this.navigationSavePending;
+  }
+
+  private navigationPreferenceActionCurrent(generation: number): boolean {
+    return generation === this.navigationGeneration && this.settingsInputIsCurrent() &&
+      this.settingsNavigationCurrent() && this.openSelect === '' && this.resetDialogTicket === 0 && !this.navigationSaving;
+  }
+
+  private async applyNavigationPreference(generation: number, change?: ReaderNavigationPreferenceChange): Promise<void> {
+    if (!this.navigationPreferenceActionCurrent(generation) || this.navigationSavePending !== (change === undefined)) return;
+    this.navigationSaving = true;
+    try {
+      if (change === undefined) await ReaderNavigationAppearancePreferences.retry();
+      else await ReaderNavigationAppearancePreferences.save(change);
+    } catch (_) { /* The preference owner retains the original write for retry. */ }
+    finally { this.navigationSaving = false; }
   }
 
   @Builder
@@ -675,10 +824,21 @@ export struct SettingsPage {
               Number(this.capturedPendingAction(identity, 1))) });
         }, (identity: string): string => `appearance:${identity}`);
       }
+      if (this.hasPendingNavigationAppearance()) {
+        ForEach([this.navigationGeneration], (generation: number): void => {
+          ReaderRecoveryNotice({ grouped: true, follows: this.hasPendingSettings() || this.hasPendingAppearanceSave(),
+            view: { visible: true, message: '界面外观与渲染模式的保存结果待确认。', canRetry: true, generation },
+            tag: '界面与渲染', actionLabel: '重试保存', busy: this.navigationSaving,
+            actionEnabled: this.navigationPreferenceActionCurrent(generation), retainPrimaryAction: true,
+            onReconcile: (): void => { void this.applyNavigationPreference(generation); },
+          });
+        }, (generation: number): string => `navigation-appearance:${generation}`);
+      }
       if (this.hasPendingCleanup()) {
         ForEach([JSON.stringify([this.recoveryIdentityFor('cache-read'), this.recoveryIdentityFor('cache-continue'),
           this.temporaryBackIdentity, `${this.cacheCleanup?.operation.generation ?? 0}`])], (identity: string) => {
-          ReaderRecoveryNotice({ grouped: true, follows: this.hasPendingSettings() || this.hasPendingAppearanceSave(), view: { visible: true,
+          ReaderRecoveryNotice({ grouped: true,
+            follows: this.hasPendingSettings() || this.hasPendingAppearanceSave() || this.hasPendingNavigationAppearance(), view: { visible: true,
             message: this.cacheCleanup?.operation.message ?? '原清理结果尚未确认，请核对；已有正文仍可使用',
             canRetry: true, generation: this.cacheCleanup?.operation.generation ?? 0 },
             actionLabel: '核对', busy: this.cacheCleanup?.busy === true,
@@ -727,39 +887,37 @@ export struct SettingsPage {
 
   @Builder
   private preferenceCard() {
-    CategorySection({ title: '基础偏好' }) {
-      this.segmentRow('App主题');
+    CategorySection({ title: '外观与显示' }) {
+      this.segmentRow('App 主题');
       NavigationAppearanceSettings({ generation: this.navigationGeneration,
-        inputCurrent: (): boolean => this.activeSection === 'general' && this.settingsInputIsCurrent() });
-      if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
-      this.selectRow('语言', 'language',
-        ['简体中文', '繁體中文', 'English', '日本語', '한국어']);
-      this.selectRow('启动时打开', 'startup',
-        ['书架', '发现', 'RSS', '设置']);
-      }
+        actionEnabled: this.navigationPreferenceActionCurrent(this.navigationGeneration) && !this.navigationSavePending,
+        onChange: (change: ReaderNavigationPreferenceChange, generation: number): void => {
+          void this.applyNavigationPreference(generation, change);
+        } });
+      this.switchRow('减少动态效果', 'reduceMotion', this.systemReduceMotion ? '已由系统辅助功能开启' : '');
     }
   }
 
   @Builder
   private behaviorCard() {
-    CategorySection({ title: '行为与反馈' }) {
-      this.switchRow('自动检查更新', 'autoCheckUpdate');
-      this.switchRow('减少动态效果', 'reduceMotion');
-      if (isReaderProductSurfaceEnabled('wideNavigationRail')) {
+    CategorySection({ title: '交互与布局' }) {
+      this.switchRow('点击当前底栏回顶部', 'tapBottomScrollTop');
+      if (this.isWideSettings() && isReaderProductSurfaceEnabled('wideNavigationRail')) {
         this.switchRow('宽屏使用侧边导航', 'wideNavigationRail');
       }
-      this.controlPlacementRow();
+      if (this.isWideSettings()) this.controlPlacementRow();
       if (isReaderProductSurfaceEnabled('unimplementedSettings')) {
-        this.switchRow('点击当前底栏回顶部', 'tapBottomScrollTop');
+        this.selectRow('语言', 'language', ['简体中文', '繁體中文', 'English', '日本語', '한국어']);
+        this.selectRow('启动时打开', 'startup', ['书架', '发现', 'RSS', '设置']);
         this.switchRow('崩溃日志', 'crashLog');
-        this.selectRow('动画效果', 'animation', ['标准', '减弱', '关闭']);
       }
     }
   }
 
   @Builder
   private controlPlacementRow() {
-    ReaderFormRow({ label: '宽屏控制栏默认位置', contentMinWidth: READER_APP_THEME_SEGMENT_WIDTH }) {
+    ReaderFormRow({ label: '宽屏控制栏默认位置', contentMinWidth: READER_APP_THEME_SEGMENT_WIDTH,
+      secondaryText: '未检测到单手握姿时使用此默认位置' }) {
       ForEach([this.controlPlacementHostIdentity()], (identity: string): void => {
         ReaderSegmentedControl({
           specId: 'app-theme-segment', options: ['左', '居中', '右'], optionIds: ['left', 'center', 'right'],
@@ -788,7 +946,8 @@ export struct SettingsPage {
     if (this.hasPendingControlPlacement()) {
       ForEach([JSON.stringify([this.controlPlacementHostIdentity(), `${this.controlPlacementPending}`])], (ticket: string): void => {
         ReaderRecoveryNotice({ grouped: true,
-          follows: this.hasPendingSettings() || this.hasPendingAppearanceSave() || this.hasPendingCleanup(),
+          follows: this.hasPendingSettings() || this.hasPendingAppearanceSave() || this.hasPendingNavigationAppearance() ||
+            this.hasPendingCleanup(),
           view: { visible: true, message: '控制栏位置的保存结果待确认。', canRetry: true,
             generation: Number(this.capturedPendingAction(ticket, 1)) },
           tag: '控制栏位置', actionLabel: '重试保存', busy: this.controlPlacementSaving,
@@ -824,6 +983,8 @@ export struct SettingsPage {
     return readerWidthClassWithHint(this.paneWidth, this.expandedLayout) === 'expanded';
   }
 
+  private isWideSettings(): boolean { return this.embeddedWide || this.wideWindow || this.paneExpanded(); }
+
   private recordShellArea(x: number, y: number, width?: number): void {
     this.originX = x;
     this.originY = y;
@@ -834,21 +995,13 @@ export struct SettingsPage {
   private maintenanceCard() {
     CategorySection({ title: '存储维护' }) {
       this.cacheActionRow();
+      this.subpageNavRow('管理下载与自动清理策略', this.onOpenDownloads);
     }
   }
 
   @Builder
-  private permissionCard() {
-    CategorySection({ title: '系统权限' }) {
-      this.permissionRow('文件访问');
-      this.permissionRow('通知权限');
-      this.permissionRow('电池优化');
-    }
-  }
-
-  @Builder
-  private navRow(label: string, icon: () => Resource, action: () => void, actionId: string = '') {
-    ReaderFormRow({ icon: icon(), label, disclosure: true, actionId,
+  private navRow(label: string, icon: () => Resource, action: () => void, actionId: string = '', summary: string = '') {
+    ReaderFormRow({ icon: icon(), label, secondaryText: summary, disclosure: true, actionId,
       onAction: (): void => { if (this.settingsInputIsCurrent()) action(); } });
   }
 
@@ -858,13 +1011,13 @@ export struct SettingsPage {
   }
 
   @Builder
-  private switchRow(label: string, key: GeneralSettingsKey) {
+  private switchRow(label: string, key: GeneralSettingsKey, secondaryText: string = '') {
     ForEach([this.temporaryBackIdentity], (identity: string): void => {
-      ReaderFormRow({ label, actionEnabled: this.settingCanToggle(identity), isBusy: this.settingToggleBusy(),
+      ReaderFormRow({ label, secondaryText, actionEnabled: this.settingCanToggle(identity, key), isBusy: this.settingToggleBusy(),
         onLabelAction: (): void => this.toggleSetting(key, !this.settingValue(key), identity) }) {
         ReaderToggle({ value: this.settingValue(key), specId: 'standard-toggle',
           inputIdentity: `${identity}:${key}`, accessibilityLabel: label,
-          actionEnabled: this.settingCanToggle(identity), isBusy: this.settingToggleBusy(),
+          actionEnabled: this.settingCanToggle(identity, key), isBusy: this.settingToggleBusy(),
           onToggle: (next: boolean): void => this.toggleSetting(key, next, identity) });
       }
     }, (identity: string): string => identity);
@@ -876,9 +1029,7 @@ export struct SettingsPage {
   }
 
   private syncSnapshotValues(): void {
-    this.autoCheckUpdateValue = this.snapshot.autoCheckUpdate;
     this.tapBottomScrollTopValue = this.snapshot.tapBottomScrollTop;
-    this.reduceMotionValue = this.snapshot.reduceMotion;
     this.crashLogValue = this.snapshot.crashLog;
     this.developerModeValue = this.snapshot.developerMode;
     this.wideNavigationRailValue = this.snapshot.wideNavigationRail;
@@ -888,8 +1039,9 @@ export struct SettingsPage {
     return this.operation.receipt?.facts.fact === 'refreshing';
   }
 
-  private settingCanToggle(identity: string): boolean {
+  private settingCanToggle(identity: string, key?: GeneralSettingsKey): boolean {
     return this.settingsInputIsCurrent(identity) && ReaderRuntimeOwner.isCurrent(this.themeOwner) &&
+      (key !== 'reduceMotion' || !this.systemReduceMotion) &&
       !this.resetInFlight && !this.settingToggleBusy() && this.operation.receipt?.receipt.confirmation !== 'unknown';
   }
 
@@ -898,7 +1050,7 @@ export struct SettingsPage {
     value: boolean,
     identity: string = this.temporaryBackIdentity,
   ): void {
-    if (!this.settingCanToggle(identity)) return;
+    if (!this.settingCanToggle(identity, key)) return;
     if (key === 'wideNavigationRail' && !isReaderProductSurfaceEnabled('wideNavigationRail')) return;
     // The Settings owner publishes the accepted snapshot before/after its
     // actual IO. The page never paints an unaccepted optimistic mirror.
@@ -907,14 +1059,11 @@ export struct SettingsPage {
   }
 
   private settingValue(key: GeneralSettingsKey): boolean {
-    if (key === 'autoCheckUpdate') {
-      return this.autoCheckUpdateValue;
-    }
     if (key === 'tapBottomScrollTop') {
       return this.tapBottomScrollTopValue;
     }
     if (key === 'reduceMotion') {
-      return this.reduceMotionValue;
+      return this.appReduceMotion;
     }
     if (key === 'developerMode') {
       return this.developerModeValue;
@@ -935,7 +1084,7 @@ export struct SettingsPage {
         options: options,
         isOpen: this.openSelect === key,
         variant: this.paneExpanded() ? 'settingsTablet' : 'settingsPhone',
-        reduceMotion: this.reduceMotionValue,
+        reduceMotion: this.appReduceMotion,
         onToggle: (): void => {
           this.toggleSelection(key);
           const a = this.selectAnchors[key];
@@ -967,7 +1116,7 @@ export struct SettingsPage {
     ForEach([this.appThemeControlIdentity()], (capturedIdentity: string): void => {
       ReaderSegmentedControl({
         specId: 'app-theme-segment', options: SEG_OPTIONS, optionIds: ['system', 'day', 'night'],
-        inputIdentity: capturedIdentity, accessibilityLabel: 'App主题',
+        inputIdentity: capturedIdentity, accessibilityLabel: 'App 主题',
         actionEnabled: this.settingsInputIsCurrent() && this.appThemeControlIsCurrent(capturedIdentity),
         selectedIndex: this.themeIndex(),
         onSelect: (index: number): void => this.selectAppTheme(index, capturedIdentity),
@@ -1000,7 +1149,7 @@ export struct SettingsPage {
   private cacheActionRow() {
     ForEach([this.temporaryBackIdentity], (capturedIdentity: string): void => {
       ReaderFormRow({
-        label: '缓存清理',
+        label: '清理阅读缓存', secondaryText: this.cacheActionSummary(),
         actionEnabled: this.canClearTextCache(capturedIdentity), isBusy: this.cacheCleanup?.busy === true,
         onLabelAction: (): void => this.requestClearTextCache(capturedIdentity),
       }) {
@@ -1019,7 +1168,7 @@ export struct SettingsPage {
       title: '清理文字缓存',
       message: '清理可重新获取的文字正文与正文图片。保留下载任务、受保护内容、书籍、阅读进度和书签。',
       primaryButton: { value: '取消', action: (): void => {} },
-      secondaryButton: { value: '清理', fontColor: readerAppColor('TOK_MESSAGE_DANGER', this.appThemeScheme),
+      secondaryButton: { value: this.cacheActionLabel(), fontColor: readerAppColor('TOK_MESSAGE_DANGER', this.appThemeScheme),
         action: (): void => this.clearTextCache(identity) },
     }, current);
   }
@@ -1046,64 +1195,41 @@ export struct SettingsPage {
   }
 
   private cacheActionLabel(): string {
-    const snapshot = this.cacheCleanup;
-    if (snapshot === undefined) return '清理';
-    const report = snapshot.operation.value;
-    const resultLabel = report?.scope === 'text' && report.cleanupError !== undefined ? '部分清理' :
-      report?.scope === 'text' && report.removedContentBytes === 0 && (report.deletedFiles ?? 0) === 0 ? '暂无缓存' : '已清理';
-    return snapshot.busy ? '清理中' : snapshot.confirmation === 'confirmed' ? resultLabel :
-      snapshot.confirmation === 'unknown' ? '结果未确认' : snapshot.confirmation === 'undispatched' ? '清理失败' : '清理';
+    const report = this.cacheCleanup?.operation.value;
+    return this.cacheCleanup?.confirmation === 'undispatched' ||
+      (report?.scope === 'text' && report.cleanupError !== undefined) ? '重试' : '清理';
   }
 
-  @Builder
-  private permissionRow(label: string) {
-    ReaderFormRow({ label }) {
-      // Figma Article trailing 是 fit-content 聚簇 (状态徽标 + 去设置 + chevron), 6 间距。
-      Row({ space: 6 }) {
-        StatusBadge({ status: 'unknown', label: `${label}状态未查询` });
-        ReaderButton({ scheme: this.appThemeScheme, variant: 'tonal', visualSize: 'small', label: '去设置',
-          actionEnabled: false });
-        Stack({ alignContent: Alignment.Center }) {
-          Image((this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'))).width(14).height(14);
-        }
-        .width(16)
-        .height(16);
-      }
-      .alignItems(VerticalAlign.Center);
-    }
+  private cacheActionSummary(): string {
+    const description = '清理可重新获取的文字正文与正文图片';
+    const result = this.cacheCleanup?.busy === true ? '' : this.cacheCleanup?.operation.message ?? '';
+    return result === '' ? description : `${description}。\n${result}`;
   }
 
   private themeIndex(): number {
-    const i = SEG_OPTIONS.indexOf((this.appThemeMode === 'system' ? SEG_OPTIONS[0] : this.appThemeMode === 'day' ? SEG_OPTIONS[1] : SEG_OPTIONS[2]));
-    return i >= 0 ? i : 0;
+    return this.appThemeMode === 'day' ? 1 : this.appThemeMode === 'night' ? 2 : 0;
   }
 
   private currentValue(key: SettingsSelectField): string {
     if (key === 'language') {
       return this.languageValue;
-    } else if (key === 'startup') {
-      return this.startupValue;
     }
-    return this.animationValue;
+    return this.startupValue;
   }
 
   private setSelectValue(key: SettingsSelectField, value: string): void {
     if (key === 'language') {
       this.languageValue = value;
-    } else if (key === 'startup') {
+    } else {
       this.startupValue = value;
-    } else if (key === 'animation') {
-      this.animationValue = value;
     }
   }
 
   private selectOptions(key: SettingsSelectField): string[] {
     if (key === 'language') {
       return ['简体中文', '繁體中文', 'English', '日本語', '한국어'];
-    } else if (key === 'startup') {
-      return ['书架', '发现', 'RSS', '设置'];
     }
-    return ['标准', '减弱', '关闭'];
+    return ['书架', '发现', 'RSS', '设置'];
   }
 
   // 展开面板: SettingsShell 根 Stack 即全高 overlay 宿主, 面板相对位置 = 触发条全局坐标
@@ -1226,7 +1352,10 @@ export struct SettingsPage {
   @Builder
   private resetDialog(ticket: number, identity: string) {
     Stack({ alignContent: Alignment.Center }) {
-      Rect().width('100%').height('100%').fill(readerAppColor('app.scrim.warmModal', this.appThemeScheme))
+      Stack().width('100%').height('100%')
+        .attributeModifier(new ReaderModalScrimModifier(this.navigationPreferences, this.appThemeScheme,
+          readerAppColor('app.scrim.warmModal', this.appThemeScheme)))
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .accessibilityLevel('no').onClick((): void => this.closeResetDialog(ticket));
       Column() {
         ReaderDialogSurface({ specId: 'book-removal', title: '恢复界面与阅读设置',
@@ -1259,7 +1388,7 @@ export struct SettingsPage {
   @Builder
   private resetDialogMessage() {
     Scroll() {
-      Text('将重置通用偏好、书架视图与阅读设置。书籍、书源、阅读进度、书签、导入字体文件及服务凭据会完整保留。')
+      Text('将重置通用偏好、界面外观与渲染模式、书架视图与筛选、阅读及朗读设置。书籍、书源、阅读进度、书签、导入字体文件及服务凭据会完整保留。')
         .width('100%').textAlign(TextAlign.Center)
         .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight).fontSize(MESSAGE_BODY.fontSizeFp)
         .lineHeight(MESSAGE_BODY.lineHeightFp as number)
@@ -1288,7 +1417,10 @@ export struct SettingsPage {
     if (!this.mounted || identity !== this.temporaryBackIdentity || revision !== this.resetRevision) return;
     this.resetInFlight = false;
     if (!this.generalConfirmationCurrent(identity) || !this.isOpeningCurrent() || sectionRevision !== this.resetSectionRevision) return;
-    if (result?.fact === 'confirmedCurrent') this.resetMessage = '已恢复界面与阅读设置';
+    if (result?.fact === 'confirmedCurrent') {
+      this.developerToolsUnlocked = false;
+      this.resetMessage = '已恢复界面与阅读设置';
+    }
     else if (result === undefined || result.fact === 'notDispatched') this.resetMessage = '恢复未完成，请重试';
     // Pending writes and failed readback already use the owner's recovery projection.
     this.showFeedbackToast(this.resetMessage);
@@ -1298,7 +1430,7 @@ export struct SettingsPage {
   @Builder
   private dangerRow() {
     ReaderCard({ specId: 'settings-category' }) {
-      ReaderFormRow({ kind: 'danger', label: '恢复默认设置', isBusy: this.resetInFlight, disclosure: true,
+      ReaderFormRow({ kind: 'danger', label: '恢复默认设置', isBusy: this.resetInFlight,
         actionId: this.resetTriggerId(this.temporaryBackIdentity),
         onAction: (): void => this.requestRestoreDefaults() });
     }

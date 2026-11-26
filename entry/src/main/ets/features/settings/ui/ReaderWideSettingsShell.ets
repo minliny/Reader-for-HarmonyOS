@@ -4,8 +4,10 @@ import { publishReaderMainViewport } from '../../shell/MainNavigationSpec';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
+import { ReaderSectionHeading } from '../../../ui/controls/ReaderSectionHeading';
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { settingsNavigationItems, type SettingsNavigationItem, type SettingsPane } from '../presentation/SettingsNavigationItems';
+import { settingsNavigationGroups, type SettingsNavigationGroup, type SettingsNavigationItem,
+  type SettingsPane } from '../presentation/SettingsNavigationItems';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
 import { TYPE_APP_ROW_LABEL, TYPE_PAGE_TITLE } from '../../../ui/foundation/ReaderTypography';
@@ -77,11 +79,11 @@ export struct ReaderWideSettingsShell {
               .onClick((): void => { if (this.interactive) this.onToggle(); });
           }.width(44).height(44).justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center);
         }.width('100%').padding({ left: 6, right: 6, top: 4, bottom: 4 });
-        ForEach(settingsNavigationItems(), (item: SettingsNavigationItem): void => {
-          this.railItem(item.id, item.label, item.icon);
-        }, (item: SettingsNavigationItem): string => item.id);
+        ForEach(settingsNavigationGroups(), (group: SettingsNavigationGroup, index: number): void => {
+          this.railGroup(group, index);
+        }, (group: SettingsNavigationGroup): string => group.id);
       }.width('100%');
-    }.width(this.collapsed ? 56 : 164)
+    }.width(this.collapsed ? 56 : 208)
       .animation(this.reduceMotion ? { duration: 0 } : readerMotionAnimateParam('app.navigation.tab', false))
       .constraintSize({ maxHeight: '100%' }).scrollBar(BarState.Auto).borderRadius(14)
       .backgroundColor(readerAppColor('TOK_CARD_BG', this.scheme))
@@ -90,28 +92,46 @@ export struct ReaderWideSettingsShell {
   }
 
   @Builder
-  private railItem(pane: SettingsPane, label: string, media: string) {
+  private railGroup(group: SettingsNavigationGroup, index: number) {
+    Column() {
+      if (this.collapsed && index > 0) {
+        Divider().width(28).strokeWidth(TOK_BORDER_W)
+          .color(readerAppColor('TOK_LINE_STRONG', this.scheme)).margin({ top: 5, bottom: 5 });
+      }
+      if (!this.collapsed) {
+        Column() {
+          ReaderSectionHeading({ title: group.label });
+        }.width('100%').padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: 8, bottom: 4 });
+      }
+      ForEach(group.items, (item: SettingsNavigationItem): void => {
+        this.railItem(item);
+      }, (item: SettingsNavigationItem): string => item.id);
+    }.width('100%');
+  }
+
+  @Builder
+  private railItem(item: SettingsNavigationItem) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Row({ space: this.collapsed ? 0 : TOK_SPACE_SM }) {
         Stack() {
-          Image($r(`app.media.${media}${this.scheme === 'night' ? '_theme_night' : ''}`))
+          Image($r(`app.media.${item.icon}${this.scheme === 'night' ? '_theme_night' : ''}`))
             .width(15).height(15).objectFit(ImageFit.Contain).accessibilityLevel('no');
         }.width(28).height(28).borderRadius(14).backgroundColor(readerAppColor('TOK_SETTING_ICON_BG', this.scheme));
         if (!this.collapsed) {
-          Text(label).fontFamily(TYPE_APP_ROW_LABEL.fontFamily).fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
+          Text(item.label).fontFamily(TYPE_APP_ROW_LABEL.fontFamily).fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
             .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp).lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number)
             .halfLeading(true).layoutWeight(1)
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-            .fontColor(readerAppColor(this.pane === pane ? 'TOK_GREEN' : 'TOK_INK', this.scheme));
+            .fontColor(readerAppColor(this.pane === item.id ? 'TOK_GREEN' : 'TOK_INK', this.scheme));
         }
       }.width('100%').justifyContent(this.collapsed ? FlexAlign.Center : FlexAlign.Start)
         .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM });
     }.width('100%').constraintSize({ minHeight: 58 }).padding(0)
       .attributeModifier(new ReaderPressFeedback(
-        readerAppColor(this.pane === pane ? 'TOK_PRIMARY_SOFT' : 'app.surface.transparent', this.scheme),
+        readerAppColor(this.pane === item.id ? 'TOK_PRIMARY_SOFT' : 'app.surface.transparent', this.scheme),
         this.scheme, 0, 0, this.interactive))
       .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.scheme) })
-      .accessibilityText(label).accessibilitySelected(this.pane === pane)
-      .enabled(this.interactive).onClick((): void => { if (this.interactive) this.onPane(pane); });
+      .id(item.actionId ?? '').accessibilityText(item.label).accessibilitySelected(this.pane === item.id)
+      .enabled(this.interactive).onClick((): void => { if (this.interactive) this.onPane(item.id); });
   }
 }

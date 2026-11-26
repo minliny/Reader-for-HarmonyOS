@@ -1,7 +1,7 @@
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { effectiveReaderWideNavigationRail, isReaderProductSurfaceEnabled } from '../../../app/ReaderProductScope';
 import type { CommitReadbackSummary } from '../../../app/ReaderOperationFacts';
-import { READER_REDUCE_MOTION_STORAGE_KEY } from '../../../ui/foundation/ReaderMotionPolicy';
+import { READER_REDUCE_MOTION_STORAGE_KEY, READER_SYSTEM_REDUCE_MOTION_STORAGE_KEY } from '../../../ui/foundation/ReaderMotionPolicy';
 import { watchReaderSystemReduceMotion } from '../../../platform/accessibility/ReaderSystemReduceMotion';
 import { createDefaultSettingsSnapshot, SettingsGateway, type GeneralSettingsKey, type SettingsSnapshot } from '../application/SettingsGateway';
 import { SettingsHost } from '../application/SettingsHost';
@@ -81,6 +81,7 @@ export class SettingsPresentation {
   }
 
   private publishReduceMotion(): void {
+    AppStorage.setOrCreate<boolean>(READER_SYSTEM_REDUCE_MOTION_STORAGE_KEY, this.systemReduceMotion);
     AppStorage.setOrCreate<boolean>(READER_REDUCE_MOTION_STORAGE_KEY,
       this.systemReduceMotion || this.applicationSnapshot?.reduceMotion === true);
   }

@@ -1,7 +1,7 @@
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { LengthMetrics } from '@kit.ArkUI';
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
-import { readerStandardPageContentFrame } from '../../../ui/layout/ReaderPageShell';
+import { readerStandardPageContentFrame, readerStandardPageSpec } from '../../../ui/layout/ReaderPageShell';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
@@ -22,6 +22,7 @@ import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { ReaderCard } from '../../../ui/surfaces/ReaderCard';
+import { LocalRecoveryPanel } from '../../bookshelf/ui/LocalRecoveryPanel';
 import {
   SurfaceHorizontalFrame,
 } from '../../../ui/layout/SurfaceHorizontalGeometry';
@@ -44,6 +45,7 @@ export struct SyncPage {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onSnapshotChanged') snapshot: SyncSnapshot = DEFAULT_SYNC_SNAPSHOT;
   @Prop expandedLayout: boolean;
+  isOpeningCurrent: () => boolean = (): boolean => true;
   onBack: () => void = (): void => {};
   onSaveConfig: (url: string, user: string, pass: string, backupPass: string, path: string) => void =
     (_url: string, _user: string, _pass: string, _backupPass: string, _path: string): void => {};
@@ -66,6 +68,7 @@ export struct SyncPage {
   @State private webdavUserEdited: boolean = false;
   @State private webdavPathEdited: boolean = false;
   @State private viewportWidth: number = 0;
+  @State private localRecoveryBusy: boolean = false;
   private appliedSnapshotIdentity: string = '';
   private acknowledgedSaveGeneration: number = 0;
 
@@ -86,7 +89,7 @@ export struct SyncPage {
       variant: 'sync',
       header: (): void => { this.backBar(); },
       content: (): void => { this.pageContent(); },
-      boundedOverlayVisible: this.hasOriginalRecovery() && this.snapshot.restoreConflict === undefined,
+      boundedOverlayVisible: !this.localRecoveryBusy && this.hasOriginalRecovery() && this.snapshot.restoreConflict === undefined,
       boundedOverlayContent: (): void => { this.pendingRecovery(); },
     })
       .onAreaChange((_oldValue: Area, newValue: Area): void => {
@@ -99,10 +102,16 @@ export struct SyncPage {
 
   @Builder
   private pageContent() {
-    this.webdavSection();
-    this.manualActionsSection();
-    this.autoBackupSection();
-    this.historySection();
+    LocalRecoveryPanel({ showHeading: true, editingHost: this.editingHost,
+      isOpeningCurrent: this.isOpeningCurrent,
+      isInputAllowed: (): boolean => this.snapshot.facts?.busy !== true && this.snapshot.restoreConflict === undefined,
+      onBusyChange: (busy: boolean): void => { this.localRecoveryBusy = busy; } });
+    Column({ space: readerStandardPageSpec('sync').space }) {
+      this.webdavSection();
+      this.manualActionsSection();
+      this.autoBackupSection();
+      this.historySection();
+    }.width('100%').alignItems(HorizontalAlign.Start).enabled(!this.localRecoveryBusy);
   }
 
 
@@ -111,7 +120,7 @@ export struct SyncPage {
     PageBackBar({
       floating: true, centered: true, elevation: 'floating',
       showBack: !this.embeddedWide,
-      title: '同步与备份',
+      title: '备份与同步',
       onBack: (): void => this.onBack(),
     });
   }
@@ -215,7 +224,7 @@ export struct SyncPage {
   @Builder
   private manualActionsSection() {
     Column({ space: TOK_SPACE_XS }) {
-      this.sectionHeadingMuted('手动配置备份与恢复');
+      this.sectionHeadingMuted('WebDAV 备份与恢复');
       ReaderCard({ specId: 'sync-status',
         cardWidth: this.contentFrame().width }) {
         Column({ space: TOK_SPACE_SM }) {
@@ -350,7 +359,7 @@ export struct SyncPage {
   @Builder
   private autoBackupSection() {
     Column({ space: TOK_SPACE_XS }) {
-      this.sectionHeadingMuted('自动备份（尚未启用）');
+      this.sectionHeadingMuted('WebDAV 自动备份（尚未启用）');
       ReaderCard({ specId: 'sync-status',
         cardWidth: this.contentFrame().width }) {
         Column() {
@@ -434,7 +443,7 @@ export struct SyncPage {
   @Builder
   private historySection() {
     Column({ space: TOK_SPACE_XS }) {
-      this.sectionHeadingMuted('历史备份');
+      this.sectionHeadingMuted('WebDAV 备份记录');
       if (this.snapshot.history.length === 0) {
         this.emptyState();
       } else {
