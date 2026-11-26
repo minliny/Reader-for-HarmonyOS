@@ -60,9 +60,25 @@ export async function prepareReaderVmJourneyFixture(owner: ReaderRuntimeOwner,
   }
   const after = await bookshelf.loadBookshelf({ limit: 16 }, current);
   requireCurrent();
+  const localBook = after.books.find(book => book.sourceId === 'local' && book.title === READER_VM_LOCAL_TITLE);
   if (after.total !== 2 || !after.books.some(book => book.sourceId === READER_VM_SHELF_SOURCE && book.bookId === bookId &&
-    book.contentKind === 'text') || !after.books.some(book => book.sourceId === 'local' && book.title === READER_VM_LOCAL_TITLE)) {
+    book.contentKind === 'text') || localBook === undefined) {
     throw new Error('VM_JOURNEY_FIXTURE_BOOKSHELF_NOT_READY');
+  }
+  if (localBook.readingPosition === undefined) {
+    const identity: JsonObject = { sourceId: 'local', bookId: localBook.bookId };
+    const currentProgress = await owner.request('reading.progress.get', identity, { canDispatch: current, canContinue: current });
+    requireCurrent();
+    if (currentProgress.data['found'] === false) {
+      const revision = currentProgress.data['progressRevision'];
+      if (typeof revision !== 'string') throw new Error('VM_JOURNEY_FIXTURE_PROGRESS_REVISION_MISSING');
+      // Seed a real location only for a fresh public book. Core determines
+      // whether it has enough facts to project a whole-book percentage.
+      const seeded = await owner.request('reading.progress.update', { ...identity, chapterIndex: 1,
+        chapterOffset: 0, chapterProgress: 0, expectedProgressRevision: revision }, { canDispatch: current, canContinue: current });
+      requireCurrent();
+      if (seeded.data['stored'] !== true) throw new Error('VM_JOURNEY_FIXTURE_PROGRESS_NOT_STORED');
+    }
   }
   owner.confirmPublicSearchHttpFixture(fixture);
   const session = await owner.bookAcquisitions().acquireBook({ sourceId: READER_VM_SHELF_SOURCE,

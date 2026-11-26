@@ -63,7 +63,7 @@ export class ShelfBookPresentation {
     } else if (value === 0) {
       if (this.listReadingPosition(book) === UNREAD_POSITION) return '未读';
       const basisPoints = book.readProgress;
-      if (basisPoints === undefined || !Number.isFinite(basisPoints) || basisPoints < 0) return '*%';
+      if (basisPoints === undefined || !Number.isFinite(basisPoints) || basisPoints < 0) return '进度未知';
     }
     return this.percentLabel(value);
   }

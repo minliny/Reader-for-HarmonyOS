@@ -143,15 +143,21 @@ async function runJourney(id, run, candidate, options, outputDir) {
       const observed = afterLog.sample;
       const present = (outcome.all ?? []).every(selector => matchingNodes(afterRoot, selector).length > 0);
       const absent = (outcome.none ?? []).every(selector => matchingNodes(afterRoot, selector).length === 0);
+      const textValues = outcome.sameText?.map(selector =>
+        [...new Set(matchingNodes(afterRoot, selector).map(node => node.attrs.text)
+          .filter(text => typeof text === 'string' && text.length > 0))]);
+      const sameText = textValues === undefined ||
+        (textValues.length > 0 && textValues.every(values => values.length === 1 && values[0] === textValues[0][0]));
       const fresh = observed?.sequence > priorSequence;
       const state = fresh && (outcome.route === undefined || observed.route === outcome.route) &&
         (outcome.modalOpen === undefined || observed.modalOpen === outcome.modalOpen) &&
         (outcome.scheme === undefined || observed.scheme === outcome.scheme);
       const unobserved = (outcome.requiredRules ?? []).filter(rule => !observed?.observedRules?.includes(rule));
-      if (present && absent && state && observed.status === 'measured' && !observed.recoveryPending &&
+      if (present && absent && sameText && state && observed.status === 'measured' && !observed.recoveryPending &&
           (!recoverModal || observed.observedRules?.includes('R6') === true)) {
         const receipt = { step: description, elapsedMs: Math.round(performance.now() - stepStart), actionSeq: input?.seq ?? null,
           layout: { seq: raw.seq, received: raw.received, sha256: raw.sha256, file: raw.file }, reportSeq: afterLog.seq, report: observed };
+        if (textValues !== undefined) receipt.matchedText = textValues[0]?.[0];
         steps.push(receipt);
         demand(Array.isArray(observed.violations) && observed.violations.length === 0 &&
           Array.isArray(observed.missing) && observed.missing.length === 0, `Layout invariants failed for ${description}`);
@@ -165,7 +171,7 @@ async function runJourney(id, run, candidate, options, outputDir) {
         return;
       }
       const missing = (outcome.all ?? []).filter(selector => matchingNodes(afterRoot, selector).length === 0).map(showSelector);
-      lastReason = JSON.stringify({ fresh, present, absent, missing, route: observed?.route, modal: observed?.modalOpen,
+      lastReason = JSON.stringify({ fresh, present, absent, textValues, missing, route: observed?.route, modal: observed?.modalOpen,
         scheme: observed?.scheme, pending: observed?.recoveryPending, scan: observed?.status, rules: observed?.observedRules,
         unmeasured: observed?.missing, requiredRules: unobserved });
       await delay(180);

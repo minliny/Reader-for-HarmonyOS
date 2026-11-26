@@ -3,9 +3,11 @@ import type { BookAcquisitionCandidate, BookAcquisitionCoordinator } from '../..
 import { diagnosticCodeOf } from '../../../app/LogPrivacy';
 import { errorMessageOf } from '../../../app/ErrorMessage';
 import { resolveBookshelfBook, type BookshelfBookMatch } from '../../bookshelf/application/BookshelfBookIdentity';
+import { readableBookshelfSourceName } from '../../bookshelf/application/BookshelfSourceNameProjection';
 import { readerPageInitialHeaderHeight } from '../../../ui/foundation/ReaderHeaderSpecs';
 import { readerSurfaceRectValid, type ReaderSurfaceRect } from '../../../ui/layout/ReaderSurfaceRect';
 import type { RemoteReadingEntryInput } from '../../reading/application/ReadingEntryHost';
+import { readingEntryInputForShelfSnapshot } from '../../reading/presentation/ReadingEntryDto';
 import { readingFailureHint } from '../../reading/presentation/ReadingFailurePresentation';
 import type { RemoteReadingBookSeed } from '../../reading/application/RemoteReadingFlowGateway';
 import type { RemoteReadingVariable } from '../../reading/application/RemoteReadingContract';
@@ -482,8 +484,12 @@ export class LibrarySearchPresentation {
         contentKind: saved.contentKind,
         detailUrl: saved.bookId, title: saved.title, author: saved.author, coverUrl: saved.coverUrl,
         intro: saved.intro, kind: saved.kind, lastChapter: saved.lastChapter };
-      return ports.remote({ seed, sourceName: saved.sourceName ?? ports.sourceName(saved.sourceId),
-        shelfSnapshot: saved, fallbackSeeds: [], fallbackSourceNames: [], displayCoverUrl });
+      const namedCandidate = this.detailCandidates.find((candidate: SearchBook): boolean => candidate.sourceId === saved.sourceId &&
+        readableBookshelfSourceName(saved.sourceId, candidate.sourceName.trim()));
+      const sourceName = namedCandidate?.sourceName ?? ports.sourceName(saved.sourceId);
+      return ports.remote(readingEntryInputForShelfSnapshot({
+        seed, sourceName, fallbackSeeds: [], fallbackSourceNames: [], displayCoverUrl,
+      }, saved));
     }
     // Unsaved works retain every source candidate. The shared scheduler bounds concurrency.
     const ordered: SearchBook[] = [book];

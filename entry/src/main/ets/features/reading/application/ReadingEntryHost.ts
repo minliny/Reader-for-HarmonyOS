@@ -5,6 +5,7 @@ import { BookAcquisitionProjectionGateway, type BookAcquisitionDetailProjection 
 import type { BookAcquisitionCandidate } from './BookAcquisitionCoordinator';
 import { errorMessageOf } from '../../../app/ErrorMessage';
 import { BookshelfFlowGateway } from '../../bookshelf/application/BookshelfFlowGateway';
+import { bookshelfSourceDisplayName, bookshelfSourceNameNeedsLookup } from '../../bookshelf/application/BookshelfSourceNameProjection';
 import { SourceGateway } from '../../source/application/SourceGateway';
 import { LocalReadingFlowGateway, LOCAL_SOURCE_ID, type LocalReadingTocEntry } from './LocalReadingFlowGateway';
 import { RemoteReadingFlowGateway, RemoteChapterCacheRefreshError, type RemoteReadingBookSeed, type RemoteReadingSession } from './RemoteReadingFlowGateway';
@@ -266,7 +267,7 @@ export class ReadingEntryHost {
       this.publish(scope, lease);
       const probe = this.probe(scope);
       if (suppliedShelf === undefined) void this.readMembership(session, scope, lease);
-      if (sourceName === session.identity.sourceId) void this.resolveSourceName(session, scope, lease);
+      void this.resolveSourceName(session, scope, lease);
       void this.projectDirectory(scope);
       if (admission.backgroundRefresh !== undefined) void this.refreshInBackground(seeds[index], sourceName,
         session, scope, lease, admission.backgroundRefresh);
@@ -719,11 +720,12 @@ export class ReadingEntryHost {
       const refreshed = await (refresh ?? this.runtime.bookAcquisitions().acquireBook(seed, { forceRefresh: true, isCurrent: current }));
       if (!current() || !this.sameBook(refreshed, cached.identity)) return;
       const changed = !sameRemoteSessionEvidence(this.state.session, refreshed); this.install(refreshed); displayed = refreshed;
-      this.state = { ...this.state, book: this.sessionDetail(refreshed, name.trim() || refreshed.identity.sourceId),
+      const currentName = this.state.book?.sourceName ?? name;
+      this.state = { ...this.state, book: this.sessionDetail(refreshed, currentName.trim() || refreshed.identity.sourceId),
         toc: this.catalog(refreshed), loadingMessage: '', catalogLoading: false, backgroundError: undefined }; this.publish(scope, lease);
       if (changed || this.state.verdict !== 'readable') void this.probe(scope);
       void this.projectDirectory(scope);
-      if (name.trim().length === 0 || name === refreshed.identity.sourceId) void this.resolveSourceName(refreshed, scope, lease);
+      void this.resolveSourceName(refreshed, scope, lease);
       if (this.state.inBookshelf) { try { lease.refreshShelf(); } catch (_) {} }
     } catch (error) { if (current()) this.backgroundFailure(scope, lease, 'detail-refresh', error); }
   }
@@ -740,11 +742,23 @@ export class ReadingEntryHost {
     this.state = { ...this.state, inBookshelf: value }; this.publish(scope, lease);
   }
   private async resolveSourceName(session: RemoteReadingSession, scope: number, lease: ReadingEntryLease): Promise<void> {
+    const sourceId = session.identity.sourceId;
+    const entryCurrent = this.current(scope, lease);
+    const current = (): boolean => {
+      const book = this.state.book;
+      return entryCurrent() && this.sameBook(this.state.session, session.identity) &&
+        book !== undefined && book.sourceId === sourceId && book.bookId === session.identity.bookId &&
+        bookshelfSourceNameNeedsLookup(sourceId, book.sourceName);
+    };
+    if (!current()) return;
     try {
-      const sources = await new SourceGateway(this.runtime).loadSources(session.identity.sourceId);
-      if (!this.current(scope, lease)() || !this.sameBook(this.state.session, session.identity) || this.state.book === undefined) return;
-      const source = sources.find(source => source.sourceId === session.identity.sourceId);
-      if (source !== undefined) { this.state = { ...this.state, book: { ...this.state.book, sourceName: source.name } }; this.publish(scope, lease); }
+      const sources = await new SourceGateway(this.runtime).loadSources(sourceId, false, current);
+      const book = this.state.book;
+      if (!current() || book === undefined) return;
+      const sourceName = bookshelfSourceDisplayName(sourceId, book.sourceName, [sources]);
+      if (bookshelfSourceNameNeedsLookup(sourceId, sourceName)) return;
+      this.state = { ...this.state, book: { ...book, sourceName } };
+      this.publish(scope, lease);
     } catch (_) { /* An optional name cannot gate readiness or invent source absence. */ }
   }
   private projectionCurrent(intent: DetailProjectionIntent): boolean {

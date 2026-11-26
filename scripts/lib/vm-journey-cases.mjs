@@ -29,12 +29,17 @@ const readerDirectoryContent = id('reader-control-module-directory');
 const switchSource = { id: /^reader-source-trigger:.*"detail-source"\]$/, enabled: 'true' };
 const sourceA = id(/^reader-source-trigger:.*novel-a\.reader-journeys\.invalid.*"detail-source"\]$/);
 const sourceB = id(/^reader-source-trigger:.*novel-b\.reader-journeys\.invalid.*"detail-source"\]$/);
+const currentSourceName = name => ({ type: 'Text', text: name, within: { type: 'Scroll' } });
+const unavailableSourceName = currentSourceName(/^(书源名称暂不可用|书源未知)$/);
 const switchClose = { id: /^reader-source-close:/, enabled: 'true' };
 const addBook = { id: 'reader-detail-shelf-action:加入书架', enabled: 'true' };
 const removeBook = { id: 'reader-detail-shelf-action:移除书架', enabled: 'true' };
 const readBook = { id: 'reader-detail-primary-action', enabled: 'true' };
 const shelfRowNovelMore = { id: /^reader-shelf-book-action:.*ReaderShelfNovel",true\]$/, enabled: 'true' };
 const shelfRowLocalMore = { id: /^reader-shelf-book-action:.*,"local",.*true\]$/, enabled: 'true' };
+const shelfRowLocalCard = { id: /^reader-shelf-book-action:.*,"local",.*false\]$/, enabled: 'true' };
+const localContinueCard = id(/^reader\.bookshelf\.continue-card:\d+:\["local",/);
+const localShelfProgress = within => ({ type: 'Text', text: /^(?:进度未知|(?:<1|\d+)%)$/, within });
 const bookActions = id('reader-bookshelf-book-action-sheet');
 const bookInfo = { id: /^reader-bookshelf-book-action-.*::book-info$/, enabled: 'true', within: bookActions };
 const activePage = { id: /^reader-page-slot-[ab]$/, enabled: 'true' };
@@ -69,14 +74,14 @@ async function openShelfMore(ui) {
   });
 }
 
-async function openLocalDetail(ui) {
+async function openLocalDetail(ui, captureBookActions = false) {
   if (!ui.has(shelfRowLocalMore)) {
     await ui.tap('切到书架列表以访问本地书操作', viewList, {
       route: 'bookshelf', all: [shelfRowLocalMore],
     });
   }
   await ui.tap('打开本地书操作抽屉', shelfRowLocalMore, {
-    route: 'bookshelf', all: [bookActions, bookInfo], modalOpen: true,
+    route: 'bookshelf', all: [bookActions, bookInfo], modalOpen: true, screenCapture: captureBookActions,
   });
   await ui.tap('打开已导入 TXT 的书籍信息', bookInfo, {
     route: 'detail', all: [text(LOCAL_TXT), text('本地藏书'), readBook], modalOpen: false,
@@ -90,7 +95,10 @@ export const journeys = {
       route: 'bookshelf', all: [text(LOCAL_TXT), text(SHELF_NOVEL)], none: [shelfRowNovelMore], screenCapture: true,
     });
     await ui.tap('切换列表模式', viewList, {
-      route: 'bookshelf', all: [shelfRowNovelMore, shelfRowLocalMore], screenCapture: true,
+      route: 'bookshelf', all: [shelfRowNovelMore, shelfRowLocalMore],
+      none: [{ ...text('*%'), within: localContinueCard }, { ...text('*%'), within: shelfRowLocalCard }],
+      sameText: [localShelfProgress(localContinueCard), localShelfProgress(shelfRowLocalCard)],
+      screenCapture: true,
     });
     await ui.tap('展开书架筛选', shelfFilterToggle, {
       route: 'bookshelf', all: [shelfFilterLocal, shelfFilterAll],
@@ -114,13 +122,15 @@ export const journeys = {
     await coldShelf(ui);
     await search(ui, SHELF_NOVEL, true);
     await ui.tap('从已入架的搜索结果打开详情', searchRow(SHELF_NOVEL), {
-      route: 'detail', all: [text(SHELF_NOVEL), sourceA, removeBook, switchSource],
+      route: 'detail', all: [text(SHELF_NOVEL), sourceA, removeBook, switchSource, currentSourceName('ReaderNovelA')],
+      none: [unavailableSourceName],
     });
     await ui.tap('打开详情换源抽屉', switchSource, {
       route: 'detail', all: [switchClose], modalOpen: true,
     });
     await ui.tap('关闭换源并验证详情动作恢复', switchClose, {
-      route: 'detail', all: [removeBook, switchSource], none: [switchClose], modalOpen: false, screenCapture: true,
+      route: 'detail', all: [removeBook, switchSource, currentSourceName('ReaderNovelA')],
+      none: [switchClose, unavailableSourceName], modalOpen: false, screenCapture: true,
     });
     const alternative = { type: 'Row', label: /^(ReaderNovelB|https:\/\/novel-b\.reader-journeys\.invalid)(?:[,，]|$)/,
       enabled: 'true', clickable: 'true' };
@@ -132,7 +142,8 @@ export const journeys = {
       none: [switchClose], modalOpen: false,
     });
     await ui.key('从切源后的阅读返回详情', 'Back', {
-      route: 'detail', all: [text(SHELF_NOVEL), sourceB, removeBook, switchSource], modalOpen: false,
+      route: 'detail', all: [text(SHELF_NOVEL), sourceB, removeBook, switchSource, currentSourceName('ReaderNovelB')],
+      none: [unavailableSourceName], modalOpen: false,
     });
     await ui.key('返回搜索并核对新源仍对应在架书籍', 'Back', {
       route: 'search', all: [{ ...text('已在书架'), within: searchRow(SHELF_NOVEL) }],
@@ -294,23 +305,22 @@ export const journeys = {
   async J8(ui) {
     const localShelf = { route: 'bookshelf', all: [searchEntry, text(LOCAL_TXT)], modalOpen: false };
     await ui.wait('冷启动并核对无书源夹具的本地 TXT', localShelf);
+    if (!ui.has(shelfRowLocalMore)) {
+      await ui.tap('切到列表以保留待测本地书操作', viewList, {
+        ...localShelf, all: [...localShelf.all, shelfRowLocalMore],
+      });
+    }
     await ui.tap('打开搜索以核对无结果态', searchEntry, { route: 'search', all: [searchField] });
     await ui.input('填写公开无匹配关键词', searchField, NO_MATCH, { route: 'search', all: [searchField] });
     await ui.tap('提交搜索并核对无结果态', searchSubmit, {
       route: 'search', all: [text('没有找到相关书籍'), text(`已搜索 0 个书源,未找到「${NO_MATCH}」的相关结果`)],
       none: [id(/^reader-search-result:/)], requiredRules: ['R7'], screenCapture: true,
     });
-    await ui.key('从无结果态返回书架', 'Back', localShelf);
+    await ui.key('从无结果态返回书架并保留本地书列表项', 'Back', {
+      ...localShelf, all: [...localShelf.all, shelfRowLocalMore],
+    });
 
-    const localResult = { id: /^reader-search-result:.*"local:local:/, enabled: 'true' };
-    await ui.tap('从恢复的书架重新打开搜索', searchEntry, { route: 'search', all: [searchField] });
-    await ui.input('填写本地 TXT 的检索词', searchField, 'Reader', { route: 'search', all: [searchField] });
-    await ui.tap('检索并核对公开本地 TXT', searchSubmit, {
-      route: 'search', all: [localResult, { ...text(LOCAL_TXT), within: localResult }],
-    });
-    await ui.tap('从本地搜索结果打开 TXT 详情', localResult, {
-      route: 'detail', all: [text(LOCAL_TXT), text('本地藏书'), readBook], modalOpen: false,
-    });
+    await openLocalDetail(ui, true);
     await ui.tap('打开本地 TXT 并等待分页正文', readBook, { route: 'reading', all: [readingStage, activePage] });
     const appearanceEntry = { id: 'reader-control-entry-appearance', enabled: 'true' };
     const appearance = id('reader-control-module-appearance');
@@ -339,10 +349,13 @@ export const journeys = {
     await ui.key('返回夜间详情并核对本地书动作', 'Back', {
       route: 'detail', all: [text(LOCAL_TXT), readBook], modalOpen: false, scheme: 'night', requiredRules: ['R7'],
     });
-    await ui.key('从夜间详情返回本地搜索结果', 'Back', {
-      route: 'search', all: [localResult], modalOpen: false, scheme: 'night',
-    });
     await ui.key('返回夜间书架并核对原条目', 'Back', {
+      ...localShelf, all: [...localShelf.all, shelfRowLocalCard], scheme: 'night', requiredRules: ['R7'],
+    });
+    await ui.tap('点击返回后保留的本地书卡继续阅读', shelfRowLocalCard, {
+      route: 'reading', all: [readingStage, activePage], modalOpen: false, scheme: 'night',
+    });
+    await ui.key('从书架卡片发起的阅读返回夜间书架', 'Back', {
       ...localShelf, scheme: 'night', requiredRules: ['R7'],
     });
     const general = { id: 'reader-settings-general', enabled: 'true' };

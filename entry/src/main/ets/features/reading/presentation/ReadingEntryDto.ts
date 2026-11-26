@@ -1,4 +1,5 @@
 import type { ShelfBook } from '../../../app/ReaderCoreGateway';
+import { bookshelfSourceDisplayName } from '../../bookshelf/application/BookshelfSourceNameProjection';
 import type { RemoteReadingEntryInput } from '../application/ReadingEntryHost';
 import type { RemoteReadingBookSeed, RemoteReadingSession } from '../application/RemoteReadingFlowGateway';
 
@@ -25,6 +26,10 @@ export function readingEntrySeedForContentKind(seed: RemoteReadingBookSeed,
 /** Keep the original request envelope and referenced owner DTOs when the
  * exact canonical shelf read supplies its current media and format facts. */
 export function readingEntryInputForShelfSnapshot(input: RemoteReadingEntryInput, book: ShelfBook): RemoteReadingEntryInput {
-  return { ...input, shelfSnapshot: book,
+  const sourceName = book.sourceId === input.seed.sourceId && book.bookId === input.seed.bookId
+    ? bookshelfSourceDisplayName(book.sourceId, book.sourceName ?? '', [],
+      { sourceId: input.seed.sourceId, sourceName: input.sourceName })
+    : input.sourceName;
+  return { ...input, sourceName, shelfSnapshot: book,
     seed: { ...input.seed, kind: book.kind ?? input.seed.kind, contentKind: book.contentKind } };
 }

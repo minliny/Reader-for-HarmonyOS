@@ -5,7 +5,8 @@ import { BookshelfReadOwner } from './BookshelfReadOwner';
 import type { BookshelfReadResult } from './BookshelfReadOwner';
 import type { BookshelfDataState, BookshelfFilter, BookshelfFlowGateway } from './BookshelfFlowGateway';
 import type { BookSource } from '../../source/application/SourceGateway';
-import { bookshelfSourceDisplayName, readableBookshelfSourceName, type BookshelfNamedSource } from './BookshelfSourceNameProjection';
+import { bookshelfSourceDisplayName, bookshelfSourceNameNeedsLookup, readableBookshelfSourceName,
+  type BookshelfNamedSource } from './BookshelfSourceNameProjection';
 
 export interface BookshelfProjectionSnapshot {
   generation: number;
@@ -136,8 +137,7 @@ export class BookshelfProjectionOwner {
     if (this.completeMembership()) this.deliver(binding, (): void => binding.membership(books));
     else if (binding.membershipNeeded?.() === true) void this.refreshMembership(binding);
     this.deliver(binding, (): void => binding.accepted?.(state));
-    if (state.shelf.books.some(book => book.sourceId !== 'local' && (book.sourceName === undefined ||
-      book.sourceName.trim().length === 0 || book.sourceName === '书源名称暂不可用'))) void this.hydrate(binding);
+    if (state.shelf.books.some(book => bookshelfSourceNameNeedsLookup(book.sourceId, book.sourceName ?? ''))) void this.hydrate(binding);
   }
   async page(previous: boolean, binding: BookshelfProjectionBinding): Promise<void> {
     const before = this.value, start = before.offset, count = before.books.length;

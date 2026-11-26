@@ -3,9 +3,9 @@
   "version": 1,
   "contractSource": "{\n  \"format\": \"reader.storage-contract\",\n  \"version\": 1,\n  \"productCompatibilityLine\": \"0.2\",\n  \"dataFormatGenerations\": [\n    1\n  ],\n  \"acceptedDirectoryPolicies\": [\n    \"reader-directory-broad-v1\",\n    \"reader-directory-visible-content-v2\"\n  ],\n  \"normalOpen\": {\n    \"migrateExisting\": false,\n    \"acceptedLayouts\": [\n      44,\n      45,\n      46,\n      47\n    ]\n  },\n  \"layouts\": [\n    {\n      \"schemaVersion\": 44,\n      \"layoutId\": \"reader-sqlite-44-v1\",\n      \"read\": true,\n      \"write\": true,\n      \"syncProtocolVersions\": [],\n      \"syncEpochOwner\": \"none\",\n      \"syncLogReceipts\": false\n    },\n    {\n      \"schemaVersion\": 45,\n      \"layoutId\": \"reader-sqlite-45-v1\",\n      \"read\": true,\n      \"write\": true,\n      \"syncProtocolVersions\": [\n        1\n      ],\n      \"syncEpochOwner\": \"state\",\n      \"syncLogReceipts\": false\n    },\n    {\n      \"schemaVersion\": 46,\n      \"layoutId\": \"reader-sqlite-46-v1\",\n      \"read\": true,\n      \"write\": true,\n      \"syncProtocolVersions\": [\n        2\n      ],\n      \"syncEpochOwner\": \"state\",\n      \"syncLogReceipts\": true\n    },\n    {\n      \"schemaVersion\": 47,\n      \"layoutId\": \"reader-sqlite-47-v1\",\n      \"read\": true,\n      \"write\": true,\n      \"syncProtocolVersions\": [\n        2\n      ],\n      \"syncEpochOwner\": \"clock\",\n      \"syncLogReceipts\": true\n    },\n    {\n      \"schemaVersion\": 47,\n      \"layoutId\": \"reader-sqlite-47-remote\",\n      \"schemaProfileSha256\": \"78ec3da13ad542c869b6825e4c008ddffe8310edf0fc268ceb80f0e42203d28b\",\n      \"read\": true,\n      \"write\": true,\n      \"syncProtocolVersions\": [],\n      \"syncEpochOwner\": \"none\",\n      \"syncLogReceipts\": false\n    }\n  ],\n  \"migrations\": {\n    \"automaticExisting\": false,\n    \"targetSchemaVersion\": 44,\n    \"explicitLegacyRange\": [\n      0,\n      43\n    ],\n    \"preserveLegacyFactsBefore\": [\n      8,\n      9\n    ]\n  }\n}\n",
   "contractSha256": "ac94d1e219d3da64665317840584a7143dc790e0a304c4f4ce5bc3beb052aa86",
-  "coreBuildId": "cf46c058a72d9110c87ce8b7bc2772aaf576199c4f2ae2ec0e293df86f596969",
-  "coreBuildIdentitySha256": "b3e5447935f15e4d1b02ec616d4c8c632f2b2792362da5bd6b6cccc191bd7274",
-  "coreInputFingerprint": "f3dc14dc8694be9ca9f0553bc224b6e12ae277dc317a23df4939e17aa108ddc1",
-  "nativeSha256": "24991791ef1a46c3dba3072840a97177680edfc8031d3ada3c203093f32064e3",
-  "nativeBytes": 36976856
+  "coreBuildId": "3efaed5e1c53e794e31ff7ba8a1d910ee57b3f46f66772768e7eea767c2bf56f",
+  "coreBuildIdentitySha256": "22003a430982127ce4f42e82c5befd8449f7a476f68fd0ffec333c6d40d5d20a",
+  "coreInputFingerprint": "3f18fa16476c3b2fb2f099ba07e9678586e63c1faa4a1d54d975c58d900c8faa",
+  "nativeSha256": "1c1e667bbd78330debd1bb88c810d04771db8a3a53d71767db2c2fa804db2194",
+  "nativeBytes": 36994800
 }
