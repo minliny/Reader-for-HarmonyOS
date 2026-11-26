@@ -256,7 +256,8 @@ export struct SourceSwitchWindow {
   @State private coverFailed: boolean = false;
   private coverGeneration: number = 0;
   @State private containerHeight: number = -1;
-  private containerOriginY: number = 0;
+  @State private containerOriginX: number = 0;
+  @State private containerOriginY: number = 0;
   @State private containerWidth: number = 0;
   @State private novelFontsReady: boolean = sourceSwitchNovelFontsReady();
   @State private messageGeneration: number = 0;
@@ -587,20 +588,24 @@ export struct SourceSwitchWindow {
     this.requestRefresh();
   }
   private safeTop(): number {
-    return !this.consumeTopInset || this.readerWindowMetricsRevision < 0 ? 0 : readerVisualSafeTop(ReaderWindowCoordinator.metrics());
+    return !this.consumeTopInset || this.readerWindowMetricsRevision < 0 ? 0 :
+      Math.max(0, readerVisualSafeTop(ReaderWindowCoordinator.metrics()) - this.containerOriginY);
   }
   private safeBottom(): number {
     if (this.readerWindowMetricsRevision < 0) return 0;
     const metrics = ReaderWindowCoordinator.metrics();
     return Math.max(0, this.frameHeight() - readerKeyboardHostBottom(metrics, this.containerOriginY,
-      this.frameHeight(), 0, this.frameWidth()));
+      this.frameHeight(), this.containerOriginX, this.frameWidth()));
   }
   private safeLeft(): number {
     const metrics = ReaderWindowCoordinator.metrics();
-    return this.readerWindowMetricsRevision < 0 ? 0 : readerInteractiveSafeLeft(metrics);
+    return this.readerWindowMetricsRevision < 0 ? 0 :
+      Math.max(0, readerInteractiveSafeLeft(metrics) - this.containerOriginX);
   }
   private safeRight(): number {
-    return this.readerWindowMetricsRevision < 0 ? 0 : readerInteractiveSafeRight(ReaderWindowCoordinator.metrics());
+    const metrics = ReaderWindowCoordinator.metrics();
+    return this.readerWindowMetricsRevision < 0 ? 0 :
+      Math.max(0, this.containerOriginX + this.frameWidth() - (metrics.windowRect.width - readerInteractiveSafeRight(metrics)));
   }
 
   @Builder
@@ -1131,7 +1136,10 @@ export struct SourceSwitchWindow {
         const height = Number(area.height);
         const width = Number(area.width);
         if (Number.isFinite(height) && height >= 0) this.containerHeight = height;
-        this.containerOriginY = Number(area.globalPosition.y);
+        const originX = Number(area.globalPosition.x);
+        const originY = Number(area.globalPosition.y);
+        if (Number.isFinite(originX) && originX !== this.containerOriginX) this.containerOriginX = originX;
+        if (Number.isFinite(originY) && originY !== this.containerOriginY) this.containerOriginY = originY;
         if (Number.isFinite(width) && width > 0) this.containerWidth = width;
       });
   }

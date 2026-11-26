@@ -551,7 +551,8 @@ export struct BookshelfPage {
 
   @Builder
   private bookActionSheetHost(id: string, book: ShelfBook | undefined) {
-    ReaderBottomSheet({ visible: this.bookActionSheetVisible, specId: 'bookshelf-book-action', surfaceWidth: this.bookActionWidth(),
+    ReaderBottomSheet({ visible: this.bookActionSheetVisible, specId: 'bookshelf-book-action',
+      surfaceWidth: this.bookActionSheetSpec().maxWidth,
       scheme: this.appThemeScheme, reduceMotion: this.reduceMotion, nativeId: 'reader-bookshelf-book-action-sheet', drainPendingClose: true,
       content: (): void => { this.bookActionSheetPresentation(id, book); },
       onRequestClose: (): void => this.dismissBookActionSheet(id, book),
@@ -1498,11 +1499,6 @@ export struct BookshelfPage {
     };
     // The keyed presentation and selected book remain owned until the exit.
     this.bookActionSheetVisible = false;
-  }
-
-  private bookActionWidth(): number {
-    // Match the source drawer's live width cap, independently of shelf covers.
-    return this.resolveContentFrame(new SurfaceWidthSpec(this.bookActionSheetSpec().maxWidth)).width;
   }
 
   private phoneContentWidth(): number {

@@ -30,8 +30,8 @@ export struct SettingsShell {
   onOpenSync: () => void = (): void => {};
   onRssRequested: () => void = (): void => {};
   onDiscoverRequested: () => void = (): void => {};
-  onOverlayOriginChange: (x: number, y: number, width?: number) => void =
-    (_x: number, _y: number, _width?: number): void => {};
+  onOverlayOriginChange: (x: number, y: number, width: number, height: number) => void =
+    (_x: number, _y: number, _width: number, _height: number): void => {};
   @BuilderParam homeContent: () => void;
   @BuilderParam generalContent: () => void;
   @BuilderParam overlayContent: (contentStartInset: number) => void;
@@ -111,7 +111,7 @@ export struct SettingsShell {
     if (!this.routeCurrent) return;
     // Area.globalPosition 已是 vp 单位，不能再 px2vp。
     this.onOverlayOriginChange(readerPageAreaLength(area.globalPosition.x),
-      readerPageAreaLength(area.globalPosition.y), readerPageAreaLength(area.width));
+      readerPageAreaLength(area.globalPosition.y), readerPageAreaLength(area.width), readerPageAreaLength(area.height));
   }
 
   private onMainTab(key: string): void {

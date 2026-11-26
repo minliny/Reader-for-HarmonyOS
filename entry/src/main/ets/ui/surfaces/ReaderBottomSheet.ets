@@ -5,8 +5,8 @@ import { READER_REDUCED_FADE_MS, READER_SHEET_CLOSE_MS } from '../foundation/Pro
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../foundation/ReaderMotionPolicy';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
-import { readerInteractiveSafeTop, readerVisualSafeBottom, readerVisualSafeLeft, readerVisualSafeRight }
-  from '../foundation/ReaderWindowMetrics';
+import { ReaderRectVp } from '../foundation/ReaderWindowMetrics';
+import { readerOverlayViewport } from '../layout/ReaderOverlayGeometry';
 import { readerSurfaceElevation, resolveSheetSpec, type SheetSpecId, type SheetSurfaceSpec } from './ReaderSurfaceSpecs';
 import { defaultNavigationPreferences, ReaderImmersiveMaterialModifier, ReaderModalScrimModifier,
   readerSurfaceMaterialDecision } from './ReaderSurfaceMaterial';
@@ -114,21 +114,27 @@ export struct ReaderBottomSheet {
 
   @Builder
   private sheetCoverContent() {
-    Stack({ alignContent: Alignment.Bottom }) {
+    Stack({ alignContent: Alignment.TopStart }) {
       if (this.frameVisible) {
         Stack().width('100%').height('100%')
           .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
             readerAppColor(this.spec().hostMaskRole, this.scheme), this.frameMaterial().native))
-          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+          .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
           .accessibilityLevel('no')
           .onClick((): void => {
             if (this.mounted && this.visible && this.opened) this.onRequestClose();
           })
           .transition(TransitionEffect.OPACITY.animation(this.reduceMotion ? readerMotionReducedFadeParam() :
             readerMotionAnimateParam('app.sheet.scrim', false)));
-        this.frame();
+        if (this.frameViewport().width > 0 && this.frameViewport().height > 0) {
+          Stack({ alignContent: Alignment.Bottom }) { this.frame(); }
+            .width(this.frameViewport().width).height(this.frameViewport().height)
+            .position({ x: this.frameViewport().left, y: this.frameViewport().top })
+            .hitTestBehavior(HitTestMode.Transparent);
+        }
       }
     }.width('100%').height('100%').hitTestBehavior(HitTestMode.Default)
+      .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.ALL])
       .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
         ? { role: 'modal-overlay', id: 'bottom-sheet', active: this.visible,
           intercepts: this.coverVisible, closeDurationMs: this.reduceMotion ? READER_REDUCED_FADE_MS : READER_SHEET_CLOSE_MS } as LayoutInvariantTag : undefined);
@@ -142,10 +148,8 @@ export struct ReaderBottomSheet {
       } else {
         this.content();
       }
-    }.id(this.nativeId).width(this.surfaceWidth)
-      .constraintSize({ maxHeight: this.frameMaxHeight() })
-      .padding({ bottom: this.safeBottom() })
-      .translate({ x: this.safeCenterOffset() })
+    }.id(this.nativeId).width(Math.min(this.surfaceWidth, this.spec().maxWidth, this.frameViewport().width))
+      .constraintSize({ maxHeight: this.frameViewport().height })
       .backgroundEffect(undefined)
       .backgroundColor(this.frameMaterial().native ? Color.Transparent : readerAppColor(this.spec().hostBackgroundRole, this.scheme))
       .border(this.frameMaterial().native ? { width: 0, color: Color.Transparent } :
@@ -181,16 +185,9 @@ export struct ReaderBottomSheet {
     return readerSurfaceMaterialDecision('modalSheet', this.appearancePreferences, this.scheme, this.systemScheme);
   }
 
-  private frameMaxHeight(): Length {
+  private frameViewport(): ReaderRectVp {
     this.metricsRevision;
-    const metrics = readerWindowMetrics();
-    if (metrics.windowRect.height <= 0) return '100%';
-    return Math.max(1, metrics.windowRect.height - readerInteractiveSafeTop(metrics, false));
-  }
-
-  private safeBottom(): number {
-    this.metricsRevision;
-    return readerVisualSafeBottom(readerWindowMetrics());
+    return readerOverlayViewport(readerWindowMetrics());
   }
 
   private frameShadow(): ShadowOptions {
@@ -198,9 +195,4 @@ export struct ReaderBottomSheet {
     return readerSurfaceElevation(this.spec().hostElevation, this.scheme);
   }
 
-  private safeCenterOffset(): number {
-    this.metricsRevision;
-    const metrics = readerWindowMetrics();
-    return (readerVisualSafeLeft(metrics) - readerVisualSafeRight(metrics)) / 2;
-  }
 }

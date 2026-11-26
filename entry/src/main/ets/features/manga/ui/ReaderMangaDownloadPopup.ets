@@ -1,5 +1,9 @@
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../../reading/presentation/ReadingDirectoryRecovery';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import { ReaderInsetsVp, ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerOverlayPanel, readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry';
+import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
@@ -12,6 +16,8 @@ import type { MangaDownloadAction, MangaDownloadActionId } from '../application/
 @Component
 export struct ReaderMangaDownloadPopup {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @State private anchor: ReaderRectVp | undefined = undefined;
   @Prop specId: 'manga-download' = 'manga-download';
   @Prop visible: boolean = false;
   @Prop reduceMotion: boolean = false;
@@ -46,13 +52,36 @@ export struct ReaderMangaDownloadPopup {
       .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, this.spec().anchorSize / 2))
       .accessibilityText('漫画下载管理')
       .onClick((): void => { if (this.mounted) this.onOpen(); })
+      .onAreaChange((_old: Area, current: Area): void => this.recordAnchor(current))
       .bindPopup(this.mounted && this.visible, this.popupOptions(this.generation));
   }
+
+  private recordAnchor(area: Area): void {
+    const x = readerPageAreaLength(area.globalPosition.x);
+    const y = readerPageAreaLength(area.globalPosition.y);
+    const width = readerPageAreaLength(area.width);
+    const height = readerPageAreaLength(area.height);
+    if (Number.isFinite(x) && Number.isFinite(y) && width > 0 && height > 0) {
+      this.anchor = new ReaderRectVp(x, y, width, height);
+    }
+  }
+
+  private popupRect(): ReaderRectVp {
+    this.metricsRevision;
+    const viewport = readerOverlayViewport(readerWindowMetrics(), undefined, new ReaderInsetsVp(8, 8, 8, 8), this.anchor);
+    return readerOverlayPanel(viewport, Math.min(this.spec().maxWidth, this.availableWidth),
+      this.spec().maxHeight, 'anchor-start', this.anchor, 8);
+  }
+
   private popupOptions(generation: number): CustomPopupOptions {
     const spec = this.spec();
     const border = readerAppColor('app.border.menu', this.appThemeScheme);
+    const rect = this.popupRect();
+    const anchor = this.anchor;
     return { builder: (): void => { this.popupContent(generation); },
-      placement: Placement.BottomLeft, enableArrow: false,
+      placement: anchor !== undefined && rect.top < anchor.top ? Placement.TopLeft : Placement.BottomLeft,
+      width: rect.width, targetSpace: 8, enableArrow: false,
+      offset: anchor === undefined ? undefined : { x: rect.left - anchor.left, y: 0 },
       popupColor: readerAppColor('TOK_CARD_BG', this.appThemeScheme),
       backgroundBlurStyle: BlurStyle.NONE,
       radius: spec.radius, borderWidth: spec.borderWidth,
@@ -80,8 +109,8 @@ export struct ReaderMangaDownloadPopup {
           if (this.isCurrent(generation) && this.visible) this.onAction(action, generation);
         },
         onRetry: (): void => { if (this.isCurrent(generation) && this.visible) this.onRetry(generation); } });
-    }.width(Math.min(this.spec().maxWidth, this.availableWidth))
-      .constraintSize({ maxHeight: this.spec().maxHeight }).padding(this.spec().padding).scrollBar(BarState.Off);
+    }.width(this.popupRect().width).constraintSize({ maxHeight: this.popupRect().height })
+      .padding(this.spec().padding).scrollBar(BarState.Auto);
   }
   private spec(): ReaderMangaDownloadPopupRecipe {
     if (this.specId !== 'manga-download') throw new Error('Unsupported manga download popup specification');

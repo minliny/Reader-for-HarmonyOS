@@ -1,7 +1,7 @@
 import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
-import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { readerSurfaceElevation, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfaces/ReaderActionMenuSurface';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
 import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
@@ -23,6 +23,8 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { bookContentKindLabel, bookCoverDisplayUrl } from '../../../app/library/BookCoverDisplay';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
+import { readerOverlayListHeight, readerOverlayPanel, readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry';
+import { readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
 import { ReaderPageGeometry, ReaderPageGeometryInput,
   resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
@@ -43,7 +45,7 @@ import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision, ReaderSurfaceMaterialRole } from '../../../app/HarmonyCapabilityPolicy';
 import { ReaderUIVerificationProbe } from '../../../app/diagnostics/ReaderUIVerificationProbe';
 import {
-  readerVisualSafeLeft,
+  ReaderInsetsVp, ReaderRectVp, readerVisualSafeLeft,
   readerVisualSafeRight, readerInteractiveSafeTop, readerInteractiveSafeBottom,
 } from '../../../ui/foundation/ReaderWindowMetrics';
 import {
@@ -130,6 +132,8 @@ export struct LocalBookDetail {
   onCancelAdd: (identity?: string) => void = (_identity?: string): void => {};
   onBack: () => void = (): void => {};
   @State private viewportWidth: number = 0;
+  @State private viewportLeft: number = 0;
+  @State private viewportTop: number = 0;
   private viewportHeight: number = 0;
   @State private introExpanded: boolean = false;
   @State private introOverflow: boolean = false;
@@ -141,6 +145,7 @@ export struct LocalBookDetail {
   @State private detailPressedAction: string = '';
   private detailPressPointer: number = -1;
   @State private moreOpen: boolean = false;
+  @State private moreAnchor: ReaderRectVp | undefined = undefined;
   private moreLease: string = '';
   private moreRevision: number = 0;
   private shownBookIdentity: string = '';
@@ -273,6 +278,10 @@ export struct LocalBookDetail {
         if (!this.mounted) return;
         const width = readerPageAreaLength(area.width);
         const height = readerPageAreaLength(area.height);
+        const left = readerPageAreaLength(area.globalPosition.x);
+        const top = readerPageAreaLength(area.globalPosition.y);
+        if (Number.isFinite(left) && Math.abs(this.viewportLeft - left) > .1) this.viewportLeft = left;
+        if (Number.isFinite(top) && Math.abs(this.viewportTop - top) > .1) this.viewportTop = top;
         if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) return;
         const widthChanged = Math.abs(this.viewportWidth - width) > .1;
         if (!widthChanged && Math.abs(this.viewportHeight - height) <= .1) return;
@@ -583,7 +592,16 @@ export struct LocalBookDetail {
       accessibilityLabel: '更多操作', focusId: this.moreFocusKey(), actionScope: this.admissionIdentity,
       actionEnabled: this.detailKindConfirmed() && this.acceptsDetailInput(),
       selectionState: this.moreOpen ? 'selected' : 'none',
-      onTap: (): void => { if (this.moreOpen) this.closeMore(true); else this.openMore(); } });
+      onTap: (): void => { if (this.moreOpen) this.closeMore(true); else this.openMore(); } })
+      .onAreaChange((_old: Area, area: Area): void => {
+        const left = readerPageAreaLength(area.globalPosition.x);
+        const top = readerPageAreaLength(area.globalPosition.y);
+        const width = readerPageAreaLength(area.width);
+        const height = readerPageAreaLength(area.height);
+        if (Number.isFinite(left) && Number.isFinite(top) && width > 0 && height > 0) {
+          this.moreAnchor = new ReaderRectVp(left, top, width, height);
+        }
+      });
   }
 
   private moreFocusKey(): string { return sourceSwitchTriggerFocusId(this.book.sourceId, this.book.bookId, 'detail-more'); }
@@ -649,7 +667,7 @@ export struct LocalBookDetail {
 
   @Builder
   private detailMoreMenu() {
-    Stack({ alignContent: Alignment.TopEnd }) {
+    Stack({ alignContent: Alignment.TopStart }) {
       Stack().width('100%').height('100%').opacity(.32)
         .attributeModifier(new ReaderModalScrimModifier(this.navigationAppearance, this.appThemeScheme,
           readerAppColor('app.scrim.select', this.appThemeScheme), this.surfaceMaterial('popoverMenu').native))
@@ -658,8 +676,8 @@ export struct LocalBookDetail {
       Stack({ alignContent: Alignment.TopEnd }) {
         Column() {
           ReaderActionMenuSurface({ nativeId: `${this.moreFocusKey()}-menu`,
-            scheme: this.appThemeScheme, availableWidth: DETAIL_MENU_WIDTH,
-            viewportHeight: Math.max(0, this.viewportHeight - this.geometry.content.startInset - 20),
+            scheme: this.appThemeScheme, availableWidth: this.detailMoreRect().width,
+            viewportHeight: Math.max(0, this.detailMoreRect().height - 14),
             reduceMotion: this.appReduceMotion, actions: this.detailMenuActions(),
             onAction: (id: string): void => this.chooseMoreAction(id) });
         }.width('100%').padding({ top: 6, bottom: 6 }).borderRadius(16)
@@ -671,16 +689,43 @@ export struct LocalBookDetail {
           .shadow(this.surfaceMaterial('popoverMenu').native ? undefined : readerSurfaceElevation('dialog', this.appThemeScheme))
           .attributeModifier(new ReaderImmersiveMaterialModifier(this.surfaceMaterial('popoverMenu')));
         if (!this.surfaceMaterial('popoverMenu').native) {
-          Column().width(12).height(12).rotate({ angle: 45 })
+          Column().width(12).height(12).rotate({ angle: this.detailMoreAboveAnchor() ? 225 : 45 })
             .backgroundColor(readerAppColor('TOK_SURFACE_ELEVATED', this.appThemeScheme))
             .border({ width: { top: 1, left: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-            .position({ x: DETAIL_MENU_WIDTH - 28, y: -6 }).zIndex(1)
+            .position({ x: this.detailMorePointerX(),
+              y: this.detailMoreAboveAnchor() ? this.detailMoreRect().height - 6 : -6 }).zIndex(1)
             .hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
         }
-      }.width(DETAIL_MENU_WIDTH).clip(false)
-        .margin({ top: this.geometry.content.startInset, right: this.geometry.header.insetRight })
+      }.width(this.detailMoreRect().width).clip(false)
+        .position({ x: this.detailMoreRect().left - this.viewportLeft, y: this.detailMoreRect().top - this.viewportTop })
         .transition(this.detailMoreTransition());
     }.width('100%').height('100%');
+  }
+
+  private detailMoreAnchor(): ReaderRectVp {
+    return this.moreAnchor ?? new ReaderRectVp(this.viewportLeft + this.liveWidth() - this.geometry.header.insetRight - 44,
+      this.viewportTop + this.geometry.content.startInset - 50, 44, 44);
+  }
+
+  private detailMoreRect(): ReaderRectVp {
+    this.readerWindowMetricsRevision;
+    const metrics = ReaderWindowCoordinator.metrics();
+    const anchor = this.detailMoreAnchor();
+    const host = this.viewportHeight > 0 ?
+      new ReaderRectVp(this.viewportLeft, this.viewportTop, this.liveWidth(), this.viewportHeight) : undefined;
+    const viewport = readerOverlayViewport(metrics, host, new ReaderInsetsVp(8, 6, 8, 6), anchor);
+    const spec = resolvePopupSpec('reader-more-menu');
+    const rowHeight = readerScaledControlHeight(spec.actionHeight, spec.actionLineHeight, metrics.systemFontScale);
+    const height = readerOverlayListHeight(0, rowHeight, this.detailMenuActions().length, 0, 6, 6, 1, 0);
+    return readerOverlayPanel(viewport, DETAIL_MENU_WIDTH, height, 'anchor-end', anchor, 8);
+  }
+
+  private detailMoreAboveAnchor(): boolean { return this.detailMoreRect().top < this.detailMoreAnchor().top; }
+
+  private detailMorePointerX(): number {
+    const panel = this.detailMoreRect();
+    const anchor = this.detailMoreAnchor();
+    return Math.max(6, Math.min(panel.width - 18, anchor.left + anchor.width / 2 - panel.left - 6));
   }
 
   private surfaceMaterial(role: ReaderSurfaceMaterialRole): ReaderSurfaceMaterialDecision {

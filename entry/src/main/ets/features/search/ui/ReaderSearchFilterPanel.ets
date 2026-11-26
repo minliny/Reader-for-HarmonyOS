@@ -8,7 +8,7 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { SheetSurfaceSpec, resolveSheetSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSurfaceHeader';
-import { readerVisualSafeTop, readerVisualSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import { SearchFilterGeometry } from './SearchFilterGeometry';
@@ -99,8 +99,9 @@ export struct ReaderSearchFilterPanel {
     const header = this.measuredHeaderHeight > 0 ? this.measuredHeaderHeight :
       spec.handleTop + spec.handleHeight + spec.handleBottom +
       Math.max(spec.titleHeight, spec.titleLineHeight * Math.max(1, this.systemFontScale()), resetHeight) + spec.titleBottom;
-    return Math.max(0, Math.min(metrics.windowRect.height * .6, metrics.windowRect.height -
-      readerVisualSafeTop(metrics) - readerVisualSafeBottom(metrics) - header - spec.contentBottom));
+    const viewport = readerOverlayViewport(metrics);
+    return Math.max(0, Math.min(metrics.windowRect.height * .6,
+      viewport.height - header - spec.contentBottom - spec.hostBorderWidth));
   }
   private headerMeasurement(identity: string): (_old: Area, area: Area) => void {
     return (_old: Area, area: Area): void => {

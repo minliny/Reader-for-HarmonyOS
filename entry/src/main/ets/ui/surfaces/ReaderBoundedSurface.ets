@@ -32,9 +32,11 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
     this.material = material;
   }
   applyNormalAttribute(instance: CommonAttribute): void {
+    const maxHeight = this.maxHeight > 0 ? this.maxHeight : '100%';
+    const height = this.height > 0 ? this.height : undefined;
     if (this.id === 'source-switch-drawer') {
       const spec = resolveDrawerSpec(this.id);
-      instance.width(this.width).height(this.height);
+      instance.width(this.width).height(height).constraintSize({ maxWidth: '100%', maxHeight });
       this.applyMaterialFrame(instance, { radius: READER_HEAVY_GLASS_BLUR_VP, color: readerAppColor(spec.surfaceRole, this.scheme) },
         { width: this.placement === 'side' ? { left: 1 } : { top: 1 }, color: readerAppColor(spec.lineRole, this.scheme) },
         readerSurfaceElevation('sheet', this.scheme));
@@ -44,10 +46,13 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
     }
     if (this.id === 'reader-action-sheet') {
       const spec = resolveDrawerSpec(this.id); const side = this.placement === 'side';
-      const contentMax = Math.max(1, this.maxHeight - this.insets.top - this.insets.bottom);
-      instance.width(this.width).height(side ? this.height : undefined)
-        .constraintSize({ minHeight: side ? 0 : Math.min(spec.minimumContentHeight, contentMax) + this.insets.top + this.insets.bottom, maxHeight: this.maxHeight })
-        .padding({ left: this.insets.left, right: this.insets.right, top: this.insets.top, bottom: this.insets.bottom });
+      const paddingTop = this.maxHeight > 0 ? Math.min(this.insets.top, this.maxHeight) : this.insets.top;
+      const paddingBottom = this.maxHeight > 0 ? Math.min(this.insets.bottom, this.maxHeight - paddingTop) : this.insets.bottom;
+      const insetHeight = paddingTop + paddingBottom;
+      const minimumHeight = this.maxHeight > 0 ? Math.min(this.maxHeight, spec.minimumContentHeight + insetHeight) : insetHeight;
+      instance.width(this.width).height(side ? height : undefined)
+        .constraintSize({ maxWidth: '100%', minHeight: side ? 0 : minimumHeight, maxHeight })
+        .padding({ left: this.insets.left, right: this.insets.right, top: paddingTop, bottom: paddingBottom });
       this.applyMaterialFrame(instance, { radius: READER_HEAVY_GLASS_BLUR_VP, color: readerAppColor(spec.surfaceRole, this.scheme) },
         side ? { width: { left: 1 }, color: readerAppColor(spec.lineRole, this.scheme) } : undefined, READER_NO_SHADOW);
       instance.borderRadius({ topLeft: side ? 0 : spec.cornerRadius, topRight: side ? 0 : spec.cornerRadius, bottomLeft: 0, bottomRight: 0 })
@@ -56,7 +61,7 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
     }
     if (this.id === 'source-switch-window') {
       const spec = resolvePopupSpec(this.id);
-      instance.width(this.width).height(this.height);
+      instance.width(this.width).height(height).constraintSize({ maxWidth: '100%', maxHeight });
       this.applyMaterialFrame(instance, { radius: READER_GLASS_BLUR_VP, color: readerAppColor(spec.surfaceBackgroundRole, this.scheme) },
         { width: spec.borderWidth, color: readerAppColor(spec.surfaceBorderRole, this.scheme) });
       instance.borderRadius(spec.borderRadius);
@@ -64,14 +69,14 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
     }
     if (this.id === 'local-import-selection' || this.id === 'local-import-progress' || this.id === 'local-import-result-content') {
       const spec = resolveDialogSpec('local-import');
-      instance.width(this.width).height(this.height);
+      instance.width(this.width).height(height).constraintSize({ maxWidth: '100%', maxHeight });
       if (this.id !== 'local-import-result-content') instance.backgroundColor(readerAppColor(spec.backgroundRole, this.scheme))
         .border({ width: 1, color: readerAppColor('TOK_LINE', this.scheme) })
         .borderRadius(spec.borderRadius).shadow(readerSurfaceElevation('dialog', this.scheme));
       return;
     }
     if (this.id === 'reader-replace-editor') {
-      instance.width(this.width).height(this.height).padding(12)
+      instance.width(this.width).height(height).constraintSize({ maxWidth: '100%', maxHeight }).padding(12)
         .backgroundColor(readerAppColor('TOK_SURFACE_SOLID', this.scheme)).borderRadius(12);
       return;
     }
@@ -83,11 +88,11 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
     }
     const spec = resolvePopupSpec('tts-config-manager');
     const density = readerWindowMetrics().densityPixels;
-    instance.width(this.width).height(this.height)
+    instance.width(this.width).height(height)
       .backgroundColor(readerAppColor(spec.surfaceBackgroundRole, this.scheme))
       .border({ width: spec.borderWidth, color: readerAppColor(spec.surfaceBorderRole, this.scheme) })
       .borderRadius(this.id === 'tts-config-picker' ? 14 : spec.borderRadius)
-      .constraintSize({ maxWidth: this.id === 'tts-config-manager' ? spec.width : this.width, maxHeight: '100%' }).shadow({
+      .constraintSize({ maxWidth: '100%', maxHeight }).shadow({
         radius: (this.id === 'tts-config-picker' ? 36 : spec.shadowRadius) * density,
         color: readerAppColor(this.id === 'tts-config-picker' ? 'app.shadow.readerConfigSecondary' : spec.surfaceShadowRole, this.scheme),
         offsetY: (this.id === 'tts-config-picker' ? 14 : spec.shadowOffsetY) * density,

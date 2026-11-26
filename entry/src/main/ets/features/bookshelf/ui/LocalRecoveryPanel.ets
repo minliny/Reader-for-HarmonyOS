@@ -9,13 +9,10 @@ import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFee
 import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { TOK_SPACE_SM } from '../../../ui/foundation/ReaderTokens';
-import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
-import { readerInteractiveSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
-import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
-import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { DialogActionView, ReaderDialogSurface } from '../../../ui/surfaces/ReaderDialogSurface';
+import { ReaderDialogViewport } from '../../../ui/surfaces/ReaderDialogViewport';
 import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
 import { CategorySection } from '../../settings/ui/CategorySection';
@@ -31,7 +28,6 @@ export struct LocalRecoveryPanel {
     defaultNavigationPreferences();
   @StorageProp('readerAppForeground') private appForeground: boolean = true;
   @StorageProp('readerSystemMigrationState') @Watch('refreshOpening') private systemMigrationState: string = 'none';
-  @StorageProp('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
   @Prop @Watch('refreshOpening') navigationGeneration: number = 0;
   @Prop @Watch('refreshOpening') externalRestoreRevision: number = 0;
   @Prop showHeading: boolean = false;
@@ -52,8 +48,6 @@ export struct LocalRecoveryPanel {
   @State private dialogKind: LocalRecoveryDialog = 'export';
   @State private dialogTicket: number = 0;
   @State private coverVisible: boolean = false;
-  @State private coverHeight: number = 0;
-  @State private coverOriginY: number = 0;
   private dialogSequence: number = 0;
   private confirmedDialogTicket: number = 0;
   private mounted: boolean = false;
@@ -134,8 +128,6 @@ export struct LocalRecoveryPanel {
     this.dialogTicket = 0;
     this.coverVisible = false;
     this.confirmation = '';
-    this.coverHeight = 0;
-    this.coverOriginY = 0;
   }
 
   private dialogCurrent(ticket: number, revision: number): boolean {
@@ -334,17 +326,6 @@ export struct LocalRecoveryPanel {
     }
   }
 
-  private coverTop(): number {
-    if (this.windowMetricsRevision < 0) return 0;
-    return Math.max(0, readerInteractiveSafeTop(readerWindowMetrics(), true) - this.coverOriginY);
-  }
-
-  private coverBodyHeight(): number {
-    const metrics = readerWindowMetrics();
-    const height = this.coverHeight > 0 ? this.coverHeight : metrics.windowRect.height;
-    return Math.max(0, readerKeyboardHostBottom(metrics, this.coverOriginY, height) - this.coverTop());
-  }
-
   @Builder
   private dialogCover() {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -353,12 +334,7 @@ export struct LocalRecoveryPanel {
           (ticket: number): string => ticket.toString());
       }
     }.width('100%').height('100%')
-      .onAreaChange((_old: Area, next: Area): void => {
-        const height = readerPageAreaLength(next.height);
-        const originY = readerPageAreaLength(next.globalPosition.y);
-        if (height > 0 && this.coverHeight !== height) this.coverHeight = height;
-        if (this.coverOriginY !== originY) this.coverOriginY = originY;
-      });
+      .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], [LayoutSafeAreaEdge.ALL]);
   }
 
   @Builder
@@ -367,12 +343,15 @@ export struct LocalRecoveryPanel {
       .width('100%').height('100%')
       .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
         readerAppColor('app.scrim.modal', this.scheme)))
-      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+      .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
       .accessibilityLevel('no')
       .onClick((): void => this.dismissDialog(ticket));
-    Scroll(this.dialogScroller) {
-      Column() {
-        ReaderDialogSurface({ specId: 'json-import',
+    ReaderDialogViewport({ scroller: this.dialogScroller, nativeId: this.dialogScrollBinding.id,
+      onScrollAppeared: (): void => this.dialogScrollBinding.mount(this.getUIContext(), this.dialogEditing, this.dialogScroller),
+      onScrollDisappeared: (): void => this.dialogScrollBinding.unmount(),
+      onScrollChanged: (): void => this.dialogEditing.refresh(),
+      content: (widthVp: number, _heightVp: number): void => {
+        ReaderDialogSurface({ specId: 'json-import', containerWidthVp: widthVp,
           title: this.dialogKind === 'export' ? '导出恢复包' : this.dialogKind === 'inspect' ? '导入恢复包' :
             this.dialogKind === 'rollback' ? '回退未完成的恢复' : '恢复本地阅读库',
           actions: [new DialogActionView('cancel', '取消', 'default', true, true),
@@ -382,15 +361,8 @@ export struct LocalRecoveryPanel {
           onAction: (id: string): void => this.chooseDialogAction(ticket, revision, id),
           body: (): void => { this.dialogFields(ticket, revision); },
         }).hitTestBehavior(HitTestMode.Default);
-      }.width('100%').constraintSize({ minHeight: this.coverBodyHeight() })
-        .padding({ top: TOK_SPACE_SM, bottom: TOK_SPACE_SM }).justifyContent(FlexAlign.Center)
-        .hitTestBehavior(HitTestMode.Transparent);
-    }.width('100%').height(this.coverBodyHeight()).position({ x: 0, y: this.coverTop() })
-      .id(this.dialogScrollBinding.id)
-      .onAppear((): void => this.dialogScrollBinding.mount(this.getUIContext(), this.dialogEditing, this.dialogScroller))
-      .onDisAppear((): void => this.dialogScrollBinding.unmount())
-      .onAreaChange((): void => this.dialogEditing.refresh())
-      .scrollBar(BarState.Auto).clip(true).hitTestBehavior(HitTestMode.Transparent);
+      },
+    });
   }
 
   @Builder

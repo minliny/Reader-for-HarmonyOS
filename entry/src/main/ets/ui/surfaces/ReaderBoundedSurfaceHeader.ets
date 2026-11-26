@@ -53,7 +53,7 @@ export struct ReaderBoundedSurfaceHeader {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop specId: ReaderBoundedSurfaceId = 'source-switch-window';
   @Prop title: string = '';
-  // Only the embedded reading replacement editor supplies a natural header budget.
+  // Reading replacement and TTS overlays can provide a precomputed header budget.
   @Prop naturalHeaderHeightVp: number = 0;
   @Prop surfaceWidth: number = 300;
   @Prop actionEnabled: boolean = true;
@@ -216,7 +216,7 @@ export struct ReaderBoundedSurfaceHeader {
       this.accessory();
       this.closeAction();
     }.width('100%')
-      .height(this.specId === 'source-switch-window' ? 33 : undefined)
+      .height(this.specId === 'source-switch-window' ? 33 : this.naturalHeaderHeightVp > 0 ? this.naturalHeaderHeightVp : undefined)
       .constraintSize({ minHeight: this.specId === 'source-switch-window' ? undefined : this.specId === 'tts-config-manager' ? 58 : 44 })
       .alignItems(VerticalAlign.Center)
       .padding(this.specId === 'source-switch-window' ? 0 : {
@@ -226,7 +226,12 @@ export struct ReaderBoundedSurfaceHeader {
   }
 
   @Builder private titleText() {
-    Text(this.title).layoutWeight(1).attributeModifier(new ReaderBoundedTitleModifier(this.specId, this.appThemeScheme));
+    if (this.naturalHeaderHeightVp > 0) {
+      Text(this.title).layoutWeight(1).attributeModifier(new ReaderBoundedTitleModifier(this.specId, this.appThemeScheme))
+        .maxLines(2).wordBreak(WordBreak.BREAK_WORD).textOverflow({ overflow: TextOverflow.Ellipsis });
+    } else {
+      Text(this.title).layoutWeight(1).attributeModifier(new ReaderBoundedTitleModifier(this.specId, this.appThemeScheme));
+    }
   }
 
   @Builder private closeAction() {

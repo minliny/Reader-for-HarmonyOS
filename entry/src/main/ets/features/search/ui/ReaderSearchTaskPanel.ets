@@ -6,7 +6,7 @@ import { MESSAGE_META } from '../../../ui/foundation/ReaderMessageStyle';
 import { READER_ACTION_MIN_TARGET } from '../../../ui/controls/ReaderActionAccessibility';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { resolveSheetSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { readerVisualSafeTop, readerVisualSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 
 /** Bounded search task content. SearchPage owns the current presentation and input. */
@@ -45,8 +45,7 @@ export struct ReaderSearchTaskPanel {
     const spec = resolveSheetSpec('search-task-status');
     const header = this.measuredHeaderHeight > 0 ? this.measuredHeaderHeight : spec.handleTop + spec.handleHeight +
       spec.handleBottom + Math.max(spec.titleHeight, spec.titleLineHeight * this.fontScale()) + spec.titleBottom;
-    return Math.max(0, metrics.windowRect.height - readerVisualSafeTop(metrics) - readerVisualSafeBottom(metrics) -
-      header - spec.contentBottom);
+    return Math.max(0, readerOverlayViewport(metrics).height - header - spec.contentBottom - spec.hostBorderWidth);
   }
   private retryAction(identity: string, retryIdentity: string): () => void {
     return (): void => {

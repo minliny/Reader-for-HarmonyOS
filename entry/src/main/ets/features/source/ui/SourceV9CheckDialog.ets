@@ -8,8 +8,8 @@ import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback'
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerReadableFontScale } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
-import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
-import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
+import type { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
+import { ReaderDialogViewport } from '../../../ui/surfaces/ReaderDialogViewport';
 import { DialogActionView, ReaderDialogSurface, readerDialogCardTransition,
   readerDialogScrimTransition } from '../../../ui/surfaces/ReaderDialogSurface';
 import type { BookSource, SourceCheckOutcome, SourceCheckReport, SourceCheckReportStep } from '../application/SourceGateway';
@@ -54,6 +54,7 @@ export struct SourceV9CheckDialog {
   @Prop title: string = '批量检测';
   @Prop batch: boolean = false;
   @Prop inputEnabled: boolean = true;
+  @Prop modalHost: ReaderRectVp | undefined = undefined;
   onCheck: (id: string, options: SourceV9CheckOptions, current: () => boolean,
     onStage: (stage: string) => void) => Promise<SourceCheckOutcome | undefined> =
       (): Promise<SourceCheckOutcome | undefined> => Promise.resolve(undefined);
@@ -69,10 +70,6 @@ export struct SourceV9CheckDialog {
   @State private batchTotal: number = 0;
   @State private activeSources: BookSource[] = [];
   @State private stage: string = '';
-  @State private paneWidth: number = 0;
-  @State private paneHeight: number = 0;
-  @State private paneLeft: number = 0;
-  @State private paneTop: number = 0;
   @State private runError: string = '';
   private batchReturn: SourceV9BatchReturn | undefined = undefined;
   private generation: number = 0;
@@ -191,19 +188,19 @@ export struct SourceV9CheckDialog {
   onTemporaryBackBridge: (handler: (() => boolean) | undefined) => void = (): void => {};
 
   build() {
-    Stack({ alignContent: Alignment.Center }) {
+    Stack({ alignContent: Alignment.TopStart }) {
       Stack().width('100%').height('100%')
         .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
           readerAppColor('app.scrim.modal', this.scheme)))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .accessibilityLevel('no').onClick((): void => this.close());
-      Column() {
-        Scroll() {
+      ReaderDialogViewport({ host: this.modalHost,
+        content: (width: number, height: number): void => {
           ReaderDialogSurface({
-            specId: 'source-v9-check', containerWidthVp: this.paneWidth,
+            specId: 'source-v9-check', containerWidthVp: width,
             title: this.batch && this.drillId.length === 0 ? this.title : '书源检测报告',
             showCloseButton: true, closeEnabled: this.inputEnabled, onClose: (): void => this.close(),
-            body: (): void => { this.body(); },
+            body: (): void => { this.body(height); },
             actions: [
               new DialogActionView('back', this.drillId.length > 0 ? '返回结果' : '关闭', 'default', this.inputEnabled,
                 false, 'reader-source-v9-check-close'),
@@ -218,49 +215,21 @@ export struct SourceV9CheckDialog {
               else void this.start();
             },
           });
-        }.width('100%').constraintSize({ maxHeight: this.paneHeight > 0 ? this.visibleDialogHeight() : undefined })
-          .scrollBar(BarState.Auto).hitTestBehavior(HitTestMode.Transparent)
-          .transition(readerDialogCardTransition(this.reduceMotion));
-      }.width('100%').height('100%').justifyContent(FlexAlign.Center)
-        .padding({ bottom: this.keyboardClearance() }).hitTestBehavior(HitTestMode.Transparent);
+        },
+      }).transition(readerDialogCardTransition(this.reduceMotion));
     }.width('100%').height('100%')
-      .transition(readerDialogScrimTransition(this.reduceMotion))
-      .onAreaChange((_old: Area, next: Area): void => this.recordPane(next));
+      .transition(readerDialogScrimTransition(this.reduceMotion));
   }
 
-  private recordPane(area: Area): void {
-    const width = readerPageAreaLength(area.width);
-    const height = readerPageAreaLength(area.height);
-    const left = readerPageAreaLength(area.globalPosition.x);
-    const top = readerPageAreaLength(area.globalPosition.y);
-    if (width > 0) this.paneWidth = width;
-    if (height > 0) this.paneHeight = height;
-    if (Number.isFinite(left)) this.paneLeft = left;
-    if (Number.isFinite(top)) this.paneTop = top;
-  }
-
-  private keyboardClearance(): number {
+  private bodyHeight(viewportHeight: number): number {
     this.windowRevision;
-    const metrics = readerWindowMetrics();
-    if (!metrics.ready) return 0;
-    return Math.max(0, this.paneHeight - readerKeyboardHostBottom(
-      metrics, this.paneTop, this.paneHeight, this.paneLeft, this.paneWidth));
-  }
-
-  private visibleDialogHeight(): number {
-    return this.paneHeight - this.keyboardClearance();
-  }
-
-  private bodyHeight(): number {
-    this.windowRevision;
-    if (this.paneHeight <= 0) return 400;
     const scale = readerReadableFontScale(readerWindowMetrics().systemFontScale);
     // The outer scroll keeps the actions reachable when the keyboard leaves too little room for the full card.
-    return Math.max(72, Math.min(500, this.visibleDialogHeight() - Math.max(150, 100 * scale)));
+    return Math.max(72, Math.min(500, viewportHeight - Math.max(150, 100 * scale)));
   }
 
   @Builder
-  private body() {
+  private body(viewportHeight: number) {
     Scroll() {
       Column({ space: 9 }) {
         if (this.singleSource() !== undefined) {
@@ -302,7 +271,7 @@ export struct SourceV9CheckDialog {
           ReaderPageState({ variant: 'inline', message: '此书源已不在当前列表', padded: false });
         } else this.batchRows();
       }.width('100%').alignItems(HorizontalAlign.Start);
-    }.width('100%').constraintSize({ maxHeight: this.bodyHeight() }).scrollBar(BarState.Auto)
+    }.width('100%').constraintSize({ maxHeight: this.bodyHeight(viewportHeight) }).scrollBar(BarState.Auto)
       .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
   }
 

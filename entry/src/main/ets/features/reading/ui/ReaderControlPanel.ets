@@ -6,7 +6,9 @@ import { readerKeyboardViewport } from '../../../ui/layout/ReaderKeyboardGeometr
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
-import { ReaderRectVp, readerVisualSafeBottom, readerVisualSafeRight, readerVisualSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
+import { ReaderInsetsVp, ReaderRectVp, readerVisualSafeBottom, readerVisualSafeRight, readerVisualSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerOverlayListHeight, readerOverlayPanel, readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry';
+import { readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerControlKeyboardVisible } from '../../../ui/foundation/ReaderKeyboardBack';
 import { READER_FULL_PANEL_TOP, readerControlIslandHeight, type ReaderControlContentBudget } from './ReaderLayoutGeometry';
 import { measureReaderControlMinimum, readerControlModuleFactsGeometryKey, readerControlModuleFactsDisplayEqual,
@@ -561,6 +563,8 @@ export struct ReaderControlPanel {
   @Prop bookDownloadEnabled: boolean = false;
   @Prop bookDownloadActive: boolean = false;
   @State private moreMenuVisible: boolean = false;
+  @State private moreTopAnchor: ReaderRectVp | undefined = undefined;
+  @State private moreShortAnchor: ReaderRectVp | undefined = undefined;
   private moreMenuGeneration: number = 0;
   private moreMenuRecoveryIdentity: string = '';
   private previousTopBarVisibility: boolean = true;
@@ -2279,8 +2283,39 @@ export struct ReaderControlPanel {
         this.moreMenuMeasuredWidth = surface.width;
       }
     }
-    return Math.min(Math.max(surface.width, this.moreMenuMeasuredWidth),
-      Math.max(0, this.currentLayout().viewportWidth - 24));
+    return Math.max(surface.width, this.moreMenuMeasuredWidth);
+  }
+
+  private recordMoreAnchor(area: Area, shortWindow: boolean): void {
+    const left = Number(area.globalPosition.x);
+    const top = Number(area.globalPosition.y);
+    const width = Number(area.width);
+    const height = Number(area.height);
+    if (!Number.isFinite(left) || !Number.isFinite(top) || width <= 0 || height <= 0) return;
+    const current = shortWindow ? this.moreShortAnchor : this.moreTopAnchor;
+    if (current !== undefined && current.left === left && current.top === top &&
+      current.width === width && current.height === height) return;
+    const anchor = new ReaderRectVp(left, top, width, height);
+    if (shortWindow) this.moreShortAnchor = anchor;
+    else this.moreTopAnchor = anchor;
+  }
+
+  private readerMoreAnchor(): ReaderRectVp | undefined {
+    return this.currentLayout().topBarVisible ? this.moreTopAnchor : this.moreShortAnchor;
+  }
+
+  private readerMorePopupRect(): ReaderRectVp {
+    this.editingMetricsRevision;
+    const metrics = readerWindowMetrics();
+    const layout = this.currentLayout();
+    const host = new ReaderRectVp(this.rootScreenX, this.rootScreenY, layout.viewportWidth, layout.viewportHeight);
+    const anchor = this.readerMoreAnchor();
+    const viewport = readerOverlayViewport(metrics, host, new ReaderInsetsVp(12, 8, 12, 8), anchor);
+    const surface = this.readerMoreSurfaceSpec();
+    const actionHeight = readerScaledControlHeight(surface.actionHeight, surface.actionLineHeight, metrics.systemFontScale);
+    const height = readerOverlayListHeight(0, actionHeight, this.readerMoreActions().length, 0,
+      0, 0, surface.borderWidth, surface.pointerHeight);
+    return readerOverlayPanel(viewport, this.readerMoreMenuWidth(), height, 'anchor-end', anchor, 8);
   }
 
   private readerMoreSurfaceSpec(): PopupSurfaceSpec {
@@ -2291,10 +2326,13 @@ export struct ReaderControlPanel {
     const surface = this.readerMoreSurfaceSpec();
     const density = readerWindowMetrics().densityPixels;
     const material = this.surfaceMaterial('popoverMenu');
+    const anchor = this.readerMoreAnchor();
+    const rect = this.readerMorePopupRect();
     const options: CustomPopupOptions = {
       builder: (): void => { this.readerMoreMenu(generation); },
-      placement: Placement.BottomRight,
-      width: this.readerMoreMenuWidth(),
+      placement: anchor !== undefined && rect.top < anchor.top ? Placement.TopRight : Placement.BottomRight,
+      width: rect.width,
+      offset: anchor === undefined ? undefined : { x: rect.left - (anchor.left + anchor.width - rect.width), y: 0 },
       enableArrow: true, arrowWidth: surface.pointerWidth, arrowHeight: surface.pointerHeight,
       radius: surface.borderRadius,
       arrowPointPosition: ArrowPointPosition.CENTER,
@@ -2347,7 +2385,8 @@ export struct ReaderControlPanel {
     ReaderActionMenuSurface({
       specId: 'reader-more-menu', nativeId: 'reader-control-more-menu',
       scheme: this.appScheme, actions: this.readerMoreActions(),
-      viewportHeight: Math.max(0, this.currentLayout().viewportHeight - 36),
+      viewportHeight: Math.max(0, this.readerMorePopupRect().height - this.readerMoreSurfaceSpec().pointerHeight -
+        2 * this.readerMoreSurfaceSpec().borderWidth),
       onAction: (id: string): void => {
         if (id === 'info' || id === 'refresh' || id === 'download' || id === 'recovery') this.performMoreAction(id, generation);
       },
@@ -3075,6 +3114,7 @@ export struct ReaderControlPanel {
       this.topBarInputEnabled() && !this.controlObscured && (this.temporaryLayerKind === '' || this.moreMenuVisible), false, true,
       new ReaderPressFeedback(Color.Transparent, this.appScheme, 999), 'nativeButton'))
     .onClick(this.controlActionHandler((): void => { if (this.topBarInputEnabled()) this.setMoreMenuVisible(!this.moreMenuVisible); }))
+    .onAreaChange((_previous: Area, area: Area): void => this.recordMoreAnchor(area, false))
     .bindPopup(this.moreMenuVisible && this.currentLayout().topBarVisible, this.readerMorePopupOptions(this.moreMenuGeneration));
   }
 
@@ -3119,6 +3159,7 @@ export struct ReaderControlPanel {
         .onClick(this.controlActionHandler((): void => {
           if (this.shortWindowActionInput() && (this.temporaryLayerKind === '' || this.moreMenuVisible)) this.setMoreMenuVisible(!this.moreMenuVisible);
         }))
+        .onAreaChange((_previous: Area, area: Area): void => this.recordMoreAnchor(area, true))
         .bindPopup(this.moreMenuVisible && !this.currentLayout().topBarVisible, this.readerMorePopupOptions(this.moreMenuGeneration));
     }.width(Math.max(180, this.frame().content.width)).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).justifyContent(FlexAlign.End);
     }.width(this.frame().content.width).height(READER_CONTROL_HOME_SHORT_ACTION_HEIGHT).scrollable(ScrollDirection.Horizontal)

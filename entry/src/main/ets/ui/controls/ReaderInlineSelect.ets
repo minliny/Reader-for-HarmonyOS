@@ -1,11 +1,14 @@
-import { readerKeyboardHostBottom } from '../layout/ReaderKeyboardGeometry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
-import { readerInteractiveSafeTop } from '../foundation/ReaderWindowMetrics';
+import { ReaderInsetsVp, ReaderRectVp } from '../foundation/ReaderWindowMetrics';
+import { readerOverlayChoiceRowHeight, readerOverlayListHeight, readerOverlayPanel, readerOverlayViewport }
+  from '../layout/ReaderOverlayGeometry';
 import { readerMotionReducedFadeParam } from '../foundation/ReaderMotionPolicy';
 import { readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
 import { ReaderSelect, type ReaderSelectVariant } from './ReaderSelect';
 import { ReaderSelectPanel } from './ReaderSelectPanel';
 import type { ReaderSelectMenuKind } from '../foundation/ReaderSelectGeometry';
+
+const POPUP_GAP = 4;
 
 /**
  * Bounded select host for secondary pages. Native Select used to bypass the
@@ -31,6 +34,7 @@ export struct ReaderInlineSelect {
   onSelect: (index: number, value: string) => void = (_index: number, _value: string): void => {};
   @State private open: boolean = false;
   @State private selectionId: string = '';
+  @State private anchor: ReaderRectVp = new ReaderRectVp();
   private mounted: boolean = false;
   private generation: number = 0;
 
@@ -45,7 +49,7 @@ export struct ReaderInlineSelect {
   }
 
   private toggle(): void {
-    if (!this.mounted || !this.actionEnabled) return;
+    if (!this.mounted || !this.actionEnabled || (!this.open && this.anchor.height <= 0)) return;
     this.selectionId = `inline-${++this.generation}`;
     this.open = !this.open;
   }
@@ -63,29 +67,33 @@ export struct ReaderInlineSelect {
   }
 
   private popupOptions(identity: string): CustomPopupOptions {
-    return { builder: (): void => this.menu(identity), placement: Placement.Bottom,
+    return { builder: (): void => this.selectPanel(identity),
+      placement: this.popupAbove() ? Placement.Top : Placement.Bottom, targetSpace: POPUP_GAP,
       enableArrow: false, popupColor: Color.Transparent, backgroundBlurStyle: BlurStyle.NONE,
       radius: 0, shadow: readerSurfaceElevation('embedded', 'day'), autoCancel: true, focusable: true,
       transition: this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) : undefined,
       onStateChange: (event: PopupStateChangeParam): void => { if (!event.isVisible) this.dismiss(identity); } };
   }
 
-  @Builder
-  private menu(identity: string) {
-    if (this.variant === 'default' || this.variant === 'sourceGroup' || this.variant === 'appearanceLibrary') {
-      this.selectPanel(identity);
-    } else {
-    Scroll() {
-      this.selectPanel(identity);
-    }.constraintSize({ maxHeight: 288 }).scrollBar(BarState.Auto);
-    }
+  private popupViewport(): ReaderRectVp {
+    this.metricsRevision;
+    return readerOverlayViewport(readerWindowMetrics(), undefined, new ReaderInsetsVp(8, 8, 8, 8));
+  }
+
+  private popupAbove(): boolean {
+    const viewport = this.popupViewport();
+    const rowCount = this.options[this.selectedIndex] === this.value || this.options.includes(this.value) ?
+      this.options.length : this.options.length + 1;
+    const natural = readerOverlayListHeight(0, readerOverlayChoiceRowHeight(44, 18, readerWindowMetrics().systemFontScale),
+      rowCount, 0, 0, 0, 1, 0);
+    const frame = readerOverlayPanel(viewport, viewport.width, Math.min(330, natural), 'anchor-start', this.anchor, POPUP_GAP);
+    return frame.top + frame.height <= this.anchor.top;
   }
 
   private popupViewportHeight(): number {
-    const metrics = readerWindowMetrics();
-    const height = this.metricsRevision < 0 ? 0 : metrics.windowRect.height;
-    return Number.isFinite(height) ? Math.max(0, readerKeyboardHostBottom(metrics, 0, height) -
-      readerInteractiveSafeTop(metrics) - 32) : 0;
+    const viewport = this.popupViewport();
+    return Math.max(0, this.popupAbove() ? this.anchor.top - viewport.top - POPUP_GAP :
+      viewport.top + viewport.height - this.anchor.top - this.anchor.height - POPUP_GAP);
   }
 
   @Builder
@@ -117,6 +125,13 @@ export struct ReaderInlineSelect {
     .width(this.variant === 'default' ? 'auto' : this.controlWidth > 0 ? this.controlWidth : 'auto')
     .constraintSize({ minHeight: 44 })
     .opacity(this.actionEnabled ? 1 : 0.4)
+    .onAreaChange((_old: Area, area: Area): void => {
+      const rect = new ReaderRectVp(Number.parseFloat(`${area.globalPosition.x}`), Number.parseFloat(`${area.globalPosition.y}`),
+        Number.parseFloat(`${area.width}`), Number.parseFloat(`${area.height}`));
+      if (rect.width <= 0 || rect.height <= 0 || !Number.isFinite(rect.left) || !Number.isFinite(rect.top)) return;
+      if (rect.left !== this.anchor.left || rect.top !== this.anchor.top || rect.width !== this.anchor.width ||
+        rect.height !== this.anchor.height) this.anchor = rect;
+    })
     .bindPopup(this.open, this.popupOptions(this.selectionId));
   }
 }

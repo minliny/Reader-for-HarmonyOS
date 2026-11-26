@@ -2,6 +2,7 @@ import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapability
 import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import type { ReaderNativeAlertOptions } from '../../../ui/platform/ReaderNativeAlertOwner';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { SourceManagementPage } from './SourceManagementPage';
 import { SourceToolsPage } from './SourceToolsPage';
 import { SourceV9TransferPage } from './SourceV9TransferPage';
@@ -12,6 +13,7 @@ import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { DialogActionView, ReaderDialogSurface, readerDialogCardTransition,
   readerDialogScrimTransition } from '../../../ui/surfaces/ReaderDialogSurface';
+import { ReaderDialogViewport } from '../../../ui/surfaces/ReaderDialogViewport';
 import { readerSceneTransition } from '../../../app/navigation/ReaderRouteMotion';
 import { errorMessageOf } from '../../../app/ErrorMessage';
 import type { BookSource, SourceCheckOutcome, SourceGroupCatalogData,
@@ -56,7 +58,7 @@ export struct SourceJourneySurface {
   @State private moveCatalogError: boolean = false;
   @State private deleteSourceIds: string[] = [];
   @State private listDialogGeneration: number = 0;
-  @State private paneWidth: number = 0;
+  @State private paneRect: ReaderRectVp | undefined = undefined;
   @State private checkSourceIds: string[] = [];
   @State private checkTitle: string = '';
   @State private checkBatch: boolean = false;
@@ -264,6 +266,7 @@ export struct SourceJourneySurface {
       if (this.pane === 'import' || this.pane === 'subscriptions') {
         SourceV9TransferPage({
           pane: this.pane === 'import' ? 'import' : 'subscriptions', embeddedWide: this.embeddedWide,
+          modalHost: this.paneRect,
           owner: this.presentation.runtime(this.identity),
           isInputAllowed: (): boolean => this.managementInputIsCurrent(),
           onTemporaryBackBridge: (handler: (() => boolean) | undefined): void => { this.paneBack = handler; },
@@ -273,24 +276,24 @@ export struct SourceJourneySurface {
               imported === undefined ? undefined : this.importSearchAction);
             void this.refreshCatalog();
           },
-        }).transition(readerSceneTransition(this.paneWidth, this.reduceMotion, true));
+        }).transition(readerSceneTransition(this.paneRect?.width ?? 0, this.reduceMotion, true));
       }
       if (this.pane === 'groups' || this.pane === 'group-detail') {
         Stack() { this.groupsPage(); }.width('100%').height('100%')
-          .transition(readerSceneTransition(this.paneWidth, this.reduceMotion, true));
+          .transition(readerSceneTransition(this.paneRect?.width ?? 0, this.reduceMotion, true));
       } else if (this.pane === 'list' && this.moveSourceIds.length > 0 && !this.moveCatalogDialogVisible()) {
         this.groupsPage();
       }
       if (this.listDialogVisible()) {
         ForEach([this.listDialogGeneration], (generation: number): void => {
-          Stack({ alignContent: Alignment.Center }) {
+          Stack({ alignContent: Alignment.TopStart }) {
             Stack().width('100%').height('100%')
               .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
                 readerAppColor('app.scrim.warmModal', this.scheme)))
               .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
               .accessibilityLevel('no').onClick((): void => this.chooseListDialog(generation, 'cancel'));
-            Column() {
-              ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: this.paneWidth,
+            ReaderDialogViewport({ host: this.paneRect, content: (width: number): void => {
+              ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: width,
                 title: this.deleteSourceIds.length > 0 ? '删除书源' : '移动书源', actions: this.listDialogActions(),
                 onAction: (action: string): void => this.chooseListDialog(generation, action),
                 body: (): void => {
@@ -303,15 +306,14 @@ export struct SourceJourneySurface {
                   }
                 },
               });
-            }.width('100%').alignItems(HorizontalAlign.Center).hitTestBehavior(HitTestMode.Transparent)
-              .transition(readerDialogCardTransition(this.reduceMotion));
+            } }).transition(readerDialogCardTransition(this.reduceMotion));
           }.width('100%').height('100%').transition(readerDialogScrimTransition(this.reduceMotion));
         }, (generation: number): string => generation.toString());
       }
       if (this.checkSourceIds.length > 0) {
         SourceV9CheckDialog({
           sources: this.checkRows(), title: this.checkTitle, batch: this.checkBatch,
-          inputEnabled: this.inputEnabled,
+          inputEnabled: this.inputEnabled, modalHost: this.paneRect,
           onCheck: (id: string, options: SourceV9CheckOptions, current: () => boolean,
             onStage: (stage: string) => void): Promise<SourceCheckOutcome | undefined> =>
             this.presentation.management(this.identity)?.runSourceCheck(id, options,
@@ -322,8 +324,21 @@ export struct SourceJourneySurface {
       }
     }.width('100%').height('100%').clip(true)
       .onAreaChange((_previous: Area, next: Area): void => {
-        if (this.mounted) this.paneWidth = readerPageAreaLength(next.width);
+        if (this.mounted) this.recordPane(next);
       });
+  }
+
+  private recordPane(area: Area): void {
+    const left = readerPageAreaLength(area.globalPosition.x);
+    const top = readerPageAreaLength(area.globalPosition.y);
+    const width = readerPageAreaLength(area.width);
+    const height = readerPageAreaLength(area.height);
+    if (!Number.isFinite(left) || !Number.isFinite(top) || !Number.isFinite(width) || !Number.isFinite(height) ||
+      width <= 0 || height <= 0) return;
+    const old = this.paneRect;
+    if (old === undefined || old.left !== left || old.top !== top || old.width !== width || old.height !== height) {
+      this.paneRect = new ReaderRectVp(left, top, width, height);
+    }
   }
 
   @Builder
@@ -348,6 +363,7 @@ export struct SourceJourneySurface {
   private groupsPage() {
     SourceV9GroupsPage({
       catalog: this.catalog, sources: this.projectedRows, detailGroupId: this.detailGroupId,
+      modalHost: this.paneRect,
       catalogError: this.catalogError, onRetryCatalog: (): void => {
         if (this.managementInputIsCurrent()) void this.refreshCatalog();
       },

@@ -1,9 +1,6 @@
-import { readerKeyboardHostBottom } from '../../ui/layout/ReaderKeyboardGeometry';
+import { ReaderDialogViewport } from '../../ui/surfaces/ReaderDialogViewport';
 import { ReaderEditingVisibility } from '../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../ui/layout/ReaderEditingScrollBinding';
-import { readerWindowMetrics } from '../../ui/foundation/ReaderWindowEnvironment';
-import { readerInteractiveSafeTop } from '../../ui/foundation/ReaderWindowMetrics';
-import { readerPageAreaLength } from '../../ui/layout/ReaderPageShell';
 import { ReaderButton } from '../../ui/controls/ReaderButton';
 import { ReaderFormField } from '../../ui/controls/ReaderFormField';
 import { ReaderTransientFeedback } from '../../ui/feedback/ReaderTransientFeedback';
@@ -53,7 +50,6 @@ export struct JsonImportDialog {
   @StorageLink('readerAppForeground') @Watch('retireClipboardPaste') private foreground: boolean = true;
   @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
 
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   title: string = '导入 JSON';
   description: string = '支持选择本地 JSON 文件，或从在线链接下载后导入。';
   expandedLayout: boolean = false;
@@ -66,8 +62,6 @@ export struct JsonImportDialog {
   @State private urlDraft: string = '';
   @State private validationMessage: string = '';
   @State private urlInputRevision: number = 0;
-  @State private hostHeight: number = 0;
-  @State private hostOriginY: number = 0;
   private mounted: boolean = false;
   private focusRevision: number = 0;
 
@@ -133,49 +127,29 @@ export struct JsonImportDialog {
         .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
           readerAppColor('app.scrim.modal', this.appThemeScheme)))
         .accessibilityLevel('no')
-        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
         .onClick((): void => this.dismissIfCurrent());
-      Scroll(this.editingScroller) {
-        Column() {
-          ReaderDialogSurface({ specId: 'json-import', title: this.title, showCloseButton: true,
+      ReaderDialogViewport({ scroller: this.editingScroller, nativeId: this.editingScroll.id,
+        onScrollAppeared: (): void => this.editingScroll.mount(this.getUIContext(), this.editingHost, this.editingScroller),
+        onScrollDisappeared: (): void => this.editingScroll.unmount(),
+        onScrollChanged: (): void => this.editingHost.refresh(),
+        content: (widthVp: number, _heightVp: number): void => {
+          ReaderDialogSurface({ specId: 'json-import', containerWidthVp: widthVp, title: this.title, showCloseButton: true,
             actions: [new DialogActionView('importOnline', '从在线链接导入', 'primary', true, false)],
             onAction: (id: string): void => { if (id === 'importOnline') this.submitOnlineImport(); },
             onClose: (): void => this.dismissIfCurrent(),
             body: (): void => { this.formBody(); },
           }).transition(readerImportCardTransition(this.reduceMotion)).hitTestBehavior(HitTestMode.Default);
-        }.width('100%').constraintSize({ minHeight: this.availableHeight() }).justifyContent(FlexAlign.Center)
-          .hitTestBehavior(HitTestMode.Transparent);
-      }.width('100%').height(this.availableHeight()).position({ x: 0, y: this.safeTop() })
-        .id(this.editingScroll.id)
-        .onAppear((): void => this.editingScroll.mount(this.getUIContext(), this.editingHost, this.editingScroller))
-        .onDisAppear((): void => this.editingScroll.unmount())
-        .onAreaChange((): void => this.editingHost.refresh())
-        .scrollBar(BarState.Auto).clip(true).hitTestBehavior(HitTestMode.Transparent);
+        },
+      });
     }
     .width('100%')
     .height('100%')
-    .onAreaChange((_old: Area, next: Area): void => {
-      if (!this.mounted) return;
-      this.hostHeight = readerPageAreaLength(next.height);
-      this.hostOriginY = readerPageAreaLength(next.globalPosition.y);
-    })
     .id(this.focusScopeKey()).focusable(true).focusScopeId(this.focusScopeKey(), true, false)
     .onAppear((): void => this.requestInitialFocus())
     .onDisAppear(this.restoreFocusAction())
     .transition(readerImportOverlayTransition(this.reduceMotion))
     .zIndex(200);
-  }
-
-  private safeTop(): number {
-    if (this.readerWindowMetricsRevision < 0) return 0;
-    return Math.max(0, readerInteractiveSafeTop(readerWindowMetrics(), true) - this.hostOriginY);
-  }
-
-  private availableHeight(): number {
-    const metrics = readerWindowMetrics();
-    const height = this.hostHeight > 0 ? this.hostHeight : metrics.windowRect.height;
-    const bottom = readerKeyboardHostBottom(metrics, this.hostOriginY, height);
-    return Math.max(0, bottom - this.safeTop());
   }
 
   @Builder

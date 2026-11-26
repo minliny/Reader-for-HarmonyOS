@@ -22,6 +22,7 @@ import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
 import { ReaderPageGeometry, ReaderPageGeometryInput, applyReaderStandardFloatingHeader, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
 import { resolveReaderButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerOverlayListHeight, readerOverlayPanel } from '../../../ui/layout/ReaderOverlayGeometry';
 import { resolveSourceManagementLayout, SOURCE_ROW_ACTION_GAP, SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP_GAP, type SourceManagementLayout } from '../presentation/SourceManagementLayout';
 import { sourceManagementFilterKey, copySourceManagementScroll, type SourceManagementScrollState } from '../presentation/SourceManagementScrollState';
 import { projectSourceManagementV9, sourceV9DisplayUrl, sourceV9ReportTone, sourceV9Supports,
@@ -936,26 +937,27 @@ export struct SourceManagementPage {
     this.onV9Action(id as SourceV9ListAction, id === 'detect' ? this.visibleIds() : []);
   }
 
-  private moreWidth(): number {
-    return Math.min(resolvePopupSpec('source-v9-more-menu').width, this.overlayRight() - this.overlayLeft());
+  private moreAnchorInPane(): ReaderRectVp {
+    const anchor = this.moreAnchor;
+    return anchor === undefined ? new ReaderRectVp(this.viewportWidth - this.geometry.header.insetRight - 44,
+      this.geometry.content.startInset - 50, 44, 44) :
+      new ReaderRectVp(anchor.left - this.originX, anchor.top - this.originY, anchor.width, anchor.height);
   }
 
-  private moreLeft(): number {
-    const anchorRight = this.moreAnchor === undefined ? this.viewportWidth - this.geometry.header.insetRight :
-      this.moreAnchor.left + this.moreAnchor.width - this.originX;
-    return Math.max(this.overlayLeft(), Math.min(this.overlayRight() - this.moreWidth(), anchorRight + 8 - this.moreWidth()));
-  }
-
-  private moreTop(): number {
-    const anchorBottom = this.moreAnchor === undefined ? this.geometry.content.startInset - 6 :
-      this.moreAnchor.top + this.moreAnchor.height - this.originY;
-    return Math.max(this.overlayTop() + 6, anchorBottom + 8);
+  private moreMenuRect(): ReaderRectVp {
+    const spec = resolvePopupSpec('source-v9-more-menu');
+    const rowHeight = readerScaledControlHeight(spec.actionHeight, spec.actionLineHeight, this.fontScale());
+    const height = readerOverlayListHeight(0, rowHeight, this.moreActions().length, 0, 6, 6, 1, 0);
+    const left = this.overlayLeft();
+    const top = this.overlayTop() + 6;
+    const viewport = new ReaderRectVp(left, top, this.overlayRight() - left, this.overlayBottom() - top - 6);
+    return readerOverlayPanel(viewport, spec.width, height, 'anchor-end', this.moreAnchorInPane(), 8);
   }
 
   private morePointerX(): number {
-    const anchorCenter = this.moreAnchor === undefined ? this.moreLeft() + this.moreWidth() - 28 :
-      this.moreAnchor.left - this.originX + this.moreAnchor.width / 2;
-    return Math.max(6, Math.min(this.moreWidth() - 18, anchorCenter - this.moreLeft() - 6));
+    const anchor = this.moreAnchorInPane();
+    const panel = this.moreMenuRect();
+    return Math.max(6, Math.min(panel.width - 18, anchor.left + anchor.width / 2 - panel.left - 6));
   }
 
   private moreTransition(): TransitionEffect {
@@ -979,8 +981,8 @@ export struct SourceManagementPage {
       Stack({ alignContent: Alignment.TopStart }) {
         Column() {
           ReaderActionMenuSurface({ specId: 'source-v9-more-menu', nativeId: 'reader-source-v9-more-menu',
-            actionIdPrefix: 'reader-source-v9-open-', scheme: this.appThemeScheme, availableWidth: this.moreWidth(),
-            viewportHeight: Math.max(0, this.overlayBottom() - this.moreTop() - 12),
+            actionIdPrefix: 'reader-source-v9-open-', scheme: this.appThemeScheme, availableWidth: this.moreMenuRect().width,
+            viewportHeight: Math.max(0, this.moreMenuRect().height - 14),
             reduceMotion: this.reduceMotion, actions: this.moreActions(),
             onAction: (id: string): void => this.chooseMoreAction(id) });
         }.width('100%').padding({ top: 6, bottom: 6 })
@@ -995,10 +997,12 @@ export struct SourceManagementPage {
           Row().width(12).height(12).rotate({ angle: 45 })
             .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
             .border({ width: { top: 1, left: 1 }, color: readerAppColor('app.border.menu', this.appThemeScheme) })
-            .position({ x: this.morePointerX(), y: -6 }).zIndex(1)
+            .position({ x: this.morePointerX(), y: this.moreMenuRect().top < this.moreAnchorInPane().top ?
+              this.moreMenuRect().height - 6 : -6 }).zIndex(1)
             .hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
         }
-      }.width(this.moreWidth()).clip(false).position({ x: this.moreLeft(), y: this.moreTop() })
+      }.width(this.moreMenuRect().width).clip(false)
+        .position({ x: this.moreMenuRect().left, y: this.moreMenuRect().top })
         .transition(this.moreTransition());
     }
   }

@@ -1,5 +1,6 @@
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
-import { readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
+import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { CategorySection } from './CategorySection';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
@@ -43,8 +44,7 @@ export struct ReaderMessagePreviewPage {
   @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
-  @State private hostHeight: number = -1;
-  @State private hostY: number = 0;
+  @State private hostRect: ReaderRectVp = new ReaderRectVp();
   @State private scene: MessagePreviewScene = 'none';
   @State private generation: number = 0;
   @State private batch: LocalImportBatch | undefined = undefined;
@@ -168,8 +168,8 @@ export struct ReaderMessagePreviewPage {
       overlayContent: (): void => { this.previewOverlay(); } })
       .onAreaChange((_old: Area, next: Area): void => {
         if (!this.mounted) return;
-        this.hostHeight = readerPageAreaLength(next.height);
-        this.hostY = readerPageAreaLength(next.globalPosition.y);
+        this.hostRect = new ReaderRectVp(readerPageAreaLength(next.globalPosition.x), readerPageAreaLength(next.globalPosition.y),
+          readerPageAreaLength(next.width), readerPageAreaLength(next.height));
       });
   }
 
@@ -255,12 +255,9 @@ export struct ReaderMessagePreviewPage {
     }, (expected: number): string => expected.toString());
   }
 
-  private modalTop(): number {
+  private modalViewport(): ReaderRectVp {
     this.readerWindowMetricsRevision;
-    const metrics = readerWindowMetrics();
-    const height = this.hostHeight >= 0 ? this.hostHeight : metrics.windowRect.height;
-    const bottom = Math.max(0, Math.min(height, metrics.windowRect.height - readerInteractiveSafeBottom(metrics, true) - this.hostY));
-    return Math.min(bottom, Math.max(readerInteractiveSafeTop(metrics, true) - this.hostY, 0));
+    return readerOverlayViewport(readerWindowMetrics(), this.hostRect);
   }
 
   @Builder
@@ -279,7 +276,7 @@ export struct ReaderMessagePreviewPage {
 
   @Builder
   private previewOverlay() {
-    if (this.dialogActive() || this.taskActive()) {
+    if ((this.dialogActive() || this.taskActive()) && this.modalViewport().width > 0 && this.modalViewport().height > 0) {
       Column() {
         ForEach([this.generation], (expected: number): void => {
           Row({ space: 8 }) {
@@ -293,7 +290,8 @@ export struct ReaderMessagePreviewPage {
         }, (expected: number): string => expected.toString());
         if (this.dialogActive()) this.dialogPreview();
         else this.taskPreview();
-      }.width('100%').height('100%').padding({ top: this.modalTop() })
+      }.width(this.modalViewport().width).height(this.modalViewport().height)
+        .position({ x: this.modalViewport().left - this.hostRect.left, y: this.modalViewport().top - this.hostRect.top })
         .hitTestBehavior(HitTestMode.Default)
         .onTouch((event: TouchEvent): void => event.stopPropagation());
     }
@@ -305,7 +303,7 @@ export struct ReaderMessagePreviewPage {
       Scroll() {
         Column() {
           ForEach([this.generation], (expected: number): void => {
-            ReaderDialogSurface({ specId: 'book-removal',
+            ReaderDialogSurface({ specId: 'book-removal', containerWidthVp: this.modalViewport().width,
               title: this.scene === 'dialog-danger' ? '危险操作预览' : '确认操作预览',
               body: (): void => { this.dialogBody(); },
               actions: [new DialogActionView('cancel', '取消预览'),
@@ -335,7 +333,7 @@ export struct ReaderMessagePreviewPage {
   private taskPreview() {
     ForEach([this.generation], (expected: number): void => {
       LocalImportDialog({ state: this.scene === 'task-running' ? 'importing' : 'result', batch: this.batch,
-        reduceMotion: this.reduceMotion, selectionEnabled: false, originalPending: false,
+        reduceMotion: this.reduceMotion, selectionEnabled: false, originalPending: false, embeddedPreview: true,
         onClose: (): void => this.end(expected) }).width('100%').layoutWeight(1);
     }, (expected: number): string => expected.toString());
   }

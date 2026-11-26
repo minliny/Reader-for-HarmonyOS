@@ -13,6 +13,7 @@ import { FrameCallback } from '@kit.ArkUI';
 import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
+import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import type { ReaderTtsWaveformSample } from './ReaderTtsWaveformModel';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -71,6 +72,11 @@ interface ReaderTtsConfigurationReturnFocus {
   identity: string;
   generation: number;
   origin: ReaderTtsConfigField | 'manage';
+}
+
+interface ReaderTtsInlineConfigurationGeometry {
+  host: ReaderRectVp | undefined;
+  anchor: ReaderRectVp | undefined;
 }
 
 let ttsConfigurationFocusSequence = 0;
@@ -169,7 +175,7 @@ class ReaderTtsNaturalRangeFrame implements AttributeModifier<TextAttribute> {
 @Component
 export struct ReaderControlTtsContent {
   @StorageLink('readerAppScheme') @Watch('reportMorphActor') private appScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') @Watch('onMinimumInputsChanged') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerWindowMetricsRevision') @Watch('onWindowMetricsChanged') private readerWindowMetricsRevision: number = 0;
 
   // Pure retained source projections have no Scroll, IDs, callbacks or modal hosts.
   @Prop fixedIsland: boolean = false;
@@ -325,6 +331,7 @@ export struct ReaderControlTtsContent {
   private committedSliderSeek: number = -1;
   @State private configField: ReaderTtsConfigField | 'manage' | '' = '';
   @State private configIdentity: string = '';
+  @State private inlineConfigurationGeometry: ReaderTtsInlineConfigurationGeometry | undefined = undefined;
   @State private managerBusy: boolean = false;
   @State @Watch('onMinimumInputsChanged') private serviceTab: string = '';
   @State private serviceBusy: boolean = false;
@@ -439,6 +446,15 @@ export struct ReaderControlTtsContent {
     this.cachedProgress = -1;
     this.publishMinimumMeasurer();
   }
+  private onWindowMetricsChanged(): void {
+    this.onMinimumInputsChanged();
+    const field = this.configField;
+    if (this.fixedIsland || !this.configMounted || field === '' || field === 'manage') return;
+    const identity = this.configIdentity;
+    this.getUIContext().postFrameCallback(new ReaderTtsConfigurationFocusFrame((): void => {
+      if (this.configMounted && this.configIdentity === identity) this.captureInlineConfigurationGeometry(field);
+    }));
+  }
   private onMinimumKeyChanged(): void {
     this.cachedProgress = -1;
     if (this.configMounted) this.syncMorphScroll();
@@ -533,6 +549,7 @@ export struct ReaderControlTtsContent {
     this.configGeneration += 1;
     this.configField = '';
     this.configIdentity = '';
+    this.inlineConfigurationGeometry = undefined;
     this.managerBusy = false;
     if (origin === 'voice') this.onAuditionStop();
     this.onTemporaryLayerChange(false);
@@ -546,6 +563,7 @@ export struct ReaderControlTtsContent {
     this.islandConfigurationReturnFocus = undefined;
     if (field === 'manage') this.managerFocusOrigin = this.configField === '' ? 'manage' : this.configField;
     if (this.configField === 'voice') this.onAuditionStop();
+    if (!this.fixedIsland && field !== 'manage') this.captureInlineConfigurationGeometry(field);
     this.configField = field;
     this.configIdentity = `${field}:${++this.configGeneration}`;
     this.onTemporaryLayerChange(true);
@@ -1178,17 +1196,27 @@ export struct ReaderControlTtsContent {
         .opacity(1 - this.p()).hitTestBehavior(HitTestMode.None);
   }
 
-  private configurationAnchorY(): number {
-    const nativeOffset = this.scroller.currentOffset()?.yOffset;
-    const offset = nativeOffset !== undefined && Number.isFinite(nativeOffset) ?
-      nativeOffset : this.scrollMotion.nativeScrollOffset;
-    const header = (this.textMinimum()?.sectionHeader ?? 18) + 8;
-    if (this.configField === 'voice') return this.frame().detail.y + header + (this.textMinimum()?.voiceRow ?? 52) - offset;
-    if (this.configField === 'failure') return this.frame().detail.y +
-      (this.textMinimum() === undefined ? 270 : header + (this.textMinimum()?.detailCard ?? 340)) - offset;
-    const row = this.configField === 'language' ? 1 : 0;
-    return this.frame().config.y + header + 14 + (this.textMinimum()?.serviceTab ?? 87) + 15 +
-      (row + 1) * (this.textMinimum()?.configRow ?? 48) - offset;
+  private nativeConfigurationRect(id: string): ReaderRectVp | undefined {
+    try {
+      const context = this.getUIContext();
+      const node = context.getFrameNodeById(id);
+      if (node === null) return undefined;
+      const position = node.getPositionToWindowWithTransform();
+      const size = context.getComponentUtils().getRectangleById(id).size;
+      const width = context.px2vp(size.width), height = context.px2vp(size.height);
+      if ([position.x, position.y, width, height].every(Number.isFinite) && width > 0 && height > 0) {
+        return new ReaderRectVp(position.x, position.y, width, height);
+      }
+    } catch (_) {
+      // The overlay remains bounded by the inline host if a native actor is retiring.
+    }
+    return undefined;
+  }
+
+  private captureInlineConfigurationGeometry(field: ReaderTtsConfigField): void {
+    const host = this.nativeConfigurationRect(this.actorId(false));
+    this.inlineConfigurationGeometry = { host, anchor: host === undefined ? undefined :
+      this.nativeConfigurationRect(`${this.configFocusId}:${field}`) };
   }
 
   private managerCurrent(identity: string): boolean {
@@ -1205,7 +1233,7 @@ export struct ReaderControlTtsContent {
       if (!this.configMounted || !this.fullInput()) return;
       let target: ReaderTtsConfigField | 'manage' | 'close' = 'close';
       if (origin === undefined) {
-        if (!this.managerCurrent(identity) || this.managerBusy) return;
+        if (this.configIdentity !== identity || this.configGeneration !== generation || this.configField === '' || this.managerBusy) return;
       } else {
         if (this.configField !== '' || this.configGeneration !== generation + 1) return;
         target = origin;
@@ -1225,7 +1253,7 @@ export struct ReaderControlTtsContent {
     const generation = this.configGeneration;
     const origin = this.managerFocusOrigin;
     return {
-      modalTransition: ModalTransition.NONE, backgroundColor: Color.Transparent,
+      modalTransition: ModalTransition.NONE, backgroundColor: Color.Transparent, enableSafeArea: false,
       onAppear: (): void => this.scheduleConfigurationFocus(identity, generation),
       onDisappear: (): void => this.scheduleConfigurationFocus(identity, generation, origin),
       onWillDismiss: (action: DismissContentCoverAction): void => {
@@ -1250,12 +1278,14 @@ export struct ReaderControlTtsContent {
 
   private islandCoverOptions(): ContentCoverOptions {
     return {
-      modalTransition: ModalTransition.NONE, backgroundColor: Color.Transparent, enableSafeArea: true,
+      // The content-cover root uses full-window coordinates. The panel owns the interactive safe bounds.
+      modalTransition: ModalTransition.NONE, backgroundColor: Color.Transparent, enableSafeArea: false,
       onWillDismiss: (action: DismissContentCoverAction): void => {
         if (!this.configMounted || this.configField === '') return;
         if (this.configField === 'manage' &&
           (this.consumeManagerKeyboardBack(action, this.configIdentity) || this.managerBusy)) return;
         this.dismissConfiguration(true);
+        action.dismiss();
       },
       onDisappear: (): void => {
         const focus = this.islandConfigurationReturnFocus;
@@ -1305,7 +1335,8 @@ export struct ReaderControlTtsContent {
           message: this.configurationMessage(), manager: false, windowModal: this.fixedIsland,
           showManage: this.configField === 'engine' || this.configurationMessage().length > 0,
           availableWidth: this.availableWidth, availableHeight: this.availableHeight,
-          anchorY: this.fixedIsland ? 0 : this.configurationAnchorY(), voicePicker: this.configField === 'voice',
+          inlineHost: this.inlineConfigurationGeometry?.host, inlineAnchor: this.inlineConfigurationGeometry?.anchor,
+          voicePicker: this.configField === 'voice',
           engines: this.httpEngines, engine: this.engine, selectionId: opening,
           closeFocusId: `${this.configFocusId}:close`,
           recoveryView: this.configurationRecovery,
@@ -1321,6 +1352,8 @@ export struct ReaderControlTtsContent {
             if (this.configField !== '' && identity === this.configIdentity) this.openConfiguration('manage');
           },
           onClose: (identity: string): void => { if (identity === this.configIdentity) this.dismissConfiguration(true); },
+        }).onAppear((): void => {
+          if (this.fixedIsland && this.configIdentity === opening) this.scheduleConfigurationFocus(opening, this.configGeneration);
         });
       }, (opening: string): string => opening);
     }

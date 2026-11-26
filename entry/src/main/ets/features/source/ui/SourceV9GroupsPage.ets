@@ -18,8 +18,8 @@ import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPol
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerReadableFontScale } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import type { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
-import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { ReaderPageGeometry, ReaderPageGeometryInput, applyReaderStandardFloatingHeader,
   resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
@@ -27,6 +27,7 @@ import { readerPageAreaLength, readerStandardPageContentEndInset, readerStandard
   READER_STANDARD_PAGE_CONTENT_GAP } from '../../../ui/layout/ReaderPageShell';
 import { DialogActionView, ReaderDialogSurface, readerDialogCardTransition,
   readerDialogScrimTransition } from '../../../ui/surfaces/ReaderDialogSurface';
+import { ReaderDialogViewport } from '../../../ui/surfaces/ReaderDialogViewport';
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import type { BookSource, SourceGroupCatalogData, SourceGroupMutateParams, SourceGroupRecord } from '../application/SourceGateway';
 import { SourceInitialMembershipUnconfirmed } from '../application/SourceInitialMembershipUnconfirmed';
@@ -93,6 +94,7 @@ export struct SourceV9GroupsPage {
   @Prop inputEnabled: boolean = true;
   @Prop moveOnly: boolean = false;
   @Prop embeddedWide: boolean = false;
+  @Prop modalHost: ReaderRectVp | undefined = undefined;
   @Prop statusKind: SourceManagementStatusKind = 'idle';
   @Prop statusMessage: string = '';
   @Prop operation: SourceManagementProjection = { action: 'load', sourceId: '' };
@@ -122,7 +124,6 @@ export struct SourceV9GroupsPage {
   @State private paneWidth: number = 0;
   @State private paneHeight: number = 0;
   @State private paneLeft: number = 0;
-  @State private paneTop: number = 0;
   @State private headerHeight: number = APP_FLOATING_HEADER_BAR_HEIGHT;
   @State private mutationProblem: string = '';
   private mounted: boolean = false;
@@ -513,7 +514,7 @@ export struct SourceV9GroupsPage {
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
       if (!this.moveOnly) this.page();
-      if (this.dialog !== 'none' && this.paneWidth > 0) this.groupDialog();
+      if (this.dialog !== 'none') this.groupDialog();
     }.width('100%').height('100%').clip(true)
       .onAreaChange((_previous: Area, next: Area): void => this.recordPane(next));
   }
@@ -522,28 +523,14 @@ export struct SourceV9GroupsPage {
     const width = readerPageAreaLength(area.width);
     const height = readerPageAreaLength(area.height);
     const left = readerPageAreaLength(area.globalPosition.x);
-    const top = readerPageAreaLength(area.globalPosition.y);
     if (!this.mounted || !Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) return;
     if (Math.abs(width - this.paneWidth) > .1) this.paneWidth = width;
     if (Math.abs(height - this.paneHeight) > .1) this.paneHeight = height;
     if (Number.isFinite(left) && Math.abs(left - this.paneLeft) > .1) this.paneLeft = left;
-    if (Number.isFinite(top) && Math.abs(top - this.paneTop) > .1) this.paneTop = top;
   }
 
-  private keyboardClearance(): number {
-    this.windowRevision;
-    const metrics = readerWindowMetrics();
-    if (!metrics.ready) return 0;
-    return Math.max(0, this.paneHeight - readerKeyboardHostBottom(
-      metrics, this.paneTop, this.paneHeight, this.paneLeft, this.paneWidth));
-  }
-
-  private bodyLimit(): number {
-    return Math.max(72, Math.min(440, this.visibleDialogHeight() - Math.max(128, 98 * this.fontScale())));
-  }
-
-  private visibleDialogHeight(): number {
-    return this.paneHeight - this.keyboardClearance();
+  private bodyLimit(viewportHeight: number): number {
+    return Math.max(72, Math.min(440, viewportHeight - Math.max(128, 98 * this.fontScale())));
   }
 
   private fontScale(): number {
@@ -863,32 +850,28 @@ export struct SourceV9GroupsPage {
 
   @Builder
   private groupDialog() {
-    Stack({ alignContent: Alignment.Center }) {
+    Stack({ alignContent: Alignment.TopStart }) {
       Stack().width('100%').height('100%')
         .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.scheme,
           this.color('app.scrim.warmModal')))
         .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
         .accessibilityLevel('no').onClick((): void => { this.consumeBack(); });
-      Column() {
-        Scroll() {
-          ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: this.paneWidth,
+      ReaderDialogViewport({ host: this.modalHost, content: (width: number, height: number): void => {
+          ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: width,
             primarySurfaceColor: this.color('app.sourceUi.primary'), title: this.dialogTitle(),
             actions: [new DialogActionView('cancel', '取消', 'default', this.dialogEditable(), true),
               new DialogActionView('confirm', this.confirmLabel(), this.dialog === 'delete' ? 'danger' : 'primary',
                 this.dialogParams() !== undefined)],
             onAction: (id: string): void => { void this.confirmDialog(id); },
-            body: (): void => { this.dialogBody(); },
+            body: (): void => { this.dialogBody(this.bodyLimit(height)); },
           });
-        }.width('100%').constraintSize({ maxHeight: this.visibleDialogHeight() })
-          .scrollBar(BarState.Auto).hitTestBehavior(HitTestMode.Transparent)
-          .transition(readerDialogCardTransition(this.reduceMotion));
-      }.width('100%').height('100%').justifyContent(FlexAlign.Center)
-        .padding({ bottom: this.keyboardClearance() }).hitTestBehavior(HitTestMode.Transparent);
+        },
+      }).transition(readerDialogCardTransition(this.reduceMotion));
     }.width('100%').height('100%').transition(readerDialogScrimTransition(this.reduceMotion));
   }
 
   @Builder
-  private dialogBody() {
+  private dialogBody(bodyLimit: number) {
     Scroll() {
       Column({ space: 8 }) {
         if (this.dialog === 'create' || this.dialog === 'rename') {
@@ -897,20 +880,20 @@ export struct SourceV9GroupsPage {
         if (this.dialog === 'create') {
           Text('添加首批成员（可选）').width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
             .fontSize(12).fontColor(this.color('app.sourceUi.muted'));
-          this.candidateList();
+          this.candidateList(bodyLimit);
         } else if (this.dialog === 'delete') {
           Text(`删除「${this.groupNames.get(this.dialogGroupId) ?? this.detailName}」后，成员将移入未分组。`)
             .width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(13)
             .fontColor(this.color('app.sourceUi.muted'));
         } else if (this.dialog === 'add') {
           this.field(this.query, '搜索书源名称、域名', (input: string): void => this.setQuery(input));
-          this.candidateList();
+          this.candidateList(bodyLimit);
         } else if (this.dialog === 'move') {
-          this.moveTargets();
+          this.moveTargets(bodyLimit);
         }
-        this.actionFeedback(this.bodyLimit());
+        this.actionFeedback(bodyLimit);
       }.width('100%').alignItems(HorizontalAlign.Start);
-    }.width('100%').constraintSize({ maxHeight: this.bodyLimit() }).scrollBar(BarState.Auto)
+    }.width('100%').constraintSize({ maxHeight: bodyLimit }).scrollBar(BarState.Auto)
       .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
   }
 
@@ -934,7 +917,7 @@ export struct SourceV9GroupsPage {
   }
 
   @Builder
-  private candidateList() {
+  private candidateList(bodyLimit: number) {
     if (this.candidateCount === 0) {
       Text('没有可选书源').width('100%').padding({ top: 12, bottom: 12 }).textAlign(TextAlign.Center)
         .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(12).fontColor(this.color('app.sourceUi.muted'));
@@ -946,7 +929,7 @@ export struct SourceV9GroupsPage {
           }
         }, (source: BookSource): string => JSON.stringify([source.sourceId, source.name, source.baseUrl,
           this.sourceGroup(source), this.groupNames.get(this.sourceGroup(source)), this.selection.includes(source.sourceId)]));
-      }.width('100%').constraintSize({ maxHeight: Math.min(208, this.bodyLimit()) }).scrollBar(BarState.Off).cachedCount(3)
+      }.width('100%').constraintSize({ maxHeight: Math.min(208, bodyLimit) }).scrollBar(BarState.Auto).cachedCount(3)
         .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
     }
   }
@@ -978,7 +961,7 @@ export struct SourceV9GroupsPage {
   }
 
   @Builder
-  private moveTargets() {
+  private moveTargets(bodyLimit: number) {
     Scroll() {
       Column({ space: 4 }) {
         this.targetOption('', '未分组');
@@ -987,7 +970,7 @@ export struct SourceV9GroupsPage {
         }, (group: SourceGroupRecord): string => JSON.stringify([group.groupId, group.name]));
         this.targetOption(undefined, '新建分组');
       }.width('100%');
-    }.width('100%').constraintSize({ maxHeight: Math.min(208, this.bodyLimit()) }).scrollBar(BarState.Off)
+    }.width('100%').constraintSize({ maxHeight: Math.min(208, bodyLimit) }).scrollBar(BarState.Auto)
       .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
     if (this.target === undefined) {
       this.nameField('新分组名称', '');

@@ -1,8 +1,8 @@
-import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { FrameCallback } from '@kit.ArkUI';
 import { BookshelfGroupPresentation } from '../presentation/BookshelfGroupPresentation';
 import { BookshelfGroupSelector } from './BookshelfGroupSelector';
 import { ReaderDialogSurface } from '../../../ui/surfaces/ReaderDialogSurface';
+import { ReaderDialogViewport } from '../../../ui/surfaces/ReaderDialogViewport';
 import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
@@ -10,8 +10,8 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
-import { readerInteractiveSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
-import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
+import { ReaderInsetsVp, ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry';
 
 class BookshelfGroupFocusFrame extends FrameCallback {
   private readonly action: () => void;
@@ -28,8 +28,6 @@ export struct BookshelfGroupDialog {
   @StorageLink('readerAppForeground') private foreground: boolean = true;
   @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
   @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
-  @State private viewportHeight: number = -1;
-  @State private originY: number = 0;
   @ObjectLink presentation: BookshelfGroupPresentation;
   @Prop recoveryTop: number = 0;
   isInputAllowed: (() => boolean) | undefined = undefined;
@@ -44,42 +42,38 @@ export struct BookshelfGroupDialog {
 
   @Builder
   private surface(identity: string) {
-    Stack({ alignContent: Alignment.Center }) {
+    Stack({ alignContent: Alignment.TopStart }) {
       Stack().width('100%').height('100%')
         .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
           readerAppColor('app.scrim.modal', this.appThemeScheme)))
-        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+        .expandSafeArea([SafeAreaType.SYSTEM], [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END])
         .accessibilityLevel('no')
         .onClick((): void => { if (this.groupInputIsCurrent(identity)) this.presentation.dismiss(identity); });
-      Stack() {
-        ReaderDialogSurface({ specId: 'shelf-group', title: '编辑分组', actions: [], showCloseButton: true,
-          onClose: (): void => { if (this.groupInputIsCurrent(identity)) this.presentation.dismiss(identity); },
-          body: (): void => { this.selector(identity); } })
-          .transition(this.cardTransition());
-      }.width('100%').height('100%')
-        .padding({ top: this.contentSafeTop(), bottom: this.contentBottomInset() })
-        .hitTestBehavior(HitTestMode.Transparent);
+      ReaderDialogViewport({
+        onScrollAppeared: (): void => this.requestFocusAfterFrame((): boolean => this.presentation.identity === identity,
+          this.selectorFocusKey(identity), this.focusScopeKey(identity)),
+        content: (widthVp: number, _heightVp: number): void => {
+          ReaderDialogSurface({ specId: 'shelf-group', containerWidthVp: widthVp, title: '编辑分组',
+            actions: [], showCloseButton: true,
+            onClose: (): void => { if (this.groupInputIsCurrent(identity)) this.presentation.dismiss(identity); },
+            body: (): void => { this.selector(identity); } })
+            .transition(this.cardTransition());
+        },
+      });
       Column() {
         if (this.presentation.snapshot.receipt !== undefined) {
           ForEach([this.presentation.snapshot.receipt.facts.generation], (expected: number): void => {
             this.recovery(identity, expected);
           }, (expected: number): string => expected.toString());
         }
-      }.width('100%').padding({ left: 16, right: 16, top: this.recoveryInsetTop() })
-        .align(Alignment.Top).zIndex(1).hitTestBehavior(HitTestMode.Transparent);
+      }.width(this.recoveryViewport().width)
+        .position({ x: this.recoveryViewport().left, y: this.recoveryInsetTop() })
+        .zIndex(1).hitTestBehavior(HitTestMode.Transparent);
     }.width('100%').height('100%')
       .hitTestBehavior(this.presentation.identity === identity ? HitTestMode.Default : HitTestMode.None)
       .accessibilityLevel(this.presentation.identity === identity ? 'auto' : 'no-hide-descendants')
       .transition(this.surfaceTransition())
-      .onAreaChange((_old: Area, area: Area): void => {
-        const height = readerPageAreaLength(area.height);
-        const originY = readerPageAreaLength(area.globalPosition.y);
-        if (Number.isFinite(height) && height >= 0) this.viewportHeight = height;
-        if (Number.isFinite(originY)) this.originY = originY;
-      })
       .id(this.focusScopeKey(identity)).focusable(true).focusScopeId(this.focusScopeKey(identity), true, false)
-      .onAppear((): void => this.requestFocusAfterFrame((): boolean => this.presentation.identity === identity,
-        this.selectorFocusKey(identity), this.focusScopeKey(identity)))
       .onDisAppear(this.restoreFocusAction(identity));
   }
 
@@ -103,30 +97,17 @@ export struct BookshelfGroupDialog {
   }
 
   private recoveryInsetTop(): number {
-    return Math.max(this.recoveryTop, this.contentSafeTop()) + 12;
+    return Math.max(this.recoveryTop, this.recoveryViewport().top) + 12;
   }
 
-  private contentSafeTop(): number {
+  private recoveryViewport(): ReaderRectVp {
     this.metricsRevision;
-    return Math.max(0, readerInteractiveSafeTop(readerWindowMetrics(), true) - this.originY);
-  }
-
-  private contentHeight(): number {
-    this.metricsRevision;
-    const metrics = readerWindowMetrics();
-    return this.viewportHeight >= 0 ? this.viewportHeight : metrics.windowRect.height;
-  }
-
-  private contentBottom(): number {
-    return readerKeyboardHostBottom(readerWindowMetrics(), this.originY, this.contentHeight());
-  }
-
-  private contentBottomInset(): number {
-    return Math.max(0, this.contentHeight() - this.contentBottom());
+    return readerOverlayViewport(readerWindowMetrics(), undefined, new ReaderInsetsVp(16, 0, 16, 12));
   }
 
   private recoveryAvailableHeight(): number {
-    return Math.max(0, this.contentBottom() - this.recoveryInsetTop() - 12);
+    const viewport = this.recoveryViewport();
+    return Math.max(0, viewport.top + viewport.height - this.recoveryInsetTop());
   }
 
   @Builder
@@ -136,7 +117,6 @@ export struct BookshelfGroupDialog {
       groups: this.presentation.snapshot.data.groups,
       busy: this.presentation.assigning || this.presentation.snapshot.busy || this.presentation.snapshot.mutationBlocked === true,
       focusId: this.selectorFocusKey(identity),
-      maxOptionsHeight: Math.max(0, this.contentBottom() - this.contentSafeTop() - 140),
       onSelect: (group: string): void => {
         if (this.groupInputIsCurrent(identity)) void this.presentation.assignGroup(identity, group);
       },

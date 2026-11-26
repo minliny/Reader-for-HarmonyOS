@@ -215,6 +215,7 @@ export struct ReaderControlAppearanceContent {
   private selectCloseInputRevision: number = -1;
   @State private selectAnchorX: number = 0;
   @State private selectAnchorY: number = 0;
+  @State private selectAnchorHeight: number = 0;
   @State private scrollMotion: ReaderControlMorphScrollState = createReaderControlMorphScroll();
   @State private draggedFontId: string = '';
   @State private draggedFontOffsetX: number = 0;
@@ -1330,6 +1331,7 @@ export struct ReaderControlAppearanceContent {
         this.selectOptions(kind).length, this.availableWidth, this.availableHeight);
       this.selectAnchorX = anchor.x;
       this.selectAnchorY = anchor.y;
+      this.selectAnchorHeight = anchor.height;
       return;
     }
     const triggerHeight = minimum?.selectTriggerHeight ?? 30;
@@ -1347,6 +1349,7 @@ export struct ReaderControlAppearanceContent {
       this.selectOptions(kind).length, this.availableWidth, this.availableHeight, triggerHeight, menuHeight);
     this.selectAnchorX = anchor.x;
     this.selectAnchorY = anchor.y;
+    this.selectAnchorHeight = anchor.height;
   }
 
   private selectMenuViewportHeight(kind: string): number | undefined {
@@ -1368,7 +1371,8 @@ export struct ReaderControlAppearanceContent {
         // The menu remains a shared business control. It never contributes a
         // second time/progress channel to this control-bar morph.
         reduceMotion: this.reduceMotion, controlWidth: APPEARANCE_SELECT_MENU_WIDTH,
-        maxPanelHeight: this.selectMenuViewportHeight(this.openSelect) ?? 0,
+        hostRightVp: this.availableWidth, hostBottomVp: this.availableHeight,
+        maxPanelHeight: this.selectAnchorHeight,
         focusIdPrefix: this.selectPanelFocusPrefix(_actor),
         nativeAnchorId: 'reader-control-appearance-overlay',
         closing: this.selectClosing, selectionId: _actor,

@@ -3,6 +3,7 @@ import { readerReadableFontScale, readerScaledControlHeight } from '../foundatio
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
+import { readerOverlayListHeight, readerOverlayViewport } from '../layout/ReaderOverlayGeometry';
 
 export type ReaderActionMenuVariant = 'menu' | ActionSheetSpecId;
 export type ReaderActionTone = 'default' | 'danger';
@@ -51,7 +52,7 @@ export struct ReaderActionMenuSurface {
   @Prop scheme: string = 'day';
   @Prop actions: ReaderMenuActionView[] = [];
   @Prop availableWidth: string | number = '100%';
-  @Prop viewportHeight: number = 0;
+  @Prop viewportHeight: number = -1;
   @Prop reduceMotion: boolean = false;
   onAction: (id: string) => void = (): void => {};
 
@@ -75,10 +76,10 @@ export struct ReaderActionMenuSurface {
         ForEach(this.actions, (action: ReaderMenuActionView, index: number): void => {
           this.actionRow(action.id);
         }, (action: ReaderMenuActionView): string => action.id);
-      }.width('100%').height(this.menuActionHeight() * this.actions.length);
-    }.width(this.availableWidth)
+      }.width('100%').height(this.menuListHeight());
+    }.width(this.menuWidth())
       .id(this.nativeId)
-      .height(Math.max(0, Math.min(this.menuActionHeight() * this.actions.length, this.viewportHeight)))
+      .height(this.menuHeight())
       .clip(true).scrollBar(BarState.Auto).align(Alignment.TopStart);
   }
 
@@ -200,6 +201,23 @@ export struct ReaderActionMenuSurface {
     return readerScaledControlHeight(spec.actionHeight, spec.actionLineHeight, this.fontScale());
   }
 
+  private menuListHeight(): number {
+    // Menu dividers are drawn at the bottom of their rows.
+    return readerOverlayListHeight(0, this.menuActionHeight(), this.actions.length, 0, 0, 0, 0, 0);
+  }
+
+  private menuHeight(): number {
+    this.readerWindowMetricsRevision;
+    const available = readerOverlayViewport(readerWindowMetrics()).height;
+    return Math.min(this.menuListHeight(), this.viewportHeight >= 0 ? Math.min(available, this.viewportHeight) : available);
+  }
+
+  private menuWidth(): string | number {
+    this.readerWindowMetricsRevision;
+    return typeof this.availableWidth === 'number' ?
+      Math.min(this.availableWidth, readerOverlayViewport(readerWindowMetrics()).width) : this.availableWidth;
+  }
+
   private fontScale(): number {
     if (this.readerWindowMetricsRevision < 0) return 1;
     return readerReadableFontScale(readerWindowMetrics().systemFontScale);
@@ -211,8 +229,9 @@ export struct ReaderActionMenuSurface {
   }
 
   private dividerWidth(): string | number {
-    return typeof this.availableWidth === 'number' ?
-      Math.max(0, this.availableWidth - this.spec().dividerInset * 2) :
+    const width = this.menuWidth();
+    return typeof width === 'number' ?
+      Math.max(0, width - this.spec().dividerInset * 2) :
       `calc(100% - ${this.spec().dividerInset * 2}vp)`;
   }
 

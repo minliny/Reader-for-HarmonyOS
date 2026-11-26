@@ -8,8 +8,11 @@ import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { ReaderChoiceRow } from './ReaderChoiceRow';
 import { registerReaderFonts } from '../foundation/ReaderFonts';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
-import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
-import { ReaderSelectMenuKind, readerSelectAvailableWidth, readerSelectMenuWidth,
+import { ReaderInsetsVp, ReaderRectVp, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
+import { readerOverlayChoiceRowHeight, readerOverlayListHeight, readerOverlayPanel, readerOverlayViewport }
+  from '../layout/ReaderOverlayGeometry';
+import { readerReadableFontScale } from '../foundation/ReaderSurfaceResolvers';
+import { ReaderSelectMenuKind, readerSelectMenuWidth,
   SOURCE_GROUP_SELECT_ARROW_TARGET, SOURCE_GROUP_SELECT_PAINT_INSET,
   SOURCE_GROUP_SELECT_RADIUS } from '../foundation/ReaderSelectGeometry';
 import {
@@ -18,14 +21,15 @@ import {
 } from '../foundation/ReaderTokens';
 import { motionAnimateParam, motionSpecGet } from '../foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../foundation/ReaderMotionPolicy';
-import {
-  APPEARANCE_SELECT_OPTION_HEIGHT, appearanceSelectMenuHeight,
-} from './ReaderSelectAppearanceStyle';
 import type { ReaderSelectVariant } from './ReaderSelect';
 import {
   TYPE_SELECT_DEFAULT_VALUE,
   TYPE_SELECT_SETTINGS_VALUE,
   TYPE_SELECT_SOURCE_GROUP_VALUE,
+  TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_REGULAR,
+  TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_SELECTED,
+  TYPE_SELECT_OPTION,
+  TYPE_SELECT_VALUE_SELECTED,
 } from '../foundation/ReaderTypography';
 
 // 展开下拉面板 — 宿主页在全高 overlay Stack 内定位渲染, position 相对宿主 Stack。
@@ -34,7 +38,7 @@ import {
 // 面板 = 已选行置顶 (panel-soft 高亮 + Bold + chevron 上旋) + 其余选项 (透明 +
 // Regular #41484C), 选项左对齐 px10, 对齐 motion 1506:8807。
 // 默认菜单独立测量选项；书源分组在触发条宽度内折行。
-const OPTION_H = 36;
+const OPTION_H = 44;
 const SELECT_PAD = TOK_SPACE_CONTROL_INLINE; // 10
 const CHEVRON_GAP = 8;
 const CHEVRON_W = 12;
@@ -129,6 +133,10 @@ export struct ReaderSelectPanel {
     this.closeFinish = undefined;
     this.panelOpacity = this.reduceMotion ? 0 : 1;
     registerReaderFonts(this.getUIContext().getFont());
+    if (this.hosting === 'popup') {
+      this.expandedHeight = this.fullPanelHeight();
+      this.chevronAngle = -180;
+    }
   }
 
   aboutToDisappear(): void {
@@ -200,8 +208,8 @@ export struct ReaderSelectPanel {
     if (this.variant !== 'appearanceLibrary' && this.appearanceHeightAnimator !== undefined) {
       this.cancelAppearanceHeightAnimation();
     }
-    if (this.mounted && !this.closeInFlight && this.wrapsOptions()) {
-      this.invalidateOptionHeights();
+    if (this.mounted && !this.closeInFlight) {
+      if (this.wrapsOptions()) this.invalidateOptionHeights();
       this.expandPanel();
     }
   }
@@ -263,7 +271,7 @@ export struct ReaderSelectPanel {
 
   private panelHeight(): number {
     const height = Math.max(this.menuHeaderHeight, this.menuFooterHeight, this.expandedHeight);
-    return this.hostBottomVp >= 0 ? Math.min(height, Math.max(0, this.hostBottomVp - this.hostTopVp)) : height;
+    return Math.min(height, this.panelViewport().height);
   }
 
   build() {
@@ -272,7 +280,7 @@ export struct ReaderSelectPanel {
     } else {
       Column() { this.panelBody(); }
         .width(this.resolvedWidth()).height(this.panelHeight())
-        .position({ x: this.panelX(), y: this.panelY() }).zIndex(10);
+        .position({ x: this.panelFrame().left, y: this.panelFrame().top }).zIndex(10);
     }
   }
 
@@ -290,12 +298,10 @@ export struct ReaderSelectPanel {
         this.searchableFrame();
         this.searchableHeader(this.selectionId);
       }
-      if (this.wrapsOptions()) {
-        Scroll() {
-          Column({ space: 0 }) { this.optionContent(); }.width('100%');
-        }.width('100%').layoutWeight(1).scrollBar(BarState.Auto)
-          .onScrollStop(this.onOptionsScrollStop === undefined ? (): void => {} : this.optionsScrollStopAction());
-      } else { this.optionContent(); }
+      Scroll() {
+        Column({ space: 0 }) { this.optionContent(); }.width('100%');
+      }.width('100%').layoutWeight(1).scrollBar(BarState.Auto)
+        .onScrollStop(this.onOptionsScrollStop === undefined ? (): void => {} : this.optionsScrollStopAction());
       if (this.menuFooterHeight > 0) { this.menuFooter(); }
     }
     .id(this.nativeAnchorId)
@@ -459,11 +465,9 @@ export struct ReaderSelectPanel {
   }
 
   private resolvedWidth(): number {
-    if (this.variant === 'sourceGroup' && this.controlWidth > 0) {
-      return this.hostRightVp >= 0 ? Math.min(this.controlWidth, this.hostRightVp - this.panelX()) : this.controlWidth;
-    }
+    const viewport = this.panelViewport();
     if (this.controlWidth > 0 && this.variant !== 'default') {
-      return this.hostRightVp >= 0 ? Math.min(this.controlWidth, readerSelectAvailableWidth(this.hostRightVp - this.hostLeftVp, 0, 0)) : this.controlWidth;
+      return Math.min(this.controlWidth, viewport.width);
     }
     const ctx = this.getUIContext();
     const utils = ctx.getMeasureUtils();
@@ -481,47 +485,35 @@ export struct ReaderSelectPanel {
       }
     }
     const naturalWidth = Math.ceil(ctx.px2vp(maxPx)) + this.resolvedChrome();
-    if (this.variant !== 'default' && this.variant !== 'sourceGroup') return naturalWidth;
-    const metrics = readerWindowMetrics();
-    const viewportWidth = this.hostRightVp >= 0 ? Math.max(0, this.hostRightVp - this.hostLeftVp) :
-      this.readerWindowMetricsRevision < 0 ? 0 : metrics.windowRect.width;
-    const available = this.hostRightVp >= 0 ? readerSelectAvailableWidth(viewportWidth, 0, 0) :
-      readerSelectAvailableWidth(viewportWidth, readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics));
+    if (this.variant !== 'default' && this.variant !== 'sourceGroup') return Math.min(naturalWidth, viewport.width);
     // The panel border consumes one vp on each side of the 44vp option lane.
     const minimum = 44 + TOK_BORDER_W * 2;
-    const contentWidth = this.variant === 'sourceGroup' && available >= minimum ?
+    const contentWidth = this.variant === 'sourceGroup' && viewport.width >= minimum ?
       Math.max(minimum, naturalWidth) : naturalWidth;
-    return readerSelectMenuWidth(contentWidth, viewportWidth, available, this.menuKind);
+    const base = this.hostRightVp >= 0 ? this.hostRightVp - this.hostLeftVp : readerWindowMetrics().windowRect.width;
+    return readerSelectMenuWidth(contentWidth, base, viewport.width, this.menuKind);
   }
 
-  private panelX(): number {
-    if (this.variant === 'sourceGroup' && this.controlWidth > 0) {
-      return this.hostRightVp >= 0 ? Math.max(this.hostLeftVp, Math.min(this.x, this.hostRightVp)) : this.x;
-    }
-    const requested = this.alignRight ? this.x - this.resolvedWidth() : this.x;
-    if (this.hostRightVp >= 0) {
-      const left = Math.min(this.hostRightVp, this.hostLeftVp + 16);
-      const right = Math.max(left, this.hostRightVp - 16);
-      return Math.max(left, Math.min(requested, right - this.resolvedWidth()));
-    }
-    if (this.variant !== 'sourceGroup') return requested;
-    const metrics = readerWindowMetrics();
-    return Math.max(Math.max(16, readerInteractiveSafeLeft(metrics)), Math.min(requested,
-      metrics.windowRect.width - Math.max(16, readerInteractiveSafeRight(metrics)) - this.resolvedWidth()));
+  private panelViewport(): ReaderRectVp {
+    this.readerWindowMetricsRevision;
+    const window = readerOverlayViewport(readerWindowMetrics(), undefined, new ReaderInsetsVp(8, 0, 8, 0));
+    const local = this.hosting === 'popup';
+    const left = this.hostRightVp >= 0 ? this.hostLeftVp : local ? 0 : window.left;
+    const width = this.hostRightVp >= 0 ? Math.max(0, this.hostRightVp - left) : window.width;
+    const top = this.hostBottomVp >= 0 ? this.hostTopVp : local ? 0 : window.top;
+    const height = this.hostBottomVp >= 0 ? Math.max(0, this.hostBottomVp - top) : window.height;
+    return new ReaderRectVp(left, top, width, height);
+  }
+
+  private panelFrame(): ReaderRectVp {
+    return readerOverlayPanel(this.panelViewport(), this.resolvedWidth(), this.fullPanelHeight(),
+      this.alignRight ? 'anchor-overlap-end' : 'anchor-overlap-start', new ReaderRectVp(this.x, this.y));
   }
 
   private appearanceShadow(): ShadowOptions {
     const density = readerWindowMetrics().densityPixels;
     return { radius: 20 * density, offsetY: 8 * density,
       color: readerAppColor('app.shadow.select', this.appThemeScheme) };
-  }
-
-  private panelY(): number {
-    if (this.hostBottomVp < 0) return this.y;
-    const height = this.fullPanelHeight();
-    const below = this.hostBottomVp - this.y;
-    const requested = below >= height ? this.y : this.y - height;
-    return Math.max(this.hostTopVp, Math.min(requested, this.hostBottomVp - height));
   }
 
   private resolvedChrome(): number {
@@ -561,6 +553,12 @@ export struct ReaderSelectPanel {
     if (!this.mounted || this.closeInFlight) return;
     if (this.closing) { this.onClosingChanged(); return; }
     const targetHeight = this.fullPanelHeight();
+    if (this.hosting === 'popup') {
+      this.expandedHeight = targetHeight;
+      this.chevronAngle = -180;
+      if (this.reduceMotion) this.fadePanelIn();
+      return;
+    }
     if (this.reduceMotion) {
       this.expandedHeight = targetHeight;
       this.chevronAngle = -180;
@@ -679,29 +677,26 @@ export struct ReaderSelectPanel {
   }
 
   private fullPanelHeight(): number {
-    if (this.wrapsOptions()) {
-      // Native rows report their actual wrapped height. Retain this state read
-      // so measurements also update the animated frame during font/width changes.
-      if (this.measuredHeightRevision < 0) return 0;
+      this.measuredHeightRevision;
       const configured = Number.isFinite(this.maxPanelHeight) && this.maxPanelHeight > 0 ? Math.min(330, this.maxPanelHeight) : 330;
-      const maximum = this.hostBottomVp >= 0 ?
-        Math.min(configured + this.menuHeaderHeight, Math.max(0, this.hostBottomVp - this.hostTopVp)) :
-        configured + this.menuHeaderHeight;
+      const maximum = Math.min(configured + this.menuHeaderHeight, this.panelViewport().height);
       if (this.fillsMeasuredSourceGroupHeight(maximum - this.menuHeaderHeight)) return maximum;
       const appearance = this.variant === 'appearanceLibrary';
-      const minimum = appearance ? APPEARANCE_SELECT_OPTION_HEIGHT : 44;
-      let height = this.menuHeaderHeight + (this.menuFooterHeight || 0) + (appearance ? 8 : TOK_BORDER_W * 2);
+      const padding = appearance ? 3 : 0;
+      const border = this.menuHeaderHeight > 0 || this.panelMaterial().native ? 0 : TOK_BORDER_W;
+      let height = readerOverlayListHeight(this.menuHeaderHeight, 0, 0, 0, padding, padding, border, this.menuFooterHeight);
       if (height >= maximum) return maximum;
+      const width = this.resolvedWidth();
       const selected = this.renderedValue();
       const indexed = this.hosting === 'popup';
       const selectedIndex = indexed ? this.renderedSelectedIndex() : -1;
       // The identity includes the complete option list. Resolve it once per
       // panel height, since native row measurement can run this for every row.
-      const heights = this.optionHeightsLayoutIdentity === this.optionMeasurementIdentity() ? this.optionHeights : undefined;
+      const heights = this.wrapsOptions() && this.optionHeightsLayoutIdentity === this.optionMeasurementIdentity() ? this.optionHeights : undefined;
       if (!appearance && (indexed || this.showsSelectedRow())) {
-        height += heights?.get(`${this.variant}:true:${selected}`) ?? minimum;
+        height += heights?.get(`${this.variant}:true:${selected}`) ?? this.optionHeightEstimate(selected, true, width);
       } else if (this.menuHeaderHeight > 0 && this.renderedOptions().length === 0) {
-        height += minimum;
+        height += OPTION_H;
       }
       const options = this.renderedOptions();
       for (let i = 0; i < options.length; i++) {
@@ -709,20 +704,28 @@ export struct ReaderSelectPanel {
         const option = options[i];
         const isSelected = indexed ? i === selectedIndex : option === selected;
         if (appearance || !isSelected) {
-          height += heights?.get(`${this.variant}:${appearance && isSelected}:${option}`) ?? minimum;
+          height += heights?.get(`${this.variant}:${appearance && isSelected}:${option}`) ??
+            this.optionHeightEstimate(option, appearance && isSelected, width);
         }
       }
-      return Math.min(height,maximum);
-    }
-    if (this.variant === 'appearanceLibrary') return appearanceSelectMenuHeight(this.options.length);
-    if (this.hosting === 'popup') return OPTION_H * (this.options.length + (this.renderedSelectedIndex() < 0 ? 1 : 0));
-    let unselectedCount = 0;
-    for (const option of this.options) {
-      if (option !== this.value) {
-        unselectedCount += 1;
-      }
-    }
-    return OPTION_H * (1 + unselectedCount);
+      return Math.min(height, maximum);
+  }
+
+  private optionHeightEstimate(option: string, selected: boolean, panelWidth: number): number {
+    const appearance = this.variant === 'appearanceLibrary';
+    const style = appearance ? (selected ? TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_SELECTED : TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_REGULAR) :
+      selected ? TYPE_SELECT_VALUE_SELECTED : this.variant === 'sourceGroup' ? TYPE_SELECT_SOURCE_GROUP_VALUE : TYPE_SELECT_OPTION;
+    const fontScale = readerReadableFontScale(readerWindowMetrics().systemFontScale);
+    const lineHeight = style.lineHeightFp ?? style.fontSizeFp * 1.5;
+    if (!this.wrapsOptions()) return readerOverlayChoiceRowHeight(OPTION_H, lineHeight, fontScale);
+    const width = Math.max(1, panelWidth - (appearance ? 26 : this.variant === 'sourceGroup' ? 30 : 22) -
+      (selected && (appearance || this.menuHeaderHeight === 0) ? 21 : 0));
+    const context = this.getUIContext();
+    const text = context.getMeasureUtils().measureTextSize({ textContent: option, constraintWidth: width,
+      fontSize: style.fontSizeFp, fontFamily: style.fontFamily, fontWeight: style.fontWeight,
+      lineHeight: `${lineHeight}fp`, wordBreak: WordBreak.BREAK_WORD });
+    const height = context.px2vp(Number(text.height));
+    return Math.max(OPTION_H, Math.ceil((Number.isFinite(height) && height > 0 ? height : lineHeight * fontScale) + (appearance ? 12 : 20)));
   }
 
   private fillsMeasuredSourceGroupHeight(maximum: number): boolean {

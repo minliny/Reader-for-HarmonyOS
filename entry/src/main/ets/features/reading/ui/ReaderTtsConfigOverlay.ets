@@ -2,27 +2,40 @@ import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapability
 import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../../ui/surfaces/ReaderSurfaceMaterial';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
-import { readerKeyboardViewport } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { ReaderFormField } from '../../../ui/controls/ReaderFormField';
+import { resolveReaderFormFieldSpec } from '../../../ui/controls/ReaderControlSpecs';
 import { ReaderBoundedSurfaceActions } from '../../../ui/surfaces/ReaderBoundedSurfaceActions';
-import { ReaderBoundedSurface, type ReaderBoundedSurfaceId } from '../../../ui/surfaces/ReaderBoundedSurface';
+import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSurfaceHeader';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { TYPE_READER_TTS_CHOICE_REGULAR, TYPE_READER_TTS_CHOICE_SELECTED, TYPE_READER_TTS_CONFIGURATION_TITLE, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_VOICE_REGULAR, TYPE_READER_TTS_VOICE_SELECTED } from '../../../ui/foundation/ReaderTypography';
-import { TYPE_READER_TTS_CONFIG_BUILD_LABEL, TYPE_READER_TTS_CONFIG_BUILD_STATUS, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY, TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_CANCEL, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE, TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT, TYPE_READER_TTS_CONFIG_MANAGER_FORM_INPUT_SECONDARY, TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL, TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS, TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_READER_TTS_CONFIG_BUILD_LABEL, TYPE_READER_TTS_CONFIG_BUILD_STATUS, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY, TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE, TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL, TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS, TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE, type ReaderTextStyle } from '../../../ui/foundation/ReaderTypography';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import type { ReaderHttpTtsConfig } from '../application/ReaderHttpTtsGateway';
 import type { ReaderTtsConfigurationDraft } from '../application/ReaderTtsConfigurationHost';
 import { readerOnlineTtsProfile, type ReaderTtsAudioFormat } from '../application/ReaderOnlineTtsProfile';
-import { readerFontFamilyReady } from '../../../ui/foundation/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import type { ReaderTtsConfigChoice } from '../presentation/ReaderTtsConfigOptions';
 import { measureReaderControlText } from './ReaderControlTextMeasurement';
 import { PopupSurfaceSpec, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { READER_TTS_CONFIG_BODY_GAP, READER_TTS_CONFIG_BODY_HORIZONTAL_PADDING, READER_TTS_CONFIG_BODY_TOP_PADDING,
+  READER_TTS_CONFIG_BODY_BOTTOM_PADDING, READER_TTS_CONFIG_CHOICE_GAP, READER_TTS_CONFIG_CHOICE_PAD_X,
+  READER_TTS_CONFIG_VOICE_BADGE_WIDTH, readerTtsConfigChoiceHeight, readerTtsConfigChoiceTextWidth, readerTtsConfigCompactVoicePreview,
+  readerTtsConfigPanelBudget, readerTtsConfigPanelLayout, readerTtsConfigViewport, type ReaderTtsConfigPanelLayout }
+  from './ReaderTtsConfigGeometry';
+
+const FORM_PAD_X = 18;
+const FORM_PAD_TOP = 8;
+const FORM_PAD_BOTTOM = 16;
+const FORM_GROUP_GAP = 14;
+const FORM_FIELD_GAP = 6;
+const STATUS_PADDING = 12;
+const FORMAT_GAP = 8;
 
 /** Temporary choices/forms live in the viewport, never inside a clipped 48vp row. */
 @Component
@@ -35,10 +48,8 @@ export struct ReaderTtsConfigOverlay {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
 
-  @State private modalUsableHeight: number = 844;
-  @State private modalUsableWidth: number = 0;
-  @State private measuredHeaderHeight: number = 0;
-  private measuredHeaderKey: string = '';
+  private panelLayoutKey: string = '';
+  private cachedPanelLayout: ReaderTtsConfigPanelLayout | undefined = undefined;
   private releaseKeyboardAvoidance: (() => void) | undefined = undefined;
   @Prop title: string = '';
   @Prop choices: ReaderTtsConfigChoice[] = [];
@@ -51,10 +62,11 @@ export struct ReaderTtsConfigOverlay {
   @Prop windowModal: boolean = false;
   @Prop closeFocusId: string = '';
   @Prop voicePicker: boolean = false;
-  @Prop anchorY: number = 0;
+  @Prop inlineAnchor: ReaderRectVp | undefined = undefined;
+  @Prop inlineHost: ReaderRectVp | undefined = undefined;
   @Prop showManage: boolean = false;
-  @Prop availableWidth: number = 338;
-  @Prop availableHeight: number = 666;
+  @Prop availableWidth: number = 0;
+  @Prop availableHeight: number = 0;
   @Prop engines: ReaderHttpTtsConfig[] = [];
   @Prop engine: string = 'system';
   @Prop @Watch('onIdentityChanged') selectionId: string = '';
@@ -116,154 +128,156 @@ export struct ReaderTtsConfigOverlay {
   }
   private close(): void { this.stopPreview(); if (!this.busy) this.onClose(this.selectionId); }
 
-  private panelWidth(): number {
-    if (this.manager) return Math.min(this.managerSurfaceSpec().width,
-      this.modalUsableWidth > 0 ? Math.max(0, this.modalUsableWidth - 26) : this.managerSurfaceSpec().width);
-    const viewportWidth = this.windowModal && this.modalUsableWidth > 0 ? this.modalUsableWidth : this.availableWidth;
-    return Math.max(0, Math.min(this.voicePicker ? this.availableWidth - 42 : 260, viewportWidth - 16));
+  private surfaceSpec(): PopupSurfaceSpec { return resolvePopupSpec(this.boundedSpecId()); }
+
+  private fontScale(): number {
+    this.metricsRevision;
+    return readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
   }
-  private managerSurfaceSpec(): PopupSurfaceSpec {
-    return resolvePopupSpec('tts-config-manager');
+
+  private textHeight(text: string, style: ReaderTextStyle, width: number, maxLines: number = 0): number {
+    if (text.length === 0) return 0;
+    const context = this.getUIContext();
+    const line = measureReaderControlText(context, text, style, Math.max(1, width));
+    const measured = maxLines === 1 ? line : measureReaderControlText(context, text, style, Math.max(1, width), 'wrap');
+    const lineHeight = line?.heightVp ?? (style.lineHeightFp ?? style.fontSizeFp * 1.5) * this.fontScale();
+    return Math.ceil(Math.min(measured?.heightVp ?? lineHeight, maxLines > 0 ? lineHeight * maxLines : Number.MAX_VALUE));
   }
-  private headerLayoutKey(): string {
+
+  private innerWidth(panelWidth: number): number {
+    return Math.max(1, panelWidth - 2 * (this.surfaceSpec().borderWidth + READER_TTS_CONFIG_BODY_HORIZONTAL_PADDING));
+  }
+
+  private headerHeight(width: number): number {
     const role = this.manager ? TYPE_READER_TTS_MANAGER_TITLE : TYPE_READER_TTS_CONFIGURATION_TITLE;
-    return JSON.stringify([this.selectionId, this.title, this.manager, this.metricsRevision, this.panelWidth(), readerFontFamilyReady(role.fontFamily)]);
+    // Header uses one 44vp close target, 8vp between children, and optionally an icon.
+    const horizontalChrome = this.manager ? 18 + 24 + 20 + 16 + 44 : 12 + 16 + 8 + 44;
+    const textWidth = width - 2 * this.surfaceSpec().borderWidth - horizontalChrome;
+    return Math.max(this.manager ? 58 : 44, this.textHeight(this.title, role, textWidth, 2));
   }
-  private headerHeight(): number {
-    if (this.voicePicker) return 0;
-    if (this.measuredHeaderKey === this.headerLayoutKey() && this.measuredHeaderHeight > 0) return this.measuredHeaderHeight;
-    const scale = ReaderWindowCoordinator.metrics().systemFontScale;
-    return Math.ceil((this.manager ? 58 : 44) * Math.max(1, Number.isFinite(scale) ? scale : 1));
-  }
-  private headerAreaChangeHandler(key: string): (_old: Area, area: Area) => void {
-    return (_old: Area, area: Area): void => {
-      const height = Number(area.height);
-      if (!this.mounted || key !== this.headerLayoutKey() || !Number.isFinite(height) || height <= 0) return;
-      this.measuredHeaderKey = key;
-      if (Math.abs(this.measuredHeaderHeight - height) > 0.5) this.measuredHeaderHeight = height;
-    };
-  }
+
   private footerHeight(): number {
-    this.metricsRevision;
-    return readerScaledControlHeight(76, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.lineHeightFp ?? 20,
-      readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale));
+    return this.manager ? readerScaledControlHeight(76, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE.lineHeightFp ?? 20,
+      this.fontScale()) : 0;
   }
-  private compactManager(): boolean {
-    return this.manager && (this.modalUsableHeight <= 166 || this.panelHeight() - this.headerHeight() - this.footerHeight() < 44);
+
+  private messageHeight(message: string, panelWidth: number): number {
+    return message.length === 0 ? 0 : this.textHeight(message, TYPE_READER_TTS_CONFIG_BUILD_STATUS,
+      this.innerWidth(panelWidth) - 2 * STATUS_PADDING) + 2 * STATUS_PADDING;
   }
-  private compactContent(): boolean {
-    return this.compactManager() || (!this.manager && !this.voicePicker && this.panelHeight() - this.headerHeight() < 44);
+
+  private manageActionHeight(panelWidth: number): number {
+    return Math.max(44, this.textHeight('管理在线 TTS', TYPE_READER_TTS_CONFIG_BUILD_LABEL, this.innerWidth(panelWidth)) + 16);
   }
-  @State private modalOriginY: number = 0;
-  private modalEditingViewport(): ReaderRectVp {
-    this.metricsRevision;
-    return readerKeyboardViewport(ReaderWindowCoordinator.metrics(),
-      new ReaderRectVp(0, this.modalOriginY, this.modalUsableWidth, this.modalUsableHeight)).rect;
+
+  private formatActionHeight(panelWidth: number): number {
+    const choiceWidth = Math.max(1, (this.innerWidth(panelWidth) - 2 * (FORM_PAD_X + FORMAT_GAP)) / 3 - 1);
+    return Math.max(44, this.textHeight('MP3', TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL, choiceWidth) + 16,
+      this.textHeight('WAV', TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL, choiceWidth) + 16,
+      this.textHeight('PCM', TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL, choiceWidth) + 16);
   }
-  private modalVisibleTop(): number { return Math.max(0, this.modalEditingViewport().top - this.modalOriginY); }
-  private modalVisibleHeight(): number { return this.modalEditingViewport().height; }
-  private managerOuterPadding(): number {
-    return Math.min(16, Math.max(0, (this.modalVisibleHeight() - 44) / 2));
+
+  private formWidth(panelWidth: number): number { return this.innerWidth(panelWidth) - 2 * FORM_PAD_X; }
+
+  private managerFormHeight(panelWidth: number): number {
+    const fieldWidth = this.formWidth(panelWidth);
+    const labelHeight = this.formLabelHeight(fieldWidth);
+    const name = resolveReaderFormFieldSpec('tts-manager-name');
+    const value = resolveReaderFormFieldSpec('tts-manager-value');
+    const nameHeight = readerScaledControlHeight(name.height,
+      name.text?.lineHeightFp ?? (name.text?.fontSizeFp ?? 16) * 1.5, this.fontScale());
+    const valueHeight = readerScaledControlHeight(value.height,
+      value.text?.lineHeightFp ?? (value.text?.fontSizeFp ?? 16) * 1.5, this.fontScale());
+    const errorHeight = this.textHeight(this.errorText, TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS, fieldWidth, 3);
+    return FORM_PAD_TOP + FORM_PAD_BOTTOM + 5 * (labelHeight + FORM_FIELD_GAP) + nameHeight + 3 * valueHeight +
+      FORM_FIELD_GAP + this.clearKeyHeight(fieldWidth) + this.formatActionHeight(panelWidth) + 4 * FORM_GROUP_GAP +
+      (errorHeight > 0 ? FORM_GROUP_GAP + errorHeight : 0);
   }
-  private panelHeight(): number {
-    // Make V17: header + a bounded scrolling body + fixed footer.  The
-    // footer must remain visible while the keyboard or a long form body is
-    // present; putting it inside the Scroll makes the production sheet drift
-    // away from the reference and hides Save on small windows.
-    const content = this.manager ? this.headerHeight() + 440 + this.formatActionHeight() - 36 + 44 + this.footerHeight() :
-      this.headerHeight() + this.choices.reduce((height: number, choice: ReaderTtsConfigChoice): number => height + this.choiceHeight(choice), 0) +
-      (this.statusMessage().length > 0 ? 80 : 0) + (this.showManage ? 44 : 0) + (this.errorText.length > 0 ? 48 : 0);
-    if (this.manager) return Math.max(0, Math.min(content,
-      this.modalVisibleHeight() - 2 * this.managerOuterPadding()));
-    return Math.max(0, Math.min(content, this.pickerViewportHeight() - 2 * this.pickerOuterPadding()));
+
+  private formLabelHeight(width: number): number {
+    return this.textHeight('发音人 / 音色', TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL, width);
   }
-  private formatActionHeight(): number {
-    this.metricsRevision;
-    const measured = measureReaderControlText(this.getUIContext(), 'MP3', TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL,
-      Math.max(1, (this.panelWidth() - 52) / 3 - 1));
-    return Math.max(44, (measured?.heightVp ?? 18) + 16);
+
+  private clearKeyHeight(width: number): number {
+    return Math.max(44, this.textHeight('将清除已保存密钥', TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE, width));
   }
-  private previewActionWidth(choiceId?: string): number {
-    this.metricsRevision;
-    const label = measureReaderControlText(this.getUIContext(), this.previewId === choiceId ? '试听中' : '试听', TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY,
-      Math.max(1, this.panelWidth()));
-    return Math.max(44, (label?.singleLineWidthVp ?? 30) + this.previewActionChromeWidth());
+
+  private fullPreviewActionWidth(panelWidth: number): number {
+    const label = measureReaderControlText(this.getUIContext(), '试听中', TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY, panelWidth);
+    return Math.max(44, Math.ceil((label?.singleLineWidthVp ?? 30 * this.fontScale()) + this.previewActionChromeWidth()));
   }
-  private previewPaintHeight(): number {
-    this.metricsRevision;
-    const measured = measureReaderControlText(this.getUIContext(), '试听', TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY,
-      Math.max(1, this.previewActionWidth() - this.previewActionChromeWidth()));
-    return Math.max(26, (measured?.heightVp ?? 10) + 16);
+
+  private compactVoicePreview(panelWidth: number): boolean {
+    const glyph = Math.max(TYPE_READER_TTS_VOICE_REGULAR.fontSizeFp, TYPE_READER_TTS_VOICE_SELECTED.fontSizeFp) * this.fontScale();
+    return readerTtsConfigCompactVoicePreview(panelWidth, this.surfaceSpec().borderWidth,
+      this.fullPreviewActionWidth(panelWidth), TOK_BORDER_W, glyph);
   }
-  private previewActionHeight(): number { return Math.max(44, this.previewPaintHeight()); }
+
+  private previewActionWidth(panelWidth: number): number {
+    return this.compactVoicePreview(panelWidth) ? 44 : this.fullPreviewActionWidth(panelWidth);
+  }
+
+  private previewPaintHeight(panelWidth: number): number {
+    if (this.compactVoicePreview(panelWidth)) return 26;
+    const width = this.previewActionWidth(panelWidth) - this.previewActionChromeWidth();
+    return Math.max(26, this.textHeight('试听中', TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY, width, 1) + 16);
+  }
+
+  private previewActionHeight(panelWidth: number): number { return Math.max(44, this.previewPaintHeight(panelWidth)); }
   private previewActionChromeWidth(): number { return 8 + 9 + 5 + 13; }
-  private choiceHeight(choice: ReaderTtsConfigChoice): number {
-    this.metricsRevision;
-    const width = Math.max(1, this.panelWidth() - 24 - (this.voicePicker ? 16 : 11) - 10 - (this.voicePicker ? 34 + this.previewActionWidth(choice.id) + 20 : 0));
+
+  private choiceHeight(choice: ReaderTtsConfigChoice, panelWidth: number): number {
+    const border = this.surfaceSpec().borderWidth;
+    const width = readerTtsConfigChoiceTextWidth(panelWidth, border, this.voicePicker,
+      this.voicePicker ? this.previewActionWidth(panelWidth) : 0, TOK_BORDER_W);
     const style = this.voicePicker ? (choice.id === this.selectedId ? TYPE_READER_TTS_VOICE_SELECTED : TYPE_READER_TTS_VOICE_REGULAR) :
       (choice.id === this.selectedId ? TYPE_READER_TTS_CHOICE_SELECTED : TYPE_READER_TTS_CHOICE_REGULAR);
     const label = this.voicePicker ? choice.label.split(' · ')[0] : choice.label;
-    const line = measureReaderControlText(this.getUIContext(), label, style, width);
-    const wrapped = measureReaderControlText(this.getUIContext(), label, style, width, 'wrap');
-    const primary = Math.min(wrapped?.heightVp ?? 18, (line?.heightVp ?? 18) * 2);
-    const meta = this.voicePicker && choice.label.includes(' · ') ? measureReaderControlText(this.getUIContext(),
-      choice.label.split(' · ').slice(1).join(' · '), TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY, width)?.heightVp ?? 0 : 0;
-    return Math.max(this.voicePicker ? 54 : 44, primary + meta + 16, this.voicePicker ? this.previewActionHeight() + 8 : 0);
+    const meta = this.voicePicker ? choice.label.split(' · ').slice(1).join(' · ') : '';
+    return readerTtsConfigChoiceHeight(this.textHeight(label, style, width, 2),
+      this.textHeight(meta, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY, width, 2),
+      this.voicePicker ? this.previewActionHeight(panelWidth) : 0, this.voicePicker, TOK_BORDER_W);
   }
-  private pickerViewportHeight(): number {
-    if (!this.windowModal) return this.availableHeight;
+
+  private viewport(): ReaderRectVp {
     this.metricsRevision;
-    return this.modalUsableWidth > 0 ? this.modalUsableHeight : ReaderWindowCoordinator.metrics().windowRect.height;
+    const host = this.windowModal ? undefined :
+      this.inlineHost ?? new ReaderRectVp(0, 0, this.availableWidth, this.availableHeight);
+    return readerTtsConfigViewport(ReaderWindowCoordinator.metrics(), this.surfaceSpec().width, host);
   }
-  private pickerOuterPadding(): number {
-    return Math.min(8, Math.max(0, (this.pickerViewportHeight() - 44) / 2));
-  }
-  private pickerPanelX(): number {
-    if (this.windowModal) {
-      const viewportWidth = this.modalUsableWidth > 0 ? this.modalUsableWidth : this.availableWidth;
-      return Math.max(0, (viewportWidth - this.panelWidth()) / 2);
+
+  private panelWidth(): number { return Math.min(this.surfaceSpec().width, this.viewport().width); }
+
+  private panelLayout(): ReaderTtsConfigPanelLayout {
+    const spec = this.surfaceSpec();
+    const viewport = this.viewport();
+    const width = Math.min(spec.width, viewport.width);
+    const status = this.statusMessage();
+    const key = JSON.stringify([this.metricsRevision, viewport, this.windowModal, this.inlineAnchor, this.manager,
+      this.title, this.voicePicker, this.choices, this.selectedId, status, this.showManage, this.errorText, spec.borderWidth]);
+    if (key === this.panelLayoutKey && this.cachedPanelLayout !== undefined) return this.cachedPanelLayout;
+    const items: number[] = [this.messageHeight(status, width)];
+    if (this.manager) {
+      items.push(this.managerFormHeight(width));
+    } else {
+      for (const choice of this.choices) items.push(this.choiceHeight(choice, width));
+      if (this.showManage) items.push(this.manageActionHeight(width));
+      items.push(this.messageHeight(this.errorText, width));
     }
-    return Math.max(0, this.availableWidth - this.panelWidth() - (this.voicePicker ? 21 : 13));
-  }
-  private panelY(): number {
-    const h = this.panelHeight();
-    if (this.manager) return 0;
-    const padding = this.pickerOuterPadding();
-    if (this.windowModal) return Math.max(padding, this.pickerViewportHeight() - h - padding);
-    const below = this.anchorY + 2;
-    const desired = below + h <= this.availableHeight - padding ? below : this.anchorY - 54 - h;
-    return Math.max(padding, Math.min(desired, this.availableHeight - h - padding));
+    const budget = readerTtsConfigPanelBudget(this.headerHeight(width), items, this.footerHeight(), spec.borderWidth);
+    this.cachedPanelLayout = readerTtsConfigPanelLayout(viewport, width, budget, this.windowModal ? 'bottom' :
+      this.inlineAnchor === undefined ? 'center' : 'anchor-end', this.inlineAnchor);
+    this.panelLayoutKey = key;
+    return this.cachedPanelLayout;
   }
 
-  private recoveryOverlayLeft(): number {
-    return (this.manager ? Math.max(0, (this.modalUsableWidth - this.panelWidth()) / 2) :
-      this.availableWidth - this.panelWidth() - (this.voicePicker ? 21 : 13)) + 12;
-  }
-
-  private recoveryOverlayWidth(): number {
-    // Compact content scrolls its header and footer. Keep the close column
-    // clear horizontally instead of subtracting both from a short viewport.
-    return Math.max(0, this.panelWidth() - (this.compactContent() ? 88 : 24));
-  }
-
-  private recoveryOverlayTop(): number {
-    const top = this.manager ? this.modalVisibleTop() + Math.max(0,
-      this.modalVisibleHeight() - this.managerOuterPadding() - this.panelHeight()) : this.panelY();
-    return top + (this.compactContent() ? 0 : this.headerHeight());
-  }
-
-  private recoveryOverlayMaxHeight(): number {
-    return this.compactContent() ? this.panelHeight() : Math.max(0,
-      this.panelHeight() - this.headerHeight() - (this.manager ? this.footerHeight() : 0));
-  }
-
-  private boundedSpecId(): ReaderBoundedSurfaceId { return this.manager ? 'tts-config-manager' : 'tts-config-picker'; }
+  private boundedSpecId(): 'tts-config-manager' | 'tts-config-picker' { return this.manager ? 'tts-config-manager' : 'tts-config-picker'; }
 
   @Builder
   private configurationHeader() {
     ReaderBoundedSurfaceHeader({ specId: this.boundedSpecId(), title: this.title, actionEnabled: !this.busy,
-      surfaceWidth: this.panelWidth(), closeFocusId: this.closeFocusId,
-      onAreaChanged: this.headerAreaChangeHandler(this.headerLayoutKey()), onClose: (): void => this.close() });
+      surfaceWidth: this.panelWidth(), naturalHeaderHeightVp: this.panelLayout().headerHeight,
+      closeFocusId: this.closeFocusId, onClose: (): void => this.close() });
   }
 
   build() {
@@ -272,49 +286,52 @@ export struct ReaderTtsConfigOverlay {
         .attributeModifier(new ReaderModalScrimModifier(this.appearancePreferences, this.appThemeScheme,
           this.manager ? readerAppColor('app.scrim.modal', this.appThemeScheme) : Color.Transparent, false, this.manager))
         .onClick((): void => this.close());
-      Column() {
-      ReaderBoundedSurface({ specId: this.boundedSpecId(), surfaceWidth: this.manager ? '100%' : this.panelWidth(),
-        surfaceHeight: this.panelHeight(), header: (): void => { this.boundedHeader(); }, body: (): void => { this.boundedContent(); }, actions: (): void => { this.boundedActions(); } });
-      }.id(this.manager ? 'reader-control-tts-manager-overlay' : 'reader-control-tts-overlay')
-        .width(this.manager ? '100%' : this.panelWidth()).height(this.manager ? this.modalVisibleHeight() : this.panelHeight())
-        .justifyContent(FlexAlign.End).alignItems(HorizontalAlign.Center)
-        .padding(this.manager ? { left: 13, right: 13,
-          top: this.managerOuterPadding(), bottom: this.managerOuterPadding() } : 0)
-        .position(this.manager ? { x: 0, y: this.modalVisibleTop() } : {
-          x: this.pickerPanelX(),
-          y: this.panelY() }).hitTestBehavior(HitTestMode.Transparent);
-      if (this.manager && this.windowModal && this.recoveryView.visible) {
+      this.configurationPanel();
+    }.width(this.windowModal ? '100%' : this.availableWidth)
+      .height(this.windowModal ? '100%' : this.availableHeight).zIndex(20);
+  }
+
+  @Builder
+  private configurationPanel() {
+    if (this.panelWidth() > 0 && this.panelLayout().rect.height > 0) {
+      ReaderBoundedSurface({ specId: this.boundedSpecId(), surfaceWidth: this.panelWidth(), surfaceHeight: this.panelLayout().rect.height,
+        header: (): void => { this.boundedHeader(); }, body: (): void => { this.boundedContent(); },
+        actions: (): void => { this.boundedActions(); } })
+        .id(this.manager ? 'reader-control-tts-manager-overlay' : 'reader-control-tts-overlay')
+        .position({ x: this.panelLayout().rect.left - (this.windowModal ? 0 : this.inlineHost?.left ?? 0),
+          y: this.panelLayout().rect.top - (this.windowModal ? 0 : this.inlineHost?.top ?? 0) })
+        .hitTestBehavior(HitTestMode.Default);
+      if (this.manager && this.windowModal && this.recoveryView.visible && this.panelLayout().bodyHeight > 0) {
         Scroll() {
           ReaderRecoveryNotice({ view: this.recoveryView, tag: '朗读配置', actionLabel: '',
             layoutWidthVp: this.recoveryOverlayWidth() });
-        }.width(this.recoveryOverlayWidth())
-          .constraintSize({ maxHeight: this.recoveryOverlayMaxHeight() })
-          .position({ x: this.recoveryOverlayLeft(), y: this.recoveryOverlayTop() })
+        }.width(this.recoveryOverlayWidth()).constraintSize({ maxHeight: this.panelLayout().bodyHeight })
+          .position({ x: this.panelLayout().rect.left + 12,
+            y: this.recoveryOverlayTop() })
           .zIndex(1).scrollBar(BarState.Auto).hitTestBehavior(HitTestMode.Default)
           .onTouch((event: TouchEvent): void => event.stopPropagation());
       }
-    }.width(this.windowModal ? '100%' : this.availableWidth)
-      .height(this.windowModal ? '100%' : this.availableHeight).zIndex(20)
-      .onSizeChange((_oldSize: SizeOptions, size: SizeOptions): void => {
-        if (this.windowModal && typeof size.width === 'number' && size.width > 0) this.modalUsableWidth = size.width;
-        if (this.windowModal && typeof size.height === 'number' && size.height >= 0) {
-          this.modalUsableHeight = size.height;
-        }
-      }).onAreaChange((_old: Area, area: Area): void => {
-        if (!this.mounted || !this.windowModal) return;
-        const origin = Number.parseFloat(`${area.globalPosition.y}`);
-        if (Number.isFinite(origin)) this.modalOriginY = origin;
-      });
+    }
+  }
+
+  private recoveryOverlayWidth(): number {
+    // A compact panel scrolls header and footer together. Leave the close target unobstructed.
+    return Math.max(0, this.panelWidth() - (this.panelLayout().compact ? 88 : 24));
+  }
+
+  private recoveryOverlayTop(): number {
+    const layout = this.panelLayout();
+    return layout.rect.top + this.surfaceSpec().borderWidth + (layout.compact ? 0 : layout.headerHeight);
   }
 
   @Builder
   private boundedHeader() {
-    if (!this.compactContent() && !this.voicePicker) this.configurationHeader();
+    if (!this.panelLayout().compact) this.configurationHeader();
   }
 
   @Builder
   private boundedActions() {
-    if (!this.compactContent() && this.manager) this.managerFooter();
+    if (!this.panelLayout().compact && this.manager) this.managerFooter();
   }
 
   private statusMessage(): string {
@@ -323,59 +340,58 @@ export struct ReaderTtsConfigOverlay {
     return this.message;
   }
 
+  private displayedStatus(failure: boolean): string { return failure ? this.errorText : this.statusMessage(); }
+
   @Builder
-  private configurationStatus() {
-    if (this.statusMessage().length > 0) {
-      Text(this.statusMessage()).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontFamily)
-        .fontSize(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontSizeFp).fontWeight(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontWeight)
-        .fontColor(readerAppColor('TOK_TTS_MUTED', this.appThemeScheme)).padding(12);
+  private configurationStatus(failure: boolean) {
+    if (this.displayedStatus(failure).length > 0) {
+      Text(this.displayedStatus(failure)).width('100%')
+        .height(this.messageHeight(this.displayedStatus(failure), this.panelWidth()))
+        .fontFamily(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontSizeFp)
+        .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontWeight)
+        .lineHeight(TYPE_READER_TTS_CONFIG_BUILD_STATUS.lineHeightFp as number).wordBreak(WordBreak.BREAK_WORD)
+        .fontColor(readerAppColor(failure ? 'TOK_TTS_CLAY' : 'TOK_TTS_MUTED', this.appThemeScheme)).padding(STATUS_PADDING);
     }
   }
 
   @Builder
   private configurationBody() {
-          Column({ space: 6 }) {
-            this.configurationStatus();
-            if (this.manager) {
-              this.managerForm();
-            } else {
-              ForEach(this.choices, (choice: ReaderTtsConfigChoice): void => {
-                this.choiceRow(choice);
-              }, (choice: ReaderTtsConfigChoice): string => choice.id);
-              if (this.showManage) {
-                Button({ type: ButtonType.Normal, stateEffect: false }) {
-                  Text('管理在线 TTS').width('100%').height(43.5).textAlign(TextAlign.Center)
-                    .fontFamily(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontSizeFp)
-                    .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontWeight).fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme))
-                    .accessibilityLevel('no');
-                }.width('100%').height(44).padding(0).backgroundColor(Color.Transparent)
-                  .border({ width: { top: .5 }, color: readerAppColor('app.border.readerConfigSoft', this.appThemeScheme) }).enabled(!this.busy)
-                  .borderRadius(0)
-                  .accessibilityText('管理在线 TTS')
-                  .onClick((): void => this.onManage(this.selectionId));
-              }
-              if (this.errorText.length > 0) {
-                Text(this.errorText).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontSizeFp)
-                  .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_STATUS.fontWeight).padding(12)
-                  .fontColor(readerAppColor('TOK_TTS_CLAY', this.appThemeScheme)).accessibilityText(`TTS 配置失败：${this.errorText}`);
-              }
-            }
-          }.width('100%').padding({ left: 8, right: 8, top: 4, bottom: 8 }).alignItems(HorizontalAlign.Start)
-            .constraintSize({ minHeight: this.manager ? 244 : 0 })
-            .id(this.manager ? 'reader-tts-manager-content' : 'reader-tts-choice-content');
+    Column({ space: READER_TTS_CONFIG_BODY_GAP }) {
+      this.configurationStatus(false);
+      if (this.manager) {
+        this.managerForm();
+      } else {
+        ForEach(this.choices, (choice: ReaderTtsConfigChoice): void => {
+          this.choiceRow(choice);
+        }, (choice: ReaderTtsConfigChoice): string => choice.id);
+        if (this.showManage) {
+          Button({ type: ButtonType.Normal, stateEffect: false }) {
+            Text('管理在线 TTS').width('100%').textAlign(TextAlign.Center).wordBreak(WordBreak.BREAK_WORD)
+              .fontFamily(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontFamily).fontSize(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontSizeFp)
+              .fontWeight(TYPE_READER_TTS_CONFIG_BUILD_LABEL.fontWeight).fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme))
+              .accessibilityLevel('no');
+          }.width('100%').height(this.manageActionHeight(this.panelWidth())).padding(0).backgroundColor(Color.Transparent)
+            .border({ width: { top: .5 }, color: readerAppColor('app.border.readerConfigSoft', this.appThemeScheme) })
+            .enabled(!this.busy).borderRadius(0).accessibilityText('管理在线 TTS')
+            .onClick((): void => this.onManage(this.selectionId));
+        }
+        this.configurationStatus(true);
+      }
+    }.width('100%').padding({ left: READER_TTS_CONFIG_BODY_HORIZONTAL_PADDING, right: READER_TTS_CONFIG_BODY_HORIZONTAL_PADDING,
+      top: READER_TTS_CONFIG_BODY_TOP_PADDING, bottom: READER_TTS_CONFIG_BODY_BOTTOM_PADDING })
+      .alignItems(HorizontalAlign.Start).id(this.manager ? 'reader-tts-manager-content' : 'reader-tts-choice-content');
   }
 
   @Builder
   private boundedContent() {
     Scroll(this.editorScroller) {
       Column({ space: 0 }) {
-        if (this.compactContent() && !this.voicePicker) this.configurationHeader();
+        if (this.panelLayout().compact) this.configurationHeader();
         this.configurationBody();
-        if (this.compactContent() && this.manager) this.managerFooter();
+        if (this.panelLayout().compact && this.manager) this.managerFooter();
       }.width('100%');
-    }.width('100%').height(this.compactContent() ? this.panelHeight() :
-      Math.max(0, this.panelHeight() - this.headerHeight() - (this.manager ? this.footerHeight() : 0)))
-      .align(Alignment.TopStart).scrollBar(BarState.Off)
+    }.width('100%').height(this.panelLayout().bodyHeight)
+      .align(Alignment.TopStart).scrollBar(this.panelLayout().scrollRequired ? BarState.Auto : BarState.Off)
       .id(this.editorScroll.id)
       .onAppear((): void => this.editorScroll.mount(this.getUIContext(), this.editingHost, this.editorScroller))
       .onDisAppear((): void => this.editorScroll.unmount())
@@ -388,12 +404,13 @@ export struct ReaderTtsConfigOverlay {
 
   @Builder
   private choiceRow(choice: ReaderTtsConfigChoice) {
-    Row({ space: 10 }) {
+    Row({ space: READER_TTS_CONFIG_CHOICE_GAP }) {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Row({ space: 10 }) {
+      Row({ space: READER_TTS_CONFIG_CHOICE_GAP }) {
       if (this.voicePicker) {
         Text(this.currentChoice(choice).label.includes('女') ? '女' : this.currentChoice(choice).label.includes('男') ? '男' : '声')
-          .width(34).height(34).textAlign(TextAlign.Center).fontFamily(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontFamily)
+          .width(READER_TTS_CONFIG_VOICE_BADGE_WIDTH).height(READER_TTS_CONFIG_VOICE_BADGE_WIDTH)
+          .textAlign(TextAlign.Center).fontFamily(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontFamily)
           .fontWeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.fontSizeFp).lineHeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE.lineHeightFp as number)
           .fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme)).backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme)).borderRadius(17);
       }
@@ -407,12 +424,12 @@ export struct ReaderTtsConfigOverlay {
         if (this.voicePicker && this.currentChoice(choice).label.includes(' · ')) {
           Text(this.currentChoice(choice).label.split(' · ').slice(1).join(' · ')).width('100%')
             .fontFamily(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontWeight)
-            .fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontSizeFp).lineHeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.lineHeightFp as number).fontColor(readerAppColor('TOK_TTS_MUTED', this.appThemeScheme)).maxLines(1);
+            .fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.fontSizeFp).lineHeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY.lineHeightFp as number).fontColor(readerAppColor('TOK_TTS_MUTED', this.appThemeScheme)).maxLines(2);
         }
       }.layoutWeight(1).constraintSize({ minHeight: 44 }).alignItems(HorizontalAlign.Start);
       }.width('100%').height('100%').alignItems(VerticalAlign.Center)
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-      }.layoutWeight(1).height(this.choiceHeight(this.currentChoice(choice))).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
+      }.layoutWeight(1).height('100%').padding(0).borderRadius(0).backgroundColor(Color.Transparent)
         .enabled(!this.busy).accessibilityText(this.currentChoice(choice).label).accessibilitySelected(choice.id === this.selectedId)
         .onClick((): void => this.choose(choice.id));
       if (this.voicePicker) {
@@ -421,24 +438,28 @@ export struct ReaderTtsConfigOverlay {
             Image($r(this.previewId === choice.id ?
               (this.appThemeScheme === 'night' ? 'app.media.reader_tts_make_stop_theme_night' : 'app.media.reader_tts_make_stop') :
               (this.appThemeScheme === 'night' ? 'app.media.reader_tts_make_play_theme_night' : 'app.media.reader_tts_make_play'))).width(13).height(13);
-            Text(this.previewId === choice.id ? '试听中' : '试听')
-              .fontFamily(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY.fontFamily)
-              .fontWeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY.fontWeight)
-              .fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY.fontSizeFp)
-              .lineHeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY.lineHeightFp as number).halfLeading(true)
-              .fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme));
-          }.width('100%').height(this.previewPaintHeight()).padding({ left: 8, right: 9 })
+            if (!this.compactVoicePreview(this.panelWidth())) {
+              Text(this.previewId === choice.id ? '试听中' : '试听')
+                .fontFamily(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY.fontFamily)
+                .fontWeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY.fontWeight)
+                .fontSize(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY.fontSizeFp)
+                .lineHeight(TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY.lineHeightFp as number).halfLeading(true)
+                .fontColor(readerAppColor('TOK_TTS_TEAL', this.appThemeScheme));
+            }
+          }.width('100%').height(this.previewPaintHeight(this.panelWidth())).padding({ left: 8, right: 9 })
+            .justifyContent(FlexAlign.Center)
             .backgroundColor(readerAppColor('TOK_TTS_TEAL_SOFT', this.appThemeScheme))
-            .borderRadius(Math.min(this.previewActionWidth(choice.id), this.previewPaintHeight()) / 2)
+            .borderRadius(Math.min(this.previewActionWidth(this.panelWidth()), this.previewPaintHeight(this.panelWidth())) / 2)
             .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-        }.width(this.previewActionWidth(choice.id)).height(this.previewActionHeight()).padding(0).backgroundColor(Color.Transparent)
+        }.width(this.previewActionWidth(this.panelWidth())).height(this.previewActionHeight(this.panelWidth())).padding(0).backgroundColor(Color.Transparent)
           .enabled(!this.busy).accessibilityText(`${this.currentChoice(choice).label}，${this.previewId === choice.id ? '停止试听' : '试听'}`)
           .onClick((): void => this.preview(choice.id));
       }
       Image((this.appThemeScheme === 'night' ? $r('app.media.reader_appearance_make_check_theme_night') : $r('app.media.reader_appearance_make_check')))
         .width(this.voicePicker ? 16 : 11).height(this.voicePicker ? 16 : 9)
         .opacity(choice.id === this.selectedId ? 1 : 0).accessibilityLevel('no');
-    }.width('100%').height(this.choiceHeight(this.currentChoice(choice))).padding({ left: 12, right: 12 })
+    }.width('100%').height(this.choiceHeight(this.currentChoice(choice), this.panelWidth()))
+      .padding({ left: READER_TTS_CONFIG_CHOICE_PAD_X, right: READER_TTS_CONFIG_CHOICE_PAD_X })
       .attributeModifier(new ReaderPanelFrame(choice.id === this.selectedId ? 'reader-island-emphasis' :
         'reader-island-card', this.appThemeScheme))
       .enabled(!this.busy);
@@ -486,25 +507,32 @@ export struct ReaderTtsConfigOverlay {
     });
   }
   @Builder
+  private managerLabel(text: string) {
+    Text(text).width('100%').height(this.formLabelHeight(this.formWidth(this.panelWidth())))
+      .fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
+      .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight)
+      .fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp)
+      .lineHeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.lineHeightFp as number)
+      .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+  }
+
+  @Builder
   private managerForm() {
-    Column({ space: 14 }) {
-      Column({ space: 6 }) {
-        Text('服务名称').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
-          .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+    Column({ space: FORM_GROUP_GAP }) {
+      Column({ space: FORM_FIELD_GAP }) {
+        this.managerLabel('服务名称');
         ReaderFormField({ editingHost: this.editingHost, inputIdentity: `${this.selectionId}:${this.generation}:${this.draftId}:draftName`, specId: 'tts-manager-name', scheme: this.appThemeScheme, text: this.draftName, placeholder: '例如 Azure 语音',
           isEditable: !this.busy, fieldAccessibilityLabel: '在线 TTS 配置名称',
           onTextChange: (value: string): void => this.changeDraftText('name', value) });
       }.width('100%');
-      Column({ space: 6 }) {
-        Text('接口地址').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
-          .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+      Column({ space: FORM_FIELD_GAP }) {
+        this.managerLabel('接口地址');
         ReaderFormField({ editingHost: this.editingHost, inputIdentity: `${this.selectionId}:${this.generation}:${this.draftId}:draftUrl`, specId: 'tts-manager-value', scheme: this.appThemeScheme, text: this.draftUrl, placeholder: 'https://api.example.com/tts',
           isEditable: !this.busy, fieldAccessibilityLabel: '在线 TTS 请求 URL',
           onTextChange: (value: string): void => this.changeDraftText('url', value) });
       }.width('100%');
-      Column({ space: 6 }) {
-        Text('API 密钥').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
-          .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+      Column({ space: FORM_FIELD_GAP }) {
+        this.managerLabel('API 密钥');
         ReaderFormField({ editingHost: this.editingHost, inputIdentity: `${this.selectionId}:${this.generation}:${this.draftId}:draftApiKey`, specId: 'tts-manager-value', scheme: this.appThemeScheme, text: this.draftApiKey, placeholder: '填入访问密钥',
           isEditable: !this.busy, fieldAccessibilityLabel: '在线 TTS 访问密钥，不会显示或写入 Core', password: true,
           onTextChange: (value: string): void => this.changeDraftText('apiKey', value) });
@@ -513,7 +541,8 @@ export struct ReaderTtsConfigOverlay {
             .width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE.fontWeight)
             .fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE.fontSizeFp).fontColor(this.draftClearApiKey ? readerAppColor('TOK_TTS_CLAY', this.appThemeScheme) : readerAppColor('TOK_TTS_MUTED', this.appThemeScheme))
             .accessibilityLevel('no');
-        }.width('100%').constraintSize({ minHeight: 44 }).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
+        }.width('100%').height(this.clearKeyHeight(this.formWidth(this.panelWidth())))
+          .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
           .accessibilityText(this.draftClearApiKey ? '已选择清除已保存密钥' : '清除已保存密钥')
           .enabled(!this.busy).onClick((): void => {
             if (!this.acceptsInput() || this.busy) return;
@@ -521,30 +550,30 @@ export struct ReaderTtsConfigOverlay {
             if (this.draftClearApiKey) this.draftApiKey = '';
           });
       }.width('100%');
-      Column({ space: 6 }) {
-        Text('发音人 / 音色').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
-          .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+      Column({ space: FORM_FIELD_GAP }) {
+        this.managerLabel('发音人 / 音色');
         ReaderFormField({ editingHost: this.editingHost, inputIdentity: `${this.selectionId}:${this.generation}:${this.draftId}:draftVoice`, specId: 'tts-manager-value', scheme: this.appThemeScheme, text: this.draftVoice, placeholder: '例如 xiaoxiao',
           isEditable: !this.busy, fieldAccessibilityLabel: '在线 TTS 音色',
           onTextChange: (value: string): void => this.changeDraftText('voice', value) });
       }.width('100%');
-      Column({ space: 6 }) {
-        Text('音频格式').width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontFamily)
-          .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
-        Row({ space: 8 }) {
+      Column({ space: FORM_FIELD_GAP }) {
+        this.managerLabel('音频格式');
+        Row({ space: FORMAT_GAP }) {
           this.formatChoice('MP3', 'mp3');
           this.formatChoice('WAV', 'wav');
           this.formatChoice('PCM', 'pcm');
-        }.width('100%').height(this.formatActionHeight());
+        }.width('100%').height(this.formatActionHeight(this.panelWidth()));
       }.width('100%');
       if (this.errorText.length > 0) {
-        Text(this.errorText).width('100%').fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS.fontFamily)
+        Text(this.errorText).width('100%')
+          .height(this.textHeight(this.errorText, TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS, this.formWidth(this.panelWidth()), 3))
+          .fontFamily(TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS.fontFamily).wordBreak(WordBreak.BREAK_WORD)
           .fontWeight(TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS.fontSizeFp)
           .fontColor(readerAppColor('TOK_TTS_CLAY', this.appThemeScheme)).maxLines(3).textOverflow({ overflow: TextOverflow.Ellipsis })
           .accessibilityText(`在线 TTS 操作失败：${this.errorText}`);
       }
-    }.width('100%').padding({ top: 8, bottom: 16, left: 18, right: 18 })
-      .alignItems(HorizontalAlign.Start).constraintSize({ minHeight: 244 }).id('reader-tts-manager-form');
+    }.width('100%').padding({ top: FORM_PAD_TOP, bottom: FORM_PAD_BOTTOM, left: FORM_PAD_X, right: FORM_PAD_X })
+      .alignItems(HorizontalAlign.Start).id('reader-tts-manager-form');
   }
 
   @Builder
@@ -673,11 +702,11 @@ export struct ReaderTtsConfigOverlay {
   @Builder
   private formatChoice(label: string, format: ReaderTtsAudioFormat) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Text(label).width('100%').height(Math.max(0, this.formatActionHeight() - 1)).textAlign(TextAlign.Center)
+      Text(label).width('100%').textAlign(TextAlign.Center)
         .fontFamily(TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL.fontFamily).fontWeight(TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL.fontWeight).fontSize(TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL.fontSizeFp)
         .fontColor(this.draftFormat === format ? readerAppColor('app.control.onPrimary', this.appThemeScheme) : readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme))
         .accessibilityLevel('no');
-    }.layoutWeight(1).height(this.formatActionHeight()).padding(0)
+    }.layoutWeight(1).height('100%').padding(0)
       .backgroundColor(this.draftFormat === format ? readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme))
       .border({ width: .5, color: readerAppColor('app.border.readerConfig', this.appThemeScheme) }).borderRadius(9)
       .enabled(!this.busy).accessibilityText(`${label}${this.draftFormat === format ? '，已选择' : ''}`)
