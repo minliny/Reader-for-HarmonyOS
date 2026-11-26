@@ -38,8 +38,7 @@ import { APPEARANCE_LAYOUT_SURFACE, APPEARANCE_LAYOUT_BORDER, APPEARANCE_LAYOUT_
   readerControlAppearanceThemeSwatch,
   readerControlAppearanceThemeScheme } from './ReaderControlAppearanceStyle';
 import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
-import { ReaderIslandAction } from './ReaderIslandControlStyle';
-import { ReaderControlSwitchTrack } from './ReaderControlSwitchTrack';
+import { ReaderIslandAction, ReaderIslandControlFrame, ReaderIslandSwitchRow } from './ReaderIslandControlStyle';
 import { readerControlSettingsOptionLabel } from './ReaderControlSettingsMinimum';
 import {
   createDefaultReaderAppearanceSnapshot, isReaderAppearanceFont, moveReaderAppearanceFontSlot,
@@ -822,8 +821,8 @@ export struct ReaderControlAppearanceContent {
             }, (font: ReaderAppearanceFontSlot): string => font);
           }.width('100%').height(this.islandFontGridHeight());
         }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme));
-        Column() {
-          Text('排版').width('100%').padding({ top: 8 }).fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
+        Column({ space: 4 }) {
+          Text('排版').width('100%').fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
             .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
           this.islandMetric('fontSize');
           this.islandMetric('lineHeightMultiplier');
@@ -832,17 +831,13 @@ export struct ReaderControlAppearanceContent {
           this.islandMetric('pageMarginOffset');
           this.islandSelect('indent');
           this.islandSelect('language');
-          Button({ type: ButtonType.Normal, stateEffect: false }) {
-            Row() {
-              Text('两端对齐').layoutWeight(1).fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
-              ReaderControlSwitchTrack({ value: this.displaySnapshot().alignment === 'justify' });
-            }.width('100%');
-          }.width('100%').height(44).padding(0).backgroundColor(Color.Transparent)
-            .accessibilityText('两端对齐').accessibilitySelected(this.displaySnapshot().alignment === 'justify')
-            .onClick((): void => {
+          ReaderIslandSwitchRow({ scheme: this.appThemeScheme, label: '两端对齐',
+            value: this.displaySnapshot().alignment === 'justify', actionReady: this.currentInputEnabled(),
+            onChange: (): void => {
               if (this.currentInputEnabled()) this.onAlignmentRequest(this.displaySnapshot().alignment);
-            });
-        }.width('100%').padding({ left: 8, right: 8 }).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme));
+            },
+          });
+        }.width('100%').padding(8).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme));
         Column({ space: 4 }) {
           Text('翻页方式').width('100%').fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
             .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
@@ -879,11 +874,10 @@ export struct ReaderControlAppearanceContent {
           .borderRadius(6).border({ width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) });
         Text(this.themeLabel(theme)).fontFamily(TYPE_READER_PANEL_CAPTION.fontFamily).fontWeight(TYPE_READER_PANEL_CAPTION.fontWeight).fontSize(TYPE_READER_PANEL_CAPTION.fontSizeFp).maxLines(1).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       }.width('100%').padding(3).accessibilityLevel('no-hide-descendants');
-    }.id(`reader-control-theme-${theme}`).layoutWeight(1).constraintSize({ minHeight: 48 }).padding(0)
-      .backgroundColor(readerAppColor(this.displaySnapshot().activeTheme === theme ? 'TOK_READ_ACTIVE_SOFT' :
-        'TOK_READ_ELEVATED', this.appThemeScheme))
-      .border({ width: 1, color: readerAppColor(this.displaySnapshot().activeTheme === theme ? 'TOK_READ_PRIMARY' :
-        'TOK_LINE', this.appThemeScheme) }).borderRadius(8)
+    }.id(`reader-control-theme-${theme}`).layoutWeight(1).constraintSize({ minHeight: 48 }).padding(0).opacity(1)
+      .attributeModifier(new ReaderIslandControlFrame(this.appThemeScheme, this.currentInputEnabled(),
+        this.displaySnapshot().activeTheme === theme ? 'marked' : 'normal'))
+      .enabled(this.currentInputEnabled())
       .accessibilityText(`切换到${this.themeLabel(theme)}主题`).accessibilitySelected(this.displaySnapshot().activeTheme === theme)
       .onClick((): void => { if (this.currentInputEnabled()) this.onThemeChange(theme); });
   }
@@ -891,7 +885,7 @@ export struct ReaderControlAppearanceContent {
   @Builder
   private islandDefaultTheme(day: boolean) {
     ReaderButton({ scheme: this.appThemeScheme, label: this.defaultThemeActionLabel(day),
-      layout: 'full', visualSize: 'small', variant: 'reader-tonal',
+      layout: 'full', visualSize: 'small', variant: 'reader-island',
       actionEnabled: this.currentInputEnabled(), onAction: (): void => this.requestDefaultTheme(day),
     }).layoutWeight(1);
   }
@@ -914,7 +908,8 @@ export struct ReaderControlAppearanceContent {
         label: readerAppearanceFontSlotLabel(this.displaySnapshot(), font),
         accessibleLabel: font === 'import' ? '导入自定义字体' : readerAppearanceFontSlotLabel(this.displaySnapshot(), font),
         previewFamily: this.visiblePreviewFamily(font), tone: this.activeFont(font) ? 'selected' : 'normal',
-        nativeId: 'reader-control-font-' + font, chosen: this.activeFont(font), actionReady: this.fontInput(font),
+        nativeId: 'reader-control-font-' + font, chosen: this.activeFont(font),
+        actionReady: this.fontInput(font), visualAvailable: this.fontInput(font),
         onAction: (): void => {
           if (!this.fontInput(font) || this.draggedFontId !== '' || this.suppressFontClick) return;
           if (font === 'import') this.onCustomFontImport();
@@ -968,7 +963,7 @@ export struct ReaderControlAppearanceContent {
       Flex({ wrap: FlexWrap.Wrap }) {
         ForEach(this.selectOptions(kind), (value: string) => {
           ReaderButton({ scheme: this.appThemeScheme, label: value,
-            visualSize: 'small', variant: this.selectValue(kind) === value ? 'primary' : 'reader-tonal',
+            visualSize: 'small', variant: this.selectValue(kind) === value ? 'reader-island-selected' : 'reader-island',
             primary: this.selectValue(kind) === value, selectionSemantic: true,
             actionEnabled: this.currentInputEnabled(),
             onAction: (): void => { if (this.currentInputEnabled()) this.applySelect(kind, value); },
@@ -982,7 +977,7 @@ export struct ReaderControlAppearanceContent {
   private islandTurn(style: ReaderPageTurnStyle) {
     ReaderButton({
       scheme: this.appThemeScheme, label: readerControlSettingsOptionLabel('pageTurn', style),
-      layout: 'full', visualSize: 'small', variant: this.pageTurnStyle === style ? 'primary' : 'reader-tonal',
+      layout: 'full', visualSize: 'small', variant: this.pageTurnStyle === style ? 'reader-island-selected' : 'reader-island',
       actionEnabled: this.currentInputEnabled() && isReaderPageTurnStyleAvailable(style) &&
         (style !== 'simulation' || this.pageTurnSimulationAvailable),
       primary: this.pageTurnStyle === style, selectionSemantic: true,

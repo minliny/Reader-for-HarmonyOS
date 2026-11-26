@@ -1,5 +1,6 @@
 import { TOK_SPACE_XS, TOK_BORDER_W, TOK_SPACE_MD, TOK_SPACE_CARD_PADDING, TOK_SPACE_SM, TOK_SPACE_LG, TOK_SPACE_CONTROL_INLINE } from '../foundation/ReaderTokens';
 import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
+import { readerIslandControlPaint } from '../foundation/ReaderIslandControlPaint';
 import { SEARCH_CONTROL_MIN_TARGET, SEARCH_HISTORY_HORIZONTAL_PADDING, SEARCH_HISTORY_VISUAL_HEIGHT } from '../foundation/ReaderSearchControlGeometry';
 import { MESSAGE_ACTION } from '../foundation/ReaderMessageStyle';
 import {
@@ -64,7 +65,8 @@ export function resolveReaderIconButtonSpec(id: ReaderIconButtonSpecId): ReaderI
 
 export type ReaderButtonSpecId = 'source-tools-action' | 'source-tools-compact' | 'source-action' | 'source-compact' | 'rules-action' | 'rules-compact' | 'sync-action' | 'form-action' | 'form-busy-action' | 'form-document-action' | 'search-primary' | 'search-secondary' | 'discover-page' | 'rss-mode-tab' | 'rss-state' | 'rss-source-link' | 'shelf-action' | 'shelf-small' | 'shelf-row-edit' | 'shelf-row-select' | 'rss-detail-bottom' | 'rss-filter' | 'sync-config-test' | 'sync-config-save' | 'source-management-retry' | 'source-management-category' | 'source-management-status-compact' | 'source-management-status-wide' | 'source-management-detect' | 'source-management-login' | 'source-management-manage' | 'search-field-wide' | 'search-history-keyword' | 'search-filter-option' | 'search-retry-progress' | 'search-error-retry' | 'search-error-source' | 'discover-category' | 'sync-empty-backup';
 export type ReaderButtonLayout = 'intrinsic' | 'equal' | 'full';
-export type ReaderButtonVariant = 'primary' | 'tonal' | 'reader-tonal' | 'subtle' | 'danger';
+export type ReaderButtonVariant = 'primary' | 'tonal' | 'reader-tonal' | 'subtle' | 'danger' |
+  'reader-island' | 'reader-island-selected';
 export type ReaderButtonSize = 'large' | 'medium' | 'small';
 
 export interface ReaderButtonMatrixSize {
@@ -87,6 +89,7 @@ const BUTTON_MATRIX_SIZES: Record<ReaderButtonSize, ReaderButtonMatrixSize> = {
 export interface ReaderButtonMatrixPaint {
   surface: ReaderAppColorRole;
   ink: ReaderAppColorRole;
+  border?: ReaderAppColorRole;
 }
 
 const BUTTON_MATRIX_PAINT: Record<ReaderButtonVariant, ReaderButtonMatrixPaint> = {
@@ -95,6 +98,8 @@ const BUTTON_MATRIX_PAINT: Record<ReaderButtonVariant, ReaderButtonMatrixPaint> 
   'reader-tonal': { surface: 'TOK_READ_ACTIVE_SOFT', ink: 'TOK_READ_PRIMARY' },
   'subtle': { surface: 'TOK_SURFACE_FIELD', ink: 'TOK_INK' },
   'danger': { surface: 'app.action.destructiveSoft', ink: 'app.action.destructive' },
+  'reader-island': readerIslandControlPaint(true),
+  'reader-island-selected': readerIslandControlPaint(true, 'selected'),
 };
 
 const DISABLED_BUTTON_PAINT: ReaderButtonMatrixPaint = { surface: 'TOK_SURFACE_FIELD', ink: 'TOK_MUTED' };
@@ -104,6 +109,9 @@ export function resolveReaderButtonMatrixSize(size: ReaderButtonSize): ReaderBut
 }
 
 export function resolveReaderButtonMatrixPaint(variant: ReaderButtonVariant, enabled: boolean): ReaderButtonMatrixPaint {
+  if (!enabled && (variant === 'reader-island' || variant === 'reader-island-selected')) {
+    return readerIslandControlPaint(false);
+  }
   return enabled ? BUTTON_MATRIX_PAINT[variant] : DISABLED_BUTTON_PAINT;
 }
 

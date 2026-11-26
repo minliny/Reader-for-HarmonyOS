@@ -34,7 +34,7 @@ import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../../..
 import { readerControlIsDirectSheet } from './ReaderControlHostSession';
 import { readerPaperActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
 import type { ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
-import type { ReaderSessionCapsuleState } from './ReaderSessionCapsuleModel';
+import type { ReaderSessionCapsuleState, ReaderSessionCapsuleType } from './ReaderSessionCapsuleModel';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { PopupSurfaceSpec, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
@@ -690,7 +690,7 @@ export struct ReaderControlPanel {
       !Number.isFinite(height) || width <= 0 || height <= 0) {
       return;
     }
-    if (this.launchOwnsControls) return;
+    if (this.launchOwnsControls || this.launchRecovering) return;
     this.onSessionLaunchShellMeasured(this.currentLayout().topBarTop + this.currentLayout().topBarHeight,
       this.currentLayout().viewportHeight - this.presentedDockTop() - this.frame().shell.y);
     const frame = this.frame();
@@ -1543,9 +1543,13 @@ export struct ReaderControlPanel {
     this.confirmLaunchSourceReady();
   }
 
+  private launchSourceDetached(type: ReaderSessionCapsuleType): boolean {
+    return this.launchSample?.type === type && (this.launchOwnsControls || this.launchRecovering);
+  }
+
   private confirmLaunchSourceReady(): void {
-    if (!this.launchRecovering || this.launchSourceVisibleGeneration !== this.launchGeneration ||
-      this.launchSourceVisibleKind !== this.capturedLaunchSourceKind ||
+    if (!this.launchRecovering || (this.fixedIsland && (this.launchSourceVisibleGeneration !== this.launchGeneration ||
+      this.launchSourceVisibleKind !== this.capturedLaunchSourceKind)) ||
       this.launchSourceReadyGeneration === this.launchGeneration || this.visualVisibilityProgress < 1 ||
       !this.launchSourceCurrent()) return;
     this.launchSourceReadyGeneration = this.launchGeneration;
@@ -2123,15 +2127,16 @@ export struct ReaderControlPanel {
           sample: this.launchSample, sessionState: this.launchBusinessStatus,
           desiredPlaying: this.launchDesiredPlaying, countdown: this.launchCountdown,
           interactionEnabled: this.launchInteractionEnabled,
+          ownsSourceRegion: this.launchSourceDetached(this.launchSample.type),
           material: this.surfaceMaterial('sessionCapsule'),
           sourceSurfaceColor: readerAppColor(this.fixedIsland ? 'TOK_READ_CARD_EMPHASIS' : this.launchSourceKind === 'fullAutoPagePlayback' ?
             'TOK_SURFACE_PANEL_SOFT' : this.launchSourceKind === 'fullTtsPlayback' ? 'TOK_TTS_CARD' :
               this.launchSourceKind === 'quickTts' ? 'TOK_TTS_QUICK_CARD' : 'TOK_SURFACE_PANEL', this.appScheme),
-          sourceBorderColor: readerAppColor(this.fixedIsland ? 'TOK_PRIMARY_BORDER' : this.launchSourceKind === 'quickTts' ?
+          sourceBorderColor: readerAppColor(this.fixedIsland ? 'TOK_LINE_STRONG' : this.launchSourceKind === 'quickTts' ?
             'app.control.paint.66B4A697' : this.launchSourceKind === 'fullTtsPlayback' ? 'TOK_TTS_LINE' : 'TOK_LINE', this.appScheme),
           sourceBorderWidth: this.fixedIsland || this.launchSample.type === 'autoPage' ? TOK_BORDER_W : 0.5,
-          sourceSurfaceTopInset: this.launchSourceKind === 'fullTtsPlayback' ? 27 : 0,
-          sourceHighlightColor: this.launchSourceKind === 'fullTtsPlayback' ? readerAppColor('app.control.paint.99FFFFFF', this.appScheme) : '#00000000',
+          sourceSurfaceTopInset: !this.fixedIsland && this.launchSourceKind === 'fullTtsPlayback' ? 27 : 0,
+          sourceHighlightColor: !this.fixedIsland && this.launchSourceKind === 'fullTtsPlayback' ? readerAppColor('app.control.paint.99FFFFFF', this.appScheme) : '#00000000',
           sourceGradientStart: !this.fixedIsland && this.launchSourceKind === 'quickTts' ? readerAppColor('app.control.paint.FFFAF4', this.appScheme) : '',
           sourceGradientEnd: !this.fixedIsland && this.launchSourceKind === 'quickTts' ? readerAppColor('app.control.paint.F6ECDD', this.appScheme) : '',
           themeScheme: this.appScheme,
@@ -2564,10 +2569,11 @@ export struct ReaderControlPanel {
       Stack({ alignContent: Alignment.Center }) {
         Text('返回').fontFamily(this.headerActionStyle().fontFamily).fontWeight(this.headerActionStyle().fontWeight)
           .fontSize(this.headerActionStyle().fontSizeFp).maxLines(1)
-          .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme));
+          .fontColor(readerAppColor('app.readerIsland.controlInk', this.appScheme));
       }.width(this.headerPaintLayout().actionPaint.width).height(this.headerPaintLayout().actionPaint.height)
         .position({ x: this.headerPaintLayout().actionPaint.x, y: this.headerPaintLayout().actionPaint.y })
-        .backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme)).borderRadius(8)
+        .backgroundColor(readerAppColor('app.readerIsland.controlSurface', this.appScheme))
+        .border({ width: TOK_BORDER_W, color: readerAppColor('app.readerIsland.controlBorder', this.appScheme) }).borderRadius(8)
         .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
     } else {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -2850,9 +2856,10 @@ export struct ReaderControlPanel {
       onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts): void => this.onModuleMinimumFactsChanged(identity, facts),
       onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined,
         profileReader?: ReaderControlPlaybackProfileReader): void => this.bindModuleMinimum('tts', identity, measurer, profileReader),
-      sourceDetached: this.launchSample !== undefined && this.launchOwnsControls && this.launchSample.type === 'tts',
+      sourceDetached: this.launchSourceDetached('tts'),
+      sourceHandoffPending: this.launchRecovering,
       reduceMotion: this.reduceMotion,
-      waveformActive: this.frame().visibility > 0 && !this.launchOwnsControls && !this.controlObscured,
+      waveformActive: this.frame().visibility > 0 && !this.launchSourceDetached('tts') && !this.controlObscured,
       onMorphActorVisible: (kind: ReaderSessionMorphSourceKind): void => this.onLaunchSourceVisible(kind),
       dismissTemporaryRevision: this.dismissTemporaryRevision,
       onTemporaryLayerChange: this.moduleTemporaryLayerHandler('tts'),
@@ -2918,7 +2925,8 @@ export struct ReaderControlPanel {
       onMinimumFactsChanged: (identity: string, facts: ReaderControlModuleFacts): void => this.onModuleMinimumFactsChanged(identity, facts),
           onMinimumMeasurerReady: (identity: string, measurer: ReaderControlModuleMeasurer | undefined,
             profileReader?: ReaderControlPlaybackProfileReader): void => this.bindModuleMinimum('autoPage', identity, measurer, profileReader),
-          sourceDetached: this.launchSample !== undefined && this.launchOwnsControls && this.launchSample.type === 'autoPage',
+          sourceDetached: this.launchSourceDetached('autoPage'),
+          sourceHandoffPending: this.launchRecovering,
           onMorphActorVisible: (kind: ReaderSessionMorphSourceKind): void => this.onLaunchSourceVisible(kind),
           fullViewportHeight: this.contentEndpointHeight(true),
           expandedLayout: this.isExpanded(), motionProgress: this.contentMotionProgress,

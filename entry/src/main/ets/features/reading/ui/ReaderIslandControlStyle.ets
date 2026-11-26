@@ -1,55 +1,61 @@
+import { drawing } from '@kit.ArkGraphics2D';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerPressAnimation, readerPressOpacity, readerPressPointer, readerPressScale } from '../../../ui/foundation/ReaderPressMotion';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerIslandControlPaint, type ReaderIslandControlTone } from '../../../ui/foundation/ReaderIslandControlPaint';
+import { readerIslandPlaybackLayout, READER_ISLAND_TARGET_VP, READER_ISLAND_TRANSPORT_ICON_VP,
+  READER_ISLAND_TRANSPORT_LABEL_GAP, READER_ISLAND_ACTION_INSET, type ReaderIslandPlaybackLayout
+} from './ReaderIslandPlaybackLayout';
 import { ReaderTextStyle, TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE,
-  TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE, TYPE_READER_PANEL_LABEL } from '../../../ui/foundation/ReaderTypography';
-
-export const READER_ISLAND_PLAYBACK_HEIGHT_VP = 84;
-const ISLAND_PLAYBACK_STATUS_MIN_HEIGHT_VP = 22;
-export const READER_ISLAND_PLAYBACK_INSET_X = 10;
-export const READER_ISLAND_PLAYBACK_INSET_Y = 6;
-export const READER_ISLAND_PLAYBACK_STATUS_GAP = 2;
-export const READER_ISLAND_PLAYBACK_ACTION_GAP = 6;
+  TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE, TYPE_READER_PANEL_LABEL,
+  TYPE_APP_ROW_DETAIL } from '../../../ui/foundation/ReaderTypography';
+import { ReaderControlSwitchTrack } from './ReaderControlSwitchTrack';
 
 type ReaderIslandActionKind = 'step' | 'transport' | 'font';
-type ReaderIslandActionTone = 'normal' | 'selected' | 'stop';
 
-const ISLAND_TARGET_VP = 44;
 const ISLAND_PAINT_VP = 32;
-const ISLAND_ICON_VP = 14;
-const ISLAND_ICON_LABEL_GAP = 3;
-const ISLAND_ACTION_INSET = 3;
+const ISLAND_CONTROL_RADIUS_VP = 8;
 
-export interface ReaderIslandTtsPlaybackLayout {
-  columns: number;
-  rowHeight: number;
-  statusHeight: number;
-  height: number;
+export function readerIslandTransportLayout(cardWidth: number, fontScale: number,
+  labelLength: number): ReaderIslandPlaybackLayout {
+  const action = TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE;
+  return readerIslandPlaybackLayout(cardWidth, fontScale, labelLength, {
+    actionSize: action.fontSizeFp, actionLineHeight: action.lineHeightFp ?? action.fontSizeFp,
+    statusLineHeight: TYPE_READER_PANEL_LABEL.lineHeightFp ?? TYPE_READER_PANEL_LABEL.fontSizeFp,
+  });
 }
 
-export function readerIslandTtsPlaybackLayout(cardWidth: number, fontScale: number,
-  sentenceLabelLength: number): ReaderIslandTtsPlaybackLayout {
-  const scale = Number.isFinite(fontScale) && fontScale > 0 ? fontScale : 1;
-  const style = TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE;
-  const minActionWidth = Math.max(ISLAND_TARGET_VP, Math.ceil(sentenceLabelLength * style.fontSizeFp * scale) +
-    ISLAND_ICON_VP + ISLAND_ICON_LABEL_GAP + 2 * ISLAND_ACTION_INSET);
-  const innerWidth = Math.floor(Math.max(0, cardWidth - 2 * READER_ISLAND_PLAYBACK_INSET_X));
-  const gap = READER_ISLAND_PLAYBACK_ACTION_GAP;
-  // The four-column row gives play/pause the original 1.25 share.
-  const compactWidth = Math.floor((innerWidth - 3 * gap) / 4.25);
-  const pairWidth = Math.floor((innerWidth - gap) / 2);
-  const columns = compactWidth >= minActionWidth ? 4 : pairWidth >= minActionWidth ? 2 : 1;
-  const rowHeight = Math.max(ISLAND_TARGET_VP, Math.ceil((style.lineHeightFp ?? style.fontSizeFp) * scale));
-  const statusHeight = Math.max(ISLAND_PLAYBACK_STATUS_MIN_HEIGHT_VP,
-    Math.ceil((TYPE_READER_PANEL_LABEL.lineHeightFp ?? TYPE_READER_PANEL_LABEL.fontSizeFp) * scale));
-  const rows = 4 / columns;
-  return {
-    columns,
-    rowHeight,
-    statusHeight,
-    height: Math.max(READER_ISLAND_PLAYBACK_HEIGHT_VP, rows * rowHeight + (rows - 1) * gap +
-      statusHeight + READER_ISLAND_PLAYBACK_STATUS_GAP + 2 * READER_ISLAND_PLAYBACK_INSET_Y),
-  };
+/** Keep the border available in native resting, pressed, and disabled states. */
+export class ReaderIslandControlFrame implements AttributeModifier<CommonAttribute> {
+  private readonly border: string;
+  private readonly feedback: ReaderPressFeedback;
+
+  constructor(scheme: string, available: boolean = true, tone: ReaderIslandControlTone = 'normal',
+    radius: number = ISLAND_CONTROL_RADIUS_VP, actionReady: boolean = available, pressed: boolean = false) {
+    const paint = readerIslandControlPaint(available, tone);
+    this.border = readerAppColor(paint.border, scheme);
+    this.feedback = new ReaderPressFeedback(readerAppColor(paint.surface, scheme), scheme, radius,
+      radius, actionReady, pressed);
+  }
+
+  applyNormalAttribute(instance: CommonAttribute): void {
+    this.feedback.applyNormalAttribute(instance);
+    this.paintBorder(instance);
+  }
+
+  applyPressedAttribute(instance: CommonAttribute): void {
+    this.feedback.applyPressedAttribute(instance);
+    this.paintBorder(instance);
+  }
+
+  applyDisabledAttribute(instance: CommonAttribute): void {
+    this.feedback.applyDisabledAttribute(instance);
+    this.paintBorder(instance);
+  }
+
+  private paintBorder(instance: CommonAttribute): void {
+    instance.border({ width: 1, color: this.border });
+  }
 }
 
 /** Preserve one native target while painting a compact icon, font sample, or stepper. */
@@ -57,7 +63,7 @@ export function readerIslandTtsPlaybackLayout(cardWidth: number, fontScale: numb
 export struct ReaderIslandAction {
   @Prop scheme: string = 'day';
   @Prop kind: ReaderIslandActionKind = 'step';
-  @Prop tone: ReaderIslandActionTone = 'normal';
+  @Prop tone: ReaderIslandControlTone = 'normal';
   @Prop label: string = '';
   @Prop accessibleLabel: string = '';
   @Prop nativeId: string = '';
@@ -74,36 +80,35 @@ export struct ReaderIslandAction {
 
   build() {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Row({ space: ISLAND_ICON_LABEL_GAP }) {
+      Row({ space: READER_ISLAND_TRANSPORT_LABEL_GAP }) {
         if (this.icon !== undefined) {
-          Image(this.icon).width(ISLAND_ICON_VP).height(ISLAND_ICON_VP).accessibilityLevel('no');
+          Image(this.icon).width(READER_ISLAND_TRANSPORT_ICON_VP).height(READER_ISLAND_TRANSPORT_ICON_VP)
+            .supportSvg2(true).colorFilter(this.iconTint()).flexShrink(0).accessibilityLevel('no');
         }
         Text(this.label)
           .fontFamily(this.previewFamily ?? this.labelStyle().fontFamily)
           .fontSize(this.labelStyle().fontSizeFp)
           .lineHeight(this.labelStyle().lineHeightFp ?? 16).halfLeading(true)
           .fontWeight(this.labelStyle().fontWeight)
-          .fontColor(readerAppColor(this.tone === 'selected' ? 'app.control.onPrimary' : 'TOK_READ_INK', this.scheme))
+          .fontColor(this.ink())
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .accessibilityLevel('no');
       }
       .width(this.kind === 'step' ? ISLAND_PAINT_VP : '100%')
       .constraintSize({ minHeight: ISLAND_PAINT_VP })
-      .padding(this.kind === 'step' ? 0 : { left: ISLAND_ACTION_INSET, right: ISLAND_ACTION_INSET })
+      .padding(this.kind === 'step' ? 0 : { left: READER_ISLAND_ACTION_INSET, right: READER_ISLAND_ACTION_INSET })
       .justifyContent(FlexAlign.Center).alignItems(VerticalAlign.Center)
       .scale(readerPressScale(this.islandPointer >= 0, this.reduceIslandMotion))
-      .opacity(readerPressOpacity(this.islandPointer >= 0, this.reduceIslandMotion, this.visualAvailable ? 1 : .42))
+      .opacity(readerPressOpacity(this.islandPointer >= 0, this.reduceIslandMotion))
       .animation(readerPressAnimation(this.reduceIslandMotion))
-      .attributeModifier(new ReaderPressFeedback(readerAppColor(
-        this.tone === 'selected' ? 'TOK_READ_PRIMARY' : this.tone === 'stop' ? 'TOK_TTS_CLAY_SOFT' :
-          'TOK_SURFACE_PANEL_SOFT', this.scheme),
-        this.scheme, ISLAND_PAINT_VP / 2, ISLAND_PAINT_VP / 2, this.actionReady, this.islandPointer >= 0))
+      .attributeModifier(new ReaderIslandControlFrame(this.scheme, this.visualAvailable, this.tone,
+        ISLAND_PAINT_VP / 2, this.actionReady, this.islandPointer >= 0))
       .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
     }
     .id(this.nativeId)
-    .width(this.kind === 'step' ? ISLAND_TARGET_VP : '100%')
-    .constraintSize({ minWidth: ISLAND_TARGET_VP, minHeight: ISLAND_TARGET_VP })
-    .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
+    .width(this.kind === 'step' ? READER_ISLAND_TARGET_VP : '100%')
+    .constraintSize({ minWidth: READER_ISLAND_TARGET_VP, minHeight: READER_ISLAND_TARGET_VP })
+    .padding(0).backgroundColor(Color.Transparent).borderRadius(0).opacity(1)
     .enabled(this.actionReady)
     .accessibilityText(this.accessibleLabel || this.label)
     .accessibilitySelected(this.chosen)
@@ -113,10 +118,55 @@ export struct ReaderIslandAction {
     .onClick((): void => { if (this.actionReady) this.onAction(); });
   }
 
+  private ink(): string {
+    return readerAppColor(readerIslandControlPaint(this.visualAvailable, this.tone).ink, this.scheme);
+  }
+
+  private iconTint(): drawing.ColorFilter {
+    // Blend against the glyph alpha so both filled and stroked SVGs follow the same state ink.
+    return drawing.ColorFilter.createBlendModeColorFilter(Number.parseInt(this.ink().slice(1), 16),
+      drawing.BlendMode.SRC_IN);
+  }
+
   private labelStyle(): ReaderTextStyle {
     return this.kind === 'step' ? TYPE_READER_APPEARANCE_RETAINED_STEP_BUTTON_VALUE :
       TYPE_READER_APPEARANCE_RETAINED_STEPPER_ROW_VALUE;
   }
 
   private resetIslandPress(): void { this.islandPointer = -1; }
+}
+
+@Component
+export struct ReaderIslandSwitchRow {
+  @Prop scheme: string = 'day';
+  @Prop label: string = '';
+  @Prop accessibleLabel: string = '';
+  @Prop nativeId: string = '';
+  @Prop value: boolean = false;
+  @Prop actionReady: boolean = true;
+  onChange: (value: boolean) => void = (_value: boolean): void => {};
+
+  build() {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
+      Row({ space: 8 }) {
+        Text(this.label).layoutWeight(1)
+          .fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight)
+          .fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp)
+          .fontColor(readerAppColor(readerIslandControlPaint(this.actionReady).ink, this.scheme));
+        ReaderControlSwitchTrack({ value: this.value,
+          activeColor: readerAppColor(this.actionReady ? 'TOK_READ_PRIMARY' :
+            'app.readerIsland.controlDisabledInk', this.scheme),
+          inactiveColor: readerAppColor(this.actionReady ? 'app.toggle.inactiveTrack' :
+            'app.readerIsland.controlDisabledBorder', this.scheme),
+        }).flexShrink(0);
+      }.width('100%').alignItems(VerticalAlign.Center)
+        .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+    }.id(this.nativeId).width('100%').constraintSize({ minHeight: READER_ISLAND_TARGET_VP })
+      .padding({ left: 10, right: 10, top: 4, bottom: 4 }).opacity(1)
+      .attributeModifier(new ReaderIslandControlFrame(this.scheme, this.actionReady))
+      .enabled(this.actionReady)
+      .accessibilityRole(AccessibilityRoleType.SWITCH).accessibilitySelected(this.value)
+      .accessibilityText(this.accessibleLabel || this.label)
+      .onClick((): void => { if (this.actionReady) this.onChange(!this.value); });
+  }
 }

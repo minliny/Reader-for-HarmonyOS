@@ -100,9 +100,9 @@ function readerImmersiveMaterial(
 
 /** A fallback may clear material on API 26. Older SDKs have no dispatch entry. */
 export function applyReaderImmersiveMaterial(instance: CommonAttribute,
-  decision: ReaderSurfaceMaterialDecision | undefined): void {
+  decision: ReaderSurfaceMaterialDecision | undefined, applyShadow: boolean = true): void {
   if (deviceInfo.distributionOSApiVersion >= 260000) {
-    if (deviceInfo.apiAvailable('26.0.0')) instance.systemMaterial(readerImmersiveMaterial(decision));
+    if (deviceInfo.apiAvailable('26.0.0')) instance.systemMaterial(readerImmersiveMaterial(decision, applyShadow));
   }
 }
 

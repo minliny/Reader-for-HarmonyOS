@@ -9044,7 +9044,7 @@ export struct ReadingExperience {
       Math.max(this.sessionCapsuleMeasuredWidth, capsule.width) : capsule.width;
     const target = resolveReaderPageChromeLayout(this.readingLayout(), new ReaderPageChromeMeasurements(
       0, 0, 0, 0, 0, 0, 0, 0, true, width, capsule.targetHeight));
-    const geometry = buildReaderSessionLaunchGeometry({ source, targetLeft: target.sessionX,
+    const geometry = buildReaderSessionLaunchGeometry({ source, fixedIsland: true, targetLeft: target.sessionX,
       targetTop: target.sessionY + (capsule.targetHeight - capsule.paintHeight) / 2,
       capsuleWidth: width, capsuleHeight: capsule.paintHeight,
       topBarExitDistance: this.sessionLaunchTopExit, dockExitDistance: this.sessionLaunchDockExit });

@@ -6,6 +6,7 @@ import { TOK_BORDER_W, TOK_RADIUS_XL } from '../foundation/ReaderTokens';
 import type { ReaderRaisedShape } from '../layout/ReaderRaisedShape';
 import type { ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
 import { applyReaderImmersiveMaterial } from './ReaderSurfaceMaterial';
+import { readerIslandCardPaint, readerReadingPanelPaint } from './ReaderReadingPanelPaint';
 
 export type ReaderPanelFrameId = 'reader' | 'reader-menu' | 'reader-card' | 'reader-full-card' | 'reader-soft-control' | 'floating-action-dock' |
   'reader-island-card' | 'reader-island-emphasis' |
@@ -31,20 +32,27 @@ export class ReaderPanelFrame implements AttributeModifier<CommonAttribute> {
 
   applyNormalAttribute(instance: CommonAttribute): void {
     switch (this.id) {
-      case 'floating-action-dock':
+      case 'floating-action-dock': {
+        const borderColor = readerAppColor('app.navigation.floatingBorder', this.scheme);
+        const radius = this.raisedShape?.radius ?? TOK_RADIUS_XL;
         this.applyMaterialPaint(instance, readerAppColor('app.surface.dock', this.scheme),
-          { width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.scheme) },
-          readerSurfaceElevation('raised', this.scheme));
-        instance
-          .borderRadius(this.raisedShape?.radius ?? TOK_RADIUS_XL).clip(false);
-        applyReaderImmersiveMaterial(instance, this.material);
+          { width: TOK_BORDER_W, color: borderColor }, readerSurfaceElevation('raised', this.scheme),
+          { width: TOK_BORDER_W, color: borderColor, radius });
+        instance.borderRadius(radius).clip(false);
         return;
-      case 'reader':
-        this.applyMaterialPaint(instance, readerAppColor('TOK_READ_SURFACE', this.scheme),
-          { width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.scheme) });
-        instance.borderRadius(TOK_RADIUS_XL);
-        applyReaderImmersiveMaterial(instance, this.material);
+      }
+      case 'reader': {
+        const native = this.material?.native === true;
+        const paint = readerReadingPanelPaint(this.scheme, native);
+        if (!native) applyReaderImmersiveMaterial(instance, this.material);
+        instance.backgroundEffect(undefined).backgroundColor(paint.surface ?? Color.Transparent)
+          .borderRadius(TOK_RADIUS_XL);
+        if (native) applyReaderImmersiveMaterial(instance, this.material, paint.nativeShadow);
+        // Native material controls border and shadow on its node. The independent
+        // outline keeps the shell edge across native/fallback policy switches.
+        instance.outline({ width: paint.outlineWidth, color: paint.outline, radius: TOK_RADIUS_XL });
         return;
+      }
       case 'reader-menu':
         instance.backgroundColor(readerAppColor('TOK_READ_SURFACE', this.scheme))
           .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.scheme) })
@@ -58,13 +66,13 @@ export class ReaderPanelFrame implements AttributeModifier<CommonAttribute> {
           .borderRadius(this.id === 'reader-card' ? 8 : 12);
         return;
       case 'reader-island-card':
-      case 'reader-island-emphasis':
-        instance.backgroundColor(readerAppColor(this.id === 'reader-island-emphasis' ?
-          'TOK_READ_CARD_EMPHASIS' : 'TOK_READ_ELEVATED', this.scheme))
-          .border({ width: TOK_BORDER_W, color: readerAppColor(this.id === 'reader-island-emphasis' ?
-            'TOK_PRIMARY_BORDER' : 'TOK_LINE', this.scheme) })
+      case 'reader-island-emphasis': {
+        const paint = readerIslandCardPaint(this.scheme, this.id === 'reader-island-emphasis');
+        instance.backgroundColor(paint.surface)
+          .border({ width: TOK_BORDER_W, color: paint.border })
           .borderRadius(12);
         return;
+      }
       case 'reader-soft-control':
         instance.backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.scheme))
           .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.scheme) })
@@ -82,13 +90,14 @@ export class ReaderPanelFrame implements AttributeModifier<CommonAttribute> {
   }
 
   private applyMaterialPaint(instance: CommonAttribute, background: ResourceColor, border?: BorderOptions,
-    shadow?: ShadowOptions): void {
+    shadow?: ShadowOptions, outline?: OutlineOptions): void {
     if (this.material?.native) {
-      instance.backgroundEffect(undefined).backgroundColor(Color.Transparent)
-        .border({ width: 0, color: Color.Transparent }).shadow(undefined);
+      instance.backgroundEffect(undefined).backgroundColor(Color.Transparent);
+      applyReaderImmersiveMaterial(instance, this.material);
+      instance.outline(outline);
     } else {
-      instance.backgroundColor(background).border(border);
-      if (shadow !== undefined) instance.shadow(shadow);
+      applyReaderImmersiveMaterial(instance, this.material);
+      instance.backgroundColor(background).border(border).shadow(shadow).outline(undefined);
     }
   }
 
@@ -101,16 +110,15 @@ export class ReaderPanelFrame implements AttributeModifier<CommonAttribute> {
         radius: 32 * readerWindowMetrics().densityPixels, color: readerAppColor('app.shadow.sheet', this.scheme),
         offsetX: -14 * readerWindowMetrics().densityPixels, offsetY: 0,
       } : readerSurfaceElevation('sheet', this.scheme);
-      this.applyMaterialPaint(instance, surface, this.side ? { width: { left: 1 }, color: line } : undefined, shadow);
+      this.applyMaterialPaint(instance, surface, this.side ? { width: { left: 1 }, color: line } : undefined, shadow,
+        this.side ? { width: { left: 1 }, color: line } : undefined);
       instance.borderRadius({ topLeft: radius, topRight: radius, bottomLeft: 0, bottomRight: 0 }).clip(true);
-      applyReaderImmersiveMaterial(instance, this.material);
       return;
     }
     if (this.id === 'manga-dock') {
       this.applyMaterialPaint(instance, surface, { width: TOK_BORDER_W, color: line },
-        readerSurfaceElevation('sheet', this.scheme));
+        readerSurfaceElevation('sheet', this.scheme), { width: TOK_BORDER_W, color: line, radius: 24 });
       instance.borderRadius(24).clip(true);
-      applyReaderImmersiveMaterial(instance, this.material);
       return;
     }
     instance.backgroundColor(surface);

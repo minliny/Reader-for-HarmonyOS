@@ -24,6 +24,7 @@ export struct ReaderSessionLaunchStage {
   @Prop desiredPlaying: boolean = true;
   @Prop countdown: number = 8;
   @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
+  @Prop ownsSourceRegion: boolean = true;
   @Prop fontScale: number = 1;
   @Prop material: ReaderSurfaceMaterialDecision | undefined = undefined;
   @Prop surfaceColor: string = '';
@@ -80,32 +81,11 @@ export struct ReaderSessionLaunchStage {
           this.sample.canonicalSurfaceOpacity > 0 ? this.material : undefined))
         .opacity(this.sample.canonicalSurfaceOpacity).hitTestBehavior(HitTestMode.None);
 
-      // SourceRegion owns its surface; the single content actor retains uniform scale.
-      Stack({ alignContent: Alignment.TopStart }) {
-        Row().width('100%').height(Math.max(0, this.sample.proxyHeight - this.sourceSurfaceTopInset * (1 - this.sample.flight)))
-          .position({ x: 0, y: this.sourceSurfaceTopInset * (1 - this.sample.flight) })
-          .linearGradient({ angle: 155, colors: [[this.sourceGradientStart.length > 0 ? this.sourceGradientStart : this.effectiveSourceSurfaceColor(), 0],
-            [this.sourceGradientEnd.length > 0 ? this.sourceGradientEnd : this.effectiveSourceSurfaceColor(), 1]] })
-          .border({ width: this.sourceBorderWidth, color: this.effectiveSourceBorderColor() }).borderRadius(this.sample.sourceRadius)
-          .shadow({ radius: this.sourceShadowRadius * this.paintDensity(), offsetX: 0,
-            offsetY: this.sourceShadowOffsetY * this.paintDensity(), color: this.sourceShadowColor.length > 0 ?
-              this.sourceShadowColor : readerAppColor('app.shadow.menu', this.themeScheme) })
-          .hitTestBehavior(HitTestMode.None);
-        Row().width('100%').height(1).backgroundColor(this.sourceHighlightColor)
-          .position({ x: 0, y: this.sourceSurfaceTopInset * (1 - this.sample.flight) }).hitTestBehavior(HitTestMode.None);
-        if (this.sample.sourceNeeded) {
-          Stack({ alignContent: Alignment.TopStart }) { this.sourceSharpContent(); }
-            .id('reader-session-launch-sharp')
-            .width(this.sample.sourceWidth).height(this.sample.sourceHeight)
-            .position({ x: this.sample.sourceContentBaseOffset, y: this.sample.sourceContentBaseOffset })
-            .scale({ x: this.sample.sourceContentScale, y: this.sample.sourceContentScale, centerX: '50%', centerY: '50%' })
-            .translate({ x: this.sample.sourceContentTranslateX, y: this.sample.sourceContentTranslateY })
-            .opacity(this.sample.sharpOpacity).hitTestBehavior(HitTestMode.None);
-        }
+      // The live card and this source region use the same ownership decision.
+      // The shell and its content have independent tracks during the flight.
+      if (this.ownsSourceRegion && this.sample.sourceNeeded) {
+        this.sourceRegion();
       }
-      .id('reader-session-launch-source')
-      .width('100%').height('100%')
-      .clipShape(this.sourceClip()).opacity(this.sample.sourceSurfaceOpacity).hitTestBehavior(HitTestMode.None);
 
       // CapsuleContent reveal clip and CapsuleTransitionContent leading row.
       Stack({ alignContent: Alignment.TopStart }) {
@@ -145,6 +125,35 @@ export struct ReaderSessionLaunchStage {
     .onClick((): void => {
       if (this.interactionEnabled && this.sample.pauseOpacity > 0) this.onToggle();
     });
+  }
+
+  @Builder
+  private sourceRegion() {
+    Stack({ alignContent: Alignment.TopStart }) {
+      Stack({ alignContent: Alignment.TopStart }) {
+        Row().width('100%').height(Math.max(0, this.sample.proxyHeight - this.sourceSurfaceTopInset * (1 - this.sample.flight)))
+          .position({ x: 0, y: this.sourceSurfaceTopInset * (1 - this.sample.flight) })
+          .linearGradient({ angle: 155, colors: [[this.sourceGradientStart.length > 0 ? this.sourceGradientStart : this.effectiveSourceSurfaceColor(), 0],
+            [this.sourceGradientEnd.length > 0 ? this.sourceGradientEnd : this.effectiveSourceSurfaceColor(), 1]] })
+          .border({ width: this.sourceBorderWidth, color: this.effectiveSourceBorderColor() }).borderRadius(this.sample.sourceRadius)
+          .shadow({ radius: this.sourceShadowRadius * this.paintDensity(), offsetX: 0,
+            offsetY: this.sourceShadowOffsetY * this.paintDensity(), color: this.sourceShadowColor.length > 0 ?
+              this.sourceShadowColor : readerAppColor('app.shadow.menu', this.themeScheme) })
+          .hitTestBehavior(HitTestMode.None);
+        Row().width('100%').height(1).backgroundColor(this.sourceHighlightColor)
+          .position({ x: 0, y: this.sourceSurfaceTopInset * (1 - this.sample.flight) }).hitTestBehavior(HitTestMode.None);
+      }.id('reader-session-launch-source').width('100%').height('100%')
+        .opacity(this.sample.sourceSurfaceOpacity).hitTestBehavior(HitTestMode.None);
+      if (this.sample.sharpOpacity > 0) {
+        Stack({ alignContent: Alignment.TopStart }) { this.sourceSharpContent(); }
+          .id('reader-session-launch-sharp')
+          .width(this.sample.sourceWidth).height(this.sample.sourceHeight)
+          .position({ x: this.sample.sourceContentBaseOffset, y: this.sample.sourceContentBaseOffset })
+          .scale({ x: this.sample.sourceContentScale, y: this.sample.sourceContentScale, centerX: '50%', centerY: '50%' })
+          .translate({ x: this.sample.sourceContentTranslateX, y: this.sample.sourceContentTranslateY })
+          .opacity(this.sample.sharpOpacity).hitTestBehavior(HitTestMode.None);
+      }
+    }.width('100%').height('100%').clipShape(this.sourceClip()).hitTestBehavior(HitTestMode.None);
   }
 
   private metrics(): ReaderSessionCapsuleMetrics {
