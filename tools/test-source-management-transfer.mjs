@@ -113,3 +113,53 @@ test('transfer footer and dialog reserve only actual keyboard occlusion in this 
   assert.equal(page.modalViewportHeight(), 636, 'keyboard beside the pane leaves the pane visible');
   assert.equal(page.geometry.footer.bottom, 24);
 });
+
+test('subscription cancel and system back both dismiss a pending write without dispatching a replacement', async () => {
+  const Page = selectedProductionMethods(transferPage, 'SourceV9TransferPage',
+    ['inputCurrent', 'editable', 'canDismissDialog', 'consumeBack', 'confirmDialog']);
+  const page = Object.assign(new Page(), {
+    mounted: true, dialog: 'form', state: { writePending: true, busy: false, runningCheck: false, reviews: [] },
+    flow: { saveSubscription: () => assert.fail('cancel must not issue a write') },
+  });
+  assert.equal(page.canDismissDialog(), true);
+  assert.equal(page.editable(), false);
+  await page.confirmDialog('confirm');
+  assert.equal(page.dialog, 'form');
+  await page.confirmDialog('cancel');
+  assert.equal(page.dialog, 'none');
+  assert.equal(page.state.writePending, true);
+
+  page.dialog = 'form';
+  assert.equal(page.consumeBack(), true);
+  assert.equal(page.dialog, 'none');
+
+  page.dialog = 'form';
+  page.state.busy = true;
+  assert.equal(page.canDismissDialog(), false);
+  await page.confirmDialog('cancel');
+  assert.equal(page.consumeBack(), true);
+  assert.equal(page.dialog, 'form');
+});
+
+test('short keyboard-constrained dialogs keep a scrollable input row', () => {
+  const metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 800, 330));
+  metrics.ready = true;
+  metrics.systemFontScale = 1.3;
+  metrics.keyboardArea = new ReaderKeyboardAreaVp(true, true, [new ReaderRectVp(0, 125, 800, 205)]);
+  const dependencies = { readerWindowMetrics: () => metrics, readerReadableFontScale, readerKeyboardHostBottom };
+  for (const [owner, body, viewport, methods] of [
+    ['SourceV9CheckDialog', 'bodyHeight', 'visibleDialogHeight', ['keyboardClearance']],
+    ['SourceV9GroupsPage', 'bodyLimit', 'visibleDialogHeight', ['keyboardClearance', 'fontScale']],
+    ['SourceV9TransferPage', 'modalBodyHeight', 'modalViewportHeight', ['visiblePaneHeight']],
+  ]) {
+    const Page = selectedProductionMethods(new URL(owner + '.ets', transferPage), owner,
+      [...methods, body, viewport], dependencies);
+    const page = Object.assign(new Page(), {
+      windowRevision: 1, paneWidth: 800, paneHeight: 330, paneTop: 0, paneLeft: 0, paneX: 0, paneY: 0,
+    });
+    assert.equal(page[viewport](), 125, owner + ' bounds the whole overlay above the keyboard');
+    assert.ok(page[body]() >= 44, owner + ' preserves room for an input row');
+    page.paneHeight = 125;
+    assert.equal(page[viewport](), 125, owner + ' avoids subtracting the keyboard a second time');
+  }
+});

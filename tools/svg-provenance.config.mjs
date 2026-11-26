@@ -412,6 +412,24 @@ const readerThemeSources = [
 ].map(([file, authoredPaintId, sourceCommit, sourceSha256, semanticRole]) => ({
   file, authoredPaintId, sourceCommit, sourceSha256, semanticRole, originType: 'reader-theme-svg',
 }));
+
+// Preserve the original Host geometry from the source management v9 commits.
+const sourceManagementIcons = [
+  ['source_login_lock', '635D55', 'a2b5da23a4f50e82ce99308bf3e033aad0620f7a',
+    '89bf510744936a1a6512692b30e59e2b9530b60c5381c914a5d8dc9b8fd14c4a', 'book source login secure connection',
+    'app.sourceUi.muted'],
+  ['source_v9_cloud', '1F3D31', '242d48a7462d17fda50ecf3a85fca87c563bf296',
+    '027c8a09d12cb498291107595883aa7b9b781f1efd97cecd144fbcd7cea407bd', 'book source subscriptions'],
+  ['source_v9_question', '1F3D31', '242d48a7462d17fda50ecf3a85fca87c563bf296',
+    'abd067b653830c57b76d4e05d0977eaa876bb6642ddbf4c8f943c56e07bed29f', 'book source unverified login status'],
+  ['source_v9_upload', '1F3D31', '242d48a7462d17fda50ecf3a85fca87c563bf296',
+    'f94e36c05543543260798135dfd21e9aea03422852ee034763949a4cb4a40da6', 'book source export'],
+  ['source_v9_wave', '1F3D31', '242d48a7462d17fda50ecf3a85fca87c563bf296',
+    '8bbb986a14152df870b29e30aab9522dc22e6f8656c8bf0516b69f20748bcaa2', 'book source detection'],
+].map(([file, authoredPaintId, sourceCommit, sourceSha256, semanticRole, themeColorRole]) => ({
+  file, authoredPaintId, sourceCommit, sourceSha256, semanticRole, themeColorRole, originType: 'reader-theme-svg',
+  sourceFile: 'docs/ui-design/svg-provenance/source-management-v9/' + file + '.svg',
+}));
 export const SVG_TTS_SELECTED_C = Object.freeze({
   selectionId: 'TTS-TRANSPORT-C',
   sourceSha256: '301b61aeb0b2bd833b761388d9bef401ede3e79af08269fa1af0d443c043be01',
@@ -476,5 +494,5 @@ export const svgControlForegroundRecipes = [
     semanticRole: `reader selected auto page module ${scheme} on primary control surface`,
   })),
 ].map(recipe => ({ ...recipe, originType: 'theme-palette-derived' }));
-export const svgAssetRecipes = [...icons, ...exactExports, ...makeExports, ...makeSourceExports, ...appearanceMakeExports, ...adaptedExports, ...paperPrimitives, ...readerThemeSources, ...themeVariants, ...svgRadixSheetRecipes, ...svgDownloadLucideRecipes, ...svgMessageLucideRecipes, ...svgActionForegroundRecipes, ...svgControlForegroundRecipes, ...svgTtsSelectedCRecipes]
+export const svgAssetRecipes = [...icons, ...exactExports, ...makeExports, ...makeSourceExports, ...appearanceMakeExports, ...adaptedExports, ...paperPrimitives, ...readerThemeSources, ...sourceManagementIcons, ...themeVariants, ...svgRadixSheetRecipes, ...svgDownloadLucideRecipes, ...svgMessageLucideRecipes, ...svgActionForegroundRecipes, ...svgControlForegroundRecipes, ...svgTtsSelectedCRecipes]
   .sort((left, right) => left.file.localeCompare(right.file));

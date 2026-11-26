@@ -155,6 +155,10 @@ export struct SourceV9TransferPage {
     return this.inputCurrent() && !this.state.busy && !this.state.runningCheck && !this.state.writePending;
   }
 
+  private canDismissDialog(): boolean {
+    return this.inputCurrent() && !this.state.busy && this.dialog !== 'none';
+  }
+
   private consumeBack(): boolean {
     if (!this.mounted) return false;
     if (this.visibleReport !== undefined) {
@@ -162,7 +166,7 @@ export struct SourceV9TransferPage {
       return true;
     }
     if (this.state.busy) return true;
-    if (this.dialog !== 'none') {
+    if (this.canDismissDialog()) {
       this.dialog = 'none';
       return true;
     }
@@ -277,11 +281,11 @@ export struct SourceV9TransferPage {
   }
 
   private async confirmDialog(action: string): Promise<void> {
-    if (!this.editable()) return;
     if (action === 'cancel') {
-      this.dialog = 'none';
+      if (this.canDismissDialog()) this.dialog = 'none';
       return;
     }
+    if (action !== 'confirm' || !this.editable() || this.dialog === 'none') return;
     if (this.dialog === 'form') {
       const draft: RuleSubscriptionDraft = { id: this.edited?.id, name: this.formName, url: this.formUrl,
         type: this.formType, autoUpdate: this.formEnabled, customOrder: this.edited?.customOrder ?? 0,
@@ -385,7 +389,7 @@ export struct SourceV9TransferPage {
     const height = this.modalViewportHeight();
     if (height <= 0 && this.paneHeight <= 0) return 430;
     const fontScale = readerReadableFontScale(readerWindowMetrics().systemFontScale);
-    return Math.max(0, Math.min(480, height - 156 - 52 * (fontScale - 1)));
+    return Math.max(72, Math.min(480, height - 156 - 52 * (fontScale - 1)));
   }
 
   private recordPaneArea(area: Area): void {
@@ -1009,11 +1013,15 @@ export struct SourceV9TransferPage {
     Stack({ alignContent: Alignment.Top }) {
       this.scrim();
       Stack({ alignContent: Alignment.Center }) {
-        Column() {
-          if (layer === 'review') this.subscriptionReview();
-          else if (layer === 'edit') this.subscriptionDialog();
-          else this.reportDialog();
-        }.hitTestBehavior(HitTestMode.Transparent).transition(readerDialogCardTransition(this.reduceMotion));
+        Scroll() {
+          Column() {
+            if (layer === 'review') this.subscriptionReview();
+            else if (layer === 'edit') this.subscriptionDialog();
+            else this.reportDialog();
+          }.width('100%');
+        }.width('100%').constraintSize({ maxHeight: this.paneHeight > 0 ? this.modalViewportHeight() : undefined })
+          .scrollBar(BarState.Auto).hitTestBehavior(HitTestMode.Transparent)
+          .transition(readerDialogCardTransition(this.reduceMotion));
       }.width('100%').height(this.paneHeight > 0 ? this.modalViewportHeight() : '100%')
         .hitTestBehavior(HitTestMode.Transparent);
     }.width('100%').height('100%')
@@ -1052,7 +1060,8 @@ export struct SourceV9TransferPage {
         }
         this.reviewList();
       }.width('100%');
-    }.width('100%').constraintSize({ maxHeight: this.modalBodyHeight() }).scrollBar(BarState.Off);
+    }.width('100%').constraintSize({ maxHeight: this.modalBodyHeight() }).scrollBar(BarState.Off)
+      .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
   }
 
   @Builder
@@ -1123,7 +1132,7 @@ export struct SourceV9TransferPage {
   private subscriptionDialog() {
     ReaderDialogSurface({ specId: 'source-v9-check', primarySurfaceColor: this.primary(), containerWidthVp: this.paneWidth,
       title: this.dialog === 'delete' ? '删除订阅' : this.edited === undefined ? '新建订阅' : '编辑订阅',
-      actions: [new DialogActionView('cancel', '取消', 'default', this.editable(), true),
+      actions: [new DialogActionView('cancel', '取消', 'default', this.canDismissDialog(), true),
         new DialogActionView('confirm', this.dialog === 'delete' ? '删除订阅' : '保存',
           this.dialog === 'delete' ? 'danger' : 'primary',
           this.editable() && (this.dialog === 'delete' || (this.formName.trim().length > 0 && this.formUrl.trim().length > 0)))],
@@ -1165,7 +1174,8 @@ export struct SourceV9TransferPage {
           ReaderPageState({ variant: 'inline', padded: false, message: this.state.error });
         }
       }.width('100%');
-    }.width('100%').constraintSize({ maxHeight: this.modalBodyHeight() }).scrollBar(BarState.Off);
+    }.width('100%').constraintSize({ maxHeight: this.modalBodyHeight() }).scrollBar(BarState.Off)
+      .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
   }
 
   @Builder
@@ -1195,6 +1205,7 @@ export struct SourceV9TransferPage {
         if (this.visibleReport?.failureReason) this.label(this.visibleReport?.failureReason ?? '', 12, 'TOK_MUTED');
         SourceV9ReportSteps({ report: this.visibleReport?.report, currentFailure: this.visibleReport?.failureReason });
       }.width('100%').alignItems(HorizontalAlign.Start);
-    }.width('100%').constraintSize({ maxHeight: this.modalBodyHeight() }).scrollBar(BarState.Off);
+    }.width('100%').constraintSize({ maxHeight: this.modalBodyHeight() }).scrollBar(BarState.Off)
+      .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
   }
 }

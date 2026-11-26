@@ -535,8 +535,11 @@ export struct SourceV9GroupsPage {
   }
 
   private bodyLimit(): number {
-    return Math.max(0, Math.min(440,
-      this.paneHeight - this.keyboardClearance() - Math.max(128, 98 * this.fontScale())));
+    return Math.max(72, Math.min(440, this.visibleDialogHeight() - Math.max(128, 98 * this.fontScale())));
+  }
+
+  private visibleDialogHeight(): number {
+    return this.paneHeight - this.keyboardClearance();
   }
 
   private fontScale(): number {
@@ -860,7 +863,7 @@ export struct SourceV9GroupsPage {
       Rect().width('100%').height('100%').fill(this.color('app.scrim.warmModal'))
         .accessibilityLevel('no').onClick((): void => { this.consumeBack(); });
       Column() {
-        Column() {
+        Scroll() {
           ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: this.paneWidth,
             primarySurfaceColor: this.color('app.sourceUi.primary'), title: this.dialogTitle(),
             actions: [new DialogActionView('cancel', '取消', 'default', this.dialogEditable(), true),
@@ -869,7 +872,9 @@ export struct SourceV9GroupsPage {
             onAction: (id: string): void => { void this.confirmDialog(id); },
             body: (): void => { this.dialogBody(); },
           });
-        }.width('100%').hitTestBehavior(HitTestMode.Transparent).transition(readerDialogCardTransition(this.reduceMotion));
+        }.width('100%').constraintSize({ maxHeight: this.visibleDialogHeight() })
+          .scrollBar(BarState.Auto).hitTestBehavior(HitTestMode.Transparent)
+          .transition(readerDialogCardTransition(this.reduceMotion));
       }.width('100%').height('100%').justifyContent(FlexAlign.Center)
         .padding({ bottom: this.keyboardClearance() }).hitTestBehavior(HitTestMode.Transparent);
     }.width('100%').height('100%').transition(readerDialogScrimTransition(this.reduceMotion));
@@ -898,7 +903,8 @@ export struct SourceV9GroupsPage {
         }
         this.actionFeedback(this.bodyLimit());
       }.width('100%').alignItems(HorizontalAlign.Start);
-    }.width('100%').constraintSize({ maxHeight: this.bodyLimit() }).scrollBar(BarState.Auto);
+    }.width('100%').constraintSize({ maxHeight: this.bodyLimit() }).scrollBar(BarState.Auto)
+      .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
   }
 
   @Builder

@@ -12,13 +12,22 @@ function fixture() {
   let generation = 1;
   let canForward = false;
   let nativeClearFailures = 0;
+  let abortNextStop;
   let executor;
   class Controller {
     static setHostIP() {}
     static clearHostIP() {}
-    stop() { events.push('stop'); }
+    stop() {
+      events.push('stop');
+      if (abortNextStop !== undefined) {
+        const url = abortNextStop;
+        abortNextStop = undefined;
+        executor.onNativeError(url, true, -3, 'net::ERR_ABORTED', executor.active.surface);
+      }
+    }
     loadUrl(url) {
       this.url = url;
+      executor.onPageEnd(url, executor.active.surface);
       executor.active.pageReadyAt = Date.now() - 1;
       events.push(['load', url]);
     }
@@ -52,9 +61,9 @@ function fixture() {
       events.push(['capture', profile, expectedGeneration]);
     },
   };
-  const Executor = new Function('webview', 'CookieSessionStore', 'prepareNetworkTarget',
+  const Executor = new Function('webview', 'CookieSessionStore', 'prepareNetworkTarget', 'WebNetErrorList',
     `${lower('HttpTransportPolicy.ts')}\n${lower('ArkWebExecutor.ts')}\nreturn ArkWebExecutor;`)(
-    webview, { instance: cookieStore }, async () => ({ route: 'systemProxy' }));
+    webview, { instance: cookieStore }, async () => ({ route: 'systemProxy' }), { ERR_ABORTED: -3 });
   executor = new Executor();
   executor.attachSurfaceHost(surface => {
     if (surface) executor.attachController(surface);
@@ -68,7 +77,7 @@ function fixture() {
   });
   return { executor, events, shown, advanceGeneration: () => { generation++; },
     addForwardHistory: () => { canForward = true; },
-    failNativeClears: count => { nativeClearFailures = count; } };
+    failNativeClears: count => { nativeClearFailures = count; }, abortNextStop: url => { abortNextStop = url; } };
 }
 
 async function until(condition, detail) {
@@ -170,5 +179,30 @@ for (const failures of [1, 2]) {
   assert.equal(f.events.filter(event => event === 'clear-owner-cookies').length, 1);
   assert.equal(f.events.filter(event => event === 'clear-core-report').length, 1);
   assert.equal(f.events.some(event => Array.isArray(event) && event[0] === 'capture'), false);
+}
+{
+  const f = fixture();
+  const completion = f.executor.openInteractive(loginUrl, 'source-stop', 'Example', () => true);
+  await until(() => f.shown.length === 1, 'initial login is visible');
+  const surface = f.executor.active.surface;
+  const loadingUrl = 'https://public.example/slow';
+  f.executor.observeDiagnosticPageBegin(loadingUrl, surface);
+  f.abortNextStop(loadingUrl);
+  assert.equal(f.executor.navigateInteractive(surface, 'stop'), true);
+  assert.equal(f.executor.navigateInteractive(surface, 'stop'), false, 'an interrupted load cannot be stopped again');
+  assert.equal(f.events.filter(event => event === 'stop').length, 1, 'the Stop action reaches the native port');
+  assert.equal(f.executor.active.nativeFailure, undefined, 'an intentional abort does not retire the login');
+  assert.equal(f.executor.onPageEnd(loadingUrl, surface), false);
+  assert.equal(f.executor.active.pageReadyAt, 0, 'stopping a page cannot report that it finished loading');
+  assert.equal(f.executor.navigateInteractive(surface, 'refresh'), true);
+  f.executor.observeDiagnosticPageBegin(loginUrl, surface);
+  assert.equal(f.executor.onPageEnd(loadingUrl, surface), false, 'late page-end cannot settle the restarted load');
+  assert.equal(f.executor.onPageEnd(loginUrl, surface), true);
+  assert.ok(f.executor.active.pageReadyAt > 0, 'a real subsequent load can still settle');
+  f.executor.finishInteractive(surface);
+  await completion;
+  assert.deepEqual(f.events.filter(event => Array.isArray(event) && event[0] === 'capture'),
+    [['capture', 'source-stop', 1]], 'only explicit completion gathers source cookies');
+  assert.equal(f.executor.navigateInteractive(surface, 'stop'), false, 'the retired surface cannot stop a later job');
 }
 console.log('PASS source-login-v9 (native controller ports, profile fencing and clear/finish lifecycle)');

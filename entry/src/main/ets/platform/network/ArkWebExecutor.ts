@@ -66,6 +66,9 @@ type ArkWebJob = {
   pageReadyAt: number;
   finalUrl?: string;
   interactive: boolean;
+  interactiveLoadingUrl?: string;
+  interactiveStoppedUrl?: string;
+  interactiveStopAbortPending?: boolean;
   interactiveCurrent?: () => boolean;
   clearInteractiveSession?: () => Promise<ArkWebLoginClearOutcome>;
   clearRequested?: boolean;
@@ -90,7 +93,7 @@ export interface ArkWebLoginClearOutcome {
   report: 'cleared' | 'unsupported' | 'failed';
 }
 
-export type ArkWebInteractiveNavigation = 'back' | 'forward' | 'refresh';
+export type ArkWebInteractiveNavigation = 'back' | 'forward' | 'refresh' | 'stop';
 
 export interface ArkWebInteractiveHistory {
   canGoBack: boolean;
@@ -177,6 +180,7 @@ export class ArkWebExecutor {
     const job = this.active;
     if (current && job?.interactive === true && job.pinnedHost !== undefined && httpUrlHostname(url) === job.pinnedHost) {
       job.pageReadyAt = 0;
+      job.interactiveLoadingUrl = url;
     }
   }
 
@@ -185,6 +189,7 @@ export class ArkWebExecutor {
     if (!this.isSurfaceCurrent(surface) || job?.interactive !== true ||
       job.pinnedHost === undefined || httpUrlHostname(url) !== job.pinnedHost) return;
     job.finalUrl = url;
+    job.interactiveLoadingUrl = undefined;
     if (job.pageReadyAt === 0) job.pageReadyAt = Date.now() + PAGE_SETTLE_MS + job.settleDelayMillis;
   }
 
@@ -306,6 +311,10 @@ export class ArkWebExecutor {
   onNativeError(url: string, mainFrame: boolean, code: number, info: string, surface: ArkWebSurface): void {
     const job = this.nativeErrorJob(url, mainFrame, surface);
     if (job === undefined) return;
+    if (job.interactiveStopAbortPending === true && job.interactiveStoppedUrl === url && code === WebNetErrorList.ERR_ABORTED) {
+      job.interactiveStopAbortPending = false;
+      return;
+    }
     // Reuse the platform's WebNetErrorList (API 12). Generic connect/DNS
     // failures are not proof of a proxy outage. Older mapped errors can also
     // identify an exact net::ERR_* reason; never search inside raw URL text.
@@ -470,19 +479,25 @@ export class ArkWebExecutor {
     }
   }
 
-  onPageEnd(url: string, surface: ArkWebSurface): void {
+  onPageEnd(url: string, surface: ArkWebSurface): boolean {
     if (!this.isSurfaceCurrent(surface)) {
       this.emitDiagnostic('pageEndDiscarded', surface, url);
-      return;
+      return false;
     }
     const job = this.active;
     this.emitDiagnostic('pageEnd', job, url);
     if (job === undefined || job.cancelled) {
-      return;
+      return false;
     }
     if (url.trim().length === 0 || url === 'about:blank') {
-      return;
+      return false;
     }
+    // ArkWeb can end an interrupted load after Stop. Wait for a new load
+    // before accepting page-end readiness for the interrupted URL.
+    if (job.interactiveStoppedUrl === url && job.interactiveLoadingUrl !== url) return false;
+    job.interactiveLoadingUrl = undefined;
+    job.interactiveStoppedUrl = undefined;
+    job.interactiveStopAbortPending = false;
     job.finalUrl = url;
     job.pageReadyAt = Date.now() + PAGE_SETTLE_MS + job.settleDelayMillis;
     const capture = job.resourceCapture;
@@ -494,6 +509,7 @@ export class ArkWebExecutor {
         void this.runResourceInitialization(job).catch((error: unknown): void => this.rejectResourceCapture(job, error));
       }, PAGE_SETTLE_MS + job.settleDelayMillis);
     }
+    return true;
   }
 
   /** Actual ArkWeb resource callback; the Core-authored matcher runs in the
@@ -623,7 +639,9 @@ export class ArkWebExecutor {
   }
 
   navigateInteractive(surface: ArkWebSurface, navigation: ArkWebInteractiveNavigation): boolean {
-    if (!this.interactiveActionJob(surface)) return false;
+    const job = this.interactiveActionJob(surface);
+    if (job === undefined) return false;
+    if (navigation === 'stop') return this.stopInteractiveLoad(job, surface);
     const controller = surface.controller;
     try {
       if (navigation === 'back') {
@@ -637,6 +655,25 @@ export class ArkWebExecutor {
       }
       return true;
     } catch (_) {
+      return false;
+    }
+  }
+
+  private stopInteractiveLoad(job: ArkWebJob, surface: ArkWebSurface): boolean {
+    const url = job.interactiveLoadingUrl;
+    if (url === undefined) return false;
+    const previousStoppedUrl = job.interactiveStoppedUrl;
+    const previousAbortPending = job.interactiveStopAbortPending;
+    job.interactiveLoadingUrl = undefined;
+    job.interactiveStoppedUrl = url;
+    job.interactiveStopAbortPending = true;
+    try {
+      surface.controller.stop();
+      return true;
+    } catch (_) {
+      job.interactiveLoadingUrl = url;
+      job.interactiveStoppedUrl = previousStoppedUrl;
+      job.interactiveStopAbortPending = previousAbortPending;
       return false;
     }
   }

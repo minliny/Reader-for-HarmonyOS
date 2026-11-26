@@ -161,7 +161,12 @@ export struct ArkWebExecutionHost {
 
   private navigate(surface: ArkWebSurface, direction: ArkWebInteractiveNavigation): void {
     if (!this.interactive || this.clearing || this.currentSurface !== surface) return;
-    ArkWebExecutor.instance.navigateInteractive(surface, direction);
+    if (direction === 'refresh' && this.pageLoading) return;
+    if (direction === 'stop' && !this.pageLoading) return;
+    if (ArkWebExecutor.instance.navigateInteractive(surface, direction) && direction === 'stop') {
+      this.pageLoading = false;
+      this.pageProgress = 0;
+    }
     this.updateHistory(surface);
   }
 
@@ -374,7 +379,7 @@ export struct ArkWebExecutionHost {
             this.updateHistory(surface);
           })
           .onProgressChange((event): void => {
-            if (!this.interactive || !ArkWebExecutor.instance.isSurfaceCurrent(surface)) return;
+            if (!this.interactive || !this.pageLoading || !ArkWebExecutor.instance.isSurfaceCurrent(surface)) return;
             this.pageProgress = Math.min(100, Math.max(0, event.newProgress));
           })
           .onResourceLoad((event): void => {
@@ -389,8 +394,7 @@ export struct ArkWebExecutionHost {
               event.response.getResponseCode(), surface);
           })
           .onPageEnd((event): void => {
-            ArkWebExecutor.instance.onPageEnd(event.url, surface);
-            if (!ArkWebExecutor.instance.isSurfaceCurrent(surface) || httpUrlHostname(event.url) === undefined) return;
+            if (!ArkWebExecutor.instance.onPageEnd(event.url, surface) || httpUrlHostname(event.url) === undefined) return;
             this.updateAddress(event.url);
             this.pageLoading = false;
             if (this.interactive) this.updateHistory(surface);
@@ -480,9 +484,15 @@ export struct ArkWebExecutionHost {
               this.browserAction('前进', this.canGoForward && !this.clearing && !this.pageLoading,
                 this.appThemeScheme === 'night' ? $r('app.media.rc_chevron_right_theme_night') : $r('app.media.rc_chevron_right'), false,
                 (): void => this.navigate(surface, 'forward'));
-              this.browserAction('刷新', !this.clearing, this.appThemeScheme === 'night' ?
-                $r('app.media.settings_gen_refresh_theme_night') : $r('app.media.settings_gen_refresh'), false,
-                (): void => this.navigate(surface, 'refresh'));
+              if (this.pageLoading) {
+                this.browserAction('停止加载', !this.clearing, this.appThemeScheme === 'night' ?
+                  $r('app.media.reader_auto_full_stop_theme_night') : $r('app.media.reader_auto_full_stop'), false,
+                  (): void => this.navigate(surface, 'stop'));
+              } else {
+                this.browserAction('刷新', !this.clearing, this.appThemeScheme === 'night' ?
+                  $r('app.media.settings_gen_refresh_theme_night') : $r('app.media.settings_gen_refresh'), false,
+                  (): void => this.navigate(surface, 'refresh'));
+              }
               this.browserAction('清除登录态', this.canClear && !this.clearing, readerPaperActionIcon('trash', this.appThemeScheme), true,
                 (): void => this.clearSession(surface));
             }
@@ -508,14 +518,16 @@ export struct ArkWebExecutionHost {
         }
       }, (surface: ArkWebSurface): string => `${surface.id}`)
     }
-    .width('100%').height('100%')
+    .width(this.interactive ? '100%' : 1)
+    .height(this.interactive ? '100%' : 1)
+    .animation({ duration: 0 })
     .onAreaChange((_old: Area, next: Area): void => {
-      if (!this.mounted) return;
+      if (!this.mounted || !this.interactive) return;
       this.hostWidth = readerPageAreaLength(next.width); this.hostHeight = readerPageAreaLength(next.height);
       this.hostX = readerPageAreaLength(next.globalPosition.x); this.hostY = readerPageAreaLength(next.globalPosition.y);
     })
     .accessibilityLevel(this.interactive ? 'auto' : 'no-hide-descendants')
     .hitTestBehavior(this.interactive ? HitTestMode.Default : HitTestMode.Transparent)
-    .zIndex(10000)
+    .zIndex(this.interactive ? 10000 : -1)
   }
 }

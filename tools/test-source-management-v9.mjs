@@ -756,12 +756,12 @@ test('source more menu closes on every ownership change and rejects disabled or 
     'onToolsFocusContextChanged', 'onV9PaneChanged', 'onV9ListInputChanged', 'toggleGroupSelection',
     'onUngroupedBatch', 'consumeTemporaryBack', 'aboutToDisappear',
   ], { ReaderMenuActionView: class {
-    constructor(id, label, enabled) { Object.assign(this, { id, label, enabled }); }
-  } });
+    constructor(id, label, enabled, icon) { Object.assign(this, { id, label, enabled, icon }); }
+  }, $r: name => name, readerActionIcon: (kind, scheme) => `icon:${kind}:${scheme}` });
   const events = [];
   const owner = new Page();
   Object.assign(owner, {
-    mounted: true, v9Pane: 'list', appForeground: true, inputEnabled: true, projectedSourceCount: 0, moreMenuOpen: false,
+    mounted: true, v9Pane: 'list', appThemeScheme: 'day', appForeground: true, inputEnabled: true, projectedSourceCount: 0, moreMenuOpen: false,
     temporaryBackIdentity: 'opening', hasReadableSources: false, ungroupedBatchIds: [],
     managementOpeningIsCurrent: () => true, managementInputIsCurrent: () => true, managementBackIsCurrent: () => true,
     toolsFocusId: target => 'focus:' + target, scheduleMoreFocus: id => events.push(['focus', id]),
@@ -775,6 +775,8 @@ test('source more menu closes on every ownership change and rejects disabled or 
   owner.toggleMoreMenu();
   assert.deepEqual(events.splice(0), [['keyboard'], ['focus', 'reader-source-v9-open-subscriptions']]);
   assert.deepEqual(owner.moreActions().map(action => action.enabled), [true, true, false, false]);
+  assert.deepEqual(owner.moreActions().map(action => action.icon),
+    ['app.media.source_v9_cloud', 'icon:folder:day', 'app.media.source_v9_wave', 'app.media.source_v9_upload']);
   owner.chooseMoreAction('detect');
   owner.chooseMoreAction('export');
   assert.equal(owner.moreMenuOpen, true);
@@ -846,7 +848,7 @@ test('export admits only one picker while pending and releases admission after c
   assert.deepEqual([exports, pickers], [3, 3]);
 });
 
-test('login finish and refresh stay available during loading, and an already mounted toast receives clear results', async () => {
+test('login offers Stop while loading, keeps Finish available, and sends clear feedback to the mounted toast', async () => {
   const { readFileSync } = await import('node:fs');
   const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
   const file = new URL('ui/platform/ArkWebExecutionHost.ets', etsRoot);
@@ -854,7 +856,11 @@ test('login finish and refresh stay available during loading, and an already mou
   const finish = text.slice(text.indexOf("Text('完成')"), text.indexOf('finishInteractive(surface)'));
   assert.match(finish, /\.enabled\(!this\.clearing\)/);
   assert.doesNotMatch(finish, /pageLoading/);
-  assert.match(text, /this\.browserAction\('刷新', !this\.clearing[,)]/);
+  assert.match(text, /if \(this\.pageLoading\) \{\s*this\.browserAction\('停止加载', !this\.clearing,[\s\S]+?this\.navigate\(surface, 'stop'\)\);\s*\} else \{\s*this\.browserAction\('刷新', !this\.clearing,/);
+  const root = text.slice(text.lastIndexOf(".width(this.interactive ? '100%' : 1)"));
+  assert.match(root, /\.height\(this\.interactive \? '100%' : 1\)/);
+  assert.match(root, /\.onAreaChange\([\s\S]+?if \(!this\.mounted \|\| !this\.interactive\) return;\s*this\.hostWidth/);
+  assert.match(root, /\.zIndex\(this\.interactive \? 10000 : -1\)/);
 
   const surface = { id: 11 };
   const Host = selectedProductionMethods(file, 'ArkWebExecutionHost', ['presentationListener', 'showClearFeedback'],
@@ -923,4 +929,41 @@ test('batch delete confirmation retains the original IDs and rejects cancelled o
   owner.chooseListDialog(2, 'delete');
   assert.deepEqual(calls, [[['one', 'two'], 'source-opening']]);
   assert.equal(owner.listDialogVisible(), false);
+});
+
+test('the shared source menu renders four tinted icons and clips the card without clipping its pointer', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { boundedMembers, readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+  const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
+  const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+  const shared = readFileSync(new URL('ui/surfaces/ReaderActionMenuSurface.ets', etsRoot), 'utf8');
+  const { ReaderMenuActionView } = pureModuleProbe(shared.slice(0, shared.indexOf('@Component')),
+    'ReaderMenuActionView.ets', {}, ['ReaderMenuActionView']);
+  const specs = readerSurfaceSpecsForProbe();
+  const foundation = foundationControls();
+  const { owner } = createReaderBuilderProbe(shared, boundedMembers(shared), {
+    ...foundation.dependencies, ...specs, ReaderMenuActionView, readerAppColor,
+  }, foundation.hooks);
+  const icons = ['app.media.source_v9_cloud', 'app.media.reader_action_folder_theme_night',
+    'app.media.source_v9_wave', 'app.media.source_v9_upload'];
+  const spec = specs.resolvePopupSpec('source-v9-more-menu');
+  Object.assign(owner, { specId: 'source-v9-more-menu', scheme: 'night', availableWidth: spec.width,
+    viewportHeight: spec.expandedHeight,
+    actions: icons.map((icon, index) => new ReaderMenuActionView(String(index), `操作 ${index}`, index < 2, icon)) });
+  owner.menuActions();
+  const nodes = [...owner.nodes.values()];
+  assert.deepEqual(nodes.filter(node => node.type === 'Image')
+    .map(node => [node.create, node.width, node.height, node.fillColor]),
+  icons.map(icon => [icon, 17, 17, readerAppColor('TOK_INK', 'night')]));
+  assert.equal(nodes.filter(node => node.type === 'Button' && node.height >= 44).length, 4);
+  assert.equal(nodes.filter(node => node.type === 'Button' && node.opacity === 0.45).length, 2);
+  assert.equal(specs.resolvePopupSpec('reader-more-menu').actionIconSize, 0);
+
+  const page = readFileSync(sourceUi('SourceManagementPage'), 'utf8');
+  const shell = page.slice(page.indexOf('private sourceMoreMenu()'), page.indexOf('private visibleIds()'));
+  assert.match(shell, /ReaderActionMenuSurface\(\{ specId: 'source-v9-more-menu'/);
+  assert.match(shell, /\.borderRadius\(resolvePopupSpec\('source-v9-more-menu'\)\.borderRadius\)\.clip\(true\)/);
+  assert.match(shell, /\.rotate\(\{ angle: 45 \}\)[\s\S]+\.width\(this\.moreWidth\(\)\)\.clip\(false\)/);
 });

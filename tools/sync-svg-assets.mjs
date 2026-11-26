@@ -40,6 +40,9 @@ const THEME_VARIANTS_PATH = path.join(ROOT, 'tools/theme-svg-variants.json');
 const MAIN_SOURCE_DIR = path.join(ROOT, 'entry/src/main');
 const BANNED_PROVENANCE = /reference-only|readerseed|unknown|manual|approximation/i;
 const SVG_COLOR = /#[0-9a-f]{6}\b/gi;
+const readerThemeColorRoles = new Map(svgAssetRecipes
+  .filter(recipe => recipe.themeColorRole !== undefined)
+  .map(recipe => [recipe.file, recipe.themeColorRole]));
 
 function sha256(content) {
   return createHash('sha256').update(content).digest('hex');
@@ -76,7 +79,7 @@ function renderPaperPrimitive(recipe) {
 }
 
 export function svgThemeColorRole(file, color) {
-  return `app.icon.${file}.${color.slice(1).toUpperCase()}`;
+  return readerThemeColorRoles.get(file) ?? `app.icon.${file}.${color.slice(1).toUpperCase()}`;
 }
 
 function themePaint(role, scheme) {
@@ -110,7 +113,8 @@ export async function renderRecipe(recipe) {
 
 export async function renderSvgSource(recipe) {
   if (recipe.originType === 'reader-theme-svg') {
-    const sourcePath = path.join(ROOT, '../Reader-UI/theme/icons', recipe.file + '.svg');
+    const sourceFile = recipe.sourceFile ?? `../Reader-UI/theme/icons/${recipe.file}.svg`;
+    const sourcePath = path.join(ROOT, sourceFile);
     const source = await readFile(sourcePath, 'utf8');
     assert.equal(sha256(source), recipe.sourceSha256, `${recipe.file}: original Reader geometry changed`);
     assert.ok(source.includes('currentColor') && !/#[0-9a-f]{6}\b/i.test(source), `${recipe.file}: theme geometry uses currentColor`);

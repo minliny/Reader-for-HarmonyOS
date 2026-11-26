@@ -447,7 +447,7 @@ export function resolveActionSheetSpec(_id: ActionSheetSpecId): ActionSheetSurfa
  * consumer keeps labels, icons, enabled state and callbacks; this contract
  * owns frame geometry, touch rows and visual roles.
  */
-export type PopupSpecId = 'reader-more-menu' | 'source-switch-window' | 'tts-config-manager' | 'tts-config-picker' | 'settings-select-tablet';
+export type PopupSpecId = 'reader-more-menu' | 'source-v9-more-menu' | 'source-switch-window' | 'tts-config-manager' | 'tts-config-picker' | 'settings-select-tablet';
 
 export interface PopupSurfaceSpecInit {
   height: number;
@@ -570,17 +570,16 @@ export class PopupSurfaceSpec {
   }
 }
 
-const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
-  // Reader control More retains its three-row native popup geometry.
-  'reader-more-menu': new PopupSurfaceSpec({
+function anchoredMoreMenuSpec(width: number, actionCount: number, actionIconSize: number): PopupSurfaceSpec {
+  return new PopupSurfaceSpec({
     height: 0,
-    width: 176, pointerWidth: 24, pointerHeight: 12,
-    actionHeight: 50, actionCount: 3,
+    width, pointerWidth: 24, pointerHeight: 12,
+    actionHeight: 50, actionCount,
     trailingExtension: 11, anchorOverlap: 5,
     borderWidth: 1, borderRadius: 16,
     shadowRadius: 28, shadowOffsetY: 10,
     actionPaddingLeft: 18, actionPaddingRight: 18,
-    actionIconSize: 0, dividerInset: 16, dividerHeight: 1,
+    actionIconSize, dividerInset: 16, dividerHeight: 1,
     pointerPoints: [[0, 12], [12, 0], [24, 12]],
     surfaceBackgroundRole: 'app.surface.menuSolid',
     surfaceBorderRole: 'app.border.menu',
@@ -590,7 +589,12 @@ const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
     actionTextRole: 'TOK_INK',
     dividerRole: 'app.border.menuDivider',
     actionFontFamily: 'ReaderNotoSansSCUIMedium', actionFontSize: 15, actionLineHeight: 22,
-  }),
+  });
+}
+
+const POPUP_SPECS: Record<PopupSpecId, PopupSurfaceSpec> = {
+  'reader-more-menu': anchoredMoreMenuSpec(176, 3, 0),
+  'source-v9-more-menu': anchoredMoreMenuSpec(192, 4, 17),
   // Source-switch window: the content state machine remains in the consumer;
   // this entry owns the finite outer frame used by phone and tablet hosts.
   'source-switch-window': new PopupSurfaceSpec({

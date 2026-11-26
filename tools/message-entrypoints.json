@@ -1590,25 +1590,36 @@
       "status": "registered-source-entry"
     },
     {
+      "id": "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets#SourceJourneySurface.managementJourney::shared.dialog-surface",
+      "file": "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets",
+      "owner": "SourceJourneySurface",
+      "member": "managementJourney",
+      "family": "shared.dialog-surface",
+      "category": "批量删除确认与移动分组读取反馈",
+      "effectiveHost": "当前书源管理列表以公共弹窗确认删除原选中书源及关联登录会话，或承载移动操作读取目录时的等待和重试。",
+      "retireRule": "取消、确认、移动目录准备就绪或管理旅程退役时关闭当前弹窗。旧代按钮不得派发操作，删除和读目录分别沿用原业务入口。",
+      "status": "registered-source-entry"
+    },
+    {
       "id": "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets#SourceJourneySurface.managementJourney::shared.page-state",
       "file": "entry/src/main/ets/features/source/ui/SourceJourneySurface.ets",
       "owner": "SourceJourneySurface",
       "member": "managementJourney",
       "family": "shared.page-state",
-      "category": "书源分组目录读取失败",
-      "effectiveHost": "当前书源管理旅程内，初次读取 Core 分组目录失败且没有已读目录时，显示失败并提供重读、返回动作。",
-      "retireRule": "下一代目录读取成功、当前分组页面关闭或原管理旅程退役时撤销状态；重读仍调用原目录读取。",
+      "category": "批量移动书源的分组目录读取状态",
+      "effectiveHost": "当前书源管理列表的移动弹窗在读取 Core 分组目录时显示等待，读取失败时显示提示并通过弹窗动作重试。",
+      "retireRule": "目录读取成功、取消移动或管理旅程退役时退出；重试仍调用原目录读取。",
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/features/source/ui/SourceV9GroupsPage.ets#SourceV9GroupsPage.page::shared.page-state",
+      "id": "entry/src/main/ets/features/source/ui/SourceV9GroupsPage.ets#SourceV9GroupsPage.pageBody::shared.page-state",
       "file": "entry/src/main/ets/features/source/ui/SourceV9GroupsPage.ets",
       "owner": "SourceV9GroupsPage",
-      "member": "page",
+      "member": "pageBody",
       "family": "shared.page-state",
-      "category": "分组目录初次读取",
-      "effectiveHost": "当前有效分组总览或分组详情尚未收到 Core 分组目录时，以公共页面状态呈现读取中。",
-      "retireRule": "收到目录、目录读取返回失败或分组页面关闭时退出；录入表单与检测仍由其原会话持有。",
+      "category": "分组目录初次读取与失败",
+      "effectiveHost": "当前分组总览或分组详情尚未收到 Core 分组目录时，以公共页面状态呈现读取中；失败后保留返回入口并允许重试原读取。",
+      "retireRule": "收到目录或离开分组页面时退出；录入表单与检测仍由其原会话持有。",
       "status": "registered-source-entry"
     },
     {

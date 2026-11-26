@@ -719,7 +719,7 @@ for (const id of selectContractCases(definitions)) {
     const { ReaderMenuActionView } = pureModuleProbe(source.slice(0, source.indexOf('@Component')), 'ReaderMenuActionView.ets', {}, ['ReaderMenuActionView']);
     const properties = createArkUIPropertyRuntimeProbe();
     const available = boundedMembers(source);
-    const members = ['actions', 'menuActions', 'actionRow', 'action', 'spec', 'fontScale', 'effectiveScheme', 'menuActionHeight', 'dividerWidth', 'hasFollowingAction', 'nativeId', 'commitAction', 'mounted'].filter(name => available.includes(name));
+    const members = ['actions', 'menuActions', 'actionRow', 'action', 'spec', 'fontScale', 'effectiveScheme', 'menuActionHeight', 'dividerWidth', 'hasFollowingAction', 'nativeId', 'actionIdPrefix', 'commitAction', 'mounted'].filter(name => available.includes(name));
     const requests = [];
     const ReaderPressFeedback = productionReaderPressFeedback({ ColorMetrics: {
       resourceColor: color => { requests.push(color); return { blendColor: () => ({ color: 'pressed-ink' }) }; },

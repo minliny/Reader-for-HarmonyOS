@@ -57,7 +57,7 @@ import { sourceVerificationOfflineDetectIdentity, sourceVerificationOpening, sou
   type SourceToggleReadyObservation, type SourceV9ListReturnView, type SourceV9ListTransitionObservation } from './SourceManagementVerification';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
-import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
+import { readerSurfaceElevation, resolvePopupSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { readerFloatingBarBottomInset } from '../../../ui/layout/ReaderFloatingBarMetrics';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
@@ -907,10 +907,10 @@ export struct SourceManagementPage {
 
   private moreActions(): ReaderMenuActionView[] {
     return [
-      new ReaderMenuActionView('subscriptions', '书源订阅', true),
-      new ReaderMenuActionView('groups', '分组管理', true),
-      new ReaderMenuActionView('detect', '批量检测', this.projectedSourceCount > 0),
-      new ReaderMenuActionView('export', '导出全部书源', this.hasReadableSources),
+      new ReaderMenuActionView('subscriptions', '书源订阅', true, $r('app.media.source_v9_cloud')),
+      new ReaderMenuActionView('groups', '分组管理', true, readerActionIcon('folder', this.appThemeScheme)),
+      new ReaderMenuActionView('detect', '批量检测', this.projectedSourceCount > 0, $r('app.media.source_v9_wave')),
+      new ReaderMenuActionView('export', '导出全部书源', this.hasReadableSources, $r('app.media.source_v9_upload')),
     ];
   }
 
@@ -923,7 +923,9 @@ export struct SourceManagementPage {
     this.onV9Action(id as SourceV9ListAction, id === 'detect' ? this.visibleIds() : []);
   }
 
-  private moreWidth(): number { return Math.min(192, this.overlayRight() - this.overlayLeft()); }
+  private moreWidth(): number {
+    return Math.min(resolvePopupSpec('source-v9-more-menu').width, this.overlayRight() - this.overlayLeft());
+  }
 
   private moreLeft(): number {
     const anchorRight = this.moreAnchor === undefined ? this.viewportWidth - this.geometry.header.insetRight :
@@ -959,12 +961,13 @@ export struct SourceManagementPage {
         .accessibilityLevel('no').onClick((): void => this.closeMoreMenu(true));
       Stack({ alignContent: Alignment.TopStart }) {
         Column() {
-          ReaderActionMenuSurface({ nativeId: 'reader-source-v9-more-menu', actionIdPrefix: 'reader-source-v9-open-',
-            scheme: this.appThemeScheme, availableWidth: this.moreWidth(),
+          ReaderActionMenuSurface({ specId: 'source-v9-more-menu', nativeId: 'reader-source-v9-more-menu',
+            actionIdPrefix: 'reader-source-v9-open-', scheme: this.appThemeScheme, availableWidth: this.moreWidth(),
             viewportHeight: Math.max(0, this.overlayBottom() - this.moreTop() - 12),
             reduceMotion: this.reduceMotion, actions: this.moreActions(),
             onAction: (id: string): void => this.chooseMoreAction(id) });
-        }.width('100%').padding({ top: 6, bottom: 6 }).borderRadius(16)
+        }.width('100%').padding({ top: 6, bottom: 6 })
+          .borderRadius(resolvePopupSpec('source-v9-more-menu').borderRadius).clip(true)
           .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
           .border({ width: 1, color: readerAppColor('app.border.menu', this.appThemeScheme) })
           .shadow(readerSurfaceElevation('popover', this.appThemeScheme));

@@ -183,7 +183,7 @@ export struct SourceV9CheckDialog {
         .backgroundColor(readerAppColor('app.scrim.modal', this.scheme))
         .accessibilityLevel('no').onClick((): void => this.close());
       Column() {
-        Column() {
+        Scroll() {
           ReaderDialogSurface({
             specId: 'source-v9-check', containerWidthVp: this.paneWidth,
             title: this.singleSource() === undefined ? this.title : '书源检测报告',
@@ -202,7 +202,9 @@ export struct SourceV9CheckDialog {
               else void this.start();
             },
           });
-        }.width('100%').hitTestBehavior(HitTestMode.Transparent).transition(readerDialogCardTransition(this.reduceMotion));
+        }.width('100%').constraintSize({ maxHeight: this.paneHeight > 0 ? this.visibleDialogHeight() : undefined })
+          .scrollBar(BarState.Auto).hitTestBehavior(HitTestMode.Transparent)
+          .transition(readerDialogCardTransition(this.reduceMotion));
       }.width('100%').height('100%').justifyContent(FlexAlign.Center)
         .padding({ bottom: this.keyboardClearance() }).hitTestBehavior(HitTestMode.Transparent);
     }.width('100%').height('100%')
@@ -229,11 +231,16 @@ export struct SourceV9CheckDialog {
       metrics, this.paneTop, this.paneHeight, this.paneLeft, this.paneWidth));
   }
 
+  private visibleDialogHeight(): number {
+    return this.paneHeight - this.keyboardClearance();
+  }
+
   private bodyHeight(): number {
     this.windowRevision;
     if (this.paneHeight <= 0) return 400;
     const scale = readerReadableFontScale(readerWindowMetrics().systemFontScale);
-    return Math.max(0, Math.min(500, this.paneHeight - this.keyboardClearance() - Math.max(150, 100 * scale)));
+    // The outer scroll keeps the actions reachable when the keyboard leaves too little room for the full card.
+    return Math.max(72, Math.min(500, this.visibleDialogHeight() - Math.max(150, 100 * scale)));
   }
 
   @Builder
@@ -277,7 +284,8 @@ export struct SourceV9CheckDialog {
         }
         else this.batchRows();
       }.width('100%').alignItems(HorizontalAlign.Start);
-    }.width('100%').constraintSize({ maxHeight: this.bodyHeight() }).scrollBar(BarState.Auto);
+    }.width('100%').constraintSize({ maxHeight: this.bodyHeight() }).scrollBar(BarState.Auto)
+      .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
   }
 
   @Builder

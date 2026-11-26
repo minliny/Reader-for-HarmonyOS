@@ -10352,6 +10352,39 @@
       "sha256": "8938234867933bd4c4000efc6343a6a8380dedad828f4af5b9e9df21564242e2"
     },
     {
+      "file": "source_login_lock_theme_night.svg",
+      "semanticRole": "source_login_lock night app palette",
+      "originType": "theme-palette-derived",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/source-management-v9/source_login_lock.svg",
+      "sourceSha256": "89bf510744936a1a6512692b30e59e2b9530b60c5381c914a5d8dc9b8fd14c4a",
+      "sourceCommit": "a2b5da23a4f50e82ce99308bf3e033aad0620f7a",
+      "transform": {
+        "pathMutation": "none",
+        "palette": "night",
+        "colorRoles": [
+          "app.sourceUi.muted"
+        ]
+      },
+      "baseAsset": "source_login_lock.svg",
+      "baseSha256": "5a6554a887dedc953f432a98c9e3528157ef37bd0b45f99fc326d4accd1c3681",
+      "themeRegistrySha256": "efad38df0006760c5af699c54f7f6166766c171d69bd686ac455f4abf957ce8b",
+      "sha256": "60c118ff651c037f4d1fce9dcb35bc7871c6b9ede1864d888448bb97c0fbb584"
+    },
+    {
+      "file": "source_login_lock.svg",
+      "semanticRole": "book source login secure connection",
+      "originType": "reader-theme-svg",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/source-management-v9/source_login_lock.svg",
+      "sourceSha256": "89bf510744936a1a6512692b30e59e2b9530b60c5381c914a5d8dc9b8fd14c4a",
+      "sourceCommit": "a2b5da23a4f50e82ce99308bf3e033aad0620f7a",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "5a6554a887dedc953f432a98c9e3528157ef37bd0b45f99fc326d4accd1c3681"
+    },
+    {
       "file": "source_switch_close_theme_night.svg",
       "semanticRole": "source_switch_close night app palette",
       "originType": "theme-palette-derived",
@@ -10395,6 +10428,58 @@
         "rotationDegrees": 0
       },
       "sha256": "2257fb57f6c058b9a19617e23d27c6e6e61a857912259ff1d045179a42e7f42f"
+    },
+    {
+      "file": "source_v9_cloud.svg",
+      "semanticRole": "book source subscriptions",
+      "originType": "reader-theme-svg",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/source-management-v9/source_v9_cloud.svg",
+      "sourceSha256": "027c8a09d12cb498291107595883aa7b9b781f1efd97cecd144fbcd7cea407bd",
+      "sourceCommit": "242d48a7462d17fda50ecf3a85fca87c563bf296",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "c9ae8006ddbd7839128ee925f061802fddfc4ac8898c5d6b858ee7044319d2fb"
+    },
+    {
+      "file": "source_v9_question.svg",
+      "semanticRole": "book source unverified login status",
+      "originType": "reader-theme-svg",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/source-management-v9/source_v9_question.svg",
+      "sourceSha256": "abd067b653830c57b76d4e05d0977eaa876bb6642ddbf4c8f943c56e07bed29f",
+      "sourceCommit": "242d48a7462d17fda50ecf3a85fca87c563bf296",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "7d5439981f5495d59cd7c33fc5754152ceab7933fb2f8120ff9e152e43dade32"
+    },
+    {
+      "file": "source_v9_upload.svg",
+      "semanticRole": "book source export",
+      "originType": "reader-theme-svg",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/source-management-v9/source_v9_upload.svg",
+      "sourceSha256": "f94e36c05543543260798135dfd21e9aea03422852ee034763949a4cb4a40da6",
+      "sourceCommit": "242d48a7462d17fda50ecf3a85fca87c563bf296",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "016bb60a5383dd879096234dac26b243269f7fc4c9f3f25422cc78edefe10d3e"
+    },
+    {
+      "file": "source_v9_wave.svg",
+      "semanticRole": "book source detection",
+      "originType": "reader-theme-svg",
+      "license": "Reader project design",
+      "sourceFile": "docs/ui-design/svg-provenance/source-management-v9/source_v9_wave.svg",
+      "sourceSha256": "8bbb986a14152df870b29e30aab9522dc22e6f8656c8bf0516b69f20748bcaa2",
+      "sourceCommit": "242d48a7462d17fda50ecf3a85fca87c563bf296",
+      "transform": {
+        "pathMutation": "none"
+      },
+      "sha256": "2572f74cf60a16329e7438a5f3eca3555db5e5425c4e46e3422268fea060c459"
     },
     {
       "file": "sync_account_theme_night.svg",

@@ -7,7 +7,7 @@ import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 export type ReaderActionMenuVariant = 'menu' | ActionSheetSpecId;
 export type ReaderActionTone = 'default' | 'danger';
 
-export type ReaderActionMenuSpecId = 'reader-more-menu';
+export type ReaderActionMenuSpecId = 'reader-more-menu' | 'source-v9-more-menu';
 
 /** Business identity, content and admission. Geometry and disabled treatment
  * belong to the finite menu specification, not individual callers. */
@@ -87,7 +87,7 @@ export struct ReaderActionMenuSurface {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
     Stack({ alignContent: Alignment.TopStart }) {
       Row({ space: this.spec().actionIconSize > 0 ? 16 : 0 }) {
-        if (this.action(id).icon !== undefined) {
+        if (this.spec().actionIconSize > 0 && this.action(id).icon !== undefined) {
           if (this.action(id).busy) {
             LoadingProgress().width(this.spec().actionIconSize).height(this.spec().actionIconSize)
               .color(readerAppColor(this.spec().actionTextRole, this.effectiveScheme()))
@@ -95,6 +95,7 @@ export struct ReaderActionMenuSurface {
           } else {
             Image(this.action(id).icon)
               .width(this.spec().actionIconSize).height(this.spec().actionIconSize)
+              .fillColor(readerAppColor(this.spec().actionTextRole, this.effectiveScheme()))
               .objectFit(ImageFit.Contain).accessibilityLevel('no');
           }
         }
