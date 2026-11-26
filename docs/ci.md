@@ -1,9 +1,9 @@
 # HarmonyOS source and integration checks
 
-CI keeps manual selection only. Select the checks required by the current task using the task table in [`../../GATE_INDEX.md`](../../GATE_INDEX.md) and explicit IDs / `--stages` / `--tests`. Unselected checks are `NOT_RUN`; full sets require an explicit release or overall acceptance plan.
+HarmonyOS CI runs affected, qualified pure-Node Host checks on branch pushes and pull requests, including fork PRs. Changes limited to documentation or `.reader-artifacts/` are skipped. Checks with no applicable case report `NOT_RUN`.
 
-Local checks follow the same required selection. A selected check with a missing tool, failure or missing result remains `FAIL` / incomplete. Source checks do not establish ArkTS compilation, matching OHOS Native, signed HAP or device behavior.
+Trusted runs on pushes to `main`, same-repository PRs, and the default manual or weekly trigger build and verify an unsigned arm64 HAP with the pinned `api26r` SDK. Manual `api23` and `api24` runs compile Core Native only. The public artifact contains the manifest, source snapshot and build summary, with five-day retention. Native outputs stay in the build job's temporary workspace. Signed builds and device acceptance have separate evidence.
 
-Native synchronization uses `node scripts/hap-pipeline.mjs sync-native`; the previous `sync-core` spelling delegates to the same provenance checker and transactional replacement. Inputs must come from a fresh matching local Core build, with `core-input-snapshot.json` and SDK smoke evidence. Older generated SO/SDK packages are retained for recovery and are not accepted as inputs for new source.
+The manual `contracts.yml` workflow retains exact test and case selection and an explicit source-hygiene option. For local work, use the task table in [`../../GATE_INDEX.md`](../../GATE_INDEX.md) and select checks by ID, `--stages` or `--tests`. Unselected checks are `NOT_RUN`. A selected check with a missing tool, a failure or a missing result remains failed or incomplete.
 
-The source CI does not download a private SDK link, use signing credentials, build or install a package, change repository protection, or access a device. Cross-repository review branches and prior CI configurations remain recoverable in retained local refs.
+Native synchronization uses `node scripts/hap-pipeline.mjs sync-native`. The previous `sync-core` spelling delegates to the same provenance checker and transactional replacement. Inputs must come from a fresh matching Core build, with `core-input-snapshot.json` and SDK smoke evidence. Older generated SO/SDK packages are retained for recovery and are not accepted as inputs for new source.
