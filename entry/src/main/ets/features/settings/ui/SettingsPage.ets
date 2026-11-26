@@ -47,6 +47,7 @@ import { DEFAULT_BOOKSHELF_VIEW, type BookshelfViewMode } from '../../bookshelf/
 import { LocalRecoveryPanel } from '../../bookshelf/ui/LocalRecoveryPanel';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { SettingsSelectOverlay, type SettingsSelectField } from './SettingsSelectOverlay';
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { NavigationAppearanceSettings, readerRenderModeLabel } from './NavigationAppearanceSettings';
 import { SettingsLicensesPage } from './SettingsLicensesPage';
@@ -654,7 +655,7 @@ export struct SettingsPage {
 
   @Builder
   private homeNavigationGroup(group: SettingsNavigationGroup) {
-    CategorySection({ title: group.label }) {
+    CategorySection({ title: group.label, nativeId: READER_LAYOUT_DEBUG_BUILD ? `reader-settings-home-group:${group.id}` : '' }) {
       ForEach(group.items, (item: SettingsNavigationItem): void => {
         this.navRow(item.label, (): Resource => $r(`app.media.${item.icon}${this.appThemeScheme === 'night' ? '_theme_night' : ''}`),
           (): void => this.openHomeDestination(item.id), item.actionId ?? '', this.homeDestinationSummary(item.id));
@@ -1127,6 +1128,8 @@ export struct SettingsPage {
         options: options,
         isOpen: this.openSelect === key,
         variant: this.paneExpanded() ? 'settingsTablet' : 'settingsPhone',
+        nativeAnchorId: typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD ?
+          `reader-settings-select-trigger:${key}` : '',
         reduceMotion: this.appReduceMotion,
         onToggle: (): void => {
           const anchor = this.selectAnchors.get(key);

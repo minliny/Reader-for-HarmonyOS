@@ -5,6 +5,7 @@ import statvfs from '@ohos.file.statvfs';
 import crypto from '@ohos.security.cryptoFramework';
 import util from '@ohos.util';
 import { ReaderDocumentPickerActivity } from '../ReaderDocumentPickerActivity';
+import { readerVmJourneyDocumentsEnabled, readerVmJourneyRecoveryDocument } from '../../app/diagnostics/ReaderVmJourneyDocuments';
 
 export const LOCAL_RECOVERY_MAX_BYTES = 512 * 1024 * 1024;
 const CHUNK_BYTES = 1024 * 1024;
@@ -193,6 +194,9 @@ export async function openRecoveryFile(path: string, plaintext: string, passphra
 
 export async function selectRecoveryDocument(context: common.UIAbilityContext, save: boolean):
   Promise<string | undefined> {
+  if (readerVmJourneyDocumentsEnabled()) {
+    return readerVmJourneyRecoveryDocument(context.cacheDir, save);
+  }
   const activity = ReaderDocumentPickerActivity.begin();
   try {
     const document = new picker.DocumentViewPicker(context);

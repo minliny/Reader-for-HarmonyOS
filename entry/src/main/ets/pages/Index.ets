@@ -127,6 +127,8 @@ import { readerLayoutCarrierResponseRegion } from '../ui/layout/ReaderPageNative
 import { ReaderPostLayoutFrame } from '../ui/layout/ReaderPostLayoutFrame';
 import { ReaderLayoutDebugOverlay } from '../app/composition/ReaderLayoutDebugOverlay';
 import { READER_LAYOUT_DEBUG_BUILD } from '../ui/foundation/ReaderLayoutInvariantSignals';
+import { readerBeginTransition, readerRouteTransitionLaneId, readerTransitionActorX,
+  readerTransitionsEnabled } from '../ui/foundation/ReaderTransitionSignals';
 
 const DOMAIN = 0x5244;
 
@@ -330,6 +332,11 @@ struct Index {
       this.updateReaderParentMotion(toReader, previousLane === lane && !incomingDetail && !returningFromDetail);
     }
     if (incomingDetail || returningFromDetail) this.animateReaderDetailMotion();
+    else if (routeChanged && fromReader !== toReader && readerTransitionsEnabled()) {
+      const retainedReveal = fromReader && this.readingEntry.sessionActive;
+      readerBeginTransition({ kind: 'route', action: toReader ? 'push' : 'pop', subject: 'reading', scope: 'retained-reader',
+        nodes: ['reader-transition-retained-scene'], staticMotion: this.appReduceMotion || retainedReveal });
+    }
     if (restoringDirectory) this.directoryJourney.refreshDetailPosition();
   }
   private setSettingsSection(section: SettingsSection): void {
@@ -418,6 +425,8 @@ struct Index {
     const motion = this.readerDetailScene;
     if (motion === undefined || motion.phase === 'preview' || motion.phase === 'covered') return;
     const target = motion.phase === 'pop' ? 0 : 1;
+    const distance = Math.abs(target - motion.coverage);
+    this.observeReaderDetailTransition(motion.phase, distance < .001);
     const current = (): boolean => this.readerDetailTransition.snapshot()?.generation === motion.generation;
     const finish = (): void => {
       if (!current()) return;
@@ -426,7 +435,6 @@ struct Index {
     };
     const id = this.appReduceMotion ? 'app.motion.reduced.fade' :
       motion.phase === 'pop' ? 'app.navigation.pop' : 'app.navigation.push';
-    const distance = Math.abs(target - motion.coverage);
     if (distance < .001 || !this.searchAppForeground) { finish(); return; }
     const duration = Math.max(1, Math.round((motionSpecGet(id)?.durationMs ?? 200) * distance));
     const context = this.getUIContext();
@@ -454,6 +462,15 @@ struct Index {
     catch (_error) { finish(); }
   }
 
+  private observeReaderDetailTransition(action: string, stationary: boolean = false): void {
+    if (!readerTransitionsEnabled()) return;
+    readerBeginTransition({ kind: 'route', action, subject: 'reader-detail', scope: 'reader-detail',
+      nodes: [readerRouteTransitionLaneId('reader-app-route-stack', 'detail')],
+      staticMotion: stationary || this.appReduceMotion, routeOriginX: this.readerDetailBackOriginX });
+  }
+
+  private readerDetailBackOriginX: number | undefined = undefined;
+
   private readerSceneMotionEnabled(): boolean {
     return readerConditionalSceneMotion(this.searchAppForeground, this.readerDetailScene !== undefined).enter === 'push';
   }
@@ -474,6 +491,9 @@ struct Index {
     if (!this.readerDetailBackGestureEnabled()) return;
     const preview = this.readerDetailTransition.preview(this.routeViewportWidth());
     if (preview === undefined) return;
+    this.readerDetailBackOriginX = readerTransitionsEnabled() ? readerTransitionActorX(this.getUIContext(),
+      readerRouteTransitionLaneId('reader-app-route-stack', 'detail')) : undefined;
+    this.observeReaderDetailTransition('preview');
     this.readerDetailScene = this.readerDetailTransition.updatePreview(preview.generation, offset);
   }
 
@@ -1251,7 +1271,8 @@ struct Index {
             inputAllowed: this.readingEntry.sessionActive && this.searchAppForeground && !this.arkWebCapturesInput &&
               this.readerDetailScene === undefined,
             ports: this.retainedReaderPorts(),
-          }).transition(readerSceneTransition(this.routeViewportWidth(), this.appReduceMotion, this.readerSceneMotionEnabled()));
+          }).id(readerTransitionsEnabled() ? 'reader-transition-retained-scene' : undefined)
+            .transition(readerSceneTransition(this.routeViewportWidth(), this.appReduceMotion, this.readerSceneMotionEnabled()));
           if (this.readerDetailScene !== undefined) {
             Column().width('100%').height('100%').backgroundColor(Color.Black)
               .opacity(this.appReduceMotion ? 0 : this.readerDetailScene.coverage * READER_ROUTE_PARENT_DIM)

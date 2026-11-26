@@ -1,6 +1,7 @@
 import type { ReaderNavigationPreferences, ReaderSurfaceMaterialDecision } from '../../app/HarmonyCapabilityPolicy';
 import { READER_LAYOUT_DEBUG_BUILD, newReaderLayoutModalId, publishReaderLayoutModal } from '../../ui/foundation/ReaderLayoutInvariantSignals';
 import type { LayoutInvariantTag } from '../../ui/layout/LayoutInvariantEvaluator';
+import { readerBeginTransition, readerTransitionsEnabled } from '../foundation/ReaderTransitionSignals';
 import { READER_REDUCED_FADE_MS, READER_SHEET_CLOSE_MS } from '../foundation/ProductMotionTiming';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../foundation/ReaderMotionPolicy';
@@ -148,7 +149,7 @@ export struct ReaderBottomSheet {
       } else {
         this.content();
       }
-    }.id(this.nativeId).width(Math.min(this.surfaceWidth, this.spec().maxWidth, this.frameViewport().width))
+    }.id(this.transitionNativeId()).width(Math.min(this.surfaceWidth, this.spec().maxWidth, this.frameViewport().width))
       .constraintSize({ maxHeight: this.frameViewport().height })
       .backgroundEffect(undefined)
       .backgroundColor(this.frameMaterial().native ? Color.Transparent : readerAppColor(this.spec().hostBackgroundRole, this.scheme))
@@ -158,12 +159,23 @@ export struct ReaderBottomSheet {
       .shadow(this.frameMaterial().native ? undefined : this.frameShadow())
       .attributeModifier(new ReaderImmersiveMaterialModifier(this.frameMaterial())).clip(true)
       .hitTestBehavior(HitTestMode.Default).focusable(true).focusScopeId(this.nativeId, true, false)
-      .onAppear((): void => { this.frameAttached = true; })
+      .onAppear((): void => {
+        this.frameAttached = true;
+        if (readerTransitionsEnabled()) {
+          const id = this.transitionNativeId();
+          readerBeginTransition({ kind: 'surface', action: 'mount', subject: this.specId,
+            scope: id, nodes: [id], axis: this.reduceMotion ? 'none' : 'y' });
+        }
+      })
       .transition(this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) :
         TransitionEffect.asymmetric(
           TransitionEffect.move(TransitionEdge.BOTTOM).animation(readerMotionAnimateParam('app.sheet.open', false)),
           TransitionEffect.move(TransitionEdge.BOTTOM).animation(readerMotionAnimateParam('app.sheet.close', false))),
         (entering: boolean): void => this.finishMotion(entering));
+  }
+
+  private transitionNativeId(): string {
+    return this.nativeId.length > 0 || !readerTransitionsEnabled() ? this.nativeId : `reader-transition-sheet:${this.layoutModalId}`;
   }
 
   private finishMotion(entering: boolean): void {

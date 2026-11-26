@@ -31,6 +31,7 @@ export class ReaderContinuousReadingProjection<T extends ReaderContinuousFragmen
   private items: T[] = [];
   private readonly byStartScalar: Map<number, number> = new Map<number, number>();
   private identity: string = 'continuous:empty';
+  private committedChapterIndex: number = -1;
   private title: string = '';
   private layoutKey: string = '';
   private ttsChapterKey: string = '';
@@ -40,6 +41,7 @@ export class ReaderContinuousReadingProjection<T extends ReaderContinuousFragmen
 
   get fragments(): T[] { return this.items; }
   get chapterIdentity(): string { return this.identity; }
+  get chapterIndex(): number { return this.committedChapterIndex; }
   get chapterTitle(): string { return this.title; }
   get geometryKey(): string { return this.layoutKey; }
   get visibleStart(): number { return this.firstVisible; }
@@ -84,6 +86,7 @@ export class ReaderContinuousReadingProjection<T extends ReaderContinuousFragmen
     }
     this.focus(this.indexForScalar(visibleScalar));
     this.identity = `continuous:${JSON.stringify([chapter.sourceId, chapter.bookId, chapter.chapterIndex, chapter.contentVersion])}`;
+    this.committedChapterIndex = chapter.chapterIndex;
     this.ttsChapterKey = readerTtsChapterKey(chapter.sourceId, chapter.bookId, chapter.chapterIndex);
     this.ttsContentVersion = chapter.contentVersion;
     this.title = (chapter.documentRange?.startScalar ?? 0) === 0 ? chapter.chapterTitle : '';
@@ -110,6 +113,7 @@ export class ReaderContinuousReadingProjection<T extends ReaderContinuousFragmen
     this.items = [];
     this.byStartScalar.clear();
     this.identity = 'continuous:empty';
+    this.committedChapterIndex = -1;
     this.title = '';
     this.ttsChapterKey = '';
     this.ttsContentVersion = undefined;

@@ -6,7 +6,7 @@
  * Quit or EOF closes this session and releases its lease.
  */
 import assert from 'node:assert/strict';
-import { spawnSync } from 'node:child_process';
+import { execFile, spawnSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import {
   accessSync, appendFileSync, constants, lstatSync, mkdirSync,
@@ -15,6 +15,7 @@ import {
 import { tmpdir } from 'node:os';
 import { basename, isAbsolute, parse, resolve } from 'node:path';
 import { createInterface } from 'node:readline';
+import { setTimeout as delay } from 'node:timers/promises';
 import { acquireLease, canonicalServerKey, hdcDirectEnvironment, releaseLease, targetRef } from './reader-hdc-lease.mjs';
 import { inspectNativePng, sha256 } from './lib/native-ui-evidence.mjs';
 import { remoteVmServer } from './ui-contract/collectors/harmonyos/candidate-evidence.mjs';
@@ -129,9 +130,14 @@ function operationPlan(operation, outputDir) {
     return shell('uitest', 'uiInput', 'inputText', integer(operation.x, 0, 16384, 'x'),
       integer(operation.y, 0, 16384, 'y'), text);
   }
-  if (operation.op === 'swipe') {
+  if (operation.op === 'inputSourceJourneyUrl') {
+    exactFields(operation, ['x', 'y']);
+    return shell('uitest', 'uiInput', 'inputText', integer(operation.x, 0, 16384, 'x'),
+      integer(operation.y, 0, 16384, 'y'), 'https://novel-a.reader-journeys.invalid/fixtures/v9-source.json');
+  }
+  if (operation.op === 'swipe' || operation.op === 'drag') {
     exactFields(operation, ['fromX', 'fromY', 'toX', 'toY', 'velocity']);
-    return shell('uitest', 'uiInput', 'swipe', ...dragArguments(operation));
+    return shell('uitest', 'uiInput', operation.op, ...dragArguments(operation));
   }
   if (operation.op === 'keyEvent') {
     exactFields(operation, ['key']);
@@ -147,13 +153,19 @@ function operationPlan(operation, outputDir) {
     const path = remotePath(operation.path);
     return { kind: 'command', args: ['file', 'recv', path, resolve(outputDir, basename(path))], localPath: resolve(outputDir, basename(path)) };
   }
-  if (operation.op === 'startRemoteJourneyFixture' || operation.op === 'startRemoteEmptySearchFixture') {
+  if (['startRemoteJourneyFixture', 'startRemoteEmptySearchFixture', 'startRemoteBackupJourneyFixture'].includes(operation.op)) {
     exactFields(operation, []);
     const fixture = operation.op === 'startRemoteEmptySearchFixture'
       ? ['--ps', 'readerPublicFixture', 'empty-sources', '--ps', 'readerPublicFixtureBook', 'long-directory']
       : ['--ps', 'readerPublicFixture', 'vm-journeys'];
+    if (operation.op === 'startRemoteBackupJourneyFixture') fixture.push('--pb', 'readerPublicFixtureRecovery', 'true');
     return { ...shell('aa','start','-a','EntryAbility','-b',BUNDLE,'-m','entry',
       ...fixture), kind:'startRemoteJourneyFixture' };
+  }
+  if (operation.op === 'openJourneyInvalidBook') {
+    exactFields(operation, []);
+    return { ...shell('aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry',
+      '--pb', 'readerPublicFixtureInvalidBook', 'true'), kind: 'openJourneyInvalidBook' };
   }
   if (operation.op === 'journeyFixtureLog') {
     exactFields(operation, []);
@@ -166,6 +178,35 @@ function operationPlan(operation, outputDir) {
   if (operation.op === 'journeyLayoutLog') {
     exactFields(operation, []);
     return shell('hilog', '-x', '-e', 'READER_LAYOUT_INVARIANTS');
+  }
+  if (operation.op === 'journeyTransitionLog') {
+    exactFields(operation, []);
+    return shell('hilog', '-x', '-e', 'READER_TRANSITION_(BEGIN|INVARIANTS|FRAMES)');
+  }
+  if (operation.op === 'journeyShareLog') {
+    exactFields(operation, []);
+    return shell('hilog', '-x', '-e', 'READER_JOURNEY_SHARE');
+  }
+  if (operation.op === 'journeySampledAction') {
+    exactFields(operation, ['action', 'captures']);
+    const action = operation.action;
+    if (!action || !['click', 'keyEvent', 'swipe', 'longClick'].includes(action.op))
+      fail('sampled action requires a supported fixture input');
+    const plan = operationPlan({ ...action, preflightConfirmed: true }, outputDir);
+    if (!Array.isArray(operation.captures) || operation.captures.length < 2 || operation.captures.length > 4)
+      fail('sampled action requires two to four capture slots');
+    let previous = -1;
+    const usedPaths = new Set();
+    const captures = operation.captures.map(slot => {
+      if (!slot || typeof slot !== 'object' || Object.keys(slot).length !== 2) fail('invalid capture slot');
+      const atMs = Number(integer(slot.atMs, 0, 400, 'atMs'));
+      const path = remotePath(slot.path, '.png');
+      if (atMs <= previous || usedPaths.has(path)) fail('capture slots must have unique increasing times and paths');
+      previous = atMs;
+      usedPaths.add(path);
+      return { atMs, path };
+    });
+    return { kind: 'journeySampledAction', args: plan.args, captures };
   }
   if (operation.op === 'uiContractFocusWindow') {
     exactFields(operation, []);
@@ -217,7 +258,8 @@ async function probe(options) {
   let stopping = false;
   let idleTimer;
   const deadline = performance.now() + SESSION_MS;
-  const stop = () => { stopping = true; input?.close(); };
+  const burstAbort = new AbortController();
+  const stop = () => { stopping = true; burstAbort.abort(); input?.close(); };
   const sessionTimer = setTimeout(stop, SESSION_MS);
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
@@ -270,6 +312,37 @@ async function probe(options) {
       }
     };
 
+    // One bounded burst holds the same target lease as its input. Timestamps
+    // refer to host acquisition requests, not guest input or display frames.
+    const sampleAction = async plan => {
+      const start = performance.now();
+      if (stopping || deadline <= start) fail('probe is stopping');
+      const startedAt = new Date().toISOString();
+      const execute = args => new Promise(resolveResult => {
+        execFile(options.hdc, [...prefix, ...args], {
+          shell: false, encoding: 'utf8', env: hdcEnvironment, maxBuffer: MAX_OUTPUT, signal: burstAbort.signal,
+          timeout: Math.min(10000, Math.max(1, Math.floor(deadline - performance.now()))),
+        }, (error, stdout, stderr) => resolveResult({ error, stdout, stderr, status: error ? Number(error.code) : 0 }));
+      });
+      const command = execute(plan.args);
+      const captures = plan.captures.map(async ({ atMs, path }) => {
+        await delay(atMs, undefined, { signal: burstAbort.signal });
+        const requested = performance.now();
+        const args = ['shell', 'uitest', 'screenCap', '-p', path];
+        const result = await execute(args);
+        return { path, timestampMs: Math.round(requested - start),
+          acquisitionMs: Math.round(performance.now() - requested), ok: commandOK(result, args) };
+      });
+      // Await all children before a transport failure can release the lease.
+      const [action, ...sampled] = await Promise.allSettled([command, ...captures]);
+      const screenshots = sampled.flatMap(item => item.status === 'fulfilled' ? [item.value] : []);
+      const ok = action.status === 'fulfilled' && commandOK(action.value, plan.args) &&
+        screenshots.length === captures.length && screenshots.every(item => item.ok);
+      record({ event: 'command', startedAt, elapsedMs: performance.now() - start, ok, screenshots,
+        ...(action.status === 'fulfilled' ? publicCommandResult(plan.args, action.value, redact) : {}) });
+      if (!ok) fail('native input or screen burst failed; no automatic retry');
+    };
+
     const readiness = async () => {
       const { readinessQueryOutput, targetReadiness } = await import('../scripts/lib/hap-delivery-evidence.mjs');
       const query = command => {
@@ -306,11 +379,12 @@ async function probe(options) {
       if (plan.kind === 'quit') break;
       if (plan.kind === 'uiContractReadiness') await readiness();
       else {
-        if (plan.kind === 'startRemoteJourneyFixture' && !remoteVmReady) {
+        if (['startRemoteJourneyFixture', 'openJourneyInvalidBook'].includes(plan.kind) && !remoteVmReady) {
           fail('Remote public storage launch requires this probe’s verified remote VM');
         }
         if (plan.privateBundleOutput) ({ parseBundleMetadata } = await import('../scripts/hap-pipeline.mjs'));
-        run(plan);
+        if (plan.kind === 'journeySampledAction') await sampleAction(plan);
+        else run(plan);
       }
       waitForInput();
     }
@@ -354,6 +428,17 @@ function selfTest() {
     ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry',
       '--ps', 'readerPublicFixture', 'empty-sources', '--ps', 'readerPublicFixtureBook', 'long-directory'] });
   assert.deepEqual(plan('journeyEmptySearchFixtureLog').args, ['shell', 'hilog', '-x', '-e', 'Public UI fixture long-directory book verified']);
+  assert.deepEqual(plan('startRemoteBackupJourneyFixture').args.slice(-3), ['--pb', 'readerPublicFixtureRecovery', 'true']);
+  assert.deepEqual(plan('openJourneyInvalidBook').args.slice(-3), ['--pb', 'readerPublicFixtureInvalidBook', 'true']);
+  assert.equal(plan('inputSourceJourneyUrl', { x: 1, y: 2 }).args.at(-1), 'https://novel-a.reader-journeys.invalid/fixtures/v9-source.json');
+  assert.throws(() => plan('inputSourceJourneyUrl', { x: 1, y: 2, url: 'https://example.com' }), /operation field/);
+  assert.deepEqual(plan('drag', { fromX: 8, fromY: 13, toX: 29, toY: 43, velocity: 200 }).args,
+    ['shell', 'uitest', 'uiInput', 'drag', '8', '13', '29', '43', '200']);
+  const captures = [0, 150].map(atMs => ({ atMs, path: `/data/local/tmp/reader-control-journey-${atMs}.png` }));
+  const action = { op: 'click', x: 1, y: 2 };
+  assert.equal(plan('journeySampledAction', { action, captures }).kind, 'journeySampledAction');
+  assert.throws(() => plan('journeySampledAction', { action, captures: [captures[0], captures[0]] }), /increasing/);
+  assert.throws(() => plan('journeySampledAction', { action: { op: 'quit' }, captures }), /supported fixture input/);
   process.stdout.write('Reader VM transport self-test: PASS (no HDC)\n');
 }
 

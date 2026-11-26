@@ -1,0 +1,105 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { journeys } from '../../scripts/lib/vm-journey-cases.mjs';
+import { layoutReceiptProblem, layoutReports, matchingTransitions, matchesVmEnvironment, shareReports,
+  transitionReceiptProblem, transitionReports, transitionWatermark, vmJourneyMatrix } from '../../scripts/lib/vm-journey-evidence.mjs';
+import { READER_VM_IMPORT_SOURCE, readerVmJourneyImportDocument, readerVmJourneyResponse,
+  readerVmJourneySources } from '../../entry/src/main/ets/app/diagnostics/ReaderVmJourneyData.ts';
+
+const log = (pid: string, marker: string, payload: string): string =>
+  `11-27 15:42:00.001  ${pid}  401 I A05244/Reader: ${marker} ${payload}`;
+
+const layout = {
+  schemaVersion: 2, sequence: 3, status: 'measured', scheme: 'night',
+  observedRules: ['R13', 'R14'], violations: [], missing: [],
+  features: [{ id: 'tts-transport', state: 'pass' }],
+  nativeAudit: { complete: true, textCount: 3, imageCount: 1, interactiveCount: 4 },
+  environment: { widthVp: 320, heightVp: 610, fontScale: 1.6, material: 'performance', reducedMotion: true },
+};
+const transition = { schemaVersion: 1, sequence: 8, kind: 'launch', action: 'tts', subject: 'reader-session-launch',
+  status: 'measured', observedRules: ['T3'], missing: [], violations: [], frameCount: 3 };
+const frames = [0, 16, 32].map(atMs => ({ atMs, nodes: [], unreadableIds: [] }));
+const frameText = JSON.stringify({ sequence: 8, frames });
+const firstChunk = log('401', 'READER_TRANSITION_FRAMES', `8/0/2 ${frameText.slice(0, 15)}`);
+const lastChunk = log('401', 'READER_TRANSITION_FRAMES', `8/1/2 ${frameText.slice(15)}`);
+const summary = log('401', 'READER_TRANSITION_INVARIANTS', JSON.stringify(transition));
+
+test('matrix selects all fourteen journeys and expands independently supported axes', () => {
+  assert.deepEqual(Object.keys(journeys), Array.from({ length: 14 }, (_, index) => `J${index + 1}`));
+  const profiles = vmJourneyMatrix({ material: 'native,performance', motion: 'standard,reduced',
+    scheme: 'day,night', 'reading-mode': 'paged,continuous' });
+  assert.equal(profiles.length, 16);
+  assert.equal(new Set(profiles.map(profile => profile.id)).size, 16);
+  assert.throws(() => vmJourneyMatrix({ 'font-scale': '1.8' }), /Invalid fontScale/);
+  assert.throws(() => vmJourneyMatrix({ material: 'native,performance', motion: 'standard,reduced',
+    scheme: 'day,night', 'reading-mode': 'paged,continuous', window: 'actual,portrait,landscape' }), /32/);
+});
+
+test('matrix environment requires actual native measurements, including provisioned size/scale', () => {
+  const [profile] = vmJourneyMatrix({ material: 'performance', motion: 'reduced', scheme: 'night',
+    'font-scale': '1.6', window: 'narrow' });
+  assert.deepEqual(matchesVmEnvironment(profile, layout), []);
+  assert.equal(matchesVmEnvironment(profile, { ...layout, environment: undefined }).length, 1);
+  assert.equal(matchesVmEnvironment(profile, { ...layout, environment: { ...layout.environment,
+    widthVp: 380, fontScale: 1.1, material: 'fallback', reducedMotion: false } }).length, 4);
+});
+
+test('layout evidence isolates current process and rejects missing rules, features and violations', () => {
+  const sample = log('401', 'READER_LAYOUT_INVARIANTS', JSON.stringify(layout));
+  const other = log('400', 'READER_LAYOUT_INVARIANTS', JSON.stringify({ ...layout, sequence: 8 }));
+  const old = log('401', 'READER_LAYOUT_INVARIANTS', JSON.stringify({ ...layout, schemaVersion: 1, sequence: 9 }));
+  assert.deepEqual(layoutReports([sample, old, other].join('\n'), '401'), [layout]);
+  assert.equal(layoutReceiptProblem(layout, { requiredRules: ['R14'], features: ['tts-transport'] }), '');
+  assert.match(layoutReceiptProblem(layout, { requiredRules: ['R8'] }), /R 规则/);
+  assert.match(layoutReceiptProblem(layout, { features: ['not-confirmed'] }), /功能强断言/);
+  assert.match(layoutReceiptProblem({ ...layout, nativeAudit: { complete: false } }, { requiredRules: ['R13'] }), /原生树扫描/);
+  assert.match(layoutReceiptProblem({ ...layout, violations: [{ rule: 'R13' }] }, {}), /违规/);
+});
+
+test('transition evidence joins out-of-order chunks under exact process, subject and action', () => {
+  const output = transitionReports([lastChunk, summary, firstChunk].join('\n'), '401');
+  assert.deepEqual(output[0].frames, frames);
+  assert.equal(matchingTransitions(output, 7, { kind: 'launch', action: 'tts', subject: 'reader-session-launch' }).length, 1);
+  assert.equal(matchingTransitions(output, 8, { kind: 'launch', action: 'tts' }).length, 0);
+  assert.equal(matchingTransitions(output, 7, { kind: 'launch', action: 'autoPage' }).length, 0);
+  assert.equal(transitionReceiptProblem(output[0], ['T3']), '');
+  assert.match(transitionReceiptProblem(output[0], ['T1']), /T 规则/);
+  assert.match(transitionReceiptProblem({ ...output[0], violations: [{ rule: 'T3' }] }, ['T3']), /违规/);
+  assert.match(transitionReceiptProblem({ ...output[0], frames: [...frames].reverse() }, ['T3']), /采样顺序/);
+});
+
+test('a preceding in-flight transition cannot fulfill the next identical action', () => {
+  const before = [log('401', 'READER_TRANSITION_BEGIN', '8'), log('407', 'READER_TRANSITION_BEGIN', '32')].join('\n');
+  const watermark = transitionWatermark(before, '401', []);
+  assert.equal(watermark, 8);
+  const completed = transitionReports([summary, firstChunk, lastChunk].join('\n'), '401');
+  assert.equal(matchingTransitions(completed, watermark, { kind: 'launch', action: 'tts' }).length, 0);
+});
+
+test('share receipt accepts only native records in the current process with a valid operation id', () => {
+  const output = [log('408', 'READER_JOURNEY_SHARE', '12 presented'), log('401', 'READER_JOURNEY_SHARE', '20 presented'),
+    log('401', 'READER_JOURNEY_SHARE', '20 dismissed'), log('401', 'READER_JOURNEY_SHARE', '23 assumed'),
+    log('401', 'READER_JOURNEY_SHARE', '0 shown')].join('\n');
+  assert.deepEqual(shareReports(output, '401'), [{ operationId: 20, state: 'presented' }, { operationId: 20, state: 'dismissed' }]);
+});
+
+test('source-journey input is exact, inert outside its finite synthetic transport and excluded from initial catalog', () => {
+  const url = 'https://novel-a.reader-journeys.invalid/fixtures/v9-source.json';
+  const document = readerVmJourneyImportDocument(url);
+  assert.ok(document);
+  assert.equal(JSON.parse(document)[0].bookSourceUrl, READER_VM_IMPORT_SOURCE);
+  assert.equal(readerVmJourneySources().some(row => row.bookSourceUrl === READER_VM_IMPORT_SOURCE), false);
+  assert.equal(readerVmJourneyImportDocument(url + '?other'), undefined);
+  assert.equal(readerVmJourneyResponse({ url, method: 'POST' }), undefined);
+  assert.equal(readerVmJourneyResponse({ url, method: 'GET', usePlatformCookieJar: true }), undefined);
+  assert.equal(readerVmJourneyResponse({ url, method: 'GET' })?.body, document);
+});
+
+test('foreign, missing and contradictory transition chunks stay unaccepted', () => {
+  for (const chunks of [firstChunk, [firstChunk, lastChunk.replace('401  401', '402  401')].join('\n'),
+    [firstChunk, lastChunk, log('401', 'READER_TRANSITION_FRAMES', '8/1/2 corrupted')].join('\n')]) {
+    const reports = transitionReports([summary, chunks].join('\n'), '401');
+    assert.equal(reports.length, 1);
+    assert.match(transitionReceiptProblem(reports[0], ['T3']), /分片不完整/);
+  }
+});

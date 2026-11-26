@@ -15,6 +15,9 @@ import { TYPE_READER_TTS_CHOICE_REGULAR, TYPE_READER_TTS_CHOICE_SELECTED, TYPE_R
 import { TYPE_READER_TTS_CONFIG_BUILD_LABEL, TYPE_READER_TTS_CONFIG_BUILD_STATUS, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_SECONDARY, TYPE_READER_TTS_CONFIG_CHOICE_ROW_VALUE_TERTIARY, TYPE_READER_TTS_CONFIG_FORMAT_CHOICE_LABEL, TYPE_READER_TTS_CONFIG_MANAGER_FOOTER_SAVE, TYPE_READER_TTS_CONFIG_MANAGER_FORM_LABEL, TYPE_READER_TTS_CONFIG_MANAGER_FORM_STATUS, TYPE_READER_TTS_CONFIG_MANAGER_FORM_VALUE, type ReaderTextStyle } from '../../../ui/foundation/ReaderTypography';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerBeginTransition, readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
+import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_SURFACE_HINT } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantSurfaceHint } from '../../../ui/layout/LayoutInvariantNativeAudit';
 import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import type { ReaderHttpTtsConfig } from '../application/ReaderHttpTtsGateway';
 import type { ReaderTtsConfigurationDraft } from '../application/ReaderTtsConfigurationHost';
@@ -248,6 +251,14 @@ export struct ReaderTtsConfigOverlay {
 
   private panelWidth(): number { return Math.min(this.surfaceSpec().width, this.viewport().width); }
 
+  private layoutSurfaceHint(): LayoutInvariantSurfaceHint {
+    const viewport = this.viewport();
+    const anchor = this.inlineAnchor;
+    return { placement: this.windowModal ? 'bottom-center' : anchor === undefined ? 'center' : 'anchor',
+      viewport: { x: viewport.left, y: viewport.top, width: viewport.width, height: viewport.height },
+      anchor: anchor === undefined ? undefined : { x: anchor.left, y: anchor.top, width: anchor.width, height: anchor.height } };
+  }
+
   private panelLayout(): ReaderTtsConfigPanelLayout {
     const spec = this.surfaceSpec();
     const viewport = this.viewport();
@@ -273,6 +284,8 @@ export struct ReaderTtsConfigOverlay {
 
   private boundedSpecId(): 'tts-config-manager' | 'tts-config-picker' { return this.manager ? 'tts-config-manager' : 'tts-config-picker'; }
 
+  private surfaceNativeId(): string { return this.manager ? 'reader-control-tts-manager-overlay' : 'reader-control-tts-overlay'; }
+
   @Builder
   private configurationHeader() {
     ReaderBoundedSurfaceHeader({ specId: this.boundedSpecId(), title: this.title, actionEnabled: !this.busy,
@@ -297,10 +310,18 @@ export struct ReaderTtsConfigOverlay {
       ReaderBoundedSurface({ specId: this.boundedSpecId(), surfaceWidth: this.panelWidth(), surfaceHeight: this.panelLayout().rect.height,
         header: (): void => { this.boundedHeader(); }, body: (): void => { this.boundedContent(); },
         actions: (): void => { this.boundedActions(); } })
-        .id(this.manager ? 'reader-control-tts-manager-overlay' : 'reader-control-tts-overlay')
+        .id(this.surfaceNativeId())
+        .customProperty(READER_LAYOUT_SURFACE_HINT, typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD ?
+          this.layoutSurfaceHint() : undefined)
         .position({ x: this.panelLayout().rect.left - (this.windowModal ? 0 : this.inlineHost?.left ?? 0),
           y: this.panelLayout().rect.top - (this.windowModal ? 0 : this.inlineHost?.top ?? 0) })
-        .hitTestBehavior(HitTestMode.Default);
+        .hitTestBehavior(HitTestMode.Default)
+        .onAppear((): void => {
+          if (readerTransitionsEnabled()) {
+            const id = this.surfaceNativeId();
+            readerBeginTransition({ kind: 'surface', action: 'mount', subject: id, scope: id, nodes: [id] });
+          }
+        });
       if (this.manager && this.windowModal && this.recoveryView.visible && this.panelLayout().bodyHeight > 0) {
         Scroll() {
           ReaderRecoveryNotice({ view: this.recoveryView, tag: '朗读配置', actionLabel: '',

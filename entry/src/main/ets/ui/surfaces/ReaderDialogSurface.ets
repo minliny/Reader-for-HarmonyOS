@@ -1,5 +1,7 @@
 import { MESSAGE_ACTION } from '../foundation/ReaderMessageStyle';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
+import { READER_LAYOUT_CLOSE_CONTROL, READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_SURFACE_HINT } from '../foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantSurfaceHint } from '../layout/LayoutInvariantNativeAudit';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../layout/SurfaceHorizontalGeometry';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
@@ -13,6 +15,8 @@ import { readerReadableFontScale, readerScaledControlHeight } from '../foundatio
 export function readerDialogScrimTransition(reduceMotion: boolean): TransitionEffect {
   return TransitionEffect.OPACITY.animation(readerMotionAnimateParam('app.sheet.scrim', reduceMotion));
 }
+
+const NATIVE_DIALOG_SURFACE: LayoutInvariantSurfaceHint = { placement: 'center', dialog: true };
 
 export function readerDialogCardTransition(reduceMotion: boolean): TransitionEffect {
   if (reduceMotion) return TransitionEffect.IDENTITY;
@@ -112,6 +116,7 @@ export struct ReaderDialogSurface {
       }
     }
     .width(this.frameWidth())
+    .customProperty(READER_LAYOUT_SURFACE_HINT, READER_LAYOUT_DEBUG_BUILD ? NATIVE_DIALOG_SURFACE : undefined)
     .padding(this.framePadding())
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(readerAppColor(this.spec().backgroundRole, this.appThemeScheme))
@@ -137,6 +142,7 @@ export struct ReaderDialogSurface {
           Image(readerPaperActionIcon('close', this.appThemeScheme)).width(15).height(15)
             .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
         }.width(32).height(32).padding(0)
+          .customProperty(READER_LAYOUT_CLOSE_CONTROL, READER_LAYOUT_DEBUG_BUILD ? true : undefined)
           .responseRegion({ x: -12, y: -6, width: 44, height: 44 })
           .enabled(this.closeEnabled).opacity(this.closeEnabled ? 1 : 0.45)
           .attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme),
@@ -190,6 +196,8 @@ export struct ReaderDialogSurface {
     .enabled(this.action(id).enabled)
     .attributeModifier(this.actionModifier(this.action(id)))
     .id(this.action(id).nativeId)
+    .customProperty(READER_LAYOUT_CLOSE_CONTROL, READER_LAYOUT_DEBUG_BUILD ?
+      id === 'close' || id === 'cancel' || id === 'back' || id === 'dismiss' : undefined)
     .defaultFocus(this.action(id).defaultFocus)
     .responseRegion(this.actionTouchRegion())
     .onClick((): void => {

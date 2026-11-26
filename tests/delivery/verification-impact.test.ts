@@ -5,17 +5,17 @@ import { affectedHostDomains, suggestedVmJourneys } from '../../scripts/test-hos
 
 const featurePath = (feature: string) => `entry/src/main/ets/features/${feature}/Example.ts`;
 const featureImpact: [string, string[], string[]][] = [
-  ['bookshelf', ['bookshelf', 'contracts', 'detail-reading', 'downloads', 'search'], ['J1', 'J2', 'J3']],
+  ['bookshelf', ['bookshelf', 'contracts', 'detail-reading', 'downloads', 'search'], ['J1', 'J2', 'J3', 'J14']],
   ['discover', ['bookshelf', 'search'], ['J7', 'J8']],
   ['downloads', ['downloads', 'manga', 'navigation-geometry'], ['J5']],
   ['manga', ['detail-reading', 'downloads', 'manga', 'navigation-geometry', 'source-switch'], ['J6']],
   ['reading', ['bookshelf', 'detail-reading', 'downloads', 'manga', 'navigation-geometry', 'settings-sync-rss', 'source-switch'],
-    ['J2', 'J4', 'J6', 'J8']],
+    ['J2', 'J4', 'J6', 'J8', 'J9', 'J10', 'J11', 'J12', 'J14']],
   ['rss', ['navigation-geometry', 'settings-sync-rss'], ['J7', 'J8']],
   ['search', ['bookshelf', 'contracts', 'detail-reading', 'navigation-geometry', 'search', 'source-switch'], ['J2', 'J3', 'J6', 'J8']],
-  ['settings', ['navigation-geometry', 'settings-sync-rss'], ['J7', 'J8']],
-  ['source', ['bookshelf', 'contracts', 'search', 'source-management', 'source-switch'], ['J2', 'J6', 'J7']],
-  ['sync', ['settings-sync-rss'], ['J7', 'J8']],
+  ['settings', ['navigation-geometry', 'settings-sync-rss'], ['J7', 'J8', 'J11', 'J12', 'J14']],
+  ['source', ['bookshelf', 'contracts', 'search', 'source-management', 'source-switch'], ['J2', 'J6', 'J7', 'J12', 'J13']],
+  ['sync', ['settings-sync-rss'], ['J7', 'J8', 'J14']],
 ];
 
 test('feature paths select their Host domains and recommend existing VM journeys', () => {
@@ -45,7 +45,7 @@ test('combined feature and test changes keep recommendations sorted and deduplic
   assert.deepEqual(affectedHostDomains(paths), [
     'bookshelf', 'delivery', 'detail-reading', 'downloads', 'manga', 'navigation-geometry', 'settings-sync-rss', 'source-switch',
   ]);
-  assert.deepEqual(suggestedVmJourneys(paths), ['J2', 'J4', 'J5', 'J6', 'J8']);
+  assert.deepEqual(suggestedVmJourneys(paths), ['J2', 'J4', 'J5', 'J6', 'J8', 'J9', 'J10', 'J11', 'J12', 'J14']);
 });
 
 test('shared or unfamiliar paths select all Host domains and journeys from the VM catalog', () => {

@@ -3,6 +3,7 @@ import { defaultNavigationPreferences, ReaderModalScrimModifier } from '../../..
 import type { ReaderNativeAlertOptions } from '../../../ui/platform/ReaderNativeAlertOwner';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerBeginTransition, readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { SourceManagementPage } from './SourceManagementPage';
 import { SourceToolsPage } from './SourceToolsPage';
 import { SourceV9TransferPage } from './SourceV9TransferPage';
@@ -181,6 +182,7 @@ export struct SourceJourneySurface {
 
   private openPane(pane: SourceV9View): void {
     if (!this.managementInputIsCurrent()) return;
+    if (pane !== this.pane && readerTransitionsEnabled()) this.observePaneTransition(pane);
     if (pane === 'groups') this.detailGroupId = undefined;
     const scene = sourceV9ForegroundPane(pane);
     if (scene !== this.paneOpening?.pane) {
@@ -194,6 +196,17 @@ export struct SourceJourneySurface {
     }
     this.pane = pane;
     if (pane === 'groups' || pane === 'import') void this.refreshCatalog();
+  }
+
+  private observePaneTransition(next: SourceV9View): void {
+    const previous = this.pane;
+    const popping = sourceV9ParentView(previous) === next;
+    const actor = popping ? previous : next;
+    const scene = sourceV9ForegroundPane(actor);
+    if (scene === undefined) return;
+    const node = actor === 'group-detail' ? 'reader-source-v9-group-detail-motion' : `reader-source-v9-${scene}-motion`;
+    readerBeginTransition({ kind: 'route', action: popping ? 'pop' : 'push', subject: `source-${actor}`,
+      scope: `source-${this.identity}`, nodes: [node], staticMotion: this.reduceMotion });
   }
 
   private openCheck(ids: string[], title: string, batch: boolean): void {
@@ -309,7 +322,7 @@ export struct SourceJourneySurface {
         Stack({ alignContent: Alignment.TopStart }) {
           if (opening.pane === 'groups') this.groupsPage(opening, -1);
           else this.transferPage(opening);
-        }.width('100%').height('100%')
+        }.id(readerTransitionsEnabled() ? `reader-source-v9-${opening.pane}-motion` : undefined).width('100%').height('100%')
           .transition(readerSceneTransition(this.paneRect?.width ?? 0, this.reduceMotion, true));
       }, (opening: SourceJourneyPaneOpening): string => `${opening.pane}:${opening.generation}`);
       if (this.pane === 'list' && this.moveSourceIds.length > 0 && !this.moveCatalogDialogVisible()) {

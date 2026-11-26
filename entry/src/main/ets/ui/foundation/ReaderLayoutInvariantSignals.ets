@@ -3,6 +3,9 @@ import type { LayoutInvariantTag } from '../layout/LayoutInvariantEvaluator';
 
 export const READER_LAYOUT_DEBUG_BUILD: boolean = DEBUG && BUILD_MODE_NAME === 'debug';
 export const READER_LAYOUT_INVARIANT_PROPERTY: string = 'readerLayoutInvariant';
+export const READER_LAYOUT_SURFACE_HINT: string = 'readerLayoutSurfaceHint';
+export const READER_LAYOUT_CLOSE_CONTROL: string = 'readerLayoutCloseControl';
+export const READER_LAYOUT_FOOTER: string = 'readerLayoutFooter';
 let nextModalId: number = 0;
 let ownedModals: Map<number, LayoutInvariantTag> | undefined;
 

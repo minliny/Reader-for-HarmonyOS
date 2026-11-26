@@ -5,6 +5,10 @@ import { READER_GLASS_BLUR_VP, READER_HEAVY_GLASS_BLUR_VP, readerSurfaceElevatio
   type SheetSpecId } from './ReaderSurfaceSpecs';
 import { ReaderInsetsVp } from '../foundation/ReaderWindowMetrics';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
+import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_SURFACE_HINT, newReaderLayoutModalId } from '../foundation/ReaderLayoutInvariantSignals';
+import { readerBeginTransition, readerTransitionsEnabled } from '../foundation/ReaderTransitionSignals';
+import type { LayoutInvariantSurfaceHint } from '../layout/LayoutInvariantNativeAudit';
+import type { ReaderTransitionAxis } from '../layout/TransitionInvariantEvaluator';
 import { applyReaderImmersiveMaterial, defaultNavigationPreferences, readerSurfaceMaterialDecision,
   READER_NO_SHADOW } from './ReaderSurfaceMaterial';
 
@@ -127,22 +131,47 @@ export struct ReaderBoundedSurface {
   @BuilderParam header: () => void = this.emptySlot;
   @BuilderParam body: () => void = this.emptySlot;
   @BuilderParam actions: () => void = this.emptySlot;
+  private readonly transitionId: number = READER_LAYOUT_DEBUG_BUILD ? newReaderLayoutModalId() : 0;
 
   @Builder private emptySlot() {}
+
+  private transitionNativeId(): string | undefined {
+    if (!readerTransitionsEnabled() || this.specId === 'tts-config-picker' || this.specId === 'tts-config-manager') return undefined;
+    return `reader-transition-bounded:${this.transitionId}`;
+  }
+
+  private observeMount(): void {
+    const id = this.transitionNativeId();
+    if (id === undefined) return;
+    const drawer = this.specId === 'source-switch-drawer' || this.specId === 'reader-action-sheet';
+    const axis: ReaderTransitionAxis = drawer ? this.placement === 'side' ? 'x' : 'y' : 'none';
+    readerBeginTransition({ kind: 'surface', action: 'mount', subject: this.specId, scope: id, nodes: [id], axis,
+      layoutBounds: this.specId === 'local-import-selection' || this.specId === 'local-import-progress' });
+  }
+
+  private layoutAuditHint(): LayoutInvariantSurfaceHint | undefined {
+    if (!READER_LAYOUT_DEBUG_BUILD) return undefined;
+    if (this.specId === 'local-import-selection') return { placement: 'center', dialog: true, contentMeasured: true };
+    if (this.specId === 'source-switch-drawer') return {
+      placement: this.placement === 'side' ? 'side-end' : 'bottom-center', dialog: true, windowEdge: true,
+    };
+    return undefined;
+  }
 
   build() {
     if (this.specId === 'bookshelf-book-action' || this.specId === 'search-result-filter' || this.specId === 'search-task-status') {
       Column({ space: 0 }) { this.header(); this.body(); this.actions(); }.alignItems(HorizontalAlign.Start)
-        .attributeModifier(this.frameModifier());
+        .attributeModifier(this.frameModifier()).id(this.transitionNativeId()).onAppear((): void => this.observeMount());
     } else if (this.specId === 'local-import-progress') {
       Stack({ alignContent: Alignment.Center }) { this.header(); this.body(); this.actions(); }
-        .attributeModifier(this.frameModifier());
+        .attributeModifier(this.frameModifier()).id(this.transitionNativeId()).onAppear((): void => this.observeMount());
     } else if (this.specId === 'local-import-result-content') {
       Column() { this.header(); this.body(); this.actions(); }.alignItems(HorizontalAlign.Start)
-        .attributeModifier(this.frameModifier());
+        .attributeModifier(this.frameModifier()).id(this.transitionNativeId()).onAppear((): void => this.observeMount());
     } else {
       Column({ space: this.specId === 'reader-replace-editor' ? 8 : 0 }) { this.header(); this.body(); this.actions(); }
-        .attributeModifier(this.frameModifier());
+        .attributeModifier(this.frameModifier()).id(this.transitionNativeId())
+        .customProperty(READER_LAYOUT_SURFACE_HINT, this.layoutAuditHint()).onAppear((): void => this.observeMount());
     }
   }
 

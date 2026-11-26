@@ -5,6 +5,8 @@ import { ReaderPostLayoutFrame } from '../../ui/layout/ReaderPostLayoutFrame';
 import { motionAnimateParam, motionSpecGet } from '../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../ui/foundation/ReaderMotionPolicy';
 import { readerMotionNowMs } from '../../ui/foundation/ReaderMotionClock';
+import { readerBeginTransition, readerRouteTransitionLaneId, readerTransitionActorX,
+  readerTransitionsEnabled } from '../../ui/foundation/ReaderTransitionSignals';
 import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
 
 const ROOT_LANE = 'reader-route-root';
@@ -32,6 +34,7 @@ interface ReaderRouteBackPreview {
   width: number;
   progress: number;
   requested: boolean;
+  originX?: number;
   result?: 'commit' | 'cancel';
   animation?: ReaderRouteAnimation;
 }
@@ -311,6 +314,10 @@ export struct ReaderRouteStackSurface {
         }
         this.paint = { from: from.name ?? ROOT_LANE, to: to.name ?? ROOT_LANE, motion, fade,
           fadeOutgoing: nativePop || motion === 'pop' };
+        if (motion === 'push' || motion === 'pop') {
+          if (preview?.result === undefined) this.observeRouteMotion(preview === undefined ? motion : 'preview',
+            motion === 'pop' ? from.name ?? ROOT_LANE : to.name ?? ROOT_LANE, preview?.originX);
+        }
         this.setPendingPushLane(undefined);
         this.progress = 0;
         const finish = (): void => {
@@ -407,7 +414,9 @@ export struct ReaderRouteStackSurface {
     if (names[names.length - 1] !== this.route) return;
     this.setPendingPushLane(undefined);
     const target = names.length < 2 ? this.rootRoute : names[names.length - 2] as ReaderRouteSurfaceKey;
-    this.preview = { from: this.route, to: target, width: this.viewportWidth, progress: 0, requested: false };
+    const originX = readerTransitionsEnabled() ? readerTransitionActorX(this.getUIContext(),
+      readerRouteTransitionLaneId(this.surfaceId, this.route)) : undefined;
+    this.preview = { from: this.route, to: target, width: this.viewportWidth, progress: 0, requested: false, originX };
     this.updatePreview(offset);
     this.pathStack.pop(true);
   }
@@ -453,6 +462,8 @@ export struct ReaderRouteStackSurface {
     const preview = this.preview;
     if (preview === undefined || preview.result !== undefined) return;
     preview.result = result;
+    const remaining = (result === 'cancel' ? preview.progress : 1 - preview.progress) * preview.width;
+    this.observeRouteMotion(result === 'cancel' ? 'cancel' : 'pop', preview.from, preview.originX, remaining <= 2);
     if (this.mounted) {
       this.armRouteDeadline(PREVIEW_END_TIMEOUT_MS, (): void => {
         if (this.preview !== preview) return;
@@ -475,6 +486,12 @@ export struct ReaderRouteStackSurface {
     }
   }
 
+  private observeRouteMotion(action: string, lane: string, routeOriginX?: number, stationary: boolean = false): void {
+    if (!readerTransitionsEnabled()) return;
+    readerBeginTransition({ kind: 'route', action, subject: lane, scope: `route:${this.surfaceId}`,
+      nodes: [readerRouteTransitionLaneId(this.surfaceId, lane)], staticMotion: this.reduceMotion || stationary, routeOriginX });
+  }
+
   @Builder
   private lane(route: ReaderRouteSurfaceKey, lane: string) {
     Stack({ alignContent: Alignment.TopStart }) {
@@ -484,6 +501,7 @@ export struct ReaderRouteStackSurface {
         .accessibilityLevel('no-hide-descendants');
     }
     .width('100%').height('100%')
+    .id(readerTransitionsEnabled() ? readerRouteTransitionLaneId(this.surfaceId, lane) : undefined)
     .backgroundColor(readerAppColor('app.window.background', this.scheme))
     .translate({ x: this.laneX(route, lane) })
     .opacity(this.laneOpacity(route, lane))

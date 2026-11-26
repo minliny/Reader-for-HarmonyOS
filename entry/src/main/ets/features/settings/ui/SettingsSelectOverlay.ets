@@ -1,4 +1,5 @@
 import { ReaderInsetsVp, ReaderRectVp } from '../../../ui/foundation/ReaderWindowMetrics';
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import { readerOverlayListHeight, readerOverlayPanel, readerOverlayViewport } from '../../../ui/layout/ReaderOverlayGeometry';
 import { ReaderChoiceRow, readerSettingsTabletOptionHeight } from '../../../ui/controls/ReaderChoiceRow';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -142,6 +143,7 @@ export struct SettingsSelectOverlay {
               .width('100%').constraintSize({ maxHeight: this.viewport().height }).scrollBar(BarState.Auto);
           }
         }.width('100%')
+          .id(typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD ? `reader-settings-select-phone:${this.field}` : '')
           .backgroundEffect(undefined)
           .backgroundColor(Color.Transparent)
           .border({ width: 0, color: Color.Transparent })
@@ -206,6 +208,7 @@ export struct SettingsSelectOverlay {
             .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme)).accessibilityLevel('no');
         }
         .width('100%')
+        .id(typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD ? 'reader-settings-select-cancel' : '')
         .height(this.phoneCancelHeight())
         .padding(0)
         .border({ width: 1, color: readerAppColor('app.border.control', this.appThemeScheme) })
@@ -236,6 +239,7 @@ export struct SettingsSelectOverlay {
         this.phoneOption(option, index);
       }, (option: string): string => `settings-phone-option-${this.field}-${option}`);
     }.width('100%')
+      .id(typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD ? 'reader-settings-select-options' : '')
       .backgroundColor(this.panelMaterial('modalSheet').native ? Color.Transparent :
         readerAppColor('app.surface.menuSolid', this.appThemeScheme))
       .border({ width: 1, color: readerAppColor('app.border.control', this.appThemeScheme) })
@@ -261,9 +265,11 @@ export struct SettingsSelectOverlay {
         this.tabletOption(option, index);
       }, (option: string): string => `settings-tablet-option-${this.field}-${option}`);
     }
-    .width('100%');
+    .width('100%')
+      .id(typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD ? 'reader-settings-select-options' : '');
     }
     .width(this.tabletFrame().width).height(this.tabletFrame().height).scrollBar(BarState.Auto)
+    .id(typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD ? `reader-settings-select-tablet:${this.field}` : '')
     .backgroundEffect(undefined)
     .backgroundColor(this.panelMaterial('popoverMenu').native ? Color.Transparent :
       readerAppColor(this.tabletSpec().surfaceBackgroundRole, this.appThemeScheme))

@@ -15,6 +15,7 @@ import { readerAppColor, type ReaderAppColorRole } from '../../../ui/foundation/
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { readerSceneTransition } from '../../../app/navigation/ReaderRouteMotion';
+import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerReadableFontScale } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
@@ -601,7 +602,8 @@ export struct SourceV9GroupsPage {
       } else {
         Column() {
           this.groupDetail();
-        }.width('100%').layoutWeight(1).transition(readerSceneTransition(12, this.reduceMotion, true));
+        }.id(readerTransitionsEnabled() ? 'reader-source-v9-group-detail-motion' : undefined).width('100%').layoutWeight(1)
+          .transition(readerSceneTransition(12, this.reduceMotion, true));
       }
     }.width('100%').height('100%').padding({ left: geometry.content.frame.left, right: geometry.content.frame.right,
       top: geometry.content.startInset, bottom: geometry.content.endInset });

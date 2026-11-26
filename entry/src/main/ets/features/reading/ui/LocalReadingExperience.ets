@@ -86,6 +86,7 @@ import { ReaderSessionLaunchController, type ReaderSessionLaunchTransaction,
 import { ReaderPageChrome } from './ReaderPageChrome';
 import { ReaderStatusBarPaper } from './ReaderStatusBarPaper';
 import { ReaderChapterLoadingState } from './ReaderChapterLoadingState';
+import { readerBeginTransition, readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { ReaderPageGeometryHost } from './ReaderPageGeometryHost';
 import { readerAppColor, readerThemeDefinition } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerVisualSafeTop, readerInteractiveSafeBottom, readerInteractiveSafeLeft,
@@ -178,6 +179,8 @@ import {
 import {
   ReaderPageTurnRenderPage,
   ReaderPageTurnStage,
+  READER_PAGE_TURN_SLOT_A,
+  READER_PAGE_TURN_SLOT_B,
   type ReaderPageTurnSlot,
 } from './ReaderPageTurnStage';
 import { READER_BOOKMARK_RIBBON_HEIGHT, READER_BOOKMARK_RIBBON_WIDTH,
@@ -2842,17 +2845,33 @@ export struct ReadingExperience {
     const source: ReaderChapterLoadSource = this.sourceId === LOCAL_READING_SOURCE_ID ? 'local' :
       recovery || findReusableReadingWindowChapter(this.chapterWindow, chapterIndex, refresh, context) !== undefined ?
         'cache' : 'coldRemote';
-    const lease = this.chapterPresentation.begin(lifecycle, selection, source, this.captureRetainedChapterFrame(), readerMotionNowMs());
+    const retained = this.captureRetainedChapterFrame();
+    const lease = this.chapterPresentation.begin(lifecycle, selection, source, retained, readerMotionNowMs());
     this.retainedTtsOwner = ttsOwner;
     this.retainedTtsCommitAdmitted = false;
     this.chapterPresentationRevision += 1;
-    if (source !== 'coldRemote') return;
+    if (source !== 'coldRemote') {
+      if (retained !== undefined && this.currentChapterIndex() !== chapterIndex)
+        this.observeChapterTransition(source, chapterIndex);
+      return;
+    }
     this.chapterLoadingDelayTimer = setTimeout((): void => {
       this.chapterLoadingDelayTimer = -1;
       if (this.isSelectionActive(lifecycle, selection) && this.chapterPresentation.owns(lease)) {
         this.chapterPresentationRevision += 1;
       }
     }, READER_CHAPTER_LOADING_DELAY_MS);
+  }
+
+  private observeChapterTransition(source: 'local' | 'cache', targetChapterIndex: number): void {
+    if (!readerTransitionsEnabled()) return;
+    const continuous = this.readerSettingsSnapshot.navigationMode === 'continuous';
+    const nodes = continuous ? ['reader-reading-interaction-host-continuous'] :
+      [READER_PAGE_TURN_SLOT_A + ':transition-body', READER_PAGE_TURN_SLOT_B + ':transition-body'];
+    const chapterBodyCount = nodes.length;
+    nodes.push('reader-chapter-loading-state');
+    readerBeginTransition({ kind: 'chapter', action: 'advance', subject: 'reader-chapter-' + source,
+      scope: 'reader-chapter', nodes, chapterBodyCount, targetChapterIndex });
   }
 
   private markRetainedChapterBodyReady(lifecycle: number, selection: number): void {
@@ -3805,6 +3824,7 @@ export struct ReadingExperience {
       this.visibleReadingAppearance(),
       bookmark,
       facingChapter,
+      chapterIndex,
     );
   }
 
@@ -3860,6 +3880,7 @@ export struct ReadingExperience {
       this.pageReadingAppearance(prepared.page),
       bookmark,
       facingChapter,
+      prepared.key.chapterIndex,
     );
   }
 
@@ -6475,6 +6496,7 @@ export struct ReadingExperience {
 
   private continuousRenderFrame(): ReaderContinuousRenderFrame {
     return { chapterIdentity: this.continuousProjection.chapterIdentity,
+      chapterIndex: this.continuousProjection.chapterIndex,
       chapterTitle: this.continuousProjection.chapterTitle, geometryKey: this.continuousProjection.geometryKey,
       titleRecipe: this.continuousTitleRecipe, fragments: this.continuousProjection.fragments,
       changedFragmentIndex: this.continuousChangedFragmentIndex, initialFragmentIndex: this.continuousInitialFragmentIndex,
@@ -9234,6 +9256,9 @@ export struct ReadingExperience {
     this.sessionLaunchEffects.invalidateExit();
     this.sessionLaunch = this.sessionLaunchController.begin(identity, geometry, readerMotionNowMs(), this.reduceMotion);
     if (this.sessionLaunch === undefined) return false;
+    if (readerTransitionsEnabled()) readerBeginTransition({ kind: 'launch', action: type,
+      subject: 'reader-session-launch', scope: 'reader-session-launch',
+      nodes: [identity.sourceActorId, 'reader-session-launch-proxy'] });
     this.capsuleVerification.begin(this.sessionLaunch, readerControlContentLocation(this.sessionLaunchSourceControl), this.reduceMotion);
     this.sessionLaunchSourceMinimum = { generation: this.sessionLaunch.generation, kind: kind,
       requiresNaturalProfile: nativeMinimumContract, receipt: sourceMinimum };
@@ -9439,6 +9464,9 @@ export struct ReadingExperience {
       }
     }
     if (launch.ownership === 'handoffPending') {
+      if (readerTransitionsEnabled()) readerBeginTransition({ kind: 'launch', action: launch.geometry.type,
+        subject: 'reader-session-launch-handoff', scope: 'reader-session-launch-handoff',
+        nodes: [launch.identity.sourceActorId, 'reader-session-launch-proxy'] });
       if (this.sessionLaunchSourceLayoutKey !== this.sessionLaunchLayoutKey()) {
         this.finishSessionLaunchHandoff(launch.generation);
         return;
@@ -11956,6 +11984,9 @@ export struct ReadingExperience {
     if (!this.isPreparedPageTurnFresh(prepared) || this.preparedSettlement.prepared !== undefined ||
       this.viewportWidth <= 0) {
       return false;
+    }
+    if (prepared.context.chapter.chapterIndex !== this.currentChapterIndex()) {
+      this.observeChapterTransition(this.sourceId === LOCAL_READING_SOURCE_ID ? 'local' : 'cache', prepared.context.chapter.chapterIndex);
     }
     this.bookTurnTexture.invalidate(true);
     const lifecycleToken = this.lifecycleToken;

@@ -4,6 +4,7 @@ import type { ReaderQuoteCardAction } from '../application/ReaderShareActions';
 import { LengthMetrics } from '@ohos.arkui.node';
 import { READER_ACTION_MIN_TARGET } from '../../../ui/controls/ReaderActionAccessibility';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
+import { readerTransitionsEnabled } from '../../../ui/foundation/ReaderTransitionSignals';
 import { ReaderPageInputClock } from './ReaderPageInputClock';
 import { READER_PAGE_GESTURE_LONG_PRESS_MS } from './ReaderPageGestureState';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
@@ -94,6 +95,7 @@ class ContinuousFragmentDataSource implements IDataSource {
 /** All chapter and initial-position facts are read through one published revision. */
 export interface ReaderContinuousRenderFrame {
   chapterIdentity: string;
+  chapterIndex: number;
   chapterTitle: string;
   geometryKey: string;
   titleRecipe: ReaderNativeParagraphRecipe | undefined;
@@ -277,12 +279,16 @@ export struct ReaderContinuousReadingStage {
               }
             }
             .width('100%')
+            .customProperty('readerTransitionIgnoreBody', readerTransitionsEnabled() && fragment.id === CONTINUOUS_TITLE_ID)
             .alignItems(HorizontalAlign.Start);
           }
           .width('100%');
         }, (fragment: ReadingSurfacePageFragment): string => this.fragmentRenderKey(fragment, mountIdentity));
       }
       .id('reader-reading-interaction-host-continuous')
+      .customProperty('readerTransitionChapterIndex', readerTransitionsEnabled() ? this.renderFrame?.chapterIndex ?? -1 : -1)
+      .customProperty('readerTransitionContentTop', readerTransitionsEnabled() ? this.layout.contentTop : 0)
+      .customProperty('readerTransitionContentBottom', readerTransitionsEnabled() ? this.layout.contentBottom : 0)
       .width('100%')
       .height('100%')
       .padding({

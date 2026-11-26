@@ -4,6 +4,8 @@ import { ReaderFooterFrameModifier, ReaderPageFrameModifier, readerLayoutCarrier
 import { ReaderPageGeometry } from './ReaderPageGeometry';
 import { ReaderFrameStyle } from './ReaderFrameStyle';
 import { ReaderNativeSlotMeasurement } from './ReaderNativeSlotMeasurement';
+import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_FOOTER } from '../foundation/ReaderLayoutInvariantSignals';
+import { readerBeginTransition, readerTransitionsEnabled } from '../foundation/ReaderTransitionSignals';
 
 /** One native frame for finite categories. Geometry inputs are measured safe,
  * rail or card offsets. Visual surfaces and layers stay at the shared owner. */
@@ -50,6 +52,17 @@ export struct ReaderPageScaffold {
     return (_old: Area, next: Area): void => this.publishFooterMeasurement(readerPageAreaLength(next.height), presentedKey);
   }
 
+  private transitionHeaderId(): string { return this.footerMeasurement.id + ':transition-header'; }
+
+  private observeMount(): void {
+    if (!readerTransitionsEnabled() || !this.pageVisible) return;
+    const nodes: string[] = [];
+    if (this.headerVisible && this.geometry.header.height > 0) nodes.push(this.transitionHeaderId());
+    if (this.geometry.footer.height > 0) nodes.push(this.footerMeasurement.id);
+    if (nodes.length > 0) readerBeginTransition({ kind: 'surface', action: 'mount', subject: 'page-scaffold',
+      scope: this.footerMeasurement.id, nodes, axis: 'x' });
+  }
+
   build() {
     Stack({ alignContent: this.frameStyle.alignment === 'top' ? Alignment.Top : Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) { this.content(); }
@@ -64,7 +77,8 @@ export struct ReaderPageScaffold {
             layoutDebugHeaderKey: this.layoutDebugHeaderKey(),
             content: (): void => { this.header(); },
             onHeightChange: (height: number, presentedKey: number): void => this.onHeaderHeightChange(height, presentedKey) });
-        }.width('100%').padding({ left: this.geometry.header.insetLeft, right: this.geometry.header.insetRight })
+        }.id(readerTransitionsEnabled() ? this.transitionHeaderId() : undefined)
+          .width('100%').padding({ left: this.geometry.header.insetLeft, right: this.geometry.header.insetRight })
           .margin({ top: this.geometry.header.top }).zIndex(10)
           .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion());
       }
@@ -75,6 +89,7 @@ export struct ReaderPageScaffold {
           .width('100%').padding({ left: this.geometry.footer.insetLeft, right: this.geometry.footer.insetRight })
           .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion())
           .id(this.footerMeasurement.id)
+          .customProperty(READER_LAYOUT_FOOTER, READER_LAYOUT_DEBUG_BUILD ? true : undefined)
           .onAppear((): void => this.footerMeasurement.mount(this.getUIContext(), this.footerMeasurementKey,
             (height: number, key: number): void => this.publishFooterMeasurement(height, key)))
           .onDisAppear((): void => this.footerMeasurement.unmount())
@@ -101,6 +116,7 @@ export struct ReaderPageScaffold {
         this.frameStyle.safeArea === 'systemCutoutAll' ? [LayoutSafeAreaType.SYSTEM] : [],
         this.frameStyle.safeArea === 'systemCutoutAll' ? [LayoutSafeAreaEdge.ALL] : [])
       .opacity(this.pageVisible ? 1 : 0)
-      .hitTestBehavior(this.pageVisible && !this.transparentContent ? HitTestMode.Default : HitTestMode.Transparent);
+      .hitTestBehavior(this.pageVisible && !this.transparentContent ? HitTestMode.Default : HitTestMode.Transparent)
+      .onAppear((): void => this.observeMount());
   }
 }

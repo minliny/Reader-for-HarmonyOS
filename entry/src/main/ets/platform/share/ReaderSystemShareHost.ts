@@ -3,10 +3,18 @@ import { uniformTypeDescriptor } from '@kit.ArkData';
 import { url } from '@kit.ArkTS';
 import { fileIo, fileUri } from '@kit.CoreFileKit';
 import { systemShare } from '@kit.ShareKit';
+import { hilog } from '@kit.PerformanceAnalysisKit';
+import { readerHostCacheDirectory } from '../../app/diagnostics/ReaderPublicFixtureScope';
+import { readerVmJourneyDocumentsEnabled } from '../../app/diagnostics/ReaderVmJourneyDocuments';
 import type { ReaderShareFile, ReaderShareImage, ReaderShareRecord, SystemSharePort, SystemShareResult } from '../../features/reading/application/ReaderShareActions';
 
 const SHARE_COPY_TTL_SECONDS = 24 * 60 * 60;
 const SHARE_DISMISS_SETTLE_MS = 250;
+let nextJourneyShare: number = 0;
+
+function recordJourneyShare(sequence: number, phase: SystemShareResult | 'presented'): void {
+  if (sequence > 0) hilog.info(0x5244, 'Reader', 'READER_JOURNEY_SHARE %{public}d %{public}s', sequence, phase);
+}
 export const READER_QUOTE_CARD_MAX_BYTES = 8 * 1024 * 1024;
 
 interface ReaderPreparedBookShare {
@@ -15,6 +23,7 @@ interface ReaderPreparedBookShare {
 }
 
 export function readerShareCachePath(context: common.UIAbilityContext): string {
+  if (readerVmJourneyDocumentsEnabled()) return `${readerHostCacheDirectory(context.cacheDir)}/reader-share`;
   return `${context.getApplicationContext().cacheDir}/reader-share`;
 }
 
@@ -78,7 +87,16 @@ export class ReaderSystemShareHost implements SystemSharePort {
     }
   }
 
-  async show(record: ReaderShareRecord, current: () => boolean): Promise<SystemShareResult> {
+  show(record: ReaderShareRecord, current: () => boolean): Promise<SystemShareResult> {
+    const sequence = readerVmJourneyDocumentsEnabled() ? ++nextJourneyShare : 0;
+    const result = this.showRecord(record, current, sequence);
+    return sequence === 0 ? result : result.then((phase: SystemShareResult): SystemShareResult => {
+      recordJourneyShare(sequence, phase);
+      return phase;
+    });
+  }
+
+  private async showRecord(record: ReaderShareRecord, current: () => boolean, sequence: number): Promise<SystemShareResult> {
     if (!current() || !canIUse('SystemCapability.Collaboration.SystemShare')) return 'unavailable';
     const context = this.context();
     if (context === undefined) return 'unavailable';
@@ -88,7 +106,7 @@ export class ReaderSystemShareHost implements SystemSharePort {
       let result: SystemShareResult = 'unavailable';
       try {
         if (!current()) return 'dismissed';
-        result = await this.present(context, prepared.data, true);
+        result = await this.present(context, prepared.data, true, sequence);
         return result;
       } finally {
         if (result !== 'shown') await removeReaderShareCopy(prepared.directory);
@@ -98,15 +116,15 @@ export class ReaderSystemShareHost implements SystemSharePort {
       const checked = await this.quoteImage(record, context);
       if (!current()) return 'dismissed';
       if (checked === undefined) return 'unsafe';
-      return this.present(context, checked, true);
+      return this.present(context, checked, true, sequence);
     }
     const utd = record.kind === 'link' ? uniformTypeDescriptor.UniformDataType.HYPERLINK :
       uniformTypeDescriptor.UniformDataType.PLAIN_TEXT;
-    return this.present(context, { utd, content: record.text, title: record.title, description: record.description }, false);
+    return this.present(context, { utd, content: record.text, title: record.title, description: record.description }, false, sequence);
   }
 
   private present(context: common.UIAbilityContext, data: systemShare.SharedRecord,
-    hasStagedFile: boolean): Promise<SystemShareResult> {
+    hasStagedFile: boolean, sequence: number): Promise<SystemShareResult> {
     const controller = new systemShare.ShareController(new systemShare.SharedData(data));
     return new Promise<SystemShareResult>((resolve): void => {
       let finished = false;
@@ -132,8 +150,10 @@ export class ReaderSystemShareHost implements SystemSharePort {
       try {
         controller.on('dismiss', dismiss);
         controller.on('shareCompleted', complete);
-        controller.show(context, { selectionMode: systemShare.SelectionMode.SINGLE, anchor: this.anchor })
-          .catch((): void => finish('unavailable'));
+        const showing = controller.show(context, { selectionMode: systemShare.SelectionMode.SINGLE, anchor: this.anchor });
+        if (sequence > 0) void showing.then((): void => recordJourneyShare(sequence, 'presented'),
+          (): void => finish('unavailable'));
+        else void showing.catch((): void => finish('unavailable'));
       } catch (_) {
         finish('unavailable');
       }

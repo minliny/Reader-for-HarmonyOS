@@ -19,6 +19,7 @@ import { FrameCallback } from '@kit.ArkUI';
 import curves from '@ohos.curves';
 import { MotionPointTrack } from '../../../ui/foundation/MotionPointTrack';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
 import { motionSpecGet } from '../../../ui/foundation/MotionSpec';
 import { sampleReaderControlMotionPresentation, ReaderControlMotionPathCache, readerControlMotionClipRects, readerControlMotionClipPath,
   type ReaderControlMotionPresentation, type ReaderControlMotionClipRect } from './ReaderControlMotionPresentation';
@@ -935,7 +936,9 @@ export struct ReaderControlAppearanceContent {
     Row({ space: 4 }) {
       Text(this.metricLabel(metric)).layoutWeight(1).fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       this.islandStep(metric, -1);
-      Text(this.metricValue(metric)).width(46).textAlign(TextAlign.Center).fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp)
+      Text(this.metricValue(metric)).id(READER_LAYOUT_DEBUG_BUILD ?
+        `reader-control-appearance-metric-value-${metric}` : undefined)
+        .width(46).textAlign(TextAlign.Center).fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_PRIMARY', this.appThemeScheme));
       this.islandStep(metric, 1);
     }.width('100%').border({ width: { bottom: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) });
