@@ -170,7 +170,8 @@ jobs:
           retention-days: 5
 
   harmonyos-ci-gate:
-    name: harmonyos-ci-gate
+    # A branch push on the PR head must not publish the required PR check.
+    name: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && 'harmonyos-ci-gate' || 'harmonyos-ci-result' }}
     if: always()
     needs: [host-fast-checks, unsigned-hap-build]
     runs-on: ubuntu-24.04
