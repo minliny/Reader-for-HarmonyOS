@@ -36,6 +36,8 @@ import type { RemoteReadingIdentity } from '../application/RemoteReadingContract
 import type { RemoteReadingFailureKind } from '../application/RemoteContentAdmission';
 import { ReaderStatusBarPaper } from './ReaderStatusBarPaper';
 import { readerWidthClassWithHint } from '../../../ui/foundation/ReaderWidthClass';
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 
 
 // RetainedReaderScene supplies the admitted session and navigation intents.
@@ -570,5 +572,3 @@ export struct ReaderShell {
     }
   }
 }
-import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
-import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';

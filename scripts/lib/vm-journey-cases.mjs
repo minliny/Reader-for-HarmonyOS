@@ -5,6 +5,7 @@ const LOCAL_TXT = 'Reader Phase 1 公共长目录';
 const FIRST_REMOTE_CHAPTER = '第一章 启程';
 const SECOND_REMOTE_CHAPTER = '第二章 校验';
 const SECOND_LOCAL_CHAPTER = '第二章 测试编号 02';
+const THIRD_LOCAL_CHAPTER = '第三章 测试编号 03';
 
 const id = id => ({ id });
 const text = text => ({ text });
@@ -165,18 +166,16 @@ export const journeys = {
     await ui.tap('打开阅读控制并显示目录入口', readingStage, {
       route: 'reading', all: [readerDirectory],
     });
-    const secondChapter = { text: SECOND_LOCAL_CHAPTER, within: [readerDirectoryContent, { type: 'ListItem' }] };
+    const activeDirectoryTab = { id: 'reader-control-directory-tab-directory', enabled: 'true' };
+    const chooseChapter = title => ({ text: title, within: [readerDirectoryContent, { type: 'ListItem' }] });
+    const controlTitle = title => ({ text: `${title} · 本地书籍`, within: id('reader-control-motion-topbar') });
     await ui.tap('打开阅读控制中的目录', readerDirectory, {
-      route: 'reading', all: [readerDirectoryContent, secondChapter],
+      route: 'reading', all: [activeDirectoryTab, chooseChapter(SECOND_LOCAL_CHAPTER), chooseChapter(THIRD_LOCAL_CHAPTER)],
     });
-    await ui.tap('选择本地 TXT 的第二章', secondChapter, {
-      route: 'reading', all: [readingStage], none: [readerDirectoryContent],
-    });
-    await ui.tap('显示控制并核对当前章已变化', readingStage, {
-      route: 'reading', all: [text(SECOND_LOCAL_CHAPTER), readerDirectory],
-    });
-    await ui.tap('关闭本地阅读控制', readingStage, {
-      route: 'reading', all: [readingStage], none: [readerDirectory],
+    const target = ui.has(controlTitle(SECOND_LOCAL_CHAPTER)) ? THIRD_LOCAL_CHAPTER : SECOND_LOCAL_CHAPTER;
+    await ui.tap(`从目录跳到 ${target} 并核对阅读内容`, chooseChapter(target), {
+      route: 'reading', all: [readingStage, controlTitle(target), { text: target, within: [readingStage, { type: 'CustomFrameNode' }] }],
+      none: [activeDirectoryTab],
     });
     await ui.key('退出本地阅读返回详情', 'Back', {
       route: 'detail', all: [text(LOCAL_TXT), readBook],
