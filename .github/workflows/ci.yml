@@ -1,0 +1,221 @@
+name: HarmonyOS CI
+
+on:
+  push:
+    branches: ['**']
+    paths-ignore: ['docs/**', '**/*.md', '.reader-artifacts/**']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      sdk:
+        description: api26r builds the unsigned HAP, api23 and api24 compile Core Native only
+        type: choice
+        default: api26r
+        options: [api26r, api23, api24]
+  schedule:
+    - cron: '17 3 * * 1'
+
+permissions: { contents: read }
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}-${{ inputs.sdk || 'default' }}
+  cancel-in-progress: true
+
+jobs:
+  host-fast-checks:
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && !github.event.deleted)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    outputs:
+      non_document: ${{ steps.impact.outputs.non_document }}
+      selected: ${{ steps.impact.outputs.selected }}
+      executed: ${{ steps.impact.outputs.executed }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - uses: ./.github/actions/source-hygiene
+        with:
+          directory: .
+      - name: Run affected Host checks
+        id: impact
+        shell: bash
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [[ -z "$BASE_SHA" || "$BASE_SHA" =~ ^0+$ ]]; then
+            BASE_SHA=$(git hash-object -w -t tree --stdin </dev/null)
+          elif ! git cat-file -e "${BASE_SHA}^{commit}" 2>/dev/null; then
+            git fetch --no-tags --no-recurse-submodules --depth=1 origin "$BASE_SHA"
+          fi
+          node scripts/ci/run-impact-checks.mjs --base "$BASE_SHA" \
+            --summary-file "$GITHUB_STEP_SUMMARY" --output-file "$GITHUB_OUTPUT"
+
+  unsigned-hap-build:
+    name: ${{ format('{0} ({1})', matrix.sdk == 'api26r' && 'unsigned-hap-build' || 'core-native-only', matrix.sdk) }}
+    needs: host-fast-checks
+    if: >-
+      ${{
+        !cancelled() && github.repository == 'minliny/Reader-for-HarmonyOS' && github.actor != 'dependabot[bot]' &&
+        ((needs.host-fast-checks.result == 'success' &&
+          ((github.event_name == 'push' && github.ref == 'refs/heads/main' && !github.event.deleted) ||
+           (github.event_name == 'pull_request' && github.event.pull_request.head.repo.id == github.event.repository.id &&
+            needs.host-fast-checks.outputs.non_document == 'true'))) ||
+         (needs.host-fast-checks.result == 'skipped' &&
+          (github.event_name == 'workflow_dispatch' || github.event_name == 'schedule')))
+      }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 85
+    strategy:
+      fail-fast: false
+      matrix:
+        sdk: >-
+          ${{ fromJSON(
+            github.event_name == 'workflow_dispatch' && inputs.sdk == 'api23' && '["api23"]' ||
+            github.event_name == 'workflow_dispatch' && inputs.sdk == 'api24' && '["api24"]' ||
+            '["api26r"]'
+          ) }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          path: Reader-for-HarmonyOS
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: 22.23.3
+      - name: Read the locked Core commit
+        id: core
+        shell: bash
+        run: |
+          commit=$(node -p 'require("./Reader-for-HarmonyOS/scripts/core-dependency.json").coreCommit')
+          [[ "$commit" =~ ^[a-f0-9]{40}$ ]]
+          printf 'commit=%s\n' "$commit" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          repository: minliny/Reader-Core
+          path: Reader-Core
+          ref: ${{ steps.core.outputs.commit }}
+          token: ${{ secrets.READER_CORE_READ_TOKEN || github.token }}
+          persist-credentials: false
+      - name: Prepare disk and pull the locked SDK image
+        id: sdk
+        shell: bash
+        env:
+          SDK: ${{ matrix.sdk }}
+        run: |
+          case "$SDK" in
+            api23) digest=5c1746c216a5d16459e9c871828ab40b49bcc8dff6d2bb7e33902d0b4410c5dc ;;
+            api24) digest=395e3477262500aa8818199b7784ef83b0d41f66b21d795b33fcde5f17422720 ;;
+            api26r) digest=a741ce9a30040f701342dec069e15e6cec5019db28afe9264aaee3044e8fdc31 ;;
+            *) exit 2 ;;
+          esac
+          docker_root=$(docker info --format '{{.DockerRootDir}}')
+          df -h "$docker_root" "$RUNNER_TEMP"
+          available=$(df -Pk "$docker_root" | awk 'NR == 2 { print $4 }')
+          if (( available < 28 * 1024 * 1024 )); then
+            sudo rm -rf -- /usr/local/lib/android /usr/share/dotnet /opt/ghc
+            df -h "$docker_root" "$RUNNER_TEMP"
+          fi
+          image="ghcr.io/dalongzhuazi/harmonyos-ci@sha256:$digest"
+          docker pull --platform linux/amd64 "$image"
+          df -h "$docker_root" "$RUNNER_TEMP"
+          printf 'image=%s\n' "$image" >> "$GITHUB_OUTPUT"
+      - name: Compile Native and prepare the toolchain
+        id: prepare
+        shell: bash
+        env:
+          IMAGE: ${{ steps.sdk.outputs.image }}
+          SDK: ${{ matrix.sdk }}
+        run: |
+          build_temp=$(mktemp -d "$RUNNER_TEMP/reader-unsigned.XXXXXX")
+          node_home=$(dirname "$(dirname "$(command -v node)")")
+          mode=--prepare
+          if [ "$SDK" != api26r ]; then
+            mode=--native-only
+          fi
+          docker run --rm --platform linux/amd64 \
+            --mount "type=bind,src=$build_temp,dst=/reader-ci" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/reader-ci/workspace" \
+            --mount "type=bind,src=$node_home,dst=/reader-ci/node,readonly" \
+            --env GITHUB_SHA --env IMAGE --env SDK \
+            "$IMAGE" bash /reader-ci/workspace/Reader-for-HarmonyOS/scripts/ci/build-unsigned-hap.sh "$mode"
+          printf 'directory=%s\n' "$build_temp" >> "$GITHUB_OUTPUT"
+      - name: Resolve local OHPM dependencies, build and verify the HAP offline
+        if: matrix.sdk == 'api26r'
+        shell: bash
+        env:
+          IMAGE: ${{ steps.sdk.outputs.image }}
+          SDK: ${{ matrix.sdk }}
+          BUILD_TEMP: ${{ steps.prepare.outputs.directory }}
+        run: |
+          node_home=$(dirname "$(dirname "$(command -v node)")")
+          docker run --rm --network none --platform linux/amd64 \
+            --mount "type=bind,src=$BUILD_TEMP,dst=/reader-ci" \
+            --mount "type=bind,src=$GITHUB_WORKSPACE,dst=/reader-ci/workspace" \
+            --mount "type=bind,src=$node_home,dst=/reader-ci/node,readonly" \
+            --env GITHUB_SHA --env IMAGE --env SDK \
+            "$IMAGE" bash /reader-ci/workspace/Reader-for-HarmonyOS/scripts/ci/build-unsigned-hap.sh --package-offline
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        if: matrix.sdk == 'api26r'
+        with:
+          name: unsigned-hap-evidence-${{ matrix.sdk }}-attempt-${{ github.run_attempt }}
+          path: |
+            ${{ steps.prepare.outputs.directory }}/public/manifest.json
+            ${{ steps.prepare.outputs.directory }}/public/source-snapshot.json
+            ${{ steps.prepare.outputs.directory }}/public/build-summary.txt
+          if-no-files-found: error
+          retention-days: 5
+
+  harmonyos-ci-gate:
+    # A branch push on the PR head must not publish the required PR check.
+    name: ${{ github.event_name == 'pull_request' && github.base_ref == 'main' && 'harmonyos-ci-gate' || 'harmonyos-ci-result' }}
+    if: always()
+    needs: [host-fast-checks, unsigned-hap-build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Verify the required job results
+        shell: bash
+        env:
+          HOST_RESULT: ${{ needs.host-fast-checks.result }}
+          BUILD_RESULT: ${{ needs.unsigned-hap-build.result }}
+          NON_DOCUMENT: ${{ needs.host-fast-checks.outputs.non_document }}
+          SELECTED: ${{ needs.host-fast-checks.outputs.selected }}
+          EXECUTED: ${{ needs.host-fast-checks.outputs.executed }}
+          SAME_REPO_PR: ${{ github.event.pull_request.head.repo.id == github.event.repository.id }}
+          DELETED_PUSH: ${{ github.event.deleted || false }}
+        run: |
+          set -euo pipefail
+          expected_host=success
+          expected_build=skipped
+          case "$GITHUB_EVENT_NAME" in
+            pull_request)
+              if [[ "$SAME_REPO_PR" == true && "$NON_DOCUMENT" == true ]]; then
+                expected_build=success
+              fi
+              ;;
+            push)
+              if [[ "$DELETED_PUSH" == true ]]; then
+                expected_host=skipped
+              elif [[ "$GITHUB_REF" == refs/heads/main && "$GITHUB_REPOSITORY" == minliny/Reader-for-HarmonyOS && "$GITHUB_ACTOR" != 'dependabot[bot]' ]]; then
+                expected_build=success
+              fi
+              ;;
+            workflow_dispatch|schedule)
+              expected_host=skipped
+              expected_build=success
+              ;;
+            *) exit 1 ;;
+          esac
+          printf 'Host %s (expected %s), build %s (expected %s)\n' "$HOST_RESULT" "$expected_host" "$BUILD_RESULT" "$expected_build"
+          [[ "$HOST_RESULT" == "$expected_host" && "$BUILD_RESULT" == "$expected_build" ]] || exit 1
+          if [[ "$expected_host" == success ]]; then
+            [[ "$NON_DOCUMENT" == true || "$NON_DOCUMENT" == false ]] || exit 1
+            [[ "$SELECTED" =~ ^(0|[1-9][0-9]*)$ && "$EXECUTED" =~ ^(0|[1-9][0-9]*)$ ]] || exit 1
+            (( EXECUTED <= SELECTED )) || exit 1
+            [[ "$NON_DOCUMENT" == true || "$SELECTED" == 0 ]] || exit 1
+            printf 'Non-document changes: %s; Node gates selected: %s, executed: %s\n' "$NON_DOCUMENT" "$SELECTED" "$EXECUTED"
+          fi

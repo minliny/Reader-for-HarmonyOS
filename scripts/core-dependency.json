@@ -1,0 +1,9 @@
+{
+  "coreCommit": "b8926904193a4bd7453d69d90aee849830879a7b",
+  "coreInputFingerprint": "927d7e023ce21860a1020b6af3d7a148c4ecc042e6c59b6ec20bab047a158a01",
+  "abis": ["arm64-v8a"],
+  "rustTarget": "aarch64-unknown-linux-ohos",
+  "rustToolchain": "1.97.1",
+  "canonicalBuild": "scripts/build-harmony-napi.sh",
+  "ciUnsignedOnly": true
+}
