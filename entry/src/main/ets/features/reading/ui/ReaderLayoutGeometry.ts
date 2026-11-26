@@ -206,6 +206,27 @@ export class ReaderReadingLayoutSnapshot {
   }
 }
 
+export function createReaderWindowMetricsLayoutKey(
+  layout: ReaderReadingLayoutSnapshot,
+  extendIntoCutout: boolean,
+  hideNavigationBar: boolean,
+): string {
+  return [
+    layout.widthClass,
+    layout.viewportWidth,
+    layout.viewportHeight,
+    layout.contentTop,
+    layout.contentRight,
+    layout.contentBottom,
+    layout.contentLeft,
+    layout.facingChapterWidth,
+    layout.titleTrackHeightVp,
+    layout.systemFontScale,
+    extendIntoCutout,
+    hideNavigationBar === true,
+  ].join('|');
+}
+
 export type ReaderControlContentModule = 'home' | 'directory' | 'search' | 'tts' | 'autoPage' |
   'appearance' | 'settings' | 'replace';
 

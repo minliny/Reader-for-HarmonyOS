@@ -170,6 +170,39 @@ export function readerBookmarkLoadState(entries: LocalReadingTocEntry[]): Reader
   return 'ready';
 }
 
+/** Project quotes for the current chapter without changing the admitted records. */
+export function projectReaderChapterBookmarkExcerpts(
+  entries: LocalReadingTocEntry[],
+  chapterIndex: number,
+  matchesChapter: (mark: LocalReadingBookmark) => boolean,
+  excerptFor: (mark: LocalReadingBookmark) => string | undefined,
+): LocalReadingTocEntry[] {
+  const entry = entries.find((candidate: LocalReadingTocEntry): boolean => candidate.index === chapterIndex);
+  if (entry?.bookmarks === undefined) return entries;
+  let changed = false;
+  const bookmarks = entry.bookmarks.map((mark: LocalReadingBookmark): LocalReadingBookmark => {
+    if (!matchesChapter(mark)) {
+      if (mark.positionScope === undefined) return mark;
+      changed = true;
+      // A parent projection can still carry a proof from the previous body.
+      // Keep the stored quote without reusing its offset as a current coordinate.
+      return { time: mark.time, chapterIndex: mark.chapterIndex, chapterOffset: mark.chapterOffset,
+        chapterTitle: mark.chapterTitle, content: mark.content, bookText: mark.bookText, positionScope: undefined };
+    }
+    if ((mark.bookText ?? '').length > 0) return mark;
+    const excerpt = excerptFor(mark);
+    if (excerpt === undefined) return mark;
+    changed = true;
+    return { time: mark.time, chapterIndex: mark.chapterIndex, chapterOffset: mark.chapterOffset,
+      chapterTitle: mark.chapterTitle, content: mark.content, bookText: excerpt, positionScope: mark.positionScope };
+  });
+  if (!changed) return entries;
+  const hydrated: LocalReadingTocEntry = { index: entry.index, title: entry.title, level: entry.level,
+    displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
+    downloadState: entry.downloadState, navigable: entry.navigable, bookmarks };
+  return entries.map((candidate: LocalReadingTocEntry): LocalReadingTocEntry => candidate === entry ? hydrated : candidate);
+}
+
 const BOOKMARK_EXCERPT_MAX_SCALARS = 48;
 
 export function readerBookmarkExcerpt(content: string, maxScalars: number = BOOKMARK_EXCERPT_MAX_SCALARS): string {

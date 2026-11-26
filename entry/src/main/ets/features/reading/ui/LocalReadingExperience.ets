@@ -1,10 +1,14 @@
 import type { ReaderControlTemporaryInputKind } from './ReaderControlSessionState';
 import { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryDataSnapshot';
+import { projectReaderControlDirectoryTitles, readableReaderDirectoryEntries, readerDirectoryEntryRanks,
+  readerDirectoryProgressTarget, readerEntryNavigationItem, readerUnreadDirectoryCandidates }
+  from '../presentation/ReaderDirectoryProjection';
 import { readerControlStructureKey } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { drainReaderPagePreparation, type ReaderPagePreparationAttempt } from './ReaderPagePreparationCoordinator';
 import { measureReaderControlMinimumCandidates } from './ReaderControlMinimumReceipt';
 import { admitReaderControlVisualSnapshot } from './ReaderControlVisualHostPort';
-import { CoreReadingAnchor, InitialReadingToc, CoreReadingLayout } from '../application/ReadingMeasurementFacts';
+import { CoreReadingAnchor, InitialReadingToc, ParagraphRange, createCoreReadingLayout,
+  type CoreReadingLayout, type MeasuredReadingLine } from '../application/ReadingMeasurementFacts';
 import { ArkUILineMetric } from './ReaderArkUILineMetric';
 import { ReaderMaterializedChapterContext, ReaderRetainedPresentation, ReaderControlPlaybackPresentation, ReaderTtsPlayIntent, ReaderControlSelectionDisplay, ReaderControlSelectionOrigin, ReaderControlSelectionCandidate, PreparedReaderPageTurn, ReaderPageTurnPreparation, ReaderPageTurnTarget, ReaderDeferredChapterSelection, ReaderAutomaticPageStart, KnownReadingContentVersion, PreviousChapterMeasurement } from '../presentation/ReaderPagePresentationModels';
 import { readingEntryHandoff } from '../presentation/ReaderRetainedPresentationHost';
@@ -37,14 +41,16 @@ import { SourceSwitchCompletionOverlay } from '../../source/ui/SourceSwitchCompl
 import { ReaderParagraphLayoutOwner } from './ReaderParagraphLayoutOwner';
 import { ReaderPhysicalPaginationOwner } from './ReaderPhysicalPaginationOwner';
 import { drawing } from '@kit.ArkGraphics2D';
-import { ParagraphRange, MeasurementParagraph, MeasuredReadingLine, PhysicalReadingPage } from './ReadingMeasurementModels';
+import { MeasurementParagraph, PhysicalReadingPage } from './ReadingMeasurementModels';
+import { collectForwardMeasuredLines, collectReverseMeasuredLines } from '../application/ReadingMeasuredLineTraversal';
 import { ReaderNativeTextWindow, readerNativeParagraphHeight } from './ReaderNativeTextWindow';
 import { ReaderNativeParagraphResources, ReaderNativeParagraphRecipe, readerNativeParagraphKey } from './ReaderNativeParagraph';
 import { ReaderNativeTextMeasurement, READER_CHAPTER_TITLE_FONT_SIZE_FP, type ReaderNativeTextStyle } from './ReaderNativeTextMeasurement';
-import { readPreparedReadingEntrySnapshot, type ReadingEntryNavigation, type ReadingEntryNavigationItem, type ReadingEntrySnapshot as CoreReadingEntrySnapshot } from '../application/ReadingEntrySnapshot';
+import { readPreparedReadingEntrySnapshot, type ReadingEntryNavigation, type ReadingEntrySnapshot as CoreReadingEntrySnapshot } from '../application/ReadingEntrySnapshot';
 import { ReaderTtsPageFollow, readerTtsFollowActive, type ReaderTtsFollowScope,
   type ReaderTtsFollowLease, type ReaderTtsFollowTarget, type ReaderPageTurnOrigin } from './ReaderTtsPageFollow';
-import type { RemoteReadingPositionContext, RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
+import { createRequestedRemoteReadingPositionContext,
+  type RemoteReadingPositionContext, type RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 import { ReaderThemeHost } from '../../../app/ReaderThemeHost';
 import { ReaderStartupTrace } from '../../../app/ReaderStartupTrace';
 import type { ReaderAutoPageStatus } from './ReaderAutoPageState';
@@ -102,7 +108,7 @@ import {
   remoteReadingFailureKindOf,
   type RemoteReadingFailureKind,
 } from '../application/RemoteContentAdmission';
-import type { ReaderBookIdentity } from '../presentation/ReaderBookmarkProjection';
+import { projectReaderChapterBookmarkExcerpts, type ReaderBookIdentity } from '../presentation/ReaderBookmarkProjection';
 import {
   contentMetricForChapter,
   validateContentMetricsAgainstToc,
@@ -271,24 +277,25 @@ import { copyReaderControlReplaceState, createReaderControlReplaceState, beginRe
   from '../presentation/ReaderControlReplaceState';
 import type { ReaderReplaceRule, ReaderControlReplaceDraft } from '../application/ReaderReplaceQuickState';
 import {
-  ReadingSurfaceLayoutMap, readingChapterLayoutMap, prepareReadingChapterLayoutMap,
+  ReadingSurfaceLayoutMap, readingChapterLayoutMap,
   type ReadingSurfaceLineMetric,
 } from '../application/ReadingSurfaceLayoutMap';
 import {
   ReadingPaginationPrefix,
-  createReadingPaginationLayoutSignature,
   type ReadingPaginationKey,
 } from '../application/ReadingPaginationIndex';
 import {
-  ReadingChapterWindow, retainReadingEntryImageHandles, hasKnownReadingImageGeometry,
+  ReadingChapterWindow, hasKnownReadingImageGeometry, readingChapterWindowOrder,
   type ReadingSessionChapter,
   type ReadingSessionImage,
 } from '../application/ReadingChapterWindow';
 import {
   collectReadingParagraphUtf16Ranges,
-  prepareReadingParagraphUtf16Ranges,
   readingParagraphBoundaryMode,
+  type ReadingParagraphBoundaryMode,
 } from '../application/ReadingParagraphProjection';
+import { completeReadingEntryWindow, prepareReadingChapterMeasurement, prepareReadingParagraphWindowMeasurement,
+  projectRetainedReadingParagraphWindow, type ReadingChapterMeasurementProjection } from '../application/ReadingChapterMeasurementPreparation';
 import { registerReaderFonts, readerRegisteredFontFamily, prepareReaderFontFamily, readerFontFamilyReady } from '../../../ui/foundation/ReaderFonts';
 import { motionAnimateParam, readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
@@ -351,12 +358,11 @@ import {
   copyReaderAppearanceSnapshot,
   createDefaultReaderAppearanceSnapshot,
   normalizeReaderAppearanceFontOrder,
-  readerAppearanceMetricRange,
   setReaderAppearanceAlignment,
   setReaderAppearanceFont,
   setReaderAppearanceFontOrder,
   setReaderAppearanceIndent,
-  setReaderAppearanceMetric,
+  stepReaderAppearanceMetric,
   type ReaderAppearanceAlignment,
   type ReaderAppearanceFont,
   type ReaderAppearanceFontSlot,
@@ -367,6 +373,7 @@ import {
   type ReaderAppearanceTheme,
 } from '../application/ReaderAppearanceState';
 import {
+  createNativeReadingPaginationLayoutSignature,
   readerAppearanceChromeTone,
   readerAppearanceSnapshotFontFamily,
   readerAppearanceFontScale,
@@ -386,6 +393,7 @@ import {
   READER_TABLET_REFERENCE_WIDTH,
   ReaderControlLayoutSnapshot,
   ReaderReadingLayoutSnapshot,
+  createReaderWindowMetricsLayoutKey,
   resolveReaderControlLayout,
   resolveReaderReadingLayout,
   readerControlCandidateWidths,
@@ -433,11 +441,6 @@ interface DeferredReadingImagePixels {
   requested: ReadingSessionImage;
   resolved?: ReadingSessionImage;
   isCurrent: () => boolean;
-}
-
-interface ReaderPreparedMeasurementProjection {
-  map: ReadingSurfaceLayoutMap;
-  ranges: ParagraphRange[];
 }
 
 interface ReaderTtsPreferenceSave {
@@ -569,12 +572,6 @@ class ReaderUIFrameCallback extends FrameCallback {
   onIdle(_timeLeftInNano: number): void {}
 }
 
-const FIGMA_BODY_FONT_WEIGHT = 'regular';
-const READING_WRITING_MODE = 'horizontal-tb';
-const READER_APPEARANCE_FONT_SIZE_STEP = 2;
-const READER_APPEARANCE_LINE_HEIGHT_STEP = 0.08;
-const READER_APPEARANCE_PARAGRAPH_SPACING_STEP = 2;
-const READER_APPEARANCE_LETTER_SPACING_STEP = 0.5;
 const LOCAL_READING_SOURCE_ID = 'local';
 const READER_BOOK_TURN_COMPONENT_ID = 'reader-book-turn-surface';
 const READER_BOOK_TURN_CURRENT_PAGE_SNAPSHOT_ID = 'reader-book-turn-current-page';
@@ -4328,15 +4325,10 @@ export struct ReadingExperience {
       const tryLeadingEmpty = this.sourceId !== LOCAL_READING_SOURCE_ID && remoteSession !== undefined &&
         progress.kind === 'missing' && requested === undefined && bookmark === undefined &&
         this.sourceSwitchTransactionId === undefined && this.sessionGateway?.hasPendingSourceSwitch?.() !== true;
-      const unreadCandidates: number[] = [];
-      if (tryLeadingEmpty && remoteSession !== undefined) {
-        const navigable = new Set<number>(this.readingTocEntries().map((entry: LocalReadingTocEntry): number => entry.index));
-        for (const entry of remoteSession.entries) {
-          if (!navigable.has(entry.index) || entry.url.trim().length === 0) continue;
-          unreadCandidates.push(entry.index);
-          if (unreadCandidates.length === 3) break;
-        }
-        if (unreadCandidates.length === 0) throw new RemoteReadingSourceError('SOURCE_TOC_EMPTY', '目录没有可阅读的章节');
+      const unreadCandidates = tryLeadingEmpty && remoteSession !== undefined ?
+        readerUnreadDirectoryCandidates(this.readingTocEntries(), remoteSession.entries) : [];
+      if (tryLeadingEmpty && unreadCandidates.length === 0) {
+        throw new RemoteReadingSourceError('SOURCE_TOC_EMPTY', '目录没有可阅读的章节');
       }
       const chapterIndex = this.requireKnownChapter(tryLeadingEmpty ? unreadCandidates[0] : target);
       // An explicit directory/mark selection never borrows the old resume offset.
@@ -4480,44 +4472,28 @@ export struct ReadingExperience {
     const contentCurrent = gateway.captureEntryContentValidity?.();
     const current = (): boolean => this.isSelectionActive(lifecycle, selection) && this.chapter === chapter &&
       this.measurementEpoch === measurement && contentCurrent?.() !== false;
-    const operation = gateway.completeEntryChapter(chapter, current, background ? 'background' : 'foreground').then(async (full: ReadingSessionChapter): Promise<void> => {
-      // Let the in-flight first-page save finish against its original immutable
-      // owner. It never gates the visible page; expansion must not orphan it.
-      await this.ordinaryFirstPagePersistence;
-      if (!current()) return;
-      const expanded = retainReadingEntryImageHandles(full, chapter);
-      const expandedMap = readingChapterLayoutMap(expanded);
-      const utf16Ranges = await prepareReadingParagraphUtf16Ranges(expanded.content,
-        readingParagraphBoundaryMode(this.sourceId, this.bookKind), current);
-      if (utf16Ranges === undefined || !current()) return;
-      const preparedRanges: ParagraphRange[] = [];
-      for (let index = 0; index < utf16Ranges.length; index += 1) {
-        if (index > 0 && index % 512 === 0) {
-          await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
-          if (!current()) return;
-        }
-        const range = utf16Ranges[index];
-        preparedRanges.push(new ParagraphRange(`paragraph-${index}-${range.startUtf16}`,
-          range.startUtf16, range.endUtf16, expandedMap.scalarForUtf16(range.startUtf16),
-          expandedMap.scalarForUtf16(range.endUtf16)));
-      }
-      if (!current()) return;
-      this.chapter = expanded;
-      this.chapterLayoutMap = readingChapterLayoutMap(expanded);
-      this.materializedContentVersion = expanded.contentVersion;
-      this.setCurrentReadingChapter(expanded);
-      this.rebuildChapterImageIndexes(expanded);
-      this.paragraphLayout.ranges = preparedRanges;
-      this.retainCurrentChapterWindow();
-      if (this.readerSettingsSnapshot.navigationMode === 'continuous') this.rebuildContinuousFragments(true);
-      // Existing visible native nodes and absolute page facts stay unchanged.
-      if (this.phase === 'ready') {
-        this.schedulePageTurnPreparation();
-        this.prefetchNextChapter(expanded, lifecycle, selection);
-        this.drainRapidPageTurn();
-        this.resumePendingAutoPageTurn();
-      }
-    });
+    const operation = completeReadingEntryWindow(
+      gateway.completeEntryChapter(chapter, current, background ? 'background' : 'foreground'), chapter, current, {
+        firstPagePersistence: (): Promise<void> | undefined => this.ordinaryFirstPagePersistence,
+        boundaryMode: (): ReadingParagraphBoundaryMode => readingParagraphBoundaryMode(this.sourceId, this.bookKind),
+        admit: (expanded: ReadingSessionChapter, ranges: ParagraphRange[]): void => {
+          this.chapter = expanded;
+          this.chapterLayoutMap = readingChapterLayoutMap(expanded);
+          this.materializedContentVersion = expanded.contentVersion;
+          this.setCurrentReadingChapter(expanded);
+          this.rebuildChapterImageIndexes(expanded);
+          this.paragraphLayout.ranges = ranges;
+          this.retainCurrentChapterWindow();
+          if (this.readerSettingsSnapshot.navigationMode === 'continuous') this.rebuildContinuousFragments(true);
+          // Existing visible native nodes and absolute page facts stay unchanged.
+          if (this.phase === 'ready') {
+            this.schedulePageTurnPreparation();
+            this.prefetchNextChapter(expanded, lifecycle, selection);
+            this.drainRapidPageTurn();
+            this.resumePendingAutoPageTurn();
+          }
+        },
+      });
     this.entryWindowHydration = operation;
     this.entryWindowHydrationChapter = chapter;
     try { await operation; }
@@ -4685,9 +4661,7 @@ export struct ReadingExperience {
   }
 
   private entryChapterPosition(chapterIndex: number): number | undefined {
-    const window = this.entryCatalogNavigation;
-    if (window === undefined) return undefined;
-    return [...window.before, window.current, ...window.after].find((entry): boolean => entry.index === chapterIndex)?.readablePosition;
+    return readerEntryNavigationItem(this.entryCatalogNavigation, chapterIndex)?.readablePosition;
   }
 
   private loadInitialToc(isCurrent: () => boolean): Promise<LocalReadingToc> {
@@ -4980,7 +4954,8 @@ export struct ReadingExperience {
               processingVersion: chapter.processingVersion } };
         }
       }
-      const measurementProjection = await this.prepareChapterMeasurementProjection(chapter,
+      const measurementProjection = await prepareReadingChapterMeasurement(chapter,
+        (): ReadingParagraphBoundaryMode => readingParagraphBoundaryMode(this.sourceId, this.bookKind),
         (): boolean => isCurrent() && contentCurrent());
       const chapterMap = measurementProjection.map;
       if (chapterMap.scalarCount() === 0) {
@@ -5062,29 +5037,6 @@ export struct ReadingExperience {
 
   private requestCachedChapterRefresh(error: RemoteChapterCacheRefreshError, refresh: () => void): void {
     this.showReaderRecovery(error.message, '刷新本章', refresh);
-  }
-
-  /** Cold chapter DTOs may contain the complete body. Prepare privately using
-   * the same cooperative work already used by entry-window expansion; no
-   * partial table or old selection may reach native measurement or progress. */
-  private async prepareChapterMeasurementProjection(chapter: ReadingSessionChapter,
-    isCurrent: () => boolean): Promise<ReaderPreparedMeasurementProjection> {
-    const map = await prepareReadingChapterLayoutMap(chapter, isCurrent);
-    const utf16Ranges = await prepareReadingParagraphUtf16Ranges(chapter.content,
-      readingParagraphBoundaryMode(this.sourceId, this.bookKind), isCurrent);
-    if (utf16Ranges === undefined || !isCurrent()) throw new Error('READING_CONTENT_PREPARATION_CANCELLED');
-    const ranges: ParagraphRange[] = [];
-    for (let index = 0; index < utf16Ranges.length; index += 1) {
-      if (index > 0 && index % 512 === 0) {
-        await new Promise<void>((resolve): void => { setTimeout(resolve, 0); });
-        if (!isCurrent()) throw new Error('READING_CONTENT_PREPARATION_CANCELLED');
-      }
-      const range = utf16Ranges[index];
-      ranges.push(new ParagraphRange(`paragraph-${index}-${range.startUtf16}`,
-        range.startUtf16, range.endUtf16, map.scalarForUtf16(range.startUtf16), map.scalarForUtf16(range.endUtf16)));
-    }
-    if (!isCurrent()) throw new Error('READING_CONTENT_PREPARATION_CANCELLED');
-    return { map, ranges };
   }
 
   private notifyPreservedContentRefresh(chapter: ReadingSessionChapter, refreshContent: boolean,
@@ -5942,26 +5894,13 @@ export struct ReadingExperience {
     const map = paragraph.layoutMap;
     const endUtf16 = map.utf16ForScalar(Math.max(0,
       Math.min(map.scalarCount(), endScalar - paragraph.chapterStartScalar)));
-    let low = 0, high = manager.getLineCount();
-    while (low < high) {
-      const middle = Math.floor((low + high) / 2);
-      if (manager.getLineMetrics(middle).endIndex <= endUtf16) low = middle + 1;
-      else high = middle;
-    }
-    const lastLine = low - 1;
-    const result: MeasuredReadingLine[] = [];
-    for (let index = lastLine; index >= 0; index -= 1) {
-      const metric = this.toLineMetric(manager.getLineMetrics(index));
-      const line = map.linesFromArkUI([metric])[0];
-      if (line.endScalar <= line.startScalar) continue;
-      result.push(new MeasuredReadingLine(index, metric.startIndex, metric.endIndex,
-        paragraph.chapterStartScalar + line.startScalar, paragraph.chapterStartScalar + line.endScalar, line.height));
-      // Read only the real lines needed to prove overflow. The paragraph node
-      // remains whole, including giant paragraphs and mixed-direction text.
-      if (this.getUIContext().px2vp(readerNativeParagraphHeight(manager, index, lastLine)) >
-        this.readingLayout().bodyHeightAfterTitle(0)) break;
-    }
-    return result;
+    return collectReverseMeasuredLines(map, paragraph.chapterStartScalar, manager.getLineCount(), endUtf16, {
+      lineEndUtf16: (index: number): number => manager.getLineMetrics(index).endIndex,
+      readLine: (index: number): ArkUILineMetric => this.toLineMetric(manager.getLineMetrics(index)),
+      exceedsCapacity: (first: number, last: number): boolean =>
+        this.getUIContext().px2vp(readerNativeParagraphHeight(manager, first, last)) >
+        this.readingLayout().bodyHeightAfterTitle(0),
+    });
   }
 
   private consumeReversePageParagraph(generation: number, selectionToken: number, lifecycleToken: number): void {
@@ -6062,46 +6001,24 @@ export struct ReadingExperience {
       new ReadingSurfaceLayoutMap(measurementText);
     const requestedLocal = Math.max(0, (paragraph.requestedStartScalar ?? paragraph.chapterStartScalar) - paragraph.chapterStartScalar);
     const requestedUtf16 = measurementMap.utf16ForScalar(requestedLocal);
-    // Locate the native containing line without copying every preceding line
-    // metric across ArkUI. The complete paragraph still owns shaping context.
-    let low = 0, high = lineCount;
-    while (low < high) {
-      const middle = Math.floor((low + high) / 2);
-      if (manager.getLineMetrics(middle).endIndex <= requestedUtf16) low = middle + 1;
-      else high = middle;
-    }
-    const firstLine = low;
-    const result: MeasuredReadingLine[] = [];
-    let previousEnd = 0;
-    for (let lineIndex = firstLine; lineIndex < lineCount; lineIndex += 1) {
-      const metric = this.toLineMetric(manager.getLineMetrics(lineIndex));
-      if (metric.startIndex < previousEnd) {
+    return collectForwardMeasuredLines(measurementMap, paragraph.chapterStartScalar, lineCount, requestedUtf16, {
+      lineEndUtf16: (index: number): number => manager.getLineMetrics(index).endIndex,
+      readLine: (index: number): ArkUILineMetric => this.toLineMetric(manager.getLineMetrics(index)),
+      // The predecessor's background catalog pass deliberately enumerates all pages.
+      exceedsCapacity: (first: number, last: number): boolean => this.previousChapterMeasurement === undefined &&
+        this.getUIContext().px2vp(readerNativeParagraphHeight(manager, first, last)) > this.pendingPageBodyCapacity(),
+      reportOverlap: (index: number, metric: ReadingSurfaceLineMetric, previousEnd: number): void => {
         hilog.error(0x5244, 'Reader',
           'Pagination overlap line=%{public}d start=%{public}d end=%{public}d previousEnd=%{public}d',
-          lineIndex, metric.startIndex, metric.endIndex, previousEnd);
-        throw new Error('PAGINATION_LINE_GEOMETRY_INVALID');
-      }
-      previousEnd = metric.endIndex;
-      const local = measurementMap.linesFromArkUI([metric])[0];
-      if (local.endScalar <= local.startScalar || local.height <= 0) continue;
-      result.push(new MeasuredReadingLine(
-        lineIndex, measurementMap.utf16ForScalar(local.startScalar), measurementMap.utf16ForScalar(local.endScalar),
-        paragraph.chapterStartScalar + local.startScalar,
-        paragraph.chapterStartScalar + local.endScalar, local.height,
-      ));
-      // Include the first overflowing line so page admission can commit. A
-      // predecessor's background catalog pass deliberately enumerates all pages.
-      if (this.previousChapterMeasurement === undefined &&
-        this.getUIContext().px2vp(readerNativeParagraphHeight(manager, firstLine, lineIndex)) > this.pendingPageBodyCapacity()) break;
-    }
-    if (result.length === 0) {
-      const last = manager.getLineMetrics(lineCount - 1);
-      hilog.error(0x5244, 'Reader',
-        'Pagination empty lines=%{public}d first=%{public}d request=%{public}d length=%{public}d lastStart=%{public}d lastEnd=%{public}d lastHeight=%{public}f',
-        lineCount, firstLine, requestedUtf16, measurementText.length, last.startIndex, last.endIndex, last.height);
-      throw new Error('PAGINATION_LINE_GEOMETRY_INVALID');
-    }
-    return result;
+          index, metric.startIndex, metric.endIndex, previousEnd);
+      },
+      reportEmpty: (firstLine: number): void => {
+        const last = manager.getLineMetrics(lineCount - 1);
+        hilog.error(0x5244, 'Reader',
+          'Pagination empty lines=%{public}d first=%{public}d request=%{public}d length=%{public}d lastStart=%{public}d lastEnd=%{public}d lastHeight=%{public}f',
+          lineCount, firstLine, requestedUtf16, measurementText.length, last.startIndex, last.endIndex, last.height);
+      },
+    });
   }
 
   private measuredPageEndLimit(): number | undefined {
@@ -6123,41 +6040,20 @@ export struct ReadingExperience {
   private retainMeasuredParagraphWindow(page: PhysicalReadingPage): void {
     const chapter = this.requireMeasurementChapter();
     if (chapter.documentRange === undefined || this.canonicalModeAnchor >= 0) return;
-    const ranges = this.measuringRanges();
-    const first = ranges.findIndex((range: ParagraphRange): boolean => range.endScalar > page.startScalar);
-    let last = ranges.length - 1;
-    while (last >= 0 && ranges[last].startScalar >= page.endScalar) last -= 1;
-    if (first < 0 || last < first) throw new Error('PAGINATION_PAGE_OUTSIDE_PARAGRAPH_WINDOW');
-    const keepFirst = first > 0 && ranges[first - 1].endScalar - ranges[first - 1].startScalar <= 8192 ? first - 1 : first;
-    const keepLast = last + 1 < ranges.length && ranges[last + 1].endScalar - ranges[last + 1].startScalar <= 8192 ? last + 1 : last;
-    if (keepFirst === 0 && keepLast === ranges.length - 1) return;
-    const oldMap = this.requireMeasurementLayoutMap();
-    const startUtf16 = keepFirst === 0 ? 0 : ranges[keepFirst].startUtf16;
-    const endUtf16 = keepLast === ranges.length - 1 ? chapter.content.length : ranges[keepLast].endUtf16;
-    const startScalar = oldMap.scalarForUtf16(startUtf16), endScalar = oldMap.scalarForUtf16(endUtf16);
-    // The necessary giant paragraph has already been mapped cooperatively.
-    // Do not rebuild that unbounded map synchronously just to trim neighbours.
-    if (endScalar - startScalar > 32768) return;
-    const cropped: ReadingSessionChapter = {
-      sourceId: chapter.sourceId, bookId: chapter.bookId, chapterIndex: chapter.chapterIndex,
-      chapterTitle: chapter.chapterTitle, chapterUrl: chapter.chapterUrl,
-      contentVersion: chapter.contentVersion, directoryTargetProof: chapter.directoryTargetProof, bodyVersion: chapter.bodyVersion,
-      processingVersion: chapter.processingVersion, positionMigration: chapter.positionMigration,
-      cacheRefreshRequired: chapter.cacheRefreshRequired, extractionVia: chapter.extractionVia,
-      content: chapter.content.substring(startUtf16, endUtf16), textLayoutIdentity: undefined,
-      documentRange: { startScalar, endScalar, totalScalars: oldMap.scalarCount() },
-      images: chapter.images.filter((image: ReadingSessionImage): boolean =>
-        image.startScalar >= startScalar && image.endScalar <= endScalar) };
-    const map = readingChapterLayoutMap(cropped);
-    const retained = ranges.slice(keepFirst, keepLast + 1).map((range: ParagraphRange): ParagraphRange =>
-      new ParagraphRange(range.id, range.startUtf16 - startUtf16, range.endUtf16 - startUtf16,
-        range.startScalar, range.endScalar));
-    const lane = this.adjacentMeasurementContext;
+    const retained = projectRetainedReadingParagraphWindow(chapter, this.measuringRanges(),
+      page.startScalar, page.endScalar, (): ReadingSurfaceLayoutMap => this.requireMeasurementLayoutMap());
+    if (retained !== undefined) {
+      this.admitMeasurementParagraphWindow(retained.chapter, retained, this.adjacentMeasurementContext);
+    }
+  }
+
+  private admitMeasurementParagraphWindow(chapter: ReadingSessionChapter, projection: ReadingChapterMeasurementProjection,
+    lane: ReaderMaterializedChapterContext | undefined): void {
     if (lane === undefined) {
-      this.chapter = cropped; this.chapterLayoutMap = map; this.paragraphLayout.ranges = retained;
-      this.setCurrentReadingChapter(cropped); this.rebuildChapterImageIndexes(cropped);
+      this.chapter = chapter; this.chapterLayoutMap = projection.map; this.paragraphLayout.ranges = projection.ranges;
+      this.setCurrentReadingChapter(chapter); this.rebuildChapterImageIndexes(chapter);
     } else {
-      lane.chapter = cropped; lane.layoutMap = map; lane.paragraphRanges = retained;
+      lane.chapter = chapter; lane.layoutMap = projection.map; lane.paragraphRanges = projection.ranges;
     }
   }
 
@@ -6181,24 +6077,13 @@ export struct ReadingExperience {
     const mode = readingParagraphBoundaryMode(this.sourceId, this.bookKind);
     void this.activeGateway().loadParagraphWindow(chapter,
       direction === 'before' ? range.startScalar : range.endScalar,
-      direction, mode, current).then(async (result: ReadingSessionChapter): Promise<void> => {
-      if (!current()) return;
-      const expanded = retainReadingEntryImageHandles(result, chapter);
-      const map: ReadingSurfaceLayoutMap = await prepareReadingChapterLayoutMap(expanded, current);
-      const ranges = await prepareReadingParagraphUtf16Ranges(expanded.content, mode, current);
-      if (!current() || ranges === undefined) return;
-      const paragraphs = ranges.map((item, index): ParagraphRange => new ParagraphRange(
-        `paragraph-${index}-${item.startUtf16}`, item.startUtf16, item.endUtf16,
-        map.scalarForUtf16(item.startUtf16), map.scalarForUtf16(item.endUtf16)));
-      if (lane === undefined) {
-        this.chapter = expanded; this.chapterLayoutMap = map; this.paragraphLayout.ranges = paragraphs;
-        this.setCurrentReadingChapter(expanded); this.rebuildChapterImageIndexes(expanded);
-      } else {
-        lane.chapter = expanded; lane.layoutMap = map; lane.paragraphRanges = paragraphs;
-      }
-      this.measurementCompleting = false;
-      this.beginMeasurement(lifecycleToken);
-    }).catch(async (error: Error): Promise<void> => {
+      direction, mode, current).then((result: ReadingSessionChapter): Promise<void> =>
+      prepareReadingParagraphWindowMeasurement(result, chapter, mode, current,
+        (expanded: ReadingSessionChapter, projection: ReadingChapterMeasurementProjection): void => {
+          this.admitMeasurementParagraphWindow(expanded, projection, lane);
+          this.measurementCompleting = false;
+          this.beginMeasurement(lifecycleToken);
+        })).catch(async (error: Error): Promise<void> => {
       if (!current()) return;
       // Adjacent/control preparations retain their existing rollback owner.
       // An ordinary current page reloads through the same versioned position
@@ -7316,13 +7201,10 @@ export struct ReadingExperience {
   }
 
   private coreLayout(): CoreReadingLayout {
-    // Core's contract is a uint32 viewport snapshot. ArkUI areas may be
-    // fractional vp values, so retain the fractional value for measurement
-    // and round only at this Core protocol boundary.
     const layout = this.readingLayout();
-    return new CoreReadingLayout(
-      Math.max(1, Math.round(layout.viewportWidth)),
-      Math.max(1, Math.round(layout.viewportHeight)),
+    return createCoreReadingLayout(
+      layout.viewportWidth,
+      layout.viewportHeight,
       readerAppearanceFontScale(this.appearanceSnapshot) * layout.systemFontScale,
       readerAppearanceLineHeight(this.appearanceSnapshot),
     );
@@ -7330,30 +7212,7 @@ export struct ReadingExperience {
 
   private paginationLayoutSignature(): string {
     const layout = this.readingLayout();
-    return 'native-paragraph-v3|' + createReadingPaginationLayoutSignature({
-      deviceForm: layout.widthClass === 'expanded' ? 'tablet' : 'phone',
-      viewportWidth: layout.viewportWidth,
-      viewportHeight: layout.viewportHeight,
-      fontFamily: readerAppearanceSnapshotFontFamily(this.appearanceSnapshot),
-      fontWeight: FIGMA_BODY_FONT_WEIGHT,
-      fontSize: this.appearanceSnapshot.fontSize,
-      fontScale: readerAppearanceFontScale(this.appearanceSnapshot) * layout.systemFontScale,
-      lineHeight: readerAppearanceLineHeight(this.appearanceSnapshot),
-      topInset: layout.contentTop,
-      bottomInset: layout.contentBottom,
-      leftInset: layout.contentLeft,
-      rightInset: layout.contentRight,
-      titleLineHeight: layout.titleLineHeightFp,
-      titleToBodySpacing: layout.titleToBodySpacingVp,
-      paragraphSpacing: this.appearanceSnapshot.paragraphSpacing,
-      paragraphIndent: readerAppearanceParagraphIndent(
-        this.appearanceSnapshot.fontSize,
-        this.appearanceSnapshot.indent,
-      ),
-      letterSpacing: this.appearanceSnapshot.letterSpacing,
-      textAlignment: this.appearanceSnapshot.alignment,
-      writingMode: READING_WRITING_MODE,
-    });
+    return createNativeReadingPaginationLayoutSignature(layout, this.appearanceSnapshot);
   }
 
   private currentPaginationKey(): ReadingPaginationKey {
@@ -8382,20 +8241,11 @@ export struct ReadingExperience {
 
   private windowMetricsLayoutKey(): string {
     const layout = this.readingLayout();
-    return [
-      layout.widthClass,
-      layout.viewportWidth,
-      layout.viewportHeight,
-      layout.contentTop,
-      layout.contentRight,
-      layout.contentBottom,
-      layout.contentLeft,
-      layout.facingChapterWidth,
-      layout.titleTrackHeightVp,
-      layout.systemFontScale,
+    return createReaderWindowMetricsLayoutKey(
+      layout,
       this.readerSettingsSnapshot.extendIntoCutout,
-      this.readerSettingsSnapshot.hideNavigationBar === true,
-    ].join('|');
+      this.readerSettingsSnapshot.hideNavigationBar,
+    );
   }
 
   private readerSystemGestureLeftInset(): number {
@@ -8587,53 +8437,35 @@ export struct ReadingExperience {
     this.bookmarkExcerptSource = entries;
     this.bookmarkExcerptChapter = chapter;
     this.bookmarkExcerptProjection = entries;
-    const entry = entries.find((candidate: LocalReadingTocEntry): boolean => candidate.index === chapter.chapterIndex);
-    if (entry?.bookmarks === undefined) return entries;
-    let changed = false;
-    const bookmarks = entry.bookmarks.map((mark: LocalReadingBookmark): LocalReadingBookmark => {
-      if (!this.bookmarkMatchesCurrentChapter(mark)) {
-        if (mark.positionScope === undefined) return mark;
-        changed = true;
-        // A parent projection may still carry the previous body's proof while
-        // the canonical list reloads. Retain its original quote, never a newly
-        // sliced quote or a current coordinate claimed from the old offset.
-        return { time: mark.time, chapterIndex: mark.chapterIndex, chapterOffset: mark.chapterOffset,
-          chapterTitle: mark.chapterTitle, content: mark.content, bookText: mark.bookText, positionScope: undefined };
+    const projection = projectReaderChapterBookmarkExcerpts(entries, chapter.chapterIndex,
+      (mark: LocalReadingBookmark): boolean => this.bookmarkMatchesCurrentChapter(mark),
+      (mark: LocalReadingBookmark): string | undefined => this.controlDirectoryBookmarkExcerpt(chapter, map, mark));
+    if (projection !== entries) this.bookmarkExcerptProjection = projection;
+    return projection;
+  }
+
+  private controlDirectoryBookmarkExcerpt(chapter: ReadingSessionChapter, map: ReadingSurfaceLayoutMap,
+    mark: LocalReadingBookmark): string | undefined {
+    if (mark.chapterOffset >= map.scalarCount() || !map.containsScalar(mark.chapterOffset) ||
+      !map.containsScalar(Math.min(map.scalarCount(), mark.chapterOffset + 160))) return undefined;
+    const key = JSON.stringify([chapter.sourceId, chapter.bookId, chapter.chapterIndex,
+      chapter.contentVersion, mark.time, mark.chapterOffset]);
+    let excerpt = this.bookmarkExcerptCache.get(key);
+    if (excerpt === undefined) {
+      excerpt = chapter.content.substring(map.utf16ForScalar(mark.chapterOffset),
+        map.utf16ForScalar(Math.min(map.scalarCount(), mark.chapterOffset + 160)));
+      if (this.bookmarkExcerptCache.size >= 128) {
+        for (const oldest of this.bookmarkExcerptCache.keys()) { this.bookmarkExcerptCache.delete(oldest); break; }
       }
-      if ((mark.bookText ?? '').length > 0 || mark.chapterOffset >= map.scalarCount() ||
-        !map.containsScalar(mark.chapterOffset) || !map.containsScalar(Math.min(map.scalarCount(), mark.chapterOffset + 160))) return mark;
-      const key = JSON.stringify([chapter.sourceId, chapter.bookId, chapter.chapterIndex,
-        chapter.contentVersion, mark.time, mark.chapterOffset]);
-      let excerpt = this.bookmarkExcerptCache.get(key);
-      if (excerpt === undefined) {
-        excerpt = chapter.content.substring(map.utf16ForScalar(mark.chapterOffset),
-          map.utf16ForScalar(Math.min(map.scalarCount(), mark.chapterOffset + 160)));
-        if (this.bookmarkExcerptCache.size >= 128) {
-          for (const oldest of this.bookmarkExcerptCache.keys()) { this.bookmarkExcerptCache.delete(oldest); break; }
-        }
-        this.bookmarkExcerptCache.set(key, excerpt);
-      }
-      // Display-only recovery for older records. Never overwrite the user's
-      // note or persist guessed original text, and never fetch another chapter.
-      changed = true;
-      return { time: mark.time, chapterIndex: mark.chapterIndex, chapterOffset: mark.chapterOffset,
-        chapterTitle: mark.chapterTitle, content: mark.content, bookText: excerpt, positionScope: mark.positionScope };
-    });
-    if (!changed) return entries;
-    const hydrated: LocalReadingTocEntry = { index: entry.index, title: entry.title, level: entry.level,
-      displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
-      downloadState: entry.downloadState, navigable: entry.navigable, bookmarks };
-    this.bookmarkExcerptProjection = entries.map((candidate: LocalReadingTocEntry): LocalReadingTocEntry =>
-      candidate === entry ? hydrated : candidate);
-    return this.bookmarkExcerptProjection;
+      this.bookmarkExcerptCache.set(key, excerpt);
+    }
+    return excerpt;
   }
 
   private controlDirectoryCatalogPosition(): number {
     const navigation = this.entryCatalogNavigation;
     if (navigation === undefined) return -1;
-    const index = this.currentChapterIndex();
-    return [...navigation.before, navigation.current, ...navigation.after]
-      .find((entry: ReadingEntryNavigationItem): boolean => entry.index === index)?.position ?? -1;
+    return readerEntryNavigationItem(navigation, this.currentChapterIndex())?.position ?? -1;
   }
 
   private bookmarkMatchesCurrentChapter(mark: LocalReadingBookmark): boolean {
@@ -8664,22 +8496,7 @@ export struct ReadingExperience {
       this.controlDirectoryTocSource === this.tocEntries) {
       return this.controlDirectoryProjection;
     }
-    const projectedByChapter = new Map<number, LocalReadingTocEntry>();
-    for (const projected of this.tocEntries) {
-      projectedByChapter.set(projected.index, projected);
-    }
-    const projection = this.directoryEntries.map((entry: LocalReadingTocEntry): LocalReadingTocEntry => {
-      const projected = projectedByChapter.get(entry.index);
-      return projected === undefined ? entry : {
-        index: entry.index,
-        title: projected.title,
-        displayTitle: entry.displayTitle, isVip: entry.isVip, isPay: entry.isPay, contextTitle: entry.contextTitle,
-        level: projected.level ?? entry.level,
-        downloadState: entry.downloadState,
-        navigable: entry.navigable,
-        bookmarks: entry.bookmarks,
-      };
-    });
+    const projection = projectReaderControlDirectoryTitles(this.directoryEntries, this.tocEntries);
     this.controlDirectoryParentSource = this.directoryEntries;
     this.controlDirectoryTocSource = this.tocEntries;
     this.controlDirectoryProjection = projection;
@@ -10862,37 +10679,7 @@ export struct ReadingExperience {
     direction: ReaderAppearanceStepDirection,
   ): void {
     this.commitAppearanceChange((current: ReaderAppearanceSnapshot): ReaderAppearanceSnapshot =>
-      this.stepAppearanceSnapshotMetric(current, metric, direction));
-  }
-
-  private stepAppearanceSnapshotMetric(
-    current: ReaderAppearanceSnapshot,
-    metric: ReaderAppearanceMetric,
-    direction: ReaderAppearanceStepDirection,
-  ): ReaderAppearanceSnapshot {
-    let value = 0;
-    if (metric === 'fontSize') {
-      value = current.fontSize + direction * READER_APPEARANCE_FONT_SIZE_STEP;
-    } else if (metric === 'lineHeightMultiplier') {
-      value = this.roundAppearanceMetric(
-        current.lineHeightMultiplier + direction * READER_APPEARANCE_LINE_HEIGHT_STEP,
-      );
-    } else if (metric === 'paragraphSpacing') {
-      value = current.paragraphSpacing + direction * READER_APPEARANCE_PARAGRAPH_SPACING_STEP;
-    } else if (metric === 'pageMarginOffset') {
-      value = (current.pageMarginOffset ?? 0) + direction * 2;
-    } else {
-      value = this.roundAppearanceMetric(
-        current.letterSpacing + direction * READER_APPEARANCE_LETTER_SPACING_STEP,
-      );
-    }
-    const range = readerAppearanceMetricRange(metric);
-    value = Math.min(range.maximum, Math.max(range.minimum, value));
-    return setReaderAppearanceMetric(current, metric, value);
-  }
-
-  private roundAppearanceMetric(value: number): number {
-    return Math.round(value * 100) / 100;
+      stepReaderAppearanceMetric(current, metric, direction));
   }
 
   private async commitAppearanceChange(change: ReaderAppearanceChange): Promise<ReaderAppearanceSnapshot | undefined> {
@@ -12886,15 +12673,10 @@ export struct ReadingExperience {
       }
       return;
     }
-    if (this.readingTocEntries().length === 0) {
-      return;
-    }
-    const normalized = Math.max(0, Math.min(1, percent / 100));
-    const scaled = normalized >= 1 ? this.readingTocEntries().length : normalized * this.readingTocEntries().length;
-    const position = Math.min(this.readingTocEntries().length - 1, Math.floor(scaled));
-    const chapterProgress = normalized >= 1 ? 1 : scaled - position;
+    const target = readerDirectoryProgressTarget(this.readingTocEntries().length, percent);
+    if (target === undefined) return;
     this.clearTtsChapterEndTimer();
-    this.selectChapterAnchor(this.readingTocEntries()[position].index, 0, false, true, chapterProgress, -2, false);
+    this.selectChapterAnchor(this.readingTocEntries()[target.position].index, 0, false, true, target.chapterProgress, -2, false);
   }
 
   private canRefreshCurrentChapter(): boolean {
@@ -12915,15 +12697,8 @@ export struct ReadingExperience {
 
   private positionContextForScope(scope: RemoteReadingPositionScope | undefined,
     chapterIndex: number, offset: number, directoryTargetProof?: ReaderDirectoryTargetProof): RemoteReadingPositionContext | undefined {
-    if (directoryTargetProof !== undefined && (directoryTargetProof.sourceId !== this.sourceId || directoryTargetProof.bookId !== this.bookId)) throw new Error('DIRECTORY_SCOPE_CHANGED');
-    if (scope === undefined) return directoryTargetProof === undefined ? undefined : { anchors: [], directoryTargetProof };
-    if (scope.sourceId !== this.sourceId || scope.bookId !== this.bookId || scope.chapterIndex !== chapterIndex) {
-      throw new Error('READING_POSITION_SCOPE_MISMATCH');
-    }
-    const context: RemoteReadingPositionContext = { bodyVersion: scope.bodyVersion, processingVersion: scope.processingVersion,
-      anchors: [{ id: 'requested', offset }] };
-    if (directoryTargetProof !== undefined) context.directoryTargetProof = directoryTargetProof;
-    return context;
+    return createRequestedRemoteReadingPositionContext(
+      this.sourceId, this.bookId, chapterIndex, offset, scope, directoryTargetProof);
   }
 
   private selectChapterAnchor(
@@ -15950,10 +15725,7 @@ export struct ReadingExperience {
   }
 
   private configureReadingChapterWindow(entries: LocalReadingTocEntry[] = this.tocEntries): void {
-    // The current historical body may be retained without becoming a directory,
-    // automatic continuation, or progress-denominator target.
-    const order = entries.filter((entry: LocalReadingTocEntry): boolean =>
-      entry.navigable !== false || entry.index === this.resumeOnlyChapterIndex).map((entry: LocalReadingTocEntry): number => entry.index);
+    const order = readingChapterWindowOrder(entries, this.resumeOnlyChapterIndex);
     this.chapterWindow.configure(this.sourceId, this.bookId, order, this.resumeOnlyChapterIndex);
   }
 
@@ -15968,9 +15740,8 @@ export struct ReadingExperience {
   private readingTocEntries(): LocalReadingTocEntry[] {
     if (this.readingTocSource !== this.tocEntries) {
       this.readingTocSource = this.tocEntries;
-      this.readingTocProjection = this.tocEntries.filter((entry: LocalReadingTocEntry): boolean => entry.navigable !== false);
-      this.readingTocRanks = new Map<number, number>();
-      this.readingTocProjection.forEach((entry: LocalReadingTocEntry, position: number): void => { this.readingTocRanks.set(entry.index, position); });
+      this.readingTocProjection = readableReaderDirectoryEntries(this.tocEntries);
+      this.readingTocRanks = readerDirectoryEntryRanks(this.readingTocProjection);
     }
     return this.readingTocProjection;
   }
