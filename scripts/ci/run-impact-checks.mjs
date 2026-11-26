@@ -3,11 +3,12 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { appendFileSync, readFileSync } from 'node:fs';
 import { posix, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseArgs } from 'node:util';
+import { isDeepStrictEqual, parseArgs } from 'node:util';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const impactTool = 'tools/gate-index-impact.mjs';
 const gateTool = 'tools/gate-index.mjs';
+const gateCatalog = 'tools/gate-index.json';
 const impactArgumentBytes = 80 * 1024;
 const nodeCosts = new Set(['plain-js', 'plain-js-and-fixtures', 'local-method']);
 const testName = /^test-[A-Za-z0-9._-]+\.mjs$/;
@@ -43,12 +44,12 @@ function readArguments() {
   return { ...values, files };
 }
 
-function command(binary, args) {
+function command(binary, args, stderr = 'inherit') {
   return execFileSync(binary, args, {
     cwd: root,
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
-    stdio: ['ignore', 'pipe', 'inherit'],
+    stdio: ['ignore', 'pipe', stderr],
   });
 }
 
@@ -60,15 +61,16 @@ function changedPaths({ base, head, files }) {
   if (files.length) {
     if (base !== undefined) throw new Error('Choose --files or a --base/--head comparison.');
     if (head !== 'HEAD' && gitCommit(head) !== gitCommit('HEAD')) throw new Error('--head must match the checked-out commit.');
-    return files;
+    return { paths: files };
   }
   if (!base) throw new Error('Provide --base or --files.');
   const headCommit = gitCommit(head);
   if (headCommit !== gitCommit('HEAD')) throw new Error('--head must match the checked-out commit.');
   const baseTree = command('git', ['rev-parse', '--verify', '--end-of-options', `${base}^{tree}`]).trim();
   // With rename detection off, Git returns the old and new paths separately.
-  return command('git', ['diff', '--name-only', '-z', '--no-renames', baseTree, headCommit, '--'])
+  const paths = command('git', ['diff', '--name-only', '-z', '--no-renames', baseTree, headCommit, '--'])
     .split('\0').filter(Boolean);
+  return { paths, baseTree };
 }
 
 function hostPath(path) {
@@ -93,6 +95,37 @@ function nonDocumentPaths(paths) {
 
 function readJson(path) {
   return JSON.parse(readFileSync(resolve(root, path), 'utf8'));
+}
+
+function catalogEntriesById(catalog) {
+  if (!Array.isArray(catalog.entries) || !Array.isArray(catalog.caseEntries ?? [])) return null;
+  const byId = new Map();
+  for (const [group, entries] of [['entries', catalog.entries], ['caseEntries', catalog.caseEntries ?? []]]) {
+    for (const entry of entries) {
+      if (typeof entry?.id !== 'string' || !entry.id || byId.has(entry.id)) return null;
+      byId.set(entry.id, { group, entry });
+    }
+  }
+  return byId;
+}
+
+function changedCatalogGates(baseTree, catalog) {
+  let previous;
+  try {
+    previous = JSON.parse(command('git', ['show', `${baseTree}:${gateCatalog}`], 'ignore'));
+  } catch {
+    return null;
+  }
+  if (previous?.schemaVersion !== 1 || catalog?.schemaVersion !== previous.schemaVersion ||
+      catalog.completeReview !== previous.completeReview || catalog.reviewedDefinitionsFrozen !== previous.reviewedDefinitionsFrozen) return null;
+  const before = catalogEntriesById(previous);
+  const after = catalogEntriesById(catalog);
+  if (!before || !after) return null;
+  const changed = new Set();
+  for (const [id, record] of after) {
+    if (!isDeepStrictEqual(before.get(id), record)) changed.add(`gate:${id}`);
+  }
+  return changed;
 }
 
 function hasNoDeclaredResources(entry, manifest) {
@@ -126,8 +159,12 @@ function isNodeOnly(entry, manifest) {
   });
 }
 
-function affectedGates(paths) {
-  const impacted = new Set();
+function affectedGates(paths, baseTree) {
+  const catalog = readJson(gateCatalog);
+  // The graph binds the catalog file to every gate. In a Git comparison the
+  // changed records supply the exact catalog impact without widening other paths.
+  const catalogGates = baseTree && paths.includes(gateCatalog) ? changedCatalogGates(baseTree, catalog) : null;
+  const impacted = new Set(catalogGates ?? []);
   // Direct matches and reverse references are impacted. Prerequisites alone
   // are inputs to those checks, so the query does not select them for CI.
   const addBatch = args => {
@@ -137,6 +174,7 @@ function affectedGates(paths) {
   let args = [];
   let bytes = 0;
   for (const path of paths) {
+    if (path === gateCatalog && catalogGates !== null) continue;
     const arg = `--affected=${path}`;
     const argBytes = Buffer.byteLength(arg) + 1;
     if (args.length && bytes + argBytes > impactArgumentBytes) {
@@ -148,7 +186,7 @@ function affectedGates(paths) {
     bytes += argBytes;
   }
   if (args.length) addBatch(args);
-  const catalog = readJson('tools/gate-index.json');
+  if (!impacted.size) return [];
   const resources = readJson('tools/contract-case-manifest.json');
   return [...catalog.entries, ...(catalog.caseEntries ?? [])]
     .filter(entry => impacted.has(`gate:${entry.id}`) && isNodeOnly(entry, resources))
@@ -179,9 +217,10 @@ function main() {
   if (!/^\d+$/.test(options['max-cases']) || !Number.isSafeInteger(cap) || cap < 1) {
     throw new Error('--max-cases must be a positive integer.');
   }
-  const paths = nonDocumentPaths(changedPaths(options));
+  const changes = changedPaths(options);
+  const paths = nonDocumentPaths(changes.paths);
   const results = [];
-  const candidates = paths.length ? affectedGates(paths) : [];
+  const candidates = paths.length ? affectedGates(paths, changes.baseTree) : [];
   let started = 0;
   for (const { id, definitionInputs } of candidates) {
     if (started === cap) {

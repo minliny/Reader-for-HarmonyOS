@@ -457971,9 +457971,10 @@
       "prerequisites": [
         "Node stripTypeScriptTypes",
         "生产Layout/Keyboard/Session",
-        "fake window metrics/IME"
+        "fake window metrics/IME",
+        "Harmony SDK ETS loader"
       ],
-      "estimatedCostType": "plain-js",
+      "estimatedCostType": "sdk-method-probe",
       "reviewedSourceSha256": "8f8e7d7aa95610a2ca43a36fe6c46c30dd4f6f49d8e0c67a59b5f5b4045410d4",
       "definitionInputs": [
         {
