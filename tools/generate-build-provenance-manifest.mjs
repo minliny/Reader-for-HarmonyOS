@@ -191,6 +191,7 @@ function treeRecord(root) {
 
 function readArchiveProof(hap, nativeEntry, bootstrapEntry) {
   return withHapZip(hap, zip => {
+    const hapRecord = zip.fileRecord(basename(hap));
     const read = path => {
       if (!zip.names.includes(path)) throw new Error(`HAP does not contain ${path}`);
       const bytes = zip.read(path, 128 * 1024 * 1024);
@@ -199,7 +200,7 @@ function readArchiveProof(hap, nativeEntry, bootstrapEntry) {
     return {
       embeddedNative: read(nativeEntry),
       embeddedBootstrap: read(bootstrapEntry),
-      hapRecord: zip.fileRecord(basename(hap)),
+      hapRecord,
       assertUnchanged: zip.assertUnchanged,
     };
   });

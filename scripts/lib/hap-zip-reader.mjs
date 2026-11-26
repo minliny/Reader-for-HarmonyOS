@@ -66,10 +66,13 @@ function archiveSha256(fd, fileSize) {
   return hash.digest('hex');
 }
 
-function assertFileIdentity(expected, actual) {
+function assertSameArchiveFile(expected, actual) {
   requireZip(actual?.isFile() && actual.dev === expected.dev && actual.ino === expected.ino &&
-    actual.size === expected.size && actual.mode === expected.mode && actual.mtimeNs === expected.mtimeNs &&
-    actual.ctimeNs === expected.ctimeNs, 'archive file identity changed');
+    actual.size === expected.size && actual.mode === expected.mode, 'archive file identity changed');
+}
+
+function sameArchiveTimestamps(before, after) {
+  return before.mtimeNs === after.mtimeNs && before.ctimeNs === after.ctimeNs;
 }
 
 function centralDirectory(read, fileSize) {
@@ -253,33 +256,59 @@ function parseEntries(read, directory) {
 /** Open one read-only archive for a synchronous action. Only assertUnchanged remains usable afterward. */
 export function withHapZip(path, action) {
   const absolute = resolve(path);
-  const captured = lstatSync(absolute, { bigint: true, throwIfNoEntry: false });
+  const pathStat = () => lstatSync(absolute, { bigint: true, throwIfNoEntry: false });
+  let captured = pathStat();
   requireZip(captured?.isFile(), 'archive must be a regular file');
   requireZip(captured.size >= 22n && captured.size <= BigInt(MAX_ARCHIVE_BYTES), 'archive size is out of bounds');
-  const fd = openSync(absolute, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+  const openFlags = constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0) | (constants.O_NONBLOCK ?? 0);
+  const fd = openSync(absolute, openFlags);
   let open = true;
+  let sha256;
   try {
+    const bytes = Number(captured.size);
+    const descriptorStamp = archiveFd => {
+      const opened = fstatSync(archiveFd, { bigint: true });
+      const current = pathStat();
+      assertSameArchiveFile(captured, opened);
+      assertSameArchiveFile(captured, current);
+      requireZip(sameArchiveTimestamps(opened, current), 'archive file identity changed');
+      return opened;
+    };
+    const stableDigest = (archiveFd, before) => {
+      requireZip(sameArchiveTimestamps(before, descriptorStamp(archiveFd)), 'archive file identity changed');
+      const digest = archiveSha256(archiveFd, bytes);
+      requireZip(sameArchiveTimestamps(before, descriptorStamp(archiveFd)), 'archive file identity changed');
+      return digest;
+    };
     const assertUnchanged = () => {
-      if (open) assertFileIdentity(captured, fstatSync(fd, { bigint: true }));
-      assertFileIdentity(captured, lstatSync(absolute, { bigint: true, throwIfNoEntry: false }));
+      const current = open ? descriptorStamp(fd) : pathStat();
+      if (!open) assertSameArchiveFile(captured, current);
+      if (sameArchiveTimestamps(captured, current)) return current;
+      requireZip(sha256 !== undefined, 'archive file identity changed');
+      // A changed timestamp can only refresh the stamp after hashing the same
+      // inode under a stable descriptor and confirming all the original bytes.
+      const archiveFd = open ? fd : openSync(absolute, openFlags);
+      try {
+        requireZip(stableDigest(archiveFd, current) === sha256, 'archive file identity changed');
+        captured = current;
+        return current;
+      } finally { if (!open) closeSync(archiveFd); }
     };
     assertUnchanged();
-    const bytes = Number(captured.size);
     const read = reader(fd, bytes);
     const entries = parseEntries(read, centralDirectory(read, bytes));
-    let sha256;
     const result = action({
       names: Object.freeze([...entries.keys()]),
       assertUnchanged,
       fileRecord(recordedPath = basename(absolute)) {
         requireZip(open, 'archive reader has already closed');
-        assertUnchanged();
-        sha256 ??= archiveSha256(fd, bytes);
-        assertUnchanged();
+        const before = assertUnchanged();
+        sha256 ??= stableDigest(fd, before);
         return { path: recordedPath, bytes, sha256 };
       },
       read(name, maxBytes = MAX_ENTRY_BYTES) {
         requireZip(open, 'archive reader has already closed');
+        const before = assertUnchanged();
         const entry = entries.get(name);
         requireZip(entry && !name.endsWith('/'), 'required entry is missing');
         requireZip(Number.isSafeInteger(maxBytes) && maxBytes >= 0 && entry.size <= maxBytes,
@@ -297,6 +326,7 @@ export function withHapZip(path, action) {
           }
         }
         requireZip(bytes.length === entry.size && crc32(bytes) === entry.crc, 'entry size or CRC mismatch');
+        requireZip(sameArchiveTimestamps(before, descriptorStamp(fd)), 'archive file identity changed');
         return bytes;
       },
     });

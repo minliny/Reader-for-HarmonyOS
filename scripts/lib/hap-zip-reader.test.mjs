@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { mkdtempSync, renameSync, rmSync, truncateSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, renameSync, rmSync, truncateSync, utimesSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -247,6 +247,47 @@ test('rejects same-inode content changes and path replacement during the archive
       writeFileSync(path + '.replacement', fixture.data);
       renameSync(path + '.replacement', path);
     }), /archive file identity changed/);
+  });
+});
+
+test('revalidates unchanged bytes after timestamp drift during and after the archive callback', () => {
+  const fixture = basic();
+  const sha256 = createHash('sha256').update(fixture.data).digest('hex');
+  withFixture(fixture.data, path => {
+    const assertUnchanged = withHapZip(path, zip => {
+      assert.equal(zip.fileRecord().sha256, sha256);
+      utimesSync(path, 1000, 1000);
+      assert.doesNotThrow(zip.assertUnchanged);
+      assert.equal(zip.fileRecord().sha256, sha256);
+      return zip.assertUnchanged;
+    });
+    utimesSync(path, 2000, 2000);
+    assert.doesNotThrow(assertUnchanged);
+    assert.doesNotThrow(assertUnchanged);
+  });
+});
+
+test('timestamp drift stays invalid until a full archive digest has been captured', () => {
+  withFixture(basic().data, path => {
+    assert.throws(() => withHapZip(path, zip => {
+      utimesSync(path, 1000, 1000);
+      zip.fileRecord();
+    }), /archive file identity changed/);
+  });
+});
+
+test('a retained archive digest rejects a late same-size content change', () => {
+  const fixture = basic();
+  withFixture(fixture.data, path => {
+    const assertUnchanged = withHapZip(path, zip => {
+      zip.fileRecord();
+      return zip.assertUnchanged;
+    });
+    const changed = Buffer.from(fixture.data);
+    changed[fixture.layout[0].data] ^= 1;
+    writeFileSync(path, changed);
+    utimesSync(path, 1000, 1000);
+    assert.throws(assertUnchanged, /archive file identity changed/);
   });
 });
 

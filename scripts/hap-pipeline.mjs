@@ -845,7 +845,9 @@ function inspectHapForSeal(hapPath, kind, publicPath, requiredResources, abi, ex
     if (JSON.stringify(nativeEntries) !== JSON.stringify(expectedNativeEntries)) {
       fail(`unexpected native archive layout in ${hapPath}: ${JSON.stringify(nativeEntries)}`);
     }
+    const hapRecord = measureBuildStep('hapDigest', () => zip.fileRecord(publicPath));
     const signature = verifySignature(hapPath);
+    zip.assertUnchanged();
     if (kind === 'signed' && signature.status !== 'signed') fail(`${hapPath} is not signed`);
     if (kind === 'unsigned' && signature.status !== 'unsigned') fail(`${hapPath} is not unsigned`);
     let embeddedBootstrap;
@@ -862,7 +864,6 @@ function inspectHapForSeal(hapPath, kind, publicPath, requiredResources, abi, ex
       }
       console.log(`${hapPath}: bundled source byte identity PASS (${bundled.bytes} bytes); source behavior NOT_RUN`);
     });
-    const hapRecord = measureBuildStep('hapDigest', () => zip.fileRecord(publicPath));
     const nativePath = `libs/${abi}/libreader_core_napi.so`;
     const { embeddedNative, compatibility } = measureBuildStep('embeddedNative', () => {
       const bytes = zip.read(nativePath);
