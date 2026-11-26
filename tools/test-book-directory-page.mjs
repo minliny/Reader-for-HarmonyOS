@@ -4,6 +4,7 @@ const definitions = {
   'sdk-callbacks': {description: '实际目录Builder→tree/flat→row current/retired业务回调', resources: []},
   'measured-frame': {description: '实际public host vp-string面积与header delta保目录actor', resources: []},
   'manga-header': {description: '实际漫画目录header asymmetric safe-frame', resources: []},
+  'detail-return-inset': {description: 'Returning from immersive reading preserves the detail catalog header across system bar revisions for both media', resources: []},
   'rules-eligibility': {description: '实际持久format/capability准入及identity撤销', resources: []},
 };
 for (const id of selectContractCases(definitions)) {
@@ -31,6 +32,26 @@ async function runSelectedCase(selectedCase) {
   const base = new URL('../entry/src/main/ets/', import.meta.url);
   const read = path => readFileSync(new URL(path, base), 'utf8');
   const load = path => import(new URL(path, base));
+  if (selectedCase === 'detail-return-inset') {
+    const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+    const metricsApi = await load('ui/foundation/ReaderWindowMetrics.ts');
+    const metrics = metricsApi.createDefaultReaderWindowMetrics();
+    metrics.statusBarHeight = 25;
+    metrics.statusBarRect.top = 3;
+    const deps = { ...metricsApi, readerWindowMetrics: () => metrics };
+    for (const [name, method] of [['ReaderFullDirectory', 'topBarTop'], ['BookDirectoryPage', 'topInset']]) {
+      const Owner = selectedProductionMethods(new URL('features/reading/ui/' + name + '.ets', base), name, [method], deps);
+      const page = Object.assign(new Owner(), { readerWindowMetricsRevision: 1, headerSpec: { topGap: 18 } });
+      for (const top of [28, 0, 28]) {
+        metrics.systemInsets.top = top;
+        page.catalogContext = 'detail';
+        assert.equal(page[method](), 28, name + ' detail catalog must retain the measured status bar');
+        page.catalogContext = 'reader';
+        assert.equal(page[method](), name === 'BookDirectoryPage' ? top : Math.max(18, top));
+      }
+    }
+    return;
+  }
   const surfaceResolvers = await load('ui/foundation/ReaderSurfaceResolvers.ts');
   const fullDirectoryBudget = await load('features/reading/presentation/ReaderFullDirectoryBudget.ts');
   const {ReaderNativeSlotMeasurement} = pureModuleProbe(read('ui/layout/ReaderNativeSlotMeasurement.ets'),

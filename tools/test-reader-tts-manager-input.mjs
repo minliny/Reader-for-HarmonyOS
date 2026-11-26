@@ -15,7 +15,7 @@ const {ReaderTtsConfigurationHost}=await import('../entry/src/main/ets/features/
 const root=new URL('../entry/src/main/ets/',import.meta.url),file=p=>new URL(p,root),read=p=>readFileSync(file(p),'utf8');
 const lre=file('features/reading/ui/LocalReadingExperience.ets'),panelFile=file('features/reading/ui/ReaderControlPanel.ets');
 const contentSource=read('features/reading/ui/ReaderControlTtsContent.ets'),overlaySource=read('features/reading/ui/ReaderTtsConfigOverlay.ets');
-const Local=selectedProductionMethods(lre,'ReadingExperience',['saveHttpTtsEngine','deleteHttpTtsEngine','isSessionActive','isMountedToken','readerInputIsCurrent','isControlInputEnabled'],{readerControlHostInputEnabled});
+const Local=selectedProductionMethods(lre,'ReadingExperience',['saveHttpTtsEngine','deleteHttpTtsEngine','isSessionActive','isMountedToken','readerInputIsCurrent','isControlInputEnabled','sessionLaunchAllowsControlInput'],{readerControlHostInputEnabled});
 const Panel=selectedProductionMethods(panelFile,'ReaderControlPanel',['moduleEditorInputEnabled','contentInputEnabled','hasCurrentTemporaryInput','currentTemporaryInputScope']);
 const overlayMethods=['acceptsInput','submit','deleteEngine','selectEngine','clearDraft','changeDraftText','canSubmit','setBusy','current','resetDraft'];
 class Child{constructor(owner,params){Object.assign(this,{owner,params});}}

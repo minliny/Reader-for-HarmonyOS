@@ -28,9 +28,22 @@ async function run(id){
  }else if(id==='owner-snapshot'){
   const{selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
   let current=metrics();current.ready=false;current.revision=1;
-  const Owner=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),'ReadingExperience',['readingLayout','controlLayout'],{ReaderWindowCoordinator:{metrics:()=>current},...geometry});
-  const owner=Object.assign(new Owner(),{readerSettingsSnapshot:{extendIntoCutout:false,hideStatusBar:true,navigationMode:'paged'},isTablet:false,effectiveViewportWidth:()=>390,effectiveViewportHeight:()=>844,getUIContext(){assert.fail('unready metrics do not measure chrome');}});
+  const Owner=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),'ReadingExperience',['readingLayout','controlLayout'],{ReaderWindowCoordinator:{metrics:()=>current},READER_BOOKMARK_RIBBON_HEIGHT:34,...geometry});
+  const owner=Object.assign(new Owner(),{readerSettingsSnapshot:{extendIntoCutout:false,hideStatusBar:true,navigationMode:'paged'},appearanceSnapshot:{},expandedLayout:false,sessionCapsuleMetrics:()=>({paintHeight:24}),bookmarkRibbonPaperTop:()=>0,effectiveViewportWidth:()=>390,effectiveViewportHeight:()=>844,getUIContext(){assert.fail('unready metrics do not measure chrome');}});
   const reading=owner.readingLayout(),control=owner.controlLayout(1);assert.equal(owner.readingLayout(),reading);assert.equal(owner.controlLayout(1),control);
+  owner.readerSettingsSnapshot.hideNavigationBar=true;
+  const hiddenNav=owner.readingLayout();
+  assert.equal(hiddenNav.hideNavigationBar,true);
+  assert.ok(hiddenNav.contentBottom<reading.contentBottom);
+  assert.equal(owner.readingLayout(),hiddenNav,'unchanged hidden-navigation geometry reuses its snapshot');
+  owner.readerSettingsSnapshot.hideNavigationBar=false;
+  assert.equal(owner.readingLayout().contentBottom,reading.contentBottom);
+  const restored=owner.readingLayout();
+  owner.appearanceSnapshot.pageMarginOffset=6;
+  const remargined=owner.readingLayout();
+  assert.notEqual(remargined,restored,'a margin revision produces a new snapshot without a window publication');
+  assert.equal(remargined.contentLeft,restored.contentLeft+6);
+  assert.equal(owner.readingLayout(),remargined,'matching settings and size reuse the exact cached snapshot');
   current=metrics({keyboard:300});current.ready=false;current.revision=2;
   assert.notEqual(owner.readingLayout(),reading);assert.notEqual(owner.controlLayout(2),control,'IME/coordinator revision invalidates control snapshot');
   owner.pageTurnFrozenRevision=3;owner.pageTurnRenderRevision=3;owner.pageTurnFrozenLayout=reading;assert.equal(owner.readingLayout(),reading,'active frozen presentation keeps its exact geometry');

@@ -19,11 +19,12 @@ const panelGeometry=await import('../entry/src/main/ets/features/reading/ui/Read
 const motion=await import('../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry.ts');
 const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
 const Panel=selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets',import.meta.url),
-  'ReaderControlPanel',['controlPanelHeight','controlQuickHeight','brightnessTrackHeight','clampBrightness','roundBrightness',
+  'ReaderControlPanel',['currentLayout','paintedPresentationReceipt','controlPanelHeight','controlQuickHeight','brightnessTrackHeight','brightnessContentHeight','brightnessInputEnabled','clampBrightness','roundBrightness',
     'commitBrightnessTap','updateBrightnessDrag'],panelGeometry);
 function fixture(expanded,width,fullPanelHeight){
   const changes=[];
   const owner=Object.assign(new Panel(),{layout:{fullPanelHeight,quickPanelHeight:Math.min(fullPanelHeight,330)},isExpanded:()=>expanded,
+    runtimeMounted:true,contentInputEnabled:()=>true,temporaryLayerKind:'',brightnessDragging:true,
     brightnessDragStartPercent:1,onBrightnessChange:value=>changes.push(value)});
   const bounds=motion.readerControlMotionBounds(width,owner.controlPanelHeight(),19,owner.controlQuickHeight());
   const frame=motion.sampleReaderControlMotionComposition({visibilityProgress:1,expansionProgress:0},bounds);
@@ -48,7 +49,10 @@ owner.commitBrightnessTap({fingerList:[{localY:trackHeight}]});
 owner.commitBrightnessTap({fingerList:[{localY:0}]});
 owner.updateBrightnessDrag(-trackHeight);
 assert.deepEqual(changes,[1,100,100],'tap and drag share the shortened track endpoints');
-const tiny=fixture(true,720,200);
+const compact = fixture(true,720,200);
+assert.ok(compact.frame.brightness.height > 0 && compact.frame.brightness.height < compact.owner.brightnessContentHeight(),
+  'a short visible rail scrolls its taller control content');
+const tiny=fixture(true,720,120);
 assert.equal(tiny.frame.brightness.opacity,0,'a rail with no usable track takes no input');
 tiny.owner.commitBrightnessTap({fingerList:[{localY:0}]});
 assert.deepEqual(tiny.changes,[]);

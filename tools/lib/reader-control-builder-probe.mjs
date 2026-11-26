@@ -58,12 +58,14 @@ export function productionReaderMotionSdk() {
   return { ...motion, ...policy };
 }
 
-function productionReaderPressMotion(dependencies) {
+export function productionReaderPressMotion(dependencies = {}) {
   const motion = productionReaderMotionSdk();
   const TouchType = dependencies.TouchType ?? { Down: 'down', Move: 'move', Up: 'up', Cancel: 'cancel' };
   const ReaderPressFeedback = productionReaderPressFeedback({ Color: dependencies.Color, ColorMetrics: dependencies.ColorMetrics });
-  return loadMotionSource('ReaderPressMotion', { ...motion, TouchType, ReaderPressFeedback },
-    ['readerPressScale', 'readerPressOpacity', 'readerPressAnimation', 'readerPressPointer', 'readerPressSurface', 'readerAnimatePress']);
+  return loadMotionSource('ReaderPressMotion', { ...motion, TouchType, ReaderPressFeedback,
+    setTimeout: dependencies.setTimeout ?? setTimeout, clearTimeout: dependencies.clearTimeout ?? clearTimeout },
+    ['ReaderDelayedRowPress', 'readerPressScale', 'readerPressOpacity', 'readerPressAnimation', 'readerPressPointer',
+      'readerPressSurface', 'readerAnimatePress']);
 }
 
 const sdkRoot = resolveEtsLoaderRoot();
@@ -717,7 +719,7 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       return metrics;
     } },
     readerInteractiveSafeBottom: metrics => metrics.interactiveSafeInsets?.bottom ?? 0,
-    ...(source.includes('readerPressScale') ? productionReaderPressMotion(dependencies) : {}),
+    ...(source.includes('readerPressScale') || source.includes('ReaderDelayedRowPress') ? productionReaderPressMotion(dependencies) : {}),
     ...dependencies };
   // Existing fixtures supply an explicit fake metrics source under the old
   // owner-shaped I/O port. The UI consumes the real readonly adapter instead.

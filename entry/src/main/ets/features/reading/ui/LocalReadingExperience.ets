@@ -445,6 +445,20 @@ interface ReaderTtsPreferenceSave {
   current: () => boolean;
 }
 
+interface ReaderReadingLayoutCache {
+  layout: ReaderReadingLayoutSnapshot;
+  width: number;
+  height: number;
+  windowRevision: number;
+  expanded: boolean;
+  cutout: boolean;
+  hideStatusBar: boolean;
+  hideNavigationBar: boolean;
+  paged: boolean;
+  wide: ReaderWidePageLayout;
+  margin: number;
+}
+
 type ReadingPhase = 'loading' | 'measuring' | 'ready' | 'failed';
 type ReaderPageTurnInputPhase = 'idle' | 'tracking' | 'dragging' | 'settling';
 /** Unified visual presentation phase shared by gesture, settle and promotion. */
@@ -2275,7 +2289,8 @@ export struct ReadingExperience {
         onAutoPageSpeedUp: (): void => this.changeAutoPageSpeed(-2),
         onAutoPageFullTimerChange: (minutes: number, seconds: number): void =>
           this.changeAutoPageSessionTimer(minutes, seconds),
-        onAutoPageFullSpeedChange: (seconds: number): void => this.setAutoPageSpeed(seconds),
+        onAutoPageFullSpeedChange: (seconds: number, onDeclined?: () => void): void =>
+          this.setAutoPageSpeed(seconds, onDeclined),
         onAutoPageFollowHighlightChange: (enabled: boolean): void =>
           this.setAutoPageFollowHighlight(enabled),
         onOpenReplace: (): void => this.openQuickReplace(),
@@ -2326,7 +2341,7 @@ export struct ReadingExperience {
         onTtsPrevious: (): void => this.previousTtsUtterance(),
         onTtsNext: (): void => this.nextTtsUtterance(),
         onTtsSeek: (sliceIndex: number): void => this.seekTtsUtterance(sliceIndex),
-        onTtsRateChange: (rate: number): void => this.changeTtsRate(rate),
+        onTtsRateChange: (rate: number, onDeclined?: () => void): void => this.changeTtsRate(rate, onDeclined),
         onTtsTimerChange: (minutes: number, seconds: number, mode?: ReaderTtsTimerMode): void =>
           this.changeTtsTimer(minutes, seconds, mode),
         onTtsFollowHighlightChange: (enabled: boolean): void => this.changeTtsFollowHighlight(enabled),
@@ -8014,16 +8029,7 @@ export struct ReadingExperience {
       (this.expandedLayout ? READER_TABLET_REFERENCE_HEIGHT : READER_PHONE_REFERENCE_HEIGHT);
   }
 
-  private readingLayoutCache: ReaderReadingLayoutSnapshot | undefined = undefined;
-  private readingLayoutCacheWidth: number = -1;
-  private readingLayoutCacheHeight: number = -1;
-  private readingLayoutCacheRevision: number = -1;
-  private readingLayoutCacheTablet: boolean = false;
-  private readingLayoutCacheCutout: boolean = false;
-  private readingLayoutCacheHideStatusBar: boolean = false;
-  private readingLayoutCachePaged: boolean = false;
-  private readingLayoutCacheWide: ReaderWidePageLayout | undefined = undefined;
-  private readingLayoutCacheMargin: number = 0;
+  private readingLayoutCache: ReaderReadingLayoutCache | undefined;
 
   private readingLayout(): ReaderReadingLayoutSnapshot {
     this.readerWindowMetricsRevision;
@@ -8038,22 +8044,24 @@ export struct ReadingExperience {
     const metrics = ReaderWindowCoordinator.metrics();
     const cutout = this.readerSettingsSnapshot.extendIntoCutout;
     const hideStatusBar = this.readerSettingsSnapshot.hideStatusBar === true;
+    const hideNavigationBar = this.readerSettingsSnapshot.hideNavigationBar === true;
     const paged = this.readerSettingsSnapshot.navigationMode === 'paged';
     const wide = this.readerSettingsSnapshot.widePageLayout ?? 'spread';
     const margin = this.appearanceSnapshot.pageMarginOffset ?? 0;
-    if (this.readingLayoutCache !== undefined && this.readingLayoutCacheWidth === width &&
-      this.readingLayoutCacheHeight === height && this.readingLayoutCacheRevision === metrics.revision &&
-      this.readingLayoutCacheTablet === this.expandedLayout && this.readingLayoutCacheCutout === cutout &&
-      this.readingLayoutCacheHideStatusBar === hideStatusBar && this.readingLayoutCachePaged === paged &&
-      this.readingLayoutCacheWide === wide && this.readingLayoutCacheMargin === margin) {
-      return this.readingLayoutCache;
+    const cache = this.readingLayoutCache;
+    if (cache !== undefined && cache.width === width && cache.height === height &&
+      cache.windowRevision === metrics.revision && cache.expanded === this.expandedLayout &&
+      cache.cutout === cutout && cache.hideStatusBar === hideStatusBar &&
+      cache.hideNavigationBar === hideNavigationBar && cache.paged === paged &&
+      cache.wide === wide && cache.margin === margin) {
+      return cache.layout;
     }
     // Size the shared footer for accessible text once per layout. A session
     // changes only the occupants of this band, so pagination stays stable.
     const footerHeight = Math.max(this.sessionCapsuleMetrics('autoPage').paintHeight,
       this.sessionCapsuleMetrics('tts').paintHeight);
     let layout = resolveReaderReadingLayout(width, height, this.expandedLayout, metrics, cutout,
-      undefined, 0, 0, wide, margin, footerHeight);
+      undefined, 0, 0, wide, margin, footerHeight, hideNavigationBar);
     if (metrics.ready && layout.pageChromeTopRegionHeight > 0) {
       const context = this.getUIContext();
       const topStyle = readerPageChromeTopTextStyle(layout, context);
@@ -8063,20 +8071,16 @@ export struct ReadingExperience {
       const measuredInformationLane = informationHeight + READER_PAGE_CHROME_TOP_ROW_PADDING_VP * 2;
       if (measuredInformationLane > layout.pageChromeTopRegionHeight) {
         layout = resolveReaderReadingLayout(width, height, this.expandedLayout, metrics, cutout,
-          undefined, informationHeight, 0, wide, margin, footerHeight);
+          undefined, informationHeight, 0, wide, margin, footerHeight, hideNavigationBar);
       }
     }
     // Reserve the full opening below the system status crop. Pagination and
     // every retained page share this settings-sensitive layout snapshot.
     layout.contentTop = Math.max(layout.contentTop, this.bookmarkRibbonPaperTop(layout) + READER_BOOKMARK_RIBBON_HEIGHT);
-    this.readingLayoutCache = layout;
-    this.readingLayoutCacheWidth = width; this.readingLayoutCacheHeight = height;
-    this.readingLayoutCacheRevision = metrics.revision; this.readingLayoutCacheTablet = this.expandedLayout;
-    this.readingLayoutCacheCutout = cutout;
-    this.readingLayoutCacheHideStatusBar = hideStatusBar;
-    this.readingLayoutCachePaged = paged;
-    this.readingLayoutCacheWide = wide;
-    this.readingLayoutCacheMargin = margin;
+    this.readingLayoutCache = {
+      layout, width, height, windowRevision: metrics.revision, expanded: this.expandedLayout,
+      cutout, hideStatusBar, hideNavigationBar, paged, wide, margin,
+    };
     return layout;
   }
 
@@ -8182,7 +8186,8 @@ export struct ReadingExperience {
     const layout = this.controlLayout(this.readerWindowMetricsRevision);
     if (receipt.layout.fullPanelWidth !== layout.fullPanelWidth || receipt.layout.fullPanelHeight !== layout.fullPanelHeight ||
       receipt.layout.quickPanelHeight !== layout.quickPanelHeight || receipt.bounds.fullHeight !== layout.fullPanelHeight ||
-      receipt.bounds.quickHeight !== layout.quickPanelHeight || receipt.bounds.bottomGap !== layout.dockBottomGap) return;
+      (layout.quickPanelHeight !== undefined && receipt.bounds.quickHeight !== layout.quickPanelHeight) ||
+      receipt.bounds.bottomGap !== layout.dockBottomGap) return;
     const previous = this.controlPlaybackProfile;
     if (previous !== undefined && previous.identity === receipt.identity && previous.key === receipt.key &&
       previous.metricsRevision === receipt.metricsRevision && previous.module === receipt.module &&
@@ -8287,6 +8292,7 @@ export struct ReadingExperience {
   private admitControlMinimum(candidates: ReaderControlCandidateMinimum[], identity: string): void {
     if (!this.controlMinimumCurrent(identity)) return;
     let preparedPage: ReaderControlPage | undefined = undefined;
+    let nextReceipt: ReaderControlPresentationReceipt | undefined = undefined;
     if (this.controlMinimumProfileReader !== undefined) {
       const prefix = `${identity}|${this.controlMinimumGeneration}|`;
       if (candidates.some((candidate: ReaderControlCandidateMinimum): boolean => !candidate.key.startsWith(prefix)) ||
@@ -8323,12 +8329,12 @@ export struct ReadingExperience {
       if (previous !== undefined && previous.identity === identity && previous.environmentKey === environment &&
         this.controlLayoutGeometryKey(previous.layout) === this.controlLayoutGeometryKey(layout) &&
         readerControlMeasuredProfileGeometryKey(previous.profile) === readerControlMeasuredProfileGeometryKey(profile)) {
-        this.adoptControlDisplayFacts(profile.moduleFacts);
-        this.controlMinimumCommittedFactsKey = this.controlMinimumProviderFactsKey;
         this.controlMinimumReady = true;
+        this.controlMinimumCommittedFactsKey = this.controlMinimumProviderFactsKey;
+        this.adoptControlDisplayFacts(profile.moduleFacts);
         return;
       }
-      const next: ReaderControlPresentationReceipt = { identity: identity, ownerKey: this.controlMinimumOwnerKey(), environmentKey: environment,
+      nextReceipt = { identity: identity, ownerKey: this.controlMinimumOwnerKey(), environmentKey: environment,
         key: layout.minimumKey, layout: layout, profile: profile, facts: profile.moduleFacts,
         location: { level: location.level, module: location.module, directoryTab: location.directoryTab, form: location.form },
         prepared: profile.moduleData === undefined || profile.moduleFacts === undefined ? undefined :
@@ -8350,7 +8356,6 @@ export struct ReadingExperience {
         this.controlSession = committed;
         if (previousModule !== this.observedControlModule) preparedPage = this.controlPage();
       }
-      this.controlPresentationReceipt = next;
       this.controlMinimumCommittedFactsKey = this.controlMinimumProviderFactsKey;
     }
     this.lastControlStructureKey = this.currentControlStructureKey();
@@ -8365,6 +8370,8 @@ export struct ReadingExperience {
     this.controlMinimumCandidateMetrics = ReaderWindowCoordinator.metrics().revision;
     this.controlMinimumRevision += 1;
     this.controlMinimumReady = candidates.length > 0;
+    // Receipt observers can synchronously read the accepted layout and publish the launch source.
+    if (nextReceipt !== undefined) this.controlPresentationReceipt = nextReceipt;
     if (this.controlFontOrderRequest !== undefined) this.reconcileControlFontOrderPresentation();
     this.invalidateControlBackdrop();
     if (preparedPage !== undefined) this.prepareControlPage(preparedPage);
@@ -8385,6 +8392,7 @@ export struct ReadingExperience {
       layout.titleTrackHeightVp,
       layout.systemFontScale,
       this.readerSettingsSnapshot.extendIntoCutout,
+      this.readerSettingsSnapshot.hideNavigationBar === true,
     ].join('|');
   }
 
@@ -9271,11 +9279,11 @@ export struct ReadingExperience {
     }
   }
 
-  private changeTtsRate(rate: number): void {
+  private changeTtsRate(rate: number, onDeclined?: () => void): void {
     const normalized = Math.max(READER_TTS_RATE_MIN, Math.min(READER_TTS_RATE_MAX,
       Math.round(rate * READER_TTS_RATE_STEP_SCALE) / READER_TTS_RATE_STEP_SCALE));
     const coordinator = this.ttsCoordinator;
-    if (coordinator === undefined) return;
+    if (coordinator === undefined) { onDeclined?.(); return; }
     this.ttsConfigMutationGeneration += 1;
     const generation = this.ttsConfigMutationGeneration;
     const lifecycleToken = this.lifecycleToken;
@@ -9308,7 +9316,10 @@ export struct ReadingExperience {
             // The coordinator exposes its own retryable error state.
           }
         }
-        if (current()) this.notifyTtsConfigurationFailure('语速未能保存，请重试');
+        if (current()) {
+          onDeclined?.();
+          this.notifyTtsConfigurationFailure('语速未能保存，请重试');
+        }
         this.logTtsFailure('rate', error);
       });
   }
@@ -9729,7 +9740,13 @@ export struct ReadingExperience {
     this.setAutoPageSpeed(this.automaticReadingState().speedSeconds + deltaSeconds);
   }
 
-  private setAutoPageSpeed(nextSpeed: number): void { this.autoPageCoordinator.setSpeed(nextSpeed); }
+  private setAutoPageSpeed(nextSpeed: number, onDeclined?: () => void): void {
+    if (!Number.isFinite(nextSpeed) || !this.mounted || !this.appForeground || this.exitRequested) {
+      onDeclined?.();
+      return;
+    }
+    if (!this.autoPageCoordinator.setSpeed(nextSpeed)) onDeclined?.();
+  }
 
   private changeAutoPageSessionTimer(minutes: number, seconds: number): void {
     this.autoPageCoordinator.setSessionTimer(minutes, seconds);
@@ -10409,6 +10426,8 @@ export struct ReadingExperience {
     const lifecycleToken = this.lifecycleToken;
     const current = this.captureReaderSettingsAdmission(lifecycleToken, generation);
     const previous = this.readerSettingsSnapshot;
+    const bodyLayoutChanged = previous.extendIntoCutout !== snapshot.extendIntoCutout ||
+      previous.hideStatusBar !== snapshot.hideStatusBar || previous.hideNavigationBar !== snapshot.hideNavigationBar;
     this.readerWindowPolicyGeneration = generation;
     this.readerWindowPolicyPending = true;
     this.readerSettingsSnapshot = snapshot;
@@ -10420,8 +10439,6 @@ export struct ReadingExperience {
         if (!current()) {
           return Promise.resolve();
         }
-        const bodyLayoutChanged = previous.extendIntoCutout !== snapshot.extendIntoCutout ||
-          previous.hideStatusBar !== snapshot.hideStatusBar;
         if (bodyLayoutChanged) {
           this.reflowAfterWindowGeometryChange();
         }
@@ -10443,8 +10460,7 @@ export struct ReadingExperience {
           this.readerSettingsSnapshot = previous;
           this.configureReaderScreenAwakeLease(previous);
           this.applyReaderSystemEventPolicy(previous);
-          if (previous.extendIntoCutout !== snapshot.extendIntoCutout ||
-            previous.hideStatusBar !== snapshot.hideStatusBar) {
+          if (bodyLayoutChanged) {
             // Controls may keep the same native bar geometry throughout the
             // failed write, so no Window callback will restore the body budget.
             this.reflowAfterWindowGeometryChange();

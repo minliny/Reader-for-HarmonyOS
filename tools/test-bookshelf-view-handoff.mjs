@@ -346,15 +346,15 @@ for (const mode of ['cover', 'list']) {
 
 // Render the real default-cover text body, not a test replica of its labels.
 const defaultBuilderSource = noCoverSource.replace('  build() {', '  build() { Column() {} }\n  @Builder\n  coverContent() {');
-const { owner: defaultCover } = createReaderBuilderProbe(defaultBuilderSource, ['coverContent', 'x', 'y', 'scaleCoverUnit'],
+const { owner: defaultCover } = createReaderBuilderProbe(defaultBuilderSource, ['coverContent', 'x', 'y', 'scaleCoverUnit', 'isComic', 'titleUnits'],
   { ...readerTypographyRoles, ...readerFoundationTokens });
 const defaultFrame = grid.bookshelfGridFrame(326, false);
 Object.assign(defaultCover, { coverWidth: defaultFrame.cardWidth,
   coverHeight: defaultFrame.coverHeight, appThemeScheme: 'day', glyph: '海边旧书店', kindLabel: '小说' });
 defaultCover.coverContent();
 const textActors = [...defaultCover.nodes.values()].filter(node => node.type === 'Text');
-assert.deepEqual(textActors.map(node => node.create), ['海边旧书店', '无封面 · 小说']);
-assert.equal(textActors[0].maxLines, 2);
+assert.deepEqual(textActors.map(node => node.create), ['海边旧书店', '小说'], 'default cover never prints a no-cover notice');
+assert.equal(textActors[0].maxLines, 5);
 assert.equal(textActors[1].maxLines, 1);
 const textFrames = textActors.map(node => structuredClone(node));
 for (let index = 0; index < 10; index += 1) defaultCover.replay();

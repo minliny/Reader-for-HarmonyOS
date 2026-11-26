@@ -139,7 +139,7 @@ export struct ReaderPageChrome {
       layout.pageChromeVisualSafeLeft, layout.pageChromeVisualSafeRight,
       layout.pageChromeVisualSafeTop, layout.pageChromeTopRegionHeight, layout.pageChromeVisualSafeBottom,
       layout.pageChromeStatusMetrics?.revision,
-      layout.pageChromeInteractiveSafeRight, layout.pageChromeInteractiveSafeBottom,
+      layout.pageChromeInteractiveSafeRight, layout.pageChromeInteractiveSafeBottom, layout.hideNavigationBar,
       context.px2vp(1), context.fp2px(1), topStyle.fontFamily, topStyle.fontSizeFp,
       topStyle.fontWeight, topStyle.lineHeightFp, topStyle.letterSpacingFp]);
     if (key === this.chromeLayoutCacheKey && this.chromeLayoutCache !== undefined) return this.chromeLayoutCache;

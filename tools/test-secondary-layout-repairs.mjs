@@ -1205,7 +1205,7 @@ function downloadAccessibility() {
   const coverSource = read('features/downloads/ui/SharedDownloadBookCover.ets');
   const placeholderSource = read('ui/patterns/NoCoverCover.ets');
   deps.NoCoverCover = createReaderBuilderProbe(placeholderSource,
-    ['appThemeScheme', 'coverWidth', 'coverHeight', 'glyph', 'kindLabel', 'build', 'x', 'y', 'scaleCoverUnit'], deps, c.hooks).Component;
+    ['appThemeScheme', 'coverWidth', 'coverHeight', 'glyph', 'kindLabel', 'build', 'x', 'y', 'scaleCoverUnit', 'isComic', 'titleUnits'], deps, c.hooks).Component;
   deps.SharedDownloadBookCover = createReaderBuilderProbe(coverSource,
     ['bookKey', 'coverUrl', 'presentationGeneration', 'coverWidth', 'coverHeight', 'bookTitle', 'kindLabel',
       'imageFailed', 'requestGeneration', 'mounted',

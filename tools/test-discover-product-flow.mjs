@@ -1,11 +1,46 @@
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions = {"explore-wire-admission": {"description": "真实Discover gateway分类/书籍wire解码与准入", "resources": []}};
+definitions['empty-source-pagination'] = {
+  description: 'Losing all Discover sources clears page and suppresses stale pagination intents', resources: [],
+};
 for (const id of selectContractCases(definitions)) {
   await runSelectedCase(id);
   recordContractCasePass(id);
 }
 async function runSelectedCase(selectedCase) {
 const {default: assert} = await import('node:assert/strict');
+if (selectedCase === 'empty-source-pagination') {
+  const { bookshelfOperationClass: load } = await import('./lib/bookshelf-operation-owner-probe.mjs');
+  const projectOperationFacts = load('app/ReaderOperationFacts.ts', 'projectOperationFacts');
+  const { readerSourceCategoryIsText } = load('features/source/application/ReaderSourceCategory.ts', '{readerSourceCategoryIsText}');
+  let sources = [{ enabled: true, enabledExplore: true, category: 'novel', sourceId: 'source', name: '来源' }];
+  let pageReads = 0;
+  const ReaderRuntimeOwner = { isCurrent: () => true };
+  class SourceGateway { async loadSources() { return sources; } }
+  class DiscoverGateway {
+    async loadExploreKinds() { return [{ title: '分类', url: '/all' }]; }
+    async loadExplore() { pageReads++; return [{ sourceId: 'source', bookId: 'book' }]; }
+  }
+  const Owner = load('features/discover/application/DiscoverOrchestrator.ets', 'DiscoverOrchestrator',
+    { projectOperationFacts, ReaderRuntimeOwner, readerSourceCategoryIsText, SourceGateway, DiscoverGateway });
+  let state;
+  const owner = new Owner(value => { state = value; }, () => true, {});
+  owner.open(); await owner.operationTail;
+  owner.nextPage(); await owner.operationTail;
+  assert.equal(state.page, 2);
+  assert.equal(state.hasPrevious, true);
+  sources = [];
+  owner.open(); await owner.operationTail;
+  assert.equal(state.page, 1);
+  assert.equal(state.loading, false);
+  assert.equal(state.hasPrevious, false);
+  assert.equal(state.hasNext, false);
+  assert.equal(state.operation.fact, 'empty');
+  owner.previousPage(); owner.nextPage(); await owner.operationTail;
+  assert.equal(state.loading, false);
+  assert.equal(pageReads, 2);
+  return;
+}
 const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
 
 const Gateway=selectedProductionMethods(new URL('../entry/src/main/ets/features/discover/application/DiscoverGateway.ts',import.meta.url),'DiscoverGateway',['loadExploreKinds','loadExplore','string']);

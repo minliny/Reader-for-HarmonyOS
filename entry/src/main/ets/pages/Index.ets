@@ -21,7 +21,7 @@ import { ReaderExitActions, type ReaderExitActionPorts } from '../app/compositio
 import type { SystemFileOpenReaderIdentity } from '../app/navigation/ReaderSystemFileOpenNavigationHost';
 import { errorMessageOf } from '../app/ErrorMessage';
 import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
-import { readerContentSafeTop } from '../ui/foundation/ReaderWindowMetrics';
+import { readerContentSafeTop, type ReaderRectVp } from '../ui/foundation/ReaderWindowMetrics';
 import type {
   ShelfBook,
   BookshelfState,
@@ -151,9 +151,9 @@ let rssIndexInstance: number = 0;
 struct Index {
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
+  @StorageLink('readerReduceMotion') @Watch('onReaderParentMotionPolicyChanged') private appReduceMotion: boolean = false;
 
-  @StorageLink('readerWindowMetricsRevision') readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerWindowMetricsRevision') @Watch('onReaderParentWindowChanged') readerWindowMetricsRevision: number = 0;
   private readonly entryStartupTrace: ReaderEntryStartupTrace = new ReaderEntryStartupTrace(
     (phase: ReaderShelfEntryPhase, attempt: number, navigation: number, elapsedMs: number): void => {
       hilog.info(DOMAIN, 'Reader',
@@ -240,6 +240,9 @@ struct Index {
   @State private wideSettingsMotion: ReaderRouteMotionKind = 'tab';
   @State private visibleRouteMotion: ReaderRouteMotionKind | 'none' = 'none';
   @State private readerParentProgress: number = 0;
+  @State private readerParentAnimated: boolean = false;
+  private readerParentAnimationGeneration: number = 0;
+  private readerParentAnimationViewport: ReaderRectVp | undefined;
   @State private readerDetailCover: boolean = false;
   private readerDetailCoverGeneration: number = 0;
   @State private pendingBackDuringCover: number | undefined = undefined;
@@ -323,13 +326,38 @@ struct Index {
   }
   private updateReaderParentMotion(open: boolean, sameLane: boolean): void {
     const progress = open && sameLane ? 1 : 0;
-    if (this.readerParentProgress === progress) return;
-    if (sameLane && this.searchAppForeground && !this.appReduceMotion) {
-      const timing = motionAnimateParam(open ? 'app.navigation.push' : 'app.navigation.pop');
-      this.getUIContext().animateTo(timing, (): void => { this.readerParentProgress = progress; });
-    } else {
-      this.readerParentProgress = progress;
+    const animate = this.readerParentProgress !== progress && sameLane &&
+      this.searchAppForeground && !this.appReduceMotion;
+    this.readerParentAnimationGeneration += 1;
+    this.readerParentAnimationViewport = animate ? this.routeViewport() : undefined;
+    this.readerParentAnimated = animate;
+    this.readerParentProgress = progress;
+  }
+
+  private onReaderParentWindowChanged(): void {
+    if (this.readerParentAnimated && !this.readerParentViewportMatches()) {
+      this.readerParentAnimated = false;
     }
+  }
+
+  private onReaderParentMotionPolicyChanged(): void {
+    if (this.appReduceMotion) this.readerParentAnimated = false;
+  }
+
+  private readerParentViewportMatches(): boolean {
+    const start = this.readerParentAnimationViewport;
+    if (start === undefined) return false;
+    const current = this.routeViewport();
+    return start.width === current.width && start.height === current.height;
+  }
+
+  private readerParentAnimation(): AnimateParam | null {
+    if (!this.readerParentAnimated || !this.searchAppForeground || this.appReduceMotion ||
+      !this.readerParentViewportMatches()) return null;
+    const generation = this.readerParentAnimationGeneration;
+    return motionAnimateParam(this.readerParentProgress === 1 ? 'app.navigation.push' : 'app.navigation.pop', (): void => {
+      if (generation === this.readerParentAnimationGeneration) this.readerParentAnimated = false;
+    });
   }
 
   private readerParentMotionProgress(): number {
@@ -770,6 +798,7 @@ struct Index {
 
   aboutToDisappear(): void {
     this.shelfReceiptRetired = true;
+    this.readerParentAnimated = false;
     this.readerDetailCover = false;
     this.pendingBackDuringCover = undefined;
     this.readerDetailReturnPaint = undefined;
@@ -1119,11 +1148,13 @@ struct Index {
           content: (route: ReaderRouteSurfaceKey): void => { this.appRouteContent(route as ReaderRoute); },
           onBack: (): boolean => this.onBackPress(),
         });
-        Column().width('100%').height('100%').backgroundColor(Color.Black)
-          .opacity(this.readerParentMotionProgress() * READER_ROUTE_PARENT_DIM)
+        Column().opacity(this.readerParentMotionProgress() * READER_ROUTE_PARENT_DIM)
+          .animation(this.readerParentAnimation())
+          .width('100%').height('100%').backgroundColor(Color.Black)
           .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
-      }.width('100%').height('100%')
-        .translate({ x: -this.routeViewportWidth() * READER_ROUTE_PARENT_PARALLAX * this.readerParentMotionProgress() })
+      }.translate({ x: -this.routeViewportWidth() * READER_ROUTE_PARENT_PARALLAX * this.readerParentMotionProgress() })
+        .animation(this.readerParentAnimation())
+        .width('100%').height('100%')
         .zIndex(this.detailAboveReader() ? 1 : 0);
       Stack({ alignContent: Alignment.TopStart }) {
         if ((this.readingEntry.sessionActive || this.readerDetailCover) && this.readingEntry.book !== undefined) {
@@ -1169,9 +1200,13 @@ struct Index {
     }
   }
 
-  private routeViewportWidth(): number {
+  private routeViewport(): ReaderRectVp {
     this.readerWindowMetricsRevision;
-    return ReaderWindowCoordinator.metrics().windowRect.width;
+    return ReaderWindowCoordinator.metrics().windowRect;
+  }
+
+  private routeViewportWidth(): number {
+    return this.routeViewport().width;
   }
 
   private overlaySafeTop(): number {
@@ -1815,6 +1850,7 @@ struct Index {
 
   private onSearchVisibilityChanged(): void {
     if (!this.searchAppForeground) {
+      this.readerParentAnimated = false;
       this.readerDetailCover = false;
       this.pendingBackDuringCover = undefined;
       this.readerDetailReturnPaint = undefined;

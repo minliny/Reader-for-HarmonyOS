@@ -81,6 +81,37 @@ assert.equal(idle.footerTop, playing.footerTop, 'playback never shifts the foote
 assert.equal(playing.sessionY + 22, playing.footerTop + 12, 'capsule paint shares the footer center');
 assert.equal(page.viewportHeight - page.contentBottom, playing.sessionY,
   'body ends at the transparent capsule target rather than under it');
+const hiddenNav = readingGeometry.resolveReaderReadingLayout(390, 844, false, metrics, false, undefined, 0, 0,
+  undefined, 0, undefined, true);
+const hiddenPlaying = resolveReaderPageChromeLayout(hiddenNav,
+  new ReaderPageChromeMeasurements(70, 14, 30, 14, 40, 14, 50, 14, true, 96, 44));
+assert.equal(hiddenNav.hideNavigationBar, true);
+assert.equal(hiddenNav.pageChromeInteractiveSafeBottom, 34, 'the window still owns the gesture inset');
+assert.ok(page.contentBottom - hiddenNav.contentBottom >= 20,
+  'a hidden navigation bar releases the gesture strip and default bottom inset to the body');
+assert.ok(hiddenPlaying.footerTop > playing.footerTop && hiddenPlaying.sessionY > playing.sessionY,
+  'the capsule target and footer both move down with the hidden navigation bar');
+assert.equal(hiddenNav.viewportHeight - hiddenNav.contentBottom, hiddenPlaying.sessionY,
+  'hidden-nav body still ends at the capsule target');
+assert.ok(hiddenPlaying.footerTop + 24 <= hiddenNav.viewportHeight - 8, 'footer keeps a small optical bottom gap');
+// A native policy can succeed or be refused without changing the reported window metrics.
+const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+const Settings = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
+  'ReadingExperience', ['commitReaderWindowSettings'], {});
+for (const refused of [false, true]) {
+  const reflows = [];
+  const owner = Object.assign(new Settings(), {
+    readerSettingsSnapshot: { hideNavigationBar: false }, readerSettingsMutationGeneration: 0,
+    pageTurnInputPhase: () => 'idle', captureReaderSettingsAdmission: () => () => true, isSessionActive: () => true,
+    controlsPresentedForWindow: () => true, configureReaderScreenAwakeLease() {}, applyReaderSystemEventPolicy() {},
+    applyReaderWindowPolicy: async snapshot => { if (refused && snapshot.hideNavigationBar) throw Error('refused'); },
+    reflowAfterWindowGeometryChange() { reflows.push(this.readerSettingsSnapshot.hideNavigationBar); },
+    persistReaderSettingsSnapshot: async () => {}, resumePendingAutoPageTurn() {}, showReaderSettingsFailure() {},
+  });
+  owner.commitReaderWindowSettings({ hideNavigationBar: true });
+  await new Promise(setImmediate);
+  assert.deepEqual(reflows, [!refused], 'pagination reconciles the accepted or restored navigation setting without a resize');
+}
 for (const [width, height] of [[390, 844], [844, 390], [760, 960]]) {
   for (const footerPaintHeight of [24, 32, 44, 60]) {
     const layout = readingGeometry.resolveReaderReadingLayout(width, height, width >= 600, metrics,
@@ -386,6 +417,12 @@ layoutChrome.layout.pageChromeVisualSafeTop = 40;
 assert.equal(layoutChrome.chromeLayout().topEndY, 48 + (24 - 14.4) / 2,
   'clock centres in the same 24vp bookmark lane below the safe top');
 assert.equal(layoutMeasures, 8, 'in-place safe area changes invalidate geometry');
+const visibleNav = layoutChrome.chromeLayout();
+layoutChrome.layout.hideNavigationBar = true;
+const hiddenNav = layoutChrome.chromeLayout();
+assert.equal(hiddenNav.footerTop - visibleNav.footerTop, 13, 'changing only navigation visibility replaces the cached footer');
+layoutChrome.layout.hideNavigationBar = false;
+assert.equal(layoutChrome.chromeLayout().footerTop, visibleNav.footerTop);
 layoutChrome.sessionVisible = true; layoutChrome.sessionWidth = 80; layoutChrome.sessionHeight = 24;
 assert.notEqual(layoutChrome.chromeLayout().bottomEndX, geometry.bottomEndX);
 console.log('page chrome complete layout reuse and safe-area/session invalidation: PASS');

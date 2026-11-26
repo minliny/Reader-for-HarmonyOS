@@ -30,7 +30,7 @@ const cases = {
     resources: [],
   },
   'route-transition-effects': {
-    description: 'Production transition directions, parent parallax, and shared opacity-only reduced motion.',
+    description: 'Production transition directions, parent parallax, window and policy retirement, and shared opacity-only reduced motion.',
     resources: [],
   },
   'retained-directory-back': {
@@ -249,12 +249,12 @@ async function routeTransitionEffects() {
   const navigationProbe = createReaderBuilderProbe(surface, [
     'route', 'initialRoot', 'routeMotion', 'reduceMotion', 'viewportWidth', 'rootRoute', 'previousTab',
     'tabProgress', 'mounted', 'pathStack', 'routeUpdate', 'animationGeneration', 'tabGeneration', 'activeRouteAnimation',
-    'pendingTabResetFrom', 'scheme', 'content', 'destination', 'lane',
+    'pendingTabResetFrom', 'pendingPushLane', 'pendingPushTimer', 'setPendingPushLane', 'scheme', 'content', 'destination', 'lane',
     'reconcile', 'settleAnimation', 'switchRootTab', 'onRouteChanged', 'routeEndTimer',
     'clearRouteDeadline', 'armRouteDeadline', 'completeRouteAnimation',
     'finishTabTransition', 'rootTabs', 'rootTabOpacity', 'rootTabScale', 'nativeTransition',
     'laneX', 'laneDimOpacity', 'laneOpacity', 'laneVisibleDuringReaderCover', 'laneAcceptsInput',
-    'aboutToAppear', 'backGestureEnabled', 'hasDestination',
+    'aboutToAppear', 'aboutToDisappear', 'backGestureEnabled', 'hasDestination',
     'readerCoverGeneration', 'readerCoverStartGeneration', 'readerCoverSettled', 'onReaderCovered',
     'onReaderCoverChanged', 'settleReaderCover', 'revealRetainedDetail', 'readerCoverCanAnimate',
     'retireStaleReaderCover', 'finishReaderCoverAnimation',
@@ -298,11 +298,40 @@ async function routeTransitionEffects() {
   Object.assign(host, { route: 'bookshelf', routeMotion: 'push', viewportWidth: 400,
     animationGeneration: 0, tabGeneration: 0 });
   host.aboutToAppear();
+  for (const reduceMotion of [false, true]) {
+    const directory = new navigationProbe.Component(undefined, { route: 'detail', viewportWidth: 400, reduceMotion });
+    directory.aboutToAppear();
+    directory.route = 'directory';
+    directory.routeMotion = 'push';
+    directory.reconcile();
+    assert.equal(directory.laneX('directory'), 400, 'the directory must be offscreen before the native push starts');
+    assert.equal(directory.laneOpacity('directory'), reduceMotion ? 0 : 1);
+    assert.equal(directory.laneX('reader-route-root'), 0, 'the outgoing detail remains in place');
+    motionNow += 300;
+    expireTimers();
+    assert.equal(directory.laneX('directory'), 0, 'a missing native start must release the directory');
+    assert.equal(directory.laneOpacity('directory'), 1);
+  }
+  for (const retire of ['silent-reconcile', 'unmount']) {
+    const directory = new navigationProbe.Component(undefined, { route: 'detail', viewportWidth: 400 });
+    directory.aboutToAppear();
+    directory.route = 'directory';
+    directory.routeMotion = 'push';
+    directory.reconcile();
+    if (retire === 'unmount') directory.aboutToDisappear();
+    else {
+      directory.routeMotion = 'none';
+      directory.reconcile();
+    }
+    assert.equal(directory.laneX('directory'), 0, retire);
+    assert.equal(timers.size, 0, retire);
+  }
   host.route = 'detail';
   host.reconcile();
-  assert.deepEqual(pathCalls[0], ['push', 'detail', true]);
+  assert.deepEqual(pathCalls.at(-1), ['push', 'detail', true]);
   assert.deepEqual(host.rootTabs(), ['bookshelf'], 'a detail push keeps the bookshelf in the native root');
   let native = host.nativeTransition({}, { name: 'detail' }, 'push');
+  assert.equal(host.laneX('detail'), 400, 'the native factory can return before its proxy arrives');
   native.transition({});
   assert.equal(host.progress, 0, 'the native start pose is visible for a frame');
   assert.equal(animations.length, 0, 'animating in the same turn collapses the start pose');
@@ -465,7 +494,10 @@ async function routeTransitionEffects() {
   expireTimers();
   await Promise.resolve();
   assert.deepEqual(pathCalls.at(-1), ['push', 'settings-developer', true], 'a missing native start releases the latest route');
-  assert.equal(timers.size, 0, 'the fallback retires its own timer');
+  assert.equal(timers.size, 1, 'only the newly pushed destination awaits its first frame');
+  motionNow += 300;
+  expireTimers();
+  assert.equal(timers.size, 0, 'both missing native starts retire their deadlines');
   const callsAfterFallback = pathCalls.length;
   await Promise.resolve();
   assert.equal(pathCalls.length, callsAfterFallback, 'the fallback performs no repeated path mutations');
@@ -543,16 +575,23 @@ async function routeTransitionEffects() {
   assert.deepEqual(pathCalls.at(-1), ['push', 'settings-general', false], 'initial wide entry avoids a second animation');
 
   const routeOwner = new ReaderNavigation();
-  const parentTimings = [];
+  const parentProperties = createArkUIPropertyRuntimeProbe();
+  let viewportWidth = 400;
+  let viewportHeight = 800;
   const indexOwner = createReaderBuilderProbe(index, [
     'appRouteLane', 'publishNavigation', 'updateReaderParentMotion', 'readerParentMotionProgress', 'detailAboveReader', 'readerDetailCoverGeneration',
-  ], { retainedReaderRoute, ...motionSpec }).owner;
+    'readerParentAnimated', 'readerParentAnimation', 'readerWindowMetricsRevision', 'searchAppForeground', 'appReduceMotion',
+    'readerParentAnimationGeneration', 'readerParentAnimationViewport', 'readerParentViewportMatches', 'routeViewport',
+  ], { retainedReaderRoute, ...motionSpec, ...parentProperties.sdk,
+    ReaderWindowCoordinator: { metrics: () => ({ windowRect: { width: viewportWidth, height: viewportHeight } }) },
+  }, parentProperties.hooks).owner;
   Object.assign(indexOwner, { route: 'search', wideSettingsPane: () => undefined,
     navigationOwner: routeOwner, searchAppForeground: true, visibleRouteMotion: 'none',
     readerParentProgress: 0,
-    getUIContext: () => ({ animateTo(params, update) { parentTimings.push(params.duration); update(); } }),
+    getUIContext: () => ({ animateTo() { assert.fail('route publication must not animate unrelated page layout'); } }),
     bookRemovalConfirmation: { dismiss() {} }, jsonImportPresentation: { dismiss() {} },
     readingEntry: { book: { sourceId: 'local', bookId: 'book' } }, shelfGroupPresentation: { retire() {} },
+    transientFeedback: { reset() {} }, libraryAcquisition: { currentOwner: () => undefined },
     bookshelfModalVisible: () => false });
   assert.equal(indexOwner.appRouteLane(), 'bookshelf', 'the shelf and editor share one lane');
   indexOwner.route = 'reading';
@@ -563,28 +602,69 @@ async function routeTransitionEffects() {
   assert.equal(indexOwner.visibleRouteMotion, 'push');
   assert.equal(indexOwner.appRouteLane(), 'bookshelf', 'the shelf stays under the reader during native motion');
   assert.equal(indexOwner.readerParentMotionProgress(), 1);
+  const pushAnimation = indexOwner.readerParentAnimation();
+  assert.equal(pushAnimation?.duration, 260);
+  indexOwner.readerWindowMetricsRevision += 1;
+  assert.equal(indexOwner.readerParentAnimation()?.duration, 260, 'a same-size metrics update does not cancel the transition');
+  viewportHeight = 640;
+  assert.equal(indexOwner.readerParentAnimation(), null, 'a height-only resize cannot inherit the previous push');
+  indexOwner.readerWindowMetricsRevision += 1;
+  assert.equal(indexOwner.readerParentAnimated, false);
+  assert.equal(indexOwner.readerParentMotionProgress(), 1, 'resizing keeps the current parent displacement');
+  viewportHeight = 800;
+  indexOwner.readerWindowMetricsRevision += 1;
+  assert.equal(indexOwner.readerParentAnimation(), null, 'restoring the previous height cannot revive the push');
   indexOwner.publishNavigation(routeOwner.showReadingOrigin());
   assert.equal(indexOwner.route, 'bookshelf');
   assert.equal(indexOwner.visibleRouteMotion, 'pop');
   assert.equal(indexOwner.appRouteLane(), 'bookshelf');
   assert.equal(indexOwner.readerParentMotionProgress(), 0);
-  assert.deepEqual(parentTimings, [260, 240]);
+  const popAnimation = indexOwner.readerParentAnimation();
+  assert.equal(popAnimation?.duration, 240);
+  pushAnimation.onFinish();
+  assert.equal(indexOwner.readerParentAnimation()?.duration, 240, 'late push completion cannot retire the pending pop');
+  popAnimation.onFinish();
+  assert.equal(indexOwner.readerParentAnimation(), null, 'a completed pop retires its animation');
+  indexOwner.publishNavigation(routeOwner.show('reading'));
+  assert.equal(indexOwner.readerParentAnimation()?.duration, 260);
+  viewportWidth = 680;
+  indexOwner.readerWindowMetricsRevision += 1;
+  assert.equal(indexOwner.readerParentAnimated, false, 'changing width also retires the push');
+  indexOwner.publishNavigation(routeOwner.showReadingOrigin());
+  for (const [field, interrupted] of [['searchAppForeground', false], ['appReduceMotion', true]]) {
+    indexOwner.publishNavigation(routeOwner.show('reading'));
+    const interruptedPush = indexOwner.readerParentAnimation();
+    assert.equal(interruptedPush?.duration, 260);
+    indexOwner[field] = interrupted;
+    assert.equal(indexOwner.readerParentAnimated, false, `${field} must retire the interrupted push`);
+    assert.equal(indexOwner.readerParentAnimation(), null);
+    indexOwner[field] = !interrupted;
+    assert.equal(indexOwner.readerParentMotionProgress(), 1, 'the open reader retains its settled displacement');
+    assert.equal(indexOwner.readerParentAnimation(), null, `restoring ${field} cannot replay the interrupted push`);
+    indexOwner.publishNavigation(routeOwner.showReadingOrigin());
+    const nextPop = indexOwner.readerParentAnimation();
+    assert.equal(nextPop?.duration, 240);
+    interruptedPush.onFinish();
+    assert.equal(indexOwner.readerParentAnimation()?.duration, 240, 'an old finish callback cannot retire the next pop');
+    nextPop.onFinish();
+  }
   for (const policy of [{ appReduceMotion: true }, { searchAppForeground: false }]) {
     Object.assign(indexOwner, policy);
     indexOwner.publishNavigation(routeOwner.show('reading'));
     assert.equal(indexOwner.readerParentMotionProgress(), 0);
+    assert.equal(indexOwner.readerParentAnimation(), null);
     indexOwner.publishNavigation(routeOwner.showReadingOrigin());
+    assert.equal(indexOwner.readerParentAnimation(), null);
     Object.assign(indexOwner, { appReduceMotion: false, searchAppForeground: true });
   }
-  assert.deepEqual(parentTimings, [260, 240], 'disabled and reduced motion do not animate the parent');
   routeOwner.returns.completeDetailEntry('bookshelf', undefined, false);
   indexOwner.publishNavigation(routeOwner.show('detail'));
   indexOwner.publishNavigation(routeOwner.show('reading'));
-  assert.deepEqual(parentTimings, [260, 240, 260]);
+  assert.equal(indexOwner.readerParentAnimation()?.duration, 260);
   indexOwner.publishNavigation(routeOwner.show('detail', 'push'));
   assert.equal(indexOwner.readerDetailCover, true, 'reader book information is a foreground push even when its host lane was detail');
   assert.equal(indexOwner.detailAboveReader(), true);
-  assert.deepEqual(parentTimings, [260, 240, 260], 'the reader-to-detail cover has no extra parent animation');
+  assert.equal(indexOwner.readerParentAnimation(), null, 'the reader-to-detail cover has no extra parent animation');
   assert.equal(indexOwner.readerParentMotionProgress(), 0);
   routeOwner.returns.rememberDirectoryReaderOrigin();
   indexOwner.route = 'directory'; indexOwner.directoryReturnTarget = 'readerControl';
@@ -597,7 +677,8 @@ async function routeTransitionEffects() {
   assert.equal(indexOwner.appRouteLane(), 'detail');
   assert.match(index, /ReaderRouteStackSurface\(\{\s*route: this\.appRouteLane\(\)/);
   assert.match(index, /\}\)\.transition\(readerSceneTransition\(this\.routeViewportWidth\(\), this\.appReduceMotion, this\.readerSceneMotionEnabled\(\)\)\)/);
-  assert.match(index, /\.opacity\(this\.readerParentMotionProgress\(\) \* READER_ROUTE_PARENT_DIM\)\s*\.hitTestBehavior\(HitTestMode\.None\)/);
+  assert.match(index, /Column\(\)\.opacity\(this\.readerParentMotionProgress\(\) \* READER_ROUTE_PARENT_DIM\)\s*\.animation\(this\.readerParentAnimation\(\)\)/);
+  assert.match(index, /\}\.translate\(\{ x: -this\.routeViewportWidth\(\) \* READER_ROUTE_PARENT_PARALLAX \* this\.readerParentMotionProgress\(\) \}\)\s*\.animation\(this\.readerParentAnimation\(\)\)/);
   const readerShell = readMotion('features/reading/ui/ReaderShell');
   const shell = createReaderBuilderProbe(readerShell, ['frameStyle'], { readerFrameStyle }).owner;
   Object.assign(shell, { chromeUnderlayColor: '#FFF2E9D7', contentKind: 'text' });
@@ -1249,7 +1330,8 @@ async function readerCoverStack(route, names, source = routeFixtureSource('app/n
     'route', 'initialRoot', 'routeMotion', 'reduceMotion', 'viewportWidth', 'rootRoute', 'pathStack', 'mounted', 'routeUpdate',
     'animationGeneration', 'tabGeneration', 'tabProgress', 'previousTab', 'hasDestination', 'pendingTabResetFrom',
     'activeRouteAnimation', 'readerCoverGeneration', 'readerCoverStartGeneration', 'readerCoverSettled', 'preview',
-    'paint', 'progress', 'routeEndTimer', 'onReaderCovered', 'aboutToAppear', 'reconcile', 'finishTabTransition',
+    'paint', 'progress', 'routeEndTimer', 'pendingPushLane', 'pendingPushTimer', 'setPendingPushLane',
+    'onReaderCovered', 'aboutToAppear', 'reconcile', 'finishTabTransition',
     'onRouteChanged', 'onReaderCoverChanged', 'readerCoverCanAnimate', 'retireStaleReaderCover', 'finishReaderCoverAnimation',
     'settleReaderCover', 'settleAnimation', 'completeRouteAnimation', 'revealRetainedDetail', 'nativeTransition',
     'clearRouteDeadline', 'armRouteDeadline', 'backGestureEnabled', 'beginPreview', 'updatePreview',
@@ -1296,9 +1378,9 @@ async function downloadEntryRouteFixture({ earlyDetail = false, immediateBack = 
     acceptReaderExit() { return this.sessionActive; },
     currentExitLease() { return this.sessionActive ? { readerIdentity: 'reader', request() {} } : undefined; },
   };
-  const frames = [], parentTimings = [], publications = [];
+  const frames = [], publications = [];
   const index = createReaderBuilderProbe(source, [
-    'appRouteLane', 'publishNavigation', 'updateReaderParentMotion', 'readerParentMotionProgress',
+    'appRouteLane', 'publishNavigation', 'updateReaderParentMotion', 'readerParentMotionProgress', 'readerParentAnimation', 'readerParentViewportMatches',
     'completeReaderDetailCover', 'appRouteBackGestureEnabled', 'readerDetailCoverGeneration',
     'replayingReaderDetailBack', 'readerDetailReturnPaint', 'retireReaderDetailReturnPaintAfterLayout', 'readerSceneMotionEnabled',
     'onBackPress', 'dispatchBackDestination', 'handleDetailBack',
@@ -1309,10 +1391,11 @@ async function downloadEntryRouteFixture({ earlyDetail = false, immediateBack = 
   Object.assign(index, {
     route: 'bookshelf', navigationGeneration: 0, navigationOwner: navigation, directoryReturnTarget: 'detail',
     wideSettingsPane: () => undefined, searchAppForeground: true, visibleRouteMotion: 'none', readerParentProgress: 0,
+    routeViewport: () => ({ width: 400, height: 800 }), readerParentAnimationGeneration: 0,
     currentReadingRuntime: () => runtime, readingEntry: entry, appReduceMotion: false, journeyRecoveryInputAllowed: () => true,
     getUIContext: () => ({
       postFrameCallback(frame) { frames.push(frame); },
-      animateTo(params, update) { parentTimings.push(params.duration); update(); },
+      animateTo() { assert.fail('the Index must keep route animations scoped to their paint attributes'); },
     }),
     bookRemovalConfirmation: { dismiss() {}, isOpen: () => false }, jsonImportPresentation: { dismiss() {} },
     shelfGroupPresentation: { retire() {}, back: () => false }, bookshelfModalVisible: () => false,
@@ -1336,12 +1419,12 @@ async function downloadEntryRouteFixture({ earlyDetail = false, immediateBack = 
     runtime: () => runtime, entry: () => entry, advance, publish, bindReader() {}, refreshDetail() {}, refreshShelf() {},
     captureReturn: () => navigation.returns.captureReaderReturn(runtime, () => ({})),
   });
-  return { index, actions, exit, navigation, entry, book, frames, parentTimings, publications, publish };
+  return { index, actions, exit, navigation, entry, book, frames, publications, publish };
 }
 
 async function downloadChapterTransition() {
   async function check(origin, earlyDetail = false) {
-    const { index, actions, navigation, book, parentTimings, publications, publish } = await downloadEntryRouteFixture({ earlyDetail });
+    const { index, actions, navigation, book, publications, publish } = await downloadEntryRouteFixture({ earlyDetail });
     if (origin === 'detail') publish(navigation.show('detail'));
     publish(navigation.openDownloads({ kind: 'fresh', detailKey: '' }, () => book, () => navigation.advance()));
     const names = origin === 'detail' ? ['detail', 'downloads'] : ['downloads'];
@@ -1352,7 +1435,7 @@ async function downloadChapterTransition() {
     assert.ok(!publications.includes('detail'), 'download opening must not publish an intermediate detail');
     assert.equal(index.appRouteLane(), 'detail');
     assert.equal(index.readerParentMotionProgress(), 0);
-    assert.deepEqual(parentTimings, []);
+    assert.equal(index.readerParentAnimation(), null);
     host.route = index.appRouteLane(); host.routeMotion = index.visibleRouteMotion;
     host.reconcile();
     assert.deepEqual(calls, [[origin === 'detail' ? 'popToName' : 'push', 'detail', false]]);

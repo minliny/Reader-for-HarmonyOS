@@ -89,7 +89,7 @@ async function failureFirstInput(localSource = read(localPath), mangaSource = re
         readerRecoveryView: { visible: kind === 'cache', canRetry: true, generation: 7 }, readerRecoveryActionLabel: '刷新本章',
         readerInputIsCurrent: () => reader.readerInputIsCurrent(), retryReading: () => reader.retryReading(),
         reconcileReaderRecovery: generation => reader.reconcileReaderRecovery(generation), openReaderControl() {},
-        error: 'chapter failed', openingRetry: false, offline: false, openFailureStage: 'chapter',
+        error: 'chapter failed', openingRetry: false, offline: false, openFailureStage: 'chapter', controller: reader.controller,
         inkColor: () => '#000000', mutedColor: () => '#666666', displayError: value => value,
         interactiveInsets: () => ({}), readerPanelForeground: () => reader.readerPanelForeground(),
         retryOpen: () => reader.retryOpen(), openSourceSwitch() {},
@@ -373,14 +373,15 @@ async function sliderTerminals(autoSource = read('features/reading/ui/ReaderCont
   const speedOwner = selectedProductionMethods(file(localPath), 'ReadingExperience', ['setAutoPageSpeed']);
   const coordinator = new ReaderAutoPageCoordinator({ now: () => 0, schedule: () => 1, cancel() {},
     active: () => true, ready: () => true, canResumeTurn: () => true, turn: () => ({ kind: 'started' }), changed() {} });
-  const reading = Object.assign(new speedOwner(), { autoPageCoordinator: coordinator });
+  const reading = Object.assign(new speedOwner(), { autoPageCoordinator: coordinator, mounted: true, appForeground: true });
   const speedCommits = [];
   const sdk = boundedSurfaceSdk();
   const methods = ['p', 'frame', 'effectiveSpeedSeconds', 'speedRow', 'speedControlsWidth', 'speedControlsHeight',
     'speedControlsX', 'speedControlsY', 'speedSliderWidth', 'speedSliderX', 'speedMinusX', 'speedMaxLabelX',
-    'speedPlusX', 'speedLabelY', 'speedActor', 'speedActorId', 'speedStepButton', 'changeSpeedStep', 'textMetric']
+    'speedPlusX', 'speedLabelY', 'speedActor', 'speedActorId', 'speedStepButton', 'changeSpeedStep', 'textMetric', 'changeSpeedSlider', 'commitSpeedSeconds',
+    'clearPendingSpeed', 'onSpeedSecondsChanged']
     .filter(name => autoSource.includes(`private ${name}(`));
-  const auto = sdk.consumer(autoSource, [...methods, 'speedSeconds', 'speedPreviewSeconds'], { ...geometry, ...actors, ...policy });
+  const auto = sdk.consumer(autoSource, [...methods, 'speedSeconds', 'speedPreviewSeconds', 'pendingSpeedSeconds', 'speedChangeGeneration', 'observedSpeedSeconds'], { ...geometry, ...actors, ...policy });
   let input = true;
   Object.assign(auto, { motionProgress: 1, availableWidth: 338, speedSeconds: 8, speedPreviewSeconds: -1,
     minimumProfile: () => undefined, preparedMinimumRequired: false, minimumKey: '',
@@ -393,12 +394,11 @@ async function sliderTerminals(autoSource = read('features/reading/ui/ReaderCont
     } });
   auto.speedRow();
   const speed = sdk.nodes(auto).find(node => node.type === 'Slider');
-  // The installed SDK onChange contract includes Begin and End for gesture
-  // clicks. A Click-only injection cannot establish a missing click commit.
+  // A complete tap delivers Click and End. The accepted speed must only be submitted once.
   speed.onChange(8, 'SliderChangeMode.Begin');
   speed.onChange(13, 'SliderChangeMode.Click');
   sdk.properties.flush();
-  assert.equal(auto.effectiveSpeedSeconds(), 13); assert.equal(coordinator.snapshot().speedSeconds, 8);
+  assert.equal(auto.effectiveSpeedSeconds(), 13);
   assert.equal(speed.create.value, 13, 'native Slider displays the current click preview');
   speed.onChange(13, 'SliderChangeMode.End');
   sdk.properties.flush();
@@ -417,12 +417,13 @@ async function sliderTerminals(autoSource = read('features/reading/ui/ReaderCont
   assert.deepEqual(speedCommits, [13, 15]);
 
   const seeks = [], restored = [];
-  const manga = sdk.consumer(mangaSource, ['bottomControls', 'seekPage', 'readerPanelForeground'], {
+  const manga = sdk.consumer(mangaSource, ['bottomControls', 'seekPage', 'readerPanelForeground', 'presentedPage', 'changePageSlider',
+    'pageSliderGeneration', 'pageSliderPreview', 'pageSliderCommitted'], {
     ReaderPanelFrame: class { applyNormalAttribute() {} },
   });
   Object.assign(manga, { mounted: true, exiting: false, appForeground: true, windowChromeActive: true,
     windowChromeOverlayActive: false, interactionBlocked: false, isReaderIdentityCurrent: () => true,
-    inputCurrent: () => true, opened: true, horizontal: false, horizontalPageCount: 5,
+    inputCurrent: () => true, opened: true, horizontal: false, horizontalPageCount: 5, panel: '', controlsVisible: true,
     presentationGeneration: 0, pageTurnInputRevision: 1, layoutGeneration: 1,
     controller: { chapter: {}, totalPages: 5, setVisible: async ordinal => { seeks.push(ordinal); } },
     data: { projection: { index: ordinal => ordinal } }, saveVisible: async () => {}, notifyPublishedRows() {},
@@ -435,7 +436,7 @@ async function sliderTerminals(autoSource = read('features/reading/ui/ReaderCont
   const page = sdk.nodes(manga).find(node => node.type === 'Slider');
   page.onChange(1, 'SliderChangeMode.Begin');
   page.onChange(3, 'SliderChangeMode.Click'); await settle();
-  assert.deepEqual(seeks, [], 'manga click preview waits for completion');
+  assert.deepEqual(seeks, [2], 'manga click reaches the current seek controller');
   page.onChange(3, 'SliderChangeMode.End'); await settle();
   assert.deepEqual(seeks, [2], 'manga complete click reaches original seek controller once');
   assert.deepEqual(restored, [[2, 0, 0]]);
@@ -487,11 +488,12 @@ for (const id of cases) {
   } else {
     const auto = read('features/reading/ui/ReaderControlAutoPageContent.ets'), manga = read(mangaPath);
     result = await sliderTerminals(auto, manga);
-    const extraAuto = auto.replace('if (mode === SliderChangeMode.End)', 'if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click)');
-    const extraManga = manga.replace('if (mode === SliderChangeMode.End) void this.seekPage', 'if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) void this.seekPage');
+    const extraAuto = auto.replace('if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click)',
+      'if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click || mode === SliderChangeMode.Moving)');
+    const extraManga = manga.replace('if (mode === SliderChangeMode.End && this.pageSliderCommitted === ordinal) return;', '');
     assert.notEqual(extraAuto, auto); assert.notEqual(extraManga, manga);
     await assert.rejects(() => sliderTerminals(extraAuto, manga));
-    await assert.rejects(() => sliderTerminals(auto, extraManga), /manga click preview waits for completion/);
+    await assert.rejects(() => sliderTerminals(auto, extraManga), /manga complete click reaches original seek controller once/);
   }
   console.log(JSON.stringify({ case: id, result, oldBehaviorRejected: true,
     boundary: 'Current production methods and actual SDK native action callbacks. Acquisition, native layout and platform IO are finite ports. No device action.' }));

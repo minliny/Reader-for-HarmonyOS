@@ -21,7 +21,7 @@ import type { ReaderAutoPageStatus } from './ReaderAutoPageState';
 import {
   READER_AUTO_PAGE_FULL_MAX_MINUTES, READER_AUTO_PAGE_FULL_MAX_SECONDS,
   READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, READER_AUTO_PAGE_FULL_MIN_MINUTES,
-  READER_AUTO_PAGE_FULL_MIN_SECONDS, READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
+  READER_AUTO_PAGE_FULL_MIN_SECONDS, READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS, normalizeReaderAutoPageSpeedSeconds,
 } from './ReaderAutoPageFullState';
 import type { ReaderControlForm } from './ReaderControlSessionState';
 import { readerSessionMorphActorId, type ReaderSessionMorphSourceKind } from './ReaderSessionMorphState';
@@ -142,7 +142,7 @@ export struct ReaderControlAutoPageContent {
   @Prop @Watch('publishMinimumMeasurer') timerSummaryText: string = '15:00';
   @Prop timerMinutes: number = 15;
   @Prop timerSeconds: number = 0;
-  @Prop speedSeconds: number = 8;
+  @Prop @Watch('onSpeedSecondsChanged') speedSeconds: number = 8;
   @Prop followHighlight: boolean = false;
   @Prop canPreviousChapter: boolean = false;
   @Prop canNextChapter: boolean = false;
@@ -152,7 +152,8 @@ export struct ReaderControlAutoPageContent {
   onNextChapter: () => void = (): void => {};
   onTimerChange: (minutes: number, seconds: number) => void =
     (_minutes: number, _seconds: number): void => {};
-  onSpeedChange: (seconds: number) => void = (_seconds: number): void => {};
+  onSpeedChange: (seconds: number, onDeclined?: () => void) => void =
+    (_seconds: number, onDeclined?: () => void): void => { onDeclined?.(); };
   onFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
 
   onBack: () => void = (): void => {};
@@ -160,6 +161,9 @@ export struct ReaderControlAutoPageContent {
     width: number, height: number) => void =
     (_kind: ReaderSessionMorphSourceKind, _left: number, _top: number, _width: number, _height: number): void => {};
   @State private speedPreviewSeconds: number = -1;
+  @State private pendingSpeedSeconds: number = -1;
+  private observedSpeedSeconds: number | undefined;
+  private speedChangeGeneration: number = 0;
   @State private scrollMotion: ReaderControlMorphScrollState = createReaderControlMorphScroll();
   @Prop fullViewportHeight: number = 666;
   private readonly scroller: Scroller = new Scroller();
@@ -207,6 +211,8 @@ export struct ReaderControlAutoPageContent {
   }
 
   aboutToDisappear(): void {
+    this.clearPendingSpeed();
+    this.speedPreviewSeconds = -1;
     this.adoptedPrepared = undefined;
     this.adoptedPreparedKey = '';
 
@@ -297,9 +303,10 @@ export struct ReaderControlAutoPageContent {
   }
 
   private morphMeasurementScope(): string {
-    const frame = this.frame();
+    const frame = this.fixedIsland ? undefined : this.frame();
     return JSON.stringify([this.minimumIdentity, this.availableWidth, this.availableHeight, this.fullViewportHeight,
-      this.form, this.p(), this.readerWindowMetricsRevision, frame.content.x, frame.content.y, frame.control.x, frame.control.y]);
+      this.form, this.fixedIsland ? 0 : this.p(), this.readerWindowMetricsRevision, this.fixedIsland, frame?.content.x, frame?.content.y,
+      frame?.control.x, frame?.control.y]);
   }
 
   private rebindMinimumMorphSource(): void {
@@ -308,16 +315,16 @@ export struct ReaderControlAutoPageContent {
 
   private naturalMorphMeasurementCurrent(): boolean {
     if (this.minimumIdentity.length === 0) return true;
-    if (this.minimumProfile() === undefined || (this.p() !== 0 && this.p() !== 1)) return false;
+    if (this.minimumProfile() === undefined || (!this.fixedIsland && (this.form === 'quick' ? this.p() !== 0 : this.p() !== 1))) return false;
     const full = this.form === 'full';
     const measured = full ? this.fullMeasurement : this.quickMeasurement;
     const metrics = full ? this.fullMeasurementMetrics : this.quickMeasurementMetrics;
     const scope = full ? this.fullMeasurementScope : this.quickMeasurementScope;
-    const frame = this.frame();
-    const width = full ? frame.control.width : this.availableWidth;
-    const height = full ? frame.control.height : this.fixedIsland ? this.islandPlaybackHeight() : this.availableHeight;
-    return measured !== undefined && metrics === this.readerWindowMetricsRevision && scope === this.morphMeasurementScope() &&
-      Math.abs(measured.width - width) < .1 && Math.abs(measured.height - height) < .1;
+    const width = full ? this.frame().control.width : this.availableWidth;
+    const height = full ? this.frame().control.height : this.fixedIsland ? this.islandPlaybackHeight() : this.availableHeight;
+    if (measured === undefined || metrics !== this.readerWindowMetricsRevision || scope !== this.morphMeasurementScope()) return false;
+    const sizeError = Math.max(Math.abs(measured.width - width), Math.abs(measured.height - height));
+    return this.fixedIsland && !full ? sizeError <= 0.5 : sizeError < 0.1;
   }
 
   private textMetric(name: string, fallback: number): number {
@@ -467,7 +474,9 @@ export struct ReaderControlAutoPageContent {
       return readerControlMotionClipPath(rects, density);
     });
   }
-  private sharedInput(): boolean { return this.currentInputEnabled() && (this.p() === 0 || this.p() === 1); }
+  private sharedInput(): boolean {
+    return this.currentInputEnabled() && (this.fixedIsland || this.p() === 0 || this.p() === 1);
+  }
   private contentWidth(): number { return this.frame().content.width; }
   private sectionInnerWidth(): number { return Math.max(0, this.frame().content.width - 8); }
   private actorId(full: boolean): string {
@@ -555,15 +564,8 @@ export struct ReaderControlAutoPageContent {
               .width('100%').height(44)
               .selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
               .trackColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme))
-              .accessibilityText('自动翻页间隔').onChange((value: number, mode: SliderChangeMode): void => {
-                if (!this.currentInputEnabled()) return;
-                if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) {
-                  this.speedPreviewSeconds = -1;
-                  if (Math.round(value) !== this.speedSeconds) this.onSpeedChange(Math.round(value));
-                } else {
-                  this.speedPreviewSeconds = Math.round(value);
-                }
-              });
+              .enabled(this.sharedInput()).accessibilityText('自动翻页间隔')
+              .onChange((value: number, mode: SliderChangeMode): void => this.changeSpeedSlider(value, mode));
           }.width('100%').padding({ left: 10, right: 10 }).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
           Column() {
             Row() {
@@ -675,8 +677,7 @@ export struct ReaderControlAutoPageContent {
   private stepIslandSpeed(delta: number): void {
     const next = this.effectiveSpeedSeconds() + delta;
     if (next >= READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS && next <= READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS) {
-      this.speedPreviewSeconds = -1;
-      this.onSpeedChange(next);
+      this.commitSpeedSeconds(next);
     }
   }
 
@@ -1028,7 +1029,7 @@ export struct ReaderControlAutoPageContent {
 
   private changeSpeedStep(increase: boolean): void {
     if (!this.sharedInput() || this.p() !== 0) return;
-    this.onSpeedChange(Math.max(READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
+    this.commitSpeedSeconds(Math.max(READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
       Math.min(READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, this.effectiveSpeedSeconds() + (increase ? 1 : -1))));
   }
 
@@ -1090,15 +1091,7 @@ export struct ReaderControlAutoPageContent {
           .opacity(this.speedActor('slider').opacity).enabled(this.fullInput())
           .accessibilityLevel(this.fullInput() ? 'auto' : 'no-hide-descendants')
           .accessibilityText('调整自动翻页速度')
-          .onChange((value: number, mode: SliderChangeMode): void => {
-            if (!this.fullInput()) { this.speedPreviewSeconds = -1; return; }
-            this.speedPreviewSeconds = Math.round(value);
-            if (mode === SliderChangeMode.End) {
-              const committed = this.speedPreviewSeconds;
-              this.speedPreviewSeconds = -1;
-              this.onSpeedChange(committed);
-            }
-          })
+          .onChange((value: number, mode: SliderChangeMode): void => this.changeSpeedSlider(value, mode))
           .position({ x: this.speedActor('slider').x, y: this.speedActor('slider').y });
         Text('20 秒').id(this.speedActorId('maximum'))
           .width(this.speedActor('maximum').width).height(this.speedActor('maximum').height)
@@ -1157,12 +1150,45 @@ export struct ReaderControlAutoPageContent {
     });
   }
 
+  private changeSpeedSlider(value: number, mode: SliderChangeMode): void {
+    if (!(this.fixedIsland ? this.sharedInput() : this.fullInput())) { this.speedPreviewSeconds = -1; return; }
+    if (mode === SliderChangeMode.Begin) this.clearPendingSpeed();
+    if (!Number.isFinite(value)) { this.speedPreviewSeconds = -1; return; }
+    const seconds = normalizeReaderAutoPageSpeedSeconds(value);
+    if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) this.commitSpeedSeconds(seconds);
+    else this.speedPreviewSeconds = seconds;
+  }
+
+  private onSpeedSecondsChanged(): void {
+    if (this.observedSpeedSeconds === this.speedSeconds) return;
+    this.observedSpeedSeconds = this.speedSeconds;
+    this.clearPendingSpeed();
+  }
+
+  private clearPendingSpeed(): void {
+    this.speedChangeGeneration += 1;
+    this.pendingSpeedSeconds = -1;
+  }
+
+  private commitSpeedSeconds(seconds: number): void {
+    const previous = this.pendingSpeedSeconds >= READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS ?
+      this.pendingSpeedSeconds : this.speedSeconds;
+    this.speedPreviewSeconds = -1;
+    if (seconds === previous) return;
+    const generation = ++this.speedChangeGeneration;
+    this.observedSpeedSeconds = this.speedSeconds;
+    this.pendingSpeedSeconds = seconds === this.speedSeconds ? -1 : seconds;
+    this.onSpeedChange(seconds, (): void => {
+      if (generation === this.speedChangeGeneration) this.clearPendingSpeed();
+    });
+  }
+
   private effectiveSpeedSeconds(): number {
     if (this.speedPreviewSeconds >= READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS) {
       return this.speedPreviewSeconds;
     }
-    return Math.max(READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
-      Math.min(READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, Math.round(this.speedSeconds)));
+    if (this.pendingSpeedSeconds >= READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS) return this.pendingSpeedSeconds;
+    return normalizeReaderAutoPageSpeedSeconds(this.speedSeconds);
   }
 
   private currentTimerValue(minutes: boolean): number {

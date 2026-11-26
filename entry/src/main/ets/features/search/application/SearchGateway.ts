@@ -546,7 +546,7 @@ export class SearchGateway {
       if (!this.localBookMatches(book, query)) continue;
       books.push({ sourceId: 'local', sourceName: '本地导入', bookSourceUrl: '',
         bookId: requiredNonBlankString(book, 'bookId'), detailUrl: '', searchRequestId,
-        sourceRuleVersion: 'local', category: 'novel', title, author,
+        sourceRuleVersion: 'local', category: book['contentKind'] === 'manga' ? 'comic' : 'novel', title, author,
         coverUrl: optionalString(book, 'coverUrl'), intro: optionalString(book, 'intro'),
         kind: optionalString(book, 'kind'), variables: [] });
     }

@@ -9,7 +9,7 @@ const choices=await import("../entry/src/main/ets/features/reading/presentation/
 const state=await import("../entry/src/main/ets/features/reading/application/ReaderTtsState.ts");
 const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
 const labels=pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlTtsMinimum.ets',import.meta.url),'utf8'),
-  'ReaderControlTtsMinimum.ets',{...choices,...state},['readerControlTtsEngineLabel','readerControlTtsVoiceLabel']);
+  'ReaderControlTtsMinimum.ets',{...choices,...state},['readerControlTtsEngineLabel','readerControlTtsVoiceLabel','readerControlTtsSessionLabel']);
 const { readerControlUnit }=await import("../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts");
 const file = name => new URL(`../entry/src/main/ets/features/${name}`, import.meta.url);
 const ttsFile = file('reading/ui/ReaderControlTtsContent.ets');
@@ -17,13 +17,14 @@ const SliderChangeMode = { Begin: 0, Moving: 1, End: 2, Click: 3 };
 const methods = ['p','fullInput','sharedInput','openConfiguration','dismissConfiguration','configurationChoices',
   'configurationSelectedId','configurationMessage','commitConfiguration','fieldLabel','fieldValue','fieldWidth',
   'hasActiveQueue','isHttpEngineSelected','onlineServicePage','onEngineChanged','onlineEngineId','onlineServiceDescription','isTtsServiceTabSelected','systemEngineDisplay','currentEngineLabel','currentVoiceLabel','selectTtsServiceType',
-  'changeRateSlider','changeSeekSlider','presentationPrepared','preparedProfile','displayedFacts',
+  'changeRateSlider','changeSeekSlider','effectiveRate','settlePendingRate','chooseRatePreset',
+  'onMinimumInputsChanged','presentationPrepared','preparedProfile','displayedFacts',
   'sourceMinimumCurrent','selectedMinimum','textMinimum','fieldHeight'];
 const deps = { ...choices, ...state, ...labels, readerControlUnit, SliderChangeMode };
 const Content = productionMotionMethods(ttsFile, methods, deps);
 function setup(owner = new Content()) {
   return Object.assign(owner, { motionProgress:1, interactionEnabled:true, configField:'', configIdentity:'', configGeneration:0,
-    state:{status:'idle',rate:1}, onStop(){}, engine:'system', serviceTab:'', serviceBusy:false, serviceGeneration:0, serviceError:'', httpEngines:[], language:'zh-CN', person:0, allowMixing:false, failurePolicy:'stop',
+    state:{status:'idle',rate:1}, pendingRate:-1, ratePreview:-1, rateInputGeneration:0, publishMinimumMeasurer(){}, onStop(){}, engine:'system', serviceTab:'', serviceBusy:false, serviceGeneration:0, serviceError:'', httpEngines:[], language:'zh-CN', person:0, allowMixing:false, failurePolicy:'stop',
     voiceOptions:[{language:'zh-CN',person:0,label:'中文女声'},{language:'zh-CN',person:1,label:'中文男声'},
       {language:'en-US',person:7,label:'English'}],
     frame:()=>({config:{width:316}}), onTemporaryLayerChange(){}, onAuditionStop(){}, sourceOnly:'none',
@@ -35,6 +36,23 @@ function setup(owner = new Content()) {
 
 const tick=async()=>{for(let i=0;i<8;i++)await Promise.resolve();};
 if(id==='configuration'){
+const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+const { ts, options } = installedEtsCompiler();
+const tree = ts.createSourceFile('ReaderControlTtsContent.ets', readFileSync(ttsFile, 'utf8'),
+  ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const headers = [];
+function checkHeader(node) {
+  if (ts.isCallExpression(node) && node.expression.getText(tree) === 'this.sectionHeader') {
+    assert.equal(node.arguments.length, 1, 'all TTS forms use one V1 Builder reference argument');
+    const header = node.arguments[0];
+    assert.ok(ts.isObjectLiteralExpression(header));
+    assert.deepEqual(header.properties.map(prop => prop.name.getText(tree)), ['title','meta']);
+    headers.push(header.properties[0].initializer.text);
+  }
+  ts.forEachChild(node, checkHeader);
+}
+checkHeader(tree);
+assert.ok(['播放配置','朗读引擎','语速','定时停止','音频配置'].every(label => headers.includes(label)));
 assert.equal(choices.readerTtsLanguageLabel('zh_CN'), '普通话');
 assert.equal(choices.readerTtsLanguageLabel('en-US'), '英语（美国）');
 assert.equal(choices.readerTtsConfigChoices('language', 'system', [],
@@ -55,7 +73,7 @@ for(const [field,id,expected] of [['voice','voice:zh-CN:1','中文男声'],['lan
 c.configField=''; c.selectTtsServiceType(true);
 assert.equal(c.configField,'','Online selects a tab before a separate configuration entry');
 assert.equal(c.onlineServicePage(),true); assert.equal(c.engine,'system','empty Online never fabricates a native engine');
-c.openConfiguration('manage'); assert.equal(c.configField,'manage');
+c.openConfiguration('manage'); assert.equal(c.configField,'manage'); c.dismissConfiguration();
 c.httpEngines=[{id:12,name:'测试服务'}]; c.openConfiguration('engine');
 await c.commitConfiguration('http-tts:12',c.configIdentity);
 assert.equal(c.engine,'http-tts:12');
@@ -89,6 +107,88 @@ assert.deepEqual(rateCalls,[1.4]); assert.deepEqual(seekCalls,[1]);
 for(const mode of [0,1,2]) slider.changeRateSlider(1.6,mode);
 assert.deepEqual(rateCalls,[1.4,1.6]);
 slider.interactionEnabled=false; slider.changeRateSlider(2,3); assert.equal(rateCalls.length,2);
+
+const island = createReaderBuilderProbe(readFileSync(ttsFile, 'utf8'),
+  ['islandRate', 'sectionHeader', 'sharedInput', 'effectiveRate', 'changeRateSlider', 'settlePendingRate'],
+  { ...deps, makeBuilderParameterProxy: (_name, fields) => new Proxy(fields, {
+    get: (target, property) => target[property](),
+  }) }).owner;
+let viewRate = 1;
+Object.assign(island, { fixedIsland: true, currentInputEnabled: () => true, p: () => 0.4,
+  state: { rate: 1 }, displayedFacts: () => ({ viewRate }), ratePreview: -1, pendingRate: -1, rateInputGeneration: 0,
+  onRateChange() {}, appScheme: 'day', textMinimum: () => undefined });
+island.islandRate();
+const nodes = [...island.nodes.values()];
+const range = nodes.find(node => node.type === 'Slider');
+const label = nodes.find(node => node.type === 'Text' && node.create === '1.00×');
+assert.ok(label); assert.equal(range.enabled, true);
+range.onChange(1.4, SliderChangeMode.Begin);
+range.onChange(1.7, SliderChangeMode.Moving);
+island.replay(); assert.equal(label.create, '1.70×', 'mounted section header uses the current preview');
+viewRate = 1.7; // The prepared facts may echo a preview before playback has accepted it.
+range.onChange(1.7, SliderChangeMode.End); viewRate = 1;
+island.replay(); assert.equal(label.create, '1.70×');
+island.state = { rate: 1.7 }; island.settlePendingRate();
+assert.equal(island.pendingRate, 1.7, 'old display receipt can still lag the playback acknowledgment');
+viewRate = 1.7; island.settlePendingRate(); assert.equal(island.pendingRate, -1);
+island.replay(); assert.equal(label.create, '1.70×');
+
+slider.interactionEnabled = true;
+slider.chooseRatePreset(1);
+assert.equal(slider.pendingRate, -1, 'a preset supersedes the outstanding drag');
+slider.changeRateSlider(1.6, SliderChangeMode.Click);
+assert.equal(slider.pendingRate, 1.6);
+slider.changeRateSlider(1.8, SliderChangeMode.Begin);
+assert.equal(slider.pendingRate, -1);
+const declined = [];
+slider.onRateChange = (_rate, onDeclined) => declined.push(onDeclined);
+slider.changeRateSlider(1.8, SliderChangeMode.End);
+slider.changeRateSlider(1.9, SliderChangeMode.Click);
+declined[0](); assert.equal(slider.effectiveRate(), 1.9, 'an older failure keeps the new edit');
+declined[1](); assert.equal(slider.effectiveRate(), 1, 'a rejected command reveals the confirmed rate');
+slider.changeRateSlider(1.9, SliderChangeMode.End); assert.equal(declined.length, 2);
+slider.changeRateSlider(1.9, SliderChangeMode.Click); assert.equal(declined.length, 3);
+
+const { selectedProductionComponentCallback, selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+const readingFile = file('reading/ui/LocalReadingExperience.ets');
+const Reading = selectedProductionMethods(readingFile, 'ReadingExperience', ['changeTtsRate'], state);
+const host = Object.assign(new Reading(), { ttsConfigMutationGeneration: 0, lifecycleToken: 1,
+  sourceId: 'source', bookId: 'book', isSessionActive: () => true, ttsState: { rate: 1 },
+  notifyTtsConfigurationFailure() {}, logTtsFailure() {} });
+const panel = { onTtsRateChange: selectedProductionComponentCallback(readingFile, 'ReaderControlPanel', 'onTtsRateChange', host) };
+slider.onRateChange = selectedProductionComponentCallback(file('reading/ui/ReaderControlPanel.ets'),
+  'ReaderControlTtsContent', 'onRateChange', panel);
+slider.changeRateSlider(2, SliderChangeMode.Click);
+assert.equal(slider.effectiveRate(), 1, 'an unavailable coordinator immediately releases the pending display');
+host.ttsCoordinator = { async setRate(rate) { if (rate !== 1) throw Error('declined'); } };
+slider.changeRateSlider(1.5, SliderChangeMode.Click);
+assert.equal(slider.effectiveRate(), 1.5); await tick(); assert.equal(slider.effectiveRate(), 1);
+
+for (const [path, name, member] of [
+  ['reading/ui/ReaderControlPanel.ets', 'ReaderControlPanel', 'onTtsRateChange'],
+  ['reading/ui/ReaderControlTtsContent.ets', 'ReaderControlTtsContent', 'onRateChange'],
+]) {
+  const Owner = selectedProductionMethods(file(path), name, [member]);
+  let declined = 0;
+  new Owner()[member](1.7, () => { declined++; });
+  assert.equal(declined, 1, 'a missing TTS owner retires optimistic rate just like a missing auto-page owner');
+}
+const auto = await import('../entry/src/main/ets/features/reading/ui/ReaderAutoPageFullState.ts');
+const AutoPage = productionMotionMethods(file('reading/ui/ReaderControlAutoPageContent.ets'),
+  ['changeSpeedSlider', 'effectiveSpeedSeconds', 'commitSpeedSeconds', 'onSpeedSecondsChanged', 'clearPendingSpeed', 'stepIslandSpeed'],
+  { ...auto, SliderChangeMode });
+for (const fixedIsland of [true, false]) {
+  const writes = [];
+  const control = Object.assign(new AutoPage(), { fixedIsland, sharedInput: () => true, fullInput: () => true,
+    speedSeconds: 8, speedPreviewSeconds: -1, pendingSpeedSeconds: -1, speedChangeGeneration: 0, onSpeedChange: value => writes.push(value) });
+  control.changeSpeedSlider(12, SliderChangeMode.Moving); assert.equal(control.effectiveSpeedSeconds(), 12);
+  control.changeSpeedSlider(12, SliderChangeMode.Click);
+  control.changeSpeedSlider(12, SliderChangeMode.End);
+  assert.equal(control.effectiveSpeedSeconds(), 12); assert.deepEqual(writes, [12]);
+  control.stepIslandSpeed(1); assert.equal(control.effectiveSpeedSeconds(), 13);
+  control.speedSeconds = 12; control.onSpeedSecondsChanged(); assert.equal(control.effectiveSpeedSeconds(), 12);
+  control.speedSeconds = 13; control.onSpeedSecondsChanged(); assert.equal(control.pendingSpeedSeconds, -1);
+}
 }
 if(id==='service-tabs'){
 const tabs=setup();
@@ -101,9 +201,11 @@ tabs.selectTtsServiceType(true); assert.equal(tabs.serviceBusy,true);
 tabs.selectTtsServiceType(false); assert.deepEqual(engineChanges,['http-tts:31'],'busy tab cannot start a second engine transaction');
 assert.equal(tabs.configField,''); finishSwitch(); await tick();
 assert.equal(tabs.serviceBusy,false); assert.equal(tabs.engine,'http-tts:31');
-tabs.onEngineChange=async()=>{throw new Error('Switch failed');};
+let rejectedSwitch;
+tabs.onEngineChange=async id=>{rejectedSwitch=id;throw new Error('Switch failed');};
 tabs.selectTtsServiceType(false); await tick();
-assert.equal(tabs.onlineServicePage(),true); assert.equal(tabs.serviceError,'Switch failed');
+assert.equal(rejectedSwitch,'system'); assert.equal(tabs.onlineServicePage(),true);
+assert.equal(tabs.engine,'http-tts:31'); assert.equal(tabs.serviceBusy,false);
 tabs.onEngineChange=async id=>{tabs.engine=id;}; tabs.selectTtsServiceType(false); await tick();
 assert.equal(tabs.onlineServicePage(),false); assert.equal(tabs.engine,'system'); assert.equal(tabs.configField,'');
 }
@@ -132,7 +234,7 @@ const Manager=productionMotionMethods(file('reading/ui/ReaderTtsConfigOverlay.et
   ['stopPreview','aboutToAppear','aboutToDisappear'],{ReaderWindowCoordinator:{acquireReaderKeyboardResize(){
     keyboardWrites.push('acquire');return ()=>keyboardWrites.push('release');
   }}});
-const modal=Object.assign(new Manager(),{windowModal:true,manager:false,generation:0,previewGeneration:0,onPreviewStop(){},onBusyChange(){},
+const modal=Object.assign(new Manager(),{windowModal:true,manager:true,engines:[],generation:0,previewGeneration:0,onPreviewStop(){},onBusyChange(){},
   getUIContext:()=>{throw new Error('only the registered window coordinator owns native keyboard policy');}});
 modal.aboutToAppear(); modal.aboutToDisappear(); modal.aboutToDisappear();
 assert.deepEqual(keyboardWrites,['acquire','release']);

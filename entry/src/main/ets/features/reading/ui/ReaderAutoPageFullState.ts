@@ -20,6 +20,10 @@ export type ReaderAutoPageFullConfiguration = {
   followHighlight: boolean;
 };
 
+export function normalizeReaderAutoPageSpeedSeconds(seconds: number): number {
+  return clampInteger(Math.round(seconds), READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS, READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS);
+}
+
 export function createDefaultReaderAutoPageFullConfiguration(): ReaderAutoPageFullConfiguration {
   return {
     // Figma Phone Full endpoint `1771:10280` displays a real 15:00

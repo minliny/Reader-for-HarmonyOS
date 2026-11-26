@@ -6,7 +6,7 @@ import {
   type ReaderAutoPageStopReason,
 } from './ReaderAutoPageState.ts';
 import {
-  createDefaultReaderAutoPageFullConfiguration, normalizeReaderAutoPageFullConfiguration,
+  createDefaultReaderAutoPageFullConfiguration, normalizeReaderAutoPageFullConfiguration, normalizeReaderAutoPageSpeedSeconds,
   readerAutoPageFullTimerDurationSeconds, setReaderAutoPageFullSpeed, setReaderAutoPageFullFollowHighlight,
   type ReaderAutoPageFullConfiguration,
 } from './ReaderAutoPageFullState.ts';
@@ -88,12 +88,15 @@ export class ReaderAutoPageCoordinator {
     // before the old deadline. Retaining that deadline consumes paused time.
     this.clearPageTimer(); this.clearSessionTimer();
   }
-  setSpeed(speed: number): void {
-    const normalized = Math.max(2, Math.min(20, Math.round(speed)));
-    if (normalized === this.state.speedSeconds) return;
+  /** A no-op publishes no speed change, so the caller can retire its preview. */
+  setSpeed(speed: number): boolean {
+    if (!Number.isFinite(speed)) return false;
+    const normalized = normalizeReaderAutoPageSpeedSeconds(speed);
+    if (normalized === this.state.speedSeconds) return false;
     this.configuration = setReaderAutoPageFullSpeed(this.configuration, normalized);
     this.publish(setReaderAutoPageSpeed(this.state, normalized));
     if (this.state.status === 'running' && !this.state.awaitingPageCommit) this.armPageTimer(true);
+    return true;
   }
   setSessionTimer(minutes: number, seconds: number): void {
     if (this.state.status !== 'stopped') return;

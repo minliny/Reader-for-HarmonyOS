@@ -58,6 +58,7 @@ export struct BookDirectoryPage {
   @StorageLink('readerWindowMetricsRevision') @Watch('onMangaMetricsChanged') private readerWindowMetricsRevision: number = 0;
   @Prop @Watch('onIdentityChanged') sourceId: string = '';
   @Prop @Watch('onIdentityChanged') bookId: string = '';
+  @Prop @Watch('onMangaMetricsChanged') catalogContext: 'detail' | 'reader' = 'reader';
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
   navigationPortFactory: ReaderDirectoryNavigationPortFactory | undefined = undefined;
   @Prop catalogMessage: string = '';
@@ -706,7 +707,9 @@ export struct BookDirectoryPage {
 
   private topInset(): number {
     if (this.readerWindowMetricsRevision < 0) return 0;
-    return readerInteractiveSafeTop(readerWindowMetrics());
+    const metrics = readerWindowMetrics();
+    const inset = readerInteractiveSafeTop(metrics);
+    return this.catalogContext === 'detail' ? Math.max(inset, metrics.statusBarRect.top + metrics.statusBarHeight) : inset;
   }
 
   private locateCurrent(): void {

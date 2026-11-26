@@ -1,5 +1,5 @@
 import {READER_FEEDBACK_BRIEF_MS} from '../../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts';
-import {bookCoverDisplayUrl} from '../../entry/src/main/ets/app/library/BookCoverDisplay.ts';
+import {bookContentKindLabel, bookCoverDisplayUrl} from '../../entry/src/main/ets/app/library/BookCoverDisplay.ts';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
 import {bookshelfOperationClass} from './bookshelf-operation-owner-probe.mjs';
@@ -58,7 +58,7 @@ export function localBookDetailSdk(dependencies = {}, hooks = {}, properties = c
   const actionTargets = bookshelfOperationClass('ui/controls/ReaderActionAccessibility.ets', '({READER_ACTION_MIN_TARGET})');
   const headers = bookshelfOperationClass('ui/foundation/ReaderHeaderSpecs.ets', '({DetailHeaderSpec,detailHeaderSpec})', {...readerFoundationTokens,...headerMetrics});
   const resolvers = bookshelfOperationClass('ui/foundation/ReaderSurfaceResolvers.ts', '({readerScaledBarHeight,readerScaledControlHeight,readerReadableFontScale})', metrics);
-  const deps = {bookCoverDisplayUrl,...properties.sdk, ...readerFoundationTokens, ...geometry, ...metrics, ...fonts,
+  const deps = {bookContentKindLabel,bookCoverDisplayUrl,...properties.sdk, ...readerFoundationTokens, ...geometry, ...metrics, ...fonts,
     ...author, ...intro, ...mangaDirectory, ...mangaLayout, ...manga.deps, ...constants,
     ...layout,...actionTargets,...headers,...headerMetrics,...resolvers,...mangaVisual,visual:mangaVisual.MANGA_DIRECTORY_VISUAL,READER_FEEDBACK_BRIEF_MS,
     readerDirectoryAccessibilityText, readerDirectoryIndentVp, readerDirectoryBookmarkMarkerState, sourceSwitchTriggerFocusId,

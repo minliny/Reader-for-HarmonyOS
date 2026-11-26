@@ -280,6 +280,7 @@ for (const id of selected) {
     function mountedHeader(source) {
       const metrics = metricsApi.createDefaultReaderWindowMetrics();
       metrics.windowRect.width = 366; metrics.windowRect.height = 844; metrics.systemFontScale = 1;
+      metrics.ready = true;
       const frames = [], sdk = boundedSurfaceSdk({ windowMetrics: () => metrics });
       sdk.hooks.childSources.PageBackBar = read('ui/chrome/PageBackBar.ets');
       const classes = pureModuleProbe(source.slice(source.indexOf('class DirectoryRulesFocusFrame'),
@@ -295,9 +296,12 @@ for (const id of selected) {
         fullDirectoryBackGeneration: 0, ReaderRuntimeOwner: { current: () => undefined }, registerReaderFonts() {},
         uiContext: { getFont: () => ({}), postFrameCallback: frame => frames.push(frame),
           getComponentUtils: () => ({ getRectangleById() { throw Error('native measurement outside this SDK contract'); } }) } });
-      Object.assign(owner, { containerWidth: 366, containerHeight: 844, sourceId: 'local', bookId: 'book', bookKind: 'epub',
+      Object.assign(owner, { sourceId: 'local', bookId: 'book', bookKind: 'epub',
         bookTitle: 'Book', chapterTitle: 'Chapter', catalogContext: 'reader' });
-      owner.aboutToAppear(); owner.directoryHeader(); sdk.properties.flush();
+      owner.aboutToAppear();
+      assert.deepEqual([owner.containerWidth, owner.containerHeight], [366, 844],
+        'the directory starts with the measured window before its first native area callback');
+      owner.directoryHeader(); sdk.properties.flush();
       const back = nodes(owner).find(node => node.type === 'Button' && node.accessibilityText === '收起目录');
       assert.ok(back); assert.equal(back.height, 44);
       const geometryBefore = owner.geometry, keyBefore = owner.measurementKey;

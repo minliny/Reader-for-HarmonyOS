@@ -79,12 +79,13 @@ async function sharedContentCase() {
   }, { childSources: { ReaderControlAutoPageContent: childSource } });
   const calls = [];
   const callbacks = {
-    onBack: ['requestPage', 'home'], onPreviousChapter: ['onPreviousChapter'],
+    onBack: ['requestPage', 'home', 'module-back'], onPreviousChapter: ['onPreviousChapter'],
     onToggleRunning: ['onAutoPageToggle'], onStop: ['onAutoPageStop'], onNextChapter: ['onNextChapter'],
     onTimerChange: ['onAutoPageFullTimerChange', 4, 12], onSpeedChange: ['onAutoPageFullSpeedChange', 9],
     onFollowHighlightChange: ['onAutoPageFollowHighlightChange', true],
   };
-  Object.assign(owner, { launchSample: undefined, launchOwnsControls: false, onLaunchSourceVisible() {},
+  Object.assign(owner, { currentMinimumIdentity: () => '', currentMinimumKey: () => '',
+    preparedMinimum: () => undefined, contentEditingHeight: () => 700, launchSample: undefined, launchOwnsControls: false, onLaunchSourceVisible() {},
     contentEndpointHeight: () => 700, isExpanded: () => true, contentMotionProgress: .8,
     contentLocation: () => ({ form: 'full' }), contentMotionWidth: 360, contentMotionHeight: 700,
     secondaryModuleInputEnabled: module => module === 'autoPage', canStepChapter: direction => direction === 1,
@@ -97,12 +98,91 @@ async function sharedContentCase() {
   assert.equal(captured.params.interactionEnabled, true); assert.equal(captured.params.form, 'full');
   for (const [prop, [target, ...args]] of Object.entries(callbacks)) {
     assert.equal(typeof captured.params[prop], 'function', `actual callback ${prop}`);
-    captured.params[prop](...(prop === 'onBack' ? [] : args)); assert.deepEqual(calls.at(-1), [target, ...args]);
+    captured.params[prop](...(prop === 'onBack' ? [] : args));
+    assert.deepEqual(calls.at(-1), prop === 'onSpeedChange' ? [target, ...args, undefined] : [target, ...args]);
   }
+  const onDeclined = () => {};
+  captured.params.onSpeedChange(12, onDeclined);
+  assert.deepEqual(calls.at(-1), ['onAutoPageFullSpeedChange', 12, onDeclined]);
 }
-const cases = { 'configuration': configurationCase, 'chapter-admission': chapterAdmissionCase, 'shared-content': sharedContentCase };
+async function pendingSpeedCase() {
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const limits = await import('../entry/src/main/ets/features/reading/ui/ReaderAutoPageFullState.ts');
+  const SliderChangeMode = { Begin: 0, Moving: 1, End: 2, Click: 3 };
+  const content = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlAutoPageContent.ets', import.meta.url),
+    'ReaderControlAutoPageContent', ['changeSpeedSlider', 'onSpeedSecondsChanged', 'clearPendingSpeed', 'commitSpeedSeconds',
+      'effectiveSpeedSeconds'], { ...limits, SliderChangeMode });
+  const Experience = selectedProductionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
+    'ReadingExperience', ['setAutoPageSpeed']);
+  const accepted = [];
+  const experience = Object.assign(new Experience(), { mounted: true, appForeground: true, exitRequested: false,
+    autoPageCoordinator: { setSpeed(seconds) { accepted.push(seconds); } } });
+  for (const fixedIsland of [true, false]) {
+    const requests = [];
+    const control = Object.assign(new content(), {
+      fixedIsland, sharedInput: () => true, fullInput: () => true, speedSeconds: 8,
+      speedPreviewSeconds: -1, pendingSpeedSeconds: -1, speedChangeGeneration: 0,
+      onSpeedChange: (seconds, decline) => requests.push({ seconds, decline }),
+    });
+    control.changeSpeedSlider(12, SliderChangeMode.End);
+    assert.equal(control.effectiveSpeedSeconds(), 12);
+    assert.equal(typeof requests[0].decline, 'function');
+    experience.exitRequested = true;
+    experience.setAutoPageSpeed(12, requests[0].decline);
+    assert.equal(control.effectiveSpeedSeconds(), 8, 'a retired owner rejects the submission and releases the optimistic speed');
+    assert.deepEqual(accepted, []);
+    experience.exitRequested = false;
+
+    control.changeSpeedSlider(13, SliderChangeMode.End);
+    control.onSpeedSecondsChanged();
+    assert.equal(control.effectiveSpeedSeconds(), 13, 'same-value notification keeps the in-flight preview');
+    control.speedSeconds = 9;
+    control.onSpeedSecondsChanged();
+    assert.equal(control.effectiveSpeedSeconds(), 9, 'a changed external speed supersedes the previous submission');
+    control.changeSpeedSlider(15, SliderChangeMode.End);
+    control.changeSpeedSlider(9, SliderChangeMode.Begin);
+    assert.equal(control.pendingSpeedSeconds, -1, 'a new gesture retires the previous submission');
+    control.changeSpeedSlider(15, SliderChangeMode.End);
+    requests[2].decline();
+    assert.equal(control.effectiveSpeedSeconds(), 15, 'a late rejection cannot clear a newer submission of the same speed');
+    control.speedSeconds = 15;
+    control.onSpeedSecondsChanged();
+    assert.equal(control.pendingSpeedSeconds, -1);
+  }
+
+  const { ReaderAutoPageCoordinator } = await import('../entry/src/main/ets/features/reading/ui/ReaderAutoPageCoordinator.ts');
+  let publications = 0;
+  const coordinator = new ReaderAutoPageCoordinator({ now: () => 0, schedule: () => 1, cancel() {},
+    active: () => true, ready: () => true, canResumeTurn: () => true, turn: () => ({ kind: 'started' }),
+    changed() { publications++; } });
+  experience.autoPageCoordinator = coordinator;
+  for (const [reported, authoritative, proposed] of [[7, 8, 8], [19, 20, 25], [3, 2, 0]]) {
+    coordinator.setSpeed(authoritative);
+    const before = publications;
+    const submissions = [];
+    const control = Object.assign(new content(), {
+      fixedIsland: true, sharedInput: () => true, speedSeconds: reported, speedPreviewSeconds: -1,
+      pendingSpeedSeconds: -1, speedChangeGeneration: 0,
+      onSpeedChange(seconds, decline) {
+        submissions.push(seconds);
+        experience.setAutoPageSpeed(seconds, decline);
+      },
+    });
+    control.changeSpeedSlider(proposed, SliderChangeMode.End);
+    assert.deepEqual(submissions, [authoritative], 'slider and coordinator normalize to the same interval');
+    assert.equal(publications, before, 'repeating the authoritative value does not restart the timer or re-publish');
+    assert.equal(control.pendingSpeedSeconds, -1, 'a no-op retires pending even before the owner prop catches up');
+    control.speedSeconds = authoritative;
+    control.onSpeedSecondsChanged();
+    assert.equal(control.effectiveSpeedSeconds(), authoritative);
+  }
+
+}
+
+const cases = { 'configuration': configurationCase, 'chapter-admission': chapterAdmissionCase, 'shared-content': sharedContentCase, 'pending-speed': pendingSpeedCase };
 for (const id of selectContractCases({
   'configuration': { description: 'Production timer/speed/follow configuration normalization and immutable bounds', resources: [] },
   'chapter-admission': { description: 'Actual canStepChapter using sparse canonical IDs and readable rank', resources: [] },
+  'pending-speed': { description: 'Auto-page speed rejects retired commits and follows intervening owner changes and gestures', resources: [] },
   'shared-content': { description: 'SDK-emitted current AutoPage child callbacks; no legacy Full geometry', resources: [] },
 })) { await cases[id](); recordContractCasePass(id); }

@@ -25,7 +25,7 @@ const resolution=registerHooks({ resolve(specifier, context, nextResolve) {
 try {
 const { readerControlReplaceEndpoint } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlReplaceGeometry.ts');
 
-const root = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
+const root = new URL('../entry/src/main/ets/features/reading/ui/', import.meta.url);
 function method(source, name) {
   const start = source.indexOf(`  private ${name}(`);
   assert.ok(start >= 0, name);
@@ -49,7 +49,8 @@ for (const name of adapters[selectedCase]?[adapters[selectedCase]]:[]) {
     const owner = new Component(), calls = [];
     let native = start;
     Object.assign(owner, { motionProgress: 1, interactionEnabled: true, sourceOnly: 'none', reportMorphActor: () => {},
-      extendedThemes: () => false,
+      extendedThemes: () => false, currentInputEnabled() { return this.interactionEnabled; },
+      quickMinimumScrollInput: () => false, quickMinimumScrollPresentation: () => false,
       scrollMotion: policy.createReaderControlMorphScroll(),
       scroller: { currentOffset: () => ({ yOffset: native }), scrollTo: command => calls.push(command) } });
     owner.syncMorphScroll(); owner.onFullDidScroll();
@@ -115,7 +116,8 @@ for (const name of selectedCase==='measure-tts'?['Tts']:selectedCase==='measure-
     const owner = new Component(), reports = [];
     let nativeOffset = unboundOffset;
     const previous = { left: 3, top: 10, width: 99, height: 44 };
-    Object.assign(owner, { sourceOnly: 'none', sourceDetached: false, form: 'full',
+    Object.assign(owner, { sourceOnly: 'none', sourceDetached: false, form: 'full', minimumIdentity: '',
+      actorMeasurementScope: () => 'unprepared', morphMeasurementScope: () => 'unprepared', naturalMorphMeasurementCurrent: () => true,
       fullMeasurement: previous, fullMeasurementScrollOffset: 13,
       scroller: { currentOffset: () => nativeOffset },
       onMorphActorMeasured: (...args) => reports.push(args) });
@@ -140,7 +142,7 @@ for (const name of selectedCase==='measure-tts'?['Tts']:selectedCase==='measure-
 
 if(selectedCase==='replace-source-reset'){
 const Replace = productionMotionMethods(new URL('ReaderControlReplaceContent.ets', root),
-  ['onSourceChanged', 'onFullDidScroll', 'fullInput'], { ...policy, readerControlReplaceEndpoint });
+  ['onSourceChanged', 'onMinimumContentChanged', 'onFullDidScroll', 'fullInput'], { ...policy, readerControlReplaceEndpoint });
 for (const unboundOffset of [undefined, { yOffset: NaN }]) {
   const owner = new Replace(), commands = [];
   let nativeOffset = unboundOffset, dismissals = 0;
@@ -148,14 +150,15 @@ for (const unboundOffset of [undefined, { yOffset: NaN }]) {
     fullScrollActive: true, resettingFullScroll: false };
   Object.assign(owner, { lastSessionKey: 'previous-book', state: { sessionKey: 'next-book' },
     localError: 'retained until source reset', scrollMotion: previous, motionProgress: 1, interactionEnabled: true,
-    dismissTemporaryLayer: () => { dismissals++; },
+    dismissTemporaryLayer: () => { dismissals++; }, quickScroller: { currentOffset: () => unboundOffset },
     scroller: { currentOffset: () => nativeOffset,
       scrollTo: command => { commands.push(command); nativeOffset = { yOffset: command.yOffset }; } } });
   owner.onSourceChanged();
-  assert.equal(owner.lastSessionKey, 'previous-book', 'unbound source reset remains pending');
+  assert.equal(owner.lastSessionKey, 'next-book', 'switching books retires the previous UI owner immediately');
+  assert.equal(owner.sourceScrollResetPending, true, 'native scroll reset waits for a bound offset');
   assert.equal(owner.scrollMotion, previous, 'pending source reset preserves the retained position');
-  assert.equal(owner.localError, 'retained until source reset');
-  assert.equal(commands.length, 0); assert.equal(dismissals, 0);
+  assert.equal(owner.localError, '');
+  assert.equal(commands.length, 0); assert.equal(dismissals, 1);
   nativeOffset = { yOffset: 67 };
   owner.onSourceChanged();
   assert.equal(owner.lastSessionKey, 'next-book');
@@ -174,7 +177,7 @@ for (const unboundOffset of [undefined, { yOffset: NaN }]) {
   let nativeOffset = unboundOffset;
   const previous = { nativeScrollOffset: 67 };
   Object.assign(owner, { configField: 'voice', scrollMotion: previous,
-    scroller: { currentOffset: () => nativeOffset }, frame: () => ({ detail: { y: 100 } }) });
+    scroller: { currentOffset: () => nativeOffset }, textMinimum: () => undefined, frame: () => ({ detail: { y: 100 } }) });
   assert.equal(owner.configurationAnchorY(), 111, 'detached configuration uses the saved 67vp anchor');
   assert.equal(owner.scrollMotion, previous, 'display fallback does not replace the scroll state');
   nativeOffset = { yOffset: 91 };

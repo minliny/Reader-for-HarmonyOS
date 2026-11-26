@@ -499,7 +499,17 @@ if (selected.length) {
     }
     if (id === 'playback-source-reuse') {
       for (const module of ['tts', 'autoPage']) {
-        const h = makeHost(); h.owner.controlSession.location.module = module; h.bind(); h.flush();
+        const h = makeHost(); h.owner.controlSession.location.module = module;
+        let accepted;
+        Object.defineProperty(h.owner, 'controlPresentationReceipt', {
+          get() { return accepted; },
+          set(value) {
+            assert.equal(h.owner.controlMinimumReady, true, 'receipt observers see the ready owner');
+            assert.equal(h.owner.controlMinimumCandidateBook, h.owner.bookId);
+            accepted = value;
+          },
+        });
+        h.bind(); h.flush();
         const first = h.owner.controlPresentationReceipt;
         h.owner.controlLayout = () => h.owner.controlPresentationReceipt.layout;
         assert.equal(first.profile.playbackData[module], first.profile.moduleData[module]);
@@ -518,6 +528,18 @@ if (selected.length) {
         assert.ok(source, `fixed-island ${module} publishes the selected natural profile`);
         assert.equal(source.identity, first.identity);
         assert.equal(source.data[module + 'Facts'], first.facts[module]);
+        const layoutWithoutQuickHeight = { ...first.layout, quickPanelHeight: undefined };
+        const fallback = { ...source, layout: layoutWithoutQuickHeight, bounds: { ...source.bounds,
+          quickHeight: Math.min(330, source.bounds.fullHeight) } };
+        h.owner.controlLayout = () => layoutWithoutQuickHeight;
+        h.owner.acceptControlPlaybackProfile(fallback);
+        assert.equal(h.owner.controlPlaybackProfile, fallback, 'the default quick bound is accepted without an explicit height');
+        for (const invalidHeight of [NaN, -1, fallback.bounds.fullHeight + 1]) {
+          const invalid = { ...fallback, bounds: { ...fallback.bounds, quickHeight: invalidHeight } };
+          assert.equal(playbackMatches(invalid, module, first.identity, first.key, metrics.revision), false);
+        }
+        h.owner.controlLayout = () => h.owner.controlPresentationReceipt.layout;
+        h.owner.acceptControlPlaybackProfile(source);
         if (module === 'tts') {
           h.bind(0, undefined, 1); h.flush();
           panel.presentationReceipt = h.owner.controlPresentationReceipt;
@@ -582,22 +604,59 @@ if (selected.length) {
     if (id === 'fixed-island-playback-scroll') {
       const playback = await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
       for (const [name, kind] of [['ReaderControlAutoPageContent', 'quickAutoPage'], ['ReaderControlTtsContent', 'quickTts']]) {
-        const Actor = selectedProductionMethods(ui(name + '.ets'), name, ['measureActor', 'reportMorphActor'], playback);
+        const admission = kind === 'quickTts' ? ['actorMeasurementScope', 'measuredActorCurrent'] :
+          ['morphMeasurementScope', 'naturalMorphMeasurementCurrent'];
+        const Actor = selectedProductionMethods(ui(name + '.ets'), name, ['measureActor', 'reportMorphActor', ...admission], playback);
         let offset = 23;
+        let frameOffset = 0;
+        let progress = 0.4;
         const reports = [];
         const actor = Object.assign(new Actor(), { form: 'quick', fixedIsland: true, sourceOnly: 'none',
           minimumIdentity: 'active', readerWindowMetricsRevision: metrics.revision,
           scroller: { currentOffset: () => ({ yOffset: offset }) },
-          naturalMorphMeasurementCurrent: () => true, measuredActorCurrent: () => true,
-          morphMeasurementScope: () => 'current', actorMeasurementScope: () => 'current',
+          p: () => progress, availableWidth: 310.4, availableHeight: 180, fullViewportHeight: 480,
+          islandPlaybackHeight: () => 84, selectedMinimum: () => ({}), minimumProfile: () => ({}),
+          frame: () => ({ content: { x: frameOffset, y: frameOffset }, playback: { x: 0, y: frameOffset },
+            control: { x: 0, y: frameOffset } }),
           onMorphActorMeasured: (...rect) => reports.push(rect) });
         actor.measureActor(false, { globalPosition: { x: 54, y: 580 }, width: 310, height: 84 });
+        frameOffset = 12; // New timer/rate facts move only the legacy morph frame.
+        progress = 0;
         offset = 71;
         actor.reportMorphActor();
         assert.deepEqual(reports, [[kind, 54, 580, 310, 84], [kind, 54, 532, 310, 84]]);
+        actor.availableWidth += 1;
+        actor.reportMorphActor();
+        assert.equal(reports.length, 2, 'an actual card resize still needs a fresh measurement');
+        actor.availableWidth -= 1;
+        actor.minimumIdentity = 'reopened';
+        actor.reportMorphActor();
+        assert.equal(reports.length, 2, 'a new opening requires its own measured source');
+        actor.measureActor(false, { globalPosition: { x: 54, y: 555 }, width: 310, height: 84 });
+        assert.deepEqual(reports.at(-1), [kind, 54, 555, 310, 84]);
         actor.sourceDetached = true;
         actor.reportMorphActor();
-        assert.equal(reports.length, 2, 'detached content releases the measurement owner');
+        assert.equal(reports.length, 3, 'detached content releases the measurement owner');
+        // The ordinary morph still needs a fresh area at the matching pose.
+        actor.fixedIsland = false;
+        actor.sourceDetached = false;
+        actor.frame = () => ({ content: { x: frameOffset, y: frameOffset },
+          playback: { x: 0, y: frameOffset, width: 240, height: 88 },
+          control: { x: 0, y: frameOffset, width: 240, height: 88 } });
+        for (const full of [false, true]) {
+          actor.form = full ? 'full' : 'quick';
+          progress = full ? 1 : 0;
+          const area = { globalPosition: { x: 54, y: 540 }, width: full ? 240 : actor.availableWidth,
+            height: full ? 88 : actor.availableHeight };
+          actor.measureActor(full, area);
+          const expected = playback.readerControlPlaybackSourceKind(kind === 'quickTts' ? 'tts' : 'autoPage', actor.form);
+          assert.deepEqual(reports.at(-1), [expected, 54, 540, area.width, area.height]);
+          const current = reports.length;
+          frameOffset += 3;
+          actor.reportMorphActor(); assert.equal(reports.length, current);
+          progress = 0.5;
+          actor.measureActor(full, area); assert.equal(reports.length, current);
+        }
       }
     }
     if (id === 'fixed-island-font-reorder') {

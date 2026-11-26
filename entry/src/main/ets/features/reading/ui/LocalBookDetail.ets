@@ -16,7 +16,7 @@ import { READER_ACTION_MIN_TARGET, ReaderActionAccessibility } from '../../../ui
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import type { MeasureOptions } from '@ohos.measure';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { bookCoverDisplayUrl } from '../../../app/library/BookCoverDisplay';
+import { bookContentKindLabel, bookCoverDisplayUrl } from '../../../app/library/BookCoverDisplay';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
@@ -650,6 +650,10 @@ export struct LocalBookDetail {
   @Builder
   private hero() { this.standardHero(); }
 
+  private contentKindLabel(): string {
+    return bookContentKindLabel(this.book.sourceId, this.book.contentKind);
+  }
+
   @Builder
   private detailCover(width: number, height: number) {
     if (this.hasCover()) {
@@ -657,7 +661,7 @@ export struct LocalBookDetail {
         .onError(this.coverErrorHandler(this.displayCoverUrl()));
     } else {
       NoCoverCover({ coverWidth: width, coverHeight: height, glyph: this.book.title,
-        kindLabel: this.book.contentKind === 'manga' ? '漫画' : '小说' });
+        kindLabel: this.contentKindLabel() });
     }
   }
 
@@ -679,16 +683,19 @@ export struct LocalBookDetail {
   @Builder
   private bookTags() {
     Row({ space: 6 }) {
-      this.metadataTag(this.book.contentKind === 'manga' ? '漫画' : '小说', false);
-      this.metadataTag(this.book.sourceId === 'local' ? '本地藏书' : '在线', true);
+      if (this.contentKindLabel().length > 0) {
+        this.metadataTag('content');
+      }
+      this.metadataTag('origin');
     }
   }
 
   @Builder
-  private metadataTag(label: string, tonal: boolean) {
-    Text(label).fontFamily(TYPE_BOOK_DETAIL_TAG.fontFamily).fontWeight(TYPE_BOOK_DETAIL_TAG.fontWeight).fontSize(TYPE_BOOK_DETAIL_TAG.fontSizeFp).lineHeight(TYPE_BOOK_DETAIL_TAG.lineHeightFp as number).padding({ left: 8, right: 8 })
-      .fontColor(readerAppColor(tonal ? 'TOK_PRIMARY_DARK' : 'TOK_MUTED', this.appThemeScheme))
-      .backgroundColor(readerAppColor(tonal ? 'TOK_PRIMARY_SOFT' : 'TOK_SURFACE_FIELD', this.appThemeScheme))
+  private metadataTag(kind: 'content' | 'origin') {
+    Text(kind === 'origin' ? (this.book.sourceId === 'local' ? '本地藏书' : '在线') : this.contentKindLabel())
+      .fontFamily(TYPE_BOOK_DETAIL_TAG.fontFamily).fontWeight(TYPE_BOOK_DETAIL_TAG.fontWeight).fontSize(TYPE_BOOK_DETAIL_TAG.fontSizeFp).lineHeight(TYPE_BOOK_DETAIL_TAG.lineHeightFp as number).padding({ left: 8, right: 8 })
+      .fontColor(readerAppColor(kind === 'origin' ? 'TOK_PRIMARY_DARK' : 'TOK_MUTED', this.appThemeScheme))
+      .backgroundColor(readerAppColor(kind === 'origin' ? 'TOK_PRIMARY_SOFT' : 'TOK_SURFACE_FIELD', this.appThemeScheme))
       .borderRadius(6);
   }
 
@@ -1142,7 +1149,8 @@ export struct LocalBookDetail {
     input.viewportWidth = this.liveWidth();
     input.viewportHeight = this.viewportHeight;
     input.measurementRevision = ++this.geometryRevision;
-    input.headerTop = this.headerSpec.headerTop(readerInteractiveSafeTop(metrics));
+    const stableSafeTop = Math.max(readerInteractiveSafeTop(metrics), metrics.statusBarRect.top + metrics.statusBarHeight);
+    input.headerTop = this.headerSpec.headerTop(stableSafeTop);
     const minimumHeaderHeight = manga ? mangaDirectoryHeaderHeight(this.mangaFontScale()) : this.headerSpec.barHeight;
     input.headerHeight = Math.max(minimumHeaderHeight, this.measurements.readForGeneration('detail:header', this.measurementKey, minimumHeaderHeight));
     input.headerInsetLeft = Math.max(8, this.safeLeft());

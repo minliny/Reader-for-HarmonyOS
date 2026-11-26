@@ -1,4 +1,5 @@
 import type { ShelfBook } from '../../../app/ReaderCoreGateway';
+import { bookContentKindLabel } from '../../../app/library/BookCoverDisplay.ts';
 import { MangaBookPresentation } from '../../manga/presentation/MangaBookPresentation.ts';
 
 export type ShelfProgressVariant = 'list-status' | 'grid-caption';
@@ -99,8 +100,7 @@ export class ShelfBookPresentation {
   }
 
   static contentLabel(book: ShelfBook | undefined): string {
-    if (book === undefined) return '';
-    return book.contentKind === 'manga' ? '漫画' : book.contentKind === 'audio' ? '有声' : '小说';
+    return book === undefined ? '' : bookContentKindLabel(book.sourceId, book.contentKind);
   }
 
   static originLabel(book: ShelfBook): string {

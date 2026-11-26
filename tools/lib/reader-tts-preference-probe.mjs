@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
 import * as state from '../../entry/src/main/ets/features/reading/application/ReaderTtsPreferencesState.ts';
+import { readerHostPreferencesName } from '../../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts';
 import {selectedProductionMethods, selectedProductionComponentCallback} from './selected-production-methods.mjs';
 
 export {state};
@@ -14,7 +15,7 @@ export const settle = async () => {for(let i=0;i<12;i++)await new Promise(resolv
  * Preferences, Theme recovery and Runtime identity are finite delivery ports. */
 export function preferenceGateway(base=state.createDefaultReaderTtsPreferencesSnapshot(), source=readFileSync(gatewayFile,'utf8')) {
   const events=[], cache=new Map([['snapshot',JSON.stringify(base)]]), durable=new Map(cache);
-  const runtime={getUIAbilityContext:()=>({})};let active=runtime, barrier=async()=>{},storeGate,readGate,putGate,flushGate,failRead=false,failPut=false,failFlush;
+  const runtime={getUIAbilityContext:()=>({filesDir:'/fixture/files'})};let active=runtime, barrier=async()=>{},storeGate,readGate,putGate,flushGate,failRead=false,failPut=false,failFlush;
   const store={async get(key,fallback){events.push(['get']);if(readGate){const gate=readGate;readGate=undefined;await gate.promise;}if(failRead){failRead=false;throw Error('controlled read failure');}return cache.get(key)??fallback;},
     async put(key,value){events.push(['put',JSON.parse(value)]);if(putGate){const gate=putGate;putGate=undefined;await gate.promise;}
       if(failPut){failPut=false;throw Error('controlled put before effect');}cache.set(key,value);},
@@ -23,8 +24,8 @@ export function preferenceGateway(base=state.createDefaultReaderTtsPreferencesSn
       for(const [key,value] of cache)durable.set(key,value);
       if(failFlush==='after'){failFlush=undefined;throw Error('controlled flush lost ACK');}}};
   const body=stripTypeScriptTypes(source.slice(source.indexOf('const READER_TTS_PREFERENCES_NAME'))).replace('export class ','class ');
-  const Gateway=new Function(...Object.keys(state),'ReaderThemeHost','ReaderRuntimeOwner','preferences',body+';return ReaderTtsPreferencesGateway;')
-    (...Object.values(state),{prepareUserChange:()=>barrier()},{isCurrent:owner=>owner===active},{getPreferences:async()=>{
+  const Gateway=new Function(...Object.keys(state),'readerHostPreferencesName','ReaderThemeHost','ReaderRuntimeOwner','preferences',body+';return ReaderTtsPreferencesGateway;')
+    (...Object.values(state),readerHostPreferencesName,{prepareUserChange:()=>barrier()},{isCurrent:owner=>owner===active},{getPreferences:async()=>{
       if(storeGate){const gate=storeGate;storeGate=undefined;await gate.promise;}return store;}});
   const owner=new Gateway(runtime);
   return {owner,Gateway,events,cache,durable,runtime,store,setBarrier:fn=>{barrier=fn;},hangRead:gate=>{readGate=gate;},

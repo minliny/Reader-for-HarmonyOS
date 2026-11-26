@@ -301,7 +301,11 @@ for (const theme of ['day', 'night']) {
 
 }
 if (selectedCase === 'detail-admission') {
-  const { owner: detail } = localBookDetailSdk({}, { allowEmptyBranchAdmission: true });
+  const metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 390, 840));
+  metrics.statusBarRect = new ReaderRectVp(0, 3, 390, 25);
+  metrics.statusBarHeight = metrics.statusBarRect.height;
+  const { owner: detail } = localBookDetailSdk({ ReaderWindowCoordinator: { metrics: () => metrics } },
+    { allowEmptyBranchAdmission: true });
   Object.assign(detail, {
     appThemeScheme: 'day', mounted: true, directoryFocusContext: 'detail',
     book: { sourceId: 'remote', bookId: 'title', contentKind: 'text', title: '书', author: '作者' },
@@ -309,7 +313,12 @@ if (selectedCase === 'detail-admission') {
     viewportWidth: 390, viewportHeight: 840, admissionIdentity: 'details:1',
     readingEnabled: true, inBookshelf: true, removalEnabled: true,
   });
-  detail.refreshGeometry();
+  for (const systemTop of [28, 0, 28]) {
+    metrics.systemInsets.top = systemTop;
+    detail.refreshGeometry();
+    assert.equal(detail.geometry.header.top, detail.headerSpec.headerTop(28),
+      'the detail header must stay in place while the reader hides and restores the status bar');
+  }
   detail.actionArea();
   const controls = () => [...detail.nodes.values()].filter(node => node.type === 'Button');
   const [reading, shelf] = controls();

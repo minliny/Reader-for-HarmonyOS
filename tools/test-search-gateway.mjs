@@ -135,9 +135,11 @@ if(id==='local-timeout'){
   const gateway = new SearchGateway({ request: async (command, _params, options) => {
     assert.equal(command, 'bookshelf.list');
     localTimeout = options?.timeoutMs;
-    return { data: { books: [], total: 0 } };
+    return { data: { books: [{ sourceId: 'local', bookId: 'comic', title: '本地漫画', author: '', contentKind: 'manga' },
+      { sourceId: 'local', bookId: 'legacy', title: '本地旧书', author: '' }], total: 2 } };
   } });
-  await gateway.searchLocalBooks('本地', 'local-timeout-check');
+  const local = await gateway.searchLocalBooks('本地', 'local-timeout-check');
+  assert.deepEqual(local.map(book => book.category), ['comic', 'novel']);
   assert.equal(localTimeout, undefined, 'local bookshelf pagination keeps its existing timeout contract');
 }
 }

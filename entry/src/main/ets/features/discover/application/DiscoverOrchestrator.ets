@@ -133,13 +133,15 @@ export class DiscoverOrchestrator {
     this.enqueue(async (): Promise<void> => this.loadPage(session, this.presentation.activeKindIndex, this.presentation.page, false));
   }
   nextPage(): void {
-    if (!this.admitsIntent() || !this.presentation.hasNext) return;
+    if (!this.admitsIntent() || !this.presentation.hasNext ||
+      this.currentSource() === undefined || this.currentKind() === undefined) return;
     const session = this.session;
     this.publish({ loading: true });
     this.enqueue(async (): Promise<void> => this.loadPage(session, this.presentation.activeKindIndex, this.presentation.page + 1, true));
   }
   previousPage(): void {
-    if (!this.admitsIntent() || !this.presentation.hasPrevious) return;
+    if (!this.admitsIntent() || !this.presentation.hasPrevious ||
+      this.currentSource() === undefined || this.currentKind() === undefined) return;
     const session = this.session;
     this.publish({ loading: true });
     this.enqueue(async (): Promise<void> => this.loadPage(session, this.presentation.activeKindIndex, this.presentation.page - 1, false));
@@ -179,7 +181,8 @@ export class DiscoverOrchestrator {
         .map((source: BookSource): DiscoverSource => ({ sourceId: source.sourceId, name: source.name, category: source.category }));
       if (!this.isCurrentRead(session, generation)) return;
       if (sources.length === 0) {
-        this.publish({ sources, books: [], kinds: [], loading: false, statusMessage: '没有已启用且支持发现的书源',
+        this.publish({ sources, activeSourceIndex: 0, books: [], kinds: [], activeKindIndex: 0,
+          page: 1, hasPrevious: false, hasNext: false, loading: false, statusMessage: '没有已启用且支持发现的书源',
           operation: projectOperationFacts({ phase: 'empty', generation, value: [] }) });
         return;
       }

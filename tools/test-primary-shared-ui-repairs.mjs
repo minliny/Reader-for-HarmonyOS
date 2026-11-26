@@ -28,6 +28,7 @@ import { remoteReadingEntryKind } from '../entry/src/main/ets/features/reading/p
 import { readingEntryInputForShelfSnapshot, readingEntrySeedForContentKind } from '../entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts';
 import { sourceSwitchTriggerFocusId } from '../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts';
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
+import { readerSourceCategoryLabel } from '../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts';
 const read = file => readFileSync(new URL('../entry/src/main/ets/' + file, import.meta.url), 'utf8');
 const definitions = {
   'detail-scroll-origin': 'Actual detailContent/Scroll SDK attributes keep short and long same-book documents at the declared top inset across media and legacy type facts.',
@@ -45,7 +46,7 @@ const definitions = {
   'dialog-action-budget': 'Real bundled font advances at actual dialog safe widths expose wrapping and natural native action growth beyond the old single-line cap.',
   'menu-divider-current': 'Stable-key menu actors recompute their divider from current action order after an appended action.',
   'main-rail-current': 'Actual stable-key rail actors update selected appearance and current/inactive event routing with the current tab.',
-  'no-cover-graphic': 'The Figma cover graphic typography stays in cover-relative vp coordinates independently of system font scale.',
+  'no-cover-graphic': 'Shelf and detail cover labels follow the current media facts, and the cover graphic keeps its cover-relative typography.',
   'compact-source-paint': 'Source category/detect/login preserve their distinct compact paint heights, centered labels and a paid native44 carrier at four font scales.',
   'tablet-select-admission': 'The actual Settings tablet select uses the common native trigger and live mounted/disabled qualification.',
   'dialog-current-actions': 'Actual SDK stable-key dialog actors read current action facts after same-id replacement and reject disabled/removed actions.',
@@ -802,40 +803,102 @@ for (const id of selectContractCases(definitions)) {
     assert.ok(nodes(owner).filter(node => node.type === 'Image').every(node => node.width === 24 && node.height === 24));
   }
   if (id === 'no-cover-graphic') {
+    const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts');
     const source = read('ui/patterns/NoCoverCover.ets');
-    const glyph = '海边旧书店的漫长假期';
-    for (const [width, height] of [[48, 80], [60, 160], [84, 122], [90, 124], [128, 168]]) {
-      for (const scheme of ['day', 'night']) {
-        const owner = createReaderBuilderProbe(source, ['build', 'x', 'y', 'scaleCoverUnit'], { readerAppColor }).owner;
-        Object.assign(owner, { coverWidth: width, coverHeight: height, appThemeScheme: scheme, glyph, kindLabel: '小说' });
-        owner.initialRender();
-        const emitted = nodes(owner);
-        const frame = emitted.find(node => node.width === width && node.height === height);
-        assert.equal(frame.backgroundColor, readerAppColor('TOK_FIELD_SURFACE', scheme));
-        assert.equal(frame.hitTestBehavior, 'HitTestMode.None');
-        assert.equal(frame.accessibilityLevel, 'no-hide-descendants');
-        const rules = emitted.filter(node => node.type === 'Row');
-        assert.deepEqual(rules.map(rule => rule.width), [2 * width / 90, 68 * width / 90, 61 * width / 90,
-          10 * Math.min(width / 90, height / 124)]);
-        assert.equal(rules[0].height, height);
-        assert.equal(rules[0].backgroundColor, readerAppColor('TOK_LINE_STRONG', scheme));
-        assert.equal(rules[1].border.color, readerAppColor('TOK_LINE_STRONG', scheme));
-        assert.equal(rules[2].border.color, readerAppColor('TOK_LINE', scheme));
-        assert.equal(rules[3].border.color, readerAppColor('TOK_GREEN', scheme));
-        assert.equal(rules[3].backgroundColor, readerAppColor('TOK_PRIMARY_SOFT', scheme));
-        const title = emitted.find(node => node.type === 'Text' && node.create === glyph);
-        assert.equal(title.fontFamily, readerTypographyRoles.TYPE_SHELF_COVER_PLACEHOLDER.fontFamily);
-        assert.equal(title.fontSize, `${12.5 * Math.min(width / 90, height / 124)}vp`);
-        assert.equal(title.lineHeight, `${16 * Math.min(width / 90, height / 124)}vp`);
-        assert.equal(title.textAlign, 'TextAlign.Center');
-        assert.equal(title.maxLines, 2);
-        assert.deepEqual(title.textOverflow, { overflow: 'TextOverflow.Ellipsis' });
-        const label = emitted.find(node => node.type === 'Text' && node.create === '无封面 · 小说');
-        assert.equal(label.width, 58 * width / 90);
-        assert.equal(label.position.y, 89 * height / 124);
-        assert.equal(label.maxLines, 1);
+    const detailProperties = createArkUIPropertyRuntimeProbe();
+    const coverComponent = createReaderBuilderProbe(source, ['coverWidth', 'coverHeight', 'appThemeScheme', 'kindLabel', 'glyph',
+      'build', 'x', 'y', 'scaleCoverUnit', 'isComic', 'titleUnits'], { ...detailProperties.sdk, readerAppColor }, detailProperties.hooks).Component;
+    const detailSdk = localBookDetailSdk({ NoCoverCover: coverComponent }, {}, detailProperties);
+    assert.equal(ShelfBookPresentation.contentLabel(undefined), '');
+    const textNodes = owner => nodes(owner).filter(node => node.type === 'Text').map(node => node.create);
+    for (const [sourceId, contentKind, label] of [['source', 'manga', '漫画'], ['source', 'text', '小说'],
+      ['source', 'audio', '有声'], ['source', undefined, ''], ['local', undefined, '小说']]) {
+      assert.equal(ShelfBookPresentation.contentLabel({ sourceId, contentKind }), label);
+      const book = { title: '归途', sourceId, bookId: 'same-book', contentKind };
+      const detail = new detailSdk.Component(undefined, { book });
+      detail.detailCover(86, 118);
+      detail.bookTags();
+      const graphic = [...detail.children.values()].find(child => child instanceof coverComponent);
+      assert.ok(graphic, 'the detail mounts its fallback cover');
+      const origin = sourceId === 'local' ? '本地藏书' : '在线';
+      assert.deepEqual(textNodes(graphic), label === '' ? [book.title] : [book.title, label], `detail cover for ${sourceId}/${contentKind}`);
+      assert.deepEqual(textNodes(detail), label === '' ? [origin] : [label, origin], `detail tags for ${sourceId}/${contentKind}`);
+      if (contentKind === 'text') {
+        detail.updateStateVars({ book: { ...book, sourceId: 'local', contentKind: 'audio' } });
+        detailProperties.flush();
+        assert.deepEqual(textNodes(graphic), [book.title, '有声']);
+        assert.deepEqual(textNodes(detail), ['有声', '本地藏书']);
       }
     }
+    const longTitle = '海边旧书店的漫长假期'.repeat(4);
+    for (const [width, height] of [[48, 80], [60, 160], [84, 122], [90, 124], [128, 168]]) {
+      const unit = Math.min(width / 90, height / 124);
+      for (const scheme of ['day', 'night']) {
+        for (const [kindLabel, comic] of [['小说', false], ['漫画', true], ['', false]]) {
+          const owner = createReaderBuilderProbe(source, ['build', 'x', 'y', 'scaleCoverUnit', 'isComic', 'titleUnits'], { readerAppColor }).owner;
+          Object.assign(owner, { coverWidth: width, coverHeight: height, appThemeScheme: scheme, glyph: longTitle, kindLabel });
+          owner.initialRender();
+          const emitted = nodes(owner);
+          const frame = emitted.find(node => node.width === width && node.height === height);
+          assert.equal(frame.backgroundColor, readerAppColor('TOK_PAPER', scheme));
+          assert.equal(frame.hitTestBehavior, 'HitTestMode.None');
+          assert.equal(frame.accessibilityLevel, 'no-hide-descendants');
+          const texts = emitted.filter(node => node.type === 'Text');
+          assert.ok(texts.every(node => !String(node.create).includes('封面')), 'no "no cover" notice is painted');
+          const title = texts.find(node => node.create === longTitle);
+          assert.equal(title.maxLines, 5);
+          assert.equal(title.wordBreak, 'WordBreak.BREAK_ALL');
+          assert.deepEqual(title.textOverflow, { overflow: 'TextOverflow.Ellipsis' });
+          assert.equal(title.fontSize, `${8.5 * unit}vp`);
+          assert.equal(title.fontFamily, comic ? readerTypographyRoles.TYPE_SHELF_COVER_PLACEHOLDER.fontFamily :
+            readerTypographyRoles.TYPE_READER_CHAPTER_TITLE.fontFamily, 'novel serif title, comic bold sans title');
+          const titleBox = emitted.find(node => node.type === 'Stack' && node.width === 70 * width / 90);
+          const cjkPerLine = Math.floor(titleBox.width / Number.parseFloat(title.fontSize));
+          const lines = Math.ceil(Array.from(longTitle).length / cjkPerLine);
+          assert.ok(lines <= title.maxLines && lines * Number.parseFloat(title.lineHeight) <= titleBox.height,
+            'the forty-character CJK title fits both the line limit and the available height');
+          const rows = emitted.filter(node => node.type === 'Row');
+          const band = rows.some(node => node.backgroundColor === readerAppColor('app.status.warningSoft', scheme));
+          assert.equal(band, comic, 'only comics carry the tinted panel band');
+          const spine = rows.some(node => node.height === height && node.width === 8 * width / 90);
+          assert.equal(spine, !comic, 'only novels carry the paper spine');
+          const label = texts.find(node => node.create === kindLabel);
+          if (kindLabel.length === 0) assert.equal(texts.length, 1, 'no kind label without a kind');
+          else assert.equal(label.maxLines, 1);
+        }
+      }
+    }
+    const owner = createReaderBuilderProbe(source, ['build', 'x', 'y', 'scaleCoverUnit', 'isComic', 'titleUnits'], { readerAppColor }).owner;
+    for (const [glyph, size] of [['短书', 15], ['八个字的书名吧', 13], ['十四个字以内的书名还算比较长', 11.5]]) {
+      Object.assign(owner, { coverWidth: 90, coverHeight: 124, glyph, kindLabel: '小说' });
+      assert.equal(owner.titleUnits(), size);
+    }
+    const discover = read('features/discover/ui/DiscoverPage.ets');
+    const book = { sourceId: 'source', bookId: 'book', category: 'novel', name: longTitle, author: '', intro: '', coverUrl: '  ' };
+    const cover = class { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } };
+    const properties = createArkUIPropertyRuntimeProbe();
+    const { owner: page } = createReaderBuilderProbe(discover,
+      ['resultRow', 'currentBook', 'coverUrl', 'coverErrorHandler', 'failedCoverGeneration', 'failedCoverUrls'],
+      { ...properties.sdk, readerSourceCategoryLabel, NoCoverCover: cover },
+      { ...properties.hooks, childSources: { NoCoverCover: source } });
+    Object.assign(page, { mounted: true, presentation: { books: [book], operation: { generation: 1 } } });
+    page.resultRow(book);
+    assert.deepEqual([...page.children.values()][0].params,
+      { coverWidth: 52, coverHeight: 74, glyph: longTitle, kindLabel: '小说' });
+    book.coverUrl = 'https://example.test/cover.png';
+    page.resultRow(book);
+    const failed = nodes(page).find(node => node.type === 'Image').onError;
+    // Capture the branch selected by the SDK update. The host probe cannot
+    // unmount one non-empty native branch and mount another.
+    const updates = [];
+    page.ifElseBranchUpdateFunction = branch => updates.push(branch);
+    failed();
+    properties.flush();
+    assert.ok(updates.includes(1), 'the original image row reacts to the first failure and selects its fallback branch');
+    assert.equal(page.coverUrl(book), '');
+    page.presentation.operation.generation++;
+    failed();
+    assert.equal(page.coverUrl(book), book.coverUrl, 'a retired image failure must not suppress a fresh cover');
   }
   if (id === 'compact-source-paint') {
     for (const fontScale of [1, 1.3, 1.6, 2]) for (const [specId, paintHeight, label] of [

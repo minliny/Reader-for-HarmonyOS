@@ -594,7 +594,8 @@ export struct ReaderControlPanel {
   onAutoPageSpeedUp: () => void = (): void => {};
   onAutoPageFullTimerChange: (minutes: number, seconds: number) => void =
     (_minutes: number, _seconds: number): void => {};
-  onAutoPageFullSpeedChange: (seconds: number) => void = (_seconds: number): void => {};
+  onAutoPageFullSpeedChange: (seconds: number, onDeclined?: () => void) => void =
+    (_seconds: number, onDeclined?: () => void): void => { onDeclined?.(); };
   onAutoPageFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
   onOpenReplace: () => void = (): void => {};
   onReloadControlReplace: (operationId?: string) => Promise<void> = async (): Promise<void> => {};
@@ -645,7 +646,8 @@ export struct ReaderControlPanel {
   onTtsPrevious: () => void = (): void => {};
   onTtsNext: () => void = (): void => {};
   onTtsSeek: (sliceIndex: number) => void = (_sliceIndex: number): void => {};
-  onTtsRateChange: (rate: number) => void = (_rate: number): void => {};
+  onTtsRateChange: (rate: number, onDeclined?: () => void) => void =
+    (_rate: number, onDeclined?: () => void): void => { onDeclined?.(); };
   onTtsTimerChange: (minutes: number, seconds: number, mode?: ReaderTtsTimerMode) => void =
     (_minutes: number, _seconds: number, _mode?: ReaderTtsTimerMode): void => {};
   onTtsFollowHighlightChange: (enabled: boolean) => void = (_enabled: boolean): void => {};
@@ -2868,7 +2870,7 @@ export struct ReaderControlPanel {
       onPrevious: (): void => this.onTtsPrevious(),
       onNext: (): void => this.onTtsNext(),
       onSeek: (sliceIndex: number): void => this.onTtsSeek(sliceIndex),
-      onRateChange: (rate: number): void => this.onTtsRateChange(rate),
+      onRateChange: (rate: number, onDeclined?: () => void): void => this.onTtsRateChange(rate, onDeclined),
       onTimerChange: (minutes: number, seconds: number, mode?: ReaderTtsTimerMode): void =>
         this.onTtsTimerChange(minutes, seconds, mode),
       onFollowHighlightChange: (enabled: boolean): void => this.onTtsFollowHighlightChange(enabled),
@@ -2919,7 +2921,8 @@ export struct ReaderControlPanel {
           onNextChapter: (): void => this.onNextChapter(),
           onTimerChange: (minutes: number, seconds: number): void =>
             this.onAutoPageFullTimerChange(minutes, seconds),
-          onSpeedChange: (seconds: number): void => this.onAutoPageFullSpeedChange(seconds),
+          onSpeedChange: (seconds: number, onDeclined?: () => void): void =>
+            this.onAutoPageFullSpeedChange(seconds, onDeclined),
           onFollowHighlightChange: (enabled: boolean): void => this.onAutoPageFollowHighlightChange(enabled),
           onMorphActorMeasured: (kind: ReaderSessionMorphSourceKind, left: number, top: number,
             width: number, height: number): void => this.reportSessionMorphSource(kind, left, top, width, height),
