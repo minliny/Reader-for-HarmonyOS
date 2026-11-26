@@ -1,17 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if (( $# == 0 )); then
-  build_mode=hap
-elif [[ $# == 1 && $1 == --native-only ]]; then
-  build_mode=native-only
-else
-  printf 'Usage: %s [--native-only]\n' "${0##*/}" >&2
+if (( $# != 1 )); then
+  printf 'Select --prepare, --package-offline, or --native-only\n' >&2
   exit 2
 fi
-readonly build_mode
+case "$1" in
+  --prepare|--package-offline|--native-only) readonly phase=${1#--} ;;
+  *) exit 2 ;;
+esac
 
-readonly workspace=/workspace
+readonly workspace=/reader-ci/workspace
 readonly host="$workspace/Reader-for-HarmonyOS"
 readonly core="$workspace/Reader-Core"
 readonly output=/reader-ci
@@ -20,11 +19,13 @@ readonly abi=arm64-v8a
 readonly rust_target=aarch64-unknown-linux-ohos
 readonly lock="$host/scripts/core-dependency.json"
 
-if [[ ! -d "$output" || -L "$output" ]] || ! private=$(mktemp -d "$output/private.XXXXXX" 2>/dev/null); then
-  printf 'bootstrap FAIL\n'
-  exit 1
+readonly private="$output/private"
+[[ -d "$output" && ! -L "$output" ]]
+if [[ "$phase" == package-offline ]]; then
+  [[ -d "$private" && ! -L "$private" ]]
+else
+  mkdir -m 0700 "$private"
 fi
-readonly private
 readonly summary="$private/build-summary.txt"
 umask 022
 
@@ -41,9 +42,9 @@ export DEVECO_SDK_HOME="$READER_HARMONY_SDK_HOME"
 export HOS_SDK_HOME="$READER_HARMONY_SDK_HOME"
 export OHOS_NATIVE_HOME="$READER_HARMONY_SDK_HOME/default/openharmony/native"
 export LIBCLANG_PATH="$OHOS_NATIVE_HOME/llvm/lib"
-export NODE_HOME=/reader-node READER_NODE=/reader-node/bin/node
+export NODE_HOME=/reader-ci/node READER_NODE=/reader-ci/node/bin/node
 export PATH="$NODE_HOME/bin:$CARGO_HOME/bin:$cli/bin:$PATH"
-if [[ "$build_mode" == hap ]]; then
+if [[ "$phase" != native-only ]]; then
   export HVIGORW="$cli/bin/hvigorw" OHPM="$cli/bin/ohpm"
   export READER_HVIGOR_PLUGIN_PACKAGE="$cli/hvigor/hvigor-ohos-plugin/package.json"
   export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
@@ -64,7 +65,7 @@ run_stage() {
   if (( result != 0 )); then
     printf '%s FAIL (%ss, exit %s)\n' "$name" "$((SECONDS - started))" "$result"
     case "$name" in
-      workspace-admission|toolchain-setup|unsigned-hap-build|public-evidence)
+      workspace-admission|toolchain-setup|offline-admission|unsigned-hap-build|public-evidence)
         tail -n 120 -- "$log" >&2 || true
         ;;
     esac
@@ -79,25 +80,23 @@ require_clean_checkout() {
   test -z "$status"
 }
 
-prepare_workspace() {
+admit_workspace() {
   [[ ! -e "$output/public" && ! -L "$output/public" ]] || return 1
-  mkdir -p "$HOME" "$TMPDIR" "$READER_LOCK_DIR"
   test "$(uname -s):$(uname -m)" = Linux:x86_64
   test "$("$READER_NODE" --version)" = v22.23.3
-  git config --global --add safe.directory "$host"
-  git config --global --add safe.directory "$core"
+  [[ "$GITHUB_SHA" =~ ^[a-f0-9]{40}$ && "$(git -C "$host" rev-parse HEAD)" == "$GITHUB_SHA" ]]
   require_clean_checkout "$host"
   require_clean_checkout "$core"
 
   cd "$workspace"
-  "$READER_NODE" --input-type=module - "$lock" "$private" "$build_mode" <<'NODE'
+  "$READER_NODE" --input-type=module - "$lock" "$SDK" <<'NODE'
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { coreBuildSnapshot } from './Reader-Core/scripts/build-input-snapshot.mjs';
 import { harmonySdkContainerRoot } from './Reader-Core/scripts/lib/development-environment.mjs';
 
-const [lockPath, privateDir, mode] = process.argv.slice(2);
+const [lockPath, sdkChoice] = process.argv.slice(2);
 const dependency = JSON.parse(readFileSync(lockPath, 'utf8'));
 assert.match(dependency.coreCommit, /^[a-f0-9]{40}$/);
 assert.match(dependency.coreInputFingerprint, /^[a-f0-9]{64}$/);
@@ -119,22 +118,27 @@ const sdk = harmonySdkContainerRoot(process.env.READER_HARMONY_SDK_HOME);
 assert.ok(sdk, 'Official Harmony SDK container is missing');
 const sdkPackage = JSON.parse(readFileSync(resolve(sdk.packageRoot, 'sdk-pkg.json'), 'utf8')).data;
 const api = String(sdkPackage.apiVersion);
-assert.match(api, /^(23|24|26)$/);
-if (mode === 'hap') {
-  assert.equal(api, '26', 'Full HAP compilation requires SDK API 26; use --native-only with lower SDKs');
+assert.equal(api, { api23: '23', api24: '24', api26r: '26' }[sdkChoice]);
+if (sdkChoice === 'api26r') {
   assert.equal(sdkPackage.releaseType, 'Release', 'Full HAP compilation requires a release SDK');
 }
-writeFileSync(resolve(privateDir, 'sdk-api'), `${api}\n`);
-writeFileSync(resolve(privateDir, 'rust-toolchain'), `${dependency.rustToolchain}\n`);
+console.log(`Host ${process.env.GITHUB_SHA}, Core ${dependency.coreCommit}, SDK API ${api} (${sdkPackage.releaseType})`);
 NODE
+}
 
+prepare_workspace() {
+  mkdir -p "$HOME" "$TMPDIR" "$READER_LOCK_DIR"
+  git config --global --add safe.directory "$host"
+  git config --global --add safe.directory "$core"
+  admit_workspace
+  cd "$workspace"
   "$READER_NODE" Reader-Core/scripts/sync-workspace.mjs --write
   "$READER_NODE" Reader-Core/scripts/sync-workspace.mjs --check
   require_clean_checkout "$host"
   require_clean_checkout "$core"
 }
 
-prepare_hap_tools() {
+check_hap_tools() {
   local executable
   for executable in "$HVIGORW" "$OHPM" "$JAVA_HOME/bin/java" \
     "$OHOS_NATIVE_HOME/llvm/bin/llvm-objcopy"; do
@@ -142,9 +146,16 @@ prepare_hap_tools() {
   done
   test -r "$READER_HARMONY_SDK_HOME/default/openharmony/toolchains/lib/hap-sign-tool.jar"
   command -v unzip
-  printf '%s\n' '@ohos:registry=https://repo.harmonyos.com/npm/' > "$HOME/.npmrc"
+  for executable in cmake ninja; do
+    test -x "$OHOS_NATIVE_HOME/build-tools/cmake/bin/$executable" || command -v "$executable"
+  done
   test -f "$READER_HVIGOR_PLUGIN_PACKAGE"
   test -f "$(dirname "$READER_HVIGOR_PLUGIN_PACKAGE")/../hvigor/package.json"
+}
+
+prepare_hap_tools() {
+  check_hap_tools
+  printf '%s\n' '@ohos:registry=https://repo.harmonyos.com/npm/' > "$HOME/.npmrc"
   cd "$host"
   "$READER_NODE" tools/reader-build-tools.mjs --install
 }
@@ -175,8 +186,8 @@ prepare_tools() {
   printf '%s  %s\n' '20a06e644b0d9bd2fbdbfd52d42540bdde820ea7df86e92e533c073da0cdd43c' "$rustup_init" | sha256sum --check
   chmod 700 "$rustup_init"
   "$rustup_init" -y --no-modify-path --default-toolchain none
-  rustup toolchain install "$(cat "$private/rust-toolchain")" --profile minimal --target "$rust_target"
-  if [[ "$build_mode" == hap ]]; then
+  rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal --target "$rust_target"
+  if [[ "$phase" != native-only ]]; then
     prepare_hap_tools
   fi
 }
@@ -214,6 +225,7 @@ const run = JSON.parse(readFileSync(manifestPath, 'utf8'));
 const dependency = JSON.parse(readFileSync(dependencyPath, 'utf8'));
 assert.equal(run.buildClass, 'iteration');
 assert.equal(run.acceptanceEligible, false);
+assert.equal(run.source.harmony.commit, process.env.GITHUB_SHA);
 assert.equal(run.source.core.commit, dependency.coreCommit);
 assert.equal(run.source.core.dirty, false);
 assert.equal(run.source.effectiveBuildProfile.mode, 'unsigned');
@@ -237,7 +249,8 @@ stage_public_evidence() {
     install -m 0644 "$run/$file" "$staging/$file"
   done
   {
-    printf 'Unsigned HarmonyOS build (%s, SDK API %s)\n' "$abi" "$(cat "$private/sdk-api")"
+    printf 'Unsigned HarmonyOS build (%s, %s, network none)\n' "$abi" "$SDK"
+    cat "$private/prepared-inputs"
     cat "$summary"
   } > "$staging/build-summary.txt"
   chmod 0644 "$staging/build-summary.txt"
@@ -251,12 +264,36 @@ stage_public_evidence() {
   mv -T "$staging" "$output/public"
 }
 
-run_stage workspace-admission prepare_workspace
-run_stage toolchain-setup prepare_tools
-RUSTUP_TOOLCHAIN=$(<"$private/rust-toolchain")
+# sync-native verifies the Native package against the canonical Core inputs.
+# Additionally bind both containers to the exact same checkout, image and Native receipt.
+prepared_inputs() {
+  local evidence="$CARGO_TARGET_DIR/harmony-napi/$abi/harmony-napi-build-evidence.txt"
+  printf 'host=%s\ncore=%s\nimage=%s\nsdk=%s\n' "$GITHUB_SHA" "$(git -C "$core" rev-parse HEAD)" "$IMAGE" "$SDK"
+  sha256sum "$lock" "$evidence"
+}
+
+admit_offline_inputs() {
+  local -a interfaces=(/sys/class/net/*)
+  [[ "${interfaces[*]}" == /sys/class/net/lo ]]
+  admit_workspace
+  "$READER_NODE" "$core/scripts/sync-workspace.mjs" --check
+  check_hap_tools
+  "$READER_NODE" "$host/tools/reader-build-tools.mjs" --profile release
+  prepared_inputs > "$private/offline-inputs"
+  cmp "$private/prepared-inputs" "$private/offline-inputs"
+}
+
+RUSTUP_TOOLCHAIN=$("$READER_NODE" -p 'require(process.argv[1]).rustToolchain' "$lock")
 export RUSTUP_TOOLCHAIN
-run_stage core-native-napi build_native
-if [[ "$build_mode" == hap ]]; then
+if [[ "$phase" == package-offline ]]; then
+  run_stage offline-admission admit_offline_inputs
   run_stage unsigned-hap-build build_hap
   run_stage public-evidence stage_public_evidence
+else
+  run_stage workspace-admission prepare_workspace
+  run_stage toolchain-setup prepare_tools
+  run_stage core-native-napi build_native
+  if [[ "$phase" == prepare ]]; then
+    prepared_inputs > "$private/prepared-inputs"
+  fi
 fi
