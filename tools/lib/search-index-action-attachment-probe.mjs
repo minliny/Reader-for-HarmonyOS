@@ -52,7 +52,7 @@ export function searchAttachmentFixture({ mutatePredicate, pageDefinition = page
   let journeySource = read('app/composition/ReaderLibraryJourney.ets');
   if (mutatePredicate) {
     const journeyTree = parse(journeySource), journey = journeyTree.statements.find(node => node.name?.text === 'ReaderLibraryJourney');
-    const predicate = journey.members.find(node => node.name?.getText(journeyTree) === 'isCurrentSearch');
+    const predicate = journey.members.find(node => node.name?.getText(journeyTree) === 'ownsSearchPresentation');
     journeySource = journeySource.slice(0, predicate.getStart(journeyTree)) + mutatePredicate(predicate.getText(journeyTree)) + journeySource.slice(predicate.end);
   }
   const { ReaderLibraryJourney } = pureModuleProbe(journeySource,
@@ -73,26 +73,36 @@ export function searchAttachmentFixture({ mutatePredicate, pageDefinition = page
     req(sdk+'/lib/validate_ui_syntax.js').observedClassCollection.add(name);
   }
   const taskSource = read('features/search/ui/ReaderSearchTaskPanel.ets');
+  const taskTriggerSource = read('features/search/ui/ReaderSearchTaskTrigger.ets');
   const filterSource = read('features/search/ui/ReaderSearchFilterPanel.ets');
+  const filterTriggerSource = read('features/search/ui/ReaderSearchFilterTrigger.ets');
+  const sheetSource = read('ui/surfaces/ReaderBottomSheet.ets');
   const resultsSource = read('features/search/ui/LibrarySearchResults.ets');
   const resultGeometry = pureModuleProbe(read('features/search/ui/SearchResultGeometry.ts'),
     'SearchResultGeometry.ts', {}, ['SEARCH_RESULT_GEOMETRY']);
   const dependencies = { ...surfaces.deps, ...controls.dependencies, ...scopeConstants, ...resultGeometry, ...actionTargets,
     SearchPublication, SearchViewState, SearchResultProjection, SearchBookGroup, SearchResultDataSource,
     ...geometry, ...metrics, ...floating, ...author,
-    ReaderWindowCoordinator: { metrics: () => metrics.createDefaultReaderWindowMetrics() },
-    Scroller: class { scrollEdge() {} },
-    SheetSize: { FIT_CONTENT: 'fit' }, SheetType: { BOTTOM: 'bottom' }, DismissReason: { PRESS_BACK: 'back' } };
-  const { SearchResultSheetBinding } = pureModuleProbe(read('features/search/ui/SearchResultSheetBinding.ets'),
-    'SearchResultSheetBinding.ets', dependencies, ['SearchResultSheetBinding']);
-  dependencies.SearchResultSheetBinding = SearchResultSheetBinding;
+    ReaderWindowCoordinator: { metrics: () => metrics.createDefaultReaderWindowMetrics(),
+      requestOverlayChrome() {}, requestAppChrome() {} },
+    readerScrimmedOpaqueColor: color => color,
+    ReaderWindowChromeStyle: class {},
+    ModalTransition: { NONE: 'none' },
+    Scroller: class { scrollEdge() {} } };
   Object.assign(dependencies,pureModuleProbe(read('features/search/ui/SearchFilterGeometry.ts'),
     'SearchFilterGeometry.ts',{},['SearchFilterGeometry']));
   const hooks = { ...controls.hooks, childSources: { ...surfaces.childSources, ...controls.hooks.childSources,
-    SearchPage: pageDefinition, ReaderSearchTaskPanel: taskSource, ReaderSearchFilterPanel: filterSource, LibrarySearchResults: resultsSource } };
+    SearchPage: pageDefinition, ReaderSearchTaskPanel: taskSource, ReaderSearchFilterPanel: filterSource,
+    ReaderSearchTaskTrigger: taskTriggerSource, ReaderSearchFilterTrigger: filterTriggerSource,
+    ReaderBottomSheet: sheetSource, LibrarySearchResults: resultsSource } };
   dependencies.ReaderSearchFilterPanel = compileTailConsumer(filterSource, boundedMembers(filterSource), dependencies, hooks).Component;
+  dependencies.ReaderSearchFilterTrigger = compileTailConsumer(filterTriggerSource, boundedMembers(filterTriggerSource), dependencies, hooks).Component;
   const Task = compileTailConsumer(taskSource, boundedMembers(taskSource), dependencies, hooks).Component;
+  const TaskTrigger = compileTailConsumer(taskTriggerSource, boundedMembers(taskTriggerSource), dependencies, hooks).Component;
   dependencies.ReaderSearchTaskPanel = Task;
+  dependencies.ReaderSearchTaskTrigger = TaskTrigger;
+  const Sheet = compileTailConsumer(sheetSource, boundedMembers(sheetSource), dependencies, hooks).Component;
+  dependencies.ReaderBottomSheet = Sheet;
   // Select actual page methods and the finite state consumed by these existing
   // Builders. The unrelated page Scaffold/native result list is outside this
   // operation action contract; no replacement retry or eligibility is supplied.
@@ -100,14 +110,15 @@ export function searchAttachmentFixture({ mutatePredicate, pageDefinition = page
   const methods = component.members.filter(ts.isMethodDeclaration).map(node => node.name.getText(tree))
     .filter(name => !['build', 'aboutToAppear', 'aboutToDisappear'].includes(name));
   const fields = ['appThemeScheme', 'readerWindowMetricsRevision', 'presentation', 'publication', 'viewState',
-    'expandedLayout', 'reduceMotion', 'externalHeaderHeight', 'surfaceModel', 'isPresentationCurrent', 'isPresentationVisible',
+    'expandedLayout', 'reduceMotion', 'presented', 'externalHeaderHeight', 'surfaceModel', 'isPresentationCurrent', 'isPresentationVisible',
     'onBack', 'onSearch', 'onStop', 'onClearHistory', 'onRetryHistory', 'onSelectResult', 'onVisibleGroups', 'onRetry',
     'onManageSources', 'pageEpoch', 'pageMounted', 'queryAtMount', 'surfaceOwner', 'taskStatusExpanded', 'taskStatusGeneration',
+    'filtersExpanded', 'filterGeneration', 'filterSheetIdentity', 'taskSheetIdentity',
     'resultNoticeFacts', 'retainedViewportPending', 'listMounted'];
   const page = compileTailConsumer(pageDefinition, [...fields, ...methods], dependencies, hooks);
   dependencies.SearchPage = page.Component;
   const Results = compileTailConsumer(resultsSource, boundedMembers(resultsSource), dependencies, hooks).Component;
-  const names = ['searchPageContent', 'searchPageSurface', 'isCurrentSearchPresentation'];
+  const names = ['searchPageContent', 'searchPageSurface', 'isCurrentSearchPresentation', 'searchResultsAttached', 'searchResultsKey'];
   const currentIndex = `@Component struct Index {\n${names.map(name => member(searchIndexSource, name)).join('\n')}\nbuild(){this.searchPageContent();}\n}`;
   const composition = compileTailConsumer(currentIndex, [...names, 'build'],
     { ...dependencies, LibrarySearchResults: Results }, hooks);
@@ -126,7 +137,7 @@ export function searchAttachmentFixture({ mutatePredicate, pageDefinition = page
     navigationGeneration: { get: () => route.snapshot().generation } });
   Object.assign(index, {
     mountedRuntimeOwner: native, detailShelfAdmissionMount: 1, shelfReceiptRetired: false,
-    searchAppForeground: true, arkWebCapturesInput: false, librarySearch: library,
+    searchAppForeground: true, arkWebCapturesInput: false, librarySearch: library, navigationOwner: route,
     libraryAcquisition: { coordinator: () => coordinator, currentOwner: () => currentRuntime,
       beginSearch: () => coordinator.beginSearch(), endSearch: () => coordinator.endSearch() },
     settingsPresentation: { snapshot: { reduceMotion: false } }, expandedLayout: () => false,
@@ -169,6 +180,8 @@ export function searchAttachmentFixture({ mutatePredicate, pageDefinition = page
   }
   return { index, first, native, host, library, reading, navigation: route, calls, controls, SearchHost, mount, physical,
     setRuntime: value => { currentRuntime = value; },
+    sheets: () => walk(first).filter(child => child instanceof Sheet),
     taskPanel: () => walk(first).find(child => child instanceof Task),
+    taskTrigger: () => walk(first).find(child => child instanceof TaskTrigger),
     actors: spec => walk(first).filter(child => child.specId === spec) };
 }

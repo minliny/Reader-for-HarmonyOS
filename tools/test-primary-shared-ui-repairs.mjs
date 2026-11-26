@@ -4,10 +4,12 @@ import * as windowFacts from '../entry/src/main/ets/ui/foundation/ReaderWindowMe
 import * as horizontalFrame from '../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts';
 import { readFileSync } from 'node:fs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { createReaderBuilderProbe, productionReaderMotionSdk } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { selectedProductionValues } from './lib/selected-production-methods.mjs';
+import { productionReaderPressFeedback } from './lib/reader-press-feedback-probe.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
+import { actualReaderPostLayoutFrame, drainReaderPostLayoutFallbacks } from './lib/reader-post-layout-frame-probe.mjs';
 import { foundationControls, foundationSpecs, surfaceFontResolvers } from './lib/reader-foundation-control-probe.mjs';
 import { inlineSelectSdk } from './lib/reader-inline-select-sdk-probe.mjs';
 import { labeledIconControls, labeledIconSpecs } from './lib/reader-labeled-icon-action-probe.mjs';
@@ -33,12 +35,12 @@ const definitions = {
   'prepared-media-qualification': 'Actual coordinator cache and in-flight joins qualify current media, preserve existing consumers and never retain an explicit media-mismatched result for the next retry.',
   'detail-kind-confirmation': 'Actual current source registry gives the initial media hint while cold detail failure/retry publishes its confirmed session type through the shipping Entry/Host chain.',
   'detail-type-state': 'Unknown remote type renders the existing page-state host with current retry, keeps Back available and excludes a misleading hero/footer; local/text/manga/audio are distinguished.',
-  'library-watch-parent-delivery': 'Library search PropWatch completes its local visual state immediately while settled navigation and continue-card coverage notify the parent after render with current scope fencing.',
+  'library-watch-parent-delivery': 'Library search PropWatch fences input before its 120ms paint-only fade; settled navigation and coverage notify the current parent after render.',
   'detail-entry-dto-geometry': 'Actual search matched-shelf selection and shelf info entry project canonical kind/cover facts through the shipping Host mapper before comparing their real detail geometry.',
   'detail-directory-action': 'Actual text/manga detail directory actors enter the detail-directory journey without dispatching reading; a late prepared-page delivery is rejected after the detail session has ended.',
-  'bookshelf-action-lanes': 'The shelf section pays the full icon hit lane while the group selector preserves compact paint inside a native44vp carrier.',
+  'bookshelf-action-lanes': 'The shelf section keeps two nonoverlapping 44vp hit lanes around one centered sliding or reduced-motion selection pill.',
   'labeled-action-paint': 'Finite labeled actions retain their authored compact paint heights and distinct glyphs with an independent44vp native carrier and natural text growth.',
-  'select-watch-parent-delivery': 'A closing/reduce-motion PropWatch fences immediately but delivers the actual select dismiss callback after the parent render and rejects a replaced identity.',
+  'select-watch-parent-delivery': 'A closing/reduce-motion PropWatch fences input immediately, fades only the shared select paint for 120ms and rejects dismissal from a retired identity.',
   'directory-watch-parent-delivery': 'Directory focus revocation fences the native input immediately and delivers the parent callback on the next frame only while its current identity still owns it.',
   'dialog-action-budget': 'Real bundled font advances at actual dialog safe widths expose wrapping and natural native action growth beyond the old single-line cap.',
   'menu-divider-current': 'Stable-key menu actors recompute their divider from current action order after an appended action.',
@@ -68,7 +70,7 @@ for (const id of selectContractCases(definitions)) {
             mangaFontsReady: true, introExpanded: length === 'long', introMeasured: true,
             admissionIdentity: 'same-opening', appThemeScheme: 'day', inBookshelf: true });
           owner.refreshGeometry();
-          if (kind === 'manga') owner.prepareMangaPreview();
+          if (kind === 'manga') owner.refreshChapterPreview();
           owner.detailContent();
           const scrolls = nodes(owner).filter(node => node.type === 'Scroll');
           if (kind === 'unknown-remote') {
@@ -77,7 +79,7 @@ for (const id of selectContractCases(definitions)) {
             assert.equal(scrolls.length, 1);
             assert.equal(scrolls[0].align, 'Alignment.Top', `${kind}/${length}/${scale} document uses its declared top origin`);
             assert.equal(scrolls[0].height, '100%');
-            assert.equal(scrolls[0].create, kind === 'manga' ? undefined : owner.detailScroller);
+            assert.equal(scrolls[0].create, owner.detailScroller, 'both book kinds use the same live header scroll source');
             const column = nodes(owner).find(node => node.type === 'Column' && node.padding?.top === owner.geometry.content.startInset &&
               node.padding?.bottom === owner.geometry.content.endInset);
             assert.ok(column, 'the actual detail column retains the resolved header and footer clearance');
@@ -294,46 +296,72 @@ for (const id of selectContractCases(definitions)) {
   if (id === 'library-watch-parent-delivery') {
     const source = read('features/search/ui/ReaderLibrarySearchSurface.ets');
     const locals = pureModuleProbe(source.slice(0, source.indexOf('@Component')), 'LibrarySearchFrames.ets',
-      { FrameCallback: class {} }, ['SurfaceValueTrack', 'LibrarySearchFrame', 'LibrarySearchFocusFrame']);
+      { FrameCallback: class {} }, ['LibrarySearchFrame', 'LibrarySearchFocusFrame']);
     const headerMetrics = await import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts');
     const headers = pureModuleProbe(read('ui/foundation/ReaderHeaderSpecs.ets'), 'ReaderHeaderSpecs.ets',
       { ...headerMetrics, ...inlineSelectSdk({ uiContext: {} }).dependencies }, ['searchHeaderSpec', 'bookshelfHeaderSpec']);
-    const frames = [], calls = [];
-    let renderingParent = false;
-    const uiContext = { postFrameCallback: frame => frames.push(frame), getFocusController: () => ({ clearFocus() {} }) };
+    const frames = [], calls = [], animations = [];
+    let renderingParent = false, owner;
+    const uiContext = {
+      postFrameCallback: frame => frames.push(frame),
+      getFocusController: () => ({ clearFocus() {} }),
+      animateTo(params, paint) {
+        const before = [owner.displayedSurfaceProgress, owner.reducedSearchOpacity];
+        paint();
+        animations.push({ params, before, after: [owner.displayedSurfaceProgress, owner.reducedSearchOpacity] });
+      },
+    };
     const properties = createArkUIPropertyRuntimeProbe();
     const members = ['mode', 'reduceMotion', 'identity', 'navigationGeneration', 'mounting', 'currentMode', 'mounted', 'generation',
       'activeIdentity', 'activeNavigation', 'activeMounting', 'fromSurface', 'fromHistory', 'fromResults', 'fromScrim',
       'toSurface', 'toHistory', 'toResults', 'toScrim', 'measurementKey', 'automaticInputFocusAllowed', 'fieldFocused',
       'transitionKind', 'transitionDurationMs', 'transitionStartedMs', 'elapsed', 'searchMounted', 'historyHeight',
-      'displayedHistoryViewport', 'historyTrack', 'historyResizeSpec', 'lastCardSuppressed', 'lastCardCoverageScope',
+      'displayedHistoryViewport', 'displayedHistoryLimit', 'displayedSurfaceProgress', 'reducedTransition', 'reducedSearchOpacity',
+      'lastCardSuppressed', 'lastCardCoverageScope',
       'openSpec', 'submitSpec', 'backSpec', 'applyTargets', 'transitionFor', 'durationFor', 'modeChanged',
-      'retargetHistoryViewport', 'publishContinueCardCoverage', 'completeTransition'];
-    const owner = createReaderBuilderProbe(source, members, { ...properties.sdk, ...locals, ...headers, uiContext,
-      motionSpecGet: () => ({ durationMs: 100, curve: { interpolate: value => value } }), readerMotionNowMs: () => 0 }, properties.hooks).owner;
+      'retargetHistoryViewport', 'publishContinueCardCoverage', 'completeTransition', 'beginReducedTransition'];
+    owner = createReaderBuilderProbe(source, members, { ...properties.sdk, ...locals, ...headers, uiContext,
+      ...productionReaderMotionSdk(), ReaderPostLayoutFrame: actualReaderPostLayoutFrame(), readerMotionNowMs: () => 0 }, properties.hooks).owner;
     Object.assign(owner, { mounted: false, mode: 'input', currentMode: 'input', reduceMotion: true, identity: 1, navigationGeneration: 2, mounting: 3,
       activeIdentity: 1, activeNavigation: 2, activeMounting: 3, searchMounted: true,
-      resolvedHistoryViewport: () => ({ height: 80, suppressContinueCard: true }),
-      scheduleInputFocus: () => {},
-      surfaceProgress: () => 1, historyProgress: () => 1, resultsProgress: () => 0, scrimProgress: () => 1,
+      resolvedHistoryViewport: () => ({ height: 80, suppressContinueCard: true }), historyLimit: () => 100,
+      model: {},
+      scheduleInputFocus: () => {}, observeEntryHistory: () => {},
+      displayedSurfaceProgress: 1, sampleSurfaceProgress() { return this.fromSurface; },
+      historyProgress: () => 1, resultsProgress: () => 0, scrimProgress: () => 1,
       onHistoryCoverageChanged: (...values) => { assert.equal(renderingParent, false); calls.push(['coverage', ...values]); },
       onSettled: (...values) => { assert.equal(renderingParent, false); calls.push(['settled', ...values]); } });
     owner.mounted = true;
     const props = ['mode', 'reduceMotion', 'identity', 'navigationGeneration', 'mounting'];
     const deliver = patch => owner.updateStateVars({ ...Object.fromEntries(props.map(name => [name, owner[name]])), ...patch });
+    assert.deepEqual(['open', 'submit', 'back', 'edit'].map(kind => owner.durationFor(kind)), [260, 240, 200, 200]);
+    const frame = () => {
+      for (const callback of frames.splice(0)) { callback.onFrame(16); callback.onIdle(0); }
+      drainReaderPostLayoutFallbacks(frames);
+    };
     renderingParent = true; deliver({ mode: 'idle' }); renderingParent = false;
-    assert.equal(owner.searchMounted, false, 'local input/visual retirement completes immediately');
+    assert.equal(owner.searchMounted, true, 'existing visual actors survive through fade-out');
     assert.deepEqual(calls, []);
-    frames.splice(0).forEach(frame => frame.onFrame());
+    frame();
+    assert.equal(animations[0].params.duration, 120);
+    assert.deepEqual(animations[0].before, [1, 1]);
+    assert.deepEqual(animations[0].after, [1, 0]);
+    assert.deepEqual(calls, []);
+    animations[0].params.onFinish();
+    assert.equal(owner.searchMounted, false);
     assert.deepEqual(calls, [['settled', 'idle', 1, 2, 3]]);
     renderingParent = true; deliver({ mode: 'input' }); renderingParent = false;
     assert.equal(calls.length, 1);
-    frames.splice(0).forEach(frame => frame.onFrame());
+    frame();
+    assert.equal(animations[1].params.duration, 120);
+    assert.deepEqual(animations[1].before, [1, 0]);
+    assert.deepEqual(animations[1].after, [1, 1]);
     assert.ok(calls.some(values => values[0] === 'coverage' && values[1] === true));
     const count = calls.length;
     renderingParent = true; deliver({ mode: 'idle' }); renderingParent = false;
     owner.mounted = false; owner.generation++;
-    frames.splice(0).forEach(frame => frame.onFrame());
+    animations[1].params.onFinish();
+    frame();
     assert.equal(calls.length, count, 'retired search cannot navigate or update its successor coverage');
   }
   if (id === 'detail-entry-dto-geometry') {
@@ -472,14 +500,57 @@ for (const id of selectContractCases(definitions)) {
   if (id === 'bookshelf-action-lanes') {
     const shared = iconButtonControls();
     const section = read('features/bookshelf/ui/BookshelfSectionHeader.ets');
+    const geometry = pureModuleProbe(section.slice(0, section.indexOf('@Component')), 'BookshelfSectionHeaderGeometry.ets', {},
+      ['SHELF_SECTION_ACTION_SIZE', 'SHELF_SECTION_TRACK_HEIGHT', 'SHELF_SECTION_TRACK_INSET',
+        'SHELF_SECTION_PILL_HEIGHT', 'SHELF_SECTION_PILL_WIDTH']);
     for (const scale of [1, 1.3, 1.6, 2]) {
+      const animations = [], frames = [];
       const owner = shared.consumer(section, boundedMembers(section), { ...readerTypographyRoles, ...surfaceFontResolvers(),
-        ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: scale }) }, readerAppColor, TOK_SPACE_XS: 8, SHELF_SECTION_ACTION_SIZE: 34 });
-      Object.assign(owner, { contentWidth: 320, windowRevision: 1, appThemeScheme: 'day' }); owner.initialRender();
+        ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: scale }) }, readerAppColor, TOK_SPACE_XS: 8,
+        ...geometry, ...productionReaderMotionSdk(), ReaderPostLayoutFrame: actualReaderPostLayoutFrame() });
+      owner.getUIContext = () => ({ animateTo: (options, transition) => { animations.push(options); transition(); },
+        postFrameCallback: frame => frames.push(frame) });
+      Object.assign(owner, { contentWidth: 320, windowRevision: 1, appThemeScheme: 'day' });
+      owner.aboutToAppear(); owner.initialRender();
       const parent = nodes(owner).find(node => node.type === 'Row' && node.constraintSize !== undefined);
       assert.ok(parent.constraintSize.minHeight >= 44, 'the section parent reserves the expanded response height');
       const actors = [...owner.children.values()]; assert.equal(actors.length, 3);
-      for (const actor of actors) assert.equal(shared.nodes(actor).find(node => node.type === 'Image').width, 20);
+      const segments = actors.filter(actor => actor.specId === 'shelf-view-segment');
+      const filter = actors.find(actor => actor.specId === 'shelf-section');
+      assert.equal(segments.length, 2);
+      assert.ok(filter);
+      for (const actor of actors) {
+        assert.equal(shared.nodes(actor).find(node => node.type === 'Image').width, 15);
+        const button = shared.nodes(actor).find(node => node.type === 'Button');
+        assert.equal(button.width, 44);
+        assert.equal(button.height, 44);
+      }
+      assert.ok(nodes(owner).some(node => node.type === 'Stack' && node.width === 88));
+      const pill = () => nodes(owner).find(node => node.type === 'Row' && node.width === 38);
+      assert.equal(pill().height, 28);
+      assert.equal(pill().borderRadius, 14);
+      assert.equal(pill().translate.x, 0);
+      assert.ok(nodes(owner).some(node => node.type === 'Stack' && node.padding?.left === 3 && node.padding?.right === 3));
+      shared.update(owner, { viewMode: 'list' }); owner.replay();
+      assert.equal(pill().translate.x, 44, 'the same painted pill moves to the center of the next target');
+      assert.equal(animations.at(-1).duration, productionReaderMotionSdk().motionAnimateParam('app.navigation.pill').duration);
+      owner.__reduceMotion.reset(true);
+      shared.update(owner, { viewMode: 'cover' }); owner.replay();
+      assert.equal(pill().opacity, 0);
+      const frame = frames.shift();
+      frame.onFrame(0);
+      frame.onIdle(0);
+      owner.replay();
+      assert.equal(pill().translate.x, 0);
+      assert.equal(pill().opacity, 1);
+      assert.equal(animations.at(-1).duration, 120);
+      const hasFilterDot = () => nodes(owner).some(node => node.type === 'Row' && node.width === 6 &&
+        node.opacity === 1 && node.backgroundColor === readerAppColor('TOK_PRIMARY_DARK', 'day'));
+      assert.equal(hasFilterDot(), false);
+      owner.hasActiveFilters = true; owner.replay();
+      assert.equal(hasFilterDot(), true, 'collapsed active filter uses an independent pine dot');
+      owner.filterExpanded = true; owner.replay();
+      assert.equal(hasFilterDot(), false, 'expanded filter paints its button state without a second indicator');
       owner.actionsEnabled = false; owner.replay();
       assert.equal(parent.constraintSize.minHeight, Math.ceil(38 + readerTypographyRoles.TYPE_APP_SECTION_LABEL.lineHeightFp * (scale - 1)),
         'empty shelf keeps its authored heading height while omitting unavailable actions');
@@ -488,16 +559,34 @@ for (const id of selectContractCases(definitions)) {
     const accessibility = pureModuleProbe(read('ui/controls/ReaderActionAccessibility.ets'), 'ReaderActionAccessibility.ets',
       { AccessibilityRoleType: { BUTTON: 'AccessibilityRoleType.BUTTON' } }, ['ReaderActionAccessibility']);
     const properties = createArkUIPropertyRuntimeProbe();
+    const ReaderPressFeedback = productionReaderPressFeedback({ ColorMetrics: {
+      resourceColor: color => ({ blendColor: () => ({ color: 'pressed-group-chip' }) }),
+    } });
     const owner = createReaderBuilderProbe(source, boundedMembers(source), { ...properties.sdk, ...readerTypographyRoles, readerAppColor,
-      ...accessibility }, properties.hooks).owner;
-    Object.assign(owner, { selected: true, busy: false, appThemeScheme: 'day' }); owner.initialRender();
-    const button = nodes(owner).find(node => node.type === 'Button');
+      ReaderPressFeedback, ...accessibility }, properties.hooks).owner;
+    Object.assign(owner, { selectedGroup: '收藏分组', groups: [{ groupId: 2, groupName: '收藏分组' }],
+      busy: false, appThemeScheme: 'day' }); owner.initialRender();
+    const button = nodes(owner).find(node => node.type === 'Button' && node.accessibilityText === '默认分组');
     const paint = nodes(owner).find(node => node.type === 'Text' && node.create === '默认');
     assert.ok(button.constraintSize.minHeight >= 44 && button.constraintSize.minWidth >= 44);
-    assert.equal(button.backgroundColor, 'Color.Transparent'); assert.equal(paint.borderRadius, 999);
+    assert.equal(button.backgroundColor, 'Color.Transparent');
+    assert.equal(paint.borderRadius, (readerTypographyRoles.TYPE_APP_FILTER_OPTION.lineHeightFp + 10) / 2);
     assert.deepEqual(paint.padding, { left: 12, right: 12, top: 5, bottom: 5 });
-    let selected = 0; owner.onSelect = () => selected++;
-    button.onClick(); owner.busy = true; button.onClick(); assert.equal(selected, 1);
+    assert.equal(paint.fontColor, readerAppColor('TOK_INK', 'day'));
+    const modifier = owner.attributeCalls.find(call => call.id === button.id && call.property === 'attributeModifier').args[0];
+    const pressed = {};
+    const pressPort = new Proxy({}, { get: (_object, key) => value => { pressed[key] = value; return pressPort; } });
+    modifier.applyPressedAttribute(pressPort);
+    assert.equal(pressed.backgroundColor, 'pressed-group-chip');
+    assert.equal(pressed.borderRadius, 999);
+    const choices = [];
+    owner.onSelect = group => choices.push(group);
+    const clear = nodes(owner).find(node => node.type === 'Button' && node.accessibilityText === '清除分组');
+    const named = nodes(owner).find(node => node.type === 'Button' && node.accessibilityText === '收藏分组');
+    assert.ok(clear.enabled && named.enabled);
+    named.onClick(); clear.onClick(); button.onClick();
+    owner.busy = true; button.onClick(); clear.onClick();
+    assert.deepEqual(choices, ['收藏分组', '', '']);
   }
   if (id === 'labeled-action-paint') {
     const specs = labeledIconSpecs();
@@ -516,16 +605,25 @@ for (const id of selectContractCases(definitions)) {
       assert.equal(paint.height === undefined || !spec.naturalHeight, true, specId + ' natural paint grows with native text');
       const glyph = nodes(owner).find(node => node.type === 'Image');
       assert.equal(glyph.width, spec.iconSize); assert.equal(glyph.height, spec.iconSize);
+      assert.equal(glyph.width, spec.text.fontSizeFp >= 13 ? 16 : 14);
+      const label = nodes(owner).find(node => node.type === 'Text');
+      assert.equal(label.halfLeading, true);
+      assert.equal(label.lineHeight, spec.text.lineHeightFp ?? Math.round(spec.text.fontSizeFp * 1.5));
       assert.ok(!paint.padding?.top && !paint.padding?.bottom, 'authored horizontal padding does not add a second44vp surface');
     }
   }
   if (id === 'select-watch-parent-delivery') {
-    const frames = [];
-    const uiContext = { getFont: () => ({}), postFrameCallback: frame => frames.push(frame), animateTo: (_param, action) => action(),
+    const frames = [], animations = [];
+    let owner;
+    const uiContext = { getFont: () => ({}), postFrameCallback: frame => frames.push(frame), animateTo(params, action) {
+        const before = owner.expandedHeight;
+        action();
+        animations.push({ params, before, after: owner.expandedHeight });
+      },
       getMeasureUtils: () => ({ measureText: () => 36, measureTextSize: () => ({ width: 36, height: 18 }) }), px2vp: n => n };
     const metrics = windowFacts.createDefaultReaderWindowMetrics(); metrics.windowRect.width = 366;
     const sdk = inlineSelectSdk({ uiContext, dependencies: { readerWindowMetrics: () => metrics } });
-    const owner = new sdk.dependencies.ReaderSelectPanel(undefined, { selectionId: 'one', reduceMotion: true, value: '自动', options: ['自动', '手动'] });
+    owner = new sdk.dependencies.ReaderSelectPanel(undefined, { selectionId: 'one', reduceMotion: true, value: '自动', options: ['自动', '手动'] });
     const propNames = [...read('ui/controls/ReaderSelectPanel.ets').matchAll(/^\s*@Prop[^\n]*?\s(\w+):/gm)].map(match => match[1]);
     const deliver = patch => owner.updateStateVars({ ...Object.fromEntries(propNames.map(name => [name, owner[name]])), ...patch });
     let renderingParent = false;
@@ -537,19 +635,30 @@ for (const id of selectContractCases(definitions)) {
     assert.equal(owner.closeInFlight, true, 'watch closes input synchronously');
     assert.deepEqual(dismissed, []);
     renderingParent = false;
+    const finishFade = () => {
+      const fade = animations.filter(animation => animation.params.onFinish !== undefined).at(-1);
+      assert.equal(fade.params.duration, 120);
+      assert.equal(fade.before, fade.after, 'reduced dismissal does not animate panel geometry');
+      assert.equal(owner.panelOpacity, 0);
+      fade.params.onFinish();
+    };
+    finishFade();
     frames.splice(0).forEach(frame => frame.onFrame());
     assert.deepEqual(dismissed, ['one']);
     deliver({ selectionId: 'two', closing: false });
     renderingParent = true;
     deliver({ closing: true });
     renderingParent = false;
+    const retiredFade = animations.filter(animation => animation.params.onFinish !== undefined).at(-1);
     deliver({ selectionId: 'three', closing: false });
+    retiredFade.params.onFinish();
     frames.splice(0).forEach(frame => frame.onFrame());
     assert.deepEqual(dismissed, ['one'], 'a later presentation invalidates the queued close completion');
     deliver({ reduceMotion: false });
     owner.closeInFlight = true; owner.closeFinish = () => owner.onDismiss(owner.selectionId);
     renderingParent = true; deliver({ reduceMotion: true }); renderingParent = false;
     assert.deepEqual(dismissed, ['one']);
+    finishFade();
     frames.splice(0).forEach(frame => frame.onFrame());
     assert.deepEqual(dismissed, ['one', 'three']);
   }
@@ -620,16 +729,37 @@ for (const id of selectContractCases(definitions)) {
     const { ReaderMenuActionView } = pureModuleProbe(source.slice(0, source.indexOf('@Component')), 'ReaderMenuActionView.ets', {}, ['ReaderMenuActionView']);
     const properties = createArkUIPropertyRuntimeProbe();
     const available = boundedMembers(source);
-    const members = ['actions', 'menuActions', 'actionRow', 'action', 'spec', 'fontScale', 'effectiveScheme', 'menuActionHeight', 'dividerWidth', 'hasFollowingAction'].filter(name => available.includes(name));
+    const members = ['actions', 'menuActions', 'actionRow', 'action', 'spec', 'fontScale', 'effectiveScheme', 'menuActionHeight', 'dividerWidth', 'hasFollowingAction', 'nativeId', 'actionIdPrefix', 'commitAction', 'mounted'].filter(name => available.includes(name));
+    const requests = [];
+    const ReaderPressFeedback = productionReaderPressFeedback({ ColorMetrics: {
+      resourceColor: color => { requests.push(color); return { blendColor: () => ({ color: 'pressed-ink' }) }; },
+    } });
     const owner = createReaderBuilderProbe(source, members,
-      { ReaderMenuActionView, ...properties.sdk, ...readerSurfaceSpecsForProbe(), ...surfaceFontResolvers(), readerAppColor, readerWindowMetrics: () => ({ systemFontScale: 1 }) },
+      { ReaderMenuActionView, ReaderPressFeedback, ...properties.sdk, ...readerSurfaceSpecsForProbe(), ...surfaceFontResolvers(), readerAppColor, readerWindowMetrics: () => ({ systemFontScale: 1 }) },
       { ...properties.hooks, allowEmptyBranchAdmission: true }).owner;
-    Object.assign(owner, { specId: 'reader-more-menu', scheme: 'day', appThemeScheme: 'day', availableWidth: 240, viewportHeight: 300,
+    Object.assign(owner, { specId: 'reader-more-menu', scheme: 'day', appThemeScheme: 'day', availableWidth: 240, viewportHeight: 300, nativeId: 'menu', mounted: true,
       actions: [new ReaderMenuActionView('one', '第一个动作')] });
     owner.menuActions();
+    const target = nodes(owner).find(node => node.id === 'menu-item-one');
+    const fired = [];
+    owner.onAction = action => fired.push(action);
+    target.onClick(); assert.deepEqual(fired, ['one']);
+    const currentModifier = () => owner.attributeCalls.filter(call => call.property === 'attributeModifier' &&
+      call.id === [...owner.nodes].find(([, node]) => node === target)[0]).at(-1).args[0];
+    const paint = {};
+    const port = new Proxy({}, { get: (_object, key) => value => { paint[key] = value; return port; } });
+    currentModifier().applyPressedAttribute(port);
+    assert.equal(paint.backgroundColor, 'pressed-ink');
+    assert.deepEqual(requests, [readerAppColor('app.interaction.press', 'day'), 'Color.Transparent']);
     owner.actions = [new ReaderMenuActionView('one', '第一个动作'), new ReaderMenuActionView('two', '第二个动作')]; owner.replay();
     assert.equal(nodes(owner).filter(node => node.type === 'Row' && node.position !== undefined).length, 1,
       'a retained former last action acquires its current divider');
+    owner.actions = [new ReaderMenuActionView('one', '第一个动作', false), new ReaderMenuActionView('two', '第二个动作')];
+    owner.replay(); target.onClick();
+    assert.deepEqual(fired, ['one']);
+    currentModifier().applyPressedAttribute(port);
+    assert.equal(paint.backgroundColor, 'Color.Transparent');
+    assert.equal(requests.length, 2, 'disabled menu actions skip neutral ink composition');
   }
   if (id === 'main-rail-current') {
     const product = pureModuleProbe(read('app/ReaderProductScope.ts'), 'ReaderProductScope.ts', {}, ['isReaderMainTabEnabled']);
@@ -664,16 +794,37 @@ for (const id of selectContractCases(definitions)) {
   }
   if (id === 'no-cover-graphic') {
     const source = read('ui/patterns/NoCoverCover.ets');
-    for (const width of [60, 84, 96.96, 128]) {
-      const owner = createReaderBuilderProbe(source, ['build', 'ruleWidth', 'labelWidth'], { readerAppColor }).owner;
-      Object.assign(owner, { coverWidth: width, coverHeight: width * 1.5, appThemeScheme: 'day' }); owner.initialRender();
-      const label = nodes(owner).find(node => node.type === 'Text' && node.create === '暂无封面');
-      assert.equal(typeof label.fontSize, 'string'); assert.ok(label.fontSize.endsWith('vp'));
-      assert.equal(typeof label.lineHeight, 'string'); assert.ok(label.lineHeight.endsWith('vp'));
-      for (const fontScale of [1, 2]) {
-        const painted = Number.parseFloat(label.fontSize) * (label.fontSize.endsWith('fp') ? fontScale : 1);
-        assert.equal(painted / width, readerTypographyRoles.TYPE_SHELF_COVER_PLACEHOLDER.fontSizeFp / 96.96);
-        assert.ok(painted * 4 <= label.width, 'cover artwork label fits its authored72-unit lane');
+    const glyph = '海边旧书店的漫长假期';
+    for (const [width, height] of [[48, 80], [60, 160], [84, 122], [90, 124], [128, 168]]) {
+      for (const scheme of ['day', 'night']) {
+        const owner = createReaderBuilderProbe(source, ['build', 'x', 'y', 'scaleCoverUnit'], { readerAppColor }).owner;
+        Object.assign(owner, { coverWidth: width, coverHeight: height, appThemeScheme: scheme, glyph, kindLabel: '小说' });
+        owner.initialRender();
+        const emitted = nodes(owner);
+        const frame = emitted.find(node => node.width === width && node.height === height);
+        assert.equal(frame.backgroundColor, readerAppColor('TOK_FIELD_SURFACE', scheme));
+        assert.equal(frame.hitTestBehavior, 'HitTestMode.None');
+        assert.equal(frame.accessibilityLevel, 'no-hide-descendants');
+        const rules = emitted.filter(node => node.type === 'Row');
+        assert.deepEqual(rules.map(rule => rule.width), [2 * width / 90, 68 * width / 90, 61 * width / 90,
+          10 * Math.min(width / 90, height / 124)]);
+        assert.equal(rules[0].height, height);
+        assert.equal(rules[0].backgroundColor, readerAppColor('TOK_LINE_STRONG', scheme));
+        assert.equal(rules[1].border.color, readerAppColor('TOK_LINE_STRONG', scheme));
+        assert.equal(rules[2].border.color, readerAppColor('TOK_LINE', scheme));
+        assert.equal(rules[3].border.color, readerAppColor('TOK_GREEN', scheme));
+        assert.equal(rules[3].backgroundColor, readerAppColor('TOK_PRIMARY_SOFT', scheme));
+        const title = emitted.find(node => node.type === 'Text' && node.create === glyph);
+        assert.equal(title.fontFamily, readerTypographyRoles.TYPE_SHELF_COVER_PLACEHOLDER.fontFamily);
+        assert.equal(title.fontSize, `${12.5 * Math.min(width / 90, height / 124)}vp`);
+        assert.equal(title.lineHeight, `${16 * Math.min(width / 90, height / 124)}vp`);
+        assert.equal(title.textAlign, 'TextAlign.Center');
+        assert.equal(title.maxLines, 2);
+        assert.deepEqual(title.textOverflow, { overflow: 'TextOverflow.Ellipsis' });
+        const label = emitted.find(node => node.type === 'Text' && node.create === '无封面 · 小说');
+        assert.equal(label.width, 58 * width / 90);
+        assert.equal(label.position.y, 89 * height / 124);
+        assert.equal(label.maxLines, 1);
       }
     }
   }
@@ -691,6 +842,14 @@ for (const id of selectContractCases(definitions)) {
       const button = nodes(owner).find(node => node.type === 'Button');
       const text = nodes(owner).find(node => node.type === 'Text' && node.create === label);
       assert.equal(button.backgroundColor, 'Color.Transparent');
+      if (specId === 'source-management-detect') {
+        const row = nodes(owner).find(node => node.type === 'Row' && node.alignItems === 'VerticalAlign.Center');
+        assert.equal(row.translate, undefined, 'detect label keeps its native vertical center');
+        assert.equal(text.halfLeading, true);
+        assert.equal(text.lineHeight, 17);
+        assert.ok(button.width >= 44 && button.height >= 44);
+        continue;
+      }
       assert.equal(button.constraintSize.minWidth, 44); assert.equal(button.constraintSize.minHeight, 44);
       assert.equal(text.height, Math.ceil(paintHeight + (spec.text.lineHeightFp ?? spec.text.fontSizeFp * 1.5) * (fontScale - 1)));
       assert.equal(text.textAlign, 'TextAlign.Center');

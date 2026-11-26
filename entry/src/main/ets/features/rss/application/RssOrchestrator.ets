@@ -1,4 +1,5 @@
-import type { RssSourceSnapshot, RssEntrySnapshot } from '../presentation/RssPresentationContract';
+import type { RssSourceSnapshot, RssEntrySnapshot, RssFeedItems } from '../presentation/RssPresentationContract';
+import { projectRssFeedItems } from '../presentation/RssPresentationContract';
 import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from './RssMutationRecoveryContract';
 import { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
 import { RssRouteOperationHost, type RssRouteOperationProjection, type RssRouteBinding } from './RssRouteOperationHost';
@@ -100,6 +101,8 @@ export class RssOrchestrator {
   private readonly routeOperations: RssRouteOperationHost;
   private feedRead: OperationFacts<RssSubscription[]> = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
   private feedValue: RssSubscription[] | undefined = undefined;
+  private feedItems: RssFeedItems = { all: [], favorites: [] };
+  private feedRefreshQueued: boolean = false;
   private emit: (subscriptions: RssSubscription[]) => void;
   private isCurrent: () => boolean;
   private emitOperation: RssOperationProjectionEmitter;
@@ -345,39 +348,87 @@ export class RssOrchestrator {
     );
   }
 
-  /** Main feed is a subscription projection only; global query remains unadmitted. */
+  /** Refresh through the same serialized, route-qualified Core lane as the
+   * individual source action, then read the current cached feed. */
   loadFeed(emit: (value: RssSubscription[]) => void, emitRead: (facts: OperationFacts<RssSubscription[]>) => void,
     isCurrent: RssRouteGuard, expectedGeneration?: number,
     emitOriginal?: (original: RssOriginalMutationProjection | undefined) => void,
-    expectedOriginal?: RssOriginalMutationIdentity): void {
+    expectedOriginal?: RssOriginalMutationIdentity, emitItems?: (value: RssFeedItems) => void,
+    refresh: boolean = false): void {
+    if (refresh && this.feedRefreshQueued) return;
+    if (refresh) this.feedRefreshQueued = true;
     void this.runSerialized(async (): Promise<void> => {
       if (!this.ownsRuntime() || !isCurrent() ||
         (expectedOriginal !== undefined && !this.gateway.isOriginalMutationCurrent(expectedOriginal)) ||
         (expectedGeneration !== undefined && (this.feedRead.generation !== expectedGeneration || !this.feedRead.canRetry))) return;
-      this.feedRead = projectOperationFacts<RssSubscription[]>({ phase: 'loading', value: this.feedValue, generation: ++rssProjectionGeneration });
+      this.feedRead = projectOperationFacts<RssSubscription[]>({ phase: refresh ? 'refreshing' : 'loading',
+        value: this.feedValue, generation: ++rssProjectionGeneration });
       this.deliverRoute(isCurrent, (): void => emitRead(this.feedRead));
       try {
         const recovery = await this.gateway.recoverOriginalRss(isCurrent, expectedOriginal, false, true);
         this.deliverRoute(isCurrent, (): void => emitOriginal?.(recovery.original));
         if (!this.ownsRuntime() || !isCurrent()) return;
-        const subscriptions = await this.loadSubscriptionsWithRetry();
-        if (!this.ownsRuntime()) return;
+        let subscriptions = await this.loadSubscriptionsWithRetry();
+        let refreshMisses = 0;
+        if (refresh && recovery.original?.blocked !== true) {
+          for (const subscription of subscriptions) {
+            if (!isCurrent() || !this.ownsRuntime()) return;
+            if (!subscription.enabled) continue;
+            const evidence = new ReaderWriteEvidence();
+            this.gateway.observeWrites(evidence, isCurrent);
+            try {
+              await this.runMutationWithRetry(async (): Promise<void> => {
+                await this.gateway.refreshSubscription(subscription.subscriptionId);
+              }, isCurrent);
+            } catch (error) {
+              refreshMisses += 1;
+              logRssError('RSS feed refresh missing confirmed result: %{private}s', (error as Error).message);
+            } finally { this.gateway.observeWrites(undefined); }
+          }
+          subscriptions = await this.loadSubscriptionsWithRetry();
+        } else if (refresh) {
+          refreshMisses = subscriptions.filter((subscription: RssSubscription): boolean => subscription.enabled).length;
+        }
+        if (!this.ownsRuntime() || !isCurrent()) return;
         this.feedValue = subscriptions;
-        this.feedRead = projectOperationFacts<RssSubscription[]>({ phase: 'succeeded', value: subscriptions, generation: ++rssProjectionGeneration });
-        this.deliverRoute(isCurrent, (): void => emitRead(this.feedRead));
         this.deliverRoute(isCurrent, (): void => emit(subscriptions));
+        if (emitItems !== undefined) {
+          this.deliverRoute(isCurrent, (): void => emitItems(this.feedItems));
+          await this.readFeedItems(subscriptions, isCurrent);
+          this.deliverRoute(isCurrent, (): void => emitItems(this.feedItems));
+        }
+        this.feedRead = projectOperationFacts<RssSubscription[]>({
+          phase: refreshMisses > 0 ? 'partial' : 'succeeded', value: subscriptions, generation: ++rssProjectionGeneration,
+          message: refreshMisses > 0 ? `${refreshMisses} 个订阅源的刷新结果未确认` : undefined });
+        this.deliverRoute(isCurrent, (): void => emitRead(this.feedRead));
       } catch (error) {
         this.feedRead = projectOperationFacts<RssSubscription[]>({ phase: 'failed', value: this.feedValue,
           message: (error as Error).message, canRetry: true, generation: ++rssProjectionGeneration });
         this.deliverRoute(isCurrent, (): void => emitRead(this.feedRead));
       }
-    }).catch((error: Error): void => logRssError('%{private}s', error.message));
+    }).catch((error: Error): void => logRssError('%{private}s', error.message)).finally((): void => {
+      if (refresh) this.feedRefreshQueued = false;
+    });
+  }
+
+  private async readFeedItems(subscriptions: RssSubscription[], isCurrent: RssRouteGuard): Promise<void> {
+    const items: RssItem[] = [];
+    for (const subscription of subscriptions) {
+      if (!this.ownsRuntime() || !isCurrent()) return;
+      const cached = await this.loadItemsWithRetry(subscription.subscriptionId);
+      for (const item of cached.items) items.push(item);
+    }
+    if (!this.ownsRuntime() || !isCurrent()) return;
+    const favorites = await this.gateway.loadFavorites();
+    if (!this.ownsRuntime() || !isCurrent()) return;
+    this.feedItems = projectRssFeedItems(items, favorites);
   }
 
   reconcileFeedOriginal(expected: RssOriginalMutationIdentity, emit: (value: RssSubscription[]) => void,
     emitRead: (facts: OperationFacts<RssSubscription[]>) => void, isCurrent: RssRouteGuard,
-    emitOriginal: (original: RssOriginalMutationProjection | undefined) => void): void {
-    this.loadFeed(emit, emitRead, isCurrent, undefined, emitOriginal, expected);
+    emitOriginal: (original: RssOriginalMutationProjection | undefined) => void,
+    emitItems?: (value: RssFeedItems) => void): void {
+    this.loadFeed(emit, emitRead, isCurrent, undefined, emitOriginal, expected, emitItems);
   }
 
   /** Also used by the editor: every RSS write/read shares this actual lane. */

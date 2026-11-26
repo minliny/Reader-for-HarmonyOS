@@ -1,48 +1,51 @@
-import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions = {"author-metadata-retention": {"description": "实际shelf details空作者/来回复用及二类tag", "resources": []}};
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
+
+const definitions = {
+  'author-metadata-retention': { description: 'Actual list retains its empty-or-present author actor and shows local metadata', resources: [] },
+};
+
 for (const id of selectContractCases(definitions)) {
-  await runSelectedCase(id);
+  await authorMetadataRetention();
   recordContractCasePass(id);
 }
-async function runSelectedCase(selectedCase) {
 
-const {default:assert}=await import('node:assert/strict');
-const {readFileSync}=await import('node:fs');
-const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');
-const {ShelfBookPresentation}=await import('../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts');
-const list=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/ShelfBookListDetails.ets',import.meta.url),'utf8');
-// Inspect the real SDK-emitted details: two metadata tags, independent manga
-// position, compact same-colour facts and the thin whole-book progress track.
-const probeSource=list.replace('  build() {', '  build() { Column() {} }\n  @Builder\n  shelfDetails() {');
-const Blank=new Proxy({name:'Blank'},{get:(target,key)=>key==='name'?target.name:()=>{}});
-const {owner:details}=createReaderBuilderProbe(probeSource,['shelfDetails','metadataTag','positionLabel'],{ShelfBookPresentation,Blank});
-details.appThemeScheme='day'; details.mangaRevision=0;
-details.book={sourceId:'local',bookId:'empty-author',title:'书名',author:'',lastChapter:'最新章节',readProgress:0};
-details.shelfDetails();
-const textNodes=()=>[...details.nodes.values()].filter(n=>n.type==='Text');
-const verifyAuthor=expected=>{
- const texts=textNodes();
- const author=texts.find(n=>n.create===expected);
- assert.ok(author,'the actual author field stays empty without invented metadata');
- 
- 
- const latest=texts.find(n=>n.create==='最新：最新章节');
- 
- const position=texts.find(n=>n.create==='尚未阅读');
- assert.equal(position.fontColor,latest.fontColor,'secondary facts share one muted colour');
- const title=texts.find(n=>n.create==='书名');
- 
- const tags=texts.filter(n=>['小说','本地'].includes(n.create));
- assert.deepEqual(tags.map(n=>n.create),['小说','本地'],'only content type and origin are metadata tags');
- 
- const track=[...details.nodes.values()].find(n=>n.type==='Progress');
- 
-};
-verifyAuthor('');
-details.book={...details.book,author:'Reader test'};details.replay();verifyAuthor('Reader test');
-details.book={...details.book,author:''};details.replay();verifyAuthor('');
-
-
-
-
+async function authorMetadataRetention() {
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+  const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+  const { readerFoundationTokens } = await import('./lib/reader-tokens-probe.mjs');
+  const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts');
+  const fonts = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+  const read = name => readFileSync(new URL(`../entry/src/main/ets/features/bookshelf/ui/${name}.ets`, import.meta.url), 'utf8');
+  const source = read('ShelfBookListDetails');
+  const grid = pureModuleProbe(read('BookshelfGridSpec'), 'BookshelfGridSpec.ets', readerFoundationTokens,
+    ['bookshelfListTextFrame', 'BOOKSHELF_LIST_COVER_HEIGHT', 'BOOKSHELF_LIST_PROGRESS_STROKE']);
+  const constants = [...source.matchAll(/^const (\w+) = \d+;$/gm)];
+  const detailConstants = pureModuleProbe(constants.map(match => match[0]).join('\n'), 'ShelfListConstants.ts', {},
+    constants.map(match => match[1]));
+  const properties = createArkUIPropertyRuntimeProbe();
+  const book = { sourceId: 'local', bookId: 'empty-author', title: '书名', author: '',
+    kind: 'epub', chapterCount: 12, lastChapter: '本地遗留章节', readProgress: 0 };
+  const { owner } = createReaderBuilderProbe(source,
+    ['appThemeScheme', 'mangaRevision', 'book', 'textFrame', 'targetHeight', 'moreFocusId',
+      'metadataTag', 'updateBadgeLabel', 'positionLabel', 'progressLabel', 'build'],
+    { ...properties.sdk, ...fonts, ...grid, ...detailConstants, ShelfBookPresentation, EllipsisMode: { END: 'EllipsisMode.END' } },
+    { ...properties.hooks, initialParams: { book } });
+  owner.initialRender();
+  const texts = [...owner.nodes.values()].filter(node => node.type === 'Text');
+  const author = texts.find(node => node.create === '');
+  assert.ok(author, 'an empty author keeps its actual text actor');
+  assert.deepEqual(texts.map(node => node.create), ['书名', '', '本地', '尚未阅读', '本地 EPUB · 共 12 章', '未读']);
+  assert.equal(texts.find(node => node.create === '尚未阅读').fontColor,
+    texts.find(node => node.create === '本地 EPUB · 共 12 章').fontColor);
+  for (const currentAuthor of ['Reader test', '']) {
+    owner.book = { ...book, author: currentAuthor };
+    properties.flush();
+    owner.replay();
+    assert.equal(owner.nodes.get(author.id), author);
+    assert.equal(author.create, currentAuthor);
+    assert.equal(author.layoutWeight, 1);
+  }
 }

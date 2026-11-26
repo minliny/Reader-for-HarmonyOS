@@ -16,6 +16,7 @@ if (selectedCase === 'settings-arguments') {
     SettingsShell: 'features/settings/ui/SettingsShell.ets',
     MainTabShell: 'features/shell/MainTabShell.ets',
     ReaderBottomNavigation: 'app/navigation/ReaderBottomNavigation.ets',
+    ReaderNavigationAppearanceHost: 'app/navigation/ReaderNavigationAppearanceHost.ets',
     ReaderBottomTabBar: 'ui/patterns/ReaderBottomTabBar.ets',
   };
   const verify = (component, consumerFile, expected, source = read(consumerFile)) => {
@@ -32,7 +33,9 @@ if (selectedCase === 'settings-arguments') {
   const page = 'features/settings/ui/SettingsPage.ets';
   const shelf = 'features/bookshelf/ui/BookshelfSettingsPage.ets';
   const settingsShell = 'features/settings/ui/SettingsShell.ets';
-  verify('SettingsPage', 'app/composition/SettingsScenes.ets', { navigationGeneration: 'this.generation' });
+  verify('SettingsPage', 'app/composition/SettingsScenes.ets', {
+    navigationGeneration: 'this.painted?.generation ?? this.generation',
+  });
   verify('SettingsShell', page, { navigationGeneration: 'this.navigationGeneration' });
   verify('MainTabShell', settingsShell, { navigationGeneration: 'this.navigationGeneration' });
   verify('ReaderBottomNavigation', shell, {
@@ -41,10 +44,13 @@ if (selectedCase === 'settings-arguments') {
     onCurrentTap: /this\.requestCurrentTab\(key, generation\)/,
   });
   const bottom = 'app/navigation/ReaderBottomNavigation.ets';
+  verify('ReaderNavigationAppearanceHost', bottom, {
+    inputEnabled: 'this.inputIsEnabled()', bottomInset: 'this.bottomInset()', translateX: 'this.bottomBarTranslateX()',
+  });
   const bottomInputs = {
     items: 'this.items()', current: 'this.current', scheme: 'this.appThemeScheme',
-    surfaceWidth: 'this.bottomBarFrame().width', translateX: 'this.bottomBarTranslateX()',
-    bottomInset: 'this.bottomInset()', fontScale: 'this.navigationFontScale()', inputEnabled: 'this.inputIsEnabled()',
+    surfaceWidth: 'this.bottomBarFrame().width',
+    fontScale: 'this.navigationFontScale()', inputEnabled: 'this.inputIsEnabled()',
     onSelect: /this\.acceptsInput\(key\).*this\.onSelect\(key\)/,
     onCurrentTap: /this\.acceptsInput\(key\).*this\.onCurrentTap\(key\)/,
   };
@@ -56,11 +62,16 @@ if (selectedCase === 'settings-arguments') {
     onViewportChange: /if \(this\.mounted\) publishReaderMainViewport\(width, height\)/,
   };
   verify('ReaderStandardPage', shell, shellInputs);
-  verify('ReaderPageScaffold', 'ui/layout/ReaderStandardPage.ets', {
-    geometry: 'this.geometry', headerMeasurementKey: 'this.measurementKey', footerMeasurementKey: 'this.measurementKey',
+  const standardPage = 'ui/layout/ReaderStandardPage.ets';
+  const scaffoldInputs = {
+    geometry: 'this.geometry', headerMeasurementKey: 'this.measurementKey', footerMeasurementKey: 'this.footerMeasurementKey',
     onHeaderHeightChange: /this\.recordMeasurement\('standard:header', height, key\)/,
     onFooterHeightChange: /this\.recordMeasurement\('standard:footer', height, key\)/,
-  });
+  };
+  verify('ReaderPageScaffold', standardPage, scaffoldInputs);
+  assert.throws(() => verify('ReaderPageScaffold', standardPage, scaffoldInputs,
+    read(standardPage).replace('footerMeasurementKey: this.footerMeasurementKey', 'footerMeasurementKey: this.measurementKey')),
+    /expected ReaderPageScaffold inputs/);
   verify('PageBackBar', shelf, { title: "'书架设置'", onBack: /this\.onBack\(\)/ });
   verify('ReaderFormRow', page, {
     actionEnabled: 'this.settingCanToggle(identity)', isBusy: 'this.settingToggleBusy()',
@@ -89,7 +100,8 @@ if (selectedCase === 'settings-arguments') {
     read(settingsShell).replace('navigationGeneration: this.navigationGeneration', 'navigationGeneration: 0')),
     /expected MainTabShell inputs/);
   assert.throws(() => verify('ReaderBottomTabBar', bottom, bottomInputs,
-    read(bottom).replace('inputEnabled: this.inputIsEnabled()', 'inputEnabled: true')),
+    read(bottom).replace('fontScale: this.navigationFontScale(), inputEnabled: this.inputIsEnabled()',
+      'fontScale: this.navigationFontScale(), inputEnabled: true')),
     /expected ReaderBottomTabBar inputs/);
   return;
 }
@@ -421,7 +433,7 @@ if (selectedCase === 'navigation-owner') {
   const showDirectory = { showBookshelf: assert.fail, showSettings: assert.fail, resumeReader: assert.fail,
     restoreReader: assert.fail, showBook: (...args) => directoryReturns.push(args) };
   cancelledDownload.returnFromDownloads(showDirectory);
-  assert.deepEqual(directoryReturns.pop(), [book, 'bookshelf', true]);
+  assert.deepEqual(directoryReturns.pop(), [book, 'bookshelf', true, undefined]);
   cancelledDownload.rememberBookshelfReaderOrigin();
   cancelledDownload.openReadingFromDownloads(() => false);
   const refused = cancelledDownload.captureReaderReturn(runtime, () => view);
@@ -448,7 +460,7 @@ if (selectedCase === 'navigation-owner') {
   });
   assert.deepEqual(reopening, ['restore', 'open', 'restore']);
   returns.returnFromDownloads(showDirectory);
-  assert.deepEqual(directoryReturns.pop(), [book, 'search', true]);
+  assert.deepEqual(directoryReturns.pop(), [book, 'search', true, undefined]);
   returns.restoreReaderReturn(context, restored => assert.equal(restored, view));
   returns.requestBookInfoAfterExit(exitLease('reader'), 'book', context);
   assert.equal(returns.takeReaderExit('reader', 'book', {}).target, 'readingOrigin');
@@ -497,14 +509,17 @@ if (selectedCase === 'navigation-owner') {
   const { installDirectoryOperationIndex } = await import('./lib/reader-directory-operations-probe.mjs');
   const { bookshelfOperationClass } = await import('./lib/bookshelf-operation-owner-probe.mjs');
   const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
-  const { readingEntryInputForSearchContext } = await import('../entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts');
+  const { readingEntryInputForSearchContext, readingEntrySeedForContentKind } =
+    await import('../entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts');
   const EntryActions = bookshelfOperationClass('app/composition/ReaderReadingEntryActions.ets',
     'ReaderReadingEntryActions', { Observed: value => value, readingEntryInputForSearchContext });
   const ExitActions = bookshelfOperationClass('app/composition/ReaderExitActions.ets', 'ReaderExitActions');
   const LibraryJourney = bookshelfOperationClass('app/composition/ReaderLibraryJourney.ets', 'ReaderLibraryJourney');
   const SettingsJourney = bookshelfOperationClass('app/composition/ReaderSettingsJourney.ets', 'ReaderSettingsJourney');
-  const downloadBookFromReadingDetail = bookshelfOperationClass('features/reading/presentation/ReadingBookDetail.ts', 'downloadBookFromReadingDetail');
-  const DownloadJourney = bookshelfOperationClass('app/composition/ReaderDownloadJourney.ets', 'ReaderDownloadJourney', { downloadBookFromReadingDetail });
+  const downloadDetail = bookshelfOperationClass('features/reading/presentation/ReadingBookDetail.ts',
+    '({ downloadBookFromReadingDetail, remoteReadingSeedForShelf })');
+  const DownloadJourney = bookshelfOperationClass('app/composition/ReaderDownloadJourney.ets', 'ReaderDownloadJourney',
+    { ...downloadDetail, readingEntrySeedForContentKind, LOCAL_SOURCE_ID: 'local' });
   // Real navigation, entry Actions and Presentation execute both download
   // branches. Only the existing Host publication and window/Core ports are
   // controlled; the return or chapter admission algorithms are not copied.
@@ -601,7 +616,7 @@ if (selectedCase === 'navigation-owner') {
   const entryActionSource = read('app/composition/ReaderReadingEntryActions.ets');
   for (const [kind, before, after] of [
     ['local', 'this.openLocalDetail(book, true, parent, download);', 'this.openLocalDetail(book, true, undefined, download);'],
-    ['remote', '}, parent, download);', '}, undefined, download);'],
+    ['remote', 'validatedSession: download.session }, parent, download,', 'validatedSession: download.session }, undefined, download,'],
   ]) {
     const changed = entryActionSource.replace(before, after); assert.notEqual(changed, entryActionSource);
     const BrokenActions = pureModuleProbe(changed, 'ReaderReadingEntryActions.ets',
@@ -617,12 +632,14 @@ if (selectedCase === 'navigation-owner') {
     'currentReaderPresentationIdentity', 'settingsNavigationPorts', 'readingExitActionPorts', 'libraryJourneyPorts', 'navigateTo', 'publishNavigation', 'bookshelfModalVisible',
     'downloadNavigationPorts',
     'readingEntryActionPorts', 'readingEntryPorts', 'openFullDirectory',
-  ], { ReaderRuntimeOwner: { isCurrent: candidate => candidate === runtime } });
+    'appRouteLane', 'updateReaderParentMotion', 'wideSettingsPane', 'rulesManagementInputAllowed',
+  ], { ReaderRuntimeOwner: { isCurrent: candidate => candidate === runtime }, retainedReaderRoute });
   const events = [];
   let currentRootOwner = runtime;
   const indexActor = Object.assign(new Index(), {
     navigationOwner: new ReaderNavigation(), mountedRuntimeOwner: runtime, rssInstanceIdentity: 1, detailShelfAdmissionMount: 1,
-    shelfMutations: { snapshot: { removalKey: '' } }, shelfGroupPresentation: { identity: '' },
+    route: 'bookshelf', searchAppForeground: true, appReduceMotion: true, expandedLayout: () => false,
+    shelfMutations: { snapshot: { removalKey: '' } }, shelfGroupPresentation: { identity: '', retire() {} },
     libraryAcquisition: { currentOwner: () => currentRootOwner, beginSearch: () => true, endSearch() {} },
     readingEntry: Object.assign(new ReadingEntry(), { book, contentKind: 'text', sessionActive: true, readyGeneration: 3 }),
     bookRemovalConfirmation: new BookRemovalDialogPresentation(),
@@ -634,13 +651,13 @@ if (selectedCase === 'navigation-owner') {
       assert.equal(current(), true);
       events.push('rules');
     } },
-    returnToReadingOrigin: () => events.push('origin'),
-    librarySearch: { prepareEntry() {}, open() {} },
+    librarySearch: { model: {}, prepareEntry() {}, open() {} },
   });
   indexActor.libraryJourney = new LibraryJourney(indexActor.navigationOwner, indexActor.libraryJourneyPorts());
   indexActor.settingsNavigation = new SettingsJourney(indexActor.navigationOwner, indexActor.settingsNavigationPorts());
   indexActor.downloadNavigation = new DownloadJourney(indexActor.navigationOwner, indexActor.downloadNavigationPorts());
   indexActor.readingExitActions = new ExitActions(indexActor.navigationOwner, indexActor.readingExitActionPorts());
+  indexActor.readingExitActions.completeReturn = () => events.push('origin');
   indexActor.navigateTo('reading');
   let identity = indexActor.currentReaderPresentationIdentity();
   currentRootOwner = undefined;
@@ -775,15 +792,15 @@ if (selectedCase === 'navigation-owner') {
   indexReturns.leaveDetailJourney();
   indexActor.navigateTo('downloads');
   const directoryOpening = indexActor.readingEntry.directoryPresentationGeneration;
-  indexActor.readingEntryActions.openShelfEntry = () => {};
+  indexActor.readingEntryActions.openRemoteDetail = () => {};
   indexActor.downloadNavigation.returnFromDownloads();
   assert.equal(indexActor.route, 'downloads', 'a refused book detail cannot reveal a directory');
   assert.equal(indexActor.readingEntry.directoryPresentationGeneration, directoryOpening);
-  indexActor.readingEntryActions.openShelfEntry = (selection, intent, parent) => {
-    assert.equal(intent, 'info');
-    downloadEvents.push(['admit detail', selection, parent]);
+  indexActor.readingEntryActions.openRemoteDetail = (input, parent) => {
+    assert.deepEqual([input.seed.sourceId, input.seed.bookId], [book.sourceId, book.bookId]);
+    downloadEvents.push(['admit detail', book, parent]);
     assert.equal(indexReturns.snapshot().retainedReader, downloaded);
-    indexActor.readingEntry.book = { ...selection, contentKind: 'manga' };
+    indexActor.readingEntry.book = { ...book, contentKind: 'manga' };
     indexActor.navigateTo('detail');
   };
   indexActor.downloadNavigation.returnFromDownloads();
@@ -820,7 +837,7 @@ if (selectedCase === 'navigation-owner') {
   } });
   const detailActor = Object.assign(new Index(), {
     navigationOwner: new ReaderNavigation(), mountedRuntimeOwner: runtime, detailShelfAdmissionMount: 4,
-    shelfMutations: { snapshot: { removalKey: '' } }, shelfGroupPresentation: { identity: '' },
+    shelfMutations: { snapshot: { removalKey: '' } }, shelfGroupPresentation: { identity: '', retire() {} },
     libraryAcquisition: { currentOwner: () => runtime },
     readingEntry: Object.assign(new DetailEntry(), { session: retainedSession }),
     bookRemovalConfirmation: new BookRemovalDialogPresentation(),
@@ -871,7 +888,9 @@ if (selectedCase === 'navigation-owner') {
   detailActor.navigateTo('bookshelf');
   detailActor.navigationOwner.returns.rememberBookshelfReaderOrigin();
   handoff.length = 0;
-  detailActor.readingEntryActions.openRemoteDetail({ seed, sourceName: '书源', shelfSnapshot: book, resumeImmediately: true });
+  detailActor.readingEntryActions.openRemoteDetail({
+    seed, sourceName: '书源', shelfSnapshot: { ...book, contentKind: 'text' }, resumeImmediately: true,
+  });
   assert.deepEqual(handoff, ['advance', 'visible:bookshelf:text', 'candidates', 'host', 'resume']);
   assert.equal(admitted.resumeImmediately, true);
   assert.equal(admitted.fromSearch, false);
@@ -882,8 +901,8 @@ if (selectedCase === 'navigation-owner') {
   assert.ok(publish);
   assert.doesNotMatch(index.replace(publish, ''), /\bthis\.(?:route|navigationGeneration|directoryReturnTarget|settingsSection)\s*(?:=(?!=)|\+=|\+\+)/);
   assert.match(publish, /this\.navigationGeneration = snapshot\.generation;/);
-  assert.match(publish, /this\.route = snapshot\.route;\s*\}/);
-  assert.match(index, /this\.publishNavigation\(this\.navigationOwner\.show\(route\)\);/);
+  assert.match(publish, /this\.route = snapshot\.route;/);
+  assert.match(index, /this\.publishNavigation\(this\.navigationOwner\.show\(route, motion\)\);/);
   assert.match(index, /this\.publishNavigation\(this\.navigationOwner\.advance\(\)\);/);
   assert.match(index, /@State @Watch\('onSearchVisibilityChanged'\) private route: ReaderRoute/);
   assert.doesNotMatch(index, /private (?:readingOriginRoute|detailReturnRoute|sourceManagementReturnTarget|downloadReturnTarget|bookInfoAfterReaderExit):/);

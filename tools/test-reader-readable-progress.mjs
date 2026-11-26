@@ -13,13 +13,15 @@ assert.equal(project(entries.slice(0,1),'directory','',true,0,undefined,{complet
 const Full=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/FullDirectoryPanel.ets',import.meta.url),['currentPosition']);
 const full=Object.assign(new Full(),{admittedEntries:entries,currentEntry:()=>entries[1]});assert.equal(full.currentPosition(),'1 / 2');
 full.currentEntry=()=>entries[0];assert.equal(full.currentPosition(),'');
-const Panel=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets',import.meta.url),['canStepChapter']);
+const Panel=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets',import.meta.url),['canStepChapter','currentDirectoryEntries']);
 const panel=Object.assign(new Panel(),{tocEntries:entries,currentChapterIndex:7,readableChapterPosition:0,totalChapters:2});
 assert.equal(panel.canStepChapter(-1),false);assert.equal(panel.canStepChapter(1),true);
 panel.currentChapterIndex=42;panel.readableChapterPosition=1;assert.equal(panel.canStepChapter(1),false);assert.equal(panel.canStepChapter(-1),true);
 panel.readableChapterPosition=-1;assert.equal(panel.canStepChapter(1),false,'disabled/group tail cannot enable next');
-const Reader=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),['readingTocEntries','readableChapterPosition','entryChapterPosition','controlProgress','pageChromeProgress','seekControlProgress'],{READER_CONTROL_PROGRESS_MIN:0,READER_CONTROL_PROGRESS_MAX:100});
-const selected=[];const reader=Object.assign(new Reader(),{tocEntries:entries,mounted:true,entryCatalogPending:false,desiredChapterProgress:.5,desiredChapterOffset:5,currentChapterIndex:()=>7,normalizedProgress:x=>x,clearTtsChapterEndTimer(){},selectChapterAnchor:(...args)=>selected.push(args),chapterWindow:{position(){throw Error('resumeOnly order must not define readable percentage');}}});
+const Reader=productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url),['readingTocEntries','readableChapterPosition','entryChapterPosition','controlProgress','pageChromeProgress','seekControlProgress','canDispatchControlChapterIntent'],{READER_CONTROL_PROGRESS_MIN:0,READER_CONTROL_PROGRESS_MAX:100});
+const selected=[];const reader=Object.assign(new Reader(),{tocEntries:entries,mounted:true,entryCatalogPending:false,entryCatalogSeekRevision:0,desiredChapterProgress:.5,desiredChapterOffset:5,currentChapterIndex:()=>7,normalizedProgress:x=>x,
+ isControlInputEnabled:()=>true,controlVisible:()=>true,controlShellExitArmed:()=>false,
+ clearTtsChapterEndTimer(){},selectChapterAnchor:(...args)=>selected.push(args),chapterWindow:{position(){throw Error('resumeOnly order must not define readable percentage');}}});
 assert.equal(reader.controlProgress(),25);assert.equal(reader.pageChromeProgress(42,5,10),75);assert.equal(reader.readableChapterPosition(0),-1);
 const ranks=reader.readingTocRanks;reader.controlProgress();assert.equal(reader.readingTocRanks,ranks,'reuse rank map while catalog identity unchanged');
 reader.seekControlProgress(0);reader.seekControlProgress(75);reader.seekControlProgress(100);assert.deepEqual(selected.map(x=>[x[0],x[4]]),[[7,0],[42,.5],[42,1]],'slider resolves readable rank back to unchanged canonical ID');

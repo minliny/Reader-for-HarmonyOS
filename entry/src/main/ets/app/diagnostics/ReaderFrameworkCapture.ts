@@ -11,6 +11,8 @@ interface FrameworkCaptureSession {
   timer: number;
   recorder?: media.AVScreenCaptureRecorder;
   file?: fileIo.File;
+  onError?: (error: Error) => void;
+  onStateChange?: (state: media.AVScreenCaptureStateCode) => void;
 }
 
 /** Explicit DEBUG warm-Want diagnostic. Platform consent owns screen access.
@@ -44,6 +46,10 @@ export class ReaderFrameworkCapture {
 
   private async prepare(session: FrameworkCaptureSession): Promise<void> {
     try {
+      if (!canIUse('SystemCapability.Multimedia.Media.AVScreenCapture')) {
+        await this.finish(session, 'capability-unavailable');
+        return;
+      }
       this.log(session, 'create');
       const recorder = await media.createAVScreenCaptureRecorder();
       if (recorder === undefined || recorder === null) throw new Error('Recorder unavailable');
@@ -52,13 +58,16 @@ export class ReaderFrameworkCapture {
         return;
       }
       session.recorder = recorder;
-      recorder.on('error', (error: Error): void => {
+      const onError = (error: Error): void => {
+        if (!this.current(session)) return;
         this.log(session, 'error', String(error));
         void this.finish(session, 'error');
-      });
-      recorder.on('stateChange', (state: media.AVScreenCaptureStateCode): void => {
-        this.log(session, 'state', String(state));
+      };
+      session.onError = onError;
+      recorder.on('error', onError);
+      const onStateChange = (state: media.AVScreenCaptureStateCode): void => {
         if (!this.current(session)) return;
+        this.log(session, 'state', String(state));
         if (state === media.AVScreenCaptureStateCode.SCREENCAPTURE_STATE_STARTED) {
           session.started = true;
           clearTimeout(session.timer);
@@ -68,7 +77,9 @@ export class ReaderFrameworkCapture {
           state === media.AVScreenCaptureStateCode.SCREENCAPTURE_STATE_MIC_UNMUTED_BY_USER) {
           void this.finish(session, 'platform-stopped');
         }
-      });
+      };
+      session.onStateChange = onStateChange;
+      recorder.on('stateChange', onStateChange);
       if (fileIo.accessSync(session.path)) throw new Error('Capture output already exists');
       session.file = fileIo.openSync(session.path, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY);
       await recorder.init({ fd: session.file.fd, videoBitrate: 6000000, audioSampleRate: 48000,
@@ -89,13 +100,24 @@ export class ReaderFrameworkCapture {
     if (session.retired) return;
     session.retired = true;
     clearTimeout(session.timer);
+    const recorder = session.recorder;
     try {
-      if (session.started) await session.recorder?.stopRecording();
+      if (session.onError !== undefined) recorder?.off('error', session.onError);
+    } catch (error) {
+      this.log(session, 'error-listener-release-failed', String(error));
+    }
+    try {
+      if (session.onStateChange !== undefined) recorder?.off('stateChange', session.onStateChange);
+    } catch (error) {
+      this.log(session, 'state-listener-release-failed', String(error));
+    }
+    try {
+      if (session.started) await recorder?.stopRecording();
     } catch (error) {
       this.log(session, 'stop-failed', String(error));
     }
     try {
-      await session.recorder?.release();
+      await recorder?.release();
     } catch (error) {
       this.log(session, 'release-failed', String(error));
     } finally {

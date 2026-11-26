@@ -21,7 +21,7 @@ function fixture(contentKind = 'text', intro = '完整短简介', receipt = {ful
     getMeasureUtils: () => ({measureTextSize(options) {
       calls.push({...options});
       if (receipt.error) throw new Error('platform unavailable');
-      return {width: 500, height: options.maxLines === 3 ? receipt.folded : receipt.full};
+      return {width: 500, height: options.maxLines === 10000 ? receipt.full : receipt.folded};
     }})};
   const sdk = localBookDetailSdk({ReaderWindowCoordinator: {metrics: () => metrics},
     uiContext: context, hilog: {warn: (...args) => warnings.push(args)}});
@@ -41,40 +41,52 @@ async function measure(value) {
 }
 
 for (const kind of ['text', 'manga']) {
+  const foldedLines = kind === 'manga' ? 3 : 4;
+  const cardInset = 26;
+  const expandLabel = kind === 'manga' ? '展开' : '展开全部';
   const short = fixture(kind); await measure(short);
   assert.equal(short.owner.introMeasured, true);
   assert.equal(short.owner.introOverflow, false);
   assert.equal(short.calls.length, 2);
   const [full, folded] = short.calls;
-  assert.equal(full.constraintWidth,short.owner.contentFrame().width+'vp');
+  assert.equal(full.constraintWidth,(short.owner.contentFrame().width - cardInset)+'vp');
 
 
   assert.equal(full.fontWeight, 400); assert.equal(full.wordBreak, 'WordBreak.BREAK_WORD');
-  assert.deepEqual({...full, maxLines: 3}, folded, 'only the actual line limit differs between the two platform layouts');
+  assert.deepEqual({...full, maxLines: foldedLines}, folded, 'only the actual line limit differs between the two platform layouts');
   assert.equal(full.maxLines, 10000);
   short.owner.initialRender();
   const nodes = [...short.owner.nodes.values()];
   const synopsis = nodes.find(node => node.type === 'Text' && node.create === short.owner.book.intro);
-  assert.equal(synopsis.maxLines,3);assert.equal(parseFloat(full.fontSize),synopsis.fontSize,'measurement uses actual native text font size');assert.equal(full.fontFamily,synopsis.fontFamily);
-  assert.equal(parseFloat(full.lineHeight),synopsis.lineHeight,'measurement and actual native line box agree');
+  assert.equal(synopsis.maxLines,foldedLines);assert.equal(parseFloat(full.fontSize),synopsis.fontSize,'measurement uses actual native text font size');assert.equal(full.fontFamily,synopsis.fontFamily);
+  assert.equal(parseFloat(full.lineHeight),parseFloat(synopsis.lineHeight),'measurement and actual native line box agree');
   assert.equal(synopsis.wordBreak, full.wordBreak);
-  assert.ok(!nodes.some(node => node.create === '展开' || node.create === '收起'),
+  assert.ok(!nodes.some(node => node.create === expandLabel || node.create === '收起'),
     'a complete short synopsis has no action that cannot change its contents');
+  assert.ok(!nodes.some(node => node.linearGradient && node.height === 20), 'short text does not fade');
   short.owner.measureIntro(); await tick(); assert.equal(short.calls.length, 2,
     'identical publications reuse the same finite measurement receipt');
 
-  const long = fixture(kind, '平台报告实际超过三行的简介', {full: 120, folded: 72});
+  const long = fixture(kind, '平台报告实际超过折叠行数的简介', {full: 144, folded: foldedLines * 24});
   await measure(long); long.owner.initialRender();
   assert.equal(long.owner.introOverflow, true);
-  const toggle = [...long.owner.nodes.values()].find(node => node.type === 'Row' && node.onClick && node.constraintSize?.minHeight === 36 && node.flexShrink === 0);
-  assert.ok([...long.owner.nodes.values()].some(node => node.create === '展开'));
-  const toggleTarget = [...long.owner.nodes.values()].find(node => node.onClick && (kind === 'manga' ? node.type === 'Row' && node.margin?.top === 4 : node.type === 'Text' && node.create === '展开'));
+  const longNodes = [...long.owner.nodes.values()];
+  assert.ok(longNodes.some(node => node.create === expandLabel));
+  const toggleTarget = longNodes.find(node => node.type === 'Button' && node.onClick &&
+    (kind === 'manga' ? node.margin?.top === 4 : node.id === 'reader-detail-summary-toggle'));
+  assert.ok(longNodes.some(node => node.type === 'Column' && node.borderRadius === 14 && node.padding === 12 && node.border?.width === 1));
+  if (kind === 'text') {
+    assert.ok(longNodes.some(node => node.linearGradient && node.height === 20 && node.hitTestBehavior === 'HitTestMode.None'));
+    const fade = longNodes.find(node => node.type === 'Column' && node.linearGradient && node.position?.y < 0);
+    assert.equal(fade.width, long.owner.liveWidth(), 'the dock backing fades across the whole page width');
+    assert.equal(fade.position.x, -long.owner.geometry.footer.insetLeft);
+    assert.equal(fade.hitTestBehavior, 'HitTestMode.None');
+  }
   assert.ok(toggleTarget); toggleTarget.onClick(); long.sdk.properties.flush();
   assert.equal(long.owner.introExpanded, true);
   const body = [...long.owner.nodes.values()].find(node => node.create === long.owner.book.intro);
   assert.equal(body.maxLines, 10000, 'the actual Text actor receives the expanded line limit');
-  toggleTarget.onClick(); long.sdk.properties.flush(); assert.equal(body.maxLines, 3);
-  assert.ok(toggle || kind === 'text', 'the existing manga complete-directory action remains independent of synopsis folding');
+  toggleTarget.onClick(); long.sdk.properties.flush(); assert.equal(body.maxLines, foldedLines);
 
   long.owner.introExpanded = true;
   long.receipt.full = 72; long.receipt.folded = 72;
@@ -86,7 +98,7 @@ for (const kind of ['text', 'manga']) {
   const empty = fixture(kind, '   '); await measure(empty); empty.owner.initialRender();
   assert.equal(empty.calls.length, 0); assert.equal(empty.owner.introOverflow, false);
   assert.ok([...empty.owner.nodes.values()].some(node => node.create === '暂无简介'));
-  assert.ok(![...empty.owner.nodes.values()].some(node => node.create === '展开'));
+  assert.ok(![...empty.owner.nodes.values()].some(node => node.create === expandLabel));
 
   const failed = fixture(kind, '测量不可用时仍能完整阅读', {error: true});
   await measure(failed); failed.owner.initialRender();
@@ -104,7 +116,7 @@ for (const kind of ['text', 'manga']) {
   assert.equal(value.calls.length, 4, 'font/metrics revision invalidates the actual measurement');
   assert.ok(value.calls.at(-1).fontSize.endsWith('fp'),'font scale remains platform-owned fp');
   value.owner.viewportWidth = 320; value.owner.onMangaGeometryChanged(); await tick();
-  assert.equal(value.calls.at(-1).constraintWidth,value.owner.contentFrame().width+'vp');
+  assert.equal(value.calls.at(-1).constraintWidth,(value.owner.contentFrame().width-26)+'vp');
 }
 {
   const value = fixture('manga'); value.owner.mangaFontsReady = false;
@@ -124,18 +136,26 @@ for (const kind of ['text', 'manga']) {
 }
 {
   const value = fixture('manga', '即将被替换的长简介', {full: 120, folded: 72});
-  value.owner.measureIntro();
-  value.owner.book = {...value.owner.book, bookId: 'replacement', intro: '新的短简介'};
+  value.owner.measureIntro(); value.owner.initialRender();
+  const oldText = [...value.owner.nodes.values()].find(node => node.create === value.owner.book.intro);
+  const oldSize = oldText.onAreaChange;
+  const replacement = {...value.owner.book, bookId: 'replacement', intro: '新的短简介'};
   value.receipt.full = 48; value.receipt.folded = 48;
-  value.owner.onBookChanged(); await tick();
-  assert.equal(value.calls.length, 2, 'a prior queued layout cannot measure or publish for a replacement book');
+  value.owner.book = replacement; await tick();
+  const callsAfterReplacement = value.calls.length;
+  oldSize({}, {width: 123}); await tick();
+  assert.equal(value.calls.length, callsAfterReplacement, 'a retired area of the old native body cannot replace the measured width');
   assert.equal(value.owner.introOverflow, false);
-  assert.equal(value.calls[0].textContent, '新的短简介');
+  assert.equal(value.calls.at(-1).textContent, '新的短简介');
 }
 {
   const value = fixture('manga', '卸载后不应发布的简介', {full: 120, folded: 72});
-  value.owner.measureIntro(); value.owner.aboutToDisappear(); await tick();
-  assert.equal(value.calls.length, 0); assert.equal(value.owner.introOverflow, false);
+  value.owner.measureIntro(); value.owner.initialRender();
+  const body = [...value.owner.nodes.values()].find(node => node.create === value.owner.book.intro);
+  const callsBeforeDetach = value.calls.length;
+  value.owner.aboutToDisappear();
+  body.onAreaChange({}, {width: 123}); await tick();
+  assert.equal(value.calls.length, callsBeforeDetach, 'a stale native Area cannot measure after detach');
 }
 
 }

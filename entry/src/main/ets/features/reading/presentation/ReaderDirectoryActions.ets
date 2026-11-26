@@ -17,6 +17,7 @@ export interface ReaderDirectoryActions {
   continueOffline: (generation: number, identity: string) => void;
   downloadChapter: (chapter: number) => void;
   downloadBook: () => void;
+  openCacheManagement: () => void;
   clearBookOffline: () => void;
   loadMangaActions: (chapter?: number) => Promise<MangaDownloadAction[]>;
   performMangaAction: (action: MangaDownloadActionId, chapter?: number) => Promise<void>;
@@ -48,6 +49,7 @@ export function readerDirectoryActions(reading: () => ReadingEntryPresentation,
     continueOffline: (generation: number, identity: string): void => operations()?.reconcileOffline(generation, identity, true),
     downloadChapter: (chapter: number): void => operations()?.downloadChapter(chapter),
     downloadBook: (): void => operations()?.downloadBook(),
+    openCacheManagement: (): void => operations()?.openCacheManagement(),
     clearBookOffline: (): void => operations()?.requestClearOffline(),
     loadMangaActions: (chapter?: number): Promise<MangaDownloadAction[]> => operations()?.loadMangaActions(chapter) ?? Promise.resolve([]),
     performMangaAction: (action: MangaDownloadActionId, chapter?: number): Promise<void> =>

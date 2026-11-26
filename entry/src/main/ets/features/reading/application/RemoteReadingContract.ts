@@ -55,6 +55,7 @@ export type RemoteReadingTocDiagnostic = {
   finalUrlDigest?: string;
   httpStatus?: number;
   requestId?: number;
+  chapterPublicationFailure?: 'SOURCE_SWITCH_POSITION_PROTECTION' | 'SQLITE_WRITE_FAILURE' | 'OTHER_STORAGE_FAILURE';
 };
 
 /** Bounded, log-safe facts. URLs, response text and continuation values never enter this record. */
@@ -362,6 +363,11 @@ export function classifyRemoteReadingCommandFailure(
   }
   if (category === 'CACHE_DERIVED_CORRUPT') return new RemoteReadingGatewayError('cacheDerivedCorrupt', message, command, undefined, diagnostic, error);
   if (category === 'STORAGE_FAILURE' || command === 'cache.book.status') {
+    const publicationFailure = details?.['chapterPublicationFailure'];
+    if (command === 'chapter.content' && (publicationFailure === 'SOURCE_SWITCH_POSITION_PROTECTION' ||
+      publicationFailure === 'SQLITE_WRITE_FAILURE' || publicationFailure === 'OTHER_STORAGE_FAILURE')) {
+      diagnostic.chapterPublicationFailure = publicationFailure;
+    }
     return new RemoteReadingGatewayError('storageFailure', message, command, undefined, diagnostic, error);
   }
   if (category === 'SOURCE_HTTP_FAILED') {

@@ -1,5 +1,6 @@
 import { DiscoverPage } from './DiscoverPage';
 import { DiscoverScenePresentation } from '../presentation/DiscoverScenePresentation';
+import type { DiscoverBook } from '../application/DiscoverGateway';
 
 @Component
 export struct DiscoverSurface {
@@ -9,6 +10,7 @@ export struct DiscoverSurface {
   onBack: () => void = (): void => {};
   onRss: () => void = (): void => {};
   onSettings: () => void = (): void => {};
+  onOpenBook: (book: DiscoverBook) => void = (_book: DiscoverBook): void => {};
 
   build() {
     DiscoverPage({
@@ -23,6 +25,9 @@ export struct DiscoverSurface {
       onSelectKind: (index: number): void => this.presentation.operations(this.identity)?.selectKind(index),
       onPreviousPage: (): void => this.presentation.operations(this.identity)?.previousPage(),
       onNextPage: (): void => this.presentation.operations(this.identity)?.nextPage(),
+      onOpenBook: (book: DiscoverBook): void => {
+        if (this.presentation.operations(this.identity) !== undefined) this.onOpenBook(book);
+      },
     });
   }
 }

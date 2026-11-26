@@ -37,7 +37,7 @@ for (const id of selectContractCases(definitions)) {
     else {
       methods.push(module === 'settings' ? 'build' : 'normalContent',
         'quickMinimumScrollInput', 'quickMinimumScrollPresentation');
-      if (module === 'settings') methods.push('scrollContentHeight');
+      if (module === 'settings') methods.push('settingsGroups', 'scrollContentHeight');
     }
     const owner = createReaderBuilderProbe(source, methods,
       { ...actor, ...morph, ...replace, readerControlExtentFits: geometry.readerControlExtentFits }).owner;
@@ -120,8 +120,8 @@ for (const id of selectContractCases(definitions)) {
   assert.equal(blocked.scroll.enableScrollInteraction, false, 'actual retained outer Scroll observes the live layer guard');
 
   const mutations = {
-    settings: ['!readerControlExtentFits(this.geometry().contentHeight, this.availableHeight)',
-      'this.geometry().contentHeight > this.availableHeight + .1'],
+    settings: ['!readerControlExtentFits(this.geometry().contentHeight + wideHeight, this.availableHeight)',
+      'this.geometry().contentHeight + wideHeight > this.availableHeight + .1'],
     tts: ['!readerControlExtentFits(profile.minimum.quick.heightVp, this.availableHeight)',
       'profile.minimum.quick.heightVp > this.availableHeight + .1'],
     autoPage: ['!readerControlExtentFits(profile.minimum.quick.heightVp, this.availableHeight)',

@@ -14,7 +14,7 @@ registerHooks({ resolve(specifier, context, nextResolve) {
 } });
 const base = new URL('../entry/src/main/ets/', import.meta.url);
 const { BookAcquisitionCoordinator } = await import(new URL('features/reading/application/BookAcquisitionCoordinator.ts', base));
-const { ReaderNavigation } = await import(new URL('app/navigation/ReaderNavigation.ts', base));
+const { ReaderNavigation, retainedReaderRoute } = await import(new URL('app/navigation/ReaderNavigation.ts', base));
 const { ReaderLibraryAcquisitionBinding } = await import(new URL('app/composition/ReaderLibraryAcquisitionBinding.ts', base));
 const evidence = await import(new URL('features/reading/application/RemoteReadingEvidence.ts', base));
 const runtimeAuthority = { isCurrent: owner => owner !== undefined && owner === currentRuntime };
@@ -24,14 +24,14 @@ const indexSource = readFileSync(indexFile, 'utf8');
 const detailSceneSource = readFileSync(new URL('features/bookshelf/ui/BookshelfDetailScene.ets', base), 'utf8');
 const Index = selectedProductionMethods(indexFile, 'Index', [
   'currentReadingRuntime', 'bindReadingEntryReader', 'readingEntryActionPorts',
-  'readingEntryPorts', 'returnToReadingOrigin', 'isCurrentRuntime', 'publishNavigation',
-  'navigateTo', 'bookshelfModalVisible',
-], { ReaderRuntimeOwner: runtimeAuthority, LOCAL_SOURCE_ID: 'local' });
+  'readingEntryPorts', 'isCurrentRuntime', 'publishNavigation',
+  'navigateTo', 'bookshelfModalVisible', 'appRouteLane', 'updateReaderParentMotion',
+], { ReaderRuntimeOwner: runtimeAuthority, retainedReaderRoute, LOCAL_SOURCE_ID: 'local' });
 const ReadingActions = selectedProductionMethods(new URL('app/composition/ReaderReadingEntryActions.ets', base),
   'ReaderReadingEntryActions', ['refreshDetailAcquisition']);
 const DetailShelf = selectedProductionMethods(new URL('features/bookshelf/presentation/BookshelfDetailPresentation.ets', base),
   'BookshelfDetailPresentation', ['readingMembership', 'admission', 'key'], { EMPTY_READABLE_ADMISSION: emptyAdmission });
-const ReaderExit = selectedProductionMethods(new URL('app/composition/ReaderExitActions.ts', base),
+const ReaderExit = selectedProductionMethods(new URL('app/composition/ReaderExitActions.ets', base),
   'ReaderExitActions', ['completeReturn', 'navigationSettled']);
 const ReadingEntry = actualReadingEntryPresentation({ ReadingEntryHost: ProductionHost });
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
@@ -39,6 +39,7 @@ const pause = () => new Promise(resolve => setTimeout(resolve, 0));
 const until = async condition => { for (let i = 0; i < 100; i++) { if (condition()) return; await pause(); } assert.fail('did not settle'); };
 const now = Date.now();
 const session = { identity: { sourceId: 'source', bookId: 'book' }, sourceVersion: 'v1', acquisitionMode: 'online',
+  contentKind: 'text',
   detailUrl: '/book', tocUrl: '/toc', catalogAt: now, catalogVersion: 'catalog', contextVersion: 'context',
   continuationVariables: [], hostRequirements: ['httpExecute'], requiresContextRefresh: false,
   book: { title: '书', author: '作者' }, entries: [{ index: 0, title: '第一章', url: '/chapter', variables: [] }] };
@@ -89,25 +90,23 @@ function fixture() {
     request: (...args) => coordinator.request(...args) };
   setRuntime(owner);
   const entry = Object.assign(new ReadingEntry(), {
-    book: { ...session.identity, sourceName: '书源', title: '书', author: '作者' },
+    book: { ...session.identity, contentKind: 'text', sourceName: '书源', title: '书', author: '作者' },
     toc: session.entries,
     inBookshelf: false,
   });
   const page = Object.assign(new Index(), {
     mountedRuntimeOwner: owner, shelfReceiptRetired: false, detailShelfAdmissionMount: 1,
+    searchAppForeground: true, appReduceMotion: true, readerParentProgress: 0, wideSettingsPane: () => undefined,
     libraryAcquisition: new ReaderLibraryAcquisitionBinding(),
-    navigationOwner: new ReaderNavigation(), readingEntry: entry, sourceSwitchPresentation: { visible: false },
+    navigationOwner: new ReaderNavigation(), readingEntry: entry,
+    sourceSwitchPresentation: { visible: false, isSurfacePresented: () => false },
     shelfRead: { snapshot: { books: [] } },
     shelfMutations: { snapshot: { generation: 0, removalKey: '', busy: false } },
     detailShelf: Object.assign(new DetailShelf(), { admissions: [], scope: {
       book: () => entry.book, mutations: () => page.shelfMutations, inBookshelf: () => entry.inBookshelf,
     } }),
-    shelfGroupPresentation: { identity: '' },
+    shelfGroupPresentation: { identity: '', retire() {} },
     bookRemovalConfirmation: { dismiss() {} }, jsonImportPresentation: { dismiss() {} },
-    shelfMotion: {
-      returnToOrigin() { page.readingExitActions.completeReturn(); },
-      resumeReturn() {},
-    },
     refreshBookshelf() {},
     showReadingFailure: (title, message) => failures.push({ title, message }),
     chooseCachedChapterRefresh() { assert.fail('stale readmission must not require confirmation'); },
@@ -128,7 +127,6 @@ function fixture() {
     bindReader: () => page.bindReadingEntryReader(),
     refreshDetail: () => { void page.readingEntryActions.refreshDetailAcquisition(); },
     refreshShelf: () => page.refreshBookshelf(),
-    resumeReturnMotion: id => page.shelfMotion.resumeReturn(id),
   } });
   let verdict = entry.verdict;
   Object.defineProperty(entry, 'verdict', { get: () => verdict, set(value) { verdict = value; verdicts.push(value); } });
@@ -178,7 +176,7 @@ function fixture() {
           f.coordinator.readingProjectionRevision()));
       }
     }
-    f.page.returnToReadingOrigin(); await until(() => f.projectionActive === undefined);
+    f.page.readingExitActions.completeReturn(); await until(() => f.projectionActive === undefined);
     assert.ok(f.verdicts.every(value => value === 'readable'), 'Core-confirmed return cannot flash verifying');
     assert.equal(f.entry.session.preparedChapter, prepared, 'unchanged materialized body remains reusable on return');
     assert.equal(f.entry.verdict, 'readable');
@@ -294,17 +292,22 @@ function detailSdk(f) {
   const parent = createReaderBuilderProbe(indexSource, [
     'detailScenePorts', 'detailContentIsForeground', 'isDetailDirectoryRoute',
     'isCurrentDetailPresentation', 'isCurrentRuntime',
-  ], { ReaderRuntimeOwner: runtimeAuthority }).owner;
+  ], { ...properties.sdk, ReaderRuntimeOwner: runtimeAuthority }, properties.hooks).owner;
   Object.assign(parent, {
     readingEntry: f.entry, route: f.page.route, directoryReturnTarget: f.page.directoryReturnTarget,
     mountedRuntimeOwner: f.page.mountedRuntimeOwner,
-    sourceSwitchPresentation: { visible: false }, mangaSourceSwitch: { selectionVisible: false },
+    shelfGroupPresentation: { identity: '' },
+    searchAppForeground: true, sourceSwitchPresentation: { isSurfacePresented: () => false },
+    mangaSourceSwitch: { selectionVisible: false },
     detailShelf: {
       identity: () => 'detail-book', sourceSwitchEnabled: () => true, mutationEnabled: () => false,
       admission: () => emptyAdmission, message: () => '', isCurrent: () => true,
     },
   });
-  const scene = createReaderBuilderProbe(detailSceneSource, ['build', 'detailSurface'], {
+  const scene = createReaderBuilderProbe(detailSceneSource, [
+    'build', 'detailSurface', 'onEntryChanged', 'aboutToAppear',
+    'bodyBook', 'bodyToc', 'sourceBook', 'sourceToc', 'detailKey', 'detailInputCurrent',
+  ], {
     ...properties.sdk, LocalBookDetail: DetailChild, remoteContentVerdictLabel: () => '',
   }, { ...properties.hooks, childSources: { LocalBookDetail: localBookDetailSource } }).owner;
   Object.assign(scene, {
@@ -313,6 +316,7 @@ function detailSdk(f) {
     directoryRetained: parent.isDetailDirectoryRoute(), mutationEnabled: parent.detailShelf.mutationEnabled(),
     ports: parent.detailScenePorts(),
   });
+  scene.aboutToAppear();
   scene.initialRender();
   const detail = [...scene.children.values()].find(child => child instanceof DetailChild);
   assert.ok(detail, 'production detail scene mounts a native child');
@@ -320,7 +324,8 @@ function detailSdk(f) {
   const child = localBookDetailSdk({ NoCoverCover: CoverChild }, { initialParams: props }).owner;
   Object.assign(child, { appThemeScheme: 'day', contentWidth: () => 352 });
   child.hero();
-  return { props, texts: [...child.nodes.values()].filter(node => node.type === 'Text').map(node => node.create) };
+  return { props, bookSource: properties.sdk.ObservedObject.GetRawObject(props.book),
+    texts: [...child.nodes.values()].filter(node => node.type === 'Text').map(node => node.create) };
 }
 for (const invalid of [null, [], { origin: 'other', bookUrl: 'book' }, { origin: 'source', bookUrl: 'other' },
   { bookUrl: 'book' }, { origin: 'source', bookUrl: 'book', name: 3 },
@@ -334,7 +339,7 @@ for (const invalid of [null, [], { origin: 'other', bookUrl: 'book' }, { origin:
     f.overrideProjection(invalid); await f.page.readingEntryActions.refreshDetailAcquisition();
     assert.equal(f.entry.book, oldBook, 'wrong/absent/malformed data cannot replace admitted detail');
     assert.equal(f.entry.session, oldSession); assert.equal(f.calls.filter(m => m === 'chapter.content').length, 0);
-    assert.equal(detailSdk(f).props.book, oldBook, 'real SDK detail consumer retains the exact admitted book');
+    assert.equal(detailSdk(f).bookSource, oldBook, 'real SDK detail consumer retains the exact admitted book');
     assert.equal(f.projectionActive, undefined);
   } finally { f.dispose(); }
 }

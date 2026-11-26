@@ -99,7 +99,7 @@ export const svgRadixSheetRecipes = [
     .flatMap(([slot, component, role]) => ['day', 'night'].map(scheme => ({
       file: `manga_directory_${slot}${scheme === 'night' ? '_theme_night' : ''}`,
       semanticRole: `manga directory ${slot} ${scheme}`, originType: 'radix-component-derived',
-      component, ...SVG_RADIX_COMPONENT_SOURCES[component], color: mangaDirectoryColor(role, scheme),
+      component, ...SVG_RADIX_COMPONENT_SOURCES[component], color: '#' + mangaDirectoryColor(role, scheme).slice(3),
     }))),
 ];
 
@@ -177,7 +177,7 @@ const icons = [
   ...[['ascending', 'SortAsc'], ['descending', 'SortDesc']].flatMap(([name, component]) =>
     ['day', 'night'].map(scheme => icon(
       `manga_directory_sort_${name}${scheme === 'night' ? '_theme_night' : ''}`, component,
-      mangaDirectoryColor('accent', scheme), `manga directory ${name} sort ${scheme}`))),
+      '#' + mangaDirectoryColor('accent', scheme).slice(3), `manga directory ${name} sort ${scheme}`))),
   icon('bookshelf_rss_active', 'Rss', '#FFFAF4', 'bookshelf rss active navigation'),
   icon('bookshelf_rss_outline', 'Rss', '#756F69', 'bookshelf rss inactive navigation'),
   icon('bookshelf_search', 'Search', '#1F1B17', 'bookshelf search', { fillNone: true }),
@@ -314,7 +314,6 @@ const exactExports = [
   exact('reader_control_replace_delete', '1939:1261', 'restored in-reader replace delete rule'),
   exact('reader_control_replace_back', 'I1938:12631;411:72', 'restored in-reader replace Quick back'),
   exact('bookshelf_more', '4578:583', 'bookshelf more vertical override'),
-  exact('bookshelf_more_batch', '4575:5', 'bookshelf more batch action'),
   exact('bookshelf_more_import', '4575:14', 'bookshelf more local import action'),
   exact('bookshelf_more_settings', '4575:24', 'bookshelf more settings action'),
   exact('import_cancel', '2657:797', 'local import cancel'),
@@ -396,8 +395,39 @@ const paperPrimitives = [
     ]),
 ];
 
-const themeVariants = JSON.parse(readFileSync(new URL('./theme-svg-variants.json', import.meta.url), 'utf8')).map(baseFile => ({
-  file: `${baseFile}_theme_night`, baseFile, semanticRole: `${baseFile} night app palette`, originType: 'theme-palette-derived',
+export function svgThemeVariantRecipe(baseFile) {
+  return { file: `${baseFile}_theme_night`, baseFile, semanticRole: `${baseFile} night app palette`, originType: 'theme-palette-derived' };
+}
+
+const themeVariants = JSON.parse(readFileSync(new URL('./theme-svg-variants.json', import.meta.url), 'utf8'))
+  .map(svgThemeVariantRecipe);
+// Reader-authored geometry from the two Host main commits below. The theme
+// source replaces the original paint with currentColor and keeps the geometry.
+const readerThemeSources = [
+  ['reader_control_header_chevron', '2F6373', '8cb0c447d7746aa29b2a9bc0271c4d2bec071340',
+    '176f7ea3416d297cf7437ff30b40877e7dc54aeb0fe492153930cb29e2aa1caa', 'reader control header disclosure'],
+  ['settings_gen_navigation', '2D4A3E', 'fce869a10399fd6feec4c9a8178808f43d55e31d',
+    'ef696bb6844746dd733207c0e436be713ad1eda666681a137dc141ede0440f5d', 'general settings navigation layout'],
+].map(([file, authoredPaintId, sourceCommit, sourceSha256, semanticRole]) => ({
+  file, authoredPaintId, sourceCommit, sourceSha256, semanticRole, originType: 'reader-theme-svg',
+}));
+
+// Preserve the original Host geometry from the source management v9 commits.
+const sourceManagementIcons = [
+  ['source_login_lock', '635D55', 'a2b5da23a4f50e82ce99308bf3e033aad0620f7a',
+    '89bf510744936a1a6512692b30e59e2b9530b60c5381c914a5d8dc9b8fd14c4a', 'book source login secure connection',
+    'app.sourceUi.muted'],
+  ['source_v9_cloud', '1F3D31', '242d48a7462d17fda50ecf3a85fca87c563bf296',
+    '027c8a09d12cb498291107595883aa7b9b781f1efd97cecd144fbcd7cea407bd', 'book source subscriptions'],
+  ['source_v9_question', '1F3D31', '242d48a7462d17fda50ecf3a85fca87c563bf296',
+    'abd067b653830c57b76d4e05d0977eaa876bb6642ddbf4c8f943c56e07bed29f', 'book source unverified login status'],
+  ['source_v9_upload', '1F3D31', '242d48a7462d17fda50ecf3a85fca87c563bf296',
+    'f94e36c05543543260798135dfd21e9aea03422852ee034763949a4cb4a40da6', 'book source export'],
+  ['source_v9_wave', '1F3D31', '242d48a7462d17fda50ecf3a85fca87c563bf296',
+    '8bbb986a14152df870b29e30aab9522dc22e6f8656c8bf0516b69f20748bcaa2', 'book source detection'],
+].map(([file, authoredPaintId, sourceCommit, sourceSha256, semanticRole, themeColorRole]) => ({
+  file, authoredPaintId, sourceCommit, sourceSha256, semanticRole, themeColorRole, originType: 'reader-theme-svg',
+  sourceFile: 'docs/ui-design/svg-provenance/source-management-v9/' + file + '.svg',
 }));
 export const SVG_TTS_SELECTED_C = Object.freeze({
   selectionId: 'TTS-TRANSPORT-C',
@@ -419,6 +449,9 @@ export const svgTtsSelectedCRecipes = [
 // The approved action-sheet family uses the original icon geometry with a
 // foreground palette selected before SVG rasterization, without a runtime
 // ColorFilter. These aliases do not recolor their original page/status assets.
+export const svgSourceOnlyRecipes = [
+  exact('bookshelf_more_batch', '4575:5', 'bookshelf more batch action'),
+];
 export const svgActionForegroundRecipes = [
   ['check', 'bookshelf_more_batch'], ['info', 'settings_row_about'],
   ['folder', 'source_group_folder'], ['trash', 'download_visual_trash'],
@@ -435,14 +468,37 @@ export const svgActionForegroundRecipes = [
   ...(kind === 'trash' ? { strokeWidth: 1.75 } : {}),
 })));
 export const svgControlForegroundRecipes = [
+  ...[
+    ['close', 'download_visual_close', 'TOK_INK'],
+    ['trash', 'download_visual_trash', 'TOK_INK'],
+    ['download', 'download_visual_download', 'TOK_INK'],
+    ['bookmark_outline', 'reader_directory_marker_bookmark', 'TOK_READ_PRIMARY'],
+    ['bookmark_filled', 'reader_page_bookmark_filled', 'TOK_ACCENT'],
+  ].flatMap(([kind, baseFile, paletteRole]) => ['day', 'night'].map(scheme => ({
+    file: `reader_control_${kind}${scheme === 'night' ? '_theme_night' : ''}`,
+    baseFile, scheme, paletteRole, semanticRole: `reader ${kind} ${scheme} on paper`,
+  }))),
+  ...['compass', 'rss'].map(kind => ({
+    file: `bookshelf_${kind}_active_theme_night`, baseFile: `bookshelf_${kind}_active`,
+    scheme: 'night', paletteRole: 'TOK_ON_PRIMARY', semanticRole: `main tab ${kind} selected night foreground`,
+  })),
+  ...['import_choose_file', 'import_done'].map(baseFile => ({
+    file: `${baseFile}_theme_night`, baseFile, scheme: 'night', paletteRole: 'TOK_ON_PRIMARY',
+    semanticRole: `${baseFile} night foreground on the import primary action`,
+  })),
   { file: 'reader_control_replace_add_theme_night', baseFile: 'reader_control_replace_add', scheme: 'night',
-    paletteRole: 'app.ReaderControlReplaceContent.toolbarButton.fontColor.FFFFFFFF', namedWhiteStroke: true,
+    paletteRole: 'app.replace.onToolbarAction', namedWhiteStroke: true,
     semanticRole: 'reader replace add night foreground on the light primary control surface' },
   ...['day', 'night'].map(scheme => ({
     file: `reader_tts_configure_chevron${scheme === 'night' ? '_theme_night' : ''}`,
     baseFile: 'reader_appearance_make_chevron', scheme, paletteRole: 'app.control.paint.FFFAF4',
     semanticRole: `reader TTS unconfigured service action chevron ${scheme} on primary control surface`,
   })),
+  ...['day', 'night'].map(scheme => ({
+    file: `reader_autopage_nav_active${scheme === 'night' ? '_theme_night' : ''}`,
+    baseFile: 'rc_autopage', scheme, paletteRole: 'app.control.onPrimary',
+    semanticRole: `reader selected auto page module ${scheme} on primary control surface`,
+  })),
 ].map(recipe => ({ ...recipe, originType: 'theme-palette-derived' }));
-export const svgAssetRecipes = [...icons, ...exactExports, ...makeExports, ...makeSourceExports, ...appearanceMakeExports, ...adaptedExports, ...paperPrimitives, ...themeVariants, ...svgRadixSheetRecipes, ...svgDownloadLucideRecipes, ...svgMessageLucideRecipes, ...svgActionForegroundRecipes, ...svgControlForegroundRecipes, ...svgTtsSelectedCRecipes]
+export const svgAssetRecipes = [...icons, ...exactExports, ...makeExports, ...makeSourceExports, ...appearanceMakeExports, ...adaptedExports, ...paperPrimitives, ...readerThemeSources, ...sourceManagementIcons, ...themeVariants, ...svgRadixSheetRecipes, ...svgDownloadLucideRecipes, ...svgMessageLucideRecipes, ...svgActionForegroundRecipes, ...svgControlForegroundRecipes, ...svgTtsSelectedCRecipes]
   .sort((left, right) => left.file.localeCompare(right.file));

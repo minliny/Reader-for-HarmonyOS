@@ -1,4 +1,6 @@
 import {copySourceManagementScroll} from '../../entry/src/main/ets/features/source/presentation/SourceManagementScrollState.ts';
+import { projectSourceV9Check, retainSourceV9Check, sourceV9AuthenticationDenied, sourceV9Supports }
+  from '../../entry/src/main/ets/features/source/presentation/SourceManagementV9.ts';
 import {bookshelfOperationClass} from './bookshelf-operation-owner-probe.mjs';
 import {isReaderCoreTransactionPendingError} from '../../entry/vendor/core-harmony/sdk/reader_core.ts';
 import {projectOperationFacts,projectCommitReadback} from '../../entry/src/main/ets/app/ReaderOperationFacts.ts';
@@ -7,6 +9,7 @@ import {errorMessageOf} from '../../entry/src/main/ets/app/ErrorMessage.ts';
 import * as windowMetrics from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import * as horizontalGeometry from '../../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts';
 import * as widthClass from '../../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts';
+import { APP_FLOATING_HEADER_TOP_GAP, APP_FLOATING_HEADER_BAR_HEIGHT } from '../../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts';
 import * as scrollLayout from '../../entry/src/main/ets/ui/layout/ReaderScrollLayout.ts';
 import {ReaderMeasurementStore} from '../../entry/src/main/ets/ui/layout/ReaderMeasurements.ts';
 import {actualReaderPageShell} from './reader-page-shell-runtime-probe.mjs';
@@ -14,11 +17,11 @@ import {actualReaderPageShell} from './reader-page-shell-runtime-probe.mjs';
 export function actualSourceManagementGeometry(metrics = windowMetrics.createDefaultReaderWindowMetrics()) {
  const shell = actualReaderPageShell();
  const geometry = bookshelfOperationClass('ui/layout/ReaderPageGeometry.ts',
-   '({ReaderPageGeometry,ReaderPageGeometryInput,resolveReaderPageGeometry})',
-   {...shell,...windowMetrics,...horizontalGeometry,...widthClass});
+   '({ReaderPageGeometry,ReaderPageGeometryInput,applyReaderStandardFloatingHeader,resolveReaderPageGeometry})',
+   {...shell,...windowMetrics,...horizontalGeometry,...widthClass,APP_FLOATING_HEADER_TOP_GAP});
  const readerFloatingBarBottomInset = bookshelfOperationClass('ui/layout/ReaderFloatingBarMetrics.ts',
    'readerFloatingBarBottomInset',windowMetrics);
- return {...shell,...geometry,...scrollLayout,ReaderMeasurementStore,readerFloatingBarBottomInset,
+ return {...shell,...geometry,...scrollLayout,ReaderMeasurementStore,readerFloatingBarBottomInset, APP_FLOATING_HEADER_BAR_HEIGHT,
    ReaderWindowCoordinator:{metrics:()=>metrics}};
 }
 export function actualSourceManagementTypes(deps) {
@@ -28,7 +31,8 @@ export function actualSourceManagementTypes(deps) {
  const categories=bookshelfOperationClass('features/source/application/ReaderSourceCategory.ts','({classifyReaderSource})');
  const all={...deps,...facts,ReaderWriteEvidence,errorMessageOf,projectPersistedReceipt,isReaderCoreTransactionPendingError,...http,...categories};
  const SourceGateway=bookshelfOperationClass('features/source/application/SourceGateway.ts','SourceGateway',all);
- const SourceOrchestrator=bookshelfOperationClass('features/source/application/SourceOrchestrator.ets','SourceOrchestrator',{...all,SourceGateway});
+ const SourceOrchestrator=bookshelfOperationClass('features/source/application/SourceOrchestrator.ets','SourceOrchestrator',
+   {...all,SourceGateway,projectSourceV9Check,retainSourceV9Check,sourceV9AuthenticationDenied,sourceV9Supports});
  const SourceHost=bookshelfOperationClass('features/source/application/SourceHost.ets','SourceHost',{...all,SourceGateway,SourceOrchestrator});
  return{SourceGateway,SourceOrchestrator,SourceHost};
 }

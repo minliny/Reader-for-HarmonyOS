@@ -3,15 +3,14 @@ import type { ReaderSurfaceRect } from '../../../ui/layout/ReaderSurfaceRect';
 import { BookshelfCatalogPresentation } from '../presentation/BookshelfCatalogPresentation';
 import { BookshelfEmptyPage } from './BookshelfEmptyPage';
 import { BookshelfMutationPresentation } from '../presentation/BookshelfMutationPresentation';
-import type { BookshelfBookOrigin } from '../presentation/BookshelfNavigationMotion';
-import { BookshelfNavigationPresentation } from './BookshelfNavigationPresentation';
 import { BookshelfPage } from './BookshelfPage';
 import { BookshelfReadPresentation } from '../presentation/BookshelfReadPresentation';
 import { BookshelfShell } from './BookshelfShell';
 import { BookshelfStatusContent } from './BookshelfStatusContent';
 import type { BookshelfDetailReturnFocus } from '../presentation/BookshelfViewState';
 
-export type BookshelfSceneDestination = 'search' | 'discover' | 'rss' | 'settings' | 'bookshelfSettings' | 'downloads';
+export type BookshelfSceneDestination =
+  'search' | 'discover' | 'rss' | 'settings' | 'bookshelfSettings' | 'bookshelfManagement' | 'downloads';
 
 export interface BookshelfScenePorts {
   isCurrent: (navigation: number) => boolean;
@@ -21,7 +20,7 @@ export interface BookshelfScenePorts {
   measureContinueCard: (rect: ReaderSurfaceRect | undefined, navigation: number, bookKey: string) => void;
   prepareVisibleBooks: (books: ShelfBook[]) => void;
   openDestination: (destination: BookshelfSceneDestination) => void;
-  openBook: (book: ShelfBook, origin?: BookshelfBookOrigin) => void;
+  openBook: (book: ShelfBook) => void;
   openSelection: (book?: ShelfBook) => void;
   openBookInfo: (book: ShelfBook, focus?: BookshelfDetailReturnFocus) => void;
   takeDetailReturnFocus: (navigation: number) => BookshelfDetailReturnFocus | undefined;
@@ -33,12 +32,12 @@ export struct BookshelfScene {
   @ObjectLink read: BookshelfReadPresentation;
   @ObjectLink mutations: BookshelfMutationPresentation;
   @ObjectLink catalog: BookshelfCatalogPresentation;
-  @ObjectLink motion: BookshelfNavigationPresentation;
   @Prop navigation: number = 0;
   @Prop feedbackEnabled: boolean = true;
   @Prop continueCardSuppressed: boolean = false;
   @Prop reduceMotion: boolean = false;
   @Prop tapBottomScrollTop: boolean = false;
+  @Prop sharedBottomNavigationHeight: number = -1;
   ports: BookshelfScenePorts | undefined;
 
   private isCurrent(navigation?: number): boolean {
@@ -69,6 +68,11 @@ export struct BookshelfScene {
         viewState: this.read.viewState,
         books: this.read.snapshot.books,
         serverFiltered: this.read.snapshot.revision.length > 0,
+        projectedSourceFilter: this.read.snapshot.filter.sourceKind,
+        projectedContentFilter: this.read.snapshot.filter.contentKind ?? 'all',
+        projectedBookCount: this.read.snapshot.facts?.fact === 'refreshing' ||
+          this.read.snapshot.facts?.fact === 'refreshFailed' || this.read.snapshot.facts?.fact === 'partial' ?
+          -1 : this.read.snapshot.matchedTotal,
         onNextPageRequested: (presentedNavigation?: number): void => {
           if (this.isCurrent(presentedNavigation ?? navigation)) this.read.page(false);
         },
@@ -77,6 +81,10 @@ export struct BookshelfScene {
         },
         onFilterRequested: (_readingState: string, _sourceKind: string, _contentKind?: string, presentedNavigation?: number): void => {
           if (this.isCurrent(presentedNavigation ?? navigation)) this.read.refreshForFilter();
+        },
+        onEmptySearch: (presentedNavigation: number): void => this.open('search', presentedNavigation),
+        onEmptyImport: (presentedNavigation: number, focusTarget: string): void => {
+          if (this.isInteractive(presentedNavigation)) this.mutations.openImport(focusTarget);
         },
         continueReading: this.read.snapshot.continueReading,
         continueCardSuppressed: this.continueCardSuppressed,
@@ -87,12 +95,8 @@ export struct BookshelfScene {
         onRssRequested: (presentedNavigation?: number): void => this.open('rss', presentedNavigation ?? navigation),
         onSettingsRequested: (presentedNavigation?: number): void => this.open('settings', presentedNavigation ?? navigation),
         onDiscoverRequested: (presentedNavigation?: number): void => this.open('discover', presentedNavigation ?? navigation),
-        returnMotionBookKey: this.motion.returnBookKey,
-        onReturnMotionOrigin: (origin: BookshelfBookOrigin, presentedNavigation?: number): void => {
-          if (this.isCurrent(presentedNavigation ?? navigation)) this.motion.receiveReturnOrigin(origin);
-        },
-        onBookSelected: (book: ShelfBook, presentedNavigation?: number, origin?: BookshelfBookOrigin): void => {
-          if (this.isInteractive(presentedNavigation ?? navigation)) this.ports?.openBook(book, origin);
+        onBookSelected: (book: ShelfBook, presentedNavigation?: number): void => {
+          if (this.isInteractive(presentedNavigation ?? navigation)) this.ports?.openBook(book);
         },
         onVisibleBooksChanged: (books: ShelfBook[], presentedNavigation?: number): void => {
           if (this.isCurrent(presentedNavigation ?? navigation)) this.ports?.prepareVisibleBooks(books);
@@ -146,6 +150,7 @@ export struct BookshelfScene {
       feedbackEnabled: this.feedbackEnabled,
       headerBottom: this.read.headerBottom,
       navigationGeneration: this.navigation,
+      sharedBottomNavigationHeight: this.sharedBottomNavigationHeight,
       onNoticeHeightChange: (height: number, navigation?: number): void => {
         if (this.isCurrent(navigation)) this.read.noticeHeight = height;
       },
@@ -167,6 +172,7 @@ export struct BookshelfScene {
         else void this.mutations.reconcile(generation);
       },
       reduceMotion: this.reduceMotion,
+      canBatchManage: this.read.snapshot.visualAdmitted && this.read.snapshot.books.length > 0,
       canCheckUpdates: this.read.canCheckUpdates(),
       updateRunning: this.catalog.snapshot.manualRunning,
       backgroundUpdateRunning: this.catalog.snapshot.automaticRunning,
@@ -176,9 +182,10 @@ export struct BookshelfScene {
         if (this.isInteractive(navigation)) this.mutations.openImport(focusTarget);
       },
       onBookshelfSettingsRequested: (navigation?: number): void => this.open('bookshelfSettings', navigation),
+      onBookshelfManagementRequested: (navigation?: number): void => this.open('bookshelfManagement', navigation),
       onDownloadsRequested: (navigation?: number): void => this.open('downloads', navigation),
       onBatchManageRequested: (navigation?: number): void => {
-        if (this.isInteractive(navigation)) this.ports?.openSelection();
+        if (this.isInteractive(navigation) && this.read.snapshot.books.length > 0) this.ports?.openSelection();
       },
       onCheckUpdatesRequested: (navigation?: number): void => {
         if (this.isInteractive(navigation)) this.catalog.manual(this.read.snapshot.books);

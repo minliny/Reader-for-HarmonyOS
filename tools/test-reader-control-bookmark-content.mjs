@@ -59,7 +59,7 @@ for(const p of [0,.25,.5,.75,1,.75,0]){
     const { owner } = createReaderBuilderProbe(source, ['frame', 'motionBody'], {
       sampleReaderControlBookmark, BOOKMARK_ROW_HEIGHT: 74,
       BOOKMARK_EXCERPT_ACCENT: '#8C9B8466', BOOKMARK_PENDING_LABEL: '待确认' });
-    Object.assign(owner, { motionProgress: 0, availableWidth: 254,
+    Object.assign(owner, { motionProgress: 0, availableWidth: 254, showExcerpt: true,
       row: { bookmarkId: 'a', chapterIndex: 2, chapterOffset: 3, chapterTitle: '旧章节', excerpt: '旧片段',
         positionLabel: '20%', timeLabel: '今天', identityStatus: 'pendingConfirmation' } });
     const calls = []; owner.onSelectBookmark = (...args) => calls.push(args);
@@ -102,7 +102,7 @@ return;
  const model=projectReaderBookmarkRows(entries,'',identity,new Map([[0,24]]))[0];
  for(const builder of ['motionBody','legacyBody']) {
   const {owner}=createReaderBuilderProbe(row,['frame',builder],{sampleReaderControlBookmark,BOOKMARK_ROW_HEIGHT:74,BOOKMARK_PENDING_LABEL:'待确认'});
-  const calls=[];Object.assign(owner,{row:model,motionProgress:1,availableWidth:316,onSelectBookmark:(...args)=>calls.push(args)});
+  const calls=[];Object.assign(owner,{row:model,motionProgress:1,availableWidth:316,showExcerpt:true,onSelectBookmark:(...args)=>calls.push(args)});
   owner[builder]();
   assert.ok([...owner.nodes.values()].some(n=>n.type==='Text'&&n.create==='位置待恢复'));
   assert.ok([...owner.nodes.values()].some(n=>n.type==='Text'&&n.create==='刷新前保留的原文'));

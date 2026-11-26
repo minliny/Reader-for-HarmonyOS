@@ -22,6 +22,7 @@ for (const focus of selectContractCases(CONTRACT_CASES)) {
 
 async function runSelectedCase(focus) {
 const { createMangaAtomicPayloadReaderFixture } = await import('./lib/manga-atomic-payload-probe.mjs');
+const { readerHostFilesDirectory } = await import('../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts');
 
 const directory = await mkdtemp(join(tmpdir(), 'reader-manga-display-regression-'));
 const fs = {
@@ -55,7 +56,7 @@ const Body = load('ReadingBodyImageHost', { fs, util, cryptoFramework, MangaDisp
 class MaterializationError extends Error { constructor(kind, message) { super(message); this.kind = kind; } }
 const Disk = load('ReadingImageDiskCache', { fileIo: fs, util, cryptoFramework,
   statfs: { getFreeSize: async () => 8 * 1024 ** 3 }, canonicalReadingImageBaseUrl: () => undefined,
-  assertReadingOfflineWriteCapacity: () => {}, ReadingOfflineMaterializationError: MaterializationError, readMangaAtomicPayload });
+  assertReadingOfflineWriteCapacity: () => {}, ReadingOfflineMaterializationError: MaterializationError, readMangaAtomicPayload, readerHostFilesDirectory });
 const owner = (chapterId, contentVersion = 'v1') => ({ sourceId: 'source', bookId: 'book', chapterId, contentVersion });
 const source = new Uint8Array([1, 2, 3, 4]);
 let decodes = 0, reservations = 0;

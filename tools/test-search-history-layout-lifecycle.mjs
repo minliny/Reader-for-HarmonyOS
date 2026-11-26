@@ -1,181 +1,253 @@
-import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"top-scroll": {"description": "实际history初始TopStart Scroll与当前非负gap", "resources": []}, "all-history": {"description": "35条首屏前全部可见且零文本测量，无展开隐藏", "resources": []}, "late-history": {"description": "异步历史/窄宽tablet保留全部记录与Scroll", "resources": []}, "status-actions": {"description": "无源/加载失败保留本地历史点击与恢复动作", "resources": []}, "focus-state": {"description": "实际SearchViewState焦点只消费一次与reset退休", "resources": []}, "history-feedback": {"description": "三入口各自loading/read-failed/clear-failed反馈及retry", "resources": []}, "native-focus": {"description": "实际ReaderSearchField布局后焦点、卸载/回程不抢焦点", "resources": []}};
-for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
-async function runSelectedCase(selectedCase){
-const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
-const {default: assert} = await import('node:assert/strict');
-const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
-const { readFileSync } = await import('node:fs');
-const { createRequire } = await import('node:module');
-const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-const { SearchViewState } = await import('../entry/src/main/ets/features/search/presentation/SearchViewState.ts');
-const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
-const { readerFloatingBarBottomInset } = await import('./lib/reader-floating-bar-metrics-probe.mjs');
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 
+const cases = {
+  'top-scroll': { description: 'Expanded history scroll starts at the top within the available viewport', resources: [] },
+  'all-history': { description: '35 records fold into two complete rows and the final record is reachable after expansion', resources: [] },
+  'late-history': { description: 'Late history and a new window width reproject ordered rows without losing records', resources: [] },
+  'status-actions': { description: 'Source recovery and local history dispatch through their separate current owners', resources: [] },
+  'focus-state': { description: 'SearchViewState consumes fresh focus once and retires it on reset', resources: [] },
+  'history-feedback': { description: 'History loading and errors retain the records and gate clear and retry', resources: [] },
+  'native-focus': { description: 'ReaderSearchField focuses after layout and retires the pending callback on unmount', resources: [] },
+};
+const base = new URL('../entry/src/main/ets/', import.meta.url);
+const source = path => readFileSync(new URL(path, base), 'utf8');
+const historyPath = 'features/search/ui/ReaderSearchHistoryPanel.ets';
+const historyGeometryPath = 'features/search/ui/SearchHistoryGeometry.ts';
 
-const source=readFileSync(new URL('../entry/src/main/ets/features/search/ui/SearchPage.ets',import.meta.url),'utf8');
-let actualSearchFocusFrame;
-if (selectedCase === 'native-focus') {
+for (const id of selectContractCases(cases)) {
+  if (id === 'focus-state') {
+    const { SearchViewState } = await import('../entry/src/main/ets/features/search/presentation/SearchViewState.ts');
+    const state = new SearchViewState();
+    assert.equal(state.consumeInputFocusRequest(), false);
+    state.requestInputFocus();
+    assert.equal(state.consumeInputFocusRequest(), true);
+    assert.equal(state.consumeInputFocusRequest(), false);
+    state.requestInputFocus();
+    state.reset('新查询');
+    assert.equal(state.consumeInputFocusRequest(), false);
+  } else if (id === 'native-focus') {
+    await fieldFocus();
+  } else {
+    await panelCase(id);
+  }
+  recordContractCasePass(id);
+}
+
+async function fieldFocus() {
   const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
-  const field = readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderSearchField.ets', import.meta.url), 'utf8');
-  const frame = field.slice(field.indexOf('class ReaderSearchFocusFrame'), field.indexOf('@Component'));
-  actualSearchFocusFrame = pureModuleProbe(frame, 'ReaderSearchFocusFrame.ets',
-    { FrameCallback: class {} }, ['ReaderSearchFocusFrame']).ReaderSearchFocusFrame;
-}
-// StateContent branches reference the page's other real Builders; register
-// their production names with the same SDK registry without executing them.
-const require = createRequire(import.meta.url);
-const sdkRoot = resolveEtsLoaderRoot();
-const { CUSTOM_BUILDER_METHOD } = require(`${sdkRoot}/lib/component_map.js`);
-for (const match of source.matchAll(/@Builder\s+(?:private\s+)?(\w+)\s*\(/g)) CUSTOM_BUILDER_METHOD.add(match[1]);
-const enumValues = name => new Proxy({}, { get: (_, key) => `${name}.${String(key)}` });
-const caseNames={'top-scroll': 'initial history Scroll uses the top of the content viewport', 'all-history': 'all history appears before layout without per-item measurement or expansion', 'late-history': 'async history and narrow/tablet widths preserve every entry and existing scroll', 'status-actions': 'no-source and load-error entries retain history chips and their actions', 'focus-state': 'fresh-entry focus is consumed once and reset/return cannot recreate it', 'history-feedback': 'history loading, failure and retry render independently on every entry surface', 'native-focus': 'native focus waits for layout and a removed or returning page never steals it'};
-function check(name, fn) {
-  if(name!==caseNames[selectedCase])return;fn();
-}
-function fixture(history, { width = 0, tablet = false, kind = 'initial', historyStatus,
-  measureVp = text => text.length * 13 } = {}) {
-  let owner;
-  const controls=foundationControls();
-  const measurements = [];
-  const actions = [];
-  // Flex is only a native attribute recorder. The SDK transforms the actual
-  // production Builder/ForEach/If; this is not a native layout simulation.
-  const Flex = new Proxy({ name: 'Flex' }, { get(target, property) {
-    if (property === 'name') return target.name;
-    return (...args) => {
-      if (property === 'pop') return;
-      const node = owner.nodes.get(owner.observers.length - 1);
-      node[property] = args.length === 1 ? args[0] : args;
-    };
-  } });
-  ({ owner } = createReaderBuilderProbe(source,
-    ['stateContent', 'searchHeaderHeight', 'searchBottomInset', 'sourceRequiredReason', 'initialContent', 'sourceRequiredContent', 'sourceLoadErrorContent',
-      'operation', 'retryOperation', 'primaryPill', 'secondaryPill', 'refreshVisibleResults', 'publishVisibleGroups'],
-    { ...controls.dependencies, Flex, FlexWrap: enumValues('FlexWrap'), FlexDirection: enumValues('FlexDirection'), readerFloatingBarBottomInset,
-      ReaderWindowCoordinator: { metrics: () => ({ systemInsets: {}, cutoutInsets: {}, gestureInsets: {}, navigationInsets: {} }) },
-      FlexAlign: enumValues('FlexAlign'), TOK_BORDER_W: 1, TOK_SPACE_XS: 8,
-      TOK_SPACE_CARD_PADDING: 12, TOK_SPACE_ROW_BLOCK: 4 },controls.hooks));
-  Object.assign(owner, {
-    presentation: kind === 'sourceRequired' ? { kind, reason: 'noSources', history, historyStatus } : { kind, history, historyStatus },
-    isTablet: tablet,
-    historyWidth: width,
-    viewState: new SearchViewState(),
-    viewStateRevision: -1, appThemeScheme: 'day', keyword: '',
-    onManageSources: () => actions.push('manage'),
-    onRetry: () => actions.push('retry'),
-    onBack: () => actions.push('back'),
-    submitSearch: () => actions.push(`search:${owner.keyword}`),
-    onClearHistory: () => actions.push('clear'),
-    onRetryHistory: () => actions.push('retry-history'),
-    visibleStart: 0, visibleEnd: 0, warmupGroups: [], onVisibleGroups(groups) {
-      assert.deepEqual(groups, [], 'history view cannot admit online candidate preparation');
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const field = 'ui/controls/ReaderSearchField.ets';
+  const fieldSource = source(field);
+  const frameSource = fieldSource.slice(fieldSource.indexOf('class ReaderSearchFocusFrame'), fieldSource.indexOf('@Component'));
+  const { ReaderSearchFocusFrame } = pureModuleProbe(frameSource, 'ReaderSearchFocusFrame.ets',
+    { FrameCallback: class {} }, ['ReaderSearchFocusFrame']);
+  const Field = selectedProductionMethods(new URL(field, base), 'ReaderSearchField',
+    ['aboutToAppear', 'aboutToDisappear', 'isBookField', 'bindEditingTarget', 'editingNativeId'],
+    { DEBUG: false, ReaderSearchFocusFrame });
+  const frames = [], focus = [];
+  const owner = Object.assign(new Field(), {
+    mounted: false, focusGeneration: 0, variant: 'bookPanel', mode: 'submit', focusOnAppear: true,
+    editingTarget: {
+      mount(_context, _host, _controller, current, _height, id) {
+        assert.equal(current(), true);
+        assert.equal(id, 'reader-book-search-input');
+      },
+      unmount() {},
     },
-    resultDataSource: { replace() {} },
-    getUIContext: () => ({ getMeasureUtils: () => ({ measureTextSize: input => {
-      measurements.push(input); return { width: measureVp(input.textContent) * 3.5 };
-    } }), px2vp: pixels => pixels / 3.5 }),
+    getUIContext: () => ({ postFrameCallback: frame => frames.push(frame),
+      getFocusController: () => ({ requestFocus: id => focus.push(id) }) }),
   });
-  owner.refreshVisibleResults();
-  owner.stateContent();
-  return { owner, measurements, actions, nodes: () => controls.nodes(owner),
-    areas: () => [...owner.nodes.values()].filter(node => typeof node.onAreaChange === 'function') };
-}
-function dispatchArea(f, outerWidth) {
-  const areas = f.areas();
-  assert.equal(areas.length, 1, 'one authoritative measured history container');
-  assert.equal(areas[0].type, 'Column', 'measure the stable history container, not count-dependent empty Flex');
-  areas[0].onAreaChange({ width: 0 }, { width: outerWidth });
-}
-function replayHistory(f) {
-  // Retain the SDK-produced ForEach closure and refresh only its data list.
-  const each = f.nodes().find(node => node.type === 'ForEach');
-  assert.ok(each);
-  f.owner.runObserver(each.id, false);
+  owner.aboutToAppear();
+  assert.deepEqual(focus, []);
+  frames.shift().onFrame();
+  assert.deepEqual(focus, ['reader-book-search-input']);
+  owner.aboutToAppear();
+  owner.aboutToDisappear();
+  frames.shift().onFrame();
+  assert.equal(focus.length, 1);
+  owner.focusOnAppear = false;
+  owner.aboutToAppear();
+  assert.equal(frames.length, 0);
 }
 
-check('initial history Scroll uses the top of the content viewport', () => {
-  const f = fixture(['唯一历史']);
-  assert.equal(f.nodes().find(node => node.type === 'Scroll').align, 'Alignment.TopStart');
-  assert.ok(Number.isFinite(f.areas()[0].padding.top)&&f.areas()[0].padding.top>=0,'current gap is a bounded production output');
-});
-check('all history appears before layout without per-item measurement or expansion', () => {
-  const history=Array.from({length:35},(_,i)=>`书${i}`);
-  const f=fixture(history);assert.equal(f.owner.historyWidth,0);
-  for(const keyword of history)assert.ok(f.nodes().some(n=>n.type==='Text'&&n.create===keyword));
-  assert.equal(f.measurements.length,0);
-  assert.ok(!f.nodes().some(n=>/展开|收起/.test(String(n.create??''))));
-  dispatchArea(f,196);replayHistory(f);
-  assert.equal(f.measurements.length,0);
-  for(const keyword of history)assert.ok(f.nodes().some(n=>n.type==='Text'&&n.create===keyword));
-});
-check('async history and narrow/tablet widths preserve every entry and existing scroll',()=>{
-  for(const tablet of [false,true]) {
-    const f=fixture([],{tablet});dispatchArea(f,260);
-    f.owner.presentation={kind:'initial',history:['加载后历史','很长'.repeat(80)]};
-    f.owner.refreshVisibleResults();f.owner.stateContent();
-    assert.ok(f.owner.historyWidth>0&&f.owner.historyWidth<=260,'measured history fits host');assert.equal(f.measurements.length,0);
-    assert.ok(f.nodes().some(n=>n.type==='Text'&&n.create==='加载后历史'));
-    assert.equal(f.nodes().find(n=>n.type==='Scroll').align,'Alignment.TopStart');
+async function panelCase(id) {
+  const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
+  const { boundedMembers, boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const controls = foundationControls();
+  const shared = boundedSurfaceSdk({ properties: controls.properties });
+  const facets = await import('../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts');
+  const { SearchHistoryGeometry, SearchHistoryPanelLayout, SearchHistoryViewport, projectSearchHistoryPanel } =
+    pureModuleProbe(source(historyGeometryPath), 'SearchHistoryGeometry.ts', facets,
+      ['SearchHistoryGeometry', 'SearchHistoryPanelLayout', 'SearchHistoryViewport', 'projectSearchHistoryPanel']);
+  const deps = { ...shared.deps, ...controls.dependencies, SearchHistoryGeometry, SearchHistoryPanelLayout,
+    readerPaperActionIcon: () => 'history-trash' };
+  const hooks = { ...controls.hooks, childSources: { ...shared.childSources, ...controls.hooks.childSources } };
+  const actions = [];
+  const keywords = Array.from({ length: 35 }, (_, index) => `关键词${index + 1}`);
+  const panelSource = source(historyPath);
+  const Panel = createReaderBuilderProbe(panelSource, boundedMembers(panelSource), deps, hooks).Component;
+  const measureWidth = keyword => keyword.length > 30 ? 800 : 100;
+
+  function fixture(history, { width = 328, height = 435, status = 'ready', expanded = false } = {}) {
+    const geometry = new SearchHistoryGeometry(width, height, 1, width >= 600, status, 0);
+    const layout = projectSearchHistoryPanel(history, geometry, expanded, measureWidth);
+    const owner = new Panel(undefined, {});
+    Object.assign(owner, { appThemeScheme: 'day', history, status, layout,
+      onClear: () => actions.push('clear'), onRetry: () => actions.push('retry-history'),
+      onSelect: keyword => actions.push(keyword), onToggle: () => actions.push('toggle') });
+    owner.initialRender();
+    const nodes = controls.nodes(owner);
+    return { layout, nodes, button: label => nodes.find(node => node.type === 'Button' && node.accessibilityText === label) };
   }
-});
-check('no-source and load-error entries retain history chips and their actions', () => {
-  for (const [kind, actionLabel, expectedAction] of [
-    ['sourceRequired', '添加书源', 'manage'],
-    ['sourceLoadError', '重试加载', 'retry'],
-  ]) {
-    const f = fixture(['本地书'], { kind });
-    assert.equal(f.nodes().filter(node => node.type === 'Scroll').length, 1,
-      'status and history share one scroll viewport');
-    const action = f.nodes().find(node => node.type === 'Text' && node.create === actionLabel);
-    const chip = f.nodes().find(node => node.type === 'Text' && node.create === '本地书');
-    assert.ok(action, `${kind} exposes its online-source recovery action`);
-    assert.ok(chip, `${kind} keeps the local search shortcut`);
-    action.onClick();
-    chip.onClick();
-    assert.deepEqual(f.actions, [expectedAction, 'search:本地书']);
-    dispatchArea(f, 260);
+
+  async function verifyRetainedPanel() {
+    const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+    const compiler = installedEtsCompiler();
+    const modelPath = 'features/search/presentation/ReaderLibrarySearchModel.ets';
+    const modelSource = source(modelPath);
+    assert.match(modelSource, /@Observed\s+export class ReaderLibrarySearchModel/);
+    compiler.require(compiler.root + '/lib/validate_ui_syntax.js').observedClassCollection.add('ReaderLibrarySearchModel');
+    const { ReaderLibrarySearchModel } = pureModuleProbe(modelSource, modelPath, { Observed: value => value }, ['ReaderLibrarySearchModel']);
+    const model = controls.properties.sdk.ObservedObject.createNew(new ReaderLibrarySearchModel(), undefined);
+    model.claim(7);
+    model.activate(7);
+    model.history = keywords;
+    let width = 328;
+    const surfacePath = 'features/search/ui/ReaderLibrarySearchSurface.ets';
+    const { owner: surface } = createReaderBuilderProbe(source(surfacePath), [
+      'header', 'historyPanel', 'historyExpanded', 'historyLayout', 'historyGeometry', 'historyFeedbackKey',
+      'historyViewportHeight', 'historyChanged', 'metricsChanged', 'metricsRevision', 'model', 'toggleHistoryAction',
+      'retargetHistoryViewport', 'resolvedHistoryViewport', 'displayedHistoryViewport', 'displayedHistoryLimit',
+      'historyToggleRevision', 'historyResizeRevision', 'historyResizeHoldingCoverage', 'historyProjectionKey',
+    ], {
+      ...deps, ReaderSearchHistoryPanel: Panel, projectSearchHistoryPanel, SearchHistoryViewport,
+      SynchedPropertyNesedObjectPU: controls.properties.sdk.SynchedPropertyNestedObjectPU,
+      motionAnimateParam: (_name, onFinish) => ({ onFinish }),
+      uiContext: { animateTo(options, update) { update(); options.onFinish?.(); } },
+    }, {
+      ...hooks, initialParams: { model },
+      childSources: { ...hooks.childSources, ReaderSearchHistoryPanel: panelSource },
+    });
+    const noop = () => {};
+    Object.assign(surface, {
+      spec: { panelInnerInset: 13, borderWidth: 1 }, mounted: true, searchMounted: true,
+      mode: 'input', reduceMotion: false, expandedLayout: false, reducedSearchOpacity: 1, historyResizeOpacity: 1,
+      historyMeasurements: { measureControlWidth: (_context, _revision, keyword) => measureWidth(keyword) },
+      surfaceWindowY: 0, measuredHistoryFeedback: 0, bar: noop, historyLimit: () => 435,
+      historyBarBottom: () => 0, availableBottom: () => 435, fontScale: () => 1, cardContentWidth: () => width,
+      publishContinueCardCoverage: noop, observeEntryHistory: noop, historyInteractive: () => true,
+      headerVeil: () => false, historyProgress: () => 1, headerMaterialRadius: () => 18,
+      historyDividerColor: () => '#000', panelBorderColor: () => '#000', headerStackShadow: () => undefined,
+      headerSurfaceAreaChange: () => noop, historyFeedbackAction: () => noop, historyAction: () => noop,
+      clearHistoryAction: () => noop, retryHistoryAction: () => noop,
+    });
+    surface.retargetHistoryViewport(true);
+    surface.header();
+    const panel = [...surface.children.values()].find(child => child instanceof Panel);
+    assert.ok(panel, 'actual SearchSurface mounts one native HistoryPanel');
+    const retainedToggle = controls.nodes(panel).find(node => node.type === 'Button' &&
+      node.accessibilityText === '展开搜索历史');
+    assert.ok(retainedToggle);
+    const check = (expanded, records) => {
+      // Deliver the real parent observer and child @Prop update. This recorder
+      // leaves native If-branch removal to ArkUI, which the direct renders cover.
+      controls.properties.flush(owner => owner === surface);
+      assert.deepEqual([...surface.children.values()].filter(child => child instanceof Panel), [panel]);
+      assert.equal(panel.layout.expanded, expanded);
+      assert.deepEqual(panel.layout.rows.flatMap(row => row.chips.map(chip => chip.keyword)), records);
+    };
+    const foldedKeywords = panel.layout.rows.flatMap(row => row.chips.map(chip => chip.keyword));
+    assert.equal(panel.layout.rows.length, 2);
+    for (const expanded of [true, false, true]) {
+      retainedToggle.onClick();
+      check(expanded, expanded ? keywords : foldedKeywords);
+    }
+    const received = [...keywords, '新收到的历史'];
+    model.history = received;
+    check(true, received);
+    width = 240;
+    surface.metricsRevision += 1;
+    check(true, received);
+    assert.equal(panel.layout.geometry.contentWidth, width - 2 * surface.spec.panelInnerInset);
   }
-});
-check('fresh-entry focus is consumed once and reset/return cannot recreate it',()=>{
-  const state=new SearchViewState();assert.equal(state.consumeInputFocusRequest(),false);
-  state.requestInputFocus();assert.equal(state.consumeInputFocusRequest(),true);assert.equal(state.consumeInputFocusRequest(),false);
-  state.reset('新查询');assert.equal(state.consumeInputFocusRequest(),false);
-  state.requestInputFocus();state.reset();assert.equal(state.consumeInputFocusRequest(),false);
-});
-check('history loading, failure and retry render independently on every entry surface', () => {
-  for (const kind of ['initial', 'sourceRequired', 'sourceLoadError']) {
-    for (const [historyStatus, label, retry] of [
-      ['loading', '正在读取搜索历史', undefined],
-      ['loadFailed', '搜索历史读取失败', '重试读取'],
+
+  if (id === 'top-scroll') {
+    const f = fixture(keywords, { expanded: true });
+    const scroll = f.nodes.find(node => node.type === 'Scroll');
+    assert.equal(scroll.align, 'Alignment.TopStart');
+    assert.equal(scroll.height, f.layout.bodyViewport);
+    assert.ok(scroll.height > 0 && f.layout.height <= 435);
+  } else if (id === 'all-history') {
+    const folded = fixture(keywords);
+    assert.equal(folded.layout.rows.length, 2);
+    assert.equal(folded.button('搜索关键词35'), undefined);
+    folded.button('展开搜索历史').onClick();
+    assert.deepEqual(actions, ['toggle']);
+    const expanded = fixture(keywords, { expanded: true });
+    expanded.button('搜索关键词35').onClick();
+    expanded.button('收起搜索历史').onClick();
+    assert.deepEqual(actions, ['toggle', '关键词35', 'toggle']);
+    assert.equal(fixture(['唯一记录']).button('展开搜索历史'), undefined);
+    const geometry = folded.layout.geometry;
+    for (const count of [1, 2]) {
+      const height = geometry.fixedHeight() + count * (geometry.buttonHeight + geometry.gap) - geometry.gap;
+      const compact = fixture(keywords, { height });
+      const open = fixture(keywords, { height, expanded: true });
+      assert.equal(compact.layout.rows.length, count);
+      assert.equal(compact.layout.toggleInHeading, true);
+      assert.equal(open.layout.toggleInHeading, true);
+      assert.equal(open.layout.height, height);
+      assert.ok(open.layout.bodyViewport >= geometry.buttonHeight);
+      assert.equal(compact.button('展开搜索历史').height, open.button('收起搜索历史').height);
+      assert.ok(open.button('搜索关键词35'));
+    }
+    await verifyRetainedPanel();
+  } else if (id === 'late-history') {
+    for (const width of [240, 620]) {
+      const empty = fixture([], { width, status: 'loading' });
+      assert.equal(empty.layout.rows.length, 0);
+      const long = '很长'.repeat(80);
+      const history = [...keywords, long];
+      const loaded = fixture(history, { width, expanded: true });
+      assert.deepEqual(loaded.layout.rows.flatMap(row => row.chips.map(chip => chip.keyword)), history);
+      assert.ok(loaded.layout.rows.flatMap(row => row.chips).every(chip => chip.width <= loaded.layout.geometry.contentWidth));
+      assert.ok(loaded.button(`搜索${long}`));
+    }
+  } else if (id === 'status-actions') {
+    const pageSource = source('features/search/ui/SearchPage.ets');
+    const names = ['sourceRequiredReason', 'sourceRequiredContent', 'sourceLoadErrorContent', 'sourceRecoveryActions',
+      'primaryPill', 'secondaryPill'];
+    const Page = createReaderBuilderProbe(pageSource, names, deps, hooks).Component;
+    for (const [kind, expectedAction] of [['sourceRequired', 'manage'], ['sourceLoadError', 'retry']]) {
+      const page = new Page(undefined, {});
+      Object.assign(page, { presentation: { kind, reason: 'noSources' }, pageInputCurrent: () => true,
+        searchStateIllustration() {}, sourceRecoveryVisible: () => true, appThemeScheme: 'day',
+        surfaceModel: { verification: { enabled: () => true } },
+        onManageSources: () => actions.push('manage'), retryOperation: () => actions.push('retry') });
+      page[kind === 'sourceRequired' ? 'sourceRequiredContent' : 'sourceLoadErrorContent']();
+      const button = controls.nodes(page).find(node => node.type === 'Button' && node.id === 'reader-search-source-recovery-primary');
+      assert.ok(button, 'source recovery has its own primary action');
+      button.onClick();
+      fixture(['本地书']).button('搜索本地书').onClick();
+      assert.deepEqual(actions.splice(0), [expectedAction, '本地书']);
+    }
+  } else if (id === 'history-feedback') {
+    for (const [status, message, retry] of [
+      ['loading', '正在读取搜索历史', undefined], ['loadFailed', '搜索历史读取失败', '重试读取'],
       ['clearFailed', '搜索历史清空失败', '重试清空'],
     ]) {
-      const f = fixture(['保留记录'], { kind, historyStatus });
-      assert.ok(f.nodes().some(node => node.type === 'Text' && node.create === label));
-      assert.ok(f.nodes().some(node => node.type === 'Text' && node.create === '保留记录'));
-      const clear = f.nodes().find(node => node.type === 'Text' && node.create === '清空记录');
-      assert.equal(clear.enabled, historyStatus !== 'loading');
-      if (retry) {
-        f.nodes().find(node => node.type === 'Text' && node.create === retry).onClick();
-        assert.deepEqual(f.actions, ['retry-history']);
-      }
+      const f = fixture(['保留记录'], { status });
+      assert.ok(f.nodes.some(node => node.type === 'Text' && node.create === message));
+      assert.ok(f.button('搜索保留记录'));
+      const clear = f.button('清空搜索历史');
+      assert.equal(clear.enabled, status !== 'loading');
+      clear.onClick();
+      if (retry !== undefined) f.button(retry).onClick();
+      assert.deepEqual(actions.splice(0), retry === undefined ? [] : ['clear', 'retry-history']);
     }
-    const empty = fixture([], { kind, historyStatus: 'ready' });
-    assert.ok(!empty.nodes().some(node => /搜索历史.*失败|正在读取搜索历史/.test(String(node.create ?? ''))));
   }
-
-});
-check('native focus waits for layout and a removed or returning page never steals it',()=>{
-  const path=new URL('../entry/src/main/ets/ui/controls/ReaderSearchField.ets',import.meta.url);
-  const frames=[],focus=[];
-  const Field=selectedProductionMethods(path,'ReaderSearchField',['aboutToAppear','aboutToDisappear','isBookField'],{
-    ReaderSearchFocusFrame:actualSearchFocusFrame});
-  const owner=Object.assign(new Field(),{mounted:false,focusGeneration:0,variant:'bookPanel',mode:'submit',focusOnAppear:true,
-    getUIContext:()=>({postFrameCallback:frame=>frames.push(frame),getFocusController:()=>({requestFocus:id=>focus.push(id)})})});
-  owner.aboutToAppear();assert.equal(focus.length,0);frames.shift().onFrame();assert.deepEqual(focus,['reader-book-search-input']);
-  owner.aboutToAppear();owner.aboutToDisappear();frames.shift().onFrame();assert.equal(focus.length,1);
-  owner.focusOnAppear=false;owner.aboutToAppear();assert.equal(frames.length,0);
-
-});
-
 }

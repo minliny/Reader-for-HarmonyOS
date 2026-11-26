@@ -2,11 +2,12 @@ import { PopupSurfaceSpec, resolvePopupSpec, ActionSheetSurfaceSpec, resolveActi
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
+import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 
 export type ReaderActionMenuVariant = 'menu' | ActionSheetSpecId;
 export type ReaderActionTone = 'default' | 'danger';
 
-export type ReaderActionMenuSpecId = 'reader-more-menu';
+export type ReaderActionMenuSpecId = 'reader-more-menu' | 'source-v9-more-menu';
 
 /** Business identity, content and admission. Geometry and disabled treatment
  * belong to the finite menu specification, not individual callers. */
@@ -46,6 +47,7 @@ export struct ReaderActionMenuSurface {
   @Prop variant: ReaderActionMenuVariant = 'menu';
   @Prop specId: ReaderActionMenuSpecId = 'reader-more-menu';
   @Prop nativeId: string = '';
+  @Prop actionIdPrefix: string = '';
   @Prop scheme: string = 'day';
   @Prop actions: ReaderMenuActionView[] = [];
   @Prop availableWidth: string | number = '100%';
@@ -85,7 +87,7 @@ export struct ReaderActionMenuSurface {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
     Stack({ alignContent: Alignment.TopStart }) {
       Row({ space: this.spec().actionIconSize > 0 ? 16 : 0 }) {
-        if (this.action(id).icon !== undefined) {
+        if (this.spec().actionIconSize > 0 && this.action(id).icon !== undefined) {
           if (this.action(id).busy) {
             LoadingProgress().width(this.spec().actionIconSize).height(this.spec().actionIconSize)
               .color(readerAppColor(this.spec().actionTextRole, this.effectiveScheme()))
@@ -93,12 +95,13 @@ export struct ReaderActionMenuSurface {
           } else {
             Image(this.action(id).icon)
               .width(this.spec().actionIconSize).height(this.spec().actionIconSize)
+              .fillColor(readerAppColor(this.spec().actionTextRole, this.effectiveScheme()))
               .objectFit(ImageFit.Contain).accessibilityLevel('no');
           }
         }
         Text(this.action(id).label)
           .fontFamily(this.spec().actionFontFamily).fontWeight(this.spec().actionFontWeight)
-          .fontSize(this.spec().actionFontSize).lineHeight(this.spec().actionLineHeight)
+          .fontSize(this.spec().actionFontSize).lineHeight(this.spec().actionLineHeight).halfLeading(true)
           .fontColor(readerAppColor(this.spec().actionTextRole, this.effectiveScheme()))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .layoutWeight(this.spec().actionIconSize > 0 ? 1 : undefined);
@@ -111,8 +114,8 @@ export struct ReaderActionMenuSurface {
       }
     }.width('100%').height(this.menuActionHeight());
     }.width('100%').height(this.menuActionHeight()).padding(0).borderRadius(0)
-      .id(this.nativeId.length > 0 ? this.nativeId + '-item-' + id : '')
-      .backgroundColor(Color.Transparent)
+      .id(this.actionIdPrefix.length > 0 ? this.actionIdPrefix + id : this.nativeId.length > 0 ? this.nativeId + '-item-' + id : '')
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.effectiveScheme(), 0, 0, this.action(id).enabled))
       .opacity(this.action(id).enabled || this.action(id).busy ? 1 : 0.45)
       .enabled(this.action(id).enabled)
       .accessibilityText(this.action(id).accessibilityLabel)
@@ -141,7 +144,7 @@ export struct ReaderActionMenuSurface {
             .backgroundColor(readerAppColor(this.action(id).tone === 'danger' ? 'TOK_DOWNLOAD_DANGER' : 'TOK_GREEN', this.effectiveScheme()))
             .borderRadius(this.actionSheetSpec().iconRadius);
         }
-        Text(this.action(id).label).fontSize(this.actionSheetSpec().labelFontSize).lineHeight(this.actionSheetSpec().labelLineHeight)
+        Text(this.action(id).label).fontSize(this.actionSheetSpec().labelFontSize).lineHeight(this.actionSheetSpec().labelLineHeight).halfLeading(true)
           .fontFamily(this.actionSheetSpec().labelFontFamily).fontWeight(this.actionSheetSpec().labelFontWeight)
           .fontColor(this.color(this.action(id).tone === 'danger' ? 'danger' : 'ink'))
           .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1);
@@ -169,12 +172,13 @@ export struct ReaderActionMenuSurface {
         this.actionSheetSpec().labelLineHeight, this.fontScale()) })
         .padding({ left: this.actionSheetSpec().rowInsetLeft, right: this.actionSheetSpec().rowInsetRight,
           top: this.actionSheetSpec().rowPaddingY, bottom: this.actionSheetSpec().rowPaddingY });
-      }.width('100%').padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-        .opacity(this.action(id).enabled ? 1 : 0.48).enabled(this.action(id).enabled)
+      }.width('100%').padding(0)
+        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.effectiveScheme(), 0, 0, this.action(id).enabled))
+        .opacity(this.action(id).enabled ? 1 : 0.45).enabled(this.action(id).enabled)
         .accessibilityGroup(true).accessibilityText(this.accessibilityLabel(this.action(id))).onClick((): void => this.commitAction(id));
       if (this.hasFollowingAction(id)) {
         Row().width(`calc(100% - ${this.actionSheetSpec().dividerInset}vp)`).height(this.actionSheetSpec().dividerHeight)
-          .backgroundColor(readerAppColor('TOK_ROW_DIVIDER', this.effectiveScheme()))
+          .backgroundColor(readerAppColor(this.actionSheetSpec().lineRole, this.effectiveScheme()))
           .margin({ left: this.actionSheetSpec().dividerInset });
       }
     }.width('100%');

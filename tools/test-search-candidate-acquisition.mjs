@@ -443,7 +443,7 @@ await check('real body storage failure stops group and preserves visible admitte
 if(id==='index-fixed-source'){
 for(const mode of ['shelf','explicit'])await check(`${mode} fixed source never auto-falls back`,async()=>{
  const f=fixture();try{f.modes.set(f.key('s1','/b0'),'empty');const x=indexFixture(f),{errors}=x;const primary=book(0),other=book(0,'s2');x.publish({kind:'results',keyword:'鸣龙',results:[primary,other],searching:false});
- if(mode==='explicit')x.navigation.show('detail');const shelf=mode==='shelf'?primary:undefined;
+ if(mode==='explicit')x.navigation.show('detail');const shelf=mode==='shelf'?{...primary,contentKind:'text'}:undefined;
  x.actions.openRemoteDetail({seed:seed(0),sourceName:'s1名称',shelfSnapshot:shelf,resumeImmediately:false,
   fallbackSeeds:[seed(0,'s2')],fallbackSourceNames:['s2名称']});
  await until(()=>x.entry.loadingMessage?.length>0 && x.entry.verdict!=='verifying');assert.deepEqual(errors,[]);
@@ -453,7 +453,7 @@ for(const mode of ['shelf','explicit'])await check(`${mode} fixed source never a
 }
 if(id==='visible-range'){
 await check('visible range callback bounds group count, skips unchanged rows and clears stopped view',async()=>{
- const Page=productionMotionMethods(path('features/search/ui/SearchPage.ets'),['publishVisibleGroups']);const calls=[];const page=Object.assign(new Page(),{presentation:{kind:'results'},visibleStart:0,visibleEnd:0,warmupGroups:[],visibleGroups:Array.from({length:2000},(_,i)=>({book:book(i),variants:[book(i)]})),onVisibleGroups:g=>calls.push(g)});
+ const Page=productionMotionMethods(path('features/search/ui/SearchPage.ets'),['publishVisibleGroups', 'scheduleMoreResults']);const calls=[];const page=Object.assign(new Page(),{ownsPageQuery:()=>false,presentation:{kind:'results'},visibleStart:0,visibleEnd:0,warmupGroups:[],visibleGroups:Array.from({length:2000},(_,i)=>({book:book(i),variants:[book(i)]})),onVisibleGroups:g=>calls.push(g)});
  page.publishVisibleGroups(10,25);assert.equal(calls[0].length,6);assert.equal(calls[0][0][0].bookId,'/b10');page.publishVisibleGroups(10,25);assert.equal(calls.length,1);
  page.presentation={kind:'results',stopped:true};page.publishVisibleGroups();assert.equal(calls.at(-1).length,0);
 });

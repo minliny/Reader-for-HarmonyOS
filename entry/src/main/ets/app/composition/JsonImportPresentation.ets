@@ -37,9 +37,9 @@ export class JsonImportPresentation {
       (url?: string): void => journey.importSources(identity, url, searchAction()), focusTargets);
   }
 
-  openRuleBundle(presentation: RulesManagementPresentation, identity: string): void {
+  openRuleBundle(presentation: RulesManagementPresentation, identity: string, focusTargets?: JsonImportFocusTargets): void {
     this.open('ruleBundle', (): boolean => presentation.operations(identity) !== undefined,
-      (url?: string): void => presentation.operations(identity)?.importBundle(url, identity));
+      (url?: string): void => presentation.operations(identity)?.importBundle(url, identity), focusTargets);
   }
 
   openRss(journey: RssJourneyPresentation, context: 'rssMerge' | 'rssReplace', identity: string): void {
@@ -60,7 +60,8 @@ export class JsonImportPresentation {
           focusTargets: focusTargets === undefined ? undefined : { preferred: focusTargets.preferred, fallback: focusTargets.fallback } };
         break;
       case 'ruleBundle':
-        this.opening = { id, context, title: '导入规则包', description: '本地和在线导入共用 Core 规则包校验；同主键以导入值为准。' };
+        this.opening = { id, context, title: '导入规则包', description: '本地和在线导入共用 Core 规则包校验；同主键以导入值为准。',
+          focusTargets };
         break;
       case 'rssMerge':
         this.opening = { id, context, title: '导入 RSS 源', description: '合并导入会保留现有 RSS 来源。' };

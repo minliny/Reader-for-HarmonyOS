@@ -1269,7 +1269,7 @@
         },
         {
           "caseId": "source-management.row-detect-offline",
-          "scope": "由正常书源列表派发单条公开停用源的检测。验证 44vp 实际 Button 的中心点击、同开次 Core 的 L1 通过及 L2 发请求前失败，并观察同一原生行的失败状态。",
+          "scope": "从公开停用书源的 28vp 检测按钮中心打开报告，开始检测后验证 Core 的 L1 通过及 L2 在 HTTP 前失败，关闭报告后验证同一原生行回写。",
           "assertions": [
             {"id": "source.row.detect.offline-dispatch", "sampleId": "detect-settled"}
           ],
@@ -1283,7 +1283,7 @@
         },
         {
           "caseId": "source-management.row-detect-offline-edge",
-          "scope": "独立未检测的公开停用源，核同一实际 Button 上缘派发、L1 通过和无网络请求的 L2 失败。",
+          "scope": "从公开未检测书源的检测按钮上缘打开报告，开始检测后验证 L1 通过且 L2 在 HTTP 前失败，关闭后核对原行回写。",
           "assertions": [{"id":"source.row.detect.offline-top","sampleId":"detect-settled"}],
           "ownerSources": [
             "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
@@ -2807,6 +2807,11 @@
         "reader-book-detail-verification"
       ]
     },
+    "source.v9-more": {"ids":["reader-source-v9-more-menu"]},
+    "source.v9-groups": {"ids":["reader-source-v9-groups"]},
+    "source.v9-batch": {"ids":["reader-source-v9-batch-dock"]},
+    "source.v9-import": {"ids":["reader-source-v9-import"]},
+    "source.v9-import-file": {"ids":["reader-source-v9-import-file"]},
     "source.tools-back": {
       "ids": [
         "reader-source-tools-back"
@@ -4735,6 +4740,36 @@
       ]
     },
     {
+      "id": "source.v9-more-open",
+      "layer": "overlay",
+      "basis": "书源管理 v9 顶栏更多操作与真实分组管理入口",
+      "requires": ["source.catalog"],
+      "checks": [{"kind":"present","node":"source.v9-more"}]
+    },
+    {
+      "id": "source.v9-groups-open",
+      "layer": "route",
+      "basis": "书源管理 v9 分组管理窗格覆盖原列表并保持其 owner",
+      "requires": [],
+      "checks": [{"kind":"present","node":"source.v9-groups"},{"kind":"absent","node":"source.list"}]
+    },
+    {
+      "id": "source.v9-batch-open",
+      "layer": "interaction",
+      "basis": "书源管理 v9 批量模式继续使用原列表并切换底部操作栏",
+      "requires": [],
+      "checks": [{"kind":"present","node":"source.list"},
+        {"kind":"descendant","node":"source.v9-batch","ancestor":"source.footer"}]
+    },
+    {
+      "id": "source.v9-import-open",
+      "layer": "route",
+      "basis": "书源管理 v9 底栏导入进入三步导入首页",
+      "requires": [],
+      "checks": [{"kind":"present","node":"source.v9-import"},
+        {"kind":"descendant","node":"source.v9-import-file","ancestor":"source.v9-import"}]
+    },
+    {
       "id": "source.tools",
       "layer": "route",
       "basis": "Phase 1 详细方案 §3 书源工具往返",
@@ -5343,6 +5378,29 @@
       }
     },
     {
+      "caseId": "reading.control-direct-sheet-navigation",
+      "states": {
+        "reading-before": "reading.controls-hidden",
+        "open-state": "reading.controls-home",
+        "directory-open": "reading.directory-full-directory-list",
+        "directory-closed": "reading.controls-home",
+        "search-open": "reading.search-full",
+        "search-closed": "reading.controls-home",
+        "replace-open": "reading.replace-full",
+        "replace-closed": "reading.controls-home"
+      },
+      "actions": {
+        "reading-before": "enter-reading",
+        "open-state": "open",
+        "directory-open": "open-directory",
+        "directory-closed": "close-directory",
+        "search-open": "open-search",
+        "search-closed": "close-search",
+        "replace-open": "open-replace",
+        "replace-closed": "close-replace"
+      }
+    },
+    {
       "caseId": "reading.control-search-morph-back",
       "states": {
         "reading-before": "reading.controls-hidden",
@@ -5616,7 +5674,7 @@
         "search-entry": "open-search",
         "search-draft": "hide-ime",
         "source-before-import": "manage-sources",
-        "source-imported": "select-source-file",
+        "source-imported": "return-source-list",
         "search-returned": "press-research-top"
       }
     },
@@ -5635,7 +5693,7 @@
         "search-entry": "open-search",
         "search-draft": "hide-ime",
         "source-before-import": "manage-sources",
-        "source-imported": "select-source-file",
+        "source-imported": "return-source-list",
         "search-returned": "press-research"
       }
     },
@@ -5779,7 +5837,7 @@
       },
       "actions": {
         "source-ready": "open-sources",
-        "detect-settled": "detect-source"
+        "detect-settled": "close-check"
       }
     },
     {
@@ -5790,7 +5848,7 @@
       },
       "actions": {
         "source-ready": "open-sources",
-        "detect-settled": "detect-source-top"
+        "detect-settled": "close-check"
       }
     },
     {
@@ -6319,6 +6377,145 @@
       }
     },
     {
+      "caseId": "source-management.v9-captured-parent-roundtrip",
+      "states": {
+        "before": "bookshelf.public-book-ready",
+        "entry-projection": "search.no-source-recovery",
+        "search-source-ready": "source.empty-library",
+        "search-more-open": "source.v9-more-open",
+        "search-groups": "source.v9-groups-open",
+        "search-source-restored": "source.empty-library",
+        "search-returned": "search.no-source-recovery",
+        "bookshelf-again": "bookshelf.public-book-ready",
+        "settings": "settings.source-return",
+        "settings-source-ready": "source.empty-library",
+        "settings-more-open": "source.v9-more-open",
+        "settings-groups": "source.v9-groups-open",
+        "settings-source-restored": "source.empty-library",
+        "settings-returned": "settings.source-return"
+      },
+      "actions": {
+        "before": null,
+        "entry-projection": "open-search",
+        "search-source-ready": "manage-sources",
+        "search-more-open": "search-open-more",
+        "search-groups": "search-open-groups",
+        "search-source-restored": "search-groups-back",
+        "search-returned": "back-to-search",
+        "bookshelf-again": "back-to-shelf",
+        "settings": "open-settings",
+        "settings-source-ready": "open-sources",
+        "settings-more-open": "settings-open-more",
+        "settings-groups": "settings-open-groups",
+        "settings-source-restored": "settings-groups-back",
+        "settings-returned": "back-to-settings"
+      }
+    },
+    {
+      "caseId": "source-management.v9-scroll-return",
+      "states": {
+        "source-ready": "source.query",
+        "fixture-sources-ready": "source.query",
+        "shallow": "source.fixed-carriers-over-list",
+        "filter-reset": "source.catalog",
+        "scrolled": "source.catalog",
+        "more-open": "source.v9-more-open",
+        "groups": "source.v9-groups-open",
+        "restored": "source.fixed-carriers-over-list",
+        "list-tail": "source.catalog"
+      },
+      "actions": {
+        "source-ready": "open-sources",
+        "fixture-sources-ready": "leave-fixture-ime",
+        "shallow": "scroll-shallow",
+        "filter-reset": "select-novel",
+        "scrolled": "scroll-list",
+        "more-open": "open-more",
+        "groups": "open-groups",
+        "restored": "groups-back",
+        "list-tail": "scroll-tail-3"
+      }
+    },
+    {
+      "caseId": "source-management.v9-group-return",
+      "states": {
+        "source-ready": "source.filter-lanes",
+        "group-open": "source.group-open",
+        "filtered": "source.filter-lanes",
+        "scrolled": "source.catalog",
+        "more-open": "source.v9-more-open",
+        "v9-child": "source.v9-groups-open",
+        "restored": "source.catalog"
+      },
+      "actions": {
+        "source-ready": "open-sources",
+        "group-open": "open-group",
+        "filtered": "select-group",
+        "scrolled": "scroll-list",
+        "more-open": "open-more",
+        "v9-child": "open-groups",
+        "restored": "v9-back"
+      }
+    },
+    {
+      "caseId": "source-management.v9-chrome-touch-delivery",
+      "states": {
+        "settings": "settings.source-return",
+        "source-ready-center": "source.catalog",
+        "opened-header-more-center": "source.v9-more-open",
+        "returned-header-more-center": "source.catalog",
+        "opened-footer-batch-center": "source.v9-batch-open",
+        "returned-footer-batch-center": "source.catalog",
+        "opened-footer-import-center": "source.v9-import-open",
+        "returned-footer-import-center": "source.catalog",
+        "settings-returned-center": "settings.source-return",
+        "source-ready-top": "source.catalog",
+        "opened-header-more-top": "source.v9-more-open",
+        "returned-header-more-top": "source.catalog",
+        "opened-footer-batch-top": "source.v9-batch-open",
+        "returned-footer-batch-top": "source.catalog",
+        "opened-footer-import-top": "source.v9-import-open",
+        "returned-footer-import-top": "source.catalog",
+        "settings-returned-top": "settings.source-return"
+      },
+      "actions": {
+        "settings": "open-settings",
+        "source-ready-center": "open-v9-sources-center",
+        "opened-header-more-center": "tap-v9-header-more-center",
+        "returned-header-more-center": "back-v9-header-more-center",
+        "opened-footer-batch-center": "tap-v9-footer-batch-center",
+        "returned-footer-batch-center": "back-v9-footer-batch-center",
+        "opened-footer-import-center": "tap-v9-footer-import-center",
+        "returned-footer-import-center": "back-v9-footer-import-center",
+        "settings-returned-center": "tap-v9-header-back-center",
+        "source-ready-top": "open-v9-sources-top",
+        "opened-header-more-top": "tap-v9-header-more-top",
+        "returned-header-more-top": "back-v9-header-more-top",
+        "opened-footer-batch-top": "tap-v9-footer-batch-top",
+        "returned-footer-batch-top": "back-v9-footer-batch-top",
+        "opened-footer-import-top": "tap-v9-footer-import-top",
+        "returned-footer-import-top": "back-v9-footer-import-top",
+        "settings-returned-top": "tap-v9-header-back-top"
+      }
+    },
+    {
+      "caseId": "source-management.v9-batch-return",
+      "states": {
+        "source-ready": "source.filter-lanes",
+        "filtered": "source.filter-lanes",
+        "scrolled": "source.catalog",
+        "v9-child": "source.v9-batch-open",
+        "restored": "source.catalog"
+      },
+      "actions": {
+        "source-ready": "open-sources",
+        "filtered": "select-novel",
+        "scrolled": "scroll-list",
+        "v9-child": "open-batch",
+        "restored": "v9-back"
+      }
+    },
+    {
       "caseId": "reading.control-appearance-navigation",
       "states": {
         "reading-before": "reading.controls-hidden",
@@ -6488,8 +6685,7 @@
       "states": {
         "reading-before": "reading.controls-hidden",
         "open-state": "reading.controls-home",
-        "enter-directory-state": "reading.directory-quick-directory-list",
-        "expand-state": "reading.directory-full-directory-list",
+        "enter-directory-state": "reading.directory-full-directory-list",
         "directory-editor-ime": "reading.directory-ime",
         "directory-editor-ime-hidden": "reading.directory-full-directory-list"
       },
@@ -6497,7 +6693,6 @@
         "reading-before": "enter-reading",
         "open-state": "open",
         "enter-directory-state": "enter-directory",
-        "expand-state": "expand",
         "directory-editor-ime": "focus-directory-editor",
         "directory-editor-ime-hidden": "directory-editor-back"
       }
@@ -6507,20 +6702,18 @@
       "states": {
         "reading-before": "reading.controls-hidden",
         "open-state": "reading.controls-home",
-        "enter-directory-state": "reading.directory-quick-directory-list",
-        "expand-state": "reading.directory-full-directory-list",
+        "enter-directory-state": "reading.directory-full-directory-list",
         "directory-editor-ime": "reading.directory-ime",
         "directory-editor-ime-hidden": "reading.directory-full-directory-list",
-        "directory-quick-state": "reading.directory-quick-directory-list"
+        "return-home-state": "reading.controls-home"
       },
       "actions": {
         "reading-before": "enter-reading",
         "open-state": "open",
         "enter-directory-state": "enter-directory",
-        "expand-state": "expand",
         "directory-editor-ime": "focus-directory-editor",
         "directory-editor-ime-hidden": "directory-editor-back",
-        "directory-quick-state": "directory-panel-back"
+        "return-home-state": "directory-panel-back"
       }
     },
     {
@@ -6566,8 +6759,7 @@
       "states": {
         "reading-before": "reading.controls-hidden",
         "open-state": "reading.controls-home",
-        "enter-directory-state": "reading.directory-quick-directory-list",
-        "expand-state": "reading.directory-full-directory-list",
+        "enter-directory-state": "reading.directory-full-directory-list",
         "directory-editor-ime": "reading.directory-ime",
         "directory-editor-ime-hidden": "reading.directory-full-directory-list",
         "selected-reading": "reading.controls-hidden"
@@ -6576,7 +6768,6 @@
         "reading-before": "enter-reading",
         "open-state": "open",
         "enter-directory-state": "enter-directory",
-        "expand-state": "expand",
         "directory-editor-ime": "focus-directory-editor",
         "directory-editor-ime-hidden": "directory-soft-ime-hide",
         "selected-reading": "select-directory-chapter"
@@ -6587,8 +6778,7 @@
       "states": {
         "reading-before": "reading.controls-hidden",
         "open-state": "reading.controls-home",
-        "enter-directory-state": "reading.directory-quick-directory-list",
-        "expand-state": "reading.directory-full-directory-list",
+        "enter-directory-state": "reading.directory-full-directory-list",
         "directory-editor-ime": "reading.directory-ime",
         "directory-editor-ime-hidden": "reading.directory-full-directory-list"
       },
@@ -6596,7 +6786,6 @@
         "reading-before": "enter-reading",
         "open-state": "open",
         "enter-directory-state": "enter-directory",
-        "expand-state": "expand",
         "directory-editor-ime": "focus-directory-editor",
         "directory-editor-ime-hidden": "directory-soft-ime-hide"
       }
@@ -6754,8 +6943,7 @@
       "states": {
         "reading-before": "reading.controls-hidden",
         "open-state": "reading.controls-home",
-        "enter-replace-state": "reading.replace-quick",
-        "expand-state": "reading.replace-full",
+        "enter-replace-state": "reading.replace-full",
         "open-layer-state": "reading.replace-overlay-open",
         "replace-editor-ime": "reading.replace-overlay-open",
         "replace-editor-ime-hidden": "reading.replace-overlay-open",
@@ -6765,7 +6953,6 @@
         "reading-before": "enter-reading",
         "open-state": "open",
         "enter-replace-state": "enter-replace",
-        "expand-state": "expand",
         "open-layer-state": "open-layer",
         "replace-editor-ime": "focus-replace-name",
         "replace-editor-ime-hidden": "replace-editor-ime-back",
@@ -6811,8 +6998,7 @@
       "states": {
         "reading-before": "reading.controls-hidden",
         "open-state": "reading.controls-home",
-        "enter-replace-state": "reading.replace-quick",
-        "expand-state": "reading.replace-full",
+        "enter-replace-state": "reading.replace-full",
         "open-layer-state": "reading.replace-overlay-open",
         "close-layer-state": "reading.replace-overlay-closed"
       },
@@ -6820,7 +7006,6 @@
         "reading-before": "enter-reading",
         "open-state": "open",
         "enter-replace-state": "enter-replace",
-        "expand-state": "expand",
         "open-layer-state": "open-layer",
         "close-layer-state": "close-layer"
       }
@@ -6830,8 +7015,7 @@
       "states": {
         "reading-before": "reading.controls-hidden",
         "open-state": "reading.controls-home",
-        "enter-search-state": "reading.search-quick",
-        "expand-state": "reading.search-full",
+        "enter-search-state": "reading.search-full",
         "editor-ime": "reading.search-ime",
         "editor-ime-hidden": "reading.search-full"
       },
@@ -6839,7 +7023,6 @@
         "reading-before": "enter-reading",
         "open-state": "open",
         "enter-search-state": "enter-search",
-        "expand-state": "expand",
         "editor-ime": "focus-editor",
         "editor-ime-hidden": "keyboard-back"
       }

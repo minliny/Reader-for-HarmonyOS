@@ -20,8 +20,22 @@ function deferred(){let resolve,reject;const promise=new Promise((a,b)=>{resolve
 const first=owner();await Host.install(first,'day');
 assert.equal(storage.get('readerAppScheme'),'day');assert.equal(storage.get('readerAppThemeMode'),'system');
 assert.equal(chrome.at(-1).values[0],registry.readerAppColor('app.window.background','day'));
+assert.equal(chrome.length,1,'startup publishes a single resolved selection');
 // Same-scheme reader selection survives restart and retains follow-system.
-await first.store.change(s=>appearance.setReaderAppearanceTheme(s,'green','day'));await first.store.flush();
+await (await Host.selectReader('green',()=>true)).saved;
+await Host.selectManga('day',()=>true);
+assert.equal(Host.backup().reader.id,'green','selecting the already visible manga paper keeps the specific novel paper');
+assert.equal(Host.backup().appMode,'system');
+await (await Host.selectReaderDefault('green',()=>true)).saved;
+await Host.selectManga('night',()=>true);
+assert.equal(storage.get('readerAppScheme'),'night');
+assert.equal(Host.backup().reader.id,'night');
+await Host.selectManga('day',()=>true);
+assert.equal(storage.get('readerAppScheme'),'day');
+assert.equal(Host.backup().reader.id,'green','cross-scheme manga choice restores the saved matching novel paper');
+await (await Host.selectReader('greenNight',()=>true)).saved;
+assert.equal(storage.get('readerAppScheme'),'night','novel paper publishes to the same scheme observed by manga');
+await Host.selectApp('system');
 await Host.install(owner(first.disk.value),'day');assert.equal(Host.backup().reader.id,'green');assert.equal(Host.backup().appMode,'system');
 await Host.systemChanged('night');assert.equal(Host.backup().reader.id,'night');assert.equal(Host.backup().appMode,'system');
 const pending=deferred();Host.setRecoveryBarrier(()=>pending.promise);

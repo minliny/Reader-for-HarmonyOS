@@ -1,10 +1,12 @@
 import { readerSurfaceElevation } from './ReaderSurfaceSpecs';
 import { DIRECTORY_CHROME_VISUAL, mangaDirectoryColor } from '../foundation/ReaderDirectoryChromeVisual';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { TOK_BORDER_W, TOK_RADIUS_XL } from '../foundation/ReaderTokens';
 import type { ReaderRaisedShape } from '../layout/ReaderRaisedShape';
 
 export type ReaderPanelFrameId = 'reader' | 'reader-menu' | 'reader-card' | 'reader-full-card' | 'reader-soft-control' | 'floating-action-dock' |
+  'reader-island-card' | 'reader-island-emphasis' |
   'reader-quick-fill' | 'reader-full-fill' | 'manga-toolbar' | 'manga-dock' |
   'manga-directory-sheet' | 'manga-directory-rail' | 'manga-chapter-end';
 
@@ -27,7 +29,7 @@ export class ReaderPanelFrame implements AttributeModifier<CommonAttribute> {
       case 'floating-action-dock':
         instance.backgroundColor(readerAppColor('app.surface.dock', this.scheme))
           .border({ width: TOK_BORDER_W, color: readerAppColor('app.navigation.floatingBorder', this.scheme) })
-          .borderRadius(this.raisedShape?.radius ?? TOK_RADIUS_XL).clip(true)
+          .borderRadius(this.raisedShape?.radius ?? TOK_RADIUS_XL).clip(false)
           .shadow(readerSurfaceElevation('raised', this.scheme));
         return;
       case 'reader':
@@ -42,6 +44,14 @@ export class ReaderPanelFrame implements AttributeModifier<CommonAttribute> {
           .border({ width: TOK_BORDER_W,
             color: readerAppColor(this.id === 'reader-card' ? 'TOK_LINE_STRONG' : 'TOK_LINE', this.scheme) })
           .borderRadius(this.id === 'reader-card' ? 8 : 12);
+        return;
+      case 'reader-island-card':
+      case 'reader-island-emphasis':
+        instance.backgroundColor(readerAppColor(this.id === 'reader-island-emphasis' ?
+          'TOK_READ_CARD_EMPHASIS' : 'TOK_READ_ELEVATED', this.scheme))
+          .border({ width: TOK_BORDER_W, color: readerAppColor(this.id === 'reader-island-emphasis' ?
+            'TOK_PRIMARY_BORDER' : 'TOK_LINE', this.scheme) })
+          .borderRadius(12);
         return;
       case 'reader-soft-control':
         instance.backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.scheme))
@@ -62,14 +72,15 @@ export class ReaderPanelFrame implements AttributeModifier<CommonAttribute> {
   private applyMangaFrame(instance: CommonAttribute): void {
     const surface = mangaDirectoryColor('surface', this.scheme);
     const line = mangaDirectoryColor('line', this.scheme);
-    const dark = this.scheme === 'night';
     instance.backgroundColor(surface);
     if (this.id === 'manga-directory-sheet') {
       const radius = this.side ? 0 : DIRECTORY_CHROME_VISUAL.quickSheetRadius;
       instance.border(this.side ? { width: { left: 1 }, color: line } : undefined)
         .borderRadius({ topLeft: radius, topRight: radius, bottomLeft: 0, bottomRight: 0 }).clip(true)
-        .shadow({ radius: this.side ? 32 : 48, color: this.side ? '#11000000' : dark ? '#66000000' : '#33000000',
-          offsetX: this.side ? -14 : 0, offsetY: this.side ? 0 : -16 });
+        .shadow(this.side ? {
+          radius: 32 * readerWindowMetrics().densityPixels, color: readerAppColor('app.shadow.sheet', this.scheme),
+          offsetX: -14 * readerWindowMetrics().densityPixels, offsetY: 0,
+        } : readerSurfaceElevation('sheet', this.scheme));
       return;
     }
     if (this.id === 'manga-directory-rail') {
@@ -78,13 +89,13 @@ export class ReaderPanelFrame implements AttributeModifier<CommonAttribute> {
     }
     instance.border({ width: TOK_BORDER_W, color: line });
     if (this.id === 'manga-chapter-end') {
-      instance.borderRadius(20).shadow({ radius: dark ? 0 : 16, color: dark ? '#44000000' : '#1A594632', offsetX: 0, offsetY: 4 });
+      instance.borderRadius(20).shadow(readerSurfaceElevation('popover', this.scheme));
     } else if (this.id === 'manga-toolbar') {
       instance.borderRadius(DIRECTORY_CHROME_VISUAL.headerRadius).clip(true)
-        .shadow({ radius: dark ? 0 : 8, color: dark ? '#22000000' : '#1A594632', offsetX: 0, offsetY: 3 });
+        .shadow(readerSurfaceElevation('floating', this.scheme));
     } else {
       instance.borderRadius(24).clip(true)
-        .shadow({ radius: 8, color: dark ? '#44000000' : '#1A594632', offsetX: 0, offsetY: -3 });
+        .shadow(readerSurfaceElevation('sheet', this.scheme));
     }
   }
 }

@@ -12,7 +12,8 @@ const { join } = await import('node:path');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
-const { deriveReaderSessionCapsule } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionCapsuleModel.ts');
+const { deriveReaderSessionCapsule, readerTtsSessionBlocksAutoPageStart } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionCapsuleModel.ts');
+const { READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT } = await import('../entry/src/main/ets/features/reading/ui/ReaderPageChromeLayout.ts');
 const { buildReaderSessionLaunchGeometry, readerSessionLaunchDesign, sampleReaderSessionLaunch } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
 const { ReaderSessionMorphSourceMeasurement } = await import('../entry/src/main/ets/features/reading/ui/ReaderSessionMorphState.ts');
 const pageGesture = await import('../entry/src/main/ets/features/reading/ui/ReaderPageGestureState.ts');
@@ -226,6 +227,9 @@ check('first load, real failure, controls, obstruction and exit still hide the c
 if (scope === 'pointer-routing') {
 const { readerControlHostInputEnabled } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
 const { selectedProductionComponentCallback } = await import('./lib/selected-production-methods.mjs');
+const { productionReaderPressFeedback } = await import('./lib/reader-press-feedback-probe.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
 // The actual parent __Common__ and raw Row are siblings in LRE. A zIndex on
 // the Stage inside Panel cannot repair a lower/equal parent. This controlled
 // pointer seam verifies emitted attributes/callback dispatch, not native hit
@@ -237,10 +241,21 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
   const capsuleTree = ts.createSourceFile(virtualFilePath('ReaderSessionCapsule.ets'), capsuleText,
     ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   const frameSource = capsuleTree.statements.map(statement => statement.getText(capsuleTree))
-    .filter(value => /^export (?:const READER_SESSION_CAPSULE_(?:RADIUS|SHADOW)\b|class ReaderSessionCapsuleFrame\b)/.test(value))
+    .filter(value => /^export (?:const READER_SESSION_CAPSULE_(?:RADIUS|SHADOW)\b|class ReaderSessionCapsule(?:Frame|MetricsCache)\b)/.test(value))
     .join('\n');
-  const capsuleFrame = new Function('readerAppColor',
-    `${stripTypeScriptTypes(frameSource.replace(/^export /gm, ''))}; return { ReaderSessionCapsuleFrame, READER_SESSION_CAPSULE_RADIUS };`)(readerAppColor);
+  const measure = (_context, type) => ({ measured: true, metrics: { width: type === 'tts' ? 94 : 96,
+    paintHeight: 24, targetHeight: 44, labelWidth: 42, labelHeight: 16, countdownSize: 16 } });
+  const ReaderPressFeedback = productionReaderPressFeedback();
+  const capsuleFrame = new Function('readerAppColor', 'ReaderPressFeedback', 'readReaderSessionCapsuleMeasurement',
+    `${stripTypeScriptTypes(frameSource.replace(/^export /gm, ''))}; return {
+      ReaderSessionCapsuleFrame, READER_SESSION_CAPSULE_RADIUS, ReaderSessionCapsuleMetricsCache,
+    };`)(readerAppColor, ReaderPressFeedback, measure);
+  const TouchType = { Down: 'down', Move: 'move', Up: 'up', Cancel: 'cancel' };
+  const pressSource = readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderPressMotion.ets', import.meta.url), 'utf8');
+  const { readerPressPointer } = pureModuleProbe(pressSource.slice(pressSource.indexOf('export function readerPressPointer')),
+    'PressPointer.ets', { TouchType }, ['readerPressPointer']);
+  const paintInputs = { ...createArkUIPropertyRuntimeProbe().sdk, ...capsuleFrame,
+    readerPressPointer, readerWindowMetrics: () => ({ densityPixels: 1 }) };
   let panelStatement, panelCall;
   function locate(node) {
     if (ts.isExpressionStatement(node) && node.getText(tree).startsWith('ReaderControlPanel({')) panelStatement = node;
@@ -256,22 +271,22 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
   const Parent = createReaderBuilderProbe(`@Component struct CapsuleParentProbe { build() { ${parentText} } }`, ['build'],
     { ReaderControlPanel: CapsuleChild }, { childSources: { ReaderControlPanel: panelText } }).Component;
   const Raw = createReaderBuilderProbe(rawText, ['build']).Component;
-  const Stage = createReaderBuilderProbe(stageText, ['build', 'sourceSharpContent', 'sourceBlurContent',
-    'effectiveSourceSurfaceColor', 'effectiveSourceBorderColor', 'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor', 'metrics'], {
-    ...capsuleFrame, measureReaderSessionCapsule: (_context, type) => ({ width: type === 'tts' ? 94 : 96,
-      paintHeight: 24, targetHeight: 44, labelWidth: 42, labelHeight: 16, countdownSize: 16 }),
+  const Stage = createReaderBuilderProbe(stageText, ['build', 'sourceSharpContent',
+    'effectiveSourceSurfaceColor', 'effectiveSourceBorderColor', 'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor',
+    'metrics', 'metricsCache', 'metricsRevision', 'pressPointer', 'paintDensity', 'sample', 'interactionEnabled',
+    'onInteractionChanged', 'aboutToDisappear'], {
+    ...paintInputs, READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT,
     ReaderSessionCapsuleLeading: CapsuleChild, ReaderSessionCapsulePause: CapsuleChild,
     readerSessionCapsuleAccessibility: () => 'capsule',
   }, { childSources: { ReaderSessionCapsuleLeading: capsuleText, ReaderSessionCapsulePause: capsuleText } }).Component;
   const Static = createReaderBuilderProbe(capsuleText, ['build', 'finalWidth',
-    'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor', 'numericLength', 'metrics', 'measurementHandler'], {
-    ...capsuleFrame, measureReaderSessionCapsule: (_context, type) => ({ width: type === 'tts' ? 94 : 96,
-      paintHeight: 24, targetHeight: 44, labelWidth: 42, labelHeight: 16, countdownSize: 16 }),
+    'effectiveTextColor', 'effectivePrimaryColor', 'effectiveOnPrimaryColor', 'numericLength', 'metrics', 'measurementHandler',
+    'metricsCache', 'metricsRevision', 'pressPointer', 'interactionEnabled', 'onInteractionChanged', 'aboutToDisappear'], {
+    ...paintInputs,
     ReaderSessionCapsuleLeading: CapsuleChild, ReaderSessionCapsulePause: CapsuleChild,
     READER_SESSION_CAPSULE_HEIGHT: 24, readerSessionCapsuleMinimumWidth: type => type === 'tts' ? 94 : 96,
     readerSessionCapsuleAccessibility: () => 'capsule',
   }, { componentName: 'ReaderSessionCapsule', childSources: { ReaderSessionCapsuleLeading: capsuleText, ReaderSessionCapsulePause: capsuleText } }).Component;
-  const TouchType = { Down: 'down', Move: 'move', Up: 'up', Cancel: 'cancel' };
   let pointerTime = 1000;
   const Pointer = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/ReaderPageInteractionLayer.ets', import.meta.url), [
     'acceptCurrentInput', 'handleTouch', 'startRawPointer', 'updateRawPointer', 'finishRawPointer', 'updateVelocity', 'eventTimeMs',
@@ -316,7 +331,7 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
     assert.equal(pointer.raw.activePointerId, -1);
   }
   const Toggle = productionMotionMethods(file, ['toggleSessionCapsule', 'sessionLaunchBusinessStatus', 'pageTurnInputPhase',
-    'readerInputIsCurrent', 'toggleTts', 'toggleAutoPage'], { readerControlHostInputEnabled });
+    'readerInputIsCurrent', 'toggleTts', 'toggleAutoPage'], { readerControlHostInputEnabled, readerTtsSessionBlocksAutoPageStart });
   const oldSource = source.replace('if (!this.readerInputIsCurrent() || this.pageTurnInputPhase()',
     'if (this.pageTurnInputPhase()');
   assert.notEqual(oldSource, source);
@@ -330,7 +345,8 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
     rmSync(mutantDirectory, { recursive: true, force: true });
   }
   const raw = new Raw(undefined, {}); let rawHits = 0;
-  Object.assign(raw, { interactionEnabled: true, allowTextSelection: false, handleTouch: () => rawHits++ }); raw.initialRender();
+  Object.assign(raw, { interactionEnabled: true, allowTextSelection: false, accessiblePageActions() {},
+    handleTouch: () => rawHits++ }); raw.initialRender();
   const rawActor = [...raw.nodes.values()].find(node => node.onTouch);
   assert.equal(rawActor.zIndex, 7); assert.equal(rawActor.width, '100%'); assert.equal(rawActor.height, '100%');
   assert.equal(rawActor.hitTestBehavior, 'HitTestMode.Block');
@@ -350,7 +366,7 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
       const calls = [], launch = { geometry, generation: 1, ownership: 'stage', businessStatus: status,
         desiredPlaying: status !== 'paused', sample: sampleReaderSessionLaunch(time, geometry, curves) };
       const host = Object.assign(new Toggle(), { sessionLaunch: launch, pageTurnGestureState: { phase: 'idle' },
-        mounted: true, exitRequested: false, appForeground: true, windowChromeActive: true,
+        mounted: true, exitRequested: false, appForeground: true, windowChromeActive: true, phase: 'ready',
         interactionBlocked: false, controlObscured: false, isReaderIdentityCurrent: () => true,
         inputCurrent: () => liveInput,
         ttsState: { status: geometry.type === 'tts' ? status : 'idle' }, ttsAvailabilityResolved: true,
@@ -359,9 +375,13 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
         ttsCoordinator: { setDesiredPlaying: value => calls.push(['desired', value]),
           pause: async () => { calls.push(['tts.pause']); }, resume: async () => { calls.push(['tts.resume']); } },
         createTtsPlayIntent: () => ({}), isTtsPlayIntentCurrent: () => true, cancelPendingAutoPageStart() {},
+        isControlPlaybackPresentationCurrent: () => false,
         cancelPendingTtsPlay() {}, captureControlPlaybackPresentation() {}, stopAutoPage() {},
+        startAutoPageSession: resuming => calls.push([resuming ? 'auto.resume' : 'auto.start']),
         pauseAutoPage: reason => calls.push(['auto.pause', reason]),
-        autoPageCoordinator: { resume: () => calls.push(['auto.resume']) },
+        controlVerification: { observing: () => false },
+        autoPageCoordinator: { pendingStart: () => false, beginStart: () => 1, admitStart: () => true,
+          resume: () => calls.push(['auto.resume']) },
         hideControl() {}, armAutoPageTimer() {}, armAutoPageSessionTimer() {},
       });
       parent.sessionLaunch = launch; parent.replay();
@@ -373,7 +393,7 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
         sourceSurfaceTopInset: 0, sourceHighlightColor: '#00000000', sourceGradientStart: '', sourceGradientEnd: '',
         sourceBorderWidth: 1, sourceShadowColor: '#00000000', sourceShadowRadius: 0, sourceShadowOffsetY: 0,
         textColor: '', primaryColor: '', onPrimaryColor: '', themeScheme: 'day', shadowColor: '#00000000',
-        sourceClip: () => ({}), sourceSharpContent() {}, sourceBlurContent() {},
+        sourceClip: () => ({}), sourceSharpContent() {},
         onToggle: selectedProductionComponentCallback(
           new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url),
           'ReaderSessionLaunchStage', 'onToggle', {
@@ -431,6 +451,7 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
       interactionBlocked: false, controlObscured: false, isReaderIdentityCurrent: () => true,
       inputCurrent: () => liveInput,
       ttsState: { status: 'playing' }, ttsAvailabilityResolved: true, sessionCapsuleSnapshot: () => ({ type: 'tts' }),
+      controlVerification: { observing: () => false },
       createTtsPlayIntent: () => ({}), isTtsPlayIntentCurrent: () => true, cancelPendingAutoPageStart() {},
       cancelPendingTtsPlay() {}, captureControlPlaybackPresentation() {},
       ttsCoordinator: { pause: async () => calls.push('pause') },
@@ -443,7 +464,7 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
       textColor: '#000000', primaryColor: '#000000', onPrimaryColor: '#ffffff', themeScheme: 'day', shadowColor: '#00000000',
       sourceSurfaceTopInset: 0, sourceHighlightColor: '#00000000', sourceGradientStart: '', sourceGradientEnd: '',
       sourceBorderWidth: 1, sourceShadowColor: '#00000000', sourceShadowRadius: 0, sourceShadowOffsetY: 0,
-      sourceClip: () => ({}), sourceSharpContent() {}, sourceBlurContent() {}, onMeasured() {},
+      sourceClip: () => ({}), sourceSharpContent() {}, onMeasured() {},
       onToggle: label === 'static capsule'
         ? selectedProductionComponentCallback(file, 'ReaderSessionCapsule', 'onToggle', host)
         : selectedProductionComponentCallback(
@@ -454,6 +475,27 @@ check('SDK capsule parent ownership, real Stage click and Host dispatch', () => 
     actorOwner.initialRender();
     const actor = [...actorOwner.nodes.values()].find(node => node.onClick);
     assert.equal(actor.type, 'Button', `${label}: pointer barrier and click share the native actor`);
+    const updateInput = (interactionEnabled, sample = actorOwner.sample) => actorOwner.updateStateVars({ interactionEnabled, sample });
+    actor.onTouch(touch(TouchType.Down));
+    assert.equal(actorOwner.pressPointer, 7);
+    updateInput(false);
+    assert.equal(actorOwner.pressPointer, -1, `${label}: disable clears press when no UP is delivered`);
+    updateInput(true);
+    actorOwner.replay();
+    assert.equal(actorOwner.pressPointer, -1, `${label}: re-enable leaves the capsule at rest`);
+    if (label === 'launch Stage') {
+      actor.onTouch(touch(TouchType.Down));
+      assert.equal(actorOwner.pressPointer, 7);
+      const visible = actorOwner.sample;
+      updateInput(true, { ...visible, pauseOpacity: 0 });
+      assert.equal(actorOwner.pressPointer, -1, 'hiding the pause actor clears its outstanding touch');
+      updateInput(true, visible);
+      actorOwner.replay();
+    }
+    actor.onTouch(touch(TouchType.Down));
+    assert.equal(actorOwner.pressPointer, 7);
+    actorOwner.aboutToDisappear();
+    assert.equal(actorOwner.pressPointer, -1, `${label}: disappearance clears an outstanding touch`);
     liveInput = false;
     actor.onClick();
     assert.deepEqual(calls, [], `${label}: lost original live input cannot pause`);

@@ -2,6 +2,7 @@ import { pureModuleProbe } from './ets-pure-module-probe.mjs';
 import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import { readFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './reader-control-builder-probe.mjs';
+import { readerEditingSdk } from './reader-editing-sdk-probe.mjs';
 import { boundedMembers } from './bounded-surface-sdk-probe.mjs';
 import { foundationControls, readerFoundationTokens } from './reader-foundation-control-probe.mjs';
 import { readerAppColor } from '../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
@@ -20,7 +21,7 @@ export function cardSdk({source=read('ReaderCard'),specSource=read('ReaderCardSp
  // that platform lookup while retaining the installed value/dependency class.
  const ActualSimple=properties.sdk.ObservedPropertySimplePU;
  class StorageLinkedSimple extends ActualSimple {constructor(value,owner,name){super(name==='appThemeScheme'?scheme:value,owner,name);}}
- const deps={...foundation.dependencies,...readerFoundationTokens,readerAppColor,resolveReaderCardSpec,ObservedPropertySimplePU:StorageLinkedSimple};
+ const deps={...foundation.dependencies,...readerEditingSdk(),...readerFoundationTokens,readerAppColor,resolveReaderCardSpec,ObservedPropertySimplePU:StorageLinkedSimple};
  require(sdk+'/lib/validate_ui_syntax.js').builderParamObjectCollection.set('ReaderCard',new Set(['content']));
  const childSources={...foundation.hooks.childSources,ReaderCard:source,
   ReaderSectionHeading:read('ReaderSectionHeading','ui/controls'),

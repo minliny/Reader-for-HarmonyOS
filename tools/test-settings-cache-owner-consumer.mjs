@@ -9,14 +9,19 @@ const { stripTypeScriptTypes, createRequire }=await import('node:module');
 const { ReaderWriteEvidence }=await import('../entry/src/main/ets/app/ReaderWriteEvidence.ts');
 const { projectOperationFacts }=await import('../entry/src/main/ets/app/ReaderOperationFacts.ts');
 const { readerRecoveryView }=await import('../entry/src/main/ets/app/ReaderRecoveryProjection.ts');
+const { READER_FEEDBACK_EXTENDED_MS }=await import('../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts');
 const { ReaderNativeAlertOwner }=await import('./lib/reader-native-alert-sdk-probe.mjs');
 const { ReaderCoreRequestError, isReaderCoreTransactionPendingError }=await import('../entry/vendor/core-harmony/sdk/reader_core.ts');
+const { readerHostFilesDirectory }=await import('../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts');
 const { runtimeOwnerIdentityProbe }=await import('./lib/reader-runtime-admission-probe.mjs');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
 const { createReaderBuilderProbe }=await import('./lib/reader-control-builder-probe.mjs');
 const { boundedSurfaceSdk }=await import('./lib/bounded-surface-sdk-probe.mjs');
+const { pureModuleProbe }=await import('./lib/ets-pure-module-probe.mjs');
 const {fixture: generalSettingsFixture,defaults}=await import('./lib/general-settings-persistence-probe.mjs');
 const file=name=>new URL('../entry/src/main/ets/'+name,import.meta.url),source=name=>readFileSync(file(name),'utf8');
+const { emptyReaderAppBuildInfo }=pureModuleProbe(source('platform/bundle/ReaderAppBuildInfo.ts'),
+ 'ReaderAppBuildInfo.ts',{},['emptyReaderAppBuildInfo']);
 const CacheFeedback=productionMotionMethods(file('features/settings/ui/SettingsPage.ets'),['feedbackMessage']);
 const inlineMessage=snapshot=>Object.assign(new CacheFeedback(),{cacheCleanup:snapshot,resetMessage:'',recovery:()=>({visible:false})}).feedbackMessage();
 const ordinary=text=>stripTypeScriptTypes(text.replace(/^export type \{[^\n]+from [^\n]+\n/gm,'').replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'').replace(/^@Observed\n/gm,'').replace(/^export /gm,''));
@@ -32,14 +37,14 @@ const good=()=>({scope:'text',removedContentBytes:10,deletedBytes:20,deletedFile
 const typedPending=()=>new ReaderCoreRequestError({protocolVersion:1,requestId:1,type:'error',error:{code:'TRANSACTION_PENDING',message:'pre-execution gate',retryable:true,details:{transactionKind:'persistenceMutation',pendingHostOperationCount:0,retryAfterMillis:0}}});
 class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
 const sdkRequire=createRequire(import.meta.url),sdkRoot=resolveEtsLoaderRoot();
-const Storage=load('features/downloads/application/SharedDownloadStorageGateway.ts','SharedDownloadStorageGateway',{ReaderCoreRequestError,isReaderCoreTransactionPendingError,SharedDownloadIntentPreferences:class{}});const RuntimeCleanup=productionMotionMethods(file('app/ReaderRuntimeOwner.ts'),['clearTextRebuildableCache','readSettingsTextCleanup']);
+const Storage=load('features/downloads/application/SharedDownloadStorageGateway.ts','SharedDownloadStorageGateway',{ReaderCoreRequestError,isReaderCoreTransactionPendingError,SharedDownloadIntentPreferences:class{}});const RuntimeCleanup=productionMotionMethods(file('app/ReaderRuntimeOwner.ts'),['clearTextRebuildableCache','readSettingsTextCleanup','reconcileSettingsTextCleanup']);
 function fixture(mode='valid'){
  const calls=[],notices=[];let currentMode=mode,gate,report=good(),textJournal,remainingEntries=10,head,receipt,raw='',uuid=0,queryMode,committedParams;const queries=[];
  const fileIo={OpenMode:{READ_ONLY:0,READ_WRITE:2},async readText(){return raw;},async open(){return{fd:1};},async close(){},async fsync(){},
   AtomicFile:class {startWrite(){return{on(){},end:(value,_encoding,callback)=>{this.raw=value;queueMicrotask(callback);}};}finishWrite(){raw=this.raw;}failWrite(){}}};
  const replaceReaderAtomicSnapshot=load('app/ReaderAtomicSnapshotFile.ts','replaceReaderAtomicSnapshot',{fileIo});
  ActualCacheStore=load('features/reading/application/ReadingOperationIntents.ts','CacheClearOperationIntentStore',{
-  fileIo,replaceReaderAtomicSnapshot,ReaderRuntimeOwner:Runtime,ReaderCoreRequestError,isReaderCoreTransactionPendingError,
+  fileIo,replaceReaderAtomicSnapshot,readerHostFilesDirectory,ReaderRuntimeOwner:Runtime,ReaderCoreRequestError,isReaderCoreTransactionPendingError,
   util:{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`}});
  const runtime={getUIAbilityContext:()=>({filesDir:'/cache-fixture'}),async request(method,params,options){
   if(method==='cache.storage.summary')return{data:good()};
@@ -69,7 +74,9 @@ function fixture(mode='valid'){
  // Actual Runtime delegation and whole storage owner execute unchanged.
  // Only disk inventory/receipts and Core transaction responses are ports.
  const disk={readPolicy:async()=>({capacityBytes:1024,expiryDays:30}),captureReadingStorageInventory:async()=>({files:[],hostImageChapters:[],protectedChapters:[]}),
-  readingStorageCleanupReceipt:async()=>({deletedBytes:report.deletedBytes??0,deletedFiles:report.deletedFiles??0}),
+  isReadingStorageInventoryCurrent:()=>true,
+  readingStorageCleanupReceipt:async()=>{if(currentMode==='receipt-fail')throw Error('disk statistics temporarily unavailable');
+    return {deletedBytes:report.deletedBytes??0,deletedFiles:report.deletedFiles??0};},
   readingStorageSummary:async()=>({totalBytes:0,retainedBytes:0,automaticBytes:0,cleanableBytes:0}),readingStorageBookIndex:async()=>new Map(),
   clearChapter:async()=>assert.fail('empty removal response cannot clear a chapter')};
  const persistence={loadLegacyProtection:async()=>[],saveLegacyProtection:async()=>{},loadSettingsTextCleanup:async()=>structuredClone(textJournal),saveSettingsTextCleanup:async value=>{textJournal=structuredClone(value);}};
@@ -77,6 +84,7 @@ function fixture(mode='valid'){
  const storage=new Storage(runtime,disk,persistence);runtime.state='ready';runtime.getDownloadStorageGateway=()=>storage;
  runtime.clearTextRebuildableCache=RuntimeCleanup.prototype.clearTextRebuildableCache;
  runtime.readSettingsTextCleanup=RuntimeCleanup.prototype.readSettingsTextCleanup;
+ runtime.reconcileSettingsTextCleanup=RuntimeCleanup.prototype.reconcileSettingsTextCleanup;
 
  installed=runtime;
  const general=generalSettingsFixture();general.setActive(runtime);const actual=general.host();assert.equal(actual.host.bindPresentation(runtime,'cache-compiler',()=>true),true);
@@ -113,20 +121,24 @@ function fixture(mode='valid'){
  const declaration=tree.statements.find(node=>node.members&&node.members.some(member=>member.name?.getText(tree)==='build'));
  const names=[...declaration.members.filter(node=>ts.isPropertyDeclaration(node)).map(node=>node.name.getText(tree)),
   'cacheActionRow','cacheActionLabel','requestClearTextCache','clearTextCache','canClearTextCache',
-  'generalConfirmationCurrent','settingsNavigationCurrent','onCacheCleanupChanged','onSnapshotChanged','syncSnapshotValues',
+  'generalConfirmationCurrent','settingsNavigationCurrent','settingsInputIsCurrent','onCacheCleanupChanged','onSnapshotChanged','syncSnapshotValues',
   'onOperationChanged','operationFeedbackIdentity','cacheFeedbackIdentity','showFeedbackToast','hasPendingSettings','hasPendingCleanup','recovery'];
- function props(){const scene=createReaderBuilderProbe(source('app/composition/SettingsScenes.ets'),['settings'],{SettingsPage:Child},{childSources:{SettingsPage:pageSource}}).owner;
+ function props(){const scene=createReaderBuilderProbe(source('app/composition/SettingsScenes.ets'),['settings','inputIsCurrent'],{SettingsPage:Child},{childSources:{SettingsPage:pageSource}}).owner;
   Object.assign(scene,{route:index.route,section:'general',presentation,expandedLayout:false});
   scene.settings(presentation.identity);return [...scene.children.values()][0].params;}
  function page(identity='settings-back:test'){
-  const params=props(),owner=sdk.consumer(pageSource,names,{ReaderRuntimeOwner:Runtime,ReaderNativeAlertOwner,readerRecoveryView},params);
+  const params=props(),owner=sdk.consumer(pageSource,names,{ReaderRuntimeOwner:Runtime,ReaderNativeAlertOwner,
+   readerRecoveryView,emptyReaderAppBuildInfo,READER_FEEDBACK_EXTENDED_MS},params);
   const dialogs=[];
   Object.assign(owner,{mounted:true,themeOwner:runtime,temporaryBackIdentity:identity,appThemeScheme:'day',
    lastOperationFeedback:owner.operationFeedbackIdentity(),lastCacheFeedback:owner.cacheFeedbackIdentity(),
    transientFeedback:{show(_context,options,current){if(current())notices.push(options.message);}},
    getUIContext:()=>({showAlertDialog:options=>dialogs.push(options)})});
   owner.onCacheCleanupChanged();owner.cacheActionRow();
-  const row=()=>sdk.nodes(owner).find(node=>node.type==='Button'&&node.accessibilityText==='缓存清理');
+  const row=()=>{
+   const label=owner.cacheActionLabel();
+   return sdk.nodes(owner).find(node=>node.type==='Button'&&node.accessibilityText===(label==='清理'?'清理文字缓存':label));
+  };
   return{owner,dialogs,row,confirm(){row().onClick();dialogs.at(-1)?.secondaryButton.action();},label:()=>{owner.replay();return sdk.nodes(owner).find(node=>node.type==='Text'&&node.create===owner.cacheActionLabel())?.create;},
    update(){owner.updateStateVars({...props()});owner.onCacheCleanupChanged();owner.replay();}};
  }
@@ -143,7 +155,9 @@ if(id==='confirmation'){
 }
 if(id==='confirmed'){
 {
- const f=fixture(),p=f.page();assert.equal(p.owner.cacheActionLabel(),'清理文字缓存');p.confirm();p.confirm();await until(()=>f.snapshot()?.confirmation==='confirmed');p.update();
+ const f=fixture(),p=f.page();assert.equal(p.owner.cacheActionLabel(),'清理');assert.equal(p.row().accessibilityText,'清理文字缓存');
+ p.confirm();assert.equal(p.dialogs.length,1,'current native action presents the cleanup confirmation');p.confirm();
+ await until(()=>f.snapshot()!==undefined&&!f.snapshot().busy);p.update();
  assert.equal(f.calls.length,1);assert.equal(p.owner.cacheActionLabel(),'已清理');assert.equal(p.label(),'已清理');assert.equal(f.snapshot().operation.value.removedContentBytes,10);
  assert.equal(f.snapshot().operation.fact,'current');assert.equal(f.snapshot().operation.canRetry,false);
  assert.equal(f.notices.length,1,'a confirmed result produces one transient feedback');
@@ -231,6 +245,20 @@ if(id==='pre-dispatch-retire'){
  const f=fixture();f.index.settingsHost.emitCacheCleanup=snapshot=>{if(snapshot.busy)f.index.navigationGeneration++;};
  await f.index.clearTextCache();assert.equal(f.calls.length,0);assert.equal(f.snapshot().confirmation,'undispatched','retired before actual Gateway admission stays undispatched');
 }
+if(id==='reconcile-staged-text'){
+ const f=fixture('receipt-fail'),p=f.page();
+ p.confirm();await until(()=>f.snapshot()?.busy===false);
+ assert.equal(f.snapshot().confirmation,'confirmed');
+ assert.equal(f.snapshot().operation.canRetry,true);
+ assert.equal((await f.runtime.readSettingsTextCleanup()).phase,'host_completed');
+ f.mode('valid');
+ p.owner.mounted=false;f.index.route='bookshelf';f.index.openSettings();
+ const reopened=f.page('settings-back:staged-recovery');
+ await until(()=>f.snapshot()?.busy===false);reopened.update();
+ assert.equal(reopened.label(),'已清理');
+ assert.equal(f.snapshot().operation.value.removedContentBytes,10);
+ assert.equal(f.calls.length,1,'opening Settings recovers the receipt without dispatching text cleanup again');
+}
 }
 if(id==='publication-reentry'){
 {
@@ -247,4 +275,5 @@ if(id==='publisher-failure'){
 }finally{installed=undefined;}
 }
 const definitions={"confirmation": "confirmation actual scoped owner/gateway/storage path; controlled Core/OS ports", "confirmed": "confirmed actual scoped owner/gateway/storage path; controlled Core/OS ports", "partial": "partial actual scoped owner/gateway/storage path; controlled Core/OS ports", "unknown": "unknown actual scoped owner/gateway/storage path; controlled Core/OS ports", "typed-refusal": "typed-refusal actual scoped owner/gateway/storage path; controlled Core/OS ports", "legacy-query": "legacy-query actual scoped owner/gateway/storage path; controlled Core/OS ports", "malformed-core": "malformed-core actual scoped owner/gateway/storage path; controlled Core/OS ports", "retirement": "retirement actual scoped owner/gateway/storage path; controlled Core/OS ports", "retained-row": "retained-row actual scoped owner/gateway/storage path; controlled Core/OS ports", "reopened-ack": "reopened-ack actual scoped owner/gateway/storage path; controlled Core/OS ports", "pre-dispatch-retire": "pre-dispatch-retire actual scoped owner/gateway/storage path; controlled Core/OS ports", "publication-reentry": "publication-reentry actual scoped owner/gateway/storage path; controlled Core/OS ports", "publisher-failure": "publisher-failure actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+definitions['reconcile-staged-text']='reopening Settings completes a known cleanup receipt without another write';
 for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

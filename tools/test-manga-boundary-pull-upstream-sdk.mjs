@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
+import { readerPaperPullOffset } from '../entry/src/main/ets/features/reading/presentation/ReaderPaperPullMotion.ts';
 
 // Execute the actual patched upstream methods and official SDK-emitted layout.
 // Scroller edge facts and native pointer callbacks are controlled seams; this
@@ -217,9 +218,34 @@ check('actual SDK pull State exposes the bottom band and short release animates 
     }
   }
   verify(source);
-  const staticTranslation = source.replace('.translate({ y: this.trYTop + this.trYBottom })','.translate({ y: 0 })');
+  const staticTranslation = source.replace('.translate({ y: this.reduceMotion ? 0 : this.displayedPull })','.translate({ y: 0 })');
   assert.notEqual(staticTranslation,source);
   assert.throws(() => verify(staticTranslation), /SDK translation follows actual nonzero pull State/);
+});
+check('paper damping keeps SDK view bounded without changing release admission, reduced view remains stationary', () => {
+  for (const reduceMotion of [false, true]) {
+    const f = fixture(); let requested = 0;
+    f.owner.customList = () => {};
+    f.owner.visualDamping = readerPaperPullOffset;
+    f.owner.reduceMotion = reduceMotion;
+    f.owner.onLoadMore = async () => { requested++; return ''; };
+    f.owner.initialRender();
+    const content = [...f.owner.nodes.values()].find(node => node.type === 'Column');
+    const footerHost = [...f.owner.nodes.values()].find(node => node.create?.alignContent === 'Alignment.Bottom');
+    assert.equal(footerHost.height, '100%');
+    assert.equal(footerHost.hitTestBehavior, 'HitTestMode.None');
+    startAtEnd(f); pull(f, 120); f.runtime.flush();
+    assert.equal(content.translate.y, reduceMotion ? 0 : -readerPaperPullOffset(120));
+    assert.equal(f.pulls.at(-1)[2], false);
+    f.owner.onActionEnd(); f.runtime.flush();
+    assert.equal(content.translate.y, 0);
+    assert.equal(f.animations.length, reduceMotion ? 0 : 1);
+    assert.equal(requested, 0);
+    startAtEnd(f); pull(f, 240); f.runtime.flush();
+    assert.ok(f.owner.displayedPull > -86);
+    f.owner.onActionEnd();
+    assert.equal(requested, 1);
+  }
 });
 
 {

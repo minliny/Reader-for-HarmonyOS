@@ -1,4 +1,5 @@
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
+import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { TOK_SPACE_CONTROL_INLINE } from '../../../ui/foundation/ReaderTokens';
 import type { ReaderBookmarkRowModel } from '../presentation/ReaderBookmarkProjection';
 import { BOOKMARK_ROW_HEIGHT, ReaderBookmarkRow, type ReaderStandaloneBookmarkSize } from './ReaderBookmarkRow';
@@ -11,6 +12,7 @@ import { sampleReaderControlBookmark } from './ReaderControlBookmarkGeometry';
  */
 @Component
 export struct ReaderBookmarkList {
+  @StorageProp('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop rows: ReaderBookmarkRowModel[] = [];
   @Prop listPaddingX: number = TOK_SPACE_CONTROL_INLINE;
   @Prop listPaddingY: number = 4;
@@ -139,14 +141,18 @@ export struct ReaderBookmarkList {
       Repeat(this.rows)
         .each((repeatItem: RepeatItem<ReaderBookmarkRowModel>) => {
           ListItem() {
-            ReaderBookmarkRow({
+            Stack({ alignContent: Alignment.TopStart }) {
+              Row().width('100%').height(Math.max(0, this.rowHeight() - 3))
+                .attributeModifier(new ReaderPanelFrame('reader-island-card', this.appThemeScheme)).hitTestBehavior(HitTestMode.None);
+              ReaderBookmarkRow({
               row: repeatItem.item,
               onSelectBookmark: this.onSelectBookmark,
               embeddedInControl: this.embeddedInControl,
               motionProgress: this.motionProgress,
               availableWidth: this.rowWidth,
               standaloneSize: this.standaloneSize,
-            });
+              });
+            }.width('100%').height(this.rowHeight());
           }
           .width('100%')
           .height(this.layoutRowHeightValue())

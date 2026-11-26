@@ -110,7 +110,8 @@ export function retiredContractTests() {
 
 function activeContractInventory(manifest, discovered) {
   const retired = new Set(retiredContractTests().map(entry => entry.file));
-  const registrations = [...manifest.source, ...manifest.integration,
+  assert.ok(Array.isArray(manifest.pending ?? []), 'pending contract tests must be a list');
+  const registrations = [...manifest.source, ...manifest.integration, ...(manifest.pending ?? []),
     ...Object.values(manifest.scopes ?? {}).flat(),
     ...Object.values(manifest.scopePolicies ?? {}).flatMap(policy => policy.layers?.flatMap(layer => layer.tests) ?? [])];
   assert.ok(registrations.every(name => !retired.has(name)), 'retired contract cannot be registered in a tier, scope or evidence layer');
@@ -270,16 +271,25 @@ export function contractSelection(manifest, discovered, tier, scope) {
   assert.equal(manifest.schemaVersion, 1);
   discovered = activeContractInventory(manifest, discovered);
   const declared = [...manifest.source, ...manifest.integration];
-  assert.equal(new Set(declared).size, declared.length, 'duplicate test classification');
-  assert.deepEqual([...declared].sort(), discovered, 'every discovered test must be classified');
+  const pending = manifest.pending ?? [];
+  const classified = [...declared, ...pending];
+  assert.equal(new Set(classified).size, classified.length, 'duplicate test classification');
+  assert.deepEqual([...classified].sort(), discovered, 'every discovered test must be classified');
   for (const [name, tests] of Object.entries(manifest.scopes ?? {})) {
     assert.match(name, /^[a-z][a-z0-9-]+$/, 'invalid contract scope name');
     assert.ok(Array.isArray(tests) && tests.length > 0, 'empty contract scope is not PASS');
     assert.equal(new Set(tests).size, tests.length, 'duplicate scope test');
-    assert.ok(tests.every(test => discovered.includes(test)), 'unclassified scope test');
+    assert.ok(tests.every(test => declared.includes(test)), 'unclassified scope test');
     contractScopePolicy(manifest, name);
   }
   assert.ok(Object.keys(manifest.scopePolicies ?? {}).every(name => Object.hasOwn(manifest.scopes ?? {}, name)), 'orphan contract scope policy');
+  for (const [name, cases] of Object.entries(manifest.scopeCases ?? {})) {
+    assert.ok(Object.hasOwn(manifest.scopes ?? {}, name) && cases && typeof cases === 'object' && !Array.isArray(cases),
+      'orphan or invalid contract scope case selection');
+    assert.ok(Object.entries(cases).every(([test, ids]) => manifest.scopes[name].includes(test) &&
+      Array.isArray(ids) && ids.length > 0 && new Set(ids).size === ids.length &&
+      ids.every(id => typeof id === 'string' && id.length > 0)), 'invalid exact cases for contract scope');
+  }
   if (scope !== undefined) {
     assert.equal(tier, 'full', 'scope cannot replace the source tier');
     assert.ok(Object.hasOwn(manifest.scopes ?? {}, scope), 'unknown contract scope');
@@ -289,17 +299,22 @@ export function contractSelection(manifest, discovered, tier, scope) {
   // Preserve each scope's direct/consumer/witness ordering from its policy.
   // Full and manga retain their existing alphabetical selection contract.
   const selected = ORDERED_DEVELOPMENT_SCOPES.includes(scope) ? scopePolicy.layers.flatMap(layer => layer.tests) :
-    [...(scope === undefined ? tier === 'source' ? manifest.source : discovered : manifest.scopes[scope])].sort();
+    [...(scope === undefined ? tier === 'source' ? manifest.source : declared : manifest.scopes[scope])].sort();
   assert.ok(selected.length > 0, 'empty test tier is not PASS');
-  return { selected, omitted: discovered.filter(test => !selected.includes(test)), inventory: discovered,
-    integrationCount: manifest.integration.length, scopePolicy };
+  return { selected, omitted: declared.filter(test => !selected.includes(test)).sort(), inventory: [...declared].sort(),
+    pending: [...pending].sort(), integrationCount: manifest.integration.length, scopePolicy,
+    ...(scope && manifest.scopeCases?.[scope] ? { defaultCases: manifest.scopeCases[scope] } : {}) };
 }
 
 export function contractInventory(root) {
   const manifest = JSON.parse(readFileSync(resolve(root, 'tools/contract-test-tiers.json'), 'utf8'));
   const discovered = readdirSync(resolve(root, 'tools')).filter(name =>
     /^test-.*\.mjs$/.test(name) && !/-server\.mjs$/.test(name)).sort();
-  return { manifest, discovered: activeContractInventory(manifest, discovered) };
+  const active = activeContractInventory(manifest, discovered);
+  const declared = new Set([...manifest.source, ...manifest.integration]);
+  const available = active.filter(name => declared.has(name));
+  const pending = active.filter(name => !declared.has(name));
+  return { manifest, discovered: active, available, pending };
 }
 
 export function contractTests(root, tier, scope) {
@@ -311,12 +326,11 @@ export function contractTests(root, tier, scope) {
 export function explicitContractTests(root, names) {
   const retired = new Set(retiredContractTests().map(entry => entry.file));
   assert.ok(Array.isArray(names) && names.every(name => !retired.has(name)), 'retired contract cannot be selected explicitly');
-  const { manifest, discovered: inventory } = contractInventory(root);
-  const declared = [...manifest.source, ...manifest.integration];
+  const { manifest, available: inventory, pending } = contractInventory(root);
   assert.ok(Array.isArray(names) && names.length > 0 && names.every(name =>
-    typeof name === 'string' && /^test-[^/\\]+\.mjs$/.test(name) && inventory.includes(name) && declared.includes(name)), 'unknown or empty explicit test selection');
+    typeof name === 'string' && /^test-[^/\\]+\.mjs$/.test(name) && inventory.includes(name)), 'unknown or empty explicit test selection');
   assert.equal(new Set(names).size, names.length, 'duplicate explicit test');
-  return { selected: [...names], omitted: inventory.filter(name => !names.includes(name)), inventory,
+  return { selected: [...names], omitted: inventory.filter(name => !names.includes(name)), inventory, pending,
     integrationCount: manifest.integration.length, nestedTestImports: reviewedTestImports(root, names), scopePolicy: null };
 }
 
@@ -326,12 +340,12 @@ export function contractCaseSelection(root, names, requested = {}) {
   assert.ok(Object.keys(requested).every(name => names.includes(name)), 'cases must belong to an explicitly selected file');
   let metadata;
   try { metadata = JSON.parse(readFileSync(resolve(root, 'tools/contract-case-manifest.json'), 'utf8')); }
-  catch { metadata = { schemaVersion: 1, files: {}, legacy: {} }; }
+  catch (error) { throw new Error('contract case manifest cannot be read', { cause: error }); }
   assert.equal(metadata.schemaVersion, 1, 'unsupported contract case manifest');
   const selections = {}, resources = new Set();
   for (const name of names) {
     const source = readFileSync(resolve(root, 'tools', name), 'utf8');
-    const focused = /\bfrom\s*['"]\.\/lib\/contract-case-selection\.mjs['"]/.test(source);
+    const focused = /^[\t ]*import\b\s*[^'";]*?\bfrom\s*['"]\.\/lib\/contract-case-selection\.mjs['"]/m.test(source);
     const ids = requested[name] ?? [];
     assert.ok(Array.isArray(ids) && new Set(ids).size === ids.length, 'select unique case IDs');
     if (focused) assert.ok(ids.length > 0, `${name}: focused case selection required; a list is NOT_RUN, never PASS`);
@@ -339,8 +353,9 @@ export function contractCaseSelection(root, names, requested = {}) {
     if (ids.length) {
       assert.ok(focused && declarations && ids.every(id => typeof id === 'string' && Object.hasOwn(declarations, id)), `${name}: unknown or unpublished case; no whole-file fallback`);
       assert.ok(ids.every(id=>declarations[id].qualification === 'QUALIFIED'), `${name}: selected case is not qualified for dispatch; no broader fallback`);
-      const expected = metadata.files[name].sourceSha256;
-      assert.ok(/^[a-f0-9]{64}$/.test(expected ?? '') && createHash('sha256').update(source).digest('hex') === expected, `${name}: reviewed case/resource definition changed; review this file before dispatch`);
+      const actual = createHash('sha256').update(source).digest('hex');
+      assert.ok(ids.every(id => actual === (declarations[id].sourceSha256 ?? metadata.files[name].sourceSha256)),
+        `${name}: reviewed case/resource definition changed; review the selected case before dispatch`);
       selections[name] = [...ids];
     }
     const needs = ids.length ? ids.flatMap(id => declarations[id].resources ?? ['UNREVIEWED']) : metadata.legacy?.[name]?.resources;
@@ -348,6 +363,29 @@ export function contractCaseSelection(root, names, requested = {}) {
     needs.forEach(value => resources.add(value));
   }
   return { selections, resources: [...resources] };
+}
+
+export function contractExecutionPlan(root, tier, { tests, scope, cases } = {}) {
+  assert.ok(tests === undefined || scope === undefined, 'explicit tests and named scope are mutually exclusive');
+  const selection = tests === undefined ? contractTests(root, tier, scope) : explicitContractTests(root, tests);
+  const nestedTestImports = selection.nestedTestImports ?? reviewedTestImports(root, selection.selected);
+  const caseSelection = contractCaseSelection(root, selection.selected, cases ?? selection.defaultCases);
+  return { ...selection, nestedTestImports, caseSelection };
+}
+
+export function contractListView(root) {
+  const { manifest, available, pending } = contractInventory(root);
+  const scopeAdmissions = Object.keys(manifest.scopes ?? {}).map(scope => {
+    try {
+      const plan = contractExecutionPlan(root, 'full', { scope });
+      return { scope, status: 'READY', caseSelection: plan.caseSelection.selections };
+    } catch (error) {
+      return { scope, status: 'BLOCKED', reason: error.message,
+        caseSelection: manifest.scopeCases?.[scope] ?? {} };
+    }
+  });
+  return { availableTests: available, pendingTests: pending,
+    availableScopes: scopeAdmissions.filter(item => item.status === 'READY').map(item => item.scope), scopeAdmissions };
 }
 
 function caseReceipts(log, expected) {
@@ -372,9 +410,9 @@ function reviewedTestImports(root, names) {
     visited.add(path);
     const source = readFileSync(path, 'utf8');
     const imports = [
-      ...source.matchAll(/(?:^|\n)\s*import\s+(?:[^'";]*?\bfrom\s*)?['"]([^'"]+)['"]/g),
+      ...source.matchAll(/(?:^|\n)\s*import\b\s*(?:[^'";]*?\bfrom\s*)?['"]([^'"]+)['"]/g),
       ...source.matchAll(/\bimport\s*\(\s*['"]([^'"]+)['"]/g),
-      ...source.matchAll(/(?:^|\n)\s*export\s+[^'";]*?\bfrom\s*['"]([^'"]+)['"]/g),
+      ...source.matchAll(/(?:^|\n)\s*export\b\s*[^'";]*?\bfrom\s*['"]([^'"]+)['"]/g),
     ];
     for (const match of imports) {
       const specifier = match[1];
@@ -429,10 +467,8 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
   const timeoutMs = testOptions.timeoutMs ?? MAX_CONTRACT_TIMEOUT_MS;
   const killGraceMs = testOptions.killGraceMs ?? MAX_CONTRACT_KILL_GRACE_MS;
   const explicit = testOptions.tests !== undefined;
-  const { selected, omitted, inventory, integrationCount, scopePolicy, nestedTestImports } = explicit ?
-    explicitContractTests(root, testOptions.tests) : contractTests(root, tier, testOptions.scope);
-  const reviewedImports = nestedTestImports ?? reviewedTestImports(root, selected);
-  const caseSelection = contractCaseSelection(root, selected, testOptions.cases);
+  const { selected, omitted, inventory, pending, integrationCount, scopePolicy, nestedTestImports, caseSelection } =
+    contractExecutionPlan(root, tier, testOptions);
   if (explicit) assert.equal(workers, 1, 'explicit checks run sequentially in the reviewed order');
   const scopeTimeoutMs = scopePolicy === null ? null : testOptions.scopeTimeoutMs ?? scopePolicy.timeoutMs;
   const failFast = explicit || (scopePolicy?.failFast ?? false);
@@ -531,7 +567,7 @@ export async function runContractsBounded(root, tier, workers = 1, testOptions =
   const report = { schemaVersion: 1, name: 'reader-harmony-contract-results', tier,
     ...(testOptions.rationale ? { rationale: testOptions.rationale } : {}),
     scope: explicit ? 'custom' : testOptions.scope ?? tier, selected, omitted, inventory, workers, timeoutMs, killGraceMs,
-    nestedTestImports: reviewedImports, caseSelection: caseSelection.selections, resources: caseSelection.resources,
+    nestedTestImports, pending, caseSelection: caseSelection.selections, resources: caseSelection.resources,
     ...(explicit ? { executionOrder: 'explicit-selection-order' } : {}),
     scopeTimeoutMs, scopeExpired, millisecondsTotal, unrun, failFast, failureStopped, treeRecoveryBlocked, cancelled, treeCapability,
     selectedStatus: selectedPassed ? 'PASS' : 'FAIL',
@@ -563,9 +599,8 @@ if (process.argv[1] && process.argv[1] !== '-' && realpathSync(process.argv[1]) 
   const repository = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   if (mode === undefined || mode === '--list') {
     assert.ok(process.argv.length <= 3, 'list mode does not accept execution arguments');
-    const { manifest, discovered } = contractInventory(repository);
     console.log(JSON.stringify({ status: 'NOT_RUN', harmonyContracts: 'NOT_RUN', fullSuite: 'NOT_RUN', acceptanceEligible: false,
-      availableTests: discovered, availableScopes: Object.keys(manifest.scopes ?? {}),
+      ...contractListView(repository),
       selection: 'Explicit --tests, --scope, --source or --full only after item-specific necessity review.' }));
   } else {
   assert.ok(['--source', '--full', '--scope', '--tests'].includes(mode),
@@ -580,18 +615,17 @@ if (process.argv[1] && process.argv[1] !== '-' && realpathSync(process.argv[1]) 
   }
   assert.ok(options.get('--rationale')?.trim(), 'an item-specific necessity rationale is required before running checks');
   const tier = mode === '--source' ? 'source' : 'full';
-  if (tests) explicitContractTests(repository, tests);
-  else reviewedTestImports(repository, contractTests(repository, tier, scope).selected); // Reject unknown or unreviewed nested checks before acquiring the shared toolchain.
-  const cases = {};
+  let cases;
   if (options.has('--cases')) {
-    assert.ok(tests, '--cases requires exact --tests files');
+    assert.ok(tests || scope, '--cases requires exact --tests files or a named --scope');
+    cases = Object.create(null);
     for (const value of options.get('--cases').split(',')) {
       const parts = value.split('#');
       assert.ok(parts.length === 2 && parts.every(Boolean), 'use --cases file.mjs#case-id');
       (cases[parts[0]] ??= []).push(parts[1]);
     }
   }
-  const caseSelection = contractCaseSelection(repository, tests ?? contractTests(repository, tier, scope).selected, cases);
+  const { caseSelection } = contractExecutionPlan(repository, tier, { tests, scope, cases });
   // The standalone dispatcher consumes the same toolchain as HAP/Native. A
   // diagnostic run must not bypass their shared owner, including when each
   // test gets a different OS temporary directory.

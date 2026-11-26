@@ -4,6 +4,8 @@ import {readFileSync} from 'node:fs';
 import {createRequire,stripTypeScriptTypes} from 'node:module';
 import {resolveEtsLoaderRoot,virtualFilePath} from './tool-environment.mjs';
 import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
+import {compileTailConsumer} from './foundation-tail-consumer-probe.mjs';
+import {readerEditingSdk} from './reader-editing-sdk-probe.mjs';
 import {searchListLazyRequests} from './reader-content-search-list-probe.mjs';
 import {sourceSwitchRowSdk} from './source-switch-row-sdk-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './bounded-surface-sdk-probe.mjs';
@@ -22,9 +24,12 @@ import {DIRECTORY_CHROME_VISUAL as MANGA_DIRECTORY_VISUAL} from '../../entry/src
 import * as fontFamilies from '../../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 import {readerAppColor} from '../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import {SourceSwitchCompletionPresentation} from '../../entry/src/main/ets/features/source/presentation/SourceSwitchCompletionPresentation.ts';
+import {sourceSwitchTriggerFocusId} from '../../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts';
 import * as appearanceRender from '../../entry/src/main/ets/features/reading/ui/ReaderAppearanceRenderStyle.ts';
 import * as sourceNames from '../../entry/src/main/ets/features/bookshelf/application/BookshelfSourceNameProjection.ts';
 import * as providerFamily from '../../entry/src/main/ets/features/source/application/SourceSwitchProviderFamily.ts';
+import * as searchGeometry from '../../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts';
+import {readerIsExpandedWidth} from '../../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts';
 export {novelPresentation};
 export function sourceSwitchRecoveryAction(p, owner, label) {
  const notice = p.walk(owner).find(child => child instanceof p.deps.ReaderRecoveryNotice && child.actionLabel === label);
@@ -42,11 +47,15 @@ export function sourceSwitchRecoveryAction(p, owner, label) {
 export function sourceSwitchColorMetricsSdk() {
  const registry=JSON.parse(readFileSync(new URL('../../../Reader-UI/theme/registry.json',import.meta.url)));
  const resources=new Map();
- for(const role of ['TOK_GREEN','TOK_ROW_DIVIDER'])for(const scheme of ['day','night']){
+ for(const role of ['TOK_GREEN','TOK_ROW_DIVIDER','TOK_PRIMARY_SOFT','app.interaction.press'])for(const scheme of ['day','night']){
   const c=registry.appRoles[role][scheme];
   resources.set(readerAppColor(role,scheme),{red:c.r,green:c.g,blue:c.b,alpha:Math.round(c.a*255)});
  }
- return{resourceColor(value){assert.ok(resources.has(value),'finite native source-switch color resource');return resources.get(value);},
+ resources.set('Color.Transparent',{red:0,green:0,blue:0,alpha:0});
+ return{resourceColor(value){
+  assert.ok(resources.has(value),'finite native source-switch color resource');
+  return {...resources.get(value), blendColor(overlay){return {color:`sdk-blend:${value}:${overlay.red},${overlay.green},${overlay.blue},${overlay.alpha}`};}};
+ },
   rgba(red,green,blue,alpha){return{color:`sdk-rgba:${red},${green},${blue},${alpha}`};}};
 }
 /** Actual checked-load registrar with a controlled platform receipt boundary.
@@ -87,21 +96,31 @@ export function sourceSwitchLiveSdk(p,extra={},sources={}) {
  const curves={cubicBezierCurve(...values){return{kind:'cubic-bezier',values};}};
  const Curve={EaseIn:'ease-in',EaseInOut:'ease-in-out',EaseOut:'ease-out',Linear:'linear'};
  const motion=sourceSwitchMotionSdk(curves,Curve);
+ const { readerKeyboardHostBottom } = pureModuleProbe(read('ui/layout/ReaderKeyboardGeometry.ts'),
+  'ReaderKeyboardGeometry.ts', metricsApi, ['readerKeyboardHostBottom']);
  const motionPolicy=pureModuleProbe(read('ui/foundation/ReaderMotionPolicy.ets'),'ReaderMotionPolicy.ets',
-  {...motion,collapseMotionDurationMs},['readerMotionAnimateParam']);
- const deps={...p.deps,SynchedPropertyNesedObjectPU:p.properties.sdk.SynchedPropertyNestedObjectPU,...horizontal,...metricsApi,...scrollLayout,...novelPresentation,...sourceVisual,...appearanceRender,...sourceNames,...providerFamily,...gatewayExports,...motion,...motionPolicy,SourceSwitchCompletionPresentation,sourceSwitchSourceCount,SourceSwitchLayoutFrame,SourceSwitchCandidateRow,SourceSwitchCandidateDataSource,LazyForEach,ColorMetrics:sourceSwitchColorMetricsSdk(),
-   curves,
+  {...motion,collapseMotionDurationMs},['readerMotionAnimateParam','readerMotionReducedFadeParam']);
+ const {readerPaperActionIcon}=pureModuleProbe(read('ui/foundation/ReaderActionIconResources.ets'),
+   'ReaderActionIconResources.ets',{$r:name=>name},['readerPaperActionIcon']);
+ const deps={...p.deps,SynchedPropertyNesedObjectPU:p.properties.sdk.SynchedPropertyNestedObjectPU,...horizontal,...metricsApi,readerKeyboardHostBottom,...scrollLayout,...novelPresentation,...sourceVisual,...appearanceRender,...sourceNames,...providerFamily,...gatewayExports,...motion,...motionPolicy,SourceSwitchCompletionPresentation,sourceSwitchSourceCount,SourceSwitchLayoutFrame,SourceSwitchCandidateRow,SourceSwitchCandidateDataSource,LazyForEach,ColorMetrics:sourceSwitchColorMetricsSdk(),
+   curves,readerIsExpandedWidth,readerPaperActionIcon,
    ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}},
    Scroller:class Scroller{},ScrollAlign:{START:'start'},TouchType:{Down:'down',Move:'move',Up:'up',Cancel:'cancel'},
    Curve,ImageFit:{Cover:'cover',Fill:'fill'},ButtonType:{Normal:'normal'},
    GradientDirection:{Bottom:'GradientDirection.Bottom'},ImageInterpolation:{High:'ImageInterpolation.High'},ImageRepeat:{XY:'ImageRepeat.XY'},
-   TransitionEdge:{BOTTOM:'bottom'},TransitionEffect:{IDENTITY:effect('identity'),OPACITY:effect('opacity'),
+   TransitionEdge:{BOTTOM:'bottom',END:'end'},TransitionEffect:{IDENTITY:effect('identity'),OPACITY:effect('opacity'),
     move:edge=>effect('move',edge),asymmetric:(appear,disappear)=>effect('asymmetric',{appear,disappear})},
    ...sourceSwitchFontSdk(),uiContext:{getFont:()=>({}),animateTo(_options,action){action();},postFrameCallback(){},
     createAnimator(_options){return{onFrame(){},play(){},cancel(){}};}},...extra};
  p.hooks.lifecycleChildren=true;
  p.hooks.childSources.SourceSwitchPanel=windowSource;
  p.hooks.childSources.SourceSwitchNovelRow=windowSource;
+ const fieldSource=read('ui/controls/ReaderSearchField.ets');
+ p.hooks.childSources.ReaderSearchField=fieldSource;
+ const fieldAdapters=pureModuleProbe(fieldSource.slice(0,fieldSource.indexOf('@Component')),
+   'ReaderSearchFieldAdapters.ets',{FrameCallback:class {}},['ReaderSearchInputTarget','ReaderSearchFocusFrame']);
+ deps.ReaderSearchField=compileTailConsumer(fieldSource,boundedMembers(fieldSource),
+   {...deps,...readerEditingSdk(),...searchGeometry,...fieldAdapters,DEBUG:false,TextInputController:class {}},p.hooks).Component;
  for(const [name,path] of [['NoCoverCover','ui/patterns/NoCoverCover.ets'],['SearchSpinner','features/search/ui/SearchSpinner.ets'],['SourceSwitchSpinner','features/source/ui/SourceSwitchSpinner.ets'],['SourceSwitchProgress','features/source/ui/SourceSwitchProgress.ets'],['ReaderPaperBackground','features/reading/ui/ReaderPaperBackground.ets'],['SourceSwitchCompletionOverlay','features/source/ui/SourceSwitchCompletionOverlay.ets']]){
    p.hooks.childSources[name]=sources[name]??read(path);deps[name]=createReaderBuilderProbe(p.hooks.childSources[name],boundedMembers(p.hooks.childSources[name]),deps,p.hooks).Component;
  }
@@ -147,17 +166,18 @@ export function makeSourceSwitchFixture(f,options={}) {
  return {...owners,p,surface,mount,rows:()=>p.walk(surface).filter(child=>child instanceof leafDeps.SourceSwitchNovelRow),leafDeps};
 }
 
-export function failureChain(x){
+export function failureChain(x, { retryReading = () => assert.fail('source recovery must not restart ordinary body loading') } = {}){
  const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
  const ts=require(sdk+'/node_modules/typescript'),source=read('app/composition/RetainedReaderScene.ets');
  const ast=ts.createSourceFile(virtualFilePath('ActualSourceFailureBridge.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,require(sdk+'/lib/ets_checker.js').compilerOptions);
  let actualShell;const visit=n=>{if((ts.isCallExpression(n)||ts.isEtsComponentExpression(n))&&n.expression.getText(ast)==='ReaderShell')actualShell=n;ts.forEachChild(n,visit);};visit(ast);
- const names=new Set(['sourceSwitchScopeId','sourceSwitchFailureMessage','onRetryFailedSourceSwitch','onDismissSourceSwitchFailure']);
- const fields=actualShell.arguments[0].properties.filter(p=>names.has(p.name?.getText(ast))).map(p=>p.getText(ast));assert.equal(fields.length,4);
+ const names=new Set(['sourceSwitchScopeId','sourceSwitchFailureMessage','sourceSwitchTransactionId','sourceSwitchRollbackInFlight',
+  'onRetryFailedSourceSwitch','onDismissSourceSwitchFailure','onRollbackReaderTarget','onSwitchSource']);
+ const fields=actualShell.arguments[0].properties.filter(p=>names.has(p.name?.getText(ast))).map(p=>p.getText(ast));assert.equal(fields.length,names.size);
  class Child{constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}updateStateVars(p){Object.assign(this.params,p);}}
  const carrier=createReaderBuilderProbe('@Component struct ActualIndexFailurePayload {@Builder payload(){ReaderShell({'+fields.join(',')+'});}build(){Column(){}}}',
   ['payload'],{ReaderShell:Child},{childSources:{ReaderShell:read('features/reading/ui/ReaderShell.ets')}}).owner;
- Object.assign(carrier,{source:x.source,ports:{sourceSwitch:x.sourceActions}});
+ Object.assign(carrier,{source:x.source,reading:x.entry,ports:{sourceSwitch:x.sourceActions,openSourceSwitch:()=>x.switchJourney.openReader()}});
  carrier.payload();const payload=[...carrier.children.values()][0].params;
  const shell=read('features/reading/ui/ReaderShell.ets'),start=shell.indexOf('        ForEach([this.readingIdentityKey()]'),tail='        }, (identity: string): string => identity);',end=shell.indexOf(tail,start)+tail.length;
  assert.ok(start>=0&&end>start);
@@ -168,14 +188,19 @@ export function failureChain(x){
  const Shell=selectedProductionMethods(new URL('../../entry/src/main/ets/features/reading/ui/ReaderShell.ets',import.meta.url),'ReaderShell',['readingContentIsForeground','acceptsTextInput']);
  retained.readingContentIsForeground=Shell.prototype.readingContentIsForeground;retained.acceptsTextInput=Shell.prototype.acceptsTextInput;
  retained.readingOwner();const actualReaderProps=[...retained.children.values()][0].params;
- const o=x.p.consumer(read('features/reading/ui/LocalReadingExperience.ets'),['sourceSwitchScopeId','sourceSwitchFailureMessage','readingFailureContent','readingFailureActions'],
-  {LOCAL_READING_SOURCE_ID:'local',readerAppearanceThemeStyle:()=>({ink:'#111111',paperStart:'#ffffff'})},actualReaderProps);
- Object.assign(o,actualReaderProps,{sourceId:'old',appearanceSnapshot:{activeTheme:'day'},readingLayout:()=>({bodyWidth:()=>390,bodyHeight:()=>800,contentLeft:0,contentTop:0}),
-  openReaderControl(){},onSwitchSource(){},retryReading(){assert.fail('source recovery must not restart ordinary body loading');}});
- const render=()=>{o.readingFailureContent();const physical=label=>{
+ const o=x.p.consumer(read('features/reading/ui/LocalReadingExperience.ets'),['sourceSwitchScopeId','sourceSwitchFailureMessage',
+  'sourceSwitchTransactionId','sourceSwitchRollbackInFlight','phase','readingFailureContent','readingFailureActions'],
+  {LOCAL_READING_SOURCE_ID:'local',sourceSwitchTriggerFocusId,readerAppearanceThemeStyle:()=>({ink:'#111111',paperStart:'#ffffff'})},actualReaderProps);
+ Object.assign(o,actualReaderProps,{publishControlVerificationReady(){},cancelSourceSwitchCompletion(){},
+  phase:'failed',chapterSelectionToken:1,readerRecoveryView:{visible:false,canRetry:false},
+  appearanceSnapshot:{activeTheme:'day'},readingLayout:()=>({bodyWidth:()=>390,bodyHeight:()=>800,contentLeft:0,contentTop:0}),
+  openReaderControl(){},readerInputIsCurrent(){return this.isReaderIdentityCurrent() && this.inputCurrent();},retryReading});
+ const render=()=>{o.readingFailureContent();const physical=(label,required=true)=>{
   const actor=x.p.walk(o).filter(actor=>actor instanceof x.p.deps.ReaderRecoveryAction&&actor.label===label).at(-1);
-  assert.ok(actor,label+' delegates to the actual shared recovery actor');
+  if(required) assert.ok(actor,label+' delegates to the actual shared recovery actor');
+  if(!actor) return undefined;
   return [...actor.nodes.values()].find(node=>typeof node.onClick==='function').onClick;
- };return{retry:physical('重试'),dismiss:physical('继续当前书源')};};
- return{o,render};
+ };return{retry:physical('重试'),dismiss:physical('继续当前书源',false),choose:physical('切换书源'),
+  rollback:physical('换回原书源',false)};};
+ return{o,retained,render};
 }

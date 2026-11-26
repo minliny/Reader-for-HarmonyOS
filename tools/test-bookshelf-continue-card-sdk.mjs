@@ -10,21 +10,30 @@ const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { createRequire } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
+const { readerFoundationTokens } = await import('./lib/reader-tokens-probe.mjs');
 const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts');
 const { MangaBookPresentation } = await import('../entry/src/main/ets/features/manga/presentation/MangaBookPresentation.ts');
+const { bookCoverDisplayUrl } = await import('../entry/src/main/ets/app/library/BookCoverDisplay.ts');
 
 
 const source=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfPage.ets',import.meta.url),'utf8');
+const frameSource=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfContinueCardSpec.ets',import.meta.url),'utf8');
+const {bookshelfContinueCardFrame}=pureModuleProbe(frameSource,'BookshelfContinueCardSpec.ets',readerTypographyRoles,['bookshelfContinueCardFrame']);
+const gridSource=readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfGridSpec.ets',import.meta.url),'utf8');
+const {BOOKSHELF_LIST_PROGRESS_STROKE}=pureModuleProbe(gridSource,'BookshelfGridSpec.ets',readerFoundationTokens,['BOOKSHELF_LIST_PROGRESS_STROKE']);
+const noCoverSource=readFileSync(new URL('../entry/src/main/ets/ui/patterns/NoCoverCover.ets',import.meta.url),'utf8');
+const {noCoverGlyph}=pureModuleProbe(noCoverSource.split('@Component')[0],'NoCoverGlyph.ets',{},['noCoverGlyph']);
 const require=createRequire(import.meta.url);
 const sdk=resolveEtsLoaderRoot();
-const builders=require(`${sdk}/lib/component_map.js`).CUSTOM_BUILDER_METHOD;
-for(const name of ['sectionAction','filterRow','projectionRow'])builders.add(name);
 const syntax=require(`${sdk}/lib/validate_ui_syntax.js`);
 syntax.componentCollection.customComponents.add('NoCoverCover');
-syntax.propCollection.set('NoCoverCover',new Set(['coverWidth','coverHeight']));
+syntax.propCollection.set('NoCoverCover',new Set(['coverWidth','coverHeight','glyph','kindLabel']));
 
 function mount(book) {
-  const mounted=new Set(),dependencies=new Map(),selected=[];
+  const dependencies=new Map(),selected=[];
   let activeId=-1;
   class ObservedPropertySimplePU {
     constructor(value,_owner,name){this.value=value;this.name=name;}
@@ -32,29 +41,28 @@ function mount(book) {
     set(value){this.value=value;}
   }
   class NoCover {constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}}
-  const {owner,output}=createReaderBuilderProbe(source,['mangaRevision','bookshelfList','continueReadingCard',
-    'continueReadingPosition','mangaReadingPosition','shelfScrollHandler','shelfPageHandler',
-    'isShelfPresentationCurrent','bookSelectionHandler','hasCover','hasActiveFilters'],{
-      ShelfBookPresentation,MangaBookPresentation,ObservedPropertySimplePU,NoCoverCover:NoCover,ImageFit:{Cover:'cover'},
-      ViewStackProcessor:{StartGetAccessRecordingFor(){},StopGetAccessRecording(){}},
-      LazyForEach:{create(){},pop(){}},readerFloatingTabContentInset:()=>108,
-      ReaderWindowCoordinator:{metrics:()=>({})},
+  const {owner}=createReaderBuilderProbe(source,['mangaRevision','continueReadingCard','continueCardCover','continueCardCopy',
+    'continueCardReadAction','continueCardFrame','continueCardFontScale','continueCardRectId','continueCardBookKey',
+    'continueBookProgress','continueBookProgressLabel','continueReadingPosition','mangaReadingPosition',
+    'isShelfPresentationCurrent','bookSelectionHandler','hasCover','coverUrl','coverErrorHandler','failedCoverUrls',
+    'shelfPressed','shelfPressKey','shelfPressPointer','observeShelfPress'],{
+      ShelfBookPresentation,MangaBookPresentation,bookCoverDisplayUrl,noCoverGlyph,BOOKSHELF_LIST_PROGRESS_STROKE,
+      ObservedPropertySimplePU,ObservedPropertyObjectPU:ObservedPropertySimplePU,NoCoverCover:NoCover,ImageFit:{Cover:'cover'},
+      bookshelfContinueCardFrame, ReaderWindowCoordinator:{metrics:()=>({systemFontScale:1})},
+      readerSurfaceElevation: readerSurfaceSpecsForProbe().readerSurfaceElevation,
     },{
       onObserverEnter(_owner,id){activeId=id;dependencies.delete(id);},
-      onObserverExit(owner,id){
-        activeId=-1;
-        const node=owner.nodes.get(id);
-        if(node.type==='ListItem'&&Array.isArray(node.create)&&typeof node.create[0]==='function'&&!mounted.has(id)){
-          mounted.add(id);node.create[0]();
-        }
-      },
+      onObserverExit(){activeId=-1;},
     });
-  Object.assign(owner,{appThemeScheme:'day',continueReading:book,filterRowVisible:false,viewModeError:'',
-    visibleBookCount:1,rowDataSource:{},shelfContentWidth:()=>352,isWideViewport:()=>false,
-    mounted:true,navigationGeneration:1,viewportRestored:false,contentFilter:'all',sourceFilter:'all',sectionAction(){},onBookSelected:book=>selected.push(book)});
-  owner.bookshelfList(false);
+  Object.assign(owner,{appThemeScheme:'day',continueReading:book, shelfContentWidth:()=>352, readerWindowMetricsRevision:0,
+    mounted:true,navigationGeneration:1, isCurrentShelfInput:()=>true,
+    continueCardAreaHandler:()=>()=>{},saveShelfViewport(){},onBookSelected:book=>selected.push(book)});
+  owner.continueReadingCard(()=>owner.continueReading,false);
   const textNodes=()=>[...owner.nodes.values()].filter(node=>node.type==='Text');
-  const cardClick=[...owner.nodes.values()].find(node=>node.type==='Row'&&typeof node.onClick==='function').onClick;
+  const card=[...owner.nodes.values()].find(node=>typeof node.onClick==='function');
+  const cardClick=card.onClick;
+  assert.equal(card.width,352,'the touch wrapper shares the shelf content width');
+  assert.equal(card.alignSelf,'ItemAlign.Center','the wrapper owns the card alignment');
   assert.equal([...owner.nodes.values()].filter(node=>typeof node.onClick==='function').length,1,
     'the card and its Reading button keep their existing shared row click action');
   assert.ok(textNodes().some(node=>node.create==='阅读'));
@@ -71,17 +79,20 @@ function admit(book,title='04',ordinal=2,total=24,revision=1) {
     progress:{location,token:{epoch:1,revision}},targetOrdinal:ordinal,
   }),true);
 }
-const novel={sourceId:'novel-source',bookId:'same-book',title:'小说名',author:'小说作者',
+const novel={sourceId:'novel-source',bookId:'same-book',title:'小说名',author:'小说作者',readProgress:2350,
   currentChapterTitle:'第四章 云岚宗',coverUrl:'https://example.test/novel-cover'};
 const comic={sourceId:'comic-source',bookId:'same-book',contentKind:'manga',title:'漫画名',author:'知音漫客 x 任翔',coverUrl:'https://example.test/comic-cover'};
 
 {
   MangaBookPresentation.useOwner({});
   const f=mount(novel),ids=f.textNodes().map(node=>node.id),before=f.owner.observers.length;
-  assert.ok(f.texts().includes('第四章 云岚宗'));f.cardClick();assert.equal(f.selected[0],novel);
+  assert.ok(f.texts().includes('读至：第四章 云岚宗'));
+  assert.ok(f.texts().includes('23%'));
+  assert.equal([...f.owner.nodes.values()].find(node=>node.type==='Progress').style.strokeWidth,3);
+  f.cardClick();assert.equal(f.selected[0],novel);
   f.owner.continueReading=comic;f.owner.replay();
   assert.ok(f.texts().includes(comic.title));assert.ok(f.texts().includes(comic.author));
-  assert.ok(!f.texts().includes(novel.author));assert.ok(!f.texts().includes('第四章 云岚宗'));
+  assert.ok(!f.texts().includes(novel.author));assert.ok(!f.texts().includes('读至：第四章 云岚宗'));
   assert.deepEqual(f.images(),['https://example.test/comic-cover']);assert.ok(f.texts().includes(''));
   assert.ok(!f.texts().includes('尚未阅读'),'missing cold position stays blank in the progressed continue card');
   f.cardClick();f.cardClick();assert.deepEqual(f.selected.slice(1),[comic,comic],
@@ -96,19 +107,19 @@ const comic={sourceId:'comic-source',bookId:'same-book',contentKind:'manga',titl
   admit(comic);f.owner.mangaRevision=MangaBookPresentation.revision;
   const dependent=[...f.dependencies].filter(([_id,names])=>names.has('mangaRevision')).map(([id])=>id);
   assert.deepEqual(dependent,[position.id]);f.owner.replayOnly(dependent);
-  assert.equal(position.create,'04 · 3 页 / 24 页');assert.equal(f.owner.continueReading,currentProp);
+  assert.equal(position.create,'读至：04 · 3 页 / 24 页');assert.equal(f.owner.continueReading,currentProp);
   assert.equal(f.owner.observers.length,before);assert.deepEqual(f.textNodes().map(node=>node.id),ids,
     'the same native card actors update without remounting the shelf ListItem');
   const updatedNovel={...novel,title:'新小说名',author:'新小说作者',currentChapterTitle:'第五章',coverUrl:'https://example.test/new-novel-cover'};
   f.owner.continueReading=updatedNovel;f.owner.replay();
-  assert.ok(f.texts().includes('新小说名'));assert.ok(f.texts().includes('新小说作者'));assert.ok(f.texts().includes('第五章'));
+  assert.ok(f.texts().includes('新小说名'));assert.ok(f.texts().includes('新小说作者'));assert.ok(f.texts().includes('读至：第五章'));
   assert.deepEqual(f.images(),['https://example.test/new-novel-cover']);f.cardClick();assert.equal(f.selected.at(-1),updatedNovel);
   const oldClick=f.cardClick;f.owner.navigationGeneration=2;const selectedCount=f.selected.length;oldClick();
   assert.equal(f.selected.length,selectedCount,'the real selection actor rejects a previous navigation presentation');
   f.owner.navigationGeneration=1;
   f.owner.continueReading=undefined;f.owner.replay();const count=f.selected.length;f.cardClick();
   assert.equal(f.selected.length,count,'a late click after removal cannot select the initial novel or comic');
-  assert.ok(!f.texts().includes('新小说名'));assert.ok(!f.texts().includes('第五章'));
+  assert.ok(!f.texts().includes('新小说名'));assert.ok(!f.texts().includes('读至：第五章'));
 }
 {
   MangaBookPresentation.useOwner({});
@@ -117,10 +128,10 @@ const comic={sourceId:'comic-source',bookId:'same-book',contentKind:'manga',titl
   assert.ok(!f.texts().includes('尚未阅读'));
   admit(comic);f.owner.mangaRevision=MangaBookPresentation.revision;
   const ids=[...f.dependencies].filter(([_id,names])=>names.has('mangaRevision')).map(([id])=>id);
-  f.owner.replayOnly(ids);assert.ok(f.texts().includes('04 · 3 页 / 24 页'));
-  assert.ok(!f.texts().includes('其他来源 · 7 页 / 12 页'));f.cardClick();assert.equal(f.selected[0],comic);
+  f.owner.replayOnly(ids);assert.ok(f.texts().includes('读至：04 · 3 页 / 24 页'));
+  assert.ok(!f.texts().includes('读至：其他来源 · 7 页 / 12 页'));f.cardClick();assert.equal(f.selected[0],comic);
   admit(comic,'04',3,24,2);f.owner.mangaRevision=MangaBookPresentation.revision;f.owner.replayOnly(ids);
-  assert.ok(f.texts().includes('04 · 4 页 / 24 页'),'same card and book receive subsequent admitted page movement');
+  assert.ok(f.texts().includes('读至：04 · 4 页 / 24 页'),'same card and book receive subsequent admitted page movement');
 }
 console.log('PASS actual SDK retained continue card: novel/comic metadata and cover, current click identity, hydration-only StorageLink delivery, source isolation, late removal and stable actors');
 

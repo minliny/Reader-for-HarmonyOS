@@ -1,13 +1,26 @@
 import { MESSAGE_ACTION } from '../foundation/ReaderMessageStyle';
-import { TYPE_DIALOG_ACTION, TYPE_SELECT_OPTION } from '../foundation/ReaderTypography';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../layout/SurfaceHorizontalGeometry';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
+import { readerPaperActionIcon } from '../foundation/ReaderActionIconResources';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
-import { DialogSpecId, DialogSurfaceSpec, resolveDialogSpec } from './ReaderSurfaceSpecs';
+import { readerMotionAnimateParam } from '../foundation/ReaderMotionPolicy';
+import { DialogSpecId, DialogSurfaceSpec, readerSurfaceElevation, resolveDialogSpec } from './ReaderSurfaceSpecs';
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
+
+export function readerDialogScrimTransition(reduceMotion: boolean): TransitionEffect {
+  return TransitionEffect.OPACITY.animation(readerMotionAnimateParam('app.sheet.scrim', reduceMotion));
+}
+
+export function readerDialogCardTransition(reduceMotion: boolean): TransitionEffect {
+  if (reduceMotion) return TransitionEffect.IDENTITY;
+  return TransitionEffect.asymmetric(
+    TransitionEffect.scale({ x: 0.95, y: 0.95 }).combine(TransitionEffect.translate({ y: 8 }))
+      .animation(readerMotionAnimateParam('app.sheet.open', false)),
+    TransitionEffect.scale({ x: 0.95, y: 0.95 }).animation(readerMotionAnimateParam('app.sheet.close', false)));
+}
 
 /** One action rendered in the standard actions area. The owning dialog routes
  * onAction by id; admission (enabled) reflects the owner's live gating. */
@@ -17,6 +30,7 @@ export class DialogActionView {
   readonly tone: 'default' | 'primary' | 'danger';
   readonly enabled: boolean;
   readonly defaultFocus: boolean;
+  readonly nativeId: string;
 
   constructor(
     id: string,
@@ -24,12 +38,14 @@ export class DialogActionView {
     tone: 'default' | 'primary' | 'danger' = 'default',
     enabled: boolean = true,
     defaultFocus: boolean = false,
+    nativeId: string = '',
   ) {
     this.id = id;
     this.label = label;
     this.tone = tone;
     this.enabled = enabled;
     this.defaultFocus = defaultFocus;
+    this.nativeId = nativeId;
   }
 }
 
@@ -56,7 +72,12 @@ export struct ReaderDialogSurface {
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @Prop specId: DialogSpecId = 'book-removal';
   @Prop title: string = '';
+  /** Available width after the parent pane has applied its window insets. */
+  @Prop containerWidthVp: number = 0;
+  @Prop leadingActionWidthVp: number = 0;
+  @Prop primarySurfaceColor: string | undefined = undefined;
   @Prop showCloseButton: boolean = false;
+  @Prop closeEnabled: boolean = true;
   @Prop actions: DialogActionView[] = [];
   @BuilderParam body: () => void = this.defaultBody;
   onAction: (id: string) => void = (): void => {};
@@ -95,20 +116,10 @@ export struct ReaderDialogSurface {
     .alignItems(HorizontalAlign.Start)
     .backgroundColor(readerAppColor(this.spec().backgroundRole, this.appThemeScheme))
     .border(this.spec().hasBorder ?
-      { width: 1, color: readerAppColor('TOK_MESSAGE_BORDER', this.appThemeScheme) } :
+      { width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) } :
       { width: 0, color: Color.Transparent })
     .borderRadius(this.spec().borderRadius)
-    .shadow(this.spec().hasShadow ? {
-      radius: 46,
-      offsetX: 0,
-      offsetY: 18,
-      color: readerAppColor('app.shadow.sheet', this.appThemeScheme),
-    } : {
-      radius: 0,
-      offsetX: 0,
-      offsetY: 0,
-      color: Color.Transparent,
-    });
+    .shadow(readerSurfaceElevation(this.spec().hasShadow ? 'dialog' : 'embedded', this.appThemeScheme));
   }
 
   @Builder
@@ -119,27 +130,29 @@ export struct ReaderDialogSurface {
           .layoutWeight(1)
           .fontFamily(this.spec().headerFontFamily).fontWeight(this.spec().headerFontWeight)
           .fontSize(this.spec().headerFontSize).lineHeight(this.spec().headerLineHeight)
-          .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .textAlign(this.spec().headerTextAlign);
         Button({ type: ButtonType.Normal, stateEffect: false }) {
-          Text('关闭')
-            .fontFamily(TYPE_SELECT_OPTION.fontFamily).fontWeight(TYPE_SELECT_OPTION.fontWeight).fontSize(TYPE_SELECT_OPTION.fontSizeFp)
-            .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-            .textAlign(TextAlign.Center).accessibilityLevel('no');
-        }.constraintSize({ minWidth: 52 }).height(readerScaledControlHeight(44, TYPE_SELECT_OPTION.lineHeightFp as number, this.fontScale()))
-          .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
+          Image(readerPaperActionIcon('close', this.appThemeScheme)).width(15).height(15)
+            .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
+        }.width(32).height(32).padding(0)
+          .responseRegion({ x: -12, y: -6, width: 44, height: 44 })
+          .enabled(this.closeEnabled).opacity(this.closeEnabled ? 1 : 0.45)
+          .attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme),
+            this.appThemeScheme, 16, 16, this.closeEnabled))
           .accessibilityText('关闭')
-          .onClick((): void => { if (this.mounted) this.onClose(); });
+          .onClick((): void => { if (this.mounted && this.closeEnabled) this.onClose(); });
       }
       .width('100%')
+      .constraintSize({ minHeight: 44 })
       .alignItems(VerticalAlign.Center);
     } else {
       Text(this.title)
         .width('100%')
         .fontFamily(this.spec().headerFontFamily).fontWeight(this.spec().headerFontWeight)
         .fontSize(this.spec().headerFontSize).lineHeight(this.spec().headerLineHeight)
-        .fontColor(readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme))
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .textAlign(this.spec().headerTextAlign);
     }
   }
@@ -170,12 +183,13 @@ export struct ReaderDialogSurface {
         .fontFamily(MESSAGE_ACTION.fontFamily).fontWeight(MESSAGE_ACTION.fontWeight).fontSize(MESSAGE_ACTION.fontSizeFp).lineHeight(MESSAGE_ACTION.lineHeightFp as number)
         .fontColor(this.actionLabelColor(this.action(id)));
     }
-    .width(this.spec().actionsLayout === 'stack' ? '100%' : undefined)
-    .layoutWeight(this.spec().actionsLayout === 'stack' ? undefined : 1)
+    .width(this.spec().actionsLayout === 'stack' ? '100%' : this.fixedActionWidth(id))
+    .layoutWeight(this.spec().actionsLayout === 'stack' || this.fixedActionWidth(id) !== undefined ? undefined : 1)
     .constraintSize({ minHeight: this.actionHeight() }).padding({ top: 6, bottom: 6 })
-    .opacity(this.action(id).enabled ? 1 : 0.62)
+    .opacity(this.action(id).enabled ? 1 : 0.45)
     .enabled(this.action(id).enabled)
     .attributeModifier(this.actionModifier(this.action(id)))
+    .id(this.action(id).nativeId)
     .defaultFocus(this.action(id).defaultFocus)
     .responseRegion(this.actionTouchRegion())
     .onClick((): void => {
@@ -183,6 +197,11 @@ export struct ReaderDialogSurface {
         this.onAction(id);
       }
     });
+  }
+
+  private fixedActionWidth(id: string): number | undefined {
+    return this.leadingActionWidthVp > 0 && this.actions[0]?.id === id
+      ? Math.min(this.leadingActionWidthVp, this.resolvedFrame().width / 3) : undefined;
   }
 
   private action(id: string): DialogActionView {
@@ -256,6 +275,10 @@ export struct ReaderDialogSurface {
       return new SurfaceHorizontalFrame(0, 0, 0);
     }
     const spec = this.spec();
+    if (this.containerWidthVp > 0) {
+      return resolveHorizontalFrame(this.containerWidthVp, 0, 0,
+        new SurfaceWidthSpec(spec.maxWidth, spec.edgeGap, spec.edgeGap));
+    }
     const metrics = readerWindowMetrics();
     return resolveHorizontalFrame(metrics.windowRect.width,
       readerInteractiveSafeLeft(metrics, spec.usesKeyboardSafeArea),
@@ -264,32 +287,32 @@ export struct ReaderDialogSurface {
   }
 
   private actionLabelColor(action: DialogActionView): ResourceColor {
+    if (!action.enabled) return readerAppColor('TOK_MUTED', this.appThemeScheme);
     if (action.tone === 'primary') {
       return readerAppColor(this.spec().actionPrimaryLabelRole, this.appThemeScheme);
     }
     if (action.tone === 'danger') {
-      return readerAppColor('TOK_MESSAGE_DANGER', this.appThemeScheme);
+      return readerAppColor('app.action.onDanger', this.appThemeScheme);
     }
-    return readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme);
+    return readerAppColor('TOK_INK', this.appThemeScheme);
   }
 
   private actionSurfaceRole(action: DialogActionView): ReaderAppColorRole {
+    if (!action.enabled) return 'TOK_SURFACE_FIELD';
     if (action.tone === 'primary') {
       return this.spec().actionPrimarySurfaceRole;
     }
     if (action.tone === 'danger') {
-      return 'TOK_MESSAGE_SOFT';
+      return 'app.action.destructive';
     }
-    return 'TOK_MESSAGE_SOFT';
+    return 'TOK_SURFACE_FIELD';
   }
 
   private actionModifier(action: DialogActionView): AttributeModifier<CommonAttribute> {
     const spec = this.spec();
-    const surface = readerAppColor(this.actionSurfaceRole(action), this.appThemeScheme);
-    if (spec.actionUsesPressFeedback) {
-      return new ReaderPressFeedback(surface, this.appThemeScheme, spec.actionBorderRadius);
-    }
+    const surface = (action.tone === 'primary' ? this.primarySurfaceColor : undefined) ??
+      readerAppColor(this.actionSurfaceRole(action), this.appThemeScheme);
     return new ReaderPressFeedback(surface, this.appThemeScheme, spec.actionBorderRadius,
-      spec.actionBorderRadius, false);
+      spec.actionBorderRadius, spec.actionUsesPressFeedback && action.enabled);
   }
 }

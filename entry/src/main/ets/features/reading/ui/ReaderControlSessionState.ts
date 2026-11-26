@@ -408,7 +408,8 @@ export function resumeReaderControlSessionTarget(state: ReaderControlSessionStat
   if (kind === 'dismiss') destination.expansionProgress = frame.expansionProgress;
   const alreadyAtTarget = frame.expansionProgress === destination.expansionProgress &&
     frame.visibilityProgress === destination.visibilityProgress;
-  return startTransition(state, target, kind, intent, alreadyAtTarget ? 0 : durationMs);
+  return startTransition(state, target, kind, intent,
+    alreadyAtTarget && sameLocation(readerControlContentLocation(state), target) ? 0 : durationMs);
 }
 
 /** Explicit commands revoke the old pointer and pending frame epoch. */

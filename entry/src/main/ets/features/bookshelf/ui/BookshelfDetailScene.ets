@@ -13,6 +13,10 @@ export interface BookshelfDetailScenePorts {
   openDirectory: () => void;
   retryCatalog: () => void;
   openSourceSwitch: (focusId?: string) => void;
+  projectCurrentChapter?: (identity: string) => void;
+  openDownloads?: () => void;
+  openGroup?: (identity: string, focusId?: string) => void;
+  registerMoreBack?: (handler: (() => boolean) | undefined, identity: string) => void;
   back: () => void;
 }
 
@@ -39,9 +43,20 @@ export struct BookshelfDetailScene {
 
   private onEntryChanged(): void {
     const book = this.entry.book, toc = this.entry.toc;
+    // The visible owner retires first on Back. Keep the departing visual data
+    // until Navigation removes its lane. The unqualified actions stay fenced.
+    if (book === undefined) return;
     if (book !== this.sourceBook) {
+      const previous = this.sourceBook;
       this.sourceBook = book;
       this.bodyBook = book;
+      if (previous?.sourceId !== book.sourceId || previous?.bookId !== book.bookId) {
+        const identity = this.identity;
+        void Promise.resolve().then((): void => {
+          if (identity === this.identity && this.sourceBook?.sourceId === book.sourceId &&
+            this.sourceBook?.bookId === book.bookId) this.ports?.projectCurrentChapter?.(identity);
+        });
+      }
     }
     if (toc !== this.sourceToc) {
       this.sourceToc = toc;
@@ -49,23 +64,34 @@ export struct BookshelfDetailScene {
     }
   }
 
+  private detailKey(book: ReadingBookDetail): string {
+    return JSON.stringify([book.sourceId, book.bookId]);
+  }
+
+  private detailInputCurrent(key: string): boolean {
+    return this.foreground && this.entry.book !== undefined && this.detailKey(this.entry.book) === key &&
+      this.ports?.captureAction(this.identity)() === true;
+  }
+
   build() {
-    if (this.entry.book !== undefined) {
-      // The directory covers the same native detail. A different admission
-      // mounts a new actor and captures its own runtime action lease.
-      ForEach([this.identity], (identity: string): void => {
-        this.detailSurface(identity, this.ports?.captureAction(identity));
-      }, (identity: string): string => identity);
+    if (this.bodyBook !== undefined) {
+      ForEach([this.detailKey(this.bodyBook)], (key: string): void => {
+        this.detailSurface((): boolean => this.detailInputCurrent(key));
+      }, (key: string): string => key);
     }
   }
 
   @Builder
-  private detailSurface(identity: string, current: (() => boolean) | undefined) {
+  private detailSurface(current: () => boolean) {
     if (this.bodyBook !== undefined) {
       LocalBookDetail({
         book: this.bodyBook,
         directoryFocusContext: this.foreground ? 'detail' : this.directoryRetained ? 'directory' : 'inactive',
         toc: this.bodyToc,
+        currentChapterIndex: this.bodyBook.contentKind === 'manga' ?
+          this.bodyBook.mangaPosition?.chapterIndex ?? -1 : this.entry.directoryCurrentChapterIndex,
+        groupEnabled: this.entry.inBookshelf && this.ports?.openGroup !== undefined,
+        downloadsEnabled: this.ports?.openDownloads !== undefined,
         sourceSwitchEnabled: this.detail.sourceSwitchEnabled(this.bodyBook),
         readingEnabled: this.entry.verdict === 'readable',
         readingBlockedReason: remoteContentVerdictLabel(this.entry.verdict),
@@ -77,7 +103,7 @@ export struct BookshelfDetailScene {
         adding: this.detail.admission(this.bodyBook).adding,
         cancellingAdd: this.detail.admission(this.bodyBook).cancelling,
         shelfMessage: this.detail.message(this.bodyBook),
-        isDetailActionCurrent: (): boolean => current?.() === true,
+        isDetailActionCurrent: current,
         retainedShareFile: this.ports?.retainedShareFile,
         onContinue: (): void => { if (current?.() === true) this.ports?.openReading(); },
         onSelectChapter: (chapterIndex: number): void => {
@@ -85,18 +111,22 @@ export struct BookshelfDetailScene {
         },
         onOpenDirectory: (): void => { if (current?.() === true) this.ports?.openDirectory(); },
         onRetryCatalog: (): void => { if (current?.() === true) this.ports?.retryCatalog(); },
+        onOpenDownloads: (): void => { if (current?.() === true) this.ports?.openDownloads?.(); },
+        onOpenGroup: (focusId: string): void => { if (current()) this.ports?.openGroup?.(this.identity, focusId); },
+        onMoreBack: (handler: (() => boolean) | undefined, lease: string): void => {
+          if (handler === undefined || current?.() === true) this.ports?.registerMoreBack?.(handler, lease);
+        },
         onSwitchSource: (focusId?: string): void => { if (current?.() === true) this.ports?.openSourceSwitch(focusId); },
-        admissionIdentity: identity,
+        admissionIdentity: this.identity,
         onRemove: (requestedIdentity?: string): void => {
-          if (requestedIdentity === identity && current?.() === true) this.detail.request(identity);
+          if (requestedIdentity === this.identity && current()) this.detail.request(this.identity);
         },
         onCancelAdd: (requestedIdentity?: string): void => {
-          if (requestedIdentity === identity && current?.() === true) this.detail.cancel(identity);
+          if (requestedIdentity === this.identity && current()) this.detail.cancel(this.identity);
         },
         onBack: (): void => { if (current?.() === true) this.ports?.back(); },
       })
         .width('100%').height('100%')
-        .visibility(this.directoryRetained ? Visibility.Hidden : Visibility.Visible)
         .enabled(this.foreground)
         .focusable(this.foreground)
         .hitTestBehavior(this.foreground ? HitTestMode.Default : HitTestMode.None)

@@ -8,6 +8,7 @@ import {actualReadingEntryPresentation} from './reading-entry-presentation-probe
 import {readerRecoveryView} from '../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import {errorMessageOf,localReadFailureSummary} from '../../entry/src/main/ets/app/ErrorMessage.ts';
 import {BookshelfViewState} from '../../entry/src/main/ets/features/bookshelf/presentation/BookshelfViewState.ts';
+import {ShelfBookPresentation} from '../../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts';
 import * as names from '../../entry/src/main/ets/features/bookshelf/application/BookshelfSourceNameProjection.ts';
 import * as headerMetrics from '../../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts';
 import {readerFoundationTokens} from './reader-tokens-probe.mjs';
@@ -42,9 +43,7 @@ const {BookshelfCatalogPresentation}=emit('features/bookshelf/presentation/Books
 const {EMPTY_BOOKSHELF_OPERATION_SNAPSHOT}=emit('features/bookshelf/application/BookshelfOperationOwner.ts',['EMPTY_BOOKSHELF_OPERATION_SNAPSHOT']);
 const {LOCAL_IMPORT_PRESENTATION_KEY}=emit('features/bookshelf/presentation/LocalImportPresentationOwner.ts',['LOCAL_IMPORT_PRESENTATION_KEY']);
 const {BookshelfMutationPresentation}=emit('features/bookshelf/presentation/BookshelfMutationPresentation.ets',['BookshelfMutationPresentation'],
- {EMPTY_BOOKSHELF_OPERATION_SNAPSHOT,LOCAL_IMPORT_PRESENTATION_KEY,readerRecoveryView});
-const {BookshelfNavigationPresentation}=emit('features/bookshelf/ui/BookshelfNavigationPresentation.ets',['BookshelfNavigationPresentation'],
- {FrameCallback:class {}});
+ {EMPTY_BOOKSHELF_OPERATION_SNAPSHOT,LOCAL_IMPORT_PRESENTATION_KEY,readerRecoveryView,ShelfBookPresentation});
 const Reading=actualReadingEntryPresentation();
 export const currentProjectionIndexMembers=['isCurrentRuntime','currentReadingRuntime','bookshelfProjectionScene',
  'isCurrentBookshelfPresentation','isInteractiveBookshelfPresentation','bookshelfContentAcceptsInput','bookshelfModalVisible',
@@ -65,7 +64,7 @@ function indexField(field,receiver,deps){
 }
 function currentReadTypes(storage){
  return emit('features/bookshelf/presentation/BookshelfReadPresentation.ets',
- ['BookshelfReadPresentation'],{BookshelfViewState,readerRecoveryView,readerPageInitialHeaderHeight,...names,
+ ['BookshelfReadPresentation'],{BookshelfViewState,ShelfBookPresentation,readerRecoveryView,readerPageInitialHeaderHeight,...names,
   errorMessageOf,localReadFailureSummary,AppStorage:storage,hilog:{warn(){},error(){}}});
 }
 export function currentReadPresentation(ports={},storage={get:()=>undefined}){
@@ -92,7 +91,7 @@ export function currentProjectionFixture(runtime,types,{filter={sourceKind:'all'
   preparePersistedShelfBooks:()=>scheduling.push('prepare'),traceStartupStage:(...args)=>scheduling.push(args),
   beginStartupStage:()=>0,endStartupStage(){},
   prepareVisibleReadingBooks(){assert.fail('old physical callbacks cannot prepare books');},
-  openShelfBookWithMotion(){assert.fail('old physical callbacks cannot open a book');},
+  openShelfBook(){assert.fail('old physical callbacks cannot open a book');},
   openShelfBookInfo(){assert.fail('old physical callbacks cannot open detail');},
  });
  const sources={registry:[],tools:[],search:[]};
@@ -104,7 +103,6 @@ export function currentProjectionFixture(runtime,types,{filter={sourceKind:'all'
  const {BookshelfReadPresentation}=currentReadTypes(storage);
  index.shelfRead=indexField('shelfRead',index,{BookshelfReadPresentation});
  index.shelfMutations=indexField('shelfMutations',index,{BookshelfMutationPresentation});
- index.shelfMotion=indexField('shelfMotion',index,{BookshelfNavigationPresentation});
  index.shelfCatalog=new BookshelfCatalogPresentation({scene:()=>index.bookshelfProjectionScene(),
   catalog:owner=>index.bookshelfHost.catalog(owner),automaticAllowed:()=>false,revision:()=>index.shelfRead.snapshot.revision,
   filter:()=>index.shelfRead.filter(),project:state=>index.shelfRead.accept(state,true),

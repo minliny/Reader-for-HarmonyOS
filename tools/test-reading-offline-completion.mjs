@@ -18,6 +18,7 @@ registerHooks({ resolve(specifier, context, next) {
 const root = new URL('../', import.meta.url);
 const { ReadingOfflineGateway } = await import(new URL('entry/src/main/ets/features/reading/application/ReadingOfflineGateway.ts', root));
 const { ReadingOfflineMaterializationError } = await import(new URL('entry/src/main/ets/features/reading/application/ReadingOfflineContract.ts', root));
+const { readerHostFilesDirectory } = await import(new URL('entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts', root));
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
 const source = readFileSync(new URL('entry/src/main/ets/platform/reading-resources/ReadingImageDiskCache.ts', root), 'utf8');
 const executable = stripTypeScriptTypes(source.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
@@ -41,8 +42,8 @@ const util = { LRUCache: class {
   TextDecoder: { create: (_, options) => ({ decodeToString: b => new TextDecoder('utf-8', options).decode(b) }) } };
 const crypto = { createMd: () => { const h = createHash('sha256'); return { update: async ({ data }) => { h.update(data); }, digest: async () => ({ data: h.digest() }) }; } };
 const Cache = new Function('fileIo', 'statfs', 'cryptoFramework', 'util', 'canonicalReadingImageBaseUrl',
-  'assertReadingOfflineWriteCapacity', 'ReadingOfflineMaterializationError', `${executable};return ReadingImageDiskCache;`)(
-  io, { getFreeSize: async () => 1e9 }, crypto, util, value => value?.trim().split('#')[0] || undefined, () => {}, Error);
+  'assertReadingOfflineWriteCapacity', 'ReadingOfflineMaterializationError', 'readerHostFilesDirectory', `${executable};return ReadingImageDiskCache;`)(
+  io, { getFreeSize: async () => 1e9 }, crypto, util, value => value?.trim().split('#')[0] || undefined, () => {}, Error, readerHostFilesDirectory);
 const Owner = productionMotionMethods(localFilePath(new URL('entry/src/main/ets/app/ReaderRuntimeOwner.ts', root)),
   ['markOfflineImageChapterComplete', 'isOfflineImageChapterComplete']);
 const directories = [];

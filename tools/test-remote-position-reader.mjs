@@ -8,6 +8,7 @@ const {readFileSync}=await import('node:fs');
 const { fileURLToPath }=await import('node:url');
 const { productionMotionMethods }=await import('./lib/reader-motion-method-probe.mjs');
 const { compileHost, ReaderDirectoryHost }=await import('./lib/reading-entry-owner-probe.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
 registerHooks({resolve(specifier,context,next){try{return next(specifier,context);}catch(error){if(specifier.startsWith('.')&&!specifier.endsWith('.ts'))return next(`${specifier}.ts`,context);throw error;}}});
 // The shared production map uses a TypeScript constructor parameter property;
 // expand that one syntax node for Node's strip-only loader, preserving methods.
@@ -43,6 +44,74 @@ function page(load){
 const preservedChapter=()=>({...old,positionMigration:{...receipt('requested'),status:'preserved',reason:'text_anchor_missing_or_ambiguous',
  bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',previousOffset:6,offset:6}]}});
 
+const feedbackSource = readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts', import.meta.url), 'utf8');
+function installFeedback(p, notices, { unavailable, onPublished } = {}) {
+ const storage = new Map();
+ let now = 0, failed = 0;
+ const failAt = stage => {
+  if (stage === unavailable) { failed++; throw Error(stage + ' unavailable'); }
+ };
+ const { ReaderTransientFeedback, READER_FEEDBACK_DEDUPE_MS } = pureModuleProbe(feedbackSource, 'ReaderTransientFeedback.ts', {
+  Date: { now: () => now },
+  AppStorage: {
+   get(key) { failAt('storage-read'); return storage.get(key); },
+   setOrCreate(key, value) {
+    failAt('storage-write');
+    storage.set(key, value);
+    if (value.visible) { onPublished?.(); notices.push(value.message); }
+   },
+  },
+ }, ['ReaderTransientFeedback', 'READER_FEEDBACK_DEDUPE_MS']);
+ Object.assign(p, {
+  appForeground: true, windowChromeActive: true,
+  isSessionActive: token => p.isSelectionActive(token, p.chapterSelectionToken),
+  getUIContext() { failAt('context'); return {}; },
+  transientFeedback: new ReaderTransientFeedback(),
+ });
+ return { advance: () => { now += READER_FEEDBACK_DEDUPE_MS; }, failed: () => failed };
+}
+
+async function directoryFixture(runtime, host, active) {
+ const { actualReadingEntryPresentation } = await import('./lib/reading-entry-presentation-probe.mjs');
+ const { actualReaderDirectoryOperations } = await import('./lib/reader-directory-operations-probe.mjs');
+ const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+ const { ReaderNavigation } = await import('../entry/src/main/ets/app/navigation/ReaderNavigation.ts');
+ const root = new URL('../entry/src/main/ets/', import.meta.url);
+ const emit = (path, names, bindings) => pureModuleProbe(readFileSync(new URL(path, root), 'utf8'), path, bindings, names);
+ const Index = selectedProductionMethods(new URL('pages/Index.ets', root), 'Index',
+  ['isCurrentRuntime', 'directoryJourneyPorts', 'directoryNavigationPorts'], { ReaderRuntimeOwner: { isCurrent: owner => owner === runtime } });
+ const ReaderDirectoryOperations = actualReaderDirectoryOperations({
+  ReaderDirectoryHost: { forRuntime(owner, current) {
+   assert.equal(owner, runtime); assert.equal(current(), true);
+   return host;
+  } },
+  // These cases only read, or refuse navigation before any operation.
+  BookmarkOperationIntentStore: class {},
+ });
+ const { ReaderDirectoryJourney } = emit('app/composition/ReaderDirectoryJourney.ets', ['ReaderDirectoryJourney'],
+  { ReaderDirectoryOperations, hilog: { warn() {}, error() {} } });
+ const { readerDirectoryActions } = emit('features/reading/presentation/ReaderDirectoryActions.ets', ['readerDirectoryActions'], {});
+ const navigation = new ReaderNavigation();
+ navigation.show('directory');
+ const entry = new (actualReadingEntryPresentation())();
+ Object.assign(entry, {
+  book: { sourceId: 's', bookId: 'b', title: '书', author: '作者' },
+  toc: [{ index: 0, title: '章', navigable: true, bookmarks: [] }],
+  sessionActive: active,
+ });
+ const notices = [];
+ const index = Object.assign(new Index(), {
+  mountedRuntimeOwner: runtime, detailShelfAdmissionMount: 1, searchAppForeground: true,
+  shelfReceiptRetired: false, arkWebCapturesInput: false, mangaSourceSwitch: { selectionVisible: false },
+  sourceSwitchPresentation: { isSurfacePresented: () => false },
+  readingEntry: entry, currentReadingRuntime: () => runtime,
+  openReading: assert.fail, publishNavigation: assert.fail,
+  transientFeedback: { show(_context, feedback, current) { if (current()) notices.push(feedback.message); } },
+ });
+ index.directoryJourney = new ReaderDirectoryJourney(navigation, index.directoryJourneyPorts());
+ const actions = readerDirectoryActions(() => entry, () => index.directoryNavigationPorts(), () => index.directoryJourney.operations);
+ return { entry, navigation, operations: index.directoryJourney.operations, actions, notices };
+}
 
 try{
 if(id==='content-epoch'){
@@ -127,7 +196,7 @@ if(id==='bookmark-proof'){
 {
  const {p}=page(async()=>old); const selections=[]; const notices=[];
  p.selectChapterAnchor=(...args)=>selections.push(args);p.clearTtsChapterEndTimer=()=>{};
- p.getUIContext=()=>({getPromptAction:()=>({showToast:row=>notices.push(row)})});
+ installFeedback(p, notices);
  p.selectBookmarkAnchor(0,6);assert.equal(selections.length,0);assert.equal(notices.length,1);
  p.selectBookmarkAnchor(0,6,{sourceId:'foreign',bookId:'b',chapterIndex:0,bodyVersion:'old',processingVersion:'old-p'});
  assert.equal(selections.length,0);
@@ -141,9 +210,7 @@ for(const status of [undefined,'committed','unchanged','preserved'])for(const fo
  const chapter=status==='committed'?{...upgraded,positionMigration:receipt('requested')}:
    status===undefined?{...old,cacheRefreshRequired:true}:{...preservedChapter(),positionMigration:{...preservedChapter().positionMigration,status}};
  const {p}=page(async()=>chapter);const notices=[];
- p.getUIContext=()=>({getPromptAction:()=>({showToast:row=>{
-   assert.equal(p.chapter,chapter,'notice follows admission of the readable chapter');notices.push(row.message);
- }})});
+ installFeedback(p, notices, { onPublished: () => assert.equal(p.chapter, chapter, 'notice follows chapter admission') });
  await p.openChapter(0,false,1,1,6,undefined,force);
  assert.equal(p.failure,undefined);assert.equal(p.chapter,chapter);
  assert.equal(notices.length,(force&&status!==undefined)||status===undefined?1:0,`${status}, force=${force}`);
@@ -153,15 +220,13 @@ for(const status of [undefined,'committed','unchanged','preserved'])for(const fo
 }
 }
 if(id==='feedback-unavailable'){
-for(const failure of ['context','prompt','toast']){
- const chapter=preservedChapter();const {p}=page(async()=>chapter);
- p.getUIContext=()=>{
-   if(failure==='context')throw Error('context detached');
-   return{getPromptAction:()=>{if(failure==='prompt')throw Error('prompt unavailable');
-     return{showToast(){throw Error('toast unavailable');}};}};
- };
+for(const failure of ['context','storage-read','storage-write']){
+ const chapter=preservedChapter();const {p}=page(async()=>chapter);const notices=[];
+ const feedback = installFeedback(p, notices, { unavailable: failure });
  await p.openChapter(0,false,1,1,6,undefined,true);
  assert.equal(p.failure,undefined,failure);assert.equal(p.chapter,chapter);assert.equal(p.desiredChapterOffset,6);
+ assert.equal(feedback.failed(), 1);
+ assert.deepEqual(notices, []);
  
 }
 }
@@ -169,7 +234,7 @@ if(id==='late-feedback'){
 for(const stage of ['load','metrics']){
  let release;const gate=new Promise(resolve=>release=resolve);let active=true;const notices=[];
  const {p}=page(async()=>stage==='load'?gate:preservedChapter());p.isSelectionActive=()=>active;
- p.getUIContext=()=>({getPromptAction:()=>({showToast:row=>notices.push(row)})});
+ installFeedback(p, notices);
  if(stage==='metrics')p.ensureCurrentContentMetrics=async()=>gate;
  const pending=p.openChapter(0,false,1,1,6,undefined,true);
  await Promise.resolve();await Promise.resolve();active=false;
@@ -182,7 +247,7 @@ if(id==='metrics-unavailable'){
 {
  const {p}=page(async()=>preservedChapter());const notices=[];
  p.ensureCurrentContentMetrics=async()=>false;
- p.getUIContext=()=>({getPromptAction:()=>({showToast:row=>notices.push(row)})});
+ installFeedback(p, notices);
  await p.openChapter(0,false,1,1,6,undefined,true);
  assert.equal(notices.length,0);assert.equal(p.chapter,undefined);assert.equal(p.failure,undefined);
  
@@ -191,7 +256,7 @@ if(id==='metrics-unavailable'){
 if(id==='old-cache-once'){
 {
  const cached={...old,cacheRefreshRequired:true}; const {p,calls}=page(async()=>cached);const notices=[];
- p.getUIContext=()=>({getPromptAction:()=>({showToast:row=>notices.push(row.message)})});
+ installFeedback(p, notices);
  await p.openChapter(0,false,1,1);await p.openChapter(0,false,1,1);
  assert.equal(p.failure,undefined);assert.equal(p.chapter,cached);assert.equal(notices.length,1);
  assert.ok(calls.every(call=>call[3]===false));assert.match(notices[0],/旧版缓存.*待验证/);
@@ -244,8 +309,7 @@ for(const scenario of ['refresh','decline','stale','late','preserved','already-r
 }
 if(id==='index-cache-recovery'){
 {
- const admission=await import('../entry/src/main/ets/features/reading/application/RemoteContentAdmission.ts');
- const {withPreparedRemoteChapter}=await import('../entry/src/main/ets/features/reading/application/RemoteReadingEvidence.ts');
+ const { currentCachedChapterFeedbackOwners } = await import('./lib/reader-download-feedback-current-owner-probe.mjs');
  const session={identity:{sourceId:'s',bookId:'b'},sourceVersion:'v',acquisitionMode:'online',
    detailUrl:'/b',tocUrl:'/toc',book:{title:'书',author:'作者'},entries:[{index:0,title:'章',url:'/0',variables:[]}],
    continuationVariables:[],hostRequirements:[]};
@@ -258,37 +322,41 @@ if(id==='index-cache-recovery'){
    const NativeGateway=class{async loadChapter(...args){calls.push(args);revision+=2;
      if(scenario==='failure')throw Error('synthetic refresh failed');if(scenario==='late')return gate;return upgraded;}};
    const Entry=compileHost(undefined,{ReaderRuntimeOwner:{current:()=>runtime,isCurrent:owner=>owner===runtime},RemoteReadingFlowGateway:NativeGateway});
-   const emptyAdmission={generation:0,adding:false,cancelling:false,confirmation:'none'};
-   const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-     ['refreshCachedChapterFromPrompt','bindReadingEntryReader'],{...admission,withPreparedRemoteChapter,errorMessageOf:e=>e.message,
-       ReadingEntryHost:Entry,EMPTY_READABLE_ADMISSION:emptyAdmission,LOCAL_SOURCE_ID:'local',
-       ReaderRuntimeOwner:{current:()=>runtime},hilog:{warn(){}},DOMAIN:0,
-       RemoteReadingFlowGateway:NativeGateway});
-   const page=Object.assign(new Index(),{route:'reading',shelfReceiptRetired:false,remoteSessionGeneration:1,remoteReadingSession:session,navigationGeneration:7,showReadingFailure:(...args)=>failures.push(args),
-     mountedRuntimeOwner:runtime,detailShelfAdmissionMount:1,detailBook:{sourceId:'s',bookId:'b',title:'书',author:'作者'},detailToc:session.entries,
-     shelfOperation:{generation:0,removalKey:'',busy:false},detailReadableAdmission:()=>emptyAdmission,
-     getUIContext:()=>({showAlertDialog(row){dialogs.push(row);assert.fail('entry recovery must not create a native dialog');}})});
-   page.bindReadingEntryReader();
-   assert.equal(await page.refreshCachedChapterFromPrompt(error,()=>active),undefined,'background probe completes without waiting for a notice decision');
+   const host = Entry.forRuntime(runtime);
+   const { entry, receiver } = currentCachedChapterFeedbackOwners(runtime, host, { get live() { return active; } }, [], []);
+   Object.assign(entry, { book: { ...session.identity, ...session.book, sourceName: '书源' }, session, toc: session.entries });
+   receiver.route = 'reading';
+   receiver.getUIContext = () => ({ showAlertDialog(row) {
+     dialogs.push(row); assert.fail('entry recovery must not create a native dialog');
+   } });
+   entry.bindReader(runtime, { current: () => active, projectionVisible: () => true,
+     membership: () => ({ generation: 0, blocked: false, value: false }), refreshShelf() {},
+     notice: (...args) => failures.push(args), cacheDecision: receiver.chooseCachedChapterRefresh });
+   assert.equal(await host.recoverCachedChapter(entry.scopeId,error,()=>active),undefined,'background probe completes without waiting for a notice decision');
    assert.equal(calls.length,0,'background failure never silently fetches another body');assert.equal(dialogs.length,0);
+   let dispatched;
+   const recover = host.recoverCachedChapter.bind(host);
+   host.recoverCachedChapter = (...args) => { dispatched = recover(...args); return dispatched; };
    if(scenario!=='preserved'){
-     assert.equal(page.indexRecoveryNotice.canRetry,true);assert.equal(page.indexRecoveryActionLabel,'刷新本章');
-     const presentation=page.indexRecoveryNotice.generation;
+     assert.equal(entry.recoveryNotice.canRetry,true);assert.equal(entry.recoveryActionLabel,'刷新本章');
+     const presentation=entry.recoveryNotice.generation;
      if(scenario==='stale')active=false;
-     if(scenario!=='decline'){page.readingEntry.retryRecoveryNotice(presentation);page.readingEntry.retryRecoveryNotice(presentation);}
+     if(scenario!=='decline'){entry.retryRecoveryNotice(presentation);entry.retryRecoveryNotice(presentation);}
      if(scenario==='late'){
        for(let n=0;n<20&&calls.length<1;n++)await new Promise(resolve=>setImmediate(resolve));
        assert.equal(calls.length,1,'late entry cancellation follows actual dispatch');active=false;release(upgraded);
      }
    }
-   for(let n=0;n<4;n++)await new Promise(resolve=>setImmediate(resolve));
+   await dispatched;
    assert.equal(calls.length,['refresh','failure','late'].includes(scenario)?1:0,scenario);
    if(calls.length){assert.equal(calls[0][0],session);assert.equal(calls[0][1],0);
      assert.equal(calls[0][3],true);assert.deepEqual(calls[0][4],position);}
-   if(scenario==='refresh'){assert.equal(page.remoteContentVerdict,'readable');assert.equal(page.remoteReadingSession.identity,session.identity);}
-   else assert.equal(page.remoteReadingSession.preparedChapter,undefined);
+   if(scenario==='refresh'){
+     assert.equal(entry.verdict,'readable');assert.deepEqual(entry.session.identity,session.identity);
+     assert.equal(entry.session.preparedChapter.projectionRevision,revision);
+   } else assert.equal(entry.session.preparedChapter,undefined);
    assert.equal(failures.length,scenario==='preserved'||scenario==='failure'?1:0,scenario);
-   assert.equal(dialogs.length,0);assert.equal(page.route,'reading','feedback never changes the active route');
+   assert.equal(dialogs.length,0);assert.equal(receiver.route,'reading','feedback never changes the active route');
  }
 }
 }
@@ -297,7 +365,7 @@ if(id==='fallback-anchor'){
  const current={...upgraded,content:'全新的本章正文，旧版文字已被替换。',positionMigration:{...receipt('requested'),
    reason:'positions_partially_restored',anchors:[{id:'requested',previousOffset:6,offset:0}]}};
  const {p}=page(async()=>current);const notices=[],reads=[];
- p.getUIContext=()=>({getPromptAction:()=>({showToast:row=>notices.push(row.message)})});
+ installFeedback(p, notices);
  p.onLoadControlBookmarks=async(...args)=>{reads.push(args);};
  await p.openChapter(0,false,1,1,6,undefined,true,{bodyVersion:'old',processingVersion:'old-p',anchors:[{id:'requested',offset:6}]});
  await new Promise(resolve=>setImmediate(resolve));
@@ -312,8 +380,10 @@ for(const status of ['committed','unchanged']){
  const chapter=status==='committed'?{...upgraded,positionMigration:receipt('requested')}:
    {...old,positionMigration:{...preservedChapter().positionMigration,status:'unchanged'}};
  const {p}=page(async()=>chapter);const notices=[];
- p.getUIContext=()=>({getPromptAction:()=>({showToast:row=>notices.push(row.message)})});
- await p.openChapter(0,false,1,1,6,undefined,true);await p.openChapter(0,false,1,1,6,undefined,true);
+ const feedback = installFeedback(p, notices);
+ await p.openChapter(0,false,1,1,6,undefined,true);
+ feedback.advance();
+ await p.openChapter(0,false,1,1,6,undefined,true);
  assert.equal(notices.length,2,'each explicit refresh has its own result');
  assert.match(notices[0],status==='unchanged'?/正文没有变化/:/正文已更新/);
 }
@@ -334,7 +404,8 @@ if(id==='bookmark-reload'){
 }
 if(id==='page-mark-scope'){
 const Marks=productionMotionMethods(file,['bookmarkMatchesCurrentChapter','controlDirectoryEntries','currentPageBookmarkStatus',
- 'toggleCurrentPageBookmark','pageBookmarkFeedbackAnchor','pageBookmarkFeedbackFilled','reconcilePageBookmarkFeedback','bookmarkFeedbackOwnerKey'],
+ 'toggleCurrentPageBookmark','pageBookmarkFeedbackAnchor','pageBookmarkFeedbackFilled','reconcilePageBookmarkFeedback','bookmarkFeedbackOwnerKey',
+ 'currentBookmarkViewport','currentPageBookmarkText'],
  {LOCAL_READING_SOURCE_ID:'local'});
 {
  const scope={sourceId:'s',bookId:'b',chapterIndex:0,bodyVersion:'old',processingVersion:'old-p'};
@@ -342,9 +413,10 @@ const Marks=productionMotionMethods(file,['bookmarkMatchesCurrentChapter','contr
  let entries=[{index:0,title:'章',bookmarks:[mark,{...mark,time:2,bookText:'',positionScope:undefined}]}];
  const requests=[];
  const p=Object.assign(new Marks(),{sourceId:'s',bookId:'b',mounted:true,chapter:old,
-  chapterLayoutMap:new ReadingSurfaceLayoutMap(old.content),visiblePage:{startScalar:0,endScalar:20},
+  chapterLayoutMap:new ReadingSurfaceLayoutMap(old.content),visiblePage:{startScalar:0,endScalar:12},
+  readerSettingsSnapshot:{navigationMode:'paged'},bookmarkWriteEnabled:()=>true,bookmarkGestureAnchor:'',
   bookmarkExcerptCache:new Map(),bookmarkMutationGeneration:0,bookmarkPendingTarget:'',bookmarkPreviewChanged:false,
-  currentChapterIndex:()=>0,controlDirectorySourceEntries:()=>entries,currentPageBookmarkText:()=> '当前页正文',
+  currentChapterIndex:()=>0,controlDirectorySourceEntries:()=>entries,
   onTogglePageBookmark:r=>requests.push(r)});
  assert.equal(p.currentPageBookmarkStatus(),'bookmarked');
  // The same page numbers and parent array survive a refresh. Its previous
@@ -372,42 +444,35 @@ const Marks=productionMotionMethods(file,['bookmarkMatchesCurrentChapter','contr
 }
 if(id==='cold-bookmark'){
 {
- const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-   ['onReaderBookmarkSelected'],{LOCAL_SOURCE_ID:'local',ReaderBookmarkAnchorRequest:class{constructor(...args){this.args=args;}}});
  for(const active of [false,true]){
-  const notices=[];const p=Object.assign(new Index(),{detailBook:{sourceId:'s',bookId:'b'},readingSessionActive:active,
-   detailToc:[{index:0,navigable:true}],route:'directory',bookmarkAnchorRequestId:0,
-   openReading(){throw Error('must not open');},transientFeedback:{show(_context,message){notices.push(message.message);}}});
-  p.onReaderBookmarkSelected('unresolved',0,6);assert.equal(notices.length,1);assert.equal(p.route,'directory');
-  assert.equal(p.requestedBookmarkAnchor,undefined);assert.equal(p.readingSessionActive,active);
+  const { entry, navigation, actions, notices } = await directoryFixture({}, undefined, active);
+  actions.selectBookmark('unresolved',0,6);
+  assert.equal(notices.length,1);assert.match(notices[0],/原摘录和备注仍保留/);
+  assert.equal(navigation.snapshot().route,'directory');
+  assert.equal(entry.requestedBookmarkAnchor,undefined);assert.equal(entry.sessionActive,active);
  }
 }
 }
 if(id==='index-bookmark-failure'){
 {
- const {loadReaderControlBookmarkProjection}=await import('../entry/src/main/ets/features/reading/presentation/ReaderControlBookmarkLoad.ts');
+ const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts');
  for(const scenario of ['read-failed','new-mutation','new-navigation']){
-  let reject;const gate=new Promise((_resolve,no)=>reject=no);
-  const Index=productionMotionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),
-   ['loadControlBookmarks','applyOwnedDirectoryEntries'],
-   {ReaderRuntimeOwner:{current:()=>runtime},ReaderDirectoryHost:{forRuntime:()=>host}});
-  const {LocalReadingFlowGateway}=await import('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts');
-  const runtime={request:()=>gate};
+  let reject;
+  const gate=new Promise((_resolve,no)=>reject=no);
+  let started=false;
+  const runtime={request(method){assert.equal(method,'bookmark.list');started=true;return gate;}};
   const host=new ReaderDirectoryHost({gateway:new LocalReadingFlowGateway(runtime),ownsRuntime:()=>true});
   const fresh=[{index:0,title:'章',bookmarks:[{time:2,chapterOffset:0}]}];
-  const p=Object.assign(new Index(),{mounted:true,mountedRuntimeOwner:runtime,shelfReceiptRetired:false,route:'directory',
-   detailBook:{sourceId:'s',bookId:'b',title:'书',author:'作者'},readingSessionActive:true,
-   navigationGeneration:1,directoryBookmarkMutationGeneration:1,directoryBookmarkMutationActiveKey:'',
-   detailToc:[{index:0,title:'章',bookmarks:[]}],directoryBookmarkMutationKey:()=> 'book-key',
-   getReadingEntryHost:()=>undefined,clearDirectoryBookmarkProjectionFailure(){}});
-  const promise=p.loadControlBookmarks('s','b',()=>true);
+  const { entry, navigation, operations } = await directoryFixture(runtime, host, true);
+  const promise=operations.loadControlBookmarks('s','b',()=>true);
+  const settlement = scenario==='read-failed' ? assert.rejects(promise,/bookmark read failed/) : promise;
   await new Promise(resolve=>setImmediate(resolve));
-  if(scenario==='new-mutation'){host.generation++;p.detailToc=fresh;}
-  if(scenario==='new-navigation')p.navigationGeneration++;
+  assert.equal(started,true,'the failing read is pending on the actual Core gateway');
+  if(scenario==='new-mutation'){host.generation++;entry.toc=fresh;}
+  if(scenario==='new-navigation')navigation.advance();
   reject(Error('bookmark read failed'));
-  if(scenario==='read-failed')await assert.rejects(promise,/bookmark read failed/);
-  else await promise;
-  if(scenario==='new-mutation')assert.equal(p.detailToc,fresh,'obsolete read cannot overwrite or fail a new CRUD projection');
+  await settlement;
+  if(scenario==='new-mutation')assert.equal(entry.toc,fresh,'obsolete read cannot overwrite or fail a new CRUD projection');
  }
 }
 }

@@ -247,7 +247,7 @@ async function sameMountDisabledAdmission(text = source) {
   f.receipts[0].resolve(true); await tick(); f.properties.flush();
   assert.equal(f.blank(), false, 'same mounted SDK build leaves Blank after receipt even while interaction is false');
   assert.equal(f.historicalBlank(), true, 'the probe keeps historical native actors and does not claim renderer removal');
-  assert.equal(f.fallbackBuilds(), 1); assert.equal(f.text().fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_550,
+  assert.equal(f.fallbackBuilds(), 1); assert.equal(f.text().fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
     'the real prepared fallback row Text is requested by its production Builder after checked receipt');
   assert.equal(f.treeRequests().length, 0, 'display admission cannot issue a blocked tree request');
   const row = f.fallbackNodes().find(node => node.type === 'Stack' && node.accessibilityText?.includes('03') && typeof node.onClick === 'function');
@@ -337,8 +337,8 @@ function liveCurrentFamily(text = listSource) {
   };
   assert.equal(title.fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_REGULAR);
   update({ currentChapterIndex: 79 });
-  assert.equal(title.fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_550, 'native Prop update switches the retained title to physical fixed 550');
-  assert.deepEqual(title.fontWeight, [550, {enableVariableFontWeight: true}], 'fixed outlines and explicit current weight use the shared 550 role');
+  assert.equal(title.fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_MEDIUM, 'native Prop update switches the retained title to static UI Medium 500');
+  assert.deepEqual(title.fontWeight, 500, 'fixed outlines and explicit current weight use the checked UI Medium role');
   update({ currentChapterIndex: -1 });
   assert.equal(title.fontFamily, fonts.READER_FONT_NOTO_SANS_SC_UI_REGULAR);
   const row = [...owner.nodes.values()].find(node => node.type === 'Row');
@@ -355,7 +355,7 @@ function liveCurrentFamily(text = listSource) {
   assert.equal(owner.observers.length, actors, 'same native title actor switches family in both directions');
 }
 liveCurrentFamily();
-const stuckRegular = listSource.replaceAll('this.isCurrentMangaNode(item) ? READER_FONT_NOTO_SANS_SC_UI_550 : READER_FONT_NOTO_SANS_SC_UI_REGULAR', 'READER_FONT_NOTO_SANS_SC_UI_REGULAR');
+const stuckRegular = listSource.replaceAll('this.isCurrentMangaNode(item) ? READER_FONT_NOTO_SANS_SC_UI_MEDIUM : READER_FONT_NOTO_SANS_SC_UI_REGULAR', 'READER_FONT_NOTO_SANS_SC_UI_REGULAR');
 assert.notEqual(stuckRegular, listSource);
-assert.throws(() => liveCurrentFamily(stuckRegular), /physical fixed 550/);
+assert.throws(() => liveCurrentFamily(stuckRegular), /static UI Medium 500/);
 console.log('PASS manga directory fixed-font SDK binding, deferred checked receipt, fallback/tree admission, stale/closing fences, same actor responsive styles, phone/catalog open50 and side-panel open7 through SDK scroll requests, explicit locate12, novel direct/center path; 5 old-implementation negative controls, same mounted SDK Blank-to-prepared-fallback branch request while interaction disabled, retained closing display, dispose/remount receipt fences and unchanged tree/target admission. Native branch removal, glyph pixels and motion frames remain target acceptance.');

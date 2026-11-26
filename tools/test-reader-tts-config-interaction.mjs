@@ -143,22 +143,24 @@ assert.deepEqual(keyboardWrites,['acquire','release'],'an anchored picker never 
 }
 if(id==='overlay'){
 const Overlay=productionMotionMethods(file('reading/ui/ReaderTtsConfigOverlay.ets'),
-  ['stopPreview','choose','aboutToDisappear','onIdentityChanged','acceptsInput']);
+  ['stopPreview','choose','aboutToDisappear','onIdentityChanged','acceptsInput','setBusy']);
 let complete, closed=[];
 const busyChanges=[];
 const overlay=Object.assign(new Overlay(),{mounted:true,generation:0,previewGeneration:0,onPreviewStop(){},busy:false,selectionId:'engine:1',choices:[{id:'system',label:'系统'}],
   onChoose:()=>new Promise(resolve=>complete=resolve),onBusyChange:busy=>busyChanges.push(busy),onClose:id=>closed.push(id)});
-overlay.choose('system'); overlay.choose('system'); overlay.selectionId='voice:2'; overlay.onIdentityChanged();
+overlay.choose('system'); overlay.choose('system');
+assert.deepEqual(busyChanges,[true],'the pending choice blocks its host and cannot start twice');
+overlay.selectionId='voice:2'; overlay.onIdentityChanged();
 await tick();
-assert.deepEqual(busyChanges,[false],'replaced selection releases the parent content-cover gate');
+assert.deepEqual(busyChanges,[true,false],'replaced selection releases the parent content-cover gate');
 complete(); await tick(); assert.deepEqual(closed,[],'old completion cannot close a newer menu');
 overlay.onChoose=async()=>{throw new Error('切换失败');}; overlay.choose('system'); await tick();
 assert.equal(overlay.errorText,'切换失败'); assert.equal(overlay.busy,false);
-assert.deepEqual(busyChanges,[false],'choice transaction does not own the manager content-cover callback');
+assert.deepEqual(busyChanges,[true,false,true,false],'a rejected choice also restores host input');
 }
 if(id==='audio-adapter'){
 for(const name of ['HarmonySystemTtsHost','HarmonyHttpTtsHost']) {
-  const Host=productionMotionMethods(new URL(`../entry/src/main/ets/app/${name}.ts`,import.meta.url),['activateAudioSession']);
+  const Host=productionMotionMethods(new URL(`../entry/src/main/ets/platform/tts/${name}.ts`,import.meta.url),['activateAudioSession']);
   const calls=[];
   const lease=new ReaderTtsAudioSessionLease({async activate(mix){calls.push(mix);},async deactivate(){}});
   const host=Object.assign(new Host(),{assertOpen(){},installAudioListeners(){},audioSessionLease:lease,

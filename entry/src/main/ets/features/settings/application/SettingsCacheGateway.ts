@@ -39,6 +39,8 @@ export class SettingsCacheGateway {
     const previous = await this.owner.readSettingsTextCleanup();
     if (previous?.phase === 'pending')
       throw new SettingsCacheCleanupFailure('清理结果尚未确认，原状态已保留；不会自动再次清理', true);
+    if (previous !== undefined && previous.phase !== 'confirmed')
+      throw new SettingsCacheCleanupFailure('正文清理已确认，结果保存尚未完成，请核对', false, true);
     try {
       const actual = await this.owner.clearTextRebuildableCache(evidence, current);
       return this.decode({ scope: 'text', removedContentBytes: actual.removedContentBytes,
@@ -67,11 +69,19 @@ export class SettingsCacheGateway {
     }
     const journal = await this.owner.readSettingsTextCleanup();
     if (journal === undefined) return undefined;
-    if (journal.version !== 2 || journal.scope !== 'text' || journal.phase !== 'confirmed' || journal.result === undefined)
+    if (journal.version !== 2 || journal.scope !== 'text' || journal.phase === 'pending' ||
+      (journal.phase === 'confirmed' && journal.result === undefined))
       throw new SettingsCacheCleanupFailure('清理结果尚未确认，原状态已保留；当前没有可核对的完整回执', true);
-    const report = this.decode({ scope: 'text', removedContentBytes: journal.result.removedContentBytes,
-      deletedBytes: journal.result.deletedBytes, deletedFiles: journal.result.deletedFiles,
-      ...(journal.result.cleanupError === undefined ? {} : { cleanupError: '部分清理未完成，请稍后重试' }) });
+    let result = journal.result;
+    try {
+      if (journal.phase !== 'confirmed') result = await this.owner.reconcileSettingsTextCleanup(current);
+    } catch (_) {
+      throw new SettingsCacheCleanupFailure('正文清理已确认，结果保存尚未完成，请核对', false, true);
+    }
+    if (result === undefined || !current()) return undefined;
+    const report = this.decode({ scope: 'text', removedContentBytes: result.removedContentBytes,
+      deletedBytes: result.deletedBytes, deletedFiles: result.deletedFiles,
+      ...(result.cleanupError === undefined ? {} : { cleanupError: '部分清理未完成，请稍后重试' }) });
     return { data: report as unknown as JsonObject };
   }
   decode(data: JsonObject): SettingsCacheClearReport {

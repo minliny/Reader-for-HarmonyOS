@@ -123,7 +123,7 @@ function checkFullChrome(candidate = pageSource, headerCandidate = headerSource,
     for(const child of [field,header,pageFrame(owner)]){child.appThemeScheme=scheme;child.readerWindowMetricsRevision=0;}properties.flush();
     const nodes=[...owner.nodes.values()],title=nodes.find(n=>n.type==='Text'&&n.create===owner.bookTitle),visual=directoryVisual.MANGA_DIRECTORY_VISUAL;
     assert.ok(title);assert.equal(title.fontSize,visual.summaryFontSize);assert.equal(title.lineHeight,visual.summaryLineHeight);assert.equal(title.maxLines,undefined,'long actual title remains naturally wrapping');
-    const hnodes=[...header.nodes.values()],htitle=hnodes.find(n=>n.type==='Text'&&n.create==='章节目录');assert.ok(htitle);assert.equal(htitle.fontFamily,fonts.READER_FONT_NOTO_SANS_SC_UI_650);assert.equal(htitle.fontSize,visual.headerFontSize);assert.equal(htitle.lineHeight,visual.headerLineHeight);assert.deepEqual(htitle.fontWeight,[visual.headerFontWeight,{enableVariableFontWeight:true}]);
+    const hnodes=[...header.nodes.values()],htitle=hnodes.find(n=>n.type==='Text'&&n.create==='章节目录');assert.ok(htitle);assert.equal(htitle.fontFamily,fonts.READER_FONT_NOTO_SANS_SC_UI_BOLD);assert.equal(htitle.fontSize,visual.headerFontSize);assert.equal(htitle.lineHeight,visual.headerLineHeight);assert.equal(htitle.fontWeight, visual.headerFontWeight);
     const backImage = hnodes.find(node => node.type === 'Image');
     assert.equal(backImage?.create, `app.media.manga_directory_back${scheme === 'night' ? '_theme_night' : ''}`);
     const locate=nodes.find(n=>n.accessibilityText==='定位当前条目'),sort=nodes.find(n=>n.accessibilityText==='切换排序');assert.ok(locate&&sort);assert.equal(locate.height,undefined,'wrapped locate uses intrinsic actor');

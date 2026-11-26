@@ -1,3 +1,6 @@
+import { READER_BOOKMARK_TRIGGER_VP } from '../presentation/ReaderPageBookmarkModel.ts';
+import { readerPaperPullOffset } from '../presentation/ReaderPaperPullMotion.ts';
+
 /** The shared raw-input arena for paged reading. It owns no renderer or page transaction. */
 export type ReaderPageTurnDirection = 'previous' | 'next';
 
@@ -44,7 +47,6 @@ export type ReaderPageGestureState = {
   currentLocalY: number;
   maxDistance2D: number;
   progress: number;
-  bookmarkPeakDistance: number;
   bookmarkOffsetY: number;
   bookmarkPreviewChanged: boolean;
   settleTarget: ReaderPageGestureSettleTarget | undefined;
@@ -62,6 +64,7 @@ export const READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP = 16;
 export const READER_PAGE_GESTURE_AXIS_DOMINANCE = 1.5;
 export const READER_PAGE_GESTURE_LONG_PRESS_MS = 500;
 export const READER_PAGE_GESTURE_VERTICAL_PREVIOUS_SLOP = 24;
+/** Raw slop for terminal owner admission and unavailable feedback. */
 export const READER_PAGE_GESTURE_BOOKMARK_SLOP = 48;
 
 export function readerPagePointerCoordinate(
@@ -343,16 +346,11 @@ function applyReaderPageGestureSample(
     }
   }
 
-  let bookmarkPeak = state.bookmarkPeakDistance;
   let bookmarkOffsetY = state.bookmarkOffsetY;
   let bookmarkPreviewChanged = state.bookmarkPreviewChanged;
   if (owner === 'bookmark') {
-    const downward = Math.max(0, inputY);
-    bookmarkPeak = Math.max(bookmarkPeak, downward);
-    bookmarkOffsetY = Math.min(state.viewportHeight / 2,
-      Math.max(0, downward - READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP) / 2);
-    bookmarkPreviewChanged = bookmarkPeak >= READER_PAGE_GESTURE_BOOKMARK_SLOP &&
-      downward >= bookmarkPeak / 2 &&
+    bookmarkOffsetY = readerPaperPullOffset(inputY);
+    bookmarkPreviewChanged = bookmarkOffsetY >= READER_BOOKMARK_TRIGGER_VP &&
       absoluteX < absoluteY * READER_PAGE_GESTURE_AXIS_DOMINANCE;
   }
 
@@ -383,7 +381,6 @@ function applyReaderPageGestureSample(
     state.currentLocalY = currentY;
     state.maxDistance2D = maxDistance;
     state.progress = progress;
-    state.bookmarkPeakDistance = bookmarkPeak;
     state.bookmarkOffsetY = bookmarkOffsetY;
     state.bookmarkPreviewChanged = bookmarkPreviewChanged;
     state.settleTarget = undefined;
@@ -413,7 +410,6 @@ function applyReaderPageGestureSample(
     currentLocalY: currentY,
     maxDistance2D: maxDistance,
     progress,
-    bookmarkPeakDistance: bookmarkPeak,
     bookmarkOffsetY,
     bookmarkPreviewChanged,
     settleTarget: undefined,
@@ -430,7 +426,7 @@ function idleReaderPageGestureState(consumed: boolean): ReaderPageGestureState {
     lastOffsetX: 0, lastOffsetY: 0, velocityX: 0, velocityY: 0,
     startEventTimeMs: 0, eventTimeMs: 0, startLocalX: 0, startLocalY: 0,
     currentLocalX: 0, currentLocalY: 0, maxDistance2D: 0, progress: 0,
-    bookmarkPeakDistance: 0, bookmarkOffsetY: 0, bookmarkPreviewChanged: false,
+    bookmarkOffsetY: 0, bookmarkPreviewChanged: false,
     settleTarget: undefined, reversed: false,
   };
 }

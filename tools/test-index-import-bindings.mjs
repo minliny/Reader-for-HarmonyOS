@@ -31,10 +31,10 @@ function bindingConflicts(statements) {
 }
 
 assert.deepEqual(bindingConflicts(imports), [], 'production entry imports must have unique bindings');
-const directoryImport = imports.find(text => text.includes("from '../features/reading/application/ReaderDirectoryBackfill'"));
-assert.ok(directoryImport);
-const conflicts = bindingConflicts([...imports, directoryImport]);
-for (const name of ['ReaderDirectoryBackfill']) {
-  assert.ok(conflicts.some(message => message.includes(name)), `compiler must reject repeated ${name}`);
-}
+const directoryImport = tree.statements.filter(ts.isImportDeclaration)
+  .find(node => node.moduleSpecifier.text === '../app/composition/ReaderDirectoryJourney');
+assert.ok(directoryImport, 'Index imports the directory navigation owner');
+const conflicts = bindingConflicts([...imports, directoryImport.getText(tree)]);
+assert.ok(conflicts.some(message => message.includes('ReaderDirectoryJourney')),
+  'compiler must reject the repeated directory navigation owner');
 console.log('Index import bindings: PASS (installed compiler; duplicate directory-navigation imports rejected)');

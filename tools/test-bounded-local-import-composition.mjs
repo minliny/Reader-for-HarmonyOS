@@ -12,6 +12,8 @@ const {readFileSync} = await import('node:fs');
 const {boundedSurfaceSdk,boundedMembers} = await import('./lib/bounded-surface-sdk-probe.mjs');
 const {pureModuleProbe} = await import('./lib/ets-pure-module-probe.mjs');
 const {selectedProductionValues} = await import('./lib/selected-production-methods.mjs');
+const {readerImportMotionForProbe} = await import('./lib/reader-import-motion-probe.mjs');
+const {readerEditingSdk} = await import('./lib/reader-editing-sdk-probe.mjs');
 const horizontal = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
 const metricsApi = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const {localImportResultLayout} = await import('../entry/src/main/ets/features/bookshelf/ui/LocalImportLayout.ts');
@@ -21,17 +23,22 @@ const {LOCAL_IMPORT_FILE_FOCUS_ID}=selectedProductionValues(new URL('../entry/sr
 const frameSource=readFileSync(new URL('../entry/src/main/ets/ui/surfaces/ReaderBoundedSurface.ets',import.meta.url),'utf8');
 const resolverSource=readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts',import.meta.url),'utf8');
 const {readerSurfaceMaxHeight}=pureModuleProbe(resolverSource,'ReaderSurfaceResolvers.ts',{},['readerSurfaceMaxHeight']);
+const { readerActionIcon } = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderActionIconResources.ets', import.meta.url), 'utf8'),
+  'ReaderActionIconResources.ets', { $r: name => name }, ['readerActionIcon']);
 const productTiming = await import('../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts');
+const {readerMotionValueDurationMs: collapseMotionDurationMs} = await import('../entry/src/main/ets/ui/foundation/ReaderMotionDurationPolicy.ts');
 const { SOURCE_CHROME_VISUAL: SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts');
 const { DIRECTORY_CHROME_VISUAL: MANGA_DIRECTORY_VISUAL } = await import('../entry/src/main/ets/ui/foundation/ReaderDirectoryChromeVisual.ts');
 const { READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS } = await import('../entry/src/main/ets/features/bookshelf/ui/LocalImportMotion.ts');
+const modalMotion = readerImportMotionForProbe();
+const {readerKeyboardHostBottom} = readerEditingSdk();
 const nativeCurves = { cubicBezierCurve: (...values) => ({ nativeCurveArguments: values }) };
 const nativeCurve = Object.fromEntries(['Linear', 'Ease', 'EaseIn', 'EaseInOut', 'EaseOut'].map(name => [name, `Curve.${name}`]));
 const motion = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/foundation/MotionSpec.ets', import.meta.url), 'utf8'),
   'MotionSpec.ets', { ...productTiming, SOURCE_SWITCH_VISUAL, MANGA_DIRECTORY_VISUAL, curves: nativeCurves, Curve: nativeCurve },
   ['motionAnimateParam', 'motionAnimateParamDelayed', 'motionSpecGet']);
 const policy = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderMotionPolicy.ets', import.meta.url), 'utf8'),
-  'ReaderMotionPolicy.ets', { ...motion }, ['readerMotionCurve', 'readerMotionDurationMs']);
+  'ReaderMotionPolicy.ets', { ...motion, collapseMotionDurationMs }, ['readerMotionCurve', 'readerMotionDurationMs', 'readerMotionReducedFadeParam']);
 const feedbackSource=readFileSync(new URL('../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts',import.meta.url),'utf8');
 const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
 const props=o=>({state:o.state,batch:o.batch,reduceMotion:o.reduceMotion,failureMessage:o.failureMessage,originalPending:o.originalPending,recovery:o.recovery,selectionEnabled:o.selectionEnabled,selectionBlockedMessage:o.selectionBlockedMessage});
@@ -43,8 +50,8 @@ function mount(params={},options={},input=source,viewportHeight=0){
     if(key==='readerTransientToast'&&value.visible)feedback.push(value.message);
   }};
   const feedbackDeps=pureModuleProbe(feedbackSource,'ReaderTransientFeedback.ts',{AppStorage},['ReaderTransientFeedback','READER_FEEDBACK_BRIEF_MS']);
-  const o=p.consumer(input,boundedMembers(input),{...horizontal,...metricsApi,...feedbackDeps,...motion,...policy,READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS,localImportResultLayout,readerSurfaceMaxHeight,LOCAL_IMPORT_FILE_FOCUS_ID,
-    ReaderWindowCoordinator:{metrics:()=>metrics},registerReaderFonts(){},readerMotionNowMs:()=>now,
+  const o=p.consumer(input,boundedMembers(input),{...horizontal,...metricsApi,...feedbackDeps,...motion,...modalMotion,...policy,READER_LOCAL_IMPORT_HANDOFF_REVEAL_DELAY_MS,localImportResultLayout,readerSurfaceMaxHeight,readerKeyboardHostBottom,LOCAL_IMPORT_FILE_FOCUS_ID,
+    ReaderWindowCoordinator:{metrics:()=>metrics},registerReaderFonts(){},readerMotionNowMs:()=>now,readerActionIcon,
     BorderStyle:{Dashed:'BorderStyle.Dashed'},Curve:{Linear:'Curve.Linear'},curves:{cubicBezierCurve:(...values)=>values},
     uiContext:{animateTo:(options,work)=>{animations.push(options);work();}}}, {state:'fileSelection',reduceMotion:true,...params});
   o.viewportHeight=viewportHeight;o.aboutToAppear();o.initialRender();return{p,o,animations,feedback,clock:n=>now=n};
@@ -90,6 +97,14 @@ if (selectedCase === 'importing-growth') {
     old({}, { height: 777 });
     assert.equal(o.measuredImportingHeight, naturalHeight, 'old opening cannot resize successor');
   }
+  metrics.systemInsets = new metricsApi.ReaderInsetsVp(0, 24, 0, 16);
+  const { p, o } = mount({ state: 'importing' }, {}, source, 400);
+  const host = p.nodes(o).find(node => node.type === 'Stack' && typeof node.onAreaChange === 'function' && node.height === '100%');
+  assert.ok(host, 'the complete modal reports the window origin');
+  host.onAreaChange({}, { width: 390, height: 400, globalPosition: { y: 0 } });
+  const fullWindowBudget = o.availableHeight();
+  host.onAreaChange({}, { width: 390, height: 376, globalPosition: { y: 24 } });
+  assert.equal(o.availableHeight(), fullWindowBudget, 'a host that already excludes safe-top pays the inset only once');
   console.log('PASS actual SDK importing natural height / bounded single Scroll at 1x/2x and short windows; glyph wrapping/native touch remain OPEN');
   return;
 }
@@ -116,8 +131,8 @@ if(selectedCase==='picker-admission') {
 {
   const {p,o}=mount({failureMessage:'select failed'});let choose=0,close=0;o.onSelectFiles=()=>choose++;o.onClose=()=>close++;
   const frame=p.walk(o).find(x=>x instanceof p.deps.ReaderBoundedSurface);
-  const chooseActor=p.walk(o).find(x=>x instanceof p.deps.ReaderRecoveryAction&&x.label==='选择文件');
-  const cancelActor=p.walk(o).find(x=>x instanceof p.deps.ReaderRecoveryAction&&x.label==='取消');
+  const chooseActor=p.walk(o).find(x=>x.specId==='form-action'&&x.label==='选择文件');
+  const cancelActor=p.walk(o).find(x=>x.specId==='form-action'&&x.label==='取消');
   const native=[...frame.nodes.values()].find(n=>n.type==='Column');assert.equal(native.width,o.panelFrame().width);
   const chooseAction=[...chooseActor.nodes.values()].find(n=>n.onClick),cancelAction=[...cancelActor.nodes.values()].find(n=>n.onClick);
   assert.equal(chooseAction.constraintSize.minHeight,44);chooseAction.onClick();assert.equal(choose,1);cancelAction.onClick();assert.equal(close,1);
@@ -129,7 +144,7 @@ if(selectedCase==='picker-admission') {
   chooseAction.onClick();assert.equal(choose,1);cancelAction.onClick();assert.equal(close,2,'closing the surface remains available');
   const drop=p.nodes(o).find(n=>n.onClick&&n.border?.style==='BorderStyle.Dashed');assert.ok(drop);
   assert.equal(drop.type,'Button');assert.equal(drop.id,'reader-local-import-file-selection');
-  assert.equal(drop.width,'100%');assert.equal(drop.padding,0);assert.equal(drop.border.width,2);assert.equal(drop.borderRadius,14);
+  assert.equal(drop.width,'100%');assert.equal(drop.padding,0);assert.equal(drop.border.width,2);assert.equal(drop.borderRadius,16);
   assert.equal(drop.enabled,false);drop.onClick();assert.equal(choose,1);
   const fileLabel=p.nodes(o).find(n=>n.type==='Text'&&n.create==='从系统文件中选择');assert.ok(fileLabel);assert.equal(fileLabel.onClick,undefined);
   o.updateStateVars({...props(o),selectionEnabled:true,selectionBlockedMessage:''});p.properties.flush();chooseAction.onClick();assert.equal(choose,2);
@@ -140,12 +155,27 @@ if(selectedCase==='picker-admission') {
   o.aboutToDisappear();drop.onClick();assert.equal(choose,4);assert.equal(admitted(),false,'unmount retires file selection lease');
   const reopened=mount();assert.equal(reopened.o.state,'fileSelection');assert.equal(reopened.o.mounted,true);
 }
+{
+  const m = mount({reduceMotion:false});
+  const nodes = m.p.nodes(m.o);
+  const surface = nodes.find(node => node.type === 'Stack' && node.transition?.appear?.kind === 'opacity').transition;
+  assert.equal(surface.appear.parameters.duration, 220);
+  assert.equal(surface.disappear.parameters.duration, 180);
+  const card = nodes.find(node => node.type === 'Stack' && node.transition?.appear?.kind === 'combine').transition;
+  for (const endpoint of [card.appear, card.disappear]) {
+    assert.deepEqual(endpoint.value.map(pose => pose.value), [{x:.95,y:.95},{y:8}]);
+  }
+  const reduced = mount({reduceMotion:true});
+  const transitions = reduced.p.nodes(reduced.o).flatMap(node => node.transition ? [node.transition] : []);
+  assert.ok(transitions.some(value => value.kind === 'opacity' && value.parameters.duration === 120));
+  assert.ok(transitions.every(value => value.appear?.kind !== 'combine'));
+}
 
 }
 if(selectedCase==='result-receipts') {
 {
   const recovery={message:'保存结果待确认',visible:true,canRetry:true,generation:7};
-  const {p,o}=mount({state:'importing',batch:undefined,recovery,selectionEnabled:false,originalPending:true},{allowEmptyBranchAdmission:true});let close=0,reconcile=[];o.onClose=()=>close++;o.onReconcile=g=>reconcile.push(g);
+  const {p,o,animations}=mount({state:'importing',batch:undefined,recovery,selectionEnabled:false,originalPending:true},{allowEmptyBranchAdmission:true});let close=0,reconcile=[];o.onClose=()=>close++;o.onReconcile=g=>reconcile.push(g);
   const shell=p.walk(o).find(x=>x instanceof p.deps.ReaderBoundedSurface&&x.specId==='local-import-progress');
   const shellNative=[...shell.nodes.values()].find(n=>n.type==='Stack');assert.ok(Number.isFinite(shellNative.height));
   assert.equal(p.walk(o).some(x=>x instanceof p.deps.ReaderBoundedSurface&&x.specId==='local-import-result-content'),false);
@@ -155,6 +185,7 @@ if(selectedCase==='result-receipts') {
   assert.ok(shell&&result&&footer);const resultNative=[...result.nodes.values()].find(n=>n.type==='Column');
   assert.equal(resultNative.backgroundColor,undefined,'transparent result does not duplicate persistent shell');assert.equal(resultNative.shadow,undefined);
   assert.equal(o.resultOpacity,1);assert.equal(o.importingOpacity,0);assert.equal(shellNative.height,o.resultPanelHeight());assert.ok(p.walk(o).includes(shell),'late batch admits one result layer while retaining the original opaque shell');
+  animations[0].onFinish();p.properties.flush();
   const resultIdentity=result;o.updateStateVars({...props(o),recovery:{...recovery,message:'saved result visible'}});p.properties.flush();assert.ok(p.walk(o).includes(resultIdentity));
   const measure=p.nodes(o).find(n=>n.type==='Column'&&n.onAreaChange&&String(n.onAreaChange).includes('measuredHeaderHeight')),measureFooter=p.nodes(o).find(n=>n.type==='Column'&&n.onAreaChange&&String(n.onAreaChange).includes('measuredFooterHeight'));
   measure.onAreaChange({}, {height:'73vp'});measureFooter.onAreaChange({}, {height:100});p.properties.flush();assert.equal(o.measuredHeaderHeight,73);assert.equal(o.measuredFooterHeight,100);assert.equal(shellNative.height,o.resultPanelHeight());assert.equal(resultNative.height,o.resultPanelHeight());
@@ -196,6 +227,17 @@ if(selectedCase==='result-receipts') {
   o.updateStateVars({...props(o),reduceMotion:true});p.properties.flush();
 
   o.foreground=false;o.aboutToDisappear();
+}
+{
+  const {p,o,animations}=mount({state:'importing',reduceMotion:true,batch:{items:[],imported:0}});
+  o.updateStateVars({...props(o),state:'result',batch:{items:[],imported:0}});p.properties.flush();
+  assert.deepEqual(animations.map(animation=>animation.duration),[120],'reduced handoff animates only one opacity fade');
+  assert.deepEqual([o.importingOpacity,o.resultOpacity,o.shellHeight],[0,1,o.resultPanelHeight()]);
+  assert.equal(o.resultAcceptsInput(),false);
+  o.updateStateVars({...props(o),batch:{items:[],imported:0}});p.properties.flush();
+  assert.equal(animations.length,1,'receipt refresh cannot restart the active reduced fade');
+  animations[0].onFinish();
+  assert.equal(o.resultAcceptsInput(),true);
 }
 {
   const first={fileName:'same.txt',state:'failed',failure:{code:'recoveryPending',message:'first ACK unknown'}};
@@ -240,8 +282,8 @@ if(selectedCase==='result-receipts') {
 // projection and the persistent measured result shell still execute unchanged.
 assert.doesNotMatch(source,/\.shadow\(\{ radius: 50/);assert.doesNotMatch(source,/\.backgroundColor\(readerAppColor\(this\.surfaceSpec\(\)\.backgroundRole/);
 assert.throws(()=>mount({}, {},source.replace('body: (): void => { this.selectionDocument(); }','body: this.selectionDocument')),/state|selectionDocument|selectionPanelHeight|bind/,'old unbound slot is detected by composed probe');
-const changed=frameSource.replace('.borderRadius(spec.borderRadius).shadow({ radius: 50', '.borderRadius(spec.borderRadius + 2).shadow({ radius: 50');assert.notEqual(changed,frameSource);
-for(const state of ['fileSelection','importing']){const {p,o}=mount({state},{ReaderBoundedSurface:changed});const frame=p.walk(o).find(x=>x instanceof p.deps.ReaderBoundedSurface);assert.equal([...frame.nodes.values()].find(n=>n.type==='Column'||n.type==='Stack').borderRadius,14);}
+const changed=frameSource.replace(".borderRadius(spec.borderRadius).shadow(readerSurfaceElevation('dialog'", ".borderRadius(spec.borderRadius + 2).shadow(readerSurfaceElevation('dialog'");assert.notEqual(changed,frameSource);
+for(const state of ['fileSelection','importing']){const {p,o}=mount({state},{ReaderBoundedSurface:changed});const frame=p.walk(o).find(x=>x instanceof p.deps.ReaderBoundedSurface);assert.equal([...frame.nodes.values()].find(n=>n.type==='Column'||n.type==='Stack').borderRadius,24);}
 console.log('bounded local import composition PASS: real SDK selection/progress/result frame/header/actions/recovery, parent Props/guards/measurement, persistent phases, retire/reopen, shared propagation and binding negative control; native dynamic layout/focus/scheduling remains OPEN');
 
 }

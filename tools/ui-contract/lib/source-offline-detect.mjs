@@ -87,7 +87,9 @@ export function evaluateSourceOfflineDetect(assertion,context) {
   const origin = samples[assertion.baseline];
   const after = samples[assertion.sample];
   const action = actions[assertion.action];
-  const observations = [origin,after,action];
+  const run = assertion.runAction ? actions[assertion.runAction] : action;
+  const back = assertion.returnAction ? actions[assertion.returnAction] : undefined;
+  const observations = [origin,after,action,run,back];
   const result = (verdict,reason,actual=null) => ({
     verdict,reason,actual,expected:assertion.expected,evidenceRefs:observations.flatMap(value=>value?.evidenceRefs ?? []),
   });
@@ -103,8 +105,17 @@ export function evaluateSourceOfflineDetect(assertion,context) {
       !positive(marked?.probeSeq) || ![origin.afterSeq,action.beforeSeq,action.afterSeq,after.beforeSeq].every(positive) ||
       origin.afterSeq > action.beforeSeq || action.beforeSeq >= action.afterSeq || action.afterSeq > after.beforeSeq)
     return result('NOT_RUN','No verified native Detect click between complete current same-window samples');
+  if (assertion.runAction && (run?.op !== 'click' || run.targetId !== 'reader-source-v9-check-run' ||
+      back?.op !== 'click' || back.targetId !== 'reader-source-v9-check-close' ||
+      run.instanceId !== origin.instanceId || back.instanceId !== origin.instanceId ||
+      ![run.beforeSeq,run.afterSeq,back.beforeSeq,back.afterSeq].every(positive) ||
+      action.afterSeq > run.beforeSeq || run.beforeSeq >= run.afterSeq ||
+      run.afterSeq > back.beforeSeq || back.beforeSeq >= back.afterSeq || back.afterSeq > after.beforeSeq))
+    return result('NOT_RUN','No verified report start and close actions belong to the current native row click');
   const accepted = events.filter(event=>ownerFact(event,after) && event.eventSeq > action.beforeSeq && event.eventSeq <= after.beforeSeq);
   const actionEvents = accepted.filter(event=>event.kind === sourceOfflineDetectObservation && event.payload.phase !== 'ready');
+  if (actionEvents.some(event=>event.eventSeq <= run.beforeSeq || (back && event.eventSeq > back.beforeSeq)))
+    return result('FAIL','The Core check was admitted outside the report start and close actions');
   const routes = accepted.filter(event=>event.kind === 'source.route');
   const current = events.findLast(event=>ownerFact(event,after) && event.eventSeq <= after.beforeSeq && event.kind === 'source.projection');
   observations.push(...actionEvents,...routes,current);

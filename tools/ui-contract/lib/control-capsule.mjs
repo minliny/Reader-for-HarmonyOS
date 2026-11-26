@@ -62,10 +62,8 @@ function arkUiBezier(x1, x2) {
   };
 }
 
-const curves = {
-  flight:arkUiBezier(.4,.2), expand:arkUiBezier(.2,0), easeIn:arkUiBezier(.42,1),
-  easeOut:arkUiBezier(0,.58), easeInOut:arkUiBezier(.42,.58),
-};
+const standard = arkUiBezier(.2,0);
+const curves = { flight:standard, expand:standard, easeOut:arkUiBezier(0,.58) };
 
 function nativeGeometry(sample, id) {
   const node = exactNode(sample, id);
@@ -260,7 +258,8 @@ export function checkCapsuleLaunch({ before, after, expected, events, check, con
       continue;
     }
     const sample = model.sample((frame.publishedTickMs - admission.startTimeMs) / model.timeScale, geometry, curves, false);
-    seen.add(sample.phase);
+    if ((sample.phase !== 'flight' || sample.flight > 0) &&
+      (sample.phase !== 'overlap' || sample.flight < 1 && sample.expansion > 0)) seen.add(sample.phase);
     check('launch-clock', { frame:frame.index, time:frame.timeMs, phase:frame.phase }, { time:sample.timeMs, phase:sample.phase },
       frame.timeMs === sample.timeMs && frame.phase === sample.phase &&
         frame.sourceNeeded === sample.sourceNeeded && frame.controlsPresented === sample.controlsPresented);
@@ -275,10 +274,9 @@ export function checkCapsuleLaunch({ before, after, expected, events, check, con
       scale:[sample.sourceContentScale,sample.sourceContentScale,1],
       translation:[sample.sourceContentTranslateX,sample.sourceContentTranslateY,0],
     }, ids);
-    checkActor(check, frame, 'blur', 'reader-session-launch-blur', expected, sample.sourceNeeded, {
-      parent:proxy?.uniqueId, opacity:sample.blurOpacity, scale:[sample.sourceContentScale,sample.sourceContentScale,1],
-      translation:[sample.sourceContentTranslateX,sample.sourceContentTranslateY,0],
-    }, ids);
+    const obsoleteBlur = frame.actors?.find(actor => actor.id === 'reader-session-launch-blur');
+    check('no-obsolete-blur-actor', { frame:frame.index, mounted:obsoleteBlur?.mounted }, false,
+      typeof obsoleteBlur?.mounted === 'boolean' ? !obsoleteBlur.mounted : null);
     checkActor(check, frame, 'surface', 'reader-session-launch-surface', expected, true,
       { parent:proxy?.uniqueId, opacity:sample.canonicalSurfaceOpacity }, ids);
     checkActor(check, frame, 'leading', 'reader-session-launch-leading', expected, true, { parent:proxy?.uniqueId, clip:'rect' }, ids);
@@ -287,8 +285,9 @@ export function checkCapsuleLaunch({ before, after, expected, events, check, con
     checkActor(check, frame, 'topbar', 'reader-control-motion-topbar', expected, sample.controlsPresented,
       { translation:[0,sample.topBarOffsetY,0] }, ids);
   }
-  check('all-moving-capsule-phases', [...seen], ['flight','dotHold','expand','settled'],
-    ['flight','dotHold','expand','settled'].every(phase => seen.has(phase)) ? true : null);
+  const expectedPhases = ['flight','overlap','expand','settled'];
+  check('all-moving-capsule-phases', [...seen], expectedPhases,
+    expectedPhases.every(phase => seen.has(phase)) ? true : null);
   const maximumGap = cadence * expected.cadenceGapFactor;
   const gapOutsideCadence = gap => !finite(gap) || gap <= 0 || gap > maximumGap;
   const missingCadence = physicalGaps.findIndex(gapOutsideCadence);

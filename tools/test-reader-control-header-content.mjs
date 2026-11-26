@@ -28,7 +28,7 @@ const fileSource = read('entry/src/main/ets/features/reading/ui/ReaderControlPan
 const headerTextModifier = selectedProductionClasses(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlPanel.ets', import.meta.url), ['ReaderControlHeaderLineHeight']);
 const source = fileSource.slice(fileSource.indexOf('@Component\nexport struct ReaderControlPanel'));
 const members = ['contentLocation', 'controlHeader', 'replaceHeader', 'replaceHeaderFrame',
-  'headerFrame', 'headerPaintLayout', 'headerRole', 'headerTitleStyle', 'headerActionStyle', 'headerActionPaint',
+  'headerFrame', 'headerPaintLayout', 'headerRole', 'headerTitleStyle', 'headerActionStyle', 'headerActionPaint', 'directSheetVisible',
   ...(source.includes('private headerIcon(') ? ['headerIcon', 'headerInter', 'contentTitle'] : [])];
 const near = (a, b, reason) => assert.ok(Math.abs(a - b) < 1e-8, `${reason}: ${a} != ${b}`);
 for (const [module, tab, expectedTitle] of [['search', 'toc', '内容搜索'], ['autoPage', 'toc', '自动翻页'],
@@ -46,6 +46,10 @@ for (const [module, tab, expectedTitle] of [['search', 'toc', '内容搜索'], [
   owner.frame = () => ({ progress: owner.p, header: { width: owner.width } });
   owner.selectedMinimumProfile = () => undefined;
   owner.collapseControl = () => {};
+  owner.fixedIsland = false;
+  owner.directSheetRedesign = true;
+  owner.visualDirectSheet = false;
+  owner.visualVisibilityProgress = 1;
   owner.controlHeader();
   const identities = [...owner.nodes.keys()];
   for (const p of [0, .2, .5, .8, 1, .8, .5, .2, 0]) {
@@ -71,6 +75,32 @@ for (const [module, tab, expectedTitle] of [['search', 'toc', '内容搜索'], [
     assert.equal(row.opacity ?? 1, 1, 'Stage owns p once');
     assert.deepEqual([...owner.nodes.keys()], identities, 'same mounted header actors');
   }
+}
+for (const module of ['autoPage', 'tts', 'appearance', 'settings']) {
+  const { owner } = createReaderBuilderProbe(source, [...members, 'headerAction', 'headerActionFrame',
+    'headerActionInputEnabled', 'activateHeaderAction', 'collapseControl'],
+    { ...headerGeometry, ...readerTypographyRoles, ...headerTextModifier });
+  const requestedPages = [];
+  Object.assign(owner, {
+    fixedIsland: true, directSheetRedesign: true, visualDirectSheet: false, visualVisibilityProgress: 1,
+    lastVisibleContentLocation: { module, directoryTab: 'toc', level: 'secondary', form: 'quick' },
+    frame: () => ({ progress: 0, header: { x: 13, y: 14, width: 338, opacity: 1 } }),
+    selectedMinimumProfile: () => undefined, controlActionInputEnabled: () => true,
+    currentLayout: () => ({ fullPanelWidth: 364 }), controlPanelHeight: () => 330,
+    controlActionHandler: action => action, requestPage: page => requestedPages.push(page),
+  });
+  owner.controlHeader();
+  owner.headerAction();
+  const nodes = [...owner.nodes.values()];
+  assert.ok(nodes.some(node => node.type === 'Text' && node.create === '返回'));
+  assert.ok(!nodes.some(node => node.type === 'Text' && node.create === '收起'));
+  assert.equal(nodes.filter(node => node.type === 'Image').length, 1, 'only the module title icon is painted');
+  assert.ok(owner.headerFrame().y <= 1, 'the fixed island uses stable header geometry');
+  const back = nodes.find(node => node.type === 'Button' && node.accessibilityText === '返回阅读主控');
+  assert.ok(back?.enabled);
+  assert.ok(back.width >= 44 && back.height >= 44);
+  back.onClick();
+  assert.deepEqual(requestedPages, ['home']);
 }
 for (const p of [NaN, -1, 0, .5, 1, 2]) {
   for (const width of [0, 120, 338, 700, NaN]) {

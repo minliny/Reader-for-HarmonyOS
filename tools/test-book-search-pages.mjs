@@ -13,10 +13,64 @@ const receipt=(s,page,books,extra={})=>({sourceId:s.sourceId,sourceVersion:s.sou
 const settle=async()=>{for(let i=0;i<20;i++)await new Promise(setImmediate);};
 const defs={'unknown-zero':'Actual owner zero unknown stays unresolved, safe page reason and current task recovery retries the exact source page',
  'unknown-retained':'Actual owner retains results across unknown; task action binds query/generation and retries the unfinished page without repeating exhausted sources','continuation-stop':'Actual SearchPage surface keeps initial loading separate while its existing action stops the current continuation owner',assembly:'Actual SearchPage demand and LibrarySearchResults→SearchHost callback dispatch only for the current visible query',receipt:'Receipt identity/version/order/no-progress and legacy unknown remain separate from failed page',
+ 'confirmed-empty-rerun':'Actual empty result button starts fresh work for the current keyword after a proven exhausted search',
+ 'retry-recovery':'Actual task retry recovers the same failed source page and preserves already admitted results',
  gateway:'Real Gateway transmits negotiated exact page/version and validates receipts without guessing from array length',
  orchestrator:'Real query owner fair round demand, page2, dedup/order, same-page failure retry and stop/late guards',
  switch:'Real source-switch worker/decoder finds page2 target, advances fairly and stops duplicate-response source as incomplete'};
 for(const id of selectContractCases(defs)){
+ if(id==='confirmed-empty-rerun'||id==='retry-recovery'){
+  const {searchSharedActionFixture}=await import('./lib/search-shared-action-probe.mjs');
+  const recovering=id==='retry-recovery', sources=[source('first'),source('second')], calls=[];
+  let recovered=false;
+  const runtime={supportsCoreCapability:()=>true,async request(method,p,options){
+   options?.onDispatch?.();
+   if(method==='source.list')return{data:{sources}};
+   if(method==='bookshelf.list')return{data:{books:[],total:0,projectionRevision:'empty-shelf',changed:false,offset:0}};
+   if(method!=='book.search')return{data:{}};
+   calls.push([p.sourceId,p.page,p.keyword]);
+   const current=sources.find(item=>item.sourceId===p.sourceId);
+   if(recovering&&p.sourceId==='second'&&!recovered)throw Error('controlled failed source');
+   const books=recovering?[row(p.sourceId)]:[];
+   return{data:{sourceId:p.sourceId,sourceVersion:current.sourceVersion,books,contentKind:'text',
+    pageReceipt:receipt(current,p.page,books,{state:'end',nextPage:undefined})}};
+  }};
+  const o=new searchTypes.SearchOrchestrator(()=>{},()=>{},()=>true,runtime);
+  const run=new searchTypes.SearchQueryRun('词','q');
+  Object.assign(o,{run,sessionOpen:true,work:1,session:1,sources,sweepAlive:true});
+  run.localStatus='done';run.historyWritten=true;
+  await o.performSearch(1,1,run,false,true);
+  const initial=o.presentation;
+  const f=searchSharedActionFixture({...initial,localSearchFailed:false,sourceListFailed:false});
+  f.page.onRetry=()=>o.retry();
+  if(recovering){
+   assert.equal(initial.kind,'results');
+   assert.equal(initial.failedSourceCount,1);
+   assert.equal(initial.operation.canRetry,true);
+   f.page.searchProgressDetails();
+   f.page.taskSheetContent();
+   const retry=f.action('search-retry-progress');
+   recovered=true;
+   retry.click();await settle();
+   assert.equal(o.run,run,'retry reuses the current query');
+   assert.deepEqual(calls,[['first',1,'词'],['second',1,'词'],['second',1,'词']]);
+   assert.equal(o.presentation.failedSourceCount,0);
+   assert.deepEqual(run.results().map(book=>book.bookId),['first','second']);
+  }else{
+   assert.equal(initial.kind,'empty');
+   assert.equal(initial.operation.fact,'empty');
+   assert.equal(initial.operation.canRetry,false,'a completed query has no failed work to retry');
+   f.page.emptyContent(()=>'词',()=>7);
+   f.action('search-secondary','重新搜索').click();
+   await settle();
+   assert.notEqual(o.run,run,'confirmed-empty rerun starts new work');
+   assert.ok(o.work>1);
+   assert.deepEqual(calls,[['first',1,'词'],['second',1,'词'],['first',1,'词'],['second',1,'词']]);
+   assert.equal(o.presentation.kind,'empty');
+   assert.equal(o.presentation.operation.fact,'empty');
+  }
+  o.close();
+ }
  if(id==='unknown-zero'||id==='unknown-retained'){
   const retained=id==='unknown-retained',sources=[source('a'),source('ended')],calls=[],emitted=[];
   let recovered=false,visible=true;
@@ -47,7 +101,7 @@ for(const id of selectContractCases(defs)){
    'captureSearchNoticeFacts','displayedSearchNoticeFacts','acceptResultNoticeFacts','searchProgressText','searchStopped','isSweeping','hasActiveSearchRequest',
    'hasIncompleteSearch','incompleteSearchMessage','partialSearchFailure','searchFailureTitle','searchFailureMessage','hasAnySearchNotice',
    'hasDisplayedSearchNotice','hasSearchNotice','searchNoticeActionEnabled','searchNoticeRetryKind','searchNoticeOffersRetry',
-   'searchNoticeActionKey','hasSearchNoticeRetry','retryTaskStatus','retryOperation','operation','searchStatusColor','searchStatusLabel'],
+   'searchNoticeActionKey','hasSearchNoticeRetry','retryTaskStatus','retryOperation','observePageAction','operation','searchStatusColor','searchStatusLabel'],
    {readerAppColor:key=>`COLOR:${key}`});
   let dispatches=0;
   const page=Object.assign(new Page(),{presentation:o.presentation,viewState:{revision:3},pageEpoch:'page',

@@ -21,23 +21,22 @@ export function readerMotionCurve(id: string): Curve | curves.ICurve {
   return requireMotion(id).curve;
 }
 
-/** Registered duration with the one reduce-motion collapse applied. */
+/** Registered duration with the shared opacity fallback. */
 export function readerMotionDurationMs(id: string, reduceMotion: boolean): number {
-  return reduceMotion ? 0 : requireMotion(id).durationMs;
+  return collapseMotionDurationMs(requireMotion(id).durationMs, reduceMotion);
 }
 
-/** Collapse a caller-supplied motion clock through the same reduce-motion rule
- * used by registered MotionSpec entries. Specialized motion domains may keep
- * their own nominal-duration selection, but must not reimplement this branch.
- */
+/** Apply the same opacity clock to caller-supplied durations. */
 export function readerMotionValueDurationMs(durationMs: number, reduceMotion: boolean): number {
   return collapseMotionDurationMs(durationMs, reduceMotion);
 }
 
-/** Registered AnimateParam; reduce motion keeps the curve but drops the clock. */
+/** With reduced motion the caller applies this parameter only to opacity. */
 export function readerMotionAnimateParam(id: string, reduceMotion: boolean, onFinish?: () => void): AnimateParam {
-  if (!reduceMotion) return motionAnimateParam(id, onFinish);
-  const curve = requireMotion(id).curve;
-  if (onFinish === undefined) return { duration: 0, curve };
-  return { duration: 0, curve, onFinish };
+  return reduceMotion ? readerMotionReducedFadeParam(onFinish) : motionAnimateParam(id, onFinish);
+}
+
+/** A reduced-motion transition whose caller animates only opacity. */
+export function readerMotionReducedFadeParam(onFinish?: () => void): AnimateParam {
+  return motionAnimateParam('app.motion.reduced.fade', onFinish);
 }

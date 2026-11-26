@@ -72,7 +72,8 @@ try {
   const {manifest,deployment,snapshot,ownerSources} = original.candidate;
   const refs = {manifest,deployment,snapshot,ownerSources};
   const captures = session.chain.flatMap(({entry}) => [entry.screenshot,entry.layout].filter(Boolean));
-  const files = [manifest,deployment,snapshot,...Object.values(ownerSources),session.fixture,session.commands,original.session,...captures];
+  const files = [manifest,deployment,snapshot,...Object.values(ownerSources),session.fixture,session.commands,
+    original.session,...Object.values(session.runner ?? {}),...captures];
   const checked = new Map();
   for (const ref of files) {
     const previous = checked.get(ref.path);

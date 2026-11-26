@@ -1,8 +1,6 @@
 import assert from 'node:assert/strict';
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 async function run(id){
-const { localFilePath }=await import('./lib/tool-environment.mjs');
-
 const { readFileSync }=await import('node:fs');
 const { registerHooks, stripTypeScriptTypes }=await import('node:module');
 registerHooks({ resolve(specifier, context, next) {
@@ -641,15 +639,16 @@ if(id==='content-epoch'){
 }
 if(id==='index-submit'){
 {
-  const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-  const Entry = productionMotionMethods(localFilePath(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url)),
-    ['downloadDirectoryBook', 'submitReaderDownload'], { readingOfflineFailureHint, DOMAIN: 0, hilog: { warn() {} } });
+  const { actualReaderDirectoryOperations } = await import('./lib/reader-directory-operations-probe.mjs');
+  const Operations = actualReaderDirectoryOperations();
   const f = fixture(), s = session(), opened = [], messages = [];
   const owner = { getDownloadCoordinator: () => f.coordinator };
-  const entry = Object.assign(new Entry(), { mountedRuntimeOwner: owner, remoteReadingSession: s,
-    navigationGeneration: 1, shelfReceiptRetired: false, isCurrentRuntime: value => value === owner,
-    requestReaderDownloads: key => opened.push(key), showOfflineDownloadFeedback: message => messages.push(message) });
-  entry.downloadDirectoryBook();
+  const scene = { owner, session:s, book:{...s.identity,...s.book}, retired:false, foreground:true,
+    navigation:1, mount:1, sessionGeneration:1, presentation:1, acceptsProjection:true, directoryVisible:true };
+  const operations = new Operations({ scene:() => scene, ownsRuntime:value => value === owner,
+    openDownloadProgress:key => opened.push(key), feedback:message => messages.push(message),
+    diagnostic:(_stage,error) => assert.fail(error) });
+  operations.downloadBook();
   await until(() => opened.length === 1, 'actual download-all entry opens confirmed book progress');
   assert.deepEqual(opened, [JSON.stringify(['source', 'book'])]);
   assert.equal(messages.length, 0, 'accepted whole-book action opens persistent progress without a misleading start Toast');

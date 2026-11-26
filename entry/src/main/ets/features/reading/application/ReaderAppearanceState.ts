@@ -66,7 +66,8 @@ export type ReaderAppearanceMetric =
   | 'fontSize'
   | 'lineHeightMultiplier'
   | 'paragraphSpacing'
-  | 'letterSpacing';
+  | 'letterSpacing'
+  | 'pageMarginOffset';
 
 export type ReaderAppearanceStepDirection = -1 | 1;
 
@@ -88,6 +89,7 @@ export const READER_APPEARANCE_FONT_SIZE_RANGE = new ReaderAppearanceMetricRange
 export const READER_APPEARANCE_LINE_HEIGHT_RANGE = new ReaderAppearanceMetricRange(1.2, 2.8);
 export const READER_APPEARANCE_PARAGRAPH_SPACING_RANGE = new ReaderAppearanceMetricRange(0, 32);
 export const READER_APPEARANCE_LETTER_SPACING_RANGE = new ReaderAppearanceMetricRange(-2, 4);
+export const READER_APPEARANCE_PAGE_MARGIN_OFFSET_RANGE = new ReaderAppearanceMetricRange(-12, 24);
 
 export type ReaderAppearanceSnapshot = {
   version: 4;
@@ -102,6 +104,7 @@ export type ReaderAppearanceSnapshot = {
   lineHeightMultiplier: number;
   paragraphSpacing: number;
   letterSpacing: number;
+  pageMarginOffset?: number;
   indent: ReaderAppearanceIndent;
   alignment: ReaderAppearanceAlignment;
 };
@@ -212,6 +215,8 @@ export function normalizeReaderAppearanceSnapshot(
       clampReaderAppearanceMetric('paragraphSpacing', candidate.paragraphSpacing) : fallback.paragraphSpacing,
     letterSpacing: Number.isFinite(candidate.letterSpacing) ?
       clampReaderAppearanceMetric('letterSpacing', candidate.letterSpacing) : fallback.letterSpacing,
+    ...(candidate.version === 4 && candidate.pageMarginOffset !== undefined && Number.isFinite(candidate.pageMarginOffset)
+      ? { pageMarginOffset: clampReaderAppearanceMetric('pageMarginOffset', candidate.pageMarginOffset) } : {}),
     indent: isReaderAppearanceIndent(candidate.indent) ? candidate.indent : fallback.indent,
     alignment: isReaderAppearanceAlignment(candidate.alignment) ? candidate.alignment : fallback.alignment,
   };
@@ -332,7 +337,7 @@ export function setReaderAppearanceMetric(
       throw new RangeError('paragraphSpacing must be a non-negative finite number');
     }
   } else if (!Number.isFinite(value)) {
-    throw new RangeError('letterSpacing must be a finite number');
+    throw new RangeError(`${metric} must be a finite number`);
   }
   const boundedValue = clampReaderAppearanceMetric(metric, value);
   return copyWith(snapshot, snapshot.activeTheme, snapshot.dayTheme, snapshot.nightTheme, snapshot.font,
@@ -350,6 +355,7 @@ export function readerAppearanceMetricRange(metric: ReaderAppearanceMetric): Rea
   if (metric === 'paragraphSpacing') {
     return READER_APPEARANCE_PARAGRAPH_SPACING_RANGE;
   }
+  if (metric === 'pageMarginOffset') return READER_APPEARANCE_PAGE_MARGIN_OFFSET_RANGE;
   return READER_APPEARANCE_LETTER_SPACING_RANGE;
 }
 
@@ -460,6 +466,7 @@ function readerAppearanceMetricValue(
   if (metric === 'paragraphSpacing') {
     return snapshot.paragraphSpacing;
   }
+  if (metric === 'pageMarginOffset') return snapshot.pageMarginOffset ?? 0;
   return snapshot.letterSpacing;
 }
 
@@ -487,6 +494,7 @@ function copyWith(
     lineHeightMultiplier: snapshot.lineHeightMultiplier,
     paragraphSpacing: snapshot.paragraphSpacing,
     letterSpacing: snapshot.letterSpacing,
+    ...(snapshot.pageMarginOffset !== undefined ? { pageMarginOffset: snapshot.pageMarginOffset } : {}),
     indent,
     alignment,
   };
@@ -498,6 +506,8 @@ function copyWith(
     next.paragraphSpacing = metricValue;
   } else if (metric === 'letterSpacing' && metricValue !== undefined) {
     next.letterSpacing = metricValue;
+  } else if (metric === 'pageMarginOffset' && metricValue !== undefined) {
+    next.pageMarginOffset = metricValue;
   }
   return normalizeReaderAppearanceSnapshot(next);
 }

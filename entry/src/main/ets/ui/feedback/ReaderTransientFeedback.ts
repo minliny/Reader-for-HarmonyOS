@@ -16,7 +16,8 @@ const transientHosts: ReaderTransientHostRegistration[] = [];
 let announcedGeneration: number = -1;
 
 export interface ReaderTransientTextObserver {
-  readonly textOptions: (message: string) => TextOptions | undefined;
+  // Native Text options pass through to the ETS toast without interpretation.
+  readonly textOptions: (message: string) => Object | undefined;
   readonly onPublished: (generation: number, durationMs: number) => void;
   readonly onLayout: (generation: number, hostId: number, durationMs: number) => boolean;
   readonly onRetired: (generation: number, durationMs: number) => void;

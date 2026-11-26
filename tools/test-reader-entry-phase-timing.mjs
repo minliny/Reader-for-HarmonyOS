@@ -162,7 +162,7 @@ const entryPorts = owner => {
 const actions = new Actions(navigationOwner, startup, {
   runtime: () => f.runtime.closed ? undefined : f.runtime, mounting: () => 1, entry: () => entry,
   search: () => ({ host: { visibilityChanged() {} }, admissionCandidates: () => [] }), sourceSwitch: () => sourceSwitch,
-  shelfBooks: () => [], removalPending: () => false, readerExitPending: () => false,
+  shelfBooks: () => [], removalPending: () => false,
   advance: () => { entry.retire(); actions.retirePreparation(); return navigationOwner.advance().generation; },
   show: route => navigationOwner.show(route), bindReader: () => entry.bindReader(f.runtime, entryPorts(f.runtime)),
   restoreReaderReturn: () => false, entryPorts, sourceName: () => 'private-source-name',
@@ -170,7 +170,7 @@ const actions = new Actions(navigationOwner, startup, {
   postFrame: action => action(), refreshNearEnd() {},
 });
 try {
-  actions.resumeShelf({ sourceId: 'remote', bookId: 'private-book', title: 'private-title' });
+  actions.resumeShelf({ sourceId: 'remote', bookId: 'private-book', title: 'private-title', contentKind: 'text' });
   assert.equal(navigationOwner.snapshot().route, 'reading', 'mount request immediately opens the normal reader; body-ready remains a separate barrier');
   actions.presentPreparedReading(0);
   assert.equal(navigationOwner.snapshot().route, 'reading');

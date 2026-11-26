@@ -9,6 +9,7 @@ import { bookshelfSourceDisplayName, type BookshelfNamedSource, type BookshelfSo
 import { BookshelfProjectionOwner, type BookshelfProjectionBinding, type BookshelfProjectionSnapshot } from '../application/BookshelfProjectionOwner';
 import type { BookshelfDataState, BookshelfFilter } from '../application/BookshelfFlowGateway';
 import { BookshelfViewState } from './BookshelfViewState';
+import { ShelfBookPresentation } from './ShelfBookPresentation';
 
 const DOMAIN = 0x5244;
 
@@ -150,8 +151,16 @@ export class BookshelfReadPresentation {
   }
 
   selection(): Promise<BookshelfState | undefined> {
-    if (this.binding !== undefined && this.owner !== undefined) return this.owner.selection(this.binding);
+    if (this.binding !== undefined && this.owner !== undefined) return this.owner.selection(this.binding, this.filter());
     return Promise.resolve(undefined);
+  }
+
+  containsVisibleBook(book: ShelfBook): boolean {
+    const filter = this.filter();
+    const candidate = this.snapshot.books.find((entry: ShelfBook): boolean =>
+      entry.sourceId === book.sourceId && entry.bookId === book.bookId && entry.addedAt === book.addedAt);
+    return candidate !== undefined &&
+      ShelfBookPresentation.visible([candidate], '', filter.readingState, filter.sourceKind, filter.contentKind).length > 0;
   }
 
   selectionMatches(selection: BookshelfState, current: () => boolean, filter?: BookshelfFilter): Promise<boolean | undefined> {

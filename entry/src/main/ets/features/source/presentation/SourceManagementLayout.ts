@@ -5,6 +5,7 @@ export interface SourceManagementLayoutInput {
   fontScale: number;
   hasLogin: boolean;
   detectWidth: number;
+  batchStatusWidth?: number;
   actionWidth: number;
   actionHeight: number;
   loginHeight: number;
@@ -27,31 +28,38 @@ export interface SourceManagementLayout {
   statusContentWidth: number;
 }
 
-export const SOURCE_ROW_ICON_WIDTH = 29;
+export const SOURCE_ROW_ICON_WIDTH = 34;
+export const SOURCE_STATUS_CHIP_GAP = 5;
+const SOURCE_ROW_GAP = 8;
+const SOURCE_ROW_CARD_INSETS = 22;
+export const SOURCE_ROW_ACTION_GAP = 10;
+const SOURCE_ROW_SWITCH_WIDTH = 44;
 
 /** Keep the two text lines together at narrow widths and large font scales. */
 export function resolveSourceManagementLayout(input: SourceManagementLayoutInput): SourceManagementLayout {
   const scale = readerReadableFontScale(input.fontScale);
-  const width = Math.max(0, input.availableWidth - 8);
-  const leadingWidth = SOURCE_ROW_ICON_WIDTH + 8;
+  const width = Math.max(0, input.availableWidth - SOURCE_ROW_CARD_INSETS);
+  const leadingWidth = SOURCE_ROW_ICON_WIDTH + SOURCE_ROW_GAP;
   const preferredTextWidth = 96 * scale;
-  const trailingPreferredWidth = input.detectWidth + (input.hasLogin ? input.actionWidth + 8 : 0);
+  const hasActions = input.detectWidth > 0 || (input.batchStatusWidth ?? 0) > 0;
+  const trailingPreferredWidth = input.detectWidth > 0 ? input.detectWidth + SOURCE_ROW_SWITCH_WIDTH + SOURCE_ROW_ACTION_GAP +
+    (input.hasLogin ? input.actionWidth + SOURCE_ROW_ACTION_GAP : 0) : input.batchStatusWidth ?? 0;
   const trailingWidth = Math.min(width, trailingPreferredWidth);
-  const inlineTextWidth = width - leadingWidth - 8 - trailingPreferredWidth;
+  const infoWidth = Math.max(0, width - leadingWidth);
+  const inlineTextWidth = infoWidth - (hasActions ? SOURCE_ROW_GAP + trailingPreferredWidth : 0);
   const rowForm = inlineTextWidth >= preferredTextWidth ? 'inline' :
-    width - leadingWidth >= preferredTextWidth ? 'stacked-actions' : 'stacked-leading';
+    infoWidth >= preferredTextWidth && hasActions ? 'stacked-actions' : 'stacked-leading';
   const textAvailableWidth = rowForm === 'inline' ? inlineTextWidth :
-    rowForm === 'stacked-actions' ? width - leadingWidth : width;
+    rowForm === 'stacked-actions' ? infoWidth : width;
   const textMinWidth = Math.min(preferredTextWidth, textAvailableWidth);
-  // Detection and switching occupy separate touch rows. Login, when supported,
-  // shares the switch row beside it.
-  const actionRowCount = 2;
-  const actionsHeight = input.actionHeight + (input.hasLogin ? Math.max(44, input.loginHeight) : 44);
+  const actionRowCount = hasActions ? 1 : 0;
+  const actionsHeight = hasActions ? Math.max(input.actionHeight, input.hasLogin ? input.loginHeight : 0) : 0;
   const infoHeight = (input.titleLineHeight + input.metaLineHeight) * scale + 3;
-  const bodyHeight = Math.max(32, infoHeight);
-  const rowMinHeight = Math.ceil(rowForm === 'inline' ? Math.max(bodyHeight + 16, actionsHeight) :
-    bodyHeight + 8 + actionsHeight + (rowForm === 'stacked-leading' ? 40 : 0));
+  const bodyHeight = rowForm === 'stacked-leading' ? SOURCE_ROW_ICON_WIDTH + SOURCE_ROW_GAP + infoHeight :
+    Math.max(SOURCE_ROW_ICON_WIDTH, infoHeight);
+  const rowMinHeight = SOURCE_ROW_CARD_INSETS + Math.ceil(rowForm === 'inline' ? Math.max(bodyHeight, actionsHeight) :
+    bodyHeight + (hasActions ? SOURCE_ROW_GAP + actionsHeight : 0));
   return { rowForm, textMinWidth, textAvailableWidth, trailingWidth, actionsHeight, actionRowCount, rowMinHeight,
     filterHeight: input.filterHeight, footerHeight: Math.max(48, input.footerHeight),
-    statusContentWidth: Math.ceil(318 * scale + 32) };
+    statusContentWidth: input.availableWidth };
 }

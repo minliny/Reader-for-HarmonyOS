@@ -12,15 +12,10 @@ import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import {
-  TOK_BORDER,
   TOK_BORDER_W,
-  TOK_INK,
-  TOK_MUTED,
   TOK_SPACE_MD,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
-  TOK_SURFACE_PANEL_SOFT,
-  TOK_SURFACE_SOLID,
 } from '../../../ui/foundation/ReaderTokens';
 import {
   type RssSubscriptionEditorSnapshot,
@@ -53,7 +48,7 @@ export struct RssSubscriptionEditorPage {
   }
 
   build() {
-    ReaderStandardPage({ editingHost: this.editingHost,
+    ReaderStandardPage({ floatingHeader: true, editingHost: this.editingHost,
       variant: 'rssEditor',
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
@@ -64,7 +59,7 @@ export struct RssSubscriptionEditorPage {
 
   @Builder
   private pageHeader() {
-    PageBackBar({ title: this.snapshot.mode === 'create' ? '新增 RSS 订阅' : '编辑 RSS 订阅', onBack: (): void => this.onBack() });
+    PageBackBar({ floating: true, centered: true, elevation: 'floating', title: this.snapshot.mode === 'create' ? '新增 RSS 订阅' : '编辑 RSS 订阅', onBack: (): void => this.onBack() });
   }
 
   @Builder
@@ -207,7 +202,8 @@ export struct RssSubscriptionEditorPage {
 
   @Builder
   private saveAction() {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'form-busy-action', label: '保存', primary: true, layout: 'full',
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'form-busy-action', label: '保存', variant: 'primary',
+      visualSize: 'large', layout: 'full', isBusy: this.snapshot.busy,
       actionEnabled: this.snapshot.canSave && !this.snapshot.busy, onAction: (): void => this.onSave() });
   }
 

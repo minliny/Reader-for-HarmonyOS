@@ -4,13 +4,12 @@ import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfa
 import { SheetSurfaceSpec, resolveSheetSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
 
-/** Bottom-sheet content for the bookshelf top-bar More action.
- * The native host owns the sheet frame, mask and lifecycle; this component
- * only owns the five existing bookshelf actions and their presentation token. */
+/** Content and presentation token for the bookshelf More actions. */
 @Component
 export struct BookshelfMoreActionSheet {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop presentationId: string = '';
+  @Prop canBatchManage: boolean = false;
   @Prop canCheckUpdates: boolean = false;
   @Prop updateRunning: boolean = false;
   @Prop backgroundUpdateRunning: boolean = false;
@@ -20,6 +19,7 @@ export struct BookshelfMoreActionSheet {
   onCheckUpdates: () => void = (): void => {};
   onDownloadsRequested: () => void = (): void => {};
   onBookshelfSettings: () => void = (): void => {};
+  onBookshelfManagement: () => void = (): void => {};
   private mounted: boolean = false;
   private dispatchedId: string = '';
 
@@ -34,7 +34,7 @@ export struct BookshelfMoreActionSheet {
     const updateBusy = this.updatesRunning();
     const updateLabel = updateBusy ? '检查更新中' : '检查更新';
     return [
-      new ReaderMenuActionView(this.actionToken('batch'), '批量管理', true,
+      new ReaderMenuActionView(this.actionToken('batch'), '批量管理', this.canBatchManage,
         readerActionIcon('check', this.appThemeScheme)),
       new ReaderMenuActionView(this.actionToken('import'), '本地导入', true,
         readerActionIcon('import', this.appThemeScheme)),
@@ -43,7 +43,10 @@ export struct BookshelfMoreActionSheet {
       new ReaderMenuActionView(this.actionToken('downloads'), '下载管理', true,
         readerActionIcon('download', this.appThemeScheme)),
       new ReaderMenuActionView(this.actionToken('settings'), '书架设置', true,
-        readerActionIcon('more', this.appThemeScheme)),
+        this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_settings_theme_night') :
+          $r('app.media.bookshelf_more_settings')),
+      new ReaderMenuActionView(this.actionToken('management'), '书架数据管理', true,
+        readerActionIcon('folder', this.appThemeScheme)),
     ];
   }
 
@@ -73,11 +76,13 @@ export struct BookshelfMoreActionSheet {
     const actionId = separator < 0 ? '' : token.slice(separator + 2);
     if (!this.mounted || identity.length === 0 || identity !== this.presentationId || this.dispatchedId === identity) return;
     try { if (!this.isCurrent(identity)) return; } catch (_error) { return; }
+    if (actionId === 'batch' && !this.canBatchManage) return;
     this.dispatchedId = identity;
     if (actionId === 'batch') this.onBatchManage();
     else if (actionId === 'import') this.onLocalImport();
     else if (actionId === 'update') this.onCheckUpdates();
     else if (actionId === 'downloads') this.onDownloadsRequested();
     else if (actionId === 'settings') this.onBookshelfSettings();
+    else if (actionId === 'management') this.onBookshelfManagement();
   }
 }

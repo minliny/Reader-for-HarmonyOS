@@ -17,11 +17,12 @@ import * as headerGeometry from '../entry/src/main/ets/features/reading/ui/Reade
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { readerDirectoryToolbarBudget } from '../entry/src/main/ets/features/reading/presentation/ReaderFullDirectoryBudget.ts';
 import { selectedProductionClasses } from './lib/selected-production-methods.mjs';
+import { readerEditingSdk } from './lib/reader-editing-sdk-probe.mjs';
 
 const selected = selectContractCases({
   'header-spacing': 'Measured control-header title/glyph center, compact painted collapse surface inside native44 carrier, four scales and legacy negatives.',
   'icon-roles': 'Actual directory toolbar/header images retain per-role dimensions independently of the paid response rectangle, including constrained targets.',
-  'standalone-collapse': 'Actual standalone phone/expanded collapse paint keeps intrinsic compact dimensions inside its paid native carrier and preserves current Back dispatch.',
+  'standalone-collapse': 'Phone and expanded collapse pills paint on the action itself, retain a compact height, and offer a 44vp response region with guarded Back dispatch.',
   'full-directory-font-revision': 'Mounted standalone DirectoryHeader and actual ReadingTopBar retain their Back actor while an existing metrics revision updates its font-aware budget.',
   'full-directory-source-caption': 'The actual phone/expanded source action preserves its glyph, carrier and admission while its single-line caption receives natural CJK width and font-aware height.',
 });
@@ -154,17 +155,18 @@ function standaloneHeader(expanded, width, height, fontScale, tab, source = stan
   const declaration = sourceTree.statements.find(node => ts.isStructDeclaration(node) && node.name.text === 'FullDirectoryPanel');
   const members = declaration.members.filter(member => member.name && member.name.getText(sourceTree) !== 'build' &&
     !ts.getAllDecorators(member).some(decorator => decorator.getText(sourceTree) === '@Builder')).map(member => member.name.getText(sourceTree));
-  for (const name of ['panelHeader', 'collapseLabel', 'collapsePaint', 'standalonePrefix'])
+  for (const name of ['panelHeader', 'collapseLabel'])
     if (declaration.members.some(member => member.name?.getText(sourceTree) === name)) members.push(name);
   const owner = createReaderBuilderProbe(source, members,
     { ...deps, ...surface, ...standaloneSupport, ...properties.sdk, readerWindowMetrics: () => metrics,
+      ColorMetrics: { resourceColor: color => ({ color, blendColor: overlay => ({ color: [color, overlay.color] }) }) },
       uiContext: context, registerReaderFonts() {} }, properties.hooks).owner;
   Object.assign(owner, { expandedLayout: expanded, initialTab: tab, appThemeScheme: 'day', embeddedInControl: false,
     panelWidthOverride: width, panelHeightOverride: height, entries: [], allowUnanchoredBrowse: true, motionProgress: 1, onExit,
     standaloneShort: () => height === 168, tabs() {}, searchControls() {}, statusFooter() {} });
   owner.aboutToAppear();
   assert.equal(owner.positioningMounted, true, 'the actual lifecycle admits the mounted panel');
-  if (height === 168) owner.standalonePrefix(); else owner.panelHeader();
+  owner.panelHeader();
   properties.flush();
   return { owner, parent, properties, metrics, exits: () => exits, keyboard: value => { keyboard = value; },
     opening: value => { opening = value; }, width, height, expanded, fontScale };
@@ -174,32 +176,33 @@ function assertStandalone(rendered, fontScale = rendered.fontScale) {
   const { owner, width, expanded } = rendered;
   scale = fontScale;
   const target = nodes(owner).find(node => typeof node.onClick === 'function');
-  const paint = nodes(owner).find(node => node.type === 'Stack' && node.backgroundColor === readerAppColor('TOK_SURFACE_PANEL_SOFT', 'day'));
   const label = nodes(owner).find(node => node.type === 'Text' && node.create === '收起');
   assert.ok(target); assert.equal(target.type, expanded ? 'Stack' : 'Button');
-  assert.equal(target.backgroundColor, 'Color.Transparent', 'the paid standalone target must not become the painted capsule');
-  assert.equal(target.height, surface.readerScaledControlHeight(30, 20, fontScale));
+  const restingColor = readerAppColor('TOK_SURFACE_PANEL_SOFT', 'day');
+  assert.equal(target.backgroundColor, restingColor, 'the collapse action paints its own pill');
+  assert.equal(target.height, surface.readerScaledControlHeight(26, 14, fontScale));
   assert.equal(target.constraintSize.minWidth, 44); assert.equal(target.flexShrink, 0);
-  assert.ok(paint); assert.equal(paint.create.alignContent, 'Alignment.Center');
-  assert.equal(paint.width, undefined, 'compact paint uses intrinsic text width');
-  assert.equal(paint.height, undefined, 'compact paint retains natural text height');
-  assert.equal(paint.constraintSize.minWidth, 40);
-  assert.equal(paint.constraintSize.minHeight, surface.readerScaledControlHeight(26, 14, fontScale));
-  assert.deepEqual(paint.padding, { left: 10, right: 10, top: 0, bottom: 0 });
-  assert.equal(paint.hitTestBehavior, 'HitTestMode.None');
-  assert.equal(paint.accessibilityLevel, 'no-hide-descendants');
+  assert.equal(target.width, undefined, 'the pill can grow with its label');
+  assert.deepEqual(target.padding, { left: 10, right: 10, top: 0, bottom: 0 });
+  assert.deepEqual(target.responseRegion, { x: 0, y: Math.min(0, (target.height - 44) / 2),
+    width: '100%', height: Math.max(44, target.height) });
+  const modifier = owner.attributeCalls.find(call => call.id === target.id && call.property === 'attributeModifier').args[0];
+  let pressedColor;
+  modifier.applyPressedAttribute({ backgroundColor(color) { pressedColor = color; return this; }, borderRadius() {} });
+  assert.deepEqual(pressedColor, [restingColor, readerAppColor('app.interaction.press', 'day')],
+    'the press modifier blends into the same surface that paints the pill at rest');
+  assert.equal(label.hitTestBehavior, 'HitTestMode.None');
+  assert.equal(label.accessibilityLevel, 'no');
   assert.equal(label.width, undefined, 'intrinsic text must not create a cyclic100percent width');
   assert.equal(label.maxLines, 1); assert.equal(label.textAlign, 'TextAlign.Center');
   const glyphWidth = advance('收起', label.fontSize * fontScale, label.fontFamily, label.fontWeight);
-  const paintWidth = Math.max(40, glyphWidth + 20), targetWidth = Math.max(44, paintWidth);
-  const paintHeight = Math.max(paint.constraintSize.minHeight, label.lineHeight * fontScale);
-  assert.ok(targetWidth <= width - 26 && paintHeight <= target.height, 'the natural paint is paid by the original header lane');
+  const paintWidth = Math.max(44, glyphWidth + 20);
+  assert.ok(paintWidth <= width - 26 && label.lineHeight * fontScale <= target.height,
+    'the natural paint is paid by the original header lane');
   const heading = nodes(owner).find(node => node.type === 'Text' && ['目录', '书签'].includes(node.create));
-  assert.ok(width - 26 - targetWidth >= 16 + deps.TOK_SPACE_XS +
+  assert.ok(width - 26 - paintWidth >= 16 + deps.TOK_SPACE_XS +
     advance(heading.create, heading.fontSize * fontScale, heading.fontFamily, heading.fontWeight));
-  return { target, paint, label, expectedIntrinsicPaintWidth: paintWidth, expectedIntrinsicPaintHeight: paintHeight,
-    paidTargetWidth: targetWidth, responseComplete44: target.height >= 44 && targetWidth >= 44,
-    conflict: target.height < 44 ? 'host' : 'none' };
+  return { target, paintWidth };
 }
 
 for (const id of selected) {
@@ -278,6 +281,7 @@ for (const id of selected) {
       const metrics = metricsApi.createDefaultReaderWindowMetrics();
       metrics.windowRect.width = 366; metrics.windowRect.height = 844; metrics.systemFontScale = 1;
       const frames = [], sdk = boundedSurfaceSdk({ windowMetrics: () => metrics });
+      sdk.hooks.childSources.PageBackBar = read('ui/chrome/PageBackBar.ets');
       const classes = pureModuleProbe(source.slice(source.indexOf('class DirectoryRulesFocusFrame'),
         source.indexOf('let fullDirectoryBackGeneration')), 'FullDirectoryFrames.ets', { FrameCallback: class {} , ReaderPostLayoutFrame: actualReaderPostLayoutFrame()},
       ['DirectoryRulesFocusFrame', 'FullDirectoryHeaderMeasurementFrame']);
@@ -285,13 +289,14 @@ for (const id of selected) {
       const declaration = tree.statements.find(node => ts.isStructDeclaration(node));
       const members = declaration.members.filter(member => member.name && member.name.getText(tree) !== 'build' &&
         !ts.getAllDecorators(member).some(decorator => decorator.getText(tree) === '@Builder')).map(member => member.name.getText(tree));
-      members.push('directoryHeader', 'topBar', 'topBarBack', 'topBarBackIcon', 'topBarActions', 'topBarSourceContent', 'topBarMoreIcon');
+      members.push('directoryHeader', 'topBar', 'topBarBack', 'topBarBackIcon', 'topBarActions', 'topBarSourceContent',
+        'topBarMoreIcon', 'detailMoreAction');
       const owner = sdk.consumer(source, members, { ...support, ...classes, ...surface,
         fullDirectoryBackGeneration: 0, ReaderRuntimeOwner: { current: () => undefined }, registerReaderFonts() {},
         uiContext: { getFont: () => ({}), postFrameCallback: frame => frames.push(frame),
           getComponentUtils: () => ({ getRectangleById() { throw Error('native measurement outside this SDK contract'); } }) } });
       Object.assign(owner, { containerWidth: 366, containerHeight: 844, sourceId: 'local', bookId: 'book', bookKind: 'epub',
-        bookTitle: 'Book', chapterTitle: 'Chapter', catalogContext: 'detail' });
+        bookTitle: 'Book', chapterTitle: 'Chapter', catalogContext: 'reader' });
       owner.aboutToAppear(); owner.directoryHeader(); sdk.properties.flush();
       const back = nodes(owner).find(node => node.type === 'Button' && node.accessibilityText === '收起目录');
       assert.ok(back); assert.equal(back.height, 44);
@@ -321,6 +326,7 @@ for (const id of selected) {
   }
   if (id === 'standalone-collapse') {
     standaloneSupport = {
+      ...readerEditingSdk(),
       ...await import('../entry/src/main/ets/features/reading/ui/ReaderControlListPositioning.ts'),
       ...await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts'),
       ...await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryProjection.ts'),
@@ -347,8 +353,7 @@ for (const id of selected) {
         rendered.parent.offlineMenuVisible = true; measured.target.onClick(); assert.equal(rendered.parent.offlineMenuVisible, false);
         assert.equal(rendered.exits(), 1, 'local Back layers keep their original order');
         samples.push({ kind: 'standalone-collapse', expanded, width, height, fontScale, tab,
-          paintWidth: measured.expectedIntrinsicPaintWidth, paintHeight: measured.expectedIntrinsicPaintHeight,
-          targetMinWidth: measured.target.constraintSize.minWidth, paidTargetWidth: measured.paidTargetWidth, targetHeight: measured.target.height });
+          paintWidth: measured.paintWidth, paintHeight: measured.target.height, responseRegion: measured.target.responseRegion });
       }
     for (const expanded of [false, true]) {
       const rendered = standaloneHeader(expanded, 294, 168, 1, 'directory');
@@ -360,11 +365,11 @@ for (const id of selected) {
       assert.equal(enlarged.target, original.target, 'font changes retain the actual native actor');
       assert.deepEqual([...rendered.owner.nodes.keys()], ids, 'font changes do not rebuild a parallel header');
     }
-    const paintedCarrier = standaloneSource.replaceAll('.backgroundColor(Color.Transparent).borderRadius(8)',
-      ".backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)");
-    assert.notEqual(paintedCarrier, standaloneSource);
+    const transparentPress = standaloneSource.replaceAll("new ReaderPressFeedback(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme),",
+      'new ReaderPressFeedback(Color.Transparent,');
+    assert.notEqual(transparentPress, standaloneSource);
     for (const expanded of [false, true]) assert.throws(() => assertStandalone(
-      standaloneHeader(expanded, 294, 168, 1, 'directory', paintedCarrier)), /paid standalone target must not become/);
+      standaloneHeader(expanded, 294, 168, 1, 'directory', transparentPress)), /paints its own pill/);
     const unsubscribed = standaloneSource.replace('    this.readerWindowMetricsRevision;\n', '');
     assert.notEqual(unsubscribed, standaloneSource);
     const stale = standaloneHeader(false, 294, 168, 1, 'directory', unsubscribed);

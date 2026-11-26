@@ -8,7 +8,8 @@ import { chapter, canonicalRemoteContent, FakeGateway, FakeHost } from './lib/re
 
 // Whole production platform adapter, with only unavailable Kit bindings supplied.
 // Invoking this real SpeakListener is code proof, never a device onStart receipt.
-const source = readFileSync(new URL('../entry/src/main/ets/platform/tts/HarmonySystemTtsHost.ts', import.meta.url), 'utf8');
+const source = ['HarmonyTtsAudioListenerRegistry', 'HarmonySystemTtsHost'].map(name =>
+  readFileSync(new URL(`../entry/src/main/ets/platform/tts/${name}.ts`, import.meta.url), 'utf8')).join('\n');
 const engines = [];
 let createGate;
 const makeEngine = () => {
@@ -78,6 +79,18 @@ assert.equal(delivered.length, 0, 'old engine rejected even with current request
 engines.at(-1).listener.onStart('replacement', {});
 assert.deepEqual(delivered, [{ type: 'start', requestId: 'replacement' }]);
 await replaced.close();
+
+const stopping = new SystemHost();
+await stopping.speak(request);
+const stoppingEngine = engines.at(-1);
+const stop = stoppingEngine.stop;
+try {
+  stoppingEngine.stop = () => { throw Error('native stop rejected'); };
+  await assert.rejects(stopping.stop(), /system TTS transport did not stop/);
+} finally {
+  stoppingEngine.stop = stop;
+  await stopping.close();
+}
 
 // Stop during asynchronous engine initialization must prevent the later speak.
 let releaseEngine;

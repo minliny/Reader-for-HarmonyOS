@@ -20,3 +20,11 @@ export function readerActionIcon(kind: ReaderActionIconKind, scheme: string): Re
   if (kind === 'source') return night ? $r('app.media.reader_action_source_theme_night') : $r('app.media.reader_action_source');
   return night ? $r('app.media.reader_action_import_theme_night') : $r('app.media.reader_action_import');
 }
+
+/** Control foregrounds for paper, field and transparent surfaces. */
+export function readerPaperActionIcon(kind: 'close' | 'trash' | 'download', scheme: string): Resource {
+  const night = scheme === 'night';
+  if (kind === 'trash') return night ? $r('app.media.reader_control_trash_theme_night') : $r('app.media.reader_control_trash');
+  if (kind === 'download') return night ? $r('app.media.reader_control_download_theme_night') : $r('app.media.reader_control_download');
+  return night ? $r('app.media.reader_control_close_theme_night') : $r('app.media.reader_control_close');
+}

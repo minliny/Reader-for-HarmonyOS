@@ -2,18 +2,20 @@ import {selectContractCases,recordContractCasePass} from './lib/contract-case-se
 const definitions={"settings": {"description": "实际Index→Settings SDK Back桥/Runtime/nav/instance旧租约", "resources": []}, "source": {"description": "实际Index→Source SDK collapse/route Back桥", "resources": []}, "bookshelf": {"description": "实际Index→Shelf Props/Watch换generation与小trigger退役", "resources": []}, "priority": {"description": "实际Index higher overlay优先级，含真SourceSwitchHost", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
+if (selectedCase === 'priority') return testBackPriority();
 const { resolveEtsLoaderRoot, virtualFilePath } = await import('./lib/tool-environment.mjs');
-const {fixture: sourceSwitchFixture} = await import('./lib/source-switch-owner-probe.mjs');
 const {default: assert} = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {createRequire,stripTypeScriptTypes} = await import('node:module');
 const {ReaderNativeAlertOwner} = await import('./lib/reader-native-alert-sdk-probe.mjs');
-const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
-const {createBookshelfReadProjectionProbe,createLibraryShelfChromeProbe,mountBookshelfSceneProbe} = await import('./lib/bookshelf-projection-owner-probe.mjs');
+const {createReaderBuilderProbe,productionReaderMotionSdk} = await import('./lib/reader-control-builder-probe.mjs');
+const {admitBookshelfSdkCarrier,createBookshelfReadProjectionProbe,createLibraryShelfChromeProbe,mountBookshelfSceneProbe} = await import('./lib/bookshelf-projection-owner-probe.mjs');
 const {boundedSurfaceSdk,boundedMembers} = await import('./lib/bounded-surface-sdk-probe.mjs');
 const {choiceSource,resolveReaderChoiceSpec,compileReaderChoiceLabelModifier} = await import('./lib/reader-choice-row-probe.mjs');
 const {menuSource,ReaderMenuActionView} = await import('./lib/reader-action-menu-probe.mjs');
 const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
+const {selectedProductionMethods} = await import('./lib/selected-production-methods.mjs');
+const {actualReaderPageLayout} = await import('./lib/reader-page-shell-runtime-probe.mjs');
 const {runtimeOwnerIdentityProbe} = await import('./lib/reader-runtime-admission-probe.mjs');
 const {actualSourceJourneyTypes,actualSourceManagementGeometry} = await import('./lib/source-management-owner-probe.mjs');
 const {fixture: generalSettingsFixture} = await import('./lib/general-settings-persistence-probe.mjs');
@@ -29,9 +31,13 @@ const syntax=createRequire(import.meta.url)((resolveEtsLoaderRoot())+'/lib/valid
 const indexPath=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),indexSource=readFileSync(indexPath,'utf8');
 let installed;const Runtime=runtimeOwnerIdentityProbe(()=>installed);
 const methods=['registerTemporaryBackBridge','currentReadingRuntime','isCurrentRuntime','isCurrentBookshelfPresentation',
-  'isInteractiveBookshelfPresentation',...(selectedCase==='bookshelf'?['bookshelfScenePorts']:[]),'nextNavigationGeneration','onBackPress',
-  'openSourcePresentation','sourceJourneyIdentity','isCurrentRoute','publishNavigation','setSettingsSection'];
-const Index=productionMotionMethods(indexPath,methods,{ReaderRuntimeOwner:Runtime,hilog:{error(){}},DOMAIN:0});
+  'isInteractiveBookshelfPresentation',...(selectedCase==='bookshelf'?
+    ['bookshelfScenePorts','bookshelfModalVisible','dispatchBackDestination','wideSettingsPane']:['openSourcePresentation','sourceJourneyIdentity']),
+  'nextNavigationGeneration','onBackPress','isCurrentRoute','publishNavigation','setSettingsSection'];
+const indexDependencies={ReaderRuntimeOwner:Runtime,hilog:{error(){}},DOMAIN:0};
+const Index=selectedCase==='bookshelf'?
+  selectedProductionMethods(indexPath,'Index',methods,indexDependencies):
+  productionMotionMethods(indexPath,methods,indexDependencies);
 class Child{constructor(owner,params,_s,id){Object.assign(this,{owner,params,id});}updateStateVars(params){Object.assign(this.params,params);}}
 function sourceLeaf(params){
   const p=boundedSurfaceSdk(),source=leaf.sourceSource;
@@ -72,25 +78,47 @@ if(sourceTypes){
     settingsPresentation:{snapshot:{reduceMotion:false},retire(){}},
     sourceSwitchPresentation:{visible:false,retire(){}},mangaSourceSwitch:{selectionVisible:false},shelfMutations:{snapshot:{}},
     shelfGroupPresentation:{back:()=>false,retire(){}},shelfCatalog:{retire(){}},
-    shelfMotion:{clear(){}},readingCommits:{retire(){}},transientFeedback:{reset(){}},retireSourceSwitchPresentation(){}});
+    readingCommits:{retire(){}},transientFeedback:{reset(){}},retireSourceSwitchPresentation(){}});
   index.openSourcePresentation('source');
 }
   const calls=[];index.hasVisibleImportDialog=()=>false;index.returnToBookshelf=()=>calls.push('bookshelf');index.returnFromSourceManagement=()=>calls.push('source-route');index.returnToSettings=()=>calls.push('settings-route');index.dismissBookRemovalDialog=()=>calls.push('delete');index.dismissJsonImport=()=>calls.push('json');index.closeSourceSwitch=()=>calls.push('source-switch');index.closeImportDialog=()=>calls.push('import');index.shelfRecovery=()=>({message:'',visible:false,canRetry:false,generation:0});
   const h=scope==='source'?undefined:leaf.harness(),source=scope==='settings'?leaf.settingsSource:scope==='source'?leaf.sourceSource:leaf.shelfSource;
   if(scope==='bookshelf'){
     const recovery=index.shelfRecovery;
+    const retire=()=>{};
     Object.assign(index,{
       libraryAcquisition:{currentOwner:()=>installed},
+      expandedLayout:()=>false,
+      wideSettingsPane:()=>undefined,
       shelfRead:createBookshelfReadProjectionProbe(),librarySearch:createLibraryShelfChromeProbe(),
-      settingsPresentation:{snapshot:{reduceMotion:false}},searchAppForeground:true,mangaSourceSwitch:{selectionVisible:false},
+      settingsPresentation:{snapshot:{reduceMotion:false},retire},searchAppForeground:true,mangaSourceSwitch:{selectionVisible:false},
       shelfCatalog:{snapshot:{},retire(){}},
       shelfGroupPresentation:{identity:'',back:()=>false,retire(){}},
+      bookRemovalConfirmation:{isOpen:()=>false,dismiss(){}},jsonImportPresentation:{opening:undefined,dismiss(){}},
+      sourceSwitchPresentation:{isSurfacePresented:()=>false},retireSourceSwitchPresentation:retire,
+      readingEntry:{sessionActive:false,retire},readingEntryActions:{shelfPreparing:false,retirePreparation:retire},
+      transientFeedback:{reset(){}},downloadPresentation:{retire},readingCommits:{retire},
+      sourceJourney:{retire},rssJourney:{retire},shelfManagement:{retire},discoverPresentation:{retire},
+      rulesPresentation:{retire},syncPresentation:{retire},nativeAlertOwner:{retire},
       shelfMutations:{snapshot:{importPresentation:undefined},recovery,canContinueRemoval:()=>false,retireSelection(){},
+        hasUnknownWrite:()=>false,
         openImport(){calls.push('import-open');this.snapshot.importPresentation={state:'fileSelection'};},
         closeImport(){calls.push('import-close');this.snapshot.importPresentation=undefined;}},
     });
+    admitBookshelfSdkCarrier(index,runtime,()=>installed);
+    const coverSource=leaf.read('ui/surfaces/ReaderBottomSheet');
+    h.p.hooks.childSources.ReaderBottomSheet=coverSource;
     h.p.hooks.childSources.BookshelfMoreActionSheet=leaf.read('features/bookshelf/ui/BookshelfMoreActionSheet');
-    Object.assign(h.p.deps,horizontalGeometry,{BookshelfMoreActionSheet:Child,bookshelfHeaderSpec:()=>({frameHeight:58}),
+    h.p.hooks.allowEmptyBranchAdmission=true;
+    h.p.hooks.allowEmptyBranchRemoval=true;
+    syntax.builderParamObjectCollection.set('ReaderBottomSheet',new Set(['content']));
+    const transition=kind=>({animation:options=>({kind,...options})});
+    h.p.deps.ReaderBottomSheet=createReaderBuilderProbe(coverSource,boundedMembers(coverSource),
+      {...h.p.deps,...productionReaderMotionSdk(),readerWindowMetrics:()=>h.p.deps.ReaderWindowCoordinator.metrics(),
+        ModalTransition:{NONE:'none'},TransitionEdge:{BOTTOM:'bottom'},
+        TransitionEffect:{OPACITY:transition('opacity'),move:transition,asymmetric:(enter,exit)=>({enter,exit})},
+      },h.p.hooks).Component;
+    Object.assign(h.p.deps,horizontalGeometry,actualReaderPageLayout(),{BookshelfMoreActionSheet:Child,bookshelfHeaderSpec:()=>({frameHeight:58}),
       SheetType:{BOTTOM:'bottom'},SheetSize:{FIT_CONTENT:'fit-content'}});
     Object.assign(h.p.deps.ReaderWindowCoordinator,{requestAppChrome(){},requestOverlayChrome(){}});
   }
@@ -99,7 +127,7 @@ if(sourceTypes){
   function props(){
     if(scope==='bookshelf'){
       const scene=mountBookshelfSceneProbe({
-        read:index.shelfRead,mutations:index.shelfMutations,catalog:index.shelfCatalog,motion:{},
+        read:index.shelfRead,mutations:index.shelfMutations,catalog:index.shelfCatalog,
         navigation:index.navigationGeneration,feedbackEnabled:true,reduceMotion:false,
         ports:index.bookshelfScenePorts(runtime,index.detailShelfAdmissionMount),
       },{BookshelfShell:Child,BookshelfPage:Child,BookshelfEmptyPage:Child,BookshelfStatusContent:Child});
@@ -127,21 +155,52 @@ if(sourceTypes){
   }
   const params={...props(),sources:[],groups:['A','B']};
   const f=scope==='source'?sourceLeaf(params):h.owner(source,params);
-  const open=()=>{if(scope==='settings')f.o.toggleSelection('language');else if(scope==='source')f.o.toggleGroupSelection();
-    else index.librarySearch.openShelfMore(f.o.temporaryBackIdentity,index.navigationGeneration,index.detailShelfAdmissionMount);};
+  let openedCover;
+  const open=async()=>{
+    if(scope==='settings')f.o.toggleSelection('language');
+    else if(scope==='source')f.o.toggleGroupSelection();
+    else {
+      index.librarySearch.openShelfMore(f.o.temporaryBackIdentity,index.navigationGeneration,index.detailShelfAdmissionMount);
+      f.o.content=()=>{};
+      if(f.o.nodes.size===0) f.o.initialRender();
+      else f.o.replay();
+      h.p.properties.flush();
+      const cover=[...f.o.children.values()].findLast(child=>child instanceof h.p.deps.ReaderBottomSheet && child.visible);
+      const anchor=[...cover.nodes.values()].find(node=>node.bindContentCover);
+      const [visible,body,options]=anchor.bindContentCover;
+      assert.equal(visible,true,'the current Bookshelf More presentation opens one native content cover');
+      body.builder();
+      options.onAppear();
+      await Promise.resolve();
+      h.p.properties.flush();
+      const frame=[...cover.nodes.values()].find(node=>node.id==='reader-bookshelf-more-sheet');
+      frame.onAppear();
+      openedCover={cover,anchor,frame,options};
+      return openedCover;
+    }
+  };
   const finish=()=>{
     if(scope==='source')f.o.dismissGroupSelection(f.o.groupSelectionId);
-    if(scope==='bookshelf')f.o.moreSheetOptions().onDisappear();
+    if(scope==='bookshelf'){
+      h.p.properties.flush();
+      const {cover,anchor,frame,options}=openedCover;
+      assert.equal(cover.frameVisible,false,'the current frame has started closing');
+      assert.equal(cover.coverVisible,true,'the cover still owns Back while its frame exits');
+      frame.transition[1](false);
+      h.p.properties.flush();
+      assert.equal(anchor.bindContentCover[0],false);
+      options.onDisappear();
+    }
   };
   return{index,runtime,calls,h,f,open,finish,props};
 }
 for(const scope of ['settings','source','bookshelf'].filter(scope=>scope===selectedCase)){
-  const x=fixture(scope);assert.ok(x.index.navigationOwner.temporaryBackLease,'actual SDK Index child constructor publishes real leaf lease');x.open();assert.equal(x.index.onBackPress(),true);assert.deepEqual(x.calls,[],'temporary Back never invokes route exit');
+  const x=fixture(scope);assert.ok(x.index.navigationOwner.temporaryBackLease,'actual SDK Index child constructor publishes real leaf lease');await x.open();assert.equal(x.index.onBackPress(),true);assert.deepEqual(x.calls,[],'temporary Back never invokes route exit');
   if(scope==='source')assert.equal(x.f.o.groupClosing,true,'Source collapse retains existing finish boundary');else assert.equal(scope==='settings'?x.f.o.openSelect:x.f.o.moreMenuVisible,scope==='settings'?'':false);
   x.finish();assert.equal(x.index.onBackPress(),scope!=='bookshelf');if(scope==='settings')assert.equal(x.index.settingsSection,'home');if(scope==='source')assert.deepEqual(x.calls,['source-route']);
 }
 for(const scope of ['settings','source','bookshelf'].filter(scope=>scope===selectedCase))for(const retired of ['navigation','route','unset','replacement','unmounted']){
-  const x=fixture(scope),callback=x.props().onTemporaryBackBridge,old=x.index.navigationOwner.temporaryBackLease;x.open();
+  const x=fixture(scope),callback=x.props().onTemporaryBackBridge,old=x.index.navigationOwner.temporaryBackLease;await x.open();
   if(retired==='navigation')x.index.nextNavigationGeneration();if(retired==='route')x.index.publishNavigation(x.index.navigationOwner.show('search'));if(retired==='unset')installed=undefined;if(retired==='replacement')installed={};if(retired==='unmounted')x.index.shelfReceiptRetired=true;
   assert.doesNotThrow(()=>callback(old.handler,old.identity,old.generation));assert.equal(consumeCurrentTemporaryBack(x.index),false);assert.equal(scope==='settings'?x.f.o.openSelect:scope==='source'?x.f.o.groupOpen:x.f.o.moreMenuVisible,scope==='settings'?'language':true,'stale host does not call live leaf close');
   if(retired==='unset')assert.throws(()=>Runtime.current(),/installed by EntryAbility/);
@@ -149,17 +208,7 @@ for(const scope of ['settings','source','bookshelf'].filter(scope=>scope===selec
 for(const scope of ['settings','source','bookshelf'].filter(scope=>scope===selectedCase)){
   const x=fixture(scope),old=x.index.navigationOwner.temporaryBackLease,callback=x.props().onTemporaryBackBridge;
   x.f.o.aboutToDisappear();x.f.o.aboutToAppear();const current=x.index.navigationOwner.temporaryBackLease;assert.notEqual(current.identity,old.identity);callback(undefined,old.identity,old.generation);assert.equal(x.index.navigationOwner.temporaryBackLease,current,'old unregister cannot remove replacement lease');
-  x.open();assert.equal(old.handler(),false);assert.equal(consumeCurrentTemporaryBack(x.index),true);
-}
-if(selectedCase==='priority') for(const layer of ['delete','json','source-switch','import','group','busy-group']){
-  const x=fixture('settings');x.open();
-  if(layer==='delete')x.index.bookRemovalConfirmation.open(()=>true,()=>{},()=>({open(){},close(){}}));if(layer==='json')x.index.jsonImportVisible=true;if(layer==='source-switch'){const source=sourceSwitchFixture();installed=source.runtime;x.index.mountedRuntimeOwner=source.runtime;x.index.sourceSwitchHost=source.host;x.index.sourceSwitchScopeId=source.changes.at(-1).scopeId;x.index.sourceSwitchVisible=true;x.source=source;}if(layer==='import')x.index.hasVisibleImportDialog=()=>true;
-  if(layer.endsWith('group')){x.index.editingShelfGroupBook={bookId:'book'};x.index.editingShelfGroupBusy=layer==='busy-group';}
-  assert.equal(x.index.onBackPress(),true);assert.equal(x.f.o.openSelect,'language','Index-owned higher layer wins before settings temporary Back');
-  if(layer==='group')assert.equal(x.index.editingShelfGroupBook,undefined);if(layer==='busy-group')assert.ok(x.index.editingShelfGroupBook);if(layer==='source-switch'){assert.deepEqual(x.calls,[]);assert.equal(x.source.changes.at(-1).visible,false,'actual SourceSwitchHost consumes only overlay Back');}else if(!layer.endsWith('group'))assert.deepEqual(x.calls,[layer]);
-}
-if(selectedCase==='priority'){
-  const x=fixture('settings');x.index.registerTemporaryBackBridge('settings',1,x.runtime,()=>{throw Error('native close failure');},'throw');assert.equal(x.index.onBackPress(),true);assert.equal(x.index.settingsSection,'general','failed close cannot claim route is clear');
+  await x.open();assert.equal(old.handler(),false);assert.equal(consumeCurrentTemporaryBack(x.index),true);
 }
 if(selectedCase==='bookshelf'){
   const x=fixture('bookshelf'),o=x.f.o,first=x.index.navigationOwner.temporaryBackLease,firstId=o.temporaryBackIdentity;
@@ -167,7 +216,7 @@ if(selectedCase==='bookshelf'){
   const oldAction=o.moreOpenAction(firstId);
   assert.equal(chrome.shelfMoreIdentity(first.generation,mounting),firstId);
   o.content=()=>{};o.initialRender();const children=[...o.children.values()];
-  x.open();const disappeared=o.moreSheetOptions().onDisappear;
+  const disappeared=(await x.open()).options.onDisappear;
   x.index.nextNavigationGeneration();assert.equal(x.index.navigationOwner.temporaryBackLease,undefined);
   const p=x.props();o.updateStateVars(p);x.h.p.properties.flush();
   const second=x.index.navigationOwner.temporaryBackLease;assert.equal(second.generation,2);assert.notEqual(second.identity,firstId);assert.equal(o.moreMenuVisible,false,'actual @Prop/@Watch retires old opening');assert.equal(first.handler(),false);
@@ -175,15 +224,172 @@ if(selectedCase==='bookshelf'){
   disappeared();oldAction();chrome.openShelfMore(firstId,first.generation,mounting);
   assert.equal(o.moreMenuVisible,false,'old top-bar More callback and presentation lease are retired');
   assert.equal(chrome.shelfMoreIdentity(second.generation,mounting),second.identity);
-  x.open();assert.equal(o.moreMenuVisible,true,'top-bar More bridge receives the current callback');
+  await x.open();assert.equal(o.moreMenuVisible,true,'top-bar More bridge receives the current callback');
   p.onTemporaryBackBridge(undefined,first.identity,first.generation);assert.equal(x.index.navigationOwner.temporaryBackLease,second);assert.equal(x.index.onBackPress(),true);assert.equal(o.moreMenuVisible,false);
   o.aboutToDisappear();assert.equal(x.index.navigationOwner.temporaryBackLease,undefined);o.aboutToAppear();assert.ok(x.index.navigationOwner.temporaryBackLease);assert.equal(second.handler(),false);
 }
+
+async function testBackPriority() {
+  const { default: assert } = await import('node:assert/strict');
+  const { readFileSync } = await import('node:fs');
+  const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+  const { selectedProductionMethods, selectedProductionValues } = await import('./lib/selected-production-methods.mjs');
+  const { JsonImportPresentation } = await import('./lib/json-import-presentation-probe.mjs');
+  const { fixture: sourceSwitchFixture } = await import('./lib/source-switch-owner-probe.mjs');
+  const { actualSourceSwitchPresentation } = await import('./lib/source-switch-presentation-probe.mjs');
+  const { ReaderNavigation } = await import('../entry/src/main/ets/app/navigation/ReaderNavigation.ts');
+  const { BookRemovalDialogPresentation } = await import('../entry/src/main/ets/features/bookshelf/presentation/BookRemovalDialogPresentation.ts');
+  const { errorMessageOf } = await import('../entry/src/main/ets/app/ErrorMessage.ts');
+  const file = path => new URL('../entry/src/main/ets/' + path, import.meta.url);
+
+  const loggedErrors = [];
+  const Index = selectedProductionMethods(file('pages/Index.ets'), 'Index',
+    ['onBackPress', 'wideSettingsPane', 'registerTemporaryBackBridge', 'dismissJsonImport'],
+    { hilog: { error: (_domain, _tag, _format, error) => loggedErrors.push(error) }, DOMAIN: 0, errorMessageOf });
+  const SettingsPage = selectedProductionMethods(file('features/settings/ui/SettingsPage.ets'), 'SettingsPage',
+    ['aboutToAppear', 'consumeTemporaryBack', 'toggleSelection', 'retireSelection', 'ownsSelection', 'messagePreviewCurrent',
+      'developerPageCurrent', 'openSelect', 'selectionField', 'selectionId', 'temporaryBackIdentity', 'mounted',
+      'messagePreviewId', 'developerPageId', 'resetDialogTicket'],
+    { State() {}, settingsSelectionGeneration: 0, registerReaderFonts() {}, ReaderRuntimeOwner: { current: () => undefined } });
+  const groupSnapshotFile = file('features/bookshelf/application/BookshelfManagementOrchestrator.ets');
+  const { EMPTY_DATA } = selectedProductionValues(groupSnapshotFile, ['EMPTY_DATA']);
+  const groupDefinitions = selectedProductionValues(groupSnapshotFile, ['EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT'], { EMPTY_DATA });
+  const BookshelfGroupPresentation = selectedProductionMethods(
+    file('features/bookshelf/presentation/BookshelfGroupPresentation.ets'), 'BookshelfGroupPresentation',
+    ['back', 'retire', 'book', 'identity', 'assigning', 'snapshot', 'opening', 'host'], groupDefinitions);
+  const BookshelfMutationPresentation = selectedProductionMethods(
+    file('features/bookshelf/presentation/BookshelfMutationPresentation.ets'), 'BookshelfMutationPresentation', ['closeImport']);
+  const sourceActionsFile = file('app/composition/ReaderSourceSwitchActions.ets');
+  const { readerSourceSwitchActions } = pureModuleProbe(readFileSync(sourceActionsFile, 'utf8'),
+    'ReaderSourceSwitchActions.ets', {}, ['readerSourceSwitchActions']);
+  const SourceSwitchPresentation = actualSourceSwitchPresentation({});
+
+  function fixture(route, runtime = {}) {
+    const calls = [];
+    const navigationOwner = new ReaderNavigation();
+    const { generation } = navigationOwner.advance();
+    navigationOwner.show(route);
+    navigationOwner.setSettingsSection('general');
+    const index = Object.assign(new Index(), {
+      route, navigationOwner, settingsSection: 'general', expandedLayout: () => false,
+      currentReadingRuntime: () => runtime, mangaSourceSwitch: { selectionVisible: false },
+      bookRemovalConfirmation: new BookRemovalDialogPresentation(),
+      jsonImportPresentation: new JsonImportPresentation(),
+      sourceSwitchPresentation: new SourceSwitchPresentation(),
+      shelfGroupPresentation: new BookshelfGroupPresentation(),
+      readingEntryActions: { shelfPreparing: false },
+      dispatchBackDestination: target => calls.push(target),
+    });
+    index.sourceSwitchActions = readerSourceSwitchActions(() => index.sourceSwitchPresentation, assert.fail, () => false, assert.fail);
+    const shelfMutations = Object.assign(new BookshelfMutationPresentation(), {
+      owner: runtime, snapshot: {},
+      scope: {
+        isCurrentOwner: owner => owner === runtime,
+        instance: () => 7,
+        host: () => ({ operations: owner => ({
+          closeImport(instance) {
+            assert.equal(owner, runtime);
+            assert.equal(instance, 7);
+            calls.push('import');
+            shelfMutations.snapshot.importPresentation = undefined;
+          },
+        }) }),
+      },
+    });
+    index.shelfMutations = shelfMutations;
+    const register = (handler, identity, blocking) =>
+      index.registerTemporaryBackBridge(route, generation, runtime, handler, identity, blocking);
+    return { index, calls, register };
+  }
+
+  function settingsFixture(runtime) {
+    const result = fixture('settings', runtime);
+    const settings = Object.assign(new SettingsPage(), {
+      getUIContext: () => ({ getFont: () => ({}) }),
+      syncSnapshotValues() {}, prepareAboutSection() {},
+      operationFeedbackIdentity: () => '', cacheFeedbackIdentity: () => '',
+      onTemporaryBackBridge: result.register,
+    });
+    settings.aboutToAppear();
+    settings.toggleSelection('language');
+    return { ...result, settings };
+  }
+
+  for (const layer of ['delete', 'json']) {
+    const { index, calls, settings } = settingsFixture();
+    if (layer === 'delete') {
+      const removal = index.bookRemovalConfirmation;
+      removal.attach(() => ({ open() {}, close() { calls.push('delete'); return true; } }));
+      removal.open('移出书架', () => true, assert.fail, assert.fail);
+    } else {
+      index.jsonImportPresentation.openBookSource({
+        isManagementCurrent: identity => identity === 'source-opening',
+        importSources: assert.fail,
+      }, 'source-opening', () => undefined);
+    }
+    assert.equal(index.onBackPress(), true);
+    assert.equal(settings.openSelect, 'language', 'the higher modal consumes Back before the Settings popover');
+    assert.deepEqual(calls, layer === 'delete' ? ['delete'] : []);
+    assert.equal(index.bookRemovalConfirmation.isOpen(), false);
+    assert.equal(index.jsonImportPresentation.opening, undefined);
+    assert.equal(index.onBackPress(), true);
+    assert.equal(settings.openSelect, '');
+  }
+
+  {
+    const source = sourceSwitchFixture();
+    const { index, calls, settings } = settingsFixture(source.runtime);
+    const presentation = index.sourceSwitchPresentation;
+    Object.assign(presentation, { activeHost: source.host, visible: true, scopeId: source.changes.at(-1).scopeId });
+    const attachment = presentation.attachSurface(presentation.scopeId);
+    assert.notEqual(attachment, 0);
+    assert.equal(index.onBackPress(), true);
+    assert.equal(source.changes.at(-1).visible, false, 'actual SourceSwitchHost consumes only overlay Back');
+    presentation.visible = source.changes.at(-1).visible;
+    assert.equal(index.onBackPress(), true, 'the attached exiting surface retains the next Back');
+    assert.equal(settings.openSelect, 'language');
+    assert.deepEqual(calls, []);
+    presentation.detachSurface(attachment, presentation.scopeId);
+    assert.equal(index.onBackPress(), true);
+    assert.equal(settings.openSelect, '');
+  }
+
+  for (const layer of ['import', 'group', 'busy-group']) {
+    const { index, calls, register } = fixture('bookshelf');
+    register(() => { calls.push('temporary'); return true; }, 'bookshelf-opening');
+    const group = index.shelfGroupPresentation;
+    const book = { sourceId: 'local', bookId: 'book' };
+    if (layer === 'import') index.shelfMutations.snapshot.importPresentation = { state: 'fileSelection' };
+    else Object.assign(group, { book, identity: 'group-opening', assigning: layer === 'busy-group' });
+    assert.equal(index.onBackPress(), true);
+    assert.deepEqual(calls, layer === 'import' ? ['import'] : [], 'the shelf modal consumes Back before the shelf lease');
+    assert.equal(index.shelfMutations.snapshot.importPresentation, undefined);
+    assert.equal(group.book, layer === 'busy-group' ? book : undefined);
+    if (layer !== 'busy-group') {
+      assert.equal(index.onBackPress(), true);
+      assert.equal(calls.at(-1), 'temporary');
+    }
+  }
+
+  {
+    const { index, calls, settings, register } = settingsFixture();
+    index.shelfMutations.snapshot.importPresentation = { state: 'fileSelection' };
+    index.shelfGroupPresentation.back = assert.fail;
+    assert.equal(index.onBackPress(), true);
+    assert.equal(settings.openSelect, '', 'bookshelf-only overlays do not compete with the Settings popover');
+    assert.deepEqual(calls, []);
+
+    register(() => { throw Error('native close failure'); }, 'throw');
+    assert.equal(index.onBackPress(), true);
+    assert.equal(index.settingsSection, 'general', 'failed close cannot claim route is clear');
+    assert.equal(index.navigationOwner.snapshot().settingsSection, 'general');
+    assert.deepEqual(calls, []);
+    assert.deepEqual(loggedErrors, ['native close failure']);
+  }
+}
 if(selectedCase==='bookshelf')for(const retired of ['current','navigation','route','unmounted']){
   const x=fixture('bookshelf'),o=x.f.o;
-  o.content=()=>{};o.initialRender();x.open();o.replay();
-  const host=[...o.nodes.values()].find(node=>node.bindSheet),[visible,body,options]=host.bindSheet;
-  assert.equal(visible,true);body.builder();
+  const {options}=await x.open();
   const action=[...o.children.values()].find(child=>child.params?.onLocalImport).params.onLocalImport;
   action();action();
   assert.equal(o.moreMenuVisible,false);assert.deepEqual(x.calls,[],'import waits for the native sheet to disappear');
@@ -194,7 +400,9 @@ if(selectedCase==='bookshelf')for(const retired of ['current','navigation','rout
   }
   if(retired==='route')x.index.publishNavigation(x.index.navigationOwner.show('search'));
   if(retired==='unmounted')o.aboutToDisappear();
-  options.onDisappear();options.onDisappear();action();
+  if(retired==='current')x.finish();
+  else options.onDisappear();
+  options.onDisappear();action();
   assert.deepEqual(x.calls,retired==='current'?['import-open']:[],`only the exact current onDisappear can deliver import once (${retired})`);
   if(retired==='current'){
     assert.equal(x.index.onBackPress(),true);assert.deepEqual(x.calls,['import-open','import-close']);

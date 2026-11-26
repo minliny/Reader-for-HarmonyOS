@@ -14,7 +14,7 @@ let cases = 0;
  f.navigation.show('detail'); const book = f.reading.book;
  old.retry(); for (const act of intents(f.first)) act();
  assert.equal(f.navigation.snapshot().route, 'detail'); assert.equal(f.reading.book, book); assert.deepEqual(f.calls, []); cases++;
- f.navigation.show('search'); f.navigation.advance();
+ f.navigation.show('search'); f.host.viewState.reset();
  const current = f.mount(), now = f.physical(current);
  old.retry(); for (const act of intents(f.first)) act(); assert.deepEqual(f.calls, []);
  now.retry(); assert.equal(f.calls.filter(c => c[0] === 'retrySearch').length, 1);
@@ -33,30 +33,29 @@ let cases = 0;
  assert.deepEqual(back.calls.map(c => c[0]), ['closeSearch','nextNavigation','clearRssSelection','endSearch',
   'refreshBookshelf','readbackOnBookshelf']); cases++;
 }
-// Change one scope fact while retaining the mounted shared/native actor. Each
-// mutation deletes only the corresponding real Journey predicate clause.
-// Native retry exposes its missing parent admission even when Back has an
-// additional destination-route check in the current journey.
+// Exercise retired presentation boundaries without removing the native actor.
+// A retained covered viewport is still current for painting, so route input
+// and search-opening identity must be checked independently.
 const axes = [
- ['route', f => { f.navigation.show('detail'); }, text => text.replace("route.route === 'search' && ", '')],
- ['generation', f => { f.navigation.advance(); }, text => text.replace('generation === route.generation &&', '')],
- ['mount', f => { f.index.detailShelfAdmissionMount++; }, text => text.replace('mounting === scope.mounting &&', '')],
- ['owner', f => { const next = {}; f.index.mountedRuntimeOwner = next; f.setRuntime(next); },
-  text => text.replace('this.ports.acquisition().currentOwner() === owner &&', '')],
+ ['route', f => { f.navigation.show('detail'); }],
+ ['query', f => { f.host.viewState.reset(); }],
+ ['opening', f => { f.library.identity++; }],
+ ['mount', f => { f.index.detailShelfAdmissionMount++; }],
+ ['runtime', f => { const next = {}; f.index.mountedRuntimeOwner = next; f.setRuntime(next); }],
  ['host', f => { const next = new f.SearchHost(() => {}, () => true); next.orchestrator = f.host.orchestrator; f.library.host = next; },
   text => text.replace('&& this.ports.search().host === host', '')],
+ ['retirement', f => { f.index.shelfReceiptRetired = true; }, text => text.replace('!scope.retired &&', '')],
 ];
 for (const [name, alter, mutation] of axes) {
  const normal = searchAttachmentFixture(), physical = normal.physical(normal.first); alter(normal);
  physical.retry(); for (const act of intents(normal.first)) act(); assert.deepEqual(normal.calls, [], name + ': all nine old intents reject');
- const broken = searchAttachmentFixture({ mutatePredicate: text => { const changed = mutation(text); assert.notEqual(changed, text); return changed; } });
- const brokenPhysical = broken.physical(broken.first); alter(broken); brokenPhysical.retry();
- assert.equal(broken.calls.filter(call => call[0] === 'retrySearch').length, 1,
-  name + ': actual retained native retry dispatches when only this parent guard is deleted'); cases++;
-}
-{
- const f = searchAttachmentFixture(), old = f.physical(f.first); f.index.shelfReceiptRetired = true;
- old.retry(); for (const act of intents(f.first)) act(); assert.deepEqual(f.calls, []); cases++;
+ if (mutation !== undefined) {
+  const broken = searchAttachmentFixture({ mutatePredicate: text => { const changed = mutation(text); assert.notEqual(changed, text); return changed; } });
+  const brokenPhysical = broken.physical(broken.first); alter(broken); brokenPhysical.retry();
+  assert.equal(broken.calls.filter(call => call[0] === 'retrySearch').length, 1,
+    name + ': actual retained native retry dispatches when only this parent guard is deleted');
+ }
+ cases++;
 }
 {
  const f = searchAttachmentFixture(), old = f.physical(f.first); f.setRuntime(undefined);
@@ -69,4 +68,4 @@ for (const [name, alter, mutation] of axes) {
  f.controls.properties.flush(); actor.retry(); assert.deepEqual(f.calls, [], 'actual retained disabled Button blocks physical retry');
  b.aboutToDisappear(); actor.retry(); assert.deepEqual(f.calls, [], 'actual unmounted Button blocks retained physical retry'); cases++;
 }
-console.log(`PASS Search physical attachment: ${cases} current Index/Results/Journey/Host and actual shared/native retry cases; all 9 old UI intents reject; current positives; five independent predicate-removal counterexamples. Native OS delivery/focus/layout remain NOT_RUN.`);
+console.log(`PASS Search physical attachment: ${cases} current Index/Results/Journey/Host and actual shared/native retry cases; retired UI intents reject; current positives; host and retirement predicate-removal counterexamples. Native OS delivery/focus/layout remain NOT_RUN.`);

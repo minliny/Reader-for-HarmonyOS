@@ -1,4 +1,5 @@
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../foundation/ReaderFontFamilies';
 
 export type ReaderStatusBadgeStatus = 'success' | 'error' | 'pending' | 'neutral' | 'enabled' | 'paused' | 'unknown';
 
@@ -10,10 +11,36 @@ export struct StatusBadge {
   @StorageLink('readerUiConfigurationRevision') private configurationRevision: number = 0;
   @Prop status: ReaderStatusBadgeStatus = 'unknown';
   @Prop label: string = '';
+  @Prop text: string = '';
   @Prop verificationId: string = '';
   @Prop symbolOnly: boolean = false;
 
   build() {
+    Stack({ alignContent: Alignment.Center }) {
+      if (this.hasText()) {
+        Row({ space: 4 }) {
+          this.mark();
+          Text(this.text).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(11).fontWeight(500)
+            .fontColor(this.symbolColor())
+            .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+            .accessibilityLevel('no');
+        }.alignItems(VerticalAlign.Center);
+      } else {
+        this.mark();
+      }
+    }.width(this.hasText() ? undefined : this.symbolOnly ? 14 : 24)
+      .height(this.hasText() ? undefined : 18)
+      .constraintSize({ minHeight: 18 })
+      .padding(this.hasText() ? { left: 8, right: 8, top: 2, bottom: 2 } : 0)
+      .borderRadius(6).backgroundColor(this.symbolOnly ? Color.Transparent : this.surfaceColor())
+      .id(this.verificationId)
+      .accessibilityLevel(this.symbolOnly ? 'no' : 'auto')
+      .accessibilityGroup(true).accessibilityText(this.label.trim().length > 0 ? this.label :
+        this.hasText() ? this.text : '状态未知');
+  }
+
+  @Builder
+  private mark() {
     Stack({ alignContent: Alignment.Center }) {
       if (this.symbolOnly && this.status !== 'pending') {
         Row().width(14).height(14).borderRadius(7).border({ width: 1, color: this.symbolColor() })
@@ -23,12 +50,10 @@ export struct StatusBadge {
         .fill(Color.Transparent).stroke(this.symbolColor()).strokeWidth(1.6)
         .strokeLineCap(LineCapStyle.Round).strokeLineJoin(LineJoinStyle.Round)
         .accessibilityLevel('no');
-    }.width(this.symbolOnly ? 14 : 24).height(18).borderRadius(9)
-      .backgroundColor(this.symbolOnly ? Color.Transparent : this.surfaceColor())
-      .id(this.verificationId)
-      .accessibilityLevel(this.symbolOnly ? 'no' : 'auto')
-      .accessibilityGroup(true).accessibilityText(this.label.trim().length > 0 ? this.label : '状态未知');
+    }.width(14).height(14).accessibilityLevel('no');
   }
+
+  private hasText(): boolean { return !this.symbolOnly && this.text.trim().length > 0; }
 
   private surfaceColor(): ResourceColor {
     if (this.status === 'success') return readerAppColor('app.status.goodSoft', this.appThemeScheme);

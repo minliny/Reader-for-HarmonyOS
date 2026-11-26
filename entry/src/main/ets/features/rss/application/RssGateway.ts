@@ -415,9 +415,12 @@ export class RssGateway {
   /** Read favorite membership from Core truth; no local membership cache. */
   async isFavorite(subscriptionId: string, guid: string): Promise<boolean> {
     this.requireEntryIdentity(subscriptionId, guid);
-    const result = await this.runtimeOwner.request('rss.favorite.list', {
-      subscriptionId,
-    });
+    return (await this.loadFavorites(subscriptionId)).some((favorite: RssFavorite): boolean => favorite.guid === guid);
+  }
+
+  async loadFavorites(subscriptionId?: string): Promise<RssFavorite[]> {
+    const result = await this.runtimeOwner.request('rss.favorite.list',
+      subscriptionId === undefined ? {} : { subscriptionId });
     const rawFavorites = result.data['favorites'];
     if (!Array.isArray(rawFavorites)) {
       throw new Error('rss.favorite.list returned invalid favorites');
@@ -426,22 +429,21 @@ export class RssGateway {
     if (count !== rawFavorites.length) {
       throw new Error('rss.favorite.list returned an inconsistent count');
     }
-    let found = false;
-    const seenGuids: string[] = [];
+    const favorites: RssFavorite[] = [];
+    const seen = new Set<string>();
     for (const raw of rawFavorites) {
       const favorite = this.decodeFavorite(raw);
-      if (favorite.subscriptionId !== subscriptionId) {
+      if (subscriptionId !== undefined && favorite.subscriptionId !== subscriptionId) {
         throw new Error('rss.favorite.list returned a favorite for another subscription');
       }
-      if (seenGuids.includes(favorite.guid)) {
+      const key = JSON.stringify([favorite.subscriptionId, favorite.guid]);
+      if (seen.has(key)) {
         throw new Error('rss.favorite.list returned a duplicate scoped identity');
       }
-      seenGuids.push(favorite.guid);
-      if (favorite.guid === guid) {
-        found = true;
-      }
+      seen.add(key);
+      favorites.push(favorite);
     }
-    return found;
+    return favorites;
   }
 
   /** Persist a favorite using stable identity only; Core owns display data. */

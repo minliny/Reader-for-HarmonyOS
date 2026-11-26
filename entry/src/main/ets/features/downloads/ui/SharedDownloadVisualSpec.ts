@@ -1,5 +1,6 @@
 // Generated from approved docs/ui-design/shared-download/demo.html by Chromium CSSOM.
 // Storage v2 constraints come from approved storage-demo.html; each source SHA is independent.
+// Runtime colors come from Reader-UI/theme/registry.json.
 // Do not edit values. This finite adapter is not a general HTML/CSS engine.
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry.ts';
 export const SHARED_DOWNLOAD_DEMO_SHA256 = "e0bb8def207486d73e6117a543c264c893d399a427745f5100bdb6e48df6517b";
@@ -251,7 +252,7 @@ export class SharedDownloadVisualSpec {
   readonly storageUnknownSummaryLabelTop: number = 14;
 }
 export const DOWNLOAD_VISUAL = new SharedDownloadVisualSpec();
-export type DownloadVisualColorRole = "paper" | "surface" | "ink" | "muted" | "line" | "soft" | "green" | "greenInk" | "softGreen" | "danger" | "scrim" | "shadow" | "overlayChrome" | "overlayChromeInk" | "overlayChromeDouble" | "overlayChromeDoubleInk";
+export type DownloadVisualColorRole = "paper" | "surface" | "ink" | "muted" | "line" | "soft" | "green" | "greenInk" | "softGreen" | "danger" | "scrim" | "shadow";
 export function downloadVisualColor(role: DownloadVisualColorRole, scheme: string): string {
   if (role === "paper") return readerAppColor("TOK_DOWNLOAD_PAPER", scheme);
   if (role === "surface") return readerAppColor("TOK_DOWNLOAD_SURFACE", scheme);
@@ -265,24 +266,7 @@ export function downloadVisualColor(role: DownloadVisualColorRole, scheme: strin
   if (role === "danger") return readerAppColor("TOK_DOWNLOAD_DANGER", scheme);
   if (role === "scrim") return readerAppColor("TOK_DOWNLOAD_SCRIM", scheme);
   if (role === "shadow") return readerAppColor("TOK_DOWNLOAD_SHADOW", scheme);
-  if (role === "overlayChrome") return readerAppColor("TOK_DOWNLOAD_OVERLAY_CHROME", scheme);
-  if (role === "overlayChromeInk") return readerAppColor("TOK_DOWNLOAD_OVERLAY_CHROME_INK", scheme);
-  if (role === "overlayChromeDouble") return readerAppColor("TOK_DOWNLOAD_OVERLAY_CHROME_DOUBLE", scheme);
-  if (role === "overlayChromeDoubleInk") return readerAppColor("TOK_DOWNLOAD_OVERLAY_CHROME_DOUBLE_INK", scheme);
   return readerAppColor('TOK_DOWNLOAD_INK', scheme);
-}
-export class SharedDownloadOverlayChromeSpec {
-  underlayColor: string; contentColor: string; navigationUnderlayColor: string; navigationContentColor: string; tone: 'light' | 'dark';
-  constructor(scheme: string, sheetVisible: boolean, layerCount: number = 1) {
-    this.underlayColor = downloadVisualColor(layerCount === 2 ? 'overlayChromeDouble' : 'overlayChrome', scheme);
-    this.contentColor = downloadVisualColor(layerCount === 2 ? 'overlayChromeDoubleInk' : 'overlayChromeInk', scheme);
-    this.navigationUnderlayColor = sheetVisible ? downloadVisualColor('surface', scheme) : this.underlayColor;
-    this.navigationContentColor = sheetVisible ? downloadVisualColor('ink', scheme) : this.contentColor;
-    this.tone = scheme === 'night' ? 'light' : 'dark';
-  }
-}
-export function downloadOverlayChromeStyle(scheme: string, sheetVisible: boolean, layerCount: number = 1): SharedDownloadOverlayChromeSpec {
-  return new SharedDownloadOverlayChromeSpec(scheme, sheetVisible, layerCount);
 }
 export class SharedDownloadInsets {
   left: number; right: number;

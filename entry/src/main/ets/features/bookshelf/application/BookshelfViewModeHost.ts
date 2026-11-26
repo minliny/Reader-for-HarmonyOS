@@ -5,8 +5,9 @@ import { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
 import { errorMessageOf } from '../../../app/ErrorMessage';
 import { projectOperationFacts, type OperationFacts } from '../../../app/ReaderOperationFacts';
 import { projectPersistedReceipt, type PersistedReceiptProjection } from '../../../app/ReaderPersistedReceiptProjection';
+import { DEFAULT_BOOKSHELF_VIEW, type BookshelfViewMode } from './BookshelfViewMode.ts';
 
-export type BookshelfViewMode = 'cover' | 'list';
+export type { BookshelfViewMode } from './BookshelfViewMode';
 export interface BookshelfViewModeSnapshot {
   canonical: BookshelfViewMode | undefined;
   receipt?: PersistedReceiptProjection<BookshelfViewMode>;
@@ -22,6 +23,7 @@ export class BookshelfViewModeHost {
   private readonly prepare: () => Promise<void>;
   private snapshot: BookshelfViewModeSnapshot = { canonical: undefined };
   private revision: number = 0;
+  private lastResetRevision: number = 0;
   private reconcileBusy: boolean = false;
   private writeTail: Promise<void> = Promise.resolve();
   private pendingWrite: Promise<BookshelfViewModeSnapshot | undefined> | undefined;
@@ -34,6 +36,20 @@ export class BookshelfViewModeHost {
 
   current(): BookshelfViewModeSnapshot { return this.snapshot; }
   canSave(): boolean { return this.snapshot.receipt?.receipt.confirmation !== 'unknown'; }
+
+  async resetDefaults(owner: ReaderRuntimeOwner): Promise<void> {
+    const revision = ++this.revision;
+    const context = this.store.bookshelfModeContextGeneration();
+    const current = (): boolean => ReaderRuntimeOwner.isCurrent(owner) &&
+      context === this.store.bookshelfModeContextGeneration();
+    // The preference store serializes dispatched writes. A queued UI write can
+    // be waiting for configuration recovery itself, so do not join that queue.
+    await this.store.saveBookshelfViewMode(DEFAULT_BOOKSHELF_VIEW, undefined, undefined, current);
+    if (!current()) throw new Error('BOOKSHELF_VIEW_MODE_RETIRED');
+    this.lastResetRevision = revision;
+    this.snapshot = { canonical: DEFAULT_BOOKSHELF_VIEW };
+    AppStorage.setOrCreate('readerBookshelfViewMode', DEFAULT_BOOKSHELF_VIEW);
+  }
 
   async load(isCurrent: () => boolean): Promise<BookshelfViewModeSnapshot | undefined> {
     const pending = this.pendingWrite;
@@ -94,6 +110,7 @@ export class BookshelfViewModeHost {
       if (!admitted()) return undefined;
       await this.store.saveBookshelfViewMode(mode, undefined, evidence, admitted);
     } catch (error) { writeError = errorMessageOf(error); }
+    if (revision < this.lastResetRevision) return undefined;
     if (!owns()) {
       if (evidence.confirmation() === 'unknown') {
         // Retain the feature's unresolved write fact across runtime/context
@@ -110,7 +127,7 @@ export class BookshelfViewModeHost {
     let refreshError: string | undefined;
     try { canonical = await this.store.loadBookshelfViewMode(false); readback = 'succeeded'; }
     catch (error) { refreshError = errorMessageOf(error); }
-    if (!owns()) return undefined;
+    if (!owns() || revision < this.lastResetRevision) return undefined;
     const result: BookshelfViewModeSnapshot = { canonical,
       receipt: projectPersistedReceipt({ confirmation: evidence.confirmation(), readback, value: canonical,
         refreshError, canRetry: evidence.confirmation() !== 'undispatched' || readback === 'failed', generation,

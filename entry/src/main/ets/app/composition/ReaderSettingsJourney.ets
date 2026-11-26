@@ -1,5 +1,5 @@
 import type { ReaderRuntimeOwner } from '../ReaderRuntimeOwner';
-import type { ReaderNavigation, ReaderNavigationSnapshot, RulesManagementReturnTarget } from '../navigation/ReaderNavigation';
+import type { ReaderNavigation, ReaderNavigationSnapshot, RulesManagementReturnTarget, SettingsSection } from '../navigation/ReaderNavigation';
 import type { ReadingEntryPresentation } from '../../features/reading/presentation/ReadingEntryPresentation';
 import type { SettingsPresentation, SettingsRoute } from '../../features/settings/presentation/SettingsPresentation';
 import type { RulesManagementPresentation } from '../../features/settings/presentation/RulesManagementPresentation';
@@ -38,7 +38,7 @@ export class ReaderSettingsJourney {
     this.ports.advance();
     this.ports.reading().endReading(this.ports.scope().owner);
     this.ports.publish(this.navigation.openSettingsHome());
-    this.openPresentation('settings');
+    this.openPresentation('settings', true);
   }
 
   openBookshelfSettings(): void {
@@ -52,7 +52,7 @@ export class ReaderSettingsJourney {
     this.navigation.backFromBookshelfSettings((): void => this.returnToSettings(), this.ports.showBookshelf);
   }
 
-  openPresentation(route: SettingsRoute): void {
+  openPresentation(route: SettingsRoute, freshHome: boolean = false): void {
     const bound = this.ports.scope(), owner = bound.owner;
     if (owner === undefined) return;
     const generation = this.navigation.snapshot().generation;
@@ -61,14 +61,15 @@ export class ReaderSettingsJourney {
       const scope = this.ports.scope(), current = this.navigation.snapshot();
       return this.ports.ownsRuntime(owner) && scope.owner === owner && generation === current.generation &&
         bound.mounting === scope.mounting && current.route === route && !scope.retired;
-    });
+    }, freshHome);
   }
 
-  returnToSettings(): void {
+  returnToSettings(section?: SettingsSection, openPresentation: boolean = true): void {
     this.ports.advance();
     this.ports.reading().endReading(this.ports.scope().owner);
+    if (section !== undefined) this.navigation.setSettingsSection(section);
     this.ports.publish(this.navigation.show('settings'));
-    this.openPresentation('settings');
+    if (openPresentation) this.openPresentation('settings');
   }
 
   openRulesManagement(): void {
@@ -108,7 +109,7 @@ export class ReaderSettingsJourney {
       this.returnToSettings();
       return;
     }
-    this.ports.publish(this.navigation.show(this.navigation.returns.snapshot().readingOrigin));
+    this.ports.publish(this.navigation.showReadingOrigin());
     this.ports.readingActions().openReading(undefined);
   }
 }

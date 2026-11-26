@@ -1,3 +1,4 @@
+import { readerLayoutCarrierResponseRegion } from '../../../ui/layout/ReaderPageNativeAttributes';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../../reading/presentation/ReadingDirectoryRecovery';
 import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwitchSurfaceLifecycle';
@@ -14,13 +15,14 @@ import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { MangaDirectoryCurrentFooter } from './MangaDirectoryCurrentFooter';
 import { MangaDirectoryPressFeedback } from '../../../ui/foundation/MangaDirectoryPressFeedback';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { MANGA_DIRECTORY_VISUAL as visual, mangaDirectoryColor, mangaDirectoryScale, mangaDirectoryLineBox, mangaDirectoryFooterHeight, mangaDirectoryQuickFlowGaps, mangaDirectoryQuickMinimumListHeight } from './MangaDirectoryVisual';
 import hilog from '@ohos.hilog';
-import curves from '@ohos.curves';
 import inputMethod from '@ohos.inputMethod';
 import vibrator from '@ohos.vibrator';
 import { FrameCallback } from '@kit.ArkUI';
 import { ReaderWindowCoordinator, ReaderWindowChromeStyle, ReaderWindowPolicy } from '../../../app/ReaderWindowCoordinator';
+import { ReaderThemeHost } from '../../../app/ReaderThemeHost';
 import { diagnosticCodeOf } from '../../../app/LogPrivacy';
 import { readerInteractiveSafeInsets, type ReaderInsetsVp } from '../../../ui/foundation/ReaderWindowMetrics';
 import { mangaUserError } from '../presentation/MangaUserError';
@@ -36,6 +38,9 @@ import { MangaBoundaryTurnFeedback } from './MangaBoundaryTurnFeedback';
 import { PhotoViewScaleModel } from '../vendor/photoview/PhotoViewScaleModel';
 import { MangaStripProjection, MangaStripRow } from './MangaStripProjection';
 import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
+import { ReaderButton } from '../../../ui/controls/ReaderButton';
+import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
+import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
 import { ReaderDirectoryNavigationSurface } from '../../reading/ui/ReaderDirectoryNavigationSurface';
 import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowGateway';
 import type { RemoteReadingPositionScope } from '../../reading/application/RemoteReadingPositionMigration';
@@ -46,16 +51,16 @@ import { MangaReadingDirectoryFallback } from './MangaReadingDirectoryFallback';
 import { MangaDownloadOperationsPanel } from './MangaDownloadOperationsPanel';
 import type { MangaDownloadAction, MangaDownloadActionId } from '../application/MangaDownloadActionsGateway';
 import { readerBrightnessControlPercent, readerBrightnessWindowValue } from '../../reading/ui/ReaderBrightnessCurve';
-import { READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_600,
-  READER_FONT_NOTO_SANS_SC_UI_900 } from '../../../ui/foundation/ReaderFontFamilies';
-import { prepareMangaSheetFonts, prepareReaderFontFamily } from '../../../ui/foundation/ReaderFonts';
+import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../../../ui/foundation/ReaderFontFamilies';
+import { prepareMangaSheetFonts } from '../../../ui/foundation/ReaderFonts';
 import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfaces/ReaderActionMenuSurface';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSurfaceHeader';
 import { resolveDrawerSpec, type ActionSheetSpecId } from '../../../ui/surfaces/ReaderSurfaceSpecs';
-import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
-import { readerMotionDurationMs } from '../../../ui/foundation/ReaderMotionPolicy';
+import { motionAnimateParam, readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
+import { readerMotionDurationMs, readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerPaperPullOffset } from '../../reading/presentation/ReaderPaperPullMotion';
 
 interface MangaViewportAnchor { ordinal: number; y: number; x?: number; }
 interface MangaConfirmedPosition { controller: MangaSessionController; manifest: MangaManifest; identity: string; anchor: MangaViewportAnchor; }
@@ -92,6 +97,7 @@ export struct MangaReadingSurface {
   @StorageLink('readerAppForeground') @Watch('onPanelForegroundChanged') private appForeground: boolean = true;
   @State private quickHeaderMeasured: number = 0;
   @State private quickToolsMeasured: number = 0;
+  @State private directoryUtilityMeasured: number = 0;
   @State private quickFooterMeasured: number = 0;
   private readonly directoryOuterScroller: Scroller = new Scroller();
   private quickOuterViewportHeight: number = 0;
@@ -210,11 +216,12 @@ export struct MangaReadingSurface {
   private mountedTurnRowKey: string = '';
   private exiting: boolean = false;
   private navigationExitRequested: boolean = false;
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageProp('readerAppScheme') @Watch('synchronizePaper') private appThemeScheme: string = 'day';
   @State @Watch('onWindowChromeChanged') private controlsVisible: boolean = false;
   @State @Watch('onWindowChromeChanged') private panel: string = '';
   @State private panelOffset: number = 0;
   @State private panelScrimOpacity: number = 0;
+  @State private panelOpacity: number = 1;
   @State private panelPhase: string = 'closed';
   private panelGeneration: number = 0;
   private panelFocusGeneration: number = 0;
@@ -232,6 +239,9 @@ export struct MangaReadingSurface {
   @State private refreshing: boolean = false;
   @State @Watch('onWindowChromeChanged') private chapterEnd: boolean = false;
   @State private displayedPage: number = 0;
+  @State private pageSliderPreview: number = -1;
+  private pageSliderGeneration: number = 0;
+  private pageSliderCommitted: number = -1;
   @State @Watch('onWindowChromeChanged') private backgroundPreference: 'paper' | 'white' | 'ink' = 'paper';
   @State private showPageNumbers: boolean = true;
   @State private directoryQuery: string = '';
@@ -243,6 +253,7 @@ export struct MangaReadingSurface {
   private brightnessOwner: number = 0;
   private brightnessGeneration: number = 0;
   private seekingPage: number | undefined;
+  private clampedSeekPage: number | undefined;
   @State private stageWidth: number = 1;
   @State private stageHeight: number = 1;
   @State private boundaryDirection: PullDirection = '';
@@ -274,7 +285,7 @@ export struct MangaReadingSurface {
 
   aboutToAppear(): void {
     this.mounted = true;
-    this.backgroundPreference = this.settingsGateway?.current()?.mangaBackground ?? (this.appThemeScheme === 'night' ? 'ink' : 'paper');
+    this.synchronizePaper();
     if (this.runtime === undefined) {
       this.error = 'MANGA_RESOURCE_HOST_UNAVAILABLE';
       this.onWindowChromeChanged();
@@ -301,6 +312,7 @@ export struct MangaReadingSurface {
     this.transientFeedback.reset();
     // Withdraw before resetting watched state: disposal cannot reissue reader policy.
     this.mounted = false;
+    this.clearPageSliderPreview();
     this.withdrawExitRequest?.();
     this.withdrawExitRequest = undefined;
     if (this.boundaryBusy || this.boundaryDragging || this.chapterTransitions?.pending === true)
@@ -526,6 +538,8 @@ export struct MangaReadingSurface {
       this.viewportRangeObserved = false;
       // Manifest layout is separate from newer user presentation intent.
       this.confirmedPosition = undefined;
+      this.seekingPage = undefined;
+      this.clampedSeekPage = undefined;
       this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
       this.recovering = this.controller.recoveryRequired;
       const ordinal = this.controller.displayedOrdinal;
@@ -542,7 +556,7 @@ export struct MangaReadingSurface {
       // as ArkUI state even when a new chapter starts at the same ordinal 0.
       this.horizontalPageCount = this.controller?.totalPages ?? 0;
       this.title = this.displayChapterTitle(chapter.chapterIndex, chapter.chapterTitle);
-      this.displayedPage = anchor?.ordinal ?? this.controller?.displayedOrdinal ?? 0;
+      if (manifestChanged || this.restoringAnchor) this.displayedPage = anchor?.ordinal ?? this.controller?.displayedOrdinal ?? 0;
       this.notifyPublishedRows(changed);
       if (this.mountedTurnRowKey.length > 0 && this.data.totalCount() > 0) this.confirmMountedTurn(this.data.getData(0));
       if (changed && this.opened && anchor !== undefined &&
@@ -591,6 +605,19 @@ export struct MangaReadingSurface {
     return JSON.stringify([manifest.chapter.sourceId, manifest.chapter.bookId, manifest.chapter.chapterId,
       manifest.manifestVersion, page.pageId]);
   }
+  private verticalTailVisible(): boolean {
+    const lastIndex = this.data.totalCount() - 1;
+    if (this.horizontal || lastIndex < 0 || this.last !== lastIndex) return false;
+    const row = this.data.getData(lastIndex);
+    if (!row.known || row.ordinal !== this.horizontalPageCount - 1) return false;
+    try {
+      if (!this.scroller.isAtEnd()) return false;
+      const rect = this.scroller.getItemRect(lastIndex);
+      return Number.isFinite(rect.y) && Number.isFinite(rect.height) && rect.height > 0 &&
+        rect.y < this.viewportHeight && rect.y + rect.height > 0;
+    } catch (_error) { return false; }
+  }
+
   private rememberVisible(allowRestore: boolean = false): boolean {
     // A pulled drawing transform cannot become a durable image coordinate.
     if (this.boundaryDragging) return false;
@@ -605,13 +632,19 @@ export struct MangaReadingSurface {
         Math.abs(rect.width - this.viewportWidth * this.zoom) > 1 ||
         Math.abs(rect.height - this.rowDisplayHeight(row)) > 1) return false;
       const y = this.data.projection.position(this.first, -rect.y - this.rowDisplayTop(row), this.rowDisplayWidth(row));
-      this.visibleAnchor = { ordinal: row.ordinal, y, x: this.visibleX(row) };
       const identity = this.positionIdentity(row.ordinal);
       const manifest = this.controller?.chapter?.manifest;
       if (identity.length === 0 || this.controller === undefined || manifest === undefined) return false;
+      const atTail = this.verticalTailVisible();
+      const seek = this.seekingPage;
+      if (seek !== undefined && seek !== row.ordinal && (!atTail || seek < row.ordinal)) return false;
+      this.visibleAnchor = { ordinal: row.ordinal, y, x: this.visibleX(row) };
       this.confirmedPosition = { controller: this.controller, manifest, identity, anchor: this.visibleAnchor };
-      this.displayedPage = row.ordinal;
-      if (this.seekingPage === row.ordinal) this.seekingPage = undefined;
+      // Bottom clamping can leave several page starts visible. Keep the
+      // explicit selection while clamped and retain the measured top anchor.
+      this.clampedSeekPage = atTail ? seek ?? this.clampedSeekPage : undefined;
+      this.displayedPage = atTail ? Math.max(row.ordinal, this.clampedSeekPage ?? this.horizontalPageCount - 1) : row.ordinal;
+      this.seekingPage = undefined;
       return true;
     } catch (_error) {
       // Unknown geometry must not erase an already measured intra-image anchor.
@@ -671,7 +704,6 @@ export struct MangaReadingSurface {
   private onViewportScroll(): void {
     if (this.boundaryDragging) return;
     this.refreshLoginRequiredForControls();
-    if (this.visibleAnchor !== undefined) this.displayedPage = this.visibleAnchor.ordinal;
     if (!this.restoringAnchor) { this.rememberVisible(); if (this.pendingChapterTransition !== undefined || this.rollbackChapterController !== undefined) this.confirmBoundaryFrame(); return; }
     if (this.appliedLayoutGeneration !== this.layoutGeneration || !this.measureVisibleWindow()) return;
     // An unknown following page can temporarily shorten the native list and
@@ -714,6 +746,7 @@ export struct MangaReadingSurface {
     if (!this.phonePanelBackgroundEnabled()) return;
     this.viewportInputRevision = this.pageTurnInputRevision;
     this.seekingPage = undefined;
+    this.clampedSeekPage = undefined;
     this.pendingRestoreAnchor = undefined;
     this.presentationGeneration++;
     this.pendingTurnOrdinal = undefined; this.mountedTurnRowKey = '';
@@ -1279,6 +1312,7 @@ export struct MangaReadingSurface {
     if (this.boundaryBusy) { void this.cancelBoundaryChapter().catch((): void => {}); return; }
     if (this.panel.length > 0 || this.chapterEnd) return;
     this.controlsVisible = !this.controlsVisible;
+    if (!this.controlsVisible) this.clearPageSliderPreview();
   }
   private controlsPresentedForWindow(): boolean {
     return !this.chapterEnd && (this.controlsVisible || (!this.opened && this.error.length > 0) || this.openingRetry ||
@@ -1369,6 +1403,36 @@ export struct MangaReadingSurface {
     if (this.pendingChapterTransition !== undefined && this.boundaryOrigin !== undefined) return this.boundaryOrigin.anchor.ordinal;
     return this.horizontal ? this.horizontalPage : this.displayedPage;
   }
+  private presentedPage(): number {
+    if (this.pageSliderPreview >= 0) return this.pageSliderPreview + 1;
+    const pendingSeek = this.horizontal ? undefined : this.seekingPage;
+    return (pendingSeek ?? this.pageOrdinal()) + 1;
+  }
+  private clearPageSliderPreview(): void {
+    this.pageSliderGeneration += 1;
+    this.pageSliderPreview = -1;
+    this.pageSliderCommitted = -1;
+  }
+  private changePageSlider(value: number, mode: SliderChangeMode): void {
+    if (!this.readerPanelForeground() || !this.opened || this.panel.length > 0 || this.chapterEnd ||
+      !this.controlsVisible || !Number.isFinite(value)) return;
+    const ordinal = Math.round(value) - 1;
+    if (ordinal < 0 || ordinal >= this.horizontalPageCount) return;
+    if (mode === SliderChangeMode.Begin || mode === SliderChangeMode.Moving) {
+      this.pageSliderGeneration += 1;
+      this.pageSliderCommitted = -1;
+      this.pageSliderPreview = ordinal;
+      return;
+    }
+    if (mode !== SliderChangeMode.End && mode !== SliderChangeMode.Click) return;
+    if (mode === SliderChangeMode.End && this.pageSliderCommitted === ordinal) return;
+    const generation = ++this.pageSliderGeneration;
+    this.pageSliderCommitted = ordinal;
+    this.pageSliderPreview = ordinal;
+    void this.seekPage(ordinal).finally((): void => {
+      if (generation === this.pageSliderGeneration) this.pageSliderPreview = -1;
+    });
+  }
   private async seekPage(ordinal: number): Promise<void> {
     const controller = this.controller;
     const chapter = controller?.chapter;
@@ -1382,6 +1446,7 @@ export struct MangaReadingSurface {
       inputRevision !== this.pageTurnInputRevision || !this.readerPanelForeground()) return;
     // Freeze the explicit seek anchor before async geometry publication.
     // Existing publish/restore fencing must not re-adopt the old native row.
+    const previousAnchor = this.visibleAnchor;
     this.seekingPage = ordinal;
     this.visibleAnchor = { ordinal, x: 0, y: 0 };
     this.restoringAnchor = true;
@@ -1392,13 +1457,19 @@ export struct MangaReadingSurface {
     try { await controller.setVisible(ordinal); }
     catch (error) {
       const message = error instanceof Error ? error.message : '图片加载失败';
-      if (this.mounted && generation === this.presentationGeneration && message !== 'MANGA_SESSION_CANCELLED') { this.seekingPage = undefined; this.error = message; }
+      if (this.mounted && generation === this.presentationGeneration) {
+        this.seekingPage = undefined;
+        if (previousAnchor !== undefined) this.restore(previousAnchor.ordinal, previousAnchor.y, previousAnchor.x ?? 0);
+        if (message !== 'MANGA_SESSION_CANCELLED') this.error = message;
+      }
       return;
     }
     if (!this.mounted || this.controller !== controller || controller.chapter !== chapter || generation !== this.presentationGeneration) return;
     this.restore(ordinal, 0, 0);
   }
   private async stepPage(direction: number): Promise<void> {
+    if (!this.horizontal && this.seekingPage !== undefined) return;
+    this.clearPageSliderPreview();
     const ordinal = this.pageOrdinal() + direction;
     if (ordinal >= this.horizontalPageCount) { await this.openChapterEnd(); return; }
     await this.seekPage(ordinal);
@@ -1417,10 +1488,44 @@ export struct MangaReadingSurface {
     return entries.find((entry: RemoteReadingTocEntry): boolean => entry.navigable !== false &&
       entry.url.trim().length > 0 && entry.url !== current.manifest.chapter.chapterId);
   }
-  private async openChapterEnd(): Promise<void> {
-    if (!this.opened || this.pageOrdinal() + 1 !== this.horizontalPageCount ||
-      this.confirmedPosition?.anchor.ordinal !== this.pageOrdinal()) return;
-    await this.performPanelAction((): void => { this.chapterEnd = true; });
+  private finalBoundaryConfirmed(): boolean {
+    const session = this.remoteSession;
+    const current = this.controller?.chapter;
+    if (session?.contentKind !== 'manga' || current === undefined || session.identity.sourceId !== this.sourceId ||
+      session.identity.bookId !== this.bookId || current.manifest.chapter.sourceId !== this.sourceId ||
+      current.manifest.chapter.bookId !== this.bookId) return false;
+    const proven = session.acquisitionMode === 'online' ? !session.requiresContextRefresh :
+      (session.catalogVersion?.trim().length ?? 0) > 0 && session.sourceVersion === current.manifest.sourceRuleVersion;
+    return proven && session.entries.some((entry: RemoteReadingTocEntry): boolean => entry.index === current.chapterIndex &&
+      entry.url === current.manifest.chapter.chapterId) && this.adjacentChapter(1) === undefined;
+  }
+  private async releaseNextBoundary(): Promise<string> {
+    if (!this.readerPanelForeground() || !this.boundaryDragging || !this.boundaryArmed ||
+      this.boundaryInputRevision !== this.pageTurnInputRevision) return '';
+    if (this.adjacentChapter(1) !== undefined) return this.turnBoundaryChapter(1);
+    await this.openChapterEnd(true);
+    return '';
+  }
+  private resumeFromChapterEnd(): void {
+    if (!this.chapterEnd || !this.readerPanelForeground() || this.panel.length > 0) return;
+    this.chapterEnd = false;
+    this.controlsVisible = true;
+  }
+  private async openChapterEnd(fromVerticalBoundary: boolean = false): Promise<void> {
+    const inputRevision = this.pageTurnInputRevision;
+    const canOpen = (): boolean => {
+      const ordinal = this.pageOrdinal();
+      const confirmed = this.confirmedPosition;
+      if (!this.opened || !this.readerPanelForeground() || inputRevision !== this.pageTurnInputRevision ||
+        this.restoringAnchor || confirmed === undefined || confirmed.controller !== this.controller ||
+        confirmed.manifest !== this.controller?.chapter?.manifest ||
+        confirmed.identity !== this.positionIdentity(confirmed.anchor.ordinal)) return false;
+      if (fromVerticalBoundary) return this.verticalTailVisible() && this.finalBoundaryConfirmed();
+      return ordinal + 1 === this.horizontalPageCount &&
+        (confirmed.anchor.ordinal === ordinal || this.verticalTailVisible());
+    };
+    if (!canOpen()) return;
+    await this.performPanelAction((): void => { if (canOpen()) this.chapterEnd = true; });
   }
   private async selectAdjacentChapter(direction: number, fromDirectory: boolean = false): Promise<void> {
     if (this.adjacentChapter(direction) === undefined) return;
@@ -1438,7 +1543,8 @@ export struct MangaReadingSurface {
       this.error.length === 0 && !this.boundaryBusy && !this.rollbackPainting && this.pendingChapterTransition === undefined && this.rollbackChapterController === undefined;
   }
   private phonePanelBackgroundEnabled(): boolean {
-    return this.readerPanelForeground() && (this.widePanel() || (!this.windowChromeOverlayActive && !this.chapterEnd &&
+    return this.readerPanelForeground() && !this.chapterEnd && this.panel !== 'directory' &&
+      (this.widePanel() || (!this.windowChromeOverlayActive &&
       this.panel.length === 0 && this.panelPhase === 'closed'));
   }
   private viewportGestureCurrent(): boolean {
@@ -1456,6 +1562,7 @@ export struct MangaReadingSurface {
   private onBoundaryActivity(active: boolean): void {
     if (active && !this.readerPanelForeground()) return;
     if (active && !this.boundaryDragging) {
+      this.clearPageSliderPreview();
       this.boundaryInputRevision = this.pageTurnInputRevision;
       this.boundaryHapticSent = false;
       this.flushViewportObservation();
@@ -1577,8 +1684,12 @@ export struct MangaReadingSurface {
           this.publish(); this.restore(confirmed.anchor.ordinal, confirmed.anchor.y, confirmed.anchor.x ?? 0);
         }
         // A cancelled, late save/prepare must never cancel a newer intention.
-        if (candidate !== undefined) await candidate.cancel();
-        else if (generation === this.boundaryGeneration) await this.chapterTransitions?.cancel();
+        try {
+          if (candidate !== undefined) await candidate.cancel();
+          else if (generation === this.boundaryGeneration) await this.chapterTransitions?.cancel();
+        } catch (_) {
+          hilog.warn(0x5244, 'Reader', 'Manga chapter candidate cleanup failed');
+        }
       }
       if (this.mounted && generation === this.boundaryGeneration && message !== 'MANGA_SESSION_CANCELLED') {
         this.boundaryFailure = '章节暂时打不开，请稍后再试。';
@@ -1746,6 +1857,7 @@ export struct MangaReadingSurface {
   }
   private async openPanel(panel: string, returnFocusTarget: string = ''): Promise<void> {
     if (!this.readerPanelForeground()) return;
+    this.clearPageSliderPreview();
     const sourceId = this.sourceId, bookId = this.bookId;
     const focusTarget = returnFocusTarget || (this.panel.length > 0 ? this.panelReturnFocusTarget : '') ||
       this.panelTriggerFocusId(panel === 'downloads' ? 'directory' : panel);
@@ -1787,20 +1899,17 @@ export struct MangaReadingSurface {
     this.actionPanelPresentationGeneration = generation;
     this.panel = panel;
     this.panelPhase = 'opening';
-    this.panelOffset = this.panelTravel(); this.panelScrimOpacity = 0;
-    if (this.reduceMotion) {
-      this.panelOffset = 0; this.panelScrimOpacity = 1; this.panelPhase = 'open';
-      this.scheduleDirectoryOuterPosition(this.directoryOuterIdentity());
-      this.requestPanelFocus(this.panelCloseFocusId(this.actionPanelPresentationGeneration), generation, true);
-      return;
-    }
+    this.panelOffset = this.reduceMotion ? 0 : this.panelTravel();
+    this.panelOpacity = this.reduceMotion ? 0 : 1;
+    this.panelScrimOpacity = 0;
     // The native surface must finish its first layout at the offscreen
     // endpoint before either animation changes the observed values.
     this.getUIContext().postFrameCallback(new MangaSheetFrame(this.getUIContext(), (): void => {
       if (this.panelPhase !== 'opening' || !this.panelOpeningCurrent(generation)) return;
-      if (this.reduceMotion) this.panelScrimOpacity = 1;
-      else this.getUIContext().animateTo(motionAnimateParam('manga.panel.scrim'),
+      if (!this.reduceMotion) {
+        this.getUIContext().animateTo(motionAnimateParam('app.sheet.scrim'),
           (): void => { this.panelScrimOpacity = 1; });
+      }
       this.settlePanel(generation, true);
     }));
   }
@@ -1808,6 +1917,7 @@ export struct MangaReadingSurface {
     if (!this.mounted || this.readerPanelForeground()) return;
     this.panelFocusGeneration += 1;
     this.pageTurnInputRevision += 1;
+    this.clearPageSliderPreview();
     this.pinchAnchor = undefined;
     if (this.panelPhase === 'dragging') {
       this.panelOffset = 0;
@@ -1868,8 +1978,6 @@ export struct MangaReadingSurface {
     const current = (): boolean => this.mounted && !this.exiting && generation === this.panelFontGeneration &&
       this.sourceId === sourceId && this.bookId === bookId && this.isReaderIdentityCurrent();
     try {
-      await prepareReaderFontFamily(READER_FONT_NOTO_SERIF_SC_BOLD);
-      if (!current()) return false;
       const ready = await prepareMangaSheetFonts();
       if (!current()) return false;
       this.panelFontsReady = ready; this.panelFontsFailed = !ready;
@@ -1901,9 +2009,18 @@ export struct MangaReadingSurface {
         if (focusOnOpen) this.requestPanelFocus(this.panelCloseFocusId(this.actionPanelPresentationGeneration), generation, true);
       }
     };
-    if (this.reduceMotion) { this.panelOffset = 0; finish(); return; }
-    this.getUIContext().animateTo({ curve: curves.interpolatingSpring(0, 0.9, 500, 43), onFinish: finish },
-      (): void => { this.panelOffset = 0; });
+    if (this.reduceMotion) {
+      this.panelOffset = 0;
+      if (!focusOnOpen) { finish(); return; }
+      this.panelOpacity = 0;
+      this.getUIContext().animateTo(readerMotionReducedFadeParam(finish), (): void => {
+        this.panelOpacity = 1;
+        this.panelScrimOpacity = 1;
+      });
+    } else {
+      this.getUIContext().animateTo(motionAnimateParam('app.sheet.open', finish),
+        (): void => { this.panelOffset = 0; this.panelOpacity = 1; });
+    }
   }
   private closePanel(restoreFocus: boolean = true): Promise<boolean> {
     if (!this.mounted) return Promise.resolve(false);
@@ -1914,19 +2031,10 @@ export struct MangaReadingSurface {
     if (this.panel.length === 0) { this.panelPhase = 'closed'; return Promise.resolve(true); }
     this.panelPhase = 'closing';
     void this.dismissPanelKeyboard();
-    if (this.reduceMotion) {
-      this.panel = ''; this.panelOffset = 0; this.panelScrimOpacity = 0; this.panelPhase = 'closed';
-      if (restoreFocus) {
-        this.panelReturnFocusTarget = '';
-        this.requestPanelFocus(focusTarget, generation, false);
-      }
-      return Promise.resolve(true);
-    }
+    const reduced = this.reduceMotion;
     this.panelCloseTask = new Promise<boolean>((resolve): void => {
       this.panelCloseResolve = resolve;
-      this.getUIContext().animateTo(motionAnimateParam('manga.panel.scrim'),
-        (): void => { this.panelScrimOpacity = 0; });
-      this.getUIContext().animateTo({ curve: curves.interpolatingSpring(0, 1.05, 250, 30), onFinish: (): void => {
+      const finish = (): void => {
         if (!this.mounted || generation !== this.panelGeneration) { resolve(false); return; }
         this.panel = ''; this.panelOffset = 0; this.panelPhase = 'closed';
         this.panelCloseResolve = undefined; this.panelCloseTask = undefined;
@@ -1935,7 +2043,18 @@ export struct MangaReadingSurface {
           this.requestPanelFocus(focusTarget, generation, false);
         }
         resolve(true);
-      } }, (): void => { this.panelOffset = this.panelTravel(); });
+      };
+      if (reduced) {
+        this.getUIContext().animateTo(readerMotionReducedFadeParam(finish), (): void => {
+          this.panelOpacity = 0;
+          this.panelScrimOpacity = 0;
+        });
+      } else {
+        this.getUIContext().animateTo(motionAnimateParam('app.sheet.scrim'),
+          (): void => { this.panelScrimOpacity = 0; });
+        this.getUIContext().animateTo(motionAnimateParam('app.sheet.close', finish),
+          (): void => { this.panelOffset = this.panelTravel(); });
+      }
     });
     return this.panelCloseTask;
   }
@@ -1965,9 +2084,7 @@ export struct MangaReadingSurface {
   private updatePanelDrag(offset: number): void {
     if (this.panelPhase !== 'dragging' || !Number.isFinite(offset)) return;
     const target = Math.max(0, offset);
-    if (this.reduceMotion || target === this.panelOffset) { this.panelOffset = target; return; }
-    this.getUIContext().animateTo({ curve: curves.interpolatingSpring(0, 0.9, 500, 43) },
-      (): void => { this.panelOffset = target; });
+    this.panelOffset = target;
   }
   private finishPanelDrag(offset: number, velocity: number): void {
     if (this.panelPhase !== 'dragging') return;
@@ -1977,21 +2094,20 @@ export struct MangaReadingSurface {
     this.settlePanel(this.panelGeneration);
   }
   private paperColor(): string {
-    return this.backgroundPreference === 'ink' ? '#1C1E1A' : this.backgroundPreference === 'white' ? '#FFFFFF' : '#F8F4EC';
+    return readerAppColor('TOK_PAPER', this.chromeScheme());
   }
   private chromeScheme(): 'day' | 'night' { return this.backgroundPreference === 'ink' ? 'night' : 'day'; }
   private surfaceColor(): string { return mangaDirectoryColor('surface', this.chromeScheme()); }
   private inkColor(): string { return mangaDirectoryColor('ink', this.backgroundPreference === 'ink' ? 'night' : 'day'); }
   private mutedColor(): string { return mangaDirectoryColor('muted', this.backgroundPreference === 'ink' ? 'night' : 'day'); }
-  private faintColor(): string { return this.backgroundPreference === 'ink' ? '#767D71' : '#A39C90'; }
   private lineColor(): string { return mangaDirectoryColor('line', this.backgroundPreference === 'ink' ? 'night' : 'day'); }
   private softSurfaceColor(): string { return mangaDirectoryColor('soft', this.backgroundPreference === 'ink' ? 'night' : 'day'); }
-  private greenColor(): string { return this.backgroundPreference === 'ink' ? '#324C37' : '#1F3528'; }
+  private greenColor(): string { return readerAppColor('TOK_PRIMARY_DARK', this.chromeScheme()); }
   private accentColor(): string { return mangaDirectoryColor('accent', this.backgroundPreference === 'ink' ? 'night' : 'day'); }
   private isSheetChoiceSelected(kind: string): boolean {
     if (kind === 'vertical') return !this.horizontal;
     if (kind === 'horizontal') return this.horizontal;
-    if (kind === 'sun') return this.backgroundPreference === 'paper';
+    if (kind === 'sun') return this.backgroundPreference !== 'ink';
     return this.backgroundPreference === 'ink';
   }
   private choiceIcon(kind: string): Resource {
@@ -2006,9 +2122,10 @@ export struct MangaReadingSurface {
     return mangaUsesPersistentDirectory(this.stageWidth, this.stageHeight, ReaderWindowCoordinator.isTabletDevice());
   }
   private directoryColumnWidth(): number { return mangaDirectoryColumnWidth(this.stageWidth); }
-  private widePanel(): boolean { return this.persistentDirectory() || readerIsExpandedWidth(this.viewportWidth) || this.viewportWidth > this.viewportHeight; }
+  private widePanel(): boolean { return this.persistentDirectory() || readerIsExpandedWidth(Math.max(this.stageWidth, this.viewportWidth)); }
   private panelWidth(): number | string {
     if (!this.widePanel()) return this.isActionPanel() ? Math.min(resolveDrawerSpec('reader-action-sheet').maxWidth, this.stageWidth > 0 ? this.stageWidth : this.viewportWidth) : '100%';
+    if (this.panel === 'directory') return 336;
     return this.stageWidth <= 700 ? Math.min(320, this.stageWidth * 0.85) :
       Math.max(240, Math.min(this.persistentDirectory() ? 340 : 320, this.stageWidth * 0.45));
   }
@@ -2022,7 +2139,7 @@ export struct MangaReadingSurface {
   // The demo snap is a maximum, not a forced empty sheet height.
   private panelHeight(): number {
     const snap = this.panel === 'directory' ? 0.78 : this.panel === 'more' ? 0.75 : this.panel === 'mode' || this.panel === 'settings' ? 0.67 : 0.5;
-    return this.widePanel() ? this.viewportHeight : Math.min(this.viewportHeight, Math.max(260, Math.round(this.viewportHeight * snap)));
+    return this.widePanel() ? Math.max(this.viewportHeight, this.stageHeight) : Math.min(this.viewportHeight, Math.max(260, Math.round(this.viewportHeight * snap)));
   }
   private panelContentHeight(): number {
     const insets = this.panelInsets(this.windowMetricsRevision);
@@ -2045,16 +2162,15 @@ export struct MangaReadingSurface {
     const separator = title.indexOf(' · ');
     return separator > 0 ? title.slice(0, separator) : title || '本话';
   }
-  private chapterEndTypeLabel(): string {
-    return this.title.includes('卷') ? '本卷已读完' : '本话已读完';
-  }
   private adjacentLabel(): string {
     const entry = this.adjacentChapter(1);
-    return entry === undefined ? '' : entry.title.includes('卷') ? `下一卷 · ${entry.title}` : `下一话 · ${entry.title}`;
+    return entry?.displayTitle?.trim() || entry?.title.trim() || '';
   }
-  private adjacentActionLabel(): string {
-    const entry = this.adjacentChapter(1);
-    return entry === undefined || !entry.title.includes('卷') ? '继续阅读下一话' : '继续阅读下一卷';
+  private boundaryCaption(): string {
+    const next = this.adjacentLabel();
+    if (this.boundaryBusy) return next.length > 0 ? `正在进入：${next}` : '正在进入下一话…';
+    if (next.length > 0) return `${this.boundaryArmed ? '松手进入' : '继续上拉进入'}下一话：${next}`;
+    return this.finalBoundaryConfirmed() ? '已读至最新一话 · 返回继续' : '暂无下一话';
   }
   private directoryEntries(): LocalReadingTocEntry[] {
     const session = this.remoteSession;
@@ -2113,7 +2229,8 @@ export struct MangaReadingSurface {
   }
 
   private requestPanelFocus(target: string, generation: number, opening: boolean): void {
-    if (this.widePanel() || !this.readerPanelForeground() || target.length === 0) return;
+    const sideDirectory = opening ? this.panel === 'directory' : target === this.panelTriggerFocusId('directory');
+    if ((this.widePanel() && !sideDirectory) || !this.readerPanelForeground() || target.length === 0) return;
     const request = ++this.panelFocusGeneration;
     const sourceId = this.sourceId, bookId = this.bookId;
     const controller = this.controller, chapter = controller?.chapter;
@@ -2154,8 +2271,9 @@ export struct MangaReadingSurface {
   private loadBrightness(): void {
     this.brightnessOwner = ReaderWindowCoordinator.brightness().claim();
     const owner = this.brightnessOwner;
+    const generation = this.brightnessGeneration;
     void ReaderWindowCoordinator.brightness().read(owner).then((result): void => {
-      if (!this.mounted || owner !== this.brightnessOwner || !result.applied) return;
+      if (!this.mounted || owner !== this.brightnessOwner || generation !== this.brightnessGeneration || !result.applied) return;
       this.automaticBrightness = result.value < 0;
       if (result.value >= 0) this.brightnessPercent = readerBrightnessControlPercent(result.value);
     }).catch((error: Error): void => { if (this.mounted) this.error = error.message; });
@@ -2169,15 +2287,21 @@ export struct MangaReadingSurface {
     void ReaderWindowCoordinator.brightness().request(owner, automatic ? -1 : readerBrightnessWindowValue(this.brightnessPercent))
       .catch((error: Error): void => { if (this.mounted && owner === this.brightnessOwner && generation === this.brightnessGeneration) this.error = error.message; });
   }
-  // The demo's slider starts at 20. A prior lower platform preference remains
-  // owned by brightness storage until the user actually changes this control.
-  private displayedBrightnessPercent(): number {
-    return Math.max(20, Math.min(100, this.brightnessPercent));
+  private changeBrightnessSlider(value: number, mode: SliderChangeMode, opening: number): void {
+    if (!this.preferencePanelInputCurrent(opening, 'settings') || !Number.isFinite(value)) return;
+    if (mode === SliderChangeMode.Begin || this.automaticBrightness && mode !== SliderChangeMode.Moving) return;
+    if (this.automaticBrightness || value !== this.brightnessPercent) this.setBrightness(value);
   }
-  private setBackground(background: 'paper' | 'white' | 'ink'): void {
-    this.backgroundPreference = background;
-    this.settingsGateway?.updateMangaPreferences({ mangaBackground: background })
-      .catch((error: Error): void => { if (this.mounted) this.error = error.message; });
+  private synchronizePaper(): void {
+    this.backgroundPreference = this.appThemeScheme === 'night' ? 'ink' : 'paper';
+  }
+  private setBackground(background: 'paper' | 'ink', opening: number): void {
+    const current = (): boolean => this.preferencePanelInputCurrent(opening, 'settings');
+    if (!current()) return;
+    void ReaderThemeHost.selectManga(background === 'ink' ? 'night' : 'day', current)
+      .catch((error: Error): void => {
+        if (current()) hilog.warn(0x5244, 'Reader', 'Manga theme selection: %{private}s', diagnosticCodeOf(error.message));
+      });
   }
   private setPageNumbers(enabled: boolean): void {
     this.showPageNumbers = enabled;
@@ -2189,11 +2313,13 @@ export struct MangaReadingSurface {
     if (this.horizontal) this.toggleDirection(false);
     const layout = this.changeFit('width', false);
     this.showPageNumbers = true;
-    this.setBrightness(78);
+    this.setBrightness(this.brightnessPercent, true);
+    const paper = ReaderThemeHost.selectManga(this.appThemeScheme === 'night' ? 'night' : 'day',
+      (): boolean => this.mounted && !this.exiting && this.isReaderIdentityCurrent?.() !== false);
     // Queue the user's reset now. Waiting for preview mode would allow an
     // older reset to overwrite a newer page-number or layout choice.
     const saved = this.settingsGateway?.updateMangaPreferences({ mangaDirection: 'vertical', mangaFit: 'width', mangaPageNumbers: true });
-    await Promise.all([layout, saved]);
+    await Promise.all([layout, saved, paper]);
   }
   private windowInteractiveInsets(_revision: number): ReaderInsetsVp {
     const metrics = ReaderWindowCoordinator.metrics();
@@ -2209,7 +2335,7 @@ export struct MangaReadingSurface {
     const insets = this.windowInteractiveInsets(revision);
     // The persistent directory owns the window's left edge. Do not apply that
     // same cutout twice to the adjacent image/control column.
-    if (this.persistentDirectory()) insets.left = Math.max(0, insets.left - this.directoryColumnWidth());
+    if (this.persistentDirectory() && this.panel !== 'directory') insets.left = Math.max(0, insets.left - this.directoryColumnWidth());
     return insets;
   }
   @Builder
@@ -2230,35 +2356,15 @@ export struct MangaReadingSurface {
   build() {
     Column() {
       Row() {
-        if (this.persistentDirectory()) { this.tabletDirectory(); }
+        if (this.persistentDirectory() && this.panel !== 'directory') { this.tabletDirectory(); }
         Stack({ alignContent: Alignment.Center }) {
           Stack({ alignContent: Alignment.Center }) {
             this.boundaryViewport();
             if (!this.opened) { this.chapterLoadState(); }
             if (this.previousChapterPixels.length > 0) { this.retainedChapterPixels(); }
-            if (this.opened && this.showPageNumbers && !this.controlsVisible && !this.chapterEnd && !this.boundaryBusy) {
-              Stack({ alignContent: Alignment.BottomEnd }) {
-                Text(`${this.pageOrdinal() + 1} / ${this.horizontalPageCount}`)
-                  .fontSize(11).fontColor(this.mutedColor()).padding({ left: 10, right: 10, top: 5, bottom: 5 })
-                  .backgroundColor(this.surfaceColor()).borderRadius(12).margin(12)
-                  .hitTestBehavior(HitTestMode.None);
-              }.width('100%').height('100%').hitTestBehavior(HitTestMode.None)
-                .padding(this.interactiveInsets(this.windowMetricsRevision));
-            }
+            if (this.opened && this.showPageNumbers && !this.chapterEnd && !this.boundaryBusy) this.pageBadge();
             if (this.controlsPresentedForWindow() && !this.boundaryBusy) {
-              // Stack owns child placement. Component align() only aligns its
-              // own content and cannot position an intrinsic floating bar.
-              Stack({ alignContent: Alignment.Top }) {
-                this.topControls();
-              }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent)
-                .padding(this.interactiveInsets(this.windowMetricsRevision));
-              Stack({ alignContent: Alignment.Bottom }) {
-                Scroll() { this.bottomControls(); }
-                  .width('100%').height(this.bottomControlViewportHeight())
-                  .enableScrollInteraction(this.bottomControlViewportHeight() < this.dockHeight() + 12)
-                  .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None);
-              }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent)
-                .padding(this.interactiveInsets(this.windowMetricsRevision));
+              this.readerChrome();
             }
             this.refreshProgress();
             this.recoveryOverlay();
@@ -2292,7 +2398,7 @@ export struct MangaReadingSurface {
     Column() {
       if (this.panelFontsReady) {
         Column({ space: visual.sidebarHeaderGap }) {
-          Text(this.bookTitle).fontFamily(READER_FONT_NOTO_SERIF_SC_BOLD).fontWeight(700)
+          Text(this.bookTitle).fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontWeight(700)
             .fontSize(this.stageWidth <= 700 ? visual.sidebarNarrowTitleFontSize : visual.sidebarTitleFontSize)
             .lineHeight(visual.sidebarTitleLineHeight).halfLeading(true)
             .minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale())).fontColor(this.inkColor());
@@ -2329,21 +2435,22 @@ export struct MangaReadingSurface {
     PullToRefresh({
       scroller: this.scroller,
       customList: (): void => { this.imageViewport(); },
-      customLoad: (): void => { this.boundaryHint('next'); },
+      customLoad: (): void => { this.boundaryHint(); },
       pullEnabled: this.boundaryEnabled(), hasPrevious: false,
-      hasNext: this.adjacentChapter(1) !== undefined, resetToken: this.boundaryReset,
+      hasNext: this.adjacentChapter(1) !== undefined || this.finalBoundaryConfirmed(), resetToken: this.boundaryReset,
       animationDuration: readerMotionDurationMs('manga.pullRefresh.reset', this.reduceMotion),
+      animationCurve: readerMotionStandardCurve(), visualDamping: readerPaperPullOffset, reduceMotion: this.reduceMotion,
       onPull: (direction: PullDirection, distance: number, armed: boolean): void => this.onBoundaryPull(direction, distance, armed),
       onActivity: (active: boolean): void => this.onBoundaryActivity(active),
       onRefresh: (): Promise<string> => this.turnBoundaryChapter(-1),
-      onLoadMore: (): Promise<string> => this.turnBoundaryChapter(1),
+      onLoadMore: (): Promise<string> => this.releaseNextBoundary(),
     }).width('100%').height('100%');
   }
   @Builder
-  private boundaryHint(direction: PullDirection) {
+  private boundaryHint() {
     MangaBoundaryTurnFeedback({
-      caption: this.boundaryBusy ? '正在进入下一章节…' : this.boundaryArmed ? '松手进入下一章节' : '继续上拉进入下一章节',
-      paperColor: this.paperColor(), inkColor: this.inkColor(), mutedColor: this.mutedColor()
+      caption: this.boundaryCaption(), scheme: this.chromeScheme(), distance: this.boundaryDistance,
+      busy: this.boundaryBusy, armed: this.boundaryArmed, reduceMotion: this.reduceMotion,
     });
   }
   @Builder
@@ -2410,8 +2517,6 @@ export struct MangaReadingSurface {
           // A reload can report the preceding viewport before native consumes
           // the jump. That range cannot select or retire the landing page.
           if (!this.horizontal && this.restoringAnchor && this.appliedLayoutGeneration !== this.layoutGeneration) { this.traceBoundary('range-before-jump'); return; }
-          if (this.seekingPage !== undefined && first >= 0 && first < this.data.totalCount() &&
-            this.data.getData(first).ordinal !== this.seekingPage) return;
           const unchanged = this.first === first && this.last === last;
           this.first = first; this.last = last;
           this.refreshLoginRequiredForControls();
@@ -2458,15 +2563,57 @@ export struct MangaReadingSurface {
         })));
   }
   @Builder
+  private readerChrome() {
+    Column() { this.topControls(); }
+      .width(this.topControlsWidth())
+      .position(this.topControlsPosition())
+      .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion());
+    if (this.bottomControlViewportHeight() > 12) {
+      Scroll() { this.bottomControls(); }
+        .width(this.dockWidth(this.interactiveInsets(this.windowMetricsRevision)))
+        .height(this.bottomControlViewportHeight() - 12)
+        .position(this.bottomControlsPosition())
+        .hitTestBehavior(HitTestMode.Default)
+        .enableScrollInteraction(this.bottomControlViewportHeight() < this.dockHeight() + 12)
+        .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None);
+    }
+  }
+
+  private topControlsWidth(): string {
+    const insets = this.interactiveInsets(this.windowMetricsRevision);
+    return `calc(100% - ${insets.left + insets.right}vp)`;
+  }
+
+  private topControlsPosition(): Edges {
+    const insets = this.interactiveInsets(this.windowMetricsRevision);
+    return { left: insets.left, top: insets.top };
+  }
+
+  private bottomControlsPosition(): Edges {
+    const insets = this.interactiveInsets(this.windowMetricsRevision);
+    return { left: (this.viewportWidth - this.dockWidth(insets) + insets.left - insets.right) / 2,
+      bottom: insets.bottom + 12 };
+  }
+
+  @Builder
   private topControls() {
     Column({ space: 8 }) {
       ReaderReadingTopBar({ variant: 'manga', barHeight: this.mangaTopBarHeight(), scheme: this.chromeScheme(),
         bookTitle: this.bookTitle || this.remoteSession?.book.title || this.remoteBookSeed?.title || '漫画阅读', subtitle: this.title,
         leading: (): void => { this.mangaTopBarBack(); }, trailing: (): void => { this.mangaTopBarActions(); },
       });
-      if (this.loginRequiredForControls) { Button(this.loggingIn ? '登录处理中' : '登录书源后重试').height(44).enabled(!this.loggingIn).onClick((): void => { void this.loginAndRetry(); }); }
-      if (this.offlineProbeStatus.length > 0) { Text(this.offlineProbeStatus).fontSize(10).maxLines(4).fontColor(this.mutedColor()).id('reader-manga-offline-probe-status'); }
-    }.width('100%').padding({ left: 8, right: 8, top: 10 });
+      if (this.loginRequiredForControls) {
+        ReaderButton({ scheme: this.chromeScheme(), variant: 'primary',
+          label: this.loggingIn ? '登录处理中' : '登录书源后重试', isBusy: this.loggingIn,
+          actionEnabled: !this.loggingIn, controlHeight: 44,
+          onAction: (): void => { void this.loginAndRetry(); } });
+      }
+      if (this.offlineProbeStatus.length > 0) {
+        Text(this.offlineProbeStatus).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400)
+          .fontSize(10).maxLines(4).fontColor(this.mutedColor()).id('reader-manga-offline-probe-status');
+      }
+    }.width('100%').padding({ left: 8, right: 8, top: 10 })
+      .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion());
   }
 
   private recoveryOverlayIdentity(): string {
@@ -2536,13 +2683,14 @@ export struct MangaReadingSurface {
   @Builder
   private mangaTopBarActions() {
     Row() {
-      Button({ type: ButtonType.Normal }) {
+      Button({ type: ButtonType.Normal, stateEffect: false }) {
         Column({ space: 2 }) {
           Image(this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_switch_theme_night') :
-            $r('app.media.reader_directory_switch')).width(18).height(18);
-          Text('换源').fontSize(10).fontColor(this.inkColor()).maxLines(1);
+            $r('app.media.reader_directory_switch')).width(13).height(13);
+          Text('换源').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(10).lineHeight(15).halfLeading(true).fontColor(this.inkColor()).maxLines(1);
         }.alignItems(HorizontalAlign.Center).accessibilityLevel('no-hide-descendants');
-      }.width(44).height(Math.max(44, 20 + 15 * this.controlFontScale())).padding(0).borderRadius(10).backgroundColor(Color.Transparent)
+      }.width(44).height(Math.max(44, 20 + 15 * this.controlFontScale())).padding(0)
+        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 10, 10, this.readerPanelForeground()))
         .id(sourceSwitchTriggerFocusId(this.sourceId, this.bookId, 'manga-source'))
         .enabled(this.readerPanelForeground()).accessibilityText('换源')
         .onClick((): void => { void this.openSourceSwitch(); });
@@ -2575,6 +2723,9 @@ export struct MangaReadingSurface {
   private dockPageRowHeight(): number { return 44 + 3 + Math.max(16, 15 * this.controlFontScale()); }
   private dockActionHeight(): number { return Math.max(58, 22 + 4 + 16.5 * this.controlFontScale() + 12); }
   private dockHeight(): number { return this.dockPageRowHeight() + 4 + this.dockActionHeight() + 1 + 24; }
+  private dockWidth(insets: ReaderInsetsVp): number {
+    return Math.min(560, Math.max(1, this.viewportWidth - 60 - insets.left - insets.right));
+  }
   private recoveryNoticeHeight(): number {
     const insets = this.interactiveInsets(this.windowMetricsRevision);
     const available = this.viewportHeight - insets.top - insets.bottom;
@@ -2588,64 +2739,84 @@ export struct MangaReadingSurface {
   }
   private sheetActionHeight(): number { return Math.max(44, 18 * this.controlFontScale() + 16); }
   @Builder
+  private pageBadge() {
+    Stack({ alignContent: Alignment.BottomStart }) {
+      Text(`${this.chapterEndLabel()} · ${this.presentedPage()} / ${this.horizontalPageCount}`)
+        .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(11).fontFeature('"tnum" 1').fontColor(readerAppColor('TOK_INK', this.chromeScheme()))
+        .padding({ left: 10, right: 10, top: 5, bottom: 5 }).constraintSize({ maxWidth: 230 })
+        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        .backgroundColor(readerAppColor('TOK_READ_ELEVATED', this.chromeScheme())).borderRadius(12)
+        .border({ width: 1, color: readerAppColor('TOK_LINE', this.chromeScheme()) })
+        .margin({ left: 12, bottom: this.controlsVisible ? this.bottomControlViewportHeight() + 14 : 12 })
+        .hitTestBehavior(HitTestMode.None);
+    }.width('100%').height('100%').hitTestBehavior(HitTestMode.None)
+      .padding(this.interactiveInsets(this.windowMetricsRevision));
+  }
+  @Builder
   private bottomControls() {
     Column({ space: 4 }) {
       Row({ space: 10 }) {
-        Button('‹').height(44).width(44).fontSize(20).fontColor(this.mutedColor()).backgroundColor(Color.Transparent)
-          .accessibilityText('上一页').accessibilityRole(AccessibilityRoleType.BUTTON)
-          .focusable(this.opened && this.pageOrdinal() > 0)
-          .enabled(this.opened && this.pageOrdinal() > 0).onClick((): void => { void this.stepPage(-1); });
+        ReaderIconButton({ scheme: this.chromeScheme(), specId: 'manga-dock-step',
+          icon: this.chromeScheme() === 'night' ? $r('app.media.rc_chevron_left_theme_night') :
+            $r('app.media.rc_chevron_left'), accessibilityLabel: '上一页',
+          actionEnabled: this.opened && this.pageOrdinal() > 0, onTap: (): void => { void this.stepPage(-1); } });
         Column({ space: 3 }) {
-          Slider({ value: this.pageOrdinal() + 1, min: 1, max: Math.max(1, this.horizontalPageCount), step: 1 })
-            .height(44).selectedColor(this.backgroundPreference === 'ink' ? '#ABC39E' : this.greenColor())
-            .blockColor(this.backgroundPreference === 'ink' ? '#ABC39E' : this.greenColor()).trackColor(this.lineColor())
+          Slider({ value: this.presentedPage(), min: 1, max: Math.max(1, this.horizontalPageCount), step: 1 })
+            .height(44).selectedColor(readerAppColor('TOK_ACCENT', this.chromeScheme()))
+            .blockColor(this.greenColor()).trackColor(this.lineColor())
             .enabled(this.opened && this.horizontalPageCount > 1)
+            .accessibilityText('漫画页码')
+            .onTouch((event: TouchEvent): void => {
+              if (event.type === TouchType.Cancel && this.pageSliderCommitted < 0) this.clearPageSliderPreview();
+            })
             .onChange((value: number, mode: SliderChangeMode): void => {
-              if (mode === SliderChangeMode.End) void this.seekPage(Math.round(value) - 1);
+              this.changePageSlider(value, mode);
             });
           Row() {
-            Text(this.opened ? `${this.pageOrdinal() + 1} / ${this.horizontalPageCount}` : '—')
-              .fontSize(10).fontColor(this.mutedColor());
+            Text(this.opened ? `${this.presentedPage()} / ${this.horizontalPageCount}` : '—')
+              .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(10).fontFeature('"tnum" 1').fontColor(this.mutedColor());
             if (this.opened) {
-              Text(' 页').fontSize(10).fontColor(this.mutedColor());
+              Text(' 页').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(10).fontColor(this.mutedColor());
             }
           }.width('100%').justifyContent(FlexAlign.Center).height(Math.max(16, 15 * this.controlFontScale()));
         }.layoutWeight(1);
-        Button('›').height(44).width(44).fontSize(20).fontColor(this.mutedColor()).backgroundColor(Color.Transparent)
-          .accessibilityText('下一页').accessibilityRole(AccessibilityRoleType.BUTTON).focusable(this.opened)
-          .enabled(this.opened).onClick((): void => { void this.stepPage(1); });
+        ReaderIconButton({ scheme: this.chromeScheme(), specId: 'manga-dock-step',
+          icon: this.chromeScheme() === 'night' ? $r('app.media.rc_chevron_right_theme_night') :
+            $r('app.media.rc_chevron_right'), accessibilityLabel: '下一页',
+          actionEnabled: this.opened, onTap: (): void => { void this.stepPage(1); } });
       }.width('100%').height(this.dockPageRowHeight()).alignItems(VerticalAlign.Top);
       Row() {
         this.footerAction((): Resource => (this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_directory_theme_night') : $r('app.media.reader_directory_directory')), '目录', 'directory');
         this.footerAction((): Resource => (this.backgroundPreference === 'ink' ? $r('app.media.reader_appearance_header_theme_night') : $r('app.media.reader_appearance_header')), '阅读方式', 'mode');
         this.footerAction((): Resource => (this.backgroundPreference === 'ink' ? $r('app.media.reader_settings_header_theme_night') : $r('app.media.reader_settings_header')), '设置', 'settings');
       }.width('100%').height(this.dockActionHeight() + 1).border({ width: { top: 1 }, color: this.lineColor() });
-    }.width(Math.max(1, this.viewportWidth - 60 - this.interactiveInsets(this.windowMetricsRevision).left -
-      this.interactiveInsets(this.windowMetricsRevision).right)).padding({ left: 14, right: 14, top: 13, bottom: 11 })
+    }.width('100%').padding({ left: 14, right: 14, top: 13, bottom: 11 })
       .attributeModifier(new ReaderPanelFrame('manga-dock', this.chromeScheme()))
-      .margin({ left: 30, right: 30, bottom: 12 })
-      .constraintSize({ maxWidth: 560 });
+      .hitTestBehavior(HitTestMode.Default)
+      .onTouch((): void => {});
   }
   @Builder
   private footerAction(icon: () => Resource, label: string, panel: string) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
-    Column({ space: 4 }) {
-      Image(icon()).width(22).height(22);
-      Text(label).fontSize(11).fontColor(this.inkColor());
-    }.width('100%').height('100%').justifyContent(FlexAlign.Center).accessibilityLevel('no-hide-descendants');
+      Column() {
+        Stack({ alignContent: Alignment.Center }) { Image(icon()).width(14).height(14); }
+          .width(30).height(28).accessibilityLevel('no');
+        Text(label).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(12).lineHeight(18).halfLeading(true).fontColor(this.inkColor()).maxLines(1);
+      }.width('100%').justifyContent(FlexAlign.Center).accessibilityLevel('no-hide-descendants');
     }.id(this.panelTriggerFocusId(panel)).enabled(this.readerPanelForeground())
-      .layoutWeight(1).height(this.dockActionHeight()).padding(0).backgroundColor(Color.Transparent).borderRadius(0)
+      .layoutWeight(1).height(this.dockActionHeight()).padding(0)
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 8, 8, this.readerPanelForeground()))
       .onClick((): void => { void this.openPanel(panel, this.panelTriggerFocusId(panel)); }).accessibilityText(label);
   }
   @Builder
   private panelOverlay(directoryIdentity: string = this.directoryOuterIdentity(), opening: number = this.actionPanelPresentationGeneration) {
     Stack({ alignContent: this.widePanel() ? Alignment.End : Alignment.Bottom }) {
       Column().width('100%').height('100%')
-        .backgroundColor(this.widePanel() ? Color.Transparent : this.panel === 'directory' ?
+        .backgroundColor(this.widePanel() && this.panel !== 'directory' ? Color.Transparent : this.panel === 'directory' ?
           mangaDirectoryColor('scrim', this.chromeScheme()) :
           readerAppColor(resolveDrawerSpec('reader-action-sheet').scrimRole, this.chromeScheme()))
-        .opacity(this.widePanel() ? 1 : this.panelScrimOpacity)
-        .accessibilityLevel(this.widePanel() ? 'auto' : 'no')
+        .opacity(this.widePanel() && this.panel !== 'directory' ? 1 : this.panelScrimOpacity)
+        .accessibilityLevel('no')
         .onClick((): void => {
           // The opening touch and an unfinished handle gesture cannot also
           // become an outside dismissal while the surface is moving.
@@ -2654,7 +2825,8 @@ export struct MangaReadingSurface {
       if (this.panel === 'directory') { this.directorySheet(directoryIdentity, opening); }
       else { this.actionPanelSurface(opening); }
     }.width('100%').height('100%')
-      .accessibilityLevel(this.widePanel() || this.panelPhase === 'open' || this.panelPhase === 'dragging' ? 'auto' : 'no-hide-descendants');
+      .accessibilityLevel((this.widePanel() && this.panel !== 'directory') || this.panelPhase === 'open' || this.panelPhase === 'dragging' ?
+        'auto' : 'no-hide-descendants');
   }
 
   @Builder
@@ -2664,12 +2836,17 @@ export struct MangaReadingSurface {
         Column() {
           if (this.widePanel()) { this.directorySideHeader(opening); }
           else { this.directoryBottomHeader(opening); }
-          Scroll(this.directoryOuterScroller) { this.directoryPanel(directoryIdentity); }
-            .width('100%').constraintSize({ maxHeight: Math.max(1, this.panelContentHeight() - this.directoryHeaderChrome()) })
-            .scrollBar(BarState.Auto).scrollBarWidth(visual.scrollbarWidth)
-            .scrollBarColor(mangaDirectoryColor('scrollbar', this.chromeScheme()))
-            .onAreaChange((_old: Area, area: Area): void => this.onDirectoryOuterArea(directoryIdentity, Number(area.height)))
-            .onWillStartDragging((): void => this.onDirectoryOuterUserScroll(directoryIdentity));
+          this.directoryUtility(directoryIdentity);
+          if (this.widePanel()) {
+            this.directoryPanel(directoryIdentity);
+          } else {
+            Scroll(this.directoryOuterScroller) { this.directoryPanel(directoryIdentity); }
+              .width('100%').constraintSize({ maxHeight: Math.max(1, this.panelContentHeight() - this.directoryHeaderChrome() - this.directoryUtilityHeight()) })
+              .scrollBar(BarState.Auto).scrollBarWidth(visual.scrollbarWidth)
+              .scrollBarColor(mangaDirectoryColor('scrollbar', this.chromeScheme()))
+              .onAreaChange((_old: Area, area: Area): void => this.onDirectoryOuterArea(directoryIdentity, Number(area.height)))
+              .onWillStartDragging((): void => this.onDirectoryOuterUserScroll(directoryIdentity));
+          }
         }.width('100%').height(this.widePanel() ? this.panelContentHeight() : undefined)
           .constraintSize({ minHeight: this.widePanel() ? 0 : Math.min(260, this.panelContentHeight()),
             maxHeight: this.panelContentHeight() });
@@ -2692,8 +2869,9 @@ export struct MangaReadingSurface {
         bottom: this.panelInsets(this.windowMetricsRevision).bottom,
       }).attributeModifier(new ReaderPanelFrame('manga-directory-sheet', this.chromeScheme(), this.widePanel()))
         .enabled(this.panelPhase === 'open' || this.panelPhase === 'dragging');
-    }.width(this.panelWidth())
+    }.width(this.panelWidth()).height(this.widePanel() ? this.panelHeight() : undefined)
       .translate({ x: this.widePanel() ? this.panelOffset : 0, y: this.widePanel() ? 0 : this.panelOffset })
+      .opacity(this.panelOpacity)
       // The sheet must admit its chapter rows while masking the scrim below.
       .hitTestBehavior(this.widePanel() ? HitTestMode.Block : HitTestMode.Default);
   }
@@ -2703,14 +2881,14 @@ export struct MangaReadingSurface {
     Column() {
       Row({ space: 12 }) {
         Text(this.panelTitle()).fontSize(visual.wideHeaderFontSize)
-          .fontFamily(READER_FONT_NOTO_SANS_SC_UI_600).fontWeight(visual.wideHeaderFontWeight)
+          .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontWeight(visual.wideHeaderFontWeight)
           .fontColor(this.inkColor()).lineHeight(visual.wideHeaderLineHeight).halfLeading(true)
           .minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale())).layoutWeight(1);
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_sheet_close_theme_night') : $r('app.media.manga_sheet_close'))
             .width(18).height(18);
-        }.width(44).height(44).padding(0).backgroundColor(Color.Transparent).borderRadius(12)
-          .attributeModifier(new MangaDirectoryPressFeedback(true, true, this.chromeScheme(), 'nativeButton'))
+        }.id(this.panelCloseFocusId(opening)).width(44).height(44).padding(0)
+          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 12, 12, this.panelInputCurrent(opening)))
           .enabled(this.panelInputCurrent(opening))
           .onClick((): void => { if (this.panelInputCurrent(opening)) void this.closePanel(); }).accessibilityText('关闭宽屏面板');
       }.width('100%').constraintSize({ minHeight: Math.max(visual.wideHeaderMinHeight, 44 + visual.wideHeaderPaddingY * 2 + 1) })
@@ -2733,7 +2911,7 @@ export struct MangaReadingSurface {
         .onActionEnd((event: GestureEvent): void => { if (this.panelInputCurrent(opening)) this.finishPanelDrag(event.offsetY, event.velocityY); })
         .onActionCancel((): void => { if (this.panelInputCurrent(opening)) this.finishPanelDrag(0, 0); }));
     Text(this.panelTitle()).fontSize(visual.quickHeaderFontSize)
-      .fontFamily(READER_FONT_NOTO_SANS_SC_UI_900).fontWeight(900).fontColor(this.inkColor())
+      .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontWeight(700).fontColor(this.inkColor())
       .width('100%').padding({ left: visual.quickPaddingX, right: Math.max(visual.quickHeaderPaddingRight, 44 + visual.closeRight + 8), bottom: visual.quickHeaderPaddingBottom })
       .lineHeight(visual.quickHeaderLineHeight).halfLeading(true)
       .minFontScale(Math.min(1, this.directoryFontScale())).maxFontScale(Math.max(1, this.directoryFontScale()))
@@ -2772,6 +2950,7 @@ export struct MangaReadingSurface {
       }).enabled(this.panelPhase === 'open' || this.panelPhase === 'dragging');
     }.width(this.panelWidth())
       .translate({ x: this.widePanel() ? this.panelOffset : 0, y: this.widePanel() ? 0 : this.panelOffset })
+      .opacity(this.panelOpacity)
       .hitTestBehavior(this.widePanel() ? HitTestMode.Block : HitTestMode.Default);
   }
   @Builder
@@ -2836,6 +3015,60 @@ export struct MangaReadingSurface {
       .padding({ left: this.widePanel() ? this.panelContentInset() - 8 : visual.quickPaddingX,
         right: this.widePanel() ? this.panelContentInset() - 8 : visual.quickPaddingX, bottom: this.widePanel() ? 22 : visual.quickPaddingBottom })
       .onAreaChange((_old: Area, area: Area): void => this.onDirectoryOuterContentArea(directoryIdentity, Number(area.height)));
+  }
+  private directoryUtilityHeight(): number { return Math.max(92, this.directoryUtilityMeasured); }
+
+  @Builder
+  private directoryUtility(identity: string) {
+    Column({ space: 4 }) {
+      ReaderSearchField({ variant: 'readerDirectory', mode: 'live', catalogChrome: true, text: this.directoryQuery,
+        placeholder: '搜索话名或序号…', editingFocusId: `reader-manga-directory-query:${identity}`,
+        editingCurrent: (): boolean => this.directorySheetInputCurrent(identity),
+        onTextChange: (value: string): void => {
+          if (this.directorySheetInputCurrent(identity)) this.directoryQuery = value;
+        } });
+      Row({ space: 8 }) {
+        Button({ type: ButtonType.Normal, stateEffect: false }) {
+          Row({ space: 4 }) {
+            Image(this.chromeScheme() === 'night' ? $r('app.media.manga_sheet_locate_theme_night') : $r('app.media.manga_sheet_locate'))
+              .width(14).height(14).accessibilityLevel('no');
+            Text('定位当前话').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontWeight(500).fontSize(12).lineHeight(18).halfLeading(true).fontColor(this.greenColor());
+          }.accessibilityLevel('no-hide-descendants');
+        }.constraintSize({ minWidth: 44, minHeight: 44 }).padding({ left: 8, right: 8 })
+          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 8, 8, this.directoryCurrentIndex() >= 0))
+          .accessibilityText('定位当前话').enabled(this.directoryCurrentIndex() >= 0)
+          .onClick((): void => {
+            if (!this.directorySheetInputCurrent(identity) || this.directoryCurrentIndex() < 0) return;
+            if (this.directoryQuery.length > 0) this.directoryQuery = '';
+            this.directoryRevision += 1;
+          });
+        Blank();
+        Button({ type: ButtonType.Normal, stateEffect: false }) {
+          Row({ space: 4 }) {
+            Image(this.directorySortIcon()).width(14).height(14).accessibilityLevel('no');
+            Text(this.directoryAscending ? '正序' : '倒序').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontWeight(500).fontSize(12).lineHeight(18).halfLeading(true).fontColor(this.greenColor());
+          }.accessibilityLevel('no-hide-descendants');
+        }.constraintSize({ minWidth: 44, minHeight: 44 }).padding({ left: 8, right: 8 })
+          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 8))
+          .accessibilityText(this.directoryAscending ? '正序，切换倒序' : '倒序，切换正序')
+          .onClick((): void => {
+            if (this.directorySheetInputCurrent(identity)) this.directoryAscending = !this.directoryAscending;
+          });
+      }.width('100%').constraintSize({ minHeight: 44 });
+    }.width('100%').constraintSize({ minHeight: 92 })
+      .padding({ left: this.panelContentInset(), right: this.panelContentInset() })
+      .onAreaChange((_old: Area, area: Area): void => {
+        const height = Number(area.height);
+        if (identity === this.directoryOuterIdentity() && Number.isFinite(height) && height > 0 &&
+          Math.abs(height - this.directoryUtilityMeasured) > .1) this.directoryUtilityMeasured = height;
+      });
+  }
+
+  private directorySortIcon(): Resource {
+    if (this.directoryAscending) return this.chromeScheme() === 'night' ? $r('app.media.manga_directory_sort_ascending_theme_night') :
+      $r('app.media.manga_directory_sort_ascending');
+    return this.chromeScheme() === 'night' ? $r('app.media.manga_directory_sort_descending_theme_night') :
+      $r('app.media.manga_directory_sort_descending');
   }
   @Builder
   private directoryTools(directoryIdentity: string = this.directoryOuterIdentity()) {
@@ -2940,6 +3173,7 @@ export struct MangaReadingSurface {
 
   private onDirectoryMetricsChanged(): void {
     this.quickHeaderMeasured = 0; this.quickToolsMeasured = 0; this.quickFooterMeasured = 0;
+    this.directoryUtilityMeasured = 0;
     // Wait for the new physical viewport/content areas before using their
     // scroll extent; old font measurements cannot reposition a retained Scroll.
     this.quickOuterViewportHeight = 0; this.quickOuterContentHeight = 0;
@@ -3039,7 +3273,7 @@ export struct MangaReadingSurface {
   private directoryQuickRemainingHeight(): number {
     const tools = this.directoryQuickToolsHeight();
     const chrome = this.directoryHeaderChrome() + tools + (this.quickFooterMeasured > 0 ? this.quickFooterMeasured : mangaDirectoryFooterHeight(this.directoryFontScale(), this.directoryInitialWidth(false), this.directoryCurrentPagePosition())) + mangaDirectoryQuickFlowGaps() + (this.widePanel() ? 22 : visual.quickPaddingBottom);
-    return this.panelContentHeight() - chrome;
+    return this.panelContentHeight() - chrome - this.directoryUtilityHeight();
   }
   private directoryQuickHeight(): number {
     return Math.min(visual.quickMaxListHeight, Math.max(mangaDirectoryQuickMinimumListHeight(this.directoryFontScale()), this.directoryQuickRemainingHeight()));
@@ -3127,7 +3361,7 @@ export struct MangaReadingSurface {
       }.width('100%');
     }.width('100%');
     Column() {
-      Text('图片适配').fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_600).fontWeight(600).lineHeight(21).fontColor(this.inkColor()).width('100%').margin({ bottom: 12 });
+      Text('图片适配').fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontWeight(700).lineHeight(21).fontColor(this.inkColor()).width('100%').margin({ bottom: 12 });
       this.fitLine('跟随书源', 'source', (): void => {
         if (this.preferencePanelInputCurrent(opening, 'mode')) void this.changeFit('source');
       });
@@ -3141,29 +3375,33 @@ export struct MangaReadingSurface {
   }
   @Builder
   private sectionTitle(label: string) {
-    Text(label).fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_600).fontWeight(600).lineHeight(21).fontColor(this.inkColor()).width('100%');
+    Text(label).fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontWeight(700).lineHeight(21).fontColor(this.inkColor()).width('100%');
   }
   @Builder
   private sheetChoice(kind: string, label: string, action: () => void) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
     Row({ space: 6 }) {
-      Image(this.choiceIcon(kind)).width(18).height(18);
-      Text(label).layoutWeight(1).textAlign(TextAlign.Center).fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).lineHeight(18).fontColor(this.isSheetChoiceSelected(kind) ? '#FFFAF4' : this.mutedColor());
+      Image(this.choiceIcon(kind)).width(14).height(14);
+      Text(label).layoutWeight(1).textAlign(TextAlign.Center).fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).lineHeight(18)
+        .halfLeading(true).fontColor(this.isSheetChoiceSelected(kind) ? readerAppColor('TOK_ON_PRIMARY', this.chromeScheme()) : this.mutedColor());
     }.width('100%').justifyContent(FlexAlign.Center).accessibilityLevel('no-hide-descendants');
     }.layoutWeight(1).constraintSize({ minHeight: 44 }).padding(8)
-      .backgroundColor(this.isSheetChoiceSelected(kind) ? this.greenColor() : this.softSurfaceColor())
-      .border({ width: 1, color: this.isSheetChoiceSelected(kind) ? this.greenColor() : this.lineColor() }).borderRadius(12).onClick(action)
+      .attributeModifier(new ReaderPressFeedback(this.isSheetChoiceSelected(kind) ? this.greenColor() : this.softSurfaceColor(),
+        this.chromeScheme(), 12))
+      .border({ width: 1, color: this.isSheetChoiceSelected(kind) ? this.greenColor() : this.lineColor() }).onClick(action)
       .accessibilityText(`${label}，${this.isSheetChoiceSelected(kind) ? '已选择' : '未选择'}`);
   }
   @Builder
   private fitLine(label: string, fit: string, action: () => void) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
     Row({ space: 12 }) {
-      Text(label).fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).lineHeight(18).fontColor(this.inkColor()).layoutWeight(1);
-      if (this.fitPreference === fit) { Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_sheet_check_theme_night') : $r('app.media.manga_sheet_check')).width(18).height(18); }
+      Text(label).fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).lineHeight(18)
+        .halfLeading(true).fontColor(this.inkColor()).layoutWeight(1);
+      if (this.fitPreference === fit) { Image(this.backgroundPreference === 'ink' ? $r('app.media.manga_sheet_check_theme_night') : $r('app.media.manga_sheet_check')).width(14).height(14); }
     }.width('100%').height('100%').accessibilityLevel('no-hide-descendants');
-    }.width('100%').height(this.sheetActionHeight()).padding(0).backgroundColor(Color.Transparent)
-      .border({ width: { bottom: 1 }, color: this.lineColor() }).borderRadius(0).onClick(action)
+    }.width('100%').height(this.sheetActionHeight()).padding(0)
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme()))
+      .border({ width: { bottom: 1 }, color: this.lineColor() }).onClick(action)
       .accessibilityText(`${label}，${this.fitPreference === fit ? '已选择' : '未选择'}`);
   }
   @Builder
@@ -3172,45 +3410,60 @@ export struct MangaReadingSurface {
       this.sectionTitle('阅读底色');
       Row({ space: 8 }) {
         this.sheetChoice('sun', '暖纸', (): void => {
-          if (this.preferencePanelInputCurrent(opening, 'settings')) this.setBackground('paper');
+          this.setBackground('paper', opening);
         });
         this.sheetChoice('moon', '深墨', (): void => {
-          if (this.preferencePanelInputCurrent(opening, 'settings')) this.setBackground('ink');
+          this.setBackground('ink', opening);
         });
       }.width('100%');
     }.width('100%');
     Column() {
       Row() {
-        Text('亮度').fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_600).fontWeight(600).lineHeight(21).fontColor(this.inkColor()).layoutWeight(1);
-        Text(`${Math.round(this.brightnessPercent)}%`).fontSize(11).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontColor(this.mutedColor());
+        Text('亮度').fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontWeight(700).lineHeight(21).fontColor(this.inkColor()).layoutWeight(1);
+        Text(this.automaticBrightness ? '跟随系统' : `${Math.round(this.brightnessPercent)}%`)
+          .fontSize(11).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontColor(this.mutedColor());
+        ReaderToggle({ value: this.automaticBrightness, checkedColor: this.greenColor(),
+          inputIdentity: `${this.panelCloseFocusId(opening)}:brightness-auto`, accessibilityLabel: '亮度跟随系统',
+          actionEnabled: this.preferencePanelInputCurrent(opening, 'settings'),
+          onToggle: (enabled: boolean): void => {
+            if (this.preferencePanelInputCurrent(opening, 'settings') && enabled !== this.automaticBrightness) {
+              this.setBrightness(this.brightnessPercent, enabled);
+            }
+          } });
       }.width('100%').margin({ bottom: 10 });
-      Slider({ value: this.displayedBrightnessPercent(), min: 20, max: 100, step: 1 }).width('100%').height(44)
-        .selectedColor(this.backgroundPreference === 'ink' ? '#ABC39E' : this.greenColor())
-        .blockColor(this.backgroundPreference === 'ink' ? '#ABC39E' : this.greenColor()).trackColor(this.lineColor())
-        .onChange((value: number): void => {
-          if (this.preferencePanelInputCurrent(opening, 'settings')) this.setBrightness(value);
-        }).accessibilityText('阅读亮度');
+      Slider({ value: this.brightnessPercent, min: 1, max: 100, step: 1 }).width('100%').height(44)
+        .enabled(this.preferencePanelInputCurrent(opening, 'settings'))
+        .selectedColor(this.greenColor()).blockColor(this.greenColor()).trackColor(this.lineColor())
+        .onChange((value: number, mode: SliderChangeMode): void => this.changeBrightnessSlider(value, mode, opening))
+        .accessibilityText('阅读亮度');
       Row() {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Text('常驻页码').width('100%').textAlign(TextAlign.Start).fontSize(12)
             .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).lineHeight(18)
             .fontColor(this.inkColor()).accessibilityLevel('no');
-        }.layoutWeight(1).height('100%').padding(0).backgroundColor(Color.Transparent).borderRadius(0)
+        }.layoutWeight(1).height('100%').padding(0)
+          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 0, 0,
+            this.preferencePanelInputCurrent(opening, 'settings')))
           .onClick((): void => {
             if (this.preferencePanelInputCurrent(opening, 'settings')) this.setPageNumbers(!this.showPageNumbers);
           }).accessibilityText(`常驻页码，${this.showPageNumbers ? '已启用' : '已关闭'}`);
-        Toggle({ type: ToggleType.Switch, isOn: this.showPageNumbers }).width(44).height(44).selectedColor(this.greenColor())
-          .switchStyle({ pointRadius: 8.5, pointColor: this.showPageNumbers ? '#FFFAF4' : this.surfaceColor(), unselectedColor: this.backgroundPreference === 'ink' ? '#4D5447' : '#D7D0C3', trackBorderRadius: 11.5 })
-          .onChange((enabled: boolean): void => {
-            if (this.preferencePanelInputCurrent(opening, 'settings')) this.setPageNumbers(enabled);
-          }).accessibilityText('常驻页码');
+        ReaderToggle({ value: this.showPageNumbers, checkedColor: this.greenColor(),
+          inputIdentity: `${this.panelCloseFocusId(opening)}:page-numbers`, accessibilityLabel: '常驻页码',
+          actionEnabled: this.preferencePanelInputCurrent(opening, 'settings'),
+          onToggle: (enabled: boolean): void => {
+            if (this.preferencePanelInputCurrent(opening, 'settings') && enabled !== this.showPageNumbers) {
+              this.setPageNumbers(enabled);
+            }
+          } });
       }.width('100%').height(this.sheetActionHeight()).border({ width: { bottom: 1 }, color: this.lineColor() })
         .hitTestBehavior(this.widePanel() ? HitTestMode.Block : HitTestMode.Default);
     }.width('100%');
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Text('恢复默认').fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400)
         .lineHeight(18).fontColor(this.accentColor()).textAlign(TextAlign.Center).accessibilityLevel('no');
-    }.width('100%').height(this.sheetActionHeight()).padding(0).backgroundColor(Color.Transparent).borderRadius(0)
+    }.width('100%').height(this.sheetActionHeight()).padding(0)
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 0, 0,
+        this.preferencePanelInputCurrent(opening, 'settings')))
       .accessibilityText('恢复默认').onClick((): void => {
         if (!this.preferencePanelInputCurrent(opening, 'settings')) return;
         const motion = this.panelGeneration;
@@ -3284,50 +3537,32 @@ export struct MangaReadingSurface {
   private chapterEndContent() {
     Stack({ alignContent: Alignment.Bottom }) {
       Scroll() {
-        Column() {
-        Column({ space: 10 }) {
-          Image(this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_marker_check_theme_night') : $r('app.media.reader_directory_marker_check'))
-            .width(24).height(24);
-          Text(this.chapterEndTypeLabel()).fontSize(11).lineHeight(19).fontColor(this.mutedColor()).textAlign(TextAlign.Center);
-          Text(`${this.chapterEndLabel()} 完`).fontFamily('ReaderNotoSerifSCBold').fontWeight(FontWeight.Bold)
-            .fontSize(23).fontColor(this.inkColor()).textAlign(TextAlign.Center);
-          if (this.adjacentChapter(1) !== undefined) {
-            Text(this.adjacentLabel()).fontSize(13).fontColor(this.mutedColor()).maxLines(2).textAlign(TextAlign.Center);
-            Row({ space: 12 }) {
-              Button({ type: ButtonType.Normal, stateEffect: false }) {
-                Text(this.adjacentActionLabel()).fontSize(13).fontColor('#FFFFFF').width('100%').textAlign(TextAlign.Center);
-              }.layoutWeight(1).constraintSize({ minHeight: 44 }).padding(8)
-                .backgroundColor('#1F3528').borderRadius(16)
-                .onClick((): void => { void this.selectAdjacentChapter(1); });
-              Button({ type: ButtonType.Normal, stateEffect: false }) {
-                Text('返回目录').fontSize(13).fontColor(this.inkColor()).width('100%').textAlign(TextAlign.Center);
-              }.layoutWeight(1).constraintSize({ minHeight: 44 }).padding(8)
-                .backgroundColor(this.paperColor()).borderRadius(16)
-                .onClick((): void => { void this.openPanel('directory'); });
-            }.width('100%');
-          } else {
-            Text('已读到本书末尾').fontSize(13).fontColor(this.mutedColor()).textAlign(TextAlign.Center);
-            Button({ type: ButtonType.Normal, stateEffect: false }) {
-              Text('返回目录').fontSize(13).fontColor(this.inkColor()).width('100%').textAlign(TextAlign.Center);
-            }.constraintSize({ minHeight: 44 }).width('100%').padding(8)
-              .backgroundColor(this.paperColor()).borderRadius(16).onClick((): void => { void this.openPanel('directory'); });
-          }
-        }.width('100%').padding(20)
-          .attributeModifier(new ReaderPanelFrame('manga-chapter-end', this.chromeScheme()));
-        }.width('100%').constraintSize({ minHeight: this.viewportHeight }).justifyContent(FlexAlign.End).padding({
-        left: 12 + this.interactiveInsets(this.windowMetricsRevision).left,
-        right: 12 + this.interactiveInsets(this.windowMetricsRevision).right,
-        top: this.interactiveInsets(this.windowMetricsRevision).top,
-        bottom: 48 + this.interactiveInsets(this.windowMetricsRevision).bottom,
-        });
-      }.width('100%').height('100%').scrollBar(BarState.Off).edgeEffect(EdgeEffect.None).clip(true);
-      Stack({ alignContent: Alignment.BottomEnd }) {
-        Text(`${this.pageOrdinal() + 1} / ${this.horizontalPageCount}`)
-          .fontSize(11).fontColor(this.backgroundPreference === 'ink' ? '#EAE7DE' : '#FFFCF8')
-          .padding({ left: 10, right: 10, top: 5, bottom: 5 }).backgroundColor('#66251F1B').borderRadius(12)
-          .margin({ right: 12, bottom: 12 }).hitTestBehavior(HitTestMode.None);
-      }.width('100%').height('100%').hitTestBehavior(HitTestMode.None)
-        .padding(this.interactiveInsets(this.windowMetricsRevision));
-    }.width('100%').height('100%');
+        Button({ type: ButtonType.Normal, stateEffect: false }) {
+          Row({ space: 8 }) {
+            Image(this.chromeScheme() === 'night' ? $r('app.media.reader_chevron_down_primary_theme_night') :
+              $r('app.media.reader_chevron_down_primary')).rotate({ angle: this.adjacentChapter(1) === undefined ? 90 : 270 })
+              .width(16).height(16).flexShrink(0).accessibilityLevel('no');
+            Text(this.chapterEndActionLabel()).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(13).lineHeight(20).halfLeading(true).fontWeight(500).maxLines(3)
+              .fontColor(this.greenColor()).textAlign(TextAlign.Center);
+          }.width('100%').justifyContent(FlexAlign.Center).accessibilityLevel('no-hide-descendants');
+        }.width('100%').constraintSize({ minHeight: 56 }).padding({ top: 8, bottom: 8, left: 16, right: 16 })
+          .attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_SURFACE_ELEVATED', this.chromeScheme()),
+            this.chromeScheme(), 0, 0, this.readerPanelForeground() && this.chapterEnd && this.panel.length === 0))
+          .border({ width: { top: 1 }, color: readerAppColor('TOK_LINE', this.chromeScheme()) })
+          .accessibilityText(this.chapterEndActionLabel())
+          .onClick((): void => {
+            if (!this.readerPanelForeground() || !this.chapterEnd || this.panel.length > 0) return;
+            if (this.adjacentChapter(1) === undefined) this.resumeFromChapterEnd();
+            else void this.selectAdjacentChapter(1);
+          });
+      }.width('100%').constraintSize({ maxHeight: Math.max(56, this.viewportHeight - this.windowInteractiveInsets(this.windowMetricsRevision).top) })
+        .scrollBar(BarState.Off).edgeEffect(EdgeEffect.None);
+    }.width('100%').height('100%').padding(this.interactiveInsets(this.windowMetricsRevision));
+  }
+
+  private chapterEndActionLabel(): string {
+    const next = this.adjacentLabel();
+    if (next.length > 0) return `点击进入下一话：${next}`;
+    return this.finalBoundaryConfirmed() ? '已读至最新一话 · 返回继续' : '返回继续阅读';
   }
 }

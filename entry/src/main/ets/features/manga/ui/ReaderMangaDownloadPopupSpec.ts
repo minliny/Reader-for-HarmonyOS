@@ -6,5 +6,7 @@ export class ReaderMangaDownloadPopupRecipe {
   readonly maxWidth: number = 240;
   readonly maxHeight: number = 340;
   readonly padding: number = 8;
+  readonly radius: number = 16;
+  readonly borderWidth: number = 1;
 }
 export const READER_MANGA_DOWNLOAD_POPUP = new ReaderMangaDownloadPopupRecipe();

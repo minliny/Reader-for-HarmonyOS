@@ -1,8 +1,12 @@
 import type { RemoteReadingFailureKind } from '../application/RemoteContentAdmission';
-import { READING_CATALOG_SOURCE_SWITCH_PENDING } from '../application/RemoteReadingContract.ts';
+import { READING_CATALOG_SOURCE_SWITCH_PENDING, type RemoteReadingTocDiagnostic } from '../application/RemoteReadingContract.ts';
 
 /** Public copy only. The owning operation retains the original diagnostic. */
-export function readingFailureHint(code: string, kind?: RemoteReadingFailureKind): string {
+export function readingFailureHint(code: string, kind?: RemoteReadingFailureKind,
+  publicationFailure?: RemoteReadingTocDiagnostic['chapterPublicationFailure']): string {
+  if (publicationFailure === 'SOURCE_SWITCH_POSITION_PROTECTION') {
+    return '为保留原书源的阅读进度，暂时无法加载当前书源的正文。你可以换回原书源，或另选书源。';
+  }
   if (code === 'ENOSPC' || code === 'NO_SPACE' || code === 'MANGA_CACHE_STORAGE_FULL') {
     return '存储空间不足，请清理可重建缓存或释放空间后重试。';
   }

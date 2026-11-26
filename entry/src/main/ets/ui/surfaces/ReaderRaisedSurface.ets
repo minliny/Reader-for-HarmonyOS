@@ -85,7 +85,7 @@ export struct ReaderRaisedSurface {
   build() {
     // Native custom components still contribute an absolutely positioned root
     // Canvas to Stack measurement. A zero-sized host owns the layout boundary;
-    // consumer modifiers address this host, preserving the Canvas's -48 offset.
+    // consumer modifiers address this host without changing the Canvas outset.
     Stack({ alignContent: Alignment.TopStart }) {
       Canvas(this.context).width(this.extent(this.drawingWidth())).height(this.extent(this.drawingHeight()))
         .position({ x: -readerRaisedSurfaceSpec().canvasOutsetVp, y: -readerRaisedSurfaceSpec().canvasOutsetVp })

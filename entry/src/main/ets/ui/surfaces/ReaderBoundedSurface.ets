@@ -1,7 +1,9 @@
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
-import { PopupSurfaceSpec, resolvePopupSpec, resolveSheetSpec, resolveDialogSpec, resolveDrawerSpec,
+import { PopupSurfaceSpec, READER_GLASS_BLUR_VP, READER_HEAVY_GLASS_BLUR_VP, readerSurfaceElevation,
+  resolvePopupSpec, resolveSheetSpec, resolveDialogSpec, resolveDrawerSpec,
   type SheetSpecId } from './ReaderSurfaceSpecs';
 import { ReaderInsetsVp } from '../foundation/ReaderWindowMetrics';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 
 export type ReaderBoundedSurfaceId = 'source-switch-window' | 'source-switch-drawer' | 'reader-action-sheet' | 'tts-config-manager' | 'tts-config-picker' | SheetSpecId | 'local-import-selection' | 'local-import-progress' | 'local-import-result-content' | 'reader-replace-editor';
 
@@ -9,8 +11,7 @@ export type ReaderBoundedSurfaceId = 'source-switch-window' | 'source-switch-dra
  * owner's measured viewport geometry; visual choices are finite spec IDs.
  * The native/content-cover host, tasks and lifecycle stay with the caller. */
 /** Finite spec adapter shared by both column and fixed-position stack
- * roots. Geometry inputs belong to bounded modal owners; the native book
- * Sheet paints its one frame and measures its normal-flow content. */
+ * roots. Geometry inputs belong to bounded modal owners. */
 export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttribute> {
   private readonly id: ReaderBoundedSurfaceId;
   private readonly width: number | string;
@@ -27,9 +28,13 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
   applyNormalAttribute(instance: CommonAttribute): void {
     if (this.id === 'source-switch-drawer') {
       const spec = resolveDrawerSpec(this.id);
-      instance.width(this.width).height(this.height).constraintSize({ maxWidth: spec.maxWidth })
-        .backgroundColor(readerAppColor(spec.surfaceRole, this.scheme))
-        .borderRadius({ topLeft: spec.cornerRadius, topRight: spec.cornerRadius }).clip(true);
+      instance.width(this.width).height(this.height)
+        .backgroundEffect({ radius: READER_HEAVY_GLASS_BLUR_VP,
+          color: readerAppColor(spec.surfaceRole, this.scheme) })
+        .border({ width: this.placement === 'side' ? { left: 1 } : { top: 1 }, color: readerAppColor(spec.lineRole, this.scheme) })
+        .borderRadius(this.placement === 'side' ? { topLeft: 22, bottomLeft: 22, topRight: 0, bottomRight: 0 } :
+          { topLeft: spec.cornerRadius, topRight: spec.cornerRadius })
+        .shadow(readerSurfaceElevation('sheet', this.scheme)).clip(true);
       return;
     }
     if (this.id === 'reader-action-sheet') {
@@ -38,7 +43,8 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
       instance.width(this.width).height(side ? this.height : undefined)
         .constraintSize({ minHeight: side ? 0 : Math.min(spec.minimumContentHeight, contentMax) + this.insets.top + this.insets.bottom, maxHeight: this.maxHeight })
         .padding({ left: this.insets.left, right: this.insets.right, top: this.insets.top, bottom: this.insets.bottom })
-        .backgroundColor(readerAppColor(spec.surfaceRole, this.scheme))
+        .backgroundEffect({ radius: READER_HEAVY_GLASS_BLUR_VP,
+          color: readerAppColor(spec.surfaceRole, this.scheme) })
         .border(side ? { width: { left: 1 }, color: readerAppColor(spec.lineRole, this.scheme) } : undefined)
         .borderRadius({ topLeft: side ? 0 : spec.cornerRadius, topRight: side ? 0 : spec.cornerRadius, bottomLeft: 0, bottomRight: 0 })
         .hitTestBehavior(HitTestMode.Default)
@@ -50,8 +56,8 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
       const spec = resolveDialogSpec('local-import');
       instance.width(this.width).height(this.height);
       if (this.id !== 'local-import-result-content') instance.backgroundColor(readerAppColor(spec.backgroundRole, this.scheme))
-        .borderRadius(spec.borderRadius).shadow({ radius: 50,
-          color: readerAppColor(this.id === 'local-import-selection' ? 'app.shadow.dialog' : 'app.shadow.dialog', this.scheme), offsetX: 0, offsetY: 25 });
+        .border({ width: 1, color: readerAppColor('TOK_LINE', this.scheme) })
+        .borderRadius(spec.borderRadius).shadow(readerSurfaceElevation('dialog', this.scheme));
       return;
     }
     if (this.id === 'reader-replace-editor') {
@@ -61,25 +67,28 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
     }
     if (this.id === 'bookshelf-book-action' || this.id === 'search-result-filter' || this.id === 'search-task-status') {
       const spec = resolveSheetSpec(this.id);
-      // Native bindSheet owns the opaque paper, radius, clipping and safe
-      // bottom. A second fixed box would distort FIT_CONTENT and crop rows.
+      // ReaderBottomSheet owns the one frame and safe bottom.
       instance.width('100%').padding({ bottom: spec.contentBottom });
       return;
     }
     const spec = resolvePopupSpec(this.id === 'source-switch-window' ? 'source-switch-window' : 'tts-config-manager');
-    instance.width(this.width).height(this.height)
-
-      .backgroundColor(readerAppColor(spec.surfaceBackgroundRole, this.scheme))
-      .border({ width: spec.borderWidth, color: readerAppColor(spec.surfaceBorderRole, this.scheme) })
-      .borderRadius(this.id === 'tts-config-picker' ? 14 : spec.borderRadius)
-;
-    if (this.id !== 'source-switch-window') instance.constraintSize({
-      maxWidth: this.id === 'tts-config-manager' ? spec.width : this.width, maxHeight: '100%',
-    }).shadow({
-        radius: this.id === 'tts-config-picker' ? 36 : spec.shadowRadius,
+    instance.width(this.width).height(this.height);
+    const popupSurface = readerAppColor(spec.surfaceBackgroundRole, this.scheme);
+    if (this.id === 'source-switch-window') {
+      instance.backgroundEffect({ radius: READER_GLASS_BLUR_VP, color: popupSurface });
+    } else {
+      instance.backgroundColor(popupSurface);
+    }
+    instance.border({ width: spec.borderWidth, color: readerAppColor(spec.surfaceBorderRole, this.scheme) })
+      .borderRadius(this.id === 'tts-config-picker' ? 14 : spec.borderRadius);
+    if (this.id !== 'source-switch-window') {
+      const density = readerWindowMetrics().densityPixels;
+      instance.constraintSize({ maxWidth: this.id === 'tts-config-manager' ? spec.width : this.width, maxHeight: '100%' }).shadow({
+        radius: (this.id === 'tts-config-picker' ? 36 : spec.shadowRadius) * density,
         color: readerAppColor(this.id === 'tts-config-picker' ? 'app.shadow.readerConfigSecondary' : spec.surfaceShadowRole, this.scheme),
-        offsetY: this.id === 'tts-config-picker' ? 14 : spec.shadowOffsetY,
+        offsetY: (this.id === 'tts-config-picker' ? 14 : spec.shadowOffsetY) * density,
       }).clip(true);
+    }
   }
 }
 

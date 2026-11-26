@@ -14,6 +14,7 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 // Icons: existing media only (no new SVG assets).
 
 import { MainTabShell } from '../../shell/MainTabShell';
+import { readerMainNavigationMode, readerMainRailLeading, readerMainRailBottomInset } from '../../shell/MainNavigationSpec';
 import { readerPageContentStartInset } from '../../../ui/layout/ReaderPageShell';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
 import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
@@ -27,14 +28,7 @@ import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import { SurfaceHorizontalFrame } from '../../../ui/layout/SurfaceHorizontalGeometry';
 import {
   TOK_BORDER_W,
-  TOK_CARD_BG,
-  TOK_CARD_BG_HI,
   TOK_CONTENT_RAIL_W_TABLET,
-  TOK_GREEN,
-  TOK_INK,
-  TOK_LINE_STRONG,
-  TOK_MUTED,
-  TOK_ON_PRIMARY,
   TOK_SCREEN_INSET,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_ROW_BLOCK,
@@ -57,6 +51,8 @@ export struct DiscoverPage {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
   @StorageLink('readerWindowMetricsRevision') @Watch('onGeometryInputsChanged') private readerWindowMetricsRevision: number = 0;
+  @StorageLink('readerMainViewportRevision') private mainViewportRevision: number = 0;
+  @StorageLink('readerWideNavigationRail') private wideNavigationRail: boolean = false;
   @State private measurementRevision: number = 0;
   @State private measurementKey: number = 0;
   private headerInputs: string = '';
@@ -72,6 +68,7 @@ export struct DiscoverPage {
   onSelectKind: (index: number) => void = (_index: number): void => {};
   onPreviousPage: () => void = (): void => {};
   onNextPage: () => void = (): void => {};
+  onOpenBook: (book: DiscoverBook) => void = (_book: DiscoverBook): void => {};
   private mounted: boolean = false;
   private lastReadFeedback: string = '';
 
@@ -121,7 +118,7 @@ export struct DiscoverPage {
 
   build() {
     MainTabShell({
-      activeTab: 'discover', headerKind: 'home',
+      activeTab: 'discover', headerKind: 'floating',
       headerMeasurementKey: this.measurementKey,
       onMainTab: (key: string): void => this.onMainTab(key),
       header: (): void => { this.homeTopBar(); },
@@ -133,15 +130,20 @@ export struct DiscoverPage {
 
   @Builder
   private homeTopBar() {
-    AppTopBar({ title: '发现' }) {
-      ReaderIconButton({
-        icon: (this.appThemeScheme === 'night' ? $r('app.media.discover_refresh_theme_night') : $r('app.media.discover_refresh')),
-        specId: 'toolbar-standard',
-        accessibilityLabel: '刷新',
-        actionEnabled: !this.presentation.loading,
-        onTap: (): void => this.onRefresh(),
-      });
-    }
+    Row() {
+      if (this.isRailActive()) { Blank().width(readerMainRailLeading()); }
+      Column() {
+        AppTopBar({ title: '发现', floating: true }) {
+          ReaderIconButton({
+            icon: (this.appThemeScheme === 'night' ? $r('app.media.discover_refresh_theme_night') : $r('app.media.discover_refresh')),
+            specId: 'toolbar-standard',
+            accessibilityLabel: '刷新',
+            actionEnabled: !this.presentation.loading,
+            onTap: (): void => this.onRefresh(),
+          });
+        }
+      }.layoutWeight(1);
+    }.width('100%');
   }
 
   @Builder
@@ -150,8 +152,10 @@ export struct DiscoverPage {
       Column({ space: 7 }) {
         this.operationFeedback();
         this.currentSourceCard();
-        this.categoryChips();
-        this.filterRow();
+        if (this.presentation.kinds.length > 0) {
+          this.categoryChips();
+          this.filterRow();
+        }
         this.rankingHeader();
         this.resultList();
       }
@@ -183,7 +187,11 @@ export struct DiscoverPage {
 
   private bottomContentInset(): number {
     if (this.readerWindowMetricsRevision < 0) return TOK_SPACE_SM;
-    return readerFloatingTabContentInset(ReaderWindowCoordinator.metrics());
+    return this.isRailActive() ? readerMainRailBottomInset() : readerFloatingTabContentInset(ReaderWindowCoordinator.metrics());
+  }
+
+  private isRailActive(): boolean {
+    return readerMainNavigationMode(this.wideNavigationRail, this.mainViewportRevision, this.readerWindowMetricsRevision) === 'rail';
   }
 
   private pageGeometry(): ReaderPageGeometry {
@@ -195,6 +203,7 @@ export struct DiscoverPage {
     input.contentGap = TOK_SPACE_XS;
     input.contentMaxWidth = TOK_CONTENT_RAIL_W_TABLET;
     input.contentHorizontalPadding = TOK_SCREEN_INSET;
+    input.contentLeadingRail = this.isRailActive() ? readerMainRailLeading() : 0;
     input.contentEndInset = this.bottomContentInset();
     return resolveReaderPageGeometry(input);
   }
@@ -222,7 +231,7 @@ export struct DiscoverPage {
           .textOverflow({ overflow: TextOverflow.Ellipsis });
 
         Text(this.presentation.sources.length > 0 ?
-          `${this.presentation.activeSourceIndex + 1}/${this.presentation.sources.length} · 点击切换书源` :
+          `${this.presentation.activeSourceIndex + 1}/${this.presentation.sources.length}${this.presentation.sources.length > 1 ? ' · 点击切换书源' : ''}` :
           '没有已启用发现的书源')
           .width('100%')
           .fontFamily(TYPE_DISCOVER_SOURCE_META.fontFamily)
@@ -236,7 +245,9 @@ export struct DiscoverPage {
       .layoutWeight(1)
       .alignItems(HorizontalAlign.Start);
 
-      Image((this.appThemeScheme === 'night' ? $r('app.media.discover_source_chevron_theme_night') : $r('app.media.discover_source_chevron'))).width(20).height(20);
+      if (this.presentation.sources.length > 1) {
+        Image((this.appThemeScheme === 'night' ? $r('app.media.discover_source_chevron_theme_night') : $r('app.media.discover_source_chevron'))).width(20).height(20);
+      }
     }
     .width('100%')
     .constraintSize({ minHeight: 58 })
@@ -245,17 +256,20 @@ export struct DiscoverPage {
     .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('app.discover.sourceBorder', this.appThemeScheme) })
     .borderRadius(8)
-    .onClick((): void => this.onCycleSource());
+    .onClick((): void => {
+      if (!this.presentation.loading && this.presentation.sources.length > 1) this.onCycleSource();
+    });
   }
 
   @Builder
   private categoryChips() {
     Scroll() {
       Row({ space: 7 }) {
-        ForEach(this.kindTitles(), (label: string, index: number) => {
-          ReaderButton({ scheme: this.appThemeScheme, specId: 'discover-category', label,
-            primary: this.presentation.activeKindIndex === index, onAction: (): void => this.onSelectKind(index) });
-        }, (label: string): string => `discover-chip-${label}`);
+        ForEach(this.presentation.kinds, (kind: DiscoverKind, index: number) => {
+          ReaderButton({ scheme: this.appThemeScheme, specId: 'discover-category', label: kind.title,
+            primary: this.presentation.activeKindIndex === index, actionEnabled: !this.presentation.loading,
+            onAction: (): void => this.onSelectKind(index) });
+        }, (kind: DiscoverKind, index: number): string => JSON.stringify([kind.title, kind.url, index]));
       }
       .constraintSize({ minHeight: 32 })
       .padding({ right: TOK_SPACE_XS })
@@ -271,12 +285,12 @@ export struct DiscoverPage {
   private filterRow() {
     Row({ space: 7 }) {
       Row() {
-        Image((this.appThemeScheme === 'night' ? $r('app.media.discover_filter_theme_night') : $r('app.media.discover_filter'))).width(20).height(20);
+        Image((this.appThemeScheme === 'night' ? $r('app.media.discover_filter_theme_night') : $r('app.media.discover_filter'))).width(14).height(14);
         Text('筛选')
           .fontFamily(TYPE_DISCOVER_FILTER_LABEL.fontFamily)
           .fontWeight(TYPE_DISCOVER_FILTER_LABEL.fontWeight)
           .fontSize(TYPE_DISCOVER_FILTER_LABEL.fontSizeFp)
-          .lineHeight(TYPE_DISCOVER_FILTER_LABEL.lineHeightFp as number)
+          .lineHeight(TYPE_DISCOVER_FILTER_LABEL.lineHeightFp as number).halfLeading(true)
           .fontColor(readerAppColor('app.text.filter', this.appThemeScheme))
           .maxLines(1)
           .margin({ left: 3 });
@@ -285,13 +299,12 @@ export struct DiscoverPage {
           .fontFamily(TYPE_DISCOVER_FILTER_VALUE.fontFamily)
           .fontWeight(TYPE_DISCOVER_FILTER_VALUE.fontWeight)
           .fontSize(TYPE_DISCOVER_FILTER_VALUE.fontSizeFp)
-          .lineHeight(TYPE_DISCOVER_FILTER_VALUE.lineHeightFp as number)
+          .lineHeight(TYPE_DISCOVER_FILTER_VALUE.lineHeightFp as number).halfLeading(true)
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.RIGHT)
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .padding({ left: 7 });
-        Image((this.appThemeScheme === 'night' ? $r('app.media.discover_filter_chevron_theme_night') : $r('app.media.discover_filter_chevron'))).width(20).height(20);
       }
       .layoutWeight(1)
       .constraintSize({ minHeight: 34 })
@@ -302,7 +315,8 @@ export struct DiscoverPage {
       .borderRadius(8);
 
       ReaderLabeledIconAction({ scheme: this.appThemeScheme, specId: 'discover-apply', label: '应用',
-        icon: $r('app.media.discover_apply'), onAction: (): void => this.onRefresh() });
+        icon: $r('app.media.discover_apply'), actionEnabled: !this.presentation.loading,
+        onAction: (): void => this.onRefresh() });
     }
     .width('100%')
     .constraintSize({ minHeight: 34 })
@@ -443,7 +457,13 @@ export struct DiscoverPage {
     .constraintSize({ minHeight: 98 })
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: TOK_SPACE_SM, bottom: TOK_SPACE_SM })
     .alignItems(VerticalAlign.Top)
-    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) });
+    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
+    .onClick((): void => {
+      if (!this.mounted) return;
+      const current = this.presentation.books.find((row: DiscoverBook): boolean =>
+        row.sourceId === book.sourceId && row.bookId === book.bookId);
+      if (current !== undefined) this.onOpenBook(current);
+    });
   }
 
   private onMainTab(key: string): void {
@@ -462,13 +482,6 @@ export struct DiscoverPage {
       return new SurfaceHorizontalFrame(0, 0, 0);
     }
     return this.pageGeometry().content.frame;
-  }
-
-  private kindTitles(): string[] {
-    if (this.presentation.kinds.length > 0) {
-      return this.presentation.kinds.map((k: DiscoverKind): string => k.title);
-    }
-    return ['排行榜', '书源', '分类', '完本', '最新', '书单'];
   }
 
   private currentSourceName(): string {

@@ -20,8 +20,8 @@ export class ReaderControlPlacementPreferences {
   // Finish dispatched I/O before a successor Ability opens the same store.
   private static tail: Promise<void> = Promise.resolve();
   private static generation: number = 0;
+  private static pendingWrites: Map<string, ReaderControlPlacementSave> = new Map();
   private store: preferences.Preferences | undefined;
-  private pending: ReaderControlPlacementSave | undefined;
   private readonly context: common.UIAbilityContext;
   private readonly ownerCurrent: () => boolean;
 
@@ -33,11 +33,15 @@ export class ReaderControlPlacementPreferences {
   static async install(context: common.UIAbilityContext, ownerCurrent: () => boolean): Promise<void> {
     if (!ownerCurrent()) return;
     const owner = new ReaderControlPlacementPreferences(context, ownerCurrent);
+    const sameDirectory = this.active?.context.filesDir === context.filesDir;
     ReaderControlPlacementPreferences.active = owner;
-    AppStorage.setOrCreate(STORAGE_KEY, 'center');
-    AppStorage.setOrCreate(PENDING_GENERATION_KEY, 0);
+    if (!sameDirectory) AppStorage.setOrCreate(STORAGE_KEY, 'center');
+    AppStorage.setOrCreate(PENDING_GENERATION_KEY, this.pendingWrites.get(context.filesDir)?.generation ?? 0);
     await this.enqueue(async (): Promise<void> => {
       if (!owner.current()) return;
+      const pending = this.pendingWrites.get(context.filesDir);
+      AppStorage.setOrCreate(PENDING_GENERATION_KEY, pending?.generation ?? 0);
+      if (pending !== undefined) return;
       const value = await (await owner.open()).get(ALIGNMENT_KEY, 'center');
       if (owner.current()) AppStorage.setOrCreate(STORAGE_KEY, readerControlAlignment(typeof value === 'string' ? value : undefined));
     });
@@ -46,13 +50,12 @@ export class ReaderControlPlacementPreferences {
   static select(alignment: ReaderControlAlignment, inputCurrent: () => boolean): Promise<ReaderControlPlacementSaveResult> {
     const owner = ReaderControlPlacementPreferences.active;
     return this.enqueue(async (): Promise<ReaderControlPlacementSaveResult> => {
-      if (owner === undefined || !owner.current() || !inputCurrent() || owner.pending !== undefined) return 'ignored';
+      if (owner === undefined || !owner.current() || !inputCurrent() || this.pendingWrites.has(owner.context.filesDir)) return 'ignored';
       let store: preferences.Preferences;
       try { store = await owner.open(); }
       catch (_) { return owner.current() && inputCurrent() ? 'notDispatched' : 'ignored'; }
       if (!owner.current() || !inputCurrent()) return 'ignored';
       const original: ReaderControlPlacementSave = { generation: ++this.generation, alignment };
-      owner.pending = original;
       return owner.write(store, original);
     });
   }
@@ -60,11 +63,25 @@ export class ReaderControlPlacementPreferences {
   static retry(generation: number, inputCurrent: () => boolean): Promise<ReaderControlPlacementSaveResult> {
     const owner = ReaderControlPlacementPreferences.active;
     return this.enqueue(async (): Promise<ReaderControlPlacementSaveResult> => {
-      const original = owner?.pending;
-      const store = owner?.store;
-      if (owner === undefined || original === undefined || store === undefined || original.generation !== generation ||
-        !owner.current() || !inputCurrent()) return 'ignored';
+      if (owner === undefined || !owner.current() || !inputCurrent()) return 'ignored';
+      const original = this.pendingWrites.get(owner.context.filesDir);
+      if (original === undefined || original.generation !== generation) return 'ignored';
+      let store: preferences.Preferences;
+      try { store = await owner.open(); }
+      catch (_) { return owner.current() && inputCurrent() ? 'pending' : 'ignored'; }
+      if (!owner.current() || !inputCurrent()) return 'ignored';
       return owner.write(store, original);
+    });
+  }
+
+  static resetDefaults(): Promise<void> {
+    const owner = this.active;
+    return this.enqueue(async (): Promise<void> => {
+      if (owner === undefined || !owner.current()) throw new Error('CONTROL_PLACEMENT_RETIRED');
+      const store = await owner.open();
+      if (!owner.current()) throw new Error('CONTROL_PLACEMENT_RETIRED');
+      const original: ReaderControlPlacementSave = { generation: ++this.generation, alignment: 'center' };
+      if (await owner.write(store, original) !== 'confirmed') throw new Error('CONTROL_PLACEMENT_RESET_UNCONFIRMED');
     });
   }
 
@@ -76,6 +93,8 @@ export class ReaderControlPlacementPreferences {
   }
 
   private async write(store: preferences.Preferences, original: ReaderControlPlacementSave): Promise<ReaderControlPlacementSaveResult> {
+    const directory = this.context.filesDir;
+    ReaderControlPlacementPreferences.pendingWrites.set(directory, original);
     try {
       await store.put(ALIGNMENT_KEY, original.alignment);
       await store.flush();
@@ -84,8 +103,8 @@ export class ReaderControlPlacementPreferences {
       AppStorage.setOrCreate(PENDING_GENERATION_KEY, original.generation);
       return 'pending';
     }
+    ReaderControlPlacementPreferences.pendingWrites.delete(directory);
     if (!this.current()) return 'ignored';
-    this.pending = undefined;
     AppStorage.setOrCreate(STORAGE_KEY, original.alignment);
     AppStorage.setOrCreate(PENDING_GENERATION_KEY, 0);
     return 'confirmed';

@@ -7,6 +7,7 @@ import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from
 import type { SurfaceHorizontalAlignment } from './SurfaceHorizontalGeometry';
 import { readerWidthClass } from '../foundation/ReaderWidthClass';
 import type { ReaderWidthClass } from '../foundation/ReaderWidthClass';
+import { APP_FLOATING_HEADER_TOP_GAP } from '../foundation/ReaderHeaderMetrics';
 
 function finiteNonNegative(value: number): number {
   return Number.isFinite(value) ? Math.max(0, value) : 0;
@@ -63,6 +64,8 @@ export class ReaderPageGeometryInput {
   metrics: ReaderWindowMetricsSnapshot;
   viewportWidth: number = 0;
   viewportHeight: number = 0;
+  /** Window-relative left edge of a page embedded in a split pane. */
+  originX: number | undefined = undefined;
   measurementRevision: number = 0;
   headerHeight: number = 0;
   headerTop: number = 0;
@@ -96,6 +99,26 @@ export class ReaderPageGeometryInput {
   constructor(metrics: ReaderWindowMetricsSnapshot = createDefaultReaderWindowMetrics()) {
     this.metrics = metrics;
   }
+}
+
+/** Standard floating page chrome starts below the route's already safe top. */
+export function applyReaderStandardFloatingHeader(input: ReaderPageGeometryInput): void {
+  input.headerTop = APP_FLOATING_HEADER_TOP_GAP;
+  input.headerInsetLeft = Math.max(14, readerPageSafeLeft(input.metrics, input.originX, true));
+  input.headerInsetRight = Math.max(14, readerPageSafeRight(input.metrics, input.originX, input.viewportWidth, true));
+}
+
+export function readerPageSafeLeft(metrics: ReaderWindowMetricsSnapshot, originX?: number, interactive: boolean = false): number {
+  const safe = interactive ? readerInteractiveSafeLeft(metrics) : readerVisualSafeLeft(metrics);
+  return Math.max(0, safe - finiteNonNegative(originX ?? 0));
+}
+
+export function readerPageSafeRight(metrics: ReaderWindowMetricsSnapshot, originX: number | undefined,
+  viewportWidth: number, interactive: boolean = false): number {
+  const safe = interactive ? readerInteractiveSafeRight(metrics) : readerVisualSafeRight(metrics);
+  if (originX === undefined || !Number.isFinite(viewportWidth) || viewportWidth <= 0) return safe;
+  const consumed = Math.max(0, metrics.windowRect.width - finiteNonNegative(originX) - viewportWidth);
+  return Math.max(0, safe - consumed);
 }
 
 /** Explicit inert geometry for hosts that own their entire frame (reader shell,
@@ -151,8 +174,8 @@ export function resolveReaderPageGeometry(input: ReaderPageGeometryInput): Reade
   const interactive = input.contentHorizontalSafeArea === 'interactive';
   geometry.content.frame = resolveHorizontalFrame(
     contentViewportWidth,
-    Math.max(0, (interactive ? readerInteractiveSafeLeft(metrics) : readerVisualSafeLeft(metrics)) - rail),
-    interactive ? readerInteractiveSafeRight(metrics) : readerVisualSafeRight(metrics),
+    Math.max(0, readerPageSafeLeft(metrics, input.originX, interactive) - rail),
+    readerPageSafeRight(metrics, input.originX, input.viewportWidth, interactive),
     new SurfaceWidthSpec(finiteNonNegative(input.contentMaxWidth), leftGap, rightGap, input.contentAlignment),
   );
 

@@ -2,7 +2,7 @@ import { resolveEtsLoaderRoot } from './lib/tool-environment.mjs';
 import { formatDownloadStorageBytes } from '../entry/src/main/ets/features/downloads/presentation/SharedDownloadProjection.ts';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {createRequire, stripTypeScriptTypes} from 'node:module';
+import {createRequire} from 'node:module';
 import {fixture, deferred, settle} from './lib/general-settings-persistence-probe.mjs';
 import {createReaderBuilderProbe} from './lib/reader-control-builder-probe.mjs';
 import {boundedMembers} from './lib/bounded-surface-sdk-probe.mjs';
@@ -11,22 +11,26 @@ import {ReaderNativeAlertOwner} from './lib/reader-native-alert-sdk-probe.mjs';
 import {readerRecoveryView} from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import {isReaderProductSurfaceEnabled} from '../entry/src/main/ets/app/ReaderProductScope.ts';
 import {ReaderNavigation} from '../entry/src/main/ets/app/navigation/ReaderNavigation.ts';
+import {settingsNavigationItems} from '../entry/src/main/ets/features/settings/presentation/SettingsNavigationItems.ts';
+import {readerHostFilesDirectory} from '../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts';
 
 const read=path=>readFileSync(new URL('../entry/src/main/ets/'+path,import.meta.url),'utf8');
 const indexSource=read('pages/Index.ets'), pageSource=read('features/settings/ui/SettingsPage.ets');
-const sourceNavigationPath='app/composition/ReaderSourceJourney.ts';
+const sourceNavigationPath='app/composition/ReaderSourceJourney.ets';
 const sourceNavigationSource=read(sourceNavigationPath);
 const sdkRoot=resolveEtsLoaderRoot();
 const require=createRequire(import.meta.url), ts=require(sdkRoot+'/node_modules/typescript');
 const syntax=require(sdkRoot+'/lib/validate_ui_syntax.js');
-const ordinary=text=>stripTypeScriptTypes(text
+const ordinary=text=>ts.transpileModule(text
   .replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'')
   .replace(/^@Observed\s*$/gm,'')
-  .replace(/^export (?:type )?\{[\s\S]*?\} from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''),{mode:'transform'});
+  .replace(/^export (?:type )?\{[\s\S]*?\} from ['"][^'"]+['"];\n/gm,'').replace(/^export /gm,''),
+  {compilerOptions:{target:ts.ScriptTarget.ES2022}}).outputText;
 const load=(path,result,deps={},text=read(path))=>new Function(...Object.keys(deps),ordinary(text)+`;return ${result};`)(...Object.values(deps));
 const indexMethods=['settingsNavigationPorts','sourceNavigationPorts','nextNavigationGeneration',
   'navigationOwner','route','navigationGeneration','directoryReturnTarget','publishNavigation','navigateTo','settingsSection',
-  'setSettingsSection','onSearchVisibilityChanged','bookshelfModalVisible','settingsContent','openSettingsDestination',
+  'setSettingsSection','onSearchVisibilityChanged','bookshelfModalVisible','settingsContent','settingsPaintCurrent',
+  'rulesManagementInputAllowed','wideSettingsPane','openSettingsDestination',
   'sourceJourneyContent','sourceJourneySurface',
   'registerTemporaryBackBridge','isCurrentRuntime','isCurrentRoute','currentReadingRuntime',
   'onBackPress','dispatchBackDestination','retireSourceSwitchPresentation'];
@@ -51,7 +55,8 @@ function navigation(sourceText=sourceNavigationSource){
   // absent intent through the actual fixed-domain Store/Gateway/owner, never a
   // dummy successful cache owner. No mutation/Atomic write is admitted here.
   const intents=load('features/reading/application/ReadingOperationIntents.ts','{CacheClearOperationIntentStore}',{
-    ...common,fileIo:{async readText(path){platformReads.push(path);throw Object.assign(Error('ENOENT'),{code:13900002});}},
+    ...common,readerHostFilesDirectory,
+    fileIo:{async readText(path){platformReads.push(path);throw Object.assign(Error('ENOENT'),{code:13900002});}},
     replaceReaderAtomicSnapshot:async()=>{throw Error('Unexpected persistent write in return-navigation contract');},
     util:{generateRandomUUID(){throw Error('Unexpected mutation identity');}},isReaderCoreTransactionPendingError:()=>false});
   const CacheGateway=load('features/settings/application/SettingsCacheGateway.ts','SettingsCacheGateway',intents);
@@ -72,11 +77,15 @@ function navigation(sourceText=sourceNavigationSource){
   const SettingsPresentation=load('features/settings/presentation/SettingsPresentation.ets','SettingsPresentation',{
     SettingsHost,createDefaultSettingsSnapshot,AppStorage:{setOrCreate(){}},
   });
-  const SourceJourneyPresentation=load('features/source/presentation/SourceJourneyPresentation.ets','SourceJourneyPresentation',{
+  const {SourceJourneyPresentation,EMPTY_SOURCE_JOURNEY}=load(
+    'features/source/presentation/SourceJourneyPresentation.ets','{SourceJourneyPresentation,EMPTY_SOURCE_JOURNEY}',{
     SourceHost,EMPTY_SOURCE_TOOLS_SNAPSHOT:{},
   });
-  const SettingsJourney=load('app/composition/ReaderSettingsJourney.ts','ReaderSettingsJourney');
-  const SourceJourney=load(sourceNavigationPath,'ReaderSourceJourney',{},sourceText);
+  syntax.observedClassCollection.add(SettingsPresentation.name);
+  syntax.observedClassCollection.add(SourceJourneyPresentation.name);
+  const SettingsJourney=load('app/composition/ReaderSettingsJourney.ets','ReaderSettingsJourney');
+  const SourceJourney=load(sourceNavigationPath,'ReaderSourceJourney',
+    {ReaderUIVerificationProbe:{enabled:()=>false}},sourceText);
   const calls=[];
   Object.assign(f.runtime,{supportsCoreCapability:()=>false,
     bookAcquisitions:()=>({visibilityChanged(){},setPreparationVisible(){}}),async request(method,params={},options={}){
@@ -92,7 +101,8 @@ function navigation(sourceText=sourceNavigationSource){
   composition.hooks.childSources.BookshelfSettingsPage=read('features/bookshelf/ui/BookshelfSettingsPage.ets');
   composition.hooks.childSources.SourceManagementPage=read('features/source/ui/SourceManagementPage.ets');
   composition.hooks.childSources.SourceToolsPage=read('features/source/ui/SourceToolsPage.ets');
-  const deps={...composition.deps,ReaderRuntimeOwner:f.Runtime,ReaderNavigation,SourceJourneyPresentation,
+  const deps={...composition.deps,SynchedPropertyNesedObjectPU:composition.properties.sdk.SynchedPropertyNestedObjectPU,
+    ReaderRuntimeOwner:f.Runtime,ReaderNavigation,SourceJourneyPresentation,EMPTY_SOURCE_JOURNEY,
     SettingsPage:PagePayload,BookshelfSettingsPage:PagePayload,SourceManagementPage:PagePayload,SourceToolsPage:PagePayload};
   for(const [name,path] of [['SettingsScenes','app/composition/SettingsScenes.ets'],
     ['SourceJourneySurface','features/source/ui/SourceJourneySurface.ets']]){
@@ -102,15 +112,16 @@ function navigation(sourceText=sourceNavigationSource){
   }
   const i=createReaderBuilderProbe(indexSource,indexMethods,deps,composition.hooks).owner;
   const retiredSurface={retire(){}};
-  const settings=new SettingsPresentation(),source=new SourceJourneyPresentation();
+  const settings=composition.properties.sdk.ObservedObject.createNew(new SettingsPresentation(),undefined);
+  const source=new SourceJourneyPresentation();
   Object.assign(i,{rssInstanceIdentity:++instance,detailShelfAdmissionMount:1,mountedRuntimeOwner:f.runtime,shelfReceiptRetired:false,
     settingsPresentation:settings,sourceJourney:source,nativeAlertOwner:new ReaderNativeAlertOwner(),
-    shelfMotion:{clear(){},visibilityChanged(){}},transientFeedback:{reset(){}},
+    transientFeedback:{reset(){}},
     libraryAcquisition:{currentOwner:()=>f.current(),visibilityChanged(){}},librarySearch:{host:{visibilityChanged(){}}},
     readingEntry:{retire(){},endReading(){},shelfPreparationVisibilityChanged(){}},
     readingEntryActions:{retirePreparation(){},refreshDetailAcquisition(){},shelfPreparing:false},readingExitActions:{navigationSettled(){}},
     bookRemovalConfirmation:{dismiss(){},isOpen:()=>false},jsonImportPresentation:{dismiss(){},opening:undefined},
-    mangaSourceSwitch:{selectionVisible:false},sourceSwitchPresentation:{visible:false},
+    mangaSourceSwitch:{selectionVisible:false},sourceSwitchPresentation:{isSurfacePresented:()=>false},
     shelfMutations:{snapshot:{},retireSelection(){}},shelfGroupPresentation:{identity:'',retire(){},back:()=>false},
     downloadPresentation:retiredSurface,readingCommits:retiredSurface,sourceSwitchJourney:retiredSurface,
     rssJourney:retiredSurface,shelfCatalog:retiredSurface,shelfManagement:retiredSurface,
@@ -137,9 +148,11 @@ function navigation(sourceText=sourceNavigationSource){
     const callbackNames=[...pageSource.matchAll(/^  (on\w+):/gm)].map(m=>m[1]);
     const page=sdk.consumer(pageSource,[...propertyNames,...callbackNames,'appThemeScheme','mounted','themeOwner','temporaryBackIdentity','resetMessage',
       'onSnapshotChanged','syncSnapshotValues','onCacheCleanupChanged',
-      'buildHome','navRow','operationFeedback','recovery','feedbackMessage','recoveryActionIdentities','recoveryActionKind',
+      'buildHome','navRow','openHomeDestination','settingsInputIsCurrent','isOpeningCurrent','isInputAllowed','operationFeedback','recovery',
+      'feedbackMessage','recoveryActionIdentities','recoveryActionKind',
       'recoveryActionGeneration','recoveryActionLabel','recoveryActionCurrent','dispatchRecoveryAction'],
-      {ReaderRuntimeOwner:f.Runtime,readerRecoveryView,isReaderProductSurfaceEnabled},props);
+      {ReaderRuntimeOwner:f.Runtime,readerRecoveryView,isReaderProductSurfaceEnabled,settingsNavigationItems},props);
+    page.appForeground=true;
     page.mounted=true;page.themeOwner=f.runtime;page.temporaryBackIdentity='return-native:'+instance;page.resetMessage='';
     page.buildHome();
     const hit=sdk.nodes(page).find(node=>node.type==='Button'&&node.accessibilityText==='书源管理');

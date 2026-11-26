@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import {registerHooks, stripTypeScriptTypes} from 'node:module';
 import test from 'node:test';
 import {selectedProductionMethods, selectedProductionValues} from '../../lib/selected-production-methods.mjs';
+import {sourceVerificationStatus} from '../../../entry/src/main/ets/features/source/ui/SourceManagementVerification.ts';
 
 test('source native text sampler retains complete UTF-16 ranges and distinguishes unavailable reads', async () => {
   const sampler = new URL('../../../entry/src/main/ets/pages/ReaderSourceTextMetrics.ets', import.meta.url);
@@ -102,7 +103,7 @@ test('source text sampler retires a queued sweep when the same opening publishes
     'observeVerificationProjection','verificationTextLayoutScope','scheduleVerificationTextLayout',
     'scheduleVerificationReadText','verificationReadTextScope','scheduleVerificationOperationText',
     'verificationOperationTextFact','hasPendingSourceRecovery',
-  ],{SOURCE_TEXT_ROLES,ReaderUIVerificationProbe,ReaderWindowCoordinator,SourceListLayoutFrame,
+  ],{SOURCE_TEXT_ROLES,ReaderUIVerificationProbe,ReaderWindowCoordinator,SourceListLayoutFrame,sourceVerificationStatus,
     sourceVerificationOpening:() => owner,SourceVerificationAnchors:{identify:() => 12}});
   let statsLength = 14;
   const rows = [{sourceId:'public-first'},{sourceId:'public-second'}];
@@ -164,23 +165,24 @@ test('source read surface sampler keeps native controllers attached from loading
     }
   }
   const Page = selectedProductionMethods(source,'SourceManagementPage',[
-    'readPageStateTitle','readPageStateMessage','verificationReadTextScope','readPageStateTextOptions','readVerificationPageText',
+    'readPageStateTitle','readPageStateMessage','hasEmptyImportReadbackFailure','verificationReadTextScope','readPageStateTextOptions','readVerificationPageText',
     'verificationSurfaceTextKey','verificationSurfaceTextOptions','scheduleVerificationReadText',
     'scheduleVerificationSurfaceText','verificationTextLayoutScope',
   ],{ReaderUIVerificationProbe,ReaderWindowCoordinator,SourceListLayoutFrame,ReaderSourceTextMetrics,
     sourceVerificationOpening:()=>owner,SourceVerificationAnchors:{identify:()=>0}});
   const footerMetrics = new ReaderSourceTextMetrics();
-  const footerAdd = footerMetrics.track('footer/add','新增书源');
-  footerAdd.nativeLength = '新增书源'.length;
+  const footerAdd = footerMetrics.track('footer/add','导入书源');
+  footerAdd.nativeLength = '导入书源'.length;
   footerMetrics.track('footer/manage','批量管理').nativeLength = '批量管理'.length;
   const page = Object.assign(new Page(),{mounted:true,verificationOpening:'source',verificationTextMetrics:footerMetrics,
     verificationReadTextMetrics:new ReaderSourceTextMetrics(),
     verificationSurfaceTextMetrics:new Map(),verificationSurfaceTextFrameKeys:new Map(),verificationTextProjectionRevision:1,
     verificationTextRowId:'',verificationFilterRevision:1,viewportWidth:366,viewportHeight:809,
-    groupOpen:false,groupClosing:false,operation:{readFacts:{fact:'loading',generation:3}},
+    groupOpen:false,groupClosing:false,sources:[],operation:{action:'load',readFacts:{fact:'loading',generation:3}},
     searchQuery:'',statusValue:'全部',categoryValue:'all',groupValue:'全部分组',managementOpeningIsCurrent:()=>true,
     verificationProjectionState:()=>projection,fontScale:()=>1.3,
-    sourceListLoading:()=>projection === 'loading',hasEmptyListReadFailure:()=>projection === 'readFailure',
+    sourceListLoading:()=>projection === 'loading',hasPendingSourceRecovery:()=>false,
+    hasEmptyListReadFailure:()=>projection === 'readFailure',
     recovery:()=>({canRetry:true}),
     getUIContext:()=>({postFrameCallback:frame=>frames.push(frame)})});
 

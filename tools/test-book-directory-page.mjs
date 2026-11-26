@@ -113,7 +113,7 @@ async function runSelectedCase(selectedCase) {
     ReaderDirectoryDestination: Port, ReaderFullDirectory: FullPort, BookDirectoryPage: MangaPort,
     ReaderDirectoryNavigationSurface: Port, ReaderDirectoryList: Port, ReaderDirectoryToolbar: Port,
     FullDirectoryPanel: Port, ReaderDirectoryRules: Port, ReaderDirectoryRecoverySurface: Port,
-    PageBackBar: Port, MangaDirectoryCurrentFooter: Port, MangaDirectoryEntryRow: Port, ReaderMangaDownloadPopup: Port,
+    PageBackBar: Port, ReaderDirectoryQuickActions: Port, MangaDirectoryEntryRow: Port, ReaderMangaDownloadPopup: Port,
   };
   const sdk = boundedSurfaceSdk({allowEmptyBranchAdmission: true});
   for (const [name, path] of Object.entries({
@@ -132,10 +132,13 @@ async function runSelectedCase(selectedCase) {
     ReaderDirectoryRules: 'features/reading/ui/ReaderDirectoryRules.ets',
     ReaderDirectoryRecoverySurface: 'features/reading/ui/ReaderDirectoryRecoverySurface.ets',
     PageBackBar: 'ui/chrome/PageBackBar.ets',
-    MangaDirectoryCurrentFooter: 'features/manga/ui/MangaDirectoryCurrentFooter.ets',
+    ReaderDirectoryQuickActions: 'features/reading/ui/ReaderDirectoryQuickActions.ets',
     MangaDirectoryEntryRow: 'features/manga/ui/MangaDirectoryEntryRow.ets',
     ReaderMangaDownloadPopup: 'features/manga/ui/ReaderMangaDownloadPopup.ets',
   })) sdk.hooks.childSources[name] = read(path);
+  Object.assign(deps, pureModuleProbe(
+    read('features/reading/ui/ReaderDirectoryQuickActions.ets').split('@Component')[0],
+    'DirectoryQuickActionsHeight.ets', {}, ['readerDirectoryQuickActionsHeight']));
   const syntax = createRequire(import.meta.url)(resolveEtsLoaderRoot()+'/lib/validate_ui_syntax.js');
   syntax.builderParamObjectCollection.set('ReaderDirectoryNavigationSurface', new Set(['fallbackBuilder']));
   syntax.builderParamObjectCollection.set('ReaderDirectoryList', new Set(['rowBuilder']));
@@ -213,7 +216,7 @@ async function runSelectedCase(selectedCase) {
     // Native Grid edge-top may put the first row at the viewport origin.
     // START is documented to retain contentStartOffset. Check the resulting
     // coordinate, including the actual page header, instead of API call count.
-    m.listScroller.contentStartOffset = m.mangaContentTopInset();
+    m.listScroller.contentStartOffset = m.geometry.content.startInset;
     assert.ok(m.listScroller.contentStartOffset > m.geometry.header.bottom);
     m.onListFirstLayout(oldIdentity);
     assert.equal(m.listScroller.firstItemTop, m.listScroller.contentStartOffset,

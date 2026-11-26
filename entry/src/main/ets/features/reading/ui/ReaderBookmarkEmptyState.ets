@@ -1,3 +1,4 @@
+import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { readerBookmarkEmptyCopy } from '../presentation/ReaderBookmarkProjection';
@@ -22,8 +23,13 @@ export struct ReaderBookmarkEmptyState {
 
   @Builder
   private emptyIcon() {
-    Image((this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_theme_night') : $r('app.media.reader_directory_marker_bookmark')))
-      .width(28).height(28).margin({ bottom: 16 });
+    Stack({ alignContent: Alignment.Center }) {
+      Image(this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') :
+        $r('app.media.reader_directory_marker_bookmark_active'))
+        .width(21).height(21).accessibilityLevel('no');
+    }.width(52).height(52).margin({ bottom: 12 }).borderRadius(16)
+      .backgroundColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme))
+      .border({ width: 1, color: readerAppColor('TOK_PRIMARY_BORDER', this.appThemeScheme) });
   }
 
   build() {

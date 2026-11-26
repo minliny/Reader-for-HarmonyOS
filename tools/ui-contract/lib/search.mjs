@@ -1,5 +1,5 @@
 import { EvidenceError } from '../../lib/native-ui-evidence.mjs';
-import { ancestorsOf, evaluateLayout, publicSearchResultContinuity, searchMismatchedEmptyHeading,
+import { ancestorsOf, evaluateLayout, isReaderSearchBottomSheet, publicSearchResultContinuity, searchMismatchedEmptyHeading,
   searchUnconfirmedEmptyHeading, selectLayoutNode } from './layout.mjs';
 import { effectiveAppearance } from './structure.mjs';
 import { imeSearchTap } from './search-ime-key.mjs';
@@ -1136,12 +1136,13 @@ function phasePanelNativeReturn(evidence, assertion) {
     return output(actual, expected, false, 'Unrelated work changed the results during the sheet interaction');
   }
   const sheetTitle = expected.panel === 'filter' ? '筛选' : '搜索进度';
-  const sheets = sample => sample.nodes.filter(node => node.type === 'SheetPage' && node.visible === true &&
-    placed(node.visibleRectPx));
+  const sheets = sample => sample.nodes.filter(node => (node.type === 'SheetPage' || isReaderSearchBottomSheet(node)) &&
+    node.visible === true && placed(node.visibleRectPx));
   const mountedSheets = sheets(opened);
   const endpointSheets = [...sheets(baseline),...sheets(restored)];
   if (endpointSheets.length || mountedSheets.length > 1 ||
-      mountedSheets.some(node => node.sheetTitle !== undefined && node.sheetTitle !== sheetTitle) ||
+      mountedSheets.some(node => (node.sheetTitle !== undefined && node.sheetTitle !== sheetTitle) ||
+        (expected.sheetHost === undefined ? node.type !== 'SheetPage' : !isReaderSearchBottomSheet(node, expected.panel))) ||
       [baseline, opened, restored].some(sample => evidence.keyboard(sample).visible)) {
     return output(actual, expected, false, 'The native Back source shows a wrong sheet, or the results endpoint is still covered');
   }

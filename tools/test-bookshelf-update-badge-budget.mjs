@@ -2,9 +2,12 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
+import { readerSurfaceSpecsForProbe } from './lib/bounded-surface-sdk-probe.mjs';
 import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts';
+import { bookCoverDisplayUrl } from '../entry/src/main/ets/app/library/BookCoverDisplay.ts';
 
 const definitions = {
   'bounded-badge': {
@@ -21,16 +24,16 @@ function runBadgeBudget() {
   const grid = readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfGridSpec.ets', import.meta.url), 'utf8');
   const geometry = pureModuleProbe(grid, 'BookshelfGridSpec.ets', { ...readerTypographyRoles, TOK_SPACE_XS: 8 },
     ['bookshelfGridFrame', 'bookshelfCoverHeight']);
-  const styles = pureModuleProbe(readFileSync(new URL('../entry/src/main/ets/features/bookshelf/ui/BookshelfCoverVisual.ts', import.meta.url), 'utf8'),
-    'BookshelfCoverVisual.ts', {}, ['BOOKSHELF_COVER_SHADOW_RADIUS', 'BOOKSHELF_COVER_SHADOW_OFFSET_Y']);
   const names = ['projectionBookCoverLayer', 'projectionBookCard', 'shelfBookCardWidth', 'bookCardWidth', 'bookCardHeight',
-    'gridProgressLabel', 'continueCardFontScale'];
+    'gridProgressLabel', 'continueCardFontScale', 'hasCover', 'coverUrl', 'coverErrorHandler', 'failedCoverUrls'];
   const coverSource = readFileSync(new URL('../entry/src/main/ets/ui/patterns/NoCoverCover.ets', import.meta.url), 'utf8');
   class Cover { constructor(owner, params) { Object.assign(this, { owner, params }); } }
   const nativeGesture = new Proxy({}, { get: () => () => {} });
-  const probe = createReaderBuilderProbe(page, names, { ...geometry, ...styles, ShelfBookPresentation, NoCoverCover: Cover,
+  const properties = createArkUIPropertyRuntimeProbe();
+  const probe = createReaderBuilderProbe(page, names, { ...properties.sdk, ...geometry, ...readerSurfaceSpecsForProbe(), ShelfBookPresentation,
+    bookCoverDisplayUrl, NoCoverCover: Cover,
     globalThis: { Gesture: nativeGesture }, LongPressGesture: nativeGesture, GesturePriority: { Low: 'low' } },
-    { childSources: { NoCoverCover: coverSource } });
+    { ...properties.hooks, childSources: { NoCoverCover: coverSource } });
   let variants = 0;
   for (const width of [320, 366, 720]) for (const count of [1, 99, 123456789]) for (const fontScale of [1, 2]) {
     for (const morph of [false, true]) {
@@ -39,7 +42,7 @@ function runBadgeBudget() {
       Object.assign(owner, {
         appThemeScheme: 'day', viewSwitchGridContentOpacity: 1,
         shelfContentWidth: () => width - 40, projectionCoverRadius: () => 8,
-        projectionCoverLayerOpacity: () => 1, hasCover: () => true,
+        projectionCoverLayerOpacity: () => 1,
         continueCardFontScale: () => fontScale,
       });
       const book = { sourceId: 'test', bookId: 'same', title: '书名', author: '作者', coverUrl: 'file://cover', unreadCount: count };
@@ -48,6 +51,9 @@ function runBadgeBudget() {
       const text = nodes.find(node => node.type === 'Text' && node.create === `更新 ${count} 章`);
       const badge = nodes.find(node => node.type === 'Row' && node.constraintSize?.maxWidth !== undefined && node.padding?.top === 3);
       assert.ok(text && badge);
+      const layer = nodes.find(node => node.type === 'Stack' && node.linearGradient);
+      assert.equal(layer.create.alignContent, 'Alignment.TopEnd');
+      assert.deepEqual(badge.margin, { top: 7, right: 7 });
       const coverWidth = owner.shelfBookCardWidth(wide);
       assert.equal(badge.constraintSize.maxWidth, Math.max(0, coverWidth - 14));
       assert.equal(text.constraintSize.maxWidth, Math.max(0, coverWidth - 28));
@@ -66,8 +72,9 @@ function runBadgeBudget() {
         projectionBookCover() {}, projectionGridDetails() {}, projectionListDetails() {},
         projectionBookWidth: () => coverWidth, projectionBookHeight: () => 200,
         projectionBookTranslateX: () => 0, projectionBookTranslateY: () => 0,
+        projectionDetailsOpacity: () => 0,
         bookActionFocusKey: () => 'book', bookSelectionHandler: () => () => {},
-        bookActionPresentationHandler: () => () => {},
+        bookActionPresentationHandler: () => () => {}, shelfPressed: () => false,
       });
       owner.projectionBookCard(book, wide, () => 0, 0);
       assert.ok([...owner.nodes.values()].some(node => node.accessibilityText?.includes(`更新 ${count} 章`)),

@@ -19,5 +19,11 @@ export function readerRuleMutationEffects(method: string, params: JsonObject): R
   const originalParams = command['params'];
   if (typeof originalMethod !== 'string' || !(method==='rules.mutation.apply' ? RULES_MUTATION_METHODS : ['bookshelf.remove','bookshelf.removeBatch']).includes(originalMethod) ||
     originalParams === null || typeof originalParams !== 'object' || Array.isArray(originalParams)) return { method, params };
-  return { method: originalMethod, params: originalParams as JsonObject };
+  const original = originalParams as JsonObject;
+  const sourceIds = original['sourceIds'];
+  if (originalMethod === 'source.import.grouped' ||
+    (originalMethod === 'rule-sub.update.apply.v1' && Array.isArray(sourceIds) && sourceIds.length > 0)) {
+    return { method: 'source.import', params: original };
+  }
+  return { method: originalMethod, params: original };
 }

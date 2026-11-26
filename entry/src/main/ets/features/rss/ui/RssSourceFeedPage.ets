@@ -1,6 +1,7 @@
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { RssOriginalRecoverySurface } from './RssOriginalRecoverySurface';
+import { rssOriginalMatchesScope } from '../application/RssMutationRecoveryContract';
 import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from '../application/RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconAction';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
@@ -19,11 +20,6 @@ import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
 import {
   TOK_BORDER_W,
-  TOK_CARD_BG_HI,
-  TOK_INK,
-  TOK_MUTED,
-  TOK_PRIMARY_BG,
-  TOK_ROW_DIVIDER,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
@@ -61,6 +57,7 @@ export struct RssSourceFeedPage {
 
   build() {
     ReaderStandardPage({
+      floatingHeader: true,
       variant: 'rssFeed',
       scrollOwner: 'native-list',
       header: (): void => { this.pageHeader(); },
@@ -72,7 +69,7 @@ export struct RssSourceFeedPage {
 
   @Builder
   private pageHeader() {
-    PageBackBar({ title: '全部条目', onBack: (): void => this.onBack() });
+    PageBackBar({ floating: true, centered: true, elevation: 'floating', title: '全部条目', onBack: (): void => this.onBack() });
   }
 
   @Builder
@@ -109,7 +106,8 @@ export struct RssSourceFeedPage {
   }
 
   private hasPendingRecovery(): boolean {
-    return this.operation?.projection.receipt.confirmation === 'unknown' && this.feedbackView().visible;
+    return rssOriginalMatchesScope(this.original, 'feed') ||
+      this.operation?.projection.receipt.confirmation === 'unknown' && this.feedbackView().visible;
   }
 
   private feedbackView(): ReaderRecoveryView { return readerRecoveryView(this.operation?.projection, this.readFacts); }

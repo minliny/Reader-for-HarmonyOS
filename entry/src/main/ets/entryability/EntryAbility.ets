@@ -11,6 +11,7 @@ import { ReaderControlPlacementPreferences } from '../app/ReaderControlPlacement
 import { AbilityConstant, ConfigurationConstant, type Configuration, UIAbility, Want } from '@kit.AbilityKit';
 import contextConstant from '@ohos.app.ability.contextConstant';
 import fileIo from '@ohos.file.fs';
+import type { BusinessError } from '@ohos.base';
 import { window } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderRuntimeOwner } from '../app/ReaderRuntimeOwner';
@@ -289,8 +290,17 @@ export default class EntryAbility extends UIAbility {
   private prepareNamedFixtureDirectory(sandbox: string, root: string): void {
     const parent = `${sandbox}/reader-public-ui-fixtures`;
     for (const path of [sandbox, parent, root]) {
-      if (path !== sandbox && !fileIo.accessSync(path)) fileIo.mkdirSync(path);
-      if (!fileIo.lstatSync(path).isDirectory()) throw new Error('PUBLIC_FIXTURE_STORAGE_NOT_ISOLATED');
+      if (path !== sandbox) {
+        try { fileIo.mkdirSync(path); }
+        catch (error) {
+          const code = (error as BusinessError | undefined)?.code;
+          if (code !== 13900015) throw error as Error;
+        }
+      }
+      // An existing path, including one created concurrently, must still
+      // be its own directory before admitting any child under it.
+      const stat = fileIo.lstatSync(path);
+      if (stat.isSymbolicLink() || !stat.isDirectory()) throw new Error('PUBLIC_FIXTURE_STORAGE_NOT_ISOLATED');
     }
   }
 

@@ -9,9 +9,6 @@ import { readerMainTabItemHeight } from '../../ui/layout/ReaderFloatingBarMetric
 import { resolveReaderRaisedShape } from '../../ui/layout/ReaderRaisedShape';
 import {
   TOK_BORDER_W,
-  TOK_MUTED,
-  TOK_ON_PRIMARY,
-  TOK_PRIMARY_DARK,
   TOK_RADIUS_PILL,
 } from '../../ui/foundation/ReaderTokens';
 import { TYPE_MAIN_TAB_LABEL } from '../../ui/foundation/ReaderTypography';

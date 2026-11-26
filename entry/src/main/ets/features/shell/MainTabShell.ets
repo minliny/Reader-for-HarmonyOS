@@ -27,6 +27,10 @@ export struct MainTabShell {
   @Prop activeTab: string = 'bookshelf';
   @Prop standardScroll: boolean = false;
   @Prop standardPageVariant: ReaderStandardPageVariant = 'settingsHome';
+  @Prop standardInitialScrollY: number = 0;
+  @Prop floatingHeader: boolean = false;
+  // A primary page receives the occupied extent of the app-owned capsule.
+  @Prop sharedBottomNavigationHeight: number = -1;
   scroller: Scroller = new Scroller();
   @Prop navigationGeneration: number = 0;
   private mounted: boolean = false;
@@ -94,7 +98,8 @@ export struct MainTabShell {
   build() {
     if (this.standardScroll) {
       ReaderStandardPage({
-        variant: this.standardPageVariant, scroller: this.scroller,
+        variant: this.standardPageVariant, scroller: this.scroller, floatingHeader: this.floatingHeader,
+        initialScrollY: this.standardInitialScrollY,
         onViewportChange: (width: number, height: number): void => {
           if (this.mounted) publishReaderMainViewport(width, height);
         },
@@ -127,10 +132,14 @@ export struct MainTabShell {
   @Builder
   private bottomNavigation() {
     if (this.navigationMode() === 'bottom') {
-      ForEach([this.navigationGeneration], (generation: number) => {
-        ReaderBottomNavigation({ current: this.activeTab, onSelect: (key: string): void => this.requestMainTab(key, generation),
-          onCurrentTap: (key: string): void => this.requestCurrentTab(key, generation) });
-      }, (generation: number): string => generation.toString());
+      if (this.sharedBottomNavigationHeight >= 0) {
+        Row().height(this.sharedBottomNavigationHeight).hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+      } else {
+        ForEach([this.navigationGeneration], (generation: number) => {
+          ReaderBottomNavigation({ current: this.activeTab, onSelect: (key: string): void => this.requestMainTab(key, generation),
+            onCurrentTap: (key: string): void => this.requestCurrentTab(key, generation) });
+        }, (generation: number): string => generation.toString());
+      }
     }
   }
 

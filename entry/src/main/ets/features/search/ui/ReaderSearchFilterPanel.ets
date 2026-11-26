@@ -8,42 +8,33 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { SheetSurfaceSpec, resolveSheetSpec } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { ReaderBoundedSurface } from '../../../ui/surfaces/ReaderBoundedSurface';
 import { ReaderBoundedSurfaceHeader } from '../../../ui/surfaces/ReaderBoundedSurfaceHeader';
-import { SurfaceWidthSpec, resolveHorizontalFrame } from '../../../ui/layout/SurfaceHorizontalGeometry';
-import { readerVisualSafeLeft, readerVisualSafeRight, readerVisualSafeTop, readerVisualSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
+import { readerVisualSafeTop, readerVisualSafeBottom } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import { SearchFilterGeometry } from './SearchFilterGeometry';
-import { SEARCH_RESULT_GEOMETRY } from './SearchResultGeometry';
-import { SearchResultSheetBinding } from './SearchResultSheetBinding';
 import type { SearchContentType } from '../presentation/SearchViewState';
 
-/** One filter trigger and native bottom-sheet host. Query facts and selected
- * conditions stay with SearchPage; the shared sheet owns its one frame. */
+/** Bounded search filter content. SearchPage owns the current presentation and input. */
 @Component
 export struct ReaderSearchFilterPanel {
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') @Watch('metricsChanged') private metricsRevision: number = 0;
   @Prop expanded: boolean = false;
   @Prop presentationIdentity: string = '';
-  @Prop triggerFocusId: string = '';
+  @Prop surfaceWidth: number = 0;
   @Prop selectedGroup: string = '全部';
   @Prop selectedType: SearchContentType = '全部类型';
-  onToggle: (identity: string, expanded: boolean) => void = (_identity: string, _expanded: boolean): void => {};
-  onNativeOpening: (identity: string) => void = (_identity: string): void => {};
-  onNativeClosing: (identity: string) => void = (_identity: string): void => {};
-  onClosed: (identity: string) => void = (_identity: string): void => {};
   onReset: (identity: string) => void = (_identity: string): void => {};
   onDismiss: (identity: string) => void = (_identity: string): void => {};
   onGroup: (value: string, identity: string) => void = (_value: string, _identity: string): void => {};
   onType: (value: SearchContentType, identity: string) => void = (_value: SearchContentType, _identity: string): void => {};
   private mounted: boolean = false;
   private geometryKey: string = '';
-  private readonly nativeSheet: SearchResultSheetBinding = new SearchResultSheetBinding();
   @State private measuredHeaderHeight: number = 0;
   private measuredGeometry: SearchFilterGeometry | undefined = undefined;
 
   aboutToAppear(): void { this.mounted = true; }
-  aboutToDisappear(): void { this.mounted = false; this.nativeSheet.retire(this.onNativeClosing); }
+  aboutToDisappear(): void { this.mounted = false; }
 
   private systemFontScale(): number {
     const value = this.metricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
@@ -53,13 +44,7 @@ export struct ReaderSearchFilterPanel {
   private accepts(identity: string): boolean {
     return this.mounted && this.expanded && identity === this.presentationIdentity;
   }
-  private toggleAction(identity: string, expanded: boolean): () => void {
-    return (): void => { if (this.mounted) this.onToggle(identity, expanded); };
-  }
   private metricsChanged(): void {
-    // A native bottom sheet can publish avoid-area/window facts during entry.
-    // It has no popup anchor to retire: remeasure in place, and let explicit
-    // dismiss/navigation ownership close it. Closing here cancels its opening.
     this.geometryKey = '';
     this.measuredHeaderHeight = 0;
   }
@@ -69,15 +54,9 @@ export struct ReaderSearchFilterPanel {
     return `${size}${this.systemFontScale() < 1 ? 'vp' : 'fp'}`;
   }
   private sheetSpec(): SheetSurfaceSpec { return resolveSheetSpec('search-result-filter'); }
-  private sheetWidth(): number {
-    this.metricsRevision;
-    const metrics = ReaderWindowCoordinator.metrics();
-    return resolveHorizontalFrame(metrics.windowRect.width, readerVisualSafeLeft(metrics), readerVisualSafeRight(metrics),
-      new SurfaceWidthSpec(this.sheetSpec().maxWidth)).width;
-  }
   private sheetGeometry(): SearchFilterGeometry {
     const windowHeight = ReaderWindowCoordinator.metrics().windowRect.height;
-    const key = `${this.metricsRevision}:${this.sheetWidth()}:${windowHeight}:${this.measuredHeaderHeight}:${this.bodyHeightLimit()}`;
+    const key = `${this.metricsRevision}:${this.surfaceWidth}:${windowHeight}:${this.measuredHeaderHeight}:${this.bodyHeightLimit()}`;
     if (key === this.geometryKey && this.measuredGeometry !== undefined) return this.measuredGeometry;
     const context = this.getUIContext();
     const measure = context.getMeasureUtils();
@@ -105,19 +84,11 @@ export struct ReaderSearchFilterPanel {
       labelWidth = Math.max(labelWidth, Math.ceil(context.px2vp(Number(size.width))));
       labelHeight = Math.max(labelHeight, Math.ceil(context.px2vp(Number(size.height))));
     });
-    this.measuredGeometry = new SearchFilterGeometry(this.sheetWidth(), this.bodyHeightLimit(), labelWidth, labelHeight,
+    this.measuredGeometry = new SearchFilterGeometry(this.surfaceWidth, this.bodyHeightLimit(), labelWidth, labelHeight,
       [widths[0], Math.max(widths[1], widths[3]), Math.max(widths[2], widths[4])],
       optionHeight + spec.verticalPadding * 2 + TOK_BORDER_W * 2, this.sheetSpec().horizontalInset);
     this.geometryKey = key;
     return this.measuredGeometry;
-  }
-  private sheetOptions(identity: string): SheetOptions {
-    return this.nativeSheet.options(this.sheetSpec(), this.sheetWidth(), this.scheme, identity, {
-      isMountedOpening: (): boolean => this.mounted && identity === this.presentationIdentity,
-      isExpandedOpening: (): boolean => this.accepts(identity),
-      onOpening: this.onNativeOpening, onClosing: this.onNativeClosing,
-      onDismiss: this.onDismiss, onClosed: this.onClosed,
-    });
   }
   private bodyHeightLimit(): number {
     const metrics = ReaderWindowCoordinator.metrics();
@@ -221,31 +192,11 @@ export struct ReaderSearchFilterPanel {
       this.optionContent(identity);
     }
   }
-  @Builder
-  private sheetContent() {
-    // bindSheet must receive the named @Builder so the SDK emits its native
-    // { builder } port. Capture each presentation inside that Builder, rather
-    // than returning a raw function from a factory the native host cannot use.
+  build() {
     ForEach([this.presentationIdentity], (identity: string): void => {
       ReaderBoundedSurface({ specId: 'search-result-filter',
         header: (): void => { this.sheetHeader(identity); },
         body: (): void => { this.sheetBody(identity); } });
     }, (identity: string): string => identity);
-  }
-  build() {
-    Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Stack({ alignContent: Alignment.Center }) {
-      Image(this.scheme === 'night' ?
-        (this.active() ? $r('app.media.bookshelf_filter_active_theme_night') : $r('app.media.bookshelf_filter_theme_night')) :
-        (this.active() ? $r('app.media.bookshelf_filter_active') : $r('app.media.bookshelf_filter')))
-        .width(SEARCH_RESULT_GEOMETRY.filterIconSize).height(SEARCH_RESULT_GEOMETRY.filterIconSize);
-      }.width(SEARCH_RESULT_GEOMETRY.filterActionSize).height(SEARCH_RESULT_GEOMETRY.filterActionSize);
-    }.width(SEARCH_RESULT_GEOMETRY.filterActionSize).height(SEARCH_RESULT_GEOMETRY.filterActionSize)
-      .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
-      .id(this.triggerFocusId)
-      .accessibilityRole(AccessibilityRoleType.BUTTON)
-      .accessibilityText(`${this.expanded ? '收起筛选' : '展开筛选'}，内容${this.selectedType}，来源${this.selectedGroup}`)
-      .onClick(this.toggleAction(this.presentationIdentity, this.expanded))
-      .bindSheet(this.expanded, this.sheetContent, this.sheetOptions(this.presentationIdentity));
   }
 }

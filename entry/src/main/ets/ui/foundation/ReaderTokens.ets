@@ -1,6 +1,6 @@
 import { readerAppColor, readerThemeDefinition } from './ReaderThemeRegistry';
 // ============================================================================
-// ReaderTokens — 共享设计令牌 (对齐 Figma 语义色变量, Reader · App Color, Day 模式)。
+// ReaderTokens — 共享设计令牌。墨纸青松 2.0 的日夜颜色由主题注册表发布。
 // 分类: App / Reader / Navigation / Settings / Surface / Text / Border / Spacing /
 //       Radius / Responsive / State / Motion / HarmonyOS Calibration。
 // 命名对应 Figma 变量: color/runtime/paper/solid -> TOK_PAPER 等。
@@ -15,16 +15,16 @@ import { readerAppColor, readerThemeDefinition } from './ReaderThemeRegistry';
 // ----------------------------------------------------------------------------
 // App — 应用级语义 (主色 / 强调色 / 主色上的文字)
 // ----------------------------------------------------------------------------
-// Figma: color/action/primary-dark  深绿主色
+// 墨纸青松 2.0：品牌主色。
 export const TOK_PRIMARY_DARK = readerAppColor('TOK_PRIMARY_DARK', 'day');
-// Figma: color/action/primary       中绿主色
+// 品牌主色的兼容角色。
 export const TOK_GREEN = readerAppColor('TOK_GREEN', 'day');
 // Figma: color/runtime/on/primary   主色上文字
 export const TOK_ON_PRIMARY = readerAppColor('TOK_ON_PRIMARY', 'day');
 // HarmonyOS calibration: 书架/搜索页头主色渐变起点 (Figma 页面实测渐变起色, 非正式变量)。
 // 两页共享 (BookshelfPage/SearchPage 同值 linearGradient 起点)。
 export const TOK_PRIMARY_GRADIENT_START = readerAppColor('TOK_PRIMARY_GRADIENT_START', 'day');
-// Figma: color/accent
+// 古铜只用于阅读进度、在读定位和书签。
 export const TOK_ACCENT = readerAppColor('TOK_ACCENT', 'day');
 
 // ----------------------------------------------------------------------------
@@ -40,34 +40,34 @@ export const TOK_CONTROL_INK = readerAppColor('TOK_CONTROL_INK', 'day');
 // ----------------------------------------------------------------------------
 // Surface — 表面层级 (页面 / 卡片 / 面板 / 浮起 / 字段 / 透明白)
 // ----------------------------------------------------------------------------
-// 2026-10-28 approved warm-white hierarchy: App page paper (reader body is independent).
+// 应用画布。正文纸底由各阅读主题单独持有。
 export const TOK_PAPER = readerAppColor('TOK_PAPER', 'day');
 // App page alias of TOK_PAPER; preserved for existing scaffold consumers.
 export const TOK_SURFACE = readerAppColor('TOK_SURFACE', 'day');
-// 2026-10-28: opaque embedded paper #F8F4EC; no elevation belongs to this fill.
+// 嵌入式内容卡表面。
 export const TOK_CARD_BG = readerAppColor('TOK_CARD_BG', 'day');
 // Embedded content alias; the former high-alpha fill does not imply a floating layer.
 export const TOK_CARD_BG_HI = readerAppColor('TOK_CARD_BG_HI', 'day');
-// Figma: color/runtime/surface/panel rgba(255,252,248,0.62)
+// 玻璃浮层表面。
 export const TOK_SURFACE_PANEL = readerAppColor('TOK_SURFACE_PANEL', 'day');
-// Figma: color/runtime/surface/panel/soft rgba(238,230,219,0.64)
+// 阅读控制岛的次级纸面。
 export const TOK_SURFACE_PANEL_SOFT = readerAppColor('TOK_SURFACE_PANEL_SOFT', 'day');
-// Figma: color/runtime/surface/elevated rgba(255,255,255,0.78)
+// 对话框与提升表面。
 export const TOK_SURFACE_ELEVATED = readerAppColor('TOK_SURFACE_ELEVATED', 'day');
-// 2026-10-28: opaque warm-white input role, separate from selected/reader input surfaces.
+// 应用输入与凹槽表面。
 export const TOK_SURFACE_FIELD = readerAppColor('TOK_SURFACE_FIELD', 'day');
 // Figma: color/runtime/surface/solid/near-opaque
 export const TOK_SURFACE_SOLID_OPAQUE = readerAppColor('TOK_SURFACE_SOLID_OPAQUE', 'day');
 // Opaque fixed-toolbar/modal base. Embedded cards use TOK_CARD_BG; their
 // elevation/edge recipes are selected by the finite surface owner.
 export const TOK_SURFACE_SOLID = readerAppColor('TOK_SURFACE_SOLID', 'day');
-// Figma: color/runtime/surface/translucent rgba(255,252,248,0.42)
+// 重玻璃浮层表面。
 export const TOK_SURFACE_TRANSLUCENT = readerAppColor('TOK_SURFACE_TRANSLUCENT', 'day');
-// 2026-10-28: shared App input #E7E1D5; reader controls retain their own role.
+// 应用输入表面的兼容角色。
 export const TOK_FIELD_SURFACE = readerAppColor('TOK_FIELD_SURFACE', 'day');
-// Figma: color/runtime/primary/bg rgba(45,74,62,0.12)
+// 主色浅底。
 export const TOK_PRIMARY_BG = readerAppColor('TOK_PRIMARY_BG', 'day');
-// Figma: color/runtime/primary/strong rgba(45,74,62,0.28)
+// 主色选中描边。
 export const TOK_PRIMARY_STRONG = readerAppColor('TOK_PRIMARY_STRONG', 'day');
 
 // ----------------------------------------------------------------------------
@@ -103,10 +103,9 @@ export const TOK_BOTTOM_BG = readerAppColor('TOK_BOTTOM_BG', 'day');
 // ----------------------------------------------------------------------------
 // Figma: color/meta/bg
 export const TOK_META_BG = readerAppColor('TOK_META_BG', 'day');
-// HarmonyOS calibration: 设置图标软底 rgba(35,121,164,0.09)。CategoryRow 图标盒与
-// SettingsPage iconBox/dangerRow 共用单源 (此前两处重复定义 #172379A4)。
+// 设置图标浅松绿底。
 export const TOK_SETTING_ICON_BG = readerAppColor('TOK_SETTING_ICON_BG', 'day');
-// HarmonyOS calibration: 设置内联动作按钮底 rgba(35,121,164,0.10)。
+// 设置内联动作浅松绿底。
 export const TOK_SETTING_ACTION_BG = readerAppColor('TOK_SETTING_ACTION_BG', 'day');
 // HarmonyOS calibration: 首页顶部栏 (AppTopBar) 水平内边距 (Figma 标题定位 x:20)。
 export const TOK_HOME_TOP_BAR_INSET = 20;
@@ -188,7 +187,7 @@ export const TOK_READ_BODY_INK = readerThemeDefinition('paper').ink;
 export const TOK_READ_MUTED = readerAppColor('TOK_READ_MUTED', 'day');
 // Figma: 目录未读章节标题 (make `unread` state, #8a7d6e)
 export const TOK_READ_UNREAD = readerAppColor('TOK_READ_UNREAD', 'day');
-// Figma: reading primary  阅读主色 (teal)
+// 阅读控制层的松绿主色。
 export const TOK_READ_PRIMARY = readerAppColor('TOK_READ_PRIMARY', 'day');
 // Figma: reading icon  阅读图标
 export const TOK_READ_ICON = readerAppColor('TOK_READ_ICON', 'day');

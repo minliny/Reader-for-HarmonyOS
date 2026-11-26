@@ -2,7 +2,7 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 
 export const CONTRACT_CASES = {
   "late-identity": {
-    "description": "Actual Index onReadingFailure ignores stale source/book and retains owned reader/session",
+    "description": "Actual reading presentation ignores stale source/book and retains owned reader/session",
     "resources": []
   },
   "retained-failure-owner": {
@@ -21,14 +21,13 @@ export const CONTRACT_CASES = {
 
 async function case_late_identity() {
 const { default: assert } = await import('node:assert/strict');
-const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
-const indexFile=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
-const Index=productionMotionMethods(indexFile,['onReadingFailure'],{hilog:{warn(){}},DOMAIN:0});
+const {actualReadingEntryPresentation} = await import('./lib/reading-entry-presentation-probe.mjs');
+const Presentation=actualReadingEntryPresentation();
 for(const active of [false,true])for(const sourceId of ['s','other'])for(const bookId of ['b','other']){
- const page=Object.assign(new Index(),{readingSessionActive:active,detailBook:{sourceId:'s',bookId:'b'},detailLoadingMessage:'old',detailCatalogBusy:true,route:'reading',remoteReadingSession:{kept:true}});
- const before=page.remoteReadingSession;page.onReadingFailure(sourceId,bookId,'target failed','SOURCE_HTTP_FAILED');
- const accepted=active&&sourceId==='s'&&bookId==='b';assert.equal(page.detailLoadingMessage,accepted?'target failed':'old');assert.equal(page.detailCatalogBusy,!accepted);
- assert.equal(page.readingSessionActive,active);assert.equal(page.route,'reading');assert.equal(page.remoteReadingSession,before,'failure retains mount/session, never compensates source switch');
+ const entry=Object.assign(new Presentation(),{sessionActive:active,book:{sourceId:'s',bookId:'b'},loadingMessage:'old',catalogBusy:true,session:{kept:true}});
+ const before=entry.session;entry.projectReaderFailure(sourceId,bookId,'target failed','SOURCE_HTTP_FAILED');
+ const accepted=active&&sourceId==='s'&&bookId==='b';assert.equal(entry.loadingMessage,accepted?'target failed':'old');assert.equal(entry.catalogBusy,!accepted);
+ assert.equal(entry.sessionActive,active);assert.equal(entry.session,before,'failure retains the session owned by the mounted reader');
 }
 
 }
@@ -36,9 +35,10 @@ for(const active of [false,true])for(const sourceId of ['s','other'])for(const b
 async function case_retained_failure_owner() {
 const { default: assert } = await import('node:assert/strict');
 const {productionMotionMethods} = await import('./lib/reader-motion-method-probe.mjs');
-const indexFile=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url);
+const {RemoteReadingGatewayError}=await import('../entry/src/main/ets/features/reading/application/RemoteReadingContract.ts');
+const {remoteReadingFailureKindOf}=await import('../entry/src/main/ets/features/reading/application/RemoteContentAdmission.ts');
 const file=new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets',import.meta.url);
-const Reader=productionMotionMethods(file,['fail']);
+const Reader=productionMotionMethods(file,['fail'],{RemoteReadingGatewayError,remoteReadingFailureKindOf});
 for(const active of [false,true]){
  const events=[];const page=Object.assign(new Reader(),{isSessionActive:()=>active,pageTurnPreparation:undefined,previousChapterMeasurement:undefined,recoverControlSelectionFailure:()=>false,errorMessage:e=>e.message,chapterSelectionToken:4,mounted:true,exitRequested:false,sourceId:'s',bookId:'b',phase:'ready',autoPageCoordinator:{stop:why=>events.push(['stop',why])},nativeAlertOwner:{retire:()=>events.push('retire')},physicalPagination:{index:{invalidateMeasurement:()=>events.push('invalidate')}},onReadingFailure:(...args)=>events.push(['failure',...args]),beginExit:()=>assert.fail('failure cannot dispose recovery owner')});
  for(const name of ['finishPageTurnPerf','captureReadingRecordElapsed','clearReadingRecordTimer','clearAutoPageTimer','clearAutoPageSessionTimer','cancelMeasurementDeadline','cancelFirstPageReadyDeadline','cancelFirstPageCompletionDeadline','cancelPageTurnPreparationRetry','resetPaginationDraft'])page[name]=()=>events.push(name);
@@ -128,10 +128,11 @@ async function case_source_switch_route() {
   const { actualReadingEntryPresentation } = await import('./lib/reading-entry-presentation-probe.mjs');
   const { actualSourceSwitchPresentation } = await import('./lib/source-switch-presentation-probe.mjs');
   const { ReaderNavigation } = await import('../entry/src/main/ets/app/navigation/ReaderNavigation.ts');
-  const { ReaderSourceSwitchJourney } = await import('../entry/src/main/ets/app/composition/ReaderSourceSwitchJourney.ts');
+  const { bookshelfOperationClass } = await import('./lib/bookshelf-operation-owner-probe.mjs');
+  const ReaderSourceSwitchJourney = bookshelfOperationClass('app/composition/ReaderSourceSwitchJourney.ets', 'ReaderSourceSwitchJourney');
   const indexFile = fileURLToPath(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url));
   const Index = selectedProductionMethods(indexFile, 'Index', [
-    'openSourceSwitch', 'openDetailSourceSwitch', 'sourceSwitchJourneyPorts', 'navigateTo', 'publishNavigation',
+    'openSourceSwitch', 'openDetailSourceSwitch', 'sourceSwitchJourneyPorts',
   ]);
   const ReadingEntry = actualReadingEntryPresentation();
 
@@ -148,36 +149,27 @@ async function case_source_switch_route() {
       ReaderRuntimeOwner: { isCurrent: owner => owner === runtime },
       SourceSwitchHost: { forRuntime: () => host },
     });
+    const navigationOwner = new ReaderNavigation();
+    const opening = navigationOwner.show(route === 'reader-fallback' ? 'detail' : route);
     const page = Object.assign(new Index(), {
       mountedRuntimeOwner: runtime, shelfReceiptRetired: false, detailShelfAdmissionMount: 1,
       readingEntry: Object.assign(new ReadingEntry(), { book, sessionActive: route === 'reading' }),
-      navigationOwner: new ReaderNavigation(), sourceSwitchPresentation: new SourceSwitch(),
+      navigationOwner, route: opening.route, navigationGeneration: opening.generation, sourceSwitchPresentation: new SourceSwitch(),
       mangaSourceSwitch: { selectionVisible: false }, shelfMutations: { snapshot: { removalKey: '' } },
       shelfRead: { snapshot: { books: [] } },
-      bookRemovalConfirmation: { dismiss() {} }, jsonImportPresentation: { dismiss() {} },
-      nextNavigationGeneration() {
-        calls.push('navigation');
-        this.sourceSwitchPresentation.retire();
-        this.publishNavigation(this.navigationOwner.advance());
-      },
+      nextNavigationGeneration: () => calls.push('navigation'),
       bindReadingEntryReader: () => calls.push('bind'),
-      returnToReadingOrigin: () => calls.push('origin'),
+      readingExitActions: { completeReturn: () => calls.push('origin') },
+      bindSourceSwitchFocus: focusId => calls.push(['focus', focusId]),
     });
     page.sourceSwitchJourney = new ReaderSourceSwitchJourney(page.navigationOwner, page.sourceSwitchJourneyPorts());
-    if (route === 'reader-fallback') {
-      page.navigateTo('detail');
-      page.sourceSwitchJourney.openDetail = () => calls.push('detail');
-      page.openSourceSwitch();
-      assert.deepEqual(calls, ['origin', 'detail']);
-      continue;
-    }
-    page.navigateTo(route);
-    if (route === 'reading') page.openSourceSwitch();
-    else page.openDetailSourceSwitch();
-    const expected = route === 'directory' ? [] : ['navigation', 'bind'];
-    assert.deepEqual(calls, [...expected, ['open', 'b', true]]);
-    assert.equal(page.route, route);
-    assert.equal(page.navigationGeneration, route === 'directory' ? 0 : 1);
+    if (route === 'reading' || route === 'reader-fallback') page.openSourceSwitch('trigger');
+    else page.openDetailSourceSwitch('trigger');
+    assert.deepEqual(calls, [['open', 'b', true], ['focus', 'trigger']],
+      'opening reserves the current scene without advancing navigation or rebinding its reader');
+    assert.equal(page.route, opening.route);
+    assert.equal(page.navigationGeneration, opening.generation);
+    assert.equal(navigationOwner.snapshot(), opening);
   }
 
 }

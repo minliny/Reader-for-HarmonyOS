@@ -52,8 +52,8 @@ for(const outcome of ['cancelled','already-saved','failure','other-book']){
  assert.equal(snapshot.receipt,undefined,'readback is membership, never this add ACK');
 }
 const entry=stripTypeScriptTypes(read('entry/src/main/ets/entryability/EntryAbility.ets').replace(/^import[\s\S]*?;\n/gm,''));
-let setups=[];const coordinator={install:()=>{const p=deferred();setups.push(p);return p.promise;},detach(){}};
-const Entry=new Function('UIAbility','ReaderWindowCoordinator','ReaderStartupTrace','hilog','ReaderStartupContentOwner',entry.replace('export default class','return class'))(class{},coordinator,ReaderStartupTrace,{error(){}},ReaderStartupContentOwner);
+let setups=[];const coordinator={install:()=>{const p=deferred();setups.push(p);return p.promise;},destroyWindow(){}};
+const Entry=new Function('UIAbility','ReaderWindowCoordinator','ReaderStartupTrace','hilog','ReaderStartupContentOwner','ReaderFrameworkCapture',entry.replace('export default class','return class'))(class{context={config:{}}},coordinator,ReaderStartupTrace,{error(){}},ReaderStartupContentOwner,class { close() {} });
 const stage=()=>({loads:0,getMainWindowSync:()=>({}),loadContent(_page,done){this.loads++;done({code:0});}});
 {
  const e=new Entry(),old=stage(),fresh=stage();e.onWindowStageCreate(old);e.onWindowStageDestroy();e.onWindowStageCreate(fresh);
@@ -102,7 +102,7 @@ for (const scenario of ['offscreen-existing','not-on-shelf','stale-lookup']) {
  const owner={bookAcquisitions:()=>coordinator,request:async(method)=>{if(method==='bookmark.list')return {data:{bookmarks:[]}};if(method==='chapter.content')return {data:{sourceId:'s',bookId:'b',chapterTitle:'第一章',via:'rule',content:'完整的故事正文。'.repeat(20),bodyVersion:'body',processingVersion:'processing'}};throw Error('optional IO unavailable: '+method);}}; setRuntime(owner);
  const EntryHost=compileHost(undefined,{ReaderCoreGateway:class{loadShelfBook(){return lookup.promise;}}});
  const h=readingEntryActionFixture({runtime:owner,Host:EntryHost,route:'search'});
- const selected={sourceId:'s',bookId:'offscreen',title:'书',author:'作者'};
+ const selected={sourceId:'s',bookId:'offscreen',title:'书',author:'作者',contentKind:'text'};
  h.actions.openRemoteDetail({seed:selected,sourceName:'书源'});assert.equal(h.navigation.snapshot().route,'detail');assert.deepEqual(calls,[]);
  if(scenario==='stale-lookup'){h.advance();h.navigation.show('bookshelf');}
  lookup.resolve(scenario==='not-on-shelf'?undefined:selected);await tick();
@@ -134,7 +134,7 @@ const fakeFileIo={
  close:async file=>{positions.delete(file.fd);},
 };
 const fakeCrypto={createMd:()=>{const chunks=[];return {update:async({data})=>chunks.push(Buffer.from(data)),digest:async()=>({data:Uint8Array.from(createHash('sha256').update(Buffer.concat(chunks)).digest())})};}};
-const Recovery=new Function('fileIo','cryptoFramework','hilog','LOG_DOMAIN','errorMessageOf',stripTypeScriptTypes('class Recovery { static LocalBookLimitBytes=64*1024*1024; static HashChunkBytes=1024*1024;'+recoveryMethods+'};')+'return Recovery;')(fakeFileIo,fakeCrypto,{warn(){},error(){}},0x5244,e=>e instanceof Error?e.message:String(e));
+const Recovery=new Function('fileIo','cryptoFramework','hilog','LOG_DOMAIN','errorMessageOf',stripTypeScriptTypes('class Recovery { static LocalBookLimitBytes=64*1024*1024; static HashChunkBytes=1024*1024; static deferredStages=new Map();'+recoveryMethods+'};')+'return Recovery;')(fakeFileIo,fakeCrypto,{warn(){},error(){}},0x5244,e=>e instanceof Error?e.message:String(e));
 {
  const h=new Recovery();Object.assign(h,{localBookStageDirectory:()=>'/stage',localBookAssetDirectory:()=>'/assets',ensureDirectory:async()=>{},unlinkIfPresent:async p=>files.delete(p)});
  await h.recoverAbandonedStages();assert.equal(files.has('/stage/1-1.book'),false);

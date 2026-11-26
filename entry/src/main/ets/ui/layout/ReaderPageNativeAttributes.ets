@@ -1,5 +1,11 @@
 import { ReaderFooterFrameStyle, ReaderFrameStyle, ReaderHeaderFrameStyle } from './ReaderFrameStyle';
 
+/** Keep normal sibling ordering when a descendant is hit. An unpainted,
+ * unclipped carrier has a zero-size response region of its own. */
+export function readerLayoutCarrierResponseRegion(ownsSurface: boolean = false): Rectangle {
+  return ownsSurface ? { x: 0, y: 0, width: '100%', height: '100%' } : { x: 0, y: 0, width: 0, height: 0 };
+}
+
 export class ReaderPageFrameModifier implements AttributeModifier<CommonAttribute> {
   private readonly style: ReaderFrameStyle;
   constructor(style: ReaderFrameStyle) { this.style = style; }
@@ -23,6 +29,6 @@ export class ReaderFooterFrameModifier implements AttributeModifier<CommonAttrib
   private readonly style: ReaderFooterFrameStyle;
   constructor(style: ReaderFooterFrameStyle) { this.style = style; }
   applyNormalAttribute(instance: CommonAttribute): void {
-    instance.clip(this.style.clip).backgroundColor(this.style.backgroundColor).zIndex(0);
+    instance.clip(this.style.clip).backgroundColor(this.style.backgroundColor);
   }
 }

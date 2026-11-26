@@ -1,5 +1,5 @@
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions = {"chapter-start": {"description": "实际Index→Shell→Surface章首generation与canonical拒绝", "resources": []}, "source-cancel": {"description": "实际Index/Panel/Window准备cancel与durable commit锁", "resources": []}};
+const definitions = {"chapter-start": {"description": "旧索引回调当前由真实DirectoryJourney、ReadingEntryPresentation、RetainedReaderScene、Shell与Surface接力，保护章首generation与canonical准入", "resources": []}, "source-cancel": {"description": "实际Index/Panel/Window准备cancel与durable commit锁", "resources": []}};
 for (const id of selectContractCases(definitions)) {
   await runSelectedCase(id);
   recordContractCasePass(id);
@@ -105,25 +105,71 @@ function indexOwner(overrides={}){
 }
 function child(owner,name){return [...owner.children.values()].find(row=>row.constructor.name==='Child'&&row.params&&
  (name==='ReaderShell'?row.params.mangaChapterRequestGeneration!==undefined:row.params.currentSourceId!==undefined))?.params;}
-function shellSurface(props){map.resetComponentMap();const owner=createReaderBuilderProbe(shell,['mangaSurface','mangaIdentityKey'],{
- ...mangaSurfaceSdkDependencies,MangaReadingSurface:Child,ReaderRuntimeOwner:{current:()=>({})}}).owner;
- Object.assign(owner,props,{keepsMangaReadingSession:()=>true});owner.mangaSurface();return {owner,props:[...owner.children.values()][0].params};}
 if(selectedCase==='chapter-start') {
-{
- const owner=indexOwner();owner.initialRender();const props=child(owner,'ReaderShell');assert.ok(props);assert.equal(props.mangaStartAtChapterFirst,true);
- const surface=shellSurface(props);assert.equal(surface.props.startAtChapterFirst,true);assert.equal(surface.props.chapterIndex,3);
- owner.onDirectoryChapterSelected(999);assert.equal(owner.navigationGeneration,2);assert.equal(owner.mangaChapterRequestGeneration,4,'unknown chapter is rejected by the actual canonical admission');
- owner.onDirectoryChapterSelected(3);assert.equal(owner.navigationGeneration,2);assert.equal(owner.mangaChapterRequestGeneration,4,'already committed first page retains its actual branch');
- owner.onDirectoryChapterSelected(7);assert.equal(owner.mangaChapterRequestGeneration,5);
- assert.equal(owner.navigationGeneration,3);assert.equal(owner.settingsPresentationIdentity,'');assert.equal(owner.sourcePresentationIdentity,'');
- assert.equal(owner.bookshelfManagementPresentationIdentity,'');assert.equal(owner.readingEntryScopeId,-1);
- const later=indexOwner({mangaChapterRequestGeneration:owner.mangaChapterRequestGeneration,mangaChapterStartRequestGeneration:owner.mangaChapterStartRequestGeneration,requestedChapterIndex:7});
- later.initialRender();assert.equal(child(later,'ReaderShell').mangaStartAtChapterFirst,false);
- assert.equal(shellSurface(child(later,'ReaderShell')).props.startAtChapterFirst,false);
- const continued=indexOwner({mangaChapterStartRequestGeneration:-1,requestedChapterIndex:undefined});continued.initialRender();
- assert.equal(child(continued,'ReaderShell').mangaStartAtChapterFirst,false);assert.equal(shellSurface(child(continued,'ReaderShell')).props.chapterIndex,undefined);
-}
-console.log('PASS SDK actual Index→Shell→Surface exact first-page generation; next chapter invalidates intent; ordinary resume retains undefined chapter and saved-location route');
+ const {ReaderNavigation}=await import('../entry/src/main/ets/app/navigation/ReaderNavigation.ts');
+ const {LOCAL_SOURCE_ID}=await import('../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway.ts');
+ const {actualReadingEntryPresentation}=await import('./lib/reading-entry-presentation-probe.mjs');
+ const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+ const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
+ const file=name=>new URL('../entry/src/main/ets/'+name,import.meta.url);
+ const Entry=actualReadingEntryPresentation({LOCAL_SOURCE_ID});
+ const reading=Object.assign(new Entry(),{sessionActive:true,contentKind:'manga',scopeId:12,
+  book:{sourceId:'source',bookId:'book',title:'Manga',author:'Author'},
+  toc:[{index:3,title:'First'},{index:7,title:'Next'}],mangaChapterRequestGeneration:3,
+  directoryCurrentChapterIndex:3,mangaCommittedRequestGeneration:4});
+ reading.requestMangaChapterBeginning(3);
+ const Root=selectedProductionMethods(file('pages/Index.ets'),'Index',
+  ['directoryJourneyPorts','directoryNavigationPorts','nextNavigationGeneration','retireSourceSwitchPresentation']);
+ const Journey=selectedProductionMethods(file('app/composition/ReaderDirectoryJourney.ets'),'ReaderDirectoryJourney',['navigationPorts']);
+ const navigation=new ReaderNavigation();navigation.show('reading');
+ const retired=new Set();let binds=0;
+ const root=Object.assign(new Root(),{readingEntry:reading,navigationOwner:navigation,
+  publishNavigation:()=>{},bindReadingEntryReader:()=>binds++});
+ Object.assign(root,Object.fromEntries(['downloadPresentation','readingCommits','settingsPresentation','sourceJourney','sourceSwitchJourney',
+  'rssJourney','shelfCatalog','shelfMutations','shelfManagement','shelfGroupPresentation','discoverPresentation','rulesPresentation',
+  'syncPresentation','nativeAlertOwner','readingEntryActions','transientFeedback'].map(name=>{
+  const retire=()=>retired.add(name);
+  return [name,{retire,retirePreparation:retire,retireSelection:retire,reset:retire}];
+ })));
+ root.directoryJourney=Object.assign(new Journey(),{navigation,ports:root.directoryJourneyPorts()});
+ const retained=read('app/composition/RetainedReaderScene.ets');
+ const {readerDirectoryActions}=pureModuleProbe(read('features/reading/presentation/ReaderDirectoryActions.ets'),
+  'ReaderDirectoryActions.ets',{},['readerDirectoryActions']);
+ function render() {
+  map.resetComponentMap();
+  const scene=createReaderBuilderProbe(retained,['directoryActions','build'],{ReaderShell:Child,readerDirectoryActions}).owner;
+  Object.assign(scene,{reading,commits:{},source:{currentTransaction:()=>undefined,isSurfacePresented:()=>false,host:()=>undefined},
+   manga:{canCancelPreparation:()=>false},visibleRoute:'reading',inputAllowed:true,
+   ports:{directory:{bookmarkMessage:()=>'',recovery:()=>undefined},directoryNavigation:root.directoryNavigationPorts(),
+    runtime:()=>runtimePort,inputCurrent:()=>true,sourceSwitch:{}}});
+  scene.initialRender();const shellProps=[...scene.children.values()][0].params;
+  const shellOwner=createReaderBuilderProbe(shell,['mangaSurface','mangaIdentityKey','readingIdentityKey','readingContentIsForeground',
+    'isMangaSurfaceCurrent','acceptsMangaInput','keepsMangaReadingSession'],{
+    ...mangaSurfaceSdkDependencies,MangaReadingSurface:Child,ReaderRuntimeOwner:Runtime}).owner;
+  Object.assign(shellOwner,shellProps);shellOwner.mangaSurface();
+  return {shellProps,surface:[...shellOwner.children.values()][0].params};
+ }
+ const opening=navigation.snapshot().generation;
+ const current=render();
+ assert.equal(current.shellProps.mangaStartAtChapterFirst,true);
+ assert.equal(current.surface.startAtChapterFirst,true);assert.equal(current.surface.chapterIndex,3);
+ current.surface.onSelectDirectoryTarget(999);
+ assert.equal(navigation.snapshot().generation,opening);
+ assert.equal(reading.mangaChapterRequestGeneration,4,'unknown chapter is rejected by canonical admission');
+ current.surface.onSelectDirectoryTarget(3);
+ assert.equal(navigation.snapshot().generation,opening);
+ assert.equal(reading.mangaChapterRequestGeneration,4,'already committed chapter reveals without restarting');
+ current.surface.onSelectDirectoryTarget(7);
+ assert.equal(reading.mangaChapterRequestGeneration,5);assert.equal(navigation.snapshot().generation,opening+1);
+ assert.equal(binds,1);assert.equal(reading.scopeId,-1);
+ for(const owner of ['settingsPresentation','sourceJourney','sourceSwitchJourney','shelfManagement'])assert.ok(retired.has(owner),owner);
+ const later=render();
+ assert.equal(later.shellProps.mangaStartAtChapterFirst,false);
+ assert.equal(later.surface.startAtChapterFirst,false);assert.equal(later.surface.chapterIndex,7);
+ reading.requestedChapterIndex=undefined;
+ const continued=render();
+ assert.equal(continued.shellProps.mangaStartAtChapterFirst,false);assert.equal(continued.surface.chapterIndex,undefined);
+ console.log('PASS actual Index directory ports and retained SDK scene→shell→surface first-page generation, canonical refusal, retirement and ordinary resume');
 
 }
 if(selectedCase==='source-cancel') {

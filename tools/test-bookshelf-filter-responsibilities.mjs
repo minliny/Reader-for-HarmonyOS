@@ -5,7 +5,9 @@ import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts';
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { createReaderBuilderProbe, productionReaderMotionSdk } from './lib/reader-control-builder-probe.mjs';
+import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
+import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 const path = name => new URL(`../entry/src/main/ets/features/bookshelf/ui/${name}.ets`, import.meta.url);
 const source = name => readFileSync(path(name), 'utf8');
 const books = [
@@ -28,7 +30,11 @@ assert.equal(books[2].group, '历史');
 const shelfSource = source('BookshelfPage');
 const memberNames = ['isFilterSelected','hasActiveFilters','selectFilter','clearFilters',
   'onShelfFiltersChanged','queueShelfProjection','setFilterExpanded','settleFilterPanel','isShelfPresentationCurrent'];
-const { owner: shelf } = createReaderBuilderProbe(shelfSource, ['filterRow','filterChip',...memberNames]);
+const shelfProperties = createArkUIPropertyRuntimeProbe();
+const { owner: shelf } = createReaderBuilderProbe(shelfSource, ['filterRow','filterChip',
+  'shelfPressed','shelfPressKey','shelfPressPointer','observeShelfPress',...memberNames],
+  { ...shelfProperties.sdk, ...productionReaderMotionSdk(),
+    uiContext: { animateTo(options, apply) { apply(); options.onFinish?.(); } } }, shelfProperties.hooks);
 Object.assign(shelf, { appThemeScheme:'day', storedSelectedGroup:'', readingFilter:'all',contentFilter:'all',sourceFilter:'all',
   feedbackEnabled:true,navigationGeneration:7,isCurrentShelfInput:()=>true,filterRowVisible:true, viewMode:'list', mounted:true,reduceMotion:true,viewState:{},filterMotionGeneration:0,
   projectionQueued:false,projectionGeneration:0, rebuildShelfProjection(){this.rebuilds=(this.rebuilds??0)+1;} });
@@ -44,15 +50,23 @@ assert.ok(![...shelf.nodes.values()].some(n=>n.type==='Text'&&typeof n.onClick==
 button('漫画').onClick(); shelf.onShelfFiltersChanged(); button('在线').onClick(); shelf.onShelfFiltersChanged(); shelf.replay();
 await Promise.resolve();assert.equal(shelf.rebuilds,1,'same gesture/storage notifications publish the final projection only once');
 assert.equal(shelf.readingFilter,'all','content selection clears obsolete reading-state filtering');assert.equal(shelf.contentFilter,'manga');assert.equal(shelf.sourceFilter,'online');
-assert.equal(button('漫画').backgroundColor, readerAppColor('TOK_PRIMARY_SOFT','day'));
-assert.equal(button('小说').backgroundColor, readerAppColor('TOK_CARD_BG','day'));
+const chipPaint = label => {
+  const nodes = [...shelf.nodes.values()];
+  const buttonIndex = nodes.indexOf(button(label));
+  return nodes.slice(buttonIndex + 1).find(node => node.type === 'Row' && node.borderRadius === 999);
+};
+assert.equal(chipPaint('漫画').backgroundColor, readerAppColor('TOK_PRIMARY_DARK','day'));
+assert.equal(chipPaint('小说').backgroundColor, readerAppColor('TOK_CARD_BG','day'));
+assert.equal(chipPaint('小说').constraintSize.minHeight, 32);
+assert.equal(button('小说').constraintSize.minHeight, 44);
+assert.equal(button('小说').constraintSize.minWidth, 44);
 assert.equal(button('漫画').accessibilitySelected,true);
 assert.equal(button('小说').accessibilitySelected,false);
 shelf.filterRowVisible=false;
 const Header = productionMotionMethods(path('BookshelfSectionHeader'), ['isActive','actionLabel','activate']);
 const header = Object.assign(new Header(),{viewMode:shelf.viewMode,actionsEnabled:true,filterExpanded:false,
   hasActiveFilters:shelf.hasActiveFilters()});
-assert.equal(header.isActive('bookshelf_filter'),true,'closed filter keeps active-condition indication');
+assert.equal(header.isActive('bookshelf_filter'),false,'a closed filter is not the expanded button state');
 assert.match(header.actionLabel('bookshelf_filter'),/已有筛选条件/);
 button('清除').onClick(); shelf.onShelfFiltersChanged(); shelf.replay();
 await Promise.resolve();assert.equal(shelf.rebuilds,2,'clearing both dimensions is one reload');
@@ -89,21 +103,107 @@ shell.backgroundUpdateRunning=true;shell.requestCheckUpdates();assert.equal(upda
 shell.backgroundUpdateRunning=false;shell.canCheckUpdates=false;shell.requestCheckUpdates();assert.equal(updates,1);
 assert.ok(!shelfSource.slice(shelfSource.indexOf('private filterRow(navigation:'),shelfSource.indexOf('private filterChip(')).includes('onCheckUpdates'));
 
+const sdkSyntax = require(`${sdk}/lib/validate_ui_syntax.js`);
+sdkSyntax.builderParamObjectCollection.set('ReaderPageState', new Set(['leading','actionContent']));
+const childSources = Object.fromEntries([
+  ['ReaderPageState','ui/feedback'], ['ReaderButton','ui/controls'],
+].map(([name,folder]) => [name, readFileSync(new URL(`../entry/src/main/ets/${folder}/${name}.ets`, import.meta.url), 'utf8')]));
+class Child {
+  constructor(owner,params,_storage,id){ Object.assign(this,{owner,params,id}); }
+}
+const {owner: empty} = createReaderBuilderProbe(shelfSource,
+  ['filteredEmptyCard','filteredEmptyBadge','filteredEmptyActions','isShelfPresentationCurrent','currentFilterBookCount'],
+  {ReaderPageState:Child,ReaderButton:Child},{childSources});
+const emptyCalls = [];
+Object.assign(empty, {navigationGeneration:7,mounted:true,appThemeScheme:'day',
+  clearFilters:navigation=>emptyCalls.push(['clear',navigation]),
+  setFilterExpanded:(expanded,navigation)=>emptyCalls.push(['collapse',expanded,navigation]),
+  onEmptySearch:navigation=>emptyCalls.push(['search',navigation]),
+  onEmptyImport:(navigation,focus)=>emptyCalls.push(['import',navigation,focus])});
+empty.filteredEmptyCard(7);
+const card = [...empty.children.values()].find(child=>child.params.customActions);
+assert.equal(card.params.title,'没有符合筛选条件的书籍');
+card.params.leading();card.params.actionContent();
+const actions = [...empty.children.values()].filter(child=>child.params.label);
+assert.deepEqual(actions.map(child=>child.params.label),['重置筛选','搜索书籍','本地导入']);
+actions.forEach(child=>child.params.onAction());
+assert.deepEqual(emptyCalls,[['clear',7],['collapse',false,7],['search',7],['import',7,'reader-bookshelf-filtered-import']]);
+empty.navigationGeneration=8;
+actions[1].params.onAction();actions[2].params.onAction();
+assert.equal(emptyCalls.length,4,'retired filtered-empty search/import actions cannot cross routes');
+Object.assign(empty,{serverFiltered:true,sourceFilter:'local',contentFilter:'manga',
+  projectedSourceFilter:'local',projectedContentFilter:'text',projectedBookCount:0,visibleBookCount:5});
+assert.equal(empty.currentFilterBookCount(),-1,'the previous query result cannot display a new zero-results state');
+empty.projectedContentFilter='manga';
+assert.equal(empty.currentFilterBookCount(),0,'the accepted empty query can render its reset actions');
+empty.projectedBookCount=200;
+assert.equal(empty.currentFilterBookCount(),200,'the count reports the matching result, not the current pagination window');
+
 const Batch = productionMotionMethods(path('BookshelfMultiSelectPage'),['visibleBooks','bookKey','reconcileSelection','removeVisibleSelection',
-  'toggleBook','hasBookKey','toggleAll','allSelected','selectionInputEnabled','canRemoveSelection'],{ShelfBookPresentation});
+  'toggleBook','hasBookKey','toggleAll','canSelectAll','allSelected','selectionInputEnabled','canRemoveSelection',
+  'isSelected','selectedVisibleCount'],{ShelfBookPresentation});
 let removed=[];
 const batch = Object.assign(new Batch(),{books,storedSelectedGroup:'默认',readingFilter:'reading',sourceFilter:'online',selectedKeys:[],busy:false,ready:true,mounted:true,appForeground:true,onRemoveSelected:k=>removed.push(k)});
-assert.equal(ids(batch.visibleBooks()),'bd');batch.toggleAll();assert.equal(batch.selectedKeys.length,2);
-batch.books=books.map(b=>b.bookId==='b'?{...b,readProgress:10000}:b);
-batch.removeVisibleSelection();assert.deepEqual(removed,[['online\u0000d']],'a selected book hidden by a new progress value is never removed');
+assert.equal(ids(batch.visibleBooks()),'bde','the batch shares the shelf source/content filters and ignores legacy preferences');
+batch.toggleAll();assert.equal(batch.selectedKeys.length,3);
+batch.books=books.map(b=>b.bookId==='b'?{...b,readProgress:10000,group:'历史'}:b);
+batch.removeVisibleSelection();assert.deepEqual(removed,[['online\u0000b','online\u0000d','online\u0000e']],
+  'group and progress updates preserve the selected identities');
 batch.sourceFilter='local';batch.reconcileSelection();assert.equal(batch.selectedKeys.length,0);
 batch.toggleBook(books[1]);assert.equal(batch.selectedKeys.length,0,'stale recycled clicks cannot select hidden books');
 batch.removeVisibleSelection();assert.equal(removed.length,1);
 batch.sourceFilter='online';batch.mounted=false;
 batch.toggleBook(books[3]);assert.equal(batch.selectedKeys.length,0,'a retired selection route rejects a retained visible-row callback');
-for(const text of [source('BookshelfMultiSelectPage')]) {
-  for(const key of ['readerBookshelfSelectedGroup','readerBookshelfReadingFilter','readerBookshelfSourceFilter'])assert.ok(text.includes(`@StorageLink('${key}')`));
-}
+const manga = { ...books[3], bookId: 'manga', contentKind: 'manga' };
+Object.assign(batch, { mounted: true, sourceFilter: 'online', contentFilter: 'text', readingFilter: 'all',
+  books: [...books, manga], selectedKeys: ['online\u0000manga'] });
+assert.equal(batch.selectedVisibleCount(), 0, 'hidden selection is excluded from the live heading');
+batch.toggleAll();
+assert.deepEqual(batch.selectedKeys, ['online\u0000b', 'online\u0000d', 'online\u0000e']);
+batch.toggleAll();
+assert.equal(batch.selectedVisibleCount(), 0, 'select all and deselect all affect exactly the visible set');
+
+const mutationSource = readFileSync(new URL('../entry/src/main/ets/features/bookshelf/presentation/BookshelfMutationPresentation.ets', import.meta.url), 'utf8');
+const { BookshelfMutationPresentation } = pureModuleProbe(mutationSource, 'BookshelfMutationPresentation.ets', {
+  Observed: Type => Type, ShelfBookPresentation, EMPTY_BOOKSHELF_OPERATION_SNAPSHOT: {},
+}, ['BookshelfMutationPresentation']);
+const owner = {};
+const filter = { readingState: 'all', sourceKind: 'online', contentKind: 'text' };
+let activeFilter = filter;
+const confirmations = [], dispatches = [], readBack = [];
+const selection = new BookshelfMutationPresentation({
+  owner: () => owner, isCurrentOwner: candidate => candidate === owner, generation: () => 7, mounting: () => 2,
+  route: () => 'bookshelfMultiSelect', retired: () => false, filter: () => activeFilter,
+  readSelection: async () => ({ books: [...books, manga] }),
+  confirmRemoval: (_text, action) => confirmations.push(action),
+  selectionMatches: async (_books, current, expected) => {
+    readBack.push(expected);
+    return current();
+  },
+  finishSelection() {},
+});
+selection.remove = (_owner, targets) => { dispatches.push(targets); return { outcome: Promise.resolve(undefined) }; };
+selection.openSelection(undefined, [...books, manga]);
+await Promise.resolve();
+const identity = selection.selection.identity;
+selection.requestSelectionRemoval(identity, ['online\u0000manga', 'online\u0000b']);
+assert.equal(confirmations.length, 0, 'root owner rejects an entire mixed visible/hidden batch');
+selection.requestSelectionRemoval(identity, ['online\u0000b']);
+assert.equal(confirmations.length, 1);
+activeFilter = { ...filter, contentKind: 'manga' };
+confirmations[0]();
+await Promise.resolve();
+assert.deepEqual([readBack, dispatches], [[], []], 'filter changes revoke a stale native confirmation');
+activeFilter = filter;
+selection.requestSelectionRemoval(identity, ['online\u0000b']);
+confirmations[1]();
+await Promise.resolve();
+await Promise.resolve();
+assert.deepEqual(readBack, [filter]);
+assert.deepEqual(dispatches, [[{sourceId:'online',bookId:'b'}]], 'accepted confirmation submits only the visible identity');
+const batchSource = source('BookshelfMultiSelectPage');
+for(const key of ['readerBookshelfSourceFilter','readerBookshelfContentFilter'])assert.ok(batchSource.includes(`@StorageLink('${key}')`));
+for(const key of ['readerBookshelfSelectedGroup','readerBookshelfReadingFilter'])assert.ok(!batchSource.includes(`@StorageLink('${key}')`));
 for(const key of ['readerBookshelfSelectedGroup','readerBookshelfSourceFilter'])assert.ok(shelfSource.includes(`@StorageLink('${key}')`));
 assert.ok(!shelfSource.includes("@StorageLink('readerBookshelfReadingFilter')"),'current shelf filters do not resurrect the retired reading-state producer');
 assert.ok(shelfSource.includes("@StorageLink('readerBookshelfContentFilter')"),'content type has its own storage dimension');

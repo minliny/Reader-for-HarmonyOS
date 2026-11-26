@@ -22,7 +22,8 @@ const emit = (path, names, deps={}) => pureModuleProbe(read(path),path,{Observed
 const { readerSourceSwitchActions } = emit('app/composition/ReaderSourceSwitchActions.ets',['readerSourceSwitchActions']);
 const { ReadingCommitPresentation } = emit('features/reading/presentation/ReadingCommitPresentation.ets',['ReadingCommitPresentation'],{
   sameRemoteSessionEvidence,SourceSwitchCompletionPresentation,
-  ReadingPrefetchHost:{forRuntime:()=>({nearEnd:()=>false,prefetch:async()=>{}})},
+  ReadingPrefetchHost:{forRuntime:()=>({nearEnd:()=>false,prefetch:async()=>{},
+    retireDeepReading(){},noteReadingProgress(){}})},
 });
 const IndexMangaPorts=selectedProductionMethods(new URL('../../entry/src/main/ets/pages/Index.ets',import.meta.url),
   'Index',['mangaSourceSwitchPorts','nextNavigationGeneration'],{READER_FEEDBACK_EXTENDED_MS});
@@ -69,7 +70,7 @@ export function currentSourceSwitchOwners(f,{navigation=1,reading=false,cacheAut
   // Use Index's actual navigation retirement fan-out, retaining every active
   // source/manga/entry owner. Unrelated feature lifecycles remain finite ports.
   const inactive=()=>({retire(){}});
-  const navigationReceiver={shelfMotion:{clear(){}},transientFeedback:{reset(){}},downloadPresentation:inactive(),
+  const navigationReceiver={transientFeedback:{reset(){}},downloadPresentation:inactive(),
     settingsPresentation:inactive(),sourceJourney:inactive(),rssJourney:inactive(),shelfCatalog:inactive(),
     shelfManagement:inactive(),shelfGroupPresentation:inactive(),discoverPresentation:inactive(),rulesPresentation:inactive(),
     syncPresentation:inactive(),nativeAlertOwner:inactive(),shelfMutations:{retireSelection(){}},readingEntry:x.entry,

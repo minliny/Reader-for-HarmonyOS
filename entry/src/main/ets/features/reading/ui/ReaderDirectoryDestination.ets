@@ -8,6 +8,12 @@ import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from 
 import { ReaderFullDirectory } from './ReaderFullDirectory';
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 
+interface ReaderDirectoryBackBridge {
+  readonly opening: number;
+  readonly identity: string;
+  readonly handler: () => boolean;
+}
+
 /** Directory reached from book detail or an already mounted reader. */
 @Component
 export struct ReaderDirectoryDestination {
@@ -27,12 +33,14 @@ export struct ReaderDirectoryDestination {
   @Prop catalogMessage: string = '';
   @Prop catalogBusy: boolean = false;
   @Prop directoryRecovery: ReadingDirectoryRecovery = EMPTY_READING_DIRECTORY_RECOVERY;
-  @Prop interactive: boolean = true;
+  @Prop @Watch('publishTemporaryBack') interactive: boolean = true;
   @Prop offlineBookOperationActive: boolean = false;
   @Prop mangaDownloadEnabled: boolean = false;
   @Prop chapterStartBookmarkCreationEnabled: boolean = false;
   bookmarkIdentity: ReaderBookIdentity | undefined = undefined;
   private mounted: boolean = false;
+  private backBridge: ReaderDirectoryBackBridge | undefined = undefined;
+  private backBridgeRevision: number = 0;
   isOpeningCurrent: (opening: number) => boolean = (_opening: number): boolean => true;
 
   onReconcileBookmarks: (generation: number, identity: string) => void = (): void => {};
@@ -48,6 +56,7 @@ export struct ReaderDirectoryDestination {
     positionScope?: RemoteReadingPositionScope) => void) | undefined = undefined;
   onDownloadChapter: (chapterIndex: number) => void = (): void => {};
   onDownloadBook: () => void = (): void => {};
+  onOpenCacheManagement: () => void = (): void => {};
   onClearBookOffline: () => void = (): void => {};
   onDeleteBookmarks: (times: number[]) => void = (): void => {};
   onCreateChapterStartBookmark: (request: ReaderDirectoryChapterStartBookmarkRequest) => void = (): void => {};
@@ -57,16 +66,37 @@ export struct ReaderDirectoryDestination {
   onTemporaryBackBridge: (handler: (() => boolean) | undefined, identity: string, opening: number) => void = (): void => {};
 
   aboutToAppear(): void { this.mounted = true; }
-  aboutToDisappear(): void { this.mounted = false; }
+  aboutToDisappear(): void {
+    this.mounted = false;
+    this.publishTemporaryBack();
+    this.backBridge = undefined;
+  }
 
   private canHandle(opening: number): boolean {
     return this.mounted && this.interactive && opening === this.opening && this.isOpeningCurrent(opening);
   }
 
   private forwardTemporaryBack(opening: number, handler: (() => boolean) | undefined, identity: string): void {
-    if (handler === undefined) this.onTemporaryBackBridge(undefined, identity, opening);
-    else if (opening === this.opening) this.onTemporaryBackBridge(
-      (): boolean => this.canHandle(opening) && handler(), identity, opening);
+    if (handler === undefined) {
+      if (this.backBridge?.identity === identity && this.backBridge?.opening === opening) {
+        this.backBridge = undefined;
+        this.backBridgeRevision += 1;
+      }
+      this.onTemporaryBackBridge(undefined, identity, opening);
+    } else if (opening === this.opening) {
+      this.backBridge = { opening, identity, handler };
+      this.publishTemporaryBack();
+    }
+  }
+
+  private publishTemporaryBack(): void {
+    const bridge = this.backBridge;
+    const revision = ++this.backBridgeRevision;
+    if (bridge === undefined) return;
+    const handler = this.canHandle(bridge.opening) ?
+      (): boolean => revision === this.backBridgeRevision && this.canHandle(bridge.opening) && bridge.handler() :
+      undefined;
+    this.onTemporaryBackBridge(handler, bridge.identity, bridge.opening);
   }
 
   private bookmarkSelection(opening: number): ((bookmarkId: string, chapterIndex: number, chapterOffset: number,
@@ -121,6 +151,7 @@ export struct ReaderDirectoryDestination {
           this.loadDownloadActions(opening, chapterIndex),
         onDownloadAction: (action: MangaDownloadActionId, chapterIndex?: number): Promise<void> =>
           this.canHandle(opening) ? this.onDownloadAction(action, chapterIndex) : Promise.resolve(),
+        onOpenCacheManagement: (): void => { if (this.canHandle(opening)) this.onOpenCacheManagement(); },
         onSelectChapter: (chapterIndex: number): void => {
           if (this.canHandle(opening)) this.onSelectChapter(chapterIndex);
         },
@@ -169,6 +200,7 @@ export struct ReaderDirectoryDestination {
           if (this.canHandle(opening)) this.onDownloadChapter(chapterIndex);
         },
         onDownloadBook: (): void => { if (this.canHandle(opening)) this.onDownloadBook(); },
+        onOpenCacheManagement: (): void => { if (this.canHandle(opening)) this.onOpenCacheManagement(); },
         onClearBookOffline: (): void => { if (this.canHandle(opening)) this.onClearBookOffline(); },
         onDeleteBookmarks: (times: number[]): void => { if (this.canHandle(opening)) this.onDeleteBookmarks(times); },
         chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,

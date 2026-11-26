@@ -32,12 +32,25 @@ const MAX_RETAINED_COMPLETED_UTTERANCES = 128;
 
 let READER_TTS_COORDINATOR_SEQ = 0;
 
+export type ReaderTtsHostResumeOrigin = 'mediaPlay' | 'interruptionResume';
+
 export type ReaderTtsCoordinatorOptions = {
   /** Max delay between host.speak() acceptance and the real onStart callback. */
   startCallbackTimeoutMs?: number;
+  /** Admit a native resume while the current reading session owns a resumable queue. */
+  admitHostResume?: (origin: ReaderTtsHostResumeOrigin) => boolean;
 };
 
 type StartWaiter = { generation: number; resolve: (started: boolean) => void };
+type ReaderTtsUserPauseAttempt = {
+  sessionGeneration: number;
+  controlGeneration: number;
+  task?: Promise<void>;
+};
+type ReaderTtsNativeStopReceipt = {
+  sessionGeneration: number;
+  result: Promise<Error | undefined>;
+};
 
 export type ReaderTtsStartInput = {
   chapter: ReaderTtsChapterRef;
@@ -177,6 +190,8 @@ export class ReaderTtsSessionCoordinator {
   private active: ActiveSession | undefined = undefined;
   private disposed: boolean = false;
   private desiredPlaying: boolean = true;
+  private userPauseAttempt: ReaderTtsUserPauseAttempt | undefined = undefined;
+  private nativeStopReceipt: ReaderTtsNativeStopReceipt | undefined = undefined;
   private controlGeneration: number = 0;
   private voicePreferenceGeneration: number = 0;
   private idleVoicePreparationGeneration: number = 0;
@@ -196,6 +211,7 @@ export class ReaderTtsSessionCoordinator {
   private readonly retainedUtteranceIds: Set<string> = new Set();
   private readonly ownerToken: string;
   private readonly startCallbackTimeoutMs: number;
+  private readonly admitHostResume: ((origin: ReaderTtsHostResumeOrigin) => boolean) | undefined;
   private readonly startWaiters: StartWaiter[] = [];
   private startConfirmedRequestId: string | undefined = undefined;
   private startWatchdogHandle: number = -1;
@@ -217,6 +233,7 @@ export class ReaderTtsSessionCoordinator {
     this.chapterAdvance = chapterAdvance;
     this.ownerToken = `tts-coordinator-${++READER_TTS_COORDINATOR_SEQ}`;
     this.startCallbackTimeoutMs = options?.startCallbackTimeoutMs ?? DEFAULT_START_CALLBACK_TIMEOUT_MS;
+    this.admitHostResume = options?.admitHostResume;
     this.host.setEventListener((event: ReaderTtsHostEvent): void => {
       this.routeHostEvent(event);
     }, this.ownerToken);
@@ -246,7 +263,7 @@ export class ReaderTtsSessionCoordinator {
       }
     }
     if (event.type === 'mediaControl') {
-      if (event.action === 'play') this.voidLogged(this.resume(), 'mediaControl.play');
+      if (event.action === 'play') this.resumeFromHost('mediaPlay');
       else if (event.action === 'pause') this.voidLogged(this.pause(), 'mediaControl.pause');
       else if (event.action === 'stop') this.voidLogged(this.stop('user'), 'mediaControl.stop');
       else if (event.action === 'next') this.voidLogged(this.next(), 'mediaControl.next');
@@ -261,7 +278,7 @@ export class ReaderTtsSessionCoordinator {
           this.voidLogged(this.stop('systemInterruption'), 'interruption.stop');
         }
       } else if (event.action === 'resume') {
-        this.voidLogged(this.resume(), 'interruption.resume');
+        this.resumeFromHost('interruptionResume');
       }
       return;
     }
@@ -272,6 +289,23 @@ export class ReaderTtsSessionCoordinator {
       return;
     }
     this.voidLogged(this.enqueue(async (): Promise<void> => this.handleHostEvent(event)), `callback.${event.type}`);
+  }
+
+  private resumeFromHost(origin: ReaderTtsHostResumeOrigin): void {
+    const stage = origin === 'mediaPlay' ? 'mediaControl.play' : 'interruption.resume';
+    if (this.admitHostResume === undefined) {
+      this.voidLogged(this.resume(), stage);
+      return;
+    }
+    const active = this.resumableSession();
+    if (active === undefined || !this.isSessionCurrent(active.identity)) return;
+    try {
+      if (this.admitHostResume(origin) && this.resumableSession() === active && this.isSessionCurrent(active.identity)) {
+        this.voidLogged(this.resume(), stage);
+      }
+    } catch (error) {
+      this.logTtsEvent(stage, errorMessageOf(error));
+    }
   }
 
   auditionVoice(input: ReaderTtsAuditionInput): Promise<void> {
@@ -554,8 +588,23 @@ export class ReaderTtsSessionCoordinator {
 
   private pauseForReason(reason: ReaderTtsPauseReason): Promise<void> {
     this.desiredPlaying = false;
+    const stop = this.nativeStopReceipt;
+    if (reason === 'user' && this.state.status === 'stopping' &&
+      stop !== undefined && stop.sessionGeneration === this.transport.sessionGeneration) {
+      return stop.result.then((error: Error | undefined): void => {
+        if (error !== undefined) throw error;
+      });
+    }
     const active = this.active;
-    if (active === undefined || !this.canPause()) return Promise.resolve();
+    if (active === undefined) return Promise.resolve();
+    const previous = this.userPauseAttempt;
+    const sameUserPause = reason === 'user' && this.state.status === 'paused' && previous !== undefined &&
+      previous.sessionGeneration === active.identity.sessionGeneration && previous.controlGeneration === this.controlGeneration &&
+      this.isSessionCurrent(active.identity);
+    const pending = sameUserPause ? previous?.task : undefined;
+    if (pending !== undefined) return pending;
+    if (!sameUserPause && !this.canPause()) return Promise.resolve();
+    this.userPauseAttempt = undefined;
     const systemPause = reason === 'systemInterruption' || reason === 'deviceChange';
     const index = this.state.sliceIndex;
     const controlGeneration = this.retireControlIntent(reason === 'user' ? undefined : reason);
@@ -573,7 +622,7 @@ export class ReaderTtsSessionCoordinator {
       pauseReason: reason,
     });
     const hostStopTask = this.stopHostTransportImmediately();
-    return this.enqueue(async (): Promise<void> => {
+    const transaction = this.enqueue(async (): Promise<void> => {
       try {
         const hostStopError = await hostStopTask;
         if (hostStopError !== undefined) throw hostStopError;
@@ -592,15 +641,29 @@ export class ReaderTtsSessionCoordinator {
         this.transport = { ...this.transport, audioSession: 'inactive', focus: systemPause ? 'interrupted' : 'none' };
       }
     });
+    if (reason !== 'user') return transaction;
+    const attempt: ReaderTtsUserPauseAttempt = { sessionGeneration: active.identity.sessionGeneration, controlGeneration };
+    const completion = transaction.then((): void => {
+      if (this.userPauseAttempt === attempt) this.userPauseAttempt = undefined;
+    }, (error: Error): never => {
+      if (this.userPauseAttempt === attempt) {
+        // A failed local pause still projects paused. Allow only the same
+        // admitted user intent to retry the underlying transport and queue.
+        if (currentPause()) attempt.task = undefined;
+        else this.userPauseAttempt = undefined;
+      }
+      throw error;
+    });
+    attempt.task = completion;
+    this.userPauseAttempt = attempt;
+    return completion;
   }
 
   resume(): Promise<void> {
     this.voidLogged(this.stopAudition(), 'audition.formal-resume');
     this.desiredPlaying = true;
-    const active = this.active;
-    if ((this.state.status !== 'paused' && this.state.status !== 'interrupted') ||
-      active === undefined || active.plan === undefined ||
-      this.state.sliceIndex === undefined) return Promise.resolve();
+    const active = this.resumableSession();
+    if (active === undefined) return Promise.resolve();
     this.setState({ ...this.state, status: 'preparing', pauseReason: undefined, requestId: undefined });
     const identity = active.identity;
     const controlGeneration = this.controlGeneration;
@@ -613,6 +676,12 @@ export class ReaderTtsSessionCoordinator {
       const index = this.requireSnapshotIndex(snapshot, 'tts.queue.resume');
       await this.speakSlice(active, index, 'preparing');
     });
+  }
+
+  private resumableSession(): ActiveSession | undefined {
+    const active = this.active;
+    return (this.state.status === 'paused' || this.state.status === 'interrupted') &&
+      active?.plan !== undefined && this.state.sliceIndex !== undefined ? active : undefined;
   }
 
   next(): Promise<void> {
@@ -909,6 +978,8 @@ export class ReaderTtsSessionCoordinator {
     this.active = undefined;
     this.clearUtteranceCorrelations();
     const hostStopTask = this.stopHostTransportImmediately();
+    const receipt: ReaderTtsNativeStopReceipt = { sessionGeneration: this.transport.sessionGeneration, result: hostStopTask };
+    this.nativeStopReceipt = receipt;
     this.host.publishPlaybackState('stopped');
     return this.enqueue(async (): Promise<void> => {
       const hostStopError = await hostStopTask;
@@ -940,6 +1011,8 @@ export class ReaderTtsSessionCoordinator {
         });
       }
       if (hostStopError !== undefined) throw hostStopError;
+    }).finally((): void => {
+      if (this.nativeStopReceipt === receipt) this.nativeStopReceipt = undefined;
     });
   }
 

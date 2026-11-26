@@ -1,25 +1,28 @@
 import { PathShape } from '@ohos.arkui.shape';
 import { ReaderControlMotionPathCache, readerControlMotionClipPath } from './ReaderControlMotionPresentation';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import { readerPressPointer } from '../../../ui/foundation/ReaderPressMotion';
 import { READER_SESSION_CAPSULE_RADIUS, ReaderSessionCapsuleFrame, ReaderSessionCapsuleLeading, ReaderSessionCapsulePause,
-  readerSessionCapsuleAccessibility, measureReaderSessionCapsule, type ReaderSessionCapsuleMetrics } from './ReaderSessionCapsule';
+  readerSessionCapsuleAccessibility, ReaderSessionCapsuleMetricsCache, type ReaderSessionCapsuleMetrics } from './ReaderSessionCapsule';
 import type { ReaderSessionCapsuleState } from './ReaderSessionCapsuleModel';
 import type { ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
+import { READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT } from './ReaderPageChromeLayout';
 
 /**
- * Persistent C/D/E/F actors. Parent owns viewport positioning, lifecycle and
- * one clock. Keep this stage mounted through the 2300–3500 hold and afterwards.
+ * Persistent launch and playback actors. Parent owns positioning, lifecycle and clock.
  * Builders contain visual source CONTENT only: no source surface, interaction,
  * onAppear work, measurements, Core reads or capture requests. They can render
  * a ready, revision-validated PixelMap; they must never wait for one to exist.
  */
 @Component
 export struct ReaderSessionLaunchStage {
-  @Prop sample: ReaderSessionLaunchSample;
+  @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
+  @Prop @Watch('onInteractionChanged') sample: ReaderSessionLaunchSample;
   @Prop sessionState: ReaderSessionCapsuleState = 'preparing';
   @Prop desiredPlaying: boolean = true;
   @Prop countdown: number = 8;
-  @Prop interactionEnabled: boolean = true;
+  @Prop @Watch('onInteractionChanged') interactionEnabled: boolean = true;
   @Prop fontScale: number = 1;
   @Prop surfaceColor: string = '';
   @Prop surfaceBorderColor: string = '';
@@ -30,20 +33,27 @@ export struct ReaderSessionLaunchStage {
   @Prop sourceGradientEnd: string = '';
   @Prop sourceBorderColor: string = '';
   @Prop sourceBorderWidth: number = 1;
-  @Prop sourceShadowColor: string = '#0D5C4732';
+  @Prop sourceShadowColor: string = '';
   @Prop sourceShadowRadius: number = 0;
   @Prop sourceShadowOffsetY: number = 5;
   @Prop textColor: string = '';
   @Prop primaryColor: string = '';
   @Prop onPrimaryColor: string = '';
   @Prop themeScheme: string = 'day';
-  @Prop shadowColor: string = '#12463423';
+  @Prop shadowColor: string = '';
   @BuilderParam sourceSharpContent: () => void;
-  @BuilderParam sourceBlurContent: () => void;
   onToggle: () => void = (): void => {};
+  @State private pressPointer: number = -1;
+  private readonly metricsCache: ReaderSessionCapsuleMetricsCache = new ReaderSessionCapsuleMetricsCache();
 
   private sourceClipCache: ReaderControlMotionPathCache<PathShape> = new ReaderControlMotionPathCache<PathShape>(
     (path: string): PathShape => new PathShape().commands(path));
+
+  private onInteractionChanged(): void {
+    if (!this.interactionEnabled || this.sample.pauseOpacity <= 0) this.pressPointer = -1;
+  }
+
+  aboutToDisappear(): void { this.pressPointer = -1; }
 
   private sourceClip(): PathShape {
     const s = this.sample;
@@ -63,34 +73,32 @@ export struct ReaderSessionLaunchStage {
       Row() {}
         .id('reader-session-launch-surface')
         .width('100%').height('100%')
-        .attributeModifier(new ReaderSessionCapsuleFrame(this.themeScheme, this.surfaceColor, this.surfaceBorderColor, this.shadowColor))
+        .attributeModifier(new ReaderSessionCapsuleFrame(this.themeScheme, this.surfaceColor, this.surfaceBorderColor, this.shadowColor,
+          this.paintDensity(), this.interactionEnabled && this.sample.pauseOpacity > 0 && this.pressPointer >= 0))
         .opacity(this.sample.canonicalSurfaceOpacity).hitTestBehavior(HitTestMode.None);
 
-      // SourceRegion owns its surface; both content copies retain uniform scale.
+      // SourceRegion owns its surface; the single content actor retains uniform scale.
       Stack({ alignContent: Alignment.TopStart }) {
         Row().width('100%').height(Math.max(0, this.sample.proxyHeight - this.sourceSurfaceTopInset * (1 - this.sample.flight)))
           .position({ x: 0, y: this.sourceSurfaceTopInset * (1 - this.sample.flight) })
           .linearGradient({ angle: 155, colors: [[this.sourceGradientStart.length > 0 ? this.sourceGradientStart : this.effectiveSourceSurfaceColor(), 0],
             [this.sourceGradientEnd.length > 0 ? this.sourceGradientEnd : this.effectiveSourceSurfaceColor(), 1]] })
           .border({ width: this.sourceBorderWidth, color: this.effectiveSourceBorderColor() }).borderRadius(this.sample.sourceRadius)
-          .shadow({ radius: this.sourceShadowRadius, color: this.sourceShadowColor, offsetX: 0, offsetY: this.sourceShadowOffsetY })
+          .shadow({ radius: this.sourceShadowRadius * this.paintDensity(), offsetX: 0,
+            offsetY: this.sourceShadowOffsetY * this.paintDensity(), color: this.sourceShadowColor.length > 0 ?
+              this.sourceShadowColor : readerAppColor('app.shadow.menu', this.themeScheme) })
           .hitTestBehavior(HitTestMode.None);
         Row().width('100%').height(1).backgroundColor(this.sourceHighlightColor)
           .position({ x: 0, y: this.sourceSurfaceTopInset * (1 - this.sample.flight) }).hitTestBehavior(HitTestMode.None);
-        Stack({ alignContent: Alignment.TopStart }) { this.sourceSharpContent(); }
-          .id('reader-session-launch-sharp')
-          .width(this.sample.sourceWidth).height(this.sample.sourceHeight)
-          .position({ x: this.sample.sourceContentBaseOffset, y: this.sample.sourceContentBaseOffset })
-          .scale({ x: this.sample.sourceContentScale, y: this.sample.sourceContentScale, centerX: '50%', centerY: '50%' })
-          .translate({ x: this.sample.sourceContentTranslateX, y: this.sample.sourceContentTranslateY })
-          .opacity(this.sample.sharpOpacity).hitTestBehavior(HitTestMode.None);
-        Stack({ alignContent: Alignment.TopStart }) { this.sourceBlurContent(); }
-          .id('reader-session-launch-blur')
-          .width(this.sample.sourceWidth).height(this.sample.sourceHeight)
-          .position({ x: this.sample.sourceContentBaseOffset, y: this.sample.sourceContentBaseOffset })
-          .scale({ x: this.sample.sourceContentScale, y: this.sample.sourceContentScale, centerX: '50%', centerY: '50%' })
-          .translate({ x: this.sample.sourceContentTranslateX, y: this.sample.sourceContentTranslateY })
-          .blur(this.sample.blurRadius).opacity(this.sample.blurOpacity).hitTestBehavior(HitTestMode.None);
+        if (this.sample.sourceNeeded) {
+          Stack({ alignContent: Alignment.TopStart }) { this.sourceSharpContent(); }
+            .id('reader-session-launch-sharp')
+            .width(this.sample.sourceWidth).height(this.sample.sourceHeight)
+            .position({ x: this.sample.sourceContentBaseOffset, y: this.sample.sourceContentBaseOffset })
+            .scale({ x: this.sample.sourceContentScale, y: this.sample.sourceContentScale, centerX: '50%', centerY: '50%' })
+            .translate({ x: this.sample.sourceContentTranslateX, y: this.sample.sourceContentTranslateY })
+            .opacity(this.sample.sharpOpacity).hitTestBehavior(HitTestMode.None);
+        }
       }
       .id('reader-session-launch-source')
       .width('100%').height('100%')
@@ -106,7 +114,7 @@ export struct ReaderSessionLaunchStage {
           .translate({ x: this.sample.leadingOffsetX }).opacity(this.sample.leadingOpacity);
       }.id('reader-session-launch-leading').width('100%').height('100%').borderRadius(READER_SESSION_CAPSULE_RADIUS).clip(true).hitTestBehavior(HitTestMode.None);
 
-      // CircleState is NOT a descendant of the reveal row: already visible at dot.
+      // The pause control keeps its own position throughout the reveal.
       ReaderSessionCapsulePause({ sessionState: this.sessionState, themeScheme: this.themeScheme, desiredPlaying: this.desiredPlaying,
         primaryColor: this.effectivePrimaryColor(), onPrimaryColor: this.effectiveOnPrimaryColor() })
         .position({ x: this.sample.pauseX, y: (this.sample.proxyHeight - 16) / 2 }).opacity(this.sample.pauseOpacity);
@@ -117,22 +125,31 @@ export struct ReaderSessionLaunchStage {
     }
     .id('reader-session-launch-toggle')
     .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-    .width(Math.max(44, this.sample.proxyWidth)).height(Math.max(44, this.sample.proxyHeight))
+    .width(Math.max(44, this.sample.proxyWidth))
+    .height(Math.max(READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT, this.sample.proxyHeight))
     .position({ x: this.sample.proxyLeft - Math.max(0, 44 - this.sample.proxyWidth) / 2,
-      y: this.sample.proxyTop - Math.max(0, 44 - this.sample.proxyHeight) / 2 })
+      y: this.sample.proxyTop - Math.max(0, READER_SESSION_CAPSULE_MIN_TARGET_HEIGHT - this.sample.proxyHeight) / 2 })
     .hitTestBehavior(this.interactionEnabled && this.sample.pauseOpacity > 0 ? HitTestMode.Block : HitTestMode.None)
     .enabled(this.interactionEnabled && this.sample.pauseOpacity > 0)
     .accessibilityText(readerSessionCapsuleAccessibility(this.sample.type, this.sessionState, this.desiredPlaying))
     // Transparent overlay ancestors also admit the page's raw touch owner.
     // Consume the whole pointer stream here; the click recognizer still runs.
-    .onTouch((event: TouchEvent): void => event.stopPropagation())
+    .onTouch((event: TouchEvent): void => {
+      event.stopPropagation();
+      const pointer = readerPressPointer(event, this.pressPointer, this.interactionEnabled && this.sample.pauseOpacity > 0);
+      if (pointer !== this.pressPointer) this.pressPointer = pointer;
+    })
     .onClick((): void => {
       if (this.interactionEnabled && this.sample.pauseOpacity > 0) this.onToggle();
     });
   }
 
   private metrics(): ReaderSessionCapsuleMetrics {
-    return measureReaderSessionCapsule(this.getUIContext(), this.sample.type, this.fontScale);
+    return this.metricsCache.resolve(this.getUIContext(), this.sample.type, this.fontScale, this.metricsRevision);
+  }
+
+  private paintDensity(): number {
+    return this.metricsRevision < 0 ? 1 : readerWindowMetrics().densityPixels;
   }
 
   private effectiveSourceSurfaceColor(): string {

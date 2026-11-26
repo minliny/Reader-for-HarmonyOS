@@ -33,6 +33,7 @@ export class ReadingRecordGateway {
   // Preferences snapshots serialize with each other, but never wait on a
   // Native ACK. A slow old receipt cannot prevent newly elapsed time staging.
   private static storeTail: Promise<void> = Promise.resolve();
+  private static unconfirmedDeviceIds: Map<string, string> = new Map();
   private static retiredMemory: ReadingRecordIntent[] = [];
   private static currentReceiver: ReadingRecordGateway | undefined;
   private outboxLane: Promise<void> = Promise.resolve();
@@ -320,14 +321,17 @@ export class ReadingRecordGateway {
     return new ReadingRecordIntent(prior.acceptanceId, prior.bookName, elapsed, Math.max(prior.readAt, next.readAt));
   }
 
-  private serializedStore(operation: () => Promise<void>): Promise<void> {
+  private serializedStore<T>(operation: () => Promise<T>): Promise<T> {
     const work = ReadingRecordGateway.storeTail.then(operation);
     ReadingRecordGateway.storeTail = work.then((): void => {}, (): void => {});
     return work;
   }
 
   /** Recency renewal uses the same durable device identity as reading time. */
-  currentDeviceId(): Promise<string> { this.assertCurrent(); return this.deviceId(); }
+  currentDeviceId(): Promise<string> {
+    this.assertCurrent();
+    return this.deviceId().then((deviceId: string): string => { this.assertCurrent(); return deviceId; });
+  }
 
   createIntent(bookName: string, elapsedMillis: number, readAt: number): ReadingRecordIntent {
     const normalized = bookName.trim();
@@ -480,7 +484,9 @@ export class ReadingRecordGateway {
   }
 
   private async readJournal(store: preferences.Preferences): Promise<ReadingRecordJournal | undefined> {
-    const raw = await store.get(READING_RECORD_JOURNAL_KEY, '') as string;
+    const raw = await store.get(READING_RECORD_JOURNAL_KEY, '');
+    if (typeof raw !== 'string')
+      throw new ReadingRecordRecoveryError('blocked', '阅读时长待核对记录格式不合法，已保留并停止覆盖。');
     if (raw.length === 0) return undefined;
     if (raw.length > 262144) throw new ReadingRecordRecoveryError('blocked', '阅读时长记录超过有限容量，已停止覆盖。');
     let parsed: unknown;
@@ -546,15 +552,26 @@ export class ReadingRecordGateway {
   }
 
   private async loadOrCreateDeviceId(): Promise<string> {
-    const store = await this.ensureStore();
-    const existing = ((await store.get(READING_RECORD_DEVICE_ID_KEY, '')) as string).trim();
-    if (existing.length > 0) {
-      return existing;
-    }
-    const created = `harmony-${util.generateRandomUUID()}`;
-    await store.put(READING_RECORD_DEVICE_ID_KEY, created);
-    await store.flush();
-    return created;
+    return this.serializedStore(async (): Promise<string> => {
+      this.assertCurrent();
+      const filesDir = this.runtimeOwner.getUIAbilityContext().filesDir;
+      const store = await this.ensureStore();
+      const existing = ((await store.get(READING_RECORD_DEVICE_ID_KEY, '')) as string).trim();
+      this.assertCurrent();
+      const pending = ReadingRecordGateway.unconfirmedDeviceIds.get(filesDir);
+      if (pending === undefined && existing.length > 0) return existing;
+      if (pending !== undefined && existing.length > 0 && existing !== pending) {
+        throw new Error('READING_RECORD_DEVICE_ID_CONFLICT');
+      }
+      const original = pending ?? `harmony-${util.generateRandomUUID()}`;
+      // A cached read can observe a put with an unknown flush outcome. The
+      // whole process shares one lane and continues the exact same identity.
+      ReadingRecordGateway.unconfirmedDeviceIds.set(filesDir, original);
+      await store.put(READING_RECORD_DEVICE_ID_KEY, original);
+      await store.flush();
+      ReadingRecordGateway.unconfirmedDeviceIds.delete(filesDir);
+      return original;
+    });
   }
 
   private async ensureStore(): Promise<preferences.Preferences> {

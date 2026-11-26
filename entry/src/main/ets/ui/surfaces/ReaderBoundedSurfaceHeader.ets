@@ -1,7 +1,9 @@
+import { readerPaperActionIcon } from '../foundation/ReaderActionIconResources';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerReadableFontScale } from '../foundation/ReaderSurfaceResolvers';
 import { TYPE_SOURCE_SWITCH_HEADING, TYPE_READER_TTS_MANAGER_TITLE, TYPE_READER_TTS_CONFIGURATION_TITLE, TYPE_FILE_IMPORT_TITLE, TYPE_READER_REPLACE_RETAINED_TEMPORARY_OVERLAY_VALUE } from '../foundation/ReaderTypography';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { SheetSurfaceSpec, DrawerSurfaceSpec, resolveSheetSpec, resolveDrawerSpec } from './ReaderSurfaceSpecs';
 import type { ReaderBoundedSurfaceId } from './ReaderBoundedSurface';
 
@@ -10,12 +12,19 @@ import type { ReaderBoundedSurfaceId } from './ReaderBoundedSurface';
 class ReaderDrawerCloseFocusModifier implements AttributeModifier<ButtonAttribute> {
   private readonly placement: 'bottom' | 'side';
   private readonly enabled: boolean;
-  constructor(placement: 'bottom' | 'side', enabled: boolean) {
+  private readonly feedback: ReaderPressFeedback;
+  constructor(placement: 'bottom' | 'side', enabled: boolean, scheme: string) {
     this.placement = placement;
     this.enabled = enabled;
+    this.feedback = new ReaderPressFeedback(Color.Transparent, scheme, 8, 8, enabled);
   }
   applyNormalAttribute(instance: ButtonAttribute): void {
     if (this.placement === 'side') instance.focusable(this.enabled);
+    this.feedback.applyNormalAttribute(instance);
+  }
+  applyPressedAttribute(instance: ButtonAttribute): void {
+    this.applyNormalAttribute(instance);
+    this.feedback.applyPressedAttribute(instance);
   }
 }
 
@@ -126,11 +135,10 @@ export struct ReaderBoundedSurfaceHeader {
   @Builder private drawerClose() {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
       Image(this.drawerScheme() === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close'))
-        .width(this.drawerSpec().closeIcon).height(this.drawerSpec().closeIcon);
+        .width(this.drawerSpec().closeIcon).height(this.drawerSpec().closeIcon).accessibilityLevel('no');
     }.id(this.closeFocusId).width(this.drawerSpec().closeSize).height(this.drawerSpec().closeSize).padding(0)
-      .backgroundColor(Color.Transparent).borderRadius(8)
       .enabled(this.actionEnabled)
-      .attributeModifier(new ReaderDrawerCloseFocusModifier(this.placement, this.actionEnabled))
+      .attributeModifier(new ReaderDrawerCloseFocusModifier(this.placement, this.actionEnabled, this.drawerScheme()))
       .accessibilityText(this.placement === 'side' ? '关闭宽屏面板' : '关闭面板')
       .onClick((): void => { if (this.actionEnabled) this.onClose(); });
   }
@@ -145,8 +153,7 @@ export struct ReaderBoundedSurfaceHeader {
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).maxLines(1).width('100%')
           .padding({ left: 20, right: 20, top: 20, bottom: 17 });
       }
-      Blank().width('100%').height(1).backgroundColor(readerAppColor(this.specId === 'local-import-selection' ?
-        'app.import.separator' : 'app.import.separator', this.appThemeScheme));
+      Blank().width('100%').height(1).backgroundColor(readerAppColor('app.import.separator', this.appThemeScheme));
     }.width('100%').onAreaChange((oldValue: Area, next: Area): void => this.onAreaChanged(oldValue, next));
   }
 
@@ -187,11 +194,12 @@ export struct ReaderBoundedSurfaceHeader {
   }
 
   @Builder private sheetClose() {
-    Button({ type: ButtonType.Normal }) {
-      Image(this.appThemeScheme === 'night' ? $r('app.media.reader_action_close_theme_night') : $r('app.media.reader_action_close'))
-        .width(this.sheetSpec().closeIcon).height(this.sheetSpec().closeIcon);
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
+      Image(readerPaperActionIcon('close', this.appThemeScheme))
+        .width(this.sheetSpec().closeIcon).height(this.sheetSpec().closeIcon).accessibilityLevel('no');
     }.width(this.sheetSpec().closeSize).height(this.sheetSpec().closeSize).padding(0)
-      .backgroundColor(Color.Transparent).enabled(this.actionEnabled).accessibilityText('关闭面板')
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 999, 999, this.actionEnabled))
+      .enabled(this.actionEnabled).accessibilityText('关闭面板')
       .onClick((): void => { if (this.actionEnabled) this.onClose(); });
   }
 
@@ -199,9 +207,10 @@ export struct ReaderBoundedSurfaceHeader {
     Row({ space: this.specId === 'source-switch-window' ? 0 : 8 }) {
       if (this.specId === 'source-switch-window') {
         Image(this.appThemeScheme === 'night' ? $r('app.media.reader_directory_switch_theme_night') : $r('app.media.reader_directory_switch'))
-          .width(18).height(18).margin({ left: 9 });
+          .width(18).height(18).margin({ left: 9 }).accessibilityLevel('no');
       } else if (this.specId === 'tts-config-manager') {
-        Image(this.appThemeScheme === 'night' ? $r('app.media.reader_tts_online_engine_theme_night') : $r('app.media.reader_tts_online_engine')).width(20).height(20);
+        Image(this.appThemeScheme === 'night' ? $r('app.media.reader_tts_online_engine_theme_night') : $r('app.media.reader_tts_online_engine'))
+          .width(20).height(20).accessibilityLevel('no');
       }
       this.titleText();
       this.accessory();
@@ -227,7 +236,8 @@ export struct ReaderBoundedSurfaceHeader {
           Image(this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close'))
             .width(20).height(20).accessibilityLevel('no');
         }.width(22).height(22).borderRadius(8).backgroundColor(readerAppColor('TOK_SS_CLOSE_BG', this.appThemeScheme));
-      }.width(44).height(44).padding(0).backgroundColor(Color.Transparent).margin({ left: 1 })
+      }.width(44).height(44).padding(0).margin({ left: 1 })
+        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 8, 8, this.actionEnabled))
         .id(this.closeFocusId).enabled(this.actionEnabled).focusable(this.actionEnabled)
         .accessibilityText('关闭换源')
         .onClick((): void => { if (this.actionEnabled) this.onClose(); });
@@ -235,7 +245,8 @@ export struct ReaderBoundedSurfaceHeader {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Image(this.appThemeScheme === 'night' ? $r('app.media.reader_tts_make_close_theme_night') : $r('app.media.reader_tts_make_close'))
           .width(16).height(16).accessibilityLevel('no');
-      }.width(44).height(44).padding(0).backgroundColor(Color.Transparent)
+      }.width(44).height(44).padding(0)
+        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 999, 999, this.actionEnabled))
         .id(this.closeFocusId)
         .enabled(this.actionEnabled)
         .accessibilityText('关闭 TTS 配置').onClick((): void => { if (this.actionEnabled) this.onClose(); });

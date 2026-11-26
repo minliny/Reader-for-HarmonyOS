@@ -282,6 +282,11 @@ test('Phase 1 search Task retry accepts only the unique enabled button inside th
   const settled = recovered([sheet([title('搜索进度')])]);
   assert.equal(selectLayoutNode(settled,'reader-search-task-sheet').type,'SheetPage');
   assert.throws(() => selectLayoutNode(settled,selector),/missing/);
+  const frame = node('reader-search-sheet:task', [0,90,100,200], {type:'Column',
+    children:[title('搜索进度'),button()]});
+  const currentFrame = recovered([button(),frame]);
+  assert.equal(selectLayoutNode(currentFrame,'reader-search-task-sheet').id,'reader-search-sheet:task');
+  assert.equal(selectLayoutNode(currentFrame,selector).path,'0/1/1');
   const duplicateRetry = recovered([sheet([title('搜索进度'),button(),button()])]);
   assert.equal(duplicateRetry.nodes.filter(item => item.alias === selector).length,2);
   assert.throws(() => selectLayoutNode(recovered([sheet([title('搜索进度')]),sheet([title('搜索进度')])]),

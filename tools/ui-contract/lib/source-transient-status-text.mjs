@@ -6,15 +6,21 @@ export const sourceTransientStatusGuard = 'source-transient-status';
 export const sourceTransientStatusLifecycle = 'source.transient-feedback';
 export const sourceTransientStatusLayout = 'source.transient-text-layout';
 export const sourceTransientStatusCases = {
-  'source-management.import-research-status-action':{version:3,fixture:'public-source-import-research-status-v1',
-    sample:'source-imported',action:'select-source-file',scope:'operation-status',role:'operation/status',
+  'source-management.import-research-status-action':{version:4,fixture:'public-source-import-research-status-v1',
+    sample:'source-imported',action:'return-source-list',scope:'operation-status',role:'operation/status',
     assertion:'source.import-research-status-glyph'},
   'source-management.retained-read-failure':{version:4,fixture:'public-source-retained-read-v1',
     sample:'retained-failure',action:'reopen-sources',scope:'retained-read-failed',role:'read/retained-status',
     assertion:'source.read.retained-failure.text'},
 };
 
-const policies = Object.values(sourceTransientStatusCases);
+const sourceImportStatusCase = 'source-management.import-research-status-action';
+const legacyImportStatus = {...sourceTransientStatusCases[sourceImportStatusCase],version:3,action:'select-source-file'};
+export function sourceTransientStatusCase(caseId,version) {
+  if (caseId === sourceImportStatusCase && version === legacyImportStatus.version) return legacyImportStatus;
+  return sourceTransientStatusCases[caseId];
+}
+const policies = [...Object.values(sourceTransientStatusCases),legacyImportStatus];
 export const sourceTransientStatusStep = (fixture,step) => step?.captureGuard === sourceTransientStatusGuard &&
   step.kind === 'sample' && policies.find(policy=>policy.fixture === fixture?.id && step.id === policy.sample &&
     step.afterAction === policy.action);

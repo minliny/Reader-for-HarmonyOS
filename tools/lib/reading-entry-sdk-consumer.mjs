@@ -86,7 +86,7 @@ export function makeIndex(f, { route = 'search', mount = 1, indexSource = read('
     searchAppForeground: true, arkWebCapturesInput: false,
     libraryAcquisition: { currentOwner: () => f.runtime.closed ? undefined : f.runtime, visibilityChanged() {} },
     shelfRead: { snapshot: { books: [], revision: 'r1' } }, shelfCatalog: { snapshot: { seeds: undefined } },
-    settingsPresentation: { ready: () => true }, shelfMotion: { pendingExitId: -1, visibilityChanged() {}, projectAfterOpening: project => project() },
+    settingsPresentation: { ready: () => true },
     readingCommits: { refreshNearEnd() {} }, downloadNavigation: { restoreReaderReturn: () => false },
     readingExitActions: { navigationSettled() {} }, transientFeedback: { reset() {} },
     librarySearch: { host: { visibilityChanged() {} }, admissionCandidates: () => [] },

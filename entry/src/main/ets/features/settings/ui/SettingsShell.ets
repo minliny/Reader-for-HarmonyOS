@@ -4,7 +4,6 @@ import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { AppTopBar } from '../../../ui/chrome/AppTopBar';
 
-
 // SettingsShell —— Settings 页面骨架 (FIGMA_NATIVE_UI_ARCHITECTURE_PLAN §七/§十)。
 // 负责 Settings Home TopBar + BackTopBar + Scroll Content + BottomNav + 子页返回结构 +
 // 响应式页面边距。Settings 分 Home 与 General 两态(不互替): Home 显示设置菜单 + 底部栏,
@@ -15,11 +14,16 @@ import { AppTopBar } from '../../../ui/chrome/AppTopBar';
 @Component
 export struct SettingsShell {
   @Prop activeSection: 'home' | 'general' = 'home';
+  @Prop routeCurrent: boolean = true;
+  @Prop embeddedWide: boolean = false;
   @Prop navigationGeneration: number = 0;
+  @Prop sharedBottomNavigationHeight: number = -1;
+  @Prop @Watch('scrollHomeToTop') homeScrollTopRequest: number = 0;
   @Prop tapBottomScrollTop: boolean = true;
   @Prop reduceMotion: boolean = false;
   @Prop showOverlay: boolean = false;
   @Prop boundedOverlayVisible: boolean = false;
+  @Prop homeScrollY: number = 0;
   onSectionChange: (section: 'home' | 'general') => void = (_section: 'home' | 'general'): void => {};
   onBack: () => void = (): void => {};
   onOpenSourceManagement: () => void = (): void => {};
@@ -33,14 +37,33 @@ export struct SettingsShell {
   @BuilderParam overlayContent: (contentStartInset: number) => void;
   @BuilderParam boundedOverlayContent: () => void = this.emptySlot;
   @Builder private emptySlot() {}
-  private readonly homeScroller: Scroller = new Scroller();
+  homeScroller: Scroller = new Scroller();
   private readonly generalScroller: Scroller = new Scroller();
 
   build() {
-    if (this.activeSection === 'home') {
+    if (this.embeddedWide) {
+      ReaderStandardPage({
+        floatingHeader: true,
+        embeddedWide: true,
+        variant: this.activeSection === 'home' ? 'settingsHome' : 'settingsGeneral',
+        scroller: this.activeSection === 'home' ? this.homeScroller : this.generalScroller,
+        initialScrollY: this.activeSection === 'home' ? this.homeScrollY : 0,
+        content: (): void => {
+          if (this.activeSection === 'home') this.homeContent();
+          else this.generalContent();
+        },
+        header: (): void => { this.embeddedTopBar(); },
+        overlayContent: (contentStartInset: number): void => { this.pageOverlay(contentStartInset); },
+        boundedOverlayVisible: this.boundedOverlayVisible,
+        boundedOverlayContent: (): void => { this.boundedOverlayContent(); },
+      }).onAreaChange((_old: Area, next: Area): void => this.reportOverlayOrigin(next));
+    } else if (this.activeSection === 'home') {
       MainTabShell({
         activeTab: 'settings', standardScroll: true, standardPageVariant: 'settingsHome', scroller: this.homeScroller,
+        floatingHeader: true,
+        standardInitialScrollY: this.homeScrollY,
         navigationGeneration: this.navigationGeneration,
+        sharedBottomNavigationHeight: this.sharedBottomNavigationHeight,
         onMainTab: (key: string): void => this.onMainTab(key),
         onCurrentTabTap: (_key: string): void => this.scrollHomeToTop(),
         content: (): void => { this.homeContent(); },
@@ -51,6 +74,7 @@ export struct SettingsShell {
       }).onAreaChange((_old: Area, next: Area): void => this.reportOverlayOrigin(next));
     } else {
       ReaderStandardPage({
+        floatingHeader: true,
         variant: 'settingsGeneral',
         scroller: this.generalScroller,
         content: (): void => { this.generalContent(); },
@@ -63,13 +87,19 @@ export struct SettingsShell {
   }
 
   @Builder
+  private embeddedTopBar() {
+    PageBackBar({ floating: true, centered: true, elevation: 'floating', showBack: false,
+      title: this.activeSection === 'home' ? '设置' : '通用设置' });
+  }
+
+  @Builder
   private homeTopBar() {
-    AppTopBar({ title: '设置' });
+    AppTopBar({ title: '设置', floating: true, centered: true });
   }
 
   @Builder
   private generalTopBar() {
-    PageBackBar({ title: '通用设置', onBack: (): void => this.onSectionChange('home') });
+    PageBackBar({ floating: true, centered: true, elevation: 'floating', title: '通用设置', onBack: (): void => this.onSectionChange('home') });
   }
 
   @Builder
@@ -78,12 +108,14 @@ export struct SettingsShell {
   }
 
   private reportOverlayOrigin(area: Area): void {
+    if (!this.routeCurrent) return;
     // Area.globalPosition 已是 vp 单位，不能再 px2vp。
     this.onOverlayOriginChange(readerPageAreaLength(area.globalPosition.x),
       readerPageAreaLength(area.globalPosition.y), readerPageAreaLength(area.width));
   }
 
   private onMainTab(key: string): void {
+    if (!this.routeCurrent) return;
     if (key === 'bookshelf') {
       this.onBack();
     } else if (key === 'discover') {
@@ -95,7 +127,7 @@ export struct SettingsShell {
   }
 
   private scrollHomeToTop(): void {
-    if (!this.tapBottomScrollTop || this.activeSection !== 'home') return;
+    if (!this.routeCurrent || !this.tapBottomScrollTop || this.activeSection !== 'home') return;
     this.homeScroller.scrollTo({ xOffset: 0, yOffset: 0, animation: !this.reduceMotion });
   }
 

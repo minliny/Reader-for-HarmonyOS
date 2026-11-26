@@ -72,18 +72,18 @@ for (const mutation of [d => { d.bookId = 'wrong'; }, d => { d.positionScope.pro
 
 // Execute the real initial-admission method with the real synchronous DTO and
 // gateway. Native shaping is an explicit fixture; it does NOT model pixels.
-let runtime, metrics, fontReady = true, titleFontReady = true;
+let runtime, metrics, fontReady = true;
 const Owner = productionMotionMethods(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
   ['restorePersistedFirstPresentation'], {
     ReaderRuntimeOwner: { current: () => runtime }, ReaderWindowCoordinator: { metrics: () => metrics },
-    readerFontFamilyReady: family => family === 'title-font' ? titleFontReady : fontReady,
-    readerAppearanceSnapshotFontFamily: () => 'registered-font', TYPE_READER_CHAPTER_TITLE: { fontFamily: 'title-font' },
+    readerFontFamilyReady: () => fontReady,
+    readerAppearanceSnapshotFontFamily: () => 'registered-font',
     ReadingSessionFlowGateway, readPreparedReadingEntrySnapshot, readingParagraphBoundaryMode,
     LOCAL_READING_SOURCE_ID: 'local', hilog: { info() {} },
   });
 function ownerFixture() {
   const f = fixture(); runtime = f.runtime;
-  metrics = { ready: true, revision: 1, windowRect: { width: 360, height: 800 } }; fontReady = true; titleFontReady = true;
+  metrics = { ready: true, revision: 1, windowRect: { width: 360, height: 800 } }; fontReady = true;
   const events = [];
   const o = Object.assign(new Owner(), {
     sourceId: 'local', bookId: 'b', bookKind: 'txt', readerSettingsLoaded: true, entryAppearanceReady: true,
@@ -126,10 +126,9 @@ function ownerFixture() {
   assert.equal(o.chapter.content, text); assert.equal(o.visiblePage.startScalar, 0);
   assert.equal(events.at(-1), 'measure');
 }
-for (const boundary of ['font', 'title-font', 'appearance', 'settings', 'window', 'rotate', 'transaction', 'capability', 'deep-local-bookmark']) {
+for (const boundary of ['font', 'appearance', 'settings', 'window', 'rotate', 'transaction', 'capability', 'deep-local-bookmark']) {
   const { o, f } = ownerFixture();
   if (boundary === 'font') fontReady = false;
-  if (boundary === 'title-font') titleFontReady = false;
   if (boundary === 'appearance') o.entryAppearanceReady = false;
   if (boundary === 'settings') o.readerSettingsLoaded = false;
   if (boundary === 'window') metrics.ready = false;

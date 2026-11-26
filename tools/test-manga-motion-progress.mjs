@@ -45,7 +45,8 @@ const methods = ['rollbackChapterImages', 'publish', 'requestedLast', 'saveVisib
 const timers = [];
 // Optional baseline path executes the pre-fix methods against the same assertions.
 const Surface = productionMotionMethods(surfaceURL, [...methods, 'onPanelForegroundChanged', 'readerPanelForeground',
-  'phonePanelBackgroundEnabled', 'cancelPanelOpening', 'restoreAppWindowChrome'].filter(name => memberNames.has(name)), {
+  'phonePanelBackgroundEnabled', 'cancelPanelOpening', 'restoreAppWindowChrome',
+  'verticalTailVisible', 'clearPageSliderPreview'].filter(name => memberNames.has(name)), {
   setTimeout: callback => timers.push(callback), ScrollAlign: {START: 0}, LengthMetrics: {vp: value => ({value, unit: 'vp'})},
   MangaLayoutFrame, MangaBookPresentation, readerIsExpandedWidth, AppStorage:{setOrCreate(){}}
 });
@@ -81,6 +82,7 @@ async function fixture(horizontal = false, offline = true) {
     data: {projection, totalCount: () => projection.totalCount(), getData: index => projection.row(index), notify() {}},
     first: native.first, last: native.first, panel:'', chapterEnd:false, brightnessOwner:0, mounted: true, opened: true, recovering: false,
     appForeground: true, windowChromeActive: true, interactionBlocked: false, pageTurnInputRevision: 0,
+    pageSliderGeneration: 0, pageSliderPreview: -1, pageSliderCommitted: -1,
     isReaderIdentityCurrent: () => true, persistentDirectory: () => false, requestPanelFocus() {},
     panelPhase: 'closed', panelFocusGeneration: 0, viewportInputRevision: 0,
     transientFeedback: { show: (_context, view, eligible) => { if (eligible()) notices.push(view.message); }, reset() {} },

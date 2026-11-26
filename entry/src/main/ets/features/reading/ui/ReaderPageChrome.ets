@@ -5,10 +5,6 @@ import {
   TYPE_READER_IMMERSIVE_PROGRESS,
 } from '../../../ui/foundation/ReaderTypography';
 import {
-  TOK_READ_IMMERSIVE_META,
-  TOK_READ_IMMERSIVE_META_NIGHT,
-} from '../../../ui/foundation/ReaderTokens';
-import {
   createDefaultReaderAppearanceSnapshot,
   type ReaderAppearanceSnapshot,
 } from '../application/ReaderAppearanceState';
@@ -139,7 +135,7 @@ export struct ReaderPageChrome {
     const topStyle = this.topTextStyle();
     const key = JSON.stringify([this.topStartText, this.topEndText, this.bottomStartText,
       this.bottomEndText, this.sessionVisible, this.sessionWidth, this.sessionHeight,
-      layout.viewportWidth, layout.viewportHeight, layout.systemFontScale,
+      layout.viewportWidth, layout.viewportHeight, layout.systemFontScale, layout.contentLeft, layout.pageChromeFooterHeight,
       layout.pageChromeVisualSafeLeft, layout.pageChromeVisualSafeRight,
       layout.pageChromeVisualSafeTop, layout.pageChromeTopRegionHeight, layout.pageChromeVisualSafeBottom,
       layout.pageChromeStatusMetrics?.revision,

@@ -9,7 +9,7 @@ import {
   readerInteractiveSafeLeft,
   readerVisualSafeTop,
 } from '../../ui/foundation/ReaderWindowMetrics';
-import { READER_EXPANDED_MIN_WIDTH } from '../../ui/foundation/ReaderWidthClass';
+import { readerIsExpandedWidth } from '../../ui/foundation/ReaderWidthClass';
 
 export type MainNavigationMode = 'rail' | 'bottom';
 
@@ -65,7 +65,7 @@ export function mainTabBottomWidth(tabCount: number): number {
 
 export function mainNavigationMode(useRail: boolean, viewportWidth: number, windowHeight: number,
   safeTop: number, safeBottom: number, tabCount: number, fontScale: number = 1): MainNavigationMode {
-  if (!useRail || !Number.isFinite(viewportWidth) || viewportWidth < READER_EXPANDED_MIN_WIDTH) return 'bottom';
+  if (!useRail || !readerIsExpandedWidth(viewportWidth)) return 'bottom';
   const availableHeight = Math.max(0, windowHeight - Math.max(0, safeTop) - Math.max(0, safeBottom));
   return availableHeight >= mainTabRailHeight(tabCount, fontScale) + RAIL_PAIR_GAP ? 'rail' : 'bottom';
 }

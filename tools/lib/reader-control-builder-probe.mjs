@@ -10,7 +10,11 @@ import { ReaderNavigation } from '../../entry/src/main/ets/app/navigation/Reader
 import { resolveEtsLoaderRoot, virtualFilePath } from './tool-environment.mjs';
 import * as directoryVisual from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
 import * as directoryChrome from '../../entry/src/main/ets/ui/foundation/ReaderDirectoryChromeVisual.ts';
-import { READER_FONT_NOTO_SERIF_SC_BOLD } from '../../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import {
+  READER_FONT_NOTO_SERIF_SC_BOLD,
+  READER_FONT_NOTO_SANS_SC_UI_BOLD,
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+} from '../../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 import * as directoryGeometry from '../../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts';
 import { readerAppColor, readerThemeDefinition } from '../../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import assert from 'node:assert/strict';
@@ -35,6 +39,32 @@ import { readerRecoveryView } from '../../entry/src/main/ets/app/ReaderRecoveryP
 import { ReaderTransientFeedback } from '../../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts';
 import { readerWindowEnvironmentForProbe } from './reader-window-environment-probe.mjs';
 import { readerFoundationTokens } from './reader-tokens-probe.mjs';
+import * as motionTiming from '../../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts';
+import { readerMotionValueDurationMs as collapseMotionDurationMs } from '../../entry/src/main/ets/ui/foundation/ReaderMotionDurationPolicy.ts';
+
+function loadMotionSource(name, dependencies, names) {
+  return pureModuleProbe(readFileSync(
+    new URL(`../../entry/src/main/ets/ui/foundation/${name}.ets`, import.meta.url), 'utf8'),
+    `${name}.ets`, dependencies, names);
+}
+
+export function productionReaderMotionSdk() {
+  const curves = { cubicBezierCurve: (...points) => points };
+  const Curve = new Proxy({}, { get: (_target, name) => `Curve.${String(name)}` });
+  const motion = loadMotionSource('MotionSpec', { ...motionTiming, curves, Curve,
+    MANGA_DIRECTORY_VISUAL: directoryChrome.DIRECTORY_CHROME_VISUAL }, ['motionAnimateParam', 'motionSpecGet', 'readerMotionStandardCurve']);
+  const policy = loadMotionSource('ReaderMotionPolicy', { ...motion, collapseMotionDurationMs },
+    ['readerMotionAnimateParam', 'readerMotionReducedFadeParam', 'readerMotionDurationMs']);
+  return { ...motion, ...policy };
+}
+
+function productionReaderPressMotion(dependencies) {
+  const motion = productionReaderMotionSdk();
+  const TouchType = dependencies.TouchType ?? { Down: 'down', Move: 'move', Up: 'up', Cancel: 'cancel' };
+  const ReaderPressFeedback = productionReaderPressFeedback({ Color: dependencies.Color, ColorMetrics: dependencies.ColorMetrics });
+  return loadMotionSource('ReaderPressMotion', { ...motion, TouchType, ReaderPressFeedback },
+    ['readerPressScale', 'readerPressOpacity', 'readerPressAnimation', 'readerPressPointer', 'readerPressSurface', 'readerAnimatePress']);
+}
 
 const sdkRoot = resolveEtsLoaderRoot();
 const { readerSourceSwitchActions } = pureModuleProbe(readFileSync(new URL(
@@ -357,11 +387,12 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     const hostDependencies = { ...dependencies };
     if (name === 'ReaderReadingTopBar') {
       const title = tree.statements.find(statement => ts.isClassDeclaration(statement) && statement.name?.text === 'ReaderReadingTopBarTitle');
-      hostDependencies.ReaderReadingTopBarTitle = new Function('readerAppColor', 'mangaDirectoryColor', 'READER_FONT_NOTO_SERIF_SC_BOLD',
+      hostDependencies.ReaderReadingTopBarTitle = new Function('readerAppColor',
+        'READER_FONT_NOTO_SANS_SC_UI_BOLD', 'READER_FONT_NOTO_SANS_SC_UI_REGULAR',
         'FontWeight', 'TextOverflow', 'TextAlign', ...Object.keys(readerTypographyRoles),
         `${stripTypeScriptTypes(title.getText(tree).replace(/^export /, ''))}; return ReaderReadingTopBarTitle;`)(
-        readerAppColor, directoryChrome.mangaDirectoryColor, READER_FONT_NOTO_SERIF_SC_BOLD,
-        { Bold: 'FontWeight.Bold' }, { Ellipsis: 'TextOverflow.Ellipsis' }, { Start: 'TextAlign.Start' }, ...Object.values(readerTypographyRoles));
+        readerAppColor, READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+        { Bold: 'FontWeight.Bold', Regular: 'FontWeight.Regular' }, { Ellipsis: 'TextOverflow.Ellipsis' }, { Start: 'TextAlign.Start' }, ...Object.values(readerTypographyRoles));
     }
     const host = createReaderBuilderProbe(definition, declaration.members.filter(member => member.name)
       .map(member => member.name.getText(tree)), hostDependencies, { ...hooks, componentName: name });
@@ -447,7 +478,9 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     // consumers do not need to know about this diagnostics-only child.
     ['ReaderLayoutDebugOverlay', '../../entry/src/main/ets/app/composition/ReaderLayoutDebugOverlay.ets'],
     ['ReaderInlineSelect', '../../entry/src/main/ets/ui/controls/ReaderInlineSelect.ets'],
+    ['ReaderTransientToast', '../../entry/src/main/ets/ui/feedback/ReaderTransientToast.ets'],
     ['ReaderFullDirectory', '../../entry/src/main/ets/features/reading/ui/ReaderFullDirectory.ets'],
+    ['ReaderPageBookmarkGlyph', '../../entry/src/main/ets/features/reading/ui/ReaderPageBookmarkRibbon.ets'],
     ['BookDirectoryPage', '../../entry/src/main/ets/features/reading/ui/BookDirectoryPage.ets'],
   ];
   for (const [name, relative] of knownChildren) {
@@ -522,14 +555,24 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
   if (lowered === undefined) {
     const diagnostics = [];
     let transformed;
-    const result = ts.transform(file, [context => node => {
-      require(`${sdkRoot}/lib/process_ui_syntax.js`).contextGlobal = context;
-      transformed = compiler.processComponentClass(node.statements[0], context, diagnostics, false);
-      const visit = child => ts.visitEachChild(child, visit, context);
-      transformed = ts.visitNode(transformed, visit);
-      return node;
-    }]);
-    result.dispose();
+    // Each probe compiles an isolated virtual module. The SDK retains literal
+    // native IDs across compilations in this process, even when the file is virtual.
+    const ids = require(`${sdkRoot}/lib/component_map.js`).ID_ATTRS;
+    const previousIds = new Map(ids);
+    ids.clear();
+    try {
+      const result = ts.transform(file, [context => node => {
+        require(`${sdkRoot}/lib/process_ui_syntax.js`).contextGlobal = context;
+        transformed = compiler.processComponentClass(node.statements[0], context, diagnostics, false);
+        const visit = child => ts.visitEachChild(child, visit, context);
+        transformed = ts.visitNode(transformed, visit);
+        return node;
+      }]);
+      result.dispose();
+    } finally {
+      ids.clear();
+      for (const [id, value] of previousIds) ids.set(id, value);
+    }
     assert.deepEqual(diagnostics, [], 'real SDK Builder/member transform has no diagnostics');
     output = ts.createPrinter().printNode(ts.EmitHint.Unspecified, transformed, file);
     sdkLoweringCompiles++;
@@ -579,6 +622,9 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     createStorageLink(_key, value, name) {
       return new dependencies.ObservedPropertySimplePU(value, this, name);
     }
+    createStorageProp(_key, value, name) {
+      return new dependencies.SynchedPropertyOneWayPU(value, this, name);
+    }
     getUIContext() { return dependencies.uiContext?.getFont ? dependencies.uiContext : { ...dependencies.uiContext, getFont: () => ({}) }; }
     declareWatch(name, callback) { this.watches.set(name, callback); }
     observeComponentCreation2(callback, component) {
@@ -616,9 +662,14 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       if (!this.keys.has(key)) {
         this.keys.set(key, id); const before = this.observers.length; generator();
         this.keys.set(`${key}-empty`, before === this.observers.length);
-      } else if (hooks.allowEmptyBranchAdmission && this.keys.get(key) !== id) {
-        assert.equal(this.keys.get(`${key}-empty`), true, 'probe only admits previously empty branches; it does not model removal');
+      } else if ((hooks.allowEmptyBranchAdmission || hooks.allowEmptyBranchRemoval) && this.keys.get(key) !== id) {
+        const wasEmpty = this.keys.get(`${key}-empty`);
+        if (wasEmpty && !hooks.allowEmptyBranchAdmission) return;
+        if (!wasEmpty) assert.ok(hooks.allowEmptyBranchRemoval, 'probe only admits previously empty branches; it does not model removal');
         this.keys.set(key, id); const before = this.observers.length; generator();
+        // A close can deliver the SDK-emitted empty branch. Keep the recorded
+        // actors to exercise late callbacks; native unmount is outside this recorder.
+        if (!wasEmpty) assert.equal(this.observers.length, before, 'closing branch emits no replacement actors');
         this.keys.set(`${key}-empty`, before === this.observers.length);
       }
     }
@@ -647,13 +698,13 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     LengthMetrics: { vp: value => ({ value, unit: 'vp' }) }, ColorMetrics: { resourceColor: color => ({ color }) },
     readerAppColor, readerThemeDefinition, readerRecoveryView, ReaderTransientFeedback, EMPTY_READABLE_ADMISSION, readerContentSafeTop, ViewPU, ReaderControlSwitchTrack: Child,
     ...Object.fromEntries(recoveryChildren.map(name => [name, Child])), $r: value => value,
-    ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Grid', 'GridItem', 'LazyForEach', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Rect', 'Shape', 'Path', 'Polygon', 'Polyline', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'Slider', 'Toggle', 'Checkbox', 'Radio', 'ForEach', 'If', '__Common__']
+    ...Object.fromEntries(['Blank', 'Button', 'Row', 'Column', 'Flex', 'Stack', 'Scroll', 'List', 'ListItem', 'Grid', 'GridItem', 'LazyForEach', 'Web', 'LoadingProgress', 'Progress', 'Circle', 'Rect', 'Shape', 'Path', 'Polygon', 'Polyline', 'Text', 'TextInput', 'TextArea', 'Select', 'Span', 'Marquee', 'Image', 'SymbolGlyph', 'Slider', 'Toggle', 'Checkbox', 'Radio', 'ForEach', 'If', '__Common__']
       .map(name => [name, native(name)])),
-    ...Object.fromEntries(['TextDecorationType', 'BorderStyle', 'FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'LayoutPolicy', 'AccessibilityRoleType',
+    ...Object.fromEntries(['TextDecorationType', 'TextHeightAdaptivePolicy', 'BorderStyle', 'FontWeight', 'FlexAlign', 'VerticalAlign', 'HorizontalAlign', 'HitTestMode', 'Alignment', 'LocalizedAlignment', 'LayoutPolicy', 'AccessibilityRoleType',
       'LineCapStyle', 'ImageFit', 'TextAlign', 'TextOverflow', 'WordBreak', 'Visibility', 'Color', 'EnterKeyType', 'BarState', 'NestedScrollMode', 'EdgeEffect', 'Axis', 'SliderStyle', 'SliderChangeMode', 'ProgressType', 'FlexWrap', 'FlexDirection', 'ItemAlign', 'ToggleType', 'ButtonType',
       'SafeAreaType','SafeAreaEdge','LayoutSafeAreaType','LayoutSafeAreaEdge'].map(name => [name, new Proxy({}, { get: (_, key) => `${name}.${String(key)}` })])),
     ...Object.fromEntries([...source.matchAll(/\b(TOK_[A-Z0-9_]+)\b/g)].map(m => [m[1], m[1]])),
-    ...readerTypographyRoles, ...directoryVisual, ...directoryGeometry, visual: directoryVisual.MANGA_DIRECTORY_VISUAL,
+    ...readerTypographyRoles, READER_FONT_NOTO_SERIF_SC_BOLD, ...directoryVisual, ...directoryGeometry, visual: directoryVisual.MANGA_DIRECTORY_VISUAL,
     // Actual production surface/inset policy, including all finite variants.
     ...actualReaderPageShell(),
     ...headerMetrics,
@@ -666,11 +717,20 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
       return metrics;
     } },
     readerInteractiveSafeBottom: metrics => metrics.interactiveSafeInsets?.bottom ?? 0,
+    ...(source.includes('readerPressScale') ? productionReaderPressMotion(dependencies) : {}),
     ...dependencies };
   // Existing fixtures supply an explicit fake metrics source under the old
   // owner-shaped I/O port. The UI consumes the real readonly adapter instead.
   globals.readerWindowMetrics ??= readerWindowEnvironmentForProbe(
     () => globals.ReaderWindowCoordinator.metrics()).readerWindowMetrics;
+  if (members.some(member => member.includes('readerHeaderVeilMaterial('))) {
+    const surface = readerSurfaceSpecsForProbe(new Proxy({}, {
+      get: (_target, key) => globals.readerWindowMetrics()[key],
+    }));
+    globals.readerHeaderVeilMaterial ??= surface.readerHeaderVeilMaterial;
+    globals.readerHeaderVeilBorder ??= surface.readerHeaderVeilBorder;
+    globals.readerSurfaceElevation ??= surface.readerSurfaceElevation;
+  }
   if ((struct.name.getText(original) === 'FullDirectoryPanel' && names.includes('panelHeader')) ||
     (['FullDirectoryPanel', 'ReaderDirectoryToolbar', 'ReaderControlDirectoryContent'].includes(struct.name.getText(original)) &&
       /reader(?:ReadableFontScale|ScaledControlHeight)/.test(members.join('\n')))) {
@@ -694,14 +754,16 @@ export function createReaderBuilderProbe(source, names, dependencies = {}, hooks
     const resolvers = pureModuleProbe(readFileSync(new URL('../../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts', import.meta.url), 'utf8'),
       'ReaderSurfaceResolvers.ts', {}, ['readerReadableFontScale']);
     const measurement = pureModuleProbe(header.slice(0, header.indexOf('@Component')), 'ReaderReadingTopBarMeasure.ets', {
-      ...readerTypographyRoles, ...resolvers, readerWindowMetrics: globals.readerWindowMetrics, READER_FONT_NOTO_SERIF_SC_BOLD,
+      ...readerTypographyRoles, ...resolvers, readerWindowMetrics: globals.readerWindowMetrics,
+      READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_REGULAR,
       readerFontFamilyReady: globals.readerFontFamilyReady,
     }, ['readerReadingTopBarHeight','readerReadingTopBarFontsReady']);
     globals.readerReadingTopBarHeight ??= measurement.readerReadingTopBarHeight;
     globals.readerReadingTopBarFontsReady ??= measurement.readerReadingTopBarFontsReady;
+    globals.readerReadableFontScale ??= resolvers.readerReadableFontScale;
   }
 
-  globals.ReaderPressFeedback ??= productionReaderPressFeedback({ Color: globals.Color });
+  globals.ReaderPressFeedback ??= productionReaderPressFeedback({ Color: globals.Color, ColorMetrics: globals.ColorMetrics });
   globals.MangaDirectoryPressFeedback ??= productionMangaDirectoryPressFeedback(undefined,
     { LengthMetrics: globals.LengthMetrics, ColorMetrics: globals.ColorMetrics });
   if (members.some(member => member.includes('new ReaderPanelFrame('))) globals.ReaderPanelFrame ??= readerPanelFrameForProbe(globals);

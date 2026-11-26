@@ -10,6 +10,7 @@ const {readFileSync} = await import('node:fs');
 const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
 const {choiceRowProbe,resolveReaderChoiceSpec,choiceSource} = await import('./lib/reader-choice-row-probe.mjs');
 const {boundedMembers} = await import('./lib/bounded-surface-sdk-probe.mjs');
+const {readerInteractiveSafeLeft,readerInteractiveSafeRight} = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 
 
 const read=file=>readFileSync(new URL(`../entry/src/main/ets/features/${file}.ets`,import.meta.url),'utf8');
@@ -27,7 +28,8 @@ function inline(variant,selected=true,resolve=resolveReaderChoiceSpec) {
   const shared=choiceRowProbe(resolve),commits=[];
   const source=read('../ui/controls/ReaderSelectPanel');
   const {owner}=createReaderBuilderProbe(source,boundedMembers(source),
-    {...shared.properties.sdk,...shared.dependencies,OPTION_H:36,motionAnimateParam:(_id,onFinish)=>({onFinish})},
+    {...shared.properties.sdk,...shared.dependencies,OPTION_H:36,readerInteractiveSafeLeft,readerInteractiveSafeRight,
+      motionAnimateParam:(_id,onFinish)=>({onFinish})},
     {...shared.hooks,initialParams:{reduceMotion:true,selectionId:'field-1'}});
   Object.assign(owner,{value:'中文',options:['中文','English'],variant,appThemeScheme:'day',mounted:true,closeInFlight:false,
     generation:0,chevronAngle:-180,expandedHeight:72,
@@ -52,12 +54,16 @@ for(const [id,render,height,size,line,iconWidth] of cases) {
 
 
   const calls=view.child.attributeCalls.filter(call=>call.id===text.id),spec=resolveReaderChoiceSpec(view.child.specId);
+  const style=view.child.selected?spec.selectedText:spec.text;
+  assert.equal(text.fontFamily,style.fontFamily);
+  assert.equal(text.fontWeight,style.fontWeight);
+  if(view.child.selected){assert.equal(text.fontFamily,'ReaderNotoSansSCUIBold');assert.equal(text.fontWeight,700);}
   assert.equal(calls.some(call=>call.property==='lineHeight'),(view.child.selected?spec.selectedText:spec.text).lineHeightFp!==undefined,`${id}: AUTO means setter is absent, not undefined`);
   assert.equal(calls.some(call=>call.property==='wordBreak'),view.child.wrapLabel,`${id}: multiline is owned by the actual parent`);
   if(spec.layout==='row'){
     assert.equal(calls.some(call=>call.property==='textAlign'),spec.textAlignStart,`${id}: native text alignment AUTO`);
     assert.equal(calls.some(call=>call.property==='textOverflow'),!view.child.wrapLabel&&spec.ellipsis,`${id}: native overflow AUTO`);
-    assert.deepEqual(calls.find(call=>call.property==='fontWeight').args.length,spec.variableWeight?2:1,`${id}: optional font-weight settings are omitted unless authored`);
+    assert.equal(calls.find(call=>call.property==='fontWeight').args.length,1,`${id}: physical static face uses one weight argument`);
   }
   assert.ok(!calls.some(call=>['fontFamily','fontWeight','fontSize','lineHeight','textAlign','textOverflow'].includes(call.property)&&call.args.some(arg=>arg===undefined)),`${id}: no explicit undefined native attribute`);
 
@@ -94,12 +100,16 @@ for(const [render,expectedHeight] of [[()=>settings(false,changed),51],[()=>sett
 }
 // These negative controls execute altered actual production modifiers and
 // actual SDK Text observers. Getter equality alone would miss undefined calls.
-for(const [id,source,property]of[
- ['default-selected',choiceSource.replace('if (text.lineHeightFp !== undefined) instance.lineHeight(text.lineHeightFp);','instance.lineHeight(text.lineHeightFp);'),'lineHeight'],
+const autoLine=id=>{
+ const value=resolveReaderChoiceSpec(id);
+ return id==='default-option'?{...value,selectedText:{...value.selectedText,lineHeightFp:undefined}}:value;
+};
+for(const [id,source,property,resolve]of[
+ ['default-option',choiceSource.replace('if (text.lineHeightFp !== undefined || spec.showIcon !== \'never\') {\n      instance.lineHeight(text.lineHeightFp ?? Math.round(text.fontSizeFp * 1.5));\n    }','instance.lineHeight(text.lineHeightFp);'),'lineHeight',autoLine],
  ['settings-phone',choiceSource.replace('if (spec.textAlignStart) instance.textAlign(TextAlign.Start);','instance.textAlign(spec.textAlignStart ? TextAlign.Start : undefined);'),'textAlign'],
- ['settings-tablet',choiceSource.replace('if (spec.ellipsis) instance.textOverflow({ overflow: TextOverflow.Ellipsis });','instance.textOverflow(spec.ellipsis ? { overflow: TextOverflow.Ellipsis } : undefined);'),'textOverflow'],
+ ['settings-tablet',choiceSource.replace('else if (spec.ellipsis) instance.textOverflow({ overflow: TextOverflow.Ellipsis });','else instance.textOverflow(spec.ellipsis ? { overflow: TextOverflow.Ellipsis } : undefined);'),'textOverflow'],
 ]){
- assert.notEqual(source,choiceSource,'mutation binds actual source');const shared=choiceRowProbe(resolveReaderChoiceSpec,source),child=new shared.Component(undefined,{specId:id,label:'负控',selected:true});child.aboutToAppear();child.initialRender();const text=shared.nodes(child).find(node=>node.type==='Text');
+ assert.notEqual(source,choiceSource,'mutation binds actual source');const shared=choiceRowProbe(resolve??resolveReaderChoiceSpec,source),child=new shared.Component(undefined,{specId:id,label:'负控',selected:true});child.aboutToAppear();child.initialRender();const text=shared.nodes(child).find(node=>node.type==='Text');
  assert.throws(()=>assert.equal(child.attributeCalls.some(call=>call.id===text.id&&call.property===property),false),/strictly equal/,'explicit undefined setter cannot pass AUTO contract '+property);
  assert.equal(child.attributeCalls.find(call=>call.id===text.id&&call.property===property).args[0],undefined,'actual negative SDK native call carries undefined');
 }

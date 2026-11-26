@@ -16,6 +16,7 @@
 // short-content support, raw trigger distance, a stable translated viewport,
 // cancellation and async lifetime guards. Original five-stage damping retained.
 import { PullToRefreshConfigurator } from './PullToRefreshConfigurator';
+import { curves } from '@kit.ArkUI';
 
 export type PullDirection = 'previous' | 'next' | '';
 const IS_FREE = 0;
@@ -37,6 +38,9 @@ export struct PullToRefresh {
   @Prop @Watch('handleAdmissionChange') hasNext: boolean = true;
   @Prop @Watch('handleResetToken') resetToken: number = 0;
   @Prop animationDuration: number = 180;
+  @Prop reduceMotion: boolean = false;
+  animationCurve: Curve | curves.ICurve | string | undefined = undefined;
+  visualDamping: ((distance: number) => number) | undefined = undefined;
   onPull: (direction: PullDirection, distance: number, armed: boolean) => void = () => {};
   onActivity: (active: boolean) => void = () => {};
   onRefresh: () => Promise<string> = async () => '';
@@ -48,6 +52,7 @@ export struct PullToRefresh {
   @State private mHeightNumber: number = 0;
   @State private trYTop: number = 0;
   @State private trYBottom: number = 0;
+  @State private displayedPull: number = 0;
   @State private state: number = IS_FREE;
   private touchYOld: number = 0;
   @State private rawDistance: number = 0;
@@ -167,6 +172,8 @@ export struct PullToRefresh {
       this.trYBottom = this.getTranslateYOfLoadMore(delta);
       this.state = this.rawDistance >= this.triggerDistance() ? IS_PULL_UP_2 : IS_PULL_UP_1;
     }
+    const original = this.trYTop + this.trYBottom;
+    this.displayedPull = original === 0 ? 0 : Math.sign(original) * (this.visualDamping?.(this.rawDistance) ?? Math.abs(original));
     this.emitPull();
   }
 
@@ -183,6 +190,7 @@ export struct PullToRefresh {
     const generation = ++this.requestGeneration;
     if (direction === 'previous') { this.state = IS_REFRESHING; this.trYTop = 96; }
     else { this.state = IS_LOADING; this.trYBottom = -96; }
+    if (this.visualDamping === undefined) this.displayedPull = this.trYTop + this.trYBottom;
     this.emitPull();
     this.runRequest(direction, generation);
   }
@@ -209,8 +217,10 @@ export struct PullToRefresh {
   }
 
   private resetPull(animated: boolean, deferParent: boolean = false): void {
-    const reset = (): void => { this.trYTop = 0; this.trYBottom = 0; };
-    if (animated) this.getUIContext().animateTo({ duration: Math.max(0, this.animationDuration) }, reset);
+    const reset = (): void => { this.trYTop = 0; this.trYBottom = 0; this.displayedPull = 0; };
+    if (animated && !this.reduceMotion) this.getUIContext().animateTo({
+      duration: Math.max(0, this.animationDuration), curve: this.animationCurve,
+    }, reset);
     else reset();
     this.state = IS_FREE;
     this.rawDistance = 0;
@@ -234,24 +244,22 @@ export struct PullToRefresh {
         if (this.customRefresh !== undefined) this.customRefresh();
       }
       .width('100%')
-      .height(this.trYTop)
+      .height(this.reduceMotion ? 56 : Math.max(0, this.displayedPull))
       .align(Alignment.Top)
       .clip(true)
-      .visibility(this.rawDistance >= 24 || this.state === IS_REFRESHING ? Visibility.Visible : Visibility.Hidden)
+      .visibility(this.reduceMotion || this.rawDistance >= 24 || this.state === IS_REFRESHING ? Visibility.Visible : Visibility.Hidden)
       .hitTestBehavior(HitTestMode.None)
       Column() { this.customList(); }
       .width('100%')
       .height('100%')
-      .translate({ y: this.trYTop + this.trYBottom })
-      Stack() {
-        if (this.customLoad !== undefined) this.customLoad();
-      }
-      .width('100%')
-      .height(-this.trYBottom)
-      .align(Alignment.Bottom)
-      .clip(true)
-      .visibility(this.rawDistance >= 24 || this.state === IS_LOADING ? Visibility.Visible : Visibility.Hidden)
-      .hitTestBehavior(HitTestMode.None)
+      .translate({ y: this.reduceMotion ? 0 : this.displayedPull })
+      Stack({ alignContent: Alignment.Bottom }) {
+        Stack({ alignContent: Alignment.Top }) {
+          if (this.customLoad !== undefined) this.customLoad();
+        }.width('100%').height(this.reduceMotion ? 56 : Math.max(0, -this.displayedPull)).clip(true)
+          .visibility(this.reduceMotion || this.rawDistance >= 24 || this.state === IS_LOADING ? Visibility.Visible : Visibility.Hidden)
+          .hitTestBehavior(HitTestMode.None);
+      }.width('100%').height('100%').hitTestBehavior(HitTestMode.None);
     }
     .width(this.mWidth)
     .height(this.mHeight)

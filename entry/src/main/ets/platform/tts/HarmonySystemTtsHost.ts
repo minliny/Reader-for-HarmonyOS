@@ -1,4 +1,5 @@
 import { harmonyTtsAudioSessionLease } from './HarmonyTtsAudioSessionLease';
+import { HarmonyTtsAudioListenerRegistry } from './HarmonyTtsAudioListenerRegistry';
 import { textToSpeech } from '@kit.CoreSpeechKit';
 import { audio } from '@kit.AudioKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
@@ -62,7 +63,9 @@ class EngineSpeakListener implements textToSpeech.SpeakListener {
  * the slice/queue source of truth while this adapter only owns platform audio.
  */
 export class HarmonySystemTtsHost implements ReaderTtsHost {
-  private audioSessionManager: audio.AudioSessionManager | undefined = undefined;
+  private static readonly retiringEngines: Set<textToSpeech.TextToSpeechEngine> =
+    new Set<textToSpeech.TextToSpeechEngine>();
+  private audioListeners: HarmonyTtsAudioListenerRegistry | undefined = undefined;
   private readonly audioSessionDeactivatedCallback: (event: audio.AudioSessionDeactivatedEvent) => void;
   private readonly audioSessionStateChangedCallback: (event: audio.AudioSessionStateChangedEvent) => void;
   private readonly outputDeviceChangedCallback: (event: audio.CurrentOutputDeviceChangedEvent) => void;
@@ -74,7 +77,6 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   private listener: ((event: ReaderTtsHostEvent) => void) | undefined = undefined;
   private listenerOwner: string | undefined = undefined;
   private currentRequestId: string | undefined = undefined;
-  private audioListenersInstalled: boolean = false;
   private readonly audioSessionLease = harmonyTtsAudioSessionLease;
   private readonly audioSessionOwner: string = this.audioSessionLease.createOwner('system');
   private closed: boolean = false;
@@ -213,14 +215,17 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
       engine.stop();
     } catch (error) {
       this.logError('system TTS stop failed', error);
+      throw new Error('Reader system TTS transport did not stop');
     }
   }
 
   publishPlaybackState(_state: 'preparing' | 'playing' | 'paused' | 'completed' | 'stopped' | 'error'): void {}
 
   async close(): Promise<void> {
-    if (this.closed) return;
+    const alreadyClosed = this.closed;
     this.closed = true;
+    this.audioListeners?.close();
+    if (alreadyClosed) return;
     this.speakGeneration += 1;
     this.engineGeneration += 1;
     this.currentRequestId = undefined;
@@ -237,23 +242,21 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
       } catch (_) {
         // Best effort: shutdown below still releases the platform object.
       }
-      try {
-        engine.shutdown();
-      } catch (error) {
-        this.logError('system TTS shutdown failed', error);
-      }
+      this.retireEngine(engine);
     }
     try {
       await this.deactivateAudioSession();
     } catch (error) {
       this.logError('audio session deactivation failed during teardown', error);
     }
-    this.removeAudioListeners();
   }
 
   private async ensureEngine(language: string, person: number,
     trace?: (point: ReaderTtsNativeSpeakPoint) => void, exactVoice: boolean = false): Promise<textToSpeech.TextToSpeechEngine> {
     this.assertOpen();
+    for (const retired of HarmonySystemTtsHost.retiringEngines) {
+      if (!this.retireEngine(retired)) throw new Error('Reader system TTS could not release its previous engine');
+    }
     if (this.engine !== undefined && this.engineRequestedLanguage === language) {
       const cached = this.engineRequestedPerson;
       if (cached === person && (!exactVoice || (this.engineLanguage === language && this.enginePerson === person))) {
@@ -282,11 +285,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
       } catch (_) {
         // Replacing the engine is still safe when stop has already completed.
       }
-      try {
-        previous.shutdown();
-      } catch (error) {
-        this.logError('system TTS engine shutdown during replacement failed', error);
-      }
+      if (!this.retireEngine(previous)) throw new Error('Reader system TTS could not release its previous engine');
     }
     let effectiveLanguage = language;
     let effectivePerson = person;
@@ -306,20 +305,35 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
     // A stopped/retired creation must never replace or orphan a successor's
     // active platform object. Shut down only the object this creation owns.
     if (this.closed || generation !== this.engineGeneration) {
-      try { engine.shutdown(); } catch (error) {
-        this.logError('retired system TTS engine shutdown failed', error);
-      }
+      this.retireEngine(engine);
       throw new Error('Reader system TTS engine initialization retired');
     }
-    engine.setListener(new EngineSpeakListener((event: ReaderTtsHostEvent): void => {
-      if (this.engine === engine) this.emit(event);
-    }));
+    try {
+      engine.setListener(new EngineSpeakListener((event: ReaderTtsHostEvent): void => {
+        if (this.engine === engine) this.emit(event);
+      }));
+    } catch (error) {
+      this.retireEngine(engine);
+      throw error;
+    }
     this.engine = engine;
     this.engineRequestedLanguage = language;
     this.engineRequestedPerson = person;
     this.engineLanguage = effectiveLanguage;
     this.enginePerson = effectivePerson;
     return engine;
+  }
+
+  private retireEngine(engine: textToSpeech.TextToSpeechEngine): boolean {
+    try {
+      engine.shutdown();
+      HarmonySystemTtsHost.retiringEngines.delete(engine);
+      return true;
+    } catch (error) {
+      HarmonySystemTtsHost.retiringEngines.add(engine);
+      this.logError('system TTS engine shutdown failed', error);
+      return false;
+    }
   }
 
   private createEngine(language: string, person: number): Promise<textToSpeech.TextToSpeechEngine> {
@@ -343,29 +357,9 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   }
 
   private installAudioListeners(): void {
-    if (this.audioListenersInstalled) return;
-    const audioSessionManager = this.ensureAudioSessionManager();
-    audioSessionManager.on('audioSessionDeactivated', this.audioSessionDeactivatedCallback);
-    audioSessionManager.on('audioSessionStateChanged', this.audioSessionStateChangedCallback);
-    audioSessionManager.on('currentOutputDeviceChanged', this.outputDeviceChangedCallback);
-    this.audioListenersInstalled = true;
-  }
-
-  private removeAudioListeners(): void {
-    if (!this.audioListenersInstalled) return;
-    const audioSessionManager = this.audioSessionManager;
-    if (audioSessionManager === undefined) return;
-    audioSessionManager.off('audioSessionDeactivated', this.audioSessionDeactivatedCallback);
-    audioSessionManager.off('audioSessionStateChanged', this.audioSessionStateChangedCallback);
-    audioSessionManager.off('currentOutputDeviceChanged', this.outputDeviceChangedCallback);
-    this.audioListenersInstalled = false;
-  }
-
-  private ensureAudioSessionManager(): audio.AudioSessionManager {
-    if (this.audioSessionManager === undefined) {
-      this.audioSessionManager = audio.getAudioManager().getSessionManager();
-    }
-    return this.audioSessionManager;
+    this.audioListeners ??= new HarmonyTtsAudioListenerRegistry(audio.getAudioManager().getSessionManager(),
+      this.audioSessionDeactivatedCallback, this.audioSessionStateChangedCallback, this.outputDeviceChangedCallback);
+    this.audioListeners.install();
   }
 
   private handleAudioStateHint(hint: audio.AudioSessionStateChangeHint): void {
@@ -405,7 +399,7 @@ export class HarmonySystemTtsHost implements ReaderTtsHost {
   }
 
   private logError(message: string, error: Object): void {
-    const detail = errorMessageOf(error);
-    hilog.error(LOG_DOMAIN, 'Reader', '%{private}s: %{private}s', message, detail);
+    try { hilog.error(LOG_DOMAIN, 'Reader', '%{private}s: %{private}s', message, errorMessageOf(error)); }
+    catch (_) { /* Diagnostics must not reject transport teardown. */ }
   }
 }

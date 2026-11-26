@@ -1,5 +1,6 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={"definition": {"description": "所选第三抽屉/2026-10-07 light-toolbar定义→generated spec身份，浏览器/设备接受仍OPEN", "resources": []}, "layout-text": {"description": "所选text当前drawer布局矩阵与native属性/最新复合identity回调", "resources": []}, "layout-manga": {"description": "所选manga当前drawer布局矩阵与native属性/最新复合identity回调", "resources": []}, "rows-safe-area": {"description": "provider规则不合并，shared frame residual safe inset单一owner与未测latency占位", "resources": []}, "row-action-interaction": {"description": "真实SDK row/查找action pressed、cancel/state/retire与当前可选行", "resources": []}, "adaptive-empty": {"description": "实测container宽优先与极短/大字体空状态可达", "resources": []}, "cancel-admission": {"description": "实际progress allowCancel与pending/rollback窗口close准入", "resources": []}, "anchor-controller": {"description": "实际未绑定List currentOffset/rect回落与有界frame恢复", "resources": []}, "native-spinner": {"description": "当前实际native LoadingProgress active/foreground/reduceMotion/mount与guard负例", "resources": []}, "completion-surfaces": {"description": "实际换源纸张过渡委托、尺寸、透明度与主题传播", "resources": []}, "font-load": {"description": "实际checked字体四face ready/reject/retired才准入两格式文字", "resources": []}, "wiring-negatives": {"description": "实际生产halfLeading/rowheight/heading/theme接线负例", "resources": []}, "refresh-error": {"description": "刷新失败保留缓存候选/空诊断不造失败", "resources": []}};
+definitions['redesigned-picker']={description:'新换源抽屉 599/600 分界与动效，实际输入节点跨批次保留、筛选、排序和定位',resources:[]};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const {default: assert} = await import('node:assert/strict');
@@ -7,7 +8,8 @@ const {readFileSync} = await import('node:fs');
 const {createHash} = await import('node:crypto');
 const {stripTypeScriptTypes} = await import('node:module');
 const {boundedSurfaceSdk} = await import('./lib/bounded-surface-sdk-probe.mjs');
-const {sourceSwitchLiveSdk,sourceSwitchFontSdk} = await import('./lib/source-switch-sdk-consumer.mjs');
+const {sourceSwitchLiveSdk,sourceSwitchFontSdk,sourceSwitchColorMetricsSdk} = await import('./lib/source-switch-sdk-consumer.mjs');
+const {productionReaderPressFeedback} = await import('./lib/reader-press-feedback-probe.mjs');
 const metricsApi = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const families = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
 const {SOURCE_SWITCH_VISUAL,SOURCE_SWITCH_VISUAL_SHA256} = await import('../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts');
@@ -20,6 +22,137 @@ const design=JSON.parse(designBytes),v=design.numbers;
 if(selectedCase==='definition'){assert.equal(SOURCE_SWITCH_VISUAL_SHA256,createHash('sha256').update(designBytes).digest('hex'));assert.deepEqual(SOURCE_SWITCH_VISUAL,{...v,...design.strings});assert.equal(design.provenance.browserVisualAcceptance,'OPEN');assert.equal(design.provenance.nativeVisualAcceptance,'OPEN');return;}
 const tick=async()=>{await new Promise(setImmediate);};
 const candidate=(id,url='/book')=>({sourceId:id,bookUrl:url,sourceName:'书源 '+id,bookName:'书名',category:'novel',latestChapterTitle:'最新章节 '+id,latencyKind:'search',latencyMs:38,acquisitionState:'discovered'});
+if(selectedCase==='redesigned-picker'){
+ const frames=[], timers=new Map(), jumps=[], commands=[];
+ let timerId=0;
+ const state=(candidates,refreshing=false,checked=0)=>({kind:'candidates',candidates,refreshing,sweep:{checked,total:5}});
+ const make=(sourceId,sourceName,latestChapterTitle,latencyMs)=>({...candidate(sourceId),sourceName,latestChapterTitle,latencyMs});
+ const a=make('a','Alpha 源','第 9 章 序',10), b=make('b','Beta 源','第一百二十三章 远行',30);
+ const c=make('c','Gamma 源','第 ３１ 章 山路',20), d=make('d','Delta 源','第 1000 章 重逢',50);
+ const current={...make('current','原书源','第 10 章',1),isCurrent:true};
+ const order=owner=>owner.displayedCandidates.map(row=>row.sourceId);
+ for(const width of [599,600]){
+  const focusRequests=[], queuedFocus=[];
+  const surface={
+   surfacePartAppeared(){}, surfaceTransitionFinished(){},
+   focusSurfaceAction(attachment,scope,target,current){
+    assert.deepEqual([attachment,scope],[5,3]);
+    queuedFocus.push(()=>{if(current())focusRequests.push(target);});
+   },
+  };
+  const flushFocus=()=>queuedFocus.splice(0).forEach(action=>action());
+  const window=new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,width,800));
+  const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+  p.hooks.allowEmptyBranchRemoval=true;
+  const deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>window},readerWindowMetrics:()=>window,
+   uiContext:{getFont:()=>({}),animateTo(_spec,admit){admit();},postFrameCallback(frame){frames.push(frame);}},
+   Scroller:class{currentOffset(){return{yOffset:0};}scrollToIndex(...args){jumps.push(args);}},
+   setTimeout(action,delay){timers.set(++timerId,{action,delay});return timerId;},clearTimeout(id){timers.delete(id);}});
+  const flush=()=>{for(const [id, timer] of timers){timers.delete(id);timer.action();}p.properties.flush();};
+  const owner=new deps.SourceSwitchPanel(undefined,{state:state([current,a,b],true,1),contentKind:width===599?'text':'manga',
+   currentSourceId:'current',currentSourceName:'原书源',currentChapterTitle:'第 10 章',latestChapterTitle:'第 20 章',
+   bookTitle:'同一本书',coverUrl:'retained-cover',surfaceScope:3,surfaceAttachment:5,surface,
+   onSelectCandidate:row=>commands.push(row.sourceId),onRefresh:()=>commands.push('refresh'),onStop:()=>commands.push('stop')});
+  owner.aboutToAppear();owner.initialRender();flush();
+  const nodes=()=>p.nodes(owner);
+  const target=(label, actor=owner)=>p.nodes(actor).find(node=>node.type==='Button'&&node.accessibilityText===label);
+  const input=(actor=owner)=>p.nodes(actor).filter(node=>node.type==='TextInput');
+  const transition=(actor=owner)=>{
+   const value=p.nodes(actor).find(node=>node.type==='__Common__'&&node.transition)?.transition;
+   return Array.isArray(value)?value[0]:value;
+  };
+  const frame=p.walk(owner).find(child=>child instanceof p.deps.ReaderBoundedSurface);
+  assert.equal(frame.placement,width===599?'bottom':'side');
+  assert.equal(frame.surfaceWidth,width===599?599:376);
+  assert.equal(frame.surfaceHeight,width===599?656:800);
+  const frameNode=p.nodes(frame).find(node=>node.backgroundEffect&&node.width===frame.surfaceWidth);
+  assert.deepEqual(frameNode.border.width,width===599?{top:1}:{left:1});
+  if(width===600)assert.deepEqual(frameNode.borderRadius,{topLeft:22,bottomLeft:22,topRight:0,bottomRight:0});
+  assert.equal(transition().parameters.appear.parameters,width===599?'bottom':'end');
+  assert.equal(transition().parameters.disappear.parameters,width===599?'bottom':'end');
+  assert.equal(transition().parameters.appear.options.duration,260);
+  assert.equal(transition().parameters.disappear.options.duration,210);
+  assert.deepEqual(transition().parameters.appear.options.curve.values,[.2,0,0,1]);
+  const reduced=new deps.SourceSwitchPanel(undefined,{state:state([a]),reduceMotion:true,coverUrl:'retained-cover',
+   onRefresh:()=>commands.push('refresh')});
+  reduced.aboutToAppear();reduced.initialRender();
+  assert.equal(transition(reduced).kind,'opacity');
+  assert.equal(transition(reduced).options.duration,120);
+  target('重新查找书源',reduced).onClick();assert.equal(commands.at(-1),'refresh');
+  reduced.aboutToDisappear();
+
+  const [editor]=input();assert.equal(input().length,1);
+  const close=target('关闭更换书源');
+  close.onAppear();close.onAppear();flushFocus();
+  assert.deepEqual(focusRequests,['reader-source-close:3:5:0']);
+  assert.equal(target('停止查找书源').focusOnTouch,false);
+  assert.equal(target('清空书源筛选'), undefined, 'empty search reserves no clear target');
+  assert.equal(target('定位当前').height, 44);
+  assert.ok(nodes().some(node => node.type === 'Row' && node.height === 32 && node.borderRadius === 16 &&
+    node.border?.color === readerAppColor('TOK_LINE', 'day')), 'filter actions paint compact bordered pills');
+  assert.equal(editor.id,'reader-source-filter:3:5');
+  const [field]=p.walk(owner).filter(child=>child instanceof deps.ReaderSearchField);
+  const candidateCount=count=>nodes().some(node=>node.type==='Text'&&node.create===`已发现 ${count} 个候选书源`);
+  const nativeController=editor.create.controller;
+  const retained=()=>{
+   assert.equal(input().length,1);assert.equal(input()[0],editor);
+   assert.equal(input()[0].create.controller,nativeController);
+   assert.equal(p.walk(owner).find(child=>child instanceof deps.ReaderSearchField),field);
+  };
+  const headers=nodes().filter(node=>node.type==='ListItem').slice(0,owner.listHeaderCount());
+  for(const item of headers)item.create[0](item.id,true);
+  assert.ok(nodes().some(node=>node.type==='Text'&&node.create==='当前 · 原书源'));
+  const list=nodes().find(node=>node.type==='List');list.onAppear();
+  assert.deepEqual(order(owner),['a','b']);
+  assert.ok(candidateCount(2));
+  const oldA=p.walk(owner).find(child=>child instanceof deps.SourceSwitchNovelRow&&child.row.candidate.sourceId==='a');
+  const oldRow=[...oldA.nodes.values()].find(node=>node.type==='Row'&&node.onClick);
+  owner.state=state([a,b],true,2);flush();retained();
+  const sweepProgress=()=>nodes().filter(node=>node.type==='Progress').map(node=>node.create);
+  assert.ok(sweepProgress().some(progress=>progress.value===2&&progress.total===5),JSON.stringify(sweepProgress()));
+  assert.equal(nodes().find(node=>node.type==='Progress'&&node.create.value===2).color,readerAppColor('TOK_PRIMARY_DARK','day'));
+  editor.onChange('山路');flush();retained();assert.equal(editor.create.text,'山路');
+  close.onAppear();flushFocus();
+  assert.deepEqual(focusRequests,['reader-source-close:3:5:0'],'the flow heading remount cannot claim focus from the live editor');
+  assert.deepEqual(order(owner),[]);assert.ok(candidateCount(0));oldRow.onClick();assert.equal(commands.at(-1),'refresh');
+  owner.state=state([a,c,b],true,3);flush();retained();assert.equal(editor.create.text,'山路');
+  assert.deepEqual(order(owner),['c']);
+  assert.ok(candidateCount(1));
+  assert.ok(nodes().some(node=>node.type==='Progress'&&node.create.value===3));
+  target('清空书源筛选').onClick();flush();retained();assert.equal(editor.create.text,'');
+  assert.deepEqual(order(owner),['a','c','b']);
+  target('延迟优先').onClick();flush();retained();assert.deepEqual(order(owner),['b','c','a']);
+  const notifications=[];
+  owner.candidateDataSource.registerDataChangeListener({
+   onDataAdd:index=>notifications.push(['add',index]),onDataReloaded:()=>notifications.push(['reload']),
+  });
+  owner.state=state([a,c,b,d],true,4);p.properties.flush();
+  assert.deepEqual(order(owner),['b','c','a','d'],'new discoveries append before the timed reorder');
+  const [scheduled]=timers;
+  assert.equal(scheduled[1].delay,200);
+  owner.state=state([a,c,b,{...d,sourceName:'Delta 源已更新'}],true,5);p.properties.flush();
+  assert.deepEqual([...timers.keys()],[scheduled[0]],'a rapid result update reuses the same deadline');
+  assert.deepEqual(notifications,[['add',3]],'incremental results preserve the current native range');
+  flush();retained();assert.deepEqual(order(owner),['d','b','c','a']);
+  assert.deepEqual(notifications,[['add',3],['reload']]);
+  target('停止查找书源').onClick();assert.equal(commands.at(-1),'stop');
+  editor.onChange(' ALPHA ');flush();assert.deepEqual(order(owner),['a']);
+  target('定位当前').onClick();flush();retained();assert.equal(editor.create.text,'');
+  const locateFrame=frames.at(-1);
+  locateFrame.onFrame(0);locateFrame.onIdle(0);
+  assert.deepEqual(jumps.at(-1),[owner.listHeaderCount()-1,false,'start']);
+  assert.equal(nodes().filter(node=>node.type==='ListItem'&&node.transition).length,0,'no row entrance transition');
+  oldRow.onClick();assert.equal(commands.at(-1),'a');
+  owner.state=state([a,c,b,d],true,4);flush();
+  owner.aboutToDisappear();
+  const retiredCount=commands.length;
+  oldRow.onClick();
+  editor.onChange('Beta');
+  assert.equal(commands.length,retiredCount);
+  assert.equal(owner.filterText,'');
+ }
+ return;
+}
 if(selectedCase==='native-spinner'){
  const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs'),{boundedMembers}=await import('./lib/bounded-surface-sdk-probe.mjs');const source=readFileSync(new URL('../entry/src/main/ets/features/source/ui/SourceSwitchSpinner.ets',import.meta.url),'utf8');
  function check(definition,negative=false){const r=boundedSurfaceSdk(),C=createReaderBuilderProbe(definition,boundedMembers(definition),{...r.deps,readerAppColor},r.hooks).Component,o=new C(undefined,{active:true,diameter:27});o.aboutToAppear();o.initialRender();const node=r.nodes(o).find(n=>n.type==='LoadingProgress');assert.ok(node,'current native spinner');assert.equal(node.width,27);assert.equal(node.height,27);assert.equal(node.enableLoading,true);for(const field of ['foreground','active']){o[field]=false;r.properties.flush();assert.equal(node.enableLoading,false);o[field]=true;r.properties.flush();}o.reduceMotion=true;r.properties.flush();assert.equal(node.enableLoading,false);o.reduceMotion=false;r.properties.flush();o.aboutToDisappear();r.properties.flush();assert.equal(node.enableLoading,false);}
@@ -33,7 +166,8 @@ const uiContext={getFont:()=>({}),animateTo(_options,action){action();},postFram
  const a={options,onFrame:()=>{},played:0,cancelled:0,play(){this.played++;},cancel(){this.cancelled++;this.onFrame(360);}};
  animations.push(a);return a;
 }};
-const deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics},uiContext,setTimeout(){return 1;},clearTimeout(){}});
+const deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics},uiContext,setTimeout(){return 1;},clearTimeout(){},
+ ReaderPressFeedback:productionReaderPressFeedback({ColorMetrics:sourceSwitchColorMetricsSdk()})});
 function scene(width,height,scale,state={kind:'candidates',candidates:[candidate('a'),candidate('a','/alternate'),candidate('b')],refreshing:true},contentKind='text',scheme='day',extra={},safeInsets=[0,24,0,24]){
  metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,width,height);
  metrics.systemFontScale=scale;metrics.systemInsets=new metricsApi.ReaderInsetsVp(...safeInsets);
@@ -97,8 +231,11 @@ function assertScene(x,width,height,s){
  assert.equal(discovery.height,e.toolbar,'actual discovery row consumes its two-line toolbar height');
  assert.deepEqual(discovery.margin,{bottom:v.discoveryBottomGap});assert.equal(discovery.border,undefined,'selected toolbar has no outer card or divider');
  const actionChrome=chrome.find(n=>n.create.space===v.discoveryActionGap);
- assert.equal(actionChrome.height,e.actionVisible);assert.equal(actionChrome.backgroundColor,readerAppColor(design.strings.discoveryActionBackgroundRole,scheme));
- assert.equal(actionChrome.borderRadius,v.discoveryActionRadius);
+ const action=x.nodes.find(n=>n.type==='Button'&&n.accessibilityText==='停止查找书源');
+ assert.equal(actionChrome.height,e.actionVisible);assert.equal(actionChrome.backgroundColor,undefined);
+ assert.equal(action.height,e.actionVisible);assert.equal(action.backgroundColor,readerAppColor(design.strings.discoveryActionBackgroundRole,scheme));
+ assert.equal(action.borderRadius,v.discoveryActionRadius);
+ assert.deepEqual(action.responseRegion,{x:0,y:(e.actionVisible-e.actionHit)/2,width:'100%',height:e.actionHit});
  const actionButton=x.nodes.find(n=>n.type==='Button'&&n.width===e.actionWidth);
  assert.equal(actionButton.height,e.actionHit);assert.equal(actionButton.stateEffect,false);assert.equal(actionButton.backgroundColor,'Color.Transparent');
  const cover=x.nodes.find(n=>n.type==='Image'&&n.create==='owned-cover');
@@ -114,7 +251,7 @@ function assertScene(x,width,height,s){
  assert.equal(x.rows.length,3);assert.equal(x.nodes.filter(n=>n.type==='ListItem'&&n.height===e.row).length,3);
  for(const row of x.rows){
   assert.equal(row.rowHeight,e.row);assert.equal(row.timingColumnWidth,e.timing);
-  const native=p.nodes(row),box=native.find(n=>n.type==='Row');assert.equal(box.height,e.row);
+  const native=p.nodes(row),box=native.find(n=>n.type==='Row'&&n.padding);assert.equal(box.height,e.row);
   assert.equal(box.width,'100%');assert.deepEqual(box.padding,{top:v.rowPaddingY,bottom:v.rowPaddingY,right:8},'8vp platform reserve keeps latency clear of the overlay thumb while preserving row/divider width');
   assert.ok(e.row >= (v.sourceNameLineHeight+v.latestChapterLineHeight+v.rowTextGap)*s+2*v.rowPaddingY,'scaled two-line content fits the selected row extent');
   assert.equal(native.find(n=>n.type==='Flex').width,e.timing);
@@ -157,9 +294,10 @@ function assertScene(x,width,height,s){
  assert.deepEqual(transition.parameters.appear.options.curve.values,[v.easingX1,v.easingY1,v.easingX2,v.easingY2]);
  const latest={...candidate('a','/alternate'),latencyMs:1,latestChapterTitle:'更新章节'};
  o.state={kind:'candidates',candidates:[candidate('a'),latest,candidate('b')],refreshing:true};o.acceptState();
- const hit=p.nodes(x.rows[1]).find(n=>n.type==='Row');
- hit.onTouch({type:deps.TouchType.Down});p.properties.flush();assert.equal(hit.backgroundColor,readerAppColor(design.strings.selectedRowRole,scheme));
- hit.onTouch({type:deps.TouchType.Up});p.properties.flush();hit.onClick();
+ const hit=p.nodes(x.rows[1]).find(n=>n.type==='Row'&&n.onTouch);
+ const paint=p.nodes(x.rows[1]).find(n=>n.type==='Row'&&n.padding);
+ hit.onTouch({type:deps.TouchType.Down,changedTouches:[{id:1}]});p.properties.flush();assert.equal(paint.scale.x,0.978);
+ hit.onTouch({type:deps.TouchType.Up,changedTouches:[{id:1}]});p.properties.flush();hit.onClick();
  assert.equal(x.selected[0],latest,'actual native row callbacks select the latest composite identity, including alternate URL');
  p.properties.flush();
  o.aboutToDisappear();
@@ -204,84 +342,102 @@ for(const width of [390,720])for(const scheme of ['day','night']){
  const content=x.nodes.filter(node=>node.type==='Column'&&node.layoutWeight===1&&node.padding?.bottom===32);
  assert.equal(content.length,1,'only the drawer content owns the safe-area padding');
  assert.deepEqual(content[0].padding,{left:left+side,right:right+side,bottom:32});
- assert.equal([...x.o.nodes.values()].find(node=>node.type==='__Common__'&&node.transition!==undefined).transition.kind,'identity','owner preserves reduced-motion policy around the shared frame');
+ const transition = [...x.o.nodes.values()].find(node => node.type === '__Common__' && node.transition !== undefined).transition[0];
+ assert.equal(transition.kind, 'opacity', 'reduced sheet movement is an opacity dissolve');
+ assert.equal(transition.options.duration, 120);
  x.o.aboutToDisappear();
+}
+if (selectedCase === 'rows-safe-area') {
+ const { o, rows } = scene(390,844,1);
+ const carrier = [...o.nodes.values()].find(node => node.type === '__Common__' && node.transition !== undefined);
+ const [normal] = carrier.transition;
+ assert.equal(normal.kind, 'asymmetric');
+ for (const [phase, duration] of [['appear', 260], ['disappear', 210]]) {
+  const effect = normal.parameters[phase];
+  assert.equal(effect.kind, 'move');
+  assert.equal(effect.parameters, 'bottom');
+  assert.equal(effect.options.duration, duration);
+  assert.deepEqual(effect.options.curve.values, [0.2, 0, 0, 1]);
+ }
+ assert.ok(rows.length > 0);
+ assert.ok(rows.every(row => p.nodes(row).every(node => node.transition === undefined)),
+  'candidate insertion has no per-row entrance actor or delay');
+ o.aboutToDisappear();
 }
 // The same native track remains reserved before remeasurement supplies a
 // latency. Only content is inset; the row's border and hit extent stay full width.
 {
  const cached={...candidate('cached'),latencyKind:undefined,latencyMs:undefined};
  const row=new deps.SourceSwitchNovelRow(undefined,{row:new deps.SourceSwitchCandidateRow(cached),timingColumnWidth:v.narrowTimingColumnWidth},undefined,++serial);row.initialRender();
- const native=p.nodes(row),box=native.find(n=>n.type==='Row'),dash=native.find(n=>n.create==='—');
+ const native=p.nodes(row),box=native.find(n=>n.type==='Row'&&n.padding),dash=native.find(n=>n.create==='—');
  assert.equal(box.width,'100%');assert.equal(box.height,50);assert.equal(box.padding.right,8);
  assert.equal(dash.width,v.narrowTimingColumnWidth);assert.equal(dash.textAlign,'TextAlign.End');
 }
 
 }
 if(selectedCase==='row-action-interaction'){
-// The selected CSS :active state follows the actual row event and property
-// lifecycle. Native disabled hit dispatch remains the platform boundary.
+// The row keeps its original hit geometry and selection identity while the
+// shared press implementation paints inside it. Only matching release retires it.
 {
  let presses=0,clicks=0;
  const row=new deps.SourceSwitchNovelRow(undefined,{row:new deps.SourceSwitchCandidateRow(candidate('press')),onPress:()=>presses++,onSelect:()=>clicks++},undefined,++serial);row.initialRender();
- const hit=p.nodes(row).find(n=>n.type==='Row'),soft=readerAppColor(design.strings.selectedRowRole,'day');
- assert.equal(hit.backgroundColor,'Color.Transparent');assert.equal(hit.enabled,true);
- for(const end of [deps.TouchType.Move,deps.TouchType.Up,deps.TouchType.Cancel]){
-  const before=presses;hit.onTouch({type:deps.TouchType.Down});p.properties.flush();assert.equal(row.pressed,true);assert.equal(hit.backgroundColor,soft);assert.equal(presses,before+1);
-  hit.onTouch({type:end});p.properties.flush();assert.equal(row.pressed,false);assert.equal(hit.backgroundColor,'Color.Transparent');assert.equal(presses,before+1);
- }
- hit.onTouch({type:deps.TouchType.Down});p.properties.flush();
+ const hit=p.nodes(row).find(n=>n.type==='Row'&&n.onTouch),paint=p.nodes(row).find(n=>n.type==='Row'&&n.padding);
+ const soft=readerAppColor(design.strings.selectedRowRole,'day');
+ const touch=(type,id=7)=>{hit.onTouch({type,changedTouches:[{id}]});p.properties.flush();};
+ assert.equal(paint.backgroundColor,'Color.Transparent');assert.equal(hit.enabled,true);
+ touch(deps.TouchType.Down);assert.equal(presses,1);assert.equal(paint.scale.x,0.978);
+ assert.equal(paint.backgroundColor,'sdk-blend:Color.Transparent:29,27,24,20');
+ touch(deps.TouchType.Move);touch(deps.TouchType.Up,8);assert.equal(paint.scale.x,0.978);
+ touch(deps.TouchType.Up);assert.equal(paint.scale.x,1);assert.equal(paint.backgroundColor,'Color.Transparent');
+ touch(deps.TouchType.Down);touch(deps.TouchType.Cancel);assert.equal(paint.scale.x,1);
+ touch(deps.TouchType.Down);
  row.updateStateVars({row:row.row,rowEnabled:false,selected:false});p.properties.flush();
- assert.equal(row.pressed,false,'disabling a retained row clears active feedback');assert.equal(hit.enabled,false);assert.equal(hit.backgroundColor,'Color.Transparent');
- let before=presses;hit.onTouch({type:deps.TouchType.Down});p.properties.flush();assert.equal(row.pressed,false);assert.equal(presses,before,'disabled rows cannot emit a press identity');
+ assert.equal(row.pressPointer,-1,'disabling a retained row clears active feedback');assert.equal(hit.enabled,false);
+ const before=presses;touch(deps.TouchType.Down);assert.equal(presses,before);
  row.row.update({...candidate('press'),isCurrent:true});row.updateStateVars({row:row.row,rowEnabled:true,selected:false});p.properties.flush();
- assert.equal(hit.enabled,false);hit.onTouch({type:deps.TouchType.Down});p.properties.flush();assert.equal(row.pressed,false);assert.equal(presses,before,'current source cannot enter the active state');assert.equal(hit.backgroundColor,'Color.Transparent');
- row.row.update(candidate('press'));row.updateStateVars({row:row.row,rowEnabled:true,selected:true});p.properties.flush();assert.equal(hit.enabled,true);assert.equal(hit.backgroundColor,soft);
- hit.onTouch({type:deps.TouchType.Cancel});p.properties.flush();assert.equal(hit.backgroundColor,soft,'selection feedback is retained independently of a cancelled press');
- row.updateStateVars({row:row.row,rowEnabled:true,selected:false});p.properties.flush();hit.onClick();assert.equal(clicks,1,'enabled native row retains its original selection callback');
+ assert.equal(hit.enabled,false);touch(deps.TouchType.Down);assert.equal(presses,before);
+ row.row.update(candidate('press'));row.updateStateVars({row:row.row,rowEnabled:true,selected:true,reduceMotion:true});p.properties.flush();
+ assert.equal(hit.enabled,true);assert.equal(paint.backgroundColor,soft);touch(deps.TouchType.Down);
+ assert.deepEqual(paint.scale,{x:1,y:1});assert.equal(paint.opacity,0.92);assert.equal(paint.backgroundColor,soft);
+ touch(deps.TouchType.Cancel);assert.equal(paint.opacity,1);assert.equal(paint.backgroundColor,soft);
+ hit.onClick();assert.equal(clicks,1,'enabled native row retains its original selection callback');
 }
-// Actual action hit callbacks retain the pressed recipe independently of
-// candidate enrichment, and restore it on pointer/cancellation/state changes.
+// The native visual button blends both recheck and stop fills. The extra
+// touch area stays beyond its paint bounds in both states.
 for(const contentKind of ['text','manga'])for(const scheme of ['day','night'])for(const running of [false,true]){
  const rows=[candidate('a'),candidate('a','/alternate'),candidate('b')];
  const state={kind:'candidates',candidates:rows,refreshing:running};
  const x=scene(390,844,1,state,contentKind,scheme),o=x.o;
- const button=()=>p.nodes(o).find(n=>n.type==='Button'&&typeof n.onTouch==='function');
+ const button=p.nodes(o).find(n=>n.type==='Button'&&n.accessibilityText===(running?'停止查找书源':'重新查找书源'));
  const fill=()=>p.nodes(o).find(n=>n.type==='Row'&&n.create?.space===v.discoveryActionGap);
  const normal=readerAppColor(design.strings.discoveryActionBackgroundRole,scheme);
- const color=deps.ColorMetrics.resourceColor(readerAppColor('TOK_GREEN',scheme));
- const pressed=deps.ColorMetrics.rgba(color.red,color.green,color.blue,v.discoveryActionPressedOpacity).color;
- assert.equal(fill().backgroundColor,normal);assert.equal(button().stateEffect,false);
- const actionWidth=button().width;
+ const pressed=deps.ColorMetrics.resourceColor(normal).blendColor(
+  deps.ColorMetrics.resourceColor(readerAppColor('app.interaction.press',scheme))).color;
+ const visualOwner = p.walk(o).find(child=>[...child.nodes.values()].includes(button));
+ const nativeId = [...visualOwner.nodes].find(([,node])=>node===button)[0];
+ const modifier = () => visualOwner.attributeCalls.filter(call=>call.id===nativeId&&call.property==='attributeModifier').at(-1).args[0];
+ const paint = {};
+ const port = new Proxy({}, {get:(_object,key)=>value=>{paint[key]=value;return port;}});
+ assert.equal(fill().backgroundColor,undefined);
+ assert.equal(button.backgroundColor,normal);
+ assert.equal(button.height,o.discoveryActionVisibleHeight());
+ assert.deepEqual(button.responseRegion,{x:0,y:(o.discoveryActionVisibleHeight()-o.discoveryActionHitHeight())/2,
+  width:'100%',height:o.discoveryActionHitHeight()});
+ assert.equal(button.createWithChild.stateEffect,false);
+ assert.equal(button.focusOnTouch,false);
+ assert.equal(button.onTouch,undefined,'a movement event cannot clear locally managed press state');
+ modifier().applyPressedAttribute(port);
+ assert.equal(paint.backgroundColor,pressed);
+ modifier().applyNormalAttribute(port);
+ assert.equal(paint.backgroundColor,normal);
+ const actionWidth=button.width;
  const icon=scheme==='night'?'app.media.settings_gen_refresh_theme_night':'app.media.settings_gen_refresh';
  assert.equal(p.nodes(o).filter(n=>n.type==='Image'&&n.create===icon).length,running?0:1,'only the idle action displays the static refresh icon');
- for(const end of [deps.TouchType.Up,deps.TouchType.Move,deps.TouchType.Cancel]){
-  button().onTouch({type:deps.TouchType.Down});p.properties.flush();
-  assert.equal(o.discoveryActionPressed,true);assert.equal(fill().backgroundColor,pressed,'press replaces the normal fill with exact14percent green');
-  button().onTouch({type:end});p.properties.flush();assert.equal(o.discoveryActionPressed,false);assert.equal(fill().backgroundColor,normal);
- }
- button().onTouch({type:deps.TouchType.Down});p.properties.flush();
  o.state={...state,candidates:rows.map(c=>({...c,latestChapterTitle:'异步更新'}))};o.acceptState();p.properties.flush();
- assert.equal(o.discoveryActionPressed,true,'same-phase candidate enrichment cannot flash the action fill');assert.equal(fill().backgroundColor,pressed);
- // This controlled builder probe admits additions, but deliberately rejects
- // retiring a populated branch. Exercise the real owner transition before
- // painting, then restore this scene; independent idle/running scenes above
- // verify each emitted branch without weakening that probe boundary.
- o.state={kind:'candidates',candidates:rows,refreshing:!running,stopped:running};o.acceptState();
- assert.equal(o.discoveryActionPressed,false,'a real running-state change clears the prior action press');
- assert.equal(o.discoveryActionBackgroundColor(),normal);
- const phase=running?'已停止':'正在查找';
- assert.equal(o.novelDiscoveryPhase(),phase,'the actual owner supplies the next phase');
- o.state=state;o.acceptState();p.properties.flush();
- assert.equal(fill().backgroundColor,normal);
- assert.equal(button().width,actionWidth,'the restored action retains its same hit extent');
- button().onTouch({type:deps.TouchType.Down});p.properties.flush();assert.equal(o.discoveryActionPressed,true);
- o.cancelPresentation();p.properties.flush();assert.equal(o.discoveryActionPressed,false,'retiring/cancelling this presentation restores the action');
- const retainedTouch=button().onTouch;
- o.state={kind:'failure',transactionId:'held',confirmation:'known',message:'保留原阅读位置'};o.acceptState();
- retainedTouch({type:deps.TouchType.Down});assert.equal(o.discoveryActionPressed,false,'disabled rollback state cannot admit a new press');
- assert.equal(o.discoveryActionBackgroundColor(),normal);
- o.state=state;o.acceptState();p.properties.flush();assert.equal(fill().backgroundColor,normal);
+ modifier().applyPressedAttribute(port);
+ assert.equal(paint.backgroundColor,pressed,'same-phase enrichment preserves the native target feedback');
+ assert.equal(fill().backgroundColor,undefined);
+ assert.equal(button.width,actionWidth);
  o.aboutToDisappear();
 }
 

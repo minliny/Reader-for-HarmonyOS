@@ -5,7 +5,6 @@ import { createRequire, registerHooks } from 'node:module';
 import { ReaderBrightnessWriter } from '../entry/src/main/ets/app/ReaderBrightnessWriter.ts';
 import * as metrics from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import { findReaderTheme, READER_THEME_DEFINITIONS } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
-import { downloadOverlayChromeStyle } from '../entry/src/main/ets/features/downloads/ui/SharedDownloadVisualSpec.ts';
 
 registerHooks({ resolve(specifier, context, next) {
   try { return next(specifier, context); } catch (error) {
@@ -277,27 +276,26 @@ await check('a different paper ID republishes even with equal colors while ident
   f.C.detach();
 });
 
-await check('approved download scrim and bottom sheet use one writer, navigation-only changes publish, then app restores both bands', async () => {
+await check('overlay and bottom sheet use one writer, navigation-only changes publish, then app restores both bands', async () => {
   const f = await ready();
-  const fromDemo = (sheet) => {
-    const visual = downloadOverlayChromeStyle('day', sheet);
-    const style = new f.Style(visual.underlayColor, visual.tone, visual.contentColor);
-    style.navigationUnderlayColor = visual.navigationUnderlayColor;
-    style.navigationContentColor = visual.navigationContentColor;
+  const overlayStyle = (sheet) => {
+    const style = new f.Style('#FFA3A19B', 'dark', '#FF14110F');
+    style.navigationUnderlayColor = sheet ? '#FFFFFCF8' : style.underlayColor;
+    style.navigationContentColor = sheet ? '#FF1F1B17' : style.contentColor;
     return style;
   };
-  f.C.requestOverlayChrome(fromDemo(true)); await settle();
+  f.C.requestOverlayChrome(overlayStyle(true)); await settle();
   assert.equal(f.win.native.statusBarColor, '#FFA3A19B');
   assert.equal(f.win.native.statusBarContentColor, '#FF14110F');
   assert.equal(f.win.native.navigationBarColor, '#FFFFFCF8');
   assert.equal(f.win.native.navigationBarContentColor, '#FF1F1B17');
   const writes = f.win.calls.length;
-  f.C.requestOverlayChrome(fromDemo(false)); await settle();
+  f.C.requestOverlayChrome(overlayStyle(false)); await settle();
   assert.equal(f.win.calls.length, writes + 1, 'identical top band must not suppress changed bottom band');
   assert.equal(f.win.native.navigationBarColor, '#FFA3A19B');
   assert.equal(f.win.native.navigationBarContentColor, '#FF14110F');
   const gate = deferred(); f.win.nextWrite = gate;
-  f.C.requestOverlayChrome(fromDemo(true));
+  f.C.requestOverlayChrome(overlayStyle(true));
   f.C.requestAppChrome(); gate.resolve(); await settle();
   assert.equal(f.win.native.statusBarColor, '#F8F4EC');
   assert.equal(f.win.native.navigationBarColor, '#F8F4EC');

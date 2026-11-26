@@ -9,7 +9,7 @@ import * as readerWindowMetrics from '../../entry/src/main/ets/ui/foundation/Rea
 import { isReaderProductSurfaceEnabled, isReaderMainTabEnabled } from '../../entry/src/main/ets/app/ReaderProductScope.ts';
 import { readerWidthClass } from '../../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts';
 import * as mangaDirectoryVisual from '../../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts';
-import { READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_550,
+import { READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM, READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_550,
   READER_FONT_NOTO_SANS_SC_UI_600, READER_FONT_NOTO_SANS_SC_UI_650, READER_FONT_NOTO_SANS_SC_UI_900 } from '../../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 
 // SDK probes resolve the production extensionless TypeScript imports exactly
@@ -67,7 +67,7 @@ for (const [name, relative] of [
 export const mangaSurfaceSdkDependencies = {
   ...Object.fromEntries(['SafeAreaType', 'SafeAreaEdge', 'LayoutSafeAreaType', 'LayoutSafeAreaEdge', 'BarState']
     .map(name => [name, new Proxy({}, { get: (_target, key) => `${name}.${String(key)}` })])),
-  READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_550,
+  READER_FONT_NOTO_SERIF_SC_BOLD, READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM, READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_550,
   READER_FONT_NOTO_SANS_SC_UI_600, READER_FONT_NOTO_SANS_SC_UI_650, READER_FONT_NOTO_SANS_SC_UI_900, MangaSheetFrame,
   ReaderMenuActionView,
   resolveDrawerSpec: actionControls.deps.resolveDrawerSpec, readerAppColor: actionControls.deps.readerAppColor,

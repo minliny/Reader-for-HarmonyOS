@@ -461,8 +461,10 @@ function readinessFixtures() {
   const utcBootStamp = value => new Date(value).toISOString().slice(0, 19).replace('T', ' ');
   const sampleBatchCommand = ['set -e', 'date -u +%s', 'TZ=UTC uptime -s',
     ...Object.keys(physicalMilestones).map(name => `param get ohos.boot.time.${name}`), 'date -u +%s'].join('\n');
+  const fractionalEpoch = milliseconds => (milliseconds / 1000).toFixed(3);
   function physicalReadiness(options = {}) {
     const commands = []; let elapsed = 0, wallElapsed = 0, second = false;
+    const checkEpoch = physicalCheckEpoch + (options.clockPhaseMs ?? 0);
     const scalarQuery = command => {
       if (command === 'cat /proc/sys/kernel/random/boot_id') {
         if (options.throwProc) throw new Error(physicalDenied);
@@ -470,8 +472,10 @@ function readinessFixtures() {
       }
       if (command === 'param get bootevent.boot.completed') return second ? options.finalComplete ?? 'true' : options.initialComplete ?? 'true';
       if (command === 'pidof com.ohos.sceneboard') return second ? options.finalPid ?? '1643' : options.initialPid ?? '1643';
-      if (command === 'date -u +%s') return options.guestDate ?? String(Math.floor((physicalCheckEpoch + elapsed +
-        (options.clockOffset ?? 0) + (second ? options.secondClockOffset ?? 0 : 0)) / 1000));
+      if (command === 'date -u +%s' || command === 'date -u +%s.%N') {
+        const guestEpoch = checkEpoch + elapsed + (options.clockOffset ?? 0) + (second ? options.secondClockOffset ?? 0 : 0);
+        return options.guestDate ?? (command.endsWith('.%N') ? fractionalEpoch(guestEpoch) : String(Math.floor(guestEpoch / 1000)));
+      }
       if (command === 'TZ=UTC uptime -s') return options.bootTimestamp ?? utcBootStamp(physicalBootEpoch +
         (options.bootOffset ?? 0) + (second ? options.secondBootOffset ?? 1000 : 0));
       if (command === 'cat /proc/uptime') return '155 155';
@@ -484,11 +488,14 @@ function readinessFixtures() {
       return command === sampleBatchCommand ? command.split('\n').slice(1).map(scalarQuery).join('\n') : scalarQuery(command);
     };
     return { commands, run: () => targetReadiness({ targetKind: options.targetKind ?? 'physical', query: guestQuery,
-      vmLog: options.vmLog, now: () => physicalCheckEpoch + wallElapsed, monotonicNow: () => elapsed,
+      vmLog: options.vmLog, now: () => checkEpoch + wallElapsed, monotonicNow: () => elapsed,
       wait() { elapsed += options.waitMs ?? 2000; wallElapsed = elapsed + (options.hostWaitOffset ?? 0); second = true; } }) };
   }
   const physicalFixture = physicalReadiness(), physicalReady = physicalFixture.run();
   assert.equal(physicalReady.status, 'PASS'); assert.equal(physicalReady.bootIdentitySource, 'physical-boot-milestones-v1');
+  const fractionalClock = physicalReadiness({ clockPhaseMs: 200, clockOffset: -700 }).run();
+  assert.equal(fractionalClock.physicalBootWitness.samples[0].guestStart, physicalCheckEpoch - 500,
+    'millisecond precision avoids reporting 1200ms of lag for an actual 700ms lag');
   assert.equal(physicalReady.uptimeSource, 'toybox-sysinfo'); assert.equal(physicalReady.observationMs, 2000);
   assert.match(physicalReady.bootIdSha256, /^[a-f0-9]{64}$/);
   assert.notEqual(physicalReady.bootIdSha256, digest(physicalDenied), 'a denied procfs string cannot be the boot identity');
@@ -520,6 +527,7 @@ function readinessFixtures() {
     ['future milestone', { milestones: { kernel: '99000000' } }, /milestone timing is inconsistent/],
     ['unavailable guest clock', { guestDate: 'Permission denied' }, /guest clock is unavailable/],
     ['guest clock disagreement', { clockOffset: 5000 }, /clock or observation is inconsistent/],
+    ['guest lag exceeds tolerance', { clockPhaseMs: 200, clockOffset: -1001 }, /clock or observation is inconsistent/],
     ['guest clock jump', { secondClockOffset: 5000 }, /clock or observation is inconsistent/],
     ['guest clock frozen', { guestDate: String((physicalCheckEpoch + 1000) / 1000) }, /changed during readiness|clock or observation/],
     ['host clock jump', { hostWaitOffset: 5000 }, /observation interval or clock/],
@@ -561,6 +569,8 @@ function readinessFixtures() {
       if (command === 'param get bootevent.boot.completed') return second ? options.finalComplete ?? 'true' : options.initialComplete ?? 'true';
       if (command === 'pidof com.ohos.sceneboard') return second ? options.finalPid ?? '1643' : options.initialPid ?? '1643';
       if (command === 'date -u +%s') return options.guestDate ?? String(Math.floor((sampleCheckEpoch + elapsed + (second ? options.secondClockOffset ?? 0 : 0)) / 1000));
+      if (command === 'date -u +%s.%N') return options.guestDate ?? fractionalEpoch(sampleCheckEpoch + elapsed +
+        (second ? options.secondClockOffset ?? 0 : 0));
       if (command === 'TZ=UTC uptime -s') return options.bootTimestamp ?? utcStamp(sampleBootEpoch + (second ? options.secondBootOffset ?? 1000 : 0));
       const name = command.replace('param get ohos.boot.time.', '');
       if (Object.hasOwn(milestoneValues, name)) return String((second ? options.secondMilestones ?? options.milestones : options.milestones)?.[name] ?? milestoneValues[name]);

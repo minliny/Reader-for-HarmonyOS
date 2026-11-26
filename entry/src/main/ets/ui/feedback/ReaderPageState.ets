@@ -45,12 +45,12 @@ export struct ReaderPageState {
   private loadingProgress() {
     if (this.onLoadingProgressVisible === undefined) {
       LoadingProgress().id(this.loadingProgressId).width(32).height(32)
-        .color(this.mutedColor ?? readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme))
+        .color(this.mutedColor ?? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
         .enableLoading(this.loadingActive && this.appForeground && !this.appReduceMotion)
         .accessibilityText('载入中');
     } else {
       LoadingProgress().id(this.loadingProgressId).width(32).height(32)
-        .color(this.mutedColor ?? readerAppColor('TOK_MESSAGE_SOFT_INK', this.appThemeScheme))
+        .color(this.mutedColor ?? readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
         .enableLoading(this.loadingActive && this.appForeground && !this.appReduceMotion)
         .accessibilityText('载入中')
         .onVisibleAreaChange([0, 0.01, 1], (visible: boolean, ratio: number): void => {
@@ -66,7 +66,7 @@ export struct ReaderPageState {
         Text(this.message.length > 0 ? this.message : this.title).layoutWeight(1)
           .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
           .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
-          .fontColor(this.mutedColor ?? readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme));
+          .fontColor(this.mutedColor ?? readerAppColor('TOK_MUTED', this.appThemeScheme));
       }.width('100%').padding({ left: this.padded ? 20 : 0, right: this.padded ? 20 : 0,
         top: this.padded ? 24 : 0, bottom: this.padded ? 24 : 0 });
     } else {
@@ -79,13 +79,13 @@ export struct ReaderPageState {
           Text(this.title, this.titleTextLayoutOptions).id(this.titleTextId).width('100%').textAlign(TextAlign.Center)
             .fontFamily(MESSAGE_TITLE.fontFamily).fontWeight(MESSAGE_TITLE.fontWeight)
             .fontSize(MESSAGE_TITLE.fontSizeFp).lineHeight(MESSAGE_TITLE.lineHeightFp as number)
-            .fontColor(this.inkColor ?? readerAppColor('TOK_MESSAGE_INK', this.appThemeScheme));
+            .fontColor(this.inkColor ?? readerAppColor('TOK_INK', this.appThemeScheme));
         }
         if (this.message.length > 0) {
           Text(this.message, this.messageTextLayoutOptions).id(this.messageTextId).width('100%').textAlign(TextAlign.Center)
             .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
             .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
-            .fontColor(this.mutedColor ?? readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
+            .fontColor(this.mutedColor ?? readerAppColor('TOK_MUTED', this.appThemeScheme))
             .margin({ top: this.variant === 'readingBookmark' && this.title.length > 0 ? 9 : 0 });
         }
         if (!this.loading && this.customActions) {

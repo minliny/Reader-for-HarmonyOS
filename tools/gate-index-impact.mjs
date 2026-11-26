@@ -10,7 +10,7 @@ import { createImpactView, diffImpactViews } from './lib/gate-index-impact.mjs';
 const root = fileURLToPath(new URL('../', import.meta.url));
 const usage = `Reader gate index, read-only impact queries
   node tools/gate-index-impact.mjs --affected entry/src/main/ets/features/search/ui/SearchPage.ets
-  node tools/gate-index-impact.mjs --affected old/path --affected new/path
+  node tools/gate-index-impact.mjs --affected old/path new/path
   node tools/gate-index-impact.mjs --deps ui-case:bookshelf.search-no-sources
   node tools/gate-index-impact.mjs --deps structure-rule:<rule-id> --compare <earlier-query.json>
   node tools/gate-index-impact.mjs --check-deps --deps ui-case:bookshelf.search-no-sources
@@ -30,14 +30,31 @@ function identity(command, fallback) {
   }
 }
 
-function main() {
-  const { values } = parseArgs({ options: {
+export function parseImpactArguments(args = process.argv.slice(2)) {
+  const { values, tokens } = parseArgs({ args, options: {
     affected: { type: 'string', multiple: true },
     deps: { type: 'string', multiple: true },
     compare: { type: 'string' },
     'check-deps': { type: 'boolean' },
     help: { type: 'boolean' },
-  }, allowPositionals: false });
+  }, allowPositionals: true, tokens: true });
+  const affected = [];
+  let collectingPaths = false;
+  for (const token of tokens) {
+    if (token.kind === 'positional') {
+      if (!collectingPaths) throw new Error(`Unexpected positional argument '${token.value}'. Use --affected to group paths.`);
+      affected.push(token.value);
+      continue;
+    }
+    collectingPaths = token.kind === 'option' && token.name === 'affected';
+    if (collectingPaths) affected.push(token.value);
+  }
+  if (affected.length > 0) values.affected = affected;
+  return values;
+}
+
+function main() {
+  const values = parseImpactArguments();
   if (values.help || !Object.keys(values).length) {
     console.log(usage);
     return;
@@ -58,6 +75,8 @@ function main() {
     impactReaderSha256: createHash('sha256')
       .update(readFileSync(fileURLToPath(import.meta.url)))
       .update(readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'lib/gate-index-impact.mjs')))
+      .update(readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'lib/gate-resource-definition.mjs')))
+      .update(readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'ui-contract/lib/case-registry.mjs')))
       .update(readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'ui-contract/lib/structure-contract.mjs')))
       .update(readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'ui-contract/lib/capsule-model-inputs.mjs')))
       .update(readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'ui-contract/lib/control-input.mjs')))

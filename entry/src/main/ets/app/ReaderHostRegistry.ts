@@ -92,6 +92,7 @@ export class ReaderHostRegistry {
   private static readonly LocalBookLimitBytes = 64 * 1024 * 1024;
   private static readonly StageSpaceReserveBytes = 16 * 1024 * 1024;
   private static readonly stageRecoveries = new Map<string, Promise<void>>();
+  private static readonly deferredStages = new Map<string, string[]>();
   // Stage paths are allocated by short-lived Host instances as UIAbility
   // windows are recreated. Share the sequence per directory so two such
   // instances in one process cannot truncate each other's `.book` file.
@@ -138,17 +139,19 @@ export class ReaderHostRegistry {
     const directory = this.localBookStageDirectory();
     this.stageRecovery = ReaderHostRegistry.stageRecoveryFor(
       directory,
-      (): Promise<void> => this.recoverAbandonedStages(),
+      (): Promise<boolean> => this.recoverAbandonedStages(),
     );
     void this.stageRecovery.catch((): void => {});
   }
 
-  private static stageRecoveryFor(directory: string, recover: () => Promise<void>): Promise<void> {
+  private static stageRecoveryFor(directory: string, recover: () => Promise<boolean>): Promise<void> {
     const existing = ReaderHostRegistry.stageRecoveries.get(directory);
     if (existing !== undefined) {
       return existing;
     }
-    const pending = recover();
+    const pending = recover().then((complete: boolean): void => {
+      if (complete === false) ReaderHostRegistry.stageRecoveries.delete(directory);
+    });
     const retryable = pending.catch((error: Error): Promise<never> => {
       if (ReaderHostRegistry.stageRecoveries.get(directory) === retryable) {
         ReaderHostRegistry.stageRecoveries.delete(directory);
@@ -200,6 +203,24 @@ export class ReaderHostRegistry {
     await CookieSessionStore.instance.clearSession(sourceId);
   }
 
+  private readonly sourceCheckStages = new Map<number, (stage: string) => void>();
+
+  observeSourceCheckStages(requestId: number, observe: (stage: string) => void): () => void {
+    this.sourceCheckStages.set(requestId, observe);
+    return (): void => { this.sourceCheckStages.delete(requestId); };
+  }
+
+  private publishSourceCheckStage(event: ReaderCoreHostRequestEvent): void {
+    const observe = this.sourceCheckStages.get(event.requestId);
+    const raw = event.params['diagnostic'];
+    if (observe === undefined || raw === null || typeof raw !== 'object' || Array.isArray(raw)) return;
+    const diagnostic = raw as JsonObject;
+    const stage = diagnostic['stage'];
+    if (diagnostic['requestId'] !== event.requestId || typeof stage !== 'string' ||
+      !['L2', 'L3', 'L4', 'L5'].includes(stage)) return;
+    try { observe(stage); } catch (_) { /* Progress observers cannot affect Host transport. */ }
+  }
+
   /** Consume sanitized evidence captured during one original Core request. */
   takeSourceHttpDiagnostics(requestId: number): SourceHttpDiagnosticRecord[] {
     return HttpExecuteHost.instance.takeSourceDiagnostics(requestId);
@@ -238,6 +259,7 @@ export class ReaderHostRegistry {
       return this.writeSnapshot(event);
     });
     router.register('http.execute', (event: ReaderCoreHostRequestEvent): Promise<JsonObject> => {
+      this.publishSourceCheckStage(event);
       if (this.fixtureDirectory !== undefined) {
         const fixture = this.publicSearchHttpFixture;
         const current = this.publicSearchHttpIsCurrent;
@@ -378,21 +400,18 @@ export class ReaderHostRegistry {
   }
 
   private async ensureStageRecovery(): Promise<void> {
+    const directory = this.localBookStageDirectory();
     try {
       await this.stageRecovery;
-      return;
+      if (!ReaderHostRegistry.deferredStages.has(directory)) return;
     } catch (_) {
-      // stageRecoveryFor removes a failed shared entry. Re-acquire the
-      // directory-scoped single-flight promise so the next attempt can make
-      // progress after a transient filesystem failure. If the retry also
-      // fails, propagate that concrete error to the picker caller; a later
-      // invocation will get another retry opportunity.
-      this.stageRecovery = ReaderHostRegistry.stageRecoveryFor(
-        this.localBookStageDirectory(),
-        (): Promise<void> => this.recoverAbandonedStages(),
-      );
-      await this.stageRecovery;
+      // Listing must succeed once before any live stages can be admitted.
     }
+    this.stageRecovery = ReaderHostRegistry.stageRecoveryFor(
+      directory,
+      (): Promise<boolean> => this.recoverAbandonedStages(),
+    );
+    await this.stageRecovery;
   }
 
   /**
@@ -528,6 +547,7 @@ export class ReaderHostRegistry {
       uri,
       fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC,
     );
+    let written = false;
     try {
       let writtenBytes = 0;
       while (writtenBytes < bytes.byteLength) {
@@ -539,8 +559,10 @@ export class ReaderHostRegistry {
         writtenBytes += written;
       }
       await fileIo.fsync(file.fd);
+      written = true;
     } finally {
-      await fileIo.close(file);
+      try { await fileIo.close(file); }
+      catch (error) { if (written) throw error; }
     }
     return this.requireSelectedFileName(uri);
   }
@@ -700,6 +722,13 @@ export class ReaderHostRegistry {
     await this.ensureDirectory(this.localBookStageDirectory());
     try {
       const contentHash = await this.copyAndHashLocalBook(uri, stagePath);
+      const abandoned = ReaderHostRegistry.deferredStages.get(this.localBookStageDirectory());
+      if (abandoned?.some((name: string): boolean =>
+        name.endsWith(`-${contentHash}.source`) || name.endsWith(`-${contentHash}.epub`)) === true) {
+        // A new import's rollback must not remove the asset that the older
+        // Core transaction may already reference.
+        throw new Error('Local book original is awaiting stage recovery');
+      }
       // Every complete original gets a recovery identity before Core sees it.
       const recoverablePath = `${stagePath.slice(0, -5)}-${contentHash}.source`;
       await fileIo.moveFile(stagePath, recoverablePath);
@@ -711,7 +740,10 @@ export class ReaderHostRegistry {
         assetKind: 'source',
       };
     } catch (error) {
-      await this.unlinkIfPresent(stagePath);
+      try { await this.unlinkIfPresent(stagePath); }
+      catch (cleanupError) {
+        hilog.warn(LOG_DOMAIN, 'Reader', 'Local-book stage cleanup deferred: %{private}s', errorMessageOf(cleanupError));
+      }
       throw error;
     }
   }
@@ -729,47 +761,55 @@ export class ReaderHostRegistry {
     }
     ReaderHostRegistry.stagingReservations.set(this.context.filesDir, reserved + stat.size);
     try {
-    const digest = cryptoFramework.createMd('SHA256');
-    const buffer = new ArrayBuffer(ReaderHostRegistry.HashChunkBytes);
-    const source = await fileIo.open(uri, fileIo.OpenMode.READ_ONLY);
-    try {
-    const destination = await fileIo.open(
-      stagePath,
-      fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC,
-    );
-    try {
-      let totalBytes = 0;
-      while (true) {
-        const bytesRead = await fileIo.read(source.fd, buffer);
-        if (bytesRead === 0) {
-          break;
-        }
-        totalBytes += bytesRead;
-        if (totalBytes > stat.size || totalBytes > ReaderHostRegistry.LocalBookLimitBytes) {
-          throw new Error('Selected document exceeded its staging limit');
-        }
-        const chunk = new Uint8Array(buffer, 0, bytesRead);
-        await digest.update({ data: chunk });
-        let writtenBytes = 0;
-        while (writtenBytes < bytesRead) {
-          const writable = chunk.slice(writtenBytes);
-          const written = await fileIo.write(destination.fd, writable.buffer);
-          if (!Number.isSafeInteger(written) || written <= 0 || written > writable.byteLength) {
-            throw new Error('Selected document staging destination stopped accepting bytes');
+      const digest = cryptoFramework.createMd('SHA256');
+      const buffer = new ArrayBuffer(ReaderHostRegistry.HashChunkBytes);
+      const source = await fileIo.open(uri, fileIo.OpenMode.READ_ONLY);
+      let copied = false;
+      try {
+        const destination = await fileIo.open(
+          stagePath,
+          fileIo.OpenMode.CREATE | fileIo.OpenMode.READ_WRITE | fileIo.OpenMode.TRUNC,
+        );
+        let written = false;
+        try {
+          let totalBytes = 0;
+          while (true) {
+            const bytesRead = await fileIo.read(source.fd, buffer);
+            if (bytesRead === 0) {
+              break;
+            }
+            totalBytes += bytesRead;
+            if (totalBytes > stat.size || totalBytes > ReaderHostRegistry.LocalBookLimitBytes) {
+              throw new Error('Selected document exceeded its staging limit');
+            }
+            const chunk = new Uint8Array(buffer, 0, bytesRead);
+            await digest.update({ data: chunk });
+            let writtenBytes = 0;
+            while (writtenBytes < bytesRead) {
+              const writable = chunk.slice(writtenBytes);
+              const written = await fileIo.write(destination.fd, writable.buffer);
+              if (!Number.isSafeInteger(written) || written <= 0 || written > writable.byteLength) {
+                throw new Error('Selected document staging destination stopped accepting bytes');
+              }
+              writtenBytes += written;
+            }
           }
-          writtenBytes += written;
+          if (totalBytes !== stat.size) {
+            throw new Error('Selected document changed while being staged');
+          }
+          await fileIo.fsync(destination.fd);
+          written = true;
+        } finally {
+          try { await fileIo.close(destination); }
+          catch (error) { if (written) throw error; }
         }
+        copied = true;
+      } finally {
+        try { await fileIo.close(source); }
+        catch (error) { if (copied) throw error; }
       }
-      if (totalBytes !== stat.size) {
-        throw new Error('Selected document changed while being staged');
-      }
-      await fileIo.fsync(destination.fd);
-    } finally {
-      await fileIo.close(destination);
-    }
-    } finally { await fileIo.close(source); }
-    const output = await digest.digest();
-    return this.digestToHex(output.data);
+      const output = await digest.digest();
+      return this.digestToHex(output.data);
     } finally {
       const reserved = ReaderHostRegistry.stagingReservations.get(this.context.filesDir) ?? 0;
       ReaderHostRegistry.stagingReservations.set(this.context.filesDir, Math.max(0, reserved - stat.size));
@@ -793,6 +833,7 @@ export class ReaderHostRegistry {
     const buffer = new ArrayBuffer(ReaderHostRegistry.HashChunkBytes);
     const file = await fileIo.open(path, fileIo.OpenMode.READ_ONLY);
     let totalBytes = 0;
+    let read = false;
     try {
       while (true) {
         const bytesRead = await fileIo.read(file.fd, buffer);
@@ -809,11 +850,13 @@ export class ReaderHostRegistry {
         }
         await digest.update({ data: new Uint8Array(buffer, 0, bytesRead) });
       }
+      if (totalBytes !== stat.size) {
+        throw new Error('Staged local book changed while being verified');
+      }
+      read = true;
     } finally {
-      await fileIo.close(file);
-    }
-    if (totalBytes !== stat.size) {
-      throw new Error('Staged local book changed while being verified');
+      try { await fileIo.close(file); }
+      catch (error) { if (read) throw error; }
     }
     const finalStat = await fileIo.stat(path);
     if (!Number.isSafeInteger(finalStat.size) || finalStat.size !== stat.size) {
@@ -847,6 +890,7 @@ export class ReaderHostRegistry {
       Math.min(ReaderHostRegistry.JsonDocumentReadChunkBytes, stat.size),
     );
     const file = await fileIo.open(uri, fileIo.OpenMode.READ_ONLY);
+    let read = false;
     try {
       let totalBytes = 0;
       while (totalBytes < stat.size) {
@@ -866,8 +910,10 @@ export class ReaderHostRegistry {
       if (await fileIo.read(file.fd, new ArrayBuffer(1)) !== 0) {
         throw new Error('Selected book-source document changed while being read');
       }
+      read = true;
     } finally {
-      await fileIo.close(file);
+      try { await fileIo.close(file); }
+      catch (error) { if (read) throw error; }
     }
 
     try {
@@ -878,46 +924,57 @@ export class ReaderHostRegistry {
     }
   }
 
-  private async recoverAbandonedStages(): Promise<void> {
+  private async recoverAbandonedStages(): Promise<boolean> {
     const directory = this.localBookStageDirectory();
-    if (!(await fileIo.access(directory))) { return; }
-    // Startup runs once before new staging. Recover complete originals
-    // first: Core may have committed their resource references before death.
-    const entries = await fileIo.listFile(directory);
-    for (const name of entries) {
-      const complete = /^[0-9]+-[0-9]+-([0-9a-f]{64})\.(source|epub)$/.exec(name);
-      if (complete !== null) {
-        const stagePath = `${directory}/${name}`;
-        let actualHash: string | undefined;
-        try {
-          actualHash = await this.hashLocalBookFile(stagePath);
-        } catch (error) {
-          // A transient read/permission error should not destroy a completed
-          // import. Leave the stage in place so the next picker/startup can
-          // retry verification; only an explicit hash/size mismatch is
-          // discarded below.
-          hilog.warn(LOG_DOMAIN, 'Reader',
-            'Completed local-book stage verification deferred for %{private}s: %{private}s',
-            name, errorMessageOf(error));
-          continue;
-        }
-        if (actualHash === undefined || actualHash !== complete[1]) {
-          hilog.error(LOG_DOMAIN, 'Reader',
-            'Discarding local-book stage with mismatched content identity: %{private}s', name);
-          await this.unlinkIfPresent(stagePath);
-          continue;
-        }
-        await this.ensureDirectory(this.localBookAssetDirectory());
-        const destination = `${this.localBookAssetDirectory()}/${complete[1]}.${complete[2]}`;
-        if (await fileIo.access(destination)) {
-          await this.unlinkIfPresent(stagePath);
-        } else {
-          await fileIo.moveFile(stagePath, destination);
-        }
-      } else if (/^[0-9]+-[0-9]+\.book$/.test(name)) {
-        await this.unlinkIfPresent(`${directory}/${name}`);
+    let entries = ReaderHostRegistry.deferredStages.get(directory);
+    if (entries === undefined) {
+      // Capture the abandoned names before admitting any new staging. Later
+      // retries use just the failed entries, since a fresh listing would
+      // also contain live imports and their protected originals.
+      try { entries = await fileIo.listFile(directory); }
+      catch (error) {
+        if (this.isMissingFile(error)) return true;
+        throw error;
       }
     }
+    const deferred: string[] = [];
+    for (const name of entries) {
+      const stagePath = `${directory}/${name}`;
+      const complete = /^[0-9]+-[0-9]+-([0-9a-f]{64})\.(source|epub)$/.exec(name);
+      try {
+        if (complete !== null) {
+          const actualHash = await this.hashLocalBookFile(stagePath);
+          if (actualHash === undefined || actualHash !== complete[1]) {
+            hilog.error(LOG_DOMAIN, 'Reader',
+              'Discarding local-book stage with mismatched content identity: %{private}s', name);
+            await this.unlinkIfPresent(stagePath);
+            continue;
+          }
+          await this.ensureDirectory(this.localBookAssetDirectory());
+          const destination = `${this.localBookAssetDirectory()}/${complete[1]}.${complete[2]}`;
+          if (await fileIo.access(destination)) {
+            await this.unlinkIfPresent(stagePath);
+          } else {
+            await fileIo.moveFile(stagePath, destination);
+          }
+        } else if (/^[0-9]+-[0-9]+\.book$/.test(name)) {
+          await this.unlinkIfPresent(stagePath);
+        }
+      } catch (error) {
+        try {
+          if (this.isMissingFile(error) && !(await fileIo.access(stagePath))) continue;
+        } catch (_) { /* The original failure still needs reconciliation. */ }
+        deferred.push(name);
+        hilog.warn(LOG_DOMAIN, 'Reader', 'Local-book stage recovery deferred for %{private}s: %{private}s',
+          name, errorMessageOf(error));
+      }
+    }
+    if (deferred.length > 0) {
+      ReaderHostRegistry.deferredStages.set(directory, deferred);
+      return false;
+    }
+    ReaderHostRegistry.deferredStages.delete(directory);
+    return true;
   }
 
   private localBookStageDirectory(): string {
@@ -978,10 +1035,13 @@ export class ReaderHostRegistry {
   }
 
   private async unlinkIfPresent(path: string): Promise<void> {
-    if (!(await fileIo.access(path))) {
-      return;
-    }
-    await fileIo.unlink(path);
+    try { await fileIo.unlink(path); }
+    catch (error) { if (!this.isMissingFile(error)) throw error; }
+  }
+
+  private isMissingFile(error: unknown): boolean {
+    const code = (error as { code?: number | string } | undefined)?.code;
+    return code === 13900002 || code === 'ENOENT';
   }
 
   private async ensureDirectory(directory: string): Promise<void> {
@@ -1001,9 +1061,14 @@ export class ReaderHostRegistry {
 
   private nextStagePath(): string {
     const directory = this.localBookStageDirectory();
-    const next = (ReaderHostRegistry.stageSequences.get(directory) ?? 0) + 1;
+    const timestamp = Date.now();
+    let next = (ReaderHostRegistry.stageSequences.get(directory) ?? 0) + 1;
+    const abandoned = ReaderHostRegistry.deferredStages.get(directory);
+    // A clock change or immediate process restart can repeat a timestamp.
+    while (abandoned?.some((name: string): boolean =>
+      name === `${timestamp}-${next}.book` || name.startsWith(`${timestamp}-${next}-`)) === true) next += 1;
     ReaderHostRegistry.stageSequences.set(directory, next);
-    return `${directory}/${Date.now()}-${next}.book`;
+    return `${directory}/${timestamp}-${next}.book`;
   }
 
   private async writeSnapshot(event: ReaderCoreHostRequestEvent): Promise<JsonObject> {

@@ -39,13 +39,16 @@ export class MangaSourceLogin {
     if (this.opening) throw new Error('MANGA_LOGIN_IN_PROGRESS');
     this.opening = true;
     try {
-      const sources = await new SourceGateway(owner).loadSourcesForIds([sourceId], current);
+      const gateway = new SourceGateway(owner);
+      const sources = await gateway.loadSourcesForIds([sourceId], current);
       if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
       const source = sources.find(candidate => candidate.sourceId === sourceId);
       if (source === undefined || !source.enabled || source.loginUrl === undefined || source.loginUrl.trim().length === 0) {
         throw new Error('MANGA_SOURCE_LOGIN_UNAVAILABLE');
       }
-      await owner.openSourceLogin(source.sourceId, source.loginUrl, source.name, current);
+      await owner.openSourceLogin(source.sourceId, source.loginUrl, source.name, current, async (): Promise<boolean> => {
+        return (await gateway.clearSourceCheckReports([source.sourceId], current)).supported;
+      });
       if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
     } catch (error) {
       if (!current()) throw new Error('MANGA_SESSION_CANCELLED');

@@ -13,17 +13,18 @@ export const CONTRACT_CASES = {
 
 async function case_native_composition() {
 const { default: assert } = await import('node:assert/strict');
-const { readFileSync } = await import('node:fs');
 const { productionReaderPressFeedback } = await import('./lib/reader-press-feedback-probe.mjs');
 const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 for (const scheme of ['day', 'night']) {
+  const expectedOverlay = readerAppColor('app.interaction.press', scheme);
   const bases = [], overlays = [];
   const Modifier = productionReaderPressFeedback({ ColorMetrics: {
     resourceColor(value) {
-      if (value === readerAppColor('TOK_ACCENT', scheme)) return { red: 244, green: 139, blue: 19 };
-      return { blendColor(overlay) { bases.push(value); return { color: `native-blend:${value}:${overlay.alpha}` }; } };
+      return { color: value, blendColor(overlay) {
+        bases.push(value); overlays.push(overlay.color);
+        return { color: `native-blend:${value}:${overlay.color}` };
+      } };
     },
-    rgba(red, green, blue, alpha) { overlays.push({ red, green, blue, alpha }); return { alpha }; },
   } });
   for (const surface of ['#00000000', readerAppColor('TOK_PRIMARY_SOFT', scheme), readerAppColor('TOK_PRIMARY_DARK', scheme)]) {
     const attributes = { backgroundColor(value) { this.fill = value; return this; }, borderRadius(value) { this.radius = value; return this; } };
@@ -32,7 +33,7 @@ for (const scheme of ['day', 'night']) {
     modifier.applyPressedAttribute(attributes); modifier.applyPressedAttribute(attributes);
     assert.deepEqual(bases.slice(-2), [surface, surface], 'pressed re-evaluation must not accumulate tint over a selected surface');
     assert.equal(attributes.radius, 12);
-    assert.ok(Number.isFinite(overlays.at(-1).alpha) && overlays.at(-1).alpha >= 0 && overlays.at(-1).alpha <= 1, 'platform receives a valid alpha; a specific design percentage needs independent provenance');
+    assert.deepEqual(overlays.slice(-2), [expectedOverlay, expectedOverlay], 'platform receives the themed ink overlay');
     modifier.applyNormalAttribute(attributes);
     assert.equal(attributes.fill, surface); assert.equal(attributes.radius, 17);
     modifier.applyPressedAttribute(attributes); modifier.applyDisabledAttribute(attributes);
@@ -56,23 +57,24 @@ async function case_platform_failure_fallback() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { productionReaderPressFeedback } = await import('./lib/reader-press-feedback-probe.mjs');
-const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
 // Every official composition stage can fail independently. Preserve the
 // complete original normal recipe, while the gradient-oriented public helper
 // still returns the original unblended surface without leaking an exception.
 const actualSource=readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderPressFeedback.ets',import.meta.url),'utf8');
 function failedCompositionFallback(source=actualSource) {
-  for(const stage of ['accent','rgba','base','blend']) {
+  for(const stage of ['overlay','base','blend']) {
     let requests=0;
     const Modifier=productionReaderPressFeedback({source,ColorMetrics:{
-      resourceColor(){requests++;if((stage==='accent'&&requests===1)||(stage==='base'&&requests===2))throw Error('platform '+stage);
-        return {red:244,green:139,blue:19,blendColor(){if(stage==='blend')throw Error('platform blend');return{color:'pressed'};}};},
-      rgba(){if(stage==='rgba')throw Error('platform rgba');return{alpha:.12};},
+      resourceColor(){requests++;if((stage==='overlay'&&requests===1)||(stage==='base'&&requests===2))throw Error('platform '+stage);
+        return {blendColor(){if(stage==='blend')throw Error('platform blend');return{color:'pressed'};}};},
     }});
     const attributes={backgroundColor(value){this.fill=value;return this;},borderRadius(value){this.radius=value;return this;}};
     const modifier=new Modifier('current-surface','day',17,12);
     modifier.applyPressedAttribute(attributes);
     assert.deepEqual([attributes.fill,attributes.radius],['current-surface',17],stage+': complete normal fallback');
+    requests=0;
+    new Modifier('current-surface','day',17,12,true,true).applyNormalAttribute(attributes);
+    assert.deepEqual([attributes.fill,attributes.radius],['current-surface',17],stage+': paint-child fallback');
     requests=0;assert.equal(modifier.pressedSurface(),'current-surface',stage+': finite gradient helper retains its fallback');
     requests=0;new Modifier('disabled-surface','day',17,12,false).applyPressedAttribute(attributes);
     assert.equal(requests,0,'disabled actor never requests a platform press color');
@@ -80,7 +82,7 @@ function failedCompositionFallback(source=actualSource) {
   }
 }
 failedCompositionFallback();
-const correctFallback='this.applyNormalAttribute(instance);\n    }\n  }\n\n  applyDisabledAttribute';
+const correctFallback='this.applyResting(instance);\n    }\n  }\n\n  applyDisabledAttribute';
 assert.ok(actualSource.includes(correctFallback));
 assert.throws(()=>failedCompositionFallback(actualSource.replace(correctFallback,
   'instance.backgroundColor(this.surface).borderRadius(this.pressedRadius);\n    }\n  }\n\n  applyDisabledAttribute')),

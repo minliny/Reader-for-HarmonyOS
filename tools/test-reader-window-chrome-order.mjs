@@ -746,10 +746,11 @@ await check('native policy reapply rejection is handled without looping and a la
   assert.equal(w.calls.slice(before).filter(call=>call[0]==='visible').length,1,'forced reapply reaches the native pending request');
   gate.reject(Object.assign(Error('controlled native reapply failure'),{code:1300003}));await settle();
   assert.equal(f.warnings.length,1,'void foreground recovery handles and diagnoses its native rejection');
-  assert.equal(w.calls.slice(before).filter(call=>call[0]==='visible').length,1,'native rejection cannot start a retry loop');
+  assert.deepEqual(w.calls.slice(before).filter(call=>call[0]==='visible').map(call=>call[1]),
+    ['status','navigation','navigationIndicator'],'native rejection still applies the independent bars exactly once');
   f.C.reapplyWindowPolicy();await settle();
   assert.deepEqual(w.barEnabled,{status:owner==='app',navigation:owner==='app',navigationIndicator:owner==='app'});
-  assert.equal(w.calls.slice(before).filter(call=>call[0]==='visible').length,4,'later explicit retry reapplies all three bars');
+  assert.equal(w.calls.slice(before).filter(call=>call[0]==='visible').length,6,'later explicit retry reapplies all three bars');
   f.C.detach();
  }
 });

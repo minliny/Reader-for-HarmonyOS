@@ -13,6 +13,7 @@ for(const cancel of [false,true]){
  const window=new ReadingChapterWindow();window.configure('local','b',[10,20,30,40,50,60,70,80]);window.setCurrent(body(40));
  let valid=true,active=0,peak=0;const calls=[],prepared=[];
  const f=Object.assign(new Host(),{sourceId:'local',bookId:'b',chapterWindow:window,visiblePage:{startScalar:0},neighbourPreparationKey:'',
+  readingLayout:()=>({facingChapterWidth:0}),
   isStableVisiblePageOwner:()=>valid,adjacentChapterIndex:(...a)=>window.adjacentChapterIndex(...a),
   activeGateway:()=>({async prefetchChapter(book,index,current){calls.push(index);peak=Math.max(peak,++active);await tick();active--;
    if(cancel)valid=false;return body(index);}}),retainCurrentChapterWindow(){},admitChapterContentVersion(){},

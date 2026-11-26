@@ -98,7 +98,7 @@ if(selectedCase==='message-action') for(const variant of ['compact','rssManageme
  const sdk=boundedSurfaceSdk();const actor=sdk.consumer(recoverySource,undefined,{}, {label:'核对',variant});actor.initialRender();
  for(const scheme of ['day','night','day']){
   actor.appThemeScheme=scheme;sdk.properties.flush();const native=sdk.nodes(actor).find(node=>node.type==='Text'&&node.create==='核对');
-  const expected=readerAppColor(variant==='notice'?'TOK_MESSAGE_NOTICE_INK':'TOK_MESSAGE_SOFT_INK',scheme);
+  const expected=readerAppColor(variant==='notice'?'TOK_PRIMARY_DARK':'TOK_MESSAGE_SOFT_INK',scheme);
   assert.equal(native.fontColor,expected,'actual approved message foreground and current scheme');messageColors.push({variant,scheme,color:native.fontColor});
  }
 }

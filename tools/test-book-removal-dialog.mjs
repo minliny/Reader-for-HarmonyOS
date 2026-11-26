@@ -13,7 +13,10 @@ const { readFileSync } = await import('node:fs');
 const { createRequire, stripTypeScriptTypes } = await import('node:module');
 const { SOURCE_SWITCH_VISUAL } = await import('../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts');
 const {runtimeOwnerIdentityProbe} = await import('./lib/reader-runtime-admission-probe.mjs');
-const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
+const { readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
+const { createReaderBuilderProbe, productionReaderMotionSdk } = await import('./lib/reader-control-builder-probe.mjs');
 const { resolveHorizontalFrame, SurfaceWidthSpec } = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
 const { readerInteractiveSafeLeft, readerInteractiveSafeRight, ReaderWindowMetricsSnapshot,
   ReaderRectVp, ReaderInsetsVp } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
@@ -44,15 +47,17 @@ syntax.propCollection.set('ReaderDialogSurface', new Set(
 syntax.builderParamObjectCollection.set('ReaderDialogSurface', new Set(
   [...surfaceSource.matchAll(/@BuilderParam\s+(\w+)\s*:/g)].map(match => match[1])));
 syntax.componentCollection.customComponents.add('BookRemovalDialog');
-syntax.componentCollection.customDialogs.add('BookRemovalDialog');syntax.propCollection.set('BookRemovalDialog',new Set(['message']));
+syntax.componentCollection.customDialogs.add('BookRemovalDialog');
+syntax.propCollection.set('BookRemovalDialog', new Set(['message', 'reducedMotion']));
 if (selectedCase === 'confirmation-admission') {
   const { selectedProductionClasses, selectedProductionMethods, selectedProductionValues } = await import('./lib/selected-production-methods.mjs');
   const { BookRemovalDialogPresentation } = await import('../entry/src/main/ets/features/bookshelf/presentation/BookRemovalDialogPresentation.ts');
+  const { ShelfBookPresentation } = await import('../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts');
   const { ReaderNavigation } = await import('../entry/src/main/ets/app/navigation/ReaderNavigation.ts');
   const mutationFile = file('features/bookshelf/presentation/BookshelfMutationPresentation.ets');
   const { EMPTY_SELECTION } = selectedProductionValues(mutationFile, ['EMPTY_SELECTION']);
   const { BookshelfMutationPresentation } = selectedProductionClasses(mutationFile, ['BookshelfMutationPresentation'],
-    { EMPTY_SELECTION, EMPTY_BOOKSHELF_OPERATION_SNAPSHOT: { busy: false, removalKey: '' } });
+    { EMPTY_SELECTION, ShelfBookPresentation, EMPTY_BOOKSHELF_OPERATION_SNAPSHOT: { busy: false, removalKey: '' } });
   const { BookshelfDetailPresentation } = selectedProductionClasses(
     file('features/bookshelf/presentation/BookshelfDetailPresentation.ets'), ['BookshelfDetailPresentation']);
   const { BookshelfProjectionOwner } = selectedProductionClasses(
@@ -62,22 +67,47 @@ if (selectedCase === 'confirmation-admission') {
   const online = { sourceId: 'source', bookId: 'b', title: '在线书', addedAt: 2 };
   const localKey = 'local\0a';
   const tick = () => new Promise(resolve => setImmediate(resolve));
-  let nativeEvents, nativeController;
+  let nativeEvents, nativeController, backdropAnimations;
+  let failNextOpen = false;
   class NativeController {
     constructor(options) { this.options = options; nativeController = this; }
-    open() { nativeEvents.push('open'); this.options.builder(); }
-    close() { nativeEvents.push('close'); }
-    cancelNatively() { nativeEvents.push('close'); this.options.cancel(); }
+    open() {
+      nativeEvents.push('open');
+      if (failNextOpen) { failNextOpen = false; throw Error('native open unavailable'); }
+      this.options.builder();
+    }
+    close() {
+      nativeEvents.push('close');
+      if (this.failClose) throw Error('native close unavailable');
+      this.options.onWillDisappear();
+    }
+    cancelNatively() {
+      nativeEvents.push('close');
+      this.options.onWillDisappear();
+      this.options.cancel();
+    }
   }
   class DialogChild {
     constructor(owner, params, _storage, id) { Object.assign(this, {owner, params, id}); }
   }
   const nativeHostSource = readFileSync(file('features/bookshelf/ui/BookRemovalDialogHost.ets'), 'utf8');
-  const nativeHostMembers = ['aboutToAppear', 'aboutToDisappear', 'createDialog', 'dialogContent'];
+  const nativeHostMembers = ['aboutToAppear', 'aboutToDisappear', 'createDialog', 'dialogContent', 'clearBackdrop',
+    'backdropTicket', 'backdropOpacity', 'backdropSequence', 'build'];
+  const nativeProperties = createArkUIPropertyRuntimeProbe();
+  const motion = productionReaderMotionSdk();
+  let reduceMotion = false;
+  let themeScheme = 'day';
   const NativeHost = createReaderBuilderProbe(nativeHostSource, nativeHostMembers, {
+    ...nativeProperties.sdk,
     BookRemovalDialog: DialogChild, CustomDialogController: NativeController, DialogAlignment: { Center: 'center' },
-  }, { childSources: { BookRemovalDialog: readFileSync(file('features/bookshelf/ui/BookRemovalDialog.ets'), 'utf8') } }).Component;
-  const hostMethods = ['openBookRemovalDialog', 'onBackPress', 'isCurrentRuntime'];
+    AppStorage: { get: key => key === 'readerAppScheme' ? themeScheme : undefined }, readerAppColor,
+    readerReduceMotionFromStorage: () => reduceMotion,
+    readerMotionStandardCurve: () => motion.motionSpecGet('app.control.press').curve,
+    readerMotionReducedFadeParam: motion.readerMotionReducedFadeParam,
+    uiContext: { animateTo(options, update) { backdropAnimations.push(options); update(); } },
+  }, { ...nativeProperties.hooks,
+    childSources: { BookRemovalDialog: readFileSync(file('features/bookshelf/ui/BookRemovalDialog.ets'), 'utf8') } }).Component;
+  const hostMethods = ['openBookRemovalDialog', 'onBackPress', 'isCurrentRuntime', 'wideSettingsPane'];
   const Host = selectedProductionMethods(file('pages/Index.ets'), 'Index', hostMethods, {
     ReaderRuntimeOwner, hilog: { warn() {} }, DOMAIN: 0, errorMessageOf: error => error.message,
   });
@@ -85,6 +115,7 @@ if (selectedCase === 'confirmation-admission') {
   function fixture(route, book = local, paged = true) {
     const events = [], feedback = [], messages = [];
     nativeEvents = events;
+    backdropAnimations = [];
     const model = { books: [local, online], revision: 'r1', pending: undefined, failed: false };
     const state = () => ({ books: model.books, total: model.books.length,
       projectionRevision: paged ? model.revision : undefined });
@@ -99,17 +130,25 @@ if (selectedCase === 'confirmation-admission') {
     const binding = { identity: 'selection', current: () => true, emit() {} };
     projection.attach(binding);
     const host = Object.assign(new Host(), {
-      route, readingSessionActive: false, shelfRead: { snapshot: { books: [local, online] } },
+      route, expandedLayout: () => false, readingSessionActive: false, shelfRead: { snapshot: { books: [local, online] } },
       mangaSourceSwitch: { selectionVisible: false }, navigationGeneration: 1, bookRemovalConfirmation: new BookRemovalDialogPresentation(),
       detailShelfAdmissionMount: 1, mountedRuntimeOwner: runtime, shelfReceiptRetired: false,
+      searchAppForeground: true, arkWebCapturesInput: false, currentReadingRuntime: () => runtime,
       navigationOwner: new ReaderNavigation(), jsonImportPresentation: {},
-      sourceSwitchPresentation: { visible: false }, shelfGroupPresentation: { back: () => false },
+      sourceSwitchPresentation: { isSurfacePresented: () => false }, shelfGroupPresentation: { back: () => false },
+      readingEntryActions: { shelfPreparing: false },
     });
     host.navigationOwner.show(route);
     const nativeHost = new NativeHost(undefined, {});
     nativeHost.presentation = host.bookRemovalConfirmation;
     nativeHost.aboutToAppear();
-    const confirmCurrent = () => [...nativeHost.children.values()].findLast(child => child instanceof DialogChild).params.onConfirm();
+    nativeHost.initialRender();
+    const backdrop = () => {
+      nativeProperties.flush(owner => owner === nativeHost);
+      return [...nativeHost.nodes.values()].find(node => node.type === 'Stack');
+    };
+    const currentDialog = () => [...nativeHost.children.values()].findLast(child => child instanceof DialogChild).params;
+    const confirmCurrent = () => currentDialog().onConfirm();
     const confirm = (message, action) => { messages.push(message); host.openBookRemovalDialog(message, action); };
     const operation = {
       current: () => ({ generation: 1 }),
@@ -139,11 +178,13 @@ if (selectedCase === 'confirmation-admission') {
     });
     model.detailBook = book;
     model.inBookshelf = true;
-    return { host, model, detail, events, feedback, messages, confirmCurrent };
+    return { host, model, detail, events, feedback, messages, confirmCurrent, currentDialog, nativeHost, backdrop };
   }
 
   for (const route of ['detail', 'bookshelf', 'bookshelfMultiSelect']) {
     for (const exit of ['cancel', 'back', 'confirm', 'stale', 'busy']) {
+      reduceMotion = exit === 'back';
+      themeScheme = route === 'detail' ? 'day' : 'night';
       const f = fixture(route), h = f.host, selection = h.shelfMutations;
       if (route === 'bookshelfMultiSelect') { selection.openSelection(local, [local, online]); await tick(); }
       const request = () => {
@@ -153,6 +194,19 @@ if (selectedCase === 'confirmation-admission') {
       };
       request(); request();
       assert.deepEqual(f.events, ['open'], 'repeated requests preserve one confirmation');
+      const { width, height, backdropBlur, backgroundColor, hitTestBehavior, accessibilityLevel, focusable } = f.backdrop();
+      assert.deepEqual([width, height, backdropBlur], ['100%', '100%', 6]);
+      assert.equal(f.backdrop().opacity, 1);
+      assert.deepEqual([backgroundColor, hitTestBehavior, accessibilityLevel, focusable],
+        ['Color.Transparent', 'HitTestMode.None', 'no-hide-descendants', false]);
+      assert.equal(nativeController.options.maskColor, readerAppColor('app.scrim.modal', themeScheme));
+      assert.deepEqual([nativeController.options.openAnimation.duration, nativeController.options.closeAnimation.duration],
+        reduceMotion ? [0, 120] : [220, 180]);
+      assert.equal(f.currentDialog().reducedMotion, reduceMotion, 'the native builder forwards the opening preference');
+      if (!reduceMotion) {
+        assert.deepEqual(nativeController.options.openAnimation.curve, [0.2, 0, 0, 1]);
+        assert.deepEqual(nativeController.options.closeAnimation.curve, [0.2, 0, 0, 1]);
+      }
       if (exit === 'cancel') nativeController.cancelNatively();
       else if (exit === 'back') assert.equal(h.onBackPress(), true);
       else {
@@ -163,10 +217,50 @@ if (selectedCase === 'confirmation-admission') {
       f.confirmCurrent();
       await tick();
       assert.equal(h.bookRemovalConfirmation.isOpen(), false);
+      assert.equal(f.backdrop().backdropBlur, 6, 'the underlay stays mounted through the exit fade');
+      assert.equal(f.backdrop().opacity, 0, 'native dismissal starts the underlay fade');
+      assert.deepEqual(backdropAnimations.map(animation => animation.duration), reduceMotion ? [120, 120] : [220, 180]);
+      nativeController.options.onDidDisappear();
+      backdropAnimations.at(-1).onFinish();
+      assert.deepEqual([f.backdrop().width, f.backdrop().height, f.backdrop().backdropBlur], [0, 0, 0]);
       assert.deepEqual(f.events, exit === 'confirm' ?
         ['open', 'close', [route === 'bookshelfMultiSelect' ? 'batch' : route, [{ sourceId: 'local', bookId: 'a' }]]] :
         ['open', 'close'], `${route}/${exit}`);
     }
+  }
+
+  {
+    const f = fixture('detail');
+    const presentation = f.host.bookRemovalConfirmation;
+    const errors = [];
+    let writes = 0;
+    const open = () => presentation.open('移出书架', () => true, () => { writes++; }, phase => errors.push(phase));
+    open();
+    const retired = nativeController;
+    assert.equal(presentation.dismiss(), true);
+    const finishRetiredFade = backdropAnimations.at(-1).onFinish;
+    open();
+    const current = nativeController;
+    retired.options.cancel();
+    retired.options.onDidDisappear();
+    finishRetiredFade();
+    assert.equal(presentation.isOpen(), true);
+    assert.equal(f.backdrop().backdropBlur, 6, 'old native callbacks cannot clear a newer underlay');
+    current.failClose = true;
+    presentation.confirm();
+    assert.equal(writes, 0, 'native close failure keeps the destructive action unadmitted');
+    assert.deepEqual(errors, ['close']);
+    assert.equal(f.backdrop().backdropBlur, 0, 'native close failure clears the underlay');
+    failNextOpen = true;
+    open();
+    assert.deepEqual(errors, ['close', 'open']);
+    assert.equal(presentation.isOpen(), false);
+    assert.equal(f.backdrop().backdropBlur, 0, 'native open failure leaves no underlay');
+    open();
+    assert.equal(f.backdrop().backdropBlur, 6);
+    f.nativeHost.aboutToDisappear();
+    assert.equal(f.backdrop().backdropBlur, 0, 'unmount clears the underlay without waiting for native callbacks');
+    assert.equal(presentation.isOpen(), false);
   }
 
   for (const book of [local, online]) {
@@ -256,19 +350,36 @@ class SurfaceChild {
   }
 }
 const dialogSource = readFileSync(file('features/bookshelf/ui/BookRemovalDialog.ets'), 'utf8');
+const { actualReaderPostLayoutFrame } = await import('./lib/reader-post-layout-frame-probe.mjs');
+const properties = createArkUIPropertyRuntimeProbe();
+const frames = [], animations = [];
+let rejectFrame = false, rejectAnimation = false;
+const uiContext = {
+  postFrameCallback(frame) {
+    if (rejectFrame) throw Error('frame unavailable');
+    frames.push(frame);
+  },
+  animateTo(options, apply) {
+    if (rejectAnimation) throw Error('animation unavailable');
+    animations.push(options);
+    apply();
+  },
+};
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
 void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
 const { owner: dialog } = createReaderBuilderProbe(dialogSource,
-  ['build', 'messageBody', 'messageMaxHeight'], {
-  ReaderWindowCoordinator: { metrics: () => metrics }, ReaderDialogSurface: SurfaceChild, DialogActionView,
-  registerReaderFonts: () => {},
-});
+  ['build', 'messageBody', 'messageMaxHeight', 'reducedMotion', 'contentOpacity', 'motionGeneration',
+    'aboutToAppear', 'aboutToDisappear'], {
+  ...properties.sdk, ReaderWindowCoordinator: { metrics: () => metrics }, ReaderDialogSurface: SurfaceChild, DialogActionView,
+  registerReaderFonts: () => {}, ReaderPostLayoutFrame: actualReaderPostLayoutFrame(), uiContext,
+  ...productionReaderMotionSdk(),
+}, properties.hooks);
 let cancel = 0, confirm = 0;
 Object.assign(dialog, { appThemeScheme: 'day', message: '很长的书名'.repeat(120),
   measuredMessageHeight: 50, onCancel: () => cancel++, onConfirm: () => confirm++ });
-dialog.initialRender();
+dialog.aboutToAppear(); dialog.initialRender();
 const surfaceChild = [...dialog.children.values()][0];
 assert.equal(surfaceChild.params.specId, 'book-removal');
 assert.equal(surfaceChild.params.title, '移出书架');
@@ -279,6 +390,9 @@ assert.equal(typeof surfaceChild.params.body, 'function', 'message body is deleg
 const dialogNodes = [...dialog.nodes.values()];
 const dialogScroll = dialogNodes.find(n => n.type === 'Scroll');
 const dialogBody = dialogNodes.find(n => n.type === 'Text' && n.create === dialog.message);
+const dialogContent = dialogNodes.find(n => n.type === '__Common__' && n.opacity !== undefined);
+assert.equal(dialogContent.opacity, 1, 'standard native presentation remains opaque');
+assert.equal(frames.length, 0, 'standard native presentation needs no content fade');
 assert.equal(dialogScroll.height, 50);
 assert.equal(dialogBody.maxLines, undefined, 'purge notices must not be ellipsized');
 assert.equal(dialogBody.textOverflow, undefined);
@@ -296,6 +410,29 @@ assert.equal(cancel, 1); assert.equal(confirm, 1);
 surfaceChild.params.onAction('unknown');
 assert.equal(cancel + confirm, 2, 'unrouted action ids never reach the callbacks');
 
+dialog.aboutToDisappear(); dialog.reducedMotion = true; dialog.aboutToAppear(); dialog.replay();
+assert.equal(dialogContent.opacity, 0, 'the reduced dialog starts fully laid out with hidden content paint');
+for (const property of ['scale', 'translate', 'position', 'width', 'height'])
+  assert.equal(dialogContent[property], undefined, 'the content fade owns no spatial properties');
+const frame = frames.shift();
+frame.onFrame(0);
+assert.equal(animations.length, 0, 'the reduced fade waits for post-layout');
+frame.onIdle(0); frames.shift().onFrame(0); dialog.replay();
+assert.deepEqual(animations.map(({ duration, curve }) => [duration, curve]), [[120, 'Curve.EaseOut']]);
+assert.equal(dialogContent.opacity, 1, 'the shared motion reaches opaque content');
+
+dialog.aboutToDisappear(); dialog.aboutToAppear();
+const retiredFrame = frames.shift();
+dialog.aboutToDisappear(); dialog.aboutToAppear();
+retiredFrame.onIdle(0); dialog.replay();
+assert.equal(dialogContent.opacity, 0, 'a retired layout callback cannot reveal the next opening');
+assert.equal(animations.length, 1);
+rejectAnimation = true;
+frames.shift().onIdle(0); dialog.replay();
+assert.equal(dialogContent.opacity, 1, 'animation failure leaves the dialog readable');
+dialog.aboutToDisappear(); rejectFrame = true; dialog.aboutToAppear(); dialog.replay();
+assert.equal(dialogContent.opacity, 1, 'layout scheduling failure leaves the dialog readable');
+
 }
 if(selectedCase==='removal-actions') {
 const resolverSource = readFileSync(file('ui/foundation/ReaderSurfaceResolvers.ts'), 'utf8');
@@ -306,29 +443,36 @@ let metrics=new ReaderWindowMetricsSnapshot();
 // the data-driven actions row and press feedback for the book-removal spec.
 metrics = new ReaderWindowMetricsSnapshot();
 metrics.windowRect = new ReaderRectVp(0, 0, 390, 844);
+const properties = createArkUIPropertyRuntimeProbe();
 const { owner: surface } = createReaderBuilderProbe(surfaceSource,
-  ['body', 'defaultBody', 'build', 'header', 'actionsRow', 'actionCell', 'spec', 'resolvedFrame',
+  ['body', 'defaultBody', 'build', 'header', 'actions', 'actionsRow', 'actionCell', 'action', 'spec', 'resolvedFrame',
     'frameWidth', 'framePadding', 'actionLabelColor', 'actionSurfaceRole', 'actionModifier',
-    'actionTouchRegion', 'bodyActionsInnerMargin', 'actionHeight', 'fontScale'], {
-  ReaderWindowCoordinator: { metrics: () => metrics }, readerInteractiveSafeLeft, readerInteractiveSafeRight,
+    'actionTouchRegion', 'bodyActionsInnerMargin', 'actionHeight', 'fontScale', 'mounted', 'aboutToAppear', 'aboutToDisappear'], {
+  ...properties.sdk, ReaderWindowCoordinator: { metrics: () => metrics }, readerInteractiveSafeLeft, readerInteractiveSafeRight,
   resolveHorizontalFrame, SurfaceWidthSpec, SurfaceHorizontalFrame: class {
     constructor(left, right, width) { Object.assign(this, { left, right, width }); }
-  }, resolveDialogSpec, readerReadableFontScale, readerScaledControlHeight,
+  }, DialogActionView, resolveDialogSpec, readerSurfaceElevation: readerSurfaceSpecsForProbe().readerSurfaceElevation, readerReadableFontScale, readerScaledControlHeight,
   MESSAGE_ACTION: { lineHeightFp: 20 }, ButtonType: { Normal: 'Normal' },
-});
+}, properties.hooks);
 const actions = [
   { id: 'cancel', label: '取消', tone: 'default', enabled: true, defaultFocus: true },
   { id: 'confirm', label: '移除', tone: 'danger', enabled: true, defaultFocus: false },
 ];
 Object.assign(surface, { appThemeScheme: 'day', readerWindowMetricsRevision: 0,
   specId: 'book-removal', title: '移出书架', showCloseButton: false, actions });
-surface.initialRender();
+surface.aboutToAppear(); surface.initialRender();
 const surfaceNodes = [...surface.nodes.values()];
 const buttons = surfaceNodes.filter(n => n.type === 'Button');
-void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-assert.equal(buttons.length,actions.length);
-void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
+const frame = surfaceNodes.find(node => node.type === 'Column' && node.borderRadius === 22);
+assert.equal(frame.width, 318);
+assert.equal(frame.padding, 19, 'the 1vp border completes the 20vp edge inset');
+assert.equal(frame.border.color, readerAppColor('TOK_LINE', 'day'));
+assert.equal(frame.backgroundColor, readerAppColor('TOK_SURFACE_ELEVATED', 'day'));
+assert.equal(frame.shadow.radius, 30);
+assert.equal(buttons.length, actions.length);
+assert.ok(buttons.every(button => button.borderRadius === 999 && button.constraintSize.minHeight >= 44));
+assert.equal(buttons[0].backgroundColor, readerAppColor('TOK_SURFACE_FIELD', 'day'));
+assert.equal(buttons[1].backgroundColor, readerAppColor('app.action.destructive', 'day'));
 assert.deepEqual(buttons.map(b => b.defaultFocus), [true, false], 'keyboard focus defaults to cancel');
 assert.ok(buttons.every(b=>b.responseRegion?.width==='100%'),'each action owns its full horizontal response region');
 metrics.windowRect = new ReaderRectVp(0, 0, 280, 300);

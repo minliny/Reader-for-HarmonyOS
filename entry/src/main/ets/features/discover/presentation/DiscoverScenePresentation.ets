@@ -7,7 +7,7 @@ export class DiscoverScenePresentation {
   private host: DiscoverOrchestrator | undefined;
   private identity: string = '';
 
-  open(owner: ReaderRuntimeOwner, identity: string, current: () => boolean): void {
+  open(owner: ReaderRuntimeOwner, identity: string, current: () => boolean, returning: boolean = false): void {
     if (!current() || identity === this.identity) return;
     const host = DiscoverOrchestrator.forRuntime(owner);
     if (host === undefined) return;
@@ -21,7 +21,7 @@ export class DiscoverScenePresentation {
       this.retire();
       return;
     }
-    host.open();
+    if (!returning || this.snapshot.loading || this.snapshot.kinds.length === 0) host.open();
   }
 
   operations(identity: string): DiscoverOrchestrator | undefined {

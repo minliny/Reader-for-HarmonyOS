@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
-import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
+import { createReaderBuilderProbe, productionReaderMotionSdk } from './lib/reader-control-builder-probe.mjs';
 import { compileTailConsumer } from './lib/foundation-tail-consumer-probe.mjs';
 import { productionMangaDirectoryPressFeedback } from './lib/manga-directory-press-feedback-probe.mjs';
 import { downloadChapterDetailLabel } from '../entry/src/main/ets/features/downloads/presentation/SharedDownloadProjection.ts';
@@ -21,6 +21,7 @@ import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { selectedProductionMethods, selectedProductionValues } from './lib/selected-production-methods.mjs';
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
+import { httpUrlHostname, redactedHttpUrl } from '../entry/src/main/ets/platform/network/HttpTransportPolicy.ts';
 import * as safe from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import { SOURCE_GROUP_SELECT_RADIUS } from '../entry/src/main/ets/ui/foundation/ReaderSelectGeometry.ts';
 import { consumeReaderControlKeyboardBack } from '../entry/src/main/ets/ui/foundation/ReaderKeyboardBack.ts';
@@ -42,6 +43,7 @@ const selected = selectContractCases({
   'title-scale': 'Actual standard and action-sheet titles at2.5 with platformmax3 and current linebox parent.',
   'page-back-bar-title-wrap': 'Actual PageBackBar fixed heading wraps at original font with a naturally growing Row. Floating standard heading stays single-line. Old truncation fails.',
   'select-reduce-motion': 'Nine real InlineSelect callers and both directory/source-tool propagation chains preserve true/false preferences and popup lifecycle.',
+  'inline-select-indexed-popup': 'Actual InlineSelect popup rows preserve duplicate option labels, exact source index, and reduced-motion native options.',
   'bookshelf-group-recovery-capacity': 'Actual group build/surface/recovery pays current safe host capacity, including expanded long text, zero, busy and retired actions.',
 });
 const root = new URL('../entry/src/main/ets/', import.meta.url);
@@ -361,19 +363,22 @@ function recoveryOverlays() {
   Object.assign(negative, { appThemeScheme: 'day', view: { visible: true, message: '旧未决消息', generation: 1, canRetry: false }, maxHeightVp: 100, clipped: false, expanded: true, actionsWidth: 0, actionsHeight: 44, titleLineHeight: 22, reservedSpace: '', tag: '待处理', actionLabel: '', secondaryActionLabel: '' });
   negative.initialRender(); assert.throws(() => assert.ok(sdk.nodes(negative).some(n => n.type === 'Scroll')), /AssertionError/);
   const c = context(value);
+  Object.assign(c.deps, pureModuleProbe(read('ui/layout/ReaderKeyboardGeometry.ts'),
+    'ReaderKeyboardGeometry.ts', safe, ['readerKeyboardHostBottom']));
   const boundCases = [
     ['app/composition/ReaderJourneyRecoveryNotices.ets', 'availableHeight', { hostHeight: 180, hostY: 0, topInset: 70 }, []],
   ];
   for (const [rel, method, fields, args] of boundCases) {
     const owner = c.actor(rel, [method], fields); assert.ok(owner[method](...args) <= 110);
   }
-  for (const [rel, builder] of [['features/source/ui/SourceToolsPage.ets', 'pendingRecovery'],
+  for (const [rel, builder] of [['features/source/ui/SourceToolsPage.ets', 'recoveryAction'],
     ['features/settings/ui/SettingsPage.ets', 'pendingFeedback']]) {
     const source = read(rel), { ts, options } = installedEtsCompiler();
     const tree = ts.createSourceFile(rel, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
     assert.deepEqual(tree.parseDiagnostics, []);
     const component = tree.statements.find(node => ts.isStructDeclaration(node));
     const content = component.members.find(member => member.name?.getText(tree) === builder);
+    assert.ok(content, `${rel} binds the current recovery builder ${builder}`);
     assert.equal(content.parameters.length, 0, `${rel} supplies no page-local scalar geometry`);
     const slots = [];
     const visit = node => {
@@ -393,44 +398,126 @@ function recoveryOverlays() {
   assert.equal(frame.margin.top, standard.geometry.content.startInset);
   assert.equal(frame.width, standard.geometry.content.frame.width);
   assert.ok(frame.margin.top + frame.constraintSize.maxHeight <= standard.geometry.footer.top);
-  for (const rel of ['features/source/ui/SourceManagementPage.ets', 'features/source/ui/SourceSwitchWindow.ets', 'features/downloads/ui/SharedDownloadPage.ets']) assert.match(read(rel), /maxHeightVp:/, `${rel} explicitly supplies its actual host remainder`);
+  const sources = c.actor('features/source/ui/SourceManagementPage.ets',
+    ['pendingRecovery', 'recoveryOverlayTop', 'recoveryOverlayBottom'], {
+      geometry: { content: { startInset: 70 }, footer: { top: 145 } },
+      overlayBottom: () => 180, recoveryOverlayVisible: () => true, operation: {},
+      contentFrame: () => ({ left: 19, width: 282 }), layoutBudget: () => ({ filterHeight: 44 }),
+    });
+  sources.pendingRecovery();
+  const sourceFrame = c.nodes(sources).find(node => node.id === 'reader-source-pending-recovery');
+  assert.ok(sourceFrame && sourceFrame.type === 'Scroll', 'source recovery uses its bounded host scroll');
+  assert.equal(sourceFrame.margin.top, 70, 'short source host retains a visible recovery lane');
+  assert.equal(sourceFrame.constraintSize.maxHeight, 75, 'source recovery ends at the footer boundary');
+  for (const rel of ['features/source/ui/SourceSwitchWindow.ets', 'features/downloads/ui/SharedDownloadPage.ets']) {
+    assert.match(read(rel), /maxHeightVp:/, `${rel} explicitly supplies its actual host remainder`);
+  }
   results.push({ case: 'recovery-overlays', fullMessageActions: 3, zeroBudget: 'bounded', staleGeneration: 'rejected', oldGenerationArea: 'rejected', sameGenerationOldLayoutArea: 'rejected', oldMetricsArea: 'rejected', retiredMountArea: 'rejected', oldInlineAreaMutation: 'reproduced-and-rejected', coldTextThenActions: 'PASS-one-delivery-each', coldActionsThenText: 'PASS-one-delivery-each', resultKeyedMutation: 'rejected-both-orders' });
 }
 function arkwebHost() {
-  for (const scale of [1, 1.45, 2]) {
-    const value = metrics(320, 360, scale), c = context(value), calls = [], current = { id: 1, controller: {} };
-    const executor = { isSurfaceCurrent: surface => surface === current, cancelInteractive: surface => calls.push(['cancel', surface.id]), finishInteractive: surface => calls.push(['finish', surface.id]) };
-    const source = read('ui/platform/ArkWebExecutionHost.ets');
-    const members = ['build', 'surfacesForRender', 'safeLeft', 'safeTop', 'safeWidth', 'safeHeight', 'toolbarHeight', 'toolbarAreaHandler', 'fontScale', 'consumeBack'];
-    const owner = createReaderBuilderProbe(source, members, { ...c.deps, ArkWebExecutor: { instance: executor }, ReaderActionAccessibility: class { applyNormalAttribute() {} },
-      consumeReaderControlKeyboardBack, inputMethod: { getController: () => ({ hideTextInput: () => { calls.push(['keyboard']); return Promise.resolve(); } }) }, hilog: { warn() {} } }, c.hooks).owner;
-    Object.assign(owner, { appThemeScheme: 'day', readerWindowMetricsRevision: 1, mounted: true, currentSurface: current, interactiveBackSurface: current,
-      surfaceId: 1, interactive: true, title: '书源网页登录', currentUrl: 'https://example.test/login', hostWidth: 320, hostHeight: 360, hostX: 0, hostY: 0,
-      measuredToolbarHeight: 0 });
-    owner.initialRender(); const nodes = c.nodes(owner), web = nodes.find(n => n.type === 'Web'), toolbar = nodes.find(n => n.type === 'Scroll');
+  const source = read('ui/platform/ArkWebExecutionHost.ets');
+  const members = ['build', 'surfacesForRender', 'safeLeft', 'safeTop', 'safeWidth', 'safeHeight', 'toolbarHeight',
+    'toolbarAreaHandler', 'toolbarActionWidth', 'controlsHeight', 'controlsColumns', 'controlsActionHeight',
+    'controlsAreaHandler', 'fontScale', 'consumeBack',
+    'browserAction', 'navigate', 'updateHistory', 'updateAddress', 'clearSession'];
+  const keyboard = pureModuleProbe(read('ui/layout/ReaderKeyboardGeometry.ts'),
+    'ReaderKeyboardGeometry.ts', safe, ['readerKeyboardHostBottom']);
+  for (const scale of [1, 1.45, 2, 3.2]) for (const wide of [false, true]) for (const scheme of ['day', 'night']) {
+    const value = metrics(wide ? 1024 : 320, wide ? 640 : 360, scale), c = context(value);
+    const calls = [], current = { id: 1, controller: {} };
+    const executor = {
+      isSurfaceCurrent: surface => surface === current,
+      interactiveHistory: () => ({ canGoBack: true, canGoForward: true }),
+      onSameDocumentNavigation: (_url, surface) => calls.push(['same-document', surface.id]),
+      navigateInteractive: (surface, command) => { calls.push([command, surface.id]); return true; },
+      requestInteractiveSessionClear: surface => { calls.push(['clear', surface.id]); return true; },
+      cancelInteractive: surface => calls.push(['cancel', surface.id]),
+      finishInteractive: surface => calls.push(['finish', surface.id]),
+    };
+    const dependencies = { ...c.deps, ...keyboard, httpUrlHostname, redactedHttpUrl, ArkWebExecutor: { instance: executor },
+      ReaderActionAccessibility: class { applyNormalAttribute() {} },
+      consumeReaderControlKeyboardBack, inputMethod: { getController: () => ({
+        hideTextInput: () => { calls.push(['keyboard']); return Promise.resolve(); },
+      }) }, hilog: { warn() {} }, $r: id => id };
+    const fields = { appThemeScheme: scheme, readerWindowMetricsRevision: 1, mounted: true, currentSurface: current,
+      interactiveBackSurface: current, surfaceId: 1, interactive: true, title: '书源网页登录',
+      currentUrl: 'https://example.test/login', currentHost: 'example.test',
+      canGoBack: true, canGoForward: true, canClear: true, pageLoading: false, pageProgress: 0, clearing: false,
+      hostWidth: value.windowRect.width, hostHeight: value.windowRect.height, hostX: 0, hostY: 0,
+      interactiveBounds: wide ? { left: 234, top: 48, width: 708, height: 544 } : undefined,
+      measuredToolbarHeight: 0, measuredControlsHeight: 0 };
+    const owner = createReaderBuilderProbe(source, members, dependencies, c.hooks).owner;
+    Object.assign(owner, fields);
+    owner.initialRender();
+    const nodes = c.nodes(owner), web = nodes.find(n => n.type === 'Web');
+    const [toolbar, controls] = nodes.filter(n => n.type === 'Scroll');
+    const bounds = fields.interactiveBounds ?? { left: 0, top: 24, width: 320, height: 320 };
+    for (const layer of [toolbar, web, controls]) {
+      assert.equal(layer.position.x, bounds.left, 'left follows the current pane');
+      assert.equal(layer.width, bounds.width, 'width follows the current pane');
+    }
+    assert.equal(toolbar.position.y, bounds.top);
     assert.equal(web.position.y, toolbar.position.y + toolbar.height, 'Web starts below the actual toolbar viewport');
-    assert.ok(web.position.y + web.height <= 344 && web.position.y >= 24); assert.ok(web.width <= 320);
-    const actions = nodes.filter(n => n.type === 'Button'); assert.equal(actions.length, 2);
+    assert.equal(controls.position.y, web.position.y + web.height, 'Web ends at the current browser controls');
+    assert.equal(controls.position.y + controls.height, bounds.top + bounds.height);
+    const actions = nodes.filter(n => n.type === 'Button');
+    assert.equal(actions.length, 6);
     assert.ok(actions.every(n => n.constraintSize.minWidth >= 44 && n.constraintSize.minHeight >= 44));
+    const controlsPerRow = (wide && scale < 3.2) || scale === 1 ? 4 : 2;
+    assert.ok(actions.slice(2).every(action => action.width === (controlsPerRow === 4 ? '25%' : '50%')));
+    const controlsContentHeight = (4 / controlsPerRow) * actions[2].constraintSize.minHeight;
+    assert.equal(controls.height, Math.min(controlsContentHeight, bounds.height - toolbar.height));
+    const brand = readerAppColor('app.sourceUi.primary', scheme);
+    const specs = [['取消', brand], ['后退', brand], ['前进', brand], ['刷新', brand],
+      ['清除登录态', readerAppColor('app.sourceUi.danger', scheme)]];
+    for (const [label, color] of specs) {
+      const node = nodes.find(node => node.type === 'Text' && node.create === label);
+      assert.equal(node?.fontColor, color, `${scheme} ${label} uses its matching semantic tone`);
+      assert.equal(node.fontFamily, 'ReaderNotoSansSCUIRegular');
+      assert.equal(node.maxLines, undefined, `${label} remains readable when it wraps`);
+    }
+    const done = nodes.find(node => node.type === 'Text' && node.create === '完成');
+    assert.equal(done?.backgroundColor, brand);
+    owner.pageLoading = true;
+    web.onNavigationEntryCommitted({ isMainFrame: false, isSameDocument: true, url: 'https://example.test/frame' });
+    assert.equal(owner.pageLoading, true, 'subframe navigation does not settle the browser');
+    web.onNavigationEntryCommitted({ isMainFrame: true, isSameDocument: true, url: 'https://example.test/token#state' });
+    assert.equal(owner.pageLoading, false, 'the browser controls stay available for same-document history');
+    assert.equal(owner.currentUrl, 'https://example.test/…', 'the address projection omits credentials and fragments');
+    assert.deepEqual(calls.at(-1), ['same-document', 1]);
+    for (const [action, command] of actions.map((action, index) => [action, ['cancel', 'finish', 'back', 'forward', 'refresh', 'clear'][index]])) {
+      action.onClick();
+      assert.deepEqual(calls.at(-1), [command, 1]);
+      owner.pageLoading = false;
+    }
+    assert.equal(owner.clearing, true);
+    owner.clearing = false;
     assert.equal(owner.consumeBack(), true); assert.deepEqual(calls.at(-1), ['cancel', 1]);
     value.keyboardInsets = new safe.ReaderInsetsVp(0, 0, 0, 180);
     assert.equal(owner.consumeBack(), true); assert.deepEqual(calls.at(-1), ['keyboard'], 'IME dismissal precedes cancellation');
-    const background = createReaderBuilderProbe(source, members, { ...c.deps, ArkWebExecutor: { instance: executor } }, c.hooks).owner;
-    Object.assign(background, { appThemeScheme: 'day', readerWindowMetricsRevision: 1, currentSurface: current, surfaceId: 1, interactive: false });
+    if (wide) {
+      value.keyboardArea = new safe.ReaderKeyboardAreaVp(true, true, [new safe.ReaderRectVp(0, 400, 200, 240)]);
+      assert.equal(owner.safeHeight(), bounds.height, 'a floating keyboard beside the pane does not shrink it');
+      value.keyboardArea = new safe.ReaderKeyboardAreaVp(true, true, [new safe.ReaderRectVp(400, 400, 450, 240)]);
+      assert.equal(owner.safeHeight(), 400 - bounds.top, 'a keyboard overlapping the pane reserves its occupied lane');
+    }
+    const background = createReaderBuilderProbe(source, members, dependencies, c.hooks).owner;
+    Object.assign(background, { ...fields, interactive: false });
     background.initialRender();
-    const hidden = c.nodes(background).find(n => n.type === 'Web'); assert.equal(hidden.width, '100%'); assert.equal(hidden.height, '100%'); assert.equal(hidden.focusable, false);
-    assert.ok(c.nodes(background).some(n => n.type === 'Stack' && n.width === 1 && n.height === 1), 'background Web keeps1px execution host');
-    if (scale === 1) {
+    const hidden = c.nodes(background).find(n => n.type === 'Web');
+    assert.equal(hidden.width, '100%'); assert.equal(hidden.height, '100%'); assert.equal(hidden.focusable, false);
+    assert.ok(c.nodes(background).some(n => n.type === 'Stack' && n.width === 1 && n.height === 1), 'background Web keeps the 1vp execution host');
+    if (scale === 1 && !wide && scheme === 'day') {
       const coveredSource = source.replace('y: this.interactive ? this.safeTop() + this.toolbarHeight() : 0', 'y: 0');
       assert.notEqual(coveredSource, source);
-      const covered = createReaderBuilderProbe(coveredSource, members, { ...c.deps, ArkWebExecutor: { instance: executor }, ReaderActionAccessibility: class { applyNormalAttribute() {} } }, c.hooks).owner;
-      Object.assign(covered, { appThemeScheme: 'day', readerWindowMetricsRevision: 1, mounted: true, currentSurface: current, surfaceId: 1,
-        interactive: true, title: '旧宿主', currentUrl: 'https://example.test/login', hostWidth: 320, hostHeight: 360, hostX: 0, hostY: 0, measuredToolbarHeight: 0 });
+      const covered = createReaderBuilderProbe(coveredSource, members, dependencies, c.hooks).owner;
+      Object.assign(covered, fields);
       covered.initialRender(); const before = c.nodes(covered);
       assert.throws(() => assert.equal(before.find(n => n.type === 'Web').position.y,
-        before.find(n => n.type === 'Scroll').position.y + before.find(n => n.type === 'Scroll').height), /AssertionError/, 'actual old full-Web-under-overlay top0 is rejected');
+        before.find(n => n.type === 'Scroll').position.y + before.find(n => n.type === 'Scroll').height), /AssertionError/, 'Web under the toolbar is rejected');
     }
-    results.push({ case: 'arkweb-host', scale, toolbarHeight: toolbar.height, webY: web.position.y, webHeight: web.height });
+    results.push({ case: 'arkweb-host', scale, wide, scheme, controlsPerRow, toolbarHeight: toolbar.height, webY: web.position.y,
+      webHeight: web.height, controlsHeight: controls.height });
   }
 }
 function retainedAndSettings() {
@@ -730,7 +817,7 @@ function supplementalInputTargets() {
 }
 function standardRecoveryDocument(c, { width, height, header, content }, definition = read('ui/layout/ReaderStandardPage.ets')) {
   const members = ['geometry', 'viewportWidth', 'viewportHeight', 'boundedOverlayVisible', 'boundedOverlayContent',
-    'overlayContent', 'emptySlot', 'emptyOverlaySlot', 'pageOverlay', 'overlayAvailableHeight', 'refreshGeometry'];
+    'boundedOverlayLeadingReserve', 'overlayContent', 'emptySlot', 'emptyOverlaySlot', 'pageOverlay', 'overlayTop', 'overlayBottom', 'refreshGeometry'];
   const owner = createReaderBuilderProbe(definition, members, { ...c.deps, ...actualReaderPageLayout() }, c.hooks).owner;
   Object.assign(owner, { appThemeScheme: 'day', viewportWidth: width, viewportHeight: height, variant: 'settingsGeneral',
     geometryRevision: 0, contentLeadingRail: 0, contentEndInset: -1, headerHeight: () => header, footerHeight: () => 0,
@@ -792,9 +879,11 @@ function pageBackBarTitleWrap() {
     const text = nodes.find(node => node.type === 'Text' && node.create === '书源管理');
     const row = nodes.find(node => node.type === 'Row');
     assert.ok(text && row);
-    assert.equal(text.maxLines, floating ? 1 : undefined, 'header title follows fixed or floating layout policy');
-    assert.equal(text.textOverflow.overflow, floating ? nativeEnums.TextOverflow.Ellipsis : nativeEnums.TextOverflow.Clip);
-    assert.equal(text.fontSize, floating ? 19 : readerTypographyRoles.TYPE_PAGE_TITLE.fontSizeFp);
+    assert.equal(text.maxLines, floating ? 1 : 2, 'header title follows fixed or floating layout policy');
+    assert.equal(text.textOverflow.overflow, nativeEnums.TextOverflow.Ellipsis);
+    assert.equal(text.fontSize, 17, 'fixed and floating secondary titles share the same size');
+    assert.equal(text.fontFamily, 'ReaderNotoSansSCUIBold');
+    assert.equal(text.fontWeight, 700);
     assert.equal(text.maxFontScale, 2);
     assert.equal(text.layoutWeight, 1);
     assert.equal(row.height, undefined, 'row height follows native single or multiline text');
@@ -802,9 +891,12 @@ function pageBackBarTitleWrap() {
   }
   expect(source, false);
   expect(source, true);
-  const before = source.replace('.maxLines(this.multilineTitle() ? undefined : 1)', '.maxLines(1)');
+  const before = source.replace('.maxLines(this.multilineTitle() ? 2 : 1)', '.maxLines(1)');
   assert.notEqual(before, source);
   assert.throws(() => expect(before, false), /header title follows fixed or floating layout policy/);
+  const formerFloatingSize = source.replace('visual.headerFontSize : TYPE_PAGE_TITLE.fontSizeFp',
+    'visual.headerFontSize : this.floating ? 16 : TYPE_PAGE_TITLE.fontSizeFp');
+  assert.throws(() => expect(formerFloatingSize, true), /fixed and floating secondary titles share the same size/);
   results.push({ case: 'page-back-bar-title-wrap', fixedHeaderGrowth: true, floatingSingleLine: true });
 }
 
@@ -938,8 +1030,9 @@ async function selectReduceMotion() {
       c.foundation.properties.flush(); select.menu(select.selectionId); c.foundation.properties.flush();
       const nativePopup = () => [...select.nodes.values()].find(node => node.bindPopup !== undefined).bindPopup[1];
       const originalPopupOptions = nativePopup();
-      assert.deepEqual(originalPopupOptions.transition, reduceMotion ? { kind: 'identity', animation: { duration: 0 } } : undefined,
-        'actual native popup consumes the current reduce-motion preference');
+      assert.equal(originalPopupOptions.transition?.kind, reduceMotion ? 'opacity' : undefined);
+      assert.equal(originalPopupOptions.transition?.animation.duration, reduceMotion ? 120 : undefined);
+      assert.equal(originalPopupOptions.backgroundBlurStyle, 'BlurStyle.NONE');
       const panel = inline.walk(select).find(child => child instanceof inline.dependencies.ReaderSelectPanel && child.selectionId === select.selectionId);
       assert.equal(panel.reduceMotion, reduceMotion);
       const before = animations.length; panel.expandPanel();
@@ -947,15 +1040,15 @@ async function selectReduceMotion() {
       else assert.ok(animations.at(-1).duration > 0, 'ordinary preference retains the current animation recipe');
       select.reduceMotion = true; c.foundation.properties.flush();
       assert.equal(panel.reduceMotion, true, 'open popup receives a live preference update');
-      assert.deepEqual(nativePopup().transition, { kind: 'identity', animation: { duration: 0 } },
-        'live preference also updates the native popup options');
+      assert.equal(nativePopup().transition.kind, 'opacity');
+      assert.equal(nativePopup().transition.animation.duration, 120, 'live preference updates the native popup');
       const oldIdentity = panel.selectionId;
-      panel.onCommit(panel.options[0], oldIdentity); assert.equal(commits.length, 1);
-      select.toggle(); panel.onCommit(panel.options[0], oldIdentity);
+      panel.onCommit(panel.options[0], oldIdentity, 0); assert.equal(commits.length, 1);
+      select.toggle(); panel.onCommit(panel.options[0], oldIdentity, 0);
       originalPopupOptions.onStateChange({ isVisible: false });
       assert.equal(select.open, true, 'late native dismissal cannot close the successor popup');
       assert.equal(commits.length, 1, 'an old popup cannot commit into the new opening');
-      select.aboutToDisappear(); select.commit(panel.options[0], select.selectionId);
+      select.aboutToDisappear(); select.commit(panel.options[0], select.selectionId, 0);
       assert.equal(commits.length, 1, 'unmounted select cannot commit');
     }
     // Each intermediate constructor is executed by the normal SDK Builder.
@@ -1013,21 +1106,38 @@ async function selectReduceMotion() {
 }
 
 function bookshelfGroupRecoveryCapacity() {
+  const { readerMotionReducedFadeParam } = productionReaderMotionSdk();
+  const compiler = installedEtsCompiler();
+  compiler.require(compiler.root + '/lib/validate_ui_syntax.js')
+    .observedClassCollection.add('BookshelfGroupPresentation');
+  const { readerKeyboardHostBottom } = pureModuleProbe(read('ui/layout/ReaderKeyboardGeometry.ts'),
+    'ReaderKeyboardGeometry.ts', safe, ['readerKeyboardHostBottom']);
   for (const scale of [1, 1.3, 1.6, 2]) for (const height of [360, 180, 0]) {
     const value = metrics(320, height, scale), c = context(value), calls = [];
     const rel = 'features/bookshelf/ui/BookshelfGroupDialog.ets';
     const dialogSource = read('ui/surfaces/ReaderDialogSurface.ets');
     const horizontal = pureModuleProbe(read('ui/layout/SurfaceHorizontalGeometry.ts'), 'SurfaceHorizontalGeometry.ts', {},
       ['SurfaceHorizontalFrame', 'SurfaceWidthSpec', 'resolveHorizontalFrame']);
-    Object.assign(c.deps, horizontal, readerSurfaceSpecsForProbe(value));
+    Object.assign(c.deps, horizontal, readerSurfaceSpecsForProbe(value), {
+      readerKeyboardHostBottom,
+      SynchedPropertyNesedObjectPU: c.foundation.properties.sdk.SynchedPropertyNestedObjectPU,
+    });
+    c.deps.TransitionEffect = { IDENTITY: {}, OPACITY: { animation: params => params } };
+    c.deps.readerMotionReducedFadeParam = readerMotionReducedFadeParam;
     c.hooks.childSources.ReaderDialogSurface = dialogSource;
     c.deps.ReaderDialogSurface = createReaderBuilderProbe(dialogSource, boundedMembers(dialogSource), c.deps, c.hooks).Component;
-    const owner = c.actor(rel, ['build', 'surface', 'recovery', 'recoveryInsetTop', 'recoveryAvailableHeight', 'groupInputIsCurrent',
-      'focusScopeKey', 'selectorFocusKey', 'viewportHeight', 'originY', 'metricsRevision'], { foreground: true, metricsRevision: 1, viewportHeight: height, originY: 0, recoveryTop: 70,
+    const groupSource = read(rel);
+    const presentation = c.foundation.properties.sdk.ObservedObject.createNew({
+      book: {}, identity: 'group:1', snapshot: { busy: false, receipt: { facts: { generation: 7 } } },
+      recovery: generation => ({ visible: true, message: '分组操作仍待核对。'.repeat(1000), generation, canRetry: true }),
+      canContinue: () => true, reconcile: (...args) => calls.push(args),
+    }, undefined);
+    const { owner } = createReaderBuilderProbe(groupSource, boundedMembers(groupSource).filter(name => name !== 'selector'),
+      c.deps, { ...c.hooks, initialParams: { presentation } });
+    Object.assign(owner, { foreground: true, appReduceMotion: true,
+      metricsRevision: 1, viewportHeight: height, originY: 0, recoveryTop: 70,
       selector() {}, restoreFocusAction: () => () => {}, requestFocusAfterFrame() {},
-      presentation: { book: {}, identity: 'group:1', snapshot: { busy: false, receipt: { facts: { generation: 7 } } },
-        recovery: generation => ({ visible: true, message: '分组操作仍待核对。'.repeat(1000), generation, canRetry: true }), canContinue: () => true,
-        reconcile: (...args) => calls.push(args) } });
+    });
     owner.initialRender(); c.foundation.properties.flush();
     const notice = [...owner.children.values()].find(child => child instanceof c.deps.ReaderRecoveryNotice);
     assert.ok(notice, 'normal group build/surface/recovery mounts the shared Notice');
@@ -1095,9 +1205,10 @@ function downloadAccessibility() {
   const coverSource = read('features/downloads/ui/SharedDownloadBookCover.ets');
   const placeholderSource = read('ui/patterns/NoCoverCover.ets');
   deps.NoCoverCover = createReaderBuilderProbe(placeholderSource,
-    ['appThemeScheme', 'coverWidth', 'coverHeight', 'build', 'ruleWidth', 'labelWidth'], deps, c.hooks).Component;
+    ['appThemeScheme', 'coverWidth', 'coverHeight', 'glyph', 'kindLabel', 'build', 'x', 'y', 'scaleCoverUnit'], deps, c.hooks).Component;
   deps.SharedDownloadBookCover = createReaderBuilderProbe(coverSource,
-    ['bookKey', 'coverUrl', 'presentationGeneration', 'coverWidth', 'coverHeight', 'imageFailed', 'requestGeneration', 'mounted',
+    ['bookKey', 'coverUrl', 'presentationGeneration', 'coverWidth', 'coverHeight', 'bookTitle', 'kindLabel',
+      'imageFailed', 'requestGeneration', 'mounted',
       'build', 'requestIdentity', 'rejectImage', 'resetImage'], deps,
     { ...c.hooks, childSources: { ...c.hooks.childSources, NoCoverCover: placeholderSource } }).Component;
   const methods = ['bookRow', 'chapterRow', 'eventBook', 'eventChapter', 'chapterButtonLabel', 'chapterIsRunning',
@@ -1221,7 +1332,34 @@ function supplementalChapterWidths() {
     results.push({ case: 'download-chapter-width', chapter: { width, safeInset, scale, managing, innerWidth, titleMinimum: title.constraintSize.minWidth, tagWidth, sideLane, keepsSideLaneInline } });
   }
 }
+function inlineSelectIndexedPopup() {
+  const value = metrics(320, 360, 1);
+  for (const reduceMotion of [false, true]) {
+    const inline = inlineSelectSdk({ uiContext: uiContext(), dependencies: { readerWindowMetrics: () => value } });
+    const commits = [];
+    const select = new inline.dependencies.ReaderInlineSelect(undefined, {
+      value: '同名', options: ['同名', '其他', '同名'], selectedIndex: 2, reduceMotion,
+      onSelect: (index, label) => commits.push([index, label]),
+    });
+    select.aboutToAppear(); select.initialRender();
+    select.toggle(); inline.properties.flush();
+    const native = inline.nodes(select).find(node => node.bindPopup !== undefined).bindPopup[1];
+    assert.equal(native.backgroundBlurStyle, 'BlurStyle.NONE');
+    assert.equal(native.shadow.radius, 0);
+    assert.equal(native.transition?.kind, reduceMotion ? 'opacity' : undefined);
+    assert.equal(native.transition?.animation.duration, reduceMotion ? 120 : undefined);
+    select.menu(select.selectionId); inline.properties.flush();
+    const panel = inline.walk(select).find(child => child instanceof inline.dependencies.ReaderSelectPanel);
+    const sameLabels = inline.walk(panel).filter(child =>
+      child instanceof inline.dependencies.ReaderChoiceRow && child.label === '同名');
+    assert.deepEqual(sameLabels.map(row => row.selected), [true, false]);
+    inline.nodes(sameLabels[1]).find(node => node.onClick).onClick();
+    assert.deepEqual(commits, [[0, '同名']], 'the first equal label commits its original index');
+    results.push({ case: 'inline-select-indexed-popup', reduceMotion });
+  }
+}
 const runners = { 'select-host': selectHost, 'actions-tools-rules': actionsToolsRules, 'recovery-overlays': recoveryOverlays,
+  'inline-select-indexed-popup': inlineSelectIndexedPopup,
   'select-reduce-motion': selectReduceMotion, 'bookshelf-group-recovery-capacity': bookshelfGroupRecoveryCapacity,
   'arkweb-host': arkwebHost, 'retained-and-settings': retainedAndSettings, 'title-scale': titleScale,
   'page-back-bar-title-wrap': pageBackBarTitleWrap,

@@ -7,7 +7,6 @@ import { foundationControls } from './lib/reader-foundation-control-probe.mjs';
 import { iconButtonControls } from './lib/reader-icon-button-probe.mjs';
 import { boundedMembers, boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
-import { actualModeHost } from './lib/bookshelf-view-mode-probe.mjs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import { ReaderAppearanceStore } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceStore.ts';
 import { createDefaultReaderAppearanceSnapshot, changeAppearanceThemeSelection } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
@@ -107,6 +106,7 @@ function shelfFilters() {
 }
 
 async function modeAdmission() {
+  const { actualModeHost } = await import('./lib/bookshelf-view-mode-probe.mjs');
   const results = [];
   for (const settings of [false, true]) {
     for (const phase of ['prepare', 'load', 'navigation', 'dispatched']) {
@@ -210,7 +210,7 @@ function readerRootInput(owner) {
   const runtime = {};
   const host = Object.assign(new Root(), { readingEntry: reading, route: 'reading', directoryReturnTarget: 'readerControl',
     searchAppForeground: true, arkWebCapturesInput: false, shelfReceiptRetired: false, mountedRuntimeOwner: runtime,
-    libraryAcquisition: { currentOwner: () => runtime }, shelfMotion: { pendingExitId: -1 },
+    libraryAcquisition: { currentOwner: () => runtime },
     sourceSwitchPresentation: { isSurfacePresented: () => host.switchPresented === true },
     mangaSourceSwitch: { selectionVisible: false }, directoryJourney: { operations: {} },
     directoryNavigationPorts: () => ({}), sourceSwitchActions: {} });
@@ -228,12 +228,12 @@ function readerRootInput(owner) {
 async function readerLiveInput() {
   const lrePath = 'features/reading/ui/LocalReadingExperience.ets';
   const Owner = selectedProductionMethods(new URL(lrePath, root), 'ReadingExperience',
-    ['readerInputIsCurrent', 'isControlInputEnabled', 'changeReaderSetting', 'commitReaderSessionSettings',
+    ['readerInputIsCurrent', 'isControlInputEnabled', 'sessionLaunchAllowsControlInput', 'changeReaderSetting', 'commitReaderSessionSettings',
       'captureReaderSettingsAdmission', 'persistReaderSettingsSnapshot'], { readerControlHostInputEnabled, setReaderSettingsToggle });
   const Panel = selectedProductionMethods(new URL('features/reading/ui/ReaderControlPanel.ets', root), 'ReaderControlPanel',
     ['contentInputEnabled', 'secondaryModuleInputEnabled', 'controlActionInputEnabled']);
   class Child { constructor(owner, params) { Object.assign(this, { owner, params }); } }
-  const boundaries = ['current', 'foreground', 'arkweb', 'opening', 'exit', 'source', 'manga', 'route', 'identity', 'runtime', 'retired'];
+  const boundaries = ['current', 'foreground', 'arkweb', 'source', 'manga', 'route', 'identity', 'runtime', 'retired'];
   for (const boundary of boundaries) {
     const writes = [];
     const owner = Object.assign(new Owner(), { mounted: true, exitRequested: false, appForeground: true,
@@ -256,7 +256,8 @@ async function readerLiveInput() {
       { ReaderControlSettingsContent: Child }, { childSources: { ReaderControlSettingsContent: read('features/reading/ui/ReaderControlSettingsContent.ets') } }).owner;
     Object.assign(builder, { currentMinimumIdentity: () => 'minimum', currentMinimumKey: () => 'minimum-key',
       preparedMinimum: () => ({ ownerCurrent: () => true }), preparedMinimumRequired: true,
-      contentEndpointHeight: () => 800, contentMotionProgress: 1, contentMotionWidth: 390, contentMotionHeight: 600,
+      contentEndpointHeight: () => 800, contentEditingHeight: () => 600, isExpanded: () => false, contentMotionProgress: 1,
+      contentMotionWidth: 390, contentMotionHeight: 600,
       secondaryModuleInputEnabled: module => panel.secondaryModuleInputEnabled(module), settingsSnapshot: owner.readerSettingsSnapshot,
       appearanceSnapshot: { alignment: 'start' },
       onSettingsToggleChange: componentCallback(lrePath, 'ReaderControlPanel', 'onSettingsToggleChange', owner, {}) });
@@ -276,8 +277,6 @@ async function readerLiveInput() {
     const callback = [...settings.nodes.values()].find(node => node.type === 'Button').onClick;
     if (boundary === 'foreground') { host.searchAppForeground = false; owner.appForeground = false; }
     if (boundary === 'arkweb') host.arkWebCapturesInput = true;
-    if (boundary === 'opening') host.shelfMotion.request = { direction: 'open' };
-    if (boundary === 'exit') host.shelfMotion.pendingExitId = 1;
     if (boundary === 'source') host.switchPresented = true;
     if (boundary === 'manga') host.mangaSourceSwitch.selectionVisible = true;
     if (boundary === 'route') host.route = 'settings';
@@ -322,6 +321,7 @@ async function readerLiveInput() {
       requireChapterLayoutMap: () => ({}), lastVisibleScalar: () => 500,
       measureCommittedPageAt: offset => measurements.push(offset), beginPageTurnPerf() {}, finishPageTurnPerf() {}, completeDirectPageTurnGesture() {},
       applyWindowPolicyForChromeOwner() {}, cancelSourceSwitchCompletion() {}, scheduleControlMinimum() {}, syncVolumeKeyPolicy() {},
+      refreshAppearanceSaveRecovery() {}, retirePendingPlaybackStarts() {}, publishControlVerificationReady() {},
       controlMinimumGeneration: 0, controlInputRevision: 0, stopReaderTtsAudition() {}, finishSessionCapsuleMorph() {},
       finishBookmarkRollback() {}, bookmarkRollbackGeneration: 0, captureReadingRecordElapsed() {}, clearReadingRecordTimer() {},
       flushReadingRecord: async () => {}, pauseAutoPage() {},
@@ -707,7 +707,7 @@ function sample(lost, consumer, ending) {
   const index = Object.assign(new Index(), {
     currentReadingRuntime: () => ({}), readingEntry: { sessionActive: true },
     currentReaderPresentationIdentity: () => identity, route: 'reading', directoryReturnTarget: 'reading',
-    searchAppForeground: true, arkWebCapturesInput: false, shelfMotion: { pendingExitId: -1, request: undefined },
+    searchAppForeground: true, arkWebCapturesInput: false,
     sourceSwitchPresentation: { isSurfacePresented: () => false }, mangaSourceSwitch: { selectionVisible: false },
   });
   const scene = { ports: { inputCurrent: value => index.readerContentInputCurrent(value) } };

@@ -35,6 +35,11 @@ const bottom = rect => rect.top + rect.height;
 const area = rect => rect.width * rect.height;
 const searchLabels = new Map([['搜索', 'search'], ['停止搜索', 'stop'], ['停止', 'stop']]);
 const searchSheetTitles = ['筛选', '搜索进度'];
+export const readerSearchBottomSheetHost = 'reader-bottom-sheet';
+export function isReaderSearchBottomSheet(node, kind) {
+  const match = /^reader-search-sheet:(filter|task)$/u.exec(node.id ?? '');
+  return node.type === 'Column' && match !== null && (kind === undefined || match[1] === kind);
+}
 export const searchConfirmedEmptyHeading = 'reader-search-confirmed-empty-heading';
 export const searchUnconfirmedEmptyHeading = 'reader-search-unconfirmed-empty-heading';
 export const searchMismatchedEmptyHeading = 'reader-search-mismatched-empty-heading';
@@ -291,6 +296,8 @@ export function normalizeHarmonyLayout({
   observeSourceInlineImportDialog = false,
   observeSourceNativeFocus = false,
   publicSourceToolsQuery,
+  publicSourceToolsGroup = '小说 书源',
+  observeSourceV9More = false,
 }) {
   const metrics = report?.metrics;
   const density = metrics?.densityPixels;
@@ -362,13 +369,16 @@ export function normalizeHarmonyLayout({
       if (matchesNativeText(a,id,observeSourceOfflineDetect ? sourceOfflineDetectTitle : sourceRowActionTitle)) sourceActionRow.titles += 1;
       const locator = observeSourceOfflineDetect ? sourceOfflineDetectUrl : sourceRowActionUrl;
       const hostname = observeSourceOfflineDetect ? sourceOfflineDetectHost : sourceRowActionHost;
-      if (matchesNativeText(a,id,locator) || matchesNativeText(a,id,hostname)) sourceActionRow.locators += 1;
+      if (matchesNativeText(a,id,locator) || matchesNativeText(a,id,hostname) ||
+          matchesNativeText(a,id,'https://' + hostname)) sourceActionRow.locators += 1;
       if (a.type === 'Button') {
         const labels = sourceRowButtonLabels(node,id);
-        if (labels.length === 1) sourceActionRow.buttons.push({index:nodes.length,alias:labels[0][1]});
+        if (a.id === 'reader-source-v9-fixture-detect' || a.id === 'reader-source-text-row-detect') {
+          sourceActionRow.buttons.push({index:nodes.length,alias:'reader-source-row-detect-control'});
+        } else if (labels.length === 1) sourceActionRow.buttons.push({index:nodes.length,alias:labels[0][1]});
       }
     }
-    if (a.type === 'SheetPage' && parentType === 'SheetWrapper' &&
+    if (((a.type === 'SheetPage' && parentType === 'SheetWrapper') || isReaderSearchBottomSheet(a)) &&
         boolean(a.visible) === true && positive(finiteNumber(a.opacity))) {
       sheet = { index:nodes.length, titles:new Map(), buttons:[] };
       taskSheets.push(sheet);
@@ -420,14 +430,14 @@ export function normalizeHarmonyLayout({
       /^source-back:[0-9]+:group-trigger$/u.test(a.id ?? '');
     const groupTextOption = (observeSourceGroupOptionsText &&
       ['option:Phase1 Scroll 01','option:Phase1 Scroll 12'].includes(groupFocus?.[2])) ||
-      (publicSourceToolsQuery && groupFocus?.[2] === 'option:小说 书源');
+      (publicSourceToolsQuery && groupFocus?.[2] === `option:${publicSourceToolsGroup}`);
     const groupOptionTitle = groupTextOption ? groupFocus[2].slice('option:'.length) : parentGroupOptionTitle;
     const probeTransientText = observeSourceTransientStatus && a.type === 'Text' &&
       /^reader-transient-feedback-text-[1-9]\d*$/u.test(a.id ?? '');
     const nativeTransientText = probeTransientText &&
       [a.originalText,a.text].find(value => typeof value === 'string' && value.length > 0);
     const footerToolsButton = a.type === 'Button' && /^source-back:[0-9]+:tools:footer$/u.test(a.id ?? '');
-    const headerToolsButton = publicSourceToolsQuery && a.type === 'Button' &&
+    const headerToolsButton = (publicSourceToolsQuery || observeSourceV9More) && a.type === 'Button' &&
       /^source-back:[1-9][0-9]*:tools:header$/u.test(a.id ?? '');
     let groupAlias;
     if (groupFocus?.[2] === 'selected') groupAlias = 'reader-source-group-selected';

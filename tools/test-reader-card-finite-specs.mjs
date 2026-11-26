@@ -212,32 +212,38 @@ for (const method of ['build', ...methods]) for (const scheme of ['day', 'night'
   assert.equal(current.outer().border.width, spec.borderWidth);
   assert.equal(current.outer().borderRadius, spec.radius);
   assert.equal(current.outer().backgroundColor, readerAppColor(spec.backgroundRole, scheme));
-  assert.equal(current.outer().border.color, readerAppColor(spec.borderRole, scheme));
+  assert.equal(spec.borderRole, 'TOK_LINE');
+  assert.equal(current.outer().border.color, readerAppColor('TOK_LINE', scheme));
+  assert.deepEqual(current.outer().shadow,
+    { radius: 2, offsetX: 0, offsetY: 1, color: readerAppColor('TOK_DOWNLOAD_SHADOW', scheme) });
   if (method === 'build') assert.equal(current.contentCalls(), 1, 'actual category Builder slot executes once');
   comparisons++;
 }
 assert.equal(comparisons, 48, 'six actual consumer sites by two schemes and four width inputs');
-// The two semantic names resolve to the same object, not copies of a standard
-// tuple. Changing that one actual shared source reaches both real consumers.
+// Settings and Sync semantic names share a specification. Changing the
+// standard radius reaches each actual consumer.
 {
  const base=cardSdk();assert.equal(base.resolveReaderCardSpec('settings-category'),base.resolveReaderCardSpec('sync-config'));
- const changed=originalSpec.replace('radius: TOK_RADIUS_MD','radius: TOK_RADIUS_MD + 2');assert.notEqual(changed,originalSpec);
- const category=parent({specSource:changed}),configuration=parent({method:'webdavSection',specSource:changed}),status=parent({method:'manualActionsSection',specSource:changed});
- assert.equal(category.outer().borderRadius,10);assert.equal(configuration.outer().borderRadius,10);assert.equal(status.outer().borderRadius,13,'status variant isolated');
- const other=originalSpec.replace('radius: 13','radius: 15');assert.notEqual(other,originalSpec);
- for(const method of methods.slice(1))assert.equal(parent({method,specSource:other}).outer().borderRadius,15,'all four real status consumers share changed spec');
- assert.equal(parent({specSource:other}).outer().borderRadius,8);assert.equal(parent({method:'webdavSection',specSource:other}).outer().borderRadius,8);
+ assert.equal(base.resolveReaderCardSpec('settings-category'),base.resolveReaderCardSpec('sync-status'));
+ const standard = 'radius: 14, maxWidth: TOK_CONTENT_MAX_W_TABLET';
+ const changed = originalSpec.replace(standard, standard.replace('14', '16'));
+ assert.notEqual(changed, originalSpec);
+ assert.equal(parent({ specSource: changed }).outer().borderRadius, 16);
+ for (const method of methods) {
+   assert.equal(parent({ method, specSource: changed }).outer().borderRadius, 16,
+     'all Sync consumers follow the shared card radius');
+ }
 }
 // Retained V1 Props update the actual native Card without remounting its body;
 // obsolete physical props have no setters and cannot alter the outer geometry.
 {
  const p=parent(),body=p.contentCalls(),count=p.card.observers.length;
  p.card.updateStateVars({specId:'sync-status',cardWidth:280});p.shared.properties.flush();
- assert.equal(p.outer().borderRadius,13);assert.equal(p.outer().width,280);assert.equal(p.card.observers.length,count);assert.equal(p.contentCalls(),body);
- p.card.updateStateVars({specId:'settings-category',cardWidth:0});p.shared.properties.flush();assert.equal(p.outer().borderRadius,8);assert.equal(p.outer().width,'100%');
+ assert.equal(p.outer().borderRadius,p.shared.resolveReaderCardSpec('sync-status').radius);assert.equal(p.outer().width,280);assert.equal(p.card.observers.length,count);assert.equal(p.contentCalls(),body);
+ p.card.updateStateVars({specId:'settings-category',cardWidth:0});p.shared.properties.flush();assert.equal(p.outer().borderRadius,14);assert.equal(p.outer().width,'100%');
  p.card.radius=99;p.card.bg='private';p.card.cardBorder='private';p.card.replay();
- assert.equal(p.outer().borderRadius,8);assert.equal(p.outer().backgroundColor,readerAppColor('TOK_CARD_BG','day'));
- p.card.appThemeScheme='night';p.shared.properties.flush();assert.equal(p.outer().backgroundColor,readerAppColor('TOK_CARD_BG','night'));assert.equal(p.outer().border.color,readerAppColor('TOK_BORDER','night'),'actual retained StorageLink follows current theme');
+ assert.equal(p.outer().borderRadius,14);assert.equal(p.outer().backgroundColor,readerAppColor('TOK_CARD_BG','day'));
+ p.card.appThemeScheme='night';p.shared.properties.flush();assert.equal(p.outer().backgroundColor,readerAppColor('TOK_CARD_BG','night'));assert.equal(p.outer().border.color,readerAppColor('TOK_LINE','night'),'actual retained StorageLink follows current theme');
  p.owner.cardWidth=318;p.shared.flush(p.owner);assert.equal(p.outer().width,318,'parent measurement reaches real child Prop');
  assert.equal(p.card.observers.length,count,'parent update retains one Card');
 }
@@ -254,7 +260,7 @@ assert.equal(comparisons, 48, 'six actual consumer sites by two schemes and four
  assert.equal(first.card.attributeCalls.length,firstCalls,'another fixture update cannot replay retained observers');
  assert.equal(first.card.appThemeScheme,'day');assert.equal(first.contentCalls(),1);assert.equal(second.contentCalls(),1);
  const action=parent({method:'emptyState'}),otherAction=parent({method:'emptyState'});
- const click=p=>p.shared.nodes(p.owner).find(node=>node.onClick&&node.create==='立即备份').onClick();
+ const click=p=>p.shared.nodes(p.owner).find(node=>node.onClick&&node.accessibilityText==='立即备份').onClick();
  click(action);assert.equal(action.backupCalls(),1);assert.equal(otherAction.backupCalls(),0,'compiled callback code retains each owner\'s business closure');
  click(otherAction);assert.equal(action.backupCalls(),1);assert.equal(otherAction.backupCalls(),1);
 }
@@ -302,7 +308,7 @@ if (selectedCase === 'action-admission') {
 // shipping common Button, with current disabled and unmount admission intact.
 {
  const p=parent({method:'emptyState'}),button=p.shared.walk(p.owner).find(owner=>owner.specId==='sync-empty-backup');assert.ok(button);
- const click=p.shared.nodes(p.owner).find(n=>n.onClick&&n.create==='立即备份');assert.ok(click);click.onClick();assert.equal(p.backupCalls(),1);
+ const click=p.shared.nodes(p.owner).find(n=>n.onClick&&n.accessibilityText==='立即备份');assert.ok(click);click.onClick();assert.equal(p.backupCalls(),1);
  button.updateStateVars(Object.assign(Object.fromEntries(['scheme','specId','label','primary','actionEnabled','layout','isBusy','availableWidth','actionAccessibilityLabel'].map(key=>[key,button[key]])),{actionEnabled:false}));p.shared.properties.flush();click.onClick();assert.equal(p.backupCalls(),1,'retained native action respects busy/disabled update');
  button.aboutToDisappear();click.onClick();assert.equal(p.backupCalls(),1,'old physical content action does not publish after unmount');
 }

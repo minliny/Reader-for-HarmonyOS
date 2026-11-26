@@ -5,13 +5,15 @@ import { createRequire, stripTypeScriptTypes } from 'node:module';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { createArkUIPropertyRuntimeProbe } from './lib/arkui-property-runtime-probe.mjs';
 import { motionSegment } from '../entry/src/main/ets/ui/foundation/MotionTimeline.ts';
+import { READER_SHELF_REFLOW_MS, READER_SHELF_STAGGER_MS, READER_SHELF_STAGGER_CAP_MS } from '../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts';
 import { readerProbeCubicBezierProgress as bezier } from './lib/reader-motion-curve-fixture.mjs';
-import { compileIconButtonSpecs } from './lib/reader-icon-button-probe.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { readerFoundationTokens } from './lib/reader-tokens-probe.mjs';
+import { readerSurfaceSpecsForProbe } from './lib/bounded-surface-sdk-probe.mjs';
+import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import { createDefaultReaderWindowMetrics } from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
-import * as coverVisual from '../entry/src/main/ets/features/bookshelf/ui/BookshelfCoverVisual.ts';
+import { bookCoverDisplayUrl } from '../entry/src/main/ets/app/library/BookCoverDisplay.ts';
 import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts';
 
 // Execute the real SDK-emitted Builder callbacks and production sample methods.
@@ -37,50 +39,62 @@ function constants(text, names, dependencies = {}) {
 }
 const curves = { cubicBezierCurve: (...points) => ({ interpolate: value => bezier(value, ...points) }) };
 const { BOOKSHELF_VIEW_MOTION: motion } = constants(motionSource, ['BOOKSHELF_VIEW_MOTION'],
-  { curves, Curve: { Linear: 'linear', EaseOut: 'ease-out' } });
+  { STANDARD_CURVE: curves.cubicBezierCurve(0.2, 0, 0, 1),
+    READER_SHELF_REFLOW_MS, READER_SHELF_STAGGER_MS, READER_SHELF_STAGGER_CAP_MS });
 const tokens = constants(tokensSource, ['TOK_SPACE_XS', 'TOK_SPACE_CONTROL_INLINE']);
-const geometry = constants(source, ['PHONE_LIST_COVER_WIDTH', 'PHONE_LIST_COVER_HEIGHT', 'TABLET_LIST_COVER_WIDTH', 'TABLET_LIST_COVER_HEIGHT']);
 const grid = pureModuleProbe(read('features/bookshelf/ui/BookshelfGridSpec.ets'), 'BookshelfGridSpec.ets',
   { ...readerTypographyRoles, ...readerFoundationTokens, readerFontFamilyReady: () => false },
-  ['bookshelfGridFrame', 'bookshelfCoverHeight', 'bookshelfListTextHeight', 'BookshelfListTextBudget', 'BOOKSHELF_GRID_TEXT_GAP']);
+  ['bookshelfGridFrame', 'bookshelfCoverHeight', 'bookshelfListTextHeight', 'BookshelfListTextBudget',
+    'BOOKSHELF_GRID_TEXT_GAP', 'BOOKSHELF_GRID_TITLE_LINES', 'BOOKSHELF_LIST_COLUMN_GAP',
+    'BOOKSHELF_LIST_COVER_WIDTH', 'BOOKSHELF_LIST_COVER_HEIGHT', 'BOOKSHELF_LIST_CARD_PADDING',
+    'BOOKSHELF_LIST_DETAILS_GAP', 'bookshelfColumnCount', 'bookshelfListCardWidth']);
+const noCover = parse(noCoverSource);
+const noCoverGlyphSource = noCover.statements.find(statement => ts.isFunctionDeclaration(statement) &&
+  statement.name?.text === 'noCoverGlyph').getText(noCover);
+const { noCoverGlyph } = pureModuleProbe(noCoverGlyphSource, 'NoCoverGlyph.ets', {}, ['noCoverGlyph']);
 const metrics = createDefaultReaderWindowMetrics();
 const motionTree = parse(motionSource);
 const delay = motionTree.statements.find(statement => ts.isFunctionDeclaration(statement) && statement.name?.text === 'bookshelfViewCoverDelayMs');
 assert.ok(delay);
 const bookshelfViewCoverDelayMs = new Function('BOOKSHELF_VIEW_MOTION',
   `${stripTypeScriptTypes(delay.getText(motionTree)).replace(/^export /, '')}; return bookshelfViewCoverDelayMs;`)(motion);
-for (const [name, props] of [['NoCoverCover', ['coverWidth', 'coverHeight']], ['ShelfBookListDetails', ['book', 'textFrame']],
-  ['ReaderIconButton', ['specId', 'icon', 'accessibilityLabel', 'focusId']]]) {
+for (const [name, props] of [['NoCoverCover', ['coverWidth', 'coverHeight']],
+  ['ShelfBookListDetails', ['book', 'textFrame', 'targetHeight', 'moreEnabled', 'moreFocusId', 'moreAccessibilityLabel']]]) {
   syntax.componentCollection.customComponents.add(name);
   syntax.propCollection.set(name, new Set(props));
 }
 class Child { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
 const childPropsFor = owner => [...owner.children.values()].map(child => {
-  const { onTap, ...props } = child.params;
-  return structuredClone(props);
+  return structuredClone(Object.fromEntries(Object.entries(child.params).filter(([, value]) => typeof value !== 'function')));
 });
 const methods = ['sampleViewSwitch', 'resetViewSwitchMotion', 'setRestingProjectionOpacity',
-  'projectionListProgress', 'projectionRowHeight', 'projectionBookWidth', 'projectionBookHeight',
+  'captureViewSwitchRanks', 'projectionDetailsOpacity', 'projectionListProgress', 'projectionRowHeight',
+  'projectionBookWidth', 'projectionBookHeight',
   'projectionBookTranslateX', 'projectionBookTranslateY', 'projectionCoverScale', 'projectionCoverRadius',
   'projectionCoverCompensationX', 'projectionCoverCompensationY', 'projectionListDetailsWidth',
-  'projectionCoverLayerOpacity', 'gridBookCardHeight', 'gridProgressLabel', 'listCoverWidth', 'listCoverHeight', 'listRowHeight', 'listTextFrame', 'listTextBudget', 'listTextFontRevision',
-  'shelfBookCardWidth', 'bookCardWidth', 'bookCardHeight', 'bookRowSpace', 'hasCover',
-  'projectionBookCover', 'projectionBookCoverLayer', 'projectionGridDetails', 'projectionListDetails',
-  'bookActionFocusKey', 'bookActionPresentationHandler', 'isShelfPresentationCurrent', 'bookCoverMotionId'];
+  'projectionCoverLayerOpacity', 'gridBookCardHeight', 'gridProgressLabel', 'listCoverWidth', 'listCoverHeight',
+  'listContentHeight', 'listRowHeight', 'listTextFrame', 'listTextBudget', 'listTextFontRevision',
+  'shelfBookCardWidth', 'bookCardWidth', 'bookCardHeight', 'bookRowSpace', 'hasCover', 'coverUrl', 'coverErrorHandler', 'failedCoverUrls',
+  'projectionBookCard', 'projectionBookCover', 'projectionBookCoverLayer', 'projectionGridDetails', 'projectionListDetails',
+  'bookActionFocusKey', 'bookActionPresentationHandler', 'isShelfPresentationCurrent', 'bookCoverMotionId',
+  'shelfPressed', 'shelfPressKey', 'shelfPressPointer', 'observeShelfPress',
+  'measureBookOrigin', 'shelfViewportMotionId'];
 function fixture(text = source) {
   const properties = createArkUIPropertyRuntimeProbe();
-  const { owner } = createReaderBuilderProbe(text, methods, { ...properties.sdk, ...readerFoundationTokens, ...tokens, ...geometry, ...grid, ...coverVisual,
-    ReaderWindowCoordinator: { metrics: () => metrics }, resolveReaderIconButtonSpec: compileIconButtonSpecs(),
-    motionSegment, bookshelfViewCoverDelayMs, NoCoverCover: Child, ShelfBookListDetails: Child, ReaderIconButton: Child, ShelfBookPresentation,
-    ImageFit: { Cover: 'cover' } }, properties.hooks);
+  const { owner } = createReaderBuilderProbe(text, methods, { ...properties.sdk, ...readerFoundationTokens, ...tokens, ...grid, bookCoverDisplayUrl,
+    ReaderWindowCoordinator: { metrics: () => metrics },
+    motionSegment, bookshelfViewCoverDelayMs, noCoverGlyph, NoCoverCover: Child, ShelfBookListDetails: Child, ShelfBookPresentation,
+    ImageFit: { Cover: 'cover' }, readerSurfaceElevation: readerSurfaceSpecsForProbe().readerSurfaceElevation,
+    GesturePriority: { Low: 'Low' } }, properties.hooks);
   Object.assign(owner, { viewMotion: motion, viewContentCurve: curves.cubicBezierCurve(.4, 0, .2, 1),
     viewFadeCurve: curves.cubicBezierCurve(0, 0, .58, 1), viewMoveCurve: curves.cubicBezierCurve(.2, 0, 0, 1),
     viewScaleCurve: curves.cubicBezierCurve(.25, .1, 0, 1), appThemeScheme: 'day', reduceMotion: false,
-    viewSwitchToken: 0, mounted: true, navigationGeneration: 1, shelfContentWidth: tablet => tablet ? 650 : 326 });
+    viewSwitchToken: 0, viewSwitchRanks: new Map(Array.from({ length: 9 }, (_, i) => [i, i])),
+    mounted: true, navigationGeneration: 1, shelfContentWidth: tablet => tablet ? 650 : 326 });
   return owner;
 }
 function sample(owner, from, to, time) {
-  Object.assign(owner, { viewSwitchSourceMode: from, viewSwitchDestinationMode: to,
+  Object.assign(owner, { viewSwitchSourceMode: from, viewSwitchDestinationMode: to, pendingViewMode: to,
     viewSwitchRunning: true, viewSwitchTimeMs: time });
   owner.sampleViewSwitch();
 }
@@ -103,7 +117,7 @@ function verifyGroupedCoverActors(owner) {
   }
 }
 function verifyDetailsInput(owner) {
-  const list = [...owner.nodes.values()].find(node => node.type === 'Row' && node.width === owner.projectionListDetailsWidth(false));
+  const list = [...owner.nodes.values()].find(node => node.width === owner.projectionListDetailsWidth(false) && node.translate?.x !== undefined);
   const grid = [...owner.nodes.values()].find(node => node.type === 'Column' && node.translate?.y !== undefined);
   assert.ok(list && grid, 'actual retained grid/list detail parents are mounted');
   assert.equal(list.enabled, owner.viewMode === 'list', 'hidden list disables every descendant, including More');
@@ -122,8 +136,27 @@ function verifyHandoff(owner, from, to, start, end) {
   }
 }
 const actual = fixture();
-verifyHandoff(actual, 'cover', 'list', 690, 820);
-verifyHandoff(actual, 'list', 'cover', 150, 180);
+verifyHandoff(actual, 'cover', 'list', motion.movingCoverFadeStartMs, motion.totalMs);
+verifyHandoff(actual, 'list', 'cover', motion.morphCoverIncomingStartMs, motion.totalMs);
+
+assert.deepEqual(Array.from({ length: 9 }, (_, i) => bookshelfViewCoverDelayMs(i)),
+  [0, 24, 48, 72, 96, 120, 120, 120, 120]);
+assert.equal(motion.coverMoveDurationMs + bookshelfViewCoverDelayMs(8), motion.totalMs);
+const viewport = fixture();
+Object.assign(viewport, { firstVisibleItem: 2, lastVisibleItem: 6, shelfHeaderItems: () => 1,
+  rowDataSource: { totalCount: () => 6, getData: row => Array.from({ length: 3 }, (_, col) => row * 3 + col) },
+  measureBookOrigin: book => book === 3 ? undefined : {} });
+viewport.captureViewSwitchRanks();
+assert.deepEqual([...viewport.viewSwitchRanks.keys()], [4, 5, 6, 7, 8, 9, 10, 11, 12]);
+sample(viewport, 'cover', 'list', 1);
+assert.equal(viewport.projectionListProgress(2), 1, 'offscreen previous row takes final layout immediately');
+assert.equal(viewport.projectionListProgress(13), 1, 'covers after the first visible group take final layout immediately');
+assert.equal(viewport.projectionListProgress(3, false, 3), viewport.projectionListProgress(4),
+  'row keeps the same timing when its first cover is clipped');
+assert.equal(viewport.projectionListProgress(5), 0, 'second visible cover waits for its stagger');
+viewport.viewSwitchRanks = new Map([[7, 0], [8, 1]]);
+assert.equal(viewport.projectionListProgress(4, false, 4), viewport.projectionListProgress(7),
+  'tablet row follows its fourth cover when the first three are clipped');
 
 // Final sampled geometry tolerates finite endpoint interpolation rounding.
 // Visible opacity, frame fields and actor identity retain strict comparisons.
@@ -132,11 +165,41 @@ function near(actual, expected, message) {
   assert.ok(Math.abs(actual - expected) <= 1e-9, `${message}: ${actual} vs ${expected}`);
 }
 const book = { sourceId: 'local', bookId: 'handoff', title: '封面交接', author: '作者', readProgress: 3245 };
+const oldGesture = globalThis.Gesture, oldLongPress = globalThis.LongPressGesture;
+globalThis.Gesture = globalThis.LongPressGesture = { create() {}, onAction() {}, pop() {} };
+try {
+  for (const tablet of [false, true]) for (const scheme of ['day', 'night']) {
+    const owner = fixture();
+    Object.assign(owner, { appThemeScheme: scheme, viewMode: 'list', bookSelectionHandler: () => () => {} });
+    owner.setRestingProjectionOpacity('list');
+    owner.projectionBookCard(book, tablet, () => 0, 0);
+    const nodes = [...owner.nodes.values()];
+    const paper = nodes.find(node => node.type === 'Row' && node.borderRadius === 14);
+    assert.ok(paper, 'compact and expanded cards each own their real paper paint');
+    assert.equal(paper.backgroundColor, readerAppColor('TOK_CARD_BG', scheme));
+    assert.equal(paper.border.width, 1);
+    assert.equal(paper.border.color, readerAppColor('TOK_LINE', scheme));
+    assert.deepEqual(paper.shadow, readerSurfaceSpecsForProbe().readerSurfaceElevation('card', scheme));
+    assert.equal(paper.opacity, 1);
+    const progress = nodes.find(node => node.type === 'Text' && node.create === '已读 32%');
+    assert.equal(progress?.fontColor, readerAppColor('TOK_ACCENT', scheme));
+    owner.viewMode = 'cover';
+    owner.setRestingProjectionOpacity('cover');
+    owner.replay();
+    assert.equal(paper.opacity, 0, 'shared cover rest state leaves list paper hidden');
+  }
+} finally {
+  if (oldGesture === undefined) delete globalThis.Gesture; else globalThis.Gesture = oldGesture;
+  if (oldLongPress === undefined) delete globalThis.LongPressGesture; else globalThis.LongPressGesture = oldLongPress;
+}
 function frame(owner, tablet, index) {
-  return { rowHeight: owner.projectionRowHeight([book, book, book], tablet, index - index % 3),
+  const columns = grid.bookshelfColumnCount(tablet);
+  const column = index % columns;
+  return { rowHeight: owner.projectionRowHeight(Array(columns).fill(book), tablet, index - column),
     width: owner.projectionBookWidth(tablet, index), height: owner.projectionBookHeight(book, tablet, index),
-    x: owner.projectionBookTranslateX(index % 3, tablet, index), y: owner.projectionBookTranslateY(index % 3, tablet, index),
-    scale: owner.projectionCoverScale(tablet, index), radius: owner.projectionCoverRadius(tablet, index),
+    x: owner.projectionBookTranslateX(column, tablet, index), y: owner.projectionBookTranslateY(column, tablet, index),
+    scale: owner.projectionCoverScale(tablet, index),
+    radius: owner.projectionCoverRadius(tablet, index),
     compensationX: owner.projectionCoverCompensationX(tablet, index), compensationY: owner.projectionCoverCompensationY(tablet, index),
     detailsWidth: owner.projectionListDetailsWidth(tablet), coverOpacity: coverOpacity(owner),
     headerOpacity: owner.viewSwitchHeaderOpacity, gridOpacity: owner.viewSwitchGridContentOpacity,
@@ -159,16 +222,60 @@ for (const [from, to] of [['cover', 'list'], ['list', 'cover']]) {
           assert.equal(after[name], before[name], `${from}->${to} reset retains final ${name}`);
         }
         if (to === 'list') {
-          const minimumHeight = grid.bookshelfListTextHeight(scale);
-          assert.ok(Number.isFinite(before.height) && Number.isFinite(minimumHeight) && before.height >= minimumHeight - 1e-9,
-            'final list card reserves the shared four-line font budget');
-          near(before.rowHeight, before.height * 3 + tokens.TOK_SPACE_CONTROL_INLINE * 2, 'final projection row pays every list card and gap');
-          near(before.y, (index % 3) * (before.height + tokens.TOK_SPACE_CONTROL_INLINE), 'final projection offset pays the list stride');
+          const innerHeight = Math.max(grid.BOOKSHELF_LIST_COVER_HEIGHT, grid.bookshelfListTextHeight(scale));
+          const padding = grid.BOOKSHELF_LIST_CARD_PADDING;
+          const coverWidth = actual.shelfBookCardWidth(tablet);
+          const coverHeight = actual.bookCardHeight(coverWidth, tablet);
+          near(before.height, innerHeight + 2 * padding, 'final list card reserves the scaled details and both insets');
+          near(coverWidth * before.scale, grid.BOOKSHELF_LIST_COVER_WIDTH, 'cover actor reaches the list width');
+          const listCoverHeight = grid.bookshelfCoverHeight(grid.BOOKSHELF_LIST_COVER_WIDTH, tablet);
+          near(coverHeight * before.scale, listCoverHeight, 'cover actor retains its aspect ratio at any text scale');
+          near(coverWidth * (1 - before.scale) / 2 + before.compensationX, padding, 'cover visual left reaches the card inset');
+          near(coverHeight * (1 - before.scale) / 2 + before.compensationY, padding + (innerHeight - listCoverHeight) / 2,
+            'cover remains centered as list text grows');
+          near(before.detailsWidth, before.width - grid.BOOKSHELF_LIST_COVER_WIDTH - 2 * padding - grid.BOOKSHELF_LIST_DETAILS_GAP,
+            'details fill the rest of the list card');
+          const coverColumns = grid.bookshelfColumnCount(tablet);
+          const listColumns = grid.bookshelfColumnCount(tablet, true);
+          const rows = coverColumns / listColumns;
+          near(before.rowHeight, before.height * rows + tokens.TOK_SPACE_CONTROL_INLINE * (rows - 1), 'final projection row pays every list card and gap');
+          near(before.y, Math.floor((index % coverColumns) / listColumns) * (before.height + tokens.TOK_SPACE_CONTROL_INLINE),
+            'final projection offset pays the list stride');
+          near(before.x, ((index % coverColumns) % listColumns) * (before.width + grid.BOOKSHELF_LIST_COLUMN_GAP),
+            'final projection offset pays the list column');
+        } else {
+          assert.equal(grid.bookshelfColumnCount(tablet), tablet ? 4 : 3);
         }
       }
     }
   }
 }
+
+const measured = fixture();
+metrics.systemFontScale = 1;
+let width = grid.BOOKSHELF_LIST_COVER_WIDTH, height = measured.listCoverHeight(false), viewportWidth = 326;
+const currentId = measured.bookCoverMotionId(book), viewportId = measured.shelfViewportMotionId();
+const node = (x,y) => ({getPositionToWindowWithTransform:()=>({x,y})});
+Object.assign(measured,{viewMode:'list',viewSwitchRunning:false,isWideViewport:()=>false,
+  shelfHeaderClearance:()=>52,shelfContentEndInset:()=>68,
+  getUIContext:()=>({getFrameNodeById:id=>id===currentId?node(20,70):id===viewportId?node(0,0):null,
+    getComponentUtils:()=>({getRectangleById:id=>id===currentId?{size:{width,height},scale:{x:1,y:1}}:
+      {size:{width:viewportWidth,height:700}}}),px2vp:value=>value})});
+assert.deepEqual(measured.measureBookOrigin(book),{x:20,y:70,width,height});
+metrics.systemFontScale = 2;
+assert.deepEqual(measured.measureBookOrigin(book),{x:20,y:70,width,height},'font scaling keeps the same cover dimensions');
+const fixedCoverHeight = height;
+height = measured.listContentHeight(false);
+assert.equal(measured.measureBookOrigin(book),undefined,'text lane height cannot be used as the cover height');
+height = fixedCoverHeight;
+metrics.systemFontScale = 1;
+assert.equal(measured.measureBookOrigin({...book,sourceId:'different'}),undefined,'same bookId in another source has no mounted cover');
+measured.viewMode='cover';
+assert.equal(measured.measureBookOrigin(book),undefined,'old list dimensions fail measurement in the cover projection');
+width=grid.bookshelfGridFrame(viewportWidth,false).cardWidth;height=grid.bookshelfCoverHeight(width,false);
+assert.deepEqual(measured.measureBookOrigin(book),{x:20,y:70,width,height});
+viewportWidth=650;
+assert.equal(measured.measureBookOrigin(book),undefined,'a sample from the previous viewport shape cannot be ranked');
 
 // Mount production cover/list builders once, then replay the real observer
 // closures. Retain both default-cover children or both native Image nodes
@@ -191,16 +298,22 @@ for (const hasImage of [false, true]) {
     const childProps = childPropsFor(owner);
     const covers = [...owner.nodes.values()].filter(node => node.type === 'Image' && node.create === rowBook.coverUrl);
     assert.equal(covers.length, hasImage ? 2 : 0, 'the two cover actors use the same current image');
+    const cover = [...owner.nodes.values()].find(node => node.id === owner.bookCoverMotionId(rowBook));
+    assert.ok(cover);
+    assert.equal(cover.clip ?? false, false, 'the shared cover shadow sits outside the clipped layers');
+    assert.deepEqual(cover.shadow, readerSurfaceSpecsForProbe().readerSurfaceElevation(hasImage ? 'cover' : 'embedded', owner.appThemeScheme));
     const defaultCovers = [...owner.children.values()].filter(child => 'coverWidth' in child.params);
     assert.equal(defaultCovers.length, hasImage ? 0 : 2);
     if (!hasImage) assert.deepEqual(defaultCovers[0].params, defaultCovers[1].params, 'both default-cover actors have identical geometry');
     const imageProps = covers.map(node => ({ id: node.id, source: node.create, width: node.width, height: node.height, fit: node.objectFit }));
-    for (const time of [0, 150, 165, 180, 600, 690, 700, 710, 720, 800, 820, 999, motion.totalMs, 'reset']) {
+    for (const time of [0, 12, 24, 60, 120, 180, 200, motion.movingCoverFadeStartMs,
+      motion.totalMs - 20, motion.totalMs, 'reset']) {
       if (time === 'reset') owner.resetViewSwitchMotion(); else sample(owner, from, to, time);
       branches = [];
       owner.replay();
       verifyGroupedCoverActors(owner);
       verifyDetailsInput(owner);
+      assert.equal(cover.scale.x, cover.scale.y, 'the emitted cover actor scales uniformly throughout the morph');
       assert.deepEqual(branches, initialBranches, 'opacity updates do not replace a conditional cover subtree');
       assert.deepEqual([...owner.nodes.keys()], nodeIds);
       assert.deepEqual([...owner.children.keys()], childIds);
@@ -233,13 +346,16 @@ for (const mode of ['cover', 'list']) {
 
 // Render the real default-cover text body, not a test replica of its labels.
 const defaultBuilderSource = noCoverSource.replace('  build() {', '  build() { Column() {} }\n  @Builder\n  coverContent() {');
-const { owner: defaultCover } = createReaderBuilderProbe(defaultBuilderSource, ['coverContent', 'ruleWidth', 'labelWidth']);
+const { owner: defaultCover } = createReaderBuilderProbe(defaultBuilderSource, ['coverContent', 'x', 'y', 'scaleCoverUnit'],
+  { ...readerTypographyRoles, ...readerFoundationTokens });
 const defaultFrame = grid.bookshelfGridFrame(326, false);
 Object.assign(defaultCover, { coverWidth: defaultFrame.cardWidth,
-  coverHeight: defaultFrame.coverHeight, appThemeScheme: 'day' });
+  coverHeight: defaultFrame.coverHeight, appThemeScheme: 'day', glyph: '海边旧书店', kindLabel: '小说' });
 defaultCover.coverContent();
 const textActors = [...defaultCover.nodes.values()].filter(node => node.type === 'Text');
-assert.deepEqual(textActors.map(node => node.create), ['', '暂无封面', '']);
+assert.deepEqual(textActors.map(node => node.create), ['海边旧书店', '无封面 · 小说']);
+assert.equal(textActors[0].maxLines, 2);
+assert.equal(textActors[1].maxLines, 1);
 const textFrames = textActors.map(node => structuredClone(node));
 for (let index = 0; index < 10; index += 1) defaultCover.replay();
 assert.deepEqual(textActors.map(node => structuredClone(node)), textFrames, 'default cover labels/rules retain text and layout inputs');
@@ -252,12 +368,12 @@ const sampler = shelf.members.find(member => member.name?.getText(tree) === 'sam
 const samplerText = sampler.getText(tree);
 const legacySampler = samplerText.replace(/this\.viewSwitchDestinationCoverOpacity\s*=\s*[^;]+;/g,
   "this.viewSwitchDestinationCoverOpacity = this.viewSwitchDestinationMode === 'list' ? incoming : " +
-  '1 - motionSegment(t, m.morphCoverIncomingStartMs, m.morphCoverIncomingDurationMs, fade) + incoming;');
+  '1 - motionSegment(t, m.morphCoverIncomingStartMs, m.morphCoverIncomingDurationMs, fade);');
 assert.notEqual(legacySampler, samplerText, 'counterfactual changes the current cover opacity assignment');
 const legacySource = source.slice(0, sampler.getStart(tree)) + legacySampler + source.slice(sampler.end);
 const legacy = fixture(legacySource);
-assert.throws(() => verifyHandoff(legacy, 'cover', 'list', 690, 820), /cover fades backwards|expose the shelf background/);
-assert.throws(() => verifyHandoff(legacy, 'list', 'cover', 150, 180), /cover fades backwards|expose the shelf background/);
+assert.throws(() => verifyHandoff(legacy, 'list', 'cover', motion.morphCoverIncomingStartMs, motion.totalMs),
+  /cover fades backwards|expose the shelf background/);
 
 // Counterfactual: correct layer alpha alone is insufficient when the engine
 // blends a cover background and its glyphs separately. Remove only the real
@@ -270,7 +386,7 @@ const ungroupedSource = source.slice(0, coverLayer.getStart(tree)) + ungroupedTe
 for (const hasImage of [false, true]) {
   const ungrouped = fixture(ungroupedSource);
   const rowBook = { ...book, ...(hasImage ? { coverUrl: 'https://example.test/handoff.jpg' } : {}) };
-  sample(ungrouped, 'cover', 'list', 710);
+  sample(ungrouped, 'cover', 'list', motion.movingCoverFadeStartMs + 20);
   ungrouped.projectionBookCover(rowBook, false, () => 5);
   assert.equal(coverOpacity(ungrouped), 1, 'the counterexample deliberately still passes layer-alpha composition');
   assert.throws(() => verifyGroupedCoverActors(ungrouped), /each cover must composite/,

@@ -8,7 +8,9 @@ import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice'
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
-import { TYPE_APP_COMPACT_BADGE, TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_LOADING_BODY, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_LABEL, TYPE_FORM_ACTION, TYPE_FORM_LABEL_ACTION, TYPE_FORM_STATUS, TYPE_SECTION_HEADING, TYPE_SYNC_BACKUP_ACTION, TYPE_SYNC_CONFLICT_META, TYPE_SYNC_HISTORY_STATUS, TYPE_SYNC_INPUT, TYPE_SYNC_MUTED_HEADING, TYPE_SYNC_ROW_LABEL } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_APP_LOADING_BODY, TYPE_APP_ROW_DETAIL, TYPE_APP_ROW_LABEL, TYPE_APP_SMALL_LABEL,
+  TYPE_CARD_SECTION_HEADING, TYPE_FORM_STATUS, TYPE_SELECT_DEFAULT_VALUE, TYPE_SECTION_HEADING,
+  TYPE_SYNC_CONFLICT_META, TYPE_SYNC_HISTORY_STATUS, TYPE_SYNC_INPUT, TYPE_SYNC_ROW_LABEL } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import {
   type SyncHistoryEntry,
@@ -24,29 +26,18 @@ import {
   SurfaceHorizontalFrame,
 } from '../../../ui/layout/SurfaceHorizontalGeometry';
 import {
-  TOK_BORDER,
   TOK_BORDER_W,
-  TOK_INK,
-  TOK_MUTED,
-  TOK_READ_PRIMARY,
-  TOK_SETTING_ICON_BG,
+  TOK_RADIUS_PILL,
   TOK_SPACE_CARD_PADDING,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_LG,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
-  TOK_SURFACE_PANEL_SOFT,
 } from '../../../ui/foundation/ReaderTokens';
-
-// Sync Backup — rebuilt 2026-08-05 against live Figma nodes
-// 943:4982 (Phone 390×844) / 943:5462 (Tablet 760×960).
-// Structural notes: WebDAV card = #E6FFFCF8 + 1px #C1C7CD r8 with 4 labelled
-// rows (28px circular blue icon + 36px r6 input) and two action buttons;
-// Auto Backup / History = solid #FFFCF8 cards + #D8D0C3 r13 with muted
-// 11px tracked section titles.
 
 @Component
 export struct SyncPage {
+  @Prop embeddedWide: boolean = false;
   private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
@@ -91,7 +82,7 @@ export struct SyncPage {
   }
 
   build() {
-    ReaderStandardPage({ editingHost: this.editingHost,
+    ReaderStandardPage({ floatingHeader: true, embeddedWide: this.embeddedWide, editingHost: this.editingHost,
       variant: 'sync',
       header: (): void => { this.backBar(); },
       content: (): void => { this.pageContent(); },
@@ -118,72 +109,63 @@ export struct SyncPage {
   @Builder
   private backBar() {
     PageBackBar({
+      floating: true, centered: true, elevation: 'floating',
+      showBack: !this.embeddedWide,
       title: '同步与备份',
-      titleColor: readerAppColor('app.text.syncHeading', this.appThemeScheme),
       onBack: (): void => this.onBack(),
     });
   }
 
-  // Section title inside the WebDAV section (dark 13px Inter Black).
   @Builder
   private sectionHeadingDark(title: string) {
     Text(title)
       .width('100%')
-      .constraintSize({ minHeight: 16 })
-      .fontFamily(TYPE_SECTION_HEADING.fontFamily)
-      .fontWeight(TYPE_SECTION_HEADING.fontWeight)
-      .fontSize(TYPE_SECTION_HEADING.fontSizeFp)
-      .lineHeight(TYPE_SECTION_HEADING.lineHeightFp as number)
-      .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-      .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM });
+      .fontFamily(TYPE_CARD_SECTION_HEADING.fontFamily)
+      .fontWeight(TYPE_CARD_SECTION_HEADING.fontWeight)
+      .fontSize(TYPE_CARD_SECTION_HEADING.fontSizeFp)
+      .lineHeight(TYPE_CARD_SECTION_HEADING.lineHeightFp as number)
+      .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
   }
 
-  // Auto Backup / History section titles: muted 11px tracked caps.
   @Builder
   private sectionHeadingMuted(title: string) {
     Text(title)
       .width('100%')
-      .fontFamily(TYPE_SYNC_MUTED_HEADING.fontFamily)
-      .fontWeight(TYPE_SYNC_MUTED_HEADING.fontWeight)
-      .fontSize(TYPE_SYNC_MUTED_HEADING.fontSizeFp)
-      .fontColor(readerAppColor('app.text.syncHint', this.appThemeScheme))
-      .letterSpacing(TYPE_SYNC_MUTED_HEADING.letterSpacingFp as number)
-      .padding({ left: TOK_SPACE_SM });
+      .fontFamily(TYPE_SECTION_HEADING.fontFamily)
+      .fontWeight(TYPE_SECTION_HEADING.fontWeight)
+      .fontSize(TYPE_SECTION_HEADING.fontSizeFp)
+      .lineHeight(TYPE_SECTION_HEADING.lineHeightFp as number)
+      .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+      .padding({ left: 4, right: 4 });
   }
 
   @Builder
   private webdavSection() {
     Column({ space: TOK_SPACE_XS }) {
-      this.sectionHeadingDark('WebDAV 配置');
+      this.sectionHeadingMuted('WebDAV 配置');
       ReaderCard({ specId: 'sync-config',
         cardWidth: this.contentFrame().width }) {
         Column({ space: TOK_SPACE_XS }) {
-          Text('连接信息')
-            .width('100%')
-            .fontFamily(TYPE_SECTION_HEADING.fontFamily)
-            .fontWeight(TYPE_SECTION_HEADING.fontWeight)
-            .fontSize(TYPE_SECTION_HEADING.fontSizeFp)
-            .lineHeight(TYPE_SECTION_HEADING.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-          this.webdavInputRow((): Resource => (this.appThemeScheme === 'night' ? $r('app.media.sync_server_theme_night') : $r('app.media.sync_server')), '服务器地址', (): string => this.effectiveWebdavUrl(),
+          this.sectionHeadingDark('连接信息');
+          this.webdavInputRow('服务器地址', (): string => this.effectiveWebdavUrl(),
             'https://dav.example.com/reader/backup', false, (value: string): void => {
               this.webdavUrlEdited = true;
               this.webdavUrl = value;
             });
-          this.webdavInputRow((): Resource => (this.appThemeScheme === 'night' ? $r('app.media.sync_account_theme_night') : $r('app.media.sync_account')), '账号', (): string => this.effectiveWebdavUser(),
+          this.webdavInputRow('账号', (): string => this.effectiveWebdavUser(),
             'reader@example.com', false, (value: string): void => {
               this.webdavUserEdited = true;
               this.webdavUser = value;
             });
-          this.webdavInputRow((): Resource => (this.appThemeScheme === 'night' ? $r('app.media.sync_password_theme_night') : $r('app.media.sync_password')), '密码', (): string => this.webdavPass,
+          this.webdavInputRow('密码', (): string => this.webdavPass,
             '••••••••••••', true, (value: string): void => {
               this.webdavPass = value;
             });
-          this.webdavInputRow((): Resource => (this.appThemeScheme === 'night' ? $r('app.media.sync_backup_password_theme_night') : $r('app.media.sync_backup_password')), '备份加密密码', (): string => this.backupPass,
+          this.webdavInputRow('备份加密密码', (): string => this.backupPass,
             '与 WebDAV 登录密码分开保存', true, (value: string): void => {
               this.backupPass = value;
             });
-          this.webdavInputRow((): Resource => (this.appThemeScheme === 'night' ? $r('app.media.source_group_folder_theme_night') : $r('app.media.source_group_folder')), '备份目录', (): string => this.effectiveWebdavPath(),
+          this.webdavInputRow('备份目录', (): string => this.effectiveWebdavPath(),
             '/ReaderBackup/ReaderHarmony', false, (value: string): void => {
               this.webdavPathEdited = true;
               this.webdavPath = value;
@@ -191,54 +173,42 @@ export struct SyncPage {
           this.configActions();
         }
         .width('100%')
-        .padding({ left: 11, right: 11, top: TOK_SPACE_CONTROL_INLINE, bottom: 11 });
+        .padding(TOK_SPACE_SM);
       }
     }
     .width('100%');
   }
 
   @Builder
-  private webdavInputRow(icon: () => Resource, label: string, value: () => string, placeholder: string,
+  private webdavInputRow(label: string, value: () => string, placeholder: string,
     isPassword: boolean, onChange: (value: string) => void) {
-    Row({ space: 12 }) {
-      Stack({ alignContent: Alignment.Center }) {
-        Image(icon()).width(15).height(15);
-      }
-      .width(28)
-      .constraintSize({ minHeight: 28 })
-      .borderRadius(14)
-      .backgroundColor(readerAppColor('TOK_SETTING_ICON_BG', this.appThemeScheme));
-
-      Column({ space: 5 }) {
-        Text(label)
-          .width('100%')
-          .fontFamily(TYPE_APP_ROW_LABEL.fontFamily)
-          .fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
-          .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp)
-          .lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-          .maxLines(1);
-        // Credential masking remains the original native password policy.
-        ReaderFormField({ editingHost: this.editingHost, scheme: this.appThemeScheme, specId: 'sync-credential', text: value(), placeholder, password: isPassword,
-          isEditable: this.canEdit(), onTextChange: (newValue: string): void => onChange(newValue) });
-      }
-      .layoutWeight(1)
-      .alignItems(HorizontalAlign.Start);
+    Column({ space: 5 }) {
+      Text(label)
+        .width('100%')
+        .fontFamily(TYPE_APP_ROW_LABEL.fontFamily)
+        .fontWeight(TYPE_APP_ROW_LABEL.fontWeight)
+        .fontSize(TYPE_APP_ROW_LABEL.fontSizeFp)
+        .lineHeight(TYPE_APP_ROW_LABEL.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+      ReaderFormField({ editingHost: this.editingHost, scheme: this.appThemeScheme, specId: 'sync-credential', text: value(), placeholder, password: isPassword,
+        isEditable: this.canEdit(), onTextChange: (newValue: string): void => onChange(newValue) });
     }
     .width('100%')
-    .padding({ left: 11, right: 11, top: TOK_SPACE_CONTROL_INLINE, bottom: TOK_SPACE_CONTROL_INLINE })
-    .backgroundColor(readerAppColor('app.surface.syncRow', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
-    .borderRadius(8);
+    .constraintSize({ minHeight: 58 })
+    .padding({ top: TOK_SPACE_XS, bottom: TOK_SPACE_XS })
+    .alignItems(HorizontalAlign.Start)
+    .border({ width: { top: TOK_BORDER_W }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) });
   }
 
   @Builder
   private configActions() {
     Row({ space: TOK_SPACE_XS }) {
-      ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-config-test', label: '测试网络连通性', layout: 'full', actionEnabled: this.canMutate(),
-        onAction: (): void => this.onTestConnection(this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(), this.webdavPass, this.effectiveWebdavPath().trim()) }).layoutWeight(1);
-      ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-config-save', label: '保存配置', primary: true, layout: 'full', actionEnabled: this.canMutate(),
-        onAction: (): void => this.onSaveConfig(this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(), this.webdavPass, this.backupPass, this.effectiveWebdavPath().trim()) }).layoutWeight(1);
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-config-test', variant: 'tonal', visualSize: 'medium',
+        label: '测试网络连通性', layout: 'equal', actionEnabled: this.canMutate(),
+        onAction: (): void => this.onTestConnection(this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(), this.webdavPass, this.effectiveWebdavPath().trim()) });
+      ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-config-save', variant: 'primary', visualSize: 'medium',
+        label: '保存配置', layout: 'equal', actionEnabled: this.canMutate(),
+        onAction: (): void => this.onSaveConfig(this.effectiveWebdavUrl().trim(), this.effectiveWebdavUser().trim(), this.webdavPass, this.backupPass, this.effectiveWebdavPath().trim()) });
     }.width('100%');
   }
 
@@ -263,6 +233,7 @@ export struct SyncPage {
             Text(this.snapshot.statusMessage)
               .width('100%')
               .fontFamily(TYPE_FORM_STATUS.fontFamily as string)
+              .fontWeight(TYPE_FORM_STATUS.fontWeight as number)
               .fontSize(TYPE_FORM_STATUS.fontSizeFp)
               .lineHeight(TYPE_FORM_STATUS.lineHeightFp as number)
               .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme));
@@ -348,21 +319,18 @@ export struct SyncPage {
 
   @Builder
   private manualActionButton(label: string, primary: boolean, action: () => void) {
-    ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-action', label, primary, actionEnabled: this.canMutate(), layout: 'full', onAction: action }).layoutWeight(1);
+    ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-action', label, variant: primary ? 'primary' : 'tonal',
+      visualSize: 'medium', actionEnabled: this.canMutate(), layout: 'equal', onAction: action });
   }
 
   @Builder
   private restoreConflictCard(conflict: SyncRestoreConflict) {
     Column({ space: TOK_SPACE_XS }) {
-      Text('本机配置与远端备份不同')
-        .width('100%')
-        .fontFamily(TYPE_FORM_LABEL_ACTION.fontFamily)
-        .fontWeight(TYPE_FORM_LABEL_ACTION.fontWeight)
-        .fontSize(TYPE_FORM_LABEL_ACTION.fontSizeFp)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+      this.sectionHeadingDark('本机配置与远端备份不同');
       Text(`备份 ${conflict.backupId} · 本机 ${conflict.localChecksum.substring(0, 8)}… · 远端 ${conflict.remoteChecksum.substring(0, 8)}…`)
         .width('100%')
         .fontFamily(TYPE_SYNC_CONFLICT_META.fontFamily as string)
+        .fontWeight(TYPE_SYNC_CONFLICT_META.fontWeight as number)
         .fontSize(TYPE_SYNC_CONFLICT_META.fontSizeFp)
         .lineHeight(TYPE_SYNC_CONFLICT_META.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
@@ -376,7 +344,7 @@ export struct SyncPage {
     .padding(TOK_SPACE_SM)
     .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-    .borderRadius(8);
+    .borderRadius(14);
   }
 
   @Builder
@@ -387,9 +355,9 @@ export struct SyncPage {
         cardWidth: this.contentFrame().width }) {
         Column() {
           this.gatedRow('保存位置', (): string => this.snapshot.saveLocation);
-          Row().width('100%').height(1).backgroundColor(readerAppColor('app.border.statusCard', this.appThemeScheme));
+          Row().width('100%').height(1).backgroundColor(readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme));
           this.gatedRow('备份频率', (): string => this.snapshot.backupFrequency);
-          Row().width('100%').height(1).backgroundColor(readerAppColor('app.border.statusCard', this.appThemeScheme));
+          Row().width('100%').height(1).backgroundColor(readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme));
           this.scopeRow();
         }
         .width('100%');
@@ -406,15 +374,17 @@ export struct SyncPage {
         .fontFamily(TYPE_SYNC_ROW_LABEL.fontFamily)
         .fontWeight(TYPE_SYNC_ROW_LABEL.fontWeight)
         .fontSize(TYPE_SYNC_ROW_LABEL.fontSizeFp)
-        .fontColor(readerAppColor('app.text.syncHeading', this.appThemeScheme));
+        .lineHeight(TYPE_SYNC_ROW_LABEL.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
       Text(value())
-        .fontFamily(TYPE_FORM_ACTION.fontFamily)
-        .fontWeight(TYPE_FORM_ACTION.fontWeight)
-        .fontSize(TYPE_FORM_ACTION.fontSizeFp)
+        .fontFamily(TYPE_APP_ROW_DETAIL.fontFamily)
+        .fontWeight(TYPE_APP_ROW_DETAIL.fontWeight)
+        .fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp)
+        .lineHeight(TYPE_APP_ROW_DETAIL.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
     }
     .width('100%')
-    .constraintSize({ minHeight: 50 })
+    .constraintSize({ minHeight: 58 })
     .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING })
     .opacity(0.72)
     .hitTestBehavior(HitTestMode.None);
@@ -430,25 +400,25 @@ export struct SyncPage {
         .fontFamily(TYPE_SYNC_ROW_LABEL.fontFamily)
         .fontWeight(TYPE_SYNC_ROW_LABEL.fontWeight)
         .fontSize(TYPE_SYNC_ROW_LABEL.fontSizeFp)
-        .fontColor(readerAppColor('app.text.syncHeading', this.appThemeScheme))
+        .lineHeight(TYPE_SYNC_ROW_LABEL.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
         .maxLines(1);
       Row({ space: 8 }) {
         Text(this.scopeSummary())
-          .layoutWeight(1)
-          .fontFamily(TYPE_FORM_ACTION.fontFamily)
-          .fontWeight(TYPE_FORM_ACTION.fontWeight)
-          .fontSize(TYPE_FORM_ACTION.fontSizeFp)
+          .fontFamily(TYPE_SELECT_DEFAULT_VALUE.fontFamily)
+          .fontWeight(TYPE_SELECT_DEFAULT_VALUE.fontWeight)
+          .fontSize(TYPE_SELECT_DEFAULT_VALUE.fontSizeFp)
+          .lineHeight(TYPE_SELECT_DEFAULT_VALUE.lineHeightFp ?? Math.round(TYPE_SELECT_DEFAULT_VALUE.fontSizeFp * 1.5)).halfLeading(true)
           .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
           .textAlign(TextAlign.Start)
           .maxLines(1);
         Image((this.appThemeScheme === 'night' ? $r('app.media.sync_scope_chevron_theme_night') : $r('app.media.sync_scope_chevron'))).width(12).height(8);
       }
-      .width(86)
-      .height(36)
+      .constraintSize({ minWidth: 86, minHeight: 36 })
       .padding({ left: TOK_SPACE_CONTROL_INLINE, right: TOK_SPACE_CONTROL_INLINE })
-      .backgroundColor(readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme))
-      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
-      .borderRadius(6)
+      .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
+      .borderRadius(TOK_RADIUS_PILL)
       .alignItems(VerticalAlign.Center)
       .opacity(0.62)
       .hitTestBehavior(HitTestMode.None)
@@ -456,7 +426,7 @@ export struct SyncPage {
       .accessibilityDescription('多选展开设计和持久化契约待确认，当前不可编辑');
     }
     .width('100%')
-    .constraintSize({ minHeight: 50 })
+    .constraintSize({ minHeight: 58 })
     .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING })
     .alignItems(VerticalAlign.Center);
   }
@@ -497,10 +467,11 @@ export struct SyncPage {
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
           .textAlign(TextAlign.Center)
           .padding({ top: TOK_SPACE_LG, bottom: TOK_SPACE_SM });
-        ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-empty-backup', label: '立即备份', layout: 'full',
+        ReaderButton({ scheme: this.appThemeScheme, specId: 'sync-empty-backup', variant: 'primary', visualSize: 'large', label: '立即备份', layout: 'full',
           actionEnabled: this.canMutate(), onAction: (): void => this.onTriggerBackup() });
       }
-      .width('100%');
+      .width('100%')
+      .padding({ left: TOK_SPACE_CARD_PADDING, right: TOK_SPACE_CARD_PADDING, bottom: TOK_SPACE_CARD_PADDING });
     }
   }
 
@@ -524,7 +495,7 @@ export struct SyncPage {
           .constraintSize({ minWidth: 64 })
           .padding({ left: 8, right: 8 })
           .constraintSize({ minHeight: 24 })
-          .borderRadius(12)
+          .borderRadius(6)
           .backgroundColor(readerAppColor('app.sync.badgeSurface', this.appThemeScheme));
 
           Text(this.snapshot.history[index]?.timestamp ?? '')

@@ -22,6 +22,7 @@ class ReaderTtsWaveformFrame extends FrameCallback {
 
 @Component
 export struct ReaderTtsWaveform {
+  @StorageProp('readerAppForeground') @Watch('onPlaybackChanged') private foreground: boolean = true;
   @Prop @Watch('onPlaybackChanged') playing: boolean = false;
   @Prop @Watch('onPlaybackChanged') active: boolean = true;
   @Prop @Watch('onPlaybackChanged') reduceMotion: boolean = false;
@@ -46,15 +47,18 @@ export struct ReaderTtsWaveform {
   }
   private onPlaybackChanged(): void {
     if (!this.mounted) return;
-    if (this.frozen || !this.active || !this.visible) {
+    if (!this.playing || !this.foreground || this.frozen || !this.active || !this.visible || this.reduceMotion) {
       WAVEFORM_CLOCK.unsubscribe(this.subscription); this.subscription = -1;
+      if (!this.frozen) this.liveSample = createReaderTtsWaveformSample();
       return;
     }
     if (this.subscription < 0) {
-      this.subscription = WAVEFORM_CLOCK.subscribe(this.playing, this.reduceMotion,
-        (sample: ReaderTtsWaveformSample): void => { if (this.mounted && this.active && this.visible && !this.frozen) this.liveSample = sample; },
+      this.subscription = WAVEFORM_CLOCK.subscribe(true, false,
+        (sample: ReaderTtsWaveformSample): void => {
+          if (this.mounted && this.playing && this.foreground && this.active && this.visible && !this.frozen && !this.reduceMotion) this.liveSample = sample;
+        },
         (callback: () => void): void => this.getUIContext().postFrameCallback(new ReaderTtsWaveformFrame(callback)));
-    } else WAVEFORM_CLOCK.update(this.subscription, this.playing, this.reduceMotion);
+    }
   }
   private sample(): ReaderTtsWaveformSample { return this.frozen ? this.frozenSample ?? this.frozenFallback : this.liveSample; }
   private barColor(): number {
@@ -75,7 +79,7 @@ export struct ReaderTtsWaveform {
     Row() {
       ForEach(this.sample().heights, (_height: number, index: number): void => {
         Row().width(2.5).height(this.sample().heights[index]).borderRadius(2)
-          .scale({ x: 1, y: this.sample().scales[index], centerY: '50%' })
+          .scale({ x: 1, y: Math.min(1.05, this.sample().scales[index]), centerY: '50%' })
           .backgroundColor(this.barColor()).opacity(this.sample().opacities[index]);
       }, (_height: number, index: number): string => index.toString());
     }.width('100%').height(26).justifyContent(FlexAlign.SpaceBetween).alignItems(VerticalAlign.Center)

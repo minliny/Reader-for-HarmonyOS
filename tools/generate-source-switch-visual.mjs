@@ -63,7 +63,7 @@ const scaled = key => `calc(${px(key)} * var(--source-switch-font-scale,1))`;
 const font = (prefix, family = s.bodyFontFamilyCss) => `${n[`${prefix}FontWeight`]} ${scaled(`${prefix}FontSize`)}/${scaled(`${prefix}LineHeight`)} ${family},${family === s.titleFontFamilyCss ? 'serif' : 'sans-serif'}`;
 const role = key => `var(--${s[key]})`;
 const easing = `cubic-bezier(${n.easingX1},${n.easingY1},${n.easingX2},${n.easingY2})`;
-let css = `/* ${generatedHeader.replaceAll('\n', '\n * ')}\n * Normal profile: ${n.baseViewportWidth}x${n.baseViewportHeight}, font scale 1.\n * Put data-width-profile="narrow" on the modal when available drawer width < ${n.narrowWidthThreshold}.\n * data-content-profile="scrollable" means the markup adapter has moved book context into the results scroller.\n * Fonts below are the same checked assets as native roles; business state is supplied by the host.\n */\n`;
+let css = `/* ${generatedHeader.replaceAll('\n', '\n * ')}\n * Normal profile: ${n.baseViewportWidth}x${n.baseViewportHeight}, font scale 1.\n * Put data-width-profile="narrow" on the modal when available drawer width < ${n.narrowWidthThreshold}.\n * data-content-profile="scrollable" means the markup adapter has moved book context into the results scroller.\n * Fonts below are the checked reference assets. Business state is supplied by the host.\n */\n`;
 for (const asset of definition.fontAssets) css += `@font-face{font-family:${asset.cssFamily};src:url('../../../entry/src/main/resources/rawfile/${asset.file}');font-weight:${asset.axis === 'wght' ? '100 900' : asset.weight};font-style:normal}\n`;
 css += `.source-flow-modal,.source-flow-modal *,.source-flow-transition,.source-flow-transition *,.source-flow-toast{box-sizing:border-box}\n`;
 css += `.source-flow-modal{--source-switch-side-inset:${px('normalSideInset')};--source-switch-time-width:calc(${px('timingColumnWidth')} * max(1,var(--source-switch-font-scale,1)));--source-switch-status-line-height:${px('discoveryStatusLineHeight')};--source-switch-status-font-size:${px('discoveryStatusFontSize')};--source-switch-action-font-size:${px('discoveryActionFontSize')};--source-switch-action-padding-x:${px('discoveryActionPaddingX')};--source-switch-action-width:${px('discoveryActionWidth')};--source-switch-action-visible-height:${px('discoveryActionVisibleHeight')};--source-switch-action-hit-height:${px('discoveryActionMinHeight')};--source-switch-discovery-height:${px('discoveryHeight')};--source-switch-column-base-height:${px('columnHeight')};--source-switch-footer-base-height:${px('footerHeight')};position:absolute;inset:0;color:${role('inkRole')};font-family:${s.bodyFontFamilyCss},ReaderSans,sans-serif;--source-switch-easing:${easing};--source-switch-open-duration:${n.openDurationMs}ms;--source-switch-close-duration:${n.closeDurationMs}ms;--source-switch-row-enter-duration:${n.rowEnterDurationMs}ms}\n`;
@@ -138,12 +138,15 @@ const endMarker = '// Source-management rows use one compact metadata tuple';
 const start = typography.indexOf(startMarker);
 const end = typography.indexOf(endMarker);
 if (start < 0 || end <= start) throw new Error('SOURCE_SWITCH_VISUAL_TYPOGRAPHY_REGION_MISSING');
+const nativeFamiliesByWeight = {
+  400: 'READER_FONT_NOTO_SANS_SC_UI_REGULAR',
+  500: 'READER_FONT_NOTO_SANS_SC_UI_MEDIUM',
+  700: 'READER_FONT_NOTO_SANS_SC_UI_BOLD',
+};
 const nativeFamily = prefix => {
-  const family = ['title', 'bookTitle', 'switchTitle'].includes(prefix) ? s.titleFontFamilyCss :
-    ['timing', 'timingUnit', 'discoveryCount'].includes(prefix) ? s.timingFontFamilyCss : s.bodyFontFamilyCss;
-  const asset = definition.fontAssets.find(item => item.cssFamily === family && (item.weight === n[`${prefix}FontWeight`] || (item.axis === 'wght' && item.supportedWeights?.includes(n[`${prefix}FontWeight`]))));
-  if (!asset) throw new Error(`SOURCE_SWITCH_VISUAL_FONT_FACE_MISSING ${prefix}`);
-  return asset.nativeFamilyConstant;
+  const family = nativeFamiliesByWeight[n[`${prefix}FontWeight`]];
+  if (family === undefined) throw new Error(`SOURCE_SWITCH_NATIVE_UI_WEIGHT_UNSUPPORTED ${prefix}`);
+  return family;
 };
 const roles = [
   ['HEADING', 'title'], ['BOOK_TITLE', 'bookTitle'], ['METADATA', 'author'], ['CAPTION', 'metadata'],
@@ -153,7 +156,7 @@ const roles = [
   ['FOOTER', 'footer'], ['EMPTY', 'empty'], ['TOAST', 'toast'], ['SWITCH_TITLE', 'switchTitle'], ['SWITCH_SOURCE', 'switchSource'],
   ['SWITCH_STATUS', 'switchStep'], ['SWITCH_CAPTION', 'switchCaption'],
 ];
-let roleCode = `${startMarker}\n// ${generatedHeader.replaceAll('\n', '\n// ')}\n// Historical compact-popup and manga roles above are unchanged. Static UI\n// Regular/Medium faces and Inter axes 400/500 are shared with the generated reference.\n`;
+let roleCode = `${startMarker}\n// ${generatedHeader.replaceAll('\n', '\n// ')}\n// HarmonyOS uses the shared static UI faces with the reference line boxes.\n`;
 for (const [roleName, prefix] of roles) {
   roleCode += `export const TYPE_SOURCE_SWITCH_NOVEL_${roleName} = new ReaderTextStyle(\n`;
   roleCode += `  ${nativeFamily(prefix)}, ${n[`${prefix}FontWeight`]}, ${n[`${prefix}FontSize`]}, ${n[`${prefix}LineHeight`]}, undefined, 'system', 'appBaseline');\n`;

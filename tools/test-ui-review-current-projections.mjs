@@ -8,6 +8,7 @@ import { readerFoundationTokens } from './lib/reader-tokens-probe.mjs';
 import { boundedSurfaceSdk, boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { selectedProductionMethods, selectedProductionValues } from './lib/selected-production-methods.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
+import { readerEditingSdk } from './lib/reader-editing-sdk-probe.mjs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import { readerAppColor, readerThemeDefinition } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 import { createDefaultReaderAppearanceSnapshot } from '../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts';
@@ -27,7 +28,7 @@ const selected = selectContractCases({
   'reading-fragments': 'Actual page-turn surface provider updates retained native and fallback text payloads.',
   'waveform-current': 'Retained waveform bars consume current base height, scale and opacity.',
   'tts-choice-current': 'Retained TTS options consume current visible and accessibility labels.',
-  'tts-picker-capacity': 'Non-manager TTS overlays fit positive short slots and share a bounded scroll.',
+  'tts-picker-capacity': 'TTS choices fit inline slots or the measured native viewport and keep a bounded scroll.',
   'section-heading-growth': 'Real CategorySection/Card/Heading permits current system-scale line growth.',
   'multi-select-current': 'Real retained multi-select card/list readback updates all current visible and AX facts.',
 });
@@ -260,6 +261,9 @@ function waveformCurrent(source) {
 }
 
 function ttsDependencies() {
+  const { ReaderEditingVisibility, ReaderEditingScrollBinding } = readerEditingSdk();
+  const cardPath = 'features/reading/ui/ReaderIslandControlStyle.ets';
+  const { ReaderIslandCard } = pureModuleProbe(read(cardPath), cardPath, { readerAppColor }, ['ReaderIslandCard']);
   const measurement = pureModuleProbe(read('features/reading/ui/ReaderControlTextMeasurement.ets'),
     'ReaderControlTextMeasurement.ets', { WordBreak: { BREAK_WORD: 'break' } }, ['measureReaderControlText']);
   const context = { px2vp: value => value, getMeasureUtils: () => ({
@@ -268,7 +272,7 @@ function ttsDependencies() {
       [...options.textContent].length * Number.parseFloat(options.fontSize)),
     height: Number.parseFloat(options.lineHeight ?? options.fontSize) * 1.5 }),
   }) };
-  return { ...measurement, readerFontFamilyReady: () => true,
+  return { ReaderEditingVisibility, ReaderEditingScrollBinding, ReaderIslandCard, ...measurement, readerFontFamilyReady: () => true,
     ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }) }, uiContext: context };
 }
 
@@ -325,7 +329,32 @@ function ttsPickerCapacity(source) {
       cases.push({ voicePicker, height, frameHeight: box.height, y: carrier.position.y });
     }
   }
-  return { capacities: cases.length };
+  for (const voicePicker of [false, true]) {
+    const sdk = boundedSurfaceSdk();
+    const deps = ttsDependencies();
+    deps.ReaderWindowCoordinator.metrics = () => ({ systemFontScale: 1, windowRect: { height: 844 } });
+    const owner = sdk.consumer(source, boundedMembers(source), deps, {
+      manager: false, voicePicker, windowModal: true, availableWidth: 286, availableHeight: 176,
+      appThemeScheme: 'day', choices: Array.from({ length: 25 }, (_, index) => ({
+        id: `choice:${index}`, label: `选项${index}`,
+      })), selectionId: 'viewport-picker',
+    });
+    owner.aboutToAppear();
+    owner.initialRender();
+    const cover = [...owner.nodes.values()].find(node => node.type === 'Stack' && node.onSizeChange);
+    const frame = sdk.walk(owner).find(child => child instanceof sdk.deps.ReaderBoundedSurface);
+    const box = [...frame.nodes.values()].find(node => node.type === 'Column');
+    const carrier = [...owner.nodes.values()].find(node => node.type === 'Column' && node.position !== undefined);
+    assert.equal(cover.width, '100%');
+    assert.equal(cover.height, '100%');
+    for (const height of [400, 120]) {
+      cover.onSizeChange({}, { width: 310, height });
+      sdk.properties.flush();
+      assert.equal(box.height, height - 16, 'long picker uses the measured cover instead of the 176vp island');
+      assert.equal(carrier.position.y + box.height, height - 8);
+    }
+  }
+  return { inlineCapacities: cases.length, viewportCapacities: 4 };
 }
 
 function sectionHeadingGrowth(source) {
@@ -389,7 +418,7 @@ function multiSelectCurrent(source) {
     dependencies.ShelfBookListDetails = createReaderBuilderProbe(details, boundedMembers(details), dependencies, hooks).Component;
     const members = ['books', 'ready', 'busy', 'appForeground', 'selectedKeys', 'selectionList', 'selectionCard', 'selectionListCard',
       'selectionBadge', 'selectionRowAction', 'currentBook', 'hasCover', 'bookKey', 'isSelected', 'hasBookKey',
-      'toggleBook', 'visibleBooks', 'bookRows', 'isListMode', 'selectionInputEnabled', 'reconcileSelection', 'canRetainSelectedKey'];
+      'toggleBook', 'visibleBooks', 'bookRows', 'isListMode', 'selectionInputEnabled', 'reconcileSelection'];
     const { owner } = createReaderBuilderProbe(source, members, dependencies, hooks);
     const first = { sourceId: 'source', bookId: 'one', title: '旧标题', author: '旧作者',
       coverUrl: 'https://example.invalid/old.png', contentKind: 'text', currentChapterTitle: '旧章节',
@@ -439,8 +468,8 @@ const cases = {
   'waveform-current': ['features/reading/ui/ReaderTtsWaveform.ets', waveformCurrent, source => source.replace('.height(this.sample().heights[index])', '.height(_height)')],
   'tts-choice-current': ['features/reading/ui/ReaderTtsConfigOverlay.ets', ttsChoiceCurrent, source => source.replaceAll('this.currentChoice(choice)', 'choice')],
   'tts-picker-capacity': ['features/reading/ui/ReaderTtsConfigOverlay.ets', ttsPickerCapacity, source => source
-    .replace('Math.max(0, Math.min(content, this.availableHeight - 2 * this.pickerOuterPadding()))', 'Math.max(44, Math.min(content, this.availableHeight - 16))')
-    .replace('const padding = this.pickerOuterPadding();', 'const padding = 8;')],
+    .replace('Math.max(0, Math.min(content, this.pickerViewportHeight() - 2 * this.pickerOuterPadding()))',
+      'Math.max(44, Math.min(content, this.availableHeight - 16))')],
   'section-heading-growth': ['ui/controls/ReaderSectionHeading.ets', sectionHeadingGrowth,
     source => source.replace('.constraintSize({ minHeight: 16 })', '.height(16)')],
   'multi-select-current': ['features/bookshelf/ui/BookshelfMultiSelectPage.ets', multiSelectCurrent,

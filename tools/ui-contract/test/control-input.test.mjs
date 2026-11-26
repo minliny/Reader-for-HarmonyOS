@@ -55,14 +55,15 @@ test('the bounded AutoPage initiation input measures the prior reader host and v
   const accepted = pair();
   accepted.event = 'click-then-reader-center';
   accepted.click.args = launch;
-  accepted.center = {...accepted.back,args:center,hostStartMs:850,startedAt:'2026-11-19T07:00:00.650Z'};
-  accepted.recordedAt = '2026-11-19T07:00:00.950Z';
-  assert.deepEqual(requireActionDispatch([accepted],1,actual),{dispatchGapMs:650,probeSeq:1});
-  accepted.center.hostStartMs = 849;
+  accepted.click.elapsedMs = 164;
+  accepted.center = {...accepted.back,args:center,hostStartMs:405,startedAt:'2026-11-19T07:00:00.205Z'};
+  accepted.recordedAt = '2026-11-19T07:00:00.550Z';
+  assert.deepEqual(requireActionDispatch([accepted],1,actual),{dispatchGapMs:205,probeSeq:1});
+  accepted.center.hostStartMs = 404;
   assert.throws(() => requireActionDispatch([accepted],1,actual),/outside the launch host window/);
-  accepted.center.hostStartMs = 1150;
+  accepted.center.hostStartMs = 550;
   assert.throws(() => requireActionDispatch([accepted],1,actual),/outside the launch host window/);
-  accepted.center.hostStartMs = 850;
+  accepted.center.hostStartMs = 405;
   accepted.center.args[4] = '401';
   assert.throws(() => requireActionDispatch([accepted],1,actual),/Invalid click and normal reader center/);
   samples['reading-before'].nodes[1] = node('reader-reading-interaction-host-continuous',

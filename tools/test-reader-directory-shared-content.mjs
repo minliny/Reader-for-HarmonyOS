@@ -85,8 +85,8 @@ function row(overrides = {}, scheme = 'day') {
   const owner = createReaderBuilderProbe(rowSource, ['build', 'chapterTitle', 'marker', 'bookmarkActionEnabled', 'bookmarkActionLabel',
     'downloadActionEnabled', 'downloadActionLabel'],
     { readerDirectoryBookmarkMarkerState, readerDirectoryAccessibilityText, readerDirectoryIndentVp }).owner;
-  Object.assign(owner, { appThemeScheme: scheme, entry: { ...entry }, rowHeight: 40, currentChapterIndex: -1,
-    chapterDownloadEnabled: true, chapterStartBookmarkCreationEnabled: true,
+  Object.assign(owner, { appThemeScheme: scheme, entry: { ...entry }, rowHeight: 44, currentChapterIndex: -1,
+    chapterDownloadEnabled: true, bookmarkActionsEnabled: true, chapterStartBookmarkCreationEnabled: true,
     onSelectChapter: index => calls.push(['select', index]), onDownloadChapter: index => calls.push(['download', index]),
     onDeleteBookmarks: times => calls.push(['delete', times]), onCreateChapterStartBookmark: request => calls.push(['create', request]),
     ...overrides });
@@ -96,6 +96,11 @@ for (const scheme of ['day', 'night']) {
   const { owner, calls } = row({}, scheme);
   assert.equal(action(owner, '下载章节').type,'Button');
   assert.equal(action(owner, '添加本章章首书签').type,'Button');
+  for (const label of ['下载章节', '添加本章章首书签']) {
+    const button = action(owner, label);
+    assert.equal(button.width, 44);
+    assert.deepEqual(button.responseRegion, { x: 0, y: 0, width: 44, height: 44 });
+  }
   action(owner, '打开章节：第二十二章').onClick(); action(owner, '下载章节').onClick();
   action(owner, '添加本章章首书签').onClick();
   assert.deepEqual(calls, [['select', 21], ['download', 21], ['create', { chapterIndex: 21, chapterTitle: '第二十二章' }]]);
@@ -104,10 +109,10 @@ for (const scheme of ['day', 'night']) {
   assert.equal(text.fontColor, readerAppColor('TOK_READ_INK', scheme));
   assert.ok(nodes(owner).some(node => node.type === 'Image' && node.create ===
     `app.media.reader_directory_marker_download${scheme === 'night' ? '_theme_night' : ''}`));
-  owner.entry = { ...entry, index: 33, title: '另一个章节' }; owner.rowHeight = 32; owner.replay();
+  owner.entry = { ...entry, index: 33, title: '另一个章节' }; owner.rowHeight = 48; owner.replay();
   action(owner, '打开章节：另一个章节').onClick();
   assert.deepEqual(calls.at(-1), ['select', 33], 'retained row callback uses the current chapter');
-  assert.ok(nodes(owner).filter(node => node.height !== undefined).every(node => [32, 15].includes(node.height)));
+  assert.ok(nodes(owner).filter(node => node.height !== undefined).every(node => [48, 15].includes(node.height)));
 }
 {
   const nested = row({ entry: { ...entry, level: 3 } });

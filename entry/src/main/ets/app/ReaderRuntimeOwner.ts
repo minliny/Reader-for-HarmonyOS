@@ -41,7 +41,7 @@ import {
   type ReadingImageChapterIdentity,
 } from '../platform/reading-resources/ReadingImageDiskCache';
 import { canonicalReadingImageBaseUrl } from '../common/ReadingImageIdentity';
-import { ArkWebExecutor } from '../platform/network/ArkWebExecutor';
+import { ArkWebExecutor, type ArkWebLoginClearOutcome } from '../platform/network/ArkWebExecutor';
 import { sourceLoginPageUrl } from './SourceLoginPageProjection';
 import type { SourceHttpDiagnosticRecord } from '../platform/network/HttpExecuteHost';
 import {
@@ -228,6 +228,7 @@ export class ReaderRuntimeOwner {
   private bookCoordinator: BookAcquisitionCoordinator | undefined = undefined;
   private entryPreparations: ReadingEntryPreparation | undefined = undefined;
   private preparationNetwork: ReaderPreparationNetworkHost | undefined;
+  private deepReadingPrefetchObservers?: Set<() => void>;
   private preparationWakeTimer: number = -1;
   private preparationForeground: boolean = false;
   private preparationCatalogAllowed: boolean = false;
@@ -551,6 +552,12 @@ export class ReaderRuntimeOwner {
       revision === this.downloadProtectionRevision && before === signature();
   }
 
+  protectsDownloadStorageChapter(chapter: ReadingTextStorageChapter): boolean {
+    const reading = this.downloadReadingProtection;
+    return reading !== undefined && reading.sourceId === chapter.sourceId && reading.bookId === chapter.bookId &&
+      (reading.chapterIndex === undefined || reading.chapterIndex === chapter.chapterIndex);
+  }
+
   async readDownloadStorageBindings(): Promise<{ retainedChapters: ReadingTextStorageChapter[]; protectedChapters: ReadingTextStorageChapter[]; }> {
     const coordinator = this.getDownloadCoordinator();
     await coordinator.restore();
@@ -619,6 +626,26 @@ export class ReaderRuntimeOwner {
 
   allowOptionalMangaPreparation(): boolean {
     return this.state === 'ready' && this.preparationForeground && this.preparationNetwork?.allowed() === true;
+  }
+
+  /** Deep text preparation may observe the same network lifecycle without
+   * importing or owning the network host. The returned disposer is idempotent
+   * and keeps the callback out of the runtime after its route retires. */
+  observeDeepReadingPrefetchNetwork(advance: () => void): () => void {
+    if (this.state === 'closing' || this.state === 'closed') return (): void => {};
+    const observers = this.deepReadingPrefetchObservers ??= new Set<() => void>();
+    observers.add(advance);
+    return (): void => { observers.delete(advance); };
+  }
+
+  deepReadingPrefetchNetworkAllowed(): boolean {
+    return this.state === 'ready' && this.preparationForeground && this.preparationNetwork?.deepAllowed() === true;
+  }
+
+  canDeepReadingPrefetchWrite(current: () => boolean): Promise<boolean> {
+    return this.getDownloadStorageGateway().canPrefetchTextChapter(
+      (): boolean => current() && this.deepReadingPrefetchNetworkAllowed(),
+    );
   }
 
   readPreparedEntry(params: JsonObject): JsonObject {
@@ -692,6 +719,10 @@ export class ReaderRuntimeOwner {
     if (this.state !== 'ready') throw new Error('READER_RUNTIME_NOT_READY');
     return this.getDownloadStorageGateway().readSettingsTextCleanup();
   }
+  reconcileSettingsTextCleanup(current: () => boolean): Promise<SharedDownloadCleanupResult | undefined> {
+    if (this.state !== 'ready') throw new Error('READER_RUNTIME_NOT_READY');
+    return this.getDownloadStorageGateway().reconcileSettingsTextCleanup(current);
+  }
 
   async configureDownloadStorage(limitMb: number, cleanupAfterDays: number): Promise<SharedDownloadStoragePolicyResult> {
     if (this.state !== 'ready') throw new Error('READER_RUNTIME_NOT_READY');
@@ -731,6 +762,9 @@ export class ReaderRuntimeOwner {
         this.bookCoordinator?.visibilityChanged();
         MangaChapterPreparationCoordinator.forRuntime(this).networkChanged();
         this.wakeReadingPreparations();
+        this.deepReadingPrefetchObservers?.forEach((observer: () => void): void => {
+          try { observer(); } catch (_) { /* Network notification cannot break the owner. */ }
+        });
       });
       this.preparationNetwork.setForeground(foreground);
     } else if (changed) this.preparationNetwork.setForeground(foreground);
@@ -842,7 +876,16 @@ export class ReaderRuntimeOwner {
       }
       const probe = this.mangaOfflineProbe;
       let result: ReaderCoreResultEvent;
-      if (probe?.ownsCommand(method, params) === true && probe.assertCapacity()) {
+      if (options.onSourceCheckStage !== undefined &&
+        (method === 'source.check.run' || method === 'source.check.ephemeral.run')) {
+        const requestId = runtime.send(method, params);
+        const release = this.host.observeSourceCheckStages(requestId, options.onSourceCheckStage);
+        try {
+          result = await runtime.waitForResult(requestId, {
+            ...options, timeoutMs: options.timeoutMs ?? DEFAULT_CORE_REQUEST_TIMEOUT_MS,
+          });
+        } finally { release(); }
+      } else if (probe?.ownsCommand(method, params) === true && probe.assertCapacity()) {
         // SDK request is send + waitForResult. Register before any Host dispatch;
         // the Registry uses this exact id, never a URL or source-only guess.
         const requestId = runtime.send(method, params);
@@ -945,12 +988,24 @@ export class ReaderRuntimeOwner {
   }
 
   /** Open a user-operated source login/challenge page on the shared Host jar. */
-  async openSourceLogin(sourceId: string, loginUrl: string, sourceName: string, isCurrent?: () => boolean): Promise<void> {
+  async openSourceLogin(sourceId: string, loginUrl: string, sourceName: string,
+    isCurrent?: () => boolean, clearReport?: () => Promise<boolean>): Promise<void> {
+    const clearSession = clearReport === undefined ? undefined : async (): Promise<ArkWebLoginClearOutcome> => {
+      let cookiesCleared = false;
+      try {
+        await this.clearSourceCookieSession(sourceId);
+        cookiesCleared = true;
+      } catch (_) { /* The outcome separates a failed credential write from the report write. */ }
+      let report: 'cleared' | 'unsupported' | 'failed' = 'failed';
+      try { report = await clearReport() ? 'cleared' : 'unsupported'; } catch (_) {}
+      return { cookiesCleared, report };
+    };
     await ArkWebExecutor.instance.openInteractive(
       sourceLoginPageUrl(sourceId, loginUrl),
       sourceId,
       `${sourceName} · 登录 / 验证`,
       isCurrent,
+      clearSession,
     );
   }
 
@@ -1601,6 +1656,7 @@ export class ReaderRuntimeOwner {
     this.mangaOfflineProbe?.release('runtime-close');
     this.preparationForeground = false;
     this.preparationNetwork?.close();
+    this.deepReadingPrefetchObservers?.clear();
     if (this.preparationWakeTimer >= 0) clearTimeout(this.preparationWakeTimer);
     this.preparationWakeTimer = -1;
     this.entryPreparations?.close();

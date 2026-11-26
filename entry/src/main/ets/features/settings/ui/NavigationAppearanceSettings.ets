@@ -5,11 +5,9 @@ import {
   type ReaderNavigationPreferences,
 } from '../../../app/HarmonyCapabilityPolicy';
 import { ReaderFormRow } from '../../../ui/controls/ReaderFormRow';
-import { ReaderSegmentedControl } from '../../../ui/controls/ReaderSegmentedControl';
+import { ReaderSegmentedControl, READER_APP_THEME_SEGMENT_WIDTH } from '../../../ui/controls/ReaderSegmentedControl';
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
-import { TYPE_APP_INHERITED_BODY } from '../../../ui/foundation/ReaderTypography';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 
 const OVERRIDES: ReaderNavigationOverride[] = ['unset', 'unified', 'systemNative'];
 
@@ -32,7 +30,8 @@ export struct NavigationAppearanceSettings {
   build() {
     ForEach([this.generation], (generation: number): void => {
       Column() {
-        ReaderFormRow({ label: '导航外观' }) {
+        ReaderFormRow({ label: '导航外观', contentMinWidth: READER_APP_THEME_SEGMENT_WIDTH,
+          secondaryText: this.usesUnifiedFallback() ? '当前条件下沿用统一外观' : '' }) {
           ReaderSegmentedControl({
             specId: 'app-theme-segment', options: ['默认', '统一', '原生'],
             optionIds: ['unset', 'unified', 'systemNative'], selectedIndex: this.selectedIndex(),
@@ -40,12 +39,6 @@ export struct NavigationAppearanceSettings {
             actionEnabled: this.canSave(generation),
             onSelect: (index: number): void => { this.select(index, generation); },
           });
-        }
-        if (this.usesUnifiedFallback()) {
-          Text('当前条件下沿用统一外观')
-            .fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
-            .fontColor(readerAppColor('TOK_MUTED', this.appScheme))
-            .width('100%').padding({ left: 12, right: 12 });
         }
         ReaderFormRow({ label: '减少导航透明度', actionEnabled: this.canSave(generation),
           onLabelAction: (): void => { void this.save({ reduceTransparency: !this.preferences.reduceTransparency }, generation); } }) {

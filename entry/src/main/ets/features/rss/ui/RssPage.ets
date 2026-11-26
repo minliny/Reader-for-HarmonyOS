@@ -2,7 +2,7 @@ import { LengthMetrics } from '@kit.ArkUI';
 import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from '../application/RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconAction';
 import { RssPresentationProjection } from '../presentation/RssPresentationProjection';
-import type { RssFailedSource, RssMode, RssPresentation } from '../presentation/RssPresentationContract';
+import type { RssFailedSource, RssFeedItems, RssMode, RssPresentation } from '../presentation/RssPresentationContract';
 import { ReaderButton } from '../../../ui/controls/ReaderButton';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
@@ -10,6 +10,7 @@ import { projectOperationFacts, type OperationFacts } from '../../../app/ReaderO
 import { TYPE_APP_COMPACT_PRIMARY_ACTION, TYPE_APP_SEGMENT_LABEL, TYPE_APP_SMALL_ACTION, TYPE_RSS_ENTRY_DESCRIPTION, TYPE_RSS_ENTRY_TITLE, TYPE_RSS_ERROR_REASON, TYPE_RSS_HOME_TITLE, TYPE_RSS_LINK_ACTION, TYPE_RSS_META, TYPE_RSS_REFRESH_STATUS, TYPE_RSS_SECTION_HEADING, TYPE_RSS_SOURCE_TITLE, TYPE_RSS_STATE_ACTION, TYPE_RSS_STATE_BODY, TYPE_RSS_STATE_TITLE, TYPE_RSS_UNREAD_COUNT } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import {
+  type RssFavorite,
   type RssItem,
   type RssSubscription,
 } from '../application/RssGateway';
@@ -33,20 +34,8 @@ import {
   readerInteractiveSafeRight,
 } from '../../../ui/foundation/ReaderWindowMetrics';
 import {
-  TOK_BORDER,
   TOK_BORDER_W,
-  TOK_CARD_BG,
-  TOK_CARD_BG_HI,
   TOK_CONTENT_RAIL_W_TABLET,
-  TOK_GREEN,
-  TOK_INK,
-  TOK_LINE_STRONG,
-  TOK_MUTED,
-  TOK_ON_PRIMARY,
-  TOK_PRIMARY_BG,
-  TOK_PRIMARY_DARK,
-  TOK_PRIMARY_SOFT,
-  TOK_ROW_DIVIDER,
   TOK_SCREEN_INSET,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_LG,
@@ -81,6 +70,7 @@ export struct RssPage {
   @Prop presentation: RssPresentation;
   @Prop expandedLayout: boolean;
   @Prop activeMode: RssMode = 'sources';
+  @Prop feedItems: RssFeedItems = { all: [], favorites: [] };
   @Prop original: RssOriginalMutationProjection | undefined = undefined;
   @Prop presentationIdentity: string = '';
   onReconcileOriginal: (expected: RssOriginalMutationIdentity) => void = (_expected: RssOriginalMutationIdentity): void => {};
@@ -97,6 +87,7 @@ export struct RssPage {
   onDiscoverRequested: () => void = (): void => {};
   @State private filterValue: string = '全部';
   @State private filterOpen: boolean = false;
+  @State private query: string = '';
   @State private measuredHeaderHeight: number = 0;
   @State private viewportWidth: number = 0;
   @State private refreshPillShape: ReaderRaisedShape | undefined = undefined;
@@ -125,7 +116,11 @@ export struct RssPage {
   private rssContent() {
     Row() {
       Stack({ alignContent: Alignment.TopStart }) {
-        if (this.presentation.kind === 'feed') {
+        if (this.presentation.kind === 'fatalError') {
+          this.errorContent();
+        } else if (this.activeMode !== 'sources') {
+          this.articleModeContent();
+        } else if (this.presentation.kind === 'feed') {
           this.feedScroll(
             (): RssSubscription[] => RssPresentationProjection.subscriptions(this.presentation),
             (): RssItem[] => RssPresentationProjection.recentUnread(this.presentation), false);
@@ -135,8 +130,6 @@ export struct RssPage {
             (): RssItem[] => RssPresentationProjection.recentUnread(this.presentation), true);
         } else if (this.presentation.kind === 'emptyUnread') {
           this.emptyUnreadScroll((): RssSubscription[] => RssPresentationProjection.subscriptions(this.presentation));
-        } else {
-          this.errorContent();
         }
       }.layoutWeight(1).height('100%');
     }.width('100%').height('100%')
@@ -211,7 +204,7 @@ export struct RssPage {
         Text(this.refreshStatusText())
           .fontFamily(TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily)
           .fontWeight(TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight)
-          .fontSize(TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp)
+          .fontSize(TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp).lineHeight(18).halfLeading(true)
           .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
           .maxLines(1);
       } else {
@@ -230,8 +223,8 @@ export struct RssPage {
           .fontColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme));
       }
       Image((this.appThemeScheme === 'night' ? $r('app.media.rss_refresh_theme_night') : $r('app.media.rss_refresh')))
-        .width(18)
-        .height(18);
+        .width(14)
+        .height(14);
     }
     .constraintSize({ minHeight: 34 })
     .padding({ left: 11, right: 9 })
@@ -241,7 +234,8 @@ export struct RssPage {
     .borderRadius(this.currentRefreshPillRadius())
     .onAreaChange(this.refreshPillAreaHandler())
     .responseRegion({ x: 0, y: -5, width: '100%', height: 44 })
-    .onClick((): void => this.onRefresh());
+    .accessibilityText('刷新订阅')
+    .onClick((): void => { if (!this.feedBusy()) this.onRefresh(); });
   }
 
   private refreshPillMeasurementKey(): string {
@@ -277,9 +271,10 @@ export struct RssPage {
   private searchBar() {
     Row() {
       ReaderSearchField({
-        variant: 'rssPassive', mode: 'passive',
+        variant: 'rssPassive', mode: 'live', text: this.query,
         fieldWidthVp: this.contentFrame().width,
         placeholder: '搜索订阅源、文章标题或分组', accessibilityLabel: '搜索订阅源、文章标题或分组',
+        onTextChange: (value: string): void => { this.query = value; },
       });
     }.width(this.contentFrame().width).constraintSize({ minHeight: 44 })
       .alignItems(VerticalAlign.Center)
@@ -293,7 +288,6 @@ export struct RssPage {
         this.statusTab('源列表', 'sources');
         this.statusTab('全部', 'all');
         this.statusTab('收藏', 'favorites');
-        this.statusTab('规则订阅', 'rules');
       }.constraintSize({ minWidth: this.contentFrame().width, minHeight: 44 })
         .alignItems(VerticalAlign.Center);
     }.width(this.contentFrame().width).scrollable(ScrollDirection.Horizontal).scrollBar(BarState.Off)
@@ -318,6 +312,54 @@ export struct RssPage {
         } });
       }, (generation: number): string => `rss-read:${generation}`);
     }
+  }
+
+  private feedBusy(): boolean {
+    return this.readFacts.fact === 'loading' || this.readFacts.fact === 'refreshing';
+  }
+
+  private matchesQuery(value: string): boolean {
+    return value.toLowerCase().includes(this.query.trim().toLowerCase());
+  }
+
+  private visibleItems(items: RssItem[]): RssItem[] {
+    const subscriptions = RssPresentationProjection.subscriptions(this.presentation);
+    const sourceMatches = new Set<string>(subscriptions.filter((source: RssSubscription): boolean =>
+      this.matchesQuery(source.title) || this.matchesQuery(source.sourceGroup ?? '')).map((source: RssSubscription): string => source.subscriptionId));
+    return items.filter((item: RssItem): boolean => this.matchesQuery(item.title) || sourceMatches.has(item.subscriptionId));
+  }
+
+  private visibleArchivedFavorites(): RssFavorite[] {
+    return (this.feedItems.archivedFavorites ?? []).filter((favorite: RssFavorite): boolean =>
+      this.matchesQuery(favorite.title) || this.matchesQuery(favorite.subscriptionTitle) || this.matchesQuery(favorite.summary ?? ''));
+  }
+
+  @Builder
+  private emptyFeedResults(title: string) {
+    ReaderPageState({ title, padded: false,
+      actionLabel: this.query.trim().length > 0 ? '清除搜索' : '',
+      onAction: (): void => { this.query = ''; } });
+  }
+
+  @Builder
+  private articleModeContent() {
+    Scroll() {
+      Column({ space: TOK_SPACE_XS }) {
+        this.readFeedback();
+        if (this.visibleItems(this.activeMode === 'favorites' ? this.feedItems.favorites : this.feedItems.all).length > 0) {
+          this.articleList((): RssSubscription[] => RssPresentationProjection.subscriptions(this.presentation),
+            (): RssItem[] => this.visibleItems(this.activeMode === 'favorites' ? this.feedItems.favorites : this.feedItems.all));
+        }
+        if (this.visibleArchivedFavorites().length > 0) {
+          this.archivedArticleList((): RssFavorite[] => this.visibleArchivedFavorites());
+        } else if (!this.feedBusy() && this.visibleItems(this.activeMode === 'favorites' ? this.feedItems.favorites : this.feedItems.all).length === 0) {
+          this.emptyFeedResults(this.query.trim().length > 0 ? '没有匹配的文章' :
+            this.activeMode === 'favorites' ? '暂无收藏' : '暂无文章');
+        }
+      }.width(this.contentFrame().width)
+        .padding({ top: this.pageGeometry().content.startInset, bottom: this.pageGeometry().content.endInset });
+    }.width('100%').height('100%').align(Alignment.Top)
+      .padding({ left: this.contentFrame().left, right: this.contentFrame().right }).scrollBar(BarState.Off);
   }
 
   @Builder
@@ -384,12 +426,12 @@ export struct RssPage {
 
       Row({ space: 7 }) {
         Image((this.appThemeScheme === 'night' ? $r('app.media.rss_filter_theme_night') : $r('app.media.rss_filter')))
-          .width(20)
-          .height(20);
+          .width(14)
+          .height(14);
         Text('筛选')
           .fontFamily(TYPE_APP_COMPACT_PRIMARY_ACTION.fontFamily)
           .fontWeight(TYPE_APP_COMPACT_PRIMARY_ACTION.fontWeight)
-          .fontSize(TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp)
+          .fontSize(TYPE_APP_COMPACT_PRIMARY_ACTION.fontSizeFp).lineHeight(18).halfLeading(true)
           .fontColor(readerAppColor('app.text.filter', this.appThemeScheme))
           .maxLines(1);
         Blank();
@@ -397,7 +439,7 @@ export struct RssPage {
           Text(this.filterValue)
             .fontFamily(TYPE_APP_SMALL_ACTION.fontFamily)
             .fontWeight(TYPE_APP_SMALL_ACTION.fontWeight)
-            .fontSize(TYPE_APP_SMALL_ACTION.fontSizeFp)
+            .fontSize(TYPE_APP_SMALL_ACTION.fontSizeFp).lineHeight(17).halfLeading(true)
             .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
             .maxLines(1);
           Image((this.appThemeScheme === 'night' ? $r('app.media.rss_filter_chevron_theme_night') : $r('app.media.rss_filter_chevron')))
@@ -424,6 +466,9 @@ export struct RssPage {
         this.filterExpand();
       }
 
+      if (this.filteredSubscriptions(subscriptions()).length === 0 && this.query.trim().length > 0) {
+        this.emptyFeedResults('没有匹配的订阅源');
+      } else {
       List() {
         Repeat(this.filteredSubscriptions(subscriptions()))
           .each((repeatItem: RepeatItem<RssSubscription>) => {
@@ -440,6 +485,7 @@ export struct RssPage {
       .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
       .borderRadius(8);
+      }
     }
     .width(this.contentFrame().width);
   }
@@ -525,7 +571,17 @@ export struct RssPage {
   private recentUnreadSection(subscriptions: () => RssSubscription[], recentUnread: () => RssItem[]) {
     Column({ space: 6 }) {
       this.recentUnreadHeader();
+      if (this.visibleItems(recentUnread()).length > 0) {
+        this.articleList(subscriptions, (): RssItem[] => this.visibleItems(recentUnread()));
+      } else if (!this.feedBusy()) {
+        this.emptyFeedResults(this.query.trim().length > 0 ? '没有匹配的未读文章' : '暂无未读文章');
+      }
+    }
+    .width(this.contentFrame().width);
+  }
 
+  @Builder
+  private articleList(subscriptions: () => RssSubscription[], recentUnread: () => RssItem[]) {
       List() {
         Repeat(recentUnread())
           .each((repeatItem: RepeatItem<RssItem>) => {
@@ -543,8 +599,27 @@ export struct RssPage {
       .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
       .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
       .borderRadius(8);
-    }
-    .width(this.contentFrame().width);
+  }
+
+  @Builder
+  private archivedArticleList(favorites: () => RssFavorite[]) {
+    List() {
+      Repeat(favorites())
+        .each((favorite: RepeatItem<RssFavorite>) => {
+          ListItem() {
+            this.articleRow((): string => favorite.item.title, (): string => favorite.item.subscriptionTitle,
+              (): string => favorite.item.summary ?? '', (): boolean => false, (): number => favorite.index,
+              (): void => this.onSelectItem(favorite.item.subscriptionId, favorite.item.guid));
+          }
+        })
+        .key((favorite: RssFavorite): string => JSON.stringify([favorite.subscriptionId, favorite.guid]))
+        .virtualScroll({ reusable: true });
+    }.width('100%')
+      .height(Math.min(420, Math.max(72, favorites().length * 72)))
+      .scrollBar(BarState.Off)
+      .backgroundColor(readerAppColor('TOK_CARD_BG_HI', this.appThemeScheme))
+      .border({ width: TOK_BORDER_W, color: readerAppColor('app.border.contentCard', this.appThemeScheme) })
+      .borderRadius(8);
   }
 
   @Builder
@@ -569,15 +644,23 @@ export struct RssPage {
 
   @Builder
   private recentUnreadItem(subscriptions: () => RssSubscription[], item: () => RssItem, index: () => number) {
+    this.articleRow((): string => item().title, (): string => this.itemSubtitle(subscriptions(), item()),
+      (): string => item().description ?? '', (): boolean => !item().read, index,
+      (): void => this.onSelectItem(item().subscriptionId, item().guid));
+  }
+
+  @Builder
+  private articleRow(title: () => string, subtitle: () => string, description: () => string,
+    showUnreadMarker: () => boolean, index: () => number, open: () => void) {
     Row({ space: TOK_SPACE_XS }) {
       Text('')
         .width(7)
         .height(7)
         .borderRadius(3.5)
-        .backgroundColor(readerAppColor('app.action.fill', this.appThemeScheme));
+        .backgroundColor(showUnreadMarker() ? readerAppColor('app.action.fill', this.appThemeScheme) : Color.Transparent);
 
       Column({ space: 3 }) {
-        Text(item().title)
+        Text(title())
           .width('100%')
           .fontFamily(TYPE_RSS_ENTRY_TITLE.fontFamily)
           .fontWeight(TYPE_RSS_ENTRY_TITLE.fontWeight)
@@ -586,8 +669,8 @@ export struct RssPage {
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1)
           .textOverflow({ overflow: TextOverflow.Ellipsis });
-        if (this.itemSubtitle(subscriptions(), item()) !== '') {
-          Text(this.itemSubtitle(subscriptions(), item()))
+        if (subtitle() !== '') {
+          Text(subtitle())
             .width('100%')
             .fontFamily(TYPE_RSS_META.fontFamily)
             .fontWeight(TYPE_RSS_META.fontWeight)
@@ -596,8 +679,8 @@ export struct RssPage {
             .maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis });
         }
-        if ((item().description ?? '').trim().length > 0) {
-          Text(item().description ?? '')
+        if (description().trim().length > 0) {
+          Text(description())
             .width('100%')
             .fontFamily(TYPE_RSS_ENTRY_DESCRIPTION.fontFamily)
             .fontWeight(TYPE_RSS_ENTRY_DESCRIPTION.fontWeight)
@@ -619,7 +702,7 @@ export struct RssPage {
     .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM, top: TOK_SPACE_CONTROL_INLINE, bottom: TOK_SPACE_CONTROL_INLINE })
     .alignItems(VerticalAlign.Top)
     .border({ width: { top: index() > 0 ? TOK_BORDER_W : 0 }, color: readerAppColor('TOK_ROW_DIVIDER', this.appThemeScheme) })
-    .onClick((): void => this.onSelectItem(item().subscriptionId, item().guid));
+    .onClick((): void => open());
   }
 
   private onMainTab(key: string): void {
@@ -673,7 +756,7 @@ export struct RssPage {
         this.stateCard(
           (): Resource => (this.appThemeScheme === 'night' ? $r('app.media.rss_error_theme_night') : $r('app.media.rss_error')),
           'RSS 暂时无法载入',
-          (): string => `${this.failedSources().length} 个订阅源无法载入。可以稍后重试，或进入订阅源管理修复登录态和规则。`,
+          (): string => '可以重试刷新，或在订阅源管理中检查订阅配置。',
           (): RssFailedSource[] => this.failedSources(),
           '重试刷新',
           (): void => this.onRefresh());
@@ -918,11 +1001,9 @@ export struct RssPage {
   }
 
   private filteredSubscriptions(subs: RssSubscription[]): RssSubscription[] {
-    if (this.filterValue === '全部') {
-      return subs;
-    }
     return subs.filter((sub: RssSubscription): boolean =>
-      this.subscriptionStatus(sub) === this.filterValue);
+      (this.filterValue === '全部' || this.subscriptionStatus(sub) === this.filterValue) &&
+      (this.matchesQuery(sub.title) || this.matchesQuery(sub.sourceGroup ?? '')));
   }
 
   /** Source title is a page projection resolved by subscriptionId, not part of the Core item DTO. */

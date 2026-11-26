@@ -30,7 +30,7 @@ const MangaLayoutFrame=new Function('FrameCallback','ReaderPostLayoutFrame', `${
 const timers=[],scrolls=[],frames=[],measurements=[],native={index:2,offset:237.5};
 function renderFrame(){const frame=frames.shift();assert.ok(frame instanceof MangaLayoutFrame);frame.onFrame(0);frame.onIdle(2_000_000); drainReaderPostLayoutFallbacks(frames);}
 const Surface=productionMotionMethods(surfaceURL,
-  ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','positionIdentity','rememberVisible','resizeViewport','restore','finishLayout','onViewportScroll','measureVisibleWindow'],{setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'},
+  ['effectiveFit','rowDisplayWidth','rowDisplayHeight','rowDisplayTop','rowDisplayLeft','visibleX','positionIdentity','rememberVisible','verticalTailVisible','resizeViewport','restore','finishLayout','onViewportScroll','measureVisibleWindow'],{setTimeout:callback=>timers.push(callback),ScrollAlign:{START:'start'},
     LengthMetrics:{vp:value=>({value,unit:'vp'})},MangaLayoutFrame});
 const surface=Object.assign(new Surface(),{data:{totalCount:()=>p.totalCount(),getData:i=>p.row(i),projection:p},
  first:2,last:2,viewportWidth:500,viewportHeight:900,zoom:1,horizontalScroller:{currentOffset:()=>({xOffset:0}),scrollTo:()=>{}},opened:true,mounted:true,layoutGeneration:0,appliedLayoutGeneration:-1,presentationGeneration:0,

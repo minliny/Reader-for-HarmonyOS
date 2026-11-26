@@ -22,6 +22,7 @@ const local=await import('../../entry/src/main/ets/features/reading/application/
 const remote=await import('../../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway.ts');
 const {remoteReadingEntryKind}=await import('../../entry/src/main/ets/features/reading/presentation/ReadingBookDetail.ts');
 const readingEvidence=await import('../../entry/src/main/ets/features/reading/application/RemoteReadingEvidence.ts');
+const prefetchPolicy=await import('../../entry/src/main/ets/features/reading/application/ReadingDeepPrefetchPolicy.ts');
 const position=await import('../../entry/src/main/ets/features/reading/application/RemoteReadingPositionMigration.ts');
 const content=await import('../../entry/src/main/ets/features/reading/application/RemoteContentAdmission.ts');
 const bookmarks=await import('../../entry/src/main/ets/features/reading/presentation/ReaderControlBookmarkLoad.ts');
@@ -57,7 +58,7 @@ const BookmarkOperationIntentStore=emit('features/reading/application/ReadingOpe
  ...common,fileIo:{readText:unavailableBookmarkIO},util:{generateRandomUUID:unavailableBookmarkIO},
  replaceReaderAtomicSnapshot:unavailableBookmarkIO});
 export const ReaderDirectoryHost=emit('features/reading/application/ReaderDirectoryHost.ts','ReaderDirectoryHost',common);
-const ReadingPrefetchHost=emit('features/reading/application/ReadingPrefetchHost.ts','ReadingPrefetchHost',common);
+const ReadingPrefetchHost=emit('features/reading/application/ReadingPrefetchHost.ts','ReadingPrefetchHost',{...common,...prefetchPolicy});
 export const compileHost=(source=read('features/reading/application/ReadingEntryHost.ts'),dependencies={})=>emit('features/reading/application/ReadingEntryHost.ts','ReadingEntryHost',
  {...common,ReaderCoreGateway,BookshelfFlowGateway,SourceGateway,BookAcquisitionProjectionGateway,ReaderDirectoryHost,ReadingPrefetchHost,
  BookmarkOperationIntentStore,remoteReadingEntryKind,...dependencies},source);

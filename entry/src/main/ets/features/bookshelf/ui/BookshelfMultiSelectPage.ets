@@ -1,9 +1,12 @@
+import { readerLayoutCarrierResponseRegion } from '../../../ui/layout/ReaderPageNativeAttributes';
 import { TYPE_SHELF_SELECTION_ACTION, TYPE_SHELF_SELECTION_AUTHOR, TYPE_SHELF_SELECTION_AUTHOR_WIDE, TYPE_SHELF_SELECTION_HEADING, TYPE_SHELF_SELECTION_REMOVE, TYPE_SHELF_SELECTION_TITLE, TYPE_SHELF_SELECTION_TITLE_WIDE } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { APP_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderScrollLayout, readerScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
+import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { READER_ACTION_MIN_TARGET, ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ShelfBookListDetails } from './ShelfBookListDetails';
 import { ShelfBookPresentation } from '../presentation/ShelfBookPresentation';
@@ -16,8 +19,15 @@ import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
 import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
-import { bookshelfGridFrame, BookshelfGridFrame, BookshelfListTextBudget, BookshelfListTextFrame, prepareBookshelfListTextFonts, bookshelfSelectionCardHeight } from './BookshelfGridSpec';
+import { BOOKSHELF_LIST_CARD_PADDING, BOOKSHELF_LIST_COLUMN_GAP, BOOKSHELF_LIST_COVER_WIDTH, BOOKSHELF_LIST_COVER_HEIGHT,
+  BOOKSHELF_LIST_DETAILS_GAP, bookshelfColumnCount,
+  bookshelfGridFrame, bookshelfListCardWidth, BookshelfGridFrame, BookshelfListTextBudget, BookshelfListTextFrame,
+  prepareBookshelfListTextFonts, bookshelfSelectionCardHeight } from './BookshelfGridSpec';
 import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
+import { bookCoverDisplayUrl } from '../../../app/library/BookCoverDisplay';
+import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
+import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
+import { DEFAULT_BOOKSHELF_VIEW } from '../application/BookshelfViewMode';
 
 const GRID_ROW_GAP = 12;
 
@@ -34,11 +44,9 @@ export struct BookshelfMultiSelectPage {
   @StorageLink('readerReduceMotion') private appReduceMotion: boolean = false;
 
   @StorageLink('readerWindowMetricsRevision') @Watch('onGeometryInputsChanged') private readerWindowMetricsRevision: number = 0;
-  @StorageLink('readerBookshelfViewMode') private storedViewMode: string = 'cover';
-  @StorageLink('readerBookshelfSelectedGroup') @Watch('reconcileSelection') private storedSelectedGroup: string = '';
-  @StorageLink('readerBookshelfReadingFilter') @Watch('reconcileSelection') private readingFilter: string = 'all';
+  @StorageLink('readerBookshelfViewMode') private storedViewMode: string = DEFAULT_BOOKSHELF_VIEW;
   @StorageLink('readerBookshelfSourceFilter') @Watch('reconcileSelection') private sourceFilter: string = 'all';
-  @StorageLink('readerMangaPresentationRevision') @Watch('onMangaPresentationChanged') private mangaRevision: number = 0;
+  @StorageLink('readerBookshelfContentFilter') @Watch('reconcileSelection') private contentFilter: string = 'all';
   @Prop @Watch('reconcileSelection') books: ShelfBook[] = [];
   @Prop initialSelectedKey: string = '';
   @Prop busy: boolean = false;
@@ -48,6 +56,7 @@ export struct BookshelfMultiSelectPage {
   onRemoveSelected: (keys: string[]) => void = (_keys: string[]): void => {};
   @State private viewportWidth: number = 0;
   @State private selectedKeys: string[] = [];
+  @State private failedCoverUrls: string[] = [];
   @State private geometry: ReaderPageGeometry = new ReaderPageGeometry();
   @State private measurementKey: number = 0;
   @State private footerMeasurementKey: number = 0;
@@ -68,7 +77,7 @@ export struct BookshelfMultiSelectPage {
     registerReaderFonts(this.getUIContext().getFont());
     this.prepareSelectionHeaderFonts();
     this.prepareListTextFonts();
-    if (this.initialSelectedKey.length > 0 && this.canRetainSelectedKey(this.initialSelectedKey)) {
+    if (this.initialSelectedKey.length > 0 && this.hasBookKey(this.initialSelectedKey)) {
       this.selectedKeys = [this.initialSelectedKey];
     }
     this.onGeometryInputsChanged();
@@ -118,11 +127,20 @@ export struct BookshelfMultiSelectPage {
 
   @Builder
   private selectionList() {
+    if (this.visibleBooks().length === 0) {
+      Column() {
+        ReaderPageState({ loading: !this.ready,
+          title: this.ready ? '没有可批量管理的书籍' : '正在加载书架' });
+      }.width(this.geometry.content.frame.width).height('100%')
+        .margin({ left: this.geometry.content.frame.left })
+        .padding({ top: this.geometry.content.startInset, bottom: this.geometry.content.endInset })
+        .justifyContent(FlexAlign.Center);
+    } else {
     List({ space: GRID_ROW_GAP }) {
         Repeat(this.bookRows())
           .each((repeatItem: RepeatItem<ShelfBook[]>) => {
           ListItem() {
-          Row({ space: this.gridFrame().columnGap }) {
+          Row({ space: this.isListMode() ? BOOKSHELF_LIST_COLUMN_GAP : this.gridFrame().columnGap }) {
             ForEach(repeatItem.item, (book: ShelfBook) => {
               if (this.isListMode()) {
                 this.selectionListCard(book);
@@ -146,6 +164,7 @@ export struct BookshelfMultiSelectPage {
     .contentEndOffset(readerScrollEndOffset(this.scrollLayout()))
     .alignListItem(ListItemAlign.Center)
     .scrollBar(BarState.Off);
+    }
   }
 
   @Builder
@@ -153,28 +172,30 @@ export struct BookshelfMultiSelectPage {
     Column({ space: 0 }) {
       if (this.selectionHeaderInline()) {
         Row() {
-          this.selectionAction((): string => '取消', TextAlign.Start, (): void => this.onCancel());
+          this.selectionAction((): string => '取消', (): void => this.onCancel());
           this.selectionHeading();
-          this.selectionAction((): string => this.allSelected() ? '取消全选' : '全选', TextAlign.End, (): void => this.toggleAll());
+          this.selectionAction((): string => this.allSelected() ? '取消全选' : '全选',
+            (): void => this.toggleAll(), (): boolean => this.canSelectAll());
         }.width('100%').alignItems(VerticalAlign.Center);
       } else {
         this.selectionHeading();
         Row() {
-          this.selectionAction((): string => '取消', TextAlign.Start, (): void => this.onCancel());
+          this.selectionAction((): string => '取消', (): void => this.onCancel());
           Blank().layoutWeight(1);
-          this.selectionAction((): string => this.allSelected() ? '取消全选' : '全选', TextAlign.End, (): void => this.toggleAll());
+          this.selectionAction((): string => this.allSelected() ? '取消全选' : '全选',
+            (): void => this.toggleAll(), (): boolean => this.canSelectAll());
         }.width('100%').alignItems(VerticalAlign.Center);
       }
     }
     .width('100%')
     .constraintSize({ minHeight: APP_HEADER_BAR_HEIGHT })
     .padding({ left: 20, right: 20, top: 7, bottom: 7 })
-    .hitTestBehavior(HitTestMode.Transparent);
+    .hitTestBehavior(HitTestMode.Default).responseRegion(readerLayoutCarrierResponseRegion());
   }
 
   @Builder
   private selectionHeading() {
-    Text(`已选择 ${this.selectedKeys.length} 本`)
+    Text(`已选择 ${this.selectedVisibleCount()} 本`)
       .width(this.selectionHeaderInline() ? undefined : '100%')
       .layoutWeight(this.selectionHeaderInline() ? 1 : 0)
       .fontFamily(TYPE_SHELF_SELECTION_HEADING.fontFamily)
@@ -208,9 +229,9 @@ export struct BookshelfMultiSelectPage {
         return context.px2vp(context.getMeasureUtils().measureText({ textContent: text,
           fontSize: `${style.fontSizeFp}fp`, fontFamily: style.fontFamily, fontWeight: style.fontWeight }));
       };
-      const heading = measure(`已选择 ${this.selectedKeys.length} 本`, true);
-      const cancel = Math.max(72, measure('取消', false));
-      const select = Math.max(72, measure(this.allSelected() ? '取消全选' : '全选', false));
+      const heading = measure(`已选择 ${this.selectedVisibleCount()} 本`, true);
+      const cancel = Math.max(72, measure('取消', false) + 16);
+      const select = Math.max(72, measure(this.allSelected() ? '取消全选' : '全选', false) + 16);
       return Number.isFinite(heading) && Number.isFinite(cancel) && Number.isFinite(select) &&
         heading > 0 && heading + cancel + select <= width;
     } catch (_unavailableMeasure) {
@@ -219,8 +240,9 @@ export struct BookshelfMultiSelectPage {
   }
 
   @Builder
-  private selectionAction(label: () => string, alignment: TextAlign, action: () => void) {
-    Button({ type: ButtonType.Normal }) {
+  private selectionAction(label: () => string, action: () => void,
+    available: () => boolean = (): boolean => true) {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
       Text(label())
         .constraintSize({ minWidth: 72 }).maxLines(1)
         .fontFamily(TYPE_SHELF_SELECTION_ACTION.fontFamily)
@@ -228,14 +250,16 @@ export struct BookshelfMultiSelectPage {
         .fontSize(TYPE_SHELF_SELECTION_ACTION.fontSizeFp)
         .lineHeight(TYPE_SHELF_SELECTION_ACTION.lineHeightFp as number)
         .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme))
-        .textAlign(alignment)
+        .textAlign(TextAlign.Center).padding({ left: 8, right: 8 })
         .accessibilityLevel('no');
     }
     .constraintSize({ minWidth: 72, minHeight: READER_ACTION_MIN_TARGET }).flexShrink(0)
-    .padding(0).backgroundColor(Color.Transparent).borderRadius(8)
-    .enabled(this.selectionInputEnabled())
+    .padding(0).attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_CARD_BG', this.appThemeScheme), this.appThemeScheme, 999, 999,
+      this.selectionInputEnabled() && available()))
+    .enabled(this.selectionInputEnabled() && available())
+    .opacity(available() ? 1 : 0.45)
     .accessibilityText(label())
-    .onClick((): void => { if (this.selectionInputEnabled()) action(); });
+    .onClick((): void => { if (this.selectionInputEnabled() && available()) action(); });
   }
 
   @Builder
@@ -243,15 +267,16 @@ export struct BookshelfMultiSelectPage {
     Column({ space: 6 }) {
       Stack({ alignContent: Alignment.BottomEnd }) {
         if (this.hasCover(this.currentBook(book))) {
-          Image(this.currentBook(book).coverUrl as string)
+          Image(this.coverUrl(this.currentBook(book)) as string)
             .width(this.cardWidth())
             .height(this.coverHeight())
             .objectFit(ImageFit.Cover)
             .borderRadius(8)
-            .shadow({ radius: 26, color: readerAppColor('app.shadow.cover', this.appThemeScheme), offsetX: 0, offsetY: 8 });
+            .shadow(readerSurfaceElevation('cover', this.appThemeScheme))
+            .onError(this.coverErrorHandler(this.coverUrl(this.currentBook(book))));
         } else {
           NoCoverCover({ coverWidth: this.cardWidth(), coverHeight: this.coverHeight(),
-            glyph: noCoverGlyph(this.currentBook(book).title) });
+            glyph: noCoverGlyph(this.currentBook(book).title), kindLabel: ShelfBookPresentation.contentLabel(this.currentBook(book)) });
         }
 
         this.selectionBadge(book, 4);
@@ -310,9 +335,10 @@ export struct BookshelfMultiSelectPage {
         }.width('100%').alignItems(HorizontalAlign.Center)
           .opacity(this.canRemoveSelection() ? 1 : 0.38)
           .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
-        Button({ type: ButtonType.Normal }) {}
+        Button({ type: ButtonType.Normal, stateEffect: false }) {}
           .width(LayoutPolicy.matchParent).height(LayoutPolicy.matchParent)
-          .padding(0).borderRadius(8).backgroundColor(Color.Transparent)
+          .padding(0).attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 999, 999,
+            this.canRemoveSelection()))
           .accessibilityText('移除书架')
           .enabled(this.canRemoveSelection())
           .onClick((): void => this.removeVisibleSelection());
@@ -324,7 +350,8 @@ export struct BookshelfMultiSelectPage {
     .backgroundColor(readerAppColor('app.surface.dock', this.appThemeScheme))
     .border({ width: { top: 1 }, color: readerAppColor('app.border.control', this.appThemeScheme) })
     .borderRadius({ topLeft: 24, topRight: 24 })
-    .hitTestBehavior(HitTestMode.Transparent);
+    .hitTestBehavior(HitTestMode.Default)
+    .onTouch((): void => {});
   }
 
   private onGeometryInputsChanged(): void {
@@ -365,11 +392,13 @@ export struct BookshelfMultiSelectPage {
     input.headerInsetRight = readerInteractiveSafeRight(input.metrics);
     input.footerInsetLeft = input.headerInsetLeft;
     input.footerInsetRight = input.headerInsetRight;
+    input.footerHeight = this.removeBarClearance();
     input.contentMaxWidth = this.isWide() ? 622 : 351;
     input.contentHorizontalPadding = this.isWide() ? 20 : 7.5;
     input.contentHorizontalSafeArea = 'interactive';
     input.contentGap = 12;
-    input.contentEndInset = this.removeBarClearance() + 20;
+    input.contentNativeEndInset = input.footerHeight;
+    input.contentEndInset = 20;
     this.geometry = resolveReaderPageGeometry(input);
   }
 
@@ -379,33 +408,23 @@ export struct BookshelfMultiSelectPage {
   }
 
   private reconcileSelection(): void {
-    this.selectedKeys = this.selectedKeys.filter((key: string): boolean => this.canRetainSelectedKey(key));
-  }
-
-  private onMangaPresentationChanged(): void {
-    if (this.mounted) this.reconcileSelection();
-  }
-
-  private canRetainSelectedKey(key: string): boolean {
-    if (this.hasBookKey(key)) return true;
-    // A missing optional display receipt is not evidence that an explicitly
-    // selected book became unread/read. Keep that identity pending, while the
-    // submit fence below still requires the current confirmed filter match.
-    return ShelfBookPresentation.visible(this.books, this.storedSelectedGroup, 'all', this.sourceFilter)
-      .some((book: ShelfBook): boolean => this.bookKey(book) === key && ShelfBookPresentation.readingStatePending(book));
+    this.selectedKeys = this.selectedKeys.filter((key: string): boolean => this.hasBookKey(key));
   }
 
   private canRemoveSelection(): boolean {
-    return this.selectionInputEnabled() && this.selectedKeys.some((key: string): boolean => this.hasBookKey(key));
+    return this.selectionInputEnabled() && this.selectedVisibleCount() > 0;
+  }
+
+  private selectedVisibleCount(): number {
+    return this.visibleBooks().filter((book: ShelfBook): boolean => this.isSelected(book)).length;
   }
 
   private removeVisibleSelection(): void {
     if (!this.canRemoveSelection()) return;
-    // Protect a click delivered before the Prop watcher has reconciled a
-    // book whose progress/group changed underneath an active filter.
+    // Protect a click delivered before the watcher reconciles a changed shelf
+    // snapshot or source/content filter.
     this.reconcileSelection();
-    const keys = this.selectedKeys.filter((key: string): boolean => this.hasBookKey(key));
-    if (keys.length > 0) this.onRemoveSelected(keys);
+    if (this.selectedKeys.length > 0) this.onRemoveSelected([...this.selectedKeys]);
   }
 
   private toggleBook(book: ShelfBook): void {
@@ -420,15 +439,12 @@ export struct BookshelfMultiSelectPage {
   }
 
   private toggleAll(): void {
-    if (!this.selectionInputEnabled()) return;
+    if (!this.selectionInputEnabled() || !this.canSelectAll()) return;
     const visible = this.visibleBooks();
-    if (this.allSelected()) {
-      this.selectedKeys = [];
-      return;
-    }
-    const pending = this.selectedKeys.filter((key: string): boolean => !this.hasBookKey(key) && this.canRetainSelectedKey(key));
-    this.selectedKeys = [...pending, ...visible.map((book: ShelfBook): string => this.bookKey(book))];
+    this.selectedKeys = this.allSelected() ? [] : visible.map((book: ShelfBook): string => this.bookKey(book));
   }
+
+  private canSelectAll(): boolean { return this.books.length > 0 && this.visibleBooks().length > 0; }
 
   private allSelected(): boolean {
     const visible = this.visibleBooks();
@@ -444,9 +460,11 @@ export struct BookshelfMultiSelectPage {
     return this.appForeground && this.mounted && this.ready && !this.busy && (this.isInputAllowed?.() ?? true);
   }
 
-  private selectionRowAction(book: ShelfBook): ReaderActionAccessibility {
+  private selectionRowAction(book: ShelfBook, surface: ResourceColor = Color.Transparent): ReaderActionAccessibility {
     const selected = this.isSelected(book);
-    return new ReaderActionAccessibility(`${this.currentBook(book).title}，${selected ? '已选择' : '未选择'}`, this.selectionInputEnabled(), selected);
+    const enabled = this.selectionInputEnabled();
+    return new ReaderActionAccessibility(`${this.currentBook(book).title}，${selected ? '已选择' : '未选择'}`, enabled, selected,
+      true, new ReaderPressFeedback(surface, this.appThemeScheme, 14, 14, enabled));
   }
 
   private currentBook(snapshot: ShelfBook): ShelfBook {
@@ -459,8 +477,7 @@ export struct BookshelfMultiSelectPage {
   }
 
   private visibleBooks(): ShelfBook[] {
-    if (this.mangaRevision < 0) return [];
-    return ShelfBookPresentation.visible(this.books, this.storedSelectedGroup, this.readingFilter, this.sourceFilter);
+    return ShelfBookPresentation.visible(this.books, '', 'all', this.sourceFilter, this.contentFilter);
   }
 
   private bookKey(book: ShelfBook): string {
@@ -470,7 +487,7 @@ export struct BookshelfMultiSelectPage {
   private bookRows(): ShelfBook[][] {
     const visible = this.visibleBooks();
     const rows: ShelfBook[][] = [];
-    const columnCount = this.isListMode() ? 1 : 3;
+    const columnCount = bookshelfColumnCount(this.isWide(), this.isListMode());
     for (let index = 0; index < visible.length; index += columnCount) {
       rows.push(visible.slice(index, index + columnCount));
     }
@@ -479,27 +496,33 @@ export struct BookshelfMultiSelectPage {
 
   @Builder
   private selectionListCard(book: ShelfBook) {
-    Row({ space: 12 }) {
+    Row({ space: BOOKSHELF_LIST_DETAILS_GAP }) {
       Stack({ alignContent: Alignment.BottomEnd }) {
         if (this.hasCover(this.currentBook(book))) {
-          Image(this.currentBook(book).coverUrl as string)
-            .width(48)
-            .height(80)
+          Image(this.coverUrl(this.currentBook(book)) as string)
+            .width(BOOKSHELF_LIST_COVER_WIDTH)
+            .height(this.listContentHeight())
             .objectFit(ImageFit.Cover)
-            .borderRadius(6);
+            .borderRadius(6)
+            .onError(this.coverErrorHandler(this.coverUrl(this.currentBook(book))));
         } else {
-          NoCoverCover({ coverWidth: 48, coverHeight: 80, glyph: noCoverGlyph(this.currentBook(book).title) });
+          NoCoverCover({ coverWidth: BOOKSHELF_LIST_COVER_WIDTH, coverHeight: this.listContentHeight(), glyph: noCoverGlyph(this.currentBook(book).title),
+            kindLabel: ShelfBookPresentation.contentLabel(this.currentBook(book)) });
         }
         this.selectionBadge(book, 2);
       }
-      .width(48)
-      .height(80);
-      ShelfBookListDetails({ book: this.currentBook(book), textFrame: this.listTextFrame() }).layoutWeight(1).constraintSize({ minWidth: 0 });
+      .width(BOOKSHELF_LIST_COVER_WIDTH)
+      .height(this.listContentHeight());
+      ShelfBookListDetails({
+        book: this.currentBook(book), textFrame: this.listTextFrame(), targetHeight: this.listContentHeight(),
+      }).layoutWeight(1).constraintSize({ minWidth: 0 });
     }
-    .width(this.gridWidth())
-    .height(Math.max(80, this.listTextFrame().height))
+    .width(this.listCardWidth())
+    .height(this.listContentHeight() + 2 * (BOOKSHELF_LIST_CARD_PADDING + TOK_BORDER_W))
+    .padding(BOOKSHELF_LIST_CARD_PADDING)
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
     .alignItems(VerticalAlign.Center)
-    .attributeModifier(this.selectionRowAction(book))
+    .attributeModifier(this.selectionRowAction(book, readerAppColor('TOK_CARD_BG', this.appThemeScheme)))
     .onClick((): void => this.toggleBook(book));
   }
 
@@ -513,17 +536,29 @@ export struct BookshelfMultiSelectPage {
     .width(22).height(22).margin({ right: inset, bottom: inset })
     .backgroundColor(this.isSelected(book) ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('app.surface.menuSolid', this.appThemeScheme))
     .border({ width: this.isSelected(book) ? 0 : 1.5, color: readerAppColor('app.border.control', this.appThemeScheme) })
-    .borderRadius(11).shadow({ radius: 4, color: readerAppColor('app.shadow.control', this.appThemeScheme), offsetX: 0, offsetY: 2 });
+    .borderRadius(11).shadow(readerSurfaceElevation('control', this.appThemeScheme));
   }
 
   private isListMode(): boolean {
-    return this.storedViewMode === 'list';
+    return this.storedViewMode !== 'cover';
   }
 
 
 
   private hasCover(book: ShelfBook): boolean {
-    return book.coverUrl !== undefined && book.coverUrl.trim().length > 0;
+    return this.coverUrl(book) !== undefined;
+  }
+
+  private coverUrl(book: ShelfBook): string | undefined {
+    const url = bookCoverDisplayUrl(book.coverUrl);
+    return url !== undefined && !this.failedCoverUrls.includes(url) ? url : undefined;
+  }
+
+  private coverErrorHandler(url: string | undefined): () => void {
+    return (): void => {
+      if (!this.mounted || url === undefined || this.failedCoverUrls.includes(url)) return;
+      this.failedCoverUrls = [...this.failedCoverUrls, url];
+    };
   }
 
   private isWide(): boolean {
@@ -546,8 +581,14 @@ export struct BookshelfMultiSelectPage {
   }
 
   private listTextFrame(): BookshelfListTextFrame {
-    return this.listTextBudget.resolve(this.getUIContext(), Math.max(0, this.gridWidth() - 48 - 12),
+    const width = Math.max(0, this.listCardWidth() - BOOKSHELF_LIST_COVER_WIDTH -
+      2 * (BOOKSHELF_LIST_CARD_PADDING + TOK_BORDER_W) - BOOKSHELF_LIST_DETAILS_GAP);
+    return this.listTextBudget.resolve(this.getUIContext(), width,
       this.fontScale(), this.listTextFontRevision);
+  }
+
+  private listContentHeight(): number {
+    return Math.max(BOOKSHELF_LIST_COVER_HEIGHT, this.listTextFrame().height);
   }
 
   private fontScale(): number {
@@ -569,7 +610,7 @@ export struct BookshelfMultiSelectPage {
         const context = this.getUIContext();
         const style = TYPE_SHELF_SELECTION_HEADING;
         const measured = context.px2vp(Number(context.getMeasureUtils().measureTextSize({
-          textContent: `已选择 ${this.selectedKeys.length} 本`, fontSize: `${style.fontSizeFp}fp`,
+          textContent: `已选择 ${this.selectedVisibleCount()} 本`, fontSize: `${style.fontSizeFp}fp`,
           fontFamily: style.fontFamily, fontWeight: style.fontWeight, lineHeight: `${style.lineHeightFp}fp`,
           constraintWidth: `${this.selectionHeaderContentWidth()}vp`,
         }).height));
@@ -587,6 +628,10 @@ export struct BookshelfMultiSelectPage {
 
   private gridWidth(): number {
     return this.isListMode() ? this.geometry.content.frame.width : this.gridFrame().rowWidth;
+  }
+
+  private listCardWidth(): number {
+    return bookshelfListCardWidth(this.geometry.content.frame.width, this.isWide());
   }
 
   private cardWidth(): number {

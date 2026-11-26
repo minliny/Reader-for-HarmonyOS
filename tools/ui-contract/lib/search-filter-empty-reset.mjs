@@ -1,4 +1,4 @@
-import { ancestorsOf, publicSearchResultContinuity } from './layout.mjs';
+import { ancestorsOf, isReaderSearchBottomSheet, publicSearchResultContinuity } from './layout.mjs';
 import { effectiveAppearance } from './structure.mjs';
 
 const filterEvent = 'search-filter-applied';
@@ -24,12 +24,15 @@ function nativeNode(sample, predicate) {
   return {available:true,count:matches.length,node:matches.length === 1 ? matches[0].node : undefined};
 }
 
-function visibleButtonInFilter(sample, id) {
-  const sheet = nativeNode(sample,node=>node.type === 'SheetPage' && node.sheetTitle === '筛选');
+function visibleButtonInFilter(sample, id, sheetHost) {
+  const sheet = nativeNode(sample,node=>sheetHost === undefined ?
+    node.type === 'SheetPage' && node.sheetTitle === '筛选' : isReaderSearchBottomSheet(node));
   const control = nativeNode(sample,node=>node.id === id && node.type === 'Button');
   if (!sheet.available || !control.available) return 'NOT_RUN';
   const button = control.node;
-  if (!sheet.node || !button || button.enabled === false || button.clickable === false ||
+  if (sheet.node?.sheetTitle !== '筛选' ||
+      (sheetHost !== undefined && !isReaderSearchBottomSheet(sheet.node, 'filter')) ||
+      !button || button.enabled === false || button.clickable === false ||
       !ancestorsOf(sample,button).includes(sheet.node)) return 'FAIL';
   return button.enabled === true && button.clickable === true ? 'PASS' : 'NOT_RUN';
 }
@@ -38,7 +41,8 @@ function resultView(sample, viewportId, filtered) {
   const list = nativeNode(sample,node=>node.type === 'List' && /^reader-search-result-list:\d+:\d+$/u.test(node.id ?? ''));
   const book = nativeNode(sample,node=>node.type === 'Button' && node.alias === publicResult && node.localSearchResult === true);
   const marker = nativeNode(sample,node=>node.id === emptyMarker);
-  const sheet = nativeNode(sample,node=>node.type === 'SheetPage' && (node.sheetTitle === '筛选' || node.sheetTitle === '搜索进度'));
+  const sheet = nativeNode(sample,node=>isReaderSearchBottomSheet(node) ||
+    (node.type === 'SheetPage' && (node.sheetTitle === '筛选' || node.sheetTitle === '搜索进度')));
   if (![list,book,marker,sheet].every(entry=>entry.available)) return {verdict:'NOT_RUN'};
   const desired = filtered ? marker : book;
   const hidden = filtered ? book : marker;
@@ -94,7 +98,7 @@ export function evaluateSearchFilterEmptyReset(assertion, context) {
   const firstOpening = inAction('search-page-action',open,event=>event.payload.action === 'panel-open' && event.payload.panel === 'filter');
   used.push(...firstOpening);
   if (firstOpening.length !== 1 || !sameQuery(firstOpening[0],query)) return incomplete('No unique current Filter Sheet owner');
-  const selectionControl = visibleButtonInFilter(firstPanel,online);
+  const selectionControl = visibleButtonInFilter(firstPanel,online,assertion.expected.sheetHost);
   if (selectionControl !== 'PASS') return report(selectionControl,'No usable Online button in the current native filter Sheet');
   if (!actionMatches(choose,'click','filter-open',online) || !follows(firstPanel,choose)) {
     return incomplete('No native Online selection from the measured filter');
@@ -130,7 +134,7 @@ export function evaluateSearchFilterEmptyReset(assertion, context) {
   const secondOpening = inAction('search-page-action',reopen,event=>event.payload.action === 'panel-open' && event.payload.panel === 'filter');
   used.push(...secondOpening);
   if (secondOpening.length !== 1 || !sameQuery(secondOpening[0],query)) return incomplete('No unique reopened Filter Sheet owner');
-  const resetControl = visibleButtonInFilter(secondPanel,reset);
+  const resetControl = visibleButtonInFilter(secondPanel,reset,assertion.expected.sheetHost);
   if (resetControl !== 'PASS') return report(resetControl,'No usable Reset button in the reopened native filter Sheet');
   if (!actionMatches(clear,'click','reset-open',reset) || !follows(secondPanel,clear)) return incomplete('No native Reset press');
   const applied = inAction(filterEvent,clear);

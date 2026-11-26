@@ -1,9 +1,12 @@
+import url from '@ohos.url';
 import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 import type { JsonObject } from '@reader/core-harmony';
 import { errorMessageOf } from '../../../app/ErrorMessage';
+import type { BookRequestOptions } from '../../../app/BookRequestScheduler';
 import { httpUrlHostname, isPrivateNetworkTarget } from '../../../platform/network/HttpTransportPolicy';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import type { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
+import type { SourceHttpDiagnosticRecord } from '../../../platform/network/HttpExecuteHost';
 import { classifyReaderSource, type ReaderSourceCategory } from './ReaderSourceCategory';
 import { RulesMutationOwner, type RulesMutationSnapshot } from '../../settings/application/RulesMutationOwner';
 import type { RuleSubscriptionStep } from '../../settings/application/RulesMutationIntentStore';
@@ -21,6 +24,7 @@ export type BookSource = {
   /** Stable media category; novel is the only category admitted by the text reader. */
   category: ReaderSourceCategory;
   loginUrl?: string;
+  loginState?: 'unknown' | 'verified' | 'expired';
   checkState?: 'unchecked' | 'checking' | 'passed' | 'failed';
   checkLevels?: string[];
   checkMessage?: string;
@@ -48,6 +52,43 @@ export type SourceImportSummary = {
   failures: SourceImportFailure[];
 };
 
+export interface SourceGroupRecord { groupId: string; name: string }
+export interface SourceGroupMembership { sourceId: string; groupId: string; locallyAssigned: boolean }
+export interface SourceGroupCatalogData {
+  version: number; revision: number; groups: SourceGroupRecord[]; memberships: SourceGroupMembership[];
+}
+export type SourceGroupAction = 'create' | 'rename' | 'delete' | 'assign';
+export interface SourceGroupMutateParams {
+  expectedRevision: number; action: SourceGroupAction;
+  groupId?: string; name?: string; targetGroupId?: string; sourceIds?: string[];
+}
+export interface SourceGroupMutateData {
+  version: number; revision: number; action: SourceGroupAction; groupId: string; affectedSourceIds: string[];
+}
+export type SourceImportGroupStrategy = 'preserve' | 'fill' | 'all';
+export interface SourceImportGroupTarget { groupId?: string; groupName?: string }
+export interface SourceImportCandidate {
+  index: number; sourceId: string; bookSource: JsonObject; name: string;
+  category: ReaderSourceCategory; supported: boolean;
+}
+export interface SourceGroupedImportPreview {
+  items: SourceImportCandidate[]; failures: SourceImportFailure[]; filteredUnsupportedCount: number;
+}
+export interface SourceGroupedImportRow {
+  index: number; sourceId: string; status: 'imported' | 'failed';
+  name?: string; groupId?: string; locallyAssigned?: boolean; error?: string;
+}
+export interface SourceGroupedImportPlan {
+  params: JsonObject;
+  items: SourceImportCandidate[];
+  existingSourceIds: string[];
+}
+export interface SourceGroupedImportOutcome {
+  revision: number; addedCount: number; updatedCount: number; failedCount: number;
+  sourceIds: string[]; results: SourceGroupedImportRow[]; failures: SourceImportFailure[];
+}
+export interface SourceReportClearOutcome { supported: boolean; clearedCount: number; sourceIds: string[] }
+
 export type SourceCheckOutcome = {
   sourceId: string;
   traceId: string;
@@ -61,6 +102,8 @@ export type SourceCheckOutcome = {
   requestedLevels?: string[];
   capabilities?: SourceCapabilityCheck[];
   report?: SourceCheckReport;
+  /** Ordered one-candidate Core diagnostic failed before assigning a source identity. */
+  oneRowEphemeralL1Failure?: boolean;
 };
 
 export type SourceCheckReportStatus = 'pass' | 'fail' | 'not_requested' | 'not_supported' | 'blocked' | 'cancelled';
@@ -241,8 +284,9 @@ export class SourceGateway {
         group,
         category: classifyReaderSource({ bookSourceType, name, group, sourceId, baseUrl }),
         loginUrl,
-        sourceVersion: this.optionalString(source, 'sourceVersion'),
       };
+      const sourceVersion = this.optionalString(source, 'sourceVersion');
+      if (sourceVersion !== undefined) entry.sourceVersion = sourceVersion;
       if (sourceId === 'https://offline-detect.reader-phase1.invalid/' && ReaderUIVerificationProbe.enabled() &&
         rawBookSource !== null && typeof rawBookSource === 'object' && !Array.isArray(rawBookSource) &&
         sourceVerificationOfflineDetectFixture(entry, rawBookSource as JsonObject) &&
@@ -390,7 +434,293 @@ export class SourceGateway {
       const ids=params['sourceIds']; const deleted=data['deleted'];
       if (!Array.isArray(ids) || typeof deleted!=='number' || !Number.isSafeInteger(deleted) || deleted<0 || deleted>ids.length)
         throw new Error('source.delete original ACK does not match its fixed DTO');
+    } else if (method==='source.group.mutate') {
+      this.readGroupMutation(params, data);
+    } else if (method==='source.import.grouped') {
+      this.readGroupedImport(params, data);
     } else throw new Error('不能用书源核定器确认另一家族的原操作');
+  }
+
+  async loadSourceGroupCatalog(current?: () => boolean): Promise<SourceGroupCatalogData> {
+    if (!this.runtimeOwner.supportsCoreCapability('source.group.metadata.v1')) {
+      throw new Error('当前 Core 不支持书源分组目录');
+    }
+    const event = await this.runtimeOwner.request('source.group.catalog', { reportVersion: 1 }, {
+      canDispatch: current, canContinue: current,
+    });
+    const data = event.data;
+    const revision = data['revision'];
+    const groups: SourceGroupRecord[] = [];
+    const memberships: SourceGroupMembership[] = [];
+    if (data['version'] !== 1 || !this.isCount(revision) ||
+      !Array.isArray(data['groups']) || !Array.isArray(data['memberships'])) {
+      throw new Error('书源分组目录结构无效');
+    }
+    const groupIds = new Set<string>();
+    const groupNames = new Set<string>();
+    for (const value of data['groups']) {
+      const group = this.requireObject(value, '书源分组');
+      const groupId = this.optionalString(group, 'groupId');
+      const name = this.optionalString(group, 'name');
+      if (groupId === undefined || groupId.trim().length === 0 || groupId === '*' ||
+        name === undefined || name.length === 0 || name.trim() !== name ||
+        groupIds.has(groupId) || groupNames.has(name)) throw new Error('书源分组身份无效或重复');
+      groupIds.add(groupId);
+      groupNames.add(name);
+      groups.push({ groupId, name });
+    }
+    const sourceIds = new Set<string>();
+    for (const value of data['memberships']) {
+      const membership = this.requireObject(value, '书源分组成员');
+      const sourceId = this.optionalString(membership, 'sourceId');
+      const groupId = this.optionalString(membership, 'groupId');
+      const locallyAssigned = membership['locallyAssigned'];
+      if (sourceId === undefined || sourceId.trim().length === 0 || sourceIds.has(sourceId) ||
+        groupId === undefined || (groupId !== '' && !groupIds.has(groupId)) ||
+        typeof locallyAssigned !== 'boolean') throw new Error('书源分组成员身份无效或重复');
+      sourceIds.add(sourceId);
+      memberships.push({ sourceId, groupId, locallyAssigned });
+    }
+    return { version: 1, revision: revision as number, groups, memberships };
+  }
+
+  async mutateSourceGroup(input: SourceGroupMutateParams, current?: () => boolean): Promise<SourceGroupMutateData> {
+    if (!this.runtimeOwner.supportsCoreCapability('rules.mutation.source-groups.v1')) {
+      throw new Error('当前 Core 不支持书源分组写入');
+    }
+    const params: JsonObject = { expectedRevision: input.expectedRevision, action: input.action };
+    if (input.groupId !== undefined) params['groupId'] = input.groupId;
+    if (input.name !== undefined) params['name'] = input.name.trim();
+    if (input.sourceIds !== undefined) params['sourceIds'] = input.sourceIds.slice();
+    if (input.action === 'delete') params['targetGroupId'] = '';
+    else if (input.targetGroupId !== undefined) params['targetGroupId'] = input.targetGroupId;
+    const owner = RulesMutationOwner.forRuntime(this.runtimeOwner);
+    const admitted = current ?? ((): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner));
+    const method = 'source.group.mutate';
+    let dispatchedId: string | undefined;
+    try {
+      return await owner.run('书源分组', admitted, async (request, confirmed): Promise<SourceGroupMutateData> => {
+        const result = this.readGroupMutation(params, (await request(method, params)).data);
+        confirmed();
+        return result;
+      }, this.writeEvidence, undefined, (): void => { dispatchedId = owner.snapshot().operationId; });
+    } catch (error) {
+      if (dispatchedId === undefined || !admitted() || !owner.snapshot().blocked) throw error;
+      // Keep the exact input paired with the ID captured at SDK dispatch. A
+      // recovered create provides the real group ID and revision for assign.
+      const keys = Object.keys(params);
+      let recovered: SourceGroupMutateData | undefined;
+      await owner.recoverOriginal(admitted, (_method: string, _original: JsonObject, data: JsonObject): void => {
+        recovered = this.readGroupMutation(params, data);
+      }, false, 'source-management', undefined, dispatchedId, (originalMethod: string, original: JsonObject): boolean =>
+        originalMethod === method && Object.keys(original).length === keys.length &&
+        keys.every((key: string): boolean => JSON.stringify(original[key]) === JSON.stringify(params[key])));
+      if (recovered === undefined) throw error;
+      return recovered;
+    }
+  }
+
+  prepareGroupedSourceDocument(text: string): SourceGroupedImportPreview {
+    const raw = this.parseBookSourceDocument(text);
+    const items: SourceImportCandidate[] = [];
+    const failures: SourceImportFailure[] = [];
+    let filteredUnsupportedCount = 0;
+    for (let index = 0; index < raw.length; index += 1) {
+      try {
+        const item = this.prepareImportCandidate(raw[index], index);
+        items.push(item);
+        if (!item.supported) filteredUnsupportedCount += 1;
+      } catch (error) {
+        failures.push({ index, sourceId: '', message: errorMessageOf(error) });
+      }
+    }
+    return { items, failures, filteredUnsupportedCount };
+  }
+
+  async importGroupedSources(items: SourceImportCandidate[], expectedRevision: number, strategy: SourceImportGroupStrategy,
+    target?: SourceImportGroupTarget, current?: () => boolean, keepPlan?: (plan: SourceGroupedImportPlan) => void): Promise<SourceGroupedImportOutcome> {
+    if (!this.runtimeOwner.supportsCoreCapability('rules.mutation.source-groups.v1')) {
+      throw new Error('当前 Core 不支持分组导入');
+    }
+    // Re-admit the original DTO at the write boundary. UI selection or a prior
+    // diagnostics result cannot give an unsupported media type write access.
+    const selected = items.filter((item: SourceImportCandidate): boolean => item.supported)
+      .map((item: SourceImportCandidate): SourceImportCandidate => {
+        const candidate = this.prepareImportCandidate(item.bookSource, item.index);
+        if (item.sourceId !== candidate.sourceId || !candidate.supported) throw new Error('书源预检已经变化');
+        return candidate;
+      });
+    if (selected.length === 0) throw new Error('请选择可导入的小说或漫画书源');
+    if (selected.length > MAX_BOOK_SOURCE_DOCUMENT_ENTRIES) throw new Error('选中书源超出文档条数上限');
+    const catalog = await this.loadSourceGroupCatalog(current);
+    if (catalog.revision !== expectedRevision) throw new Error('分组目录已更新，请重新核对导入预览');
+    const params: JsonObject = {
+      expectedRevision,
+      strategy,
+      items: selected.map((item: SourceImportCandidate): JsonObject =>
+        ({ sourceId: item.sourceId, bookSource: item.bookSource })),
+    };
+    if (target?.groupId !== undefined) params['targetGroupId'] = target.groupId;
+    if (target?.groupName !== undefined) params['targetGroupName'] = target.groupName.trim();
+    const plan: SourceGroupedImportPlan = { params, items: selected,
+      existingSourceIds: catalog.memberships.map((item: SourceGroupMembership): string => item.sourceId) };
+    keepPlan?.(plan);
+    return RulesMutationOwner.forRuntime(this.runtimeOwner).run('分组导入书源',
+      current ?? ((): boolean => ReaderRuntimeOwner.isCurrent(this.runtimeOwner)),
+      async (request, confirmed): Promise<SourceGroupedImportOutcome> => {
+        const data = (await request('source.import.grouped', params)).data;
+        const outcome = this.groupedImportOutcome(plan, data);
+        confirmed();
+        return outcome;
+      }, this.writeEvidence);
+  }
+
+  async recoverOriginalGroupedImport(plan: SourceGroupedImportPlan, operationId: string,
+    current: () => boolean, retryOriginal: boolean): Promise<SourceGroupedImportOutcome | undefined> {
+    let outcome: SourceGroupedImportOutcome | undefined = undefined;
+    const owner = RulesMutationOwner.forRuntime(this.runtimeOwner);
+    await owner.recoverOriginal(current, (method: string, params: JsonObject, data: JsonObject): void => {
+      this.qualifyOriginalSource(method, params, data);
+      outcome = this.groupedImportOutcome(plan, data);
+    }, retryOriginal, 'source-management', undefined, operationId,
+    (method: string): boolean => method === 'source.import.grouped');
+    return owner.snapshot().confirmation === 'confirmed' ? outcome : undefined;
+  }
+
+  private groupedImportOutcome(plan: SourceGroupedImportPlan, data: JsonObject): SourceGroupedImportOutcome {
+    const existing = new Set(plan.existingSourceIds);
+    const results = this.readGroupedImport(plan.params, data)
+      .map((row: SourceGroupedImportRow): SourceGroupedImportRow => ({ ...row, index: plan.items[row.index].index }));
+    const sourceIds: string[] = [];
+    const failures: SourceImportFailure[] = [];
+    let addedCount = 0;
+    let updatedCount = 0;
+    for (const row of results) {
+      if (row.status === 'imported') {
+        sourceIds.push(row.sourceId);
+        if (existing.has(row.sourceId)) updatedCount += 1; else addedCount += 1;
+      } else {
+        failures.push({ index: row.index, sourceId: row.sourceId, message: row.error as string });
+      }
+    }
+    return { revision: data['revision'] as number, addedCount, updatedCount, failedCount: failures.length,
+      sourceIds, results, failures };
+  }
+
+  async overwriteSubscriptionSource(sourceId: string, candidate: JsonObject, expectedVersion: string,
+    current: () => boolean): Promise<void> {
+    const prepared = this.prepareImportCandidate(candidate, 0);
+    if (!prepared.supported || prepared.sourceId !== sourceId || !/^[a-f0-9]{64}$/.test(expectedVersion)) {
+      throw new Error('订阅冲突书源身份或版本不匹配');
+    }
+    if (!this.supportsOriginalSourceImport() ||
+      !this.runtimeOwner.supportsCoreCapability('source.import.conditional.v1')) {
+      throw new Error('当前 Core 不支持按版本覆盖书源');
+    }
+    const imported = await this.importOriginalSourceDocument(JSON.stringify(candidate), current, undefined,
+      { sourceId, expectedVersion });
+    if (imported.importedCount !== 1) throw new Error(imported.failures[0]?.message ?? 'Core 未确认覆盖书源');
+  }
+
+  private prepareImportCandidate(value: unknown, index: number): SourceImportCandidate {
+    const bookSource = this.requireBookSourceObject(value, index);
+    const sourceId = this.requireBookSourceUrl(bookSource, index).trim();
+    // The Legado remark belongs to the published identity, not the network URL.
+    const networkUrl = sourceId.split('#')[0];
+    try {
+      if (/\s/.test(networkUrl)) throw new Error('invalid address');
+      const parsed = url.URL.parseURL(networkUrl);
+      if ((parsed.protocol !== 'http:' && parsed.protocol !== 'https:') ||
+        isPrivateNetworkTarget(parsed.hostname)) throw new Error('invalid address');
+    } catch (_) {
+      throw new Error(`第 ${index + 1} 项的 bookSourceUrl 需要有效的公开 HTTP(S) 地址`);
+    }
+    const name = this.optionalString(bookSource, 'bookSourceName')?.trim() ?? '';
+    const category = classifyReaderSource({ bookSourceType: bookSource['bookSourceType'], name,
+      group: this.optionalString(bookSource, 'bookSourceGroup'), sourceId, baseUrl: sourceId });
+    const supported = category === 'novel' || category === 'comic';
+    if (supported && name.length === 0) throw new Error(`第 ${index + 1} 项需要书源名称`);
+    return { index, sourceId, bookSource, name: name.length > 0 ? name : sourceId, category, supported };
+  }
+
+  private readGroupMutation(params: JsonObject, data: JsonObject): SourceGroupMutateData {
+    const revision = data['revision'];
+    const groupId = this.optionalString(data, 'groupId');
+    const action = params['action'] as SourceGroupAction;
+    const affectedSourceIds = this.readSourceIds(data['affectedSourceIds'], '分组成员回执');
+    const expectedRevision = params['expectedRevision'];
+    if (data['version'] !== 1 || !this.isCount(revision) || !this.isCount(expectedRevision) ||
+      revision !== (expectedRevision as number) + 1 || data['action'] !== action || groupId === undefined ||
+      (action === 'assign' ? groupId !== params['targetGroupId'] : groupId.length === 0) ||
+      ((action === 'delete' || action === 'rename') && groupId !== params['groupId']) ||
+      ((action === 'create' || action === 'rename') && affectedSourceIds.length > 0)) {
+      throw new Error('书源分组原操作回执不匹配');
+    }
+    if (action === 'assign') {
+      const expectedIds = this.readSourceIds(params['sourceIds'], '分组成员请求');
+      if (affectedSourceIds.length !== expectedIds.length ||
+        expectedIds.some((id: string): boolean => !affectedSourceIds.includes(id))) {
+        throw new Error('书源分组成员回执不匹配');
+      }
+    }
+    return { version: 1, revision: revision as number, action, groupId, affectedSourceIds };
+  }
+
+  private readGroupedImport(params: JsonObject, data: JsonObject): SourceGroupedImportRow[] {
+    const requestItems = params['items'];
+    const rows = data['results'];
+    const revision = data['revision'];
+    const expectedRevision = params['expectedRevision'];
+    const imported = data['importedCount'];
+    const failed = data['failedCount'];
+    if (data['version'] !== 1 || !Array.isArray(requestItems) || !Array.isArray(rows) ||
+      rows.length !== requestItems.length || !this.isCount(imported) || !this.isCount(failed) ||
+      (imported as number) + (failed as number) !== rows.length || !this.isCount(revision) || !this.isCount(expectedRevision) ||
+      revision !== (expectedRevision as number) + ((imported as number) > 0 ? 1 : 0)) {
+      throw new Error('分组导入回执数量或版本不匹配');
+    }
+    const results: SourceGroupedImportRow[] = [];
+    const confirmed = new Set<string>();
+    for (let index = 0; index < rows.length; index += 1) {
+      const request = this.requireObject(requestItems[index], '分组导入请求条目');
+      const row = this.requireObject(rows[index], '分组导入回执条目');
+      const sourceId = this.optionalString(row, 'sourceId');
+      const name = this.optionalString(row, 'name');
+      const groupId = this.optionalString(row, 'groupId');
+      const locallyAssigned = row['locallyAssigned'];
+      const error = this.optionalString(row, 'error');
+      if (row['index'] !== index || sourceId === undefined || sourceId !== request['sourceId']) {
+        throw new Error('分组导入回执条目身份不匹配');
+      }
+      if (row['status'] === 'imported') {
+        if (name === undefined || name.trim().length === 0 || groupId === undefined ||
+          typeof locallyAssigned !== 'boolean' || error !== undefined || confirmed.has(sourceId)) {
+          throw new Error('分组导入成功回执缺少确定的结果');
+        }
+        confirmed.add(sourceId);
+        results.push({ index, sourceId, status: 'imported', name, groupId, locallyAssigned });
+      } else if (row['status'] === 'failed' && error !== undefined && error.trim().length > 0) {
+        results.push({ index, sourceId, status: 'failed', error });
+      } else {
+        throw new Error('分组导入失败回执缺少原因');
+      }
+    }
+    if (confirmed.size !== imported) throw new Error('分组导入回执计数不一致');
+    return results;
+  }
+
+  private isCount(value: unknown): boolean {
+    return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
+  }
+
+  private readSourceIds(value: unknown, label: string): string[] {
+    if (!Array.isArray(value)) throw new Error(`${label}结构无效`);
+    const ids = new Set<string>();
+    for (const id of value) {
+      if (typeof id !== 'string' || id.trim().length === 0 || ids.has(id)) throw new Error(`${label}身份无效`);
+      ids.add(id);
+    }
+    return Array.from(ids);
   }
 
   /** Same original admission, without side effects; subscription freezes these
@@ -703,49 +1033,161 @@ export class SourceGateway {
     mode: 'search' | 'explore' = 'search',
     levels: string[] = ['L1', 'L2'],
     timeoutMs: number = 180000,
+    onStage?: (stage: string) => void,
   ): Promise<SourceCheckOutcome> {
     if (sourceId.trim().length === 0) {
       throw new Error('source.check.run requires a non-empty sourceId');
     }
-    const selectedLevels = Array.from(new Set(levels));
-    if (selectedLevels.length === 0 || selectedLevels.some((level: string): boolean =>
+    if (!this.runtimeOwner.supportsCoreCapability('source.check.mode.v1')) {
+      throw new Error('当前 Core 不支持分项书源检测，请使用配套 Native');
+    }
+    const selectedLevels = this.admitCheckOptions(levels, timeoutMs);
+    const params: JsonObject = { sourceIds: [sourceId], timeoutMs, mode, levels: selectedLevels };
+    const reportVersion = this.runtimeOwner.supportsCoreCapability('source.check.report.v2') ? 2 :
+      this.runtimeOwner.supportsCoreCapability('source.check.report.v1') ? 1 : undefined;
+    if (reportVersion !== undefined) params['reportVersion'] = reportVersion;
+    this.applyCheckKeyword(params, keyword, mode);
+    const result = await this.runtimeOwner.request('source.check.run', params,
+      this.sourceCheckRequestOptions(shouldContinue, timeoutMs, onStage));
+    return this.readSourceCheckResults(result.data, result.requestId, [sourceId], mode,
+      selectedLevels, timeoutMs, reportVersion)[0];
+  }
+
+  supportsEphemeralSourceCheck(): boolean {
+    return this.runtimeOwner.supportsCoreCapability('source.check.ephemeral.v1');
+  }
+
+  async checkEphemeralSources(
+    sources: JsonObject[],
+    shouldContinue: () => boolean = (): boolean => true,
+    keyword?: string,
+    mode: 'search' | 'explore' = 'search',
+    levels: string[] = ['L1', 'L2'],
+    timeoutMs: number = 180000,
+    onStage?: (stage: string) => void,
+  ): Promise<SourceCheckOutcome[]> {
+    if (!this.supportsEphemeralSourceCheck()) {
+      throw new Error('当前 Core 不支持未入库书源检测，可跳过检测后继续');
+    }
+    if (sources.length < 1 || sources.length > 100) throw new Error('未入库检测支持每批 1–100 条书源');
+    const selected = this.admitCheckOptions(levels, timeoutMs);
+    const expected = sources.map((source: JsonObject): string =>
+      this.optionalString(source, 'bookSourceUrl')?.trim() ?? '');
+    const params: JsonObject = { sources, reportVersion: 2, mode, levels: selected, timeoutMs };
+    this.applyCheckKeyword(params, keyword, mode);
+    const result = await this.runtimeOwner.request('source.check.ephemeral.run', params,
+      this.sourceCheckRequestOptions(shouldContinue, timeoutMs, onStage));
+    return this.readSourceCheckResults(result.data, result.requestId, expected, mode, selected, timeoutMs, 2, true);
+  }
+
+  async clearSourceCheckReports(sourceIds: string[], current?: () => boolean): Promise<SourceReportClearOutcome> {
+    if (sourceIds.length === 0 || sourceIds.some((id: string): boolean => id.trim().length === 0)) {
+      throw new Error('清除检测报告需要非空书源标识');
+    }
+    if (!this.runtimeOwner.supportsCoreCapability('source.check.report.clear.v1')) {
+      return { supported: false, clearedCount: 0, sourceIds: [] };
+    }
+    const requested = Array.from(new Set(sourceIds));
+    const result = await this.runtimeOwner.request('source.check.report.clear', { sourceIds: requested }, {
+      canDispatch: current,
+    });
+    const clearedCount = result.data['clearedCount'];
+    const ids = this.readSourceIds(result.data['sourceIds'], '检测报告清理回执');
+    if (typeof clearedCount !== 'number' || !Number.isSafeInteger(clearedCount) || clearedCount < 0 ||
+      ids.length > requested.length || ids.some((id: string): boolean =>
+        !requested.some((input: string): boolean => id === input || id === input.trim())) ||
+      requested.some((id: string): boolean => !ids.includes(id) && !ids.includes(id.trim()))) {
+      throw new Error('书源检测报告清理回执不匹配');
+    }
+    return { supported: true, clearedCount, sourceIds: ids };
+  }
+
+  private admitCheckOptions(levels: string[], timeoutMs: number): string[] {
+    const selected = Array.from(new Set(levels));
+    if (selected.length === 0 || selected.some((level: string): boolean =>
       !['L1', 'L2', 'L3', 'L4', 'L5'].includes(level))) {
       throw new Error('source.check.run requires known selected levels');
-    }
-    if (!this.runtimeOwner.supportsCoreCapability('source.check.mode.v1')) {
-      throw new Error('当前 Core 不支持分项书源检测，请使用配套 Native；不会将发现检测降级为搜索');
     }
     if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 4294967295) {
       throw new Error('source.check.run requires a positive uint32 Core budget');
     }
-    const params: JsonObject = {
-      sourceIds: [sourceId],
-      timeoutMs,
-      mode,
-      levels: selectedLevels,
+    return selected;
+  }
+
+  private sourceCheckRequestOptions(current: () => boolean, timeoutMs: number,
+    onStage?: (stage: string) => void): BookRequestOptions {
+    const options: BookRequestOptions = {
+      timeoutMs: timeoutMs + 5000, canDispatch: current, canContinue: current,
+      shouldCancel: (): boolean => !current(),
     };
-    const reportVersion = this.runtimeOwner.supportsCoreCapability('source.check.report.v2') ? 2 :
-      this.runtimeOwner.supportsCoreCapability('source.check.report.v1') ? 1 : undefined;
-    const wantsReport = reportVersion !== undefined;
-    if (wantsReport) params['reportVersion'] = reportVersion;
-    const normalizedKeyword = keyword?.trim();
-    if (normalizedKeyword !== undefined && normalizedKeyword.length > 0) {
-      params['keyword'] = normalizedKeyword;
+    if (onStage !== undefined) {
+      options.onDispatch = (): void => { if (current()) onStage('L1'); };
+      options.onSourceCheckStage = (stage: string): void => { if (current()) onStage(stage); };
     }
-    const result = await this.runtimeOwner.request('source.check.run', params, {
-      timeoutMs: timeoutMs + 5000,
-      canDispatch: shouldContinue,
-      canContinue: shouldContinue,
-      shouldCancel: (): boolean => !shouldContinue(),
-    });
-    const diagnostics = this.runtimeOwner.takeSourceHttpDiagnostics(result.requestId);
-    const traceId = this.optionalString(result.data, 'traceId');
-    const rawResults = result.data['results'];
+    return options;
+  }
+
+  private applyCheckKeyword(params: JsonObject, keyword: string | undefined, mode: 'search' | 'explore'): void {
+    const explicit = mode === 'search' ? keyword?.trim() ?? '' : '';
+    if (explicit.length > 0) params['keyword'] = explicit;
+    if (this.runtimeOwner.supportsCoreCapability('source.check.keyword_override.v1')) {
+      params['keywordOverride'] = explicit.length > 0;
+    }
+  }
+
+  private readSourceCheckResults(data: JsonObject, requestId: number, expected: string[],
+    mode: 'search' | 'explore', selected: string[], timeoutMs: number, reportVersion?: number,
+    ephemeral: boolean = false): SourceCheckOutcome[] {
+    const diagnostics = this.runtimeOwner.takeSourceHttpDiagnostics(requestId);
+    const traceId = this.optionalString(data, 'traceId');
+    const rawResults = data['results'];
     if (traceId === undefined || traceId.trim().length === 0 ||
-      !Array.isArray(rawResults) || rawResults.length !== 1) {
-      throw new Error('source.check.run returned invalid result count');
+      !Array.isArray(rawResults) || rawResults.length !== expected.length) {
+      throw new Error('source check returned invalid result count');
     }
-    const raw = rawResults[0];
+    const correlated = ephemeral ? expected.map((id: string, index: number): string => {
+      const row = this.requireObject(rawResults[index], '未入库检测回执');
+      const fallbackId = `ephemeral:${index + 1}`;
+      if (row['sourceId'] !== fallbackId && id.length > 0) return id;
+      const passed = row['levelsPassed'];
+      // Core owns URL parsing. Its positional ID represents a real static L1
+      // failure, and must never qualify a different candidate's success.
+      if (row['sourceId'] !== fallbackId || row['available'] !== false ||
+        row['failureReason'] !== 'L1: invalid or missing bookSourceUrl' || !Array.isArray(passed) || passed.length > 0) {
+        throw new Error('未入库检测回执缺少可关联的书源身份');
+      }
+      return fallbackId;
+    }) : expected;
+    const counts = new Map<string, number>();
+    const bySource = new Map<string, SourceHttpDiagnosticRecord[]>();
+    for (const sourceId of correlated) counts.set(sourceId, (counts.get(sourceId) ?? 0) + 1);
+    for (const diagnostic of diagnostics) {
+      if (!counts.has(diagnostic.sourceId) || diagnostic.traceId !== traceId || diagnostic.requestId !== requestId) {
+        throw new Error('source.check.run Host evidence correlation mismatch');
+      }
+      // Repeated candidate identities share the same public Host trace and ID.
+      // The ordered Core rows still prove each result. Do not attach transport
+      // observations to individual rows when the recorder cannot distinguish them.
+      if (counts.get(diagnostic.sourceId) !== 1) continue;
+      const records = bySource.get(diagnostic.sourceId) ?? [];
+      records.push(diagnostic);
+      bySource.set(diagnostic.sourceId, records);
+    }
+    return rawResults.map((raw: unknown, index: number): SourceCheckOutcome => {
+      const outcome = this.readSourceCheckOutcome(raw, correlated[index], traceId, requestId,
+        bySource.get(correlated[index]) ?? [], mode, selected, timeoutMs, reportVersion);
+      if (ephemeral && expected.length === 1 && outcome.sourceId === 'ephemeral:1' &&
+        outcome.report?.steps.some((step: SourceCheckReportStep): boolean =>
+          step.level === 'L1' && step.executed && step.status === 'fail') === true) {
+        outcome.oneRowEphemeralL1Failure = true;
+      }
+      return outcome;
+    });
+  }
+
+  private readSourceCheckOutcome(raw: unknown, sourceId: string, traceId: string, requestId: number,
+    diagnostics: SourceHttpDiagnosticRecord[], mode: 'search' | 'explore', selectedLevels: string[],
+    timeoutMs: number, reportVersion?: number): SourceCheckOutcome {
     if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {
       throw new Error('source.check.run returned a non-object result');
     }
@@ -772,8 +1214,8 @@ export class SourceGateway {
     if (!available && (failureReason === undefined || failureReason.trim().length === 0)) {
       throw new Error('source.check.run failed without a failure reason');
     }
-    const report = wantsReport ? this.readCheckReport(outcome['report'], mode, traceId,
-      selectedLevels, levelsPassed, durationMs, reportVersion as number, timeoutMs) : undefined;
+    const report = reportVersion === undefined ? undefined : this.readCheckReport(outcome['report'], mode, traceId,
+      selectedLevels, levelsPassed, durationMs, reportVersion, timeoutMs);
     const rawCoreLogs = outcome['debugLogs'];
     if (!Array.isArray(rawCoreLogs) || rawCoreLogs.length === 0) {
       throw new Error('source.check.run returned no structured Core debug logs');
@@ -793,7 +1235,7 @@ export class SourceGateway {
         timestampMs,
         sourceId,
         traceId,
-        requestId: result.requestId,
+        requestId: requestId,
       };
       const step = this.optionalString(row, 'step');
       const errorKind = this.optionalString(row, 'errorKind');
@@ -807,10 +1249,6 @@ export class SourceGateway {
     });
     const hostLogs: SourceDebugLog[] = diagnostics
       .map((record): SourceDebugLog => {
-        if (record.sourceId !== sourceId || record.traceId !== traceId ||
-          record.requestId !== result.requestId) {
-          throw new Error('source.check.run Host evidence correlation mismatch');
-        }
         const status = record.errorMessage === undefined ? record.statusCode : undefined;
         const target = record.finalUrl !== undefined && record.finalUrl !== record.url ?
           `${record.url} → ${record.finalUrl}` : record.url;

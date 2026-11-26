@@ -9,7 +9,7 @@ import { SharedDownloadHost, withoutDownloadStorageSummary, type SharedDownloadS
   type SharedDownloadBatchReceipt } from '../application/SharedDownloadHost';
 import type { SharedDownloadStoragePolicyResult } from '../application/SharedDownloadStorageGateway';
 import type { SharedDownloadExpectedChapter } from '../application/SharedDownloadCoordinator';
-import { SharedDownloadActionTarget, canCleanDownloadStorage, formatDownloadStorageBytes, type DownloadBookView,
+import { SharedDownloadActionTarget, canCleanDownloadStorage, downloadReadingShelfBook, formatDownloadStorageBytes, type DownloadBookView,
   type DownloadReadingTarget } from './SharedDownloadProjection';
 import type { SharedDownloadOpeningIntent, SharedDownloadReadingControl, SharedDownloadReadingFocus,
   SharedDownloadReturnState, SharedDownloadUiIntent, SharedDownloadViewState } from './SharedDownloadUiContract';
@@ -360,8 +360,9 @@ export class SharedDownloadPresentation {
         deliver({ shelfBook: book.shelfBook, chapterIndex: chapter.index, sourceLabel: book.sourceLabel });
         return;
       }
+      const contentKind = book.contentKind === 'manga' ? 'manga' : 'text';
       const seed: RemoteReadingBookSeed = { sourceId: book.sourceId, bookId: book.bookId, detailUrl: book.bookId,
-        title: book.title, author: book.author, coverUrl: book.coverUrl, contentKind: book.contentKind === 'manga' ? 'manga' : 'text' };
+        title: book.title, author: book.author, coverUrl: book.coverUrl, contentKind };
       const session = await new RemoteReadingFlowGateway(opening.owner)
         .openCachedCatalogSession(seed, current, false, book.contentKind === 'manga');
       if (!current()) return;
@@ -374,7 +375,10 @@ export class SharedDownloadPresentation {
       }
       if (!session.entries.some(row => row.navigable !== false && row.index === chapter.index && row.url === chapter.chapterId))
         throw new Error('目录已变化，请刷新下载页后重新选择');
-      const entry: DownloadReadingEntry = { shelfBook: latest.shelfBook, chapterIndex: chapter.index,
+      // Carry the admitted download's media projection with the exact chapter.
+      // Older shelf rows can lack it, but the reading route and its download
+      // return must be admitted synchronously from this opening.
+      const entry: DownloadReadingEntry = { shelfBook: downloadReadingShelfBook(latest, contentKind), chapterIndex: chapter.index,
         seed, sourceLabel: latest.sourceLabel, session };
       if (book.contentKind === 'manga') entry.mangaOfflineChapterId = chapter.chapterId;
       deliver(entry);

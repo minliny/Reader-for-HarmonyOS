@@ -323,7 +323,7 @@ if(id==='remount'){
 if(id==='retained-reader-failure'){
 {
  const f=fixture({shared:true,open:false,preview:true,failAcquire:true}),x=makeOwners(f);
- x.switchJourney.openDetail();await settle();x.mount().onSelectCandidate(f.candidate());await settle();
+ x.switchJourney.openDetail();await settle();x.sourceActions.select(f.candidate(),x.source.scopeId);await settle();
  const chain=failureChain(x),old=chain.render(),oldScope=x.source.scopeId;
  x.actions.ports.advance();x.bindSource();assert.notEqual(x.source.scopeId,oldScope);
  chain.o.updateStateVars({sourceSwitchScopeId:x.source.scopeId,sourceSwitchFailureMessage:x.source.failureMessage});
@@ -401,6 +401,159 @@ if(id==='reader-overlay'){
  assert.equal(f.calls.filter(([m])=>m==='source.switch.commit').length,0);
  checks.push('actual-ReaderShell-overlay-oldscope-preserved-without-reader-tree-remount');
 }
+}
+if(id==='pending-target-reader-overlay'){
+  const { currentSourceSwitchOwners } = await import('./lib/source-switch-current-owner-probe.mjs');
+  class PickerPort {
+    constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
+  }
+  const shellSource = read('features/reading/ui/ReaderShell.ets');
+  const { Component: ReaderShell } = createReaderBuilderProbe(shellSource, ['sourceSwitchScopeId', 'sourceSwitchOverlayContent'],
+    { SourceSwitchPanel: PickerPort }, { childSources: { SourceSwitchPanel: read('features/source/ui/SourceSwitchPanel.ets') } });
+  const third = { ...target, sourceId: 'third', bookId: 'third-book' };
+  for (const { destination, failAcquire } of [{ destination: origin }, { destination: third }, { destination: third, failAcquire: true }]) {
+    const { sourceId, bookId } = destination;
+    const f = fixture({ shared: true, open: false });
+    const x = currentSourceSwitchOwners(f);
+    const base = f.runtime.request.bind(f.runtime);
+    const sources = [origin.sourceId, target.sourceId, third.sourceId]
+      .map(sourceId => ({ sourceId, name: sourceId, enabled: true, sourceVersion: 'v1' }));
+    let books = [rawCandidate];
+    f.runtime.request = async (method, params, options) => {
+      if (method === 'source.list') return { data: { sources } };
+      if (method === 'search-book.related') return { data: { books, snapshotRevision: 's1', complete: true, sourceVersions: sources } };
+      const result = await base(method, params, options);
+      if (method === 'source.switch.commit' && params.target.sourceId === third.sourceId) result.data.book = third;
+      return result;
+    };
+
+    x.switchJourney.openDetail();
+    await settle();
+    assert.equal(x.source.state.kind, 'candidates');
+    const initialCandidate = x.source.state.candidates.find(candidate => candidate.sourceId === target.sourceId);
+    assert.ok(initialCandidate);
+    x.sourceActions.select(initialCandidate, x.source.scopeId);
+    await settle();
+    const tx = x.source.currentTransaction(x.entry.book);
+    assert.ok(tx, 'the first target has not acknowledged its reader page');
+    assert.equal(x.entry.book.sourceId, target.sourceId);
+    const opening = x.navigation.snapshot();
+    assert.equal(opening.route, 'reading');
+    books = [rawCandidate, { ...rawCandidate, origin: origin.sourceId, bookUrl: origin.bookId },
+      { ...rawCandidate, origin: third.sourceId, bookUrl: third.bookId }];
+
+    x.switchJourney.openReader();
+    await settle();
+    assert.equal(x.source.visible, true);
+    assert.equal(x.source.state.kind, 'candidates');
+    assert.equal(x.source.currentTransaction(x.entry.book), tx);
+    assert.equal(x.navigation.snapshot(), opening);
+    assert.equal(f.calls.filter(([method]) => method === 'source.switch.rollback').length, 0);
+
+    const shell = new ReaderShell(undefined, { sourceSwitchScopeId: x.source.scopeId });
+    Object.assign(shell, { sourceId: target.sourceId, visible: true, inputAllowed: true, sourceSwitchVisible: x.source.visible,
+      sourceSwitchSurface: x.source, sourceSwitchState: x.source.state,
+      onPickSource: x.sourceActions.select });
+    shell.sourceSwitchOverlayContent();
+    const panel = [...shell.children.values()].find(child => child instanceof PickerPort);
+    assert.ok(panel, 'the retained reader supplies the source picker');
+    const picker = panel.params;
+    assert.equal(picker.showing, true);
+    assert.equal(picker.scopeId, x.source.scopeId);
+    const candidate = picker.state.candidates.find(candidate => candidate.sourceId === sourceId);
+    assert.ok(candidate, `the reader picker receives the ${sourceId} source`);
+    if (sourceId === third.sourceId) f.options.targetSession = { ...session, identity: { sourceId, bookId } };
+    f.options.failAcquire = failAcquire === true;
+    picker.onSelectCandidate(candidate, picker.scopeId);
+    await settle();
+
+    assert.equal(x.source.visible, false);
+    const canonical = failAcquire ? origin : destination;
+    assert.equal(x.entry.book.sourceId, canonical.sourceId, 'the reader projects the selected book or restored original');
+    assert.equal(x.entry.book.bookId, canonical.bookId);
+    assert.equal(x.navigation.snapshot().route, 'reading');
+    assert.deepEqual(f.calls.filter(([method]) => method === 'source.switch.rollback').map(([, params]) => params.transactionId), [tx]);
+    const commits = f.calls.filter(([method]) => method === 'source.switch.commit');
+    assert.equal(commits.length, canonical.sourceId === origin.sourceId ? 1 : 2);
+    if (canonical.sourceId === third.sourceId) {
+      assert.deepEqual(commits[1][1].from, { sourceId: origin.sourceId, bookId: origin.bookId });
+      assert.equal(x.source.currentTransaction(x.entry.book), commits[1][1].operationId);
+      assert.deepEqual(x.entry.session.identity, { sourceId, bookId });
+    } else {
+      assert.equal(x.source.currentTransaction(x.entry.book), undefined);
+    }
+    if (failAcquire) {
+      assert.ok(x.source.failureMessage, 'failed third-source acquisition stays recoverable from the original reader');
+      const writes = f.calls.filter(([method]) => method === 'source.switch.rollback' || method === 'source.switch.commit').length;
+      x.switchJourney.openReader();
+      await settle();
+      assert.equal(x.source.visible, true);
+      assert.equal(f.calls.filter(([method]) => method === 'source.switch.rollback' || method === 'source.switch.commit').length, writes);
+    }
+  }
+}
+if(id==='failed-target-reader-actions'){
+  const f = fixture({ shared: true, open: false });
+  const x = makeOwners(f);
+  const base = f.runtime.request.bind(f.runtime);
+  let originalEnabled = true;
+  f.runtime.request = async (method, params, options) => {
+    if (method === 'source.list') return { data: { sources: [
+      { sourceId: origin.sourceId, enabled: originalEnabled, sourceVersion: 'v1' },
+      { sourceId: target.sourceId, enabled: true, sourceVersion: 'v1' },
+    ] } };
+    if (method === 'bookshelf.get' && params.sourceId === origin.sourceId && params.bookId === origin.bookId)
+      return { data: { book: { ...origin, contentKind: 'text' } } };
+    return base(method, params, options);
+  };
+  x.switchJourney.openDetail();
+  await settle();
+  x.sourceActions.select(f.candidate(), x.source.scopeId);
+  await settle();
+  const tx = x.source.currentTransaction(x.entry.book);
+  assert.ok(tx);
+  originalEnabled = false;
+
+  const chain = failureChain(x, { retryReading() { this.phase = 'loading'; this.chapterSelectionToken += 1; } });
+  const before = f.calls.length;
+  const actions = chain.render();
+  assert.equal(typeof actions.rollback, 'function', 'the failed target reader exposes a direct original-source action');
+  assert.equal(f.calls.length, before, 'rendering both recovery paths is read-only');
+  actions.retry();
+  actions.rollback();
+  assert.equal(f.calls.length, before, 'an old failure action cannot roll back after ordinary retry starts');
+  chain.o.phase = 'failed';
+  actions.rollback();
+  assert.equal(f.calls.length, before, 'an old failure action cannot affect a later attempt on the same target');
+
+  const firstFailure = chain.render();
+  firstFailure.choose();
+  await settle();
+  assert.equal(x.source.visible, true, 'the alternate-source action opens the actual owner picker');
+  assert.equal(x.entry.book.sourceId, target.sourceId);
+  assert.equal(x.source.currentTransaction(x.entry.book), tx);
+  assert.deepEqual(f.calls.slice(before).filter(([method]) => method === 'source.switch.rollback' || method === 'source.switch.commit'), []);
+  x.sourceActions.close(x.source.scopeId);
+  assert.equal(x.source.visible, false);
+
+  const next = failureChain(x);
+  const returnToOriginal = next.render().rollback;
+  firstFailure.rollback();
+  await settle();
+  assert.equal(f.calls.filter(([method]) => method === 'source.switch.rollback').length, 0, 'picker scope change retires the older action');
+  returnToOriginal();
+  returnToOriginal();
+  await settle();
+  assert.deepEqual(f.calls.filter(([method]) => method === 'source.switch.rollback').map(([, params]) => params.transactionId), [tx]);
+  assert.equal(x.entry.book.sourceId, origin.sourceId);
+  assert.equal(x.entry.book.bookId, origin.bookId);
+  assert.equal(x.source.currentTransaction(x.entry.book), undefined);
+  assert.equal(x.source.rollbackInFlight, false, 'retiring the failed target presentation clears the old busy indicator');
+  assert.equal(x.navigation.snapshot().route, 'reading');
+
+  const { readingFailureHint } = await import('../entry/src/main/ets/features/reading/presentation/ReadingFailurePresentation.ts');
+  assert.match(readingFailureHint('STORAGE_FAILURE', 'STORAGE_FAILED', 'SOURCE_SWITCH_POSITION_PROTECTION'), /保留原书源的阅读进度.*换回原书源.*另选书源/);
+  assert.match(readingFailureHint('STORAGE_FAILURE', 'STORAGE_FAILED', 'SQLITE_WRITE_FAILURE'), /检查存储空间/);
 }
 if(id==='reader-completion'){
 {
@@ -482,7 +635,7 @@ if(id==='reader-completion'){
 }
 if(id==='metadata-hosts'){
 {
- const {numbers,colors}=await visualContract();
+ const {colors}=await visualContract();
  class ChildPort {
   constructor(owner,params,_storage,id){Object.assign(this,{owner,params,id});}
   updateStateVars(params){Object.assign(this.params,params);}
@@ -491,7 +644,13 @@ if(id==='metadata-hosts'){
  const windowSource=read('features/source/ui/SourceSwitchWindow.ets'),indexSource=read('pages/Index.ets');
  const surfacesSource=read('app/composition/ReaderSourceSwitchSurfaces.ets');
  const directorySource=read('features/reading/ui/BookDirectoryPage.ets');
- const p=boundedSurfaceSdk(),deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metricsApi.createDefaultReaderWindowMetrics()}});
+ const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+ const frames=[];
+ const deps=sourceSwitchLiveSdk(p,{
+  ReaderWindowCoordinator:{metrics:()=>metricsApi.createDefaultReaderWindowMetrics()},
+  SourceSwitchSurfaceFrame: class { constructor(action) { this.onFrame = action; } },
+  uiContext: { postFrameCallback: frame => frames.push(frame) },
+ });
  const factories=new Map(),actors=[];
  const capture=(source,names,childName,childSource,fields)=>{
   const key=JSON.stringify([source,names,childName,childSource]);
@@ -511,7 +670,7 @@ if(id==='metadata-hosts'){
  };
  const book={sourceId:'old',bookId:'book',title:'书名',author:'作者',sourceName:'当前书源',coverUrl:'cover',lastChapter:'最新章节 第 120 章'};
  const state={kind:'candidates',candidates:[]};
- const expectedCurve={kind:'cubic-bezier',values:[numbers.easingX1,numbers.easingY1,numbers.easingX2,numbers.easingY2]};
+ const expectedCurve={kind:'cubic-bezier',values:[0.2,0,0,1]};
  const assertScrim=(probe,contentKind,scheme,reduceMotion)=>{
   const nodes=probe.p.nodes(probe.o).filter(n=>n.type==='Stack'&&typeof n.onClick==='function');
   assert.equal(nodes.length,1,'the real overlay has one dismissing scrim');
@@ -519,22 +678,15 @@ if(id==='metadata-hosts'){
   const c=colors[scheme],hex=n=>Math.round(n).toString(16).padStart(2,'0').toUpperCase();const expectedColor='#'+[c.a*255,c.r,c.g,c.b].map(hex).join('');
   assert.equal(scrim.backgroundColor,expectedColor,'detail and retained reader use the same selected scrim palette for both formats');
   assert.equal(scrim.width,'100%');assert.equal(scrim.height,'100%');
-  if(reduceMotion){
-   assert.equal(scrim.transition.kind,'identity','reduced motion preserves a static scrim for both formats');
-  }else{
-   assert.equal(scrim.transition.kind,'asymmetric');
-   for(const [phase,duration] of [['appear',numbers.openDurationMs],['disappear',numbers.closeDurationMs]]){
-    const effect=scrim.transition.parameters[phase];
-    assert.equal(effect.kind,'opacity');
-    assert.equal(effect.options.duration,duration,'the scrim uses the selected drawer transition duration');
-    assert.deepEqual(effect.options.curve,expectedCurve,'both hosts use the selected shared cubic curve');
-   }
-  }
+  const [transition] = scrim.transition;
+  assert.equal(transition.kind, 'opacity');
+  assert.equal(transition.options.duration, reduceMotion ? 120 : 160);
+  assert.deepEqual(transition.options.curve, reduceMotion ? 'ease-out' : expectedCurve);
  };
  for(const contentKind of ['text','manga'])for(const scheme of ['day','night'])for(const reduceMotion of [false,true]){
   const i=capture(surfacesSource,['build'],'SourceSwitchPanel',panelSource,{
    reading:{book:{...book,contentKind},directoryChapterTitle:'正在阅读 第 20 章',sessionActive:false},
-   source:{visible:true,scopeId:7,state,host:()=>undefined},
+   source:{visible:true,scopeId:7,state,host:()=>undefined,isSurfacePresented:()=>true},
    manga:{selectionVisible:false,canCancelPreparation:()=>false},
    entryPickerAllowed:true,consumeTopInset:false,reduceMotion,interactive:true,
    actions:{stop(){},close(){},retry(){},refresh(){},select(){},rollback(){}},
@@ -546,6 +698,7 @@ if(id==='metadata-hosts'){
    contentKind,bookTitle:book.title,bookAuthor:book.author,bookCoverUrl:book.coverUrl,sourceName:book.sourceName,
    sourceId:book.sourceId,latestChapterTitle:book.lastChapter,directoryChapterTitle:'正在阅读 第 20 章',
    sourceSwitchScopeId:7,sourceSwitchState:state,appThemeScheme:scheme,reduceMotion,visible:true,inputAllowed:true,sourceSwitchCovered:false,
+   sourceSwitchVisible:true,
   });
   s.o.sourceSwitchOverlayContent();assert.equal(s.child().params.latestChapterTitle,book.lastChapter);
   assert.equal(i.child().params.reduceMotion,reduceMotion);assert.equal(s.child().params.reduceMotion,reduceMotion);
@@ -553,7 +706,13 @@ if(id==='metadata-hosts'){
    const closes=[];
    const panel=capture(panelSource,boundedMembers(panelSource),'SourceSwitchWindow',windowSource,
     {...host.child().params,appThemeScheme:scheme,appForeground:true,onClose:scope=>closes.push(scope)});
+   panel.o.surface = {
+    surfaceIsCurrent: (attachment, scope) => attachment === 1 && scope === 7,
+    attachSurface: () => 1,
+    detachSurface: () => {},
+   };
    panel.o.aboutToAppear();
+   frames.splice(0).forEach(frame => frame.onFrame());
    panel.o.initialRender();
    assert.ok(panel.p.nodes(panel.o).some(n=>n.type==='Stack'&&n.create?.alignContent==='Alignment.Bottom'));
    assertScrim(panel,contentKind,scheme,reduceMotion);
@@ -571,7 +730,7 @@ if(id==='metadata-hosts'){
  const effects=[];
  const targetCatalog=capture(surfacesSource,['build'],'BookDirectoryPage',directorySource,{
   reading:{book,sessionActive:true},source:{visible:true,scopeId:7,state},entryPickerAllowed:true,
-  manga:{selectionVisible:true,selection,
+  manga:{selectionVisible:true,selection,directorySelectionBusy:()=>false,
    directoryOpening:current=>()=>current===selection,
    directorySelection:current=>index=>effects.push(['chapter',current,index]),
    directoryTemporaryBack:current=>(_handler,identity)=>effects.push(['bridge',current,identity]),
@@ -624,4 +783,6 @@ if(id==='metadata-hosts'){
 passed=true;}finally{for(const host of owned)host.retire();setCurrentRuntime(undefined);setEntryRuntime(undefined);const cleanup=await cleanupDurableFixtures?.({retain:!passed});if(cleanup&&!passed)console.error(JSON.stringify({kind:'reader-contract-retained-fixtures',...cleanup}));}
 }
 const definitions={"presentation-workflow":"Actual Index and SourceSwitchPresentation workflow, startup inspection and current reader transaction", "manga-valid": "manga-valid actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-stale-proof": "manga-stale-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-wrong-book": "manga-wrong-book actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-wrong-author": "manga-wrong-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-target-version": "manga-target-version actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-registry-during-proof": "manga-registry-during-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-wrong-target-author": "manga-wrong-target-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-registry-during-image": "manga-registry-during-image actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-cancel-resolve": "manga-cancel-resolve actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-cancel-reject": "manga-cancel-reject actual scoped owner/gateway/storage path; controlled Core/OS ports", "preview-cancel": "preview-cancel actual scoped owner/gateway/storage path; controlled Core/OS ports", "seed-author-proof": "seed-author-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "qualification-cancel": "qualification-cancel actual scoped owner/gateway/storage path; controlled Core/OS ports", "source-finalization": "source-finalization actual scoped owner/gateway/storage path; controlled Core/OS ports", "old-overlay": "old-overlay actual scoped owner/gateway/storage path; controlled Core/OS ports", "unknown-recovery": "unknown-recovery actual scoped owner/gateway/storage path; controlled Core/OS ports", "late-navigation": "late-navigation actual scoped owner/gateway/storage path; controlled Core/OS ports", "failed-preview": "failed-preview actual scoped owner/gateway/storage path; controlled Core/OS ports", "remount": "remount actual scoped owner/gateway/storage path; controlled Core/OS ports", "retained-reader-failure": "retained-reader-failure actual scoped owner/gateway/storage path; controlled Core/OS ports", "retired-cache-confirmed": "retired-cache-confirmed actual scoped owner/gateway/storage path; controlled Core/OS ports", "retired-cache-platform-failure": "retired-cache-platform-failure actual scoped owner/gateway/storage path; controlled Core/OS ports", "retired-cache-Core-unknown": "retired-cache-Core-unknown actual scoped owner/gateway/storage path; controlled Core/OS ports", "reader-overlay": "reader-overlay actual scoped owner/gateway/storage path; controlled Core/OS ports", "reader-completion": "reader-completion actual scoped owner/gateway/storage path; controlled Core/OS ports", "metadata-hosts": "metadata-hosts actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+definitions['pending-target-reader-overlay']='Retained reader picker stays open on a pending target and can restore the original or switch to a third source';
+definitions['failed-target-reader-actions']='Retained text reader shows exact direct rollback and alternate picker on a failed pending target';
 for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

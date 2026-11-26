@@ -13,6 +13,7 @@ import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
 import {compileCardSpecs} from './reader-card-probe.mjs';
 import {compileIconButtonSpecs} from './reader-icon-button-probe.mjs';
 import {readerEditingSdk} from './reader-editing-sdk-probe.mjs';
+import {pureModuleProbe} from './ets-pure-module-probe.mjs';
 const req=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot();
 const map=req(sdk+'/lib/component_map.js');
 export function compileTailConsumer(source,names,deps,hooks){const saved=new Map(map.ID_ATTRS);map.ID_ATTRS.clear();try{return createReaderBuilderProbe(source,names,deps,hooks);}finally{map.ID_ATTRS.clear();for(const[k,v]of saved)map.ID_ATTRS.set(k,v);}}
@@ -24,7 +25,7 @@ export function tailControls(options={}){
  const roles={...readerTypographyRoles,...options.roles};
  const foundation=options.foundation??foundationControls({specs:foundationSpecs(roles)});
  const shared=labeledIconControls({foundation,specs:labeledIconSpecs(roles),ColorMetrics:options.ColorMetrics});
- const paths={ReaderIconButton:'ui/controls/ReaderIconButton',ReaderSearchField:'ui/controls/ReaderSearchField',ReaderCard:'ui/surfaces/ReaderCard',SearchSpinner:'features/search/ui/SearchSpinner'};
+ const paths={ReaderIconButton:'ui/controls/ReaderIconButton',ReaderSearchField:'ui/controls/ReaderSearchField',ReaderCard:'ui/surfaces/ReaderCard',NoCoverCover:'ui/patterns/NoCoverCover',SearchSpinner:'features/search/ui/SearchSpinner'};
  const childSources=Object.fromEntries(Object.entries(paths).map(([name,path])=>[name,readFileSync(new URL('../../entry/src/main/ets/'+path+'.ets',import.meta.url),'utf8')]));
  const page=readFileSync(new URL('../../entry/src/main/ets/features/search/ui/SearchPage.ets',import.meta.url),'utf8');
  childSources.SearchResultCard=page.slice(page.lastIndexOf('@Component',page.indexOf('struct SearchResultCard')));
@@ -37,6 +38,8 @@ export function tailControls(options={}){
     getCaretOffset(){assert.fail('tail action fixture must not fabricate a native caret position');}
     scrollToVisible(range){nativeInputCalls.push(['scrollToVisible',range]);}},
   LazyForEach:{create(_id,_owner,data){assert.equal(data.totalCount(),0,'tail parent fixture mounts original empty native lazy list; results row algorithms are separate contracts');},pop(){}},SynchedPropertyNesedObjectPU:shared.properties.sdk.SynchedPropertyNestedObjectPU,ReaderPressFeedback:productionReaderPressFeedback({}),Edge:enumValues('Edge'),ScrollDirection:enumValues('ScrollDirection'),TouchType:enumValues('TouchType')};
+ Object.assign(dependencies,pureModuleProbe(childSources.NoCoverCover.slice(0,childSources.NoCoverCover.indexOf('@Component')),
+  'NoCoverGlyph.ets',{},['noCoverGlyph']));
  const syntax=req(sdk+'/lib/validate_ui_syntax.js');syntax.builderParamObjectCollection.set('ReaderCard',new Set(['content']));
  assert.match(page,/@Observed\s+(?:export )?class SearchBookGroup/);syntax.observedClassCollection.add('SearchBookGroup');
  for(const[name,source]of Object.entries(childSources))dependencies[name]=compileTailConsumer(source,boundedMembers(source),dependencies,hooks).Component;

@@ -1,4 +1,7 @@
 import assert from 'node:assert/strict';
+import { readerPaperPullOffset } from '../entry/src/main/ets/features/reading/presentation/ReaderPaperPullMotion.ts';
+import { READER_BOOKMARK_TRIGGER_VP, readerBookmarkHintAlpha, readerBookmarkRibbonPull, readerBookmarkRibbonRest }
+  from '../entry/src/main/ets/features/reading/presentation/ReaderPageBookmarkModel.ts';
 
 import {
   READER_PAGE_GESTURE_BOOKMARK_SLOP,
@@ -101,7 +104,7 @@ state = moveReaderPageGesture(state, 10, 120, 5000, 210, 520, 0, 32);
 assert.equal(state.owner, 'bookmark');
 assert.equal(state.direction, undefined);
 assert.equal(state.currentDirection, undefined);
-assert.equal(state.bookmarkOffsetY, 52);
+assert.equal(state.bookmarkOffsetY, readerPaperPullOffset(120));
 decision = settleReaderPageGesture(state, 10, 120);
 assert.equal(decision.bookmarkChanged, true);
 assert.equal(decision.direction, undefined);
@@ -157,29 +160,35 @@ assert.equal(state.owner, 'verticalPrevious', 'later X cannot create a second ge
 decision = settleReaderPageGesture(state, 100, -24, 0, 280, 476, 0, 48);
 assert.equal(decision.direction, 'previous');
 
-// Bookmark ownership is admitted before its commit threshold. Only travel
-// beyond the16vp confirmation band moves the page, retaining the H/2 cap.
+// The gesture owner is admitted early; release is decided from the current
+// damped paper distance in physical vp, including same-finger withdrawal.
+const rawBookmarkTrigger = -115 * Math.log(1 - 46 / 86);
+assert.equal(READER_BOOKMARK_TRIGGER_VP, 46);
+assert.equal(readerPaperPullOffset(-64), 0);
+assert.equal(readerPaperPullOffset(10000), 86);
 state = beginReaderPageGesture(300, 150, 100, 0, 800);
 state = moveReaderPageGesture(state, 0, 16, 0, 150, 116, 0, 8);
 assert.equal(state.owner, 'bookmark');
-assert.equal(state.bookmarkOffsetY, 0);
+assert.equal(state.bookmarkOffsetY, 86 * (1 - Math.exp(-16 / 115)));
 assert.equal(state.bookmarkPreviewChanged, false);
 state = moveReaderPageGesture(state, 0, 48, 0, 150, 148, 0, 16);
 assert.equal(state.owner, 'bookmark');
-assert.equal(state.bookmarkOffsetY, 16);
+assert.equal(state.bookmarkOffsetY, readerPaperPullOffset(48));
+assert.equal(state.bookmarkPreviewChanged, false);
+state = moveReaderPageGesture(state, 0, 800);
+assert.ok(state.bookmarkOffsetY < 86);
 assert.equal(state.bookmarkPreviewChanged, true);
-state = moveReaderPageGesture(state, 0, 800, 0, 150, 900, 0, 32);
-assert.equal(state.bookmarkOffsetY, 392);
-assert.equal(state.bookmarkPeakDistance, 800);
-state = moveReaderPageGesture(state, 0, 399, 0, 150, 499, 0, 48);
-assert.equal(state.bookmarkPreviewChanged, false, 'below half peak withdraws the preview toggle');
-state = moveReaderPageGesture(state, 0, 401, 0, 150, 501, 0, 64);
-assert.equal(state.bookmarkPreviewChanged, true);
-decision = settleReaderPageGesture(state, 0, 401, 0, 150, 501, 0, 80);
+state = moveReaderPageGesture(state, 0, rawBookmarkTrigger - 0.01);
+assert.equal(state.bookmarkPreviewChanged, false, 'returning below 46 rendered vp withdraws the pending action');
+assert.equal(settleReaderPageGesture(state, 0, rawBookmarkTrigger - 0.01).bookmarkChanged, false);
+state = moveReaderPageGesture(state, 0, rawBookmarkTrigger + 0.01);
+assert.equal(state.bookmarkPreviewChanged, true, 'the same finger can re-arm after reversal');
+decision = settleReaderPageGesture(state, 0, rawBookmarkTrigger + 0.01);
 assert.equal(decision.bookmarkChanged, true);
 assert.equal(decision.direction, undefined);
+assert.equal(cancelReaderPagePan(state).settleTarget, 'rollback');
 state = moveReaderPageGesture(beginReaderPageGesture(300, 0, 0, 0, 800), 0, 1000);
-assert.equal(state.bookmarkOffsetY, 400);
+assert.equal(state.bookmarkOffsetY, readerPaperPullOffset(1000));
 state = moveReaderPageGesture(state, 500, 1000);
 assert.equal(state.owner, 'bookmark', 'later X never steals an admitted bookmark');
 assert.equal(state.direction, undefined);
@@ -187,21 +196,34 @@ assert.equal(state.currentDirection, undefined);
 assert.equal(settleReaderPageGesture(state, 500, 1000).direction, undefined);
 
 for (const sign of [-1, 1]) {
-  state = moveReaderPageGesture(beginReaderPageGesture(300, 0, 0, 0, 800), 0, 60);
-  state = moveReaderPageGesture(state, sign * 12, 60);
+  state = moveReaderPageGesture(beginReaderPageGesture(300, 0, 0, 0, 800), 0, 90);
+  state = moveReaderPageGesture(state, sign * 12, 90);
   assert.equal(state.bookmarkPreviewChanged, true, 'small left/right drift preserves the bookmark');
-  const changed = moveReaderPageGesture(state, sign * 150, 60);
+  const changed = moveReaderPageGesture(state, sign * 150, 90);
   assert.equal(changed.owner, 'bookmark');
   assert.equal(changed.direction, undefined);
   assert.equal(changed.bookmarkPreviewChanged, false, 'a clear horizontal redirection withdraws the bookmark');
-  const cancelled = settleReaderPageGesture(changed, sign * 150, 60);
+  const cancelled = settleReaderPageGesture(changed, sign * 150, 90);
   assert.equal(cancelled.direction, undefined);
   assert.equal(cancelled.bookmarkChanged, false);
   assert.equal(cancelled.state.settleTarget, 'rollback');
-  state = moveReaderPageGesture(changed, sign * 12, 60);
+  state = moveReaderPageGesture(changed, sign * 12, 90);
   assert.equal(state.bookmarkPreviewChanged, true, 'returning to the admitted pull restores its preview');
-  assert.equal(settleReaderPageGesture(state, sign * 12, 60).bookmarkChanged, true);
+  assert.equal(settleReaderPageGesture(state, sign * 12, 90).bookmarkChanged, true);
 }
+
+const frame = projected => [projected.y, projected.fillHeight, projected.opacity];
+assert.deepEqual(frame(readerBookmarkRibbonRest(false)), [-34, 0, 0]);
+assert.deepEqual(frame(readerBookmarkRibbonRest(true)), [-13, 34, 1]);
+assert.equal(readerBookmarkRibbonPull(22, false, false).y, -12, 'the paper exposes one vp of ribbon per rendered vp');
+assert.deepEqual(frame(readerBookmarkRibbonPull(46, false, false)), [0, 34, 1]);
+assert.ok(readerBookmarkRibbonPull(23, true, false).fillHeight > readerBookmarkRibbonPull(46, true, false).fillHeight);
+assert.equal(readerBookmarkRibbonPull(46, true, false).fillHeight, 0, 'removal drains the fill to the top');
+assert.equal(readerBookmarkRibbonPull(46, false, true).y, -13, 'reduced motion never translates the ribbon');
+assert.equal(readerBookmarkRibbonPull(46, true, true).fillHeight, 34, 'reduced motion never changes the clipping edge');
+assert.equal(readerBookmarkHintAlpha(8), 0);
+assert.equal(readerBookmarkHintAlpha(46), 0.92);
+assert.ok(readerBookmarkHintAlpha(14) > readerBookmarkHintAlpha(11));
 
 // Classification and tap history use physical vp, while rendering keeps the
 // independent stage coordinates and progress. Large stage scale is not slop.
@@ -221,18 +243,17 @@ assert.equal(settleReaderPageGesture(state, 15, 900, 0, 15, 900, 0, 32, 8, 0).di
 state = beginReaderPageGesture(300, 200, 100, 0, 800);
 state = moveReaderPageGesture(state, 0, 160, 0, 200, 260, 0, 16, 0, 16);
 assert.equal(state.owner, 'bookmark');
-assert.equal(state.bookmarkOffsetY, 0);
+assert.equal(state.bookmarkOffsetY, readerPaperPullOffset(16));
 state = moveReaderPageGesture(state, 0, 480, 0, 200, 580, 0, 32, 0, 48);
 assert.equal(state.currentOffsetY, 480);
 assert.equal(state.inputOffsetY, 48);
-assert.equal(state.bookmarkPeakDistance, 48);
-assert.equal(state.bookmarkOffsetY, 16);
-assert.equal(settleReaderPageGesture(state, 0, 240, 0, 200, 340, 0, 48, 0, 24).bookmarkChanged, true);
-assert.equal(settleReaderPageGesture(state, 0, 240, 0, 200, 340, 0, 48, 0, 23.99).bookmarkChanged, false);
-state = moveReaderPageGesture(beginReaderPageGesture(300, 0, 0, 0, 800), 180, 120, 0, 180, 120, 0, 16, 12, 60);
+assert.equal(state.bookmarkOffsetY, readerPaperPullOffset(48));
+assert.equal(settleReaderPageGesture(state, 0, 240, 0, 200, 340, 0, 48, 0, 90).bookmarkChanged, true);
+assert.equal(settleReaderPageGesture(state, 0, 240, 0, 200, 340, 0, 48, 0, 87).bookmarkChanged, false);
+state = moveReaderPageGesture(beginReaderPageGesture(300, 0, 0, 0, 800), 180, 120, 0, 180, 120, 0, 16, 12, 90);
 assert.equal(state.owner, 'bookmark', 'raw Y selects bookmark even if stage X is larger');
 assert.equal(state.bookmarkPreviewChanged, true);
-state = moveReaderPageGesture(state, 20, 120, 0, 20, 120, 0, 32, 150, 60);
+state = moveReaderPageGesture(state, 20, 120, 0, 20, 120, 0, 32, 150, 90);
 assert.equal(state.bookmarkPreviewChanged, false, 'raw horizontal redirection cancels despite stage Y dominance');
 
 // The UP admission pass can be called in-place before final dispatch; all

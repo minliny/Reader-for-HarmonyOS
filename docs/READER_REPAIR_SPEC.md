@@ -232,7 +232,7 @@ Figma文件 `klhs2jMM4MncaJFqZMfqEK`。快捷自动C `1307:3126` / source `1308:
 
 ### 4.2 已确诊偏差及对应改法
 
-1. `startTtsSession`等待`start→whenStarted`才morph，自动翻页也等待TTS停止屏障才动。把**视觉启动**移到有效点击当帧：创建呈现事务、接管source、启动轴；业务仍异步准备/互斥，状态为preparing，不能假报playing。成功只更新业务投影，不重播；失败撤销本事务并给可操作错误状态。
+1. 朗读的启动反馈在有效点击当帧接管实际 source。朗读异步准备时使用 preparing，真实 ACK 到来后更新业务投影，不重放动效。2026-11-24 重构的自动翻页直接接管阅读播放通道。当帧通过现有朗读 owner 发出暂停、撤销旧语句的发声资格并保留朗读位置。同一调用轮从 t=0 启动倒计时和 380ms 胶囊飞展，平台和队列的暂停回执异步核对。
 2. `beginSessionCapsuleMorph`先hideControl再await snapshot，capture阶段又不渲染胶囊，产生空档。真实source必须保持挂载直到新owner接管；优先直接用稳定组件source actor。快照只能用已校验revision的预备副本，或作为不阻断源显示的异步替代。失败不能先删源、再直跳终态掩盖。
 3. 当前flight Image、dot Row、expand Capsule、staticShell轮换。改为固定Stage与固定actor集合，phase只控制交互/诊断，不能决定树是否创建。结束保留同一shell在终态，释放仅供飞行的缓存资源。
 4. 当前pause键和leading文字同Row并共用offset。拆sourceSharp、sourceBlur、sourceSurface、canonicalSurface、revealClip、leadingIconLabel、pauseCircle及footer actor；逐轨道采样。
@@ -247,14 +247,14 @@ Figma文件 `klhs2jMM4MncaJFqZMfqEK`。快捷自动C `1307:3126` / source `1308:
 
 点击的第一时间是当帧接管源/按压和准备态反馈并启动轴，**不是第一帧就在右下显示完整胶囊**；保留设计开头100/200ms的轨道保持，不额外等音频或快照。控制壳退场由胶囊事务轨道驱动，不能再并行跑普通hide动画形成第二时钟。
 
-暂停/恢复只更新当前圆钮/文字和业务状态，不重启飞行；停止、离页、后台、切书、source/module改动失效旧generation。自动/TTS业务互斥保留停止屏障，stop失败不得启动另一业务。重复点击同意图幂等；启动中重新唤起控制栏按当前姿态交还owner，不能无条件跳终点。没有用户拖拽胶囊的需求，不借此新增能力。
+暂停/恢复只更新当前圆钮/文字和业务状态，不重启飞行；停止、离页、后台、切书、source/module改动失效旧generation。自动翻页接管后保持朗读可恢复。用户明确继续朗读时，先结束自动翻页并清掉两个定时器，再进入原朗读恢复事务。系统中断恢复只在仍有资格时派发。重复点击同意图幂等；启动中重新唤起控制栏按当前姿态交还owner，不能无条件跳终点。没有用户拖拽胶囊的需求，不借此新增能力。
 
 异常/中断落点按下表固定为本方案实现合同，不能用“跳终态”四字代替：
 
 | 事件 | 业务与呈现落点 |
 |---|---|
 | preparing时点已出现的pause | 接受desiredPlaying=false；准备可继续，但真正发声/开始自动计时前检查此意图，进入readyPaused；恢复点击再启动业务。不得先播一句再补pause，文案只在ACK后称已暂停，不重播morph |
-| TTS↔自动的stop屏障失败 | 不启动目标业务，保留原业务真实状态；撤销目标启动事务，从当前姿态交回原source模块，显示可重试错误，不把原业务伪造已停止 |
+| 自动翻页接管时朗读暂停失败 | 只暂停仍属于本次接管的自动翻页并显示可重试错误。迟到失败不操作后续会话或已选择的朗读模式 |
 | 启动失败/权限拒绝 | 保留错误事实，失效本次业务；恢复触发时的quick/full模块和scroll锚。原control模型一直保留，按当前几何rebasing接管，再沿现有控制打开轨道恢复；飞行actor在新source ready后走现有capsule exit淡出，不先清空/不跳到完整胶囊 |
 | 启动中主动stop | desiredPlaying=false并阻止未开始业务；从当前视觉姿态走现有exit淡出，页码从当前偏移回静态无胶囊端点；不强制完成未走完的向左展开。late success不能复活 |
 | 中途唤起控制 | 冻结本次sample并把源模块/壳/输入交给控制Runtime；使用当前screen rect和现有layout rebase继续打开，不重放启动。系统栏按§3先显示；保留实际playing/paused状态 |

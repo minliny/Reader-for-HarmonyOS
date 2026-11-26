@@ -67,6 +67,11 @@ export type SourceSwitchCandidate = {
   isCurrent?: boolean;
 };
 
+export interface SourceSwitchSweepProgress {
+  checked: number;
+  total: number;
+}
+
 export type SourceSwitchProbeQuery = {
   contentKind?: 'text' | 'manga';
   sourceId: string;
@@ -559,12 +564,14 @@ export class SourceSwitchGateway {
   async refreshCandidates(
     query: SourceSwitchProbeQuery,
     isCurrent: (() => boolean) | undefined = undefined,
-    onProgress: ((candidates: SourceSwitchCandidate[]) => void) | undefined = undefined,
+    onProgress: ((candidates: SourceSwitchCandidate[], sweep?: SourceSwitchSweepProgress) => void) | undefined = undefined,
     initialCandidates: SourceSwitchCandidate[] = [],
+    restartSweep: boolean = false,
   ): Promise<SourceSwitchDiscoveryOutcome> {
     this.validateProbeQuery(query);
     if (isCurrent?.() === false) return { kind: 'noSources' };
     const generation = ++this.discoveryGeneration;
+    if (restartSweep) this.discoveryPages.clear();
     const scope = sourceSwitchCandidateKey(query.sourceId, query.bookId);
     if (this.discoveryScope !== scope) this.discoverySamples.clear();
     this.discoveryScope = scope;
@@ -583,11 +590,12 @@ export class SourceSwitchGateway {
     let flushInFlight: Promise<void> = Promise.resolve();
     let flushWaiters: Array<{ resolve: () => void; active: boolean }> = [];
     let cancelled = false;
+    let sweep: SourceSwitchSweepProgress | undefined;
 
     const publish = (): void => {
       if (!current()) return;
       candidates = this.sortCandidates(Array.from(candidateMap.values()));
-      onProgress?.(candidates);
+      onProgress?.(candidates, sweep);
     };
 
     const mergeCandidate = (candidate: SourceSwitchCandidate, queueProjection: boolean = true): void => {
@@ -778,7 +786,11 @@ export class SourceSwitchGateway {
           }
           publish();
           scheduleFlush();
-        }, query);
+        }, query, (next: SourceSwitchSweepProgress): void => {
+          if (!current()) return;
+          sweep = next;
+          onProgress?.(candidates, sweep);
+        });
       if (!current()) return { kind: 'noSources' };
       await awaitFlush();
       // One complete relation read at the end owns membership/deletion. A
@@ -789,7 +801,7 @@ export class SourceSwitchGateway {
       candidateMap.clear();
       for (const candidate of finalCandidates) candidateMap.set(sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl), candidate);
       candidates = finalCandidates;
-      onProgress?.(candidates);
+      onProgress?.(candidates, sweep);
       return candidates.length === 0 ? { kind: 'noSources', incompleteSourceCount: discovery.incompleteSourceCount } :
         { kind: 'sources', candidates, incompleteSourceCount: discovery.incompleteSourceCount };
     } catch (error) {
@@ -816,6 +828,7 @@ export class SourceSwitchGateway {
     contentKind: 'text' | 'manga' = 'text',
     onSourceComplete: ((candidates: SourceSwitchCandidate[]) => Promise<void>) | undefined = undefined,
     expectedBook: SourceSwitchProbeQuery | undefined = undefined,
+    onSweep: ((progress: SourceSwitchSweepProgress) => void) | undefined = undefined,
   ): Promise<SourceSwitchDiscoveryOutcome> {
     this.assertNonBlankString(sourceId, 'sourceId');
     this.assertNonBlankString(bookId, 'bookId');
@@ -885,6 +898,8 @@ export class SourceSwitchGateway {
     const httpStatuses = new Map<number, number>();
     let pending = sources.filter((source: SourceSwitchRegistryEntry): boolean => progressFor(source).state === 'ready' || progressFor(source).state === 'unknown');
     const failed = new Set<string>();
+    let checked = sources.length - pending.length;
+    onSweep?.({ checked, total: sources.length });
     while (pending.length > 0 && isCurrent?.() !== false) {
     await runBookSourceWorkers(pending, SOURCE_SWITCH_DISCOVERY_CONCURRENCY,
       async (source: SourceSwitchRegistryEntry): Promise<void> => {
@@ -905,6 +920,10 @@ export class SourceSwitchGateway {
           // Route/proxy configuration failures still stop the shared batch.
           domainFailures += 1;
           return;
+        } finally {
+          if (isCurrent?.() !== false && (failed.has(source.sourceId) || progressFor(source).state !== 'ready')) {
+            onSweep?.({ checked: ++checked, total: sources.length });
+          }
         }
         if (isCurrent?.() !== false) {
           candidates.push(...group);

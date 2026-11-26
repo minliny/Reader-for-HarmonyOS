@@ -53,7 +53,8 @@ const Controller = productionMotionMethods(files.controller, ['close']);
 function surfaceFixture(shell, previousIdentity) {
   const events = [], intent = [], counts = { close: 0, leave: 0, releaseView: 0 };
   let surface, retentionChecks = 0;
-  const Surface = productionMotionMethods(files.surface, ['rollbackChapterImages', 'aboutToDisappear', 'invalidatePanelMotion'], {
+  const Surface = productionMotionMethods(files.surface, ['rollbackChapterImages', 'aboutToDisappear', 'invalidatePanelMotion',
+    'clearPageSliderPreview'], {
     ReaderWindowCoordinator: { brightness: () => ({ release: async token => {
       assert.equal(token, 41); assert.equal(surface.mounted, false); events.push('brightness.release');
     } }) },
@@ -76,6 +77,7 @@ function surfaceFixture(shell, previousIdentity) {
     sourceId: 'source', bookId: 'manga', mounted: true, controller,
     layoutGeneration: 2, viewportGeneration: 3, loginGeneration: 4, presentationGeneration: 5,
     brightnessOwner: 41, brightnessGeneration: 6,
+    pageSliderGeneration: 1, pageSliderPreview: 3, pageSliderCommitted: 3,
     confirmedPosition: { old: true }, pendingTurnOrdinal: 3, mountedTurnRowKey: 'old-row',
     transientFeedback:{reset(){}},rollbackChapterImages:new Map(),withdrawExitRequest:()=>events.push('exit.withdraw'),
     panelGeneration: 0, panelActionGeneration: 0, panelFocusGeneration: 0,
@@ -101,6 +103,7 @@ function assertDisposed(f, reason) {
   assert.equal(f.surface.confirmedPosition, undefined); assert.equal(f.surface.pendingTurnOrdinal, undefined);
   assert.equal(f.surface.mountedTurnRowKey, ''); assert.equal(f.surface.detachOfflineProbe, undefined);
   assert.equal(f.surface.brightnessOwner, 0); assert.equal(f.surface.brightnessGeneration, 7);
+  assert.deepEqual([f.surface.pageSliderGeneration, f.surface.pageSliderPreview, f.surface.pageSliderCommitted], [2, -1, -1]);
   assert.deepEqual([f.surface.layoutGeneration, f.surface.viewportGeneration, f.surface.loginGeneration, f.surface.presentationGeneration], [3, 4, 5, 6]);
   assert.deepEqual([f.surface.panel, f.surface.panelPhase, f.surface.panelOffset, f.surface.panelScrimOpacity], ['', 'closed', 0, 0]);
   assert.equal(f.surface.panelFontsReady, false); assert.equal(f.surface.panelFontGeneration, 8);

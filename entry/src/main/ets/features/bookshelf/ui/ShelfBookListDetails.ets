@@ -1,83 +1,142 @@
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import { readerHarmonyApi24 } from '../../../app/HarmonyCapabilityProbe';
 import {
-  TYPE_SHELF_LIST_AUTHOR,
-  TYPE_SHELF_LIST_CHAPTER,
-  TYPE_SHELF_LIST_STATUS,
-  TYPE_SHELF_LIST_TITLE, TYPE_SHELF_METADATA_TAG,
-} from '../../../ui/foundation/ReaderTypography';
+  READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+  READER_FONT_NOTO_SANS_SC_UI_BOLD,
+} from '../../../ui/foundation/ReaderFontFamilies';
+import { ReaderIconButton } from '../../../ui/controls/ReaderIconButton';
 import type { ShelfBook } from '../../../app/ReaderCoreGateway';
-import { BookshelfListTextFrame, bookshelfListTextFrame } from './BookshelfGridSpec';
+import {
+  BOOKSHELF_LIST_COVER_HEIGHT, BOOKSHELF_LIST_PROGRESS_STROKE,
+  BookshelfListTextFrame, bookshelfListTextFrame,
+} from './BookshelfGridSpec';
 import { ShelfBookPresentation } from '../presentation/ShelfBookPresentation';
 
-/** Shared shelf facts. Only content type and origin occupy metadata tags. */
+const SHELF_LIST_BADGE_FONT_SIZE = 10;
+const SHELF_LIST_BADGE_INLINE_PADDING = 4;
+const SHELF_LIST_BADGE_GAP = 4;
+
 @Component
 export struct ShelfBookListDetails {
-  private readonly metadataEllipsisMode: EllipsisMode = readerHarmonyApi24() ? EllipsisMode.CENTER : EllipsisMode.END;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerMangaPresentationRevision') private mangaRevision: number = 0;
   @Prop book: ShelfBook;
   @Prop textFrame: BookshelfListTextFrame = bookshelfListTextFrame();
+  @Prop targetHeight: number = BOOKSHELF_LIST_COVER_HEIGHT;
+  @Prop moreFocusId: string = '';
+  @Prop moreAccessibilityLabel: string = '';
+  @Prop moreEnabled: boolean = false;
+  onMore: () => void = (): void => {};
 
   build() {
-    Column({ space: 2 }) {
-      Flex({ direction: this.textFrame.stackTitle ? FlexDirection.Column : FlexDirection.Row,
-        alignItems: this.textFrame.stackTitle ? ItemAlign.Start : ItemAlign.Center }) {
-        Text(this.book.title).layoutWeight(this.textFrame.stackTitle ? 0 : 1)
-          .width(this.textFrame.stackTitle ? '100%' : undefined).constraintSize({ minWidth: 0 })
-          .margin({ right: this.textFrame.stackTitle ? 0 : 6, bottom: this.textFrame.stackTitle ? 2 : 0 })
-          .fontFamily(TYPE_SHELF_LIST_TITLE.fontFamily).fontWeight(TYPE_SHELF_LIST_TITLE.fontWeight)
-          .fontSize(TYPE_SHELF_LIST_TITLE.fontSizeFp).lineHeight(TYPE_SHELF_LIST_TITLE.lineHeightFp as number).letterSpacing(TYPE_SHELF_LIST_TITLE.letterSpacingFp as number)
+    Column() {
+      Row({ space: 4 }) {
+        Text(this.book.title).layoutWeight(1).constraintSize({ minWidth: 0 })
+          .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontWeight(FontWeight.Bold)
+          .fontSize(15).lineHeight(`${this.textFrame.titleLineHeight}vp`)
+          .minFontScale(Math.min(1, this.textFrame.scale)).maxFontScale(Math.max(1, this.textFrame.scale))
           .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).ellipsisMode(this.metadataEllipsisMode);
-        Flex({ direction: this.textFrame.metadataColumns === 2 ? FlexDirection.Row : FlexDirection.Column }) {
-          this.metadataTag((): string => ShelfBookPresentation.contentLabel(this.book), false);
-          this.metadataTag((): string => ShelfBookPresentation.originLabel(this.book), true);
-        }.width(this.textFrame.metadataWidth).height(this.textFrame.metadataHeight).flexShrink(0);
-      }.width('100%').height(this.textFrame.titleGroupHeight);
-      Text(this.book.author).width('100%').constraintSize({ minHeight: (TYPE_SHELF_LIST_AUTHOR.lineHeightFp as number) * this.textFrame.scale }).fontFamily(TYPE_SHELF_LIST_AUTHOR.fontFamily).fontWeight(TYPE_SHELF_LIST_AUTHOR.fontWeight)
-          .fontSize(TYPE_SHELF_LIST_AUTHOR.fontSizeFp).lineHeight(TYPE_SHELF_LIST_AUTHOR.lineHeightFp as number).letterSpacing(TYPE_SHELF_LIST_AUTHOR.letterSpacingFp as number)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-      Text(this.positionLabel()).width('100%').fontFamily(TYPE_SHELF_LIST_CHAPTER.fontFamily).fontWeight(TYPE_SHELF_LIST_CHAPTER.fontWeight)
-          .fontSize(TYPE_SHELF_LIST_CHAPTER.fontSizeFp).lineHeight(TYPE_SHELF_LIST_CHAPTER.lineHeightFp as number).letterSpacing(TYPE_SHELF_LIST_CHAPTER.letterSpacingFp as number)
-        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-      Flex({ direction: this.textFrame.stackStatus ? FlexDirection.Column : FlexDirection.Row }) {
-        Text(`最新：${ShelfBookPresentation.latestChapter(this.book)}`).layoutWeight(this.textFrame.stackStatus ? 0 : 1)
-          .width(this.textFrame.stackStatus ? '100%' : undefined)
-          .margin({ right: this.textFrame.stackStatus ? 0 : 8, bottom: this.textFrame.stackStatus ? 2 : 0 })
-          .constraintSize({ minWidth: 0 }).fontFamily(TYPE_SHELF_LIST_CHAPTER.fontFamily).fontWeight(TYPE_SHELF_LIST_CHAPTER.fontWeight)
-          .fontSize(TYPE_SHELF_LIST_CHAPTER.fontSizeFp).lineHeight(TYPE_SHELF_LIST_CHAPTER.lineHeightFp as number).letterSpacing(TYPE_SHELF_LIST_CHAPTER.letterSpacingFp as number)
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).ellipsisMode(EllipsisMode.END);
+        if (this.moreFocusId !== '') {
+          ReaderIconButton({
+            specId: 'shelf-list-more',
+            icon: this.appThemeScheme === 'night' ? $r('app.media.rc_dots_theme_night') : $r('app.media.rc_dots'),
+            focusId: this.moreFocusId, accessibilityLabel: this.moreAccessibilityLabel,
+            actionEnabled: this.moreEnabled, onTap: this.onMore,
+          }).hitTestBehavior(this.moreEnabled ? HitTestMode.Default : HitTestMode.None);
+        }
+      }.width('100%').height(this.textFrame.titleLineHeight).alignItems(VerticalAlign.Top);
+
+      Row({ space: SHELF_LIST_BADGE_GAP }) {
+        Text(this.book.author).layoutWeight(1).constraintSize({ minWidth: 0 })
+          .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(FontWeight.Regular)
+          .fontSize(12).lineHeight(`${this.textFrame.authorLineHeight}vp`)
+          .minFontScale(Math.min(1, this.textFrame.scale)).maxFontScale(Math.max(1, this.textFrame.scale))
           .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-        Text(ShelfBookPresentation.progress(this.book)).width(this.textFrame.stackStatus ? '100%' : undefined)
-          .fontFamily(TYPE_SHELF_LIST_STATUS.fontFamily).fontWeight(TYPE_SHELF_LIST_STATUS.fontWeight)
-          .fontSize(TYPE_SHELF_LIST_STATUS.fontSizeFp).lineHeight(TYPE_SHELF_LIST_STATUS.lineHeightFp as number).letterSpacing(TYPE_SHELF_LIST_STATUS.letterSpacingFp as number).fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).maxLines(this.textFrame.stackStatus ? undefined : 1).wordBreak(WordBreak.BREAK_WORD).flexShrink(0);
-      }.width('100%').height(this.textFrame.readingGroupHeight);
-      Progress({ value: ShelfBookPresentation.progressPercent(this.book), total: 100, type: ProgressType.Linear })
-        .width('100%').height(3).color(readerAppColor('TOK_GREEN', this.appThemeScheme))
-        .backgroundColor(readerAppColor('TOK_LINE', this.appThemeScheme))
-        .style({ strokeWidth: 3, strokeRadius: 2, enableSmoothEffect: false })
-        .hitTestBehavior(HitTestMode.None);
-    }.width('100%').height(this.textFrame.height).alignItems(HorizontalAlign.Start);
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).ellipsisMode(EllipsisMode.END);
+        if (this.updateBadgeLabel() !== '' || ShelfBookPresentation.listAttribute(this.book) !== '') {
+          Row({ space: SHELF_LIST_BADGE_GAP }) {
+            if (this.updateBadgeLabel() !== '') {
+              this.metadataTag((): string => this.updateBadgeLabel(), true);
+            }
+            if (ShelfBookPresentation.listAttribute(this.book) !== '') {
+              this.metadataTag((): string => ShelfBookPresentation.listAttribute(this.book), false);
+            }
+          }.flexShrink(0);
+        }
+      }.width('100%').height(this.textFrame.authorLineHeight).alignItems(VerticalAlign.Center);
+
+      Text(this.positionLabel()).width('100%').height(this.textFrame.chapterLineHeight)
+        .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontWeight(FontWeight.Medium)
+        .fontSize(12).lineHeight(`${this.textFrame.chapterLineHeight}vp`)
+        .minFontScale(Math.min(1, this.textFrame.scale)).maxFontScale(Math.max(1, this.textFrame.scale))
+        .fontColor(readerAppColor(this.positionLabel() === '尚未阅读' ? 'TOK_MUTED' : 'TOK_INK', this.appThemeScheme))
+        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).ellipsisMode(EllipsisMode.END);
+
+      if (ShelfBookPresentation.listSecondary(this.book) !== '') {
+        Text(ShelfBookPresentation.listSecondary(this.book)).width('100%').height(this.textFrame.latestLineHeight)
+          .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(FontWeight.Regular)
+          .fontSize(12).lineHeight(`${this.textFrame.latestLineHeight}vp`)
+          .minFontScale(Math.min(1, this.textFrame.scale)).maxFontScale(Math.max(1, this.textFrame.scale))
+          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).ellipsisMode(EllipsisMode.END);
+      }
+
+      Row({ space: 8 }) {
+        // Anchor the painted track at the cover edge while keeping the label centered in its line.
+        Progress({ value: ShelfBookPresentation.progressPercent(this.book), total: 100, type: ProgressType.Linear })
+          .layoutWeight(1).height(BOOKSHELF_LIST_PROGRESS_STROKE).alignSelf(ItemAlign.End)
+          .color(readerAppColor('TOK_ACCENT', this.appThemeScheme))
+          .backgroundColor(readerAppColor('TOK_FIELD_SURFACE', this.appThemeScheme))
+          .style({ strokeWidth: BOOKSHELF_LIST_PROGRESS_STROKE, strokeRadius: 2, enableSmoothEffect: false })
+          .hitTestBehavior(HitTestMode.None);
+        Text(this.progressLabel()).flexShrink(0)
+          .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontWeight(FontWeight.Medium)
+          .fontSize(11).lineHeight(`${this.textFrame.progressRowHeight}vp`).fontFeature('"tnum" 1')
+          .minFontScale(Math.min(1, this.textFrame.scale)).maxFontScale(Math.max(1, this.textFrame.scale))
+          .fontColor(readerAppColor(this.progressLabel() === '未读' ? 'TOK_MUTED' : 'TOK_ACCENT', this.appThemeScheme))
+          .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).ellipsisMode(EllipsisMode.END);
+      }.width('100%').height(this.textFrame.progressRowHeight).alignItems(VerticalAlign.Center);
+    }.width('100%').height(this.targetHeight).alignItems(HorizontalAlign.Start).justifyContent(FlexAlign.SpaceBetween);
   }
 
   @Builder
-  private metadataTag(label: () => string, trailing: boolean) {
-    Text(label()).constraintSize({ minWidth: Math.min(30, this.textFrame.width), maxWidth: this.textFrame.width, minHeight: this.textFrame.tagHeight })
-      .maxLines(this.textFrame.metadataColumns === 2 ? 1 : undefined).wordBreak(WordBreak.BREAK_WORD).flexShrink(0)
-      .margin({ left: trailing && this.textFrame.metadataColumns === 2 ? 6 : 0,
-        top: trailing && this.textFrame.metadataColumns === 1 ? 2 : 0 }).padding({ left: 4, right: 4 })
-      .fontFamily(TYPE_SHELF_METADATA_TAG.fontFamily).fontWeight(TYPE_SHELF_METADATA_TAG.fontWeight)
-          .fontSize(TYPE_SHELF_METADATA_TAG.fontSizeFp).lineHeight(TYPE_SHELF_METADATA_TAG.lineHeightFp as number).letterSpacing(TYPE_SHELF_METADATA_TAG.letterSpacingFp as number).textAlign(TextAlign.Center)
-      .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
-      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: 0.5, color: readerAppColor('TOK_BORDER', this.appThemeScheme) }).borderRadius(4);
+  private metadataTag(label: () => string, isUpdate: boolean) {
+    Text(label()).flexShrink(0)
+      .constraintSize({ maxWidth: isUpdate ? this.updateBadgeWidth() : undefined })
+      .padding({ left: SHELF_LIST_BADGE_INLINE_PADDING, right: SHELF_LIST_BADGE_INLINE_PADDING })
+      .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontWeight(FontWeight.Medium)
+      .fontSize(SHELF_LIST_BADGE_FONT_SIZE).lineHeight(`${12 * this.textFrame.scale}vp`)
+      .minFontScale(Math.min(1, this.textFrame.scale)).maxFontScale(Math.max(1, this.textFrame.scale))
+      .fontColor(readerAppColor(isUpdate ? 'TOK_GREEN' : 'TOK_MUTED', this.appThemeScheme))
+      .backgroundColor(readerAppColor(isUpdate ? 'TOK_PRIMARY_SOFT' : 'TOK_FIELD_SURFACE', this.appThemeScheme))
+      .borderRadius(5).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis }).ellipsisMode(EllipsisMode.END);
+  }
+
+  private updateBadgeLabel(): string {
+    const label = ShelfBookPresentation.listUpdateBadge(this.book);
+    if (label === '') return '';
+    const fullBadgeWidth = label.length * SHELF_LIST_BADGE_FONT_SIZE * this.textFrame.scale +
+      2 * SHELF_LIST_BADGE_INLINE_PADDING;
+    return fullBadgeWidth > this.updateBadgeWidth()
+      ? ShelfBookPresentation.listUpdateBadge(this.book, true) : label;
+  }
+
+  private updateBadgeWidth(): number {
+    const attribute = ShelfBookPresentation.listAttribute(this.book);
+    const authorAllowance = 24 * this.textFrame.scale + SHELF_LIST_BADGE_GAP;
+    const attributeAllowance = attribute === '' ? 0 : attribute.length * SHELF_LIST_BADGE_FONT_SIZE * this.textFrame.scale +
+      2 * SHELF_LIST_BADGE_INLINE_PADDING + SHELF_LIST_BADGE_GAP;
+    return Math.max(0, this.textFrame.width - authorAllowance - attributeAllowance);
   }
 
   private positionLabel(): string {
     if (this.mangaRevision < 0) return '';
-    return ShelfBookPresentation.readingPosition(this.book);
+    return ShelfBookPresentation.listReadingPosition(this.book);
+  }
+
+  private progressLabel(): string {
+    if (this.mangaRevision < 0) return '';
+    return ShelfBookPresentation.listProgress(this.book);
   }
 }

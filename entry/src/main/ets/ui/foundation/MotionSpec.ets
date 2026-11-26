@@ -1,7 +1,11 @@
 import curves from '@ohos.curves';
 import { READER_CONTROL_OPEN_MS, READER_CONTROL_EXPAND_MS, READER_CONTROL_COLLAPSE_MS,
-  READER_CONTROL_DISMISS_MS } from './ProductMotionTiming';
-import { SOURCE_CHROME_VISUAL as SOURCE_SWITCH_VISUAL } from './ReaderSourceChromeVisual';
+  READER_CONTROL_DISMISS_MS, READER_CONTROL_MODULE_SWITCH_MS, READER_CONTROL_LAYER_SWITCH_MS,
+  READER_REDUCED_FADE_MS, READER_NAVIGATION_PUSH_MS, READER_NAVIGATION_POP_MS, READER_NAVIGATION_TAB_MS,
+  READER_NAVIGATION_PILL_MS, READER_SHELF_REFLOW_MS, READER_SHELF_STAGGER_MS, READER_SHELF_STAGGER_CAP_MS,
+  READER_SHELF_FILTER_OPEN_MS, READER_SHELF_FILTER_CLOSE_MS,
+  READER_SEARCH_OPEN_MS, READER_SEARCH_SUBMIT_MS, READER_SEARCH_BACK_MS, READER_SHEET_OPEN_MS,
+  READER_SHEET_CLOSE_MS, READER_SHEET_SCRIM_MS, READER_BOOKMARK_RIBBON_RETURN_MS } from './ProductMotionTiming';
 import { DIRECTORY_CHROME_VISUAL as MANGA_DIRECTORY_VISUAL } from './ReaderDirectoryChromeVisual';
 // ----------------------------------------------------------------------------
 // MotionSpec — 动效注册表
@@ -20,13 +24,10 @@ export interface MotionSpecEntry {
   curve: Curve | curves.ICurve;
 }
 
-/**
- * Figma Review G/H (`1497:2` / `1497:811`) bookshelf projection switch.
- *
- * The live Figma motion context exposes one 1000ms loop for each direction.
- * Keep every percentage-derived boundary here so the page cannot silently
- * compress the authored timeline or drift back to one generic animation.
- */
+const STANDARD_CURVE: curves.ICurve = curves.cubicBezierCurve(0.2, 0, 0, 1);
+export function readerMotionStandardCurve(): curves.ICurve { return STANDARD_CURVE; }
+
+/** Bookshelf reflow uses the current product clock across both projections. */
 export interface BookshelfViewMotionContract {
   totalMs: number;
   layoutCommitMs: number;
@@ -42,6 +43,7 @@ export interface BookshelfViewMotionContract {
   coverMoveDurationMs: number;
   coverScaleDurationMs: number;
   coverStaggerMs: number;
+  coverStaggerCapMs: number;
   contentCurve: curves.ICurve;
   coverMoveCurve: curves.ICurve;
   coverScaleCurve: curves.ICurve;
@@ -49,27 +51,37 @@ export interface BookshelfViewMotionContract {
 }
 
 const BOOKSHELF_VIEW_MOTION: BookshelfViewMotionContract = {
-  totalMs: 1000,
-  layoutCommitMs: 150, // 15%
-  outgoingDurationMs: 120, // 15% -> 27%
-  headerIncomingStartMs: 500, // 50%
-  headerIncomingDurationMs: 200, // 50% -> 70%
-  contentIncomingStartMs: 600, // 60%
-  contentIncomingDurationMs: 220, // 60% -> 82%
-  morphCoverIncomingStartMs: 150, // 15%
-  morphCoverIncomingDurationMs: 30, // 15% -> 18%
-  movingCoverFadeStartMs: 690, // 69%
-  movingCoverFadeDurationMs: 30, // 69% -> 72%
-  coverMoveDurationMs: 420, // 42%
-  coverScaleDurationMs: 250, // 25%
-  coverStaggerMs: 30, // 3%
-  contentCurve: curves.cubicBezierCurve(0.4, 0, 0.2, 1),
-  coverMoveCurve: curves.cubicBezierCurve(0.2, 0, 0, 1),
-  coverScaleCurve: curves.cubicBezierCurve(0.25, 0.1, 0, 1),
-  coverFadeCurve: curves.cubicBezierCurve(0, 0, 0.58, 1),
+  totalMs: READER_SHELF_REFLOW_MS,
+  layoutCommitMs: 0,
+  outgoingDurationMs: 120,
+  headerIncomingStartMs: 0,
+  headerIncomingDurationMs: 120,
+  contentIncomingStartMs: 0,
+  contentIncomingDurationMs: 120,
+  morphCoverIncomingStartMs: READER_SHELF_REFLOW_MS - 60,
+  morphCoverIncomingDurationMs: 60,
+  movingCoverFadeStartMs: READER_SHELF_REFLOW_MS - 60,
+  movingCoverFadeDurationMs: 60,
+  coverMoveDurationMs: READER_SHELF_REFLOW_MS - READER_SHELF_STAGGER_CAP_MS,
+  coverScaleDurationMs: READER_SHELF_REFLOW_MS - READER_SHELF_STAGGER_CAP_MS,
+  coverStaggerMs: READER_SHELF_STAGGER_MS,
+  coverStaggerCapMs: READER_SHELF_STAGGER_CAP_MS,
+  contentCurve: STANDARD_CURVE,
+  coverMoveCurve: STANDARD_CURVE,
+  coverScaleCurve: STANDARD_CURVE,
+  coverFadeCurve: STANDARD_CURVE,
 };
 
 const ENTRIES: MotionSpecEntry[] = [
+  { id: 'app.control.press', durationMs: 140, curve: STANDARD_CURVE },
+  { id: 'app.motion.reduced.fade', durationMs: READER_REDUCED_FADE_MS, curve: Curve.EaseOut },
+  { id: 'app.navigation.push', durationMs: READER_NAVIGATION_PUSH_MS, curve: STANDARD_CURVE },
+  { id: 'app.navigation.pop', durationMs: READER_NAVIGATION_POP_MS, curve: STANDARD_CURVE },
+  { id: 'app.navigation.tab', durationMs: READER_NAVIGATION_TAB_MS, curve: STANDARD_CURVE },
+  { id: 'app.navigation.pill', durationMs: READER_NAVIGATION_PILL_MS, curve: curves.cubicBezierCurve(0.22, 1.05, 0.36, 1) },
+  { id: 'app.sheet.open', durationMs: READER_SHEET_OPEN_MS, curve: STANDARD_CURVE },
+  { id: 'app.sheet.close', durationMs: READER_SHEET_CLOSE_MS, curve: STANDARD_CURVE },
+  { id: 'app.sheet.scrim', durationMs: READER_SHEET_SCRIM_MS, curve: STANDARD_CURVE },
   // Figma: 25 · Motion Reference MR1 · reader.control.show (TopBar y-8→0, Dock y+18→0)
   { id: 'reader.control.show', durationMs: READER_CONTROL_OPEN_MS, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
   // Figma: 25 · Motion Reference MR1 · reader.control.hide (反向回到原位)
@@ -80,8 +92,9 @@ const ENTRIES: MotionSpecEntry[] = [
   { id: 'reader.control.handle.snap', durationMs: 120, curve: Curve.EaseOut },
   // Figma: 25 · Motion Reference MR1 · reader.quick.promote (y+12→0)
   { id: 'reader.quick.promote', durationMs: 320, curve: Curve.EaseOut },
-  // Figma: 25 · Motion Reference MR1 · reader.module.switch (交叉淡化)
-  { id: 'reader.module.switch', durationMs: 360, curve: curves.cubicBezierCurve(0.25, 0.1, 0.25, 1) },
+  { id: 'reader.module.switch', durationMs: READER_CONTROL_MODULE_SWITCH_MS, curve: STANDARD_CURVE },
+  { id: 'reader.module.layer', durationMs: READER_CONTROL_LAYER_SWITCH_MS, curve: STANDARD_CURVE },
+  { id: 'reader.autoPage.pulse.half', durationMs: 650, curve: Curve.EaseInOut },
   // Product interaction supplement: the Figma font library defines a static
   // reorderable grid but has no authored keyframes. Keep the finger direct;
   // only neighbouring slots and the final settle use implicit animation.
@@ -106,76 +119,44 @@ const ENTRIES: MotionSpecEntry[] = [
   { id: 'reader.panel.dock.incoming', durationMs: 150, curve: Curve.EaseOut },
   { id: 'reader.panel.full.incoming', durationMs: 330, curve: Curve.EaseOut },
   { id: 'reader.panel.full.outgoing', durationMs: 150, curve: curves.cubicBezierCurve(0.45, 0, 0.55, 1) },
-  // Existing non-launch entrance/exit tokens; launch uses the complete Figma
-  // 3500ms C/D/E/F timeline in ReaderSessionLaunchPresentation.
-  { id: 'reader.session.capsule.enter', durationMs: 160, curve: Curve.EaseOut },
+  // The independent capsule exit uses this clock. The physical launch
+  // sequence is authored by ReaderSessionLaunchTimeline.
   { id: 'reader.session.capsule.exit', durationMs: 200, curve: Curve.EaseOut },
-  // Registry mirrors authored interval durations, not a sequential sum:
-  // flight 200–1400, ghost-in 600–900, sharp-fade 700–1100, handoff
-  // 1100–1400, hold 1400–1700, expand + reveal 1700–2300. Only the
-  // single launch sampler owns start times and per-actor keyframe overlap.
-  { id: 'reader.session.capsule.morph.flight',
-    durationMs: 1200, curve: curves.cubicBezierCurve(0.4, 0, 0.2, 1) },
-  { id: 'reader.session.capsule.morph.ghost.in', durationMs: 300, curve: Curve.EaseInOut },
-  { id: 'reader.session.capsule.morph.source.fade', durationMs: 400, curve: Curve.EaseIn },
-  { id: 'reader.session.capsule.morph.shell.handoff', durationMs: 300, curve: Curve.EaseOut },
-  { id: 'reader.session.capsule.morph.dot.hold', durationMs: 300, curve: Curve.Linear },
-  { id: 'reader.session.capsule.morph.expand',
-    durationMs: 600, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
-  { id: 'reader.session.capsule.morph.reveal', durationMs: 600, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
   // Page turns use ReaderPageSettlementTimeline / Native motion directly.
   // Their distance/velocity clock must not acquire an implicit second animation.
-  // Frozen simulated-page contract: a released bookmark pull returns the
-  // translated page to its origin in one 160 ms compositor animation.
-  { id: 'reader.bookmark.rollback', durationMs: 160, curve: Curve.EaseOut },
+  // The paper, ribbon and hint return in the same transaction.
+  { id: 'reader.bookmark.rollback', durationMs: READER_BOOKMARK_RIBBON_RETURN_MS, curve: STANDARD_CURVE },
+  { id: 'reader.bookmark.pill.add', durationMs: 240, curve: STANDARD_CURVE },
+  { id: 'reader.bookmark.pill.remove', durationMs: 160, curve: STANDARD_CURVE },
   // Figma: Review · J1 `1506:8807`, production dropdown expansion.
   // Same panel grows 36→full height with a fixed top anchor; no fade/translate.
   { id: 'dropdown.menu.expand', durationMs: 160, curve: curves.cubicBezierCurve(0.16, 1, 0.3, 1) },
   // Figma: Review · J2 `1506:9291`, production dropdown collapse.
   // The same fixed-top panel contracts back to its 36vp selected row.
   { id: 'dropdown.menu.collapse', durationMs: 120, curve: curves.cubicBezierCurve(0.5, 0, 1, 1) },
-  // Live Figma motion context for Review G/H `1497:2`/`1497:811`: one 1000ms
-  // coordinated timeline. Shared-element reflow keeps covers as entities and
-  // fades only the authored local layers, never the whole page.
-  { id: 'bookshelf.view.switch', durationMs: 1000, curve: Curve.EaseOut },
+  { id: 'bookshelf.view.switch', durationMs: READER_SHELF_REFLOW_MS, curve: STANDARD_CURVE },
   // Reviewed bookshelf demo: the filter keeps its mounted host through both
   // directions, while navigation covers are visual actors over the live route.
-  { id: 'bookshelf.filter.expand', durationMs: 240, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
-  { id: 'bookshelf.filter.collapse', durationMs: 180, curve: curves.cubicBezierCurve(0.4, 0, 0.2, 1) },
+  { id: 'bookshelf.filter.expand', durationMs: READER_SHELF_FILTER_OPEN_MS, curve: STANDARD_CURVE },
+  { id: 'bookshelf.filter.collapse', durationMs: READER_SHELF_FILTER_CLOSE_MS, curve: STANDARD_CURVE },
   { id: 'bookshelf.filter.content.in', durationMs: 160, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
   { id: 'bookshelf.filter.content.out', durationMs: 100, curve: curves.cubicBezierCurve(0.4, 0, 0.2, 1) },
-  { id: 'bookshelf.open.carry', durationMs: 320, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
-  { id: 'bookshelf.open.turn', durationMs: 300, curve: curves.cubicBezierCurve(0.3, 0, 0.2, 1) },
-  { id: 'bookshelf.open.handoff', durationMs: 160, curve: curves.cubicBezierCurve(0, 0, 0.58, 1) },
-  { id: 'bookshelf.open.fade', durationMs: 180, curve: curves.cubicBezierCurve(0, 0, 0.58, 1) },
-  { id: 'search.surface.open', durationMs: 650, curve: curves.cubicBezierCurve(0.2, 0.7, 0.15, 1) },
-  { id: 'search.surface.submit', durationMs: 700, curve: curves.cubicBezierCurve(0.2, 0.7, 0.15, 1) },
-  { id: 'search.surface.back', durationMs: 390, curve: curves.cubicBezierCurve(0.2, 0.7, 0.15, 1) },
+  { id: 'search.surface.open', durationMs: READER_SEARCH_OPEN_MS, curve: STANDARD_CURVE },
+  { id: 'search.surface.submit', durationMs: READER_SEARCH_SUBMIT_MS, curve: STANDARD_CURVE },
+  { id: 'search.surface.back', durationMs: READER_SEARCH_BACK_MS, curve: STANDARD_CURVE },
   // Search filter disclosure: the header panel and its result clearance change
   // in one native layout pass, so both directions share this timing.
-  { id: 'search.filters.toggle', durationMs: 180, curve: curves.cubicBezierCurve(0.42, 0, 0.58, 1) },
+  { id: 'search.filters.toggle', durationMs: 180, curve: STANDARD_CURVE },
   // Keyboard/window insets change the measured history viewport. The panel
   // follows the new limit instead of collapsing and re-measuring from zero.
-  { id: 'search.history.resize', durationMs: 180, curve: curves.cubicBezierCurve(0.2, 0, 0.2, 1) },
-  // Generated SourceSwitchVisual drawer: the scrim, drawer and row entrance
-  // share one authored curve, so the registry is the only rebuild site.
-  { id: 'source.switch.open', durationMs: SOURCE_SWITCH_VISUAL.openDurationMs,
-    curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1,
-      SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) },
-  { id: 'source.switch.close', durationMs: SOURCE_SWITCH_VISUAL.closeDurationMs,
-    curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1,
-      SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) },
-  { id: 'source.switch.row.enter', durationMs: SOURCE_SWITCH_VISUAL.rowEnterDurationMs,
-    curve: curves.cubicBezierCurve(SOURCE_SWITCH_VISUAL.easingX1, SOURCE_SWITCH_VISUAL.easingY1,
-      SOURCE_SWITCH_VISUAL.easingX2, SOURCE_SWITCH_VISUAL.easingY2) },
+  { id: 'search.history.resize', durationMs: 180, curve: STANDARD_CURVE },
   // Candidate list publish when no scroll anchor survived the update.
   { id: 'source.switch.list.update', durationMs: 220, curve: Curve.EaseInOut },
   // Generated MangaDirectoryVisual fold cadence (chevron + nested rows).
   { id: 'manga.directory.fold', durationMs: MANGA_DIRECTORY_VISUAL.foldDuration, curve: Curve.Ease },
-  // Manga sheet scrim is opacity-only; the sheet body keeps its spring clock.
-  { id: 'manga.panel.scrim', durationMs: 160, curve: Curve.EaseInOut },
   // Vendor pull-to-refresh reset settle.
   { id: 'manga.pullRefresh.reset', durationMs: 180, curve: Curve.EaseOut },
+  { id: 'manga.boundary.arrow', durationMs: 160, curve: STANDARD_CURVE },
   // Local import sheet handoff: spinner fade, shell resize, result reveal.
   { id: 'bookshelf.import.handoff.fade', durationMs: 120, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
   { id: 'bookshelf.import.handoff.resize', durationMs: 220, curve: curves.cubicBezierCurve(0.2, 0, 0, 1) },
@@ -183,8 +164,6 @@ const ENTRIES: MotionSpecEntry[] = [
   // Transient feedback enter/exit pair.
   { id: 'message.feedback.enter', durationMs: 220, curve: Curve.EaseOut },
 ];
-
-/** Product layer beats, relative to the single capsule flight clock. */
 
 export function motionSpecGet(id: string): MotionSpecEntry | undefined {
   return ENTRIES.find((entry: MotionSpecEntry): boolean => entry.id === id);
@@ -223,13 +202,8 @@ export function bookshelfViewMotionContract(): BookshelfViewMotionContract {
   return BOOKSHELF_VIEW_MOTION;
 }
 
-/**
- * G/H staggers columns by 3% and adds one 9% row offset. The third review row
- * deliberately reuses the second-row cadence, so later rows stay capped too.
- */
+/** The index is a rank within the admitted visible covers. */
 export function bookshelfViewCoverDelayMs(index: number): number {
-  const safeIndex = Math.max(0, Math.floor(index));
-  const column = safeIndex % 3;
-  const rowBand = Math.min(1, Math.floor(safeIndex / 3));
-  return ((rowBand * 3) + column) * BOOKSHELF_VIEW_MOTION.coverStaggerMs;
+  const safeIndex = Number.isFinite(index) ? Math.max(0, Math.floor(index)) : 0;
+  return Math.min(safeIndex * BOOKSHELF_VIEW_MOTION.coverStaggerMs, BOOKSHELF_VIEW_MOTION.coverStaggerCapMs);
 }

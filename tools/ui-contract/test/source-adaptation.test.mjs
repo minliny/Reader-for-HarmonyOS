@@ -72,7 +72,7 @@ function fixture({expanded = false, scale = 1.45} = {}) {
   return {evaluate,context,find,nodes,assertion,event};
 }
 
-test('source adaptation tolerates only one pixel at the transparent footer window boundary', () => {
+test('source adaptation tolerates only one pixel at the unpainted, nonclickable footer window boundary', () => {
   const {context} = fixture();
   const original = loadCase('source-management.layout-font-maximum').assertions
     .find(assertion => assertion.kind === 'adaptation');
@@ -85,7 +85,7 @@ test('source adaptation tolerates only one pixel at the transparent footer windo
     return {id,type,path,parentPath,rectPx,visibleRectPx:{...rectPx},visible:true,opacity:1,enabled:true,clickable};
   };
   const carrier = {...node('reader-source-footer','Column','0/2','0',0,2507,1280,326),
-    clip:false,backgroundAlpha:0,hitTestMode:'HitTestMode.Transparent'};
+    clip:false,backgroundAlpha:0,hitTestMode:'HitTestMode.Default'};
   carrier.visibleRectPx.height -= 1;
   const actionOne = node(null,'Button','0/2/0/0','0/2/0',67,2549,556,186,true);
   ready.nodes.push(node('reader-source-row-1','Column','0/1','0',66,1317,1147,452),
@@ -100,6 +100,10 @@ test('source adaptation tolerates only one pixel at the transparent footer windo
     ['two pixels', sample => { sample.nodes.find(n=>n.path===carrier.path).rectPx.height += 1; }],
     ['horizontal clipping', sample => { const box=sample.nodes.find(n=>n.path===carrier.path).rectPx; box.left -= 1; box.width += 1; }],
     ['opaque carrier', sample => { sample.nodes.find(n=>n.path===carrier.path).backgroundAlpha = 1; }],
+    ['clipping carrier', sample => { sample.nodes.find(n=>n.path===carrier.path).clip = true; }],
+    ['clickable carrier', sample => { sample.nodes.find(n=>n.path===carrier.path).clickable = true; }],
+    ['pass-through carrier', sample => { sample.nodes.find(n=>n.path===carrier.path).hitTestMode = 'HitTestMode.Transparent'; }],
+    ['blocking carrier', sample => { sample.nodes.find(n=>n.path===carrier.path).hitTestMode = 'HitTestMode.Block'; }],
     ['different window boundary', sample => { sample.window.visibleRectPx.height += 1; }],
     ['child action clipped by one pixel', sample => { sample.nodes.find(n=>n.path===actionOne.path).visibleRectPx.height -= 1; }],
     ['row clipped by one pixel', sample => { sample.nodes.find(n=>n.id==='reader-source-row-1').visibleRectPx.height -= 1; }],
@@ -356,7 +360,6 @@ test('source supplemental E3 keeps the default and preserved reserved row separa
   const proof = contract.assertions.find(assertion => assertion.kind === 'reserved-row-typography');
   const check = {...proof,acceptedSources:proof.sources};
   assert.equal(phase1CaseIds.includes(contract.id),false);
-  assert.equal(phase1CaseIds.length,136);
   assert.equal(contract.version,2);
   assert.equal(planCase(contract,'harmonyos').steps.filter(step => step.kind === 'sample').length,2);
   assert.equal(loadCase('source-management.layout-font-intermediate').steps.at(-1).waitFor[0].fields['payload.count'],1);
@@ -865,10 +868,23 @@ test('source adaptation text binds the four remaining normal window matrix cells
     assert.equal(capture.afterAction,spec.action);
     assert.ok(capture.waitFor.some(event => event.kind === 'source.text-layout' && event.channel === 'business'));
     const rowReady = capture.waitFor.find(event => event.kind === 'source.projection');
-    assert.equal(rowReady.fields['payload.projected'],1);
-    assert.ok(capture.waitFor.some(event => event.kind === 'source.toggle' && event.fields['payload.enabled'] === false));
+    const disabledRow = capture.waitFor.find(event => event.kind === 'source.toggle');
+    if (narrow) {
+      assert.equal(rowReady.fields['payload.count'],1,contract.id);
+      assert.equal(rowReady.fields['payload.projected'],1,contract.id);
+      assert.equal(disabledRow?.fields['payload.enabled'],false,contract.id);
+    } else {
+      assert.equal(rowReady.fields['payload.status'],'all',contract.id);
+      assert.equal(rowReady.fields['payload.queryLength'],0,contract.id);
+      assert.equal(disabledRow,undefined,contract.id);
+      assert.equal(spec.expected.requireFirstRowToggleOff,true,contract.id);
+    }
 
     const {context,byRole,nodes,text} = narrow ? narrowRowTextFixture(scale) : withFixedRowText(textFixture(scale));
+    if (!narrow) {
+      nodes.find(node => node.id === 'reader-source-row-12').source = 'native-tree';
+      nodes.push({type:'Toggle',source:'native-tree',visible:true,opacity:1,path:'0/2/2',sourceDefaultFontToggleChecked:false});
+    }
     if (scale === 1) byRole.stats.lines[0].heightPx = 61;
     const assertion = {...spec,action:'open',sample:'ready',acceptedSources:spec.sources};
     const {window} = context.samples.ready;

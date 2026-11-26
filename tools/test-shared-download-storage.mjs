@@ -11,6 +11,7 @@ const { createHash }=await import('node:crypto');
 const { stripTypeScriptTypes }=await import('node:module');
 const { ReaderCoreRequestError, isReaderCoreTransactionPendingError }=await import('../entry/vendor/core-harmony/sdk/reader_core.ts');
 const { ReaderWriteEvidence }=await import('../entry/src/main/ets/app/ReaderWriteEvidence.ts');
+const { readerHostFilesDirectory }=await import('../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts');
 const { createMangaAtomicPayloadReaderFixture }=await import('./lib/manga-atomic-payload-probe.mjs');
 
 // Full production methods, real temporary files. The sparse quota fixtures
@@ -22,11 +23,14 @@ const handles = new Map();
 let rejectUnlink = () => false;
 let beforeUnlink = async () => {};
 let beforeSync = async () => {};
+let beforeAccess = async () => {};
+let beforeStat = async () => {};
+let omitMtime = () => false;
 const io = {
   OpenMode: { CREATE: 1, READ_WRITE: 2, TRUNC: 4 },
-  access: path => fs.access(path).then(() => true, () => false),
-  stat: async path => { const s = await fs.stat(path), n = await fs.stat(path, { bigint: true }); return {
-    size:s.size,ino:n.ino,mtimeNs:n.mtimeNs,ctimeNs:n.ctimeNs,
+  access: async path => { await beforeAccess(path); return fs.access(path).then(() => true, () => false); },
+  stat: async path => { await beforeStat(path); const s = await fs.stat(path), n = await fs.stat(path, { bigint: true }); return {
+    size:s.size,ino:n.ino,mtimeNs:omitMtime(path) ? undefined : n.mtimeNs,ctimeNs:n.ctimeNs,
     isFile:()=>s.isFile(),isDirectory:()=>s.isDirectory(),
   }; },
   mkdir: (path, recursive) => fs.mkdir(path, { recursive }), listFile: path => fs.readdir(path), rmdir: path => fs.rmdir(path),
@@ -46,9 +50,9 @@ const util = {
 const crypto = {createMd:()=>{const h=createHash('sha256');return{update:async({data})=>{h.update(data);},digest:async()=>({data:h.digest()})};}};
 class MaterializationError extends Error {constructor(kind,message){super(message);this.kind=kind;this.code=kind;}}
 const readMangaAtomicPayload = createMangaAtomicPayloadReaderFixture(io);
-const Cache = new Function('fileIo','statfs','cryptoFramework','util','canonicalReadingImageBaseUrl','assertReadingOfflineWriteCapacity','ReadingOfflineMaterializationError','readMangaAtomicPayload', `${executable}\nreturn ReadingImageDiskCache;`)(
+const Cache = new Function('fileIo','statfs','cryptoFramework','util','canonicalReadingImageBaseUrl','assertReadingOfflineWriteCapacity','ReadingOfflineMaterializationError','readMangaAtomicPayload','readerHostFilesDirectory', `${executable}\nreturn ReadingImageDiskCache;`)(
   io,{getFreeSize:async()=>8*1024**3},crypto,util,b=>b?.trim().split('#')[0]||undefined,
-  (free,bytes,reserve)=>{if(free<bytes+reserve)throw new MaterializationError('storage_full','MANGA_CACHE_STORAGE_FULL');},MaterializationError,readMangaAtomicPayload,
+  (free,bytes,reserve)=>{if(free<bytes+reserve)throw new MaterializationError('storage_full','MANGA_CACHE_STORAGE_FULL');},MaterializationError,readMangaAtomicPayload,readerHostFilesDirectory,
 );
 
 const storageSource = readFileSync(join(repo, 'entry/src/main/ets/features/downloads/application/SharedDownloadStorageGateway.ts'), 'utf8');
@@ -62,9 +66,10 @@ const resource = c => ({ ...c, contentVersion: 'body-v1', imageUrl: `https://fix
 let serial = 0;
 async function fixture(options = {}) {
   const { legacy = [], bodyCount = 0 } = options;
+  const { freeBytes = () => 4 * 1024 ** 3, extraAutomaticBytes = () => 0 } = options;
   const migration = Object.hasOwn(options, 'migration') ? options.migration : [];
   const dir = join(root, `case-${++serial}`); await fs.mkdir(dir);
-  const disk = new Cache({ filesDir: dir }, { getFreeBytes: async () => 4 * 1024 ** 3, getTotalBytes: async () => 8 * 1024 ** 3 });
+  const disk = new Cache({ filesDir: dir }, { getFreeBytes: async () => freeBytes(), getTotalBytes: async () => 8 * 1024 ** 3 });
   disk.setMangaStorageAuthority({ classify: async () => 'unknown', candidates: async () => [], pending: async () => [],
     policy: async () => ({ status: 'unknown', inUse: true, lastReadAt: null }) });
   const bodies = new Map(), calls = []; let retained = [], protectedRows = [], revision = 0, completed = false;
@@ -79,7 +84,7 @@ async function fixture(options = {}) {
   const totals = params => {
     const retainedKeys = new Set((params.retainedChapters ?? []).map(chapterKey));
     const protectedKeys = new Set((params.protectedChapters ?? []).map(chapterKey));
-    let totalBytes = 0, retainedBytes = 0, cleanableBytes = 0;
+    let totalBytes = extraAutomaticBytes(), retainedBytes = 0, cleanableBytes = 0;
     for (const [key, row] of bodies) { const bytes = utf8(row.content); totalBytes += bytes;
       if (retainedKeys.has(key)) retainedBytes += bytes; else if (!protectedKeys.has(key)) cleanableBytes += bytes; }
     return { totalBytes, retainedBytes, automaticBytes: totalBytes - retainedBytes, cleanableBytes,
@@ -284,11 +289,278 @@ if(id==='settings-partial-ack'){
     await assert.rejects(f.gateway.cleanupSettingsText(evidence, () => true), /UNCONFIRMED/);
     assert.equal(evidence.dispatchedCount, 2); assert.equal(evidence.confirmedCount, 1);
     const pending = await f.gateway.readSettingsTextCleanup();
-    assert.ok(pending.result.removedContentBytes > 0, 'known first-batch receipt is preserved without falsely confirming the entire operation');
+    assert.ok(pending.removedContentBytes > 0, 'known first-batch bytes are preserved without falsely confirming the entire operation');
+    assert.equal(pending.phase, 'pending');
+    const cold = new Storage(f.runtime, f.disk, f.persistence);
+    await assert.rejects(cold.reconcileSettingsTextCleanup(() => true), /UNCONFIRMED/);
+    assert.equal(cleanupBatches, 2);
     assert.equal(f.bodies.size, 172);
   }
 }
+if(id==='settings-recover-staged'){
+  {
+    const f = await fixture({ bodyCount: 1 }), r = resource(identity(0));
+    await f.disk.storeResource(r, Uint8Array.of(1, 2, 3, 4));
+    const path = await f.disk.resourcePath(r);
+    const save = f.persistence.saveSettingsTextCleanup;
+    let refused = false;
+    f.persistence.saveSettingsTextCleanup = async journal => {
+      if (journal?.phase === 'core_confirmed' && !refused) {
+        refused = true;
+        throw Error('Core receipt could not yet be saved');
+      }
+      await save(journal);
+    };
+    const evidence = new ReaderWriteEvidence();
+    await assert.rejects(f.gateway.cleanupSettingsText(evidence, () => true), /Core receipt could not yet be saved/);
+    assert.equal(evidence.confirmation(), 'confirmed');
+    assert.equal(await io.access(path), true, 'Host waits for the exact durable authorization');
+    assert.equal((await f.gateway.readSettingsTextCleanup()).phase, 'core_confirmed');
+    const cold = new Storage(f.runtime, f.disk, f.persistence);
+    await assert.rejects(cold.reconcileSettingsTextCleanup(() => true), /UNCONFIRMED/);
+    const result = await f.gateway.reconcileSettingsTextCleanup(() => true);
+    assert.ok(result.removedContentBytes > 0);
+    assert.equal(await io.access(path), false);
+    assert.equal(f.calls.filter(call => call.method === 'cache.storage.cleanup').length, 1);
+  }
+  {
+    const f = await fixture({ bodyCount: 1 }), r = resource(identity(0));
+    await f.disk.storeResource(r, new Uint8Array([1, 2, 3, 4]));
+    const receipt = f.disk.readingStorageCleanupReceipt.bind(f.disk);
+    f.disk.readingStorageCleanupReceipt = async () => { throw Error('post-cleanup inventory unavailable'); };
+    await assert.rejects(f.gateway.cleanupSettingsText(new ReaderWriteEvidence(), () => true), /post-cleanup inventory/);
+    assert.equal((await f.gateway.readSettingsTextCleanup()).phase, 'host_completed');
+    assert.equal(f.bodies.size, 0);
+    f.disk.readingStorageCleanupReceipt = receipt;
+    const cold = new Storage(f.runtime, f.disk, f.persistence);
+    const recovered = await cold.reconcileSettingsTextCleanup(() => true);
+    assert.ok(recovered.removedContentBytes > 0 && recovered.deletedBytes > 0);
+    assert.equal(f.calls.filter(call => call.method === 'cache.storage.cleanup').length, 1);
+    assert.equal((await cold.readSettingsTextCleanup()).phase, 'confirmed');
+
+    const preferenceSource = readFileSync(join(repo,
+      'entry/src/main/ets/features/downloads/application/SharedDownloadIntentPreferences.ts'), 'utf8');
+    const preferenceCode = stripTypeScriptTypes(preferenceSource.replace(/^import[\s\S]*?;\n/gm, '').replace(/^export /gm, ''));
+    let legacy = { version: 2, scope: 'text', phase: 'pending' }, atomicFile;
+    const prefs = { async getPreferences() { return { get: async () => JSON.stringify(legacy) }; } };
+    const fileIo = { async readText() {
+      if (atomicFile === undefined) throw Object.assign(Error('missing journal'), { code: 13900002 });
+      return atomicFile;
+    } };
+    const writeSnapshot = async (path, parent, raw) => {
+      assert.equal(parent, f.dir);
+      assert.equal(path, join(f.dir, 'reader-settings-text-cleanup-v2.json'));
+      atomicFile = raw;
+    };
+    const Preferences = new Function('readerHostFilesDirectory', 'readerHostPreferencesName', 'preferences',
+      'fileIo', 'replaceReaderAtomicSnapshot', `${preferenceCode}\nreturn SharedDownloadIntentPreferences;`)(
+      readerHostFilesDirectory, (_files, name) => name, prefs, fileIo, writeSnapshot);
+    assert.deepEqual(await new Preferences({filesDir:f.dir}).loadSettingsTextCleanup(), legacy);
+    legacy = JSON.parse(JSON.stringify({ ...legacy, phase: 'confirmed', result: recovered }));
+    assert.deepEqual(await new Preferences({filesDir:f.dir}).loadSettingsTextCleanup(), legacy);
+    const persisted = new Preferences({filesDir:f.dir});
+    const completed = { version: 2, scope: 'text', phase: 'host_completed', removedContentBytes: 16, beforeTextFiles: [] };
+    await persisted.saveSettingsTextCleanup(completed);
+    assert.deepEqual(await new Preferences({filesDir:f.dir}).loadSettingsTextCleanup(), completed);
+    await persisted.saveSettingsTextCleanup(undefined);
+    assert.equal(await new Preferences({filesDir:f.dir}).loadSettingsTextCleanup(), undefined, 'an empty new journal shadows old Preferences');
+    atomicFile = '';
+    await assert.rejects(new Preferences({filesDir:f.dir}).loadSettingsTextCleanup(), /JOURNAL_INVALID/);
+  }
+}
+if(id==='settings-recover-host'){
+  {
+    const f = await fixture({ bodyCount: 1 }), r = resource(identity(0));
+    await f.disk.storeResource(r, Uint8Array.of(1, 2, 3, 4));
+    const path = await f.disk.resourcePath(r), before = await io.stat(path);
+    let readingBook = false;
+    f.runtime.protectsDownloadStorageChapter = chapter => readingBook && chapter.sourceId === 'source' && chapter.bookId === 'book';
+    const request = f.runtime.request;
+    f.runtime.request = async (method, params, options) => {
+      const response = await request(method, params, options);
+      if (method === 'cache.storage.cleanup') { readingBook = true; f.bump(); }
+      return response;
+    };
+    const result = await f.gateway.cleanupSettingsText(new ReaderWriteEvidence(), () => true);
+    assert.equal((await io.stat(path)).ino, before.ino, 'the active book is protected before its chapter has been published');
+    assert.equal(result.cleanupError, 'TEXT_CACHE_CLEANUP_PARTIAL');
+    assert.equal(f.calls.filter(call => call.method === 'cache.storage.cleanup').length, 1);
+  }
+  {
+    const f = await fixture({ bodyCount: 129 });
+    const alreadyAcknowledged = identity(0), r = resource(alreadyAcknowledged);
+    await f.disk.storeResource(r, Uint8Array.of(1, 2, 3, 4));
+    const path = await f.disk.resourcePath(r);
+    omitMtime = candidate => candidate.startsWith(dirname(path) + '/');
+    try {
+      const result = await f.gateway.cleanupSettingsText(new ReaderWriteEvidence(), () => true);
+      const batches = f.calls.filter(call => call.method === 'cache.storage.cleanup');
+      assert.equal(batches.length, 2, 'a later distinct body batch still runs');
+      assert.ok(batches[0].params.hostImageChapters.some(chapter => chapterKey(chapter) === chapterKey(alreadyAcknowledged)));
+      assert.ok(batches[1].params.protectedChapters.some(chapter => chapterKey(chapter) === chapterKey(alreadyAcknowledged)),
+        'the first ACK prevents a second Core selection of the same unresolved Host chapter');
+      assert.equal(f.bodies.size, 0);
+      assert.equal(await io.access(path), true);
+      assert.equal(result.cleanupError, 'TEXT_CACHE_CLEANUP_PARTIAL');
+    } finally { omitMtime = () => false; }
+  }
+  {
+    const f = await fixture({ bodyCount: 3 });
+    const retained = resource(identity(0)), protectedNow = resource(identity(1)), clearable = resource(identity(2));
+    for (const r of [retained, protectedNow, clearable]) await f.disk.storeResource(r, Uint8Array.of(3, 4, 5, 6));
+    const retainedPath = await f.disk.resourcePath(retained), protectedPath = await f.disk.resourcePath(protectedNow);
+    const clearablePath = await f.disk.resourcePath(clearable);
+    const before = await io.stat(retainedPath);
+    const request = f.runtime.request;
+    f.runtime.request = async (method, params, options) => {
+      const response = await request(method, params, options);
+      if (method === 'cache.storage.cleanup') {
+        f.keep([identity(0)]);
+        f.protect([identity(1)]);
+      }
+      return response;
+    };
+    const evidence = new ReaderWriteEvidence();
+    const result = await f.gateway.cleanupSettingsText(evidence, () => true);
+    assert.equal(evidence.confirmation(), 'confirmed');
+    assert.equal((await io.stat(retainedPath)).ino, before.ino, 'newly retained same-inode content survives the warm Host handoff');
+    assert.equal(await io.access(protectedPath), true);
+    assert.equal(await io.access(clearablePath), false);
+    assert.equal(f.calls.filter(call => call.method === 'cache.storage.cleanup').length, 1);
+    assert.equal(typeof result.cleanupError, 'string');
+  }
+  {
+    const f = await fixture({ bodyCount: 1 }), r = resource(identity(0));
+    await f.disk.storeResource(r, Uint8Array.of(3, 4, 5, 6));
+    const path = await f.disk.resourcePath(r);
+    const originalInode = (await io.stat(path)).ino;
+    const request = f.runtime.request;
+    let committed = false;
+    f.runtime.request = async (method, params, options) => {
+      const response = await request(method, params, options);
+      if (method === 'cache.storage.cleanup') committed = true;
+      return response;
+    };
+    beforeStat = async candidate => {
+      if (!committed || candidate !== path) return;
+      beforeStat = async () => {};
+      f.protect([identity(0)]);
+    };
+    await assert.rejects(f.gateway.cleanupSettingsText(new ReaderWriteEvidence(), () => true), /PROTECTION_CHANGED/);
+    assert.equal((await f.gateway.readSettingsTextCleanup()).phase, 'core_confirmed');
+    const cold = new Storage(f.runtime, f.disk, f.persistence);
+    const recovered = await cold.reconcileSettingsTextCleanup(() => true);
+    assert.equal((await io.stat(path)).ino, originalInode, 'the captured inode can become protected inside the Host deletion lane');
+    assert.equal(recovered.cleanupError, 'TEXT_CACHE_CLEANUP_PARTIAL');
+    assert.equal(f.calls.filter(call => call.method === 'cache.storage.cleanup').length, 1);
+  }
+  {
+    const f = await fixture({ bodyCount: 130 });
+    const first = resource(identity(0)), second = resource(identity(1)), protectedLater = resource(identity(2));
+    for (const r of [first, second, protectedLater]) await f.disk.storeResource(r, new Uint8Array([1, 2, 3, 4]));
+    const firstPath = await f.disk.resourcePath(first), secondPath = await f.disk.resourcePath(second);
+    const protectedPath = await f.disk.resourcePath(protectedLater);
+    rejectUnlink = actual => actual === secondPath;
+    await assert.rejects(f.gateway.cleanupSettingsText(new ReaderWriteEvidence(), () => true), /injected unlink/);
+    const checkpoint = await f.gateway.readSettingsTextCleanup();
+    assert.equal(checkpoint.phase, 'core_confirmed');
+    assert.equal(checkpoint.pendingHostChapters.length, 128);
+    assert.equal(f.bodies.size, 2);
+    assert.equal(await io.access(firstPath), false);
+    assert.equal(await io.access(secondPath), true);
+    rejectUnlink = () => false;
+
+    // The same ordinal/path can be published again while the app is waiting
+    // for reconciliation. Its current physical identity must be preserved.
+    const replacement = Uint8Array.of(9, 8, 7, 6);
+    await f.disk.storeResource(first, replacement);
+    f.keep([identity(2)]);
+    const cold = new Storage(f.runtime, f.disk, f.persistence);
+    const result = await cold.reconcileSettingsTextCleanup(() => true);
+    assert.equal(result.removedContentBytes, checkpoint.removedContentBytes);
+    assert.equal(await io.access(secondPath), false);
+    assert.deepEqual(new Uint8Array(await fs.readFile(firstPath)), replacement);
+    assert.equal(await io.access(protectedPath), true);
+    assert.equal(f.calls.filter(call => call.method === 'cache.storage.cleanup').length, 1);
+    assert.equal(typeof result.cleanupError, 'string');
+
+    const unverified = await fixture({ bodyCount: 1 });
+    const unverifiedResource = resource(identity(0));
+    await unverified.disk.storeResource(unverifiedResource, replacement);
+    const unverifiedPath = await unverified.disk.resourcePath(unverifiedResource);
+    omitMtime = candidate => candidate.startsWith(dirname(unverifiedPath) + '/');
+    try {
+      const noTimestamp = await unverified.gateway.cleanupSettingsText(new ReaderWriteEvidence(), () => true);
+      assert.equal(noTimestamp.cleanupError, 'TEXT_CACHE_CLEANUP_PARTIAL');
+      assert.equal(noTimestamp.deletedFiles, 0);
+      assert.deepEqual(new Uint8Array(await fs.readFile(unverifiedPath)), replacement);
+    } finally { omitMtime = () => false; }
+  }
+}
+if(id==='inventory-concurrent-enoent'){
+    const f = await fixture(), r = resource(identity(0));
+    await f.disk.storeResource(r, Uint8Array.of(4, 5, 6, 7));
+    const path = await f.disk.resourcePath(r);
+    let injected = 0;
+    beforeStat = async candidate => {
+      if (candidate === path && injected++ === 0) await fs.unlink(path);
+    };
+    const inventory = await f.disk.captureReadingStorageInventory();
+    assert.equal(injected, 1);
+    assert.equal(inventory.files.some(file => file.path === path), false);
+    const another = resource(identity(1));
+    await f.disk.storeResource(another, Uint8Array.of(1, 2, 3, 4));
+    const denied = await f.disk.resourcePath(another);
+    beforeStat = async candidate => {
+      if (candidate === denied) throw Object.assign(Error('injected disk error'), { code: 'EIO' });
+    };
+    await assert.rejects(f.disk.captureReadingStorageInventory(), /injected disk error/);
+    let mutationStarted = false;
+    beforeStat = async candidate => {
+      if (candidate !== denied || mutationStarted) return;
+      mutationStarted = true;
+      await f.disk.clearChapter(another.sourceId, another.bookId, another.chapterIndex);
+    };
+    const changed = await f.disk.captureReadingStorageInventory();
+    const summary = await f.disk.readingStorageSummary(changed, () => ({ retained:false, inUse:false }));
+    assert.equal(mutationStarted, true);
+    assert.equal(summary.cleanableBytes, undefined, 'a moving snapshot cannot authorize capacity eviction');
+}
+if(id==='policy-retry'){
+    const f = await fixture();
+    await f.disk.configurePolicy({ capacityBytes: 128 * 1024 ** 2, expiryDays: 19 });
+    const cold = new Cache({filesDir:f.dir}, { getFreeBytes: async () => 4 * 1024 ** 3, getTotalBytes: async () => 8 * 1024 ** 3 });
+    let accesses = 0;
+    beforeAccess = async candidate => {
+      if (candidate.endsWith('/storage-policy.json') && ++accesses === 1) throw Error('temporary policy access failure');
+    };
+    const first = cold.readPolicy(), concurrent = cold.readPolicy();
+    await assert.rejects(first, /temporary policy access/);
+    await assert.rejects(concurrent, /temporary policy access/);
+    assert.equal(accesses, 1, 'concurrent readers share the same in-flight attempt');
+    assert.deepEqual(await cold.readPolicy(), { capacityBytes: 128 * 1024 ** 2, expiryDays: 19 });
+    assert.equal(accesses, 2);
+}
 if(id==='automatic-policy'){
+  {
+    const mib = 1024 ** 2;
+    let free = 4 * 1024 ** 3, used = 40 * mib;
+    const f = await fixture({ freeBytes: () => free, extraAutomaticBytes: () => used, bodyCount: 1 });
+    await f.disk.configurePolicy({ capacityBytes: 128 * mib, expiryDays: 7 });
+    f.keep([identity(0)]);
+    assert.equal(await f.gateway.canPrefetchTextChapter(() => true), true);
+    used = 100 * mib;
+    assert.equal(await f.gateway.canPrefetchTextChapter(() => true), false, 'keep cache headroom below the user-set limit');
+    used = 128 * mib;
+    assert.equal(await f.gateway.canPrefetchTextChapter(() => true), false, 'deny when the cache limit is reached');
+    used = 40 * mib; free = 520 * mib;
+    assert.equal(await f.gateway.canPrefetchTextChapter(() => true), false, 'keep headroom above the existing system reserve');
+    free = 4 * 1024 ** 3;
+    assert.equal(await f.gateway.canPrefetchTextChapter(() => false), false, 'retired admission is refused');
+    assert.equal(f.calls.every(call => call.method === 'cache.storage.summary'), true, 'admission never runs storage cleanup');
+    assert.equal(f.bodies.has(chapterKey(identity(0))), true, 'retained download remains present under pressure');
+    f.disk.close();
+  }
 {
     const dir = join(root, `case-${++serial}`); await fs.mkdir(dir);
     const volumeBytes = 1024 ** 3 + 123;
@@ -306,7 +578,11 @@ if(id==='automatic-policy'){
     disk.close();
   }
 }
-}finally{rejectUnlink=()=>false;beforeUnlink=async()=>{};beforeSync=async()=>{};for(const handle of handles.values())await handle.close().catch(()=>{});await fs.rm(root,{recursive:true,force:true});}
+}finally{rejectUnlink=()=>false;beforeUnlink=async()=>{};beforeSync=async()=>{};beforeAccess=async()=>{};beforeStat=async()=>{};for(const handle of handles.values())await handle.close().catch(()=>{});await fs.rm(root,{recursive:true,force:true});}
 }
 const definitions={"inventory-ownership": "inventory-ownership actual scoped owner/gateway/storage path; controlled Core/OS ports", "legacy-migration": "legacy-migration actual scoped owner/gateway/storage path; controlled Core/OS ports", "legacy-flush": "legacy-flush actual scoped owner/gateway/storage path; controlled Core/OS ports", "bounded-cleanup": "bounded-cleanup actual scoped owner/gateway/storage path; controlled Core/OS ports", "late-protection": "late-protection actual scoped owner/gateway/storage path; controlled Core/OS ports", "unlink-retry": "unlink-retry actual scoped owner/gateway/storage path; controlled Core/OS ports", "unknown-alias": "unknown-alias actual scoped owner/gateway/storage path; controlled Core/OS ports", "settings-text": "settings-text actual scoped owner/gateway/storage path; controlled Core/OS ports", "settings-unknown": "settings-unknown actual scoped owner/gateway/storage path; controlled Core/OS ports", "settings-local-flush": "settings-local-flush actual scoped owner/gateway/storage path; controlled Core/OS ports", "settings-nonexecution": "settings-nonexecution actual scoped owner/gateway/storage path; controlled Core/OS ports", "settings-partial-ack": "settings-partial-ack actual scoped owner/gateway/storage path; controlled Core/OS ports", "automatic-policy": "automatic-policy actual scoped owner/gateway/storage path; controlled Core/OS ports"};
+definitions['settings-recover-staged'] = 'recover a confirmed cleanup after statistics fail without replaying Core';
+definitions['settings-recover-host'] = 'restart a partly applied Host deletion and preserve replaced and newly protected files';
+definitions['inventory-concurrent-enoent'] = 'ignore disappeared cache entries but preserve true storage errors';
+definitions['policy-retry'] = 'allow a new storage-policy read after the shared in-flight attempt fails';
 for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

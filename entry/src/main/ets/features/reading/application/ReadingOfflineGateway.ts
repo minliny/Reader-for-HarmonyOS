@@ -18,6 +18,9 @@ import type {
 } from './ReadingGatewayRuntime';
 import type { ReadingSessionChapter, ReadingSessionImage } from './ReadingChapterWindow';
 import { materializeReadingDocument } from './ReadingDocumentProjection';
+import { remoteReadingFailureKindOf } from './RemoteContentAdmission';
+import type { RemoteReadingGatewayError } from './RemoteReadingContract';
+import type { DeepPrefetchOutcome } from './ReadingDeepPrefetchPolicy';
 import {
   normalizeReadingOfflineMaterializationError,
   ReadingOfflineMaterializationError,
@@ -68,6 +71,11 @@ export type ReadingOfflineBookProgress = {
   totalChapters: number;
   entries: LocalReadingTocEntry[];
 };
+
+interface TextPrefetchAvailability {
+  cached: Set<number>;
+  reserved: Set<number>;
+}
 
 type OfflineChapterProof = {
   identity: ReadingGatewayImageChapterIdentity;
@@ -438,6 +446,54 @@ export class ReadingOfflineGateway {
     const proofs = runtime.captureReadingContentValidity === undefined ? undefined : new Map<string, OfflineChapterProof>();
     return new ReadingOfflineGateway(background)
       .prefetchRangeResult(session, startInclusive, endExclusive, isCurrent, proofs, true);
+  }
+
+  /** Only Core's body receipts open the low-water refill. Explicitly managed
+   * queue entries are unavailable to this optional producer. */
+  async loadTextPrefetchAvailability(session: RemoteReadingSession,
+    isCurrent: OfflineRequestGuard): Promise<TextPrefetchAvailability> {
+    const current = this.contentGuard(session, isCurrent);
+    this.assertCurrent(current);
+    const statuses = await this.loadCoreStatuses(session, current);
+    this.assertCurrent(current);
+    const cached = new Set<number>(), reserved = new Set<number>();
+    for (const status of statuses) {
+      if (status.cachedBytes > 0) cached.add(status.chapterIndex);
+      if (status.state === 'queued' || status.state === 'inProgress' || status.state === 'paused' ||
+        status.state === 'cancelled') reserved.add(status.chapterIndex);
+    }
+    return { cached, reserved };
+  }
+
+  /** Deep cache fills use the ordinary cache-first body path. Image assets
+   * and explicit download queue ownership remain with their original owners. */
+  async prefetchTextChapter(session: RemoteReadingSession, chapterIndex: number,
+    isCurrent: OfflineRequestGuard): Promise<LocalReadingTocEntry> {
+    const current = this.contentGuard(session, isCurrent);
+    const coordinator = this.runtime.bookAcquisitions?.();
+    const entry = session.entries.find((candidate): boolean => candidate.index === chapterIndex);
+    if (session.contentKind !== 'text' || session.identity.sourceId === 'local' || session.acquisitionMode !== 'online' ||
+      coordinator === undefined || entry === undefined) throw new Error('READING_PREFETCH_TEXT_SCOPE_REQUIRED');
+    const sourceVersion = await coordinator.currentSourceVersion(session.identity.sourceId);
+    this.assertCurrent(current);
+    if (sourceVersion === undefined || sourceVersion !== session.sourceVersion) throw new Error('READING_PREFETCH_SOURCE_CHANGED');
+    const gateway = new RemoteReadingFlowGateway({
+      allowSourceContentCorrection: false,
+      request: (method: string, params: JsonObject = {}, options: RequestOptions = {}): Promise<ReaderCoreResultEvent> =>
+        coordinator.request(method, params, options, 'background'),
+    });
+    await gateway.loadChapter(session, chapterIndex, current);
+    this.assertCurrent(current);
+    const availability = await this.loadTextPrefetchAvailability(session, current);
+    if (!availability.cached.has(chapterIndex)) throw new Error('READING_PREFETCH_BODY_UNAVAILABLE');
+    return { index: chapterIndex, title: entry.title, navigable: true, downloadState: 'cached' };
+  }
+
+  deepPrefetchFailure(error: Error): DeepPrefetchOutcome {
+    const status = (error as RemoteReadingGatewayError).diagnostic?.httpStatus;
+    return status === 429 || status === 403 || remoteReadingFailureKindOf(error) === 'SOURCE_AUTH_REQUIRED' ||
+      /\bHTTP(?:\s+status)?\s+(?:403|429)\b|rate.?limit|too many requests|anti.?crawl|captcha|限流|反爬|验证码/i.test(error.message) ?
+      'throttled' : 'failed';
   }
 
   private async prefetchRangeResult(

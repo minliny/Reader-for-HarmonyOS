@@ -2,7 +2,7 @@ import { selectContractCases, recordContractCasePass } from './lib/contract-case
 
 export const CONTRACT_CASES = {
   "manga-preferences": {
-    "description": "Real SettingsGateway with cache/durable and unknown-flush queue ports; no SDK or device",
+    "description": "Real brightness Slider intent and SettingsGateway writes; native input and preferences are controlled ports",
     "resources": []
   },
   "chapter-action-admission": {
@@ -19,8 +19,32 @@ async function case_manga_preferences() {
 const { default: assert } = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
 const { stripTypeScriptTypes } = await import('node:module');
+const { readerHostPreferencesName } = await import('../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts');
 const { createDefaultReaderSettingsSnapshot, normalizeReaderSettingsSnapshot, copyReaderSettingsSnapshot } = await import('../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts');
 const { runtimeOwnerIdentityProbe } = await import('./lib/reader-runtime-admission-probe.mjs');
+const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
+const { readerBrightnessWindowValue } = await import('../entry/src/main/ets/features/reading/ui/ReaderBrightnessCurve.ts');
+const slider = { Begin: 'begin', Moving: 'moving', End: 'end', Click: 'click' };
+const brightnessRequests = [];
+const Brightness = productionMotionMethods(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url),
+  ['changeBrightnessSlider', 'setBrightness'], { SliderChangeMode: slider, readerBrightnessWindowValue,
+    ReaderWindowCoordinator: { brightness: () => ({ request: async (owner, value) => brightnessRequests.push([owner, value]) }) } });
+const brightness = Object.assign(new Brightness(), { mounted: true, brightnessOwner: 14, brightnessGeneration: 0,
+  automaticBrightness: true, brightnessPercent: 50,
+  preferencePanelInputCurrent: (opening, panel) => opening === 3 && panel === 'settings' });
+brightness.changeBrightnessSlider(66, slider.Begin, 3);
+brightness.changeBrightnessSlider(66, slider.Click, 3);
+brightness.changeBrightnessSlider(66, slider.End, 3);
+brightness.changeBrightnessSlider(66, slider.Moving, 2);
+assert.equal(brightness.automaticBrightness, true);
+assert.deepEqual(brightnessRequests, [], 'passive events and retired panels never replace automatic brightness');
+brightness.changeBrightnessSlider(66, slider.Moving, 3);
+brightness.changeBrightnessSlider(66, slider.End, 3);
+assert.equal(brightness.automaticBrightness, false);
+assert.equal(brightness.brightnessPercent, 66);
+assert.deepEqual(brightnessRequests, [[14, readerBrightnessWindowValue(66)]], 'actual drag switches to manual once');
+brightness.changeBrightnessSlider(74, slider.Click, 3);
+assert.equal(brightness.brightnessPercent, 74, 'manual brightness still admits direct tap adjustment');
 const initial = createDefaultReaderSettingsSnapshot();
 const normalized = normalizeReaderSettingsSnapshot({ ...initial, mangaBackground: 'ink', mangaPageNumbers: false });
 assert.equal(normalized.mangaBackground, 'ink');
@@ -46,14 +70,14 @@ const store = {
     durableValue = value;
   },
 };
-const runtimeOwner = { getUIAbilityContext: () => ({}) };
+const runtimeOwner = { getUIAbilityContext: () => ({ filesDir: '/reader-fixture' }) };
 const source = readFileSync(new URL('../entry/src/main/ets/features/reading/application/ReaderSettingsGateway.ts', import.meta.url), 'utf8')
   .replace(/^import[\s\S]*?;\s*\n/gm, '').replace(/^export /gm, '');
 const Gateway = new Function('preferences', 'ReaderRuntimeOwner', 'ReaderThemeHost', 'copyReaderSettingsSnapshot',
-  'createDefaultReaderSettingsSnapshot', 'normalizeReaderSettingsSnapshot',
+  'createDefaultReaderSettingsSnapshot', 'normalizeReaderSettingsSnapshot', 'readerHostPreferencesName',
   `${stripTypeScriptTypes(source)}; return ReaderSettingsGateway;`)(
   { getPreferences: async () => store }, runtimeOwnerIdentityProbe(() => runtimeOwner), { prepareUserChange: async () => {} },
-  copyReaderSettingsSnapshot, createDefaultReaderSettingsSnapshot, normalizeReaderSettingsSnapshot);
+  copyReaderSettingsSnapshot, createDefaultReaderSettingsSnapshot, normalizeReaderSettingsSnapshot, readerHostPreferencesName);
 const gateway = new Gateway(runtimeOwner);
 await gateway.load();
 await gateway.updateMangaPreferences({ mangaDirection: 'horizontal', mangaFit: 'contain', mangaBackground: 'ink', mangaPageNumbers: false });
@@ -158,6 +182,26 @@ assert.equal(mangaDirectoryColumnWidth(700),168);
 assert.equal(mangaDirectoryColumnWidth(701),258);
 assert.equal(mangaDirectoryColumnWidth(1180),258);
 assert.equal(mangaDirectoryColumnWidth(1600),258);
+const { readFileSync } = await import('node:fs');
+const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+const { MANGA_DIRECTORY_VISUAL: visual } = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+const source = readFileSync(new URL('../entry/src/main/ets/features/manga/ui/MangaReadingSurface.ets', import.meta.url), 'utf8');
+const { owner: header } = createReaderBuilderProbe(source, ['directorySideHeader', 'panelCloseFocusId'], {
+  visual, READER_FONT_NOTO_SANS_SC_UI_BOLD: 'ReaderNotoSansSCUIBold',
+});
+let opening = 5, closes = 0;
+Object.assign(header, { sourceId: 'source', bookId: 'book', panelContentInset: () => 8,
+  backgroundPreference: 'ink', panelTitle: () => '目录', inkColor: () => '#fff', lineColor: () => '#fff',
+  chromeScheme: () => 'night', directoryFontScale: () => 1, panelInputCurrent: expected => expected === opening,
+  closePanel: () => { closes += 1; },
+});
+header.directorySideHeader(opening);
+const close = [...header.nodes.values()].find(node => node.accessibilityText === '关闭宽屏面板');
+assert.equal(close?.id, header.panelCloseFocusId(opening), 'the native side drawer close button owns the opening focus target');
+close.onClick();
+opening += 1;
+close.onClick();
+assert.equal(closes, 1, 'a retained tablet close callback cannot dismiss a successor panel');
 console.log('PASS phone portrait/landscape versus tablet directory ownership and bounded persistent column');
 
 }

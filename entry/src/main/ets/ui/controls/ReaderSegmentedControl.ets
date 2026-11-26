@@ -1,10 +1,11 @@
-import { TYPE_APP_INHERITED_OPTION, TYPE_APP_SEGMENT_LABEL } from '../foundation/ReaderTypography';
+import { TYPE_APP_SEGMENT_LABEL, TYPE_APP_SEGMENT_LABEL_SELECTED } from '../foundation/ReaderTypography';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
 import { CapsuleSegmentButtonV2, SegmentButtonV2Items, type SegmentButtonV2ItemOptions } from '@ohos.arkui.advanced.SegmentButtonV2';
 import { TextModifier } from '@ohos.arkui.modifier';
 import { ColorMetrics, LengthMetrics } from '@ohos.arkui.node';
 import { FrameCallback } from '@kit.ArkUI';
+import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 
 interface ReaderSegmentOpening { identity: string; ids: string[]; }
 
@@ -15,9 +16,9 @@ class ReaderSegmentPolicyFrame extends FrameCallback {
   onIdle(_time: number): void {}
 }
 
-type ReaderSegmentSpecId = 'app-theme-segment' | 'pill-choice';
+type ReaderSegmentSpecId = 'app-theme-segment';
 interface ReaderSegmentSpec {
-  width?: number;
+  width: number;
   padding: number;
   radius: number;
   itemRadius: number;
@@ -25,27 +26,18 @@ interface ReaderSegmentSpec {
   activeText: ReaderAppColorRole;
   inactiveText: ReaderAppColorRole;
   selectedSurface: ReaderAppColorRole;
-  selectedBorder?: ReaderAppColorRole;
-  unselectedSurface?: ReaderAppColorRole;
-  surface?: ReaderAppColorRole;
-  border?: ReaderAppColorRole;
+  surface: ReaderAppColorRole;
+  border: ReaderAppColorRole;
 }
 export const READER_APP_THEME_SEGMENT_WIDTH = 168;
 const APP_THEME_SEGMENT: ReaderSegmentSpec = {
-  width: READER_APP_THEME_SEGMENT_WIDTH, padding: 2, radius: 8, itemRadius: 6, borderWidth: 1,
+  width: READER_APP_THEME_SEGMENT_WIDTH, padding: 4, radius: 12, itemRadius: 9, borderWidth: 1,
   activeText: 'app.segment.activeText',
-  inactiveText: 'app.segment.inactiveText',
-  selectedSurface: 'app.segment.selected',
-  selectedBorder: 'TOK_GREEN',
+  inactiveText: 'TOK_MUTED',
+  selectedSurface: 'TOK_SURFACE_ELEVATED',
   surface: 'app.segment.surface', border: 'app.segment.border',
 };
-const PILL_CHOICE: ReaderSegmentSpec = {
-  padding: 0, radius: 0, itemRadius: 20, borderWidth: 0,
-  activeText: 'app.selection.onMode', inactiveText: 'TOK_GREEN',
-  selectedSurface: 'app.action.fill', unselectedSurface: 'TOK_PAPER',
-};
 function resolveReaderSegmentSpec(id: ReaderSegmentSpecId): ReaderSegmentSpec {
-  if (id === 'pill-choice') return PILL_CHOICE;
   if (id !== 'app-theme-segment') throw new Error('Unknown ReaderSegmentedControl specification');
   return APP_THEME_SEGMENT;
 }
@@ -59,6 +51,7 @@ export struct ReaderSegmentedControl {
   @State private themeFontPolicyReady: boolean = false;
   @State private themeMaxFontScale: number = 1;
   @Prop @Watch('refreshThemeFontPolicy') specId: ReaderSegmentSpecId = 'app-theme-segment';
+  @Prop controlWidth: number = 0;
   @Prop @Watch('syncNativeThemeItems') options: string[] = [];
   @Prop @Watch('syncNativeThemeItems') optionIds: string[] = [];
   @Prop @Watch('syncNativeThemeItems') selectedIndex: number = 0;
@@ -78,42 +71,21 @@ export struct ReaderSegmentedControl {
   }
   build() {
     ForEach([this.inputIdentity], (identity: string): void => {
-      Row({ space: this.specId === 'pill-choice' ? 12 : 0 }) {
-        if (this.specId === 'app-theme-segment') {
-          if (this.themeFontPolicyReady && this.themeInputIsValid()) {
-            this.nativeThemeOptions(identity);
-          } else {
-            Text(`${this.options[this.selectedIndex] ?? ''}（暂不可用）`)
-              .fontFamily(TYPE_APP_SEGMENT_LABEL.fontFamily).fontWeight(TYPE_APP_SEGMENT_LABEL.fontWeight)
-              .fontSize(TYPE_APP_SEGMENT_LABEL.fontSizeFp).fontColor(readerAppColor(this.spec().inactiveText, this.appThemeScheme))
-              .constraintSize({ minHeight: 44 }).layoutWeight(1).textAlign(TextAlign.Center)
-              .accessibilityText(`${this.accessibilityLabel} ${this.options[this.selectedIndex] ?? ''}，暂不可用`);
-          }
+      Row() {
+        if (this.themeFontPolicyReady && this.themeInputIsValid()) {
+          this.nativeThemeOptions(identity);
         } else {
-        ForEach(this.optionIds, (optionId: string): void => {
-          Button({ type: ButtonType.Normal }) {
-            Text(this.optionLabel(optionId)).fontSize(TYPE_APP_INHERITED_OPTION.fontSizeFp)
-              .fontColor(this.choiceColor(optionId)).textAlign(TextAlign.Center);
-          }
-          .layoutWeight(undefined)
-          .constraintSize({ minWidth: 44, minHeight: 44 })
-          .padding({ left: 14, right: 14, top: 10, bottom: 10 })
-          .backgroundColor(this.choiceBackground(optionId))
-          .border(this.isSelected(optionId) && this.spec().selectedBorder !== undefined ? { width: this.spec().borderWidth,
-            color: readerAppColor(this.spec().selectedBorder!, this.appThemeScheme), radius: this.spec().itemRadius } :
-            { width: 0, radius: this.spec().itemRadius })
-          .enabled(this.canAct(identity, optionId))
-          .accessibilityRole(AccessibilityRoleType.RADIO).accessibilitySelected(this.isSelected(optionId))
-          .accessibilityText(this.optionLabel(optionId))
-          .onClick((): void => this.select(identity, optionId));
-        }, (optionId: string): string => optionId);
+          Text(`${this.options[this.selectedIndex] ?? ''}（暂不可用）`)
+            .fontFamily(TYPE_APP_SEGMENT_LABEL.fontFamily).fontWeight(TYPE_APP_SEGMENT_LABEL.fontWeight)
+            .fontSize(TYPE_APP_SEGMENT_LABEL.fontSizeFp).fontColor(readerAppColor(this.spec().inactiveText, this.appThemeScheme))
+            .constraintSize({ minHeight: 44 }).layoutWeight(1).textAlign(TextAlign.Center)
+            .accessibilityText(`${this.accessibilityLabel} ${this.options[this.selectedIndex] ?? ''}，暂不可用`);
         }
       }
-      .width(this.spec().width)
+      .width(this.controlWidth > 0 ? this.controlWidth : this.spec().width)
       .padding(this.spec().padding)
-      .backgroundColor(this.spec().surface === undefined ? Color.Transparent : readerAppColor(this.spec().surface!, this.appThemeScheme))
-      .border(this.spec().border === undefined ? { width: 0 } : { width: this.spec().borderWidth,
-        color: readerAppColor(this.spec().border!, this.appThemeScheme) })
+      .backgroundColor(readerAppColor(this.spec().surface, this.appThemeScheme))
+      .border({ width: this.spec().borderWidth, color: readerAppColor(this.spec().border, this.appThemeScheme) })
       .borderRadius(this.spec().radius)
       .accessibilityText(this.accessibilityLabel)
       .alignItems(VerticalAlign.Center);
@@ -190,14 +162,12 @@ export struct ReaderSegmentedControl {
     });
   }
   private themeTextModifier(id: string): TextModifier {
-    return new TextModifier().fontFamily(TYPE_APP_SEGMENT_LABEL.fontFamily)
-        .fontSize(TYPE_APP_SEGMENT_LABEL.fontSizeFp).fontWeight(TYPE_APP_SEGMENT_LABEL.fontWeight)
+    const style = this.isSelected(id) ? TYPE_APP_SEGMENT_LABEL_SELECTED : TYPE_APP_SEGMENT_LABEL;
+    return new TextModifier().fontFamily(style.fontFamily)
+        .fontSize(style.fontSizeFp).fontWeight(style.fontWeight)
         .minFontScale(0).maxFontScale(this.themeMaxFontScale)
         .maxLines(Math.max(1, this.optionLabel(id).length)).textOverflow({ overflow: TextOverflow.Clip })
         .width('100%').constraintSize({ minHeight: 44 }).padding(0).textAlign(TextAlign.Center)
-        .border({ width: this.isSelected(id) && this.spec().selectedBorder !== undefined ? this.spec().borderWidth : 0,
-          color: this.spec().selectedBorder === undefined ? Color.Transparent : readerAppColor(this.spec().selectedBorder!, this.appThemeScheme),
-          radius: this.spec().itemRadius })
         .backgroundColor(Color.Transparent).borderRadius(this.spec().itemRadius);
   }
   @Builder
@@ -217,19 +187,14 @@ export struct ReaderSegmentedControl {
         itemSelectedFontColor: ColorMetrics.resourceColor(readerAppColor(this.spec().activeText, this.appThemeScheme)),
         buttonPadding: LengthMetrics.vp(0), buttonMinHeight: LengthMetrics.vp(44),
         itemSelectedBackgroundColor: ColorMetrics.resourceColor(readerAppColor(this.spec().selectedSurface, this.appThemeScheme)),
-        itemShadow: { radius: 0, color: '#00000000', offsetX: 0, offsetY: 0 },
-        buttonBackgroundColor: ColorMetrics.resourceColor('#00000000'), buttonBorderRadius: LengthMetrics.vp(this.spec().radius),
+        itemShadow: { radius: 3 * readerWindowMetrics().densityPixels,
+          color: readerAppColor('app.chrome.raisedShadowNear', this.appThemeScheme),
+          offsetX: 0, offsetY: readerWindowMetrics().densityPixels },
+        buttonBackgroundColor: ColorMetrics.resourceColor(readerAppColor('app.surface.transparent', this.appThemeScheme)), buttonBorderRadius: LengthMetrics.vp(this.spec().radius),
       }).width('100%');
     }, (opening: ReaderSegmentOpening): string => opening.identity + JSON.stringify(opening.ids));
   }
   private spec(): ReaderSegmentSpec { return resolveReaderSegmentSpec(this.specId); }
-  private choiceColor(id: string): ResourceColor {
-    return readerAppColor(this.isSelected(id) ? this.spec().activeText : this.spec().inactiveText, this.appThemeScheme);
-  }
-  private choiceBackground(id: string): ResourceColor {
-    if (this.isSelected(id)) return readerAppColor(this.spec().selectedSurface, this.appThemeScheme);
-    return this.spec().unselectedSurface === undefined ? Color.Transparent : readerAppColor(this.spec().unselectedSurface!, this.appThemeScheme);
-  }
   private optionLabel(id: string): string { return this.options[this.optionIds.indexOf(id)] ?? ''; }
   private isSelected(id: string): boolean { return this.optionIds.indexOf(id) === this.selectedIndex; }
   private canAct(identity: string, id: string): boolean {

@@ -21,8 +21,9 @@ import { sampleReaderControlMotionPresentation, readerControlMotionClipRects, re
 import { sampleReaderControlMorphScrollPath,
   type ReaderControlMorphScrollPath } from './ReaderControlMorphScroll';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
-import { TOK_BORDER_W, TOK_DANGER, TOK_LINE, TOK_LINE_STRONG, TOK_READ_INK,
-  TOK_READ_MUTED, TOK_READ_PRIMARY, TOK_SURFACE_PANEL_SOFT } from '../../../ui/foundation/ReaderTokens';
+import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
+import { SEARCH_CONTROL_CLEAR_END_INSET, SEARCH_CONTROL_CLEAR_ICON_SIZE, SEARCH_CONTROL_CLEAR_SLOT,
+  SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
 import type { ReadingContentSearchResult } from '../application/ReadingSessionFlowGateway';
 import { ReaderContentSearchPublication, type ReaderQuickSearchState, type ReaderQuickSearchResultsState } from '../presentation/ReaderContentSearchPublication';
 import { ReaderContentSearchDataSource, readerContentSearchResultKey } from './ReaderContentSearchDataSource';
@@ -77,6 +78,7 @@ export struct ReaderControlSearchContent {
   inputCurrent?: () => boolean;
   @Prop @Watch('dismissTemporaryLayer') dismissTemporaryRevision: number = 0;
   @Prop @Watch('publishMinimumMeasurer') query: string = '';
+  @Prop @Watch('publishMinimumMeasurer') onlineBook: boolean = false;
   searchPublication: ReaderContentSearchPublication = new ReaderContentSearchPublication();
   @Prop @Watch('acceptSearchPublication') searchRevision: number = 0;
   @State @Watch('onResultDataChanged') private state: ReaderQuickSearchState = { kind: 'idle' };
@@ -291,6 +293,7 @@ export struct ReaderControlSearchContent {
     const identity = this.minimumIdentity;
     const state = this.currentSearchState();
     const facts = readerControlSearchMinimumFacts({ query: this.query, state: state,
+      onlineBook: this.onlineBook,
       resultScope: this.searchPublication.resultScrollScopeFor(state), retainedLoadMoreFailure: this.retainedLoadMoreFailure });
     if (this.preparedMinimumRequired) { this.onMinimumFactsChanged(identity, { module: 'search', search: facts }); return; }
     const signature = JSON.stringify([identity, this.minimumMetricsRevision, readerControlModuleFactsGeometryKey({ module: 'search', search: facts })]);
@@ -327,6 +330,8 @@ export struct ReaderControlSearchContent {
     const profile = this.currentMinimumProfile();
     if (profile === undefined) return undefined;
     const q = profile.quick.natural, f = profile.full.natural;
+    const quickScopeHeight = q.cacheScopeHeightVp ?? 0;
+    const fullScopeHeight = f.cacheScopeHeightVp ?? 0;
     return { fieldHeightVp: q.fieldHeightVp + (f.fieldHeightVp - q.fieldHeightVp) * progress,
       inputHeightVp: q.inputHeightVp + (f.inputHeightVp - q.inputHeightVp) * progress,
       titleHeightVp: q.titleHeightVp + (f.titleHeightVp - q.titleHeightVp) * progress,
@@ -334,6 +339,7 @@ export struct ReaderControlSearchContent {
       rowHeightVp: q.rowHeightVp + (f.rowHeightVp - q.rowHeightVp) * progress,
       loadMoreHeightVp: q.loadMoreHeightVp + (f.loadMoreHeightVp - q.loadMoreHeightVp) * progress,
       loadMoreWidthVp: q.loadMoreWidthVp + (f.loadMoreWidthVp - q.loadMoreWidthVp) * progress,
+      cacheScopeHeightVp: quickScopeHeight + (fullScopeHeight - quickScopeHeight) * progress,
       statusHeightVp: q.statusHeightVp + (f.statusHeightVp - q.statusHeightVp) * progress,
       backHeightVp: q.backHeightVp + (f.backHeightVp - q.backHeightVp) * progress,
       backWidthVp: q.backWidthVp + (f.backWidthVp - q.backWidthVp) * progress };
@@ -346,7 +352,7 @@ export struct ReaderControlSearchContent {
   private resultLayoutAt(frame: ReaderControlSearchFrame): ReaderControlSearchScrollLayout {
     const displayState = this.displayState();
     return { rowHeightVp: frame.rowHeight, viewportHeightVp: Math.max(0, frame.results.height - frame.loadMoreHeightVp -
-      (frame.loadMoreHeightVp > 0 ? 4 : 0)),
+      (frame.loadMoreHeightVp > 0 ? 4 : 0) - frame.cacheScopeHeightVp),
       contentOriginVp: frame.firstResult.y, contentEndPaddingVp: frame.resultEndPadding,
       resultCount: displayState.kind === 'results' ? displayState.results.length : 0 };
   }
@@ -671,7 +677,7 @@ export struct ReaderControlSearchContent {
 
   @Builder
   private searchField() {
-    Row({ space: 5 }) {
+    Row({ space: 0 }) {
       ReaderFormField({ editingHost: this.editingHost, specId: 'reader-content-search', scheme: this.appThemeScheme,
         editingContext: (field: ReaderRectVp): ReaderRectVp | undefined => this.queryEditingContext(field),
         naturalInputHeightVp: this.frame().inputHeightVp,
@@ -679,12 +685,33 @@ export struct ReaderControlSearchContent {
         fieldAccessibilityLabel: '搜索正文内容', onTextChange: (value: string): void => {
           if (this.currentEditorInputEnabled()) this.onQueryChange(value);
         },
-        onEditingChange: (editing: boolean): void => this.onQueryEditingChanged(editing), onSubmit: (): void => this.submit() });
+        onEditingChange: (editing: boolean): void => this.onQueryEditingChanged(editing), onSubmit: (): void => this.submit() })
+        .layoutWeight(1);
+      if (this.query.length > 0) {
+        Button({ type: ButtonType.Normal, stateEffect: false }) {
+          Image(this.appThemeScheme === 'night' ? $r('app.media.search_clear_theme_night') : $r('app.media.search_clear'))
+            .width(SEARCH_CONTROL_CLEAR_ICON_SIZE).height(SEARCH_CONTROL_CLEAR_ICON_SIZE)
+            .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
+        }.width(SEARCH_CONTROL_CLEAR_SLOT).height(this.frame().field.height).padding({ left: 10 })
+          .backgroundColor(Color.Transparent).focusOnTouch(false)
+          .responseRegion({ x: -SEARCH_CONTROL_CLEAR_END_INSET,
+            y: (this.frame().field.height - Math.max(this.frame().field.height, SEARCH_CONTROL_MIN_TARGET)) / 2,
+            width: SEARCH_CONTROL_MIN_TARGET, height: Math.max(this.frame().field.height, SEARCH_CONTROL_MIN_TARGET) })
+          .enabled(this.currentEditorInputEnabled()).accessibilityText('清空正文搜索')
+          .onClick((): void => {
+            if (!this.currentEditorInputEnabled()) return;
+            this.onQueryChange('');
+            this.focusQueryField();
+          });
+      }
     }
     .id('reader-control-search-field')
     .width(this.frame().field.width).height(this.frame().field.height)
-    .padding({ left: 9, right: 9 }).alignItems(VerticalAlign.Center)
-    .attributeModifier(new ReaderPanelFrame('reader-soft-control', this.appThemeScheme))
+    .padding({ left: 9, right: this.query.length > 0 ? SEARCH_CONTROL_CLEAR_END_INSET : 9 })
+    .alignItems(VerticalAlign.Center)
+    .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
+    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+    .borderRadius(this.frame().field.height / 2)
     .position({ x: this.frame().field.x, y: this.frame().field.y })
     .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur)
     .onClick((): void => this.focusQueryField());
@@ -765,6 +792,15 @@ export struct ReaderControlSearchContent {
         }.width(this.frame().firstResult.width).height(this.resultLayout().viewportHeightVp)
           .position({ x: this.frame().firstResult.x, y: 0 }).clip(true);
         this.loadMoreAction();
+        if (this.frame().cacheScopeHeightVp > 0) {
+          Text(this.statusText()).width(this.frame().results.width).height(this.frame().cacheScopeHeightVp)
+            .fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
+            .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
+            .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).textAlign(TextAlign.Center)
+            .wordBreak(WordBreak.BREAK_WORD).hitTestBehavior(HitTestMode.None)
+            .position({ x: 0, y: Math.max(0, this.frame().results.height - this.frame().cacheScopeHeightVp) })
+            .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
+        }
       } else {
         Stack({ alignContent: Alignment.Center }) {
           ReaderPageState({ message: this.statusText(), loading: this.displayState().kind === 'loading', padded: false,
@@ -836,7 +872,8 @@ export struct ReaderControlSearchContent {
             actionEnabled: this.loadMoreActionEnabled(true),
             onReconcile: (expected: number): void => this.performLoadMore(true, expected) });
         }.width(this.frame().results.width).height(Math.max(44, this.frame().loadMoreHeightVp)).justifyContent(FlexAlign.Center)
-          .position({ x: 0, y: Math.max(0, this.frame().results.height - Math.max(44, this.frame().loadMoreHeightVp)) })
+          .position({ x: 0, y: Math.max(0, this.frame().results.height - (this.frame().cacheScopeHeightVp ?? 0) -
+            Math.max(44, this.frame().loadMoreHeightVp)) })
           .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
 
       }
@@ -954,8 +991,7 @@ export struct ReaderControlSearchContent {
   }
 
   private statusText(): string {
-    const displayState = this.displayState();
-    return readerControlSearchStatusText(displayState);
+    return this.displayedFacts()?.message ?? readerControlSearchStatusText(this.displayState(), this.onlineBook);
   }
 
 }

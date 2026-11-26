@@ -85,7 +85,14 @@ export class ReaderSystemShareHost implements SystemSharePort {
     // Publish a temporary copy with the book format extension. The private
     // archive is never granted to the receiving app or changed by its actions.
     const cache = `${context.getApplicationContext().cacheDir}/reader-share`;
-    if (!(await fileIo.access(cache))) await fileIo.mkdir(cache, true);
+    let cacheExists = false;
+    try {
+      cacheExists = await fileIo.access(cache);
+    } catch (error) {
+      const code = (error as { code?: number | string } | undefined)?.code;
+      if (code !== 13900002 && code !== 'ENOENT') throw error;
+    }
+    if (!cacheExists) await fileIo.mkdir(cache, true);
     if (!(await fileIo.lstat(cache)).isDirectory()) return undefined;
     await this.removeExpiredCopies(cache);
     if (!current()) return undefined;
@@ -116,8 +123,14 @@ export class ReaderSystemShareHost implements SystemSharePort {
       for (const name of await fileIo.listFile(cache)) {
         if (!/^book-[a-zA-Z0-9]{6}$/.test(name)) continue;
         const directory = `${cache}/${name}`;
-        const stat = await fileIo.lstat(directory);
-        if (stat.isDirectory() && stat.mtime < expiresBefore) await this.removeCopy(directory);
+        try {
+          const stat = await fileIo.lstat(directory);
+          if (stat.isDirectory() && stat.mtime < expiresBefore) await this.removeCopy(directory);
+        } catch (error) {
+          const code = (error as { code?: number | string } | undefined)?.code;
+          // The OS or another share may remove this entry after listing it.
+          if (code !== 13900002 && code !== 'ENOENT') throw error;
+        }
       }
     } catch (_) { /* Cache eviction cannot prevent a new explicit share. */ }
   }

@@ -8,6 +8,7 @@ import { actualSourceManagementGeometry } from './source-management-owner-probe.
 import { createDefaultReaderWindowMetrics } from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import * as windowFacts from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import { readerTypographyRoles } from './reader-typography-probe.mjs';
+import * as v9 from '../../entry/src/main/ets/features/source/presentation/SourceManagementV9.ts';
 import * as sourceScroll from '../../entry/src/main/ets/features/source/presentation/SourceManagementScrollState.ts';
 import * as surfaceResolvers from '../../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts';
 import { resolveSourceManagementLayout } from '../../entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts';
@@ -19,11 +20,11 @@ import { READER_FEEDBACK_EXTENDED_MS } from '../../entry/src/main/ets/ui/feedbac
 
 // Only unrelated material/scroll rendering is outside this action proof.
 // No Watch callback or member reachable from one may cross this seam.
-const renderSeams = ['searchField', 'statsRow', 'filterArea', 'categoryFilter',
+const renderSeams = ['searchField', 'filterArea', 'categoryFilter',
   'sourceRow'];
 const roots = ['appThemeScheme', 'sources', 'operation', 'statusKind', 'statusMessage',
   'statusActionLabel', 'statusActionGeneration', 'mounted', 'appForeground',
-  'temporaryBackIdentity', 'sourceList', 'pendingOverlay', 'statusAction'];
+  'temporaryBackIdentity', 'sourceList', 'pendingRecovery', 'statusAction'];
 
 /** Compute the complete member/initializer/Watch dependency closure from the
  * current production struct instead of maintaining a list of fixture fields.
@@ -99,9 +100,10 @@ export function sourceManagementRecoveryProbe(source, params = {}, options = {})
   const support = new Function('FrameCallback',
     'ReaderPostLayoutFrame', stripTypeScriptTypes(closure.support) + ';return {SourceListDataSource,SourceListLayoutFrame};')(FramePort, actualReaderPostLayoutFrame());
   const owner = sdk.consumer(source, closure.members, {
-    ...actualSourceManagementGeometry(metrics), ...windowFacts, ...readerTypographyRoles, ...sourceScroll, ...surfaceResolvers,
+    ...actualSourceManagementGeometry(metrics), ...windowFacts, ...readerTypographyRoles, ...sourceScroll, ...surfaceResolvers, ...v9,
     ...foundationSpecs(), ...labeledIconSpecs(), ...readerEditingSdk(), READER_FEEDBACK_EXTENDED_MS,
     resolveSourceManagementLayout, readerSourceCategoryLabel, readerRecoveryView, ...support,
+    ReaderUIVerificationProbe: { enabled: () => false },
     hilog: { info() {}, warn() {}, error() {} },
     ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} },
     BarState: { Off: 'BarState.Off' },
@@ -118,7 +120,7 @@ export function sourceManagementRecoveryProbe(source, params = {}, options = {})
     temporaryBackIdentity: 'source-recovery-producer',
     onReconcile: missing('onReconcile'), onRetryLoad: missing('onRetryLoad'),
     onStatusAction: missing('onStatusAction'), onContinueOriginal: missing('onContinueOriginal'),
-    searchField() {}, statsRow() {}, filterArea() {}, categoryFilter() {}, sourceRow() {},
+    searchField() {}, filterArea() {}, categoryFilter() {}, sourceRow() {},
     viewportWidth: 366, viewportHeight: 844,
     ...params,
   });
@@ -144,7 +146,7 @@ export function sourceManagementRecoveryProbe(source, params = {}, options = {})
       callback.call(owner, id, true);
     }
   }
-  owner.pendingOverlay(0);
+  owner.pendingRecovery();
   return { owner, sdk, closure };
 }
 

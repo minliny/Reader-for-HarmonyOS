@@ -60,6 +60,15 @@ export interface SourceToolsSelection {
   sourceIds: string[];
   sourceListRevision: number;
   selectionRevision: number;
+  query?: string;
+  isScopeCurrent?: () => boolean;
+}
+
+export function filterSourceTools(sources: BookSource[], query: string): BookSource[] {
+  const keyword = query.trim().toLowerCase();
+  return keyword.length === 0 ? sources : sources.filter((source: BookSource): boolean =>
+    source.name.toLowerCase().includes(keyword) || source.baseUrl.toLowerCase().includes(keyword) ||
+    (source.group ?? '').toLowerCase().includes(keyword));
 }
 
 export interface SourceToolsSnapshot {
@@ -265,6 +274,14 @@ export class SourceToolsOrchestrator {
     this.setSelection(this.snapshot.sources.map((source: BookSource): string => source.sourceId));
   }
 
+  setVisibleSelection(query: string, selected: boolean): void {
+    const visible = filterSourceTools(this.snapshot.sources, query).map((source: BookSource): string => source.sourceId);
+    if (visible.length === 0) return;
+    const matching = new Set<string>(visible);
+    const hidden = this.snapshot.selectedSourceIds.filter((sourceId: string): boolean => !matching.has(sourceId));
+    this.setSelection(selected ? hidden.concat(visible) : hidden);
+  }
+
   toggleSelection(sourceId: string): void {
     const selected = this.snapshot.selectedSourceIds;
     this.setSelection(selected.indexOf(sourceId) >= 0 ?
@@ -273,17 +290,22 @@ export class SourceToolsOrchestrator {
 
   acceptsSelection(selection: SourceToolsSelection): boolean {
     const selected = this.snapshot.selectedSourceIds;
+    if (selection.query !== undefined && selection.isScopeCurrent?.() !== true) return false;
+    const visible = selection.query === undefined ? undefined : new Set<string>(
+      filterSourceTools(this.snapshot.sources, selection.query).map((source: BookSource): string => source.sourceId));
+    const expected = visible === undefined ? selected : selected.filter((sourceId: string): boolean => visible.has(sourceId));
     return this.isCurrentSession(this.session) && !this.snapshot.busy && this.pendingOperations === 0 &&
       selection.sourceListRevision === this.snapshot.sourceListRevision &&
       selection.selectionRevision === this.snapshot.selectionRevision && selection.sourceIds.length > 0 &&
-      selection.sourceIds.length === selected.length &&
-      selection.sourceIds.every((sourceId: string, index: number): boolean => selected[index] === sourceId);
+      selection.sourceIds.length === expected.length &&
+      selection.sourceIds.every((sourceId: string, index: number): boolean => expected[index] === sourceId);
   }
 
   consumeSelection(sourceIds: string[]): string[] {
     if (this.snapshot.busy || this.pendingOperations > 0 || !this.isCurrentSession(this.session)) return [];
     const selection = this.normalizeSourceIds(sourceIds);
-    this.setSelection([]);
+    const consumed = new Set<string>(selection);
+    this.setSelection(this.snapshot.selectedSourceIds.filter((sourceId: string): boolean => !consumed.has(sourceId)));
     return selection;
   }
 

@@ -15,21 +15,21 @@ const prelude = fixture.slice(0, cut)
   .replaceAll('import.meta.url', JSON.stringify(fixtureUrl.href));
 const scenarios = `
 list.onScrollIndex(0, 1); await tick(); properties.flush();
-const horizontal = [...owner.nodes.values()].find(node => node.type === 'Scroll');
+const horizontal = [...owner.nodes.values()].find(node => node.type === 'Scroll' && typeof node.onDidScroll === 'function');
 assert.equal(list.scrollBar, 'BarState.Off');
 assert.equal(horizontal.scrollBar, 'BarState.Off');
 let rectangleQueries = 0, offsetQueries = 0, latestY = -20;
 owner.scroller.getItemRect = () => { rectangleQueries++; return { x:0, y:latestY, width:300, height:300 }; };
 owner.horizontalScroller.currentOffset = () => { offsetQueries++; return { xOffset:0 }; };
 const before = snapshot();
-for (let index=0; index<100; index++) { list.onScroll(); horizontal.onScroll(); }
+for (let index=0; index<100; index++) { list.onDidScroll(); horizontal.onDidScroll(); }
 assert.equal(rectangleQueries,0,'native input/scroll callbacks do not synchronously query layout');
 assert.equal(offsetQueries,0);
 assert.equal(frames.length,1,'both scrollers share one pending observation');
 latestY = -150;
 const observation = frames.shift();observation.onFrame(0);
 assert.equal(rectangleQueries,0,'frame start precedes rendered native geometry');
-observation.onIdle(2_000_000); await tick(); properties.flush();
+observation.onIdle(2_000_000); drainReaderPostLayoutFallbacks(frames); await tick(); properties.flush();
 assert.equal(rectangleQueries,1); assert.equal(offsetQueries,1);
 assert.equal(owner.visibleAnchor.y,0.25,'delivered frame observes latest native position');
 assert.equal(snapshot().mounts,before.mounts); assert.equal(snapshot().reloads,before.reloads);
@@ -42,16 +42,16 @@ for (let index=0; index<100; index++) list.onScrollIndex(0,1);
 assert.equal(rectangleQueries,restoredQueries,'restore range callbacks cannot re-enter native geometry');
 assert.equal(frames.length,1);
 const restored = frames.shift();restored.onFrame(0);assert.equal(owner.restoringAnchor,true);
-restored.onIdle(2_000_000); await tick();
+restored.onIdle(2_000_000); drainReaderPostLayoutFallbacks(frames); await tick();
 assert.equal(owner.restoringAnchor,false);
 assert.equal(rectangleQueries,restoredQueries+1);
 console.log('PASS repeated native restoration callbacks defer geometry and settle the current anchor');
 
-list.onScroll(); horizontal.onScroll(); assert.equal(frames.length,1);
+list.onDidScroll(); horizontal.onDidScroll(); assert.equal(frames.length,1);
 owner.controller.close = async () => {};
 owner.restoreAppWindowChrome = () => {};
 owner.aboutToDisappear();
-{const frame=frames.shift();frame.onFrame(0);frame.onIdle(2_000_000);}
+{const frame=frames.shift();frame.onFrame(0);frame.onIdle(2_000_000);drainReaderPostLayoutFallbacks(frames);}
 assert.equal(rectangleQueries,restoredQueries+1,'disappeared Surface cannot read native layout');
 assert.equal(offsetQueries,2);
 console.log('PASS pending observation is invalidated by production disappearance');
@@ -60,11 +60,11 @@ console.log('PASS pending observation is invalidated by production disappearance
 // overwrite the saved, confirmed position. Use the same admitted image context.
 owner.mounted=true; owner.opened=true; owner.controller.savePosition=async()=>{};
 owner.controller.savedLocation=null; latestY=-90;
-list.onScroll(); assert.equal(frames.length,1);
+list.onDidScroll(); assert.equal(frames.length,1);
 list.onScrollStop(); await tick();
 assert.equal(owner.confirmedPosition.anchor.y,0.15);
 const finalQueries=rectangleQueries;
-{const frame=frames.shift();frame.onFrame(0);frame.onIdle(2_000_000);}
+{const frame=frames.shift();frame.onFrame(0);frame.onIdle(2_000_000);drainReaderPostLayoutFallbacks(frames);}
 assert.equal(rectangleQueries,finalQueries,'native stop consumes and cancels the pending observation');
 console.log('PASS native stop captures position synchronously and cancels obsolete observation');
 `;

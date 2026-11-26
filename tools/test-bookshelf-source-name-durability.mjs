@@ -3,6 +3,7 @@ import { actualProjectionTypes } from './lib/bookshelf-projection-owner-probe.mj
 import { bookshelfOperationClass } from './lib/bookshelf-operation-owner-probe.mjs';
 import { actualReadingEntryPresentation } from './lib/reading-entry-presentation-probe.mjs';
 import { BookshelfViewState } from '../entry/src/main/ets/features/bookshelf/presentation/BookshelfViewState.ts';
+import { ShelfBookPresentation } from '../entry/src/main/ets/features/bookshelf/presentation/ShelfBookPresentation.ts';
 import { readerRecoveryView } from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import { errorMessageOf, localReadFailureSummary } from '../entry/src/main/ets/app/ErrorMessage.ts';
 import * as sourceNames from '../entry/src/main/ets/features/bookshelf/application/BookshelfSourceNameProjection.ts';
@@ -14,7 +15,13 @@ import { readingEntryInputForSearchContext } from '../entry/src/main/ets/feature
 import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { MangaOfflineNetworkProbe } from '../entry/src/main/ets/app/MangaOfflineNetworkProbe.ts';
 const file = name => new URL(`../entry/src/main/ets/${name}`, import.meta.url);
-const Gateway = productionMotionMethods(file('app/ReaderCoreGateway.ts'), ['loadBookshelf','decodeShelfBook','decodeShelfReadingPosition','requiredNonNegativeInteger','requiredString','requiredNumber','optionalString','optionalNumber','optionalNonNegativeInteger']);
+const Gateway = productionMotionMethods(file('app/ReaderCoreGateway.ts'), ['loadBookshelf','loadShelfBook','assertNonBlankString','decodeShelfBook','decodeShelfReadingPosition','requiredNonNegativeInteger','requiredString','requiredNumber','optionalString','optionalNumber','optionalNonNegativeInteger']);
+class EntryGateway extends Gateway {
+  constructor(runtimeOwner) {
+    super();
+    this.runtimeOwner=runtimeOwner;
+  }
+}
 const raw = {sourceId:'source-a',bookId:'same',sourceName:'持久名称',title:'T',author:'A',kind:'MANGA',contentKind:'manga',
   coverUrl:'https://example.test/cover',intro:'简介',lastChapter:'最新章',addedAt:1,lastReadAt:2,group:'分组',sortIndex:3,
   unreadCount:2,lastCheckAt:3,currentChapterTitle:'当前章',readProgress:4520,currentChapterIndex:4,chapterCount:12,
@@ -76,9 +83,9 @@ console.log('PASS Core shelf-name DTO, cold source.list failure, rename/delete/s
 // navigation and probe binding execute unchanged production code.
 let selectionRuntime;
 const ShelfSelection=productionMotionMethods(file('features/bookshelf/ui/BookshelfPage.ets'),
-  ['bookSelectionHandler','isShelfPresentationCurrent']);
+  ['bookSelectionHandler','isShelfPresentationCurrent','currentVisibleBook','projectedBooks'],{ShelfBookPresentation});
 const EntryActions=bookshelfOperationClass('app/composition/ReaderReadingEntryActions.ets',
-  'ReaderReadingEntryActions',{Observed:value=>value,readingEntryInputForSearchContext});
+  'ReaderReadingEntryActions',{Observed:value=>value,readingEntryInputForSearchContext,ReaderCoreGateway:EntryGateway});
 for (const contentKind of ['manga','text','audio',undefined]) {
   const payload={...raw};
   if(contentKind===undefined)delete payload.contentKind;else payload.contentKind=contentKind;
@@ -90,9 +97,10 @@ for (const contentKind of ['manga','text','audio',undefined]) {
   assert.strictEqual(shelfRead.snapshot.continueReading,decoded,'continue-reading retains its Core DTO');
   assert.equal(Object.hasOwn(shelfRead.snapshot.books[0],'contentKind'),contentKind!==undefined,'legacy absence does not become an invented media type');
   for(const [entry,provider] of [['shelf-row',()=>shelfRead.snapshot.books[0]],['continue-reading',()=>shelfRead.snapshot.continueReading]]) {
-    const probe=new MangaOfflineNetworkProbe(undefined,()=>{},'reading',true),selections=[],opened=[],failures=[];
+    const probe=new MangaOfflineNetworkProbe(undefined,()=>{},'reading',true),selections=[],opened=[],failures=[],shelfReads=[];
     selectionRuntime={selectMangaOfflineProbe(sourceId,bookId,manga){selections.push({sourceId,bookId,manga});probe.select(sourceId,bookId,manga);},
-      mangaOfflineProbeFor:(sourceId,bookId)=>probe.matches(sourceId,bookId),noteReadingPreparationIntent(){}};
+      mangaOfflineProbeFor:(sourceId,bookId)=>probe.matches(sourceId,bookId),noteReadingPreparationIntent(){},
+      async request(method,key){shelfReads.push([method,key]);return {data:{book:provider()}};}};
     const sourceNameRequests=[];
     const acquisition={snapshot:()=>({scopeId:0}),
       openRemote(input,lease){assert.equal(lease.isCurrent(),true);opened.push(input);},
@@ -106,7 +114,7 @@ for (const contentKind of ['manga','text','audio',undefined]) {
       runtime:()=>selectionRuntime,mounting:()=>1,entry:()=>readingEntry,
       search:()=>({host:{visibilityChanged(){}},admissionCandidates:()=>[]}),
       sourceSwitch:()=>sourceSwitch,shelfBooks:()=>shelfRead.snapshot.books,
-      removalPending:()=>false,readerExitPending:()=>false,
+      removalPending:()=>false,
       advance:()=>{readingEntry.retire();entryActions.retirePreparation();return navigation.advance().generation;},
       show:route=>navigation.show(route),bindReader(){},restoreReaderReturn:()=>false,
       entryPorts:()=>({current:()=>true,projectionVisible:()=>false,membership:()=>({}),
@@ -117,23 +125,26 @@ for (const contentKind of ['manga','text','audio',undefined]) {
       },
       failure:(title,message)=>failures.push({title,message}),afterOpening:project=>project(),postFrame:action=>action(),refreshNearEnd(){},
     });
-    const origin={x:4,y:8,width:100,height:160},viewState=new BookshelfViewState();
     let viewportSaves=0;
     const continuing=entry==='continue-reading';
-    const page=Object.assign(new ShelfSelection(),{mounted:true,navigationGeneration:1,viewState,
+    const page=Object.assign(new ShelfSelection(),{mounted:true,navigationGeneration:1,
+      isCurrentShelfInput:navigation=>navigation===1,books:shelfRead.snapshot.books,sourceFilter:'all',contentFilter:'all',
       saveShelfViewport(){viewportSaves++;},
-      measureBookOrigin(book,isContinuing){assert.equal(book,provider());assert.equal(isContinuing,continuing);return origin;},
-      onBookSelected:(book,generation,actualOrigin)=>{
-        assert.equal(generation,1);assert.equal(actualOrigin,origin);entryActions.resumeShelf(book);
+      measureBookOrigin(){assert.fail('opening from the bookshelf must skip cover measurement');},
+      onBookSelected:(book,generation)=>{
+        assert.equal(generation,1);entryActions.resumeShelf(book);
       }});
     page.bookSelectionHandler(provider,continuing)();
     assert.equal(viewportSaves,1);
-    assert.equal(viewState.openedBookKey,JSON.stringify([decoded.sourceId,decoded.bookId]));
-    assert.equal(viewState.openedFromContinueReading,continuing);
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.deepEqual(shelfReads,contentKind===undefined ? [['bookshelf.get',{sourceId:decoded.sourceId,bookId:decoded.bookId}]] : []);
     const snapshot=JSON.parse(probe.snapshot());
     if(contentKind==='audio') {
       assert.equal(selections.length,0,`${entry}: unsupported audio is rejected before probe binding`);
       assert.equal(opened.length,0);assert.equal(sourceNameRequests.length,0);assert.equal(failures.length,1);assert.equal(snapshot.state,'armed');
+    } else if(contentKind===undefined) {
+      assert.equal(opened.length,0);
+      assert.deepEqual(failures.map(failure=>failure.title),['书籍类型尚未确认']);
     } else {
       assert.deepEqual(selections,[{sourceId:decoded.sourceId,bookId:decoded.bookId,manga:contentKind==='manga'}],`${entry}: exact identity and media classification reach the real dispatcher`);
       assert.equal(opened.length,1);assert.strictEqual(opened[0].shelfSnapshot,provider());assert.equal(opened[0].resumeImmediately,true);

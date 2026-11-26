@@ -34,7 +34,7 @@ export interface ReaderLabeledIconActionSpec {
 const FEED: ReaderLabeledIconActionSpec = {
   labelMarginLeft: undefined, leftPaddingOnly: false, gradientStart: undefined, gradientEnd: undefined, text: TYPE_APP_SMALL_ACTION, textRole: 'app.text.filter',
   dangerRole: undefined, surfaceRole: 'app.feed.actionSoft', borderRole: undefined,
-  divided: false, iconSize: 18, rowHeight: 32, gap: 5, surfaceOnHit: false, rowWidth: undefined, horizontalPadding: 9,
+  divided: false, iconSize: 14, rowHeight: 32, gap: 5, surfaceOnHit: false, rowWidth: undefined, horizontalPadding: 9,
   radius: 999, centerRow: false, outerHit: true, equalLayout: false, responseOffset: undefined,
 };
 function copyReaderLabeledIconActionSpec(): ReaderLabeledIconActionSpec {
@@ -51,31 +51,31 @@ ENTRY.rowWidth = '100%'; ENTRY.horizontalPadding = undefined; ENTRY.centerRow = 
 const MANAGEMENT: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
 MANAGEMENT.text = TYPE_FORM_COMPACT_ACTION; MANAGEMENT.textRole = 'TOK_INK'; MANAGEMENT.dangerRole = 'TOK_DANGER';
 MANAGEMENT.surfaceRole = undefined; MANAGEMENT.divided = true; MANAGEMENT.borderRole = 'TOK_ROW_DIVIDER';
-MANAGEMENT.iconSize = 16; MANAGEMENT.rowHeight = 44; MANAGEMENT.horizontalPadding = undefined;
+MANAGEMENT.rowHeight = 44; MANAGEMENT.horizontalPadding = undefined;
 MANAGEMENT.radius = undefined; MANAGEMENT.centerRow = true; MANAGEMENT.outerHit = false; MANAGEMENT.equalLayout = true;
 const MANAGE: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
 MANAGE.text = TYPE_APP_COMPACT_PRIMARY_ACTION; MANAGE.textRole = 'TOK_PRIMARY_TEXT';
 MANAGE.surfaceRole = 'app.feed.pillSurface'; MANAGE.borderRole = 'app.feed.pillBorder';
-MANAGE.iconSize = 16; MANAGE.rowHeight = 34; MANAGE.rowWidth = 64; MANAGE.horizontalPadding = undefined;
+MANAGE.rowHeight = 34; MANAGE.rowWidth = 64; MANAGE.horizontalPadding = undefined;
 MANAGE.radius = 12; MANAGE.centerRow = true; MANAGE.outerHit = false; MANAGE.responseOffset = -5;
 const SOURCE_OPERATIONS: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
 SOURCE_OPERATIONS.text = TYPE_RSS_LINK_ACTION; SOURCE_OPERATIONS.textRole = 'TOK_PRIMARY_TEXT';
-SOURCE_OPERATIONS.surfaceRole = 'TOK_PRIMARY_SOFT'; SOURCE_OPERATIONS.iconSize = 16;
+SOURCE_OPERATIONS.surfaceRole = 'TOK_PRIMARY_SOFT';
 SOURCE_OPERATIONS.rowHeight = 30; SOURCE_OPERATIONS.horizontalPadding = 8;
 SOURCE_OPERATIONS.outerHit = false; SOURCE_OPERATIONS.responseOffset = -7;
 const VIEW_ALL: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
 VIEW_ALL.text = TYPE_RSS_LINK_ACTION; VIEW_ALL.textRole = 'TOK_PRIMARY_TEXT';
-VIEW_ALL.surfaceRole = 'TOK_PRIMARY_SOFT'; VIEW_ALL.iconSize = 20;
+VIEW_ALL.surfaceRole = 'TOK_PRIMARY_SOFT';
 VIEW_ALL.rowHeight = 28; VIEW_ALL.horizontalPadding = 8;
 VIEW_ALL.outerHit = false; VIEW_ALL.responseOffset = -8;
 const SOURCE_ADD: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
 SOURCE_ADD.text = TYPE_FORM_LABEL_ACTION; SOURCE_ADD.textRole = 'TOK_ON_PRIMARY';
-SOURCE_ADD.surfaceRole = 'TOK_PRIMARY_DARK'; SOURCE_ADD.iconSize = 18; SOURCE_ADD.gap = 8;
-SOURCE_ADD.rowHeight = undefined; SOURCE_ADD.horizontalPadding = undefined; SOURCE_ADD.radius = 8;
+SOURCE_ADD.surfaceRole = 'TOK_PRIMARY_DARK'; SOURCE_ADD.iconSize = 16; SOURCE_ADD.gap = 8;
+SOURCE_ADD.rowHeight = undefined; SOURCE_ADD.horizontalPadding = undefined; SOURCE_ADD.radius = 999;
 SOURCE_ADD.surfaceOnHit = true; SOURCE_ADD.equalLayout = true;
 const DISCOVER_APPLY: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
 DISCOVER_APPLY.text = TYPE_DISCOVER_FILTER_LABEL; DISCOVER_APPLY.textRole = 'TOK_ON_PRIMARY';
-DISCOVER_APPLY.iconSize = 20; DISCOVER_APPLY.rowHeight = 34; DISCOVER_APPLY.rowWidth = 69.097;
+DISCOVER_APPLY.rowHeight = 34; DISCOVER_APPLY.rowWidth = 69.097;
 DISCOVER_APPLY.gap = 0; DISCOVER_APPLY.labelMarginLeft = TOK_SPACE_ROW_BLOCK; DISCOVER_APPLY.horizontalPadding = TOK_SPACE_CONTROL_INLINE; DISCOVER_APPLY.leftPaddingOnly = true;
 DISCOVER_APPLY.radius = 8; DISCOVER_APPLY.outerHit = false; DISCOVER_APPLY.surfaceRole = undefined;
 DISCOVER_APPLY.borderRole = 'app.action.applyBorder';
@@ -84,7 +84,7 @@ DISCOVER_APPLY.gradientEnd = 'app.action.applyGradientEnd';
 const DETAIL_DIRECTORY: ReaderLabeledIconActionSpec = copyReaderLabeledIconActionSpec();
 DETAIL_DIRECTORY.text = TYPE_APP_COMPACT_PRIMARY_ACTION; DETAIL_DIRECTORY.textRole = 'TOK_PRIMARY_TEXT';
 DETAIL_DIRECTORY.surfaceRole = 'app.surface.chapterSection'; DETAIL_DIRECTORY.borderRole = 'TOK_BORDER';
-DETAIL_DIRECTORY.iconSize = 20; DETAIL_DIRECTORY.gap = 6;
+DETAIL_DIRECTORY.gap = 6;
 DETAIL_DIRECTORY.naturalHeight = true; DETAIL_DIRECTORY.rowWidth = undefined; DETAIL_DIRECTORY.rowHeight = 30; DETAIL_DIRECTORY.horizontalPadding = 11;
 DETAIL_DIRECTORY.pressFeedback = false; DETAIL_DIRECTORY.disabledIconOpacity = 1;
 FEED.naturalHeight = true; ENTRY.naturalHeight = true; MANAGEMENT.naturalHeight = true;

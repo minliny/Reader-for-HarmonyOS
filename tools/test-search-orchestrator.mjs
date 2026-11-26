@@ -342,12 +342,13 @@ function makeSources(count) {
  * failure. Tracks peak concurrent `book.search` in-flight requests so the test
  * can assert the orchestrator's bound.
  */
-function fakeOwner({ sources, resultsFor, failFor, delayForSource = () => 0 }) {
+function fakeOwner({ sources, resultsFor, failFor, delayForSource = () => 0, pageReceiptFor }) {
   const state = { inFlight: 0, maxInFlight: 0, calls: [], historyWrites: 0, sourceLoads: 0,
     failList: false, localBooks: [], historyKeywords: [] };
   return {
     state,
-    supportsCoreCapability: (capability) => capability === 'source.check.report.v2',
+    supportsCoreCapability: (capability) => capability === 'source.check.report.v2' ||
+      (capability === 'book.search.page-receipt.v1' && pageReceiptFor !== undefined),
     request: async (command, params, options) => {
       if (command === 'bookshelf.list') return { data: { books: state.localBooks, total: state.localBooks.length } };
       if (command === 'source.list') {
@@ -386,7 +387,12 @@ function fakeOwner({ sources, resultsFor, failFor, delayForSource = () => 0 }) {
         if (failFor !== undefined && failFor(sourceId)) {
           throw new Error(`boom:${sourceId}`);
         }
-        return { data: { sourceId, books: resultsFor(sourceId, keyword) } };
+        const data = { sourceId, books: resultsFor(sourceId, keyword) };
+        if (pageReceiptFor !== undefined) {
+          assert.equal(params.pageReceipt, true);
+          data.pageReceipt = pageReceiptFor(sourceId, keyword, params.page);
+        }
+        return { data };
       } finally {
         state.inFlight -= 1;
       }
@@ -1200,22 +1206,32 @@ case "route-live-return": {
   assert.equal(final.searching, false, 'the surviving sweep settles alone');
   assert.equal(owner.state.calls.length, 2, 'no source request is re-issued');
 };break;
-case "route-settled-return": {
+case "route-settled-return": for (const confirmed of [false, true]) {
   const owner = fakeOwner({
     sources: makeSources(2),
     delayForSource: () => 10,
     resultsFor: () => [],
+    pageReceiptFor: confirmed ? (sourceId, query, requestedPage) => ({
+      sourceId, query, requestedPage, state: 'end',
+      requestFingerprint: 'a'.repeat(64), responseFingerprint: 'b'.repeat(64), candidateFingerprint: 'c'.repeat(64),
+    }) : undefined,
   });
   const { orchestrator, presentations } = capture();
   const search = orchestrator(owner);
   search.open();
   search.search('无结果');
   await settle(owner.state, 2);
-  assert.equal(last(presentations).kind, 'empty');
+  const final = last(presentations);
+  assert.equal(final.kind, confirmed ? 'empty' : 'error');
+  assert.equal(final.operation.fact, confirmed ? 'empty' : 'partial');
+  assert.equal(final.operation.canRetry, !confirmed);
+  assert.equal(final.incompleteSourceCount, confirmed ? 0 : 2);
+  if (!confirmed) assert.deepEqual(final.incompleteSources.map(source => source.reason), ['legacyReceipt', 'legacyReceipt']);
 
   const presentationsBefore = presentations.length;
   const callsBefore = owner.state.calls.length;
   search.resume();
+  await sleep(20);
   assert.equal(presentations.length, presentationsBefore, 'a settled surface never re-sweeps');
   assert.equal(owner.state.calls.length, callsBefore, 'a settled surface issues no requests');
 };break;
@@ -1696,7 +1712,11 @@ case "stop-flush-pending": {
 };break;
 case "retry-failed-source": {
   let failing=true;let localReads=0;
-  const owner=fakeOwner({sources:makeSources(2),failFor:id=>failing&&id==='source-1',resultsFor:id=>[{bookId:'/'+id,title:'书',author:'作者'}]});
+  const owner=fakeOwner({sources:makeSources(2),failFor:id=>failing&&id==='source-1',
+    resultsFor:id=>[{bookId:'/'+id,title:'书',author:'作者'}],
+    pageReceiptFor:(sourceId,query,requestedPage)=>({sourceId,query,requestedPage,state:'end',
+      requestFingerprint:'a'.repeat(64),responseFingerprint:'b'.repeat(64),candidateFingerprint:'c'.repeat(64)}),
+  });
   const request=owner.request;owner.request=async(method,...args)=>{if(method==='bookshelf.list'){localReads++;if(failing)throw Error('local read unavailable');}return request(method,...args);};
   const {orchestrator,presentations}=capture();const search=orchestrator(owner);search.open();search.search('书');
   await waitUntil(owner.state,()=>last(presentations).kind==='results'&&!last(presentations).searching);

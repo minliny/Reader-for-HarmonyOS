@@ -53,10 +53,12 @@ const Page=selectedProductionMethods(new URL('../entry/src/main/ets/features/sea
   ['aboutToAppear', 'aboutToDisappear', 'acceptPublication', 'bindSurface', 'publishSurface', 'ownsSurface', 'surfaceInputCurrent', 'pageInputCurrent', 'hasSearchSession', 'canSubmit',
     'ownsPageQuery', 'ownsList', 'searchFontScale', 'submitSearch', 'selectContentType', 'selectGroup', 'filteredEmptyMessage', 'groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults', 'publishVisibleGroups', 'scheduleScrollRestore', 'finishScrollRestore', 'restoreMeasuredAnchor', 'resultNativeIndex', 'rememberAnchorNeighbors', 'cancelScrollRestoreForUser', 'onResultScrollIndex',
     'retirePanelScope', 'publishSurfacePanelInput', 'cancelSearchFocusRestore', 'pendingResultFocus', 'resetFilteredResults', 'releaseNativePanelChrome',
+    'hasSearchFilters', 'acceptsEmptyFilterReset', 'resetEmptySearchFilters', 'resetSelectedFilters',
     'filterPresentationIdentity', 'taskStatusIdentity', 'acceptsFilter', 'acceptsTaskStatus', 'dismissSearchFilters', 'dismissTaskStatus', 'searchPanelOwnsInput',
     'onListTouch', 'scheduleDeferredResults', 'restoreResultFocus', 'resultFocusId', 'resultViewportId',
     'acceptResultNoticeFacts', 'captureSearchNoticeFacts', 'searchProgressText', 'searchStopped', 'isSweeping', 'operation',
-    'partialSearchFailure', 'onCardDisplayFactsChange'],
+    'partialSearchFailure', 'onCardDisplayFactsChange', 'scheduleMoreResults', 'hasActiveSearchRequest',
+    'acceptsResultSelection', 'observePageAnchor', 'pageEvidence', 'presentationVisibilityChanged'],
   {...actualReaderPageShell(),...authorMetadata,...mediaIdentity,
     ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1 }), requestAppChrome: () => { restoredAppChrome++; } },
     nextSearchSurfaceOwner: 0, READER_LIBRARY_SEARCH_BACK_FOCUS_ID,
@@ -336,7 +338,8 @@ if (selectedCase === 'layout-restoration') {
     const p = Object.assign(new Page(), { viewState: state, publication, surfaceModel: model, publicationRevision: 1,
       listEpoch: 0, restoreEpoch: 0, viewStateRevision: -1, resultFlushEpoch: 0, taskStatusGeneration: 0,
       visibleStart: 0, visibleEnd: 0, warmupGroups: [], resultDataSource: new SearchResultDataSource(),
-      listMounted: false, headerAnchorPending: false, isPresentationCurrent: () => true, isPresentationVisible: () => true,
+      listMounted: false, presented: true, headerAnchorPending: false,
+      isPresentationCurrent: () => true, isPresentationVisible: () => p.presented,
       searchContentStartInset: () => 54, searchContentEndInset: () => 28, onVisibleGroups: groups => warmups.push(groups),
       getUIContext: () => ({
         getFont() {}, postFrameCallback: frame => frames.push(frame), px2vp: value => value / 2,
@@ -455,6 +458,38 @@ if (selectedCase === 'layout-restoration') {
     assert.deepEqual(f.focusRequests, target === 'realized' ? [f.p.resultFocusId('online:b')] :
       target === 'missing' ? [READER_LIBRARY_SEARCH_BACK_FOCUS_ID] : [], target);
   }
+
+  {
+    const f = restoration({ measured: true, focusKey: 'online:b' });
+    f.p.pendingResultFocus = '';
+    f.p.scheduleScrollRestore(); f.tick(); f.tick();
+    const epoch = f.p.pageEpoch;
+    const surfaceOwner = f.model.currentOwner();
+    const dataSource = f.p.resultDataSource;
+    const moves = [...f.moves];
+    const selected = f.p.visibleGroups[1].book;
+    assert.equal(f.p.acceptsResultSelection(selected), true);
+    const chrome = restoredAppChrome;
+    f.p.nativePanel = { kind: 'filter', identity: 'covered-filter', chromeClaimed: true };
+    f.p.publishSurfacePanelInput();
+    f.p.presented = false;
+    f.p.presentationVisibilityChanged();
+    assert.equal(f.p.acceptsResultSelection(selected), false);
+    assert.equal(f.model.panelOwnsInput, false, 'covering the retained page releases its temporary panel');
+    assert.equal(restoredAppChrome, chrome + 1);
+    f.p.viewState.rememberDetailResult('online:b');
+    f.p.viewState.returnFromDetail();
+    f.p.presented = true;
+    f.p.presentationVisibilityChanged();
+    assert.equal(f.p.acceptsResultSelection(selected), true);
+    assert.equal(f.p.pageEpoch, epoch);
+    assert.equal(f.model.currentOwner(), surfaceOwner);
+    assert.equal(f.p.resultDataSource, dataSource);
+    assert.equal(f.p.retainedViewportPending, false, 'revealing a mounted list does not paint the paper mask');
+    f.tick();
+    assert.deepEqual(f.moves, moves, 'the mounted list keeps its anchor without replaying scroll');
+    assert.deepEqual(f.focusRequests, [f.p.resultFocusId('online:b')]);
+  }
 }
 
 if(selectedCase==='candidate-facts'){
@@ -521,6 +556,7 @@ const filtered = Object.assign(new Page(), {
   pageMounted: true, pageEpoch: filterState.pageRevision, queryAtMount: filterState.revision,
   isPresentationCurrent: () => true,
   visibleStart: 0, visibleEnd: 5, warmupGroups: [], resultDataSource: new SearchResultDataSource(),
+  scheduleMoreResults() {},
   resultScroller: { scrollTo() { scrollResets++; }, scrollEdge() { scrollResets++; } },
   onVisibleGroups() { warmups++; }, onSearch(keyword) { searches.push(keyword); }, onRetry() { retries++; },
 });
@@ -544,63 +580,54 @@ Object.assign(chips, { mounted: true, expanded: true, presentationIdentity: shee
     filtered.selectContentType(label);
     this.selectedType = filtered.selectedContentType;
   } });
-// Exercise the current trigger actors as well as the existing real chip path.
-// Native sheet lifecycle remains the production binding, not reconstructed callbacks.
-const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
-const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
-const sheetSurfaces = boundedSurfaceSdk();
-const surfaceGeometry = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
-const windowMetrics = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+// The result List trigger is stable while SearchPage owns the modal cover.
+const filterTriggerSource = read('entry/src/main/ets/features/search/ui/ReaderSearchFilterTrigger.ets');
 const resultGeometry = await import('../entry/src/main/ets/features/search/ui/SearchResultGeometry.ts');
-const sheetDeps = { ...sheetSurfaces.deps, ...surfaceGeometry, ...windowMetrics, ...resultGeometry,
-  SheetSize: { FIT_CONTENT: 'fit' }, SheetType: { BOTTOM: 'bottom' }, DismissReason: { PRESS_BACK: 'back' } };
-const { SearchResultSheetBinding } = pureModuleProbe(read('entry/src/main/ets/features/search/ui/SearchResultSheetBinding.ets'),
-  'SearchResultSheetBinding.ets', sheetDeps, ['SearchResultSheetBinding']);
-const { owner: filterTrigger } = createReaderBuilderProbe(filterPanel,
-  ['build', 'active', 'toggleAction', 'sheetContent', 'sheetOptions', 'sheetSpec', 'sheetWidth', 'accepts', 'nativeSheet'],
-  { ...sheetDeps, SearchResultSheetBinding }, sheetSurfaces.hooks);
+const { owner: filterTrigger } = createReaderBuilderProbe(filterTriggerSource,
+  ['build', 'active', 'toggleAction'], { ...controls.dependencies, ...resultGeometry }, controls.hooks);
 const triggerEvents = [];
 Object.assign(filterTrigger, { mounted: true, expanded: false, scheme: 'day', selectedType: '漫画', selectedGroup: '全部',
   presentationIdentity: 'filter-trigger', triggerFocusId: 'filter-return',
-  onToggle: (identity, expanded) => triggerEvents.push(['toggle', identity, expanded]),
-  onNativeOpening: identity => triggerEvents.push(['opening', identity]),
-  onNativeClosing() {}, onDismiss() {}, onClosed() {} });
+  onToggle: (identity, expanded) => triggerEvents.push(['toggle', identity, expanded]) });
 filterTrigger.initialRender();
 const physicalFilter = [...filterTrigger.nodes.values()].find(node => node.type === 'Button' && node.onClick);
 assert.ok(physicalFilter, 'actual filter trigger is a native Button');
 assert.equal(physicalFilter.id, 'filter-return');
 assert.equal(physicalFilter.width, resultGeometry.SEARCH_RESULT_GEOMETRY.filterActionSize);
-assert.ok(Array.isArray(physicalFilter.bindSheet), 'native sheet stays attached to the same filter actor');
+assert.equal(physicalFilter.bindSheet, undefined, 'the retained trigger does not create a second native sheet');
 physicalFilter.onClick();
-physicalFilter.bindSheet[2].onWillAppear();
-assert.deepEqual(triggerEvents, [['toggle', 'filter-trigger', false], ['opening', 'filter-trigger']]);
+assert.deepEqual(triggerEvents, [['toggle', 'filter-trigger', false]]);
 filterTrigger.mounted = false;
-physicalFilter.onClick(); physicalFilter.bindSheet[2].onWillAppear();
-assert.equal(triggerEvents.length, 2, 'retired trigger and native opening cannot dispatch');
+physicalFilter.onClick();
+assert.equal(triggerEvents.length, 1, 'a retired trigger cannot dispatch');
 assert.ok(![...filterTrigger.nodes.values()].some(node => node.type === 'Stack' && node.onClick),
   'filter visual Stack has no duplicate toggle');
 
 const historySource = read('entry/src/main/ets/features/search/ui/ReaderSearchHistoryPanel.ets');
 const historyGeometry = await import('../entry/src/main/ets/features/search/ui/SearchHistoryGeometry.ts');
+const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
 let clears = 0;
 const { owner: history } = createReaderBuilderProbe(historySource,
-  ['build', 'actionsEnabled', 'projectedRows', 'measuredControlWidth', 'measuredWidths', 'measuredRevision', 'metricsRevision'],
-  { ...controls.dependencies, ...historyGeometry }, controls.hooks);
+  boundedMembers(historySource),
+  { ...controls.dependencies, ...historyGeometry, readerPaperActionIcon: () => 'reader-paper-action-icon' }, controls.hooks);
+const historyGeometryValue = new historyGeometry.SearchHistoryGeometry(350, 180, 1, false);
+const historyLayout = historyGeometry.projectSearchHistoryPanel(['已保留关键词'], historyGeometryValue, false, () => 80);
 Object.assign(history, { appThemeScheme: 'day', history: ['已保留关键词'], status: undefined,
-  geometry: new historyGeometry.SearchHistoryGeometry(350, 180, 1, false),
+  layout: historyLayout,
   onClear: () => clears++, onSelect() {}, getUIContext: () => ({ px2vp: value => value,
     getMeasureUtils: () => ({ measureText: () => 80 }) }) });
 history.initialRender();
-const clearHistory = [...history.nodes.values()].find(node => node.type === 'Button' && node.accessibilityText === '清空搜索历史');
+const clearHistory = controls.nodes(history).find(node => node.type === 'Button' && node.accessibilityText === '清空搜索历史');
 assert.ok(clearHistory, 'actual history clear is one native Button');
-assert.equal(clearHistory.height, history.geometry.headingHeight);
+assert.equal(clearHistory.height, history.layout.geometry.headingHeight);
 clearHistory.onClick(); assert.equal(clears, 1);
 history.status = 'loading'; clearHistory.onClick(); assert.equal(clears, 1, 'busy history rejects a retained native callback');
 assert.ok(![...history.nodes.values()].some(node => node.type === 'Row' && node.onClick),
   'history visual Row cannot clear twice');
 const typeLabels = ['全部类型', '小说', '漫画'];
 const geometry = { choiceWidths: [64, 64, 64], choiceHeight: 44 };
-typeLabels.forEach((label, index) => chips.typeChip(label, index, sheetIdentity, geometry));
+chips.sheetGeometry = () => geometry;
+typeLabels.forEach((label, index) => chips.typeChip(label, index, sheetIdentity));
 const chip = label => controls.nodes(chips).find(node => node.onClick &&
   [`当前内容:${label}`, `筛选内容:${label}`].includes(node.accessibilityText));
 assert.deepEqual(typeLabels.map(label => Boolean(chip(label))), [true, true, true]);
@@ -620,6 +647,22 @@ filtered.presentation = { ...queryPresentation, searching: false, stopped: true 
 assert.match(filtered.filteredEmptyMessage(), /搜索已停止.*已返回的结果/);
 filtered.presentation = { ...queryPresentation, searching: false, stopped: false };
 assert.match(filtered.filteredEmptyMessage(), /已返回的结果.*可切换范围或内容类型/);
+filtered.listMounted = true;
+filtered.getUIContext = () => ({ postFrameCallback() {} });
+filtered.filterSheetIdentity = '';
+filtered.taskSheetIdentity = '';
+filtered.resetEmptySearchFilters(queryRevision - 1);
+assert.equal(filtered.visibleGroups.length, 0, 'a retired query cannot reset current filters');
+filtered.filtersExpanded = true;
+filtered.resetEmptySearchFilters(queryRevision);
+assert.equal(filtered.visibleGroups.length, 0, 'the current modal owns filter actions');
+filtered.filtersExpanded = false;
+filtered.resetEmptySearchFilters(queryRevision);
+assert.deepEqual([filterState.category, filterState.contentType], ['全部', '全部类型']);
+assert.deepEqual(filtered.visibleGroups.map(group => filtered.resultGroupKey(group.book)), originalOrder);
+assert.equal(filterState.revision, queryRevision, 'the empty-state action keeps the accepted query');
+assert.deepEqual(searches, []);
+filtered.selectGroup('本地');
 chip('小说').onClick(); controls.flush(chips);
 assert.deepEqual(filtered.visibleGroups.map(group => group.book), [localNovel]);
 filtered.selectGroup('在线');

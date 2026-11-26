@@ -10,6 +10,8 @@ export type ReaderScreenDirection = 'system' | 'portrait' | 'landscape';
 
 export type ReaderNavigationMode = 'paged' | 'continuous';
 
+export type ReaderWidePageLayout = 'spread' | 'single';
+
 export type ReaderPageTransition = 'simulation' | 'cover' | 'slide' | 'none';
 
 /** Presentation vocabulary used by the Figma-backed settings controls. */
@@ -34,6 +36,7 @@ export type ReaderSettingsSnapshot = {
   mangaFit?: 'source' | 'width' | 'contain';
   mangaBackground?: 'paper' | 'white' | 'ink';
   mangaPageNumbers?: boolean;
+  widePageLayout?: ReaderWidePageLayout;
   screenDirection: ReaderScreenDirection;
   navigationMode: ReaderNavigationMode;
   pageTransition: ReaderPageTransition;
@@ -196,11 +199,21 @@ export function normalizeReaderSettingsSnapshot(
   if (candidate.version === 5 && (candidate.mangaFit === 'width' || candidate.mangaFit === 'contain' || candidate.mangaFit === 'source')) normalized.mangaFit = candidate.mangaFit;
   if (candidate.version === 5 && (candidate.mangaBackground === 'paper' || candidate.mangaBackground === 'white' || candidate.mangaBackground === 'ink')) normalized.mangaBackground = candidate.mangaBackground;
   if (candidate.version === 5 && typeof candidate.mangaPageNumbers === 'boolean') normalized.mangaPageNumbers = candidate.mangaPageNumbers;
+  if (candidate.version === 5 && (candidate.widePageLayout === 'spread' || candidate.widePageLayout === 'single')) {
+    normalized.widePageLayout = candidate.widePageLayout;
+  }
   return normalized;
 }
 
 export function copyReaderSettingsSnapshot(snapshot: ReaderSettingsSnapshot): ReaderSettingsSnapshot {
   return normalizeReaderSettingsSnapshot(snapshot);
+}
+
+export function setReaderWidePageLayout(snapshot: ReaderSettingsSnapshot,
+  value: ReaderWidePageLayout): ReaderSettingsSnapshot {
+  const next = copyReaderSettingsSnapshot(snapshot);
+  next.widePageLayout = value;
+  return next;
 }
 
 export function readerPageTurnStyle(snapshot: ReaderSettingsSnapshot): ReaderPageTurnStyle {

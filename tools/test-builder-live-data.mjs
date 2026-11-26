@@ -24,7 +24,7 @@ const selected = selectContractCases({
 if (selected.length) {
   const { selectedProductionClasses, selectedProductionValues } = await import('./lib/selected-production-methods.mjs');
   const { motionSegment } = await import('../entry/src/main/ets/ui/foundation/MotionTimeline.ts');
-  const coverVisual = await import('../entry/src/main/ets/features/bookshelf/ui/BookshelfCoverVisual.ts');
+  const productTiming = await import('../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts');
   const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
   const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
   const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
@@ -259,10 +259,13 @@ if (selected.length) {
 
   function shelfRowIndex() {
     const controls = foundationControls();
+    const grid = pureModuleProbe(read('entry/src/main/ets/features/bookshelf/ui/BookshelfGridSpec.ets'),
+      'BookshelfGridSpec.ets', controls.dependencies,
+      ['bookshelfColumnCount', 'bookshelfListCardWidth', 'BOOKSHELF_LIST_COLUMN_GAP', 'BOOKSHELF_LIST_CARD_PADDING']);
     const motionPath = 'entry/src/main/ets/ui/foundation/MotionSpec.ets';
     const linearCurve = { interpolate: value => value };
     const { BOOKSHELF_VIEW_MOTION } = selectedProductionValues(new URL(motionPath, root), ['BOOKSHELF_VIEW_MOTION'],
-      { curves: { cubicBezierCurve: () => linearCurve }, Curve: { Linear: 'linear', EaseOut: 'ease-out' } });
+      { ...productTiming, STANDARD_CURVE: linearCurve });
     const motionSource = read(motionPath);
     const tree = ts.createSourceFile('MotionSpec.ets', motionSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
     const delay = tree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'bookshelfViewCoverDelayMs');
@@ -271,22 +274,25 @@ if (selected.length) {
       stripTypeScriptTypes(delay.getText(tree)).replace(/^export /, '') + ';return bookshelfViewCoverDelayMs;')(BOOKSHELF_VIEW_MOTION);
     const { BookshelfRowDataSource } = selectedProductionClasses(new URL(shelfPath, root), ['BookshelfRowDataSource'],
       { DataOperationType: { ADD: 'ADD', DELETE: 'DELETE', RELOAD: 'RELOAD' } });
-    const methods = ['bookshelfList', 'projectionRow', 'projectionBookCard', 'projectionBookCover', 'projectionBookCoverLayer',
-      'projectionListProgress', 'projectionRowHeight', 'projectionBookWidth', 'projectionBookHeight',
+    const methods = ['bookshelfList', 'layoutDebugMountedIds', 'projectionRow', 'projectionBookCard', 'projectionBookCover', 'projectionBookCoverLayer',
+      'projectionListProgress', 'projectionDetailsOpacity', 'projectionRowHeight', 'projectionBookWidth', 'projectionBookHeight',
       'projectionBookTranslateX', 'projectionBookTranslateY', 'projectionCoverScale', 'projectionCoverRadius',
       'projectionCoverCompensationX', 'projectionCoverCompensationY', 'bookRowRenderKey'];
     class CoverPort { constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); } }
     const source = read(shelfPath);
     const nativeGesture = new Proxy({}, { get: () => () => {} });
-    const owner = createReaderBuilderProbe(source, methods, { ...controls.dependencies, ...coverVisual,
+    const owner = createReaderBuilderProbe(source, methods, { ...controls.dependencies, ...grid,
       motionSegment, bookshelfViewCoverDelayMs, BookshelfSectionHeader: CoverPort, ImageFit: { Cover: 'cover' }, NoCoverCover: CoverPort,
       globalThis: { Gesture: nativeGesture }, LongPressGesture: nativeGesture, GesturePriority: { Low: 'low' } },
       { ...controls.hooks, childSources: { ...controls.hooks.childSources, NoCoverCover: read('entry/src/main/ets/ui/patterns/NoCoverCover.ets'), BookshelfSectionHeader: read('entry/src/main/ets/features/bookshelf/ui/BookshelfSectionHeader.ets') } }).owner;
     Object.assign(owner, { viewMotion: BOOKSHELF_VIEW_MOTION, viewSwitchRunning: true, reduceMotion: false,
-      viewMode: 'cover', viewSwitchDestinationMode: 'list', viewSwitchTimeMs: BOOKSHELF_VIEW_MOTION.layoutCommitMs + 20,
+      viewMode: 'cover', viewSwitchDestinationMode: 'list', pendingViewMode: 'list',
+      viewSwitchRanks: new Map([[0, 0], [3, 3]]), viewSwitchTimeMs: BOOKSHELF_VIEW_MOTION.layoutCommitMs + 20,
       shelfBookCardWidth: () => 100, shelfContentWidth: () => 300, gridBookCardHeight: () => 140,
       listRowHeight: () => 160, listCoverWidth: () => 60, listCoverHeight: () => 80, bookCardHeight: () => 140,
       bookRowSpace: () => 10, projectionGridDetails() {}, projectionListDetails() {}, hasCover: () => true,
+      coverUrl: book => book.coverUrl, coverErrorHandler: () => () => {},
+      shelfPressed: () => false,
       bookActionFocusKey: book => `book:${book.bookId}`, bookCoverMotionId: book => `cover:${book.bookId}`,
       gridProgressLabel: () => '', bookSelectionHandler: () => () => {}, bookActionPresentationHandler: () => () => {},
       projectionCoverLayerOpacity: () => 1, viewSwitchGridContentOpacity: 1 });

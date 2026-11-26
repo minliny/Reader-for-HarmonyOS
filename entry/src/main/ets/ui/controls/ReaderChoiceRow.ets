@@ -1,8 +1,9 @@
 import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
 import {
-  ReaderTextStyle, TYPE_SELECT_DEFAULT_VALUE, TYPE_SELECT_OPTION,
-  TYPE_SELECT_SOURCE_GROUP_VALUE,
-  TYPE_SETTINGS_SELECT_PHONE_OPTION, TYPE_SETTINGS_SELECT_TABLET_OPTION,
+  ReaderTextStyle, TYPE_SELECT_DEFAULT_VALUE, TYPE_SELECT_OPTION, TYPE_SELECT_OPTION_SELECTED,
+  TYPE_SELECT_SOURCE_GROUP_VALUE, TYPE_SELECT_VALUE_SELECTED,
+  TYPE_SETTINGS_SELECT_PHONE_OPTION, TYPE_SETTINGS_SELECT_PHONE_OPTION_SELECTED,
+  TYPE_SETTINGS_SELECT_TABLET_OPTION, TYPE_SETTINGS_SELECT_TABLET_OPTION_SELECTED,
   TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_REGULAR, TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_SELECTED, TYPE_DOWNLOAD_BODY,
 } from '../foundation/ReaderTypography';
 
@@ -22,8 +23,6 @@ interface ReaderChoiceSpec {
   radius: number;
   text: ReaderTextStyle;
   selectedText: ReaderTextStyle;
-  selectedWeight: number;
-  variableWeight: boolean;
   textRole: ReaderAppColorRole;
   selectedTextRole: ReaderAppColorRole;
   selectedBackground: ReaderAppColorRole | undefined;
@@ -44,8 +43,7 @@ interface ReaderChoiceSpec {
 
 const COMMON_ROW: ReaderChoiceSpec = {
   height: 44, padding: 10, gap: 0, radius: 0,
-  text: TYPE_SELECT_OPTION, selectedText: TYPE_SELECT_OPTION,
-  selectedWeight: TYPE_SELECT_OPTION.fontWeight, variableWeight: false,
+  text: TYPE_SELECT_OPTION, selectedText: TYPE_SELECT_OPTION_SELECTED,
   textRole: 'TOK_CONTROL_INK', selectedTextRole: 'TOK_CONTROL_INK',
   selectedBackground: undefined, dividerRole: undefined, dividerHeight: 0,
   iconDay: '', iconNight: '', iconWidth: 0, iconHeight: 0, showIcon: 'never', rotateIcon: false,
@@ -63,8 +61,6 @@ function copyReaderChoiceSpec(): ReaderChoiceSpec {
     radius: COMMON_ROW.radius,
     text: COMMON_ROW.text,
     selectedText: COMMON_ROW.selectedText,
-    selectedWeight: COMMON_ROW.selectedWeight,
-    variableWeight: COMMON_ROW.variableWeight,
     textRole: COMMON_ROW.textRole,
     selectedTextRole: COMMON_ROW.selectedTextRole,
     selectedBackground: COMMON_ROW.selectedBackground,
@@ -86,14 +82,13 @@ function copyReaderChoiceSpec(): ReaderChoiceSpec {
 const CHOICE_SOURCE_GROUP_OPTION: ReaderChoiceSpec = copyReaderChoiceSpec();
 CHOICE_SOURCE_GROUP_OPTION.padding = 14;
 CHOICE_SOURCE_GROUP_OPTION.text = TYPE_SELECT_SOURCE_GROUP_VALUE;
-CHOICE_SOURCE_GROUP_OPTION.selectedText = TYPE_SELECT_SOURCE_GROUP_VALUE;
+CHOICE_SOURCE_GROUP_OPTION.selectedText = TYPE_SELECT_VALUE_SELECTED;
 CHOICE_SOURCE_GROUP_OPTION.textRole = 'TOK_INK';
 CHOICE_SOURCE_GROUP_OPTION.selectedTextRole = 'TOK_INK';
 const CHOICE_DEFAULT_SELECTED: ReaderChoiceSpec = copyReaderChoiceSpec();
 CHOICE_DEFAULT_SELECTED.gap = 8;
 CHOICE_DEFAULT_SELECTED.text = TYPE_SELECT_DEFAULT_VALUE;
-CHOICE_DEFAULT_SELECTED.selectedText = TYPE_SELECT_DEFAULT_VALUE;
-CHOICE_DEFAULT_SELECTED.selectedWeight = TYPE_SELECT_DEFAULT_VALUE.fontWeight;
+CHOICE_DEFAULT_SELECTED.selectedText = TYPE_SELECT_VALUE_SELECTED;
 CHOICE_DEFAULT_SELECTED.textRole = 'TOK_PRIMARY_TEXT';
 CHOICE_DEFAULT_SELECTED.selectedTextRole = 'TOK_PRIMARY_TEXT';
 CHOICE_DEFAULT_SELECTED.selectedBackground = 'app.select.selectedSurface';
@@ -105,15 +100,14 @@ CHOICE_DEFAULT_SELECTED.showIcon = 'always';
 CHOICE_DEFAULT_SELECTED.rotateIcon = true;
 const CHOICE_SOURCE_GROUP_SELECTED: ReaderChoiceSpec = copyReaderChoiceSpec();
 CHOICE_SOURCE_GROUP_SELECTED.text = TYPE_SELECT_SOURCE_GROUP_VALUE;
-CHOICE_SOURCE_GROUP_SELECTED.selectedText = TYPE_SELECT_SOURCE_GROUP_VALUE;
-CHOICE_SOURCE_GROUP_SELECTED.selectedWeight = TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight;
+CHOICE_SOURCE_GROUP_SELECTED.selectedText = TYPE_SELECT_VALUE_SELECTED;
 CHOICE_SOURCE_GROUP_SELECTED.textRole = 'TOK_INK';
 CHOICE_SOURCE_GROUP_SELECTED.selectedTextRole = 'TOK_INK';
 CHOICE_SOURCE_GROUP_SELECTED.selectedBackground = 'app.select.sourceGroupSelected';
-CHOICE_SOURCE_GROUP_SELECTED.iconDay = 'app.media.source_group_chevron';
-CHOICE_SOURCE_GROUP_SELECTED.iconNight = 'app.media.source_group_chevron_theme_night';
+CHOICE_SOURCE_GROUP_SELECTED.iconDay = 'app.media.reader_chevron_down';
+CHOICE_SOURCE_GROUP_SELECTED.iconNight = 'app.media.reader_chevron_down_theme_night';
 CHOICE_SOURCE_GROUP_SELECTED.iconWidth = 12;
-CHOICE_SOURCE_GROUP_SELECTED.iconHeight = 12;
+CHOICE_SOURCE_GROUP_SELECTED.iconHeight = 8;
 CHOICE_SOURCE_GROUP_SELECTED.showIcon = 'always';
 CHOICE_SOURCE_GROUP_SELECTED.rotateIcon = true;
 CHOICE_SOURCE_GROUP_SELECTED.layout = 'positioned';
@@ -126,8 +120,6 @@ CHOICE_APPEARANCE_LIBRARY.gap = 10;
 CHOICE_APPEARANCE_LIBRARY.radius = 6;
 CHOICE_APPEARANCE_LIBRARY.text = TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_REGULAR;
 CHOICE_APPEARANCE_LIBRARY.selectedText = TYPE_SELECT_APPEARANCE_LIBRARY_OPTION_SELECTED;
-CHOICE_APPEARANCE_LIBRARY.selectedWeight = 700;
-CHOICE_APPEARANCE_LIBRARY.variableWeight = true;
 CHOICE_APPEARANCE_LIBRARY.textAlignStart = false;
 CHOICE_APPEARANCE_LIBRARY.textRole = 'TOK_CONTROL_INK';
 CHOICE_APPEARANCE_LIBRARY.selectedTextRole = 'TOK_READ_PRIMARY';
@@ -141,8 +133,7 @@ const CHOICE_SETTINGS_PHONE: ReaderChoiceSpec = copyReaderChoiceSpec();
 CHOICE_SETTINGS_PHONE.height = 52;
 CHOICE_SETTINGS_PHONE.padding = 16;
 CHOICE_SETTINGS_PHONE.text = TYPE_SETTINGS_SELECT_PHONE_OPTION;
-CHOICE_SETTINGS_PHONE.selectedText = TYPE_SETTINGS_SELECT_PHONE_OPTION;
-CHOICE_SETTINGS_PHONE.selectedWeight = 700;
+CHOICE_SETTINGS_PHONE.selectedText = TYPE_SETTINGS_SELECT_PHONE_OPTION_SELECTED;
 CHOICE_SETTINGS_PHONE.ellipsis = false;
 CHOICE_SETTINGS_PHONE.textAlignStart = false;
 CHOICE_SETTINGS_PHONE.textRole = 'app.text.heading';
@@ -159,8 +150,7 @@ const CHOICE_SETTINGS_TABLET: ReaderChoiceSpec = copyReaderChoiceSpec();
 CHOICE_SETTINGS_TABLET.height = 44;
 CHOICE_SETTINGS_TABLET.padding = 14;
 CHOICE_SETTINGS_TABLET.text = TYPE_SETTINGS_SELECT_TABLET_OPTION;
-CHOICE_SETTINGS_TABLET.selectedText = TYPE_SETTINGS_SELECT_TABLET_OPTION;
-CHOICE_SETTINGS_TABLET.selectedWeight = 700;
+CHOICE_SETTINGS_TABLET.selectedText = TYPE_SETTINGS_SELECT_TABLET_OPTION_SELECTED;
 CHOICE_SETTINGS_TABLET.ellipsis = false;
 CHOICE_SETTINGS_TABLET.textAlignStart = false;
 CHOICE_SETTINGS_TABLET.textRole = 'app.text.heading';
@@ -195,6 +185,11 @@ const CHOICES: Record<ReaderChoiceSpecId, ReaderChoiceSpec> = {
 
 function resolveReaderChoiceSpec(id: ReaderChoiceSpecId): ReaderChoiceSpec { return CHOICES[id]; }
 
+export function readerSettingsTabletOptionHeight(fontScale: number): number {
+  const spec = resolveReaderChoiceSpec('settings-tablet');
+  return readerScaledControlHeight(spec.height, spec.text.lineHeightFp ?? spec.text.fontSizeFp * 1.5, fontScale);
+}
+
 /** The finite row spec keeps AUTO attributes absent, rather than calling a
  * native setter with undefined (which has different platform semantics). */
 class ReaderChoiceLabelModifier implements AttributeModifier<TextAttribute> {
@@ -210,11 +205,12 @@ class ReaderChoiceLabelModifier implements AttributeModifier<TextAttribute> {
     const spec = resolveReaderChoiceSpec(this.id);
     const text = this.selected ? spec.selectedText : spec.text;
     instance.fontFamily(text.fontFamily);
-    const weight = this.selected ? spec.selectedWeight : text.fontWeight;
-    if (spec.variableWeight) instance.fontWeight(weight, { enableVariableFontWeight: true });
-    else instance.fontWeight(weight);
+    instance.fontWeight(text.fontWeight);
     instance.fontSize(text.fontSizeFp);
-    if (text.lineHeightFp !== undefined) instance.lineHeight(text.lineHeightFp);
+    if (text.lineHeightFp !== undefined || spec.showIcon !== 'never') {
+      instance.lineHeight(text.lineHeightFp ?? Math.round(text.fontSizeFp * 1.5));
+    }
+    if (spec.showIcon !== 'never') instance.halfLeading(true);
     if (spec.textAlignStart) instance.textAlign(TextAlign.Start);
     if (this.multiline) instance.wordBreak(WordBreak.BREAK_WORD);
     else if (spec.ellipsis) instance.textOverflow({ overflow: TextOverflow.Ellipsis });

@@ -8813,7 +8813,26 @@
         "D0:分辨当前行为契约与历史字形锁，后者另列治理/兼容入口"
       ],
       "coverageAdoption": [
-        "Book-turn Host/motion/present-barrier/presentation-owner/stage specialized entries remain independently owned; none is imported or executed here."
+        {
+          "id": "H-reader-book-turn-host-runtime",
+          "coverage": "本机书页运动与渲染状态由此入口独立验证。"
+        },
+        {
+          "id": "H-reader-book-turn-motion",
+          "coverage": "书页轨迹与时间轴由此入口独立验证。"
+        },
+        {
+          "id": "H-reader-book-turn-present-barrier",
+          "coverage": "终帧和确认屏障由此入口独立验证。"
+        },
+        {
+          "id": "H-reader-book-turn-presentation-owner",
+          "coverage": "实际呈现所有权由此入口独立验证。"
+        },
+        {
+          "id": "H-reader-page-turn-stage",
+          "coverage": "双物理槽位和待提交页面由此入口独立验证。"
+        }
       ],
       "evidence": {
         "authoredProposal": ".reader-artifacts/gate-audit-20261019/reaudit/optimization/remaining-plan.jsonl",
@@ -12318,7 +12337,10 @@
         "D6:明确focused入口及触发范围后才登记候选，不自动加入发布集合"
       ],
       "coverageAdoption": [
-        "Root-owned test-reader-session-launch focused controller/design cases; no import/spawn/combined run."
+        {
+          "id": "H-reader-session-launch",
+          "coverage": "阅读启动 Controller 的回执和生命周期，以及原设计过渡轨道由此入口独立验证。"
+        }
       ],
       "evidence": {
         "authoredProposal": ".reader-artifacts/gate-audit-20261019/reaudit/optimization/remaining-plan.jsonl",
@@ -27531,7 +27553,7 @@
           "reason": "两个真实editor Toggle受控回调由该case负责"
         },
         {
-          "id": "H-rss-return-presentation",
+          "id": "H-rss-return-presentation-sdk",
           "reason": "RSS原文/回程业务不再混入浮动header测量"
         }
       ],
@@ -33504,7 +33526,7 @@
       ],
       "coverageAdoption": [
         {
-          "id": "H-bookshelf-projection-owner",
+          "id": "H-bookshelf-projection-index-owner",
           "coverage": "Shelf refreshOnly/hysteresis由实际domain owner专项接纳，不再在窗口入口扫字形"
         }
       ],

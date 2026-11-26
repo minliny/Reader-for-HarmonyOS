@@ -33,10 +33,10 @@ export class SourceSwitchSurfaceLifecycle {
     this.parts = [...this.parts, part];
   }
 
-  hide(attachment: number, scope: number, reduceMotion: boolean): boolean {
+  hide(attachment: number, scope: number): boolean {
     if (!this.current(attachment, scope)) return false;
     this.closing = true;
-    if (reduceMotion || this.parts.length === 0) return this.finish(attachment, scope);
+    if (this.parts.length === 0) return this.finish(attachment, scope);
     this.publish();
     return false;
   }

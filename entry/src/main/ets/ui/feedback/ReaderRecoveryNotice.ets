@@ -2,6 +2,7 @@ import { LengthMetrics } from '@kit.ArkUI';
 import type { MeasureOptions } from '@ohos.measure';
 import { MESSAGE_ACTION, MESSAGE_META, MESSAGE_NOTICE_TITLE } from '../foundation/ReaderMessageStyle';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
 import { ReaderRecoveryAction } from './ReaderRecoveryAction';
 import type { ReaderRecoveryView } from './ReaderRecoveryView';
 
@@ -81,7 +82,7 @@ export struct ReaderRecoveryNotice {
         Column() {
           Text(undefined, this.noticeBodyTextOptions()) {
             Span(` ${this.tag} `).fontSize(MESSAGE_META.fontSizeFp)
-              .textBackgroundStyle({ color: readerAppColor('TOK_MESSAGE_TAG', this.appThemeScheme), radius: 4 });
+              .textBackgroundStyle({ color: readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme), radius: 4 });
             Span(`  ${this.view.message}`);
             // Native text layout carries a nonbreaking space group the width
             // of the actions. The action overlay ends at the trailing edge of
@@ -93,7 +94,7 @@ export struct ReaderRecoveryNotice {
           .id(this.titleId).width('100%').fontFamily(MESSAGE_NOTICE_TITLE.fontFamily)
           .fontWeight(MESSAGE_NOTICE_TITLE.fontWeight).fontSize(MESSAGE_NOTICE_TITLE.fontSizeFp)
           .lineHeight(MESSAGE_NOTICE_TITLE.lineHeightFp as number)
-          .fontColor(readerAppColor('TOK_MESSAGE_NOTICE_INK', this.appThemeScheme))
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           // A fitting business title may need one more native line for its
           // decorative action reservation. Folding still uses the title alone.
           .wordBreak(WordBreak.BREAK_WORD)
@@ -140,11 +141,11 @@ export struct ReaderRecoveryNotice {
       .margin({ top: this.grouped && this.follows ? 10 : 0 })
       .padding({ left: this.grouped ? 0 : 12, right: this.grouped ? 0 : 12,
         top: this.grouped ? (this.follows ? 10 : 0) : 10, bottom: this.grouped ? 0 : 10 })
-      .border({ width: { top: this.grouped && this.follows ? 1 : 0 },
-        color: readerAppColor('TOK_MESSAGE_NOTICE_DIVIDER', this.appThemeScheme), style: BorderStyle.Solid })
+      .border({ width: this.grouped ? { top: this.follows ? 1 : 0 } : 1,
+        color: readerAppColor(this.grouped ? 'TOK_LINE' : 'TOK_PRIMARY_BORDER', this.appThemeScheme), style: BorderStyle.Solid })
       .borderRadius(this.grouped ? 0 : 14)
-      .backgroundColor(this.grouped ? Color.Transparent : readerAppColor('TOK_MESSAGE_NOTICE', this.appThemeScheme))
-      .shadow({ radius: this.grouped ? 0 : 16, offsetY: this.grouped ? 0 : 4, color: '#18000000' })
+      .backgroundColor(this.grouped ? Color.Transparent : readerAppColor('TOK_SURFACE_ELEVATED', this.appThemeScheme))
+      .shadow(readerSurfaceElevation(this.grouped ? 'embedded' : 'popover', this.appThemeScheme))
       .hitTestBehavior(HitTestMode.Default);
   }
 
@@ -204,11 +205,13 @@ export struct ReaderRecoveryNotice {
       const widths: number[] = [];
       if ((this.view.canRetry || this.busy || this.secondaryBusy || this.retainPrimaryAction) && this.actionLabel.length > 0) widths.push(labelWidth(this.actionLabel));
       if (this.secondaryActionLabel.length > 0) widths.push(labelWidth(this.secondaryActionLabel));
-      const space = context.px2vp(utils.measureText({ textContent: ' ', fontSize: '14fp',
-        fontFamily: MESSAGE_NOTICE_TITLE.fontFamily, fontWeight: 400 }));
+      const titleSize = `${MESSAGE_NOTICE_TITLE.fontSizeFp}fp`;
+      const titleHeight = `${MESSAGE_NOTICE_TITLE.lineHeightFp}fp`;
+      const space = context.px2vp(utils.measureText({ textContent: ' ', fontSize: titleSize,
+        fontFamily: MESSAGE_NOTICE_TITLE.fontFamily, fontWeight: MESSAGE_NOTICE_TITLE.fontWeight }));
       const options: MeasureOptions = { textContent: ` ${this.tag}   ${this.view.message}`,
-        fontFamily: MESSAGE_NOTICE_TITLE.fontFamily, fontSize: '14fp', fontWeight: 400,
-        lineHeight: '22fp', constraintWidth: `${width}vp`, wordBreak: WordBreak.BREAK_WORD };
+        fontFamily: MESSAGE_NOTICE_TITLE.fontFamily, fontSize: titleSize, fontWeight: MESSAGE_NOTICE_TITLE.fontWeight,
+        lineHeight: titleHeight, constraintWidth: `${width}vp`, wordBreak: WordBreak.BREAK_WORD };
       // Folding belongs to the business title alone. Decorative action space
       // must never manufacture an expand action for an otherwise fitting title.
       const full = Number(utils.measureTextSize(options).height);
@@ -223,8 +226,9 @@ export struct ReaderRecoveryNotice {
       // reserve their complete hit widths, coarse-pointer gaps and text gap.
       const reservationWidth = this.separateActions || actions === 0 ? 0 : Math.min(width, this.actionsWidth + 8);
       this.reservedSpace = reservationWidth > 0 && space > 0 ? ' ' + ' '.repeat(Math.ceil(reservationWidth / space)) : '';
-      this.titleLineHeight = context.px2vp(Number(utils.measureTextSize({ textContent: '字', fontSize: '14fp',
-        fontFamily: MESSAGE_NOTICE_TITLE.fontFamily, fontWeight: 400, lineHeight: '22fp' }).height));
+      this.titleLineHeight = context.px2vp(Number(utils.measureTextSize({ textContent: '字', fontSize: titleSize,
+        fontFamily: MESSAGE_NOTICE_TITLE.fontFamily, fontWeight: MESSAGE_NOTICE_TITLE.fontWeight,
+        lineHeight: titleHeight }).height));
       if (Number.isFinite(full) && Number.isFinite(folded) && full > 0 && folded > 0) measuredClipping = this.clipped;
     } catch (_) {
       // The full original message remains available if native measurement is

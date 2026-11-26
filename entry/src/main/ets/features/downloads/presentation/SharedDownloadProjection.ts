@@ -110,6 +110,18 @@ export interface SharedDownloadFilters {
   direction: 'asc' | 'desc';
 }
 
+export function downloadChapterBookTitle(book: DownloadBookView): string {
+  if (book.contentKind === undefined) return book.title;
+  const label = book.contentKind === 'manga' ? '漫画' : '小说';
+  const normalized = book.title.replace(/（/g, '(').replace(/）/g, ')').replace(/\s/g, '');
+  return normalized.includes(`(${label})`) ? book.title : `${book.title.trimEnd()}（${label}）`;
+}
+
+export function downloadsProvenEmpty(books: DownloadBookView[]): boolean {
+  return books.every((book: DownloadBookView): boolean => book.contentKind === undefined ||
+    (book.projectionStatus === 'ready' && book.state === 'none'));
+}
+
 export interface DownloadReadingTarget {
   sourceId: string;
   bookId: string;
@@ -142,6 +154,11 @@ export function createDownloadBookView(book: ShelfBook): DownloadBookView {
     projectionStatus: contentKind === undefined ? 'unavailable' : 'unloaded',
     projectionError: contentKind === undefined ? '当前下载页尚未支持音频内容' : undefined,
   };
+}
+
+/** Carry the admitted media projection without changing the stored shelf DTO. */
+export function downloadReadingShelfBook(book: DownloadBookView, contentKind: 'manga' | 'text'): ShelfBook {
+  return { ...book.shelfBook, contentKind };
 }
 
 export function downloadChapterStateLabel(state: LocalReadingDownloadState, complete: boolean): string {

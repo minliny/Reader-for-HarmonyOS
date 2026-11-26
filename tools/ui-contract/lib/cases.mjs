@@ -12,6 +12,7 @@ import { publicAssertionDefinition } from './assertion-contract.mjs';
 import { sourceReadLoadingCase, sourceReadLoadingFrame } from './source-read.mjs';
 import { loadStructureDefinition, resolveStructureBindings, structureRuleOrder } from './structure-contract.mjs';
 import { planCapture } from './capture-plan.mjs';
+import { readCaseRegistrations } from './case-registry.mjs';
 import {
   sourceCategoryNativeChecksValid, sourceCategoryTouchEdgeCase, sourceCategoryTouchFixture,
   sourceFilterEdgeAllowed, sourceFilterEdgeCase, sourceFilterEdgeTarget, sourceGroupOptionEdgeCase, sourceGroupOptionEdgeFixture,
@@ -34,7 +35,7 @@ import { sourceGroupOptionsScroll, sourceGroupOptionsTail, sourceGroupOptionsTex
 import { sourceGroupOptionsScrollCase, sourceGroupOptionsScrollFixture, sourceGroupOptionsScrollFixturePath,
   sourceGroupOptionsSwipePath } from './source-group-options-scroll.mjs';
 import { sourceGroupTextEvent, sourceGroupTextScope } from './source-group-options-text.mjs';
-import { sourceTransientStatusCases, sourceTransientStatusGuard, sourceTransientStatusStep } from './source-transient-status-text.mjs';
+import { sourceTransientStatusCase, sourceTransientStatusGuard, sourceTransientStatusStep } from './source-transient-status-text.mjs';
 import { sourceQueryEdgeAllowed, sourceQueryEdgeCase, sourceQueryEdgeFixture, sourceQueryEditor,
   sourceQueryPositions, sourceQueryTouchFixture, sourceQueryTouchPosition } from './source-query-edge.mjs';
 import { sourceNativeFocusCase, sourceNativeFocusFixture, sourceNativeFocusSteps } from './source-native-focus.mjs';
@@ -45,24 +46,24 @@ import { sourceInlineImportAreaKind, sourceInlineImportButton, sourceInlineImpor
   sourceInlineImportEdges } from './source-inline-import-edge.mjs';
 import { sourceChromeActions, sourceChromeCase, sourceChromeDispatch, sourceChromeFixture,
   sourceChromeGeometry, sourceChromeStep, sourceChromeTopActions, sourceChromeTopEntry } from './source-chrome-dispatch.mjs';
+import { sourceV9ChromeCase, sourceV9ChromeDispatch, sourceV9ChromeFixture, sourceV9ChromeGeometry,
+  validateSourceV9ChromeCase, validSourceV9ChromeTap } from './source-v9-chrome.mjs';
 import { sourceFilterClearAction, sourceFilterClearCase, sourceFilterClearFixture, sourceFilterClearKind,
   sourceFilterClearQuery, sourceFilterClearStep } from './source-filter-clear-edge.mjs';
 import { sourceOfflineDetectButton, sourceOfflineDetectCase, sourceOfflineDetectEdgeCase, sourceOfflineDetectFailed, sourceOfflineDetectFixture,
   sourceOfflineDetectFixturePath, sourceOfflineDetectObservation, sourceOfflineDetectReady } from './source-offline-detect.mjs';
 import { sourceFooterAddButton, sourceLocalImportButton, sourcePickerAnchor, sourcePickerCase, sourcePickerFile,
-  sourcePickerFixture, sourcePickerFixturePath, sourcePickerGuard, sourcePickerRole, sourcePickerRoles } from './source-document-picker.mjs';
+  sourcePickerFixture, sourcePickerFixturePath, sourcePickerGuard, sourcePickerRole, sourcePickerRoles, sourceV9ImportEntry, sourceV9ImportScope, sourceV9ImportStages } from './source-document-picker.mjs';
 import { applyReservedTypographyNarrowWindow, isReservedTypographyCase, publicReservedSourceHost, reservedSourceSample,
   sourceReservedTypographyFixture, sourceReservedTypographyFixtureV2, sourceReservedTypographyInput,
   sourceReservedTypographyNarrowCase, sourceReservedTypographyNarrowFixture, usesReservedNativeToggle } from './source-reserved-typography.mjs';
 
 export const toolRoot = new URL('../', import.meta.url);
-export const phase0CaseIds = Object.freeze(['bookshelf.search-input-ime', 'reading.control-open-motion']);
-export const phase1CaseIds = Object.freeze(JSON.parse(readFileSync(new URL('cases/phase-1.registry.json', toolRoot), 'utf8')));
-export const phase2CaseIds = Object.freeze(JSON.parse(readFileSync(new URL('cases/phase-2.registry.json', toolRoot), 'utf8')));
-export const caseIds = Object.freeze([...phase0CaseIds, ...phase1CaseIds, ...phase2CaseIds]);
+const caseRegistry = readCaseRegistrations(path => JSON.parse(readFileSync(new URL(path, toolRoot), 'utf8')));
+requireEvidence(caseRegistry.issues.length === 0, 'Invalid or duplicated registered case ID');
+export const [phase0CaseIds, phase1CaseIds, phase2CaseIds] = caseRegistry.byPhase.map(ids => Object.freeze(ids));
+export const caseIds = Object.freeze([...caseRegistry.byId.keys()]);
 export const grabberReversalUnavailable = 'Grabber reversal requires a verified UiTest PointerMatrix runner in a separate test bundle, a pinned installation, and dry qualification before dispatch';
-requireEvidence(caseIds.every(id => typeof id === 'string' && /^[a-z][a-z0-9.-]+$/u.test(id)) &&
-  new Set(caseIds).size === caseIds.length, 'Invalid or duplicated registered case ID');
 
 const ownerPath = /^entry\/src\/main\/ets\/(?:[A-Za-z0-9_-]+\/)*[A-Za-z0-9_-]+\.(?:ets|ts)$/u;
 const sourceRef = /^(?:entry\/src\/main\/ets\/|tools\/page-structure\/)[A-Za-z0-9._/-]+#[A-Za-z0-9_.:-]+$/u;
@@ -74,6 +75,23 @@ export function searchSubmissionSource(action) {
   if (action?.op === 'click' && target === 'reader-search-history-public-item-0') return 'history';
   if (action?.op === 'click' && target === 'reader-bookshelf-search-submit') return 'button';
   return null;
+}
+
+const sourceSystemBack = (step, from) => step?.op === 'keyEvent' && step.key === 'Back' && step.from === from;
+
+function sourceV9GroupsSteps(steps, {entry,more,menu,depart,child,back,returned}) {
+  const opens = (step, from, id, parent) => step?.op === 'click' && step.gesture !== true && step.from === from &&
+    equalJson(step.target,{id,ancestors:[parent]});
+  const captures = (sample, after, anchor) => sample?.kind === 'sample' && sample.afterAction === after &&
+    sample.keyboard === false && sample.anchors.includes(anchor);
+  const transition = (step, phase) => step.waitFor?.some(wait => wait.kind === 'source.v9-list-transition' &&
+    wait.channel === 'business' && wait.fields?.['payload.view'] === 'groups' && wait.fields?.['payload.phase'] === phase);
+  return opens(steps[more],entry,'reader-source-header-tools-button','reader-source-header-tools') &&
+    captures(steps[menu],more,'reader-source-v9-more-menu') &&
+    opens(steps[depart],menu,'reader-source-v9-open-groups','reader-source-v9-more-menu') && transition(steps[depart],'enter') &&
+    captures(steps[child],depart,'reader-source-v9-groups') && steps[child].anchors.includes('reader-source-v9-group-back') &&
+    sourceSystemBack(steps[back],child) && transition(steps[back],'return') &&
+    captures(steps[returned],back,'reader-source-list') && steps[returned].anchors.includes('reader-source-header-tools-button');
 }
 
 function validateScopedCase(contract, samples, actions) {
@@ -119,7 +137,8 @@ function validateScopedCase(contract, samples, actions) {
       }), 'Combined Source reset v3 requires a captured public catalogue and its fixed no-match query');
   }
   const toolsReturn = contract.id === 'source-management.tool-return-filters' && contract.version === 2;
-  const liveToolsProjection = contract.assertions.filter(item=>item.expected?.minimumProjected !== undefined);
+  const liveToolsProjection = contract.assertions.filter(item=>item.kind === 'tool-return-filters' &&
+    item.expected?.minimumProjected !== undefined);
   if (toolsReturn || liveToolsProjection.length || fixture.id === 'public-source-tools-return-v2') {
     const toolsCheck = liveToolsProjection[0];
     const focus = contract.assertions.find(item=>item.kind === 'tools-return-focus');
@@ -133,6 +152,69 @@ function validateScopedCase(contract, samples, actions) {
       departure.gesture !== true && departure.from === 'scrolled' && equalJson(departure.target,{
         id:'reader-source-header-tools-button',ancestors:['reader-source-header-tools'],
       }), 'The public Source Tools round trip requires the fixed query, four filters and actual header Button');
+  }
+  const v9ListReturn = contract.assertions.filter(item=>item.kind === 'v9-list-return');
+  const v9Groups = contract.id === 'source-management.v9-group-return';
+  const v9Batch = contract.id === 'source-management.v9-batch-return';
+  const v9Scroll = contract.id === 'source-management.v9-scroll-return';
+  const v9Inset = contract.assertions.filter(item=>item.kind === 'fixed-insets' && item.expected?.v9GroupRoundTrip === true);
+  if (v9Groups || v9Batch || v9Scroll || v9ListReturn.length || v9Inset.length) {
+    const steps = Object.fromEntries(contract.steps.map(step=>[step.id,step]));
+    const groups = v9Groups || v9Scroll;
+    const view = groups ? 'groups' : 'batch';
+    const depart = groups ? 'open-groups' : 'open-batch';
+    const child = v9Scroll ? 'groups' : 'v9-child';
+    const back = v9Scroll ? 'groups-back' : 'v9-back';
+    requireEvidence((v9Groups || v9Batch || v9Scroll) && contract.version === 1 && contract.pageId === 'source-management' &&
+      fixture.id === `public-source-v9-${v9Scroll ? 'scroll' : groups ? 'group' : 'batch'}-return-v1` && fixture.publicSources === true &&
+      (groups ? equalJson(fixture.inputs,{'public-source-prefix':'Phase1Return'}) : fixture.inputs === undefined) &&
+      (v9Scroll ? v9ListReturn.length === 1 && v9ListReturn[0].expected.proof === 'position' &&
+        v9ListReturn[0].priorAction === 'scroll-list' && v9ListReturn[0].filteredSample === 'filter-reset' :
+        v9ListReturn.length === 2 && new Set(v9ListReturn.map(assertion=>assertion.expected.proof)).size === 2) &&
+      v9ListReturn.every(assertion=>assertion.expected.view === view && assertion.action === back &&
+        assertion.sample === 'restored' && assertion.departAction === depart && assertion.toolsSample === child &&
+        assertion.baseline === (groups ? 'more-open' : 'scrolled') &&
+        (!groups || assertion.entrySample === 'scrolled' && assertion.openAction === 'open-more')) &&
+      (groups ? sourceV9GroupsSteps(steps,{entry:'scrolled',more:'open-more',menu:'more-open',depart,child,back,returned:'restored'}) :
+        steps[depart]?.op === 'click' && steps[depart].from === 'scrolled' &&
+        equalJson(steps[depart].target,{id:'reader-source-footer-tools-button',ancestors:['reader-source-footer']}) &&
+        steps[child]?.afterAction === depart && sourceSystemBack(steps[back],child)),
+    'Source v9 return requires bounded native child entry, same-opening position and focus, and normal System Back');
+    const insetBindings = {action:'scroll-shallow',baseline:'fixture-sources-ready',movingSample:'shallow',sample:'list-tail',
+      entrySample:'scrolled',menuSample:'more-open',openAction:'open-more',departAction:'open-groups',toolsSample:'groups',
+      returnAction:'groups-back',restoreSample:'restored',tailAction:'scroll-tail-3'};
+    requireEvidence(!v9Scroll ? v9Inset.length === 0 : v9Inset.length === 1 &&
+      Object.entries(insetBindings).every(([field,value])=>v9Inset[0][field] === value) &&
+      contract.assertions.some(item=>item.kind === 'fixed-scroll' && item.required === true && item.expected.requireNativeSwipe === true) &&
+      contract.assertions.some(item=>item.kind === 'footer-end' && item.required === true && item.action === 'scroll-tail-3' &&
+        item.sample === 'list-tail' && item.expected.requireFreshEnd === true && item.expected.maxOverlapAreaVp2 === 0 && item.expected.minFraction === 1) &&
+      steps['scroll-away-from-tail']?.op === 'swipe' && steps['scroll-away-from-tail'].target === 'reader-source-list' &&
+      steps['scroll-away-from-tail'].from === 'tail-2' && steps['before-final-tail']?.afterAction === 'scroll-away-from-tail' &&
+      steps['scroll-tail-3']?.op === 'swipe' && steps['scroll-tail-3'].target === 'reader-source-list' && steps['scroll-tail-3'].from === 'before-final-tail' &&
+      steps['list-tail']?.afterAction === 'scroll-tail-3',
+    'Source v9 scroll requires static and moving insets, the same Groups return, and an independent fresh, unclipped tail');
+  }
+  const v9Parents = contract.assertions.filter(item=>item.kind === 'route-parent-after-v9-groups');
+  if (contract.id === 'source-management.v9-captured-parent-roundtrip' || v9Parents.length) {
+    const steps = Object.fromEntries(contract.steps.map(step=>[step.id,step]));
+    requireEvidence(contract.id === 'source-management.v9-captured-parent-roundtrip' && contract.version === 1 && contract.pageId === 'source-management' &&
+      fixture.id === 'public-source-v9-captured-parent-v1' && fixture.publicSources === true && fixture.bookTitle === 'Reader Phase 1 公共长目录' &&
+      v9Parents.length === 2 && new Set(v9Parents.map(item=>item.expected.parent)).size === 2 && v9Parents.every(item=>{
+        const {parent} = item.expected;
+        const parentSample = parent === 'search' ? 'entry-projection' : 'settings';
+        const entryAction = parent === 'search' ? 'manage-sources' : 'open-sources';
+        const parentTarget = parent === 'search' ? 'reader-search-source-recovery-primary' : 'reader-settings-source-management';
+        return item.required === true && item.parentSample === parentSample && item.entryAction === entryAction &&
+          steps[entryAction]?.op === 'click' && steps[entryAction].from === parentSample && steps[entryAction].target === parentTarget &&
+          item.entrySample === `${parent}-source-ready` && steps[item.entrySample]?.afterAction === entryAction &&
+          item.openAction === `${parent}-open-more` && item.menuSample === `${parent}-more-open` &&
+          item.departAction === `${parent}-open-groups` && item.toolsSample === `${parent}-groups` &&
+          item.returnAction === `${parent}-groups-back` && item.baseline === `${parent}-source-restored` &&
+          item.action === `back-to-${parent}` && item.sample === `${parent}-returned` &&
+          sourceV9GroupsSteps(steps,{entry:item.entrySample,more:item.openAction,menu:item.menuSample,
+            depart:item.departAction,child:item.toolsSample,back:item.returnAction,returned:item.baseline}) &&
+          sourceSystemBack(steps[item.action],item.baseline) && steps[item.sample]?.afterAction === item.action;
+      }), 'Source v9 must restore the separately captured native Search and Settings parents after real Group management');
   }
   if (contract.id === searchEmptyBookshelfCase || fixture.id === searchEmptyBookshelfFixture ||
       contract.steps.some(step=>step.target === emptyBookshelfEntry || step.target?.id === emptyBookshelfEntry) ||
@@ -156,7 +238,7 @@ function validateScopedCase(contract, samples, actions) {
     'Each additional public result requires a distinct title and a registered input role');
   }
   const append = contract.id === 'bookshelf.search-append' && [3,4,5].includes(contract.version);
-  const recovery = contract.id === 'bookshelf.search-retry-success' && contract.version === 1;
+  const recovery = contract.id === 'bookshelf.search-retry-success' && [1, 2].includes(contract.version);
   const onlineRoles = append ? ['cedar','maple'] : recovery ? ['recovery'] : [];
   requireEvidence(equalJson(Object.keys(fixture.onlineResultTitles ?? {}).sort(),onlineRoles) &&
     Object.values(fixture.onlineResultTitles ?? {}).every(title => title !== fixture.bookTitle),
@@ -252,7 +334,7 @@ function validateScopedCase(contract, samples, actions) {
       contract.assertions.length === 2 && contract.assertions[1] === controlTouch,
     'The public Source control requires one current conditional target and one separate exact center or top dispatch');
   }
-  const transient = Object.hasOwn(sourceTransientStatusCases,contract.id) && sourceTransientStatusCases[contract.id];
+  const transient = sourceTransientStatusCase(contract.id,contract.version);
   const transientSamples = contract.steps.filter(step=>step.captureGuard === sourceTransientStatusGuard);
   const transientChecks = contract.assertions.filter(check=>check.expected?.requireTransientStatus !== undefined);
   if (transient?.version === contract.version || transientSamples.length || transientChecks.length) {
@@ -413,7 +495,17 @@ function validateScopedCase(contract, samples, actions) {
     const scopedClick = (contract.id === sourceOfflineDetectCase && check?.expected?.position === undefined &&
       tap?.id === 'detect-source') || (contract.id === sourceOfflineDetectEdgeCase &&
       check?.expected?.position === 'top' && tap?.id === 'detect-source-top');
-    requireEvidence(scopedClick && contract.pageId === 'source-management' && contract.version === 1 &&
+    const run = contract.steps.find(step=>step.id === check?.runAction);
+    const close = contract.steps.find(step=>step.id === check?.returnAction);
+    const dialog = contract.steps.find(step=>step.id === run?.from);
+    const complete = contract.steps.find(step=>step.id === close?.from);
+    const v9 = contract.version === 2 && run?.op === 'click' && run.target === 'reader-source-v9-check-run' &&
+      dialog?.afterAction === tap?.id && dialog.keyboard === false &&
+      complete?.afterAction === run.id && waitsFor(complete.waitFor,'settled') &&
+      close?.op === 'click' && close.target === 'reader-source-v9-check-close' && end?.afterAction === close.id;
+    const legacy = contract.version === 1 && end?.afterAction === tap?.id && waitsFor(end?.waitFor,'settled') &&
+      contract.steps.at(-2) === tap && contract.steps.at(-3) === start;
+    requireEvidence(scopedClick && contract.pageId === 'source-management' && (v9 || legacy) &&
       fixture.id === sourceOfflineDetectFixture && fixture.publicSources === true && detects.length === 1 && detectChecks.length === 1 &&
       check.evaluator === 'source' && check.action === tap.id &&
       entry?.op === 'click' && entry.target === 'reader-settings-source-management' &&
@@ -421,15 +513,15 @@ function validateScopedCase(contract, samples, actions) {
       start.anchors.includes(sourceOfflineDetectButton) && start.anchors.includes(sourceOfflineDetectReady) &&
       waitsFor(start.waitFor,'ready') && waitsFor(tap.beforeEvent,'ready') &&
       tap.op === 'click' && tap.from === start.id && !tap.gesture && !tap.tapEdge && !tap.wait && !tap.waitFor &&
-      end?.kind === 'sample' && end.afterAction === tap.id && end.keyboard === false &&
-      end.anchors.includes(sourceOfflineDetectFailed) && waitsFor(end.waitFor,'settled') &&
-      contract.steps.at(-1) === end && contract.steps.at(-2) === tap && contract.steps.at(-3) === start,
+      end?.kind === 'sample' && end.keyboard === false && end.anchors.includes(sourceOfflineDetectFailed) &&
+      contract.steps.at(-1) === end,
     'Offline Detect requires one scoped click after the exact provider-free native ready row and its real local outcome');
   }
   const pickerLocators = contract.steps.filter(step => step.captureGuard === sourcePickerGuard);
   const pickerActions = contract.steps.filter(step => sourcePickerRole(step.target));
   const localImport = contract.steps.filter(step => step.target === sourceLocalImportButton);
   const statusEdge = contract.id === sourceStatusActionEdgeCase;
+  const v9Import = statusEdge ? contract.version === 3 : contract.id === sourcePickerCase && contract.version === 4;
   const statusEdges = contract.steps.filter(step => step.id === 'press-research-top');
   const statusChecks = contract.assertions.filter(assertion => assertion.kind === 'import-research-status-action' &&
     assertion.expected?.position === 'top');
@@ -439,27 +531,27 @@ function validateScopedCase(contract, samples, actions) {
     const baseline = contract.steps.find(step=>step.id === check?.baseline);
     const endpoint = contract.steps.find(step=>step.id === check?.sample);
     const waitsForRetirement = baseline?.waitFor?.some(predicate=>equalJson(predicate,sourceStatusActionEdgeWaitForRetirement));
-    requireEvidence(statusEdge && [1,2].includes(contract.version) &&
+    requireEvidence(statusEdge && [1,2,3].includes(contract.version) &&
       (contract.version === 1 || waitsForRetirement && baseline.quietMs >= 500) &&
       statusEdges.length === 1 && sourceStatusActionEdgeStep(press) &&
       statusChecks.length === 1 && check.id === 'source.import-research-status-action.top' &&
       check.action === press.id && check.baseline === press.from &&
-      baseline?.kind === 'sample' && baseline.afterAction === 'select-source-file' &&
+      baseline?.kind === 'sample' && baseline.afterAction === (v9Import ? 'return-source-list' : 'select-source-file') &&
       endpoint?.kind === 'sample' && endpoint.id === 'search-returned' && endpoint.afterAction === press.id,
     'The Re-search upper edge requires the current public picker receipt and the bound search return');
   }
   if (statusEdge || contract.id === sourcePickerCase || fixture.publicDocument || pickerLocators.length || pickerActions.length || localImport.length) {
-    requireEvidence((statusEdge || contract.id === sourcePickerCase && [1,2,3].includes(contract.version)) &&
+    requireEvidence((statusEdge || contract.id === sourcePickerCase && [1,2,3,4].includes(contract.version)) &&
       contract.pageId === 'source-management' &&
       fixture.id === sourcePickerFixture && fixture.publicSources && fixture.publicDocument?.basename === sourcePickerFile &&
       fixture.publicDocument.sha256 === sha256(readFileSync(new URL(sourcePickerFixturePath,toolRoot))) &&
       pickerLocators.length === sourcePickerRoles.length && pickerActions.length === sourcePickerRoles.length &&
       localImport.length === 1, 'System picker actions require the exact public Source Management case and pinned document');
-    const dialog = contract.steps.find(step => step.id === 'import-dialog');
+    const dialog = contract.steps.find(step => step.id === (v9Import ? sourceV9ImportEntry : 'import-dialog'));
     const openDialog = contract.steps.find(step => step.id === dialog?.afterAction);
     const [openPicker] = localImport;
     requireEvidence(dialog?.kind === 'locate' && dialog.keyboard === false && dialog.quietMs >= 750 &&
-      dialog.anchors.includes(sourceLocalImportButton) &&
+      dialog.anchors.includes(sourceLocalImportButton) && (!v9Import || dialog.anchors.includes(sourceV9ImportScope)) &&
       openDialog?.op === 'click' && openDialog.target === sourceFooterAddButton && openDialog.from === 'source-before-import' &&
       openPicker.id === 'open-picker' && openPicker.op === 'click' && openPicker.from === dialog.id && !openPicker.gesture &&
       contract.steps.indexOf(openPicker) === contract.steps.indexOf(dialog)+1,
@@ -480,6 +572,33 @@ function validateScopedCase(contract, samples, actions) {
         contract.steps.filter(step => step.from === locator.id).length === 1,
       'System picker clicks must follow each exact current native carrier in order');
       previous = action;
+    }
+    const research = contract.assertions.find(assertion=>assertion.kind === 'import-research-status-action');
+    requireEvidence(research?.expected.importWorkflow === (v9Import ? 'v9' : undefined),
+      'Import Re-search assertion must identify its actual import workflow');
+    if (v9Import) {
+      requireEvidence(!previous.waitFor && !previous.wait,
+        'Selecting a file stages it before a separate parse and import');
+      let index = contract.steps.indexOf(previous)+1;
+      for (const {sample,action,target,stage} of sourceV9ImportStages) {
+        const {id:priorAction} = previous;
+        const locator = contract.steps[index++];
+        const next = contract.steps[index++];
+        requireEvidence(locator?.id === sample && locator.kind === 'locate' && locator.keyboard === false &&
+          locator.afterAction === priorAction && equalJson(locator.anchors,[sourceV9ImportScope,target,...(stage?[stage]:[])]) &&
+          next?.id === action && next.op === 'click' && next.from === sample && next.target === target &&
+          !next.gesture && !next.tapEdge,
+        'V9 import requires ordered scoped native parse, apply, and result-return clicks');
+        previous = next;
+      }
+      const imported = contract.steps[index];
+      requireEvidence(imported?.id === research.baseline && imported.afterAction === previous.id &&
+        previous.waitFor?.length === 1 && equalJson(previous.waitFor[0],imported.waitFor?.[0]) &&
+        previous.waitFor[0].kind === 'source.import-status-action' &&
+        previous.waitFor[0].fields?.['payload.phase'] === 'ready' &&
+        previous.waitFor[0].fields?.['payload.confirmation'] === 'confirmed' &&
+        previous.waitFor[0].fields?.['payload.readback'] === 'succeeded',
+        'The Source list and Re-search control follow the actual result return');
     }
   }
   const outsideActions = contract.steps.filter(step => step.target === sourceGroupBackdrop);
@@ -565,7 +684,7 @@ function validateScopedCase(contract, samples, actions) {
     }
     if (typeof assertion.action === 'string') requireEvidence(actions.has(assertion.action),
       `Assertion ${assertion.id} refers to an unknown action`);
-    for (const field of ['priorAction','entryAction','returnAction','openAction','departAction','scrollAction']) {
+    for (const field of ['priorAction','entryAction','returnAction','openAction','departAction','scrollAction','tailAction']) {
       if (assertion[field] !== undefined && !actions.has(assertion[field])) {
         throw new Error(`Assertion ${assertion.id} refers to an unknown action in ${field}`);
       }
@@ -661,7 +780,7 @@ function validateScopedCase(contract, samples, actions) {
           wait.fields?.['payload.direction'] === 'dismiss' && wait.fields?.['payload.target.level'] === 'hidden'),
       `Assertion ${assertion.id} requires the public measured IME hide, native noncurrent chapter click and committed hidden endpoint`);
     }
-    for (const field of ['editSample','movingSample','toolsSample','restoreSample','filteredSample','parentSample','entrySample','dialogSample']) {
+    for (const field of ['editSample','movingSample','toolsSample','restoreSample','filteredSample','parentSample','entrySample','dialogSample','menuSample']) {
       if (assertion[field] !== undefined && (!samples.has(assertion[field]) || scoped.has(assertion[field]))) {
         throw new Error(`Assertion ${assertion.id} refers to an unknown or action-only sample in ${field}`);
       }
@@ -729,6 +848,10 @@ function validateScopedCase(contract, samples, actions) {
       prior = back;
       baseline = returned;
     }
+  }
+  if (contract.id === sourceV9ChromeCase || fixture.id === sourceV9ChromeFixture ||
+      contract.assertions.some(assertion=>[sourceV9ChromeGeometry,sourceV9ChromeDispatch].includes(assertion.kind))) {
+    requireEvidence(validateSourceV9ChromeCase(contract), 'V9 Source chrome requires all exact native tap and first Back pairs');
   }
   const chromeChecks = contract.assertions.filter(assertion => [sourceChromeGeometry,sourceChromeDispatch].includes(assertion.kind));
   if (contract.id === sourceChromeCase || fixture.id === sourceChromeFixture || chromeChecks.length) {
@@ -874,6 +997,7 @@ function validateScopedCase(contract, samples, actions) {
         (recoveryEdge || sharedUnknownExpand) && sourceRecoveryExpandEdgeStep(step) || readTouch && sourceReadRetryTouchStep(step,fixture) ||
         sourceControlTouchStep(step,fixture) ||
         contract.id === sourceChromeCase && sourceChromeStep(step) ||
+        contract.id === sourceV9ChromeCase && validSourceV9ChromeTap(step,fixture) ||
         contract.id === sourceFilterClearCase && sourceFilterClearStep(step,fixture)) continue;
     const baseline = contract.steps.find(item => item.id === step.from);
     const toggle = sourceToggleEdgeAllowed(step.target, step.tapEdge);
@@ -921,7 +1045,7 @@ export function loadCase(id) {
   const path = supplemental ? 'lib/source-reserved-typography-366-font-130.json' : `cases/${id}.json`;
   const inputContract = JSON.parse(readFileSync(new URL(path, toolRoot), 'utf8'));
   const contract = validate('case', narrow ? applyReservedTypographyNarrowWindow(inputContract) : inputContract);
-  const registeredPhase = supplemental || phase1CaseIds.includes(id) ? 1 : phase2CaseIds.includes(id) ? 2 : undefined;
+  const registeredPhase = supplemental ? 1 : caseRegistry.byId.get(id)?.phase;
   requireEvidence(contract.id === id && contract.phase === registeredPhase, 'Case file identity differs from its registration');
   if (supplemental || contract.fixture.id === sourceReservedTypographyFixture || usesReservedNativeToggle(contract.fixture.id) ||
       Object.hasOwn(contract.fixture.inputs ?? {}, sourceReservedTypographyInput) ||

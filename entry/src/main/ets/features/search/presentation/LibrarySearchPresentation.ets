@@ -307,7 +307,7 @@ export class LibrarySearchPresentation {
 
   continueCardSuppressed(navigation: number, mounting: number): boolean {
     const coverage = this.cardCoverage;
-    return this.mode === 'input' && coverage !== undefined && coverage.identity === this.identity &&
+    return coverage !== undefined && coverage.identity === this.identity &&
       coverage.navigation === navigation && coverage.mounting === mounting;
   }
 

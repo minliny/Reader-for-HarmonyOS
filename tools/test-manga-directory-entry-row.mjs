@@ -8,8 +8,8 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { mangaDirectoryPresentation } from '../entry/src/main/ets/features/manga/presentation/MangaDirectoryPresentation.ts';
 import { mangaDirectoryDisplay } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryDisplay.ts';
 import { mangaDirectoryEntryRows } from '../entry/src/main/ets/features/manga/ui/MangaDirectoryLayout.ts';
-import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550,
-  READER_FONT_NOTO_SANS_SC_UI_600 } from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
+import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
+  READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 import { sameReaderDirectoryData } from '../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import * as motionTiming from '../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts';
@@ -27,7 +27,7 @@ const names = ['row', 'presentation', 'scheme', 'currentChapterIndex', 'collapse
   'interactionEnabled', 'chapterDownloadEnabled', 'branchControlsEnabled', 'onSelectEntry', 'onToggleBranch', 'onDownloadEntry',
   'fontScale', 'cellHeight', 'windowMetricsRevision', 'liveEntry', 'liveLabel', 'facts', 'color', 'current', 'expanded', 'downloadable', 'title', 'contextTitle', 'status', 'gridLabel', 'accessibility', 'activateEntry',
   'download', 'numberCell', 'branchToggle', 'fullWidthEntry', 'fullWidthEntryBody', 'emptySlots', 'build'];
-const fonts = { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600 };
+const fonts = { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM, READER_FONT_NOTO_SANS_SC_UI_BOLD };
 function mount(entries, options = {}, candidate = source) {
   const properties = createArkUIPropertyRuntimeProbe();
   const { owner } = createReaderBuilderProbe(candidate, names, { ...visual, ...directoryState, mangaDirectoryDisplay, motionAnimateParam, WordBreak: { BREAK_WORD: 'WordBreak.BREAK_WORD' }, FlexWrap: { Wrap: 'FlexWrap.Wrap' }, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: options.systemFontScale ?? 1 }) }, ...fonts, ...properties.sdk }, properties.hooks);
@@ -55,8 +55,8 @@ for (const scheme of ['day', 'night']) {
   cells[1].onClick(); cells[0].onClick();
   assert.deepEqual(state.selected, [67, 41], 'the displayed part label never replaces the sparse canonical index');
   state.owner.currentChapterIndex = 41; state.properties.flush();
-  assert.equal(labels[0].fontFamily, READER_FONT_NOTO_SANS_SC_UI_550);
-  assert.deepEqual(labels[0].fontWeight, [550, {enableVariableFontWeight: true}], 'current status explicitly declares 550 native weight');
+  assert.equal(labels[0].fontFamily, READER_FONT_NOTO_SANS_SC_UI_MEDIUM);
+  assert.deepEqual(labels[0].fontWeight, 500, 'current status explicitly declares static UI Medium 500 weight');
   assert.equal(labels[2].fontFamily, READER_FONT_NOTO_SANS_SC_UI_REGULAR, 'current status follows reactive props without replacing labels');
 }
 
@@ -159,8 +159,8 @@ function retainedCurrent(candidate) {
   const state = mount(entries, { currentChapterIndex: 13 }, candidate);
   const labels = state.nodes().filter(node => node.type === 'Text');
   state.owner.currentChapterIndex = 3; state.properties.flush();
-  assert.equal(labels[0].fontFamily, READER_FONT_NOTO_SANS_SC_UI_550, 'retained current prop scheduling');
-  assert.deepEqual(labels[0].fontWeight, [550, {enableVariableFontWeight: true}], 'retained current weight role is 550');
+  assert.equal(labels[0].fontFamily, READER_FONT_NOTO_SANS_SC_UI_MEDIUM, 'retained current prop scheduling');
+  assert.deepEqual(labels[0].fontWeight, 500, 'retained current weight role is UI Medium 500');
 }
 retainedCurrent(source);
 const thinCurrent = source.replaceAll('MANGA_DIRECTORY_VISUAL.currentFontWeight', 'MANGA_DIRECTORY_VISUAL.bodyFontWeight');

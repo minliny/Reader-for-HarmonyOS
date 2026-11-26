@@ -23,7 +23,8 @@ const outside = 'group-outside-dismiss';
 const nativeTargets = new Map([
   ['header-back','reader-source-back'], ['header-tools','reader-source-header-tools-button'],
   ['query-input','reader-source-editor'], ['search-import','reader-source-search-import-button'],
-  ['group-trigger','reader-source-group-trigger'], ['group-selected-option','reader-source-group-selected'],
+  ['group-trigger','reader-source-group-trigger'], ['group-search-input','reader-source-group-search'],
+  ['group-selected-option','reader-source-group-selected'],
   ['group-other-option','reader-source-group-option-1'],
   ['row-login','reader-source-row-login-control'], ['row-detect','reader-source-row-detect-control'],
   ['row-toggle','reader-source-public-toggle-fixture'], ['footer-manage','reader-source-footer-tools-button'],

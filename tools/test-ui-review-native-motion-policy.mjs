@@ -61,7 +61,8 @@ function verifyFold(rowSource=read(rowPath),listSource=read(listPath)){
     const toggle=[...owner.nodes.values()].find(n=>n.type==='Button'&&n.onClick);
     assert.ok(toggle);toggle.onClick();assert.equal(events.length,1,'original fold action still dispatched');
     owner.reduceMotion=true;properties.flush();
-    assert.equal(owner.nodes.get(identity).animation.duration,0,'retained native fold observes current zero clock');
+    assert.equal(owner.nodes.get(identity).animation.duration,120,'retained native observer consumes the reduced fade clock');
+    assert.equal(owner.nodes.get(identity).rotate.angle,0,'reduced fold never rotates its disclosure glyph');
     assert.ok(properties.reads.some(r=>r.name==='reduceMotion'&&r.id===identity),'actual Image observer owns preference dependency');
     owner.reduceMotion=false;properties.flush();
     assert.equal(owner.nodes.get(identity).animation.duration,180,'same Image restores registered clock');
@@ -123,7 +124,7 @@ for(const id of selected){
   if(id==='fold-policy'){
     for(const path of [rowPath,listPath]){
       const source=read(path),old=source.replaceAll("readerMotionAnimateParam('manga.directory.fold', this.reduceMotion)","motionAnimateParam('manga.directory.fold')");
-      assert.notEqual(old,source);assert.throws(()=>verifyFold(path===rowPath?old:read(rowPath),path===listPath?old:read(listPath)),/retained native fold observes/);
+      assert.notEqual(old,source);assert.throws(()=>verifyFold(path===rowPath?old:read(rowPath),path===listPath?old:read(listPath)),/retained native observer consumes/);
     }
   }
   console.log(JSON.stringify({kind:'ui-review-native-motion-policy',case:id,receipts,layer:'installed SDK authoring/property delivery or actual production methods; native rendering/scroll physics remain separate'}));

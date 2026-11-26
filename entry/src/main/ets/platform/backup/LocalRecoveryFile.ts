@@ -62,11 +62,26 @@ async function write(fd: number, bytes: Uint8Array): Promise<void> {
 }
 
 export async function recoveryOutput(path: string, output: (emit: ChunkSink) => Promise<void>): Promise<void> {
-  const file = await fileIo.open(path, fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC);
-  try {
+  const mode = fileIo.OpenMode.WRITE_ONLY | fileIo.OpenMode.CREATE | fileIo.OpenMode.TRUNC;
+  await recoveryWithFile(path, mode, async (file): Promise<void> => {
     await output((bytes) => write(file.fd, bytes));
     await fileIo.fsync(file.fd);
-  } finally { await fileIo.close(file); }
+  });
+}
+
+/** Close once on both paths. A close failure can invalidate a successful
+ * operation but cannot replace its rejection or cancellation. */
+export async function recoveryWithFile<T>(path: string, mode: number, action: (file: fileIo.File) => Promise<T>): Promise<T> {
+  const file = await fileIo.open(path, mode);
+  let completed = false;
+  try {
+    const result = await action(file);
+    completed = true;
+    return result;
+  } finally {
+    try { await fileIo.close(file); }
+    catch (error) { if (completed) throw error; }
+  }
 }
 
 export async function recoveryCopyBytes(fd: number, size: number, emit: ChunkSink,
@@ -88,8 +103,7 @@ export async function recoveryHashFile(path: string): Promise<string> {
 
 export async function recoveryVisitFile(path: string, emit: ChunkSink, current: () => boolean,
   expectedSize?: number): Promise<string> {
-  const file = await fileIo.open(path, fileIo.OpenMode.READ_ONLY);
-  try {
+  return recoveryWithFile(path, fileIo.OpenMode.READ_ONLY, async (file): Promise<string> => {
     const size = (await fileIo.stat(file.fd)).size;
     if (!Number.isSafeInteger(size) || size <= 0 || size > LOCAL_RECOVERY_MAX_BYTES) {
       throw new LocalRecoveryFileError(size > LOCAL_RECOVERY_MAX_BYTES ? 'tooLarge' : 'rejected');
@@ -98,7 +112,7 @@ export async function recoveryVisitFile(path: string, emit: ChunkSink, current: 
     const digest = await recoveryCopyBytes(file.fd, size, emit, current);
     if ((await fileIo.read(file.fd, new ArrayBuffer(1))) !== 0) throw new LocalRecoveryFileError('rejected');
     return digest;
-  } finally { await fileIo.close(file); }
+  });
 }
 
 export async function recoveryReserve(directory: string, bytes: number): Promise<void> {
@@ -113,18 +127,18 @@ async function cipher(passphrase: string, header: Uint8Array, tag?: Uint8Array):
     iterations: 600000, keySize: 32,
   };
   const material = await crypto.createKdf('PBKDF2|SHA256').generateSecret(keySpec);
-  const gcm = crypto.createCipher('AES256|GCM|NoPadding');
-  const spec: crypto.GcmParamsSpec = {
-    algName: 'GcmParamsSpec',
-    iv: { data: header.slice(MAGIC.length + SALT_BYTES) },
-    aad: { data: header },
-    authTag: { data: tag ?? new Uint8Array(TAG_BYTES) },
-  };
   try {
+    const gcm = crypto.createCipher('AES256|GCM|NoPadding');
+    const spec: crypto.GcmParamsSpec = {
+      algName: 'GcmParamsSpec',
+      iv: { data: header.slice(MAGIC.length + SALT_BYTES) },
+      aad: { data: header },
+      authTag: { data: tag ?? new Uint8Array(TAG_BYTES) },
+    };
     const key = await crypto.createSymKeyGenerator('AES256').convertKey(material);
     await gcm.init(tag === undefined ? crypto.CryptoMode.ENCRYPT_MODE : crypto.CryptoMode.DECRYPT_MODE, key, spec);
+    return gcm;
   } finally { material.data.fill(0); }
-  return gcm;
 }
 
 export async function sealRecoveryFile(path: string, passphrase: string,
@@ -157,8 +171,7 @@ export async function openRecoveryFile(path: string, plaintext: string, passphra
   if (size <= headerBytes + TAG_BYTES || size > LOCAL_RECOVERY_MAX_BYTES) {
     throw new LocalRecoveryFileError(size > LOCAL_RECOVERY_MAX_BYTES ? 'tooLarge' : 'rejected');
   }
-  const source = await fileIo.open(path, fileIo.OpenMode.READ_ONLY);
-  try {
+  await recoveryWithFile(path, fileIo.OpenMode.READ_ONLY, async (source): Promise<void> => {
     const header = await recoveryRead(source.fd, headerBytes);
     if (recoveryText(header.slice(0, MAGIC.length)) !== MAGIC) throw new LocalRecoveryFileError('rejected');
     await fileIo.lseek(source.fd, -TAG_BYTES, fileIo.WhenceType.SEEK_END);
@@ -175,7 +188,7 @@ export async function openRecoveryFile(path: string, plaintext: string, passphra
       catch (_) { throw new LocalRecoveryFileError('rejected'); }
       if (final !== null) await emit(final.data);
     });
-  } finally { await fileIo.close(source); }
+  });
 }
 
 export async function selectRecoveryDocument(context: common.UIAbilityContext, save: boolean):

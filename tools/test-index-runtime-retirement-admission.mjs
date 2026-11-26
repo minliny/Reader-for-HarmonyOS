@@ -1,26 +1,109 @@
 import { resolveEtsLoaderRoot, virtualFilePath } from './lib/tool-environment.mjs';
-import {bookshelfOperationClass} from './lib/bookshelf-operation-owner-probe.mjs';
+import { bookshelfOperationClass } from './lib/bookshelf-operation-owner-probe.mjs';
 import assert from 'node:assert/strict';
-import {readFileSync} from 'node:fs';
-import {createRequire} from 'node:module';
-import {productionMotionMethods} from './lib/reader-motion-method-probe.mjs';
-import {runtimeOwnerIdentityProbe} from './lib/reader-runtime-admission-probe.mjs';
-const path=new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),source=readFileSync(path,'utf8');
-const sdk=resolveEtsLoaderRoot(),require=createRequire(import.meta.url);
-const ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
-const tree=ts.createSourceFile(virtualFilePath('Index.ets'),source,ts.ScriptTarget.Latest,true,ts.ScriptKind.ETS,options);assert.equal(tree.parseDiagnostics.length,0);
-const current=n=>ts.isCallExpression(n)&&n.expression.getText(tree)==='ReaderRuntimeOwner.current'&&n.arguments.length===0;
-function visit(n){if(ts.isBinaryExpression(n)&&[ts.SyntaxKind.EqualsEqualsEqualsToken,ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(n.operatorToken.kind))assert.equal(current(n.left)||current(n.right),false,'late identity checks use authoritative static admission, without throwing getter');ts.forEachChild(n,visit);}visit(tree);
-let installed;const Runtime=runtimeOwnerIdentityProbe(()=>installed);
-const Index=productionMotionMethods(path,['isCurrentRuntime','aboutToDisappear','hasUnknownShelfWrite','shelfRecovery','emptyShelfRecovery'],{ReaderRuntimeOwner:Runtime});
-const ActualBookshelfHost=bookshelfOperationClass('features/bookshelf/application/BookshelfHost.ets','BookshelfHost');
-function fixture(){const calls=[],old={bookAcquisitions:()=>({endSearch:()=>calls.push('old-search')}),readingEntryPreparations:()=>({setPaused:()=>calls.push('old-pause')})};installed=old;
-  const index=Object.assign(new Index(),{bookshelfHost:new ActualBookshelfHost(()=>{},()=>false),mountedRuntimeOwner:old,shelfOperationOwner:old,shelfOperation:{receipt:{receipt:{confirmation:'unknown'}},generation:4,cleanupWarning:''},
-    dismissBookRemovalDialog:()=>calls.push('delete-dismiss'),searchHost:{close:()=>calls.push('search-host')},
-    applicationSettingsUnsubscribe:()=>calls.push('settings-unsubscribe'),bookProjectionUnsubscribe:()=>calls.push('books-unsubscribe'),systemFileOpenUnsubscribe:()=>calls.push('file-unsubscribe'),sourceSwitchUnsubscribe:()=>calls.push('source-unsubscribe'),navigationBackfillObserverDisposer:()=>calls.push('navigation-unsubscribe')});
-  return{index,old,calls};}
-{const f=fixture();assert.equal(f.index.isCurrentRuntime(undefined),false);assert.equal(f.index.isCurrentRuntime(f.old),true);installed=undefined;assert.throws(()=>Runtime.current(),/installed by EntryAbility/);assert.equal(f.index.isCurrentRuntime(f.old),false);assert.equal(f.index.hasUnknownShelfWrite(),false);assert.equal(f.index.shelfRecovery().visible,false);assert.doesNotThrow(()=>f.index.aboutToDisappear());assert.equal(f.index.mountedRuntimeOwner,undefined);assert.equal(f.calls.includes('old-search'),false);assert.equal(f.index.shelfReceiptRetired,true);}
-{const f=fixture(),replacement={bookAcquisitions:()=>({endSearch:()=>f.calls.push('new-search')}),readingEntryPreparations:()=>({setPaused:()=>f.calls.push('new-pause')})};installed=replacement;assert.doesNotThrow(()=>f.index.aboutToDisappear());assert.equal(f.calls.some(c=>/^(old|new)-/.test(c)),false,'old Index never clears either retired or replacement runtime work');}
-{const f=fixture();f.index.aboutToDisappear();assert.deepEqual(f.calls.slice(-2),['old-search','old-pause'],'installed captured owner receives original normal cleanup');f.index.aboutToDisappear();assert.equal(f.calls.filter(c=>c==='old-search').length,1,'repeat retirement never reacquires a live owner');}
-assert.match(source,/aboutToAppear\(\): void \{\s*this\.mountedRuntimeOwner = ReaderRuntimeOwner\.current\(\)/,'mount captures exact authoritative owner');
-console.log('PASS Index actual Runtime current/isCurrent→28 domain callback admissions, undefined explicit guard, true getter failure, old/replaced owner cleanup and repeated retirement; accepted ACK/readback and finally covered by actual bookshelf/import/Discover/RSS/Sync chains');
+import { readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { selectedProductionMethods } from './lib/selected-production-methods.mjs';
+import { runtimeOwnerIdentityProbe } from './lib/reader-runtime-admission-probe.mjs';
+import { JsonImportPresentation } from './lib/json-import-presentation-probe.mjs';
+import { ReaderLibraryAcquisitionBinding } from '../entry/src/main/ets/app/composition/ReaderLibraryAcquisitionBinding.ts';
+import { readerRecoveryView } from '../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
+
+const path = new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url);
+const source = readFileSync(path, 'utf8');
+const sdk = resolveEtsLoaderRoot();
+const require = createRequire(import.meta.url);
+const ts = require(sdk + '/node_modules/typescript');
+const options = require(sdk + '/lib/ets_checker.js').compilerOptions;
+const tree = ts.createSourceFile(virtualFilePath('Index.ets'), source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+assert.deepEqual(tree.parseDiagnostics, []);
+const current = node => ts.isCallExpression(node) &&
+  node.expression.getText(tree) === 'ReaderRuntimeOwner.current' && node.arguments.length === 0;
+function visit(node) {
+  if (ts.isBinaryExpression(node) &&
+      [ts.SyntaxKind.EqualsEqualsEqualsToken, ts.SyntaxKind.ExclamationEqualsEqualsToken].includes(node.operatorToken.kind)) {
+    assert.equal(current(node.left) || current(node.right), false,
+      'late identity checks use authoritative static admission without invoking the throwing getter');
+  }
+  ts.forEachChild(node, visit);
+}
+visit(tree);
+
+let installed;
+const Runtime = runtimeOwnerIdentityProbe(() => installed);
+const BookshelfMutationPresentation = bookshelfOperationClass(
+  'features/bookshelf/presentation/BookshelfMutationPresentation.ets', 'BookshelfMutationPresentation',
+  { Observed: value => value, EMPTY_BOOKSHELF_OPERATION_SNAPSHOT: {}, readerRecoveryView });
+const ActualBookshelfHost = bookshelfOperationClass('features/bookshelf/application/BookshelfHost.ets', 'BookshelfHost');
+const Index = selectedProductionMethods(path, 'Index',
+  ['isCurrentRuntime', 'aboutToDisappear', 'dismissJsonImport', 'retireSourceSwitchPresentation', 'libraryAcquisition', 'shelfMutations'],
+  { State() {}, ReaderRuntimeOwner: Runtime, BookshelfMutationPresentation, ReaderLibraryAcquisitionBinding });
+function fixture() {
+  const calls = [];
+  const retire = { retire() {} };
+  const dispose = { dispose() {} };
+  function runtime(label) {
+    return {
+      bookAcquisitions: () => ({
+        subscribe: () => () => calls.push(label + '-unsubscribe'),
+        endSearch: () => calls.push(label + '-search'),
+      }),
+      readingEntryPreparations: () => ({
+        setPaused(paused) { assert.equal(paused, true); calls.push(label + '-pause'); },
+      }),
+    };
+  }
+  const old = runtime('old');
+  installed = old;
+  const index = Object.assign(new Index(), {
+    bookshelfHost: new ActualBookshelfHost(() => {}, () => false), mountedRuntimeOwner: old,
+    sourceSwitchPresentation: { retireMangaRecovery() {} }, sourceSwitchJourney: retire,
+    entryStartupTrace: retire, mangaPositions: retire,
+    readingExitActions: dispose, transientFeedback: { reset() {} }, downloadPresentation: dispose,
+    readingCommits: retire, navigationOwner: retire, settingsPresentation: dispose, sourceJourney: retire,
+    nativeAlertOwner: retire, shelfCatalog: retire, shelfManagement: retire, shelfGroupPresentation: retire,
+    discoverPresentation: retire, rulesPresentation: retire, syncPresentation: retire,
+    bookRemovalConfirmation: { dismiss() {} }, jsonImportPresentation: new JsonImportPresentation(),
+    shelfRead: retire, detailShelf: { detach() {} }, rssJourney: retire,
+    readingEntry: { clearExitRequest() {}, retire(pause) { assert.equal(pause, false); } },
+    librarySearch: { ...dispose, model: { verification: {} } },
+  });
+  index.shelfMutations.owner = old;
+  index.shelfMutations.snapshot = { receipt: { receipt: { confirmation: 'unknown' } } };
+  index.libraryAcquisition.mount(old, {
+    ownsRuntime: owner => index.isCurrentRuntime(owner),
+    detailBook: () => undefined, refreshShelf: assert.fail, refreshMembership: assert.fail, refreshDetail: assert.fail,
+  });
+  return { index, old, calls, runtime };
+}
+{
+  const { index, old, calls } = fixture();
+  assert.equal(index.isCurrentRuntime(undefined), false);
+  assert.equal(index.isCurrentRuntime(old), true);
+  assert.equal(index.shelfMutations.hasUnknownWrite(), true);
+  installed = undefined;
+  assert.throws(() => Runtime.current(), /installed by EntryAbility/);
+  assert.equal(index.isCurrentRuntime(old), false);
+  assert.equal(index.shelfMutations.hasUnknownWrite(), false);
+  assert.equal(index.shelfMutations.recovery().visible, false);
+  assert.doesNotThrow(() => index.aboutToDisappear());
+  assert.equal(index.mountedRuntimeOwner, undefined);
+  assert.deepEqual(calls, ['old-unsubscribe']);
+  assert.equal(index.shelfReceiptRetired, true);
+}
+{
+  const { index, calls, runtime } = fixture();
+  installed = runtime('new');
+  assert.doesNotThrow(() => index.aboutToDisappear());
+  assert.deepEqual(calls, ['old-unsubscribe'], 'old Index disconnects its subscription without disturbing either runtime');
+}
+{
+  const { index, calls } = fixture();
+  index.aboutToDisappear();
+  assert.deepEqual(calls, ['old-unsubscribe', 'old-pause', 'old-search'], 'the current captured owner receives cleanup');
+  index.aboutToDisappear();
+  assert.deepEqual(calls, ['old-unsubscribe', 'old-pause', 'old-search'], 'repeat retirement never reacquires a live owner');
+}
+assert.match(source, /aboutToAppear\(\): void \{\s*this\.mountedRuntimeOwner = ReaderRuntimeOwner\.current\(\)/,
+  'mount captures the authoritative owner');
+console.log('Index runtime retirement: PASS (mounted owner, retired recovery, replaced runtime, repeated cleanup)');

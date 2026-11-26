@@ -86,12 +86,14 @@ function fixture() {
   return {
     samples:{
       [assertion.baseline]:sample(assertion.baseline,20,sourceOfflineDetectReady),
-      [assertion.sample]:sample(assertion.sample,42,sourceOfflineDetectFailed),
+      [assertion.sample]:sample(assertion.sample,50,sourceOfflineDetectFailed),
     },
     actions:{
       'open-sources':{instanceId,op:'click',targetId:'reader-settings-source-management',beforeSeq:5,afterSeq:10},
-      'detect-source':{instanceId,op:'click',from:assertion.baseline,targetId:sourceOfflineDetectButton,beforeSeq:25,afterSeq:30,
+      'detect-source':{instanceId,op:'click',from:assertion.baseline,targetId:sourceOfflineDetectButton,beforeSeq:25,afterSeq:26,
         detectTap:{x:1031,y:1177,probeSeq:8}},
+      'start-check':{instanceId,op:'click',targetId:'reader-source-v9-check-run',beforeSeq:26,afterSeq:29},
+      'close-check':{instanceId,op:'click',targetId:'reader-source-v9-check-close',beforeSeq:40,afterSeq:44},
     },
     events:[
       record(7,'source.route',{action:'open',from:'settings',to:'source',...owner,previousGeneration:2}),
@@ -199,7 +201,7 @@ test('Offline Source Detect production owner observes one admitted check and val
     takeSourceHttpDiagnostics:()=>[],
     async request(method,params) {
       calls.push({method,params});
-      if (method === 'source.list') return {data:{sources:[raw]}};
+      if (method === 'source.list') return {data:{sources:[{...raw, checkReports: []}]}};
       assert.equal(method,'source.check.run');
       assert.equal(params.mode,'search');
       assert.deepEqual(params.sourceIds,[sourceId]);
@@ -223,9 +225,11 @@ test('Offline Source Detect production owner observes one admitted check and val
   await host.orchestrator.operationChain;
   assert.equal(sources[0].offlineDetectReportVersion,1);
   assert.equal(sources[0].checkState,'unchecked');
-  host.checkSource(sourceId,identity);
-  host.checkSource(sourceId,identity);
-  await host.orchestrator.operationChain;
+  const options = {mode:'search',levels:['L1','L2'],keyword:''};
+  const first = host.runSourceCheck(sourceId,options,()=>true,()=>{},identity);
+  const duplicate = host.runSourceCheck(sourceId,options,()=>true,()=>{},identity);
+  assert.equal(await duplicate,undefined);
+  assert.equal((await first).available,false);
   const observed = observations.filter(item=>item.kind === sourceOfflineDetectObservation).map(item=>item.payload);
   assert.deepEqual(observed.map(item=>item.phase),['admitted','settled']);
   assert.equal(observed[0].sequence,observed[1].sequence);

@@ -10,7 +10,7 @@ export const CONTRACT_CASES = {
     "resources": []
   },
   "hold-and-capsule": {
-    "description": "Actual Host hold timer/cancel/session capsule and progress chrome authority; fake timer/frame callbacks",
+    "description": "Actual Host frame retirement, session capsule and progress chrome authority; controlled frame callbacks",
     "resources": []
   },
   "bookmark-original-text": {
@@ -49,24 +49,24 @@ const identity = {lifecycle:1,bookIdentity:'src:book',moduleVisit:1,viewportRevi
   layoutRevision:1,paletteRevision:1,fontRevision:1,sourceRevision:1,sourceActorId:'source'};
 const clocks=[];
 const {READER_SESSION_LAUNCH_TIME_SCALE:scale}=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchController.ts');
-const {READER_SESSION_LAUNCH_DURATION_MS:duration,READER_SESSION_LAUNCH_SETTLED_MS:settled,READER_SESSION_LAUNCH_SOURCE_RELEASE_MS:sourceRelease,READER_SESSION_LAUNCH_CONTROL_RELEASE_MS:controlRelease}=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchPresentation.ts');
+const {READER_SESSION_LAUNCH_DURATION_MS:duration,READER_SESSION_LAUNCH_SETTLED_MS:settled,READER_SESSION_LAUNCH_SOURCE_RELEASE_MS:sourceRelease,READER_SESSION_LAUNCH_CONTROL_RELEASE_MS:controlRelease}=await import('../entry/src/main/ets/features/reading/ui/ReaderSessionLaunchTimeline.ts');
 for(const kind of ['quickAutoPage','quickTts','fullAutoPagePlayback','fullTtsPlayback']) {
   const d=readerSessionLaunchDesign(kind),g=buildReaderSessionLaunchGeometry({source:
     new ReaderSessionMorphSourceMeasurement(kind,'source',30,400,d.width,d.height,1),
     targetLeft:270,targetTop:797,topBarExitDistance:90,dockExitDistance:740});
   const c=new ReaderSessionLaunchController(curves);const launch=c.begin(identity,g,10000);let releases=0;
   c.admitPreparedResource(launch.generation,identity,{release:()=>releases++},1,1,1);
-  for(const wall of [0,50,100,349,350,699,700,849,850,1149,1150,1749,1750]) {
+  for(const wall of [0,50,100,159,160,189,219,220,300,379,380]) {
     const s=c.advance(launch.generation,10000+wall).sample;
     assert.equal(s.timeMs,wall/scale); assert.equal(s.controlsPresented,wall<controlRelease*scale);
     assert.equal(s.sourceNeeded,wall<sourceRelease*scale);assert.equal(s.settled,wall>=settled*scale);assert.equal(s.finished,wall>=duration*scale);
     clocks.push({kind,wall,design:s.timeMs,phase:s.phase});
   }
-  assert.equal(releases,1);assert.equal(c.remainingHoldMs(),0);
+  assert.equal(releases,1);
   // Physical lane geometry, independent of the archived CSS property equality.
   const gap=5, footerWidth=53, baseRight=g.targetLeft-gap;
   const fresh=new ReaderSessionLaunchController(curves),start=fresh.begin(identity,g,0);
-  for(let wall=700;wall<=1750;wall+=3) {
+  for(let wall=220;wall<=380;wall+=3) {
     const s=fresh.advance(start.generation,wall).sample;
     const footerRight=(baseRight-footerWidth)+footerWidth+s.footerTranslateX;
     assert.ok(footerRight<=s.proxyLeft-gap+1e-8,`${kind}: footer intersects at ${wall}`);
@@ -175,21 +175,19 @@ const curves = {flight:p=>b(p,.4,0,.2,1),expand:p=>b(p,.2,0,0,1),easeIn:p=>b(p,.
 const identity = {lifecycle:1,bookIdentity:'src:book',moduleVisit:1,viewportRevision:1,scrollRevision:1,
   layoutRevision:1,paletteRevision:1,fontRevision:1,sourceRevision:1,sourceActorId:'source'};
 const clocks=[];
-// Real Host hold scheduling: one timer, no native frames after visual settle;
-// cancelled generations cannot publish a late terminal sample.
-let now=1150,frames=[],timers=[],cleared=[];
-const Host=productionMotionMethods(file('LocalReadingExperience.ets'),['scheduleSessionLaunchFrame','liveSessionCapsuleSnapshot',
+// Cancelled generations cannot publish a late frame or terminal sample.
+const frames=[];
+const Host=productionMotionMethods(file('ui/LocalReadingExperience.ets'),['scheduleSessionLaunchFrame','liveSessionCapsuleSnapshot',
  'admitSessionControlClosing','sessionChromeForPresentation'],{
-  readerMotionNowMs:()=>now,ReaderUIFrameCallback:class {constructor(fn){this.fn=fn;}},
-  setTimeout:(fn,ms)=>{timers.push({fn,ms});return timers.length;},clearTimeout:id=>cleared.push(id),deriveReaderSessionCapsule});
+  ReaderUIFrameCallback:class {constructor(fn){this.fn=fn;}},deriveReaderSessionCapsule});
 const c=new ReaderSessionLaunchController(curves),d=readerSessionLaunchDesign('quickTts');
 const g=buildReaderSessionLaunchGeometry({source:new ReaderSessionMorphSourceMeasurement('quickTts','source',30,500,d.width,d.height,1),targetLeft:270,targetTop:797,topBarExitDistance:90,dockExitDistance:330});
-const tx=c.begin(identity,g,0);c.advance(tx.generation,1150);
+const tx=c.begin(identity,g,0);c.advance(tx.generation,300);
 const host=Object.assign(new Host(),{mounted:true,appForeground:true,exitRequested:false,sessionLaunch:c.snapshot(),sessionLaunchController:c,
-  sessionLaunchFramePending:false,sessionLaunchHoldTimer:-1,getUIContext:()=>({postFrameCallback:f=>frames.push(f)})});
+  sessionLaunchFramePending:false,capsuleVerification:{queuedFrameTime:()=>undefined},getUIContext:()=>({postFrameCallback:f=>frames.push(f)})});
 host.scheduleSessionLaunchFrame(tx.generation);host.scheduleSessionLaunchFrame(tx.generation);
-assert.equal(frames.length,0);assert.equal(timers.length,1);assert.equal(timers[0].ms,600);
-c.cancel('openControl');now=1750;timers[0].fn();assert.equal(host.sessionLaunch.sample.timeMs,2300);
+assert.equal(frames.length,1);
+c.cancel('openControl');frames[0].fn(380e6);assert.equal(host.sessionLaunch.sample.timeMs,300);
 Object.assign(host,{phase:'ready',controlObscured:false,interactionBlocked:false,controlVisible:()=>true,
   controlShellExitArmed:()=>true,autoPageState:{status:'paused',remainingSeconds:8},ttsState:{status:'idle'},
   automaticReadingState(){return this.autoPageState;}});

@@ -78,7 +78,7 @@ export function searchReadingJourneyFixture({ runtime, ReadingHost, route = 'sea
     shelfReceiptRetired: { get: () => controls.retired } });
   const library = indexLibrary(receiver);
   const searchHost = library.host;
-  searchHost.orchestrator = { visibilityChanged: () => onEvent('search.visibility'),
+  searchHost.orchestrator = { visibilityChanged: () => onEvent('search.visibility'), observeEntrySourceRead: () => undefined,
     resume: () => onEvent('search.resume'), close: () => onEvent('search.close'),
     open: () => onEvent('UNEXPECTED.search.open'), search: () => onEvent('UNEXPECTED.search.search'),
     ...onSearch };
@@ -98,7 +98,7 @@ export function searchReadingJourneyFixture({ runtime, ReadingHost, route = 'sea
   const bindReader = () => { if (currentRuntime()) entry.bindReader(runtime, entryPorts(runtime)); };
   const actions = new ReaderReadingEntryActions(navigation, new ReaderEntryStartupTrace(() => {}), {
     runtime: currentRuntime, mounting: () => 1, entry: () => entry, search: () => library, sourceSwitch: () => source,
-    shelfBooks: () => controls.shelfBooks, removalPending: () => false, readerExitPending: () => false,
+    shelfBooks: () => controls.shelfBooks, removalPending: () => false,
     advance, show: next => navigation.show(next), bindReader, restoreReaderReturn: () => false,
     entryPorts, sourceName, failure, afterOpening: project => project(), postFrame: action => action(), refreshNearEnd() {},
   });
@@ -117,9 +117,9 @@ export function searchReadingJourneyFixture({ runtime, ReadingHost, route = 'sea
   const exit = new ReaderExitActions(navigation, { entry: () => entry, runtime: currentRuntime, mounting: () => 1,
     foreground: () => controls.foreground, captureReturn: () => navigation.returns.captureReaderReturn(runtime, () => undefined),
     switchBlocked: () => false, fileOpenBlocked: () => false, advance, publish: snapshot => assert.equal(navigation.snapshot(), snapshot),
-    bindReader, hydrateMangaPosition() {}, refreshDetail() {}, refreshShelf: () => onEvent('shelf.project'), resumeReturnMotion() {},
+    bindReader, hydrateMangaPosition() {}, refreshDetail() {}, refreshShelf: () => onEvent('shelf.project'),
     returnToBookshelf: () => journey.returnToBookshelf(), returnFromDetail: () => journey.returnFromDetail(),
-    returnToReadingOrigin: () => exit.completeReturn(), showDownloads() { assert.fail('downloads outside this fixture'); },
+    showDownloads() { assert.fail('downloads outside this fixture'); },
     showRules() { assert.fail('rules outside this fixture'); }, unavailableDownloads() {}, prepareFileOpen() {},
     openShelfBook: book => actions.resumeShelf(book), resolveFileReaderTransaction: async () => {}, fileNotice() {},
   });

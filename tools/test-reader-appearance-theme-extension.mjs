@@ -4,6 +4,7 @@ import { productionMotionMethods } from './lib/reader-motion-method-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import * as geometry from '../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceGeometry.ts';
 import * as scroll from '../entry/src/main/ets/features/reading/ui/ReaderControlMorphScroll.ts';
+import { READER_CONTROL_APPEARANCE_THEMES, readerControlAppearanceThemeScheme } from '../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceStyle.ts';
 
 const url = new URL('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceContent.ets', import.meta.url);
 const near = (a, b) => assert.ok(Math.abs(a - b) < 1e-7, `${a} != ${b}`);
@@ -34,6 +35,7 @@ const Content = productionMotionMethods(url, ['frame', 'endpointFrame', 'fullInp
 let ids = Array.from({ length: 9 }, (_, i) => `theme-${i}`), native = 0;
 const c = Object.assign(new Content(), {
   fontIds: () => ['system','serif','sans','kai','fangSong','mono','sourceHanSerif','lxgwWenKai','import'], themeIds: () => ids, motionProgress: 0, interactionEnabled: true, availableWidth: 286,
+  minimumProfile: () => undefined, currentInputEnabled() { return this.interactionEnabled; },
   availableHeight: 190, fullContentHeight: 666, cachedThemeCount: -1, endpointThemeCount: -1,
   extendedScrollOffset: 0, extendedScrollPath: scroll.readerControlMorphScrollPath(0, 0),
   extendedScrollInMotion: false, extendedScrollEndpoint: 0,
@@ -60,10 +62,24 @@ assert.equal(native, 0); assert.equal(c.scrollInput(), true);
 // SDK-emitted swatches for added IDs still call the actual selection handler;
 // safe array length alone must not leave them disabled or without identity.
 const source = readFileSync(url, 'utf8');
+const island = createReaderBuilderProbe(source, ['islandThemeRow', 'themeIds'],
+  { READER_CONTROL_APPEARANCE_THEMES, readerControlAppearanceThemeScheme }).owner;
+const rows = [];
+island.islandTheme = theme => rows.at(-1).push(theme);
+for (const scheme of ['day', 'night']) {
+  rows.push([]);
+  island.islandThemeRow(scheme);
+}
+assert.deepEqual(rows, [
+  ['day', 'warm', 'paper', 'green'],
+  ['night', 'warmNight', 'paperNight', 'greenNight'],
+], 'the actual island rows follow each theme scheme in registry order');
+assert.deepEqual(island.themeIds(), ['day', 'warm', 'night', 'warmNight', 'paper', 'green', 'paperNight', 'greenNight']);
 const { owner } = createReaderBuilderProbe(source, ['themeSwatch']);
 const chosen = [];
 Object.assign(owner, { frame: () => geometry.sampleReaderControlAppearance(1, 338, 666, 12),
   snapshot: { activeTheme: 'theme-8' }, appThemeScheme: 'day', themeColor: () => '#FFFFFF',
+  displaySnapshot() { return this.snapshot; },
   themeLabel: id => id, presentation: () => ({ contentOpacity: 1, contentBlur: 0 }),
   actorPosition: actor => ({ x: actor.x, y: actor.y }), sharedClip: () => 'clip',
   fullInput: () => true, sharedInput: () => true, onThemeChange: id => chosen.push(id),

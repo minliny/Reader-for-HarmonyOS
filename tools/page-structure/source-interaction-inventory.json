@@ -17,7 +17,7 @@
         "symbol": "panel"
       },
       "eventOwner": "SourceJourneySurface.managementPage → ReaderNavigation.closeSourceManagement",
-      "condition": "always",
+      "condition": "Compact normal source list; batch mode has a cancel action instead",
       "admission": "PageBackBar direct onBack; overlay-first is parent temporary-back policy",
       "sdkGroup": "header-back",
       "nativeEvidence": "OPEN",
@@ -34,8 +34,8 @@
         "path": "entry/src/main/ets/ui/controls/ReaderIconButton.ets",
         "symbol": "build"
       },
-      "eventOwner": "SourceJourneySurface.managementPage → SourceJourneyPresentation.retainManagementViewForTools → ReaderNavigation.openSourceTools",
-      "condition": "always",
+      "eventOwner": "SourceManagementPage opens the v9 options menu",
+      "condition": "Normal source list mode",
       "admission": "mounted + actionEnabled + readable label",
       "sdkGroup": "header-tools",
       "nativeEvidence": "OPEN",
@@ -61,37 +61,19 @@
       "controlRef": "source-search"
     },
     {
-      "id": "search-import",
-      "pageBinding": {
-        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-        "symbol": "importAction",
-        "component": "ReaderIconButton"
-      },
-      "drawHost": {
-        "path": "entry/src/main/ets/ui/controls/ReaderIconButton.ets",
-        "symbol": "build"
-      },
-      "eventOwner": "SourceJourneySurface.managementPage → SourceJourneySurface.onImport",
-      "condition": "always",
-      "admission": "page callback; D1 retains duplicate entry",
-      "sdkGroup": "search-import",
-      "nativeEvidence": "OPEN",
-      "controlRef": "source-add-inline"
-    },
-    {
       "id": "status-all",
       "pageBinding": {
         "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "chip",
-        "component": "ReaderButton"
+        "component": "native:onClick"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
-        "symbol": "build"
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "chip"
       },
       "eventOwner": "SourceManagementPage.statusValue",
       "condition": "全部",
-      "admission": "ReaderButton mounted + actionEnabled + not busy",
+      "admission": "Current source opening, active list input and no covering group overlay",
       "sdkGroup": "status-chip",
       "nativeEvidence": "OPEN",
       "label": "全部",
@@ -102,18 +84,37 @@
       "pageBinding": {
         "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "chip",
-        "component": "ReaderButton"
+        "component": "native:onClick"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
-        "symbol": "build"
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "chip"
       },
       "eventOwner": "SourceManagementPage.statusValue",
       "condition": "启用",
-      "admission": "ReaderButton mounted + actionEnabled + not busy",
+      "admission": "Current source opening, active list input and no covering group overlay",
       "sdkGroup": "status-chip",
       "nativeEvidence": "OPEN",
-      "label": "启用",
+      "label": "已启用",
+      "controlRef": "source-filter-chip"
+    },
+    {
+      "id": "status-disabled",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "chip",
+        "component": "native:onClick"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "chip"
+      },
+      "eventOwner": "SourceManagementPage.statusValue",
+      "condition": "已停用",
+      "admission": "Current source opening, active list input and no covering group overlay",
+      "sdkGroup": "status-chip",
+      "nativeEvidence": "OPEN",
+      "label": "已停用",
       "controlRef": "source-filter-chip"
     },
     {
@@ -121,56 +122,18 @@
       "pageBinding": {
         "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "chip",
-        "component": "ReaderButton"
+        "component": "native:onClick"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
-        "symbol": "build"
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "chip"
       },
       "eventOwner": "SourceManagementPage.statusValue",
       "condition": "异常",
-      "admission": "ReaderButton mounted + actionEnabled + not busy",
+      "admission": "Current source opening, active list input and no covering group overlay",
       "sdkGroup": "status-chip",
       "nativeEvidence": "OPEN",
       "label": "异常",
-      "controlRef": "source-filter-chip"
-    },
-    {
-      "id": "status-unchecked",
-      "pageBinding": {
-        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-        "symbol": "chip",
-        "component": "ReaderButton"
-      },
-      "drawHost": {
-        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
-        "symbol": "build"
-      },
-      "eventOwner": "SourceManagementPage.statusValue",
-      "condition": "未检测",
-      "admission": "ReaderButton mounted + actionEnabled + not busy",
-      "sdkGroup": "status-chip",
-      "nativeEvidence": "OPEN",
-      "label": "未检测",
-      "controlRef": "source-filter-chip"
-    },
-    {
-      "id": "status-custom",
-      "pageBinding": {
-        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-        "symbol": "chip",
-        "component": "ReaderButton"
-      },
-      "drawHost": {
-        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
-        "symbol": "build"
-      },
-      "eventOwner": "SourceManagementPage.statusValue",
-      "condition": "自定义",
-      "admission": "actionEnabled false; retained visual placeholder",
-      "sdkGroup": "status-chip",
-      "nativeEvidence": "OPEN",
-      "label": "自定义",
       "controlRef": "source-filter-chip"
     },
     {
@@ -178,19 +141,19 @@
       "pageBinding": {
         "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "categoryFilter",
-        "component": "ReaderButton"
+        "component": "native:onClick"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
-        "symbol": "build"
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "categoryFilter"
       },
       "eventOwner": "SourceManagementPage.categoryValue",
-      "condition": "all",
-      "admission": "ReaderButton mounted + actionEnabled + not busy",
+      "condition": "全部",
+      "admission": "Current source opening, active list input and no covering group overlay",
       "sdkGroup": "category-chip",
       "nativeEvidence": "OPEN",
       "category": "all",
-      "label": "全部类型",
+      "label": "全部",
       "controlRef": "source-category-chip"
     },
     {
@@ -198,15 +161,15 @@
       "pageBinding": {
         "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "categoryFilter",
-        "component": "ReaderButton"
+        "component": "native:onClick"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
-        "symbol": "build"
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "categoryFilter"
       },
       "eventOwner": "SourceManagementPage.categoryValue",
       "condition": "novel",
-      "admission": "ReaderButton mounted + actionEnabled + not busy",
+      "admission": "Current source opening, active list input and no covering group overlay",
       "sdkGroup": "category-chip",
       "nativeEvidence": "OPEN",
       "category": "novel",
@@ -218,99 +181,19 @@
       "pageBinding": {
         "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "categoryFilter",
-        "component": "ReaderButton"
+        "component": "native:onClick"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
-        "symbol": "build"
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "categoryFilter"
       },
       "eventOwner": "SourceManagementPage.categoryValue",
       "condition": "comic",
-      "admission": "ReaderButton mounted + actionEnabled + not busy",
+      "admission": "Current source opening, active list input and no covering group overlay",
       "sdkGroup": "category-chip",
       "nativeEvidence": "OPEN",
       "category": "comic",
       "label": "漫画",
-      "controlRef": "source-category-chip"
-    },
-    {
-      "id": "category-music",
-      "pageBinding": {
-        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-        "symbol": "categoryFilter",
-        "component": "ReaderButton"
-      },
-      "drawHost": {
-        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
-        "symbol": "build"
-      },
-      "eventOwner": "SourceManagementPage.categoryValue",
-      "condition": "music",
-      "admission": "ReaderButton mounted + actionEnabled + not busy",
-      "sdkGroup": "category-chip",
-      "nativeEvidence": "OPEN",
-      "category": "music",
-      "label": "音乐/有声",
-      "controlRef": "source-category-chip"
-    },
-    {
-      "id": "category-download",
-      "pageBinding": {
-        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-        "symbol": "categoryFilter",
-        "component": "ReaderButton"
-      },
-      "drawHost": {
-        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
-        "symbol": "build"
-      },
-      "eventOwner": "SourceManagementPage.categoryValue",
-      "condition": "download",
-      "admission": "ReaderButton mounted + actionEnabled + not busy",
-      "sdkGroup": "category-chip",
-      "nativeEvidence": "OPEN",
-      "category": "download",
-      "label": "下载/文件",
-      "controlRef": "source-category-chip"
-    },
-    {
-      "id": "category-external",
-      "pageBinding": {
-        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-        "symbol": "categoryFilter",
-        "component": "ReaderButton"
-      },
-      "drawHost": {
-        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
-        "symbol": "build"
-      },
-      "eventOwner": "SourceManagementPage.categoryValue",
-      "condition": "external",
-      "admission": "ReaderButton mounted + actionEnabled + not busy",
-      "sdkGroup": "category-chip",
-      "nativeEvidence": "OPEN",
-      "category": "external",
-      "label": "视频/外部媒体",
-      "controlRef": "source-category-chip"
-    },
-    {
-      "id": "category-other",
-      "pageBinding": {
-        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
-        "symbol": "categoryFilter",
-        "component": "ReaderButton"
-      },
-      "drawHost": {
-        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
-        "symbol": "build"
-      },
-      "eventOwner": "SourceManagementPage.categoryValue",
-      "condition": "other",
-      "admission": "ReaderButton mounted + actionEnabled + not busy",
-      "sdkGroup": "category-chip",
-      "nativeEvidence": "OPEN",
-      "category": "other",
-      "label": "其他/混合",
       "controlRef": "source-category-chip"
     },
     {
@@ -322,7 +205,7 @@
       },
       "drawHost": {
         "path": "entry/src/main/ets/ui/controls/ReaderSelect.ets",
-        "symbol": "sourceGroupTrigger"
+        "symbol": "standardTrigger"
       },
       "eventOwner": "SourceManagementPage.group selection",
       "condition": "always",
@@ -330,6 +213,24 @@
       "sdkGroup": "group-trigger",
       "nativeEvidence": "OPEN",
       "controlRef": "source-group-select"
+    },
+    {
+      "id": "group-search-input",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "groupSearchField",
+        "component": "ReaderSearchField"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/ui/controls/ReaderSearchField.ets",
+        "symbol": "autoLineHeightField"
+      },
+      "eventOwner": "SourceManagementPage.changeGroupSearch",
+      "condition": "groupOpen with current group-selection identity",
+      "admission": "Group closing and retired identities reject text changes",
+      "sdkGroup": "group-search-input",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-search"
     },
     {
       "id": "group-selected-option",
@@ -401,15 +302,15 @@
       "pageBinding": {
         "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "loginButton",
-        "component": "ReaderButton"
+        "component": "native:onClick"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
-        "symbol": "build"
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "loginButton"
       },
       "eventOwner": "SourceHost.loginSource",
       "condition": "nonempty trimmed loginUrl",
-      "admission": "sourceActionEnabled and not checkState checking",
+      "admission": "Current source opening, active list input and no covering group overlay",
       "sdkGroup": "row-login",
       "nativeEvidence": "OPEN",
       "controlRef": "source-login"
@@ -419,15 +320,16 @@
       "pageBinding": {
         "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
         "symbol": "detectButton",
-        "component": "ReaderButton"
+        "component": "SourceV9DetectButton"
       },
       "drawHost": {
-        "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
-        "symbol": "build"
+        "path": "entry/src/main/ets/features/source/ui/SourceV9Chrome.ets",
+        "symbol": "build",
+        "component": "SourceV9DetectButton"
       },
       "eventOwner": "SourceHost.checkSource",
       "condition": "each source",
-      "admission": "sourceDetectEnabled: mounted + current sourceId exists + not checking; captured presentation must match. Original source-write blocked/unknown allowed by independent diagnostic policy; Core transaction/cache persistence gates remain authoritative.",
+      "admission": "Current row identity and detection idle",
       "sdkGroup": "row-detect",
       "nativeEvidence": "OPEN",
       "controlRef": "source-detect"
@@ -461,8 +363,8 @@
         "path": "entry/src/main/ets/ui/controls/ReaderButton.ets",
         "symbol": "build"
       },
-      "eventOwner": "SourceJourneySurface.managementPage → SourceJourneyPresentation.retainManagementViewForTools → ReaderNavigation.openSourceTools",
-      "condition": "always",
+      "eventOwner": "SourceManagementPage enters batch mode and retains current list position",
+      "condition": "Normal source list with readable sources",
       "admission": "ReaderButton mounted + actionEnabled; D1 retains duplicate entry",
       "sdkGroup": "footer-manage",
       "nativeEvidence": "OPEN",
@@ -479,12 +381,138 @@
         "path": "entry/src/main/ets/ui/controls/ReaderLabeledIconAction.ets",
         "symbol": "build"
       },
-      "eventOwner": "SourceJourneySurface.managementPage → SourceJourneySurface.onImport",
-      "condition": "always",
-      "admission": "mounted action; D1 retains duplicate entry",
+      "eventOwner": "SourceJourneySurface.openPane(import)",
+      "condition": "Normal source list mode",
+      "admission": "Current list opening and active input",
       "sdkGroup": "footer-add",
       "nativeEvidence": "OPEN",
       "controlRef": "footer-add"
+    },
+    {
+      "id": "header-overflow-item",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "sourceMoreAction",
+        "component": "native:onClick"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "sourceMoreAction"
+      },
+      "eventOwner": "SourceManagementPage onV9Action",
+      "condition": "Open options menu",
+      "admission": "Current source list action or visible overlay",
+      "sdkGroup": "source-tools",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-tools"
+    },
+    {
+      "id": "group-manage-entry",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "manageGroupsOption",
+        "component": "native:onClick"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "manageGroupsOption"
+      },
+      "eventOwner": "SourceJourneySurface opens group management",
+      "condition": "Open group filter panel",
+      "admission": "Current source list action or visible overlay",
+      "sdkGroup": "source-group-option",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-group-option"
+    },
+    {
+      "id": "batch-select-actions",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "batchHeaderAction",
+        "component": "native:onClick"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "batchHeaderAction"
+      },
+      "eventOwner": "SourceManagementPage cancels batch or toggles selection of visible sources",
+      "condition": "Batch mode",
+      "admission": "Current source list action or visible overlay",
+      "sdkGroup": "footer-batch",
+      "nativeEvidence": "OPEN",
+      "controlRef": "footer-batch"
+    },
+    {
+      "id": "batch-row",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "sourceRow",
+        "component": "native:onClick"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "sourceRow"
+      },
+      "eventOwner": "SourceManagementPage toggles selected source",
+      "condition": "Batch mode",
+      "admission": "Current source list action or visible overlay",
+      "sdkGroup": "source-row",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-row"
+    },
+    {
+      "id": "row-type-seal",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "sourceLeading",
+        "component": "native:onClick"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "sourceLeading"
+      },
+      "eventOwner": "SourceManagementPage starts current source detection",
+      "condition": "Normal list mode",
+      "admission": "Current source list action or visible overlay",
+      "sdkGroup": "source-row",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-row"
+    },
+    {
+      "id": "row-metadata",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "sourceInfo",
+        "component": "native:onClick"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "sourceInfo"
+      },
+      "eventOwner": "SourceManagementPage starts current source detection",
+      "condition": "Normal list mode",
+      "admission": "Current source list action or visible overlay",
+      "sdkGroup": "source-row",
+      "nativeEvidence": "OPEN",
+      "controlRef": "source-row"
+    },
+    {
+      "id": "batch-dock-action",
+      "pageBinding": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "batchAction",
+        "component": "native:onClick"
+      },
+      "drawHost": {
+        "path": "entry/src/main/ets/features/source/ui/SourceManagementPage.ets",
+        "symbol": "batchAction"
+      },
+      "eventOwner": "SourceJourneySurface dispatches current batch action",
+      "condition": "Batch mode with selected sources",
+      "admission": "Current source list action or visible overlay",
+      "sdkGroup": "footer-batch",
+      "nativeEvidence": "OPEN",
+      "controlRef": "footer-batch"
     },
     {
       "id": "status-action",
@@ -656,19 +684,23 @@
     },
     {
       "id": "statusBadge",
-      "reason": "readable noninteractive status; no onClick/gesture"
-    },
-    {
-      "id": "sourceRow",
-      "reason": "row/info/icon have no row click; only child actions are targets"
-    },
-    {
-      "id": "query-clear",
-      "reason": "ReaderSearchField sourceManagement uses autoLineHeightField; current branch has no clear button (clearable default false), query can be erased via native TextInput"
+      "reason": "The standalone badge was retired. row-detect owns the current detection status description and action."
     },
     {
       "id": "system-ime",
       "reason": "platform keyboard submit belongs native input; keyboard keys are outside application 44vp target audit"
+    },
+    {
+      "id": "search-import",
+      "reason": "The former inline icon was retired. footer-add owns the active import entry."
+    },
+    {
+      "id": "status-scroll",
+      "reason": "The former horizontal gesture was retired. v9 displays all choices through equal-width lanes."
+    },
+    {
+      "id": "category-scroll",
+      "reason": "The former horizontal gesture was retired. v9 displays all choices through equal-width lanes."
     }
   ],
   "gestures": [
@@ -676,18 +708,6 @@
       "id": "main-list",
       "owner": "SourceManagementPage.sourceList",
       "kind": "vertical Scroll/List",
-      "nativeEvidence": "OPEN"
-    },
-    {
-      "id": "status-scroll",
-      "owner": "SourceManagementPage.statusFilter",
-      "kind": "horizontal Scroll",
-      "nativeEvidence": "OPEN"
-    },
-    {
-      "id": "category-scroll",
-      "owner": "SourceManagementPage.categoryFilter",
-      "kind": "horizontal Scroll",
       "nativeEvidence": "OPEN"
     },
     {

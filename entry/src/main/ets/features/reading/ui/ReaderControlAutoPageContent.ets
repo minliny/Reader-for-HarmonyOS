@@ -1,9 +1,11 @@
 import { readerControlActor, readerControlPaidResponses, readerControlUnit, readerControlLerp, type ReaderControlActorFrame } from './ReaderControlActorGeometry';
 import { readerControlAutoPageMinimumFacts, readerControlAutoPageStatusLabel, measureReaderControlAutoPageMinimum, readerControlAutoPageMinimumFonts, type ReaderControlAutoPageMinimumProfile, type ReaderControlAutoPageTextMinimum } from './ReaderControlAutoPageMinimum';
 import { readerControlModuleProfileMatches, readerControlModuleFactsMatch, type ReaderControlPreparedModuleProfile, type ReaderControlModuleFacts } from './ReaderControlMinimumMeasurement';
-import { TYPE_READER_AUTO_SPEED_LABEL_FULL, TYPE_READER_AUTO_SPEED_LABEL_QUICK, TYPE_READER_AUTO_SPEED_VALUE_FULL, TYPE_READER_AUTO_SPEED_VALUE_QUICK, TYPE_READER_AUTO_PAGE_RETAINED_CHAPTER_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_FOLLOW_HIGHLIGHT_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_STOP_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_SECONDARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_TERTIARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_META } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_READER_PANEL_LABEL, TYPE_READER_PANEL_NUMBER, TYPE_APP_ROW_DETAIL, TYPE_READER_PANEL_META, TYPE_READER_AUTO_SPEED_LABEL_FULL, TYPE_READER_AUTO_SPEED_LABEL_QUICK, TYPE_READER_AUTO_SPEED_VALUE_FULL, TYPE_READER_AUTO_SPEED_VALUE_QUICK, TYPE_READER_AUTO_PAGE_RETAINED_CHAPTER_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_FOLLOW_HIGHLIGHT_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_QUICK_HEADER_META, TYPE_READER_AUTO_PAGE_RETAINED_RUNNING_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_ROW_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_SPEED_STEP_BUTTON_VALUE, TYPE_READER_AUTO_PAGE_RETAINED_STOP_BUTTON_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_SECONDARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_TERTIARY, TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_META } from '../../../ui/foundation/ReaderTypography';
 
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
+import { ReaderIslandAction, READER_ISLAND_PLAYBACK_HEIGHT_VP } from './ReaderIslandControlStyle';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { ReaderControlQuickBack } from './ReaderControlQuickBack';
@@ -14,8 +16,7 @@ import { createReaderControlMorphScroll, advanceReaderControlMorphScroll, observ
   readerControlMorphScrollTranslation, readerControlMorphScrollExtent, readerControlMorphScrollAllowsNative,
   readerControlMorphScrollPath, sampleReaderControlMorphScrollPath,
   type ReaderControlMorphScrollPath, type ReaderControlMorphScrollState } from './ReaderControlMorphScroll';
-import { TOK_BORDER_W, TOK_LINE, TOK_READ_ELEVATED, TOK_READ_INK, TOK_READ_MUTED,
-  TOK_READ_PRIMARY, TOK_READ_SURFACE, TOK_SURFACE_PANEL_SOFT } from '../../../ui/foundation/ReaderTokens';
+import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
 import type { ReaderAutoPageStatus } from './ReaderAutoPageState';
 import {
   READER_AUTO_PAGE_FULL_MAX_MINUTES, READER_AUTO_PAGE_FULL_MAX_SECONDS,
@@ -52,8 +53,11 @@ class ReaderAutoPageProfileFrame extends FrameCallback {
 export struct ReaderControlAutoPageContent {
   @StorageLink('readerAppScheme') @Watch('reportMorphActor') private appScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
+  @StorageProp('readerAppForeground') @Watch('syncRunningPulse') private foreground: boolean = true;
+  @StorageProp('readerReduceMotion') @Watch('syncRunningPulse') private reducedMotion: boolean = false;
 
   // Pure retained source projections have no Scroll, IDs, callbacks or modal hosts.
+  @Prop fixedIsland: boolean = false;
   @Prop sourceOnly: 'none' | 'quick' | 'full' = 'none';
   @Prop @Watch('onPreparedMinimumChanged') preparedMinimum: ReaderControlPreparedModuleProfile | undefined = undefined;
   @Prop preparedMinimumRequired: boolean = false;
@@ -113,6 +117,7 @@ export struct ReaderControlAutoPageContent {
   }
 
   private onSourceDetachedChanged(): void {
+    this.syncRunningPulse();
     if (this.sourceOnly !== 'none' || this.sourceDetached) return;
     const measured = this.form === 'full' ? this.fullMeasurement : this.quickMeasurement;
     if (measured === undefined || measured.width <= 0 || measured.height <= 0) return;
@@ -133,7 +138,7 @@ export struct ReaderControlAutoPageContent {
   @Prop @Watch('onMotionChanged') interactionEnabled: boolean = true;
   inputCurrent?: () => boolean;
   @Prop @Watch('reportMorphActor') form: ReaderControlForm = 'quick';
-  @Prop @Watch('publishMinimumMeasurer') status: ReaderAutoPageStatus = 'stopped';
+  @Prop @Watch('onStatusChanged') status: ReaderAutoPageStatus = 'stopped';
   @Prop @Watch('publishMinimumMeasurer') timerSummaryText: string = '15:00';
   @Prop timerMinutes: number = 15;
   @Prop timerSeconds: number = 0;
@@ -165,10 +170,13 @@ export struct ReaderControlAutoPageContent {
   private quickMeasurementScope: string = '';
   private fullMeasurementScope: string = '';
   private fullMeasurementScrollOffset: number = 0;
+  private islandMeasurementScrollOffset: number = 0;
   private cachedProgress: number = -1;
   private cachedWidth: number = -1;
   private cachedMinimumKey: string = '';
   private cachedFrame: ReaderControlAutoPageFrame = sampleReaderControlAutoPage(0, 286);
+  @State private runningPulseHigh: boolean = false;
+  private runningPulseVisible: boolean = false;
 
   private p(): number { return readerControlUnit(this.motionProgress); }
   private frame(): ReaderControlAutoPageFrame {
@@ -203,10 +211,25 @@ export struct ReaderControlAutoPageContent {
     this.adoptedPreparedKey = '';
 
     this.minimumMounted = false;
+    this.syncRunningPulse();
     this.minimumMeasurer = undefined;
     this.minimumOpening += 1;
     if (this.publishedMinimumIdentity.length > 0) this.onMinimumMeasurerReady(this.publishedMinimumIdentity, undefined);
     this.minimumProfiles.clear();
+  }
+
+  private onStatusChanged(): void {
+    this.publishMinimumMeasurer();
+    this.syncRunningPulse();
+  }
+
+  private syncRunningPulse(): void {
+    const running = this.minimumMounted && this.runningPulseVisible && this.foreground && !this.reducedMotion &&
+      this.sourceOnly === 'none' && !this.sourceDetached && this.status === 'running' && this.currentInputEnabled();
+    if (running === this.runningPulseHigh) return;
+    const timing = motionAnimateParam('reader.autoPage.pulse.half');
+    this.getUIContext().animateTo(running ? { duration: timing.duration, curve: timing.curve, iterations: -1,
+      playMode: PlayMode.Alternate } : { duration: 0 }, (): void => { this.runningPulseHigh = running; });
   }
 
   private publishMinimumMeasurer(): void {
@@ -292,7 +315,7 @@ export struct ReaderControlAutoPageContent {
     const scope = full ? this.fullMeasurementScope : this.quickMeasurementScope;
     const frame = this.frame();
     const width = full ? frame.control.width : this.availableWidth;
-    const height = full ? frame.control.height : this.availableHeight;
+    const height = full ? frame.control.height : this.fixedIsland ? this.islandPlaybackHeight() : this.availableHeight;
     return measured !== undefined && metrics === this.readerWindowMetricsRevision && scope === this.morphMeasurementScope() &&
       Math.abs(measured.width - width) < .1 && Math.abs(measured.height - height) < .1;
   }
@@ -328,6 +351,7 @@ export struct ReaderControlAutoPageContent {
     return profile.controlContentHeight;
   }
   private onMotionChanged(): void {
+    this.syncRunningPulse();
     if (this.sourceOnly !== 'none') return;
     const p = this.p();
     if (this.minimumLastProgress === 0 && p > 0 && this.minimumQuickScrollOffset > 0)
@@ -398,7 +422,7 @@ export struct ReaderControlAutoPageContent {
     return readerControlMorphScrollTranslation(this.scrollMotion, this.motionProgress, 'fullOnly');
   }
 
-  private fullInput(): boolean { return this.currentInputEnabled() && this.p() === 1; }
+  private fullInput(): boolean { return this.currentInputEnabled() && (this.fixedIsland || this.p() === 1); }
   private cachedPaint: ReaderControlMotionPresentation | undefined = undefined;
   private paintProgress: number = -1;
   private presentation(): ReaderControlMotionPresentation {
@@ -464,6 +488,7 @@ export struct ReaderControlAutoPageContent {
       this.fullMeasurementScrollOffset = offset;
     } else {
       this.quickMeasurement = rect;
+      if (this.fixedIsland) this.islandMeasurementScrollOffset = this.scroller.currentOffset()?.yOffset ?? 0;
       this.quickMeasurementMetrics = this.readerWindowMetricsRevision;
       this.quickMeasurementScope = this.morphMeasurementScope();
     }
@@ -479,20 +504,179 @@ export struct ReaderControlAutoPageContent {
       scrolled = { left: full.left, top: full.top - (offset - this.fullMeasurementScrollOffset),
         width: full.width, height: full.height };
     }
-    const rect = readerControlPlaybackMeasuredSource(this.form, this.quickMeasurement, scrolled);
+    const quick = this.quickMeasurement;
+    const islandOffset = this.fixedIsland ? (this.scroller.currentOffset()?.yOffset ?? 0) - this.islandMeasurementScrollOffset : 0;
+    const scrolledQuick: ReaderControlPlaybackMeasuredRect | undefined = quick === undefined || islandOffset === 0 ? quick :
+      { left: quick.left, top: quick.top - islandOffset, width: quick.width, height: quick.height };
+    const rect = readerControlPlaybackMeasuredSource(this.form, scrolledQuick, scrolled);
     if (rect !== undefined) this.onMorphActorMeasured(readerControlPlaybackSourceKind('autoPage', this.form),
       rect.left, rect.top, rect.width, rect.height);
   }
 
   build() {
     if (!this.preparedMinimumRequired || this.presentationPrepared() !== undefined) {
-    if (this.sourceOnly !== 'none') {
+    if (this.fixedIsland && this.sourceOnly === 'none') {
+      this.islandContent();
+    } else if (this.fixedIsland && this.sourceOnly === 'quick') {
+      if (this.sourceMinimumCurrent() || this.sourceMinimumIdentity.length === 0) this.islandPlaybackContents();
+    } else if (this.sourceOnly !== 'none') {
       if (this.sourceMinimumCurrent() || (this.sourceMinimum === undefined && this.sourceMinimumIdentity.length === 0 &&
         this.sourceMinimumKey.length === 0 && this.sourceMinimumMetricsRevision === -1)) this.launchSourceContent();
     } else {
       this.normalContent();
     }
 
+    }
+  }
+
+  private islandPlaybackHeight(): number { return READER_ISLAND_PLAYBACK_HEIGHT_VP; }
+
+  @Builder
+  private islandContent() {
+    Column() {
+      Scroll(this.scroller) {
+        Column({ space: 6 }) {
+          if (!this.sourceDetached) {
+            this.islandPlayback();
+          } else {
+            Blank().height(this.islandPlaybackHeight());
+          }
+          Column({ space: 2 }) {
+            Row({ space: 4 }) {
+              Text('每页停留').layoutWeight(1).fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
+                .fontColor(readerAppColor('TOK_READ_INK', this.appScheme));
+              this.islandStep('speed', -1, this.effectiveSpeedSeconds() > READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS);
+              Text(`${this.effectiveSpeedSeconds()} 秒`).width(52).textAlign(TextAlign.Center)
+                .fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme));
+              this.islandStep('speed', 1, this.effectiveSpeedSeconds() < READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS);
+            }.width('100%');
+            Slider({ value: this.effectiveSpeedSeconds(), min: READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS,
+              max: READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS, step: 1 })
+              .width('100%').height(44)
+              .selectedColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
+              .trackColor(readerAppColor('TOK_READ_ACTIVE_SOFT', this.appScheme))
+              .accessibilityText('自动翻页间隔').onChange((value: number, mode: SliderChangeMode): void => {
+                if (!this.currentInputEnabled()) return;
+                if (mode === SliderChangeMode.End || mode === SliderChangeMode.Click) {
+                  this.speedPreviewSeconds = -1;
+                  if (Math.round(value) !== this.speedSeconds) this.onSpeedChange(Math.round(value));
+                } else {
+                  this.speedPreviewSeconds = Math.round(value);
+                }
+              });
+          }.width('100%').padding({ left: 10, right: 10 }).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
+          Column() {
+            Row() {
+              Text('定时停止').layoutWeight(1).fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
+                .fontColor(readerAppColor('TOK_READ_INK', this.appScheme));
+              Text(this.timerSummaryText).fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp).fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme));
+            }.width('100%').padding({ top: 8 });
+            this.islandTimerRow(true);
+            this.islandTimerRow(false);
+          }.width('100%').padding({ left: 10, right: 10 }).attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme));
+          Button({ type: ButtonType.Normal, stateEffect: false }) {
+            Row() {
+              Text('跟随高亮').layoutWeight(1).fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appScheme));
+              ReaderControlSwitchTrack({ value: this.followHighlight });
+            }.width('100%');
+          }.width('100%').height(44).padding({ left: 10, right: 10 }).backgroundColor(Color.Transparent)
+            .attributeModifier(new ReaderPanelFrame('reader-island-card', this.appScheme))
+            .accessibilitySelected(this.followHighlight).accessibilityText('跟随高亮')
+            .onClick((): void => { if (this.currentInputEnabled()) this.onFollowHighlightChange(!this.followHighlight); });
+        }.width('100%').padding({ bottom: 2 });
+      }.width('100%').layoutWeight(1).scrollBar(BarState.Auto).edgeEffect(EdgeEffect.None)
+          .onDidScroll((): void => this.reportMorphActor());
+    }.id('reader-control-module-autoPage').width(this.availableWidth).height(this.availableHeight)
+      .enabled(this.currentInputEnabled()).clip(true);
+  }
+
+  @Builder
+  private islandPlayback() {
+    Stack() { this.islandPlaybackContents(); }
+      .id(this.actorId(false)).width(this.availableWidth).height(this.islandPlaybackHeight())
+      .attributeModifier(new ReaderPanelFrame('reader-island-emphasis', this.appScheme))
+      .onAreaChange((_old: Area, area: Area): void => this.measureActor(false, area))
+      .onVisibleAreaChange([0, .01, 1], (visible: boolean, ratio: number): void => this.reportActorVisible(false, visible, ratio));
+  }
+
+  @Builder
+  private islandPlaybackContents() {
+    Column({ space: 2 }) {
+      Row({ space: 6 }) {
+        Text('自动翻页').layoutWeight(1).fontFamily(TYPE_READER_PANEL_LABEL.fontFamily).fontWeight(TYPE_READER_PANEL_LABEL.fontWeight).fontSize(TYPE_READER_PANEL_LABEL.fontSizeFp)
+          .fontColor(readerAppColor('TOK_READ_INK', this.appScheme));
+        if (this.sourceOnly === 'none') {
+          Row().width(6).height(6).borderRadius(3).backgroundColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme))
+            .scale({ x: this.runningPulseHigh ? 1.05 : .9, y: this.runningPulseHigh ? 1.05 : .9 })
+            .opacity(this.status === 'running' ? this.runningPulseHigh || this.reducedMotion ? 1 : .6 : 0)
+            .accessibilityLevel('no').onVisibleAreaChange([0, .01, 1], (visible: boolean, ratio: number): void => {
+              this.runningPulseVisible = visible && ratio > 0;
+              this.syncRunningPulse();
+            });
+        }
+        Text(this.headerMeta('control')).fontFamily(TYPE_READER_PANEL_META.fontFamily).fontWeight(TYPE_READER_PANEL_META.fontWeight).fontSize(TYPE_READER_PANEL_META.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme));
+      }.width('100%').height(22);
+      Row({ space: 6 }) {
+        this.islandTransport('上一章', 'reader_auto_full_chevron_left', this.canPreviousChapter, 'previous');
+        this.islandTransport(this.status === 'running' ? '暂停' : this.status === 'paused' ? '继续' : '开始',
+          this.status === 'running' ? 'reader_session_pause' : 'reader_auto_full_play', true, 'toggle');
+        this.islandTransport('停止', 'reader_auto_full_stop', this.status !== 'stopped', 'stop');
+        this.islandTransport('下一章', 'reader_auto_full_chevron_right', this.canNextChapter, 'next');
+      }.width('100%');
+    }.width('100%').height('100%')
+      .padding({ left: 10, right: 10, top: 6, bottom: 6 });
+  }
+
+  @Builder
+  private islandTransport(label: string, asset: string, available: boolean,
+    action: 'previous' | 'next' | 'stop' | 'toggle') {
+    ReaderIslandAction({
+      scheme: this.appScheme, kind: 'transport', label,
+      tone: action === 'toggle' ? 'selected' : 'normal',
+      icon: $r(`app.media.${asset}${this.appScheme === 'night' ? '_theme_night' : ''}`),
+      actionReady: this.sourceOnly === 'none' && this.currentInputEnabled() && available,
+      visualAvailable: available,
+      onAction: (): void => {
+        if (this.sourceOnly !== 'none' || !this.currentInputEnabled() || !available) return;
+        if (action === 'previous') this.onPreviousChapter();
+        else if (action === 'next') this.onNextChapter();
+        else if (action === 'stop') this.onStop();
+        else { this.reportMorphActor(); this.onToggleRunning(); }
+      },
+    }).layoutWeight(action === 'toggle' ? 1.25 : 1);
+  }
+
+  @Builder
+  private islandTimerRow(minutes: boolean) {
+    Row({ space: 4 }) {
+      Text(minutes ? '分钟' : '秒钟').layoutWeight(1).fontFamily(TYPE_APP_ROW_DETAIL.fontFamily).fontWeight(TYPE_APP_ROW_DETAIL.fontWeight).fontSize(TYPE_APP_ROW_DETAIL.fontSizeFp)
+        .fontColor(readerAppColor('TOK_READ_INK', this.appScheme));
+      this.islandStep(minutes ? 'minutes' : 'seconds', -1, this.hasAdjacentTimerValue(minutes, -1));
+      Text(this.currentTimerValue(minutes).toString()).width(52).textAlign(TextAlign.Center)
+        .fontFamily(TYPE_READER_PANEL_NUMBER.fontFamily).fontWeight(TYPE_READER_PANEL_NUMBER.fontWeight).fontSize(TYPE_READER_PANEL_NUMBER.fontSizeFp).fontFeature('"tnum" 1').fontColor(readerAppColor('TOK_READ_PRIMARY', this.appScheme));
+      this.islandStep(minutes ? 'minutes' : 'seconds', 1, this.hasAdjacentTimerValue(minutes, 1));
+    }.width('100%');
+  }
+
+  @Builder
+  private islandStep(metric: 'speed' | 'minutes' | 'seconds', delta: number, available: boolean) {
+    ReaderIslandAction({
+      scheme: this.appScheme, label: delta < 0 ? '−' : '+',
+      actionReady: this.currentInputEnabled() && available, visualAvailable: available,
+      accessibleLabel: `${delta < 0 ? '减少' : '增加'}${metric === 'speed' ? '每页停留' : metric === 'minutes' ? '分钟' : '秒钟'}`,
+      onAction: (): void => {
+        if (!this.currentInputEnabled() || !available) return;
+        if (metric === 'speed') this.stepIslandSpeed(delta);
+        else this.commitTimerStep(metric === 'minutes', delta);
+      },
+    });
+  }
+
+  private stepIslandSpeed(delta: number): void {
+    const next = this.effectiveSpeedSeconds() + delta;
+    if (next >= READER_AUTO_PAGE_FULL_MIN_SPEED_SECONDS && next <= READER_AUTO_PAGE_FULL_MAX_SPEED_SECONDS) {
+      this.speedPreviewSeconds = -1;
+      this.onSpeedChange(next);
     }
   }
 
@@ -595,6 +779,17 @@ export struct ReaderControlAutoPageContent {
     Row() {
       Text(kind === 'control' ? '自动翻页控制' : '详细配置').layoutWeight(1).fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE.fontFamily).fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE.fontWeight)
         .fontSize(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_VALUE.fontSizeFp).fontColor(readerAppColor('TOK_READ_INK', this.appScheme)).maxLines(1);
+      if (kind === 'control') {
+        Row().width(6).height(6).borderRadius(3).margin({ right: 5 })
+          .backgroundColor(readerAppColor(this.status === 'running' ? 'TOK_READ_PRIMARY' : 'TOK_READ_MUTED', this.appScheme))
+          .scale({ x: this.runningPulseHigh ? 1.05 : .9, y: this.runningPulseHigh ? 1.05 : .9 })
+          .opacity(this.status === 'stopped' ? 0 : this.runningPulseHigh || this.reducedMotion ? 1 : .6)
+          .accessibilityLevel('no').hitTestBehavior(HitTestMode.None)
+          .onVisibleAreaChange([0, .01, 1], (visible: boolean, ratio: number): void => {
+            this.runningPulseVisible = visible && ratio > 0;
+            this.syncRunningPulse();
+          });
+      }
       Text(this.headerMeta(kind)).fontFamily(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META.fontFamily as string).fontSize(TYPE_READER_AUTO_PAGE_RETAINED_MODULE_HEADER_META.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appScheme));
     }.width(this.headerActor(kind).width).height(this.headerActor(kind).height).alignItems(VerticalAlign.Center)
       .position({ x: this.headerActor(kind).x, y: this.headerActor(kind).y })
@@ -766,8 +961,8 @@ export struct ReaderControlAutoPageContent {
         Row({ space: 8 }) {
           Stack({ alignContent: Alignment.Center }) {
             Image($r(this.appScheme === 'night' ? 'app.media.reader_auto_full_clock_theme_night' : 'app.media.reader_auto_full_clock'))
-              .width(18)
-              .height(18);
+              .width(14)
+              .height(14);
           }
           .width(30)
           .height(30)
@@ -777,7 +972,7 @@ export struct ReaderControlAutoPageContent {
             .fontWeight(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_SECONDARY.fontWeight)
             .fontSize(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_SECONDARY.fontSizeFp)
             .lineHeight(TYPE_READER_AUTO_PAGE_RETAINED_TIMER_SECTION_LABEL_SECONDARY.lineHeightFp as number)
-            .fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
+            .halfLeading(true).fontColor(readerAppColor('TOK_READ_INK', this.appScheme))
             .maxLines(1);
         }
         .width(this.textMetric('timerLabelWidth', 84))
@@ -870,7 +1065,7 @@ export struct ReaderControlAutoPageContent {
           .position({ x: this.speedActor('title').x, y: this.speedActor('title').y });
         Text(`${this.effectiveSpeedSeconds()} 秒`).id(this.speedActorId('current'))
           .width(this.speedActor('current').width).height(this.speedActor('current').height)
-          .fontFamily(TYPE_READER_AUTO_SPEED_VALUE_QUICK.fontFamily).fontWeight(Math.round(readerControlLerp(TYPE_READER_AUTO_SPEED_VALUE_QUICK.fontWeight, TYPE_READER_AUTO_SPEED_VALUE_FULL.fontWeight, this.p())))
+          .fontFamily(TYPE_READER_AUTO_SPEED_VALUE_QUICK.fontFamily).fontWeight(TYPE_READER_AUTO_SPEED_VALUE_QUICK.fontWeight)
           .fontSize(readerControlLerp(TYPE_READER_AUTO_SPEED_VALUE_QUICK.fontSizeFp, TYPE_READER_AUTO_SPEED_VALUE_FULL.fontSizeFp, this.p())).lineHeight(TYPE_READER_AUTO_SPEED_VALUE_QUICK.lineHeightFp as number)
           .fontColor(readerAppColor(this.p() === 0 ? 'TOK_READ_PRIMARY' : 'TOK_READ_MUTED', this.appScheme))
           .textAlign(TextAlign.Center).maxLines(1)

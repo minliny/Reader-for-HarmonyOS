@@ -95,7 +95,7 @@ if (selected.length > 0) {
       'hasReaderPendingGroup', 'openReaderRecovery', 'readerRecoveryRequestCurrent', 'retireReaderRecovery',
       'readerRecoveryOverlayId', 'readerRecoveryInputCurrent', 'readerRecoveryContent', 'readerRecoveryItems',
       'isControlInputEnabled', 'readerInputIsCurrent', 'isMountedToken', 'isSessionActive',
-      'commitAppearanceChange', 'observeAppearanceSave', 'showAppearanceFailure'];
+      'commitAppearanceChange', 'commitAppearanceMutation', 'observeAppearanceSave', 'showAppearanceFailure'];
     const owner = sdk.consumer(source, names, { ReaderRuntimeOwner: f.Runtime, ReaderThemeHost: f.Host,
       ReaderAppearanceCommit: storeTypes.ReaderAppearanceCommit, readerControlHostInputEnabled,
       prepareReaderFontFamily: async () => {}, readerAppearanceSnapshotFontFamily: () => 'finite-font-ready', hilog: log });
@@ -117,11 +117,12 @@ if (selected.length > 0) {
     });
     owner.bindAppearanceSaveRecovery(owner.lifecycleToken);
     const panel = createReaderBuilderProbe(read('features/reading/ui/ReaderControlPanel.ets'),
-      ['setMoreMenuVisible', 'currentMoreMenuOwnerScope', 'dismissMoreMenu', 'performMoreAction', 'readerMoreActionEnabled', 'readerMoreActions'],
+      ['setMoreMenuVisible', 'currentMoreMenuOwnerScope', 'dismissMoreMenu', 'performMoreAction', 'readerMoreActionEnabled',
+        'readerMoreActions', 'observeMoreMenuFrames'],
       { ReaderMenuActionView: sdk.deps.ReaderMenuActionView }).owner;
-    Object.assign(panel, { runtimeMounted: true, inputEnabled: true, controlObscured: false, temporaryLayerActive: false,
+    Object.assign(panel, { runtimeMounted: true, inputEnabled: true, controlObscured: false, temporaryLayerKind: '',
       frame: () => ({ visibility: 1 }), sourceId: 'source', sourceBookId: 'book', controlOpenRevision: 1, runtimeLifecycle: 7,
-      moreMenuVisible: false, moreMenuGeneration: 0, syncProgressInput() {}, onTemporaryLayerChange() {},
+      moreMenuVisible: false, moreMenuGeneration: 0, syncProgressInput() {}, onTemporaryLayerChange() {}, refreshDockPlacement() {},
       onOpenRecovery: selectedProductionComponentCallback(new URL('../entry/src/main/ets/features/reading/ui/LocalReadingExperience.ets', import.meta.url),
         'ReaderControlPanel', 'onOpenRecovery', owner) });
     function openMore() {

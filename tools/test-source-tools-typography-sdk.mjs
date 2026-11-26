@@ -14,18 +14,26 @@ const { boundedMembers, boundedSurfaceSdk } = await import('./lib/bounded-surfac
 const { selectedProductionClasses } = await import('./lib/selected-production-methods.mjs');
 const { resolveSourceToolsRowLayout } = await import('../entry/src/main/ets/features/source/presentation/SourceToolsLayout.ts');
 const { bookshelfOperationClass } = await import('./lib/bookshelf-operation-owner-probe.mjs');
-const sourceEditorReadbackPending = bookshelfOperationClass('features/source/application/SourceToolsOrchestrator.ets', 'sourceEditorReadbackPending');
+const { sourceEditorReadbackPending, filterSourceTools } = bookshelfOperationClass(
+  'features/source/application/SourceToolsOrchestrator.ets', '({sourceEditorReadbackPending,filterSourceTools})');
 
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/source/ui/SourceToolsPage.ets', import.meta.url), 'utf8');
 const { SourceToolListRow } = selectedProductionClasses(new URL('../entry/src/main/ets/features/source/ui/SourceToolsPage.ets', import.meta.url), ['SourceToolListRow']);
 const headerSource = readFileSync(new URL('../entry/src/main/ets/ui/chrome/PageBackBar.ets', import.meta.url), 'utf8');
+const fieldSource = readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderSearchField.ets', import.meta.url), 'utf8');
+class ReaderSearchField {
+  constructor(owner, params, _storage, id) {
+    Object.assign(this, params, {owner, id, children: new Map(), nodes: new Map()});
+  }
+}
 const methods = [...source.matchAll(/@Builder\s+private\s+(\w+)\s*\(/g)].map(match => match[1]);
 methods.push('recovery', 'batchCheckPercent', 'batchCheckPhaseLabel', 'batchResultLabel', 'confirmExportThen', 'canWriteSources',
   'editorDraftIsEditable', 'debugOptionsCurrent', 'batchControlsRenderKey', 'batchSelectionAction', 'toolsOpeningIsCurrent',
   'sourceRowAction', 'batchButtonLabel', 'batchButtonEnabled', 'batchButtonAction', 'currentSourceForRow',
   'currentSourceToolRow', 'sourceRowKey', 'sourceRowButtonLabel', 'sourceRowButtonEnabled', 'currentSourceRowAction',
-  'toolsFontScale', 'sourceRowLayout', 'actionMinimumWidth', 'toolsInputIsCurrent', 'editorAction', 'editorDraftChange', 'editorButtonLabel', 'editorButtonEnabled');
+  'toolsFontScale', 'sourceRowLayout', 'actionMinimumWidth', 'toolsInputIsCurrent', 'editorAction', 'editorDraftChange', 'debugKeyChange', 'editorButtonLabel', 'editorButtonEnabled',
+  'visibleSources', 'visibleSelectedIds', 'allVisibleSelected', 'changeSourceQuery');
 if(selectedCase==='inline-native-admission')methods.push('debugKeyChange');
 const bookSource={name:'测试书源',sourceId:'https://source.example',baseUrl:'https://source.example',lastCheckSummary:'上次检测已完成'};
 const owners=owner=>[owner,...[...owner.children.values()].flatMap(owners)];
@@ -38,25 +46,26 @@ const make = (overrides = {}) => {
   const messages=selectedCase==='inline-native-admission'?{deps:{},childSources:{}}:
     boundedSurfaceSdk({properties:controls.properties,allowEmptyBranchAdmission:true});
   controls.hooks.childSources={...messages.childSources,...controls.hooks.childSources};
-  controls.hooks.childSources = {...controls.hooks.childSources, PageBackBar: headerSource};
+  controls.hooks.childSources = {...controls.hooks.childSources, PageBackBar: headerSource, ReaderSearchField: fieldSource};
   const PageBackBar = selectedCase==='inline-native-admission'?undefined:
     createReaderBuilderProbe(headerSource, boundedMembers(headerSource), controls.dependencies, controls.hooks).Component;
   const {inlineSelectSdk}=awaitInline;
   const inline=inlineSelectSdk({properties:controls.properties,uiContext:{getFont:()=>({}),getMeasureUtils:()=>({measureText:()=>150,measureTextSize:()=>({width:150,height:54})}),px2vp:x=>x/3,animateTo(_o,action){action();}}});
   controls.hooks.childSources={...controls.hooks.childSources,...inline.hooks.childSources};controls.hooks.lifecycleChildren=true;
   const selectedMethods=selectedCase==='inline-native-admission'?
-    ['debugCard','debugKeyChange','debugOptionsCurrent','toolsInputIsCurrent','toolsOpeningIsCurrent']:methods;
+    ['debugCardHeader','debugKeyChange','debugOptionsCurrent','toolsInputIsCurrent','toolsOpeningIsCurrent']:methods;
   const { owner } = createReaderBuilderProbe(source, selectedMethods, {
     // Virtual list painting is outside this typography probe. The actual row
     // Builders run separately below, with their real SDK observer closures.
     LazyForEach: { create() {}, pop() {} }, readerRecoveryView, sourceEditorReadbackPending, SourceToolListRow, resolveSourceToolsRowLayout,
     uiContext: { px2vp: x => x, getMeasureUtils: () => ({ measureText: input => input.textContent.length * 12 }) },
-    ...messages.deps,...controls.dependencies, PageBackBar, ...inline.dependencies, AppStorage: {get: () => true}, ...overrides,
+    ...messages.deps,...controls.dependencies, PageBackBar, ReaderSearchField, filterSourceTools, ...inline.dependencies, AppStorage: {get: () => true}, ...overrides,
   },controls.hooks);
   const replay=owner.replay.bind(owner);owner.replay=()=>{replay();controls.properties.flush();};
   const calls = [];
   Object.assign(owner, {
     appThemeScheme: 'day', mounted: true, temporaryBackIdentity: 'tools:1', debugInputRevision: 0,
+    sourceQuery: '', sourceQueryRevision: 0, syncListDataSources() {},
     snapshot: {
       busy: false, sources: [bookSource], selectedSourceIds: [bookSource.sourceId], selectedSourceCount: 1,
       sourceListRevision: 1, selectionRevision: 1,
@@ -83,11 +92,11 @@ const make = (overrides = {}) => {
 if(selectedCase==='inline-native-admission'){
  const hosts=f=>owners(f.owner).filter(actor=>actor instanceof f.inline.dependencies.ReaderInlineSelect);
  const trigger=(f,host)=>{const select=f.inline.walk(host).find(actor=>actor instanceof f.inline.dependencies.ReaderSelect);assert.ok(select);const hits=f.inline.nodes(select).filter(node=>typeof node.onClick==='function');assert.equal(hits.length,1);assert.equal(hits[0].type,'Button');return hits[0];};
- const locked=make();locked.owner.snapshot.busy=true;locked.owner.debugCard();
+ const locked=make();locked.owner.snapshot.busy=true;locked.owner.debugCardHeader();
  const disabledHosts=hosts(locked);assert.equal(disabledHosts.length,2);
  for(const host of disabledHosts){assert.equal(host.actionEnabled,false,'actual SourceTools busy reaches the InlineSelect host');const native=trigger(locked,host);assert.equal(native.enabled,false,'SourceTools busy must reach the native trigger');native.onClick();assert.equal(host.open,false);}
  assert.deepEqual(locked.calls,[]);
- const live=make();live.owner.debugCard();const [host]=hosts(live);const native=trigger(live,host),retained=native.onClick;
+ const live=make();live.owner.debugCardHeader();const [host]=hosts(live);const native=trigger(live,host),retained=native.onClick;
  assert.equal(native.enabled,true);assert.equal(native.accessibilityDescription,'已收起');
  retained();live.inline.properties.flush();assert.equal(host.open,true);assert.equal(native.accessibilityDescription,'已展开');
  const oldId=host.selectionId,oldDismiss=host.popupOptions(oldId).onStateChange;
@@ -110,7 +119,7 @@ if(selectedCase==='inline-native-admission'){
 }
 
 if(selectedCase==='carrier-propagation'){
- const assertions=[['exportCard',[],'书源导出','TYPE_SOURCE_TOOLS_HEADING'],['batchCounter',[()=> '计数',()=> '#status-color'],'计数','TYPE_SOURCE_TOOLS_COMPACT_ACTION'],['sourceRow',[{source:bookSource,sourceListRevision:1,selected:true,actionsEnabled:true}],bookSource.name,'TYPE_SOURCE_TOOLS_ACTION']];
+ const assertions=[['exportCard',[],'书源导出','TYPE_CARD_SECTION_HEADING'],['batchCounter',[()=> '计数',()=> '#status-color'],'计数','TYPE_SOURCE_TOOLS_COMPACT_ACTION'],['sourceRow',[{source:bookSource,sourceListRevision:1,selected:true,actionsEnabled:true}],bookSource.name,'TYPE_APP_ROW_LABEL']];
  for(const [method,args,label,roleName]of assertions){const {owner}=make();owner[method](...args);const node=nodes(owner).find(n=>n.create===label),role=readerTypographyRoles[roleName];assert.ok(node,method);assert.equal(node.fontSize,role.fontSizeFp);assert.equal(node.fontFamily,role.fontFamily);if(role.fontWeight!==undefined)assert.equal(node.fontWeight,role.fontWeight);}
  const {owner: rowOwner}=make();
  rowOwner.sourceRow({source:bookSource,sourceListRevision:1,selected:true,actionsEnabled:true});
@@ -125,23 +134,30 @@ if(selectedCase==='carrier-propagation'){
    assert.ok(text);
    assert.equal(text.wordBreak,undefined);
  }
- const headingRole=readerTypographyRoles.TYPE_SOURCE_TOOLS_HEADING;
- const sharedHeading=make({TYPE_SOURCE_TOOLS_HEADING:{...headingRole,fontSizeFp:headingRole.fontSizeFp+2}}).owner;
+ const summary = rowTexts.find(node => node.create === bookSource.lastCheckSummary);
+ assert.deepEqual([summary.fontFamily, summary.fontWeight, summary.fontSize, summary.lineHeight],
+   [readerTypographyRoles.TYPE_APP_ROW_DETAIL.fontFamily, 400, 12, 18]);
+ const headingRole=readerTypographyRoles.TYPE_CARD_SECTION_HEADING;
+ const sharedHeading=make({TYPE_CARD_SECTION_HEADING:{...headingRole,fontSizeFp:headingRole.fontSizeFp+2}}).owner;
  sharedHeading.exportCard();
  const heading=nodes(sharedHeading).find(node=>node.create==='书源导出');
  assert.equal(heading.fontSize,headingRole.fontSizeFp+2);
- for(const attribute of ['height','lineHeight','padding','maxLines'])assert.equal(Object.hasOwn(heading,attribute),false,attribute);
+ assert.equal(heading.lineHeight, 20);
+ for(const attribute of ['height','padding','maxLines'])assert.equal(Object.hasOwn(heading,attribute),false,attribute);
  const role=readerTypographyRoles.TYPE_SOURCE_TOOLS_DESCRIPTION,changed={...role,fontSizeFp:role.fontSizeFp+3};
  const base=make().owner,mutant=make({TYPE_SOURCE_TOOLS_DESCRIPTION:changed}).owner;base.exportCard();mutant.exportCard();
  const before=nodes(base).filter(n=>n.fontSize===role.fontSizeFp&&n.lineHeight===role.lineHeightFp);assert.ok(before.length>0);
  for(const n of before){const after=nodes(mutant).find(m=>m.create===n.create&&m.type===n.type);assert.ok(after);assert.equal(after.fontSize,n.fontSize+3);assert.equal(after.lineHeight,n.lineHeight);}
 }
 if(selectedCase==='input-selection'){
- const {owner:editor,calls,inline}=make();editor.editorCard(editor.snapshot.editorRevision);editor.debugCard();const code=nodes(editor).find(n=>n.type==='TextArea'),input=nodes(editor).find(n=>n.type==='TextInput');
- assert.equal(code.fontFamily,'monospace');code.onChange('{"edited":true}');input.onChange('新的关键词');assert.deepEqual(calls.slice(-2),[['editor','{"edited":true}'],['key','新的关键词']]);
+ const {owner:editor,calls,inline}=make();editor.editorCard(editor.snapshot.editorRevision);editor.debugCardHeader();const code=nodes(editor).find(n=>n.type==='TextArea'),input=nodes(editor).find(n=>n.type==='TextInput');
+ const codeStyle=readerTypographyRoles.TYPE_SOURCE_TOOLS_CODE_INPUT;
+ assert.equal(code.fontFamily,codeStyle.fontFamily);
+ assert.equal(code.fontSize,13);
+ code.onChange('{"edited":true}');input.onChange('新的关键词');assert.deepEqual(calls.slice(-2),[['editor','{"edited":true}'],['key','新的关键词']]);
  const actors=owners(editor).filter(c=>typeof c.commit==='function'&&typeof c.toggle==='function');assert.equal(actors.length,2,'two actual production InlineSelect hosts');
  inline.choose(actors[0],'发现');inline.choose(actors[1],'正文');assert.deepEqual(calls.slice(-2),[['checkSelection','explore',2],['checkSelection','search',5]]);
- const locked=make();locked.owner.snapshot.busy=true;locked.owner.debugCard();
+ const locked=make();locked.owner.snapshot.busy=true;locked.owner.debugCardHeader();
  const lockedInput=nodes(locked.owner).find(n=>n.type==='TextInput');assert.equal(lockedInput.enabled,false);
  lockedInput.onChange('检测期间的输入');assert.deepEqual(locked.calls,[]);
  editor.isOpeningCurrent=()=>false;const beforeLeaving=calls.length;input.onChange('已离开页面的输入');assert.equal(calls.length,beforeLeaving);editor.isOpeningCurrent=()=>true;
@@ -153,26 +169,33 @@ if(selectedCase==='guard-admission'){
  const {owner,calls}=make();
  owner.onSetSelectedEnabled=(selection,enabled)=>calls.push({selection,enabled});
  owner.batchCard();
+ const [search]=owners(owner).filter(actor=>actor instanceof ReaderSearchField);
+ assert.ok(search,'the current tools card mounts the shared search field');
  const oldProof=owner.batchSelectionAction(owner.batchControlsRenderKey(),selection=>calls.push({selection,enabled:true}));
  const oldEnable=nodes(owner).find(node=>node.type==='Button'&&node.accessibilityText==='启用').onClick;
  oldEnable();
- assert.deepEqual(calls,[{selection:{sourceIds:[bookSource.sourceId],sourceListRevision:1,selectionRevision:1},enabled:true}]);
- owner.snapshot={...owner.snapshot,selectedSourceIds:['https://next.test'],selectionRevision:2};
+ assert.deepEqual(calls[0].selection.sourceIds,[bookSource.sourceId]);
+ assert.equal(calls[0].selection.isScopeCurrent(),true);
+ search.onTextChange('next');
+ const next={...bookSource,name:'next',sourceId:'https://next.test'};
+ owner.snapshot={...owner.snapshot,sources:[bookSource,next],selectedSourceIds:[bookSource.sourceId,next.sourceId],selectionRevision:2};
  oldProof();
+ assert.equal(calls[0].selection.isScopeCurrent(),false,'a new query retires the original confirmation');
  assert.equal(calls.length,1,'an old exact selection proof rejects a replacement selection');
  oldEnable();
- assert.deepEqual(calls.at(-1),{selection:{sourceIds:['https://next.test'],sourceListRevision:1,selectionRevision:2},enabled:true},'retained native action dispatches the current selection');
+ assert.deepEqual(calls.at(-1).selection.sourceIds,[next.sourceId],'retained native action targets the current visible selection');
+ assert.equal(calls.at(-1).selection.query,'next');
 }
 if(selectedCase==='raw-debug'){
- const {owner,cardType}=make(),message='目录读取失败。\n请求：https://example.test/very/long/source-and-chapter-identifier\n原始错误信息';owner.debugLogRow({state:-1,message},123);const actual=nodes(owner),body=actual.find(n=>n.create===message),ordinal=actual.find(n=>n.create==='124');assert.ok(body&&ordinal);assert.equal(body.fontSize,readerTypographyRoles.MESSAGE_BODY.fontSizeFp);assert.equal(body.lineHeight,readerTypographyRoles.MESSAGE_BODY.lineHeightFp);assert.equal(body.maxLines,undefined);assert.equal(body.textOverflow,undefined);assert.equal(body.fontColor,readerAppColor('TOK_MESSAGE_INK','day'));assert.equal(actual.find(n=>n.create==='检测失败').fontColor,readerAppColor('TOK_MESSAGE_DANGER','day'));owner.debugCard();const target=nodes(owner).find(n=>n.create===bookSource.sourceId);assert.equal(target.maxLines,undefined);assert.equal(target.textOverflow,undefined);
+ const {owner,cardType}=make(),message='目录读取失败。\n请求：https://example.test/very/long/source-and-chapter-identifier\n原始错误信息';owner.debugLogRow({state:-1,message},123);const actual=nodes(owner),body=actual.find(n=>n.create===message),ordinal=actual.find(n=>n.create==='124');assert.ok(body&&ordinal);assert.equal(body.fontSize,readerTypographyRoles.MESSAGE_BODY.fontSizeFp);assert.equal(body.lineHeight,readerTypographyRoles.MESSAGE_BODY.lineHeightFp);assert.equal(body.maxLines,undefined);assert.equal(body.textOverflow,undefined);assert.equal(body.fontColor,readerAppColor('TOK_MESSAGE_INK','day'));assert.equal(actual.find(n=>n.create==='检测失败').fontColor,readerAppColor('TOK_MESSAGE_DANGER','day'));owner.debugCardHeader();const target=nodes(owner).find(n=>n.create===bookSource.sourceId);assert.equal(target.maxLines,undefined);assert.equal(target.textOverflow,undefined);
  owner.batchCheckCard();
  const cards=owners(owner).filter(actor=>actor instanceof cardType);
- assert.deepEqual(cards.map(card=>card.specId),['task-diagnostics','task-diagnostics']);
+ assert.deepEqual(cards.map(card=>card.specId),['task-diagnostics']);
  for(const card of cards){
   const frame=[...card.nodes.values()].find(node=>node.type==='Column');
-  assert.equal(frame.width,'100%');assert.equal(frame.padding,17);assert.equal(frame.borderRadius,12);
-  assert.equal(frame.backgroundColor,readerAppColor('TOK_MESSAGE_SURFACE','day'));
-  assert.equal(frame.border.color,readerAppColor('TOK_MESSAGE_BORDER','day'));
+  assert.equal(frame.width,'100%');assert.equal(frame.padding,17);assert.equal(frame.borderRadius,14);
+  assert.equal(frame.backgroundColor,readerAppColor('TOK_CARD_BG','day'));
+  assert.equal(frame.border.color,readerAppColor('TOK_LINE','day'));
  }
 }
 

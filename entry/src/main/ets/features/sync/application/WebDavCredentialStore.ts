@@ -7,6 +7,7 @@ import asset from '@ohos.security.asset';
 import util from '@ohos.util';
 import { errorMessageOf } from '../../../app/ErrorMessage';
 import type { ReaderWriteEvidence } from '../../../app/ReaderWriteEvidence';
+import { DEFAULT_BOOKSHELF_VIEW } from '../../bookshelf/application/BookshelfViewMode.ts';
 import { readerHostFilesDirectory, readerHostPreferencesName, READER_PUBLIC_FIXTURE_IDS,
   type ReaderPublicFixtureId, type ReaderPublicFixtureScope } from '../../../app/diagnostics/ReaderPublicFixtureScope';
 
@@ -93,6 +94,7 @@ export class WebDavCredentialStore {
   private localModeWriteTail: Promise<void> = Promise.resolve();
   private context: common.UIAbilityContext | undefined;
   private localPreferences: preferences.Preferences | undefined;
+  private localPreferencesNeedsReload: boolean = false;
   private contextGeneration: number = 0;
   private confirmedBookshelfMode: 'cover' | 'list' | undefined;
   private pendingBookshelfModeWrites: number = 0;
@@ -229,7 +231,7 @@ export class WebDavCredentialStore {
   private async readOrMigrateViewMode(allowMigration: boolean = true): Promise<'cover' | 'list'> {
     const store = await this.ensureLocalPreferences();
     const present = await store.has(LOCAL_VIEW_MODE_KEY);
-    const stored = await store.get(LOCAL_VIEW_MODE_KEY, 'cover');
+    const stored = await store.get(LOCAL_VIEW_MODE_KEY, DEFAULT_BOOKSHELF_VIEW);
     const version = await store.get(LOCAL_MIGRATION_KEY, 0);
     if (present) {
       if (stored !== 'cover' && stored !== 'list') throw new Error('BOOKSHELF_VIEW_MODE_INVALID');
@@ -241,16 +243,13 @@ export class WebDavCredentialStore {
     // Only a truly absent local key may consult the legacy raw Asset field.
     // Never interpret load()'s former synthetic cover as a prior user choice.
     const legacy = version === LOCAL_CONFIG_VERSION ? null : await this.load();
-    const mode = legacy?.bookshelfViewMode === 'list' ? 'list' : 'cover';
+    const mode = legacy?.bookshelfViewMode === 'cover' ? 'cover' : DEFAULT_BOOKSHELF_VIEW;
     await this.writeLocalViewMode(store, mode);
     return mode;
   }
 
   private async writeLocalViewMode(store: preferences.Preferences, mode: 'cover' | 'list',
     observation?: ReaderWriteEvidence, isCurrent: () => boolean = (): boolean => true): Promise<void> {
-    const hadMode = await store.has(LOCAL_VIEW_MODE_KEY);
-    const priorMode = await store.get(LOCAL_VIEW_MODE_KEY, 'cover');
-    const priorVersion = await store.get(LOCAL_MIGRATION_KEY, 0);
     if (!isCurrent()) throw new Error('BOOKSHELF_VIEW_MODE_RETIRED');
     observation?.dispatched();
     try {
@@ -259,11 +258,9 @@ export class WebDavCredentialStore {
       await store.flush();
       observation?.confirmed();
     } catch (error) {
-      // Preferences keeps pending values in memory after a failed flush. Undo
-      // those values so a later read cannot acknowledge an uncommitted choice.
-      if (hadMode) await store.put(LOCAL_VIEW_MODE_KEY, priorMode);
-      else await store.delete(LOCAL_VIEW_MODE_KEY);
-      await store.put(LOCAL_MIGRATION_KEY, priorVersion);
+      // The in-memory Preferences can hold data whose flush outcome is
+      // unknown. The next operation opens the persistent view.
+      this.localPreferencesNeedsReload = true;
       throw error;
     }
   }
@@ -312,7 +309,7 @@ export class WebDavCredentialStore {
           previous.configSaveOperationId !== value.configSaveOperationId) throw new Error('上一次备份尚未核定');
       }
       try { await store.put(LOCAL_BACKUP_JOURNAL_KEY, JSON.stringify(value)); await store.flush(); }
-      catch (error) { await store.put(LOCAL_BACKUP_JOURNAL_KEY, prior); throw error; }
+      catch (error) { this.localPreferencesNeedsReload = true; throw error; }
     });
     this.localModeWriteTail = next.then((): void => {}, (): void => {});
     return next;
@@ -329,7 +326,7 @@ export class WebDavCredentialStore {
       const prior = JSON.parse(raw) as WebDavBackupJournal; this.validateBackupJournal(prior);
       if (prior.operationId !== operationId) throw new Error('备份记录已被替换');
       try { await store.delete(LOCAL_BACKUP_JOURNAL_KEY); await store.flush(); }
-      catch (error) { await store.put(LOCAL_BACKUP_JOURNAL_KEY, raw); throw error; }
+      catch (error) { this.localPreferencesNeedsReload = true; throw error; }
     });
     this.localModeWriteTail = next.then((): void => {}, (): void => {});
     return next;
@@ -349,7 +346,7 @@ export class WebDavCredentialStore {
       const encoded = JSON.stringify(value);
       if (prior !== '' && prior !== encoded) throw new Error('上一次恢复尚未完成');
       try { await store.put(LOCAL_RESTORE_JOURNAL_KEY, encoded); await store.flush(); }
-      catch (error) { await store.put(LOCAL_RESTORE_JOURNAL_KEY, prior); throw error; }
+      catch (error) { this.localPreferencesNeedsReload = true; throw error; }
     });
     this.localModeWriteTail = next.catch((): void => {});
     return next;
@@ -365,7 +362,7 @@ export class WebDavCredentialStore {
       this.validateRestoreJournal(prior);
       if (prior.operationId !== operationId) throw new Error('恢复记录已被替换');
       try { await store.delete(LOCAL_RESTORE_JOURNAL_KEY); await store.flush(); }
-      catch (error) { await store.put(LOCAL_RESTORE_JOURNAL_KEY, raw); throw error; }
+      catch (error) { this.localPreferencesNeedsReload = true; throw error; }
     });
     this.localModeWriteTail = next.catch((): void => {});
     return next;
@@ -378,11 +375,18 @@ export class WebDavCredentialStore {
   }
 
   private async ensureLocalPreferences(): Promise<preferences.Preferences> {
-    if (this.localPreferences !== undefined) return this.localPreferences;
-    if (this.context === undefined) throw new Error('本机配置尚未就绪，请重试');
+    const context = this.context;
+    if (context === undefined) throw new Error('本机配置尚未就绪，请重试');
     const generation = this.contextGeneration;
-    const store = await preferences.getPreferences(this.context,
-      readerHostPreferencesName(this.context.filesDir, LOCAL_PREFERENCES_NAME));
+    const name = readerHostPreferencesName(context.filesDir, LOCAL_PREFERENCES_NAME);
+    if (this.localPreferencesNeedsReload) {
+      this.localPreferences = undefined;
+      await preferences.removePreferencesFromCache(context, name);
+      if (generation !== this.contextGeneration) throw new Error('本机配置所属窗口已变化，请重试');
+      this.localPreferencesNeedsReload = false;
+    }
+    if (this.localPreferences !== undefined) return this.localPreferences;
+    const store = await preferences.getPreferences(context, name);
     if (generation !== this.contextGeneration) throw new Error('本机配置所属窗口已变化，请重试');
     this.localPreferences = store;
     return this.localPreferences;

@@ -1,6 +1,6 @@
 import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
 import { ReaderNativeParagraphRecipe } from './ReaderNativeParagraph';
-import { readerNativeTextGeometryKey } from './ReaderNativeTextMeasurement';
+import { readerNativeTextGeometryKey, READER_CHAPTER_TITLE_FONT_SIZE_FP } from './ReaderNativeTextMeasurement';
 import { ReaderNativeParagraphView } from './ReaderNativeParagraphView';
 import { readerThemeDefinition } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerHighlightCanvasColor, readerDynamicHighlightRectsEqual, ReaderHighlightTextCache,
@@ -12,7 +12,6 @@ import { copyReaderSelection } from '../../../platform/clipboard/ReaderClipboard
 import { readerSelectedOriginalText } from './ReaderTextSelectionProjection';
 import { readerCopySelectionForShare, readerSelectionShareAnchor, readerShareMessage, readerShareSelectionMenu, readerSystemShareActions } from './ReaderSharePresentation';
 import { registerReaderFonts, readerRegisteredFontFamily } from '../../../ui/foundation/ReaderFonts';
-import { TYPE_READER_CHAPTER_TITLE } from '../../../ui/foundation/ReaderTypography';
 import {
   createDefaultReaderAppearanceSnapshot,
   type ReaderAppearanceSnapshot,
@@ -31,8 +30,11 @@ import {
   createDefaultReaderReadingLayout,
 } from './ReaderLayoutGeometry';
 import { ReaderPageChrome } from './ReaderPageChrome';
-import type { ReaderPageBookmarkMode, ReaderPageBookmarkSnapshot } from '../presentation/ReaderPageBookmarkModel';
+import { READER_BOOKMARK_RIBBON_HEIGHT, ReaderBookmarkRibbonFrame, readerBookmarkRibbonRest, type ReaderPageBookmarkMode,
+  type ReaderPageBookmarkSnapshot } from '../presentation/ReaderPageBookmarkModel';
+import { ReaderPageBookmarkRibbon } from './ReaderPageBookmarkRibbon';
 import { ReaderPaperBackground } from './ReaderPaperBackground';
+import { ReaderFacingChapterColumn, type ReaderFacingChapter } from './ReaderFacingChapter';
 
 export type { ReaderDynamicHighlightRect } from './ReaderDynamicHighlight';
 
@@ -344,6 +346,7 @@ export struct ReadingSurface {
   @Prop @Watch('onHighlightContentChanged') layout: ReaderReadingLayoutSnapshot = createDefaultReaderReadingLayout();
   /** UI-owned persisted appearance snapshot; no business/content state lives here. */
   @Prop appearance: ReaderAppearanceSnapshot = createDefaultReaderAppearanceSnapshot();
+  @Prop facingChapter: ReaderFacingChapter | undefined = undefined;
   @Prop ttsHighlightStart: number | undefined = undefined;
   @Prop ttsHighlightEnd: number | undefined = undefined;
   @Prop autoPageHighlightStart: number | undefined = undefined;
@@ -363,6 +366,8 @@ export struct ReadingSurface {
   @Prop bookmark: ReaderPageBookmarkSnapshot | undefined = undefined;
   @Prop bookmarkMode: ReaderPageBookmarkMode | undefined = undefined;
   @Prop bookmarkOpacity: number | undefined = undefined;
+  @Prop bookmarkRibbon: ReaderBookmarkRibbonFrame | undefined = undefined;
+  @Prop bookmarkPaperTop: number | undefined = undefined;
 
   aboutToAppear(): void {
     this.highlightMounted = true; this.highlightLifecycle += 1;
@@ -400,9 +405,10 @@ export struct ReadingSurface {
           } else {
           Text(this.chapterTitle)
             .width('100%')
-            .fontFamily(TYPE_READER_CHAPTER_TITLE.fontFamily)
-            .fontWeight(TYPE_READER_CHAPTER_TITLE.fontWeight)
-            .fontSize(TYPE_READER_CHAPTER_TITLE.fontSizeFp)
+            .fontFamily(readerRegisteredFontFamily(this.getUIContext().getFont(),
+              readerAppearanceSnapshotFontFamily(this.appearance)))
+            .fontWeight(FontWeight.Bold)
+            .fontSize(READER_CHAPTER_TITLE_FONT_SIZE_FP)
             .lineHeight(this.layout.titleLineHeightFp)
             .fontColor(this.themeStyle().ink)
             .textAlign(TextAlign.Center)
@@ -509,6 +515,9 @@ export struct ReadingSurface {
       .height('100%')
       .padding(this.contentInsets())
       .clip(true);
+      if (this.layout.facingChapterWidth > 0) {
+        ReaderFacingChapterColumn({ chapter: this.facingChapter, layout: this.layout, appearance: this.appearance });
+      }
       }
       .width('100%')
       .height('100%')
@@ -527,16 +536,16 @@ export struct ReadingSurface {
         appearance: this.appearance,
       });
       if (this.bookmark !== undefined) {
-        Image(this.pageBookmarkResource())
-          .syncLoad(true)
-          .width(this.bookmark.topAccessoryWidth)
-          .height(this.bookmark.topAccessoryHeight)
-          .position({ x: this.bookmark.topAccessoryX, y: this.bookmark.topAccessoryY })
-          .visibility(this.pageBookmarkMode() === 'hidden' ? Visibility.Hidden : Visibility.Visible)
-          .opacity(this.bookmarkOpacity ?? this.bookmark.opacity)
-          .accessibilityText('本页已添加书签')
-          .accessibilityLevel(this.pageBookmarkMode() === 'filled' ? 'auto' : 'no')
-          .hitTestBehavior(HitTestMode.None);
+        ReaderPageBookmarkRibbon({
+          x: this.bookmark.topAccessoryX,
+          paperTop: this.bookmarkPaperTop ?? this.bookmark.topAccessoryY,
+          paperScale: this.pageBookmarkRibbonScale(),
+          offsetY: this.pageBookmarkRibbonFrame().y,
+          fillHeight: this.pageBookmarkRibbonFrame().fillHeight,
+          alpha: this.pageBookmarkRibbonFrame().opacity,
+          bookmarked: this.pageBookmarkMode() === 'filled' && this.bookmarkRibbon === undefined,
+          night: readerAppearanceChromeTone(this.appearance.activeTheme) === 'light',
+        });
       }
       }
       .width('100%').height('100%')
@@ -572,13 +581,18 @@ export struct ReadingSurface {
     return this.bookmarkMode ?? this.bookmark?.mode ?? 'hidden';
   }
 
-  private pageBookmarkResource(): Resource {
-    const light = readerAppearanceChromeTone(this.appearance.activeTheme) === 'light';
-    if (this.pageBookmarkMode() === 'filled') {
-      return light ? $r('app.media.reader_page_bookmark_filled_theme_night') : $r('app.media.reader_page_bookmark_filled');
-    }
-    return light ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') :
-      $r('app.media.reader_directory_marker_bookmark_active');
+  private pageBookmarkRibbonFrame(): ReaderBookmarkRibbonFrame {
+    if (this.bookmarkRibbon !== undefined) return this.bookmarkRibbon;
+    const rest = readerBookmarkRibbonRest(this.pageBookmarkMode() === 'filled');
+    return new ReaderBookmarkRibbonFrame(rest.y, rest.fillHeight, this.bookmarkOpacity ?? this.bookmark?.opacity ?? rest.opacity);
+  }
+
+  private pageBookmarkRibbonScale(): number {
+    if (this.bookmarkPaperTop === undefined) return 1;
+    const room = this.layout.contentTop - this.bookmarkPaperTop;
+    // The hidden-bar cutout can move the painted edge below the resting
+    // ribbon's anchor. Keep its entire silhouette above the existing text.
+    return Math.max(0, Math.min(1, room / READER_BOOKMARK_RIBBON_HEIGHT));
   }
 
   private usesHighlightCanvas(): boolean {

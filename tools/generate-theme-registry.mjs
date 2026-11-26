@@ -3,7 +3,8 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 const root=path.resolve(import.meta.dirname,'../..');
 const source=path.join(root,'Reader-UI/theme/registry.json');
-const raw=fs.readFileSync(source,'utf8');
+const check=process.argv.includes('--check');
+let raw=fs.readFileSync(source,'utf8');
 const registry=JSON.parse(raw);
 if(registry.schemaVersion!==1) throw Error('THEME_SCHEMA_UNSUPPORTED');
 const schemes=['day','night'];
@@ -14,6 +15,38 @@ function argb(c){
 }
 const appRoles=Object.keys(registry.appRoles).sort();
 if(!appRoles.length) throw Error('APP_PALETTE_EMPTY');
+const resolvedAliases = new Set();
+const resolvingAliases = new Set();
+const changedAliases = [];
+
+function resolveAlias(role) {
+  const value = registry.appRoles[role];
+  if (resolvedAliases.has(role) || value.sourceRole === undefined) return value;
+  if (resolvingAliases.has(role)) throw Error('THEME_ALIAS_CYCLE ' + role);
+  if (typeof value.sourceRole !== 'string' || !Object.hasOwn(registry.appRoles, value.sourceRole)) {
+    throw Error('THEME_ALIAS_SOURCE_MISSING ' + role + ' -> ' + value.sourceRole);
+  }
+  resolvingAliases.add(role);
+  const canonical = resolveAlias(value.sourceRole);
+  let changed = false;
+  for (const scheme of schemes) {
+    const color = canonical[scheme];
+    argb(color);
+    if (['r', 'g', 'b', 'a'].every(channel => value[scheme]?.[channel] === color[channel])) continue;
+    value[scheme] = { ...color };
+    changed = true;
+  }
+  if (changed) changedAliases.push(role);
+  resolvingAliases.delete(role);
+  resolvedAliases.add(role);
+  return value;
+}
+
+appRoles.forEach(resolveAlias);
+if (changedAliases.length > 0) {
+  if (check) throw Error('THEME_ALIASES_STALE ' + changedAliases.join(', '));
+  raw = JSON.stringify(registry, null, 2) + '\n';
+}
 for(const role of appRoles)for(const scheme of schemes) argb(registry.appRoles[role][scheme]);
 const ids=Object.keys(registry.reader).sort((a,b)=>registry.reader[a].order-registry.reader[b].order);
 const readerKeys=['paperStart','paperEnd','ink','chromeMeta','statusBackground','statusForeground','swatch','selection','paperBack','turnShadow'];
@@ -28,8 +61,6 @@ code+=`export interface ReaderThemeDefinition {\n  id: ReaderThemeId; scheme: Re
 code+=`export const READER_THEME_DEFINITIONS: ReaderThemeDefinition[] = ${JSON.stringify(ids.map(id=>{const d=registry.reader[id];return {id,scheme:d.scheme,order:d.order,displayName:d.displayName,...Object.fromEntries(readerKeys.map(k=>[k,argb(d.roles[k])])),...d.effects}}),null,2)};\n`;
 code+=`export function findReaderTheme(id: string): ReaderThemeDefinition | undefined {\n  return READER_THEME_DEFINITIONS.find((theme: ReaderThemeDefinition): boolean => theme.id === id);\n}\nexport function readerThemeDefinition(id: string): ReaderThemeDefinition {\n  return findReaderTheme(id) ?? READER_THEME_DEFINITIONS[0];\n}\n`;
 const outputs=[path.join(root,'Reader-for-HarmonyOS/entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts'),path.join(root,'Reader-UI/theme/ReaderThemeRegistry.ts')];
-for(const out of outputs){if(process.argv.includes('--check')){if(fs.readFileSync(out,'utf8')!==code)throw Error('THEME_ADAPTER_STALE '+out);}else fs.writeFileSync(out,code);}
-console.log(`Theme registry: ${appRoles.length} complete App roles × 2; ${ids.length} Reader palettes; canonical hash verified.`);
 
 const selectionSource=fs.readFileSync(path.join(root,'Reader-UI/theme/ReaderThemeSelection.ts'),'utf8');
 const selectionOutput=path.join(root,'Reader-for-HarmonyOS/entry/src/main/ets/app/ReaderThemeSelection.ts');
@@ -37,4 +68,12 @@ const canonicalSelectionImport="from './ReaderThemeRegistry.ts';";
 if(!selectionSource.includes(canonicalSelectionImport))throw Error('THEME_SELECTION_REGISTRY_IMPORT_MISSING');
 const selectionCode='// Generated copy of Reader-UI/theme/ReaderThemeSelection.ts. Do not edit.\n'+
   selectionSource.replace(canonicalSelectionImport,"from '../ui/foundation/ReaderThemeRegistry.ts';");
-if(process.argv.includes('--check')){if(fs.readFileSync(selectionOutput,'utf8')!==selectionCode)throw Error('THEME_SELECTION_ADAPTER_STALE');}else fs.writeFileSync(selectionOutput,selectionCode);
+if (check) {
+  for (const out of outputs) if (fs.readFileSync(out, 'utf8') !== code) throw Error('THEME_ADAPTER_STALE ' + out);
+  if (fs.readFileSync(selectionOutput, 'utf8') !== selectionCode) throw Error('THEME_SELECTION_ADAPTER_STALE');
+} else {
+  if (changedAliases.length > 0) fs.writeFileSync(source, raw);
+  for (const out of outputs) fs.writeFileSync(out, code);
+  fs.writeFileSync(selectionOutput, selectionCode);
+}
+console.log(`Theme registry: ${appRoles.length} complete App roles × 2; ${ids.length} Reader palettes; canonical hash verified.`);

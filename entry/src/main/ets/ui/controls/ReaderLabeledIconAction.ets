@@ -27,7 +27,8 @@ class ReaderLabeledIconLabelModifier implements AttributeModifier<TextAttribute>
       instance.minFontScale(1);
       instance.maxFontScale(readerReadableFontScale(this.scale));
     }
-    if (text.lineHeightFp !== undefined) instance.lineHeight(text.lineHeightFp);
+    instance.lineHeight(text.lineHeightFp ?? Math.round(text.fontSizeFp * 1.5));
+    instance.halfLeading(true);
     if (text.letterSpacingFp !== undefined) instance.letterSpacing(text.letterSpacingFp);
     if (spec.labelMarginLeft !== undefined) instance.margin({ left: spec.labelMarginLeft });
     instance.fontColor(readerAppColor(this.danger && spec.dangerRole !== undefined ? spec.dangerRole : spec.textRole, this.scheme));
@@ -94,12 +95,15 @@ class ReaderLabeledIconRowModifier implements AttributeModifier<RowAttribute> {
 class ReaderLabeledIconHitModifier implements AttributeModifier<ButtonAttribute> {
   private id: ReaderLabeledIconActionSpecId;
   private scheme: string;
+  private surfaceColor: string | undefined;
   private scale: number;
   private enabled: boolean;
   private fillWidth: boolean;
-  constructor(id: ReaderLabeledIconActionSpecId, scheme: string, enabled: boolean, scale: number = 1, fillWidth: boolean = false) {
+  constructor(id: ReaderLabeledIconActionSpecId, scheme: string, enabled: boolean, scale: number = 1,
+    fillWidth: boolean = false, surfaceColor?: string) {
     this.id = id;
     this.scheme = scheme;
+    this.surfaceColor = surfaceColor;
     this.scale = scale;
     this.enabled = enabled;
     this.fillWidth = fillWidth;
@@ -117,7 +121,7 @@ class ReaderLabeledIconHitModifier implements AttributeModifier<ButtonAttribute>
   applyDisabledAttribute(instance: ButtonAttribute): void { this.applyNormalAttribute(instance); }
   private feedback(): ReaderPressFeedback {
     const spec = resolveReaderLabeledIconActionSpec(this.id);
-    return new ReaderPressFeedback(readerAppColor(spec.surfaceRole ?? 'TOK_PAPER', this.scheme), this.scheme,
+    return new ReaderPressFeedback(this.surfaceColor ?? readerAppColor(spec.surfaceRole ?? 'TOK_PAPER', this.scheme), this.scheme,
       spec.radius ?? 0, spec.radius ?? 0, this.enabled && spec.pressFeedback !== false);
   }
 }
@@ -131,6 +135,7 @@ export struct ReaderLabeledIconAction {
   @Prop scheme: string = 'day';
   @Prop specId: ReaderLabeledIconActionSpecId = 'rss-feed';
   @Prop label: string = '';
+  @Prop surfaceColor: string | undefined = undefined;
   @Prop fillWidth: boolean = false;
   @Prop icon: Resource;
   @Prop isDanger: boolean = false;
@@ -165,7 +170,7 @@ export struct ReaderLabeledIconAction {
             this.fontScale(), this.rowPaintRadius()))
           .onAreaChange(this.rowPaintAreaChange());
       }.width(this.fillWidth ? '100%' : undefined).padding(0).backgroundColor(Color.Transparent).borderRadius(0).clip(false)
-        .attributeModifier(new ReaderLabeledIconHitModifier(this.specId, this.scheme, this.actionEnabled, this.fontScale(), this.fillWidth))
+        .attributeModifier(new ReaderLabeledIconHitModifier(this.specId, this.scheme, this.actionEnabled, this.fontScale(), this.fillWidth, this.surfaceColor))
         .enabled(this.actionEnabled)
         .id(this.focusId)
         .accessibilityRole(AccessibilityRoleType.BUTTON)

@@ -2,8 +2,8 @@ import { sampleReaderSessionLaunch } from './ReaderSessionLaunchPresentation.ts'
 import type { ReaderSessionLaunchCurves, ReaderSessionLaunchGeometry, ReaderSessionLaunchSample } from './ReaderSessionLaunchPresentation';
 import type { ReaderSessionCapsuleState } from './ReaderSessionCapsuleModel';
 
-/** PH09 physical review: one production time mapping for all Figma actors. */
-export const READER_SESSION_LAUNCH_TIME_SCALE = 0.5;
+/** The launch timeline uses physical milliseconds. */
+export const READER_SESSION_LAUNCH_TIME_SCALE = 1;
 
 /** Identity captured from the same visible-source measurement transaction. */
 export interface ReaderSessionLaunchIdentity {
@@ -66,10 +66,6 @@ export class ReaderSessionLaunchController {
   constructor(curves: ReaderSessionLaunchCurves, timeScale: number = READER_SESSION_LAUNCH_TIME_SCALE) {
     this.curves = curves;
     this.timeScale = Number.isFinite(timeScale) && timeScale > 0 ? timeScale : READER_SESSION_LAUNCH_TIME_SCALE;
-  }
-
-  remainingHoldMs(): number {
-    return Math.max(0, 3500 - (this.current?.sample.timeMs ?? 3500)) * this.timeScale;
   }
 
   snapshot(): ReaderSessionLaunchTransaction | undefined { return this.current; }

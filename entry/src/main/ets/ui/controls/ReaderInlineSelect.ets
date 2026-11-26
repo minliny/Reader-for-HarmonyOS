@@ -1,6 +1,8 @@
 import { readerKeyboardHostBottom } from '../layout/ReaderKeyboardGeometry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
-import { readerInteractiveSafeTop, readerInteractiveSafeBottom } from '../foundation/ReaderWindowMetrics';
+import { readerInteractiveSafeTop } from '../foundation/ReaderWindowMetrics';
+import { readerMotionReducedFadeParam } from '../foundation/ReaderMotionPolicy';
+import { readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
 import { ReaderSelect, type ReaderSelectVariant } from './ReaderSelect';
 import { ReaderSelectPanel } from './ReaderSelectPanel';
 import type { ReaderSelectMenuKind } from '../foundation/ReaderSelectGeometry';
@@ -48,10 +50,9 @@ export struct ReaderInlineSelect {
     this.open = !this.open;
   }
 
-  private commit(value: string, identity: string): void {
+  private commit(value: string, identity: string, index: number): void {
     if (!this.mounted || !this.actionEnabled || !this.open || identity !== this.selectionId) return;
-    const index = this.options.indexOf(value);
-    if (index < 0) return;
+    if (index < 0 || this.options[index] !== value) return;
     this.onSelect(index, value);
     this.open = false;
   }
@@ -63,8 +64,9 @@ export struct ReaderInlineSelect {
 
   private popupOptions(identity: string): CustomPopupOptions {
     return { builder: (): void => this.menu(identity), placement: Placement.Bottom,
-      enableArrow: false, popupColor: Color.Transparent, autoCancel: true, focusable: true,
-      transition: this.reduceMotion ? TransitionEffect.IDENTITY.animation({ duration: 0 }) : undefined,
+      enableArrow: false, popupColor: Color.Transparent, backgroundBlurStyle: BlurStyle.NONE,
+      radius: 0, shadow: readerSurfaceElevation('embedded', 'day'), autoCancel: true, focusable: true,
+      transition: this.reduceMotion ? TransitionEffect.OPACITY.animation(readerMotionReducedFadeParam()) : undefined,
       onStateChange: (event: PopupStateChangeParam): void => { if (!event.isVisible) this.dismiss(identity); } };
   }
 
@@ -89,11 +91,11 @@ export struct ReaderInlineSelect {
   @Builder
   private selectPanel(identity: string) {
       ReaderSelectPanel({ hosting: 'popup', hostBottomVp: this.popupViewportHeight(),
-        value: this.value, options: this.options,
+        value: this.value, options: this.options, selectedIndex: this.selectedIndex,
         variant: this.variant, controlWidth: this.controlWidth, reduceMotion: this.reduceMotion,
         menuKind: this.menuKind,
         selectionId: identity, x: 0, y: 0,
-        onCommit: (value: string, actorIdentity: string): void => this.commit(value, actorIdentity),
+        onCommit: (value: string, actorIdentity: string, index: number = -1): void => this.commit(value, actorIdentity, index),
         onDismiss: (actorIdentity: string): void => this.dismiss(actorIdentity) });
   }
 

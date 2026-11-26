@@ -48,7 +48,7 @@ export function systemFileIndexFixture({bridge,book={sourceId:'local',bookId:'lo
    openShelfBook(selected){events.push(['open',selected]);admitBook(this,selected);},
    closeImportDialog:()=>events.push(['close-import']),
    dismissJsonImport(){},
-   returnToReadingOrigin:()=>events.push(['origin']),presentRulesManagementFromReader:()=>events.push(['rules']),returnFromDetail:()=>events.push(['detail'])});
+   presentRulesManagementFromReader:()=>events.push(['rules']),returnFromDetail:()=>events.push(['detail'])});
   const switchOwner=Object.assign(new Switch(),{generation:0,reconciliationGeneration:0,snapshot:{scopeId:0,visible:false,state:{kind:'discovering'},failureMessage:'',rollbackInFlight:false}});
   Object.defineProperties(page,{
    route:{get:()=>navigationOwner.snapshot().route,set:route=>navigationOwner.show(route)},

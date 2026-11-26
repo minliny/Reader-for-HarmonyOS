@@ -1,55 +1,49 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import test from 'node:test';
-import { createArkUIPropertyRuntimeProbe } from '../../lib/arkui-property-runtime-probe.mjs';
 import { createReaderBuilderProbe } from '../../lib/reader-control-builder-probe.mjs';
 import { inlineSelectSdk } from '../../lib/reader-inline-select-sdk-probe.mjs';
 import { pureModuleProbe } from '../../lib/ets-pure-module-probe.mjs';
-import { readerFoundationTokens } from '../../lib/reader-tokens-probe.mjs';
 import { readerTypographyRoles } from '../../lib/reader-typography-probe.mjs';
-import { selectedProductionValues } from '../../lib/selected-production-methods.mjs';
 import { ReaderKeyboardAreaVp, ReaderRectVp, ReaderWindowMetricsSnapshot } from '../../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import * as searchGeometry from '../../../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts';
 import * as selectGeometry from '../../../entry/src/main/ets/ui/foundation/ReaderSelectGeometry.ts';
 
-const triggerPath = new URL('../../../entry/src/main/ets/ui/controls/ReaderSelect.ets', import.meta.url);
 const pagePath = new URL('../../../entry/src/main/ets/features/source/ui/SourceManagementPage.ets', import.meta.url);
 const searchPath = new URL('../../../entry/src/main/ets/ui/controls/ReaderSearchField.ets', import.meta.url);
 
-test('source group trigger centers its measured label and chevron in the actual trigger height', () => {
-  const properties = createArkUIPropertyRuntimeProbe();
-  const source = readFileSync(triggerPath, 'utf8');
-  const { owner } = createReaderBuilderProbe(source, ['phoneTrigger', 'trigger', 'sourceGroupTrigger'], {
-    ...properties.sdk, ...readerFoundationTokens, ...readerTypographyRoles, ...selectGeometry,
-    readerAppColor: () => '#FFFFFFFF',
-  }, properties.hooks);
-  Object.assign(owner, {
-    variant: 'sourceGroup', value: '全部分组', focusId: 'group-trigger', appThemeScheme: 'day', resolvedWidth: () => 252,
-    dropdownAnimation: () => ({}), triggerEnabled: () => true,
-  });
-  for (const valueHeight of [15, 24, 36]) {
-    const triggerHeight = Math.max(44, valueHeight + 20);
-    owner.measuredValueHeight = () => valueHeight;
-    owner.triggerHeight = () => triggerHeight;
-    owner.phoneTrigger();
-    const frame = [...owner.nodes.values()].findLast(node => node.id === 'group-trigger:frame');
-    assert.ok(frame, 'visible border has its own native paint node inside the trigger');
-    assert.equal(frame.height, triggerHeight - 4);
-    assert.deepEqual(frame.position, { x: 0, y: 2 });
-    const button = [...owner.nodes.values()].findLast(node => node.type === 'Button');
-    assert.equal(button.height, triggerHeight);
-    assert.deepEqual(button.responseRegion, { x: 0, y: 0, width: '100%', height: triggerHeight });
-    const [text, icon] = [...owner.nodes.values()].slice(-3).filter(node => node.type === 'Text' || node.type === 'Image');
-    assert.equal(text.height, valueHeight);
-    assert.equal(text.position.x, 14);
-    assert.equal(text.position.y + text.height / 2, triggerHeight / 2);
-    assert.equal(icon.position.y + icon.height / 2, triggerHeight / 2);
+test('source group trigger centers its label and chevron in a 40vp field with a 44vp response region', () => {
+  const metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 366, 600));
+  const sdk = selectSdk(metrics);
+  const { ReaderSelect, readerAppColor, TOK_BORDER_W } = sdk.dependencies;
+  for (const scheme of ['day', 'night']) for (const scale of [1, 1.45, 2]) {
+    metrics.systemFontScale = scale;
+    const owner = new ReaderSelect(undefined, { variant: 'sourceGroup', value: '全部分组',
+      options: ['全部分组', '未分组'], focusId: 'group-trigger', controlWidth: 152 });
+    owner.appThemeScheme = scheme;
+    owner.aboutToAppear(); owner.initialRender();
+    const nodes = sdk.nodes(owner);
+    const frame = nodes.find(node => node.id === 'group-trigger:frame');
+    assert.equal(frame.height, 40);
+    assert.equal(frame.borderRadius, 10);
+    assert.equal(frame.alignItems, 'VerticalAlign.Center');
+    assert.equal(frame.backgroundColor, readerAppColor('app.sourceUi.field', scheme));
+    assert.deepEqual(frame.border, { width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', scheme) });
+    const button = nodes.find(node => node.type === 'Button');
+    assert.equal(button.height, 40);
+    assert.deepEqual(button.responseRegion, { x: 0, y: -2, width: '100%', height: 44 });
+    const text = nodes.find(node => node.type === 'Text');
+    assert.equal(text.maxLines, 1);
+    assert.equal(text.lineHeight * text.maxFontScale, 40 - 2 * TOK_BORDER_W);
+    const icon = nodes.find(node => node.type === 'Image');
+    assert.deepEqual([icon.width, icon.height, icon.flexShrink], [12, 8, 0]);
   }
 });
 
-function selectSdk(metrics) {
+function selectSdk(metrics, onAnimationFinish = () => {}) {
   const uiContext = {
     getFont: () => ({}), px2vp: value => value,
-    animateTo(_params, apply) { apply(); },
+    animateTo(params, apply) { apply(); if (params.onFinish !== undefined) onAnimationFinish(params.onFinish); },
     getMeasureUtils: () => ({
       measureText: ({ textContent }) => textContent.length * 15,
       measureTextSize: ({ textContent }) => ({ width: textContent.length * 15, height: 24 }),
@@ -61,7 +55,8 @@ function selectSdk(metrics) {
 test('Source Management replaces the measured group box with a search field above the results', () => {
   const metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, 366, 600));
   metrics.ready = true;
-  const sdk = selectSdk(metrics);
+  const motionFinishes = [];
+  const sdk = selectSdk(metrics, finish => motionFinishes.push(finish));
   const { ReaderSelectPanel, ReaderChoiceRow } = sdk.dependencies;
   const searchSource = readFileSync(searchPath, 'utf8');
   const { readerActionTouchRegion, READER_ACTION_MIN_TARGET } = pureModuleProbe(
@@ -75,40 +70,42 @@ test('Source Management replaces the measured group box with a search field abov
     'textStyle', 'fieldBackgroundColor', 'inputColor', 'caretColor', 'placeholderColor', 'resolvedAccessibilityLabel',
     'editingNativeId', 'changeText', 'onTextChange', 'mounted', 'variant', 'mode', 'text', 'placeholder', 'editingFocusId',
     'directoryFocusId', 'naturalFieldHeightVp', 'directoryFocusAllowed', 'accessibilityLabel',
-  ], { ...sdk.dependencies, ...modifiers, SEARCH_CONTROL_MIN_TARGET: READER_ACTION_MIN_TARGET,
+    'autoClearButtonVisible', 'clearButton', 'resolvedClearAccessibilityLabel', 'clearAccessibilityLabel',
+  ], { ...sdk.dependencies, ...modifiers, ...searchGeometry, SEARCH_CONTROL_MIN_TARGET: READER_ACTION_MIN_TARGET,
     readerReadableFontScale: value => value }, sdk.hooks);
-  const constants = selectedProductionValues(pagePath, ['GROUP_ICON_WIDTH', 'GROUP_LABEL_GAP', 'GROUP_TRIGGER_GAP']);
   const { owner } = createReaderBuilderProbe(readFileSync(pagePath, 'utf8'), [
     'groupFilter', 'groupOverlay', 'recordGroupTrigger', 'numericAreaLength', 'toggleGroupSelection', 'commitGroupSelection',
     'dismissGroupSelection', 'retireGroupSelection', 'overlayTop', 'overlayBottom', 'overlayLeft', 'overlayRight', 'groupOverlayTop',
     'groupX', 'groupY', 'groupTriggerWidth', 'groupTriggerHeight', 'groupClosingAnchor', 'groupValue',
-    'groupOpen', 'groupClosing', 'groupSelectionId', 'groupSearchField', 'groupSearchIsCurrent', 'visibleGroupOptions',
+    'groupOpen', 'groupClosing', 'groupSelectionId', 'groupSearchField', 'manageGroupsOption', 'groupSearchIsCurrent', 'visibleGroupOptions',
     'groupSearchQuery', 'changeGroupSearch', 'requestGroupClose', 'collapseGroupSearch',
     'originX', 'originY', 'viewportWidth', 'viewportHeight', 'readerWindowMetricsRevision',
   ], {
-    ...sdk.dependencies, ...constants, sourceTemporaryGeneration: 0, ReaderRectVp, ReaderSearchField,
+    ...sdk.dependencies, sourceTemporaryGeneration: 0, ReaderRectVp, ReaderSearchField,
     ReaderWindowCoordinator: { metrics: () => metrics },
   }, { ...sdk.hooks, childSources: { ...sdk.hooks.childSources, ReaderSearchField: searchSource } });
   let keyboardHides = 0;
+  const openedViews = [];
   const setKeyboardTop = top => {
     metrics.keyboardArea = new ReaderKeyboardAreaVp(true, true, [new ReaderRectVp(0, top, 366, 600 - top)]);
     owner.readerWindowMetricsRevision += 1;
   };
   Object.assign(owner, {
     mounted: true, appThemeScheme: 'day', originX: 23, originY: 24, viewportWidth: 320, viewportHeight: 440, reduceMotion: true,
-    groupValue: '当前分组', groupOptions: () => ['全部分组', '当前分组', '特别长的书源分组名称，用来覆盖选项折行和滚动的场景', '其他'],
+    groupValue: '当前分组', groupOptions: () => ['全部分组', '未分组', '当前分组', '特别长的书源分组名称，用来覆盖选项折行和滚动的场景', '其他'],
     groupSelectWidth: () => 225, groupLabelWidth: () => 30, filterControlWidth: () => 300,
     managementInputIsCurrent: () => true, ownsGroupSelection: identity => owner.groupOpen && identity === owner.groupSelectionId,
     groupTriggerFocusId: () => 'group-trigger', groupCloseAction: () => () => {},
     groupPanelFocusPrefix: identity => `${identity}:focus`, groupPanelLayoutAction: () => () => {}, toolsFocusId: () => 'header',
     scheduleGroupFocus() {}, cancelGroupFocus() {}, cancelToolsReturnFocus() {}, prepareVerificationGroupText() {},
     hideManagementKeyboard() { keyboardHides += 1; },
+    prepareV9ListReturn() {}, onV9Action: view => openedViews.push(view),
     footerFallbackHeight: () => 50, refreshGeometry() {}, observeVerificationOverlay() {}, rebuildSourceProjection() {},
   });
 
   owner.groupFilter();
   const triggerBox = sdk.nodes(owner).find(node => node.id === 'reader-source-group-trigger');
-  const measureTrigger = (x, y, width) => triggerBox.onAreaChange({}, { width, height: 44, globalPosition: { x, y } });
+  const measureTrigger = (x, y, width) => triggerBox.onAreaChange({}, { width, height: 40, globalPosition: { x, y } });
   const panelFrame = panel => sdk.nodes(panel).find(node => node.type === 'Column' && node.position !== undefined);
 
   owner.toggleGroupSelection();
@@ -121,7 +118,7 @@ test('Source Management replaces the measured group box with a search field abov
   owner.toggleGroupSelection();
   assert.equal(owner.groupOpen, false, 'opening needs the editor and a full option row');
 
-  setKeyboardTop(324);
+  setKeyboardTop(360);
   owner.toggleGroupSelection();
   owner.groupOverlay();
   const panel = sdk.walk(owner).find(child => child instanceof ReaderSelectPanel);
@@ -135,9 +132,9 @@ test('Source Management replaces the measured group box with a search field abov
   assert.ok(input);
   assert.equal(input.create.placeholder, '搜索分组');
   assert.deepEqual(sdk.nodes(field).find(node => node.type === 'Row').padding, { left: 14, right: 44 },
-    'the expanded editor starts at the same inset as the collapsed value');
-  assert.equal(input.fontFamily, readerTypographyRoles.TYPE_SELECT_SOURCE_GROUP_VALUE.fontFamily);
-  assert.equal(input.fontSize, readerTypographyRoles.TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp);
+    'the expanded editor reserves the collapse action at the trailing edge');
+  assert.equal(input.fontFamily, readerTypographyRoles.TYPE_SEARCH_SOURCE_GROUP_INPUT.fontFamily);
+  assert.equal(input.fontSize, readerTypographyRoles.TYPE_SEARCH_SOURCE_GROUP_INPUT.fontSizeFp);
   assert.ok(!sdk.nodes(field).some(node => node.type === 'Image'), 'no leading icon displaces the expanded label');
   const collapseButtons = () => sdk.nodes(owner).filter(node => node.type === 'Button' && node.accessibilityText === '收起分组');
   const collapse = collapseButtons()[0];
@@ -145,24 +142,25 @@ test('Source Management replaces the measured group box with a search field abov
   assert.equal(collapse.width, 44);
   assert.equal(collapse.height, 44);
   assert.equal(collapse.id, 'reader-source-group-collapse');
-  assert.equal(panel.menuHeaderHeight, 44, 'the search field reserves the original trigger height');
-  assert.equal(sdk.nodes(field).find(node => node.type === 'Stack').height, 44);
+  assert.equal(panel.menuHeaderHeight, 40, 'the search field reserves the original trigger height');
+  assert.equal(panel.menuFooterHeight, 44);
+  assert.equal(sdk.nodes(field).find(node => node.type === 'Stack').height, 44, 'the open editor keeps its 44vp control target');
   assert.equal(sdk.nodes(field).find(node => node.type === 'Stack').width, '100%');
   const chrome = sdk.nodes(panel).find(node => node.id === `${panel.selectionId}:frame`);
   assert.deepEqual(chrome.position, { x: 0, y: 2 });
-  assert.equal(chrome.height, 40, 'the opening menu starts with the same compact paint as the closed selector');
+  assert.equal(chrome.height, 42, 'the opening paint accommodates the 44vp footer before expansion');
   sdk.nodes(panel).find(node => node.type === 'Column' && node.onAppear).onAppear();
   sdk.properties.flush();
-  const arrows = sdk.nodes(owner).filter(node => node.type === 'Image' && node.width === 12 && node.position?.x === 23);
-  assert.ok(arrows.some(node => node.height === 12 && node.rotate?.angle === -180));
-  assert.equal(chrome.height, 122, 'menu paint grows down from the same upper border');
+  const arrows = sdk.nodes(owner).filter(node => node.type === 'Image' && node.width === 12 && node.position?.x === 22);
+  assert.ok(arrows.some(node => node.height === 8 && node.position.y === 18 && node.rotate?.angle === -180));
+  assert.equal(chrome.height, 158, 'menu paint grows down from the same upper border');
   assert.equal(chrome.backgroundColor, sdk.dependencies.readerAppColor('app.surface.menuSolid', 'day'));
   assert.equal(chrome.border.color, sdk.dependencies.readerAppColor('app.border.sourceGroup', 'day'));
   assert.equal(chrome.borderRadius, 8);
   const frame = panelFrame(panel);
   assert.deepEqual(frame.position, { x: 100, y: 176 });
   assert.equal(frame.width, 160, 'uses native layout width even when the planned width and long option disagree');
-  assert.equal(frame.height, 124);
+  assert.equal(frame.height, 160);
   assert.equal(sdk.nodes(panel).filter(node => node.type === 'Scroll').length, 1);
   const rows = sdk.walk(panel).filter(child => child instanceof ReaderChoiceRow);
   assert.equal(rows[0].label, owner.groupValue);
@@ -170,23 +168,27 @@ test('Source Management replaces the measured group box with a search field abov
   assert.equal(rows[0].focusId, `${owner.groupSelectionId}:focus:selected`);
   assert.equal(rows[0].hideIcon, true, 'the selected result is a choice rather than another trigger');
   assert.equal(sdk.nodes(rows[0]).find(node => node.type === 'Button').constraintSize.minHeight, 44);
+  assert.ok(rows.some(row => row.label === '未分组'));
+  const manage = sdk.nodes(owner).find(node => node.id === 'reader-source-v9-manage-groups');
+  assert.equal(manage.height, 44);
+  assert.ok(sdk.nodes(owner).some(node => node.type === 'Image' && node.width === 15));
 
-  setKeyboardTop(275);
+  setKeyboardTop(350);
   sdk.properties.flush();
   assert.deepEqual(frame.position, { x: 100, y: 176 });
-  assert.equal(frame.height, 75, 'keyboard changes update only the available height');
+  assert.equal(frame.height, 150, 'keyboard changes update only the available height');
 
   measureTrigger(135, 210, 145);
   sdk.properties.flush();
   assert.deepEqual(frame.position, { x: 112, y: 186 });
-  assert.equal(frame.width, 145);
-  assert.equal(frame.height, 65);
+  assert.equal(frame.width, 148);
+  assert.equal(frame.height, 140);
 
   // The finite SDK port does not model removing mounted native branches.
   // Mount the actual result builder at each query outcome for inspection.
   const renderResults = () => {
     const results = new ReaderSelectPanel(undefined, {
-      variant: 'sourceGroup', controlWidth: 145, reduceMotion: true, menuHeaderHeight: 44,
+      variant: 'sourceGroup', controlWidth: 148, reduceMotion: true, menuHeaderHeight: 40,
       selectionId: owner.groupSelectionId, value: owner.groupValue, options: owner.visibleGroupOptions(),
       emptyOptionsText: panel.emptyOptionsText, onCommit: panel.onCommit, onDismiss: panel.onDismiss,
       onMenuHeaderCollapse: panel.onMenuHeaderCollapse,
@@ -209,7 +211,11 @@ test('Source Management replaces the measured group box with a search field abov
   sdk.nodes(choice).find(node => node.type === 'Button').onClick();
   assert.equal(owner.groupValue, '其他');
   assert.equal(keyboardHides, 1);
+  assert.equal(owner.groupClosing, true);
   measureTrigger(135, 200, 145);
+  assert.equal(owner.groupClosingAnchor.top, 210, 'the closing menu keeps the previous anchor as the row moves');
+  assert.equal(motionFinishes.length, 1);
+  motionFinishes.shift()();
   assert.equal(owner.groupSearchQuery, '', 'the query is scoped to one opening');
   assert.equal(owner.groupOpen, false);
   setKeyboardTop(340);
@@ -234,6 +240,14 @@ test('Source Management replaces the measured group box with a search field abov
   owner.dismissGroupSelection(opening);
   assert.equal(owner.groupOpen, false);
   assert.equal(owner.groupSearchQuery, '', 'explicit collapse restores the trigger and clears the menu query');
+  manage.onClick();
+  assert.deepEqual(openedViews, [], 'retired menus cannot open group management');
+  owner.toggleGroupSelection();
+  owner.groupOverlay();
+  const currentManage = sdk.nodes(owner).findLast(node => node.id === 'reader-source-v9-manage-groups');
+  currentManage.onClick();
+  assert.deepEqual(openedViews, ['groups']);
+  assert.equal(owner.groupOpen, false, 'manage groups retires the current selector');
 });
 
 test('capped source group menus avoid serializing or publishing native option heights', () => {

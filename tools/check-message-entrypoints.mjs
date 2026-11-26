@@ -165,13 +165,19 @@ export function inventoryMessageEntrypoints({ files } = {}) {
       if (property === 'showAlertDialog') return new Set(['api:native.alert']);
       if (components.has(property)) return new Set([`api:${components.get(property)}`]);
       if (owners.has(property) || property === 'CustomDialogController') return new Set([`constructor:${property}`]);
-      const values = resolveValue(receiver, seen);
       if (property === 'getUIContext') return new Set(['factory:ui-context']);
       if (property === 'getPromptAction') return new Set(['factory:prompt-action']);
-      if (property === 'show' && values.has('instance:ReaderTransientFeedback')) return new Set(['api:shared.transient']);
-      if (property === 'show' && values.has('platform-alert')) return new Set(['api:native.alert']);
-      if (property === 'present' && values.has('instance:ReaderNativeAlertOwner')) return new Set(['api:shared.alert-owner']);
-      if (['bind', 'call', 'apply'].includes(property) && [...values].some(value => value.startsWith('api:'))) return values;
+      const forwardsCall = property === 'bind' || property === 'call' || property === 'apply';
+      // Only these members use the receiver's value to identify a message API.
+      // Resolving incidental members such as Promise.then traverses unrelated
+      // assignment chains, many of which point back to the same property.
+      if (property === 'show' || property === 'present' || forwardsCall) {
+        const values = resolveValue(receiver, seen);
+        if (property === 'show' && values.has('instance:ReaderTransientFeedback')) return new Set(['api:shared.transient']);
+        if (property === 'show' && values.has('platform-alert')) return new Set(['api:native.alert']);
+        if (property === 'present' && values.has('instance:ReaderNativeAlertOwner')) return new Set(['api:shared.alert-owner']);
+        if (forwardsCall && [...values].some(value => value.startsWith('api:'))) return values;
+      }
       if (receiver?.kind === ts.SyntaxKind.ThisKeyword) {
         const owner = classFor(node), candidates = classScopes.get(owner)?.get(property) ?? [];
         return union(candidates.map(value => resolveValue(value, new Set(seen))));

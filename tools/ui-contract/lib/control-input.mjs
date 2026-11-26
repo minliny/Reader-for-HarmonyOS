@@ -4,7 +4,7 @@ export const searchMorphDispatchWindowMs = 320;
 
 // Only host dispatch is bounded here. The owner receipt proves that controls
 // actually released and native playback launch had not settled at the cut.
-export const capsuleCenterDispatch = Object.freeze({ earliestMs:650, latestMs:950 });
+export const capsuleCenterDispatch = Object.freeze({ earliestMs:205, latestMs:350 });
 
 export const crossoverTouchTiming = Object.freeze({ keepMs:100, moveMs:900 });
 

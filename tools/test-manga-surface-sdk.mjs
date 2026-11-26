@@ -8,9 +8,11 @@ const { mangaSurfaceSdkDependencies, mountMangaViewportBuilder, mangaSurfaceBoun
 const {default: assert} = await import('node:assert/strict');
 const {readFileSync} = await import('node:fs');
 const {createRequire,stripTypeScriptTypes} = await import('node:module');
-const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
+const {createReaderBuilderProbe,productionReaderMotionSdk} = await import('./lib/reader-control-builder-probe.mjs');
 const {createArkUIPropertyRuntimeProbe} = await import('./lib/arkui-property-runtime-probe.mjs');
 const {createDefaultReaderWindowMetrics, ReaderInsetsVp, readerInteractiveSafeInsets} = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const {readerPaperPullOffset} = await import('../entry/src/main/ets/features/reading/presentation/ReaderPaperPullMotion.ts');
+const {sourceSwitchTriggerFocusId} = await import('../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts');
 
 const require=createRequire(import.meta.url);
 const sdk=resolveEtsLoaderRoot();
@@ -70,19 +72,21 @@ assert.throws(()=>checkViewportTap(unrestrictedTap),/full-screen tap must bound 
 
 }
 if(selectedCase==='safe-area'||selectedCase==='save-and-frame') {
+const childSources={ReaderSearchField:readFileSync(
+  new URL('../entry/src/main/ets/ui/controls/ReaderSearchField.ets',import.meta.url),'utf8')};
 const {owner,output}=createReaderBuilderProbe(source,names,{
-  ...runtime.sdk,...mangaSurfaceSdkDependencies,MangaStripDataSource,MangaLayoutFrame,ListScroller,Scroller,PhotoViewScaleModel,
+  ...runtime.sdk,...mangaSurfaceSdkDependencies,...productionReaderMotionSdk(),MangaStripDataSource,MangaLayoutFrame,ListScroller,Scroller,PhotoViewScaleModel,
   uiContext:{postFrameCallback:frame=>frames.push(frame)},
-  ReaderWindowCoordinator:{metrics:()=>metrics},readerInteractiveSafeInsets,
+  ReaderWindowCoordinator:{metrics:()=>metrics,isTabletDevice:()=>false},readerInteractiveSafeInsets,readerPaperPullOffset,sourceSwitchTriggerFocusId,
   ScrollAlign:{START:0},ImageFit:{Fill:0},ScrollDirection:{Horizontal:0},
   LazyForEach:nativeBoundary,Gesture:nativeBoundary,GestureGroup:nativeBoundary,
   PinchGesture:nativeBoundary,SwipeGesture:nativeBoundary,TapGesture:nativeBoundary,
   globalThis:{PanGesture:nativeBoundary,Gesture:nativeBoundary,GestureGroup:nativeBoundary,PinchGesture:nativeBoundary,SwipeGesture:nativeBoundary,TapGesture:nativeBoundary},
   GesturePriority:{Parallel:0},GestureMode:{Exclusive:0},SwipeDirection:{Horizontal:0},
-},runtime.hooks);
+},{...runtime.hooks,childSources});
 assert.match(output,/LazyForEach/);
 assert.match(output,/onScrollStop/);
-owner.title='fixture chapter';owner.controlsVisible=true;
+owner.title='fixture chapter';owner.controlsVisible=true;owner.viewportWidth=390;owner.viewportHeight=640;
 owner.initialRender();mountMangaViewportBuilder(owner);
 if(selectedCase==='safe-area'){
 const root=owner.nodes.get(0);
@@ -92,17 +96,32 @@ assert.deepEqual(root.ignoreLayoutSafeArea,[['LayoutSafeAreaType.SYSTEM'],['Layo
 assert.deepEqual(root.expandSafeArea,[['SafeAreaType.SYSTEM','SafeAreaType.CUTOUT'],['SafeAreaEdge.TOP','SafeAreaEdge.BOTTOM','SafeAreaEdge.START','SafeAreaEdge.END']]);
 assert.equal(root.width,'100%');assert.equal(root.height,'100%');
 assert.equal(root.backgroundColor,owner.paperColor(),'safe content keeps the chosen manga paper behind image pixels');
-assert.ok([...owner.nodes.values()].some(node=>node.type==='Text'&&node.create==='fixture chapter'),
-  'the existing chapter title remains inside the safe root');
-for(const alignment of ['Alignment.Top','Alignment.Bottom']) {
-  const dock=[...owner.nodes.values()].find(node=>node.type==='Stack'&&node.create?.alignContent===alignment);
-  assert.ok(dock,`${alignment}: floating bar is placed by a real SDK Stack constructor`);
-  assert.equal(dock.width,'100%');assert.equal(dock.height,'100%');
-  assert.deepEqual({...dock.padding},{left:0,top:137/3.5,right:0,bottom:24},'only control overlay clears physical system/gesture bands');
-  assert.equal(dock.hitTestBehavior,'HitTestMode.Transparent','full-size bar placement leaves empty viewport space available to image gestures');
+const topBar=[...owner.children.values()].find(child=>child.params?.variant==='manga'&&child.params.subtitle==='fixture chapter');
+assert.ok(topBar,'the actual reading top bar is mounted in the safe root');
+assert.ok([...topBar.nodes.values()].some(node=>node.type==='Text'&&node.create==='fixture chapter'),
+  'the shared native reading top bar renders the retained chapter title');
+const topDock=[...owner.nodes.values()].find(node=>node.type==='Column'&&typeof node.position?.top==='number');
+const topDockContent=[...owner.nodes.values()].find(node=>node.type==='Column'&&node.padding?.top===10&&node.padding?.left===8&&node.padding?.right===8);
+const bottomDock=[...owner.nodes.values()].find(node=>node.type==='Scroll'&&typeof node.position?.bottom==='number');
+assert.ok(topDock,'the real SDK positions the top chrome column');
+assert.ok(topDockContent,'the real SDK emits the layout around the painted top bar');
+assert.ok(bottomDock,'the real SDK positions the bounded bottom dock Scroll');
+for(const carrier of [topDock,topDockContent]) {
+  assert.equal(carrier.hitTestBehavior,'HitTestMode.Default','a chrome child hit still stops the viewport under its layout carrier');
+  assert.deepEqual(carrier.responseRegion,{x:0,y:0,width:0,height:0},'the carrier gutters remain available to viewport input');
+  assert.notEqual(carrier.clip,true,'a carrier with no own response region keeps child hit testing available');
 }
-assert.equal([...owner.nodes.values()].some(node=>node.align==='Alignment.Top'||node.align==='Alignment.Bottom'),false,
-  'bar placement must not depend on content-only component align()');
+const paintedTopBar=[...topBar.nodes.values()].find(node=>node.type==='Stack'&&node.onTouch);
+assert.ok(paintedTopBar,'the painted bar keeps its bounded touch target');
+assert.equal(paintedTopBar.hitTestBehavior,'HitTestMode.Default');
+assert.ok(bottomDock.height>0&&bottomDock.height<owner.viewportHeight,'the bottom dock reserves only its own bounds');
+const assertDocks=(left,top,right,bottom)=>{
+  assert.equal(topDock.width,`calc(100% - ${left+right}vp)`);
+  assert.deepEqual(topDock.position,{left,top});
+  assert.equal(bottomDock.width,owner.viewportWidth-60-left-right);
+  assert.deepEqual(bottomDock.position,{left:30+left,bottom:bottom+12});
+};
+assertDocks(0,137/3.5,0,24);
 const nodeIds=[...owner.nodes.keys()];
 metrics=createDefaultReaderWindowMetrics();
 metrics.cutoutInsets=new ReaderInsetsVp(32,0,0,0);
@@ -110,13 +129,11 @@ metrics.gestureInsets=new ReaderInsetsVp(10,0,18,12);
 metrics.navigationInsets=new ReaderInsetsVp(0,0,28,20);
 owner.windowMetricsRevision=1;runtime.flush();
 assert.equal(root.padding,undefined,'live asymmetric avoids do not resize the image root');
-for(const alignment of ['Alignment.Top','Alignment.Bottom'])assert.deepEqual({...([...owner.nodes.values()].find(n=>n.type==='Stack'&&n.create?.alignContent===alignment).padding)},
-  {left:32,top:0,right:28,bottom:20},'control overlay independently preserves asymmetric interactive edges');
+assertDocks(32,0,28,20);
 metrics=createDefaultReaderWindowMetrics();
 owner.windowMetricsRevision=2;runtime.flush();
 assert.equal(root.padding,undefined,'cleared system bars keep the same full-window image root');
-for(const alignment of ['Alignment.Top','Alignment.Bottom'])assert.deepEqual({...([...owner.nodes.values()].find(n=>n.type==='Stack'&&n.create?.alignContent===alignment).padding)},
-  {left:0,top:0,right:0,bottom:0},'cleared control safe padding has one owner');
+assertDocks(0,0,0,0);
 assert.deepEqual([...owner.nodes.keys()],nodeIds,'metrics changes update the mounted owner without remounting');
 
 }

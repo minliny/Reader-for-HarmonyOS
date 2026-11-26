@@ -21,7 +21,7 @@ function theme() {
     // proves allocation consumes that measurement, not a native font raster.
     const labelWidth = 48 * scale;
     const owner = probe.row.owner;
-    Object.assign(owner, { label: 'App主题', icon: 'theme-icon', contentMinWidth: 168, mounted: true,
+    Object.assign(owner, { label: 'App主题', contentMinWidth: 168, mounted: true,
       getUIContext: () => ({ px2vp: value => value, getMeasureUtils: () => ({ measureText(input) {
         assert.equal(input.textContent, 'App主题');
         assert.equal(input.fontFamily, readerTypographyRoles.TYPE_APP_ROW_LABEL.fontFamily);
@@ -29,7 +29,7 @@ function theme() {
         return labelWidth;
       } }) }) });
     owner.recordContentWidth(width);
-    const required = 24 + 40 + labelWidth + 12 + 168;
+    const required = 24 + labelWidth + 12 + 168;
     assert.equal(owner.contentStacked, required > width);
     owner.initialRender();
     const nodes = [...owner.nodes.values()];
@@ -38,8 +38,8 @@ function theme() {
     assert.equal(text.maxLines, owner.contentStacked ? undefined : 1);
     if (owner.contentStacked) {
       assert.ok(nodes.some(node => node.type === 'Column' && node.padding === 12));
-      assert.ok(width - 24 - 40 >= labelWidth, 'complete label gets the full upper line');
-    } else assert.ok(width - 24 - 40 - 12 - 168 >= labelWidth);
+      assert.ok(width - 24 >= labelWidth, 'complete label gets the full upper line');
+    } else assert.ok(width - 24 - 12 - 168 >= labelWidth);
     owner.aboutToDisappear();
     const before = owner.contentRowWidth;
     owner.recordContentWidth(999);
@@ -51,8 +51,9 @@ function theme() {
   const page = createReaderBuilderProbe(read('features/settings/ui/SettingsPage.ets'), ['segmentRow'],
     { ...switchSpecs(), ReaderFormRow: Child }).owner;
   page.appThemeControl = () => {};
-  page.segmentRow('App主题', () => 'theme-icon');
+  page.segmentRow('App主题');
   const row = [...page.children.values()][0];
+  assert.equal(row.params.icon, undefined, 'general settings use the same left edge on every row');
   assert.equal(row.params.contentMinWidth, switchSpecs().resolveReaderSegmentSpec('app-theme-segment').width,
     'page and shared control use the same width authority');
   const oldWidth = 320 - 38 - 2 - 24 - 12 - 168 - 28 - 12;
@@ -101,10 +102,11 @@ function themeMeasurementIdentity() {
   Object.assign(first, { label: 'App主题', icon: 'theme-icon', contentMinWidth: 168, mounted: true,
     getUIContext: () => ({ px2vp: value => value, getMeasureUtils: () => ({ measureText: () => 48 }) }) });
   first.initialRender();
+  assert.equal(first.contentStacked, false, 'a retained control starts inline before the first area receipt');
   const firstArea = [...first.nodes.values()].find(node => node.onAreaChange).onAreaChange;
   firstArea({}, { width: 326 });
   assert.equal(first.contentRowWidth, 326); assert.equal(first.contentStacked, false,
-    'the first legitimate stacked-branch measurement can choose inline');
+    'the first measured width confirms the initial inline placement');
   for (let i = 0; i < 5; i++) first.contentWidthChangeHandler()({}, { width: 326 });
   assert.equal(first.contentStacked, false, 'equal current widths do not oscillate layout');
 
@@ -118,6 +120,10 @@ function themeMeasurementIdentity() {
     assert.equal(plain.contentRowWidth, 0);
     const button = [...plain.nodes.values()].find(node => node.type === 'Button');
     assert.equal(button.enabled, true); button.onClick(); assert.deepEqual(actions, [kind]);
+    const text = [...plain.nodes.values()].find(node => node.type === 'Text');
+    assert.equal(text.fontSize, 15); assert.equal(text.fontWeight, 500);
+    assert.equal(text.fontFamily, 'ReaderNotoSansSCUIMedium');
+    assert.equal(text.fontColor, readerAppColor(kind === 'danger' ? 'TOK_DANGER' : 'TOK_INK', 'day'));
     assert.equal([...plain.nodes.values()].filter(node => node.type === 'Column').length, 0,
       'default nonadaptive rows preserve their existing row branch');
   }
@@ -147,18 +153,24 @@ function themeAppearanceIdentity() {
 
 function sourceStats() {
   const source = read('features/source/ui/SourceManagementPage.ets');
-  for (const width of [282, 328]) for (const scale of [1, 1.3, 1.6, 2]) {
-    const owner = createReaderBuilderProbe(source, ['statsRow'], deps).owner;
-    const label = '显示 123456/999999 个书源 · 123456 个启用';
-    Object.assign(owner, { appThemeScheme: 'day', statsText: () => label, contentFrame: () => ({ width }), fontScale: () => scale });
-    owner.statsRow();
-    const node = [...owner.nodes.values()].find(node => node.type === 'Text');
-    assert.equal(node.create, label);
-    assert.equal(node.width, width);
-    assert.equal(node.maxLines, undefined);
-    assert.equal(node.height, undefined);
-    assert.equal(node.maxFontScale, scale);
-    assert.equal(node.wordBreak, 'WordBreak.BREAK_WORD');
+  for (const width of [282, 328]) {
+    const owner = createReaderBuilderProbe(source, ['statusFilter', 'chip', 'statusCount'], deps).owner;
+    Object.assign(owner, { appThemeScheme: 'day', statusValue: '全部',
+      statusCounts: { all: 999999, enabled: 123456, disabled: 876543, abnormal: 100001 },
+      contentFrame: () => ({ width }), filterTextLayoutOptions: () => undefined });
+    owner.statusFilter();
+    const nodes = [...owner.nodes.values()];
+    const row = nodes.find(node => node.id === 'reader-source-status-filter');
+    const chips = nodes.filter(node => node.type === 'Button');
+    const labels = nodes.filter(node => node.type === 'Text');
+    assert.equal(row.width, width);
+    assert.equal(chips.length, 4);
+    assert.ok(chips.every(chip => chip.layoutWeight === 1 && chip.height === 32));
+    assert.ok(labels.every(label => label.maxLines === 1 && label.textOverflow.overflow === 'TextOverflow.Ellipsis'));
+    assert.deepEqual(chips.map(chip => chip.accessibilityText), [
+      '书源状态，全部，999999 项', '书源状态，已启用，123456 项',
+      '书源状态，已停用，876543 项', '书源状态，异常，100001 项',
+    ]);
   }
 }
 
@@ -232,7 +244,7 @@ for (const id of selectContractCases({
   'theme-appearance-identity': 'Same FormRow actor reappearance rebinds the actual SDK Area factory and rejects the prior appearance callback.',
   'theme-measurement-identity': 'Actual FormRow Area callback captures label/configuration/window/branch identity, rejects retired receipts and admits current width.',
   theme: 'Actual SDK FormRow real measured-label allocation at320/366×1/1.3/1.6/2, shared width authority and retired geometry.',
-  'source-stats': 'Actual SDK Source statistics retains full long counts without single-line/fixed-height cap.',
+  'source-stats': 'Actual v9 status chips keep equal single-line budgets and expose full counts through accessibility.',
   'batch-summary': 'Actual SDK four readonly counter texts use natural width/height and wrap within their parent.',
   'sync-recovery': 'Actual SDK Sync Notice primary/secondary binding, config/retention/query separation and original identity guards.',
 })) {

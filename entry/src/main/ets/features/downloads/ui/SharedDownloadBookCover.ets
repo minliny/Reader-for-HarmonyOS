@@ -9,6 +9,8 @@ export struct SharedDownloadBookCover {
   @Prop @Watch('resetImage') presentationGeneration: number = 0;
   @Prop coverWidth: number = 0;
   @Prop coverHeight: number = 0;
+  @Prop bookTitle: string = '';
+  @Prop kindLabel: string = '';
   @State private imageFailed: boolean = false;
   @State private requestGeneration: number = 0;
   private mounted: boolean = false;
@@ -39,7 +41,7 @@ export struct SharedDownloadBookCover {
   build() {
     Stack() {
       if (this.coverUrl.trim().length === 0 || this.imageFailed) {
-        NoCoverCover({ coverWidth: this.coverWidth, coverHeight: this.coverHeight });
+        NoCoverCover({ coverWidth: this.coverWidth, coverHeight: this.coverHeight, glyph: this.bookTitle, kindLabel: this.kindLabel });
       } else {
         ForEach([this.requestIdentity()], (identity: string): void => {
           Image(this.coverUrl.trim()).width(this.coverWidth).height(this.coverHeight).objectFit(ImageFit.Contain)

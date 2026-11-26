@@ -13,7 +13,8 @@ export function readerContentSearchFieldProbe(source = actualSource) {
   const controls = foundationControls();
   const probe = createReaderBuilderProbe(source, ['queryInputId', 'queryInputMounted', 'inputController',
     'query', 'appThemeScheme', 'onQueryChange', 'onTemporaryLayerChange',
-    'focusQueryField', 'searchField', 'searchAction', 'frame', 'presentation', 'submit', 'canSearch'],
+    'focusQueryField', 'searchField', 'searchAction', 'frame', 'naturalSize', 'currentEditorInputEnabled',
+    'presentation', 'submit', 'canSearch'],
     { ...controls.dependencies, ...geometry, ...motion, readerContentSearchInputSequence: 0,
       TextInputController: class { stopCalls = 0; stopEditing() { this.stopCalls++; } } }, controls.hooks);
   return { ...probe, controls, nodes: owner => controls.orderedNodes(owner) };

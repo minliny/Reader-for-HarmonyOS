@@ -23,7 +23,7 @@ export struct DetailDirectoryScene {
   build() {
     if (this.reading.book !== undefined) {
       ReaderDirectoryDestination({ reduceMotion: this.reduceMotion,
-        opening: this.reading.directoryPresentationGeneration,
+        opening: this.reading.detailDirectoryPresentationGeneration,
         isOpeningCurrent: (opening: number): boolean => this.isOpeningCurrent(opening),
         catalogContext: 'detail', contentKind: this.reading.book.contentKind === 'manga' ? 'manga' : 'text',
         sourceId: this.reading.book.sourceId, bookId: this.reading.book.bookId,
@@ -52,6 +52,7 @@ export struct DetailDirectoryScene {
         bookmarkIdentity: this.reading.bookmarkIdentity(),
         onDownloadChapter: this.directoryActions.downloadChapter,
         onDownloadBook: this.directoryActions.downloadBook,
+        onOpenCacheManagement: this.directoryActions.openCacheManagement,
         onClearBookOffline: this.directoryActions.clearBookOffline,
         onDeleteBookmarks: this.directoryActions.deleteBookmarks,
         chapterStartBookmarkCreationEnabled: true,

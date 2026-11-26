@@ -6,6 +6,7 @@ import { SearchPage } from './SearchPage';
 @Component
 export struct LibrarySearchResults {
   @ObjectLink presentation: LibrarySearchPresentation;
+  @Prop presented: boolean = true;
   @Prop reduceMotion: boolean = false;
   @Prop expandedLayout: boolean = false;
   coordinator: BookAcquisitionCoordinator | undefined;
@@ -23,6 +24,7 @@ export struct LibrarySearchResults {
     SearchPage({
       externalHeaderHeight: this.presentation.headerBottom,
       surfaceModel: this.presentation.model,
+      presented: this.presented,
       isPresentationCurrent: this.isCurrent,
       isPresentationVisible: this.isVisible,
       viewState: this.presentation.host.viewState,
@@ -47,7 +49,7 @@ export struct LibrarySearchResults {
       },
       onVisibleGroups: (groups: SearchBook[][]): void => {
         if (this.isCurrent() && this.coordinator !== undefined)
-          this.presentation.prepareGroups(this.coordinator, groups, this.isVisible());
+          this.presentation.prepareGroups(this.coordinator, groups, this.presented && this.isVisible());
       },
       onRetry: (): void => {
         if (!this.inputCurrent()) return;

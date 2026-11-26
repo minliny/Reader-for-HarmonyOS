@@ -19,6 +19,8 @@ const definitions = Object.fromEntries([
   ['profile-preflight-no-side-effect', 'Actual parent preflight consumes pure facts before child mount, and explicit imports resolve.'],
   ['measurement-failure-budget', 'Missing or mismatched prepared profile and failed candidates preserve prior presentation without admitting a new module.'],
   ['playback-source-reuse', 'Committed playback data remains paired to its geometry across equal requests, with exact receipt checks.'],
+  ['fixed-island-playback-scroll', 'Actual playback measurement follows the fixed-island Scroll offset after the native area callback.'],
+  ['fixed-island-font-reorder', 'Actual font drag retains equal slots across rows and submits the resulting order to the Host.'],
   ['home-single-owner', 'Actual SDK Home Scroll actor survives both sides of the content-height threshold.'],
 ].map(([id, description]) => [id, { description, resources: [] }]));
 const selected = selectContractCases(definitions);
@@ -32,6 +34,7 @@ if (selected.length) {
     }
   } });
   const geometry = await import('../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry.ts');
+  const { readerControlStructureKey } = await import('../entry/src/main/ets/ui/layout/ReaderKeyboardGeometry.ts');
   const receipt = await import('../entry/src/main/ets/features/reading/ui/ReaderControlMinimumReceipt.ts');
   const session = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
   const hostSession = await import('../entry/src/main/ets/features/reading/ui/ReaderControlHostSession.ts');
@@ -71,7 +74,7 @@ if (selected.length) {
       return { module, appearance: { readViewSnapshot: () => snapshot, readViewFontOrder: () => order, fonts: [] } };
     }
     if (module === 'tts') {
-      const state = { status: 'idle', totalSlices: 0 };
+      const state = { status: 'idle', totalSlices: 0, rate: 1 + version / 10 };
       return { module, tts: { readViewState: () => state, error: '', seek: false } };
     }
     if (module === 'replace') {
@@ -83,12 +86,12 @@ if (selected.length) {
   const hostMethods = ['controlMinimumIdentity', 'controlMinimumOwnerKey', 'controlMinimumEnvironmentKey',
     'controlMinimumCommittedIdentity', 'activeControlNavigationIntent', 'controlMinimumRequestLocation',
     'requestControlSession', 'cancelControlNavigationIntent', 'onControlInputActivity',
-    'controlLayoutGeometryKey', 'controlMinimumCurrent', 'bindControlMinimum', 'controlMinimumReceiptCurrent',
+    'controlLayoutGeometryKey', 'currentControlStructureKey', 'controlMinimumCurrent', 'bindControlMinimum', 'controlMinimumReceiptCurrent',
     'scheduleControlMinimum', 'admitControlMinimum', 'adoptControlDisplayFacts', 'acceptControlPlaybackProfile',
     'onControlTemporaryLayerChanged'];
   let metrics = window.createDefaultReaderWindowMetrics();
   const Host = selectedProductionMethods(ui('LocalReadingExperience.ets'), 'ReadingExperience', hostMethods,
-    { ...geometry, ...receipt, ...session, ...hostSession, ReaderWindowCoordinator: { metrics: () => metrics },
+    { ...geometry, ...receipt, ...session, ...hostSession, readerControlStructureKey, ReaderWindowCoordinator: { metrics: () => metrics },
       readerControlMeasuredProfileGeometryKey: profileGeometryKey, readerControlModuleProfileMatches: moduleProfileMatches,
       readerControlModuleFactsDisplayEqual: factsDisplayEqual, readerControlModuleFactsMatch: moduleFactsMatch,
       readerControlPlaybackProfileMatches: playbackMatches,
@@ -109,7 +112,7 @@ if (selected.length) {
       effectiveViewportWidth: () => 390, effectiveViewportHeight: () => 844,
       isSessionActive: token => owner.mounted && token === owner.lifecycleToken,
       pageTurnInputPhase: () => 'idle', invalidateControlBackdrop() {},
-      prepareControlPage() {}, controlPage: () => 'home',
+      prepareControlPage() {}, controlPage: () => 'home', controlVerification: { accept() {} },
       getUIContext: () => ({ postFrameCallback: frame => frames.push(frame) }),
     });
     owner.latestControlVisualSession = session.copyReaderControlSessionState(owner.controlSession);
@@ -146,7 +149,7 @@ if (selected.length) {
     return { owner, frames, profiles, bind, flush, measurements: () => measurements };
   };
 
-  const panelOrdinary = ['minimumPresentationAvailable', 'minimumInputReady', 'currentLayout',
+  const panelOrdinary = ['paintedPresentationReceipt', 'minimumPresentationAvailable', 'minimumInputReady', 'currentLayout',
     'currentMinimumKey', 'currentMinimumIdentity', 'committedMinimumIdentity', 'preparedMinimum', 'contentInputEnabled',
     'currentTemporaryInputScope', 'hasCurrentTemporaryInput', 'secondaryModuleInputEnabled',
     'moduleEditorInputEnabled', 'moduleTemporaryLayerHandler', 'navigationInputEnabled', 'controlActionInputEnabled',
@@ -507,11 +510,13 @@ if (selected.length) {
             readerControlPlaybackProfileMatches: playbackMatches });
         const panel = Object.assign(new PlaybackPanel(), makePanel(h.owner), { minimumReady: true,
           minimumMetricsRevision: metrics.revision, minimumRequestLocation: h.owner.controlMinimumRequestLocation(),
-          controlPanelHeight: () => first.layout.fullPanelHeight, controlQuickHeight: () => first.layout.quickPanelHeight,
-          contentEndpointHeight: full => full ? first.layout.contentBudget.fullContentHeightVp : first.layout.contentBudget.quickContentHeightVp,
+          fixedIsland: true, controlPanelHeight: () => geometry.readerControlIslandHeight(first.layout.fullPanelHeight),
+          controlQuickHeight: () => geometry.readerControlIslandHeight(first.layout.fullPanelHeight),
+          contentEndpointHeight: () => 180,
           onPlaybackProfileSelected: value => h.owner.acceptControlPlaybackProfile(value) });
         panel.publishSelectedPlaybackProfile(); const source = h.owner.controlPlaybackProfile;
-        assert.ok(source); assert.equal(source.identity, first.identity);
+        assert.ok(source, `fixed-island ${module} publishes the selected natural profile`);
+        assert.equal(source.identity, first.identity);
         assert.equal(source.data[module + 'Facts'], first.facts[module]);
         if (module === 'tts') {
           h.bind(0, undefined, 1); h.flush();
@@ -541,6 +546,7 @@ if (selected.length) {
         updateStateVars(params) { Object.assign(this.params, params); }
       }
       const names = ['presentationReceipt', 'lastVisibleContentLocation', 'contentMotionProgress', 'currentLayout',
+        'paintedPresentationReceipt',
         'currentMinimumKey', 'currentMinimumIdentity', 'committedMinimumIdentity', 'minimumPresentationAvailable', 'preparedMinimum',
         'controlCallbackGuard', 'currentMoreMenuOwnerScope', 'contentLocation', 'rememberVisibleContentLocation',
         'onPresentationReceiptChanged', 'ttsModuleContent'];
@@ -551,6 +557,7 @@ if (selected.length) {
         minimumCommittedIdentity: h.owner.controlMinimumCommittedIdentity(), minimumEnvironmentKey: h.owner.controlMinimumEnvironmentKey(),
         onLayoutChanged() {}, publishSelectedPlaybackProfile() {}, secondaryModuleInputEnabled: () => true,
         moduleTemporaryLayerHandler: () => () => {}, contentEndpointHeight: full => full ? 666 : 190,
+        contentEditingHeight: () => 666,
         frame: () => ({ visibility: 1 }), isExpanded: () => false,
         runtimeLifecycle: 1, sourceId: 'source', sourceBookId: 'book', controlOpenRevision: 1 });
       panel.presentationReceipt = h.owner.controlPresentationReceipt;
@@ -571,6 +578,81 @@ if (selected.length) {
       properties.flush(); panel.replay();
       assert.equal(panel.contentMotionProgress, 1); assert.equal(panel.contentLocation().form, 'full');
       assert.equal(child.params.form, 'full', 'resize profile receipt cannot replace the current Runtime Full source choice');
+    }
+    if (id === 'fixed-island-playback-scroll') {
+      const playback = await import('../entry/src/main/ets/features/reading/ui/ReaderControlPlaybackGeometry.ts');
+      for (const [name, kind] of [['ReaderControlAutoPageContent', 'quickAutoPage'], ['ReaderControlTtsContent', 'quickTts']]) {
+        const Actor = selectedProductionMethods(ui(name + '.ets'), name, ['measureActor', 'reportMorphActor'], playback);
+        let offset = 23;
+        const reports = [];
+        const actor = Object.assign(new Actor(), { form: 'quick', fixedIsland: true, sourceOnly: 'none',
+          minimumIdentity: 'active', readerWindowMetricsRevision: metrics.revision,
+          scroller: { currentOffset: () => ({ yOffset: offset }) },
+          naturalMorphMeasurementCurrent: () => true, measuredActorCurrent: () => true,
+          morphMeasurementScope: () => 'current', actorMeasurementScope: () => 'current',
+          onMorphActorMeasured: (...rect) => reports.push(rect) });
+        actor.measureActor(false, { globalPosition: { x: 54, y: 580 }, width: 310, height: 84 });
+        offset = 71;
+        actor.reportMorphActor();
+        assert.deepEqual(reports, [[kind, 54, 580, 310, 84], [kind, 54, 532, 310, 84]]);
+        actor.sourceDetached = true;
+        actor.reportMorphActor();
+        assert.equal(reports.length, 2, 'detached content releases the measurement owner');
+      }
+    }
+    if (id === 'fixed-island-font-reorder') {
+      const appearance = await import('../entry/src/main/ets/features/reading/application/ReaderAppearanceState.ts');
+      const grid = await import('../entry/src/main/ets/features/reading/ui/ReaderControlAppearanceGeometry.ts');
+      const touch = { Down: 'down', Move: 'move', Up: 'up', Cancel: 'cancel' };
+      let scrollTick;
+      let scrollOffset = 0;
+      const Actor = selectedProductionMethods(ui('ReaderControlAppearanceContent.ets'), 'ReaderControlAppearanceContent',
+        ['islandFontGrid', 'islandFontGridHeight', 'islandFontDropIndex', 'fontInput', 'fontTouch',
+          'fontCellPosition', 'fontSlotPosition', 'captureFontPositions', 'beginFontDrag', 'updateFontDrag', 'settleFontDrag',
+          'cancelFontDrag', 'observeFontOrderPresentation', 'syncIslandFontDrag', 'islandFontAutoScrollDelta',
+          'updateIslandFontAutoScroll', 'stopIslandFontAutoScroll'],
+        { ...appearance, ...grid, TOK_BORDER_W: 1, TouchType: touch, readerMotionNowMs: () => 0,
+          setInterval(callback, delay) { assert.equal(delay, 16); scrollTick = callback; return 1; },
+          clearInterval(id) { assert.equal(id, 1); scrollTick = undefined; },
+          motionSpecGet: () => ({ durationMs: 120 }) });
+      const snapshot = appearance.createDefaultReaderAppearanceSnapshot(), order = snapshot.fontOrder;
+      const committed = [], activity = [];
+      const actor = new Actor();
+      Object.assign(actor, { fixedIsland: true, availableWidth: 338, motionProgress: 0, importLayout: 'ordered-slot-approved',
+        islandScrollTop: 360, islandScrollHeight: 110, islandFontScrollTimer: -1,
+        islandScroller: { currentOffset: () => ({ yOffset: scrollOffset }), isAtEnd: () => false,
+          scrollBy(_x, y) { scrollOffset += y; actor.syncIslandFontDrag(); } },
+        fullInput: () => true, currentInputEnabled: () => true, displaySnapshot: () => snapshot, frame: () => ({}),
+        fontIds: () => actor.draggedFontId ? actor.previewFontOrder : order, previewFontOrder: [],
+        fontTracks: new Map(), fontVerification: { finish() {} }, fontPointerId: -1, draggedFontId: '',
+        retireFontOrderPresentation() {}, animateFontPositions() {},
+        onFontReorderActivityChange: active => activity.push(active), onFontOrderChange: value => {
+          committed.push(value);
+          return { displayed: new Promise(() => {}), current: () => false, retire() {} };
+        } });
+      const gridMetrics = actor.islandFontGrid();
+      assert.equal(gridMetrics.columns, 4);
+      assert.equal(gridMetrics.cellWidth, 77);
+      assert.equal(actor.islandFontGridHeight(), 140);
+      const font = order[0], target = actor.fontSlotPosition(order[order.length - 1], {}, order);
+      assert.deepEqual(target, { x: 0, y: 96 }, 'one cell occupies the normal column on the partial row');
+      const event = (type, x, y) => {
+        const point = { id: 1, windowX: x, windowY: y };
+        return { type, changedTouches: [point], touches: [point], stopPropagation() {} };
+      };
+      actor.fontTouch(font, event(touch.Down, 80, 400));
+      actor.beginFontDrag(font);
+      assert.deepEqual(activity, [true]);
+      assert.equal(scrollTick, undefined, 'the centered pointer does not move the viewport');
+      actor.fontTouch(font, event(touch.Move, 80 + target.x, 466));
+      assert.notEqual(actor.previewFontOrder.at(-1), font);
+      for (let frame = 0; frame < 5; frame += 1) scrollTick();
+      assert.ok(scrollOffset > 0, 'a held pointer at the lower edge scrolls without another move event');
+      assert.equal(actor.previewFontOrder.at(-1), font);
+      actor.fontTouch(font, event(touch.Up, 80 + target.x, 466));
+      assert.equal(scrollTick, undefined, 'release cancels edge scrolling');
+      assert.deepEqual(activity, [true, false]);
+      assert.deepEqual(committed, [appearance.moveReaderAppearanceFontSlot(order, 0, order.length - 1)]);
     }
     if (id === 'profile-preflight-no-side-effect') {
       const file = ui('ReaderControlPanel.ets'), text = source('ReaderControlPanel.ets');

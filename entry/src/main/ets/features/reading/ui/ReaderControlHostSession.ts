@@ -12,6 +12,14 @@ export interface ReaderControlHostTiming {
   dismissDurationMs: number;
   morphDurationMs: number;
   navigateDurationMs: number;
+  layerDurationMs?: number;
+  directSheetDurationMs?: number;
+  directSheetCloseDurationMs?: number;
+  fixedIsland?: boolean;
+}
+
+export function readerControlIsDirectSheet(module: ReaderControlModule): boolean {
+  return module === 'directory' || module === 'search' || module === 'replace';
 }
 
 export interface ReaderControlHostInputContext {
@@ -69,15 +77,28 @@ export function setReaderControlHostPage(session: ReaderControlSessionState,
   const location = readerControlContentLocation(session);
   if (page === 'home') {
     if (location.level === 'home') return session;
+    const direct = timing.directSheetDurationMs !== undefined && readerControlIsDirectSheet(location.module);
     return resumeReaderControlSessionTarget(session,
       { level: 'home', module: 'directory', directoryTab: 'directory', form: 'quick' },
-      sampleReaderControlSession(session).expansionProgress > 0 ?
-        timing.morphDurationMs : timing.navigateDurationMs);
+      direct ? timing.directSheetCloseDurationMs ?? timing.morphDurationMs :
+        sampleReaderControlSession(session).expansionProgress > 0 ? timing.morphDurationMs :
+          timing.layerDurationMs ?? timing.navigateDurationMs);
   }
   const module = moduleForPage(page);
   const sameModule = location.level === 'secondary' && location.module === module;
+  if (timing.directSheetDurationMs !== undefined && readerControlIsDirectSheet(module)) {
+    if (sameModule && readerControlTargetLocation(session).form === 'full') return session;
+    return resumeReaderControlSessionTarget(session,
+      { level: 'secondary', module, directoryTab: sameModule ? location.directoryTab : 'directory', form: 'full' },
+      timing.directSheetDurationMs);
+  }
+  if (timing.fixedIsland) {
+    if (sameModule && readerControlTargetLocation(session).form === 'quick') return session;
+    return enterReaderControlModule(session, module,
+      location.level === 'home' ? timing.layerDurationMs ?? timing.navigateDurationMs : timing.navigateDurationMs);
+  }
   const next = sameModule ? session : enterReaderControlModule(session, module,
-    timing.navigateDurationMs);
+    location.level === 'home' ? timing.layerDurationMs ?? timing.navigateDurationMs : timing.navigateDurationMs);
   const full = page === 'fullTts' || page === 'fullAppearance' || page === 'fullSettings' ||
     page === 'fullSearch' || page === 'fullAutoPage';
   if (full) return expandReaderControlSession(next, timing.morphDurationMs);
@@ -90,12 +111,23 @@ export function setReaderControlHostPage(session: ReaderControlSessionState,
 /** Determine the logical Back destination before selecting its playback time. */
 export function backReaderControlHostSession(session: ReaderControlSessionState,
   timing: ReaderControlHostTiming): ReaderControlBackResult {
+  const content = readerControlContentLocation(session);
+  if (timing.directSheetDurationMs !== undefined && content.level === 'home' &&
+    session.transition?.fromLocation.level === 'secondary' && readerControlIsDirectSheet(session.transition.fromLocation.module)) {
+    return { state: session, consumed: true };
+  }
+  if (timing.directSheetDurationMs !== undefined && content.level === 'secondary' && readerControlIsDirectSheet(content.module)) {
+    return { state: setReaderControlHostPage(session, 'home', timing), consumed: true };
+  }
+  if (timing.fixedIsland && content.level === 'secondary') {
+    return { state: setReaderControlHostPage(session, 'home', timing), consumed: true };
+  }
   const candidate = backReaderControlSession(session, timing.morphDurationMs);
   if (!candidate.consumed) return candidate;
   const target = readerControlTargetLocation(candidate.state);
   const duration = target.level === 'hidden' ? timing.dismissDurationMs :
     target.level === 'home' && sampleReaderControlSession(session).expansionProgress === 0 ?
-      timing.navigateDurationMs : timing.morphDurationMs;
+      timing.layerDurationMs ?? timing.navigateDurationMs : timing.morphDurationMs;
   return backReaderControlSession(session, duration);
 }
 

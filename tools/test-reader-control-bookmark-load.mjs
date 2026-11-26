@@ -4,7 +4,7 @@ import { stripTypeScriptTypes } from 'node:module';
 import * as sessionPolicy from '../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts';
 
 const readingRoot = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
-const hostSource = readFileSync(new URL('LocalReadingExperience.ets', readingRoot), 'utf8');
+const hostSource = readFileSync(new URL('ui/LocalReadingExperience.ets', readingRoot), 'utf8');
 const prepare = hostSource.slice(hostSource.indexOf('  private prepareControlPage('),
   hostSource.indexOf('  private async loadAppearanceSnapshot('));
 assert.match(prepare, /page === 'moduleDirectory'[\s\S]*loadControlBookmarks\(\)/,
@@ -113,7 +113,7 @@ Object.assign(owner, { mounted: true, exitRequested: false, controlSession: quic
   lifecycleToken: 4, sourceId: 'source-A', bookId: 'book-A', controlOpenRevision: 1,
   controlBookmarkLoadGeneration: 0, controlBookmarkLoadFailed: false, controlBookmarkLoadPending: false,
   bookmarkLoadMessage: '',
-  directoryEntries: unknown, controlVisible: () => true,
+  directoryEntries: unknown, controlVisible: () => true, usesBookTurnSimulation: () => false,
   isSessionActive: token => token === owner.lifecycleToken && owner.mounted,
   errorMessage: error => error.message,
   onLoadControlBookmarks: (sourceId, bookId, guard) => {
@@ -185,7 +185,7 @@ assert.equal(owner.controlBookmarkLoadFailed, true,
 assert.equal(owner.controlBookmarkLoadPending, false);
 
 // Structural wiring only, separate from the actual production-function cases above.
-const panel = readFileSync(new URL('ReaderControlPanel.ets', readingRoot), 'utf8');
+const panel = readFileSync(new URL('ui/ReaderControlPanel.ets', readingRoot), 'utf8');
 assert.match(panel, /bookmarkLoadFailed: this\.bookmarkLoadFailed/);
 assert.match(panel, /onRetryBookmarkLoad:.*this\.onRetryBookmarkLoad\(\)/);
 assert.match(hostSource, /bookmarkLoadFailed: this\.controlBookmarkLoadFailed/);
@@ -193,12 +193,14 @@ assert.match(hostSource, /onRetryBookmarkLoad:.*this\.loadControlBookmarks\(\)/)
 const index = readFileSync(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'utf8');
 const operationSource=readFileSync(new URL('presentation/ReaderDirectoryOperations.ts',readingRoot),'utf8');
 const loader=operationSource.slice(operationSource.indexOf('  loadControlBookmarks('),operationSource.indexOf('  clearOffline('));
-assert.match(index,/this\.directoryOperations\.loadControlBookmarks\(sourceId, bookId, isRequestCurrent\)/);
+const retained = readFileSync(new URL('../entry/src/main/ets/app/composition/RetainedReaderScene.ets', import.meta.url), 'utf8');
+assert.match(index, /directory: this\.directoryJourney\.operations/);
+assert.match(retained, /this\.ports\?\.directory\.loadControlBookmarks\(sourceId, bookId, current\)/);
 assert.match(loader,/host\.load\(this\.bookmarkBinding\(owner, book, isRequestCurrent\)\)/);
 assert.match(loader,/book\.sourceId !== sourceId \|\| book\.bookId !== bookId/);
 assert.match(loader,/!reading \|\| !isRequestCurrent\(\)/);assert.doesNotMatch(loader,/this\.route\s*=/);
-const directoryOwner=readFileSync(new URL('ReaderDirectoryHost.ts',readingRoot),'utf8');
-const offlineOwner=readFileSync(new URL('ReadingOfflineHost.ts',readingRoot),'utf8');
+const directoryOwner=readFileSync(new URL('application/ReaderDirectoryHost.ts',readingRoot),'utf8');
+const offlineOwner=readFileSync(new URL('application/ReadingOfflineHost.ts',readingRoot),'utf8');
 assert.match(directoryOwner,/loadReaderControlBookmarkProjection\(\{ isCurrent: current, currentEntries: binding\.currentEntries/);
 assert.match(directoryOwner,/this\.bookmarkProjectionStale = true/);
 assert.match(operationSource,/identity === this\.bindingId\(scene\)/,'physical page scope is still a captured admission');

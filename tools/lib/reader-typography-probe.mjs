@@ -37,10 +37,17 @@ const ReaderTextStyle = new Function(`${stripTypeScriptTypes(classSource).replac
 export const readerMessageStyles = new Function('ReaderTextStyle', ...Object.keys(fontFamilies),
   `${stripTypeScriptTypes(messageSource).replace(/^import[^;]+;\s*/gm, '').replace(/^export /gm, '')}; return {${messageNames.join(',')}};`)(
   ReaderTextStyle, ...Object.values(fontFamilies));
+const nativeMeasurementSource = readFileSync(new URL(
+  '../../entry/src/main/ets/features/reading/ui/ReaderNativeTextMeasurement.ets', import.meta.url), 'utf8');
+const chapterTitleFontSizeMatch = nativeMeasurementSource.match(
+  /export const READER_CHAPTER_TITLE_FONT_SIZE_FP:\s*number\s*=\s*([0-9.]+)\s*;/);
+assert.ok(chapterTitleFontSizeMatch, 'native reading measurement exports the chapter title size');
+export const READER_CHAPTER_TITLE_FONT_SIZE_FP = Number(chapterTitleFontSizeMatch[1]);
 const downloadSource = readFileSync(new URL(
   '../../entry/src/main/ets/features/downloads/ui/DownloadTypography.ets', import.meta.url), 'utf8');
 const downloadNames = [...downloadSource.matchAll(/^export const (TYPE_DOWNLOAD_\w+)\s*=/gm)].map(match => match[1]);
 const downloadTypography = new Function('ReaderTextStyle', 'DOWNLOAD_VISUAL', ...Object.keys(fontFamilies),
   `${stripTypeScriptTypes(downloadSource).replace(/^import[^;]+;\s*/gm, '').replace(/^export /gm, '')}; return {${downloadNames.join(',')}};`)(
   ReaderTextStyle, DOWNLOAD_VISUAL, ...Object.values(fontFamilies));
-export const readerTypographyRoles = { ...typography, ...readerMessageStyles, ...downloadTypography };
+export const readerTypographyRoles = { ...typography, ...readerMessageStyles, ...downloadTypography,
+  READER_CHAPTER_TITLE_FONT_SIZE_FP };

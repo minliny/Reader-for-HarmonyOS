@@ -52,16 +52,17 @@ export function readerFontFamilyReady(family: string): boolean {
   return family === READER_FONT_HARMONYOS_SANS || readerFontLoadReady(family);
 }
 
-/** Manga panels own these extra faces. No shelf startup load; admission waits
- * for every checked receipt, including dynamic current/group text roles. */
+const READER_UI_FONT_FAMILIES: string[] = [
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR,
+  READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
+  READER_FONT_NOTO_SANS_SC_UI_BOLD,
+];
+const READER_SHELF_FONT_FAMILIES: string[] = [READER_FONT_NOTO_SANS_SC,
+  ...READER_UI_FONT_FAMILIES, READER_FONT_NOTO_SANS_SC_UI_600];
+const READER_SOURCE_SWITCH_FONT_FAMILIES: string[] = [...READER_UI_FONT_FAMILIES];
+
 export function prepareMangaSheetFonts(progress?: (family: string, phase: string) => void): Promise<boolean> {
-  const families: string[] = [READER_FONT_NOTO_SANS_SC_UI_REGULAR,
-    READER_FONT_NOTO_SANS_SC_UI_BOLD,
-    READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
-    READER_FONT_NOTO_SANS_SC_UI_550, READER_FONT_NOTO_SANS_SC_UI_600,
-    READER_FONT_NOTO_SANS_SC_UI_650,
-    READER_FONT_NOTO_SANS_SC_UI_900];
-  return Promise.all(families.map((family: string): Promise<void> => {
+  return Promise.all(READER_UI_FONT_FAMILIES.map((family: string): Promise<void> => {
     if (progress === undefined) return prepareReaderFontFamily(family);
     progress(family, 'begin');
     return prepareReaderFontFamily(family).then((): void => {
@@ -71,45 +72,31 @@ export function prepareMangaSheetFonts(progress?: (family: string, phase: string
       throw error;
     });
   })).then((): boolean =>
-    families.every((family: string): boolean => readerFontFamilyReady(family)));
+    READER_UI_FONT_FAMILIES.every((family: string): boolean => readerFontFamilyReady(family)));
 }
 
-/** The shared download demo uses checked static Sans 400/500/600/700 and Serif
- * 700 faces. Its first text build must wait for every receipt; registering a
- * family in the background does not authorize rendering with a fallback face.
- * The existing 600 face is shared with manga sheets, without copying its file. */
+/** The shared download demo uses checked static UI 400/500/700 faces. Its
+ * first text build must wait for every receipt; registering a family in the
+ * background does not authorize rendering with a fallback face. */
 export function prepareSharedDownloadFonts(): Promise<boolean> {
-  const families: string[] = [READER_FONT_NOTO_SANS_SC_UI_REGULAR,
-    READER_FONT_NOTO_SANS_SC_UI_MEDIUM, READER_FONT_NOTO_SANS_SC_UI_600,
-    READER_FONT_NOTO_SANS_SC_UI_BOLD,
-    READER_FONT_NOTO_SERIF_SC_BOLD];
-  return Promise.all(families.map((family: string): Promise<void> =>
+  return Promise.all(READER_UI_FONT_FAMILIES.map((family: string): Promise<void> =>
     prepareReaderFontFamily(family))).then((): boolean =>
-    families.every((family: string): boolean => readerFontFamilyReady(family)));
+    READER_UI_FONT_FAMILIES.every((family: string): boolean => readerFontFamilyReady(family)));
 }
 
-/** Initial shelf and its shared message surfaces need checked receipts before
- * first build, including the message action 500 and title 600 static faces.
- * Reader body and other control faces retain their on-demand admission. */
+/** Initial shelf and application UI use these three checked static faces. */
 export function prepareReaderShelfFonts(): Promise<void> {
-  return Promise.all([READER_FONT_INTER, READER_FONT_NOTO_SERIF_SC_BOLD,
-    READER_FONT_NOTO_SANS_SC, READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD,
-    READER_FONT_NOTO_SANS_SC_UI_MEDIUM, READER_FONT_NOTO_SANS_SC_UI_600]
+  return Promise.all(READER_SHELF_FONT_FAMILIES
     .map((family: string): Promise<void> => prepareReaderFontFamily(family))).then((): void => {});
 }
 
-/** The selected novel drawer admits only its four checked physical faces.
- * Keep its extra Medium face on demand instead of extending shelf startup. */
 export function sourceSwitchNovelFontsReady(): boolean {
-  return [READER_FONT_INTER, READER_FONT_NOTO_SERIF_SC_BOLD,
-    READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM]
-    .every((family: string): boolean => readerFontFamilyReady(family));
+  return READER_SOURCE_SWITCH_FONT_FAMILIES.every((family: string): boolean => readerFontFamilyReady(family));
 }
 
 export function prepareSourceSwitchNovelFonts(): Promise<boolean> {
-  return Promise.all([READER_FONT_INTER, READER_FONT_NOTO_SERIF_SC_BOLD,
-    READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM]
-    .map((family: string): Promise<void> => prepareReaderFontFamily(family)))
+  return Promise.all(READER_SOURCE_SWITCH_FONT_FAMILIES.map((family: string): Promise<void> =>
+    prepareReaderFontFamily(family)))
     .then((): boolean => sourceSwitchNovelFontsReady())
     .catch((error: Error): boolean => { reportFontFailure(error); return false; });
 }
@@ -118,9 +105,6 @@ export function prepareReaderFonts(): Promise<void> {
   return Promise.all([
     prepareReaderShelfFonts(),
     prepareReaderFontFamily(READER_FONT_NOTO_SERIF_SC_REGULAR),
-    prepareReaderFontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR),
-    prepareReaderFontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM),
-    prepareReaderFontFamily('ReaderNotoSansSCUIBold'),
   ]).then((): void => {});
 }
 

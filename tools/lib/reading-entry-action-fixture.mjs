@@ -40,7 +40,7 @@ export function readingEntryActionFixture({ runtime, Host = ProductionHost, rout
     runtime: currentRuntime, mounting: () => 1, entry: () => entry,
     search: () => ({ host: { visibilityChanged() {} }, admissionCandidates: () => [] }),
     sourceSwitch: () => source, shelfBooks: () => shelfBooks,
-    removalPending: () => false, readerExitPending: () => false, advance,
+    removalPending: () => false, advance,
     show: next => navigation.show(next), bindReader, restoreReaderReturn: () => false, entryPorts,
     sourceName: (_id, persisted) => persisted ?? '书源', failure,
     afterOpening: project => project(), postFrame: action => action(), refreshNearEnd() {},

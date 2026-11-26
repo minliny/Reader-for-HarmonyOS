@@ -1,9 +1,9 @@
 import { ReaderPageScaffold } from './ReaderPageScaffold';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
-import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
-import { APP_HEADER_BAR_HEIGHT } from '../foundation/ReaderHeaderMetrics';
+import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_HEADER_BAR_HEIGHT } from '../foundation/ReaderHeaderMetrics';
 import { ReaderMeasurementStore } from './ReaderMeasurements';
-import { ReaderPageGeometry, ReaderPageGeometryInput, resolveReaderPageGeometry } from './ReaderPageGeometry';
+import { ReaderPageGeometry, ReaderPageGeometryInput, applyReaderStandardFloatingHeader, readerPageSafeLeft,
+  readerPageSafeRight, resolveReaderPageGeometry } from './ReaderPageGeometry';
 import { ReaderStandardPageVariant, readerStandardPageSpec,
   readerPageAreaLength, readerStandardPageContentEndInset, readerStandardPageFooterBottom,
   READER_STANDARD_PAGE_CONTENT_GAP } from './ReaderPageShell';
@@ -21,9 +21,12 @@ export struct ReaderStandardPage {
   @StorageLink('readerWindowMetricsRevision') @Watch('onLayoutInputsChanged') private readerWindowMetricsRevision: number = 0;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('onLayoutInputsChanged') variant: ReaderStandardPageVariant = 'management';
+  @Prop @Watch('onLayoutInputsChanged') floatingHeader: boolean = false;
+  @Prop @Watch('onLayoutInputsChanged') embeddedWide: boolean = false;
   @Prop @Watch('onLayoutInputsChanged') contentLeadingRail: number = 0;
   @Prop @Watch('onLayoutInputsChanged') contentEndInset: number = -1;
   @Prop scrollOwner: 'page' | 'native-list' = 'page';
+  @Prop initialScrollY: number = 0;
   @State private geometry: ReaderPageGeometry = new ReaderPageGeometry();
   @State private measurementKey: number = 0;
   @State private footerMeasurementKey: number = 0;
@@ -32,6 +35,7 @@ export struct ReaderStandardPage {
   private geometryRevision: number = 0;
   private viewportWidth: number = 0;
   private viewportHeight: number = 0;
+  private viewportOriginX: number = 0;
   private mounted: boolean = false;
   onViewportChange: (width: number, height: number) => void = (_width: number, _height: number): void => {};
   scroller: Scroller = new Scroller();
@@ -61,14 +65,17 @@ export struct ReaderStandardPage {
     this.footerInputs = '';
     this.viewportWidth = 0;
     this.viewportHeight = 0;
+    this.viewportOriginX = 0;
   }
 
   private onLayoutInputsChanged(): void {
     if (!this.mounted) return;
     const metrics = readerWindowMetrics();
     const width = this.viewportWidth > 0 ? this.viewportWidth : metrics.windowRect.width;
+    const originX = this.embeddedWide ? this.viewportOriginX : undefined;
     const headerInputs = JSON.stringify([width, metrics.systemFontScale, metrics.densityPixels, metrics.ready,
-      readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics), this.variant]);
+      readerPageSafeLeft(metrics, originX, true), readerPageSafeRight(metrics, originX, this.viewportWidth, true),
+      this.variant, this.floatingHeader]);
     const footerInputs = JSON.stringify([headerInputs, this.contentLeadingRail > 0,
       readerStandardPageFooterBottom(this.variant, metrics)]);
     if (headerInputs !== this.headerInputs) {
@@ -89,7 +96,8 @@ export struct ReaderStandardPage {
   }
 
   private headerHeight(): number {
-    return this.measurements.readForGeneration('standard:header', this.measurementKey, APP_HEADER_BAR_HEIGHT);
+    return this.measurements.readForGeneration('standard:header', this.measurementKey,
+      this.floatingHeader ? APP_FLOATING_HEADER_BAR_HEIGHT : APP_HEADER_BAR_HEIGHT);
   }
 
   private footerHeight(): number {
@@ -101,8 +109,10 @@ export struct ReaderStandardPage {
     const input = new ReaderPageGeometryInput(metrics);
     input.viewportWidth = this.viewportWidth;
     input.viewportHeight = this.viewportHeight;
+    input.originX = this.embeddedWide ? this.viewportOriginX : undefined;
     input.measurementRevision = ++this.geometryRevision;
     input.headerHeight = this.headerHeight();
+    if (this.floatingHeader) applyReaderStandardFloatingHeader(input);
     input.contentGap = READER_STANDARD_PAGE_CONTENT_GAP;
     input.footerHeight = this.footerHeight();
     input.footerBottom = readerStandardPageFooterBottom(this.variant, metrics);
@@ -117,6 +127,7 @@ export struct ReaderStandardPage {
   private frameStyle(): ReaderFrameStyle {
     const pageBackground = readerAppColor('TOK_PAPER', this.appThemeScheme);
     return readerFrameStyle({ backgroundColor: pageBackground,
+      headerTransparent: this.floatingHeader,
       headerBackground: this.variant === 'settingsHome' ? pageBackground :
         readerAppColor('TOK_SURFACE_SOLID', this.appThemeScheme),
       footerBackground: pageBackground });
@@ -162,10 +173,13 @@ export struct ReaderStandardPage {
       if (!this.mounted) return;
       const width = readerPageAreaLength(next.width);
       const height = readerPageAreaLength(next.height);
+      const originX = readerPageAreaLength(next.globalPosition.x);
       if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) return;
-      if (Math.abs(width - this.viewportWidth) <= .1 && Math.abs(height - this.viewportHeight) <= .1) return;
+      if (Math.abs(width - this.viewportWidth) <= .1 && Math.abs(height - this.viewportHeight) <= .1 &&
+        (!this.embeddedWide || Math.abs(originX - this.viewportOriginX) <= .1)) return;
       this.viewportWidth = width;
       this.viewportHeight = height;
+      this.viewportOriginX = originX;
       this.onLayoutInputsChanged();
       this.onViewportChange(width, height);
     });
@@ -195,6 +209,7 @@ export struct ReaderStandardPage {
 
   @Builder private scrollContent() {
     ReaderPageScrollHost({ scroller: this.scroller, layout: this.scrollLayout(), editingHost: this.editingHost,
+      initialScrollY: this.initialScrollY,
       content: (): void => { this.pageContent(); } });
   }
 

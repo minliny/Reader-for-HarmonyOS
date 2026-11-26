@@ -111,6 +111,7 @@ export interface ReadingDirectoryRouteContext {
   mount: number;
   navigation: number;
   foreground: boolean;
+  detailDirectory?: boolean;
 }
 
 /** Page/session projection of the original ReadingEntryHost. No durable
@@ -133,6 +134,7 @@ export class ReadingEntryPresentation {
   directoryCurrentChapterIndex: number = -1;
   directoryChapterTitle: string = '';
   directoryPresentationGeneration: number = 0;
+  detailDirectoryPresentationGeneration: number = 0;
   directoryOperation: ReaderDirectoryOperation | undefined;
   bookmarkWriteEnabled: boolean = false;
   bookmarkRecoveryRevision: number = 0;
@@ -244,7 +246,7 @@ export class ReadingEntryPresentation {
   acceptReaderExit(owner: ReaderRuntimeOwner, readerIdentity: string): boolean {
     if (!this.sessionActive || readerIdentity !== this.readerPresentationIdentity() ||
       readerIdentity === this.acceptedExitIdentity) return false;
-    // Shelf return motion can retain the session until its cover settles.
+    // Reject duplicate exit acknowledgements for the same reader.
     this.acceptedExitIdentity = readerIdentity;
     const book = this.book;
     if (this.contentKind === 'manga' && book !== undefined) owner.finishMangaOfflineProbe?.(book.sourceId, book.bookId);
@@ -303,6 +305,7 @@ export class ReadingEntryPresentation {
       this.requestedBookmarkAnchor = undefined;
     }
     this.directoryPresentationGeneration += 1;
+    if (!fromReader) this.detailDirectoryPresentationGeneration = this.directoryPresentationGeneration;
     return true;
   }
 
@@ -341,7 +344,8 @@ export class ReadingEntryPresentation {
     return { owner: context.owner, retired: context.retired, mount: context.mount, navigation: context.navigation,
       foreground: context.foreground, directoryVisible: route === 'directory',
       acceptsProjection: route === 'detail' || route === 'reading' || route === 'directory',
-      presentation: this.directoryPresentationGeneration, sessionGeneration: this.sessionGeneration,
+      presentation: context.detailDirectory ? this.detailDirectoryPresentationGeneration : this.directoryPresentationGeneration,
+      sessionGeneration: this.sessionGeneration,
       reading: this.sessionActive, offlineBusy: this.offlineOperationActive,
       bookmarkWriteEnabled: this.bookmarkWriteEnabled, book: this.book, session: this.session };
   }
@@ -623,8 +627,8 @@ export class ReadingEntryPresentation {
     }
     const sourceId = book.sourceId;
     const bookId = book.bookId;
-    const opening = this.directoryPresentationGeneration;
-    const current = (): boolean => visible() && !this.sessionActive && this.directoryPresentationGeneration === opening &&
+    const opening = this.detailDirectoryPresentationGeneration;
+    const current = (): boolean => visible() && !this.sessionActive && this.detailDirectoryPresentationGeneration === opening &&
       this.book?.sourceId === sourceId && this.book?.bookId === bookId &&
       this.book.contentKind !== 'manga';
     const publishChapter = (index: number): void => {

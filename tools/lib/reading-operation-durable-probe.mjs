@@ -3,6 +3,7 @@ import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import { coreCliPath } from './tool-environment.mjs';
 import { formatDownloadStorageBytes } from '../../entry/src/main/ets/features/downloads/presentation/SharedDownloadProjection.ts';
 import {runtimeOwnerIdentityProbe} from './reader-runtime-admission-probe.mjs';
+import { readerHostFilesDirectory } from '../../entry/src/main/ets/app/diagnostics/ReaderPublicFixtureScope.ts';
 import assert from 'node:assert/strict';
 import * as fs from 'node:fs';
 import { promises as fsp } from 'node:fs';
@@ -41,7 +42,14 @@ export const bookmarkInput={bookName:'Book',bookAuthor:'Author',chapterIndex:0,c
 export const cacheContext={sourceId:'source',bookId:'book'};
 export const session={acquisitionMode:'online',identity:cacheContext,detailUrl:'/detail',tocUrl:'/toc',book:{title:'Book',author:'Author'},continuationVariables:[],entries:[{index:0,title:'Chapter',url:'/chapter',variables:[]}],hostRequirements:[]};
 export function deferred(){let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};}
-export async function until(predicate){for(let i=0;i<200;i++){if(predicate())return;await new Promise(r=>setTimeout(r,2));}assert.fail('actual durable probe did not reach requested boundary');}
+export async function until(predicate) {
+ const deadline = performance.now() + 5000;
+ do {
+  if (predicate()) return;
+  await new Promise(resolve => setTimeout(resolve, 5));
+ } while (performance.now() < deadline);
+ assert.fail('actual durable probe did not reach requested boundary within five seconds');
+}
 
 // Own only roots created by this module; reopening an externally supplied root
 // never grants deletion authority. Callers clean up in finally, including FAIL.
@@ -79,12 +87,26 @@ export async function fixture(official=false,existing,{domain='all',transport}={
    finishWrite(){fs.renameSync(this.tmp,this.path);io.finishes++;if(options.loseFinishAt===io.finishes)throw Error('actual rename published but finish ACK lost');}
    failWrite(){io.failWrites++;try{fs.unlinkSync(this.tmp);}catch{}}}};
  const replaceReaderAtomicSnapshot=compile('app/ReaderAtomicSnapshotFile.ts','replaceReaderAtomicSnapshot',{fileIo},official);
- const classes=compile('features/reading/application/ReadingOperationIntents.ts','({BookmarkOperationIntentStore,CacheClearOperationIntentStore,ReadingOperationPendingError})',
-  {ReaderRuntimeOwner:Runtime,fileIo,util:{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`},replaceReaderAtomicSnapshot,...sdk},false);
- // Each fixture loads the entire production module, resetting only cold JS statics.
- // For SDK mode emit that same whole module once, preserving its two shared lanes.
- let types=classes;
- if(official){const source=read('features/reading/application/ReadingOperationIntents.ts'),body=source.replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm,'');const output=ts.transpileModule(body,{compilerOptions:{target:ts.ScriptTarget.ES2021,module:ts.ModuleKind.CommonJS},reportDiagnostics:true});assert.deepEqual(output.diagnostics,[]);types={};new Function('exports','ReaderRuntimeOwner','fileIo','util','replaceReaderAtomicSnapshot','ReaderCoreRequestError','isReaderCoreTransactionPendingError',output.outputText)(types,Runtime,fileIo,{generateRandomUUID:()=>`12345678-1234-4234-8123-${String(++uuid).padStart(12,'0')}`},replaceReaderAtomicSnapshot,sdk.ReaderCoreRequestError,sdk.isReaderCoreTransactionPendingError);}
+ const intentPath = 'features/reading/application/ReadingOperationIntents.ts';
+ const intentDependencies = {
+  ReaderRuntimeOwner: Runtime, fileIo, readerHostFilesDirectory, replaceReaderAtomicSnapshot,
+  util: { generateRandomUUID: () => `12345678-1234-4234-8123-${String(++uuid).padStart(12, '0')}` },
+  ReaderCoreRequestError: sdk.ReaderCoreRequestError,
+  isReaderCoreTransactionPendingError: sdk.isReaderCoreTransactionPendingError,
+ };
+ // Load the whole production module once per fixture, preserving its two shared lanes.
+ let types;
+ if (official) {
+  const body = read(intentPath).replace(/^import[\s\S]*?from ['"][^'"]+['"];\n/gm, '');
+  const output = ts.transpileModule(body,
+    { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS }, reportDiagnostics: true });
+  assert.deepEqual(output.diagnostics, []);
+  types = {};
+  new Function('exports', ...Object.keys(intentDependencies), output.outputText)(types, ...Object.values(intentDependencies));
+ } else {
+  types = compile(intentPath, '({BookmarkOperationIntentStore,CacheClearOperationIntentStore,ReadingOperationPendingError})',
+    intentDependencies);
+ }
  async function command(method,params){if(transport!==undefined)return transport(method,params);const result=await run(coreBinary,['--json',JSON.stringify({protocolVersion:1,requestId:1,method,params}),'--config-json',JSON.stringify({dataDirectory:core})],{maxBuffer:16*1024*1024});const event=result.stdout.trim().split('\n').map(v=>JSON.parse(v)).findLast(e=>e.requestId===1);if(event.type==='error')throw new sdk.ReaderCoreRequestError(event);return event;}
  const runtime={getUIAbilityContext:()=>({filesDir:files}),closed:false,
   supportsCoreCapability:()=>true,async clearOfflineBookImages(s,b){calls.push({platform:[s,b]});if(options.imageFailure)throw Error('image cleanup failed');},

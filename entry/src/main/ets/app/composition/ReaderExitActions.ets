@@ -15,16 +15,14 @@ export interface ReaderExitActionPorts {
   captureReturn: () => ReaderReturnContext | undefined;
   switchBlocked: (book: ReadingBookDetail) => boolean;
   fileOpenBlocked: () => boolean;
-  advance: (preserveShelfMotion?: boolean) => void;
+  advance: () => void;
   publish: (snapshot: ReaderNavigationSnapshot) => void;
   bindReader: () => void;
   hydrateMangaPosition: (book: ReadingBookDetail) => void;
   refreshDetail: () => void;
   refreshShelf: () => void;
-  resumeReturnMotion: (coveredMotionId: number) => void;
   returnToBookshelf: () => void;
   returnFromDetail: () => void;
-  returnToReadingOrigin: (animate?: boolean) => void;
   showDownloads: (intent: SharedDownloadOpeningIntent) => void;
   showRules: () => void;
   unavailableDownloads: () => void;
@@ -79,7 +77,7 @@ export class ReaderExitActions {
       }
       return;
     }
-    this.ports.returnToReadingOrigin();
+    this.completeReturn();
   }
 
   private deliverPendingBack(request: ReaderExitRequest): void {
@@ -167,7 +165,7 @@ export class ReaderExitActions {
         this.ports.showDownloads(intent);
       },
       // Book information reuses the admitted book and catalog after the exit.
-      showReaderDetail: (): void => this.ports.returnToReadingOrigin(false),
+      showReaderDetail: (): void => this.completeReturn(),
       afterReaderDetail: (contextOwner: ReaderRuntimeOwner, action: () => void): void => {
         if (this.navigation.snapshot().route === 'detail' && !entry.sessionActive && book !== undefined &&
           book.sourceId === entry.book?.sourceId && book.bookId === entry.book?.bookId &&
@@ -176,11 +174,11 @@ export class ReaderExitActions {
       openRules: this.ports.showRules,
       returnFromDetail: this.ports.returnFromDetail,
       returnFromBookshelfPreparation: (): void => { this.ports.returnToBookshelf(); this.navigationSettled(); },
-      returnToReadingOrigin: (): void => this.ports.returnToReadingOrigin(),
+      returnToReadingOrigin: (): void => this.completeReturn(),
     });
   }
 
-  completeReturn(coveredMotionId: number = -1): void {
+  completeReturn(): void {
     const entry = this.ports.entry();
     if (entry.book === undefined) {
       this.ports.returnToBookshelf();
@@ -188,7 +186,7 @@ export class ReaderExitActions {
       return;
     }
     // The reader has already approved the exit. Keep the admitted book for its origin.
-    this.ports.advance(coveredMotionId >= 0);
+    this.ports.advance();
     entry.finishReading(this.ports.runtime());
     this.ports.publish(this.navigation.showReadingOrigin());
     this.ports.bindReader();
@@ -196,7 +194,6 @@ export class ReaderExitActions {
     if (book?.contentKind === 'manga') this.ports.hydrateMangaPosition(book);
     this.ports.refreshDetail();
     if (this.navigation.snapshot().route === 'bookshelf') this.ports.refreshShelf();
-    this.ports.resumeReturnMotion(coveredMotionId);
     this.navigationSettled();
   }
 

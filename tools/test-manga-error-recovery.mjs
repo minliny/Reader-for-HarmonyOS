@@ -142,12 +142,27 @@ console.log('PASS admitted manga preparation failures are brief, deduplicated an
 // regression to the old opened/error Text block must fail this proof.
 async function openedErrorSdkProof(surfaceSource=source) {
   const {boundedSurfaceSdk}=await import('./lib/bounded-surface-sdk-probe.mjs');
+  const {pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
+  const {readerTypographyRoles}=await import('./lib/reader-typography-probe.mjs');
+  const {readerReadableFontScale}=await import('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts');
+  const fontFamilies=await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
   const sdk=boundedSurfaceSdk(),messages=[];
+  const topBarSource=readFileSync(new URL('../entry/src/main/ets/ui/chrome/ReaderReadingTopBar.ets',import.meta.url),'utf8');
+  const topBarMetrics=pureModuleProbe(topBarSource.slice(0,topBarSource.indexOf('@Component')),'ReaderReadingTopBar.ets',{
+    ...readerTypographyRoles,...fontFamilies,readerReadableFontScale,
+    readerWindowMetrics:()=>({systemFontScale:1}),readerFontFamilyReady:()=>true,
+  },['readerReadingTopBarFontsReady','readerReadingTopBarHeight']);
+  // The Surface owns error delivery; the mounted chrome child only accepts its
+  // normal public inputs. Its own typography has independent SDK coverage.
+  class TopBarBoundary {
+    constructor(owner, params, _storage, id) { Object.assign(this, { owner, params, id }); }
+    updateStateVars(params) { this.params = { ...this.params, ...params }; }
+  }
   const members=['error','opened','mounted','openedErrorNoticeKey','presentationGeneration',
     'onErrorPresentationChanged','onWindowChromeChanged','notifyOpenedError','controlsPresentedForWindow','loginRequired',
     'requestedLast','rowHasError','imageError','nativeFailureKey','nativeImageFailures','topControls',
     'mangaTopBarBack','mangaTopBarActions','panelTriggerFocusId','chromeScheme','readerPanelForeground'];
-  const owner=sdk.consumer(surfaceSource,members,{sourceSwitchTriggerFocusId,TOK_BORDER_W:1,ButtonType:{Normal:'ButtonType.Normal'}});
+  const owner=sdk.consumer(surfaceSource,members,{...fontFamilies,...topBarMetrics,ReaderReadingTopBar:TopBarBoundary,sourceSwitchTriggerFocusId,TOK_BORDER_W:1,ButtonType:{Normal:'ButtonType.Normal'}});
   let live=true;
   const tile={image:{fileUri:'file://retained',revision:'v1'}},row={key:'page:0',ordinal:0,tileIndex:0};
   Object.assign(owner,{getUIContext:()=>({getPromptAction:()=>({showToast:({message})=>messages.push(message)})}),

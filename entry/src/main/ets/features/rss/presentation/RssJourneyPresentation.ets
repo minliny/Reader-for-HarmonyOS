@@ -7,13 +7,14 @@ import { isReaderProductSurfaceEnabled } from '../../../app/ReaderProductScope';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import type {
+  RssFavorite,
   RssItem,
   RssSourceExportResult,
   RssSourceImportResult,
   RssSubscription,
 } from '../application/RssGateway';
 import type { RssFavoritePresentation, RssMode, RssPresentation, RssSubscriptionManagementItem,
-  RssEntrySnapshot, RssSourceSnapshot } from './RssPresentationContract';
+  RssEntrySnapshot, RssSourceSnapshot, RssFeedItems } from './RssPresentationContract';
 import {
   EMPTY_RSS_EDITOR_SNAPSHOT,
   RssSubscriptionEditorOrchestrator,
@@ -39,7 +40,7 @@ export interface RssJourneyNavigation {
   retired: () => boolean;
   isCurrentOwner: (owner: ReaderRuntimeOwner | undefined) => boolean;
   advance: () => number;
-  show: (route: RssRoute) => void;
+  show: (route: RssRoute, motion?: 'tab') => void;
   endReading: () => void;
   importVisible: () => boolean;
   openImport: (context: 'rssMerge' | 'rssReplace') => void;
@@ -52,6 +53,7 @@ interface RssFeedPresentationBinding {
   emit: (subscriptions: RssSubscription[]) => void;
   emitRead: (facts: OperationFacts<RssSubscription[]>) => void;
   emitOriginal: (original: RssOriginalMutationProjection | undefined) => void;
+  emitItems: (value: RssFeedItems) => void;
 }
 
 /** Retained RSS read and operation projections for the five RSS surfaces. */
@@ -66,12 +68,15 @@ export class RssJourneyPresentation {
   rssEntryOperation: RssRouteOperationProjection<RssEntrySnapshot> | undefined = undefined;
   rssEntryRead: OperationFacts<RssEntrySnapshot> = projectOperationFacts<RssEntrySnapshot>({ phase: 'idle' });
   rssPresentation: RssPresentation = { kind: 'feed', subscriptions: [], recentUnread: [] };
+  rssFeedItems: RssFeedItems = { all: [], favorites: [] };
+  rssMode: RssMode = 'sources';
   rssManagementOperation: RssManagementOperationProjection | undefined = undefined;
   rssManagementRead: OperationFacts<RssSubscription[]> =
     projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
   selectedRssSubscription: RssSubscription | undefined = undefined;
   selectedRssItems: RssItem[] = [];
   selectedRssItem: RssItem | undefined = undefined;
+  selectedRssArchive: RssFavorite | undefined = undefined;
   selectedRssFavoriteState: RssFavoritePresentation = 'loading';
   rssDetailReturnTarget: RssDetailReturnTarget = 'rss';
   rssSourceFeedReturnTarget: RssSourceFeedReturnTarget = 'rss';
@@ -91,6 +96,7 @@ export class RssJourneyPresentation {
     this.selectedRssSubscription = undefined;
     this.selectedRssItems = [];
     this.selectedRssItem = undefined;
+    this.selectedRssArchive = undefined;
     this.selectedRssFavoriteState = 'loading';
     this.rssDetailReturnTarget = 'rss';
     this.rssSourceFeedReturnTarget = 'rss';
@@ -108,37 +114,50 @@ export class RssJourneyPresentation {
       this.rssOrchestrator, identity, 'rssSubscriptionManagement');
   }
 
-  openRss(): void {
+  openRss(motion?: 'tab'): void {
     if (!isReaderProductSurfaceEnabled('rss')) {
       return;
     }
     const generation = this.navigation.advance();
     this.navigation.endReading();
     this.clearSelection();
-    this.navigation.show('rss');
+    this.rssMode = 'sources';
+    this.navigation.show('rss', motion);
     void this.loadRss(generation);
   }
 
-  loadRss(generation: number, expectedGeneration?: number): void {
+  loadRss(generation: number, expectedGeneration?: number, refresh: boolean = false): void {
     if (!isReaderProductSurfaceEnabled('rss')) return;
     const host = this.getRssOrchestrator();
     const binding = this.rssFeedBinding(generation, this.navigation.owner(), this.navigation.mounting(),
       host, this.rssPresentationIdentity);
     if (!binding.current()) return;
-    host.loadFeed(binding.emit, binding.emitRead, binding.current, expectedGeneration, binding.emitOriginal);
+    host.loadFeed(binding.emit, binding.emitRead, binding.current, expectedGeneration, binding.emitOriginal,
+      undefined, binding.emitItems, refresh);
   }
 
   private rssFeedBinding(generation: number, owner: ReaderRuntimeOwner | undefined, mounting: number,
     host: RssOrchestrator | undefined, identity: string): RssFeedPresentationBinding {
     const current = (): boolean => this.isCurrentRssHostPresentation(generation, owner, mounting, host, identity, 'rss');
     return { current,
-      emit: (subscriptions: RssSubscription[]): void => { if (current()) this.rssPresentation = this.feedPresentation(subscriptions, []); },
+      emit: (subscriptions: RssSubscription[]): void => {
+        if (current()) this.rssPresentation = this.feedPresentation(subscriptions, this.recentUnread());
+      },
       emitRead: (facts: OperationFacts<RssSubscription[]>): void => {
         if (!current()) return;
         this.rssFeedRead = facts;
-        if (facts.value !== undefined) this.rssPresentation = this.feedPresentation(facts.value, []);
+        if (facts.fact === 'failed' && !facts.hasValue) this.rssPresentation = { kind: 'fatalError', failedSources: [] };
       },
       emitOriginal: (original: RssOriginalMutationProjection | undefined): void => { if (current()) this.rssFeedOriginal = original; },
+      emitItems: (value: RssFeedItems): void => {
+        if (!current()) return;
+        const subscriptions = this.rssSubscriptions();
+        const ids = new Set<string>(subscriptions.map((source: RssSubscription): string => source.subscriptionId));
+        this.rssFeedItems = { all: value.all.filter((item: RssItem): boolean => ids.has(item.subscriptionId)),
+          favorites: value.favorites.filter((item: RssItem): boolean => ids.has(item.subscriptionId)),
+          archivedFavorites: value.archivedFavorites };
+        this.rssPresentation = this.feedPresentation(subscriptions, this.recentUnread());
+      },
     };
   }
 
@@ -146,17 +165,12 @@ export class RssJourneyPresentation {
     owner: ReaderRuntimeOwner | undefined, mounting: number, host: RssOrchestrator | undefined, identity: string): void {
     const binding = this.rssFeedBinding(generation, owner, mounting, host, identity);
     if (!binding.current()) return;
-    host?.reconcileFeedOriginal(expected, binding.emit, binding.emitRead, binding.current, binding.emitOriginal);
+    host?.reconcileFeedOriginal(expected, binding.emit, binding.emitRead, binding.current, binding.emitOriginal, binding.emitItems);
   }
 
   refreshRss(): void {
-    if (!isReaderProductSurfaceEnabled('rss')) {
-      return;
-    }
-    // The registered Figma boundary keeps RSS as a placeholder-only page.
-    // Do not start a real rss.subscription.refresh transaction and then label
-    // its stale/cache outcome as a user-visible refresh.
-    hilog.warn(DOMAIN, 'Reader', 'FIGMA_VISUAL_GAP: RSS refresh is placeholder-only until its admitted flow is supplied');
+    if (this.rssFeedRead.fact === 'loading' || this.rssFeedRead.fact === 'refreshing') return;
+    this.loadRss(this.navigation.generation(), undefined, true);
   }
 
   onRssManage(): void {
@@ -185,6 +199,8 @@ export class RssJourneyPresentation {
     if (this.rssOrchestrator !== host || this.rssPresentationIdentity !== identity) {
       this.retireRssPresentation();
       if (this.rssOrchestrator !== host) {
+        this.rssFeedItems = { all: [], favorites: [] };
+        this.rssPresentation = this.feedPresentation([], []);
         this.rssManagementOperation = undefined;
         this.rssManagementRead = projectOperationFacts<RssSubscription[]>({ phase: 'idle' });
       }
@@ -445,7 +461,11 @@ export class RssJourneyPresentation {
     try {
       if (!this.navigation.isCurrentOwner(owner)) return false;
       if (route === 'rssSourceFeed') return this.selectedRssSubscription?.subscriptionId === subscriptionId;
-      if (route === 'rssEntryDetail') return this.selectedRssItem?.subscriptionId === subscriptionId && this.selectedRssItem?.guid === guid;
+      if (route === 'rssEntryDetail') {
+        const id = this.selectedRssArchive?.subscriptionId ?? this.selectedRssItem?.subscriptionId;
+        const entryGuid = this.selectedRssArchive?.guid ?? this.selectedRssItem?.guid;
+        return id === subscriptionId && entryGuid === guid;
+      }
       return true;
     } catch (_) { return false; }
   }
@@ -518,11 +538,24 @@ export class RssJourneyPresentation {
     if (!isReaderProductSurfaceEnabled('rss')) {
       return;
     }
-    const item = this.rssRecentUnread().find(
+    const item = this.rssFeedItems.all.find(
       (candidate: RssItem): boolean => candidate.subscriptionId === subscriptionId &&
         candidate.guid === guid,
     );
     if (item === undefined) {
+      const archived = this.rssFeedItems.archivedFavorites?.find((candidate: RssFavorite): boolean =>
+        candidate.subscriptionId === subscriptionId && candidate.guid === guid);
+      if (archived !== undefined) {
+        this.navigation.advance();
+        this.clearSelection();
+        this.rssEntryOriginal = undefined;
+        this.rssEntryOperation = undefined;
+        this.rssEntryRead = projectOperationFacts<RssEntrySnapshot>({ phase: 'idle' });
+        this.selectedRssArchive = archived;
+        this.navigation.show('rssEntryDetail');
+        this.getRssOrchestrator();
+        return;
+      }
       hilog.warn(DOMAIN, 'Reader',
         'RSS EntryDetail ignored unknown identity=%{private}s:%{private}s', subscriptionId, guid);
       return;
@@ -563,6 +596,7 @@ export class RssJourneyPresentation {
     this.rssEntryRead = projectOperationFacts<RssEntrySnapshot>({ phase: 'idle' });
     this.selectedRssSubscription = subscription;
     this.selectedRssItem = item;
+    this.selectedRssArchive = undefined;
     this.selectedRssFavoriteState = 'loading';
     this.rssDetailReturnTarget = returnTarget;
     this.navigation.show('rssEntryDetail');
@@ -697,31 +731,8 @@ export class RssJourneyPresentation {
     this.getRssOrchestrator().open();
   }
 
-  onRssOpenOriginalRequested(): void {
-    if (!isReaderProductSurfaceEnabled('rss')) {
-      return;
-    }
-    if (this.selectedRssItem?.link === undefined ||
-      this.selectedRssItem.link.trim().length === 0) {
-      hilog.warn(DOMAIN, 'Reader', 'RSS original link intent ignored because the entry has no link');
-      return;
-    }
-    hilog.warn(DOMAIN, 'Reader',
-      'HOST_CAPABILITY_GAP: RSS original link requires webview.open Host wiring');
-  }
-
   onRssModeRequested(mode: RssMode): void {
-    if (!isReaderProductSurfaceEnabled('rss')) {
-      return;
-    }
-    if (mode === 'sources') {
-      return;
-    }
-    // All/Favorites/Rules are modes of the existing RSS page, not routes.
-    // Their data contracts are not admitted yet, so keep Sources selected and
-    // surface the missing boundary instead of showing invented local data.
-    hilog.warn(DOMAIN, 'Reader',
-      'FIGMA_VISUAL_GAP: RSS mode %{private}s has no admitted data contract', mode);
+    if (isReaderProductSurfaceEnabled('rss') && mode !== 'rules') this.rssMode = mode;
   }
 
   private feedPresentation(subscriptions: RssSubscription[], recentUnread: RssItem[]): RssPresentation {
@@ -732,8 +743,8 @@ export class RssJourneyPresentation {
     return RssPresentationProjection.subscriptions(this.rssPresentation);
   }
 
-  private rssRecentUnread(): RssItem[] {
-    return RssPresentationProjection.recentUnread(this.rssPresentation);
+  private recentUnread(): RssItem[] {
+    return this.rssFeedItems.all.filter((item: RssItem): boolean => !item.read).slice(0, 20);
   }
 
   rssSubscriptionManagementItems(): RssSubscriptionManagementItem[] {

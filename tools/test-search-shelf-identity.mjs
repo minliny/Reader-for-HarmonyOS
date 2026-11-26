@@ -8,7 +8,7 @@ registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&
 const {SearchResultProjection}=await import('../entry/src/main/ets/features/search/presentation/SearchResultProjection.ts');
 const {SearchViewState}=await import('../entry/src/main/ets/features/search/presentation/SearchViewState.ts');
 const {ReaderCoreRequestError}=await import('../entry/vendor/core-harmony/sdk/reader_core.ts');
-const saved={sourceId:'cat-eye',bookId:'/old',sourceName:'猫眼看书',title:'终宋',author:'怪诞的表哥',addedAt:10};
+const saved={sourceId:'cat-eye',bookId:'/old',sourceName:'猫眼看书',title:'终宋',author:'怪诞的表哥',contentKind:'text',addedAt:10};
 const result={...saved,sourceId:'search-source',bookId:'/new',sourceName:'搜索来源',detailUrl:'/new',variables:[]};
 let coreLookup=async()=>undefined;const lookupCalls=[];
 const fixtures=[];

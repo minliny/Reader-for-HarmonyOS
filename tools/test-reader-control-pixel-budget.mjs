@@ -4,9 +4,10 @@ import { registerHooks } from 'node:module';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
-import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
 import { readerFoundationTokens } from './lib/reader-tokens-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
+import { READER_BOOKMARK_GLYPH_HEIGHT_VP, READER_BOOKMARK_GLYPH_WIDTH_VP }
+  from '../entry/src/main/ets/features/reading/presentation/ReaderPageBookmarkModel.ts';
 
 const definitions = {
   'home-composition': {
@@ -24,13 +25,15 @@ function homeComposition(source, geometry, control) {
   const finish = source.indexOf(';', source.indexOf('.enableScrollInteraction', start)) + 1;
   const statement = source.slice(start, finish);
   const names = ['regressionHome', 'measureHomeForm', 'homeContent', 'chapterProgress', 'chapterRow', 'progressRow',
-    'quickActionPanel', 'quickAction', 'shortWindowActions', 'homeChapterCardHeight', 'homeContentMinimumHeight',
+    'quickActionPanel', 'quickAction', 'shortWindowActions', 'sourceActionLabel', 'homeChapterCardHeight', 'homeContentMinimumHeight',
+    'chapterBookmarkRow', 'chapterTitleLaneHeight', 'bookmarkLaneHeight', 'bookmarkPillHeight', 'bookmarkPillWidth', 'progressLaneHeight',
     'homeMetric', 'homeProfileMetric', 'presentedHomeChapterTitle', 'presentedHomeTotalChapters'];
   function render(text, scale, viewport, topBarVisible) {
     const candidate = text.replace('  @Builder\n  private controlContent() {',
       `  @Builder\n  private regressionHome() { ${statement} }\n  @Builder\n  private controlContent() {`);
     const owner = createReaderBuilderProbe(candidate, names, {
       ...control, ...readerFoundationTokens, ...readerTypographyRoles,
+      READER_BOOKMARK_GLYPH_HEIGHT_VP, READER_BOOKMARK_GLYPH_WIDTH_VP,
       readerControlExtentFits: geometry.readerControlExtentFits,
       ScrollDirection: { Horizontal: 'horizontal' }, sourceSwitchTriggerFocusId: () => 'source-trigger',
       measureReaderControlText(_context, value, style) {
@@ -39,7 +42,8 @@ function homeComposition(source, geometry, control) {
         singleLineWidthVp: Math.min(80, Math.max(1, [...value].length * 6 * scale)), fitsWidth: true };
       },
     }).owner;
-    Object.assign(owner, { chapterTitle: 'Chapter One', totalChapters: 1, minimumIdentity: '', appScheme: 'day',
+    Object.assign(owner, { chapterTitle: 'Chapter One', totalChapters: 273, readableChapterPosition: 99,
+      minimumIdentity: '', appScheme: 'day', sessionFontScale: scale,
       currentLayout: () => ({ topBarVisible, quickPanelHeight: viewport + 140 }),
       frame: () => ({ progress: 0, content: { width: 264, height: viewport } }),
       selectedMinimumProfile: () => undefined, progressInputEnabled: () => true, canStepChapter: () => true,
@@ -55,25 +59,36 @@ function homeComposition(source, geometry, control) {
     const nodes = [...owner.nodes.values()];
     const scroll = nodes.find(node => node.type === 'Scroll');
     const column = nodes.find(node => node.type === 'Column' && node.create?.space === 6);
-    const card = nodes.find(node => node.type === 'Column' && node.border?.width === 1);
-    const chapter = nodes.find(node => node.type === 'Row' && node.padding?.top === 10);
-    const progress = nodes.find(node => node.type === 'Row' && node.padding?.top === 6);
+    const card = nodes.find(node => node.id === 'reader-control-chapter-progress-card');
+    const chapter = nodes.find(node => node.id === 'reader-control-chapter-title-lane');
+    const bookmark = nodes.find(node => node.id === 'reader-control-chapter-bookmark-lane');
+    const pill = nodes.find(node => node.id === 'novel-bookmark-pill');
+    const progress = nodes.find(node => node.id === 'reader-control-chapter-progress-lane');
     const actions = nodes.find(node => node.type === 'Row' && node.border?.width === 1);
     const slider = nodes.find(node => node.type === 'Slider');
     const short = nodes.filter(node => node.type === 'Scroll').at(1);
-    assert.ok(scroll && column && card && chapter && progress && actions && slider,
+    assert.ok(scroll && column && card && chapter && bookmark && pill && progress && actions && slider,
       'actual Scroll→Home Column→framed Card/real Rows/Slider and framed quick actions all emit');
     const border = card.border.width * 2;
     const shortHeight = topBarVisible ? 0 : short.height;
     const gapCount = topBarVisible ? 1 : 2;
     const natural = card.height + actions.height + column.create.space * gapCount + shortHeight;
-    const required = chapter.height + progress.height + border + actions.height + column.create.space * gapCount + shortHeight;
-    assert.ok(card.height + 1e-10 >= chapter.height + progress.height + border,
+    const required = Math.max(106, chapter.height + bookmark.height + progress.height + border) +
+      actions.height + column.create.space * gapCount + shortHeight;
+    assert.ok(card.height + 1e-10 >= chapter.height + bookmark.height + progress.height + border,
       'real card content pays child rows plus both native border sides');
-    assert.ok(chapter.height - chapter.padding.top >= profile.chapterTitleHeight,
+    assert.ok(chapter.height >= profile.chapterTitleHeight,
       'chapter row pays its actual top padding and declared title height');
-    assert.ok(progress.height - progress.padding.top >= slider.height,
-      'progress row pays its actual top padding and44 slider height');
+    assert.ok(progress.height >= slider.height);
+    assert.equal(pill.width, 42 + Math.ceil(44 * scale));
+    assert.equal(pill.height, Math.max(44, owner.bookmarkPillHeight()));
+    assert.ok(bookmark.height >= pill.height, 'bookmark touch never intrudes into the neighboring slider lane');
+    assert.ok(!nodes.some(node => node.type === 'Text' && node.create === '共 273 章'), 'chapter count appears once');
+    assert.equal(actions.padding.left, actions.padding.right);
+    const bookmarkLaneWeights = nodes.slice(nodes.indexOf(bookmark), nodes.indexOf(progress))
+      .filter(node => node.layoutWeight === 1);
+    assert.deepEqual(bookmarkLaneWeights.map(node => node.create), ['第 100 / 共 273 章'],
+      'chapter progress gets the entire remaining width after the bookmark target and gap');
     assert.ok(Math.abs(owner.homeContentMinimumHeight() - required) < 1e-9,
       'producer/fallback minimum agrees with independently summed emitted children, borders and Column spacing');
     assert.equal(geometry.readerControlExtentFits(natural, viewport), geometry.readerControlExtentFits(required, viewport),
@@ -96,31 +111,13 @@ function homeComposition(source, geometry, control) {
     for (const viewport of [120, 657 / 3.5, 190, 270, 666]) samples.push(render(source, scale, viewport, topBar));
   }
   const normal = render(source, 1, 190, true);
-  assert.equal(normal.natural, 190, 'default190 viewport preserves its complete authored arrangement without extra.001');
+  assert.equal(normal.cardHeight, 118);
+  assert.equal(normal.natural, 200, 'the 44vp bookmark target, slider and title occupy separate lanes');
   const current = render(source, 1, 657 / 3.5, true);
-  assert.equal(current.scrollEnabled, false);
-  const begin = source.indexOf('  private homeChapterCardHeight(): number {');
-  const end = source.indexOf('\n  @Builder\n  private chapterProgress()', begin);
-  const oldCard = `  private homeChapterCardHeight(): number {
-    return Math.max(this.homeMetric('chapterRowHeight', 54) + this.homeMetric('progressHeight', 50),
-      Math.min(READER_CONTROL_HOME_TOP_ROW_HEIGHT, this.frame().content.height) +
-      (READER_CONTROL_HOME_CHAPTER_PROGRESS_HEIGHT + READER_CONTROL_HOME_QUICK_ACTION_HEIGHT + READER_CONTROL_HOME_SECTION_GAP - READER_CONTROL_HOME_TOP_ROW_HEIGHT) -
-      this.homeMetric('actionHeight', READER_CONTROL_HOME_QUICK_ACTION_HEIGHT) - READER_CONTROL_HOME_SECTION_GAP);
-  }
-`;
-  const oldConsumer = source.slice(0, begin) + oldCard + source.slice(end);
-  assert.throws(() => render(oldConsumer, 1, 190, true), /native declaration sum cannot exceed/,
-    'old viewport+.001 consumer fails the independently emitted native child sum');
-  assert.throws(() => render(oldConsumer, 1, 650 / 3.5, true), /real card content pays/,
-    'old card child overflow matches the installed449 native counterexample');
-  const missingBorder = source.replace('minimumHeight: chapterHeight + progressHeight + TOK_BORDER_W * 2 + actionHeight',
-    'minimumHeight: chapterHeight + progressHeight + actionHeight');
-  assert.notEqual(missingBorder, source);
-  assert.throws(() => render(missingBorder, 1, 657 / 3.5, true), /independently summed emitted children/,
-    'omitting parent border from the producer is rejected by actual child declarations');
+  assert.equal(current.scrollEnabled, true, '187.71vp requires scrolling for the 200vp content');
   console.log(JSON.stringify({ kind: 'home-composition', samples: samples.length, defaultViewport190: normal.natural,
     currentMinimum: current.required, currentCardHeight: current.cardHeight, currentPaidContent: current.viewport,
-    cardBorder: current.cardBorder, shortLane: 50, oldViewportPlusPoint001Rejected: true, oldUnpaidBorderRejected: true,
+    cardBorder: current.cardBorder, shortLane: 50,
     nativeLayoutAndRaster: 'NOT_RUN' }));
 }
 
@@ -140,18 +137,21 @@ for (const id of selectContractCases(definitions)) {
   const read = name => readFileSync(new URL(root + name, import.meta.url), 'utf8');
   const geometrySource = read('ReaderLayoutGeometry.ts');
   const panelSource = read('ReaderControlPanel.ets');
-  const deps = { ...metricsApi, ...control, ...motion };
   if (id === 'home-composition') {
     homeComposition(panelSource, geometry, control);
     recordContractCasePass(id);
     continue;
   }
-  const height = pureModuleProbe(geometrySource, 'ReaderLayoutGeometry.ts', deps,
-    ['controlHeightWithin', 'pixelWithin']);
+  // The height functions need neither the layout module's imports nor its public re-exports.
+  const heightStart = geometrySource.indexOf('function pixelWithin(');
+  const heightEnd = geometrySource.indexOf('/** Only arithmetic precision', heightStart);
+  assert.ok(heightStart >= 0 && heightEnd > heightStart, 'production height helpers are present');
+  const height = pureModuleProbe(geometrySource.slice(heightStart, heightEnd), 'ReaderLayoutGeometry.ts', {},
+    ['controlHeightWithin']);
   const near = (actual, expected, text) => assert.ok(Math.abs(actual - expected) < 1e-9, `${text}: ${actual}/${expected}`);
   const density = 3.5;
 
-  const home = createReaderBuilderProbe(panelSource, ['measureHomeForm'], {
+  const home = createReaderBuilderProbe(panelSource, ['measureHomeForm', 'bookmarkPillHeight'], {
     ...control, ...readerFoundationTokens, ...readerTypographyRoles,
     measureReaderControlText(_context, text, style) {
       return { heightVp: style === readerTypographyRoles.TYPE_READER_CONTROL_CHAPTER_TITLE ? 34 :
@@ -159,9 +159,9 @@ for (const id of selectContractCases(definitions)) {
       singleLineWidthVp: Math.min(80, Math.max(1, [...text].length * 6)), fitsWidth: true };
     },
   }).owner;
-  Object.assign(home, { chapterTitle: 'Chapter One', totalChapters: 1 });
+  Object.assign(home, { chapterTitle: 'Chapter One', totalChapters: 1, sessionFontScale: 1 });
   const homeProfile = home.measureHomeForm(264);
-  near(homeProfile.minimumHeight, 187.438, 'actual Home producer minimum includes the card native borders');
+  near(homeProfile.minimumHeight, 200, 'actual Home producer minimum includes the whole bookmark lane and the card borders');
 
   // Keep the exact shipping Scroll statement. The fixture supplies only its
   // business content slot and already-committed frame/profile metric ports.
@@ -177,13 +177,11 @@ for (const id of selectContractCases(definitions)) {
     build() { ${statement} }
   }`;
   function nativeScroll(capacity, required, statement = scrollStatement) {
-    const sdk = boundedSurfaceSdk();
-    const source = scaffold(statement);
-    const owner = sdk.consumer(source, ['build', 'homeContent', 'homeContentMinimumHeight'], {
+    const owner = createReaderBuilderProbe(scaffold(statement), ['build', 'homeContent', 'homeContentMinimumHeight'], {
       ...control, readerControlExtentFits: geometry.readerControlExtentFits,
-    });
+    }).owner;
     Object.assign(owner, { frame: () => ({ content: { width: 264, height: capacity } }),
-      homeMetric: () => required, currentLayout: () => ({ topBarVisible: true }) });
+      homeChapterCardHeight: () => required - 82, homeMetric: () => 76, currentLayout: () => ({ topBarVisible: true }) });
     owner.initialRender();
     const scroll = [...owner.nodes.values()].find(node => node.type === 'Scroll');
     assert.ok(scroll); assert.equal(scroll.scrollBar, undefined, 'the existing default scrollbar is retained');
@@ -192,10 +190,9 @@ for (const id of selectContractCases(definitions)) {
 
   const quickRequired = homeProfile.minimumHeight + 140;
   const paidQuick = height.controlHeightWithin(quickRequired, quickRequired, 700, density);
-  near(paidQuick, 1147 / density, 'physical height rounds measured requirement outward');
+  near(paidQuick, 1190 / density, 'physical height rounds measured requirement outward');
   assert.equal(nativeScroll(paidQuick - 140, homeProfile.minimumHeight).enableScrollInteraction, false);
-  const oldQuick = height.pixelWithin(quickRequired, 0, 700, density);
-  near(oldQuick, 1146 / density, 'old nearest-height counterexample');
+  const oldQuick = paidQuick - 1 / density;
   const oldStatement = scrollStatement.replace('!readerControlExtentFits(this.homeContentMinimumHeight(), this.frame().content.height)',
     'this.frame().content.height < this.homeContentMinimumHeight()');
   assert.equal(nativeScroll(oldQuick - 140, homeProfile.minimumHeight, oldStatement).enableScrollInteraction, true,

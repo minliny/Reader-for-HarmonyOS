@@ -57,7 +57,7 @@ export function migrateLegacyReaderThemeSelection(
   };
 }
 export interface ReaderThemeRestoreResult { selection: ReaderThemeSelection; fallbackReason: string; }
-export type ReaderThemeIntent = 'app' | 'reader' | 'system' | 'default';
+export type ReaderThemeIntent = 'app' | 'reader' | 'manga' | 'system' | 'default';
 export function effectiveAppScheme(selection: ReaderThemeSelection, systemScheme: ReaderThemeScheme): ReaderThemeScheme {
   return selection.appThemeMode === 'system' ? systemScheme : selection.appThemeMode;
 }
@@ -79,6 +79,12 @@ export function reduceReaderThemeSelection(
     next.readerThemeId = theme.id;
     // Same scheme preserves system mode and the user's specific reading choice.
     if (theme.scheme !== effectiveAppScheme(current, systemScheme)) next.appThemeMode = theme.scheme;
+  } else if (intent === 'manga') {
+    if (value !== 'day' && value !== 'night') return next;
+    if (value !== effectiveAppScheme(current, systemScheme)) next.appThemeMode = value;
+    if (readerThemeDefinition(current.readerThemeId).scheme !== value) {
+      next.readerThemeId = value === 'day' ? next.defaultDayReaderThemeId : next.defaultNightReaderThemeId;
+    }
   } else if (intent === 'default') {
     // The default action belongs to the already selected theme, never a hidden slot.
     const theme = readerThemeDefinition(current.readerThemeId);

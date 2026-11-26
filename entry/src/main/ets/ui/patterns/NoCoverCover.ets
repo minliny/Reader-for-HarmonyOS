@@ -1,91 +1,70 @@
-import { TYPE_SHELF_COVER_PLACEHOLDER } from '../foundation/ReaderTypography';
+import { TYPE_SHELF_COVER_PLACEHOLDER, TYPE_SHELF_SELECTION_AUTHOR_WIDE } from '../foundation/ReaderTypography';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
-import {
-  TOK_BORDER,
-  TOK_BORDER_W,
-  TOK_INK,
-  TOK_META_BG,
-} from '../foundation/ReaderTokens';
-/**
- * Figma `Library/BookCover` `Book=NoCover` variant (`3612:1796`): cream
- * `#F5ECE6` background, two horizontal rules, and a centered label
- * (Noto Serif SC Bold 15, ink `#1F1B17`). The BookCover canvas is
- * 96.96 × 145.44; every element scales proportionally with the instance.
- *
- * The centered label is data-bound through `glyph` (default "暂无封面").
- * The visual skeleton — paper, rules, font, size, color, border — stays
- * exactly as the Figma variant defines; only the label content varies so
- * cover-less books are distinguishable. See docs/issues/bookshelf-cover-and-title-20261120.md.
- */
 
-/**
- * Derive the centered placeholder glyph from a book title.
- * CJK titles keep the two leading characters for better discrimination;
- * Latin/digit titles use the uppercased initial. Empty titles fall back
- * to the Figma default label so the variant is never left blank.
- */
+/** The caller continues to own the book identity and accessible title. */
 export function noCoverGlyph(title: string | undefined): string {
-  const trimmed = (title ?? '').trim();
-  if (trimmed.length === 0) {
-    return '暂无封面';
-  }
-  const first = trimmed.charCodeAt(0);
-  if (first >= 0x4E00 && first <= 0x9FFF) {
-    return trimmed.slice(0, 2);
-  }
-  return trimmed.charAt(0).toUpperCase();
+  return title?.trim() || '暂无封面';
 }
 
 @Component
 export struct NoCoverCover {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-
-  @Prop coverWidth: number;
-  @Prop coverHeight: number;
+  @Prop coverWidth: number = 0;
+  @Prop coverHeight: number = 0;
   @Prop glyph: string = '暂无封面';
+  @Prop kindLabel: string = '';
 
   build() {
     Stack({ alignContent: Alignment.TopStart }) {
-      Text('')
-        .width(this.ruleWidth())
-        .height(1)
-        .backgroundColor(readerAppColor('app.cover.fallbackMask', this.appThemeScheme))
-        .borderRadius(0.5)
-        .position({ x: (this.coverWidth - this.ruleWidth()) / 2, y: 52 / 145.44 * this.coverHeight });
+      Row().width(this.x(2)).height(this.coverHeight)
+        .backgroundColor(readerAppColor('TOK_LINE_STRONG', this.appThemeScheme))
+        .position({ x: this.x(6), y: 0 });
 
-      Text(this.glyph)
-        .width(this.labelWidth())
-        .fontFamily(TYPE_SHELF_COVER_PLACEHOLDER.fontFamily)
-        .fontWeight(TYPE_SHELF_COVER_PLACEHOLDER.fontWeight)
-        .fontSize(`${TYPE_SHELF_COVER_PLACEHOLDER.fontSizeFp * this.coverWidth / 96.96}vp`)
-        .lineHeight(`${(TYPE_SHELF_COVER_PLACEHOLDER.lineHeightFp as number) * this.coverWidth / 96.96}vp`)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .textAlign(TextAlign.Center)
-        .position({ x: (this.coverWidth - this.labelWidth()) / 2, y: 63.57 / 145.44 * this.coverHeight })
-        .maxLines(1)
-        // 读屏名称由整卡的 ReaderActionAccessibility 提供完整书名；占位首字不重复朗读。
-        .accessibilityLevel('no');
+      Row().width(this.x(68)).height(this.y(104)).borderRadius(this.scaleCoverUnit(2.5))
+        .border({ width: this.scaleCoverUnit(1), color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
+        .position({ x: this.x(11), y: this.y(10) });
+      Row().width(this.x(61)).height(this.y(97)).borderRadius(this.scaleCoverUnit(1.5))
+        .border({ width: this.scaleCoverUnit(0.7), color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+        .position({ x: this.x(14.5), y: this.y(13.5) });
 
-      Text('')
-        .width(this.ruleWidth())
-        .height(1)
-        .backgroundColor(readerAppColor('app.cover.fallbackMask', this.appThemeScheme))
-        .borderRadius(0.5)
-        .position({ x: (this.coverWidth - this.ruleWidth()) / 2, y: 92.44 / 145.44 * this.coverHeight });
+      Row().width(this.scaleCoverUnit(10)).height(this.scaleCoverUnit(10)).borderRadius(this.scaleCoverUnit(2))
+        .backgroundColor(readerAppColor('app.status.sealSoft', this.appThemeScheme))
+        .border({ width: this.scaleCoverUnit(0.7), color: readerAppColor('TOK_ACCENT', this.appThemeScheme) })
+        .position({ x: this.x(61), y: this.y(18) });
+
+      Stack({ alignContent: Alignment.Center }) {
+        Text(this.glyph.trim() || '暂无封面')
+          .width('100%')
+          .fontFamily(TYPE_SHELF_COVER_PLACEHOLDER.fontFamily)
+          .fontWeight(TYPE_SHELF_COVER_PLACEHOLDER.fontWeight)
+          .fontSize(`${this.scaleCoverUnit(12.5)}vp`)
+          .lineHeight(`${this.scaleCoverUnit(16)}vp`)
+          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
+          .textAlign(TextAlign.Center)
+          .maxLines(2)
+          .textOverflow({ overflow: TextOverflow.Ellipsis });
+      }.width(this.x(58)).height(this.y(43))
+        .position({ x: this.x(16), y: this.y(33) });
+
+      Text(this.kindLabel.trim().length > 0 ? `无封面 · ${this.kindLabel}` : '无封面')
+        .width(this.x(58)).textAlign(TextAlign.Center)
+        .fontFamily(TYPE_SHELF_SELECTION_AUTHOR_WIDE.fontFamily).fontWeight(TYPE_SHELF_SELECTION_AUTHOR_WIDE.fontWeight)
+        .fontSize(`${this.scaleCoverUnit(7)}vp`)
+        .lineHeight(`${this.scaleCoverUnit(10)}vp`)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+        .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+        .position({ x: this.x(16), y: this.y(89) });
     }
     .width(this.coverWidth)
     .height(this.coverHeight)
-    .backgroundColor(readerAppColor('TOK_META_BG', this.appThemeScheme))
-    .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_BORDER', this.appThemeScheme) })
+    .backgroundColor(readerAppColor('TOK_FIELD_SURFACE', this.appThemeScheme))
     .borderRadius(8)
-    .clip(true);
+    .clip(true)
+    .hitTestBehavior(HitTestMode.None)
+    .accessibilityLevel('no-hide-descendants');
   }
 
-  private ruleWidth(): number {
-    return 40 / 96.96 * this.coverWidth;
-  }
-
-  private labelWidth(): number {
-    return 72 / 96.96 * this.coverWidth;
-  }
+  private x(units: number): number { return units * this.coverWidth / 90; }
+  private y(units: number): number { return units * this.coverHeight / 124; }
+  private scaleCoverUnit(units: number): number { return units * Math.min(this.coverWidth / 90, this.coverHeight / 124); }
 }

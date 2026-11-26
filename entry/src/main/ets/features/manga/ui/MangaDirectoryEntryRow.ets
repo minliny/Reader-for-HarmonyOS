@@ -1,20 +1,24 @@
+import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor, mangaDirectoryScale } from './MangaDirectoryVisual';
 import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { MangaDirectoryPressFeedback } from '../../../ui/foundation/MangaDirectoryPressFeedback';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import type { LocalReadingTocEntry } from '../../reading/application/LocalReadingFlowGateway';
 import type { MangaDirectoryRowPresentation } from '../presentation/MangaDirectoryPresentation';
 import { mangaDirectoryDisplay } from './MangaDirectoryDisplay';
 import { mangaDirectoryDownloadStatusText } from './MangaDirectoryState';
 import type { MangaDirectoryLayoutRow, MangaDirectoryLabel } from './MangaDirectoryLayout';
-import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550,
-  READER_FONT_NOTO_SANS_SC_UI_600 } from '../../../ui/foundation/ReaderFontFamilies';
+import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
+  READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../../../ui/foundation/ReaderFontFamilies';
 
 /** Shared manga row content. The owning directory retains admission, folding,
  * download and canonical-target validation; this component owns only painting. */
 @Component
 export struct MangaDirectoryEntryRow {
-  @Prop row: MangaDirectoryLayoutRow = { kind: 'row', columns: 1, startIndex: 0, entries: [], labels: [] };
+  @State private pressEntryIndex: number = -1;
+  private pressPointer: number = -1;
+  @Prop @Watch('clearPress') row: MangaDirectoryLayoutRow = { kind: 'row', columns: 1, startIndex: 0, entries: [], labels: [] };
   @Prop presentation: Map<number, MangaDirectoryRowPresentation> = new Map<number, MangaDirectoryRowPresentation>();
   @Prop scheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private windowMetricsRevision: number = 0;
@@ -23,12 +27,31 @@ export struct MangaDirectoryEntryRow {
   @Prop collapsedBranches: number[] = [];
   @Prop query: string = '';
   @Prop showContext: boolean = false;
-  @Prop interactionEnabled: boolean = true;
+  @Prop @Watch('clearPress') interactionEnabled: boolean = true;
   @Prop chapterDownloadEnabled: boolean = false;
   @Prop branchControlsEnabled: boolean = true;
   onSelectEntry: (entry: LocalReadingTocEntry) => void = (_entry: LocalReadingTocEntry): void => {};
   onToggleBranch: (entry: LocalReadingTocEntry) => void = (_entry: LocalReadingTocEntry): void => {};
   onDownloadEntry: (entry: LocalReadingTocEntry) => void = (_entry: LocalReadingTocEntry): void => {};
+
+  aboutToDisappear(): void { this.clearPress(); }
+
+  private clearPress(): void { this.pressEntryIndex = -1; this.pressPointer = -1; }
+
+  private rowActionEnabled(entry: LocalReadingTocEntry): boolean {
+    if (!this.interactionEnabled) return false;
+    if (this.facts(entry)?.group === true) return this.branchControlsEnabled && this.query.trim().length === 0;
+    const current = this.liveEntry(entry);
+    return current !== undefined && current.navigable !== false;
+  }
+
+  private observePress(event: TouchEvent, entry: LocalReadingTocEntry): void {
+    if (this.pressEntryIndex >= 0 && this.pressEntryIndex !== entry.index) return;
+    const next = readerPressPointer(event, this.pressPointer, this.rowActionEnabled(entry));
+    if (next === this.pressPointer) return;
+    this.pressPointer = next;
+    readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.pressEntryIndex = next < 0 ? -1 : entry.index; });
+  }
 
   /** ForEach retains its keyed Builder arguments. Only their canonical index
    * is stable; every painted fact and action must read the current row Prop. */
@@ -123,7 +146,7 @@ export struct MangaDirectoryEntryRow {
           .width(grid ? 12 : 15).height(grid ? 12 : 15).accessibilityLevel('no');
       }.width(grid ? MANGA_DIRECTORY_VISUAL.downloadGridWidth : 44).height(grid ? this.cellHeight() - MANGA_DIRECTORY_VISUAL.gridBorder * 2 :
         Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.fontScale()))
-        .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
+        .padding(0).attributeModifier(new ReaderPressFeedback(Color.Transparent, this.scheme, 0, 0, this.interactionEnabled))
         .accessibilityText(`管理${this.title(entry)}下载`)
         .enabled(this.interactionEnabled)
         .onClick((): void => {
@@ -144,9 +167,9 @@ export struct MangaDirectoryEntryRow {
       Row() {
         Row({ space: 0 }) {
           Text(this.liveLabel(entry)?.numberText ?? '').constraintSize({ minWidth: 0 }).flexShrink(1)
-            .fontFamily(this.current(entry) ? READER_FONT_NOTO_SANS_SC_UI_550 : READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+            .fontFamily(this.current(entry) ? READER_FONT_NOTO_SANS_SC_UI_MEDIUM : READER_FONT_NOTO_SANS_SC_UI_REGULAR)
             .minFontScale(Math.min(1, this.fontScale())).maxFontScale(Math.max(1, this.fontScale())).halfLeading(true).fontSize(MANGA_DIRECTORY_VISUAL.namedFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.namedLineHeight)
-            .fontWeight(this.current(entry) ? MANGA_DIRECTORY_VISUAL.currentFontWeight : MANGA_DIRECTORY_VISUAL.bodyFontWeight, { enableVariableFontWeight: true }).maxLines(1)
+            .fontWeight(this.current(entry) ? MANGA_DIRECTORY_VISUAL.currentFontWeight : MANGA_DIRECTORY_VISUAL.bodyFontWeight).maxLines(1)
             .fontColor(this.color(this.current(entry) ? 'accent' : 'ink'));
           if (this.liveLabel(entry)?.kind === 'parts') {
             Text(` · ${this.liveLabel(entry)?.part ?? ''}`).flexShrink(0).maxLines(1)
@@ -172,9 +195,14 @@ export struct MangaDirectoryEntryRow {
       }
     }.layoutWeight(1).constraintSize({ minWidth: 0, minHeight: this.cellHeight() })
       .border({ width: MANGA_DIRECTORY_VISUAL.gridBorder, color: this.color('line') }).borderRadius(MANGA_DIRECTORY_VISUAL.gridRadius)
-      .backgroundColor(this.color(this.current(entry) ? 'active' : 'soft'))
-      .attributeModifier(new MangaDirectoryPressFeedback(this.interactionEnabled, true, this.scheme))
+      .backgroundColor(readerPressSurface(this.color(this.current(entry) ? 'active' : 'soft'), this.scheme,
+        this.pressEntryIndex === entry.index, this.reduceMotion))
+      .scale(readerPressScale(this.pressEntryIndex === entry.index, this.reduceMotion))
+      .opacity(readerPressOpacity(this.pressEntryIndex === entry.index, this.reduceMotion,
+        this.interactionEnabled ? 1 : MANGA_DIRECTORY_VISUAL.disabledOpacity))
+      .attributeModifier(new MangaDirectoryPressFeedback(this.interactionEnabled, true, this.scheme, 'custom', true))
       .enabled(this.interactionEnabled).accessibilityText(this.accessibility(entry))
+      .onTouch((event: TouchEvent): void => this.observePress(event, entry))
       .onClick((): void => this.activateEntry(entry));
   }
 
@@ -182,9 +210,10 @@ export struct MangaDirectoryEntryRow {
   private branchToggle(entry: LocalReadingTocEntry) {
     if (this.branchControlsEnabled && this.facts(entry)?.hasChildren === true) {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Image(this.scheme === 'night' ? $r('app.media.manga_sheet_chevron_down_theme_night') :
-          $r('app.media.manga_sheet_chevron_down')).width(16).height(16)
-          .rotate({ angle: this.expanded(entry) ? 0 : -90 }).animation(readerMotionAnimateParam('manga.directory.fold', this.reduceMotion)).accessibilityLevel('no');
+        Image(this.reduceMotion && !this.expanded(entry) ?
+          (this.scheme === 'night' ? $r('app.media.manga_sheet_chevron_right_theme_night') : $r('app.media.manga_sheet_chevron_right')) :
+          (this.scheme === 'night' ? $r('app.media.manga_sheet_chevron_down_theme_night') : $r('app.media.manga_sheet_chevron_down')))
+          .width(16).height(16).rotate({ angle: this.reduceMotion || this.expanded(entry) ? 0 : -90 }).animation(readerMotionAnimateParam('manga.directory.fold', this.reduceMotion)).accessibilityLevel('no');
       }.width(44).height(44)
         .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
         .margin({ left: this.facts(entry)?.group === true ? 0 : 8, right: this.facts(entry)?.group === true ? 0 : 8 })
@@ -219,12 +248,12 @@ export struct MangaDirectoryEntryRow {
       Column({ space: MANGA_DIRECTORY_VISUAL.contentGap }) {
         Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Baseline }) {
           Text(this.title(entry)).wordBreak(WordBreak.BREAK_WORD).flexShrink(1).constraintSize({ minWidth: 0 })
-            .fontFamily(this.facts(entry)?.group === true ? READER_FONT_NOTO_SANS_SC_UI_600 :
-              this.current(entry) ? READER_FONT_NOTO_SANS_SC_UI_550 : READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+            .fontFamily(this.facts(entry)?.group === true ? READER_FONT_NOTO_SANS_SC_UI_BOLD :
+              this.current(entry) ? READER_FONT_NOTO_SANS_SC_UI_MEDIUM : READER_FONT_NOTO_SANS_SC_UI_REGULAR)
             .minFontScale(Math.min(1, this.fontScale())).maxFontScale(Math.max(1, this.fontScale())).halfLeading(true).fontSize(MANGA_DIRECTORY_VISUAL.namedFontSize)
             .lineHeight(this.facts(entry)?.group === true ? MANGA_DIRECTORY_VISUAL.groupLineHeight : MANGA_DIRECTORY_VISUAL.namedLineHeight)
             .fontWeight(this.facts(entry)?.group === true ? MANGA_DIRECTORY_VISUAL.groupFontWeight :
-              this.current(entry) ? MANGA_DIRECTORY_VISUAL.currentFontWeight : MANGA_DIRECTORY_VISUAL.bodyFontWeight, { enableVariableFontWeight: true })
+              this.current(entry) ? MANGA_DIRECTORY_VISUAL.currentFontWeight : MANGA_DIRECTORY_VISUAL.bodyFontWeight)
             .fontColor(this.color(this.current(entry) ? 'accent' : 'ink'));
           if (this.facts(entry)?.group === true && this.facts(entry)?.countComplete === true) {
             Text(`${this.facts(entry)?.readableDescendantCount} 个可读条目`)
@@ -275,13 +304,18 @@ export struct MangaDirectoryEntryRow {
       .margin({ top: this.row.groupSpacing ?? 0 })
       .border({ width: { bottom: this.facts(entry)?.group === true ||
         this.branchControlsEnabled && this.facts(entry)?.readableParent === true ? 0 : MANGA_DIRECTORY_VISUAL.gridBorder }, color: this.color('line') })
-      .backgroundColor(this.current(entry) ? this.color('active') : this.facts(entry)?.group === true ? this.color('soft') : Color.Transparent)
-      .opacity(this.liveEntry(entry)?.navigable === false && this.facts(entry)?.group !== true ? MANGA_DIRECTORY_VISUAL.disabledOpacity : 1)
+      .backgroundColor(readerPressSurface(this.current(entry) ? this.color('active') : this.facts(entry)?.group === true ? this.color('soft') : Color.Transparent,
+        this.scheme, this.pressEntryIndex === entry.index, this.reduceMotion))
+      .scale(readerPressScale(this.pressEntryIndex === entry.index, this.reduceMotion))
+      .opacity(readerPressOpacity(this.pressEntryIndex === entry.index, this.reduceMotion,
+        this.liveEntry(entry)?.navigable === false && this.facts(entry)?.group !== true ? MANGA_DIRECTORY_VISUAL.disabledOpacity : 1))
+
       .attributeModifier(new MangaDirectoryPressFeedback(this.interactionEnabled &&
         (this.facts(entry)?.group === true ? this.branchControlsEnabled && this.query.trim().length === 0 : this.liveEntry(entry) !== undefined && this.liveEntry(entry)?.navigable !== false),
-        this.facts(entry)?.group !== true || this.interactionEnabled && this.branchControlsEnabled && this.query.trim().length === 0, this.scheme))
+        this.facts(entry)?.group !== true || this.interactionEnabled && this.branchControlsEnabled && this.query.trim().length === 0, this.scheme, 'custom', true))
       .enabled(this.interactionEnabled && (this.facts(entry)?.group === true ? this.branchControlsEnabled && this.query.trim().length === 0 : this.liveEntry(entry) !== undefined && this.liveEntry(entry)?.navigable !== false))
-      .accessibilityText(this.accessibility(entry)).onClick((): void => this.activateEntry(entry));
+      .accessibilityText(this.accessibility(entry)).onTouch((event: TouchEvent): void => this.observePress(event, entry))
+      .onClick((): void => this.activateEntry(entry));
   }
 
   private emptySlots(): number[] {

@@ -1,19 +1,21 @@
+import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryDataSnapshot';
 import type { ReaderDirectoryTargetProof } from '../application/ReaderDirectoryTargetProof';
 import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { mangaDirectoryDisplay } from '../../manga/ui/MangaDirectoryDisplay';
 import { mangaDirectoryDownloadStatusText, mangaDirectoryDownloadStatusWidth } from '../../manga/ui/MangaDirectoryState';
-import { TYPE_APP_INHERITED_HINT, TYPE_READER_DIRECTORY_DISCLOSURE, TYPE_READER_DIRECTORY_TITLE } from '../../../ui/foundation/ReaderTypography';
+import { TYPE_APP_INHERITED_HINT, TYPE_READER_DIRECTORY_TITLE } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
-import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_550,
-  READER_FONT_NOTO_SANS_SC_UI_600 } from '../../../ui/foundation/ReaderFontFamilies';
+import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
+  READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../../../ui/foundation/ReaderFontFamilies';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { MANGA_DIRECTORY_VISUAL, mangaDirectoryColor, mangaDirectoryScale } from '../../manga/ui/MangaDirectoryVisual';
 import { MangaDirectoryPressFeedback } from '../../../ui/foundation/MangaDirectoryPressFeedback';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { ReaderDirectoryNavigationGateway, type ReaderDirectoryNavigationPort, type ReaderDirectoryNavigationPortFactory, readerDirectoryScopeKey, type ReaderDirectoryNavigationNode,
   type ReaderDirectoryNavigationReady, type ReaderDirectoryNavigationPage } from '../application/ReaderDirectoryNavigation';
@@ -298,6 +300,8 @@ export struct ReaderDirectoryNavigationList {
   @Prop @Watch('onPrefixReveal') prefixRevealRevision: number = 0;
   @BuilderParam prefixBuilder: () => void = this.emptyPrefix;
   @BuilderParam mangaTailBuilder: () => void = this.emptyPrefix;
+  @Prop tailHeight: number = 0;
+  @BuilderParam tailBuilder: () => void = this.emptyPrefix;
   @BuilderParam emptyBuilder: () => void = this.emptyPrefix;
   @Prop emptyReadStateVisible: boolean = false;
   scroller: Scroller | undefined = undefined;
@@ -319,6 +323,8 @@ export struct ReaderDirectoryNavigationList {
   /** Optional dependency only; absent callers keep the production Gateway. */
   navigationPortFactory: ReaderDirectoryNavigationPortFactory | undefined = undefined;
   private gateway: ReaderDirectoryNavigationPort | undefined = undefined;
+  @State private chapterPressKey: string = '';
+  private chapterPressPointer: number = -1;
   private mounted: boolean = false;
   private generation: number = 0;
   private layoutReady: boolean = false;
@@ -379,6 +385,7 @@ export struct ReaderDirectoryNavigationList {
   }
 
   aboutToDisappear(): void {
+    this.clearChapterPress();
     this.captureViewportAnchor();
     this.scrollCommandUnsubscribe?.();
     this.scrollCommandUnsubscribe = undefined;
@@ -399,6 +406,7 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private onViewChanged(): void {
+    this.clearChapterPress();
     if (!this.mounted) return;
     if (this.dataSource.currentView()?.viewId === this.view.viewId) return;
     if (!this.prefixChangePending) this.captureViewportAnchor();
@@ -437,6 +445,7 @@ export struct ReaderDirectoryNavigationList {
   }
 
   private onInteractionChanged(): void {
+    if (!this.interactionEnabled) this.clearChapterPress();
     if (!this.mounted) return;
     if (!this.interactionEnabled) {
       this.retirePrefixPosition();
@@ -577,7 +586,7 @@ export struct ReaderDirectoryNavigationList {
     }
     if (this.view.locateCurrent && this.view.currentVisibleIndex !== undefined)
       return { viewId: this.view.viewId, index: this.view.currentVisibleIndex,
-        rowFraction: 0, align: this.mangaDisplay ? ScrollAlign.START : ScrollAlign.CENTER,
+        rowFraction: 0, align: this.mangaDisplay && this.view.currentDisplayCentered !== true ? ScrollAlign.START : ScrollAlign.CENTER,
         currentInset: this.mangaDisplay ? (this.view.currentDisplayInset ?? 12) : undefined,
         smooth: this.mangaDisplay && this.view.currentDisplaySmooth === true };
     const anchor = readerDirectoryViewportAnchor(readerDirectoryScopeKey(this.sourceId, this.bookId));
@@ -1244,9 +1253,9 @@ export struct ReaderDirectoryNavigationList {
         Row({ space: 0 }) {
           Row({ space: 0 }) {
             Text(this.mangaCellPlacement(item)?.labels[this.mangaCellOrdinal(item)]?.numberText ?? item.node?.title ?? '…')
-              .fontFamily(this.isCurrentMangaNode(item) ? READER_FONT_NOTO_SANS_SC_UI_550 : READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+              .fontFamily(this.isCurrentMangaNode(item) ? READER_FONT_NOTO_SANS_SC_UI_MEDIUM : READER_FONT_NOTO_SANS_SC_UI_REGULAR)
               .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true).fontSize(MANGA_DIRECTORY_VISUAL.namedFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.namedLineHeight)
-              .fontWeight(this.isCurrentMangaNode(item) ? MANGA_DIRECTORY_VISUAL.currentFontWeight : MANGA_DIRECTORY_VISUAL.bodyFontWeight, { enableVariableFontWeight: true })
+              .fontWeight(this.isCurrentMangaNode(item) ? MANGA_DIRECTORY_VISUAL.currentFontWeight : MANGA_DIRECTORY_VISUAL.bodyFontWeight)
               .fontColor(this.mangaColor(this.isCurrentMangaNode(item) ? 'accent' : 'ink'))
               .maxLines(1);
             if (this.mangaQuickDisplay && !this.mangaSearchActive && item.node?.kind === 'group') this.mangaQuickContextRow(item);
@@ -1297,12 +1306,17 @@ export struct ReaderDirectoryNavigationList {
       }.width(this.mangaCellWidth(item)).height(this.mangaCellHeight())
         .padding({ left: MANGA_DIRECTORY_VISUAL.gridPaddingX, right: MANGA_DIRECTORY_VISUAL.gridPaddingX })
         .border({ width: MANGA_DIRECTORY_VISUAL.gridBorder, color: this.mangaColor('line') }).borderRadius(MANGA_DIRECTORY_VISUAL.gridRadius)
-        .backgroundColor(this.mangaColor(this.isCurrentMangaNode(item) ? 'active' : 'soft'))
+        .backgroundColor(readerPressSurface(this.mangaColor(this.isCurrentMangaNode(item) ? 'active' : 'soft'),
+          this.mangaPressScheme(), this.chapterPressKey === item.key, this.reduceMotion))
+        .scale(readerPressScale(this.chapterPressKey === item.key, this.reduceMotion))
+        .opacity(readerPressOpacity(this.chapterPressKey === item.key, this.reduceMotion,
+          this.interactionEnabled ? 1 : MANGA_DIRECTORY_VISUAL.disabledOpacity))
         .enabled(this.interactionEnabled)
-        .attributeModifier(new ReaderActionAccessibility(this.mangaRowAccessibility(item, true), this.interactionEnabled, false, true, new MangaDirectoryPressFeedback(this.interactionEnabled, true, this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme)))
+        .attributeModifier(new ReaderActionAccessibility(this.mangaRowAccessibility(item, true), this.interactionEnabled, false, true, new MangaDirectoryPressFeedback(this.interactionEnabled, true, this.mangaPressScheme(), 'custom', true)))
         .enabled(this.interactionEnabled)
         .accessibilityText(this.mangaRowAccessibility(item, true))
       .responseRegion( readerActionTouchRegion(this.mangaCellWidth(item), this.mangaCellHeight()))
+        .onTouch((event: TouchEvent): void => this.observeChapterPress(event, item.key, this.interactionEnabled))
         .onClick((): void => this.selectMangaRow(item));
     }.width('100%').justifyContent(FlexAlign.Start)
       .visibility(this.mangaRowAdmitted(item) ? Visibility.Visible : Visibility.Hidden)
@@ -1320,7 +1334,7 @@ export struct ReaderDirectoryNavigationList {
           Image((this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme) === 'night' ?
             $r('app.media.manga_sheet_chevron_down_theme_night') : $r('app.media.manga_sheet_chevron_down'))
             .width(MANGA_DIRECTORY_VISUAL.groupIconSize).height(MANGA_DIRECTORY_VISUAL.groupIconSize)
-            .rotate({ angle: this.mangaGroupNode(item.node).expanded ? 0 : -90 })
+            .rotate({ angle: this.reduceMotion || this.mangaGroupNode(item.node).expanded ? 0 : -90 })
             .animation(readerMotionAnimateParam('manga.directory.fold', this.reduceMotion)).accessibilityLevel('no');
         }.width(44).height(44).padding(0).borderRadius(0).backgroundColor(Color.Transparent).margin({ left: 8, right: 8 })
           .enabled(this.interactionEnabled && !this.mangaSearchActive)
@@ -1345,7 +1359,7 @@ export struct ReaderDirectoryNavigationList {
         if (item.node.kind === 'group') {
           Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Baseline }) {
             Text(this.mangaTitle(item.node)).flexShrink(1).constraintSize({ minWidth: 0 })
-              .fontFamily(READER_FONT_NOTO_SANS_SC_UI_600).minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true).fontSize(MANGA_DIRECTORY_VISUAL.groupFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.groupLineHeight)
+              .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true).fontSize(MANGA_DIRECTORY_VISUAL.groupFontSize).lineHeight(MANGA_DIRECTORY_VISUAL.groupLineHeight)
               .fontWeight(MANGA_DIRECTORY_VISUAL.groupFontWeight).fontColor(this.mangaColor('ink'));
             if (this.mangaGroupNode(item.node).readableDescendantCount !== undefined) {
               Text(`${this.mangaGroupNode(item.node).readableDescendantCount} 个可读条目`).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
@@ -1357,12 +1371,12 @@ export struct ReaderDirectoryNavigationList {
         } else {
           Column({ space: MANGA_DIRECTORY_VISUAL.contentGap }) {
             Text(this.mangaTitle(item.node)).width('100%').wordBreak(WordBreak.BREAK_WORD)
-              // The fixed 550 face supplies the outlines. API 12 admits the
-              // matching non-hundred declaration without relying on a VF axis.
-              .fontFamily(this.isCurrentMangaNode(item) ? READER_FONT_NOTO_SANS_SC_UI_550 : READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+              // The static UI Medium face supplies the current-title outlines.
+              // Its explicit 500 weight stays aligned with the checked native face.
+              .fontFamily(this.isCurrentMangaNode(item) ? READER_FONT_NOTO_SANS_SC_UI_MEDIUM : READER_FONT_NOTO_SANS_SC_UI_REGULAR)
               .minFontScale(Math.min(1, this.mangaFontScale())).maxFontScale(Math.max(1, this.mangaFontScale())).halfLeading(true).fontSize(MANGA_DIRECTORY_VISUAL.namedFontSize)
               .lineHeight(MANGA_DIRECTORY_VISUAL.namedLineHeight)
-              .fontWeight(this.isCurrentMangaNode(item) ? MANGA_DIRECTORY_VISUAL.currentFontWeight : MANGA_DIRECTORY_VISUAL.bodyFontWeight, { enableVariableFontWeight: true })
+              .fontWeight(this.isCurrentMangaNode(item) ? MANGA_DIRECTORY_VISUAL.currentFontWeight : MANGA_DIRECTORY_VISUAL.bodyFontWeight)
               .fontColor(this.mangaColor(this.isCurrentMangaNode(item) ? 'accent' : 'ink'));
             if (this.mangaStatusText(item.node).length > 0) {
               Text(this.mangaStatusText(item.node)).width('100%').wordBreak(WordBreak.BREAK_WORD)
@@ -1401,7 +1415,9 @@ export struct ReaderDirectoryNavigationList {
             .enabled(this.canDownloadTarget(this.currentPaintNode(item.node)))
       .responseRegion( readerActionTouchRegion(44, Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.mangaFontScale())))
       .attributeModifier(new ReaderActionAccessibility(this.chapterDownloadActionsEnabled ? '管理本章下载' :
-              this.mangaChapter(item)?.downloadState === 'completed' ? '已下载' : '下载章节', this.canDownloadTarget(this.currentPaintNode(item.node)), false))
+              this.mangaChapter(item)?.downloadState === 'completed' ? '已下载' : '下载章节', this.canDownloadTarget(this.currentPaintNode(item.node)), false, true,
+              new ReaderPressFeedback(Color.Transparent, this.mangaPressScheme(), 0, 0,
+                this.canDownloadTarget(this.currentPaintNode(item.node))), 'nativeButton'))
             .onClick((): void => { if (item.node !== undefined) this.downloadTarget(this.currentPaintNode(item.node)); });
           }.width(44).height(Math.max(44, MANGA_DIRECTORY_VISUAL.namedLineHeight * this.mangaFontScale()))
             .focusable(false).accessibilityLevel('no').onClick((): void => {});
@@ -1410,12 +1426,14 @@ export struct ReaderDirectoryNavigationList {
           Button({ type: ButtonType.Normal, stateEffect: false }) {
           Image((this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme) === 'night' ?
             $r('app.media.manga_sheet_chevron_down_theme_night') : $r('app.media.manga_sheet_chevron_down'))
-            .width(16).height(16).rotate({ angle: this.mangaGroupNode(item.node).expanded ? 0 : -90 })
+            .width(16).height(16).rotate({ angle: this.reduceMotion || this.mangaGroupNode(item.node).expanded ? 0 : -90 })
             .animation(readerMotionAnimateParam('manga.directory.fold', this.reduceMotion)).accessibilityLevel('no');
           }.width(44).height(44).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
             .accessibilityText(`${this.mangaGroupNode(item.node).expanded ? '折叠' : '展开'}${this.mangaGroupNode(item.node).title}子目录`)
             .responseRegion(readerActionTouchRegion(44, 44))
-            .attributeModifier(new ReaderActionAccessibility(`${this.mangaGroupNode(item.node).expanded ? '折叠' : '展开'}${this.mangaGroupNode(item.node).title}子目录`, this.interactionEnabled && !this.mangaSearchActive, false))
+            .attributeModifier(new ReaderActionAccessibility(`${this.mangaGroupNode(item.node).expanded ? '折叠' : '展开'}${this.mangaGroupNode(item.node).title}子目录`, this.interactionEnabled && !this.mangaSearchActive, false, true,
+              new ReaderPressFeedback(Color.Transparent, this.mangaPressScheme(), 0, 0,
+                this.interactionEnabled && !this.mangaSearchActive), 'nativeButton'))
             .onClick((): void => this.toggleMangaRow(item));
         } else if (item.node.kind === 'target' && this.isCurrentMangaNode(item)) {
           Text('正在读').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(MANGA_DIRECTORY_VISUAL.bodyFontWeight)
@@ -1442,17 +1460,23 @@ export struct ReaderDirectoryNavigationList {
         bottom: item.node?.kind === 'group' || item.node?.kind === 'target' && item.node.hasChildren && !this.mangaQuickDisplay ?
           0 : MANGA_DIRECTORY_VISUAL.gridBorder },
         color: { top: this.mangaColor('line'), bottom: this.mangaColor('line') } })
-      .backgroundColor(item.node?.kind === 'target' && this.isCurrentMangaNode(item) ?
-        this.mangaColor('active') : item.node?.kind === 'group' ? this.mangaColor('soft') : Color.Transparent)
+      .backgroundColor(readerPressSurface(item.node?.kind === 'target' && this.isCurrentMangaNode(item) ?
+        this.mangaColor('active') : item.node?.kind === 'group' ? this.mangaColor('soft') : Color.Transparent,
+        this.mangaPressScheme(), this.chapterPressKey === item.key, this.reduceMotion))
       .visibility(this.mangaRowAdmitted(item) ? Visibility.Visible : Visibility.Hidden)
-      .opacity(item.node?.kind === 'disabled' ? MANGA_DIRECTORY_VISUAL.disabledOpacity : 1)
+      .scale(readerPressScale(this.chapterPressKey === item.key, this.reduceMotion))
+      .opacity(readerPressOpacity(this.chapterPressKey === item.key, this.reduceMotion,
+        item.node?.kind === 'disabled' || !this.interactionEnabled ? MANGA_DIRECTORY_VISUAL.disabledOpacity : 1))
+
       .enabled(this.interactionEnabled && item.node?.kind !== 'disabled' && !(item.node?.kind === 'group' && this.mangaSearchActive))
       .attributeModifier(new ReaderActionAccessibility(this.mangaRowAccessibility(item, false), this.interactionEnabled && item.node?.kind !== 'disabled' && !(item.node?.kind === 'group' && this.mangaSearchActive), false, true, new MangaDirectoryPressFeedback(this.interactionEnabled && item.node?.kind !== 'disabled' &&
         (item.node?.kind !== 'group' || !this.mangaSearchActive),
         item.node?.kind !== 'group' || this.interactionEnabled && !this.mangaSearchActive,
-        this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme)))
+        this.mangaPressScheme(), 'custom', true)))
       .accessibilityText(this.mangaRowAccessibility(item, false))
       .responseRegion( readerActionTouchRegion('100%', '100%'))
+      .onTouch((event: TouchEvent): void => this.observeChapterPress(event, item.key, this.interactionEnabled &&
+        item.node?.kind !== 'disabled' && !(item.node?.kind === 'group' && this.mangaSearchActive)))
       .onClick((): void => this.selectMangaRow(item));
   }
 
@@ -1463,6 +1487,23 @@ export struct ReaderDirectoryNavigationList {
       return `${node.nodeId === this.view.currentAncestorNodeId ? '当前章在此组，' : ''}第${this.displayLevel(node)}级分组：${node.title}，${node.expanded ? '已展开' : '已折叠'}`;
     }
     return `${node.nodeId === this.view.currentAncestorNodeId ? '当前章在此标题下，' : ''}第${this.displayLevel(node)}级，打开${node.title}`;
+  }
+
+  private clearChapterPress(): void {
+    this.chapterPressKey = '';
+    this.chapterPressPointer = -1;
+  }
+
+  private observeChapterPress(event: TouchEvent, key: string, enabled: boolean): void {
+    if (this.chapterPressKey.length > 0 && this.chapterPressKey !== key) return;
+    const next = readerPressPointer(event, this.chapterPressPointer, this.mounted && enabled);
+    if (next === this.chapterPressPointer) return;
+    this.chapterPressPointer = next;
+    readerAnimatePress(this.getUIContext(), this.reduceMotion, (): void => { this.chapterPressKey = next < 0 ? '' : key; });
+  }
+
+  private mangaPressScheme(): string {
+    return this.mangaScheme === 'theme-dark' ? 'night' : this.mangaScheme.length > 0 ? this.mangaScheme : this.appThemeScheme;
   }
 
   private verificationChapterSelectionId(item: ReaderDirectoryNavigationItem): string {
@@ -1477,7 +1518,7 @@ export struct ReaderDirectoryNavigationList {
   private row(item: ReaderDirectoryNavigationItem) {
     Row() {
       if (item.node === undefined) {
-        Text('…').fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
+        Text('…').fontFamily(TYPE_APP_INHERITED_HINT.fontFamily).fontWeight(TYPE_APP_INHERITED_HINT.fontWeight).fontSize(TYPE_APP_INHERITED_HINT.fontSizeFp).fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme));
       } else {
         if (this.isCurrentNode(item)) {
           Row().width(3).height(this.rowHeight).borderRadius(1.5)
@@ -1491,10 +1532,15 @@ export struct ReaderDirectoryNavigationList {
           .fontFamily(TYPE_READER_DIRECTORY_TITLE.fontFamily).fontSize(TYPE_READER_DIRECTORY_TITLE.fontSizeFp).fontWeight(TYPE_READER_DIRECTORY_TITLE.fontWeight)
           .fontColor(readerAppColor(this.currentPaintNode(item.node).kind === 'disabled' ? 'TOK_READ_MUTED' : 'TOK_READ_INK', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+          .backgroundColor(readerPressSurface(Color.Transparent, this.appThemeScheme, this.chapterPressKey === item.key, this.reduceMotion))
+          .scale(readerPressScale(this.chapterPressKey === item.key, this.reduceMotion))
+          .opacity(readerPressOpacity(this.chapterPressKey === item.key, this.reduceMotion))
           .accessibilityText(this.textRowAccessibility(item.node))
-          .responseRegion({ x: 0, y: 0, width: '100%', height: this.rowHeight })
+          .responseRegion(readerActionTouchRegion('100%', this.rowHeight))
           .attributeModifier(new ReaderActionAccessibility(this.textRowAccessibility(item.node),
             this.interactionEnabled && this.currentPaintNode(item.node).kind !== 'disabled', false))
+          .onTouch((event: TouchEvent): void => this.observeChapterPress(event, item.key, this.interactionEnabled &&
+            item.node !== undefined && this.currentPaintNode(item.node).kind !== 'disabled'))
           .onClick((): void => {
             const node = item.node === undefined ? undefined : this.currentPaintNode(item.node);
             if (node === undefined) return;
@@ -1503,14 +1549,14 @@ export struct ReaderDirectoryNavigationList {
           });
         if (this.currentPaintNode(item.node).hasChildren) {
           Button({ type: ButtonType.Normal, stateEffect: false }) {
-            Text(this.currentPaintNode(item.node).expanded ? '⌄' : '›')
-              .width(34).height(this.rowHeight).fontSize(TYPE_READER_DIRECTORY_DISCLOSURE.fontSizeFp)
-              .fontColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme))
-              .textAlign(TextAlign.Center).accessibilityLevel('no');
+            Image(this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'))
+              .width(16).height(16).rotate({ angle: this.currentPaintNode(item.node).expanded ? 90 : 0 })
+              .fillColor(readerAppColor('TOK_READ_MUTED', this.appThemeScheme)).accessibilityLevel('no');
           }.width(44).height(this.rowHeight).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
             .accessibilityText(`${this.currentPaintNode(item.node).expanded ? '折叠' : '展开'}${this.currentPaintNode(item.node).title}子目录`)
-      .responseRegion( { x: 0, y: 0, width: 44, height: this.rowHeight })
-      .attributeModifier(new ReaderActionAccessibility(`${this.currentPaintNode(item.node).expanded ? '折叠' : '展开'}${this.currentPaintNode(item.node).title}子目录`, true, false))
+      .responseRegion(readerActionTouchRegion(44, this.rowHeight))
+      .attributeModifier(new ReaderActionAccessibility(`${this.currentPaintNode(item.node).expanded ? '折叠' : '展开'}${this.currentPaintNode(item.node).title}子目录`, this.interactionEnabled, false, true,
+        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, this.interactionEnabled), 'nativeButton'))
             .onClick((): void => { if (item.node !== undefined) this.toggleNode(this.currentPaintNode(item.node)); });
         }
         if (this.currentPaintNode(item.node).kind === 'target' && this.currentPaintNode(item.node).chapterIndex !== undefined && this.chapterDownloadEnabled &&
@@ -1527,9 +1573,11 @@ export struct ReaderDirectoryNavigationList {
             .accessibilityText(this.chapterDownloadActionsEnabled ? '管理本章下载' :
               this.chapterByIndex.get(this.currentPaintNode(item.node).chapterIndex ?? -1)?.downloadState === 'completed' ? '已下载' : '下载章节')
             .enabled(this.canDownloadTarget(this.currentPaintNode(item.node)))
-      .responseRegion( { x: 0, y: 0, width: 44, height: this.rowHeight })
+      .responseRegion(readerActionTouchRegion(44, this.rowHeight))
       .attributeModifier(new ReaderActionAccessibility(this.chapterDownloadActionsEnabled ? '管理本章下载' :
-              this.chapterByIndex.get(this.currentPaintNode(item.node).chapterIndex ?? -1)?.downloadState === 'completed' ? '已下载' : '下载章节', this.canDownloadTarget(this.currentPaintNode(item.node)), false))
+              this.chapterByIndex.get(this.currentPaintNode(item.node).chapterIndex ?? -1)?.downloadState === 'completed' ? '已下载' : '下载章节', this.canDownloadTarget(this.currentPaintNode(item.node)), false, true,
+              new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0,
+                this.canDownloadTarget(this.currentPaintNode(item.node))), 'nativeButton'))
             .onClick((): void => { if (item.node !== undefined) this.downloadTarget(this.currentPaintNode(item.node)); });
         }
         if (this.currentPaintNode(item.node).kind === 'target' && this.currentPaintNode(item.node).chapterIndex !== undefined &&
@@ -1544,9 +1592,11 @@ export struct ReaderDirectoryNavigationList {
             .accessibilityText((this.chapterByIndex.get(this.currentPaintNode(item.node).chapterIndex ?? -1)?.bookmarks?.length ?? 0) > 0 ?
               '删除本章已有书签' : '添加本章章首书签')
             .enabled(this.bookmarkActionEnabled(this.chapterByIndex.get(this.currentPaintNode(item.node).chapterIndex ?? -1)))
-      .responseRegion( { x: 0, y: 0, width: 44, height: this.rowHeight })
+      .responseRegion(readerActionTouchRegion(44, this.rowHeight))
       .attributeModifier(new ReaderActionAccessibility((this.chapterByIndex.get(this.currentPaintNode(item.node).chapterIndex ?? -1)?.bookmarks?.length ?? 0) > 0 ?
-              '删除本章已有书签' : '添加本章章首书签', this.bookmarkActionEnabled(this.chapterByIndex.get(this.currentPaintNode(item.node).chapterIndex ?? -1)), false))
+              '删除本章已有书签' : '添加本章章首书签', this.bookmarkActionEnabled(this.chapterByIndex.get(this.currentPaintNode(item.node).chapterIndex ?? -1)), false, true,
+              new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0,
+                this.bookmarkActionEnabled(this.chapterByIndex.get(this.currentPaintNode(item.node).chapterIndex ?? -1))), 'nativeButton'))
             .onClick((): void => {
               const chapter = this.chapterByIndex.get(this.currentPaintNode(item.node!).chapterIndex ?? -1);
               if (chapter !== undefined) this.marker(chapter);
@@ -1613,9 +1663,9 @@ export struct ReaderDirectoryNavigationList {
       List({ space: 0, scroller: this.scroller }) {
       if (this.nativeHeaderCount() === 1) {
         ListItem() { this.prefixBuilder(); }.width('100%').constraintSize({ minHeight: Math.max(0, this.prefixHeight) });
-        if (this.view.visibleTotal === 0) {
-          ListItem() { this.emptyBuilder(); }.width('100%').constraintSize({ minHeight: 44 });
-        }
+      }
+      if (this.view.visibleTotal === 0 && (this.nativeHeaderCount() === 1 || this.tailHeight > 0)) {
+        ListItem() { this.emptyBuilder(); }.width('100%').constraintSize({ minHeight: 44 });
       }
       LazyForEach(this.dataSource, (item: ReaderDirectoryNavigationItem) => {
         ListItem() {
@@ -1623,6 +1673,9 @@ export struct ReaderDirectoryNavigationList {
           else this.row(item);
         }.width('100%').height(this.mangaDisplay ? undefined : this.rowHeight);
       }, (item: ReaderDirectoryNavigationItem): string => this.rowKey(item));
+      if (this.tailHeight > 0) {
+        ListItem() { this.tailBuilder(); }.width('100%').constraintSize({ minHeight: this.tailHeight });
+      }
     }
     .width('100%').height('100%')
     .padding({ left: this.listPaddingX, right: this.listPaddingRight >= 0 ? this.listPaddingRight : this.listPaddingX,

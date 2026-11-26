@@ -179,9 +179,13 @@ function physicalBootSample(query, now, monotonicNow) {
   // User-build phones can deny procfs without denying these read-only APIs.
   const hostStart = now(), monotonicStart = monotonicNow();
   const epoch = () => {
-    const text = String(query('date -u +%s')).trim();
-    if (!/^\d{10,}$/.test(text) || !Number.isSafeInteger(Number(text))) throw new Error('Physical guest clock is unavailable');
-    return Number(text) * 1000;
+    // Whole-second truncation can add almost a second to the apparent skew.
+    const text = String(query('date -u +%s.%N')).trim();
+    const match = /^(\d{10,})(?:\.(\d{3,9})|\.%N)?$/.exec(text);
+    if (!match) throw new Error('Physical guest clock is unavailable');
+    const milliseconds = Number(match[1]) * 1000 + Number(match[2]?.slice(0, 3) ?? '0');
+    if (!Number.isSafeInteger(milliseconds)) throw new Error('Physical guest clock is unavailable');
+    return milliseconds;
   };
   const guestStart = epoch(), startText = String(query('TZ=UTC uptime -s')).trim();
   const bootStart = Date.parse(startText.replace(' ', 'T') + 'Z');

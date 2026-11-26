@@ -102,7 +102,7 @@ for(const id of selected){
   const empty={visible:false,canRetry:false,generation:0,message:''};
   Object.assign(owner,{mounted:true,exitRequested:false,readerRecoveryRequestCurrent:()=>true,
    controlVisible:()=>controls,bookmarkRecovery:recovery,lifecycleToken:4,readerRecoveryView:empty,readerSettingsRecovery:empty,
-   ttsPreferencesRecovery:empty,ttsConfigurationRecovery:empty,replaceRecovery:empty,viewportWidth:366,
+   appearanceSaveRecovery:empty,ttsPreferencesRecovery:empty,ttsConfigurationRecovery:empty,replaceRecovery:empty,viewportWidth:366,
    sourceSwitchPresentationVisible:false,controlMotionVisible:()=>controls,isControlInputEnabled:()=>true,
    isSessionActive:()=>true,controlLayout:()=>({topBarWidth:334}),readerRecoveryTop:()=>100,readerRecoveryViewportHeight:()=>180,
    readerRecoveryOverlayId:()=> 'test-recovery',onReconcileBookmarks:(generation,presentation)=>calls.push([generation,presentation]),

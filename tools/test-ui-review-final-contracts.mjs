@@ -35,7 +35,7 @@ function rootInput() {
     currentReadingRuntime: () => ({}), readingEntry: reading,
     currentReaderPresentationIdentity: () => reading.readerPresentationIdentity(),
     route: 'reading', directoryReturnTarget: 'readerControl', searchAppForeground: true, arkWebCapturesInput: false,
-    shelfMotion: { pendingExitId: -1 }, sourceSwitchPresentation: { isSurfacePresented: () => false },
+    sourceSwitchPresentation: { isSurfacePresented: () => false },
     mangaSourceSwitch: { selectionVisible: false },
   });
   const Shell = selectedProductionMethods(file('features/reading/ui/ReaderShell.ets'), 'ReaderShell',
@@ -306,7 +306,7 @@ async function multiSelectForegroundRecovery(source = read('features/bookshelf/u
     const page = sdk.consumer(source, ['appForeground', 'appReduceMotion', 'appThemeScheme', 'books', 'ready', 'busy',
       'selectedKeys', 'selectionTopBar', 'selectionHeading', 'selectionAction', 'removeBar', 'selectionInputEnabled',
       'selectionRowAction', 'currentBook', 'toggleAll', 'allSelected', 'canRemoveSelection', 'removeVisibleSelection',
-      'reconcileSelection', 'canRetainSelectedKey', 'hasBookKey', 'bookKey', 'isSelected', 'visibleBooks'], {
+      'reconcileSelection', 'hasBookKey', 'bookKey', 'isSelected', 'visibleBooks'], {
       ...action, ShelfBookPresentation, APP_HEADER_BAR_HEIGHT: 52,
     });
     const calls = [];

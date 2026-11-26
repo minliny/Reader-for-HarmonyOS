@@ -5,6 +5,7 @@ definitions['sheet-choice'] = { description: '实际下载选项单一点击、�
 definitions['overlay-lifecycle'] = { description: '下载面板退场连续返回、嵌套确认焦点和同页陈旧确认', resources: [] };
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
+const downloadNodes = owner => [...(owner.nodes?.values() ?? []), ...[...(owner.children?.values() ?? [])].flatMap(downloadNodes)];
 const { resolveEtsLoaderRoot } = await import('./lib/tool-environment.mjs');
 const {default: assert} = await import('node:assert/strict');
 const { readFileSync } = await import('node:fs');
@@ -70,6 +71,14 @@ const emptyCatalog = await new SharedDownloadGateway({ request: async () => ({ d
 assert.equal(emptyCatalog.projectionStatus, 'ready');
 assert.deepEqual(emptyCatalog.chapters, []);
 assert.equal(emptyCatalog.totalChapters, 0, 'a canonical empty TOC carries a proven zero');
+assert.equal(projection.downloadsProvenEmpty([emptyCatalog]), true);
+assert.equal(projection.downloadsProvenEmpty([emptyCatalog, unknown]), false, 'unknown TOC cannot prove no downloads');
+assert.equal(projection.downloadsProvenEmpty([emptyCatalog, view]), false);
+for (const title of ['同名（漫画）', '同名(漫画)', '同名（ 漫画 ）'])
+  assert.equal(projection.downloadChapterBookTitle({ title, contentKind: 'manga' }), title);
+assert.equal(projection.downloadChapterBookTitle({ title: '同名 ', contentKind: 'manga' }), '同名（漫画）');
+assert.equal(projection.downloadChapterBookTitle({ title: '同名', contentKind: 'novel' }), '同名（小说）');
+assert.equal(projection.downloadChapterBookTitle({ title: '同名' }), '同名');
 const zeroBody = await new SharedDownloadGateway({ request: async () => ({ data: status(novel, [row(0, 'cached', 0)]) }) }).load(novel, () => true);
 assert.equal(zeroBody.downloadedChapters, 0, 'metadata alone cannot prove a saved body');
 const other = { ...createDownloadBookView(shelf('s2', 'same', 'manga')), recentRead: 2 };
@@ -260,6 +269,44 @@ owner.detailKey = '';
 assert.equal(owner.consumeBack(), false);
 assert.equal(saved.at(-1).listScroll, 87, 'save latest offset before the root retires identity');
 
+owner.managing = true;
+owner.books = [view, mixed];
+owner.selectedBookKeys = [view.key];
+owner.query = ''; owner.sourceFilter = mixed.sourceId; owner.sheet = '';
+owner.toggleAll();
+assert.equal(owner.allSelected(), true);
+assert.deepEqual(owner.selectedBookKeys, [view.key, mixed.key], 'select all retains hidden book identities');
+assert.match(owner.selectionLabel(), /1 \/ 1/);
+owner.sendSelectedQueueAction(false);
+owner.sendSelectedQueueAction(true);
+for (const [entry, action, index] of [[events.at(-2), 'pause', 1], [events.at(-1), 'download', 2]]) {
+  assert.equal(entry.action, action);
+  assert.equal(entry.scope, 'books');
+  assert.equal(entry.books.length, 1);
+  assert.equal(entry.books[0].sourceId, mixed.sourceId);
+  assert.equal(entry.books[0].bookId, mixed.bookId);
+  assert.deepEqual(entry.books[0].expectedChapters, [{ chapterIndex: index, chapterId: 'chapter:1' }]);
+}
+owner.toggleAll();
+assert.deepEqual(owner.selectedBookKeys, [view.key], 'deselect all clears only currently matching books');
+assert.equal(owner.captureSelection(), false, 'a hidden-only selection cannot open an action');
+owner.toggleAll();
+assert.equal(owner.captureSelection(), true);
+assert.deepEqual(owner.actionBookKeys, [mixed.key]);
+owner.sendAction('cancel');
+assert.deepEqual(events.at(-1).books.map(book => book.sourceId), [mixed.sourceId]);
+owner.setManaging = managing => { owner.managing = managing; };
+owner.loading = false; owner.error = '';
+owner.retireEmptyBookSelection();
+assert.equal(owner.managing, true, 'dispatch must await the actual empty projection');
+owner.books = [projectDownloadBookAvailability(createDownloadBookView(novel), [], 0)];
+owner.sheetExitPending = true;
+owner.retireEmptyBookSelection();
+assert.equal(owner.managing, true, 'removal sheet finishes before exit');
+owner.sheetExitPending = false;
+owner.retireEmptyBookSelection();
+assert.equal(owner.managing, false, 'known final task removal exits multi-select');
+
 }
 // Read the committed device-sized policy, including a non-preset and fractional
 // MiB value; opening the settings sheet must not select a fabricated preset.
@@ -295,7 +342,7 @@ class DialogFrame {
   constructor(owner, params, _storage, id) { Object.assign(this, { owner, id }); params.body(); }
 }
 const cleanupProbe = createReaderBuilderProbe(source, [...new Set([
-  'clearStorageButton', 'confirmationOverlay', 'confirmationSurfaceBody', 'confirmationContent', 'confirmationBody',
+  'clearStorageButton', 'storageCleanupIcon', 'confirmationOverlay', 'confirmationSurfaceBody', 'confirmationContent', 'confirmationBody',
   'confirmationButton', 'confirmation', 'confirmationGeneration', 'previousConfirmation', 'storageCleanupBusy',
   'transientFeedback', 'measurements', ...helpers])], {
   ReaderMeasurementStore,
@@ -306,6 +353,7 @@ const cleanupProbe = createReaderBuilderProbe(source, [...new Set([
 }, { ...storageProperties.hooks, childSources: {
   ReaderDialogSurface: readFileSync('entry/src/main/ets/ui/surfaces/ReaderDialogSurface.ets', 'utf8'),
 } });
+const storageButtons = owner => downloadNodes(owner).filter(node => node.type === 'Button');
 function storageOwner(summary = { ...storageFixture }) {
   const intents = [];
   const result = new cleanupProbe.Component(undefined, {});
@@ -320,11 +368,11 @@ function storageOwner(summary = { ...storageFixture }) {
     listScroller: { currentOffset: () => ({ yOffset: 0 }) }, onTemporaryBackBridge() {}, onViewStateChanged() {},
     onIntent: value => intents.push(value) });
   result.clearStorageButton();
-  return { result, intents, button: [...result.nodes.values()].find(node => node.type === 'Button') };
+  return { result, intents, button: storageButtons(result)[0] };
 }
 const cleanup = storageOwner(), cleanupDataBefore = structuredClone(cleanup.result.storageSummary);
 
-assert.equal(cleanup.button.accessibilityText, '清理自动保存 · 512 MB');
+assert.equal(cleanup.button.accessibilityText, '清理临时缓存 · 512 MB');
 
 
 cleanup.button.onClick();
@@ -332,15 +380,19 @@ assert.equal(cleanup.result.confirmation, 'cleanup', 'the cleanup button only op
 assert.equal(cleanup.result.sheet, 'settings', 'cancel can return to the same approved storage sheet');
 assert.deepEqual(cleanup.intents, []);
 cleanup.result.confirmationOverlay();
-const cleanupDialogButtons = [...cleanup.result.nodes.values()].filter(node => node.type === 'Button').slice(-2);
+const cleanupDialogButtons = storageButtons(cleanup.result).slice(-2);
 assert.equal(cleanupDialogButtons.length, 2);
+assert.equal(cleanupDialogButtons[0].defaultFocus, true, 'cancel retains the default native focus');
+assert.equal(cleanupDialogButtons[1].defaultFocus, false, 'the destructive action does not take default focus');
+assert.equal(downloadNodes(cleanup.result).filter(node => node.type === 'Row' && node.borderRadius === 999).length, 3,
+  'cleanup and both confirmation actions use the shared matrix paint');
 cleanupDialogButtons[0].onClick();
 assert.equal(cleanup.result.confirmation, ''); assert.equal(cleanup.result.sheet, 'settings');
 assert.deepEqual(cleanup.intents, [], 'cancel cannot request a mutation');
 cleanup.button.onClick(); cleanupDialogButtons[1].onClick();
 assert.deepEqual(cleanup.intents, [], 'the closed confirmation cannot accept a different opening');
 cleanup.result.confirmationOverlay();
-[...cleanup.result.nodes.values()].filter(node => node.type === 'Button').at(-1).onClick();
+storageButtons(cleanup.result).at(-1).onClick();
 assert.equal(cleanup.intents.length, 1);
 assert.equal(cleanup.intents[0].action, 'cleanup'); assert.equal(cleanup.intents[0].scope, 'storage');
 assert.deepEqual(cleanup.intents[0].books, []);
@@ -355,18 +407,18 @@ for (const summary of [{}, { automaticBytes: storageGiB, cleanableBytes: 0 },
   assert.deepEqual(blocked.intents, [], 'unknown/zero/invalid candidates cannot dispatch even through a stale callback');
 }
 const refreshedCleanup = storageOwner(); refreshedCleanup.button.onClick(); refreshedCleanup.result.confirmationOverlay();
-const refreshedConfirm = [...refreshedCleanup.result.nodes.values()].filter(node => node.type === 'Button').at(-1).onClick;
+const refreshedConfirm = storageButtons(refreshedCleanup.result).at(-1).onClick;
 refreshedCleanup.result.storageSummary = { ...storageFixture, cleanableBytes: 0 }; refreshedConfirm();
 assert.deepEqual(refreshedCleanup.intents, [], 'confirmation rechecks the latest executable candidates');
 const busyCleanup = storageOwner(); busyCleanup.button.onClick(); busyCleanup.result.confirmationOverlay();
-const busyConfirm = [...busyCleanup.result.nodes.values()].filter(node => node.type === 'Button').at(-1);
+const busyConfirm = storageButtons(busyCleanup.result).at(-1);
 busyCleanup.result.storageCleanupBusy = true; storageProperties.flush();
 assert.equal(busyCleanup.button.enabled, false);
-assert.equal(busyCleanup.button.accessibilityText, '正在清理自动保存…');
+assert.equal(busyCleanup.button.accessibilityText, '正在清理临时缓存…');
 assert.equal(busyConfirm.enabled, false); busyConfirm.onClick();
 assert.deepEqual(busyCleanup.intents, [], 'an open confirmation cannot duplicate a pending Runtime cleanup');
 const retiredCleanup = storageOwner(); retiredCleanup.button.onClick(); retiredCleanup.result.confirmationOverlay();
-const retiredConfirm = [...retiredCleanup.result.nodes.values()].filter(node => node.type === 'Button').at(-1).onClick;
+const retiredConfirm = storageButtons(retiredCleanup.result).at(-1).onClick;
 retiredCleanup.result.aboutToDisappear(); retiredCleanup.button.onClick(); retiredConfirm();
 assert.deepEqual(retiredCleanup.intents, [], 'retired cleanup actors cannot operate another presentation');
 retiredCleanup.result.mounted = true; retiredCleanup.result.confirmation = 'cleanup'; retiredConfirm();
@@ -400,16 +452,20 @@ const properties = createArkUIPropertyRuntimeProbe();
 const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
 const bounded = boundedSurfaceSdk({ properties });
 const metricsApi = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
+const pageGeometry = await import('../entry/src/main/ets/ui/layout/ReaderPageGeometry.ts');
 const frames = [], timers = [], focus = [], intents = [];
+const { productionReaderMotionSdk } = await import('./lib/reader-control-builder-probe.mjs');
+const motion = productionReaderMotionSdk();
 const IdleFrame = actualReaderPostLayoutFrame();
 const { owner } = createReaderBuilderProbe(source, [...new Set([...helpers, 'sheet', 'confirmation', 'reduceMotion',
   'sheetExitPending', 'sheetOpeningGeneration', 'confirmationGeneration', 'previousConfirmation', 'sheetTriggerKey', 'focusGeneration', 'managementGeneration',
   'sheetWasVisible', 'sheetMaskReady', 'pageContent', 'pageOverlays',
   'confirmationContent', 'confirmationButton', 'confirmationBody', 'sheetOverlay', 'operationsSurface',
   ...pageMembers.filter(member => ['sheetActorGeneration', 'sheetActorAttachment', 'sheetActorOwner', 'sheetActors', 'sheetSurface'].includes(member.name?.getText(pageTree))).map(member => member.name.getText(pageTree))])], {
-  ...bounded.deps, ...properties.sdk, ...metricsApi, ...projection, ...visual, ...backDependencies, SharedDownloadIdleFrame: IdleFrame,
+  ...bounded.deps, ...properties.sdk, ...metricsApi, ...pageGeometry, ...projection, ...visual, ...backDependencies, SharedDownloadIdleFrame: IdleFrame,
+  globalThis: Object.assign(Object.create(globalThis), bounded.deps.globalThis),
   ButtonType: { Normal: 'normal' }, HitTestMode: { None: 'none', Default: 'default' },
-  motionAnimateParam: () => ({ duration: 15 }), setTimeout: action => { timers.push(action); },
+  ...motion, setTimeout: action => { timers.push(action); },
   readerSurfaceElevation: () => ({}),
   TransitionEffect: { IDENTITY: { kind: 'identity' }, OPACITY: { animation: params => ({ kind: 'opacity', params }) },
     move: edge => ({ animation: params => ({ kind: 'move', edge, params }) }),
@@ -447,6 +503,12 @@ const finish = (actor, transitionIn = false) => {
 };
 owner.openSheet('settings', 'storage'); idle();
 const mountedActors = mountSheet();
+const [scrimEffect] = mountedActors.scrim.transition;
+const [sheetEffect] = mountedActors.panel.transition;
+assert.deepEqual(scrimEffect, { kind: 'opacity', params: { duration: 160, curve: [0.2, 0, 0, 1] } });
+for (const [effect, duration] of [[sheetEffect.enter, 260], [sheetEffect.exit, 210]]) {
+  assert.deepEqual(effect, { kind: 'move', edge: 'bottom', params: { duration, curve: [0.2, 0, 0, 1] } });
+}
 assert.equal(focus.at(-1), focusName('sheet'));
 owner.pageContent();
 const background = [...owner.nodes.values()].find(node => node.type === 'Stack' && node.enabled === false);
@@ -455,8 +517,8 @@ assert.equal(background.hitTestBehavior, 'none');
 owner.openStorageCleanup(); idle();
 assert.equal(focus.at(-1), focusName('confirm-cancel'));
 owner.confirmationContent(true);
-const old = [...owner.nodes.values()].find(node => node.idValue === focusName('confirm') || node.id === focusName('confirm'));
-const buttons = () => [...owner.nodes.values()].filter(node => node.type === 'Button' && typeof node.onClick === 'function');
+const old = downloadNodes(owner).find(node => node.idValue === focusName('confirm') || node.id === focusName('confirm'));
+const buttons = () => downloadNodes(owner).filter(node => node.type === 'Button' && typeof node.onClick === 'function');
 const oldConfirm = old?.onClick ?? buttons().at(-1).onClick;
 assert.equal(owner.consumeBack(), true);
 assert.equal(owner.sheet, 'settings');
@@ -540,11 +602,18 @@ assert.equal(owner.sheetExitPending, true, 'an old operations receipt cannot sta
 finish(replacementSurface.panel, true); assert.equal(owner.sheetExitPending, true);
 finish(replacementSurface.panel); idle(); assert.equal(owner.sheetExitPending, false);
 
-// Reduced-motion closure retires a real opening immediately. Its remaining
-// physical callbacks must not release a later operations opening.
-owner.openSheet('sort', 'sort'); const oldActors = mountSheet();
+// Reduced motion retains the same attachment through its opacity dissolve.
+owner.reduceMotion = true; owner.openSheet('sort', 'sort'); const oldActors = mountSheet();
 const oldAttachment = owner.sheetActorAttachment;
-owner.reduceMotion = true; assert.equal(owner.consumeBack(), true); idle();
+for (const actor of [oldActors.scrim, oldActors.panel]) {
+  assert.equal(actor.transition[0].kind, 'opacity');
+  assert.equal(actor.transition[0].params.duration, 120);
+}
+assert.equal(owner.consumeBack(), true); idle();
+assert.equal(owner.sheetExitPending, true);
+owner.openSheet('book-actions', 'book-menu:' + mixed.key);
+assert.equal(owner.sheet, '', 'an exiting reduced carrier still blocks new modal input');
+finish(oldActors.scrim); finish(oldActors.panel); idle();
 assert.equal(owner.sheetExitPending, false);
 owner.reduceMotion = false; owner.openSheet('book-actions', 'book-menu:' + mixed.key);
 const nextActors = mountSheet(); assert.notEqual(owner.sheetActorAttachment, oldAttachment);
@@ -554,12 +623,12 @@ finish(nextActors.panel, true); assert.equal(owner.sheetExitPending, true);
 finish(nextActors.panel); assert.equal(owner.sheetExitPending, true, 'operations completion still waits for its actual scrim');
 finish(nextActors.scrim); idle(); assert.equal(owner.sheetExitPending, false);
 
-// Changing motion policy during an actual exit is the explicit immediate
-// path, while an ordinary mounted exit has no timeout/disappearance shortcut.
+// An already mounted transition keeps its exit receipt when policy changes.
 owner.openSheet('sort', 'sort'); const motionActors = mountSheet();
 assert.equal(owner.consumeBack(), true); assert.equal(owner.sheetExitPending, true);
 assert.ok([motionActors.scrim, motionActors.panel].every(actor => actor.onDisappear === undefined));
-owner.reduceMotion = true; idle(); assert.equal(owner.sheetExitPending, false);
+owner.reduceMotion = true; idle(); assert.equal(owner.sheetExitPending, true);
+finish(motionActors.scrim); finish(motionActors.panel); idle(); assert.equal(owner.sheetExitPending, false);
 
 // Retiring a physical owner invalidates all its callbacks before a successor
 // presentation on the same receiver can acquire new Native actor tickets.
@@ -606,11 +675,14 @@ for (const scheme of ['day', 'night', 'day']) {
   controls.appThemeScheme = scheme; controls.replay(); colorProbe.properties.flush();
   const actual = colorProbe.nodes(controls);
   const primary = downloadVisualColor('green', scheme);
+  const theme = role => colorProbe.deps.readerAppColor(role, scheme);
   assert.equal(controls.tabInk('manga'), primary);
-  assert.equal(controls.actionInk(false), downloadVisualColor('ink', scheme));
   assert.equal(controls.statusInk(mixed), downloadVisualColor('danger', scheme));
   assert.ok(actual.some(node => node.fontColor === primary), 'real native callback applies selected/secondary emphasis');
-  assert.ok(actual.some(node => node.fontColor === downloadVisualColor('greenInk', scheme)), 'solid action keeps demo on-primary foreground');
+  assert.ok(actual.some(node => node.create === '主操作' && node.fontColor === theme('TOK_ON_PRIMARY')),
+    'the primary matrix action follows the live theme');
+  assert.ok(actual.some(node => node.create === '次操作' && node.fontColor === theme('TOK_PRIMARY_DARK')),
+    'the tonal matrix action follows the live theme');
   assert.ok(actual.some(node => node.create === '重试' && node.fontColor === downloadVisualColor('danger', scheme)), 'failure retains demo danger foreground');
   const danger = colorProbe.deps.resolveActionSheetSpec('grouped').dangerRole;
   assert.ok(actual.some(node => node.create === '删除本地内容' && node.fontColor === colorProbe.deps.readerAppColor(danger, scheme)),

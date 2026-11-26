@@ -1,4 +1,4 @@
-import type { SourceSwitchCandidate } from '../application/SourceSwitchGateway';
+import type { SourceSwitchCandidate, SourceSwitchSweepProgress } from '../application/SourceSwitchGateway';
 
 /**
  * SourceSwitch overlay window state (Window State 7态, SS-SOURCE-SWITCH-01).
@@ -9,12 +9,14 @@ import type { SourceSwitchCandidate } from '../application/SourceSwitchGateway';
  */
 export interface SourceSwitchDiscoveringState {
   kind: 'discovering';
+  sweep?: SourceSwitchSweepProgress;
 }
 
 export interface SourceSwitchCandidatesState {
   kind: 'candidates';
   candidates: SourceSwitchCandidate[];
   refreshing?: boolean;
+  sweep?: SourceSwitchSweepProgress;
   refreshError?: string;
   stopped?: boolean;
 }

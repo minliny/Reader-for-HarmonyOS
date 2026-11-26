@@ -2,6 +2,8 @@ import type { ShelfBook } from '../ReaderCoreGateway';
 import type { ReaderRuntimeOwner } from '../ReaderRuntimeOwner';
 import type { BookshelfDetailReturnFocus } from '../../features/bookshelf/presentation/BookshelfViewState';
 import type { SharedDownloadOpeningIntent, SharedDownloadReturnState } from '../../features/downloads/presentation/SharedDownloadUiContract';
+import type { RemoteReadingBookSeed } from '../../features/reading/application/RemoteReadingFlowGateway';
+import { settingsNavigationItems, type SettingsPane } from '../../features/settings/presentation/SettingsNavigationItems.ts';
 
 export type ReaderRoute = 'bookshelf' | 'discover' | 'detail' | 'reading' | 'directory' | 'search' |
   'bookshelfManagement' | 'bookshelfMultiSelect' | 'bookshelfSettings' |
@@ -10,16 +12,18 @@ export type ReaderRoute = 'bookshelf' | 'discover' | 'detail' | 'reading' | 'dir
 
 export type DirectoryReturnTarget = 'detail' | 'readerControl';
 export type RulesManagementReturnTarget = 'settings' | 'reader';
-export type SettingsSection = 'home' | 'general';
-export type DetailOriginRoute = 'bookshelf' | 'search';
+export type SettingsSection = 'home' | 'general' | 'about';
+export type DetailOriginRoute = 'bookshelf' | 'search' | 'discover';
 export type DetailReturnRoute = DetailOriginRoute | 'reader';
+export type ReadingOriginRoute = 'bookshelf' | 'detail' | 'directory';
+export type ReaderRouteMotionKind = 'push' | 'pop' | 'tab';
 export type SourceManagementReturnTarget = 'settings' | 'search';
 type PreparedReaderDestination = 'reading' | 'directory';
 type DownloadReturnTarget = 'bookshelf' | 'settings' | 'reading' | 'detail' | 'directory';
 
 export interface ReaderReturnContext {
   readonly owner: ReaderRuntimeOwner;
-  readonly originRoute: 'bookshelf' | 'detail';
+  readonly originRoute: ReadingOriginRoute;
   readonly detailParent: DetailOriginRoute;
   readonly fromDownloads: boolean;
   readonly downloadParent?: DownloadReturnContext;
@@ -31,7 +35,7 @@ export interface ReaderExitLease {
 }
 
 interface ReaderReturnSnapshot {
-  readonly readingOrigin: 'bookshelf' | 'detail';
+  readonly readingOrigin: ReadingOriginRoute;
   readonly detailParent: DetailReturnRoute;
   readonly retainedReader?: ReaderReturnContext;
 }
@@ -39,6 +43,7 @@ interface ReaderReturnSnapshot {
 interface DownloadOrigin {
   readonly target: DownloadReturnTarget;
   readonly book?: ShelfBook;
+  readonly detailSeed?: RemoteReadingBookSeed;
   readonly detailParent: DetailReturnRoute;
   readonly readerReturn?: ReaderReturnContext;
   readonly detailReaderReturn?: ReaderReturnContext;
@@ -55,7 +60,7 @@ export interface DownloadReturnPorts {
   showSettings: () => void;
   restoreReader: (context: ReaderReturnContext | undefined) => boolean;
   resumeReader: (book: ShelfBook) => void;
-  showBook: (book: ShelfBook, parent: DetailReturnRoute, restoreDirectory: boolean) => void;
+  showBook: (book: ShelfBook, parent: DetailReturnRoute, restoreDirectory: boolean, detailSeed?: RemoteReadingBookSeed) => void;
 }
 
 export interface DownloadChapterNavigationPorts {
@@ -68,6 +73,7 @@ interface DetailReturnPorts {
   resumeReader: () => void;
   leaveForSearch: () => void;
   restoreSearch: (snapshot: ReaderNavigationSnapshot) => void;
+  showDiscover: () => void;
   showBookshelf: (focus: BookshelfDetailReturnFocus | undefined) => void;
 }
 
@@ -123,7 +129,7 @@ export interface AcceptedReaderExitPorts {
 /** Return state survives ordinary route generations. Feature owners still
  * control admission, session handoff and the download view's retained data. */
 export class ReaderReturnNavigation {
-  private readingOriginRoute: 'bookshelf' | 'detail' = 'detail';
+  private readingOriginRoute: ReadingOriginRoute = 'detail';
   private detailReturnRoute: DetailReturnRoute = 'bookshelf';
   private detailReaderReturn: ReaderReturnContext | undefined;
   private bookshelfDetailFocus: BookshelfDetailReturnFocus | undefined;
@@ -133,6 +139,7 @@ export class ReaderReturnNavigation {
   private source: SourceOrigin = { target: 'settings', keyword: '' };
   private download: DownloadOrigin = { target: 'settings', detailParent: 'bookshelf' };
   private bookInfoAfterReaderExit: BookInfoExitDestination | undefined;
+  private showingBookInfoFromReader = false;
   private downloadsAfterReaderExit: DownloadExitDestination | undefined;
 
   snapshot(): ReaderReturnSnapshot {
@@ -144,15 +151,19 @@ export class ReaderReturnNavigation {
     this.readingOriginRoute = 'bookshelf';
   }
 
+  rememberDirectoryReaderOrigin(): void {
+    this.readingOriginRoute = 'directory';
+  }
+
   beginDetailEntry(retainedParent: DetailReturnRoute | undefined): void {
     this.readingFromDownloads = false;
     if (retainedParent !== 'reader') this.detailReaderReturn = undefined;
-    if (retainedParent === undefined || retainedParent === 'search') this.bookshelfDetailFocus = undefined;
+    if (retainedParent === undefined || retainedParent === 'search' || retainedParent === 'discover') this.bookshelfDetailFocus = undefined;
   }
 
   completeDetailEntry(origin: ReaderRoute, retainedParent: DetailReturnRoute | undefined,
     resumeImmediately: boolean): 'bookshelf' | 'detail' {
-    const entry = resumeImmediately ? this.readingOriginRoute : 'detail';
+    const entry = resumeImmediately && this.readingOriginRoute === 'bookshelf' ? 'bookshelf' : 'detail';
     this.readingOriginRoute = entry;
     this.detailReturnRoute = retainedParent ?? (origin === 'search' ? 'search' : 'bookshelf');
     return entry;
@@ -176,9 +187,18 @@ export class ReaderReturnNavigation {
 
   private showReaderBookInfo(context: ReaderReturnContext, showDetail: () => void): void {
     this.readingOriginRoute = 'detail';
-    showDetail();
+    this.showingBookInfoFromReader = true;
+    try {
+      showDetail();
+    } finally {
+      this.showingBookInfoFromReader = false;
+    }
     this.detailReaderReturn = context;
     this.detailReturnRoute = 'reader';
+  }
+
+  readingOriginMotion(): ReaderRouteMotionKind {
+    return this.showingBookInfoFromReader ? 'push' : 'pop';
   }
 
   restoreReaderBehindDetail(restore: (context: ReaderReturnContext | undefined) => boolean): void {
@@ -187,7 +207,7 @@ export class ReaderReturnNavigation {
 
   detailReturnTarget(owner: ReaderRuntimeOwner | undefined): DetailReturnRoute {
     if (this.detailReturnRoute === 'reader' && owner !== undefined && this.detailReaderReturn?.owner === owner) return 'reader';
-    return this.detailReturnRoute === 'search' ? 'search' : 'bookshelf';
+    return this.detailReturnRoute === 'reader' ? 'bookshelf' : this.detailReturnRoute;
   }
 
   setSourceOrigin(target: SourceManagementReturnTarget = 'settings', keyword: string = ''): void {
@@ -202,12 +222,16 @@ export class ReaderReturnNavigation {
     return origin;
   }
 
-  rememberDownloadOrigin(route: ReaderRoute, currentBook: () => ShelfBook | undefined): void {
+  rememberDownloadOrigin(route: ReaderRoute, currentBook: () => ShelfBook | undefined, detailSeed?: RemoteReadingBookSeed): void {
     const target = route === 'bookshelf' || route === 'detail' || route === 'directory' ? route : 'settings';
-    this.download = { target, book: target === 'detail' || target === 'directory' ? currentBook() : undefined,
+    const book = target === 'detail' || target === 'directory' ? currentBook() : undefined;
+    const seed = book !== undefined && detailSeed?.sourceId === book.sourceId && detailSeed.bookId === book.bookId ? detailSeed : undefined;
+    this.download = { target, book, detailSeed: seed,
       detailParent: this.detailReturnRoute,
       detailReaderReturn: this.detailReturnRoute === 'reader' ? this.detailReaderReturn : undefined };
   }
+
+  downloadsFromSettings(): boolean { return this.download?.target === 'settings'; }
 
   requestDownloadsAfterExit(book: ShelfBook, context: ReaderReturnContext | undefined, lease: ReaderExitLease, detailKey: string): void {
     const pending = this.downloadsAfterReaderExit;
@@ -258,7 +282,7 @@ export class ReaderReturnNavigation {
       return;
     }
     this.detailReaderReturn = origin.detailReaderReturn;
-    ports.showBook(origin.book, origin.detailParent, origin.target === 'directory');
+    ports.showBook(origin.book, origin.detailParent, origin.target === 'directory', origin.detailSeed);
   }
 
   captureReaderReturn(owner: ReaderRuntimeOwner, captureDownloadView: () => SharedDownloadReturnState): ReaderReturnContext {
@@ -395,6 +419,7 @@ interface TemporaryBackLease {
   readonly owner: ReaderRuntimeOwner;
   readonly identity: string;
   readonly handler: () => boolean;
+  readonly blocksSettingsSwitch?: () => boolean;
 }
 
 export interface ReaderNavigationSnapshot {
@@ -409,6 +434,7 @@ export type ReaderBackTarget = 'bookshelf' | 'leaveSelection' | 'bookshelfSettin
   'directoryOrigin' | 'readerExit' | 'detailExit' | 'rss' | 'rssFeed' | 'rssEntry' | 'rssSubscriptionList';
 
 export interface ReaderBackPorts {
+  wideSettings?: boolean;
   nativeSurface?: () => boolean;
   mangaSelection?: () => void;
   bookRemoval?: () => void;
@@ -431,7 +457,7 @@ export function readerBackTarget(route: ReaderRoute, section: SettingsSection): 
     case 'rss': return 'bookshelf';
     case 'bookshelfMultiSelect': return 'leaveSelection';
     case 'bookshelfSettings': return 'bookshelfSettingsOrigin';
-    case 'settings': return section === 'general' ? 'generalSettingsHome' : 'bookshelf';
+    case 'settings': return section === 'home' ? 'bookshelf' : 'generalSettingsHome';
     case 'sync': return 'settings';
     case 'search': return 'searchMode';
     case 'sourceTools': return 'sourceManagement';
@@ -476,6 +502,10 @@ export function retainedReaderRoute(route: ReaderRoute, directoryTarget: Directo
   return route === 'directory' && directoryTarget === 'readerControl' ? 'directory' : undefined;
 }
 
+function isMainTabRoute(route: ReaderRoute): boolean {
+  return route === 'bookshelf' || route === 'settings' || route === 'discover' || route === 'rss';
+}
+
 /** Owns destination and presentation generation. The caller still decides
  * when a feature transition is admissible and when to retire its overlays. */
 export class ReaderNavigation {
@@ -488,6 +518,8 @@ export class ReaderNavigation {
   private returnedBookshelfFocus: BookshelfDetailReturnFocus | undefined;
   private temporaryBackLease: TemporaryBackLease | undefined;
   private preparedReaderDestination: PreparedReaderDestination = 'reading';
+  private routeTrail: ReaderRoute[] = ['bookshelf'];
+  private lastRouteMotion: ReaderRouteMotionKind = 'tab';
 
   prepareReaderDestination(route: PreparedReaderDestination): void {
     this.preparedReaderDestination = route;
@@ -498,7 +530,7 @@ export class ReaderNavigation {
   }
 
   setTemporaryBack(scope: TemporaryBackScope, generation: number, owner: ReaderRuntimeOwner,
-    handler: (() => boolean) | undefined, identity: string): void {
+    handler: (() => boolean) | undefined, identity: string, blocksSettingsSwitch?: () => boolean): void {
     if (identity.length === 0 || scope !== this.current.route || generation !== this.current.generation) return;
     if (handler === undefined) {
       const lease = this.temporaryBackLease;
@@ -506,7 +538,12 @@ export class ReaderNavigation {
         lease.identity === identity) this.temporaryBackLease = undefined;
       return;
     }
-    this.temporaryBackLease = { scope, generation, owner, identity, handler };
+    this.temporaryBackLease = { scope, generation, owner, identity, handler, blocksSettingsSwitch };
+  }
+
+  canSwitchSettingsPane(owner: ReaderRuntimeOwner | undefined): boolean {
+    const lease = this.temporaryBackLease;
+    return owner !== undefined && (lease?.owner !== owner || lease.blocksSettingsSwitch?.() !== true);
   }
 
   consumeTemporaryBack(isCurrentOwner: (owner: ReaderRuntimeOwner) => boolean,
@@ -557,19 +594,55 @@ export class ReaderNavigation {
         return true;
       }
     }
-    const target = this.backTarget();
+    const target = ports.wideSettings === true && this.settingsPane() !== undefined && this.current.route !== 'sourceTools' ?
+      'bookshelf' : this.backTarget();
     if (target === undefined) return false;
     ports.destination(target);
     return true;
   }
 
-  show(route: ReaderRoute): ReaderNavigationSnapshot {
+  routeMotion(): ReaderRouteMotionKind { return this.lastRouteMotion; }
+
+  settingsPane(): SettingsPane | undefined {
+    const route = this.current.route;
+    if (route === 'settings') return this.current.settingsSection === 'about' ? 'about' : 'general';
+    if ((route === 'source' || route === 'sourceTools') && this.returns.sourceOrigin().target === 'settings') return 'source';
+    if (route === 'sync' && settingsNavigationItems().some(item => item.id === 'sync')) return 'sync';
+    if (route === 'bookshelfSettings' && this.bookshelfSettingsReturn === 'settings') return route;
+    if (route === 'downloads' && this.returns.downloadsFromSettings()) return route;
+    return undefined;
+  }
+
+  retainsDetailDirectory(): boolean {
+    const retained = this.returns.snapshot();
+    if (this.current.route === 'detail') return retained.retainedReader?.originRoute === 'directory';
+    return (this.current.route === 'reading' || this.current.route === 'directory') &&
+      retained.readingOrigin === 'directory';
+  }
+
+  show(route: ReaderRoute, motion?: ReaderRouteMotionKind): ReaderNavigationSnapshot {
+    if (this.current.route === 'directory' && this.current.directoryReturnTarget === 'detail' && route === 'reading')
+      this.returns.rememberDirectoryReaderOrigin();
+    return this.presentRoute(route, this.current.directoryReturnTarget, motion);
+  }
+
+  private presentRoute(route: ReaderRoute, target: DirectoryReturnTarget,
+    preferredMotion?: ReaderRouteMotionKind): ReaderNavigationSnapshot {
     if (route !== this.current.route) {
+      const parent = this.routeTrail.lastIndexOf(route);
+      const tabs = isMainTabRoute(this.current.route) && isMainTabRoute(route);
+      this.lastRouteMotion = preferredMotion ?? (tabs ? 'tab' : parent >= 0 ? 'pop' : 'push');
+      switch (this.lastRouteMotion) {
+        case 'tab': this.routeTrail = [route]; break;
+        case 'pop': this.routeTrail = parent >= 0 ? this.routeTrail.slice(0, parent + 1) : [route]; break;
+        case 'push': this.routeTrail.push(route); break;
+      }
       this.temporaryBackLease = undefined;
       if (this.current.route === 'bookshelf') this.returnedBookshelfFocus = undefined;
-      this.current = { route, generation: this.current.generation,
-        directoryReturnTarget: this.current.directoryReturnTarget, settingsSection: this.current.settingsSection };
     }
+    if (route !== this.current.route || target !== this.current.directoryReturnTarget)
+      this.current = { route, generation: this.current.generation, directoryReturnTarget: target,
+        settingsSection: this.current.settingsSection };
     return this.current;
   }
 
@@ -587,10 +660,7 @@ export class ReaderNavigation {
     const opening = this.current;
     if (opening.route !== origin || !prepare() || this.current !== opening) return undefined;
     this.preparedReaderDestination = target === 'readerControl' ? 'directory' : 'reading';
-    this.temporaryBackLease = undefined;
-    this.current = { route: 'directory', generation: this.current.generation, directoryReturnTarget: target,
-      settingsSection: this.current.settingsSection };
-    return this.current;
+    return this.presentRoute('directory', target, 'push');
   }
 
   closeDirectory(reading: boolean, requestReaderExit: () => void): ReaderNavigationSnapshot | undefined {
@@ -600,7 +670,7 @@ export class ReaderNavigation {
       return undefined;
     }
     this.preparedReaderDestination = 'reading';
-    return this.show(reading ? 'reading' : 'detail');
+    return this.presentRoute(reading ? 'reading' : 'detail', this.current.directoryReturnTarget, 'pop');
   }
 
   backFromDetail(exit: ReaderExitLease | undefined, returnToParent: () => void): void {
@@ -625,10 +695,14 @@ export class ReaderNavigation {
         this.returns.leaveDetailJourney();
         if (!this.advanceOpening(opening, ports.leaveForSearch)) return;
         this.prepareReaderDestination('reading');
-        ports.restoreSearch(this.show('search'));
+        ports.restoreSearch(this.show('search', 'pop'));
         return;
       case 'bookshelf':
         ports.showBookshelf(this.returns.takeBookshelfDetailFocus());
+        return;
+      case 'discover':
+        this.returns.leaveDetailJourney();
+        ports.showDiscover();
         return;
     }
   }
@@ -651,19 +725,22 @@ export class ReaderNavigation {
       this.returns.rememberBookshelfDetailFocus(focus);
   }
 
-  returnToBookshelf(focus: BookshelfDetailReturnFocus | undefined, advance: () => void): ReaderNavigationSnapshot | undefined {
+  returnToBookshelf(focus: BookshelfDetailReturnFocus | undefined, advance: () => void,
+    motion?: 'tab'): ReaderNavigationSnapshot | undefined {
     const opening = this.current;
     this.returns.leaveDetailJourney();
     if (!this.advanceOpening(opening, advance)) return undefined;
     this.prepareReaderDestination('reading');
     this.returns.setSourceOrigin();
     this.returnedBookshelfFocus = focus;
-    return this.show('bookshelf');
+    return this.show('bookshelf', motion);
   }
 
   showReadingOrigin(): ReaderNavigationSnapshot {
     this.prepareReaderDestination('reading');
-    return this.show(this.returns.snapshot().readingOrigin);
+    const origin = this.returns.snapshot().readingOrigin;
+    return this.presentRoute(origin, origin === 'directory' ? 'detail' : this.current.directoryReturnTarget,
+      this.returns.readingOriginMotion());
   }
 
   openBookshelfMultiSelect(advance: () => void): ReaderNavigationSnapshot | undefined {
@@ -700,21 +777,22 @@ export class ReaderNavigation {
       ports.openBook(parent);
       return this.current.generation !== opening.generation && this.current.route === 'reading' && ports.readingActive();
     });
-    // If admission opened a detail but never started its reader, restore the
-    // original downloads view. A refusal before navigation leaves it intact.
+    // Detail admission may retire the downloads opening before starting the reader.
+    // A refusal without a generation change leaves the opening intact.
     if (!admitted && this.current.generation !== opening.generation &&
-      this.current.route === 'detail' && !ports.readingActive()) ports.restoreDownloads({ kind: 'resume' });
+      (this.current.route === 'downloads' || this.current.route === 'detail') && !ports.readingActive())
+      ports.restoreDownloads({ kind: 'resume' });
   }
 
   openDownloads(intent: SharedDownloadOpeningIntent, currentBook: () => ShelfBook | undefined,
-    advance: () => void): ReaderNavigationSnapshot | undefined {
+    advance: () => void, detailSeed?: RemoteReadingBookSeed): ReaderNavigationSnapshot | undefined {
     const opening = this.current;
     const origin = opening.route;
     if (intent.kind === 'fresh' && origin !== 'bookshelf' && origin !== 'settings' &&
       origin !== 'detail' && origin !== 'directory') return undefined;
     const book = intent.kind === 'fresh' && (origin === 'detail' || origin === 'directory') ? currentBook() : undefined;
     if (!this.advanceOpening(opening, advance)) return undefined;
-    if (intent.kind === 'fresh') this.returns.rememberDownloadOrigin(origin, (): ShelfBook | undefined => book);
+    if (intent.kind === 'fresh') this.returns.rememberDownloadOrigin(origin, (): ShelfBook | undefined => book, detailSeed);
     return this.show('downloads');
   }
 
@@ -739,7 +817,7 @@ export class ReaderNavigation {
   backFromSourceTools(advance: () => void): ReaderNavigationSnapshot | undefined {
     const opening = this.current;
     if (opening.route !== 'sourceTools' || !this.advanceOpening(opening, advance)) return undefined;
-    return this.show('source');
+    return this.show('source', 'pop');
   }
 
   sourceImportSearchAction(current: () => boolean, submit: () => void): (() => void) | undefined {
@@ -760,7 +838,7 @@ export class ReaderNavigation {
     const origin = this.returns.sourceOrigin();
     if (!this.advanceOpening(opening, advance) || this.returns.sourceOrigin() !== origin) return undefined;
     this.returns.takeSourceOrigin();
-    const snapshot = this.show(origin.target);
+    const snapshot = this.show(origin.target, 'pop');
     return origin.target === 'search' && autoSearch && origin.keyword.length > 0 ?
       { snapshot, keyword: origin.keyword } : { snapshot };
   }
@@ -775,7 +853,7 @@ export class ReaderNavigation {
 
   openSettingsHome(): ReaderNavigationSnapshot {
     this.setSettingsSection('home');
-    return this.show('settings');
+    return this.show('settings', 'tab');
   }
 
   selectSettingsSection(section: SettingsSection, back: () => void): ReaderNavigationSnapshot | undefined {

@@ -1,30 +1,33 @@
-import { ReaderTransientFeedback } from '../../../ui/feedback/ReaderTransientFeedback';
+import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/feedback/ReaderTransientFeedback';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { ReaderStandardPage } from '../../../ui/layout/ReaderStandardPage';
+import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { BookshelfViewModeHost, type BookshelfViewModeSnapshot } from '../application/BookshelfViewModeHost';
 import type { ReaderRecoveryView } from '../../../ui/feedback/ReaderRecoveryView';
 import { ReaderRecoveryGroup } from '../../../ui/feedback/ReaderRecoveryGroup';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { readerRecoveryView } from '../../../app/ReaderRecoveryProjection';
 import type { SettingsOperationProjection } from '../../settings/application/SettingsOrchestrator';
-import { TYPE_APP_INHERITED_BODY } from '../../../ui/foundation/ReaderTypography';
-import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { PageBackBar } from '../../../ui/chrome/PageBackBar';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
-import { ReaderCard } from '../../../ui/surfaces/ReaderCard';
 import { ReaderFormRow } from '../../../ui/controls/ReaderFormRow';
-import { ReaderSegmentedControl } from '../../../ui/controls/ReaderSegmentedControl';
+import { ReaderSegmentedControl, READER_APP_THEME_SEGMENT_WIDTH } from '../../../ui/controls/ReaderSegmentedControl';
 import { ReaderToggle } from '../../../ui/controls/ReaderToggle';
+import { CategorySection } from '../../settings/ui/CategorySection';
 import { WebDavCredentialStore } from '../../sync/application/WebDavCredentialStore';
 import { LocalRecoveryPanel } from './LocalRecoveryPanel';
 
 /** Persistent bookshelf preferences, shared by More and the settings route. */
+import { DEFAULT_BOOKSHELF_VIEW, type BookshelfViewMode } from '../application/BookshelfViewMode';
+
 @Component
 export struct BookshelfSettingsPage {
+  @Prop embeddedWide: boolean = false;
+  @StorageLink('readerAppForeground') private appForeground: boolean = true;
+  private readonly editingHost: ReaderEditingVisibility = new ReaderEditingVisibility();
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
-  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
 
-  @StorageLink('readerBookshelfViewMode') private mode: string = 'cover';
+  @StorageLink('readerBookshelfViewMode') private mode: string = DEFAULT_BOOKSHELF_VIEW;
   @Prop autoCheckUpdate: boolean = true;
   @Prop @Watch('onOperationChanged') operation: SettingsOperationProjection = { action: 'load' };
   @Prop navigationGeneration: number = 0;
@@ -38,15 +41,15 @@ export struct BookshelfSettingsPage {
   @State private viewModeSnapshot: BookshelfViewModeSnapshot = { canonical: undefined };
   private readonly viewModeHost: BookshelfViewModeHost = BookshelfViewModeHost.instance;
   private revision: number = 0;
-  private confirmed: string = 'cover';
-  private requestedMode: 'cover' | 'list' = 'cover';
+  private confirmed: BookshelfViewMode = DEFAULT_BOOKSHELF_VIEW;
+  private requestedMode: BookshelfViewMode = DEFAULT_BOOKSHELF_VIEW;
   private mounted: boolean = false;
 
   aboutToAppear(): void {
     registerReaderFonts(this.getUIContext().getFont());
     this.mounted = true; this.presentationRevision += 1;
     const canonical = WebDavCredentialStore.instance.currentBookshelfViewMode();
-    this.confirmed = canonical ?? this.mode;
+    this.confirmed = canonical ?? (this.mode === 'cover' ? 'cover' : DEFAULT_BOOKSHELF_VIEW);
     this.mode = this.confirmed;
     const snapshot = this.viewModeHost.current();
     // Startup may acknowledge the Store before either feature consumer loads.
@@ -125,27 +128,41 @@ export struct BookshelfSettingsPage {
   }
   private lastSettingsFeedback: string = '';
   private onOperationChanged(): void {
-    if (!this.mounted || this.settingsPending()) return;
+    if (!this.appForeground || !this.userInputIsCurrent() || this.settingsPending()) return;
     const view = readerRecoveryView(this.operation.receipt, this.operation.readFacts);
     if (!view.visible || !view.canRetry) { this.lastSettingsFeedback = ''; return; }
     if (view.message === this.lastSettingsFeedback) return;
     this.lastSettingsFeedback = view.message;
-    try { this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: 2000 }, (): boolean => this.mounted); } catch (_) {}
+    try {
+      this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: READER_FEEDBACK_BRIEF_MS },
+        this.currentFeedbackGuard());
+    } catch (_) {}
   }
   private lastModeFeedback: string = '';
   @State private modeLoadBusy: boolean = false;
   @State private modeReconcileBusy: boolean = false;
   private modeFeedback(): void {
-    if (!this.mounted) return;
+    if (!this.appForeground || !this.userInputIsCurrent()) return;
     const view = this.viewModeRecovery();
     if (!view.visible || this.modePending()) { this.lastModeFeedback = ''; return; }
     if (this.viewModeSnapshot.canonical === undefined || view.message === this.lastModeFeedback) return;
     this.lastModeFeedback = view.message;
-    try { this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: 2000 }, (): boolean => this.mounted); } catch (_) {}
+    try {
+      this.transientFeedback.show(() => this.getUIContext(), { message: view.message, duration: READER_FEEDBACK_BRIEF_MS },
+        this.currentFeedbackGuard());
+    } catch (_) {}
+  }
+
+  private currentFeedbackGuard(): () => boolean {
+    const identity = this.preferenceControlIdentity();
+    return (): boolean => this.appForeground && this.userInputIsCurrent() && identity === this.preferenceControlIdentity();
   }
 
   build() {
     ReaderStandardPage({
+      embeddedWide: this.embeddedWide,
+      floatingHeader: true,
+      editingHost: this.editingHost,
       variant: 'settings',
       header: (): void => { this.pageHeader(); },
       content: (): void => { this.pageContent(); },
@@ -156,12 +173,13 @@ export struct BookshelfSettingsPage {
 
   @Builder
   private pageHeader() {
-    PageBackBar({ title: '书架设置', onBack: (): void => { if (this.userInputIsCurrent()) this.onBack(); } });
+    PageBackBar({ floating: true, centered: true, elevation: 'floating', showBack: !this.embeddedWide,
+      title: '书架设置', onBack: (): void => { if (this.userInputIsCurrent()) this.onBack(); } });
   }
 
   @Builder
   private pageContent() {
-    ReaderCard({ specId: 'preference-panel' }) {
+    CategorySection({ title: '书架偏好' }) {
       if (this.operation.readFacts?.hasValue === false && !this.settingsPending()) {
         ReaderPageState({ title: this.operation.readFacts?.fact === 'loading' || this.operation.readFacts?.fact === 'refreshing' ? '正在读取书架设置…' :
             this.operation.readFacts?.fact === 'failed' || this.operation.readFacts?.fact === 'refreshFailed' ? '书架设置读取失败' :
@@ -175,7 +193,8 @@ export struct BookshelfSettingsPage {
           } });
       } else {
         ForEach([this.preferenceControlIdentity()], (identity: string): void => {
-          ReaderFormRow({ label: '自动检查更新', kind: 'compact' }) {
+          ReaderFormRow({ label: '自动检查更新', kind: 'standard',
+            secondaryText: '自动检查书架中书籍的最新章节' }) {
             ReaderToggle({ specId: 'bookshelf-update-toggle', value: this.autoCheckUpdate,
               inputIdentity: identity, accessibilityLabel: '自动检查更新', actionEnabled: !this.settingsPending(),
               isBusy: this.operation.receipt?.facts.fact === 'refreshing',
@@ -186,13 +205,11 @@ export struct BookshelfSettingsPage {
             });
           }
         }, (identity: string): string => identity);
-        Text('自动检查书架中书籍的最新章节').fontSize(TYPE_APP_INHERITED_BODY.fontSizeFp)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).width('100%');
       }
       if (this.viewModeSnapshot.canonical !== undefined || this.modePending()) {
         ForEach([this.preferenceControlIdentity()], (identity: string): void => {
-          ReaderFormRow({ label: '显示方式', kind: 'compact' }) {
-            ReaderSegmentedControl({ specId: 'pill-choice', options: ['封面', '列表'], optionIds: ['cover', 'list'],
+          ReaderFormRow({ label: '显示方式', kind: 'standard', contentMinWidth: READER_APP_THEME_SEGMENT_WIDTH }) {
+            ReaderSegmentedControl({ options: ['封面', '列表'], optionIds: ['cover', 'list'],
               inputIdentity: identity, accessibilityLabel: '显示方式', selectedIndex: this.mode === 'list' ? 1 : 0,
               actionEnabled: this.viewModeHost.canSave(),
               onSelect: (index: number): void => {
@@ -214,7 +231,7 @@ export struct BookshelfSettingsPage {
       }
 
     }
-    LocalRecoveryPanel({ navigationGeneration: this.navigationGeneration,
+    LocalRecoveryPanel({ navigationGeneration: this.navigationGeneration, editingHost: this.editingHost,
       isInputAllowed: (): boolean => this.userInputIsCurrent() });
   }
 

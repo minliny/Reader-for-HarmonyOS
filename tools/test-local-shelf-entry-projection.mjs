@@ -34,6 +34,7 @@ function fixture() {
   const toc = [{ index: 0, title: '第一章', url: 'local://chapter/0' }];
   const owner = { bookAcquisitions: () => ({ setPreparationVisible() {} }), request: async (method, params, options) => {
     calls.push(method);
+    if (method === 'bookshelf.get') return { data: { book } };
     if (method === 'local_book.toc') {
       const gate = deferred(); tocReads.push(gate); await gate.promise;
       return { data: { sourceId: 'local', bookId: params.bookId, toc } };
@@ -68,7 +69,7 @@ function fixture() {
   const actions = new EntryActions(navigation, new ReaderEntryStartupTrace(() => {}), {
     runtime, mounting: () => 1, entry: () => entry,
     search: () => ({ host: { visibilityChanged() {} } }), sourceSwitch: () => source,
-    shelfBooks: () => [book], removalPending: () => false, readerExitPending: () => false,
+    shelfBooks: () => [book], removalPending: () => false,
     advance: () => { entry.retire(); actions.retirePreparation(); return navigation.advance().generation; },
     show: route => navigation.show(route),
     bindReader: () => { calls.push('reader-mount-request'); entry.bindReader(owner, entryPorts(owner)); },
@@ -123,18 +124,20 @@ async function admit(f) {
 for (const cancel of [false, true]) {
   const f = fixture(); f.actions.openLocalDetail(f.book, false);
   assert.equal(f.navigation.snapshot().route, 'detail'); assert.equal(f.entry.sessionActive, false);
+  await settle();
   if (cancel) { f.entry.retire(); f.actions.retirePreparation(); f.navigation.advance(); f.navigation.show('search'); }
   f.tocReads[0].resolve(); await settle();
   if (cancel) {
-    assert.deepEqual(f.calls, ['local_book.toc']); assert.equal(f.navigation.snapshot().route, 'search');
+    assert.deepEqual(f.calls, ['bookshelf.get', 'local_book.toc']); assert.equal(f.navigation.snapshot().route, 'search');
   } else {
-    assert.deepEqual(f.calls, ['local_book.toc', 'cache.book.status']);
+    assert.deepEqual(f.calls, ['bookshelf.get', 'local_book.toc', 'cache.book.status']);
     f.statusReads[0].resolve(); await settle();
     assert.equal(f.entry.toc[0].downloadState, 'completed');
   }
 }
 {
   const f = fixture(); f.actions.openLocalDetail(f.book, false);
+  await settle();
   f.tocReads[0].resolve(); await settle();
   f.actions.openLocalDetail(f.book, true);
   f.statusReads[0].resolve(); await settle();
@@ -143,6 +146,7 @@ for (const cancel of [false, true]) {
 }
 {
   const f = fixture(); f.actions.openLocalDetail(f.book, false);
+  await settle();
   f.tocReads[0].resolve(); await settle();
   f.setBookmarks([{time:42,bookText:'新书签'}]);
   f.entry.toc = f.entry.toc.map(entry => ({ ...entry, bookmarks: [{ time: 42, bookText: '新书签' }] }));

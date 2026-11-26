@@ -1,6 +1,7 @@
 import fileIo from '@ohos.file.fs';
 import fileUri from '@ohos.file.fileuri';
 import util from '@ohos.util';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import type { JsonObject } from '@reader/core-harmony';
 import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import { replaceReaderAtomicSnapshot } from '../../../app/ReaderAtomicSnapshotFile';
@@ -9,7 +10,7 @@ import { isReaderLocalBookFileName } from '../../../app/ReaderLocalBookFormatAdm
 import {
   LOCAL_RECOVERY_MAX_BYTES, LocalRecoveryFileError, openRecoveryFile, recoveryCopyBytes, recoveryDigest,
   recoveryHashFile, recoveryOutput, recoveryRead, recoveryReserve, recoveryText, recoveryUtf8,
-  recoveryVisitFile, sealRecoveryFile, selectRecoveryDocument,
+  recoveryVisitFile, recoveryWithFile, sealRecoveryFile, selectRecoveryDocument,
 } from '../../../platform/backup/LocalRecoveryFile';
 
 export interface LocalRecoveryOutcome {
@@ -56,6 +57,7 @@ const MAX_ORIGINAL_BYTES = 64 * 1024 * 1024;
 const MAX_ORIGINALS = 10000;
 const HASH = /^[a-f0-9]{64}$/;
 const TIMEOUT = 120000;
+const LOG_DOMAIN = 0x5244;
 
 export class LocalRecoveryGateway {
   private static readonly active = new Set<string>();
@@ -203,9 +205,13 @@ export class LocalRecoveryGateway {
         await this.restoreOriginal(this.originalPath(work, index, row.original), row.bookId, row.original, journal);
       }
     }
-    await fileIo.unlink(this.journalPath());
-    await this.syncDirectory();
-    await this.clearUnaccepted().catch(() => {});
+    try { await fileIo.unlink(this.journalPath()); }
+    catch (error) { if (!this.isMissingFile(error)) throw error; }
+    try { await this.clearUnaccepted(); }
+    catch (_) {
+      // Core and every included original already have committed receipts.
+      hilog.warn(LOG_DOMAIN, 'Reader', 'Completed local recovery cleanup deferred');
+    }
     return this.outcome('restored', archive.rows);
   }
 
@@ -316,36 +322,44 @@ export class LocalRecoveryGateway {
 
   private async open(path: string, work: string, passphrase: string, current: () => boolean): Promise<Archive> {
     const plaintext = `${work}/quarantine`;
-    await openRecoveryFile(path, plaintext, passphrase, current);
-    const file = await fileIo.open(plaintext, fileIo.OpenMode.READ_ONLY);
+    let completed = false;
     try {
-      const prefix = await recoveryRead(file.fd, 4);
-      const length = new DataView(prefix.buffer).getUint32(0);
-      if (length === 0 || length > MAX_HEADER_BYTES) this.reject();
-      let decoded: JsonObject;
-      try { decoded = this.object(JSON.parse(recoveryText(await recoveryRead(file.fd, length)))); }
-      catch (_) { return this.reject(); }
-      const content = decoded['content'];
-      const packageSha256 = decoded['packageSha256'];
-      if (typeof content !== 'string' || typeof packageSha256 !== 'string') this.reject();
-      const rows = this.decodeRows(decoded['rows'], false);
-      const expected = await this.inspectCore(content, packageSha256, passphrase);
-      if (expected.length !== rows.length) this.reject();
-      for (let index = 0; index < rows.length; index++) {
-        this.checkCurrent(current);
-        const row = rows[index], exact = expected[index];
-        if (row.bookId !== exact.bookId || JSON.stringify(row.original) !== JSON.stringify(exact.original)) this.reject();
-        if (!row.included || row.original === null) continue;
-        const original = row.original;
-        await recoveryOutput(this.originalPath(work, index, original), async (emit): Promise<void> => {
-          if (await recoveryCopyBytes(file.fd, original.byteLength, emit, current) !== original.sha256) this.reject();
-        });
-      }
-      if ((await fileIo.read(file.fd, new ArrayBuffer(1))) !== 0) this.reject();
-      return { packageSha256, content, rows };
+      await openRecoveryFile(path, plaintext, passphrase, current);
+      const archive = await recoveryWithFile(plaintext, fileIo.OpenMode.READ_ONLY, async (file): Promise<Archive> => {
+        const prefix = await recoveryRead(file.fd, 4);
+        const length = new DataView(prefix.buffer).getUint32(0);
+        if (length === 0 || length > MAX_HEADER_BYTES) this.reject();
+        let decoded: JsonObject;
+        try { decoded = this.object(JSON.parse(recoveryText(await recoveryRead(file.fd, length)))); }
+        catch (_) { return this.reject(); }
+        const content = decoded['content'];
+        const packageSha256 = decoded['packageSha256'];
+        if (typeof content !== 'string' || typeof packageSha256 !== 'string') this.reject();
+        const rows = this.decodeRows(decoded['rows'], false);
+        const expected = await this.inspectCore(content, packageSha256, passphrase);
+        if (expected.length !== rows.length) this.reject();
+        for (let index = 0; index < rows.length; index++) {
+          this.checkCurrent(current);
+          const row = rows[index], exact = expected[index];
+          if (row.bookId !== exact.bookId || JSON.stringify(row.original) !== JSON.stringify(exact.original)) this.reject();
+          if (!row.included || row.original === null) continue;
+          const original = row.original;
+          await recoveryOutput(this.originalPath(work, index, original), async (emit): Promise<void> => {
+            if (await recoveryCopyBytes(file.fd, original.byteLength, emit, current) !== original.sha256) this.reject();
+          });
+        }
+        if ((await fileIo.read(file.fd, new ArrayBuffer(1))) !== 0) this.reject();
+        return { packageSha256, content, rows };
+      });
+      completed = true;
+      return archive;
     } finally {
-      await fileIo.close(file);
-      await fileIo.unlink(plaintext);
+      try { await fileIo.unlink(plaintext); }
+      catch (error) {
+        // perform still reclaims the private work directory. Preserve the
+        // actual archive failure when plaintext cleanup also fails.
+        if (completed && !this.isMissingFile(error)) throw error;
+      }
     }
   }
 
@@ -403,7 +417,7 @@ export class LocalRecoveryGateway {
       if (!(await fileIo.access(this.directory))) await fileIo.mkdir(this.directory, true);
       // Any prior process died before removing these private staging bytes.
       for (const entry of await fileIo.listFile(this.directory)) {
-        if (/^work-[a-zA-Z0-9]+$/.test(entry)) await fileIo.rmdir(`${this.directory}/${entry}`);
+        if (/^work-[a-zA-Z0-9]+$/.test(entry)) await this.removeWorkIfPresent(`${this.directory}/${entry}`);
       }
       work = await fileIo.mkdtemp(`${this.directory}/work-XXXXXX`);
       return await action(work);
@@ -411,9 +425,19 @@ export class LocalRecoveryGateway {
       if (error instanceof LocalRecoveryFileError) return { state: error.reason };
       return { state: await this.pending().catch(() => true) ? 'interrupted' : 'failed' };
     } finally {
-      if (work !== undefined) await fileIo.rmdir(work).catch(() => {});
+      if (work !== undefined) await this.removeWorkIfPresent(work).catch(() => {});
       LocalRecoveryGateway.active.delete(this.directory);
     }
+  }
+
+  private async removeWorkIfPresent(path: string): Promise<void> {
+    try { await fileIo.rmdir(path); }
+    catch (error) { if (!this.isMissingFile(error)) throw error; }
+  }
+
+  private isMissingFile(error: unknown): boolean {
+    const code = (error as { code?: number | string } | undefined)?.code;
+    return code === 13900002 || code === 'ENOENT';
   }
 
   private async readJournal(): Promise<Journal | undefined> {
@@ -432,12 +456,18 @@ export class LocalRecoveryGateway {
   }
 
   private async syncDirectory(): Promise<void> {
-    const dir = await fileIo.open(this.directory, fileIo.OpenMode.READ_ONLY);
-    try { await fileIo.fsync(dir.fd); } finally { await fileIo.close(dir); }
+    await recoveryWithFile(this.directory, fileIo.OpenMode.READ_ONLY, (dir): Promise<void> => fileIo.fsync(dir.fd));
   }
 
   private async clearUnaccepted(): Promise<void> {
-    if (!(await this.pending()) && await fileIo.access(this.packagePath())) await fileIo.unlink(this.packagePath());
+    if (await this.pending()) return;
+    const path = this.packagePath();
+    if (!(await fileIo.access(path))) return;
+    // Persist the journal's absence before deleting the archive it needs
+    // if an interrupted directory update is replayed after a crash.
+    await this.syncDirectory();
+    try { await fileIo.unlink(path); }
+    catch (error) { if (!this.isMissingFile(error)) throw error; }
   }
 
   private request(method: string, params: JsonObject): Promise<JsonObject> {

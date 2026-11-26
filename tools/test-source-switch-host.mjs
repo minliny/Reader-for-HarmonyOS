@@ -651,6 +651,43 @@ if(id==='cold-rollback'){
   checks.push('cold-Runtime-lost-rollback-ACK-retains-original-full-intent');
 }
 }
+if(id==='failed-reader-cold-rollback'){
+  for (const loseAck of [false, true]) {
+    const f = fixture(); await settle(); await f.host.pick(f.candidate(), f.host.current().scopeId);
+    assert.equal(f.host.currentTransactionId(target), TX);
+    f.retire(); f.intentClasses.SourceSwitchIntentStore.warmIntent = undefined;
+    const successor = { ...f.runtime }, effects = [];
+    setCurrentRuntime(successor);
+    const next = new f.Constructor(successor); owned.push(next);
+    const context = { ...f.context, query: { ...f.context.query, ...target } };
+    const lease = { isCurrent: book => book.sourceId === target.sourceId && book.bookId === target.bookId,
+      changed() {}, effect: effect => effects.push(effect) };
+    assert.equal(await next.resolveTransaction(target, () => true), TX);
+    assert.equal(next.bindReader(context, lease), true);
+    assert.equal(next.current().visible, false);
+    assert.equal(next.confirmedIntent, undefined, 'cold reader knows the Core pending target before picker intent hydration');
+    const scope = next.current().scopeId, before = f.calls.length;
+    await next.rollbackReaderTarget(origin, TX, scope);
+    await next.rollbackReaderTarget(target, TX, scope + 1);
+    await next.rollbackReaderTarget(target, 'another-operation', scope);
+    assert.equal(f.calls.length, before, 'stale target, scope and operation cannot dispatch rollback');
+
+    const rollbackGate = deferred(); f.options.rollbackGate = rollbackGate; f.options.loseRollbackAck = loseAck;
+    const settleRollback = next.rollbackReaderTarget(target, TX, scope);
+    const duplicate = next.rollbackReaderTarget(target, TX, scope);
+    assert.equal(next.open(context, lease), false, 'the alternate picker cannot replace an admitted rollback');
+    await settle();
+    assert.deepEqual(f.calls.slice(before).filter(([method]) => method !== 'source.switch.transaction.query')
+      .map(([method, params]) => [method, params.transactionId]), [['source.switch.rollback', TX]],
+    'direct rollback only uses the pending transaction; source discovery and acquisition are unnecessary');
+    rollbackGate.resolve(); await Promise.all([settleRollback, duplicate]); await settle();
+    assert.equal(next.current().pending, undefined);
+    assert.equal(next.current().state.kind, 'discovering');
+    assert.deepEqual(effects.map(effect => [effect.kind, effect.book.sourceId, effect.book.bookId]),
+      [['rollbackReady', origin.sourceId, origin.bookId]]);
+    assert.equal(f.disk.durable, '', 'exact terminal proof cleared the cold original intent');
+  }
+}
 if(id==='next-choice'){
 {
   const f=fixture();await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
@@ -664,6 +701,50 @@ if(id==='next-choice'){
   assert.ok(rollbackPosition<f.calls.findIndex(([method,params])=>method==='source.switch.commit'&&params.sequence===2));
   checks.push('next-choice-actual-old-rollback-exact-terminal-clear-before-next-sequence');
 }
+}
+if(id==='reopen-pending-target'){
+  const f = fixture();
+  await settle();
+  const firstCandidate = f.candidate();
+  await f.host.pick(firstCandidate, f.host.current().scopeId);
+  f.setIdentity(target);
+  const originalCandidate = { ...firstCandidate, sourceId: origin.sourceId, bookUrl: origin.bookId, sourceName: 'Old' };
+  const context = { ...f.context, query: { ...f.context.query, sourceId: target.sourceId, bookId: target.bookId },
+    knownCandidates: [originalCandidate] };
+  assert.equal(f.host.bindReader(context, f.lease), true);
+  const transactionId = f.host.currentTransactionId(target);
+  const durableIntent = f.disk.durable;
+  assert.equal(transactionId, TX);
+
+  const effectsBeforeOpen = f.effects.length;
+  assert.equal(f.host.open(context, f.lease), true);
+  assert.equal(f.host.current().visible, true);
+  await settle();
+  assert.equal(f.host.current().visible, true, 'reading back an exact pending target must keep an explicit picker open');
+  assert.equal(f.host.current().state.kind, 'candidates');
+  assert.equal(f.host.currentTransactionId(target), transactionId);
+  assert.equal(f.disk.durable, durableIntent);
+  assert.equal(f.effects.length, effectsBeforeOpen, 'opening only discovers sources');
+  assert.equal(f.calls.filter(([method]) => method === 'source.switch.commit').length, 1);
+  assert.equal(f.calls.filter(([method]) => method === 'source.switch.rollback').length, 0);
+
+  assert.equal(f.host.close(f.host.current().scopeId), true);
+  assert.equal(f.host.currentTransactionId(target), transactionId, 'closing retains the pending target acknowledgement');
+  f.options.failExactQuery = true;
+  assert.equal(f.host.open(context, f.lease), true);
+  await settle();
+  assert.equal(f.host.current().visible, true);
+  assert.equal(f.host.current().state.kind, 'failure');
+  assert.equal(f.host.current().state.reconcile, true);
+  f.options.failExactQuery = false;
+  f.host.retry(f.host.current().scopeId);
+  await settle();
+  assert.equal(f.host.current().visible, true, 'retrying the exact readback resumes source discovery');
+  assert.equal(f.host.current().state.kind, 'candidates');
+  assert.equal(f.host.currentTransactionId(target), transactionId);
+  assert.equal(f.disk.durable, durableIntent);
+  assert.equal(f.calls.filter(([method]) => method === 'source.switch.commit').length, 1);
+  assert.equal(f.calls.filter(([method]) => method === 'source.switch.rollback').length, 0);
 }
 if(id==='startup-rollback'){
 {
@@ -971,4 +1052,6 @@ const definitions={"registry-qualification": "registry-qualification actual scop
 definitions['manga-cold-receipt']='Real manga Host/AtomicFile cold recovery reads missing, invalid and valid exact receipts once each; receipt-proven local cleanup retries make no Core query';
 definitions['manga-legacy-receipt']='Old Core live receipt, cold uncertainty and exact source/target replay fencing';
 definitions['search-handoff-pages']='Actual normal Host ignores prior search attempt IDs, discovers title match on page2 and does not commit';
+definitions['reopen-pending-target']='Opening and retrying a picker on an unacknowledged target discovers choices and retains the exact transaction';
+definitions['failed-reader-cold-rollback']='A failed cold reader rolls back its exact pending target once, independently of source discovery, and reconciles a lost ACK';
 for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

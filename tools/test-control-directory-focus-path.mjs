@@ -23,7 +23,9 @@ if(selected.length){
  const source=read('reading/ui/ReaderControlDirectoryContent.ets'),toolbar=read('reading/ui/ReaderDirectoryToolbar.ets'),field=read('../ui/controls/ReaderSearchField.ets'),navSource=read('reading/ui/ReaderDirectoryNavigationList.ets');
  const scale=pureModuleProbe(read('../ui/foundation/ReaderSurfaceResolvers.ts'),'ReaderSurfaceResolvers.ts',{},['readerReadableFontScale','readerScaledControlHeight']);
  const a11y=pureModuleProbe(read('../ui/controls/ReaderActionAccessibility.ets'),'ReaderActionAccessibility.ets',{AccessibilityRoleType:{BUTTON:'button'}},['readerActionTouchRegion','ReaderActionAccessibility']);
- const classes=pureModuleProbe(source.slice(0,source.indexOf('@Component')),'ReaderControlDirectoryContent.ets',{FrameCallback:class{}},['ControlDirectoryDataSource','ControlDirectoryFrame']);
+ const {sameReaderDirectoryData,snapshotReaderDirectoryData}=await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryDataSnapshot.ts');
+ const classes=pureModuleProbe(source.slice(0,source.indexOf('@Component')),'ReaderControlDirectoryContent.ets',
+  {FrameCallback:class{},sameReaderDirectoryData,snapshotReaderDirectoryData},['ControlDirectoryDataSource','ControlDirectoryFrame']);
  const fieldClasses=pureModuleProbe(field.slice(0,field.indexOf('@Component')),'ReaderSearchField.ets',{FrameCallback:class{},...a11y},['ReaderSearchInputTarget','ReaderSearchFocusFrame']);
  const toolbarValues=pureModuleProbe(toolbar.slice(0,toolbar.indexOf('@Component')),'ReaderDirectoryToolbar.ets',{},['READER_DIRECTORY_TOOLBAR_HEIGHT']);
  const require=createRequire(import.meta.url),map=require(resolveEtsLoaderRoot()+'/lib/component_map.js');

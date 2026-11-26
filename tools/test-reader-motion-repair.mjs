@@ -14,7 +14,7 @@ export const CONTRACT_CASES = {
     "resources": []
   },
   "shelf-reversal-fixture": {
-    "description": "Actual Shelf methods with explicitly synthetic timing tokens and curve/frame ports; reversal/retarget only",
+    "description": "Actual BookshelfPage list/cover reflow reversal and reduced-motion fade with synthetic curve/frame ports",
     "resources": []
   }
 };
@@ -179,34 +179,33 @@ for(const reduceMotion of [false,true]){
 
 async function case_shelf_reversal_fixture() {
 const { default: assert } = await import('node:assert/strict');
-const { readFileSync } = await import('node:fs');
 const { productionMotionMethods } = await import('./lib/reader-motion-method-probe.mjs');
-const S = await import('../entry/src/main/ets/features/reading/ui/ReaderControlSessionState.ts');
-const { ReaderControlRuntime } = await import('../entry/src/main/ets/features/reading/ui/ReaderControlRuntime.ts');
 const { ReversibleMotionTimeline, motionSegment } = await import('../entry/src/main/ets/ui/foundation/MotionTimeline.ts');
 const { MotionPointTrack } = await import('../entry/src/main/ets/ui/foundation/MotionPointTrack.ts');
 const feature = name => new URL(`../entry/src/main/ets/features/${name}`, import.meta.url);
 const linear = p => p;
 const curve = { interpolate: linear };
-const config = { axis: { quickGrabberScreenY: 700, fullGrabberScreenY: 300, hiddenGrabberScreenY: 718 },
-  tapMaxDurationMs: 500, directionSlopVp: 8, settleDurationMs: 320, showDurationMs: 220,
-  dismissDurationMs: 200, coordinatedMotion: true };
 let now = 1000;
 let animations=[], frames=[];
 const UI={animateTo:(p,change)=>{animations.push(p);change();},postFrameCallback:f=>frames.push(f.fn)};
-const motionAnimateParam=(id,onFinish)=>({id,onFinish});
 class Callback {constructor(fn){this.fn=fn;}}
-const shelfFile=feature('bookshelf/BookshelfPage.ets');
+const shelfFile=feature('bookshelf/ui/BookshelfPage.ets');
 const shelfNames=['setViewMode','onReduceMotionChanged','startViewSwitch','scheduleViewSwitchFrame',
- 'sampleViewSwitch','resetViewSwitchMotion','setRestingProjectionOpacity','projectionListProgress'];
+ 'sampleViewSwitch','resetViewSwitchMotion','setRestingProjectionOpacity','projectionListProgress','fadeViewSwitch'];
+const { READER_SHELF_REFLOW_MS, READER_SHELF_STAGGER_MS, READER_SHELF_STAGGER_CAP_MS, READER_REDUCED_FADE_MS } =
+ await import('../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts');
 const Shelf=productionMotionMethods(shelfFile,shelfNames,{readerMotionNowMs:()=>now,ReversibleMotionTimeline,
- motionSegment,bookshelfViewCoverDelayMs:i=>(Math.min(1,Math.floor(i/3))*3+i%3)*30,BookshelfMotionFrameCallback:Callback});
-const viewMotion={totalMs:1000,layoutCommitMs:150,outgoingDurationMs:120,headerIncomingStartMs:500,headerIncomingDurationMs:200,
- contentIncomingStartMs:600,contentIncomingDurationMs:220,morphCoverIncomingStartMs:150,morphCoverIncomingDurationMs:30,
- movingCoverFadeStartMs:690,movingCoverFadeDurationMs:30,coverMoveDurationMs:420,coverScaleDurationMs:250};
-for(const at of [80,300,680,900]){
+ motionSegment,bookshelfViewCoverDelayMs:i=>Math.min(i*READER_SHELF_STAGGER_MS,READER_SHELF_STAGGER_CAP_MS),
+ readerMotionReducedFadeParam:()=>({duration:READER_REDUCED_FADE_MS}),BookshelfMotionFrameCallback:Callback});
+const viewMotion={totalMs:READER_SHELF_REFLOW_MS,layoutCommitMs:0,outgoingDurationMs:120,
+ headerIncomingStartMs:0,headerIncomingDurationMs:120,contentIncomingStartMs:0,contentIncomingDurationMs:120,
+ morphCoverIncomingStartMs:260,morphCoverIncomingDurationMs:60,movingCoverFadeStartMs:260,movingCoverFadeDurationMs:60,
+ coverMoveDurationMs:200,coverScaleDurationMs:200,coverMoveCurve:curve,coverScaleCurve:curve,contentCurve:curve,coverFadeCurve:curve};
+for(const at of [12,60,150,290]){
  frames=[];const shelf=Object.assign(new Shelf(),{viewMode:'cover',reduceMotion:false,viewSwitchRunning:false,viewSwitchToken:0,
   webDavCredentials:{saveBookshelfViewMode:async()=>{}},viewModeHost:{canSave:()=>true},persistRequestedViewMode:async()=>true,viewModeRevision:0,confirmedViewMode:'cover',mounted:true,
+  feedbackEnabled:true,isCurrentShelfInput:()=>true,isShelfPresentationCurrent:()=>true,
+  viewSwitchRanks:new Map([[1,1]]),captureViewSwitchRanks(){},settleFilterPanel(){},
   viewMotion,viewFadeCurve:curve,viewContentCurve:curve,viewMoveCurve:curve,viewScaleCurve:curve,getUIContext:()=>UI});
  shelf.setViewMode('list');now+=at;frames.shift()();
  const before=[shelf.projectionListProgress(1),shelf.viewSwitchGridContentOpacity,shelf.viewSwitchListContentOpacity,
@@ -217,6 +216,7 @@ for(const at of [80,300,680,900]){
  now+=at;frames.shift()();assert.equal(shelf.viewSwitchRunning,false);assert.equal(shelf.viewMode,'cover');
  shelf.setViewMode('list');shelf.reduceMotion=true;shelf.onReduceMotionChanged();
  assert.equal(shelf.viewMode,'list');assert.equal(shelf.viewSwitchRunning,false);
+ assert.equal(animations.at(-1).duration,READER_REDUCED_FADE_MS,'reduced reflow fades without keeping geometry frames alive');
  frames.shift()();assert.equal(frames.length,0,'old shelf callback revoked');
 }
 

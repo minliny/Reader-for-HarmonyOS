@@ -2,13 +2,20 @@ import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createReaderBuilderProbe } from './lib/reader-control-builder-probe.mjs';
 import { productionSettingsOptionModifier } from './lib/reader-control-option-modifier-probe.mjs';
+import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
+import { selectedProductionValues } from './lib/selected-production-methods.mjs';
 import * as geometry from '../entry/src/main/ets/features/reading/ui/ReaderControlSettingsGeometry.ts';
 import * as actors from '../entry/src/main/ets/features/reading/ui/ReaderControlActorGeometry.ts';
 import * as paint from '../entry/src/main/ets/features/reading/ui/ReaderControlMotionPresentation.ts';
 import * as policy from '../entry/src/main/ets/features/reading/application/ReaderSettingsState.ts';
 import { readerAppColor } from '../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts';
 
-const source = readFileSync(new URL('../entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets', import.meta.url), 'utf8');
+const sourceFile = new URL('../entry/src/main/ets/features/reading/ui/ReaderControlSettingsContent.ets', import.meta.url);
+const source = readFileSync(sourceFile, 'utf8');
+const labelSource = readFileSync(new URL('./ReaderControlSettingsMinimum.ets', sourceFile), 'utf8');
+const labels = pureModuleProbe(labelSource, 'ReaderControlSettingsMinimum.ets', {},
+  ['readerControlSettingsGroupLabel', 'readerControlSettingsOptionLabel']);
+const options = selectedProductionValues(sourceFile, ['SETTINGS_DIRECTION_OPTIONS', 'SETTINGS_PAGE_OPTIONS', 'SETTINGS_TIMEOUT_OPTIONS']);
 const fixture = JSON.parse(readFileSync(new URL('./fixtures/reader-control-search-settings-live-20260905.json', import.meta.url), 'utf8'));
 const design = fixture.sources.find(n => n.key === 'settingsDesign').result.content.map(n => n.text ?? '').join('\n');
 for (const id of ['1692:3687', '1692:3692', '1692:3699']) {
@@ -33,18 +40,17 @@ function probe(sourceText) {
       if (property === 'pop') { if (mounting) ancestors.pop(); return; }
       const node = owner.nodes.get(activeId);
       if (property === 'create') { node.type = 'Stack'; if (mounting) ancestors.push(activeId); }
+      if (property === 'attributeModifier') args[0].applyNormalAttribute(NativeStack);
       node[property] = args.length === 1 ? args[0] : args;
       return NativeStack;
     };
   } });
   const members = ['segmentRow', 'p', 'geometry', 'bar', 'label', 'presentation', 'sharedRect', 'sharedClip', 'choice',
     'optionModifier', 'groupOptions', 'groupLabel', 'optionLabel', 'isSegmentActive', 'isSegmentAvailable',
-    'segmentAccessibilityText', 'handleSegment'];
+    'segmentAccessibilityText', 'handleSegment', 'segmentResponse', 'currentInputEnabled', 'currentMinimumProfile',
+    'preparedProfile', 'presentationPrepared'];
   const built = createReaderBuilderProbe(sourceText, members, { ...geometry, ...actors, ...paint, ...policy,
-    Stack: NativeStack, ReaderControlSettingsOptionModifier: productionSettingsOptionModifier(),
-    SETTINGS_DIRECTION_OPTIONS: ['system', 'portrait', 'landscape'],
-    SETTINGS_PAGE_OPTIONS: ['cover', 'slide', 'simulation', 'scroll', 'none'],
-    SETTINGS_TIMEOUT_OPTIONS: ['system', 'oneMinute', 'fiveMinutes', 'tenMinutes', 'alwaysOn'] });
+    ...labels, ...options, Stack: NativeStack, ReaderControlSettingsOptionModifier: productionSettingsOptionModifier() });
   owner = built.owner;
   const observe = owner.observeComponentCreation2;
   owner.observeComponentCreation2 = function(callback, component) {
@@ -57,6 +63,7 @@ function probe(sourceText) {
   const clipCache = new paint.ReaderControlMotionClipCache(path => { paths++; return { path }; },
     () => { rectangles++; return { width: '100%', height: '100%' }; });
   Object.assign(owner, { motionProgress: 0, availableWidth: 261.714285714, fullViewportHeight: 666,
+    minimumKey: '', minimumProfiles: new Map(),
     geometryProgress: -1, geometryWidth: -1, paintProgress: -1, clipEndpointWidth: -1,
     clipFullRects: [], clipQuickRects: [], scrollMotion: { fullScrollOffset: 0 }, clipCache,
     getUIContext: () => ({ vp2px: n => n * 3.5 }), optionModifiers: [], snapshot: policy.createDefaultReaderSettingsSnapshot(),
@@ -87,7 +94,7 @@ function probe(sourceText) {
       assert.equal(layer.width, bar.width); assert.equal(layer.height, bar.height);
       assert.equal(parent.width, bar.width); assert.equal(parent.height, bar.height);
       assert.deepEqual(parent.position, { x: bar.x, y: bar.y });
-      const options = [...owner.nodes.entries()].filter(([child, n]) => n.type === 'Text' && parentById.get(child) === id);
+      const options = [...owner.nodes.entries()].filter(([child, n]) => n.type === 'Button' && parentById.get(child) === id);
       assert.equal(options.length, row === 0 ? 3 : 5);
       for (const [, option] of options) { assert.equal(option.borderRadius, 6); assert.equal(typeof option.onClick, 'function'); }
     });
@@ -112,14 +119,14 @@ function probe(sourceText) {
 }
 
 const result = probe(source);
-const fixedFullText = source.replace('.fontSize(readerControlLerp(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK.fontSizeFp, TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL.fontSizeFp, this.p())).lineHeight(this.label(row).height)',
-  '.fontSize(TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL.fontSizeFp).lineHeight(16)');
+const fixedFullText = source.replace(/\.lineHeight\(readerControlLerp\(TYPE_READER_SETTINGS_SEGMENT_LABEL_QUICK\.lineHeightFp as number,\s*TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL\.lineHeightFp as number, this\.p\(\)\)\)/u,
+  '.lineHeight(TYPE_READER_SETTINGS_SEGMENT_LABEL_FULL.lineHeightFp as number)');
 assert.notEqual(fixedFullText, source, 'mutation must replace the actual current typography expression');
 assert.throws(() => probe(fixedFullText), /native label line/,
   'the shipped fixed Full typography in a Quick 12vp mask reproduces PH05');
-const collapsed = source.replace('      .borderRadius(8).clip(true).position({ x: 0, y: 0 });',
-  '      .borderRadius(8).clip(true).position({ x: 0, y: 0 }).clipShape(this.sharedClip(row, true));')
-  .replace('    .clipShape(this.sharedClip(row, true));', '    ;');
+const collapsed = source.replace("      .attributeModifier(new ReaderPanelFrame('reader-soft-control', this.appThemeScheme))\n      .clip(true).position({ x: 0, y: 0 });",
+  "      .attributeModifier(new ReaderPanelFrame('reader-soft-control', this.appThemeScheme))\n      .clip(true).position({ x: 0, y: 0 }).clipShape(this.sharedClip(row, true));")
+  .replace('\n    .clipShape(this.sharedClip(row, true));', ';');
 assert.notEqual(collapsed, source);
 assert.throws(() => probe(collapsed), /separate parent carrying|never receives/,
   'putting the rectangle/path back onto the painted bar reproduces the original structural failure');

@@ -1,6 +1,11 @@
 import { typeNode, LengthMetrics } from '@ohos.arkui.node';
 import { UIContext } from '@ohos.arkui.UIContext';
 
+// The chapter heading is part of the reading layout contract. Keep its size
+// beside native shaping so rendering and pagination cannot drift apart when
+// the selected reading family changes.
+export const READER_CHAPTER_TITLE_FONT_SIZE_FP: number = 23;
+
 export interface ReaderNativeTextStyle {
   widthVp: number;
   fontFamily: string;
@@ -53,7 +58,10 @@ export class ReaderNativeTextMeasurement {
       if (style.bookBody === true) {
         // ArkUI shapes the original text in place. Auto-spacing never inserts
         // characters into the scalar/UTF-16 coordinates used by progress.
-        node.attribute.enableAutoSpacing(true).fallbackLineSpacing(true).compressLeadingPunctuation(true);
+        const attribute = node.attribute;
+        attribute.enableAutoSpacing?.(true);
+        attribute.fallbackLineSpacing?.(true);
+        attribute.compressLeadingPunctuation?.(true);
       }
       if (style.breakAll) node.attribute.wordBreak(WordBreak.BREAK_ALL);
       if (style.indentVp !== undefined) node.attribute.textIndent(style.indentVp);

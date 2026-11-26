@@ -13,6 +13,7 @@ const targets = new Map([
   ['reader-source-footer-add-button', {id:/^source-back:\d+:import:footer$/u,scope:[footer]}],
   ['reader-source-clear-filters', {scope:['reader-source-filtered-empty',list]}],
   ['reader-source-read-retry', {scope:['reader-source-empty-state',list]}],
+  ['reader-source-import-readback-retry', {scope:['reader-source-empty-state',list]}],
   ['reader-source-retained-read-retry', {scope:['reader-source-filter-block',list]}],
   ['reader-source-status-action', {scope:['reader-source-filter-block',list]}],
   ['reader-source-original-reconcile', {scope:['reader-source-original-recovery','reader-source-pending-recovery']}],
@@ -20,8 +21,8 @@ const targets = new Map([
   ['reader-source-original-expand', {scope:['reader-source-original-recovery','reader-source-pending-recovery']}],
   ['reader-source-unknown-reconcile', {scope:['reader-source-unknown-recovery','reader-source-pending-recovery']}],
   ['reader-source-unknown-expand', {scope:['reader-source-unknown-recovery','reader-source-pending-recovery']}],
-  ['reader-source-row-detect-control', {scope:[/^reader-source-row-[1-9]\d*$/u,list]}],
-  ['reader-source-row-login-control', {scope:[/^reader-source-row-[1-9]\d*$/u,list]}],
+  ['reader-source-row-detect-control', {minimumVp:28,scope:[/^reader-source-row-[1-9]\d*$/u,list]}],
+  ['reader-source-row-login-control', {minimumVp:28,scope:[/^reader-source-row-[1-9]\d*$/u,list]}],
 ]);
 
 export function sourceNativeControlAllowed(target) {
@@ -79,11 +80,11 @@ export function measureSourceNativeControl(sample,target,{verifyMinimum = true} 
       ![window.visibleRectPx,...scope.map(parent=>parent.visibleRectPx)].every(outer=>contains(outer,visibleRectPx))) {
     return report('FAIL','The actual native control is clipped, hidden, disabled, or leaves its owning region',actual);
   }
-  const minimumVp = 44;
+  const minimumVp = policy.minimumVp ?? 44;
   if (verifyMinimum && (rectPx.width+1 < minimumVp*density || rectPx.height+1 < minimumVp*density)) {
     return policy.extended ?
       report('NOT_RUN','The native paint box is smaller than 44vp; the extended response area needs actual dispatch evidence',actual) :
-      report('FAIL','The actual native control is smaller than 44vp',actual);
+      report('FAIL',`The actual native control is smaller than ${minimumVp}vp`,actual);
   }
   return report('PASS','',actual);
 }

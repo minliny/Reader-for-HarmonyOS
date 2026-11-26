@@ -8,19 +8,25 @@ registerHooks({ resolve(specifier, context, next) {
   try { return next(specifier, context); }
   catch (error) { if (specifier.startsWith('.') && !specifier.endsWith('.ts')) return next(`${specifier}.ts`, context); throw error; }
 } });
-const { ReaderNavigation } = await import('../entry/src/main/ets/app/navigation/ReaderNavigation.ts');
-const { ReaderDownloadJourney } = await import('../entry/src/main/ets/app/composition/ReaderDownloadJourney.ts');
+const { ReaderNavigation, retainedReaderRoute } = await import('../entry/src/main/ets/app/navigation/ReaderNavigation.ts');
+const { readingEntryInputForSearchContext, readingEntryInputForShelfSnapshot, readingEntrySeedForContentKind } =
+  await import('../entry/src/main/ets/features/reading/presentation/ReadingEntryDto.ts');
+const { downloadBookFromReadingDetail, remoteReadingSeedForShelf } =
+  await import('../entry/src/main/ets/features/reading/presentation/ReadingBookDetail.ts');
 const { BookRemovalDialogPresentation } = await import('../entry/src/main/ets/features/bookshelf/presentation/BookRemovalDialogPresentation.ts');
 const { JsonImportPresentation } = await import('./lib/json-import-presentation-probe.mjs');
 const { actualReadingEntryPresentation } = await import('./lib/reading-entry-presentation-probe.mjs');
 const { installDirectoryOperationIndex } = await import('./lib/reader-directory-operations-probe.mjs');
 const { bookshelfOperationClass } = await import('./lib/bookshelf-operation-owner-probe.mjs');
+const ReaderDownloadJourney = bookshelfOperationClass('app/composition/ReaderDownloadJourney.ets', 'ReaderDownloadJourney',
+  { downloadBookFromReadingDetail, remoteReadingSeedForShelf, readingEntrySeedForContentKind, LOCAL_SOURCE_ID: 'local' });
 const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
 
 const index = new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url);
 const methods = ['cancelReaderExitDestination', 'onReaderExited', 'currentReaderPresentationIdentity',
   'downloadNavigationPorts', 'openReading', 'readingEntryActionPorts', 'readingExitActionPorts',
-  'currentReadingRuntime', 'isCurrentRuntime', 'navigateTo', 'publishNavigation', 'nextNavigationGeneration'];
+  'currentReadingRuntime', 'isCurrentRuntime', 'navigateTo', 'publishNavigation', 'nextNavigationGeneration',
+  'appRouteLane', 'updateReaderParentMotion'];
 const deferred = () => { let resolve, reject; const promise = new Promise((a, b) => { resolve = a; reject = b; }); return { promise, resolve, reject }; };
 const tick = () => new Promise(resolve => setImmediate(resolve));
 const runtimeFile = new URL('../entry/src/main/ets/app/ReaderRuntimeOwner.ts', import.meta.url);
@@ -35,7 +41,7 @@ function fixture({ route = 'reading', active = true, view = {} } = {}) {
   } }), setDownloadReadingProtection: (...args) => protection.push(args), supportsCoreCapability: () => true,
     finishMangaOfflineProbe: (...args) => probeReleases.push(args) };
   const ReaderRuntimeOwner = { isCurrent: candidate => candidate === owner };
-  const Index = selectedProductionMethods(index, 'Index', methods, { ReaderRuntimeOwner, hilog, DOMAIN: 0 });
+  const Index = selectedProductionMethods(index, 'Index', methods, { ReaderRuntimeOwner, retainedReaderRoute, hilog, DOMAIN: 0 });
   class SharedDownloadHost {
     constructor(runtime, publish) { assert.equal(runtime, owner); this.publish = publish; }
     async reload(current) {
@@ -55,8 +61,8 @@ function fixture({ route = 'reading', active = true, view = {} } = {}) {
   const Download = bookshelfOperationClass('features/downloads/presentation/SharedDownloadPresentation.ets',
     'SharedDownloadPresentation', { Observed: value => value, SharedDownloadHost });
   const EntryActions = bookshelfOperationClass('app/composition/ReaderReadingEntryActions.ets',
-    'ReaderReadingEntryActions', { Observed: value => value });
-  const ExitActions = bookshelfOperationClass('app/composition/ReaderExitActions.ts', 'ReaderExitActions');
+    'ReaderReadingEntryActions', { Observed: value => value, readingEntryInputForSearchContext, readingEntryInputForShelfSnapshot });
+  const ExitActions = bookshelfOperationClass('app/composition/ReaderExitActions.ets', 'ReaderExitActions');
   const Reading = actualReadingEntryPresentation();
   const session = { contentKind: 'manga', identity: { sourceId: 'source', bookId: 'book' },
     entries: [{ index: 0, url: '/chapter-0', navigable: true }, { index: 1, url: '/chapter-1', navigable: true },
@@ -70,10 +76,11 @@ function fixture({ route = 'reading', active = true, view = {} } = {}) {
   const page = Object.assign(new Index(), { mountedRuntimeOwner: owner, shelfReceiptRetired: false,
     libraryAcquisition: { currentOwner: () => owner },
     navigationOwner: new ReaderNavigation(), readingEntry, downloadPresentation, searchAppForeground: true,
+    appReduceMotion: true, readerParentProgress: 0, wideSettingsPane: () => undefined,
     rssInstanceIdentity: 'instance', detailShelfAdmissionMount: 1,
     bookRemovalConfirmation: new BookRemovalDialogPresentation(), jsonImportPresentation: new JsonImportPresentation(),
-    shelfRead: { snapshot: { books: [] } }, shelfMotion: { clear() {} }, transientFeedback: { reset() {} },
-    sourceSwitchPresentation: { visible: false }, mangaSourceSwitch: { selectionVisible: false },
+    shelfRead: { snapshot: { books: [] } }, transientFeedback: { reset() {} },
+    sourceSwitchPresentation: { visible: false, isSurfacePresented: () => false }, mangaSourceSwitch: { selectionVisible: false },
     readingCommits: dormant, settingsPresentation: dormant, sourceJourney: dormant, rssJourney: dormant,
     shelfCatalog: dormant, shelfManagement: dormant, shelfGroupPresentation: dormant, discoverPresentation: dormant, rulesPresentation: dormant,
     syncPresentation: dormant, nativeAlertOwner: dormant, retireSourceSwitchPresentation() {},
@@ -82,11 +89,12 @@ function fixture({ route = 'reading', active = true, view = {} } = {}) {
     showOfflineDownloadFeedback: text => toast.push(text),
     libraryJourney: { returnToBookshelf: () => calls.push(['shelf']), returnFromDetail: assert.fail },
     settingsNavigation: { returnToSettings: () => calls.push(['settings']) },
-    bookshelfModalVisible: () => false, returnToReadingOrigin: () => calls.push(['origin']),
+    bookshelfModalVisible: () => false,
     openShelfBook: saved => calls.push(['reader', saved]),
   });
   page.readingEntryActions = new EntryActions(page.navigationOwner, { begin() {} }, page.readingEntryActionPorts());
   page.readingExitActions = new ExitActions(page.navigationOwner, page.readingExitActionPorts());
+  page.readingExitActions.completeReturn = () => calls.push(['origin']);
   page.downloadNavigation = new ReaderDownloadJourney(page.navigationOwner, page.downloadNavigationPorts());
   page.readingEntryActions.resumeShelf = saved => calls.push(['reader', saved]);
   page.readingEntryActions.openShelfEntry = (saved, intent, parent) => {
@@ -114,7 +122,11 @@ if(id==='view-state'){
 {
   const retained={query:'325',type:'text',state:'downloading',sourceId:'source',
     sort:'size',direction:'asc',listScroll:389,chapterScroll:0,detailKey:'old'};
-  const {page,readingEntry,downloadPresentation,hostCalls,calls}=fixture({route:'directory',active:false,view:retained});
+  const {page,readingEntry,downloadPresentation,hostCalls,calls,session}=fixture({route:'directory',active:false,view:retained});
+  page.readingEntryActions.openRemoteDetail = (request, parent) => {
+    calls.push(['remote-detail', request.seed, request.validatedSession, parent]);
+    page.navigateTo('detail');
+  };
   const book=page.downloadNavigation.currentBook(), previous=downloadPresentation.initialView();
   page.downloadNavigation.open({ kind: 'fresh', detailKey: 'job' });
   assert.deepEqual(downloadPresentation.initialView(),{...retained,detailKey:'job'});
@@ -128,7 +140,7 @@ if(id==='view-state'){
   assert.deepEqual(hostCalls,['reload','reload','reload']);
   assert.equal(downloadPresentation.initialView().detailKey,'next','active reading waits for its saved exit before opening downloads');
   readingEntry.sessionActive=false;page.downloadNavigation.returnFromDownloads();
-  assert.deepEqual(calls.slice(-2),[['detail',book,'bookshelf'],['directory']]);
+  assert.deepEqual(calls.slice(-2),[['remote-detail',remoteReadingSeedForShelf(book),session,'bookshelf'],['directory']]);
   assert.equal(page.route,'directory');
 }
 }

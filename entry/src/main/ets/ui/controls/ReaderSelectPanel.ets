@@ -1,3 +1,5 @@
+import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
+import { readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
 import { FrameCallback } from '@kit.ArkUI';
 import type { AnimatorResult } from '@ohos.animator';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
@@ -5,28 +7,21 @@ import { ReaderChoiceRow } from './ReaderChoiceRow';
 import { registerReaderFonts } from '../foundation/ReaderFonts';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
-import { ReaderSelectMenuKind, readerSelectAvailableWidth, readerSelectMenuWidth, SOURCE_GROUP_SELECT_ARROW_END,
-  SOURCE_GROUP_SELECT_ARROW_SIZE, SOURCE_GROUP_SELECT_ARROW_TARGET, SOURCE_GROUP_SELECT_PAINT_INSET,
+import { ReaderSelectMenuKind, readerSelectAvailableWidth, readerSelectMenuWidth,
+  SOURCE_GROUP_SELECT_ARROW_TARGET, SOURCE_GROUP_SELECT_PAINT_INSET,
   SOURCE_GROUP_SELECT_RADIUS } from '../foundation/ReaderSelectGeometry';
 import {
-  TOK_BORDER,
   TOK_BORDER_W,
-  TOK_CONTROL_INK,
-  TOK_FIELD_SURFACE,
-  TOK_INK,
-  TOK_PRIMARY_DARK,
   TOK_SPACE_CONTROL_INLINE,
-  TOK_SURFACE_PANEL_SOFT,
 } from '../foundation/ReaderTokens';
 import { motionAnimateParam, motionSpecGet } from '../foundation/MotionSpec';
-import { readerMotionAnimateParam } from '../foundation/ReaderMotionPolicy';
+import { readerMotionReducedFadeParam } from '../foundation/ReaderMotionPolicy';
 import {
   APPEARANCE_SELECT_OPTION_HEIGHT, appearanceSelectMenuHeight,
 } from './ReaderSelectAppearanceStyle';
 import type { ReaderSelectVariant } from './ReaderSelect';
 import {
   TYPE_SELECT_DEFAULT_VALUE,
-  TYPE_SELECT_OPTION,
   TYPE_SELECT_SETTINGS_VALUE,
   TYPE_SELECT_SOURCE_GROUP_VALUE,
 } from '../foundation/ReaderTypography';
@@ -57,6 +52,7 @@ export struct ReaderSelectPanel {
 
   @Prop @Watch('onGeometryChanged') value: string = '';
   @Prop @Watch('onGeometryChanged') options: string[] = [];
+  @Prop @Watch('onGeometryChanged') selectedIndex: number = -1;
   @Prop hosting: 'overlay' | 'popup' = 'overlay';
   @Prop @Watch('onGeometryChanged') x: number = 0;
   @Prop y: number = 0;
@@ -69,6 +65,8 @@ export struct ReaderSelectPanel {
   @Prop @Watch('onGeometryChanged') menuHeaderHeight: number = 0;
   @Prop emptyOptionsText: string = '';
   @BuilderParam menuHeader: () => void = this.emptyMenuHeader;
+  @Prop @Watch('onGeometryChanged') menuFooterHeight: number = 0;
+  @BuilderParam menuFooter: () => void = this.emptyMenuHeader;
   onMenuHeaderCollapse: ((identity: string) => void) | undefined = undefined;
   /** Optional current appearance host budget. Zero keeps the original menu contract. */
   @Prop @Watch('onGeometryChanged') maxPanelHeight: number = 0;
@@ -84,12 +82,13 @@ export struct ReaderSelectPanel {
   @Prop focusIdPrefix: string = '';
   @Prop nativeAnchorId: string = '';
   // Production callers commit the immutable choice now; finish only unmounts.
-  onCommit: ((option: string, identity: string) => void) | undefined = undefined;
+  onCommit: ((option: string, identity: string, index?: number) => void) | undefined = undefined;
   inputCurrent: (() => boolean) | undefined = undefined;
   optionTextLayoutOptions: ((option: string, identity: string) => TextOptions | undefined) | undefined = undefined;
   onOptionsScrollStop: ((identity: string) => void) | undefined = undefined;
   onDismiss: (identity: string) => void = (_identity: string): void => {};
   @State private expandedHeight: number = OPTION_H;
+  @State private panelOpacity: number = 1;
   @State private chevronAngle: number = 0;
   @State private closeInFlight: boolean = false;
   @State private measuredHeightRevision: number = 0;
@@ -99,14 +98,20 @@ export struct ReaderSelectPanel {
   private optionHeightsLayoutIdentity: string = '';
   private mounted: boolean = false;
   private generation: number = 0;
+  private reducedEnterGeneration: number = -1;
   private closingValue: string = '';
   private closingOptions: string[] = [];
+  private closingSelectedIndex: number = -1;
   private closeFinish: (() => void) | undefined = undefined;
   private appearanceHeightAnimator: AnimatorResult | undefined = undefined;
   private appearanceHeightTarget: number = 0;
 
   private renderedValue(): string { return this.closeInFlight ? this.closingValue : this.value; }
   private renderedOptions(): string[] { return this.closeInFlight ? this.closingOptions : this.options; }
+  private renderedSelectedIndex(): number {
+    if (this.closeInFlight) return this.closingSelectedIndex;
+    return this.options[this.selectedIndex] === this.value ? this.selectedIndex : this.options.indexOf(this.value);
+  }
   private showsSelectedRow(): boolean {
     return this.menuHeaderHeight === 0 || this.renderedOptions().includes(this.renderedValue());
   }
@@ -117,6 +122,7 @@ export struct ReaderSelectPanel {
     this.mounted = true;
     this.generation += 1;
     this.closeFinish = undefined;
+    this.panelOpacity = this.reduceMotion ? 0 : 1;
     registerReaderFonts(this.getUIContext().getFont());
   }
 
@@ -132,19 +138,42 @@ export struct ReaderSelectPanel {
     if (this.appearanceHeightAnimator !== undefined) this.cancelAppearanceHeightAnimation();
     this.closeInFlight = false;
     this.closeFinish = undefined;
+    this.panelOpacity = this.reduceMotion ? 0 : 1;
     if (this.mounted) this.expandPanel();
   }
 
   private onReduceMotionChanged(): void {
-    if (!this.mounted || !this.reduceMotion) return;
+    if (!this.mounted) return;
+    if (!this.reduceMotion) {
+      if (!this.closeInFlight) this.panelOpacity = 1;
+      return;
+    }
     const generation = ++this.generation;
     if (this.appearanceHeightAnimator !== undefined) this.cancelAppearanceHeightAnimation();
-    this.getUIContext().animateTo(readerMotionAnimateParam(
-      this.closeInFlight ? 'dropdown.menu.collapse' : 'dropdown.menu.expand', true), (): void => {
-      this.expandedHeight = this.closeInFlight ? this.collapsedHeight() : this.fullPanelHeight();
-      this.chevronAngle = this.closeInFlight ? 0 : -180;
-    });
-    if (this.closeInFlight) this.finishCollapse(generation, true);
+    if (this.closeInFlight) this.fadePanelOut(generation, true);
+    else this.expandPanel();
+  }
+
+  private fadePanelIn(): void {
+    const generation = this.generation;
+    if (this.panelOpacity === 1 || this.reducedEnterGeneration === generation) return;
+    this.reducedEnterGeneration = generation;
+    try {
+      const context = this.getUIContext();
+      context.postFrameCallback(new ReaderSelectParentFrame((): void => {
+        if (!this.mounted || this.closeInFlight || !this.reduceMotion || generation !== this.generation) return;
+        try {
+          context.animateTo(readerMotionReducedFadeParam(), (): void => { this.panelOpacity = 1; });
+        } catch (_) { this.panelOpacity = 1; }
+      }));
+    } catch (_) { this.panelOpacity = 1; }
+  }
+
+  private fadePanelOut(generation: number, deferParent: boolean): void {
+    const finish = (): void => this.finishCollapse(generation, deferParent);
+    try {
+      this.getUIContext().animateTo(readerMotionReducedFadeParam(finish), (): void => { this.panelOpacity = 0; });
+    } catch (_) { void Promise.resolve().then(finish); }
   }
 
   private finishCollapse(generation: number, deferParent: boolean = false): void {
@@ -204,7 +233,8 @@ export struct ReaderSelectPanel {
     this.readerWindowMetricsRevision;
     const metrics = readerWindowMetrics();
     const inputs = JSON.stringify([this.selectionId, this.variant, this.controlWidth, this.menuKind,
-      this.renderedValue(), this.renderedOptions(), this.hostLeftVp, this.hostRightVp, metrics.windowRect.width,
+      this.renderedValue(), this.renderedOptions(), this.hosting === 'popup' ? this.renderedSelectedIndex() : -1,
+      this.hostLeftVp, this.hostRightVp, metrics.windowRect.width,
       readerInteractiveSafeLeft(metrics), readerInteractiveSafeRight(metrics), metrics.systemFontScale, metrics.densityPixels,
       this.variant === 'sourceGroup' && this.controlWidth > 0 ? this.x : 0]);
     if (inputs !== this.optionLayoutInputs) {
@@ -227,7 +257,7 @@ export struct ReaderSelectPanel {
   }
 
   private panelHeight(): number {
-    const height = Math.max(this.menuHeaderHeight, this.expandedHeight);
+    const height = Math.max(this.menuHeaderHeight, this.menuFooterHeight, this.expandedHeight);
     return this.hostBottomVp >= 0 ? Math.min(height, Math.max(0, this.hostBottomVp - this.hostTopVp)) : height;
   }
 
@@ -257,6 +287,7 @@ export struct ReaderSelectPanel {
         }.width('100%').layoutWeight(1).scrollBar(BarState.Auto)
           .onScrollStop(this.onOptionsScrollStop === undefined ? (): void => {} : this.optionsScrollStopAction());
       } else { this.optionContent(); }
+      if (this.menuFooterHeight > 0) { this.menuFooter(); }
     }
     .id(this.nativeAnchorId)
     .width(this.resolvedWidth())
@@ -265,9 +296,10 @@ export struct ReaderSelectPanel {
     .zIndex(10)
     .backgroundColor(this.menuHeaderHeight > 0 ? Color.Transparent : this.panelBackgroundColor())
     .border({ width: this.menuHeaderHeight > 0 ? 0 : TOK_BORDER_W, color: this.panelBorderColor() })
-    .borderRadius(this.variant === 'appearanceLibrary' ? 9 : (this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_RADIUS : 6))
-    .shadow({ radius: this.variant === 'appearanceLibrary' ? 20 : 0,
-      color: this.variant === 'appearanceLibrary' ? readerAppColor('app.shadow.select', this.appThemeScheme) : Color.Transparent, offsetY: 8 })
+    .borderRadius(this.variant === 'appearanceLibrary' ? 9 : (this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_RADIUS : 14))
+    .opacity(this.panelOpacity)
+    .shadow(this.variant === 'appearanceLibrary' ? this.appearanceShadow() :
+      readerSurfaceElevation(this.variant === 'sourceGroup' ? 'popover' : 'embedded', this.appThemeScheme))
     .clip(true).onAppear((): void => this.expandPanel());
   }
 
@@ -298,14 +330,19 @@ export struct ReaderSelectPanel {
       if (this.onMenuHeaderCollapse !== undefined) {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Stack({ alignContent: Alignment.TopStart }) {
-            Image(this.appThemeScheme === 'night' ? $r('app.media.source_group_chevron_theme_night') : $r('app.media.source_group_chevron'))
-              .width(SOURCE_GROUP_SELECT_ARROW_SIZE).height(SOURCE_GROUP_SELECT_ARROW_SIZE)
-              .position({ x: SOURCE_GROUP_SELECT_ARROW_TARGET - SOURCE_GROUP_SELECT_ARROW_SIZE - SOURCE_GROUP_SELECT_ARROW_END,
-                y: (SOURCE_GROUP_SELECT_ARROW_TARGET - SOURCE_GROUP_SELECT_ARROW_SIZE) / 2 })
+            Image(this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down'))
+              .width(CHEVRON_W).height(CHEVRON_H)
+              .position({ x: SOURCE_GROUP_SELECT_ARROW_TARGET - CHEVRON_W - SELECT_PAD,
+                y: (this.menuHeaderHeight - CHEVRON_H) / 2 })
               .rotate({ angle: this.chevronAngle }).accessibilityLevel('no');
           }.width('100%').height('100%');
-        }.width(SOURCE_GROUP_SELECT_ARROW_TARGET).height(SOURCE_GROUP_SELECT_ARROW_TARGET)
-          .padding(0).borderRadius(SOURCE_GROUP_SELECT_RADIUS).backgroundColor(Color.Transparent)
+        }.width(SOURCE_GROUP_SELECT_ARROW_TARGET).height(this.menuHeaderHeight)
+          .padding(0)
+          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme,
+            SOURCE_GROUP_SELECT_RADIUS, SOURCE_GROUP_SELECT_RADIUS, !this.closing))
+          .responseRegion({ x: 0, y: Math.min(0, (this.menuHeaderHeight - 44) / 2),
+            width: SOURCE_GROUP_SELECT_ARROW_TARGET, height: Math.max(44, this.menuHeaderHeight) })
+          .enabled(!this.closing)
           .id('reader-source-group-collapse').accessibilityText('收起分组')
           .onClick((): void => this.onMenuHeaderCollapse?.(identity));
       }
@@ -314,7 +351,16 @@ export struct ReaderSelectPanel {
 
   @Builder
   private optionContent() {
-      if (this.variant === 'appearanceLibrary') {
+      if (this.hosting === 'popup') {
+        if (this.variant !== 'appearanceLibrary') this.selectedRow(this.renderedSelectedIndex());
+        ForEach(this.renderedOptions(), (opt: string, index: number) => {
+          if (this.variant === 'appearanceLibrary') {
+            this.appearanceLibraryOption(opt, index);
+          } else if (index !== this.renderedSelectedIndex()) {
+            this.optionRow(opt, index);
+          }
+        }, (opt: string, index: number): string => `ropt-${index}-${opt}`);
+      } else if (this.variant === 'appearanceLibrary') {
         ForEach(this.renderedOptions(), (opt: string) => {
           this.appearanceLibraryOption(opt);
         }, (opt: string): string => `ropt-${opt}`);
@@ -324,7 +370,9 @@ export struct ReaderSelectPanel {
         } else if (this.renderedOptions().length === 0) {
           Text(this.emptyOptionsText).width('100%').height(44).padding({ left: 14, right: 14 })
             .fontFamily(TYPE_SELECT_SOURCE_GROUP_VALUE.fontFamily)
+            .fontWeight(TYPE_SELECT_SOURCE_GROUP_VALUE.fontWeight)
             .fontSize(TYPE_SELECT_SOURCE_GROUP_VALUE.fontSizeFp)
+            .lineHeight(TYPE_SELECT_SOURCE_GROUP_VALUE.lineHeightFp as number).halfLeading(true)
             .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         }
@@ -335,20 +383,24 @@ export struct ReaderSelectPanel {
   }
 
   @Builder
-  private appearanceLibraryOption(opt: string) {
+  private appearanceLibraryOption(opt: string, index: number = -1) {
     ReaderChoiceRow({
       specId: 'appearance-library', label: opt,
-      selected: opt === this.renderedValue(), scheme: this.appThemeScheme,
+      selected: this.appearanceOptionSelected(opt, index), scheme: this.appThemeScheme,
       actionEnabled: !this.closeInFlight,
       wrapLabel: true,
-      focusId: this.optionFocusId(opt === this.renderedValue() ? 'selected' : `option:${opt}`),
-      onHeightChange: this.optionHeightHandler(opt, opt === this.renderedValue()),
-      onChoose: (option: string): void => this.selectAndCollapse(option),
+      focusId: this.optionFocusId(this.appearanceOptionSelected(opt, index) ? 'selected' : `option:${index < 0 ? opt : index}`),
+      onHeightChange: this.optionHeightHandler(opt, this.appearanceOptionSelected(opt, index)),
+      onChoose: (option: string): void => this.selectAndCollapse(option, index),
     });
   }
 
+  private appearanceOptionSelected(opt: string, index: number): boolean {
+    return index < 0 ? opt === this.renderedValue() : index === this.renderedSelectedIndex();
+  }
+
   @Builder
-  private selectedRow() {
+  private selectedRow(index: number = -1) {
     ReaderChoiceRow({
       specId: this.variant === 'sourceGroup' ? 'source-group-selected' : 'default-selected',
       label: this.renderedValue(), selected: true, scheme: this.appThemeScheme,
@@ -358,20 +410,20 @@ export struct ReaderSelectPanel {
       wrapLabel: this.wrapsOptions(),
       focusId: this.optionFocusId('selected'),
       onHeightChange: this.optionHeightHandler(this.renderedValue(), true),
-      onChoose: (option: string): void => this.selectAndCollapse(option),
+      onChoose: (option: string): void => this.selectAndCollapse(option, index),
     });
   }
 
   @Builder
-  private optionRow(opt: string) {
+  private optionRow(opt: string, index: number = -1) {
     ReaderChoiceRow({
       specId: this.variant === 'sourceGroup' ? 'source-group-option' : 'default-option',
       label: opt, scheme: this.appThemeScheme, actionEnabled: !this.closeInFlight,
       textLayoutOptions: this.optionTextLayoutOptions?.(opt, this.selectionId),
       wrapLabel: this.wrapsOptions(),
-      focusId: this.optionFocusId(`option:${opt}`),
+      focusId: this.optionFocusId(`option:${index < 0 ? opt : index}`),
       onHeightChange: this.optionHeightHandler(opt, false),
-      onChoose: (option: string): void => this.selectAndCollapse(option),
+      onChoose: (option: string): void => this.selectAndCollapse(option, index),
     });
   }
 
@@ -441,6 +493,12 @@ export struct ReaderSelectPanel {
       metrics.windowRect.width - Math.max(16, readerInteractiveSafeRight(metrics)) - this.resolvedWidth()));
   }
 
+  private appearanceShadow(): ShadowOptions {
+    const density = readerWindowMetrics().densityPixels;
+    return { radius: 20 * density, offsetY: 8 * density,
+      color: readerAppColor('app.shadow.select', this.appThemeScheme) };
+  }
+
   private panelY(): number {
     if (this.hostBottomVp < 0) return this.y;
     const height = this.fullPanelHeight();
@@ -486,15 +544,16 @@ export struct ReaderSelectPanel {
     if (!this.mounted || this.closeInFlight) return;
     if (this.closing) { this.onClosingChanged(); return; }
     const targetHeight = this.fullPanelHeight();
+    if (this.reduceMotion) {
+      this.expandedHeight = targetHeight;
+      this.chevronAngle = -180;
+      this.fadePanelIn();
+      return;
+    }
     if (this.expandedHeight === targetHeight && this.chevronAngle === -180) {
       if (this.appearanceHeightAnimator !== undefined && this.appearanceHeightTarget !== targetHeight) {
         this.cancelAppearanceHeightAnimation();
       }
-      return;
-    }
-    if (this.reduceMotion) {
-      this.expandedHeight = targetHeight;
-      this.chevronAngle = -180;
       return;
     }
     if (this.variant === 'appearanceLibrary' && this.animateAppearanceHeight(targetHeight, -180)) return;
@@ -513,13 +572,16 @@ export struct ReaderSelectPanel {
     this.collapsePanel((): void => dismiss(identity), undefined, true);
   }
 
-  private selectAndCollapse(option: string): void {
+  private selectAndCollapse(option: string, index: number = -1): void {
     if (!this.mounted || this.closeInFlight || this.inputCurrent?.() === false) return;
     const identity = this.selectionId;
     const commit = this.onCommit;
     if (commit === undefined) return;
     const dismiss = this.onDismiss;
-    this.collapsePanel((): void => dismiss(identity), (): void => commit(option, identity));
+    this.collapsePanel((): void => dismiss(identity), (): void => {
+      if (this.hosting === 'popup') commit(option, identity, index);
+      else commit(option, identity);
+    });
   }
 
   private collapsePanel(onFinish: () => void, onCommit?: () => void, deferParent: boolean = false): void {
@@ -528,6 +590,7 @@ export struct ReaderSelectPanel {
     }
     this.closingValue = this.value;
     this.closingOptions = this.options.slice();
+    if (this.hosting === 'popup') this.closingSelectedIndex = this.renderedSelectedIndex();
     this.closeInFlight = true;
     this.closeFinish = onFinish;
     const generation = ++this.generation;
@@ -535,9 +598,7 @@ export struct ReaderSelectPanel {
     if (onCommit !== undefined) onCommit();
     if (!this.mounted || generation !== this.generation) return;
     if (this.reduceMotion) {
-      this.expandedHeight = this.collapsedHeight();
-      this.chevronAngle = 0;
-      this.finishCollapse(generation, deferParent);
+      this.fadePanelOut(generation, deferParent);
       return;
     }
     if (this.variant === 'appearanceLibrary' &&
@@ -612,26 +673,32 @@ export struct ReaderSelectPanel {
       if (this.fillsMeasuredSourceGroupHeight(maximum - this.menuHeaderHeight)) return maximum;
       const appearance = this.variant === 'appearanceLibrary';
       const minimum = appearance ? APPEARANCE_SELECT_OPTION_HEIGHT : 44;
-      let height = this.menuHeaderHeight + (appearance ? 8 : TOK_BORDER_W * 2);
+      let height = this.menuHeaderHeight + (this.menuFooterHeight || 0) + (appearance ? 8 : TOK_BORDER_W * 2);
       if (height >= maximum) return maximum;
       const selected = this.renderedValue();
+      const indexed = this.hosting === 'popup';
+      const selectedIndex = indexed ? this.renderedSelectedIndex() : -1;
       // The identity includes the complete option list. Resolve it once per
       // panel height, since native row measurement can run this for every row.
       const heights = this.optionHeightsLayoutIdentity === this.optionMeasurementIdentity() ? this.optionHeights : undefined;
-      if (!appearance && this.showsSelectedRow()) {
+      if (!appearance && (indexed || this.showsSelectedRow())) {
         height += heights?.get(`${this.variant}:true:${selected}`) ?? minimum;
       } else if (this.menuHeaderHeight > 0 && this.renderedOptions().length === 0) {
         height += minimum;
       }
-      for (const option of this.renderedOptions()) {
+      const options = this.renderedOptions();
+      for (let i = 0; i < options.length; i++) {
         if (height >= maximum) return maximum;
-        if (appearance || option !== selected) {
-          height += heights?.get(`${this.variant}:${appearance && option === selected}:${option}`) ?? minimum;
+        const option = options[i];
+        const isSelected = indexed ? i === selectedIndex : option === selected;
+        if (appearance || !isSelected) {
+          height += heights?.get(`${this.variant}:${appearance && isSelected}:${option}`) ?? minimum;
         }
       }
       return Math.min(height,maximum);
     }
     if (this.variant === 'appearanceLibrary') return appearanceSelectMenuHeight(this.options.length);
+    if (this.hosting === 'popup') return OPTION_H * (this.options.length + (this.renderedSelectedIndex() < 0 ? 1 : 0));
     let unselectedCount = 0;
     for (const option of this.options) {
       if (option !== this.value) {
@@ -643,7 +710,8 @@ export struct ReaderSelectPanel {
 
   private fillsMeasuredSourceGroupHeight(maximum: number): boolean {
     if (this.variant !== 'sourceGroup' || this.controlWidth <= 0) return false;
-    if (this.menuHeaderHeight > 0) return Math.max(1, this.renderedOptions().length) * 44 + TOK_BORDER_W * 2 >= maximum;
+    if (this.menuHeaderHeight > 0) return Math.max(1, this.renderedOptions().length) * 44 + (this.menuFooterHeight || 0) + TOK_BORDER_W * 2 >= maximum;
+    if (this.hosting === 'popup') return (this.renderedOptions().length + (this.renderedSelectedIndex() < 0 ? 1 : 0)) * 44 + TOK_BORDER_W * 2 >= maximum;
     // The selected row is always present, even if its value left the option list.
     let minimum = 44 + TOK_BORDER_W * 2;
     const selected = this.renderedValue();

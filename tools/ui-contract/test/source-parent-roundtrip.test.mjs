@@ -136,3 +136,90 @@ test('source captured parent separates missing proof from trusted Source staying
   wrongAction.actions['settings-tools-back'].key = 'Enter';
   assert.equal(verify('settings',wrongAction).verdict,'NOT_RUN');
 });
+
+const v9Definition = JSON.parse(readFileSync(new URL('../cases/source-management.v9-captured-parent-roundtrip.json',import.meta.url)));
+
+function v9Proof(parent, floor, generation) {
+  const assertion = v9Definition.assertions.find(item=>item.expected.parent === parent);
+  const owner = {mounting:2,generation};
+  const {input,returned} = selectors[parent];
+  const rect = {left:0,top:0,width:100,height:44};
+  const node = (id,path,type = 'Column',fields = {})=>({id,path,parentPath:path.slice(0,path.lastIndexOf('/')),type,visible:true,opacity:1,
+    rectPx:rect,visibleRectPx:rect,...fields});
+  const more = node(`source-back:${generation}:tools:header`,'0/0/0','Button',{
+    alias:'reader-source-header-tools-button',enabled:true,clickable:true,
+  });
+  const catalogue = [node(toolsHeader,'0/0'),more,node(sourceBack,'0/1','Button'),node('reader-source-list','0/2','List')];
+  const sample = (sampleId, sequence, ...nodes)=>({sampleId,instanceId,nodes,captureComplete:true,
+    beforeSeq:floor+sequence,afterSeq:floor+sequence+2,
+    window:{id:'1',revision:4,density:3.5,keyboard:{visible:false}},
+    evidenceRefs:[ref(`raw/${sampleId}.json`),ref(`raw/${sampleId}.png`)],
+  });
+  const action = (from,sequence,op,fields)=>({from,instanceId,op,...fields,outcomeSettled:true,
+    beforeSeq:floor+sequence,afterSeq:floor+sequence+3,evidenceRefs:[commands]});
+  const event = (sequence,kind,payload)=>({eventSeq:floor+sequence,kind,payload,instanceId,
+    channel:'business',evidenceRefs:[commands]});
+  const projection = {owner,state:'empty',readFact:'current',readGeneration:5,filterRevision:1,count:0,projected:0,
+    queryLength:0,status:'all',category:'all',groupIndex:0,allGroups:true};
+  return {
+    samples:{
+      [assertion.parentSample]:sample(assertion.parentSample,3,node(input,'0/0','Button')),
+      [assertion.entrySample]:sample(assertion.entrySample,15,...catalogue),
+      [assertion.menuSample]:sample(assertion.menuSample,23,node('reader-source-v9-more-menu','0/3'),
+        node('reader-source-v9-open-groups','0/3/0','Button',{enabled:true,clickable:true})),
+      [assertion.toolsSample]:sample(assertion.toolsSample,31,node('reader-source-v9-groups','0/0')),
+      [assertion.baseline]:sample(assertion.baseline,42,...catalogue),
+      [assertion.sample]:sample(assertion.sample,55,node(returned,'0/0','Button')),
+    },
+    actions:{
+      [assertion.entryAction]:action(assertion.parentSample,6,'click',{targetId:input}),
+      [assertion.openAction]:action(assertion.entrySample,18,'click',{targetId:'reader-source-header-tools-button'}),
+      [assertion.departAction]:action(assertion.menuSample,26,'click',{targetId:'reader-source-v9-open-groups'}),
+      [assertion.returnAction]:action(assertion.toolsSample,35,'keyEvent',{key:'Back'}),
+      [assertion.action]:action(assertion.baseline,46,'keyEvent',{key:'Back'}),
+    },
+    events:[
+      event(8,'source.route',{...owner,previousGeneration:generation-1,action:'open',from:parent,to:'source'}),
+      event(11,'source.projection',{...projection,trigger:'owner-update'}),
+      event(28,'source.v9-list-transition',{owner,view:'groups',revision:1,phase:'enter'}),
+      event(37,'source.v9-list-transition',{owner,view:'groups',revision:1,phase:'return',filterMatchesDeparture:true}),
+      event(39,'source.projection',{...projection,trigger:'v9-return'}),
+      event(48,'source.route',{mounting:2,generation:generation+1,previousGeneration:generation,action:'close',from:'source',to:parent}),
+    ],
+  };
+}
+
+const evaluateV9Parent = (parent, context) => {
+  const assertion = v9Definition.assertions.find(item=>item.expected.parent === parent);
+  return evaluateSource({...assertion,acceptedSources:assertion.sources},context);
+};
+
+test('v9 captured parents remain independent after real same-opening Groups Back',()=>{
+  const search = v9Proof('search',0,17), settings = v9Proof('settings',70,19);
+  const combined = {samples:{...search.samples,...settings.samples},actions:{...search.actions,...settings.actions},
+    events:[...search.events,...settings.events]};
+  for (const parent of ['search','settings']) {
+    const result = evaluateV9Parent(parent,combined);
+    assert.equal(result.verdict,'PASS',result.reason);
+    assert.equal(result.actual.closed.previousGeneration,result.actual.opened.generation);
+    assert.ok(result.evidenceRefs.some(item=>item.path === `raw/${parent}-more-open.png`));
+    assert.ok(result.evidenceRefs.some(item=>item.path === `raw/${parent}-groups.png`));
+  }
+});
+
+test('v9 captured parent rejects a wrong outer route, stale group owner and duplicate Back',()=>{
+  for (const mutate of [
+    proof=>{proof.events.at(-1).payload.to = 'settings';},
+    proof=>{proof.events[3].payload.owner = {mounting:2,generation:18};},
+    proof=>{proof.events.push({...proof.events.at(-1),eventSeq:49});},
+    proof=>{proof.events[4].payload.readGeneration += 1;},
+    proof=>{proof.samples['search-returned'].nodes = [{id:'reader-source-back',path:'0/0',visible:true}];},
+  ]) {
+    const proof = v9Proof('search',0,17);
+    mutate(proof);
+    assert.equal(evaluateV9Parent('search',proof).verdict,'FAIL');
+  }
+  const missing = v9Proof('search',0,17);
+  missing.events.pop();
+  assert.equal(evaluateV9Parent('search',missing).verdict,'NOT_RUN');
+});

@@ -1,11 +1,11 @@
 {
   "id": "source-management.row-detect-offline",
-  "version": 1,
+  "version": 2,
   "phase": 1,
   "pageId": "source-management",
   "fixture": {
     "id": "public-source-row-detect-offline-v1",
-    "description": "Use the isolated normal public Source catalog with the exact disabled Offline Detect fixture imported previously by the normal local-file route. The fixture has no searchUrl and no login. From Settings invoke real Detect once. Its persisted definition loads at L1 and Core returns the expected L2 request-construction diagnostic before Host HTTP on the same row.",
+    "description": "Use the isolated normal public Source catalog with the exact disabled Offline Detect fixture imported previously by the normal local-file route. The fixture has no searchUrl and no login. Open the v9 report from the measured row control, start one real check, and close the report. Its persisted definition loads at L1 and Core returns the expected L2 request-construction diagnostic before Host HTTP on the same row.",
     "publicSources": true
   },
   "steps": [
@@ -112,18 +112,31 @@
       ]
     },
     {
-      "kind": "sample",
-      "id": "detect-settled",
-      "afterAction": "detect-source",
+      "id": "check-dialog",
+      "kind": "locate",
       "anchors": [
-        "reader-source-back",
-        "reader-source-content",
-        "reader-source-list",
-        "reader-source-row-detect-control",
-        "reader-source-offline-detect-failed"
+        "reader-source-v9-check-run",
+        "reader-source-v9-check-close"
       ],
       "keyboard": false,
-      "quietMs": 500,
+      "afterAction": "detect-source"
+    },
+    {
+      "id": "start-check",
+      "kind": "action",
+      "op": "click",
+      "from": "check-dialog",
+      "target": "reader-source-v9-check-run"
+    },
+    {
+      "id": "check-complete",
+      "kind": "locate",
+      "anchors": [
+        "reader-source-v9-check-run",
+        "reader-source-v9-check-close"
+      ],
+      "keyboard": false,
+      "afterAction": "start-check",
       "waitFor": [
         {
           "kind": "source.row-detect",
@@ -134,6 +147,27 @@
           }
         }
       ]
+    },
+    {
+      "id": "close-check",
+      "kind": "action",
+      "op": "click",
+      "from": "check-complete",
+      "target": "reader-source-v9-check-close"
+    },
+    {
+      "kind": "sample",
+      "id": "detect-settled",
+      "afterAction": "close-check",
+      "anchors": [
+        "reader-source-back",
+        "reader-source-content",
+        "reader-source-list",
+        "reader-source-row-detect-control",
+        "reader-source-offline-detect-failed"
+      ],
+      "keyboard": false,
+      "quietMs": 500
     }
   ],
   "assertions": [
@@ -166,7 +200,7 @@
         "l1": "pass",
         "l2": "pre-request-fail"
       },
-      "source": "entry/src/main/ets/features/source/application/SourceOrchestrator.ets#checkSource",
+      "source": "entry/src/main/ets/features/source/application/SourceOrchestrator.ets#runSourceCheck",
       "entryAction": "open-sources",
       "action": "detect-source",
       "baseline": "source-ready",
@@ -176,7 +210,9 @@
         "native-tree",
         "window-metrics",
         "app-owner"
-      ]
+      ],
+      "runAction": "start-check",
+      "returnAction": "close-check"
     }
   ],
   "ownerSources": [
@@ -204,7 +240,10 @@
     "entry/src/main/ets/ui/layout/ReaderPageGeometry.ts",
     "entry/src/main/ets/ui/layout/ReaderPageScaffold.ets",
     "entry/src/main/ets/ui/layout/ReaderScrollLayout.ts",
-    "entry/src/main/ets/ui/patterns/ReaderBottomTabBar.ets"
+    "entry/src/main/ets/ui/patterns/ReaderBottomTabBar.ets",
+    "entry/src/main/ets/features/source/ui/SourceV9CheckDialog.ets",
+    "entry/src/main/ets/features/source/presentation/SourceV9CheckRun.ts",
+    "entry/src/main/ets/ui/surfaces/ReaderDialogSurface.ets"
   ],
   "structure": {
     "source-ready": "source-ready",

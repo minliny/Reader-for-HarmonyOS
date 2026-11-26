@@ -13,7 +13,7 @@ import {
 } from '../../page-structure/source-e2-admission.mjs';
 import { sourceGestureAssertion } from '../lib/source-gesture-assertion.mjs';
 
-const inventory = readSourceE2Inventory();
+const liveInventory = readSourceE2Inventory();
 const inputs = loadInputs();
 const page = inputs.register.pages.find(item=>item.pageId === 'source-management');
 const claim = 'invariants.E2';
@@ -27,6 +27,14 @@ const candidate = {
 const digest = value => createHash('sha256').update(value).digest('hex');
 const ref = path => ({path,bytes:1,sha256:digest(path)});
 const readCase = id => JSON.parse(readFileSync(new URL(`../cases/${id}.json`,import.meta.url),'utf8'));
+// Exercise native receipt invariants with the former control shapes. This
+// finite fixture cannot be admitted as evidence for the current v9 inventory.
+const fixtureInventory = {
+  schemaVersion: '1.0', pageId: 'source-management', excluded: [],
+  targets: ['header-back','query-input','search-import','row-toggle','status-custom','group-outside-dismiss'].map(id=>({id})),
+  gestures: ['main-list','status-scroll','category-scroll','group-options-scroll'].map(id=>({id})),
+};
+const inventory = {definition:fixtureInventory, sha256:digest(JSON.stringify(fixtureInventory))};
 
 function gestureDefinitions() {
   const routes = {
@@ -184,7 +192,7 @@ test('Source E2 lookup keeps missing touches visible and resolves only released 
   ])),[{id:'row-login',missing:['center','edge']},{id:'search-import',missing:['top','bottom']}]);
 });
 
-test('Source E2 registration binds all inventory targets, gestures and repeated case windows to native replay',()=>{
+test('Source E2 registration binds all synthetic inventory targets, gestures and repeated case windows to native replay',()=>{
   const {mapping,members} = interactionFixture();
   assert.equal(page.invariants.E2.result,'FAIL');
   assert.equal(inputs.model.receiptAdmissions.some(item=>item.pageId === page.pageId && item.claim === claim),false);
@@ -268,7 +276,7 @@ test('Source E2 registration accepts painted edges only when the actual query pa
   assert.throws(()=>requireSourceE2InteractionReceipts(mapping,inventory,members),/actual editor focus and native IME/u);
 });
 
-test('Source E2 registration requires separate SDK provenance and keeps the ordinary group scopes distinct',()=>{
+test('Source E2 registration rejects legacy inventory admission and requires separate SDK provenance',()=>{
   const {mapping} = interactionFixture();
   const current = loadInputs();
   const role = current.model.scenarioObligations.find(item=>item.caseId === 'source-management.scroll-return');
@@ -276,7 +284,11 @@ test('Source E2 registration requires separate SDK provenance and keeps the ordi
   current.model.scenarioObligations.push(...mapping.cases.filter(({caseId})=>!known.has(caseId))
     .map(({caseId})=>({...role,caseId})));
   current.model.receiptAdmissions.push(mapping);
-  assert.deepEqual(validateModel(current).diagnostics,[]);
+  assert.ok(liveInventory.definition.excluded.some(entry=>entry.id === 'search-import'));
+  assert.ok(liveInventory.definition.targets.some(entry=>entry.id === 'footer-add'));
+  assert.throws(()=>requireSourceE2InteractionPlan(mapping,liveInventory),/live inventory/u);
+  assert.ok(validateModel(current).diagnostics.some(item=>item.ruleId === 'RECEIPT_ADMISSION' &&
+    item.message.includes('live inventory')));
   mapping.claim='invariants.S5';
   assert.ok(validateModel(current).diagnostics.some(item=>item.ruleId === 'SCHEMA'));
   const report = JSON.parse(readFileSync(new URL('../../page-structure/source-layout-evidence.json',import.meta.url),'utf8'));
@@ -289,10 +301,12 @@ test('Source E2 registration requires separate SDK provenance and keeps the ordi
     return checkLayoutEvidence({...checkedPage,layoutEvidence:{path:'memory-report.json',sha256:digest(bytes)}},
       {read:()=>bytes,fingerprint:path=>hashes.get(path)}).diagnostics;
   }
-  assert.deepEqual(assess(report),[]);
+  assert.ok(assess(report).some(item=>item.field === 'sourceE2ReceiptGroup'),
+    'SDK layout evidence alone cannot close native E2');
   const incomplete = structuredClone(report);
   incomplete.inputs = incomplete.inputs.filter(input=>input.path !== 'tools/page-structure/evidence/source-interaction.json');
-  assert.ok(assess(incomplete).some(item=>item.ruleId === 'LAYOUT_EVIDENCE_PROVENANCE'));
+  assert.ok(assess(incomplete).filter(item=>item.ruleId === 'LAYOUT_EVIDENCE_PROVENANCE').length >
+    assess(report).filter(item=>item.ruleId === 'LAYOUT_EVIDENCE_PROVENANCE').length);
   const legacy = {...checkedPage,layers:{},invariants:{E2:{result:'PASS',evidence:[
     {kind:'device',symbol:'normal-page',result:'PASS',path:'../out-of-workspace'},
   ]}}};

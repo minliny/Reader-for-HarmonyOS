@@ -2,6 +2,7 @@ import cryptoFramework from '@ohos.security.cryptoFramework';
 import fileIo from '@ohos.file.fs';
 import fileUri from '@ohos.file.fileuri';
 import util from '@ohos.util';
+import { hilog } from '@kit.PerformanceAnalysisKit';
 import { ReaderCoreGateway, type BookshelfState } from '../ReaderCoreGateway';
 import type { ReaderRuntimeOwner } from '../ReaderRuntimeOwner';
 import { LocalBookImportGateway } from '../../features/bookshelf/application/LocalBookImportGateway';
@@ -129,16 +130,19 @@ async function importBook(owner: ReaderRuntimeOwner, root: string, book: PublicL
   await fileIo.mkdir(directory);
   const fileName = `${book.title}.txt`;
   const path = `${directory}/${fileName}`;
-  let created = false;
+  let importFailed = false;
   try {
     const file = await fileIo.open(path, fileIo.OpenMode.CREATE | fileIo.OpenMode.WRITE_ONLY);
-    created = true;
+    let writeFailed = false;
     try {
       if (await fileIo.write(file.fd, bytes.buffer as ArrayBuffer) !== book.bytes) {
         throw new Error('PUBLIC_LONG_BOOK_INPUT_WRITE_INCOMPLETE');
       }
+    } catch (error) {
+      writeFailed = true;
+      throw error;
     } finally {
-      await fileIo.close(file);
+      await closeBookFile(file, writeFailed);
     }
     if (!current()) throw new Error('PUBLIC_LONG_BOOK_SCOPE_NOT_CURRENT');
     const selection = await owner.prepareSystemLocalBookInput(fileUri.getUriFromPath(path));
@@ -153,9 +157,19 @@ async function importBook(owner: ReaderRuntimeOwner, root: string, book: PublicL
     const batch = await importer.importPreparedSelections([selection]);
     if (batch.state !== 'completed' || batch.imported !== 1 || batch.failed !== 0 || batch.items.length !== 1 ||
       batch.items[0].disposition !== 'created') throw new Error('PUBLIC_LONG_BOOK_IMPORT_NOT_CONFIRMED');
+  } catch (error) {
+    importFailed = true;
+    throw error;
   } finally {
-    if (created) await fileIo.unlink(path);
-    if ((await fileIo.listFile(directory)).length === 0) await fileIo.rmdir(directory);
+    // Only this call's exclusively created input directory belongs here.
+    try { await fileIo.rmdir(directory); }
+    catch (error) {
+      const code = (error as { code?: number | string } | undefined)?.code;
+      if (code !== 13900002 && code !== 'ENOENT') {
+        if (!importFailed) throw error;
+        hilog.warn(0x5244, 'Reader', 'Public long-book fixture input cleanup failed');
+      }
+    }
   }
 }
 
@@ -180,6 +194,7 @@ async function readBookBytes(path: string, expectedBytes: number): Promise<Uint8
   if (!stat.isFile() || stat.size !== expectedBytes) throw new Error('PUBLIC_LONG_BOOK_ARCHIVE_INVALID');
   const bytes = new Uint8Array(expectedBytes);
   const file = await fileIo.open(path, fileIo.OpenMode.READ_ONLY);
+  let readFailed = false;
   try {
     let offset = 0;
     while (offset < bytes.length) {
@@ -189,8 +204,19 @@ async function readBookBytes(path: string, expectedBytes: number): Promise<Uint8
       bytes.set(new Uint8Array(chunk, 0, read), offset);
       offset += read;
     }
+  } catch (error) {
+    readFailed = true;
+    throw error;
   } finally {
-    await fileIo.close(file);
+    await closeBookFile(file, readFailed);
   }
   return bytes;
+}
+
+async function closeBookFile(file: fileIo.File, operationFailed: boolean): Promise<void> {
+  try { await fileIo.close(file); }
+  catch (error) {
+    if (!operationFailed) throw error;
+    hilog.warn(0x5244, 'Reader', 'Public long-book fixture file close failed');
+  }
 }

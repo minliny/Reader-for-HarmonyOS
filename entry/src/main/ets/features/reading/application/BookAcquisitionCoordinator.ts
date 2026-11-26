@@ -91,6 +91,7 @@ export class BookAcquisitionCoordinator {
   private attempted: Set<string> = new Set();
   private preparationActive: number = 0;
   private foregroundRequests: number = 0;
+  private foregroundReadingListeners: Set<() => void> = new Set();
   private preparationVisible: boolean = true;
   private preparationGroups: Set<string> = new Set();
   private scope: number = 0;
@@ -138,6 +139,19 @@ export class BookAcquisitionCoordinator {
   subscribe(listener: (change: BookAcquisitionChange) => void): () => void {
     this.listeners.add(listener);
     return (): void => { this.listeners.delete(listener); };
+  }
+
+  hasForegroundReadingWork(): boolean { return this.foregroundRequests > 0; }
+
+  observeForegroundReadingWork(listener: () => void): () => void {
+    this.foregroundReadingListeners.add(listener);
+    return (): void => { this.foregroundReadingListeners.delete(listener); };
+  }
+
+  private notifyForegroundReadingWork(): void {
+    for (const listener of this.foregroundReadingListeners) {
+      try { listener(); } catch (_) { /* Optional preparation cannot interrupt foreground work. */ }
+    }
   }
 
   /** A runtime progress owner has qualified its original background receipt.
@@ -260,6 +274,7 @@ export class BookAcquisitionCoordinator {
       foregroundRequest = network && actualPriority === 'foreground';
       if (foregroundRequest) {
         this.foregroundRequests += 1;
+        this.notifyForegroundReadingWork();
         const bookId = params['bookId'] ?? objectValue(params['book'])?.['bookId'];
         this.preemptBackgroundAcquisitions(sourceId, typeof bookId === 'string' ? bookId : '');
         if (method === 'cache.book.prefetch' && params['preparationRevision'] === undefined) {
@@ -341,6 +356,7 @@ export class BookAcquisitionCoordinator {
       }
       if (foregroundRequest) {
         this.foregroundRequests -= 1;
+        this.notifyForegroundReadingWork();
         this.scheduler.visibilityChanged();
         this.drainPreparations();
       }
@@ -888,6 +904,7 @@ export class BookAcquisitionCoordinator {
     this.jobs.clear();
     this.refreshes.clear();
     this.listeners.clear();
+    this.foregroundReadingListeners.clear();
     this.downloadListeners.clear(); this.downloadRevisions.clear(); this.downloadIdentities.clear();
     if (this.downloadNotifyTimer >= 0) clearTimeout(this.downloadNotifyTimer);
     this.downloadNotifyTimer = -1;

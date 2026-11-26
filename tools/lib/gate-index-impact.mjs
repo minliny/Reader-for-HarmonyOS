@@ -3,22 +3,25 @@ import { lstatSync, readFileSync, readdirSync, realpathSync } from 'node:fs';
 import { join, relative, resolve, posix } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { capsuleModelInputFile, capsuleModelInputPaths } from '../ui-contract/lib/capsule-model-inputs.mjs';
+import { caseRegistryPaths, readCaseRegistrations } from '../ui-contract/lib/case-registry.mjs';
 import { grabberReversalRunnerInputs } from '../ui-contract/lib/control-input.mjs';
 import { conditionBoundSourceKinds } from '../ui-contract/lib/source-read.mjs';
-import { resolveStructureBindings, validateStructureDefinition } from '../ui-contract/lib/structure-contract.mjs';
+import { resolveStructureBindings, resolveStructureCondition, validateStructureDefinition } from '../ui-contract/lib/structure-contract.mjs';
 import { sourceUnknownExpandSteps, usesSourceUnknownExpand } from '../ui-contract/lib/source-unknown-expand.mjs';
 import { sourceGestureAssertion } from '../ui-contract/lib/source-gesture-assertion.mjs';
 import { sourceE2AdmissionGap, sourceE3AdmissionGap } from '../page-structure/receipt-evidence.mjs';
 import { isSourceE2Claim, sourceE2MissingTouchReferences, sourceE2TouchAssertion } from '../page-structure/source-e2-admission.mjs';
 import { isSourceE3Claim } from '../page-structure/source-e3-admission.mjs';
+import { gateResourceDefinitionSha256 } from './gate-resource-definition.mjs';
 
 const catalogFile = 'tools/gate-index.json';
+const resourceManifestFile = 'tools/contract-case-manifest.json';
 const retiredFile = 'tools/retired-contract-tests.json';
 const modelFile = 'tools/page-structure/model.json';
 const registerFile = 'tools/page-structure/register.json';
 const caseDir = 'tools/ui-contract/cases';
-const caseRegistry = `${caseDir}/phase-1.registry.json`;
 const ui = 'tools/ui-contract';
+const caseRegistries = caseRegistryPaths.map(path => `${ui}/${path}`);
 const caseLoader = `${ui}/lib/cases.mjs`;
 const replayLockFile = `${ui}/package-lock.json`;
 const receiptFile = `${ui}/lib/receipt.mjs`;
@@ -103,6 +106,7 @@ const ruleId = (id) => `structure-rule:${id}`;
 const selectorId = (id) => `structure-selector:${id}`;
 const gateId = (id) => `gate:${id}`;
 const fixturePath = /^tools\/ui-contract\/fixtures\/(?:[\p{L}\p{N}][\p{L}\p{N} ._-]*\/)*[\p{L}\p{N}][\p{L}\p{N} ._-]*\.(?:json|txt)$/u;
+const packagedFixturePath = /^entry\/src\/main\/resources\/rawfile\/reader-public-fixture-[a-z0-9]+(?:-[a-z0-9]+)*-v[0-9]+\.(?:json|txt)$/u;
 const localSupportFile = 'tools/ui-contract-impact-bindings.json';
 const localCheckPath = /^tools\/ui-contract\/test\/[A-Za-z0-9_-]+\.test\.mjs$/u;
 const localContractPath = /^tools\/test-[A-Za-z0-9_-]+\.mjs$/u;
@@ -124,23 +128,62 @@ function localTestLiterals(source) {
 
 function localContractCaseNames(source) {
   const code = maskInactiveSource(source);
+  const selectorImport = /^import\s+\{\s*selectContractCases\s*(?:,\s*recordContractCasePass\s*)?\}\s+from\s+(['"])\.\/lib\/contract-case-selection\.mjs\1;/mu;
+  if (!selectorImport.test(code)) return [];
+  const selectedTable = tail => /^\s*(?:const\s+\w+\s*=\s*selectContractCases\(\s*(\w+)\s*\);|for\s*\(\s*const\s+\w+\s+of\s+selectContractCases\(\s*(\w+)\s*\)\s*\)\s*\{)/u
+    .exec(tail)?.slice(1).find(name => name !== undefined);
   // Recognize an import-only header followed by the shared literal table and
   // its immediate runner call. Computed declarations have no static selector.
   const declaration = /^const ([A-Za-z_][A-Za-z0-9_]*)\s*=\s*Object\.fromEntries\(\s*\[[ \t]*$/mu.exec(code);
-  if (!declaration) return [];
+  if (!declaration) return localContractObjectNames(code, selectorImport, selectedTable);
   const header = code.slice(0, declaration.index);
-  if (!/^(?:\s*import[ \t]+[^;\r\n]+;)*\s*$/u.test(header) ||
-      !/^import\s+\{\s*selectContractCases\s*(?:,\s*recordContractCasePass\s*)?\}\s+from\s+(['"])\.\/lib\/contract-case-selection\.mjs\1;/mu.test(header)) return [];
+  if (!/^(?:\s*import[ \t]+[^;\r\n]+;)*\s*$/u.test(header) || !selectorImport.test(header)) return [];
   const table = code.slice(declaration.index + declaration[0].length);
   const mapped = /^[ \t]*\]\.map\(\s*\(\[id,\s*description\]\)\s*=>\s*\[id,\s*\{\s*description,\s*resources:\s*\[\]\s*\}\]\s*\)\);/mu.exec(table);
   if (!mapped) return [];
-  const call = /^\s*const [A-Za-z_][A-Za-z0-9_]*\s*=\s*selectContractCases\(\s*([A-Za-z_][A-Za-z0-9_]*)\s*\);/u
-    .exec(table.slice(mapped.index + mapped[0].length));
-  if (call?.[1] !== declaration[1]) return [];
+  if (selectedTable(table.slice(mapped.index + mapped[0].length)) !== declaration[1]) return [];
   const row = /^\s*\[\s*(['"])([a-z][a-z0-9.-]*)\1\s*,\s*(?:"(?:[^"\\\r\n]|\\.)*"|'(?:[^'\\\r\n]|\\.)*')\s*\](,?)\s*$/u;
   const entries = table.slice(0,mapped.index).split(/\r?\n/u).filter(line => line.trim()).map(line => row.exec(line));
   const literalList = entries.every((entry,index) => entry && (entry[3] === ',' || index === entries.length-1));
   return literalList ? entries.map(entry => entry[2]) : [];
+}
+
+function localContractObjectNames(code, selectorImport, selectedTable) {
+  const string = String.raw`(?:"(?:[^"\\\r\n]|\\.)*"|'(?:[^'\\\r\n]|\\.)*')`;
+  const resources = String.raw`\[\s*(?:${string}(?:\s*,\s*${string})*\s*,?\s*)?\]`;
+  const descriptor = String.raw`\{\s*(?:"description"|'description'|description)\s*:\s*${string}\s*,\s*(?:"resources"|'resources'|resources)\s*:\s*${resources}\s*,?\s*\}`;
+  const literalEntry = new RegExp(String.raw`\s*(?:(['"])([a-z][a-z0-9.-]*)\1|([a-z][a-z0-9]*))\s*:\s*(?:${string}|${descriptor})\s*(,|(?=\}))`, 'yu');
+  const declarations = /^const\s+(\w+)\s*=\s*\{/gmu;
+  for (const declaration of code.matchAll(declarations)) {
+    const header = code.slice(0, declaration.index);
+    if (!selectorImport.test(header)) continue;
+    // Local declarations can precede the table. A declaration inside a helper
+    // or exported callback cannot establish the module's CLI dispatch.
+    const brackets = maskInactiveSource(header, { keepStrings: false }).match(/[()[\]{}]/gu) ?? [];
+    const stack = [];
+    const openings = { ')': '(', ']': '[', '}': '{' };
+    for (const bracket of brackets) {
+      if (Object.hasOwn(openings, bracket)) {
+        if (stack.pop() !== openings[bracket]) { stack.push('invalid'); break; }
+      } else stack.push(bracket);
+    }
+    if (stack.length) continue;
+    let end = declaration.index + declaration[0].length;
+    const names = [];
+    for (;;) {
+      literalEntry.lastIndex = end;
+      const entry = literalEntry.exec(code);
+      if (!entry) break;
+      names.push(entry[2] ?? entry[3]);
+      end = literalEntry.lastIndex;
+      if (entry[4] !== ',') break;
+    }
+    const closing = /^\s*\};/u.exec(code.slice(end));
+    if (closing && selectedTable(code.slice(end + closing[0].length)) === declaration[1]) {
+      return new Set(names).size === names.length ? names : [];
+    }
+  }
+  return [];
 }
 
 function exactLocalCheck(path, name) {
@@ -167,7 +210,7 @@ function localModuleReferences(source, { declaredCalls = [], boundUrlIndex } = {
     return executable[head] === source[head];
   });
   const declarations = /^\s*(?:import|export)\s+(?:([\w\s{},*$]+?)\s+from\s+)?['"]([^'"\n]+)['"]/gmu;
-  const operations = /\b(?:import|require)\(\s*(['"])([^'"\n]+)\1\s*[,)]/gu;
+  const operations = /\b(?:import|require)\s*\(\s*(['"])([^'"\n]+)\1\s*[,)]/gu;
   const urlBases = new Map(activeMatches(/^(?:export )?const (\w+)\s*=\s*new URL\(\s*(['"])(\.[^'"\n]*\/)\2\s*,\s*import\.meta\.url\s*\)/gmu)
     .map(([, name, , path]) => [name, path]));
   const fileUrls = [];
@@ -180,7 +223,7 @@ function localModuleReferences(source, { declaredCalls = [], boundUrlIndex } = {
     else unresolvedBase = true;
   }
   const literalModule = /^\s*(['"])[^'"\n]+\1\s*(?:,|$)/u;
-  const computedCalls = activeMatches(/\b(?:import|require)\(([^)\n]*)/gu)
+  const computedCalls = activeMatches(/\b(?:import|require)\s*\(([^)\n]*)/gu)
     .map(([, args]) => args.trim()).filter(args => !literalModule.test(args));
   for (const call of declaredCalls) {
     const boundIndex = computedCalls.indexOf(call);
@@ -348,6 +391,10 @@ function buildImpactGraph(root, changedPaths) {
     const key = JSON.stringify(edge);
     if (edges.has(key)) return;
     edges.set(key, edge);
+    if (dependency.startsWith('file:') && !nodes.has(dependency)) {
+      const path = dependency.slice('file:'.length);
+      if (!localFile(path)) bind(dependency, path, 'declared tool input that no longer resolves');
+    }
     const incoming = downstream.get(dependency) ?? [];
     const outgoing = upstream.get(consumer) ?? [];
     incoming.push(edge);
@@ -377,8 +424,9 @@ function buildImpactGraph(root, changedPaths) {
       return;
     }
     for (const path of support.fixtures ?? []) {
-      if (typeof path !== 'string' || !fixturePath.test(path)) {
-        gaps.push({ kind:'INVALID_LOCAL_SUPPORT', id:caseNode, path:localSupportFile, reason:'Invalid public fixture path.' });
+      if (typeof path !== 'string' || !(fixturePath.test(path) || packagedFixturePath.test(path))) {
+        gaps.push({ kind:'INVALID_LOCAL_SUPPORT', id:caseNode, path:localSupportFile,
+          ...(typeof path === 'string' ? { fixturePath:path } : {}), reason:'Invalid public fixture path.' });
         continue;
       }
       const id = fileId(path);
@@ -605,7 +653,7 @@ function buildImpactGraph(root, changedPaths) {
       if (inside && target.endsWith('.mjs')) {
         scanFile(target);
       } else if (!nodes.has(fileId(target)) && localFile(target)) {
-        put(fileId(target), target, { type: 'tool-input', qualification: 'LOOKUP_ONLY' });
+        bindReplayInput(target);
       }
       if (target === schemaLibrary && schemaRuntime) {
         const use = schemaValidatorUses(source,file);
@@ -614,7 +662,7 @@ function buildImpactGraph(root, changedPaths) {
           for (const schema of use.paths) {
             const schemaId = fileId(schema);
             if (!localFile(schema)) gaps.push({kind:'MISSING_DEFINITION',id,path:schema,reason:`The Schema compiled by ${file} is missing.`});
-            else if (!nodes.has(schemaId)) put(schemaId,schema,{type:'tool-input',qualification:'LOOKUP_ONLY'});
+            else if (!nodes.has(schemaId)) bindReplayInput(schema);
             link(id,schemaId,'model-input',`literal Schema compiled by ${file}`);
           }
         }
@@ -634,50 +682,41 @@ function buildImpactGraph(root, changedPaths) {
 
   const model = openDefinition(modelFile);
   const register = openDefinition(registerFile);
-  const phase1 = openDefinition(caseRegistry);
-  const caseIds = new Map();
-  if (!Array.isArray(phase1)) throw new Error('Invalid Phase 1 case registry.');
-  for (const id of phase1) {
-    if (typeof id !== 'string' || !validCaseId.test(id) || caseIds.has(id)) {
-      gaps.push({ kind: 'INVALID_CASE_REGISTRATION', id, path: caseRegistry });
-    } else {
-      caseIds.set(id, caseRegistry);
-    }
-  }
-  // Phase 0 IDs still reside in the legacy loader. Read its literal list
-  // without importing the loader or bootstrapping its external dependencies.
-  if (localFile(caseLoader)) {
-    const source = readFileSync(join(root, caseLoader), 'utf8');
-    const list = source.match(/^export const phase0CaseIds = Object\.freeze\((\[[^\]]*\])\);$/mu)?.[1];
-    try {
-      const phase0 = JSON.parse(list?.replaceAll("'", '"'));
-      if (!phase0.every(id => typeof id === 'string' && validCaseId.test(id) && !caseIds.has(id)) ||
-          new Set(phase0).size !== phase0.length) throw new Error('Invalid Phase 0 case ID.');
-      for (const id of phase0) caseIds.set(id, caseLoader);
-    } catch {
-      gaps.push({ kind: 'DYNAMIC_REFERENCE', id: fileId(caseLoader), path: caseLoader,
-        reason: 'The legacy Phase 0 case list no longer has a recognized literal declaration.' });
-    }
+  const { byId: caseIds, issues: registrationIssues } =
+    readCaseRegistrations(path => openDefinition(`${ui}/${path}`, true));
+  const invalidRegistrations = new Set(registrationIssues.map(issue => issue.id));
+  for (const issue of registrationIssues) {
+    const id = typeof issue.id === 'string' ? caseId(issue.id) : undefined;
+    const path = `${ui}/${issue.path}`;
+    gaps.push({ kind: 'INVALID_CASE_REGISTRATION', ...issue, id, path });
+    if (caseIds.has(issue.id)) bind(id, path, 'conflicting case selection registry');
   }
   const contracts = new Map();
   for (const file of readdirSync(join(root, caseDir)).sort()) {
-    if (file === posix.basename(caseRegistry) || !file.endsWith('.json')) continue;
     const id = file.slice(0, -5);
     const path = `${caseDir}/${file}`;
+    if (caseRegistries.includes(path) || !file.endsWith('.json')) continue;
     const contract = openDefinition(path, true);
-    if (!contract) continue;
+    if (contract === undefined) continue;
+    if (!contract || typeof contract !== 'object' || Array.isArray(contract)) {
+      gaps.push({ kind: 'INVALID_CASE_DISPATCH_INPUT', id: caseId(id), path,
+        reason: 'The case definition must be an object.' });
+      continue;
+    }
     if (!validCaseId.test(id) || id !== contract.id) {
       gaps.push({ kind: 'INVALID_CASE_IDENTITY', id, path });
       continue;
     }
-    if (!Array.isArray(contract.steps) || !Array.isArray(contract.assertions) ||
-        contract.assertions.some(assertion => !assertion || typeof assertion !== 'object' || Array.isArray(assertion))) {
+    if ([contract.steps, contract.assertions].some(list => !Array.isArray(list) ||
+        list.some(item => !item || typeof item !== 'object' || Array.isArray(item))) ||
+        (contract.ownerSources !== undefined && !Array.isArray(contract.ownerSources))) {
       gaps.push({ kind: 'INVALID_CASE_DISPATCH_INPUT', id: caseId(id), path,
-        reason: 'The case steps or assertions cannot establish a dispatch relationship.' });
+        reason: 'The case steps, assertions or owner sources cannot establish a dispatch relationship.' });
       continue;
     }
     contracts.set(id, contract);
-    const registered = caseIds.has(id);
+    const registration = caseIds.get(id);
+    const registered = registration && !invalidRegistrations.has(id) && contract.phase === registration.phase;
     const node = caseId(id);
     put(node, path, {
       type: 'ui-case', qualification: registered ? 'EXPLICIT_CASE' : 'UNREGISTERED',
@@ -686,7 +725,9 @@ function buildImpactGraph(root, changedPaths) {
       constraints: registered ? 'Specify the candidate, evidence or approved live inputs separately. Coverage requires matching evidence and model obligations.' :
         'Definition exists without a registered execution selector.',
     });
-    if (!registered) gaps.push({ kind: 'UNREGISTERED_CASE', id: node, path });
+    if (!registration) gaps.push({ kind: 'UNREGISTERED_CASE', id: node, path });
+    else if (!registered) gaps.push({ kind: 'INVALID_CASE_REGISTRATION', id: node, path,
+      reason: 'The case phase or uniqueness does not match its registry.' });
     for (const source of contract.ownerSources ?? []) useSource(node, source, 'case ownerSources (file scope)');
     for (const assertion of contract.assertions ?? []) {
       for (const reference of typeof assertion.source === 'string' ? assertion.source.split(';') : []) {
@@ -775,7 +816,7 @@ function buildImpactGraph(root, changedPaths) {
     link(node, fileId(`${ui}/schema/evidence.json`), 'implementation-use', 'case and evidence schema');
     link(fileId(coverageFile), node, 'evidence-consumer', 'explicitly selected case in coverage');
     link(fileId(exportFile), node, 'archive-consumer', 'replay export includes the case definition');
-    if (registered) bind(node, caseIds.get(id), 'case selection registry');
+    if (registration) bind(node, `${ui}/${registration.path}`, 'case selection registry');
   }
   const declarations = openDefinition(localSupportFile, true);
   let registrationCoverageSupport = {};
@@ -800,7 +841,7 @@ function buildImpactGraph(root, changedPaths) {
       }
     }
   }
-  for (const [id, registry] of caseIds) {
+  for (const [id, registration] of caseIds) {
     if (!contracts.has(id)) {
       const path = `${caseDir}/${id}.json`;
       gaps.push({ kind: 'MISSING_REGISTERED_CASE', id: caseId(id), path, reason: 'Case selection registry still refers to this definition.' });
@@ -810,7 +851,7 @@ function buildImpactGraph(root, changedPaths) {
           'registered case is unavailable, so its dispatch cannot be excluded');
       }
       bind(caseId(id), path, 'registered case path that no longer resolves');
-      bind(caseId(id), registry, 'case selection registry');
+      bind(caseId(id), `${ui}/${registration.path}`, 'case selection registry');
     }
   }
 
@@ -960,7 +1001,12 @@ function buildImpactGraph(root, changedPaths) {
     }
     const declared = new Set();
     const assertions = contract?.assertions ?? [];
-    for (const [role, assertionId] of Object.entries(validConditionMap ? conditionMap : {})) {
+    const conditions = validConditionMap ? conditionMap : {};
+    const roles = new Set([...Object.keys(conditions), ...Object.keys(obligation.conditionalEndpoints ?? {})]);
+    for (const role of roles) {
+      const { conditionId: assertionId, conditionalEndpoint } =
+        resolveStructureCondition({ ...obligation, conditions }, role, contract?.version);
+      if (assertionId === undefined) continue;
       const roleBinding = roleBindings.get(role);
       if (!roleBinding) {
         gaps.push({ kind: 'UNDECLARED_CONDITION_ROLE', id: consumer, role });
@@ -982,8 +1028,8 @@ function buildImpactGraph(root, changedPaths) {
           reason: 'A role condition must name a unique optional conditional assertion for the same full sample and action.' });
         continue;
       }
-      const metadata = { ...binding, assertionId };
-      const reason = `assertion applicability controls the structural leaf for role ${role}`;
+      const metadata = { ...binding, assertionId, ...(conditionalEndpoint ? { conditionalEndpoint: true } : {}) };
+      const reason = `assertion applicability controls the ${conditionalEndpoint ? 'full structural endpoint' : 'structural leaf'} for role ${role}`;
       link(node, ruleId(required), 'condition-applicability', reason, metadata);
       link(consumer, ruleId(required), 'condition-applicability', reason, metadata);
     }
@@ -1246,12 +1292,12 @@ function buildImpactGraph(root, changedPaths) {
   ]) scanFile(file);
   for (const file of [`${ui}/schema/evidence.json`, 'tools/page-structure/schema/model.schema.json',
     'tools/page-structure/schema/register.schema.json']) {
-    if (localFile(file) && !nodes.has(fileId(file))) put(fileId(file), file, { type: 'tool-input', qualification: 'LOOKUP_ONLY' });
+    bindReplayInput(file);
   }
   for (const [name, inputs] of [
-    [coverageFile, [modelFile, caseRegistry]],
-    [exportFile, [modelFile, registerFile, caseRegistry]],
-    [reassessmentFile, [modelFile, caseRegistry]],
+    [coverageFile, [modelFile, ...caseRegistries]],
+    [exportFile, [modelFile, registerFile, ...caseRegistries]],
+    [reassessmentFile, [modelFile, ...caseRegistries]],
     [receiptFile, [`${ui}/schema/evidence.json`]],
     ['tools/page-structure/validate-model.mjs', [modelFile, 'tools/page-structure/schema/model.schema.json']],
     [registrationEntry, [modelFile, registerFile, 'tools/page-structure/schema/register.schema.json']],
@@ -1261,6 +1307,7 @@ function buildImpactGraph(root, changedPaths) {
   }
 
   const catalog = openDefinition(catalogFile);
+  const resources = openDefinition(resourceManifestFile, true);
   const retired = openDefinition(retiredFile);
   if (catalog.schemaVersion !== 1 || !Array.isArray(catalog.entries) || retired.schemaVersion !== 1 || !Array.isArray(retired.entries)) {
     throw new Error('Invalid reviewed gate index or retirement registry.');
@@ -1276,6 +1323,10 @@ function buildImpactGraph(root, changedPaths) {
   for (const entry of catalogEntries) {
     const id = gateId(entry.id);
     const executable = entry.qualification === 'QUALIFIED' && catalog.reviewedDefinitionsFrozen === true;
+    const resource = entry.resourceDefinitionSha256 ? {
+      expected: entry.resourceDefinitionSha256,
+      actual: resources ? gateResourceDefinitionSha256(resources, entry) : null,
+    } : undefined;
     put(id, entry.file ?? catalogFile, {
       type: 'reviewed-gate', qualification: entry.qualification,
       definitionFile: catalogFile,
@@ -1283,10 +1334,11 @@ function buildImpactGraph(root, changedPaths) {
       detail: `node ${reviewedEntry} --id ${entry.id}`,
       constraints: [entry.limitations, executable ? 'Existing execution-time definition identity and resource admission still apply.' :
         entry.repair ?? 'Not an admitted Host execution selector.'].filter(Boolean),
-      definitionSha256: hash(JSON.stringify({ id: entry.id, qualification: entry.qualification,
-        productionBinding: entry.productionBinding, definitionInputs: entry.definitionInputs })),
+      definitionSha256: hash(JSON.stringify({ entry, executable, resource })),
+      ...(resource ? { resourceDefinition: { path: resourceManifestFile, ...resource } } : {}),
     });
     bind(id, catalogFile, 'reviewed gate metadata');
+    if (resource) bind(id, resourceManifestFile, 'reviewed resource/case declaration');
     if (entry.file && !localFile(entry.file)) {
       gaps.push({ kind: 'STALE_PATH_REFERENCE', id, path: entry.file, reason: 'reviewed test file' });
     }
@@ -1367,8 +1419,8 @@ function checkStructureDependencies(graph, ids) {
       continue;
     }
     for (const gap of graph.gaps) {
-      if ((gap.id === id && ['MISSING_OR_WRONG_ROLE_BINDING', 'UNRESOLVED_CONDITION_BINDING'].includes(gap.kind)) ||
-          (gap.id === name && gap.kind === 'INVALID_CASE_REGISTRATION')) {
+      if (gap.id === id && ['MISSING_OR_WRONG_ROLE_BINDING', 'UNRESOLVED_CONDITION_BINDING',
+        'INVALID_CASE_REGISTRATION'].includes(gap.kind)) {
         errors.push(gap);
       }
     }
@@ -1466,8 +1518,7 @@ export function diffImpactViews(previous, current) {
   }
   const lookup = (items, key) => new Map(items.map(item => [key(item), item]));
   const id = item => item.id;
-  const edgeKey = edge => JSON.stringify([edge.consumer, edge.dependency, edge.kind, edge.reason,
-    edge.role, edge.sampleId, edge.actionId, edge.assertionId]);
+  const edgeKey = edge => JSON.stringify(Object.fromEntries(Object.entries(edge).sort(([left], [right]) => left.localeCompare(right))));
   const oldNodes = lookup(previous.nodes, id);
   const newNodes = lookup(current.nodes, id);
   const oldEdges = lookup(previous.relationships, edgeKey);

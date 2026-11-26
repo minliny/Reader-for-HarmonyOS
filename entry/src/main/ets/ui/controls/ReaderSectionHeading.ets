@@ -1,6 +1,5 @@
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
-import { TOK_SPACE_SM } from '../foundation/ReaderTokens';
-import { TYPE_SECTION_HEADING, TYPE_SOURCE_TOOLS_HEADING } from '../foundation/ReaderTypography';
+import { TYPE_CARD_SECTION_HEADING, TYPE_SECTION_HEADING } from '../foundation/ReaderTypography';
 
 type ReaderSectionHeadingVariant = 'settings-section' | 'tool-card';
 
@@ -16,9 +15,10 @@ export struct ReaderSectionHeading {
     if (this.variant === 'tool-card') {
       Text(this.title)
         .width('100%')
-        .fontFamily(TYPE_SOURCE_TOOLS_HEADING.fontFamily)
-        .fontWeight(TYPE_SOURCE_TOOLS_HEADING.fontWeight)
-        .fontSize(TYPE_SOURCE_TOOLS_HEADING.fontSizeFp)
+        .fontFamily(TYPE_CARD_SECTION_HEADING.fontFamily)
+        .fontWeight(TYPE_CARD_SECTION_HEADING.fontWeight)
+        .fontSize(TYPE_CARD_SECTION_HEADING.fontSizeFp)
+        .lineHeight(TYPE_CARD_SECTION_HEADING.lineHeightFp as number).halfLeading(true)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
     } else {
       Text(this.title)
@@ -27,9 +27,9 @@ export struct ReaderSectionHeading {
         .fontFamily(TYPE_SECTION_HEADING.fontFamily)
         .fontWeight(TYPE_SECTION_HEADING.fontWeight)
         .fontSize(TYPE_SECTION_HEADING.fontSizeFp)
-        .lineHeight(TYPE_SECTION_HEADING.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
-        .padding({ left: TOK_SPACE_SM, right: TOK_SPACE_SM })
+        .lineHeight(TYPE_SECTION_HEADING.lineHeightFp as number).halfLeading(true)
+        .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme))
+        .padding({ left: 4, right: 4 })
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }

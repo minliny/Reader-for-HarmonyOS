@@ -58,8 +58,20 @@ export class MangaImageGraphicsHost implements MangaImageGraphicsAdapter {
     const source = image.createImageSource(this.encoded(bytes));
     if (source === undefined) throw new Error('MANGA_GRAPHICS_SOURCE');
     if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'open', resource: 'source' });
+    let inspectionFailed = false;
     try { return await this.dimensions(source, current); }
-    finally { await source.release(); if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'release', resource: 'source' }); }
+    catch (error) {
+      inspectionFailed = true;
+      throw error;
+    } finally {
+      try {
+        await source.release();
+        if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'release', resource: 'source' });
+      } catch (error) {
+        if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'release-error', resource: 'source' });
+        if (!inspectionFailed) throw error;
+      }
+    }
   }
   async transform(bytes: Uint8Array, value: JsonObject, current: () => boolean): Promise<Uint8Array> {
     this.current(current);
@@ -84,6 +96,7 @@ export class MangaImageGraphicsHost implements MangaImageGraphicsAdapter {
     let input: image.PixelMap | undefined = undefined;
     let output: image.PixelMap | undefined = undefined;
     let packer: image.ImagePacker | undefined = undefined;
+    let transformFailed = false;
     let sourceOwned = true;
     const releaseSource = async (): Promise<void> => {
       if (!sourceOwned) return;
@@ -159,15 +172,33 @@ export class MangaImageGraphicsHost implements MangaImageGraphicsAdapter {
       const result = new Uint8Array(encoded);
       if (result.length < 1 || result.length > MAX_BYTES) throw new Error('MANGA_GRAPHICS_OUTPUT_BUDGET');
       return result;
+    } catch (error) {
+      transformFailed = true;
+      throw error;
     } finally {
-      try { if (packer !== undefined) { await packer.release(); if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'release', resource: 'packer' }); } }
-      finally {
-        try { if (output !== undefined) { await output.release(); if (this.diagnosticObserver !== undefined) this.observeDiagnostic({ stage: 'graphics', event: 'release', resource: 'pixel' }); } }
-        finally {
-          try { await releaseInput(); }
-          finally { await releaseSource(); }
+      let cleanupFailed = false;
+      let firstCleanupError: unknown;
+      const release = async (dispose: () => Promise<void>, resource?: 'packer' | 'pixel'): Promise<void> => {
+        try {
+          await dispose();
+          if (resource !== undefined && this.diagnosticObserver !== undefined)
+            this.observeDiagnostic({ stage: 'graphics', event: 'release', resource });
+        } catch (error) {
+          if (resource !== undefined && this.diagnosticObserver !== undefined)
+            this.observeDiagnostic({ stage: 'graphics', event: 'release-error', resource });
+          if (!cleanupFailed) {
+            cleanupFailed = true;
+            firstCleanupError = error;
+          }
         }
-      }
+      };
+      const ownedPacker = packer;
+      const ownedOutput = output;
+      if (ownedPacker !== undefined) await release((): Promise<void> => ownedPacker.release(), 'packer');
+      if (ownedOutput !== undefined) await release((): Promise<void> => ownedOutput.release(), 'pixel');
+      await release(releaseInput);
+      await release(releaseSource);
+      if (!transformFailed && cleanupFailed) throw firstCleanupError;
     }
   }
 }

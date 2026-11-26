@@ -17,7 +17,10 @@ function setup() {
   const storage = new Map([['readerAppForeground', true]]);
   const nativePorts = { TouchType, ScrollSource,
     AppStorage: { get: key => storage.get(key), setOrCreate: (key, value) => storage.set(key, value) },
-    ReaderWindowCoordinator: { reapplyChrome() {}, reapplyWindowPolicy() {}, requestAppChrome() {} },
+    ReaderWindowCoordinator: { reapplyChrome() {}, reapplyWindowPolicy() {}, requestAppChrome() {}, requestOverlayChrome() {} },
+    ReaderWindowChromeStyle: class {},
+    resolveSheetSpec: () => ({hostMaskRole:'mask',hostBackgroundRole:'paper'}),
+    readerScrimmedOpaqueColor: color => color,
     ReaderDocumentPickerActivity: { setForeground() {} },
   };
   const Ability = selectedProductionMethods(file('entryability/EntryAbility.ets'), 'EntryAbility',
@@ -35,7 +38,8 @@ function setup() {
     'pageInputCurrent', 'acceptPublication', 'refreshVisibleResults', 'scheduleDeferredResults',
     'filterPresentationIdentity', 'taskStatusIdentity', 'acceptsFilter', 'acceptsTaskStatus',
     'dismissSearchFilters', 'dismissTaskStatus', 'searchPanelOwnsInput', 'publishSurfacePanelInput',
-    'ownsSurface', 'finishNativePanel', 'releaseNativePanelChrome', 'publishSurface'];
+    'ownsSurface', 'acceptNativePanel', 'finishNativePanel', 'releaseNativePanelChrome', 'publishSurface',
+    'openPanelAction', 'closePanelAction', 'dismissPanelAction'];
   const { owner: page } = compileTailConsumer(readFileSync(file('features/search/ui/SearchPage.ets'), 'utf8'), methods,
     { ...controls.dependencies, ...nativePorts, readerAppColor: () => '#fff',
       readerScrollStartOffset: () => 0, readerScrollEndOffset: () => 0, KeyType: { Down: 0 },
@@ -53,9 +57,10 @@ function setup() {
     filtersExpanded: false, taskStatusExpanded: false, filterGeneration: 2, taskStatusGeneration: 3,
     cancelSearchFocusRestore() {}, cancelScrollRestoreForUser() {}, saveScrollAnchor() {},
     mainSearchNotices() {}, searchOuterInset: () => 0, scrollLayout: () => ({}), resultViewportId: () => 'results',
-    restoreClosedPanelFocus() {}, acceptResultNoticeFacts() {}, publishVisibleGroups() {},
+    restoreClosedPanelFocus() {}, acceptResultNoticeFacts() {}, publishVisibleGroups() {}, observePageAction() {},
     groupResults: rows => rows, scheduleScrollRestore() {},
     getUIContext: () => ({ postFrameCallback: frame => frames.push(frame) }),
+    filterSheetIdentity: '', taskSheetIdentity: '',
   });
   page.resultsContent();
   const list = [...page.nodes.values()].find(node => typeof node.onTouch === 'function' && typeof node.onScrollStop === 'function');
@@ -112,10 +117,8 @@ function listTouchReceipts() {
 }
 
 function nativePanelReceipts() {
-  const Binding = selectedProductionClasses(file('features/search/ui/SearchResultSheetBinding.ets'),
-    ['SearchResultSheetBinding'], { readerAppColor: () => '#fff', readerSurfaceElevation: () => ({}),
-      SheetSize: { FIT_CONTENT: 1 }, SheetType: { BOTTOM: 1 }, DismissReason: { PRESS_BACK: 1 },
-    }).SearchResultSheetBinding;
+  const Cover = selectedProductionMethods(file('ui/surfaces/ReaderBottomSheet.ets'), 'ReaderBottomSheet',
+    ['coverOptions'], { ModalTransition: { NONE: 'none' }, Color: { Transparent: 'transparent' } });
   const reports = [];
   for (const kind of ['filter', 'task']) {
     for (const staleQuery of [false, true]) {
@@ -123,25 +126,23 @@ function nativePanelReceipts() {
       page.surfaceModel = model;
       const expandedField = kind === 'filter' ? 'filtersExpanded' : 'taskStatusExpanded';
       page[expandedField] = true;
+      page.lastOpenedPanel = kind;
       const id = kind === 'filter' ? page.filterPresentationIdentity() : page.taskStatusIdentity();
-      page.nativePanel = { kind, identity: id, chromeClaimed: false };
-      const component = kind === 'filter' ? 'ReaderSearchFilterPanel' : 'ReaderSearchTaskPanel';
-      const Panel = selectedProductionMethods(file(`features/search/ui/${component}.ets`), component,
-        ['accepts', 'sheetOptions'], { resolveSheetSpec: () => ({}) });
-      const panel = Object.assign(new Panel(), { mounted: true, expanded: true, presentationIdentity: id,
-        nativeSheet: new Binding(), scheme: 'day', sheetSpec: () => ({}), sheetWidth: () => 300,
-        onNativeOpening() {},
+      page[kind === 'filter' ? 'filterSheetIdentity' : 'taskSheetIdentity'] = id;
+      const cover = Object.assign(new Cover(), { mounted: true, visible: true,
+        onOpening: page.openPanelAction(kind,id), onRequestClose: page.dismissPanelAction(kind,id),
+        onClosed: page.closePanelAction(kind,id),
       });
-      for (const property of ['onNativeClosing', 'onDismiss', 'onClosed']) {
-        panel[property] = selectedProductionComponentCallback(file('features/search/ui/SearchPage.ets'), component, property, page);
-      }
-      const options = panel.sheetOptions(id);
+      const options = cover.coverOptions();
       options.onWillAppear(); options.onAppear();
+      assert.equal(page.nativePanel.identity,id);
+      assert.equal(model.panelOwnsInput,true);
       ability.onBackground();
       assert.equal(page.acceptsFilter(id), false); assert.equal(page.acceptsTaskStatus(id), false);
       if (staleQuery) {
         page.viewState.revision += 1;
         const replacementId = kind === 'filter' ? page.filterPresentationIdentity() : page.taskStatusIdentity();
+        page[kind === 'filter' ? 'filterSheetIdentity' : 'taskSheetIdentity'] = replacementId;
         page.nativePanel = { kind, identity: replacementId, chromeClaimed: false };
         model.panelOwnsInput = true;
       }

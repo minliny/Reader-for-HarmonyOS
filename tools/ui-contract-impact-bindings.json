@@ -219,7 +219,7 @@
         },
         {
           "path": "tools/ui-contract/test/source-native-text-sampler.test.mjs",
-          "name": "source read surface sampler binds the scheduled glyphs to the current read generation and branch"
+          "name": "source read surface sampler keeps native controllers attached from loading through empty and failed reads"
         }
       ]
     },
@@ -235,7 +235,7 @@
         },
         {
           "path": "tools/ui-contract/test/source-native-text-sampler.test.mjs",
-          "name": "source read surface sampler binds the scheduled glyphs to the current read generation and branch"
+          "name": "source read surface sampler keeps native controllers attached from loading through empty and failed reads"
         }
       ]
     },
@@ -535,7 +535,7 @@
       "contractCases": [
         {
           "path": "tools/test-book-search-pages.mjs",
-          "name": "unconfirmed-empty"
+          "name": "unknown-zero"
         }
       ],
       "checks": [

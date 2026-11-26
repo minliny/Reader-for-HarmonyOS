@@ -19,6 +19,7 @@ import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import type { ReaderWindowMetricsSnapshot } from '../../../ui/foundation/ReaderWindowMetrics';
 import { ReadingExperience, ReaderRetainedPresentation } from './LocalReadingExperience';
 import type { ReadingCommit } from '../application/ReadingCommit';
+import type { ReadingPrefetchActivity } from '../application/ReadingPrefetchHost';
 import type { ReaderBookmarkAnchorRequest } from '../presentation/ReaderBookmarkAnchorRequest';
 import { ReaderDirectoryDestination } from './ReaderDirectoryDestination';
 import { SourceSwitchPanel } from '../../source/ui/SourceSwitchPanel';
@@ -31,6 +32,7 @@ import type {
 } from '../presentation/ReaderDirectoryMarkerState';
 import type { ReaderBookIdentity } from '../presentation/ReaderBookmarkProjection';
 import type { RemoteReadingBookSeed, RemoteReadingSession } from '../application/RemoteReadingFlowGateway';
+import type { RemoteReadingIdentity } from '../application/RemoteReadingContract';
 import type { RemoteReadingFailureKind } from '../application/RemoteContentAdmission';
 import { ReaderStatusBarPaper } from './ReaderStatusBarPaper';
 import { readerWidthClassWithHint } from '../../../ui/foundation/ReaderWidthClass';
@@ -72,6 +74,7 @@ export struct ReaderShell {
   @Prop sourceSwitchFailureMessage: string = '';
   @Prop sourceSwitchScopeId: number = 0;
   @Prop sourceSwitchTransactionId: string | undefined = undefined;
+  @Prop sourceSwitchRollbackInFlight: boolean = false;
   @Prop sourceSwitchCompletion: SourceSwitchCompletionPresentation | undefined = undefined;
   @Prop totalChapters: number = 0;
   @Prop requestedChapterIndex: number | undefined = undefined;
@@ -133,9 +136,12 @@ export struct ReaderShell {
   onRemoteSessionReady: (session: RemoteReadingSession, refreshDirectoryDisplay?: boolean) => void = (_session: RemoteReadingSession): void => {};
   onRetryFailedSourceSwitch: (scopeId?: number) => void = (): void => {};
   onDismissSourceSwitchFailure: (scopeId?: number) => void = (): void => {};
+  onRollbackReaderTarget: (identity: RemoteReadingIdentity, transactionId: string, scopeId: number) => void =
+    (_identity: RemoteReadingIdentity, _transactionId: string, _scopeId: number): void => {};
   resolveSourceSwitchTransactionId: (sourceId: string, bookId: string) => Promise<string | undefined> =
     (_sourceId: string, _bookId: string): Promise<string | undefined> => Promise.resolve(undefined);
   onReadingCommitted: (commit: ReadingCommit) => void = (_commit: ReadingCommit): void => {};
+  onReadingPrefetchActivity?: (sourceId: string, bookId: string, activity: ReadingPrefetchActivity) => void;
   onReadingFailure: (sourceId: string, bookId: string, message: string,
     failureKind?: RemoteReadingFailureKind) => void =
     (_sourceId: string, _bookId: string, _message: string,
@@ -246,6 +252,11 @@ export struct ReaderShell {
             if (_identity === this.readingIdentityKey()) this.onRemoteSessionReady(session);
           },
           sourceSwitchTransactionId: this.sourceSwitchTransactionId,
+          sourceSwitchRollbackInFlight: this.sourceSwitchRollbackInFlight,
+          onRollbackReaderTarget: (transactionId: string, scopeId: number): void => {
+            if (this.acceptsTextInput(_identity)) this.onRollbackReaderTarget(
+              { sourceId: this.sourceId, bookId: this.bookId }, transactionId, scopeId);
+          },
           sourceSwitchCompletion: this.sourceSwitchCompletion,
           readingReadyGeneration: this.readingReadyGeneration,
           sourceSwitchCompletionVisible: this.readingContentIsForeground(),
@@ -296,6 +307,9 @@ export struct ReaderShell {
           },
           onReadingCommitted: (commit: ReadingCommit): void => {
             if (_identity === this.readingIdentityKey()) this.onReadingCommitted(commit);
+          },
+          onReadingPrefetchActivity: (activity: ReadingPrefetchActivity): void => {
+            if (_identity === this.readingIdentityKey()) this.onReadingPrefetchActivity?.(this.sourceId, this.bookId, activity);
           },
           onReadingFailure: (sourceId: string, bookId: string, message: string,
             failureKind?: RemoteReadingFailureKind): void => {
@@ -373,6 +387,7 @@ export struct ReaderShell {
           onSelectChapter: this.onSelectChapter, onSelectNavigationTarget: this.onSelectNavigationTarget,
           onSelectBookmark: this.onSelectBookmark, bookmarkIdentity: this.bookmarkIdentity,
           onDownloadChapter: this.onDownloadChapter, onDownloadBook: this.onDownloadBook, onClearBookOffline: this.onClearBookOffline,
+          onOpenCacheManagement: this.onOpenDownloads,
           onDeleteBookmarks: this.onDeleteBookmarks, chapterStartBookmarkCreationEnabled: this.chapterStartBookmarkCreationEnabled,
           onCreateChapterStartBookmark: this.onCreateChapterStartBookmark,
           onSwitchSource: this.onSwitchSource, onBack: this.onCloseDirectory, onTemporaryBackBridge: this.onDirectoryBackBridge,

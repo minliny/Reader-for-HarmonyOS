@@ -1,5 +1,5 @@
 import type { RemoteReadingGatewayError } from '../application/RemoteReadingContract';
-import type { ReadingSessionFlowGateway, ReadingContentSearchPage, ReadingContentSearchResult } from '../application/ReadingSessionFlowGateway';
+import type { ReadingSessionFlowGateway, ReadingContentSearchCacheScope, ReadingContentSearchPage, ReadingContentSearchResult } from '../application/ReadingSessionFlowGateway';
 
 interface ReaderQuickSearchIdleState {
   kind: 'idle';
@@ -13,6 +13,7 @@ interface ReaderQuickSearchLoadingState {
 export interface ReaderQuickSearchResultsState {
   kind: 'results';
   keyword: string;
+  cacheScope?: ReadingContentSearchCacheScope;
   results: ReadingContentSearchResult[];
   /** Number of matches consumed from Core's stable result stream. */
   offset?: number;
@@ -30,6 +31,7 @@ export interface ReaderQuickSearchResultsState {
 interface ReaderQuickSearchEmptyState {
   kind: 'empty';
   keyword: string;
+  cacheScope?: ReadingContentSearchCacheScope;
 }
 
 interface ReaderQuickSearchErrorState {
@@ -122,6 +124,7 @@ export class ReaderContentSearchPublication {
     // Keep admitted anchors selectable. The released cursor cannot append a
     // later snapshot to these rows, even when the query text is unchanged.
     this.publish({ kind: 'results', keyword: previous.keyword, results: previous.results,
+      cacheScope: previous.cacheScope,
       offset: previous.offset, hasMore: previous.hasMore, loadingMore: false, paginationRetired: true });
     return true;
   }
@@ -135,11 +138,18 @@ export class ReaderContentSearchPublication {
     const current = (): boolean => this.generation === generation && active();
     this.publish({ kind: 'loading', keyword });
     changed();
-    void gateway.searchContentPage(bookId, keyword, limit, 0, current).then((page): void => {
+    const cacheScope = gateway.readContentSearchCacheScope?.(bookId, current)
+      .catch((_error: Error): undefined => undefined);
+    const first = gateway.searchContentPage(bookId, keyword, limit, 0, current);
+    // Admit one scope observation with the first page. Cache writes do not
+    // publish a new search revision or change the existing result list.
+    void Promise.all([first, cacheScope]).then((results): void => {
+      const page = results[0];
+      const scope = results[1];
       if (!current()) { this.releasePage(gateway, page); return; }
       this.cursor = page.nextCursor;
-      this.publish(page.results.length === 0 ? { kind: 'empty', keyword } : {
-        kind: 'results', keyword, results: page.results, offset: page.results.length,
+      this.publish(page.results.length === 0 ? { kind: 'empty', keyword, cacheScope: scope } : {
+        kind: 'results', keyword, cacheScope: scope, results: page.results, offset: page.results.length,
         hasMore: page.hasMore, loadingMore: false,
       });
       changed();
@@ -162,6 +172,7 @@ export class ReaderContentSearchPublication {
     if (!Number.isSafeInteger(offset) || offset < 0) return;
     const cursor = this.cursor;
     this.publish({ kind: 'results', keyword: before.keyword, results: before.results,
+      cacheScope: before.cacheScope,
       offset: before.offset, hasMore: before.hasMore, loadingMore: true, loadMoreError: undefined });
     changed();
     void gateway.searchContentPage(bookId, before.keyword, limit, offset, current, cursor).then((page): void => {
@@ -181,7 +192,7 @@ export class ReaderContentSearchPublication {
         this.releasePage(gateway, page);
         if (cursor !== undefined) this.release(gateway, cursor);
         this.cursor = undefined;
-        this.publish({ kind: 'results', keyword: before.keyword, results: merged,
+        this.publish({ kind: 'results', keyword: before.keyword, results: merged, cacheScope: before.cacheScope,
           offset: offset + page.results.length, hasMore: page.hasMore, loadingMore: false,
           paginationRetired: true, continuationRetryable: false, loadMoreError: '后续结果未能继续，请重新搜索' });
         changed();
@@ -191,7 +202,7 @@ export class ReaderContentSearchPublication {
       // A final receipt may remain retryable in Core; proactively release its session.
       if (!page.hasMore && cursor !== undefined) this.release(gateway, cursor);
       // Exact cursor append preserves the existing prefix and its scroll anchor.
-      this.state = { kind: 'results', keyword: before.keyword, results: merged,
+      this.state = { kind: 'results', keyword: before.keyword, results: merged, cacheScope: before.cacheScope,
         offset: offset + page.results.length, hasMore: page.hasMore, loadingMore: false };
       changed();
     }).catch((error: Error): void => {
@@ -205,7 +216,7 @@ export class ReaderContentSearchPublication {
       const failure = error as RemoteReadingGatewayError;
       const retryable = cursor !== undefined && failure.code !== 'positionContextStale' &&
         failure.code !== 'sourceVersionChanged' && failure.code !== 'invalidInput';
-      this.publish({ kind: 'results', keyword: latest.keyword, results: latest.results,
+      this.publish({ kind: 'results', keyword: latest.keyword, results: latest.results, cacheScope: latest.cacheScope,
         offset: latest.offset, hasMore: latest.hasMore, continuationRetryable: retryable,
         paginationRetired: !retryable, loadingMore: false, loadMoreError: error.message });
       if (!retryable) {
@@ -222,7 +233,7 @@ export class ReaderContentSearchPublication {
     if (state.kind !== 'results' || state.loadMoreError !== undefined || state.paginationRetired === true ||
       state.loadingMore === true || state.hasMore !== true) return;
     if (this.cursor === undefined) {
-      this.publish({ kind: 'results', keyword: state.keyword, results: state.results, offset: state.offset,
+      this.publish({ kind: 'results', keyword: state.keyword, results: state.results, cacheScope: state.cacheScope, offset: state.offset,
         hasMore: state.hasMore, loadingMore: false, paginationRetired: true, continuationRetryable: false });
       changed();
       return;

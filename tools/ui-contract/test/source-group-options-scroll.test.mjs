@@ -75,7 +75,7 @@ const action = (id,beforeSeq,afterSeq,extra={}) => {
 const event = (eventSeq,kind,payload) => ({instanceId,eventSeq,kind,payload,channel:'business'});
 const startingProjection = {owner,state:'rows',readFact:'current',readGeneration:3,allGroups:true,
   groupIndex:0,queryLength:0,count:12,projected:12,filterRevision:2,firstAnchor:1,textProjectionRevision:6};
-const selectedProjection = {...startingProjection,allGroups:false,groupIndex:12,projected:1,filterRevision:3,firstAnchor:12};
+const selectedProjection = {...startingProjection,allGroups:false,groupIndex:13,projected:1,filterRevision:3,firstAnchor:12};
 function scenario(options={}) {
   const samples = {
     'source-ready':sample(5),'panel-before':sample(11,[panel(0,false,options)],true,options.glyphs),
@@ -156,7 +156,7 @@ test('source group options scroll proves real movement and selects the same open
   assert.equal(evaluate(wrongOwner).verdict,'FAIL');
 
   const wrongProjection = scenario();
-  wrongProjection.events[3] = event(20,'source.projection',{...selectedProjection,trigger:'group',groupIndex:11});
+  wrongProjection.events[3] = event(20,'source.projection',{...selectedProjection,trigger:'group',groupIndex:12});
   assert.equal(evaluate(wrongProjection).verdict,'FAIL');
 
   const incomplete = scenario();
@@ -251,7 +251,7 @@ test('source group option glyph producer retires detached and superseded frames'
   const Select = selectedProductionMethods(panelPath,'ReaderSelectPanel',['optionsScrollStopAction']);
   let identity = selectionId;
   let revision = 6;
-  const groups = ['全部分组',...Array.from({length:12},(_,index)=>`Phase1 Scroll ${String(index+1).padStart(2,'0')}`)];
+  const groups = ['全部分组','未分组',...Array.from({length:12},(_,index)=>`Phase1 Scroll ${String(index+1).padStart(2,'0')}`)];
   const page = Object.assign(new Page(),{expandedLayout:false,sources:Array(12).fill({}),verificationTextMetrics:{},
     verificationGroupTextRevision:0,groupClosing:false,ownsGroupSelection:current=>current === identity,groupOptions:()=>groups,
     verificationTextLayoutScope:scope=>{assert.equal(scope,'group'); return {owner,fontScale:1,textProjectionRevision:revision};},

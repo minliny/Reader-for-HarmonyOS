@@ -196,7 +196,7 @@ let timerId = 0;
 let visibleAnchorNodeId, prepareMissing, prepareStandalone;
 
 const SurfaceProbe = productionMotionMethods(surfacePath,
-  ['openTree', 'onViewInputsChanged', 'onInteractionChanged', 'scheduleQueryOpen', 'cancelQueryTimer',
+  ['openTree', 'onLocateCurrent', 'onViewInputsChanged', 'onInteractionChanged', 'scheduleQueryOpen', 'cancelQueryTimer',
     'onTreeUserScrollIntent', 'onProgrammaticScrollIntent', 'onTreeScrollSettled', 'prepareVisiblePages',
     'retryOpen', 'onIdentityChanged', 'notifyReadFailure', 'currentReadInputKey', 'currentInputOwnerKey',
     'prepareMangaFonts', 'currentDirectoryEntries', 'openingInputCurrent', 'recoveryInputCurrent'], {
@@ -274,7 +274,32 @@ if (selectedCase === 'catalog-filter-admission') {
     pending[start + 2].resolve(readyCatalog('short-sorted'));
     await flushSurface();
     assert.equal(surface.view.viewId, 'short-sorted');
-    assert.equal(surface.view.startAtCatalogTop, undefined);
+    assert.notEqual(surface.view.startAtCatalogTop, true);
+    surface.query = 'stale-filter';
+    surface.lastQuery = surface.query;
+    surface.lastAscending = surface.ascending;
+    surface.onLocateCurrent();
+    const locateGeneration = surface.generation;
+    surface.query = '';
+    surface.onViewInputsChanged();
+    assert.equal(surface.generation, locateGeneration, 'the trailing clear does not invalidate the explicit locate');
+    assert.equal(timers.size, 0, 'the trailing clear never schedules a conflicting catalog search');
+    await flushSurface();
+    assert.equal(pending[start + 3].query.query, '', 'explicit locate cannot submit the just-cleared filter');
+    assert.equal(pending[start + 3].query.locateCurrent, true);
+    pending[start + 3].resolve({ ...readyCatalog('locating'), locateCurrent: true });
+    await flushSurface();
+    assert.equal(surface.view.currentDisplayCentered, true, 'the explicit full-catalog target uses centered host alignment');
+    surface.lastQuery = 'old-filter';
+    surface.onViewInputsChanged();
+    assert.equal(timers.size, 1, 'a clear delivered first is eligible for regular debounce');
+    surface.onLocateCurrent();
+    assert.equal(timers.size, 0, 'the following locate retires the queued clear');
+    await flushSurface();
+    assert.equal(pending[start + 4].query.locateCurrent, true);
+    pending[start + 4].resolve({ ...readyCatalog('clear-before-locate'), locateCurrent: true });
+    await flushSurface();
+    assert.equal(surface.view.viewId, 'clear-before-locate');
     visibleAnchorNodeId = undefined;
 }
 if (selectedCase === 'surface-admission') {

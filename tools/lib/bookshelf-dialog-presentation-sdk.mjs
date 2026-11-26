@@ -2,12 +2,12 @@ import { installedEtsCompiler } from './ets-compiler-runtime.mjs';
 import { virtualFilePath } from './tool-environment.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {createReaderBuilderProbe} from './reader-control-builder-probe.mjs';
+import {createReaderBuilderProbe,productionReaderMotionSdk} from './reader-control-builder-probe.mjs';
 import {boundedSurfaceSdk,boundedMembers} from './bounded-surface-sdk-probe.mjs';
 import {readerRecoveryView} from '../../entry/src/main/ets/app/ReaderRecoveryProjection.ts';
 import {READER_FEEDBACK_EXTENDED_MS} from '../../entry/src/main/ets/ui/feedback/ReaderTransientFeedback.ts';
 import {runtimeOwnerIdentityProbe} from './reader-runtime-admission-probe.mjs';
-import {ReaderWindowMetricsSnapshot,ReaderRectVp,readerInteractiveSafeLeft,readerInteractiveSafeRight} from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
+import {ReaderWindowMetricsSnapshot,ReaderRectVp,readerInteractiveSafeTop,readerInteractiveSafeLeft,readerInteractiveSafeRight} from '../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 import {resolveHorizontalFrame,SurfaceWidthSpec,SurfaceHorizontalFrame} from '../../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts';
 import {SOURCE_CHROME_VISUAL} from '../../entry/src/main/ets/ui/foundation/ReaderSourceChromeVisual.ts';
 const read=p=>readFileSync(new URL('../../entry/src/main/ets/'+p,import.meta.url),'utf8');
@@ -42,9 +42,26 @@ const sdk=boundedSurfaceSdk();
 const Book=createReaderBuilderProbe(bookSource,boundedMembers(bookSource),{...sdk.deps,ReaderWindowCoordinator:{metrics:()=>metrics},ReaderDialogSurface:SurfaceChild,DialogActionView,
   registerReaderFonts:font=>{assert.ok(font&&typeof font==='object','actual dialog lifecycle receives its platform Font handle');}},sdk.hooks).Component;
 const Group=createReaderBuilderProbe(selectorSource,boundedMembers(selectorSource),sdk.deps,sdk.hooks).Component;
+const motion=productionReaderMotionSdk();
+function motionEffect(kind,value,combined){
+ return {
+  kind,value,
+  combine(next){return motionEffect(kind,value,next);},
+  animation(params){return {kind,value,combined,params};},
+ };
+}
+const TransitionEffect={
+ IDENTITY:{kind:'identity'},OPACITY:motionEffect('opacity'),
+ scale:value=>motionEffect('scale',value),translate:value=>motionEffect('translate',value),
+ asymmetric:(enter,exit)=>({enter,exit}),
+};
 const GroupDialog=createReaderBuilderProbe(groupDialogSource,boundedMembers(groupDialogSource),
  { ...sdk.deps, SynchedPropertyNesedObjectPU:sdk.properties.sdk.SynchedPropertyNestedObjectPU,
-   ReaderDialogSurface:SurfaceChild, BookshelfGroupSelector:Group },{...sdk.hooks,mountChildren:true}).Component;
+   ReaderDialogSurface:SurfaceChild, BookshelfGroupSelector:Group, TransitionEffect, readerInteractiveSafeTop,
+   readerWindowMetrics:()=>metrics,
+   readerMotionStandardCurve:()=>motion.motionSpecGet('app.sheet.open').curve,
+   readerMotionReducedFadeParam:motion.readerMotionReducedFadeParam },
+ {...sdk.hooks,mountChildren:true,allowEmptyBranchAdmission:true,allowEmptyBranchRemoval:true}).Component;
 let currentOwner;const ReaderRuntimeOwner=runtimeOwnerIdentityProbe(()=>currentOwner);
 const methods=['isCurrentRuntime','isCurrentBookshelfPresentation','openBookRemovalDialog','libraryJourneyPorts','bookshelfContentAcceptsInput','bookshelfModalVisible'];
 const defer=()=>{let resolve,reject;const promise=new Promise((r,j)=>{resolve=r;reject=j;});return{promise,resolve,reject};};
@@ -84,15 +101,32 @@ function fixture(text=indexSource, runtime, groupText=groupPresentationSource, r
  i.shelfGroupPresentation=presentation;
  i.invalidateBookshelfProjection=()=>invalid++;i.refreshBookshelf=()=>refresh++;i.getUIContext=()=>({});
  i.transientFeedback={show(_ui,options,current){if(current())toasts.push(options.message);}};
- i.shelfRead={invalidate:()=>i.invalidateBookshelfProjection()};
+ let visibleBook;
+ i.shelfRead={invalidate:()=>i.invalidateBookshelfProjection(),containsVisibleBook:book=>
+  visibleBook?.sourceId===book.sourceId&&visibleBook?.bookId===book.bookId};
  // These are the existing fixture's route facts, not a second navigation flow.
  i.navigationOwner={snapshot:()=>({route:i.route,generation:i.navigationGeneration})};
  i.libraryJourney=new ReaderLibraryJourney(i.navigationOwner,i.libraryJourneyPorts());
- i.openShelfGroup=(book,focusTarget)=>i.libraryJourney.openShelfGroup(book,focusTarget);
+ i.openShelfGroup=(book,focusTarget)=>{
+  visibleBook=book;
+  i.libraryJourney.openShelfGroup(book,focusTarget);
+ };
  const leaf=()=>[...removalHost.children.values()].findLast(c=>c instanceof Book);
  const native=()=>{const b=leaf();b.initialRender();const surface=sharedSurface([...b.children.values()][0].params);return{b,surface,
   confirm:[...surface.nodes.values()].filter(n=>n.type==='Button'&&n.onClick)[1],cancel:[...surface.nodes.values()].filter(n=>n.type==='Button'&&n.onClick)[0]};};
- const group=()=>{const dialog=new GroupDialog(undefined,{presentation,recoveryTop:0});dialog.initialRender();const child=[...dialog.children.values()].findLast(c=>c instanceof Group);child?.initialRender();return{dialog,child,select:[...(child?.nodes.values()??[])].find(n=>n.type==='Button'&&n.accessibilityText==='默认分组'&&n.onClick),mask:[...dialog.nodes.values()].findLast(n=>n.type==='Row'&&n.height==='100%'&&n.onClick)};};
+ const group=(retained,reduceMotion=false)=>{
+  const dialog=retained??new GroupDialog(undefined,{presentation,recoveryTop:0});
+  dialog.appReduceMotion=reduceMotion;
+  if(retained===undefined)dialog.initialRender();else dialog.replay();
+  const focusId=dialog.selectorFocusKey(presentation.identity);
+  const child=[...dialog.children.values()].findLast(c=>c instanceof Group&&c.focusId===focusId);
+  child?.initialRender();
+  const nodes=[...dialog.nodes.values()];
+  return {dialog,child,select:[...(child?.nodes.values()??[])].find(n=>n.type==='Button'&&n.accessibilityText==='默认分组'&&n.onClick),
+   mask:nodes.findLast(n=>n.type==='Row'&&n.height==='100%'&&n.onClick),
+   surface:nodes.findLast(n=>n.type==='Stack'&&n.focusScopeId),
+   card:nodes.findLast(n=>n.type==='__Common__'&&n.transition)};
+ };
  return{i,r,controllers,native,group,presentation,writes,toasts,bindings,opens,output:probe.output,raw:value=>sdk.properties.sdk.ObservedObject.GetRawObject(value),refresh:()=>refresh,invalid:()=>invalid,setTask:t=>task=t,retire:()=>{currentOwner=undefined;}};
 }
 export {fixture as bookshelfDialogPresentationFixture,indexSource,groupPresentationSource,removalHostSource,defer,sdk as bookshelfDialogSdk};

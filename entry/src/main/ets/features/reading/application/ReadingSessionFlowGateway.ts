@@ -84,6 +84,11 @@ export type ReadingContentSearchPage = {
   nextCursor?: string;
 };
 
+export interface ReadingContentSearchCacheScope {
+  cachedChapters: number;
+  totalChapters: number;
+}
+
 /**
  * One execution boundary for the shared pagination/reader component.
  *
@@ -918,6 +923,37 @@ export class ReadingSessionFlowGateway {
       ...(stored.progressRevision === undefined ? {} : { progressRevision: stored.progressRevision }),
       ...(stored.bodyVersion === undefined ? {} : { bodyVersion: stored.bodyVersion, processingVersion: stored.processingVersion }),
     };
+  }
+
+  /** Read the online directory's durable body coverage on explicit search.
+   * Download task state is distinct from whether Core has a searchable body. */
+  async readContentSearchCacheScope(bookId: string,
+    isCurrent: () => boolean): Promise<ReadingContentSearchCacheScope | undefined> {
+    this.assertBook(bookId);
+    if (this.sourceId === 'local' || this.runtimeOwner.supportsCoreCapability?.('reading.catalog.page.v1') !== true ||
+      !isCurrent()) return undefined;
+    const contentCurrent = this.runtimeOwner.captureReadingContentValidity?.(this.sourceId, bookId);
+    const current = (): boolean => isCurrent() && contentCurrent?.() !== false;
+    const result = await this.runtimeOwner.request('cache.book.status', {
+      sourceId: this.sourceId, bookId, includeGlobalStats: false,
+    }, { timeoutMs: 1500, shouldCancel: (): boolean => !current() });
+    const data = result.data;
+    const chapters = data['chapters'];
+    if (!current() || data['sourceId'] !== this.sourceId || data['bookId'] !== bookId ||
+      data['tocAvailable'] !== true || !Array.isArray(chapters) || chapters.length !== data['chapterCount']) return undefined;
+    let totalChapters = 0;
+    let cachedChapters = 0;
+    for (const raw of chapters) {
+      const chapter = requireObject(raw, 'cache.book.status chapter');
+      const navigable = chapter['navigable'];
+      if (typeof navigable !== 'boolean') return undefined;
+      if (!navigable) continue;
+      totalChapters += 1;
+      if (requireNonNegativeIntegerValue(chapter, 'cachedBytes', 'cache.book.status chapter') > 0) cachedChapters += 1;
+    }
+    const reportedTotal = data['readableChapterCount'];
+    if (totalChapters === 0 || (reportedTotal !== undefined && reportedTotal !== totalChapters)) return undefined;
+    return { cachedChapters, totalChapters };
   }
 
   async searchContent(

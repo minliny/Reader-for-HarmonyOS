@@ -7,7 +7,7 @@ Object.assign(definitions, {
   'book-row-density': { description: '批准demo常态24/18/28/80与实际SDK行/More/状态绘制响应、状态/管理/摘要、自然增长和当前行入口', resources: [] },
   'list-layout': { description: '实际新宿主 SDK 常态单List/管理footer/短高预算与RaiseShape身份；含旧fixed header结构负例', resources: [] },
   'list-restore': { description: '实际普通List一次性epoch恢复，touch/filter/geometry/opening/font/retire取消并保留阅读返回焦点；反例移除epoch会重复恢复', resources: [] },
-  'chapter-locate-restore': { description: '实际章节定位取消旧idle并计入三个prefix，保留当前detail身份及独立章节恢复', resources: [] },
+  'chapter-locate-restore': { description: '实际章节定位按宽窄列表前置行计算索引，取消旧idle并保留章节恢复', resources: [] },
   'private-tool-budget': { description: '实际筛选/排序native carrier及父预算320/366/720 x1/1.3/1.6/2/3.2；24vp旧排序carrier负例', resources: [] },
   'touch-targets': { description: '实际tabs/search-clear/management完成44vp原生carrier及陈旧管理epoch拒绝', resources: [] },
   'filter-reset': { description: '实际筛选空PageState清条件/保排序，current opening准入与retired callback拒绝', resources: [] },
@@ -56,7 +56,7 @@ if(selectedCase==='definition'){
  const demo=readFileSync(new URL('../docs/ui-design/shared-download/demo.html',import.meta.url)),storage=readFileSync(new URL('../docs/ui-design/shared-download/storage-demo.html',import.meta.url));
  assert.equal(visual.SHARED_DOWNLOAD_DEMO_SHA256,createHash('sha256').update(demo).digest('hex'));assert.equal(manifest.sourceSha256,visual.SHARED_DOWNLOAD_DEMO_SHA256);assert.equal(manifest.storageSourceSha256,createHash('sha256').update(storage).digest('hex'));assert.deepEqual({...visual.DOWNLOAD_VISUAL},manifest.fields);for(const field of Object.keys(manifest.fields))assert.ok(manifest.provenance[field]);for(const [field,receipt]of Object.entries(manifest.storageProvenance)){assert.equal(receipt.sourceSha256,manifest.storageSourceSha256);assert.deepEqual(manifest.provenance[field],receipt);}return;
 }
-const {createReaderBuilderProbe}=await import('./lib/reader-control-builder-probe.mjs');const {createArkUIPropertyRuntimeProbe}=await import('./lib/arkui-property-runtime-probe.mjs');
+const {createReaderBuilderProbe, productionReaderMotionSdk}=await import('./lib/reader-control-builder-probe.mjs');const {createArkUIPropertyRuntimeProbe}=await import('./lib/arkui-property-runtime-probe.mjs');
 const palette=Object.fromEntries(['day','night'].map(scheme=>[scheme,Object.fromEntries(Object.entries(manifest.palettes).filter(([,v])=>v[scheme]).map(([role,v])=>[role,'#'+[Math.round(v[scheme].a*255),v[scheme].r,v[scheme].g,v[scheme].b].map(n=>n.toString(16).padStart(2,'0')).join('').toUpperCase()]))]));
 const argb=color=>{assert.equal(typeof color,'string');return color.length===7?'#FF'+color.slice(1).toUpperCase():color.toUpperCase();};
 const source = readFileSync(new URL('../entry/src/main/ets/features/downloads/ui/SharedDownloadPage.ets', import.meta.url), 'utf8');
@@ -75,7 +75,7 @@ methods.push('searchInputRevision','appForeground','covered','focusGeneration','
 // admission. Retain them rather than replacing them with fixture defaults.
 methods.push('measurements', 'measurementRevision', 'reduceMotion', 'sheetWasVisible',
   'sheetMaskReady', 'sheetExitPending',
-  ...(['native-bindings', 'row-geometry-receipts'].includes(selectedCase) ? ['sheetActorGeneration', 'sheetActorAttachment', 'sheetActorOwner', 'sheetActors'] : ['sheetAnimationGeneration']),
+  'sheetActorGeneration', 'sheetActorAttachment', 'sheetActorOwner', 'sheetActors',
   'transientFeedback', 'managementGeneration', 'takeReadingFocus',
   'storageDockShape', 'selectionDockShape');
 // This selected renderer leaf must construct the same initialized production
@@ -118,7 +118,7 @@ if (['native-bindings', 'row-geometry-receipts', 'chapter-selection-actions'].in
   if (selectedCase === 'native-bindings') assert.ok(methods.includes('filterSourceOptions') && methods.includes('sheetActors'),
     'the real filter and Native sheet actor initializers are in the current dependency closure');
 }
-if (confluenceCases.has(selectedCase) || ['area-receipts','management-scroll'].includes(selectedCase)) {
+if (confluenceCases.has(selectedCase) || ['area-receipts', 'management-scroll', 'inline-settings', 'storage-publication', 'short-layout', 'overlay-chrome'].includes(selectedCase)) {
   methods.splice(0, methods.length, ...page.members.filter(node => node.name).map(node => node.name.getText(tree)));
 }
 const frameSource = tree.statements.find(node => node.name?.getText(tree) === 'SharedDownloadIdleFrame');
@@ -176,8 +176,6 @@ const currentChromePalette = Object.fromEntries(['day', 'night'].map(scheme => {
     actionScrim, actionPaper: nativeBlendReceipt(pagePaper, actionScrim), actionInk: nativeBlendReceipt(pageInk, actionScrim),
     actionSurface: readerAppColor(action.surfaceRole, scheme), actionSurfaceInk: readerAppColor(action.inkRole, scheme),
     sheetPaper, sheetInk: pageInk,
-    doublePaper: nativeBlendReceipt(paper, scrim), doubleInk: nativeBlendReceipt(ink, scrim),
-    confirmationOnSheet: nativeBlendReceipt(sheetPaper, scrim), confirmationOnSheetInk: nativeBlendReceipt(pageInk, scrim),
   }];
 }));
 const nativeColorMetrics = { resourceColor: value => ({ value: argb(value), blendColor(overlay) {
@@ -232,7 +230,8 @@ const probeDependencies = { resolveReaderRaisedShape,
   Scroller: class { scrollTo() {} scrollToIndex() {} currentOffset() { return { yOffset: 0 }; } },
   // This case observes static material attributes with reduceMotion enabled;
   // it passes the native identity recipe through without simulating frames.
-  TransitionEffect: { IDENTITY: 'TransitionEffect.IDENTITY' },
+  ...productionReaderMotionSdk(),
+  TransitionEffect: { IDENTITY: 'TransitionEffect.IDENTITY', OPACITY: { animation: params => params } },
   uiContext: {getFont:()=>({}),animateTo(_options,action){action();},getHostContext: () => ({ config: { fontSizeScale: platformFontScale } }),
     postFrameCallback: frame => scheduledFrames.push(frame), getMeasureUtils: () => ({ measureText, measureTextSize }),
     px2vp: value => { convertedWidths.push(value); return value / 3; } },
@@ -399,11 +398,11 @@ if (selectedCase === 'chapter-selection-actions') {
         managing: true, fontsReady: true, onIntent: intent => intents.push(intent) });
     f.selectionDock();
     const buttons = records(f).filter(node => node.type === 'Button').slice(-3);
-    const entries = buttons.map(node => [...f.nodes.entries()].find(([, value]) => value === node));
     f.selectChapters([running]);
     propertyRuntime.flush();
     assert.deepEqual(buttons.map(node => node.enabled), [true, true, true], 'selection updates retained SDK buttons');
-    for (const [id, node] of entries) assert.equal(f.nodes.get(id), node, 'same SDK Button record retained');
+    const current = records(f).filter(node => node.type === 'Button').slice(-3);
+    buttons.forEach((node, index) => assert.equal(current[index], node, 'same SDK Button record retained'));
     f.books = [{ ...book, chapters: [{ ...running, localComplete: true, queueState: 'completed' }] }];
     propertyRuntime.flush();
     assert.deepEqual(buttons.map(node => node.enabled), [false, false, true], 'same identity queue update disables both direct actions');
@@ -583,19 +582,23 @@ if (selectedCase === 'list-restore') {
 }
 if (selectedCase === 'chapter-locate-restore') {
     const catalog = { ...book, shelfBook: { ...book.shelfBook, readingPosition: { chapterIndex: 0 } }, chapters: [completeChapter] };
-    const moves = [], indices = [];
-    scheduledFrames.length = 0;
-    const f = owner('day', { books: [catalog], fontsReady: true, detailKey: catalog.key, chapterLayoutReady: true, chapterScrollRestorePending: true,
-        chapterScroller: { scrollTo: v => moves.push(v), scrollToIndex: (...v) => indices.push(v) } });
-    f.chapterOffset = 77;
-    f.restoreChapterOffset();
-    const pending = scheduledFrames.at(-1);
-    assert.ok(pending);
-    f.locateCurrent();
-    pending.onIdle();
-    assert.deepEqual(moves, []);
-    assert.deepEqual(indices[0], [3, true, 'ScrollAlign.CENTER']);
-    const badSource = source.replace('    this.cancelChapterScrollRestore();\n    this.cancelManagingScroll();\n    this.chapterScroller.scrollToIndex', '    this.cancelManagingScroll();\n    this.chapterScroller.scrollToIndex');
+    for (const embeddedWide of [false, true]) {
+        const moves = [], indices = [];
+        scheduledFrames.length = 0;
+        const f = owner('day', { embeddedWide, books: [catalog], fontsReady: true, detailKey: catalog.key,
+            chapterLayoutReady: true, chapterScrollRestorePending: true,
+            chapterScroller: { scrollTo: v => moves.push(v), scrollToIndex: (...v) => indices.push(v) } });
+        f.chapterOffset = 77;
+        f.restoreChapterOffset();
+        const pending = scheduledFrames.at(-1);
+        assert.ok(pending);
+        f.locateCurrent();
+        pending.onIdle();
+        assert.deepEqual(moves, []);
+        assert.deepEqual(indices[0], [embeddedWide ? 2 : 3, true, 'ScrollAlign.CENTER']);
+    }
+    const scopedCancellation = '    this.cancelChapterScrollRestore();\n    this.cancelManagingScroll();\n    // The embedded page';
+    const badSource = source.replace(scopedCancellation, '    this.cancelManagingScroll();\n    // The embedded page');
     assert.notEqual(badSource, source);
     const badProbe = createReaderBuilderProbe(badSource, methods, probeDependencies, probeHooks), badMoves = [];
     const bad = owner('day', { books: [catalog], fontsReady: true, detailKey: catalog.key, chapterLayoutReady: true, chapterScrollRestorePending: true,
@@ -1218,7 +1221,7 @@ assert.equal(remountedFonts.fontsFailed, false);
 
 }
 if(selectedCase==='short-layout'){
-const original=windowMetrics;for(const [width,height,scale]of[[140,120,2],[366,809,1]]){windowMetrics={...original,windowRect:{left:0,top:0,width,height},systemFontScale:scale};const f=owner('day',{sheet:'filter',pageHeight:height});assert.ok(f.sheetMaxHeight()>=0&&f.sheetMaxHeight()<=height);f.sheetOverlay();const scrolls=records(f).filter(n=>n.type==='Scroll');assert.equal(scrolls.length,1);assert.ok(scrolls[0].constraintSize.maxHeight<=height);text(f,'筛选');text(f,'完成');const d=owner('day',{confirmation:'deleteLocal',pageHeight:height,actionBookKeys:[book.key]});d.confirmationOverlay();assert.equal(records(d).filter(n=>n.type==='Scroll').length,1);text(d,'取消');text(d,'删除内容');}windowMetrics=original;
+const original=windowMetrics;for(const [width,height,scale]of[[140,120,2],[366,809,1]]){windowMetrics={...original,windowRect:{left:0,top:0,width,height},systemFontScale:scale};const f=owner('day',{sheet:'filter',pageHeight:height,reduceMotion:true});assert.ok(f.sheetMaxHeight()>=0&&f.sheetMaxHeight()<=height);f.sheetOverlay();const scrolls=records(f).filter(n=>n.type==='Scroll');assert.equal(scrolls.length,1);assert.ok(scrolls[0].constraintSize.maxHeight<=height);text(f,'筛选');text(f,'完成');const d=owner('day',{confirmation:'deleteLocal',pageHeight:height,actionBookKeys:[book.key]});d.confirmationOverlay();assert.equal(records(d).filter(n=>n.type==='Scroll').length,1);text(d,'取消');text(d,'删除内容');}windowMetrics=original;
 
 }
 if(selectedCase==='reactive-metrics'){
@@ -1252,7 +1255,36 @@ assert.equal(reactivePage.observers.length, observerCount, 'metric changes updat
 
 }
 if(selectedCase==='storage-publication'){
-const MiB=1024*1024,GiB=MiB*1024,summary={totalBytes:3*GiB,retainedBytes:GiB,automaticBytes:2*GiB,cleanableBytes:512*MiB,availableBytes:8*GiB};const f=owner('day',{storageSummary:summary});f.settingsSheet();f.clearStorageButton();const values=['3.0 GB','1.0 GB','2.0 GB','8.0 GB'].map(v=>text(f,v)),ids=values.map(n=>n.id);const button=find(f,n=>n.type==='Button','actual cleanup');assert.equal(button.enabled,true);assert.equal(button.accessibilityText,'清理自动保存 · 512 MB');f.storageSummary={};propertyRuntime.flush();assert.deepEqual(values.map(label),['','','','']);assert.deepEqual(values.map(n=>f.nodes.get(n.id).id),ids);assert.equal(button.enabled,false);f.storageSummary={totalBytes:0,retainedBytes:0,automaticBytes:0,cleanableBytes:0,availableBytes:0};propertyRuntime.flush();assert.deepEqual(values.map(label),['0 MB','0 MB','0 MB','0 MB']);assert.equal(button.enabled,false);f.storageSummary=summary;propertyRuntime.flush();assert.deepEqual(values.map(label),['3.0 GB','1.0 GB','2.0 GB','8.0 GB']);assert.equal(button.enabled,true);const d=owner('day',{storageSummary:summary,sheet:'settings',confirmation:'cleanup'});d.confirmationOverlay();const confirm=records(d).filter(n=>n.type==='Button').at(-1),caption=text(d,'清理 512 MB');assert.equal(confirm.enabled,true);d.storageSummary={...summary,cleanableBytes:0};propertyRuntime.flush();assert.equal(label(caption),'清理 0 MB');assert.equal(confirm.enabled,false);
+ const MiB = 1024 * 1024, GiB = MiB * 1024;
+ const summary = { totalBytes: 3 * GiB, retainedBytes: GiB, automaticBytes: 2 * GiB,
+   cleanableBytes: 512 * MiB, availableBytes: 8 * GiB };
+ const f = owner('day', { storageSummary: summary });
+ f.settingsSheet(); f.clearStorageButton();
+ const knownValues = ['3.0 GB', '1.0 GB', '2.0 GB', '8.0 GB'];
+ const values = knownValues.map(value => text(f, value));
+ const ids = values.map(node => node.id);
+ const button = find(f, node => node.type === 'Button' && node.accessibilityText === '清理临时缓存 · 512 MB',
+   'actual shared cleanup action');
+ assert.equal(button.enabled, true);
+ f.storageSummary = {}; propertyRuntime.flush();
+ assert.deepEqual(values.map(label), ['', '', '', '']);
+ assert.deepEqual(values.map(node => f.nodes.get(node.id).id), ids);
+ assert.equal(button.enabled, false);
+ f.storageSummary = { totalBytes: 0, retainedBytes: 0, automaticBytes: 0, cleanableBytes: 0, availableBytes: 0 };
+ propertyRuntime.flush();
+ assert.deepEqual(values.map(label), ['0 MB', '0 MB', '0 MB', '0 MB']);
+ assert.equal(button.enabled, false);
+ f.storageSummary = summary; propertyRuntime.flush();
+ assert.deepEqual(values.map(label), knownValues);
+ assert.equal(button.enabled, true);
+ const d = owner('day', { storageSummary: summary, sheet: 'settings', confirmation: 'cleanup' });
+ d.confirmationOverlay();
+ const confirm = records(d).filter(node => node.type === 'Button').at(-1);
+ const caption = text(d, '清理 512 MB');
+ assert.equal(confirm.enabled, true);
+ d.storageSummary = { ...summary, cleanableBytes: 0 }; propertyRuntime.flush();
+ assert.equal(label(caption), '清理 0 MB');
+ assert.equal(confirm.enabled, false);
 
 }
 if(selectedCase==='retained-dto'){
@@ -1708,34 +1740,37 @@ assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), currentC
 chrome.appThemeScheme = 'night'; await microtasks();
 assert.equal(argb(chromeRequests.at(-1).style.underlayColor), currentChromePalette.night.paper);
 assert.equal(argb(chromeRequests.at(-1).style.contentColor), currentChromePalette.night.ink);
+chrome.sheet = 'settings'; chrome.confirmation = ''; await microtasks();
+const storageChrome = chromeRequests.at(-1).style;
 nativeStart = nativeBlendCalls.length;
-chrome.sheet = 'settings'; chrome.confirmation = 'cleanup'; await microtasks();
-assert.equal(argb(chromeRequests.at(-1).style.underlayColor), currentChromePalette.night.doublePaper);
-assert.equal(argb(chromeRequests.at(-1).style.contentColor), currentChromePalette.night.doubleInk);
-assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), currentChromePalette.night.confirmationOnSheet);
-assert.equal(argb(chromeRequests.at(-1).style.navigationContentColor), currentChromePalette.night.confirmationOnSheetInk);
-assert.notEqual(currentChromePalette.night.confirmationOnSheet, currentChromePalette.night.doublePaper,
-  'navigation is the opaque sheet plus confirmation, not the doubly-masked page');
+chrome.confirmation = 'cleanup'; await microtasks();
+assert.deepEqual(chromeRequests.at(-1).style, storageChrome, 'nested storage confirmation leaves both system-bar bands unchanged');
 assert.deepEqual(nativeBlendCalls.slice(nativeStart), [
   [argb(currentChromePalette.night.pagePaper), argb(currentChromePalette.night.scrim)],
   [argb(currentChromePalette.night.pageInk), argb(currentChromePalette.night.scrim)],
-  [currentChromePalette.night.paper, argb(currentChromePalette.night.scrim)],
-  [currentChromePalette.night.ink, argb(currentChromePalette.night.scrim)],
-  [argb(currentChromePalette.night.sheetPaper), argb(currentChromePalette.night.scrim)],
-  [argb(currentChromePalette.night.sheetInk), argb(currentChromePalette.night.scrim)],
-], 'nested confirmation keeps the independent status-band and sheet-band owners');
+], 'nested confirmation keeps a single mask over page paper and ink');
 chrome.appThemeScheme = 'day'; await microtasks();
-assert.equal(argb(chromeRequests.at(-1).style.underlayColor), currentChromePalette.day.doublePaper);
-assert.equal(argb(chromeRequests.at(-1).style.contentColor), currentChromePalette.day.doubleInk);
-assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), currentChromePalette.day.confirmationOnSheet);
+assert.equal(argb(chromeRequests.at(-1).style.underlayColor), currentChromePalette.day.paper);
+assert.equal(argb(chromeRequests.at(-1).style.contentColor), currentChromePalette.day.ink);
+assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), argb(currentChromePalette.day.sheetPaper));
+assert.equal(argb(chromeRequests.at(-1).style.navigationContentColor), argb(currentChromePalette.day.sheetInk));
+const dayStorageChrome = chromeRequests.at(-1).style;
 chrome.confirmation = ''; await microtasks();
 assert.equal(chromeRequests.at(-1).owner, 'overlay', 'cancel retains the same storage sheet with its single scrim');
-assert.equal(argb(chromeRequests.at(-1).style.underlayColor), currentChromePalette.day.paper);
-assert.equal(argb(chromeRequests.at(-1).style.navigationUnderlayColor), argb(currentChromePalette.day.sheetPaper));
-const exitingGeneration = chrome.sheetAnimationGeneration, beforeExit = chromeRequests.length;
+assert.deepEqual(chromeRequests.at(-1).style, dayStorageChrome);
+const attachment = chrome.sheetActorAttachment, ownerGeneration = chrome.sheetActorOwner;
+const sheetActor = 'sheet:' + chrome.sheetOpeningGeneration;
+chrome.onSheetActorAppeared(attachment, ownerGeneration, 'scrim');
+chrome.onSheetActorAppeared(attachment, ownerGeneration, sheetActor, chrome.sheetOpeningGeneration);
+const beforeExit = chromeRequests.length;
 chrome.sheet = ''; await microtasks();
 assert.equal(chromeRequests.length, beforeExit, 'an animated sheet retains its band until the native exit receipt');
-chrome.onSheetExitFinished(exitingGeneration); await microtasks();
+chrome.onSheetActorTransitionFinished(attachment + 1, ownerGeneration, 'scrim', false);
+chrome.onSheetActorTransitionFinished(attachment, ownerGeneration, sheetActor, false);
+await microtasks();
+assert.equal(chromeRequests.length, beforeExit, 'a stale attachment cannot retire the current scrim');
+chrome.onSheetActorTransitionFinished(attachment, ownerGeneration, 'scrim', false);
+await microtasks();
 assert.equal(chromeRequests.at(-1).owner, 'app', 'closing the final overlay restores normal App chrome');
 chrome.sheet = 'filter'; await microtasks();
 const retiredChromeStart = chromeRequests.length;

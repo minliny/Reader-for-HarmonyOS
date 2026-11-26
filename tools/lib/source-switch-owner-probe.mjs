@@ -95,7 +95,7 @@ export function fixture(options={},productionSource=hostSource) {
     }};
   const replaceReaderAtomicSnapshot=compile(read('app/ReaderAtomicSnapshotFile.ts'),'replaceReaderAtomicSnapshot',{fileIo});
   const intentClasses=compile(read('features/source/application/SourceSwitchIntentStore.ts'),'{SourceSwitchIntentStore,SourceSwitchIntentRecoveryError}',
-    {...common,SourceSwitchGateway:Gateway,util:{generateRandomUUID:()=> `00000000-0000-4000-8000-${String(++uuid).padStart(12,'0')}`},fileIo,replaceReaderAtomicSnapshot});
+    {...common,SourceSwitchGateway:Gateway,util:{generateRandomUUID:()=> `00000000-0000-4000-8000-${String(++uuid).padStart(12,'0')}`},fileIo,replaceReaderAtomicSnapshot,readerHostFilesDirectory});
   const mangaDisk={published:undefined,durable:undefined};
   const mangaFileIo={OpenMode:fileIo.OpenMode,
     async readText(){if(mangaDisk.published===undefined)throw {code:13900002};return mangaDisk.published;},

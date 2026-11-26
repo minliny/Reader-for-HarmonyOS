@@ -15,9 +15,9 @@ import { loadCandidate, readLivePriorEvents, writeGuestSchedulingEvidence } from
 import { candidateCoverage, groupExecution, scenarioCoverage } from '../coverage.mjs';
 import { loadCase, toolIdentity } from '../lib/cases.mjs';
 import { evidenceStore, jsonBytes, jsonDigest, sealChain, sha256, validate, verifyChain } from '../lib/evidence.mjs';
-import { assessStructure, replayReceipt, sealReceipt, summarizeAcceptance } from '../lib/receipt.mjs';
+import { assessStructure, reassessOriginalStructure, replayReceipt, sealReceipt, summarizeAcceptance } from '../lib/receipt.mjs';
 import { conditionApplicability } from '../lib/receipt-conditions.mjs';
-import { requireStructureProof } from '../lib/receipt-structure.mjs';
+import { requireStructureProof, structureBindingSha256 } from '../lib/receipt-structure.mjs';
 import { loadStructureDefinition, resolveStructureBindings, validateStructureDefinition } from '../lib/structure-contract.mjs';
 import { exportReplayTool } from '../export-replay.mjs';
 
@@ -518,6 +518,57 @@ test('relocates both synthetic receipts and preserves exact assertion sets and p
   }
 });
 
+test('historical structure reassessment retains an incomplete receipt without applicable assertions', t => {
+  const run = fixture(t, 'reading.control-tts-capsule-handoff-full');
+  const {receipt,rootSha256} = sealReceipt(run,run.contract);
+  assert.equal(receipt.behavior,'NOT_RUN');
+  const obligation = loadStructureDefinition().scenarioObligations.find(item => item.caseId === run.contract.id);
+  const assessment = reassessOriginalStructure({
+    receiptPath:join(run.bundle,'receipt.json'), expectedRoot:rootSha256,
+    historicalDefinition:{caseId:receipt.caseId,caseSha256:receipt.caseSha256,
+      states:obligation.states,samples:run.contract.structure},
+  });
+  assert.equal(assessment.source.rootSha256,rootSha256);
+  assert.equal(assessment.execution,'INCOMPLETE');
+  assert.equal(assessment.behavior,'NOT_RUN');
+  assert.ok(assessment.assertions.every(assertion => assertion.verdict === 'NOT_RUN'));
+});
+
+// Offline CLI checks may rehash the exported tool and read the full bundle.
+const evidenceCliTimeoutMs = 45_000;
+
+test('resealing preserves the verified Runner files referenced by the original session', t => {
+  const run = fixture(t, 'reading.control-grabber-reversal');
+  const runner = Object.fromEntries(['manifest','verification','deployment'].map(name =>
+    [name,run.store.writeJson(`candidate/runner-${name}.json`,{kind:name,fixture:'synthetic Runner capture'})]));
+  const session = {...run.session,runner};
+  const sessionRef = run.store.writeJson('session/runner-session.json',session);
+  const {receipt,rootSha256} = sealReceipt({...run,session,sessionRef},run.contract);
+  assert.equal(receipt.execution,'INCOMPLETE');
+  const reseal = output => spawnSync(process.execPath, [
+    fileURLToPath(new URL('../reseal.mjs',import.meta.url)),
+    '--case',run.contract.id,'--input',join(run.bundle,'receipt.json'),'--expected-root',rootSha256,'--output-dir',output,
+  ],{encoding:'utf8',timeout:evidenceCliTimeoutMs});
+  const output = join(run.directory,'derived');
+  const result = reseal(output);
+  assert.ifError(result.error);
+  assert.equal(result.status,1);
+  assert.equal(result.stderr,'');
+  const derived = JSON.parse(result.stdout);
+  assert.equal(derived.receipt.execution,'INCOMPLETE');
+  const derivedStore = evidenceStore(output);
+  assert.deepEqual(derivedStore.json(derived.receipt.session).runner,runner);
+  for (const ref of Object.values(runner)) assert.deepEqual(derivedStore.bytes(ref),run.store.bytes(ref));
+
+  appendFileSync(join(run.bundle,runner.verification.path),'changed raw bytes');
+  const rejectedOutput = join(run.directory,'rejected');
+  const rejected = reseal(rejectedOutput);
+  assert.ifError(rejected.error);
+  assert.equal(rejected.status,1);
+  assert.match(rejected.stderr,/Changed evidence bytes: candidate\/runner-verification\.json/u);
+  assert.equal(existsSync(rejectedOutput),false);
+});
+
 test('replays legacy and structure-aware synthetic receipts in an exported standalone tool directory', t => {
   const toolDir = join(realpathSync(scratch(t)), 'tool');
   const bundles = realpathSync(scratch(t));
@@ -540,7 +591,7 @@ test('replays legacy and structure-aware synthetic receipts in an exported stand
   delete env.NODE_OPTIONS;
   function cli(name, args) {
     const result = spawnSync(process.execPath, [...permissions, join(packageDir, name), ...args],
-      {env, cwd, encoding:'utf8', timeout:5000});
+      {env, cwd, encoding:'utf8', timeout:evidenceCliTimeoutMs});
     assert.ifError(result.error);
     assert.equal(result.stderr, '');
     assert.equal(result.status, 1);
@@ -701,6 +752,42 @@ test('current acceptance retains necessary structure, full coverage obligations 
   assert.equal(conditionApplicability(condition,context,{},{}).status,'UNKNOWN');
   context.samples['source-ready'] = {instanceId:'instance',beforeSeq:5};
   assert.equal(conditionApplicability(condition,context,{},{}).status,'DOES_NOT_APPLY');
+});
+
+test('source recovery coverage uses the accepted action for each shared capture role', () => {
+  const definition = loadStructureDefinition();
+  const cases = [
+    ['source-management.unknown-expand-target','unknown-expand','enable-for-unknown'],
+    ['source-management.unknown-recovery-body','recovery-collapsed','enable-for-unknown'],
+    ['source-management.unknown-recovery-expand-touch-edge','recovery-collapsed','collapse-recovery'],
+  ];
+  for (const [caseId,role,actionId] of cases) {
+    const contract = loadCase(caseId);
+    const obligation = definition.scenarioObligations.find(item => item.caseId === caseId);
+    const bindings = resolveStructureBindings(contract,definition);
+    const states = bindings.map(({rule,...binding}) => ({
+      ...binding,ruleId:rule.id,verdict:'PASS',observationsComplete:true,
+    }));
+    const shared = states.find(state => state.role === role);
+    assert.equal(shared.actionId,actionId,caseId);
+    const conditions = Object.fromEntries(states.filter(state => state.conditionId)
+      .map(state => [state.conditionId,{status:'APPLIES'}]));
+    const aggregate = selectedStates => {
+      const run = {receipt:{
+        runId:'synthetic-shared-capture',caseId,caseSha256:jsonDigest(contract),
+        behavior:'PASS',observations:'COMPLETE',execution:'PASS',conditions,
+        structure:{bindingSha256:structureBindingSha256(contract,definition),
+          observations:'COMPLETE',behavior:'PASS',states:selectedStates},
+      }};
+      return scenarioCoverage([run],definition,[caseId],() => contract).scenarios.find(item => item.caseId === caseId);
+    };
+    const current = aggregate(states);
+    assert.deepEqual(current.structure,{observations:'COMPLETE',behavior:'PASS'},caseId);
+    assert.equal(current.states.find(state => state.role === role).assessments[0].actionId,actionId,caseId);
+    const wrongAction = aggregate(states.map(state => state === shared ? {...state,actionId:obligation.actions[role]} : state));
+    assert.deepEqual(wrongAction.structure,{observations:'INCOMPLETE',behavior:'NOT_RUN'},caseId);
+    assert.deepEqual(wrongAction.states.find(state => state.role === role).assessments,[],caseId);
+  }
 });
 
 test('Phase 1 candidate coverage combines only compatible complete scenarios across exact layout groups', () => {
@@ -935,7 +1022,7 @@ test('combines distinct runs for the same candidate and exact target, rejecting 
     return spawnSync(process.execPath, [fileURLToPath(new URL('../coverage.mjs', import.meta.url)),
       '--search', search.path, '--search-root', search.rootSha256,
       '--reading', reading.path, '--reading-root', reading.rootSha256],
-    { encoding: 'utf8', timeout: 15000 });
+    { encoding: 'utf8', timeout: evidenceCliTimeoutMs });
   }
 
   const sameServer = cover(localReading);

@@ -22,9 +22,8 @@ import {
   pauseReaderControlLayoutCompensation, rebaseReaderControlLayout,
   settleReaderControlLayoutCompensation, type ReaderControlLayoutCompensation,
 } from './ReaderControlLayoutRebase';
-import { TOK_BORDER_W, TOK_LINE, TOK_LINE_STRONG, TOK_READ_HANDLE, TOK_READ_SURFACE, TOK_SURFACE_PANEL,
-  TOK_SURFACE_SOLID }
-  from '../../../ui/foundation/ReaderTokens';
+import { TOK_BORDER_W } from '../../../ui/foundation/ReaderTokens';
+import { READER_HEAVY_GLASS_BLUR_VP } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import type { ReaderControlBackdropRect } from './ReaderControlBackdropTouch';
 
 class ReaderControlStageFrameCallback extends FrameCallback {
@@ -676,7 +675,10 @@ export struct ReaderControlMotionStage {
           .id('reader-control-verification-shell')
           .width(this.frame().shell.width).height(this.frame().shell.height)
           .position({ x: 0, y: this.frame().shell.y })
-          .backgroundColor(readerAppColor('TOK_READ_SURFACE', this.appScheme)).borderRadius(24)
+          .backgroundEffect(this.frame().visibility > 0 ? {
+            radius: READER_HEAVY_GLASS_BLUR_VP, color: readerAppColor('TOK_READ_SURFACE', this.appScheme),
+          } : undefined)
+          .borderRadius(24)
           .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appScheme) })
           .opacity(this.frame().shell.opacity)
           .hitTestBehavior(this.frame().visibility > 0 ? HitTestMode.Block : HitTestMode.None);

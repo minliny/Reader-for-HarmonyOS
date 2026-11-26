@@ -1,3 +1,5 @@
+import { readerAppColor } from '../../ui/foundation/ReaderThemeRegistry';
+import { READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../ui/foundation/ReaderFontFamilies';
 import { ReaderWindowCoordinator } from '../ReaderWindowCoordinator';
 import { ReaderUIVerificationProbe } from '../diagnostics/ReaderUIVerificationProbe';
 import type { ReaderWindowMetricsSnapshot } from '../../ui/foundation/ReaderWindowMetrics';
@@ -73,6 +75,7 @@ const CHILD_INDEX_PROBE_MISS_LIMIT: number = 4;
 export struct ReaderLayoutDebugOverlay {
   @StorageLink('readerDeveloperMode') @Watch('onDeveloperModeChanged') private developerModeEnabled: boolean = false;
   @StorageLink('readerAppForeground') @Watch('onDeveloperModeChanged') private appForeground: boolean = true;
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @StorageLink('readerWindowMetricsRevision') private metricsRevision: number = 0;
   @State private frameCount: number = 0;
   @State private frameOriginX: number = 0;
@@ -661,7 +664,9 @@ export struct ReaderLayoutDebugOverlay {
         `${this.frameScanTruncated ? ` 扫描未完整:${this.frameScanIssue}` +
           `${this.frameScanIssueNode.length > 0 ? `@${this.frameScanIssueNode}` : ''}` :
           this.frameCount === 0 ? ' 等待组件树' : ''} · r${this.metricsRevision}`)
-        .fontSize(8).fontColor('#FFFFFFFF').backgroundColor('#A01F3528')
+        .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(FontWeight.Regular).fontSize(8)
+        .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
+        .backgroundColor(readerAppColor('TOK_PRIMARY_TEXT', this.appThemeScheme))
         .minFontScale(1).maxFontScale(1)
         .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .padding({ left: 4, right: 4, top: 1, bottom: 1 })

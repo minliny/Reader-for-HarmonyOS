@@ -1,4 +1,4 @@
-import { readerSearchHistoryControlHeight, SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
+import { readerSearchHistoryControlHeight, SEARCH_CONTROL_MIN_TARGET, SEARCH_HISTORY_GAP } from '../../../ui/foundation/ReaderSearchControlGeometry';
 
 /** Resolve the bounded viewport before choosing records. Record count never
  * controls panel height; the projection only admits complete rows. */
@@ -6,7 +6,7 @@ export class SearchHistoryGeometry {
   readonly innerInset: number;
   readonly topInset: number;
   readonly bottomInset: number;
-  readonly gap: number = 8;
+  readonly gap: number = SEARCH_HISTORY_GAP;
   readonly headingGap: number;
   readonly headingHeight: number;
   readonly buttonHeight: number;
@@ -18,18 +18,21 @@ export class SearchHistoryGeometry {
   readonly headingVisible: boolean;
   readonly feedbackVisible: boolean;
   readonly emptyVisible: boolean;
+  readonly emptyHeight: number;
 
   constructor(panelWidth: number, viewportHeight: number, fontScale: number,
-    expandedLayout: boolean, status: string = '', measuredFeedbackHeight: number = 0) {
+    expandedLayout: boolean, status: string = '', measuredFeedbackHeight: number = 0,
+    innerInsetOverride: number | undefined = undefined) {
     const scale = Number.isFinite(fontScale) ? Math.max(1, fontScale) : 1;
-    this.innerInset = expandedLayout ? 20 : 13;
+    this.innerInset = innerInsetOverride !== undefined && Number.isFinite(innerInsetOverride) ?
+      Math.max(0, innerInsetOverride) : expandedLayout ? 20 : 13;
     this.contentWidth = Math.max(0, panelWidth - this.innerInset * 2);
-    const heading = Math.max(SEARCH_CONTROL_MIN_TARGET, 20 * scale + 8);
-    this.headingVisible = viewportHeight >= 12 + heading + 8 + 16;
-    this.topInset = this.headingVisible ? 12 : 0;
-    this.bottomInset = this.headingVisible ? 16 : 0;
+    const heading = Math.max(SEARCH_CONTROL_MIN_TARGET, Math.ceil(34 + 18 * (scale - 1)));
+    this.headingVisible = viewportHeight >= 8 + heading + 10 + 12;
+    this.topInset = this.headingVisible ? 8 : 0;
+    this.bottomInset = this.headingVisible ? 12 : 0;
     this.headingHeight = this.headingVisible ? heading : 0;
-    this.headingGap = this.headingVisible ? 8 : 0;
+    this.headingGap = this.headingVisible ? 10 : 0;
     this.buttonHeight = searchHistoryButtonHeight(scale);
     const afterHeading = Math.max(0, viewportHeight - this.topInset - this.bottomInset - this.headingHeight - this.headingGap);
     const feedback = measuredFeedbackHeight > 0 ? measuredFeedbackHeight :
@@ -38,10 +41,26 @@ export class SearchHistoryGeometry {
     this.feedbackHeight = this.feedbackVisible ? feedback : 0;
     this.bodyHeight = Math.max(0, viewportHeight - this.topInset - this.bottomInset -
       this.headingHeight - this.headingGap - this.feedbackHeight);
-    this.rows = Math.max(0, Math.floor((this.bodyHeight + this.gap) / (this.buttonHeight + this.gap)));
+    const rowPitch = this.buttonHeight + this.gap;
+    const rowsInViewport = Math.floor((this.bodyHeight + this.gap) / rowPitch);
+    this.rows = Math.max(0, Math.min(rowsInViewport, 2));
     this.recordsVisible = this.headingVisible && this.contentWidth >= SEARCH_CONTROL_MIN_TARGET && this.rows > 0 &&
       (feedback === 0 || this.feedbackVisible);
-    this.emptyVisible = this.headingVisible && this.bodyHeight >= 18 * scale && feedback === 0;
+    this.emptyHeight = Math.ceil(18 * scale);
+    this.emptyVisible = this.headingVisible && this.bodyHeight >= this.emptyHeight && feedback === 0;
+  }
+
+  /** Exact panel height for the rows admitted by projectSearchHistoryRows. */
+  contentHeight(rowCount: number, historyCount: number): number {
+    const rows = Math.max(0, Math.floor(rowCount));
+    const body = rows > 0 ?
+      rows * this.buttonHeight + Math.max(0, rows - 1) * this.gap :
+      historyCount === 0 && this.emptyVisible ? this.emptyHeight : 0;
+    return this.topInset + this.headingHeight + this.headingGap + this.feedbackHeight + body + this.bottomInset;
+  }
+
+  fixedHeight(): number {
+    return this.topInset + this.headingHeight + this.headingGap + this.feedbackHeight + this.bottomInset;
   }
 }
 
@@ -59,11 +78,32 @@ export class SearchHistoryRow {
   width: number = 0;
 }
 
+export class SearchHistoryPanelLayout {
+  readonly geometry: SearchHistoryGeometry;
+  readonly rows: SearchHistoryRow[];
+  readonly canToggle: boolean;
+  readonly toggleInHeading: boolean;
+  readonly expanded: boolean;
+  readonly bodyViewport: number;
+  readonly height: number;
+
+  constructor(geometry: SearchHistoryGeometry, rows: SearchHistoryRow[], canToggle: boolean,
+    expanded: boolean, bodyViewport: number, height: number, toggleInHeading: boolean = false) {
+    this.geometry = geometry;
+    this.rows = rows;
+    this.canToggle = canToggle;
+    this.toggleInHeading = toggleInHeading;
+    this.expanded = expanded;
+    this.bodyViewport = bodyViewport;
+    this.height = height;
+  }
+}
+
 /** Admit a newest continuous prefix. A newer long title starts the next row;
  * older short titles never jump ahead to fill a hole. Only a title wider than
  * an entire row is clamped, so its native one-line label can ellipsize. */
 export function projectSearchHistoryRows(history: string[], geometry: SearchHistoryGeometry,
-  measureControlWidth: (keyword: string) => number): SearchHistoryRow[] {
+  measureControlWidth: (keyword: string) => number, rowLimit: number = geometry.rows): SearchHistoryRow[] {
   const result: SearchHistoryRow[] = [];
   if (!geometry.recordsVisible) return result;
   for (const keyword of history) {
@@ -73,7 +113,7 @@ export function projectSearchHistoryRows(history: string[], geometry: SearchHist
     const width = Math.min(geometry.contentWidth, Math.max(SEARCH_CONTROL_MIN_TARGET, Math.ceil(naturalWidth)));
     let row = result.length > 0 ? result[result.length - 1] : undefined;
     if (row === undefined || row.width + geometry.gap + width > geometry.contentWidth) {
-      if (result.length >= geometry.rows) break;
+      if (result.length >= rowLimit) break;
       row = new SearchHistoryRow();
       result.push(row);
     }
@@ -83,6 +123,29 @@ export function projectSearchHistoryRows(history: string[], geometry: SearchHist
   return result;
 }
 
+export function projectSearchHistoryPanel(history: string[], geometry: SearchHistoryGeometry, expanded: boolean,
+  measureControlWidth: (keyword: string) => number): SearchHistoryPanelLayout {
+  // The extra row detects overflow without measuring every older keyword on entry.
+  const candidate = projectSearchHistoryRows(history, geometry, measureControlWidth, geometry.rows + 1);
+  const canToggle = candidate.length > geometry.rows;
+  if (!canToggle) {
+    const rows = candidate.slice(0, geometry.rows);
+    return new SearchHistoryPanelLayout(geometry, rows, false, false, 0,
+      geometry.contentHeight(rows.length, history.length));
+  }
+  const rowPitch = geometry.buttonHeight + geometry.gap;
+  const foldedBody = geometry.rows * rowPitch - geometry.gap;
+  const toggleInHeading = geometry.bodyHeight < foldedBody + rowPitch;
+  const footer = toggleInHeading ? 0 : rowPitch;
+  const bodyBudget = geometry.bodyHeight - footer;
+  const rows = expanded ? projectSearchHistoryRows(history, geometry, measureControlWidth, history.length) :
+    candidate.slice(0, geometry.rows);
+  const naturalBody = Math.max(0, rows.length * rowPitch - geometry.gap);
+  const bodyViewport = Math.min(bodyBudget, naturalBody);
+  return new SearchHistoryPanelLayout(geometry, rows, true, expanded, bodyViewport,
+    geometry.fixedHeight() + bodyViewport + footer, toggleInHeading);
+}
+
 export function searchHistoryButtonHeight(fontScale: number): number {
   return readerSearchHistoryControlHeight(fontScale);
 }
@@ -90,12 +153,14 @@ export function searchHistoryButtonHeight(fontScale: number): number {
 export class SearchHistoryViewport {
   readonly height: number;
   readonly suppressContinueCard: boolean;
-  constructor(panelWidth: number, barBottom: number, availableBottom: number, continueCardBottom: number) {
+  constructor(desiredHeight: number, barBottom: number, availableBottom: number, continueCardBottom: number,
+    continueCardTop: number = 0) {
     const available = Math.max(0, availableBottom - barBottom);
-    const cardMinimum = continueCardBottom > barBottom ? continueCardBottom + 16 - barBottom : 0;
-    this.height = Math.min(available, Math.max(Math.max(0, panelWidth) * .64, cardMinimum));
-    // A very short IME/window retains shelf layout while retiring the obscured
-    // card's visual/hit region, rather than exposing half of its outline.
-    this.suppressContinueCard = cardMinimum > available + .1;
+    this.height = Math.min(available, Math.max(0, Number.isFinite(desiredHeight) ? desiredHeight : 0));
+    // Keep the card hidden across the whole covered interval. A fully covered
+    // card would otherwise reappear under the panel as the panel retracts.
+    const panelBottom = barBottom + this.height;
+    this.suppressContinueCard = this.height > .1 && continueCardBottom > continueCardTop &&
+      continueCardTop < panelBottom - .1 && continueCardBottom > barBottom + .1;
   }
 }

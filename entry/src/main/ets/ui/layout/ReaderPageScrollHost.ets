@@ -10,6 +10,7 @@ export struct ReaderPageScrollHost {
   editingHost: ReaderEditingVisibility | undefined = undefined;
   private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding();
   @Prop layout: ReaderScrollLayout = new ReaderScrollLayout(0, 0, 'padding');
+  @Prop initialScrollY: number = 0;
   @BuilderParam content: () => void = this.emptySlot;
   @Builder private emptySlot() {}
 
@@ -24,6 +25,7 @@ export struct ReaderPageScrollHost {
         (): number => readerScrollTopPadding(this.layout)))
       .onDisAppear((): void => this.editingScroll.unmount())
       .onAreaChange((): void => this.editingHost?.refresh())
+      .initialOffset({ xOffset: 0, yOffset: this.initialScrollY })
       .width('100%').height('100%').align(Alignment.TopStart).scrollBar(BarState.Off);
   }
 }

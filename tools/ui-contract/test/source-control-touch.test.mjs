@@ -182,7 +182,7 @@ test('Source control cases keep one exact center or top dispatch and never synth
   const collector = readFileSync(new URL('../collectors/harmonyos/records.mjs',import.meta.url),'utf8');
   assert.match(collector,/const sourceControl = sourceControlTouchStep\(step,contract\.fixture\)/u);
   assert.match(collector,/sourceControlTouchWitness\(step,target,contract\.fixture,operation,dispatch\.seq\)/u);
-  assert.match(collector,/step\.tapEdge === undefined \|\| chrome \|\| sourceControl \? \{\}/u);
+  assert.match(collector,/step\.tapEdge === undefined \|\| chrome \|\| v9Chrome \|\| sourceControl \? \{\}/u);
 });
 
 test('Source control owner admission binds the exact native point, branch, control, owner and generation',()=>{

@@ -457,10 +457,13 @@ if(selectedCase==='segment'){
  const p=switchControls(),calls=[],o=p.mount(p.segment,{inputIdentity:'A',options:['跟随','浅色','深色'],optionIds:['system','day','night'],selectedIndex:0,onSelect:i=>calls.push(i)});
  const night=nativeChoice(p,o).at(-1).onClick;night();assert.deepEqual(calls,[2]);assert.equal(o.selectedIndex,0);
  p.update(o,{selectedIndex:2});assert.equal(nativeChoice(p,o).at(-1).accessibilitySelected,true);
- p.update(o,{optionIds:['night','system','day'],options:['深色','跟随','浅色'],selectedIndex:0});night();assert.deepEqual(calls,[2,0],'stable ID follows current index after reorder');
- p.update(o,{actionEnabled:false});night();p.update(o,{actionEnabled:true,isBusy:true});night();assert.equal(calls.length,2);
- p.update(o,{isBusy:false,optionIds:['system','day'],options:['跟随','浅色']});night();assert.equal(calls.length,2,'removed option cannot borrow replacement index');
- p.update(o,{optionIds:['day','day']});p.nodes(o).find(n=>n.onClick).onClick();assert.equal(calls.length,2,'duplicate IDs fail admission');
+ p.update(o,{optionIds:['night','system','day'],options:['深色','跟随','浅色'],selectedIndex:0});
+ night();assert.deepEqual(calls,[2],'reordered native items retire the old opening callback');
+ const reorderedNight=nativeChoice(p,o)[0].onClick;
+ reorderedNight();assert.deepEqual(calls,[2,0],'current native choice resolves its stable ID in the new order');
+ p.update(o,{actionEnabled:false});reorderedNight();p.update(o,{actionEnabled:true,isBusy:true});reorderedNight();assert.equal(calls.length,2);
+ p.update(o,{isBusy:false,optionIds:['system','day'],options:['跟随','浅色']});reorderedNight();assert.equal(calls.length,2,'removed option cannot borrow replacement index');
+ o.optionIds=['day','day'];reorderedNight();assert.equal(calls.length,2,'duplicate IDs fail admission before render');
  p.update(o,{optionIds:['system','day'],inputIdentity:'B'});night();assert.equal(calls.length,2);
  const fresh=nativeChoice(p,o).at(-1);fresh.onClick();assert.equal(calls.length,3);o.aboutToDisappear();fresh.onClick();assert.equal(calls.length,3);cases++;
 }
@@ -484,11 +487,14 @@ if(selectedCase==='spec-propagation'){
  assert.equal(nativeToggle(p,t).selectedColor,readerAppColor('TOK_GREEN','day'));
  assert.equal(p.nodes(s).find(n=>n.type==='Row').width,width+3);
  assert.equal(nativeChoice(p,s)[0].constraintSize.minHeight,44,'official V2 receives its min44 policy; native pixels/hit remain OPEN');
- assert.equal(nativeChoice(p,s)[0].border.radius,baseline.resolveReaderSegmentSpec('app-theme-segment').itemRadius);
- const pillProbe=switchControls();
- const pill=pillProbe.mount(pillProbe.segment,{specId:'pill-choice',inputIdentity:'shelf',options:['封面','列表'],optionIds:['cover','list']});
- assert.deepEqual(nativeChoice(pillProbe,pill).map(button=>button.border),[{width:0,radius:20},{width:0,radius:20}],
-  'native border receives the capsule radius even when the visual border is disabled');
+ const shelfProbe=switchControls();
+ const shelf=shelfProbe.mount(shelfProbe.segment,{inputIdentity:'shelf',controlWidth:172,options:['封面','列表'],optionIds:['cover','list']});
+ const track=shelfProbe.nodes(shelf).find(node=>node.type==='Row'), capsule=shelfProbe.capsules(shelf).at(-1).params;
+ assert.equal(track.width,172);assert.equal(track.borderRadius,12);assert.equal(track.border.width,1);
+ assert.equal(capsule.itemBorderRadius.value,9);assert.equal(capsule.itemShadow.offsetY,1);
+ assert.deepEqual(capsule.items.map(item=>[item.textModifier.attributes.fontFamily,item.textModifier.attributes.fontWeight,
+  item.textModifier.attributes.fontSize]),[['ReaderNotoSansSCUIBold',700,12],['ReaderNotoSansSCUIMedium',500,12]]);
+ assert.throws(()=>baseline.resolveReaderSegmentSpec('pill-choice'),/Unknown/);
  assert.throws(()=>switchSpecs().resolveReaderToggleSpec('private99'),/Unknown/);assert.throws(()=>switchSpecs().resolveReaderSegmentSpec('private99'),/Unknown/);
 }
 if (selectedCase === 'toggle') {

@@ -149,8 +149,8 @@ export class BookshelfHost {
     this.managementPresentationIdentity = '';
   }
   managementSnapshot(): BookshelfManagementSnapshot | undefined { return this.managementOrchestrator?.currentSnapshot(); }
-  assignDefaultGroup(book: ShelfBook, identity: string = this.managementPresentationIdentity): Promise<BookshelfManagementSnapshot | undefined> {
-    return this.getManagementOrchestrator()?.assignBookGroup(book, '', identity) ?? Promise.resolve(undefined);
+  assignBookGroup(book: ShelfBook, group: string, identity: string): Promise<BookshelfManagementSnapshot | undefined> {
+    return this.getManagementOrchestrator()?.assignBookGroup(book, group, identity) ?? Promise.resolve(undefined);
   }
 
 

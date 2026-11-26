@@ -1,10 +1,13 @@
 import { readerKeyboardHostBottom } from '../layout/ReaderKeyboardGeometry';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
-import { MESSAGE_BODY, MESSAGE_TITLE } from '../foundation/ReaderMessageStyle';
+import { MESSAGE_ACTION, MESSAGE_BODY, MESSAGE_TITLE } from '../foundation/ReaderMessageStyle';
+import type { ReaderTextStyle } from '../foundation/ReaderTypography';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
-import { readerMotionAnimateParam, readerReduceMotionFromStorage } from '../foundation/ReaderMotionPolicy';
+import { readerMotionAnimateParam, readerMotionReducedFadeParam, readerReduceMotionFromStorage }
+  from '../foundation/ReaderMotionPolicy';
 import { ReaderPostLayoutFrame } from '../layout/ReaderPostLayoutFrame';
+import { readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
 import { announceReaderTransientToast } from './ReaderTransientAnnouncement';
 import {
   READER_TRANSIENT_TOAST_STORAGE_KEY,
@@ -82,7 +85,7 @@ export struct ReaderTransientToast {
               // This status mark is the glyph inside a fixed22vp icon.
               // Message title/body below retain system-scaled text units.
               .fontSize('14vp')
-              .fontColor(readerAppColor('TOK_MESSAGE_FEEDBACK_MARK_INK', this.appThemeScheme))
+              .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
               .textAlign(TextAlign.Center)
               .width(22)
               .height(22);
@@ -90,26 +93,25 @@ export struct ReaderTransientToast {
           .width(22)
           .height(22)
           .borderRadius(11)
-          .backgroundColor(readerAppColor('TOK_MESSAGE_FEEDBACK_MARK', this.appThemeScheme));
+          .backgroundColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme));
 
           Column() {
             if (this.toast.title.trim().length > 0) {
               Text(this.toast.title)
-                .fontFamily(MESSAGE_TITLE.fontFamily)
-                .fontWeight(MESSAGE_TITLE.fontWeight)
-                .fontSize(MESSAGE_TITLE.fontSizeFp)
-                .lineHeight(MESSAGE_TITLE.lineHeightFp as number)
-                .fontColor(readerAppColor('TOK_MESSAGE_FEEDBACK_INK', this.appThemeScheme))
+                .fontFamily(MESSAGE_ACTION.fontFamily)
+                .fontWeight(MESSAGE_ACTION.fontWeight)
+                .fontSize(MESSAGE_ACTION.fontSizeFp)
+                .lineHeight(MESSAGE_ACTION.lineHeightFp as number)
+                .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
                 .wordBreak(WordBreak.BREAK_WORD);
             }
             Text(this.toast.message, this.toastMessageTextOptions())
               .id(this.toastVerificationId(true))
-              .fontFamily(MESSAGE_BODY.fontFamily)
-              .fontWeight(this.toast.title.length > 0 ? MESSAGE_BODY.fontWeight : MESSAGE_TITLE.fontWeight)
-              .fontSize(this.toast.title.length > 0 ? MESSAGE_BODY.fontSizeFp : MESSAGE_TITLE.fontSizeFp)
-              .lineHeight((this.toast.title.length > 0 ? MESSAGE_BODY.lineHeightFp : MESSAGE_TITLE.lineHeightFp) as number)
-              .fontColor(readerAppColor('TOK_MESSAGE_FEEDBACK_INK', this.appThemeScheme))
-              .opacity(this.toast.title.trim().length > 0 ? 0.74 : 1)
+              .fontFamily(this.toastMessageStyle().fontFamily)
+              .fontWeight(this.toastMessageStyle().fontWeight)
+              .fontSize(this.toastMessageStyle().fontSizeFp)
+              .lineHeight(this.toastMessageStyle().lineHeightFp as number)
+              .fontColor(readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme))
               .margin({ top: this.toast.title.length > 0 ? 2 : 0 })
               .wordBreak(WordBreak.BREAK_WORD)
               .onAreaChange(this.toastTextLayout(this.toast.generation));
@@ -122,10 +124,9 @@ export struct ReaderTransientToast {
         .id(this.toastVerificationId(false))
         .constraintSize({ maxWidth: 560 })
         .padding({ left: 14, right: 14, top: 12, bottom: 12 })
-        .borderRadius(15)
-        .border({ width: 1, color: readerAppColor('TOK_MESSAGE_FEEDBACK_BORDER', this.appThemeScheme) })
-        .backgroundColor(readerAppColor('TOK_MESSAGE_FEEDBACK', this.appThemeScheme))
-        .shadow({ radius: 18, offsetY: 6, color: '#33000000' })
+        .borderRadius(999)
+        .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
+        .shadow(readerSurfaceElevation('dialog', this.appThemeScheme))
         .opacity(this.toastOpacity)
         .translate({ y: this.toastOffsetY });
       }
@@ -145,6 +146,10 @@ export struct ReaderTransientToast {
     .hitTestBehavior(HitTestMode.None);
   }
 
+  private toastMessageStyle(): ReaderTextStyle {
+    return this.toast.title.trim().length > 0 ? MESSAGE_BODY : MESSAGE_ACTION;
+  }
+
   private activeTextObserver(generation: number): ReaderTransientTextObserver | undefined {
     if (!this.foreground || !this.displayed || this.activeHost !== this.hostId ||
       !this.toast.visible || generation !== this.toast.generation || generation !== this.handledGeneration) return undefined;
@@ -158,8 +163,10 @@ export struct ReaderTransientToast {
   }
 
   private toastMessageTextOptions(): TextOptions | undefined {
-    try { return this.activeTextObserver(this.toast.generation)?.textOptions(this.toast.message); }
-    catch (_) { return undefined; }
+    try {
+      const options = this.activeTextObserver(this.toast.generation)?.textOptions(this.toast.message);
+      return options === undefined ? undefined : options as TextOptions;
+    } catch (_) { return undefined; }
   }
 
   private toastTextLayout(generation: number): (_old: Area, next: Area) => void {
@@ -207,10 +214,11 @@ export struct ReaderTransientToast {
     this.clearDismissTimer();
     this.displayed = true;
     this.toastOpacity = 0;
-    this.toastOffsetY = 10;
     const reduceMotion = readerReduceMotionFromStorage();
+    this.toastOffsetY = reduceMotion ? 0 : 10;
     try {
-      this.getUIContext().animateTo(readerMotionAnimateParam('message.feedback.enter', reduceMotion), (): void => {
+      this.getUIContext().animateTo(reduceMotion ? readerMotionReducedFadeParam() :
+        readerMotionAnimateParam('message.feedback.enter', false), (): void => {
         this.toastOpacity = 1;
         this.toastOffsetY = 0;
       });

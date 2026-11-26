@@ -3,7 +3,7 @@ import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createGateReceipt, digest } from '../../Reader-Core/scripts/lib/gate-receipt.mjs';
 import { readFileSync } from 'node:fs';
-import { contractTests, explicitContractTests, contractInventory } from '../tools/run-contract-tests.mjs';
+import { contractTests, explicitContractTests, contractListView } from '../tools/run-contract-tests.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 export function localContractPlan(args, repository = root) {
@@ -18,23 +18,26 @@ export function localContractPlan(args, repository = root) {
     return { rationale, selection: contractTests(repository, 'full'), args: ['tools/run-contract-tests.mjs', '--full', '--rationale', rationale] };
   }
   let cases;
-  if (args.length === 4 && args[0] === '--tests' && args[2] === '--cases' && args[3]?.trim()) { cases=args[3];args=args.slice(0,2); }
+  if (args.length === 4 && ['--tests', '--contracts-scope'].includes(args[0]) && args[2] === '--cases' && args[3]?.trim()) {
+    cases = args[3];
+    args = args.slice(0, 2);
+  }
   if (args.length !== 2 || !['--contracts-scope', '--tests'].includes(args[0]) || !args[1] || args[1].startsWith('--')) throw new Error(usage);
   if (args[0] === '--tests') {
     const tests = args[1].split(',');
     return { scope: 'custom', rationale, selection: explicitContractTests(repository, tests), args: ['tools/run-contract-tests.mjs', '--tests', args[1], ...(cases ? ['--cases',cases] : []), '--rationale', rationale] };
   }
   const scope = args[1], selection = contractTests(repository, 'full', scope);
-  return { scope, rationale, selection, args: ['tools/run-contract-tests.mjs', '--scope', scope, '--rationale', rationale] };
+  return { scope, rationale, selection, args: ['tools/run-contract-tests.mjs', '--scope', scope,
+    ...(cases ? ['--cases', cases] : []), '--rationale', rationale] };
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   let plan;
   try { plan = localContractPlan(process.argv.slice(2)); }
   catch (error) { console.error(error.message); process.exitCode = 2; }
   if (plan?.list) {
-    const { manifest, discovered } = contractInventory(root);
     console.log(JSON.stringify({ status: 'NOT_RUN', harmonyContracts: 'NOT_RUN', fullSuite: 'NOT_RUN', acceptanceEligible: false,
-      availableTests: discovered, availableScopes: Object.keys(manifest.scopes ?? {}),
+      ...contractListView(root),
       theme: 'explicit --theme only', selection: 'Use --tests, --contracts-scope, or explicit --full after item-specific necessity review.' }));
   } else if (plan) {
     const gate = createGateReceipt({ kind: plan.theme ? 'harmony-theme' : plan.scope === undefined ? 'harmony-development' : 'harmony-development-scoped', root, output: process.env.READER_HARMONY_GATE_RECEIPT,

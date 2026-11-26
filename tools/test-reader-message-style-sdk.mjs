@@ -7,7 +7,7 @@ const{readerMessageStyles,readerTypographyRoles}=await import('./lib/reader-typo
 const windowMetrics=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const read=name=>readFileSync(new URL(`../entry/src/main/ets/ui/feedback/${name}.ets`,import.meta.url),'utf8');const sdk=boundedSurfaceSdk(),runtime={};
 if(id==='fonts-carriers'){
-const messageFaces={ReaderNotoSansSCUIRegular:['NotoSansSC-UIRegular.otf',400],ReaderNotoSansSCUIMedium:['NotoSansSC-UIMedium.otf',500],ReaderMangaSans600:['ReaderMangaSans600.otf',600]};
+const messageFaces={ReaderNotoSansSCUIRegular:['NotoSansSC-UIRegular.otf',400],ReaderNotoSansSCUIMedium:['NotoSansSC-UIMedium.otf',500],ReaderNotoSansSCUIBold:['NotoSansSC-UIBold.otf',700]};
 const {execFileSync}=await import('node:child_process');const{fileURLToPath}=await import('node:url');
 const fontTables=JSON.parse(execFileSync(process.env.READER_FONTTOOLS_PYTHON||'python3',['-c',String.raw`
 import json,sys,fontTools,hashlib
@@ -37,7 +37,7 @@ const loadingRule=scope.rules.find(rule=>rule.includes('32px原生LoadingProgres
 assert.ok(loadingRule,'approved message loading rule exists');
 const pageLoader=Number(loadingRule.match(/采用(\d+)px原生LoadingProgress/)[1]),actionLoader=Number(loadingRule.match(/加载采用(\d+)px并固定占位/)[1]);
 for (const [name, family, weight, size, height] of [
-  ['MESSAGE_TITLE', 'ReaderMangaSans600', 600, 17, 24],
+  ['MESSAGE_TITLE', 'ReaderNotoSansSCUIBold', 700, 17, 24],
   ['MESSAGE_ACTION', 'ReaderNotoSansSCUIMedium', 500, 13, 20],
   ['MESSAGE_BODY', 'ReaderNotoSansSCUIRegular', 400, 13, 21],
   ['MESSAGE_META', 'ReaderNotoSansSCUIRegular', 400, 12, 18],
@@ -48,8 +48,8 @@ for (const [name, family, weight, size, height] of [
   assert.deepEqual([role.fontFamily,role.fontWeight],[family,weight],`${name}: actual static face role`);
   assert.ok(role.fontSizeFp>0&&role.lineHeightFp>=role.fontSizeFp,'current role usable line box; historic size tuple is not frozen');
 }
-assert.equal(readerTypographyRoles.TYPE_FILE_IMPORT_TITLE.fontFamily, 'ReaderNotoSerifSCBold',
-  'the retained ordinary import heading keeps its original Serif face');
+assert.equal(readerTypographyRoles.TYPE_FILE_IMPORT_TITLE.fontFamily, 'ReaderNotoSansSCUIBold',
+  'ordinary import headings use the full-CJK UI title face');
 let first = 0, second = 0;
 const notice = sdk.consumer(read('ReaderRecoveryNotice'));
 Object.assign(notice, { appThemeScheme: 'day', tag: '删除',
@@ -71,7 +71,7 @@ const retainedAction = actions()[0];
 const retainedGesture = [...retainedAction.nodes.values()].find(node => node.onClick).onClick;
 retainedAction.generation = 8;retainedGesture();assert.equal(first, 1, 'old physical action cannot borrow successor generation');
 retainedAction.generation = 7;
-assert.ok(sdk.nodes(notice).some(node => node.backgroundColor === readerAppColor('TOK_MESSAGE_NOTICE', 'day')));
+assert.ok(sdk.nodes(notice).some(node => node.backgroundColor === readerAppColor('TOK_SURFACE_ELEVATED', 'day')));
 const busy = sdk.consumer(read('ReaderRecoveryAction'));
 Object.assign(busy, { label: '核对', variant: 'notice', isBusy: true, onReconcile: () => first++ });
 busy.initialRender();
@@ -88,11 +88,11 @@ const loading = sdk.nodes(state).find(node => node.type === 'LoadingProgress');
 assert.equal(loading.width,pageLoader);assert.equal(loading.height,pageLoader);
 assert.equal(sdk.walk(state).filter(child => child instanceof sdk.deps.ReaderRecoveryAction).length, 0,
   'loading does not expose an unrelated retry');
-assert.equal(sdk.nodes(state).find(node => node.create === '正在载入').fontFamily, 'ReaderMangaSans600');
+assert.equal(sdk.nodes(state).find(node => node.create === '正在载入').fontFamily, 'ReaderNotoSansSCUIBold');
 const messageState = sdk.consumer(read('ReaderPageState'));
 Object.assign(messageState, { title: '没有符合条件的书籍', message: '调整筛选后再试', actionLabel: '清除全部条件' });
 messageState.initialRender();
-for (const [content, family] of [['没有符合条件的书籍', 'ReaderMangaSans600'],
+for (const [content, family] of [['没有符合条件的书籍', 'ReaderNotoSansSCUIBold'],
   ['调整筛选后再试', 'ReaderNotoSansSCUIRegular'], ['清除全部条件', 'ReaderNotoSansSCUIMedium']])
   assert.equal(sdk.nodes(messageState).find(node => node.create === content).fontFamily, family,
     'real page-state title/body/action selects the checked physical face');
@@ -118,8 +118,10 @@ for (const specId of ['book-removal', 'json-import', 'shelf-group', 'local-impor
   Object.assign(dialog, { specId, title: '确认操作', showCloseButton: false,
     actions: [{ id: 'cancel', label: '取消', tone: 'default', enabled: true, defaultFocus: false }] });
   dialog.initialRender();
-  assert.equal(sdk.nodes(dialog).find(node => node.create === '确认操作').fontFamily, 'ReaderMangaSans600',
-    `${specId}: actual shared header selects static 600`);
+  const heading = sdk.nodes(dialog).find(node => node.create === '确认操作');
+  assert.equal(heading.fontFamily, 'ReaderNotoSansSCUIBold', `${specId}: the dialog heading uses the checked UI Bold face`);
+  assert.equal(heading.fontWeight, 700, `${specId}: the dialog heading uses the matching weight`);
+  assert.equal(heading.fontSize, 18, `${specId}: the complete prompt remains an 18fp dialog heading`);
   assert.equal(sdk.nodes(dialog).find(node => node.create === '取消').fontFamily, 'ReaderNotoSansSCUIMedium',
     `${specId}: actual shared action selects static 500`);
 }
@@ -127,7 +129,7 @@ for (const specId of ['book-removal', 'json-import', 'shelf-group', 'local-impor
 const night = sdk.consumer(read('ReaderRecoveryNotice'));
 Object.assign(night, { appThemeScheme: 'night', tag: '设置', actionLabel: '',
   view: { message: '保存未确认，当前设置保留', visible: true, canRetry: false, generation: 8 } });night.initialRender();
-assert.ok(sdk.nodes(night).some(node => node.backgroundColor === readerAppColor('TOK_MESSAGE_NOTICE', 'night')));
+assert.ok(sdk.nodes(night).some(node => node.backgroundColor === readerAppColor('TOK_SURFACE_ELEVATED', 'night')));
 console.log('PASS actual SDK message family: same-card independent actions, original generation, busy admission and stable label, native18/32 loaders, day/night scoped notice palette');
 
 
@@ -143,7 +145,7 @@ const sourceRoot = new URL('../entry/src/main/ets/', import.meta.url);
 const indexSource = new URL('pages/Index.ets', sourceRoot);
 const metrics = createDefaultReaderWindowMetrics();
 metrics.systemInsets.top = 39;
-const SafeTop = selectedProductionMethods(indexSource, 'Index', ['messageSafeTop', 'readerOwnsWindowEdges'],
+const SafeTop = selectedProductionMethods(indexSource, 'Index', ['messageSafeTop', 'readerOwnsWindowEdges', 'isDetailDirectoryRoute'],
   { ReaderWindowCoordinator: { metrics: () => metrics }, readerContentSafeTop });
 const book = { sourceId: 'source', bookId: 'book', contentKind: 'manga' };
 const host = Object.assign(new SafeTop(), {
@@ -270,7 +272,7 @@ const { ReaderTransientFeedback, READER_FEEDBACK_EXTENDED_MS, READER_TRANSIENT_T
 const LibraryPorts = selectedProductionMethods(new URL('../entry/src/main/ets/pages/Index.ets', import.meta.url), 'Index',
   ['libraryJourneyPorts'], { READER_FEEDBACK_EXTENDED_MS });
 const GroupCompletion = selectedProductionMethods(new URL('../entry/src/main/ets/features/bookshelf/presentation/BookshelfGroupPresentation.ets', import.meta.url),'BookshelfGroupPresentation',
-  ['assignDefault','isCurrent','retire'], { hilog: { error() {} }, errorMessageOf: String,
+  ['assignGroup','currentGroup','dismiss','isCurrent','retire'], { hilog: { error() {} }, errorMessageOf: String,
     EMPTY_BOOKSHELF_MANAGEMENT_SNAPSHOT: {busy:false} });
 for (const [confirmation, blocked, fact] of [
   ['confirmed', false, 'succeeded'], ['confirmed', false, 'confirmedRefreshFailed'],
@@ -281,19 +283,19 @@ for (const [confirmation, blocked, fact] of [
   const index = Object.assign(new LibraryPorts(), { searchAppForeground: true,
     transientFeedback: new ReaderTransientFeedback(), getUIContext: () => ({}) });
   const onNotice = index.libraryJourneyPorts().feedback;
-  const identity = 'original-group-opening', book = { sourceId: 'source', bookId: 'book' };
+  const identity = 'original-group-opening', book = { sourceId: 'source', bookId: 'book', group: '原分组' };
   const presentation = Object.assign(new GroupCompletion(), {
-    identity, assigning: false,
+    identity, assigning: false, book, snapshot: { busy: false, data: { books: [book], groups: [{groupName:'新分组'}] } },
     opening: { owner: runtime, book, identity, isRouteCurrent: () => true,
       onApplied() { refreshes++; }, onNotice },
     host: { isManagementPresentationCurrent: (owner, currentIdentity) => owner === runtime && currentIdentity === identity,
       detachManagementPresentation() { closes++; },
-      assignDefaultGroup: async (currentBook, currentIdentity) => {
-      assert.equal(currentBook, book); assert.equal(currentIdentity, identity); writes++; return {
-      receipt: { receipt: { confirmation, fact } }, managementMutation: { blocked },
+      assignBookGroup: async (currentBook, group, currentIdentity) => {
+      assert.equal(currentBook, book); assert.equal(group, '新分组'); assert.equal(currentIdentity, identity); writes++; return {
+      receipt: { facts: {generation: 1}, receipt: { confirmation, fact } }, managementMutation: { blocked },
     }; } },
   });
-  await presentation.assignDefault(identity);
+  await presentation.assignGroup(identity, '新分组');
   assert.equal(writes, 1, 'presentation consumes exactly the original write result');
   assert.equal(closes, confirmation === 'confirmed' && !blocked ? 1 : 0,
     'unfinished original cleanup and unknown receipts retain their pending presentation');
