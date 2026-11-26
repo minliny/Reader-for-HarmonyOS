@@ -47,6 +47,7 @@ export struct ArkWebExecutionHost {
   @State private hostY: number = 0;
   @State private measuredToolbarHeight: number = 0;
   @State private measuredControlsHeight: number = 0;
+  private hostArea: ArkWebInteractiveBounds | undefined = undefined;
   private mounted: boolean = false;
 
   @State private interactive: boolean = false;
@@ -89,6 +90,7 @@ export struct ArkWebExecutionHost {
   private readonly presentationListener = (presentation: ArkWebPresentation): void => {
     if (this.currentSurface?.id !== presentation.surfaceId) return;
     if (this.interactive !== presentation.visible) {
+      if (presentation.visible) this.publishHostArea();
       const updateVisibility = (): void => { this.interactive = presentation.visible; };
       try {
         this.getUIContext().animateTo(readerMotionAnimateParam(presentation.visible ? 'app.navigation.push' :
@@ -122,6 +124,7 @@ export struct ArkWebExecutionHost {
 
   aboutToDisappear(): void {
     this.mounted = false;
+    this.hostArea = undefined;
     this.onBackBridge(undefined);
     this.interactiveBackSurface = undefined;
     this.feedbackHostSurface = undefined;
@@ -197,6 +200,24 @@ export struct ArkWebExecutionHost {
 
   private fontScale(): number {
     return readerReadableFontScale(this.readerWindowMetricsRevision < 0 ? 1 : readerWindowMetrics().systemFontScale);
+  }
+
+  private recordHostArea(area: Area): void {
+    if (!this.mounted) return;
+    this.hostArea = {
+      width: readerPageAreaLength(area.width), height: readerPageAreaLength(area.height),
+      left: readerPageAreaLength(area.globalPosition.x), top: readerPageAreaLength(area.globalPosition.y),
+    };
+    if (this.interactive) this.publishHostArea();
+  }
+
+  private publishHostArea(): void {
+    const area = this.hostArea;
+    if (area === undefined) return;
+    if (this.hostWidth !== area.width) this.hostWidth = area.width;
+    if (this.hostHeight !== area.height) this.hostHeight = area.height;
+    if (this.hostX !== area.left) this.hostX = area.left;
+    if (this.hostY !== area.top) this.hostY = area.top;
   }
 
   private safeLeft(): number {
@@ -518,16 +539,10 @@ export struct ArkWebExecutionHost {
         }
       }, (surface: ArkWebSurface): string => `${surface.id}`)
     }
-    .width(this.interactive ? '100%' : 1)
-    .height(this.interactive ? '100%' : 1)
-    .animation({ duration: 0 })
-    .onAreaChange((_old: Area, next: Area): void => {
-      if (!this.mounted || !this.interactive) return;
-      this.hostWidth = readerPageAreaLength(next.width); this.hostHeight = readerPageAreaLength(next.height);
-      this.hostX = readerPageAreaLength(next.globalPosition.x); this.hostY = readerPageAreaLength(next.globalPosition.y);
-    })
+    .width('100%').height('100%')
+    .onAreaChange((_old: Area, next: Area): void => this.recordHostArea(next))
     .accessibilityLevel(this.interactive ? 'auto' : 'no-hide-descendants')
     .hitTestBehavior(this.interactive ? HitTestMode.Default : HitTestMode.Transparent)
-    .zIndex(this.interactive ? 10000 : -1)
+    .zIndex(10000)
   }
 }

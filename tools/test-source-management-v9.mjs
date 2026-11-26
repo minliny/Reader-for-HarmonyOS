@@ -857,11 +857,6 @@ test('login offers Stop while loading, keeps Finish available, and sends clear f
   assert.match(finish, /\.enabled\(!this\.clearing\)/);
   assert.doesNotMatch(finish, /pageLoading/);
   assert.match(text, /if \(this\.pageLoading\) \{\s*this\.browserAction\('停止加载', !this\.clearing,[\s\S]+?this\.navigate\(surface, 'stop'\)\);\s*\} else \{\s*this\.browserAction\('刷新', !this\.clearing,/);
-  const root = text.slice(text.lastIndexOf(".width(this.interactive ? '100%' : 1)"));
-  assert.match(root, /\.height\(this\.interactive \? '100%' : 1\)/);
-  assert.match(root, /\.onAreaChange\([\s\S]+?if \(!this\.mounted \|\| !this\.interactive\) return;\s*this\.hostWidth/);
-  assert.match(root, /\.zIndex\(this\.interactive \? 10000 : -1\)/);
-
   const surface = { id: 11 };
   const Host = selectedProductionMethods(file, 'ArkWebExecutionHost', ['presentationListener', 'showClearFeedback'],
     { ArkWebExecutor: { instance: { isSurfaceCurrent: current => current === surface } } });
@@ -884,6 +879,28 @@ test('login offers Stop while loading, keeps Finish available, and sends clear f
   owner.feedbackHostSurface = surface;
   owner.showClearFeedback(surface);
   assert.deepEqual(shown, ['已清除登录态和旧检测报告', '已清除登录态，当前 Core 无法清除已保存的检测报告']);
+});
+
+test('login opens with the latest host geometry without publishing inactive layout changes', async () => {
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const file = new URL('ui/platform/ArkWebExecutionHost.ets', etsRoot);
+  const Host = selectedProductionMethods(file, 'ArkWebExecutionHost', [
+    'presentationListener', 'recordHostArea', 'publishHostArea',
+  ], { readerPageAreaLength: Number, readerMotionAnimateParam: () => ({}) });
+  const owner = Object.assign(new Host(), {
+    mounted: true, currentSurface: { id: 11 }, interactive: false,
+    hostWidth: 320, hostHeight: 640, hostX: 0, hostY: 16,
+    getUIContext: () => ({ animateTo: (_motion, update) => update() }),
+    onInputCaptureChange() {}, updateAddress() {}, updateHistory() {},
+  });
+  const geometry = () => [owner.hostWidth, owner.hostHeight, owner.hostX, owner.hostY];
+  owner.recordHostArea({ width: 600, height: 320, globalPosition: { x: 12, y: 24 } });
+  assert.deepEqual(geometry(), [320, 640, 0, 16]);
+  owner.presentationListener({ surfaceId: 11, visible: true, title: 'login' });
+  assert.equal(owner.interactive, true);
+  assert.deepEqual(geometry(), [600, 320, 12, 24]);
+  owner.recordHostArea({ width: 600, height: 180, globalPosition: { x: 12, y: 24 } });
+  assert.deepEqual(geometry(), [600, 180, 12, 24]);
 });
 
 test('group creation and renaming explain invalid names without blocking a retained name', async () => {
