@@ -2395,6 +2395,8 @@ export struct ReadingExperience {
           viewportWidth: this.viewportWidth,
           viewportHeight: this.viewportHeight,
           allowTextSelection: this.readerTextSelectionEnabled(),
+          // Pass the full avoid areas. The input layer caps side DOWN exclusion
+          // and uses the bottom inset for tap suppression after recognition.
           systemGestureLeftInset: this.readerSystemGestureLeftInset(),
           systemGestureRightInset: this.readerSystemGestureRightInset(),
           systemGestureBottomInset: this.readerSystemGestureBottomInset(),
@@ -14064,8 +14066,7 @@ export struct ReadingExperience {
     if (state.phase === 'dragging' && state.direction !== undefined) {
       if (this.preparedPageTurn(state.direction) !== undefined) {
         this.pageTurnDirection = state.direction;
-        const offset = state.verticalPrevious ? Math.max(0, -state.currentOffsetY) : state.currentOffsetX;
-        this.pageTurnOffsetX = this.clampedPageTurnOffset(state.direction, offset);
+        this.pageTurnOffsetX = this.clampedPageTurnOffset(state.direction, state.currentOffsetX);
       } else {
         // Symmetric with the tap path: a drag that arrives without a prepared
         // page must enqueue the preparation instead of being dropped, so the
@@ -14097,8 +14098,7 @@ export struct ReadingExperience {
 
   private updateBookTurnGesturePresentation(state: ReaderPageGestureState): void {
     this.pageTurnOffsetX = 0;
-    if (state.phase === 'dragging' && state.direction !== undefined &&
-      (state.owner === 'horizontalPage' || state.owner === 'verticalPrevious')) {
+    if (state.phase === 'dragging' && state.direction !== undefined && state.owner === 'horizontalPage') {
       if (this.preparedPageTurn(state.direction) === undefined) {
         // Symmetric with the tap path (performPageTurn preparing branch): queue
         // the missing preparation instead of a silent drop. The drain's own
@@ -14115,7 +14115,7 @@ export struct ReadingExperience {
         this.bookTurnMotion = beginBookTurnMotion(
           this.pageTurnSettlementGeneration + 1,
           state.direction,
-          state.verticalPrevious,
+          false,
           state.viewportWidth,
           state.viewportHeight,
           state.startLocalX,

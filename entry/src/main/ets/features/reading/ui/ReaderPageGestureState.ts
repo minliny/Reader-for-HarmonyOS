@@ -15,8 +15,7 @@ export type ReaderPageTurnOutcome =
 
 export type ReaderPageGesturePhase = 'idle' | 'tracking' | 'dragging' | 'settling';
 export type ReaderPageGestureAxis = 'undecided' | 'horizontal' | 'vertical';
-export type ReaderPageGestureOwner =
-  'undecided' | 'horizontalPage' | 'verticalPrevious' | 'bookmark' | 'longPress';
+export type ReaderPageGestureOwner = 'undecided' | 'horizontalPage' | 'bookmark' | 'longPress';
 export type ReaderPageGestureSettleTarget = 'commit' | 'rollback';
 
 export type ReaderPageGestureState = {
@@ -28,6 +27,7 @@ export type ReaderPageGestureState = {
   currentDirection: ReaderPageTurnDirection | undefined;
   axis: ReaderPageGestureAxis;
   verticalPrevious: boolean;
+  allowLongPress: boolean;
   viewportWidth: number;
   viewportHeight: number;
   currentOffsetX: number;
@@ -60,12 +60,22 @@ export type ReaderPageGestureDecision = {
 };
 
 export const READER_PAGE_GESTURE_TOUCH_SLOP = 8;
-export const READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP = 16;
-export const READER_PAGE_GESTURE_AXIS_DOMINANCE = 1.5;
+export const READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP = 12;
 export const READER_PAGE_GESTURE_LONG_PRESS_MS = 500;
-export const READER_PAGE_GESTURE_VERTICAL_PREVIOUS_SLOP = 24;
 /** Raw slop for terminal owner admission and unavailable feedback. */
 export const READER_PAGE_GESTURE_BOOKMARK_SLOP = 48;
+const READER_PAGE_GESTURE_BOOKMARK_START_SLOP = 24;
+const READER_PAGE_GESTURE_VERTICAL_CONE_RATIO = 1.8;
+const READER_PAGE_GESTURE_BOOKMARK_WITHDRAWAL_RATIO = 1.5;
+
+export function readerPageGestureIsHorizontal(
+  inputOffsetX: number,
+  inputOffsetY: number,
+  horizontalSlop: number = READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP,
+): boolean {
+  const absoluteX = Math.abs(inputOffsetX);
+  return absoluteX >= horizontalSlop && Math.abs(inputOffsetY) < absoluteX * READER_PAGE_GESTURE_VERTICAL_CONE_RATIO;
+}
 
 export function readerPagePointerCoordinate(
   coordinate: number,
@@ -90,8 +100,9 @@ export function beginReaderPageGesture(
   localY: number = 0,
   eventTimeMs: number = 0,
   viewportHeight: number = 0,
+  allowLongPress: boolean = true,
 ): ReaderPageGestureState {
-  return trackingReaderPageGestureState(viewportWidth, viewportHeight, localX, localY, eventTimeMs);
+  return trackingReaderPageGestureState(viewportWidth, viewportHeight, localX, localY, eventTimeMs, allowLongPress);
 }
 
 export function moveReaderPageGesture(
@@ -159,8 +170,9 @@ export function startReaderPagePan(
   localY: number = 0,
   eventTimeMs: number = 0,
   viewportHeight: number = 0,
+  allowLongPress: boolean = true,
 ): ReaderPageGestureState {
-  return beginReaderPageGesture(viewportWidth, localX, localY, eventTimeMs, viewportHeight);
+  return beginReaderPageGesture(viewportWidth, localX, localY, eventTimeMs, viewportHeight, allowLongPress);
 }
 
 export function updateReaderPagePan(
@@ -262,14 +274,7 @@ export function cancelReaderPagePan(state: ReaderPageGestureState): ReaderPageGe
 function committedDirection(state: ReaderPageGestureState): ReaderPageTurnDirection | undefined {
   if (state.owner === 'horizontalPage' && state.direction !== undefined) {
     const signedDistance = directionSign(state.direction) * state.inputOffsetX;
-    const verticalDominates = Math.abs(state.inputOffsetY) >=
-      Math.abs(state.inputOffsetX) * READER_PAGE_GESTURE_AXIS_DOMINANCE;
-    return signedDistance >= READER_PAGE_GESTURE_TOUCH_SLOP && !verticalDominates ?
-      state.direction : undefined;
-  }
-  if (state.owner === 'verticalPrevious' &&
-    -state.inputOffsetY >= READER_PAGE_GESTURE_VERTICAL_PREVIOUS_SLOP) {
-    return 'previous';
+    return signedDistance >= READER_PAGE_GESTURE_TOUCH_SLOP ? state.direction : undefined;
   }
   return undefined;
 }
@@ -310,35 +315,24 @@ function applyReaderPageGestureSample(
   let axis = state.axis;
   let phase = state.phase;
 
-  // Movement outside tap slop stays provisional until one axis is clear.
-  // Confirmation is spatial: a large first MOVE can claim immediately, while
-  // an early small horizontal wobble cannot pre-empt the later downward pull.
-  // UP consumes the same directional rule with each action's commit distance.
+  // The downward vertical cone shares a boundary with horizontal page turns.
+  // The upward vertical cone stays available to system gestures.
   if (owner === 'undecided') {
     const horizontalSlop = finalSample ? READER_PAGE_GESTURE_TOUCH_SLOP :
       READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP;
-    const upwardSlop = finalSample ? READER_PAGE_GESTURE_VERTICAL_PREVIOUS_SLOP :
-      READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP;
     const downwardSlop = finalSample ? READER_PAGE_GESTURE_BOOKMARK_SLOP :
-      READER_PAGE_GESTURE_DIRECTION_CONFIRM_SLOP;
-    if (absoluteX >= horizontalSlop &&
-      absoluteX >= absoluteY * READER_PAGE_GESTURE_AXIS_DOMINANCE) {
+      READER_PAGE_GESTURE_BOOKMARK_START_SLOP;
+    if (readerPageGestureIsHorizontal(inputX, inputY, horizontalSlop)) {
       owner = 'horizontalPage';
       direction = directionForOffset(inputX);
       axis = 'horizontal';
       phase = 'dragging';
-    } else if (-inputY >= upwardSlop &&
-      absoluteY >= absoluteX * READER_PAGE_GESTURE_AXIS_DOMINANCE) {
-      owner = 'verticalPrevious';
-      direction = 'previous';
-      axis = 'vertical';
-      phase = 'dragging';
     } else if (inputY >= downwardSlop &&
-      absoluteY >= absoluteX * READER_PAGE_GESTURE_AXIS_DOMINANCE) {
+      inputY >= absoluteX * READER_PAGE_GESTURE_VERTICAL_CONE_RATIO) {
       owner = 'bookmark';
       axis = 'vertical';
       phase = 'dragging';
-    } else if (time - state.startEventTimeMs >= READER_PAGE_GESTURE_LONG_PRESS_MS &&
+    } else if (state.allowLongPress && time - state.startEventTimeMs >= READER_PAGE_GESTURE_LONG_PRESS_MS &&
       maxDistance < READER_PAGE_GESTURE_TOUCH_SLOP) {
       owner = 'longPress';
       axis = 'undecided';
@@ -351,7 +345,7 @@ function applyReaderPageGestureSample(
   if (owner === 'bookmark') {
     bookmarkOffsetY = readerPaperPullOffset(inputY);
     bookmarkPreviewChanged = bookmarkOffsetY >= READER_BOOKMARK_TRIGGER_VP &&
-      absoluteX < absoluteY * READER_PAGE_GESTURE_AXIS_DOMINANCE;
+      absoluteX < absoluteY * READER_PAGE_GESTURE_BOOKMARK_WITHDRAWAL_RATIO;
   }
 
   const currentDirection = owner === 'bookmark' ? undefined : directionForOffset(inputX);
@@ -367,7 +361,7 @@ function applyReaderPageGestureSample(
     state.direction = direction;
     state.currentDirection = currentDirection;
     state.axis = axis;
-    state.verticalPrevious = owner === 'verticalPrevious';
+    state.verticalPrevious = false;
     state.currentOffsetX = offsetX;
     state.currentOffsetY = y;
     state.inputOffsetX = inputX;
@@ -396,7 +390,7 @@ function applyReaderPageGestureSample(
     direction,
     currentDirection,
     axis,
-    verticalPrevious: owner === 'verticalPrevious',
+    verticalPrevious: false,
     currentOffsetX: offsetX,
     currentOffsetY: y,
     inputOffsetX: inputX,
@@ -420,7 +414,7 @@ function applyReaderPageGestureSample(
 function idleReaderPageGestureState(consumed: boolean): ReaderPageGestureState {
   return {
     phase: 'idle', active: false, consumed, owner: 'undecided', direction: undefined,
-    currentDirection: undefined, axis: 'undecided', verticalPrevious: false,
+    currentDirection: undefined, axis: 'undecided', verticalPrevious: false, allowLongPress: true,
     viewportWidth: 0, viewportHeight: 0, currentOffsetX: 0, currentOffsetY: 0,
     inputOffsetX: 0, inputOffsetY: 0,
     lastOffsetX: 0, lastOffsetY: 0, velocityX: 0, velocityY: 0,
@@ -437,6 +431,7 @@ function trackingReaderPageGestureState(
   localX: number,
   localY: number,
   eventTimeMs: number,
+  allowLongPress: boolean,
 ): ReaderPageGestureState {
   const state = idleReaderPageGestureState(false);
   const x = Number.isFinite(localX) ? localX : 0;
@@ -444,7 +439,7 @@ function trackingReaderPageGestureState(
   const time = Number.isFinite(eventTimeMs) && eventTimeMs >= 0 ? eventTimeMs : 0;
   return {
     ...state,
-    phase: 'tracking', active: true,
+    phase: 'tracking', active: true, allowLongPress,
     viewportWidth: finitePositive(viewportWidth), viewportHeight: finitePositive(viewportHeight),
     startLocalX: x, startLocalY: y, currentLocalX: x, currentLocalY: y,
     startEventTimeMs: time, eventTimeMs: time,
