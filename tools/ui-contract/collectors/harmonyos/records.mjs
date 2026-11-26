@@ -305,8 +305,13 @@ export function remoteGuestReady(readiness) {
 }
 
 export function assertRemoteCollectionReadiness(readiness, candidate, contract) {
+  requireEvidence(remoteUiCollectionCase(contract), 'Unverified exact remote VM or guest-only readiness');
+  assertRemoteVmReadiness(readiness, candidate);
+}
+
+export function assertRemoteVmReadiness(readiness, candidate) {
   const deployed = candidate.remoteGuestReadiness;
-  requireEvidence(remoteUiCollectionCase(contract) && candidate.targetKind === 'vm' &&
+  requireEvidence(candidate.targetKind === 'vm' &&
     candidate.hdcServer === '192.168.1.10:8710' && candidate.postInstall?.cpuAbi === 'x86_64' &&
     readiness?.event === 'readiness' && readiness.vmLocation === 'remote' && readiness.exactConnected === true &&
     readiness.targetRef === candidate.targetRef && readiness.hdcServer === candidate.hdcServer && readiness.targetKind === 'vm' &&

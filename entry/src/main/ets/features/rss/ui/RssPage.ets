@@ -162,10 +162,10 @@ export struct RssPage {
   @Builder
   private topBar() {
     Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween, alignItems: ItemAlign.Center,
-      space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
+      space: { main: LengthMetrics.vp(TOK_SPACE_XS), cross: LengthMetrics.vp(TOK_SPACE_XS) } }) {
       Text('RSS')
         .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
-          ? { role: 'header-content', id: 'rss-title' } as LayoutInvariantTag : undefined)
+          ? { role: 'header-content', id: 'rss-title', wrapPart: 'leading' } as LayoutInvariantTag : undefined)
         .fontFamily(TYPE_RSS_HOME_TITLE.fontFamily)
         .fontWeight(TYPE_RSS_HOME_TITLE.fontWeight)
         .fontSize(TYPE_RSS_HOME_TITLE.fontSizeFp)
@@ -179,6 +179,8 @@ export struct RssPage {
         this.refreshPill();
         this.managePill();
       }
+      .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'header-content', id: 'rss-top-actions', wrapPart: 'trailing' } as LayoutInvariantTag : undefined)
       .constraintSize({ maxWidth: this.contentFrame().width })
       .margin({ left: this.headerLeftInset() });
     }
@@ -186,7 +188,7 @@ export struct RssPage {
     .constraintSize({ minHeight: APP_HEADER_BAR_HEIGHT })
     .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
       ? { role: 'fixed-header', id: 'rss-top-bar', expectedHeightVp: APP_HEADER_BAR_HEIGHT,
-        expectedTopGapVp: 0 } as LayoutInvariantTag : undefined)
+        expectedTopGapVp: 0, wrapGapVp: TOK_SPACE_XS } as LayoutInvariantTag : undefined)
     .padding({ right: this.headerRightInset() });
   }
 

@@ -166,9 +166,8 @@ export struct ReaderLayoutDebugOverlay {
   }
 
   private routeChanged(): void {
-    this.modalWasOpen = false;
-    this.modalCloseDurationMs = 0;
-    this.modalRecoveryAfter = -1;
+    // One still-mounted overlay can observe a modal handing input to a new
+    // route. Keep the pending close, while retiring any previously completed proof.
     this.modalRecoveryVerified = false;
     this.scheduleInvariantScan();
   }

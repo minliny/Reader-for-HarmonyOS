@@ -98,8 +98,8 @@ export struct BookshelfSectionHeader {
         .padding({ left: SHELF_SECTION_TRACK_INSET, right: SHELF_SECTION_TRACK_INSET })
         .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
       Row() {
-        this.sectionAction('bookshelf_grid');
-        this.sectionAction('bookshelf_list');
+        this.sectionAction('bookshelf_grid', 'reader-bookshelf-view-cover');
+        this.sectionAction('bookshelf_list', 'reader-bookshelf-view-list');
       }.height(SHELF_SECTION_ACTION_SIZE);
     }.width(SHELF_SECTION_ACTION_SIZE * 2).height(SHELF_SECTION_ACTION_SIZE)
       .hitTestBehavior(HitTestMode.Transparent);
@@ -140,7 +140,7 @@ export struct BookshelfSectionHeader {
   @Builder
   private filterButton() {
     Stack({ alignContent: Alignment.TopStart }) {
-      this.sectionAction('bookshelf_filter');
+      this.sectionAction('bookshelf_filter', 'reader-bookshelf-filter-toggle');
       Row().width(6).height(6).borderRadius(3)
         .position({ x: 29, y: 9 })
         .backgroundColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme))
@@ -151,9 +151,10 @@ export struct BookshelfSectionHeader {
   }
 
   @Builder
-  private sectionAction(assetName: BookshelfSectionAction) {
+  private sectionAction(assetName: BookshelfSectionAction, focusId: string) {
     ReaderIconButton({ specId: assetName === 'bookshelf_filter' ? 'shelf-section' : 'shelf-view-segment',
       icon: this.sectionActionAsset(assetName),
+      focusId,
       accessibilityLabel: this.actionLabel(assetName), actionEnabled: this.actionsEnabled, scheme: this.appThemeScheme,
       selectionState: this.isActive(assetName) ? 'selected' : 'none',
       onTap: (): void => this.activate(assetName) });

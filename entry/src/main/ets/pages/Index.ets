@@ -1037,6 +1037,8 @@ struct Index {
       onHeaderBottom: actions.onHeaderBottom,
       onSettled: actions.onSettled,
     }).enabled(this.route === 'search' || this.bookshelfContentAcceptsInput())
+      .customProperty('readerLayoutDebugExcluded', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD &&
+        this.route !== 'bookshelf' && this.route !== 'search')
       .hitTestBehavior(this.route === 'search' || this.bookshelfContentAcceptsInput() ? HitTestMode.Transparent : HitTestMode.None)
       .accessibilityLevel(this.route === 'search' || this.bookshelfContentAcceptsInput() ? 'auto' : 'no-hide-descendants');
   }

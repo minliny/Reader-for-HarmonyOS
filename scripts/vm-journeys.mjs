@@ -4,10 +4,10 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { parseArgs } from 'node:util';
-import { assertSameTargetBoot } from './lib/hap-delivery-evidence.mjs';
 import { journeys } from './lib/vm-journey-cases.mjs';
 import { openProbe } from '../tools/ui-contract/collectors/harmonyos/transport.mjs';
-import { assertInstalled } from '../tools/ui-contract/collectors/harmonyos/records.mjs';
+import { assertInstalled, assertRemoteVmReadiness } from '../tools/ui-contract/collectors/harmonyos/records.mjs';
+import { assertUnlockedFocus, assertVmLockDismissed, classifyFocusWindow, vmLockDismissalOperation } from '../tools/ui-contract/collectors/harmonyos/focus-window.mjs';
 import { candidateIdentity, nativeBounds, normalReaderWindowRoots, sha256 } from '../tools/lib/native-ui-evidence.mjs';
 
 const SERVER = '192.168.1.10:8710';
@@ -28,7 +28,8 @@ function nativeNodes(root) {
   const visit = (node, parents) => {
     const attrs = node.attributes ?? {};
     const bounds = nativeBounds(attrs.bounds);
-    if (bounds && bounds[2] > bounds[0] && bounds[3] > bounds[1] && attrs.visible !== 'false') result.push({ attrs, bounds, parents });
+    if (bounds && bounds[2] > bounds[0] && bounds[3] > bounds[1] && attrs.visible !== 'false' && Number(attrs.opacity ?? 1) > 0)
+      result.push({ attrs, bounds, parents, node });
     for (const child of node.children ?? []) visit(child, [...parents, attrs]);
   };
   visit(root, []);
@@ -40,20 +41,30 @@ function attributeMatches(matcher, values) {
     (matcher instanceof RegExp ? new RegExp(matcher.source, matcher.flags.replace(/[gy]/g, '')).test(value) : String(matcher) === String(value)));
 }
 
-function matchesAttributes(attributes, selector) {
+function matchesAttributes(attributes, selector, childLabels = []) {
   return attributeMatches(selector.id, [attributes.id, attributes.key]) && attributeMatches(selector.type, [attributes.type]) &&
     attributeMatches(selector.text, [attributes.text]) &&
-    attributeMatches(selector.label, [attributes.text, attributes.description, attributes.accessibilityText]) &&
+    attributeMatches(selector.label, [attributes.text, attributes.description, attributes.accessibilityText, ...childLabels]) &&
     attributeMatches(selector.enabled, [attributes.enabled]);
 }
 
+function buttonLabels(node) {
+  return (node.children ?? []).flatMap(child => {
+    const attributes = child.attributes ?? {};
+    if (attributes.clickable === 'true' || attributes.visible === 'false' || Number(attributes.opacity ?? 1) <= 0) return [];
+    return attributes.type === 'Text' && attributes.text ? [attributes.text] : buttonLabels(child);
+  });
+}
+
 function matchingNodes(root, selector) {
-  return nativeNodes(root).filter(node => matchesAttributes(node.attrs, selector) &&
+  return nativeNodes(root).filter(node => matchesAttributes(node.attrs, selector,
+    selector.label === undefined ? [] : buttonLabels(node.node)) &&
     (selector.within === undefined || node.parents.some(parent => matchesAttributes(parent, selector.within))));
 }
 
 function actor(root, selector) {
-  const found = matchingNodes(root, selector).filter(node => node.attrs.enabled === 'true' || node.attrs.enabled === true);
+  const found = [...new Map(matchingNodes(root, selector).filter(node => node.attrs.enabled === 'true' || node.attrs.enabled === true)
+    .map(node => [node.bounds.join(','), node])).values()];
   demand(found.length === 1, `Expected one enabled input target for ${showSelector(selector)}, observed ${found.length}`);
   return found[0].bounds;
 }
@@ -169,10 +180,14 @@ async function runJourney(id, run, candidate, options, outputDir) {
   try {
     await probe.ready();
     const readiness = await probe.command({ op: 'uiContractReadiness', targetKind: 'vm', vmLocation: 'remote' });
-    demand(readiness.targetRef === candidate.targetRef && readiness.hdcServer === SERVER && readiness.exactConnected === true,
-      'Live ready target does not match the signed deployment');
-    assertSameTargetBoot(candidate.deployment.readiness, readiness);
+    assertRemoteVmReadiness(readiness, candidate);
     assertInstalled(await probe.command({ op: 'uiContractInstalledIdentity' }), candidate);
+    const focus = (await probe.command({ op: 'uiContractFocusWindow' })).stdout;
+    if (classifyFocusWindow(focus) === 'LOCKED') {
+      await probe.command(vmLockDismissalOperation(focus));
+      await delay(1000);
+      assertVmLockDismissed((await probe.command({ op: 'uiContractFocusWindow' })).stdout);
+    } else assertUnlockedFocus(focus, 'before-launch');
     const prior = await probe.command({ op: 'journeyFixtureLog' });
     const oldEntries = new Set(records(prior.stdout, FIXTURE_MARKER).map(entry => entry.line));
     await probe.command({ op: 'force-stop', explicitPermit: true });
@@ -232,7 +247,8 @@ async function main() {
     identity.targetRef === sha256(values.target).slice(0, 12), 'Deployment is not an admitted x86_64 remote VM candidate');
   const output = resolve(values['output-dir']);
   mkdirSync(output, { mode: 0o700 });
-  const candidate = { ...identity, expectedVersion: manifest.expectedVersion, postInstall: deployment.postInstall, deployment };
+  const candidate = { ...identity, expectedVersion: manifest.expectedVersion, postInstall: deployment.postInstall,
+    targetKind: deployment.targetKind, hdcServer: deployment.hdcServer, remoteGuestReadiness: deployment.readiness };
   const results = [];
   for (const id of requested) {
     const directory = join(output, id);

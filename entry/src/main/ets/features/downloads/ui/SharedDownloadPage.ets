@@ -3,6 +3,10 @@ import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibil
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
 import { ReaderEditableTarget, ReaderEditableInputModifier } from '../../../ui/layout/ReaderEditableTarget';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
+import { READER_LAYOUT_DEBUG_BUILD, READER_LAYOUT_INVARIANT_PROPERTY,
+  readerLayoutInvariantChanged } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import { READER_SHEET_CLOSE_MS } from '../../../ui/foundation/ProductMotionTiming';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { LengthMetrics } from '@kit.ArkUI';
 import hilog from '@ohos.hilog';
 import inputMethod from '@ohos.inputMethod';
@@ -341,6 +345,7 @@ export struct SharedDownloadPage {
       // Keep an empty carrier until its actually mounted Native actors exit.
       ForEach([this.sheetActorAttachment], (attachment: number): void => {
         Stack() { this.sheetOverlay(attachment, this.sheetActorOwner); }.width('100%').height('100%')
+          .customProperty(READER_LAYOUT_INVARIANT_PROPERTY, READER_LAYOUT_DEBUG_BUILD ? this.sheetLayoutTag() : undefined)
           .enabled(this.confirmation.length === 0)
           .accessibilityLevel(this.confirmation.length > 0 ? 'no-hide-descendants' : 'auto')
           .hitTestBehavior(this.confirmation.length > 0 ? HitTestMode.None : HitTestMode.Transparent);
@@ -350,6 +355,11 @@ export struct SharedDownloadPage {
       ForEach([this.confirmationGeneration], (opening: number): void => { this.confirmationOverlay(opening); },
         (opening: number): string => opening.toString());
     }
+  }
+
+  private sheetLayoutTag(): LayoutInvariantTag {
+    return { role: 'modal-overlay', id: 'download-sheet', active: this.sheet.length > 0,
+      closeDurationMs: READER_SHEET_CLOSE_MS, intercepts: this.sheet.length > 0 || this.sheetExitPending };
   }
 
   private lastErrorFeedback: string = '';
@@ -1462,6 +1472,7 @@ export struct SharedDownloadPage {
   @Builder
   private operationsSheet(ownerGeneration: number, opening: number) {
     ReaderActionMenuSurface({ variant: 'grouped', actions: this.operationsActions(), scheme: this.appThemeScheme === 'night' ? 'night' : 'day',
+      actionIdPrefix: 'reader-download:sheet-action:',
       onAction: (id: string): void => this.performOperationsAction(id, ownerGeneration, opening) });
   }
 
@@ -1936,6 +1947,7 @@ export struct SharedDownloadPage {
     this.syncOverlayChrome();
     this.retireEmptyBookSelection();
     this.syncOverlayFocus();
+    if (READER_LAYOUT_DEBUG_BUILD) readerLayoutInvariantChanged();
   }
 
   private onConfirmationChanged(): void {
@@ -1978,6 +1990,7 @@ export struct SharedDownloadPage {
     this.syncOverlayChrome();
     this.retireEmptyBookSelection();
     this.syncOverlayFocus();
+    if (READER_LAYOUT_DEBUG_BUILD) readerLayoutInvariantChanged();
   }
 
   private retireSheetActors(): void {

@@ -54,6 +54,30 @@ test('checks a key control and admits documented busy or unavailable states', ()
   assert.ok(evaluateLayoutInvariants({ ...sample, nodes: [header, title, body, clipped] }).violations.some(v => v.rule === 'R5'));
 });
 
+test('a wrapping header reserves its measured rows plus its authored inter-row gap', () => {
+  const wrappedHeader: LayoutInvariantNode = {
+    tag: { role: 'fixed-header', id: 'rss', expectedHeightVp: 58, expectedTopGapVp: 0, wrapGapVp: 8 },
+    bounds: { x: 0, y: 39, width: 366, height: 93.1 }, opacity: 1,
+  };
+  const leading: LayoutInvariantNode = {
+    tag: { role: 'header-content', id: 'rss-title', wrapPart: 'leading' }, headerId: 'rss',
+    bounds: { x: 20, y: 39, width: 55, height: 41 }, opacity: 1,
+  };
+  const trailing: LayoutInvariantNode = {
+    tag: { role: 'header-content', id: 'rss-actions', wrapPart: 'trailing' }, headerId: 'rss',
+    bounds: { x: 20, y: 88, width: 326, height: 44 }, opacity: 1,
+  };
+  const rssSample = { ...sample, safeTopVp: 39, requiresFirstContent: false, requiresControl: false };
+  const result = evaluateLayoutInvariants({ ...rssSample, nodes: [wrappedHeader, leading, trailing] });
+  assert.deepEqual(result.violations, []);
+  assert.ok(result.observedRules.includes('R3'));
+  const enlarged = { ...wrappedHeader, bounds: { ...wrappedHeader.bounds!, height: 107 } };
+  assert.deepEqual(evaluateLayoutInvariants({ ...rssSample, nodes: [enlarged, leading, trailing] })
+    .violations.map(v => v.rule), ['R3']);
+  assert.deepEqual(evaluateLayoutInvariants({ ...rssSample, nodes: [wrappedHeader, leading] }).missing,
+    ['header-wrap-children:rss']);
+});
+
 test('waits for modal recovery then checks the original route and any retained input blocker', () => {
   const blocked = { ...sample, mainInputEnabled: false, checkRecovery: true };
   assert.equal(evaluateLayoutInvariants({ ...blocked, recoveryPending: true }).violations.length, 0);

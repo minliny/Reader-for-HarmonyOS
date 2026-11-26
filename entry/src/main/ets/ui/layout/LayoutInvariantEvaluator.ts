@@ -9,6 +9,8 @@ export interface LayoutInvariantTag {
   expectedHeightVp?: number;
   expectedTopGapVp?: number;
   expectedContentGapVp?: number;
+  wrapGapVp?: number;
+  wrapPart?: 'leading' | 'trailing';
   busy?: boolean;
   unavailable?: boolean;
   active?: boolean;
@@ -69,6 +71,17 @@ function overflows(inner: LayoutInvariantRect, outer: LayoutInvariantRect): bool
     inner.y + inner.height > outer.y + outer.height + BOUNDS_TOLERANCE_VP;
 }
 
+function expectedHeaderHeight(header: LayoutInvariantTag, children: LayoutInvariantNode[]): number | undefined {
+  const minimum = header.expectedHeightVp;
+  const wrapGap = header.wrapGapVp;
+  if (minimum === undefined || wrapGap === undefined) return minimum;
+  const leading = children.find((node: LayoutInvariantNode): boolean => node.tag.wrapPart === 'leading')?.bounds;
+  const trailing = children.find((node: LayoutInvariantNode): boolean => node.tag.wrapPart === 'trailing')?.bounds;
+  if (leading === undefined || trailing === undefined || leading.height <= 0 || trailing.height <= 0) return undefined;
+  const wrapped = trailing.y >= leading.y + leading.height - BOUNDS_TOLERANCE_VP;
+  return Math.max(minimum, wrapped ? leading.height + wrapGap + trailing.height : Math.max(leading.height, trailing.height));
+}
+
 export function evaluateLayoutInvariants(sample: LayoutInvariantSample): LayoutInvariantResult {
   const violations: LayoutInvariantViolation[] = [];
   const missing: string[] = [];
@@ -106,15 +119,18 @@ export function evaluateLayoutInvariants(sample: LayoutInvariantSample): LayoutI
         }
       }
     }
-    const expectedHeight = header.tag.expectedHeightVp;
+    const children = sample.nodes.filter((node: LayoutInvariantNode): boolean => node.headerId === id && node.tag.role === 'header-content');
+    const expectedHeight = expectedHeaderHeight(header.tag, children);
+    if (fontScale === 1 && header.tag.expectedHeightVp !== undefined && expectedHeight === undefined) {
+      missing.push(`header-wrap-children:${id}`);
+    }
     if (fontScale === 1 && expectedHeight !== undefined) {
       observed.add('R3');
       if (Math.abs(frame.height - expectedHeight) > SPEC_TOLERANCE_VP) {
         violations.push({ rule: 'R3', nodeId: id, detail: `height=${frame.height} expected=${expectedHeight}` });
       }
     }
-    for (const child of sample.nodes) {
-      if (child.headerId !== id || child.tag.role !== 'header-content') continue;
+    for (const child of children) {
       if (child.bounds === undefined || child.bounds.width <= 0 || child.bounds.height <= 0) {
         missing.push(`header-content:${child.tag.id}`);
         continue;

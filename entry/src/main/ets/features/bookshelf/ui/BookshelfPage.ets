@@ -1046,6 +1046,7 @@ export struct BookshelfPage {
         .borderRadius(999).scale(readerPressScale(this.shelfPressed(`filter:${dimension}:${value}`), this.reduceMotion))
         .opacity(readerPressOpacity(this.shelfPressed(`filter:${dimension}:${value}`), this.reduceMotion));
     }.padding(0).backgroundColor(Color.Transparent)
+      .id(`reader-bookshelf-filter-${dimension}-${value}`)
       .margin({ right: TOK_SPACE_XS / 2, bottom: TOK_SPACE_XS / 2 })
       .constraintSize({ maxWidth: 160, minWidth: 44, minHeight: 44 })
       .attributeModifier(new ReaderActionAccessibility(`${dimension === 'content' ? '内容类型' : '来源'}：${label}`, true, this.isFilterSelected(dimension, value), true, undefined, 'nativeButton'))

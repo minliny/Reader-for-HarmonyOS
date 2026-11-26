@@ -172,7 +172,7 @@ export struct ReaderActionMenuSurface {
         this.actionSheetSpec().labelLineHeight, this.fontScale()) })
         .padding({ left: this.actionSheetSpec().rowInsetLeft, right: this.actionSheetSpec().rowInsetRight,
           top: this.actionSheetSpec().rowPaddingY, bottom: this.actionSheetSpec().rowPaddingY });
-      }.width('100%').padding(0)
+      }.id(this.actionIdPrefix.length > 0 ? this.actionIdPrefix + id : '').width('100%').padding(0)
         .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.effectiveScheme(), 0, 0, this.action(id).enabled))
         .opacity(this.action(id).enabled ? 1 : 0.45).enabled(this.action(id).enabled)
         .accessibilityGroup(true).accessibilityText(this.accessibilityLabel(this.action(id))).onClick((): void => this.commitAction(id));
