@@ -1,9 +1,8 @@
-import { resolveHostTool } from './lib/tool-environment.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { basename, dirname, resolve } from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
+import { withHapZip } from '../scripts/lib/hap-zip-reader.mjs';
 
 const repo = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const expected = readFileSync(resolve(repo,
@@ -24,12 +23,9 @@ for (const hapPath of hapPaths) {
 }
 
 for (const hapPath of hapPaths) {
-  const extracted = spawnSync(resolveHostTool('unzip'), [
-    '-p', hapPath, 'resources/rawfile/reader-tested-book-source-collection.json',
-  ], { encoding: null, maxBuffer: 32 * 1024 * 1024 });
-  assert.equal(extracted.status, 0,
-    `${hapPath} does not expose the bundled source raw file: ${extracted.stderr?.toString('utf8') ?? ''}`);
-  assert.deepEqual(extracted.stdout, expected,
+  const extracted = withHapZip(hapPath, zip =>
+    zip.read('resources/rawfile/reader-tested-book-source-collection.json', 32 * 1024 * 1024));
+  assert.deepEqual(extracted, expected,
     `${hapPath} bundled source bytes differ from the current build input`);
   console.log(`${hapPath}: bundled source byte identity PASS (${expected.length} bytes); source behavior NOT_RUN`);
 }

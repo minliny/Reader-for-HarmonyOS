@@ -1,6 +1,10 @@
 #!/usr/bin/env node
 
 import { createHash, randomUUID, X509Certificate } from 'node:crypto';
+import { withHapZip } from './lib/hap-zip-reader.mjs';
+import { regularInputSnapshot, sameIdentity, snapshotFileRecords as snapshottedFiles,
+  startRegularInputSnapshots } from './lib/regular-input-snapshot.mjs';
+import { generateBuildProvenance } from '../tools/generate-build-provenance-manifest.mjs';
 import { createRequire } from 'node:module';
 import {
   chmodSync,
@@ -32,7 +36,7 @@ import { contentSnapshot, coreBuildSnapshot } from '../../Reader-Core/scripts/bu
 import { acquireBuildLease, acquireBuildWorkspace } from '../../Reader-Core/scripts/lib/build-resource-lock.mjs';
 import { assertWorkspaceLayout } from '../../Reader-Core/scripts/lib/development-environment.mjs';
 import { requiredHapResources, verifyRequiredHapResources, currentCoreGate, publishCoreGate, verifyPublishedCoreGate,
-  readinessQueryOutput, targetReadiness } from './lib/hap-delivery-evidence.mjs';
+  publishVerifiedHapRun, readinessQueryOutput, targetReadiness } from './lib/hap-delivery-evidence.mjs';
 import { embeddedStorageCompatibility, storageUpdateRoute } from './lib/hap-storage-admission.mjs';
 import { publishStorageDeliveryContract, verifyStorageDeliveryContract, storageBootstrapIdentityBytes, STORAGE_BOOTSTRAP_RESOURCE } from './lib/storage-delivery-contract.mjs';
 import { collectStorageAdmission, installedStorageIdentity, storageAdmissionAllowed, revalidateStorageAdmission,
@@ -442,37 +446,6 @@ function gitRecord(repo) {
 }
 
 
-function regularInputSnapshot(repo, inputs, label) {
-  repo = resolve(repo);
-  // Reject links before hashing/copying so a clean
-  // tracked link cannot leave the real build input outside this snapshot.
-  // contentSnapshot omits special nodes; inspect their types before any reads
-  // so FIFOs, sockets and devices cannot be copied as unbound build inputs.
-  const assertRegularInput = path => {
-    const stat = lstatSync(path, { throwIfNoEntry: false });
-    if (!stat) return;
-    if (stat.isSymbolicLink()) fail(`${label} must not contain symbolic links`);
-    if (stat.isDirectory()) {
-      for (const name of readdirSync(path)) assertRegularInput(resolve(path, name));
-    } else if (!stat.isFile()) {
-      fail(`${label} must contain only regular files and directories`);
-    }
-  };
-  for (const input of inputs) {
-    for (let path = resolve(repo, input); ; path = dirname(path)) {
-      const stat = lstatSync(path, { throwIfNoEntry: false });
-      if (stat?.isSymbolicLink()) fail(`${label} must not contain symbolic links`);
-      if (path === repo) break;
-    }
-    assertRegularInput(resolve(repo, input));
-  }
-  const snapshot = contentSnapshot(repo, inputs);
-  if (snapshot.files.some(file => file.type !== 'file')) {
-    fail(`${label} must not contain symbolic links`);
-  }
-  return snapshot;
-}
-
 export function sourceSnapshot(repo = REPO_ROOT) {
   return regularInputSnapshot(repo, BUILD_INPUTS, 'Host build inputs');
 }
@@ -516,16 +489,15 @@ export function assertResolvedCorePackage(sandboxRepo, expectedVendor) {
   assertSnapshotUnchanged(vendor, resolvedPackage, 'resolved Core package');
 }
 
-function snapshottedFiles(files, inputs) {
-  const hash = createHash('sha256');
-  for (const file of files) hash.update(`${JSON.stringify(file)}\n`);
-  return { schemaVersion: 1, inputs, fileCount: files.length, fingerprint: hash.digest('hex'), files };
-}
-
 function snapshotSubset(snapshot, inputs, prefix = '') {
   const files = snapshot.files.filter(file => inputs.some(input => file.path === input || file.path.startsWith(`${input}${sep}`)))
     .map(file => prefix ? { ...file, path: file.path.slice(prefix.length + 1) } : file);
   return snapshottedFiles(files, prefix ? ['.'] : inputs);
+}
+
+function appContentRecords(source, controller) {
+  return new Map([source, controller].flatMap(snapshot =>
+    snapshot.files.map(record => [record.path.split(sep).join('/'), record])));
 }
 
 export function assertSnapshotUnchanged(before, after, label) {
@@ -603,6 +575,9 @@ export function copySourceSandbox(source, destination, sandboxRoot = tmpdir(), {
   const copyOptions = { recursive: true, force: true, mode: constants.COPYFILE_FICLONE,
     preserveTimestamps: true, verbatimSymlinks: true, filter: path => !skipCopy(path) };
   const inputs = new Map(before.files.map(file => [file.path, file]));
+  // These proofs belong to this copy only. Everything recopied, overridden,
+  // or changed since its comparison is hashed during the verification walk.
+  const validatedDigests = incremental && existingDestination ? new Map() : undefined;
   const syncDirectory = (origin, target) => {
     for (const name of readdirSync(target)) {
       const input = resolve(origin, name);
@@ -612,17 +587,25 @@ export function copySourceSandbox(source, destination, sandboxRoot = tmpdir(), {
       const input = resolve(origin, name);
       if (skipCopy(input)) continue;
       const output = resolve(target, name);
-      const originStat = lstatSync(input);
-      const targetStat = lstatSync(output, { throwIfNoEntry: false });
+      const originStat = lstatSync(input, { bigint: true });
+      const targetStat = lstatSync(output, { bigint: true, throwIfNoEntry: false });
       if (originStat.isDirectory() && targetStat?.isDirectory()) {
         syncDirectory(input, output);
         continue;
       }
       if (originStat.isSymbolicLink() && targetStat?.isSymbolicLink() && readlinkSync(input) === readlinkSync(output)) continue;
       if (originStat.isFile() && targetStat?.isFile() && originStat.size === targetStat.size &&
-          (originStat.mode & 0o777) === (targetStat.mode & 0o777)) {
-        const expected = inputs.get(relative(source, input))?.sha256 ?? sha256Bytes(readFileSync(input));
-        if (expected === sha256Bytes(readFileSync(output))) continue;
+          (originStat.mode & 0o777n) === (targetStat.mode & 0o777n)) {
+        const sourceRecord = inputs.get(relative(source, input));
+        const expected = sourceRecord?.sha256 ?? sha256Bytes(readFileSync(input));
+        const sha256 = sha256Bytes(readFileSync(output));
+        if (expected === sha256) {
+          if (validatedDigests && sourceRecord) {
+            const after = lstatSync(output, { bigint: true, throwIfNoEntry: false });
+            if (sameIdentity(targetStat, after)) validatedDigests.set(output, { stat: after, sha256 });
+          }
+          continue;
+        }
       }
       if (targetStat && (!originStat.isFile() || !targetStat.isFile())) rmSync(output, { recursive: true });
       cpSync(input, output, copyOptions);
@@ -637,7 +620,8 @@ export function copySourceSandbox(source, destination, sandboxRoot = tmpdir(), {
     return override ? { ...file, mode: override.mode, bytes: override.bytes.length, sha256: sha256Bytes(override.bytes) } : file;
   });
   const expected = snapshottedFiles(files, BUILD_INPUTS);
-  assertSnapshotUnchanged(expected, measureBuildStep('verifyCopiedInputs', () => sourceSnapshot(destination)),
+  assertSnapshotUnchanged(expected, measureBuildStep('verifyCopiedInputs', () =>
+    regularInputSnapshot(destination, BUILD_INPUTS, 'Host build inputs', validatedDigests)),
     'copied sandbox inputs');
   return expected;
 }
@@ -842,52 +826,59 @@ function verifySignature(hapPath) {
   }
 }
 
-function readArchive(args, encoding = 'utf8') {
-  const binary = resolveHarmonyTool('unzip');
-  // Info-ZIP interprets UNZIP and ZIPINFO as default arguments. UNZIP can
-  // select our executable and must not also reach that executable as flags.
-  const env = Object.fromEntries(Object.entries(process.env).filter(([key]) =>
-    !/^(?:UNZIP|ZIPINFO)(?:OPT)?$/i.test(key)));
-  return run(binary, args, { encoding, env }).stdout;
-}
-
-function archiveNames(hapPath) {
-  return readArchive(['-Z1', hapPath]).split(/\r?\n/).filter(Boolean);
-}
-
-function archiveEntryRecord(hapPath, entryPath) {
-  const bytes = readArchive(['-p', hapPath, entryPath], null);
-  if (!Buffer.isBuffer(bytes)) fail(`unable to read ${entryPath} from ${hapPath}`);
-  return { path: entryPath, bytes: bytes.length, sha256: sha256Bytes(bytes),
-    storageCompatibility: embeddedStorageCompatibility(bytes) };
-}
-
 export function inspectHap(hapPath, kind, publicPath = basename(hapPath), requiredResources, abi = 'arm64-v8a', expectedVersion) {
+  return inspectHapForSeal(hapPath, kind, publicPath, requiredResources, abi, expectedVersion).artifact;
+}
+
+const bundledSourceEntry = 'resources/rawfile/reader-tested-book-source-collection.json';
+const storageBootstrapEntry = `resources/rawfile/${STORAGE_BOOTSTRAP_RESOURCE}`;
+
+function inspectHapForSeal(hapPath, kind, publicPath, requiredResources, abi, expectedVersion, expectedBundledSources) {
   if (abi !== 'arm64-v8a' && abi !== 'x86_64') fail(`unsupported HAP inspection ABI: ${abi}`);
-  const names = measureBuildStep('archiveNames', () => archiveNames(hapPath));
-  if (names.filter(name => name === 'module.json').length !== 1) fail('HAP module configuration is missing or duplicated');
-  const appVersion = measureBuildStep('moduleJson', () =>
-    packagedAppVersion(JSON.parse(readArchive(['-p', hapPath, 'module.json'])), { required: expectedVersion !== undefined }));
-  if (expectedVersion) assertAppVersion(expectedVersion, appVersion, 'HAP');
-  const nativeEntries = names.filter((name) => name.startsWith('libs/')).sort();
-  const expectedNativeEntries = EXPECTED_NATIVE_ENTRIES.map((name) => name.replace('arm64-v8a', abi));
-  if (JSON.stringify(nativeEntries) !== JSON.stringify(expectedNativeEntries)) {
-    fail(`unexpected native archive layout in ${hapPath}: ${JSON.stringify(nativeEntries)}`);
-  }
-  const signature = verifySignature(hapPath);
-  if (kind === 'signed' && signature.status !== 'signed') fail(`${hapPath} is not signed`);
-  if (kind === 'unsigned' && signature.status !== 'unsigned') fail(`${hapPath} is not unsigned`);
-  if (requiredResources) measureBuildStep('requiredResources', () =>
-    verifyRequiredHapResources(requiredResources, names, entry => readArchive(['-p', hapPath, entry], null)));
-  return {
-    kind,
-    ...measureBuildStep('hapDigest', () => fileRecord(hapPath, publicPath)),
-    signature,
-    appVersion,
-    nativeEntries,
-    embeddedCoreNapi: measureBuildStep('embeddedNative', () => archiveEntryRecord(hapPath, `libs/${abi}/libreader_core_napi.so`)),
-    ...(requiredResources ? { requiredResources } : {}),
-  };
+  return withHapZip(hapPath, zip => {
+    const record = (path, bytes) => ({ path, bytes: bytes.length, sha256: sha256Bytes(bytes) });
+    const appVersion = measureBuildStep('moduleJson', () =>
+      packagedAppVersion(JSON.parse(zip.read('module.json').toString('utf8')), { required: expectedVersion !== undefined }));
+    if (expectedVersion) assertAppVersion(expectedVersion, appVersion, 'HAP');
+    const nativeEntries = zip.names.filter(name => name.startsWith('libs/')).sort();
+    const expectedNativeEntries = EXPECTED_NATIVE_ENTRIES.map(name => name.replace('arm64-v8a', abi));
+    if (JSON.stringify(nativeEntries) !== JSON.stringify(expectedNativeEntries)) {
+      fail(`unexpected native archive layout in ${hapPath}: ${JSON.stringify(nativeEntries)}`);
+    }
+    const signature = verifySignature(hapPath);
+    if (kind === 'signed' && signature.status !== 'signed') fail(`${hapPath} is not signed`);
+    if (kind === 'unsigned' && signature.status !== 'unsigned') fail(`${hapPath} is not unsigned`);
+    let embeddedBootstrap;
+    if (requiredResources) measureBuildStep('requiredResources', () =>
+      verifyRequiredHapResources(requiredResources, zip.names, (entry) => {
+        const bytes = zip.read(entry);
+        if (entry === storageBootstrapEntry) embeddedBootstrap = record(entry, bytes);
+        return bytes;
+      }));
+    if (expectedBundledSources) measureBuildStep('bundledSources', () => {
+      const bundled = record(bundledSourceEntry, zip.read(bundledSourceEntry));
+      if (bundled.bytes !== expectedBundledSources.bytes || bundled.sha256 !== expectedBundledSources.sha256) {
+        fail(`${hapPath} bundled source bytes differ from the current build input`);
+      }
+      console.log(`${hapPath}: bundled source byte identity PASS (${bundled.bytes} bytes); source behavior NOT_RUN`);
+    });
+    const hapRecord = measureBuildStep('hapDigest', () => zip.fileRecord(publicPath));
+    const nativePath = `libs/${abi}/libreader_core_napi.so`;
+    const { embeddedNative, compatibility } = measureBuildStep('embeddedNative', () => {
+      const bytes = zip.read(nativePath);
+      return { embeddedNative: record(nativePath, bytes), compatibility: embeddedStorageCompatibility(bytes) };
+    });
+    return {
+      artifact: { kind, ...hapRecord, signature, appVersion, nativeEntries,
+        embeddedCoreNapi: { ...embeddedNative, storageCompatibility: compatibility },
+        ...(requiredResources ? { requiredResources } : {}) },
+      inspectedHap: { hapRecord, embeddedNative, embeddedBootstrap },
+      assertUnchanged(candidate) {
+        if (candidate !== hapPath) fail('HAP does not match the inspected staging path');
+        zip.assertUnchanged();
+      },
+    };
+  });
 }
 
 function timestampId() {
@@ -1328,12 +1319,10 @@ function syncNative(env = process.env) {
   }
 }
 
-function generateAcceptanceProvenance(runDir, signedHap, hvigorVersion, buildCommand, buildClass, env = process.env) {
-  const generator = resolve(REPO_ROOT, 'tools/generate-build-provenance-manifest.mjs');
+function generateAcceptanceProvenance(runDir, signedHap, hvigorVersion, buildCommand, buildClass, evidence, env) {
   const stripTool = resolveHarmonyTool('objcopy');
   const output = resolve(runDir, `${buildClass}-${basename(signedHap, '.hap')}-provenance.json`);
-  run(process.execPath, [
-    generator,
+  const { manifest } = generateBuildProvenance([
     ...nativeProvenanceArguments(env),
     ...(buildClass === 'iteration' ? ['--allow-dirty'] : []),
     '--hap', signedHap,
@@ -1342,8 +1331,24 @@ function generateAcceptanceProvenance(runDir, signedHap, hvigorVersion, buildCom
     '--build-command', buildCommand,
     '--hvigor-version', hvigorVersion,
     '--sdk-version', 'HarmonyOS 6.1.0(23)',
-  ]);
-  return basename(output);
+  ], { inspectedHap: { ...evidence.inspectedHap, assertUnchanged: evidence.assertUnchanged },
+    buildClass, cacheStrippedNative: buildClass === 'iteration' });
+  return { path: basename(output), manifest };
+}
+
+function admittedHvigorVersion(hvigorw, cwd, env, cache, fingerprint) {
+  if (fingerprint && lstatSync(cache, { throwIfNoEntry: false })?.isFile()) {
+    assertPrivateFilePermissions(cache);
+    try {
+      const saved = JSON.parse(readFileSync(cache, 'utf8'));
+      if (saved.fingerprint === fingerprint && typeof saved.version === 'string' && saved.version.length > 0) {
+        return saved.version;
+      }
+    } catch { /* Recover a locally interrupted version cache write. */ }
+  }
+  const version = capture(hvigorw, ['--version'], { cwd, env });
+  if (fingerprint) writeSandboxFile(cache, Buffer.from(JSON.stringify({ fingerprint, version })), 0o600);
+  return version;
 }
 
 function validateBuildOptions(options, root = REPO_ROOT) {
@@ -1364,33 +1369,39 @@ function validateBuildOptions(options, root = REPO_ROOT) {
   }
 }
 
-function build(options) {
+async function build(options) {
   validateBuildOptions(options);
   const buildStarted = performance.now();
   activeBuildAttempt = hapStageReceipt(resolve(REPO_ROOT, '.reader-artifacts/hap-attempts'), {});
   if (process.env.READER_HAP_TIMINGS === '1') activeBuildTimings = { parent: '', steps: new Map() };
+  let beforeSnapshot;
   try {
+    const harmony = measureBuildStep('gitHarmonyBefore', () => gitRecord(REPO_ROOT));
+    const core = measureBuildStep('gitCoreBefore', () => gitRecord(CORE_ROOT));
+    beforeSnapshot = startRegularInputSnapshots([{ repo: REPO_ROOT, inputs: BUILD_INPUTS, label: 'Host build inputs' }]);
+    const coreBuildInputs = measureBuildStep('coreBuildInputs', () => coreBuildSnapshot(CORE_ROOT));
+    const controller = measureBuildStep('controllerBefore', () => controllerSnapshot());
+    const [source] = await beforeSnapshot.result;
+    activeBuildTimings?.steps.set('sourceBefore', beforeSnapshot.timingsMs()[0]);
+    beforeSnapshot.assertUnchanged();
     const inputs = {
-      harmony: measureBuildStep('gitHarmonyBefore', () => gitRecord(REPO_ROOT)),
-      core: measureBuildStep('gitCoreBefore', () => gitRecord(CORE_ROOT)),
-      coreBuildInputs: measureBuildStep('coreBuildInputs', () => coreBuildSnapshot(CORE_ROOT)),
-      source: measureBuildStep('sourceBefore', () => sourceSnapshot()),
-      controller: measureBuildStep('controllerBefore', () => controllerSnapshot()),
+      harmony, core, coreBuildInputs, source, controller,
     };
     measureBuildStep('bindAttemptInputs', () => activeBuildAttempt.bindInputs(inputs));
-    buildImpl(options, inputs, buildStarted);
+    await buildImpl(options, inputs, buildStarted);
     finishBuildAttempt();
   } catch (error) {
     finishBuildAttempt(error);
     error.message = activeBuildAttempt.redact(error.message);
     throw error;
   } finally {
+    await beforeSnapshot?.stop();
     activeBuildAttempt = undefined;
     activeBuildTimings = undefined;
   }
 }
 
-function buildImpl(options, inputs, buildStarted) {
+async function buildImpl(options, inputs, buildStarted) {
   assertWorkspaceLayout(WORKSPACE_ROOT);
   const buildClass = option(options, '--class', 'iteration');
   const abi = resolveHarmonyAbi(option(options, '--abi', process.env.READER_HARMONY_ABI));
@@ -1398,7 +1409,7 @@ function buildImpl(options, inputs, buildStarted) {
   const incremental = options.get('--incremental') === true;
   const nativeEnvironment = { ...process.env, READER_HARMONY_ABI: abi, READER_HARMONY_CORE_PROFILE: coreProfile };
   const { harmony: sourceGitBefore, core: coreGitBefore, source: sourceBefore, controller: harmonyGateBefore } = inputs;
-  const sourceRecord = name => sourceBefore.files.find(file => file.path === name);
+  const sourceRecord = name => sourceBefore.files.find(file => file.path === name.split('/').join(sep));
   const requestedSigning = option(options, '--signing', 'auto');
   if (!['auto', 'local', 'unsigned'].includes(requestedSigning)) {
     fail('--signing must be auto, local, or unsigned', 2);
@@ -1424,7 +1435,9 @@ function buildImpl(options, inputs, buildStarted) {
   requireCleanAcceptance(buildClass, sourceGitBefore, coreGitBefore, signingMode);
   const coreGateFile = option(options, '--core-gate-receipt', process.env.READER_CORE_GATE_RECEIPT);
   if (buildClass === 'acceptance' && coreGateFile) currentCoreGate(coreGateFile, CORE_ROOT);
-  const requiredResources = measureBuildStep('requiredResourcesBefore', () => requiredHapResources(REPO_ROOT));
+  const precomputedRecords = appContentRecords(sourceBefore, harmonyGateBefore);
+  const requiredResources = measureBuildStep('requiredResourcesBefore', () =>
+    requiredHapResources(REPO_ROOT, { precomputedRecords }));
 
   const buildLease = measureBuildStep('buildWorkspace', () => acquireHapBuildWorkspace(abi, incremental));
   const sandboxRoot = buildLease.path;
@@ -1433,6 +1446,7 @@ function buildImpl(options, inputs, buildStarted) {
   const incompleteBuild = resolve(sandboxRoot, 'build-in-progress');
   let markerWritten = false;
   let unpublishedRunDir = null;
+  let afterSnapshots;
   try {
     measureBuildStep('nativePreflight', () => run(process.execPath, [resolve(REPO_ROOT, 'tools/generate-build-provenance-manifest.mjs'),
       ...nativeProvenanceArguments(nativeEnvironment), '--preflight', '--output', resolve(sandboxRoot, 'native-preflight.json'),
@@ -1466,7 +1480,8 @@ function buildImpl(options, inputs, buildStarted) {
     }
 
     const appIdentity = measureBuildStep('appIdentity', () => prepareAppIdentity(REPO_ROOT, APP_CONTENT_INPUTS, { abi,
-      channel: option(options, '--channel', process.env.READER_APP_CHANNEL), buildClass, signed: signingMode === 'local' }));
+      channel: option(options, '--channel', process.env.READER_APP_CHANNEL), buildClass, signed: signingMode === 'local',
+      precomputedRecords }));
     console.log(JSON.stringify({ stage: 'appBuildIdentity', ...appIdentity.expectedVersion }));
     const hvigorw = resolveHarmonyTool('hvigorw', { cwd: REPO_ROOT });
     const hvigorUserHome = resolve(sandboxRoot, 'hvigor-user-home');
@@ -1557,6 +1572,11 @@ function buildImpl(options, inputs, buildStarted) {
       }
       writeSandboxFile(incompleteBuild, Buffer.from(`${process.pid}\n`), 0o600);
     }
+    const versionFingerprint = wrapperToolFingerprint && !process.env.HVIGORW
+      ? sha256Bytes(JSON.stringify([wrapperToolFingerprint, appIdentity.contentSnapshot.buildIdentityInputs.toolchain]))
+      : undefined;
+    const hvigorVersion = measureBuildStep('hvigorVersion', () =>
+      admittedHvigorVersion(hvigorw, sandboxRepo, buildEnvironment, resolve(sandboxRoot, 'hvigor-version.json'), versionFingerprint));
     const hvigorStarted = performance.now();
     run(hvigorw, buildArgs, {
       cwd: sandboxRepo,
@@ -1565,6 +1585,10 @@ function buildImpl(options, inputs, buildStarted) {
     });
     const hvigorFinished = performance.now();
     const finishedAt = new Date().toISOString();
+    afterSnapshots = measureBuildStep('startSourceSnapshotsAfter', () => startRegularInputSnapshots([
+      { repo: sandboxRepo, inputs: BUILD_INPUTS, label: 'Isolated build inputs' },
+      { repo: REPO_ROOT, inputs: BUILD_INPUTS, label: 'Host build inputs' },
+    ]));
     if (signingMode === 'local') {
       const signingAfter = { configuration: fileRecord(localProfile, 'local-signing-config'),
         material: measureBuildStep('signingMaterialAfter', () => signingMaterialSnapshot(signingProfile)) };
@@ -1573,25 +1597,6 @@ function buildImpl(options, inputs, buildStarted) {
       }
     }
 
-    measureBuildStep('appIdentityAfter', () => assertAppIdentityUnchanged(appIdentity, nativeEnvironment));
-    const sandboxAfter = measureBuildStep('sandboxAfter', () => sourceSnapshot(sandboxRepo));
-    assertSnapshotUnchanged(sandboxBefore, sandboxAfter, 'isolated build inputs');
-    measureBuildStep('resolvedDependenciesAfter', () => assertResolvedCorePackage(sandboxRepo, expectedVendor));
-    const sourceAfter = measureBuildStep('sourceAfter', () => sourceSnapshot(REPO_ROOT));
-    assertSnapshotUnchanged(sourceBefore, sourceAfter, 'source worktree build inputs');
-    assertSnapshotUnchanged(
-      harmonyGateBefore,
-      measureBuildStep('controllerAfter', () => controllerSnapshot()),
-      'Harmony build controller and gate inputs',
-    );
-    assertSnapshotUnchanged(
-      workspaceContractBefore,
-      measureBuildStep('workspaceContractAfter', () => workspaceContractSnapshot()),
-      'workspace HAP contract and skill inputs',
-    );
-    assertGitRecordUnchanged(sourceGitBefore, measureBuildStep('gitHarmonyAfter', () => gitRecord(REPO_ROOT)), 'Harmony source worktree');
-    assertGitRecordUnchanged(coreGitBefore, measureBuildStep('gitCoreAfter', () => gitRecord(CORE_ROOT)), 'Core source worktree');
-
     const builtNames = findBuiltHaps(outputDir, signingMode, buildClass);
     const runId = `${timestampId()}-${sourceGitBefore.commit.slice(0, 8)}-${sourceBefore.fingerprint.slice(0, 8)}`;
     const publishedRunDir = resolve(artifactRoot, runId);
@@ -1599,7 +1604,7 @@ function buildImpl(options, inputs, buildStarted) {
     if (existsSync(publishedRunDir) || existsSync(runDir)) {
       fail(`artifact run already exists: ${publishedRunDir}`);
     }
-    mkdirSync(runDir, { recursive: true });
+    mkdirSync(runDir, { recursive: true, mode: 0o700 });
     unpublishedRunDir = runDir;
 
     const artifactPaths = measureBuildStep('copyArtifacts', () => builtNames.map(name => {
@@ -1607,22 +1612,39 @@ function buildImpl(options, inputs, buildStarted) {
       copyFileSync(resolve(outputDir, name), destination, constants.COPYFILE_FICLONE);
       return destination;
     }));
-    measureBuildStep('bundledSources', () => run(process.execPath, [
-      resolve(REPO_ROOT, 'tools/verify-bundled-test-book-source-haps.mjs'),
-      ...artifactPaths,
-    ], { cwd: REPO_ROOT, stdio: 'inherit' }));
-
-    const artifacts = artifactPaths.map((path) => measureBuildStep('inspectHap', () => inspectHap(
+    const expectedBundledSources = sourceRecord(`entry/src/main/${bundledSourceEntry}`);
+    if (!expectedBundledSources) fail('bundled source input is missing from the build snapshot');
+    const inspected = new Map(artifactPaths.map(path => [path, measureBuildStep('inspectHap', () => inspectHapForSeal(
       path,
       basename(path).endsWith('-signed.hap') ? 'signed' : 'unsigned',
       basename(path),
       requiredResources,
       abi,
       appIdentity.expectedVersion,
-    )));
+      expectedBundledSources,
+    ))]));
+    const artifacts = [...inspected.values()].map(evidence => evidence.artifact);
     if (buildClass === 'acceptance' && !artifacts.some((artifact) => artifact.kind === 'signed')) {
       fail('acceptance build did not produce a signed artifact');
     }
+
+    const waitingForSnapshots = performance.now();
+    const [sandboxAfter, sourceAfter] = await afterSnapshots.result;
+    activeBuildTimings?.steps.set('awaitSourceSnapshotsAfter', performance.now() - waitingForSnapshots);
+    const [sandboxSnapshotMs, sourceSnapshotMs] = afterSnapshots.timingsMs();
+    activeBuildTimings?.steps.set('sandboxAfter', sandboxSnapshotMs);
+    activeBuildTimings?.steps.set('sourceAfter', sourceSnapshotMs);
+    assertSnapshotUnchanged(sandboxBefore, sandboxAfter, 'isolated build inputs');
+    assertSnapshotUnchanged(sourceBefore, sourceAfter, 'source worktree build inputs');
+    measureBuildStep('resolvedDependenciesAfter', () => assertResolvedCorePackage(sandboxRepo, expectedVendor));
+    const controllerAfter = measureBuildStep('controllerAfter', () => controllerSnapshot());
+    assertSnapshotUnchanged(harmonyGateBefore, controllerAfter, 'Harmony build controller and gate inputs');
+    measureBuildStep('appIdentityAfter', () => assertAppIdentityUnchanged(appIdentity, nativeEnvironment,
+      { precomputedRecords: appContentRecords(sourceAfter, controllerAfter) }));
+    assertSnapshotUnchanged(workspaceContractBefore, measureBuildStep('workspaceContractAfter', () => workspaceContractSnapshot()),
+      'workspace HAP contract and skill inputs');
+    assertGitRecordUnchanged(sourceGitBefore, measureBuildStep('gitHarmonyAfter', () => gitRecord(REPO_ROOT)), 'Harmony source worktree');
+    assertGitRecordUnchanged(coreGitBefore, measureBuildStep('gitCoreAfter', () => gitRecord(CORE_ROOT)), 'Core source worktree');
 
     writeJson(resolve(runDir, 'app-content-snapshot.json'), appIdentity.contentSnapshot);
     writeJson(resolve(runDir, 'app-release-ledger.json'), appIdentity.ledger);
@@ -1632,30 +1654,27 @@ function buildImpl(options, inputs, buildStarted) {
     writeJson(resolve(runDir, 'workspace-contract-snapshot.json'), workspaceContractBefore);
     writeJson(resolve(runDir, 'contract-toolchain-snapshot.json'), contractToolchainBefore);
     const contracts = publishUnrunContractEvidence(runDir);
-    const hvigorVersion = measureBuildStep('hvigorVersion', () => capture(hvigorw, ['--version'], {
-      cwd: sandboxRepo,
-      env: buildEnvironment,
-    }));
     let acceptanceProvenance = null;
     const nativeProvenance = [];
-    for (const artifact of artifacts) {
-      const provenance = measureBuildStep('provenance', () => generateAcceptanceProvenance(
+    for (const [artifactPath, evidence] of inspected) {
+      const { artifact } = evidence;
+      const { path: provenance, manifest: provenanceManifest } = measureBuildStep('provenance', () => generateAcceptanceProvenance(
         runDir,
-        resolve(runDir, artifact.path),
+        artifactPath,
         hvigorVersion,
         buildCommand,
         buildClass,
+        evidence,
         nativeEnvironment,
       ));
       nativeProvenance.push(provenance);
       artifact.storageContract = measureBuildStep('storageDelivery', () =>
-        publishStorageDeliveryContract(runDir, artifact, JSON.parse(readFileSync(resolve(runDir, provenance), 'utf8'))));
+        publishStorageDeliveryContract(runDir, artifact, provenanceManifest));
       if (buildClass === 'acceptance' && artifact.kind === 'signed') acceptanceProvenance = provenance;
     }
-    const vendoredNapi = fileRecord(
-      resolve(REPO_ROOT, 'entry/libs', abi, 'libreader_core_napi.so'),
-      `entry/libs/${abi}/libreader_core_napi.so`,
-    );
+    const vendoredNapiPath = `entry/libs/${abi}/libreader_core_napi.so`;
+    const { bytes, sha256 } = sourceRecord(vendoredNapiPath);
+    const vendoredNapi = { path: vendoredNapiPath, bytes, sha256 };
     const manifest = {
       schemaVersion: 2,
       deliveryEvidenceVersion: 1,
@@ -1739,13 +1758,26 @@ function buildImpl(options, inputs, buildStarted) {
     };
     const manifestPath = resolve(runDir, 'manifest.json');
     measureBuildStep('writeManifest', () => writeJson(manifestPath, manifest));
-    measureBuildStep('sealVerify', () => verifyManifest(manifestPath));
-    if (incremental) {
-      writeSandboxFile(signingStamp, signingKey, 0o600);
-      rmSync(incompleteBuild);
-    }
-    measureBuildStep('publish', () => renameSync(runDir, publishedRunDir));
+    measureBuildStep('sealVerify', () => verifyManifestWithInspector(manifestPath, (candidate, kind, name, resources, actualAbi, version) => {
+      const evidence = inspected.get(candidate);
+      if (!evidence || evidence.artifact.kind !== kind || evidence.artifact.path !== name || actualAbi !== abi ||
+          JSON.stringify(resources) !== JSON.stringify(evidence.artifact.requiredResources)) {
+        fail('staging manifest disagrees with the verified HAP');
+      }
+      evidence.assertUnchanged(candidate);
+      assertAppVersion(version, evidence.artifact.appVersion, 'HAP');
+      return { ...evidence.artifact };
+    }));
+    if (incremental) writeSandboxFile(signingStamp, signingKey, 0o600);
+    const recoveryMarkerCleanupError = measureBuildStep('publish', () => publishVerifiedHapRun(runDir, publishedRunDir, () => {
+      afterSnapshots.assertUnchanged();
+      for (const [artifactPath, evidence] of inspected) evidence.assertUnchanged(artifactPath);
+    }, incremental ? incompleteBuild : undefined));
     unpublishedRunDir = null;
+    if (recoveryMarkerCleanupError) {
+      console.warn(`Published HAP run ${runId}. The recovery marker remains at ${incompleteBuild}. ` +
+        `The next incremental build requires cache recovery. ${recoveryMarkerCleanupError.message}`);
+    }
     console.log(JSON.stringify({
       status: 'PASS',
       runId,
@@ -1765,6 +1797,7 @@ function buildImpl(options, inputs, buildStarted) {
     }));
   } finally {
     try {
+      await afterSnapshots?.stop();
       if (unpublishedRunDir !== null) rmSync(unpublishedRunDir, { recursive: true, force: true });
       if (markerWritten) rmSync(pipelineMarker, { force: true });
     } finally { buildLease.release(); }
@@ -2012,6 +2045,10 @@ export function verifyAppIdentityEvidence(directory, manifest) {
 }
 
 export function verifyManifest(path) {
+  return verifyManifestWithInspector(path, inspectHap);
+}
+
+function verifyManifestWithInspector(path, inspector) {
   const loaded = loadManifest(path);
   const { manifest } = loaded;
   const incrementalCommand = /(?:^|\s)--incremental(?:\s|$)/.test(manifest.toolchain?.buildCommand ?? '');
@@ -2082,7 +2119,7 @@ export function verifyManifest(path) {
     if (!existsSync(artifactPath)) fail(`manifest artifact is missing: ${artifactPath}`);
     if (loaded.manifest.deliveryEvidenceVersion === 1 && !artifact.requiredResources?.length) fail('Required HAP resource inventory is missing');
     const current = measureBuildStep('inspectHap', () =>
-      inspectHap(artifactPath, artifact.kind, artifact.path, artifact.requiredResources, abi, loaded.manifest.expectedVersion));
+      inspector(artifactPath, artifact.kind, artifact.path, artifact.requiredResources, abi, loaded.manifest.expectedVersion));
     if (current.sha256 !== artifact.sha256 || current.bytes !== artifact.bytes ||
         current.embeddedCoreNapi.sha256 !== artifact.embeddedCoreNapi.sha256) {
       fail(`manifest artifact identity mismatch: ${artifactPath}`);
@@ -2500,7 +2537,7 @@ async function main() {
     console.log(JSON.stringify({ status: 'PLAN_ONLY', expectedVersion: session.expectedVersion,
       buildIdentityInputs: session.contentSnapshot.buildIdentityInputs, fileCount: session.contentSnapshot.files.length }));
   }
-  else if (command === 'build') build(options);
+  else if (command === 'build') await build(options);
   else if (command === 'sync-signing') syncSigning(options);
   else if (command === 'sync-native' || command === 'sync-core') {
     for (const key of options.keys()) if (!['--abi', '--core-profile'].includes(key)) fail(`unknown sync-native argument: ${key}`, 2);

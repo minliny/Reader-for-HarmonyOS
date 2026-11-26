@@ -8,6 +8,9 @@ export const APP_RELEASE_LEDGER = 'config/app-release-ledger.json';
 const HEX = /^[0-9a-f]{64}$/;
 const VERSION = /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/;
 const CHANNELS = ['DEV', 'RC', 'REL'];
+const APP_CONFIG_FILES = new Set(['AppScope/app.json5', 'build-profile.json5', 'entry/build-profile.json5',
+  'hvigor-config.json5', 'entry/src/main/module.json5', 'oh-package.json5', 'oh-package-lock.json5',
+  'entry/oh-package.json5', 'entry/oh-package-lock.json5']);
 const compare = (a, b) => Buffer.compare(Buffer.from(a, 'utf8'), Buffer.from(b, 'utf8'));
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const requireValue = (ok, message) => { if (!ok) throw new Error(message); };
@@ -48,8 +51,10 @@ export function effectiveIdentityProfile(profile) {
 
 /** Ordinary content is hashed byte-for-byte. Only parsed build configurations
  * are canonicalized: their whitespace/CRLF cannot change the effective config.
- * No blanket text conversion, binary conversion, mode bits or absolute paths. */
-export function appContentSnapshot(root, inputs, { abi, parseJson5 = JSON.parse } = {}) {
+ * No blanket text conversion, binary conversion, mode bits or absolute paths.
+ * precomputedRecords is optional trusted input from a fresh same-process
+ * snapshot of this checkout, keyed by slash-separated relative paths. */
+export function appContentSnapshot(root, inputs, { abi, parseJson5 = JSON.parse, precomputedRecords } = {}) {
   requireValue(['arm64-v8a', 'x86_64'].includes(abi), 'App content identity requires one explicit ABI');
   root = resolve(root);
   const records = new Map();
@@ -67,11 +72,16 @@ export function appContentSnapshot(root, inputs, { abi, parseJson5 = JSON.parse 
       return;
     }
     requireValue(stat.isFile(), `App identity requires a regular file: ${path}`);
+    const isConfig = APP_CONFIG_FILES.has(path);
+    const precomputed = isConfig ? undefined : precomputedRecords?.get(path);
+    if (precomputed?.type === 'file' && precomputed.bytes === stat.size &&
+        typeof precomputed.sha256 === 'string' && HEX.test(precomputed.sha256) &&
+        typeof precomputed.path === 'string' && precomputed.path.split(sep).join('/') === path) {
+      records.set(path, { path, encoding: 'bytes', bytes: precomputed.bytes, sha256: precomputed.sha256 });
+      return;
+    }
     let bytes = readFileSync(absolute), encoding = 'bytes';
-    const configFiles = new Set(['AppScope/app.json5', 'build-profile.json5', 'entry/build-profile.json5',
-      'hvigor-config.json5', 'entry/src/main/module.json5', 'oh-package.json5', 'oh-package-lock.json5',
-      'entry/oh-package.json5', 'entry/oh-package-lock.json5']);
-    if (configFiles.has(path)) {
+    if (isConfig) {
       let value = parseJson5(bytes.toString('utf8'));
       if (path === 'AppScope/app.json5') value = effectiveIdentityApp(value);
       if (path === 'build-profile.json5') value = effectiveIdentityProfile(value);
