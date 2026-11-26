@@ -139,7 +139,7 @@ const Body=productionMotionMethods(url('platform/reading-resources/ReadingBodyIm
 const body=new Body();body.validateBytes=async()=>{};
 
 let decodeTransport;
-const Registry=productionMotionMethods(url('app/ReaderHostRegistry.ts'),['createCapabilityRouter'],{
+const Registry=productionMotionMethods(url('app/ReaderHostRegistry.ts'),['sourceChecks','publishSourceCheckStage','createCapabilityRouter'],{
   CapabilityRouter:Router,HttpExecuteHost,ReadingBodyImageHost:{instance:body},MangaImageGraphicsHost:{instance:{}},
   MangaImageDecodeHost:{instance:{handle(event,_bridge,transport){decodeTransport=transport;return transport.fetch(event.params.request,()=>true,16777216);},cancel(){}}},
   MangaImageMetadataHost:{instance:{handle:async()=>({}),cancel(){}}},
@@ -509,7 +509,7 @@ try {
  const makeReadingOwner=(body,probe)=>{
   const originals=new Map(),holds=new Map(),pending=new Map();let id=1000,httpCalls=0,originalReads=0;
   const BodyPort={instance:body};
-  const Registry=productionMotionMethods(url('app/ReaderHostRegistry.ts'),['createCapabilityRouter'],{
+  const Registry=productionMotionMethods(url('app/ReaderHostRegistry.ts'),['sourceChecks','publishSourceCheckStage','createCapabilityRouter'],{
    CapabilityRouter:Router,ReadingBodyImageHost:BodyPort,HttpExecuteHost,MangaImageGraphicsHost:{instance:{}},MangaImageMetadataHost:{instance:{handle:async()=>({}),cancel(){}}},
    MangaImageDecodeHost:{instance:{handle(event,_bridge,transport){return transport.fetch(event.params.request,()=>true,16777216);},cancel(){}}}});
   const registry=new Registry();registry.mangaOfflineProbe=probe;registry.responseAssetBridge={};const router=registry.createCapabilityRouter();
@@ -788,6 +788,7 @@ want.parameters?.readerMangaOfflineProbeSelectManga,want.parameters?.readerManga
 want.parameters?.readerOpenSourcePilot,want.parameters?.readerEventLoopProbe,want.parameters?.readerDisableOptionalEntryMemory]);}
 declare const MangaChapterPreparationCoordinator: {forRuntime(owner:object):{close():Promise<void>}};
 class RuntimeSeam {
+private host:{registerSourceCheck(requestId:number,onStage?:(stage:string)=>void):()=>void};
 private state:'new'|'starting'|'ready'|'closing'|'closed'='ready';
 private reservationQuarantineDiagnosticLogged:boolean=false;
 private mangaImageTail:Promise<void>=Promise.resolve();

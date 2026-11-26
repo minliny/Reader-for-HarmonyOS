@@ -9,6 +9,10 @@ import { MangaChapterPreparationCoordinator } from './MangaChapterPreparationCoo
 import { MangaRetainedTileCache } from './MangaRetainedTileCache';
 
 interface MangaProgressCursor { state: MangaProgressState; }
+interface MangaProgressLane {
+  settled?: Promise<void>;
+  requiresReadback: boolean;
+}
 interface MangaNextChapter { index: number; url: string; }
 interface MangaNextImage { scope: MangaResourceScope; page: MangaResourcePage; }
 interface MangaPendingReplacement { chapter: MangaChapterResult; progress: MangaProgressState; }
@@ -23,7 +27,7 @@ export interface MangaVisiblePage {
 }
 /** Session policy only: Host continues to own scheduling, bytes and decoding. */
 export class MangaSessionController {
-  private static progressLanes: WeakMap<ReadingGatewayRuntime, Map<string, Promise<void>>> = new WeakMap();
+  private static progressLanes: WeakMap<ReadingGatewayRuntime, Map<string, MangaProgressLane>> = new WeakMap();
   private readonly runtime: ReadingGatewayRuntime;
   private progressCursor: MangaProgressCursor | undefined;
   private readonly gateway: MangaSessionGateway;
@@ -757,9 +761,13 @@ export class MangaSessionController {
   async awaitPendingProgress(sourceId: string, bookId: string): Promise<void> {
     const lanes = MangaSessionController.progressLanes.get(this.runtime);
     const key = JSON.stringify([sourceId, bookId]);
-    const pending = lanes?.get(key);
-    try { await pending; }
-    finally { if (lanes?.get(key) === pending) lanes?.delete(key); }
+    // Entry and chapter admission read Core's position after this barrier.
+    // An old caller receives its own write error; opening only waits for it.
+    let pending = lanes?.get(key)?.settled;
+    while (pending !== undefined) {
+      await pending;
+      pending = lanes?.get(key)?.settled;
+    }
   }
 
   /** Freeze the actually displayed fact before releasing the view's resources. */
@@ -780,25 +788,38 @@ export class MangaSessionController {
     const identity = chapter.manifest.chapter;
     const current = this.runtime.captureReadingContentValidity?.(identity.sourceId, identity.bookId) ?? ((): boolean => true);
     let lanes = MangaSessionController.progressLanes.get(this.runtime);
-    if (lanes === undefined) { lanes = new Map<string, Promise<void>>(); MangaSessionController.progressLanes.set(this.runtime, lanes); }
+    if (lanes === undefined) {
+      lanes = new Map<string, MangaProgressLane>();
+      MangaSessionController.progressLanes.set(this.runtime, lanes);
+    }
     const key = JSON.stringify([identity.sourceId, identity.bookId]);
-    const predecessor = lanes.get(key) ?? Promise.resolve();
+    const lane: MangaProgressLane = lanes.get(key) ?? { requiresReadback: false };
+    const predecessor = lane.settled ?? Promise.resolve();
     const task = predecessor.then(async (): Promise<void> => {
       if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
-      const progress = cursor.state;
+      // A rejected or missing receipt may follow a committed update. Recover
+      // the authoritative token under the same lane before proposing any write.
+      const progress = lane.requiresReadback ? await this.gateway.progress(identity.sourceId, identity.bookId, current) : cursor.state;
+      if (progress.token.epoch !== cursor.state.token.epoch) throw new Error('MANGA_SESSION_CONTENT_CHANGED');
       const location: MangaLocation = { kind: 'manga', chapter: identity,
         manifestVersion: chapter.manifest.manifestVersion, pageId: page.pageId, pageOrdinalFallback: ordinal,
         x, y, progressRevision: progress.token.revision + 1 };
+      lane.requiresReadback = true;
       cursor.state = await this.gateway.save(location, progress.token, current);
+      lane.requiresReadback = false;
       if (this.progressCursor === cursor) {
         this.progressData = cursor.state; this.mappedLocation = undefined; this.entryAtChapterFirst = false;
       }
     });
-    lanes.set(key, task);
     const ownedLanes = lanes;
-    // Keep a failed tail until an explicit reopen observes the failure; never
-    // silently replace an unknown write with an older read position.
-    void task.then((): void => { if (ownedLanes.get(key) === task) ownedLanes.delete(key); }, (): void => {});
+    const release = (): void => {
+      if (lane.settled !== settled) return;
+      lane.settled = undefined;
+      if (!lane.requiresReadback) ownedLanes.delete(key);
+    };
+    const settled = task.then(release, release);
+    lane.settled = settled;
+    lanes.set(key, lane);
     await task;
   }
 

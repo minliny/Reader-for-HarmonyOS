@@ -1275,9 +1275,10 @@ export struct MangaReadingSurface {
   }
   private async retryOpen(): Promise<void> {
     const controller = this.controller;
-    if (controller === undefined || this.opened || this.offline || this.openingRetry) return;
+    if (controller === undefined || !this.mounted || this.opened || this.openingRetry) return;
     this.openingRetry = true;
     this.error = '';
+    this.detachOfflineProbe?.(); this.detachOfflineProbe = undefined;
     controller.close('chapter');
     try {
       if (this.mounted && this.controller === controller) await this.open(controller, this.resumeChangedContent);
@@ -2346,7 +2347,7 @@ export struct MangaReadingSurface {
         title: this.error.length === 0 || this.openingRetry ? '' :
           (this.openFailureStage === 'source' ? '书源加载失败' : '章节加载失败'),
         message: this.error.length === 0 || this.openingRetry ? '正在载入章节…' : this.displayError(this.error),
-        actionLabel: this.offline ? '' : '重试', onAction: (): void => {
+        actionLabel: this.controller === undefined ? '' : '重试', onAction: (): void => {
           if (this.readerPanelForeground()) void this.retryOpen();
         },
         secondaryActionLabel: '切换书源', onSecondaryAction: (): void => { void this.openSourceSwitch(); } });

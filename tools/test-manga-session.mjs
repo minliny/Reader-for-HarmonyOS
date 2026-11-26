@@ -10,6 +10,10 @@ export const CONTRACT_CASES = {
     "description": "Actual Controller byte admission, exact mapping and bounded preview; fake Core/image ports",
     "resources": []
   },
+  "controller-progress-recovery": {
+    "description": "Rejected position writes reconcile the durable token before the next save; the first reopen reads the durable position",
+    "resources": []
+  },
   "surface-cold-admission": {
     "description": "Actual Surface narrow cold entry, removed chapter protection and unsaved refresh; selected SDK method extraction",
     "resources": []
@@ -203,7 +207,7 @@ console.log('PASS pending neighbor selection joins decode and admits a visible t
 console.log('PASS narrow cold entry: 3 of 10000 real page facts, no full manifest/catalog/progress RPC, bounded end window, invalid ordinal and disposed request rejected');
 // Disposal releases pixels immediately but does not cancel an admitted position.
 {
- let finish,fail;const gate=new Promise((resolve,reject)=>{finish=resolve;fail=reject;});let writes=0;let reads=0;let released=0;
+ let finish;const gate=new Promise(resolve=>{finish=resolve;});let writes=0;let reads=0;let released=0;
  const rt={supportsCoreCapability:()=>true,captureReadingContentValidity:()=>()=>true,request:async(method,params)=>{
   if(method==='manga.chapter.get')return {data:structuredClone(chapter)};
   if(method==='reading.progress.get'){reads++;return {data:{token:{epoch:7,revision:writes},location:null}};}
@@ -213,12 +217,118 @@ console.log('PASS narrow cold entry: 3 of 10000 real page facts, no full manifes
  assert.ok(released>0,'dispose immediately releases display leases');
  const next=new Controller(rt);const reopening=next.open('s','b',0);await new Promise(r=>setImmediate(r));assert.equal(reads,1,'rapid reopen waits for old owner CAS');
  finish();await saving;await reopening;assert.equal(reads,2);assert.equal(writes,1);next.close();
- const broken={...rt,request:async(method,params)=>{if(method==='reading.progress.update')throw Error('durable write failed');return rt.request(method,params);}};
- const c=new Controller(broken);await c.open('s','b',0);const bad=c.savePosition(0,0,0.1);c.close();await assert.rejects(bad,/durable write failed/);
- await assert.rejects(new Controller(broken).awaitPendingProgress('s','b'),/durable write failed/,'reopen observes prior failure');
 }
-console.log('PASS nonblocking disposal: pixel leases released immediately, admitted CAS survives owner close, rapid reopen waits, failed tail stays observable');
+console.log('PASS nonblocking disposal: pixel leases released immediately, admitted CAS survives owner close, rapid reopen waits');
 
+}
+
+async function case_controller_progress_recovery() {
+  const { MangaRetainedTileCache } = await import('./lib/manga-retained-tile-cache-probe.mjs');
+  const { default: assert } = await import('node:assert/strict');
+  const { readFileSync } = await import('node:fs');
+  const { stripTypeScriptTypes } = await import('node:module');
+  function load(name, dependencies = {}) {
+    const source = readFileSync(mangaSourceUrl(`${name}.ts`), 'utf8')
+      .replace(/^import[\s\S]*?;\n/gm, '').replace(/^export type \{[^;]+;\n/gm, '').replace(/^export /gm, '');
+    return new Function(...Object.keys(dependencies), `${stripTypeScriptTypes(source)}\nreturn ${name};`)(...Object.values(dependencies));
+  }
+  const Controller = load('MangaSessionController', { MangaRetainedTileCache,
+    MangaResourceGateway: load('MangaResourceGateway'), MangaSessionGateway: load('MangaSessionGateway') });
+  const pages = [0, 1].map(ordinal => {
+    const pageId = `mp1:${String(ordinal).padStart(64, '0')}`;
+    return { ordinal, pageId, resourceRef: `manga:${pageId}` };
+  });
+  const chapter = { chapterIndex: 0, chapterTitle: 'A', cached: false,
+    manifest: { chapter: { sourceId: 's', bookId: 'b', chapterId: '/c' },
+      sourceRuleVersion: 'r', manifestVersion: 'v', decodeRevision: 'identity-v1', pages },
+    resources: pages.map(page => ({ resourceRef: page.resourceRef, request: { url: 'https://example.invalid/image.jpg' } })) };
+  for (const firstWriteCommits of [false, true]) {
+    for (const firstRecovery of ['next-page', 'reopen', 'different-epoch']) {
+      let attempts = 0, epoch = 1, revision = 0, location = null, rejectReadback = false;
+      let holdFirstWrite;
+      const firstWriteGate = new Promise(resolve => { holdFirstWrite = resolve; });
+      const calls = [];
+      const state = () => ({ data: { token: { epoch, revision }, location } });
+      const runtime = {
+        supportsCoreCapability: () => true,
+        captureReadingContentValidity: () => () => true,
+        loadReadingImage: async () => ({ fileUri: 'file://image', width: 600, height: 800, revision: 'image' }),
+        releaseReadingImage() {},
+        async request(method, params) {
+          if (method === 'manga.chapter.get') return { data: structuredClone(chapter) };
+          if (method === 'reading.progress.get') {
+            calls.push(['read', epoch, revision]);
+            if (rejectReadback) { rejectReadback = false; throw Error('READBACK_UNAVAILABLE'); }
+            return state();
+          }
+          assert.equal(method, 'reading.progress.update');
+          calls.push(['write', params.expectedEpoch, params.expectedRevision]);
+          assert.equal(params.expectedEpoch, epoch);
+          assert.equal(params.expectedRevision, revision);
+          if (++attempts === 1) {
+            if (firstWriteCommits) { revision++; location = params.location; }
+            await firstWriteGate;
+            throw Error(firstWriteCommits ? 'FIRST_RECEIPT_LOST' : 'ONE_REFUSAL_BEFORE_WRITE');
+          }
+          revision++;
+          location = params.location;
+          return state();
+        },
+      };
+      const controller = new Controller(runtime);
+      await controller.open('s', 'b', 0);
+      const rejected = assert.rejects(controller.savePosition(0, 0, .2), /FIRST_RECEIPT_LOST|ONE_REFUSAL_BEFORE_WRITE/);
+      if (firstRecovery === 'next-page') {
+        await controller.selectPage(1);
+        rejectReadback = true;
+        const nextPage = assert.rejects(controller.savePosition(1, 0, .3), /READBACK_UNAVAILABLE/,
+          'the queued write must observe authority before issuing another update');
+        assert.equal(attempts, 1);
+        holdFirstWrite();
+        await rejected;
+        await nextPage;
+        const authoritativeRevision = Number(firstWriteCommits);
+        assert.deepEqual(calls, [['read', 1, 0], ['write', 1, 0], ['read', 1, authoritativeRevision]]);
+        await controller.savePosition(1, 0, .3);
+        assert.deepEqual(calls.slice(-2), [['read', 1, authoritativeRevision], ['write', 1, authoritativeRevision]]);
+        assert.equal(location.pageId, pages[1].pageId);
+        assert.equal(revision, authoritativeRevision + 1);
+        await controller.savePosition(1, 0, .4);
+        assert.deepEqual(calls.at(-1), ['write', 1, authoritativeRevision + 1]);
+        assert.equal(revision, authoritativeRevision + 2);
+        await controller.close();
+      } else if (firstRecovery === 'reopen') {
+        await controller.close();
+        const next = new Controller(runtime);
+        const reopening = next.open('s', 'b', 0);
+        await new Promise(resolve => setImmediate(resolve));
+        assert.equal(calls.filter(call => call[0] === 'read').length, 1, 'reopen waits for the in-flight write');
+        holdFirstWrite();
+        await rejected;
+        await reopening;
+        assert.equal(revision, Number(firstWriteCommits));
+        assert.equal(next.savedLocation?.y ?? null, firstWriteCommits ? .2 : null);
+        await next.savePosition(0, 0, .7);
+        assert.equal(location.y, .7);
+        assert.equal(revision, Number(firstWriteCommits) + 1);
+        await next.close();
+      } else {
+        holdFirstWrite();
+        await rejected;
+        epoch++;
+        revision = 0;
+        location = null;
+        await assert.rejects(controller.savePosition(0, 0, .4), /SESSION_CONTENT_CHANGED/);
+        assert.equal(attempts, 1, 'a previous epoch cannot write into the restored book');
+        await controller.close();
+        const next = new Controller(runtime);
+        await next.open('s', 'b', 0);
+        await next.savePosition(0, 0, .5);
+        assert.deepEqual(calls.at(-1), ['write', 2, 0]);
+        await next.close();
+      }
+    }
+  }
 }
 
 async function case_controller_refresh_preview() {
@@ -954,7 +1064,7 @@ console.log('PASS actual SDK Shell/retained Surface/property runtime plus cold C
 
 }
 
-const implementations = {'controller-cas-lifecycle':case_controller_cas_lifecycle,'controller-refresh-preview':case_controller_refresh_preview,'surface-cold-admission':case_surface_cold_admission,'adjacent-preparation':case_adjacent_preparation,'directory-proof':case_directory_proof,'source-cache-renew':case_source_cache_renew,'retained-shell-catalog-sdk':case_retained_shell_catalog_sdk};
+const implementations = {'controller-cas-lifecycle':case_controller_cas_lifecycle,'controller-progress-recovery':case_controller_progress_recovery,'controller-refresh-preview':case_controller_refresh_preview,'surface-cold-admission':case_surface_cold_admission,'adjacent-preparation':case_adjacent_preparation,'directory-proof':case_directory_proof,'source-cache-renew':case_source_cache_renew,'retained-shell-catalog-sdk':case_retained_shell_catalog_sdk};
 for (const id of selectContractCases(CONTRACT_CASES)) {
   await implementations[id]();
   recordContractCasePass(id);

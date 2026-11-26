@@ -132,6 +132,33 @@ function oldVisible(f, uri) {
 console.log('PASS next candidate retains original pixels/position/currentKey until explicit admission/native presentation; serialized latest CAS and successor-safe retired close');
 
 {
+  let refuseNextWrite = true;
+  const f = await fixture({
+    beforeRequest: method => {
+      if (method === 'reading.progress.update' && refuseNextWrite) {
+        refuseNextWrite = false;
+        throw Error('ONE_REFUSAL_BEFORE_WRITE');
+      }
+    },
+  });
+  await assert.rejects(f.origin.savePosition(0, 0, 0.1), /ONE_REFUSAL_BEFORE_WRITE/);
+  assert.equal(f.revision, 0);
+  // The boundary owner saves the still-visible position before preparing the
+  // next chapter. The new attempt must use a freshly read CAS token.
+  await f.origin.savePosition(0, 0, 0.1);
+  const candidate = await f.transfer.prepare(f.request());
+  assert.equal(candidate.entry.progress.token.revision, 1);
+  assert.equal(f.position.chapter.chapterId, '/c3');
+  await candidate.activate(); candidate.confirmPresented();
+  await candidate.controller.savePosition(0, 0, 0);
+  assert.equal(f.position.chapter.chapterId, '/c9');
+  assert.equal(f.revision, 2);
+  await f.origin.close('chapter');
+  await candidate.controller.close();
+}
+console.log('PASS a one-time progress refusal no longer blocks the next boundary save and candidate activation');
+
+{
   const f = await fixture(), candidate = await f.transfer.prepare(f.request({ chapterIndex: 0, chapterUrl: '/c0', landing: 'last' }));
   assert.equal(candidate.targetOrdinal, 34); assert.equal(candidate.location.y, 1); assert.equal(candidate.landingTileIndex, 3);
   assert.ok(candidate.controller.tile(34, 3).image);

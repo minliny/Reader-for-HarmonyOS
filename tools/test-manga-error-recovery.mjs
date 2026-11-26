@@ -1,5 +1,5 @@
 import {selectContractCases, recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions = {"exit-once": {"description": "实际注册退出owner save/back仅一次与retired guard", "resources": []}, "brief-current-error": {"description": "实际admitted preparation brief/opened Watch保error和pixels", "resources": []}, "recovery-touch-actor": {"description": "真实恢复提示SDK在阅读触摸换代后生成当前动作并拒绝旧物理回调", "resources": []}};
+const definitions = {"exit-once": {"description": "实际注册退出owner save/back仅一次与retired guard", "resources": []}, "brief-current-error": {"description": "实际admitted preparation brief/opened Watch保error和pixels", "resources": []}, "recovery-touch-actor": {"description": "真实恢复提示SDK在阅读触摸换代后生成当前动作并拒绝旧物理回调", "resources": []}, "offline-open-retry": {"description": "实际离线章节失败页的主操作复用原打开入口与离线上下文", "resources": []}};
 for (const id of selectContractCases(definitions)) {
   await runSelectedCase(id);
   recordContractCasePass(id);
@@ -61,6 +61,38 @@ if(selectedCase==='recovery-touch-actor') {
  const current=action();assert.equal(current.enabled,true,'current recovery remains actionable after touch');
  current.onClick();await tick();assert.equal(confirmed,1,'current native recovery action dispatches after presentation change');
  old.onClick();await tick();assert.equal(confirmed,1,'old physical recovery actor cannot confirm a new presentation');
+}
+
+if (selectedCase === 'offline-open-retry') {
+  const { boundedSurfaceSdk } = await import('./lib/bounded-surface-sdk-probe.mjs');
+  const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true });
+  const owner = sdk.consumer(source, ['chapterLoadState', 'retryOpen']);
+  const calls = [];
+  const pending = deferred();
+  const controller = { close: async intent => { calls.push(['close', intent]); } };
+  const proof = { sourceId: 's', bookId: 'b', chapterIndex: 0, url: '/cached' };
+  Object.assign(owner, { controller, mounted: true, opened: false, offline: true, openingRetry: false,
+    openFailureStage: 'chapter', error: 'INTERNAL', resumeChangedContent: false,
+    expectedOfflineChapterId: '/cached', directoryTargetProof: proof,
+    readerPanelForeground: () => true, inkColor: () => '#111111', mutedColor: () => '#666666',
+    displayError: mangaUserError, interactiveInsets: () => ({ left: 0, top: 0, right: 0, bottom: 0 }),
+    open: async function (actual, resume) {
+      assert.equal(actual, controller);
+      calls.push(['open', this.offline, this.expectedOfflineChapterId, this.directoryTargetProof, resume]);
+      await pending.promise;
+    },
+  });
+  owner.chapterLoadState();
+  const retry = sdk.nodes(owner).find(node => node.type === 'Button' && node.accessibilityText === '重试');
+  assert.ok(retry, 'the actual offline load failure has a primary retry button');
+  retry.onClick();
+  retry.onClick();
+  await tick();
+  assert.deepEqual(calls, [['close', 'chapter'], ['open', true, '/cached', proof, false]]);
+  assert.equal(owner.openingRetry, true);
+  pending.resolve();
+  await tick();
+  assert.equal(owner.openingRetry, false);
 }
 
 if(selectedCase==='exit-once') {
