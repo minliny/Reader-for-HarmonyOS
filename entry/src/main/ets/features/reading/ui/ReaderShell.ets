@@ -203,13 +203,13 @@ export struct ReaderShell {
     });
   }
 
+  private readingContentInputEnabled(): boolean {
+    const sourceSwitchCovered = this.sourceSwitchPresented || this.sourceSwitchCovered;
+    return this.inputAllowed && this.visible && this.route === 'reading' && !sourceSwitchCovered;
+  }
+
   private readingContentIsForeground(): boolean {
-    // Native attributes must read their local reactive boundary before a live
-    // ancestor callback can short-circuit. Otherwise an opening render never
-    // subscribes to inputAllowed and cannot recover when that Prop arrives.
-    return this.inputAllowed && this.visible && this.route === 'reading' &&
-      !this.sourceSwitchPresented && !this.sourceSwitchCovered &&
-      (this.inputCurrent?.(this.readingIdentityKey()) ?? true);
+    return this.readingContentInputEnabled() && (this.inputCurrent?.(this.readingIdentityKey()) ?? true);
   }
 
   private acceptsTextInput(identity: string): boolean {
@@ -360,13 +360,13 @@ export struct ReaderShell {
       .height('100%')
       // Preserve layout and the reader owner while a sibling owns input.
       .id(sourceSwitchTriggerFocusId(this.sourceId, this.bookId, 'reader-body'))
-      .focusable(this.readingContentIsForeground())
-      .enabled(this.readingContentIsForeground())
+      .focusable(this.readingContentInputEnabled())
+      .enabled(this.readingContentInputEnabled())
       .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
         ? { role: 'main-input', id: 'reader-body' } as LayoutInvariantTag : undefined)
-      .accessibilityLevel(this.readingContentIsForeground() ? 'auto' : 'no-hide-descendants')
-      .customProperty('readerLayoutDebugExcluded', !this.readingContentIsForeground())
-      .hitTestBehavior(this.readingContentIsForeground() ? HitTestMode.Transparent : HitTestMode.None);
+      .accessibilityLevel(this.readingContentInputEnabled() ? 'auto' : 'no-hide-descendants')
+      .customProperty('readerLayoutDebugExcluded', !this.readingContentInputEnabled())
+      .hitTestBehavior(this.readingContentInputEnabled() ? HitTestMode.Transparent : HitTestMode.None);
 
   }
 
@@ -427,7 +427,7 @@ export struct ReaderShell {
         inputCurrent: (): boolean => this.acceptsMangaInput(_identity),
         windowChromeActive: this.visible,
         windowChromeOverlayActive: this.visible && (this.route === 'directory' || this.sourceSwitchPresented || this.sourceSwitchCovered),
-        interactionBlocked: !this.readingContentIsForeground(),
+        interactionBlocked: !this.readingContentInputEnabled(),
         isReaderIdentityCurrent: (): boolean => this.isMangaSurfaceCurrent(_identity),
         retainPreparationOnDisappear: (): boolean => this.keepsMangaReadingSession(_identity),
         reduceMotion: this.reduceMotion,

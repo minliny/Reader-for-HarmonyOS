@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import { READER_SHEET_CLOSE_MS } from '../../entry/src/main/ets/ui/foundation/ProductMotionTiming.ts';
 import { SourceSwitchSurfaceLifecycle, type SourceSwitchSurfaceSnapshot } from '../../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts';
 
-test('a missing native retirement callback releases the surface exactly once by the close deadline', context => {
+test('an owner close releases its native surface without a child frame or transition callback', context => {
   context.mock.timers.enable({ apis: ['setTimeout'] });
   const snapshots: SourceSwitchSurfaceSnapshot[] = [];
   const closed: number[] = [];
@@ -11,7 +11,9 @@ test('a missing native retirement callback releases the surface exactly once by 
   const attachment = surface.attach(41);
   surface.appeared(attachment, 41, 'drawer');
   surface.appeared(attachment, 41, 'scrim');
-  assert.equal(surface.hide(attachment, 41), false);
+  surface.hideCurrent(40);
+  assert.deepEqual(snapshots.at(-1), { attachment, attached: true, closing: false });
+  surface.hideCurrent(41);
   context.mock.timers.tick(2 * READER_SHEET_CLOSE_MS - 1);
   assert.deepEqual(snapshots.at(-1), { attachment, attached: true, closing: true });
   context.mock.timers.tick(1);

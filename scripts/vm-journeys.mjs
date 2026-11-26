@@ -45,7 +45,7 @@ function matchesAttributes(attributes, selector, childLabels = []) {
   return attributeMatches(selector.id, [attributes.id, attributes.key]) && attributeMatches(selector.type, [attributes.type]) &&
     attributeMatches(selector.text, [attributes.text]) &&
     attributeMatches(selector.label, [attributes.text, attributes.description, attributes.accessibilityText, ...childLabels]) &&
-    attributeMatches(selector.enabled, [attributes.enabled]);
+    attributeMatches(selector.enabled, [attributes.enabled]) && attributeMatches(selector.clickable, [attributes.clickable]);
 }
 
 function buttonLabels(node) {

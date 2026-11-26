@@ -41,6 +41,10 @@ export class SourceSwitchSurfaceLifecycle {
     this.parts = [...this.parts, part];
   }
 
+  hideCurrent(scope: number): void {
+    this.hide(this.attachment, scope);
+  }
+
   hide(attachment: number, scope: number): boolean {
     if (!this.current(attachment, scope) || this.closing) return false;
     this.closing = true;

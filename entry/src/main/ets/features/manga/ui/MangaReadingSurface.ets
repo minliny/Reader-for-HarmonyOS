@@ -743,7 +743,7 @@ export struct MangaReadingSurface {
   }
   private onViewportTouch(event?: TouchEvent): void {
     if (event !== undefined && event.type !== TouchType.Down) return;
-    if (!this.phonePanelBackgroundEnabled()) return;
+    if (!this.phonePanelBackgroundEnabled() || !this.readerPanelForeground()) return;
     this.viewportInputRevision = this.pageTurnInputRevision;
     this.seekingPage = undefined;
     this.clampedSeekPage = undefined;
@@ -1544,12 +1544,12 @@ export struct MangaReadingSurface {
       this.error.length === 0 && !this.boundaryBusy && !this.rollbackPainting && this.pendingChapterTransition === undefined && this.rollbackChapterController === undefined;
   }
   private phonePanelBackgroundEnabled(): boolean {
-    return this.readerPanelForeground() && !this.chapterEnd && this.panel !== 'directory' &&
-      (this.widePanel() || (!this.windowChromeOverlayActive &&
-      this.panel.length === 0 && this.panelPhase === 'closed'));
+    return this.readerPanelInputEnabled() && !this.chapterEnd && this.panel !== 'directory' &&
+      (this.widePanel() || this.panel.length === 0 && this.panelPhase === 'closed');
   }
   private viewportGestureCurrent(): boolean {
-    return this.viewportInputRevision === this.pageTurnInputRevision && this.phonePanelBackgroundEnabled();
+    return this.viewportInputRevision === this.pageTurnInputRevision && this.phonePanelBackgroundEnabled() &&
+      this.readerPanelForeground();
   }
   private onBoundaryPull(direction: PullDirection, distance: number, armed: boolean): void {
     if (!this.readerPanelForeground() || this.boundaryInputRevision !== this.pageTurnInputRevision) return;
@@ -2215,10 +2215,13 @@ export struct MangaReadingSurface {
     }
   }
 
+  private readerPanelInputEnabled(): boolean {
+    return !this.interactionBlocked && this.mounted && !this.exiting && this.appForeground && this.windowChromeActive;
+  }
+
   private readerPanelForeground(): boolean {
-    return this.mounted && !this.exiting && this.appForeground && this.windowChromeActive && !this.windowChromeOverlayActive &&
-      !this.interactionBlocked &&
-      this.isReaderIdentityCurrent() && (this.inputCurrent?.() ?? true);
+    return this.readerPanelInputEnabled() && !this.windowChromeOverlayActive && this.isReaderIdentityCurrent() &&
+      (this.inputCurrent?.() ?? true);
   }
 
   private panelTriggerFocusId(panel: string): string {
@@ -2691,9 +2694,9 @@ export struct MangaReadingSurface {
           Text('换源').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(10).lineHeight(15).halfLeading(true).fontColor(this.inkColor()).maxLines(1);
         }.alignItems(HorizontalAlign.Center).accessibilityLevel('no-hide-descendants');
       }.width(44).height(Math.max(44, 20 + 15 * this.controlFontScale())).padding(0)
-        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 10, 10, this.readerPanelForeground()))
+        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 10, 10, this.readerPanelInputEnabled()))
         .id(sourceSwitchTriggerFocusId(this.sourceId, this.bookId, 'manga-source'))
-        .enabled(this.readerPanelForeground()).accessibilityText('换源')
+        .enabled(this.readerPanelInputEnabled()).accessibilityText('换源')
         .onClick((): void => { void this.openSourceSwitch(); });
       this.iconAction((): Resource => this.backgroundPreference === 'ink' ? $r('app.media.reader_directory_more_theme_night') :
         $r('app.media.reader_directory_more'), '更多', (): void => {
@@ -2804,9 +2807,9 @@ export struct MangaReadingSurface {
           .width(30).height(28).accessibilityLevel('no');
         Text(label).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(400).fontSize(12).lineHeight(18).halfLeading(true).fontColor(this.inkColor()).maxLines(1);
       }.width('100%').justifyContent(FlexAlign.Center).accessibilityLevel('no-hide-descendants');
-    }.id(this.panelTriggerFocusId(panel)).enabled(this.readerPanelForeground())
+    }.id(this.panelTriggerFocusId(panel)).enabled(this.readerPanelInputEnabled())
       .layoutWeight(1).height(this.dockActionHeight()).padding(0)
-      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 8, 8, this.readerPanelForeground()))
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.chromeScheme(), 8, 8, this.readerPanelInputEnabled()))
       .onClick((): void => { void this.openPanel(panel, this.panelTriggerFocusId(panel)); }).accessibilityText(label);
   }
   @Builder

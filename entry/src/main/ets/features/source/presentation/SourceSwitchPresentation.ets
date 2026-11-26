@@ -230,7 +230,14 @@ export class SourceSwitchPresentation {
     this.failureMessage = snapshot.failureMessage;
     this.rollbackInFlight = snapshot.rollbackInFlight;
     this.pending = snapshot.pending;
-    this.visible = snapshot.visible;
+    if (snapshot.visible) this.visible = true;
+    else this.hidePicker();
+  }
+
+  hidePicker(): void {
+    this.visible = false;
+    // Host close owns the fallback even when the retired child no longer receives a post-layout callback.
+    this.surfaceLifecycle.hideCurrent(this.scopeId);
   }
 
   retire(): void {

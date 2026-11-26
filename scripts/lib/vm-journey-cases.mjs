@@ -103,7 +103,8 @@ export const journeys = {
     await ui.tap('关闭换源并验证详情动作恢复', switchClose, {
       route: 'detail', all: [removeBook, switchSource], none: [switchClose], modalOpen: false,
     });
-    const alternative = { type: 'Text', text: /^(ReaderNovelB|https:\/\/novel-b\.reader-journeys\.invalid)$/ };
+    const alternative = { type: 'Row', label: /^(ReaderNovelB|https:\/\/novel-b\.reader-journeys\.invalid)(?:[,，]|$)/,
+      enabled: 'true', clickable: 'true' };
     await ui.tap('重新打开换源并等待可用备选', switchSource, {
       route: 'detail', all: [switchClose, alternative], modalOpen: true,
     });
@@ -245,12 +246,16 @@ export const journeys = {
     await ui.tap('点漫画画布唤出工具栏', mangaStage, {
       route: 'reading', all: [mangaSwitch, { type: 'Slider', within: mangaStage }],
     });
-    await ui.tap('打开漫画换源抽屉并等待候选来源', mangaSwitch, {
+    const mangaPicker = {
       route: 'reading', all: [switchClose, text(/^(ReaderComic[AB]|https:\/\/comic-[ab]\.reader-journeys\.invalid)$/)], modalOpen: true,
-    });
-    await ui.tap('关闭漫画换源抽屉并恢复原阅读工具栏', switchClose, {
+    };
+    const mangaToolbar = {
       route: 'reading', all: [mangaStage, mangaSwitch], none: [switchClose], modalOpen: false,
-    });
+    };
+    await ui.tap('打开漫画换源抽屉并等待候选来源', mangaSwitch, mangaPicker);
+    await ui.tap('关闭漫画换源抽屉并恢复原阅读工具栏', switchClose, mangaToolbar);
+    await ui.tap('使用恢复后的工具栏再次打开漫画换源', mangaSwitch, mangaPicker);
+    await ui.key('系统返回关闭再次打开的抽屉', 'Back', mangaToolbar);
     await ui.key('退出漫画阅读并返回漫画详情', 'Back', {
       route: 'detail', all: [text(COMIC), readBook], modalOpen: false,
     });

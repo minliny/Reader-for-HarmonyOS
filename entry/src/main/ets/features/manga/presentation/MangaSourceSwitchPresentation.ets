@@ -547,7 +547,7 @@ export class MangaSourceSwitchPresentation {
       (this.ports.source().state.kind === 'switching' && !this.canCancelPreparation())) return;
     this.preparationGeneration += 1;
     this.ports.source().host()?.retire();
-    this.ports.source().visible = false;
+    this.ports.source().hidePicker();
     this.ports.source().state = { kind: 'discovering' };
     this.ports.consumeFileOpen();
   }
