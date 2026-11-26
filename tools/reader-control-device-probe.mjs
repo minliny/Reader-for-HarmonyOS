@@ -147,14 +147,21 @@ function operationPlan(operation, outputDir) {
     const path = remotePath(operation.path);
     return { kind: 'command', args: ['file', 'recv', path, resolve(outputDir, basename(path))], localPath: resolve(outputDir, basename(path)) };
   }
-  if (operation.op === 'startRemoteJourneyFixture') {
+  if (operation.op === 'startRemoteJourneyFixture' || operation.op === 'startRemoteEmptySearchFixture') {
     exactFields(operation, []);
+    const fixture = operation.op === 'startRemoteEmptySearchFixture'
+      ? ['--ps', 'readerPublicFixture', 'empty-sources', '--ps', 'readerPublicFixtureBook', 'long-directory']
+      : ['--ps', 'readerPublicFixture', 'vm-journeys'];
     return { ...shell('aa','start','-a','EntryAbility','-b',BUNDLE,'-m','entry',
-      '--ps','readerPublicFixture','vm-journeys'), kind:'startRemoteJourneyFixture' };
+      ...fixture), kind:'startRemoteJourneyFixture' };
   }
   if (operation.op === 'journeyFixtureLog') {
     exactFields(operation, []);
     return shell('hilog', '-x', '-T', 'ReaderVmJourney');
+  }
+  if (operation.op === 'journeyEmptySearchFixtureLog') {
+    exactFields(operation, []);
+    return shell('hilog', '-x', '-e', 'Public UI fixture long-directory book verified');
   }
   if (operation.op === 'journeyLayoutLog') {
     exactFields(operation, []);
@@ -343,6 +350,10 @@ function selfTest() {
   assert.throws(() => plan('click', { x: 1, y: 2, preflightConfirmed: false }), /preflight confirmation/);
   assert.throws(() => plan('sampledDrag'), /whitelist/);
   assert.throws(() => plan('startRemoteEmptyShelf'), /whitelist/);
+  assert.deepEqual(plan('startRemoteEmptySearchFixture'), { kind: 'startRemoteJourneyFixture', args:
+    ['shell', 'aa', 'start', '-a', 'EntryAbility', '-b', BUNDLE, '-m', 'entry',
+      '--ps', 'readerPublicFixture', 'empty-sources', '--ps', 'readerPublicFixtureBook', 'long-directory'] });
+  assert.deepEqual(plan('journeyEmptySearchFixtureLog').args, ['shell', 'hilog', '-x', '-e', 'Public UI fixture long-directory book verified']);
   process.stdout.write('Reader VM transport self-test: PASS (no HDC)\n');
 }
 

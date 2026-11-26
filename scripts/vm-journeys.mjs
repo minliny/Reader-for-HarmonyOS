@@ -5,13 +5,13 @@ import { dirname, isAbsolute, join, resolve } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { parseArgs } from 'node:util';
 import { journeys } from './lib/vm-journey-cases.mjs';
+import { renderVisualReview } from './lib/vm-visual-review.mjs';
 import { openProbe } from '../tools/ui-contract/collectors/harmonyos/transport.mjs';
 import { assertInstalled, assertRemoteVmReadiness, remoteVmServer } from '../tools/ui-contract/collectors/harmonyos/candidate-evidence.mjs';
 import { assertUnlockedFocus, assertVmLockDismissed, classifyFocusWindow, vmLockDismissalOperation } from '../tools/ui-contract/collectors/harmonyos/focus-window.mjs';
 import { candidateIdentity, nativeBounds, normalReaderWindowRoots, sha256 } from '../tools/lib/native-ui-evidence.mjs';
 
 const LAYOUT_MARKER = 'READER_LAYOUT_INVARIANTS ';
-const FIXTURE_MARKER = 'Public UI fixture VM journeys verified';
 const STEP_MS = 12000;
 const readJson = file => JSON.parse(readFileSync(file, 'utf8'));
 const demand = (condition, message) => { if (!condition) throw Error(message); };
@@ -44,7 +44,8 @@ function matchesAttributes(attributes, selector, childLabels = []) {
   return attributeMatches(selector.id, [attributes.id, attributes.key]) && attributeMatches(selector.type, [attributes.type]) &&
     attributeMatches(selector.text, [attributes.text]) &&
     attributeMatches(selector.label, [attributes.text, attributes.description, attributes.accessibilityText, ...childLabels]) &&
-    attributeMatches(selector.enabled, [attributes.enabled]) && attributeMatches(selector.clickable, [attributes.clickable]);
+    attributeMatches(selector.enabled, [attributes.enabled]) && attributeMatches(selector.clickable, [attributes.clickable]) &&
+    attributeMatches(selector.selected, [attributes.selected]);
 }
 
 function buttonLabels(node) {
@@ -88,8 +89,14 @@ function records(text, marker) {
 
 async function runJourney(id, run, candidate, options, outputDir) {
   const probe = openProbe({ hdc: options.hdc, server: remoteVmServer, target: options.target, outputDir });
+  const fixture = id === 'J8'
+    ? { scope: 'empty-sources', start: 'startRemoteEmptySearchFixture', log: 'journeyEmptySearchFixtureLog',
+      marker: 'Public UI fixture long-directory book verified' }
+    : { scope: 'vm-journeys', start: 'startRemoteJourneyFixture', log: 'journeyFixtureLog',
+      marker: 'Public UI fixture VM journeys verified' };
   const steps = [];
-  const receipt = { journey: id, appBuildId: candidate.appBuildId, hapSha256: candidate.hapSha256, status: 'FAIL', steps };
+  const receipt = { journey: id, fixtureScope: fixture.scope, appBuildId: candidate.appBuildId,
+    hapSha256: candidate.hapSha256, status: 'FAIL', steps };
   const start = performance.now();
   const nonce = randomUUID();
   let captureNumber = 0;
@@ -106,8 +113,10 @@ async function runJourney(id, run, candidate, options, outputDir) {
     const transferred = await probe.command({ op: 'recv', path });
     const file = probe.capturePath(path);
     const content = readFileSync(file);
-    demand(content.length === transferred.bytes && sha256(content) === transferred.sha256, 'Capture bytes do not match native transfer');
-    return { seq: dispatched.seq, received: transferred.seq, sha256: transferred.sha256, file: file.slice(outputDir.length + 1), content };
+    demand(content.length > 0 && content.length === transferred.bytes &&
+      sha256(content) === transferred.sha256, 'Capture is empty or does not match native transfer');
+    return { seq: dispatched.seq, received: transferred.seq, bytes: transferred.bytes, sha256: transferred.sha256,
+      file: file.slice(outputDir.length + 1), content };
   }
 
   async function layoutLog() {
@@ -136,7 +145,9 @@ async function runJourney(id, run, candidate, options, outputDir) {
       const absent = (outcome.none ?? []).every(selector => matchingNodes(afterRoot, selector).length === 0);
       const fresh = observed?.sequence > priorSequence;
       const state = fresh && (outcome.route === undefined || observed.route === outcome.route) &&
-        (outcome.modalOpen === undefined || observed.modalOpen === outcome.modalOpen);
+        (outcome.modalOpen === undefined || observed.modalOpen === outcome.modalOpen) &&
+        (outcome.scheme === undefined || observed.scheme === outcome.scheme);
+      const unobserved = (outcome.requiredRules ?? []).filter(rule => !observed?.observedRules?.includes(rule));
       if (present && absent && state && observed.status === 'measured' && !observed.recoveryPending &&
           (!recoverModal || observed.observedRules?.includes('R6') === true)) {
         const receipt = { step: description, elapsedMs: Math.round(performance.now() - stepStart), actionSeq: input?.seq ?? null,
@@ -144,6 +155,7 @@ async function runJourney(id, run, candidate, options, outputDir) {
         steps.push(receipt);
         demand(Array.isArray(observed.violations) && observed.violations.length === 0 &&
           Array.isArray(observed.missing) && observed.missing.length === 0, `Layout invariants failed for ${description}`);
+        demand(unobserved.length === 0, `Required layout rules not measured for ${description}: ${unobserved.join(', ')}`);
         if (outcome.screenCapture) {
           const { content, ...screenshot } = await capture('screenCap');
           receipt.screenCap = screenshot;
@@ -154,7 +166,8 @@ async function runJourney(id, run, candidate, options, outputDir) {
       }
       const missing = (outcome.all ?? []).filter(selector => matchingNodes(afterRoot, selector).length === 0).map(showSelector);
       lastReason = JSON.stringify({ fresh, present, absent, missing, route: observed?.route, modal: observed?.modalOpen,
-        pending: observed?.recoveryPending, scan: observed?.status, rules: observed?.observedRules, unmeasured: observed?.missing });
+        scheme: observed?.scheme, pending: observed?.recoveryPending, scan: observed?.status, rules: observed?.observedRules,
+        unmeasured: observed?.missing, requiredRules: unobserved });
       await delay(180);
     } while (performance.now() < until);
     throw Error(`Step did not settle: ${description} (${lastReason})`);
@@ -162,6 +175,7 @@ async function runJourney(id, run, candidate, options, outputDir) {
 
   const ui = {
     has: selector => matchingNodes(root, selector).length > 0,
+    scheme: () => sample?.scheme,
     wait: (description, outcome) => checkpoint(description, outcome),
     tap: (description, selector, outcome) => checkpoint(description, outcome,
       () => probe.command({ op: 'click', ...center(actor(root, selector)) })),
@@ -194,14 +208,14 @@ async function runJourney(id, run, candidate, options, outputDir) {
       await delay(1000);
       assertVmLockDismissed((await probe.command({ op: 'uiContractFocusWindow' })).stdout);
     } else assertUnlockedFocus(focus, 'before-launch');
-    const prior = await probe.command({ op: 'journeyFixtureLog' });
-    const oldEntries = new Set(records(prior.stdout, FIXTURE_MARKER).map(entry => entry.line));
+    const prior = await probe.command({ op: fixture.log });
+    const oldEntries = new Set(records(prior.stdout, fixture.marker).map(entry => entry.line));
     await probe.command({ op: 'force-stop', explicitPermit: true });
-    await probe.command({ op: 'startRemoteJourneyFixture' });
+    await probe.command({ op: fixture.start });
     const setupDeadline = performance.now() + 30000;
     while (processId === undefined && performance.now() < setupDeadline) {
-      const log = await probe.command({ op: 'journeyFixtureLog' });
-      processId = records(log.stdout, FIXTURE_MARKER).filter(entry => !oldEntries.has(entry.line)).at(-1)?.pid;
+      const log = await probe.command({ op: fixture.log });
+      processId = records(log.stdout, fixture.marker).filter(entry => !oldEntries.has(entry.line)).at(-1)?.pid;
       if (processId === undefined) await delay(350);
     }
     demand(processId !== undefined, 'No fresh isolated public fixture startup receipt');
@@ -256,17 +270,26 @@ async function main() {
   const candidate = { ...identity, expectedVersion: manifest.expectedVersion, postInstall: deployment.postInstall,
     targetKind: deployment.targetKind, hdcServer: deployment.hdcServer, remoteGuestReadiness: deployment.readiness };
   const results = [];
+  const visualReceipts = [];
   for (const id of requested) {
     const directory = join(output, id);
     mkdirSync(directory, { mode: 0o700 });
     const receipt = await runJourney(id, journeys[id], candidate, values, directory);
+    visualReceipts.push(receipt);
     results.push({ journey: id, status: receipt.status, seconds: receipt.seconds, failure: receipt.failure });
     console.log(`${id} ${receipt.status} ${receipt.seconds}s${receipt.failure ? ` ${receipt.failure.step}` : ''}`);
     // If the package, target or scope cannot be proved, no journey can accept actions.
     if (receipt.failure?.step === 'fixture setup' || !receipt.probe.clean) break;
   }
-  for (const id of requested.slice(results.length)) results.push({ journey: id, status: 'NOT_RUN' });
+  for (const id of requested.slice(results.length)) {
+    const skipped = { journey: id, status: 'NOT_RUN' };
+    results.push(skipped);
+    visualReceipts.push(skipped);
+  }
   writeFileSync(join(output, 'summary.json'), `${JSON.stringify(results, null, 2)}\n`, { mode: 0o600 });
+  const review = renderVisualReview(visualReceipts);
+  writeFileSync(join(output, 'visual-review.md'), review.markdown, { mode: 0o600 });
+  writeFileSync(join(output, 'visual-review.html'), review.html, { mode: 0o600 });
   if (results.some(result => result.status !== 'PASS')) process.exitCode = 1;
 }
 

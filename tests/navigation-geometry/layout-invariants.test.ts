@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { evaluateLayoutInvariants } from '../../entry/src/main/ets/ui/layout/LayoutInvariantEvaluator.ts';
+import { evaluateLayoutInvariants, READER_PAGED_INPUT_SCOPE } from '../../entry/src/main/ets/ui/layout/LayoutInvariantEvaluator.ts';
 import type { LayoutInvariantNode, LayoutInvariantSample } from '../../entry/src/main/ets/ui/layout/LayoutInvariantEvaluator.ts';
 
 const header: LayoutInvariantNode = {
@@ -42,6 +42,19 @@ test('detects a covered top, double inset, oversized bar, overflow, and excessiv
   assert.deepEqual(rules.map(v => v.rule), ['R2', 'R3', 'R4', 'R4']);
   assert.ok(!evaluateLayoutInvariants({ ...sample, fontScale: 1.6, nodes: [below, overflow, distant, action] })
     .violations.some(v => v.rule === 'R3'));
+});
+
+test('large text keeps the header height floor and may grow beyond its normal height', () => {
+  for (const height of [47, 48, 76]) {
+    const bar = { ...header, bounds: { ...header.bounds!, height } };
+    const firstContent = { ...body, bounds: { ...body.bounds!, y: bar.bounds.y + height + 8 } };
+    const result = evaluateLayoutInvariants({ ...sample, fontScale: 1.45, nodes: [bar, title, firstContent, action] });
+    assert.ok(result.observedRules.includes('R3'));
+    assert.deepEqual(result.missing, []);
+    assert.deepEqual(result.violations, height === 47
+      ? [{ rule: 'R3', nodeId: 'header', detail: 'height=47 minimum=48' }]
+      : []);
+  }
 });
 
 test('checks a key control and admits documented busy or unavailable states', () => {
@@ -107,6 +120,49 @@ test('an active drawer requires its foreground control and still checks visible 
     .violations.map(v => v.rule), ['R1', 'R5']);
 });
 
+test('R7 observes adjacent controls including the measurement tolerance', () => {
+  for (const x of [282, 283]) {
+    const adjacent = { ...action, tag: { ...action.tag, id: 'edit' }, bounds: { ...action.bounds!, x } };
+    const result = evaluateLayoutInvariants({ ...sample, nodes: [...sample.nodes, adjacent] });
+    assert.deepEqual(result.violations, []);
+    assert.deepEqual(result.missing, []);
+    assert.ok(result.observedRules.includes('R7'));
+  }
+});
+
+test('R7 reports both control IDs and the same-layer overlap beyond tolerance', () => {
+  const overlapping = { ...action, tag: { ...action.tag, id: 'edit' }, bounds: { ...action.bounds!, x: 320 } };
+  const result = evaluateLayoutInvariants({ ...sample, nodes: [...sample.nodes, overlapping] });
+  assert.ok(result.observedRules.includes('R7'));
+  assert.deepEqual(result.violations, [{ rule: 'R7', nodeId: 'edit', detail: 'edit overlaps more by 37×43vp' }]);
+});
+
+test('R7 checks the modal layer independently and ignores covered background overlap', () => {
+  const close = { ...action, tag: { ...action.tag, id: 'close', modalControl: true } };
+  const confirm = { ...close, tag: { ...close.tag, id: 'confirm' }, bounds: { ...close.bounds!, x: 282 } };
+  const covered = { ...action, tag: { ...action.tag, id: 'covered' } };
+  const separated = evaluateLayoutInvariants({ ...sample, nodes: [...sample.nodes, close] });
+  assert.deepEqual(separated.violations, []);
+  assert.ok(!separated.observedRules.includes('R7'));
+
+  const foreground = { ...sample, modalOpen: true, nodes: [...sample.nodes, covered, close, confirm] };
+  const clear = evaluateLayoutInvariants(foreground);
+  assert.deepEqual(clear.violations, []);
+  assert.ok(clear.observedRules.includes('R7'));
+
+  const overlappedModal = { ...confirm, bounds: close.bounds };
+  const blocked = evaluateLayoutInvariants({ ...foreground, nodes: [...sample.nodes, covered, close, overlappedModal] });
+  assert.deepEqual(blocked.violations, [{ rule: 'R7', nodeId: 'confirm', detail: 'confirm overlaps close by 43×43vp' }]);
+});
+
+test('R7 requires two visible controls with positive bounds', () => {
+  const transparent = { ...action, tag: { ...action.tag, id: 'transparent', unavailable: true }, opacity: 0.09 };
+  const collapsed = { ...action, tag: { ...action.tag, id: 'collapsed' }, bounds: { ...action.bounds!, height: 0 } };
+  const result = evaluateLayoutInvariants({ ...sample, nodes: [...sample.nodes, transparent, collapsed] });
+  assert.ok(!result.observedRules.includes('R7'));
+  assert.deepEqual(result.violations.map(v => v.rule), ['R5']);
+});
+
 test('reading recovery requires the native input host to agree with application admission', () => {
   const reading = { ...sample, checkRecovery: true, requiresNativeMainInput: true };
   assert.deepEqual(evaluateLayoutInvariants(reading).missing, ['recovered-input']);
@@ -117,6 +173,35 @@ test('reading recovery requires the native input host to agree with application 
   assert.deepEqual(restored.missing, []);
   assert.deepEqual(restored.violations, []);
   assert.ok(restored.observedRules.includes('R6'));
+});
+
+test('paged reading recovery checks the native touch layer for R5 and retains the R6 host check', () => {
+  const host: LayoutInvariantNode = { tag: { role: 'main-input', id: 'reader-body' }, opacity: 1, enabled: true };
+  const touchLayer: LayoutInvariantNode = {
+    tag: { role: 'main-input', id: 'paged-input', scope: READER_PAGED_INPUT_SCOPE },
+    bounds: { x: 0, y: 60, width: 360, height: 650 }, opacity: 1, enabled: true, intercepts: true,
+  };
+  const reading: LayoutInvariantSample = {
+    ...sample, nodes: [touchLayer, host], requiresHeader: false, requiresControl: false,
+    requiresFirstContent: false, checkRecovery: true, requiresNativeMainInput: true,
+  };
+  assert.deepEqual(evaluateLayoutInvariants(reading), { violations: [], missing: [], observedRules: ['R5', 'R6'] });
+  assert.deepEqual(evaluateLayoutInvariants({ ...reading, recoveryPending: true }).observedRules, []);
+  assert.deepEqual(evaluateLayoutInvariants({ ...reading, nodes: [touchLayer] }).missing, ['recovered-input']);
+
+  const unreadable = { ...touchLayer, enabled: undefined, intercepts: undefined };
+  assert.deepEqual(evaluateLayoutInvariants({ ...reading, nodes: [host, unreadable] }).missing,
+    ['control-enabled:paged-input', 'control-hit-test:paged-input']);
+
+  for (const blockedLayer of [
+    { ...touchLayer, intercepts: false },
+    { ...touchLayer, bounds: { ...touchLayer.bounds!, height: 42 } },
+    { ...touchLayer, opacity: 0.5 },
+    { ...touchLayer, clipped: true },
+  ]) {
+    assert.deepEqual(evaluateLayoutInvariants({ ...reading, nodes: [host, blockedLayer] })
+      .violations.map(violation => [violation.rule, violation.nodeId]), [['R5', 'paged-input']]);
+  }
 });
 
 test('absent data and a truncated scan stay incomplete with zero violations', () => {

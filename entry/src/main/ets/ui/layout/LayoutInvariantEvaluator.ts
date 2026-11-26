@@ -1,6 +1,7 @@
-export type LayoutInvariantRule = 'R1' | 'R2' | 'R3' | 'R4' | 'R5' | 'R6';
+export type LayoutInvariantRule = 'R1' | 'R2' | 'R3' | 'R4' | 'R5' | 'R6' | 'R7';
 export type LayoutInvariantRole = 'floating-header' | 'fixed-header' | 'header-content' | 'scroll-content' |
   'key-control' | 'primary-dock' | 'modal-overlay' | 'main-input';
+export const READER_PAGED_INPUT_SCOPE = 'reader-paged-input';
 
 export interface LayoutInvariantTag {
   role: LayoutInvariantRole;
@@ -64,6 +65,11 @@ export interface LayoutInvariantResult {
   observedRules: LayoutInvariantRule[];
 }
 
+interface MeasuredControl {
+  id: string;
+  bounds: LayoutInvariantRect;
+}
+
 const BOUNDS_TOLERANCE_VP = 1;
 const SPEC_TOLERANCE_VP = 4;
 const NATIVE_MINIMUM_HIT_VP = 44;
@@ -94,6 +100,9 @@ export function evaluateLayoutInvariants(sample: LayoutInvariantSample): LayoutI
   const body = sample.nodes.filter((node: LayoutInvariantNode): boolean =>
     node.tag.role === 'scroll-content' && node.tag.active !== false);
   const controls = sample.nodes.filter((node: LayoutInvariantNode): boolean => node.tag.role === 'key-control');
+  const checkRecovery = sample.checkRecovery && !sample.recoveryPending && !sample.modalOpen;
+  const recoveredPageInputs = checkRecovery ? sample.nodes.filter((node: LayoutInvariantNode): boolean =>
+    node.tag.role === 'main-input' && node.tag.scope === READER_PAGED_INPUT_SCOPE) : [];
   const expectsModalControl = sample.nodes.some((node: LayoutInvariantNode): boolean =>
     node.tag.role === 'modal-overlay' && node.tag.active === true && node.tag.expectsModalControl === true);
   const safeTop = sample.safeTopVp;
@@ -141,6 +150,12 @@ export function evaluateLayoutInvariants(sample: LayoutInvariantSample): LayoutI
       if (Math.abs(frame.height - expectedHeight) > SPEC_TOLERANCE_VP) {
         violations.push({ rule: 'R3', nodeId: id, detail: `height=${frame.height} expected=${expectedHeight}` });
       }
+    } else if (fontScale !== undefined && fontScale > 1 && expectedHeight !== undefined) {
+      observed.add('R3');
+      const minimumHeight = expectedHeight - SPEC_TOLERANCE_VP;
+      if (frame.height < minimumHeight) {
+        violations.push({ rule: 'R3', nodeId: id, detail: `height=${frame.height} minimum=${minimumHeight}` });
+      }
     }
     for (const child of children) {
       if (child.bounds === undefined || child.bounds.width <= 0 || child.bounds.height <= 0) {
@@ -175,7 +190,7 @@ export function evaluateLayoutInvariants(sample: LayoutInvariantSample): LayoutI
     }
   }
 
-  for (const control of controls) {
+  for (const control of [...controls, ...recoveredPageInputs]) {
     const id = control.tag.id;
     const frame = control.bounds;
     if (frame === undefined) {
@@ -193,10 +208,15 @@ export function evaluateLayoutInvariants(sample: LayoutInvariantSample): LayoutI
     if (control.enabled === false || control.opacity < 0.55) {
       violations.push({ rule: 'R5', nodeId: id, detail: `enabled=${control.enabled} opacity=${control.opacity}` });
     }
+    if (control.tag.role === 'main-input') {
+      if (control.intercepts === undefined) missing.push(`control-hit-test:${id}`);
+      else if (!control.intercepts) violations.push({ rule: 'R5', nodeId: id, detail: 'page input does not receive hit tests' });
+    }
   }
 
-  if (sample.checkRecovery && !sample.recoveryPending && !sample.modalOpen) {
-    const nativeInput = sample.nodes.find((node: LayoutInvariantNode): boolean => node.tag.role === 'main-input');
+  if (checkRecovery) {
+    const nativeInput = sample.nodes.find((node: LayoutInvariantNode): boolean =>
+      node.tag.role === 'main-input' && node.tag.scope !== READER_PAGED_INPUT_SCOPE);
     if (sample.mainInputEnabled === undefined || (sample.requiresNativeMainInput === true && nativeInput?.enabled === undefined)) {
       missing.push('recovered-input');
     } else observed.add('R6');
@@ -209,6 +229,27 @@ export function evaluateLayoutInvariants(sample: LayoutInvariantSample): LayoutI
       if (node.intercepts === undefined) missing.push(`modal-hit-test:${node.tag.id}`);
       else if (node.intercepts) violations.push({ rule: 'R6', nodeId: node.tag.id, detail: 'retired modal intercepts input' });
     }
+  }
+
+  const foregroundControls: MeasuredControl[] = [];
+  const backgroundControls: MeasuredControl[] = [];
+  for (const control of controls) {
+    const frame = control.bounds;
+    const modalControl = control.tag.modalControl === true;
+    if (frame === undefined || !(frame.width > 0 && frame.height > 0 && control.opacity >= 0.1) ||
+      (sample.modalOpen && !modalControl)) continue;
+    const layer = modalControl ? foregroundControls : backgroundControls;
+    if (layer.length > 0) observed.add('R7');
+    const id = control.tag.id;
+    for (const peer of layer) {
+      const other = peer.bounds;
+      const interWidth = Math.min(frame.x + frame.width, other.x + other.width) - Math.max(frame.x, other.x) - BOUNDS_TOLERANCE_VP;
+      const interHeight = Math.min(frame.y + frame.height, other.y + other.height) - Math.max(frame.y, other.y) - BOUNDS_TOLERANCE_VP;
+      if (interWidth > 0 && interHeight > 0) {
+        violations.push({ rule: 'R7', nodeId: id, detail: `${id} overlaps ${peer.id} by ${interWidth}×${interHeight}vp` });
+      }
+    }
+    layer.push({ id, bounds: frame });
   }
   return { violations, missing, observedRules: [...observed].sort() };
 }

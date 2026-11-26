@@ -882,7 +882,7 @@ export struct ReaderControlAppearanceContent {
           .borderRadius(6).border({ width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) });
         Text(this.themeLabel(theme)).fontFamily(TYPE_READER_PANEL_CAPTION.fontFamily).fontWeight(TYPE_READER_PANEL_CAPTION.fontWeight).fontSize(TYPE_READER_PANEL_CAPTION.fontSizeFp).maxLines(1).fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme));
       }.width('100%').padding(3).accessibilityLevel('no-hide-descendants');
-    }.layoutWeight(1).constraintSize({ minHeight: 48 }).padding(0)
+    }.id(`reader-control-theme-${theme}`).layoutWeight(1).constraintSize({ minHeight: 48 }).padding(0)
       .backgroundColor(readerAppColor(this.displaySnapshot().activeTheme === theme ? 'TOK_READ_ACTIVE_SOFT' :
         'TOK_READ_ELEVATED', this.appThemeScheme))
       .border({ width: 1, color: readerAppColor(this.displaySnapshot().activeTheme === theme ? 'TOK_READ_PRIMARY' :
@@ -1054,7 +1054,8 @@ export struct ReaderControlAppearanceContent {
         .position({ x: 8.25, y: 2 })
         .opacity(this.presentation().contentOpacity).blur(this.presentation().contentBlur);
     }.width(62.5).height(this.frame().themeSwatches[index].height);
-    }.width(62.5).height(this.frame().themeSwatches[index].height).padding(0).backgroundColor(Color.Transparent).borderRadius(8)
+    }.id(`reader-control-theme-${theme}`).width(62.5).height(this.frame().themeSwatches[index].height)
+      .padding(0).backgroundColor(Color.Transparent).borderRadius(8)
       .position(this.actorPosition(this.frame().themeSwatches[index], true))
       .clipShape(this.sharedClip('theme', index))
       .responseRegion({ x: this.fullInput() ? -(this.frame().themeShells[index].width - 62.5) / 2 :

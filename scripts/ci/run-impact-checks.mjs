@@ -3,7 +3,8 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { appendFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
-import { affectedHostDomains, committedHostChanges, isHostDocument } from '../test-host.mjs';
+import { journeys } from '../lib/vm-journey-cases.mjs';
+import { affectedHostDomains, committedHostChanges, isHostDocument, suggestedVmJourneys } from '../test-host.mjs';
 
 const root = fileURLToPath(new URL('../../', import.meta.url));
 const nodePaths = ['scripts', 'tests', 'tools'].flatMap(directory =>
@@ -40,6 +41,9 @@ function main() {
   const { base, head, paths } = committedHostChanges(values.base, values.head);
   const nonDocument = paths.filter(path => !isHostDocument(path));
   const selected = affectedHostDomains(nonDocument);
+  const suggested = suggestedVmJourneys(nonDocument);
+  const journeyArgs = suggested.length === Object.keys(journeys).length ? '--all' :
+    suggested.map(journey => `--journey ${journey}`).join(' ');
   let executed = 0;
   let failure = '';
   try {
@@ -56,11 +60,15 @@ function main() {
   const status = failure ? 'FAIL' : executed ? 'PASS' : 'NOT_RUN';
   const report = `${status} — Host incremental checks${failure ? ` (${failure})` : ''}\n\n` +
     `Non-document paths: ${nonDocument.length}\nHost domains selected: ${selected.length}, executed: ${executed}` +
-    (selected.length > 0 ? `\nSelected: ${selected.join(', ')}` : '');
+    (selected.length > 0 ? `\nSelected: ${selected.join(', ')}` : '') +
+    `\nSuggested VM journeys: ${suggested.join(', ') || 'none'}` +
+    (journeyArgs ? `\nVM journey arguments: ${journeyArgs}` : '');
   console.log(report);
   if (values['summary-file']) appendFileSync(values['summary-file'], `\n## ${report}\n`);
   if (values['output-file']) appendFileSync(values['output-file'],
-    `non_document=${nonDocument.length > 0}\nselected=${selected.length}\nexecuted=${executed}\n`);
+    `non_document=${nonDocument.length > 0}\nselected=${selected.length}\nexecuted=${executed}\n` +
+    `suggested_vm_journeys=${suggested.join(',') || 'none'}\n` +
+    (journeyArgs ? `suggested_vm_journey_args=${journeyArgs}\n` : ''));
   if (failure) process.exitCode = 1;
 }
 

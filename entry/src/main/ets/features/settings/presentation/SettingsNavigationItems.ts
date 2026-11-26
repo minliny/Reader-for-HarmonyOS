@@ -11,7 +11,7 @@ export interface SettingsNavigationItem {
 
 export function settingsNavigationItems(): SettingsNavigationItem[] {
   const items: SettingsNavigationItem[] = [
-    { id: 'general', label: '通用设置', icon: 'settings_row_general' },
+    { id: 'general', label: '通用设置', icon: 'settings_row_general', actionId: 'reader-settings-general' },
     { id: 'source', label: '书源管理', icon: 'settings_row_source', actionId: 'reader-settings-source-management' },
   ];
   if (isReaderProductSurfaceEnabled('sync')) {

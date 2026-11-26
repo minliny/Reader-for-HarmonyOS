@@ -4,6 +4,8 @@ import { ReaderDirectoryDataPublication } from '../presentation/ReaderDirectoryD
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { readerKeyboardViewport } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { ReaderRectVp, readerVisualSafeBottom, readerVisualSafeRight, readerVisualSafeTop } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerControlKeyboardVisible } from '../../../ui/foundation/ReaderKeyboardBack';
 import { READER_FULL_PANEL_TOP, readerControlIslandHeight, type ReaderControlContentBudget } from './ReaderLayoutGeometry';
@@ -2089,6 +2091,9 @@ export struct ReaderControlPanel {
         }
         .width(this.currentLayout().fullPanelWidth).height(this.controlPanelHeight())
         .id('reader-control-motion-dock')
+        .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+          ? { role: 'modal-overlay', id: 'reading-controls', active: this.frame().visibility > 0,
+            intercepts: this.inputEnabled && (this.frame().visibility > 0 || this.visualHeldPointerId >= 0) } as LayoutInvariantTag : undefined)
         .translate({ x: this.currentLayout().isExpanded() ? this.directSheetTranslation() : 0,
           y: this.frame().dock.translateY + (this.currentLayout().isExpanded() ? 0 : this.directSheetTranslation()) })
         .opacity(this.frame().dock.opacity * (this.directSheetVisible() && this.reduceMotion ? this.visualExpansionProgress : 1))

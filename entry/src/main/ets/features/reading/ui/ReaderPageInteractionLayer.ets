@@ -19,6 +19,8 @@ import {
 } from './ReaderPageGestureState';
 import { READER_ACTION_MIN_TARGET } from '../../../ui/controls/ReaderActionAccessibility';
 import { readerMotionNowMs } from '../../../ui/foundation/ReaderMotionClock';
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import { READER_PAGED_INPUT_SCOPE, type LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { ReaderPageInputClock } from './ReaderPageInputClock';
 
 /** Tap and long press share the frozen HarmonyOS 500ms boundary. */
@@ -128,6 +130,8 @@ export struct ReaderPageInteractionLayer {
   build() {
     Row()
       .id(this.interactionEnabled ? 'reader-reading-interaction-host-paged' : '')
+      .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD && this.interactionEnabled
+        ? { role: 'main-input', id: 'reader-paged-input', scope: READER_PAGED_INPUT_SCOPE } as LayoutInvariantTag : undefined)
       .width('100%')
       .height('100%')
       // XComponent composition order is device-dependent; make the sole raw

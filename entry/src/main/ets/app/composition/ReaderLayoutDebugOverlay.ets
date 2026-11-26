@@ -9,7 +9,7 @@ import { hilog } from '@kit.PerformanceAnalysisKit';
 import { readerMotionNowMs } from '../../ui/foundation/ReaderMotionClock';
 import { ReaderPostLayoutFrame } from '../../ui/layout/ReaderPostLayoutFrame';
 import { READER_LAYOUT_INVARIANT_PROPERTY, readerOwnedLayoutModals } from '../../ui/foundation/ReaderLayoutInvariantSignals';
-import { evaluateLayoutInvariants } from '../../ui/layout/LayoutInvariantEvaluator';
+import { evaluateLayoutInvariants, READER_PAGED_INPUT_SCOPE } from '../../ui/layout/LayoutInvariantEvaluator';
 import type { LayoutInvariantNode, LayoutInvariantTag, LayoutInvariantRect, LayoutInvariantResult } from '../../ui/layout/LayoutInvariantEvaluator';
 
 interface ReaderDeveloperWindowReport {
@@ -86,6 +86,7 @@ interface LayoutInvariantReceipt extends LayoutInvariantResult {
   schemaVersion: number;
   sequence: number;
   route: string;
+  scheme: string;
   status: string;
   modalOpen: boolean;
   recoveryPending: boolean;
@@ -233,7 +234,7 @@ export struct ReaderLayoutDebugOverlay {
       checkRecovery: recovery || this.modalRecoveryVerified,
       mainInputEnabled: this.mainInputEnabled, requiresNativeMainInput: this.route === 'reading' });
     const receipt: LayoutInvariantReceipt = {
-      schemaVersion: 1, sequence: ++layoutInvariantSequence, route: this.route,
+      schemaVersion: 1, sequence: ++layoutInvariantSequence, route: this.route, scheme: this.appThemeScheme,
       status: result.missing.length === 0 && !recoveryPending ? 'measured' : 'incomplete',
       violations: result.violations, missing: result.missing, observedRules: result.observedRules, modalOpen, recoveryPending,
     };
@@ -660,6 +661,8 @@ export struct ReaderLayoutDebugOverlay {
         if (behavior === 'HitTestMode.None' || behavior === HitTestMode.None) intercepts = false;
         if (behavior === 'HitTestMode.Default' || behavior === 'HitTestMode.Block' ||
           behavior === HitTestMode.Default || behavior === HitTestMode.Block) intercepts = true;
+        if (tag.role === 'main-input' && tag.scope === READER_PAGED_INPUT_SCOPE &&
+          (behavior === 'HitTestMode.Transparent' || behavior === HitTestMode.Transparent)) intercepts = true;
       } catch (_) {
         // A key control's unreadable native enabled state cannot produce a green sample.
       }

@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from 'node:child_process';
 import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { journeys } from './lib/vm-journey-cases.mjs';
 
 const root = fileURLToPath(new URL('..', import.meta.url));
 const testRoot = new URL('../tests/', import.meta.url);
@@ -11,19 +12,34 @@ const testsByDomain = new Map(readdirSync(testRoot, { withFileTypes: true })
     .filter(name => name.endsWith('.test.ts')).sort().map(name => `tests/${entry.name}/${name}`)])
   .filter(([, files]) => files.length > 0).sort(([left], [right]) => left.localeCompare(right)));
 
-// These features share production seams. App, platform, test infrastructure,
-// and any unfamiliar path can change multiple domains, so they select all.
+// These features share production seams. Paths outside known features need
+// the full selection unless they are documentation or scoped Host tests.
 const featureDomains = new Map([
-  ['bookshelf', ['bookshelf', 'contracts', 'search', 'detail-reading', 'downloads']],
-  ['discover', ['search', 'bookshelf']],
-  ['downloads', ['downloads', 'manga', 'navigation-geometry']],
-  ['manga', ['manga', 'detail-reading', 'source-switch', 'downloads', 'navigation-geometry']],
-  ['reading', ['detail-reading', 'bookshelf', 'manga', 'downloads', 'source-switch', 'settings-sync-rss', 'navigation-geometry']],
-  ['rss', ['settings-sync-rss', 'navigation-geometry']],
-  ['search', ['search', 'bookshelf', 'contracts', 'detail-reading', 'source-switch', 'navigation-geometry']],
-  ['settings', ['settings-sync-rss', 'navigation-geometry']],
-  ['source', ['bookshelf', 'contracts', 'search', 'source-management', 'source-switch']],
-  ['sync', ['settings-sync-rss']],
+  ['bookshelf', {
+    hostDomains: ['bookshelf', 'contracts', 'search', 'detail-reading', 'downloads'],
+    vmJourneys: ['J1', 'J2', 'J3'],
+  }],
+  ['discover', { hostDomains: ['search', 'bookshelf'], vmJourneys: ['J7', 'J8'] }],
+  ['downloads', { hostDomains: ['downloads', 'manga', 'navigation-geometry'], vmJourneys: ['J5'] }],
+  ['manga', {
+    hostDomains: ['manga', 'detail-reading', 'source-switch', 'downloads', 'navigation-geometry'],
+    vmJourneys: ['J6'],
+  }],
+  ['reading', {
+    hostDomains: ['detail-reading', 'bookshelf', 'manga', 'downloads', 'source-switch', 'settings-sync-rss', 'navigation-geometry'],
+    vmJourneys: ['J2', 'J4', 'J6', 'J8'],
+  }],
+  ['rss', { hostDomains: ['settings-sync-rss', 'navigation-geometry'], vmJourneys: ['J7', 'J8'] }],
+  ['search', {
+    hostDomains: ['search', 'bookshelf', 'contracts', 'detail-reading', 'source-switch', 'navigation-geometry'],
+    vmJourneys: ['J2', 'J3', 'J6', 'J8'],
+  }],
+  ['settings', { hostDomains: ['settings-sync-rss', 'navigation-geometry'], vmJourneys: ['J7', 'J8'] }],
+  ['source', {
+    hostDomains: ['bookshelf', 'contracts', 'search', 'source-management', 'source-switch'],
+    vmJourneys: ['J2', 'J6', 'J7'],
+  }],
+  ['sync', { hostDomains: ['settings-sync-rss'], vmJourneys: ['J7', 'J8'] }],
 ]);
 
 function git(args) {
@@ -52,6 +68,11 @@ export function isHostDocument(path) {
   return path.endsWith('.md') || path.startsWith('docs/') || path.startsWith('.reader-artifacts/');
 }
 
+function featureImpact(path) {
+  const feature = /^entry\/src\/main\/ets\/features\/([^/]+)\//.exec(path)?.[1];
+  return featureDomains.get(feature);
+}
+
 export function affectedHostDomains(paths) {
   const selected = new Set();
   for (const path of paths) {
@@ -61,10 +82,20 @@ export function affectedHostDomains(paths) {
       selected.add(ownDomain);
       continue;
     }
-    const feature = /^entry\/src\/main\/ets\/features\/([^/]+)\//.exec(path)?.[1];
-    const affected = featureDomains.get(feature);
+    const affected = featureImpact(path)?.hostDomains;
     if (affected === undefined) return [...testsByDomain.keys()];
     for (const domain of affected) selected.add(domain);
+  }
+  return [...selected].sort();
+}
+
+export function suggestedVmJourneys(paths) {
+  const selected = new Set();
+  for (const path of paths) {
+    if (isHostDocument(path) || path.startsWith('tests/')) continue;
+    const affected = featureImpact(path)?.vmJourneys;
+    if (affected === undefined) return Object.keys(journeys);
+    for (const journey of affected) selected.add(journey);
   }
   return [...selected].sort();
 }
