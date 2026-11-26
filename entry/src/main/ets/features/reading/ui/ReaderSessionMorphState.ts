@@ -53,3 +53,20 @@ export function readerSessionMorphSourceKindForPage(
   if (page === 'fullTts') return 'fullTtsPlayback';
   return undefined;
 }
+
+/** Holds measurements separately by their actual source actor and geometry. */
+export class ReaderSessionMorphMeasurements {
+  private readonly measurements: Map<ReaderSessionMorphSourceKind, ReaderSessionMorphSourceMeasurement> =
+    new Map<ReaderSessionMorphSourceKind, ReaderSessionMorphSourceMeasurement>();
+  private readonly layouts: Map<ReaderSessionMorphSourceKind, string> = new Map<ReaderSessionMorphSourceKind, string>();
+
+  admit(measurement: ReaderSessionMorphSourceMeasurement, layoutKey: () => string): void {
+    this.measurements.set(measurement.kind, measurement);
+    this.layouts.set(measurement.kind, layoutKey());
+  }
+
+  current(kind: ReaderSessionMorphSourceKind, layoutKey: () => string): ReaderSessionMorphSourceMeasurement | undefined {
+    const measurement = this.measurements.get(kind);
+    return measurement !== undefined && this.layouts.get(kind) === layoutKey() ? measurement : undefined;
+  }
+}

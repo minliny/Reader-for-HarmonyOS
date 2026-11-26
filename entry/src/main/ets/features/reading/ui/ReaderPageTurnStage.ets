@@ -21,7 +21,7 @@ import {
 } from './ReadingSurface';
 import { ReaderPageChromeSnapshot } from '../presentation/ReaderPageChromeModel';
 import type { ReaderBookmarkRibbonFrame, ReaderPageBookmarkMode, ReaderPageBookmarkSnapshot } from '../presentation/ReaderPageBookmarkModel';
-import type { ReaderFacingChapter } from './ReaderFacingChapter';
+import type { ReaderFacingChapter } from './ReaderFacingChapterPreview';
 import type { BookTurnTexturePage } from './BookTurnTextureCapture';
 
 class ReaderPageTurnFrameCallback extends FrameCallback {
