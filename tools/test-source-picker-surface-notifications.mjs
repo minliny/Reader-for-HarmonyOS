@@ -82,6 +82,7 @@ for (const id of selected) {
     surface.visible = true;
     const next = surface.attachSurface(2);
     surface.surfaceTransitionFinished(old, 2, 'drawer:0', false);
+    surface.surfacePartDisappeared(old, 2, 'drawer:0');
     mock.timers.tick(1000);
     assert.equal(surface.surfaceIsCurrent(next, 2), true, 'late exit cannot detach a reopened picker');
     assert.equal(restored, 1);
@@ -91,6 +92,20 @@ for (const id of selected) {
     assert.equal(surface.isSurfacePresented(), false, 'normal exit releases immediately');
     mock.timers.tick(1000);
     assert.equal(restored, 2, 'normal and fallback completion restore focus exactly once');
+    const detached = openAndHide();
+    surface.surfacePartDisappeared(detached, 2, 'drawer:0');
+    assert.equal(surface.isSurfacePresented(), false, 'a detached native actor releases without waiting for its exit timer');
+    surface.surfaceTransitionFinished(detached, 2, 'drawer:0', false);
+    mock.timers.tick(1000);
+    assert.equal(restored, 3, 'detachment, exit callback and timer cannot restore focus more than once');
+    surface.visible = true;
+    const earlyDetach = surface.attachSurface(2);
+    surface.surfacePartAppeared(earlyDetach, 2, 'drawer:0');
+    surface.surfacePartDisappeared(earlyDetach, 2, 'drawer:0');
+    assert.equal(surface.isSurfacePresented(), true, 'replacing an actor while open leaves the attachment active');
+    surface.visible = false;
+    surface.hideSurface(earlyDetach, 2);
+    assert.equal(surface.isSurfacePresented(), false, 'hide completes immediately when the native actor already disappeared');
   } finally { mock.timers.reset(); }
   assert.match(source, /this\.attachment > 0 \? \[this\.attachment\] : \[\]/, 'attachment zero never creates native surface actors');
   console.log('PASS source-picker current lifecycle receipts with owner-bound notification delivery; no native scheduling proof');

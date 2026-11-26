@@ -246,6 +246,8 @@ async function directPageSameArea() {
   const safe = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
   const rect = await import('../entry/src/main/ets/ui/layout/ReaderSurfaceRect.ts');
   const manga = await import('../entry/src/main/ets/features/manga/ui/MangaDirectoryVisual.ts');
+  const { resolveReadingDetailShelfAction } = await import('../entry/src/main/ets/features/reading/presentation/ReadingDetailShelfActionPolicy.ts');
+  const { readerIsExpandedWidth } = await import('../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts');
   const root = new URL('../entry/src/main/ets/', import.meta.url);
   const read = path => readFileSync(new URL(path, root), 'utf8');
   const layout = actualReaderPageLayout(), metrics = safe.createDefaultReaderWindowMetrics();
@@ -254,9 +256,10 @@ async function directPageSameArea() {
   const constants = selectedProductionValues(detailPath,
     ['DETAIL_DOCK_HEIGHT', 'DETAIL_DOCK_BOTTOM_GAP', 'DETAIL_DOCK_CONTENT_GAP']);
   const Detail = selectedProductionMethods(detailPath, 'LocalBookDetail',
-    ['invalidateFrame', 'recordFrameHeight', 'refreshGeometry', 'detailKindConfirmed',
-      'readingActionLabel', 'shelfActionLabel', 'detailBookAvailable'],
-    { ...layout, ...safe, ...constants, ...manga, visual: manga.MANGA_DIRECTORY_VISUAL,
+    ['invalidateFrame', 'recordFrameHeight', 'refreshGeometry', 'wideDetail', 'dockContentGap', 'detailKindConfirmed',
+      'readingActionLabel', 'shelfActionLabel', 'shelfAction', 'detailBookAvailable'],
+    { ...layout, ...safe, ...constants, ...manga, resolveReadingDetailShelfAction, readerIsExpandedWidth,
+      visual: manga.MANGA_DIRECTORY_VISUAL,
       ReaderWindowCoordinator: { metrics: () => metrics }, TOK_CONTENT_MAX_W_TABLET: 720 });
   const detail = Object.assign(new Detail(), { mounted: true, book: { sourceId: 'local', bookId: 'a', contentKind: 'text' },
     mangaFontsReady: false, inBookshelf: true, measurementKey: 0, footerMeasurementKey: 0, geometryRevision: 0,

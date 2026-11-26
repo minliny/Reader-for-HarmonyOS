@@ -1098,7 +1098,8 @@ export struct SourceSwitchWindow {
         TransitionEffect.move(this.sideDrawer() ? TransitionEdge.END : TransitionEdge.BOTTOM).animation(motionAnimateParam('app.sheet.open')),
         TransitionEffect.move(this.sideDrawer() ? TransitionEdge.END : TransitionEdge.BOTTOM).animation(motionAnimateParam('app.sheet.close'))),
         (transitionIn: boolean): void => this.surface?.surfaceTransitionFinished(attachment, scope, part, transitionIn))
-      .onAppear((): void => this.surface?.surfacePartAppeared(attachment, scope, part));
+      .onAppear((): void => this.surface?.surfacePartAppeared(attachment, scope, part))
+      .onDisAppear((): void => this.surface?.surfacePartDisappeared(attachment, scope, part));
   }
   @Builder
   private novelSwitching(part: string, attachment: number, scope: number, variant: number) {
@@ -1110,7 +1111,8 @@ export struct SourceSwitchWindow {
       onCancel: (): void => { if (this.state.kind === 'switching') this.requestClose(); } })
       .transition(TransitionEffect.OPACITY.animation(this.reduceMotion ? readerMotionReducedFadeParam() : motionAnimateParam('app.sheet.close')),
         (transitionIn: boolean): void => this.surface?.surfaceTransitionFinished(attachment, scope, part, transitionIn))
-      .onAppear((): void => this.surface?.surfacePartAppeared(attachment, scope, part));
+      .onAppear((): void => this.surface?.surfacePartAppeared(attachment, scope, part))
+      .onDisAppear((): void => this.surface?.surfacePartDisappeared(attachment, scope, part));
   }
   build() {
     Stack({ alignContent: this.sideDrawer() ? Alignment.End : Alignment.Bottom }) {

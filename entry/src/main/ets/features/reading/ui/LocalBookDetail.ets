@@ -8,6 +8,7 @@ import { readerPressAnimation, readerPressOpacity, readerPressPointer, readerPre
 import { motionAnimateParam, readerMotionStandardCurve } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
 import { detailChapterPreview } from '../presentation/DetailChapterPreview';
+import { resolveReadingDetailShelfAction, type ReadingDetailShelfAction } from '../presentation/ReadingDetailShelfActionPolicy';
 import { sourceSwitchTriggerFocusId } from '../../source/presentation/SourceSwitchSurfaceLifecycle';
 import { FrameCallback } from '@kit.ArkUI';
 import { ReaderTransientFeedback, READER_FEEDBACK_BRIEF_MS } from '../../../ui/feedback/ReaderTransientFeedback';
@@ -361,7 +362,7 @@ export struct LocalBookDetail {
           .constraintSize({ minHeight: primary ? 40 : 36 })
           .fontFamily(TYPE_APP_PRIMARY_ACTION.fontFamily).fontWeight(TYPE_APP_PRIMARY_ACTION.fontWeight)
           .fontSize(TYPE_APP_PRIMARY_ACTION.fontSizeFp)
-          .fontColor(!primary && (this.removing || this.cancellingAdd) ? Color.Transparent :
+          .fontColor(!primary && this.shelfAction().busy ? Color.Transparent :
             readerAppColor(primary ? 'TOK_ON_PRIMARY' : 'TOK_INK', this.appThemeScheme))
           .scale(readerPressScale(this.detailPressedAction === (primary ? 'read' : 'shelf'), this.appReduceMotion))
           .opacity(readerPressOpacity(this.detailPressedAction === (primary ? 'read' : 'shelf'), this.appReduceMotion))
@@ -381,7 +382,7 @@ export struct LocalBookDetail {
           if (primary && this.readingActionAvailable()) this.onContinue();
           if (!primary && this.shelfActionAvailable()) this.commitShelfAction(this.admissionIdentity);
         });
-      if (!primary && (this.removing || this.cancellingAdd)) {
+      if (!primary && this.shelfAction().busy) {
         LoadingProgress().width(18).height(18).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
           .enableLoading(this.appForeground && this.directoryFocusContext === 'detail' && !this.appReduceMotion)
           .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
@@ -1036,8 +1037,7 @@ export struct LocalBookDetail {
           .minFontScale(Math.min(1, this.mangaFontScale()))
           .maxFontScale(Math.max(1, this.mangaFontScale()))
           .halfLeading(this.book.contentKind === 'manga').fontWeight(TYPE_APP_SEGMENT_LABEL.fontWeight)
-          .textAlign(TextAlign.Center).fontColor(this.removing || this.cancellingAdd ? Color.Transparent :
-            this.inBookshelf ? this.detailColor('TOK_INK', 'ink') : this.detailColor('TOK_GREEN', 'accent'))
+          .textAlign(TextAlign.Center).fontColor(this.shelfActionColor())
           .accessibilityLevel('no');
         }.width(this.book.contentKind === 'manga' ? visual.detailSecondaryWidth : 94)
           .constraintSize({ minHeight: 44 })
@@ -1050,7 +1050,7 @@ export struct LocalBookDetail {
           .onClick((): void => {
             if (this.acceptsDetailInput()) this.commitShelfAction(identity);
           });
-          if (this.removing || this.cancellingAdd) {
+          if (this.shelfAction().busy) {
             LoadingProgress().width(18).height(18).color(readerAppColor('TOK_MESSAGE_MUTED', this.appThemeScheme))
               .enableLoading(this.appForeground && !this.appReduceMotion);
           }
@@ -1331,15 +1331,22 @@ export struct LocalBookDetail {
   private readingActionAvailable(): boolean {
     return !this.removing && this.detailBookAvailable() && (this.book.sourceId !== 'local' || this.readingEnabled);
   }
-  private shelfActionLabel(): string {
-    if (this.cancellingAdd) return '取消加入';
-    if (this.adding) return '取消加入';
-    if (this.removing) return this.inBookshelf ? '移除书架' : '加入书架';
-    if (!this.detailBookAvailable()) return '已移除';
-    return this.inBookshelf ? '移除书架' : '加入书架';
+  private shelfAction(): ReadingDetailShelfAction {
+    return resolveReadingDetailShelfAction({
+      inBookshelf: this.inBookshelf,
+      bookAvailable: this.detailBookAvailable(),
+      removalEnabled: this.removalEnabled,
+      removing: this.removing,
+      adding: this.adding,
+      cancellingAdd: this.cancellingAdd,
+    });
   }
-  private shelfActionAvailable(): boolean {
-    return this.removalEnabled && !this.removing && !this.cancellingAdd && this.detailBookAvailable();
+  private shelfActionLabel(): string { return this.shelfAction().label; }
+  private shelfActionAvailable(): boolean { return this.shelfAction().enabled; }
+  private shelfActionColor(): ResourceColor {
+    const action = this.shelfAction();
+    if (action.busy) return Color.Transparent;
+    return action.tone === 'ink' ? this.detailColor('TOK_INK', 'ink') : this.detailColor('TOK_GREEN', 'accent');
   }
   private commitShelfAction(identity: string): void {
     if (!this.shelfActionAvailable() || identity !== this.admissionIdentity) return;

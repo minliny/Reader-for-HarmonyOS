@@ -55,12 +55,14 @@ if(selectedCase==='action'){
  const source=read('search/ui/ReaderLibrarySearchSurface.ets');
  const headers=pureModuleProbe(read('../ui/foundation/ReaderHeaderSpecs.ets'),'ReaderHeaderSpecs.ets',
   {...dependencies,...headerMetrics},['bookshelfHeaderSpec','searchHeaderSpec']);
+ const headerGeometry=pureModuleProbe(read('../ui/foundation/ReaderSurfaceResolvers.ts'),'ReaderSurfaceResolvers.ts',
+  {},['readerLibraryHeaderContentHeight']);
  const {ReaderLibrarySearchModel,READER_LIBRARY_SEARCH_BACK_FOCUS_ID}=pureModuleProbe(
   read('search/presentation/ReaderLibrarySearchModel.ets'),'ReaderLibrarySearchModel.ets',
   {Observed:value=>value},['ReaderLibrarySearchModel','READER_LIBRARY_SEARCH_BACK_FOCUS_ID']);
  const currentWindow=()=>{const value=metrics.createDefaultReaderWindowMetrics();value.windowRect.width=390;
   value.windowRect.height=844;value.systemFontScale=scale;return value;};
- const currentDependencies={...dependencies,...headers,...metrics,...controlGeometry,...fonts,READER_LIBRARY_SEARCH_BACK_FOCUS_ID,
+ const currentDependencies={...dependencies,...headers,...headerGeometry,...metrics,...controlGeometry,...fonts,READER_LIBRARY_SEARCH_BACK_FOCUS_ID,
   ReaderWindowCoordinator:{metrics:currentWindow}};
  const methods=['bar','headerActionFrame','headerActionGlyph','cardContentWidth','horizontalInset','fontScale','controlHeight',
   'barHeight','blend','actionWidth','searchLaneLeft','searchLaneWidth','stackedSearch','searchLaneHeight','fieldWidth','laneTop','titleOpacity','surfaceValue',

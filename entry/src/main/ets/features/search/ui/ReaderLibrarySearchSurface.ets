@@ -14,7 +14,7 @@ import { ReaderHeaderFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { readerPresentedHeaderBottom, readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { bookshelfHeaderSpec, searchHeaderSpec, SearchHeaderSpec } from '../../../ui/foundation/ReaderHeaderSpecs';
-import { readerScaledBarHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerLibraryHeaderContentHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerSearchControlHeight, readerSearchControlVisualHeight, readerSearchActionWidth, SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -588,11 +588,9 @@ export struct ReaderLibrarySearchSurface {
   private titleOpacity(): number { return 1 - Math.min(1, this.surfaceValue() / .45); }
   private barHeight(): number {
     const shelf = bookshelfHeaderSpec();
-    // The parent panel paints both borders outside this content box.
-    const idle = readerScaledBarHeight(shelf.barHeight - 2 * this.spec.borderWidth,
-      shelf.titleLineHeight, this.fontScale(), 0);
-    if (!this.searchMounted) return idle;
-    return this.blend(idle, this.spec.barHeight(this.searchLaneHeight()), this.surfaceValue());
+    const searchBarHeight = this.searchMounted ? this.spec.barHeight(this.searchLaneHeight()) : undefined;
+    return readerLibraryHeaderContentHeight(shelf.barHeight, shelf.titleLineHeight, this.fontScale(), this.spec.borderWidth,
+      searchBarHeight, this.searchMounted ? this.surfaceValue() : 0);
   }
   private trailingWidth(): number {
     return this.blend(bookshelfHeaderSpec().actionExtent,

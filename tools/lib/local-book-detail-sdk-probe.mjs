@@ -30,6 +30,7 @@ import {readerCanShareOriginal} from '../../entry/src/main/ets/features/reading/
 import {resolveReaderRaisedShape} from '../../entry/src/main/ets/ui/layout/ReaderRaisedShape.ts';
 import {readerIsExpandedWidth} from '../../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts';
 import {detailChapterPreview} from '../../entry/src/main/ets/features/reading/presentation/DetailChapterPreview.ts';
+import {resolveReadingDetailShelfAction} from '../../entry/src/main/ets/features/reading/presentation/ReadingDetailShelfActionPolicy.ts';
 
 const read = path => readFileSync(new URL('../../entry/src/main/ets/' + path, import.meta.url), 'utf8');
 export const localBookDetailSource = read('features/reading/ui/LocalBookDetail.ets');
@@ -62,7 +63,7 @@ export function localBookDetailSdk(dependencies = {}, hooks = {}, properties = c
     ...author, ...intro, ...mangaDirectory, ...mangaLayout, ...manga.deps, ...constants,
     ...layout,...actionTargets,...headers,...headerMetrics,...resolvers,...mangaVisual,visual:mangaVisual.MANGA_DIRECTORY_VISUAL,READER_FEEDBACK_BRIEF_MS,
     readerDirectoryAccessibilityText, readerDirectoryIndentVp, readerDirectoryBookmarkMarkerState, sourceSwitchTriggerFocusId,
-    readerCanShareOriginal, resolveReaderRaisedShape, readerIsExpandedWidth, detailChapterPreview,
+    readerCanShareOriginal, resolveReaderRaisedShape, readerIsExpandedWidth, detailChapterPreview, resolveReadingDetailShelfAction,
     ...readerSurfaceSpecsForProbe(), ...motion, ...menu.dependencies, ...icons.dependencies,
     readerMotionStandardCurve: () => motion.motionSpecGet('app.control.press').curve,
     GradientDirection: {Top: 'top'},

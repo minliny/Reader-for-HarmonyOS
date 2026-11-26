@@ -53,7 +53,11 @@ export class SourceSwitchSurfaceLifecycle {
   }
 
   transitionFinished(attachment: number, scope: number, part: string, transitionIn: boolean): boolean {
-    if (transitionIn || !this.current(attachment, scope) || !this.parts.includes(part)) return false;
+    return transitionIn ? false : this.disappeared(attachment, scope, part);
+  }
+
+  disappeared(attachment: number, scope: number, part: string): boolean {
+    if (!this.current(attachment, scope) || !this.parts.includes(part)) return false;
     this.parts = this.parts.filter((candidate: string): boolean => candidate !== part);
     return this.closing && this.parts.length === 0 ? this.finish(attachment, scope) : false;
   }

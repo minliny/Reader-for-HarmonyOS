@@ -17,6 +17,7 @@ async function run(id){
  const{pureModuleProbe}=await import('./lib/ets-pure-module-probe.mjs');
  const{compileTailConsumer}=await import('./lib/foundation-tail-consumer-probe.mjs');
  const headerMetrics=await import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts');
+ const {readerLibraryHeaderContentHeight}=await import('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts');
  const searchGeometry=await import('../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts');
  const windowMetrics=await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
  const fonts=await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
@@ -39,7 +40,7 @@ async function run(id){
   const modelContract=pureModuleProbe(read('entry/src/main/ets/features/search/presentation/ReaderLibrarySearchModel.ets'),
    'ReaderLibrarySearchModel.ets',{Observed:value=>value},['READER_LIBRARY_SEARCH_BACK_FOCUS_ID']);
   const {owner:bar}=compileTailConsumer(surfaceSource,[...currentFields,...currentMethods],{
-   ...f.controls.dependencies,...specs,...searchGeometry,...windowMetrics,...fonts,...modelContract,
+   ...f.controls.dependencies,...specs,...searchGeometry,...windowMetrics,...fonts,...modelContract,readerLibraryHeaderContentHeight,
    ReaderWindowCoordinator:{metrics:()=>portraitMetrics},
   },f.controls.hooks);
   Object.assign(bar,{model:f.library.model,mode:busy?'results':'input',expandedLayout:false,mounted:true,searchMounted:true,

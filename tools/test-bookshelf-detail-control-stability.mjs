@@ -171,6 +171,20 @@ if (selectedCase === 'detail-more-group') {
 }
 if (selectedCase === 'detail-action-semantics') {
   const {default: assert} = await import('node:assert/strict');
+  const {resolveReadingDetailShelfAction} = await import('../entry/src/main/ets/features/reading/presentation/ReadingDetailShelfActionPolicy.ts');
+  const shelfState = { inBookshelf: true, bookAvailable: true, removalEnabled: true,
+    removing: false, adding: false, cancellingAdd: false };
+  for (const [state, expected] of [
+    [{}, { label: '移除书架', enabled: true, busy: false, tone: 'ink' }],
+    [{ inBookshelf: false }, { label: '加入书架', enabled: true, busy: false, tone: 'accent' }],
+    [{ removalEnabled: false }, { label: '移除书架', enabled: false, busy: false, tone: 'ink' }],
+    [{ removing: true }, { label: '移除书架', enabled: false, busy: true, tone: 'ink' }],
+    [{ inBookshelf: false, bookAvailable: false }, { label: '已移除', enabled: false, busy: false, tone: 'accent' }],
+    [{ inBookshelf: false, adding: true }, { label: '取消加入', enabled: true, busy: false, tone: 'accent' }],
+    [{ inBookshelf: false, cancellingAdd: true }, { label: '取消加入', enabled: false, busy: true, tone: 'accent' }],
+  ]) {
+    assert.deepEqual(resolveReadingDetailShelfAction({ ...shelfState, ...state }), expected);
+  }
   const {readFileSync} = await import('node:fs');
   const {createReaderBuilderProbe} = await import('./lib/reader-control-builder-probe.mjs');
   const {resolveReaderRaisedShape} = await import('../entry/src/main/ets/ui/layout/ReaderRaisedShape.ts');
@@ -178,8 +192,8 @@ if (selectedCase === 'detail-action-semantics') {
   const DETAIL_DOCK_HEIGHT = Number(source.match(/const DETAIL_DOCK_HEIGHT = (\d+);/)[1]);
   const {owner} = createReaderBuilderProbe(source, ['actionSurface', 'readingActionLabel', 'readingActionAvailable', 'shelfActionLabel',
     'detailBookAvailable', 'detailColor', 'mangaFontScale', 'dockNativeShape', 'dockShapeIdentity', 'dockRequestedRadius',
-    'shelfActionAvailable', 'commitShelfAction', 'acceptsDetailInput', 'isDetailActionCurrent',
-    'currentDockShape', 'dockAreaChangeHandler'], { DETAIL_DOCK_HEIGHT, resolveReaderRaisedShape,
+    'shelfAction', 'shelfActionAvailable', 'shelfActionColor', 'commitShelfAction', 'acceptsDetailInput', 'isDetailActionCurrent',
+    'currentDockShape', 'dockAreaChangeHandler'], { DETAIL_DOCK_HEIGHT, resolveReaderRaisedShape, resolveReadingDetailShelfAction,
       ColorMetrics: { resourceColor: color => ({ color, blendColor: over => ({ color: [color, over.color] }) }) },
     });
   const intents = [];

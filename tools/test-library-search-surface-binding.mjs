@@ -106,6 +106,17 @@ for (const id of selected) {
     const { SearchPublication } = await import('../entry/src/main/ets/features/search/presentation/SearchPublication.ts');
     const headerTypes = pureModuleProbe(read('ui/foundation/ReaderHeaderSpecs.ets'), 'ReaderHeaderSpecs.ets', {
       ...readerFoundationTokens, ...(await import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts')) }, ['searchHeaderSpec', 'bookshelfHeaderSpec']);
+    const shelfHeader = headerTypes.bookshelfHeaderSpec();
+    const searchHeader = headerTypes.searchHeaderSpec();
+    const headerGeometry = pureModuleProbe(read('ui/foundation/ReaderSurfaceResolvers.ts'), 'ReaderSurfaceResolvers.ts',
+      {}, ['readerLibraryHeaderContentHeight']);
+    for (const [scale, expanded, progress, expected] of [
+      [1, undefined, 0, 50], [1, 60, 0, 50], [1, 60, 0.5, 55], [1, 60, 1, 60],
+      [2, undefined, 0, 56], [2, 84, 0.5, 70], [2, 84, 1, 84],
+    ]) {
+      assert.equal(headerGeometry.readerLibraryHeaderContentHeight(shelfHeader.barHeight, shelfHeader.titleLineHeight,
+        scale, searchHeader.borderWidth, expanded, progress), expected);
+    }
     const fieldFocus = pureModuleProbe(fieldSource.slice(0, fieldSource.indexOf('@Component')), 'ReaderSearchFocusFrame.ets', { FrameCallback: class {} }, ['ReaderSearchFocusFrame']);
     const fonts = ['Regular', 'Bold'].map(weight => {
       const path = new URL(`../entry/src/main/resources/rawfile/NotoSansSC-UI${weight}.otf`, import.meta.url);
@@ -128,7 +139,7 @@ for (const id of selected) {
       const uiContext = { getFont: () => ({}), px2vp: value => value,
         postFrameCallback: callback => frames.push(callback), getFocusController: () => ({ requestFocus: name => nativeCalls.push(['focus', name]), clearFocus: () => nativeCalls.push(['clearFocus']) }),
         getMeasureUtils: () => ({ measureText: options => measure(options.textContent, Number.parseFloat(options.fontSize) * scale, options.fontWeight) }) };
-      const shared = { ...surfaces.deps, ...controls.dependencies, ...geometry, ...historyTypes, ...headerTypes, ...modelTypes,
+      const shared = { ...surfaces.deps, ...controls.dependencies, ...geometry, ...headerGeometry, ...historyTypes, ...headerTypes, ...modelTypes,
         ...safe, ...readerSurfaceSpecsForProbe(metrics), ...fieldFocus, ...actualSourceManagementGeometry(metrics),
         ReaderWindowCoordinator: { metrics: () => metrics }, readerWindowMetrics: () => metrics, uiContext,
         readerPaperActionIcon: () => 'history-trash',
@@ -171,14 +182,13 @@ for (const id of selected) {
         displayedHistoryLimit: 0, continueCardRect: undefined, onOpen() {}, onBack() {}, onMore() {}, measurementKey: 1, headerBottom: 0,
         reduceMotion: true, historyLimitTrack: { set() {} }, historyTrack: { set() {} }, publishContinueCardCoverage() {}, schedule() {} };
       Object.assign(surface, surfaceFields);
-      const shelfHeader = headerTypes.bookshelfHeaderSpec();
       const borders = 2 * surface.spec.borderWidth;
       const expandedHeight = surface.spec.barHeight(surface.searchLaneHeight());
       surface.mode = 'idle';
       surface.searchMounted = false;
       surface.surfaceProgress = () => 0;
       const idleHeight = surface.barHeight();
-      assert.equal(idleHeight + borders, Math.max(52, Math.ceil(shelfHeader.titleLineHeight * scale) + borders));
+      assert.equal(idleHeight + borders, new Map([[1, 52], [1.45, 52], [2, 58], [3, 86]]).get(scale));
       assert.equal(surface.headerActionTop() * 2 + shelfHeader.actionExtent, idleHeight);
       assert.equal(shelfHeader.frameHeight, shelfHeader.topInset + 52);
       assert.equal(shelfHeader.contentGap, 8);
@@ -399,9 +409,23 @@ for (const id of selected) {
     const areaTree = parse(readFileSync(new URL('../entry/src/main/ets/ui/layout/ReaderPageShell.ts', import.meta.url), 'utf8'));
     const areaNode = areaTree.statements.find(node => node.name?.text === 'readerPageAreaLength');
     const areaLength = new Function(`${stripTypeScriptTypes(areaNode.getText(areaTree).replace(/^export\s+/, ''))}; return readerPageAreaLength;`)();
+    const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
+    const { readerFoundationTokens } = await import('./lib/reader-tokens-probe.mjs');
+    const headerGeometrySource = readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts', import.meta.url), 'utf8');
+    const headerGeometry = pureModuleProbe(headerGeometrySource, 'ReaderSurfaceResolvers.ts', {}, ['readerLibraryHeaderContentHeight']);
+    const headerMetrics = await import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts');
+    const searchGeometry = await import('../entry/src/main/ets/ui/foundation/ReaderSearchControlGeometry.ts');
+    const headerSpecSource = readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderHeaderSpecs.ets', import.meta.url), 'utf8');
+    const { bookshelfHeaderSpec, searchHeaderSpec } = pureModuleProbe(headerSpecSource, 'ReaderHeaderSpecs.ets', {
+      TOK_BORDER_W: readerFoundationTokens.TOK_BORDER_W, ...headerMetrics,
+    }, ['bookshelfHeaderSpec', 'searchHeaderSpec']);
+    const geometryMethods = ['barHeight', 'fontScale', 'surfaceValue', 'searchLaneHeight', 'stackedSearch',
+      'searchLaneWidth', 'searchLaneLeft', 'actionWidth', 'controlHeight'];
+    const geometryDependencies = { bookshelfHeaderSpec, ...headerGeometry, ...searchGeometry };
     function compileHeader(builder) {
       const fixture = parse(`@Component struct MeasuredHeaderProbe {
         ${builder}
+        ${geometryMethods.map(method).join('\n')}
         ${method('headerSurfaceAreaChange')}
         ${method('headerSurfaceGeometryKey')}
         ${method('headerSurfaceCollapsed')}
@@ -450,14 +474,15 @@ for (const id of selected) {
       const clips = [];
       const Column = attributes({ clip(value) { clips.push(value); } });
       const empty = attributes({});
-      const metrics = { windowRect: { width: 1280 / 3.5 }, densityPixels: 3.5 };
+      const metrics = { windowRect: { width: 1280 / 3.5 }, densityPixels: 3.5, systemFontScale: 1 };
       const elevation=readerSurfaceSpecsForProbe(metrics).readerSurfaceElevation;
       const Owner = new Function('ViewPU', 'Stack', 'Column', 'If', '__Common__',
         'Alignment', 'HitTestMode', 'Color', 'readerSurfaceElevation', 'readerHeaderVeilMaterial',
         'readerHeaderVeilBorder', 'readerAppColor', 'readerPageAreaLength', 'ReaderWindowCoordinator', 'resolveReaderRaisedShape',
+        ...Object.keys(geometryDependencies),
         `${stripTypeScriptTypes(emitted)}; return MeasuredHeaderProbe;`)(ProbeView, Stack, Column, empty, empty,
         { TopStart: 0 }, { Default: 0 }, { Transparent: 0 }, elevation, () => ({}), () => '', () => '', areaLength,
-        { metrics: () => metrics }, resolveReaderRaisedShape);
+        { metrics: () => metrics }, resolveReaderRaisedShape, ...Object.values(geometryDependencies));
       return { Owner, panels, clips, metrics, elevation };
     }
     function checkMeasured(builder) {
@@ -467,10 +492,10 @@ for (const id of selected) {
         mode: 'idle', animateOnAppear: false, searchMounted: false, headerRaisedShape:undefined,
         model:{bindInputBack:()=>()=>{},bindInputFocusReady:()=>()=>{}},
         transitionKind: 'none', toResults: 0,
-        scheme: 'night', spec: { panelRadius: 18, borderWidth: 1 },
+        scheme: 'night', spec: searchHeaderSpec(), metricsRevision: 0, expandedLayout: false, surfaceProgress: () => 0,
         headerVeil: () => true, historyFraction: 0, historyProgress() { return this.historyFraction; },
         historyViewportHeight: () => 100, horizontalInset: () => 16,
-        cardContentWidth: () => 1168 / 3.5 - 2, barHeight: () => 52,
+        cardContentWidth: () => 1168 / 3.5 - 2,
         retargetHistoryViewport() {}, historyLimitTrack: { set() {} }, historyLimit: () => 1, snapToMode() {},
       });
       const render = () => {
@@ -506,7 +531,10 @@ for (const id of selected) {
       render().measure({}, {width:358,height:20});
       assert.deepEqual([owner.headerRaisedShape.width,owner.headerRaisedShape.height],[358,20],'fresh available-width measurement replaces both axes');
       assert.equal(render().material.borderRadius,10,'measured short border-box clamps the actual Native radius');
-      owner.barHeight=()=>70;const retained=owner.headerRaisedShape;
+      metrics.systemFontScale = 2.5;
+      owner.metricsRevision++;
+      assert.equal(owner.barHeight(), 70, 'the actual header height grows with system font scale');
+      const retained=owner.headerRaisedShape;
       const beforeDensity=render().measure;metrics.densityPixels=2;
       beforeDensity({}, {width:358,height:72});assert.equal(owner.headerRaisedShape,retained,'old density sample cannot overwrite current adopted box');
       render().measure({}, {width:'358vp',height:'71vp'});
@@ -529,27 +557,20 @@ for (const id of selected) {
       assert.throws(()=>checkMeasured(header.replace(before,after)),expected,`${name} is rejected`);
     }
     const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
-    const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
-    const { readerFoundationTokens } = await import('./lib/reader-tokens-probe.mjs');
-    const { APP_FLOATING_HEADER_BAR_HEIGHT, APP_FLOATING_HEADER_TOP_GAP } = await import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts');
-    const headerSpecSource = readFileSync(new URL('../entry/src/main/ets/ui/foundation/ReaderHeaderSpecs.ets', import.meta.url), 'utf8');
-    const { bookshelfHeaderSpec } = pureModuleProbe(headerSpecSource, 'ReaderHeaderSpecs.ets', {
-      TOK_BORDER_W: readerFoundationTokens.TOK_BORDER_W, APP_FLOATING_HEADER_BAR_HEIGHT, APP_FLOATING_HEADER_TOP_GAP,
-    }, ['bookshelfHeaderSpec']);
     const searchModelSource = readFileSync(new URL('../entry/src/main/ets/features/search/presentation/ReaderLibrarySearchModel.ets', import.meta.url), 'utf8');
     const { READER_LIBRARY_SEARCH_BACK_FOCUS_ID } = pureModuleProbe(searchModelSource, 'ReaderLibrarySearchModel.ets',
       { Observed: value => value }, ['READER_LIBRARY_SEARCH_BACK_FOCUS_ID']);
     const searchField = readFileSync(new URL('../entry/src/main/ets/ui/controls/ReaderSearchField.ets', import.meta.url), 'utf8');
     class SearchField {}
     const bar = createReaderBuilderProbe(surfaceTree.getFullText(), ['bar', 'headerActionGlyph', 'headerActionFrame',
-      'headerActionTop', 'moreInteractive', 'leadingAction', 'moreAction', 'presentedSearch', 'blend'],
-      { bookshelfHeaderSpec, READER_LIBRARY_SEARCH_BACK_FOCUS_ID,
+      'headerActionTop', 'moreInteractive', 'leadingAction', 'moreAction', 'presentedSearch', 'blend', 'barHeight', 'fontScale'],
+      { ...geometryDependencies, READER_LIBRARY_SEARCH_BACK_FOCUS_ID,
         ReaderSearchField: SearchField, READER_FONT_NOTO_SANS_SC_UI_BOLD: 'ReaderNotoSansSCUIBold' },
       { childSources: { ReaderSearchField: searchField } }).owner;
     const actions = [];
     Object.assign(bar, { mounted: true, mode: 'idle', transitionKind: 'none', scheme: 'day', identity: 7, navigationGeneration: 9, mounting: 11,
-      searchMounted: false, model: {panelOwnsInput: false},
-      moreIdentity: 'shelf', cardContentWidth: () => 280, barHeight: () => 52, titleOpacity: () => 1,
+      searchMounted: false, model: {panelOwnsInput: false}, spec: searchHeaderSpec(), metricsRevision: -1,
+      moreIdentity: 'shelf', cardContentWidth: () => 280, titleOpacity: () => 1,
       surfaceValue() { return this.mode === 'idle' ? 0 : .5; },
       onOpen: (...args) => actions.push(['open', ...args]), onBack: (...args) => actions.push(['back', ...args]),
       onMore: (...args) => actions.push(['more', ...args]) });
@@ -574,10 +595,11 @@ for (const id of selected) {
       assert.equal(actor.enabled, true, 'admitted header action keeps native enabled semantics');
     }
     assert.deepEqual([more.accessibilityRole, leading.accessibilityRole], Array(2).fill('AccessibilityRoleType.BUTTON'));
+    assert.equal(bar.barHeight() + 2 * bar.spec.borderWidth, 52);
     assert.deepEqual([more.width, more.height, more.borderRadius, more.position, more.focusable, more.hitTestBehavior],
-      [44, 44, 14, { x: 231, y: 4 }, undefined, 'HitTestMode.Default']);
+      [44, 44, 14, { x: 231, y: 3 }, undefined, 'HitTestMode.Default']);
     assert.deepEqual([leading.width, leading.height, leading.borderRadius, leading.position, leading.focusable],
-      [44, 44, 14, { x: 4, y: 4 }, undefined]);
+      [44, 44, 14, { x: 4, y: 3 }, undefined]);
     const icons = physical.filter(node => node.type === 'Image');
     const iconElements = icons.map(observerKey);
     assert.deepEqual(icons.map(node => [node.create, node.width, node.height]),

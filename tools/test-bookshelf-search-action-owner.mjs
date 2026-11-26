@@ -11,7 +11,7 @@ import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
 import { actualReadingEntryPresentation } from './lib/reading-entry-presentation-probe.mjs';
 import { SearchViewState } from '../entry/src/main/ets/features/search/presentation/SearchViewState.ts';
 import { SearchPublication } from '../entry/src/main/ets/features/search/presentation/SearchPublication.ts';
-import { ReaderNavigation } from '../entry/src/main/ets/app/navigation/ReaderNavigation.ts';
+import { ReaderNavigation, retainedReaderRoute } from '../entry/src/main/ets/app/navigation/ReaderNavigation.ts';
 import { ReaderLibraryAcquisitionBinding } from '../entry/src/main/ets/app/composition/ReaderLibraryAcquisitionBinding.ts';
 import * as headerMetrics from '../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts';
 import { readerFoundationTokens } from './lib/reader-tokens-probe.mjs';
@@ -29,7 +29,10 @@ const require = createRequire(import.meta.url), sdk = resolveEtsLoaderRoot();
 const syntax = require(sdk + '/lib/validate_ui_syntax.js');
 syntax.builderParamObjectCollection.set('ReaderLibrarySearchSurface', new Set(['results']));
 const header = pureModuleProbe(read('ui/foundation/ReaderHeaderSpecs.ets'), 'ReaderHeaderSpecs.ets',
-  { ...headerMetrics, TOK_BORDER_W: readerFoundationTokens.TOK_BORDER_W }, ['bookshelfHeaderSpec', 'readerPageInitialHeaderHeight']);
+  { ...headerMetrics, TOK_BORDER_W: readerFoundationTokens.TOK_BORDER_W },
+  ['bookshelfHeaderSpec', 'searchHeaderSpec', 'readerPageInitialHeaderHeight']);
+const headerGeometry = pureModuleProbe(read('ui/foundation/ReaderSurfaceResolvers.ts'), 'ReaderSurfaceResolvers.ts',
+  {}, ['readerLibraryHeaderContentHeight']);
 const model = pureModuleProbe(read('features/search/presentation/ReaderLibrarySearchModel.ets'), 'ReaderLibrarySearchModel.ets',
   { Observed: value => value }, ['ReaderLibrarySearchModel', 'READER_LIBRARY_SEARCH_BACK_FOCUS_ID']);
 const { SearchHost } = pureModuleProbe(read('features/search/application/SearchHost.ets'), 'SearchHost.ets',
@@ -57,15 +60,17 @@ function fixture(source = journeySource) {
   const ReaderRuntimeOwner = runtimeOwnerIdentityProbe(() => current);
   const methods = ['libraryJourneyPorts', 'bookshelfScenePorts', 'isCurrentRuntime', 'currentReadingRuntime',
     'isCurrentBookshelfPresentation', 'isInteractiveBookshelfPresentation', 'bookshelfContentAcceptsInput',
-    'bookshelfModalVisible', 'publishNavigation'];
-  const Index = selectedProductionMethods(indexFile, 'Index', methods, { ReaderRuntimeOwner });
+    'bookshelfModalVisible', 'publishNavigation', 'appRouteLane', 'wideSettingsPane', 'updateReaderParentMotion'];
+  const Index = selectedProductionMethods(indexFile, 'Index', methods, { ReaderRuntimeOwner, retainedReaderRoute });
   const index = Object.assign(new Index(), {
     mountedRuntimeOwner: runtime, rssInstanceIdentity: 1, shelfReceiptRetired: false,
     route: 'bookshelf', navigationGeneration: 7, detailShelfAdmissionMount: 3,
+    readerOriginLane: 'bookshelf', readerParentProgress: 0, readerParentAnimationGeneration: 0, appReduceMotion: true,
     searchAppForeground: true, arkWebCapturesInput: false,
     readingEntry: new ReadingEntryPresentation(), readingEntryActions: { shelfPreparing: false },
     shelfMutations: { snapshot: {} }, shelfGroupPresentation: { identity: '' },
     shelfRead: { snapshot: { visualAdmitted: true }, headerScrolled: false },
+    sourceSwitchPresentation: { isSurfacePresented: () => false }, mangaSourceSwitch: { selectionVisible: false },
     settingsPresentation: { snapshot: { reduceMotion: false } }, expandedLayout: () => false,
     bookRemovalConfirmation: { dismiss() {} }, jsonImportPresentation: { dismiss() {} },
     refreshSearchShelfMembership: () => calls.push('membership'), librarySearchResults() {},
@@ -102,11 +107,13 @@ function fixture(source = journeySource) {
   assert.ok(carrier, 'actual Index mounts its persistent search surface');
   const surface = createReaderBuilderProbe(read('features/search/ui/ReaderLibrarySearchSurface.ets'),
     ['bar', 'headerActionGlyph', 'headerActionFrame', 'headerActionTop', 'moreInteractive', 'leadingAction',
-      'moreAction', 'presentedSearch', 'blend'],
-    { ...header, ...model, ReaderSearchField: SearchField, READER_FONT_NOTO_SANS_SC_UI_BOLD: 'ReaderNotoSansSCUIBold' },
+      'moreAction', 'presentedSearch', 'blend', 'barHeight', 'fontScale'],
+    { ...header, ...model, ...headerGeometry,
+      ReaderSearchField: SearchField, READER_FONT_NOTO_SANS_SC_UI_BOLD: 'ReaderNotoSansSCUIBold' },
     { childSources: { ReaderSearchField: read('ui/controls/ReaderSearchField.ets') } }).owner;
   Object.assign(surface, carrier.params, { mounted: true, transitionKind: 'none', scheme: 'day', searchMounted: false,
-    cardContentWidth: () => 352, barHeight: () => 52, titleOpacity: () => 1, surfaceValue: () => 0 });
+    spec: header.searchHeaderSpec(), metricsRevision: -1, cardContentWidth: () => 352,
+    titleOpacity: () => 1, surfaceValue: () => 0 });
   surface.bar();
   const button = () => {
     const focus = surface.mode === 'idle' ? 'reader-bookshelf-search-entry' : model.READER_LIBRARY_SEARCH_BACK_FOCUS_ID;
@@ -193,7 +200,7 @@ for (const disabled of ['panel', 'background', 'web', 'import', 'group', 'prepar
   if (disabled === 'preparing') f.index.readingEntryActions.shelfPreparing = true;
   f.surface.replay();
   if (disabled === 'panel') assert.deepEqual([f.button().enabled, f.button().focusable, f.button().accessibilityLevel],
-    [false, false, 'no-hide-descendants'], 'native Search Button projects panel input isolation');
+    [false, undefined, 'no-hide-descendants'], 'native Search Button projects panel input isolation');
   click(); assert.deepEqual(f.calls, [], disabled + ': native callback cannot dispatch'); cases++;
 }
 {
@@ -219,7 +226,7 @@ for (const disabled of ['panel', 'background', 'web', 'import', 'group', 'prepar
 // Keep global Runtime/acquisition admission so each negative isolates the
 // mounted-root gap rather than relying on a second, unrelated retirement.
 const ts = require(sdk + '/node_modules/typescript');
-for (const name of ['isCurrentBookshelf', 'isCurrentSearch']) {
+for (const name of ['isCurrentBookshelf', 'ownsSearchPresentation']) {
   const tree = ts.createSourceFile('ReaderLibraryJourney.ets', journeySource, ts.ScriptTarget.Latest, true,
     ts.ScriptKind.ETS, require(sdk + '/lib/ets_checker.js').compilerOptions);
   const declaration = tree.statements.find(node => node.name?.text === 'ReaderLibraryJourney');
@@ -230,7 +237,7 @@ for (const name of ['isCurrentBookshelf', 'isCurrentSearch']) {
   const source = journeySource.slice(0, method.getStart(tree)) + changed + journeySource.slice(method.end);
   assert.throws(() => {
     const f = fixture(source);
-    if (name === 'isCurrentSearch') { f.move('search'); f.index.librarySearch.mode = 'input'; f.render(); }
+    if (name === 'ownsSearchPresentation') { f.move('search'); f.index.librarySearch.mode = 'input'; f.render(); }
     const click = f.button().onClick;
     f.index.mountedRuntimeOwner = {};
     click();

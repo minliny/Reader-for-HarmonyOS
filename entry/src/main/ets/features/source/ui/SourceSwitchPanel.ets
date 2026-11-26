@@ -113,6 +113,7 @@ export struct SourceSwitchPanel {
           readerMotionReducedFadeParam() : motionAnimateParam('app.sheet.scrim')),
           (transitionIn: boolean): void => this.surface?.surfaceTransitionFinished(attachment, scopeId, 'scrim', transitionIn))
         .onAppear((): void => this.surface?.surfacePartAppeared(attachment, scopeId, 'scrim'))
+        .onDisAppear((): void => this.surface?.surfacePartDisappeared(attachment, scopeId, 'scrim'))
         .onClick((): void => { if (this.isCurrent(scopeId)) this.onClose(scopeId); });
       }
       SourceSwitchWindow({

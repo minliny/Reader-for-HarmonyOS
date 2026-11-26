@@ -132,6 +132,9 @@ export class SourceSwitchPresentation {
   surfacePartAppeared(attachment: number, scope: number, part: string): void {
     this.surfaceLifecycle.appeared(attachment, scope, part);
   }
+  surfacePartDisappeared(attachment: number, scope: number, part: string): void {
+    this.surfaceLifecycle.disappeared(attachment, scope, part);
+  }
   hideSurface(attachment: number, scope: number): void {
     this.surfaceLifecycle.hide(attachment, scope);
   }
