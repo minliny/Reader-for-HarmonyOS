@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { ReadingSessionChapter, ReadingSessionImage } from '../../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts';
+import { createReaderTtsState, readerTtsChapterKey }
+  from '../../entry/src/main/ets/features/reading/application/ReaderTtsState.ts';
 import { ReaderContinuousReadingProjection,
   type ReaderContinuousFragmentSpan } from '../../entry/src/main/ets/features/reading/ui/ReaderContinuousReadingProjection.ts';
 
@@ -115,4 +117,28 @@ test('continuous viewport reports the nearest canonical scalar inside the first 
   assert.deepEqual(projection.anchor(9), { index: 1, progress: 1 });
   projection.clear();
   assert.deepEqual(projection.anchor(9), { index: 0, progress: 0 });
+});
+
+test('continuous chapter handoff admits the first speech range only for its committed book, chapter and version', () => {
+  const { projection, factory } = fixture();
+  const old = chapter('abcdef');
+  const next = { ...old, chapterIndex: 3, contentVersion: 'next' };
+  const oldSpeech = { ...createReaderTtsState(true), chapterKey: readerTtsChapterKey('local', 'book', 2),
+    chapterIndex: 2, contentVersion: 'content', charStart: 1, charEnd: 5 };
+  const firstSpeech = { ...oldSpeech, chapterKey: readerTtsChapterKey('local', 'book', 3),
+    chapterIndex: 3, contentVersion: 'next', charStart: 2, charEnd: 5 };
+  const rows = (value: ReadingSessionChapter): Fragment[] => projection.project(value, [range(0, 6, 0, 6)],
+    false, factory.imageAtScalar, factory.image, factory.text);
+
+  projection.commit(old, rows(old), 1, () => 'geometry');
+  assert.deepEqual(projection.ttsHighlight(oldSpeech, true), { start: 1, end: 5 });
+  assert.equal(projection.ttsHighlight(firstSpeech, true), undefined);
+
+  projection.commit(next, rows(next), firstSpeech.charStart, () => 'geometry');
+  assert.equal(projection.ttsHighlight(oldSpeech, true), undefined);
+  assert.equal(projection.ttsHighlight({ ...firstSpeech, contentVersion: 'old body' }, true), undefined);
+  assert.equal(projection.ttsHighlight({ ...firstSpeech, chapterKey: readerTtsChapterKey('other', 'book', 3) }, true), undefined);
+  assert.equal(projection.ttsHighlight(firstSpeech, false), undefined);
+  assert.deepEqual(projection.anchor(firstSpeech.charStart), { index: 0, progress: 1 / 3 });
+  assert.deepEqual(projection.ttsHighlight(firstSpeech, true), { start: 2, end: 5 });
 });

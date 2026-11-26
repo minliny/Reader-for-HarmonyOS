@@ -25,6 +25,10 @@ export type ReaderTtsStopReason =
 
 export type ReaderTtsContentVersion = number | string;
 
+export function readerTtsChapterKey(sourceId: string, bookId: string, chapterIndex: number): string {
+  return `${sourceId}\u0000${bookId}\u0000${chapterIndex}`;
+}
+
 export type ReaderTtsState = {
   status: ReaderTtsSessionStatus;
   sessionGeneration: number;

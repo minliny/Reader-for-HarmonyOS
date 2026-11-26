@@ -184,7 +184,10 @@ test('next speech chapter holds its lease across catalog and body reads, selecti
   const catalog = deferred<void>();
   const content = deferred<ReadingSessionChapter>();
   const host = {
-    capture: () => ({ current: () => valid, select: (target: number) => { events.push(`select ${target}`); } }),
+    capture: () => ({ current: () => valid, select: (target: number, range?: { charStart: number; charEnd: number }) => {
+      events.push(`select ${target} ${range?.charStart}:${range?.charEnd}`);
+      return range !== undefined;
+    } }),
     hydrateCatalogIfNeeded: () => { events.push('catalog'); return catalog.result; },
     nextChapterIndex: () => 1,
     load: (target: number) => { events.push(`load ${target}`); return content.result; },
@@ -208,8 +211,12 @@ test('next speech chapter holds its lease across catalog and body reads, selecti
   const next = await loadNextReaderTtsChapter(window, host);
   assert.deepEqual(events, ['catalog', 'catalog', 'load 1', 'catalog', 'load 1', 'admit version']);
   assert.equal(window.get(1)?.chapterIndex, 1);
-  next?.onAdmitted?.();
-  assert.equal(events.at(-1), 'select 1');
+  valid = false;
+  assert.equal(next?.onAdmitted?.({ charStart: 2, charEnd: 5 }), false);
+  assert.equal(events.at(-1), 'admit version');
+  valid = true;
+  assert.equal(next?.onAdmitted?.({ charStart: 2, charEnd: 5 }), true);
+  assert.equal(events.at(-1), 'select 1 2:5');
 });
 
 test('paged speech follow reads a prepared neighbour only after the current index is known', () => {

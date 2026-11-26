@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { setImmediate } from 'node:timers/promises';
 import {
-  prepareReadingChapterOpening, readReadingWindowChapter, resolveReadingChapterOpeningAnchor,
+  findReusableReadingWindowChapter, prepareReadingChapterOpening, readReadingWindowChapter, resolveReadingChapterOpeningAnchor,
   type ReadingChapterOpeningHost, type ReadingChapterOpeningRequest,
 } from '../../entry/src/main/ets/features/reading/application/ReadingChapterOpening.ts';
 import { ReadingChapterWindow, type ReadingSessionChapter } from '../../entry/src/main/ets/features/reading/application/ReadingChapterWindow.ts';
@@ -185,6 +185,16 @@ test('body cache is shared and kept lazy, while partial, forced and foreign-vers
     { anchors: [], bodyVersion: 'foreign', processingVersion: 'rules' })).contentVersion, 'gateway-content');
   const partial = readyWindow(chapter({ documentRange: { startScalar: 0, endScalar: 5, totalScalars: 8 } }));
   assert.equal((await readReadingWindowChapter(partial, 5, load)).contentVersion, 'gateway-content');
+});
+
+test('cache classification defers a directory proof to the gateway despite a compatible cached body', async () => {
+  const window = readyWindow(chapter());
+  const proof = { sourceId: 'source', bookId: 'book', catalogRevision: 'catalog', structureRevision: 'structure',
+    nodeId: 'chapter-5', chapterIndex: 5, url: 'https://example.com/chapter-5' };
+  const context = { bodyVersion: 'old', processingVersion: 'rules', directoryTargetProof: proof, anchors: [] };
+  const read = async (): Promise<ReadingSessionChapter> => chapter({ contentVersion: 'gateway-content' });
+  assert.equal(findReusableReadingWindowChapter(window, 5, false, context), undefined);
+  assert.equal((await readReadingWindowChapter(window, 5, read, false, context)).contentVersion, 'gateway-content');
 });
 
 test('opening anchor preserves request precedence, stale restore progress and the visible Unicode end', () => {

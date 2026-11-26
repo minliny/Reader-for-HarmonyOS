@@ -1,4 +1,5 @@
 import type { ReadingSessionChapter, ReadingSessionImage } from '../application/ReadingChapterWindow';
+import { readerTtsChapterKey, type ReaderTtsContentVersion, type ReaderTtsState } from '../application/ReaderTtsState';
 import type { ReaderParagraphLayoutRange } from './ReaderParagraphLayoutOwner';
 
 export interface ReaderContinuousFragmentSpan {
@@ -19,6 +20,11 @@ export interface ReaderContinuousVisibleRange {
   scalar: number;
 }
 
+export interface ReaderContinuousHighlight {
+  start: number;
+  end: number;
+}
+
 /** Owns the published fragment references and their scalar/index projection.
  * Native fragment construction and the revision observed by ArkUI are host-owned. */
 export class ReaderContinuousReadingProjection<T extends ReaderContinuousFragmentSpan> {
@@ -27,6 +33,8 @@ export class ReaderContinuousReadingProjection<T extends ReaderContinuousFragmen
   private identity: string = 'continuous:empty';
   private title: string = '';
   private layoutKey: string = '';
+  private ttsChapterKey: string = '';
+  private ttsContentVersion: ReaderTtsContentVersion | undefined = undefined;
   private firstVisible: number = 0;
   private lastVisible: number = 0;
 
@@ -76,6 +84,8 @@ export class ReaderContinuousReadingProjection<T extends ReaderContinuousFragmen
     }
     this.focus(this.indexForScalar(visibleScalar));
     this.identity = `continuous:${JSON.stringify([chapter.sourceId, chapter.bookId, chapter.chapterIndex, chapter.contentVersion])}`;
+    this.ttsChapterKey = readerTtsChapterKey(chapter.sourceId, chapter.bookId, chapter.chapterIndex);
+    this.ttsContentVersion = chapter.contentVersion;
     this.title = (chapter.documentRange?.startScalar ?? 0) === 0 ? chapter.chapterTitle : '';
     this.layoutKey = geometryKey();
   }
@@ -101,6 +111,16 @@ export class ReaderContinuousReadingProjection<T extends ReaderContinuousFragmen
     this.byStartScalar.clear();
     this.identity = 'continuous:empty';
     this.title = '';
+    this.ttsChapterKey = '';
+    this.ttsContentVersion = undefined;
+  }
+
+  ttsHighlight(state: ReaderTtsState, enabled: boolean): ReaderContinuousHighlight | undefined {
+    const start = state.charStart;
+    const end = state.charEnd;
+    if (!enabled || this.ttsChapterKey.length === 0 || this.ttsChapterKey !== state.chapterKey ||
+      this.ttsContentVersion !== state.contentVersion || start === undefined || end === undefined || end <= start) return undefined;
+    return { start, end };
   }
 
   anchor(scalar: number): ReaderContinuousAnchor {

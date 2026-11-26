@@ -5,6 +5,7 @@ import { ReaderStartupTrace, type ReaderTtsCapsuleTiming } from '../../../app/Re
 import { errorMessageOf } from '../../../app/ErrorMessage.ts';
 import {
   createReaderTtsState,
+  readerTtsChapterKey,
   readerTtsCoreRateForMultiplier,
   isReaderTtsSupportedPlaybackRate,
   type ReaderTtsContentVersion,
@@ -82,8 +83,13 @@ export type ReaderTtsChapterAdvanceInput = {
   chapter: ReaderTtsChapterRef;
   content: string;
   contentVersion: ReaderTtsContentVersion;
-  onAdmitted?: () => void;
+  onAdmitted?: (firstRange?: ReaderTtsChapterAdvanceRange) => boolean;
 };
+
+export interface ReaderTtsChapterAdvanceRange {
+  charStart: number;
+  charEnd: number;
+}
 
 export interface ReaderTtsCoordinatorGateway {
   getConfig(): Promise<ReaderTtsConfig | undefined>;
@@ -1551,7 +1557,10 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
       }
       const nextPlan = await this.gateway.slice(next.chapter, next.content, 'paragraph-then-sentence');
       if (!current()) return;
-      next.onAdmitted?.();
+      const firstSlice = nextPlan.slices[0];
+      const firstRange: ReaderTtsChapterAdvanceRange | undefined = firstSlice === undefined ? undefined :
+        { charStart: firstSlice.charStart, charEnd: firstSlice.charEnd };
+      const alignedRange = next.onAdmitted?.(firstRange) === true ? firstRange : undefined;
       if (!current()) return;
       const nextChapterKey = this.chapterKey(next.chapter);
       this.setState({
@@ -1562,8 +1571,8 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
         chapterIndex: next.chapter.chapterIndex,
         sliceIndex: 0,
         totalSlices: nextPlan.slices.length,
-        charStart: undefined,
-        charEnd: undefined,
+        charStart: alignedRange?.charStart,
+        charEnd: alignedRange?.charEnd,
         requestId: undefined,
         consecutiveFailures: 0,
         pauseReason: undefined,
@@ -1893,7 +1902,7 @@ export class ReaderTtsSessionCoordinator implements ReaderTtsPlaybackCoordinator
   }
 
   private chapterKey(chapter: ReaderTtsChapterRef): string {
-    return `${chapter.sourceId}\u0000${chapter.bookId}\u0000${chapter.chapterIndex}`;
+    return readerTtsChapterKey(chapter.sourceId, chapter.bookId, chapter.chapterIndex);
   }
 
   private canPause(): boolean {

@@ -43,6 +43,22 @@ export interface ReadingChapterOpeningHost {
   fail: (error: Error) => Promise<void>;
 }
 
+/** Shared cache admission for chapter acquisition and the presentation's loading policy. */
+export function findReusableReadingWindowChapter(
+  window: ReadingChapterWindow,
+  chapterIndex: number,
+  forceRefresh: boolean = false,
+  context?: RemoteReadingPositionContext,
+): ReadingSessionChapter | undefined {
+  const cached = window.get(chapterIndex);
+  if (context?.directoryTargetProof === undefined && cached !== undefined &&
+    cached.sourceCorrectionRequired !== true && cached.documentRange === undefined && !forceRefresh &&
+    (context === undefined || cached.bodyVersion === context.bodyVersion && cached.processingVersion === context.processingVersion)) {
+    return cached;
+  }
+  return undefined;
+}
+
 /** Reuse a complete, version-compatible chapter for reading and TTS. The gateway stays lazy on a hit. */
 export async function readReadingWindowChapter(
   window: ReadingChapterWindow,
@@ -51,13 +67,7 @@ export async function readReadingWindowChapter(
   forceRefresh: boolean = false,
   context?: RemoteReadingPositionContext,
 ): Promise<ReadingSessionChapter> {
-  const cached = window.get(chapterIndex);
-  if (context?.directoryTargetProof === undefined && cached !== undefined &&
-    cached.sourceCorrectionRequired !== true && cached.documentRange === undefined && !forceRefresh &&
-    (context === undefined || cached.bodyVersion === context.bodyVersion && cached.processingVersion === context.processingVersion)) {
-    return cached;
-  }
-  return load();
+  return findReusableReadingWindowChapter(window, chapterIndex, forceRefresh, context) ?? load();
 }
 
 /** Read in parallel with layout admission, retaining both lease checks around measurement. */

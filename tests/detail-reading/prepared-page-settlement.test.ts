@@ -100,6 +100,17 @@ test('ordinary presented persistence dispatches before the visual join without f
   run.preview.complete();
 });
 
+test('a measured cross-chapter page cannot replace the retained frame after its layout is superseded', async () => {
+  const run = fixture();
+  run.begin();
+  run.write.complete(receipt);
+  await nextTask();
+  assert.equal(run.owner.join(false, false, () => true).action, 'wait');
+  assert.equal(run.owner.join(true, false, () => false).action, 'rollback');
+  assert.equal(run.owner.prepared, undefined);
+  assert.equal(run.owner.join(true, false, () => true).action, 'wait');
+});
+
 test('an exact target recovered from the serial read can present while an exact origin rolls back', async () => {
   for (const [stored, outcome] of [[receipt, 'promote'], [origin, 'rollback']] as const) {
     const run = fixture();
