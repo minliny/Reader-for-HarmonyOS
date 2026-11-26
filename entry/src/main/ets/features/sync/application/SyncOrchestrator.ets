@@ -34,7 +34,10 @@ export class SyncOrchestrator {
   attachPresentation(identity: string, emit: (snapshot: SyncSnapshot) => void,
     read: () => SyncSnapshot, current: () => boolean): boolean {
     if (identity.length === 0 || !this.currentOwner() || !current()) return false;
-    if (identity !== this.presentationIdentity) this.session += 1;
+    if (identity !== this.presentationIdentity) {
+      this.session += 1;
+      this.requestFacts = undefined;
+    }
     this.presentationIdentity = identity;
     this.emit = emit; this.read = read; this.isCurrent = current;
     this.deliver(this.session);
@@ -45,6 +48,7 @@ export class SyncOrchestrator {
   detachPresentation(identity: string): void {
     if (identity !== this.presentationIdentity) return;
     this.session += 1; this.presentationIdentity = '';
+    this.requestFacts = undefined;
     this.emit = (): void => {}; this.read = (): SyncSnapshot => DEFAULT_SYNC_SNAPSHOT;
     this.isCurrent = (): boolean => false;
   }
@@ -210,7 +214,7 @@ export class SyncOrchestrator {
     if (!this.beginOperation()) return;
     const session = this.session;
     this.requestFacts = projectOperationFacts<boolean>({ phase: 'loading', generation: ++syncProjectionGeneration, message: '正在测试 WebDAV 连接…' });
-    this.status(session, '正在测试 WebDAV 连接…');
+    this.deliver(session);
     this.operationChain = this.operationChain.then(async (): Promise<void> => {
       if (!this.currentSession(session)) return;
       const outcome = await this.gateway.testConnection(url, user, pass, directory, (): boolean => this.currentSession(session));
@@ -218,8 +222,15 @@ export class SyncOrchestrator {
       this.requestFacts = projectOperationFacts<boolean>({ phase: outcome.ok ? 'succeeded' : 'failed', value: outcome.ok ? true : undefined,
         generation: ++syncProjectionGeneration, message: outcome.ok ? undefined : outcome.error ?? 'WebDAV 连接测试未完成' });
       this.status(session, outcome.ok ? outcome.note ?? 'WebDAV 连接成功' : outcome.error ?? 'WebDAV 连接失败');
-    }).catch((error: Error): void => { this.requestFacts = projectOperationFacts<boolean>({ phase: 'failed', generation: ++syncProjectionGeneration, message: 'WebDAV 连接测试未完成' }); this.status(session, this.safeError(error as Error)); })
-      .finally((): void => { this.operationInFlight = false; this.deliver(this.session); });
+    }).catch((error: Error): void => {
+      if (!this.currentSession(session)) return;
+      this.requestFacts = projectOperationFacts<boolean>({ phase: 'failed', generation: ++syncProjectionGeneration, message: 'WebDAV 连接测试未完成' });
+      this.status(session, this.safeError(error));
+    }).finally((): void => {
+      if (!this.currentSession(session) && this.requestFacts?.fact === 'loading') this.requestFacts = undefined;
+      this.operationInFlight = false;
+      this.deliver(this.session);
+    });
   }
 
   triggerBackup(): void {

@@ -114,6 +114,39 @@ if(id==='unknown-transfer'){
   assert.equal(f.asset.calls.filter(v => v === 'add').length, writes, 'pure exact read does not dispatch another save');
 }
 }
+if (id === 'connection-test-retirement') {
+  for (const rejects of [false, true]) {
+    const x = fixture(), a = x.attach('test-a');
+    x.owner.open(); await x.settle();
+    const gate = f.pause();
+    let dispatched = false;
+    x.owner.gateway.testConnection = async () => {
+      dispatched = true;
+      await gate.promise;
+      if (rejects) throw new Error('retired result');
+      return { ok: true };
+    };
+    x.owner.testConnection(f.config.url, f.config.user, '', f.config.directory);
+    await until(() => dispatched);
+    assert.equal(a.snapshot.facts.request.fact, 'loading');
+    a.current = false; x.owner.detachPresentation('test-a');
+    const before = a.emitted.length, b = x.attach('test-b');
+    x.owner.open();
+    assert.equal(b.snapshot.facts.busy, true, 'the original operation holds the mutex until it finishes');
+    assert.equal(b.snapshot.facts.request, undefined, 'a new page cannot inherit an in-flight request message');
+    gate.resolve(); await x.settle();
+    x.owner.open(); await x.settle();
+    assert.equal(b.snapshot.facts.busy, false);
+    assert.equal(b.snapshot.facts.canMutate, true);
+    assert.equal(b.snapshot.facts.request, undefined);
+    assert.doesNotMatch(b.snapshot.statusMessage, /正在测试|retired result/);
+    assert.equal(a.emitted.length, before, 'a retired page cannot receive the late result');
+    x.owner.gateway.testConnection = async () => ({ ok: true });
+    x.owner.testConnection(f.config.url, f.config.user, '', f.config.directory);
+    await x.settle();
+    assert.equal(b.snapshot.facts.request.fact, 'current', 'the new page can run its own test');
+  }
+}
 if(id==='runtime-retirement'){
 {
   const x = fixture(), a = x.attach('retired');
@@ -135,5 +168,5 @@ if(id==='runtime-retirement'){
 }
 }finally{f.cleanup();}
 }
-const definitions={"config-transfer": "config-transfer; actual production methods with explicit controlled platform ports", "restore-transfer": "restore-transfer; actual production methods with explicit controlled platform ports", "unknown-transfer": "unknown-transfer; actual production methods with explicit controlled platform ports", "runtime-retirement": "runtime-retirement; actual production methods with explicit controlled platform ports"};
+const definitions={"connection-test-retirement": "Retired WebDAV test messages and late replies do not enter the replacement page", "config-transfer": "config-transfer; actual production methods with explicit controlled platform ports", "restore-transfer": "restore-transfer; actual production methods with explicit controlled platform ports", "unknown-transfer": "unknown-transfer; actual production methods with explicit controlled platform ports", "runtime-retirement": "runtime-retirement; actual production methods with explicit controlled platform ports"};
 for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}
