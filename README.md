@@ -1,50 +1,119 @@
 # Reader for HarmonyOS
 
-Reader 当前唯一完整产品 Host/UI，也是唯一实际消费 `Reader-Core` 的应用。
+Reader 的 HarmonyOS 原生客户端，使用 **ArkUI / ArkTS** 构建界面与平台适配层，通过 NAPI 接入共享的 Rust 业务内核 `Reader-Core`，面向手机、平板与 2in1 宽屏设备提供统一的本地与在线阅读体验。
 
-## 跨平台 UI 与交互参考
+> **当前状态**：活跃开发中（当前开发基线 `0.2.0`，尚未公开发行）。本仓库包含 HarmonyOS Host/UI 源码、构建与验证脚本以及设计参考文档。
 
-非鸿蒙原生增强版本的通用界面交接入口为[跨平台界面参考](docs/ui-design/cross-platform-reference/README.md)，集中说明固定提交、页面与状态、样式动效、iOS 适配及有效来源。本轮使用已提交版本；正在进行的 UI 优化与原生特性分支另行保留，后续提交不自动改写参考。
+## 基本信息
 
-[历史 UI 稿](docs/ui-design/app-baseline/index.html)、[逻辑稿](docs/ui-design/app-baseline/LOGIC.md)及其分类账保留已观察画面和路线的证据。它们不是当前固定提交的全状态交付规格；历史截图、浏览器示意与各端原生验收分别记账。
+| 项目 | 当前配置 |
+| --- | --- |
+| 应用包名 | `io.reader.minliny` |
+| 产品版本基线 | `0.2.0`（由 `config/app-release-ledger.json` 管理） |
+| 兼容 / 目标 SDK | HarmonyOS `6.1.0`（API 23） |
+| 适配设备形态 | `phone`、`tablet`、`2in1` |
+| 核心技术栈 | ArkTS / ArkUI + Rust (`Reader-Core`, `arm64-v8a` NAPI) |
 
-## 开发准入
+## 功能范围
 
-日常开发、漏洞修复和构建前，先按 [`../GATE_INDEX.md`](../GATE_INDEX.md) 的任务选择表确定本次刚需检查，再用准确 ID / `--stages` / `--tests` 显式选择。全量仅用于已明确的正式发布或整体验收计划；合并、Core 改动或某项失败不自动扩大范围。
+### 当前主线能力
+- **本地电子书**：支持通过系统文件打开与选择导入 `TXT`、`EPUB`、`MOBI`、`AZW`、`AZW3`、`KF8`，保留原书文件并维护阅读进度与目录。
+- **在线小说与书源管理**：支持书源导入/分组/订阅、多源搜索（单源异常隔离）、详情入架、目录更新、换源、章节预缓存与离线下载。
+- **漫画阅读**：支持独立漫画图片清单、缓存与归一化阅读位置管理。
+- **阅读与听书体验**：支持自定义排版主题、阅读控制栏与目录/书签工具、系统文本朗读（TTS）及后台音频播控（AVSession）。
+- **多形态界面适配**：覆盖手机、平板与 2in1 宽屏布局；界面规范参考见 [跨平台界面参考](docs/ui-design/cross-platform-reference/README.md)。
 
-生成当前 dirty 状态可追溯的日常 debug HAP：
+### 开发中扩展模块
+- 仓库内同时包含 `RSS`、`Discover`、`Sync`（自备 WebDAV 配置备份等）扩展页面代码，目前处于开发态，不代表已进入首版发布范围。
+- 本项目为个人维护客户端，不提供自营在线账号或托管同步服务。
 
-```bash
-node scripts/hap-pipeline.mjs build --class iteration
+## 架构与多仓关系
+
+Reader 采用“共享 Rust Core + 各平台原生 Host/UI”架构：
+
+- **`Reader-for-HarmonyOS`（本仓库）**：HarmonyOS 原生 UI、页面状态、系统文件访问、网络执行、窗口/媒体/TTS 等平台 Host 能力。
+- **`Reader-Core`（闭源 / 私有仓库）**：唯一业务事实源，负责书库与规则解析、电子书解码、持久化与事务语义，通过锁定版本构建为 OHOS NAPI 原生库供本仓消费（锁定信息见 [`scripts/core-dependency.json`](scripts/core-dependency.json)）。
+- **`Reader-UI`**：跨平台 UI 契约快照、漫画共享类型、字体与设计资产参考。
+
+## 目录概览
+
+```text
+.
+├── AppScope/                  # 应用级配置与版本基线
+├── config/                    # 版本发布台账（app-release-ledger.json）
+├── entry/
+│   └── src/main/
+│       ├── module.json5       # 模块权限、设备形态与文件打开能力声明
+│       └── ets/
+│           ├── app/           # 应用初始化与状态装配
+│           ├── features/      # 书架、阅读、漫画、搜索、书源、下载、设置等业务模块
+│           ├── platform/      # HarmonyOS 系统能力适配（文件、网络、音频、窗口等）
+│           ├── ui/            # 公共组件、布局、主题与反馈框架
+│           └── pages/         # 页面入口与结构验证夹具
+├── scripts/                   # DevEco 构建、不可变 HAP 流水线、工具链检测与 CI 脚本
+├── tools/                     # 仓内契约检查与辅助测试工具
+└── docs/                      # 版本身份、CI、消息框架、UI 参考与准发布核验文档
 ```
 
-该流水线是唯一 HAP 交付入口；检查集合遵循根 `GATE_INDEX.md` 的本次刚需选择，普通构建不得隐式追加全量。流水线按内容生成源码 fingerprint，在临时目录进行
-无增量构建和本地签名注入，校验 HAP、内嵌 Native、书源字节和签名后，才原子发布 immutable
-manifest。`entry/build/` 不再是交付目录，`check-local.sh --hap` 已停用。
+## 构建与开发
 
-真实书源 L1–L5 是独立网络证据，需要时显式增加 `--live-sources`，不再让每次离线打包依赖网络。
-完整的 iteration/acceptance、本地签名、复验和保数据安装合同见
-[`../HAP_BUILD_SYSTEM.md`](../HAP_BUILD_SYSTEM.md)。首次安装和旧测试包升级仍会在 Core 可见前补齐或
-升级内置测试书源；规则升级不会改回用户的启停选择。
+### 前置依赖
+- **完整构建（含 Native / HAP）**需要：
+  - HarmonyOS SDK `6.1.0(23)` / DevEco Studio（含 Hvigor、OHPM、BiSheng）
+  - Node.js `22.23.3`、Java（用于签名/验签工具）、Rust `1.97.1`（`aarch64-unknown-linux-ohos`）
+  - 相邻检出的 `Reader-Core` 源码目录（闭源私有仓库，需具备访问权限）
+  - 本地调试签名配置（存放于 `.gitignore` 忽略的 `.reader-local/signing/`，不纳入 Git）
+- **仅查看源码或运行仓内 Node 契约检查**：只需 Node.js 22+，无需私有 Core 或签名材料。
 
-`test-*-server.mjs` 是常驻 fixture server，不计入测试数量，也不会由本命令启动。
+### 常用命令
 
-## DevEco 原生开发构建与安装
+查看本机工具链发现结果（只读，不输出签名信息）：
+```bash
+node scripts/toolchain-info.mjs
+```
 
+DevEco 原生开发构建（按需核对并同步 Core Native，在内存中注入本地签名，不改写工作树）：
 ```bash
 node scripts/deveco-build.mjs
 ```
 
-按用户 2026-10-12 的明确要求，DevEco Build/Run 可直接使用此入口。Hvigor 在内存中注入
-`.reader-local/signing/build-profile.json5` 的指定私有签名，复用流水线的证书/Profile、Native/SDK
-预检和 signed HAP 验签；增量命中也检查最终签名输出。DevEco 的安装元数据指向
-`entry-default-signed.hap`，不得卸载或清除应用数据。开发构建不运行每次全量合同，
-不声称 immutable manifest 或发布验收通过；agent 交付与 acceptance 仍使用隔离流水线。
+不可变交付流水线（隔离目录无增量构建、本地签名校验与 manifest 落盘）：
+```bash
+node scripts/hap-pipeline.mjs build --class iteration
+```
 
-当前开发 HAP 会编译尚未纳入 L0 验收的 RSS、Discover、Sync 等扩展页面；开发构建成功不代表这些
-页面已进入发布范围。最近一次已审计交付 HAP 的精确哈希、安装结果、阅读生命周期、冲突项和证据边界见
-[`../README.md`](../README.md) 和 [`../docs/audits/WORKSPACE_AUDIT.md`](../docs/audits/WORKSPACE_AUDIT.md)。
+只读计算当前工作树的应用版本与内容身份（`PLAN_ONLY`）：
+```bash
+node scripts/hap-pipeline.mjs identity --channel DEV --abi arm64-v8a
+```
 
-当前待开发内容只维护在根目录
-[`../DEVELOPMENT_BACKLOG.md`](../DEVELOPMENT_BACKLOG.md)。本仓 `docs/` 下的审计、实施切片、
-遗留问题和状态账本只作历史证据或专项合同，不得维护另一套当前 TODO。
+列出可用本地检查（默认只输出清单，不隐式运行全量测试）：
+```bash
+node scripts/check-local.mjs
+```
+
+更完整的环境变量、跨平台工具路径发现与部署说明见 [`scripts/README.md`](scripts/README.md)；应用版本与包内构建身份规则见 [`docs/build-version-identity.md`](docs/build-version-identity.md)。
+
+## CI 与验证
+
+- **HarmonyOS CI**（[`.github/workflows/ci.yml`](.github/workflows/ci.yml)）：
+  - `push` / `pull_request` 自动运行受影响范围的 Host 快速检查；
+  - 合入 `main`、仓内 PR、手动触发或定时任务会使用锁定 SDK 容器镜像（`api23` / `api24` / `api26r`）执行 Native 编译与无签名 HAP 验证（不涉及华为账号、签名私钥或设备部署）。
+- **Host Explicit Checks**（[`.github/workflows/contracts.yml`](.github/workflows/contracts.yml)）：
+  - 手动触发（`workflow_dispatch`），按需点名运行指定契约测试与源码卫生检查。
+
+更多说明见 [`docs/ci.md`](docs/ci.md)。
+
+## 相关文档
+
+- [构建与交付脚本说明](scripts/README.md)
+- [应用版本与构建身份合同](docs/build-version-identity.md)
+- [消息 UI 框架规范](docs/message-ui/FRAMEWORK.md)
+- [跨平台界面与交互参考](docs/ui-design/cross-platform-reference/README.md)
+- [HarmonyOS 准发布核验清单](docs/release/HARMONYOS_PRE_RELEASE_CHECKLIST.md)
+
+## 致谢与第三方资源
+
+- 内置字体与图标的第三方来源与许可记录见 [`entry/src/main/resources/rawfile/FONT-SOURCES.txt`](entry/src/main/resources/rawfile/FONT-SOURCES.txt)、[`docs/MANGA_SHEET_ICON_LICENSE.md`](docs/MANGA_SHEET_ICON_LICENSE.md) 及 [`docs/ui-design/SVG_PROVENANCE.json`](docs/ui-design/SVG_PROVENANCE.json)。
+- 本项目的部分阅读与书源交互语义参考了开源阅读（Legado）的产品范式，核心实现均为独立重写，未复制其 GPL 代码。
+- 本仓库许可协议待正式发布前另行确定。
