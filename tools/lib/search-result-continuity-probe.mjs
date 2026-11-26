@@ -26,12 +26,16 @@ export async function createSearchResultContinuityProbe({ source = readSearchRes
   const { installedEtsCompiler } = await import('./ets-compiler-runtime.mjs');
   const { createArkUIPropertyRuntimeProbe } = await import('./arkui-property-runtime-probe.mjs');
   const { createReaderBuilderProbe } = await import('./reader-control-builder-probe.mjs');
+  const { pureModuleProbe } = await import('./ets-pure-module-probe.mjs');
   const { bookTitleAuthorKey, bookAuthorLabel } = await import('../../entry/src/main/ets/app/library/BookAuthorMetadata.ts');
   const { bookIntroText } = await import('../../entry/src/main/ets/app/library/BookIntroText.ts');
   const { readerMediaIdentity } = await import('../../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
   const { SearchViewState } = await import('../../entry/src/main/ets/features/search/presentation/SearchViewState.ts');
   const { searchBookSnapshot } = await import('../../entry/src/main/ets/features/search/presentation/SearchBookSnapshot.ts');
   const { SEARCH_RESULT_GEOMETRY } = await import('../../entry/src/main/ets/features/search/ui/SearchResultGeometry.ts');
+  const { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } = await import('../../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+  const noCoverSource = readFileSync(new URL('../../entry/src/main/ets/ui/patterns/NoCoverCover.ets', import.meta.url), 'utf8');
+  const { noCoverGlyph } = pureModuleProbe(noCoverSource.slice(0, noCoverSource.indexOf('@Component')), 'NoCoverGlyph.ets', {}, ['noCoverGlyph']);
   const { ts, options, require, root } = installedEtsCompiler();
   const tree = ts.createSourceFile('SearchPage.ets', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
   assert.deepEqual(tree.parseDiagnostics, [], 'selected actual search source parses');
@@ -74,8 +78,9 @@ export async function createSearchResultContinuityProbe({ source = readSearchRes
   const { owner } = createReaderBuilderProbe(cardNode.getText(tree), members, {
     ...runtime.sdk, SynchedPropertyNesedObjectPU: runtime.sdk.SynchedPropertyNestedObjectPU,
     SearchViewState, SearchLayoutFrame, searchBookSnapshot, SEARCH_RESULT_GEOMETRY, bookIntroText, bookAuthorLabel, TouchType, SourceType,
+    READER_FONT_NOTO_SANS_SC_UI_MEDIUM, noCoverGlyph, NoCoverCover: class {},
     uiContext: { postFrameCallback: frame => pendingFrames.push(frame) },
-  }, { ...runtime.hooks, allowEmptyBranchAdmission: true, allowEmptyBranchRemoval: true });
+  }, { ...runtime.hooks, childSources: { NoCoverCover: noCoverSource }, allowEmptyBranchAdmission: true, allowEmptyBranchRemoval: true });
   const publishProps = () => owner.updateStateVars({ group: observed, queryRevision: viewState.revision, cardWidth: 350 });
   publishProps();
   owner.viewState = viewState;

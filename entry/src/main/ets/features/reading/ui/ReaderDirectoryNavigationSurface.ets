@@ -46,7 +46,7 @@ export struct ReaderDirectoryNavigationSurface {
   @Prop @Watch('onRefreshRevisionChanged') refreshRevision: number = 0;
   @Prop prepareLocalTxt: boolean = false;
   @Prop interacted: boolean = false;
-  @Prop rowHeight: number = 40;
+  @Prop rowHeight: number = 44;
   @Prop mangaDisplay: boolean = false;
   @Prop mangaFullCatalog: boolean = false;
   @Prop mangaRowMinHeight: number = 58;
@@ -80,11 +80,13 @@ export struct ReaderDirectoryNavigationSurface {
   /** Optional native-only prefix used by the constrained text control host. */
   @Prop headerCount: number = 0;
   @Prop prefixHeight: number = 0;
+  @Prop tailHeight: number = 0;
   @Prop prefixIdentity: string = '';
   @Prop prefixRevealRevision: number = 0;
   @Prop verificationChapterActions: boolean = false;
   @BuilderParam prefixBuilder: () => void = this.emptyPrefix;
   @BuilderParam mangaTailBuilder: () => void = this.emptyPrefix;
+  @BuilderParam tailBuilder: () => void = this.emptyPrefix;
   scroller: Scroller | undefined = undefined;
   onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof) => void =
     (_chapterIndex: number, _chapterOffsetScalar: number, _positionScope?: RemoteReadingPositionScope, _directoryTargetProof?: ReaderDirectoryTargetProof): void => {};
@@ -125,6 +127,7 @@ export struct ReaderDirectoryNavigationSurface {
   private inputOwnerKey: string = '';
   private openedInputKey: string = '';
   private locateCurrentPending: boolean = false;
+  private locateExpectsQueryClear: boolean = false;
   private acceptedCatalogFilter: string | undefined = undefined;
   private scrollIntentUnsubscribe: (() => void) | undefined = undefined;
 
@@ -188,6 +191,8 @@ export struct ReaderDirectoryNavigationSurface {
     this.inputOwnerKey = this.currentInputOwnerKey();
     this.feedback.reset();
     this.cancelQueryTimer();
+    this.locateCurrentPending = false;
+    this.locateExpectsQueryClear = false;
     this.generation += 1;
     this.openingGeneration = -1;
     this.view = undefined;
@@ -223,12 +228,22 @@ export struct ReaderDirectoryNavigationSurface {
   }
 
   private onViewInputsChanged(): void {
-    if (!this.mounted || this.settledFlat) return;
+    if (!this.mounted) return;
     const queryChanged = this.query !== this.lastQuery;
     const otherChanged = this.ascending !== this.lastAscending || this.currentChapterIndex !== this.lastChapterIndex;
     this.lastQuery = this.query;
     this.lastAscending = this.ascending;
     this.lastChapterIndex = this.currentChapterIndex;
+    if (this.settledFlat || !queryChanged && !otherChanged) return;
+    // The parent clears the query and increments the locate revision together.
+    // Either Watch can arrive first. A clear following the locate already uses
+    // the unfiltered query and must preserve its generation.
+    if (queryChanged) {
+      const pairedClear = this.locateExpectsQueryClear && this.query.trim().length === 0;
+      this.locateExpectsQueryClear = false;
+      if (pairedClear && !otherChanged) return;
+      if (this.query.trim().length > 0) this.locateCurrentPending = false;
+    }
     this.cancelQueryTimer();
     // Cancel an in-flight view before the debounce, so an old query cannot
     // publish while the user is still editing the search.
@@ -238,7 +253,8 @@ export struct ReaderDirectoryNavigationSurface {
       this.pendingQueryRefresh = queryChanged && !otherChanged;
       return;
     }
-    if (queryChanged && !otherChanged) this.scheduleQueryOpen();
+    if (this.locateCurrentPending) this.openTree(false, 'locate-current');
+    else if (queryChanged && !otherChanged) this.scheduleQueryOpen();
     else this.openTree(this.view === undefined, 'sort-or-position');
   }
 
@@ -246,6 +262,7 @@ export struct ReaderDirectoryNavigationSurface {
     if (!this.mounted || this.currentChapterIndex < 0) return;
     this.cancelQueryTimer();
     this.locateCurrentPending = true;
+    this.locateExpectsQueryClear = this.query.trim().length > 0;
     this.settledFlat = false;
     this.openTree(false, 'locate-current');
   }
@@ -472,10 +489,13 @@ export struct ReaderDirectoryNavigationSurface {
           this.settledFlat = unavailableReason === 'unsupported' ||
             (unavailableReason === 'NoStructure' && this.currentDirectoryEntries().length > 0);
           this.loadFailed = !this.settledFlat;
-          if (this.settledFlat && this.awaitingRulesRefresh) {
-            this.view = undefined;
-            this.awaitingRulesRefresh = false;
-            this.onTreeStateChange(false);
+          if (this.settledFlat) {
+            this.locateCurrentPending = false;
+            if (this.awaitingRulesRefresh || explicitLocateCurrent && this.view !== undefined) {
+              this.view = undefined;
+              this.awaitingRulesRefresh = false;
+              this.onTreeStateChange(false);
+            }
           }
           if (this.loadFailed) this.notifyReadFailure(generation, sourceId, bookId);
           return;
@@ -648,9 +668,11 @@ export struct ReaderDirectoryNavigationSurface {
         } else if (this.showLoadStatus && !this.hasRetainedContent() &&
           !(this.view !== undefined && this.headerCount === 1) &&
           (this.loadPending || this.loadFailed)) {
-          if (this.hasPrefix()) {
+          if (this.hasPrefix() || this.tailHeight > 0) {
             List({ space: 0, scroller: this.scroller }) {
-              ListItem() { this.prefixBuilder(); }.width('100%').constraintSize({ minHeight: Math.max(0, this.prefixHeight) });
+              if (this.hasPrefix()) {
+                ListItem() { this.prefixBuilder(); }.width('100%').constraintSize({ minHeight: Math.max(0, this.prefixHeight) });
+              }
               ListItem() {
                 ReaderPageState({ loading: this.loadPending, message: this.loadFailed ? '目录加载失败' : '正在加载目录',
                   actionLabel: this.loadFailed ? '重试加载目录' : '', actionEnabled: this.retryInputCurrent(),
@@ -658,6 +680,9 @@ export struct ReaderDirectoryNavigationSurface {
                   mutedColor: readerAppColor('TOK_READ_MUTED', this.appThemeScheme),
                   onAction: (expected: number): void => this.retryCurrent(expected) });
               }.width('100%').constraintSize({ minHeight: 44 });
+              if (this.tailHeight > 0) {
+                ListItem() { this.tailBuilder(); }.width('100%').constraintSize({ minHeight: this.tailHeight });
+              }
             }.width('100%').height('100%').scrollBar(BarState.Off).edgeEffect(this.edgeEffectMode)
               .enableScrollInteraction(this.interactionEnabled).onWillStartDragging((): void => { if (this.mounted) this.onTreeUserScrollIntent(); })
               .onAreaChange((_old: Area, area: Area): void => { if (this.mounted && Number(area.height) > 0) this.onFirstLayout(); });
@@ -700,6 +725,7 @@ export struct ReaderDirectoryNavigationSurface {
               headerCount: this.headerCount, prefixHeight: this.prefixHeight, prefixIdentity: this.prefixIdentity,
               prefixRevealRevision: this.prefixRevealRevision,
               prefixBuilder: (): void => this.prefixBuilder(),
+              tailHeight: this.tailHeight, tailBuilder: (): void => this.tailBuilder(),
               mangaTailBuilder: (): void => this.mangaTailBuilder(),
               emptyBuilder: (): void => this.treeEmptyState(),
               emptyReadStateVisible: this.showLoadStatus && (this.loadPending || this.loadFailed),
@@ -726,7 +752,7 @@ export struct ReaderDirectoryNavigationSurface {
                 if (this.directoryInputCurrent() && this.bookmarkActionsEnabled) this.onCreateChapterStartBookmark(request);
               },
             });
-            if (this.view.visibleTotal === 0 && !this.mangaDisplay && !this.hasPrefix()) {
+            if (this.view.visibleTotal === 0 && !this.mangaDisplay && !this.hasPrefix() && this.tailHeight <= 0) {
               this.treeEmptyState(false);
             }
           }.width('100%').height('100%');

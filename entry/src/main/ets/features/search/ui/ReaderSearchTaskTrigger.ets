@@ -2,6 +2,7 @@ import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { MESSAGE_META } from '../../../ui/foundation/ReaderMessageStyle';
 import { READER_ACTION_MIN_TARGET, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 
 @Component
 export struct ReaderSearchTaskTrigger {
@@ -44,10 +45,10 @@ export struct ReaderSearchTaskTrigger {
           .fontSize(MESSAGE_META.fontSizeFp).lineHeight(MESSAGE_META.lineHeightFp as number).halfLeading(true)
           .fontColor(readerAppColor('TOK_MUTED', this.scheme)).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         Image(this.scheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'))
-          .width(10).height(10).objectFit(ImageFit.Contain);
+          .width(10).height(10).objectFit(ImageFit.Contain).accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
         }.width(this.triggerWidth).height(this.triggerHeight());
       }.width(this.triggerWidth).height(this.triggerHeight()).id(this.triggerFocusId)
-        .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
+        .padding(0).attributeModifier(new ReaderPressFeedback(Color.Transparent, this.scheme, this.triggerHeight() / 2))
         // Expanded response stays left of the filter's reserved right lane.
         .responseRegion(readerActionTouchRegion(this.triggerWidth, this.triggerHeight()))
         .accessibilityRole(AccessibilityRoleType.BUTTON)

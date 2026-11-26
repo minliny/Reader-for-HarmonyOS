@@ -1,5 +1,5 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"field": {"description": "实际SearchField实时字体缩放、vp frame增长与IME/无效scale回落", "resources": []}, "action": {"description": "实际有限search action随scale增高、原生事件与卸载拒绝", "resources": []}, "header": {"description": "实际SearchPage状态/宽度/字体变化使测量key失效并接纳当前测量", "resources": []}, "card": {"description": "保留实际result card的标签frame随字体增长及长文本约束", "resources": []}};
+const definitions={"field": {"description": "实际SearchField实时字体缩放、vp frame增长与IME/无效scale回落", "resources": []}, "action": {"description": "实际有限search action随scale增高、原生事件与卸载拒绝", "resources": []}, "header": {"description": "实际SearchPage状态/宽度/字体变化使测量key失效并接纳当前测量", "resources": []}, "card": {"description": "实际结果卡共享无封面组件、书架标记静态字体及可增长文字区", "resources": []}};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const {default: assert} = await import('node:assert/strict');
@@ -123,21 +123,39 @@ for(const width of [320,390,736])for(const fontScale of [1,1.3,1.75,2,3.2])for(c
 for(const invalid of [NaN,Infinity,0,-1]){scale=invalid;assert.equal(p.searchFontScale(),1);}
 }
 if(selectedCase==='card'){
-// Retained result cards keep the approved compact manga tuple while their vp
-// badge frames track glyph growth; long metadata remains bounded and ellipsized.
-const cardSource=pageSource.slice(pageSource.lastIndexOf('@Component',pageSource.indexOf('struct SearchResultCard')));
-const card=compileTailConsumer(cardSource,['build','displayIntro','coverWidth','coverHeight','coverErrorHandler','searchFontScale','resultTagWidth','resultTagHeight'],{...dependencies,bookIntroText,bookAuthorLabel,ImageFit:{Cover:'Cover'}},controls.hooks).owner;
-const book={sourceId:'online',bookId:'b',sourceName:'非常长的实际书源名称'.repeat(8),title:'书籍',author:'作者',category:'comic'};
-Object.assign(card,{group:{book,coverUrl:'',variants:[book],sourceCount:10000,inBookshelf:true},appThemeScheme:'day',readerWindowMetricsRevision:0,isTablet:false,cardWidth:320});
-card.initialRender();
-for(const fontScale of [1,1.75,2,3.2]){scale=fontScale;card.readerWindowMetricsRevision++;card.replay();
- const nodes=controls.nodes(card),badges=nodes.filter(n=>n.type==='Text'&&['漫画','在线'].includes(n.create));
- assert.equal(badges.length,2);for(const badge of badges){assert.equal(badge.width,card.resultTagWidth());assert.equal(badge.height,card.resultTagHeight());if(fontScale>1){scale=1;const base=card.resultTagHeight();scale=fontScale;assert.ok(badge.height>base);}}
- for(const tag of nodes.filter(n=>n.type==='Text'&&n.constraintSize?.maxWidth==='100%')){assert.equal(tag.constraintSize.maxWidth,'100%');assert.equal(tag.textOverflow.overflow,'TextOverflow.Ellipsis');}
- assert.equal(nodes.find(n=>n.type==='Column'&&n.layoutWeight===1).height,undefined,'large text does not force a fixed cover-height information column');
-}
-
-
+ const { SEARCH_RESULT_GEOMETRY } = await import('../entry/src/main/ets/features/search/ui/SearchResultGeometry.ts');
+ const { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
+ const cardSource=controls.childSources.SearchResultCard;
+ const { Component }=compileTailConsumer(cardSource,boundedMembers(cardSource),{...dependencies,bookIntroText,bookAuthorLabel,
+  SEARCH_RESULT_GEOMETRY,READER_FONT_NOTO_SANS_SC_UI_MEDIUM,LengthMetrics:{vp:value=>value}},controls.hooks);
+ const observedGroup=group=>controls.properties.sdk.ObservedObject.createNew(group,undefined);
+ for (const [cardWidth, expandedLayout] of [[320,false],[720,true]]) {
+  for (const [category, kindLabel] of [['novel','小说'],['comic','漫画']]) {
+   const book={sourceId:'online',bookId:'b',sourceName:'非常长的实际书源名称'.repeat(8),title:'书籍',author:'作者',category};
+   const group={book,coverUrl:'',variants:[book],sourceCount:10000,inBookshelf:true};
+   const card=new Component(undefined,{group:observedGroup(group),cardWidth,expandedLayout});
+   card.initialRender();
+   const cover=[...card.children.values()].find(child=>child.glyph===book.title);
+   assert.ok(cover,'missing images mount the shared no-cover component');
+   assert.equal(cover.kindLabel,kindLabel);
+   assert.equal(cover.coverWidth,card.coverWidth());
+   assert.equal(cover.coverHeight,card.coverHeight());
+   const nodes=controls.nodes(card),shelfBadge=nodes.find(node=>node.type==='Text'&&node.create==='已在书架');
+   assert.equal(shelfBadge.fontFamily,READER_FONT_NOTO_SANS_SC_UI_MEDIUM);
+   assert.equal(shelfBadge.fontWeight,undefined,'the static Medium face owns the badge weight');
+   assert.equal(shelfBadge.textOverflow.overflow,'TextOverflow.Ellipsis');
+   const sourceLabel=nodes.find(node=>node.type==='Text'&&node.create===book.sourceName);
+   assert.equal(sourceLabel.constraintSize.maxWidth,'100%');
+   assert.equal(sourceLabel.textOverflow.overflow,'TextOverflow.Ellipsis');
+   const info=nodes.find(node=>node.type==='Column'&&node.layoutWeight===1);
+   assert.equal(info.constraintSize.minHeight,card.coverHeight());
+   assert.equal(info.height,undefined,'long metadata stays in the naturally growing card lane');
+   const withImage=new Component(undefined,{group:observedGroup({...group,coverUrl:'https://example.test/search-cover'}),cardWidth,expandedLayout});
+   withImage.initialRender();
+   assert.equal(controls.nodes(withImage).find(node=>node.type==='Image').create,'https://example.test/search-cover');
+   assert.ok(![...withImage.children.values()].some(child=>child.glyph===book.title));
+  }
+ }
 }
 
 }

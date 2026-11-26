@@ -602,8 +602,8 @@ export struct ReaderControlDirectoryContent {
       return sampleReaderControlBookmark(this.progress, this.rowWidth(), this.bookmarkNaturalSize(), this.showBookmarkExcerpt()).card.height;
     }
     const profile = this.selectedMinimum();
-    if (profile !== undefined) return this.value(profile.quick.rowHeightVp, profile.full.rowHeightVp);
-    return readerScaledControlHeight(this.value(32, 40), 20, this.fontScale());
+    if (profile !== undefined) return Math.max(44, this.value(profile.quick.rowHeightVp, profile.full.rowHeightVp));
+    return readerScaledControlHeight(44, 20, this.fontScale());
   }
   private editingPrefixHeight(): number {
     const nominal = this.contentGeometry().nominalListTop;

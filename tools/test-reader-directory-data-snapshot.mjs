@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import { stripTypeScriptTypes } from 'node:module';
 
 const base = new URL('../entry/src/main/ets/features/reading/', import.meta.url);
-const source = fs.readFileSync(new URL('ReaderDirectoryDataSnapshot.ts', base), 'utf8');
+const source = fs.readFileSync(new URL('presentation/ReaderDirectoryDataSnapshot.ts', base), 'utf8');
 const { snapshotReaderDirectoryData: copy, sameReaderDirectoryData: same } = await import(
   `data:text/javascript;base64,${Buffer.from(stripTypeScriptTypes(source)).toString('base64')}`);
 const initial = [{ index: 1, title: 'chapter', downloadState: 'completed', bookmarks: [
@@ -30,7 +30,7 @@ assert.equal(same(saved, admittedEmpty), false, 'unknown bookmarks differ from c
 initial[0].bookmarks[0].content = 'in-place change';
 assert.equal(same(saved, initial), false, 'same-reference nested edits cannot evade snapshot');
 assert.equal(saved[0].bookmarks[0].content, 'bookmark');
-const panel = fs.readFileSync(new URL('FullDirectoryPanel.ets', base), 'utf8');
+const panel = fs.readFileSync(new URL('ui/FullDirectoryPanel.ets', base), 'utf8');
 const handler = panel.slice(panel.indexOf('private onEntriesChanged()'), panel.indexOf('private onReadingAnchorChanged()'));
 assert.doesNotMatch(handler, /sameReaderDirectoryData|snapshotReaderDirectoryData/,
   'large catalogs are compared and copied at the endpoint, never on a motion prop callback');
@@ -79,7 +79,7 @@ console.log('PASS complete bookmark excerpt/proof snapshots, every scope field, 
 const {productionMotionMethods}=await import('./lib/reader-motion-method-probe.mjs');
 const {projectReaderBookmarkRows,readerBookmarkLoadState}=await import('../entry/src/main/ets/features/reading/presentation/ReaderBookmarkProjection.ts');
 const {projectReaderDirectoryEntries}=await import('../entry/src/main/ets/features/reading/presentation/ReaderDirectoryProjection.ts');
-const Panel=productionMotionMethods(new URL('FullDirectoryPanel.ets',base),['onEntriesChanged','flushDeferredMutations','rebuildProjection'],{
+const Panel=productionMotionMethods(new URL('ui/FullDirectoryPanel.ets',base),['onEntriesChanged','flushDeferredMutations','rebuildProjection'],{
  sameReaderDirectoryData:same,snapshotReaderDirectoryData:copy,projectReaderBookmarkRows,readerBookmarkLoadState,projectReaderDirectoryEntries});
 let scheduled=0,progress=0.5,restoredOffset;
 const p=Object.assign(new Panel(),{positioningMounted:true,embeddedInControl:true,entries:scopedSnapshot,admittedEntries:copy(scopedSnapshot),
@@ -97,3 +97,27 @@ p.flushDeferredMutations();assert.equal(p.projectionScrollGeneration,1,'equal cl
 p.entries=excerptOnly;p.onEntriesChanged();p.flushDeferredMutations();
 assert.equal(p.projectedBookmarks[0].excerpt,'可靠映射后的原文');assert.deepEqual(p.projectedBookmarks[0].positionScope,excerptOnly[0].bookmarks[0].positionScope);
 console.log('PASS real FullDirectoryPanel deferred scope/quote-only update retains viewport, keeps morph tree stable, and updates exact click proof at the endpoint');
+
+const list = fs.readFileSync(new URL('ui/ReaderDirectoryList.ets', base), 'utf8');
+const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+const { ts, options } = installedEtsCompiler();
+const listTree = ts.createSourceFile('ReaderDirectoryList.ets', list, ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+const dataClass = listTree.statements.find(node => ts.isClassDeclaration(node) && node.name?.text === 'DirectoryListDataSource');
+assert.ok(dataClass);
+const DirectoryListDataSource = new Function('sameReaderDirectoryData', 'snapshotReaderDirectoryData',
+  `${stripTypeScriptTypes(dataClass.getText(listTree))}; return DirectoryListDataSource;`)(same, copy);
+const data = new DirectoryListDataSource();
+let reloads = 0;
+data.registerDataChangeListener({ onDataReloaded: () => reloads++ });
+data.replace(saved);
+const keys = saved.map(entry => data.rowKey(entry));
+assert.ok(keys.every(key => /^reader-directory-row-\d+-\d+$/.test(key)));
+data.replace(structuredClone(saved));
+assert.equal(reloads, 1);
+data.replace([...saved].reverse());
+assert.deepEqual(saved.map(entry => data.rowKey(entry)), keys, 'sorting retains keys for unchanged entries');
+const renamedMarker = structuredClone(saved);
+renamedMarker[0].bookmarks[0].time += 1;
+data.replace(renamedMarker);
+assert.notEqual(data.rowKey(renamedMarker[0]), keys[0], 'same-count marker replacement refreshes captured write identity');
+assert.equal(data.rowKey(renamedMarker[1]), keys[1], 'unaffected rows keep their compact key');

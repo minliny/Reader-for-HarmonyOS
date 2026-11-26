@@ -1,5 +1,6 @@
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { registerReaderFonts, prepareSourceSwitchNovelFonts, sourceSwitchNovelFontsReady } from '../../../ui/foundation/ReaderFonts';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
 import { TYPE_SOURCE_SWITCH_NOVEL_SWITCH_TITLE, TYPE_SOURCE_SWITCH_NOVEL_SWITCH_SOURCE,
@@ -93,11 +94,12 @@ export struct SourceSwitchProgress {
         if (Number.isFinite(height) && height > 0) this.viewportHeight = height;
       });
       if (this.allowCancel) {
-        Button({ type: ButtonType.Normal }) {
+        Button({ type: ButtonType.Normal, stateEffect: false }) {
           Image(this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close'))
-            .width(SOURCE_SWITCH_VISUAL.closeIconSize).height(SOURCE_SWITCH_VISUAL.closeIconSize);
-        }.width(44).height(44).padding(0).backgroundColor(Color.Transparent)
-          .borderRadius(SOURCE_SWITCH_VISUAL.closeRadius)
+            .width(SOURCE_SWITCH_VISUAL.closeIconSize).height(SOURCE_SWITCH_VISUAL.closeIconSize).accessibilityLevel('no');
+        }.width(44).height(44).padding(0)
+          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme,
+            SOURCE_SWITCH_VISUAL.closeRadius, SOURCE_SWITCH_VISUAL.closeRadius, this.active))
           .margin({ top: this.topInset + SOURCE_SWITCH_VISUAL.switchPadding, right: SOURCE_SWITCH_VISUAL.switchPadding })
           .id(this.focusId).accessibilityText('取消切换书源')
           .onClick((): void => { if (this.mounted && this.active && this.allowCancel) this.onCancel(); })

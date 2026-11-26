@@ -6,6 +6,7 @@ import inputMethod from '@ohos.inputMethod';
 import hilog from '@ohos.hilog';
 import { KeyCode } from '@kit.InputKit';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { ReaderEditingVisibility } from '../layout/ReaderEditingVisibility';
 import { ReaderEditableTarget } from '../layout/ReaderEditableTarget';
@@ -682,7 +683,8 @@ export struct ReaderSearchField {
         .width(SEARCH_CONTROL_CLEAR_ICON_SIZE).height(SEARCH_CONTROL_CLEAR_ICON_SIZE)
         .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
     }.width(SEARCH_CONTROL_CLEAR_SLOT).height(this.sourceV9Chrome ? 40 : SEARCH_CONTROL_MIN_TARGET).padding({ left: 10 })
-      .backgroundColor(Color.Transparent)
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme,
+        SEARCH_CONTROL_CLEAR_SLOT / 2, SEARCH_CONTROL_CLEAR_SLOT / 2, this.editingCurrent?.() !== false))
       .responseRegion({
         // The adjacent group chevron keeps its whole 44vp target.
         x: this.variant === 'sourceGroup' ? SEARCH_CONTROL_CLEAR_SLOT - SEARCH_CONTROL_MIN_TARGET : -SEARCH_CONTROL_CLEAR_END_INSET,

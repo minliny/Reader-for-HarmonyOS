@@ -26,6 +26,8 @@ import { measureReaderControlText } from './ReaderControlTextMeasurement';
 import { ReaderDirectoryToolbar } from './ReaderDirectoryToolbar';
 import { ReaderDirectoryQuickActions, readerDirectoryQuickActionsHeight } from './ReaderDirectoryQuickActions';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
+import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
 import { projectReaderDirectoryEntries } from '../presentation/ReaderDirectoryProjection';
@@ -91,9 +93,12 @@ export struct FullDirectoryPanel {
   }
   private standaloneEditorHeight(): number {
     const minimumRowHeight = this.detailPage && this.activeTab === 'bookmarks' ? this.listRowHeight('bookmarks') : this.directoryRowHeight();
-    return this.standaloneShort() ? Math.min(this.standaloneAvailableHeight(),
-      Math.max(Math.min(44, this.standaloneAvailableHeight()), this.standaloneAvailableHeight() - minimumRowHeight)) :
-      Math.min(this.standaloneAvailableHeight(), this.standaloneEditorNaturalHeight());
+    const available = this.standaloneAvailableHeight();
+    if (!this.standaloneShort()) return Math.min(available, this.standaloneEditorNaturalHeight());
+    const flowFooter = this.flowCatalogFooter();
+    const editorMinimum = Math.min(44, flowFooter ? available / 2 : available);
+    const listMinimum = flowFooter ? Math.min(available / 2, minimumRowHeight) : minimumRowHeight;
+    return Math.max(editorMinimum, available - listMinimum);
   }
   @StorageLink('readerWindowMetricsRevision') @Watch('onMotionProgressChanged') private readerWindowMetricsRevision: number = 0;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
@@ -213,7 +218,7 @@ export struct FullDirectoryPanel {
   // real directory rows at the transition's source endpoint while p is
   // between 0 and 1; switch once at the settled endpoint and correct the
   // leading-row anchor there. The viewport/sheet still morphs continuously.
-  private motionStableDirectoryRowHeight: number = 32;
+  private motionStableDirectoryRowHeight: number = 44;
   private motionStableDirectoryViewportHeight: number = 141;
   private motionStableDirectoryPaddingX: number = 16;
   // Bookmarks follow the same virtual-list rule. The card actors keep their
@@ -341,7 +346,7 @@ export struct FullDirectoryPanel {
       else {
         Stack() {
           this.chapterList();
-          if (this.projectedEntries.length === 0 && !this.navigationActive) this.standaloneCatalogState();
+          if (this.projectedEntries.length === 0 && !this.navigationActive && !this.flowCatalogFooter()) this.standaloneCatalogState();
         }.width(this.innerWidth()).height(this.chapterListHeight());
         if (!this.standaloneShort()) {
           if (this.standaloneCatalog) this.catalogFooter();
@@ -371,6 +376,8 @@ export struct FullDirectoryPanel {
     if (this.standaloneCatalog) return readerDirectoryQuickActionsHeight(this.fontScale(), this.currentPosition() !== '—');
     return readerScaledControlHeight(48, 16, this.fontScale());
   }
+
+  private flowCatalogFooter(): boolean { return this.standaloneCatalog && this.standaloneShort(); }
 
   @Builder
   private standalonePrefix() { Column() {}.width('100%').height(0); }
@@ -506,7 +513,8 @@ export struct FullDirectoryPanel {
         }
         .constraintSize({ minWidth: 44, minHeight: this.panelHeaderHeight() }).height(this.panelHeaderHeight()).flexShrink(0)
         .backgroundColor(Color.Transparent).borderRadius(8)
-        .attributeModifier(new ReaderActionAccessibility('收起目录'))
+        .attributeModifier(new ReaderActionAccessibility('收起目录', this.panelInputCurrent(), false, true,
+          new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 8, 8, this.panelInputCurrent())))
         .onClick((): void => { if (this.panelInputCurrent()) this.onExit(); });
       } else {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
@@ -514,7 +522,8 @@ export struct FullDirectoryPanel {
         }
         .constraintSize({ minWidth: 44, minHeight: this.panelHeaderHeight() }).height(this.panelHeaderHeight()).padding(0).flexShrink(0)
         .backgroundColor(Color.Transparent).borderRadius(8)
-        .attributeModifier(new ReaderActionAccessibility('收起目录', true, false, true, undefined, 'nativeButton'))
+        .attributeModifier(new ReaderActionAccessibility('收起目录', this.panelInputCurrent(), false, true,
+          new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 8, 8, this.panelInputCurrent()), 'nativeButton'))
         .onClick((): void => { if (this.panelInputCurrent()) this.onExit(); });
       }
     }
@@ -587,19 +596,15 @@ export struct FullDirectoryPanel {
 
   @Builder
   private directoryTab() {
-    if (this.expandedLayout) {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
       Stack({ alignContent: Alignment.Bottom }) { this.directoryTabContent(); }
-        .layoutWeight(1).height(this.tabHeight()).accessibilityText('目录')
-        .onClick((): void => { this.choosePanelTab('directory'); });
-    } else {
-      Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Stack({ alignContent: Alignment.Bottom }) { this.directoryTabContent(); }
-          .width('100%').height(this.tabHeight())
-          .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-      }.layoutWeight(1).height(this.tabHeight()).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-        .accessibilityText('目录').accessibilitySelected(this.activeTab === 'directory')
-        .onClick((): void => { this.choosePanelTab('directory'); });
-    }
+        .width('100%').height(this.tabHeight())
+        .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+    }.layoutWeight(1).height(this.tabHeight()).padding(0)
+      .attributeModifier(new ReaderActionAccessibility('目录', this.panelInputCurrent(), this.activeTab === 'directory', true,
+        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, this.panelInputCurrent()), 'nativeButton'))
+      .responseRegion({ x: 0, y: 0, width: '100%', height: this.tabHeight() })
+      .onClick((): void => { this.choosePanelTab('directory'); });
   }
 
   @Builder
@@ -628,19 +633,15 @@ export struct FullDirectoryPanel {
 
   @Builder
   private bookmarkTab() {
-    if (this.expandedLayout) {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
       Stack({ alignContent: Alignment.Bottom }) { this.bookmarkTabContent(); }
-        .layoutWeight(1).height(this.tabHeight()).accessibilityText('书签')
-        .onClick((): void => { this.choosePanelTab('bookmarks'); });
-    } else {
-      Button({ type: ButtonType.Normal, stateEffect: false }) {
-        Stack({ alignContent: Alignment.Bottom }) { this.bookmarkTabContent(); }
-          .width('100%').height(this.tabHeight())
-          .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-      }.layoutWeight(1).height(this.tabHeight()).padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-        .accessibilityText('书签').accessibilitySelected(this.activeTab === 'bookmarks')
-        .onClick((): void => { this.choosePanelTab('bookmarks'); });
-    }
+        .width('100%').height(this.tabHeight())
+        .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
+    }.layoutWeight(1).height(this.tabHeight()).padding(0)
+      .attributeModifier(new ReaderActionAccessibility('书签', this.panelInputCurrent(), this.activeTab === 'bookmarks', true,
+        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, this.panelInputCurrent()), 'nativeButton'))
+      .responseRegion({ x: 0, y: 0, width: '100%', height: this.tabHeight() })
+      .onClick((): void => { this.choosePanelTab('bookmarks'); });
   }
 
   @Builder
@@ -744,6 +745,8 @@ export struct FullDirectoryPanel {
             headerCount: 0,
             prefixHeight: this.standalonePrefixHeight(), prefixIdentity: `${this.listSessionKey}:${this.activeTab}:${this.fontScale()}:${this.innerWidth()}`,
             prefixBuilder: (): void => { this.standalonePrefix(); },
+            tailHeight: this.flowCatalogFooter() ? this.standaloneFooterHeight() : 0,
+            tailBuilder: (): void => { this.catalogFooter(); },
             fallbackBuilder: (): void => { this.flatChapterList(); },
             onSelectTarget: (chapterIndex: number, chapterOffsetScalar: number, positionScope?: RemoteReadingPositionScope, directoryTargetProof?: ReaderDirectoryTargetProof): void => {
               this.onSelectNavigationTarget(chapterIndex, chapterOffsetScalar, positionScope, directoryTargetProof);
@@ -783,7 +786,9 @@ export struct FullDirectoryPanel {
         entries: this.projectedEntries,
         prefixHeight: this.standalonePrefixHeight(),
         prefixBuilder: (): void => { this.standalonePrefix(); },
-        emptyBuilder: (): void => { if (this.embeddedInControl) this.standaloneCatalogState(); },
+        emptyBuilder: (): void => { if (this.embeddedInControl || this.flowCatalogFooter()) this.standaloneCatalogState(); },
+        tailHeight: this.flowCatalogFooter() ? this.standaloneFooterHeight() : 0,
+        tailBuilder: (): void => { this.catalogFooter(); },
         deferEntriesDuringMotion: this.embeddedInControl && this.controlProgress() > 0 && this.controlProgress() < 1,
         rowHeight: this.directoryListRowHeight(),
         listPaddingX: this.directoryListPaddingX(),
@@ -1266,9 +1271,11 @@ export struct FullDirectoryPanel {
     if (!this.positioningMounted || this.navigationActive || this.listPositioning.status !== 'pending') return;
     const openRevision = this.listPositioning.listOpenRevision;
     const generation = this.projectionScrollGeneration;
-    setTimeout((): void => {
+    const context = this.getUIContext();
+    context.postFrameCallback(new ReaderPostLayoutFrame(context, (): void => {
       if (!this.positioningMounted || generation !== this.projectionScrollGeneration ||
-        openRevision !== this.listPositioning.listOpenRevision || this.listViewportHeight <= 0) return;
+        openRevision !== this.listPositioning.listOpenRevision || this.listViewportHeight <= 0 ||
+        this.navigationActive || this.listPositioning.status !== 'pending') return;
       const tab = this.positioningTab;
       const ordinalByChapter = new Map<number, number>();
       for (let index = 0; index < this.admittedEntries.length; index += 1) {
@@ -1298,7 +1305,7 @@ export struct FullDirectoryPanel {
         rowHeight: this.listRowHeight(tab),
         rowSpacing: 0,
         paddingTop: padding + this.standalonePrefixHeight(),
-        paddingBottom: padding,
+        paddingBottom: padding + (tab === 'directory' && this.flowCatalogFooter() ? this.standaloneFooterHeight() : 0),
         viewportHeight: this.listViewportHeight,
       });
       const prepared = prepareReaderControlListPosition(this.listPositioning, openRevision,
@@ -1315,7 +1322,7 @@ export struct FullDirectoryPanel {
       } catch (_error) {
         // Keep this opening pending until the real list has a usable layout.
       }
-    }, 0);
+    }));
   }
 
   private readListOffset(): number | undefined {
@@ -1614,7 +1621,7 @@ export struct FullDirectoryPanel {
   }
 
   private directoryRowHeight(): number {
-    return readerScaledControlHeight(40, 20, this.fontScale());
+    return readerScaledControlHeight(44, 20, this.fontScale());
   }
 
   private directoryListRowHeight(): number {
@@ -1768,7 +1775,8 @@ export struct FullDirectoryPanel {
   }
 
   private tabHeight(): number {
-    return readerScaledControlHeight(36, TYPE_READER_DIRECTORY_TAB.lineHeightFp as number, this.fontScale());
+    return readerScaledControlHeight(this.embeddedInControl ? 36 : 44,
+      TYPE_READER_DIRECTORY_TAB.lineHeightFp as number, this.fontScale());
   }
 
   private embeddedTabWidth(): number {

@@ -18,7 +18,7 @@ export function actionMenuProbe(resolve=resolvePopupSpec) {
   const scale = pureModuleProbe(readFileSync(new URL('../../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts', import.meta.url), 'utf8'), 'ReaderSurfaceResolvers.ts', {}, ['readerReadableFontScale', 'readerScaledControlHeight']);
   const properties=createArkUIPropertyRuntimeProbe();
   const probe=createReaderBuilderProbe(menuSource,
-    ['appThemeScheme','readerWindowMetricsRevision','foreground','fontScale','menuActionHeight','hasFollowingAction','variant','specId','nativeId','scheme','actions','availableWidth','viewportHeight','reduceMotion','onAction','mounted','aboutToAppear','aboutToDisappear','build','menuActions','actionRow','actionRows','row','actionSheetSpec','spec','action','dividerWidth','effectiveScheme','color','accessibilityLabel','commitAction'],
+    ['appThemeScheme','readerWindowMetricsRevision','foreground','fontScale','menuActionHeight','hasFollowingAction','variant','specId','nativeId','actionIdPrefix','scheme','actions','availableWidth','viewportHeight','reduceMotion','onAction','mounted','aboutToAppear','aboutToDisappear','build','menuActions','actionRow','actionRows','row','actionSheetSpec','spec','action','dividerWidth','effectiveScheme','color','accessibilityLabel','commitAction'],
     {...properties.sdk,...scale,ReaderMenuActionView,resolvePopupSpec:resolve,resolveActionSheetSpec},properties.hooks);
   return {...probe,properties,dependencies:{ReaderActionMenuSurface:probe.Component,ReaderMenuActionView,resolvePopupSpec:resolve,resolveActionSheetSpec},
     hooks:{childSources:{ReaderActionMenuSurface:menuSource},mountChildren:true,lifecycleChildren:true},

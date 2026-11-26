@@ -8,6 +8,7 @@ import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { TOK_SPACE_CONTROL_INLINE } from '../../../ui/foundation/ReaderTokens';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { MangaDirectoryPressFeedback } from '../../../ui/foundation/MangaDirectoryPressFeedback';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { ReaderSearchField } from '../../../ui/controls/ReaderSearchField';
 import { MANGA_DIRECTORY_VISUAL as manga, mangaDirectoryColor, mangaDirectoryLineBox } from '../../manga/ui/MangaDirectoryVisual';
 import { readerDirectoryToolbarBudget, type ReaderDirectoryToolbarBudget } from '../presentation/ReaderFullDirectoryBudget';
@@ -133,12 +134,12 @@ export struct ReaderDirectoryToolbar {
           readerAppColor('TOK_SURFACE_PANEL_SOFT', this.appThemeScheme)).borderRadius(8)
         .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
     }
-      .width(this.variant === 'full-directory' ? 32 : 44).height(Math.max(44, this.controlFieldHeight()))
+      .width(44).height(Math.max(44, this.controlFieldHeight()))
       .padding(0)
       .backgroundColor(Color.Transparent).borderRadius(8)
       .attributeModifier(new ReaderActionAccessibility(this.toolLabel(kind), this.actionEnabled, false, true,
-        new MangaDirectoryPressFeedback(this.actionEnabled, this.variant === 'manga-catalog', this.appThemeScheme, 'nativeButton'), 'nativeButton'))
-      .responseRegion({ x: 0, y: 0, width: this.variant === 'full-directory' ? 32 : 44, height: Math.max(44, this.controlFieldHeight()) })
+        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 8, 8, this.actionEnabled), 'nativeButton'))
+      .responseRegion({ x: 0, y: 0, width: 44, height: Math.max(44, this.controlFieldHeight()) })
       .onClick((): void => { if (this.actionEnabled) action(); });
   }
 
@@ -209,7 +210,7 @@ export struct ReaderDirectoryToolbar {
     }.width(44).height(44).padding(0).backgroundColor(Color.Transparent)
       .attributeModifier(new ReaderActionAccessibility(sort ?
         (this.ascending ? '按章节倒序排列' : '按章节正序排列') : '缓存管理', this.actionEnabled, false, true,
-        new MangaDirectoryPressFeedback(this.actionEnabled, false, this.appThemeScheme, 'nativeButton'), 'nativeButton'))
+        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 22, 22, this.actionEnabled), 'nativeButton'))
       .onClick((): void => {
         if (!this.actionEnabled || !this.currentDirectoryInput(inputFocusId)) return;
         if (sort) this.onToggleSort();

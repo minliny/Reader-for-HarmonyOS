@@ -53,6 +53,7 @@ const Page=selectedProductionMethods(new URL('../entry/src/main/ets/features/sea
   ['aboutToAppear', 'aboutToDisappear', 'acceptPublication', 'bindSurface', 'publishSurface', 'ownsSurface', 'surfaceInputCurrent', 'pageInputCurrent', 'hasSearchSession', 'canSubmit',
     'ownsPageQuery', 'ownsList', 'searchFontScale', 'submitSearch', 'selectContentType', 'selectGroup', 'filteredEmptyMessage', 'groupResults', 'resultGroupKey', 'normalizedBookKey', 'saveScrollAnchor', 'refreshVisibleResults', 'publishVisibleGroups', 'scheduleScrollRestore', 'finishScrollRestore', 'restoreMeasuredAnchor', 'resultNativeIndex', 'rememberAnchorNeighbors', 'cancelScrollRestoreForUser', 'onResultScrollIndex',
     'retirePanelScope', 'publishSurfacePanelInput', 'cancelSearchFocusRestore', 'pendingResultFocus', 'resetFilteredResults', 'releaseNativePanelChrome',
+    'hasSearchFilters', 'acceptsEmptyFilterReset', 'resetEmptySearchFilters', 'resetSelectedFilters',
     'filterPresentationIdentity', 'taskStatusIdentity', 'acceptsFilter', 'acceptsTaskStatus', 'dismissSearchFilters', 'dismissTaskStatus', 'searchPanelOwnsInput',
     'onListTouch', 'scheduleDeferredResults', 'restoreResultFocus', 'resultFocusId', 'resultViewportId',
     'acceptResultNoticeFacts', 'captureSearchNoticeFacts', 'searchProgressText', 'searchStopped', 'isSweeping', 'operation',
@@ -646,6 +647,22 @@ filtered.presentation = { ...queryPresentation, searching: false, stopped: true 
 assert.match(filtered.filteredEmptyMessage(), /搜索已停止.*已返回的结果/);
 filtered.presentation = { ...queryPresentation, searching: false, stopped: false };
 assert.match(filtered.filteredEmptyMessage(), /已返回的结果.*可切换范围或内容类型/);
+filtered.listMounted = true;
+filtered.getUIContext = () => ({ postFrameCallback() {} });
+filtered.filterSheetIdentity = '';
+filtered.taskSheetIdentity = '';
+filtered.resetEmptySearchFilters(queryRevision - 1);
+assert.equal(filtered.visibleGroups.length, 0, 'a retired query cannot reset current filters');
+filtered.filtersExpanded = true;
+filtered.resetEmptySearchFilters(queryRevision);
+assert.equal(filtered.visibleGroups.length, 0, 'the current modal owns filter actions');
+filtered.filtersExpanded = false;
+filtered.resetEmptySearchFilters(queryRevision);
+assert.deepEqual([filterState.category, filterState.contentType], ['全部', '全部类型']);
+assert.deepEqual(filtered.visibleGroups.map(group => filtered.resultGroupKey(group.book)), originalOrder);
+assert.equal(filterState.revision, queryRevision, 'the empty-state action keeps the accepted query');
+assert.deepEqual(searches, []);
+filtered.selectGroup('本地');
 chip('小说').onClick(); controls.flush(chips);
 assert.deepEqual(filtered.visibleGroups.map(group => group.book), [localNovel]);
 filtered.selectGroup('在线');

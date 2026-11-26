@@ -42,7 +42,7 @@ async function measure(value) {
 
 for (const kind of ['text', 'manga']) {
   const foldedLines = kind === 'manga' ? 3 : 4;
-  const cardInset = kind === 'manga' ? 0 : 26;
+  const cardInset = 26;
   const expandLabel = kind === 'manga' ? '展开' : '展开全部';
   const short = fixture(kind); await measure(short);
   assert.equal(short.owner.introMeasured, true);
@@ -74,11 +74,13 @@ for (const kind of ['text', 'manga']) {
   assert.ok(longNodes.some(node => node.create === expandLabel));
   const toggleTarget = longNodes.find(node => node.type === 'Button' && node.onClick &&
     (kind === 'manga' ? node.margin?.top === 4 : node.id === 'reader-detail-summary-toggle'));
+  assert.ok(longNodes.some(node => node.type === 'Column' && node.borderRadius === 14 && node.padding === 12 && node.border?.width === 1));
   if (kind === 'text') {
-    assert.ok(longNodes.some(node => node.type === 'Column' && node.borderRadius === 14 && node.padding === 12 && node.border?.width === 1));
     assert.ok(longNodes.some(node => node.linearGradient && node.height === 20 && node.hitTestBehavior === 'HitTestMode.None'));
-    assert.ok(!longNodes.some(node => node.type === 'Column' && node.linearGradient && node.position?.y < 0),
-      'the inset footer does not create a rectangular fade behind the dock');
+    const fade = longNodes.find(node => node.type === 'Column' && node.linearGradient && node.position?.y < 0);
+    assert.equal(fade.width, long.owner.liveWidth(), 'the dock backing fades across the whole page width');
+    assert.equal(fade.position.x, -long.owner.geometry.footer.insetLeft);
+    assert.equal(fade.hitTestBehavior, 'HitTestMode.None');
   }
   assert.ok(toggleTarget); toggleTarget.onClick(); long.sdk.properties.flush();
   assert.equal(long.owner.introExpanded, true);

@@ -31,8 +31,9 @@ export class ReaderBoundedFrameModifier implements AttributeModifier<CommonAttri
       instance.width(this.width).height(this.height)
         .backgroundEffect({ radius: READER_HEAVY_GLASS_BLUR_VP,
           color: readerAppColor(spec.surfaceRole, this.scheme) })
-        .border({ width: { top: 1 }, color: readerAppColor(spec.lineRole, this.scheme) })
-        .borderRadius(this.placement === 'side' ? 22 : { topLeft: spec.cornerRadius, topRight: spec.cornerRadius })
+        .border({ width: this.placement === 'side' ? { left: 1 } : { top: 1 }, color: readerAppColor(spec.lineRole, this.scheme) })
+        .borderRadius(this.placement === 'side' ? { topLeft: 22, bottomLeft: 22, topRight: 0, bottomRight: 0 } :
+          { topLeft: spec.cornerRadius, topRight: spec.cornerRadius })
         .shadow(readerSurfaceElevation('sheet', this.scheme)).clip(true);
       return;
     }

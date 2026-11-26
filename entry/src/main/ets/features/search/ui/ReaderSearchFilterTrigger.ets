@@ -1,4 +1,5 @@
 import { SEARCH_RESULT_GEOMETRY } from './SearchResultGeometry';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import type { SearchContentType } from '../presentation/SearchViewState';
 
 @Component
@@ -24,10 +25,12 @@ export struct ReaderSearchFilterTrigger {
       Image(this.scheme === 'night' ?
         (this.active() ? $r('app.media.bookshelf_filter_active_theme_night') : $r('app.media.bookshelf_filter_theme_night')) :
         (this.active() ? $r('app.media.bookshelf_filter_active') : $r('app.media.bookshelf_filter')))
-        .width(SEARCH_RESULT_GEOMETRY.filterIconSize).height(SEARCH_RESULT_GEOMETRY.filterIconSize);
+        .width(SEARCH_RESULT_GEOMETRY.filterIconSize).height(SEARCH_RESULT_GEOMETRY.filterIconSize)
+        .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
       }.width(SEARCH_RESULT_GEOMETRY.filterActionSize).height(SEARCH_RESULT_GEOMETRY.filterActionSize);
     }.width(SEARCH_RESULT_GEOMETRY.filterActionSize).height(SEARCH_RESULT_GEOMETRY.filterActionSize)
-      .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
+      .padding(0).attributeModifier(new ReaderPressFeedback(Color.Transparent, this.scheme,
+        SEARCH_RESULT_GEOMETRY.filterActionSize / 2))
       .id(this.triggerFocusId)
       .accessibilityRole(AccessibilityRoleType.BUTTON)
       .accessibilityText(`${this.expanded ? '收起筛选' : '展开筛选'}，内容${this.selectedType}，来源${this.selectedGroup}`)

@@ -1,7 +1,7 @@
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import type { SourceSwitchPresentation } from '../presentation/SourceSwitchPresentation';
-import { ColorMetrics, FrameCallback } from '@kit.ArkUI';
+import { ColorMetrics } from '@kit.ArkUI';
 import { SOURCE_SWITCH_VISUAL } from './SourceSwitchVisual';
 import { SourceSwitchSpinner } from './SourceSwitchSpinner';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -233,11 +233,10 @@ export struct SourceSwitchWindow {
   private containerOriginY: number = 0;
   @State private containerWidth: number = 0;
   @State private novelFontsReady: boolean = sourceSwitchNovelFontsReady();
-  @State private discoveryActionPressed: boolean = false;
   @State private messageGeneration: number = 0;
   private lastFeedbackIdentity: string = '';
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
-  private discoveryActionPressRunning: boolean = false;
+  private drawerFocusOpening: string = '';
   private latestCandidates: SourceSwitchCandidate[] = [];
   private pendingSearchKeys: Set<string> = new Set();
   private wasRefreshing: boolean = false;
@@ -281,7 +280,6 @@ export struct SourceSwitchWindow {
     else if (this.mounted) this.acceptState();
   }
   private cancelPresentation(): void {
-    this.discoveryActionPressed = false;
     this.presentationEpoch += 1;
     this.anchorEpoch += 1;
     if (this.reorderTimer >= 0) clearTimeout(this.reorderTimer);
@@ -346,8 +344,6 @@ export struct SourceSwitchWindow {
     if (switching !== this.surfaceWasSwitching) { this.surfaceWasSwitching = switching; this.surfaceVariant += 1; }
     this.messageGeneration += 1;
     if (this.state.kind !== 'switching') this.selectionPending = false;
-    if (this.discoveryActionPressed && (this.busy() || this.rollbackRequired() || this.requiresReconciliation() ||
-      this.discoveryActionPressRunning !== this.isSweeping())) this.discoveryActionPressed = false;
     if (this.state.kind !== 'candidates') {
       this.wasRefreshing = false;
       if (this.state.kind === 'empty') {
@@ -378,15 +374,15 @@ export struct SourceSwitchWindow {
       }
     }
     this.retestingKeys = Array.from(this.pendingSearchKeys);
-    // Metadata and discoveries update immediately. Every candidate remains a
-    // real row so alternate rules retain their exact selectable identity.
+    // During the sweep, metadata updates in the retained rows and new rows
+    // append through onDataAdd. Sorting and removals share the next reorder.
     const incoming = new Map<string, SourceSwitchCandidate>();
     for (const candidate of this.presentationCandidates(this.latestCandidates)) incoming.set(this.candidateKey(candidate), candidate);
     const retained: SourceSwitchCandidate[] = [];
     for (const previous of this.displayedCandidates) {
       const current = incoming.get(this.candidateKey(previous));
       if (current !== undefined) { retained.push(current); incoming.delete(this.candidateKey(previous)); }
-      else if (this.touching || this.scrolling) retained.push(previous);
+      else if (refreshing || this.touching || this.scrolling) retained.push(previous);
     }
     for (const candidate of incoming.values()) retained.push(candidate);
     this.publishCandidates(retained);
@@ -394,21 +390,20 @@ export struct SourceSwitchWindow {
     this.queueReorder();
   }
   private queueReorder(): void {
-    if (this.reorderTimer >= 0) clearTimeout(this.reorderTimer);
-    this.reorderTimer = -1;
-    if (!this.mounted || !this.foreground || this.touching || this.scrolling || this.restoringAnchor || this.busy()) return;
+    if (this.reorderTimer >= 0 || !this.mounted || !this.foreground || this.touching || this.scrolling ||
+      this.restoringAnchor || this.busy()) return;
     const epoch = this.presentationEpoch;
     this.reorderTimer = setTimeout((): void => {
       this.reorderTimer = -1;
-      if (!this.mounted || !this.foreground || epoch !== this.presentationEpoch || this.touching || this.scrolling || this.busy()) return;
+      if (!this.mounted || !this.foreground || epoch !== this.presentationEpoch ||
+        this.touching || this.scrolling || this.restoringAnchor || this.busy()) return;
       this.heldKey = '';
       this.publishOrder();
-    }, this.isSweeping() ? 0 : 80);
+    }, this.isSweeping() ? 200 : 80);
   }
   private publishOrder(): void {
     if (this.state.kind !== 'candidates') return;
-    // The gateway publishes latency-sorted candidates after every source;
-    // apply that order while searching instead of waiting for the final sweep.
+    // Apply the freshest gateway order after the coalescing interval.
     const latestKeys = new Set(this.latestCandidates.map((candidate: SourceSwitchCandidate): string => this.candidateKey(candidate)));
     const next = this.presentationCandidates(this.latestCandidates).filter((candidate: SourceSwitchCandidate): boolean =>
       latestKeys.has(this.candidateKey(candidate)));
@@ -430,7 +425,7 @@ export struct SourceSwitchWindow {
     if (anchorKey.length > 0) {
       this.publishCandidates(next);
       this.restoreAnchor(anchorKey, Math.max(1 - this.rowHeight(), Math.min(0, Number.isFinite(itemY) ? itemY : 0)));
-    } else if (this.reduceMotion) {
+    } else if (this.reduceMotion || this.isSweeping()) {
       this.publishCandidates(next);
     } else {
       this.getUIContext().animateTo(readerMotionAnimateParam('source.switch.list.update', false),
@@ -724,18 +719,6 @@ export struct SourceSwitchWindow {
   private discoveryActionVisibleHeight(): number { return sourceSwitchNovelDiscoveryActionVisibleHeight(this.novelFontScale()); }
   private discoveryActionHitHeight(): number { return sourceSwitchNovelDiscoveryActionHitHeight(this.novelFontScale()); }
   private discoveryToolbarHeight(): number { return sourceSwitchNovelDiscoveryToolbarHeight(this.novelFontScale(), this.narrowWindow()); }
-  private discoveryActionTouch(event: TouchEvent): void {
-    this.discoveryActionPressed = event.type === TouchType.Down && this.foreground && !this.busy() && !this.hasPendingRecovery();
-    if (this.discoveryActionPressed) this.discoveryActionPressRunning = this.isSweeping();
-  }
-  private discoveryActionBackgroundColor(): ResourceColor {
-    const surface = readerAppColor(SOURCE_SWITCH_VISUAL.discoveryActionBackgroundRole, this.appThemeScheme);
-    if (!this.discoveryActionPressed || !this.foreground || this.busy() || this.hasPendingRecovery() ||
-      this.discoveryActionPressRunning !== this.isSweeping()) {
-      return surface;
-    }
-    return new ReaderPressFeedback(surface, this.appThemeScheme).pressedSurface();
-  }
   private novelDiscoveryPhase(): string {
     if (this.isSweeping()) return '正在查找';
     if (this.busy()) return '正在切换书源…';
@@ -768,6 +751,19 @@ export struct SourceSwitchWindow {
       this.foreground && variant === this.surfaceVariant);
   }
 
+  private focusDrawerActor(attachment: number, scope: number, variant: number, close: boolean): void {
+    const opening = `${scope}:${attachment}:${variant}`;
+    if (this.drawerFocusOpening === opening || this.canClose() !== close) return;
+    const target = `reader-source-${close ? 'close' : 'heading'}:${opening}`;
+    this.surface?.focusSurfaceAction(attachment, scope, target, (): boolean => {
+      if (!this.mounted || !this.showing || !this.foreground || attachment !== this.surfaceAttachment ||
+        scope !== this.surfaceScope || variant !== this.surfaceVariant || this.drawerFocusOpening === opening ||
+        this.canClose() !== close) return false;
+      this.drawerFocusOpening = opening;
+      return true;
+    });
+  }
+
   @Builder
   private novelHeading(attachment: number = this.surfaceAttachment, scope: number = this.surfaceScope, variant: number = this.surfaceVariant) {
     Row({ space: SOURCE_SWITCH_VISUAL.headingGap }) {
@@ -775,20 +771,17 @@ export struct SourceSwitchWindow {
         .fontSize(TYPE_SOURCE_SWITCH_NOVEL_HEADING.fontSizeFp).lineHeight(TYPE_SOURCE_SWITCH_NOVEL_HEADING.lineHeightFp).halfLeading(true)
         .fontColor(readerAppColor('TOK_INK', this.appThemeScheme)).layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
         .id(`reader-source-heading:${scope}:${attachment}:${variant}`).focusable(!this.canClose())
-        .onAppear((): void => {
-          if (!this.canClose()) this.focusCurrentActor(attachment, scope, variant, `reader-source-heading:${scope}:${attachment}:${variant}`);
-        });
+        .onAppear((): void => this.focusDrawerActor(attachment, scope, variant, false));
       this.discoveryAction();
-      Button({ type: ButtonType.Normal }) {
+      Button({ type: ButtonType.Normal, stateEffect: false }) {
         Image(this.appThemeScheme === 'night' ? $r('app.media.source_switch_close_theme_night') : $r('app.media.source_switch_close'))
-          .width(SOURCE_SWITCH_VISUAL.closeIconSize).height(SOURCE_SWITCH_VISUAL.closeIconSize);
+          .width(SOURCE_SWITCH_VISUAL.closeIconSize).height(SOURCE_SWITCH_VISUAL.closeIconSize).accessibilityLevel('no');
       }.width(44).height(44).margin({ right: SOURCE_SWITCH_VISUAL.closeMarginRight - (44 - SOURCE_SWITCH_VISUAL.closeWidth) / 2 })
-        .padding(0).backgroundColor(Color.Transparent).borderRadius(SOURCE_SWITCH_VISUAL.closeRadius)
+        .padding(0).attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme,
+          SOURCE_SWITCH_VISUAL.closeRadius, SOURCE_SWITCH_VISUAL.closeRadius, this.canClose()))
         .id(`reader-source-close:${scope}:${attachment}:${variant}`)
         .accessibilityText('关闭更换书源').enabled(this.canClose()).onClick((): void => this.requestClose())
-        .onAppear((): void => {
-          if (this.canClose()) this.focusCurrentActor(attachment, scope, variant, `reader-source-close:${scope}:${attachment}:${variant}`);
-        });
+        .onAppear((): void => this.focusDrawerActor(attachment, scope, variant, true));
     }.width('100%').height(this.headingHeight());
   }
   @Builder
@@ -847,7 +840,7 @@ export struct SourceSwitchWindow {
               .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).flexShrink(0).maxLines(1);
           }
           Text(`${this.totalCandidateCount()}`).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontFamily)
-            .fontWeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontWeight, { enableVariableFontWeight: true }).fontSize(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontSizeFp)
+            .fontWeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontWeight).fontSize(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.fontSizeFp)
             .lineHeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_COUNT.lineHeightFp).halfLeading(true).fontFeature('"tnum" 1')
             .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme)).flexShrink(0)
             .margin({ left: this.discoveryPrefixVisible() ? SOURCE_SWITCH_VISUAL.discoveryCountGap : 0 }).maxLines(1);
@@ -868,7 +861,7 @@ export struct SourceSwitchWindow {
 
   @Builder
   private discoveryAction() {
-    Button({ type: ButtonType.Normal }) {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
         Row({ space: SOURCE_SWITCH_VISUAL.discoveryActionGap }) {
           if (!this.isSweeping()) {
             Image(this.appThemeScheme === 'night' ? $r('app.media.settings_gen_refresh_theme_night') : $r('app.media.settings_gen_refresh'))
@@ -882,12 +875,14 @@ export struct SourceSwitchWindow {
         }.width('100%').height(this.discoveryActionVisibleHeight()).justifyContent(FlexAlign.Center)
           .padding({ left: this.compactDiscoveryAction() ? SOURCE_SWITCH_VISUAL.compactDiscoveryActionPaddingX : SOURCE_SWITCH_VISUAL.discoveryActionPaddingX,
             right: this.compactDiscoveryAction() ? SOURCE_SWITCH_VISUAL.compactDiscoveryActionPaddingX : SOURCE_SWITCH_VISUAL.discoveryActionPaddingX })
-          .backgroundColor(this.discoveryActionBackgroundColor()).borderRadius(SOURCE_SWITCH_VISUAL.discoveryActionRadius);
-      }.width(this.discoveryActionWidth()).height(this.discoveryActionHitHeight()).padding(0)
-        .backgroundColor(Color.Transparent).borderRadius(SOURCE_SWITCH_VISUAL.discoveryActionRadius).stateEffect(false)
+          .backgroundColor(readerAppColor(SOURCE_SWITCH_VISUAL.discoveryActionBackgroundRole, this.appThemeScheme))
+          .borderRadius(SOURCE_SWITCH_VISUAL.discoveryActionRadius);
+      }.width(this.discoveryActionWidth()).height(this.discoveryActionHitHeight()).padding(0).focusOnTouch(false)
+        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme,
+          SOURCE_SWITCH_VISUAL.discoveryActionRadius, SOURCE_SWITCH_VISUAL.discoveryActionRadius,
+          this.foreground && !this.busy() && !this.hasPendingRecovery()))
         .accessibilityText(this.isSweeping() ? '停止查找书源' : '重新查找书源')
         .enabled(this.foreground && !this.busy() && !this.hasPendingRecovery())
-        .onTouch((event: TouchEvent): void => this.discoveryActionTouch(event))
         .onClick((): void => this.requestRefresh());
   }
 
@@ -921,9 +916,9 @@ export struct SourceSwitchWindow {
   private sweepBar() {
     Column({ space: 3 }) {
       Text(`${this.sweepProgress()?.checked ?? 0} / ${this.sweepProgress()?.total ?? 0}`).fontFamily(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontFamily).fontWeight(TYPE_SOURCE_SWITCH_NOVEL_DISCOVERY_STATUS.fontWeight).fontSize(11).fontFeature('"tnum" 1')
-        .fontColor(readerAppColor('TOK_ACCENT', this.appThemeScheme));
+        .fontColor(readerAppColor('TOK_GREEN', this.appThemeScheme));
       Progress({ value: this.sweepProgress()?.checked ?? 0, total: this.sweepProgress()?.total ?? 1, type: ProgressType.Linear })
-        .color(readerAppColor('TOK_ACCENT', this.appThemeScheme)).backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
+        .color(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)).backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
         .style({ strokeWidth: 4 }).width('100%');
     }.width('100%').alignItems(HorizontalAlign.End);
   }

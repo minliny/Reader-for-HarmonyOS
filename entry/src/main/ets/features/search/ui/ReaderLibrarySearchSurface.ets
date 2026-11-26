@@ -7,6 +7,7 @@ import inputMethod from '@ohos.inputMethod';
 import { PathShape } from '@ohos.arkui.shape';
 import { FrameCallback, LengthMetrics } from '@kit.ArkUI';
 import { ReaderWindowCoordinator } from '../../../app/ReaderWindowCoordinator';
+import type { ReaderNavigationPreferences } from '../../../app/HarmonyCapabilityPolicy';
 import { readerVisualSafeTop, readerVisualSafeBottom, readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../../../ui/foundation/ReaderWindowMetrics';
 import { ReaderFixedHeaderHost } from '../../../ui/layout/ReaderFixedHeaderHost';
 import { ReaderHeaderFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
@@ -81,6 +82,8 @@ export struct ReaderLibrarySearchSurface {
   private readonly editingScroll: ReaderEditingScrollBinding = new ReaderEditingScrollBinding('reader-library-search-surface');
   private readonly editingScroller: Scroller = new Scroller();
   @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageProp('readerNavigationAppearancePreferences') private appearancePreferences: ReaderNavigationPreferences =
+    { override: 'unset', reduceTransparency: false };
   @StorageLink('readerWindowMetricsRevision') @Watch('metricsChanged') private metricsRevision: number = 0;
   @ObjectLink @Watch('historyChanged') model: ReaderLibrarySearchModel;
   @Prop @Watch('modeChanged') mode: LibrarySearchMode = 'idle';
@@ -927,7 +930,9 @@ export struct ReaderLibrarySearchSurface {
         .opacity(1 - this.surfaceValue())
         .id(this.moreIdentity)
         .hitTestBehavior(this.moreInteractive() ? HitTestMode.Default : HitTestMode.None)
-        .attributeModifier(new ReaderActionAccessibility('更多', this.moreInteractive(), false, true, undefined, 'nativeButton'))
+        .attributeModifier(new ReaderActionAccessibility('更多', this.moreInteractive(), false, true,
+          new ReaderPressFeedback(Color.Transparent, this.scheme, bookshelfHeaderSpec().retainedActionRadius,
+            bookshelfHeaderSpec().retainedActionRadius, this.moreInteractive()), 'nativeButton'))
         .accessibilityLevel(this.mode === 'idle' ? 'auto' : 'no-hide-descendants')
         .onClick(this.moreAction(this.identity, this.navigationGeneration, this.mounting, this.moreIdentity));
       if (this.searchMounted && this.model.currentOwner() !== 0) {
@@ -998,7 +1003,9 @@ export struct ReaderLibrarySearchSurface {
       }.headerActionFrame().padding(0).backgroundColor(Color.Transparent)
         .position({ x: bookshelfHeaderSpec().retainedLeadingInset, y: this.headerActionTop() })
         .id(this.mode === 'idle' ? 'reader-bookshelf-search-entry' : READER_LIBRARY_SEARCH_BACK_FOCUS_ID)
-        .attributeModifier(new ReaderActionAccessibility(this.presentedSearch() ? '返回' : '搜索书籍', !this.model.panelOwnsInput, false, true, undefined, 'nativeButton'))
+        .attributeModifier(new ReaderActionAccessibility(this.presentedSearch() ? '返回' : '搜索书籍', !this.model.panelOwnsInput,
+          false, true, new ReaderPressFeedback(Color.Transparent, this.scheme, bookshelfHeaderSpec().retainedActionRadius,
+            bookshelfHeaderSpec().retainedActionRadius, !this.model.panelOwnsInput), 'nativeButton'))
         .accessibilityLevel(this.model.panelOwnsInput ? 'no-hide-descendants' : 'auto')
         .onClick(this.leadingAction(this.identity, this.navigationGeneration, this.mounting));
     }.width('100%').height(this.barHeight()).id('reader-bookshelf-search-bar');
@@ -1144,6 +1151,7 @@ export struct ReaderLibrarySearchSurface {
       Column().width('100%').height('100%')
         .backgroundColor(this.mode === 'input' && this.model.sourceRecoveryVisible ?
           Color.Transparent : readerAppColor('app.scrim.modal', this.scheme))
+        .backdropBlur(this.appearancePreferences.reduceTransparency || this.scrimProgress() <= .01 ? 0 : 6)
         .opacity(this.scrimProgress() * this.reducedSearchOpacity).zIndex(1)
         .hitTestBehavior(this.mode === 'input' && this.scrimProgress() > .01 ? HitTestMode.Default : HitTestMode.None)
         .onClick(this.backAction(this.identity, this.navigationGeneration, this.mounting));

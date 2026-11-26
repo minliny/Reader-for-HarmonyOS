@@ -8,7 +8,8 @@ const {readFileSync} = await import('node:fs');
 const {createHash} = await import('node:crypto');
 const {stripTypeScriptTypes} = await import('node:module');
 const {boundedSurfaceSdk} = await import('./lib/bounded-surface-sdk-probe.mjs');
-const {sourceSwitchLiveSdk,sourceSwitchFontSdk} = await import('./lib/source-switch-sdk-consumer.mjs');
+const {sourceSwitchLiveSdk,sourceSwitchFontSdk,sourceSwitchColorMetricsSdk} = await import('./lib/source-switch-sdk-consumer.mjs');
+const {productionReaderPressFeedback} = await import('./lib/reader-press-feedback-probe.mjs');
 const metricsApi = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
 const families = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
 const {SOURCE_SWITCH_VISUAL,SOURCE_SWITCH_VISUAL_SHA256} = await import('../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts');
@@ -31,17 +32,26 @@ if(selectedCase==='redesigned-picker'){
  const current={...make('current','原书源','第 10 章',1),isCurrent:true};
  const order=owner=>owner.displayedCandidates.map(row=>row.sourceId);
  for(const width of [599,600]){
+  const focusRequests=[], queuedFocus=[];
+  const surface={
+   surfacePartAppeared(){}, surfaceTransitionFinished(){},
+   focusSurfaceAction(attachment,scope,target,current){
+    assert.deepEqual([attachment,scope],[5,3]);
+    queuedFocus.push(()=>{if(current())focusRequests.push(target);});
+   },
+  };
+  const flushFocus=()=>queuedFocus.splice(0).forEach(action=>action());
   const window=new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,width,800));
   const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
   p.hooks.allowEmptyBranchRemoval=true;
   const deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>window},readerWindowMetrics:()=>window,
    uiContext:{getFont:()=>({}),animateTo(_spec,admit){admit();},postFrameCallback(frame){frames.push(frame);}},
    Scroller:class{currentOffset(){return{yOffset:0};}scrollToIndex(...args){jumps.push(args);}},
-   setTimeout(action){timers.set(++timerId,action);return timerId;},clearTimeout(id){timers.delete(id);}});
-  const flush=()=>{for(const [id, action] of timers){timers.delete(id);action();}p.properties.flush();};
+   setTimeout(action,delay){timers.set(++timerId,{action,delay});return timerId;},clearTimeout(id){timers.delete(id);}});
+  const flush=()=>{for(const [id, timer] of timers){timers.delete(id);timer.action();}p.properties.flush();};
   const owner=new deps.SourceSwitchPanel(undefined,{state:state([current,a,b],true,1),contentKind:width===599?'text':'manga',
    currentSourceId:'current',currentSourceName:'原书源',currentChapterTitle:'第 10 章',latestChapterTitle:'第 20 章',
-   bookTitle:'同一本书',coverUrl:'retained-cover',surfaceScope:3,surfaceAttachment:5,
+   bookTitle:'同一本书',coverUrl:'retained-cover',surfaceScope:3,surfaceAttachment:5,surface,
    onSelectCandidate:row=>commands.push(row.sourceId),onRefresh:()=>commands.push('refresh'),onStop:()=>commands.push('stop')});
   owner.aboutToAppear();owner.initialRender();flush();
   const nodes=()=>p.nodes(owner);
@@ -55,6 +65,9 @@ if(selectedCase==='redesigned-picker'){
   assert.equal(frame.placement,width===599?'bottom':'side');
   assert.equal(frame.surfaceWidth,width===599?599:376);
   assert.equal(frame.surfaceHeight,width===599?656:800);
+  const frameNode=p.nodes(frame).find(node=>node.backgroundEffect&&node.width===frame.surfaceWidth);
+  assert.deepEqual(frameNode.border.width,width===599?{top:1}:{left:1});
+  if(width===600)assert.deepEqual(frameNode.borderRadius,{topLeft:22,bottomLeft:22,topRight:0,bottomRight:0});
   assert.equal(transition().parameters.appear.parameters,width===599?'bottom':'end');
   assert.equal(transition().parameters.disappear.parameters,width===599?'bottom':'end');
   assert.equal(transition().parameters.appear.options.duration,260);
@@ -69,6 +82,10 @@ if(selectedCase==='redesigned-picker'){
   reduced.aboutToDisappear();
 
   const [editor]=input();assert.equal(input().length,1);
+  const close=target('关闭更换书源');
+  close.onAppear();close.onAppear();flushFocus();
+  assert.deepEqual(focusRequests,['reader-source-close:3:5:0']);
+  assert.equal(target('停止查找书源').focusOnTouch,false);
   assert.equal(target('清空书源筛选'), undefined, 'empty search reserves no clear target');
   assert.equal(target('定位当前').height, 44);
   assert.ok(nodes().some(node => node.type === 'Row' && node.height === 32 && node.borderRadius === 16 &&
@@ -93,7 +110,10 @@ if(selectedCase==='redesigned-picker'){
   owner.state=state([a,b],true,2);flush();retained();
   const sweepProgress=()=>nodes().filter(node=>node.type==='Progress').map(node=>node.create);
   assert.ok(sweepProgress().some(progress=>progress.value===2&&progress.total===5),JSON.stringify(sweepProgress()));
+  assert.equal(nodes().find(node=>node.type==='Progress'&&node.create.value===2).color,readerAppColor('TOK_PRIMARY_DARK','day'));
   editor.onChange('山路');flush();retained();assert.equal(editor.create.text,'山路');
+  close.onAppear();flushFocus();
+  assert.deepEqual(focusRequests,['reader-source-close:3:5:0'],'the flow heading remount cannot claim focus from the live editor');
   assert.deepEqual(order(owner),[]);assert.ok(candidateCount(0));oldRow.onClick();assert.equal(commands.at(-1),'refresh');
   owner.state=state([a,c,b],true,3);flush();retained();assert.equal(editor.create.text,'山路');
   assert.deepEqual(order(owner),['c']);
@@ -102,7 +122,19 @@ if(selectedCase==='redesigned-picker'){
   target('清空书源筛选').onClick();flush();retained();assert.equal(editor.create.text,'');
   assert.deepEqual(order(owner),['a','c','b']);
   target('延迟优先').onClick();flush();retained();assert.deepEqual(order(owner),['b','c','a']);
-  owner.state=state([a,c,b,d],true,4);flush();retained();assert.deepEqual(order(owner),['d','b','c','a']);
+  const notifications=[];
+  owner.candidateDataSource.registerDataChangeListener({
+   onDataAdd:index=>notifications.push(['add',index]),onDataReloaded:()=>notifications.push(['reload']),
+  });
+  owner.state=state([a,c,b,d],true,4);p.properties.flush();
+  assert.deepEqual(order(owner),['b','c','a','d'],'new discoveries append before the timed reorder');
+  const [scheduled]=timers;
+  assert.equal(scheduled[1].delay,200);
+  owner.state=state([a,c,b,{...d,sourceName:'Delta 源已更新'}],true,5);p.properties.flush();
+  assert.deepEqual([...timers.keys()],[scheduled[0]],'a rapid result update reuses the same deadline');
+  assert.deepEqual(notifications,[['add',3]],'incremental results preserve the current native range');
+  flush();retained();assert.deepEqual(order(owner),['d','b','c','a']);
+  assert.deepEqual(notifications,[['add',3],['reload']]);
   target('停止查找书源').onClick();assert.equal(commands.at(-1),'stop');
   editor.onChange(' ALPHA ');flush();assert.deepEqual(order(owner),['a']);
   target('定位当前').onClick();flush();retained();assert.equal(editor.create.text,'');
@@ -134,7 +166,8 @@ const uiContext={getFont:()=>({}),animateTo(_options,action){action();},postFram
  const a={options,onFrame:()=>{},played:0,cancelled:0,play(){this.played++;},cancel(){this.cancelled++;this.onFrame(360);}};
  animations.push(a);return a;
 }};
-const deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics},uiContext,setTimeout(){return 1;},clearTimeout(){}});
+const deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics},uiContext,setTimeout(){return 1;},clearTimeout(){},
+ ReaderPressFeedback:productionReaderPressFeedback({ColorMetrics:sourceSwitchColorMetricsSdk()})});
 function scene(width,height,scale,state={kind:'candidates',candidates:[candidate('a'),candidate('a','/alternate'),candidate('b')],refreshing:true},contentKind='text',scheme='day',extra={},safeInsets=[0,24,0,24]){
  metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,width,height);
  metrics.systemFontScale=scale;metrics.systemInsets=new metricsApi.ReaderInsetsVp(...safeInsets);
@@ -366,48 +399,38 @@ if(selectedCase==='row-action-interaction'){
  touch(deps.TouchType.Cancel);assert.equal(paint.opacity,1);assert.equal(paint.backgroundColor,soft);
  hit.onClick();assert.equal(clicks,1,'enabled native row retains its original selection callback');
 }
-// Actual action hit callbacks retain the pressed recipe independently of
-// candidate enrichment, and restore it on pointer/cancellation/state changes.
+// Native button state owns feedback for both recheck and stop. The central
+// compact fill stays in the same bounds, and the native target owns the overlay.
 for(const contentKind of ['text','manga'])for(const scheme of ['day','night'])for(const running of [false,true]){
  const rows=[candidate('a'),candidate('a','/alternate'),candidate('b')];
  const state={kind:'candidates',candidates:rows,refreshing:running};
  const x=scene(390,844,1,state,contentKind,scheme),o=x.o;
- const button=()=>p.nodes(o).find(n=>n.type==='Button'&&typeof n.onTouch==='function');
+ const button=p.nodes(o).find(n=>n.type==='Button'&&n.accessibilityText===(running?'停止查找书源':'重新查找书源'));
  const fill=()=>p.nodes(o).find(n=>n.type==='Row'&&n.create?.space===v.discoveryActionGap);
  const normal=readerAppColor(design.strings.discoveryActionBackgroundRole,scheme);
- const pressed=deps.ColorMetrics.resourceColor(normal).blendColor(
+ const pressed=deps.ColorMetrics.resourceColor('Color.Transparent').blendColor(
   deps.ColorMetrics.resourceColor(readerAppColor('app.interaction.press',scheme))).color;
- assert.equal(fill().backgroundColor,normal);assert.equal(button().stateEffect,false);
- const actionWidth=button().width;
+ const visualOwner = p.walk(o).find(child=>[...child.nodes.values()].includes(button));
+ const nativeId = [...visualOwner.nodes].find(([,node])=>node===button)[0];
+ const modifier = () => visualOwner.attributeCalls.filter(call=>call.id===nativeId&&call.property==='attributeModifier').at(-1).args[0];
+ const paint = {};
+ const port = new Proxy({}, {get:(_object,key)=>value=>{paint[key]=value;return port;}});
+ assert.equal(fill().backgroundColor,normal);
+ assert.equal(button.createWithChild.stateEffect,false);
+ assert.equal(button.focusOnTouch,false);
+ assert.equal(button.onTouch,undefined,'a movement event cannot clear locally managed press state');
+ modifier().applyPressedAttribute(port);
+ assert.equal(paint.backgroundColor,pressed);
+ modifier().applyNormalAttribute(port);
+ assert.equal(paint.backgroundColor,'Color.Transparent');
+ const actionWidth=button.width;
  const icon=scheme==='night'?'app.media.settings_gen_refresh_theme_night':'app.media.settings_gen_refresh';
  assert.equal(p.nodes(o).filter(n=>n.type==='Image'&&n.create===icon).length,running?0:1,'only the idle action displays the static refresh icon');
- for(const end of [deps.TouchType.Up,deps.TouchType.Move,deps.TouchType.Cancel]){
-  button().onTouch({type:deps.TouchType.Down});p.properties.flush();
-  assert.equal(o.discoveryActionPressed,true);assert.equal(fill().backgroundColor,pressed,'press composes neutral ink over the rest fill');
-  button().onTouch({type:end});p.properties.flush();assert.equal(o.discoveryActionPressed,false);assert.equal(fill().backgroundColor,normal);
- }
- button().onTouch({type:deps.TouchType.Down});p.properties.flush();
  o.state={...state,candidates:rows.map(c=>({...c,latestChapterTitle:'异步更新'}))};o.acceptState();p.properties.flush();
- assert.equal(o.discoveryActionPressed,true,'same-phase candidate enrichment cannot flash the action fill');assert.equal(fill().backgroundColor,pressed);
- // This controlled builder probe admits additions, but deliberately rejects
- // retiring a populated branch. Exercise the real owner transition before
- // painting, then restore this scene; independent idle/running scenes above
- // verify each emitted branch without weakening that probe boundary.
- o.state={kind:'candidates',candidates:rows,refreshing:!running,stopped:running};o.acceptState();
- assert.equal(o.discoveryActionPressed,false,'a real running-state change clears the prior action press');
- assert.equal(o.discoveryActionBackgroundColor(),normal);
- const phase=running?'已停止':'正在查找';
- assert.equal(o.novelDiscoveryPhase(),phase,'the actual owner supplies the next phase');
- o.state=state;o.acceptState();p.properties.flush();
+ modifier().applyPressedAttribute(port);
+ assert.equal(paint.backgroundColor,pressed,'same-phase enrichment preserves the native target feedback');
  assert.equal(fill().backgroundColor,normal);
- assert.equal(button().width,actionWidth,'the restored action retains its same hit extent');
- button().onTouch({type:deps.TouchType.Down});p.properties.flush();assert.equal(o.discoveryActionPressed,true);
- o.cancelPresentation();p.properties.flush();assert.equal(o.discoveryActionPressed,false,'retiring/cancelling this presentation restores the action');
- const retainedTouch=button().onTouch;
- o.state={kind:'failure',transactionId:'held',confirmation:'known',message:'保留原阅读位置'};o.acceptState();
- retainedTouch({type:deps.TouchType.Down});assert.equal(o.discoveryActionPressed,false,'disabled rollback state cannot admit a new press');
- assert.equal(o.discoveryActionBackgroundColor(),normal);
- o.state=state;o.acceptState();p.properties.flush();assert.equal(fill().backgroundColor,normal);
+ assert.equal(button.width,actionWidth);
  o.aboutToDisappear();
 }
 

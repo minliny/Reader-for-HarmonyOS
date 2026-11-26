@@ -1,6 +1,7 @@
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
 import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../../../ui/foundation/ReaderFontFamilies';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 
 export function readerDirectoryQuickActionsHeight(fontScale: number, showPosition: boolean): number {
@@ -41,12 +42,12 @@ export struct ReaderDirectoryQuickActions {
           }
         }.layoutWeight(1).constraintSize({ minWidth: 0 }).alignItems(HorizontalAlign.Start);
       }.width('100%').height(this.actionHeight() - 8).padding({ left: 12, right: 8 })
-        .backgroundColor(readerAppColor('TOK_PRIMARY_SOFT', this.scheme)).borderRadius((this.actionHeight() - 8) / 2)
         .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
     }.layoutWeight(1).constraintSize({ minWidth: 44 }).height(this.actionHeight()).padding(0)
-      .backgroundColor(Color.Transparent).opacity(this.locateEnabled ? 1 : .55)
+      .opacity(this.locateEnabled ? 1 : .55)
       .attributeModifier(new ReaderActionAccessibility(`在读：${this.title}${this.positionLabel.length > 0 ? `，${this.positionLabel}` : ''}`,
-        this.locateEnabled, false, true, undefined, 'nativeButton'))
+        this.locateEnabled, false, true, new ReaderPressFeedback(readerAppColor('TOK_PRIMARY_SOFT', this.scheme),
+          this.scheme, this.actionHeight() / 2, this.actionHeight() / 2, this.locateEnabled), 'nativeButton'))
       .onClick((): void => { if (this.locateEnabled) this.onLocateCurrent(); });
   }
 
@@ -62,12 +63,12 @@ export struct ReaderDirectoryQuickActions {
           .fontSize(12).fontWeight(FontWeight.Medium).lineHeight(16).halfLeading(true).maxLines(1)
           .fontColor(readerAppColor('TOK_INK', this.scheme));
       }.constraintSize({ minWidth: 44 }).height(this.actionHeight() - 8).padding({ left: 8, right: 8 })
-        .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.scheme)).borderRadius((this.actionHeight() - 8) / 2)
         .hitTestBehavior(HitTestMode.None).accessibilityLevel('no-hide-descendants');
     }.height(this.actionHeight()).constraintSize({ minWidth: 44 }).flexShrink(0).padding(0)
-      .backgroundColor(Color.Transparent).opacity(this.edgeEnabled ? 1 : .55)
+      .opacity(this.edgeEnabled ? 1 : .55)
       .attributeModifier(new ReaderActionAccessibility(top ? '回到目录顶部' : '前往目录底部',
-        this.edgeEnabled, false, true, undefined, 'nativeButton'))
+        this.edgeEnabled, false, true, new ReaderPressFeedback(readerAppColor('TOK_SURFACE_FIELD', this.scheme),
+          this.scheme, this.actionHeight() / 2, this.actionHeight() / 2, this.edgeEnabled), 'nativeButton'))
       .onClick((): void => {
         if (!this.edgeEnabled) return;
         if (top) this.onTop();

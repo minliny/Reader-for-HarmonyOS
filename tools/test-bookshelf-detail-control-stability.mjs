@@ -33,6 +33,7 @@ if (selectedCase === 'detail-preview-more') {
     Object.assign(owner, {book: {sourceId:'remote', bookId:'sparse', contentKind:'text', title:'书', author:'作者',
       sourceName:'真实书源', lastChapter:'实际最新章', intro:'实际简介'}, toc, currentChapterIndex:100,
       inBookshelf:true, mounted:true, viewportWidth:width, viewportHeight:840, admissionIdentity:'detail-sparse',
+      navigationAppearance: { override: 'unset', reduceTransparency: width === 820 },
       sourceSwitchEnabled:true, downloadsEnabled:true, groupEnabled:true, onSelectChapter:index=>intents.push(index),
       onSwitchSource:id=>intents.push(['source', id]), onOpenDownloads:()=>intents.push('downloads'),
       onOpenGroup:id=>intents.push(['group', id]), onMoreBack:(handler, lease)=>backLeases.push([handler, lease])});
@@ -92,6 +93,8 @@ if (selectedCase === 'detail-preview-more') {
     assert.deepEqual(backLeases.at(-1), [undefined, backLeases.at(-2)[1]]);
     more.onClick();
     owner.detailMoreMenu();
+    const scrim = nodes().find(node => node.backdropBlur === (width === 820 ? 0 : 6));
+    assert.equal(scrim?.accessibilityLevel, 'no');
     const action = label => nodes().find(node => node.type === 'Button' && node.accessibilityText === label);
     const source = action('更换书源'), downloads = action('缓存与下载'), group = action('编辑书籍分组');
     for (const button of [source, downloads, group]) assert.equal(button?.enabled, true);
@@ -137,7 +140,7 @@ if (selectedCase === 'detail-more-group') {
     shelfGroupPresentation:group, shelfRead:{invalidate:()=>record.push('invalidate')}, refreshBookshelf:()=>record.push('refresh'),
     sourceSwitchPresentation:{isSurfacePresented:()=>false}, mangaSourceSwitch:{selectionVisible:false},
     shelfMutations:{snapshot:{}}, readingEntryActions:{shelfPreparing:false}, bookRemovalConfirmation:{isOpen:()=>false},
-    jsonImportPresentation:{}, dispatchBackDestination:()=>record.push('pop')});
+    jsonImportPresentation:{}, wideSettingsPane:()=>undefined, dispatchBackDestination:()=>record.push('pop')});
   navigation.show('detail');
   const stale = candidate.openCurrentDetailGroup('detail', 'more-trigger');
   candidate.navigationGeneration++;
@@ -168,7 +171,9 @@ if (selectedCase === 'detail-action-semantics') {
   const {owner} = createReaderBuilderProbe(source, ['actionSurface', 'readingActionLabel', 'readingActionAvailable', 'shelfActionLabel',
     'detailBookAvailable', 'detailColor', 'mangaFontScale', 'dockNativeShape', 'dockShapeIdentity', 'dockRequestedRadius',
     'shelfActionAvailable', 'commitShelfAction', 'acceptsDetailInput', 'isDetailActionCurrent',
-    'currentDockShape', 'dockAreaChangeHandler'], { DETAIL_DOCK_HEIGHT, resolveReaderRaisedShape });
+    'currentDockShape', 'dockAreaChangeHandler'], { DETAIL_DOCK_HEIGHT, resolveReaderRaisedShape,
+      ColorMetrics: { resourceColor: color => ({ color, blendColor: over => ({ color: [color, over.color] }) }) },
+    });
   const intents = [];
   Object.assign(owner, {appThemeScheme: 'day', book: {sourceId:'remote',contentKind:'text'}, liveWidth: () => 390,
     mounted:true, directoryFocusContext:'detail',
@@ -185,7 +190,13 @@ if (selectedCase === 'detail-action-semantics') {
     assert.equal(action?.accessibilityRole,'AccessibilityRoleType.BUTTON');
     assert.equal(action.enabled,true);
     assert.equal(action.focusable,undefined,'the native Button retains focus ownership');
-    assert.equal(action.constraintSize?.minHeight,44);action.onClick();
+    assert.equal(action.constraintSize?.minHeight,44);
+    const modifier = owner.attributeCalls.find(call => call.id === action.id && call.property === 'attributeModifier').args[0];
+    const pressed = { backgroundColor(value) { this.fill = value; return this; }, borderRadius() { return this; } };
+    modifier.applyPressedAttribute(pressed);
+    assert.deepEqual(pressed.fill?.[0], action.backgroundColor, 'pressed action blends over the same visible pill');
+    assert.ok(pressed.fill?.[1], 'both novel actions paint the theme press overlay');
+    action.onClick();
   }
   owner.adding=true;owner.replay();control('取消加入').onClick();
   owner.cancellingAdd=true;owner.replay();
@@ -281,64 +292,50 @@ for (const theme of ['day', 'night']) {
 
 
 }
-if(selectedCase==='detail-admission') {
-// Detail is a presentation component. Metadata/progress refreshes must keep
-// its two existing actors; only an active shelf mutation gates reading.
-const detailSource = readFileSync(file('features/reading/ui/LocalBookDetail.ets'), 'utf8');
-const actionAreaSource = detailSource.slice(detailSource.indexOf('private actionArea()'), detailSource.indexOf('\n  private contentFrame()'));
-void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-const { owner: detail } = createReaderBuilderProbe(detailSource, ['actionArea',
-  'readingActionLabel', 'readingActionAvailable', 'shelfActionLabel', 'detailBookAvailable', 'detailColor'], {
-    GradientDirection: { Bottom: 'bottom' },
-    READER_FONT_NOTO_SANS_SC_UI_BOLD: 'ReaderNotoSansSCUIBold',
+if (selectedCase === 'detail-admission') {
+  const { owner: detail } = localBookDetailSdk({}, { allowEmptyBranchAdmission: true });
+  Object.assign(detail, {
+    appThemeScheme: 'day', mounted: true, directoryFocusContext: 'detail',
+    book: { sourceId: 'remote', bookId: 'title', contentKind: 'text', title: '书', author: '作者' },
+    toc: [{ index: 0, title: '第一章' }],
+    viewportWidth: 390, viewportHeight: 840, admissionIdentity: 'details:1',
+    readingEnabled: true, inBookshelf: true, removalEnabled: true,
   });
-Object.assign(detail, { appThemeScheme: 'day', toc: [{ index: 0, title: '第一章' }],
-  book: { title: '书', author: '作者' }, readingEnabled: true, readingBlockedReason: '',
-  inBookshelf: true, removalEnabled: true, removing: false, loadingMessage: '',
-  contentWidth: () => 352, actionButtonWidth: () => 171 });
-detail.dockFrame = () => ({ width: 352 });
-detail.bottomInset = () => 0;
-detail.actionArea();
-const buttons = [...detail.nodes.values()].filter(node => node.type === 'Text' && ['继续阅读', '移除书架'].includes(node.create));
-assert.equal(buttons.length, 2);
-void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-const buttonIds = buttons.map(node => node.id);
-void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-assert.deepEqual(buttons[1].border, { width: 1, color: readerAppColor('TOK_LINE', 'day') },
-  'secondary action keeps the one-pixel neutral outline');
-void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-Object.assign(detail, { inBookshelf: false, adding: false, cancellingAdd: false, removing: false });
-detail.replay();
-assert.equal(buttons[1].create, '加入书架');
-void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-Object.assign(detail, { inBookshelf: true });
-detail.replay();
-assert.equal(buttons[1].create, '移除书架');
-void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-for (let progress = 1; progress <= 4; progress += 1) {
-  detail.book = { ...detail.book, currentChapterIndex: progress, readProgress: progress * 100 };
-  detail.toc = detail.toc.map(entry => ({ ...entry }));
-  detail.replay();
-  assert.deepEqual([...detail.nodes.values()].filter(node => node.type === 'Text' && ['继续阅读', '移除书架'].includes(node.create)).map(node => node.id), buttonIds);
-  void 0; /* historical source/appearance assertion removed; focused semantic coverage remains below */
-  assert.equal(buttons[0].layoutWeight, 1);
-}
-let continues=0;detail.onContinue=()=>{continues++;};
-for (const inBookshelf of [false,true]) for(const failure of ['目录读取失败','正文处理设置已改变']) {
-  Object.assign(detail,{toc:[],readingEnabled:false,readingBlockedReason:failure,
-    loadingMessage:'正在读取目录…',inBookshelf});detail.replay();
-  assert.equal(buttons[0].enabled,true,'acquisition failures must not lock the user out of reader recovery');
-  assert.ok([...detail.nodes.values()].some(node=>node.type==='Text'&&node.create===(inBookshelf?'继续阅读':'开始阅读')));
-  buttons[0].onClick();
-}
-assert.equal(continues,4);
-detail.removing = true; detail.replay(); assert.equal(buttons[1].enabled, false);assert.equal(buttons[0].enabled,false);
-buttons[0].onClick();assert.equal(continues,4,'active shelf mutation still owns the book');
+  detail.refreshGeometry();
+  detail.actionArea();
+  const controls = () => [...detail.nodes.values()].filter(node => node.type === 'Button');
+  const [reading, shelf] = controls();
+  assert.equal(reading.accessibilityText, '继续阅读');
+  assert.equal(shelf.accessibilityText, '已在书架');
+  assert.equal(reading.layoutWeight, 1);
+  assert.deepEqual(shelf.border, { width: 1, color: readerAppColor('TOK_LINE', 'day') });
 
+  for (let progress = 1; progress <= 4; progress += 1) {
+    detail.book = { ...detail.book, currentChapterIndex: progress, readProgress: progress * 100 };
+    detail.toc = detail.toc.map(entry => ({ ...entry }));
+    detail.replay();
+    assert.deepEqual(controls().map(node => node.id), [reading.id, shelf.id]);
+  }
+
+  let continues = 0;
+  detail.onContinue = () => { continues += 1; };
+  for (const inBookshelf of [false, true]) {
+    for (const failure of ['目录读取失败', '正文处理设置已改变']) {
+      Object.assign(detail, { toc: [], readingEnabled: false, readingBlockedReason: failure, inBookshelf });
+      detail.replay();
+      assert.equal(reading.accessibilityText, inBookshelf ? '继续阅读' : '开始阅读');
+      assert.equal(shelf.accessibilityText, inBookshelf ? '已在书架' : '加入书架');
+      assert.equal(reading.enabled, true, 'remote acquisition failures still admit reader recovery');
+      reading.onClick();
+    }
+  }
+  assert.equal(continues, 4);
+  detail.removing = true;
+  detail.replay();
+  assert.equal(shelf.enabled, false);
+  assert.equal(reading.enabled, false);
+  reading.onClick();
+  assert.equal(continues, 4, 'active shelf mutation still has exclusive admission');
 }
 
 }

@@ -278,6 +278,7 @@ export struct BookDirectoryPage {
   @Builder
   private mangaHeader() {
     PageBackBar({ title: '章节目录', floating: true, centered: true, variant: 'mangaDirectory',
+      elevation: 'floating', material: 'veil',
       onBack: (): void => {
         if (this.directoryInputIsCurrent() && !this.consumeTemporaryBack(this.temporaryBackIdentity)) this.onBack();
       },

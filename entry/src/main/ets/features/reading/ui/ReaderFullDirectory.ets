@@ -14,6 +14,7 @@ import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHea
 import type { RemoteReadingPositionScope } from '../application/RemoteReadingPositionMigration';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 import { ReaderActionAccessibility } from '../../../ui/controls/ReaderActionAccessibility';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { ReaderRecoveryNotice } from '../../../ui/feedback/ReaderRecoveryNotice';
 import { ReaderPanelFrame } from '../../../ui/surfaces/ReaderPanelFrame';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
@@ -429,6 +430,7 @@ export struct ReaderFullDirectory {
   private topBar(identity: string = this.temporaryBackIdentity, bookId: string = this.bookId) {
     if (this.catalogContext === 'detail') {
       PageBackBar({ title: '章节目录', floating: true, centered: true,
+        elevation: 'floating', material: 'veil',
         onBack: (): void => { this.consumeBack(identity); },
         trailing: (): void => {
           if (this.directoryRulesAvailable() || !this.isLocalBook()) {
@@ -452,7 +454,7 @@ export struct ReaderFullDirectory {
       .id(this.directoryRulesAvailable() ? this.directoryRulesFocusId(identity, false) : undefined)
       .onAreaChange((_old: Area, area: Area): void => this.recordMoreTriggerRight(identity, bookId, area))
       .attributeModifier(new ReaderActionAccessibility(this.directoryRulesVisible ? this.topBarMoreLabel() : '目录操作',
-        true, false, true, undefined, 'nativeButton'))
+        true, false, true, new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 22), 'nativeButton'))
       .onClick((): void => { this.toggleTopBarMore(identity, bookId); });
   }
 
@@ -465,7 +467,8 @@ export struct ReaderFullDirectory {
       .width(44)
       .height(this.headerControlHeight())
       .margin({ left: 13 })
-      .attributeModifier(new ReaderActionAccessibility(this.directoryRulesVisible ? '返回目录' : '收起目录'))
+      .attributeModifier(new ReaderActionAccessibility(this.directoryRulesVisible ? '返回目录' : '收起目录', true, false, true,
+        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme)))
       .onClick((): void => { this.consumeBack(identity); });
     } else {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
@@ -475,7 +478,8 @@ export struct ReaderFullDirectory {
       .height(this.headerControlHeight())
       .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
       .margin({ left: 13 })
-      .attributeModifier(new ReaderActionAccessibility(this.directoryRulesVisible ? '返回目录' : '收起目录', true, false, true, undefined, 'nativeButton'))
+      .attributeModifier(new ReaderActionAccessibility(this.directoryRulesVisible ? '返回目录' : '收起目录', true, false, true,
+        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme), 'nativeButton'))
       .onClick((): void => { this.consumeBack(identity); });
     }
   }
@@ -495,7 +499,8 @@ export struct ReaderFullDirectory {
       }
       .width(62).height(this.headerControlHeight()).margin({ left: 8 })
       .opacity(this.isLocalBook() ? 0.4 : 1)
-      .attributeModifier(new ReaderActionAccessibility('换源', !this.isLocalBook()))
+      .attributeModifier(new ReaderActionAccessibility('换源', !this.isLocalBook(), false, true,
+        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, !this.isLocalBook())))
       .onClick((): void => { this.switchDirectorySource(); });
       Stack({ alignContent: Alignment.Center }) {
         this.topBarMoreIcon();
@@ -504,7 +509,8 @@ export struct ReaderFullDirectory {
       .id(this.directoryRulesAvailable() ? this.directoryRulesFocusId(identity, false) : undefined)
       .onAreaChange((_old: Area, area: Area): void => this.recordMoreTriggerRight(identity, bookId, area))
       .opacity(!this.directoryRulesAvailable() && (this.isLocalBook() || this.offlineBookOperationActive) ? 0.4 : 1)
-      .attributeModifier(new ReaderActionAccessibility(this.topBarMoreLabel(), this.topBarMoreEnabled()))
+      .attributeModifier(new ReaderActionAccessibility(this.topBarMoreLabel(), this.topBarMoreEnabled(), false, true,
+        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, this.topBarMoreEnabled())))
       .onClick((): void => { this.toggleTopBarMore(identity, bookId); });
     } else {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
@@ -517,7 +523,8 @@ export struct ReaderFullDirectory {
       .width(62).height(this.headerControlHeight())
       .padding(0).borderRadius(0).backgroundColor(Color.Transparent).margin({ left: 8 })
       .opacity(this.isLocalBook() ? 0.4 : 1)
-      .attributeModifier(new ReaderActionAccessibility('换源', !this.isLocalBook(), false, true, undefined, 'nativeButton'))
+      .attributeModifier(new ReaderActionAccessibility('换源', !this.isLocalBook(), false, true,
+        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, !this.isLocalBook()), 'nativeButton'))
       .onClick((): void => { this.switchDirectorySource(); });
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         this.topBarMoreIcon();
@@ -527,7 +534,8 @@ export struct ReaderFullDirectory {
       .id(this.directoryRulesAvailable() ? this.directoryRulesFocusId(identity, false) : undefined)
       .onAreaChange((_old: Area, area: Area): void => this.recordMoreTriggerRight(identity, bookId, area))
       .opacity(!this.directoryRulesAvailable() && (this.isLocalBook() || this.offlineBookOperationActive) ? 0.4 : 1)
-      .attributeModifier(new ReaderActionAccessibility(this.topBarMoreLabel(), this.topBarMoreEnabled(), false, true, undefined, 'nativeButton'))
+      .attributeModifier(new ReaderActionAccessibility(this.topBarMoreLabel(), this.topBarMoreEnabled(), false, true,
+        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 0, 0, this.topBarMoreEnabled()), 'nativeButton'))
       .onClick((): void => { this.toggleTopBarMore(identity, bookId); });
     }
   }
@@ -660,7 +668,8 @@ export struct ReaderFullDirectory {
         .fontWeight(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontWeight)
         .fontSize(TYPE_READER_DIRECTORY_OFFLINE_ACTION.fontSizeFp)
         .fontColor(readerAppColor('TOK_READ_INK', this.appThemeScheme)).textAlign(TextAlign.Start)
-        .attributeModifier(new ReaderActionAccessibility(accessibilityLabel)).onClick(action);
+        .attributeModifier(new ReaderActionAccessibility(accessibilityLabel, true, false, true,
+          new ReaderPressFeedback(Color.Transparent, this.appThemeScheme))).onClick(action);
     } else {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Text(label)
@@ -673,7 +682,8 @@ export struct ReaderFullDirectory {
       }
       .width('100%').height(this.menuRowHeight())
       .padding(0).borderRadius(0).backgroundColor(Color.Transparent)
-      .attributeModifier(new ReaderActionAccessibility(accessibilityLabel, true, false, true, undefined, 'nativeButton')).onClick(action);
+      .attributeModifier(new ReaderActionAccessibility(accessibilityLabel, true, false, true,
+        new ReaderPressFeedback(Color.Transparent, this.appThemeScheme), 'nativeButton')).onClick(action);
     }
   }
 

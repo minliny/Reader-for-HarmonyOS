@@ -3,6 +3,7 @@ import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPress
 import { ReaderActionAccessibility, readerActionTouchRegion } from '../../../ui/controls/ReaderActionAccessibility';
 import { TYPE_READER_DIRECTORY_TITLE, TYPE_READER_DIRECTORY_TITLE_INTER } from '../../../ui/foundation/ReaderTypography';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
 import { readerDirectoryBookmarkMarkerState, type ReaderDirectoryChapterStartBookmarkRequest } from '../presentation/ReaderDirectoryMarkerState';
 import { readerDirectoryAccessibilityText, readerDirectoryIndentVp } from './ReaderDirectoryHierarchy';
@@ -14,7 +15,7 @@ export struct ReaderDirectoryChapterRow {
   @State private pressPointer: number = -1;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('clearPress') entry: LocalReadingTocEntry;
-  @Prop rowHeight: number = 32;
+  @Prop rowHeight: number = 44;
   @Prop currentChapterIndex: number = -1;
   @Prop variant: 'control' | 'standalone' | 'detail-preview' = 'control';
   @Prop previewNested: boolean = false;
@@ -100,9 +101,9 @@ export struct ReaderDirectoryChapterRow {
         .fontWeight(this.entry.navigable === false ? FontWeight.Medium : FontWeight.Regular)
         .fontColor(readerAppColor(this.entry.navigable === false ? 'TOK_MUTED' : 'TOK_INK', this.appThemeScheme));
       if (this.entry.navigable === false) {
-        Text(this.previewGroupCollapsed ? '›' : '⌄').width(24)
-          .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontWeight(FontWeight.Regular).fontSize(18)
-          .fontColor(readerAppColor('TOK_MUTED', this.appThemeScheme));
+        Image(this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') : $r('app.media.reader_chevron_right'))
+          .width(16).height(16).rotate({ angle: this.previewGroupCollapsed ? 0 : 90 })
+          .fillColor(readerAppColor('TOK_MUTED', this.appThemeScheme)).accessibilityLevel('no');
       }
     }.width('100%').constraintSize({ minHeight: this.entry.navigable === false ? 44 : 58 })
       .padding({ left: this.previewNested ? 26 : 10, right: 10, top: 10, bottom: 10 })
@@ -157,10 +158,10 @@ export struct ReaderDirectoryChapterRow {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Image(this.entry.downloadState === 'completed' ? (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_check_theme_night') : $r('app.media.reader_directory_marker_check')) :
             (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_download_theme_night') : $r('app.media.reader_directory_marker_download'))).width(15).height(15).accessibilityLevel('no');
-        }.width(26).height(Math.min(26, this.rowHeight))
-          .responseRegion({ x: 0, y: -(this.rowHeight - Math.min(26, this.rowHeight)) / 2, width: 26, height: this.rowHeight })
-          .padding(0).backgroundColor(Color.Transparent)
-          .borderRadius(this.variant === 'standalone' ? 6 : 0).accessibilityText(this.downloadActionLabel())
+        }.width(44).height(Math.max(44, this.rowHeight))
+          .responseRegion(readerActionTouchRegion(44, Math.max(44, this.rowHeight)))
+          .padding(0).attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 6, 6,
+            this.downloadActionEnabled())).accessibilityText(this.downloadActionLabel())
           .enabled(this.downloadActionEnabled())
           .onClick((): void => {
             if (this.downloadActionEnabled() && this.canActOnEntry?.(this.entry) !== false) this.onDownloadChapter(this.entry.index);
@@ -170,12 +171,12 @@ export struct ReaderDirectoryChapterRow {
         Button({ type: ButtonType.Normal, stateEffect: false }) {
           Image(this.entry.bookmarks.length > 0 ? (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_active_theme_night') : $r('app.media.reader_directory_marker_bookmark_active')) :
             (this.appThemeScheme === 'night' ? $r('app.media.reader_directory_marker_bookmark_theme_night') : $r('app.media.reader_directory_marker_bookmark'))).width(15).height(15).accessibilityLevel('no');
-        }.width(26).height(Math.min(26, this.rowHeight))
-          .responseRegion({ x: 0, y: -(this.rowHeight - Math.min(26, this.rowHeight)) / 2, width: 26, height: this.rowHeight })
+        }.width(44).height(Math.max(44, this.rowHeight))
+          .responseRegion(readerActionTouchRegion(44, Math.max(44, this.rowHeight)))
           .padding(0)
-          .backgroundColor(this.variant === 'standalone' && (this.entry.bookmarks?.length ?? 0) > 0 ?
-            readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent)
-          .borderRadius(this.variant === 'standalone' ? 6 : 0)
+          .attributeModifier(new ReaderPressFeedback(this.variant === 'standalone' && (this.entry.bookmarks?.length ?? 0) > 0 ?
+            readerAppColor('TOK_READ_ACTIVE_SOFT', this.appThemeScheme) : Color.Transparent, this.appThemeScheme, 6, 6,
+            this.bookmarkActionEnabled()))
           .margin({ right: this.variant === 'standalone' ? 5 : 0 }).accessibilityText(this.bookmarkActionLabel())
           .enabled(this.bookmarkActionEnabled())
           .onClick((): void => this.marker());

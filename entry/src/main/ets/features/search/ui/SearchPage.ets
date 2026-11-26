@@ -31,10 +31,11 @@ import { resolveSheetSpec, type SheetSpecId } from '../../../ui/surfaces/ReaderS
 import { readerScrimmedOpaqueColor } from '../../../ui/surfaces/ReaderScrimColor';
 import { readerFloatingBarBottomInset } from '../../../ui/layout/ReaderFloatingBarMetrics';
 import { registerReaderFonts } from '../../../ui/foundation/ReaderFonts';
+import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../../../ui/foundation/ReaderFontFamilies';
+import { NoCoverCover, noCoverGlyph } from '../../../ui/patterns/NoCoverCover';
 import {
   TYPE_SEARCH_RESULT_AUTHOR,
   TYPE_SEARCH_RESULT_CHAPTER,
-  TYPE_SEARCH_RESULT_COVER_TITLE,
   TYPE_SEARCH_RESULT_INTRO,
   TYPE_SEARCH_RESULT_TAG,
   TYPE_SEARCH_RESULT_TITLE,
@@ -54,7 +55,6 @@ import {
   TOK_CONTENT_RAIL_W_TABLET,
   TOK_SPACE_CONTROL_INLINE,
   TOK_SPACE_MD,
-  TOK_SPACE_ROW_BLOCK,
   TOK_SPACE_SM,
   TOK_SPACE_XS,
 } from '../../../ui/foundation/ReaderTokens';
@@ -869,12 +869,28 @@ export struct SearchPage {
   }
 
   private resetSearchFilters(identity: string): void {
-    if (!this.acceptsFilter(identity)) return;
-    if (this.selectedGroupName === '全部' && this.selectedContentType === '全部类型') return;
+    if (!this.acceptsFilter(identity) || !this.hasSearchFilters()) return;
+    this.resetSelectedFilters();
+    if (this.surfaceModel?.verification?.enabled() === true) this.observeFilterApplied('reset',identity);
+  }
+
+  private hasSearchFilters(): boolean {
+    return this.selectedGroupName !== '全部' || this.selectedContentType !== '全部类型';
+  }
+
+  private acceptsEmptyFilterReset(): boolean {
+    return this.pageInputCurrent() && this.ownsList() && !this.retainedViewportPending && !this.searchPanelOwnsInput() &&
+      this.presentation.kind === 'results' && this.visibleGroups.length === 0 && this.hasSearchFilters();
+  }
+
+  private resetEmptySearchFilters(revision: number): void {
+    if (revision === this.viewState.revision && this.acceptsEmptyFilterReset()) this.resetSelectedFilters();
+  }
+
+  private resetSelectedFilters(): void {
     this.selectedGroupName = '全部'; this.selectedContentType = '全部类型';
     this.viewState.category = '全部'; this.viewState.contentType = '全部类型';
     this.resetFilteredResults();
-    if (this.surfaceModel?.verification?.enabled() === true) this.observeFilterApplied('reset',identity);
   }
 
   private observeFilterApplied(action: 'scope' | 'reset', identity: string): void {
@@ -1615,7 +1631,9 @@ export struct SearchPage {
             ListItem() { this.errorContent(this.presentation.searchedSourceCount); }
           } else if (this.visibleGroups.length === 0) {
             ListItem() {
-              ReaderPageState({ message: this.filteredEmptyMessage() }).id('reader-search-filtered-empty');
+              ReaderPageState({ message: this.filteredEmptyMessage(), actionLabel: this.hasSearchFilters() ? '重置筛选' : '',
+                actionEnabled: this.acceptsEmptyFilterReset(), actionGeneration: this.viewState.revision,
+                onAction: (revision: number): void => this.resetEmptySearchFilters(revision) }).id('reader-search-filtered-empty');
             }
           }
           LazyForEach(this.resultDataSource, (group: SearchBookGroup) => {
@@ -2198,7 +2216,6 @@ interface SearchResultDisplayFacts {
 @Component
 struct SearchResultCard {
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
-  @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
 
   // The data source keeps the same @Observed instance for the same book key.
   // ObjectLink delivers metadata changes without replacing the lazy child.
@@ -2338,20 +2355,15 @@ struct SearchResultCard {
     return this.displayBook().category !== 'comic' && this.displayIntro().length > 0;
   }
 
-  private searchFontScale(): number {
-    const scale = this.readerWindowMetricsRevision < 0 ? 1 : ReaderWindowCoordinator.metrics().systemFontScale;
-    return Number.isFinite(scale) && scale > 0 ? Math.max(1, scale) : 1;
-  }
-
-  private resultTagWidth(): number { return 30 * this.searchFontScale(); }
-  private resultTagHeight(): number { return 16 + 14 * (this.searchFontScale() - 1); }
-
   private resultAuthorLine(): string {
     const book = this.displayBook();
     const author = bookAuthorLabel(book.author, book.authorIdentity, book.sourceRuleVersion);
-    const type = book.category === 'comic' ? '漫画' :
+    return [author, this.resultKindLabel(book)].filter((value: string): boolean => value.length > 0).join(' · ');
+  }
+
+  private resultKindLabel(book: SearchBook): string {
+    return book.category === 'comic' ? '漫画' :
       book.category === 'novel' || (book.sourceId === 'local' && book.category === undefined) ? '小说' : '';
-    return [author, type].filter((value: string): boolean => value.length > 0).join(' · ');
   }
 
   private coverWidth(): number {
@@ -2382,30 +2394,8 @@ struct SearchResultCard {
             .borderRadius(6)
             .onError(this.coverErrorHandler(this.group.coverUrl));
         } else {
-          // Figma CoverContainer placeholder: a primary-green gradient with the
-          // book title overlaid at the bottom. No per-book gradient mapping
-          // rule exists, so the sole primary gradient is reused as the
-          // DESIGN_FIXTURE no-cover placeholder.
-          Stack({ alignContent: Alignment.Bottom }) {
-            Text(this.displayBook().title)
-              .width('100%')
-              .fontFamily(TYPE_SEARCH_RESULT_COVER_TITLE.fontFamily)
-              .fontWeight(TYPE_SEARCH_RESULT_COVER_TITLE.fontWeight)
-              .fontSize(TYPE_SEARCH_RESULT_COVER_TITLE.fontSizeFp)
-              .lineHeight(TYPE_SEARCH_RESULT_COVER_TITLE.lineHeightFp as number)
-              .fontColor(readerAppColor('app.search.onCoverMeta', this.appThemeScheme))
-              .textAlign(TextAlign.Center)
-              .maxLines(1)
-              .textOverflow({ overflow: TextOverflow.Ellipsis })
-              .padding({ left: TOK_SPACE_ROW_BLOCK, right: TOK_SPACE_ROW_BLOCK, bottom: 6 });
-          }
-          .width(this.coverWidth())
-          .height(this.coverHeight())
-          .linearGradient({
-            angle: 141.7,
-            colors: [[readerAppColor('TOK_PRIMARY_GRADIENT_START', this.appThemeScheme), 0.077], [readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme), 0.923]],
-          })
-          .borderRadius(6);
+          NoCoverCover({ coverWidth: this.coverWidth(), coverHeight: this.coverHeight(),
+            glyph: noCoverGlyph(this.displayBook().title), kindLabel: this.resultKindLabel(this.displayBook()) });
         }
       }
       .width(this.coverWidth())
@@ -2485,7 +2475,7 @@ struct SearchResultCard {
               .constraintSize({ maxWidth: '100%' }).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
           }
           if (this.displayInBookshelf()) {
-            Text('已在书架').fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontWeight(FontWeight.Medium)
+            Text('已在书架').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
               .fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
               .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
               .fontColor(readerAppColor('TOK_PRIMARY_DARK', this.appThemeScheme)).maxLines(1)
@@ -2521,16 +2511,4 @@ struct SearchResultCard {
       .onClick((event: ClickEvent): void => this.selectResult(event.source));
   }
 
-  @Builder
-  private resultTag(label: string, primary: boolean) {
-    Text(label)
-      .fontFamily(TYPE_SEARCH_RESULT_TAG.fontFamily).fontWeight(TYPE_SEARCH_RESULT_TAG.fontWeight).fontSize(TYPE_SEARCH_RESULT_TAG.fontSizeFp)
-      .lineHeight(TYPE_SEARCH_RESULT_TAG.lineHeightFp as number)
-      .fontColor(primary ? readerAppColor('TOK_ON_PRIMARY', this.appThemeScheme) : readerAppColor('TOK_MUTED', this.appThemeScheme))
-      .width(this.resultTagWidth())
-      .height(this.resultTagHeight())
-      .textAlign(TextAlign.Center)
-      .backgroundColor(primary ? readerAppColor('TOK_GREEN', this.appThemeScheme) : readerAppColor('TOK_PRIMARY_SOFT', this.appThemeScheme))
-      .borderRadius(4);
-  }
 }

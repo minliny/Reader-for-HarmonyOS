@@ -1,19 +1,35 @@
 import type { LocalReadingTocEntry } from '../application/LocalReadingFlowGateway';
 import { ReaderScrollLayout, readerScrollEndOffset, readerScrollStartOffset } from '../../../ui/layout/ReaderScrollLayout';
 import { sameReaderDirectoryData, snapshotReaderDirectoryData } from '../presentation/ReaderDirectoryDataSnapshot';
+import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
 
 class DirectoryListDataSource implements IDataSource {
   private entries: LocalReadingTocEntry[] = [];
   private admittedSnapshot: LocalReadingTocEntry[] = [];
+  private rowRevisions: Map<number, number> = new Map<number, number>();
+  private rowRevision: number = 0;
   private listeners: DataChangeListener[] = [];
   totalCount(): number { return this.entries.length; }
   getData(index: number): LocalReadingTocEntry { return this.entries[index]; }
+  rowKey(entry: LocalReadingTocEntry): string {
+    return `reader-directory-row-${entry.index}-${this.rowRevisions.get(entry.index) ?? 0}`;
+  }
   registerDataChangeListener(listener: DataChangeListener): void { this.listeners.push(listener); }
   unregisterDataChangeListener(listener: DataChangeListener): void {
     this.listeners = this.listeners.filter((value: DataChangeListener): boolean => value !== listener);
   }
   replace(entries: LocalReadingTocEntry[]): void {
     if (sameReaderDirectoryData(this.admittedSnapshot, entries)) return;
+    const previous = new Map<number, LocalReadingTocEntry>();
+    for (const entry of this.admittedSnapshot) previous.set(entry.index, entry);
+    const revisions = new Map<number, number>();
+    for (const entry of entries) {
+      const admitted = previous.get(entry.index);
+      const revision = this.rowRevisions.get(entry.index);
+      revisions.set(entry.index, admitted !== undefined && revision !== undefined && sameReaderDirectoryData([admitted], [entry]) ?
+        revision : ++this.rowRevision);
+    }
+    this.rowRevisions = revisions;
     this.admittedSnapshot = snapshotReaderDirectoryData(entries);
     this.entries = entries.slice();
     for (const listener of this.listeners) listener.onDataReloaded();
@@ -29,6 +45,7 @@ class DirectoryListDataSource implements IDataSource {
  */
 @Component
 export struct ReaderDirectoryList {
+  @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
   @Prop @Watch('onEntriesChanged') entries: LocalReadingTocEntry[] = [];
   // The expanded control keeps one native List while its viewport morphs.
   // Compare chapter data at an endpoint, where the owning panel admits it.
@@ -59,6 +76,7 @@ export struct ReaderDirectoryList {
   @BuilderParam emptyBuilder: () => void = this.emptyContent;
   @Prop prefixHeight: number = 0;
   @BuilderParam prefixBuilder: () => void = this.emptyContent;
+  @Prop tailHeight: number = 0;
   @BuilderParam tailBuilder: () => void = this.emptyContent;
 
   @Builder
@@ -166,7 +184,7 @@ export struct ReaderDirectoryList {
       if (this.prefixHeight > 0 && !this.materializedInsets) {
         ListItem() { this.prefixBuilder(); }.width('100%').constraintSize({ minHeight: this.prefixHeight });
       }
-      if ((this.naturalRowHeight || this.prefixHeight > 0) && this.entries.length === 0) {
+      if ((this.naturalRowHeight || this.prefixHeight > 0 || this.tailHeight > 0) && this.entries.length === 0) {
         ListItem() { this.emptyBuilder(); }.width('100%');
       }
       // Repeat.virtualScroll retained an empty native range when the control
@@ -178,15 +196,16 @@ export struct ReaderDirectoryList {
           }
           .width('100%')
           .height(this.naturalRowHeight ? undefined : this.rowHeight);
-        }, (entry: LocalReadingTocEntry): string => `reader-directory-row-${entry.index}-${JSON.stringify(entry)}`);
-      if (this.materializedInsets) {
+        }, (entry: LocalReadingTocEntry): string => this.dataSource.rowKey(entry));
+      if (this.materializedInsets || this.tailHeight > 0) {
         ListItem() { this.tailBuilder(); }.width('100%')
-          .padding({ bottom: this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY });
+          .constraintSize({ minHeight: this.tailHeight })
+          .padding({ bottom: this.materializedInsets ? this.listPaddingBottom >= 0 ? this.listPaddingBottom : this.listPaddingY : 0 });
       }
     }
     .width('100%')
     .height('100%')
-    .childrenMainSize(this.naturalRowHeight || this.prefixHeight > 0 ? undefined : this.itemSizes)
+    .childrenMainSize(this.naturalRowHeight || this.prefixHeight > 0 || this.tailHeight > 0 ? undefined : this.itemSizes)
     .padding({
       left: this.listPaddingX,
       right: this.listPaddingRight >= 0 ? this.listPaddingRight : this.listPaddingX,
@@ -201,7 +220,7 @@ export struct ReaderDirectoryList {
       readerScrollEndOffset(this.scrollLayout))
     .scrollBar(this.naturalRowHeight ? BarState.Auto : BarState.Off)
     .scrollBarWidth(this.naturalRowHeight ? 4 : undefined)
-    .scrollBarColor(this.naturalRowHeight ? '#47000000' : undefined)
+    .scrollBarColor(this.naturalRowHeight ? readerAppColor('TOK_SS_SCROLLBAR', this.appThemeScheme) : undefined)
     .edgeEffect(this.edgeEffectMode)
     // API 21 drag ownership is reported even before a positive scroll delta.
     // A Scroller.scrollTo callback is not evidence of user scroll intent.
