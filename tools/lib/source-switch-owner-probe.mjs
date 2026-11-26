@@ -161,7 +161,7 @@ export function fixture(options={},productionSource=hostSource) {
         return{data:{found:true,progressRevision:'r1',progress:{sourceId:identity.sourceId,bookId:identity.bookId,
           chapterIndex:0,chapterOffset:0,chapterProgress:0,updatedAt:1}}};
       }
-      if(method==='bookshelf.get')return{data:{book:params.sourceId==='new'?target:origin}};
+      if(method==='bookshelf.get')return{data:{book:options.preview?null:(params.sourceId==='new'?target:origin)}};
       if(method==='source.switch.commit') {
         if(options.commitGate)await options.commitGate.promise;
         const txn={transactionId:params.operationId,fromSourceId:params.from.sourceId,fromBookId:params.from.bookId,

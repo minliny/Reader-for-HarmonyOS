@@ -64,7 +64,6 @@ import { ReaderSourceSwitchJourney, type ReaderSourceSwitchJourneyPorts, type Re
 import { readerSourceSwitchActions, type ReaderSourceSwitchActions } from '../app/composition/ReaderSourceSwitchActions';
 import { ReaderTransientToast } from '../ui/feedback/ReaderTransientToast';
 import type { ReaderSurfaceRect } from '../ui/layout/ReaderSurfaceRect';
-import { LOCAL_SOURCE_ID } from '../features/reading/application/LocalReadingFlowGateway';
 import type { ReadingBookDetail } from '../features/reading/presentation/ReadingBookDetail';
 import { ReadingEntryPresentation, type ReadingEntryPorts, type CachedChapterRecoveryPorts,
   type ReaderExitRequest, type ReadingShelfPreparationScene, type ReadingDirectoryNavigationPorts,
@@ -480,8 +479,8 @@ struct Index {
       sourceHost: (): SourceSwitchHost | undefined => this.getSourceSwitchHost(),
       query: (): SourceSwitchProbeQuery => this.sourceSwitchProbeQuery(),
       ownsRuntime: (owner: ReaderRuntimeOwner): boolean => this.isCurrentRuntime(owner),
-      preview: (seed: RemoteReadingBookSeed, sourceName: string, session: RemoteReadingSession): void =>
-        this.sourceSwitchJourney.preview(seed, sourceName, session),
+      preview: (seed: RemoteReadingBookSeed, sourceName: string, session: RemoteReadingSession, shelfSnapshot: ShelfBook | undefined): void =>
+        this.sourceSwitchJourney.preview(seed, sourceName, session, shelfSnapshot),
       committed: (book: ShelfBook, session: RemoteReadingSession, chapterIndex: number): void =>
         this.performSourceSwitchSeam(book, session, chapterIndex),
       chapterStartFeedback: (current: () => boolean): void => {
@@ -548,7 +547,7 @@ struct Index {
     book: (): ReadingBookDetail | undefined => this.readingEntry.book,
     session: (): RemoteReadingSession | undefined => this.readingEntry.session,
     inBookshelf: (): boolean => this.readingEntry.inBookshelf,
-    blocked: (book: ReadingBookDetail): boolean => this.readingEntry.sessionActive || this.sourceSwitchPresentation.isSurfacePresented() ||
+    blocked: (book: ReadingBookDetail): boolean => this.readingEntry.sessionActive ||
       this.sourceSwitchPresentation.pending !== undefined || this.sourceSwitchPresentation.host()?.blocksExit(book) === true ||
       this.readingEntry.offlineOperationActive,
     host: (): BookshelfHost => this.bookshelfHost, mutations: (): BookshelfMutationPresentation => this.shelfMutations,
@@ -606,7 +605,6 @@ struct Index {
       reading: (): ReadingEntryPresentation => this.readingEntry,
       readingActions: (): ReaderReadingEntryActions => this.readingEntryActions,
       shelfBooks: (): ShelfBook[] => this.shelfRead.snapshot.books,
-      loadLocalBook: (bookId: string): Promise<ShelfBook | undefined> => this.bookshelfHost.loadShelfBook(LOCAL_SOURCE_ID, bookId),
       sourceName: (sourceId: string): string => this.sourceDisplayName(sourceId),
       failure: (title: string, message: string): void => this.showReadingFailure(title, message),
       advance: (): number => this.nextNavigationGeneration(),
@@ -1097,13 +1095,13 @@ struct Index {
         .hitTestBehavior(HitTestMode.Transparent);
     }
       .width('100%')
-      .height('100%')
+      .height(LayoutPolicy.matchParent)
       .backgroundColor(readerAppColor('app.window.background', this.appThemeScheme))
       .expandSafeArea(this.mangaOwnsWindowEdges() ? [SafeAreaType.SYSTEM, SafeAreaType.CUTOUT] : [SafeAreaType.SYSTEM],
         this.mangaOwnsWindowEdges() ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM, SafeAreaEdge.START, SafeAreaEdge.END] :
-          this.readerOwnsWindowEdges() ? [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM] : [SafeAreaEdge.BOTTOM])
-      .ignoreLayoutSafeArea(this.mangaOwnsWindowEdges() ? [LayoutSafeAreaType.SYSTEM] : [],
-        this.mangaOwnsWindowEdges() ? [LayoutSafeAreaEdge.ALL] : [])
+          [SafeAreaEdge.TOP, SafeAreaEdge.BOTTOM])
+      .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM],
+        this.mangaOwnsWindowEdges() ? [LayoutSafeAreaEdge.ALL] : [LayoutSafeAreaEdge.TOP])
   }
 
   @Builder
@@ -1113,6 +1111,7 @@ struct Index {
         ReaderRouteStackSurface({
           route: this.appRouteLane(), routeMotion: this.searchAppForeground ? this.visibleRouteMotion : 'none',
           surfaceId: 'reader-app-route-stack',
+          extendsToWindowTop: true,
           viewportWidth: this.routeViewportWidth(), reduceMotion: this.appReduceMotion,
           readerCoverGeneration: this.readerDetailCover ? this.readerDetailCoverGeneration : undefined,
           onReaderCovered: (generation: number): void => this.completeReaderDetailCover(generation),

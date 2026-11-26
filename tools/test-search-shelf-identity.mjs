@@ -1,6 +1,6 @@
 import { detailAdmissionFixture } from './lib/reading-entry-action-fixture.mjs';
 import { searchReadingJourneyFixture } from './lib/search-reading-journey-owner-probe.mjs';
-import { fixture as entryFixture } from './lib/reading-entry-index-fixture.mjs';
+import { deferred, fixture as entryFixture } from './lib/reading-entry-index-fixture.mjs';
 import { ProductionHost } from './lib/reading-entry-owner-probe.mjs';
 import assert from 'node:assert/strict';
 import { registerHooks } from 'node:module';
@@ -8,10 +8,11 @@ registerHooks({resolve(s,c,n){try{return n(s,c);}catch(e){if(s.startsWith('.')&&
 const {SearchResultProjection}=await import('../entry/src/main/ets/features/search/presentation/SearchResultProjection.ts');
 const {SearchViewState}=await import('../entry/src/main/ets/features/search/presentation/SearchViewState.ts');
 const {ReaderCoreRequestError}=await import('../entry/vendor/core-harmony/sdk/reader_core.ts');
-const saved={sourceId:'cat-eye',bookId:'/old',sourceName:'猫眼看书',title:'终宋',author:'怪诞的表哥',contentKind:'text',addedAt:10};
+const saved={sourceId:'cat-eye',bookId:'/old',sourceName:'猫眼看书',title:'终宋',author:'怪诞的表哥',contentKind:'text',addedAt:10,sortIndex:0};
 const result={...saved,sourceId:'search-source',bookId:'/new',sourceName:'搜索来源',detailUrl:'/new',variables:[]};
 let coreLookup=async()=>undefined;const lookupCalls=[];
 const fixtures=[];
+const settle=()=>new Promise(resolve=>setImmediate(resolve));
 function searchFixture(books){
   const calls=[],localCalls=[],notices=[],f=entryFixture();
   // Observe the current Host boundary, then execute its complete actual method.
@@ -35,7 +36,108 @@ function searchFixture(books){
   // Keep the real Journey's injected external refresh port observable.
   x.journey.ports.refreshMembership=()=>{x.membershipRefreshed=true;};
   fixtures.push(()=>{x.close();f.close();});
-  return {x,calls,localCalls,notices};
+  return {x,calls,localCalls,notices,core:f};
+}
+
+function selectGroup(results, membership, fullBook) {
+  const { rows } = new SearchResultProjection().update(results, membership, results[0].title, new SearchViewState());
+  assert.equal(rows.size, 1);
+  const [group] = rows.values();
+  assert.equal(group.book, results[0]);
+  const fixture = searchFixture(membership);
+  if (fullBook) fixture.core.shelves.set(fixture.core.key(fullBook.sourceId, fullBook.bookId), fullBook);
+  fixture.x.journey.selectResult(group.book, group.variants);
+  return { group, ...fixture };
+}
+
+for (const [category, contentKind] of [['novel', 'text'], ['comic', 'manga']]) {
+  const representative = { ...result, category, groupKey: 'search-group', author: '', admittedOrder: 0 };
+  const variant = { ...representative, sourceId: 'variant', bookId: '/variant', author: saved.author, admittedOrder: 1 };
+  const stored = { ...saved, contentKind };
+  const { group, calls, x } = selectGroup([representative, variant], [stored]);
+  assert.equal(group.inBookshelf, true);
+  assert.equal(calls[0]?.shelfSnapshot, stored, 'a work match from a non-representative opens the saved identity');
+  assert.equal(calls[0].seed.contentKind, contentKind);
+  assert.equal(x.entry.inBookshelf, true);
+
+  const exact = { ...stored, sourceId: variant.sourceId, bookId: variant.bookId, author: '' };
+  const exactSelection = selectGroup([representative, variant], [exact]);
+  assert.equal(exactSelection.group.inBookshelf, true);
+  assert.equal(exactSelection.calls[0]?.shelfSnapshot, exact, 'a group member can match by durable identity alone');
+
+  const ambiguous = selectGroup([representative, variant], [exact, stored]);
+  assert.equal(ambiguous.group.inBookshelf, true);
+  assert.equal(ambiguous.calls.length, 0, 'the fallback must not silently choose between two saved versions');
+  assert.match(ambiguous.notices[0][0], /多个版本/);
+}
+{
+  const olderMembership = { ...saved, contentKind: undefined };
+  const { group, calls, core, x } = selectGroup([{ ...result, category: 'novel' }], [olderMembership], saved);
+  assert.equal(group.inBookshelf, true);
+  await settle();
+  assert.ok(core.calls.some(call => call.method === 'bookshelf.get' &&
+    call.p.sourceId === saved.sourceId && call.p.bookId === saved.bookId), 'missing media triggers the exact saved lookup');
+  assert.equal(calls[0]?.shelfSnapshot.contentKind, 'text');
+  assert.equal(calls[0]?.seed.bookId, saved.bookId);
+  assert.equal(x.entry.inBookshelf, true);
+}
+{
+  const legacy = { ...saved, contentKind: undefined };
+  const { group, calls, x } = selectGroup([{ ...result, category: 'novel' }], [legacy], { ...saved, contentKind: 'manga' });
+  assert.equal(group.inBookshelf, true, 'the legacy text alias is provisional');
+  await settle();
+  assert.equal(calls[0]?.seed.bookId, result.bookId, 'a disproved cross-media alias opens the original novel preview');
+  assert.equal(calls[0].seed.contentKind, 'text');
+  assert.equal(calls[0].shelfSnapshot, undefined);
+  assert.equal(x.entry.inBookshelf, false);
+}
+{
+  const legacy = { ...saved, contentKind: undefined };
+  const { x, calls, notices, core } = searchFixture([legacy]);
+  const key = core.key(saved.sourceId, saved.bookId), gate = deferred();
+  core.shelves.set(key, saved);
+  core.gates.set('bookshelf.get:' + key, gate);
+  x.journey.selectResult(result, []);
+  await settle();
+  assert.ok(core.calls.some(call => call.method === 'bookshelf.get'));
+  x.library.host.viewState.reset('另一搜索');
+  gate.resolve();
+  await settle();
+  assert.equal(calls.length, 0);
+  assert.equal(notices.length, 0);
+  assert.equal(x.navigation.snapshot().route, 'search', 'a retired query cannot open the confirmed shelf row');
+}
+{
+  const legacy = { ...saved, sourceId: result.sourceId, bookId: result.bookId, contentKind: undefined };
+  const { x, calls } = searchFixture([legacy, saved]);
+  x.journey.selectResult(result, []);
+  await settle();
+  assert.equal(x.membershipRefreshed, true);
+  assert.equal(calls[0]?.shelfSnapshot, saved, 'if the provisional exact row disappeared, a surviving unique match still opens');
+}
+{
+  const representative = { ...result, category: 'novel', groupKey: 'group', author: '', admittedOrder: 0 };
+  const first = { ...representative, sourceId: 'first', bookId: '/first', admittedOrder: 1 };
+  const second = { ...first, sourceId: 'second', bookId: '/second', admittedOrder: 2 };
+  const { group, calls, notices } = selectGroup([representative, first, second],
+    [{ ...saved, sourceId: first.sourceId, bookId: first.bookId }, { ...saved, sourceId: second.sourceId, bookId: second.bookId }]);
+  assert.equal(group.inBookshelf, true);
+  assert.equal(calls.length, 0);
+  assert.match(notices[0][0], /多个版本/, 'two exact variant identities cannot select a saved row implicitly');
+}
+for (const [category, shelfKind] of [['comic', 'text'], ['comic', undefined], ['novel', 'manga'], ['novel', 'audio']]) {
+  const { group, calls } = selectGroup([{ ...result, category }], [{ ...saved, contentKind: shelfKind }]);
+  assert.equal(group.inBookshelf, false, 'separate media do not match by work title');
+  assert.equal(calls[0]?.seed.bookId, result.bookId);
+  assert.equal(calls[0].shelfSnapshot, undefined);
+}
+{
+  const stored = { ...saved, contentKind: 'manga' };
+  const selected = { ...result, sourceId: saved.sourceId, bookId: saved.bookId, category: 'novel' };
+  const { group, calls } = selectGroup([selected], [stored]);
+  assert.equal(group.inBookshelf, true);
+  assert.equal(calls[0].shelfSnapshot, stored);
+  assert.equal(calls[0].seed.contentKind, 'manga', 'the exact Core identity determines how detail opens');
 }
 
 {
@@ -69,7 +171,6 @@ for(const books of [[{...saved,sourceId:'local'}],[{...saved,author:''}]]){
 }
 
 let writeCount=0,writeError;
-const settle=()=>new Promise(resolve=>setImmediate(resolve));
 const localSaved={...saved,sourceId:'local',bookId:'import-one',sourceName:'本地导入'};
 const localFull={...localSaved,kind:'EPUB',coverUrl:'file://local-cover',intro:'完整简介',
   chapterCount:12,readProgress:3500,readingPosition:{chapterIndex:3,chapterOffset:42,updatedAt:20}};
@@ -154,4 +255,4 @@ function addFixture(){
  assert.equal(f.mutations.snapshot.removalKey,'');writeError=undefined;
 }
 for(const close of fixtures)close();
-console.log('PASS: search selection preserves saved identity; sparse offscreen membership loads full local detail with stale guards; ambiguous and duplicate ownership remains safe');
+console.log('PASS: search groups open the unique saved text/manga identity, confirm legacy membership, reject ambiguous versions and retain stale local lookup guards');

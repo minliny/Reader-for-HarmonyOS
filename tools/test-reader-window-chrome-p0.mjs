@@ -121,6 +121,9 @@ if(selectedCase==='root-edges'){
  const Owner=selectedProductionMethods(new URL('../entry/src/main/ets/pages/Index.ets',import.meta.url),'Index',[
   'readerOwnsWindowEdges','mangaOwnsWindowEdges','isDetailDirectoryRoute','appRouteSafeTop','overlaySafeTop']);
  const cases=[
+  {route:'bookshelf', reader:false},
+  {route:'settings', reader:false},
+  {route:'discover', reader:false},
   {route:'detail', reader:false},
   {route:'detail', book:{contentKind:'text'}, reader:true},
   {route:'directory', book:{contentKind:'manga'}, reader:true},
@@ -132,20 +135,41 @@ if(selectedCase==='root-edges'){
   {route:'detail', book:{contentKind:'manga'}, contentKind:'manga', retainingReader:true, reader:true, manga:true},
   {route:'bookshelf', sourcePicker:true, reader:true, manga:true},
  ];
- const output = (member) => {
+ const attributes = (expression) => {
   const modifiers=new Map();
-  let expression=member.body.statements[0].expression;
   while(ts.isCallExpression(expression)&&ts.isPropertyAccessExpression(expression.expression)){
     modifiers.set(expression.expression.name.text,expression.arguments);
     expression=expression.expression.expression;
   }
   return modifiers;
  };
+ const output = member => attributes(member.body.statements[0].expression);
  const modifiers=output(build);
  for(const key of ['expandSafeArea','ignoreLayoutSafeArea'])assert.ok(modifiers.has(key),'actual Index root '+key);
  const enums=Object.fromEntries(['SafeAreaType','SafeAreaEdge','LayoutSafeAreaType','LayoutSafeAreaEdge'].map(name=>[name,new Proxy({},{get:(_,key)=>name+'.'+String(key)})]));
  const evaluate = (key, owner) => new Function(...Object.keys(enums),
   `return [${modifiers.get(key).map(node=>node.getText(tree)).join(',')}];`).call(owner,...Object.values(enums));
+ assert.equal(modifiers.get('height')[0].getText(tree), 'LayoutPolicy.matchParent');
+ const stackTree=parse(read('entry/src/main/ets/app/navigation/ReaderRouteStackSurface.ets'));
+ const stack=stackTree.statements.find(node=>node.name?.getText(stackTree)==='ReaderRouteStackSurface');
+ const stackMember=name=>stack.members.find(node=>node.name?.getText(stackTree)===name);
+ assert.equal(stackMember('extendsToWindowTop').initializer.getText(stackTree), 'false');
+ const appStack=indexType.members.find(node=>node.name?.getText(tree)==='pageSurfaces').getText(tree);
+ assert.match(appStack,/ReaderRouteStackSurface\(\{[^}]*?extendsToWindowTop:\s*true,/);
+ // Inspect the Navigation and NavDestination themselves, including the embedded settings case.
+ const navigation = stackMember('build').body.statements[0].expression;
+ let outer = navigation;
+ while (ts.isCallExpression(outer) && ts.isPropertyAccessExpression(outer.expression)) outer = outer.expression.expression;
+ for (const modifiers of [attributes(outer.body.statements[0].expression),output(stackMember('destination'))]) {
+  for (const name of ['hideTitleBar','hideToolBar']) assert.equal(modifiers.get(name)[0].getText(stackTree),'true');
+  const args=modifiers.get('ignoreLayoutSafeArea').map(node=>node.getText(stackTree)).join(',');
+  const edges=new Function(...Object.keys(enums),`return [${args}];`);
+  for (const extendsToWindowTop of [true,false]) {
+   assert.deepEqual(edges.call({extendsToWindowTop},...Object.values(enums)),[
+    ['LayoutSafeAreaType.SYSTEM'], extendsToWindowTop ? ['LayoutSafeAreaEdge.TOP'] : [],
+   ]);
+  }
+ }
  for(const {route,target='detail',active=false,book,contentKind='text',retainingReader=false,sourcePicker=false,reader,manga=false} of cases){
   const owner=Object.assign(new Owner(),{route,directoryReturnTarget:target,readerDetailCover:retainingReader,
     mangaSourceSwitch:{selectionVisible:sourcePicker},readingEntry:{sessionActive:active,book,contentKind},appContentTopInset:()=>37});
@@ -153,15 +177,17 @@ if(selectedCase==='root-edges'){
   assert.equal(owner.mangaOwnsWindowEdges(),manga);
   assert.equal(owner.overlaySafeTop(),reader?0:37);
   const areas=evaluate('expandSafeArea',owner);
-  assert.equal(areas[1].includes('SafeAreaEdge.TOP'),reader);
+  assert.ok(areas[1].includes('SafeAreaEdge.TOP'));
   assert.equal(areas[1].includes('SafeAreaEdge.START'),manga);
-  assert.equal(evaluate('ignoreLayoutSafeArea',owner)[0].includes('LayoutSafeAreaType.SYSTEM'),manga);
+  assert.deepEqual(evaluate('ignoreLayoutSafeArea',owner), [
+    ['LayoutSafeAreaType.SYSTEM'], [manga ? 'LayoutSafeAreaEdge.ALL' : 'LayoutSafeAreaEdge.TOP'],
+  ]);
  }
  const routeContent=indexType.members.find(node=>node.name?.getText(tree)==='appRouteContent');
  const routePadding=output(routeContent).get('padding')[0].getText(tree);
  const evaluatePadding=new Function('route',`return ${routePadding};`);
  const owner=Object.assign(new Owner(),{appContentTopInset:()=>37});
- for(const [route,top] of [['bookshelf',37],['settings',37],['detail',0],['directory',0]]){
+ for(const [route,top] of [['bookshelf',37],['settings',37],['discover',37],['detail',0],['directory',0]]){
   assert.equal(evaluatePadding.call(owner,route).top,top);
  }
 }

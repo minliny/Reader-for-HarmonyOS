@@ -63,9 +63,9 @@ if(selectedCase==='action'){
  const currentDependencies={...dependencies,...headers,...metrics,...controlGeometry,...fonts,READER_LIBRARY_SEARCH_BACK_FOCUS_ID,
   ReaderWindowCoordinator:{metrics:currentWindow}};
  const methods=['bar','headerActionFrame','headerActionGlyph','cardContentWidth','horizontalInset','fontScale','controlHeight',
-  'barHeight','actionWidth','searchLaneLeft','searchLaneWidth','fieldWidth','laneTop','titleOpacity','surfaceValue',
+  'barHeight','blend','actionWidth','searchLaneLeft','searchLaneWidth','stackedSearch','searchLaneHeight','fieldWidth','laneTop','titleOpacity','surfaceValue',
   'headerActionTop','moreInteractive','presentedSearch','inputInteractive','actionInteractive','fieldIdentity','acceptsField',
-  'searchAction','leadingAction','moreAction','textAction','submitAction','focusAction'];
+  'searchActionVisualHeight','searchAction','leadingAction','moreAction','textAction','clearAction','submitAction','focusAction'];
  const specs=foundationSpecs();
  assert.equal(specs.resolveReaderButtonSpec('search-field-phone'),undefined,'retired phone ID is not an executable public recipe');
  assert.equal(specs.resolveReaderButtonSpec('search-scope'),undefined,'retired scope ID is not an executable public recipe');

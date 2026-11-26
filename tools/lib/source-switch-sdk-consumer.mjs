@@ -131,12 +131,15 @@ export function sourceSwitchLiveSdk(p,extra={},sources={}) {
  deps.SourceSwitchPanel=createReaderBuilderProbe(windowSource,boundedMembers(windowSource,'SourceSwitchWindow'),deps,{...p.hooks,componentName:'SourceSwitchWindow'}).Component;
  return deps;
 }
-function sourceSwitchOverlaySdk(p, extra) {
+function sourceSwitchOverlaySdk(p, extra, panelFrames) {
  const windowDeps=sourceSwitchLiveSdk(p,extra);
  const source=read('features/source/ui/SourceSwitchPanel.ets');
  p.hooks.childSources.SourceSwitchWindow=p.hooks.childSources.SourceSwitchPanel;
  p.hooks.childSources.SourceSwitchPanel=source;
- const deps={...windowDeps,SourceSwitchWindow:windowDeps.SourceSwitchPanel};
+ const frame=pureModuleProbe(source.slice(0,source.indexOf('@Component')),'SourceSwitchSurfaceFrame.ets',
+  {FrameCallback:class {}},['SourceSwitchSurfaceFrame']);
+ const deps={...windowDeps,...frame,SourceSwitchWindow:windowDeps.SourceSwitchPanel,
+  uiContext:{...windowDeps.uiContext,postFrameCallback:frame=>panelFrames.push(frame)}};
  deps.SourceSwitchPanel=createReaderBuilderProbe(source,boundedMembers(source),deps,p.hooks).Component;
  return deps;
 }
@@ -146,7 +149,8 @@ export function makeSourceSwitchFixture(f,options={}) {
  const owners=currentSourceSwitchOwners(f,options);
  const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
  const metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
- const leafDeps=sourceSwitchOverlaySdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics}});
+ const panelFrames=[];
+ const leafDeps=sourceSwitchOverlaySdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics}},panelFrames);
  const source=read('app/composition/ReaderSourceSwitchSurfaces.ets');
  const require=createRequire(import.meta.url),sdk=resolveEtsLoaderRoot(),ts=require(sdk+'/node_modules/typescript');
  const syntax=require(sdk+'/lib/validate_ui_syntax.js');
@@ -161,9 +165,16 @@ export function makeSourceSwitchFixture(f,options={}) {
   initialParams:observed,
   childSources:{...p.hooks.childSources,BookDirectoryPage:read('features/reading/ui/BookDirectoryPage.ets')}}).owner;
  Object.assign(surface,{entryPickerAllowed:true,interactive:true,actions:owners.sourceActions});
- const mount=()=>{surface.initialRender();const window=p.walk(surface).filter(child=>child instanceof leafDeps.SourceSwitchWindow).at(-1);
+ const flushPanelFrame=()=>{for(const frame of panelFrames.splice(0))frame.onFrame(0);};
+ const unmountPanel=()=>{
+  for(const panel of p.walk(surface).filter(child=>child instanceof leafDeps.SourceSwitchPanel))panel.aboutToDisappear();
+  flushPanelFrame();
+  assert.equal(owners.source.surfaceAttached,false,'the disappearing panel releases its exact attachment');
+ };
+ const mount=()=>{surface.initialRender();flushPanelFrame();p.properties.flush();
+  const window=p.walk(surface).filter(child=>child instanceof leafDeps.SourceSwitchWindow).at(-1);
   assert.ok(window,'current source root mounts the actual Panel/Window');return window;};
- return {...owners,p,surface,mount,rows:()=>p.walk(surface).filter(child=>child instanceof leafDeps.SourceSwitchNovelRow),leafDeps};
+ return {...owners,p,surface,mount,unmountPanel,rows:()=>p.walk(surface).filter(child=>child instanceof leafDeps.SourceSwitchNovelRow),leafDeps};
 }
 
 export function failureChain(x, { retryReading = () => assert.fail('source recovery must not restart ordinary body loading') } = {}){

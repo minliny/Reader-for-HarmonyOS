@@ -38,7 +38,7 @@ export interface SourceSwitchWorkflowPorts {
   entry: () => ReadingEntryPresentation;
   shelfBook: (sourceId: string, bookId: string) => ShelfBook | undefined;
   searchCandidates: () => SearchBook[];
-  preview: (seed: RemoteReadingBookSeed, sourceName: string, session: RemoteReadingSession) => void;
+  preview: (seed: RemoteReadingBookSeed, sourceName: string, session: RemoteReadingSession, shelfSnapshot: ShelfBook | undefined) => void;
   target: (book: ShelfBook, session: RemoteReadingSession, chapterIndex: number) => void;
   reopen: (book: ShelfBook) => void;
   invalidateDownloads: (book: ShelfBook) => void;
@@ -123,7 +123,7 @@ export class SourceSwitchPresentation {
     (snapshot: SourceSwitchSurfaceSnapshot): void => {
       this.surfaceAttached = snapshot.attached;
       this.surfaceClosing = snapshot.closing;
-    });
+    }, (scope: number): void => this.restoreSurfaceFocus(scope));
 
   isSurfacePresented(): boolean { return this.visible || this.surfaceAttached; }
   attachSurface(scope: number): number { return this.visible && scope === this.scopeId ? this.surfaceLifecycle.attach(scope) : 0; }
@@ -132,10 +132,10 @@ export class SourceSwitchPresentation {
     this.surfaceLifecycle.appeared(attachment, scope, part);
   }
   hideSurface(attachment: number, scope: number): void {
-    if (this.surfaceLifecycle.hide(attachment, scope)) this.restoreSurfaceFocus(scope);
+    this.surfaceLifecycle.hide(attachment, scope);
   }
   surfaceTransitionFinished(attachment: number, scope: number, part: string, transitionIn: boolean): void {
-    if (this.surfaceLifecycle.transitionFinished(attachment, scope, part, transitionIn)) this.restoreSurfaceFocus(scope);
+    this.surfaceLifecycle.transitionFinished(attachment, scope, part, transitionIn);
   }
   detachSurface(attachment: number, scope: number): void {
     if (!this.surfaceIsCurrent(attachment, scope)) return;
@@ -430,7 +430,7 @@ export class SourceSwitchPresentation {
   private deliverWorkflowEffect(host: SourceSwitchHost, effect: SourceSwitchEffect, ports: SourceSwitchWorkflowPorts): void {
     switch (effect.kind) {
       case 'previewReady':
-        ports.preview(effect.seed, effect.candidate.sourceName ?? effect.candidate.sourceId, effect.session);
+        ports.preview(effect.seed, effect.candidate.sourceName ?? effect.candidate.sourceId, effect.session, effect.shelfSnapshot);
         return;
       case 'targetReady':
         ports.target(effect.book, effect.session, effect.chapterIndex);

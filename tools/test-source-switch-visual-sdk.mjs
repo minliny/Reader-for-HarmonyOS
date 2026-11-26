@@ -1,5 +1,5 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
-const definitions={"definition": {"description": "所选第三抽屉/2026-10-07 light-toolbar定义→generated spec身份，浏览器/设备接受仍OPEN", "resources": []}, "layout-text": {"description": "所选text当前drawer布局矩阵与native属性/最新复合identity回调", "resources": []}, "layout-manga": {"description": "所选manga当前drawer布局矩阵与native属性/最新复合identity回调", "resources": []}, "rows-safe-area": {"description": "provider规则不合并，shared frame residual safe inset单一owner与未测latency占位", "resources": []}, "row-action-interaction": {"description": "真实SDK row/查找action pressed、cancel/state/retire与当前可选行", "resources": []}, "adaptive-empty": {"description": "实测container宽优先与极短/大字体空状态可达", "resources": []}, "cancel-admission": {"description": "实际progress allowCancel与pending/rollback窗口close准入", "resources": []}, "anchor-controller": {"description": "实际未绑定List currentOffset/rect回落与有界frame恢复", "resources": []}, "native-spinner": {"description": "当前实际native LoadingProgress active/foreground/reduceMotion/mount与guard负例", "resources": []}, "completion-surfaces": {"description": "实际换源纸张过渡委托、尺寸、透明度与主题传播", "resources": []}, "font-load": {"description": "实际checked字体四face ready/reject/retired才准入两格式文字", "resources": []}, "wiring-negatives": {"description": "实际生产halfLeading/rowheight/heading/theme接线负例", "resources": []}, "refresh-error": {"description": "刷新失败保留缓存候选/空诊断不造失败", "resources": []}};
+const definitions={"definition": {"description": "所选第三抽屉/2026-10-07 light-toolbar定义→generated spec身份，浏览器/设备接受仍OPEN", "resources": []}, "layout-text": {"description": "所选text当前drawer布局矩阵与native属性/最新复合identity回调", "resources": []}, "layout-manga": {"description": "所选manga当前drawer布局矩阵与native属性/最新复合identity回调", "resources": []}, "rows-safe-area": {"description": "provider规则不合并，shared frame residual safe inset单一owner与未测latency占位", "resources": []}, "row-action-interaction": {"description": "真实SDK row/查找action pressed、cancel/state/retire与当前可选行", "resources": []}, "adaptive-empty": {"description": "实测container宽优先与极短/大字体空状态可达", "resources": []}, "cancel-admission": {"description": "实际progress allowCancel与pending/rollback窗口close准入", "resources": []}, "anchor-controller": {"description": "实际未绑定List currentOffset/rect回落与有界frame恢复", "resources": []}, "native-spinner": {"description": "当前实际native LoadingProgress active/foreground/reduceMotion/mount与guard负例", "resources": []}, "completion-surfaces": {"description": "实际换源纸张过渡委托、尺寸、透明度与主题传播", "resources": []}, "font-load": {"description": "实际checked字体三种 UI 字重 ready/reject/retired 才准入两格式文字", "resources": []}, "wiring-negatives": {"description": "实际生产halfLeading/rowheight/heading/theme接线负例", "resources": []}, "refresh-error": {"description": "刷新失败保留缓存候选/空诊断不造失败", "resources": []}};
 definitions['redesigned-picker']={description:'新换源抽屉 599/600 分界与动效，实际输入节点跨批次保留、筛选、排序和定位',resources:[]};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
@@ -556,9 +556,13 @@ for(const theme of ['day','night'])for(const expanded of [false,true]){
 
 }
 if(selectedCase==='font-load'){
-// The actual ReaderFonts functions determine four checked physical receipts.
+// Both drawer variants use the shared UI regular, medium and bold faces.
 // Neither submitted loads nor a failed face authorize initial native text.
-const expectedFaces=design.fontAssets.map(asset=>families[asset.nativeFamilyConstant]);
+const expectedFaces = new Map([
+ [families.READER_FONT_NOTO_SANS_SC_UI_REGULAR, 'NotoSansSC-UIRegular.otf'],
+ [families.READER_FONT_NOTO_SANS_SC_UI_MEDIUM, 'NotoSansSC-UIMedium.otf'],
+ [families.READER_FONT_NOTO_SANS_SC_UI_BOLD, 'NotoSansSC-UIBold.otf'],
+]);
 for(const outcome of ['ready','reject','retired']){
  metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,390,844);
  const pending=new Map(),calls=[];
@@ -573,17 +577,17 @@ for(const outcome of ['ready','reject','retired']){
  const preparation=new fd.SourceSwitchProgress(undefined,{sourceName:'新书源'},undefined,++serial);
  owner.aboutToAppear();owner.initialRender();manga.aboutToAppear();manga.initialRender();preparation.aboutToAppear();preparation.initialRender();
  assert.equal(fonts.sourceSwitchNovelFontsReady(),false);assert.equal(fp.nodes(owner).filter(n=>n.type==='Text').length,0);assert.equal(fp.nodes(preparation).filter(n=>n.type==='Text').length,0);assert.equal(fp.nodes(manga).filter(n=>n.type==='Text').length,0,'manga shares pending checked-font admission');
- for(const asset of design.fontAssets)assert.ok(calls.some(call=>call.family===families[asset.nativeFamilyConstant]&&call.asset===asset.file),'actual registrar loads the exact selected physical asset');
+ for(const [family,file] of expectedFaces)assert.ok(calls.some(call=>call.family===family&&call.asset===file),'actual registrar loads '+file);
  if(outcome==='retired'){owner.aboutToDisappear();manga.aboutToDisappear();preparation.aboutToDisappear();}
  const medium=families.READER_FONT_NOTO_SANS_SC_UI_MEDIUM;
  for(const [family,load] of pending)if(family!==medium)load.resolve();
- await tick();assert.equal(owner.novelFontsReady,false,'three ready selected faces cannot authorize the fourth');assert.equal(manga.novelFontsReady,false);
+ await tick();assert.equal(owner.novelFontsReady,false,'all three shared faces must be ready');assert.equal(manga.novelFontsReady,false);
  if(outcome==='reject')pending.get(medium).reject(Error('controlled checked face failure'));else pending.get(medium).resolve();
  await tick();fp.properties.flush();
  assert.equal(owner.novelFontsReady,outcome==='ready');assert.equal(preparation.novelFontsReady,outcome==='ready');assert.equal(manga.novelFontsReady,outcome==='ready');
  assert.equal(fp.nodes(owner).some(n=>n.type==='Text'),outcome==='ready');assert.equal(fp.nodes(preparation).some(n=>n.type==='Text'),outcome==='ready');assert.equal(fp.nodes(manga).some(n=>n.type==='Text'),outcome==='ready','manga shares checked ready/reject/retired font delivery');
  if(outcome!=='retired'){owner.aboutToDisappear();manga.aboutToDisappear();preparation.aboutToDisappear();}
- assert.equal(expectedFaces.filter(loader.readerFontLoadReady).length,outcome==='reject'?3:4,'only actual checked-load receipts mark physical faces ready');
+ assert.equal([...expectedFaces.keys()].filter(loader.readerFontLoadReady).length,outcome==='reject'?2:3,'only actual checked-load receipts mark physical faces ready');
 }
 
 }

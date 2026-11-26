@@ -14,12 +14,13 @@ const { createRequire, stripTypeScriptTypes } = await import('node:module');
 const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
 const { createArkUIPropertyRuntimeProbe } = await import('./lib/arkui-property-runtime-probe.mjs');
 const { boundedMembers, readerSurfaceSpecsForProbe } = await import('./lib/bounded-surface-sdk-probe.mjs');
+const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
 const { readerFoundationTokens } = await import('./lib/reader-tokens-probe.mjs');
 const { actualReaderFloatingBarMetrics, actualReaderPageLayout } = await import('./lib/reader-page-shell-runtime-probe.mjs');
 const { actualReaderMainTabs, actualReaderPhoneNavigationGeometry } = await import('./lib/reader-phone-navigation-source.mjs');
 const fontFamilies = await import('../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts');
 const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
-const { READER_EXPANDED_MIN_WIDTH } = await import('../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts');
+const { readerIsExpandedWidth, READER_EXPANDED_MIN_WIDTH } = await import('../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts');
 const { effectiveReaderWideNavigationRail } = await import('../entry/src/main/ets/app/ReaderProductScope.ts');
 const raisedShape = await import('../entry/src/main/ets/ui/layout/ReaderRaisedShape.ts');
 const horizontalGeometry = await import('../entry/src/main/ets/ui/layout/SurfaceHorizontalGeometry.ts');
@@ -66,6 +67,7 @@ const deps = { ...properties.sdk, ...readerFoundationTokens, ...actualReaderPage
 };
 for (const [name, file, slots] of [
   ['MainTabBar', 'shell/MainTabBar.ets', []],
+  ['BookshelfSectionHeader', 'bookshelf/ui/BookshelfSectionHeader.ets', []],
   ['ReaderBottomNavigation', '../app/navigation/ReaderBottomNavigation.ets', []],
   ['ReaderBottomTabBar', '../ui/patterns/ReaderBottomTabBar.ets', []],
   ['ReaderRaisedSurface', '../ui/surfaces/ReaderRaisedSurface.ets', []],
@@ -91,14 +93,22 @@ function probe(file, members, values) {
 const descendants = owner => [owner, ...[...(owner.children?.values() ?? [])].flatMap(descendants)];
 const nodes = (owner, type) => descendants(owner).flatMap(child => [...(child.nodes?.values() ?? [])]).filter(node => node.type === type);
 const replayTree = owner => { owner.replay?.(); for (const child of owner.children?.values() ?? []) replayTree(child); };
-const sharedHeader = createReaderBuilderProbe(read('../ui/chrome/PageBackBar.ets'), boundedMembers(read('../ui/chrome/PageBackBar.ets')), deps, hooks);
-deps.PageBackBar = sharedHeader.Component;
-deps.AppTopBar = createReaderBuilderProbe(read('../ui/chrome/AppTopBar.ets'), boundedMembers(read('../ui/chrome/AppTopBar.ets')), deps, hooks).Component;
-const sharedMain = createReaderBuilderProbe(read('shell/MainTabShell.ets'), boundedMembers(read('shell/MainTabShell.ets')), deps, hooks);
-deps.MainTabShell = class extends sharedMain.Component {
-  constructor(owner, params, storage, id, ...rest) { super(owner, params, storage, id, ...rest); this.params = { ...params }; }
-  updateStateVars(params) { super.updateStateVars(params); Object.assign(this.params, params); }
-};
+if (selectedCase !== 'shelf-list' && selectedCase !== 'empty-status') {
+  const sharedHeader = createReaderBuilderProbe(read('../ui/chrome/PageBackBar.ets'), boundedMembers(read('../ui/chrome/PageBackBar.ets')), deps, hooks);
+  deps.PageBackBar = sharedHeader.Component;
+  deps.AppTopBar = createReaderBuilderProbe(read('../ui/chrome/AppTopBar.ets'), boundedMembers(read('../ui/chrome/AppTopBar.ets')), deps, hooks).Component;
+  const sharedMain = createReaderBuilderProbe(read('shell/MainTabShell.ets'), boundedMembers(read('shell/MainTabShell.ets')), deps, hooks);
+  deps.MainTabShell = class extends sharedMain.Component {
+    constructor(owner, params, storage, id, ...rest) { super(owner, params, storage, id, ...rest); this.params = { ...params }; }
+    updateStateVars(params) { super.updateStateVars(params); Object.assign(this.params, params); }
+  };
+} else {
+  Object.assign(deps, pureModuleProbe(read('../ui/foundation/ReaderHeaderSpecs.ets'), 'ReaderHeaderSpecs.ets',
+    { ...readerFoundationTokens, ...(await import('../entry/src/main/ets/ui/foundation/ReaderHeaderMetrics.ts')) }, ['bookshelfHeaderSpec']), {
+    readerIsExpandedWidth, readerMainViewport: () => metrics().windowRect,
+    readerMainNavigationMode: () => 'bottom', readerMainRailContentLeft: () => 88, readerMainRailContentRight: () => 20,
+  });
+}
 const verifyScroll = (owner, top, bottom) => {
   const scroll = nodes(owner, 'Scroll')[0];
   assert.equal(scroll.height, '100%', 'scroll viewport extends behind both floating bars');
@@ -205,15 +215,39 @@ for (const bottom of [0, 15, 34, 50]) {
 
 }
 if(selectedCase==='shelf-list') {
-const shelf = probe('bookshelf/BookshelfPage.ets', ['bookshelfList','shelfPageHandler','shelfScrollHandler','isShelfPresentationCurrent', 'isWideViewport', 'effectiveViewportWidth'], {
-  continueReading: undefined, filterRowVisible: false, viewModeError: '', visibleBookCount: 1,
-  rowDataSource: {}, shelfScroller: {}, headerClearance: 74, shelfContentWidth: () => 352, viewportWidth: 0,
+const shelfSource = read('bookshelf/BookshelfPage.ets');
+Object.assign(deps, pureModuleProbe(shelfSource.slice(shelfSource.indexOf('class BookshelfMotionFrameCallback'),
+  shelfSource.indexOf('class BookshelfBookActionFocusFrame')),
+  'BookshelfMotionFrameCallback.ets', { FrameCallback: class {} }, ['BookshelfMotionFrameCallback']));
+let scrollState;
+const shelf = probe('bookshelf/BookshelfPage.ets', ['bookshelfList','shelfPageHandler','shelfScrollHandler','shelfViewportScrollHandler',
+  'isShelfPresentationCurrent','isWideViewport','effectiveViewportWidth','scrollLayout','pageGeometry','contentGeometry',
+  'shelfFirstItemPadding','shelfContentEndValue','shelfHeaderClearance','shelfContentStartInset','scheduleHeaderScrollMeasurement'], {
+  continueReading: undefined, filterRowVisible: false, currentFilterBookCount: () => 1, hasActiveFilters: () => false,
+  rowDataSource: {}, shelfScroller: {}, headerBottom: deps.bookshelfHeaderSpec().frameHeight, paneWidth: 0,
+  shelfContentWidth: () => 352, shelfViewportMotionId: () => 'shelf', viewModeAction: () => () => {}, filterPanel() {},
+  measuredFooterHeight: 0, railActive: () => readerIsExpandedWidth(windowWidth),
+  mounted: true, viewportRestored: true, navigationGeneration: 1, viewportRestoreGeneration: 1, firstVisibleItem: 0,
+  getUIContext: () => ({ postFrameCallback: frame => frame.onFrame(0) }), publishHeaderScrolled: value => { scrollState = value; },
 });
 shelf.bookshelfList(false);
 const list = nodes(shelf, 'List')[0];
 assert.equal(list.height, '100%');
 assert.equal(list.padding, undefined, 'List has no top/bottom viewport padding');
-assert.equal(list.contentStartOffset, 74, 'shelf content clears the current floating header and its approved gap');
+nodes(shelf, 'ListItem')[0].create[0]();
+const firstContent = nodes(shelf, 'Column').find(node => node.padding?.top === shelf.shelfFirstItemPadding());
+assert.ok(firstContent);
+for (const headerBottom of [60, 94, 60]) {
+  shelf.headerBottom = headerBottom;
+  shelf.replay();
+  assert.equal(list.contentStartOffset + firstContent.padding.top, headerBottom + 8);
+  assert.equal(shelf.shelfHeaderClearance(), headerBottom + 8);
+  for (const distance of [0, 4, 5]) {
+    shelf.shelfScroller.getItemRect = () => ({ y: list.contentStartOffset - distance, height: 40 });
+    shelf.scheduleHeaderScrollMeasurement();
+    assert.equal(scrollState, distance > 4);
+  }
+}
 assert.equal(list.maintainVisibleContentPosition, true);
 assert.equal(nodes(shelf, 'ListItem').length, 1, 'no spacer ListItem changes the stored item index');
 for (const bottom of [0, 34, 50]) {
@@ -235,11 +269,17 @@ for (const width of [390, 800]) {
   windowWidth = width;
   safeBottom = 34;
   const empty = probe('bookshelf/BookshelfEmptyPage.ets', ['build', 'bottomContentInset', 'emptyCardWidth'], {
+    headerBottom: deps.bookshelfHeaderSpec().frameHeight, railActive: () => false, measuredFooterHeight: 0,
     sectionHeader() {}, contentFrame: () => ({ left: 19, right: 19, width: Math.min(352, width - 38) }),
   });
   empty.initialRender();
   const scroll=nodes(empty,'Scroll')[0]; const content=nodes(empty,'Column').find(n=>typeof n.padding?.bottom==='number');
   assert.ok(content); verifyScroll(empty,content.padding.top,content.padding.bottom); const initialBottom=content.padding.bottom;
+  for (const headerBottom of [60, 94]) {
+    empty.headerBottom = headerBottom;
+    empty.replay();
+    assert.equal(content.padding.top, headerBottom + 8);
+  }
   safeBottom = 50; empty.readerWindowMetricsRevision++; empty.replay();
   assert.equal(content.padding.bottom-initialBottom,50-34,'live safe delta reaches empty scroll child');
 }
@@ -249,7 +289,7 @@ for (const failed of [false, true]) {
   safeBottom = 34;
   const status = probe('bookshelf/BookshelfStatusContent.ets',
     ['build', 'minimumContentHeight', 'bottomContentInset'], {
-      failed, viewportHeight: 0, onRetry() {},
+      failed, viewportHeight: 0, headerBottom: 60, measuredFooterHeight: 0, contentFrame: () => ({ left: 0, right: 0 }), onRetry() {},
     });
   status.initialRender();
   const scroll = nodes(status, 'Scroll')[0];

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { mock } from 'node:test';
 import { readFileSync } from 'node:fs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
@@ -57,6 +58,40 @@ for (const id of selected) {
   parentRendering = true; owner.aboutToDisappear(); assert.equal(surface.surfaceIsCurrent(second, 2), true);
   parentRendering = false; frames.shift().onFrame(); assert.equal(surface.surfaceAttached, false);
   assert.equal(owner.isCurrent(2), false);
+  mock.timers.enable({apis: ['setTimeout']});
+  try {
+    let restored = 0;
+    function openAndHide() {
+      surface.visible = true;
+      const attachment = surface.attachSurface(2);
+      surface.bindSurfaceFocus(2, {current: () => true, postFrame: action => action(), restore: () => { restored++; }});
+      surface.surfacePartAppeared(attachment, 2, 'scrim');
+      surface.surfacePartAppeared(attachment, 2, 'drawer:0');
+      surface.visible = false;
+      surface.hideSurface(attachment, 2);
+      surface.surfaceTransitionFinished(attachment, 2, 'scrim', false);
+      return attachment;
+    }
+    const missing = openAndHide();
+    assert.equal(surface.isSurfacePresented(), true);
+    mock.timers.tick(1000);
+    assert.equal(surface.isSurfacePresented(), false, 'a missing drawer exit receipt cannot retain a modal');
+    assert.equal(restored, 1);
+    surface.surfaceTransitionFinished(missing, 2, 'drawer:0', false);
+    const old = openAndHide();
+    surface.visible = true;
+    const next = surface.attachSurface(2);
+    surface.surfaceTransitionFinished(old, 2, 'drawer:0', false);
+    mock.timers.tick(1000);
+    assert.equal(surface.surfaceIsCurrent(next, 2), true, 'late exit cannot detach a reopened picker');
+    assert.equal(restored, 1);
+    surface.detachSurface(next, 2);
+    const normal = openAndHide();
+    surface.surfaceTransitionFinished(normal, 2, 'drawer:0', false);
+    assert.equal(surface.isSurfacePresented(), false, 'normal exit releases immediately');
+    mock.timers.tick(1000);
+    assert.equal(restored, 2, 'normal and fallback completion restore focus exactly once');
+  } finally { mock.timers.reset(); }
   assert.match(source, /this\.attachment > 0 \? \[this\.attachment\] : \[\]/, 'attachment zero never creates native surface actors');
   console.log('PASS source-picker current lifecycle receipts with owner-bound notification delivery; no native scheduling proof');
   recordContractCasePass(id);

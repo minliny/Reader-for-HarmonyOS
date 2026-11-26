@@ -68,13 +68,13 @@ export function localBookDetailSdk(dependencies = {}, hooks = {}, properties = c
     GradientDirection: {Top: 'top'},
     TransitionEffect: {OPACITY: transition({opacity:0}), opacity: opacity => transition({opacity}),
       scale: scale => transition({scale}), asymmetric: (enter, exit) => ({enter, exit})},
-    globalThis: {...properties.sdk.globalThis, get Context() { return globalThis.Context; }},
     readerActionIcon: (action, scheme) => `reader-action-${action}-${scheme}`,
     ReaderWindowCoordinator: {metrics: metrics.createDefaultReaderWindowMetrics},
     ImageFit: {Cover: 'cover'}, NoCoverCover: Cover, registerReaderFonts() {},
     ReaderUIVerificationProbe: {enabled: () => false},
     TextHeightAdaptivePolicy: {LAYOUT_CONSTRAINT_FIRST: 'layout-constraint-first'},
-    prepareReaderFontFamily: async () => {}, prepareMangaSheetFonts: async () => true, ...dependencies};
+    prepareReaderFontFamily: async () => {}, prepareMangaSheetFonts: async () => true, ...dependencies,
+    globalThis: {...properties.sdk.globalThis, ...dependencies.globalThis, get Context() { return globalThis.Context; }}};
   deps.ReaderNativeSlotMeasurement ??= pureModuleProbe(read('ui/layout/ReaderNativeSlotMeasurement.ets'),
     'ReaderNativeSlotMeasurement.ets', {ReaderPostLayoutFrame: actualReaderPostLayoutFrame(),
       readerMeasureSurfaceRect: () => undefined}, ['ReaderNativeSlotMeasurement']).ReaderNativeSlotMeasurement;

@@ -415,13 +415,17 @@ for (const id of selectContractCases(definitions)) {
         sourceName: '保存书源', coverUrl: 'https://canonical.example/cover.jpg', intro: '保存简介', lastChapter: '保存章节', addedAt: 1, sortIndex: 0 };
       const searchBook = { ...saved, category,
         coverUrl: 'https://candidate.example/cover.jpg', variables: [] };
+      const confirmed = contentKind === undefined ? { ...saved, contentKind: canonicalType } : saved;
       const library = currentLibraryShelfChrome(); library.mode = 'results';
       let searchInput, shelfInput;
       library.selectResult(searchBook, [searchBook], [saved], { remote: value => { searchInput = value; return true; },
-        local: () => assert.fail('remote selection'), sourceName: () => '保存书源', failure: () => assert.fail('unexpected mismatch') }, preferred);
+        beginShelfRead: () => () => true, loadShelfBook: async (sourceId, bookId) => {
+          assert.equal(contentKind, undefined); assert.deepEqual([sourceId, bookId], [saved.sourceId, saved.bookId]); return confirmed;
+        }, local: () => assert.fail('remote selection'), sourceName: () => '保存书源', failure: () => assert.fail('unexpected mismatch') }, preferred);
+      if (contentKind === undefined) await new Promise(resolve => setImmediate(resolve));
       const entry = new Entry();
       entry.openShelfEntry({}, saved, 'info', { sourceName: () => '保存书源', remote: value => { shelfInput = value; }, local: () => assert.fail('remote shelf') });
-      assert.ok(searchInput && shelfInput); assert.equal(searchInput.shelfSnapshot, saved); assert.equal(shelfInput.shelfSnapshot, saved);
+      assert.ok(searchInput && shelfInput); assert.equal(searchInput.shelfSnapshot, confirmed); assert.equal(shelfInput.shelfSnapshot, saved);
       assert.equal(searchInput.seed.coverUrl, saved.coverUrl, 'exact durable identity stays canonical even when media category differs or is missing');
       assert.equal(searchInput.seed.kind, shelfInput.seed.kind, 'canonical format kind survives both entry DTOs');
       const coordinator = new BookAcquisitionCoordinator(async () => ({ data: { sources: [{ sourceId: 'remote', enabled: true,
@@ -461,9 +465,14 @@ for (const id of selectContractCases(definitions)) {
       const candidate = { sourceId: 'candidate', bookId: 'searched', title: saved.title, author: saved.author, category, variables: [] };
       const library = currentLibraryShelfChrome(); library.mode = 'results'; let input;
       library.selectResult(candidate, [candidate], [saved], { remote: value => { input = value; return true; },
+        beginShelfRead: () => () => true, loadShelfBook: async (sourceId, bookId) => {
+          assert.equal(category, 'novel'); assert.equal(savedType, undefined);
+          assert.deepEqual([sourceId, bookId], [saved.sourceId, saved.bookId]); return { ...saved, contentKind: 'text' };
+        },
         sourceName: () => '书源', failure: () => assert.fail('unexpected ambiguity') });
-      assert.equal(input.seed.sourceId, savedType === (category === 'comic' ? 'manga' : 'text') ? 'canonical' : 'candidate',
-        'cross-source work matching requires an explicit compatible durable type');
+      if (savedType === undefined) await new Promise(resolve => setImmediate(resolve));
+      assert.equal(input.seed.sourceId, (savedType ?? 'text') === (category === 'comic' ? 'manga' : 'text') ? 'canonical' : 'candidate',
+        'cross-source work matching uses the confirmed shelf type, including a confirmed legacy text row');
       library.dispose();
     }
   }

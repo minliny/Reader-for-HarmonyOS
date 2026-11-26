@@ -54,6 +54,8 @@ export struct ReaderRouteStackSurface {
   @StorageLink('readerAppScheme') private scheme: string = 'day';
   @Prop @Watch('onRouteChanged') route: ReaderRouteSurfaceKey = 'settings';
   @Prop surfaceId: string = '';
+  // The outer route applies its own inset. Nested settings stacks are already inside that content.
+  @Prop extendsToWindowTop: boolean = false;
   @Prop initialRoot: ReaderRouteSurfaceKey | undefined = undefined;
   @Prop @Watch('onRouteChanged') routeMotion: ReaderRouteSurfaceMotion = 'none';
   @Prop @Watch('onEdgeAvailabilityChanged') reduceMotion: boolean = false;
@@ -579,6 +581,8 @@ export struct ReaderRouteStackSurface {
     }
     .backgroundColor(Color.Transparent)
     .hideTitleBar(true)
+    .hideToolBar(true)
+    .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], this.extendsToWindowTop ? [LayoutSafeAreaEdge.TOP] : [])
     .onBackPressed((): boolean => this.destinationBack(name as ReaderRouteSurfaceKey));
   }
 
@@ -599,6 +603,8 @@ export struct ReaderRouteStackSurface {
       }
       .mode(NavigationMode.Stack)
       .hideTitleBar(true)
+      .hideToolBar(true)
+      .ignoreLayoutSafeArea([LayoutSafeAreaType.SYSTEM], this.extendsToWindowTop ? [LayoutSafeAreaEdge.TOP] : [])
       .navDestination(this.destination)
       .customNavContentTransition((from: NavContentInfo, to: NavContentInfo, operation: NavigationOperation): NavigationAnimatedTransition =>
         this.nativeTransition(from, to, operation))

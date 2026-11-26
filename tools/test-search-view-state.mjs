@@ -39,6 +39,7 @@ function listen(ds, listener) {
 }
 const group = (key, title = key) => new SearchBookGroup({ sourceId: 'source-a', bookId: key,
   title, author: '作者', groupKey: key }, 1, false);
+const book = (id, title, author = '作者', extra = {}) => ({ sourceId: id, bookId: `/${id}`, title, author, ...extra });
 
 const originalLower=String.prototype.toLocaleLowerCase,originalIndexOf=Array.prototype.indexOf;
 
@@ -68,7 +69,6 @@ const Page=selectedProductionMethods(new URL('../entry/src/main/ets/features/sea
 Page.prototype.isPresentationVisible = () => true;
 const p = Object.assign(new Page(), { presentation: { kind: 'results', keyword: '诡秘之主' },
   viewState: new SearchViewState(), shelfBooks: [], selectedGroupName: '全部' });
-const book = (id, title, author = '作者', extra = {}) => ({ sourceId: id, bookId: `/${id}`, title, author, ...extra });
 const early = [book('fan1', '诡秘之主同人'), book('fan2', '我在诡秘之主'), book('other', '随笔')];
 const exact=book('original','诡秘之主','爱潜水的乌贼');const late=[...early,exact,book('other-copy','诡秘之主','爱潜水的乌贼')];const aliases=[book('alias','诡秘之主小说','爱潜水的乌贼',{groupKey:'canonical-original'}),book('alias-exact','诡秘之主','爱潜水的乌贼',{groupKey:'canonical-original'})];
 if(selectedCase==='relevance'){

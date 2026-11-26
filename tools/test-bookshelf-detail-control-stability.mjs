@@ -11,6 +11,7 @@ async function runSelectedCase(selectedCase) {
 if (selectedCase === 'detail-preview-more') {
   const {default: assert} = await import('node:assert/strict');
   const {localBookDetailSdk} = await import('./lib/local-book-detail-sdk-probe.mjs');
+  const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
   const { detailChapterPreview } = await import('../entry/src/main/ets/features/reading/presentation/DetailChapterPreview.ts');
   const { sourceSwitchTriggerFocusId } = await import('../entry/src/main/ets/features/source/presentation/SourceSwitchSurfaceLifecycle.ts');
   const { ReaderWindowMetricsSnapshot, ReaderRectVp } = await import('../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts');
@@ -26,7 +27,7 @@ if (selectedCase === 'detail-preview-more') {
 
   const allNodes = owner => [...owner.nodes.values(), ...[...owner.children.values()].flatMap(child => child.nodes ? allNodes(child) : [])];
   for (const width of [390, 820]) {
-    const intents = [], backLeases = [];
+    const intents = [], backLeases = [], removalRequests = [];
     const metrics = new ReaderWindowMetricsSnapshot(new ReaderRectVp(0, 0, width, 840));
     const {owner} = localBookDetailSdk({ReaderWindowCoordinator: {metrics: () => metrics}},
       {allowEmptyBranchAdmission: true, allowEmptyBranchRemoval: true});
@@ -35,12 +36,19 @@ if (selectedCase === 'detail-preview-more') {
       inBookshelf:true, mounted:true, viewportWidth:width, viewportHeight:840, admissionIdentity:'detail-sparse',
       navigationAppearance: { override: 'unset', reduceTransparency: width === 820 },
       sourceSwitchEnabled:true, downloadsEnabled:true, groupEnabled:true, onSelectChapter:index=>intents.push(index),
+      onRemove:identity=>removalRequests.push(identity),
       onSwitchSource:id=>intents.push(['source', id]), onOpenDownloads:()=>intents.push('downloads'),
       onOpenGroup:id=>intents.push(['group', id]), onMoreBack:(handler, lease)=>backLeases.push([handler, lease])});
     owner.refreshChapterPreview();
     owner.refreshGeometry();
     owner.initialRender();
     const nodes = () => allNodes(owner);
+    const remove = nodes().find(node => node.type === 'Button' && node.accessibilityText === '移除书架');
+    assert.equal(remove?.enabled, true);
+    const label = nodes().find(node => node.type === 'Text' && node.create === '移除书架');
+    assert.equal(label?.fontColor, readerAppColor('TOK_INK', 'day'), 'the available shelf action uses the active text color');
+    remove.onClick();
+    assert.deepEqual(removalRequests, ['detail-sparse']);
     const preview = () => nodes().filter(node => node.type === 'Button' && typeof node.id === 'string' && node.id.startsWith('reader-detail-preview-'));
     const results = preview();
     assert.deepEqual(results.map(node => node.id), [70, 90, 100, 110, 120, 130].map(index => `reader-detail-preview-${index}`));
@@ -306,7 +314,8 @@ if (selectedCase === 'detail-admission') {
   const controls = () => [...detail.nodes.values()].filter(node => node.type === 'Button');
   const [reading, shelf] = controls();
   assert.equal(reading.accessibilityText, '继续阅读');
-  assert.equal(shelf.accessibilityText, '已在书架');
+  assert.equal(shelf.accessibilityText, '移除书架');
+  assert.equal(shelf.enabled, true);
   assert.equal(reading.layoutWeight, 1);
   assert.deepEqual(shelf.border, { width: 1, color: readerAppColor('TOK_LINE', 'day') });
 
@@ -324,12 +333,36 @@ if (selectedCase === 'detail-admission') {
       Object.assign(detail, { toc: [], readingEnabled: false, readingBlockedReason: failure, inBookshelf });
       detail.replay();
       assert.equal(reading.accessibilityText, inBookshelf ? '继续阅读' : '开始阅读');
-      assert.equal(shelf.accessibilityText, inBookshelf ? '已在书架' : '加入书架');
+      assert.equal(shelf.accessibilityText, inBookshelf ? '移除书架' : '加入书架');
       assert.equal(reading.enabled, true, 'remote acquisition failures still admit reader recovery');
       reading.onClick();
     }
   }
   assert.equal(continues, 4);
+  const {fixture} = await import('./lib/reading-entry-index-fixture.mjs');
+  const {makeIndex} = await import('./lib/reading-entry-sdk-consumer.mjs');
+  const f = fixture(), page = makeIndex(f, {route: 'detail'});
+  page.idx.shelfGroupPresentation = {identity: ''};
+  Object.assign(page.entry, {book: detail.book, toc: [], inBookshelf: true, verdict: 'readable'});
+  const leaf = page.render();
+  const remove = [...leaf.nodes.values()].find(node => node.accessibilityText === '移除书架');
+  assert.equal(remove?.enabled, true);
+  const picker = page.idx.sourceSwitchPresentation;
+  picker.visible = true;
+  assert.equal(page.idx.detailShelf.mutationEnabled(page.entry.book), true, 'preview keeps the underlying action visually available');
+  remove.onClick();
+  assert.equal(f.removalDialog, undefined, 'even a retained detail callback cannot act under the picker');
+  picker.visible = false;
+  picker.pending = {transactionId: 'pending'};
+  assert.equal(page.idx.detailShelf.mutationEnabled(page.entry.book), false, 'pending switch protects the shelf');
+  picker.pending = undefined;
+  picker.host = () => ({blocksExit: () => true});
+  assert.equal(page.idx.detailShelf.mutationEnabled(page.entry.book), false, 'active switch protects the shelf');
+  picker.host = () => undefined;
+  remove.onClick();
+  assert.match(f.removalDialog?.message ?? '', /从书架移除/);
+  assert.equal(f.calls.some(call => call.method === 'bookshelf.remove'), false, 'tap only requests confirmation');
+  f.close();
   detail.removing = true;
   detail.replay();
   assert.equal(shelf.enabled, false);

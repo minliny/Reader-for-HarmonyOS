@@ -1029,8 +1029,8 @@ export struct LocalBookDetail {
           .minFontScale(Math.min(1, this.mangaFontScale()))
           .maxFontScale(Math.max(1, this.mangaFontScale()))
           .halfLeading(this.book.contentKind === 'manga').fontWeight(TYPE_APP_SEGMENT_LABEL.fontWeight)
-          .textAlign(TextAlign.Center).fontColor(this.removing || this.cancellingAdd ? Color.Transparent : this.detailColor(this.inBookshelf ? 'TOK_MUTED' : 'TOK_GREEN',
-            this.book.contentKind === 'manga' ? 'muted' : this.inBookshelf ? 'muted' : 'accent'))
+          .textAlign(TextAlign.Center).fontColor(this.removing || this.cancellingAdd ? Color.Transparent :
+            this.inBookshelf ? this.detailColor('TOK_INK', 'ink') : this.detailColor('TOK_GREEN', 'accent'))
           .accessibilityLevel('no');
         }.width(this.book.contentKind === 'manga' ? visual.detailSecondaryWidth : 94)
           .constraintSize({ minHeight: 44 })
@@ -1328,7 +1328,7 @@ export struct LocalBookDetail {
     if (this.adding) return '取消加入';
     if (this.removing) return this.inBookshelf ? '移除书架' : '加入书架';
     if (!this.detailBookAvailable()) return '已移除';
-    return this.inBookshelf ? '已在书架' : '加入书架';
+    return this.inBookshelf ? '移除书架' : '加入书架';
   }
   private shelfActionAvailable(): boolean {
     return this.removalEnabled && !this.removing && !this.cancellingAdd && this.detailBookAvailable();

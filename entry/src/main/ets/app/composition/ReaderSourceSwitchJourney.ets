@@ -74,8 +74,8 @@ export class ReaderSourceSwitchJourney {
       shelfBook: (sourceId: string, bookId: string): ShelfBook | undefined => this.ports.shelfBooks().find(
         (book: ShelfBook): boolean => book.sourceId === sourceId && book.bookId === bookId),
       searchCandidates: (): SearchBook[] => fromSearch() ? this.ports.search().candidates() : [],
-      preview: (seed: RemoteReadingBookSeed, sourceName: string, session: RemoteReadingSession): void =>
-        this.preview(seed, sourceName, session),
+      preview: (seed: RemoteReadingBookSeed, sourceName: string, session: RemoteReadingSession, shelfSnapshot: ShelfBook | undefined): void =>
+        this.preview(seed, sourceName, session, shelfSnapshot),
       target: (book: ShelfBook, session: RemoteReadingSession, chapterIndex: number): void =>
         this.commit(book, session, chapterIndex),
       reopen: (book: ShelfBook): void => this.reopenCommitted(book),
@@ -115,9 +115,9 @@ export class ReaderSourceSwitchJourney {
     this.ports.source().openForEntry(this.workflow(), (): void => {});
   }
 
-  preview(seed: RemoteReadingBookSeed, sourceName: string, session: RemoteReadingSession): void {
+  preview(seed: RemoteReadingBookSeed, sourceName: string, session: RemoteReadingSession, shelfSnapshot: ShelfBook | undefined): void {
     this.navigation.returns.reopenPreservingReaderReturn(this.ports.captureReturn, (parent: DetailReturnRoute): void => {
-      this.ports.entryActions().openRemoteDetail({ seed, sourceName, resumeImmediately: true, validatedSession: session }, parent);
+      this.ports.entryActions().openRemoteDetail({ seed, sourceName, shelfSnapshot, resumeImmediately: true, validatedSession: session }, parent);
     }, this.ports.restoreReturn);
   }
 

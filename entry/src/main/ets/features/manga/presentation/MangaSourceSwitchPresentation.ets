@@ -35,7 +35,7 @@ export interface MangaSourceSwitchPorts {
   sourceHost: () => SourceSwitchHost | undefined;
   query: () => SourceSwitchProbeQuery;
   ownsRuntime: (owner: ReaderRuntimeOwner) => boolean;
-  preview: (seed: RemoteReadingBookSeed, sourceName: string, session: RemoteReadingSession) => void;
+  preview: (seed: RemoteReadingBookSeed, sourceName: string, session: RemoteReadingSession, shelfSnapshot: ShelfBook | undefined) => void;
   committed: (book: ShelfBook, session: RemoteReadingSession, chapterIndex: number) => void;
   chapterStartFeedback: (current: () => boolean) => void;
   refreshShelf: () => void;
@@ -142,7 +142,7 @@ export class MangaSourceSwitchPresentation {
         assertQualified();
         const first = target.entries.find(row => row.navigable !== false && row.url.trim().length > 0);
         if (first === undefined) throw new Error('漫画目标目录没有可读章节');
-        this.performMangaPreviewSourceSwitch(candidate, target, first.index);
+        await this.performMangaPreviewSourceSwitch(candidate, target, first.index, host, qualifiedCurrent);
         return;
       }
       if (previous === undefined) {
@@ -363,15 +363,15 @@ export class MangaSourceSwitchPresentation {
       if (!current()) return false;
       try { qualify?.(); return true; } catch (_) { return false; }
     };
+    const host = this.ports.sourceHost();
+    if (host === undefined) throw new Error('MANGA_SESSION_CANCELLED');
     if (!this.ports.scene().inBookshelf) {
       // Preparation already validated the explicitly selected first image.
       // Transfer a one-entry chapter-start intent. Progress is saved only by
       // the reader after actual visibility, never speculatively in this switch.
-      this.performMangaPreviewSourceSwitch(candidate, target, proposal.firstImage.chapterIndex);
+      await this.performMangaPreviewSourceSwitch(candidate, target, proposal.firstImage.chapterIndex, host, qualifiedCurrent);
       return;
     }
-    const host = this.ports.sourceHost();
-    if (host === undefined) throw new Error('MANGA_SESSION_CANCELLED');
     const chapterIndex = proposal.firstImage.chapterIndex;
     // Candidate or explicit target chapter selection supplies the intent. Core
     // verifies first-image evidence and both progress CAS tokens atomically.
@@ -453,14 +453,16 @@ export class MangaSourceSwitchPresentation {
     return error instanceof MangaSwitchRecoveryError ? error.message : '漫画换源结果暂无法核对，原操作已保留。';
   }
 
-  private performMangaPreviewSourceSwitch(candidate: SourceSwitchCandidate,
-    session: RemoteReadingSession, chapterIndex: number): void {
+  private async performMangaPreviewSourceSwitch(candidate: SourceSwitchCandidate,
+    session: RemoteReadingSession, chapterIndex: number, host: SourceSwitchHost, current: () => boolean): Promise<void> {
+    const shelfSnapshot = await host.readPreviewShelf(session, current);
+    if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
     this.clear();
     this.ports.source().host()?.retire();
     this.ports.source().visible = false;
     this.ports.source().state = { kind: 'discovering' };
     this.failure = undefined;
-    this.ports.preview(remoteReadingSeedForSession(session), candidate.sourceName ?? candidate.sourceId, session);
+    this.ports.preview(remoteReadingSeedForSession(session), candidate.sourceName ?? candidate.sourceId, session, shelfSnapshot);
     if (this.ports.entry().requestMangaPreviewBeginning(session, chapterIndex)) this.showChapterStart(session);
   }
 

@@ -267,6 +267,8 @@ async function routeTransitionEffects() {
       create(builder) { buildDestinationContent = builder; },
       pop() {},
       hideTitleBar() {},
+      hideToolBar() {},
+      ignoreLayoutSafeArea() {},
       onBackPressed() {},
       backgroundColor(color) { destinationBackgrounds.push(color); },
     },

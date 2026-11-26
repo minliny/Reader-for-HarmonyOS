@@ -1055,15 +1055,13 @@ export struct SourceSwitchWindow {
   }
   build() {
     Stack({ alignContent: this.sideDrawer() ? Alignment.End : Alignment.Bottom }) {
-      if (this.showing && this.novelFontsReady) {
-        ForEach([this.surfaceVariant], (variant: number): void => {
-          if (this.state.kind === 'switching') {
-            this.novelSwitching(`progress:${variant}`, this.surfaceAttachment, this.surfaceScope, variant);
-          } else {
-            this.novelDrawer(`drawer:${variant}`, this.surfaceAttachment, this.surfaceScope);
-          }
-        }, (variant: number): string => variant.toString());
-      }
+      ForEach(this.showing && this.novelFontsReady ? [this.surfaceVariant] : [], (variant: number): void => {
+        if (this.state.kind === 'switching') {
+          this.novelSwitching(`progress:${variant}`, this.surfaceAttachment, this.surfaceScope, variant);
+        } else {
+          this.novelDrawer(`drawer:${variant}`, this.surfaceAttachment, this.surfaceScope);
+        }
+      }, (variant: number): string => variant.toString());
     }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent)
       .onAreaChange((_old: Area, area: Area): void => {
         const height = Number(area.height);

@@ -23,7 +23,7 @@ export function foundationSpecs(roles=readerTypographyRoles,source=specsSource) 
  return {...searchGeometry,...pureModuleProbe(source,'ReaderControlSpecs.ets',values,['resolveReaderButtonSpec','resolveReaderButtonMatrixPaint','resolveReaderButtonMatrixSize','READER_DIALOG_FORM_ACTION_SIZE','resolveReaderFormFieldSpec'])};
 }
 const surfaceResolverSource=readFileSync(new URL('../../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts',import.meta.url),'utf8');
-export const surfaceFontResolvers=()=>pureModuleProbe(surfaceResolverSource,'ReaderSurfaceResolvers.ts',{},['readerReadableFontScale','readerScaledControlHeight']);
+export const surfaceFontResolvers=()=>pureModuleProbe(surfaceResolverSource,'ReaderSurfaceResolvers.ts',{},['readerReadableFontScale','readerScaledControlHeight','readerScaledBarHeight']);
 export function withReaderSectionHeading(controls, roles=readerTypographyRoles) {
  controls.hooks.childSources.ReaderSectionHeading=sectionHeadingSource;
  controls.dependencies.ReaderSectionHeading=createReaderBuilderProbe(sectionHeadingSource,['appThemeScheme','title','variant','build'],

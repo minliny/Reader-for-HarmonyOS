@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { selectContractCases, recordContractCasePass } from './lib/contract-case-selection.mjs';
 import { boundedSurfaceSdk } from './lib/bounded-surface-sdk-probe.mjs';
 import { pureModuleProbe } from './lib/ets-pure-module-probe.mjs';
+import { readerEditingSdk } from './lib/reader-editing-sdk-probe.mjs';
 import { createDefaultReaderWindowMetrics, readerInteractiveSafeTop, readerInteractiveSafeBottom, readerVisualSafeTop } from '../entry/src/main/ets/ui/foundation/ReaderWindowMetrics.ts';
 
 const cases = selectContractCases({
@@ -25,7 +26,7 @@ function checkCapacity(id, sourceOverride) {
   const sdk = boundedSurfaceSdk({ allowEmptyBranchAdmission: true, windowMetrics: () => metrics });
   const dependencies = {
     ReaderWindowCoordinator: { metrics: () => metrics }, readerSurfaceMaxHeight,
-    readerInteractiveSafeTop, readerInteractiveSafeBottom,
+    readerInteractiveSafeTop, readerInteractiveSafeBottom, readerKeyboardHostBottom: readerEditingSdk().readerKeyboardHostBottom,
     readerPageAreaLength: Number, bookshelfHeaderSpec: () => ({ contentGap: 8 }),
   };
   const recovery = { visible: true, canRetry: true, generation: 7, message: '原操作的核对详情。'.repeat(90) };
@@ -46,11 +47,11 @@ function checkCapacity(id, sourceOverride) {
     owner.initialRender();
     area = [...owner.nodes.values()].find(node => node.type === 'Stack' && node.clip === true).onAreaChange;
   } else if (id === 'shelf-mode-pending') {
-    owner = sdk.consumer(sourceOverride ?? read('BookshelfPage'), ['build', 'bookshelfTabContent', 'viewModeRecoveryMaxHeight',
+    owner = sdk.consumer(sourceOverride ?? read('BookshelfPage'), ['build', 'bookshelfTabContent', 'recordShelfPane', 'viewModeRecoveryMaxHeight',
       'recoveryViewportHeight', 'recoveryOriginY', 'readerWindowMetricsRevision'], dependencies);
     Object.assign(owner, {
       recoveryViewportHeight: 168, recoveryOriginY: 0, navigationGeneration: 2, viewModeSnapshot: {}, modeReconcileBusy: false,
-      isWideViewport: () => false, phoneContent() {}, tabletContent() {}, viewModePending: () => true,
+      shelfPane() {}, paneWidth: 320, actionSheetId: '', viewModePending: () => true,
       viewModeRecovery: () => recovery, shelfHeaderClearance: () => 56, noticeTopInset: 12,
       shelfContentEndInset: () => 64, bookActionSheetOptions: () => ({}), bookActionSheetContent() {},
       viewModeReconcileAction: () => generation => actions.push(generation),
@@ -60,9 +61,11 @@ function checkCapacity(id, sourceOverride) {
     area = [...owner.nodes.values()].find(node => node.type === 'Stack' && node.onAreaChange).onAreaChange;
   } else {
     sdk.childSources.MainTabShell = readFileSync(new URL('../../shell/MainTabShell.ets', root), 'utf8');
+    sdk.childSources.ReaderBottomSheet = readFileSync(new URL('../../../ui/surfaces/ReaderBottomSheet.ets', root), 'utf8');
     owner = sdk.consumer(sourceOverride ?? read('BookshelfShell'), ['shellOverlay', 'recoveryNoticeContent', 'recoveryMaxHeight',
       'recoveryViewportHeight', 'recoveryOriginY', 'readerWindowMetricsRevision', 'build'], {
       ...dependencies,
+      ReaderBottomSheet: class { constructor() { assert.fail('the shelf menu is closed'); } },
       MainTabShell: class {
         constructor(owner, params, _storage, id) {
           Object.assign(this, { owner, params, id });
@@ -73,7 +76,7 @@ function checkCapacity(id, sourceOverride) {
     });
     Object.assign(owner, {
       recovery, headerBottom: 56, measuredFooterHeight: 64, recoveryViewportHeight: 168, recoveryOriginY: 0,
-      recoveryBusy: false, canContinueRemoval: true, removalActionLabel: '继续原删除操作',
+      recoveryBusy: false, moreSheetCurrentId: '', canContinueRemoval: true, removalActionLabel: '继续原删除操作',
       navigationGeneration: 2, mounted: true,
       noticeHeightHandler: () => () => {}, moreSheetOptions: () => ({}), moreSheetContent() {}, numericAreaLength: Number,
       onReconcile: generation => actions.push(generation), onContinueRemoval: generation => actions.push(generation),

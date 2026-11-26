@@ -52,7 +52,7 @@ export interface SourceSwitchSnapshot {
   write?: SourceSwitchWriteFact;
 }
 export type SourceSwitchEffect =
-  | { kind: 'previewReady'; seed: RemoteReadingBookSeed; session: RemoteReadingSession; candidate: SourceSwitchCandidate }
+  | { kind: 'previewReady'; seed: RemoteReadingBookSeed; session: RemoteReadingSession; candidate: SourceSwitchCandidate; shelfSnapshot: ShelfBook | undefined }
   | { kind: 'targetReady'; book: ShelfBook; session: RemoteReadingSession; chapterIndex: number }
   | { kind: 'restoredForNextChoice'; book: ShelfBook }
   | { kind: 'rollbackReady'; book: ShelfBook }
@@ -157,6 +157,14 @@ export class SourceSwitchHost {
     await new MangaAdmissionGateway(this.runtime).verify(session, current);
     if (!current()) throw new Error('MANGA_SESSION_CANCELLED');
     return session;
+  }
+
+  async readPreviewShelf(session: RemoteReadingSession, current: () => boolean): Promise<ShelfBook | undefined> {
+    const book = await this.shelf.loadShelfBook(session.identity.sourceId, session.identity.bookId, current);
+    if (book !== undefined && book.contentKind !== (session.contentKind ?? 'text')) {
+      throw new Error('书籍类型与书架记录不一致，请重新打开书籍。');
+    }
+    return book;
   }
 
   /** One finite feature owner survives Index remounts for this exact Runtime.
@@ -364,7 +372,9 @@ export class SourceSwitchHost {
         if (!admitted()) return;
         if (!this.sameIdentity(session.identity, seed)) throw new Error('换源返回了其他书籍的阅读会话');
         this.gateway.assertAcquiredBook(candidate, session, context.query);
-        this.hide(); this.deliver({ kind: 'previewReady', seed, session, candidate });
+        const shelfSnapshot = await this.readPreviewShelf(session, admitted);
+        if (!admitted()) return;
+        this.hide(); this.deliver({ kind: 'previewReady', seed, session, candidate, shelfSnapshot });
       } catch (error) { if (admitted()) this.acquisitionFailed(candidate, this.publicFailure(error)); }
       finally {
         if (this.previewPreparation === preparation) {

@@ -41,7 +41,7 @@ async function visualContract(){const {readFileSync}=await import('node:fs');ret
 const checks=[];let passed=false;
 
 try{
-async function mangaCase(mode){
+async function mangaCase(mode,onShelf=false){
 
  const proof={schemaVersion:1,sourceVersion:'v1',field:'detail',raw:'@Writer',label:'Writer',rule:'author-nickname-at-v1'};
  const targetSession={...session,contentKind:'manga',detailUrl:'target',hostRequirements:[],
@@ -53,6 +53,8 @@ async function mangaCase(mode){
  f.runtime.bookAcquisitions=()=>({...acquisitions(),sourceRegistryRevision:()=>revision});
  f.runtime.supportsCoreCapability=()=>true;
  f.runtime.request=async(method,params,options)=>{
+  if(method==='bookshelf.get' && params.sourceId===target.sourceId && params.bookId===target.bookId)
+   return {data:{book:onShelf?{...target,contentKind:'manga'}:null}};
   if(method==='source.list')return{data:{sources:['old','new'].map(sourceId=>({sourceId,name:sourceId,enabled:true,
    sourceVersion:click&&mode==='target-version'&&sourceId==='new'?'v2':'v1',bookSource:{bookSourceType:2}}))}};
   if(method==='search-book.get'){
@@ -96,7 +98,7 @@ async function mangaCase(mode){
   await entered.promise;
   if(mode==='registry-during-proof')revision++;
   else{
-   panel.onClose();assert.equal(x.source.visible,false);
+   panel.onClose();assert.equal(x.source.visible,false);x.unmountPanel();
    x.switchJourney.openDetail();await settle();assert.equal(x.source.visible,true);
    const scope=x.source.scopeId;
    if(mode==='cancel-reject')gate.reject(Error('late proof IO error'));else gate.resolve();
@@ -114,6 +116,7 @@ async function mangaCase(mode){
   assert.deepEqual(resolvedQuery.authorIdentity,proof);assert.equal(assertQueries.length,1);
   assert.equal(assertQueries[0],resolvedQuery,'final target verification uses the same qualified query after Host retirement');
   assert.equal(f.calls.filter(([method])=>method==='acquire').length,1);assert.equal(images.length,1);assert.equal(released.length,1);
+  assert.equal(x.entry.inBookshelf,onShelf,'manga reader keeps the exact target membership');
  }else{
   assert.equal(opens.length,0);assert.equal(x.source.state.kind==='switching',false,'qualification failure is recoverable');
   const message=x.source.state.refreshError??x.source.failureMessage;
@@ -129,10 +132,17 @@ async function mangaCase(mode){
   x.sourceActions.refresh(failedScope);await settle();assert.equal(x.source.scopeId,refreshedScope,'old button cannot reopen newer scope');
  }
  assert.equal(x.entry.book.author,mode==='valid'?'Writer':'@Writer','proof rejection preserves the original detail; admitted preview projects the actual target metadata');
+ if(mode==='valid'){
+  x.exit.accepted(x.entry.readerPresentationIdentity());
+  assert.equal(x.entry.sessionActive,false);
+  assert.equal(x.navigation.snapshot().route,'detail');
+  assert.equal(x.entry.book.bookId,target.bookId);
+  assert.equal(x.entry.inBookshelf,onShelf,'returning from manga retains target membership');
+ }
  assert.equal(f.calls.some(([method])=>['manga.sourceSwitch.commit','reading.progress.update','bookshelf.add'].includes(method)),false);
  checks.push('actual-cold-manga-SDK-'+mode);
 }
-if(id==='manga-valid')await mangaCase('valid');
+if(id==='manga-valid'){await mangaCase('valid',true);await mangaCase('valid',false);}
 if(id==='manga-stale-proof')await mangaCase('stale-proof');
 if(id==='manga-wrong-book')await mangaCase('wrong-book');
 if(id==='manga-wrong-author')await mangaCase('wrong-author');
@@ -149,12 +159,37 @@ for(const late of ['resolve','reject']){
  row.onSelect();await settle();assert.ok(f.calls.some(([method])=>method==='acquire'));
  const preparing=x.mount();assert.equal(preparing.allowCancelWhileSwitching,true,'actual novel preview control admits cancellation after qualification');
  const previous=x.source.scopeId;preparing.onClose();assert.equal(x.source.visible,false);
+ x.unmountPanel();
  x.switchJourney.openDetail();await settle();const next=x.source.scopeId;assert.notEqual(next,previous);
  if(late==='resolve')gate.resolve();else gate.reject(Error('old preview failed'));await settle();
  assert.equal(x.source.visible,true);assert.equal(x.source.scopeId,next);assert.equal(x.source.state.kind,'candidates');
  assert.equal(f.calls.some(([method])=>method==='source.switch.commit'),false);
  checks.push('actual-SDK-preview-preparation-close-reopen-before-late-'+late);
 }
+}
+if(id==='preview-membership'){
+ for(const onShelf of [true,false]){
+  const f=fixture({open:false,shared:true,preview:true}),x=makeOwners(f);
+  const base=f.runtime.request.bind(f.runtime),reads=[];
+  f.runtime.request=async(method,params,options)=>{
+   if(method==='bookshelf.get'){
+    reads.push(params);
+    return {data:{book:onShelf?{...target,contentKind:'text'}:null}};
+   }
+   return base(method,params,options);
+  };
+  x.switchJourney.openDetail();await settle();
+  assert.equal(x.source.state.kind,'candidates');
+  x.sourceActions.select(f.candidate(),x.source.scopeId);await settle();
+  assert.deepEqual(reads,[{sourceId:target.sourceId,bookId:target.bookId}]);
+  assert.equal(x.entry.sessionActive,true);
+  assert.equal(x.entry.inBookshelf,onShelf);
+  x.exit.accepted(x.entry.readerPresentationIdentity());
+  assert.equal(x.entry.sessionActive,false);
+  assert.equal(x.navigation.snapshot().route,'detail');
+  assert.equal(x.entry.book.bookId,target.bookId);
+  assert.equal(x.entry.inBookshelf,onShelf,'the reader exit retains membership for the detail action');
+ }
 }
 if(id==='seed-author-proof'){
 {
@@ -224,6 +259,7 @@ for(const outcome of ['resolve','reject']){
  revision=2;blockNextRegistry=true;x.rows().find(row=>row.candidate.sourceId==='new').onSelect();await settle();
  assert.equal(started,true);assert.equal(x.source.state.kind,'switching');
  panel.onClose();assert.equal(x.source.visible,false,'actual SDK close cancels read-only qualification');
+ x.unmountPanel();
  x.switchJourney.openDetail();await settle();assert.equal(x.source.visible,true);
  const successor=x.source.scopeId;assert.notEqual(successor,scope);
  assert.equal(x.source.state.kind,'candidates');
@@ -264,7 +300,7 @@ if(id==='source-finalization'){
 if(id==='old-overlay'){
 {
  const f=fixture({shared:true,open:false}),x=makeOwners(f);x.switchJourney.openDetail();await settle();const old=x.mount(),scope=x.source.scopeId;
- old.onClose();assert.equal(f.host.current().visible,false);x.switchJourney.openDetail();await settle();const current=x.mount();
+ old.onClose();assert.equal(f.host.current().visible,false);x.unmountPanel();x.switchJourney.openDetail();await settle();const current=x.mount();
  assert.notEqual(x.source.scopeId,scope);old.onClose();old.onRetry();old.onRefresh();old.onSelectCandidate(f.candidate());await settle();
  assert.equal(f.host.current().visible,true);assert.equal(f.calls.filter(([m])=>m==='source.switch.commit').length,0);
  current.onClose();assert.equal(f.host.current().visible,false);
@@ -784,5 +820,6 @@ passed=true;}finally{for(const host of owned)host.retire();setCurrentRuntime(und
 }
 const definitions={"presentation-workflow":"Actual Index and SourceSwitchPresentation workflow, startup inspection and current reader transaction", "manga-valid": "manga-valid actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-stale-proof": "manga-stale-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-wrong-book": "manga-wrong-book actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-wrong-author": "manga-wrong-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-target-version": "manga-target-version actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-registry-during-proof": "manga-registry-during-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-wrong-target-author": "manga-wrong-target-author actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-registry-during-image": "manga-registry-during-image actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-cancel-resolve": "manga-cancel-resolve actual scoped owner/gateway/storage path; controlled Core/OS ports", "manga-cancel-reject": "manga-cancel-reject actual scoped owner/gateway/storage path; controlled Core/OS ports", "preview-cancel": "preview-cancel actual scoped owner/gateway/storage path; controlled Core/OS ports", "seed-author-proof": "seed-author-proof actual scoped owner/gateway/storage path; controlled Core/OS ports", "qualification-cancel": "qualification-cancel actual scoped owner/gateway/storage path; controlled Core/OS ports", "source-finalization": "source-finalization actual scoped owner/gateway/storage path; controlled Core/OS ports", "old-overlay": "old-overlay actual scoped owner/gateway/storage path; controlled Core/OS ports", "unknown-recovery": "unknown-recovery actual scoped owner/gateway/storage path; controlled Core/OS ports", "late-navigation": "late-navigation actual scoped owner/gateway/storage path; controlled Core/OS ports", "failed-preview": "failed-preview actual scoped owner/gateway/storage path; controlled Core/OS ports", "remount": "remount actual scoped owner/gateway/storage path; controlled Core/OS ports", "retained-reader-failure": "retained-reader-failure actual scoped owner/gateway/storage path; controlled Core/OS ports", "retired-cache-confirmed": "retired-cache-confirmed actual scoped owner/gateway/storage path; controlled Core/OS ports", "retired-cache-platform-failure": "retired-cache-platform-failure actual scoped owner/gateway/storage path; controlled Core/OS ports", "retired-cache-Core-unknown": "retired-cache-Core-unknown actual scoped owner/gateway/storage path; controlled Core/OS ports", "reader-overlay": "reader-overlay actual scoped owner/gateway/storage path; controlled Core/OS ports", "reader-completion": "reader-completion actual scoped owner/gateway/storage path; controlled Core/OS ports", "metadata-hosts": "metadata-hosts actual scoped owner/gateway/storage path; controlled Core/OS ports"};
 definitions['pending-target-reader-overlay']='Retained reader picker stays open on a pending target and can restore the original or switch to a third source';
+definitions['preview-membership']='Text preview verifies the exact target shelf record before reader handoff and retains it on exit';
 definitions['failed-target-reader-actions']='Retained text reader shows exact direct rollback and alternate picker on a failed pending target';
 for(const id of selectContractCases(definitions)){await run(id);recordContractCasePass(id);}

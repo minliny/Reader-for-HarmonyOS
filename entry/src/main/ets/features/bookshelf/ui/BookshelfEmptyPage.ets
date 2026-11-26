@@ -15,7 +15,6 @@ import {
   TOK_CONTENT_MAX_W_PHONE,
   TOK_CONTENT_RAIL_W_TABLET,
   TOK_SCREEN_INSET,
-  TOK_SPACE_XS,
   TOK_SPACE_MD,
 } from '../../../ui/foundation/ReaderTokens';
 import {
@@ -59,7 +58,7 @@ export struct BookshelfEmptyPage {
       }
       .width(this.contentFrame().width)
       .alignItems(HorizontalAlign.Center)
-      .padding({ top: this.headerBottom + TOK_SPACE_XS, bottom: this.bottomContentInset() });
+      .padding({ top: this.headerBottom + bookshelfHeaderSpec().contentGap, bottom: this.bottomContentInset() });
     }
     .id('reader-bookshelf-empty-scroll')
     .width('100%')

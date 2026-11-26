@@ -109,7 +109,9 @@ export function searchReadingJourneyFixture({ runtime, ReadingHost, route = 'sea
     runtime: currentRuntime, ownsRuntime: owner => owner === currentRuntime(), search: () => library,
     acquisition: () => ({ currentOwner: currentRuntime, beginSearch: () => true, endSearch: () => runtime.bookAcquisitions().endSearch?.() }),
     reading: () => entry, readingActions: () => actions, shelfBooks: () => controls.shelfBooks,
-    loadLocalBook: loadLocal, sourceName: id => sourceName(id), failure, feedback() {}, advance,
+    shelfHost: () => ({ loadShelfBook: (sourceId, bookId) => sourceId === 'local' ? loadLocal(bookId) :
+      new ReaderCoreGateway(runtime).loadShelfBook(sourceId, bookId) }),
+    sourceName: id => sourceName(id), failure, feedback() {}, advance,
     publish: snapshot => assert.equal(navigation.snapshot(), snapshot),
     refreshMembership() {}, refreshShelf: () => onEvent('shelf.project'), readbackOnBookshelf() {}, clearRssSelection() {},
     bookshelfInputAllowed: () => controls.foreground, back() {},

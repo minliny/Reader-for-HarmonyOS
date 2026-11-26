@@ -171,6 +171,28 @@ for (const id of selected) {
         displayedHistoryLimit: 0, continueCardRect: undefined, onOpen() {}, onBack() {}, onMore() {}, measurementKey: 1, headerBottom: 0,
         reduceMotion: true, historyLimitTrack: { set() {} }, historyTrack: { set() {} }, publishContinueCardCoverage() {}, schedule() {} };
       Object.assign(surface, surfaceFields);
+      const shelfHeader = headerTypes.bookshelfHeaderSpec();
+      const borders = 2 * surface.spec.borderWidth;
+      const expandedHeight = surface.spec.barHeight(surface.searchLaneHeight());
+      surface.mode = 'idle';
+      surface.searchMounted = false;
+      surface.surfaceProgress = () => 0;
+      const idleHeight = surface.barHeight();
+      assert.equal(idleHeight + borders, Math.max(52, Math.ceil(shelfHeader.titleLineHeight * scale) + borders));
+      assert.equal(surface.headerActionTop() * 2 + shelfHeader.actionExtent, idleHeight);
+      assert.equal(shelfHeader.frameHeight, shelfHeader.topInset + 52);
+      assert.equal(shelfHeader.contentGap, 8);
+      let measuredIdleBottom = 0;
+      surface.onHeaderBottom = bottom => { measuredIdleBottom = bottom; };
+      surface.captureHeader(idleHeight + borders, surface.measurementKey);
+      assert.equal(measuredIdleBottom, shelfHeader.topInset + idleHeight + borders);
+      surface.mode = 'input';
+      surface.searchMounted = true;
+      for (const progress of [0, 0.5, 1, 0.5, 0]) {
+        surface.surfaceProgress = () => progress;
+        assert.equal(surface.barHeight(), idleHeight + (expandedHeight - idleHeight) * progress);
+      }
+      surface.surfaceProgress = () => 1;
       const runtime = {}, host = {}, scope = { owner: runtime, mounting: 11, inputAllowed: true, retired: false };
       const headerPresentation = { identity: 7, host, mode: 'input', headerBottom: 0 };
       const journey = new ReaderLibraryJourney({ snapshot: () => ({ route: 'search', generation: 9 }) }, {
@@ -316,11 +338,11 @@ for (const id of selected) {
     // Prior finite recipes and the actual old packed Common reproduce all three omissions.
     const currentSpecsSource = read('ui/controls/ReaderControlSpecs.ets');
     const oldGeometry = pureModuleProbe(read('ui/foundation/ReaderSearchControlGeometry.ts').replace('SEARCH_CONTROL_MIN_TARGET = 44', 'SEARCH_CONTROL_MIN_TARGET = 36'), 'PriorSearchControlGeometry.ts', {}, ['readerSearchControlHeight']);
-    const narrowClearRegion = fieldSource.replace('y: 0, width: SEARCH_CONTROL_MIN_TARGET, height: SEARCH_CONTROL_MIN_TARGET',
-      'y: 0, width: 32, height: SEARCH_CONTROL_MIN_TARGET');
+    const narrowClearRegion = fieldSource.replace('width: SEARCH_CONTROL_MIN_TARGET, height: SEARCH_CONTROL_MIN_TARGET',
+      'width: 32, height: SEARCH_CONTROL_MIN_TARGET');
     assert.notEqual(narrowClearRegion, fieldSource);
     const oldField = compileTailConsumer(narrowClearRegion, boundedMembers(fieldSource), {
-      ...tailControls().dependencies, ...oldGeometry, ...fieldFocus, SEARCH_CONTROL_MIN_TARGET: 36, readerWindowMetrics: () => ({ systemFontScale: 1 }) }, tailControls().hooks).owner;
+      ...tailControls().dependencies, ...geometry, ...oldGeometry, ...fieldFocus, SEARCH_CONTROL_MIN_TARGET: 36, readerWindowMetrics: () => ({ systemFontScale: 1 }) }, tailControls().hooks).owner;
     Object.assign(oldField, { variant: 'bookPanel', mode: 'submit', text: '书', placeholder: '搜索', clearable: true, onTextChange() {}, onSubmit() {}, appThemeScheme: 'day' }); oldField.initialRender();
     assert.throws(() => assert.ok([...oldField.nodes.values()].find(node => node.type === 'TextInput').height >= 44), /AssertionError/, 'old actual bookPanel Native36 rejected');
     assert.throws(() => assert.ok([...oldField.nodes.values()].find(node => node.type === 'Button').responseRegion.width >= 44),
@@ -344,7 +366,7 @@ for (const id of selected) {
     const oldRetryControls = foundationControls({ specs: oldRetrySpecs });
     const oldRetry = new oldRetryControls.dependencies.ReaderButton(undefined, { specId: 'search-retry-progress', label: '重置' }); oldRetry.initialRender();
     assert.throws(() => assert.ok(oldRetryControls.nodes(oldRetry).find(node => node.type === 'Button').constraintSize?.minHeight >= 44), /AssertionError/, 'old bare reset/retry Native has no44 target');
-    writeFileSync(new URL('../.reader-artifacts/framework-confluence-20261112/code-side-audit/repair-secondary-post-library-native-targets.json', import.meta.url), JSON.stringify({
+    writeFileSync(process.env.READER_LIBRARY_NATIVE_TARGETS_OUTPUT ?? new URL('../.reader-artifacts/framework-confluence-20261112/code-side-audit/repair-secondary-post-library-native-targets.json', import.meta.url), JSON.stringify({
       result: 'PASS', command: { entry: 'tools/test-library-search-surface-binding.mjs', cases: ['native-targets'] }, cases, fonts, glyphMeasurements: widths.size,
       glyphRuntime: JSON.parse(execFileSync('python3', ['-c', "import sys,json,PIL;from PIL import features;print(json.dumps({'python':sys.version,'pillow':PIL.__version__,'freetype':features.version('freetype2'),'raqm':features.version('raqm')}))"], { encoding: 'utf8' })),
       completeInputManifest: process.env.READER_LAYOUT_TRACE_OUTPUT ?? 'NOT_RECORDED', boundary: 'Actual current SDK Native builders, actual model/query dispatch and bounded projection with bundled-font FreeType. No platform layout/IME/pointer/device or HAP.',

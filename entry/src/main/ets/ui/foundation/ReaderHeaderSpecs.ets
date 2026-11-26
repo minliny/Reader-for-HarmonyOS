@@ -11,7 +11,7 @@ const RAISED_HEADER_SCROLL_THRESHOLD_VP: number = 4;
 /**
  * Bookshelf floating header contract. The bar, its top inset and the gap below
  * the header are one surface: shell, content and route layers read the derived
- * frame/clearance instead of repeating 52/8/14 independently.
+ * frame/clearance instead of repeating the dimensions independently.
  */
 export class BookshelfHeaderSpec {
   readonly titleFontSize: number = 19;
@@ -23,6 +23,7 @@ export class BookshelfHeaderSpec {
   readonly retainedActionRadius: number = 14;
   readonly retainedLeadingInset: number = 4;
   readonly retainedTrailingInset: number = 5;
+  readonly titleSideInset: number = this.actionExtent + Math.max(this.retainedLeadingInset, this.retainedTrailingInset);
   readonly panelRadius: number = 18;
   readonly minWindowInset: number = 8;
   readonly barHeight: number;
@@ -42,7 +43,7 @@ export class BookshelfHeaderSpec {
   }
 }
 
-const BOOKSHELF_HEADER_SPEC = new BookshelfHeaderSpec(APP_FLOATING_HEADER_BAR_HEIGHT, APP_FLOATING_HEADER_TOP_GAP, 14);
+const BOOKSHELF_HEADER_SPEC = new BookshelfHeaderSpec(APP_FLOATING_HEADER_BAR_HEIGHT, APP_FLOATING_HEADER_TOP_GAP, 8);
 
 export function bookshelfHeaderSpec(): BookshelfHeaderSpec {
   return BOOKSHELF_HEADER_SPEC;

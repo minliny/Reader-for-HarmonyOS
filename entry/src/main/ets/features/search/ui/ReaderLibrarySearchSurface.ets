@@ -14,6 +14,7 @@ import { ReaderHeaderFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
 import { ReaderPostLayoutFrame } from '../../../ui/layout/ReaderPostLayoutFrame';
 import { readerPresentedHeaderBottom, readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
 import { bookshelfHeaderSpec, searchHeaderSpec, SearchHeaderSpec } from '../../../ui/foundation/ReaderHeaderSpecs';
+import { readerScaledBarHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerSearchControlHeight, readerSearchControlVisualHeight, readerSearchActionWidth, SEARCH_CONTROL_MIN_TARGET } from '../../../ui/foundation/ReaderSearchControlGeometry';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
@@ -586,9 +587,12 @@ export struct ReaderLibrarySearchSurface {
   }
   private titleOpacity(): number { return 1 - Math.min(1, this.surfaceValue() / .45); }
   private barHeight(): number {
-    const height = this.spec.barHeight(this.controlHeight());
-    return this.searchMounted && this.model.currentOwner() !== 0 ?
-      height + (this.searchLaneHeight() - this.controlHeight()) * this.surfaceValue() : height;
+    const shelf = bookshelfHeaderSpec();
+    // The parent panel paints both borders outside this content box.
+    const idle = readerScaledBarHeight(shelf.barHeight - 2 * this.spec.borderWidth,
+      shelf.titleLineHeight, this.fontScale(), 0);
+    if (!this.searchMounted) return idle;
+    return this.blend(idle, this.spec.barHeight(this.searchLaneHeight()), this.surfaceValue());
   }
   private trailingWidth(): number {
     return this.blend(bookshelfHeaderSpec().actionExtent,
@@ -919,8 +923,8 @@ export struct ReaderLibrarySearchSurface {
           .lineHeight(bookshelfHeaderSpec().titleLineHeight).fontWeight(FontWeight.Bold)
           .fontColor(readerAppColor('TOK_INK', this.scheme)).opacity(this.titleOpacity())
           .accessibilityLevel(this.mode === 'idle' ? 'auto' : 'no-hide-descendants');
-      }.width(Math.max(0, this.cardContentWidth() - 120)).height(this.barHeight())
-        .position({ x: 60, y: 0 });
+      }.width(Math.max(0, this.cardContentWidth() - 2 * bookshelfHeaderSpec().titleSideInset)).height(this.barHeight())
+        .position({ x: bookshelfHeaderSpec().titleSideInset, y: 0 });
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         this.headerActionGlyph('more');
       }.headerActionFrame().padding(0).backgroundColor(Color.Transparent)

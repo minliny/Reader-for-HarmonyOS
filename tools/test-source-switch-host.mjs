@@ -455,7 +455,30 @@ if(id==='preview-no-write'){
 {
   const f=fixture({preview:true});await settle();await f.host.pick(f.candidate(),f.host.current().scopeId);
   assert.equal(f.effects.at(-1).kind,'previewReady');assert.equal(f.calls.some(([method])=>method==='source.switch.commit'),false);
+  assert.equal(f.effects.at(-1).shelfSnapshot,undefined);
   checks.push('preview-acquisition-keeps-shelf-transaction-unopened');
+}
+for(const outcome of ['failure','cancel']){
+  const f=fixture({preview:true}),base=f.runtime.request.bind(f.runtime),gate=deferred();
+  let reading=false;
+  f.runtime.request=async(method,params,options)=>{
+    if(method!=='bookshelf.get')return base(method,params,options);
+    assert.deepEqual(params,{sourceId:target.sourceId,bookId:target.bookId});
+    reading=true;await gate.promise;
+    return {data:{book:{...target,contentKind:'text'}}};
+  };
+  await settle();const scope=f.host.current().scopeId,work=f.host.pick(f.candidate(),scope);
+  await untilOwner(()=>reading);
+  if(outcome==='cancel'){
+    assert.equal(f.host.close(scope),true);
+    assert.equal(f.host.open(f.context,f.lease),true);
+    gate.resolve();
+  }else gate.reject(Error('shelf read unavailable'));
+  await work;await settle();
+  assert.equal(f.effects.some(e=>e.kind==='previewReady'),false);
+  if(outcome==='cancel')assert.equal(f.host.current().state.kind,'candidates');
+  else assert.equal(f.effects.at(-1).kind,'acquisitionFailed');
+  f.retire();
 }
 }
 if(id==='old-scope'){
