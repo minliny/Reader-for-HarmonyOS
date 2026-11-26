@@ -36,6 +36,14 @@ for (const scheme of ['day', 'night']) {
     assert.deepEqual(overlays.slice(-2), [expectedOverlay, expectedOverlay], 'platform receives the themed ink overlay');
     modifier.applyNormalAttribute(attributes);
     assert.equal(attributes.fill, surface); assert.equal(attributes.radius, 17);
+    const delayed = new Modifier(surface, scheme, 17, 12, true, false, false);
+    delayed.applyPressedAttribute(attributes);
+    assert.deepEqual([attributes.fill, attributes.radius], [surface, 17], 'native down waits for row feedback');
+    const held = new Modifier(surface, scheme, 17, 12, true, true, false);
+    for (const method of ['applyNormalAttribute', 'applyPressedAttribute']) {
+      held[method](attributes);
+      assert.deepEqual([attributes.fill, attributes.radius], [`native-blend:${surface}:${expectedOverlay}`, 12]);
+    }
     modifier.applyPressedAttribute(attributes); modifier.applyDisabledAttribute(attributes);
     assert.equal(attributes.fill, surface, 'disabling a pressed control restores its current business state');
   }

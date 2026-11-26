@@ -1,7 +1,7 @@
 import { BookSearchPageProgress, readBookSearchPageReceipt } from '../../../app/library/BookSearchPageProgress';
 import { decodeReaderDirectoryDisplayMetadata } from '../../reading/application/ReaderDirectoryDisplayMetadata';
 import { bookAuthorIdentity, readBookAuthorIdentity, type BookAuthorIdentityProof } from '../../../app/library/BookAuthorMetadata';
-import { readBookSearchTiming } from '../../../app/library/BookSearchTiming';
+import { bookSearchDuration, readBookSearchTiming } from '../../../app/library/BookSearchTiming';
 import type { JsonObject, RequestOptions } from '@reader/core-harmony';
 import { isReaderCoreTransactionPendingError } from '@reader/core-harmony';
 import type { BookRequestOptions } from '../../../app/BookRequestScheduler';
@@ -61,6 +61,8 @@ export type SourceSwitchCandidate = {
   /** Version-bound source search duration; never first-image/content latency. */
   latencyMs?: number;
   latencyKind?: 'search';
+  /** A version-bound measurement retained from an earlier search. */
+  latencyFromCache?: boolean;
   latencyMeasuredAt?: number;
   offline?: boolean;
   timeout?: boolean;
@@ -108,6 +110,13 @@ type SourceSwitchSearchSample = {
 /** Shared by live Search seeds and persisted candidate projection. Legacy
  * body respondTime and timing from another source rule are never admitted. */
 export const readSourceSwitchSearchTiming = readBookSearchTiming;
+
+/** An earlier search may supply display evidence, but never a measurement
+ * for the sweep that is starting now. */
+export function retainSourceSwitchSearchTiming(candidate: SourceSwitchCandidate): SourceSwitchCandidate {
+  return candidate.latencyFromCache === true || bookSearchDuration(candidate) === undefined ? candidate :
+    { ...candidate, latencyFromCache: true };
+}
 
 /** Stable identity shared by discovery, rendering, and click admission. */
 export function sourceSwitchCandidateKey(sourceId: string, bookUrl: string): string {
@@ -266,6 +275,7 @@ export class SourceSwitchGateway {
   private confirmedCandidates = new Set<string>();
   private discoveryGeneration: number = 0;
   private discoveryScope: string = '';
+  private discoverySamplesCurrent: boolean = false;
   private readonly discoveryPages: Map<string, BookSearchPageProgress> = new Map();
   private discoveryPageScope: string = '';
   private discoverySamples = new Map<string, SourceSwitchSearchSample>();
@@ -403,14 +413,11 @@ export class SourceSwitchGateway {
         const previous = knownByKey.get(sourceSwitchCandidateKey(decoded.sourceId, decoded.bookUrl));
         // Preserve an in-memory timing while Core persistence catches up. A
         // source-version mismatch must never display timing from another rule.
+        const previousLatency = previous === undefined ? undefined : bookSearchDuration(previous, true);
         candidates.push(previous !== undefined && decoded.latencyMs === undefined &&
-          previous.latencyKind === 'search' && previous.latencyMs !== undefined &&
-          previous.sourceVersion === source.sourceVersion ? {
-            ...decoded,
-            latencyMs: previous.latencyMs,
-            latencyKind: 'search',
-            latencyMeasuredAt: previous.latencyMeasuredAt,
-          } : decoded);
+          previousLatency !== undefined && previous.sourceVersion === source.sourceVersion ?
+          retainSourceSwitchSearchTiming({ ...decoded, latencyMs: previousLatency, latencyKind: 'search',
+            latencyMeasuredAt: previous.latencyMeasuredAt }) : decoded);
       }
     }
     const keys = new Set(candidates.map((candidate: SourceSwitchCandidate): string =>
@@ -465,17 +472,24 @@ export class SourceSwitchGateway {
     if (isCurrent?.() === false) return [];
     if (revision !== this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision()) throw new Error('书源配置已变更，请重试');
     this.confirmedScope = scope; this.confirmedCandidates = confirmed;
-    return this.sortCandidates(candidates.map((candidate: SourceSwitchCandidate): SourceSwitchCandidate => {
-      const source = enabledSources.get(candidate.sourceId);
-      const sample = this.discoveryScope === scope ? this.discoverySamples.get(
-        sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)) : undefined;
-      const currentSample = sample !== undefined && sample.sourceVersion === source?.sourceVersion ? sample : undefined;
-      // A live, version-bound sample supersedes the durable acquisition fact.
-      // Legacy respondTime has no stage/version contract and remains ignored.
-      return currentSample !== undefined && currentSample.measuredAt >= (candidate.latencyMeasuredAt ?? 0)
-        ? { ...candidate, latencyMs: currentSample.latencyMs, latencyKind: 'search',
-          latencyMeasuredAt: currentSample.measuredAt } : candidate;
-    }));
+    return this.sortCandidates(candidates.map((candidate: SourceSwitchCandidate): SourceSwitchCandidate =>
+      this.withSweepTiming(scope, candidate, enabledSources.get(candidate.sourceId)?.sourceVersion)), !this.discoverySamplesCurrent);
+  }
+
+  private withSweepTiming(scope: string, candidate: SourceSwitchCandidate, version?: string): SourceSwitchCandidate {
+    const sample = this.discoveryScope === scope ?
+      this.discoverySamples.get(sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl)) : undefined;
+    if (sample !== undefined && sample.sourceVersion === version &&
+      (this.discoverySamplesCurrent || sample.measuredAt >= (candidate.latencyMeasuredAt ?? 0))) {
+      const measured: SourceSwitchCandidate = { ...candidate, latencyMs: sample.latencyMs, latencyKind: 'search',
+        latencyMeasuredAt: sample.measuredAt, latencyFromCache: false };
+      return this.discoverySamplesCurrent ? measured : retainSourceSwitchSearchTiming(measured);
+    }
+    return retainSourceSwitchSearchTiming(candidate);
+  }
+
+  retainPreviousSearchTimings(): void {
+    this.discoverySamplesCurrent = false;
   }
 
   private async loadRelatedBooks(
@@ -573,7 +587,8 @@ export class SourceSwitchGateway {
     const generation = ++this.discoveryGeneration;
     if (restartSweep) this.discoveryPages.clear();
     const scope = sourceSwitchCandidateKey(query.sourceId, query.bookId);
-    if (this.discoveryScope !== scope) this.discoverySamples.clear();
+    this.discoverySamples.clear();
+    this.discoverySamplesCurrent = true;
     this.discoveryScope = scope;
     let finished = false;
     const current = (): boolean => !finished && generation === this.discoveryGeneration && isCurrent?.() !== false;
@@ -594,7 +609,8 @@ export class SourceSwitchGateway {
 
     const publish = (): void => {
       if (!current()) return;
-      candidates = this.sortCandidates(Array.from(candidateMap.values()));
+      candidates = this.sortCandidates(Array.from(candidateMap.values()).map((candidate: SourceSwitchCandidate): SourceSwitchCandidate =>
+        this.withSweepTiming(scope, candidate, candidate.sourceVersion)));
       onProgress?.(candidates, sweep);
     };
 
@@ -776,11 +792,10 @@ export class SourceSwitchGateway {
         async (discovered: SourceSwitchCandidate[]): Promise<void> => {
           if (!current()) return;
           for (const candidate of discovered) {
-            if (candidate.latencyKind === 'search' && candidate.latencyMs !== undefined &&
-              candidate.latencyMeasuredAt !== undefined) {
+            const latency = bookSearchDuration(candidate);
+            if (latency !== undefined && candidate.latencyMeasuredAt !== undefined) {
               this.discoverySamples.set(sourceSwitchCandidateKey(candidate.sourceId, candidate.bookUrl), {
-                sourceVersion: candidate.sourceVersion, latencyMs: candidate.latencyMs,
-                measuredAt: candidate.latencyMeasuredAt });
+                sourceVersion: candidate.sourceVersion, latencyMs: latency, measuredAt: candidate.latencyMeasuredAt });
             }
             mergeCandidate(candidate);
           }
@@ -1763,7 +1778,7 @@ export class SourceSwitchGateway {
         candidate.currentChapterIndex = cachedChapter.index;
       }
     }
-    return candidate;
+    return retainSourceSwitchSearchTiming(candidate);
   }
 
   private parseCachedChapter(value: string | undefined): SourceSwitchCachedChapter | undefined {
@@ -1783,12 +1798,10 @@ export class SourceSwitchGateway {
     return { title, index: oneBasedIndex - 1 };
   }
 
-  private sortCandidates(candidates: SourceSwitchCandidate[]): SourceSwitchCandidate[] {
+  private sortCandidates(candidates: SourceSwitchCandidate[], allowCachedLatency: boolean = false): SourceSwitchCandidate[] {
     return candidates.slice().sort((left: SourceSwitchCandidate, right: SourceSwitchCandidate): number => {
-      const leftLatency = left.latencyKind === 'search' && left.latencyMs !== undefined &&
-        Number.isFinite(left.latencyMs) && left.latencyMs >= 0 ? left.latencyMs : Number.POSITIVE_INFINITY;
-      const rightLatency = right.latencyKind === 'search' && right.latencyMs !== undefined &&
-        Number.isFinite(right.latencyMs) && right.latencyMs >= 0 ? right.latencyMs : Number.POSITIVE_INFINITY;
+      const leftLatency = bookSearchDuration(left, allowCachedLatency) ?? Number.POSITIVE_INFINITY;
+      const rightLatency = bookSearchDuration(right, allowCachedLatency) ?? Number.POSITIVE_INFINITY;
       if (leftLatency !== rightLatency) return leftLatency < rightLatency ? -1 : 1;
       const order = (left.sourceOrder ?? 0) - (right.sourceOrder ?? 0);
       if (order !== 0) {

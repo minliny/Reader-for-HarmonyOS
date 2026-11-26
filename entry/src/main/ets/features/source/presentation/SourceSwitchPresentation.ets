@@ -82,6 +82,7 @@ function searchCandidatesForSwitch(books: SearchBook[], query: SourceSwitchProbe
         bookUrl: book.bookId, bookName: book.title, author: book.author, coverUrl: book.coverUrl,
         latestChapterTitle: book.latestChapterTitle, category: book.category,
         latencyMs: timing?.latencyMs, latencyKind: timing?.latencyKind, latencyMeasuredAt: timing?.latencyMeasuredAt,
+        latencyFromCache: timing !== undefined,
         acquisitionState: rank === 0 ? 'readable' : rank === 1 ? 'catalogReady' : rank === 3 ? 'failed' : 'discovered',
         isCurrent: query.sourceId === book.sourceId && query.bookId === book.bookId };
     });

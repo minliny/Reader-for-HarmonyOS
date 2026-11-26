@@ -65,7 +65,7 @@ export const ReaderCoreRequestError = sdk.ReaderCoreRequestError;
 export const Gateway = compile(read('features/source/application/SourceSwitchGateway.ts'), 'SourceSwitchGateway', common);
 export const Core = compile(read('app/ReaderCoreGateway.ts'), 'ReaderCoreGateway', common);
 export const gatewayExports = compile(read('features/source/application/SourceSwitchGateway.ts'),
-  '{buildSourceSwitchCommitParams,sourceSwitchCandidateKey,sourceSwitchIsAlternative,sourceSwitchSourceCount,readBookSearchTiming,readSourceSwitchSearchTiming}', common);
+  '{buildSourceSwitchCommitParams,sourceSwitchCandidateKey,sourceSwitchIsAlternative,sourceSwitchSourceCount,retainSourceSwitchSearchTiming,readBookSearchTiming,readSourceSwitchSearchTiming}', common);
 export const hostSource = read('features/source/application/SourceSwitchHost.ts');
 export const deferred = () => { let resolve, reject; const promise = new Promise((a,b) => { resolve=a;reject=b; });return{promise,resolve,reject}; };
 export const settle = async () => { for(let i=0;i<50;i++) await Promise.resolve(); };

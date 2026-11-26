@@ -1,6 +1,7 @@
 import {selectContractCases,recordContractCasePass} from './lib/contract-case-selection.mjs';
 const definitions={"definition": {"description": "所选第三抽屉/2026-10-07 light-toolbar定义→generated spec身份，浏览器/设备接受仍OPEN", "resources": []}, "layout-text": {"description": "所选text当前drawer布局矩阵与native属性/最新复合identity回调", "resources": []}, "layout-manga": {"description": "所选manga当前drawer布局矩阵与native属性/最新复合identity回调", "resources": []}, "rows-safe-area": {"description": "provider规则不合并，shared frame residual safe inset单一owner与未测latency占位", "resources": []}, "row-action-interaction": {"description": "真实SDK row/查找action pressed、cancel/state/retire与当前可选行", "resources": []}, "adaptive-empty": {"description": "实测container宽优先与极短/大字体空状态可达", "resources": []}, "cancel-admission": {"description": "实际progress allowCancel与pending/rollback窗口close准入", "resources": []}, "anchor-controller": {"description": "实际未绑定List currentOffset/rect回落与有界frame恢复", "resources": []}, "native-spinner": {"description": "当前实际native LoadingProgress active/foreground/reduceMotion/mount与guard负例", "resources": []}, "completion-surfaces": {"description": "实际换源纸张过渡委托、尺寸、透明度与主题传播", "resources": []}, "font-load": {"description": "实际checked字体三种 UI 字重 ready/reject/retired 才准入两格式文字", "resources": []}, "wiring-negatives": {"description": "实际生产halfLeading/rowheight/heading/theme接线负例", "resources": []}, "refresh-error": {"description": "刷新失败保留缓存候选/空诊断不造失败", "resources": []}};
 definitions['redesigned-picker']={description:'新换源抽屉 599/600 分界与动效，实际输入节点跨批次保留、筛选、排序和定位',resources:[]};
+definitions['fresh-cached-latency']={description:'实际 Host 首开命中缓存的毫秒数、读屏、排序与重查隔离',resources:[]};
 for(const id of selectContractCases(definitions)){await runSelectedCase(id);recordContractCasePass(id);}
 async function runSelectedCase(selectedCase){
 const {default: assert} = await import('node:assert/strict');
@@ -22,6 +23,86 @@ const design=JSON.parse(designBytes),v=design.numbers;
 if(selectedCase==='definition'){assert.equal(SOURCE_SWITCH_VISUAL_SHA256,createHash('sha256').update(designBytes).digest('hex'));assert.deepEqual(SOURCE_SWITCH_VISUAL,{...v,...design.strings});assert.equal(design.provenance.browserVisualAcceptance,'OPEN');assert.equal(design.provenance.nativeVisualAcceptance,'OPEN');return;}
 const tick=async()=>{await new Promise(setImmediate);};
 const candidate=(id,url='/book')=>({sourceId:id,bookUrl:url,sourceName:'书源 '+id,bookName:'书名',category:'novel',latestChapterTitle:'最新章节 '+id,latencyKind:'search',latencyMs:38,acquisitionState:'discovered'});
+if(selectedCase==='fresh-cached-latency'){
+ const {fixture,settle,rawCandidate,deferred}=await import('./lib/source-switch-owner-probe.mjs');
+ const f=fixture({open:false}),request=f.runtime.request.bind(f.runtime),fresh=Date.now();
+ const sources=['old','slow','unknown','fast'].map(sourceId=>({sourceId,name:sourceId,sourceVersion:'v1',enabled:true}));
+ const row=(id, chapter, durationMs)=>({...rawCandidate,origin:id,bookUrl:'/book/'+id,time:fresh,
+  latestChapterTitle:chapter,acquisition:{sourceVersion:'v1',catalogAt:fresh,...(durationMs===undefined?{}:{
+   searchTiming:{kind:'search',sourceVersion:'v1',durationMs,measuredAt:fresh}
+  })}});
+ const books=[row('slow','第 100 章',230),row('unknown','第 20 章'),row('fast','第 1 章',1)];
+ const done=deferred();
+ let searchRequests=0;
+ f.runtime.request=async(method,params,options)=>{
+  if(method==='source.list')return {data:{sources}};
+  if(method==='search-book.related')return {data:{books,sourceVersions:sources,complete:true,snapshotRevision:'cached-open'}};
+  if(method==='book.search')searchRequests++;
+  return request(method,params,options);
+ };
+ const window=new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,390,844));
+ const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
+ p.hooks.allowEmptyBranchRemoval=true;
+ const frames=new Map();
+ let timerId=0;
+ const deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>window},
+  setTimeout(action){frames.set(++timerId,action);return timerId;},clearTimeout(id){frames.delete(id);}});
+ const flush=()=>{p.properties.flush();for(const [id,fn] of frames){frames.delete(id);fn();}p.properties.flush();};
+ let panel;
+ const mount=state=>{
+  panel?.aboutToDisappear();
+  panel=new deps.SourceSwitchPanel(undefined,{state});
+  panel.aboutToAppear();panel.initialRender();flush();
+ };
+ try{
+  assert.equal(f.host.open(f.context,f.lease,false),true);
+  await settle();
+  const cached=f.host.current().state;
+  assert.equal(cached.kind,'candidates');
+  assert.equal(searchRequests,0,'the cache-only path must not schedule a new search');
+  mount(cached);
+  const button=title=>p.nodes(panel).find(node=>node.accessibilityText==='排序：'+title);
+  const order=()=>panel.displayedCandidates.map(result=>result.sourceId);
+  const getRow=id=>p.walk(panel).find(child=>child instanceof deps.SourceSwitchNovelRow&&child.row.candidate.sourceId===id);
+  const checkTiming=(sdkRow,numeric,speech)=>{
+   const nodes=p.nodes(sdkRow);
+   assert.ok(nodes.some(node=>node.type==='Text'&&node.create===numeric),JSON.stringify(nodes.map(node=>node.create)));
+   assert.equal(nodes.some(node=>node.type==='Text'&&node.create===' ms'),numeric!=='—');
+   assert.ok(nodes.some(node=>node.accessibilityText?.endsWith(speech)));
+  };
+  assert.deepEqual(order(),['fast','slow','unknown']);
+  checkTiming(getRow('fast'),'1','搜索用时 1 ms');
+  checkTiming(getRow('slow'),'230','搜索用时 230 ms');
+  checkTiming(getRow('unknown'),'—','搜索用时 —');
+  button('最新章优先').onClick();flush();
+  assert.deepEqual(order(),['slow','unknown','fast']);
+  button('延迟优先').onClick();flush();
+  assert.deepEqual(order(),['fast','slow','unknown']);
+  f.host.gateway.refreshCandidates=()=>done.promise;
+  f.host.refresh(f.host.current().scopeId);
+  const refreshing=f.host.current().state;
+  assert.equal(refreshing.refreshing,true);
+  // The probe observes branch updates on the mounted row, but does not emulate
+  // Ace removing all descendants of an old nonempty If branch.
+  const active=getRow('fast'),branches=[];
+  active.ifElseBranchUpdateFunction=branch=>branches.push(branch);
+  active.updateStateVars({row:active.row,allowCachedLatency:refreshing.allowCachedLatency===true});
+  p.properties.flush();
+  assert.ok(p.nodes(active).some(node=>node.accessibilityText?.endsWith('本轮未测')));
+  assert.ok(branches.length>0,'the retained row requests the visual branch update too');
+  mount(refreshing);
+  checkTiming(getRow('fast'),'—','本轮未测');
+  const measured={...cached.candidates.find(value=>value.sourceId==='slow'),latencyFromCache:false,latencyMs:400};
+  done.resolve({kind:'sources',candidates:[...cached.candidates.filter(value=>value.sourceId!=='slow'),measured]});
+  await settle();
+  mount(f.host.current().state);
+  assert.equal(order()[0],'slow','cached 1 ms must not outrank this sweep’s 400 ms at settlement');
+  checkTiming(getRow('slow'),'400','搜索用时 400 ms');
+  checkTiming(getRow('fast'),'—','本轮未测');
+  assert.equal(f.host.current().state.allowCachedLatency,false);
+ }finally{panel?.aboutToDisappear();f.retire();done.resolve({kind:'sources',candidates:[]});}
+ return;
+}
 if(selectedCase==='redesigned-picker'){
  const frames=[], timers=new Map(), jumps=[], commands=[];
  let timerId=0;
@@ -30,6 +111,21 @@ if(selectedCase==='redesigned-picker'){
  const a=make('a','Alpha 源','第 9 章 序',10), b=make('b','Beta 源','第一百二十三章 远行',30);
  const c=make('c','Gamma 源','第 ３１ 章 山路',20), d=make('d','Delta 源','第 1000 章 重逢',50);
  const current={...make('current','原书源','第 10 章',1),isCurrent:true};
+ const { sourceSwitchOrderByLatency, sourceSwitchOrderByChapter, sourceSwitchNovelDiscoveryActionWidth } =
+   await import('../entry/src/main/ets/features/source/ui/SourceSwitchNovelPresentation.ts');
+ const samples = [
+   {...a, sourceId:'cache', latencyMs:1, latencyFromCache:true}, {...b, sourceId:'unknown', latencyKind:undefined},
+   {...b, sourceId:'tie', latencyMs:10}, a, {...a, sourceId:'now', latencyMs:0},
+   {...c, sourceId:'invalid', latencyMs:NaN}, {...c, sourceId:'negative', latencyMs:-1}
+ ];
+ const ids = rows => rows.map(row => row.sourceId);
+ const original = ids(samples);
+ assert.deepEqual(ids(sourceSwitchOrderByLatency(samples)), ['now','tie','a','cache','unknown','invalid','negative']);
+ assert.deepEqual(ids(sourceSwitchOrderByChapter(samples)), ['tie','unknown','invalid','negative','now','a','cache']);
+ assert.deepEqual(ids(samples), original, 'sorting preserves the original collection and stable ties');
+ for (const [width,scale] of [[270,1],[390,1],[270,1.75],[599,1.25]]) {
+   assert.equal(sourceSwitchNovelDiscoveryActionWidth(width,scale),expected(width,800,scale).actionWidth);
+ }
  const order=owner=>owner.displayedCandidates.map(row=>row.sourceId);
  for(const width of [599,600]){
   const focusRequests=[], queuedFocus=[];
@@ -42,6 +138,7 @@ if(selectedCase==='redesigned-picker'){
   };
   const flushFocus=()=>queuedFocus.splice(0).forEach(action=>action());
   const window=new metricsApi.ReaderWindowMetricsSnapshot(new metricsApi.ReaderRectVp(0,0,width,800));
+  window.systemFontScale=width===599?1:1.6;
   const p=boundedSurfaceSdk({allowEmptyBranchAdmission:true});
   p.hooks.allowEmptyBranchRemoval=true;
   const deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>window},readerWindowMetrics:()=>window,
@@ -54,6 +151,12 @@ if(selectedCase==='redesigned-picker'){
    bookTitle:'同一本书',coverUrl:'retained-cover',surfaceScope:3,surfaceAttachment:5,surface,
    onSelectCandidate:row=>commands.push(row.sourceId),onRefresh:()=>commands.push('refresh'),onStop:()=>commands.push('stop')});
   owner.aboutToAppear();owner.initialRender();flush();
+  const cachedRow=new deps.SourceSwitchNovelRow(undefined,{row:new deps.SourceSwitchCandidateRow(samples[0])});
+  cachedRow.initialRender();
+  const cachedNodes=p.nodes(cachedRow);
+  assert.ok(cachedNodes.some(node=>node.create==='—'), 'historical latency must not look like a current measurement');
+  assert.ok(cachedNodes.some(node=>node.accessibilityText?.endsWith('本轮未测')));
+  cachedRow.aboutToDisappear();
   const nodes=()=>p.nodes(owner);
   const target=(label, actor=owner)=>p.nodes(actor).find(node=>node.type==='Button'&&node.accessibilityText===label);
   const input=(actor=owner)=>p.nodes(actor).filter(node=>node.type==='TextInput');
@@ -115,13 +218,46 @@ if(selectedCase==='redesigned-picker'){
   close.onAppear();flushFocus();
   assert.deepEqual(focusRequests,['reader-source-close:3:5:0'],'the flow heading remount cannot claim focus from the live editor');
   assert.deepEqual(order(owner),[]);assert.ok(candidateCount(0));oldRow.onClick();assert.equal(commands.at(-1),'refresh');
-  owner.state=state([a,c,b],true,3);flush();retained();assert.equal(editor.create.text,'山路');
+  owner.state=state([b,a,c],true,3);flush();retained();assert.equal(editor.create.text,'山路');
   assert.deepEqual(order(owner),['c']);
   assert.ok(candidateCount(1));
   assert.ok(nodes().some(node=>node.type==='Progress'&&node.create.value===3));
   target('清空书源筛选').onClick();flush();retained();assert.equal(editor.create.text,'');
   assert.deepEqual(order(owner),['a','c','b']);
-  target('延迟优先').onClick();flush();retained();assert.deepEqual(order(owner),['b','c','a']);
+  const segment = label => target('排序：'+label);
+  const verifySort = latest => {
+   for (const [label,selected] of [['延迟优先',!latest],['最新章优先',latest]]) {
+    const button=segment(label), caption=nodes().find(node=>node.type==='Text'&&node.create===label);
+    assert.deepEqual(button.constraintSize,{minWidth:44,minHeight:44});
+    assert.equal(button.height,undefined);
+    assert.equal(caption.height,undefined);
+    assert.equal(caption.fontSize,deps.TYPE_SOURCE_SWITCH_NOVEL_ACTION.fontSizeFp);
+    assert.equal(caption.lineHeight,deps.TYPE_SOURCE_SWITCH_NOVEL_ACTION.lineHeightFp);
+    assert.equal(caption.maxLines,2);
+    assert.equal(button.accessibilitySelected,selected);
+    assert.equal(caption.fontColor,readerAppColor(selected?'TOK_GREEN':'TOK_MUTED','day'));
+    assert.equal(caption.backgroundColor,selected?readerAppColor('TOK_PRIMARY_SOFT','day'):'Color.Transparent');
+    assert.equal(caption.border.width,selected?1:0);
+    if(selected) assert.equal(caption.border.color,readerAppColor('TOK_PRIMARY_BORDER','day'));
+   }
+   assert.ok(!nodes().some(node=>node.type==='Image' && String(node.create).includes('chevron_down')));
+  };
+  verifySort(false);
+  const inactiveCaption=nodes().find(node=>node.type==='Text'&&node.create==='最新章优先');
+  const inactive=segment('最新章优先');
+  inactive.onTouch({type:deps.TouchType.Down,changedTouches:[{id:7}]});
+  p.properties.flush();
+  assert.match(inactiveCaption.backgroundColor,/^sdk-blend:Color.Transparent/);
+  assert.equal(inactiveCaption.scale.x,.978);
+  assert.equal(inactive.accessibilitySelected,false,'press alone must not change the chosen sort');
+  inactive.onTouch({type:deps.TouchType.Cancel,changedTouches:[]});
+  p.properties.flush();
+  assert.equal(inactiveCaption.backgroundColor,'Color.Transparent');
+  assert.equal(inactiveCaption.scale.x,1);
+  segment('延迟优先').onClick();assert.equal(timers.size,0,'tapping the selected sort never queues a reorder');
+  segment('最新章优先').onClick();flush();retained();verifySort(true);assert.deepEqual(order(owner),['b','c','a']);
+  segment('延迟优先').onClick();flush();retained();verifySort(false);assert.deepEqual(order(owner),['a','c','b']);
+  segment('最新章优先').onClick();flush();retained();verifySort(true);
   const notifications=[];
   owner.candidateDataSource.registerDataChangeListener({
    onDataAdd:index=>notifications.push(['add',index]),onDataReloaded:()=>notifications.push(['reload']),
@@ -166,7 +302,13 @@ const uiContext={getFont:()=>({}),animateTo(_options,action){action();},postFram
  const a={options,onFrame:()=>{},played:0,cancelled:0,play(){this.played++;},cancel(){this.cancelled++;this.onFrame(360);}};
  animations.push(a);return a;
 }};
-const deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics},uiContext,setTimeout(){return 1;},clearTimeout(){},
+const rowTimers = new Map();
+let rowTimerId = 0;
+const rowClock = selectedCase === 'row-action-interaction' ? {
+ setTimeout(action, delay) { rowTimers.set(++rowTimerId, { action, delay }); return rowTimerId; },
+ clearTimeout(id) { rowTimers.delete(id); },
+} : { setTimeout(){return 1;},clearTimeout(){} };
+const deps=sourceSwitchLiveSdk(p,{ReaderWindowCoordinator:{metrics:()=>metrics},uiContext,...rowClock,
  ReaderPressFeedback:productionReaderPressFeedback({ColorMetrics:sourceSwitchColorMetricsSdk()})});
 function scene(width,height,scale,state={kind:'candidates',candidates:[candidate('a'),candidate('a','/alternate'),candidate('b')],refreshing:true},contentKind='text',scheme='day',extra={},safeInsets=[0,24,0,24]){
  metrics=metricsApi.createDefaultReaderWindowMetrics();metrics.windowRect=new metricsApi.ReaderRectVp(0,0,width,height);
@@ -193,8 +335,8 @@ function expected(width,height,s){
  const prefix=drawerWidth/Math.max(1,s)>v.discoveryPrefixWidthThreshold;
  const actionFont=compactAction?v.compactDiscoveryActionFontSize:v.discoveryActionFontSize;
  const actionPadding=compactAction?v.compactDiscoveryActionPaddingX:v.discoveryActionPaddingX;
- const actionWidth=Math.max(compactAction?v.compactDiscoveryActionWidth:v.discoveryActionWidth,
-  4*actionFont*s+v.discoveryActionIconSize+v.discoveryActionGap+2*actionPadding);
+ const actionWidth=Math.ceil(Math.max(compactAction?58:64,
+  2*actionFont*s+v.discoveryActionIconSize+v.discoveryActionGap+2*actionPadding+4));
  const actionVisible=Math.max(v.discoveryActionVisibleHeight,v.discoveryActionLineHeight*s+2*v.discoveryActionPaddingY);
  const actionHit=Math.max(v.discoveryActionMinHeight,actionVisible+2*v.discoveryActionInsetY);
  const toolbar=Math.max(v.discoveryHeight,(Math.max(v.discoveryCountLineHeight,narrow?v.narrowDiscoveryStatusLineHeight:v.discoveryStatusLineHeight)+v.discoveryPhaseLineHeight)*s,actionHit);
@@ -296,8 +438,8 @@ function assertScene(x,width,height,s){
  o.state={kind:'candidates',candidates:[candidate('a'),latest,candidate('b')],refreshing:true};o.acceptState();
  const hit=p.nodes(x.rows[1]).find(n=>n.type==='Row'&&n.onTouch);
  const paint=p.nodes(x.rows[1]).find(n=>n.type==='Row'&&n.padding);
- hit.onTouch({type:deps.TouchType.Down,changedTouches:[{id:1}]});p.properties.flush();assert.equal(paint.scale.x,0.978);
- hit.onTouch({type:deps.TouchType.Up,changedTouches:[{id:1}]});p.properties.flush();hit.onClick();
+ hit.onTouch({type:deps.TouchType.Down,changedTouches:[{id:1,windowX:5,windowY:5}]});p.properties.flush();assert.equal(paint.scale.x,1);
+ hit.onTouch({type:deps.TouchType.Up,changedTouches:[{id:1,windowX:5,windowY:5}]});p.properties.flush();hit.onClick();
  assert.equal(x.selected[0],latest,'actual native row callbacks select the latest composite identity, including alternate URL');
  p.properties.flush();
  o.aboutToDisappear();
@@ -383,24 +525,55 @@ if(selectedCase==='row-action-interaction'){
  const row=new deps.SourceSwitchNovelRow(undefined,{row:new deps.SourceSwitchCandidateRow(candidate('press')),onPress:()=>presses++,onSelect:()=>clicks++},undefined,++serial);row.initialRender();
  const hit=p.nodes(row).find(n=>n.type==='Row'&&n.onTouch),paint=p.nodes(row).find(n=>n.type==='Row'&&n.padding);
  const soft=readerAppColor(design.strings.selectedRowRole,'day');
- const touch=(type,id=7)=>{hit.onTouch({type,changedTouches:[{id}]});p.properties.flush();};
+ const touch=(type,id=7,y=100)=>{hit.onTouch({type,changedTouches:[{id,windowX:12,windowY:y}]});p.properties.flush();};
+ const advance=delay=>{
+  for(const [timerId,timer] of [...rowTimers]) if(timer.delay===delay){rowTimers.delete(timerId);timer.action();}
+  p.properties.flush();
+ };
  assert.equal(paint.backgroundColor,'Color.Transparent');assert.equal(hit.enabled,true);
- touch(deps.TouchType.Down);assert.equal(presses,1);assert.equal(paint.scale.x,0.978);
- assert.equal(paint.backgroundColor,'sdk-blend:Color.Transparent:29,27,24,20');
- touch(deps.TouchType.Move);touch(deps.TouchType.Up,8);assert.equal(paint.scale.x,0.978);
- touch(deps.TouchType.Up);assert.equal(paint.scale.x,1);assert.equal(paint.backgroundColor,'Color.Transparent');
- touch(deps.TouchType.Down);touch(deps.TouchType.Cancel);assert.equal(paint.scale.x,1);
+ touch(deps.TouchType.Down);assert.equal(presses,1,'down immediately protects the current row from reorder');
+ assert.deepEqual([paint.scale.x,paint.backgroundColor],[1,'Color.Transparent']);
+ touch(deps.TouchType.Move,7,109);advance(90);touch(deps.TouchType.Up,7,109);
+ assert.deepEqual([paint.scale.x,paint.backgroundColor],[1,'Color.Transparent'],'a native list drag never paints the row');
+ assert.equal(rowTimers.size,0);
+ touch(deps.TouchType.Down);touch(deps.TouchType.Move,7,104);advance(90);
+ assert.deepEqual([paint.scale.x,paint.backgroundColor],[0.978,'sdk-blend:Color.Transparent:29,27,24,20']);
+ touch(deps.TouchType.Up,8);assert.equal(paint.scale.x,0.978,'an unrelated pointer does not release the hold');
+ touch(deps.TouchType.Move,7,111);assert.equal(paint.scale.x,1,'a later drag clears a held highlight');
+ touch(deps.TouchType.Up,7,111);advance(110);assert.equal(paint.scale.x,1);
+ touch(deps.TouchType.Down);touch(deps.TouchType.Up);hit.onClick();assert.equal(clicks,1);
+ assert.equal(paint.scale.x,0.978,'quick tap paints briefly on release');
+ advance(110);assert.equal(paint.scale.x,1);
+ touch(deps.TouchType.Down);touch(deps.TouchType.Cancel);advance(90);assert.equal(paint.scale.x,1);
  touch(deps.TouchType.Down);
- row.updateStateVars({row:row.row,rowEnabled:false,selected:false});p.properties.flush();
- assert.equal(row.pressPointer,-1,'disabling a retained row clears active feedback');assert.equal(hit.enabled,false);
+ row.updateStateVars({row:row.row,rowEnabled:false,selected:false});p.properties.flush();advance(90);
+ assert.equal(paint.scale.x,1);assert.equal(hit.enabled,false);assert.equal(rowTimers.size,0);
  const before=presses;touch(deps.TouchType.Down);assert.equal(presses,before);
  row.row.update({...candidate('press'),isCurrent:true});row.updateStateVars({row:row.row,rowEnabled:true,selected:false});p.properties.flush();
  assert.equal(hit.enabled,false);touch(deps.TouchType.Down);assert.equal(presses,before);
  row.row.update(candidate('press'));row.updateStateVars({row:row.row,rowEnabled:true,selected:true,reduceMotion:true});p.properties.flush();
- assert.equal(hit.enabled,true);assert.equal(paint.backgroundColor,soft);touch(deps.TouchType.Down);
+ assert.equal(hit.enabled,true);assert.equal(paint.backgroundColor,soft);touch(deps.TouchType.Down);advance(90);
  assert.deepEqual(paint.scale,{x:1,y:1});assert.equal(paint.opacity,0.92);assert.equal(paint.backgroundColor,soft);
  touch(deps.TouchType.Cancel);assert.equal(paint.opacity,1);assert.equal(paint.backgroundColor,soft);
- hit.onClick();assert.equal(clicks,1,'enabled native row retains its original selection callback');
+ hit.onClick();assert.equal(clicks,2,'accessibility activation without a touch still selects');
+ touch(deps.TouchType.Down);row.aboutToDisappear();advance(90);
+ assert.equal(rowTimers.size,0);assert.equal(paint.opacity,1,'retired row cannot be highlighted by a late timer');
+ touch(deps.TouchType.Down);hit.onClick();assert.equal(clicks,2);assert.equal(rowTimers.size,0);
+ row.aboutToAppear();hit.onClick();assert.equal(clicks,3,'the remounted row accepts accessibility activation');
+}
+// Run the actual List callback without sending a Move or Cancel to the held row.
+{
+ const x=scene(390,844,1), list=x.nodes.find(n=>n.type==='List'&&n.onScrollStart);
+ const row=x.rows[0], hit=p.nodes(row).find(n=>n.type==='Row'&&n.onTouch);
+ const paint=p.nodes(row).find(n=>n.type==='Row'&&n.padding);
+ hit.onTouch({type:deps.TouchType.Down,changedTouches:[{id:7,windowX:12,windowY:100}]});
+ assert.equal(x.o.heldKey,row.row.key);
+ const held=[...rowTimers.entries()].find(([,timer])=>timer.delay===90);assert.ok(held);
+ rowTimers.delete(held[0]);held[1].action();p.properties.flush();assert.equal(paint.scale.x,0.978);
+ list.onScrollStart();p.properties.flush();assert.equal(paint.scale.x,1);
+ hit.onClick();assert.equal(x.selected.length,0);
+ list.onScrollStop();p.properties.flush();hit.onClick();assert.equal(x.selected.length,1);
+ x.o.aboutToDisappear();
 }
 // The native visual button blends both recheck and stop fills. The extra
 // touch area stays beyond its paint bounds in both states.

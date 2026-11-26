@@ -340,17 +340,20 @@ if(id==='streaming-latency'){
     await clock.advance(150);
     assert.equal(f.host.current().state.candidates.length,3);assert.equal(f.host.current().state.refreshing,false);
     const originalCandidates=f.host.current().state.candidates;
+    const retained=originalCandidates.map(row=>({...row,latencyFromCache:true}));
+    assert.ok(originalCandidates.every(row=>row.latencyFromCache===false));
     const before=f.host.current().scopeId;
     // Retain the real owner while the next Gateway invocation waits; direct
     // captured callbacks below exercise Host admission independently of the
     // Gateway's own cancellation, which also remains active.
     const pending=deferred();f.host.gateway.refreshCandidates=(query,current,onProgress,initial)=>{
-      progress.push(onProgress);assert.deepEqual(initial,originalCandidates);
+      progress.push(onProgress);assert.deepEqual(initial,retained);
       return pending.promise;
     };
     f.host.refresh(before);
-    assert.deepEqual(f.host.current().state.candidates,originalCandidates,
+    assert.deepEqual(f.host.current().state.candidates,retained,
       'refresh keeps the last version-bound search measurement while new results are pending');
+    assert.notEqual(f.host.current().state.allowCachedLatency,true);
     assert.ok(originalCandidates.every(row=>row.latencyMs!==undefined),'old immutable rows are not modified');
     await settle();const oldProgress=progress.at(-1);
     f.host.stop(before);f.host.refresh(before);await settle();
@@ -361,6 +364,14 @@ if(id==='streaming-latency'){
     pending.resolve({kind:'sources',candidates:originalCandidates});await settle();
     assert.equal(f.host.current(),closed,'closed owner rejects late callbacks and final results');
     assert.equal(f.subscriptions.size,0);
+    assert.equal(f.host.open(f.context,f.lease),true);
+    await settle();
+    const reopened=f.host.current().state;
+    assert.equal(reopened.kind,'candidates');
+    assert.equal(reopened.candidates.length,3);
+    assert.equal(reopened.allowCachedLatency,true,'a qualified cache-only opening admits previous search timing');
+    assert.ok(reopened.candidates.every(row=>row.latencyMs!==undefined && row.latencyFromCache===true),
+      'reopening the same book preserves the provenance of retained timings');
   }finally{Date.now=originalNow;f.retire();for(const gate of gates.values())gate.resolve();}
   checks.push('actual-owner-zero-to-streaming-latency-sort-refresh-retains-measurement-and-generation-close-admission');
 }

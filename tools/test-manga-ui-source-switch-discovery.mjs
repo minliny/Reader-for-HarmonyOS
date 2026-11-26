@@ -107,15 +107,21 @@ const progressiveQuery = { sourceId: 'original', bookId: '/origin', bookName: 'C
     const before = publications.length;
     for (const listener of listeners) listener({ reset: true, identities: [] });
     await Promise.resolve(); assert.equal(publications.length, before);
+    // A newer persisted timestamp (clock skew or another search) cannot replace this sweep's actual sample.
+    rows.find(row => row.origin === 'a').acquisition.searchTiming = {
+      kind: 'search', sourceVersion: 'v1', durationMs: 1, measuredAt: now + 10000,
+    };
     const cached = await gateway.loadCachedCandidates(progressiveQuery);
     assert.deepEqual(cached.map(item => item.latencyMs), [300, 400, 700, undefined],
       'a later cache/acquisition projection preserves the same-round timing samples');
+    assert.ok(cached.filter(row => row.latencyMs !== undefined).every(row => row.latencyFromCache === false));
     const equal = gateway.sortCandidates([
       { sourceId: 'b', bookUrl: '/2', sourceOrder: 1, latencyKind: 'search', latencyMs: 20 },
       { sourceId: 'a', bookUrl: '/1', sourceOrder: 0, latencyKind: 'search', latencyMs: 20 },
       { sourceId: 'invalid', bookUrl: '/x', sourceOrder: -1, latencyKind: 'search', latencyMs: NaN },
+      { sourceId: 'cache', bookUrl: '/cache', sourceOrder: 2, latencyKind: 'search', latencyMs: 1, latencyFromCache: true },
     ]);
-    assert.deepEqual(equal.map(item => item.sourceId), ['a', 'b', 'invalid'], 'latency ties retain deterministic source order');
+    assert.deepEqual(equal.map(item => item.sourceId), ['a', 'b', 'invalid', 'cache'], 'latency ties retain deterministic source order');
   } finally { Date.now = originalNow; }
 }
 

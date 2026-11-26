@@ -37,12 +37,12 @@ const SourceSwitchCandidateDataSource=new Function('sourceSwitchCandidateKey',
 const timers = new Map(); let nextTimer = 0;
 class LayoutFrame { constructor(_context, action) { this.action = action; } }
 const Controller = productionMotionMethods(page,
-  ['candidateKey', 'presentationCandidates', 'publishCandidates', 'acceptState', 'notifyOrdinaryFailure', 'hasPendingRecovery', 'messageActionCurrent', 'cancelPresentation', 'queueReorder', 'publishOrder', 'restoreAnchor',
-    'listTouch', 'selectCandidate', 'busy', 'isSweeping', 'requiresReconciliation', 'rollbackRequired', 'requestRefresh', 'statusText', 'errorText', 'listHeaderCount', 'listHeaderHeight', 'rowHeight', 'compactWindow',
-    'frameHeight', 'frameWidth', 'drawerWidth', 'novelSafeLeft', 'novelSafeRight', 'narrowWindow', 'sideInset', 'novelFontScale', 'flowChrome', 'scrollBook',
+  ['candidateKey', 'presentationCandidates', 'cachedLatencyAllowed', 'publishCandidates', 'acceptState', 'notifyOrdinaryFailure', 'hasPendingRecovery', 'messageActionCurrent', 'cancelPresentation', 'queueReorder', 'publishOrder', 'restoreAnchor',
+    'listTouch', 'selectCandidate', 'filterInputCurrent', 'busy', 'isSweeping', 'requiresReconciliation', 'rollbackRequired', 'requestRefresh', 'statusText', 'errorText', 'listHeaderCount', 'listHeaderHeight', 'rowHeight', 'compactWindow',
+    'sideDrawer', 'drawerTopInset', 'gripHeight', 'sweepProgress', 'searchAndSortHeight', 'frameHeight', 'frameWidth', 'drawerWidth', 'novelSafeLeft', 'novelSafeRight', 'narrowWindow', 'sideInset', 'novelFontScale', 'flowChrome', 'scrollBook',
     'headingHeight', 'discoveryHeight', 'columnsHeight', 'footerHeight', 'bookHeight', 'timingWidth', 'drawerHeight', 'safeTop', 'safeBottom', 'safeLeft', 'safeRight'],
   { sourceSwitchCandidateKey, sourceSwitchSourceCount, SourceSwitchLayoutFrame: LayoutFrame,
-    ...novelPresentation, SOURCE_SWITCH_VISUAL, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1, windowRect:{width:390,height:844} }) },
+    ...novelPresentation, readerIsExpandedWidth: (await import('../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts')).readerIsExpandedWidth, SOURCE_SWITCH_VISUAL, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1, windowRect:{width:390,height:844} }) },
     Curve: { EaseInOut: 'curve' }, ScrollAlign: { START: 'start' }, TouchType: { Down: 'down', Up: 'up', Cancel: 'cancel' },
     setTimeout: callback => { const id = ++nextTimer; timers.set(id, callback); return id; },
     clearTimeout: id => timers.delete(id),
@@ -53,7 +53,7 @@ const item = (id, latencyMs = 300, bookUrl = `${id}-book`) => ({ sourceId: id, b
 function owner(initial = [], contentKind = 'manga') {
   const page = new Controller(); const selected = [], frames = [], actions = [];
   let offset = 0;
-  Object.assign(page, { contentKind, state: { kind: 'candidates', candidates: initial }, displayedCandidates: [], latestCandidates: [],
+  Object.assign(page, { contentKind, showing: true, filterText: '', latestFirst: false, currentSourceId: '', state: { kind: 'candidates', candidates: initial }, displayedCandidates: [], latestCandidates: [],
     candidateDataSource: new SourceSwitchCandidateDataSource(),
     messageGeneration: 0, lastFeedbackIdentity: '',
     transientFeedback: { show: (_context, _view, current) => current(), reset() {} },
@@ -79,8 +79,8 @@ progressive.page.state = { kind: 'candidates', candidates: [a, b], refreshing: t
 progressive.page.listTouch({ type: 'down' }); progressive.page.heldKey = key(a);
 const fasterA = { ...a, latencyMs: 50 };
 progressive.page.state = { kind: 'candidates', candidates: [fasterA, c, b], refreshing: true }; progressive.page.acceptState(); flush();
-assert.deepEqual(progressive.page.displayedCandidates.map(key), [a, b, c].map(key), 'touch freezes physical order while additions appear');
-assert.equal(progressive.page.displayedCandidates[0].latencyMs, 50, 'metadata updates without replacing row identity');
+assert.deepEqual(progressive.page.displayedCandidates.map(key), [b, a, c].map(key), 'touch freezes physical order while additions appear');
+assert.equal(progressive.page.displayedCandidates[1].latencyMs, 50, 'metadata updates without replacing row identity');
 progressive.page.selectCandidate(key(b)); assert.equal(progressive.selected.length, 0, 'a moved hit target cannot select another identity');
 progressive.page.listTouch({ type: 'up' }); flush();
 assert.deepEqual(progressive.page.displayedCandidates.map(key), [a, c, b].map(key), 'idle publishes authoritative live order');
@@ -99,8 +99,8 @@ const variants = owner([{ ...a, isCurrent: true }, item('a', 100, 'alternate')])
 variants.page.selectCandidate(key(a)); assert.equal(variants.selected.length, 0);
 variants.page.selectCandidate(key(item('a', 100, 'alternate'))); assert.equal(variants.selected.length, 1, 'same-source alternate URL remains selectable');
 const refreshed = owner([a, b]); flush();
-refreshed.page.state = { kind: 'candidates', candidates: [a, b].map(candidate => ({ ...candidate, latencyKind: undefined, latencyMs: undefined })), refreshing: true }; refreshed.page.acceptState();
-assert.deepEqual(refreshed.page.retestingKeys, [a, b].map(key));
+refreshed.page.state = { kind: 'candidates', candidates: [a, b].map(candidate => ({ ...candidate, latencyFromCache: true })), refreshing: true }; refreshed.page.acceptState();
+assert.deepEqual(refreshed.page.retestingKeys, [b, a].map(key));
 refreshed.page.state = { kind: 'candidates', candidates: [{ ...a, latencyKind: undefined, latencyMs: undefined }, b], refreshing: true };
 refreshed.page.acceptState(); assert.ok(refreshed.page.retestingKeys.includes(key(a)), 'cache invalidation keeps old row visibly remeasuring');
 refreshed.page.state = { kind: 'candidates', candidates: [a, b], refreshing: true }; refreshed.page.acceptState();
@@ -133,12 +133,12 @@ const SourceSwitchCandidateDataSource=new Function('sourceSwitchCandidateKey',
 const timers = new Map(); let nextTimer = 0;
 class LayoutFrame { constructor(_context, action) { this.action = action; } }
 const Controller = productionMotionMethods(page,
-  ['candidateKey', 'presentationCandidates', 'publishCandidates', 'acceptState', 'notifyOrdinaryFailure', 'hasPendingRecovery', 'messageActionCurrent', 'cancelPresentation', 'queueReorder', 'publishOrder', 'restoreAnchor',
-    'listTouch', 'selectCandidate', 'busy', 'isSweeping', 'requiresReconciliation', 'rollbackRequired', 'requestRefresh', 'statusText', 'errorText', 'listHeaderCount', 'listHeaderHeight', 'rowHeight', 'compactWindow',
-    'frameHeight', 'frameWidth', 'drawerWidth', 'novelSafeLeft', 'novelSafeRight', 'narrowWindow', 'sideInset', 'novelFontScale', 'flowChrome', 'scrollBook',
+  ['candidateKey', 'presentationCandidates', 'cachedLatencyAllowed', 'publishCandidates', 'acceptState', 'notifyOrdinaryFailure', 'hasPendingRecovery', 'messageActionCurrent', 'cancelPresentation', 'queueReorder', 'publishOrder', 'restoreAnchor',
+    'listTouch', 'selectCandidate', 'filterInputCurrent', 'busy', 'isSweeping', 'requiresReconciliation', 'rollbackRequired', 'requestRefresh', 'statusText', 'errorText', 'listHeaderCount', 'listHeaderHeight', 'rowHeight', 'compactWindow',
+    'sideDrawer', 'drawerTopInset', 'gripHeight', 'sweepProgress', 'searchAndSortHeight', 'frameHeight', 'frameWidth', 'drawerWidth', 'novelSafeLeft', 'novelSafeRight', 'narrowWindow', 'sideInset', 'novelFontScale', 'flowChrome', 'scrollBook',
     'headingHeight', 'discoveryHeight', 'columnsHeight', 'footerHeight', 'bookHeight', 'timingWidth', 'drawerHeight', 'safeTop', 'safeBottom', 'safeLeft', 'safeRight'],
   { sourceSwitchCandidateKey, sourceSwitchSourceCount, SourceSwitchLayoutFrame: LayoutFrame,
-    ...novelPresentation, SOURCE_SWITCH_VISUAL, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1, windowRect:{width:390,height:844} }) },
+    ...novelPresentation, readerIsExpandedWidth: (await import('../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts')).readerIsExpandedWidth, SOURCE_SWITCH_VISUAL, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1, windowRect:{width:390,height:844} }) },
     Curve: { EaseInOut: 'curve' }, ScrollAlign: { START: 'start' }, TouchType: { Down: 'down', Up: 'up', Cancel: 'cancel' },
     setTimeout: callback => { const id = ++nextTimer; timers.set(id, callback); return id; },
     clearTimeout: id => timers.delete(id),
@@ -149,7 +149,7 @@ const item = (id, latencyMs = 300, bookUrl = `${id}-book`) => ({ sourceId: id, b
 function owner(initial = [], contentKind = 'manga') {
   const page = new Controller(); const selected = [], frames = [], actions = [];
   let offset = 0;
-  Object.assign(page, { contentKind, state: { kind: 'candidates', candidates: initial }, displayedCandidates: [], latestCandidates: [],
+  Object.assign(page, { contentKind, showing: true, filterText: '', latestFirst: false, currentSourceId: '', state: { kind: 'candidates', candidates: initial }, displayedCandidates: [], latestCandidates: [],
     candidateDataSource: new SourceSwitchCandidateDataSource(),
     messageGeneration: 0, lastFeedbackIdentity: '',
     transientFeedback: { show: (_context, _view, current) => current(), reset() {} },
@@ -166,7 +166,7 @@ function owner(initial = [], contentKind = 'manga') {
   return { page, selected, frames, actions, setOffset: value => { offset = value; }, offset: () => offset };
 }
 function flush() { const jobs = [...timers.values()]; timers.clear(); for (const job of jobs) job(); }
-const a = item('a', 600), b = item('b', 200), c = item('c', 100);
+const a = item('a', 100), b = item('b', 100), c = item('c', 100);
 // VM-SS-001: notifications must admit a mounted empty V1 lazy range, then
 // preserve native row identities during append and same-key metadata changes.
 
@@ -204,12 +204,12 @@ const SourceSwitchCandidateDataSource=new Function('sourceSwitchCandidateKey',
 const timers = new Map(); let nextTimer = 0;
 class LayoutFrame { constructor(_context, action) { this.action = action; } }
 const Controller = productionMotionMethods(page,
-  ['candidateKey', 'presentationCandidates', 'publishCandidates', 'acceptState', 'notifyOrdinaryFailure', 'hasPendingRecovery', 'messageActionCurrent', 'cancelPresentation', 'queueReorder', 'publishOrder', 'restoreAnchor',
-    'listTouch', 'selectCandidate', 'busy', 'isSweeping', 'requiresReconciliation', 'rollbackRequired', 'requestRefresh', 'statusText', 'errorText', 'listHeaderCount', 'listHeaderHeight', 'rowHeight', 'compactWindow',
-    'frameHeight', 'frameWidth', 'drawerWidth', 'novelSafeLeft', 'novelSafeRight', 'narrowWindow', 'sideInset', 'novelFontScale', 'flowChrome', 'scrollBook',
+  ['candidateKey', 'presentationCandidates', 'cachedLatencyAllowed', 'publishCandidates', 'acceptState', 'notifyOrdinaryFailure', 'hasPendingRecovery', 'messageActionCurrent', 'cancelPresentation', 'queueReorder', 'publishOrder', 'restoreAnchor',
+    'listTouch', 'selectCandidate', 'filterInputCurrent', 'busy', 'isSweeping', 'requiresReconciliation', 'rollbackRequired', 'requestRefresh', 'statusText', 'errorText', 'listHeaderCount', 'listHeaderHeight', 'rowHeight', 'compactWindow',
+    'sideDrawer', 'drawerTopInset', 'gripHeight', 'sweepProgress', 'searchAndSortHeight', 'frameHeight', 'frameWidth', 'drawerWidth', 'novelSafeLeft', 'novelSafeRight', 'narrowWindow', 'sideInset', 'novelFontScale', 'flowChrome', 'scrollBook',
     'headingHeight', 'discoveryHeight', 'columnsHeight', 'footerHeight', 'bookHeight', 'timingWidth', 'drawerHeight', 'safeTop', 'safeBottom', 'safeLeft', 'safeRight'],
   { sourceSwitchCandidateKey, sourceSwitchSourceCount, SourceSwitchLayoutFrame: LayoutFrame,
-    ...novelPresentation, SOURCE_SWITCH_VISUAL, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1, windowRect:{width:390,height:844} }) },
+    ...novelPresentation, readerIsExpandedWidth: (await import('../entry/src/main/ets/ui/foundation/ReaderWidthClass.ts')).readerIsExpandedWidth, SOURCE_SWITCH_VISUAL, ReaderWindowCoordinator: { metrics: () => ({ systemFontScale: 1, windowRect:{width:390,height:844} }) },
     Curve: { EaseInOut: 'curve' }, ScrollAlign: { START: 'start' }, TouchType: { Down: 'down', Up: 'up', Cancel: 'cancel' },
     setTimeout: callback => { const id = ++nextTimer; timers.set(id, callback); return id; },
     clearTimeout: id => timers.delete(id),
@@ -220,7 +220,7 @@ const item = (id, latencyMs = 300, bookUrl = `${id}-book`) => ({ sourceId: id, b
 function owner(initial = [], contentKind = 'manga') {
   const page = new Controller(); const selected = [], frames = [], actions = [];
   let offset = 0;
-  Object.assign(page, { contentKind, state: { kind: 'candidates', candidates: initial }, displayedCandidates: [], latestCandidates: [],
+  Object.assign(page, { contentKind, showing: true, filterText: '', latestFirst: false, currentSourceId: '', state: { kind: 'candidates', candidates: initial }, displayedCandidates: [], latestCandidates: [],
     candidateDataSource: new SourceSwitchCandidateDataSource(),
     messageGeneration: 0, lastFeedbackIdentity: '',
     transientFeedback: { show: (_context, _view, current) => current(), reset() {} },
@@ -263,8 +263,8 @@ assert.equal(sourceSwitchNovelChapter({ ...a, latestChapterTitle: undefined, acq
 assert.equal(sourceSwitchNovelLatency({ ...a, latencyMs:0 }), '0 ms');
 assert.equal(sourceSwitchNovelLatency({ ...a, latencyKind:undefined, timeout:true, offline:true }), '—', 'cached success does not become a failed or pending-check row');
 for (const latencyMs of [undefined, -1, Infinity, NaN]) assert.equal(sourceSwitchNovelLatency({ ...a, latencyMs }), '—');
-assert.equal(sourceSwitchNovelDrawerHeight(844,24),699);
-assert.equal(sourceSwitchNovelDrawerHeight(390,24),366);
+assert.equal(sourceSwitchNovelDrawerHeight(844,24),844*.82);
+assert.equal(sourceSwitchNovelDrawerHeight(390,24),390*.82);
 
 }
 

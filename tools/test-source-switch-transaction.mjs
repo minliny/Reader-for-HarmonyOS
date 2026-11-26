@@ -65,11 +65,12 @@ async function refreshMeasurement(){
  const f=fixture({open:false});f.setRows([{...rawCandidate,acquisition:{sourceVersion:'v1',searchTiming:{kind:'search',sourceVersion:'v1',durationMs:321,measuredAt:1700000000000}}}]);
  assert.equal(f.host.open(f.context,f.lease),true);await settle();
  const before=f.host.current().state.candidates;assert.ok(before?.length);assert.equal(before[0].latencyMs,321,'the fixture must contain a real version-bound previous measurement');
+ assert.equal(before[0].latencyFromCache,true);
  const saved=structuredClone(before),gate=deferred();let initial;
- f.host.gateway.refreshCandidates=(_query,_current,excluded,_progress,retained)=>{assert.deepEqual(excluded,[]);initial=retained;return gate.promise;};
+ f.host.gateway.refreshCandidates=(_query,_current,_progress,retained,restart)=>{assert.equal(restart,true);initial=retained;return gate.promise;};
  try{
   f.host.refresh(f.host.current().scopeId);await settle();assert.equal(f.host.current().state.refreshing,true);assert.deepEqual(initial,before);assert.deepEqual(f.host.current().state.candidates,saved,'pending refresh keeps old truthful version-bound timing');assert.deepEqual(before,saved,'old observed DTO is not mutated');
-  gate.resolve({kind:'sources',candidates:[{...before[0],latencyMs:12,latencyKind:'search',latencyMeasuredAt:1700000000012}]});await settle();assert.equal(f.host.current().state.refreshing,false);assert.equal(f.host.current().state.candidates[0].latencyMs,12,'new completed search replaces the measurement');
+  gate.resolve({kind:'sources',candidates:[{...before[0],latencyMs:12,latencyKind:'search',latencyFromCache:false,latencyMeasuredAt:1700000000012}]});await settle();assert.equal(f.host.current().state.refreshing,false);assert.equal(f.host.current().state.candidates[0].latencyMs,12,'new completed search replaces the measurement');
  }finally{gate.resolve({kind:'sources',candidates:before});f.host.retire();await settle();}
 }
 const cases={'row-identity':rowIdentity,'refresh-measurement':refreshMeasurement};

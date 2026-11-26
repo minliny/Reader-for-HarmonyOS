@@ -6,7 +6,7 @@ import { boundedMembers } from './lib/bounded-surface-sdk-probe.mjs';
 import { sourceSwitchRowSdk } from './lib/source-switch-row-sdk-probe.mjs';
 import { readerTypographyRoles } from './lib/reader-typography-probe.mjs';
 import { SOURCE_SWITCH_VISUAL } from '../entry/src/main/ets/features/source/ui/SourceSwitchVisual.ts';
-import { sourceSwitchNovelChapter, sourceSwitchNovelLatency } from '../entry/src/main/ets/features/source/ui/SourceSwitchNovelPresentation.ts';
+import { sourceSwitchNovelChapter, sourceSwitchNovelLatency, sourceSwitchSearchLatency, sourceSwitchCandidateMatches } from '../entry/src/main/ets/features/source/ui/SourceSwitchNovelPresentation.ts';
 
 const source = readFileSync(new URL('../entry/src/main/ets/features/source/ui/SourceSwitchWindow.ets', import.meta.url), 'utf8');
 const properties = createArkUIPropertyRuntimeProbe();
@@ -14,7 +14,7 @@ const rows = sourceSwitchRowSdk(properties, source);
 const transition = { animation() { return this; } };
 const deps = { ...properties.sdk, SynchedPropertyNesedObjectPU: properties.sdk.SynchedPropertyNestedObjectPU,
   motionAnimateParam: () => ({ duration: 200, curve: 'ease-in-out' }),
-  ...rows, ...readerTypographyRoles, SOURCE_SWITCH_VISUAL, sourceSwitchNovelChapter, sourceSwitchNovelLatency,
+  ...rows, ...readerTypographyRoles, SOURCE_SWITCH_VISUAL, sourceSwitchNovelChapter, sourceSwitchNovelLatency, sourceSwitchSearchLatency, sourceSwitchCandidateMatches,
   TouchType: { Down: 0, Up: 1, Move: 2, Cancel: 3 },
   TransitionEffect: { IDENTITY: transition, OPACITY: transition },
   ColorMetrics: { resourceColor: () => ({ red: 1, green: 2, blue: 3, alpha: 255 }), rgba: (...values) => ({ color: values }) },
@@ -67,9 +67,9 @@ assert.ok(properties.sdk.ObservedObject.IsObservedObject(retainedA), 'production
 assert.equal(retainedA.key, rows.sourceSwitchCandidateKey(a.sourceId, a.bookUrl));
 
 let selected, cancellations = 0;
-const control = createReaderBuilderProbe(source, ['candidateKey', 'selectCandidate', 'busy'], deps,
+const control = createReaderBuilderProbe(source, ['candidateKey', 'selectCandidate', 'filterInputCurrent', 'busy'], deps,
   { componentName: 'SourceSwitchWindow' }).owner;
-Object.assign(control, { state: { kind: 'candidates' }, latestCandidates: [a, b], selectionPending: false,
+Object.assign(control, { mounted: true, foreground: true, showing: true, filterText: '', state: { kind: 'candidates' }, latestCandidates: [a, b], selectionPending: false,
   scrolling: false, heldKey: '', cancelPresentation() { cancellations += 1; }, onSelectCandidate(value) { selected = value; } });
 const linked = createReaderBuilderProbe(source, boundedMembers(source, 'SourceSwitchNovelRow'), deps,
   { ...properties.hooks, componentName: 'SourceSwitchNovelRow', initialParams: { row: retainedA,
