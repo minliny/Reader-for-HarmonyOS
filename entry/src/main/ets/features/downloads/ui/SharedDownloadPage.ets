@@ -396,6 +396,7 @@ export struct SharedDownloadPage {
   @Builder
   private topBar() {
     PageBackBar({ variant: this.embeddedWide ? 'standard' : 'download', floating: this.embeddedWide,
+      layoutExpectedTopGapVp: this.headerTop(),
       centered: this.embeddedWide, elevation: this.embeddedWide ? 'floating' : 'fixed', trailingWidthVp: this.manageHeaderActionWidth(),
       showBack: !this.embeddedWide || this.detailKey.length > 0 || this.managing,
       title: this.detailKey.length === 0 ? '下载管理' : '章节下载',

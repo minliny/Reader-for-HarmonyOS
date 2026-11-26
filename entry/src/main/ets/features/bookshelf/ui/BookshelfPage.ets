@@ -1,3 +1,5 @@
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { readerAnimatePress, readerPressOpacity, readerPressPointer, readerPressScale, readerPressSurface } from '../../../ui/foundation/ReaderPressMotion';
 import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
@@ -648,6 +650,9 @@ export struct BookshelfPage {
   private continueReadingCard(bookProvider: () => ShelfBook | undefined, expandedLayout: boolean) {
     Column({ space: 6 }) {
       Text('继续阅读').width('100%')
+        .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+          ? { role: 'scroll-content', id: 'shelf-continue-heading', scope: 'bookshelf', active: !this.headerScrolled,
+            expectedContentGapVp: bookshelfHeaderSpec().contentGap } as LayoutInvariantTag : undefined)
         .fontFamily(TYPE_SHELF_CONTINUE_LABEL.fontFamily).fontWeight(TYPE_SHELF_CONTINUE_LABEL.fontWeight)
         .fontSize(TYPE_SHELF_CONTINUE_LABEL.fontSizeFp).lineHeight(TYPE_SHELF_CONTINUE_LABEL.lineHeightFp as number)
         .letterSpacing(TYPE_SHELF_CONTINUE_LABEL.letterSpacingFp as number)
@@ -738,7 +743,10 @@ export struct BookshelfPage {
               onCover: this.viewModeAction('cover', navigation),
               onList: this.viewModeAction('list', navigation),
               onFilter: (): void => this.setFilterExpanded(!this.filterRowVisible, navigation),
-            });
+            }).customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' &&
+              READER_LAYOUT_DEBUG_BUILD && this.continueReading === undefined
+              ? { role: 'scroll-content', id: 'shelf-section', scope: 'bookshelf', active: !this.headerScrolled,
+                expectedContentGapVp: bookshelfHeaderSpec().contentGap } as LayoutInvariantTag : undefined);
           }, (navigation: number): string => `shelf-section:${navigation}`);
 
           ForEach([this.navigationGeneration], (navigation: number): void => {

@@ -123,6 +123,7 @@ import { readerMainNavigationMode } from '../features/shell/MainNavigationSpec';
 import { readerLayoutCarrierResponseRegion } from '../ui/layout/ReaderPageNativeAttributes';
 import { ReaderPostLayoutFrame } from '../ui/layout/ReaderPostLayoutFrame';
 import { ReaderLayoutDebugOverlay } from '../app/composition/ReaderLayoutDebugOverlay';
+import { READER_LAYOUT_DEBUG_BUILD } from '../ui/foundation/ReaderLayoutInvariantSignals';
 
 const DOMAIN = 0x5244;
 
@@ -1356,7 +1357,14 @@ struct Index {
       });
       // Runtime geometry guide is last so it can outline every mounted page
       // surface without intercepting input.
-      ReaderLayoutDebugOverlay();
+      if (typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD) {
+        ReaderLayoutDebugOverlay({ route: this.route, requiresHeader: this.route !== 'reading',
+          requiresControl: this.route === 'bookshelf' || this.route === 'detail',
+          requiresFirstContent: this.route === 'bookshelf' && this.shelfRead.snapshot.visualAdmitted && !this.shelfRead.headerScrolled,
+          mainInputEnabled: !this.arkWebCapturesInput && (this.route === 'bookshelf' ? this.bookshelfContentAcceptsInput() :
+            this.route === 'detail' ? this.detailContentIsForeground() :
+            !this.sourceSwitchPresentation.isSurfacePresented() && !this.mangaSourceSwitch.selectionVisible) });
+      }
       // One app-owned short-feedback host sits above every route. Domain
       // owners publish only AppStorage facts through ReaderTransientFeedback.
       ReaderTransientToast()

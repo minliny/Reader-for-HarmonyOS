@@ -4,6 +4,8 @@ import { ReadingEntryPresentation } from '../../features/reading/presentation/Re
 import { SourceSwitchPanel } from '../../features/source/ui/SourceSwitchPanel';
 import { SourceSwitchPresentation } from '../../features/source/presentation/SourceSwitchPresentation';
 import type { ReaderSourceSwitchActions } from './ReaderSourceSwitchActions';
+import { READER_LAYOUT_DEBUG_BUILD } from '../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../ui/layout/LayoutInvariantEvaluator';
 
 /** Root siblings for the entry picker and the manga target catalog. */
 @Component
@@ -38,7 +40,10 @@ export struct ReaderSourceSwitchSurfaces {
         onSelectNavigationTarget: this.manga.directorySelection(this.manga.selection),
         onTemporaryBackBridge: this.manga.directoryTemporaryBack(this.manga.selection),
         onBack: this.manga.directoryBack(this.manga.selection),
-      }).width('100%').height('100%');
+      }).width('100%').height('100%')
+        .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+          ? { role: 'modal-overlay', id: 'manga-target-directory', active: this.manga.selectionVisible,
+            intercepts: this.interactive } as LayoutInvariantTag : undefined);
     } else if (this.entryPickerAllowed && !this.reading.sessionActive && this.source.isSurfacePresented() &&
       !this.manga.selectionVisible && this.reading.book !== undefined && this.actions !== undefined) {
       SourceSwitchPanel({

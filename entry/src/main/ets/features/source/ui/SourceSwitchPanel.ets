@@ -1,3 +1,6 @@
+import { READER_LAYOUT_DEBUG_BUILD, readerLayoutInvariantChanged } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
+import { READER_REDUCED_FADE_MS, READER_SHEET_CLOSE_MS } from '../../../ui/foundation/ProductMotionTiming';
 import type { SourceSwitchPresentation } from '../presentation/SourceSwitchPresentation';
 import { motionAnimateParam } from '../../../ui/foundation/MotionSpec';
 import { readerMotionReducedFadeParam } from '../../../ui/foundation/ReaderMotionPolicy';
@@ -66,6 +69,7 @@ export struct SourceSwitchPanel {
       if (!this.mounted || revision !== this.surfaceRevision || surface !== this.surface ||
         scope !== this.scopeId || showing !== this.showing) return;
       this.applySurfaceChanged();
+      if (typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD) readerLayoutInvariantChanged();
     });
   }
   private postSurfaceAction(action: () => void): void {
@@ -138,6 +142,9 @@ export struct SourceSwitchPanel {
     }.width('100%').height('100%')
       .focusScopeId(`reader-source-scope:${scopeId}:${attachment}`, true, false)
       .enabled(this.acceptsInput())
+      .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'modal-overlay', id: 'source-switch', active: this.showing,
+          intercepts: this.acceptsInput(), closeDurationMs: this.reduceMotion ? READER_REDUCED_FADE_MS : READER_SHEET_CLOSE_MS } as LayoutInvariantTag : undefined)
       .accessibilityLevel(this.acceptsInput() ? 'auto' : 'no-hide-descendants')
       .hitTestBehavior(this.acceptsInput() ? HitTestMode.Default : HitTestMode.None);
   }

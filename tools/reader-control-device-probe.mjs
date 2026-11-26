@@ -409,6 +409,19 @@ function operationPlan(operation, outputDir) {
     return { ...shell('aa','start','-a','EntryAbility','-b',BUNDLE,'-m','entry',
       '--ps','readerPublicFixture','empty-shelf'), kind:'startRemoteEmptyShelf' };
   }
+  if (operation.op === 'startRemoteJourneyFixture') {
+    exactFields(operation, []);
+    return { ...shell('aa','start','-a','EntryAbility','-b',BUNDLE,'-m','entry',
+      '--ps','readerPublicFixture','vm-journeys'), kind:'startRemoteJourneyFixture' };
+  }
+  if (operation.op === 'journeyFixtureLog') {
+    exactFields(operation, []);
+    return shell('hilog', '-x', '-T', 'ReaderVmJourney');
+  }
+  if (operation.op === 'journeyLayoutLog') {
+    exactFields(operation, []);
+    return shell('hilog', '-x', '-e', 'READER_LAYOUT_INVARIANTS');
+  }
   if (operation.op === 'clearRebuildableCache') {
     exactFields(operation, []);
     // The app owns the deletion policy. This Want invokes the debug-only,
@@ -960,7 +973,7 @@ async function probe(options) {
       else if (plan.kind === 'sampledTouchSequence') await sampledTouchSequence(plan);
       else if (plan.kind === 'uiContractReadiness') await readiness(plan);
       else if (plan.kind === 'guestSchedulingClick') await guestSchedulingClick(plan);
-      else if (plan.kind === 'startRemoteEmptyShelf') {
+      else if (plan.kind === 'startRemoteEmptyShelf' || plan.kind === 'startRemoteJourneyFixture') {
         if (!remoteVmReady) fail('Remote public storage launch requires this probe’s verified remote VM');
         run(plan);
       }

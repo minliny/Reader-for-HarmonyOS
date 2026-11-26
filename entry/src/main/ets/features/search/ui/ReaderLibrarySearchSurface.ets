@@ -1,3 +1,5 @@
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { ReaderEditingVisibility } from '../../../ui/layout/ReaderEditingVisibility';
 import { ReaderEditingScrollBinding } from '../../../ui/layout/ReaderEditingScrollBinding';
@@ -919,6 +921,8 @@ export struct ReaderLibrarySearchSurface {
         Text('书架').width('100%').textAlign(TextAlign.Center)
           .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(bookshelfHeaderSpec().titleFontSize)
           .lineHeight(bookshelfHeaderSpec().titleLineHeight).fontWeight(FontWeight.Bold)
+          .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD && this.mode === 'idle' && this.transitionKind === 'none'
+        ? { role: 'header-content', id: 'bookshelf-title' } as LayoutInvariantTag : undefined)
           .fontColor(readerAppColor('TOK_INK', this.scheme)).opacity(this.titleOpacity())
           .accessibilityLevel(this.mode === 'idle' ? 'auto' : 'no-hide-descendants');
       }.width(Math.max(0, this.cardContentWidth() - 2 * bookshelfHeaderSpec().titleSideInset)).height(this.barHeight())
@@ -931,6 +935,8 @@ export struct ReaderLibrarySearchSurface {
           y: this.headerActionTop() })
         .opacity(1 - this.surfaceValue())
         .id(this.moreIdentity)
+        .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD && this.mode === 'idle' && this.transitionKind === 'none'
+        ? { role: 'key-control', id: 'bookshelf-more' } as LayoutInvariantTag : undefined)
         .hitTestBehavior(this.moreInteractive() ? HitTestMode.Default : HitTestMode.None)
         .attributeModifier(new ReaderActionAccessibility('更多', this.moreInteractive(), false, true,
           new ReaderPressFeedback(Color.Transparent, this.scheme, bookshelfHeaderSpec().retainedActionRadius,
@@ -980,6 +986,8 @@ export struct ReaderLibrarySearchSurface {
                 .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
             }.width(this.actionWidth()).height(this.controlHeight()).padding(0)
               .id('reader-bookshelf-search-submit')
+              .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD && this.transitionKind === 'none'
+        ? { role: 'key-control', id: 'search-submit', unavailable: !this.model.canSubmit && !this.model.sweeping } as LayoutInvariantTag : undefined)
               .backgroundColor(Color.Transparent)
               .opacity(this.model.sweeping || this.model.canSubmit ? 1 : .38)
               .enabled(this.actionInteractive())
@@ -1005,12 +1013,19 @@ export struct ReaderLibrarySearchSurface {
       }.headerActionFrame().padding(0).backgroundColor(Color.Transparent)
         .position({ x: bookshelfHeaderSpec().retainedLeadingInset, y: this.headerActionTop() })
         .id(this.mode === 'idle' ? 'reader-bookshelf-search-entry' : READER_LIBRARY_SEARCH_BACK_FOCUS_ID)
+        .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD && this.transitionKind === 'none'
+        ? { role: 'key-control', id: 'search-entry-back' } as LayoutInvariantTag : undefined)
         .attributeModifier(new ReaderActionAccessibility(this.presentedSearch() ? '返回' : '搜索书籍', !this.model.panelOwnsInput,
           false, true, new ReaderPressFeedback(Color.Transparent, this.scheme, bookshelfHeaderSpec().retainedActionRadius,
             bookshelfHeaderSpec().retainedActionRadius, !this.model.panelOwnsInput), 'nativeButton'))
         .accessibilityLevel(this.model.panelOwnsInput ? 'no-hide-descendants' : 'auto')
         .onClick(this.leadingAction(this.identity, this.navigationGeneration, this.mounting));
-    }.width('100%').height(this.barHeight()).id('reader-bookshelf-search-bar');
+    }.width('100%').height(this.barHeight()).id('reader-bookshelf-search-bar')
+      .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD && this.transitionKind === 'none'
+        ? { role: 'floating-header', id: 'bookshelf-search-header',
+          scope: this.mode === 'idle' ? 'bookshelf' : undefined, expectedHeightVp: this.mode === 'idle'
+            ? bookshelfHeaderSpec().barHeight - 2 * this.spec.borderWidth : this.spec.barHeight(this.searchLaneHeight()),
+          expectedTopGapVp: bookshelfHeaderSpec().topInset + this.spec.borderWidth } as LayoutInvariantTag : undefined);
   }
   private panelBorderColor(): string {
     return readerAppColor(this.scheme === 'night' || this.historyProgress() > .01 ?

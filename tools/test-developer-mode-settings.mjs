@@ -12,6 +12,7 @@ const {default: fs} = await import('node:fs');
 const {default: path} = await import('node:path');
 const { fileURLToPath } = await import('node:url');
 const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+const {evaluateLayoutInvariants}=await import('../entry/src/main/ets/ui/layout/LayoutInvariantEvaluator.ts');
 
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -22,14 +23,24 @@ const clearedTimers = [];
 let reporterAttachments = 0;
 let reporterDetachments = 0;
 let timerCount = 0;
+const invariantReceipts = [];
 const Owner = selectedProductionMethods(path.join(root,
   'entry/src/main/ets/app/composition/ReaderLayoutDebugOverlay.ets'), 'ReaderLayoutDebugOverlay',
 ['scanFrameTree', 'collectFrameBounds', 'intersectBounds', 'paintOutline', 'paintFrameBounds',
-  'onDeveloperModeChanged', 'aboutToDisappear', 'markFrameScanIncomplete', 'debugNodeLabel'], {
+  'onDeveloperModeChanged', 'aboutToDisappear', 'markFrameScanIncomplete', 'debugNodeLabel',
+  'diagnosticsActive', 'reportInvariants', 'scheduleInvariantScan'], {
   FRAME_NODE_SCAN_LIMIT: 4000,
   FRAME_NODE_CHILD_QUERY_LIMIT: 2048,
   CHILD_INDEX_PROBE_WINDOW: 16,
   CHILD_INDEX_PROBE_MISS_LIMIT: 4,
+  READER_LAYOUT_INVARIANT_PROPERTY: 'readerLayoutInvariant',
+  readerOwnedLayoutModals: () => [],
+  readerMotionNowMs: () => 0,
+  layoutInvariantSequence: 0,
+  ReaderPostLayoutFrame: class { constructor(_context, callback) { this.callback = callback; } },
+  ReaderWindowCoordinator: { metrics: () => ({ ready: false }) },
+  evaluateLayoutInvariants,
+  hilog: { info: (_domain, _tag, _format, json) => invariantReceipts.push(JSON.parse(json)) },
   ExpandMode: { NOT_EXPAND: 0 },
   ReaderUIVerificationProbe: {
     attachSourceImportToastWindowReporter(reporter) {
@@ -98,11 +109,12 @@ const context = {
     return overlayNode;
   },
   px2vp: value => value / 3,
+  postFrameCallback: frame => frame.callback(),
   getPageRootNode: () => { throw new Error('API 24 must not be used on API 23'); },
 };
 Object.assign(owner, {
   developerModeEnabled: true, canvasReady: true, frameScanHandle: -1,
-  appForeground: true,
+  appForeground: true, mounted: true, modalRecoveryAfter: -1,
   opaqueHeaders: new Map(),
   getUIContext: () => context,
   reportWindowSample() {},
@@ -123,6 +135,7 @@ Object.assign(owner, {
   },
 });
 owner.scanFrameTree();
+assert.equal(invariantReceipts.at(-1).status, 'incomplete', 'missing native window metrics do not report a green sample');
 assert.equal(owner.frameCount, 3, 'root and both visible children of the unmeasurable wrapper are retained');
 assert.deepEqual(rectangles.find(rect => rect[2] === 30), [18, 40, 30, 15],
   'window vp coordinates subtract the overlay origin once, while measured px become vp');

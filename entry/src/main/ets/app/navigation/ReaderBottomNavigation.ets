@@ -1,3 +1,5 @@
+import { READER_LAYOUT_DEBUG_BUILD } from '../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../ui/layout/LayoutInvariantEvaluator';
 import { ReaderWindowCoordinator } from '../ReaderWindowCoordinator';
 import { ReaderStartupTrace } from '../ReaderStartupTrace';
 import { MAIN_TABS, type MainTabDef, readerMainTabIconResource } from './ReaderMainTabs';
@@ -38,7 +40,9 @@ export struct ReaderBottomNavigation {
       bottomInset: this.bottomInset(), translateX: this.bottomBarTranslateX(),
       unifiedContent: (): void => { this.unifiedTabBar(); },
       nativeContent: (appearance: ReaderNavigationAppearance): void => { this.nativeTabBar(appearance); },
-    });
+    })
+      .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'primary-dock', id: 'bottom-navigation' } as LayoutInvariantTag : undefined);
   }
 
   @Builder

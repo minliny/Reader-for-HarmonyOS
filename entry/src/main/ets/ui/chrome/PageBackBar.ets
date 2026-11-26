@@ -1,3 +1,5 @@
+import { READER_LAYOUT_DEBUG_BUILD } from '../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../ui/layout/LayoutInvariantEvaluator';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerLayoutCarrierResponseRegion } from '../layout/ReaderPageNativeAttributes';
 import { DIRECTORY_CHROME_VISUAL as visual, mangaDirectoryScale, mangaDirectoryHeaderHeight } from '../foundation/ReaderDirectoryChromeVisual';
@@ -15,7 +17,7 @@ import {
 } from '../foundation/ReaderWindowMetrics';
 import { TYPE_DOWNLOAD_HEADER_TITLE, TYPE_PAGE_TITLE } from '../foundation/ReaderTypography';
 import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../foundation/ReaderFontFamilies.ts';
-import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_HEADER_BAR_HEIGHT, DOWNLOAD_HEADER_HEIGHT,
+import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_FLOATING_HEADER_TOP_GAP, APP_HEADER_BAR_HEIGHT, DOWNLOAD_HEADER_HEIGHT,
   DOWNLOAD_HEADER_ACTION_WIDTH, DOWNLOAD_HEADER_ACTION_HEIGHT } from '../foundation/ReaderHeaderMetrics';
 import { readerScaledBarHeight } from '../foundation/ReaderSurfaceResolvers';
 
@@ -37,6 +39,7 @@ export struct PageBackBar {
   @Prop balancedCenteredSlots: boolean = false;
   @Prop centered: boolean = false;
   @Prop minimumBarHeightVp: number = 0;
+  @Prop layoutExpectedTopGapVp: number = -1;
   @Prop @Watch('onRaisedRecipeChanged') floating: boolean = false;
   /** Rounded fixed bars keep their geometry without inheriting lift. */
   @Prop elevation: 'fixed' | 'floating' | 'raised' = 'fixed';
@@ -108,7 +111,9 @@ export struct PageBackBar {
           .fontSize(TYPE_DOWNLOAD_HEADER_TITLE.fontSizeFp).lineHeight(TYPE_DOWNLOAD_HEADER_TITLE.lineHeightFp as number)
           .halfLeading(true).fontColor(readerAppColor('TOK_INK', this.appThemeScheme))
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-          .textAlign(TextAlign.Center).layoutWeight(1);
+          .textAlign(TextAlign.Center).layoutWeight(1)
+          .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'header-content', id: 'back-bar-title' } as LayoutInvariantTag : undefined);
       } else {
         Text(this.title)
           .fontFamily(this.variant === 'mangaDirectory' ? READER_FONT_NOTO_SANS_SC_UI_BOLD : TYPE_PAGE_TITLE.fontFamily)
@@ -128,7 +133,9 @@ export struct PageBackBar {
           .textOverflow({ overflow: TextOverflow.Ellipsis })
           .accessibilityText(this.title)
           .layoutWeight(1)
-          .textAlign(this.centered ? TextAlign.Center : TextAlign.Start);
+          .textAlign(this.centered ? TextAlign.Center : TextAlign.Start)
+          .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'header-content', id: 'back-bar-title' } as LayoutInvariantTag : undefined);
       }
 
       if (this.variant === 'download') {
@@ -145,6 +152,10 @@ export struct PageBackBar {
       }
     }
     .width('100%')
+    .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: this.floating ? 'floating-header' : 'fixed-header', id: 'page-back-bar',
+          expectedHeightVp: this.barHeight(), expectedTopGapVp: this.layoutExpectedTopGapVp >= 0
+            ? this.layoutExpectedTopGapVp : this.floating ? APP_FLOATING_HEADER_TOP_GAP : 0 } as LayoutInvariantTag : undefined)
     .constraintSize({ minHeight: this.barHeight() })
     .padding({ left: this.leftInset(), right: this.rightInset(), top: this.verticalInset(), bottom: this.verticalInset() })
     .alignItems(VerticalAlign.Center)
@@ -176,6 +187,8 @@ export struct PageBackBar {
     .attributeModifier(new MangaDirectoryPressFeedback(true, this.variant === 'mangaDirectory', this.appThemeScheme, 'nativeButton'))
     .accessibilityText(this.backLabel).accessibilityRole(AccessibilityRoleType.BUTTON)
     .id(this.backFocusId)
+    .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'key-control', id: 'page-back-button' } as LayoutInvariantTag : undefined)
     .onClick((): void => this.onBack());
   }
 

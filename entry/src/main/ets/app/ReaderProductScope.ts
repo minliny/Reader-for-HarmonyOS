@@ -1,3 +1,5 @@
+import { readerVmJourneyFixtureActive } from './diagnostics/ReaderPublicFixtureScope.ts';
+
 /**
  * Product-surface admission for the shipping HarmonyOS application.
  *
@@ -22,7 +24,7 @@ function configuredReaderProductProfile(): ReaderProductProfile {
 export const READER_PRODUCT_PROFILE: ReaderProductProfile = configuredReaderProductProfile();
 
 export function isReaderProductSurfaceEnabled(surface: ReaderProductSurface): boolean {
-  if (READER_PRODUCT_PROFILE !== 'extended') {
+  if (READER_PRODUCT_PROFILE !== 'extended' && !readerVmJourneyFixtureActive()) {
     return false;
   }
   return surface === 'discover' || surface === 'rss' || surface === 'sync' ||

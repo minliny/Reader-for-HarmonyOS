@@ -6,7 +6,7 @@ import type { BookAcquisitionChange } from '../../reading/application/BookAcquis
 import type { BookRequestOptions } from '../../../app/BookRequestScheduler';
 import { coreHttpResponseStatus, errorMessageOf, httpTransportFailureSummary, type HttpTransportFailureSummary } from '../../../app/ErrorMessage';
 import { SearchBookProjection, type SearchBookPatch } from './SearchBookProjection';
-import { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
+import type { ReaderRuntimeOwner } from '../../../app/ReaderRuntimeOwner';
 import {
   classifyReaderSource,
   readerSourceCategoryIsReadable,
@@ -167,7 +167,7 @@ export class SearchGateway {
     return this.runtimeOwner.bookAcquisitions?.().sourceRegistryRevision?.();
   }
 
-  constructor(runtimeOwner: ReaderRuntimeOwner = ReaderRuntimeOwner.current()) {
+  constructor(runtimeOwner: ReaderRuntimeOwner) {
     this.runtimeOwner = runtimeOwner;
   }
 

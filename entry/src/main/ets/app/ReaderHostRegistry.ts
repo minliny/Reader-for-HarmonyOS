@@ -26,6 +26,7 @@ import type { MangaOfflineNetworkProbe } from './MangaOfflineNetworkProbe';
 import { buildReaderPublicFixtureDirectory, type ReaderPublicFixtureScope } from './diagnostics/ReaderPublicFixtureScope';
 import { admitReaderPublicSearchHttpFixtureRequest, readerPublicSearchHttpFixtureMode,
   type ReaderPublicSearchHttpFixture } from './diagnostics/ReaderPublicSearchHttpFixture';
+import { readerVmJourneyResponse } from './diagnostics/ReaderVmJourneyData';
 import { READER_LOCAL_BOOK_PICKER_FILTER, isReaderLocalBookFileName } from './ReaderLocalBookFormatAdmission';
 
 type SnapshotEncoding = 'value' | 'valueBase64';
@@ -267,6 +268,10 @@ export class ReaderHostRegistry {
       if (this.fixtureDirectory !== undefined) {
         const fixture = this.publicSearchHttpFixture;
         const current = this.publicSearchHttpIsCurrent;
+        if (fixture === 'vm-journeys') {
+          const response = current?.() === true ? readerVmJourneyResponse(event.params) : undefined;
+          return response === undefined ? Promise.reject(new Error('PUBLIC_FIXTURE_NETWORK_DISABLED')) : Promise.resolve(response);
+        }
         const request = fixture !== undefined && current?.() === true ?
           admitReaderPublicSearchHttpFixtureRequest(fixture, event.params) : undefined;
         if (request === undefined || current === undefined) {
@@ -296,6 +301,7 @@ export class ReaderHostRegistry {
         fetch: (params: JsonObject, current: () => boolean, maxBytes: number): Promise<Uint8Array> => {
           const dataUri = params['dataUri'];
           if (typeof dataUri === 'string') return Promise.resolve(ReadingBodyImageHost.instance.readDataUriBytes(dataUri, current, maxBytes));
+          if (this.publicSearchHttpFixture === 'vm-journeys') return Promise.reject(new Error('PUBLIC_FIXTURE_NETWORK_DISABLED'));
           return ReadingBodyImageHost.instance.fetchRequestBytes(params, current, maxBytes,
             (): void => { this.mangaOfflineProbe?.beforeImageHttp(event.requestId); });
         },

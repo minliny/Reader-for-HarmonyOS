@@ -1,3 +1,6 @@
+import { READER_LAYOUT_DEBUG_BUILD, newReaderLayoutModalId, publishReaderLayoutModal } from '../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../ui/layout/LayoutInvariantEvaluator';
+import { READER_REDUCED_FADE_MS, READER_SHEET_CLOSE_MS } from '../foundation/ProductMotionTiming';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import { readerMotionAnimateParam, readerMotionReducedFadeParam } from '../foundation/ReaderMotionPolicy';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
@@ -30,6 +33,7 @@ export struct ReaderBottomSheet {
   private coverAppearance: number = 0;
   private frameAttached: boolean = false;
   private opened: boolean = false;
+  private layoutModalId: number = 0;
 
   aboutToAppear(): void {
     this.mounted = true;
@@ -39,6 +43,7 @@ export struct ReaderBottomSheet {
   aboutToDisappear(): void {
     this.mounted = false;
     this.coverAppearance += 1;
+    if (this.layoutModalId > 0) publishReaderLayoutModal(this.layoutModalId, false, false, 0);
   }
 
   private onVisibilityChanged(): void {
@@ -49,6 +54,14 @@ export struct ReaderBottomSheet {
       this.frameVisible = false;
       if (this.coverReady && !this.frameAttached) this.coverVisible = false;
     }
+    this.reportLayoutModal();
+  }
+
+  private reportLayoutModal(): void {
+    if (typeof READER_LAYOUT_DEBUG_BUILD !== 'boolean' || !READER_LAYOUT_DEBUG_BUILD) return;
+    if (this.layoutModalId === 0) this.layoutModalId = newReaderLayoutModalId();
+    publishReaderLayoutModal(this.layoutModalId, this.visible, this.coverVisible || this.coverReady,
+      this.reduceMotion ? READER_REDUCED_FADE_MS : READER_SHEET_CLOSE_MS);
   }
 
   private coverOptions(): ContentCoverOptions {
@@ -59,6 +72,7 @@ export struct ReaderBottomSheet {
       onAppear: (): void => {
         if (!this.mounted) return;
         this.coverReady = true;
+        this.reportLayoutModal();
         const appearance = ++this.coverAppearance;
         // The native cover may announce appearance during its first render.
         void Promise.resolve().then((): void => {
@@ -76,6 +90,7 @@ export struct ReaderBottomSheet {
         this.frameVisible = false;
         this.frameAttached = false;
         this.opened = false;
+        this.reportLayoutModal();
         if (this.mounted) this.onClosed();
       },
     };
@@ -106,7 +121,10 @@ export struct ReaderBottomSheet {
             readerMotionAnimateParam('app.sheet.scrim', false)));
         this.frame();
       }
-    }.width('100%').height('100%').hitTestBehavior(HitTestMode.Default);
+    }.width('100%').height('100%').hitTestBehavior(HitTestMode.Default)
+      .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'modal-overlay', id: 'bottom-sheet', active: this.visible,
+          intercepts: this.coverVisible, closeDurationMs: this.reduceMotion ? READER_REDUCED_FADE_MS : READER_SHEET_CLOSE_MS } as LayoutInvariantTag : undefined);
   }
 
   @Builder

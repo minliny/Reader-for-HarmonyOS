@@ -42,6 +42,7 @@ import { bindReaderNamedPublicStorage, buildReaderPublicFixtureDirectory, isRead
 import { prepareReaderPublicLongBook, prepareReaderPublicScrolledBooks } from '../app/diagnostics/ReaderPublicLongBook';
 import { prepareReaderPublicSingleSource } from '../app/diagnostics/ReaderPublicSingleSource';
 import { prepareReaderPublicSourceRecipe } from '../app/diagnostics/ReaderPublicSourceRecipe';
+import { prepareReaderVmJourneyFixture } from '../app/diagnostics/ReaderVmJourneyFixture';
 import { readerPublicSearchHttpFixtureMode } from '../app/diagnostics/ReaderPublicSearchHttpFixture';
 import { CookieSessionStore } from '../platform/network/CookieSessionStore';
 import { ArkWebExecutor } from '../platform/network/ArkWebExecutor';
@@ -96,6 +97,9 @@ export default class EntryAbility extends UIAbility {
       return;
     }
     ReaderUIVerificationProbe.configure(DEBUG === true && BUILD_MODE_NAME === 'debug', this.publicFixture?.id);
+    if (DEBUG && BUILD_MODE_NAME === 'debug' && (this.publicFixture !== undefined || want.parameters?.readerLayoutInvariants === true)) {
+      AppStorage.setOrCreate<boolean>('readerLayoutInvariantAutomation', true);
+    }
     installMangaAtomicPayloadReader();
     const trace = ReaderStartupTrace.install(readerMotionNowMs, (sample: ReaderStartupSample): void => {
       hilog.info(DOMAIN, 'Reader', 'READER_STARTUP %{public}s', JSON.stringify(sample));
@@ -186,6 +190,11 @@ export default class EntryAbility extends UIAbility {
       });
     } else if (fixture !== undefined && requiresFixtureSeed) {
       dataReady = coreReady.then(async (): Promise<void> => {
+        if (fixture.id === 'vm-journeys') {
+          await prepareReaderVmJourneyFixture(owner, fixture);
+          hilog.info(DOMAIN, 'ReaderVmJourney', 'Public UI fixture VM journeys verified');
+          return;
+        }
         if (fixture.id === 'search-detail-scroll-corpus') {
           await prepareReaderPublicScrolledBooks(owner, fixture);
           hilog.info(DOMAIN, 'Reader', 'Public UI fixture empty Source and eight scroll books verified');

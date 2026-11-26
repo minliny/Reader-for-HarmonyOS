@@ -1,4 +1,7 @@
 import { LengthMetrics } from '@kit.ArkUI';
+import { APP_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import type { RssOriginalMutationIdentity, RssOriginalMutationProjection } from '../application/RssMutationRecoveryContract';
 import { ReaderLabeledIconAction } from '../../../ui/controls/ReaderLabeledIconAction';
 import { RssPresentationProjection } from '../presentation/RssPresentationProjection';
@@ -161,6 +164,8 @@ export struct RssPage {
     Flex({ wrap: FlexWrap.Wrap, justifyContent: FlexAlign.SpaceBetween, alignItems: ItemAlign.Center,
       space: { main: LengthMetrics.vp(8), cross: LengthMetrics.vp(8) } }) {
       Text('RSS')
+        .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+          ? { role: 'header-content', id: 'rss-title' } as LayoutInvariantTag : undefined)
         .fontFamily(TYPE_RSS_HOME_TITLE.fontFamily)
         .fontWeight(TYPE_RSS_HOME_TITLE.fontWeight)
         .fontSize(TYPE_RSS_HOME_TITLE.fontSizeFp)
@@ -178,7 +183,10 @@ export struct RssPage {
       .margin({ left: this.headerLeftInset() });
     }
     .width('100%')
-    .constraintSize({ minHeight: 58 })
+    .constraintSize({ minHeight: APP_HEADER_BAR_HEIGHT })
+    .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+      ? { role: 'fixed-header', id: 'rss-top-bar', expectedHeightVp: APP_HEADER_BAR_HEIGHT,
+        expectedTopGapVp: 0 } as LayoutInvariantTag : undefined)
     .padding({ right: this.headerRightInset() });
   }
 

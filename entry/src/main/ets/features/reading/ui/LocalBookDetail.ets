@@ -1,3 +1,5 @@
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { readerIsExpandedWidth } from '../../../ui/foundation/ReaderWidthClass';
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfaces/ReaderActionMenuSurface';
@@ -373,6 +375,10 @@ export struct LocalBookDetail {
       }.width('100%').constraintSize({ minWidth: 44, minHeight: 44 })
         .padding(0).backgroundColor(Color.Transparent).borderRadius(999)
         .enabled(primary ? this.readingActionAvailable() : this.shelfActionAvailable())
+        .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'key-control', id: primary ? 'detail-read' : 'detail-shelf',
+          busy: primary ? this.removing || this.catalogBusy : this.shelfAction().busy,
+          unavailable: !this.detailBookAvailable() || (primary && this.book.sourceId === 'local' && !this.readingEnabled) } as LayoutInvariantTag : undefined)
         .opacity((primary ? this.readingActionAvailable() : this.shelfActionAvailable()) ? 1 : .45)
         .accessibilityText(primary ? this.readingActionLabel() : this.shelfActionLabel())
         .onTouch((event: TouchEvent): void => this.observeDetailPress(primary ? 'read' : 'shelf', event,
@@ -1020,6 +1026,9 @@ export struct LocalBookDetail {
         }.layoutWeight(1)
           .constraintSize({ minHeight: 44 })
           .padding(0).borderRadius(999)
+          .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'key-control', id: 'detail-read', busy: this.removing || this.catalogBusy,
+          unavailable: !this.detailBookAvailable() || (this.book.sourceId === 'local' && !this.readingEnabled) } as LayoutInvariantTag : undefined)
           .opacity(this.readingActionAvailable() ? 1 : this.book.contentKind === 'manga' ? visual.disabledOpacity : 0.5)
           .attributeModifier(new ReaderActionAccessibility(this.readingActionLabel(), this.readingActionAvailable(), false, true,
             new ReaderPressFeedback(this.detailColor('TOK_PRIMARY_DARK', 'green'), this.appThemeScheme,
@@ -1042,6 +1051,8 @@ export struct LocalBookDetail {
         }.width(this.book.contentKind === 'manga' ? visual.detailSecondaryWidth : 94)
           .constraintSize({ minHeight: 44 })
           .padding(0).borderRadius(999)
+          .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'key-control', id: 'detail-shelf', busy: this.shelfAction().busy, unavailable: !this.detailBookAvailable() } as LayoutInvariantTag : undefined)
           .opacity(this.shelfActionAvailable() ? 1 : this.book.contentKind === 'manga' ? visual.disabledOpacity : 0.4)
           .border({ width: 1, color: this.detailColor('TOK_LINE', 'line') })
           .attributeModifier(new ReaderActionAccessibility(this.shelfActionLabel(), this.shelfActionAvailable(), false, true,
@@ -1060,6 +1071,8 @@ export struct LocalBookDetail {
         .constraintSize({ minHeight: 44 }).alignItems(VerticalAlign.Center);
     // The viewport-bottom owner aligns this complete measured surface.
     }.width('100%')
+      .customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+        ? { role: 'primary-dock', id: 'detail-dock' } as LayoutInvariantTag : undefined)
       .constraintSize({ minHeight: this.book.contentKind === 'manga' ? visual.detailDockHeight : DETAIL_DOCK_HEIGHT })
       .padding(this.book.contentKind === 'manga' ? visual.detailDockPadding : 9)
       .attributeModifier(new ReaderPanelFrame('floating-action-dock', this.appThemeScheme, false, this.dockNativeShape()))

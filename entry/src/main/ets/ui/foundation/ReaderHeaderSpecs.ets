@@ -2,6 +2,9 @@ import { TOK_BORDER_W } from './ReaderTokens';
 import {
   APP_FLOATING_HEADER_BAR_HEIGHT,
   APP_FLOATING_HEADER_TOP_GAP,
+  BOOKSHELF_HEADER_CONTENT_GAP,
+  BOOKSHELF_HEADER_TITLE_LINE_HEIGHT,
+  SEARCH_HEADER_BAR_VERTICAL_PADDING,
 } from './ReaderHeaderMetrics';
 
 // One threshold for raised shelf/detail chrome; consumers only publish a
@@ -15,7 +18,7 @@ const RAISED_HEADER_SCROLL_THRESHOLD_VP: number = 4;
  */
 export class BookshelfHeaderSpec {
   readonly titleFontSize: number = 19;
-  readonly titleLineHeight: number = 28;
+  readonly titleLineHeight: number = BOOKSHELF_HEADER_TITLE_LINE_HEIGHT;
   readonly innerInset: number = 9;
   readonly actionExtent: number = 44;
   readonly iconExtent: number = 24;
@@ -43,7 +46,7 @@ export class BookshelfHeaderSpec {
   }
 }
 
-const BOOKSHELF_HEADER_SPEC = new BookshelfHeaderSpec(APP_FLOATING_HEADER_BAR_HEIGHT, APP_FLOATING_HEADER_TOP_GAP, 8);
+const BOOKSHELF_HEADER_SPEC = new BookshelfHeaderSpec(APP_FLOATING_HEADER_BAR_HEIGHT, APP_FLOATING_HEADER_TOP_GAP, BOOKSHELF_HEADER_CONTENT_GAP);
 
 export function bookshelfHeaderSpec(): BookshelfHeaderSpec {
   return BOOKSHELF_HEADER_SPEC;
@@ -87,8 +90,8 @@ export class SearchHeaderSpec {
   readonly panelBottomGap: number = 6;
   readonly barPaddingLeft: number = 5;
   readonly barPaddingRight: number = 6;
-  readonly barPaddingTop: number = 8;
-  readonly barPaddingBottom: number = 8;
+  readonly barPaddingTop: number = SEARCH_HEADER_BAR_VERTICAL_PADDING;
+  readonly barPaddingBottom: number = SEARCH_HEADER_BAR_VERTICAL_PADDING;
   readonly barHeightExtra: number;
   readonly filterMinHeight: number = 44;
   readonly filterLabelLineHeight: number = 17;

@@ -1,3 +1,5 @@
+import { READER_LAYOUT_DEBUG_BUILD } from '../../../ui/foundation/ReaderLayoutInvariantSignals';
+import type { LayoutInvariantTag } from '../../../ui/layout/LayoutInvariantEvaluator';
 import { readerMainViewport } from '../../shell/MainNavigationSpec';
 /**
  * Empty shelf, rebuilt 2026-08-06 against live Figma node `State/BookshelfEmpty`
@@ -88,7 +90,9 @@ export struct BookshelfEmptyPage {
       contentWidth: this.contentFrame().width,
       actionsEnabled: false,
       actionsOpacity: 0.42,
-    });
+    }).customProperty('readerLayoutInvariant', typeof READER_LAYOUT_DEBUG_BUILD === 'boolean' && READER_LAYOUT_DEBUG_BUILD
+      ? { role: 'scroll-content', id: 'shelf-empty-section', scope: 'bookshelf',
+        expectedContentGapVp: bookshelfHeaderSpec().contentGap } as LayoutInvariantTag : undefined);
   }
 
   private contentFrame(): SurfaceHorizontalFrame {
