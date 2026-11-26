@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import fs, { chmodSync, mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
+import fs, { chmodSync, mkdirSync, mkdtempSync, renameSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import { syncBuiltinESMExports } from 'node:module';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -98,6 +98,28 @@ test('late additions under included directories and new previously missing roots
       assert.throws(changedTree.assertUnchanged, /snapshot input changed before publication: selected/);
       assert.throws(missingRoot.assertUnchanged, /snapshot input changed before publication: absent/);
     } finally { await Promise.all([changedTree.stop(), missingRoot.stop()]); }
+  });
+});
+
+test('late directory timestamp changes preserve the seal only with the same members and file identities', async () => {
+  await fixture(async dir => {
+    const selected = join(dir, 'selected');
+    const item = join(selected, 'item');
+    mkdirSync(selected);
+    writeFileSync(item, 'original');
+    const batch = startRegularInputSnapshots([{ repo: dir, inputs: ['selected'] }]);
+    try {
+      await batch.result;
+      utimesSync(selected, 1, 1);
+      assert.doesNotThrow(batch.assertUnchanged);
+      writeFileSync(join(selected, 'new'), 'new');
+      assert.throws(batch.assertUnchanged, /snapshot input changed before publication: selected/);
+      rmSync(join(selected, 'new'));
+      assert.doesNotThrow(batch.assertUnchanged);
+      rmSync(item);
+      writeFileSync(item, 'original');
+      assert.throws(batch.assertUnchanged, /snapshot input changed before publication: selected[\\/]item/);
+    } finally { await batch.stop(); }
   });
 });
 
