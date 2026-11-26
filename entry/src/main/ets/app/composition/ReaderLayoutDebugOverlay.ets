@@ -663,10 +663,14 @@ export struct ReaderLayoutDebugOverlay {
     }
     let clipped = false;
     if (bounds !== undefined && clip !== undefined) {
-      const effective = this.intersectBounds(bounds, clip);
+      const frame: ReaderDebugRect = { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height };
+      const effective = this.intersectBounds(frame, clip);
       clipped = bounds.width - effective.width > 1 || bounds.height - effective.height > 1;
     }
-    const reportTag: LayoutInvariantTag = { ...tag, id: `${tag.id}:${nativeId}` };
+    const reportTag: LayoutInvariantTag = { id: `${tag.id}:${nativeId}`, role: tag.role, scope: tag.scope,
+      expectedHeightVp: tag.expectedHeightVp, expectedTopGapVp: tag.expectedTopGapVp,
+      expectedContentGapVp: tag.expectedContentGapVp, busy: tag.busy, unavailable: tag.unavailable,
+      active: tag.active, closeDurationMs: tag.closeDurationMs, intercepts: tag.intercepts };
     this.invariantNodes.push({ tag: reportTag, bounds, clipped, headerId, enabled, opacity, intercepts });
   }
 
