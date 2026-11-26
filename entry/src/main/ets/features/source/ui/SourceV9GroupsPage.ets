@@ -12,14 +12,19 @@ import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
 import { readerAppColor, type ReaderAppColorRole } from '../../../ui/foundation/ReaderThemeRegistry';
 import { consumeReaderControlKeyboardBack } from '../../../ui/foundation/ReaderKeyboardBack';
 import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
+import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerReadableFontScale } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
 import { ReaderFrameStyle, readerFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
+import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { ReaderPageGeometry, ReaderPageGeometryInput, applyReaderStandardFloatingHeader,
   resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { readerPageAreaLength, readerStandardPageContentEndInset, readerStandardPageSpec,
   READER_STANDARD_PAGE_CONTENT_GAP } from '../../../ui/layout/ReaderPageShell';
-import { DialogActionView, ReaderDialogSurface } from '../../../ui/surfaces/ReaderDialogSurface';
+import { DialogActionView, ReaderDialogSurface, readerDialogCardTransition,
+  readerDialogScrimTransition } from '../../../ui/surfaces/ReaderDialogSurface';
 import { readerSurfaceElevation } from '../../../ui/surfaces/ReaderSurfaceSpecs';
 import type { BookSource, SourceGroupCatalogData, SourceGroupMutateParams, SourceGroupRecord } from '../application/SourceGateway';
 import { SourceInitialMembershipUnconfirmed } from '../application/SourceInitialMembershipUnconfirmed';
@@ -34,7 +39,7 @@ const GROUP_MEMBER_INSET = 10;
 const GROUP_MEMBER_GAP = 6;
 const GROUP_TITLE_GAP = 8;
 const GROUP_TITLE_BUDGET = 132;
-const GROUP_MEMBER_CHROME_WIDTH = 34 + GROUP_TITLE_GAP + 28 + 44 + 2 * GROUP_MEMBER_GAP;
+const GROUP_MEMBER_CHROME_WIDTH = 34 + GROUP_TITLE_GAP + 44 + 44 + 2 * GROUP_MEMBER_GAP;
 
 interface GroupRow {
   id: string;
@@ -62,13 +67,22 @@ class GroupSourceData implements IDataSource {
     this.rows = rows;
     for (const listener of this.listeners) listener.onDataReloaded();
   }
+
+  notifySelection(sourceId: string): void {
+    const index = this.rows.findIndex((source: BookSource): boolean => source.sourceId === sourceId);
+    if (index >= 0) {
+      for (const listener of this.listeners) listener.onDataChange(index);
+    }
+  }
 }
 
 @Component
 export struct SourceV9GroupsPage {
   @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
   @StorageLink('readerWindowMetricsRevision') private windowRevision: number = 0;
   @Prop @Watch('refreshGroups') catalog: SourceGroupCatalogData | undefined = undefined;
+  @Prop catalogError: string = '';
   @Prop @Watch('refreshGroups') sources: BookSource[] = [];
   @Prop @Watch('refreshGroups') detailGroupId: string | undefined = undefined;
   @Prop @Watch('externalMoveChanged') moveSourceIds: string[] = [];
@@ -80,12 +94,12 @@ export struct SourceV9GroupsPage {
   @Prop operation: SourceManagementProjection = { action: 'load', sourceId: '' };
   onBack: () => void = (): void => {};
   onOpenGroup: (groupId: string) => void = (_groupId: string): void => {};
+  onRetryCatalog: () => void = (): void => {};
   onCloseMove: (applied?: boolean) => void = (_applied?: boolean): void => {};
   onMutate: (params: SourceGroupMutateParams) => Promise<void> = async (_params: SourceGroupMutateParams): Promise<void> => {};
   onToggle: (ids: string[], enabled: boolean) => void = (_ids: string[], _enabled: boolean): void => {};
   onCheck: (ids: string[], group?: boolean) => void = (_ids: string[], _group?: boolean): void => {};
   onBatchUngrouped: (ids: string[]) => void = (_ids: string[]): void => {};
-  onLogin: (id: string, url: string) => void = (_id: string, _url: string): void => {};
   onReconcile: (generation: number) => void = (_generation: number): void => {};
   onContinueOriginal: (generation: number) => void = (_generation: number): void => {};
   onTemporaryBackBridge: (handler: (() => boolean) | undefined) => void = (_handler: (() => boolean) | undefined): void => {};
@@ -101,10 +115,10 @@ export struct SourceV9GroupsPage {
   @State private query: string = '';
   @State private selection: string[] = [];
   @State private target: string | undefined = '';
-  @State private bodyLimit: number = 200;
   @State private paneWidth: number = 0;
   @State private paneHeight: number = 0;
   @State private paneLeft: number = 0;
+  @State private paneTop: number = 0;
   @State private headerHeight: number = APP_FLOATING_HEADER_BAR_HEIGHT;
   @State private mutationProblem: string = '';
   private mounted: boolean = false;
@@ -306,11 +320,14 @@ export struct SourceV9GroupsPage {
 
   private groupExists(groupId: string): boolean { return groupId === '' || this.groupNames.has(groupId); }
 
-  private usableName(excludedId: string = ''): boolean {
+  private nameError(excludedId: string = ''): string {
     const name = this.name.trim();
-    return name.length > 0 && Array.from(name).length <= 32 && name !== '全部分组' && name !== '未分组' &&
-      !this.groups.some((row: GroupRow): boolean => row.id !== '' &&
-      row.id !== excludedId && row.name === name);
+    if (name.length === 0) return '请输入分组名称';
+    if (Array.from(name).length > 32) return '分组名称最多 32 个字符';
+    if (name === '全部分组' || name === '未分组') return '该名称由系统保留';
+    if (this.groups.some((row: GroupRow): boolean => row.id !== '' &&
+      row.id !== excludedId && row.name === name)) return '已存在同名分组';
+    return '';
   }
 
   private selectedSources(ids: string[], exceptGroup?: string): string[] {
@@ -324,6 +341,7 @@ export struct SourceV9GroupsPage {
     if (!this.dialogEditable() || (this.dialog !== 'create' && this.dialog !== 'add')) return;
     this.selection = this.selection.includes(id) ? this.selection.filter((item: string): boolean => item !== id) :
       [...this.selection, id];
+    this.candidateData.notifySelection(id);
   }
 
   private setName(name: string): void { if (this.dialogEditable()) this.name = name; }
@@ -345,10 +363,10 @@ export struct SourceV9GroupsPage {
     const groupId = this.dialogGroupId;
     switch (this.dialog) {
       case 'create':
-        return this.usableName() ? { expectedRevision, action: 'create', name,
+        return this.nameError().length === 0 ? { expectedRevision, action: 'create', name,
           sourceIds: this.selectedSources(this.selection) } : undefined;
       case 'rename':
-        return this.groupExists(groupId) && groupId !== '' && this.usableName(groupId) ?
+        return this.groupExists(groupId) && groupId !== '' && this.nameError(groupId).length === 0 ?
           { expectedRevision, action: 'rename', groupId, name } : undefined;
       case 'delete':
         return this.groupExists(groupId) && groupId !== '' ? { expectedRevision, action: 'delete', groupId, targetGroupId: '' } : undefined;
@@ -362,7 +380,7 @@ export struct SourceV9GroupsPage {
         const sourceIds = this.selectedSources(this.movingIds, target);
         if (sourceIds.length === 0) return undefined;
         if (target === undefined) {
-          return this.usableName() ? { expectedRevision, action: 'create', name, sourceIds } : undefined;
+          return this.nameError().length === 0 ? { expectedRevision, action: 'create', name, sourceIds } : undefined;
         }
         return this.groupExists(target) ? { expectedRevision, action: 'assign', targetGroupId: target, sourceIds } : undefined;
       }
@@ -460,7 +478,7 @@ export struct SourceV9GroupsPage {
     if (tone === 'primary') return this.color('app.sourceUi.onPrimary');
     if (tone === 'soft') return this.color('app.sourceUi.primary');
     if (tone === 'danger') return this.color('app.sourceUi.danger');
-    return this.color('app.sourceUi.muted');
+    return this.color('TOK_INK');
   }
 
   private rowKey(source: BookSource): string {
@@ -500,13 +518,30 @@ export struct SourceV9GroupsPage {
     const width = readerPageAreaLength(area.width);
     const height = readerPageAreaLength(area.height);
     const left = readerPageAreaLength(area.globalPosition.x);
+    const top = readerPageAreaLength(area.globalPosition.y);
     if (!this.mounted || !Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0) return;
     if (Math.abs(width - this.paneWidth) > .1) this.paneWidth = width;
-    if (Math.abs(height - this.paneHeight) > .1) {
-      this.paneHeight = height;
-      this.bodyLimit = Math.max(84, Math.min(208, height - 245));
-    }
+    if (Math.abs(height - this.paneHeight) > .1) this.paneHeight = height;
     if (Number.isFinite(left) && Math.abs(left - this.paneLeft) > .1) this.paneLeft = left;
+    if (Number.isFinite(top) && Math.abs(top - this.paneTop) > .1) this.paneTop = top;
+  }
+
+  private keyboardClearance(): number {
+    this.windowRevision;
+    const metrics = readerWindowMetrics();
+    if (!metrics.ready) return 0;
+    return Math.max(0, this.paneHeight - readerKeyboardHostBottom(
+      metrics, this.paneTop, this.paneHeight, this.paneLeft, this.paneWidth));
+  }
+
+  private bodyLimit(): number {
+    return Math.max(0, Math.min(440,
+      this.paneHeight - this.keyboardClearance() - Math.max(128, 98 * this.fontScale())));
+  }
+
+  private fontScale(): number {
+    this.windowRevision;
+    return readerReadableFontScale(readerWindowMetrics().systemFontScale);
   }
 
   private pageGeometry(): ReaderPageGeometry {
@@ -558,15 +593,35 @@ export struct SourceV9GroupsPage {
   private pageBody(geometry: ReaderPageGeometry) {
     Column() {
       if (this.catalog === undefined) {
-        ReaderPageState({ title: '正在读取书源分组', loading: true, loadingActive: this.inputEnabled })
+        ReaderPageState({ title: this.catalogError.length > 0 ? '书源分组读取失败' : '正在读取书源分组',
+          message: this.catalogError, loading: this.catalogError.length === 0, loadingActive: this.inputEnabled,
+          actionLabel: this.catalogError.length > 0 ? '重试' : '', actionEnabled: this.inputEnabled,
+          onAction: (): void => {
+            if (this.inputCurrent() && this.catalog === undefined && this.catalogError.length > 0) this.onRetryCatalog();
+          } })
           .layoutWeight(1);
       } else if (this.detailGroupId === undefined) {
-        this.groupList();
+        Column() {
+          this.groupList();
+        }.width('100%').layoutWeight(1).transition(this.groupTransition(false));
       } else {
-        this.groupDetail();
+        Column() {
+          this.groupDetail();
+        }.width('100%').layoutWeight(1).transition(this.groupTransition(true));
       }
     }.width('100%').height('100%').padding({ left: geometry.content.frame.left, right: geometry.content.frame.right,
       top: geometry.content.startInset, bottom: geometry.content.endInset });
+  }
+
+  private groupTransition(detail: boolean): TransitionEffect {
+    if (this.reduceMotion) {
+      return TransitionEffect.OPACITY.animation(readerMotionAnimateParam('app.navigation.push', true));
+    }
+    return TransitionEffect.asymmetric(
+      TransitionEffect.OPACITY.combine(TransitionEffect.translate({ x: detail ? 12 : -12 }))
+        .animation(readerMotionAnimateParam(detail ? 'app.navigation.push' : 'app.navigation.pop', false)),
+      TransitionEffect.OPACITY.combine(TransitionEffect.translate({ x: detail ? 12 : -12 }))
+        .animation(readerMotionAnimateParam(detail ? 'app.navigation.pop' : 'app.navigation.push', false)));
   }
 
   private feedbackHeight(): number {
@@ -602,7 +657,10 @@ export struct SourceV9GroupsPage {
 
   @Builder
   private header() {
-    PageBackBar({ floating: true, centered: true, elevation: 'floating', balancedCenteredSlots: true, trailingWidthVp: 84,
+    PageBackBar({ floating: true, centered: true, elevation: 'floating',
+      balancedCenteredSlots: this.detailGroupId === undefined,
+      trailingWidthVp: this.detailGroupId === '' ? 24 + Math.ceil(48 * this.fontScale()) :
+        36 + Math.ceil(24 * this.fontScale()),
       title: this.detailGroupId === undefined ? '分组管理' : this.detailName,
       backFocusId: 'reader-source-v9-group-back', onBack: (): void => this.back(),
       trailing: (): void => { this.headerActions(); },
@@ -626,17 +684,18 @@ export struct SourceV9GroupsPage {
   @Builder
   private action(label: string, tone: GroupActionTone, enabled: boolean, run: () => void,
     height: number = 32, size: number = 12, controlId: string = '') {
-    Button({ type: ButtonType.Capsule }) {
+    Button({ type: ButtonType.Capsule, stateEffect: false }) {
       Text(label).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontColor(this.actionInk(tone))
         .fontSize(size).minFontSize(9).maxFontSize(size).maxLines(1)
         .heightAdaptivePolicy(TextHeightAdaptivePolicy.LAYOUT_CONSTRAINT_FIRST)
         .textOverflow({ overflow: TextOverflow.Ellipsis });
     }.height(height).padding({ left: height < 30 ? 7 : 12, right: height < 30 ? 7 : 12 })
-      .id(controlId).backgroundColor(this.actionSurface(tone)).accessibilityText(label)
+      .id(controlId).accessibilityText(label)
+      .attributeModifier(new ReaderPressFeedback(this.actionSurface(tone), this.scheme, height / 2, height / 2, enabled))
       .border({ width: tone === 'neutral' ? 1 : 0, color: this.color('TOK_LINE_STRONG') })
-      .opacity(enabled ? 1 : 0.48).enabled(enabled).flexShrink(0)
-      .responseRegion({ y: height < 30 ? -(44 - height) / 2 : -4, height: height < 30 ? 44 : height + 8 })
-      .onClick((): void => { if (this.pageEditable()) run(); });
+      .opacity(enabled ? 1 : 0.45).enabled(enabled).flexShrink(0)
+      .responseRegion({ y: -(44 - height) / 2, height: 44 })
+      .onClick((): void => { if (enabled && this.pageEditable()) run(); });
   }
 
   @Builder
@@ -666,12 +725,14 @@ export struct SourceV9GroupsPage {
               .width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(12)
               .fontColor(this.color('app.sourceUi.muted'));
           }.layoutWeight(1).alignItems(HorizontalAlign.Start);
-          Image(this.scheme === 'night' ? $r('app.media.source_group_chevron_theme_night') : $r('app.media.source_group_chevron'))
+          Image(this.scheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') :
+            $r('app.media.reader_chevron_right'))
             .width(15).height(15).flexShrink(0);
         }.width('100%');
       }.id(`reader-source-v9-group-row-${group.id === '' ? 'ungrouped' : group.id}`)
         .layoutWeight(1).constraintSize({ minHeight: 44 }).padding(0)
-        .backgroundColor(Color.Transparent).enabled(this.pageEditable())
+        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.scheme, 10, 10, this.pageEditable()))
+        .enabled(this.pageEditable())
         .accessibilityText(`${group.name}，共 ${group.members} 个，已启用 ${group.enabled} 个`)
         .onClick((): void => this.openGroup(group.id));
       if (group.id !== '') {
@@ -726,23 +787,26 @@ export struct SourceV9GroupsPage {
     Column() {
       Row({ space: GROUP_MEMBER_GAP }) {
         this.memberTitle(source);
-        SourceV9DetectButton({ tone: sourceV9ReportTone(source), checking: source.checkState === 'checking',
-          actionEnabled: this.pageEditable(), label: `${source.name}，检测`,
-          controlId: `reader-source-v9-group-source-check-${source.sourceId}`,
-          onTap: (): void => this.checkMember(source.sourceId) });
+        Stack({ alignContent: Alignment.Center }) {
+          SourceV9DetectButton({ tone: sourceV9ReportTone(source), checking: source.checkState === 'checking',
+            actionEnabled: this.pageEditable(), label: `${source.name}，检测`,
+            controlId: `reader-source-v9-group-source-check-${source.sourceId}`,
+            onTap: (): void => this.checkMember(source.sourceId) });
+        }.width(44).height(44).flexShrink(0).clip(false);
+        if (!this.memberActionsStacked()) this.memberActions(source);
         ReaderToggle({ checkedColor: this.color('app.sourceUi.primary'), value: source.enabled, inputIdentity: source.sourceId,
           actionEnabled: this.pageEditable(), accessibilityLabel: `启用${source.name}`,
           onToggle: (next: boolean): void => { if (this.rowValid(source.sourceId)) this.onToggle([source.sourceId], next); } })
           .flexShrink(0);
-        if (!this.memberActionsStacked()) this.memberActions(source);
       }.width('100%').constraintSize({ minHeight: 44 });
       if (this.memberActionsStacked()) {
         Row({ space: GROUP_MEMBER_GAP }) {
           this.memberActions(source);
-        }.id(`reader-source-v9-group-member-actions-${source.sourceId}`).width('100%').constraintSize({ minHeight: 44 })
-          .justifyContent(FlexAlign.End);
+        }.id(`reader-source-v9-group-member-actions-${source.sourceId}`).width('100%')
+          .margin({ top: 9 }).justifyContent(FlexAlign.End);
       }
-    }.width('100%').padding({ left: GROUP_MEMBER_INSET, right: GROUP_MEMBER_INSET, top: 6, bottom: 6 });
+    }.width('100%').padding({ left: GROUP_MEMBER_INSET, right: GROUP_MEMBER_INSET,
+      top: this.memberActionsStacked() ? 2 : 6, bottom: this.memberActionsStacked() ? 9 : 6 });
   }
 
   private memberActionsStacked(): boolean {
@@ -751,7 +815,7 @@ export struct SourceV9GroupsPage {
 
   private memberTitleWidth(inlineActions: boolean): number {
     const available = this.pageGeometry().content.frame.width - 2 * (GROUP_MEMBER_INSET + 1);
-    const scale = readerReadableFontScale(ReaderWindowCoordinator.metrics().systemFontScale);
+    const scale = this.fontScale();
     const actionCount = this.detailGroupId === '' ? 1 : 2;
     // Each action has two 11fp glyphs and 7vp horizontal padding on either side.
     const actions = actionCount * (Math.ceil(22 * scale) + 14 + GROUP_MEMBER_GAP);
@@ -765,14 +829,17 @@ export struct SourceV9GroupsPage {
         SourceV9TypeSeal({ category: source.category });
         Column({ space: 1 }) {
           Text(source.name).width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(14).fontColor(this.color('TOK_INK'));
+            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(14).lineHeight(20).maxFontScale(this.fontScale())
+            .fontColor(this.color('TOK_INK'));
           Text(this.displayUrl(source)).width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(11).fontColor(this.color('app.sourceUi.muted'));
+            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(11).lineHeight(16).maxFontScale(this.fontScale())
+            .fontColor(this.color('app.sourceUi.muted'));
         }.layoutWeight(1).alignItems(HorizontalAlign.Start);
       }.width('100%');
     }.id(`reader-source-v9-group-source-row-${source.sourceId}`)
       .layoutWeight(1).constraintSize({ minHeight: 44 }).padding(0)
-      .backgroundColor(Color.Transparent).enabled(this.pageEditable()).accessibilityText(`${source.name}，检测详情`)
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.scheme, 8, 8, this.pageEditable()))
+      .enabled(this.pageEditable()).accessibilityText(`${source.name}，检测详情`)
       .onClick((): void => this.checkMember(source.sourceId));
   }
 
@@ -792,39 +859,55 @@ export struct SourceV9GroupsPage {
     Stack({ alignContent: Alignment.Center }) {
       Rect().width('100%').height('100%').fill(this.color('app.scrim.warmModal'))
         .accessibilityLevel('no').onClick((): void => { this.consumeBack(); });
-      ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: this.paneWidth,
-        primarySurfaceColor: this.color('app.sourceUi.primary'), title: this.dialogTitle(),
-        actions: [new DialogActionView('cancel', '取消', 'default', this.dialogEditable(), true),
-          new DialogActionView('confirm', this.confirmLabel(), this.dialog === 'delete' ? 'danger' : 'primary',
-            this.dialogParams() !== undefined)],
-        onAction: (id: string): void => { void this.confirmDialog(id); },
-        body: (): void => { this.dialogBody(); },
-      });
-    }.width('100%').height('100%');
+      Column() {
+        Column() {
+          ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: this.paneWidth,
+            primarySurfaceColor: this.color('app.sourceUi.primary'), title: this.dialogTitle(),
+            actions: [new DialogActionView('cancel', '取消', 'default', this.dialogEditable(), true),
+              new DialogActionView('confirm', this.confirmLabel(), this.dialog === 'delete' ? 'danger' : 'primary',
+                this.dialogParams() !== undefined)],
+            onAction: (id: string): void => { void this.confirmDialog(id); },
+            body: (): void => { this.dialogBody(); },
+          });
+        }.width('100%').hitTestBehavior(HitTestMode.Transparent).transition(readerDialogCardTransition(this.reduceMotion));
+      }.width('100%').height('100%').justifyContent(FlexAlign.Center)
+        .padding({ bottom: this.keyboardClearance() }).hitTestBehavior(HitTestMode.Transparent);
+    }.width('100%').height('100%').transition(readerDialogScrimTransition(this.reduceMotion));
   }
 
   @Builder
   private dialogBody() {
-    Column({ space: 8 }) {
-      if (this.dialog === 'create' || this.dialog === 'rename') {
-        this.field(this.name, '分组名称', (input: string): void => this.setName(input));
-      }
-      if (this.dialog === 'create') {
-        Text('添加首批成员（可选）').width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
-          .fontSize(12).fontColor(this.color('app.sourceUi.muted'));
-        this.candidateList();
-      } else if (this.dialog === 'delete') {
-        Text(`删除「${this.groupNames.get(this.dialogGroupId) ?? this.detailName}」后，成员将移入未分组。`)
-          .width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(13)
-          .fontColor(this.color('app.sourceUi.muted'));
-      } else if (this.dialog === 'add') {
-        this.field(this.query, '搜索书源名称、域名', (input: string): void => this.setQuery(input));
-        this.candidateList();
-      } else if (this.dialog === 'move') {
-        this.moveTargets();
-      }
-      this.actionFeedback(this.bodyLimit);
-    }.width('100%').alignItems(HorizontalAlign.Start);
+    Scroll() {
+      Column({ space: 8 }) {
+        if (this.dialog === 'create' || this.dialog === 'rename') {
+          this.nameField('分组名称', this.dialog === 'rename' ? this.dialogGroupId : '');
+        }
+        if (this.dialog === 'create') {
+          Text('添加首批成员（可选）').width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
+            .fontSize(12).fontColor(this.color('app.sourceUi.muted'));
+          this.candidateList();
+        } else if (this.dialog === 'delete') {
+          Text(`删除「${this.groupNames.get(this.dialogGroupId) ?? this.detailName}」后，成员将移入未分组。`)
+            .width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(13)
+            .fontColor(this.color('app.sourceUi.muted'));
+        } else if (this.dialog === 'add') {
+          this.field(this.query, '搜索书源名称、域名', (input: string): void => this.setQuery(input));
+          this.candidateList();
+        } else if (this.dialog === 'move') {
+          this.moveTargets();
+        }
+        this.actionFeedback(this.bodyLimit());
+      }.width('100%').alignItems(HorizontalAlign.Start);
+    }.width('100%').constraintSize({ maxHeight: this.bodyLimit() }).scrollBar(BarState.Auto);
+  }
+
+  @Builder
+  private nameField(placeholder: string, excludedId: string) {
+    this.field(this.name, placeholder, (input: string): void => this.setName(input));
+    if (this.nameError(excludedId).length > 0) {
+      Text(this.nameError(excludedId)).width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+        .fontSize(12).lineHeight(17).maxFontScale(this.fontScale()).fontColor(this.color('app.sourceUi.danger'));
+    }
   }
 
   @Builder
@@ -848,21 +931,25 @@ export struct SourceV9GroupsPage {
           ListItem() {
             this.candidateRow(source);
           }
-        }, (source: BookSource): string => JSON.stringify([source.sourceId, source.name, source.baseUrl, this.sourceGroup(source)]));
-      }.width('100%').constraintSize({ maxHeight: this.bodyLimit }).scrollBar(BarState.Off).cachedCount(3);
+        }, (source: BookSource): string => JSON.stringify([source.sourceId, source.name, source.baseUrl,
+          this.sourceGroup(source), this.groupNames.get(this.sourceGroup(source)), this.selection.includes(source.sourceId)]));
+      }.width('100%').constraintSize({ maxHeight: Math.min(208, this.bodyLimit()) }).scrollBar(BarState.Off).cachedCount(3)
+        .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
     }
   }
 
   @Builder
   private candidateRow(source: BookSource) {
-    Button({ type: ButtonType.Normal, stateEffect: true }) {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
       Row({ space: 8 }) {
         SourceV9CircleCheck({ selected: this.selection.includes(source.sourceId), actionEnabled: this.dialogEditable(), interactive: false });
         Column({ space: 1 }) {
           Text(source.name).width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(13).fontColor(this.color('TOK_INK'));
+            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(13).lineHeight(18).maxFontScale(this.fontScale())
+            .fontColor(this.color('TOK_INK'));
           Text(this.displayUrl(source)).width('100%').maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(11).fontColor(this.color('app.sourceUi.faint'));
+            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(11).lineHeight(16).maxFontScale(this.fontScale())
+            .fontColor(this.color('app.sourceUi.muted'));
         }.layoutWeight(1).alignItems(HorizontalAlign.Start);
         if (this.sourceGroup(source) !== '') {
           Text(this.groupNames.get(this.sourceGroup(source)) ?? '').constraintSize({ maxWidth: 82 })
@@ -870,8 +957,9 @@ export struct SourceV9GroupsPage {
             .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(11).fontColor(this.color('app.sourceUi.muted'));
         }
       }.width('100%');
-    }.width('100%').constraintSize({ minHeight: 44 }).padding({ left: 10, right: 10 }).borderRadius(10)
-      .backgroundColor(Color.Transparent).enabled(this.dialogEditable()).accessibilityText(source.name)
+    }.width('100%').constraintSize({ minHeight: 44 }).padding({ left: 10, right: 10 })
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.scheme, 10, 10, this.dialogEditable()))
+      .enabled(this.dialogEditable()).accessibilityText(source.name)
       .accessibilitySelected(this.selection.includes(source.sourceId))
       .onClick((): void => this.toggleSelection(source.sourceId));
   }
@@ -886,23 +974,25 @@ export struct SourceV9GroupsPage {
         }, (group: SourceGroupRecord): string => JSON.stringify([group.groupId, group.name]));
         this.targetOption(undefined, '新建分组');
       }.width('100%');
-    }.width('100%').constraintSize({ maxHeight: this.bodyLimit }).scrollBar(BarState.Off);
+    }.width('100%').constraintSize({ maxHeight: Math.min(208, this.bodyLimit()) }).scrollBar(BarState.Off)
+      .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
     if (this.target === undefined) {
-      this.field(this.name, '新分组名称', (input: string): void => this.setName(input));
+      this.nameField('新分组名称', '');
     }
   }
 
   @Builder
   private targetOption(id: string | undefined, label: string) {
-    Button({ type: ButtonType.Capsule }) {
+    Button({ type: ButtonType.Capsule, stateEffect: false }) {
       Row({ space: 8 }) {
         SourceV9CircleCheck({ selected: this.target === id, actionEnabled: this.dialogEditable(), interactive: false });
         Text(label).layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(13)
           .fontColor(this.color(id === undefined ? 'app.sourceUi.primary' : 'TOK_INK'));
       }.width('100%');
-    }.width('100%').height(36).padding({ left: 12, right: 12 })
-      .backgroundColor(this.color(id === undefined ? 'app.sourceUi.selected' : 'app.sourceUi.field'))
+    }.width('100%').height(44).padding({ left: 12, right: 12 })
+      .attributeModifier(new ReaderPressFeedback(this.color(id === undefined ? 'app.sourceUi.selected' : 'app.sourceUi.field'),
+        this.scheme, 22, 22, this.dialogEditable()))
       .enabled(this.dialogEditable()).accessibilityText(label).accessibilitySelected(this.target === id)
       .onClick((): void => this.setTarget(id));
   }

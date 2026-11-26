@@ -1,3 +1,4 @@
+import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -24,14 +25,14 @@ if (selected.length) {
   const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
   const { foundationControls, foundationSpecs, readerFoundationTokens } = await import('./lib/reader-foundation-control-probe.mjs');
   const { labeledIconControls, labeledIconSpecs } = await import('./lib/reader-labeled-icon-action-probe.mjs');
-  const { createReaderBuilderProbe } = await import('./lib/reader-control-builder-probe.mjs');
+  const { createReaderBuilderProbe, productionReaderMotionSdk } = await import('./lib/reader-control-builder-probe.mjs');
   const { sourceV9ChromeControls } = await import('./lib/source-v9-chrome-sdk-probe.mjs');
   const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
   const { boundedMembers } = await import('./lib/bounded-surface-sdk-probe.mjs');
   const { switchSpecs, toggleSource } = await import('./lib/reader-switch-control-probe.mjs');
   const { sourceV9DisplayUrl, sourceV9ReportFill, sourceV9ReportTone } = await import('../entry/src/main/ets/features/source/presentation/SourceManagementV9.ts');
   const { readerReadableFontScale, readerScaledControlHeight } = await import('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts');
-  const { resolveSourceManagementLayout, SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP_GAP } =
+  const { resolveSourceManagementLayout, SOURCE_ROW_ACTION_GAP, SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP_GAP } =
     await import('../entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts');
   const { ReaderPageGeometryInput, resolveReaderPageGeometry } = await import('../entry/src/main/ets/ui/layout/ReaderPageGeometry.ts');
   const { readerStandardPageSpec } = await import('../entry/src/main/ets/ui/layout/ReaderPageShell.ts');
@@ -69,9 +70,9 @@ if (selected.length) {
     const childHooks = { ...shared.hooks, childSources: { ...shared.hooks.childSources, ReaderToggle: toggleSource } };
     const toggleDeps = { ...controls.dependencies, ...switchSpecs(), readerAppColor };
     const { Component: ReaderToggle } = createReaderBuilderProbe(toggleSource, boundedMembers(toggleSource), toggleDeps, childHooks);
-    const chrome = sourceV9ChromeControls({ ...shared.dependencies, ...readerFoundationTokens, ReaderToggle,
+    const chrome = sourceV9ChromeControls({ ...shared.dependencies, ...readerFoundationTokens, ...productionReaderMotionSdk(), ReaderToggle,
       readerAppColor, readerSourceCategoryLabel, sourceV9DisplayUrl, sourceV9ReportFill, sourceV9ReportTone,
-      SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP_GAP, readerLayoutCarrierResponseRegion: () => ({}) }, childHooks);
+      READER_FONT_NOTO_SANS_SC_UI_MEDIUM, SOURCE_ROW_ACTION_GAP, SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP_GAP, readerLayoutCarrierResponseRegion: () => ({}) }, childHooks);
     const { Component: Probe } = createReaderBuilderProbe(source, [...rowMembers, ...filterMembers, ...footerMembers],
       chrome.dependencies, chrome.hooks);
     function actor(book) {
@@ -81,7 +82,7 @@ if (selected.length) {
         layoutBudget: page.layoutBudget.bind(page), footerManageWidth: page.footerManageWidth.bind(page),
         footerActionHeight: page.footerActionHeight.bind(page), footerControlHeight: page.footerControlHeight.bind(page),
         batchMode: page.batchMode, batchSourceIds: page.batchMode ? [book.sourceId] : [], temporaryBackIdentity: 'test-source',
-        projectedSources: [book],
+        projectedSources: [book], firstSourceId: book.sourceId, lastSourceId: book.sourceId, batchTransition: () => ({}),
         sourceDetectEnabled: () => true, sourceActionEnabled: () => true, sourceToggleBusy: () => false,
         sourceSwitchValue: (_sourceId, value) => value, sourceSwitchName: (_sourceId, name) => name,
         sourceRowCommand: () => () => {}, offlineDetectBadgeId: () => '', verificationRowActionsCurrent: () => false,
@@ -91,7 +92,7 @@ if (selected.length) {
       return rendered;
     }
     const recordTarget = (controlRef, visualWidth, visualHeight, region) => {
-      const response = region === undefined ? null : { width: region.width, height: region.height };
+      const response = region === undefined ? null : { width: region.width === '100%' ? visualWidth : region.width, height: region.height };
       targets.push({ controlRef, width, fontScale: scale, visual: { width: visualWidth, height: visualHeight }, response });
     };
     const recordBudget = (region, availableWidth, requiredWidth, availableHeight, requiredHeight, rowForm, record = true) => {
@@ -113,6 +114,7 @@ if (selected.length) {
       assert.ok(row); assert.equal(row.width, contentWidth); assert.equal(row.height, undefined, 'row can grow from real text measurement');
       const paddedRow = batchMode ? nodes.find(node => node.type === 'Button' && node.accessibilityText === book.name) : row;
       assert.equal(paddedRow.padding, 10);
+      assert.equal(row.clip, true);
       assert.equal(row.backgroundColor, readerAppColor('TOK_CARD_BG', 'day'));
       assert.deepEqual(row.borderRadius, { topLeft: 14, topRight: 14, bottomLeft: 14, bottomRight: 14 });
       const leading = nodes.find(node => node.type === 'Stack' && node.width === 34 && node.height === 34);
@@ -140,16 +142,14 @@ if (selected.length) {
           (actionWidths.length - 1) * actionsLane.create.space, 'unbroken v9 action widths and measured Row gaps are budgeted once');
         assert.equal(budget.actionRowCount, 1);
         const detectRegion = detections[0].responseRegion;
-        assert.deepEqual(detectRegion, { x: -6, y: -8, width: 40, height: 44 },
+        assert.deepEqual(detectRegion, { x: -8, y: -8, width: 44, height: 44 },
           'the v9 Detect response region has the exact bounded envelope');
         assert.ok(detectRegion.x >= -actionsLane.create.space &&
           detectRegion.x + detectRegion.width <= detections[0].width + actionsLane.create.space,
         'expanded Detect hit area stays out of the adjacent controls');
         if (login) {
           assert.deepEqual(logins[0].responseRegion, { x: 0, y: -9, width: 58, height: 44 });
-          const loginMark = nodes.find(node => node.type === 'Stack' && node.width === 13 && node.height === 13);
-          assert.equal(loginMark.border.width, 1);
-          assert.ok(nodes.some(node => node.type === 'Image' && node.width === 9 && node.height === 9));
+          assert.ok(nodes.some(node => node.type === 'Image' && node.width === 12 && node.height === 12));
         }
       } else {
         assert.equal(budget.trailingWidth, Math.ceil(35 * scale));
@@ -183,6 +183,11 @@ if (selected.length) {
     const dockActions = batchNodes.filter(node => node.type === 'Button');
     assert.deepEqual(dockActions.map(node => node.accessibilityText), ['启用', '停用', '移至分组', '检测', '删除']);
     assert.ok(dockActions.every(node => node.layoutWeight === 1 && node.height === '100%'));
+    const emptyBatch = actor(base);
+    emptyBatch.batchSourceIds = [];
+    emptyBatch.bottomActionBar();
+    assert.equal(shared.nodes(emptyBatch).filter(node => node.type === 'Button' &&
+      node.opacity === 0.45 && node.enabled === false).length, 5);
     assert.equal(batchNodes.filter(node => node.type === 'Image' && node.width === 16 && node.height === 16).length, 5);
     page.batchMode = false;
     const before = page.contentFrame;
@@ -211,10 +216,11 @@ if (selected.length) {
       readerAppColor('app.sourceUi.onPrimary', 'day'));
     assert.equal(categoryButtons.length, 3); assert.ok(categoryButtons.every(node => node.layoutWeight === 1));
     const statusHeight = statusButtons[0].height;
-    assert.ok(statusButtons.every(node => node.height === statusHeight));
+    assert.ok(statusButtons.every(node => node.height === statusHeight && node.responseRegion.height === 44));
+    assert.ok(categoryButtons.every(node => node.responseRegion.height === 44));
     assert.equal(statusHeight, category.height);
     const chipWidth = (status.width - SOURCE_STATUS_CHIP_GAP * 3) / 4;
-    recordTarget('source-filter-chip', chipWidth, statusHeight);
+    recordTarget('source-filter-chip', chipWidth, statusHeight, statusButtons[0].responseRegion);
     recordBudget('chip', status.width, chipWidth * 4 + SOURCE_STATUS_CHIP_GAP * 3, statusHeight, statusHeight, 'single-line');
     const footer = parentNodes.find(node => node.type === 'Flex' && node.width === contentWidth);
     const parentSlots = parentNodes.filter(node => node.type === '__Common__');

@@ -9,21 +9,27 @@ import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
   READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../../ui/foundation/ReaderFontFamilies';
 import { readerActionIcon } from '../../../ui/foundation/ReaderActionIconResources';
 import { APP_FLOATING_HEADER_BAR_HEIGHT } from '../../../ui/foundation/ReaderHeaderMetrics';
+import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
 import { readerAppColor, type ReaderAppColorRole } from '../../../ui/foundation/ReaderThemeRegistry';
 import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import type { ReaderWindowMetricsSnapshot } from '../../../ui/foundation/ReaderWindowMetrics';
 import { readerFloatingBarBottomInset } from '../../../ui/layout/ReaderFloatingBarMetrics';
 import { readerFrameStyle, type ReaderFrameStyle } from '../../../ui/layout/ReaderFrameStyle';
+import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { applyReaderStandardFloatingHeader, ReaderPageGeometry, ReaderPageGeometryInput,
   resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
 import { ReaderPageScaffold } from '../../../ui/layout/ReaderPageScaffold';
 import { readerPageAreaLength, READER_STANDARD_PAGE_CONTENT_GAP } from '../../../ui/layout/ReaderPageShell';
-import { DialogActionView, ReaderDialogSurface } from '../../../ui/surfaces/ReaderDialogSurface';
+import { DialogActionView, readerDialogCardTransition, readerDialogScrimTransition,
+  ReaderDialogSurface } from '../../../ui/surfaces/ReaderDialogSurface';
 import { sourceV9DisplayUrl } from '../presentation/SourceManagementV9';
+import { SourceV9ReportSteps } from './SourceV9CheckDialog';
 import { SourceV9AddAction, SourceV9CircleCheck, SourceV9SegmentedTrack, type SourceV9SegmentChoice } from './SourceV9Chrome';
 import { httpUrlHostname } from '../../../platform/network/HttpTransportPolicy';
 import type { ManagedRuleSubscription, RuleSubscriptionDraft, RuleSubscriptionType } from '../../settings/application/RulesManagementGateway';
-import type { SourceCheckOutcome, SourceCheckReportStep, SourceGroupRecord, SourceImportGroupTarget } from '../application/SourceGateway';
+import type { SourceCheckOutcome, SourceGroupRecord, SourceImportGroupTarget } from '../application/SourceGateway';
 import { EMPTY_SOURCE_V9_TRANSFER, SourceV9TransferOwner, type SourceV9CheckOptions, type SourceV9SubscriptionReview,
   type SourceV9ConfirmedImport, type SourceV9PartialApplyDetail, type SourceV9PartialApplyItem,
   type SourceV9PartialSubscriptionApply, type SourceV9TransferItemResult, type SourceV9TransferSnapshot } from '../application/SourceV9TransferOwner';
@@ -56,12 +62,12 @@ const KEYWORDS: string[] = ['我的', '斗破', '海贼'];
 @Component
 export struct SourceV9TransferPage {
   @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
   @StorageLink('readerWindowMetricsRevision') @Watch('refreshLayout') private windowRevision: number = 0;
   @Prop @Watch('refreshLayout') pane: SourceV9TransferPane = 'import';
   @Prop initialUrl: string = '';
   @Prop initialJson: string = '';
   @Prop @Watch('refreshLayout') embeddedWide: boolean = false;
-  @Prop groups: SourceGroupRecord[] = [];
   owner: ReaderRuntimeOwner | undefined = undefined;
   onBack: () => void = (): void => {};
   onReadBack: (reports: SourceV9ImportedReport[], imported?: SourceV9ConfirmedImport) => void =
@@ -94,7 +100,8 @@ export struct SourceV9TransferPage {
   @State private geometry: ReaderPageGeometry = new ReaderPageGeometry();
   @State private paneWidth: number = 0;
   @State private paneHeight: number = 0;
-  private paneX: number = 0;
+  @State private paneX: number = 0;
+  @State private paneY: number = 0;
   private headerHeight: number = APP_FLOATING_HEADER_BAR_HEIGHT;
   private footerHeight: number = 0;
   private flow: SourceV9TransferOwner | undefined = undefined;
@@ -311,15 +318,22 @@ export struct SourceV9TransferPage {
     return this.color('app.sourceUi.field');
   }
 
-  private reportStepStatus(step: SourceCheckReportStep): string {
-    switch (step.status) {
-      case 'pass': return '通过';
-      case 'fail': return '失败';
-      case 'blocked': return '受阻';
-      case 'cancelled': return '已取消';
-      case 'not_supported': return '不支持';
-      default: return '未请求';
-    }
+  private touchRegion(height: number): Rectangle {
+    return { x: 0, y: Math.min(0, (height - 44) / 2), width: '100%', height: Math.max(44, height) };
+  }
+
+  private stepTransition(): TransitionEffect {
+    const effect = this.reduceMotion ? TransitionEffect.OPACITY :
+      TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: 6 }));
+    return effect.animation(readerMotionAnimateParam('app.navigation.tab', this.reduceMotion));
+  }
+
+  private formatSubscriptionUpdate(timestamp: number): string {
+    const date = new Date(timestamp);
+    if (timestamp <= 0 || !Number.isFinite(date.getTime())) return '尚未更新';
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日 ${hours}:${minutes}`;
   }
 
   private refreshLayout(): void {
@@ -336,6 +350,9 @@ export struct SourceV9TransferPage {
     input.contentHorizontalPadding = 19;
     input.contentHorizontalSafeArea = 'interactive';
     input.footerBottom = readerFloatingBarBottomInset(metrics, TRANSFER_BODY_TAIL);
+    if (this.paneHeight > 0) {
+      input.footerBottom = Math.max(input.footerBottom, this.paneHeight - this.visiblePaneHeight(metrics));
+    }
     input.footerHeight = this.pane === 'import' ? Math.max(this.footerHeight, this.footerButtonHeight() + TRANSFER_FOOTER_TOP) : 0;
     input.contentEndInset = input.footerHeight + input.footerBottom;
     this.geometry = resolveReaderPageGeometry(input);
@@ -351,19 +368,38 @@ export struct SourceV9TransferPage {
     return readerScaledControlHeight(44, 18, readerReadableFontScale(readerWindowMetrics().systemFontScale));
   }
 
+  private visiblePaneHeight(metrics: ReaderWindowMetricsSnapshot): number {
+    const height = this.paneHeight > 0 ? this.paneHeight : metrics.windowRect.height;
+    const keyboardVisible = metrics.keyboardArea.available ? metrics.keyboardArea.visible : metrics.keyboardInsets.bottom > 0;
+    if (!keyboardVisible) return height;
+    const width = this.paneWidth > 0 ? this.paneWidth : metrics.windowRect.width;
+    return Math.min(height, readerKeyboardHostBottom(metrics, this.paneY, height, this.paneX, width));
+  }
+
+  private modalViewportHeight(): number {
+    if (this.windowRevision < 0) return this.paneHeight;
+    return this.visiblePaneHeight(readerWindowMetrics());
+  }
+
   private modalBodyHeight(): number {
-    return this.paneHeight > 0 ? Math.max(80, Math.min(480, this.paneHeight - 156)) : 430;
+    const height = this.modalViewportHeight();
+    if (height <= 0 && this.paneHeight <= 0) return 430;
+    const fontScale = readerReadableFontScale(readerWindowMetrics().systemFontScale);
+    return Math.max(0, Math.min(480, height - 156 - 52 * (fontScale - 1)));
   }
 
   private recordPaneArea(area: Area): void {
     const width = readerPageAreaLength(area.width);
     const height = readerPageAreaLength(area.height);
     const x = readerPageAreaLength(area.globalPosition.x);
-    if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0 || !Number.isFinite(x) ||
-      (width === this.paneWidth && height === this.paneHeight && x === this.paneX)) return;
+    const y = readerPageAreaLength(area.globalPosition.y);
+    if (!Number.isFinite(width) || width <= 0 || !Number.isFinite(height) || height <= 0 ||
+      !Number.isFinite(x) || !Number.isFinite(y) ||
+      (width === this.paneWidth && height === this.paneHeight && x === this.paneX && y === this.paneY)) return;
+    this.paneX = x;
+    this.paneY = y;
     this.paneWidth = width;
     this.paneHeight = height;
-    this.paneX = x;
     this.refreshLayout();
   }
 
@@ -389,9 +425,9 @@ export struct SourceV9TransferPage {
         .accessibilityLevel(this.dialog !== 'none' || this.state.reviews.length > 0 || this.visibleReport !== undefined ?
           'no-hide-descendants' : 'auto');
       this.pendingRecovery();
-      if (this.state.reviews.length > 0) this.subscriptionReview();
-      if (this.dialog !== 'none') this.subscriptionDialog();
-      if (this.visibleReport !== undefined) this.reportDialog();
+      if (this.state.reviews.length > 0) this.modalFrame('review');
+      if (this.dialog !== 'none') this.modalFrame('edit');
+      if (this.visibleReport !== undefined) this.modalFrame('report');
     }.id(this.pane === 'import' ? 'reader-source-v9-import' : 'reader-source-v9-subscriptions')
       .width('100%').height('100%').clip(true)
       .onAreaChange((_old: Area, next: Area): void => this.recordPaneArea(next));
@@ -433,11 +469,12 @@ export struct SourceV9TransferPage {
   @Builder
   private action(label: string, tone: TransferButtonTone, enabled: boolean, run: () => void,
     height: number = 32, width: number | undefined = undefined, weight: number | undefined = undefined, id: string = '') {
-    Button(label, { type: ButtonType.Capsule }).id(id).height(height).width(width).layoutWeight(weight)
+    Button(label, { type: ButtonType.Capsule, stateEffect: false }).id(id).height(height).width(width).layoutWeight(weight)
       .padding({ left: 12, right: 12 }).fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
-      .fontColor(this.toneInk(tone)).backgroundColor(this.toneSurface(tone))
-      .enabled(enabled).opacity(enabled ? 1 : 0.47)
-      .onClick((): void => { if (this.inputCurrent()) run(); });
+      .fontColor(this.toneInk(tone)).attributeModifier(new ReaderPressFeedback(this.toneSurface(tone),
+        this.scheme, height / 2, height / 2, enabled))
+      .enabled(enabled).opacity(enabled ? 1 : 0.45).responseRegion(this.touchRegion(height))
+      .onClick((): void => { if (enabled && this.inputCurrent()) run(); });
   }
 
   @Builder
@@ -452,6 +489,7 @@ export struct SourceV9TransferPage {
     Column({ space: 5 }) {
       this.label(title, 12, 'TOK_MUTED', true);
       TextInput({ text: value, placeholder }).height(40).width('100%').borderRadius(10)
+        .border({ width: 1, color: this.color('TOK_LINE_STRONG') })
         .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(13)
         .fontColor(this.color('TOK_INK')).placeholderColor(this.color('TOK_MUTED'))
         .backgroundColor(this.color('app.sourceUi.field')).accessibilityText(title)
@@ -497,9 +535,13 @@ export struct SourceV9TransferPage {
           ReaderPageState({ variant: 'inline', loading: true, padded: false,
             message: this.state.importStep === 1 ? '正在读取书源' : '正在确认导入' });
         }
-        if (this.state.importStep === 1) this.importSource();
-        else if (this.state.importStep === 2) this.importReview();
-        else this.importResult();
+        ForEach([this.state.importStep], (step: number): void => {
+          Column({ space: 10 }) {
+            if (step === 1) this.importSource();
+            else if (step === 2) this.importReview();
+            else this.importResult();
+          }.width('100%').alignItems(HorizontalAlign.Start).transition(this.stepTransition());
+        }, (step: number): string => String(step));
       }.width('100%').padding({ bottom: 18 }).alignItems(HorizontalAlign.Start);
     }.width('100%').layoutWeight(1).align(Alignment.Top).scrollBar(BarState.Off);
   }
@@ -520,7 +562,10 @@ export struct SourceV9TransferPage {
           }.width(20).height(20).borderRadius(10).flexShrink(0)
             .backgroundColor(this.state.importStep >= index + 1 ? this.primary() : this.color('app.sourceUi.field'));
           this.label(label, 11.5, this.state.importStep === index + 1 ? 'TOK_INK' : 'TOK_MUTED', true);
-          if (index < 2) Blank().layoutWeight(1).height(1).color(this.color('TOK_LINE_STRONG'));
+          if (index < 2) {
+            Blank().layoutWeight(1).height(1)
+              .color(this.state.importStep > index + 1 ? this.primary() : this.color('TOK_LINE_STRONG'));
+          }
         }.layoutWeight(index < 2 ? 1 : undefined)
           .accessibilityText(label).accessibilitySelected(this.state.importStep === index + 1);
       }, (label: string): string => label);
@@ -532,49 +577,54 @@ export struct SourceV9TransferPage {
     this.segments(IMPORT_ORIGINS, this.origin, (id: string): void => { this.origin = id as SourceV9ImportOrigin; },
       '导入来源', 'reader-source-v9-import-origin');
     if (this.origin === 'file') {
-      Button({ type: ButtonType.Normal }) {
+      Button({ type: ButtonType.Normal, stateEffect: false }) {
         Column({ space: 5 }) {
           Stack({ alignContent: Alignment.Center }) {
-            Image(readerActionIcon('import', this.scheme)).width(18).height(18).accessibilityLevel('no');
+            Image(readerActionIcon('import', this.scheme)).width(18).height(18)
+              .fillColor(this.primary()).accessibilityLevel('no');
           }.width(36).height(36).borderRadius(18).backgroundColor(this.color('app.sourceUi.selected'));
           this.label('选择本地书源文件', 13.5, 'TOK_INK', true);
           Text(this.state.fileName.length > 0 ? this.state.fileName : '.json / .txt')
             .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(11.5).fontColor(this.color('TOK_MUTED'))
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         }.width('100%').padding({ left: 12, right: 12, top: 14, bottom: 14 });
-      }.id('reader-source-v9-import-file').width('100%').padding(0).borderRadius(14)
-        .backgroundColor(this.color('TOK_CARD_BG'))
+      }.id('reader-source-v9-import-file').width('100%').padding(0)
+        .attributeModifier(new ReaderPressFeedback(this.color('TOK_CARD_BG'), this.scheme, 14, 14, this.editable()))
         .border({ width: 1, style: BorderStyle.Dashed, color: this.color('TOK_PRIMARY_BORDER') })
-        .enabled(this.editable()).accessibilityText('选择本地书源文件')
+        .enabled(this.editable()).opacity(this.editable() ? 1 : 0.45).accessibilityText('选择本地书源文件')
         .onClick((): void => { if (this.editable()) void this.flow?.chooseFile(); });
     } else if (this.origin === 'url') {
       Column({ space: 8 }) {
         this.field('书源链接', this.url, 'https://…', (value: string): void => { this.url = value; });
-      }.width('100%').padding(13).backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14);
+      }.width('100%').padding(13).backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14)
+        .border({ width: 1, color: this.color('TOK_LINE') });
       Column({ space: 8 }) {
         Row() {
           this.label('同时保存为书源订阅', 13, 'TOK_INK', true);
           Blank();
           ReaderToggle({ checkedColor: this.primary(), value: this.saveAsSubscription, accessibilityLabel: '同时保存为书源订阅',
-            actionEnabled: this.editable(), onToggle: (next: boolean): void => {
+            inputIdentity: 'source-v9-import-save-sub', actionEnabled: this.editable(), onToggle: (next: boolean): void => {
               if (this.editable()) this.saveAsSubscription = next;
             } });
         }.width('100%');
         if (this.saveAsSubscription) {
           this.field('订阅名称（可选）', this.subscriptionName, '', (value: string): void => { this.subscriptionName = value; });
         }
-      }.width('100%').padding(13).backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14);
+      }.width('100%').padding(13).backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14)
+        .border({ width: 1, color: this.color('TOK_LINE') });
     } else {
       Column({ space: 8 }) {
         this.label('JSON 内容', 12, 'TOK_MUTED', true);
         TextArea({ text: this.paste, placeholder: '粘贴一个书源对象或一组书源' })
           .height(168).width('100%').borderRadius(10).padding(12)
+          .border({ width: 1, color: this.color('TOK_LINE_STRONG') })
           .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(12)
           .fontColor(this.color('TOK_INK')).placeholderColor(this.color('TOK_MUTED'))
           .backgroundColor(this.color('app.sourceUi.field')).accessibilityText('JSON 内容')
           .enabled(this.editable()).onChange((value: string): void => { if (this.editable()) this.paste = value; });
       }.width('100%').padding(13).alignItems(HorizontalAlign.Start)
-        .backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14);
+        .backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14)
+        .border({ width: 1, color: this.color('TOK_LINE') });
     }
   }
 
@@ -593,7 +643,7 @@ export struct SourceV9TransferPage {
       Row({ space: 6 }) {
         ForEach(KEYWORDS, (word: string): void => {
           this.action(word, this.checkKeyword === word ? 'primary' : 'neutral', this.editable(),
-            (): void => { this.checkKeyword = word; }, 28);
+            (): void => { this.checkKeyword = this.checkKeyword === word ? '' : word; }, 28);
         }, (word: string): string => word);
       }.width('100%');
     }
@@ -620,13 +670,13 @@ export struct SourceV9TransferPage {
 
   @Builder
   private checkPanel(subscription: boolean) {
-    Column({ space: 8 }) {
+    Column({ space: 14 }) {
       if (!subscription) {
         Row() {
           this.label('导入前可用性检测', 13, 'TOK_INK', true);
           Blank();
           ReaderToggle({ checkedColor: this.primary(), value: this.state.checkSupported && this.checkEnabled, accessibilityLabel: '导入前可用性检测',
-            actionEnabled: this.editable() && this.state.checkSupported,
+            inputIdentity: 'source-v9-import-check-toggle', actionEnabled: this.editable() && this.state.checkSupported,
             onToggle: (next: boolean): void => {
               if (!this.editable()) return;
               this.checkEnabled = next;
@@ -654,7 +704,8 @@ export struct SourceV9TransferPage {
           '当前 Core 不支持临时书源检测，可跳过检测' });
       }
     }.width('100%').padding(12).alignItems(HorizontalAlign.Start)
-      .backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14);
+      .backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14)
+      .border({ width: 1, color: this.color('TOK_LINE') });
   }
 
   @Builder
@@ -665,12 +716,12 @@ export struct SourceV9TransferPage {
         (id: string): void => { this.strategy = id as SourceV9GroupStrategy; },
         '分组归属', 'reader-source-v9-import-group');
       if (this.strategy !== 'preserve') {
-        Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(6) } }) {
+        Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(6), cross: LengthMetrics.vp(12) } }) {
           ForEach(this.state.groups, (group: SourceGroupRecord): void => {
             this.action(group.name, this.groupId === group.groupId && !this.createGroup ? 'primary' : 'neutral',
-              this.editable(), (): void => { this.groupId = group.groupId; this.createGroup = false; }, 28);
+              this.editable(), (): void => { this.groupId = group.groupId; this.createGroup = false; }, 32);
           }, (group: SourceGroupRecord): string => group.groupId);
-          SourceV9AddAction({ label: '新建分组', actionEnabled: this.editable(),
+          SourceV9AddAction({ label: '新建分组', actionEnabled: this.editable(), selected: this.createGroup,
             controlId: 'reader-source-v9-import-new-group', onTap: (): void => { this.createGroup = true; this.groupId = ''; } });
         }.width('100%');
         if (this.createGroup) {
@@ -678,7 +729,8 @@ export struct SourceV9TransferPage {
         }
       }
     }.width('100%').padding(12).alignItems(HorizontalAlign.Start)
-      .backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14);
+      .backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14)
+      .border({ width: 1, color: this.color('TOK_LINE') });
   }
 
   @Builder
@@ -749,14 +801,17 @@ export struct SourceV9TransferPage {
 
   @Builder
   private reportAction(name: string, report: SourceCheckOutcome, preflight: boolean = false) {
-    Button({ type: ButtonType.Capsule }) {
+    Button({ type: ButtonType.Capsule, stateEffect: false }) {
       Text((preflight ? '预检' : '') + (report.available ? '通过' : '未通过'))
         .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(11).maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .fontColor(this.color(report.available ? 'app.status.good' : 'app.sourceUi.danger'));
-    }.constraintSize({ minHeight: 28, maxWidth: 100 }).padding({ left: 8, right: 8 }).flexShrink(0)
-      .backgroundColor(this.color(report.available ? 'app.status.goodSoft' : 'app.sourceUi.dangerSurface'))
-      .enabled(this.inputCurrent()).onClick((): void => this.showReport(name, report));
+    }.height(28).constraintSize({ minWidth: 44, maxWidth: 100 }).padding({ left: 8, right: 8 }).flexShrink(0)
+      .attributeModifier(new ReaderPressFeedback(this.color(report.available ? 'app.status.goodSoft' :
+        'app.sourceUi.dangerSurface'), this.scheme, 14, 14, this.inputCurrent()))
+      .responseRegion({ x: 0, y: -8, width: '100%', height: 44 })
+      .enabled(this.inputCurrent()).opacity(this.inputCurrent() ? 1 : 0.45)
+      .onClick((): void => this.showReport(name, report));
   }
 
   @Builder
@@ -778,7 +833,9 @@ export struct SourceV9TransferPage {
         this.resultMetric('新增', this.state.importResult?.addedCount ?? 0);
         this.resultMetric('更新', this.state.importResult?.updatedCount ?? 0);
       }.width('100%');
-      this.label('已自动过滤不支持 ' + (this.state.importResult?.unsupportedCount ?? 0) + ' 项', 12, 'TOK_MUTED');
+      if ((this.state.importResult?.unsupportedCount ?? 0) > 0) {
+        this.label('已自动过滤不支持 ' + (this.state.importResult?.unsupportedCount ?? 0) + ' 项', 12, 'TOK_MUTED');
+      }
       if ((this.state.importResult?.invalidCount ?? 0) > 0) {
         this.label('另有 ' + (this.state.importResult?.invalidCount ?? 0) + ' 项未通过静态校验', 12, 'TOK_MUTED');
       }
@@ -789,28 +846,34 @@ export struct SourceV9TransferPage {
       .padding(13).backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14)
       .border({ width: 1, color: this.color('TOK_LINE') });
     Column() {
-      Button({ type: ButtonType.Normal }) {
+      Button({ type: ButtonType.Normal, stateEffect: false }) {
         Row() {
           this.label('导入详情', 13, 'TOK_INK', true);
           Blank();
-          Image($r('app.media.reader_chevron_down')).width(12).height(8)
+          Image($r('app.media.reader_chevron_down')).width(12).height(12).objectFit(ImageFit.Contain)
             .fillColor(this.color('TOK_MUTED')).rotate({ angle: this.detailExpanded ? 180 : 0 })
+            .animation(this.reduceMotion ? undefined : readerMotionAnimateParam('app.control.press', false))
             .accessibilityLevel('no');
-        }.width('100%').padding(12);
-      }.width('100%').padding(0).backgroundColor(Color.Transparent)
+        }.width('100%').constraintSize({ minHeight: 44 }).padding(12);
+      }.width('100%').padding(0).enabled(this.inputCurrent())
+        .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.scheme, 0, 0, this.inputCurrent()))
         .accessibilityText(this.detailExpanded ? '收起导入详情' : '展开导入详情')
         .onClick((): void => { if (this.inputCurrent()) this.detailExpanded = !this.detailExpanded; });
       if (this.detailExpanded) {
-        ForEach(this.state.importResult?.details ?? [], (detail: SourceV9TransferItemResult): void => {
-          Row({ space: 8 }) {
-            Text(detail.name).layoutWeight(1).fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
-              .fontColor(this.color('TOK_INK')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
-            this.label(detail.outcome, 11, detail.outcome === '新增' || detail.outcome === '更新' ? 'TOK_MUTED' : 'TOK_DANGER');
-            if (detail.preflightReport !== undefined) this.reportAction(detail.name, detail.preflightReport, true);
-          }.width('100%').padding(10).border({ width: { top: 1 }, color: this.color('TOK_LINE') });
-        }, (detail: SourceV9TransferItemResult): string => String(detail.index));
+        Column() {
+          ForEach(this.state.importResult?.details ?? [], (detail: SourceV9TransferItemResult): void => {
+            Row({ space: 8 }) {
+              Text(detail.name).layoutWeight(1).fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
+                .fontColor(this.color('TOK_INK')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
+              this.label(detail.outcome, 11, detail.outcome === '新增' || detail.outcome === '更新' ? 'TOK_MUTED' : 'TOK_DANGER');
+              if (detail.preflightReport !== undefined) this.reportAction(detail.name, detail.preflightReport, true);
+            }.width('100%').padding(10).border({ width: { top: 1 }, color: this.color('TOK_LINE') });
+          }, (detail: SourceV9TransferItemResult): string => String(detail.index));
+        }.width('100%').transition(TransitionEffect.OPACITY.animation(
+          readerMotionAnimateParam('app.control.press', this.reduceMotion)));
       }
-    }.width('100%').backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14).clip(true);
+    }.width('100%').backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14)
+      .border({ width: 1, color: this.color('TOK_LINE') }).clip(true);
   }
 
   @Builder
@@ -840,7 +903,8 @@ export struct SourceV9TransferPage {
       }
     }.width('100%').padding({ left: this.geometry.content.frame.left,
       right: this.geometry.content.frame.right, top: TRANSFER_FOOTER_TOP })
-      .backgroundColor(this.color('TOK_PAPER'));
+      .backgroundColor(this.color('TOK_PAPER'))
+      .border({ width: { top: 1 }, color: this.color('TOK_LINE') });
   }
 
   @Builder
@@ -902,22 +966,22 @@ export struct SourceV9TransferPage {
           .backgroundColor(this.color('app.sourceUi.field'));
       }, (detail: SourceV9PartialApplyDetail): string => String(detail.subscriptionId));
     }.width('100%').alignItems(HorizontalAlign.Start).padding(12).borderRadius(14)
-      .backgroundColor(this.color('TOK_CARD_BG'));
+      .backgroundColor(this.color('TOK_CARD_BG'))
+      .border({ width: 1, color: this.color('TOK_LINE') });
   }
 
   @Builder
   private subscriptionRow(sub: ManagedRuleSubscription, index: number) {
-    Column({ space: 7 }) {
+    Column({ space: 8 }) {
       Row({ space: 8 }) {
         Column({ space: 3 }) {
           Row({ space: 6 }) {
-            Text(sub.name).flexShrink(1).fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
+            Text(sub.name).flexShrink(1).fontSize(14).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
               .fontColor(this.color('TOK_INK')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
             if (sub.type === 0) this.badge('书源', 'app.sourceUi.primary', 'app.sourceUi.selected');
             else this.badge('净化规则', 'app.status.warning', 'app.status.warningSoft');
           }.width('100%');
-          Text((httpUrlHostname(sub.url) ?? '订阅链接不可用') + ' · ' +
-            (sub.update > 0 ? new Date(sub.update).toLocaleDateString() : '尚未更新'))
+          Text((httpUrlHostname(sub.url) ?? '订阅链接不可用') + ' · ' + this.formatSubscriptionUpdate(sub.update))
             .fontSize(11).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontColor(this.color('TOK_MUTED'))
             .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
         }.layoutWeight(1).alignItems(HorizontalAlign.Start);
@@ -928,7 +992,7 @@ export struct SourceV9TransferPage {
           } });
       }.width('100%');
       Row({ space: 5 }) {
-        this.action('检查更新', 'neutral', this.editable() && sub.autoUpdate,
+        this.action('检查更新', 'neutral', this.editable(),
           (): void => this.checkSubscriptions([sub.id]), 28);
         this.action('编辑', 'neutral', this.editable(), (): void => this.openForm(sub), 28);
         Blank();
@@ -941,24 +1005,38 @@ export struct SourceV9TransferPage {
   }
 
   @Builder
-  private subscriptionReview() {
-    Stack({ alignContent: Alignment.Center }) {
+  private modalFrame(layer: 'review' | 'edit' | 'report') {
+    Stack({ alignContent: Alignment.Top }) {
       this.scrim();
-      ReaderDialogSurface({ specId: 'source-v9-check', primarySurfaceColor: this.primary(), title: '订阅更新预览', showCloseButton: true,
-        containerWidthVp: this.paneWidth, leadingActionWidthVp: 80,
-        onClose: (): void => this.flow?.closeReviews(),
-        actions: [new DialogActionView('cancel', '取消', 'default', !this.state.busy, true),
-          new DialogActionView('apply', '应用更新 (' + this.applyCount() + ')', 'primary',
-            this.editable() && this.applyCount() > 0)],
-        onAction: (action: string): void => {
-          if (!this.inputCurrent()) return;
-          if (action === 'cancel') this.flow?.closeReviews();
-          else if (this.editable()) void this.flow?.applyReviews();
-        },
-        body: (): void => { this.reviewBody(); },
-      });
-    }.width('100%').height('100%').align(Alignment.Center)
-      .accessibilityLevel(this.visibleReport === undefined ? 'auto' : 'no-hide-descendants');
+      Stack({ alignContent: Alignment.Center }) {
+        Column() {
+          if (layer === 'review') this.subscriptionReview();
+          else if (layer === 'edit') this.subscriptionDialog();
+          else this.reportDialog();
+        }.hitTestBehavior(HitTestMode.Transparent).transition(readerDialogCardTransition(this.reduceMotion));
+      }.width('100%').height(this.paneHeight > 0 ? this.modalViewportHeight() : '100%')
+        .hitTestBehavior(HitTestMode.Transparent);
+    }.width('100%').height('100%')
+      .accessibilityLevel(layer !== 'report' && this.visibleReport !== undefined ? 'no-hide-descendants' : 'auto')
+      .transition(readerDialogScrimTransition(this.reduceMotion));
+  }
+
+  @Builder
+  private subscriptionReview() {
+    ReaderDialogSurface({ specId: 'source-v9-check', primarySurfaceColor: this.primary(),
+      title: '订阅更新预览', showCloseButton: true, closeEnabled: this.inputCurrent() && !this.state.busy,
+      containerWidthVp: this.paneWidth,
+      onClose: (): void => { if (this.inputCurrent()) this.flow?.closeReviews(); },
+      actions: [new DialogActionView('cancel', '取消', 'default', this.inputCurrent() && !this.state.busy, true),
+        new DialogActionView('apply', '应用更新 (' + this.applyCount() + ')', 'primary',
+          this.editable() && this.applyCount() > 0)],
+      onAction: (action: string): void => {
+        if (!this.inputCurrent()) return;
+        if (action === 'cancel') this.flow?.closeReviews();
+        else if (this.editable()) void this.flow?.applyReviews();
+      },
+      body: (): void => { this.reviewBody(); },
+    });
   }
 
   @Builder
@@ -1019,20 +1097,20 @@ export struct SourceV9TransferPage {
       Column({ space: 4 }) {
         Row({ space: 5 }) {
           Text(row.name).flexShrink(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-            .fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontColor(this.color('TOK_INK'));
+            .fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontColor(this.color('TOK_INK'));
           this.changeBadge(row.kind);
         }.width('100%');
         Text(this.reviewCaption(row, subscriptionName)).width('100%').maxLines(1)
-          .textOverflow({ overflow: TextOverflow.Ellipsis }).fontSize(10)
+          .textOverflow({ overflow: TextOverflow.Ellipsis }).fontSize(11)
           .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontColor(this.color('TOK_MUTED'));
         if (row.kind === 'conflict' && !row.selectable) {
           this.label('当前 Core 无法按版本覆盖，保留本地', 11, 'TOK_MUTED');
         } else if (row.kind === 'conflict') {
-          Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(4), cross: LengthMetrics.vp(4) } }) {
+          Flex({ wrap: FlexWrap.Wrap, space: { main: LengthMetrics.vp(4), cross: LengthMetrics.vp(16) } }) {
             this.action('覆盖', row.overwrite ? 'primary' : 'neutral', this.editable() && row.selectable,
-              (): void => this.flow?.resolveReviewConflict(row.key, true), 24);
+              (): void => this.flow?.resolveReviewConflict(row.key, true), 28);
             this.action('保留本地', !row.overwrite ? 'primary' : 'neutral', this.editable() && row.selectable,
-              (): void => this.flow?.resolveReviewConflict(row.key, false), 24);
+              (): void => this.flow?.resolveReviewConflict(row.key, false), 28);
           }.width('100%');
         }
       }.layoutWeight(1).alignItems(HorizontalAlign.Start);
@@ -1043,21 +1121,18 @@ export struct SourceV9TransferPage {
 
   @Builder
   private subscriptionDialog() {
-    Stack({ alignContent: Alignment.Center }) {
-      this.scrim();
-      ReaderDialogSurface({ specId: 'source-v9-check', primarySurfaceColor: this.primary(), containerWidthVp: this.paneWidth,
-        title: this.dialog === 'delete' ? '删除订阅' : this.edited === undefined ? '新建订阅' : '编辑订阅',
-        actions: [new DialogActionView('cancel', '取消', 'default', !this.state.busy, true),
-          new DialogActionView('confirm', this.dialog === 'delete' ? '删除订阅' : '保存',
-            this.dialog === 'delete' ? 'danger' : 'primary',
-            this.editable() && (this.dialog === 'delete' || (this.formName.trim().length > 0 && this.formUrl.trim().length > 0)))],
-        onAction: (action: string): void => { void this.confirmDialog(action); },
-        body: (): void => {
-          if (this.dialog === 'delete') this.deleteBody();
-          else this.formBody();
-        },
-      });
-    }.width('100%').height('100%');
+    ReaderDialogSurface({ specId: 'source-v9-check', primarySurfaceColor: this.primary(), containerWidthVp: this.paneWidth,
+      title: this.dialog === 'delete' ? '删除订阅' : this.edited === undefined ? '新建订阅' : '编辑订阅',
+      actions: [new DialogActionView('cancel', '取消', 'default', this.editable(), true),
+        new DialogActionView('confirm', this.dialog === 'delete' ? '删除订阅' : '保存',
+          this.dialog === 'delete' ? 'danger' : 'primary',
+          this.editable() && (this.dialog === 'delete' || (this.formName.trim().length > 0 && this.formUrl.trim().length > 0)))],
+      onAction: (action: string): void => { void this.confirmDialog(action); },
+      body: (): void => {
+        if (this.dialog === 'delete') this.deleteBody();
+        else this.formBody();
+      },
+    });
   }
 
   @Builder
@@ -1082,7 +1157,8 @@ export struct SourceV9TransferPage {
         Row() {
           this.label('自动检查更新', 13, 'TOK_INK', true);
           Blank();
-          ReaderToggle({ checkedColor: this.primary(), value: this.formEnabled, accessibilityLabel: '自动检查更新', actionEnabled: this.editable(),
+          ReaderToggle({ checkedColor: this.primary(), value: this.formEnabled, accessibilityLabel: '自动检查更新',
+            inputIdentity: 'source-v9-sub-form-auto', actionEnabled: this.editable(),
             onToggle: (next: boolean): void => { if (this.editable()) this.formEnabled = next; } });
         }.width('100%');
         if (this.state.error.length > 0 && !this.state.writePending) {
@@ -1100,16 +1176,13 @@ export struct SourceV9TransferPage {
 
   @Builder
   private reportDialog() {
-    Stack({ alignContent: Alignment.Center }) {
-      this.scrim();
-      ReaderDialogSurface({ specId: 'source-v9-check', primarySurfaceColor: this.primary(), title: '检测详情', showCloseButton: true,
-        containerWidthVp: this.paneWidth,
-        onClose: (): void => { this.visibleReport = undefined; },
-        actions: [new DialogActionView('close', '关闭', 'default', true, true)],
-        onAction: (_action: string): void => { this.visibleReport = undefined; },
-        body: (): void => { this.reportBody(); },
-      });
-    }.width('100%').height('100%');
+    ReaderDialogSurface({ specId: 'source-v9-check', primarySurfaceColor: this.primary(),
+      title: '检测详情', showCloseButton: true, closeEnabled: this.inputCurrent(), containerWidthVp: this.paneWidth,
+      onClose: (): void => { if (this.inputCurrent()) this.visibleReport = undefined; },
+      actions: [new DialogActionView('close', '关闭', 'default', this.inputCurrent(), true)],
+      onAction: (_action: string): void => { if (this.inputCurrent()) this.visibleReport = undefined; },
+      body: (): void => { this.reportBody(); },
+    });
   }
 
   @Builder
@@ -1120,19 +1193,7 @@ export struct SourceV9TransferPage {
         this.label((this.visibleReport?.available ? '通过' : '未通过') + ' · ' +
           (this.visibleReport?.durationMs ?? 0) + ' ms', 12, this.visibleReport?.available ? 'app.status.good' : 'TOK_DANGER');
         if (this.visibleReport?.failureReason) this.label(this.visibleReport?.failureReason ?? '', 12, 'TOK_MUTED');
-        ForEach(this.visibleReport?.report?.steps ?? [], (step: SourceCheckReportStep): void => {
-          Column({ space: 4 }) {
-            Row({ space: 6 }) {
-              this.label(step.level, 12, 'TOK_INK', true);
-              this.label(this.reportStepStatus(step), 11,
-                step.status === 'pass' ? 'app.status.good' : step.status === 'fail' ? 'TOK_DANGER' : 'TOK_MUTED');
-              Blank();
-              if (step.executed) this.label(step.durationMs + ' ms', 11, 'TOK_MUTED');
-            }.width('100%');
-            if (step.reason !== undefined) this.label(step.reason, 11, 'TOK_MUTED');
-          }.width('100%').padding(7).alignItems(HorizontalAlign.Start)
-            .backgroundColor(this.color('app.sourceUi.field')).borderRadius(8);
-        }, (step: SourceCheckReportStep): string => step.level);
+        SourceV9ReportSteps({ report: this.visibleReport?.report, currentFailure: this.visibleReport?.failureReason });
       }.width('100%').alignItems(HorizontalAlign.Start);
     }.width('100%').constraintSize({ maxHeight: this.modalBodyHeight() }).scrollBar(BarState.Off);
   }

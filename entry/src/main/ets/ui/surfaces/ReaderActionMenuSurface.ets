@@ -47,6 +47,7 @@ export struct ReaderActionMenuSurface {
   @Prop variant: ReaderActionMenuVariant = 'menu';
   @Prop specId: ReaderActionMenuSpecId = 'reader-more-menu';
   @Prop nativeId: string = '';
+  @Prop actionIdPrefix: string = '';
   @Prop scheme: string = 'day';
   @Prop actions: ReaderMenuActionView[] = [];
   @Prop availableWidth: string | number = '100%';
@@ -112,7 +113,7 @@ export struct ReaderActionMenuSurface {
       }
     }.width('100%').height(this.menuActionHeight());
     }.width('100%').height(this.menuActionHeight()).padding(0).borderRadius(0)
-      .id(this.nativeId.length > 0 ? this.nativeId + '-item-' + id : '')
+      .id(this.actionIdPrefix.length > 0 ? this.actionIdPrefix + id : this.nativeId.length > 0 ? this.nativeId + '-item-' + id : '')
       .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.effectiveScheme(), 0, 0, this.action(id).enabled))
       .opacity(this.action(id).enabled || this.action(id).busy ? 1 : 0.45)
       .enabled(this.action(id).enabled)

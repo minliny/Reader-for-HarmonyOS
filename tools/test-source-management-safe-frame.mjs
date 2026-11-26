@@ -1,3 +1,4 @@
+import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
@@ -29,7 +30,7 @@ const { sourceV9DisplayUrl, sourceV9ReportFill, sourceV9ReportTone } = await imp
 const { pureModuleProbe } = await import('./lib/ets-pure-module-probe.mjs');
 const { readerTypographyRoles } = await import('./lib/reader-typography-probe.mjs');
 const { actualSourceManagementGeometry } = await import('./lib/source-management-owner-probe.mjs');
-const { resolveSourceManagementLayout, SOURCE_ROW_ICON_WIDTH } = await import('../entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts');
+const { resolveSourceManagementLayout, SOURCE_ROW_ACTION_GAP, SOURCE_ROW_ICON_WIDTH } = await import('../entry/src/main/ets/features/source/presentation/SourceManagementLayout.ts');
 const { readerReadableFontScale, readerScaledControlHeight } = await import('../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers.ts');
 const { readerSourceCategoryLabel } = await import('../entry/src/main/ets/features/source/application/ReaderSourceCategory.ts');
 const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
@@ -67,7 +68,7 @@ function controls(metrics, fieldSource = searchSource) {
   const icon = iconButtonControls({ properties: foundation.properties });
   const dependencies = { ...labeled.dependencies, ...switchSpecs(), ...icon.dependencies,
     ...readerTypographyRoles, ...readerFoundationTokens, ...searchGeometry, readerScaledControlHeight, readerReadableFontScale,
-    SOURCE_ROW_ICON_WIDTH, sourceV9DisplayUrl, sourceV9ReportFill, sourceV9ReportTone, readerAppColor, readerSourceCategoryLabel,
+    READER_FONT_NOTO_SANS_SC_UI_MEDIUM, SOURCE_ROW_ACTION_GAP, SOURCE_ROW_ICON_WIDTH, sourceV9DisplayUrl, sourceV9ReportFill, sourceV9ReportTone, readerAppColor, readerSourceCategoryLabel,
     readerWindowMetrics: () => metrics,
     uiContext: { getFont: () => ({}), vp2px: value => value } };
   const toggle = createReaderBuilderProbe(toggleSource, boundedMembers(toggleSource), dependencies, foundation.hooks);
@@ -93,12 +94,12 @@ function controls(metrics, fieldSource = searchSource) {
 const rowMembers = ['sourceRow', 'sourceRowContent', 'isFirstSource', 'isLastSource', 'sourceLeading', 'sourceInfo', 'sourceDomain',
   'sourceActions', 'detectButton', 'loginInk', 'loginSurface', 'loginButton', 'sourceSwitch', 'sourceSwitchValue',
   'sourceSwitchName', 'currentSourceRow', 'currentSourceInfo',
-  'sourceRenderKey', 'projectedSources', 'sources', 'verificationRowTextId', 'verificationRowId'];
+  'sourceRenderKey', 'sourceRowKey', 'firstSourceId', 'lastSourceId', 'projectedSources', 'sources', 'verificationRowTextId', 'verificationRowId'];
 function mountRow(c, page, book, source = pageSource) {
   const owner = c.consumer(source, rowMembers);
   Object.assign(owner, { appThemeScheme: 'day', contentFrame: page.contentFrame.bind(page), fontScale: page.fontScale.bind(page),
     layoutBudget: page.layoutBudget.bind(page), temporaryBackIdentity: 'source-opening', verificationOpening: '',
-    projectedSources: [book],
+    projectedSources: [book], firstSourceId: book.sourceId, lastSourceId: book.sourceId,
     cancelToolsReturnFocus() {}, sourceRowCommand: () => () => {}, sourceRowToggle: () => () => {},
     sourceDetectEnabled: () => book.checkState !== 'checking', sourceActionEnabled: () => true,
     sourceToggleBusy: () => false, sourceActionLabel: (_source, action) => action,
@@ -295,6 +296,33 @@ for (const width of widths) for (const safe of safeEdges) for (const scale of fo
     assert.throws(() => assertQuery(oldControls, mountQuery(oldControls, page), page), /clear paint stays within/,
       'the previous 44vp visual control must fail in the 40vp query frame');
   }
+}
+// Keep the same lowered row and toggle while a neighbor disappears or returns.
+{
+  const metrics = createDefaultReaderWindowMetrics();
+  metrics.windowRect = new ReaderRectVp(0, 0, 366, 800);
+  const page = geometryOwner(metrics), c = controls(metrics);
+  const book = { sourceId: 'middle', name: '保留行', baseUrl: 'https://middle.test', category: 'novel', enabled: true };
+  const row = mountRow(c, page, book);
+  const rowId = [...row.nodes].find(([, node]) => node.type === 'Column' && node.clip === true)[0];
+  const toggle = c.nodes(row).find(node => node.type === 'Toggle');
+  const corners = () => row.nodes.get(rowId).borderRadius;
+  const border = () => row.nodes.get(rowId).border.width.bottom;
+  assert.equal(row.sourceRowKey(book), book.sourceId);
+  assert.equal(border(), 1);
+  row.firstSourceId = 'other';
+  row.lastSourceId = 'more';
+  row.replayOnly([rowId]);
+  assert.deepEqual(corners(), { topLeft: 0, topRight: 0, bottomLeft: 0, bottomRight: 0 });
+  assert.equal(border(), 0);
+  row.firstSourceId = book.sourceId;
+  row.replayOnly([rowId]);
+  assert.deepEqual(corners(), { topLeft: 14, topRight: 14, bottomLeft: 0, bottomRight: 0 });
+  row.lastSourceId = book.sourceId;
+  row.replayOnly([rowId]);
+  assert.deepEqual(corners(), { topLeft: 14, topRight: 14, bottomLeft: 14, bottomRight: 14 });
+  assert.equal(border(), 1);
+  assert.strictEqual(c.nodes(row).find(node => node.type === 'Toggle'), toggle);
 }
 const report = { status: 'PASS', case: 'safe-frame', sourceRows: samples.length, geometrySamples: widths.length * safeEdges.length * fontScales.length, querySamples: 20, footerSamples: 20,
   widths, safeEdges, fontScales, negativeControls: ['forced-inline', 'hard-text-minimum', 'protruding-clear', 'forced-equal-footer'],

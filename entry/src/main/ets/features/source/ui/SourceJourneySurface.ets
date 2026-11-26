@@ -6,6 +6,11 @@ import { SourceV9TransferPage } from './SourceV9TransferPage';
 import { SourceV9GroupsPage } from './SourceV9GroupsPage';
 import { SourceV9CheckDialog } from './SourceV9CheckDialog';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
+import { MESSAGE_BODY } from '../../../ui/foundation/ReaderMessageStyle';
+import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
+import { DialogActionView, ReaderDialogSurface, readerDialogCardTransition,
+  readerDialogScrimTransition } from '../../../ui/surfaces/ReaderDialogSurface';
+import { readerSceneTransition } from '../../../app/navigation/ReaderRouteMotion';
 import { errorMessageOf } from '../../../app/ErrorMessage';
 import type { BookSource, SourceCheckOutcome, SourceGroupCatalogData,
   SourceGroupMutateParams, SourceGroupRecord } from '../application/SourceGateway';
@@ -43,6 +48,11 @@ export struct SourceJourneySurface {
   @State private projectedRows: BookSource[] = [];
   @State private detailGroupId: string | undefined = undefined;
   @State private moveSourceIds: string[] = [];
+  @State private moveCatalogLoading: boolean = false;
+  @State private moveCatalogError: boolean = false;
+  @State private deleteSourceIds: string[] = [];
+  @State private listDialogGeneration: number = 0;
+  @State private paneWidth: number = 0;
   @State private checkSourceIds: string[] = [];
   @State private checkTitle: string = '';
   @State private checkBatch: boolean = false;
@@ -91,6 +101,11 @@ export struct SourceJourneySurface {
       this.publishCatalog(catalog);
     } catch (error) {
       if (this.mounted && generation === this.catalogGeneration) this.catalogError = errorMessageOf(error);
+    } finally {
+      if (this.mounted && generation === this.catalogGeneration && this.moveCatalogLoading) {
+        this.moveCatalogError = this.catalogError.length > 0 || this.catalog === undefined;
+        this.moveCatalogLoading = false;
+      }
     }
   }
 
@@ -118,6 +133,10 @@ export struct SourceJourneySurface {
     if (!this.managementInputIsCurrent()) return false;
     if (this.checkSourceIds.length > 0) {
       if (this.checkBack?.() !== true) this.checkSourceIds = [];
+      return true;
+    }
+    if (this.listDialogVisible()) {
+      this.chooseListDialog(this.listDialogGeneration, 'cancel');
       return true;
     }
     if (this.paneBack?.() === true) return true;
@@ -154,13 +173,17 @@ export struct SourceJourneySurface {
   }
 
   private listAction(action: SourceV9ListAction, ids: string[]): void {
-    if (!this.managementInputIsCurrent()) return;
+    if (!this.managementInputIsCurrent() || !this.listIsInteractive()) return;
     const host = this.presentation.management(this.identity);
     if (action === 'subscriptions' || action === 'groups') this.openPane(action);
     else if (action === 'detect') this.openCheck(ids, '批量检测', true);
     else if (action === 'export') host?.exportAll(this.identity);
     else if (action === 'enable' || action === 'disable') host?.toggleSources(ids, action === 'enable', this.identity);
     else if (action === 'move') {
+      if (ids.length === 0) return;
+      this.listDialogGeneration += 1;
+      this.moveCatalogError = false;
+      this.moveCatalogLoading = true;
       this.moveSourceIds = ids.slice();
       void this.refreshCatalog();
     } else if (action === 'delete') {
@@ -169,19 +192,49 @@ export struct SourceJourneySurface {
   }
 
   private confirmSourceDeletion(ids: string[]): void {
-    const current = (): boolean => this.managementInputIsCurrent() && this.pane === 'list';
-    this.onShowDeleteAlert({
-      title: '删除书源', message: `确定删除所选 ${ids.length} 个书源吗？`,
-      primaryButton: { value: '取消', action: (): void => {} },
-      secondaryButton: { value: '删除', fontColor: readerAppColor('app.action.nativeDestructive', this.scheme),
-        action: (): void => {
-          if (current()) this.presentation.management(this.identity)?.deleteSources(ids, this.identity);
-        } },
-    }, current);
+    if (ids.length === 0) return;
+    this.listDialogGeneration += 1;
+    this.deleteSourceIds = ids.slice();
+  }
+
+  private moveCatalogDialogVisible(): boolean {
+    return this.moveSourceIds.length > 0 && (this.moveCatalogLoading || this.moveCatalogError);
+  }
+
+  private listDialogVisible(): boolean {
+    return this.pane === 'list' && (this.deleteSourceIds.length > 0 || this.moveCatalogDialogVisible());
+  }
+
+  private listDialogActions(): DialogActionView[] {
+    const actions = [new DialogActionView('cancel', '取消', 'default', this.inputEnabled, true)];
+    if (this.deleteSourceIds.length > 0) {
+      actions.push(new DialogActionView('delete', '删除', 'danger', this.inputEnabled));
+    } else if (!this.moveCatalogLoading) {
+      actions.push(new DialogActionView('retry', '重试', 'primary', this.inputEnabled));
+    }
+    return actions;
+  }
+
+  private chooseListDialog(generation: number, action: string): void {
+    if (!this.managementInputIsCurrent() || generation !== this.listDialogGeneration || !this.listDialogVisible()) return;
+    if (this.deleteSourceIds.length > 0) {
+      if (action !== 'cancel' && action !== 'delete') return;
+      const ids = this.deleteSourceIds.slice();
+      this.deleteSourceIds = [];
+      if (action === 'delete') this.presentation.management(this.identity)?.deleteSources(ids, this.identity);
+    } else if (action === 'cancel') {
+      this.moveSourceIds = [];
+      this.moveCatalogLoading = false;
+      this.moveCatalogError = false;
+    } else if (action === 'retry' && !this.moveCatalogLoading) {
+      this.moveCatalogLoading = true;
+      void this.refreshCatalog();
+    }
   }
 
   private listIsInteractive(): boolean {
-    return this.pane === 'list' && this.checkSourceIds.length === 0 && this.moveSourceIds.length === 0;
+    return this.pane === 'list' && this.checkSourceIds.length === 0 && this.moveSourceIds.length === 0 &&
+      this.deleteSourceIds.length === 0;
   }
 
   private managementInputIsCurrent(): boolean {
@@ -207,7 +260,7 @@ export struct SourceJourneySurface {
       if (this.pane === 'import' || this.pane === 'subscriptions') {
         SourceV9TransferPage({
           pane: this.pane === 'import' ? 'import' : 'subscriptions', embeddedWide: this.embeddedWide,
-          owner: this.presentation.runtime(this.identity), groups: this.catalog?.groups ?? [],
+          owner: this.presentation.runtime(this.identity),
           isInputAllowed: (): boolean => this.managementInputIsCurrent(),
           onTemporaryBackBridge: (handler: (() => boolean) | undefined): void => { this.paneBack = handler; },
           onBack: (): void => this.openPane('list'),
@@ -216,19 +269,37 @@ export struct SourceJourneySurface {
               imported === undefined ? undefined : this.importSearchAction);
             void this.refreshCatalog();
           },
-        });
+        }).transition(readerSceneTransition(this.paneWidth, this.reduceMotion, true));
       }
-      if (this.pane === 'groups' || this.pane === 'group-detail' || this.moveSourceIds.length > 0) {
-        if (this.catalogError.length > 0 && this.catalog === undefined) {
-          Column() {
-            ReaderPageState({ title: '书源分组读取失败', message: this.catalogError,
-              actionLabel: '重试', onAction: (_generation: number): void => { void this.refreshCatalog(); },
-              secondaryActionLabel: '返回', onSecondaryAction: (_generation: number): void => { this.consumeBack(); } });
-          }.width('100%').height('100%').justifyContent(FlexAlign.Center)
-            .backgroundColor(readerAppColor('TOK_PAPER', this.scheme));
-        } else {
-          this.groupsPage();
-        }
+      if (this.pane === 'groups' || this.pane === 'group-detail') {
+        Stack() { this.groupsPage(); }.width('100%').height('100%')
+          .transition(readerSceneTransition(this.paneWidth, this.reduceMotion, true));
+      } else if (this.pane === 'list' && this.moveSourceIds.length > 0 && !this.moveCatalogDialogVisible()) {
+        this.groupsPage();
+      }
+      if (this.listDialogVisible()) {
+        ForEach([this.listDialogGeneration], (generation: number): void => {
+          Stack({ alignContent: Alignment.Center }) {
+            Rect().width('100%').height('100%').fill(readerAppColor('app.scrim.warmModal', this.scheme))
+              .accessibilityLevel('no').onClick((): void => this.chooseListDialog(generation, 'cancel'));
+            Column() {
+              ReaderDialogSurface({ specId: 'source-v9-check', containerWidthVp: this.paneWidth,
+                title: this.deleteSourceIds.length > 0 ? '删除书源' : '移动书源', actions: this.listDialogActions(),
+                onAction: (action: string): void => this.chooseListDialog(generation, action),
+                body: (): void => {
+                  if (this.deleteSourceIds.length > 0) {
+                    this.deleteDialogBody();
+                  } else {
+                    ReaderPageState({ variant: 'inline', padded: false, loading: this.moveCatalogLoading,
+                      loadingActive: this.inputEnabled,
+                      message: this.moveCatalogLoading ? '正在读取书源分组' : '无法读取书源分组，请重试。' });
+                  }
+                },
+              });
+            }.width('100%').alignItems(HorizontalAlign.Center).hitTestBehavior(HitTestMode.Transparent)
+              .transition(readerDialogCardTransition(this.reduceMotion));
+          }.width('100%').height('100%').transition(readerDialogScrimTransition(this.reduceMotion));
+        }, (generation: number): string => generation.toString());
       }
       if (this.checkSourceIds.length > 0) {
         SourceV9CheckDialog({
@@ -242,7 +313,20 @@ export struct SourceJourneySurface {
           onTemporaryBackBridge: (handler: (() => boolean) | undefined): void => { this.checkBack = handler; },
         });
       }
-    }.width('100%').height('100%');
+    }.width('100%').height('100%').clip(true)
+      .onAreaChange((_previous: Area, next: Area): void => {
+        if (this.mounted) this.paneWidth = readerPageAreaLength(next.width);
+      });
+  }
+
+  @Builder
+  private deleteDialogBody() {
+    Scroll() {
+      Text(`确定删除所选 ${this.deleteSourceIds.length} 个书源吗？将同时清除相关登录会话，删除后无法恢复。`)
+        .width('100%').fontFamily(MESSAGE_BODY.fontFamily).fontWeight(MESSAGE_BODY.fontWeight)
+        .fontSize(MESSAGE_BODY.fontSizeFp).lineHeight(MESSAGE_BODY.lineHeightFp as number)
+        .fontColor(readerAppColor('TOK_MESSAGE_MUTED', this.scheme));
+    }.width('100%').constraintSize({ maxHeight: '45%' }).scrollBar(BarState.Auto);
   }
 
   private checkRows(): BookSource[] {
@@ -257,6 +341,9 @@ export struct SourceJourneySurface {
   private groupsPage() {
     SourceV9GroupsPage({
       catalog: this.catalog, sources: this.projectedRows, detailGroupId: this.detailGroupId,
+      catalogError: this.catalogError, onRetryCatalog: (): void => {
+        if (this.managementInputIsCurrent()) void this.refreshCatalog();
+      },
       embeddedWide: this.embeddedWide, moveOnly: this.pane === 'list', moveSourceIds: this.moveSourceIds,
       inputEnabled: this.inputEnabled && this.checkSourceIds.length === 0,
       isInputAllowed: (): boolean => this.managementInputIsCurrent() && this.checkSourceIds.length === 0,
@@ -284,9 +371,6 @@ export struct SourceJourneySurface {
           this.presentation.management(this.identity)?.toggleSources(ids, enabled, this.identity);
       },
       onCheck: (ids: string[], group?: boolean): void => this.openCheck(ids, group === true ? '整组检测' : '书源检测报告', group === true),
-      onLogin: (id: string, url: string): void => {
-        if (this.managementInputIsCurrent()) this.presentation.management(this.identity)?.loginSource(id, url, this.identity);
-      },
       onBatchUngrouped: (ids: string[]): void => {
         if (!this.managementInputIsCurrent()) return;
         this.ungroupedBatchIds = ids.slice();
@@ -339,7 +423,7 @@ export struct SourceJourneySurface {
       onRetryLoad: (): void => {
         if (this.managementInputIsCurrent()) this.presentation.management(this.identity)?.retryLoad(this.identity);
       },
-    }).visibility(this.pane === 'list' ? Visibility.Visible : Visibility.Hidden)
+    }).hitTestBehavior(this.listIsInteractive() ? HitTestMode.Default : HitTestMode.None)
       .accessibilityLevel(this.listIsInteractive() ? 'auto' : 'no-hide-descendants');
   }
 

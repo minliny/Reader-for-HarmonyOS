@@ -1,5 +1,4 @@
 import { MESSAGE_ACTION } from '../foundation/ReaderMessageStyle';
-import { TYPE_SELECT_OPTION } from '../foundation/ReaderTypography';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
 import { SurfaceHorizontalFrame, SurfaceWidthSpec, resolveHorizontalFrame } from '../layout/SurfaceHorizontalGeometry';
@@ -7,8 +6,21 @@ import { readerAppColor } from '../foundation/ReaderThemeRegistry';
 import type { ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
 import { readerPaperActionIcon } from '../foundation/ReaderActionIconResources';
 import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
+import { readerMotionAnimateParam } from '../foundation/ReaderMotionPolicy';
 import { DialogSpecId, DialogSurfaceSpec, readerSurfaceElevation, resolveDialogSpec } from './ReaderSurfaceSpecs';
 import { readerReadableFontScale, readerScaledControlHeight } from '../foundation/ReaderSurfaceResolvers';
+
+export function readerDialogScrimTransition(reduceMotion: boolean): TransitionEffect {
+  return TransitionEffect.OPACITY.animation(readerMotionAnimateParam('app.sheet.scrim', reduceMotion));
+}
+
+export function readerDialogCardTransition(reduceMotion: boolean): TransitionEffect {
+  if (reduceMotion) return TransitionEffect.IDENTITY;
+  return TransitionEffect.asymmetric(
+    TransitionEffect.scale({ x: 0.95, y: 0.95 }).combine(TransitionEffect.translate({ y: 8 }))
+      .animation(readerMotionAnimateParam('app.sheet.open', false)),
+    TransitionEffect.scale({ x: 0.95, y: 0.95 }).animation(readerMotionAnimateParam('app.sheet.close', false)));
+}
 
 /** One action rendered in the standard actions area. The owning dialog routes
  * onAction by id; admission (enabled) reflects the owner's live gating. */
@@ -65,6 +77,7 @@ export struct ReaderDialogSurface {
   @Prop leadingActionWidthVp: number = 0;
   @Prop primarySurfaceColor: string | undefined = undefined;
   @Prop showCloseButton: boolean = false;
+  @Prop closeEnabled: boolean = true;
   @Prop actions: DialogActionView[] = [];
   @BuilderParam body: () => void = this.defaultBody;
   onAction: (id: string) => void = (): void => {};
@@ -121,18 +134,18 @@ export struct ReaderDialogSurface {
           .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
           .textAlign(this.spec().headerTextAlign);
         Button({ type: ButtonType.Normal, stateEffect: false }) {
-          Stack({ alignContent: Alignment.Center }) {
-            Image(readerPaperActionIcon('close', this.appThemeScheme)).width(15).height(15)
-              .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
-          }.width(32).height(32).borderRadius(16)
-            .backgroundColor(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
-            .accessibilityLevel('no-hide-descendants').hitTestBehavior(HitTestMode.None);
-        }.constraintSize({ minWidth: 52 }).height(readerScaledControlHeight(44, TYPE_SELECT_OPTION.lineHeightFp as number, this.fontScale()))
-          .padding(0).backgroundColor(Color.Transparent).borderRadius(0)
+          Image(readerPaperActionIcon('close', this.appThemeScheme)).width(15).height(15)
+            .accessibilityLevel('no').hitTestBehavior(HitTestMode.None);
+        }.width(32).height(32).padding(0)
+          .responseRegion({ x: -12, y: -6, width: 44, height: 44 })
+          .enabled(this.closeEnabled).opacity(this.closeEnabled ? 1 : 0.45)
+          .attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme),
+            this.appThemeScheme, 16, 16, this.closeEnabled))
           .accessibilityText('关闭')
-          .onClick((): void => { if (this.mounted) this.onClose(); });
+          .onClick((): void => { if (this.mounted && this.closeEnabled) this.onClose(); });
       }
       .width('100%')
+      .constraintSize({ minHeight: 44 })
       .alignItems(VerticalAlign.Center);
     } else {
       Text(this.title)

@@ -1,3 +1,4 @@
+import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../entry/src/main/ets/ui/foundation/ReaderFontFamilies.ts';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { registerHooks } from 'node:module';
@@ -268,7 +269,7 @@ if (selected.length) {
       ['unchecked',false,false,1],['checking',false,false,0],['unchecked',true,false,0],['unchecked',false,true,0],
     ]) {
       let calls = 0;
-      const page = createReaderBuilderProbe(text, rowMethods, { ...controls.dependencies, ...v9, readerAppColor,
+      const page = createReaderBuilderProbe(text, rowMethods, { ...controls.dependencies, ...v9, readerAppColor, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
         readerActionIcon: (kind, scheme) => `icon:${kind}:${scheme}`, $r: value => value }, controls.hooks).owner;
       const source = {...base('a'),loginUrl:'https://a.test/login',checkState};
       Object.assign(page,{mounted:true,appForeground:true,inputEnabled:true,temporaryBackIdentity:'login-sdk',
@@ -287,7 +288,7 @@ if (selected.length) {
       ['expired', 'app.sourceUi.danger', 'app.sourceUi.dangerSurface', `icon:close:${scheme}`, '登录，验证失效'],
       ['unknown', 'app.sourceUi.muted', 'app.sourceUi.field', 'app.media.source_v9_question', '登录，状态未知'],
     ]) {
-      const page = createReaderBuilderProbe(text, rowMethods, { ...controls.dependencies, ...v9, readerAppColor,
+      const page = createReaderBuilderProbe(text, rowMethods, { ...controls.dependencies, ...v9, readerAppColor, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
         readerActionIcon: (kind, theme) => `icon:${kind}:${theme}`, $r: value => value }, controls.hooks).owner;
       const source = { ...base('a'), loginState, loginUrl: 'https://a.test/login' };
       Object.assign(page, { mounted: true, appForeground: true, inputEnabled: true, temporaryBackIdentity: 'login-sdk',
@@ -295,11 +296,10 @@ if (selected.length) {
       page.loginButton(source);
       const nodes = [...page.nodes.values()];
       const button = nodes.find(node => node.type === 'Button' && node.onClick);
-      const ring = nodes.find(node => node.type === 'Stack' && node.width === 13);
       const glyph = nodes.find(node => node.type === 'Image');
       assert.deepEqual([button.width, button.height, button.responseRegion.height], [58, 26, 44]);
       assert.equal(button.backgroundColor, readerAppColor(surface, scheme));
-      assert.equal(ring.border.color, readerAppColor(ink, scheme));
+      assert.deepEqual([glyph.width, glyph.height], [12, 12]);
       assert.equal(glyph.fillColor, readerAppColor(ink, scheme));
       assert.equal(glyph.create, icon);
       assert.ok(button.accessibilityText.includes(accessibilityText));
@@ -485,8 +485,8 @@ if (selected.length) {
     metrics.systemInsets = new ReaderInsetsVp(24, 36, 12, 24);
     const geometry = actualSourceManagementGeometry(metrics);
     const transferFile = new URL('../entry/src/main/ets/features/source/ui/SourceV9TransferPage.ets', import.meta.url);
-    const Transfer = selectedProductionMethods(transferFile, 'SourceV9TransferPage', ['refreshLayout'], {
-      ...geometry, readerWindowMetrics: () => metrics, TRANSFER_MAX_WIDTH: 640, TRANSFER_BODY_TAIL: 12,
+    const Transfer = selectedProductionMethods(transferFile, 'SourceV9TransferPage', ['refreshLayout', 'visiblePaneHeight'], {
+      ...geometry, readerWindowMetrics: () => metrics, readerKeyboardHostBottom: (_metrics, _top, height) => height, TRANSFER_MAX_WIDTH: 640, TRANSFER_BODY_TAIL: 12,
       TRANSFER_FOOTER_TOP: 8,
     });
     for (const pane of ['import', 'subscriptions']) {

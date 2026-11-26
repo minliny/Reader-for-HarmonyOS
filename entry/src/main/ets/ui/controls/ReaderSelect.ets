@@ -5,11 +5,12 @@ import { registerReaderFonts } from '../foundation/ReaderFonts';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
 import { readerInteractiveSafeLeft, readerInteractiveSafeRight } from '../foundation/ReaderWindowMetrics';
 import { readerSelectAvailableWidth, readerSelectTriggerWidth,
-  READER_SELECT_TRIGGER_CHROME } from '../foundation/ReaderSelectGeometry';
+  READER_SELECT_TRIGGER_CHROME, SOURCE_GROUP_SELECT_RADIUS } from '../foundation/ReaderSelectGeometry';
 import {
   TOK_BORDER_W,
   TOK_SPACE_CONTROL_INLINE,
 } from '../foundation/ReaderTokens';
+import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerMotionAnimateParam } from '../foundation/ReaderMotionPolicy';
 import {
   TYPE_SELECT_DEFAULT_VALUE,
@@ -86,8 +87,10 @@ export struct ReaderSelect {
     .width('100%')
     .height(this.triggerHeight())
     .padding(0)
-    .backgroundColor(Color.Transparent)
-    .borderRadius(this.variant === 'sourceGroup' ? 10 : this.triggerHeight() / 2)
+    .attributeModifier(new ReaderPressFeedback(this.variant === 'sourceGroup' ?
+      readerAppColor('app.sourceUi.field', this.appThemeScheme) : Color.Transparent, this.appThemeScheme,
+      this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_RADIUS : this.triggerHeight() / 2,
+      SOURCE_GROUP_SELECT_RADIUS, this.variant === 'sourceGroup' && this.triggerEnabled()))
     .responseRegion({ x: 0, y: this.variant === 'appearanceLibrary' ? -APPEARANCE_HIT_OUTSET : this.variant === 'sourceGroup' ? -2 : 0,
       width: '100%', height: this.variant === 'appearanceLibrary' ?
         this.triggerHeight() + APPEARANCE_HIT_OUTSET * 2 : this.variant === 'sourceGroup' ? 44 : this.triggerHeight() })
@@ -166,9 +169,9 @@ export struct ReaderSelect {
     .id(this.variant === 'sourceGroup' && this.focusId.length > 0 ? `${this.focusId}:frame` : '')
     .width('100%').height(this.triggerHeight())
     .padding({ left: SELECT_PAD, right: SELECT_PAD })
-    .backgroundColor(readerAppColor(this.variant === 'sourceGroup' ? 'app.sourceUi.field' : 'TOK_SURFACE_FIELD', this.appThemeScheme))
+    .backgroundColor(this.variant === 'sourceGroup' ? Color.Transparent : readerAppColor('TOK_SURFACE_FIELD', this.appThemeScheme))
     .border({ width: TOK_BORDER_W, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
-    .borderRadius(this.variant === 'sourceGroup' ? 10 : this.triggerHeight() / 2)
+    .borderRadius(this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_RADIUS : this.triggerHeight() / 2)
     .alignItems(VerticalAlign.Center);
   }
 

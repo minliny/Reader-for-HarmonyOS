@@ -163,6 +163,7 @@ export class SourceOrchestrator {
   private toggleSeq: number = 0;
   /** Serializes Core source operations across entries. */
   private operationChain: Promise<void> = Promise.resolve();
+  private exportInFlight: boolean = false;
   /** Prevents repeated taps from opening multiple system pickers. */
   private importActive: boolean = false;
   /** Session-local source-check projections; Core remains authoritative. */
@@ -435,6 +436,8 @@ export class SourceOrchestrator {
   }
 
   exportAll(): void {
+    if (this.exportInFlight) return;
+    this.exportInFlight = true;
     const session = this.session;
     const current = (): boolean => this.isCurrentSession(session);
     this.operationChain = this.operationChain.then(async (): Promise<void> => {
@@ -445,7 +448,7 @@ export class SourceOrchestrator {
       if (current() && file !== undefined) this.publishStatus('success', `已导出 ${exported.count} 个书源：${file}`);
     }).catch((error: Error): void => {
       if (current()) this.publishStatus('error', `书源导出失败：${error.message}`);
-    });
+    }).finally((): void => { this.exportInFlight = false; });
   }
 
   loadGroups(): Promise<SourceGroupCatalogData> {

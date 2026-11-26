@@ -1,3 +1,5 @@
+import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
+import { readerSurfaceElevation } from '../surfaces/ReaderSurfaceSpecs';
 import { FrameCallback } from '@kit.ArkUI';
 import type { AnimatorResult } from '@ohos.animator';
 import { readerAppColor } from '../foundation/ReaderThemeRegistry';
@@ -289,7 +291,8 @@ export struct ReaderSelectPanel {
     .border({ width: this.menuHeaderHeight > 0 ? 0 : TOK_BORDER_W, color: this.panelBorderColor() })
     .borderRadius(this.variant === 'appearanceLibrary' ? 9 : (this.variant === 'sourceGroup' ? SOURCE_GROUP_SELECT_RADIUS : 14))
     .opacity(this.panelOpacity)
-    .shadow({ radius: this.variant === 'appearanceLibrary' ? 20 : 0,
+    .shadow(this.variant === 'sourceGroup' ? readerSurfaceElevation('popover', this.appThemeScheme) : {
+      radius: this.variant === 'appearanceLibrary' ? 20 : 0,
       color: this.variant === 'appearanceLibrary' ? readerAppColor('app.shadow.select', this.appThemeScheme) : Color.Transparent, offsetY: 8 })
     .clip(true).onAppear((): void => this.expandPanel());
   }
@@ -324,11 +327,16 @@ export struct ReaderSelectPanel {
             Image(this.appThemeScheme === 'night' ? $r('app.media.reader_chevron_down_theme_night') : $r('app.media.reader_chevron_down'))
               .width(CHEVRON_W).height(CHEVRON_H)
               .position({ x: SOURCE_GROUP_SELECT_ARROW_TARGET - CHEVRON_W - SELECT_PAD,
-                y: (SOURCE_GROUP_SELECT_ARROW_TARGET - CHEVRON_H) / 2 })
+                y: (this.menuHeaderHeight - CHEVRON_H) / 2 })
               .rotate({ angle: this.chevronAngle }).accessibilityLevel('no');
           }.width('100%').height('100%');
-        }.width(SOURCE_GROUP_SELECT_ARROW_TARGET).height(SOURCE_GROUP_SELECT_ARROW_TARGET)
-          .padding(0).borderRadius(SOURCE_GROUP_SELECT_RADIUS).backgroundColor(Color.Transparent)
+        }.width(SOURCE_GROUP_SELECT_ARROW_TARGET).height(this.menuHeaderHeight)
+          .padding(0)
+          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme,
+            SOURCE_GROUP_SELECT_RADIUS, SOURCE_GROUP_SELECT_RADIUS, !this.closing))
+          .responseRegion({ x: 0, y: Math.min(0, (this.menuHeaderHeight - 44) / 2),
+            width: SOURCE_GROUP_SELECT_ARROW_TARGET, height: Math.max(44, this.menuHeaderHeight) })
+          .enabled(!this.closing)
           .id('reader-source-group-collapse').accessibilityText('收起分组')
           .onClick((): void => this.onMenuHeaderCollapse?.(identity));
       }

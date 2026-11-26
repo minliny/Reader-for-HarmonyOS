@@ -32,7 +32,7 @@ export const SOURCE_ROW_ICON_WIDTH = 34;
 export const SOURCE_STATUS_CHIP_GAP = 5;
 const SOURCE_ROW_GAP = 8;
 const SOURCE_ROW_CARD_INSETS = 22;
-const SOURCE_ROW_ACTION_GAP = 6;
+export const SOURCE_ROW_ACTION_GAP = 10;
 const SOURCE_ROW_SWITCH_WIDTH = 44;
 
 /** Keep the two text lines together at narrow widths and large font scales. */

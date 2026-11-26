@@ -1,3 +1,4 @@
+import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
 import { readerLayoutCarrierResponseRegion } from '../layout/ReaderPageNativeAttributes';
 import { DIRECTORY_CHROME_VISUAL as visual, mangaDirectoryScale, mangaDirectoryHeaderHeight } from '../foundation/ReaderDirectoryChromeVisual';
 import { MangaDirectoryPressFeedback } from '../foundation/MangaDirectoryPressFeedback';
@@ -13,7 +14,7 @@ import {
   readerInteractiveSafeRight,
 } from '../foundation/ReaderWindowMetrics';
 import { TYPE_DOWNLOAD_HEADER_TITLE, TYPE_PAGE_TITLE } from '../foundation/ReaderTypography';
-import { READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../foundation/ReaderFontFamilies.ts';
+import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../foundation/ReaderFontFamilies.ts';
 import { APP_FLOATING_HEADER_BAR_HEIGHT, APP_HEADER_BAR_HEIGHT, DOWNLOAD_HEADER_HEIGHT,
   DOWNLOAD_HEADER_ACTION_WIDTH, DOWNLOAD_HEADER_ACTION_HEIGHT } from '../foundation/ReaderHeaderMetrics';
 import { readerScaledBarHeight } from '../foundation/ReaderSurfaceResolvers';
@@ -81,11 +82,12 @@ export struct PageBackBar {
   private panel() {
     Row({ space: this.variant === 'standard' ? TOK_SPACE_CONTROL_INLINE : 0 }) {
       if (this.leadingActionLabel.length > 0) {
-        Button({ type: ButtonType.Normal }) {
-          Text(this.leadingActionLabel).fontFamily(TYPE_PAGE_TITLE.fontFamily).fontSize(13)
+        Button({ type: ButtonType.Normal, stateEffect: false }) {
+          Text(this.leadingActionLabel).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(13)
             .maxLines(1).minFontSize(10).maxFontSize(13)
-            .fontColor(readerAppColor('app.sourceUi.primary', this.appThemeScheme));
-        }.width(this.trailingWidthVp).height(44).padding(0).backgroundColor(Color.Transparent)
+            .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
+        }.width(this.trailingWidthVp).height(44).padding(0)
+          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 22))
           .onClick((): void => this.onLeadingAction());
       } else if (!this.showBack) {
         if (this.centered || this.variant === 'download') {

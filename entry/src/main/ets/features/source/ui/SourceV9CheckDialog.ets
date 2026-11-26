@@ -1,8 +1,15 @@
 import { errorMessageOf } from '../../../app/ErrorMessage';
 import { ReaderPageState } from '../../../ui/feedback/ReaderPageState';
-import { READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../../ui/foundation/ReaderFontFamilies';
+import { READER_FONT_NOTO_SANS_SC_UI_BOLD, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
+  READER_FONT_NOTO_SANS_SC_UI_REGULAR } from '../../../ui/foundation/ReaderFontFamilies';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
 import { readerAppColor } from '../../../ui/foundation/ReaderThemeRegistry';
-import { DialogActionView, ReaderDialogSurface } from '../../../ui/surfaces/ReaderDialogSurface';
+import { readerReadableFontScale } from '../../../ui/foundation/ReaderSurfaceResolvers';
+import { readerWindowMetrics } from '../../../ui/foundation/ReaderWindowEnvironment';
+import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
+import { readerPageAreaLength } from '../../../ui/layout/ReaderPageShell';
+import { DialogActionView, ReaderDialogSurface, readerDialogCardTransition,
+  readerDialogScrimTransition } from '../../../ui/surfaces/ReaderDialogSurface';
 import type { BookSource, SourceCheckOutcome, SourceCheckReport, SourceCheckReportStep } from '../application/SourceGateway';
 import type { SourceV9CheckOptions } from '../application/SourceOrchestrator';
 import { sourceV9Levels, type SourceV9Depth, type SourceV9Mode } from '../application/SourceV9TransferState';
@@ -36,6 +43,8 @@ const QUICK_WORDS: string[] = ['我的', '斗破', '海贼'];
 @Component
 export struct SourceV9CheckDialog {
   @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
+  @StorageLink('readerWindowMetricsRevision') private windowRevision: number = 0;
   @Prop sources: BookSource[] = [];
   @Prop title: string = '批量检测';
   @Prop batch: boolean = false;
@@ -55,7 +64,9 @@ export struct SourceV9CheckDialog {
   @State private currentName: string = '';
   @State private stage: string = '';
   @State private paneWidth: number = 0;
-  @State private bodyHeight: number = 400;
+  @State private paneHeight: number = 0;
+  @State private paneLeft: number = 0;
+  @State private paneTop: number = 0;
   @State private runError: string = '';
   private batchReturn: SourceV9BatchReturn | undefined = undefined;
   private generation: number = 0;
@@ -169,31 +180,60 @@ export struct SourceV9CheckDialog {
   build() {
     Stack({ alignContent: Alignment.Center }) {
       Column().width('100%').height('100%')
-        .backgroundColor(readerAppColor('app.scrim.modal', this.scheme)).onClick((): void => this.close());
-      ReaderDialogSurface({
-        specId: 'source-v9-check', containerWidthVp: this.paneWidth, title: this.singleSource() === undefined ? this.title : '书源检测报告',
-        showCloseButton: true, onClose: (): void => this.close(),
-        body: (): void => { this.body(); },
-        actions: [
-          new DialogActionView('back', this.drillId.length > 0 ? '返回结果' : '关闭', 'default', this.inputEnabled,
-            false, 'reader-source-v9-check-close'),
-          new DialogActionView('run', this.running ? '停止检测' :
-            (this.rows.length > 0 || this.report(this.singleSource()) !== undefined) ? '重新检测' : '开始检测',
-          this.running ? 'danger' : 'primary', this.inputEnabled, false, 'reader-source-v9-check-run'),
-        ],
-        onAction: (action: string): void => {
-          if (action === 'back') this.close();
-          else if (this.running) this.stop();
-          else void this.start();
-        },
-      });
+        .backgroundColor(readerAppColor('app.scrim.modal', this.scheme))
+        .accessibilityLevel('no').onClick((): void => this.close());
+      Column() {
+        Column() {
+          ReaderDialogSurface({
+            specId: 'source-v9-check', containerWidthVp: this.paneWidth,
+            title: this.singleSource() === undefined ? this.title : '书源检测报告',
+            showCloseButton: true, closeEnabled: this.inputEnabled, onClose: (): void => this.close(),
+            body: (): void => { this.body(); },
+            actions: [
+              new DialogActionView('back', this.drillId.length > 0 ? '返回结果' : '关闭', 'default', this.inputEnabled,
+                false, 'reader-source-v9-check-close'),
+              new DialogActionView('run', this.running ? '停止检测' :
+                (this.rows.length > 0 || this.report(this.singleSource()) !== undefined) ? '重新检测' : '开始检测',
+              this.running ? 'danger' : 'primary', this.inputEnabled, false, 'reader-source-v9-check-run'),
+            ],
+            onAction: (action: string): void => {
+              if (action === 'back') this.close();
+              else if (this.running) this.stop();
+              else void this.start();
+            },
+          });
+        }.width('100%').hitTestBehavior(HitTestMode.Transparent).transition(readerDialogCardTransition(this.reduceMotion));
+      }.width('100%').height('100%').justifyContent(FlexAlign.Center)
+        .padding({ bottom: this.keyboardClearance() }).hitTestBehavior(HitTestMode.Transparent);
     }.width('100%').height('100%')
-      .onAreaChange((_old: Area, next: Area): void => {
-        const width = typeof next.width === 'number' ? next.width : Number.parseFloat(next.width.toString());
-        if (Number.isFinite(width) && width > 0) this.paneWidth = width;
-        const height = typeof next.height === 'number' ? next.height : Number.parseFloat(next.height.toString());
-        if (Number.isFinite(height) && height > 0) this.bodyHeight = Math.max(80, Math.min(500, height - 150));
-      });
+      .transition(readerDialogScrimTransition(this.reduceMotion))
+      .onAreaChange((_old: Area, next: Area): void => this.recordPane(next));
+  }
+
+  private recordPane(area: Area): void {
+    const width = readerPageAreaLength(area.width);
+    const height = readerPageAreaLength(area.height);
+    const left = readerPageAreaLength(area.globalPosition.x);
+    const top = readerPageAreaLength(area.globalPosition.y);
+    if (width > 0) this.paneWidth = width;
+    if (height > 0) this.paneHeight = height;
+    if (Number.isFinite(left)) this.paneLeft = left;
+    if (Number.isFinite(top)) this.paneTop = top;
+  }
+
+  private keyboardClearance(): number {
+    this.windowRevision;
+    const metrics = readerWindowMetrics();
+    if (!metrics.ready) return 0;
+    return Math.max(0, this.paneHeight - readerKeyboardHostBottom(
+      metrics, this.paneTop, this.paneHeight, this.paneLeft, this.paneWidth));
+  }
+
+  private bodyHeight(): number {
+    this.windowRevision;
+    if (this.paneHeight <= 0) return 400;
+    const scale = readerReadableFontScale(readerWindowMetrics().systemFontScale);
+    return Math.max(0, Math.min(500, this.paneHeight - this.keyboardClearance() - Math.max(150, 100 * scale)));
   }
 
   @Builder
@@ -201,8 +241,8 @@ export struct SourceV9CheckDialog {
     Scroll() {
       Column({ space: 9 }) {
         if (this.singleSource() !== undefined) {
-          Text(this.singleSource()?.name ?? '').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
-            .fontWeight(FontWeight.Medium).fontSize(14).width('100%').maxLines(1)
+          Text(this.singleSource()?.name ?? '').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
+            .fontSize(14).width('100%').maxLines(1)
             .textOverflow({ overflow: TextOverflow.Ellipsis }).fontColor(readerAppColor('TOK_INK', this.scheme));
         }
         SourceV9SegmentedTrack({ choices: MODES, selected: this.mode, actionEnabled: !this.running && this.inputEnabled,
@@ -215,34 +255,44 @@ export struct SourceV9CheckDialog {
           TextInput({ text: this.keyword, placeholder: '自定义测试词' })
             .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(13)
             .fontColor(readerAppColor('TOK_INK', this.scheme)).backgroundColor(readerAppColor('app.sourceUi.field', this.scheme))
-            .width('100%').height(38).borderRadius(10).enabled(!this.running && this.inputEnabled)
+            .width('100%').height(38).borderRadius(10)
+            .border({ width: 1, color: readerAppColor('TOK_LINE_STRONG', this.scheme) })
+            .cancelButton({ style: CancelButtonStyle.INPUT })
+            .enabled(!this.running && this.inputEnabled)
             .onChange((keyword: string): void => { this.keyword = keyword; });
           Text('留空时使用书源自带测试词或「我的」').width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
             .fontSize(11).fontColor(readerAppColor('TOK_MUTED', this.scheme));
           Row({ space: 6 }) {
             ForEach(QUICK_WORDS, (word: string): void => {
-              this.choice(word, word === this.keyword, false, (): void => { this.keyword = word; });
+              this.choice(word);
             }, (word: string): string => word);
           }.width('100%');
         }
         if (this.running || this.stopped || this.completed > 0) this.progress();
         if (this.runError.length > 0) ReaderPageState({ variant: 'inline', message: this.runError, padded: false });
         if (this.singleSource() !== undefined) {
-          this.reportSteps(this.report(this.singleSource()), this.outcome(this.singleSource())?.failureReason);
+          SourceV9ReportSteps({ report: this.report(this.singleSource()),
+            currentFailure: this.outcome(this.singleSource())?.failureReason,
+            activeStage: this.running ? this.stage : '' });
         }
         else this.batchRows();
       }.width('100%').alignItems(HorizontalAlign.Start);
-    }.width('100%').constraintSize({ maxHeight: this.bodyHeight }).scrollBar(BarState.Auto);
+    }.width('100%').constraintSize({ maxHeight: this.bodyHeight() }).scrollBar(BarState.Auto);
   }
 
   @Builder
-  private choice(title: string, selected: boolean, stretch: boolean, choose: () => void) {
-    Button(title, { type: ButtonType.Capsule }).height(32).layoutWeight(stretch ? 1 : undefined).padding({ left: 9, right: 9 })
-      .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(12).fontWeight(FontWeight.Medium)
-      .fontColor(readerAppColor(selected ? 'TOK_ON_PRIMARY' : 'TOK_INK', this.scheme))
-      .backgroundColor(selected ? readerAppColor('app.sourceUi.primary', this.scheme) :
-        readerAppColor('app.sourceUi.field', this.scheme))
-      .accessibilitySelected(selected).enabled(!this.running && this.inputEnabled).onClick(choose);
+  private choice(word: string) {
+    Button(word, { type: ButtonType.Capsule, stateEffect: false }).height(32).padding({ left: 9, right: 9 })
+      .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(12)
+      .fontColor(readerAppColor(word === this.keyword ? 'app.sourceUi.onPrimary' : 'TOK_INK', this.scheme))
+      .attributeModifier(new ReaderPressFeedback(
+        readerAppColor(word === this.keyword ? 'app.sourceUi.primary' : 'app.sourceUi.field', this.scheme),
+        this.scheme, 16, 16, !this.running && this.inputEnabled))
+      .responseRegion({ y: -6, height: 44 })
+      .accessibilitySelected(word === this.keyword).enabled(!this.running && this.inputEnabled)
+      .onClick((): void => {
+        if (!this.running && this.inputEnabled) this.keyword = word === this.keyword ? '' : word;
+      });
   }
 
   @Builder
@@ -283,20 +333,75 @@ export struct SourceV9CheckDialog {
   }
 
   @Builder
-  private reportSteps(report: SourceCheckReport | undefined, currentFailure?: string) {
+  private batchRows() {
+    Column() {
+      ForEach(this.rows, (row: SourceV9CheckRow, index: number): void => {
+        Button({ type: ButtonType.Normal, stateEffect: false }) {
+          Row({ space: 8 }) {
+            Row().width(8).height(8).borderRadius(4).backgroundColor(sourceV9ReportFill(sourceV9DiagnosticTone(row.outcome?.report), this.scheme) ??
+              readerAppColor('app.sourceUi.muted', this.scheme)).accessibilityLevel('no');
+            Text(row.source.name).layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
+              .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(13).fontColor(readerAppColor('TOK_INK', this.scheme));
+            Text(row.outcome === undefined ? '未取得报告' : row.outcome.available ? '通过' : '未通过')
+              .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(11)
+              .fontColor(readerAppColor(row.outcome?.available ? 'TOK_PRIMARY_TEXT' : 'TOK_MUTED', this.scheme));
+            Image(this.scheme === 'night' ? $r('app.media.reader_chevron_right_theme_night') :
+              $r('app.media.reader_chevron_right')).width(14).height(14).accessibilityLevel('no');
+          }.width('100%');
+        }.width('100%').height(44).padding({ left: 10, right: 10 })
+          .attributeModifier(new ReaderPressFeedback(readerAppColor('TOK_CARD_BG', this.scheme),
+            this.scheme, 0, 0, !this.running && this.inputEnabled))
+          .border({ width: { bottom: index === this.rows.length - 1 ? 0 : 1 },
+            color: readerAppColor('TOK_LINE', this.scheme) })
+          .enabled(!this.running && this.inputEnabled)
+          .onClick((): void => {
+            if (!this.mounted || this.running || !this.inputEnabled || this.drillId.length > 0) return;
+            const current = this.rows.find((item: SourceV9CheckRow): boolean =>
+              item.source.sourceId === row.source.sourceId);
+            if (current === undefined) return;
+            this.batchReturn = { mode: this.mode, depth: this.depth, keyword: this.keyword,
+              completed: this.completed, stopped: this.stopped };
+            this.drillId = current.source.sourceId;
+            this.runError = current.error ?? '';
+            this.stopped = false;
+            this.completed = 0;
+            this.mode = 'search';
+            this.depth = 'L2';
+            this.keyword = '';
+            this.restoreOptions(this.singleSource());
+          });
+      }, (row: SourceV9CheckRow): string => JSON.stringify([row.source.sourceId, row.source.name, row.outcome?.available,
+        row.outcome?.traceId, row.outcome?.report?.traceId, row.outcome?.durationMs, row.outcome?.failureReason,
+        row.outcome?.report?.steps, row.error]));
+    }.width('100%').borderRadius(14).clip(true);
+  }
+}
+
+@Component
+export struct SourceV9ReportSteps {
+  @StorageLink('readerAppScheme') private scheme: string = 'day';
+  @Prop report: SourceCheckReport | undefined = undefined;
+  @Prop currentFailure: string | undefined = undefined;
+  @Prop activeStage: string = '';
+
+  private stepFor(level: string): SourceCheckReportStep | undefined {
+    return this.report?.steps.find((step: SourceCheckReportStep): boolean => step.level === level);
+  }
+
+  build() {
     Column() {
       ForEach(STAGES, (stage: SourceV9CheckChoice): void => {
-        this.step(stage, report?.steps.find((step: SourceCheckReportStep): boolean => step.level === stage.value), currentFailure);
-      }, (stage: SourceV9CheckChoice): string => stage.value);
+        this.step(stage, this.stepFor(stage.value));
+      }, (stage: SourceV9CheckChoice): string => JSON.stringify([stage.value, this.stepFor(stage.value)]));
     }.width('100%').backgroundColor(readerAppColor('TOK_CARD_BG', this.scheme))
       .borderRadius(14).border({ width: 1, color: readerAppColor('TOK_LINE', this.scheme) });
   }
 
   @Builder
-  private step(stage: SourceV9CheckChoice, step: SourceCheckReportStep | undefined, currentFailure?: string) {
+  private step(stage: SourceV9CheckChoice, step: SourceCheckReportStep | undefined) {
     Row({ space: 8 }) {
       Text(stage.value).width(29).height(24).borderRadius(6).textAlign(TextAlign.Center)
-        .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(11).fontWeight(FontWeight.Bold)
+        .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(11)
         .fontColor(readerAppColor(step?.status === 'fail' ? 'app.sourceUi.danger' :
           step?.status === 'pass' ? 'TOK_PRIMARY_TEXT' : 'TOK_MUTED', this.scheme))
         .backgroundColor(readerAppColor(step?.status === 'fail' ? 'app.sourceUi.dangerSurface' :
@@ -304,7 +409,7 @@ export struct SourceV9CheckDialog {
       Column({ space: 2 }) {
         Text(stage.title).width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(13)
           .fontColor(readerAppColor('TOK_INK', this.scheme));
-        Text(this.stage === stage.value && this.running ? '正在检测…' : sourceV9CheckStepText(step, currentFailure))
+        Text(this.activeStage === stage.value ? '正在检测…' : sourceV9CheckStepText(step, this.currentFailure))
           .width('100%').fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(11)
           .fontColor(readerAppColor('TOK_MUTED', this.scheme));
       }.layoutWeight(1);
@@ -314,41 +419,5 @@ export struct SourceV9CheckDialog {
       }
     }.width('100%').padding({ left: 10, right: 10, top: 7, bottom: 7 })
       .border({ width: { top: stage.value === 'L1' ? 0 : 1 }, color: readerAppColor('TOK_LINE', this.scheme) });
-  }
-
-  @Builder
-  private batchRows() {
-    Column() {
-      ForEach(this.rows, (row: SourceV9CheckRow): void => {
-        Button({ type: ButtonType.Normal }) {
-          Row({ space: 8 }) {
-            Circle().width(8).height(8).fill(sourceV9ReportFill(sourceV9DiagnosticTone(row.outcome?.report), this.scheme) ??
-              readerAppColor('app.sourceUi.muted', this.scheme)).accessibilityLevel('no');
-            Text(row.source.name).layoutWeight(1).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-              .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(13).fontColor(readerAppColor('TOK_INK', this.scheme));
-            Text(row.outcome === undefined ? '未取得报告' : row.outcome.available ? '通过' : '未通过')
-              .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(11)
-              .fontColor(readerAppColor(row.outcome?.available ? 'TOK_PRIMARY_TEXT' : 'TOK_MUTED', this.scheme));
-            Image(this.scheme === 'night' ? $r('app.media.source_group_chevron_theme_night') :
-              $r('app.media.source_group_chevron')).width(14).height(14).accessibilityLevel('no');
-          }.width('100%');
-        }.width('100%').height(44).borderRadius(0).padding({ left: 10, right: 10 })
-          .backgroundColor(readerAppColor('TOK_CARD_BG', this.scheme))
-          .border({ width: { bottom: 1 }, color: readerAppColor('TOK_LINE', this.scheme) })
-          .enabled(!this.running && this.inputEnabled)
-          .onClick((): void => {
-            this.batchReturn = { mode: this.mode, depth: this.depth, keyword: this.keyword,
-              completed: this.completed, stopped: this.stopped };
-            this.drillId = row.source.sourceId;
-            this.runError = row.error ?? '';
-            this.stopped = false;
-            this.completed = 0;
-            this.mode = 'search';
-            this.depth = 'L2';
-            this.keyword = '';
-            this.restoreOptions(this.singleSource());
-          });
-      }, (row: SourceV9CheckRow): string => row.source.sourceId);
-    }.width('100%').borderRadius(14).clip(true);
   }
 }

@@ -116,7 +116,8 @@ test('leaving a drilled report restores the stopped batch and its own check opti
     'batchRows', 'close', 'stop', 'consumeBack', 'singleSource',
     'report', 'outcome', 'restoreOptions', 'progress', 'progressLabel', 'batchProgressCounts', 'checkTotal',
   ], { readerAppColor: role => role, sourceV9LatestReport: () => undefined, sourceV9DiagnosticTone, sourceV9ReportFill,
-    READER_FONT_NOTO_SANS_SC_UI_REGULAR: 'ReaderNotoSansSCUIRegular' });
+    READER_FONT_NOTO_SANS_SC_UI_REGULAR: 'ReaderNotoSansSCUIRegular' },
+  { componentName: 'SourceV9CheckDialog', allowEmptyBranchAdmission: true });
   const first = source('首条书源');
   const pending = source('未检测书源');
   const parentRows = [{ source: first, outcome: { available: true,
@@ -143,6 +144,25 @@ test('leaving a drilled report restores the stopped batch and its own check opti
   const text = [...owner.nodes.values()].filter(node => node.type === 'Text').map(node => node.create);
   assert.ok(text.includes('已停止检测 · 1/2'));
   assert.ok(text.includes('通过 1 · 失败 0'));
+
+  // Replay only the SDK's ForEach observer so a stable source-only key would
+  // retain its old content. Drill back into the replacement to check admission.
+  const observer = [...owner.keys.keys()].find(Number.isInteger);
+  assert.ok(Number.isInteger(observer));
+  const before = owner.nodes.size;
+  const retested = { source: first, error: '新的错误摘要', outcome: { available: false, traceId: 'new-trace',
+    durationMs: 120, report: { traceId: 'new-report', mode: 'explore',
+      steps: [{ level: 'L4', status: 'fail', requested: true, executed: true }] } } };
+  owner.rows = recordSourceV9Check(parentRows, retested);
+  owner.replayOnly([observer]);
+  const replacement = [...owner.nodes.values()].slice(before);
+  assert.ok(replacement.some(node => node.type === 'Text' && node.create === '未通过'));
+  assert.ok(replacement.some(node => node.type === 'Row' && node.width === 8 && node.backgroundColor === sourceV9ReportFill('deepFailure', 'day')));
+  const retestButton = replacement.find(node => node.type === 'Button');
+  assert.equal(retestButton.border.width.bottom, 0);
+  retestButton.onClick();
+  assert.equal(owner.runError, '新的错误摘要');
+  assert.equal(owner.mode, 'explore');
 });
 
 test('batch and group disable send every supported member through the actual cookie cleanup path', async () => {
@@ -693,4 +713,214 @@ test('transfer subscription diff renders a single card and distinguishes selecte
   assert.ok(byLabel('https://sources.example · 订阅一'));
   assert.ok(byLabel('订阅二 · 没有变更'));
   assert.deepEqual(selection, [['更新项', true, true], ['冲突项', false, false]]);
+});
+
+const etsRoot = new URL('../entry/src/main/ets/', import.meta.url);
+const sourceUi = name => new URL('features/source/ui/' + name + '.ets', etsRoot);
+
+test('all source toggles supply identity, and the three transfer controls have distinct identities', async () => {
+  const { readdirSync, readFileSync } = await import('node:fs');
+  const { installedEtsCompiler } = await import('./lib/ets-compiler-runtime.mjs');
+  const { ts, options } = installedEtsCompiler();
+  const directory = new URL('features/source/', etsRoot);
+  const transfer = new Map();
+  let count = 0;
+  for (const path of readdirSync(directory, { recursive: true }).filter(name => name.endsWith('.ets'))) {
+    const tree = ts.createSourceFile(path, readFileSync(new URL(path, directory), 'utf8'),
+      ts.ScriptTarget.Latest, true, ts.ScriptKind.ETS, options);
+    const visit = node => {
+      if (ts.isCallExpression(node) && node.expression.getText(tree) === 'ReaderToggle') {
+        const props = node.arguments[0].properties;
+        const identity = props.find(prop => prop.name?.getText(tree) === 'inputIdentity')?.initializer;
+        assert.ok(identity && (!ts.isStringLiteral(identity) || identity.text.length > 0), path);
+        if (path.endsWith('SourceV9TransferPage.ets')) {
+          const label = props.find(prop => prop.name?.getText(tree) === 'accessibilityLabel')?.initializer;
+          if (label && ts.isStringLiteral(label)) transfer.set(label.text, identity.text);
+        }
+        count += 1;
+      }
+      ts.forEachChild(node, visit);
+    };
+    visit(tree);
+  }
+  assert.ok(count >= 7);
+  const identities = ['同时保存为书源订阅', '导入前可用性检测', '自动检查更新'].map(label => transfer.get(label));
+  assert.ok(identities.every(Boolean));
+  assert.equal(new Set(identities).size, 3);
+});
+
+test('source more menu closes on every ownership change and rejects disabled or repeat actions', async () => {
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const Page = selectedProductionMethods(sourceUi('SourceManagementPage'), 'SourceManagementPage', [
+    'moreFocusRevision', 'toggleMoreMenu', 'closeMoreMenu', 'moreActions', 'chooseMoreAction',
+    'onToolsFocusContextChanged', 'onV9PaneChanged', 'onV9ListInputChanged', 'toggleGroupSelection',
+    'onUngroupedBatch', 'consumeTemporaryBack', 'aboutToDisappear',
+  ], { ReaderMenuActionView: class {
+    constructor(id, label, enabled) { Object.assign(this, { id, label, enabled }); }
+  } });
+  const events = [];
+  const owner = new Page();
+  Object.assign(owner, {
+    mounted: true, v9Pane: 'list', appForeground: true, inputEnabled: true, projectedSourceCount: 0, moreMenuOpen: false,
+    temporaryBackIdentity: 'opening', hasReadableSources: false, ungroupedBatchIds: [],
+    managementOpeningIsCurrent: () => true, managementInputIsCurrent: () => true, managementBackIsCurrent: () => true,
+    toolsFocusId: target => 'focus:' + target, scheduleMoreFocus: id => events.push(['focus', id]),
+    hideManagementKeyboard: () => { events.push(['keyboard']); return false; },
+    onV9Action: (...args) => events.push(args), visibleIds: () => ['selected'],
+    prepareV9ListReturn() {}, cancelToolsReturnFocus() {}, cancelScrollRestore() {},
+    scheduleImportStatusReadyObservation() {}, requestGroupClose: () => false, groupOptions: () => [],
+    rebuildSourceProjection() {}, retireGroupSelection() {}, onTemporaryBackBridge() {},
+    verificationOperationTextRoles: new Set(), measurements: { clear() {} }, editingHost: { unmount() {} }, transientFeedback: { reset() {} },
+  });
+  owner.toggleMoreMenu();
+  assert.deepEqual(events.splice(0), [['keyboard'], ['focus', 'reader-source-v9-open-subscriptions']]);
+  assert.deepEqual(owner.moreActions().map(action => action.enabled), [true, true, false, false]);
+  owner.chooseMoreAction('detect');
+  owner.chooseMoreAction('export');
+  assert.equal(owner.moreMenuOpen, true);
+  assert.deepEqual(events, []);
+  owner.projectedSourceCount = 1;
+  owner.hasReadableSources = true;
+  owner.chooseMoreAction('detect');
+  owner.chooseMoreAction('detect');
+  assert.deepEqual(events.splice(0), [['detect', ['selected']]]);
+
+  for (const [close, restore] of [
+    [() => owner.consumeTemporaryBack('opening'), true],
+    [() => owner.toggleMoreMenu(), true],
+    [() => { owner.appForeground = false; owner.onToolsFocusContextChanged(); owner.appForeground = true; }, false],
+    [() => { owner.v9Pane = 'groups'; owner.onV9PaneChanged(); owner.v9Pane = 'list'; }, false],
+    [() => { owner.inputEnabled = false; owner.onV9ListInputChanged(); owner.inputEnabled = true; }, false],
+    [() => owner.toggleGroupSelection(), false],
+    [() => { owner.ungroupedBatchIds = ['selected']; owner.onUngroupedBatch(); owner.batchMode = false; }, false],
+    [() => owner.aboutToDisappear(), false],
+  ]) {
+    owner.toggleMoreMenu();
+    assert.equal(owner.moreMenuOpen, true);
+    events.length = 0;
+    close();
+    assert.equal(owner.moreMenuOpen, false);
+    assert.equal(events.some(event => event[0] === 'focus' && event[1] === 'focus:header'), restore);
+  }
+});
+
+test('export admits only one picker while pending and releases admission after cancel or failure', async () => {
+  const { actualSourceManagementTypes } = await import('./lib/source-management-owner-probe.mjs');
+  const file = Promise.withResolvers();
+  const pickerOpened = Promise.withResolvers();
+  const id = 'https://export.example/';
+  let exports = 0, pickers = 0;
+  const runtime = {
+    async request(method) {
+      if (method === 'source.list') return { data: { sources: [importedSource(id)] } };
+      assert.equal(method, 'source.export');
+      exports += 1;
+      return { data: { data: '[{}]', count: 1, format: 'json' } };
+    },
+    async saveBookSourceJson() {
+      pickers += 1;
+      if (pickers === 1) { pickerOpened.resolve(); return file.promise; }
+      if (pickers === 2) throw new Error('测试写入失败');
+      return 'picked.json';
+    },
+  };
+  const { SourceHost } = actualSourceManagementTypes({
+    ReaderRuntimeOwner: { isCurrent: owner => owner === runtime }, AppStorage: { get: () => true },
+    hilog: { info() {}, warn() {}, error() {} },
+  });
+  const host = new SourceHost(() => {}, () => {}, () => {});
+  assert.equal(host.bindPresentation(runtime, 'export-list', () => true), true);
+  host.open('export-list');
+  await host.orchestrator.operationChain;
+  host.exportAll('export-list');
+  host.exportAll('export-list');
+  await pickerOpened.promise;
+  host.exportAll('export-list');
+  file.resolve(undefined);
+  await host.orchestrator.operationChain;
+  assert.deepEqual([exports, pickers], [1, 1]);
+  host.exportAll('export-list');
+  await host.orchestrator.operationChain;
+  host.exportAll('export-list');
+  await host.orchestrator.operationChain;
+  assert.deepEqual([exports, pickers], [3, 3]);
+});
+
+test('login finish and refresh stay available during loading, and an already mounted toast receives clear results', async () => {
+  const { readFileSync } = await import('node:fs');
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const file = new URL('ui/platform/ArkWebExecutionHost.ets', etsRoot);
+  const text = readFileSync(file, 'utf8');
+  const finish = text.slice(text.indexOf("Text('完成')"), text.indexOf('finishInteractive(surface)'));
+  assert.match(finish, /\.enabled\(!this\.clearing\)/);
+  assert.doesNotMatch(finish, /pageLoading/);
+  assert.match(text, /this\.browserAction\('刷新', !this\.clearing[,)]/);
+
+  const surface = { id: 11 };
+  const Host = selectedProductionMethods(file, 'ArkWebExecutionHost', ['presentationListener', 'showClearFeedback'],
+    { ArkWebExecutor: { instance: { isSurfaceCurrent: current => current === surface } } });
+  const shown = [];
+  const owner = Object.assign(new Host(), {
+    mounted: true, currentSurface: surface, interactive: true, feedbackHostSurface: surface,
+    onInputCaptureChange() {}, updateAddress() {}, updateHistory() {},
+    transientFeedback: { show(_context, feedback, current) { assert.equal(current(), true); shown.push(feedback.message); } },
+  });
+  const outcome = { report: 'cleared' };
+  const event = { surfaceId: surface.id, visible: true, clearOutcome: outcome };
+  owner.presentationListener({ ...event, surfaceId: 12 });
+  assert.deepEqual(shown, []);
+  owner.presentationListener(event);
+  owner.presentationListener(event);
+  assert.deepEqual(shown, ['已清除登录态和旧检测报告']);
+  owner.feedbackHostSurface = undefined;
+  owner.presentationListener({ ...event, clearOutcome: { report: 'unsupported' } });
+  assert.equal(shown.length, 1);
+  owner.feedbackHostSurface = surface;
+  owner.showClearFeedback(surface);
+  assert.deepEqual(shown, ['已清除登录态和旧检测报告', '已清除登录态，当前 Core 无法清除已保存的检测报告']);
+});
+
+test('group creation and renaming explain invalid names without blocking a retained name', async () => {
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const Page = selectedProductionMethods(sourceUi('SourceV9GroupsPage'), 'SourceV9GroupsPage', ['nameError']);
+  const page = Object.assign(new Page(), { groups: [{ id: 'catalog', name: '书单' }, { id: '', name: '未分组' }] });
+  for (const [name, error] of [
+    ['  ', '请输入分组名称'],
+    ['全部分组', '该名称由系统保留'],
+    ['未分组', '该名称由系统保留'],
+    ['书单 ', '已存在同名分组'],
+    ['书'.repeat(33), '分组名称最多 32 个字符'],
+  ]) {
+    page.name = name;
+    assert.equal(page.nameError(), error);
+  }
+  page.name = ' 书单 ';
+  assert.equal(page.nameError('catalog'), '');
+  page.name = '书'.repeat(32);
+  assert.equal(page.nameError(), '');
+});
+
+test('batch delete confirmation retains the original IDs and rejects cancelled or stale generations', async () => {
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const Journey = selectedProductionMethods(sourceUi('SourceJourneySurface'), 'SourceJourneySurface', [
+    'confirmSourceDeletion', 'moveCatalogDialogVisible', 'listDialogVisible', 'chooseListDialog',
+  ]);
+  const calls = [];
+  const owner = Object.assign(new Journey(), {
+    pane: 'list', listDialogGeneration: 0, deleteSourceIds: [], moveSourceIds: [], identity: 'source-opening',
+    managementInputIsCurrent: () => true,
+    presentation: { management: () => ({ deleteSources: (ids, identity) => calls.push([ids, identity]) }) },
+  });
+  owner.confirmSourceDeletion(['old']);
+  assert.equal(owner.listDialogVisible(), true);
+  owner.chooseListDialog(1, 'cancel');
+  const current = ['one', 'two'];
+  owner.confirmSourceDeletion(current);
+  current.length = 0;
+  owner.chooseListDialog(1, 'delete');
+  assert.deepEqual(calls, []);
+  owner.chooseListDialog(2, 'delete');
+  owner.chooseListDialog(2, 'delete');
+  assert.deepEqual(calls, [[['one', 'two'], 'source-opening']]);
+  assert.equal(owner.listDialogVisible(), false);
 });

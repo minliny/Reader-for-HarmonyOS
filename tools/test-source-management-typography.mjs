@@ -21,6 +21,7 @@ async function metadata() {
   Object.assign(owner,{appThemeScheme:scheme,fontScale:()=>2,layoutBudget:()=>({rowForm:'inline'})});
   owner.metadataEllipsisMode=api24?'center':'end';
   owner.verificationRowTextId=()=>undefined;
+  owner.sourceDetectEnabled=()=>true;
   const bookSource={sourceId:'s',name:'中英文超长书源 Copyright Free Books 长尾',category:'novel',
     baseUrl:'https://very-long-books.metadata.test/nested/edition.json?sort=title#contents',enabled:true,
     checkMessage:'完整检测失败原因'};
@@ -33,7 +34,7 @@ async function metadata() {
   assert.equal(title.fontSize,14);
   assert.deepEqual([domain.fontFamily,domain.fontWeight,domain.fontSize,domain.lineHeight],
     [role.fontFamily,role.fontWeight,role.fontSizeFp,role.lineHeightFp]);
-  assert.equal(domain.fontColor,readerAppColor('TOK_CONTROL_INK',scheme));
+  assert.equal(domain.fontColor,readerAppColor('app.sourceUi.muted',scheme));
   assert.equal(domain.wordBreak,'break-all');
   for (const node of [title,domain]) {
    assert.equal(node.maxFontScale,2);

@@ -5,7 +5,10 @@ import { readerReadableFontScale } from '../foundation/ReaderSurfaceResolvers';
 import inputMethod from '@ohos.inputMethod';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { readerWindowMetrics } from '../foundation/ReaderWindowEnvironment';
-import { readerAppColor } from '../foundation/ReaderThemeRegistry';
+import { readerAppColor, type ReaderAppColorRole } from '../foundation/ReaderThemeRegistry';
+import { readerPaperActionIcon } from '../foundation/ReaderActionIconResources';
+import { ReaderPressFeedback } from '../foundation/ReaderPressFeedback';
+import { readerMotionAnimateParam } from '../foundation/ReaderMotionPolicy';
 import { ReaderActionAccessibility } from '../controls/ReaderActionAccessibility';
 import { consumeReaderControlKeyboardBack } from '../foundation/ReaderKeyboardBack';
 import { ReaderTransientFeedback } from '../feedback/ReaderTransientFeedback';
@@ -13,7 +16,8 @@ import { ReaderTransientToast } from '../feedback/ReaderTransientToast';
 import { ArkWebExecutor, type ArkWebInteractiveNavigation, type ArkWebLoginClearOutcome,
   type ArkWebPresentation, type ArkWebSurface } from '../../platform/network/ArkWebExecutor';
 import { httpUrlHostname, redactedHttpUrl } from '../../platform/network/HttpTransportPolicy';
-import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../foundation/ReaderFontFamilies';
+import { READER_FONT_NOTO_SANS_SC_UI_REGULAR, READER_FONT_NOTO_SANS_SC_UI_MEDIUM,
+  READER_FONT_NOTO_SANS_SC_UI_BOLD } from '../foundation/ReaderFontFamilies';
 
 /** Window-relative vp rectangle of the visible wide settings detail pane. */
 export interface ArkWebInteractiveBounds {
@@ -35,6 +39,7 @@ export struct ArkWebExecutionHost {
   onInputCaptureChange: (captured: boolean) => void = (): void => {};
   @Prop interactiveBounds?: ArkWebInteractiveBounds = undefined;
   @StorageLink('readerAppScheme') private appThemeScheme: string = 'day';
+  @StorageLink('readerReduceMotion') private reduceMotion: boolean = false;
   @StorageLink('readerWindowMetricsRevision') private readerWindowMetricsRevision: number = 0;
   @State private hostWidth: number = 0;
   @State private hostHeight: number = 0;
@@ -57,6 +62,8 @@ export struct ArkWebExecutionHost {
   @State private surfaceId: number = 0;
   private currentSurface: ArkWebSurface | undefined = undefined;
   private interactiveBackSurface: ArkWebSurface | undefined = undefined;
+  private feedbackHostSurface: ArkWebSurface | undefined = undefined;
+  private lastClearOutcome: ArkWebLoginClearOutcome | undefined = undefined;
   private clearOutcome: ArkWebLoginClearOutcome | undefined = undefined;
   private readonly transientFeedback: ReaderTransientFeedback = new ReaderTransientFeedback();
   private readonly surfaceListener = (surface: ArkWebSurface | undefined): void => {
@@ -72,6 +79,8 @@ export struct ArkWebExecutionHost {
     this.pageProgress = 0;
     this.canClear = false;
     this.clearing = false;
+    this.feedbackHostSurface = undefined;
+    this.lastClearOutcome = undefined;
     this.clearOutcome = undefined;
     this.measuredToolbarHeight = 0;
     this.measuredControlsHeight = 0;
@@ -79,7 +88,15 @@ export struct ArkWebExecutionHost {
   };
   private readonly presentationListener = (presentation: ArkWebPresentation): void => {
     if (this.currentSurface?.id !== presentation.surfaceId) return;
-    this.interactive = presentation.visible;
+    if (this.interactive !== presentation.visible) {
+      const updateVisibility = (): void => { this.interactive = presentation.visible; };
+      try {
+        this.getUIContext().animateTo(readerMotionAnimateParam(presentation.visible ? 'app.navigation.push' :
+          'app.navigation.pop', this.reduceMotion), updateVisibility);
+      } catch (_) {
+        updateVisibility();
+      }
+    }
     this.title = presentation.title;
     const surface = this.currentSurface;
     if (presentation.visible && surface !== undefined) {
@@ -87,8 +104,12 @@ export struct ArkWebExecutionHost {
       this.onInputCaptureChange(true);
       this.updateAddress(presentation.currentUrl ?? '');
       this.canClear = presentation.canClear === true;
-      this.clearOutcome = presentation.clearOutcome;
       this.updateHistory(surface);
+      if (presentation.clearOutcome !== undefined && presentation.clearOutcome !== this.lastClearOutcome) {
+        this.lastClearOutcome = presentation.clearOutcome;
+        this.clearOutcome = presentation.clearOutcome;
+        this.showClearFeedback(surface);
+      }
     }
   };
 
@@ -103,6 +124,7 @@ export struct ArkWebExecutionHost {
     this.mounted = false;
     this.onBackBridge(undefined);
     this.interactiveBackSurface = undefined;
+    this.feedbackHostSurface = undefined;
     this.transientFeedback.reset();
     this.onInputCaptureChange(false);
     this.diagnosticResourceProvider = undefined;
@@ -150,7 +172,10 @@ export struct ArkWebExecutionHost {
 
   private showClearFeedback(surface: ArkWebSurface): void {
     const outcome = this.clearOutcome;
-    if (outcome === undefined || this.currentSurface !== surface || !this.interactive) return;
+    // Register the priority toast host before publishing. A host switch would
+    // retire a toast published to the old host while the Web was mounting.
+    if (outcome === undefined || this.feedbackHostSurface !== surface ||
+      this.currentSurface !== surface || !this.interactive) return;
     this.clearOutcome = undefined;
     const message = outcome.report === 'cleared' ? '已清除登录态和旧检测报告' :
       outcome.report === 'unsupported' ? '已清除登录态，当前 Core 无法清除已保存的检测报告' :
@@ -215,7 +240,7 @@ export struct ArkWebExecutionHost {
     const width = Math.max(0, this.safeWidth() - 16) / this.controlsColumns();
     const charsPerLine = Math.max(1, Math.floor((width - 4) / (12 * scale)));
     const lines = Math.ceil(5 / charsPerLine);
-    return Math.max(44, Math.ceil(lines * 18 * scale + 10));
+    return Math.max(44, Math.ceil(lines * 18 * scale + 24));
   }
 
   private toolbarActionWidth(): number {
@@ -239,17 +264,35 @@ export struct ArkWebExecutionHost {
     };
   }
 
+  private color(role: ReaderAppColorRole): string {
+    return readerAppColor(role, this.appThemeScheme);
+  }
+
+  private browserTransition(): TransitionEffect {
+    if (this.reduceMotion) return TransitionEffect.OPACITY.animation(readerMotionAnimateParam('app.navigation.push', true));
+    return TransitionEffect.asymmetric(
+      TransitionEffect.OPACITY.combine(TransitionEffect.translate({ y: 6 }))
+        .animation(readerMotionAnimateParam('app.navigation.push', false)),
+      TransitionEffect.OPACITY.animation(readerMotionAnimateParam('app.navigation.pop', false)));
+  }
+
   @Builder
-  private browserAction(text: string, enabled: boolean, danger: boolean, action: () => void) {
+  private browserAction(text: string, enabled: boolean, icon: Resource, danger: boolean, action: () => void) {
     Button({ type: ButtonType.Normal, stateEffect: false }) {
-      Text(text)
-        .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(12).fontWeight(FontWeight.Medium)
-        .fontColor(readerAppColor(danger ? 'app.sourceUi.danger' : 'app.sourceUi.primary', this.appThemeScheme))
-        .opacity(enabled ? 1 : 0.45).textAlign(TextAlign.Center).accessibilityLevel('no');
+      Column({ space: 2 }) {
+        Image(icon).width(16).height(16).objectFit(ImageFit.Contain)
+          .fillColor(this.color(danger ? 'app.sourceUi.danger' : 'app.sourceUi.primary'))
+          .accessibilityLevel('no');
+        Text(text)
+          .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(12)
+          .fontColor(this.color(danger ? 'app.sourceUi.danger' : 'app.sourceUi.primary'))
+          .textAlign(TextAlign.Center).accessibilityLevel('no');
+      }.opacity(enabled ? 1 : 0.45);
     }
     .width(this.controlsColumns() === 4 ? '25%' : '50%')
-    .constraintSize({ minWidth: 44, minHeight: this.controlsActionHeight() }).padding({ left: 2, right: 2, top: 4, bottom: 4 })
-    .backgroundColor(Color.Transparent).borderRadius(999).enabled(enabled)
+    .constraintSize({ minWidth: 44, minHeight: this.controlsActionHeight() }).padding({ left: 2, right: 2, top: 3, bottom: 3 })
+    .enabled(enabled)
+    .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 999, 999, enabled))
     .attributeModifier(new ReaderActionAccessibility(text, enabled, false, true, undefined, 'nativeButton'))
     .onClick(action);
   }
@@ -260,7 +303,8 @@ export struct ArkWebExecutionHost {
         Row() {}
           .width(this.safeWidth()).height(this.safeHeight())
           .position({ x: this.safeLeft(), y: this.safeTop() })
-          .backgroundColor(readerAppColor('app.web.surface', this.appThemeScheme))
+          .backgroundColor(this.color('TOK_PAPER'))
+          .transition(this.browserTransition())
           .hitTestBehavior(HitTestMode.None);
       }
       ForEach(this.surfacesForRender(this.surfaceId), (surface: ArkWebSurface) => {
@@ -269,15 +313,15 @@ export struct ArkWebExecutionHost {
           controller: surface.controller,
           incognitoMode: true,
         })
+          .opacity(this.interactive ? 1 : 0.001)
           .javaScriptAccess(true)
           .domStorageAccess(true)
           .fileAccess(false)
           .onlineImageAccess(this.interactive)
-          .width(this.interactive ? this.safeWidth() : '100%')
-          .height(this.interactive ? Math.max(0, this.safeHeight() - this.toolbarHeight() - this.controlsHeight()) : '100%')
+          .width(this.interactive ? this.safeWidth() : 1)
+          .height(this.interactive ? Math.max(0, this.safeHeight() - this.toolbarHeight() - this.controlsHeight()) : 1)
           .position({ x: this.interactive ? this.safeLeft() : 0,
             y: this.interactive ? this.safeTop() + this.toolbarHeight() : 0 })
-          .opacity(this.interactive ? 1 : 0.001)
           // Background source execution must not acquire keyboard/navigation
           // focus. Hit-test exclusion alone only excludes pointer events.
           .focusable(this.interactive && !this.clearing)
@@ -357,14 +401,15 @@ export struct ArkWebExecutionHost {
           Row({ space: 8 }) {
             Button({ type: ButtonType.Normal, stateEffect: false }) {
               Text('取消')
-                .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR)
+                .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
                 .fontSize(13)
-                .fontWeight(FontWeight.Medium)
-                .fontColor(readerAppColor('app.sourceUi.primary', this.appThemeScheme))
+                .fontColor(this.color('app.sourceUi.primary'))
+                .opacity(this.clearing ? 0.45 : 1)
                 .accessibilityLevel('no');
             }
               .width(this.toolbarActionWidth()).constraintSize({ minWidth: 44, minHeight: 44 })
-              .padding(0).backgroundColor(Color.Transparent).borderRadius(999).enabled(!this.clearing)
+              .padding(0).enabled(!this.clearing)
+              .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 999, 999, !this.clearing))
               .attributeModifier(new ReaderActionAccessibility('取消登录', !this.clearing, false, true, undefined, 'nativeButton'))
               .defaultFocus(true)
               .onClick((): void => ArkWebExecutor.instance.cancelInteractive(surface));
@@ -373,20 +418,20 @@ export struct ArkWebExecutionHost {
                 .width('100%')
                 .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD)
                 .fontSize(14.5).textAlign(TextAlign.Center)
-                .fontWeight(FontWeight.Bold)
-                .fontColor(readerAppColor('app.web.ink', this.appThemeScheme))
+                .fontColor(this.color('TOK_INK'))
                 .maxLines(1)
                 .textOverflow({ overflow: TextOverflow.Ellipsis });
               if (this.currentHost.length > 0) {
                 Row({ space: 4 }) {
                   if (this.currentUrl.startsWith('https://')) {
-                    SymbolGlyph($r('sys.symbol.lock'))
-                      .fontSize(11).fontColor([readerAppColor('app.web.muted', this.appThemeScheme)])
+                    Image(this.appThemeScheme === 'night' ? $r('app.media.source_login_lock_theme_night') :
+                      $r('app.media.source_login_lock')).width(11).height(11)
+                      .objectFit(ImageFit.Contain)
                       .accessibilityLevel('no');
                   }
                   Text(this.currentHost)
                     .fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontSize(10.5)
-                    .fontColor(readerAppColor('app.web.muted', this.appThemeScheme))
+                    .fontColor(this.color('app.sourceUi.muted'))
                     .maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
                 }.justifyContent(FlexAlign.Center).width('100%');
               }
@@ -395,16 +440,17 @@ export struct ArkWebExecutionHost {
             .alignItems(HorizontalAlign.Center);
             Button({ type: ButtonType.Normal, stateEffect: false }) {
               Text('完成')
-                .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(13).fontWeight(FontWeight.Bold)
-                .fontColor(readerAppColor('app.sourceUi.onPrimary', this.appThemeScheme))
-                .backgroundColor(readerAppColor('app.sourceUi.primary', this.appThemeScheme))
-                .constraintSize({ minWidth: 52, minHeight: 32 }).borderRadius(999).textAlign(TextAlign.Center)
-                .opacity(this.clearing || this.pageLoading ? 0.45 : 1)
+                .fontFamily(READER_FONT_NOTO_SANS_SC_UI_BOLD).fontSize(13)
+                .fontColor(this.color('app.sourceUi.onPrimary')).textAlign(TextAlign.Center)
                 .accessibilityLevel('no');
             }
-              .width(this.toolbarActionWidth()).constraintSize({ minWidth: 44, minHeight: 44 })
-              .padding(0).backgroundColor(Color.Transparent).borderRadius(999).enabled(!this.clearing && !this.pageLoading)
-              .attributeModifier(new ReaderActionAccessibility('完成登录', !this.clearing && !this.pageLoading, false, true, undefined, 'nativeButton'))
+              .width(this.toolbarActionWidth()).constraintSize({ minWidth: 44, minHeight: 32 })
+              .padding({ top: 4, bottom: 4 }).responseRegion([
+                { x: 0, y: 0, width: '100%', height: '100%' }, { x: 0, y: -6, width: '100%', height: 44 },
+              ])
+              .enabled(!this.clearing).opacity(this.clearing ? 0.45 : 1)
+              .attributeModifier(new ReaderPressFeedback(this.color('app.sourceUi.primary'), this.appThemeScheme, 999, 999, !this.clearing))
+              .attributeModifier(new ReaderActionAccessibility('完成登录', !this.clearing, false, true, undefined, 'nativeButton'))
               .onClick((): void => ArkWebExecutor.instance.finishInteractive(surface));
           }
           .width(this.safeWidth())
@@ -412,10 +458,11 @@ export struct ArkWebExecutionHost {
           .padding({ left: 12, right: 12, top: 2, bottom: 2 })
           .onAreaChange(this.toolbarAreaHandler(surface))
           .alignItems(VerticalAlign.Center)
-          .backgroundColor(readerAppColor('app.web.surface', this.appThemeScheme))
-          .border({ width: { bottom: 0.5 }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
+          .backgroundColor(this.color('TOK_CARD_BG'))
+          .border({ width: { bottom: 1 }, color: this.color('TOK_LINE') });
           }.width(this.safeWidth()).height(this.toolbarHeight())
-            .position({ x: this.safeLeft(), y: this.safeTop() }).scrollBar(BarState.Auto).clip(true);
+            .position({ x: this.safeLeft(), y: this.safeTop() }).scrollBar(BarState.Auto).clip(true)
+            .transition(this.browserTransition());
 
           if (this.pageLoading && this.pageProgress > 0) {
             Row() {}
@@ -427,39 +474,48 @@ export struct ArkWebExecutionHost {
 
           Scroll() {
             Flex({ direction: FlexDirection.Row, wrap: FlexWrap.Wrap, alignItems: ItemAlign.Center }) {
-              this.browserAction('后退', this.canGoBack && !this.clearing && !this.pageLoading, false,
+              this.browserAction('后退', this.canGoBack && !this.clearing && !this.pageLoading,
+                this.appThemeScheme === 'night' ? $r('app.media.rc_chevron_left_theme_night') : $r('app.media.rc_chevron_left'), false,
                 (): void => this.navigate(surface, 'back'));
-              this.browserAction('前进', this.canGoForward && !this.clearing && !this.pageLoading, false,
+              this.browserAction('前进', this.canGoForward && !this.clearing && !this.pageLoading,
+                this.appThemeScheme === 'night' ? $r('app.media.rc_chevron_right_theme_night') : $r('app.media.rc_chevron_right'), false,
                 (): void => this.navigate(surface, 'forward'));
-              this.browserAction('刷新', !this.clearing && !this.pageLoading, false,
+              this.browserAction('刷新', !this.clearing, this.appThemeScheme === 'night' ?
+                $r('app.media.settings_gen_refresh_theme_night') : $r('app.media.settings_gen_refresh'), false,
                 (): void => this.navigate(surface, 'refresh'));
-              this.browserAction('清除登录态', this.canClear && !this.clearing, true,
+              this.browserAction('清除登录态', this.canClear && !this.clearing, readerPaperActionIcon('trash', this.appThemeScheme), true,
                 (): void => this.clearSession(surface));
             }
             .width(this.safeWidth()).constraintSize({ minHeight: 44 }).padding({ left: 8, right: 8 })
             .onAreaChange(this.controlsAreaHandler(surface))
-            .backgroundColor(readerAppColor('app.web.surface', this.appThemeScheme))
-            .border({ width: { top: 0.5 }, color: readerAppColor('TOK_BORDER', this.appThemeScheme) });
+            .backgroundColor(this.color('TOK_CARD_BG'))
+            .border({ width: { top: 1 }, color: this.color('TOK_LINE') });
           }
           .width(this.safeWidth()).height(this.controlsHeight())
           .position({ x: this.safeLeft(), y: this.safeTop() + this.safeHeight() - this.controlsHeight() })
-          .scrollBar(BarState.Auto).clip(true);
+          .scrollBar(BarState.Auto).clip(true).transition(this.browserTransition());
 
           ReaderTransientToast({ priority: 10, bounded: true })
             .width(this.safeWidth()).height(this.safeHeight())
             .position({ x: this.safeLeft(), y: this.safeTop() })
-            .onAppear((): void => this.showClearFeedback(surface));
+            .onAppear((): void => {
+              this.feedbackHostSurface = surface;
+              this.showClearFeedback(surface);
+            })
+            .onDisAppear((): void => {
+              if (this.feedbackHostSurface === surface) this.feedbackHostSurface = undefined;
+            });
         }
       }, (surface: ArkWebSurface): string => `${surface.id}`)
     }
-    .width(this.interactive ? '100%' : 1)
-    .height(this.interactive ? '100%' : 1)
+    .width('100%').height('100%')
     .onAreaChange((_old: Area, next: Area): void => {
-      if (!this.mounted || !this.interactive) return;
+      if (!this.mounted) return;
       this.hostWidth = readerPageAreaLength(next.width); this.hostHeight = readerPageAreaLength(next.height);
       this.hostX = readerPageAreaLength(next.globalPosition.x); this.hostY = readerPageAreaLength(next.globalPosition.y);
     })
     .accessibilityLevel(this.interactive ? 'auto' : 'no-hide-descendants')
-    .zIndex(this.interactive ? 10000 : -1)
+    .hitTestBehavior(this.interactive ? HitTestMode.Default : HitTestMode.Transparent)
+    .zIndex(10000)
   }
 }

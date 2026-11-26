@@ -1,3 +1,7 @@
+import { ReaderActionMenuSurface, ReaderMenuActionView } from '../../../ui/surfaces/ReaderActionMenuSurface';
+import { ReaderPressFeedback } from '../../../ui/foundation/ReaderPressFeedback';
+import { readerMotionAnimateParam } from '../../../ui/foundation/ReaderMotionPolicy';
+import { READER_FONT_NOTO_SANS_SC_UI_MEDIUM } from '../../../ui/foundation/ReaderFontFamilies';
 import { readerLayoutCarrierResponseRegion } from '../../../ui/layout/ReaderPageNativeAttributes';
 import { readerKeyboardHostBottom } from '../../../ui/layout/ReaderKeyboardGeometry';
 import { readerHarmonyApi24 } from '../../../app/HarmonyCapabilityProbe';
@@ -16,7 +20,7 @@ import { ReaderMeasurementStore } from '../../../ui/layout/ReaderMeasurements';
 import { ReaderPageGeometry, ReaderPageGeometryInput, applyReaderStandardFloatingHeader, resolveReaderPageGeometry } from '../../../ui/layout/ReaderPageGeometry';
 import { resolveReaderButtonSpec } from '../../../ui/controls/ReaderControlSpecs';
 import { readerReadableFontScale, readerScaledControlHeight } from '../../../ui/foundation/ReaderSurfaceResolvers';
-import { resolveSourceManagementLayout, SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP_GAP, type SourceManagementLayout } from '../presentation/SourceManagementLayout';
+import { resolveSourceManagementLayout, SOURCE_ROW_ACTION_GAP, SOURCE_ROW_ICON_WIDTH, SOURCE_STATUS_CHIP_GAP, type SourceManagementLayout } from '../presentation/SourceManagementLayout';
 import { sourceManagementFilterKey, copySourceManagementScroll, type SourceManagementScrollState } from '../presentation/SourceManagementScrollState';
 import { projectSourceManagementV9, sourceV9DisplayUrl, sourceV9ReportTone, sourceV9Supports,
   type SourceV9Counts, type SourceV9ListAction, type SourceV9Projection, type SourceV9View } from '../presentation/SourceManagementV9';
@@ -204,6 +208,8 @@ export struct SourceManagementPage {
   @State private statusCounts: SourceV9Counts = { all: 0, enabled: 0, disabled: 0, abnormal: 0 };
   @State private hasReadableSources: boolean = false;
   @State private moreMenuOpen: boolean = false;
+  @State private moreAnchor: ReaderRectVp | undefined = undefined;
+  private moreFocusRevision: number = 0;
   @State private batchMode: boolean = false;
   @State private batchSourceIds: string[] = [];
   @State private groupOpen: boolean = false;
@@ -222,6 +228,8 @@ export struct SourceManagementPage {
   // 列表本身由 LazyForEach 数据源驱动，这里只保留普通引用并以计数触发重渲染。
   private projectedSources: BookSource[] = [];
   @State private projectedSourceCount: number = 0;
+  @State private firstSourceId: string = '';
+  @State private lastSourceId: string = '';
   private groupOptionsCache: string[] = [];
   private groupOptionsCacheSource: BookSource[] | undefined = undefined;
   private projectionRebuildPending: boolean = false;
@@ -367,6 +375,8 @@ export struct SourceManagementPage {
     this.pendingToolsFocus = undefined;
     this.toolsFocusReady = false;
     this.toolsFocusScheduled = false;
+    this.closeMoreMenu();
+    this.moreAnchor = undefined;
     this.temporaryBackIdentity = '';
     this.viewportWidth = 0;
     this.viewportHeight = 0;
@@ -396,7 +406,7 @@ export struct SourceManagementPage {
     if (consumed) this.observeVerificationOverlay('back', 'group');
     if (consumed) return true;
     if (this.moreMenuOpen) {
-      this.moreMenuOpen = false;
+      this.closeMoreMenu(true);
       return true;
     }
     if (this.batchMode) {
@@ -436,6 +446,7 @@ export struct SourceManagementPage {
 
   private toggleGroupSelection(): void {
     if (!this.managementInputIsCurrent()) return;
+    this.closeMoreMenu();
     if (this.requestGroupClose(this.groupSelectionId) || this.groupOptions().length <= 1 ||
       this.groupTriggerWidth <= 0 || this.groupTriggerHeight <= 0) return;
     if (this.overlayBottom() - this.groupOverlayTop() < this.groupTriggerHeight + 44 * 2 + 2 * TOK_BORDER_W ||
@@ -548,6 +559,7 @@ export struct SourceManagementPage {
   }
 
   private onV9PaneChanged(): void {
+    if (this.v9Pane !== 'list') this.closeMoreMenu();
     if (this.v9Pane === 'list') this.scheduleImportStatusReadyObservation();
     if (!this.mounted || this.v9ListReturnView !== 'groups') return;
     if (this.v9Pane === 'groups') this.observeV9ListEntry('groups');
@@ -555,6 +567,7 @@ export struct SourceManagementPage {
   }
 
   private onV9ListInputChanged(): void {
+    if (!this.inputEnabled) this.closeMoreMenu();
     if (this.inputEnabled && this.v9Pane === 'list') this.scheduleImportStatusReadyObservation();
   }
 
@@ -628,6 +641,7 @@ export struct SourceManagementPage {
   }
 
   private onToolsFocusContextChanged(): void {
+    if (!this.appForeground) this.closeMoreMenu();
     if (!this.appForeground || !this.managementOpeningIsCurrent() || this.isInputAllowed?.() === false || this.groupOpen)
       this.cancelToolsReturnFocus('inactive');
   }
@@ -688,7 +702,7 @@ export struct SourceManagementPage {
       content: (): void => { this.pageContent(); },
       header: (): void => { this.backBar(); },
       footer: (): void => { this.pageFooter(); },
-      overlayContent: (): void => { this.pendingRecovery(); this.groupOverlay(); },
+      overlayContent: (): void => { this.pendingRecovery(); this.groupOverlay(); this.sourceMoreMenu(); },
       onHeaderHeightChange: (height: number, presentedKey: number): void => {
         this.recordMeasurement('source:header', height, presentedKey);
       },
@@ -712,9 +726,9 @@ export struct SourceManagementPage {
       .id('reader-source-content')
       .width('100%')
       .height('100%')
-      .enabled(!this.groupOpen)
-      .accessibilityLevel(this.groupOpen ? 'no-hide-descendants' : 'auto')
-      .hitTestBehavior(this.groupOpen ? HitTestMode.None : HitTestMode.Default)
+      .enabled(!this.groupOpen && !this.moreMenuOpen)
+      .accessibilityLevel(this.groupOpen || this.moreMenuOpen ? 'no-hide-descendants' : 'auto')
+      .hitTestBehavior(this.groupOpen || this.moreMenuOpen ? HitTestMode.None : HitTestMode.Default)
       .onTouch((event: TouchEvent): void => {
         if (event.type === TouchType.Down) this.cancelToolsReturnFocus('touch');
       })
@@ -727,9 +741,9 @@ export struct SourceManagementPage {
       .id('reader-source-footer')
       .width('100%')
       .padding({ left: this.contentFrame().left, right: this.contentFrame().right })
-      .enabled(!this.groupOpen)
-      .accessibilityLevel(this.groupOpen ? 'no-hide-descendants' : 'auto')
-      .hitTestBehavior(this.groupOpen ? HitTestMode.None : HitTestMode.Default)
+      .enabled(!this.groupOpen && !this.moreMenuOpen)
+      .accessibilityLevel(this.groupOpen || this.moreMenuOpen ? 'no-hide-descendants' : 'auto')
+      .hitTestBehavior(this.groupOpen || this.moreMenuOpen ? HitTestMode.None : HitTestMode.Default)
       .responseRegion(readerLayoutCarrierResponseRegion());
   }
 
@@ -772,15 +786,16 @@ export struct SourceManagementPage {
 
   @Builder
   private manageGroupsOption(identity: string) {
-    Button({ type: ButtonType.Normal }) {
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
       Row({ space: 7 }) {
         Image($r('app.media.bookshelf_more_settings')).width(15).height(15)
           .fillColor(readerAppColor('app.sourceUi.primary', this.appThemeScheme)).accessibilityLevel('no');
-        Text('管理分组').fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily).fontSize(12).maxLines(1)
+        Text('管理分组').fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(13).maxLines(1)
           .fontColor(readerAppColor('app.sourceUi.primary', this.appThemeScheme));
-      }.width('100%').padding({ left: 12, right: 12 });
+      }.width('100%').padding({ left: 14, right: 14 });
     }.id('reader-source-v9-manage-groups').width('100%').height(44).padding(0).borderRadius(0)
-      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+      .attributeModifier(new ReaderPressFeedback(readerAppColor('app.surface.menuSolid', this.appThemeScheme),
+        this.appThemeScheme, 0, 0, !this.groupClosing))
       .border({ width: { top: 1 }, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
       .enabled(!this.groupClosing).onClick((): void => {
         if (!this.groupSearchIsCurrent(identity)) return;
@@ -816,11 +831,11 @@ export struct SourceManagementPage {
           this.batchHeaderAction(this.visibleBatchSelected() ? '取消全选' : '全选',
             (): void => this.toggleVisibleBatch());
         },
-      });
+      }).transition(this.batchTransition());
     } else {
       PageBackBar({
         floating: true, centered: true, elevation: 'floating',
-        showBack: !this.embeddedWide,
+        showBack: !this.embeddedWide, balancedCenteredSlots: this.embeddedWide,
         title: '书源管理',
         backFocusId: 'reader-source-back',
         onBack: (): void => {
@@ -828,78 +843,150 @@ export struct SourceManagementPage {
         },
       }) {
         Row() {
-          ReaderIconButton({ icon: this.appThemeScheme === 'night' ? $r('app.media.bookshelf_more_theme_night') : $r('app.media.bookshelf_more'),
-            specId: 'toolbar-compact', accessibilityLabel: '书源管理更多操作', focusId: this.toolsFocusId('header'),
+          ReaderIconButton({ icon: this.appThemeScheme === 'night' ? $r('app.media.rc_dots_theme_night') : $r('app.media.rc_dots'),
+            specId: 'toolbar-standard', accessibilityLabel: '书源管理更多操作', focusId: this.toolsFocusId('header'),
+            selectionState: this.moreMenuOpen ? 'selected' : 'none',
             onFocused: (): void => this.onToolsEntryFocused(identity, 'header'),
-            onTap: (): void => {
-              if (this.managementInputIsCurrent() && !this.groupOpen) this.moreMenuOpen = !this.moreMenuOpen;
-            } });
+            onTap: (): void => this.toggleMoreMenu() });
         }.id('reader-source-header-tools').enabled(!this.groupOpen)
           .accessibilityLevel(this.groupOpen ? 'no-hide-descendants' : 'auto')
-          .bindPopup(this.moreMenuOpen, this.sourceMorePopup())
-          .onAreaChange((_old: Area, area: Area): void => this.onToolsEntryLayout(identity, 'header', area));
+          .onAreaChange((_old: Area, area: Area): void => this.recordMoreAnchor(identity, area));
       }
     }
   }
 
   @Builder
   private batchHeaderAction(label: string, run: () => void) {
-    Button({ type: ButtonType.Normal }) {
-      Text(label).fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily).fontSize(13)
+    Button({ type: ButtonType.Normal, stateEffect: false }) {
+      Text(label).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(13)
         .maxLines(1).minFontSize(10).maxFontSize(13)
         .fontColor(readerAppColor('app.sourceUi.primary', this.appThemeScheme));
-    }.width('100%').height(44).padding(0).backgroundColor(Color.Transparent).onClick(run);
+    }.width('100%').height(44).padding(0)
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 22))
+      .onClick(run);
   }
 
-  private sourceMorePopup(): CustomPopupOptions {
-    return { builder: (): void => { this.sourceMoreMenu(); }, placement: Placement.BottomRight,
-      popupColor: readerAppColor('TOK_CARD_BG', this.appThemeScheme), enableArrow: false,
-      onStateChange: (event: PopupStateChangeParam): void => { if (!event.isVisible) this.moreMenuOpen = false; } };
+  private recordMoreAnchor(identity: string, area: Area): void {
+    this.onToolsEntryLayout(identity, 'header', area);
+    if (identity !== this.temporaryBackIdentity) return;
+    this.moreAnchor = new ReaderRectVp(this.numericAreaLength(area.globalPosition.x),
+      this.numericAreaLength(area.globalPosition.y), readerPageAreaLength(area.width), readerPageAreaLength(area.height));
+  }
+
+  private toggleMoreMenu(): void {
+    if (!this.managementInputIsCurrent() || this.groupOpen || this.batchMode || this.v9Pane !== 'list') return;
+    if (this.moreMenuOpen) {
+      this.closeMoreMenu(true);
+      return;
+    }
+    this.hideManagementKeyboard(this.temporaryBackIdentity);
+    this.cancelToolsReturnFocus('more');
+    this.moreMenuOpen = true;
+    this.scheduleMoreFocus('reader-source-v9-open-subscriptions');
+  }
+
+  private closeMoreMenu(restoreFocus: boolean = false): void {
+    this.moreFocusRevision += 1;
+    if (!this.moreMenuOpen) return;
+    this.moreMenuOpen = false;
+    if (restoreFocus) this.scheduleMoreFocus(this.toolsFocusId('header'));
+  }
+
+  private scheduleMoreFocus(id: string): void {
+    const revision = ++this.moreFocusRevision;
+    const identity = this.temporaryBackIdentity;
+    const context = this.getUIContext();
+    try {
+      context.postFrameCallback(new SourceListLayoutFrame(context, (): void => {
+        if (!this.managementBackIsCurrent(identity) || !this.managementInputIsCurrent() || this.groupOpen ||
+          this.batchMode || this.v9Pane !== 'list' || revision !== this.moreFocusRevision) return;
+        try { context.getFocusController().requestFocus(id); } catch (_unbound) {}
+      }));
+    } catch (_unmounted) {}
+  }
+
+  private moreActions(): ReaderMenuActionView[] {
+    return [
+      new ReaderMenuActionView('subscriptions', '书源订阅', true),
+      new ReaderMenuActionView('groups', '分组管理', true),
+      new ReaderMenuActionView('detect', '批量检测', this.projectedSourceCount > 0),
+      new ReaderMenuActionView('export', '导出全部书源', this.hasReadableSources),
+    ];
+  }
+
+  private chooseMoreAction(id: string): void {
+    if (!this.moreMenuOpen || !this.managementInputIsCurrent()) return;
+    const action = this.moreActions().find((item: ReaderMenuActionView): boolean => item.id === id && item.enabled);
+    if (action === undefined) return;
+    this.closeMoreMenu(id === 'export');
+    if (id === 'groups') this.prepareV9ListReturn('groups');
+    this.onV9Action(id as SourceV9ListAction, id === 'detect' ? this.visibleIds() : []);
+  }
+
+  private moreWidth(): number { return Math.min(192, this.overlayRight() - this.overlayLeft()); }
+
+  private moreLeft(): number {
+    const anchorRight = this.moreAnchor === undefined ? this.viewportWidth - this.geometry.header.insetRight :
+      this.moreAnchor.left + this.moreAnchor.width - this.originX;
+    return Math.max(this.overlayLeft(), Math.min(this.overlayRight() - this.moreWidth(), anchorRight + 8 - this.moreWidth()));
+  }
+
+  private moreTop(): number {
+    const anchorBottom = this.moreAnchor === undefined ? this.geometry.content.startInset - 6 :
+      this.moreAnchor.top + this.moreAnchor.height - this.originY;
+    return Math.max(this.overlayTop() + 6, anchorBottom + 8);
+  }
+
+  private morePointerX(): number {
+    const anchorCenter = this.moreAnchor === undefined ? this.moreLeft() + this.moreWidth() - 28 :
+      this.moreAnchor.left - this.originX + this.moreAnchor.width / 2;
+    return Math.max(6, Math.min(this.moreWidth() - 18, anchorCenter - this.moreLeft() - 6));
+  }
+
+  private moreTransition(): TransitionEffect {
+    if (this.reduceMotion) return TransitionEffect.OPACITY.animation(readerMotionAnimateParam('dropdown.menu.expand', true));
+    return TransitionEffect.asymmetric(
+      TransitionEffect.scale({ x: 0.96, y: 0.92, centerX: '100%', centerY: 0 })
+        .combine(TransitionEffect.OPACITY).animation(readerMotionAnimateParam('dropdown.menu.expand', false)),
+      TransitionEffect.OPACITY.animation(readerMotionAnimateParam('dropdown.menu.collapse', false)));
   }
 
   @Builder
   private sourceMoreMenu() {
-    Column({ space: 2 }) {
-      this.sourceMoreAction('书源订阅', 'subscriptions');
-      this.sourceMoreAction('分组管理', 'groups');
-      this.sourceMoreAction('批量检测', 'detect');
-      this.sourceMoreAction('导出全部书源', 'export');
-    }.id('reader-source-v9-more-menu').width(174).padding(6).borderRadius(14)
-      .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-      .border({ width: 1, color: readerAppColor('TOK_LINE', this.appThemeScheme) })
-      .shadow(readerSurfaceElevation('popover', this.appThemeScheme));
-  }
-
-  @Builder
-  private sourceMoreAction(label: string, action: SourceV9ListAction) {
-    Button({ type: ButtonType.Normal }) {
-      Row({ space: 8 }) {
-        Image(this.sourceMoreIcon(action)).width(17).height(17).fillColor(readerAppColor('TOK_INK', this.appThemeScheme)).accessibilityLevel('no');
-        Text(label).fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily).fontSize(13)
-          .layoutWeight(1).maxLines(1).minFontSize(10).maxFontSize(13)
-          .textOverflow({ overflow: TextOverflow.Ellipsis }).textAlign(TextAlign.Start)
-          .fontColor(readerAppColor('TOK_INK', this.appThemeScheme));
-      }.width('100%').justifyContent(FlexAlign.Start);
-    }.id(`reader-source-v9-open-${action}`).width('100%').height(36)
-      .padding({ left: 10, right: 10 }).backgroundColor(Color.Transparent)
-      .enabled(action !== 'detect' || this.projectedSourceCount > 0)
-      .onClick((): void => {
-        if (!this.managementInputIsCurrent() || !this.moreMenuOpen) return;
-        this.moreMenuOpen = false;
-        if (action === 'groups') this.prepareV9ListReturn('groups');
-        this.onV9Action(action, action === 'detect' ? this.visibleIds() : []);
-      });
-  }
-
-  private sourceMoreIcon(action: SourceV9ListAction): Resource {
-    if (action === 'groups' || action === 'move') return readerActionIcon('folder', this.appThemeScheme);
-    if (action === 'detect') return $r('app.media.source_v9_wave');
-    if (action === 'export') return $r('app.media.source_v9_upload');
-    return $r('app.media.source_v9_cloud');
+    if (this.moreMenuOpen) {
+      Row().width('100%').height('100%')
+        .backgroundColor(Color.Transparent).hitTestBehavior(HitTestMode.Default)
+        .accessibilityLevel('no').onClick((): void => this.closeMoreMenu(true));
+      Stack({ alignContent: Alignment.TopStart }) {
+        Column() {
+          ReaderActionMenuSurface({ nativeId: 'reader-source-v9-more-menu', actionIdPrefix: 'reader-source-v9-open-',
+            scheme: this.appThemeScheme, availableWidth: this.moreWidth(),
+            viewportHeight: Math.max(0, this.overlayBottom() - this.moreTop() - 12),
+            reduceMotion: this.reduceMotion, actions: this.moreActions(),
+            onAction: (id: string): void => this.chooseMoreAction(id) });
+        }.width('100%').padding({ top: 6, bottom: 6 }).borderRadius(16)
+          .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
+          .border({ width: 1, color: readerAppColor('app.border.menu', this.appThemeScheme) })
+          .shadow(readerSurfaceElevation('popover', this.appThemeScheme));
+        Row().width(12).height(12).rotate({ angle: 45 })
+          .backgroundColor(readerAppColor('app.surface.menuSolid', this.appThemeScheme))
+          .border({ width: { top: 1, left: 1 }, color: readerAppColor('app.border.menu', this.appThemeScheme) })
+          .position({ x: this.morePointerX(), y: -6 }).zIndex(1)
+          .hitTestBehavior(HitTestMode.None).accessibilityLevel('no');
+      }.width(this.moreWidth()).clip(false).position({ x: this.moreLeft(), y: this.moreTop() })
+        .transition(this.moreTransition());
+    }
   }
 
   private visibleIds(): string[] {
     return this.projectedSources.map((source: BookSource): string => source.sourceId);
+  }
+
+  private batchTransition(): TransitionEffect {
+    const fade = TransitionEffect.OPACITY;
+    if (this.reduceMotion) return fade.animation(readerMotionAnimateParam('app.navigation.tab', true));
+    return fade.combine(TransitionEffect.translate({ y: 4 }))
+      .animation(readerMotionAnimateParam('app.navigation.tab', false));
   }
 
   private endBatch(): void {
@@ -1591,15 +1678,18 @@ export struct SourceManagementPage {
   private categoryFilter() {
     Row({ space: 2 }) {
       ForEach(['all', 'novel', 'comic'], (category: string): void => {
-        Button({ type: ButtonType.Normal }) {
+        Button({ type: ButtonType.Normal, stateEffect: false }) {
           Text(category === 'all' ? '全部' : readerSourceCategoryLabel(category as ReaderSourceCategory),
             category === 'all' ? this.verificationTextOptions?.('category/all', undefined, '全部') : undefined)
-            .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
-            .fontSize(12).fontWeight(FontWeight.Medium).maxLines(1)
+            .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
+            .fontSize(12).maxLines(1)
             .fontColor(readerAppColor(this.categoryValue === category ? 'app.sourceUi.primary' : 'app.sourceUi.muted', this.appThemeScheme));
         }.layoutWeight(1).height('100%').padding(2).borderRadius(8)
-          .backgroundColor(this.categoryValue === category ? readerAppColor('TOK_CARD_BG', this.appThemeScheme) : Color.Transparent)
-          .shadow({ radius: this.categoryValue === category ? 3 : 0, color: readerAppColor('app.sourceUi.headerShadow', this.appThemeScheme), offsetY: 1 })
+          .attributeModifier(new ReaderPressFeedback(this.categoryValue === category ?
+            readerAppColor('TOK_CARD_BG', this.appThemeScheme) : Color.Transparent, this.appThemeScheme, 8))
+          .shadow(readerSurfaceElevation(this.categoryValue === category ? 'card' : 'embedded', this.appThemeScheme))
+          .animation(this.reduceMotion ? undefined : readerMotionAnimateParam('app.control.press', false))
+          .responseRegion({ x: 0, y: -8, width: '100%', height: 44 })
           .accessibilityText(`书源类型，${category === 'all' ? '全部' : readerSourceCategoryLabel(category as ReaderSourceCategory)}`)
           .accessibilitySelected(this.categoryValue === category)
           .id(`source-category-${category}`)
@@ -1611,7 +1701,7 @@ export struct SourceManagementPage {
           });
       }, (category: string): string => category);
     }.id('reader-source-category-filter').width(this.contentFrame().width)
-      .height(32).padding(2).borderRadius(10).margin({ top: 8 })
+      .height(32).padding(2).borderRadius(10).margin({ top: 12 })
       .backgroundColor(readerAppColor('app.sourceUi.field', this.appThemeScheme));
   }
 
@@ -1633,17 +1723,18 @@ export struct SourceManagementPage {
 
   @Builder
   private chip(label: string, verificationId: string) {
-    Button({ type: ButtonType.Capsule }) {
+    Button({ type: ButtonType.Capsule, stateEffect: false }) {
       Text(`${label} ${this.statusCount(verificationId)}`, verificationId === 'all' ? this.verificationTextOptions?.('status/all', undefined, `${label} ${this.statusCount(verificationId)}`) :
         this.filterTextLayoutOptions('status', verificationId, `${label} ${this.statusCount(verificationId)}`))
-        .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
-        .fontSize(11).fontWeight(FontWeight.Medium).textAlign(TextAlign.Center).maxLines(1)
-        .minFontSize(8).maxFontSize(11)
+        .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
+        .fontSize(11).textAlign(TextAlign.Center).maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
         .fontColor(readerAppColor(this.statusValue === label ? 'app.sourceUi.onPrimary' : 'app.sourceUi.muted', this.appThemeScheme));
     }.id(`reader-source-status-${verificationId}`).layoutWeight(1)
-      .height(32).padding({ left: 3, right: 3 })
-      .backgroundColor(this.statusValue === label ? readerAppColor('app.sourceUi.primary', this.appThemeScheme) : readerAppColor('TOK_CARD_BG', this.appThemeScheme))
+      .height(32).padding({ left: 2, right: 2 })
+      .attributeModifier(new ReaderPressFeedback(readerAppColor(this.statusValue === label ? 'app.sourceUi.primary' :
+        'TOK_CARD_BG', this.appThemeScheme), this.appThemeScheme, 16))
+      .responseRegion({ x: 0, y: -6, width: '100%', height: 44 })
       .border({ width: TOK_BORDER_W, color: this.statusValue === label ?
         readerAppColor('app.sourceUi.primary', this.appThemeScheme) : readerAppColor('app.sourceUi.border', this.appThemeScheme) })
       .accessibilityText(`书源状态，${label}，${this.statusCount(verificationId)} 项`).accessibilitySelected(this.statusValue === label)
@@ -1903,9 +1994,10 @@ export struct SourceManagementPage {
   private sourceRow(source: BookSource) {
     Column() {
       if (this.batchMode) {
-        Button({ type: ButtonType.Normal }) {
+        Button({ type: ButtonType.Normal, stateEffect: false }) {
           this.sourceRowContent(source);
-        }.width('100%').padding(10).backgroundColor(Color.Transparent).borderRadius(0)
+        }.width('100%').padding(10)
+          .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme))
           .accessibilitySelected(this.batchSourceIds.includes(source.sourceId))
           .accessibilityText(source.name)
           .onClick((): void => this.toggleBatchSource(this.currentSourceRow(source),
@@ -1923,7 +2015,8 @@ export struct SourceManagementPage {
     .borderRadius({ topLeft: this.isFirstSource(source) ? 14 : 0, topRight: this.isFirstSource(source) ? 14 : 0,
       bottomLeft: this.isLastSource(source) ? 14 : 0, bottomRight: this.isLastSource(source) ? 14 : 0 })
     .border({ width: { left: 1, right: 1, bottom: this.isLastSource(source) ? 1 : 0, top: 1 },
-      color: readerAppColor('TOK_LINE', this.appThemeScheme) });
+      color: readerAppColor('TOK_LINE', this.appThemeScheme) })
+    .clip(true);
   }
 
   @Builder
@@ -1952,9 +2045,9 @@ export struct SourceManagementPage {
     .hitTestBehavior(this.batchMode ? HitTestMode.None : HitTestMode.Default);
   }
 
-  private isFirstSource(source: BookSource): boolean { return this.projectedSources[0]?.sourceId === source.sourceId; }
+  private isFirstSource(source: BookSource): boolean { return this.firstSourceId === source.sourceId; }
   private isLastSource(source: BookSource): boolean {
-    return this.projectedSources[this.projectedSources.length - 1]?.sourceId === source.sourceId;
+    return this.lastSourceId === source.sourceId;
   }
 
   private currentSourceRow(source: BookSource): BookSource {
@@ -1978,9 +2071,14 @@ export struct SourceManagementPage {
       }.width(SOURCE_ROW_ICON_WIDTH).height(34);
     } else {
       Stack({ alignContent: Alignment.Center }) {
-        SourceV9TypeSeal({ category: source.category });
-      }.width(SOURCE_ROW_ICON_WIDTH).height(34).accessibilityLevel('no')
-        .onClick(this.sourceRowCommand(this.currentSourceRow(source), 'check'));
+        Button({ type: ButtonType.Normal, stateEffect: false }) {
+          SourceV9TypeSeal({ category: source.category, paintSurface: false });
+        }.width('100%').height('100%').padding(0)
+          .attributeModifier(new ReaderPressFeedback(readerAppColor(source.category === 'comic' ? 'app.status.warningSoft' :
+            'app.sourceUi.selected', this.appThemeScheme), this.appThemeScheme, 10, 10, this.sourceDetectEnabled(source.sourceId)))
+          .enabled(this.sourceDetectEnabled(source.sourceId))
+          .onClick(this.sourceRowCommand(this.currentSourceRow(source), 'check'));
+      }.width(SOURCE_ROW_ICON_WIDTH).height(34).accessibilityLevel('no-hide-descendants');
     }
   }
 
@@ -2012,7 +2110,7 @@ export struct SourceManagementPage {
         .fontSize(TYPE_SOURCE_MANAGEMENT_ROW_URL.fontSizeFp)
         .maxFontScale(this.fontScale())
         .lineHeight(TYPE_SOURCE_MANAGEMENT_ROW_URL.lineHeightFp as number)
-        .fontColor(readerAppColor('TOK_CONTROL_INK', this.appThemeScheme))
+        .fontColor(readerAppColor('app.sourceUi.muted', this.appThemeScheme))
         .wordBreak(WordBreak.BREAK_ALL)
         .maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
@@ -2024,6 +2122,8 @@ export struct SourceManagementPage {
     .accessibilityGroup(true)
     .accessibilityText(`${source.name}，${readerSourceCategoryLabel(source.category)}，${source.baseUrl}`)
     .alignItems(HorizontalAlign.Start)
+    .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 6, 6,
+      !this.batchMode && this.sourceDetectEnabled(source.sourceId)))
     .onClick((): void => {
       if (!this.batchMode) this.sourceRowCommand(source, 'check')();
     });
@@ -2037,7 +2137,7 @@ export struct SourceManagementPage {
         .fontColor(readerAppColor(this.currentSourceRow(source).enabled ? 'app.sourceUi.primary' : 'app.sourceUi.muted',
           this.appThemeScheme));
     } else {
-      Row({ space: 6 }) {
+      Row({ space: SOURCE_ROW_ACTION_GAP }) {
         ForEach([this.currentSourceRow(source)], (current: BookSource): void => {
           if (current.loginUrl !== undefined && current.loginUrl.trim().length > 0) this.loginButton(current);
           this.detectButton(current);
@@ -2072,22 +2172,21 @@ export struct SourceManagementPage {
 
   @Builder
   private loginButton(source: BookSource) {
-    Button({ type: ButtonType.Capsule }) {
+    Button({ type: ButtonType.Capsule, stateEffect: false }) {
       Row({ space: 3 }) {
-        Stack({ alignContent: Alignment.Center }) {
-          Image(source.loginState === 'verified' ? readerActionIcon('check', this.appThemeScheme) :
-            source.loginState === 'expired' ? readerActionIcon('close', this.appThemeScheme) : $r('app.media.source_v9_question'))
-            .width(9).height(9).fillColor(this.loginInk(source));
-        }.width(13).height(13).borderRadius(7).border({ width: 1, color: this.loginInk(source) }).accessibilityLevel('no');
+        Image(source.loginState === 'verified' ? readerActionIcon('check', this.appThemeScheme) :
+          source.loginState === 'expired' ? readerActionIcon('close', this.appThemeScheme) : $r('app.media.source_v9_question'))
+          .width(12).height(12).fillColor(this.loginInk(source)).accessibilityLevel('no');
         Text('登录', this.textLayoutOptions?.('row/login', source.sourceId, '登录'))
-          .fontSize(11).fontWeight(FontWeight.Medium).maxLines(1)
-          .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily)
+          .fontSize(11).maxLines(1)
+          .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
           .fontColor(this.loginInk(source));
       }.justifyContent(FlexAlign.Center);
     }.id(this.verificationRowActionsCurrent(source) ? 'reader-source-text-row-login' : '')
       .width(58).height(26).padding(2).flexShrink(0)
       .responseRegion({ x: 0, y: -9, width: 58, height: 44 })
-      .borderRadius(999).backgroundColor(this.loginSurface(source))
+      .attributeModifier(new ReaderPressFeedback(this.loginSurface(source), this.appThemeScheme, 13, 13,
+        this.sourceActionEnabled() && source.checkState !== 'checking'))
       .border({ width: 1, color: readerAppColor('TOK_LINE_STRONG', this.appThemeScheme) })
       .enabled(this.sourceActionEnabled() && source.checkState !== 'checking')
       .accessibilityText(this.sourceActionLabel(source, source.loginState === 'verified' ? '登录，已验证' :
@@ -2192,7 +2291,8 @@ export struct SourceManagementPage {
         .padding({ left: 6, right: 6 }).borderRadius(999).margin({ top: TOK_SPACE_SM, bottom: this.actionBottomInset() })
         .border({ width: TOK_BORDER_W, color: readerAppColor('app.sourceUi.border', this.appThemeScheme) })
         .backgroundColor(readerAppColor('TOK_CARD_BG', this.appThemeScheme))
-        .shadow(readerSurfaceElevation('floating', this.appThemeScheme));
+        .shadow(readerSurfaceElevation('floating', this.appThemeScheme))
+        .transition(this.batchTransition());
     } else {
       Flex({ direction: this.footerStacked() ? FlexDirection.Column : FlexDirection.Row,
         alignItems: ItemAlign.Center, space: { main: LengthMetrics.vp(TOK_SPACE_CONTROL_INLINE) } }) {
@@ -2202,6 +2302,7 @@ export struct SourceManagementPage {
           focusId: this.toolsFocusId('footer'), onFocused: (): void => this.onToolsEntryFocused(identity, 'footer'),
           onAction: (): void => {
             if (this.managementInputIsCurrent() && !this.groupOpen) {
+              this.closeMoreMenu();
               this.prepareV9ListReturn('batch');
               this.batchSourceIds = [];
               this.batchMode = true;
@@ -2236,15 +2337,17 @@ export struct SourceManagementPage {
 
   @Builder
   private batchAction(icon: Resource, label: string, action: SourceV9ListAction) {
-    Button({ type: ButtonType.Capsule }) {
+    Button({ type: ButtonType.Capsule, stateEffect: false }) {
       Column({ space: 2 }) {
         Image(icon).width(16).height(16).fillColor(this.batchActionInk(action)).accessibilityLevel('no');
-        Text(label).fontSize(10).fontWeight(FontWeight.Medium).maxLines(1).textAlign(TextAlign.Center)
+        Text(label).fontSize(10).maxLines(1).textAlign(TextAlign.Center)
           .minFontSize(8).maxFontSize(10).textOverflow({ overflow: TextOverflow.Ellipsis })
-          .fontFamily(TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontFamily).fontColor(this.batchActionInk(action));
+          .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontColor(this.batchActionInk(action));
       }
-    }.layoutWeight(1).height('100%').padding(2).backgroundColor(Color.Transparent)
+    }.layoutWeight(1).height('100%').padding(2)
+      .attributeModifier(new ReaderPressFeedback(Color.Transparent, this.appThemeScheme, 24, 24, this.batchSourceIds.length > 0))
       .id(`reader-source-batch-${action}`).accessibilityText(label).enabled(this.batchSourceIds.length > 0)
+      .opacity(this.batchSourceIds.length > 0 ? 1 : 0.45)
       .onClick((): void => {
         if (this.managementInputIsCurrent() && this.batchMode && this.batchSourceIds.length > 0)
           this.onV9Action(action, this.batchSourceIds.slice());
@@ -2583,6 +2686,7 @@ export struct SourceManagementPage {
     this.statusValue = '全部';
     this.categoryValue = 'all';
     this.groupValue = '未分组';
+    this.closeMoreMenu();
     this.batchMode = true;
     this.batchSourceIds = this.ungroupedBatchIds.slice();
     this.rebuildSourceProjection('group');
@@ -2630,6 +2734,8 @@ export struct SourceManagementPage {
       }
     }
     this.projectedSources = projected;
+    this.firstSourceId = projected[0]?.sourceId ?? '';
+    this.lastSourceId = projected[projected.length - 1]?.sourceId ?? '';
     this.projectedSourceCount = projected.length;
     this.sourceDataSource.replace(projected);
     if (changed && this.mounted) {
@@ -2899,7 +3005,7 @@ export struct SourceManagementPage {
     const measured = context.px2vp(context.getMeasureUtils().measureText({ textContent: text,
       fontSize: style.fontSizeFp, fontFamily: style.fontFamily, fontWeight: style.fontWeight }));
     const label = Number.isFinite(measured) && measured > 0 ? Math.ceil(measured) : fallback;
-    return Math.min(Math.max(96, label + 42), Math.max(0, available * 0.55));
+    return Math.min(Math.max(96, label + 42), Math.max(0, Math.min(Math.round(132 * this.fontScale()), available * 0.42)));
   }
 
   private numericAreaLength(value: Length | undefined): number {

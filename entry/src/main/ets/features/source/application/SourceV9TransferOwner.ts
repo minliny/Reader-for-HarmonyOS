@@ -507,7 +507,7 @@ export class SourceV9TransferOwner {
   previewSubscriptions(ids: number[]): Promise<void> {
     return this.operation(async (current: () => boolean): Promise<void> => {
       const subs = this.snapshot.subscriptions.filter((item: ManagedRuleSubscription): boolean =>
-        item.autoUpdate && ids.includes(item.id));
+        ids.includes(item.id));
       const reviews: SourceV9SubscriptionReview[] = [];
       const failures: string[] = [];
       for (const subscription of subs) {
