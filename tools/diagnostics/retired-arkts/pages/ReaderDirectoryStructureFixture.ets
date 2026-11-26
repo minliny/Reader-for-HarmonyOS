@@ -1,23 +1,23 @@
 // DEBUG component fixture only. The parent awaits checked production fonts.
 // This file owns no Runtime/Core/Host, real navigation, user records or network.
-import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
+import { DEBUG, BUILD_MODE_NAME } from '../../../../entry/build/default/generated/profile/default/BuildProfile';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { ReaderFullDirectory } from '../features/reading/ui/ReaderFullDirectory';
-import { BookDirectoryPage } from '../features/reading/ui/BookDirectoryPage';
-import { ReaderControlDirectoryContent } from '../features/reading/ui/ReaderControlDirectoryContent';
-import { readerWindowMetrics } from '../ui/foundation/ReaderWindowEnvironment';
-import { resolveReaderControlLayout, type ReaderControlLayoutSnapshot, type ReaderControlModuleMeasurer } from '../features/reading/ui/ReaderLayoutGeometry';
-import { ReaderControlGeometry } from '../features/reading/ui/ReaderControlGeometry';
+import { ReaderFullDirectory } from '../../../../entry/src/main/ets/features/reading/ui/ReaderFullDirectory';
+import { BookDirectoryPage } from '../../../../entry/src/main/ets/features/reading/ui/BookDirectoryPage';
+import { ReaderControlDirectoryContent } from '../../../../entry/src/main/ets/features/reading/ui/ReaderControlDirectoryContent';
+import { readerWindowMetrics } from '../../../../entry/src/main/ets/ui/foundation/ReaderWindowEnvironment';
+import { resolveReaderControlLayout, type ReaderControlLayoutSnapshot, type ReaderControlModuleMeasurer } from '../../../../entry/src/main/ets/features/reading/ui/ReaderLayoutGeometry';
+import { ReaderControlGeometry } from '../../../../entry/src/main/ets/features/reading/ui/ReaderControlGeometry';
 import { readerControlMotionBounds, sampleReaderControlMotionComposition,
-  type ReaderControlMotionFrame } from '../features/reading/ui/ReaderControlMotionGeometry';
-import { readerReadableFontScale } from '../ui/foundation/ReaderSurfaceResolvers';
-import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
-import type { LocalReadingTocEntry } from '../features/reading/application/LocalReadingFlowGateway';
-import type { ReaderDirectoryChapterStartBookmarkRequest } from '../features/reading/presentation/ReaderDirectoryMarkerState';
-import type { MangaDownloadAction, MangaDownloadActionId } from '../features/manga/application/MangaDownloadActionsGateway';
-import type { ReaderBookIdentity } from '../features/reading/presentation/ReaderBookmarkProjection';
-import { readingDirectoryRecovery, type ReadingDirectoryRecovery } from '../features/reading/presentation/ReadingDirectoryRecovery';
-import type { ReaderDirectoryNavigationPortFactory } from '../features/reading/application/ReaderDirectoryNavigation';
+  type ReaderControlMotionFrame } from '../../../../entry/src/main/ets/features/reading/ui/ReaderControlMotionGeometry';
+import { readerReadableFontScale } from '../../../../entry/src/main/ets/ui/foundation/ReaderSurfaceResolvers';
+import { readerPageAreaLength } from '../../../../entry/src/main/ets/ui/layout/ReaderPageShell';
+import type { LocalReadingTocEntry } from '../../../../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway';
+import type { ReaderDirectoryChapterStartBookmarkRequest } from '../../../../entry/src/main/ets/features/reading/presentation/ReaderDirectoryMarkerState';
+import type { MangaDownloadAction, MangaDownloadActionId } from '../../../../entry/src/main/ets/features/manga/application/MangaDownloadActionsGateway';
+import type { ReaderBookIdentity } from '../../../../entry/src/main/ets/features/reading/presentation/ReaderBookmarkProjection';
+import { readingDirectoryRecovery, type ReadingDirectoryRecovery } from '../../../../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery';
+import type { ReaderDirectoryNavigationPortFactory } from '../../../../entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation';
 import { readerDirectoryFixtureEntries, ReaderDirectoryFixturePort, readerDirectoryFixtureCopyEntry,
   nextReaderDirectoryFixtureInstanceId } from './ReaderDirectoryStructureFixtureData';
 import { ReaderOfflineRecoveryFixtureOwner } from './ReaderOfflineRecoveryFixtureOwner';

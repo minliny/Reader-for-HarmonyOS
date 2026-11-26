@@ -1,9 +1,9 @@
 import { LengthMetrics } from '@kit.ArkUI';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
-import { ReaderDirectoryRecoverySurface } from '../features/reading/ui/ReaderDirectoryRecoverySurface';
+import { DEBUG, BUILD_MODE_NAME } from '../../../../entry/build/default/generated/profile/default/BuildProfile';
+import { ReaderDirectoryRecoverySurface } from '../../../../entry/src/main/ets/features/reading/ui/ReaderDirectoryRecoverySurface';
 import { ReaderLegacyBookmarkFixtureOwner } from './ReaderLegacyBookmarkFixtureOwner';
-import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../features/reading/presentation/ReadingDirectoryRecovery';
+import { EMPTY_READING_DIRECTORY_RECOVERY, type ReadingDirectoryRecovery } from '../../../../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery';
 
 @Component
 export struct ReaderLegacyBookmarkRecoveryStructureFixture {

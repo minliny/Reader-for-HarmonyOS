@@ -1,4 +1,4 @@
-import type { LocalReadingTocEntry, LocalReadingDownloadState } from '../features/reading/application/LocalReadingFlowGateway';
+import type { LocalReadingTocEntry, LocalReadingDownloadState } from '../../../../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway';
 
 let directoryFixtureInstanceSequence: number = 0;
 
@@ -26,7 +26,7 @@ export function readerDirectoryFixtureEntries(manga: boolean): LocalReadingTocEn
 }
 
 import type { ReaderDirectoryNavigationQuery, ReaderDirectoryNavigationOpen, ReaderDirectoryNavigationPage,
-  ReaderDirectoryNavigationTarget, ReaderDirectoryNavigationNode, ReaderDirectoryNavigationPort } from '../features/reading/application/ReaderDirectoryNavigation';
+  ReaderDirectoryNavigationTarget, ReaderDirectoryNavigationNode, ReaderDirectoryNavigationPort } from '../../../../entry/src/main/ets/features/reading/application/ReaderDirectoryNavigation';
 
 /** Static renderer sample through the public navigation API. It deliberately
  * does not implement Core filtering, sorting, folding, paging or proof logic. */

@@ -1,14 +1,14 @@
 // DEBUG-only component fixture. All rows, JSON and diagnostics are in memory.
-import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
+import { DEBUG, BUILD_MODE_NAME } from '../../../../entry/build/default/generated/profile/default/BuildProfile';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { SourceToolsPage } from '../features/source/ui/SourceToolsPage';
-import type { BookSource, SourceDebugLog } from '../features/source/application/SourceGateway';
-import type { SourceToolsSnapshot, SourceBatchCheckProgress, SourceBatchCheckResult, SourceToolsSelection } from '../features/source/application/SourceToolsOrchestrator';
-import { ReaderPageState } from '../ui/feedback/ReaderPageState';
-import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
-import { readerWindowMetrics } from '../ui/foundation/ReaderWindowEnvironment';
-import { projectCommitReadback, projectOperationFacts } from '../app/ReaderOperationFacts';
-import { projectPersistedReceipt } from '../app/ReaderPersistedReceiptProjection';
+import { SourceToolsPage } from '../../../../entry/src/main/ets/features/source/ui/SourceToolsPage';
+import type { BookSource, SourceDebugLog } from '../../../../entry/src/main/ets/features/source/application/SourceGateway';
+import type { SourceToolsSnapshot, SourceBatchCheckProgress, SourceBatchCheckResult, SourceToolsSelection } from '../../../../entry/src/main/ets/features/source/application/SourceToolsOrchestrator';
+import { ReaderPageState } from '../../../../entry/src/main/ets/ui/feedback/ReaderPageState';
+import { readerPageAreaLength } from '../../../../entry/src/main/ets/ui/layout/ReaderPageShell';
+import { readerWindowMetrics } from '../../../../entry/src/main/ets/ui/foundation/ReaderWindowEnvironment';
+import { projectCommitReadback, projectOperationFacts } from '../../../../entry/src/main/ets/app/ReaderOperationFacts';
+import { projectPersistedReceipt } from '../../../../entry/src/main/ets/app/ReaderPersistedReceiptProjection';
 
 export type SourceToolsFixtureScenario = 'content' | 'loading' | 'empty' | 'read-error' |
   'read-empty-error' | 'unknown' | 'original-unknown' | 'original-cleanup' | 'running' |

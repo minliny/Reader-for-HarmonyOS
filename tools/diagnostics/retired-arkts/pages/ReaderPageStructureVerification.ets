@@ -1,22 +1,22 @@
 // Component-only DEBUG fixture. It never creates a Runtime/Host, opens a
 // picker/Web surface or consumes user records. Bundled production fonts and
 // real WindowCoordinator metrics are deliberately shared with the actor.
-import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
+import { DEBUG, BUILD_MODE_NAME } from '../../../../entry/build/default/generated/profile/default/BuildProfile';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import type { common } from '@kit.AbilityKit';
-import { SourceManagementPage } from '../features/source/ui/SourceManagementPage';
-import type { BookSource } from '../features/source/application/SourceGateway';
-import type { SourceManagementProjection } from '../features/source/application/SourceOrchestrator';
-import type { SourceManagementViewState } from '../features/source/presentation/SourceJourneyPresentation';
-import { prepareReaderFonts } from '../ui/foundation/ReaderFonts';
-import { ReaderPageState } from '../ui/feedback/ReaderPageState';
-import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
-import { ReaderPostLayoutFrame } from '../ui/layout/ReaderPostLayoutFrame';
-import { ReaderSourceTextMetrics } from './ReaderSourceTextMetrics';
-import { readerWindowMetrics } from '../ui/foundation/ReaderWindowEnvironment';
-import { readerContentSafeTop, readerInteractiveSafeBottom } from '../ui/foundation/ReaderWindowMetrics';
-import { projectPersistedReceipt } from '../app/ReaderPersistedReceiptProjection';
-import { projectCommitReadback, projectOperationFacts } from '../app/ReaderOperationFacts';
+import { SourceManagementPage } from '../../../../entry/src/main/ets/features/source/ui/SourceManagementPage';
+import type { BookSource } from '../../../../entry/src/main/ets/features/source/application/SourceGateway';
+import type { SourceManagementProjection } from '../../../../entry/src/main/ets/features/source/application/SourceOrchestrator';
+import type { SourceManagementViewState } from '../../../../entry/src/main/ets/features/source/presentation/SourceJourneyPresentation';
+import { prepareReaderFonts } from '../../../../entry/src/main/ets/ui/foundation/ReaderFonts';
+import { ReaderPageState } from '../../../../entry/src/main/ets/ui/feedback/ReaderPageState';
+import { readerPageAreaLength } from '../../../../entry/src/main/ets/ui/layout/ReaderPageShell';
+import { ReaderPostLayoutFrame } from '../../../../entry/src/main/ets/ui/layout/ReaderPostLayoutFrame';
+import { ReaderSourceTextMetrics } from '../../../../entry/src/main/ets/pages/ReaderSourceTextMetrics';
+import { readerWindowMetrics } from '../../../../entry/src/main/ets/ui/foundation/ReaderWindowEnvironment';
+import { readerContentSafeTop, readerInteractiveSafeBottom } from '../../../../entry/src/main/ets/ui/foundation/ReaderWindowMetrics';
+import { projectPersistedReceipt } from '../../../../entry/src/main/ets/app/ReaderPersistedReceiptProjection';
+import { projectCommitReadback, projectOperationFacts } from '../../../../entry/src/main/ets/app/ReaderOperationFacts';
 import { ReaderDirectoryStructureFixture } from './ReaderDirectoryStructureFixture';
 import { ReaderDownloadStructureFixture, DOWNLOAD_FIXTURE_SCENARIOS } from './ReaderDownloadStructureFixture';
 import type { DownloadFixtureCase, DownloadFixtureScenario } from './ReaderDownloadStructureFixture';

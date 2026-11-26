@@ -1,17 +1,17 @@
 // DEBUG component fixture only: no Runtime/Host, user shelf or file/network port.
-import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
+import { DEBUG, BUILD_MODE_NAME } from '../../../../entry/build/default/generated/profile/default/BuildProfile';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { SharedDownloadPage } from '../features/downloads/ui/SharedDownloadPage';
-import type { SharedDownloadUiIntent, SharedDownloadUiBookTarget, SharedDownloadViewState } from '../features/downloads/presentation/SharedDownloadUiContract';
+import { SharedDownloadPage } from '../../../../entry/src/main/ets/features/downloads/ui/SharedDownloadPage';
+import type { SharedDownloadUiIntent, SharedDownloadUiBookTarget, SharedDownloadViewState } from '../../../../entry/src/main/ets/features/downloads/presentation/SharedDownloadUiContract';
 import type { DownloadBookView, DownloadChapterView, DownloadContentKind, DownloadReadingTarget,
-  DownloadStorageSummary, DownloadStoragePolicyView } from '../features/downloads/presentation/SharedDownloadProjection';
-import { createDownloadBookView, projectDownloadBookAvailability, downloadChapterStateLabel } from '../features/downloads/presentation/SharedDownloadProjection';
-import type { LocalReadingDownloadState } from '../features/reading/application/LocalReadingFlowGateway';
-import { prepareSharedDownloadFonts } from '../ui/foundation/ReaderFonts';
-import { ReaderPageState } from '../ui/feedback/ReaderPageState';
-import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
-import { ReaderWindowCoordinator } from '../app/ReaderWindowCoordinator';
-import type { ReaderRecoveryView } from '../ui/feedback/ReaderRecoveryView';
+  DownloadStorageSummary, DownloadStoragePolicyView } from '../../../../entry/src/main/ets/features/downloads/presentation/SharedDownloadProjection';
+import { createDownloadBookView, projectDownloadBookAvailability, downloadChapterStateLabel } from '../../../../entry/src/main/ets/features/downloads/presentation/SharedDownloadProjection';
+import type { LocalReadingDownloadState } from '../../../../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway';
+import { prepareSharedDownloadFonts } from '../../../../entry/src/main/ets/ui/foundation/ReaderFonts';
+import { ReaderPageState } from '../../../../entry/src/main/ets/ui/feedback/ReaderPageState';
+import { readerPageAreaLength } from '../../../../entry/src/main/ets/ui/layout/ReaderPageShell';
+import { ReaderWindowCoordinator } from '../../../../entry/src/main/ets/app/ReaderWindowCoordinator';
+import type { ReaderRecoveryView } from '../../../../entry/src/main/ets/ui/feedback/ReaderRecoveryView';
 
 export type DownloadFixtureScenario = 'content' | 'loading' | 'empty' | 'read-error' | 'retained-error' |
   'recovery' | 'pending' | 'filtered-empty' | 'chapter-loading' | 'chapter-error' | 'chapter-empty' | 'chapter-no-catalog';

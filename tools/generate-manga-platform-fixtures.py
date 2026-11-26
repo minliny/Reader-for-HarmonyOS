@@ -44,6 +44,6 @@ export interface MangaPlatformFixture {
   width: number; height: number; orientation: number; lossy: boolean; previewWidth: number; previewHeight: number;
 }
 export const MANGA_PLATFORM_FIXTURES: MangaPlatformFixture[] = '''
-(ROOT/'entry/src/main/ets/app/MangaPlatformFixtures.ts').write_text(prefix+json.dumps(cases,ensure_ascii=False,indent=2)+';\n'+
+(ROOT/'tools/diagnostics/retired-arkts/app/MangaPlatformFixtures.ts').write_text(prefix+json.dumps(cases,ensure_ascii=False,indent=2)+';\n'+
  'export interface MangaPlatformGraphicsFixture { file:string; sha256:string; planFile:string; planSha256:string; expectedFile:string; expectedSha256:string; preEncodedFile:string; preEncodedSha256:string; preEncodedPixelFormat:string; width:number; height:number; }\nexport const MANGA_PLATFORM_GRAPHICS: MangaPlatformGraphicsFixture = '+json.dumps(manifest['graphics'],indent=2)+';\n', encoding='utf-8')
 print(json.dumps(dict(cases=len(cases),files=len(list(OUT.iterdir())),bytes=sum(p.stat().st_size for p in OUT.iterdir()),generator=manifest['generator'])))

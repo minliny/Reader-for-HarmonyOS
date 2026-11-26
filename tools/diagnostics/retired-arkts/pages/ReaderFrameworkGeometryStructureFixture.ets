@@ -1,16 +1,16 @@
-import { ReaderEditingVisibility } from '../ui/layout/ReaderEditingVisibility';
-import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
+import { ReaderEditingVisibility } from '../../../../entry/src/main/ets/ui/layout/ReaderEditingVisibility';
+import { DEBUG, BUILD_MODE_NAME } from '../../../../entry/build/default/generated/profile/default/BuildProfile';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { LengthMetrics } from '@kit.ArkUI';
 import inputMethod from '@ohos.inputMethod';
-import { ReaderStandardPage } from '../ui/layout/ReaderStandardPage';
-import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
-import { readerWindowMetrics } from '../ui/foundation/ReaderWindowEnvironment';
-import { PageBackBar } from '../ui/chrome/PageBackBar';
-import { ReaderSearchField } from '../ui/controls/ReaderSearchField';
-import { ReaderPageState } from '../ui/feedback/ReaderPageState';
-import { BookRemovalDialogHost } from '../features/bookshelf/ui/BookRemovalDialogHost';
-import { BookRemovalDialogPresentation } from '../features/bookshelf/presentation/BookRemovalDialogPresentation';
+import { ReaderStandardPage } from '../../../../entry/src/main/ets/ui/layout/ReaderStandardPage';
+import { readerPageAreaLength } from '../../../../entry/src/main/ets/ui/layout/ReaderPageShell';
+import { readerWindowMetrics } from '../../../../entry/src/main/ets/ui/foundation/ReaderWindowEnvironment';
+import { PageBackBar } from '../../../../entry/src/main/ets/ui/chrome/PageBackBar';
+import { ReaderSearchField } from '../../../../entry/src/main/ets/ui/controls/ReaderSearchField';
+import { ReaderPageState } from '../../../../entry/src/main/ets/ui/feedback/ReaderPageState';
+import { BookRemovalDialogHost } from '../../../../entry/src/main/ets/features/bookshelf/ui/BookRemovalDialogHost';
+import { BookRemovalDialogPresentation } from '../../../../entry/src/main/ets/features/bookshelf/presentation/BookRemovalDialogPresentation';
 
 /** Actual native geometry and confirmation hosts with memory-only actions. */
 @Component

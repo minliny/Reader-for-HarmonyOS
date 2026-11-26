@@ -7,7 +7,7 @@ if (process.argv.includes('--environment-check')) { console.log(JSON.stringify({
 const ts=require(sdk+'/node_modules/typescript'),options=require(sdk+'/lib/ets_checker.js').compilerOptions;
 const root=path.resolve(__dirname,'../entry/src/main/ets'), registryPath=path.resolve(__dirname,'../../Reader-UI/theme/registry.json');
 const registry=JSON.parse(fs.readFileSync(registryPath,'utf8'));
-const skipFiles=new Set(['ReadingSurface.ets','ReaderPageChrome.ets','ReaderBookTurnSurface.ets','ReaderPageInteractionLayer.ets','ReaderControlMotionVerification.ets','ReaderRendererPilot.ets']);
+const skipFiles=new Set(['ReadingSurface.ets','ReaderPageChrome.ets','ReaderBookTurnSurface.ets','ReaderPageInteractionLayer.ets','ReaderControlMotionVerification.ets']);
 const ownedFiles=new Set(['LocalReadingExperience.ets','ReaderControlPanel.ets','ReaderControlMotionStage.ets','ReaderControlAutoPageContent.ets','ReaderControlTtsContent.ets','ReaderSessionCapsule.ets','ReaderSessionLaunchStage.ets']);
 const mapping={
 '2D4A3E':'D2BD96','1F3528':'7A684F','254A3D':'D2BD96','243D30':'D2BD96','2B6F62':'D2BD96','2F6373':'D2BD96','244F5C':'7A684F',

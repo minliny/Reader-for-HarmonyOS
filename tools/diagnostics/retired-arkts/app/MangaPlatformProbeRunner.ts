@@ -5,11 +5,11 @@ import fs from '@ohos.file.fs';
 import cryptoFramework from '@ohos.security.cryptoFramework';
 import util from '@ohos.util';
 import type { JsonObject } from '@reader/core-harmony';
-import { ReaderRuntimeOwner } from './ReaderRuntimeOwner';
-import { ReadingBodyImageHost, type ReadingBodyImagePayload } from '../platform/reading-resources/ReadingBodyImageHost';
-import { MangaImageGraphicsHost } from '../platform/reading-resources/MangaImageGraphicsHost';
+import { ReaderRuntimeOwner } from '../../../../entry/src/main/ets/app/ReaderRuntimeOwner';
+import { ReadingBodyImageHost, type ReadingBodyImagePayload } from '../../../../entry/src/main/ets/platform/reading-resources/ReadingBodyImageHost';
+import { MangaImageGraphicsHost } from '../../../../entry/src/main/ets/platform/reading-resources/MangaImageGraphicsHost';
 import { MANGA_PLATFORM_FIXTURES, MANGA_PLATFORM_GRAPHICS, type MangaPlatformFixture } from './MangaPlatformFixtures';
-import type { MangaPlatformObservation, MangaBodyDiagnosticState } from '../platform/reading-resources/MangaPlatformObservation';
+import type { MangaPlatformObservation, MangaBodyDiagnosticState } from '../../../../entry/src/main/ets/platform/reading-resources/MangaPlatformObservation';
 import { MANGA_PLATFORM_LARGE_FIXTURE, MANGA_PLATFORM_LARGE_CONTROL } from './MangaPlatformLargeFixture';
 
 export interface MangaProbeFrame { id: string; fileUri: string; width: number; height: number; }

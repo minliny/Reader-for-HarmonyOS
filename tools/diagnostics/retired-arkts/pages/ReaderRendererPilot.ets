@@ -1,9 +1,9 @@
-import { readerWindowMetrics } from '../ui/foundation/ReaderWindowEnvironment';
-import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
+import { readerWindowMetrics } from '../../../../entry/src/main/ets/ui/foundation/ReaderWindowEnvironment';
+import { readerPageAreaLength } from '../../../../entry/src/main/ets/ui/layout/ReaderPageShell';
 // Retained renderer diagnostic source. This page has no app route.
 import webview from '@ohos.web.webview';
 import { hilog } from '@kit.PerformanceAnalysisKit';
-import { ArkWebExecutionHost } from '../ui/platform/ArkWebExecutionHost';
+import { ArkWebExecutionHost } from '../../../../entry/src/main/ets/ui/platform/ArkWebExecutionHost';
 import { ArkWebResourceDiagnostic } from '../app/ArkWebResourceDiagnostic';
 import { ReaderParagraphDiagnostic } from './ReaderParagraphDiagnostic';
 import { ReaderTextNodeDiagnostic } from './ReaderTextNodeDiagnostic';

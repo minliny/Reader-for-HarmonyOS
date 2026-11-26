@@ -1,14 +1,14 @@
 // DEBUG component fixture. The presentation has no Runtime or Host attachment.
-import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
+import { DEBUG, BUILD_MODE_NAME } from '../../../../entry/build/default/generated/profile/default/BuildProfile';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { LengthMetrics } from '@kit.ArkUI';
-import { BookshelfGroupPresentation, type BookshelfGroupFocusReturn } from '../features/bookshelf/presentation/BookshelfGroupPresentation';
-import { BookshelfGroupDialog } from '../features/bookshelf/ui/BookshelfGroupDialog';
-import type { BookshelfManagementData } from '../features/bookshelf/application/BookshelfManagementGateway';
-import { projectPersistedReceipt } from '../app/ReaderPersistedReceiptProjection';
-import { projectCommitReadback } from '../app/ReaderOperationFacts';
-import { ReaderPageState } from '../ui/feedback/ReaderPageState';
-import { readerPageAreaLength } from '../ui/layout/ReaderPageShell';
+import { BookshelfGroupPresentation, type BookshelfGroupFocusReturn } from '../../../../entry/src/main/ets/features/bookshelf/presentation/BookshelfGroupPresentation';
+import { BookshelfGroupDialog } from '../../../../entry/src/main/ets/features/bookshelf/ui/BookshelfGroupDialog';
+import type { BookshelfManagementData } from '../../../../entry/src/main/ets/features/bookshelf/application/BookshelfManagementGateway';
+import { projectPersistedReceipt } from '../../../../entry/src/main/ets/app/ReaderPersistedReceiptProjection';
+import { projectCommitReadback } from '../../../../entry/src/main/ets/app/ReaderOperationFacts';
+import { ReaderPageState } from '../../../../entry/src/main/ets/ui/feedback/ReaderPageState';
+import { readerPageAreaLength } from '../../../../entry/src/main/ets/ui/layout/ReaderPageShell';
 
 @Observed
 class ReaderGroupFixturePresentation extends BookshelfGroupPresentation {

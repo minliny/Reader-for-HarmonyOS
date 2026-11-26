@@ -1,9 +1,9 @@
 import type { JsonObject, ReaderCoreResultEvent } from '@reader/core-harmony';
-import { LocalReadingFlowGateway, type LocalReadingTocEntry } from '../features/reading/application/LocalReadingFlowGateway';
-import { ReaderDirectoryHost, type ReaderDirectoryBinding } from '../features/reading/application/ReaderDirectoryHost';
-import type { ReadingGatewayRuntime } from '../features/reading/application/ReadingGatewayRuntime';
-import type { ReadingOperationIntent, ReadingReconciliationResult } from '../features/reading/application/ReadingOperationIntents';
-import { readingDirectoryRecovery, type ReadingDirectoryRecovery } from '../features/reading/presentation/ReadingDirectoryRecovery';
+import { LocalReadingFlowGateway, type LocalReadingTocEntry } from '../../../../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway';
+import { ReaderDirectoryHost, type ReaderDirectoryBinding } from '../../../../entry/src/main/ets/features/reading/application/ReaderDirectoryHost';
+import type { ReadingGatewayRuntime } from '../../../../entry/src/main/ets/features/reading/application/ReadingGatewayRuntime';
+import type { ReadingOperationIntent, ReadingReconciliationResult } from '../../../../entry/src/main/ets/features/reading/application/ReadingOperationIntents';
+import { readingDirectoryRecovery, type ReadingDirectoryRecovery } from '../../../../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery';
 
 /** Finite DEBUG ports. The independent production owner never joins a Runtime
  * registry and these ports have no filesystem, network or mutation endpoint. */

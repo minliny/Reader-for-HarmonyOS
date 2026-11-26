@@ -1,5 +1,5 @@
 // Existing DEBUG pilot child. Fixed rawfile inputs; no reader session or user data writes.
-import { DEBUG, BUILD_MODE_NAME } from '../../../../build/default/generated/profile/default/BuildProfile';
+import { DEBUG, BUILD_MODE_NAME } from '../../../../entry/build/default/generated/profile/default/BuildProfile';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { MangaPlatformProbeRunner, type MangaProbeFrame, type MangaProbeReceipt } from '../app/MangaPlatformProbeRunner';
 

@@ -1,13 +1,13 @@
 import type { JsonObject, ReaderCoreResultEvent } from '@reader/core-harmony';
-import { ReadingOfflineGateway } from '../features/reading/application/ReadingOfflineGateway';
-import { ReadingOfflineHost, type ReadingOfflineBinding } from '../features/reading/application/ReadingOfflineHost';
-import type { ReadingGatewayRuntime } from '../features/reading/application/ReadingGatewayRuntime';
-import type { ReadingOperationContext, ReadingOperationIntent, ReadingRecoveredOperation } from '../features/reading/application/ReadingOperationIntents';
-import type { ReaderWriteEvidence } from '../app/ReaderWriteEvidence';
-import type { LocalReadingTocEntry } from '../features/reading/application/LocalReadingFlowGateway';
-import type { RemoteReadingSession, RemoteReadingTocEntry } from '../features/reading/application/RemoteReadingFlowGateway';
-import type { ReadingBookDetail } from '../features/reading/presentation/ReadingBookDetail';
-import { readingDirectoryRecovery, type ReadingDirectoryRecovery } from '../features/reading/presentation/ReadingDirectoryRecovery';
+import { ReadingOfflineGateway } from '../../../../entry/src/main/ets/features/reading/application/ReadingOfflineGateway';
+import { ReadingOfflineHost, type ReadingOfflineBinding } from '../../../../entry/src/main/ets/features/reading/application/ReadingOfflineHost';
+import type { ReadingGatewayRuntime } from '../../../../entry/src/main/ets/features/reading/application/ReadingGatewayRuntime';
+import type { ReadingOperationContext, ReadingOperationIntent, ReadingRecoveredOperation } from '../../../../entry/src/main/ets/features/reading/application/ReadingOperationIntents';
+import type { ReaderWriteEvidence } from '../../../../entry/src/main/ets/app/ReaderWriteEvidence';
+import type { LocalReadingTocEntry } from '../../../../entry/src/main/ets/features/reading/application/LocalReadingFlowGateway';
+import type { RemoteReadingSession, RemoteReadingTocEntry } from '../../../../entry/src/main/ets/features/reading/application/RemoteReadingFlowGateway';
+import type { ReadingBookDetail } from '../../../../entry/src/main/ets/features/reading/presentation/ReadingBookDetail';
+import { readingDirectoryRecovery, type ReadingDirectoryRecovery } from '../../../../entry/src/main/ets/features/reading/presentation/ReadingDirectoryRecovery';
 
 class OfflineFixtureRuntime implements ReadingGatewayRuntime {
   unexpectedRequests: number = 0;

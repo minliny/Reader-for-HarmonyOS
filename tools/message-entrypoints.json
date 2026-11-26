@@ -2043,61 +2043,6 @@
       "status": "registered-source-entry"
     },
     {
-      "id": "entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets#ReaderDownloadStructureFixture.fontPreparationState::shared.page-state",
-      "file": "entry/src/main/ets/pages/ReaderDownloadStructureFixture.ets",
-      "owner": "ReaderDownloadStructureFixture",
-      "member": "fontPreparationState",
-      "family": "shared.page-state",
-      "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "DEBUG内部ReaderDownloadStructureFixture当前presentation、字体准备attempt与内存数据；页面状态消费本次真实字体准备结果。",
-      "retireRule": "退场或后继attempt使旧字体回调失效。重试只重新准备生产字体，不调用业务Host、导入、登录或文件导出。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/pages/ReaderFrameworkGeometryStructureFixture.ets#ReaderFrameworkGeometryStructureFixture.build::shared.page-state",
-      "file": "entry/src/main/ets/pages/ReaderFrameworkGeometryStructureFixture.ets",
-      "owner": "ReaderFrameworkGeometryStructureFixture",
-      "member": "build",
-      "family": "shared.page-state",
-      "category": "框架几何诊断样本未就绪状态",
-      "effectiveHost": "当前内部框架几何诊断页在 debug 条件或字体就绪条件未满足时显示。",
-      "retireRule": "诊断页退场或样本就绪时移除该状态。无操作入口或业务结果。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/pages/ReaderGroupRecoveryStructureFixture.ets#ReaderGroupRecoveryStructureFixture.build::shared.page-state",
-      "file": "entry/src/main/ets/pages/ReaderGroupRecoveryStructureFixture.ets",
-      "owner": "ReaderGroupRecoveryStructureFixture",
-      "member": "build",
-      "family": "shared.page-state",
-      "category": "分组恢复诊断样本未就绪状态",
-      "effectiveHost": "当前内存分组诊断页在 debug 条件或字体就绪条件未满足时显示。",
-      "retireRule": "诊断页退场或样本就绪时移除该状态。无操作入口或业务结果。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/pages/ReaderPageStructureVerification.ets#ReaderPageStructureVerification.fontPreparationState::shared.page-state",
-      "file": "entry/src/main/ets/pages/ReaderPageStructureVerification.ets",
-      "owner": "ReaderPageStructureVerification",
-      "member": "fontPreparationState",
-      "family": "shared.page-state",
-      "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "DEBUG内部ReaderPageStructureVerification当前presentation、字体准备attempt与内存数据；页面状态消费本次真实字体准备结果。",
-      "retireRule": "退场或后继attempt使旧字体回调失效。重试只重新准备生产字体，不调用业务Host、导入、登录或文件导出。",
-      "status": "registered-source-entry"
-    },
-    {
-      "id": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets#ReaderSourceToolsStructureFixture.fontPreparationState::shared.page-state",
-      "file": "entry/src/main/ets/pages/ReaderSourceToolsStructureFixture.ets",
-      "owner": "ReaderSourceToolsStructureFixture",
-      "member": "fontPreparationState",
-      "family": "shared.page-state",
-      "category": "页面或局部内容的加载/空态/无内容失败",
-      "effectiveHost": "DEBUG内部ReaderSourceToolsStructureFixture当前presentation、字体准备attempt与内存数据；页面状态消费本次真实字体准备结果。",
-      "retireRule": "退场或后继attempt使旧字体回调失效。重试只重新准备生产字体，不调用业务Host、导入、登录或文件导出。",
-      "status": "registered-source-entry"
-    },
-    {
       "id": "entry/src/main/ets/pages/ReaderStartupRecovery.ets#ReaderStartupRecovery.build::shared.page-state",
       "file": "entry/src/main/ets/pages/ReaderStartupRecovery.ets",
       "owner": "ReaderStartupRecovery",
