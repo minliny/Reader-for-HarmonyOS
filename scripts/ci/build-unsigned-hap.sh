@@ -17,6 +17,8 @@ readonly output=/reader-ci
 readonly cli=/opt/command-line-tools
 readonly abi=arm64-v8a
 readonly rust_target=aarch64-unknown-linux-ohos
+# The pinned api26r Hvigor wrapper resolves its own pnpm under wrapper/tools/<version>.
+readonly wrapper_pnpm=10.28.2
 readonly lock="$host/scripts/core-dependency.json"
 
 readonly private="$output/private"
@@ -158,6 +160,8 @@ prepare_hap_tools() {
   printf '%s\n' '@ohos:registry=https://repo.harmonyos.com/npm/' > "$HOME/.npmrc"
   cd "$host"
   "$READER_NODE" tools/reader-build-tools.mjs --install
+  "$NODE_HOME/bin/npm" install --prefix "$HVIGOR_SHARED_TOOLS/$wrapper_pnpm" --save-exact \
+    --ignore-scripts --no-audit --no-fund "pnpm@$wrapper_pnpm"
 }
 
 prepare_tools() {
@@ -279,6 +283,7 @@ admit_offline_inputs() {
   "$READER_NODE" "$core/scripts/sync-workspace.mjs" --check
   check_hap_tools
   "$READER_NODE" "$host/tools/reader-build-tools.mjs" --profile release
+  test "$("$HVIGOR_SHARED_TOOLS/$wrapper_pnpm/node_modules/.bin/pnpm" --version)" = "$wrapper_pnpm"
   prepared_inputs > "$private/offline-inputs"
   cmp "$private/prepared-inputs" "$private/offline-inputs"
 }
@@ -286,6 +291,7 @@ admit_offline_inputs() {
 RUSTUP_TOOLCHAIN=$("$READER_NODE" -p 'require(process.argv[1]).rustToolchain' "$lock")
 export RUSTUP_TOOLCHAIN
 if [[ "$phase" == package-offline ]]; then
+  export npm_config_offline=true
   run_stage offline-admission admit_offline_inputs
   run_stage unsigned-hap-build build_hap
   run_stage public-evidence stage_public_evidence
