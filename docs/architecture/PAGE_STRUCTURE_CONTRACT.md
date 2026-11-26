@@ -816,7 +816,7 @@ interface OperationRef {
 | 删除/导入 | mutation operation | 行内/页脚 busy | Recovery | 只重读 |
 | 设置写入 | settings operation | 控件 busy | reconcile | 只重读 |
 
-准入必须按动作意图与具体原操作区分，不能把一个写操作的blocked/unknown自动扩大到所有动作。已裁决允许独立诊断时，应登记当前实体、presentation和检测中去重规则，并保留原owner串行链及底层事务准入。书源检测当前属于这类：不修改书源配置或确认/重放原写回执，但source.check.run会写诊断历史和阅读内容缓存，不能描述为零持久化；底层TRANSACTION_PENDING仍是有效失败事实。该裁决不自动授权其他页面或动作绕过写入门禁。
+准入必须按动作意图与具体原操作区分，不能把一个写操作的blocked/unknown自动扩大到所有动作。已裁决允许独立诊断时，应登记当前实体、presentation和检测中去重规则，并保留底层事务准入。书源检测属于这类。每次检测捕获并等待先前写操作的屏障，屏障之后各检测可并发执行。结果应用前按当前书源定义重新校验。检测不修改书源配置，也不确认或重放原写回执。`source.check.run` 会写入诊断历史和阅读内容缓存，底层 `TRANSACTION_PENDING` 仍是有效失败事实。该裁决不自动授权其他页面或动作绕过写入门禁。
 
 规则：
 

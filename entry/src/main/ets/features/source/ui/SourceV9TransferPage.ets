@@ -584,8 +584,8 @@ export struct SourceV9TransferPage {
       Button({ type: ButtonType.Normal, stateEffect: false }) {
         Column({ space: 5 }) {
           Stack({ alignContent: Alignment.Center }) {
-            Image(readerActionIcon('import', this.scheme)).width(18).height(18)
-              .fillColor(this.primary()).accessibilityLevel('no');
+            Image(this.scheme === 'night' ? $r('app.media.import_select_system_theme_night') :
+              $r('app.media.import_select_system')).width(20).height(20).accessibilityLevel('no');
           }.width(36).height(36).borderRadius(18).backgroundColor(this.color('app.sourceUi.selected'));
           this.label('选择本地书源文件', 13.5, 'TOK_INK', true);
           Text(this.state.fileName.length > 0 ? this.state.fileName : '.json / .txt')
@@ -657,13 +657,17 @@ export struct SourceV9TransferPage {
   private checkProgress() {
     if (this.state.totalChecks > 0) {
       Column({ space: 5 }) {
-        this.label(this.state.runningCheck && this.state.checkingName ?
-          this.state.checkingName + (this.state.checkingStage ? ' · ' + this.state.checkingStage : '') : '检测进度', 12, 'TOK_INK', true);
+        Text(this.state.runningCheck ?
+          `检测中 ${this.state.completedChecks + this.state.activeChecks}/${this.state.totalChecks}` +
+          (this.state.checkingName ? ' · ' + this.state.checkingName : '') +
+          (this.state.checkingStage ? ' · ' + this.state.checkingStage : '') : '检测进度')
+          .fontSize(12).fontColor(this.color('TOK_INK')).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM);
         Progress({ value: this.state.completedChecks, total: this.state.totalChecks, type: ProgressType.Linear })
           .width('100%').color(this.primary()).backgroundColor(this.color('app.sourceUi.field'));
-        this.label(this.state.completedChecks + ' / ' + this.state.totalChecks + ' · 通过 ' +
+        Text(this.state.completedChecks + ' / ' + this.state.totalChecks + ' · 通过 ' +
           (this.state.completedChecks - this.state.checkFailures - this.state.unavailableChecks) +
-          ' · 未通过 ' + this.state.checkFailures, 11, 'TOK_MUTED');
+          ' · 未通过 ' + this.state.checkFailures)
+          .fontSize(11).fontColor(this.color('TOK_MUTED')).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR);
         if (this.state.status.length > 0 && !this.state.runningCheck) this.label(this.state.status, 11, 'TOK_MUTED');
       }.width('100%').alignItems(HorizontalAlign.Start);
     }
@@ -763,7 +767,8 @@ export struct SourceV9TransferPage {
     Column() {
       ForEach(this.state.rows, (row: SourceV9ImportRow, index: number): void => {
         this.importRow(row, index);
-      }, (row: SourceV9ImportRow): string => String(row.index) + ':' + String(row.selected) + ':' + (row.report?.traceId ?? ''));
+      }, (row: SourceV9ImportRow): string => String(row.index) + ':' + String(row.selected) + ':' +
+        (row.report?.traceId ?? 'history:' + (row.previousReport?.report.traceId ?? '')));
     }.width('100%').backgroundColor(this.color('TOK_CARD_BG')).borderRadius(14)
       .border({ width: 1, color: this.color('TOK_LINE') }).clip(true);
   }
@@ -799,23 +804,24 @@ export struct SourceV9TransferPage {
         }
       }.layoutWeight(1).alignItems(HorizontalAlign.Start);
       if (row.report !== undefined) this.reportAction(row.candidate?.name ?? '', row.report);
+      else if (row.previousReport !== undefined) this.reportAction(row.candidate?.name ?? '', row.previousReport.report, '历史');
     }.width('100%').padding({ left: 9, right: 10, top: 8, bottom: 8 })
       .border({ width: { top: index === 0 ? 0 : 1 }, color: this.color('TOK_LINE') });
   }
 
   @Builder
-  private reportAction(name: string, report: SourceCheckOutcome, preflight: boolean = false) {
+  private reportAction(name: string, report: SourceCheckOutcome, origin: '' | '历史' | '预检' = '') {
     Button({ type: ButtonType.Capsule, stateEffect: false }) {
-      Text((preflight ? '预检' : '') + (report.available ? '通过' : '未通过'))
+      Text(origin + (origin === '历史' ? '报告' : report.available ? '通过' : '未通过'))
         .fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM).fontSize(11).maxLines(1)
         .textOverflow({ overflow: TextOverflow.Ellipsis })
-        .fontColor(this.color(report.available ? 'app.status.good' : 'app.sourceUi.danger'));
+        .fontColor(this.color(origin === '历史' ? 'TOK_MUTED' : report.available ? 'app.status.good' : 'app.sourceUi.danger'));
     }.height(28).constraintSize({ minWidth: 44, maxWidth: 100 }).padding({ left: 8, right: 8 }).flexShrink(0)
-      .attributeModifier(new ReaderPressFeedback(this.color(report.available ? 'app.status.goodSoft' :
+      .attributeModifier(new ReaderPressFeedback(this.color(origin === '历史' ? 'app.sourceUi.field' : report.available ? 'app.status.goodSoft' :
         'app.sourceUi.dangerSurface'), this.scheme, 14, 14, this.inputCurrent()))
       .responseRegion({ x: 0, y: -8, width: '100%', height: 44 })
       .enabled(this.inputCurrent()).opacity(this.inputCurrent() ? 1 : 0.45)
-      .onClick((): void => this.showReport(name, report));
+      .onClick((): void => this.showReport(origin === '历史' ? name + ' · 历史报告' : name, report));
   }
 
   @Builder
@@ -870,7 +876,7 @@ export struct SourceV9TransferPage {
               Text(detail.name).layoutWeight(1).fontSize(13).fontFamily(READER_FONT_NOTO_SANS_SC_UI_MEDIUM)
                 .fontColor(this.color('TOK_INK')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis });
               this.label(detail.outcome, 11, detail.outcome === '新增' || detail.outcome === '更新' ? 'TOK_MUTED' : 'TOK_DANGER');
-              if (detail.preflightReport !== undefined) this.reportAction(detail.name, detail.preflightReport, true);
+              if (detail.preflightReport !== undefined) this.reportAction(detail.name, detail.preflightReport, '预检');
             }.width('100%').padding(10).border({ width: { top: 1 }, color: this.color('TOK_LINE') });
           }, (detail: SourceV9TransferItemResult): string => String(detail.index));
         }.width('100%').transition(TransitionEffect.OPACITY.animation(
@@ -1064,19 +1070,23 @@ export struct SourceV9TransferPage {
       .nestedScroll({ scrollForward: NestedScrollMode.SELF_FIRST, scrollBackward: NestedScrollMode.SELF_FIRST });
   }
 
+  private currentReviewRows(id: number): SourceV9Change[] {
+    return this.state.reviews.find((review: SourceV9SubscriptionReview): boolean => review.subscription.id === id)?.rows ?? [];
+  }
+
   @Builder
   private reviewList() {
     Column() {
       ForEach(this.state.reviews, (review: SourceV9SubscriptionReview, reviewIndex: number): void => {
-        if (review.rows.length === 0) {
+        if (this.currentReviewRows(review.subscription.id).length === 0) {
           Text(review.subscription.name + ' · 没有变更').width('100%').padding(10)
             .fontSize(12).fontFamily(READER_FONT_NOTO_SANS_SC_UI_REGULAR).fontColor(this.color('TOK_MUTED'))
             .border({ width: { top: reviewIndex === 0 ? 0 : 1 }, color: this.color('TOK_LINE') });
         }
-        ForEach(review.rows, (row: SourceV9Change, rowIndex: number): void => {
+        ForEach(this.currentReviewRows(review.subscription.id), (row: SourceV9Change, rowIndex: number): void => {
           this.reviewRow(row, review.subscription.name, reviewIndex > 0 || rowIndex > 0);
         }, (row: SourceV9Change): string => row.key + ':' + String(row.selected) + ':' +
-          String(row.overwrite) + ':' + (row.report?.traceId ?? ''));
+          String(row.overwrite) + ':' + (row.report?.traceId ?? 'history:' + (row.previousReport?.report.traceId ?? '')));
       }, (review: SourceV9SubscriptionReview): string => String(review.subscription.id));
     }.id('reader-source-v9-subscription-review-list').width('100%').borderRadius(14)
       .backgroundColor(this.color('TOK_CARD_BG'))
@@ -1124,6 +1134,7 @@ export struct SourceV9TransferPage {
         }
       }.layoutWeight(1).alignItems(HorizontalAlign.Start);
       if (row.report !== undefined) this.reportAction(row.name, row.report);
+      else if (row.previousReport !== undefined) this.reportAction(row.name, row.previousReport.report, '历史');
     }.width('100%').padding({ left: 10, right: 10, top: 8, bottom: 8 })
       .border({ width: { top: divider ? 1 : 0 }, color: this.color('TOK_LINE') });
   }

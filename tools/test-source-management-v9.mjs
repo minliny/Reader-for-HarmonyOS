@@ -97,6 +97,107 @@ test('stop retires in-flight work, preserves completed rows and does not start q
   assert.deepEqual(finished, ['first']);
 });
 
+test('batch pool keeps several checks in flight and stop prevents queued dispatch', async () => {
+  const sources = Array.from({ length: 12 }, (_, index) => source(`s${index}`));
+  const visited = [], finished = [];
+  let live = true, inFlight = 0, peak = 0;
+  const gates = [];
+  const work = runSourceV9Checks(sources, () => live, async row => {
+    visited.push(row.sourceId);
+    inFlight += 1;
+    peak = Math.max(peak, inFlight);
+    await new Promise(resolve => gates.push(resolve));
+    inFlight -= 1;
+    return { source: row, outcome: { traceId: row.sourceId } };
+  }, item => finished.push(item.source.sourceId), 4);
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(peak, 4);
+  assert.deepEqual(visited, ['s0', 's1', 's2', 's3']);
+  gates.shift()();
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.deepEqual(finished, ['s0']);
+  assert.equal(visited.length, 5);
+  live = false;
+  while (gates.length > 0) gates.shift()();
+  await work;
+  assert.equal(visited.length, 5);
+  assert.deepEqual(finished, ['s0']);
+});
+
+test('batch checks wait for earlier writes, overlap, and revalidate before publishing', async () => {
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const Host = selectedProductionMethods(new URL('features/source/application/SourceOrchestrator.ets', etsRoot),
+    'SourceOrchestrator', ['runSourceCheck']);
+  let releaseWrite;
+  const barrier = new Promise(resolve => { releaseWrite = resolve; });
+  const releaseChecks = new Map(), accepted = [];
+  const host = Object.assign(new Host(), {
+    operationChain: barrier,
+    checkingSourceIds: new Map(),
+    captureSourceCheck: (id, active) => ({ id, active }),
+    observeOfflineDetectAdmission() {},
+    isCurrentSourceCheck: capture => capture.active(),
+    validateSourceCheck: async ({ id }, original) => original && id === 'changed' ? undefined : 'definition',
+    gateway: { checkSource: id => new Promise(resolve => { releaseChecks.set(id, () => resolve({ sourceId: id })); }) },
+    applySourceCheckOutcome: outcome => { accepted.push(outcome.sourceId); return true; },
+  });
+  const work = ['same', 'changed'].map(id => host.runSourceCheck(id, {}, () => true, () => {}));
+  await Promise.resolve();
+  assert.equal(releaseChecks.size, 0);
+  releaseWrite();
+  await new Promise(resolve => setImmediate(resolve));
+  assert.equal(host.operationChain, barrier);
+  assert.deepEqual([...releaseChecks.keys()], ['same', 'changed']);
+  for (const finish of releaseChecks.values()) finish();
+  assert.deepEqual(await Promise.all(work), [{ sourceId: 'same' }, undefined]);
+  assert.deepEqual(accepted, ['same']);
+});
+
+test('source rows share delayed press without stealing drag or another pointer', async () => {
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const { productionReaderPressMotion } = await import('./lib/reader-control-builder-probe.mjs');
+  const file = sourceUi('SourceManagementPage');
+  const TouchType = { Down: 0, Up: 1, Move: 2, Cancel: 3 };
+  let sequence = 0;
+  const timers = new Map();
+  const { ReaderDelayedRowPress } = productionReaderPressMotion({ TouchType,
+    setTimeout(tick, delay) { const id = ++sequence; timers.set(id, { tick, delay }); return id; },
+    clearTimeout(id) { timers.delete(id); },
+  });
+  const Page = selectedProductionMethods(file, 'SourceManagementPage',
+    ['rowPressKey', 'rowPressed', 'cancelRowPress', 'rowPressTouch']);
+  const page = Object.assign(new Page(), { pressedRowKey: '' });
+  page.delayedPress = new ReaderDelayedRowPress(key => { page.pressedRowKey = key; });
+  const row = { sourceId: 'a' };
+  const touch = (type, y, id = 1) => {
+    const point = { id, windowX: 10, windowY: y };
+    return { type, touches: type === TouchType.Up ? [] : [point], changedTouches: [point] };
+  };
+  const next = delay => {
+    assert.equal(timers.size, 1, 'exactly one pending feedback callback');
+    const [id, timer] = timers.entries().next().value;
+    assert.equal(timer.delay, delay);
+    timers.delete(id);
+    timer.tick();
+  };
+  page.rowPressTouch(row, 'info', touch(TouchType.Down, 100));
+  assert.equal(page.rowPressed(row, 'info'), false, 'touch-down alone does not paint');
+  page.rowPressTouch(row, 'info', touch(TouchType.Move, 130));
+  assert.equal(timers.size, 0);
+  assert.equal(page.pressedRowKey, '', 'a drag beyond slop never paints');
+  page.rowPressTouch(row, 'info', touch(TouchType.Down, 100));
+  page.rowPressTouch(row, 'info', touch(TouchType.Up, 100, 2));
+  next(90);
+  assert.equal(page.rowPressed(row, 'info'), true, 'a different pointer does not complete the held row');
+  page.cancelRowPress();
+  assert.equal(page.pressedRowKey, '', 'scroll start clears the painted press');
+  page.rowPressTouch(row, 'detect', touch(TouchType.Down, 100));
+  page.rowPressTouch(row, 'detect', touch(TouchType.Up, 100));
+  assert.equal(page.rowPressed(row, 'detect'), true, 'a quick tap gets brief confirmation');
+  next(110);
+  assert.equal(page.pressedRowKey, '');
+});
+
 test('drilldown replaces the exact parent row only with a real new outcome', () => {
   const first = { source: source('first'), outcome: { traceId: 'original' } };
   const other = { source: source('second'), outcome: { traceId: 'unchanged' } };
@@ -654,6 +755,7 @@ async function sourceV9TransferBuilderProbe(methods, dependencies = {}) {
   const { owner } = createReaderBuilderProbe(content, [...methods, 'badge', 'color'], {
     readerAppColor: role => role,
     sourceV9DisplayUrl,
+    ObservedObject: { GetRawObject: value => value },
     ...fonts,
     ...dependencies,
   });
@@ -664,6 +766,53 @@ async function sourceV9TransferBuilderProbe(methods, dependencies = {}) {
 function transferText(owner) {
   return [...owner.nodes.values()].filter(node => node.type === 'Text');
 }
+
+test('local source import draws the system file picker artwork in each scheme', async () => {
+  for (const scheme of ['day', 'night']) {
+    const owner = await sourceV9TransferBuilderProbe(['importSource'], { IMPORT_ORIGINS: [] });
+    Object.assign(owner, { scheme, origin: 'file', segments() {}, label() {}, state: { fileName: '' } });
+    owner.importSource();
+    const icon = [...owner.nodes.values()].find(node => node.type === 'Image');
+    assert.deepEqual([icon.create, icon.width, icon.height, icon.fillColor],
+      [scheme === 'night' ? 'app.media.import_select_system_theme_night' : 'app.media.import_select_system', 20, 20, undefined]);
+  }
+});
+
+test('retained transfer progress text follows dispatch and completed counts without remounting', async () => {
+  const owner = await sourceV9TransferBuilderProbe(['checkProgress', 'label', 'primary']);
+  owner.state = { runningCheck: true, totalChecks: 4, completedChecks: 0, activeChecks: 3,
+    checkingName: '甲 等 3 个', checkingStage: '', checkFailures: 0, unavailableChecks: 0, status: '', checkIssue: '' };
+  owner.checkProgress();
+  const title = transferText(owner).find(node => node.create === '检测中 3/4 · 甲 等 3 个');
+  const summary = transferText(owner).find(node => node.create.includes('通过 0'));
+  assert.ok(title && summary);
+  owner.state = { ...owner.state, completedChecks: 2, activeChecks: 2, checkingName: '乙 等 2 个' };
+  owner.replayOnly([title.id, summary.id]);
+  assert.deepEqual([title.create, summary.create], ['检测中 4/4 · 乙 等 2 个', '2 / 4 · 通过 2 · 未通过 0']);
+});
+
+test('a removed source in an open report cannot expand retry into a new batch', async () => {
+  const { selectedProductionMethods } = await import('./lib/selected-production-methods.mjs');
+  const Dialog = selectedProductionMethods(sourceUi('SourceV9CheckDialog'), 'SourceV9CheckDialog',
+    ['singleSource', 'start', 'checkTotal', 'progressLabel'], { sourceV9Levels: () => ['L1'], runSourceV9Checks,
+      SOURCE_V9_BATCH_CHECK_CONCURRENCY: 8, recordSourceV9Check });
+  const dispatch = [];
+  const dialog = Object.assign(new Dialog(), { batch: true, drillId: 'removed', sources: [source('other')],
+    mounted: true, inputEnabled: true, generation: 1, rows: [],
+    onCheck: async id => { dispatch.push(id); return undefined; } });
+  await dialog.start();
+  assert.deepEqual(dispatch, []);
+  const release = [];
+  Object.assign(dialog, { drillId: '', sources: [source('甲'), source('乙')],
+    onCheck: async () => { await new Promise(resolve => release.push(resolve)); return undefined; } });
+  const work = dialog.start();
+  dialog.sources = [source('乙')];
+  assert.equal(dialog.progressLabel(), '检测中 2/2 · 甲 等 2 个');
+  release.forEach(finish => finish());
+  await work;
+  assert.equal(dialog.progressLabel(), '本轮检测结束 · 2/2');
+
+});
 
 test('transfer import renders the normalized domain, original group and exact existing source badge', async () => {
   const owner = await sourceV9TransferBuilderProbe(['importRow', 'importCaption', 'reportAction']);
@@ -679,6 +828,8 @@ test('transfer import renders the normalized domain, original group and exact ex
   owner.importRow({ index: 0, candidate, selected: true, report: { available: true } }, 0);
   owner.importRow({ index: 1, candidate: { ...candidate, sourceId: 'https://sources.example/new', name: '新增书源' },
     selected: true, report: { available: false } }, 1);
+  owner.importRow({ index: 2, candidate: { ...candidate, sourceId: 'https://history.example' },
+    selected: false, previousReport: { report: { available: true } } }, 2);
   const labels = transferText(owner);
   const byLabel = text => labels.filter(node => node.create === text);
   assert.equal(byLabel('更新').length, 1, 'same-host candidates must not be confused with the existing exact ID');
@@ -686,19 +837,22 @@ test('transfer import renders the normalized domain, original group and exact ex
   assert.equal(byLabel('https://sources.example · 原始分组').length, 2);
   assert.equal(byLabel('通过')[0].fontColor, 'app.status.good');
   assert.equal(byLabel('未通过')[0].fontColor, 'app.sourceUi.danger');
+  assert.equal(byLabel('历史报告')[0].fontColor, 'TOK_MUTED');
+  assert.equal(byLabel('通过').length, 1);
   assert.ok(labels.every(node => !String(node.create).includes('secret')));
 });
 
 test('transfer subscription diff renders a single card and distinguishes selected updates from kept conflicts', async () => {
-  const owner = await sourceV9TransferBuilderProbe(['reviewList', 'reviewRow', 'reviewCaption', 'changeBadge'], {
+  const owner = await sourceV9TransferBuilderProbe(['reviewList', 'currentReviewRows', 'reviewRow', 'reviewCaption', 'changeBadge', 'reportAction'], {
     LengthMetrics: { vp: value => value },
   });
   const selection = [];
   owner.checkbox = (checked, enabled, label) => selection.push([label, checked, enabled]);
   owner.action = () => {};
+  owner.inputCurrent = () => true;
   owner.state = { reviews: [{ subscription: { id: 1, name: '订阅一' }, rows: [
     { key: 'update', name: '更新项', sourceId: 'https://sources.example/private', kind: 'update',
-      selected: true, selectable: true },
+      selected: true, selectable: true, previousReport: { report: { available: true } } },
     { key: 'conflict', name: '冲突项', sourceId: 'https://sources.example/other', kind: 'conflict',
       selected: true, selectable: true, overwrite: false },
   ] }, { subscription: { id: 2, name: '订阅二' }, rows: [] }] };
@@ -712,6 +866,7 @@ test('transfer subscription diff renders a single card and distinguishes selecte
   assert.equal(byLabel('冲突').backgroundColor, 'app.status.warningSoft');
   assert.ok(byLabel('https://sources.example · 订阅一'));
   assert.ok(byLabel('订阅二 · 没有变更'));
+  assert.equal(byLabel('历史报告').fontColor, 'TOK_MUTED');
   assert.deepEqual(selection, [['更新项', true, true], ['冲突项', false, false]]);
 });
 
@@ -754,7 +909,7 @@ test('source more menu closes on every ownership change and rejects disabled or 
   const Page = selectedProductionMethods(sourceUi('SourceManagementPage'), 'SourceManagementPage', [
     'moreFocusRevision', 'toggleMoreMenu', 'closeMoreMenu', 'moreActions', 'chooseMoreAction',
     'onToolsFocusContextChanged', 'onV9PaneChanged', 'onV9ListInputChanged', 'toggleGroupSelection',
-    'onUngroupedBatch', 'consumeTemporaryBack', 'aboutToDisappear',
+    'onUngroupedBatch', 'consumeTemporaryBack', 'aboutToDisappear', 'cancelRowPress',
   ], { ReaderMenuActionView: class {
     constructor(id, label, enabled, icon) { Object.assign(this, { id, label, enabled, icon }); }
   }, $r: name => name, readerActionIcon: (kind, scheme) => `icon:${kind}:${scheme}` });
@@ -769,7 +924,7 @@ test('source more menu closes on every ownership change and rejects disabled or 
     onV9Action: (...args) => events.push(args), visibleIds: () => ['selected'],
     prepareV9ListReturn() {}, cancelToolsReturnFocus() {}, cancelScrollRestore() {},
     scheduleImportStatusReadyObservation() {}, requestGroupClose: () => false, groupOptions: () => [],
-    rebuildSourceProjection() {}, retireGroupSelection() {}, onTemporaryBackBridge() {},
+    rebuildSourceProjection() {}, retireGroupSelection() {}, onTemporaryBackBridge() {}, delayedPress: { cancel() {} },
     verificationOperationTextRoles: new Set(), measurements: { clear() {} }, editingHost: { unmount() {} }, transientFeedback: { reset() {} },
   });
   owner.toggleMoreMenu();

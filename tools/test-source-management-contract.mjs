@@ -70,7 +70,7 @@ if (selected.length) {
       const page = sdk.consumer(text, ['sourceList', 'hasPendingSourceRecovery', 'sourceListLoading',
         'sourceAnchorReadPending', 'hasFilteredEmpty', 'hasEmptyListReadFailure', 'hasEmptyImportReadbackFailure',
         'readPageStateTitle', 'readPageStateMessage', 'retryEmptyListAction', 'retryRetainedListAction'],
-      { readerScrollStartOffset, readerScrollEndOffset,
+      { readerScrollStartOffset, readerScrollEndOffset, ScrollSource: { DRAG: 1 },
         ViewStackProcessor: { StartGetAccessRecordingFor() {}, StopGetAccessRecording() {} } });
       Object.assign(page, { sources, hasReadableSources: sources.some(v9.sourceV9Supports),
         projectedSources: [], projectedSourceCount: 0, statusKind, statusMessage: '', operation,
@@ -92,6 +92,14 @@ if (selected.length) {
     assert.ok(state); state.onAction(); assert.equal(filtered.clears(), 1, 'real PageState forwards reset to the page');
     const list = filtered.nodes.find(n => n.type === 'List');
     assert.equal(list.contentStartOffset, 58); assert.equal(list.contentEndOffset, 91);
+    const press = [];
+    filtered.page.cancelRowPress = () => press.push('clear');
+    filtered.page.cancelScrollRestore = () => {};
+    filtered.page.cancelToolsReturnFocus = () => {};
+    list.onScrollStart();
+    list.onWillScroll(9, 0, 1);
+    assert.deepEqual(press, ['clear', 'clear'], 'the native List forwards scroll start and drag to row feedback');
+
     for (const input of [{ statusKind: 'loading' }, { operation: { original: { blocked: true } } }, { operation: { receipt: { receipt: { confirmation: 'unknown' }, facts: { fact: 'pendingReconciliation' } } } }]) {
       const result = render(input);
       assert.ok(!result.nodes.some(n => n.type === 'Text' && n.create === '没有匹配的书源'), 'loading/recovery retain priority over filteredEmpty');
@@ -227,7 +235,7 @@ if (selected.length) {
     const { sourceV9ChromeControls } = await import('./lib/source-v9-chrome-sdk-probe.mjs');
     const chrome = sourceV9ChromeControls({ ...controls.dependencies, ...v9, readerAppColor },
       controls.hooks, ['SourceV9DetectButton']);
-    const detectMembers = ['detectButton','sourceBadgeLabel','offlineDetectBadgeId',
+    const detectMembers = ['rowPressed','rowPressKey','detectButton','sourceBadgeLabel','offlineDetectBadgeId',
       'verificationRowTextId','sourceDetectEnabled','sourceActionLabel','sourceRowCommand','sourceRowIsCurrent',
       'sourceRenderKey','managementBackIsCurrent','managementOpeningIsCurrent'];
     const renderDetect = (source, operation) => {
@@ -263,7 +271,7 @@ if (selected.length) {
     const { foundationControls } = await import('./lib/reader-foundation-control-probe.mjs');
     const { readerAppColor } = await import('../entry/src/main/ets/ui/foundation/ReaderThemeRegistry.ts');
     const controls = foundationControls();
-    const rowMethods = ['loginButton','loginInk','loginSurface','verificationRowActionsCurrent','sourceActionEnabled','sourceActionLabel',
+    const rowMethods = ['rowPressed','rowPressKey','loginButton','loginInk','loginSurface','verificationRowActionsCurrent','sourceActionEnabled','sourceActionLabel',
       'sourceRowCommand','sourceRowIsCurrent','sourceRenderKey','managementBackIsCurrent','managementOpeningIsCurrent'];
     for (const [checkState, blocked, unknown, expected] of [
       ['unchecked',false,false,1],['checking',false,false,0],['unchecked',true,false,0],['unchecked',false,true,0],

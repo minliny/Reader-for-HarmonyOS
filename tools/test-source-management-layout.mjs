@@ -50,7 +50,7 @@ if (selected.length) {
     ...labeledIconSpecs(), ReaderWindowCoordinator: { metrics: () => metrics } };
   const Page = selectedProductionMethods(file, 'SourceManagementPage', ['fontScale', 'layoutBudget', 'footerControlHeight', 'footerFallbackHeight',
     'footerContentWidth', 'footerStacked', 'footerManageWidth', 'footerActionHeight'], deps);
-  const rowMembers = ['sourceRow', 'sourceRowContent', 'isFirstSource', 'isLastSource', 'currentSourceRow', 'currentSourceInfo',
+  const rowMembers = ['rowPressed','rowPressKey','sourceRow', 'sourceRowContent', 'isFirstSource', 'isLastSource', 'currentSourceRow', 'currentSourceInfo',
     'sourceRenderKey', 'projectedSources', 'sourceLeading', 'sourceInfo', 'sourceDomain', 'sourceActions',
     'detectButton', 'loginInk', 'loginSurface', 'loginButton', 'sourceSwitch',
     'sourceBadgeLabel', 'sourceActionLabel', 'verificationRowId', 'verificationRowTextId'];

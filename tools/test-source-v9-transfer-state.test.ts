@@ -86,6 +86,68 @@ test('equivalent Core replacement defaults preserve unchanged rule identity', ()
     .toBe(sourceV9CanonicalDocument({ nested: { y: false, x: [1, 2] } }));
 });
 
+test('import checks run through a bounded pool and every row settles once', async () => {
+  let inFlight = 0;
+  let peak = 0;
+  const settled: number[] = [];
+  await runV9CandidateChecks([1, 2, 3, 4, 5, 6, 7], () => true, async (id: number): Promise<number> => {
+    inFlight += 1;
+    peak = Math.max(peak, inFlight);
+    await new Promise((resolve) => setTimeout(resolve, 7 - id));
+    inFlight -= 1;
+    if (id === 4) throw new Error('failed');
+    return id;
+  }, () => {}, (row: number): void => { settled.push(row); }, (row: number): void => { settled.push(-row); }, 3);
+  expect(peak).toBe(3);
+  expect(settled.slice().sort((a, b) => Math.abs(a) - Math.abs(b))).toEqual([1, 2, 3, -4, 5, 6, 7]);
+});
+
+test('stopping in the start notification keeps the announced row from reaching the gateway', async () => {
+  let live = true;
+  const dispatch: number[] = [];
+  await runV9CandidateChecks([1, 2, 3], () => live, async id => { dispatch.push(id); return id; },
+    () => { live = false; }, () => {}, () => {}, 2);
+  expect(dispatch).toEqual([]);
+});
+
+test('import progress retains the first active row with duplicate names and suppresses concurrent stages', async () => {
+  const names = ['同名', '另一项', '同名'];
+  const items = names.map((name, index) => ({
+    ...novel, index, sourceId: 'source-' + index, name, bookSource: { bookSourceUrl: 'source-' + index },
+  }));
+  const finish: (() => void)[] = [];
+  class ImportGateway {
+    supportsEphemeralSourceCheck() { return true; }
+    prepareGroupedSourceDocument() { return { items, failures: [], filteredUnsupportedCount: 0 }; }
+    async loadSourceGroupCatalog() { return { groups: [], revision: 0, memberships: [] }; }
+    async checkEphemeralSources(sources: SourceImportCandidate['bookSource'][], _current: () => boolean,
+      _keyword: string, _mode: string, _levels: string[], _budget: number, stage: (value: string) => void) {
+      stage('搜索中');
+      await new Promise<void>(resolve => finish.push(resolve));
+      return [{ ...report(true), sourceId: sources[0].bookSourceUrl }];
+    }
+  }
+  class Rules {
+    observeWrites() {}
+    mutationSnapshot() { return { blocked: false, generation: 0 }; }
+  }
+  const Owner = await transferFixture(ImportGateway, Rules);
+  const snapshots: SourceV9TransferSnapshot[] = [];
+  const owner = new Owner({}, (next: SourceV9TransferSnapshot) => snapshots.push(next), () => true, () => {});
+  await owner.parseImport({ origin: 'paste', url: '', paste: 'json' });
+  const pending = owner.checkImport({ mode: 'search', depth: 'L2', keyword: '' });
+  expect(snapshots.at(-1)).toMatchObject({ activeChecks: 3, checkingName: '同名 等 3 个', checkingStage: '' });
+  finish[2]();
+  await new Promise(resolve => setImmediate(resolve));
+  expect(snapshots.at(-1)).toMatchObject({ completedChecks: 1, activeChecks: 2, checkingName: '同名 等 2 个' });
+  expect(snapshots.every(next => !next.checkingStage)).toBe(true);
+  owner.stopChecks();
+  finish[0](); finish[1]();
+  await pending;
+  expect(snapshots.at(-1)).toMatchObject({ completedChecks: 1, activeChecks: 0, runningCheck: false });
+  expect(snapshots.at(-1)?.rows.map(row => row.report?.sourceId)).toEqual([undefined, undefined, 'source-2']);
+});
+
 test('a rejected in-flight request after stop cannot publish a candidate failure', async () => {
   let current = true;
   const failed: number[] = [];
@@ -180,6 +242,78 @@ async function transferFixture(SourceGateway: object, RulesManagementGateway: ob
   return bookshelfOperationClass('features/source/application/SourceV9TransferOwner.ts', 'SourceV9TransferOwner', {
     ...state, SourceGateway, RulesManagementGateway, isPrivateNetworkTarget, errorMessageOf,
     ReaderRuntimeOwner: { isCurrent: () => true }, url: { URL: { parseURL: (input: string) => new URL(input) } },
+  });
+}
+
+for (const pane of ['import', 'subscription'] as const) {
+  test(pane + ' recheck keeps historical reports out of current passing rows', async () => {
+    const names = ['fresh', 'unavailable', 'cancelled', 'unselected',
+      ...Array.from({ length: 10 }, (_, index) => 'queued-' + index)];
+    const items = names.map((name, index) => ({
+      ...novel, name, index, sourceId: name, bookSource: { bookSourceUrl: name },
+    }));
+    const subscription = { id: 1, name: '检查', type: 0, url: 'https://pkg.example/check.json' };
+    const dispatched: string[] = [];
+    let releaseCancelled = (): void => {};
+    class Source {
+      supportsEphemeralSourceCheck() { return true; }
+      prepareGroupedSourceDocument() { return { items, failures: [], filteredUnsupportedCount: 0 }; }
+      async loadSourceGroupCatalog() { return { groups: [], memberships: [], revision: 1 }; }
+      async checkEphemeralSources(sources: { bookSourceUrl: string }[], _current: () => boolean,
+        _keyword: string, _mode: string, levels: string[]) {
+        const id = sources[0].bookSourceUrl;
+        const deep = levels.includes('L5');
+        if (deep) dispatched.push(id);
+        if (deep && id === 'unavailable') throw new Error('未取得 L5 回执');
+        if (deep && id !== 'fresh') {
+          await new Promise<void>(resolve => {
+            const previous = releaseCancelled;
+            releaseCancelled = () => { previous(); resolve(); };
+          });
+        }
+        return [{ ...report(true), sourceId: id, traceId: (deep ? 'deep-' : 'shallow-') + id }];
+      }
+    }
+    class Rules {
+      observeWrites() {}
+      mutationSnapshot() { return { blocked: false, generation: 0 }; }
+      async listRuleSubscriptions() { return [subscription]; }
+      async captureSourceSubscription() { return { subscription }; }
+      async previewSourceSubscription() {
+        return { changes: items.map(item => ({ sourceId: item.sourceId, name: item.name, kind: 'added' })) };
+      }
+    }
+    const Owner = await transferFixture(Source, Rules);
+    let state: SourceV9TransferSnapshot;
+    const owner = new Owner({ supportsCoreCapability: () => false,
+      loadOnlineJsonDocument: async () => ({ text: JSON.stringify(items.map(item => item.bookSource)) }) },
+    (next: SourceV9TransferSnapshot) => { state = next; }, () => true, () => {});
+    const rows = () => pane === 'import' ? state.rows : state.reviews[0].rows;
+    const check = (depth: 'L2' | 'L5') => pane === 'import' ? owner.checkImport({ mode: 'search', depth }) :
+      owner.checkReviews({ mode: 'search', depth });
+    if (pane === 'import') await owner.parseImport({ origin: 'paste', paste: 'sources' });
+    else { await owner.loadSubscriptions(); await owner.previewSubscriptions([subscription.id]); }
+    await check('L2');
+    expect(rows().map(row => row.report?.traceId)).toEqual(items.map(item => 'shallow-' + item.name));
+    if (pane === 'import') owner.chooseImportRow(3, false);
+    else owner.selectReviewRow('1:unselected', false);
+    const recheck = check('L5');
+    await new Promise(resolve => setImmediate(resolve));
+    owner.stopChecks();
+    releaseCancelled();
+    await recheck;
+    expect(state!.unavailableChecks).toBe(1);
+    expect(dispatched).not.toContain('queued-9');
+    expect(rows().map(row => row.selected)).toEqual(names.map(name => name !== 'unselected'));
+    expect(rows().map(row => row.report?.traceId)).toEqual(names.map(name => name === 'fresh' ? 'deep-fresh' : undefined));
+    expect(rows().slice(1).map(row => row.previousReport?.report.traceId))
+      .toEqual(names.slice(1).map(name => 'shallow-' + name));
+    if (pane === 'import') {
+      expect(sourceV9ImportedReports(state!.rows, items.map(item => item.sourceId)).map(item => item.report.traceId))
+        .toEqual(['deep-fresh']);
+      owner.chooseImportRows(true, true);
+    } else owner.choosePassingReviewRows();
+    expect(rows().map(row => row.selected)).toEqual(names.map(name => name === 'fresh'));
   });
 }
 
@@ -661,6 +795,9 @@ test('switching off preflight restores static selection and all original details
   ]);
   expect(state?.completedChecks).toBe(0);
   flow.chooseImportRow(other.index, false);
+  await flow.checkImport({ mode: 'search', depth: 'L2', keyword: '' });
+  flow.skipImportChecks();
+  expect(state?.rows.map(row => row.selected)).toEqual([true, false, false, false]);
   await flow.importSelected({ strategy: 'preserve' });
   expect(state?.importResult).toMatchObject({ addedCount: 1, invalidCount: 1, unsupportedCount: 1 });
   expect(state?.importResult?.details.map(row => row.outcome)).toEqual(['新增', '已过滤 · 不支持的书源类型', '静态规则无效', '未选中']);

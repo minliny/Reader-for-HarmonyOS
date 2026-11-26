@@ -1,9 +1,11 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {stripTypeScriptTypes} from 'node:module';
+import {CapabilityRouter} from '../entry/vendor/core-harmony/sdk/reader_core.ts';
 
 const app=new URL('../entry/src/main/ets/app/',import.meta.url);
-const source=name=>stripTypeScriptTypes(readFileSync(new URL(name,app),'utf8').replace(/^import[\s\S]*?;\n/gm,'')).replace(/^export /gm,'');
+const source=name=>stripTypeScriptTypes(readFileSync(new URL(name,app),'utf8')
+ .replace(/^import[\s\S]*?;\n/gm,'').replace(/^export \{[^}]*\} from [^;]*;\n/gm,'')).replace(/^export /gm,'');
 const dispatched=[],admitted=[],cookieReads=[],cookieWrites=[],pins=[];
 let responses=[];
 const http={RequestMethod:Object.fromEntries(['GET','HEAD','POST','PUT','DELETE','OPTIONS','CONNECT','TRACE'].map(method=>[method,method])),
@@ -38,6 +40,87 @@ assert.equal(dispatched.length,0,'invalid budgets cannot start I/O');
 await run({url:'https://example.test/',timeoutMs:17});
 assert.ok(dispatched.at(-1).options.connectTimeout<=17);
 assert.ok(dispatched.at(-1).options.readTimeout<=17);
+const budgets = [];
+const createDeadline = host.createDeadline.bind(host);
+host.createDeadline = milliseconds => {
+  budgets.push(milliseconds);
+  return createDeadline(milliseconds);
+};
+const Registry = new Function('CapabilityRouter', 'HttpExecuteHost', 'readerPublicSearchHttpFixtureMode',
+  source('ReaderHostRegistry.ts') + ';return ReaderHostRegistry;')(CapabilityRouter, {instance: host}, () => undefined);
+Registry.stageRecoveryFor = () => Promise.resolve(); // No filesystem in this fixture.
+const registry = new Registry({filesDir: '/fixture'});
+const router = registry.createCapabilityRouter();
+const Owner = new Function('readerRuleMutationEffects', 'coreAdmissionFailureSummary', 'httpResponseFailureSummary',
+  source('ReaderRuntimeOwner.ts') + ';return ReaderRuntimeOwner;')((method, params) => ({method, params}),
+  () => undefined, () => undefined);
+let requestId = 10;
+let handleCommand;
+const runtime = {
+  send() { return ++requestId; },
+  async waitForResult(id, options) { return {requestId: id, data: await handleCommand(id, options)}; },
+  async request(_method, _params, options) { return this.waitForResult(this.send(), options); },
+};
+const owner = Object.assign(Object.create(Owner.prototype), {host: registry, runtime, state: 'ready',
+  start: async () => {}, readingEntryPreparations: () => ({beginRequest: () => false})});
+function httpEvent(id, stage, extra = {}, diagnosticId = id) {
+  const diagnostic = stage === undefined ? undefined : {traceId: 'fixture', requestId: diagnosticId, sourceId: 'source', stage};
+  return {capability: 'http.execute', requestId: id, operationId: 37, params: {url: 'https://example.test/', diagnostic, ...extra}};
+}
+function assertBudget(total, connect) {
+  const options = dispatched.at(-1).options;
+  assert.equal(budgets.at(-1), total);
+  if (connect === 8000) assert.equal(options.connectTimeout, connect);
+  else assert.ok(options.connectTimeout <= connect && options.connectTimeout >= connect - 1000);
+}
+const stages = [];
+for (const method of ['source.check.run', 'source.check.ephemeral.run', 'chapter.content', 'book.search']) {
+  const check = method.startsWith('source.check.');
+  handleCommand = async id => {
+    await router.route(httpEvent(id + 100, 'L3'));
+    assertBudget(25000, 25000); // Another live HTTP operation cannot borrow the registered check.
+    for (const stage of ['L2', 'L3', 'L4', 'L5', 'L1', undefined]) {
+      await router.route(httpEvent(id, stage));
+      const eligible = check && stage !== 'L1' && stage !== undefined;
+      assertBudget(eligible ? 15000 : 25000, eligible ? 8000 : 25000);
+    }
+    await router.route(httpEvent(id, 'L2', {}, id + 1));
+    assertBudget(25000, 25000);
+    await router.route(httpEvent(id, 'L2', {timeoutMs: 5000}));
+    assertBudget(5000, 5000);
+    return {};
+  };
+  await owner.requestDirect(method, {}, method === 'source.check.run' ? {onSourceCheckStage: stage => stages.push(stage)} : {});
+  await router.route(httpEvent(requestId, 'L2'));
+  assertBudget(25000, 25000);
+}
+assert.deepEqual(stages, ['L2', 'L3', 'L4', 'L5', 'L2']);
+handleCommand = async id => {
+  const assetCalls = [];
+  registry.setResponseAssetBridge({
+    begin(...args) { assetCalls.push(args); return 5; },
+    write(req, op, asset, bytes) { assetCalls.push([req, op, asset, bytes.byteLength]); },
+    commit(...args) { assetCalls.push(args); return 1; },
+  });
+  responses.push({responseCode: 200, result: Uint8Array.of(1).buffer, header: {'content-type': 'image/png'}});
+  const asset = await router.route(httpEvent(id, 'L5', {responseAsset: true}));
+  assertBudget(15000, 8000);
+  assert.equal(asset.bodyAsset.operationId, 37);
+  assert.deepEqual(assetCalls, [[id, 37, 1], [id, 37, 5, 1], [id, 37, 5]]);
+  const event = httpEvent(id, 'L2');
+  let completeHttp;
+  responses.push(new Promise(resolve => { completeHttp = resolve; }));
+  const pending = router.route(event);
+  await new Promise(resolve => setImmediate(resolve));
+  router.cancel(event);
+  await assert.rejects(pending, /cancelled by Core request/);
+  completeHttp({responseCode: 200, result: new ArrayBuffer(0), header: {}});
+  throw new Error('fixture terminal cancellation');
+};
+await assert.rejects(owner.requestDirect('source.check.run', {}), /fixture terminal cancellation/);
+await router.route(httpEvent(requestId, 'L2'));
+assertBudget(25000, 25000);
+console.log('PASS source-check command budgets, recorder compatibility, reader/search isolation, binary asset routing and cancellation cleanup');
 let finishLate;
 responses.push(new Promise(resolve=>{finishLate=resolve;}));
 await assert.rejects(run({url:'https://example.test/',timeoutMs:20}),/deadline/);

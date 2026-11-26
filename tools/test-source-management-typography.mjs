@@ -14,7 +14,7 @@ async function metadata() {
  assert.equal(roles.TYPE_SOURCE_MANAGEMENT_ROW_TITLE.fontSizeFp,14);
  assert.equal(original.fontSizeFp,11);
  for(const scheme of ['day','night'])for(const role of [original,{...original,fontFamily:'ReaderTestRole',fontWeight:500,fontSizeFp:original.fontSizeFp+2,lineHeightFp:original.lineHeightFp+3}])for(const api24 of [false,true]) {
-  const {owner}=createReaderBuilderProbe(source,['sourceInfo','sourceDomain'],{...readerFoundationTokens,...roles,
+  const {owner}=createReaderBuilderProbe(source,['sourceInfo','sourceDomain','rowPressed','rowPressKey'],{...readerFoundationTokens,...roles,
    TYPE_SOURCE_MANAGEMENT_ROW_URL:role,readerAppColor,readerSourceCategoryLabel,sourceV9DisplayUrl,
    Alignment:{Center:'center'},VerticalAlign:{Center:'center'},HorizontalAlign:{Start:'start'},
    TextOverflow:{Ellipsis:'ellipsis'},EllipsisMode:{CENTER:'center',END:'end'},WordBreak:{BREAK_ALL:'break-all'}});

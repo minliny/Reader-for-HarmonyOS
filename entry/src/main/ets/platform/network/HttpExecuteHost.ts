@@ -21,6 +21,9 @@ import {
 
 const LOG_DOMAIN = 0x5244;
 const DEFAULT_CONNECT_TIMEOUT_MS = 30000;
+/** Source checks (L2-L5 diagnostics) fail fast on dead hosts instead of holding a batch slot. */
+const SOURCE_CHECK_HTTP_DEADLINE_MS = 15000;
+const SOURCE_CHECK_CONNECT_TIMEOUT_MS = 8000;
 const DEFAULT_READ_TIMEOUT_MS = 60000;
 const MAX_RETRY_BACKOFF_MILLIS = 3000;
 const MAX_RETRY_ATTEMPTS = 5;
@@ -71,6 +74,7 @@ type DeadlineState = {
   binarySink?: BinaryResponseSink;
   responseMaxBytes?: number;
   deadlineAt: number;
+  connectTimeoutMs?: number;
   cookieGeneration?: number;
   /** Restrict this request and every redirect hop to HTTPS. */
   httpsOnly?: boolean;
@@ -185,7 +189,7 @@ class SourceHttpTransportError extends Error {
  * Wire contract (`HostHttpRequest`, camelCase): url, method, headers,
  * body (Raw=string | Form={fields:[[k,v]]} | Multipart={fields,files}),
  * charset (request-body encoding), followRedirects, maxRedirects, retry,
- * usePlatformCookieJar, session, diagnostic (opaque recorder context), and
+ * usePlatformCookieJar, session, diagnostic (source check tracing), and
  * the optional Host-only `httpsOnly` and `sameOriginRedirectsOnly` redirect
  * policies.
  *
@@ -219,8 +223,9 @@ export class HttpExecuteHost {
   private readonly activeByRequestId = new Map<number, DeadlineState>();
   private readonly sourceDiagnosticsByRequestId = new Map<number, SourceHttpDiagnosticRecord[]>();
 
-  async execute(params: JsonObject, requestId?: number, isCancelled?: () => boolean): Promise<JsonObject> {
-    return this.executeRequest(params, requestId, isCancelled);
+  async execute(params: JsonObject, requestId?: number, isCancelled?: () => boolean,
+    sourceCheck: boolean = false): Promise<JsonObject> {
+    return this.executeRequest(params, requestId, isCancelled, sourceCheck);
   }
 
   /** Host-only text/document consumers can set a transport limit before decoding. */
@@ -229,7 +234,7 @@ export class HttpExecuteHost {
     if (!Number.isSafeInteger(maxBytes) || maxBytes < 1 || maxBytes > MAX_RESPONSE_BYTES) {
       throw new Error('http.execute: invalid response limit');
     }
-    return this.executeRequest(params, requestId, isCancelled, undefined, undefined, maxBytes);
+    return this.executeRequest(params, requestId, isCancelled, false, undefined, undefined, maxBytes);
   }
 
   /** Execute a Core host request and stream binary response bytes into its asset store. */
@@ -239,8 +244,9 @@ export class HttpExecuteHost {
     operationId: number,
     bridge: ReaderCoreAssetBridge,
     isCancelled?: () => boolean,
+    sourceCheck: boolean = false,
   ): Promise<JsonObject> {
-    return this.executeRequest(params, requestId, isCancelled, undefined, {
+    return this.executeRequest(params, requestId, isCancelled, sourceCheck, undefined, {
       bridge, requestId, operationId,
     });
   }
@@ -251,7 +257,7 @@ export class HttpExecuteHost {
       throw new Error('http.execute: invalid binary response limit');
     }
     const sink: BinaryResponseSink = { maxBytes };
-    await this.executeRequest(params, requestId, isCancelled, sink);
+    await this.executeRequest(params, requestId, isCancelled, false, sink);
     if (sink.response === undefined) throw new Error('http.execute: missing binary response');
     return sink.response;
   }
@@ -260,6 +266,7 @@ export class HttpExecuteHost {
     params: JsonObject,
     requestId?: number,
     isCancelled?: () => boolean,
+    sourceCheck: boolean = false,
     binarySink?: BinaryResponseSink,
     assetSink?: HttpAssetSink,
     responseMaxBytes?: number,
@@ -301,8 +308,8 @@ export class HttpExecuteHost {
     if (useCookieJar && sessionId === null) {
       throw new Error('http.execute: platform cookie jar requires opaque session.id');
     }
-    // `diagnostic` is recorder-only context. The Host request `requestId`
-    // argument remains the sole operation key for host.complete / host.error.
+    // The registry owns the command identity. Legacy descriptors without matching L2–L5
+    // recorder metadata keep their original transport budget.
     const diagnostic = this.parseSourceDiagnostic(params['diagnostic']);
     const diagnosticStartedAt = Date.now();
     const requestedTimeout = params['timeoutMs'];
@@ -310,8 +317,11 @@ export class HttpExecuteHost {
       !Number.isSafeInteger(requestedTimeout) || requestedTimeout <= 0)) {
       throw new Error('http.execute: timeoutMs must be a positive integer');
     }
+    const useCheckBudget = sourceCheck && diagnostic !== undefined && diagnostic.requestId === requestId;
+    const effectiveDeadlineMs = useCheckBudget ? Math.min(TOTAL_DEADLINE_MS, SOURCE_CHECK_HTTP_DEADLINE_MS) : TOTAL_DEADLINE_MS;
     const deadline = this.createDeadline(typeof requestedTimeout === 'number' ?
-      Math.min(TOTAL_DEADLINE_MS, requestedTimeout) : TOTAL_DEADLINE_MS);
+      Math.min(effectiveDeadlineMs, requestedTimeout) : effectiveDeadlineMs);
+    if (useCheckBudget) deadline.connectTimeoutMs = SOURCE_CHECK_CONNECT_TIMEOUT_MS;
     deadline.binarySink = binarySink;
     deadline.responseMaxBytes = responseMaxBytes;
     deadline.httpsOnly = httpsOnly === true;
@@ -522,7 +532,7 @@ export class HttpExecuteHost {
     let rejectDeadline: (reason?: Error) => void = (): void => undefined;
     const expired = new Promise<JsonObject>((
       _resolve: (value: JsonObject) => void,
-      reject: (reason?: Error) => void,
+      reject: (reason?: Error) => void
     ): void => {
       rejectDeadline = reject;
     });
@@ -883,7 +893,7 @@ export class HttpExecuteHost {
         usingProxy: route === 'systemProxy' ? systemProxy : false,
         maxLimit: deadline.responseMaxBytes ?? deadline.binarySink?.maxBytes ?? MAX_RESPONSE_BYTES,
         // Clamp every per-request timeout to the remaining deadline budget.
-        connectTimeout: Math.min(DEFAULT_CONNECT_TIMEOUT_MS, remaining),
+        connectTimeout: Math.min(deadline.connectTimeoutMs ?? DEFAULT_CONNECT_TIMEOUT_MS, remaining),
         readTimeout: Math.min(DEFAULT_READ_TIMEOUT_MS, remaining),
         // The REDIRECTION interceptor stops before each automatic hop. A
         // positive platform limit is still required; zero is surfaced by

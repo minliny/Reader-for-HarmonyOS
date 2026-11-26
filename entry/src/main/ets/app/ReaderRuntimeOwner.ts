@@ -876,10 +876,9 @@ export class ReaderRuntimeOwner {
       }
       const probe = this.mangaOfflineProbe;
       let result: ReaderCoreResultEvent;
-      if (options.onSourceCheckStage !== undefined &&
-        (method === 'source.check.run' || method === 'source.check.ephemeral.run')) {
+      if (method === 'source.check.run' || method === 'source.check.ephemeral.run') {
         const requestId = runtime.send(method, params);
-        const release = this.host.observeSourceCheckStages(requestId, options.onSourceCheckStage);
+        const release = this.host.registerSourceCheck(requestId, options.onSourceCheckStage);
         try {
           result = await runtime.waitForResult(requestId, {
             ...options, timeoutMs: options.timeoutMs ?? DEFAULT_CORE_REQUEST_TIMEOUT_MS,

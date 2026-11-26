@@ -91,7 +91,7 @@ function controls(metrics, fieldSource = searchSource) {
     consumer(source, names) { return createReaderBuilderProbe(source, names, chrome.dependencies, chrome.hooks).owner; } };
 }
 
-const rowMembers = ['sourceRow', 'sourceRowContent', 'isFirstSource', 'isLastSource', 'sourceLeading', 'sourceInfo', 'sourceDomain',
+const rowMembers = ['rowPressed','rowPressKey','sourceRow', 'sourceRowContent', 'isFirstSource', 'isLastSource', 'sourceLeading', 'sourceInfo', 'sourceDomain',
   'sourceActions', 'detectButton', 'loginInk', 'loginSurface', 'loginButton', 'sourceSwitch', 'sourceSwitchValue',
   'sourceSwitchName', 'currentSourceRow', 'currentSourceInfo',
   'sourceRenderKey', 'sourceRowKey', 'firstSourceId', 'lastSourceId', 'projectedSources', 'sources', 'verificationRowTextId', 'verificationRowId'];

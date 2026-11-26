@@ -86,7 +86,7 @@ if(selectedCase==='action-admission') {
 
 if (selectedCase === 'action-admission') for (const scheme of ['day', 'night']) {
   const events = [];
-  const owner = page(['loginButton', 'loginInk', 'loginSurface', 'detectButton', 'sourceBadgeLabel',
+  const owner = page(['rowPressed','rowPressKey','loginButton', 'loginInk', 'loginSurface', 'detectButton', 'sourceBadgeLabel',
     'sourceActionLabel', 'sourceDetectEnabled', 'sourceRowCommand', 'sourceRowIsCurrent', 'sourceRenderKey',
     'bottomActionBar', 'sourceAddIcon', 'importFocusId', 'toolsFocusId'], scheme, {
     onDetectSource: id => events.push(['detect', id]), onLoginSource: (id, url) => events.push(['login', id, url]),
@@ -257,7 +257,7 @@ async function runStatusBadgeSemantics(){
   return new Function(...Object.keys(bindings),js+';return value;').call(receiver,...Object.values(bindings));
  }
  const sourcePage='features/source/ui/SourceManagementPage.ets',rssPage='features/rss/ui/RssPage.ets',settingsPage='features/settings/ui/SettingsPage.ets';
- const Source=selectedProductionMethods(file(sourcePage),'SourceManagementPage',['sourceBadgeLabel','sourceActionLabel'],{sourceV9ReportTone});
+ const Source=selectedProductionMethods(file(sourcePage),'SourceManagementPage',['rowPressed','rowPressKey','sourceBadgeLabel','sourceActionLabel'],{sourceV9ReportTone});
  const source=new Source();
  Object.assign(source,{verificationRowTextId:()=>'',offlineDetectBadgeId:()=>'',sourceDetectEnabled:()=>true,sourceRowCommand:()=>()=>{}});
  for(const [checkState,checkMaxLevel,tone,label]of [[undefined,undefined,'unverified','尚无有效检测报告'],

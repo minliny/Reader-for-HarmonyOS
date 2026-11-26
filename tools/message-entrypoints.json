@@ -1683,9 +1683,9 @@
       "owner": "SourceV9CheckDialog",
       "member": "body",
       "family": "shared.page-state",
-      "category": "书源检测会话执行失败",
-      "effectiveHost": "当前正在呈现的检测会话内，在运行错误已发布时投影原执行失败。单项实际结果继续由检测列表展示。",
-      "retireRule": "新的检测执行、当前检测会话退出或退役时按当前运行状态撤销。",
+      "category": "书源检测会话执行失败与单源目标已移除的行内状态",
+      "effectiveHost": "当前有效书源检测弹窗的内容区展示执行失败。单源或批量下钻目标不在实时列表时，在同一区域显示「此书源已不在当前列表」，检测动作仍由当前检测会话控制。",
+      "retireRule": "新一轮检测清除原执行失败。目标重新可用或返回批量报告时撤下缺失提示。关闭弹窗或会话退役时撤下两种状态。",
       "status": "registered-source-entry"
     },
     {

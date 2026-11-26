@@ -454,6 +454,32 @@ void 0; /* historical source/appearance assertion removed; focused semantic cove
 console.log('selected source import boundary PASS: '+selectedCase);
 if(selectedCase==='host-json-bytes') {
  const {selectedProductionMethods}=await import('./lib/selected-production-methods.mjs');
+ const filters = [], activities = [];
+ const picker = { DocumentSelectOptions: class {}, DocumentViewPicker: class {
+   async select(options) {
+     filters.push(options.fileSuffixFilters);
+     assert.equal(options.maxSelectNumber, 1);
+     return options.fileSuffixFilters.some(filter => filter.split('|')[1].split(',').includes('.txt')) ?
+       ['file://sample/sources.txt'] : [];
+   }
+ } };
+ const PickerHost = selectedProductionMethods(new URL('../entry/src/main/ets/app/ReaderHostRegistry.ts', import.meta.url),
+   'ReaderHostRegistry', ['selectBookSourceJson', 'selectRuleBundleJson', 'selectRssSourceJson',
+     'selectBoundedJsonDocument', 'JsonDocumentLimitBytes'], {
+     picker, ReaderDocumentPickerActivity: { begin() {
+       activities.push('open'); return { finish: () => activities.push('close') };
+     } },
+   });
+ const selector = Object.assign(new PickerHost(), {
+   requireSelectedFileName: uri => uri.slice(uri.lastIndexOf('/') + 1),
+   readBoundedUtf8Document: async (uri, limit) => { assert.ok(limit > 0); return uri; },
+ });
+ assert.deepEqual(await selector.selectBookSourceJson(),
+   { fileName: 'sources.txt', text: 'file://sample/sources.txt' });
+ assert.equal(await selector.selectRuleBundleJson(), undefined);
+ assert.equal(await selector.selectRssSourceJson(), undefined);
+ assert.deepEqual(filters.map(filter => filter[0].split('|')[1]), ['.json,.txt', '.json', '.json']);
+ assert.deepEqual(activities, ['open', 'close', 'open', 'close', 'open', 'close']);
  let document=new TextEncoder().encode('[{"bookSourceUrl":"https://example.test"}]'),offset=0,closed=0,grow=false;
  const fileIo={OpenMode:{READ_ONLY:1},stat:async()=>({size:document.length}),open:async()=>({fd:1}),close:async()=>{closed++;},read:async(_fd,target,options)=>{const amount=Math.min(options?.length??target.byteLength,document.length-offset);new Uint8Array(target).set(document.subarray(offset,offset+amount));offset+=amount;if(amount===0&&grow){grow=false;return 1;}return amount;}};
  const Host=selectedProductionMethods(new URL('../entry/src/main/ets/app/ReaderHostRegistry.ts',import.meta.url),'ReaderHostRegistry',['JsonDocumentReadChunkBytes','readBoundedUtf8Document'],{fileIo,util:{TextDecoder:{create:()=>({decodeToString:bytes=>new TextDecoder('utf-8',{fatal:true}).decode(bytes)})}},errorMessageOf});
