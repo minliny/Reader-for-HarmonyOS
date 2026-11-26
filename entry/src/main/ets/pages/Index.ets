@@ -1298,6 +1298,7 @@ struct Index {
 
   @Builder
   private pageOverlays() {
+    // Both the pushed detail and the retained reader can occupy zIndex 1.
     Stack({ alignContent: Alignment.TopStart }) {
       Stack({ alignContent: Alignment.TopStart }) {
         ReaderSourceSwitchSurfaces({
@@ -1311,7 +1312,7 @@ struct Index {
         .hitTestBehavior(HitTestMode.Transparent);
       this.modalOverlays();
       this.feedbackOverlays();
-    }.width('100%').height('100%').hitTestBehavior(HitTestMode.Transparent);
+    }.width('100%').height('100%').zIndex(2).hitTestBehavior(HitTestMode.Transparent);
   }
 
   @Builder

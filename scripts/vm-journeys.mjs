@@ -140,10 +140,15 @@ async function runJourney(id, run, candidate, options, outputDir) {
         (outcome.modalOpen === undefined || observed.modalOpen === outcome.modalOpen);
       if (present && absent && state && observed.status === 'measured' && !observed.recoveryPending &&
           (!recoverModal || observed.observedRules?.includes('R6') === true)) {
-        steps.push({ step: description, elapsedMs: Math.round(performance.now() - stepStart), actionSeq: input?.seq ?? null,
-          layout: { seq: raw.seq, received: raw.received, sha256: raw.sha256, file: raw.file }, reportSeq: afterLog.seq, report: observed });
+        const receipt = { step: description, elapsedMs: Math.round(performance.now() - stepStart), actionSeq: input?.seq ?? null,
+          layout: { seq: raw.seq, received: raw.received, sha256: raw.sha256, file: raw.file }, reportSeq: afterLog.seq, report: observed };
+        steps.push(receipt);
         demand(Array.isArray(observed.violations) && observed.violations.length === 0 &&
           Array.isArray(observed.missing) && observed.missing.length === 0, `Layout invariants failed for ${description}`);
+        if (outcome.screenCapture) {
+          const { content, ...screenshot } = await capture('screenCap');
+          receipt.screenCap = screenshot;
+        }
         root = afterRoot;
         sample = observed;
         return;

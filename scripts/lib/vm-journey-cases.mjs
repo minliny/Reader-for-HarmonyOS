@@ -98,10 +98,10 @@ export const journeys = {
       route: 'detail', all: [text(SHELF_NOVEL), sourceA, removeBook, switchSource],
     });
     await ui.tap('打开详情换源抽屉', switchSource, {
-      route: 'detail', all: [switchClose], modalOpen: true,
+      route: 'detail', all: [switchClose], modalOpen: true, screenCapture: true,
     });
     await ui.tap('关闭换源并验证详情动作恢复', switchClose, {
-      route: 'detail', all: [removeBook, switchSource], none: [switchClose], modalOpen: false,
+      route: 'detail', all: [removeBook, switchSource], none: [switchClose], modalOpen: false, screenCapture: true,
     });
     const alternative = { type: 'Row', label: /^(ReaderNovelB|https:\/\/novel-b\.reader-journeys\.invalid)(?:[,，]|$)/,
       enabled: 'true', clickable: 'true' };
