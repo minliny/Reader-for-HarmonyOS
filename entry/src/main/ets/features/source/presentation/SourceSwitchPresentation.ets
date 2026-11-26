@@ -120,35 +120,42 @@ export class SourceSwitchPresentation {
   private surfaceFocus: SourceSwitchSurfaceFocus | undefined = undefined;
   surfaceAttached: boolean = false;
   surfaceClosing: boolean = false;
-  private readonly surfaceLifecycle: SourceSwitchSurfaceLifecycle = new SourceSwitchSurfaceLifecycle(
-    (snapshot: SourceSwitchSurfaceSnapshot): void => {
-      this.surfaceAttached = snapshot.attached;
-      this.surfaceClosing = snapshot.closing;
-    }, (scope: number): void => this.restoreSurfaceFocus(scope));
+  private surfaceLifecycle: SourceSwitchSurfaceLifecycle | undefined;
 
   isSurfacePresented(): boolean {
     // Native input projections need to observe attachment even while visible.
     const attached = this.surfaceAttached;
     return this.visible || attached;
   }
-  attachSurface(scope: number): number { return this.visible && scope === this.scopeId ? this.surfaceLifecycle.attach(scope) : 0; }
-  surfaceIsCurrent(attachment: number, scope: number): boolean { return this.surfaceLifecycle.current(attachment, scope); }
+  attachSurface(scope: number): number {
+    if (!this.visible || scope !== this.scopeId) return 0;
+    // The callback must write through the @Observed receiver. A class field
+    // initializer captures the raw instance before ArkUI wraps it.
+    if (this.surfaceLifecycle === undefined) {
+      this.surfaceLifecycle = new SourceSwitchSurfaceLifecycle((snapshot: SourceSwitchSurfaceSnapshot): void => {
+        this.surfaceAttached = snapshot.attached;
+        this.surfaceClosing = snapshot.closing;
+      }, (closedScope: number): void => this.restoreSurfaceFocus(closedScope));
+    }
+    return this.surfaceLifecycle.attach(scope);
+  }
+  surfaceIsCurrent(attachment: number, scope: number): boolean { return this.surfaceLifecycle?.current(attachment, scope) === true; }
   surfacePartAppeared(attachment: number, scope: number, part: string): void {
-    this.surfaceLifecycle.appeared(attachment, scope, part);
+    this.surfaceLifecycle?.appeared(attachment, scope, part);
   }
   surfacePartDisappeared(attachment: number, scope: number, part: string): void {
-    this.surfaceLifecycle.disappeared(attachment, scope, part);
+    this.surfaceLifecycle?.disappeared(attachment, scope, part);
   }
   hideSurface(attachment: number, scope: number): void {
-    this.surfaceLifecycle.hide(attachment, scope);
+    this.surfaceLifecycle?.hide(attachment, scope);
   }
   surfaceTransitionFinished(attachment: number, scope: number, part: string, transitionIn: boolean): void {
-    this.surfaceLifecycle.transitionFinished(attachment, scope, part, transitionIn);
+    this.surfaceLifecycle?.transitionFinished(attachment, scope, part, transitionIn);
   }
   detachSurface(attachment: number, scope: number): void {
     if (!this.surfaceIsCurrent(attachment, scope)) return;
     this.surfaceFocusGeneration += 1;
-    this.surfaceLifecycle.detach(attachment, scope);
+    this.surfaceLifecycle?.detach(attachment, scope);
   }
 
   bindSurfaceFocus(scope: number, focus: SourceSwitchSurfaceFocus): void {
@@ -223,7 +230,7 @@ export class SourceSwitchPresentation {
     if (snapshot.scopeId !== this.scopeId) {
       this.surfaceFocusGeneration += 1;
       this.surfaceFocus = undefined;
-      this.surfaceLifecycle.retire();
+      this.surfaceLifecycle?.retire();
     }
     this.scopeId = snapshot.scopeId;
     this.state = snapshot.state;
@@ -237,13 +244,13 @@ export class SourceSwitchPresentation {
   hidePicker(): void {
     this.visible = false;
     // Host close owns the fallback even when the retired child no longer receives a post-layout callback.
-    this.surfaceLifecycle.hideCurrent(this.scopeId);
+    this.surfaceLifecycle?.hideCurrent(this.scopeId);
   }
 
   retire(): void {
     this.surfaceFocusGeneration += 1;
     this.surfaceFocus = undefined;
-    this.surfaceLifecycle.retire();
+    this.surfaceLifecycle?.retire();
     const host = this.activeHost;
     if (host !== undefined && host.current().scopeId === this.scopeId) host.retire();
     this.visible = false;

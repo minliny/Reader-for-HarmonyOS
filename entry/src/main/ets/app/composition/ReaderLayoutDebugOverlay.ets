@@ -229,7 +229,8 @@ export struct ReaderLayoutDebugOverlay {
       safeTopVp: metrics.ready ? readerVisualSafeTop(metrics) : undefined,
       fontScale: metrics.ready ? metrics.systemFontScale : undefined,
       requiresHeader: this.requiresHeader, requiresControl: this.requiresControl,
-      requiresFirstContent: this.requiresFirstContent, modalOpen, recoveryPending, checkRecovery: recovery,
+      requiresFirstContent: this.requiresFirstContent, modalOpen, recoveryPending,
+      checkRecovery: recovery || this.modalRecoveryVerified,
       mainInputEnabled: this.mainInputEnabled, requiresNativeMainInput: this.route === 'reading' });
     const receipt: LayoutInvariantReceipt = {
       schemaVersion: 1, sequence: ++layoutInvariantSequence, route: this.route,
@@ -240,7 +241,6 @@ export struct ReaderLayoutDebugOverlay {
       this.modalRecoveryAfter = -1;
       this.modalRecoveryVerified = true;
     }
-    if (this.modalRecoveryVerified && !receipt.observedRules.includes('R6')) receipt.observedRules.push('R6');
     if (this.developerModeEnabled) {
       this.invariantLabel = receipt.violations.length > 0 ? `${receipt.violations.length}` : receipt.status === 'measured' ? '0' : '…';
       this.invariantColor = receipt.violations.length > 0 ? '#A51A27' : receipt.status === 'measured' ? '#206841' : '#6F512D';
