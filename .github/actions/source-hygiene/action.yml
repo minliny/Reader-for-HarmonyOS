@@ -8,24 +8,32 @@ inputs:
 runs:
   using: composite
   steps:
-    - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5
-      with:
-        go-version: '1.24.2'
-        cache: false
-    - name: Install pinned upstream analyzers
-      shell: bash
-      run: |
-        go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
-        go install github.com/zricethezav/gitleaks/v8@v8.24.2
     - name: Workflow and current tracked-source checks
       shell: bash
       env:
         CHECKOUT: ${{ inputs.directory }}
       run: |
+        set -euo pipefail
+        work=$(mktemp -d "$RUNNER_TEMP/reader-source.XXXXXX")
+        trap 'rm -rf -- "$work"' EXIT
+        mkdir "$work/bin" "$work/source"
+
+        (
+          cd "$work"
+          curl --fail --silent --show-error --location --retry 3 --output actionlint.tar.gz \
+            https://github.com/rhysd/actionlint/releases/download/v1.7.7/actionlint_1.7.7_linux_amd64.tar.gz
+          curl --fail --silent --show-error --location --retry 3 --output gitleaks.tar.gz \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.24.2/gitleaks_8.24.2_linux_x64.tar.gz
+          sha256sum -c <<'CHECKSUMS'
+        023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  actionlint.tar.gz
+        fa0500f6b7e41d28791ebc680f5dd9899cd42b58629218a5f041efa899151a8e  gitleaks.tar.gz
+        CHECKSUMS
+          tar -xzf actionlint.tar.gz -C bin actionlint
+          tar -xzf gitleaks.tar.gz -C bin gitleaks
+        )
+
         cd "$CHECKOUT"
-        "$(go env GOPATH)/bin/actionlint" -color
-        scan=$(mktemp -d "$RUNNER_TEMP/reader-source.XXXXXX")
-        trap 'rm -rf "$scan"' EXIT
-        git archive HEAD | tar -xf - -C "$scan"
-        cd "$scan"
-        "$(go env GOPATH)/bin/gitleaks" dir . --redact=100
+        "$work/bin/actionlint" -color
+        git archive HEAD | tar -xf - -C "$work/source"
+        cd "$work/source"
+        "$work/bin/gitleaks" dir . --redact=100

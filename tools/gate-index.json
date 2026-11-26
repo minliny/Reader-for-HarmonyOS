@@ -171,7 +171,7 @@
       "qualification": "QUALIFIED",
       "protectedBehavior": "加入书架须等首可读正文，后台准备凭durable intent且不改progress；cancel/清缓存/换源等必须等旧RPC终止，不能把逻辑取消当queue release。",
       "mechanism": "L14-100 fake Core in-memory intents/raw/derived/catalog/progress，实际Coordinator/Scheduler；L109-151严格add/reuse；L164-308重启/12add/50book公平/blocked-transient；L312-451异步取消及destructive6方法终止fence；L467-529begin/status/CAS竞态。",
-      "productionBinding": "app/BookAcquisitionCoordinator.ts addReadableBook/resumeReadingPreparations/409 cancelReadableBook；BookRequestScheduler真实类。",
+      "productionBinding": "features/reading/application/BookAcquisitionCoordinator.ts addReadableBook/resumeReadingPreparations/cancelReadableBook；BookRequestScheduler真实类。",
       "failureExample": "static inference: cancel后旧finally误删新addingBooks owner会触L499-502；manual prefetch不等旧RPC终止会触L384；清cache抢跑触L441。",
       "overlap": "与removal-durable-intent同删除风险但本项只Host acquisition旧RPC取消fence，后者真Core精确ACK/cleanup；50book公平与本地style-preparation的7邻章准备有共享业务但不同owner。",
       "minimumTrigger": "Coordinator严格add、durable准备调度或Scheduler取消终止证明变化且本次需要相应反例时按需；不因普通漏洞修复自动全跑。",
@@ -190,7 +190,7 @@
         "in-memory Core fake"
       ],
       "repair": null,
-      "reviewedSourceSha256": "d2e13d9bdccc378d48ca846ab05878cfbec030b06e0fb27fe7468b3d8d03186c",
+      "reviewedSourceSha256": "112dfab6d9c8622699f72e78af9025dca66d12717c46d8a47be1246035db7a6d",
       "estimatedCostType": "plain-js",
       "definitionInputProblems": [],
       "definitionInputs": [
@@ -200,15 +200,19 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "f530873df73fc323264b3036aace8b427348c9377f4a4cb4d0d7a99f86c0df5f"
         },
         {
           "path": "tools/test-added-book-preparation.mjs",
-          "sha256": "d2e13d9bdccc378d48ca846ab05878cfbec030b06e0fb27fe7468b3d8d03186c"
+          "sha256": "112dfab6d9c8622699f72e78af9025dca66d12717c46d8a47be1246035db7a6d"
         },
         {
           "path": "tools/gate-index.mjs",
-          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+          "sha256": "f6361c4c97459d1d67f0821d326cee09b75d3f708b96a73b3e0262d7e83fa4bf"
+        },
+        {
+          "path": "tools/lib/gate-resource-definition.mjs",
+          "sha256": "c3cc74f468435463cf43ddf0d544b1c64dce89044d9c3d002c85a75ea704a9ac"
         },
         {
           "path": "tools/lib/added-book-preparation-core-fixture.mjs",
@@ -53017,7 +53021,7 @@
       "qualification": "QUALIFIED",
       "protectedBehavior": "冷开按源ID查询、同ID共享、更新race不复活旧规则、缺失tombstone和旧Core full-list兼容。",
       "mechanism": "完整51行；22-37真实Coordinator+受控RPC共享/partial/update/delete；38-46旧Core；48-51外来或malformed identity拒绝。",
-      "productionBinding": "BookAcquisitionCoordinator:182失效、203请求变更判定、836 currentSourceVersion、1030-1053 ensureSources按capability共享和重读。",
+      "productionBinding": "features/reading/application/BookAcquisitionCoordinator.ts 的 source registry 失效、请求变更判定、currentSourceVersion 和 ensureSources。",
       "failureExample": "static：partial错误标全registry ready会25缺s2 RPC；旧回包复活会31返回v1；无tombstone会36重复请求。",
       "overlap": "bundled-source-host-boundary是Host供给rawfile，本项是现有Core的Acquisition scoped registry；未以大Coordinator用例名称推定替代。",
       "minimumTrigger": "source.list.byId协商、源缓存/失效或增删改准入变化。",
@@ -53035,7 +53039,7 @@
         "真实Coordinator TS依赖，无SDK"
       ],
       "repair": null,
-      "reviewedSourceSha256": "7b829849b08d36987293650035cea58f305b48f602bab717f64f3ee1286b1722",
+      "reviewedSourceSha256": "d998a8b5d261dbb82d2d2d5bd5150ddd478776edf58ec5b862398166f9ea7655",
       "estimatedCostType": "plain-js",
       "definitionInputProblems": [],
       "definitionInputs": [
@@ -53045,15 +53049,19 @@
         },
         {
           "path": "tools/run-contract-tests.mjs",
-          "sha256": "0ac05be4e05ba3aa387282a7c834e0fbc9693e8e2c9f9ee9e9cff6e388473074"
+          "sha256": "f530873df73fc323264b3036aace8b427348c9377f4a4cb4d0d7a99f86c0df5f"
         },
         {
           "path": "tools/test-reader-scoped-source-entry.mjs",
-          "sha256": "7b829849b08d36987293650035cea58f305b48f602bab717f64f3ee1286b1722"
+          "sha256": "d998a8b5d261dbb82d2d2d5bd5150ddd478776edf58ec5b862398166f9ea7655"
         },
         {
           "path": "tools/gate-index.mjs",
-          "sha256": "a4dcd6aab37f7ed8e4fc71e74c2e98704cf1152844d3edd41385ac7f19240d0d"
+          "sha256": "f6361c4c97459d1d67f0821d326cee09b75d3f708b96a73b3e0262d7e83fa4bf"
+        },
+        {
+          "path": "tools/lib/gate-resource-definition.mjs",
+          "sha256": "c3cc74f468435463cf43ddf0d544b1c64dce89044d9c3d002c85a75ea704a9ac"
         }
       ],
       "definitionIdentityState": "REVIEWED",
